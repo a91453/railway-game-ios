@@ -4,7 +4,7 @@ import {resolve,dirname,extname} from 'node:path';
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 const {chromium}=createRequire(import.meta.url)('playwright');
-const root=resolve(process.argv[2]),source=resolve('tools/station-kit/renderer.js');
+const root=resolve(process.argv[2]),source=resolve('tools/depot-yard-kit/renderer.js');
 const manifest=JSON.parse(readFileSync(resolve(root,'manifest.json')));
 const hash=b=>createHash('sha256').update(b).digest('hex');
 copyFileSync(source,resolve(root,'renderer.js'));
@@ -29,13 +29,13 @@ try {
   if(index%25===0)console.log('Rendered '+(index+1)+'/'+manifest.models.length);
  }
  mkdirSync(resolve(root,'previews'),{recursive:true});
- for(const system of ['wenhu','taiwanRail']) {
+ for(const system of ['wenhu','metro','lightRail','taiwanRail']) {
   const record=manifest.models.find(model=>model.id==='depot-yard-scene-'+system);
   const data=await page.evaluate(async record=>{
    renderer.load(await(await fetch('/'+record.native)).arrayBuffer());
    renderer.render('isometric',{width:1024,height:1024});return renderer.png();
   },record);
-  const path=resolve(root,'previews',system==='wenhu'?'wenhu-depot-yard.png':'taiwan-rail-depot-yard.png');
+  const path=resolve(root,'previews',system+'-depot-yard.png');
   writeFileSync(path,Buffer.from(data.split(',')[1],'base64'));
   if(statSync(path).size>2_000_000)throw Error('Oversized scene '+path);
  }

@@ -113,20 +113,19 @@ public enum Map3DDepotYardKit {
                 b.box(part.length / 2 - 0.18, h - 0.625, 0, 0.36, w, 0.55, Map3DPalette.canopy)
             }
             for c in part.trackCentres {
-                b.box(0, 0.2, c, part.length - 0.2, 1.9, 0.14, Map3DDepotFacilities.dark)
-                for offset: Float in [-0.5335, 0.5335] { b.box(0, 0.35, c + offset, part.length - 0.2, 0.075, 0.1, Map3DPalette.railTop) }
-                b.box(0, 0.34, c, part.length - 1, 0.72, 0.02, Map3DDepotFacilities.steel)
+                guideway(&b, system: part.system, x: 0, z: c, length: part.length - 0.2)
+                if part.system != .wenhu { b.box(0, 0.34, c, part.length - 1, 0.72, 0.02, Map3DDepotFacilities.steel) }
             }
             b.box(0, h + 2.64, 0, part.length - 1, 0.28, 0.24, Map3DDepotFacilities.steel)
         case .parkingCanopy:
             for x: Float in [-5.7, 5.7] { for z: Float in [-w / 2 + 0.2, w / 2 - 0.2] { b.box(x, 0, z, 0.25, 0.25, h, Map3DDepotFacilities.steel) } }
             b.box(0, h, 0, 12.4, w + 0.7, 0.24, Map3DPalette.roof)
-            for c in part.trackCentres { for offset: Float in [-0.5335, 0.5335] { b.box(0, 0.35, c + offset, 11.8, 0.075, 0.1, Map3DPalette.railTop) } }
+            for c in part.trackCentres { guideway(&b, system: part.system, x: 0, z: c, length: 11.8) }
         case .washFrame:
             for z: Float in [-3, 3] { b.box(0, 0, z, 1.4, 0.45, h, Map3DDepotFacilities.steel) }
             b.box(0, h, 0, 2.4, 6.45, 0.4, Map3DPalette.canopy)
             for z: Float in [-2.6, 2.6] { b.box(0, 1.1, z, 0.15, 0.1, h - 1.5, Map3DDepotFacilities.glass) }
-            for z: Float in [-0.5335, 0.5335] { b.box(0, 0.35, z, 2.4, 0.075, 0.1, Map3DPalette.railTop) }
+            guideway(&b, system: part.system, x: 0, z: 0, length: 2.4)
         case .office:
             b.box(0, 0, 0, 12, 8, 9.4, Map3DDepotFacilities.wall)
             for level: Float in [1.6, 4.7, 7.8] { for x: Float in [-3.5, 0, 3.5] { b.box(x, level, 4.03, 1.5, 0.06, 1.2, Map3DDepotFacilities.glass) } }
@@ -154,23 +153,72 @@ public enum Map3DDepotYardKit {
         [model(for: part(.shedTail, system: system, tracks: tracks), far: far)]
     }
 
-    /// Review only. Modules meet at x = multiples of 12 m; no live map use.
+    // Wenhu's existing APM256 model puts load wheels at ±0.99 m and guide
+    // bearings at ±1.02 m. Use its dimensions, never the steel rail recipe.
+    private static func guideway(_ b: inout StationKitBuilder, system: System, x: Float, z: Float, length: Float) {
+        if system == .wenhu {
+            b.box(x, 0.2, z, length, 2.7, 0.16, Map3DPalette.concrete)
+            for side: Float in [-1, 1] {
+                b.box(x, 0.36, z + side * 0.99, length, 0.36, 0.09, Map3DDepotFacilities.dark)
+                b.box(x, 0.33, z + side * 1.27, length, 0.10, 0.32, Map3DDepotFacilities.steel)
+            }
+        } else {
+            b.box(x, 0.2, z, length, 1.9, 0.14, Map3DDepotFacilities.dark)
+            for side: Float in [-0.5335, 0.5335] { b.box(x, 0.35, z + side, length, 0.075, 0.1, Map3DPalette.railTop) }
+        }
+    }
+
+    private static func parkedTrain(_ b: inout StationKitBuilder, system: System, z: Float) {
+        switch system {
+        case .wenhu:
+            let centres: [Float] = [20.67, 6.89, -6.89, -20.67]
+            for (index, x) in centres.enumerated() {
+                b.add(Map3DWenhuAPM256.model(index.isMultiple(of: 2) ? .a : .b, far: true), at: Map3DPoint(x, 0.45, z))
+            }
+        case .metro:
+            let centres: [Float] = [58.855, 35.25, 11.75, -11.75, -35.25, -58.855]
+            for (index, x) in centres.enumerated() { b.add(Map3DC381.model(Map3DC381.arrangement[index], far: true), at: Map3DPoint(x, 0.45, z)) }
+        case .lightRail:
+            var x: Float = -15.2
+            for unit in Map3DKaohsiungCitadis.Unit.allCases {
+                let length = Map3DKaohsiungCitadis.length(unit)
+                b.add(Map3DKaohsiungCitadis.model(unit, far: true), at: Map3DPoint(x + length / 2, 0.45, z))
+                x += length + Map3DKaohsiungCitadis.joint
+            }
+        case .taiwanRail:
+            for placement in Map3DEMU3000.placements { b.add(Map3DEMU3000.model(placement.unit, far: true), at: Map3DPoint(placement.x, 0.45, z)) }
+        }
+    }
+
+    /// Four review scenes with a full existing set on an exposed siding.
     public static func reviewScene(system: System) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
-        b.box(0, -0.22, 0, 100, 72, 0.2, Map3DPalette.concrete)
-        let shedParts: [Kind] = [.shedTail, .shedMiddle, .shedMiddle, .shedMiddle, .shedMiddle, .shedHead]
-        for (index, kind) in shedParts.enumerated() {
-            b.add(model(for: part(kind, system: system, tracks: 4)), at: Map3DPoint(Float(index) * 12 - 30, 0, -18))
+        let bays: Int = switch system { case .wenhu: 5; case .metro: 12; case .lightRail: 3; case .taiwanRail: 21 }
+        let length = Float(bays) * 12
+        let tracks = system == .wenhu || system == .lightRail ? 2 : 4
+        b.box(0, -0.22, 0, length + 28, 78, 0.2, Map3DPalette.concrete)
+        for index in 0..<bays {
+            let kind: Kind = index == 0 ? .shedTail : index == bays - 1 ? .shedHead : .shedMiddle
+            b.add(model(for: part(kind, system: system, tracks: tracks)), at: Map3DPoint(Float(index) * 12 - length / 2 + 6, 0, -20))
+            b.add(model(for: part(.parkingCanopy, system: system, tracks: tracks)), at: Map3DPoint(Float(index) * 12 - length / 2 + 6, 0, 3))
         }
-        for index in 0..<6 {
-            b.add(model(for: part(.parkingCanopy, system: system, tracks: 4)), at: Map3DPoint(Float(index) * 12 - 30, 0, 6))
+        b.add(model(for: part(.washFrame, system: system)), at: Map3DPoint(length / 2 + 3, 0, -20))
+        b.add(model(for: part(.office, system: system)), at: Map3DPoint(-length / 2 + 9, 0, 32))
+        b.add(model(for: part(.gate, system: system)), at: Map3DPoint(length / 2 - 14, 0, 36))
+        b.add(model(for: part(.guardHouse, system: system)), at: Map3DPoint(length / 2 - 7, 0, 34))
+        for index in 0..<min(16, bays * 2) {
+            b.add(model(for: part(.fence, system: system)), at: Map3DPoint(Float(index) * 4 - length / 2 - 8, 0, 36))
         }
-        b.add(model(for: part(.washFrame, system: system)), at: Map3DPoint(38, 0, -18))
-        b.add(model(for: part(.office, system: system)), at: Map3DPoint(-31, 0, 23))
-        b.add(model(for: part(.gate, system: system)), at: Map3DPoint(28, 0, 34))
-        b.add(model(for: part(.guardHouse, system: system)), at: Map3DPoint(35, 0, 32))
-        for index in 0..<10 {
-            b.add(model(for: part(.fence, system: system)), at: Map3DPoint(Float(index) * 4 - 42, 0, 34))
+        guideway(&b, system: system, x: 0, z: 22, length: length - 4)
+        parkedTrain(&b, system: system, z: 22)
+        if system == .taiwanRail {
+            // Yard-only 55 m gantry pitch; these preview props are not live track.
+            for x in stride(from: -length / 2 + 20, through: length / 2 - 12, by: Float(55)) {
+                for z: Float in [17, 27] { b.box(x, 0, z, 0.26, 0.26, 7.1, Map3DPalette.mastSteel) }
+                b.box(x, 7.1, 22, 0.20, 10.2, 0.20, Map3DPalette.mastSteel)
+                b.box(x, 5.65, 22, 0.12, 0.12, 1.45, Map3DPalette.mastSteel)
+            }
+            b.box(0, 5.65, 22, length - 4, 0.06, 0.06, Map3DPalette.overheadWire)
         }
         return .flat(named: "depot-yard-scene-\(system.rawValue)", from: b.mesh)
     }

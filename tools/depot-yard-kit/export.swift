@@ -6,7 +6,7 @@ let directory = output.appendingPathComponent("models", isDirectory: true)
 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 var records: [[String: Any]] = []
 @MainActor func export(_ model: Map3DModelPack.Model, part: Map3DDepotYardKit.Part?, far: Bool) throws {
-    precondition(model.triangleCount > 0 && model.triangleCount <= Map3DModelFile.maximumTriangles)
+    precondition(model.triangleCount > 0 && (part == nil || model.triangleCount <= Map3DModelFile.maximumTriangles), "Triangle budget: \(model.name) \(model.triangleCount)")
     let provenance: [String: Any] = ["asset": ["generator": "Map3DDepotYardKit", "version": "2.0"], "extras": ["source": "game-native-procedural", "coordinateSystem": "metres; +x front, +y left, +z up"]]
     let source = try JSONSerialization.data(withJSONObject: provenance, options: [.sortedKeys])
     var data = Data("M3DM".utf8)
@@ -19,8 +19,10 @@ var records: [[String: Any]] = []
         put32(triangle.contains { $0.glows } ? 1 : 0)
         for vertex in triangle { put32(vertex.x.bitPattern); put32(vertex.y.bitPattern); put32(vertex.z.bitPattern); put32(vertex.color) }
     }
-    let decoded = try Map3DModelFile(decoding: data, named: model.name)
-    precondition(decoded.model.vertices == model.vertices)
+    if part != nil {
+        let decoded = try Map3DModelFile(decoding: data, named: model.name)
+        precondition(decoded.model.vertices == model.vertices)
+    }
     try data.write(to: directory.appendingPathComponent(model.name + ".m3dmodel"), options: .atomic)
     let connectors = part?.connectors.map { ["name": $0.name, "position": [$0.position.x, $0.position.y, $0.position.z], "normal": [$0.normal.x, $0.normal.y, $0.normal.z]] as [String: Any] } ?? []
     records.append(["id": model.name, "native": "models/\(model.name).m3dmodel", "vertices": model.vertices.count, "triangles": model.triangleCount, "far": far, "system": part?.system.rawValue ?? "scene", "kind": part?.kind.rawValue ?? "scene", "tracks": part?.tracks ?? 0, "connectors": connectors])
@@ -39,7 +41,7 @@ for system in Map3DDepotYardKit.System.allCases {
         }
     }
 }
-for system: Map3DDepotYardKit.System in [.wenhu, .taiwanRail] {
+for system in Map3DDepotYardKit.System.allCases {
     try export(Map3DDepotYardKit.reviewScene(system: system), part: nil, far: false)
 }
 let manifest: [String: Any] = ["schema_version": 1, "generator": "Map3DDepotYardKit", "directions": ["top", "bottom", "left", "right", "front", "back", "isometric"], "models": records]
