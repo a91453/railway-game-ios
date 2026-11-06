@@ -35,7 +35,7 @@ final class SurplusRunDepotTests: XCTestCase {
     /// to C at 10:30 and 11:30 and the depot D; T1 and T2, Main's, at B,
     /// T2 ahead. With traffic control (and block sections) when
     /// `controlled`.
-    private func makeScene(controlled: Bool = true) throws -> Scene {
+    private func makeScene(controlled: Bool = true, ended: [Int64]? = nil) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 362_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 600), speed: .normal)
@@ -73,10 +73,18 @@ final class SurplusRunDepotTests: XCTestCase {
         try world.setLineDepots(line, to: [depot])
         var trains: [TrainID] = []
         // T1 behind T2 on B's platform.
-        for (name, offset) in [("T1", Int64(6_144)), ("T2", Int64(9_216))] {
+        for (number, (name, offset)) in [("T1", Int64(6_144)), ("T2", Int64(9_216))].enumerated() {
             let id = try world.purchaseTrain(named: name).id
             try world.setTrainCars(id, to: 2)
             try world.placeTrain(id, at: .onEdge(forward(0), offset: offset))
+            if let ended {
+                // The run it ended here, from X, at minute `ended[number]`.
+                let end = ended[number]
+                try world.setTrainTimetable(id, to: [
+                    ScheduledStop(station: x, arrival: GameTime(minutes: end - 3), departure: GameTime(minutes: end - 2)),
+                    ScheduledStop(station: b, arrival: GameTime(minutes: end), departure: GameTime(minutes: end)),
+                ])
+            }
             try world.setTrainContinuation(id, along: [], stoppingAt: offset)
             try world.setTrainMovementRate(id, to: 4_096)
             try world.assignTrain(id, to: line)
@@ -111,6 +119,23 @@ final class SurplusRunDepotTests: XCTestCase {
         for _ in 0..<20 { try scene.world.advance(ticks: 1) }
         XCTAssertFalse(scene.world.stationsStoppedAt(by: scene.t2).contains(scene.depot), "T2 stayed at B")
         XCTAssertFalse(scene.world.stationsStoppedAt(by: scene.t1).contains(scene.depot), "T1 stayed at B")
+    }
+
+    /// Decision 609, continued: a run takes the train that has waited
+    /// longest, not the first in ID order. T2 ended its run at B at 9:00,
+    /// T1 at 9:50: the 10:30 takes T2, with traffic control or without
+    /// (before, without it, the 10:30 took T1).
+    func testARunTakesTheTrainThatHasWaitedLongest() throws {
+        for controlled in [false, true] {
+            var scene = try makeScene(controlled: controlled, ended: [590, 540])
+            for _ in 0..<35 { try scene.world.advance(ticks: 1) }
+            let line = try XCTUnwrap(scene.world.line(id: scene.line))
+            XCTAssertEqual(line.runDays[0], 0, "the 10:30 left (controlled: \(controlled))")
+            XCTAssertNotNil(scene.world.train(id: scene.t2)?.execution, "T2 took the 10:30 (controlled: \(controlled))")
+            XCTAssertFalse(scene.world.train(id: scene.t1)?.execution.map { _ in scene.world.train(id: scene.t1)?.isDeadheading == false } ?? false,
+                           "T1 did not take it (controlled: \(controlled))")
+            XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
+        }
     }
 
     /// The trains move at whole minutes, so a batch ends where minute by
