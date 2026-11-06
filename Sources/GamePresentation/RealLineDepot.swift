@@ -165,12 +165,36 @@ struct RealLineDepotSite: Sendable {
         sidings: 12, beyond: nil, compact: true
     )
 
+    /// Decision 535 (continued, KLRT): the Kaohsiung Light Rail depot
+    /// (輕軌機廠: the workshop, way 445644637, and its yard tracks, ways
+    /// 501281474 to 501281484 and 1153379542 to 1153379546) of the
+    /// Circular Light Rail, inside the ring beside the line between
+    /// Lizihnei and Light Rail Depot Station, some 30 to 50 m west of it.
+    /// The game's leads leave the line where the real yard's south lead
+    /// meets it (the node of ways 1561884684, 1561884686 and 501281475,
+    /// some 155 m past Lizihnei), and its yard runs north-north-east along
+    /// the real one, parallel to the line, from 200 m to 600 m past there.
+    /// The real yard is a strip some 60 m wide; the game's sidings, one
+    /// train each, either side of the lead, are wider, so the lead lies
+    /// 100 m off the line and the inner sidings clear it where it bends
+    /// toward them at Kaisyuan Ersheng (`tools/rail-depots`, decision 535
+    /// continued: read from OpenStreetMap's API for a box round the depot,
+    /// the whole extract not to be had that day). Its sidings hold the
+    /// trains the timetable needs at once, the 20 of a rest day; all of
+    /// them stand there overnight.
+    static let klrt = RealLineDepotSite(
+        line: "krtc:C", english: "Light Rail Depot", chinese: "輕軌機廠",
+        junction: (22.605961, 120.325089),
+        yard: ((22.607960, 120.324816), (22.611359, 120.326107)),
+        sidings: 20, beyond: nil, compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
     /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not

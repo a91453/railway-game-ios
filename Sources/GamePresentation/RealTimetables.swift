@@ -1,4 +1,5 @@
 import Foundation
+import GameCore
 
 // The real timetables of the `Railway/` site (`site_archive_clean/data/`),
 // typed. Two formats, both read as the site reads them:
@@ -338,16 +339,24 @@ public struct RealLineRuns: Sendable, Equatable {
         /// Whether it is not one of TRA's trains but added so the day ends
         /// where it began.
         public let positioning: Bool
+        /// Decision 535 (continued, KLRT): on a ring, the way round it
+        /// goes (``RingDirection/inner`` along ``RealLineRuns/stops``);
+        /// `nil` on any other line.
+        public var way: RingDirection? = nil
     }
 
     /// The line's stations, by their Chinese names.
-    public let stops: [String]
-    public let runs: [Run]
+    public internal(set) var stops: [String]
+    public internal(set) var runs: [Run]
     /// The trainsets standing at each station at midnight.
     public let overnight: [String: Int]
     /// The tracks with a platform each station needs: the most trainsets
     /// standing there at once (decision 315); 1 where the file does not say.
     public let tracks: [String: Int]
+    /// Decision 535 (continued, KLRT): whether the line is a ring (the
+    /// Kaohsiung Circular Light Rail), its runs going round it each way,
+    /// its last stop followed by its first.
+    public var ring = false
 
     /// Reads the file. Throws for one out of shape: a call that is not
     /// `[station, arrival, departure]`, or a run calling at a station that
@@ -411,6 +420,7 @@ public struct RealLineRuns: Sendable, Equatable {
             let calls: [[Call]]
             let days: [Int]
             let positioning: Bool?
+            let way: String?
         }
 
         enum Call: Decodable {
@@ -430,6 +440,7 @@ public struct RealLineRuns: Sendable, Equatable {
         let stops: [String]
         let overnight: [String: Int]
         let tracks: [String: Int]?
+        let loop: Bool?
         let runs: [Run]
     }
 
@@ -440,6 +451,7 @@ public struct RealLineRuns: Sendable, Equatable {
         stops = file.stops
         overnight = file.overnight
         tracks = file.tracks ?? [:]
+        ring = file.loop ?? false
         runs = try file.runs.map { run in
             let calls = try run.calls.map { call -> Call in
                 guard call.count == 3, case .name(let station) = call[0], case .second(let arrival) = call[1], case .second(let departure) = call[2],
@@ -447,7 +459,16 @@ public struct RealLineRuns: Sendable, Equatable {
                 else { throw corrupt("Train \(run.train)'s call is not [one of the line's stations, arrival, departure].") }
                 return Call(station: station, arrival: arrival, departure: departure)
             }
-            return Run(train: run.train, calls: calls, days: run.days, positioning: run.positioning ?? false)
+            // Decision 535 (continued, KLRT): a ring's run goes one way
+            // round it; any other line's has none.
+            let way: RingDirection?
+            switch (file.loop ?? false, run.way) {
+            case (false, nil): way = nil
+            case (true, "inner"): way = .inner
+            case (true, "outer"): way = .outer
+            default: throw corrupt("Train \(run.train)'s way round is not inner or outer on a ring, or it has one on a line with ends.")
+            }
+            return Run(train: run.train, calls: calls, days: run.days, positioning: run.positioning ?? false, way: way)
         }
     }
 }

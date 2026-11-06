@@ -223,6 +223,21 @@ struct RailwayGameApp: App {
                     launcher.session?.holdScreenshotZoningDrag()
                 }
             }
+            // Decision 535 (continued, KLRT): a real line's purchase card
+            // opened, once the app's real data is read, for its screenshot.
+            if let real = DebugLaunch.value(of: "-screenshot-offer-real") {
+                Task {
+                    await opening.value
+                    guard let session = launcher.session else { return }
+                    for _ in 0..<240 {
+                        if let line = session.buyableRealLines.first(where: { $0.id == real }) {
+                            session.offerRealLine(line)
+                            break
+                        }
+                        try? await Task.sleep(for: .milliseconds(500))
+                    }
+                }
+            }
             // Decision 536: a train of a bought real line picked and
             // followed, for its card and the 3D map.
             if let real = DebugLaunch.value(of: "-screenshot-follow-bought") {

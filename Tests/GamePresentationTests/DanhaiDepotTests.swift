@@ -283,8 +283,8 @@ final class DanhaiDepotTests: XCTestCase {
     /// half an hour behind its timetable, and every run of each line's
     /// second day sent out. Without `trafficControl` (decision 547) the
     /// player has turned it off.
-    static func buyAndRun(_ ids: [String], rules: NewGameRules, trafficControl: Bool = true) throws {
-        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: rules)
+    static func buyAndRun(_ ids: [String], round: String = "ntdlrt:V", rules: NewGameRules, trafficControl: Bool = true) throws {
+        let session = try RealLineAcquisitionTests.game(round: round, side: 1 << 21, heights: true, rules: rules)
         for id in ids {
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale after \(ids)")
             let offer = session.realLineOffer(for: line)
@@ -295,10 +295,15 @@ final class DanhaiDepotTests: XCTestCase {
         if !trafficControl { try world.setTrafficControl(false) }
         let started = Date()
         var deadlocked = 0, late: Int64 = 0
-        for _ in 0..<51 {
+        for hour in 0..<51 {
             try world.advance(ticks: 60)
             deadlocked = max(deadlocked, world.deadlockedTrains().count)
             late = max(late, world.trains.compactMap { world.lateness(of: $0.id) }.max() ?? 0)
+            if ProcessInfo.processInfo.environment["ACQUIRE_TRACE"] != nil {
+                FileHandle.standardError.write(Data(
+                    "\(ids) \(rules) hour \(hour) \(String(format: "%.1f", Date().timeIntervalSince(started))) s, deadlocked \(world.deadlockedTrains().count), late \(late / 60) min\n".utf8
+                ))
+            }
         }
         let label = "\(ids.joined(separator: " then ")) (\(rules)\(trafficControl ? "" : ", traffic control off"))"
         let today = world.clock.now.seconds / GameTime.secondsPerDay

@@ -34,7 +34,7 @@ extension GameSession {
     /// The real riders a day one transfer point stands for (decision 298):
     /// Taipei's TRA station (63,307) is 63 points, Changhua's High Speed
     /// Rail station (2,621) 3, a halt of a hundred 1.
-    static let transferRidersPerPoint = 1_000
+    nonisolated static let transferRidersPerPoint = 1_000
 
     /// The transfer points a system's station gives a place (decision 298):
     /// its real riders a day over ``transferRidersPerPoint``, rounded and
