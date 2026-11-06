@@ -95,8 +95,9 @@ struct TrainShowcaseScreen: View {
             if reduce { turntable = false }
         }
         .task {
-            // Every train's models, made once (as the 3D map's are).
-            _ = await Task.detached(priority: .userInitiated) { Map3DModelPack.standard.models.count }.value
+            // Every train's models, made once and on the GPU; decision 608:
+            // the 3D map's own (``Map3DTrainModels``), not a second copy.
+            await Map3DTrainModels.shared.make()
             ready = true
         }
         .sheet(isPresented: $picking) {
@@ -258,7 +259,7 @@ struct TrainShowcaseStage: UIViewRepresentable {
         }
         context.coordinator.view = view
         cameraLink.view = view
-        view.useModels(Map3DModelPack.standard)
+        if let models = Map3DTrainModels.shared.uploaded { view.useModels(models) }
         let orbit = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.orbit(_:)))
         orbit.maximumNumberOfTouches = 1
         let move = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.move(_:)))
