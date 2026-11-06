@@ -20,6 +20,20 @@ extension RealLineLaying {
     /// 40 m (the ring's stations lie 300 to 1,000 m apart, and the wye and
     /// its crossovers must fit between two of them).
     static let ringCrossover = 40 * RealLineAcquisition.metre
+    /// Decision 612: how far the ring's first track lies off the real
+    /// line's drawing, to its right going round: the drawing follows one
+    /// of the light rail's two real tracks, the other some 4 m to its
+    /// right (OSM, `rail_tracks.json`, the median 4.0 m), and the second
+    /// track goes ``HighSpeedDemo/trackOffset`` (5 m) to the first's
+    /// left. So each track lies about half a metre off a real one, not
+    /// the second 5 m outside both.
+    static let ringShift = 4.5 * RealLineAcquisition.metre
+    /// Decision 612: how high a ring's station on a real bridge stands
+    /// over the ground at least: one level, the least clearance over a
+    /// crossing (8 m), where the real light rail's Love River bridge at
+    /// Zhen'ai Pier is about 7 m (`rail_tracks.json`); not a metro
+    /// viaduct's 16 m (``RealLineAcquisition/raisedStation``).
+    static let ringRaisedStation = Double(TrackStructure.clearance)
 
     /// The main track's nodes of a ring's depot (as
     /// ``RealLineDepotLayout/marks(at:)``, with ``ringCrossover``).
@@ -113,7 +127,15 @@ extension RealLineLaying {
         points = Array(points[firstPast...] + points[..<firstPast])
         let start = seamMiddle + Self.ringSeam / 2
         let rotated = round.points(from: start, to: round.length) + round.points(from: 0, to: start)
-        let ring = WorldPath(rotated).smoothed()
+        let smooth = WorldPath(rotated).smoothed().points
+        // Decision 612: onto the real tracks, the drawing to its right
+        // (``ringShift``); the path closes on itself, so its ends turn
+        // with their neighbours across the seam.
+        let ring = WorldPath(smooth.indices.map { index in
+            let before = smooth[index == 0 ? max(0, smooth.count - 2) : index - 1]
+            let after = smooth[index == smooth.count - 1 ? min(1, smooth.count - 1) : index + 1]
+            return smooth[index] + (after - before).unit.normal * Self.ringShift
+        })
         guard ring.length > 4 * Self.ringSeam else { return followRefusal }
         let mainLength = ring.length - Self.ringSeam
         let path = WorldPath(ring.points(from: 0, to: mainLength))
@@ -195,7 +217,7 @@ extension RealLineLaying {
                     after: index < count - 1 ? stationsAt[index + 1].along : nil, carried: carried
                 )
             }
-            let low = raised ? height + RealLineAcquisition.raisedStation : height - RealWorldDemo.stationReach
+            let low = raised ? height + Self.ringRaisedStation : height - RealWorldDemo.stationReach
             levels.append(TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach))
         }
         guard let firstSpan = spans.first, let lastSpan = spans.last,

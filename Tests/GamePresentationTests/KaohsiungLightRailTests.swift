@@ -53,6 +53,66 @@ final class KaohsiungLightRailTests: XCTestCase {
     }
 }
 
+/// Decision 612: run only with `KLRT_OFFSET` set: how far the bought
+/// ring's track (not its depot's) lies from the real light rail's own
+/// tracks (`rail_tracks.json`, OSM, decision 402), every point of it laid,
+/// to the nearest surface or bridge track of the Kaohsiung system; with
+/// `KLRT_OFFSET_DUMP=<file>`, the points as JSON for
+/// `tools/rail-depots/plot_ring_offset.py`.
+@MainActor
+final class KaohsiungLightRailOffsetTests: XCTestCase {
+    func testHowFarTheRingLiesFromTheRealTracks() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["KLRT_OFFSET"] != nil else { throw XCTSkip("KLRT_OFFSET") }
+        let session = try RealLineAcquisitionTests.game(round: KaohsiungLightRailTests.id, side: 1 << 21, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == KaohsiungLightRailTests.id })
+        let acquisition = try XCTUnwrap(session.realLineOffer(for: line).acquisition)
+        let frame = try XCTUnwrap(RealWorldFrame(world: session.world))
+        let tracks = try XCTUnwrap(session.railways?.tracks)
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        // The light rail's: the Kaohsiung system's tracks on the surface
+        // or a bridge, none of the metro's long viaducts and tunnels.
+        var segments: [(a: WorldVector, b: WorldVector)] = []
+        for track in tracks.tracks where track.system == "krtc" && track.kind != .tunnel {
+            let points = track.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
+            guard track.heights.allSatisfy({ $0 < 7.5 }) else { continue }
+            for index in points.indices.dropLast() { segments.append((points[index], points[index + 1])) }
+        }
+        func off(_ point: WorldVector) -> Double {
+            segments.reduce(Double.infinity) { best, segment in
+                let d = segment.b - segment.a
+                let lengthSquared = d.dot(d)
+                let t = lengthSquared > 0 ? max(0, min(1, (point - segment.a).dot(d) / lengthSquared)) : 0
+                return min(best, (point - (segment.a + d * t)).length / metre)
+            }
+        }
+        // The two tracks round and the two closing them at the seam
+        // (``RealLineLaying/ringOffer``'s pieces 0 to 3), as surveyed.
+        var offsets: [Double] = []
+        var dump: [[Double]] = []
+        for (number, piece) in acquisition.pieces.prefix(4).enumerated() {
+            var most = 0.0
+            for point in piece.ground {
+                let at = WorldVector(x: Double(point.x), y: Double(point.y))
+                let away = off(at)
+                offsets.append(away)
+                most = max(most, away)
+                let place = frame.coordinate(worldX: at.x, worldY: at.y)
+                dump.append([place.latitude, place.longitude, away, Double(number)])
+            }
+            FileHandle.standardError.write(Data("KLRT_OFFSET piece \(number): \(piece.ground.count) points, most \(String(format: "%.1f", most)) m\n".utf8))
+        }
+        offsets.sort()
+        let p95 = offsets[offsets.count * 95 / 100], mean = offsets.reduce(0, +) / Double(offsets.count)
+        FileHandle.standardError.write(Data(
+            "KLRT_OFFSET \(offsets.count) points: mean \(String(format: "%.1f", mean)) m, 95% \(String(format: "%.1f", p95)) m, most \(String(format: "%.1f", offsets.last ?? 0)) m\n".utf8
+        ))
+        if let file = environment["KLRT_OFFSET_DUMP"] {
+            try JSONSerialization.data(withJSONObject: dump).write(to: URL(fileURLWithPath: file))
+        }
+    }
+}
+
 /// Decision 535 (continued, KLRT): two real days under each rule (traffic
 /// control off is still open, below): no deadlock, every run of the second day
 /// sent out. A class of its own so CI can shard it.

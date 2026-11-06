@@ -314,7 +314,14 @@ final class DanhaiDepotTests: XCTestCase {
                 run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
             }
             XCTAssertEqual(missed.count, 0, "\(label): \(id) runs not sent out yesterday: \(missed.count) of \(ran.runs.count)")
-            report.append("\(id) \(ran.trains.count) trains, \(ran.runs.count) runs, \(missed.count) missed")
+            // Yesterday's tally: the kilometres run, how many of them
+            // empty, and the late trips (decision 612's measure).
+            let tally = world.lineAccounts?.lines.first { $0.line == ran.id }?.days.first { $0.day == today - 1 }?.tally
+            let km = { (distance: Int64) in String(format: "%.0f", Double(distance) / RealLineAcquisition.metre / 1000) }
+            report.append(
+                "\(id) \(ran.trains.count) trains, \(ran.runs.count) runs, \(missed.count) missed"
+                    + (tally.map { ", \($0.lateTrips) of \($0.trips) trips late, \(km($0.trainDistance)) km run, \(km($0.deadheadDistance)) km empty" } ?? "")
+            )
         }
         XCTAssertEqual(deadlocked, 0, label)
         XCTAssertLessThanOrEqual(late, 30 * GameTime.secondsPerMinute, label)
