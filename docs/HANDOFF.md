@@ -3281,6 +3281,10 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 - 簡易規則下開路線的試算沿用。
 - iPhone 實機數字。
 
+### 4.54 車窗視角走走停停（決策 379 續，派工單 CABVIEW-STUTTER，session_01YGNNupagX8CDNTkxPxLsDw，`claude/cabview-stutter`，2026-11-06）
+
+修好的：列車、真實列車、公車、纜車、渡輪的滑行長度跟著 tick 實際的間隔（最多 5 秒），tick 慢時跟車畫面不再「動半秒、停三秒」。**還留下的**：① 大路網（機場捷運買下、32 列車）每 tick 的交通讀數 `TrafficReading` Linux 367 ms，是 tick 慢的大頭，3D 跟車時可以少讀（決策 379 續的下一步）；② 實機請作者在 119 重錄同一段（UNVERIFIED，Linux 量不到手機上的 tick 間隔）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

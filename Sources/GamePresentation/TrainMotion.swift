@@ -301,13 +301,18 @@ public struct TrainMotion: Sendable {
     /// The glide's length when the tick before is not known: the game's
     /// tick, 100 ms.
     public static let tickSeconds = 0.1
-    /// The shortest and longest a glide lasts: ticks come at most this far
-    /// apart when the game keeps up (``GameSession/maximumStepDuration``).
-    static let durations = 0.05...0.5
+    /// The shortest and longest a glide lasts. A glide lasts as long as
+    /// the tick before it took to come, so the trains (and the camera
+    /// following one) move on through every frame until the next tick.
     /// At 1× the trains move once a game second, every tenth tick: a glide
-    /// lasts that second (and a little over, as ticks come late), so they
-    /// do not stand still for nine ticks and then jump.
-    static let longestSecondGlide = 1.25
+    /// lasts that second, so they do not stand still for nine ticks and
+    /// then jump. CABVIEW-STUTTER: when the ticks cannot keep up, a big
+    /// network's tick and the rest after it (``TickPace``, at most
+    /// ``TickPace/longestRest``) come seconds apart; a glide held to half
+    /// a second then moved the cab view for half a second and stood it
+    /// still for three. The longest only keeps the first glide after a
+    /// pause from creeping on for long.
+    public static let durations = 0.05...5.0
     /// The furthest a train glides in one tick, in world units (40 km);
     /// further, it jumps.
     static let longestGlide = 40_000.0 * Double(WorldCoordinate.unitsPerMetre)
@@ -374,7 +379,7 @@ public struct TrainMotion: Sendable {
         self.samples = samples
         self.time = time
         second = world.clock.now.seconds
-        duration = Self.duration(at: time, after: previous, speed: world.clock.speed)
+        duration = Self.duration(at: time, after: previous)
     }
 
     private init(runs: [Run], samples: [TrainID: Sample], second: Int64?, time: Double, duration: Double) {
@@ -386,20 +391,27 @@ public struct TrainMotion: Sendable {
     }
 
     /// How long the glide seen at `time` after `previous` lasts.
-    private static func duration(at time: Double, after previous: TrainMotion?, speed: GameSpeed) -> Double {
+    private static func duration(at time: Double, after previous: TrainMotion?) -> Double {
         guard let previous, previous.time > 0 else { return tickSeconds }
-        let longest = speed == .x1 ? longestSecondGlide : durations.upperBound
-        return min(max(time - previous.time, durations.lowerBound), longest)
+        return glideSeconds(since: previous.time, at: time)
+    }
+
+    /// How long a glide seen at `time` lasts after a tick seen at
+    /// `previous`, both seconds on the caller's clock: the time between
+    /// them, within ``durations``. The real trains', buses' and cable
+    /// cars' clock glides the same (``RealTrainClock``).
+    public static func glideSeconds(since previous: Double, at time: Double) -> Double {
+        min(max(time - previous, durations.lowerBound), durations.upperBound)
     }
 
     /// Decision 379: these trains seen at `time` (seconds on the caller's
-    /// clock), after `previous`, at `speed`: what
+    /// clock), after `previous`: what
     /// ``init(world:previous:time:)`` gives at `time` when this was worked
     /// out from the same world and `previous` at another time, off the
     /// main actor with the tick. Not at 1×, whose glide may go on from
     /// the last one (that init keeps `previous` as it is).
-    func seen(at time: Double, after previous: TrainMotion?, speed: GameSpeed) -> TrainMotion {
-        var motion = TrainMotion(runs: runs, samples: samples, second: second, time: time, duration: Self.duration(at: time, after: previous, speed: speed))
+    func seen(at time: Double, after previous: TrainMotion?) -> TrainMotion {
+        var motion = TrainMotion(runs: runs, samples: samples, second: second, time: time, duration: Self.duration(at: time, after: previous))
         motion.source = source
         return motion
     }

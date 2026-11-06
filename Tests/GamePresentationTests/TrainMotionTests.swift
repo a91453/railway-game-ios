@@ -33,7 +33,8 @@ final class TrainMotionTests: XCTestCase {
         let first = TrainMotion(world: empty, time: 100)
         XCTAssertEqual(first.duration, 0.1, "the game's tick when the one before is not known")
         XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 100.12).duration, 0.12, accuracy: 1e-9)
-        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 103).duration, 0.5, "never longer than the longest step")
+        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 103.5).duration, 3.5, accuracy: 1e-9, "a slow tick's whole wait")
+        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 160).duration, 5, "never longer than the longest glide, after a pause")
         XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 100.001).duration, 0.05)
         XCTAssertEqual(first.progress(at: 99), 0)
         XCTAssertEqual(first.progress(at: 100.05), 0.5, accuracy: 1e-9)
@@ -363,10 +364,52 @@ final class TrainMotionTests: XCTestCase {
         for index in 10..<19 {
             XCTAssertGreaterThan(heads[index + 1], heads[index], "tick \(index + 2)")
         }
-        // Faster than 1×, a glide is still a tick's.
+        // Faster than 1×, a glide is still the tick's.
         world.setSpeed(.x10)
         try world.advance(ticks: 1)
-        XCTAssertEqual(TrainMotion(world: world, previous: motion, time: 15).duration, 0.5, "never longer than the longest step")
+        XCTAssertEqual(TrainMotion(world: world, previous: motion, time: 12.1).duration, 0.1, accuracy: 1e-9)
+    }
+
+    /// CABVIEW-STUTTER: when the ticks cannot keep up (a big network's
+    /// tick and the rest after it, seconds apart), the followed train's
+    /// head still moves on at every frame, drawn at 30 per second, rather
+    /// than gliding for half a second and standing still until the next
+    /// tick. The cab view looks from that head. Its real trains', buses'
+    /// and cable cars' clock glides the same.
+    func testAFollowedTrainMovesEveryFrameWhenTicksComeSecondsApart() throws {
+        var world = try makeWorld(width: 65_536, height: 4_096, balance: 1_000_000, speed: .x10)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 64_512, y: 2_048))
+        let edge = try world.buildTrackEdge(from: west, to: east)
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 1_024))
+        try world.setTrainMovementRate(train, to: 6_000)
+        // Ticks 3.5 s apart, as in the video: the train moves at each.
+        let gap = 3.5
+        var time = 10.0
+        var motion = TrainMotion(world: world, time: time)
+        var clock = RealTrainClock(world: world, time: time)
+        var standing = 0
+        var clockStanding = 0
+        for _ in 0..<4 {
+            try world.advance(ticks: 1)
+            time += gap
+            motion = TrainMotion(world: world, previous: motion, time: time)
+            clock = RealTrainClock(world: world, previous: clock, time: time)
+            var last = try XCTUnwrap(motion.head(of: train, at: time)).x
+            var lastSecond = clock.second(at: time)
+            for frame in 1..<Int(gap * 30) {
+                let at = time + Double(frame) / 30
+                let x = try XCTUnwrap(motion.head(of: train, at: at)).x
+                if x <= last { standing += 1 }
+                last = x
+                let second = clock.second(at: at)
+                if second <= lastSecond { clockStanding += 1 }
+                lastSecond = second
+            }
+        }
+        XCTAssertEqual(standing, 0, "frames the followed head stood still between ticks")
+        XCTAssertEqual(clockStanding, 0, "frames the real trains' clock stood still between ticks")
     }
 
     /// A train of several cars draws its whole body behind its gliding

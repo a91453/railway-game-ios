@@ -2276,7 +2276,7 @@ public final class GameSession {
         if let shown = shownGlide, shown.source == worldRevision { return shown }
         var motion: TrainMotion
         if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.source, world.clock.speed != .x1 {
-            motion = memo.motion.seen(at: time, after: previous, speed: world.clock.speed)
+            motion = memo.motion.seen(at: time, after: previous)
         } else {
             motion = TrainMotion(world: world, previous: previous, time: time)
         }
