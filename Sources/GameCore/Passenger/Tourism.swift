@@ -833,14 +833,62 @@ extension GameWorld {
     /// Why attraction `id` draws no tourists now, or ``AttractionStatus/ok``.
     public func attractionStatus(of id: AttractionID) -> AttractionStatus {
         guard let attraction = attraction(id: id) else { return .noStation }
-        let day = dayIndex(of: clock.now)
+        var asked = AttractionStatusAsked(day: dayIndex(of: clock.now))
+        return attractionStatus(of: attraction, asked: &asked)
+    }
+
+    /// ``attractionStatus(of:)`` of every attraction, the same answers
+    /// worked out together: the day's network (``Tourism/countingGraph(of:day:)``,
+    /// a tenth of a second for one bought metro line), the stations
+    /// tourists set out from and which of them can ride to a station, once
+    /// for all of them rather than once for each sight. The sights panel
+    /// asks it (CRASH-SIGHTS: once a sight each, its rows took seconds on
+    /// a big network and froze the game while it stayed open).
+    public func attractionStatuses() -> [AttractionID: AttractionStatus] {
+        var asked = AttractionStatusAsked(day: dayIndex(of: clock.now))
+        var statuses: [AttractionID: AttractionStatus] = [:]
+        for attraction in tourism?.attractions ?? [] {
+            statuses[attraction.id] = attractionStatus(of: attraction, asked: &asked)
+        }
+        return statuses
+    }
+
+    /// What ``attractionStatus(of:)`` works out once for any number of
+    /// sights on day `day`: the network, the stations tourists set out
+    /// from, and whether each can ride to a station.
+    struct AttractionStatusAsked {
+        struct Pair: Hashable {
+            let from: StationID
+            let to: StationID
+        }
+
+        let day: Int64
+        var graph: PassengerRouteGraph??
+        var candidates: [(station: StationID, outside: Bool, residents: Int64)]?
+        var reaches: [Pair: Bool] = [:]
+    }
+
+    func attractionStatus(of attraction: Attraction, asked: inout AttractionStatusAsked) -> AttractionStatus {
+        let day = asked.day
         if typhoons(onDay: day).contains(where: { $0.isActive(onDay: day) && $0.covers(attraction.point) }) { return .typhoon }
         guard let station = touristStation(at: attraction.point, onDay: day) else { return .noStation }
         // Decision 551: the network at today's noon, as the day is counted,
         // so a sight does not read "nobody can ride there" at night; each
         // line within its hours (decision 551, continued).
-        let graph = passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
-        let sources = touristSources(to: station, among: touristCandidates()) { reaches(from: $0, to: station, graph: graph) }
+        if asked.graph == nil {
+            asked.graph = .some(passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil)
+        }
+        let graph = asked.graph ?? nil
+        if asked.candidates == nil { asked.candidates = touristCandidates() }
+        var known = asked.reaches
+        let sources = touristSources(to: station, among: asked.candidates ?? []) { origin in
+            let pair = AttractionStatusAsked.Pair(from: origin, to: station)
+            if let answer = known[pair] { return answer }
+            let answer = reaches(from: origin, to: station, graph: graph)
+            known[pair] = answer
+            return answer
+        }
+        asked.reaches = known
         return sources.isEmpty ? .noSource : .ok
     }
 
