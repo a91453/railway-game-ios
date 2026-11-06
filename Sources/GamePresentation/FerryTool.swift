@@ -124,6 +124,28 @@ public struct RealFerry: Hashable, Sendable {
         }
         return placed
     }
+
+    /// How near the land a map has read in a real ferry's pier lies for
+    /// the mode to offer it before its own land is read in: 8 km.
+    static let offerReach: Int64 = 8_000 * WorldCoordinate.unitsPerMetre
+
+    /// Decision 585 續 (FERRY-QIJIN): whether its piers lie in `world` and
+    /// one within ``offerReach`` of a block of land read in, so the mode
+    /// offers it on a map whose land round it is not read in yet.
+    func lies(in world: GameWorld) -> Bool {
+        guard let frame = RealWorldFrame(world: world) else { return false }
+        let points = piers.map { pier -> (Double, Double) in frame.worldPosition(latitude: pier.latitude, longitude: pier.longitude) }
+        guard points.allSatisfy({ $0.0.isFinite && $0.1.isFinite && $0.0 >= 0 && $0.1 >= 0
+            && $0.0 < Double(world.bounds.width) && $0.1 < Double(world.bounds.height) }) else { return false }
+        let reach = Double(Self.offerReach), half = Double(Land.blockLength) / 2
+        return (world.landBlocks ?? []).contains { block in
+            let x = Double(block.column) * Double(Land.blockLength) + half, y = Double(block.row) * Double(Land.blockLength) + half
+            return points.contains { point in
+                let dx = point.0 - x, dy = point.1 - y
+                return (dx * dx + dy * dy).squareRoot() <= reach
+            }
+        }
+    }
 }
 
 extension GameWorld {
@@ -149,9 +171,16 @@ extension GameWorld {
     /// water's runs (so a whole island's sea costs its runs, not its
     /// cells).
     public func pierShore() -> [FerryMapOverlay.ShoreRun] {
-        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         var water: [Int: [Range<Int>]] = [:]
         for run in terrain.water { water[run.row, default: []].append(run.column..<run.column + run.count) }
+        return Self.shore(of: water, in: bounds)
+    }
+
+    /// The land cells of a world of `bounds` with `water` (each row's runs,
+    /// in order and apart) on one of their four sides, as runs, by row and
+    /// then column: ``pierShore()`` for any water.
+    static func shore(of water: [Int: [Range<Int>]], in bounds: WorldBounds) -> [FerryMapOverlay.ShoreRun] {
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         var candidates: [Int: [Range<Int>]] = [:]
         for (row, runs) in water {
             for run in runs {
@@ -197,10 +226,15 @@ extension GameSession {
     /// real ferries find theirs; decision 585 續, FERRYPIER: the shore is
     /// one 64 m cell wide, too thin for a finger); a tap whose nearest is
     /// the last pier takes it back. A real ferry's crossings are forgotten
-    /// once a pier changes. Never changes the world.
+    /// once a pier changes. Never changes the world but to read its land in
+    /// (``readsLandForFerries``).
     func tapFerry(at point: PlanPoint) {
         let tapped = CellPosition(containing: point)
         ferryDraftLegs = nil
+        // Decision 585 續 (FERRY-QIJIN): the land round it first, with its
+        // water, on a map that reads it as it is needed, as a station's site
+        // does (not an edit).
+        if readsLandForFerries { readLand(within: WholeTaiwan.landReach, of: point) }
         guard let cell = world.nearestPierCell(to: tapped, within: RealFerry.snapCells) else {
             message = StatusMessage(kind: .failure, text: Self.noShoreText(from: tapped, in: world, language: language))
             return
@@ -265,7 +299,10 @@ extension GameSession {
     public var realFerryOffer: RealFerry? {
         guard ferryDraft.isEmpty else { return nil }
         return RealFerry.all.first { real in
-            guard let piers = real.piers(in: world) else { return false }
+            guard let piers = real.piers(in: world) else {
+                // Decision 585 續 (FERRY-QIJIN): its land not read in yet.
+                return readsLandForFerries && real.lies(in: world)
+            }
             return !world.ferryRoutes.contains { $0.piers.first == piers.first }
         }
     }
@@ -273,6 +310,13 @@ extension GameSession {
     /// Draws `real` (``realFerryOffer``) as the mode's piers, with its real
     /// crossings, for the action button to open.
     public func traceRealFerry(_ real: RealFerry) {
+        // Decision 585 續 (FERRY-QIJIN): the land round its piers first.
+        if readsLandForFerries, let frame = RealWorldFrame(world: world) {
+            for pier in real.piers {
+                let (x, y) = frame.worldPosition(latitude: pier.latitude, longitude: pier.longitude)
+                readLand(within: WholeTaiwan.landReach, of: PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded())))
+            }
+        }
         guard let piers = real.piers(in: world) else { return }
         ferryDraft = piers
         ferryDraftLegs = real.legMetres
@@ -422,11 +466,76 @@ extension GameSession {
     /// Decision 585 續 (FERRYPIER): the world's ``GameCore/GameWorld/pierShore()``,
     /// kept for the terrain and bounds it was worked out for: the map
     /// reads it every frame of the ferry mode.
+    ///
+    /// Decision 585 續 (FERRY-QIJIN): on a map whose land is read in as it
+    /// is needed and not bought tile by tile (the whole of Taiwan, a demo,
+    /// a challenge), a block not read yet has no water in the world, so
+    /// Cijin, read in round no station, had no shore at all and the sea
+    /// beside the blocks read a straight one. There the shore of the
+    /// blocks not read comes from the app's water (``WaterGrid``), which
+    /// ``tapFerry(at:)`` reads in before it puts a pier down.
     var ferryShore: [FerryMapOverlay.ShoreRun] {
-        if let memo = ferryShoreMemo, memo.bounds == world.bounds, memo.terrain == world.terrain { return memo.shore }
-        let shore = world.pierShore()
-        ferryShoreMemo = (world.terrain, world.bounds, shore)
+        if let memo = ferryShoreMemo, memo.bounds == world.bounds, memo.terrain == world.terrain, memo.blocks == world.landBlocks {
+            return memo.shore
+        }
+        let shore = readsLandForFerries ? Self.shore(of: world, water: water) : world.pierShore()
+        ferryShoreMemo = (world.terrain, world.bounds, world.landBlocks, shore)
         return shore
+    }
+
+    /// Whether the ferry mode reads the land round a tap in
+    /// (decision 585 續, FERRY-QIJIN): a map whose land is read in as it is
+    /// needed, not one bought tile by tile, whose tiles not owned stay
+    /// unread.
+    var readsLandForFerries: Bool {
+        world.landBlocks != nil && world.mapExpansion == nil && water != nil && population != nil
+    }
+
+    /// The shore of `world`, its blocks read with their own water and the
+    /// others with `water`'s (decision 585 續, FERRY-QIJIN).
+    nonisolated static func shore(of world: GameWorld, water grid: WaterGrid?) -> [FerryMapOverlay.ShoreRun] {
+        guard let read = world.landBlocks, let grid, let frame = RealWorldFrame(world: world) else { return world.pierShore() }
+        var water: [Int: [Range<Int>]] = [:]
+        for run in world.terrain.water { water[run.row, default: []].append(run.column..<run.column + run.count) }
+        let columns = Land.columns(in: world.bounds)
+        var readColumns: [Int: [Int]] = [:]
+        for block in read { readColumns[block.row, default: []].append(block.column) }
+        var unreadMemo: [Int: [Range<Int>]] = [:]
+        /// The columns of the blocks of block row `row` not read, as runs.
+        func unread(_ row: Int) -> [Range<Int>] {
+            if let known = unreadMemo[row] { return known }
+            var runs: [Range<Int>] = [], start = 0
+            for column in (readColumns[row] ?? []).sorted() {
+                let low = column * Land.blockCells
+                if low > start { runs.append(start..<min(low, columns)) }
+                start = (column + 1) * Land.blockCells
+            }
+            if start < columns { runs.append(start..<columns) }
+            unreadMemo[row] = runs
+            return runs
+        }
+        for (row, runs) in grid.waterRuns(frame: frame, bounds: world.bounds).enumerated() where !runs.isEmpty {
+            let gaps = unread(row / Land.blockCells)
+            guard !gaps.isEmpty else { continue }
+            var clipped: [Range<Int>] = []
+            for run in runs {
+                for gap in gaps where gap.upperBound > run.lowerBound && gap.lowerBound < run.upperBound {
+                    clipped.append(max(run.lowerBound, gap.lowerBound)..<min(run.upperBound, gap.upperBound))
+                }
+            }
+            guard !clipped.isEmpty else { continue }
+            // The world's own runs lie in the blocks read, apart from these.
+            var merged: [Range<Int>] = []
+            for range in ((water[row] ?? []) + clipped).sorted(by: { $0.lowerBound < $1.lowerBound }) {
+                if let end = merged.last?.upperBound, end >= range.lowerBound {
+                    merged[merged.count - 1] = merged[merged.count - 1].lowerBound..<max(end, range.upperBound)
+                } else {
+                    merged.append(range)
+                }
+            }
+            water[row] = merged
+        }
+        return GameWorld.shore(of: water, in: world.bounds)
     }
 
     // MARK: - The card
