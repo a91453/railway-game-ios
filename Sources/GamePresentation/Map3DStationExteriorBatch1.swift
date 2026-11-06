@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -11,6 +11,7 @@ public enum Map3DStationExteriorBatch1 {
         case .taichungTRA: builder.taichungExteriorStudy(detail: detail)
         case .hsinchuTRA: builder.hsinchuExteriorStudy(detail: detail)
         case .hualienTRA: builder.hualienExteriorStudy(detail: detail)
+        case .taitungTRA: builder.taitungExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -254,6 +255,53 @@ public enum Map3DStationExteriorBatch1 {
         (8.792, -66.395),
         (2.839, -79.660),
         (-14.380, -118.011)
+    ]
+
+    // Taitung complex: OSM ways from osmtoday Taiwan PBF, downloaded 2026-11-06.
+    // Metres east/north from (121.12276045, 22.79349185); © OpenStreetMap contributors, ODbL 1.0.
+    static let taitungHallFootprint: [(Float, Float)] = [ // OSM way 386900387
+        (19.083, 77.075),
+        (42.855, 74.262),
+        (41.245, 60.496),
+        (39.523, 45.818),
+        (38.252, 35.088),
+        (36.796, 22.912),
+        (35.167, 9.035),
+        (33.783, -2.730),
+        (32.635, -12.559),
+        (8.811, -9.735),
+        (11.363, 11.848),
+        (15.730, 48.653),
+    ]
+    static let taitungPlatformAFootprint: [(Float, Float)] = [ // OSM way 386900423
+        (-9.364, 105.474),
+        (0.302, 104.329),
+        (-26.484, -119.952),
+        (-36.161, -118.795),
+    ]
+    static let taitungPlatformBFootprint: [(Float, Float)] = [ // OSM way 386900424
+        (-52.583, -116.849),
+        (-42.988, -117.995),
+        (-14.675, 118.806),
+        (-24.280, 119.952),
+    ]
+    static let taitungPlatformCFootprint: [(Float, Float)] = [ // OSM way 386900425
+        (-59.851, -115.726),
+        (-70.359, -114.470),
+        (-43.419, 110.900),
+        (-32.901, 109.644),
+    ]
+    static let taitungPorticoFootprint: [(Float, Float)] = [ // OSM way 724860888
+        (41.932, 34.643),
+        (40.477, 22.478),
+        (37.412, -3.152),
+        (35.987, -16.118),
+        (39.749, -16.551),
+        (59.728, -18.842),
+        (70.359, 69.814),
+        (53.526, 71.849),
+        (46.463, 72.660),
+        (44.977, 60.051),
     ]
 
 }
@@ -522,6 +570,86 @@ private extension StationKitBuilder {
                 if detail == .near { columns.box(x, 5.15, 0, 0.28, 9.0, 0.3, rib) }
             }
             add(.flat(named: "hualien-platform-columns", from: columns.mesh),
+                at: Map3DPoint(east, 0, north), angle: rotation * .pi / 180)
+        }
+    }
+
+    mutating func taitungExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let arcRoof = Map3DColor.rgb(0xDCE8E6)
+        let tiledWall = Map3DColor.rgb(0xD9D0CC)
+        let columns = Map3DColor.rgb(0xC6D2CF)
+        let platformRoof = Map3DColor.rgb(0xADBDBD)
+        let glass = Map3DColor.rgb(0x8CACB1)
+        let darkRoof = Map3DColor.rgb(0x768E90)
+        let brick = Map3DColor.rgb(0xBA9F92)
+        // OSM has a train-station way, a separate elevated front roof way,
+        // and three platform roof ways. None carries height or roof tags.
+        footprint(Map3DStationExteriorBatch1.taitungHallFootprint, color: tiledWall)
+        footprint(Map3DStationExteriorBatch1.taitungPorticoFootprint,
+                  color: platformRoof, baseY: 5.6, height: 0.32)
+        for outline in [Map3DStationExteriorBatch1.taitungPlatformAFootprint,
+                        Map3DStationExteriorBatch1.taitungPlatformBFootprint,
+                        Map3DStationExteriorBatch1.taitungPlatformCFootprint] {
+            footprint(outline, color: platformRoof, baseY: 5.3, height: 0.32)
+        }
+
+        // The hall's low, tiled rear wall and broad glass entrance are based on
+        // photographs. 13.5 m total is the reference's illustrative height.
+        var hall = StationKitBuilder()
+        hall.box(0, 0.32, 0, 85, 22.8, 12.3, tiledWall)
+        hall.box(0, 12.62, 0, 87.5, 24, 0.88, platformRoof)
+        hall.box(0, 1.0, -11.56, 76, 0.22, 5.6, glass)
+        hall.box(0, 1.0, -11.82, 17, 0.3, 7.0, darkRoof)
+        hall.box(0, 8.15, -12.0, 20, 0.3, 0.65, brick)
+        for x in stride(from: Float(-37), through: 37, by: detail == .near ? 7.5 : 15) {
+            hall.box(x, 1.0, -11.75, 0.55, 0.3, 6.4, columns)
+        }
+        add(.flat(named: "taitung-hall", from: hall.mesh),
+            at: Map3DPoint(25.86, 0, 32.26), angle: 83.2552 * .pi / 180)
+
+        // Two rows of shallow vaults reproduce the station's characteristic
+        // front profile. Vault curvature, rhythm and height are estimates.
+        var portico = StationKitBuilder()
+        let pitch: Float = detail == .near ? 10.5 : 18.0
+        let span: Float = detail == .near ? 11.1 : 18.8
+        for x in stride(from: Float(-38), through: 38, by: pitch) {
+            for (z, edgeHeight) in [(Float(-5.75), Float(6.6)), (Float(5.75), Float(9.5))] {
+                var vault = StationKitBuilder()
+                vault.canopy(0, 0, 0, length: 12.0, width: span,
+                             rise: detail == .near ? 1.8 : 1.65, color: arcRoof)
+                portico.add(.flat(named: "taitung-vault", from: vault.mesh),
+                            at: Map3DPoint(x, edgeHeight, z), angle: Float.pi / 2)
+            }
+            for z: Float in [-10.5, 0.0, 10.5] {
+                portico.box(x, 0.32, z, 0.65, 0.65, z == -10.5 ? 6.28 : 9.18, columns)
+                if detail == .near {
+                    portico.box(x, 5.8, z, 0.3, 3.7, 0.28, darkRoof)
+                }
+            }
+        }
+        portico.box(0, 0.32, -11.7, 88, 0.55, 0.75, brick)
+        add(.flat(named: "taitung-front-vaults", from: portico.mesh),
+            at: Map3DPoint(53.11, 0, 26.87), angle: 83.1805 * .pi / 180)
+
+        // Platform sheds retain their three separate surveyed roof polygons.
+        // The repeated columns and fascia are visual estimates.
+        let platforms: [(Float, Float, Float, Float)] = [
+            (-17.93, -7.23, 83.1893, 226.128),
+            (-33.63, 0.98, 83.1841, 238.757),
+            (-51.64, -2.41, 83.1808, 227.231)
+        ]
+        for (east, north, rotation, length) in platforms {
+            var supports = StationKitBuilder()
+            let step: Float = detail == .near ? 14 : 31
+            for x in stride(from: -length / 2 + 7, through: length / 2 - 7, by: step) {
+                supports.box(x, 0.32, 0, 0.65, 0.65, 4.98, columns)
+                if detail == .near {
+                    supports.box(x, 4.9, 0, 0.32, 9.0, 0.25, darkRoof)
+                }
+            }
+            supports.box(0, 5.62, -4.3, length - 1, 0.3, 0.3, darkRoof)
+            supports.box(0, 5.62, 4.3, length - 1, 0.3, 0.3, darkRoof)
+            add(.flat(named: "taitung-platform-supports", from: supports.mesh),
                 at: Map3DPoint(east, 0, north), angle: rotation * .pi / 180)
         }
     }

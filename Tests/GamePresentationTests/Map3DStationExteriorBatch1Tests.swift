@@ -2,6 +2,45 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch1Tests: XCTestCase {
+    func testTaitungStudyPreservesFiveOSMWaysAndTwoDetailBudgets() {
+        let near = Map3DStationExteriorBatch1.model(for: .taitungTRA, detail: .near)
+        let far = Map3DStationExteriorBatch1.model(for: .taitungTRA, detail: .far)
+        XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
+        XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
+        XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
+        XCTAssertNil(Map3DStationKit.model(id: near.name))
+        XCTAssertNil(Map3DStationKit.model(id: far.name))
+        let outlines: [([(Float, Float)], Float)] = [
+            (Map3DStationExteriorBatch1.taitungHallFootprint, 0.32),
+            (Map3DStationExteriorBatch1.taitungPorticoFootprint, 5.92),
+            (Map3DStationExteriorBatch1.taitungPlatformAFootprint, 5.62),
+            (Map3DStationExteriorBatch1.taitungPlatformBFootprint, 5.62),
+            (Map3DStationExteriorBatch1.taitungPlatformCFootprint, 5.62)
+        ]
+        for (outline, top) in outlines {
+            for (east, north) in outline {
+                XCTAssertTrue(near.vertices.contains {
+                    abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002
+                        && abs($0.z - top) < 0.002
+                })
+            }
+        }
+        let colours = Set(near.vertices.map(\.color))
+        for colour in [UInt32(0xDCE8E6), 0xD9D0CC, 0xC6D2CF, 0xADBDBD,
+                       0x8CACB1, 0x768E90, 0xBA9F92] {
+            XCTAssertTrue(colours.contains(Map3DColor.rgb(colour)))
+        }
+        func luminance(_ colour: UInt32) -> Float {
+            Float(colour & 255) * 0.2126 + Float((colour >> 8) & 255) * 0.7152
+                + Float((colour >> 16) & 255) * 0.0722
+        }
+        let order = [0xDCE8E6, 0xD9D0CC, 0xC6D2CF, 0xADBDBD, 0x8CACB1, 0xBA9F92, 0x768E90]
+            .map(Map3DColor.rgb)
+        for (lighter, darker) in zip(order, order.dropFirst()) {
+            XCTAssertGreaterThan(luminance(lighter), luminance(darker))
+        }
+    }
+
     func testHualienStudyUsesEightOSMWaysAndKeepsThemOutOfOperationalCatalog() {
         let near = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .far)
