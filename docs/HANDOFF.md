@@ -3176,6 +3176,19 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 做了的在 [決策 600](decisions/600.md)：決策 402 下一步 1–3。留下的（決策 600「下一步」）：台鐵執行時的待避（`overtake-sidings.js`）、高鐵與林鐵計畫的 `holds`、林鐵的真實列車、決策 402 下一步第 4 項、實機量每幀時間。#1861 的第 2 級截圖還沒拍：website-screenshots run #294（本分支）與 #295（main）都因 main 的 GameCore 閃退（`GameWorld.advance(ticks:)` 第 3080 行，決策 590 的堆上 storage）四支全紅，要等 GameCore 那條線修好再重跑 `testLeanedStation140At60 testLeanedStation200At60 testHighSpeedDemo testRealWorldDemoBaseMap`，看過才轉 ready。
 
+### 4.53 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL，session_01YGNNumNpoVRp8aubiDyfHE，`claude/facade-real`，#1879，2026-11-06）
+
+做了的在 [決策 610](decisions/610.md)。Linux 的檢查和 #1879 的 CI 都是綠的。本 session 第二次壓縮後停手，所以下面這些還沒做：
+
+1. **修後近景截圖時 App 當掉，原因還沒查。** website-screenshots run 42146638005（本分支，只跑 `testRealStreetFronts`）在 `WebsiteScreenshotTests.swift:600`「The 3D map opens」失敗，xcresult（artifact 13472091286）裡有 `Crash Log 2026-11-06 at 02.18.07 AM.ips`。前一次 run 42132863826 的近景也在載入時卡住。修前（`claude/facade-real-before`）的近景在 run 42129257429 拍得出來，所以多半是這個 PR 的問題。可能的原因：
+   - `Map3DRealFacade.swift:104` 在牆長是 NaN 或無限大時，`Int(...)` 會當掉；
+   - `Map3DMetalView` 一次上傳很多立面緩衝，記憶體不夠；
+   - 板橋府中某棟實景輪廓的幾何。
+   - 另外 4.52 記了 main 在 `GameWorld.advance(ticks:)` 有 GameCore 閃退（決策 590）。先讀 .ips 的堆疊，分清楚是哪一個。
+2. 修好以後重拍 `testRealStreetFronts`（`street-fronts.png`），和 run 42129257429 修前的那張配成一對。
+3. 第 3 級：遊戲規劃要看過這對近景才能合。他們要看的是：面街的牆看不看得到騎樓柱、鐵窗、冷氣、直立招牌；有沒有零件浮在牆外或陷進牆裡。從上往下拍的那張幾乎看不到立面，不算數。
+4. 這一對拍完以前，留著 `claude/facade-real-before` 分支。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
