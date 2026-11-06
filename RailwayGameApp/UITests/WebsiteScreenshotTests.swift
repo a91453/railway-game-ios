@@ -768,13 +768,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day", extra: ["-screenshot-device-tier", "1"]) }
     func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night", extra: ["-screenshot-device-tier", "1"]) }
 
-    /// Decision 610: Banqiao's Fuzhong shophouse streets close up and
-    /// leaned, the real buildings' street fronts (arcade pillars, grilles,
+    /// Decision 610: Banqiao's low-rise blocks north of Fuzhong close up
+    /// and leaned, over their roofs (decision 610 續: not against a
+    /// tower's wall), the real buildings' street fronts (arcade pillars, grilles,
     /// air conditioners, blade signs, rooftop rooms). The standard tier is
     /// asked for: the Simulator's GPU has none, and the lowest leaves the
     /// fronts out.
-    func testRealStreetFronts() { shootLean("streetFronts", "70,200,55", "street-fronts", extra: ["-screenshot-device-tier", "1"]) }
-    func testRealStreetFrontsAbove() { shootLean("streetFronts", "140,20,35", "street-fronts-above", extra: ["-screenshot-device-tier", "1"]) }
+    func testRealStreetFronts() { shootLean("streetFronts", "70,240,55", "street-fronts", extra: ["-screenshot-device-tier", "1"]) }
+    func testRealStreetFrontsAbove() { shootLean("streetFronts", "140,60,35", "street-fronts-above", extra: ["-screenshot-device-tier", "1"]) }
 
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.

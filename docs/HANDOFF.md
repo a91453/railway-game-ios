@@ -3308,17 +3308,17 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 修好的：列車、真實列車、公車、纜車、渡輪的滑行長度跟著 tick 實際的間隔（最多 5 秒），tick 慢時跟車畫面不再「動半秒、停三秒」。**還留下的**：① 大路網（機場捷運買下、32 列車）每 tick 的交通讀數 `TrafficReading` Linux 367 ms，是 tick 慢的大頭，3D 跟車時可以少讀（決策 379 續的下一步）；② 實機請作者在 119 重錄同一段（UNVERIFIED，Linux 量不到手機上的 tick 間隔）。
 
-### 4.55 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL，session_01YGNNumNpoVRp8aubiDyfHE，`claude/facade-real`，#1879，2026-11-06）
+### 4.55 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL → FACADE-B，`claude/facade-real`，#1879，2026-11-07）
 
-做了的在 [決策 610](decisions/610.md)。Linux 的檢查和 #1879 的 CI 都是綠的。本 session 第二次壓縮後停手，所以下面這些還沒做：
+做了的在 [決策 610](decisions/610.md)。原 session（session_01YGNNumNpoVRp8aubiDyfHE）在第二次壓縮後停手，由 FACADE-B（session_01YGNNuor6x7d79RdjNBkAm9）接手。
 
-1. **修後近景截圖時 App 當掉，原因還沒查。** website-screenshots run 42146638005（本分支，只跑 `testRealStreetFronts`）在 `WebsiteScreenshotTests.swift:600`「The 3D map opens」失敗，xcresult（artifact 13472091286）裡有 `Crash Log 2026-11-06 at 02.18.07 AM.ips`。前一次 run 42132863826 的近景也在載入時卡住。修前（`claude/facade-real-before`）的近景在 run 42129257429 拍得出來，所以多半是這個 PR 的問題。可能的原因：
-   - `Map3DRealFacade.swift:104` 在牆長是 NaN 或無限大時，`Int(...)` 會當掉；
-   - `Map3DMetalView` 一次上傳很多立面緩衝，記憶體不夠；
-   - 板橋府中某棟實景輪廓的幾何。
-   - 另外 4.52 記了 main 在 `GameWorld.advance(ticks:)` 有 GameCore 閃退（決策 590）。先讀 .ips 的堆疊，分清楚是哪一個。
-2. 修好以後重拍 `testRealStreetFronts`（`street-fronts.png`），和 run 42129257429 修前的那張配成一對。
-3. 第 3 級：遊戲規劃要看過這對近景才能合。他們要看的是：面街的牆看不看得到騎樓柱、鐵窗、冷氣、直立招牌；有沒有零件浮在牆外或陷進牆裡。從上往下拍的那張幾乎看不到立面，不算數。
+M6 第一次拍的改前改後完全拍不到立面，根因是截圖場景的地點與鏡頭選錯：府中一帶都是大樓，鏡頭貼在牆上。決策 610「續」記了根因和修法：地點改到板橋低層街廓 (25.0185, 121.4536)，鏡頭改成 `70,240,55` 和 `140,60,35`；`ScreenshotStreetFrontsTests` 修前紅、修後綠。
+
+還沒做的：
+
+1. 由 M6 重拍 `testRealStreetFronts`、`testRealStreetFrontsAbove`。改後用 `claude/facade-real`，改前用 `claude/facade-real-before`；改前分支已經換成同一個地點和鏡頭，沒有立面層。
+2. 第 3 級：遊戲規劃要看過這一對才能合。要看的是：面街的牆上看不看得到騎樓柱、鐵窗、冷氣、直立招牌、頂樓加蓋；有沒有零件浮在牆外或陷進牆裡。
+3. 之前 website-screenshots run 42146638005 的近景當過一次（xcresult 裡有 `.ips`），這次沒有重現；M6 後來在同一個分支上把兩張都拍出來了。如果重拍時又當掉，先讀 `.ips` 的堆疊。
 4. 這一對拍完以前，留著 `claude/facade-real-before` 分支。
 
 ## 5. 已知、還沒派的待辦

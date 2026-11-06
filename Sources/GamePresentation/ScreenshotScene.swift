@@ -84,8 +84,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case streetStop
     case streetStopNight
 
-    /// Decision 610: the same map round Banqiao's Fuzhong shophouse
-    /// streets, for the close-up screenshots of the real buildings' street
+    /// Decision 610: the same map round Banqiao's low-rise blocks north
+    /// of Fuzhong (decision 610 續: no towers within 80 m), for the close-up screenshots of the real buildings' street
     /// fronts (arcade pillars, grilles, blade signs, rooftop rooms).
     case streetFronts
 
@@ -192,7 +192,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taichungViaduct: (24.1369, 120.6850)
         case .interchange: (24.1489, 120.6233)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
-        case .streetFronts: (25.0089, 121.4592)
+        case .streetFronts: (25.0185, 121.4536)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
