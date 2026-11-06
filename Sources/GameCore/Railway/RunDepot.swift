@@ -220,9 +220,10 @@ extension GameWorld {
                 // way, and its run is left to another train, or to one out of
                 // a depot (decision 296 does not keep it). Decision 556's
                 // last way out sent such a train in only once the runs were
-                // due to leave and made a deadlock (decision 570).
+                // due to leave and made a deadlock (decision 570). Without
+                // block sections only (see ``heldRunDepartures(memo:)``).
                 var stuck: Set<Int> = []
-                if isTrafficControlEnabled, due {
+                if isTrafficControlEnabled, !blockSections, due {
                     if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
                     if heldRuns == nil { heldRuns = Set(heldRunDepartures(memo: &memo.directions).map(\.train)) }
                     stuck = Set(waiting.filter { inTheWay!.contains(trains[$0].id) && heldRuns!.contains(trains[$0].id) && !leaving.contains($0) })
@@ -391,8 +392,11 @@ extension GameWorld {
     /// dispatcher cannot send out now (see ``readyRunTrain(of:_:day:)``):
     /// its route is held, and so is the route its line names for the leg
     /// (decision 570). Each with the track its route needs, in ID order.
+    /// Not with block sections: there a route is held only up to the next
+    /// signal and clears as the train ahead moves on, and sending such
+    /// trains in left the Wenhu line's runs later under the realistic rules.
     func heldRunDepartures(memo: inout DirectionMemo) -> [(train: TrainID, needs: Set<TrackResource>)] {
-        guard isTrafficControlEnabled else { return [] }
+        guard isTrafficControlEnabled, !blockSections else { return [] }
         var held: [(train: TrainID, needs: Set<TrackResource>)] = []
         for train in trains where train.execution == nil && train.position != nil {
             guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }),
