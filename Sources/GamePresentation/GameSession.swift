@@ -697,7 +697,7 @@ public final class GameSession {
     @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// Decision 585 續 (FERRYPIER): ``ferryShore``, kept for the terrain
     /// and bounds it was worked out for.
-    @ObservationIgnored var ferryShoreMemo: (terrain: Terrain, bounds: WorldBounds, blocks: [LandBlock]?, shore: [FerryMapOverlay.ShoreRun])?
+    @ObservationIgnored var ferryShoreMemo: (terrain: Terrain, bounds: WorldBounds, blocks: [LandBlock]?, shore: [FerryMapOverlay.ShoreRun], cells: Set<CellPosition>)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.

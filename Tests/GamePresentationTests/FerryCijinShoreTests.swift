@@ -95,19 +95,19 @@ final class FerryCijinShoreTests: XCTestCase {
         }
     }
 
-    /// A tap at Cijin's ferry station reads its land in and puts a pier on
-    /// Cijin's shore, and the real Gushan–Cijin ferry lays its piers by
-    /// the real stations and opens.
+    /// A tap at Cijin's ferry station puts a pier on Cijin's shore without
+    /// changing the world; the real Gushan–Cijin ferry lays its piers by
+    /// the real stations, and its land is read in as it opens.
     func testTheRealGushanCijinFerryOpens() throws {
         let map = try map()
         let session = map.session
         let cijin = map.cell(Self.cijinStation.latitude, Self.cijinStation.longitude)
         let gushan = map.cell(Self.gushanStation.latitude, Self.gushanStation.longitude)
 
+        let before = session.world
         session.tapBusTool(at: cijin.middle, reach: 0)
         let tapped = try XCTUnwrap(session.ferryDraft.first, String(describing: session.message?.text))
-        XCTAssertTrue(session.world.isPierCell(row: tapped.row, column: tapped.column))
-        XCTAssertTrue(try XCTUnwrap(session.world.landBlocks).contains(LandBlock(cellRow: cijin.row, column: cijin.column)), "read in")
+        XCTAssertEqual(session.world, before, "a tap reads nothing in")
         XCTAssertLessThanOrEqual(map.metres(tapped, cijin), 300)
         session.undoFerryPier()
 
@@ -116,15 +116,17 @@ final class FerryCijinShoreTests: XCTestCase {
         let piers = session.ferryDraft
         XCTAssertEqual(piers.count, 2)
         for (pier, station) in zip(piers, [gushan, cijin]) {
-            XCTAssertTrue(session.world.isPierCell(row: pier.row, column: pier.column))
             print("FERRY-QIJIN pier \(pier) is \(Int(map.metres(pier, station))) m from the real station")
             XCTAssertLessThanOrEqual(map.metres(pier, station), 300)
         }
+        XCTAssertEqual(session.world, before, "laying it reads nothing in")
         // Gushan's on the north bank, Cijin's on the south.
         XCTAssertLessThan(piers[0].row, piers[1].row)
         XCTAssertNil(session.ferryPreview?.problem)
         XCTAssertTrue(session.buildFerryRoute(), String(describing: session.message?.text))
         XCTAssertEqual(session.world.ferryRoutes.last?.piers, piers)
+        XCTAssertTrue(try XCTUnwrap(session.world.landBlocks).contains(LandBlock(cellRow: cijin.row, column: cijin.column)), "read in")
+        for pier in piers { XCTAssertTrue(session.world.isPierCell(row: pier.row, column: pier.column)) }
     }
 
     /// The screenshot scene of the pull request is the author's map:
