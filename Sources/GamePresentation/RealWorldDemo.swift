@@ -774,7 +774,9 @@ struct WorldPath: Sendable {
     /// `offset` off it to one side, and moving out to that over `ramp` at
     /// each end along a smooth step (no sideways slope where it leaves and
     /// rejoins).
-    func offset(from start: Double, to end: Double, by offset: Double, ramp: Double) -> WorldPath {
+    /// Decision 605: `base` is where it leaves from and rejoins, off the
+    /// path (a second track's offset); 0 for the path itself.
+    func offset(from start: Double, to end: Double, by offset: Double, ramp: Double, from base: Double = 0) -> WorldPath {
         let count = max(8, Int(((end - start) / (10 * Double(WorldCoordinate.unitsPerMetre))).rounded()))
         var points: [WorldVector] = []
         for step in 0...count {
@@ -782,7 +784,7 @@ struct WorldPath: Sendable {
             let edge = min(distance - start, end - distance)
             let t = min(1, max(0, edge / ramp))
             let smooth = t * t * (3 - 2 * t)
-            points.append(point(at: distance) + tangent(at: distance).normal * (offset * smooth))
+            points.append(point(at: distance) + tangent(at: distance).normal * (base + offset * smooth))
         }
         return WorldPath(points)
     }

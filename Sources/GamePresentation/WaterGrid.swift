@@ -189,6 +189,50 @@ public struct WaterGrid: Sendable {
         return (rows, columns)
     }
 
+    /// Decision 585 續 (FERRY-QIJIN): the water of a world of `bounds` laid
+    /// over the Earth by `frame` as runs along each of its rows (index:
+    /// the row), each cell as ``cells(frame:bounds:in:)`` takes it, but a
+    /// cell outside the grid (the open sea more than some 11 km off the
+    /// coast) counts as water. Worked out from the grid's runs, so the
+    /// whole island costs its runs, not its cells.
+    func waterRuns(frame: RealWorldFrame, bounds: WorldBounds) -> [[Range<Int>]] {
+        let lookup = lookup(frame: frame, bounds: bounds)
+        let columns = lookup.columns.count
+        // A world column's grid column only grows west to east: those in
+        // the grid are one span, `inside`.
+        let first = lookup.columns.firstIndex { $0 != nil } ?? columns
+        let last = lookup.columns.lastIndex { $0 != nil }.map { $0 + 1 } ?? first
+        let inside = first..<max(first, last)
+        /// The first world column in `inside` whose grid column is at
+        /// least `target`.
+        func firstColumn(atLeast target: Int) -> Int {
+            var low = inside.lowerBound, high = inside.upperBound
+            while low < high {
+                let middle = (low + high) / 2
+                if (lookup.columns[middle] ?? Int.max) < target { low = middle + 1 } else { high = middle }
+            }
+            return low
+        }
+        return lookup.rows.map { source -> [Range<Int>] in
+            guard let source else { return columns > 0 ? [0..<columns] : [] }
+            var runs: [Range<Int>] = []
+            func add(_ range: Range<Int>) {
+                guard !range.isEmpty else { return }
+                if let end = runs.last?.upperBound, end >= range.lowerBound {
+                    runs[runs.count - 1] = runs[runs.count - 1].lowerBound..<max(end, range.upperBound)
+                } else {
+                    runs.append(range)
+                }
+            }
+            add(0..<inside.lowerBound)
+            for run in water[source] {
+                add(firstColumn(atLeast: run.lowerBound)..<firstColumn(atLeast: run.upperBound))
+            }
+            add(inside.upperBound..<columns)
+            return runs
+        }
+    }
+
     /// The 64 m cells of water of a world of `bounds` laid over the Earth
     /// by `frame` (each takes the water cell its middle lies in), or with
     /// `blocks` only those in the blocks: exactly the whole world's cells
