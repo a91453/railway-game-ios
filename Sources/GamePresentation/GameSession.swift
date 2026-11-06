@@ -2928,9 +2928,12 @@ public final class GameSession {
         // Decision 264: under simple rules the line comes with its first
         // train, and the passing loop its single track needs.
         let name = Self.suggestedLineName(for: world, in: language)
-        let planned = card.map { lineConfirmationPlan($0, stops: stops, targets: real?.targets) }
+        // Decision 614: tried on a copy only when it is the line made; the
+        // trial is most of what the command costs on a big network, and a
+        // game that does not run its lines for the player threw it away.
+        let planned = !runsLinesForThePlayer ? nil : card.map { lineConfirmationPlan($0, stops: stops, targets: real?.targets) }
             ?? autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap({ feasible($0) })
-        if runsLinesForThePlayer, let found = planned {
+        if let found = planned {
             let plan = found.plan
             let balance = world.economy.balance
             let made = perform(.autoService(plan)) { outcome, _, world in

@@ -190,6 +190,24 @@ final class BuildCommandCostReportTests: XCTestCase {
         print(String(format: "PERF115 %@ command on the main actor: %.1f ms (%@)", kind, Self.ms(press), session.message?.text ?? ""))
         screen("after")
         screen("again")
+        // The 3D scene the map builds again, off the main actor, when the
+        // track or the platforms change (`Map3DSceneCache`), round the
+        // middle of the own track; without the base map's files, which the
+        // tests do not have, so less than the app builds.
+        if environment["PERF_3D"] != nil {
+            let built = session.world
+            let middle = built.network.nodes.isEmpty ? nil : (
+                x: Double(built.network.nodes.map(\.position.x).reduce(0, +)) / Double(built.network.nodes.count),
+                y: Double(built.network.nodes.map(\.position.y).reduce(0, +)) / Double(built.network.nodes.count)
+            )
+            var triangles = 0
+            let scene = clock.measure {
+                let scene = Map3DScene(world: built, snapshot: built.railwaySnapshot(), skyline: CitySkyline(world: built), focus: middle,
+                                       heights: session.heights, lineBands: Map3DLineBands(world: built, palette: .standard), railways: session.railways)
+                triangles = scene.triangleCount
+            }
+            print(String(format: "PERF115   3D scene built again: %.1f ms, %d triangles", Self.ms(scene), triangles))
+        }
         var after: [Double] = []
         for index in 0..<(Int(environment["PERF_AFTER"] ?? "") ?? 5) { after.append(try await tick("after \(index)")) }
         print(String(
