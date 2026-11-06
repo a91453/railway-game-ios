@@ -3,13 +3,14 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
         switch station {
         case .taichungTRA: builder.taichungExteriorStudy(detail: detail)
         case .hsinchuTRA: builder.hsinchuExteriorStudy(detail: detail)
+        case .hualienTRA: builder.hualienExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -97,13 +98,171 @@ public enum Map3DStationExteriorBatch1 {
         (-37.463, -32.994)
     ]
 
+    // Hualien complex: OSM ways from osmtoday Taiwan PBF, downloaded 2026-11-06.
+    // Metres east/north from (121.60093265, 23.992764); © OpenStreetMap contributors, ODbL 1.0.
+    static let frontHallFootprint: [(Float, Float)] = [ // OSM way 132937553
+        (47.091, -13.610),
+        (54.842, 3.681),
+        (42.692, 9.129),
+        (22.974, -34.804),
+        (8.792, -66.395),
+        (12.856, -68.218),
+        (10.733, -72.944),
+        (21.135, -77.603),
+        (23.258, -72.877),
+        (24.640, -73.500),
+        (27.556, -67.017),
+        (28.561, -67.473),
+        (31.192, -61.624),
+        (30.177, -61.168),
+        (33.316, -54.185),
+        (34.321, -54.630),
+        (36.800, -49.126),
+        (35.794, -48.670),
+        (40.366, -38.473),
+        (41.371, -38.929),
+        (43.708, -33.737),
+        (42.702, -33.281),
+        (47.741, -22.039),
+        (48.757, -22.495),
+        (51.520, -16.323),
+        (50.514, -15.879),
+        (50.789, -15.267),
+        (49.976, -14.900)
+    ]
+    static let rearHallFootprint: [(Float, Float)] = [ // OSM way 132937567
+        (-73.829, 122.059),
+        (-79.355, 109.727),
+        (-88.732, 88.845),
+        (-92.277, 90.435),
+        (-93.222, 88.311),
+        (-97.011, 90.012),
+        (-109.862, 95.783),
+        (-103.705, 109.494),
+        (-104.752, 109.961),
+        (-97.742, 125.595),
+        (-94.512, 132.778),
+        (-90.743, 141.173),
+        (-89.686, 140.706),
+        (-84.312, 152.693),
+        (-70.578, 146.522),
+        (-67.672, 145.221),
+        (-68.465, 143.475),
+        (-65.956, 142.352),
+        (-64.919, 141.885),
+        (-67.358, 136.459),
+        (-70.852, 128.686)
+    ]
+    static let ticketHallFootprint: [(Float, Float)] = [ // OSM way 554768913
+        (92.094, 93.204),
+        (95.721, 91.569),
+        (95.071, 90.112),
+        (98.423, 88.611),
+        (90.591, 71.165),
+        (109.862, 62.514),
+        (104.884, 51.417),
+        (101.968, 44.923),
+        (101.176, 45.279),
+        (99.205, 46.168),
+        (98.291, 44.144),
+        (77.252, 53.585),
+        (74.692, 47.881),
+        (72.081, 42.076),
+        (68.709, 43.588),
+        (59.931, 47.536),
+        (62.542, 53.340),
+        (58.580, 55.119),
+        (62.918, 64.793),
+        (64.188, 67.607),
+        (58.519, 70.153),
+        (63.243, 80.683),
+        (68.912, 78.137),
+        (69.217, 78.804),
+        (73.178, 77.025),
+        (81.915, 96.495),
+        (82.392, 97.562)
+    ]
+    static let crossHallFootprint: [(Float, Float)] = [ // OSM way 554768918
+        (-66.819, 104.101),
+        (-70.151, 105.591),
+        (-79.355, 109.727),
+        (-73.829, 122.059),
+        (-54.862, 113.541),
+        (-53.460, 114.553),
+        (-3.794, 92.258),
+        (18.433, 85.587),
+        (21.044, 84.808),
+        (28.053, 82.707),
+        (34.626, 80.728),
+        (35.591, 80.438),
+        (44.043, 76.647),
+        (57.646, 70.542),
+        (58.519, 70.153),
+        (64.188, 67.607),
+        (62.918, 64.793),
+        (58.580, 55.119),
+        (62.542, 53.340),
+        (59.931, 47.536),
+        (59.495, 46.546),
+        (49.722, 24.774),
+        (39.218, 29.489),
+        (25.615, 35.594),
+        (16.249, 39.797),
+        (10.042, 42.588),
+        (1.976, 45.545),
+        (10.022, 68.752),
+        (-54.425, 97.685),
+        (-61.943, 101.577)
+    ]
+    static let welcomeUmbrellaFootprint: [(Float, Float)] = [ // OSM way 718223887
+        (98.291, 44.144),
+        (103.167, 41.954),
+        (94.725, 23.140),
+        (96.513, 22.339),
+        (74.794, -26.042),
+        (73.006, -25.241),
+        (54.009, -16.713),
+        (50.789, -15.267),
+        (49.976, -14.900),
+        (47.091, -13.610),
+        (54.842, 3.681),
+        (72.081, 42.076),
+        (74.692, 47.881),
+        (77.252, 53.585)
+    ]
+    static let platformNorthFootprint: [(Float, Float)] = [ // OSM way 1342634750
+        (-54.050, -141.874),
+        (-62.095, -137.737),
+        (11.576, 29.378),
+        (16.249, 39.797),
+        (25.615, 35.594)
+    ]
+    static let platformMiddleFootprint: [(Float, Float)] = [ // OSM way 1342634751
+        (-69.623, -134.880),
+        (-77.008, -130.954),
+        (-23.177, -5.260),
+        (1.976, 45.545),
+        (10.042, 42.588)
+    ]
+    static let platformSouthFootprint: [(Float, Float)] = [ // OSM way 1352337182
+        (-29.953, -152.693),
+        (-40.447, -147.978),
+        (39.218, 29.489),
+        (49.722, 24.774),
+        (42.692, 9.129),
+        (22.974, -34.804),
+        (8.792, -66.395),
+        (2.839, -79.660),
+        (-14.380, -118.011)
+    ]
+
 }
 
 private extension StationKitBuilder {
-    mutating func footprint(_ points: [(Float, Float)], color: UInt32) {
+    mutating func footprint(_ points: [(Float, Float)], color: UInt32, baseY: Float = 0, height: Float = 0.32) {
         guard points.count >= 3 else { return }
         // A shallow closed plinth carries the surveyed ground outline.
-        let p = points.map { Map3DPoint($0.0, 0.32, $0.1) }
+        let p = points.map { Map3DPoint($0.0, baseY + height, $0.1) }
         var remaining = Array(p.indices)
         let area = points.indices.reduce(Float(0)) { total, i in
             let j = (i + 1) % points.count
@@ -133,6 +292,10 @@ private extension StationKitBuilder {
                 }
                 if contains { continue }
                 mesh.addFacet(sign > 0 ? [p[c], p[b], p[a]] : [p[a], p[b], p[c]], color: color)
+                if baseY > 0 {
+                    let underside = [a, b, c].map { Map3DPoint(points[$0].0, baseY, points[$0].1) }
+                    mesh.addFacet(sign > 0 ? underside : underside.reversed(), color: color)
+                }
                 remaining.remove(at: k)
                 clipped = true
                 break
@@ -142,7 +305,7 @@ private extension StationKitBuilder {
         for i in points.indices {
             let j = (i + 1) % points.count
             let a = p[i], b = p[j]
-            face([a, b, Map3DPoint(b.x, 0, b.z), Map3DPoint(a.x, 0, a.z)], inside: .zero, color: color)
+            face([a, b, Map3DPoint(b.x, baseY, b.z), Map3DPoint(a.x, baseY, a.z)], inside: .zero, color: color)
         }
     }
 
@@ -247,5 +410,119 @@ private extension StationKitBuilder {
         }
         // OSM's minimum-area rectangle long axis bears 32.2° north of east.
         add(.flat(named: "hsinchu-station", from: station.mesh), at: .zero, angle: 32.2 * .pi / 180)
+    }
+
+    mutating func hualienExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let paleRoof = Map3DColor.rgb(0xE8E6DE)
+        let warmWall = Map3DColor.rgb(0xDDD8CB)
+        let rib = Map3DColor.rgb(0xC1B19A)
+        let concrete = Map3DColor.rgb(0xB9B9B3)
+        let darkRoof = Map3DColor.rgb(0x858B89)
+        let glass = Map3DColor.rgb(0x9BB7B9)
+        let wayOutlines: [[(Float, Float)]] = [
+            Map3DStationExteriorBatch1.crossHallFootprint,
+            Map3DStationExteriorBatch1.ticketHallFootprint,
+            Map3DStationExteriorBatch1.welcomeUmbrellaFootprint,
+            Map3DStationExteriorBatch1.frontHallFootprint,
+            Map3DStationExteriorBatch1.rearHallFootprint
+        ]
+        for outline in wayOutlines { footprint(outline, color: concrete) }
+        for outline in [Map3DStationExteriorBatch1.platformNorthFootprint,
+                        Map3DStationExteriorBatch1.platformMiddleFootprint,
+                        Map3DStationExteriorBatch1.platformSouthFootprint] {
+            footprint(outline, color: paleRoof, baseY: 5.6, height: 0.36)
+        }
+
+        // The cross-station gallery sits above the tracks. OSM has three levels,
+        // but no height; 6 m underside and 17 m roof are reference-display estimates.
+        var bridge = StationKitBuilder()
+        bridge.box(0, 6, 0, 147, 38, 9.8, glass)
+        bridge.box(0, 15.8, 0, 153, 45, 1.2, paleRoof)
+        bridge.box(0, 6, 0, 147, 38, 0.5, warmWall)
+        for z: Float in [-18.8, 18.8] {
+            bridge.box(0, 7.1, z, 147, 0.35, 0.7, warmWall)
+            bridge.box(0, 11.7, z, 147, 0.35, 0.55, warmWall)
+        }
+        if detail == .near {
+            for x in stride(from: Float(-68), through: 68, by: 9) {
+                for z: Float in [-18.9, 18.9] { bridge.box(x, 6.4, z, 0.4, 0.45, 9.0, warmWall) }
+            }
+        } else {
+            for x in stride(from: Float(-60), through: 60, by: 20) {
+                for z: Float in [-18.9, 18.9] { bridge.box(x, 6.4, z, 0.55, 0.55, 9.0, warmWall) }
+            }
+        }
+        add(.flat(named: "hualien-cross-gallery", from: bridge.mesh),
+            at: Map3DPoint(-10.83, 0, 76.06), angle: -23.8166 * .pi / 180)
+
+        // Ticket hall at the east end, with the vertical screen seen in east photos.
+        var ticket = StationKitBuilder()
+        ticket.box(0, 0.32, 0, 51, 46, 9.7, warmWall)
+        ticket.box(0, 10.02, 0, 54, 50, 1.1, paleRoof)
+        ticket.box(0, 1.4, -23.13, 43, 0.25, 7.8, glass)
+        let screenStep: Float = detail == .near ? 3.3 : 8.2
+        for x in stride(from: Float(-23), through: 23, by: screenStep) {
+            ticket.box(x, 0.32, -23.45, 0.8, 0.85, 10.4, paleRoof)
+        }
+        add(.flat(named: "hualien-ticket-hall", from: ticket.mesh),
+            at: Map3DPoint(84.52, 0, 66.63), angle: 65.8392 * .pi / 180)
+
+        // The huge welcome canopy is a shallow waved shell. Its roof polygon is
+        // surveyed; scallops, timber ribs, support heights and curvature are estimates.
+        footprint(Map3DStationExteriorBatch1.welcomeUmbrellaFootprint,
+                  color: rib, baseY: 10.0, height: 0.35)
+        var umbrella = StationKitBuilder()
+        for (index, x) in stride(from: Float(-29), through: 29, by: 14.5).enumerated() {
+            let edgeHeight: Float = index.isMultiple(of: 2) ? 11.0 : 12.0
+            umbrella.canopy(x, edgeHeight, 0, length: 15.5, width: 28.5, rise: 1.8, color: paleRoof)
+            umbrella.box(x, 0.32, 0, 0.7, 0.7, 10.98, rib)
+            umbrella.box(x, 9.2, 0, 0.8, 27.2, 0.28, rib)
+        }
+        if detail == .near {
+            for x in stride(from: Float(-32), through: 32, by: 3.6) {
+                umbrella.box(x, 11.42, 0, 0.24, 27.5, 0.2, rib)
+            }
+            for z in stride(from: Float(-12), through: 12, by: 4) {
+                umbrella.box(0, 11.4, z, 70, 0.25, 0.2, rib)
+            }
+        }
+        add(.flat(named: "hualien-welcome-canopy", from: umbrella.mesh),
+            at: Map3DPoint(76.09, 0, 13.77), angle: 65.8235 * .pi / 180)
+
+        // Lower front and rear station halls use the OSM ground outlines. Both
+        // heights and roof forms are visual estimates because tags omit them.
+        var front = StationKitBuilder()
+        front.box(0, 0.32, 0, 84, 17.5, 8.2, concrete)
+        front.box(0, 8.52, 0, 88, 19, 0.5, darkRoof)
+        front.box(0, 1.1, -8.9, 80, 0.2, 5.7, glass)
+        for x in stride(from: Float(-37), through: 37, by: detail == .near ? 7.5 : 15) {
+            front.box(x, 1.1, -9.05, 0.5, 0.35, 6.0, paleRoof)
+        }
+        front.box(0, 5.0, -10.5, 84, 3.2, 0.5, darkRoof)
+        add(.flat(named: "hualien-front-hall", from: front.mesh),
+            at: Map3DPoint(33.13, 0, -34.78), angle: 65.8284 * .pi / 180)
+
+        var rear = StationKitBuilder()
+        rear.box(0, 0.32, 0, 59, 21, 7.8, concrete)
+        rear.box(0, 8.12, 0, 62, 23, 0.8, darkRoof)
+        rear.box(0, 1.0, -10.6, 56, 0.2, 5.2, glass)
+        for x in stride(from: Float(-26), through: 26, by: detail == .near ? 6.5 : 13) {
+            rear.box(x, 1.0, -10.76, 0.5, 0.3, 5.4, paleRoof)
+        }
+        add(.flat(named: "hualien-rear-hall", from: rear.mesh),
+            at: Map3DPoint(-87.68, 0, 119.95), angle: 65.8233 * .pi / 180)
+
+        let platforms: [(Float, Float, Float)] = [(-18.91, -51.04, 65.8318),
+                                                   (-34.70, -43.95, 65.8247),
+                                                   (4.65, -61.65, 65.8247)]
+        for (east, north, rotation) in platforms {
+            var columns = StationKitBuilder()
+            for x in stride(from: Float(-87), through: 87, by: detail == .near ? 15 : 35) {
+                columns.box(x, 0.32, 0, 0.55, 0.55, 5.28, rib)
+                if detail == .near { columns.box(x, 5.15, 0, 0.28, 9.0, 0.3, rib) }
+            }
+            add(.flat(named: "hualien-platform-columns", from: columns.mesh),
+                at: Map3DPoint(east, 0, north), angle: rotation * .pi / 180)
+        }
     }
 }

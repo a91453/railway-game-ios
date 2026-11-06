@@ -1,4 +1,4 @@
-# 車站外觀第一批 studies：第 2 次交付
+# 車站外觀第一批 studies：第 3 次交付
 
 這是獨立研究配方，沒有接到 `Map3DStationKit` 的站點選型、地圖或存檔。公開庫只有配方、測試與一張總覽；逐方向原生模型、GLB、日夜圖與離線檢視頁在私有素材庫的同名資料夾。
 
@@ -23,11 +23,25 @@
 
 站房地面邊界從同一份台灣 PBF 量測。參考庫 `blender-buildings-v1/hsinchu-tra/model.json` 的 65 × 22 × 20 m 是舊展示估值，長度不足 OSM 143.68 m，僅用來看鐘塔與中段立面比例，不用原網格。外觀照片看 Wikimedia Commons [新竹火車站（巴洛克風格）](https://commons.wikimedia.org/wiki/File:新竹火車站(巴洛克風格).jpg) 與 [新竹市火車站夜景](https://commons.wikimedia.org/wiki/File:新竹市火車站.jpg)：淺色拱窗立面、中央高廳、鐘塔及綠色屋頂。沒有照片貼圖；使用 station kit 的四坡頂、盒體與鐘面，沒有中式屋頂。研究版的拱窗細部與屋頂坡度是視覺簡化。近景 **846 三角**、遠景 **318 三角**；逐檔數量見私庫 `manifest.json`。OSM 輪廓 © OpenStreetMap contributors，ODbL 1.0。
 
-## 尚缺的九站
+## 已完成：臺鐵花蓮
+
+| 部件 | OSM 足跡最小旋轉矩形 | 高度與屋頂 |
+| --- | --- | --- |
+| 跨站大廳／自由廊道 | [way 554768918](https://www.openstreetmap.org/way/554768918)，152.754 × 45.547 m，`building:levels=3` | OSM 無高度或屋頂標籤；底部 6 m、頂部 17 m、玻璃帶和平頂推估。 |
+| 售票大廳 | [way 554768913](https://www.openstreetmap.org/way/554768913)，54.908 × 50.028 m | 頂部約 11 m、直立肋條和屋頂推估。 |
+| 迎客大傘 | [way 718223887](https://www.openstreetmap.org/way/718223887)，73.741 × 30.409 m，`building:levels=2` | 棚緣約 11–12 m、五段波浪與支柱位置推估。 |
+| 前站舊站體 | [way 132937553](https://www.openstreetmap.org/way/132937553)，88.067 × 18.506 m | 約 9 m 低平屋頂與窗列推估。 |
+| 後站 | [way 132937567](https://www.openstreetmap.org/way/132937567)，62.454 × 23.299 m | 約 9 m 低平屋頂與窗列推估。 |
+| 三條月台棚 | [ways 1342634750](https://www.openstreetmap.org/way/1342634750)、[1342634751](https://www.openstreetmap.org/way/1342634751)、[1352337182](https://www.openstreetmap.org/way/1352337182)，依序 194.747 × 10.278、194.747 × 10.723、194.751 × 11.527 m；皆 `building:levels=1` | 棚面約 5.96 m；近／遠柱距 15／35 m 推估。 |
+
+八個 way 的全部非閉合邊界頂點從 2026-11-06 下載的 osmtoday `asia/taiwan.pbf` 擷取。參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/hualien-v1/metadata.json` 只用來核對相同 way 的尺寸與相對位置，`blender-buildings-v1/hualien-v1/model.json` 只量比例，沒有搬網格。OSM 局部公尺座標原點為 121.60093265°E、23.992764°N。八個 way 均無實測 `height`、`roof:height`、`roof:shape`；上述高度和屋頂全部是推估。輪廓 © OpenStreetMap contributors，ODbL 1.0。
+
+外觀只參考 Wikimedia Commons [東側站房與大傘](https://commons.wikimedia.org/wiki/File:Hualien_Station_east_20230504.jpg)、[西側舊站房](https://commons.wikimedia.org/wiki/File:Hualien_Station_west_20230504.jpg)、[大傘下方木肋](https://commons.wikimedia.org/wiki/File:Hualien_railway_station_east_entrance_2018.png)、[東側遠景](https://commons.wikimedia.org/wiki/File:Early_morning_view_of_TRA_Hualien_Station,_looking_northwest_from_the_room_window_at_the_five_floor_of_Hualien_WOW_Youth_Hostel_on_4_December_2021.jpg)。照片沒有作貼圖。以 station kit 盒體、曲棚、淡暖牆、淺色棚、木色肋與青灰玻璃簡化重建，保留明暗順序。近景 **3,234 三角**、遠景 **1,830 三角**；仍待作者驗收外觀。
+
+## 尚缺的八站
 
 | 站 | 來源與目前量到的部件足跡（m） | 還缺的核對 |
 | --- | --- | --- |
-| 臺鐵花蓮 | 參考庫 `stations/hualien-v1/metadata.json` 的 OSM 輪廓：花蓮跨站大廳 153 × 46（554768918）；花蓮售票大廳 55 × 50（554768913）；迎客大傘 74 × 30（718223887）；花蓮前站 88 × 19（132937553）；花蓮後站 62 × 23（132937567）；月台棚 195 × 10（1342634750）；月台棚 195 × 11（1342634751）；月台棚 195 × 12（1352337182） | 8 部件的屋頂及真實高度。 |
 | 臺鐵臺東 | 參考庫 `stations/taitung-v1/metadata.json` 的 OSM 輪廓：臺東車站 88 × 24（386900387）；前廊雨棚 90 × 24（724860888）；月台棚 226 × 10（386900423）；月台棚 239 × 10（386900424）；月台棚 227 × 11（386900425） | 5 部件的坡頂、前廊與真實高度。 |
 | 臺鐵板橋 | 參考庫 `stations/banqiao-v1/metadata.json` 的 OSM 輪廓：板橋車站 199 × 122（232201616）；板橋站塔樓 44 × 42（1491394339）；板橋站塔樓 44 × 42（1491394340）；環狀線板橋 91 × 35（818694787） | 雙塔與站體真實高度及照片細節。 |
 | 臺鐵南港 | 參考庫 `stations/nangang-v1/metadata.json` 的 OSM 輪廓：南港車站 213 × 134（233331393）；南港 A 棟 61 × 35（908843920）；南港 B 棟 84 × 39（411044008）；南港 C 棟 112 × 42（410390808）；南港東側站房 83 × 42（556511660） | A／B／C 棟真實高度與外觀。 |

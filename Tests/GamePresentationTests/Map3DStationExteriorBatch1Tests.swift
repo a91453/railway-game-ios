@@ -2,6 +2,50 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch1Tests: XCTestCase {
+    func testHualienStudyUsesEightOSMWaysAndKeepsThemOutOfOperationalCatalog() {
+        let near = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .near)
+        let far = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .far)
+        XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
+        XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
+        XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
+        XCTAssertNil(Map3DStationKit.model(id: near.name))
+        XCTAssertNil(Map3DStationKit.model(id: far.name))
+        let ground: [[(Float, Float)]] = [
+            Map3DStationExteriorBatch1.crossHallFootprint,
+            Map3DStationExteriorBatch1.ticketHallFootprint,
+            Map3DStationExteriorBatch1.welcomeUmbrellaFootprint,
+            Map3DStationExteriorBatch1.frontHallFootprint,
+            Map3DStationExteriorBatch1.rearHallFootprint
+        ]
+        let canopies: [[(Float, Float)]] = [
+            Map3DStationExteriorBatch1.platformNorthFootprint,
+            Map3DStationExteriorBatch1.platformMiddleFootprint,
+            Map3DStationExteriorBatch1.platformSouthFootprint
+        ]
+        for (outlines, height) in [(ground, Float(0.32)), (canopies, Float(5.96))] {
+            for outline in outlines {
+                for (east, north) in outline {
+                    XCTAssertTrue(near.vertices.contains {
+                        abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002 && abs($0.z - height) < 0.002
+                    })
+                }
+            }
+        }
+        let colours = Set(near.vertices.map(\.color))
+        for colour in [UInt32(0xE8E6DE), 0xDDD8CB, 0xC1B19A, 0xB9B9B3, 0x9BB7B9, 0x858B89] {
+            XCTAssertTrue(colours.contains(Map3DColor.rgb(colour)))
+        }
+        func brightness(_ colour: UInt32) -> Float {
+            Float(colour & 255) * 0.2126 + Float((colour >> 8) & 255) * 0.7152
+                + Float((colour >> 16) & 255) * 0.0722
+        }
+        let ordered = [0xE8E6DE, 0xDDD8CB, 0xB9B9B3, 0xC1B19A, 0x9BB7B9, 0x858B89]
+            .map(Map3DColor.rgb)
+        for (lighter, darker) in zip(ordered, ordered.dropFirst()) {
+            XCTAssertGreaterThan(brightness(lighter), brightness(darker))
+        }
+    }
+
     func testHsinchuStudyKeepsOSMWayAndHistoricRoofSeparateFromChineseRoofs() {
         let near = Map3DStationExteriorBatch1.model(for: .hsinchuTRA, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .hsinchuTRA, detail: .far)
