@@ -170,7 +170,7 @@ public enum Map3DDepotYardKit {
         b.add(model(for: part(.gate, system: system)), at: Map3DPoint(28, 0, 34))
         b.add(model(for: part(.guardHouse, system: system)), at: Map3DPoint(35, 0, 32))
         for index in 0..<10 {
-            b.add(model(for: part(.fence, system: system)), at: Map3DPoint(Float(index) * 4 - 34, 0, -34))
+            b.add(model(for: part(.fence, system: system)), at: Map3DPoint(Float(index) * 4 - 42, 0, 34))
         }
         return .flat(named: "depot-yard-scene-\(system.rawValue)", from: b.mesh)
     }

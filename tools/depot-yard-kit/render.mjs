@@ -28,6 +28,17 @@ try {
   }
   if(index%25===0)console.log('Rendered '+(index+1)+'/'+manifest.models.length);
  }
+ mkdirSync(resolve(root,'previews'),{recursive:true});
+ for(const system of ['wenhu','taiwanRail']) {
+  const record=manifest.models.find(model=>model.id==='depot-yard-scene-'+system);
+  const data=await page.evaluate(async record=>{
+   renderer.load(await(await fetch('/'+record.native)).arrayBuffer());
+   renderer.render('isometric',{width:1024,height:1024});return renderer.png();
+  },record);
+  const path=resolve(root,'previews',system==='wenhu'?'wenhu-depot-yard.png':'taiwan-rail-depot-yard.png');
+  writeFileSync(path,Buffer.from(data.split(',')[1],'base64'));
+  if(statSync(path).size>2_000_000)throw Error('Oversized scene '+path);
+ }
  writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
  console.log('Rendered '+manifest.models.length*7+' transparent views');
 } finally {if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}
