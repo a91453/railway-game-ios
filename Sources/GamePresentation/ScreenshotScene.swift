@@ -87,6 +87,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case streetStop
     case streetStopNight
 
+    /// Decision 610: the same map round Banqiao's low-rise blocks north
+    /// of Fuzhong (decision 610 續: no towers within 80 m), for the close-up screenshots of the real buildings' street
+    /// fronts (arcade pillars, grilles, blade signs, rooftop rooms).
+    case streetFronts
+
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
     /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
@@ -193,6 +198,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // its middle (``Map3DTaipeiLandmark/changhuaRoundhouse``).
         case .changhuaRoundhouse: (24.0858608 - 12 / 110_759, 120.5401168 + 5 / 101_684)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
+        case .streetFronts: (25.0185, 121.4536)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
@@ -233,6 +239,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipeiMain, .taipei101, .taichungViaduct, .interchange, .changhuaRoundhouse: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
+        case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)

@@ -174,6 +174,9 @@ extension Map3DScene.Builder {
         func key(_ x: Double, _ y: Double) -> Map3DScene.ChunkKey {
             Map3DScene.ChunkKey(column: Int((x / cell).rounded(.down)), row: Int((y / cell).rounded(.down)))
         }
+        // Decision 610: built in full, the street fronts by the streets.
+        facadeStreets = isFar ? nil : facadeStreetCells()
+        defer { facadeStreets = nil }
         for building in footprints.buildings {
             guard let outline = building.rings.first, outline.count >= 3 else { continue }
             let middle = (x: outline.reduce(0) { $0 + $1.x } / Double(outline.count), y: outline.reduce(0) { $0 + $1.y } / Double(outline.count))
