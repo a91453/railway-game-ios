@@ -16,13 +16,13 @@
 
 ## 重建與審查
 
-本分支 producer commit `f232a2e30ceb6c66af96b654d334f2bde6b99730` 含 Swift 配方與 Blender 4.x 工具。從該 commit checkout 後執行：
+本分支 producer commit `bfcf8f16f0f835a230851fbd4bf4559de1b89790` 含 Swift 配方與 Blender 4.x 工具。從該 commit checkout 後執行：
 
 ```sh
 blender -b --python tools/road_tunnel_portals.py -- --output /path/to/railway-assets-private/game-art-previews/docs/art/road-tunnel-portals-2026-11/revision-2
 ```
 
-私庫同路徑 `revision-2/` 收 14 個 GLB、每模型七張透明 PNG 和一張公路／鐵路同山組景圖。第 1 向是正面（0°），第 2–7 向依序 −30°、+30°、−60°、+60°、−120°、+120°。舊 `revision-1/` 僅留 PNG 與 README；舊 GLB 在同一素材 PR 刪除。
+私庫同路徑 `revision-2/` 收 14 個 GLB、每模型七張透明 PNG、`connectors.json` 和一張公路／鐵路同山組景圖。第 1 向是正面（0°），第 2–7 向依序 −30°、+30°、−60°、+60°、−120°、+120°。組景背景採遊戲 `#ECEEF6` 淺色地面。舊 `revision-1/` 僅留 PNG 與 README；舊 GLB 在同一素材 PR 刪除。
 
 ## 來源、授權與限制
 
