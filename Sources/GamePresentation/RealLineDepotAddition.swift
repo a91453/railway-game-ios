@@ -344,7 +344,7 @@ extension RealLineDepotAddition {
             return candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count })
         }()
         let runs = realRuns.map { real in real.runs.map { $0.lineRun(stops: real.stops, reversed: true) } }
-        let positioning = Set(zip(realRuns?.runs ?? [], runs ?? []).filter { $0.0.positioning }.map { RealLineRunKey($0.1) })
+        let positioning = Set(zip(realRuns?.runs ?? [], runs ?? []).filter { $0.0.positioning || $0.0.train == "回送" }.map { RealLineRunKey($0.1) })
         let waits = runs != nil && !Self.isAtRest(line, runs: runs ?? [], positioning: positioning, in: world)
 
         // GameCore's answer and the price, on a funded copy. A tile the

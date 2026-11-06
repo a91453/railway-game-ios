@@ -40,6 +40,7 @@ final class RealLineRebuildTests: XCTestCase {
         let station = try XCTUnwrap(session.world.line(id: id)?.stops.first { session.world.station(id: $0)?.name == "長庚醫院站" })
         XCTAssertEqual(session.world.network.platforms(of: station).count, 2)
         let trains = try XCTUnwrap(session.world.line(id: id)?.trains)
+        let runCount = try XCTUnwrap(session.world.line(id: id)?.runs.count)
 
         session.selectLine(id)
         XCTAssertTrue(session.rebuildsAsReal(id))
@@ -69,6 +70,10 @@ final class RealLineRebuildTests: XCTestCase {
         let line = try XCTUnwrap(session.world.line(id: id))
         XCTAssertEqual(line.trains, trains)
         XCTAssertEqual(line.runs, rebuild.runs)
+        // The same runs as before, the expresses now passing; the
+        // timetable's positioning runs stay left out, as the purchase
+        // leaves them out with its depot laid.
+        XCTAssertEqual(line.runs.count, runCount)
         XCTAssertTrue(line.runs.contains { !$0.passes.isEmpty })
         let routed = line.routePreferences.filter { $0.platform.station == station }
         XCTAssertFalse(routed.isEmpty)

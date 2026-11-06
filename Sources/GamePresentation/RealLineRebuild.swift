@@ -146,8 +146,13 @@ extension GameSession {
         let candidates = [urban.shares.flatMap { RealBranchLine.metroRuns(of: bought.realLine, after: $0, in: railways) }, railways.metroRuns[bought.realLine]]
         guard let real = candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count }),
               real.runs.contains(where: { !$0.passes.isEmpty }) else { return nil }
-        let runs = real.runs.map { $0.lineRun(stops: real.stops, reversed: true) }
-        let positioning = Set(zip(real.runs, runs).filter { $0.0.positioning }.map { RealLineRunKey($0.1) })
+        let all = real.runs.map { $0.lineRun(stops: real.stops, reversed: true) }
+        let positioning = Set(zip(real.runs, all).filter { $0.0.positioning || $0.0.train == "回送" }.map { RealLineRunKey($0.1) })
+        // As the purchase: with its depot laid, the line's own empty runs
+        // take the trains in and out, not the timetable's positioning runs
+        // (decision 479), so a line that runs none of them gets none.
+        let keeps = line.runs.contains { positioning.contains(RealLineRunKey($0)) }
+        let runs = keeps ? all : all.filter { !positioning.contains(RealLineRunKey($0)) }
         return (line, bought.realLine, station, runs, positioning)
     }
 
