@@ -496,7 +496,7 @@ extension GameSession {
     }
 
     private var ferryShoreMemoized: (shore: [FerryMapOverlay.ShoreRun], cells: Set<CellPosition>) {
-        if let memo = ferryShoreMemo, memo.bounds == world.bounds, memo.terrain == world.terrain, memo.blocks == world.landBlocks {
+        if let memo = ferryShoreMemo, memo.bounds == world.bounds, memo.terrain == world.terrain, memo.blocks == world.landBlocks, memo.readsLand == readsLandForFerries {
             return (memo.shore, memo.cells)
         }
         let shore = readsLandForFerries ? Self.shore(of: world, water: water) : world.pierShore()
@@ -504,7 +504,7 @@ extension GameSession {
         if readsLandForFerries {
             for run in shore { for column in run.columns { cells.insert(CellPosition(row: run.row, column: column)) } }
         }
-        ferryShoreMemo = (world.terrain, world.bounds, world.landBlocks, shore, cells)
+        ferryShoreMemo = (world.terrain, world.bounds, world.landBlocks, readsLandForFerries, shore, cells)
         return (shore, cells)
     }
 

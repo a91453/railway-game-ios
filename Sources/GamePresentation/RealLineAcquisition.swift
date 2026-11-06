@@ -948,6 +948,10 @@ extension RealLineLaying {
         for (stop, site, _) in depotEnds {
             if let platform = site.fan?.platform { points[stop] = onMap(platform) }
         }
+        // L11-5: the platform's point is checked too, not only the stop's.
+        guard points.allSatisfy({ world.bounds.contains($0.plan) }) else {
+            return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
+        }
         func runOn(from end: WorldVector, leaving way: WorldVector, at stop: Int) -> [WorldVector] {
             guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * RealLineAcquisition.runOn] }
             // Decision 602: a fanned yard's lead along the real leads to

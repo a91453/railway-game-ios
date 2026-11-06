@@ -89,7 +89,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case fuelSpell(percent: Int64, days: Int64)
     /// Decision 174: a sight with `stars` hundredths of a star has no
     /// station to ride to (`status`), so no tourist comes.
-    case sightUnreachable(attraction: AttractionID, english: String, chinese: String, stars: Int, status: AttractionStatus)
+    case sightUnreachable(attraction: AttractionID, english: String, chinese: String, stars: Int, status: AttractionStatus, edge: Bool)
     /// Decision 174: a public holiday starts in `days` days (0 on its first
     /// day) and the sights a station serves draw about `times` as many
     /// tourists.
@@ -445,7 +445,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         // (the panel says that) builds the whole route graph.
         for sight in candidates.sorted(by: { world.stars(of: $0) != world.stars(of: $1) ? world.stars(of: $0) > world.stars(of: $1) : $0.id < $1.id })
         where world.attractionStation(of: sight.id) == nil {
-            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: world.stars(of: sight), status: .noStation)
+            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: world.stars(of: sight), status: .noStation, edge: world.outsideConnections)
         }
         return nil
     }
@@ -695,15 +695,15 @@ public enum StationMasterAdvice: Hashable, Sendable {
                     "A typhoon is blowing over \(stations == 1 ? "one" : "\(stations)") of our stations: about \(percent)% fewer passengers there today.",
                     "颱風正在影響 \(stations) 個車站，今天那裡的旅客少約 \(percent)%。"
                 )
-        case .sightUnreachable(_, let english, let chinese, let stars, let status):
+        case .sightUnreachable(_, let english, let chinese, let stars, let status, let edge):
             status == .noStation
                 ? language.text(
                     "\(english) \(Self.starsText(stars)) has no station to reach it. Put a station within 800 m and run a line to it.",
                     "\(chinese) \(Self.starsText(stars)) 沒有車站可到。在 800 公尺內蓋車站，再開一條線過去吧。"
                 )
                 : language.text(
-                    "\(english) \(Self.starsText(stars)) has no route from where tourists come. Join its station to one where people live, or to the map's edge.",
-                    "\(chinese) \(Self.starsText(stars)) 沒有客源路線。把它的車站接到有人住的車站，或地圖邊緣吧。"
+                    "\(english) \(Self.starsText(stars)) has no route from where tourists come. Join its station to one where people live\(edge ? ", or to the map's edge." : ".")",
+                    "\(chinese) \(Self.starsText(stars)) 沒有客源路線。把它的車站接到有人住的車站\(edge ? "，或地圖邊緣吧。" : "吧。")"
                 )
         case .touristsComing(let kind, let days, let times):
             days > 0
