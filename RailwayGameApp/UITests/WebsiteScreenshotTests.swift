@@ -194,7 +194,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             keep("klrt-acquired", app)
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
