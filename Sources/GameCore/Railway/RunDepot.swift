@@ -201,7 +201,7 @@ extension GameWorld {
                 // Terminal 2 had one sent out of the depot for it; arrived,
                 // it stood there for hours on one of the station's three
                 // tracks, as some run left within two hours all day.
-                if isTrafficControlEnabled, way == nil, leaving.isEmpty, let last = waiting.last {
+                if isTrafficControlEnabled, !blockSections, way == nil, leaving.isEmpty, let last = waiting.last {
                     let soon = pendingRunStarts(of: line, from: station).filter { $0 <= clock.now.seconds + Self.runDepotSurplusLookahead }
                     var ready = runTrainsReady(of: line, at: station)
                     if let one = ready.firstIndex(of: clock.now.seconds) { ready.remove(at: one) }
@@ -513,7 +513,7 @@ extension GameWorld {
                 for start in starts {
                     wake(at: start - Self.runDepotLookahead)
                     // Decision 609: a run coming within the hour.
-                    if isTrafficControlEnabled, way == nil { wake(at: start - Self.runDepotSurplusLookahead) }
+                    if isTrafficControlEnabled, !blockSections, way == nil { wake(at: start - Self.runDepotSurplusLookahead) }
                     wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
                     if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
                     // Decision 296: once its first departure has passed, a
