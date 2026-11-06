@@ -155,27 +155,30 @@ final class CommandEditTests: XCTestCase {
         var world = base
         let made = try world.createLine(named: "Main", stops: stops)
         let train = try world.purchaseTrain(named: "Train 1")
-        let cases: [(PlayerCommand.Edit, (inout GameWorld) throws(GameError) -> Void)] = [
-            (.renameStation(stops[0], name: "North"), { world throws(GameError) in try world.renameStation(stops[0], to: "North") }),
-            (.renameStation(stops[0], name: ""), { world throws(GameError) in try world.renameStation(stops[0], to: "") }),
-            (.setLineStops(made.id, [stops[0], stops[2]]), { world throws(GameError) in try world.setLineStops(made.id, to: [stops[0], stops[2]]) }),
-            (.setLineStops(made.id, [stops[0]]), { world throws(GameError) in try world.setLineStops(made.id, to: [stops[0]]) }),
-            (.reverseLineStops(made.id), { world throws(GameError) in try world.reverseLineStops(made.id) }),
-            (.setLineRing(made.id, true), { world throws(GameError) in try world.setLineRing(made.id, to: true) }),
-            (.setTrainCars(train.id, cars: 3), { world throws(GameError) in try world.setTrainCars(train.id, to: 3) }),
-            (.setTrainCars(train.id, cars: 99), { world throws(GameError) in try world.setTrainCars(train.id, to: 99) }),
-            (.reverseTrain(train.id), { world throws(GameError) in try world.reverseTrain(train.id) }),
-            (.sellTrain(train.id), { world throws(GameError) in try world.sellTrain(train.id) }),
-            (.removeLine(made.id), { world throws(GameError) in try world.removeLine(made.id) }),
-            (.removeStation(stops[3]), { world throws(GameError) in try world.removeStation(stops[3]) }),
-            (.borrow(CompanyAccounts.loanStep), { world throws(GameError) in try world.borrow(CompanyAccounts.loanStep) }),
-            (.repayLoan(CompanyAccounts.loanStep), { world throws(GameError) in try world.repayLoan(CompanyAccounts.loanStep) }),
+        // Plain `throws` in the stored closures: typed-throws function
+        // types need the macOS 15 / iOS 18 runtime, and the package
+        // supports macOS 14 and iOS 17.
+        let cases: [(PlayerCommand.Edit, (inout GameWorld) throws -> Void)] = [
+            (.renameStation(stops[0], name: "North"), { world in try world.renameStation(stops[0], to: "North") }),
+            (.renameStation(stops[0], name: ""), { world in try world.renameStation(stops[0], to: "") }),
+            (.setLineStops(made.id, [stops[0], stops[2]]), { world in try world.setLineStops(made.id, to: [stops[0], stops[2]]) }),
+            (.setLineStops(made.id, [stops[0]]), { world in try world.setLineStops(made.id, to: [stops[0]]) }),
+            (.reverseLineStops(made.id), { world in try world.reverseLineStops(made.id) }),
+            (.setLineRing(made.id, true), { world in try world.setLineRing(made.id, to: true) }),
+            (.setTrainCars(train.id, cars: 3), { world in try world.setTrainCars(train.id, to: 3) }),
+            (.setTrainCars(train.id, cars: 99), { world in try world.setTrainCars(train.id, to: 99) }),
+            (.reverseTrain(train.id), { world in try world.reverseTrain(train.id) }),
+            (.sellTrain(train.id), { world in try world.sellTrain(train.id) }),
+            (.removeLine(made.id), { world in try world.removeLine(made.id) }),
+            (.removeStation(stops[3]), { world in try world.removeStation(stops[3]) }),
+            (.borrow(CompanyAccounts.loanStep), { world in try world.borrow(CompanyAccounts.loanStep) }),
+            (.repayLoan(CompanyAccounts.loanStep), { world in try world.repayLoan(CompanyAccounts.loanStep) }),
         ]
         for (edit, closure) in cases {
             let session = GameSession(world: world)
             var byEdit = world, byClosure = world
             let editError = Result { () throws(GameError) in _ = try session.apply(edit, to: &byEdit) }.failure
-            let closureError = Result { () throws(GameError) in try closure(&byClosure) }.failure
+            let closureError = Result { try closure(&byClosure) }.failure.map { $0 as! GameError }
             XCTAssertEqual(editError, closureError, edit.name)
             XCTAssertEqual(byEdit, byClosure, edit.name)
             session.perform(edit) { _, _, _ in "" }
