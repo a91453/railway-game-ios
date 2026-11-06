@@ -147,4 +147,19 @@ final class FerryCijinShoreTests: XCTestCase {
         XCTAssertFalse(world.terrain.water.isEmpty, "the harbour's north side is read with its water")
         XCTAssertFalse(map.shore(within: RealFerry.snapCells, of: cijin).isEmpty)
     }
+
+    /// The whole island's shore is worked out only in the ferry mode:
+    /// building elsewhere, which reads land in, does not pay for it.
+    func testTheShoreIsWorkedOutOnlyInTheFerryMode() throws {
+        let map = try map()
+        let session = map.session
+        session.setBusMode(.routes)
+        _ = session.ferryMapOverlay
+        session.readLand(within: WholeTaiwan.landReach, of: map.cell(22.6125, 120.2680).middle)
+        _ = session.ferryMapOverlay
+        XCTAssertNil(session.ferryShoreMemo, "no shore outside the ferry mode")
+        session.setBusMode(.ferries)
+        XCTAssertFalse(try XCTUnwrap(session.ferryMapOverlay).shore.isEmpty)
+        XCTAssertNotNil(session.ferryShoreMemo)
+    }
 }
