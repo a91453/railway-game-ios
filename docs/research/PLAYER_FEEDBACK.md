@@ -163,6 +163,18 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (115.1)，2026-11-06
+
+從 `main` `a3745e09`（#1882 這版新增的合併）建置。TestFlight `testflight.yml` run 42160370467（run 115），04:05 UTC 開始、04:38 成功；作者自己按（「我先發自己測」），run 116、117 是排隊時取消的，所以下一版是 118（作者 2026-11-06：口頭叫「118」，TestFlight 顯示 118.1）。
+
+**這個 commit 的檢查**：完整 `ci.yml` run 42160196894 綠；`release-archive.yml` run 42160200171 綠；full lane（iOS App Build）run 42160202925 第 1 次紅在兩個 job：build（`FinanceCompositionUITests.testTheIncomeAndCostDonutsShowAndTheirRowsAnswerATap`，UI 查詢逾時）與 map（`MapInteractionTests.testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 捏合、`testPlatformModeKeepsItsStatusAndActionInTheCard` 模擬器關不掉 App），都是已知不穩的；07:1x UTC `rerun-failed-jobs` 一次。同一處再紅就派人查（捏合那支 FLAKY-1106 在查，#1887）。
+
+**玩家回報**（作者轉，2026-11-06）：
+
+1. 「蓋多一點就很卡」（玩家停在 97.1）、「路線到中後期可能有多條線時，一樣會卡頓」（另一位，iPhone 15 Pro Max）、「建設一直卡」（同一位，113.1 沒更新）：派 PERF-115（session_01YGNNupXrcs7dyKyFmQvkAE，`claude/perf-115`）量「中後期大路網上一次建設指令」的完整代價。作者 2026-11-06：不跟玩家要存檔、不迎合（「我爽就好」）；PERF-115 照做，因為作者自己的大存檔也會卡。
+2. 「一直跳景點一直當機」：CRASH-SIGHTS（session_01YGNNuouz6tciRDRFbHhTWc，#1889）。根因：觀光景點面板開著時，每個 tick 每個有車站的景點各重建一次路網（台北文湖線、16 個景點，一次重畫 1.6 s），卡死後被系統關掉；修成一起建一次、一個遊戲日算一次（約 0.1 s），GameCore 答案不變。實機沒重現，要的當機紀錄列在 #1889。
+3. 旗津沒有淺藍色、渡輪不能用（作者截圖）：FERRY-QIJIN（#1888）。土地用到才讀的地圖上沒讀的區塊沒有水；淺藍格只在渡輪模式算。旗津碼頭偏約 330 m 沒修（搬過去 3D 直線航線會切過陸地，要和水路一起做）。
+
 ### 0.5.0 (114.1)，2026-11-05
 
 從 `main` `c1be6078`（#1855 的合併；App 內容與 `26d5fca1` #1852 相同，只多交接文件）建置。TestFlight `testflight.yml` run 42012538541（run 114），10:39 UTC 開始、11:06 成功。What to Test 與 App 內「這版新增」是 0.5.0 (114.1)（#1852）。
