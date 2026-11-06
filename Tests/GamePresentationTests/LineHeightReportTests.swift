@@ -4,7 +4,7 @@ import Foundation
 import XCTest
 
 /// HEIGHT-STUDY (docs/research/LINE_HEIGHTS_2026-11-05.md): buys each of
-/// the fourteen real lines on sale, on a world round the line that reads
+/// the fifteen real lines on sale (decision 612 added the Kaohsiung ring), on a world round the line that reads
 /// the water and the heights (as ``AcquisitionReportTests`` plays them),
 /// and prints, every 64 m along its main track, what the game built
 /// there (tunnel, ground or viaduct, and how far over the ground) beside
@@ -18,13 +18,13 @@ import XCTest
 final class LineHeightReportTests: XCTestCase {
     static let networks = [
         "PINGXI", "JIJI", "NEIWAN", "SHENAO", "LIUJIA", "SHALUN",
-        "ntdlrt:V", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT", "sanying:LB", "trtc:BR", "tymc:A",
+        "ntdlrt:V", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT", "sanying:LB", "trtc:BR", "tymc:A", "krtc:C",
     ]
 
     /// The real opening each city line is bought on.
     static let cities = [
         "ntdlrt:V": "New Taipei, Tamsui", "ntdlrt:VB": "New Taipei, Tamsui", "ntalrt:K": "New Taipei, Banqiao", "trtc:R_XBT": "Taipei",
-        "trtc:G_XBT": "Taipei", "sanying:LB": "New Taipei, Banqiao", "trtc:BR": "Taipei", "tymc:A": "Taoyuan",
+        "trtc:G_XBT": "Taipei", "sanying:LB": "New Taipei, Banqiao", "trtc:BR": "Taipei", "tymc:A": "Taoyuan", "krtc:C": "Kaohsiung",
     ]
 
     func testTheLinesHeights() throws {

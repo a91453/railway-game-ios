@@ -37,3 +37,5 @@ pip install osmium matplotlib
 WENHU_DEPOT_DUMP=$PWD/after.json swift test --skip-build --filter WenhuLineTests/testDumpTheDepotTrack
 python3 -I tools/rail-depots/plot_depots.py taiwan.pbf after.png after.json
 ```
+
+高雄輕軌機廠（`RealLineDepotSite.klrt`，決策 535「續」KLRT）：OSM 的 workshop way 445644637，停車股道 way 501281474–501281484 與 1153379542–1153379546；分岔點是 way 1561884684／1561884686 與 501281475 相交的 node，約 (22.605961, 120.325089)，yard 從 (22.607960, 120.324816) 到 (22.611359, 120.326107)。這次從 OSM API 讀這些 way（osmtoday 的 extract 下載一直被中斷），下次重量請改用 extract。鋪 20 股，照時刻表 20 組晚上全部回廠；compact，同淡海。入出庫線離正線約 100 m。

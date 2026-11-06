@@ -166,6 +166,61 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("xiaobitan-single-3d", app)
     }
 
+    /// Decision 535 (continued, KLRT): the Kaohsiung Circular Light Rail
+    /// on a real map of Kaohsiung: its purchase card (round the ring, no
+    /// terminal named), the card once bought, then run on to 07:40 with a
+    /// train followed, on the 2D map and in 3D, its CAF and Citadis trains
+    /// going round each way. For the screenshot review of the pull request
+    /// that put it on sale.
+    func testKaohsiungLightRailRing() {
+        executionTimeAllowance = 1_700
+        do {
+            let app = launch(extra: ["-screenshot-scene", "klrt", "-screenshot-offer-real", "krtc:C"])
+            defer { app.terminate() }
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let buy = app.buttons["acquire.buy"]
+            XCTAssertTrue(buy.appears(within: 300), "The purchase card opens")
+            // The card shows the price only once the ring is laid out and
+            // priced, when its buy button is enabled.
+            let priced = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: buy)
+            XCTAssertEqual(XCTWaiter().wait(for: [priced], timeout: 300), .completed, "The ring is priced")
+            settle(seconds: 3)
+            keep("klrt-offer", app)
+        }
+        let app = launch(extra: ["-screenshot-scene", "klrt", "-screenshot-buy-real", "krtc:C", "-screenshot-follow-bought", "krtc:C",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // As the Wenhu Line's: the Debug app buys the line and runs the
+        // morning with its main thread busy for a minute at a time.
+        Thread.sleep(forTimeInterval: 300)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            keep("klrt-acquired", app)
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<5 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("klrt-ring-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("klrt-ring-3d", app)
+    }
+
     /// Decision 606 (IDLEREAL): the idle mode on a real map with nothing
     /// of the player's follows a real timetable's train on the 3D map, its
     /// name and where it goes faint in the top corner, gone a few seconds

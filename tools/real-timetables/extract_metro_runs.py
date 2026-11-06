@@ -58,9 +58,23 @@ uses (`depot_tracks`), and an end may have up to `DEPOT_END_TRACKS`, its
 loops three deep either side. The Wenhu Line is bought with its two, at
 Muzha and Neihu (decision 535, PR W); its ends would hold 16 trains each
 within the look ahead, so they are laid with the five a metro's end may
-have (`END_TRACKS`) and the game sends the rest into the depots. Not listed: the Kaohsiung Circular Light
-Rail. Its trains run round the loop and come back to Lizihnei; a line's
-runs of the game run end to end (decision 535).
+have (`END_TRACKS`) and the game sends the rest into the depots.
+
+Decision 535 (continued, KLRT): the Kaohsiung Circular Light Rail is a
+ring (`RINGS`, its `<system>.json` line `loop: true`). Its trips go one
+way round, inner (the stations' order, Lizihnei to Kaisyuan Rueitian)
+or outer, nearly all a whole lap from Lizihnei back to it, the first of
+the morning from a station on the way to Lizihnei. `ring_line` reads
+them with their way (`way`, the game's `LineRun.way`) and no gaps to
+fill, and checks what the game needs: every trip calls at each station
+it passes, and a train coming round to Lizihnei takes the next trip
+the same way from there leaving at least `DWELL` later, while one
+leaving from a station on the way, or with none ready, comes out of the
+light rail depot beside the line between Light Rail Depot Station and
+Lizihnei (`RealLineDepotSite.klrt`); after its last trip each goes back
+there. So every trainset stands in the depot overnight: `overnight`
+counts them at Lizihnei, which the game reads as the depot's, and each
+station has its two platform tracks, one each way.
 
 The Ankeng LRT (decision 535, continued) stood two of its trains
 overnight at stations between, Shuangcheng having too few tracks. Each
@@ -125,6 +139,8 @@ BETWEEN_TRACKS = 3
 # The tracks such a line's end station may have: its own and loops three
 # deep either side.
 DEPOT_END_TRACKS = 7
+# Decision 535 (continued, KLRT): the rings, by their game id.
+RINGS = {"krtc:C"}
 # How long a train waits at a station for its next run before the game
 # sends it to the depot instead (`GameWorld.runDepotLookahead`).
 LOOKAHEAD = 2 * 3600
@@ -156,6 +172,8 @@ LINES = [
     ("tymc", "A", None, None),
     ("krtc", "KR", None, None),
     ("krtc", "KO", None, None),
+    # Decision 535 (continued, KLRT): the Circular Light Rail, a ring.
+    ("krtc", "C", None, None),
     ("tmrt", "TG", None, None),
     # Decision 400 (10j-3): the Sanying Line, its trains standing overnight
     # at stations between brought in after the last train there.
@@ -215,6 +233,115 @@ def trains(timetable, names, kind="輕軌", passing=False):
         out.append({"train": str(number + 1), "typeName": kind, "stops": stops})
         days[number] = running
     return out, days
+
+
+def ring_line(timetable, names):
+    """Decision 535 (continued, KLRT): a ring's runs, each with its way
+    round (`inner` along the stations' order), where its trains stand at
+    midnight and each station's tracks; or why it does not fit. A trip
+    must call at every station it passes, one step round at a time, and
+    go no further than once round."""
+    n = len(names)
+    by_calls = collections.OrderedDict()
+    for set_name in dict.fromkeys(timetable["days"]):
+        days = {day for day, name in enumerate(timetable["days"]) if name == set_name}
+        for trip in timetable["sets"][set_name]:
+            calls = tuple((trip[i], trip[i + 1]) for i in range(0, len(trip), 2))
+            by_calls.setdefault(calls, set()).update(days)
+    runs = []
+    home = names[0]
+    for number, (calls, running) in enumerate(by_calls.items()):
+        if len(calls) < 2 or len(calls) > n + 1:
+            return None, f"trip {number + 1} calls at {len(calls)} stations"
+        step = (calls[1][0] - calls[0][0]) % n
+        if step not in (1, n - 1) or any((b - a) % n != step for (a, _), (b, _) in zip(calls, calls[1:])):
+            return None, f"trip {number + 1} does not call at every station it passes"
+        if any(bt < at for (_, at), (_, bt) in zip(calls, calls[1:])):
+            return None, f"trip {number + 1}'s times go back"
+        out = []
+        for position, (index, second) in enumerate(calls):
+            ends = position in (0, len(calls) - 1)
+            out.append([names[index], second if ends else second - DWELL, second])
+        runs.append({
+            "train": str(number + 1), "type": "輕軌", "way": "inner" if step == 1 else "outer",
+            "calls": out, "days": sorted(running),
+        })
+    # The game sends a ring's trains out of its depot only to Lizihnei,
+    # beside it: a train sent to a station round the ring stands there
+    # facing whichever way it came and blocks the track for the trip the
+    # other way (decision 535, continued, KLRT). So a trip starting round
+    # the ring (the morning's first, at 06:30 at fourteen stations at once)
+    # starts at Lizihnei instead, as far before as the same way's first
+    # lap of those days takes to reach its first station, calling at each
+    # station on the way: the trains the real line runs out empty run in
+    # service. Its own calls are kept as they were.
+    extended = 0
+    for run in runs:
+        if run["calls"][0][0] == home:
+            continue
+        laps = [r for r in runs if r["way"] == run["way"] and len(r["calls"]) == n + 1 and r["calls"][0][0] == home
+                and set(r["days"]) & set(run["days"])]
+        if not laps:
+            return None, f"trip {run['train']} starts round the ring with no lap of its days to time the way out from Lizihnei"
+        lap = min(laps, key=lambda r: r["calls"][0][2])
+        k = [c[0] for c in lap["calls"]].index(run["calls"][0][0])
+        leaves = run["calls"][0][2]
+        shift = leaves - lap["calls"][k][2]
+        before = [[name, arrival + shift, departure + shift] for name, arrival, departure in lap["calls"][:k]]
+        before[0][1] = before[0][2]
+        first = run["calls"][0]
+        run["calls"] = before + [[first[0], lap["calls"][k][1] + shift, first[2]]] + run["calls"][1:]
+        extended += 1
+    if extended:
+        print(f"  {extended} trips starting round the ring start at {home} instead", file=sys.stderr)
+    # The trainsets each weekday needs: a trip leaving Lizihnei takes the
+    # train that came round to it the same way, at least DWELL before;
+    # any other comes out of the depot.
+    most = 0
+    for day in range(7):
+        today = sorted((r for r in runs if day in r["days"]), key=lambda r: (r["calls"][0][2], int(r["train"])))
+        waiting = collections.defaultdict(list)
+        out_of_depot = 0
+        for run in today:
+            origin, leaves = run["calls"][0][0], run["calls"][0][2]
+            ready = [t for t in waiting[run["way"]] if t + DWELL <= leaves] if origin == home else []
+            if ready:
+                waiting[run["way"]].remove(min(ready))
+            else:
+                out_of_depot += 1
+            if run["calls"][-1][0] == home:
+                waiting[run["way"]].append(run["calls"][-1][1])
+        most = max(most, out_of_depot)
+    # The game picks a train for a trip at a station as it comes, not by
+    # the way it faces, so a station where trips start both ways round
+    # sends trains round the wrong way (a whole lap to the trip's second
+    # stop) as soon as one runs late. Inner trips start and end at
+    # Lizihnei; outer trips start and end at the next stop that way, the
+    # Light Rail Depot station, where the depot's track joins the ring
+    # too: each leaves without its call at Lizihnei and runs on past it to
+    # that station, as long after as its own first leg took. At Lizihnei
+    # an outer train then goes straight on, leaving as it arrives rather
+    # than at the real departure the next train round makes.
+    depot_stop = names[-1]
+    turned = 0
+    for run in runs:
+        if run["way"] != "outer":
+            continue
+        calls = run["calls"]
+        if calls[0][0] == home and calls[1][0] == depot_stop:
+            leg = calls[1][1] - calls[0][2]
+            calls = [[depot_stop, calls[1][2], calls[1][2]]] + calls[2:]
+        else:
+            leg = next(r["calls"][1][1] - r["calls"][0][2] for r in runs if r["way"] == "outer" and r["calls"][0][0] == home)
+        if calls[-1][0] == home:
+            arrives = calls[-1][1]
+            calls[-1] = [home, arrives, arrives + DWELL]
+            calls.append([depot_stop, arrives + DWELL + leg, arrives + DWELL + leg])
+        run["calls"] = calls
+        turned += 1
+    if turned:
+        print(f"  {turned} outer trips start and end at {depot_stop}", file=sys.stderr)
+    return {"stops": names, "loop": True, "overnight": {home: most}, "tracks": {s: 2 for s in names}, "runs": runs}, None
 
 
 def parked(tool, found, days, stops, line, prompt=True):
@@ -298,10 +425,20 @@ def main(folder, out):
         names = [s["name"] for s in next(l for l in network["lines"] if l["id"] == line_id)["stations"]]
         timetable = json.load(open(os.path.join(folder, f"{system}_times.json"), encoding="utf-8"))["lines"][line_id]
         metro = system in METROS
+        game_id = f"{system}:{line_id}"
+        if game_id in RINGS:
+            line, problem = ring_line(timetable, names)
+            if problem:
+                print(f"{game_id}: left out: {problem}")
+                continue
+            ways = collections.Counter(r["way"] for r in line["runs"])
+            print(f"{game_id}: a ring of {len(names)} stations from {names[0]}, {len(line['runs'])} trips "
+                  f"({ways['inner']} inner, {ways['outer']} outer), {line['overnight'][names[0]]} trainsets, all in the depot overnight")
+            result["lines"].append({"id": game_id, "network": line_id, **line})
+            continue
         found, days = trains(timetable, names, "捷運" if metro else "輕軌", passing=f"{system}:{line_id}" in PASSING_LINES)
         passed = {t["train"]: [s["name"] for s in t["stops"] if not s["stop"]] for t in found}
         stops = names[names.index(after_station):] if after_station else names
-        game_id = f"{system}:{line_id}"
         label = game_id + (f" after {system}:{after}" if after else "")
         single = game_id in SINGLE_TRACK
         turnaround = tool.TURNAROUND

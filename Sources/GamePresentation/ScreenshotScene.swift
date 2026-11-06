@@ -97,6 +97,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// pull request that laid it so.
     case xiaobitan
 
+    /// Decision 535 (continued, KLRT): the same empty map round the
+    /// Kaohsiung Circular Light Rail, for `-screenshot-offer-real krtc:C`
+    /// (its purchase card) and `-screenshot-buy-real krtc:C` (its trains
+    /// going round each way). For the screenshot review of the pull
+    /// request that put it on sale.
+    case klrt
+
     /// Decision 565: a new real-world game round Taipei Main Station, a
     /// line of two stations 800 m apart whose platforms are four 20 m cars
     /// long, as the platform tool builds them, and its train of four
@@ -183,6 +190,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
+        // The middle of the ring's 38 stations.
+        case .klrt: (22.6281, 120.3036)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
@@ -218,7 +227,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipeiMain, .taipei101, .taichungViaduct, .interchange: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
-        case .wenhu, .xiaobitan: Self.realLineWorld(at: self, in: language)
+        case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
 
