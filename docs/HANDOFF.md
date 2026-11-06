@@ -534,6 +534,17 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**FLAKY-1106（2026-11-06，session_01YGNNungyjShoiFjNiD1Mhu）：full lane 三支不穩 UI 測試的根因**
+- `MapInteractionTests.testTheStationTagsPencilRenamesAtOnce`
+  - 原因：第一次彈窗沒拿到鍵盤時，測試會按 Cancel 再按筆。但 Cancel 後，筆打開的車站面板還開著，而車站標籤只在沒有面板時才畫，所以筆不存在。4 次紅都是這樣：run 41935318468、41959689553、42130736583、42173934715，最後一次跑的是修正前的程式。
+  - 修法：#1887 改成先按面板的 Done 再按筆。
+  - 還沒驗證：修正後的重試路還沒實際跑到過。下次 full lane 若走到 Cancel，要看那一輪有沒有過。
+- `MapInteractionTests.testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack`
+  - 原因：測試設了 `OS_ACTIVITY_DT_MODE=NO`（FLANE7 從 MENUSTALL 抄來），另外兩支 3D 測試沒有設。
+  - 證據：設著時，main 13 輪 full lane 的模型都要 66–268 秒，有一次超過 240 秒。同一輪另外兩支只要 23–54 秒。拿掉後是 58 秒和 48 秒（run 42171303204、42173934715）。
+  - 修法：`claude/flaky-pinch` 的 PR 拿掉這個設定（run 42179475291 再驗一次：47 秒，34/34 綠）。為什麼會慢還不知道，App 不讀這個變數。`SettingsUITests`、`StoryCardUITests` 也設了它，如果它們也慢，先拿掉試。
+- `HUDAlignmentUITests.testALessonsCardKeepsTheLines` 的 `kAXErrorIPCTimeout`（run 42130736583）：跟 App 無關。斷言全部通過；逾時發生在 App 關掉之後，`finish()` 把方向轉回直的時候。沒有改。
+
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
 **第 50 任交第 51 任（2026-11-05 約 23:15 UTC＝台灣 11-06 07:15，session_01YGNNumyd5kmn2HrCenU1qN，第 6 層，壓縮 3 次）**：照這段接手；下面「第 50 任的現況」仍有效，兩段不同時以這段為準。第 51 任要由**作者在 claude.ai 開**（第 50 任開的會是第 7 層，見 §1.1）；開工先在 #1579 登記，§1 表格的遊戲規劃改成新 session。
