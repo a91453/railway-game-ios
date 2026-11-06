@@ -103,8 +103,8 @@ extension GameWorld {
     /// 221 sends its line's trains on (``runTrainEnteringDepot(of:memo:)``,
     /// ``readyRunTrain(of:_:day:)``): of the trains waiting there, those
     /// beyond the runs leaving within ``runDepotLookahead`` go into a depot
-    /// at once, the last in ``runTrainOrder(of:)`` first; each run takes the
-    /// first in that order of those standing there by its first departure, the trains
+    /// at once, the last in ID order first; each run takes the first in ID
+    /// order of those standing there by its first departure, the trains
     /// ending a service there joining them as they arrive; a train no run
     /// takes goes into a depot when it is ready. `nil` for a train of no
     /// line with runs, or one no run takes and with no depot to go to: it
@@ -114,11 +114,10 @@ extension GameWorld {
         let now = clock.now.seconds
         let starts = pendingRunStarts(of: line, from: station).sorted()
         let wanted = starts.count { $0 <= now + Self.runDepotLookahead }
-        // Those waiting now, in the order runs take them (decision 609
-        // continued, ``runTrainOrder(of:)``), and those arriving, by arrival.
+        // Those waiting now, in ID order, and those arriving, by arrival.
         var waiting: [(order: Int, id: TrainID)] = []
         var arriving: [(time: Int64, order: Int, id: TrainID)] = []
-        for (order, id) in runTrainOrder(of: line).enumerated() {
+        for (order, id) in line.trains.enumerated() {
             guard let other = id == train.id ? train : self.train(id: id), other.placement != nil, other.movement.rate > 0 else { continue }
             if id == train.id {
                 if ready <= now, other.execution == nil { waiting.append((order, id)) } else { arriving.append((ready, order, id)) }

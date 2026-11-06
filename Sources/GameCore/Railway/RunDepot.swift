@@ -46,15 +46,14 @@ extension GameWorld {
         line.isRing ? [.inner, .outer] : [nil]
     }
 
-    /// `line`'s trains without a service waiting at `station`, in the
-    /// order its runs take them (``runTrainOrder(of:)``, decision 609
-    /// continued; ID order before): placed, with a rate above 0, stopped there; with `way`
+    /// `line`'s trains without a service waiting at `station`, in ID
+    /// order: placed, with a rate above 0, stopped there; with `way`
     /// (decision 535), those facing that way round the ring, and those
     /// facing the other way that its runs from there do not need (one
-    /// each, in that order), which take a run this way turned round rather
+    /// each, in ID order), which take a run this way turned round rather
     /// than leave it to a train out of the depot, or go in when none does.
     private func runTrainsWaiting(of line: ServiceLine, at station: StationID, way: RingDirection? = nil) -> [Int] {
-        let waiting = runTrainOrder(of: line).compactMap { id -> Int? in
+        let waiting = line.trains.compactMap { id -> Int? in
             guard let index = trains.firstIndex(where: { $0.id == id }) else { return nil }
             let train = trains[index]
             guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: station) else { return nil }
@@ -124,7 +123,7 @@ extension GameWorld {
     /// `nil` (decision 221). Of its trains without a service waiting at a
     /// station other than its depots: one where no run of the line leaves,
     /// or, where more wait than runs leave within
-    /// ``runDepotLookahead``, the last in ``runTrainOrder(of:)``. Under traffic control it
+    /// ``runDepotLookahead``, the last in ID order. Under traffic control it
     /// must be able to take its route now, and a train that came out of a
     /// depot to the stop stays while a run from there is due (decision
     /// 296); and while none is due, a train in the way of a service
@@ -193,7 +192,7 @@ extension GameWorld {
                 let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
                 var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()).filter { !kept.contains($0) } : []
                 // Decision 609: under traffic control, off a ring, the last
-                // waiting in ``runTrainOrder(of:)`` (the one its runs take last) is one too
+                // waiting in ID order (the one its runs take last) is one too
                 // many too when the runs leaving within the hour still each
                 // find a train without it, of those waiting and those on
                 // their way there (``runTrainsReady(of:at:way:)``). On the

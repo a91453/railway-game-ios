@@ -450,19 +450,7 @@ extension GameWorld {
         return (legs, turnbacks)
     }
 
-    /// Decision 609, continued: `line`'s trains in the order its runs take
-    /// them, the one waiting longest first: by when each was timetabled to
-    /// end its last timetable (where it waits, or is on its way to end),
-    /// one with no timetable first, then in ID order. A run took the first
-    /// in ID order before, and the last stood on at a terminus for hours
-    /// while the others took turns (on the Taoyuan Airport MRT, at the two
-    /// airport terminals).
-    func runTrainOrder(of line: ServiceLine) -> [TrainID] {
-        let ended = line.trains.map { id in train(id: id)?.timetable.last?.arrival.seconds ?? .min }
-        return line.trains.indices.sorted { (ended[$0], $0) < (ended[$1], $1) }.map { line.trains[$0] }
-    }
-
-    /// The first of `line`'s trains, in ``runTrainOrder(of:)``, that `run` can send out
+    /// The first of `line`'s trains, in ID order, that `run` can send out
     /// now for game day `day`: one without a service, placed, with a rate
     /// above 0, stopped at the run's first stop, and able to drive it from
     /// there; under traffic control (Stage T) also able to take the route
@@ -484,7 +472,7 @@ extension GameWorld {
     /// either when `nil`.
     private func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64, turning: Bool?) -> (index: Int, timetable: [ScheduledStop])? {
         let first = line.stops[run.from]
-        for id in runTrainOrder(of: line) {
+        for id in line.trains {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
             let train = trains[index]
             guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: first),
