@@ -68,3 +68,36 @@ extension GameSession {
         tool == .select && !isChoosingMapTile
     }
 }
+
+/// The sights panel's rows (``GameSession/sightsPanelRows``) and what they
+/// were worked out for.
+struct SightRowsMemo {
+    let day: Int64
+    let commandRevision: Int
+    let language: DisplayLanguage
+    let rows: [AttractionRow]
+}
+
+extension GameSession {
+    /// The sights panel's rows (``GameWorld/attractionRows(in:)``), worked
+    /// out again only when the game's day or a command changes, not at
+    /// every tick (CRASH-SIGHTS: a player's report, "it
+    /// keeps jumping to the sights and crashing"). Each row asks whether
+    /// tourists can ride to its sight, a route search on the whole
+    /// network; the panel, which reads the world, asked it of every sight
+    /// at every tick while it stayed open, and on a big network that took
+    /// longer than a tick, so the game froze until the system closed it.
+    /// What a row says changes with the day (its status, today's,
+    /// yesterday's and this year's tourists, the day's typhoon) or a
+    /// command (its shop, its station, the lines).
+    public var sightsPanelRows: [AttractionRow] {
+        let day = world.clock.now.seconds / GameTime.secondsPerDay
+        if let memo = sightRowsMemo, memo.day == day, memo.commandRevision == commandRevision, memo.language == language {
+            return memo.rows
+        }
+        let rows = world.attractionRows(in: language)
+        sightRowsMemo = SightRowsMemo(day: day, commandRevision: commandRevision, language: language, rows: rows)
+        sightRowsWorkedOut += 1
+        return rows
+    }
+}
