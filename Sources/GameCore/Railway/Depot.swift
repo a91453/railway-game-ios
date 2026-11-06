@@ -168,6 +168,10 @@ extension GameWorld {
     /// its platforms.
     func platformWaits(_ station: StationID, for train: Train, over times: (from: Int64, until: Int64)) -> [TrackEdgeID: Int64]? {
         guard !isTrafficControlEnabled, let stop = self.station(id: station), !stop.isDepot, followsRealTimetable(train) else { return nil }
+        // Decision 612: on a ring each way round has its own track, and a
+        // train put on the other way's platform faces the wrong way for
+        // its next run, which it then reaches only round the whole ring.
+        guard lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) })?.isRing != true else { return nil }
         let edges = Set(berths(of: station, length: train.length).map(\.traversal.edge))
         guard edges.count > 1 else { return nil }
         let clearance = Self.platformClearance

@@ -141,9 +141,7 @@ struct AcquisitionCompleteCard: View {
                 .scaleEffect(stamped || reduceMotion ? 1 : 1.25)
                 .opacity(stamped || reduceMotion ? 1 : 0)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(verbatim: language.text(
-                    "Bought: \(acquired.ends.from) to \(acquired.ends.to)", "收購：\(acquired.ends.from)—\(acquired.ends.to)"
-                )))
+                .accessibilityLabel(Text(verbatim: acquired.sealText(in: language)))
                 .accessibilityIdentifier("acquired.seal")
             VStack(spacing: 4) {
                 Text(verbatim: acquired.sizeText(in: language))
@@ -198,7 +196,7 @@ struct AcquisitionCompleteCard: View {
             VStack(spacing: 2) {
                 Text(verbatim: language.text("Bought", "收購"))
                     .font(.title2.weight(.heavy))
-                Text(verbatim: "\(acquired.ends.from)—\(acquired.ends.to)")
+                Text(verbatim: acquired.endsText(in: language))
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)

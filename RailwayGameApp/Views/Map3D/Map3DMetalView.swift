@@ -113,6 +113,8 @@ final class Map3DMetalView: MTKView {
     /// Decision 585 PR-4 (FERRYFOLLOW): the same for the ferry boat
     /// followed. Not seen through: it sails on open water.
     var ferryPose: (@MainActor (FerryBoatID) -> Map3DFollow.Pose?)?
+    /// Decision 606 (IDLEREAL): where a real timetable's train is.
+    var realTrainPose: (@MainActor (RealTrainID) -> Map3DFollow.Pose?)?
     /// Decision 259: the people and vehicles for this frame, seen with the
     /// camera given, with the city's lights on so far; decision 417: within
     /// the budget given (the trains' triangles this frame among it).
@@ -171,6 +173,9 @@ final class Map3DMetalView: MTKView {
     /// stands on are built; until they are, the camera stays above and
     /// behind the train, and flies to the platform once they are.
     var lookoutBuilt: (@MainActor (Map3DPoint) -> Bool)?
+    /// Decision 606 (續): whether the ground round a followed real train
+    /// is built, with the city in full.
+    var trainGroundBuilt: (@MainActor (Map3DPoint) -> Bool)?
     private var lookoutWasBuilt = true
 
     private struct Chunk {
@@ -841,18 +846,27 @@ final class Map3DMetalView: MTKView {
         guard var following else { return }
         let pose: Map3DFollow.Pose
         followedSeeThrough = nil
-        if let bus = following.bus {
+        // One switch over a local copy of the subject, and no closure that
+        // captures `following`: chained `if let following.bus/.cabin/...`
+        // here crashed Xcode 26.6's Release optimizer (CopyPropagation,
+        // "Found outside of lifetime use?!"). Do not change it back.
+        let subject = following.subject
+        switch subject {
+        case .bus(let bus):
             guard let found = busPose?(bus) else { return }
             pose = found
-        } else if let cabin = following.cabin {
+        case .cabin(let cabin):
             guard let found = cabinPose?(cabin) else { return }
             pose = found
             followedSeeThrough = Map3DSeeThrough.point(of: found)
-        } else if let ferry = following.ferry {
+        case .ferry(let ferry):
             guard let found = ferryPose?(ferry) else { return }
             pose = found
-        } else {
-            guard let head = heads.first(where: { $0.train == following.train }) else { return }
+        case .realTrain(let real):
+            guard let found = realTrainPose?(real) else { return }
+            pose = found
+        case .train(let train):
+            guard let head = heads.first(where: { $0.train == train }) else { return }
             pose = head.pose
         }
         // Decision 578: no jump to a platform with nothing built round it.
@@ -895,6 +909,15 @@ final class Map3DMetalView: MTKView {
         let old = chunks.filter { kept.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
         let held = Set(old.map { Map3DStreaming.Key(column: $0.column, row: $0.row) })
         chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
+    }
+
+    /// Decision 517 續 (PR 3b): draws `scene`'s chunks at `keys` in place
+    /// of what was there, and its tunnels' openings; the other chunks
+    /// drawn stay (`scene` was built again from the scene drawn, only at
+    /// `keys`).
+    func replace(_ keys: Set<Map3DStreaming.Key>, from scene: Map3DScene) {
+        openings = scene.trackCover.openings
+        place(scene.chunks.filter { keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }, at: keys.sorted())
     }
 
     /// Decision 358: draws `built` at `keys` (in place of what was there;
@@ -1001,7 +1024,11 @@ final class Map3DMetalView: MTKView {
         // Decision 394: deep in a tunnel, the cab sees nothing on the
         // ground, so none of it is drawn (nor let go: it is all there the
         // frame it is seen again).
-        underground.update(view: following?.view, head: frame?.heads.first(where: { $0.train == following?.train }), flying: flying != nil,
+        // A local copy of the subject, not `following?.train` in the
+        // closure (Xcode 26.6 Release optimizer crash, see moveCamera).
+        let followedSubject = following?.subject
+        let followedTrain: TrainID? = if case .train(let id)? = followedSubject { id } else { nil }
+        underground.update(view: following?.view, head: frame?.heads.first(where: { $0.train == followedTrain }), flying: flying != nil,
                            camera: camera, openings: openings)
         let below = underground.isUnderground
         let camera = camera

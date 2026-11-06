@@ -14,6 +14,12 @@ extension GameWorld {
     /// (decision 197); a train that turns round within the hour stays.
     static let runDepotLookahead: Int64 = 2 * GameTime.secondsPerHour
 
+    /// Decision 609: how far ahead a line with runs, under traffic control,
+    /// looks to tell a waiting train one too many though runs leave where
+    /// it waits within ``runDepotLookahead``: an hour, as a train out of
+    /// the depot comes in well within it for a run it would miss.
+    static let runDepotSurplusLookahead: Int64 = GameTime.secondsPerHour
+
     /// The first departures, in seconds, of `line`'s runs that leave from
     /// `station`, have not sent a train out on their day and may still:
     /// those of the days ``LineRun/latestDispatch`` behind to tomorrow (as
@@ -170,6 +176,7 @@ extension GameWorld {
         }
         let horizon = clock.now.seconds + Self.runDepotLookahead
         var inTheWay: Set<TrainID>?
+        var heldRuns: Set<TrainID>?
         var candidates: [Int] = []
         for station in stations {
             // Decision 535: on a ring, the trains facing each way round
@@ -180,11 +187,26 @@ extension GameWorld {
                 (way, runTrainsWaiting(of: line, at: station, way: way), pendingRunStarts(of: line, from: station, way: way).count { $0 <= horizon })
             }
             let kept = Set(counted.flatMap { $0.1.prefix($0.2) })
-            for (_, waiting, wanted) in counted {
+            for (way, waiting, wanted) in counted {
                 // Decision 296: a train out of a depot for a run due here is
                 // not one too many until that run leaves or is dropped.
                 let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
                 var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()).filter { !kept.contains($0) } : []
+                // Decision 609: under traffic control, off a ring, the last
+                // waiting in ID order (the one its runs take last) is one too
+                // many too when the runs leaving within the hour still each
+                // find a train without it, of those waiting and those on
+                // their way there (``runTrainsReady(of:at:way:)``). On the
+                // Taoyuan Airport MRT a train late for its run at Airport
+                // Terminal 2 had one sent out of the depot for it; arrived,
+                // it stood there for hours on one of the station's three
+                // tracks, as some run left within two hours all day.
+                if isTrafficControlEnabled, way == nil, leaving.isEmpty, let last = waiting.last {
+                    let soon = pendingRunStarts(of: line, from: station).filter { $0 <= clock.now.seconds + Self.runDepotSurplusLookahead }
+                    var ready = runTrainsReady(of: line, at: station)
+                    if let one = ready.firstIndex(of: clock.now.seconds) { ready.remove(at: one) }
+                    if Self.runsWithoutTrains(soon, ready: ready) == 0 { leaving = [last] }
+                }
                 // Decision 297: under traffic control, while no run from here
                 // is due, a train in the way of a service waiting for its
                 // route goes in too.
@@ -192,8 +214,23 @@ extension GameWorld {
                     if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
                     leaving += waiting.filter { inTheWay!.contains(trains[$0].id) && !leaving.contains($0) }
                 }
+                // Decision 609, continued: so too, though a run from here is
+                // due, one whose own due run cannot leave now (it waits for
+                // its route): it cannot take that run while it stands in the
+                // way, and its run is left to another train, or to one out of
+                // a depot (decision 296 does not keep it). Decision 556's
+                // last way out sent such a train in only once the runs were
+                // due to leave and made a deadlock (decision 570). Without
+                // block sections only (see ``heldRunDepartures(memo:)``).
+                var stuck: Set<Int> = []
+                if isTrafficControlEnabled, !blockSections, due {
+                    if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
+                    if heldRuns == nil { heldRuns = Set(heldRunDepartures(memo: &memo.directions).map(\.train)) }
+                    stuck = Set(waiting.filter { inTheWay!.contains(trains[$0].id) && heldRuns!.contains(trains[$0].id) && !leaving.contains($0) })
+                    leaving += waiting.filter { stuck.contains($0) }
+                }
                 for index in leaving where !candidates.contains(index) {
-                    if due, cameOutOfDepot(trains[index], to: station) { continue }
+                    if due, !stuck.contains(index), cameOutOfDepot(trains[index], to: station) { continue }
                     candidates.append(index)
                 }
             }
@@ -327,18 +364,52 @@ extension GameWorld {
     /// hour on the loop every southbound set calls at, its way out north
     /// held by the sets queued for that loop; a set waiting at a terminus
     /// keeps the sets arriving from a platform the same way.
+    ///
+    /// Decision 609, continued: or that another train without a service
+    /// needs for a due run it cannot leave on (see
+    /// ``heldRunDepartures(memo:)``). On the Taoyuan Airport MRT under the
+    /// simple rules with traffic control, a train that had ended its run at
+    /// Airport Terminal 2 stood on the platform the due run of one at
+    /// Terminal 1 was bound for, and that one on the platform the first
+    /// one's was: neither was a service, so neither was in the way.
     func trainsInTheWay(memo: inout DirectionMemo) -> Set<TrainID> {
         let idle = trains.filter { $0.execution == nil && $0.position != nil }
         guard !idle.isEmpty else { return [] }
-        var ways: [Set<TrackResource>] = []
+        var ways: [(train: TrainID, needs: Set<TrackResource>)] = []
         for train in trains where train.execution != nil {
-            if let needs = awaitedRoute(of: train.id, memo: &memo)?.needs { ways.append(needs) }
+            if let needs = awaitedRoute(of: train.id, memo: &memo)?.needs { ways.append((train.id, needs)) }
         }
+        ways += heldRunDepartures(memo: &memo)
         guard !ways.isEmpty else { return [] }
         return Set(idle.lazy.filter { train in
             let own = self.held(train)
-            return ways.contains { self.network.fouls(own, $0) }
+            return ways.contains { $0.train != train.id && self.network.fouls(own, $0.needs) }
         }.map(\.id))
+    }
+
+    /// Decision 609, continued: under traffic control, the trains without
+    /// a service, of lines with runs, whose due run (decision 133) the
+    /// dispatcher cannot send out now (see ``readyRunTrain(of:_:day:)``):
+    /// its route is held, and so is the route its line names for the leg
+    /// (decision 570). Each with the track its route needs, in ID order.
+    /// Not with block sections: there a route is held only up to the next
+    /// signal and clears as the train ahead moves on, and sending such
+    /// trains in left the Wenhu line's runs later under the realistic rules.
+    func heldRunDepartures(memo: inout DirectionMemo) -> [(train: TrainID, needs: Set<TrackResource>)] {
+        guard isTrafficControlEnabled, !blockSections else { return [] }
+        var held: [(train: TrainID, needs: Set<TrackResource>)] = []
+        for train in trains where train.execution == nil && train.position != nil {
+            guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }),
+                  let departing = dueRunDeparture(of: train, on: line),
+                  case .held = reservingDeparture(departing, memo: &memo)
+            else { continue }
+            if let preferred = dueRunPreferredDeparture(of: train, on: line),
+               case .granted = reserving(preferred, following: blockSections, memo: &memo) {
+                continue
+            }
+            held.append((train.id, routeEnvelope(of: departing).resources))
+        }
+        return held
     }
 
     /// Decision 556, continued (TYMCLIST9): the empty run of `train`
@@ -441,6 +512,8 @@ extension GameWorld {
                 let lead = runPullOut(of: line, to: station, way: way, memo: &memo)?.trip.deadhead.map { Self.lead(of: $0) * GameTime.secondsPerMinute }
                 for start in starts {
                     wake(at: start - Self.runDepotLookahead)
+                    // Decision 609: a run coming within the hour.
+                    if isTrafficControlEnabled, way == nil { wake(at: start - Self.runDepotSurplusLookahead) }
                     wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
                     if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
                     // Decision 296: once its first departure has passed, a

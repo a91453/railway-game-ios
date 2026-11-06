@@ -38,7 +38,7 @@ final class DepotReturnReportTests: XCTestCase {
 
     func testTheWenhuLine() throws {
         try wanted("wenhu")
-        try report("wenhu", Self.bought("trtc:BR"))
+        try report("wenhu", Self.resumed() ?? Self.bought("trtc:BR"))
     }
 
     /// Decision 556: the Taoyuan Airport MRT, on a map wide enough for it.
@@ -192,6 +192,15 @@ final class DepotReturnReportTests: XCTestCase {
         return session.world
     }
 
+    /// Decision 602: `DEPOT_RETURN_FROM=<file>` plays on from a world
+    /// `DEPOT_RETURN_SAVE` wrote (`DEPOT_RETURN_SAVE_AT=<clock seconds>`),
+    /// to `DEPOT_RETURN_UNTIL=<clock seconds>`, so a deadlock an hour into
+    /// the second day is a command of minutes (diagnosing-bugs).
+    static func resumed() throws -> GameWorld? {
+        guard let path = ProcessInfo.processInfo.environment["DEPOT_RETURN_FROM"] else { return nil }
+        return try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: URL(fileURLWithPath: path))).world
+    }
+
     @discardableResult
     private func report(_ name: String, _ opened: GameWorld) throws -> GameWorld {
         var world = opened
@@ -225,13 +234,20 @@ final class DepotReturnReportTests: XCTestCase {
         // played on until its runs past midnight have had their last chance
         // (decision 547's `RunsNotSent`).
         let counted = (start + 51 * 3_600) / GameTime.secondsPerDay - 1
-        let end = max(start + 51 * 3_600, RunsNotSent.closed(day: counted, of: timetabled))
+        let until = environment["DEPOT_RETURN_UNTIL"].flatMap { Int64($0) }
+        let end = until ?? max(start + 51 * 3_600, RunsNotSent.closed(day: counted, of: timetabled))
+        var saveAt = environment["DEPOT_RETURN_SAVE_AT"].flatMap { Int64($0) }
         func clock(_ seconds: Int64) -> String {
             let minutes = seconds % GameTime.secondsPerDay / 60
             return String(format: "day %d %02d:%02d", seconds / GameTime.secondsPerDay, minutes / 60, minutes % 60)
         }
         var hour = start / 3_600
         while world.clock.now.seconds < end {
+            if let at = saveAt, world.clock.now.seconds >= at, let path = environment["DEPOT_RETURN_SAVE"] {
+                try JSONEncoder().encode(SavedGame(world: world)).write(to: URL(fileURLWithPath: path))
+                FileHandle.standardError.write(Data("DEPOT_RETURN \(label) saved \(clock(world.clock.now.seconds)) to \(path)\n".utf8))
+                saveAt = nil
+            }
             try world.advance(ticks: 1)
             let stuck = world.deadlockedTrains()
             if !stuck.isEmpty { deadlockedSamples += 1 }
@@ -312,7 +328,9 @@ final class DepotReturnReportTests: XCTestCase {
         FileHandle.standardError.write(Data(summary.utf8))
         // `DEPOT_RETURN_STRICT=1`: fails on a run not sent out, a late trip or a deadlock,
         // so a finding is a command that turns red (diagnosing-bugs).
-        if environment["DEPOT_RETURN_STRICT"] != nil {
+        if environment["DEPOT_RETURN_STRICT"] != nil, until != nil {
+            XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")
+        } else if environment["DEPOT_RETURN_STRICT"] != nil {
             XCTAssertEqual(missed, 0, "\(label): runs not sent out")
             XCTAssertEqual(late, 0, "\(label): trips more than five minutes late")
             XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")

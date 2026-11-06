@@ -38,9 +38,12 @@ public struct Map3DSceneBuildTime: Hashable, Sendable {
     public internal(set) var showSeconds: Double?
     /// When it was built, in seconds since 1970.
     public let wall: Double
+    /// Decision 517 續 (PR 3b): how many of its chunks were built again
+    /// from the scene before (the rest kept); `nil` for a scene built whole.
+    public let rebuiltChunks: Int?
 
     public init(why: Why, realWorld: Bool, edges: Int, chunks: Int, triangles: Int, readSeconds: Double, buildSeconds: Double,
-                wall: Double) {
+                wall: Double, rebuiltChunks: Int? = nil) {
         self.why = why
         self.realWorld = realWorld
         self.edges = edges
@@ -49,6 +52,7 @@ public struct Map3DSceneBuildTime: Hashable, Sendable {
         self.readSeconds = readSeconds
         self.buildSeconds = buildSeconds
         self.wall = wall
+        self.rebuiltChunks = rebuiltChunks
     }
 
     /// Its line in a problem report.
@@ -64,7 +68,8 @@ public struct Map3DSceneBuildTime: Hashable, Sendable {
         times += showSeconds.map { language.text(", shown \(s($0))", "、上 GPU \(s($0))") } ?? language.text(", not shown", "、沒顯示")
         let total = readSeconds + buildSeconds + (showSeconds ?? 0)
         times += language.text(" (total \(s(total)))", "（共 \(s(total))）")
-        let size = language.text("\(edges) edges, \(chunks) chunks, \(triangles) triangles", "\(edges) 段軌道、\(chunks) 區塊、\(triangles) 三角形")
+        var size = language.text("\(edges) edges, \(chunks) chunks, \(triangles) triangles", "\(edges) 段軌道、\(chunks) 區塊、\(triangles) 三角形")
+        if let rebuiltChunks { size += language.text(", \(rebuiltChunks) built again", "、只重蓋 \(rebuiltChunks) 區塊") }
         return "\(DeviceDiagnostics.timeText(wall)) \(why), \(map), \(size): \(times)"
     }
 }

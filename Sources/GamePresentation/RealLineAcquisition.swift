@@ -40,10 +40,14 @@ public struct RealBranchLine: Hashable, Sendable {
     /// it leaves, as a branch line's junction (Beitou, the Xinbeitou
     /// Branch's), whose riders that line has.
     let leavesALine: Bool
+    /// Decision 535 (continued, KLRT): whether it is a ring (the
+    /// Kaohsiung Circular Light Rail, `metro_runs.json`'s `loop`), laid
+    /// round with no ends and run round both ways.
+    public let isRing: Bool
 
     public init(
         network: String, english: String, chinese: String, stops: [String], system: String = RealBranchLine.tra, after: String? = nil,
-        tier: LineAcquisition.Tier? = nil, leavesALine: Bool = false
+        tier: LineAcquisition.Tier? = nil, leavesALine: Bool = false, ring: Bool = false
     ) {
         self.network = network
         self.english = english
@@ -53,6 +57,7 @@ public struct RealBranchLine: Hashable, Sendable {
         self.after = after
         self.tier = tier ?? (system == Self.tra ? .branch : .lightRail)
         self.leavesALine = leavesALine
+        isRing = ring
     }
 
     /// The name GameCore records it by (``LineAcquisition/realLine``):
@@ -91,6 +96,10 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Decision 535: the Wenhu Line's four, as its real trains have.
     var cars: Int {
         guard isUrban else { return RealLineAcquisition.carsPerTrain }
+        // Decision 535 (continued, KLRT): the Kaohsiung light rail's two,
+        // its 34 m trains as long as Danhai's, not the Kaohsiung metro's
+        // three.
+        if isRing { return 2 }
         return isWenhu ? 4 : DemoRealLines.cars(ofSystem: system)
     }
 
@@ -166,9 +175,8 @@ public struct RealBranchLine: Hashable, Sendable {
     /// they share, their tier and whether they leave another line at their
     /// first station. A line is on sale where `metro_runs.json` has its
     /// runs (`tools/real-timetables/extract_metro_runs.py` says why the
-    /// others are not). Kaohsiung's Circular Light Rail is not listed:
-    /// the game's runs do not go round a ring yet (decision 535). The
-    /// Wenhu Line is, with its two depots, since its two days run under
+    /// others are not). Decision 535 (continued, KLRT): Kaohsiung's
+    /// Circular Light Rail, a ring, round both ways. The Wenhu Line is, with its two depots, since its two days run under
     /// every rule (decision 549 continued).
     static let urbanLines: [(system: String, network: String, english: String, chinese: String, shares: String?, tier: LineAcquisition.Tier, leavesALine: Bool)] = [
         ("ntdlrt", "V", "Danhai LRT Green Mountain Line", "淡海輕軌綠山線", "ntdlrt:VB", .lightRail, false),
@@ -179,6 +187,7 @@ public struct RealBranchLine: Hashable, Sendable {
         ("sanying", "LB", "Sanying Line", "三鶯線", nil, .metro, false),
         ("mrt", "BR", "Wenhu Line", "文湖線", nil, .metro, false),
         ("tymc", "A", "Taoyuan Airport MRT", "桃園機場捷運", nil, .metro, false),
+        ("krtc", "C", "Kaohsiung Circular Light Rail", "高雄環狀輕軌", nil, .lightRail, false),
     ]
 
     public func name(in language: DisplayLanguage) -> String {
@@ -344,11 +353,15 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// removed before, taken up first; `nil` for none (and in the logs of
     /// before).
     public let clearing: RealLineClearing?
+    /// Decision 535 (continued, KLRT): whether the line is a ring, its
+    /// runs going round it (``LineRun/way``, along ``stops``); `nil` for
+    /// a line with ends (and in the logs of before).
+    public let ring: Bool?
 
     public init(
         realLine: String, pieces: [Piece], stops: [Stop], platforms: [Platform], lineName: String, color: LineColor?, runs: [LineRun],
         trains: [Start], cars: Int, trainType: TrainType? = nil, dailyRiders: Int64, tiles: [MapTile]?, tier: LineAcquisition.Tier? = nil,
-        depot: Depot? = nil, moreDepots: [Depot]? = nil, clearing: RealLineClearing? = nil
+        depot: Depot? = nil, moreDepots: [Depot]? = nil, clearing: RealLineClearing? = nil, ring: Bool? = nil
     ) {
         self.realLine = realLine
         self.pieces = pieces
@@ -366,6 +379,7 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         self.depot = depot
         self.moreDepots = moreDepots
         self.clearing = clearing
+        self.ring = ring
     }
 
     /// It, taking `clearing` up first (decision 528).
@@ -373,7 +387,7 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         RealLineAcquisition(
             realLine: realLine, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: runs, trains: trains,
             cars: cars, trainType: trainType, dailyRiders: dailyRiders, tiles: tiles, tier: tier, depot: depot, moreDepots: moreDepots,
-            clearing: clearing
+            clearing: clearing, ring: ring
         )
     }
 
@@ -477,7 +491,11 @@ public struct RealLineOffer: Sendable {
     public func summaryText(in language: DisplayLanguage) -> String {
         let stops = line.stops.count
         guard let acquisition else { return language.text("\(stops) stations", "\(stops) 站") }
-        let summary = language.text(
+        // Decision 535 (continued, KLRT): a ring has no ends to name.
+        let summary = line.isRing ? language.text(
+            "Round the ring: \(stops) stations, \(acquisition.trains.count) trains and the real timetable",
+            "繞一圈：\(stops) 站、\(acquisition.trains.count) 列車與真實班次"
+        ) : language.text(
             "\(line.stops.first ?? "") to \(line.stops.last ?? ""): \(stops) stations, \(acquisition.trains.count) trains and the real timetable",
             "\(line.stops.first ?? "")—\(line.stops.last ?? "")：\(stops) 站、\(acquisition.trains.count) 列車與真實班次"
         )
@@ -545,7 +563,7 @@ extension GameSession {
             }
             lines.append(RealBranchLine(
                 network: rail.network, english: rail.english, chinese: rail.chinese, stops: runs.stops, system: rail.system, after: after,
-                tier: rail.tier, leavesALine: rail.leavesALine
+                tier: rail.tier, leavesALine: rail.leavesALine, ring: runs.ring
             ))
         }
         for line in lines {
@@ -880,9 +898,13 @@ extension RealLineLaying {
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
         }
-        let points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
+        var points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
         guard points.count == runs.stops.count, points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
+        }
+        // Decision 535 (continued, KLRT): a ring is laid round, with no ends.
+        if line.isRing {
+            return ringOffer(for: line, runs: runs, points: points, raising: raising, depot: depot, railways: railways, frame: frame)
         }
         // The real line's way from the junction to the terminal, run on
         // straight past each end (Checheng stands 81 m past the end of
@@ -921,8 +943,34 @@ extension RealLineLaying {
         let depotEnds: [(stop: Int, site: RealLineDepotSite, points: [WorldVector])] = depot ? depotSites.compactMap { site in
             site.beyond.flatMap { runs.stops.firstIndex(of: $0) }.map { ($0, site, worldPoints(site)) }
         } : []
+        func onMap(_ point: (latitude: Double, longitude: Double)) -> WorldVector {
+            WorldVector(frame.worldPosition(latitude: point.latitude, longitude: point.longitude))
+        }
+        // Decision 602 (continued): an end station whose real platform the
+        // drawn line stops short of (the Wenhu Line's at Nangang Exhibition
+        // Center, 86 m on, its point the Bannan Line's) stands on its own
+        // platform, which the run-on below goes through.
+        for (stop, site, _) in depotEnds {
+            if let platform = site.fan?.platform { points[stop] = onMap(platform) }
+        }
         func runOn(from end: WorldVector, leaving way: WorldVector, at stop: Int) -> [WorldVector] {
-            guard let points = depotEnds.first(where: { $0.stop == stop })?.points else { return [end + way * RealLineAcquisition.runOn] }
+            guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * RealLineAcquisition.runOn] }
+            // Decision 602: a fanned yard's lead along the real leads to
+            // its throat, from where the line's track runs on past the end.
+            if let fan = site.fan {
+                // Decision 602 (continued): on from where the drawn line
+                // stops, through the real platform and the real junction.
+                if let platform = fan.platform {
+                    return Array(RealLineDepotLayout.Fan.lead(
+                        from: end, leaving: way, through: [onMap(platform), points[0]] + fan.leads.map(onMap), to: onMap(fan.throat),
+                        yardWay: (points[2] - points[1]).unit
+                    ).dropFirst())
+                }
+                let junction = end + way * max(0, (points[0] - end).dot(way))
+                return RealLineDepotLayout.Fan.lead(
+                    from: junction, leaving: way, through: fan.leads.map(onMap), to: onMap(fan.throat), yardWay: (points[2] - points[1]).unit
+                )
+            }
             // In the yard's way 50 m short of its sidings' near ends, so
             // the game's ladder, longer than the real one, stays within
             // the real depot.
@@ -1009,7 +1057,8 @@ extension RealLineLaying {
         // real yard, over the Jingmei River), read but not bought.
         let yardSamples = depotEnds.flatMap { _, site, points in
             RealLineDepotLayout.groundSamples(
-                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
+                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step,
+                throat: site.fan.map { onMap($0.throat) }
             )
         } + (depot && line.readsGroundBesideYards ? midDepotSites : []).flatMap { site in
             RealLineDepotLayout.groundSamples(
@@ -1144,6 +1193,26 @@ extension RealLineLaying {
             }
             forced += [a, a + ramp, b - ramp, b]
             second = (a, b)
+        }
+        // Decision 602: a fanned yard's second lead, beside the first from
+        // the end station's outermost switch to where the real two join, on
+        // the side the real second lies: from the switch itself, so that a
+        // train out of the yard and one into it share no single track
+        // there (laid a short edge further on, a train out on one lead and
+        // one in from a loop met head on on that edge, the Neihu deadlock
+        // of decision 602).
+        var secondLeads: [(a: Double, b: Double, offset: Double)] = []
+        for (stop, site, _) in depotEnds where stop == 0 || stop == runs.stops.count - 1 {
+            guard let real = site.fan?.second, let first = spans.first, let last = spans.last else { continue }
+            let joins = path.nearest(onMap(real.joins)).along
+            let (a, b) = stop == 0 ? (joins, first.lowerBound) : (last.upperBound, joins)
+            guard b - a > 2 * ramp + gap else { continue }
+            let on = onMap(real.on), at = path.nearest(on).along
+            let side: Double = (on - path.point(at: at)).dot(path.tangent(at: at).normal) >= 0 ? 1 : -1
+            // Nodes every 30 m between its ramps, so that it follows the
+            // first lead's bends (one edge across them cut over it).
+            forced += [a, a + ramp, b - ramp, b] + Array(stride(from: a + ramp + 30 * RealLineAcquisition.metre, to: b - ramp, by: 30 * RealLineAcquisition.metre))
+            secondLeads.append((a, b, side * HighSpeedDemo.trackOffset))
         }
         // Decision 479: the depot's wye and crossovers, on the second
         // track's side of the line, clear of the stations and the second
@@ -1313,6 +1382,26 @@ extension RealLineLaying {
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 1, node: secondB), true
             ))
         }
+        // Decision 602: the second leads, after the pieces others name by
+        // their index.
+        // Beside every node of the first between its switches, the offset
+        // eased in and out over a ramp: the first lead bends there, and
+        // one edge across a bend cut over it. Each switch's two edges span
+        // the same stretch, so they leave along tangents of the same length
+        // (decision 543).
+        for lead in secondLeads {
+            guard let a = mainNode(lead.a), let b = mainNode(lead.b), b > a + 1 else { continue }
+            let beside = Array(a...b)
+            let offsets = beside.map { index -> Double in
+                let distance = main.distances[index]
+                let t = min(1, max(0, min(distance - lead.a, lead.b - distance) / ramp))
+                return lead.offset * t * t * (3 - 2 * t)
+            }
+            plans.append((
+                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: offsets, following: true),
+                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
+            ))
+        }
         var pieces = plans.map { entry in
             let plan = entry.plan
             let nodes = plan.nodes.indices.map { WorldCoordinate(x: plan.nodes[$0].point.x, y: plan.nodes[$0].point.y, z: plan.heights[$0]) }
@@ -1339,12 +1428,12 @@ extension RealLineLaying {
         }
         // Decision 489: a depot past an end, its lead on from the main
         // track's end there; decision 535, one past each end.
-        for (end, site, _) in depotEnds where end == 0 || end == runs.stops.count - 1 {
+        for (end, site, points) in depotEnds where end == 0 || end == runs.stops.count - 1 {
             let last = end == 0 ? 0 : main.nodes.count - 1
             let way = end == 0 ? path.tangent(at: 0).reversed : path.tangent(at: path.length)
             guard let laid = RealLineDepotLayout.lay(
                 site, beyond: (RealLineAcquisition.NodeAt(piece: 0, node: last), WorldVector(main.nodes[last].point), main.heights[last], way),
-                first: pieces.count, length: platformLength, ground: ground, water: water, in: language
+                shed: (points[1] + points[2]) * 0.5, first: pieces.count, length: platformLength, ground: ground, water: water, in: language
             ) else {
                 return refused("The line's depot does not fit here.", "這條線的機廠放不下。")
             }
@@ -1646,13 +1735,23 @@ extension RealLineLaying {
         let line = try world.createLine(named: acquisition.lineName, stops: stations.reversed())
         if let color = acquisition.color { try world.setLineColor(line.id, to: color) }
         try world.setLineServiceWindow(line.id, to: .allDay)
+        // Decision 535 (continued, KLRT): a ring, before its runs; each
+        // run's way round turned with the stops.
+        let ring = acquisition.ring == true
+        if ring { try world.setLineRing(line.id, to: true) }
         try world.setLineRuns(line.id, to: acquisition.runs.map { run in
-            LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days, passes: run.passes.map { last - $0 })
+            LineRun(
+                from: last - run.from, to: last - run.to, times: run.times, days: run.days,
+                way: run.way.map { $0 == .inner ? .outer : .inner }, passes: run.passes.map { last - $0 }
+            )
         })
         // Decision 564: a metro's or light rail's trains keep right, the
         // platforms it names and every other way its trains find.
         let keepsRight = RealBranchLine.keepsRight(realLine: acquisition.realLine)
-        try world.setLineRoutePreferences(line.id, to: Self.routePreferences(platformsOf, stops: stations.count, keepingRight: keepsRight))
+        try world.setLineRoutePreferences(
+            line.id, to: ring ? Self.ringRoutePreferences(platformsOf, stops: stations.count)
+                : Self.routePreferences(platformsOf, stops: stations.count, keepingRight: keepsRight)
+        )
         if keepsRight { try world.setLineKeepsRight(line.id, to: true) }
         // Decision 479: the depot, a platform along each siding, the line's.
         // Decision 535: and its others, the Wenhu Line's two.
@@ -1722,10 +1821,23 @@ public struct RealLineAcquired: Hashable, Sendable {
     /// BUGHUNT_BUILD P3-2: whether it runs from that day's first train
     /// (bought before ``LineAcquisition/sameDayCutoff``), not the next day's.
     public var startsToday = false
+    /// Decision 535 (continued, KLRT): whether it is a ring, with no ends.
+    public var ring = false
 
     public static func == (a: RealLineAcquired, b: RealLineAcquired) -> Bool {
         a.line == b.line && a.name == b.name && a.color == b.color && a.ends == b.ends && a.stations == b.stations && a.metres == b.metres
-            && a.trains == b.trains && a.weekdayTrains == b.weekdayTrains && a.startsToday == b.startsToday
+            && a.trains == b.trains && a.weekdayTrains == b.weekdayTrains && a.startsToday == b.startsToday && a.ring == b.ring
+    }
+
+    /// Where it runs, under the seal: its two ends, or round the ring.
+    public func endsText(in language: DisplayLanguage) -> String {
+        ring ? language.text("Round the ring", "繞一圈") : "\(ends.from)—\(ends.to)"
+    }
+
+    /// The seal, as VoiceOver reads it.
+    public func sealText(in language: DisplayLanguage) -> String {
+        ring ? language.text("Bought: round the ring", "收購：繞一圈")
+            : language.text("Bought: \(ends.from) to \(ends.to)", "收購：\(ends.from)—\(ends.to)")
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -1787,16 +1899,21 @@ extension GameSession {
         }
         guard let line = made?.line else { return false }
         let main = acquisition.pieces.first
-        let metres = main.map { piece in
-            Int64(((piece.distances.last ?? 0) - 2 * RealLineAcquisition.runOn) / RealLineAcquisition.metre)
-        } ?? 0
+        let ring = acquisition.ring == true
+        // A ring's main track and its seam, round once; a line with ends
+        // without the run-on past them.
+        let metres = ring
+            ? Int64(acquisition.pieces.prefix(3).enumerated().filter { $0.offset != 1 }.reduce(0) { $0 + ($1.element.distances.last ?? 0) } / RealLineAcquisition.metre)
+            : main.map { piece in
+                Int64(((piece.distances.last ?? 0) - 2 * RealLineAcquisition.runOn) / RealLineAcquisition.metre)
+            } ?? 0
         // Wednesday: 1 << 3.
         let weekday = acquisition.runs.count { $0.days & (1 << 3) != 0 }
         lastLineAcquired = RealLineAcquired(
             line: line.id, name: name, color: acquisition.color,
             ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
             stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday,
-            startsToday: today
+            startsToday: today, ring: ring
         )
         shownRealLineOffer = nil
         selectLine(line.id)

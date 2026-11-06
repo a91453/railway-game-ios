@@ -998,7 +998,7 @@ public struct RealTrainClock: Hashable, Sendable {
         if let previous, previous.day == day || previous.day == day - 1 {
             let last = previous.day == day ? previous.to : 0
             from = min(last, second)
-            duration = min(max(time - previous.time, 0.05), 0.5)
+            duration = TrainMotion.glideSeconds(since: previous.time, at: time)
         } else {
             from = second
             duration = TrainMotion.tickSeconds

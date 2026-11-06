@@ -283,8 +283,8 @@ final class DanhaiDepotTests: XCTestCase {
     /// half an hour behind its timetable, and every run of each line's
     /// second day sent out. Without `trafficControl` (decision 547) the
     /// player has turned it off.
-    static func buyAndRun(_ ids: [String], rules: NewGameRules, trafficControl: Bool = true) throws {
-        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: rules)
+    static func buyAndRun(_ ids: [String], round: String = "ntdlrt:V", rules: NewGameRules, trafficControl: Bool = true) throws {
+        let session = try RealLineAcquisitionTests.game(round: round, side: 1 << 21, heights: true, rules: rules)
         for id in ids {
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale after \(ids)")
             let offer = session.realLineOffer(for: line)
@@ -295,10 +295,15 @@ final class DanhaiDepotTests: XCTestCase {
         if !trafficControl { try world.setTrafficControl(false) }
         let started = Date()
         var deadlocked = 0, late: Int64 = 0
-        for _ in 0..<51 {
+        for hour in 0..<51 {
             try world.advance(ticks: 60)
             deadlocked = max(deadlocked, world.deadlockedTrains().count)
             late = max(late, world.trains.compactMap { world.lateness(of: $0.id) }.max() ?? 0)
+            if ProcessInfo.processInfo.environment["ACQUIRE_TRACE"] != nil {
+                FileHandle.standardError.write(Data(
+                    "\(ids) \(rules) hour \(hour) \(String(format: "%.1f", Date().timeIntervalSince(started))) s, deadlocked \(world.deadlockedTrains().count), late \(late / 60) min\n".utf8
+                ))
+            }
         }
         let label = "\(ids.joined(separator: " then ")) (\(rules)\(trafficControl ? "" : ", traffic control off"))"
         let today = world.clock.now.seconds / GameTime.secondsPerDay
@@ -309,7 +314,14 @@ final class DanhaiDepotTests: XCTestCase {
                 run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
             }
             XCTAssertEqual(missed.count, 0, "\(label): \(id) runs not sent out yesterday: \(missed.count) of \(ran.runs.count)")
-            report.append("\(id) \(ran.trains.count) trains, \(ran.runs.count) runs, \(missed.count) missed")
+            // Yesterday's tally: the kilometres run, how many of them
+            // empty, and the late trips (decision 612's measure).
+            let tally = world.lineAccounts?.lines.first { $0.line == ran.id }?.days.first { $0.day == today - 1 }?.tally
+            let km = { (distance: Int64) in String(format: "%.0f", Double(distance) / RealLineAcquisition.metre / 1000) }
+            report.append(
+                "\(id) \(ran.trains.count) trains, \(ran.runs.count) runs, \(missed.count) missed"
+                    + (tally.map { ", \($0.lateTrips) of \($0.trips) trips late, \(km($0.trainDistance)) km run, \(km($0.deadheadDistance)) km empty" } ?? "")
+            )
         }
         XCTAssertEqual(deadlocked, 0, label)
         XCTAssertLessThanOrEqual(late, 30 * GameTime.secondsPerMinute, label)

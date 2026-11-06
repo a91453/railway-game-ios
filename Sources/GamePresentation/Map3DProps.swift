@@ -215,7 +215,10 @@ extension Map3DModelPack.Model {
             let points = corners.map { Map3DPoint($0.x, -$0.z, $0.y) }
             guard let normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { continue }
             for (corner, point) in zip(corners, points) {
-                vertices.append(Map3DVertex(point, normal: normal, color: corner.color, layer: corner.glows ? Map3DVertex.glowing : Map3DVertex.plain))
+                // Decision 615: a train material (a cabin's marked glass) keeps
+                // its layer; everything else is plain or glowing as before.
+                let layer = corner.isTrainMaterial ? corner.layer : corner.glows ? Map3DVertex.glowing : Map3DVertex.plain
+                vertices.append(Map3DVertex(point, normal: normal, color: corner.color, u: corner.isTrainMaterial ? corner.u : 0, layer: layer))
             }
         }
         var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)

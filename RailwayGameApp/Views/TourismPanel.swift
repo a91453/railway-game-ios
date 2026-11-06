@@ -20,7 +20,9 @@ struct TourismPanel: View {
     var body: some View {
         let language = session.language
         let world = session.world
-        let rows = world.attractionRows(in: language)
+        // CRASH-SIGHTS: kept by the session for the day, not worked out
+        // at every tick.
+        let rows = session.sightsPanelRows
         NavigationStack {
             ScrollViewReader { proxy in
                 List {

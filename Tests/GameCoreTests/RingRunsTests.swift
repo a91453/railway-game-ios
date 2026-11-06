@@ -335,6 +335,28 @@ final class RingRunsTests: XCTestCase {
         XCTAssertEqual(seconds(try XCTUnwrap(sent[anticlockwise])[0]).first?.last, 21_600)
     }
 
+    /// Decision 612: with traffic control off, a train of a line with runs
+    /// may be put on another of a station's platforms when its own is due
+    /// to be taken (decision 228), but not on a ring: there the other
+    /// platform is the other way round's track, and a train put on it
+    /// faces the wrong way for its next run, which it then reaches only
+    /// round the whole ring (the Kaohsiung Circular Light Rail missed 85
+    /// runs a day). Every station here has a platform on each track.
+    func testARingTrainIsNotPutOnTheOtherWaysPlatform() throws {
+        var world = try makeWorld()
+        try world.setTrafficControl(false)
+        let train = try XCTUnwrap(world.train(id: clockwise))
+        XCTAssertTrue(world.followsRealTimetable(train))
+        XCTAssertEqual(Set(world.berths(of: stations[1], length: train.length).map(\.traversal.edge)).count, 2)
+        XCTAssertNil(world.platformWaits(stations[1], for: train, over: (from: 21_900, until: 21_960)))
+        // Off a ring the same line chooses among them.
+        let ends = run(from: 0, to: 3, .inner, legs: 3, at: 25_200)
+        try world.setLineRuns(ring, to: [])
+        try world.setLineRing(ring, to: false)
+        try world.setLineRuns(ring, to: [LineRun(from: 0, to: 3, times: ends.times)])
+        XCTAssertNotNil(world.platformWaits(stations[1], for: try XCTUnwrap(world.train(id: clockwise)), over: (from: 21_900, until: 21_960)))
+    }
+
     // MARK: - Riders
 
     /// With only the inner lap from A, a rider from E to B goes the inner

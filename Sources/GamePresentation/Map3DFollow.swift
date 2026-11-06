@@ -144,6 +144,9 @@ public struct Map3DFollow: Hashable, Sendable {
         case cabin(CabinID)
         /// Decision 585 PR-4 (FERRYFOLLOW): a boat of a player's ferry.
         case ferry(FerryBoatID)
+        /// Decision 606 (IDLEREAL): a real timetable's train, which only
+        /// the idle mode follows.
+        case realTrain(RealTrainID)
     }
 
     /// Where a followed vehicle is and which way it faces, in the scene's
@@ -230,6 +233,10 @@ public struct Map3DFollow: Hashable, Sendable {
     public var ferry: FerryBoatID? {
         if case .ferry(let id) = subject { id } else { nil }
     }
+    /// Decision 606: the real train followed; `nil` for the others.
+    public var realTrain: RealTrainID? {
+        if case .realTrain(let id) = subject { id } else { nil }
+    }
     public var view: View
     /// Decision 403 (續): where the station view stands; `nil` follows
     /// from behind instead.
@@ -249,6 +256,18 @@ public struct Map3DFollow: Hashable, Sendable {
         subject = .bus(bus)
         self.view = view
     }
+
+    /// Decision 606 (IDLEREAL): following a real timetable's train, from
+    /// one of ``realTrainViews`` (another view is taken as from beside
+    /// it): it has no stop of the player's to watch from.
+    public init(realTrain: RealTrainID, view: View = .side) {
+        subject = .realTrain(realTrain)
+        self.view = Self.realTrainViews.contains(view) ? view : .side
+    }
+
+    /// Decision 606: the views of a real train: beside it, behind it,
+    /// above behind it and from its cab.
+    public static let realTrainViews: [View] = [.side, .back, .aboveBack, .cab]
 
     /// Decision 583 (CABLEFOLLOW): following a cabin of a cable car, from
     /// one of ``cabinViews`` (another view is taken as the nearest of

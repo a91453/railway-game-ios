@@ -30,6 +30,86 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 118.1.
+        Entry(
+            id: "2026-11-06-118-1",
+            items: [
+                Line(
+                    english: "On the Wenhu line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
+                    chinese: "收購的文湖線，木柵、內湖機廠照真實車場鋪，多一條進出機廠的線，收購也便宜一點。"
+                ),
+                Line(
+                    english: "On the Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
+                    chinese: "收購的機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
+                ),
+                Line(
+                    english: "With train control on, spare trains that cannot depart and block the way go back to the depot first.",
+                    chinese: "行車控制下多出來、發不出去又擋路的空車會先回機廠。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Ferry mode now tints shores far from any station, such as Cijin and Bali, light blue, so you can build a pier there.",
+                    chinese: "旗津、八里這些離車站遠的岸邊，渡輪模式也會標出淺藍色，可以直接蓋碼頭。"
+                ),
+                Line(
+                    english: "Fixed the game freezing or crashing while the sights panel was open.",
+                    chinese: "觀光景點面板開著時遊戲會卡住、當掉，修好了。"
+                ),
+                Line(
+                    english: "Where a highway ramp meets the bridge deck, the road surface now lines up instead of overlapping.",
+                    chinese: "高速公路匝道接上橋面的地方，路面高度對齊，不再互相交疊。"
+                ),
+                Line(
+                    english: "On a large network, starting a line or building a station or track no longer stalls for a moment.",
+                    chinese: "路網大了以後，開路線、蓋車站、蓋軌道不再卡一下。"
+                ),
+            ]
+        ),
+        // 115.1.
+        Entry(
+            id: "2026-11-06-115-1",
+            items: [
+                Line(
+                    english: "In ferry mode the shore squares where a pier can go are tinted light blue, and a tap near the shore lands on the nearest one. Tap too far away and you are told which way the shore is.",
+                    chinese: "渡輪模式把能蓋碼頭的岸邊格子塗成淡藍；點在岸邊附近就會落在最近的一格，點太遠會告訴你岸在哪個方向。"
+                ),
+                Line(
+                    english: "Real trains on the 3D map now use the platform tracks they are scheduled for, and side-by-side viaducts no longer leave a gap between them.",
+                    chinese: "3D 地圖的真實列車會進被排定的月台股道，並排的高架橋面中間也不再漏縫。"
+                ),
+                Line(
+                    english: "Idle mode now also follows the real trains running on the map, with the train's name and destination shown faintly in the corner.",
+                    chinese: "放空模式也會跟著地圖上跑的真實列車，角落淡淡寫出車名與往哪裡。"
+                ),
+                Line(
+                    english: "A Xiaobitan branch you buy is now a single track with one train shuttling back and forth, and costs less.",
+                    chinese: "新買的小碧潭支線照真實鋪成單線，一列車來回，收購價也便宜了。"
+                ),
+                Line(
+                    english: "Building a bigger station elsewhere no longer leaves sights such as Jiji and Pingxi with no tourists.",
+                    chinese: "別處蓋了大站，集集、平溪這類景點也不會再沒有觀光客。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Fixed a crash that could happen when opening the real-world map or the high-speed demo.",
+                    chinese: "修正開啟真實世界地圖或高鐵示範時可能閃退的問題。"
+                ),
+                Line(
+                    english: "Taking a stop off a line you bought now also takes away that stop's regular riders.",
+                    chinese: "從買下的支線拿掉一站後，那一站的常客也跟著不見。"
+                ),
+                Line(
+                    english: "Cable cars and ferries no longer connect to a depot.",
+                    chinese: "纜車與渡輪不再接到機廠。"
+                ),
+                Line(
+                    english: "The advice to shorten a train to fewer cars now gives a number that fits the platform.",
+                    chinese: "列車太長時「減到幾節」的提示，節數現在停得進月台。"
+                ),
+            ]
+        ),
         // 114.1.
         Entry(
             id: "2026-11-05-114-1",

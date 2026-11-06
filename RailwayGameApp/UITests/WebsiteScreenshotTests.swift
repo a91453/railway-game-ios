@@ -67,7 +67,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
@@ -89,6 +89,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("wenhu-right-3d", app)
     }
 
+    /// Decision 602: the Wenhu Line bought on a real map of Taipei at
+    /// 05:30, its trains in its two depots, on the 3D map over Muzha
+    /// Depot past Taipei Zoo and over Neihu Depot past Nangang Exhibition
+    /// Center, from the side and from higher up. For the screenshot review
+    /// of the pull request that laid the depots as the real yards.
+    func testWenhuDepotMuzha() { shootWenhuDepot("muzha", at: "25.000776,121.586414") }
+    func testWenhuDepotNeihu() { shootWenhuDepot("neihu", at: "25.059900,121.619920") }
+
+    private func shootWenhuDepot(_ name: String, at place: String) {
+        // The buying takes minutes in the Debug app (the workflow allows up
+        // to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        for (shot, view) in [("side", "450,200,55"), ("high", "900,200,20")] {
+            let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-3d-view", view,
+                                     "-screenshot-3d-at", place, "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            // The Debug app's main thread is busy buying for a minute at a
+            // time, longer than a UI query waits.
+            Thread.sleep(forTimeInterval: 180)
+            let done = app.buttons["acquired.done"]
+            XCTAssertTrue(done.appears(within: 600), "The line is bought")
+            if done.becomesHittable(within: 10) {
+                done.tap()
+                XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+            }
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep("wenhu-depot-\(name)-\(shot)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 603: the Xiaobitan Branch Line bought on a real map of
     /// New Taipei and run on to 07:40, its one train followed: on the 2D
     /// map and in 3D, a single track with one platform track at each
@@ -107,7 +144,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
@@ -127,6 +164,93 @@ final class WebsiteScreenshotTests: XCTestCase {
         waitForPicture(timeout: 150)
         settle(seconds: 5)
         keep("xiaobitan-single-3d", app)
+    }
+
+    /// Decision 535 (continued, KLRT): the Kaohsiung Circular Light Rail
+    /// on a real map of Kaohsiung: its purchase card (round the ring, no
+    /// terminal named), the card once bought, then run on to 07:40 with a
+    /// train followed, on the 2D map and in 3D, its CAF and Citadis trains
+    /// going round each way. For the screenshot review of the pull request
+    /// that put it on sale.
+    func testKaohsiungLightRailRing() {
+        executionTimeAllowance = 1_700
+        do {
+            let app = launch(extra: ["-screenshot-scene", "klrt", "-screenshot-offer-real", "krtc:C"])
+            defer { app.terminate() }
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let buy = app.buttons["acquire.buy"]
+            XCTAssertTrue(buy.appears(within: 300), "The purchase card opens")
+            // The card shows the price only once the ring is laid out and
+            // priced, when its buy button is enabled.
+            let priced = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: buy)
+            XCTAssertEqual(XCTWaiter().wait(for: [priced], timeout: 300), .completed, "The ring is priced")
+            settle(seconds: 3)
+            keep("klrt-offer", app)
+        }
+        let app = launch(extra: ["-screenshot-scene", "klrt", "-screenshot-buy-real", "krtc:C", "-screenshot-follow-bought", "krtc:C",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // As the Wenhu Line's: the Debug app buys the line and runs the
+        // morning with its main thread busy for a minute at a time.
+        Thread.sleep(forTimeInterval: 300)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            keep("klrt-acquired", app)
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<5 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("klrt-ring-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("klrt-ring-3d", app)
+    }
+
+    /// Decision 606 (IDLEREAL): the idle mode on a real map with nothing
+    /// of the player's follows a real timetable's train on the 3D map, its
+    /// name and where it goes faint in the top corner, gone a few seconds
+    /// later. For the screenshot review of the pull request that added it,
+    /// not the website. The train is the director's random pick: one in a
+    /// tunnel is passed over, so it may take a few tries.
+    func testIdleModeFollowsARealTrain() {
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "xiaobitan", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let ambient = app.buttons["menu.ambient"]
+        XCTAssertTrue(ambient.appears(within: 30), "The menu opens")
+        ambient.waitUntilSettled()
+        settle(seconds: 1)
+        // Touched at its frame's middle, as testGameMenuAndRules does.
+        let frame = ambient.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ambient.curtain"].firstMatch.appears(within: 10), "The idle mode starts")
+        let corner = app.staticTexts["ambient.realTrain"]
+        XCTAssertTrue(corner.appears(within: 1_200), "A real train is followed and named")
+        settle(seconds: 1)
+        keep("idle-real-train", app)
+        XCTAssertTrue(corner.disappears(within: 30), "Its name fades")
+        settle(seconds: 2)
+        keep("idle-real-train-later", app)
     }
 
     /// Decision 566: the new-train card, the Puyuma's with another
@@ -316,6 +440,66 @@ final class WebsiteScreenshotTests: XCTestCase {
             keep(name, app)
             app.terminate()
         }
+    }
+
+    /// Decision 615 (CABLE-SUNMOON): the Sun Moon Lake Ropeway on the 3D
+    /// map running Sun Moon Lake's cabins (red, yellow, blue and the green
+    /// crystal one), close up over its span and from below, the glass
+    /// see-through. For the pull request's screenshot review, beside
+    /// ``testCablewayIn3D()``'s Maokong cabins.
+    func testSunMoonLakeCablewayIn3D() {
+        for (name, view, span) in [("cableway-sunmoon-3d-near", "110,40,55", "0,500"), ("cableway-sunmoon-3d-below", "60,70,88", "0,450"),
+                                   ("cableway-sunmoon-3d-close", "40,25,30", "0,520")] {
+            let app = launch(extra: ["-screenshot-scene", "sunMoonLake", "-screenshot-3d-view", view, "-screenshot-3d-cableway", span,
+                                     "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(name, app)
+            app.terminate()
+        }
+    }
+
+    /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
+    /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
+    /// not read in yet (the author's, on 115.1). For the pull request's
+    /// screenshot review.
+    func testFerryShoreCijin() {
+        let app = launch(extra: ["-screenshot-scene", "cijinShore"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 180), "The scene opens")
+        settle(seconds: 5)
+        // The whole island opens in view, and a camera request only zooms
+        // out to its region: pinched in towards Cijin (the scene centres
+        // the map on it each second), some 125 times, short of the closest
+        // zoom that hands over to the 3D map; its next request zooms out
+        // to the harbour.
+        for _ in 0..<3 {
+            map.pinch(withScale: 5, velocity: 3)
+            settle(seconds: 2)
+        }
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 10) { build.tap() }
+        let transit = app.buttons["tool.bus"]
+        XCTAssertTrue(transit.appears(within: 10))
+        transit.waitUntilSettled()
+        if !transit.isSelected { transit.tap() }
+        let mode = app.segmentedControls.buttons["渡輪"].firstMatch
+        XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+        for _ in 0..<3 where !mode.isSelected {
+            mode.tap()
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
+        settle(seconds: 3)
+        keep("ferry-shore-cijin", app)
     }
 
     /// Decision 585 PR-3 (FERRY3): the ferries on the 3D map: Tamsui–Bali's
@@ -554,6 +738,11 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// they are assigned, the double track on one deck, close and leaned.
     func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
     func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
+    /// Decision 607: the interchange west of Taichung over the high-speed
+    /// line, beside the Fazi River: its link roads meeting the decks at
+    /// one height, from above and leaned low.
+    func testInterchange() { shootLean("interchange", "320,200,40", "interchange") }
+    func testInterchangeClose() { shootLean("interchange", "160,240,25", "interchange-close") }
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 

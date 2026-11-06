@@ -202,6 +202,11 @@ public final class GameSession {
     /// How many times the track was searched for the two above (for the
     /// tests).
     @ObservationIgnored var trackSearchesWorkedOut = 0
+    /// The sights panel's rows, kept for the day, command and language
+    /// they were worked out for (CRASH-SIGHTS, ``sightsPanelRows``), and
+    /// how many times they were (for the tests).
+    @ObservationIgnored var sightRowsMemo: SightRowsMemo?
+    @ObservationIgnored var sightRowsWorkedOut = 0
     /// How many times the network tool's previews (the track, a passing
     /// loop, a depot, a platform's levelling) were worked out (for the tests).
     @ObservationIgnored var buildPreviewsWorkedOut = 0
@@ -697,7 +702,7 @@ public final class GameSession {
     @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// Decision 585 續 (FERRYPIER): ``ferryShore``, kept for the terrain
     /// and bounds it was worked out for.
-    @ObservationIgnored var ferryShoreMemo: (terrain: Terrain, bounds: WorldBounds, shore: [FerryMapOverlay.ShoreRun])?
+    @ObservationIgnored var ferryShoreMemo: (terrain: Terrain, bounds: WorldBounds, blocks: [LandBlock]?, shore: [FerryMapOverlay.ShoreRun], cells: Set<CellPosition>)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
@@ -1577,8 +1582,25 @@ public final class GameSession {
 
     func updateMap3DSpeedCapForBus() { updateMap3DSpeedCap() }
 
+    /// Whether the idle mode follows a real train on the 3D map (decision
+    /// 606): held to 10× at most as a train of the player's is (decision
+    /// 360), or a train of the real timetable is gone in a second at
+    /// 600× and no shot of it lasts.
+    public private(set) var isFollowingRealTrain = false
+
+    /// Tells the session the idle mode starts or stops following a real
+    /// train (decision 606); stopping gives back the speed it lowered.
+    public func setFollowingRealTrain(_ following: Bool) {
+        guard following != isFollowingRealTrain else { return }
+        isFollowingRealTrain = following
+        updateMap3DSpeedCap()
+    }
+
     private func updateMap3DSpeedCap() {
+        // Decision 606: a real train the idle mode follows too, also in
+        // the moment its 3D map is opened again round the next one.
         let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil || followedFerryBoatID != nil)
+            || isFollowingRealTrain
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()
         isSpeedCappedIn3D = capped
@@ -2254,7 +2276,7 @@ public final class GameSession {
         if let shown = shownGlide, shown.source == worldRevision { return shown }
         var motion: TrainMotion
         if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.source, world.clock.speed != .x1 {
-            motion = memo.motion.seen(at: time, after: previous, speed: world.clock.speed)
+            motion = memo.motion.seen(at: time, after: previous)
         } else {
             motion = TrainMotion(world: world, previous: previous, time: time)
         }
@@ -2911,9 +2933,12 @@ public final class GameSession {
         // Decision 264: under simple rules the line comes with its first
         // train, and the passing loop its single track needs.
         let name = Self.suggestedLineName(for: world, in: language)
-        let planned = card.map { lineConfirmationPlan($0, stops: stops, targets: real?.targets) }
+        // Decision 614: tried on a copy only when it is the line made; the
+        // trial is most of what the command costs on a big network, and a
+        // game that does not run its lines for the player threw it away.
+        let planned = !runsLinesForThePlayer ? nil : card.map { lineConfirmationPlan($0, stops: stops, targets: real?.targets) }
             ?? autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap({ feasible($0) })
-        if runsLinesForThePlayer, let found = planned {
+        if let found = planned {
             let plan = found.plan
             let balance = world.economy.balance
             let made = perform(.autoService(plan)) { outcome, _, world in

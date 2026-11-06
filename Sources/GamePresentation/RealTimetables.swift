@@ -339,6 +339,11 @@ public struct RealLineRuns: Sendable, Equatable {
         /// Whether it is not one of TRA's trains but added so the day ends
         /// where it began.
         public let positioning: Bool
+        /// Decision 535 (continued, KLRT): on a ring, the way round it
+        /// goes (``RingDirection/inner`` along ``RealLineRuns/stops``);
+        /// `nil` on any other line.
+        public var way: RingDirection? = nil
+
         /// Decision 605: the stations among its calls it passes without
         /// stopping (`"passes"`, the Taoyuan Airport MRT's express trains);
         /// empty for a run that stops at every one.
@@ -348,30 +353,48 @@ public struct RealLineRuns: Sendable, Equatable {
         /// reverse of `stops` when `reversed`: from its first call to its
         /// last, the stations it ``passes`` passed (decision 605) and
         /// timed only where it stops.
+        ///
+        /// A run leaving from a station between the line's ends (the
+        /// Taoyuan Airport MRT's expresses from Huanbei and Chang Gung)
+        /// calls at the station after it, which it would pass: its train
+        /// turns back there, and under traffic control a train whose own
+        /// way out is held leaves by the route the line names for its first
+        /// leg (decisions 323, 570), which the line names only between
+        /// stations next to each other. Passing it, the run was never sent
+        /// (decision 605, TYMC-EXPRESS-B).
         public func lineRun(stops: [String], reversed: Bool = false) -> LineRun {
             let last = stops.count - 1
             func index(_ station: String) -> Int {
                 let found = stops.firstIndex(of: station) ?? 0
                 return reversed ? last - found : found
             }
+            var passes = passes
+            if calls.count > 1, calls[0].station != stops.first, calls[0].station != stops.last {
+                passes.removeAll { $0 == calls[1].station }
+            }
             let stopping = passes.isEmpty ? calls : calls.filter { !passes.contains($0.station) }
             return LineRun(
                 from: index(calls[0].station), to: index(calls[calls.count - 1].station),
                 times: stopping.map { LineRunTime(arrival: $0.arrival, departure: $0.departure) },
                 days: days.reduce(0) { $0 | 1 << $1 },
+                way: reversed ? way.map { $0 == .inner ? .outer : .inner } : way,
                 passes: passes.map(index)
             )
         }
     }
 
     /// The line's stations, by their Chinese names.
-    public let stops: [String]
+    public internal(set) var stops: [String]
     public internal(set) var runs: [Run]
     /// The trainsets standing at each station at midnight.
     public let overnight: [String: Int]
     /// The tracks with a platform each station needs: the most trainsets
     /// standing there at once (decision 315); 1 where the file does not say.
     public let tracks: [String: Int]
+    /// Decision 535 (continued, KLRT): whether the line is a ring (the
+    /// Kaohsiung Circular Light Rail), its runs going round it each way,
+    /// its last stop followed by its first.
+    public var ring = false
 
     /// The timetable with every run stopping at each station it calls at:
     /// the Taoyuan Airport MRT's as it was before decision 605.
@@ -447,6 +470,7 @@ public struct RealLineRuns: Sendable, Equatable {
             let calls: [[Call]]
             let days: [Int]
             let positioning: Bool?
+            let way: String?
             let passes: [String]?
         }
 
@@ -467,6 +491,7 @@ public struct RealLineRuns: Sendable, Equatable {
         let stops: [String]
         let overnight: [String: Int]
         let tracks: [String: Int]?
+        let loop: Bool?
         let runs: [Run]
     }
 
@@ -477,6 +502,7 @@ public struct RealLineRuns: Sendable, Equatable {
         stops = file.stops
         overnight = file.overnight
         tracks = file.tracks ?? [:]
+        ring = file.loop ?? false
         runs = try file.runs.map { run in
             let calls = try run.calls.map { call -> Call in
                 guard call.count == 3, case .name(let station) = call[0], case .second(let arrival) = call[1], case .second(let departure) = call[2],
@@ -484,11 +510,20 @@ public struct RealLineRuns: Sendable, Equatable {
                 else { throw corrupt("Train \(run.train)'s call is not [one of the line's stations, arrival, departure].") }
                 return Call(station: station, arrival: arrival, departure: departure)
             }
+            // Decision 535 (continued, KLRT): a ring's run goes one way
+            // round it; any other line's has none.
+            let way: RingDirection?
+            switch (file.loop ?? false, run.way) {
+            case (false, nil): way = nil
+            case (true, "inner"): way = .inner
+            case (true, "outer"): way = .outer
+            default: throw corrupt("Train \(run.train)'s way round is not inner or outer on a ring, or it has one on a line with ends.")
+            }
             let passes = run.passes ?? []
             guard passes.allSatisfy({ name in calls.dropFirst().dropLast().contains { $0.station == name } }) else {
                 throw corrupt("Train \(run.train) passes a station that is not one of its calls between its first and last.")
             }
-            return Run(train: run.train, calls: calls, days: run.days, positioning: run.positioning ?? false, passes: passes)
+            return Run(train: run.train, calls: calls, days: run.days, positioning: run.positioning ?? false, way: way, passes: passes)
         }
     }
 }

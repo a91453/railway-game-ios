@@ -71,7 +71,9 @@ final class Map3DTransparentGlassTests: XCTestCase {
             XCTAssertEqual(v.glows, layer == -2 || layer == -15)
             XCTAssertFalse(v.isTransparentGlass)
         }
-        XCTAssertTrue(Map3DTransparentGlass.Cache(models:Map3DModelPack.standard.models).isEmpty)
+        // Decision 615: the cable car cabins, and only they, opt in.
+        let glassy = Map3DModelPack.standard.models.filter { $0.vertices.contains(where: \.isTransparentGlass) }.map(\.name)
+        XCTAssertEqual(Set(glassy), Set(Map3DCableCar.drawn.map(\.name).filter { $0.hasPrefix("cablecar-cabin-") && !$0.hasSuffix("-far") }))
     }
     func testAdapterIsIdempotentAndRejectsInvalidReflectionShade() {
         let a=Map3DTransparentGlass.applying(to:pane(z:0))

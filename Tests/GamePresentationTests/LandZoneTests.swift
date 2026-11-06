@@ -98,8 +98,15 @@ final class LandZoneTests: XCTestCase {
             let zone = zoneCell(of: cell)
             byZoneCell["\(zone.row),\(zone.column)", default: []].append(cell)
         }
+        // Spelled out step by step with explicit types: the one-line chains
+        // took Xcode 27's type checker too long.
+        func zoneCells(_ keys: [String]) -> [LandCell] {
+            var found: [LandCell] = []
+            for key in keys { found += byZoneCell[key] ?? [] }
+            return found
+        }
         func residents(_ keys: [String]) -> Int64 {
-            keys.flatMap { byZoneCell[$0] ?? [] }.reduce(0) { $0 + $1.residents }
+            zoneCells(keys).reduce(Int64(0)) { (total: Int64, cell: LandCell) in total + cell.residents }
         }
 
         // Row 0, column 0: the park has no one; the factories have jobs
@@ -108,29 +115,32 @@ final class LandZoneTests: XCTestCase {
         XCTAssertTrue(park.allSatisfy { $0.use == .park && $0.residents == 0 && $0.jobs == 0 })
         let factories = try XCTUnwrap(byZoneCell["0,1"])
         XCTAssertTrue(factories.allSatisfy { $0.use == .industrial && $0.residents == 0 && $0.jobs == LandImport.industrialJobsPerCell })
-        XCTAssertTrue(["1,0", "1,1"].flatMap { byZoneCell[$0] ?? [] }.allSatisfy { $0.use == .residential && $0.jobs == 0 })
+        let homes: [LandCell] = zoneCells(["1,0", "1,1"])
+        XCTAssertTrue(homes.allSatisfy { (cell: LandCell) in cell.use == .residential && cell.jobs == 0 })
         XCTAssertEqual(residents(["0,0", "0,1", "1,0", "1,1"]), 1_000, "everyone is kept")
 
         // Row 0, column 1: every cell a farm, the 500 people in the farms.
-        let farms = ["0,2", "0,3", "1,2", "1,3"].flatMap { byZoneCell[$0] ?? [] }
+        let farms: [LandCell] = zoneCells(["0,2", "0,3", "1,2", "1,3"])
         XCTAssertFalse(farms.isEmpty)
         XCTAssertTrue(farms.allSatisfy { $0.use == .agricultural && $0.jobs == LandImport.farmJobsPerCell })
         XCTAssertEqual(residents(["0,2", "0,3", "1,2", "1,3"]), 500)
 
         // Row 1, column 0: factories where no one lives.
-        let empty = ["2,0", "2,1", "3,0", "3,1"].flatMap { byZoneCell[$0] ?? [] }
+        let empty: [LandCell] = zoneCells(["2,0", "2,1", "3,0", "3,1"])
         XCTAssertFalse(empty.isEmpty)
         XCTAssertTrue(empty.allSatisfy { $0.use == .industrial && $0.residents == 0 && $0.jobs == LandImport.industrialJobsPerCell })
 
         // Row 1, column 1: all park, so its 300 people keep their homes
         // rather than be lost.
-        let parkland = ["2,2", "2,3", "3,2", "3,3"].flatMap { byZoneCell[$0] ?? [] }
+        let parkland: [LandCell] = zoneCells(["2,2", "2,3", "3,2", "3,3"])
         XCTAssertTrue(parkland.allSatisfy { $0.use == .residential })
         XCTAssertEqual(residents(["2,2", "2,3", "3,2", "3,3"]), 300)
 
         // Without zones the same people live there, all in homes.
         let without = try XCTUnwrap(LandImport.cells(population: population, frame: frame, bounds: bounds))
-        XCTAssertEqual(without.reduce(0) { $0 + $1.residents }, cells.reduce(0) { $0 + $1.residents })
+        let peopleWithout: Int64 = without.reduce(Int64(0)) { (total: Int64, cell: LandCell) in total + cell.residents }
+        let peopleWith: Int64 = cells.reduce(Int64(0)) { (total: Int64, cell: LandCell) in total + cell.residents }
+        XCTAssertEqual(peopleWithout, peopleWith)
         XCTAssertEqual(Set(without.map(\.use)), [.residential])
     }
 

@@ -359,8 +359,32 @@ extension GameWorld {
     /// Whether line `id`'s service `pattern` has a journey and runs trains
     /// at some level of its window.
     private func isScheduled(_ id: LineID, pattern: Int?) -> Bool {
-        guard let line = line(id: id), lineJourney(id, pattern: pattern) != nil else { return false }
-        return scheduledLevels(of: line).contains { lineHeadway(id, at: $0, pattern: pattern) != nil }
+        var journeys: [LineID: [Int: LineJourney?]] = [:]
+        return isScheduled(id, pattern: pattern, journeys: &journeys)
+    }
+
+    /// ``isScheduled(_:pattern:)``, each service's journey driven once and
+    /// kept in `journeys`, by line and service (decision 614). It asked
+    /// ``lineJourney(_:pattern:)`` and then ``lineHeadway(_:at:pattern:)``
+    /// at each level of the line's window, which drives the service and
+    /// every one before it again each time: on a big network, most of what
+    /// a build command cost. The same journeys, so the same answer.
+    private func isScheduled(_ id: LineID, pattern: Int?, journeys: inout [LineID: [Int: LineJourney?]]) -> Bool {
+        guard let line = line(id: id), let service = line.service(pattern) else { return false }
+        func kept(_ earlier: Int, _ journeys: inout [LineID: [Int: LineJourney?]]) -> LineJourney? {
+            if let known = journeys[id]?[earlier] { return known }
+            let journey = self.journey(of: line, service: earlier)
+            journeys[id, default: [:]][earlier] = .some(journey)
+            return journey
+        }
+        // The service's own journey first: without it, no other is driven.
+        guard let own = kept(service, &journeys) else { return false }
+        let driven = (0..<service).map { kept($0, &journeys) } + [Optional(own)]
+        let roundTrips = driven.map { $0?.roundTripMinutes }
+        let capacities = capacityProfiles(of: line, journeys: driven)
+        return scheduledLevels(of: line).contains { level in
+            line.services(at: level, roundTrips: roundTrips, capacities: capacities).plans[service]?.headway != nil
+        }
     }
 
     /// ``isServed(_:)`` with `scheduled` whether the leg's service runs
@@ -1107,9 +1131,11 @@ extension GameWorld {
             group.journey.map { Array($0.legs.dropFirst($0.current)) } ?? []
         })
         var scheduled: [ScheduledService: Bool] = [:]
+        // Decision 614: a line's services share their journeys.
+        var journeys: [LineID: [Int: LineJourney?]] = [:]
         return Set(pending.filter { leg in
             let key = ScheduledService(line: leg.line, pattern: leg.pattern)
-            let runs = scheduled[key] ?? isScheduled(leg.line, pattern: leg.pattern)
+            let runs = scheduled[key] ?? isScheduled(leg.line, pattern: leg.pattern, journeys: &journeys)
             scheduled[key] = runs
             return isServed(leg, scheduled: runs, onFreightLines: onFreightLines)
         })
