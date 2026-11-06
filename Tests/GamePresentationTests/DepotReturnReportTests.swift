@@ -17,7 +17,7 @@ import XCTest
 /// numbers are in the decision. HEALTH-110 added every line on sale and
 /// the other demos (`danhai-blue`, `xinbeitou`, `xiaobitan`, `pingxi`,
 /// `jiji`, `neiwan`, `shenao`, `liujia`, `shalun`, `demo`, `realworld`;
-/// HEALTH-112 `maokong`; HEALTH-114 `ferry-tamsui`, `ferry-gushan`),
+/// HEALTH-112 `maokong`; HEALTH-114 `ferry-tamsui`, `ferry-gushan`; HEALTH-119 `klrt`),
 /// the second day's late trips, and where and when the most trains stood
 /// deadlocked; a line without runs or depots reports only those.
 @MainActor
@@ -45,6 +45,12 @@ final class DepotReturnReportTests: XCTestCase {
     func testTheTaoyuanAirportLine() throws {
         try wanted("tymc")
         try report("tymc", Self.bought("tymc:A", side: 1 << 22))
+    }
+
+    /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
+    func testTheKaohsiungLightRail() throws {
+        try wanted("klrt")
+        try report("klrt", Self.bought("krtc:C"))
     }
 
     func testTheGreenMountainLine() throws {
