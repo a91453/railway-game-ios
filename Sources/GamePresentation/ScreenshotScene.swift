@@ -232,9 +232,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             let region = WorldRegion(minX: west, minY: north, maxX: east, maxY: south)
             // The map follows a camera request made after it is up, and it
             // opens on the whole island (some seconds after the game, its
-            // real-world data read): asked again each second for 90 s.
+            // real-world data read), where a request only zooms out and
+            // cannot move (the world is all in view): asked again each
+            // second for 3 minutes, as the UI test pinches in.
             Task { @MainActor in
-                for _ in 0..<90 {
+                for _ in 0..<180 {
                     try? await Task.sleep(for: .seconds(1))
                     session.lookOver(region)
                 }

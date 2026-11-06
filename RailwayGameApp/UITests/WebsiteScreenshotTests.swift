@@ -357,8 +357,18 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testFerryShoreCijin() {
         let app = launch(extra: ["-screenshot-scene", "cijinShore"])
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 180), "The scene opens")
         settle(seconds: 5)
+        // The whole island opens in view, and a camera request only zooms
+        // out to its region: pinched in towards Cijin (the scene centres
+        // the map on it each second), some 125 times, short of the closest
+        // zoom that hands over to the 3D map; its next request zooms out
+        // to the harbour.
+        for _ in 0..<3 {
+            map.pinch(withScale: 5, velocity: 3)
+            settle(seconds: 2)
+        }
         let build = app.buttons["dock.build"]
         if build.appears(within: 10) { build.tap() }
         let transit = app.buttons["tool.bus"]
