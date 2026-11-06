@@ -1,8 +1,8 @@
 @testable import GameCore
 
 /// V3 independent model: network runs are relaxed to each berth, station
-/// visits are laid out by walking the resulting runs, profiles use native
-/// UInt128 arithmetic, and pass time inversion brackets exponentially. No GameWorld,
+/// visits are laid out by walking the resulting runs, profiles use 128-bit
+/// arithmetic (ReferenceUInt128), and pass time inversion brackets exponentially. No GameWorld,
 /// RunningCurve or production planner/routing function is called here.
 extension ReferenceWorld {
     struct PlannedVisit {
@@ -202,9 +202,15 @@ extension ReferenceWorld {
         let length = distances.reduce(Int64(0), +)
         var offsets = [Int64(0)]
         for distance in distances { offsets.append(offsets.last! + distance) }
+        // lo + width * share / length in 128 bits (Swift's Int128 needs
+        // macOS 15). share lies in 0...length, so the step is at most width
+        // and lo plus it lies between yA and yB.
         func at(_ n: Int64) -> Int64 {
-            let lo = Int128(min(yA, yB)), width = Int128(max(yA, yB)) - lo
-            return Int64(lo + width * Int128(yA <= yB ? n : length - n) / Int128(length))
+            let lo = min(yA, yB), width = UInt64(bitPattern: max(yA, yB) &- lo)
+            let share = yA <= yB ? n : length - n
+            precondition(share >= 0 && share <= length, "offset outside the run")
+            let step = ReferenceUInt128(width) * ReferenceUInt128(share) / ReferenceUInt128(length)
+            return lo &+ Int64(bitPattern: step.low)
         }
         return (a..<b).contains { i in
             guard parallelTracks(between: visits[i].station, and: visits[i + 1].station) == 1 else { return false }
