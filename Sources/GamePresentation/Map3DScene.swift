@@ -385,6 +385,33 @@ public struct Map3DScene: Sendable {
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
 
+    /// Decision 339: the real lines' track laid in the scene `builder`
+    /// builds, clear of `snapshot`'s, and their trains on it; `nil` on a
+    /// map not of the real world or without `railways`' timetables.
+    /// Decision 517 續 (PR 3b): apart, so a scene built again only where
+    /// the track changed works them out again as the whole scene does.
+    static func realTrains(world: GameWorld, railways: RealRailways?, snapshot: RailwaySnapshot,
+                           builder: inout Builder) -> Map3DRealTrains? {
+        if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
+            let region = builder.region, margin = Map3DRealTrains.margin * Builder.metre
+            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine))) { coordinate in
+                let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
+            }
+            // Decision 402: the real tracks, clear of the lines the
+            // player bought.
+            let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
+                let parts = acquisition.realLine.split(separator: ":", maxSplits: 1).map(String.init)
+                guard acquisition.kind == .railway, parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
+                return (parts[0], line.shape)
+            }
+            return Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks,
+                                   operations: operations, bought: bought,
+                                   frame: frame, snapshot: snapshot, builder: &builder)
+        }
+        return nil
+    }
+
     /// Decision 358: the scene of `frame`'s region round its origin (world
     /// units), built as the public initializer builds it. Decision 359:
     /// with `trackCover`, or the network's own when `nil`. Decision 368:
@@ -429,25 +456,7 @@ public struct Map3DScene: Sendable {
         self.trackCover = builder.trackCover
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
-        if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
-            let region = builder.region, margin = Map3DRealTrains.margin * Builder.metre
-            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine))) { coordinate in
-                let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
-            }
-            // Decision 402: the real tracks, clear of the lines the
-            // player bought.
-            let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
-                let parts = acquisition.realLine.split(separator: ":", maxSplits: 1).map(String.init)
-                guard acquisition.kind == .railway, parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
-                return (parts[0], line.shape)
-            }
-            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks,
-                                         operations: operations, bought: bought,
-                                         frame: frame, snapshot: snapshot, builder: &builder)
-        } else {
-            realTrains = nil
-        }
+        realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
         // Decision 407: the viaducts, each pair of tracks on its piers.
         builder.addViaducts()
         // Decision 238: the city twice, in full and simplified for afar.

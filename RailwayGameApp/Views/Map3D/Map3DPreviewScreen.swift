@@ -565,6 +565,8 @@ final class Map3DSceneCache {
     private var hold = Map3DSceneHold()
     /// What the scene built or building covers.
     private var region: WorldRegion?
+    /// Decision 517 續 (PR 3b): the point it is built round.
+    private var builtFocus: (x: Double, y: Double)?
     private var memoryWarning: NSObjectProtocol?
 
     private init() {
@@ -587,6 +589,7 @@ final class Map3DSceneCache {
         game = nil
         building = nil
         region = nil
+        builtFocus = nil
     }
 
     private func finished(_ number: Int) {
@@ -619,6 +622,21 @@ final class Map3DSceneCache {
             .first
         }
         let world = session.world
+        // Decision 517 續 (PR 3b): only the track or the platforms changed
+        // since the scene built or building, on a map that builds ahead,
+        // where it was built round a point it still holds: it is built
+        // again only round what changed, round the same point, once it is
+        // done. A scene built round no point (from the settings) is built
+        // round the middle of what is built, which new track moves.
+        let partOf: (task: Task<Map3DBuiltScene, Never>, focus: (x: Double, y: Double))? =
+            if let previous = self.key, game === session, previous.differsOnlyInTrack(from: key), let building, let region,
+               let builtFocus, Map3DStreaming.streams(world), Map3DScene.holds(focus, in: region, world: world),
+               Map3DScene.region(world: world, focus: builtFocus) == region {
+                (building, builtFocus)
+            } else {
+                nil
+            }
+        let centre = partOf?.focus ?? focus
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
         let heights = session.heights
@@ -638,6 +656,28 @@ final class Map3DSceneCache {
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
         let task = Task.detached(priority: .userInitiated) {
+            let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
+            // Decision 517 續 (PR 3b): the scene before, once built, with
+            // its chunks round the change built again from its files.
+            if let partOf {
+                let old = await partOf.task.value
+                let clock = ContinuousClock()
+                let started = clock.now
+                let source = old.source.with(world, lineBands: Map3DLineBands(world: world, palette: palette))
+                if Map3DSceneRebuild.fits(old.scene, world: world, focus: centre) {
+                    let read = clock.now
+                    let keys = Map3DSceneRebuild.keys(round: Map3DSceneRebuild.changes(from: old.source.snapshot, old.source.world,
+                                                                                        to: source.snapshot, world),
+                                                      in: old.scene, map: WorldRegion(bounds: world.bounds))
+                    let scene = source.scene(rebuilding: keys, of: old.scene)
+                    let number = Map3DSceneBuildLog.shared.add(Map3DSceneBuildTime(
+                        why: why, realWorld: world.geoAnchor != nil, edges: world.network.edges.count, chunks: scene.chunks.count,
+                        triangles: scene.triangleCount, readSeconds: seconds(read - started), buildSeconds: seconds(clock.now - read),
+                        wall: Date().timeIntervalSince1970, rebuiltChunks: keys.count))
+                    return Map3DBuiltScene(scene: scene, source: source, buildNumber: number,
+                                           rebuilt: old.buildNumber.map { (from: $0, keys: keys) })
+                }
+            }
             let clock = ContinuousClock()
             let started = clock.now
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
@@ -650,8 +690,7 @@ final class Map3DSceneCache {
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
                                           noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) })
             let read = clock.now
-            let scene = source.scene(focus: focus)
-            let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
+            let scene = source.scene(focus: centre)
             let number = Map3DSceneBuildLog.shared.add(Map3DSceneBuildTime(
                 why: why, realWorld: world.geoAnchor != nil, edges: world.network.edges.count, chunks: scene.chunks.count,
                 triangles: scene.triangleCount, readSeconds: seconds(read - started), buildSeconds: seconds(clock.now - read),
@@ -661,7 +700,8 @@ final class Map3DSceneCache {
         self.key = key
         game = session
         building = task
-        region = Map3DScene.region(world: world, focus: focus)
+        region = Map3DScene.region(world: world, focus: centre)
+        builtFocus = centre
         let number = hold.start()
         Task {
             _ = await task.value
@@ -679,6 +719,9 @@ struct Map3DBuiltScene: Sendable {
     /// Decision 517 續: its number in ``Map3DSceneBuildLog``, for the time
     /// it takes to show.
     var buildNumber: Int?
+    /// Decision 517 續 (PR 3b): built from the scene of build `from` with
+    /// only its chunks at `keys` built again; `nil` when built whole.
+    var rebuilt: (from: Int, keys: Set<Map3DStreaming.Key>)?
 }
 
 /// Decision 358: what a scene is built from, read once (the files) and
@@ -700,6 +743,23 @@ struct Map3DChunkSource: Sendable {
     func scene(focus: (x: Double, y: Double)?) -> Map3DScene {
         Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: baseMap, cityTiles: cityTiles,
                    footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild)
+    }
+
+    /// Decision 517 續 (PR 3b): the same files for `world`, its track,
+    /// city and the lines' bands (`lineBands`) worked out again.
+    func with(_ world: GameWorld, lineBands: Map3DLineBands) -> Map3DChunkSource {
+        Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
+                         cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways,
+                         temples: temples, noBuild: noBuild)
+    }
+
+    /// Decision 517 續 (PR 3b): `old` with its chunks at `keys` built
+    /// again from this, as ``scene(focus:)`` builds the whole (the city in
+    /// full round the middle on a map that builds ahead, decision 368).
+    func scene(rebuilding keys: Set<Map3DStreaming.Key>, of old: Map3DScene) -> Map3DScene {
+        Map3DScene(rebuilding: keys, of: old, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
+                   footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                   detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil)
     }
 
     /// Decision 359 (續): with the scene's `trackCover`, which lays the
@@ -828,6 +888,14 @@ struct Map3DSceneKey: Hashable {
         roads = world.roads?.roadCellCount ?? 0
         ownRoads = world.roads?.built ?? []
         expansions = Map3DStationKit.expansionSignature(of: world)
+    }
+
+    /// Decision 517 續 (PR 3b): whether `other` differs from this only in
+    /// the track and the platforms (what a scene can build again in part).
+    func differsOnlyInTrack(from other: Map3DSceneKey) -> Bool {
+        self != other && hasHeights == other.hasHeights && hasRailways == other.hasRailways && focus == other.focus
+            && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
+            && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
     }
 }
 
@@ -1242,7 +1310,15 @@ private struct Map3DView: UIViewRepresentable {
         // round the same place does not hold, kept until built again.
         let kept = context.coordinator.streamer.kept(for: scene)
         let showing = ContinuousClock.now
-        view.show(scene, keeping: kept)
+        if !first, let rebuilt = built?.rebuilt, context.coordinator.shownBuild == rebuilt.from {
+            // Decision 517 續 (PR 3b): built again from the scene shown,
+            // only where the track changed: only those chunks handed over,
+            // the rest drawn on as they are.
+            view.replace(rebuilt.keys, from: scene)
+        } else {
+            view.show(scene, keeping: kept)
+        }
+        context.coordinator.shownBuild = built?.buildNumber
         // Decision 517 續 (PR 3b's measurement): how long handing it over took.
         if let number = built?.buildNumber {
             let took = ContinuousClock.now - showing
@@ -1346,6 +1422,10 @@ private struct Map3DView: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
+        /// Decision 517 續 (PR 3b): the number of the build shown
+        /// (``Map3DSceneBuildLog``), whose chunks a scene built again from
+        /// it replaces only where it built them again.
+        var shownBuild: Int?
         /// Decision 546: whether the view has the train models.
         var hasModels = false
         /// Decision 358.
