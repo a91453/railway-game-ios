@@ -284,7 +284,6 @@ def ring_line(timetable, names):
     # train that came round to it the same way, at least DWELL before;
     # any other comes out of the depot.
     most = 0
-    fresh = set()
     for day in range(7):
         today = sorted((r for r in runs if day in r["days"]), key=lambda r: (r["calls"][0][2], int(r["train"])))
         waiting = collections.defaultdict(list)
@@ -296,25 +295,38 @@ def ring_line(timetable, names):
                 waiting[run["way"]].remove(min(ready))
             else:
                 out_of_depot += 1
-                fresh.add(run["train"])
             if run["calls"][-1][0] == home:
                 waiting[run["way"]].append(run["calls"][-1][1])
         most = max(most, out_of_depot)
-    # The depot's track joins the ring past Lizihnei on the way to the
-    # Light Rail Depot station (the last stop): a train out of it faces
-    # the way inner trips leave Lizihnei, so one taking an outer trip
-    # there would first go round the whole ring. An outer trip a train
-    # takes straight out of the depot starts at the next stop instead, the
-    # way it comes out; one taken by a train come round the same way still
-    # calls at Lizihnei.
+    # The game picks a train for a trip at a station as it comes, not by
+    # the way it faces, so a station where trips start both ways round
+    # sends trains round the wrong way (a whole lap to the trip's second
+    # stop) as soon as one runs late. Inner trips start and end at
+    # Lizihnei; outer trips start and end at the next stop that way, the
+    # Light Rail Depot station, where the depot's track joins the ring
+    # too: each leaves without its call at Lizihnei and runs on past it to
+    # that station, as long after as its own first leg took. At Lizihnei
+    # an outer train then goes straight on, leaving as it arrives rather
+    # than at the real departure the next train round makes.
+    depot_stop = names[-1]
     turned = 0
     for run in runs:
-        if run["train"] in fresh and run["way"] == "outer" and run["calls"][0][0] == home:
-            second = run["calls"][1]
-            run["calls"] = [[second[0], second[2], second[2]]] + run["calls"][2:]
-            turned += 1
+        if run["way"] != "outer":
+            continue
+        calls = run["calls"]
+        if calls[0][0] == home and calls[1][0] == depot_stop:
+            leg = calls[1][1] - calls[0][2]
+            calls = [[depot_stop, calls[1][2], calls[1][2]]] + calls[2:]
+        else:
+            leg = next(r["calls"][1][1] - r["calls"][0][2] for r in runs if r["way"] == "outer" and r["calls"][0][0] == home)
+        if calls[-1][0] == home:
+            arrives = calls[-1][1]
+            calls[-1] = [home, arrives, arrives + DWELL]
+            calls.append([depot_stop, arrives + DWELL + leg, arrives + DWELL + leg])
+        run["calls"] = calls
+        turned += 1
     if turned:
-        print(f"  {turned} outer trips out of the depot start past {home}", file=sys.stderr)
+        print(f"  {turned} outer trips start and end at {depot_stop}", file=sys.stderr)
     return {"stops": names, "loop": True, "overnight": {home: most}, "tracks": {s: 2 for s in names}, "runs": runs}, None
 
 
