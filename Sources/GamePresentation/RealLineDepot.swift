@@ -73,6 +73,10 @@ struct RealLineDepotSite: Sendable {
         let throat: (latitude: Double, longitude: Double)
         let towardShed: Int
         var second: (on: (latitude: Double, longitude: Double), joins: (latitude: Double, longitude: Double))? = nil
+        /// Decision 602 (continued): the real platform of the end station
+        /// the depot stands beyond, where the line as drawn stops short of
+        /// it and the station's point is another line's.
+        var platform: (latitude: Double, longitude: Double)? = nil
     }
 
     /// The Sanxia depot (三峽機廠, way 619043484): the crossover of its
@@ -156,7 +160,12 @@ struct RealLineDepotSite: Sendable {
             throat: (25.058581, 121.621212), towardShed: 13,
             // The real second lead (way 499750991) joins the first where
             // way 198181448 begins toward the shed.
-            second: (on: (25.056145, 121.619426), joins: (25.057583, 121.621691))
+            second: (on: (25.056145, 121.619426), joins: (25.057583, 121.621691)),
+            // The Wenhu Line's own platform (OSM node 3501186380, between
+            // its stop positions 7093644633 and 7093644634), some 90 m
+            // east of the point `trtc.json` shares with the Bannan Line;
+            // the drawn line (`track_lines.geojson`) ends 86 m short of it.
+            platform: (25.055316, 121.617896)
         )
     )
 

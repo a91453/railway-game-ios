@@ -867,7 +867,7 @@ extension RealLineLaying {
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
         }
-        let points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
+        var points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
         guard points.count == runs.stops.count, points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
         }
@@ -911,11 +911,26 @@ extension RealLineLaying {
         func onMap(_ point: (latitude: Double, longitude: Double)) -> WorldVector {
             WorldVector(frame.worldPosition(latitude: point.latitude, longitude: point.longitude))
         }
+        // Decision 602 (continued): an end station whose real platform the
+        // drawn line stops short of (the Wenhu Line's at Nangang Exhibition
+        // Center, 86 m on, its point the Bannan Line's) stands on its own
+        // platform, which the run-on below goes through.
+        for (stop, site, _) in depotEnds {
+            if let platform = site.fan?.platform { points[stop] = onMap(platform) }
+        }
         func runOn(from end: WorldVector, leaving way: WorldVector, at stop: Int) -> [WorldVector] {
             guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * RealLineAcquisition.runOn] }
             // Decision 602: a fanned yard's lead along the real leads to
             // its throat, from where the line's track runs on past the end.
             if let fan = site.fan {
+                // Decision 602 (continued): on from where the drawn line
+                // stops, through the real platform and the real junction.
+                if let platform = fan.platform {
+                    return Array(RealLineDepotLayout.Fan.lead(
+                        from: end, leaving: way, through: [onMap(platform), points[0]] + fan.leads.map(onMap), to: onMap(fan.throat),
+                        yardWay: (points[2] - points[1]).unit
+                    ).dropFirst())
+                }
                 let junction = end + way * max(0, (points[0] - end).dot(way))
                 return RealLineDepotLayout.Fan.lead(
                     from: junction, leaving: way, through: fan.leads.map(onMap), to: onMap(fan.throat), yardWay: (points[2] - points[1]).unit

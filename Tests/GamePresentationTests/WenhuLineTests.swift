@@ -61,6 +61,39 @@ final class WenhuLineTests: XCTestCase {
         }
     }
 
+    /// Decision 602 (continued): at Nangang Exhibition Center the line
+    /// stands on the Wenhu Line's own platform (OSM node 3501186380) and
+    /// runs on east to its depot as the real one does. The drawn line ends
+    /// 86 m short of the platform and the station's point is the Bannan
+    /// Line's, some 90 m south-west of it; laid from there, the station
+    /// stood 50 m off and the track bent 70 to 90 m south of the real
+    /// line before turning back north-east to the depot.
+    func testNangangExhibitionCenterStandsOnItsOwnPlatform() throws {
+        let session = try RealLineAcquisitionTests.game(round: "trtc:BR", side: 1 << 21, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let world = session.world
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let units = Double(WorldCoordinate.unitsPerMetre)
+        let platform = frame.worldPosition(latitude: 25.055316, longitude: 121.617896)
+        func metres(_ x: Int64, _ y: Int64) -> (east: Double, north: Double) {
+            ((Double(x) - platform.x) / units, -(Double(y) - platform.y) / units)
+        }
+        let station = try XCTUnwrap(world.stations.first { !$0.isDepot && $0.name == "南港展覽館" })
+        let off = metres(station.location.x, station.location.y)
+        XCTAssertLessThan((off.east * off.east + off.north * off.north).squareRoot(), 20, "the station \(off) from its platform")
+        // The real line runs no more than some 10 m south of the platform
+        // between it and the depot's leads (its junction, 8 m south).
+        var southmost = Double.infinity
+        for edge in world.network.edges {
+            for point in world.network.geometry(of: edge.id)?.points ?? [] {
+                let at = metres(point.x, point.y)
+                if abs(at.east) < 200, at.north > -300 { southmost = min(southmost, at.north) }
+            }
+        }
+        XCTAssertGreaterThan(southmost, -30, "the track bends \(Int(-southmost)) m south of the platform")
+    }
+
     /// Decision 602: the bought line's track near the two depots, as
     /// latitude, longitude and rail height, written to the JSON file
     /// `WENHU_DEPOT_DUMP` names (only then; skipped otherwise), for
