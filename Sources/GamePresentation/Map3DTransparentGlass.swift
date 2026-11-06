@@ -35,16 +35,17 @@ public enum Map3DTransparentGlass {
     /// Cached local triangles. The renderer builds this once with its model
     /// buffers; an ordinary pack has none and does no per-frame glass work.
     public struct Cache: Sendable {
-        private let triangles: [Int: [[Map3DVertex]]]
+        /// Each model's glass triangles, three vertices a triangle.
+        private let triangles: [Int: [Map3DVertex]]
         public var isEmpty: Bool { triangles.isEmpty }
         public init(models: [Map3DModelPack.Model]) {
-            var cached: [Int: [[Map3DVertex]]] = [:]
+            var cached: [Int: [Map3DVertex]] = [:]
             for (index, model) in models.enumerated() {
-                var glass: [[Map3DVertex]] = []
+                var glass: [Map3DVertex] = []
                 for first in stride(from: 0, to: model.vertices.count - model.vertices.count % 3, by: 3) {
                     let v = model.vertices[first..<(first + 3)]
                     if v.allSatisfy({ $0.isTransparentGlass && $0.u.isFinite && $0.u > 0 && $0.u <= 1 && $0.v.isFinite }) {
-                        glass.append(Array(v))
+                        glass.append(contentsOf: v)
                     }
                 }
                 if !glass.isEmpty { cached[index] = glass }
@@ -56,33 +57,42 @@ public enum Map3DTransparentGlass {
         /// every instance (not just a sort of cabin centres). Stable ties.
         /// A conventional painter sort: intersecting translucent polygons can
         /// still require splitting. It is not order-independent transparency.
+        /// Decision 615: made without an array a triangle (the cable cars'
+        /// cabins put some 10,000 of them in a frame).
         public func vertices(instances: [Map3DInstance], eye: Map3DPoint, toward target: Map3DPoint) -> [Map3DVertex] {
             guard !isEmpty, finite(eye), finite(target), let look = (target - eye).normalized else { return [] }
-            var sorted: [(depth: Float, order: Int, vertices: [Map3DVertex])] = []
+            var placed: [Map3DVertex] = []
+            var depths: [Float] = []
             for instance in instances {
                 guard let local = triangles[instance.model] else { continue }
                 let t = instance.transform
                 guard t.count == 16, t.allSatisfy(\.isFinite), t[3] == 0, t[7] == 0, t[11] == 0, t[15] == 1,
                       instance.stripe.0.isFinite, instance.stripe.1.isFinite, instance.stripe.2.isFinite else { continue }
-                for triangle in local {
-                    let positions = triangle.map { v in
-                        Map3DPoint(t[0] * v.x + t[4] * v.y + t[8] * v.z + t[12],
-                                   t[1] * v.x + t[5] * v.y + t[9] * v.z + t[13],
-                                   t[2] * v.x + t[6] * v.y + t[10] * v.z + t[14])
-                    }
-                    guard positions.allSatisfy(finite), let normal = (positions[1] - positions[0]).cross(positions[2] - positions[0]).normalized else { continue }
-                    let centre = (positions[0] + positions[1] + positions[2]) * (1 / Float(3))
-                    let depth = (centre - eye).dot(look)
+                func place(_ v: Map3DVertex) -> Map3DPoint {
+                    Map3DPoint(t[0] * v.x + t[4] * v.y + t[8] * v.z + t[12],
+                               t[1] * v.x + t[5] * v.y + t[9] * v.z + t[13],
+                               t[2] * v.x + t[6] * v.y + t[10] * v.z + t[14])
+                }
+                for first in stride(from: 0, to: local.count, by: 3) {
+                    let v0 = local[first], v1 = local[first + 1], v2 = local[first + 2]
+                    let p0 = place(v0), p1 = place(v1), p2 = place(v2)
+                    guard finite(p0), finite(p1), finite(p2), let normal = (p1 - p0).cross(p2 - p0).normalized else { continue }
+                    let depth = ((p0 + p1 + p2) * (1 / Float(3)) - eye).dot(look)
                     guard depth.isFinite else { continue }
-                    let vertices = zip(triangle, positions).map { v, p in
-                        Map3DVertex(p, normal: normal, color: painted(v.color, stripe: instance.stripe),
-                                    u: v.u, v: v.v, layer: v.layer)
+                    func put(_ v: Map3DVertex, _ p: Map3DPoint) {
+                        placed.append(Map3DVertex(p, normal: normal, color: painted(v.color, stripe: instance.stripe), u: v.u, v: v.v, layer: v.layer))
                     }
-                    sorted.append((depth, sorted.count, vertices))
+                    put(v0, p0)
+                    put(v1, p1)
+                    put(v2, p2)
+                    depths.append(depth)
                 }
             }
-            sorted.sort { $0.depth == $1.depth ? $0.order < $1.order : $0.depth > $1.depth }
-            return sorted.flatMap(\.vertices)
+            let order = depths.indices.sorted { depths[$0] == depths[$1] ? $0 < $1 : depths[$0] > depths[$1] }
+            var sorted: [Map3DVertex] = []
+            sorted.reserveCapacity(placed.count)
+            for i in order { sorted.append(contentsOf: placed[(i * 3)..<(i * 3 + 3)]) }
+            return sorted
         }
     }
 
@@ -90,13 +100,10 @@ public enum Map3DTransparentGlass {
     private static func painted(_ color: UInt32, stripe: (Float, Float, Float)) -> UInt32 {
         // Colour alpha is still line-paint substitution, never glass opacity.
         let alpha = Float(color >> 24) / 255
-        let line = [stripe.0, stripe.1, stripe.2]
-        var result: UInt32 = 0xff000000
-        for i in 0..<3 {
-            let shade = Float((color >> (i * 8)) & 255) / 255
-            let mixed = min(1, max(0, line[i])) * (1 - alpha) + shade * alpha
-            result |= UInt32((mixed * 255).rounded()) << (i * 8)
+        func mixed(_ line: Float, _ shift: UInt32) -> UInt32 {
+            let shade = Float((color >> shift) & 255) / 255
+            return UInt32(((min(1, max(0, line)) * (1 - alpha) + shade * alpha) * 255).rounded()) << shift
         }
-        return result
+        return 0xff000000 | mixed(stripe.0, 0) | mixed(stripe.1, 8) | mixed(stripe.2, 16)
     }
 }

@@ -55,7 +55,7 @@ public enum Map3DCableCar {
     /// Decision 575 續 (CABLEMAP): what the 3D map draws, in
     /// ``Map3DModelPack/standard`` (last, so no model before them moves):
     /// the two cabins, the tower and the three halls, near and far, and a
-    /// rope's metre (``rope``).
+    /// rope's metre (``rope``); decision 615: then the Sun Moon Lake cabins.
     public static var drawn: [Map3DModelPack.Model] {
         var made: [Map3DModelPack.Model] = []
         for far in [false, true] {
@@ -64,6 +64,10 @@ public enum Map3DCableCar {
             for station in Station.allCases { made.append(model(station, far: far)) }
         }
         made.append(rope())
+        // Decision 615: the Sun Moon Lake cabins, near and far, last.
+        for far in [false, true] {
+            for cabin in SunMoonCabin.allCases { made.append(model(cabin, far: far)) }
+        }
         return made
     }
 
@@ -89,7 +93,9 @@ public enum Map3DCableCar {
     public static func model(_ cabin: Cabin, far: Bool = false) -> Map3DModelPack.Model {
         var m = CableMesh()
         CableSolids.cabin(crystal: cabin == .crystal, far: far).append(to: &m.kit.mesh)
-        return .flat(named: "cablecar-cabin-" + cabin.rawValue + (far ? "-far" : ""), from: m.kit.mesh)
+        // Decision 615: its glazing and the crystal cabin's floor
+        // see-through near (``seeThrough(_:far:)``).
+        return seeThrough(.flat(named: "cablecar-cabin-" + cabin.rawValue + (far ? "-far" : ""), from: m.kit.mesh), far: far)
     }
 
     public static func model(_ support: Support, far: Bool = false) -> Map3DModelPack.Model {

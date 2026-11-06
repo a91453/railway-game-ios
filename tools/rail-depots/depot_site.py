@@ -31,6 +31,15 @@ north ends, and the depot's northernmost node (the yard's far end is set
 some 60 m east of it: see the site's comment), with the line's two tracks'
 end past the station, where the real leads begin, and the stabling tracks'
 south ends for comparison.
+
+Decision 602 (REALYARD): then, for the Wenhu Line's two depots again,
+what the yards decision 602 lays (`RealLineDepotSite.Fan`) are read from:
+each shed's stabling tracks (count, length, spacing, the middle of their
+near ends and of their far ends, the yard's `yard`), and the nodes of the
+real leads the game's lead follows (`Fan.leads`; Neihu's third is the
+middle of a 165 m segment of way 127958010). The throat (`Fan.throat`)
+is not read: it was set by hand where the leads reach the shed, so that
+the fan lies inside the depot's land (way 71266521, 499801370).
 """
 import math
 import sys
@@ -75,6 +84,17 @@ ANKENG_CROSSOVER = [1137758430, 1137758431]
 ANKENG_YARD = [*range(1140796066, 1140796073), *range(1140796074, 1140796079)]
 
 
+# Decision 602: the sheds' stabling tracks, the longer group of each
+# (Muzha's 4 short ones 1342641760 to 63, Neihu's 8 of 70 m 1054511212 to
+# 19, are not counted), and the real leads the game's lead follows.
+MUZHA_SHED = list(range(1342641748, 1342641760))
+MUZHA_LEAD_WAYS = [307449196, 194633991]
+NEIHU_SHED = list(range(1316259201, 1316259217))
+NEIHU_LEAD_WAYS = [127958010, 198181448]
+WENHU_LAND = [71266521, 499801370]
+FANNED = [("muzha", MUZHA_SHED, MUZHA_LEAD_WAYS), ("neihu", NEIHU_SHED, NEIHU_LEAD_WAYS)]
+
+
 class Ways(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
@@ -83,7 +103,8 @@ class Ways(osmium.SimpleHandler):
 
     def way(self, w):
         if w.id in (DEPOT, CROSSOVER, *SIDINGS, *DANHAI_ENDS, *DANHAI_YARD, *MUZHA_ENDS, *MUZHA_YARD, *MUZHA_LEADS, *NEIHU_ENDS, *NEIHU_YARD, *NEIHU_LEADS,
-                    ANKENG_DEPOT, *ANKENG_ENDS, *ANKENG_CROSSOVER, *ANKENG_YARD):
+                    ANKENG_DEPOT, *ANKENG_ENDS, *ANKENG_CROSSOVER, *ANKENG_YARD,
+                    *MUZHA_SHED, *MUZHA_LEAD_WAYS, *NEIHU_SHED, *NEIHU_LEAD_WAYS, *WENHU_LAND):
             self.ways[w.id] = [(n.lat, n.lon) for n in w.nodes]
         elif w.id >= PLATFORM_FIRST and w.tags.get("railway") == "platform" and w.tags.get("area") == "yes":
             points = [(n.lat, n.lon) for n in w.nodes]
@@ -146,6 +167,24 @@ def main():
     print("ankeng tracks' end", middle([min((w[0], w[-1])) for w in (ways.ways[i] for i in ANKENG_ENDS)]))
     print("ankeng yard south ends", middle([y[0] for y in yard]))
     print("ankeng yard tracks", len(yard), "longest", round(max(metres(a, b) for a, b in yard), 1), "m")
+
+
+    # Decision 602: the sheds, near ends being those nearer the leads. Any
+    # depot laid as its real yard (a `RealLineDepotSite.fan`) adds a row
+    # here: its shed's stabling tracks and the leads its lead follows.
+    for name, shed_ids, lead_ids in FANNED:
+        leads = [p for i in lead_ids for p in ways.ways[i]]
+        shed = [ways.ways[i] for i in shed_ids]
+        near = [min((w[0], w[-1]), key=lambda p: min(metres(p, q) for q in leads)) for w in shed]
+        far = [w[-1] if n == w[0] else w[0] for w, n in zip(shed, near)]
+        lengths = [sum(metres(w[i], w[i + 1]) for i in range(len(w) - 1)) for w in shed]
+        gaps = [metres(near[i], near[i + 1]) for i in range(len(near) - 1)]
+        print(f"{name} shed tracks", len(shed), "length", round(min(lengths), 1), "to", round(max(lengths), 1), "m,",
+              "near ends", round(min(gaps), 1), "to", round(max(gaps), 1), "m apart")
+        print(f"{name} shed near ends", middle(near))
+        print(f"{name} shed far ends", middle(far))
+        for i in lead_ids:
+            print(f"{name} lead way {i}", [(round(a, 6), round(b, 6)) for a, b in ways.ways[i]])
 
 
 if __name__ == "__main__":

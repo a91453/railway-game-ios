@@ -4222,19 +4222,51 @@
       "triangles": 504
     },
     "cablecar-cabin-crystal": {
-      "hash": "5f691d69504b15d8",
+      "hash": "33b65b5d9f3a9dec",
       "triangles": 3268
     },
     "cablecar-cabin-crystal-far": {
-      "hash": "b01a183aa5608f4a",
+      "hash": "e5a848afd003a9bb",
       "triangles": 1632
     },
+    "cablecar-cabin-sunmoon-blue": {
+      "hash": "33c51ca356c1c84",
+      "triangles": 5660
+    },
+    "cablecar-cabin-sunmoon-blue-far": {
+      "hash": "d86d04ac672f3be1",
+      "triangles": 2744
+    },
+    "cablecar-cabin-sunmoon-crystal": {
+      "hash": "cd7c3fdc7830a753",
+      "triangles": 5788
+    },
+    "cablecar-cabin-sunmoon-crystal-far": {
+      "hash": "6013fc728c074762",
+      "triangles": 2808
+    },
+    "cablecar-cabin-sunmoon-red": {
+      "hash": "ce2ae7befed49d66",
+      "triangles": 5660
+    },
+    "cablecar-cabin-sunmoon-red-far": {
+      "hash": "19fa345fb27aa577",
+      "triangles": 2744
+    },
+    "cablecar-cabin-sunmoon-yellow": {
+      "hash": "1335a9fdaf8b9cf0",
+      "triangles": 5660
+    },
+    "cablecar-cabin-sunmoon-yellow-far": {
+      "hash": "86ec6d5f9d3cfdca",
+      "triangles": 2744
+    },
     "cablecar-cabin-standard": {
-      "hash": "b78d75ea2a5f842e",
+      "hash": "76f0ff305acae76e",
       "triangles": 3220
     },
     "cablecar-cabin-standard-far": {
-      "hash": "ca66a26dc53e2f8e",
+      "hash": "8d223f2e82e236ea",
       "triangles": 1584
     },
     "cablecar-catwalk": {
