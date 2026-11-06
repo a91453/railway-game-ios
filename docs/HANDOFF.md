@@ -731,6 +731,7 @@
   - **待派：文湖＋機捷擬實誤點合成一件**（遊戲規劃第 50 任 2026-11-05 定；Opus、GameCore）：文湖擬實第二天 281/532、機捷擬實 141/333 班晚超過 5 分，一起查。先讓 `DepotReturnReportTests` 在號誌關也記誤點，比較擬實與號誌關兩種規則，判斷是時刻表在閉塞間隔下本來就跑不出來，還是死結拖的；再決定修法。**等 REALYARD-B（文湖機廠，決策 602）與 TYMC-EXPRESS 都合併後才開**：兩者都會動這兩條線的入出庫與待避，先開會量到舊的行為。重現指令在 [HEALTH-114 報告](research/HEALTH_114_2026-11-05.md) §4 第 1、4 件。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
 - **REVIEW-L10**（session_01YGNNuoB7f2rfxdhAmyP2L8，第 50 任派）：審 #1803–#1857，報告 `docs/archive/PR1803_1857_REVIEW_HANDOFF.md`。P1 0、P2 1（**L10-1**：#1843 買來的線拿掉一站後，那站留著常客人數，`RealTransfers.swift` 的 `TransferMemo` 鍵少了停靠站）、P3 12，都**還沒派**。下一輪 REVIEW-L11 從 #1858 起。
+- **REVIEW-L11**（session_01YGNNumFayrcJEfodjKj3Px，第 52 任派）：審 #1858–#1907（32 點，一輪看完），報告 `docs/archive/PR1858_1907_REVIEW_HANDOFF.md`。P1 0、P2 1（**L11-1**：#1899 在真實鐵路旁鋪線後，局部重蓋的 3D 和整個重蓋不同，遠處真實線的路堤或高架錯開，`Map3DSceneRebuild.changes` 漏了 `layRealRun` 下游的區塊）、P3 7，都**還沒派**。L10-1、L10-2、L10-3 確認修好。下一輪 REVIEW-L12 從 #1908 起。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 
