@@ -274,7 +274,12 @@ struct Map3DPreviewScreen: View {
             // K1-1, K2-4: the train models (and their baked shade), made
             // once on another thread, as the train showcase makes them;
             // decision 546: often made already, after the game opened.
+            // Decision 608: how long the 3D map waits for them (made ahead,
+            // then put on the GPU here), in a UI test's trace.
+            let asked = ContinuousClock.now
             await Map3DTrainModels.shared.make()
+            let waited = asked.duration(to: .now)
+            UITestTrace.action("map3D.models ready after \(waited.components.seconds * 1000 + waited.components.attoseconds / 1_000_000_000_000_000) ms")
             modelsReady = true
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
