@@ -176,6 +176,7 @@ extension GameWorld {
         }
         let horizon = clock.now.seconds + Self.runDepotLookahead
         var inTheWay: Set<TrainID>?
+        var heldRuns: Set<TrainID>?
         var candidates: [Int] = []
         for station in stations {
             // Decision 535: on a ring, the trains facing each way round
@@ -213,8 +214,23 @@ extension GameWorld {
                     if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
                     leaving += waiting.filter { inTheWay!.contains(trains[$0].id) && !leaving.contains($0) }
                 }
+                // Decision 609, continued: so too, though a run from here is
+                // due, one whose own due run cannot leave now (it waits for
+                // its route): it cannot take that run while it stands in the
+                // way, and its run is left to another train, or to one out of
+                // a depot (decision 296 does not keep it). Decision 556's
+                // last way out sent such a train in only once the runs were
+                // due to leave and made a deadlock (decision 570). Without
+                // block sections only (see ``heldRunDepartures(memo:)``).
+                var stuck: Set<Int> = []
+                if isTrafficControlEnabled, !blockSections, due {
+                    if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
+                    if heldRuns == nil { heldRuns = Set(heldRunDepartures(memo: &memo.directions).map(\.train)) }
+                    stuck = Set(waiting.filter { inTheWay!.contains(trains[$0].id) && heldRuns!.contains(trains[$0].id) && !leaving.contains($0) })
+                    leaving += waiting.filter { stuck.contains($0) }
+                }
                 for index in leaving where !candidates.contains(index) {
-                    if due, cameOutOfDepot(trains[index], to: station) { continue }
+                    if due, !stuck.contains(index), cameOutOfDepot(trains[index], to: station) { continue }
                     candidates.append(index)
                 }
             }
@@ -348,18 +364,52 @@ extension GameWorld {
     /// hour on the loop every southbound set calls at, its way out north
     /// held by the sets queued for that loop; a set waiting at a terminus
     /// keeps the sets arriving from a platform the same way.
+    ///
+    /// Decision 609, continued: or that another train without a service
+    /// needs for a due run it cannot leave on (see
+    /// ``heldRunDepartures(memo:)``). On the Taoyuan Airport MRT under the
+    /// simple rules with traffic control, a train that had ended its run at
+    /// Airport Terminal 2 stood on the platform the due run of one at
+    /// Terminal 1 was bound for, and that one on the platform the first
+    /// one's was: neither was a service, so neither was in the way.
     func trainsInTheWay(memo: inout DirectionMemo) -> Set<TrainID> {
         let idle = trains.filter { $0.execution == nil && $0.position != nil }
         guard !idle.isEmpty else { return [] }
-        var ways: [Set<TrackResource>] = []
+        var ways: [(train: TrainID, needs: Set<TrackResource>)] = []
         for train in trains where train.execution != nil {
-            if let needs = awaitedRoute(of: train.id, memo: &memo)?.needs { ways.append(needs) }
+            if let needs = awaitedRoute(of: train.id, memo: &memo)?.needs { ways.append((train.id, needs)) }
         }
+        ways += heldRunDepartures(memo: &memo)
         guard !ways.isEmpty else { return [] }
         return Set(idle.lazy.filter { train in
             let own = self.held(train)
-            return ways.contains { self.network.fouls(own, $0) }
+            return ways.contains { $0.train != train.id && self.network.fouls(own, $0.needs) }
         }.map(\.id))
+    }
+
+    /// Decision 609, continued: under traffic control, the trains without
+    /// a service, of lines with runs, whose due run (decision 133) the
+    /// dispatcher cannot send out now (see ``readyRunTrain(of:_:day:)``):
+    /// its route is held, and so is the route its line names for the leg
+    /// (decision 570). Each with the track its route needs, in ID order.
+    /// Not with block sections: there a route is held only up to the next
+    /// signal and clears as the train ahead moves on, and sending such
+    /// trains in left the Wenhu line's runs later under the realistic rules.
+    func heldRunDepartures(memo: inout DirectionMemo) -> [(train: TrainID, needs: Set<TrackResource>)] {
+        guard isTrafficControlEnabled, !blockSections else { return [] }
+        var held: [(train: TrainID, needs: Set<TrackResource>)] = []
+        for train in trains where train.execution == nil && train.position != nil {
+            guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }),
+                  let departing = dueRunDeparture(of: train, on: line),
+                  case .held = reservingDeparture(departing, memo: &memo)
+            else { continue }
+            if let preferred = dueRunPreferredDeparture(of: train, on: line),
+               case .granted = reserving(preferred, following: blockSections, memo: &memo) {
+                continue
+            }
+            held.append((train.id, routeEnvelope(of: departing).resources))
+        }
+        return held
     }
 
     /// Decision 556, continued (TYMCLIST9): the empty run of `train`

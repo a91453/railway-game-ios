@@ -317,10 +317,17 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(cancel.appears(within: 10), "The rename alert has its Cancel button")
             cancel.tap()
             XCTAssertTrue(alert.disappears(within: 10), "Cancel puts the rename alert away")
-            // The map under the alert is drawn again before the pencil
-            // can be touched; on a runner that took 14 s for one look at
-            // the alert, the default 2 s ended first (main 72f8b469's and
-            // 240daaf8's full lanes, runs 41935318468 and 41959689553).
+            // The pencil opened Central's panel under the alert, and Cancel
+            // leaves the panel open; the tag stands over the map only while
+            // no panel is (`MapStationTagView.tag`), so the pencil was not
+            // there at all, however long it was waited for (FLAKY-1106:
+            // main 4e244db0's full lane, run 42130736583, ten looks in 10 s
+            // and no pencil; runs 41935318468 and 41959689553 the same).
+            // So the panel is closed with Done first, as a player would.
+            let done = app.buttons["station.done"]
+            XCTAssertTrue(done.becomesHittable(within: 10), "Central's panel is open under the alert, with its Done button")
+            done.tap()
+            XCTAssertTrue(app.navigationBars["Central"].disappears(within: 10), "Done closes Central's panel")
             XCTAssertTrue(pencil.becomesHittable(within: 10), "The tag's pencil can be pressed again")
             pencil.tap()
             XCTAssertTrue(alert.appears(within: 10), "The pencil puts up the rename alert again")
