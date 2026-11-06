@@ -266,7 +266,9 @@ extension RealLineDepotAddition {
         // As the purchase's run-on: into the yard's way 50 m short of its
         // sidings' near ends, so the ladder stays within the real depot.
         let yardWay = (points[2] - points[1]).unit
-        let into = points[1] - yardWay * (50 * RealLineAcquisition.metre)
+        // Decision 602: a fanned yard's throat.
+        let throat = site.fan.map { WorldVector(frame.worldPosition(latitude: $0.throat.latitude, longitude: $0.throat.longitude)) }
+        let into = throat ?? points[1] - yardWay * (50 * RealLineAcquisition.metre)
         guard (into - start).dot(way) > RealWorldDemo.shortestEdge else {
             return refused(
                 "The line's track runs on past where the depot's track would leave it, so the depot does not fit.",
@@ -284,7 +286,9 @@ extension RealLineDepotAddition {
             let point = lead.point(at: Double(index) * step)
             return [(-side, -side), (-side, side), (side, -side), (side, side)].map { dx, dy in WorldVector(x: point.x + dx, y: point.y + dy).plan }
         }
-        let yardSamples = RealLineDepotLayout.groundSamples(beyond: points, site: site, length: length, back: 50 * RealLineAcquisition.metre, step: step)
+        let yardSamples = RealLineDepotLayout.groundSamples(
+            beyond: points, site: site, length: length, back: 50 * RealLineAcquisition.metre, step: step, throat: throat
+        )
         var tiles: [MapTile] = []
         if let expansion = world.mapExpansion {
             let wanted = Set(samples.map { MapExpansion.tile(at: $0) }).filter { world.isOnMap($0) && !expansion.owns($0) }
@@ -325,7 +329,7 @@ extension RealLineDepotAddition {
             structure: .automatic, together: true, ground: [leadEnds[0].plan, leadEnds[1].plan] + surveyed
         )
         guard let laid = RealLineDepotLayout.lay(
-            site, beyond: (RealLineAcquisition.NodeAt(piece: 1, node: 1), into, height, yardWay), first: 2, length: length,
+            site, beyond: (RealLineAcquisition.NodeAt(piece: 1, node: 1), into, height, yardWay), shed: (points[1] + points[2]) * 0.5, first: 2, length: length,
             ground: ground, water: water, in: language
         ) else {
             return refused("The depot's track cannot get down to the yard here.", "機廠的入出庫線在這裡接不到停車場。", beyond: beyond)
@@ -338,15 +342,7 @@ extension RealLineDepotAddition {
         let runs: [LineRun]? = {
             let candidates = [urban.shares.flatMap { RealBranchLine.metroRuns(of: site.line, after: $0, in: railways) }, railways.metroRuns[site.line]]
             guard let real = candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count }) else { return nil }
-            let last = real.stops.count - 1
-            return real.runs.map { run in
-                LineRun(
-                    from: last - (real.stops.firstIndex(of: run.calls[0].station) ?? 0),
-                    to: last - (real.stops.firstIndex(of: run.calls[run.calls.count - 1].station) ?? 0),
-                    times: run.calls.map { LineRunTime(arrival: $0.arrival, departure: $0.departure) },
-                    days: run.days.reduce(0) { $0 | 1 << $1 }
-                )
-            }
+            return real.runs.map { $0.lineRun(stops: real.stops, reversed: true) }
         }()
         let waits = runs != nil && !Self.isAtRest(line, runs: runs ?? [], in: world)
 

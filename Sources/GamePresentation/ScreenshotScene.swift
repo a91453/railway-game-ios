@@ -72,6 +72,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Taichung Station, for the screenshots of the real trains on the
     /// tracks they are assigned and the double track's one deck.
     case taichungViaduct
+    /// Decision 607: the same map at the expressway interchange west of
+    /// Taichung over the high-speed line, the Fazi River beside it, for
+    /// the screenshots of its link roads meeting the decks at one height.
+    case interchange
 
     /// Decision 596: the same map round the big junction 380 m east of
     /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
@@ -97,6 +101,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// one train, as the real line's. For the screenshot review of the
     /// pull request that laid it so.
     case xiaobitan
+
+    /// Decision 535 (continued, KLRT): the same empty map round the
+    /// Kaohsiung Circular Light Rail, for `-screenshot-offer-real krtc:C`
+    /// (its purchase card) and `-screenshot-buy-real krtc:C` (its trains
+    /// going round each way). For the screenshot review of the pull
+    /// request that put it on sale.
+    case klrt
 
     /// Decision 565: a new real-world game round Taipei Main Station, a
     /// line of two stations 800 m apart whose platforms are four 20 m cars
@@ -124,6 +135,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// its card has a day's account: the rope and its stations on the 2D
     /// map, and the mode's card.
     case maokong
+
+    /// Decision 615: the same on a new game round Sun Moon Lake with the
+    /// Sun Moon Lake Ropeway (``RealCableway/sunMoonLake``) laid, whose
+    /// cabins are Sun Moon Lake's.
+    case sunMoonLake
 
     /// Decision 580 (FOLLOWBUS): the demo map with a road along its first
     /// station's row and a feeder bus route of two stops on it, a bus every
@@ -160,6 +176,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// had only just left, the other boat lying at the same berth.
     case tamsuiFerryCrossing
 
+    /// Decision 585 續 (FERRY-QIJIN): the whole of Taiwan with the land
+    /// (no people, its water) read in round a point on Kaohsiung
+    /// harbour's north side and not round Cijin, as on the author's map,
+    /// looking over the harbour mouth: the ferry mode's pale blue shore.
+    case cijinShore
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -168,20 +190,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
         case .taichungViaduct: (24.1369, 120.6850)
+        case .interchange: (24.1489, 120.6233)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .streetFronts: (25.0089, 121.4592)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
+        // The middle of the ring's 38 stations.
+        case .klrt: (22.6281, 120.3036)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
+        // Between the ropeway's two stations.
+        case .sunMoonLake: (23.8562, 120.9429)
         // Between the Tamsui and Bali piers.
         case .tamsuiFerry, .tamsuiFerryCrossing: (25.1640, 121.4376)
         // Between the Gushan and Cijin piers.
-        case .gushanFerry, .gushanFerryEvening: (22.6165, 120.26775)
+        case .gushanFerry, .gushanFerryEvening, .cijinShore: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
@@ -203,16 +230,17 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
-        case .taipeiMain, .taipei101, .taichungViaduct: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .taipeiMain, .taipei101, .taichungViaduct, .interchange: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
-        case .wenhu, .xiaobitan: Self.realLineWorld(at: self, in: language)
+        case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
 
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
+        case .sunMoonLake: Self.cablewayWorld(.sunMoonLake, at: self, in: language)
         case .followBus: Self.followBusWorld(in: language)
         case .followBusCity: Self.followBusCityWorld(in: language)
         case .tamsuiFerry: Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, in: language, water: water)
@@ -220,12 +248,30 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, then: 3, in: language, water: water)
         case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
+        case .cijinShore: Self.cijinShoreWorld(water: water)
         }
     }
 
     /// What the scene does once its game is open, with the player's own
     /// tools: ``depotOffer`` lays its depot. Nothing for the others.
     @MainActor public func prepare(_ session: GameSession) {
+        if self == .cijinShore, let frame = RealWorldFrame(world: session.world) {
+            let (west, north) = frame.worldPosition(latitude: 22.632, longitude: 120.252)
+            let (east, south) = frame.worldPosition(latitude: 22.598, longitude: 120.288)
+            let region = WorldRegion(minX: west, minY: north, maxX: east, maxY: south)
+            // The map follows a camera request made after it is up, and it
+            // opens on the whole island (some seconds after the game, its
+            // real-world data read), where a request only zooms out and
+            // cannot move (the world is all in view): asked again each
+            // second for 3 minutes, as the UI test pinches in.
+            Task { @MainActor in
+                for _ in 0..<180 {
+                    try? await Task.sleep(for: .seconds(1))
+                    session.lookOver(region)
+                }
+            }
+            return
+        }
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
@@ -319,10 +365,43 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         return world
     }
 
+    /// Decision 615: `real` on a new game round `scene`'s place, at 10:00
+    /// of the second day as ``maokongWorld(in:)``.
+    private static func cablewayWorld(_ real: RealCableway, at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor)
+        if let stops = real.stops(in: world) {
+            _ = try? world.createCableway(stops: stops, legMetres: real.legMetres, meetsNear: real.meetsNear(in: world))
+        }
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 34 * 6)
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
     /// Whether the scene is by the water and waits for the app's map of
     /// Taiwan's water (decision 585).
     public var needsWater: Bool {
-        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore
+    }
+
+    /// The point on Kaohsiung harbour's north side ``cijinShore`` reads
+    /// the land round: 2.5 km north of Cijin's ferry station.
+    static let cijinShoreRead = (latitude: 22.635, longitude: 120.280)
+
+    /// ``cijinShore``'s world: the whole of Taiwan, the blocks within
+    /// ``WholeTaiwan/landReach`` of ``cijinShoreRead`` read in with their
+    /// water and no people.
+    private static func cijinShoreWorld(water grid: WaterGrid?) -> GameWorld {
+        var world = GameWorld.newWholeTaiwanGame()
+        guard let grid, let frame = RealWorldFrame(world: world) else { return world }
+        let (x, y) = frame.worldPosition(latitude: cijinShoreRead.latitude, longitude: cijinShoreRead.longitude)
+        let blocks = Set(Land.blocks(within: WholeTaiwan.landReach, of: PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded())), in: world.bounds))
+        try? world.expandLand(blocks.sorted(), cells: [], water: grid.cells(frame: frame, bounds: world.bounds, in: blocks))
+        world.setSpeed(.paused)
+        return world
     }
 
     /// Decision 585: a real ferry, two boats every `every` minutes, on a

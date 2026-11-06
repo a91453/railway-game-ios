@@ -163,6 +163,32 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (118.1)，2026-11-06
+
+從 `main` `690b669d`（#1897 這版新增的合併）建置。TestFlight `testflight.yml` run 42212810010（run 118），11:47 UTC 開始、12:15 成功（含 App Store Connect 處理與 What to Test）；作者自己按。合併截止作者同意從台灣 19:00 延到 20:00，實際 19:35 合完。
+
+**這個 commit 的檢查**（作者先發、遊戲規劃後報）：完整 `ci.yml` run 42211389525 綠；`release-archive.yml` run 42211397601 綠；full lane（iOS App Build）run 42211417150 綠（build、second、lessons、map、iPad 全綠，13:58 UTC 跑完）。
+
+**115.1 之後進來的（玩家感受得到的）**：#1870 文湖線木柵、內湖真實車場（602）、#1874 機捷直達車照真實站停（605）、#1881 行車控制下多的空車回機廠（609）、#1888 旗津岸邊淺藍格（585 續）、#1889 景點面板卡死（CRASH-SIGHTS）、#1880 匝道接橋面（607）、#1896 建設那一下變快（614）。不寫：#1886 素材、#1893 著作權行、#1887／#1895 測試。
+
+**作者 2026-11-06**：「未來不優化手機版」：iPhone 能跑就好，iPhone 專屬的版面與手感不再排；效能照做（iPad 大存檔也受益）。Threads 118 照這個寫（THREADS-118）。
+
+**作者回報（118 當晚）**：3D 車窗視角「走一下停一下」（錄影 21:32：30 fps 沒掉幀，但景物動約 0.6 s、停約 3 s 反覆，2×）。派 CABVIEW-STUTTER（session_01YGNNupagX8CDNTkxPxLsDw）。
+
+**115.1 的 full lane** run 42160202925 第 2 次（rerun-failed-jobs）綠。
+
+### 0.5.0 (115.1)，2026-11-06
+
+從 `main` `a3745e09`（#1882 這版新增的合併）建置。TestFlight `testflight.yml` run 42160370467（run 115），04:05 UTC 開始、04:38 成功；作者自己按（「我先發自己測」），run 116、117 是排隊時取消的，所以下一版是 118（作者 2026-11-06：口頭叫「118」，TestFlight 顯示 118.1）。
+
+**這個 commit 的檢查**：完整 `ci.yml` run 42160196894 綠；`release-archive.yml` run 42160200171 綠；full lane（iOS App Build）run 42160202925 第 1 次紅在兩個 job：build（`FinanceCompositionUITests.testTheIncomeAndCostDonutsShowAndTheirRowsAnswerATap`，UI 查詢逾時）與 map（`MapInteractionTests.testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 捏合、`testPlatformModeKeepsItsStatusAndActionInTheCard` 模擬器關不掉 App），都是已知不穩的；07:1x UTC `rerun-failed-jobs` 一次。同一處再紅就派人查（捏合那支 FLAKY-1106 在查，#1887）。
+
+**玩家回報**（作者轉，2026-11-06）：
+
+1. 「蓋多一點就很卡」（玩家停在 97.1）、「路線到中後期可能有多條線時，一樣會卡頓」（另一位，iPhone 15 Pro Max）、「建設一直卡」（同一位，113.1 沒更新）：派 PERF-115（session_01YGNNupXrcs7dyKyFmQvkAE，`claude/perf-115`）量「中後期大路網上一次建設指令」的完整代價。作者 2026-11-06：不跟玩家要存檔、不迎合（「我爽就好」）；PERF-115 照做，因為作者自己的大存檔也會卡。
+2. 「一直跳景點一直當機」：CRASH-SIGHTS（session_01YGNNuouz6tciRDRFbHhTWc，#1889）。根因：觀光景點面板開著時，每個 tick 每個有車站的景點各重建一次路網（台北文湖線、16 個景點，一次重畫 1.6 s），卡死後被系統關掉；修成一起建一次、一個遊戲日算一次（約 0.1 s），GameCore 答案不變。實機沒重現，要的當機紀錄列在 #1889。
+3. 旗津沒有淺藍色、渡輪不能用（作者截圖）：FERRY-QIJIN（#1888）。土地用到才讀的地圖上沒讀的區塊沒有水；淺藍格只在渡輪模式算。旗津碼頭偏約 330 m 沒修（搬過去 3D 直線航線會切過陸地，要和水路一起做）。
+
 ### 0.5.0 (114.1)，2026-11-05
 
 從 `main` `c1be6078`（#1855 的合併；App 內容與 `26d5fca1` #1852 相同，只多交接文件）建置。TestFlight `testflight.yml` run 42012538541（run 114），10:39 UTC 開始、11:06 成功。What to Test 與 App 內「這版新增」是 0.5.0 (114.1)（#1852）。

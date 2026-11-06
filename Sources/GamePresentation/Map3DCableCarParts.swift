@@ -37,31 +37,33 @@ enum CableParts {
 
 /// One part's triangles in native space, and the closed solids they form.
 struct CableSolids {
-    struct Triangle { var a: Map3DPoint, b: Map3DPoint, c: Map3DPoint; var color: UInt32; var glows: Bool }
+    struct Triangle { var a: Map3DPoint, b: Map3DPoint, c: Map3DPoint; var color: UInt32; var glows: Bool; var glass = false }
     var triangles: [Triangle] = []
     /// Each solid's triangle range, for the closed-solid check.
     var solids: [Range<Int>] = []
 
     typealias P = Map3DPoint
 
-    mutating func solid(_ vertices: [P], _ faces: [[Int]], _ color: UInt32, glow: Bool = false) {
+    mutating func solid(_ vertices: [P], _ faces: [[Int]], _ color: UInt32, glow: Bool = false, glass: Bool = false) {
         let start = triangles.count
         for face in faces where face.count >= 3 {
             for i in 1..<(face.count - 1) {
-                triangles.append(Triangle(a: vertices[face[0]], b: vertices[face[i]], c: vertices[face[i + 1]], color: color, glows: glow))
+                triangles.append(Triangle(a: vertices[face[0]], b: vertices[face[i]], c: vertices[face[i + 1]], color: color, glows: glow,
+                                          glass: glass))
             }
         }
         solids.append(start..<triangles.count)
     }
 
-    mutating func box(_ x: Float, _ y: Float, _ z: Float, _ l: Float, _ w: Float, _ h: Float, _ color: UInt32, glow: Bool = false) {
+    mutating func box(_ x: Float, _ y: Float, _ z: Float, _ l: Float, _ w: Float, _ h: Float, _ color: UInt32, glow: Bool = false,
+                      glass: Bool = false) {
         var v: [P] = []
         for sz: Float in [0, 1] {
             for sy: Float in [-1, 1] {
                 for sx: Float in [-1, 1] { v.append(P(x + sx * l / 2, y + sy * w / 2, z + sz * h)) }
             }
         }
-        solid(v, [[0, 2, 3, 1], [4, 5, 7, 6], [0, 1, 5, 4], [1, 3, 7, 5], [3, 2, 6, 7], [2, 0, 4, 6]], color, glow: glow)
+        solid(v, [[0, 2, 3, 1], [4, 5, 7, 6], [0, 1, 5, 4], [1, 3, 7, 5], [3, 2, 6, 7], [2, 0, 4, 6]], color, glow: glow, glass: glass)
     }
 
     /// A square bar of side `r` from `a` to `b`.
@@ -129,8 +131,8 @@ struct CableSolids {
     /// A shell lofted through `levels` (height, length, width, radius),
     /// solid or hollow with a wall `thickness`.
     mutating func loft(_ levels: [(Float, Float, Float, Float)], _ color: UInt32, far: Bool, hollow: Bool = false,
-                       glow: Bool = false, thickness: Float = 0.035) {
-        let segments = far ? 2 : 5
+                       glow: Bool = false, glass: Bool = false, thickness: Float = 0.035, nearSegments: Int = 5) {
+        let segments = far ? 2 : nearSegments
         let rings = levels.map { Self.rounded($0.1, $0.2, $0.3, $0.0, segments) }
         let n = rings[0].count, count = rings.count
         var p = rings.flatMap { $0 }
@@ -154,7 +156,7 @@ struct CableSolids {
             faces.append(Array((0..<n).reversed()))
             faces.append(Array(((count - 1) * n)..<(count * n)))
         }
-        solid(p, faces, color, glow: glow)
+        solid(p, faces, color, glow: glow, glass: glass)
     }
 
     /// Moves the triangles from `start` on by `dz`.
@@ -205,7 +207,10 @@ struct CableSolids {
         for t in triangles {
             let corners = [t.a, t.b, t.c].map(place)
             guard let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { continue }
-            mesh.appendTriangle(corners.map { Map3DVertex($0, normal: normal, color: t.color, layer: t.glows ? Map3DVertex.glowing : Map3DVertex.plain) })
+            // Decision 615: glass is marked as a train's glass, which
+            // ``Map3DTransparentGlass`` then makes see-through.
+            let layer = t.glass ? (t.glows ? Map3DVertex.trainGlassLit : Map3DVertex.trainGlass) : t.glows ? Map3DVertex.glowing : Map3DVertex.plain
+            mesh.appendTriangle(corners.map { Map3DVertex($0, normal: normal, color: t.color, layer: layer) })
         }
     }
 }
@@ -223,7 +228,7 @@ extension CableSolids {
         let lower: [(Float, Float, Float, Float)] = [(-3.68, 1.72, 1.57, 0.14), (-3.44, 1.80, 1.68, 0.16), (-3.08, 1.89, 1.78, 0.20)]
         let glazing: [(Float, Float, Float, Float)] = [(-3.08, 1.89, 1.78, 0.20), (-2.65, 1.90, 1.79, 0.21), (-2.05, 1.86, 1.74, 0.16), (-1.50, 1.72, 1.60, 0.10)]
         m.loft(lower, C.white, far: far, hollow: true)
-        m.loft(glazing, C.glass, far: far, hollow: true, thickness: 0.012)
+        m.loft(glazing, C.glass, far: far, hollow: true, glass: true, thickness: 0.012)
         m.loft([(-1.50, 1.72, 1.60, 0.10), (-1.40, 1.82, 1.68, 0.12)], C.white, far: far, hollow: true)
         m.loft([(-1.40, 1.82, 1.68, 0.12), (-1.32, 1.84, 1.70, 0.14), (-1.27, 1.72, 1.58, 0.18)], C.white, far: far)
         // The floor: a solid slab, or a 48 mm laminated glass panel in a
@@ -233,7 +238,7 @@ extension CableSolids {
         } else {
             for x: Float in [-0.76, 0.76] { m.box(x, 0, -3.68, 0.14, 1.52, 0.08, C.steel) }
             for y: Float in [-0.69, 0.69] { m.box(0, y, -3.68, 1.38, 0.14, 0.08, C.steel) }
-            m.box(0, 0, floor - 0.048, 1.38, 1.24, 0.048, C.green)
+            m.box(0, 0, floor - 0.048, 1.38, 1.24, 0.048, C.green, glass: true)
         }
         // A bench and back at each end; the crystal cabin keeps them too.
         for sign: Float in [-1, 1] {

@@ -9,12 +9,13 @@ final class Map3DCableCarTests: XCTestCase {
     }
 
     /// Decision 575 續 (CABLEMAP): the 13 the 3D map draws (with the
-    /// rope's metre) in the game's pack, the other 7 in the studies.
-    func testTheModelsAreTwentyNamedModelsInThePacks() {
+    /// rope's metre) in the game's pack, the other 7 in the studies;
+    /// decision 615: and the 8 Sun Moon Lake cabins drawn too.
+    func testTheModelsAreTwentyEightNamedModelsInThePacks() {
         let models = Map3DCableCar.models
-        XCTAssertEqual(models.count, 20)
-        XCTAssertEqual(Map3DCableCar.drawn.count, 13)
-        XCTAssertEqual(Set(models.map(\.name)).count, 20)
+        XCTAssertEqual(models.count, 28)
+        XCTAssertEqual(Map3DCableCar.drawn.count, 21)
+        XCTAssertEqual(Set(models.map(\.name)).count, 28)
         let drawn = Set(Map3DCableCar.drawn.map(\.name))
         for model in models {
             XCTAssertTrue(model.name.hasPrefix("cablecar-"), model.name)
