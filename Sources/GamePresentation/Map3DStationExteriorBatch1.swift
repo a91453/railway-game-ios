@@ -3,12 +3,13 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
         switch station {
         case .taichungTRA: builder.taichungExteriorStudy(detail: detail)
+        case .hsinchuTRA: builder.hsinchuExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -75,6 +76,27 @@ public enum Map3DStationExteriorBatch1 {
         (-149.051, -38.319),
         (-154.586, -40.721)
     ]
+    // OSM way 293504390: 16 vertices, height=9, levels=2; no roof or tower part tags.
+    // Metres east/north from (120.97165154, 24.80160443); © OpenStreetMap contributors, ODbL 1.0.
+    static let hsinchuFootprint: [(Float, Float)] = [
+        (-57.772, -45.737),
+        (-59.185, -43.625),
+        (-66.059, -33.417),
+        (-45.387, -20.285),
+        (-27.409, -8.620),
+        (-13.449, 0.386),
+        (4.366, 11.873),
+        (15.470, 19.401),
+        (50.485, 42.085),
+        (57.087, 34.179),
+        (59.994, 36.047),
+        (61.720, 33.044),
+        (63.335, 30.242),
+        (4.669, -6.563),
+        (-10.401, -16.015),
+        (-37.463, -32.994)
+    ]
+
 }
 
 private extension StationKitBuilder {
@@ -152,7 +174,7 @@ private extension StationKitBuilder {
             }
         }
         // Reference OSM minimum rotated rectangle is 20.9529° east/north.
-        add(.flat(named: "hall", from: hall.mesh), at: Map3DPoint(18, 0, -24), angle: -20.9529 * .pi / 180)
+        add(.flat(named: "hall", from: hall.mesh), at: Map3DPoint(18, 0, -24), angle: 20.9529 * .pi / 180)
 
         // Former station: brick Baroque body, hipped roof, central clock tower.
         // OSM records two levels and roof:shape=hipped; 13 m total is estimated.
@@ -174,6 +196,56 @@ private extension StationKitBuilder {
         } else {
             old.clockFace(0, 9.45, -4.33, size: 1.8)
         }
-        add(.flat(named: "old-station", from: old.mesh), at: Map3DPoint(-147.5, 0, -45.7), angle: -23.4326 * .pi / 180)
+        add(.flat(named: "old-station", from: old.mesh), at: Map3DPoint(-147.5, 0, -45.7), angle: 23.4326 * .pi / 180)
+    }
+
+    mutating func hsinchuExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        footprint(Map3DStationExteriorBatch1.hsinchuFootprint, color: Map3DPalette.stone)
+        let wall = Map3DColor.rgb(0xE5D8C3)
+        let trim = Map3DColor.rgb(0xF1EADD)
+        let brick = Map3DColor.rgb(0xC79C89)
+        let roof = Map3DColor.rgb(0x899780)
+        let glass = Map3DColor.rgb(0xAFC7CD)
+        var station = StationKitBuilder()
+        // OSM's 9 m is used for the two-level wing. Roof ridge and clock tower
+        // are estimates from photos because the way has no building:part tags.
+        station.box(0, 0.32, 0, 139, 15.2, 8.68, wall)
+        station.hip(0, 9, 0, 142, 16.2, 2.0, roof)
+        // The broad raised central roof and its pale Baroque entrance.
+        station.box(0, 0.32, -8.0, 22, 3.2, 11.2, wall)
+        station.gable(0, 11.52, -8.0, 23.0, 4.3, 2.0, trim)
+        station.hip(0, 9.72, 0, 54, 19.5, 3.2, roof)
+        station.box(0, 1.2, -9.68, 8, 0.2, 7.2, glass)
+        station.box(0, 8.4, -9.78, 14, 0.35, 0.8, trim)
+        station.box(0, 0.32, -9.62, 22, 0.5, 1.0, brick)
+        // Clock tower is separate from the measured OSM height.
+        station.box(0, 11.4, 0, 7.2, 7.2, 6.3, wall)
+        station.hip(0, 17.7, 0, 8, 8, 2.0, roof)
+        station.box(0, 19.7, 0, 0.35, 0.35, 1.2, StationKitBuilder.steel)
+        station.clockFace(0, 14.0, -3.73, size: 2.2)
+        if detail == .near {
+            for x in stride(from: Float(-63), through: 63, by: 8) {
+                if abs(x) < 19 { continue }
+                station.box(x, 1.6, -7.74, 3.6, 0.16, 4.4, trim)
+                station.box(x, 2.0, -7.84, 2.9, 0.18, 3.7, glass)
+                station.box(x, 6.1, -7.82, 4.8, 0.35, 0.55, trim)
+            }
+            for x in stride(from: Float(-66), through: 66, by: 11) {
+                station.box(x, 0.32, -10.2, 0.35, 0.35, 4.5, trim)
+            }
+            station.box(0, 4.7, -10.2, 137, 2.8, 0.25, roof)
+            for x: Float in [-17, 17] {
+                station.box(x, 0.32, -7.8, 0.8, 0.8, 9.4, trim)
+                station.box(x, 8.8, -8.0, 1.3, 1.3, 0.5, brick)
+            }
+        } else {
+            for x in stride(from: Float(-56), through: 56, by: 16) {
+                if abs(x) < 19 { continue }
+                station.box(x, 2.1, -7.75, 5, 0.2, 3.7, glass)
+            }
+            station.box(0, 4.7, -9.5, 136, 1.5, 0.22, roof)
+        }
+        // OSM's minimum-area rectangle long axis bears 32.2° north of east.
+        add(.flat(named: "hsinchu-station", from: station.mesh), at: .zero, angle: 32.2 * .pi / 180)
     }
 }
