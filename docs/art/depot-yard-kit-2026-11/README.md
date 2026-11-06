@@ -30,7 +30,7 @@
 
 ## 重建與授權
 
-從公開配方 commit `TO_BE_FILLED` 重建：
+從公開配方 commit `c923763236d52e30ba5ca45f2e4d715549370cfc` 重建：
 
 ```sh
 PATH=/workspace/swift-6.4/usr/bin:$PATH tools/depot-yard-kit/rebuild.sh ../railway-assets-private/game-art-previews/docs/art/depot-yard-kit-2026-11/revision-2
