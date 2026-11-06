@@ -1555,10 +1555,15 @@ final class MapInteractionTests: XCTestCase {
         // they kept each look 7 to 15 s and the scene unbuilt, so both
         // pinches out came before there was a scene to hand back from
         // (main 68a4cfc's full lane, run 41432636112; a48121b's, run
-        // 41406244046). XCTest's log is not copied to standard error
-        // (MENUSTALL, #1712).
+        // 41406244046).
+        //
+        // Launched as the other two 3D tests are, without
+        // OS_ACTIVITY_DT_MODE=NO (FLAKY-1106): with it, the models took
+        // 66 to 268 s in each of 13 full lanes on main (one past the 240 s
+        // wait), the other two tests' 23 to 54 s; without it, 58 s and 48 s
+        // (runs 42171303204 and 42173934715). Why is not known; the app
+        // does not read the variable.
         app.launchArguments = ["-ui-testing", "-ui-test-3d-models-first", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         app.openDemo("demo.simple")
