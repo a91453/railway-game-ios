@@ -339,12 +339,13 @@ extension RealLineDepotAddition {
         // line's stops' order (the purchase laid them from the terminal):
         // the runs of the line's stops, from where it parts from the line
         // bought before it where it was laid so (decision 400).
-        let runs: [LineRun]? = {
+        let realRuns: RealLineRuns? = {
             let candidates = [urban.shares.flatMap { RealBranchLine.metroRuns(of: site.line, after: $0, in: railways) }, railways.metroRuns[site.line]]
-            guard let real = candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count }) else { return nil }
-            return real.runs.map { $0.lineRun(stops: real.stops, reversed: true) }
+            return candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count })
         }()
-        let waits = runs != nil && !Self.isAtRest(line, runs: runs ?? [], in: world)
+        let runs = realRuns.map { real in real.runs.map { $0.lineRun(stops: real.stops, reversed: true) } }
+        let positioning = Set(zip(realRuns?.runs ?? [], runs ?? []).filter { $0.0.positioning }.map { RealLineRunKey($0.1) })
+        let waits = runs != nil && !Self.isAtRest(line, runs: runs ?? [], positioning: positioning, in: world)
 
         // GameCore's answer and the price, on a funded copy. A tile the
         // track reaches between the samples is bought with the others.
@@ -396,20 +397,32 @@ extension RealLineDepotAddition {
     /// longer than a run may be sent out late (``LineRun/latestDispatch``).
     /// The line's runs can then change without one sent twice or dropped;
     /// a train still out is stuck, and the build takes it off its run.
-    static func isAtRest(_ line: ServiceLine, runs: [LineRun], in world: GameWorld) -> Bool {
-        let now = Self.modulo(world.clock.now.seconds, GameTime.secondsPerDay)
-        return !(runs + line.runs).contains { run in
-            guard let start = run.times.first?.departure else { return false }
-            let end = max(start, run.times.last?.arrival ?? start)
-            let behind = Self.modulo(now - start, GameTime.secondsPerDay)
-            let ahead = Self.modulo(start - now, GameTime.secondsPerDay)
-            return behind <= end - start + LineRun.latestDispatch || ahead <= LineRun.earliestDispatch
-        }
+    ///
+    /// Decision 605 (continued): only the runs that carry riders, on the
+    /// days they run, count. The Taoyuan Airport MRT's empty runs move its
+    /// trains between its stations and depots all night (02:20 to 05:25 on
+    /// a weekend, one after another from 00:33 to 06:38 on a weekday), so
+    /// counting them its last train was never in; a run of the weekdays'
+    /// timetable does not keep a Sunday night busy. `positioning` names
+    /// the runs that carry none (``RealLineRuns/Run/positioning``), a train
+    /// still on one is taken off it like a stuck one.
+    static func isAtRest(_ line: ServiceLine, runs: [LineRun], positioning: Set<RealLineRunKey> = [], in world: GameWorld) -> Bool {
+        isAtRest(line, runs: runs, positioning: positioning, at: world.clock.now.seconds)
     }
 
-    private static func modulo(_ value: Int64, _ divisor: Int64) -> Int64 {
-        let remainder = value % divisor
-        return remainder < 0 ? remainder + divisor : remainder
+    /// ``isAtRest(_:runs:positioning:in:)`` at second `now` of the game.
+    static func isAtRest(_ line: ServiceLine, runs: [LineRun], positioning: Set<RealLineRunKey> = [], at now: Int64) -> Bool {
+        let day = GameTime.secondsPerDay
+        let remainder = now % day
+        let today = (now - (remainder < 0 ? remainder + day : remainder)) / day
+        return !(runs + line.runs).contains { run in
+            guard !positioning.contains(RealLineRunKey(run)), let start = run.times.first?.departure else { return false }
+            let end = max(start, run.times.last?.arrival ?? start)
+            return ((today - 2)...(today + 1)).contains { date in
+                date >= 0 && run.days & (1 << StationDemand.weekday(ofDay: date)) != 0
+                    && (date * day + start - LineRun.earliestDispatch...date * day + end + LineRun.latestDispatch).contains(now)
+            }
+        }
     }
 
     /// `world` with line `id`'s trains taken off their runs, for the price.

@@ -143,18 +143,13 @@ extension GameSession {
     /// the place is nearer it than a split may be. `nil` where the line
     /// ends, branches or climbs first, or ends within a split's least piece
     /// of the place (decision 507). The new track leaves the turnout back
-    /// toward the platform. With `onGrade` (decision 605's rebuild of a
-    /// line bought before its real layout came) the track it runs along
-    /// may climb: GameCore's split then takes a turnout on its steady
-    /// grade, no steeper than a turnout may be, and says why where not.
-    func platformTrackTurnout(
-        from edge: TrackEdgeID, at offset: Int64, forward: Bool, reach: Int64, onGrade: Bool = false, in world: GameWorld
-    ) -> PlatformTrackTurnout? {
+    /// toward the platform.
+    func platformTrackTurnout(from edge: TrackEdgeID, at offset: Int64, forward: Bool, reach: Int64, in world: GameWorld) -> PlatformTrackTurnout? {
         var edge = edge, offset = offset, forward = forward, left = reach
         let spacing = NetworkBuilding.minimumSpacing
         for _ in 0..<64 {
             guard let current = world.network.edge(edge), let geometry = world.trackGeometry(of: edge),
-                  onGrade || (geometry.startHeight == geometry.endHeight && current.profile == .uniform) else { return nil }
+                  geometry.startHeight == geometry.endHeight, current.profile == .uniform else { return nil }
             let room = forward ? current.length - offset : offset
             if left <= room {
                 let distance = forward ? offset + left : offset - left
@@ -190,13 +185,11 @@ extension GameSession {
         return nil
     }
 
-    func platformTrackPlan(beside platform: TrackPlatform, layout: PlatformTrackLayout, side: PlatformTrackSide, onGrade: Bool = false)
+    func platformTrackPlan(beside platform: TrackPlatform, layout: PlatformTrackLayout, side: PlatformTrackSide)
         -> Result<PlatformTrackPlan, PlatformTrackProblem>
     {
         guard world.trackPlatforms(of: platform.station).contains(platform) else { return .failure(.missing) }
-        return sidingPlan(
-            on: platform.edge, from: platform.start, to: platform.end, spacing: layout.spacing, reach: layout.reach, side: side, onGrade: onGrade, in: world
-        ).map {
+        return sidingPlan(on: platform.edge, from: platform.start, to: platform.end, spacing: layout.spacing, reach: layout.reach, side: side, in: world).map {
             PlatformTrackPlan(platform: platform, near: $0.near, far: $0.far, beside: $0.beside, curves: $0.curves, structure: $0.structure)
         }
     }
@@ -205,13 +198,13 @@ extension GameSession {
     /// joined to it by a turnout `reach` beyond each end: a platform track's
     /// (above) or a passing loop's (decision 204).
     func sidingPlan(on edgeID: TrackEdgeID, from start: Int64, to end: Int64, spacing: Int64, reach: Int64, side: PlatformTrackSide,
-                    onGrade: Bool = false, in world: GameWorld) -> Result<Siding, PlatformTrackProblem>
+                    in world: GameWorld) -> Result<Siding, PlatformTrackProblem>
     {
         guard let edge = world.network.edge(edgeID), let geometry = world.trackGeometry(of: edgeID),
               start >= 0, start < end, end <= geometry.length else { return .failure(.missing) }
         guard geometry.startHeight == geometry.endHeight, edge.profile == .uniform else { return .failure(.notLevel) }
-        guard let near = platformTrackTurnout(from: edgeID, at: start, forward: false, reach: reach, onGrade: onGrade, in: world),
-              let far = platformTrackTurnout(from: edgeID, at: end, forward: true, reach: reach, onGrade: onGrade, in: world)
+        guard let near = platformTrackTurnout(from: edgeID, at: start, forward: false, reach: reach, in: world),
+              let far = platformTrackTurnout(from: edgeID, at: end, forward: true, reach: reach, in: world)
         else { return .failure(.noRoom) }
         func besides(_ distance: Int64) -> (position: WorldCoordinate, way: PlanVector) {
             // The same parallel as a double track's and a depot's sidings.
