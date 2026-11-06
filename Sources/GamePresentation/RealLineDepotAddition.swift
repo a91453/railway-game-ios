@@ -338,15 +338,7 @@ extension RealLineDepotAddition {
         let runs: [LineRun]? = {
             let candidates = [urban.shares.flatMap { RealBranchLine.metroRuns(of: site.line, after: $0, in: railways) }, railways.metroRuns[site.line]]
             guard let real = candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count }) else { return nil }
-            let last = real.stops.count - 1
-            return real.runs.map { run in
-                LineRun(
-                    from: last - (real.stops.firstIndex(of: run.calls[0].station) ?? 0),
-                    to: last - (real.stops.firstIndex(of: run.calls[run.calls.count - 1].station) ?? 0),
-                    times: run.calls.map { LineRunTime(arrival: $0.arrival, departure: $0.departure) },
-                    days: run.days.reduce(0) { $0 | 1 << $1 }
-                )
-            }
+            return real.runs.map { $0.lineRun(stops: real.stops, reversed: true) }
         }()
         let waits = runs != nil && !Self.isAtRest(line, runs: runs ?? [], in: world)
 

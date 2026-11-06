@@ -104,6 +104,14 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Terminal 2, its shuttles at Terminal 1 and Huanbei).
     var turnsBackBetween: Bool { isTaoyuanAirport }
 
+    /// Decision 605: the stations between its ends (by their names in the
+    /// timetable) laid with a passing loop outside each of its two tracks,
+    /// four tracks and two island platforms, where its express trains
+    /// overtake the stopping ones: the Taoyuan Airport MRT's Chang Gung
+    /// Memorial Hospital (A8), where every one of the real timetable's
+    /// overtakes is.
+    var overtakeStations: [String] { isTaoyuanAirport ? ["長庚醫院站"] : [] }
+
     /// Decision 556: whether the ground under its depots beside the line
     /// is read in as far as their ladders may reach, as under a yard past
     /// an end (decision 549, continued), so a yard over water (Qingpu's,
@@ -1042,7 +1050,7 @@ extension RealLineLaying {
         var levels: [TrackRise.Level] = []
         var zones: [ClosedRange<Double>] = []
         var spans: [ClosedRange<Double>] = []
-        var loopSpans: [(stop: Int, a: Double, b: Double, offset: Double, ramp: Double)] = []
+        var loopSpans: [(stop: Int, a: Double, b: Double, offset: Double, ramp: Double, onSecond: Bool)] = []
         // The stations: the company's own by the junction, if it has one;
         // and, decision 400, any other by its real name within 450 m (a
         // transfer to the company's line, or the line bought before): the
@@ -1064,15 +1072,22 @@ extension RealLineLaying {
             let zone = (at - half)...(at + half)
             zones.append(zone)
             let between = double && index > 0 && index < runs.stops.count - 1
-            let loops = (runs.tracks[name] ?? 1) - (between ? 2 : 1)
+            // Decision 605: a station where the expresses overtake has a
+            // loop outside each track, whatever its timetable stands there.
+            let overtakes = between && line.overtakeStations.contains(name)
+            let loops = overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1)
             // A positive offset is on the right going up the line; on a
             // double track the second track is on the left, so a loop
             // between the ends is on the right. An end station's loops lie
             // either side, the deeper ones (decision 400) further out.
+            // Decision 605: an overtaking station's second loop is on the
+            // left of the second track.
             let offset = layout.loopOffset
-            let sides = between
-                ? [(offset, 1)]
-                : (1...layout.endLevels).flatMap { level in [(Double(level) * offset, level), (-Double(level) * offset, level)] }
+            let sides = overtakes
+                ? [(offset, 1, false), (-offset, 1, true)]
+                : between
+                ? [(offset, 1, false)]
+                : (1...layout.endLevels).flatMap { level in [(Double(level) * offset, level, false), (-Double(level) * offset, level, false)] }
             guard loops <= sides.count else {
                 return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
             }
@@ -1080,9 +1095,9 @@ extension RealLineLaying {
             if loops > 0 {
                 let deepest = sides.prefix(loops).map(\.1).max() ?? 1
                 span = (at - layout.reach(level: deepest))...(at + layout.reach(level: deepest))
-                for (side, level) in sides.prefix(loops) {
+                for (side, level, onSecond) in sides.prefix(loops) {
                     let reach = layout.reach(level: level)
-                    loopSpans.append((index, at - reach, at + reach, side, layout.ramp(level: level)))
+                    loopSpans.append((index, at - reach, at + reach, side, layout.ramp(level: level), onSecond))
                     forced += [at - reach, at + reach]
                 }
             } else {
@@ -1220,11 +1235,19 @@ extension RealLineLaying {
         }
         for loop in loopSpans {
             for offset in [loop.offset] {
-                let loopPath = path.offset(from: loop.a, to: loop.b, by: offset, ramp: loop.ramp)
+                // Decision 605: a loop beside the second track leaves and
+                // rejoins it, the second track's offset from the first.
+                let base = loop.onSecond ? -HighSpeedDemo.trackOffset : 0
+                let loopPath = path.offset(from: loop.a, to: loop.b, by: offset, ramp: loop.ramp, from: base)
+                func shifted(_ node: (point: PlanPoint, direction: WorldVector)?, at distance: Double) -> (point: PlanPoint, direction: WorldVector)? {
+                    guard let node, base != 0 else { return node }
+                    return ((WorldVector(node.point) + path.tangent(at: distance).normal * base).plan, node.direction)
+                }
                 guard let loopRise = TrackRise(
                     path: loopPath, ground: ground, water: water, levels: [TrackRise.Level(0...loopPath.length, at: Double(rise.node(at: loop.a)))]
-                ), let startNode = main.node(at: loop.a), let endNode = main.node(at: loop.b),
-                    let a = main.distances.firstIndex(where: { abs($0 - loop.a) < 1 }), let b = main.distances.firstIndex(where: { abs($0 - loop.b) < 1 })
+                ), let startNode = shifted(main.node(at: loop.a), at: loop.a), let endNode = shifted(main.node(at: loop.b), at: loop.b),
+                    let mainA = main.distances.firstIndex(where: { abs($0 - loop.a) < 1 }), let mainB = main.distances.firstIndex(where: { abs($0 - loop.b) < 1 }),
+                    let a = loop.onSecond ? besideNodes.firstIndex(of: mainA) : mainA, let b = loop.onSecond ? besideNodes.firstIndex(of: mainB) : mainB
                 else {
                     return refused("A passing loop does not fit here.", "這裡放不下待避線。")
                 }
@@ -1237,7 +1260,7 @@ extension RealLineLaying {
                         loopPath, forced: [0, loopPath.length], avoiding: [zone], close: [0...loopPath.length],
                         start: startNode, end: endNode, rise: loopRise, structure: .automatic
                     ),
-                    RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
+                    RealLineAcquisition.NodeAt(piece: loop.onSecond ? 1 : 0, node: a), RealLineAcquisition.NodeAt(piece: loop.onSecond ? 1 : 0, node: b), true
                 ))
                 platformsAt.append((loop.stop, plans.count - 1, zone))
             }
@@ -1390,13 +1413,10 @@ extension RealLineLaying {
         // Decision 489: a depot past an end takes in and sends out only
         // that end's; the runs taking the other end's trains back there
         // for the night stay.
+        // Decision 605: an express run passes the stations it does not
+        // stop at.
         let lineRuns = runs.runs.filter { depotsLaid.isEmpty || !depotEnds.isEmpty || !($0.positioning || $0.train == "回送") }.map { run in
-            LineRun(
-                from: runs.stops.firstIndex(of: run.calls[0].station) ?? 0,
-                to: runs.stops.firstIndex(of: run.calls[run.calls.count - 1].station) ?? 0,
-                times: run.calls.map { LineRunTime(arrival: $0.arrival, departure: $0.departure) },
-                days: run.days.reduce(0) { $0 | 1 << $1 }
-            )
+            run.lineRun(stops: runs.stops)
         }
         let riders = (line.paysForFirstStop ? runs.stops[...] : runs.stops.dropFirst()).reduce(Int64(0)) { total, name in
             guard let real = railways.stations.first(where: { $0.id == "\(line.system)|\(name)" }) else { return total }
@@ -1621,7 +1641,7 @@ extension RealLineLaying {
         if let color = acquisition.color { try world.setLineColor(line.id, to: color) }
         try world.setLineServiceWindow(line.id, to: .allDay)
         try world.setLineRuns(line.id, to: acquisition.runs.map { run in
-            LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days)
+            LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days, passes: run.passes.map { last - $0 })
         })
         // Decision 564: a metro's or light rail's trains keep right, the
         // platforms it names and every other way its trains find.
