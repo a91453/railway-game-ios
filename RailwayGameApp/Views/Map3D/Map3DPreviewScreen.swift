@@ -282,7 +282,10 @@ struct Map3DPreviewScreen: View {
             UITestTrace.action("map3D.models ready after \(waited.components.seconds * 1000 + waited.components.attoseconds / 1_000_000_000_000_000) ms")
             modelsReady = true
         }
-        .onChange(of: session.world.trains, initial: true) { _, _ in
+        // Decision 379 續四: once a step's glide stops going on, with the
+        // heights and labels of the world it glides to.
+        .onChange(of: session.glideKey, initial: true) { _, key in
+            guard !key.goesOn else { return }
             feed.update(session: session, palette: linePalette)
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
