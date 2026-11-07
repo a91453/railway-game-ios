@@ -30,6 +30,54 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 119.1.
+        Entry(
+            id: "2026-11-07-119-1",
+            items: [
+                Line(
+                    english: "The Kaohsiung Circular Light Rail can now be bought: it follows the real tracks, has a light rail depot, and keeps running every trip with traffic control off.",
+                    chinese: "高雄環狀輕軌開放收購：照真實股道鋪、有輕軌機廠，行車控制關掉也不漏班。"
+                ),
+                Line(
+                    english: "Cable car cabins now change with the place: near Sun Moon Lake you get the Sun Moon Lake cabin, and the cabin glass is clear.",
+                    chinese: "纜車吊廂照地點換，日月潭附近是日月潭吊廂，玻璃改透明。"
+                ),
+                Line(
+                    english: "Real-world buildings along a street now show arcade pillars, window grilles, air conditioners, upright signs and rooftop add-ons.",
+                    chinese: "實景建物沿街立面多了騎樓柱、鐵窗、冷氣機、直立招牌和頂樓加蓋。"
+                ),
+                Line(
+                    english: "The Changhua roundhouse now has locomotives parked in its stalls.",
+                    chinese: "彰化扇形車庫的庫位停著機車。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Laying track or adding a platform on the 3D map now redraws only the area around it, so it feels smoother.",
+                    chinese: "3D 地圖鋪軌、加月台只重畫周圍，操作更順。"
+                ),
+                Line(
+                    english: "The 3D map uses less memory.",
+                    chinese: "3D 地圖比較省記憶體。"
+                ),
+                Line(
+                    english: "The cab window view no longer jerks along in fits and starts.",
+                    chinese: "車窗視角走走停停的問題修好了。"
+                ),
+                Line(
+                    english: "After you rebuild a real-world line, the whole scene updates with it.",
+                    chinese: "改建實景線後，整片場景跟著更新。"
+                ),
+                Line(
+                    english: "The picture no longer jumps after you pause.",
+                    chinese: "暫停後畫面不再跳一下。"
+                ),
+                Line(
+                    english: "Small fixes to the sights panel and a few other spots.",
+                    chinese: "觀光景點面板等幾處小修。"
+                ),
+            ]
+        ),
         // 118.1.
         Entry(
             id: "2026-11-06-118-1",
