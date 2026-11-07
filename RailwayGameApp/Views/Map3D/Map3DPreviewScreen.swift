@@ -286,6 +286,9 @@ struct Map3DPreviewScreen: View {
             feed.update(session: session, palette: linePalette)
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
+            // CABVIEW-2 (decision 379 續三): over the game loop's whole
+            // step, as the trains do.
+            guard !session.glidesOnThroughTheStep else { return }
             // Decision 339: the real trains glide with the game clock.
             feed.updateRealClock(world: session.world, shown: showsRealTrains,
                                  glides: !session.world.clock.isPaused && !reduceMotion)
@@ -746,6 +749,7 @@ final class Map3DSceneCache {
         let footprints = world.geoAnchor == nil ? nil : BaseMapFiles.footprints
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
+        let facades = key.facades
         let task = Task.detached(priority: .userInitiated) {
             let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
             // Decision 517 續 (PR 3b): the scene before, once built, with
@@ -779,7 +783,8 @@ final class Map3DSceneCache {
                                           heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
-                                          noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) })
+                                          noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) },
+                                          facades: facades)
             let read = clock.now
             let scene = source.scene(focus: centre)
             let number = Map3DSceneBuildLog.shared.add(Map3DSceneBuildTime(
@@ -830,10 +835,14 @@ struct Map3DChunkSource: Sendable {
     let railways: RealRailways?
     let temples: RealTemples?
     let noBuild: RealNoBuildLand?
+    /// Decision 610 續 (review L12-1): whether the real buildings' street
+    /// fronts are built (``Map3DQuality/scenesKeepFacades``).
+    let facades: Bool
 
     func scene(focus: (x: Double, y: Double)?) -> Map3DScene {
         Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: baseMap, cityTiles: cityTiles,
-                   footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild)
+                   footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                   facades: facades)
     }
 
     /// Decision 517 續 (PR 3b): the same files for `world`, its track,
@@ -841,7 +850,7 @@ struct Map3DChunkSource: Sendable {
     func with(_ world: GameWorld, lineBands: Map3DLineBands) -> Map3DChunkSource {
         Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
                          cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways,
-                         temples: temples, noBuild: noBuild)
+                         temples: temples, noBuild: noBuild, facades: facades)
     }
 
     /// Decision 517 續 (PR 3b): `old` with its chunks at `keys` built
@@ -850,7 +859,7 @@ struct Map3DChunkSource: Sendable {
     func scene(rebuilding keys: Set<Map3DStreaming.Key>, of old: Map3DScene) -> Map3DScene {
         Map3DScene(rebuilding: keys, of: old, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
                    footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
-                   detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil)
+                   detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil, facades: facades)
     }
 
     /// Decision 359 (續): with the scene's `trackCover`, which lays the
@@ -859,7 +868,7 @@ struct Map3DChunkSource: Sendable {
     func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover, detail: Map3DPoint) -> [Map3DScene.Chunk] {
         Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
                           footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
-                          trackCover: trackCover, detail: detail)
+                          trackCover: trackCover, detail: detail, facades: facades)
     }
 }
 
@@ -962,8 +971,14 @@ struct Map3DSceneKey: Hashable {
     /// Decision 506, later: an expanded station's bigger building shows
     /// at once.
     let expansions: Int
+    /// Decision 610 續 (review L12-1): whether the street fronts are built,
+    /// so a scene is built again when the 3D look starts or stops drawing
+    /// them.
+    let facades: Bool
 
-    init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
+    init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil,
+         facades: Bool = Map3DQuality.scenesKeepFacades) {
+        self.facades = facades
         self.hasHeights = hasHeights
         self.hasRailways = hasRailways && world.geoAnchor != nil
         self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
@@ -987,6 +1002,7 @@ struct Map3DSceneKey: Hashable {
         self != other && hasHeights == other.hasHeights && hasRailways == other.hasRailways && focus == other.focus
             && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
             && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
+            && facades == other.facades
     }
 }
 

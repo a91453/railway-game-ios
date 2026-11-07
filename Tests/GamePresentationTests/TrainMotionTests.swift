@@ -417,6 +417,94 @@ final class TrainMotionTests: XCTestCase {
         XCTAssertEqual(clockStanding, 0, "frames the real trains' clock stood still between ticks")
     }
 
+    /// CABVIEW-2 (decision 379 續三): the game loop's step of five ticks at
+    /// 10× on a phone, as Instruments recorded it on the Kaohsiung
+    /// Circular Light Rail: the first four ticks 20 ms apart, the last
+    /// 0.8 s later (it reads traffic control), then the loop's rest. Each
+    /// tick gliding on its own moved the followed train in a burst and
+    /// stood it still until the last tick; gliding over the whole step,
+    /// it moves at every frame.
+    @MainActor
+    func testAFollowedTrainMovesEveryFrameThroughAStepOfTicksBackToBack() async throws {
+        func standingFrames(overTheStep: Bool) async throws -> (standing: Int, fromTheTick: Int) {
+            var world = try makeWorld(width: 262_144, height: 4_096, balance: 1_000_000, speed: .x10)
+            let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+            let east = try world.buildTrackNode(at: WorldCoordinate(x: 261_120, y: 2_048))
+            let edge = try world.buildTrackEdge(from: west, to: east)
+            let train = try world.purchaseTrain(named: "T1").id
+            try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 1_024))
+            try world.setTrainMovementRate(train, to: 6_000)
+            let session = GameSession(world: world)
+            var time = 10.0
+            var shown = session.trainMotion(after: TrainMotion(), at: time)
+            var standing = 0, fromTheTick = 0
+            // Counted after the first step, whose glide begins from none.
+            var counting = false
+            // Where the map shows the head at each frame until `end`.
+            var last = try XCTUnwrap(shown.head(of: train, at: time)).x
+            func frames(until end: Double) throws {
+                var at = time + 1.0 / 30
+                while at < end {
+                    let x = try XCTUnwrap(shown.head(of: train, at: at)).x
+                    if counting, x <= last { standing += 1 }
+                    last = x
+                    at += 1.0 / 30
+                }
+            }
+            for step in 0..<6 {
+                counting = step > 0
+                for index in 0..<5 {
+                    var tick = try XCTUnwrap(session.beginLoopTick())
+                    if overTheStep, index < 4 { tick.goesOnInTheStep() }
+                    let outcome = await tick.work()
+                    let next = time + (index == 0 ? 0.6 : index < 4 ? 0.02 : 0.8)
+                    try frames(until: next)
+                    time = next
+                    XCTAssertTrue(session.finish(tick, with: outcome))
+                    if session.glideMemo.map({ $0.from == shown.source }) == true { fromTheTick += 1 }
+                    shown = session.trainMotion(after: shown, at: time)
+                }
+            }
+            return (standing, fromTheTick)
+        }
+        let before = try await standingFrames(overTheStep: false)
+        XCTAssertGreaterThan(before.standing, 60, "a tick at a time stands the train still until the step's last")
+        let after = try await standingFrames(overTheStep: true)
+        XCTAssertEqual(after.standing, 0, "frames the followed head stood still within a step")
+        XCTAssertEqual(after.fromTheTick, 6, "each step's glide was worked out with its last tick, off the main actor")
+    }
+
+    /// CABVIEW-2: a command within a step ends the glide over it, so the
+    /// map works out the world the command made.
+    @MainActor
+    func testACommandWithinAStepEndsItsGlide() async throws {
+        var world = try makeWorld(width: 65_536, height: 4_096, balance: 1_000_000, speed: .x10)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 64_512, y: 2_048))
+        let edge = try world.buildTrackEdge(from: west, to: east)
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 1_024))
+        try world.setTrainMovementRate(train, to: 6_000)
+        let session = GameSession(world: world)
+        let shown = session.trainMotion(after: TrainMotion(), at: 1)
+        var tick = try XCTUnwrap(session.beginLoopTick())
+        tick.goesOnInTheStep()
+        XCTAssertNil(tick.glide)
+        let outcome = await tick.work()
+        XCTAssertTrue(session.finish(tick, with: outcome))
+        XCTAssertTrue(session.glidesOnThroughTheStep)
+        XCTAssertEqual(session.trainMotion(after: shown, at: 1.02).time, shown.time, "the glide shown goes on")
+        session.togglePause()
+        XCTAssertFalse(session.glidesOnThroughTheStep)
+        XCTAssertNotEqual(session.trainMotion(after: shown, at: 1.1).source, shown.source)
+        // Faster than 60×, each tick glides on its own.
+        session.togglePause()
+        session.setSpeed(.normal)
+        var fast = try XCTUnwrap(session.beginLoopTick())
+        fast.goesOnInTheStep()
+        XCTAssertFalse(fast.stepGoesOn)
+    }
+
     /// A train of several cars draws its whole body behind its gliding
     /// head, along the track it was on.
     func testABodyFollowsItsHead() throws {

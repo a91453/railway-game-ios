@@ -75,7 +75,7 @@ extension Map3DScene.Builder {
                                                 Map3DPoint(max(box[0].x, box[1].x), 0, max(box[0].z, box[1].z)))])
             }
             // Decision 610: and the street fronts by the same streets.
-            facadeStreets = near ? streets : nil
+            facadeStreets = near && buildsFacades ? streets : nil
             defer { facadeStreets = nil }
             for building in area.buildings {
                 let polygons = building.polygons.map { $0.map { $0.map(world) } }
@@ -312,7 +312,7 @@ extension Map3DScene.Builder {
         // Decision 610: near, what stands out of its street fronts (none
         // on a temple's hall or a station's roof, whose kinds have none),
         // a rooftop room only where decision 235's clutter left the roof.
-        if !far, facadeStreets != nil, !canopy, !hipped {
+        if !far, buildsFacades, facadeStreets != nil, !canopy, !hipped {
             var street = FrontStreetLevel(height: groundFloor)
             switch kind {
             case .shophouse: street.arcade = true; street.shops = r(1) < 0.75
