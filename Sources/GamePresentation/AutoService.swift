@@ -333,11 +333,18 @@ extension GameWorld {
     }
 
     private func singleTrackShortfall(of id: LineID, edges: inout [LineID: Set<TrackEdgeID>]) -> PassingPlaceShortfall? {
-        guard let line = line(id: id), !line.assignedTrains.isEmpty,
-              let shortfall = passingPlaceShortfall(of: id, trains: line.assignedTrains.count, readyFor: 0, edges: &edges),
-              !shortfall.others.isEmpty || line.assignedTrains.count >= 2
-        else { return nil }
-        return shortfall
+        guard let line = line(id: id), !line.assignedTrains.isEmpty else { return nil }
+        if let shared = sharedSingleTrackShortfall(of: id, edges: &edges) { return shared }
+        // Its own: only trains on the track stand in the way (a spare
+        // assigned off it waits there).
+        let onTrack = trainsOnTrack(of: line)
+        guard onTrack >= 2, let own = passingPlaceShortfall(of: id, trains: onTrack, readyFor: 0, edges: &edges), own.others.isEmpty else { return nil }
+        return own
+    }
+
+    /// How many of `line`'s trains stand on the track.
+    func trainsOnTrack(of line: ServiceLine) -> Int {
+        line.assignedTrains.filter { train(id: $0)?.position != nil }.count
     }
 
     /// The first line, by ID, with a ``singleTrackShortfall(of:)``: what
@@ -347,7 +354,7 @@ extension GameWorld {
         // Only lines that share a single-track edge with another line's
         // trains, or that have two trains or more, can fall short this way.
         let running = lines.filter { !$0.assignedTrains.isEmpty }
-        let candidates = running.count >= 2 ? running : running.filter { $0.assignedTrains.count >= 2 }
+        let candidates = running.count >= 2 ? running : running.filter { trainsOnTrack(of: $0) >= 2 }
         return candidates.sorted { $0.id < $1.id }.first { singleTrackShortfall(of: $0.id, edges: &edges) != nil }
     }
 
@@ -596,8 +603,8 @@ extension GameSession {
         let from = world.station(id: line.stops[leg.from])?.name ?? ""
         let to = world.station(id: line.stops[leg.to])?.name ?? ""
         return language.text(
-            " Its single track has no place for \(line.assignedTrains.count) trains to pass between \(from) and \(to), so they would stand waiting for each other: tap Add a Passing Loop Here on the line's card.",
-            "單線上 \(from)—\(to) 沒有地方讓 \(line.assignedTrains.count) 列車交會，會互相等著不動：請在路線卡按「在這裡加待避線」。"
+            " Its single track has no place for \(world.trainsOnTrack(of: line)) trains to pass between \(from) and \(to), so they would stand waiting for each other: tap Add a Passing Loop Here on the line's card.",
+            "單線上 \(from)—\(to) 沒有地方讓 \(world.trainsOnTrack(of: line)) 列車交會，會互相等著不動：請在路線卡按「在這裡加待避線」。"
         )
     }
 
@@ -608,7 +615,7 @@ extension GameSession {
         let to = world.station(id: line.stops[leg.to])?.name ?? ""
         guard !shortfall.others.isEmpty else {
             // Decision 628: its own trains, with no other line's.
-            let count = line.assignedTrains.count
+            let count = world.trainsOnTrack(of: line)
             return language.text(
                 "\(line.name)'s \(count) trains have no place to pass on the single track between \(from) and \(to): they stand waiting for each other. A passing loop there lets them pass.",
                 "\(line.name) 的 \(count) 列車在 \(from)—\(to) 的單線上沒有地方交會，會互相等著不動。在那裡加一處待避線就能交會。"
@@ -629,7 +636,8 @@ extension GameSession {
     public func addPassingLoopToSelectedLine() {
         guard let line = requireSelectedLine() else { return }
         // Decision 628: every place to pass its trains need, in one tap.
-        let plans = passingLoopsNeeded(for: line.id, trains: line.assignedTrains.count, limit: max(1, line.assignedTrains.count - 1), in: world)
+        let trains = world.sharedSingleTrackShortfall(of: line.id) == nil ? world.trainsOnTrack(of: line) : line.assignedTrains.count
+        let plans = passingLoopsNeeded(for: line.id, trains: trains, limit: max(1, trains - 1), in: world)
         guard !plans.isEmpty else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "There is no room for a passing loop on \(line.name)'s single track: build a second track beside it instead.",
@@ -915,18 +923,21 @@ extension GameSession {
         }
         for (train, line, pattern) in lifted {
             guard let journey = world.lineJourney(line) else { throw .trackReserved(train) }
+            if plan.newLine == nil, plan.trains == 0, Self.runsEveryTrainOnItsTrack(line, in: world) {
+                // Decision 628: the line card's loop alone, and the line
+                // already has on its track every train it runs. Put back,
+                // the train would only stand as a spare on a platform of
+                // the single track, in the way of the others; off it, it
+                // waits. (Add a Train and a new line still put it back:
+                // they would buy a train and take another off.)
+                outcome.parked.append(world.train(id: train)?.name ?? "")
+                continue
+            }
             var placed = world
             if (try? Self.placeAtStart(train, of: journey, in: &placed)) == nil {
                 var atBack = world
                 if let back = Self.farEndJourney(of: line, in: world), (try? Self.placeAtStart(train, of: back, in: &atBack)) != nil {
                     placed = atBack
-                } else if Self.runsEveryTrainOnItsTrack(line, in: world) {
-                    // Decision 628: both ends taken, and the line already
-                    // has on its track every train it runs. Put back, the
-                    // train would only stand on a platform of the single
-                    // track, in the way of the others; off it, it waits.
-                    outcome.parked.append(world.train(id: train)?.name ?? "")
-                    continue
                 } else if let anywhere = Self.placeAtAnyStop(train, of: line, in: world) {
                     // Decision 628: both ends taken; a stop between them.
                     placed = anywhere

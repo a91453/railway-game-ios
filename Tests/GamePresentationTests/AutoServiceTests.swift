@@ -76,70 +76,69 @@ final class AutoServiceTests: XCTestCase {
 
     /// Realistic rules: the line card's loop goes in where the train
     /// between the ends stands, and with both ends taken that train has
-    /// nowhere to go back to. The loop waits, the train stays on its line,
-    /// and the message says to tap again once it has passed.
-    func testALoopWaitsWhenTheTrainInItsWayCannotGoBack() throws {
+    /// nowhere to go back to. Decision 264 waited for it to pass, but the
+    /// three stood still (each waiting for the platform another held), so
+    /// it never did. Decision 628: the line already has on its track the
+    /// trains it runs, so the loop goes in and that train waits off the
+    /// track, off its line, and the message says so.
+    func testTheLoopGoesInAndTheTrainInItsWayWaitsOffTheTrack() throws {
         let (world, line, _, _, between) = try endsTaken(rules: .realistic)
         let session = GameSession(world: world)
         session.selectLine(line)
-        let plans = session.passingLoopsNeeded(for: line, trains: 3, in: world)
-        XCTAssertEqual(plans.count, 1)
-        var trial = world
-        do throws(GameError) {
-            _ = try session.apply(AutoService(newLine: nil, line: line, loops: plans, trains: 0, cars: Train.minimumCars, language: .english), to: &trial)
-            XCTFail("the train in the way has nowhere to go back to")
-        } catch {
-            XCTAssertEqual(error, .trackReserved(between))
-        }
-
         session.addPassingLoopToSelectedLine()
         let text = session.message?.text ?? ""
-        XCTAssertEqual(session.message?.kind, .failure, text)
-        XCTAssertTrue(text.contains("Tap again once it has passed"), text)
-        XCTAssertEqual(session.world.lines, world.lines)
-        XCTAssertEqual(session.world.stations, world.stations)
-        XCTAssertEqual(session.world.trains, world.trains)
-        XCTAssertEqual(session.world.economy.balance, world.economy.balance)
-        XCTAssertEqual(session.world.assignedLine(of: between), line)
+        XCTAssertEqual(session.message?.kind, .success, text)
+        XCTAssertTrue(text.contains("Between left the track"), text)
+        XCTAssertTrue(session.world.stations.contains { $0.operationMode == .closed }, "a loop went in")
+        XCTAssertNil(session.world.assignedLine(of: between))
+        XCTAssertNil(session.world.train(id: between)?.position)
+        XCTAssertLessThan(session.world.economy.balance, world.economy.balance)
+        XCTAssertEqual(session.world.line(id: line)?.assignedTrains.count, 2)
+        XCTAssertNil(session.world.singleTrackShortfall(of: line))
     }
 
-    /// Simple rules: "Add a Train" on the same line needs that loop first,
-    /// so it waits too, and nothing is bought.
-    func testAddATrainWaitsWhenTheTrainInTheLoopsWayCannotGoBack() throws {
+    /// Simple rules: "Add a Train" on the same line needs that loop first.
+    /// Decision 264 waited, and nothing was bought, but the three trains
+    /// stood still, so the wait never ended. Decision 628: the train in
+    /// the way goes back on a platform of a stop between the ends (a new
+    /// loop's), the train bought goes on, and the line runs all day.
+    func testAddATrainPutsTheTrainInTheLoopsWayBackBetweenTheEnds() throws {
         let (world, line, _, _, between) = try endsTaken(rules: .simple)
         let session = GameSession(world: world)
         XCTAssertTrue(session.runsLinesForThePlayer)
         session.selectLine(line)
         session.addTrainToSelectedLine()
         let text = session.message?.text ?? ""
-        XCTAssertEqual(session.message?.kind, .failure, text)
-        XCTAssertTrue(text.contains("Tap again once it has passed"), text)
-        XCTAssertEqual(session.world.lines, world.lines)
-        XCTAssertEqual(session.world.trains, world.trains)
-        XCTAssertEqual(session.world.economy.balance, world.economy.balance)
+        XCTAssertEqual(session.message?.kind, .success, text)
         XCTAssertEqual(session.world.assignedLine(of: between), line)
+        XCTAssertNotNil(session.world.train(id: between)?.position)
+        XCTAssertTrue(session.world.stations.contains { $0.operationMode == .closed }, "a loop went in")
+        XCTAssertNil(session.world.singleTrackShortfall(of: line))
+        // Each of the three runs all day (some 355 legs), none stuck.
+        let day = try DoubleTrackDeadlockTests.runDay(session.world)
+        XCTAssertEqual(day.deadlockMinutes, 0, "\(day)")
+        XCTAssertEqual(day.legs.filter { $0 > 100 }.count, 3, "\(day)")
     }
 
-    /// Simple rules: a second line over the same single track still opens,
-    /// without the loop; the first line keeps its trains, and the message
-    /// says the loop goes in with a train added once the other has passed.
-    func testANewLineOpensWithoutItsLoopWhenTheTrainInTheWayCannotGoBack() throws {
+    /// Simple rules: a second line over the same single track opens with
+    /// its loop (decision 628: the train in the way goes back on a stop
+    /// between the ends); the first line keeps its trains.
+    func testANewLineOpensWithItsLoopWhenTheEndsAreTaken() throws {
         let (world, line, a, b, between) = try endsTaken(rules: .simple)
         let session = GameSession(world: world)
         for stop in [a, b] {
             session.selectStation(stop)
             session.addSelectedStationToLineDraft()
         }
-        XCTAssertEqual(session.lineOpeningPreview?.loop, false)
+        XCTAssertEqual(session.lineOpeningPreview?.loop, true)
         session.createLineFromDraft()
         let text = session.message?.text ?? ""
         XCTAssertEqual(session.message?.kind, .success, text)
         XCTAssertEqual(session.world.lines.count, 2, text)
-        XCTAssertTrue(session.world.stations.allSatisfy { $0.operationMode != .closed }, "no loop")
-        XCTAssertEqual(session.world.line(id: line), world.line(id: line))
+        XCTAssertTrue(session.world.stations.contains { $0.operationMode == .closed }, "a loop went in")
+        XCTAssertEqual(session.world.line(id: line)?.assignedTrains, world.line(id: line)?.assignedTrains)
         XCTAssertEqual(session.world.assignedLine(of: between), line)
-        XCTAssertEqual(session.world.train(id: between)?.position, world.train(id: between)?.position)
-        XCTAssertTrue(text.contains("Once it has passed, tap Add a Train"), text)
+        XCTAssertNotNil(session.world.train(id: between)?.position)
     }
 
     private func draftLine(_ stops: [StationID], in session: GameSession) {
