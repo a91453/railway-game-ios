@@ -2585,6 +2585,26 @@
         }
       }
     },
+    "Track Numbers" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "軌道編號"
+          }
+        }
+      }
+    },
+    "Overview Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小地圖"
+          }
+        }
+      }
+    },
     "800m Catchment Area" : {
       "localizations" : {
         "zh-Hant" : {
