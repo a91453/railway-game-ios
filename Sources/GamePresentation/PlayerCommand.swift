@@ -219,6 +219,10 @@ public enum PlayerCommand: Hashable, Sendable {
         public var unfit = 0
         /// The trains left as they were, and why.
         public var left: [String] = []
+        /// Decision 628: the trains taken off the track for a passing loop
+        /// and left off it, off their line: it already has on its track
+        /// every train it runs, and the line's ends are taken.
+        public var parked: [String] = []
     }
 
     /// The name the log gives it.
