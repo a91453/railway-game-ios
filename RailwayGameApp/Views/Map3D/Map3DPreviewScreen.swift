@@ -610,11 +610,17 @@ final class Map3DUploadedModels: @unchecked Sendable {
     let pack: Map3DModelPack
     let buffers: [MTLBuffer]
     let glass: Map3DTransparentGlass.Cache
+    /// Decision 617: every model's glow spots, and a buffer of them
+    /// (`nil` when no model glows).
+    let glows: Map3DGlow.Table
+    let glowBuffer: MTLBuffer?
 
-    private init(pack: Map3DModelPack, buffers: [MTLBuffer], glass: Map3DTransparentGlass.Cache) {
+    private init(pack: Map3DModelPack, buffers: [MTLBuffer], glass: Map3DTransparentGlass.Cache, glows: Map3DGlow.Table, glowBuffer: MTLBuffer?) {
         self.pack = pack
         self.buffers = buffers
         self.glass = glass
+        self.glows = glows
+        self.glowBuffer = glowBuffer
     }
 
     /// Puts the vertices of `full` (``Map3DView/makeModels()``) in
@@ -631,7 +637,11 @@ final class Map3DUploadedModels: @unchecked Sendable {
         }
         guard buffers.count == full.models.count else { return nil }
         let glass = Map3DTransparentGlass.Cache(models: full.models)
-        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, glass: glass)
+        let glows = Map3DGlow.Table(models: full.models)
+        let glowBuffer = glows.floats.withUnsafeBytes { bytes in
+            bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+        }
+        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, glass: glass, glows: glows, glowBuffer: glowBuffer)
         Map3DModelPack.letGoOfStandardVertices()
         return uploaded
     }

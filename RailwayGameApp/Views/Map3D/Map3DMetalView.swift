@@ -144,6 +144,9 @@ final class Map3DMetalView: MTKView {
     /// Decision 610: whether the real buildings' street fronts are drawn
     /// (``Map3DRealFacade/draws(quality:lowPower:heat:tier:)``).
     private var drawsFacades = false
+    /// Decision 617: whether the glows round the lights are drawn
+    /// (``Map3DGlow/draws(quality:lowPower:heat:tier:overBudget:)``).
+    private var drawsGlows = false
     /// Decision 238's later note: the 3D look chosen in Settings.
     var quality = Map3DQuality.automatic {
         didSet {
@@ -159,6 +162,9 @@ final class Map3DMetalView: MTKView {
     /// decision 608: the pack without its vertices, which are only in the
     /// buffers (``Map3DUploadedModels``, shared by every 3D view).
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
+    /// Decision 617: every model's glow spots (``Map3DGlow/Table``) and
+    /// the buffer holding them, made once with the models.
+    private var glowSpots: (table: Map3DGlow.Table, buffer: MTLBuffer)?
     private var transparentGlass = Map3DTransparentGlass.Cache(models: [])
     private var glassDrawing: Map3DGlassPipeline?
     /// Decision 429: the signals' three models in `models`, and the game
@@ -261,6 +267,10 @@ final class Map3DMetalView: MTKView {
     /// Decision 352: the signs' pipeline and their atlas; none where the
     /// shader or the picture does not load (the map is drawn without).
     private var signDrawing: (pipeline: MTLRenderPipelineState, atlas: MTLTexture)?
+    /// Decision 617: the glows' pipelines (round the models' lights, round
+    /// the signs), added to the picture, tested against the depth and
+    /// writing none; none where they do not load (no glows are drawn).
+    private var glowDrawing: (spots: MTLRenderPipelineState, signs: MTLRenderPipelineState?, depth: MTLDepthStencilState)?
     /// Decision 357: the sun's shadow map's pipelines (the chunks, the
     /// street furniture) and depth test; none where they do not load (the
     /// map is drawn with decision 232's shadows alone).
@@ -407,6 +417,35 @@ final class Map3DMetalView: MTKView {
             signs.depthAttachmentPixelFormat = .depth32Float
             signs.rasterSampleCount = samples
             if let signPipeline = try? device.makeRenderPipelineState(descriptor: signs) { view.signDrawing = (signPipeline, atlas) }
+        }
+        // Decision 617: the glows, added.
+        if let glowVertex = library.makeFunction(name: "map3dGlowVertex"), let glowFragment = library.makeFunction(name: "map3dGlowFragment") {
+            let glows = MTLRenderPipelineDescriptor()
+            glows.vertexFunction = glowVertex
+            glows.fragmentFunction = glowFragment
+            glows.colorAttachments[0].pixelFormat = .bgra8Unorm
+            glows.colorAttachments[0].isBlendingEnabled = true
+            glows.colorAttachments[0].rgbBlendOperation = .add
+            glows.colorAttachments[0].alphaBlendOperation = .add
+            glows.colorAttachments[0].sourceRGBBlendFactor = .one
+            glows.colorAttachments[0].destinationRGBBlendFactor = .one
+            glows.colorAttachments[0].sourceAlphaBlendFactor = .zero
+            glows.colorAttachments[0].destinationAlphaBlendFactor = .one
+            glows.depthAttachmentPixelFormat = .depth32Float
+            glows.rasterSampleCount = samples
+            let depth = MTLDepthStencilDescriptor()
+            depth.depthCompareFunction = .greater
+            depth.isDepthWriteEnabled = false
+            if let spots = try? device.makeRenderPipelineState(descriptor: glows), let state = device.makeDepthStencilState(descriptor: depth) {
+                var signs: MTLRenderPipelineState?
+                if let signVertex = library.makeFunction(name: "map3dSignGlowVertex"),
+                   let signFragment = library.makeFunction(name: "map3dSignGlowFragment") {
+                    glows.vertexFunction = signVertex
+                    glows.fragmentFunction = signFragment
+                    signs = try? device.makeRenderPipelineState(descriptor: glows)
+                }
+                view.glowDrawing = (spots, signs, state)
+            }
         }
         // Decision 357: the city's depth from the sun, no colour.
         if let sunVertex = library.makeFunction(name: "map3dSunDepthVertex"),
@@ -642,6 +681,8 @@ final class Map3DMetalView: MTKView {
         trainMaterials = Map3DReflection.trainStrength(quality, lowPower: process.isLowPowerModeEnabled, heat: heat)
         let fewer = plan.fewerPixels || load.level.drawing.fewerPixels
         let facades = Map3DRealFacade.draws(quality: quality, lowPower: process.isLowPowerModeEnabled, heat: heat, tier: level?.tier)
+        drawsGlows = Map3DGlow.draws(quality: quality, lowPower: process.isLowPowerModeEnabled, heat: heat, tier: level?.tier,
+                                     overBudget: load.level.drawing.fewerPixels)
         if facades != drawsFacades {
             drawsFacades = facades
             if !facades { releaseFacades() }
@@ -783,6 +824,9 @@ final class Map3DMetalView: MTKView {
     /// An instance's bytes (`Map3DInstance` in `Map3DShaders.metal`): a
     /// matrix and a colour.
     private static let instanceStride = 80
+    /// Decision 617: one instance that leaves the scene as it is, for the
+    /// trains' lamps' glows, already placed.
+    private static let sceneInstance: [Float] = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1]
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -935,6 +979,7 @@ final class Map3DMetalView: MTKView {
         guard let device, uploaded.buffers.allSatisfy({ $0.device === device }) else { return }
         let pack = uploaded.pack
         models = (pack, uploaded.buffers)
+        glowSpots = uploaded.glowBuffer.map { (table: uploaded.glows, buffer: $0) }
         transparentGlass = uploaded.glass
         signalModels = Map3DSignalTiming.Models(pack: pack)
         walkModels = Map3DPedestrianSignal.Models(pack: pack)
@@ -1150,7 +1195,12 @@ final class Map3DMetalView: MTKView {
         // unless a set is too small for this frame.
         let boxMesh = frame.flatMap { $0.boxes.isEmpty ? nil : $0.boxes }
         let shadowMesh = frame.flatMap { $0.shadows.isEmpty ? nil : $0.shadows }
+        // Decision 617: the glows round the trains' lamps, placed this frame.
+        let glows = glowsNow
+        let trainGlowFloats = glows && models != nil && frame != nil
+            ? Map3DGlow.trainSpots(of: frame!, pack: models!.pack).flatMap(\.floats) : []
         let fills = boxMesh != nil || shadowMesh != nil || !carsSorted.isEmpty || !lifeSorted.isEmpty || !glassVertices.isEmpty
+            || !trainGlowFloats.isEmpty
         if fills {
             let waiting = CACurrentMediaTime()
             frameInFlight.wait()
@@ -1171,6 +1221,13 @@ final class Map3DMetalView: MTKView {
         if let buffer = fill(.life, lifeSorted.flatMap(\.floats)) { lifeDraw = (lifeSorted, buffer) }
         var glassBuffer: (buffer: MTLBuffer, vertices: Int)?
         if let buffer = fill(.glass, glassVertices) { glassBuffer = (buffer, glassVertices.count) }
+        let trainGlows = fill(.glows, trainGlowFloats)
+        // Decision 617: the runs of instances whose models glow, as they
+        // are drawn: the instances' buffer and offset, the model, how many.
+        var glowRuns: [(instances: MTLBuffer, offset: Int, model: Int, count: Int)] = []
+        func glowRun(_ instances: MTLBuffer, offset: Int, model: Int, count: Int) {
+            if glows, let glowSpots, glowSpots.table.spots(of: model) > 0 { glowRuns.append((instances, offset, model, count)) }
+        }
         let waiting = CACurrentMediaTime()
         guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable, let commands = queue.makeCommandBuffer()
         else {
@@ -1307,6 +1364,7 @@ final class Map3DMetalView: MTKView {
                                                instanceCount: count)
                         drawCalls += 1
                         triangles += models.pack.models[model].triangleCount * count
+                        glowRun(buffer, offset: first * Self.instanceStride, model: model, count: count)
                     }
                     first = last + 1
                 }
@@ -1346,6 +1404,7 @@ final class Map3DMetalView: MTKView {
                                            instanceCount: run.count)
                     drawCalls += 1
                     triangles += models.pack.models[drawn].triangleCount * run.count
+                    glowRun(props.instances, offset: run.first * Self.instanceStride, model: drawn, count: run.count)
                 }
             }
         }
@@ -1411,6 +1470,60 @@ final class Map3DMetalView: MTKView {
             encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: glassBuffer.vertices)
             drawCalls += 1
             triangles += glassBuffer.vertices / 3
+        }
+        // Decision 617: last, the glows round the lights, added: the
+        // models' over the instances they were drawn with, the trains'
+        // lamps placed this frame, the signs'.
+        if glows, let glowDrawing {
+            let axes = Map3DGlow.axes(eye: camera.eye, target: camera.target, lights: shown.lights)
+            encoder.setRenderPipelineState(glowDrawing.spots)
+            encoder.setDepthStencilState(glowDrawing.depth)
+            axes.withUnsafeBytes { bytes in
+                guard let base = bytes.baseAddress else { return }
+                encoder.setVertexBytes(base, length: bytes.count, index: 3)
+            }
+            let spotStride = Map3DGlow.floatsASpot * MemoryLayout<Float>.stride
+            if let glowSpots {
+                encoder.setVertexBuffer(glowSpots.buffer, offset: 0, index: 0)
+                for run in glowRuns {
+                    let spots = glowSpots.table.spots(of: run.model)
+                    encoder.setVertexBufferOffset(glowSpots.table.first[run.model] * spotStride, index: 0)
+                    encoder.setVertexBuffer(run.instances, offset: run.offset, index: 2)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: spots * Map3DGlow.verticesASpot, instanceCount: run.count)
+                    drawCalls += 1
+                    triangles += 2 * spots * run.count
+                }
+            }
+            if let trainGlows {
+                let spots = trainGlowFloats.count / Map3DGlow.floatsASpot
+                encoder.setVertexBuffer(trainGlows, offset: 0, index: 0)
+                Self.sceneInstance.withUnsafeBytes { bytes in
+                    guard let base = bytes.baseAddress else { return }
+                    encoder.setVertexBytes(base, length: bytes.count, index: 2)
+                }
+                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: spots * Map3DGlow.verticesASpot)
+                drawCalls += 1
+                triangles += 2 * spots
+            }
+            if let signs = glowDrawing.signs, let signDrawing, !below, visible.contains(where: { $0.detailed && $0.signs != nil }) {
+                encoder.setRenderPipelineState(signs)
+                encoder.setVertexTexture(signDrawing.atlas, index: 0)
+                Map3DSign.clock(seconds: start, hour: shown.hour, quality: quality, reduceMotion: reduceMotion).withUnsafeBytes { bytes in
+                    guard let base = bytes.baseAddress else { return }
+                    encoder.setVertexBytes(base, length: bytes.count, index: 3)
+                }
+                axes.withUnsafeBytes { bytes in
+                    guard let base = bytes.baseAddress else { return }
+                    encoder.setVertexBytes(base, length: bytes.count, index: 4)
+                }
+                for chunk in visible where chunk.detailed {
+                    guard let signs = chunk.signs else { continue }
+                    encoder.setVertexBuffer(signs.instances, offset: 0, index: 2)
+                    encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: signs.count)
+                    drawCalls += 1
+                    triangles += 2 * signs.count
+                }
+            }
         }
         encoder.endEncoding()
         if !captures.isEmpty, !drawable.texture.isFramebufferOnly {
@@ -1502,6 +1615,10 @@ final class Map3DMetalView: MTKView {
     /// 232's shadows fainter). The lights are
     /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
     /// `nightWindowRows`), worked out in GamePresentation.
+    /// Decision 617: whether this frame draws glows: they are drawn, and
+    /// the city's lights are on.
+    private var glowsNow: Bool { drawsGlows && glowDrawing != nil && Map3DGlow.shows(lights: shown.lights) }
+
     private func uniformValues(_ matrix: Map3DMatrix, seconds: Double, sun: Map3DSunShadow.Region?) -> [Float] {
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         let eye = camera.eye
@@ -1516,7 +1633,7 @@ final class Map3DMetalView: MTKView {
             + padded(shown.fogColour)
             + [eye.x, eye.y, eye.z, 1]
             + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight]
-            + [Map3DSunShadow.blobStrength(shown, drawn: sun != nil), shown.lights, 0, 0]
+            + [Map3DSunShadow.blobStrength(shown, drawn: sun != nil), shown.lights, glowsNow ? Map3DGlow.windowGlow : 0, 0]
             + Map3DLighting.nightWindowRows
             + Map3DReflection.rows(sky: Map3DSky(shown), sunLight: shown.sunLight, quality: quality, seconds: seconds, reduceMotion: reduceMotion,
                                      trains: trainMaterials)
