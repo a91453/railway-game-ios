@@ -1602,9 +1602,33 @@ extension GameWorld {
         let free = longestAuthority(envelopes, from: 0, clearBase: clear.base(envelopes.base), clear: clear.stretch)
         let authority = min(followingAuthority(envelopes, free: free), limit)
         guard authority >= 1 else { return nil }
+        if Self.followProbe > 0, !blockSections, let clears = againstClearance(of: candidate, envelopes, memo: &memo), authority < clears { return nil }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()
         return train
+    }
+
+    // DEBUG-TYMC4 probe switch.
+    nonisolated(unsafe) static var followProbe = 0
+
+    // DEBUG-TYMC4: how far the head must go for the whole train to be off the track its line runs only the other way.
+    func againstClearance(of candidate: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> Int64? {
+        guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(candidate.id) }) else { return nil }
+        let key = PathMemo.LineAgainst(line: line.id, length: candidate.length)
+        let against: Set<TrackTraversal>
+        if let known = memo.paths.against[key] { against = known } else {
+            against = oneWayAgainst(line, length: candidate.length)
+            memo.paths.against[key] = against
+        }
+        guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }) else { return nil }
+        var last = envelopes.stretches.lastIndex { against.contains($0.traversal) }
+        if Self.followProbe == 2, var index = last, index == envelopes.stretches.count - 1 {
+            while index > 0, against.contains(envelopes.stretches[index - 1].traversal) { index -= 1 }
+            last = envelopes.stretches[..<index].lastIndex { against.contains($0.traversal) }
+        }
+        guard let last else { return nil }
+        let (sum, overflow) = envelopes.ends[last].addingReportingOverflow(candidate.length)
+        return overflow ? .max : sum
     }
 
     /// Whether train `other`, following a train, waits for any of

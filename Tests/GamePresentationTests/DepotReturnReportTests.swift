@@ -245,6 +245,7 @@ final class DepotReturnReportTests: XCTestCase {
         // Decision 549: `DEPOT_RETURN_CONTROLLED=1` keeps it on under
         // simple rules too, as a new game has it.
         let environment = ProcessInfo.processInfo.environment
+        GameWorld.followProbe = Int(environment["FOLLOW_PROBE"] ?? "") ?? 0 // DEBUG-TYMC4
         if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
         // Decision 618: the high-speed demo opens with realistic operation
         // off; `DEPOT_RETURN_REALISTIC=1` turns it on. (Traffic control
