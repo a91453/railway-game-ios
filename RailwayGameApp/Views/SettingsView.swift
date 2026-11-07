@@ -72,6 +72,8 @@ struct SettingsView: View {
     /// Decision 585: the collection's page shown (the garage became its
     /// trains page).
     @State private var collectionPage = FerryCollection.Page.trains
+    /// Decision 632: the ferries' or cable cars' stage, when open.
+    @State private var shownExhibit: Map3DCollectionShowcase.Exhibit?
 
     var body: some View {
         NavigationStack {
@@ -105,6 +107,9 @@ struct SettingsView: View {
             }
             .fullScreenCover(isPresented: $showsTrainShowcase) {
                 TrainShowcaseScreen(close: { showsTrainShowcase = false })
+            }
+            .fullScreenCover(item: $shownExhibit) { exhibit in
+                TrainShowcaseScreen(exhibit: exhibit, close: { shownExhibit = nil })
             }
             .sheet(isPresented: $showsHelp) {
                 HelpView(language: .app, launcher: launcher)
@@ -478,20 +483,14 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.trainGarage")
             case .ferries:
+                exhibitButton(.ferries, language)
                 ForEach(FerryCollection.boats(in: language) + FerryCollection.routes(in: language)) { entry in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: entry.title)
-                            .font(.subheadline.weight(.semibold))
-                        ForEach(entry.lines, id: \.self) { line in
-                            Text(verbatim: line)
-                                .font(.footnote)
-                                .monospacedDigit()
-                                .foregroundStyle(Theme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("settings.ferry.\(entry.id)")
+                    collectionEntry(entry, identifier: "settings.ferry.\(entry.id)")
+                }
+            case .cableways:
+                exhibitButton(.cableways, language)
+                ForEach(FerryCollection.cableways(in: language)) { entry in
+                    collectionEntry(entry, identifier: "settings.cableway.\(entry.id)")
                 }
             }
         } header: {
@@ -505,8 +504,41 @@ struct SettingsView: View {
                 ))
             case .ferries:
                 Text(verbatim: FerryCollection.note(in: language))
+            case .cableways:
+                Text(verbatim: FerryCollection.cablewayNote(in: language))
             }
         }
+    }
+
+    /// Decision 632: the button that opens a page's 3D stage.
+    private func exhibitButton(_ exhibit: Map3DCollectionShowcase.Exhibit, _ language: DisplayLanguage) -> some View {
+        Button {
+            shownExhibit = exhibit
+        } label: {
+            Label {
+                Text(verbatim: exhibit.openTitle(in: language))
+            } icon: {
+                Image(systemName: exhibit.symbol)
+            }
+        }
+        .accessibilityIdentifier("settings.collection.\(exhibit.rawValue)")
+    }
+
+    /// Decision 585: one entry of the collection, its name over its lines.
+    private func collectionEntry(_ entry: FerryCollection.Entry, identifier: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: entry.title)
+                .font(.subheadline.weight(.semibold))
+            ForEach(entry.lines, id: \.self) { line in
+                Text(verbatim: line)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier)
     }
 
     /// Decision 152: the 3D city view, a preview of what the game's 3D may
