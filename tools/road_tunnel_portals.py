@@ -1,4 +1,4 @@
-"""Blender 4.x producer for decision 611/359 revision-2 tunnel portal studies.
+"""Blender 4.x producer for decision 611/359 tunnel portal studies.
 
 blender -b --python tools/road_tunnel_portals.py -- --output REVISION_DIR
 Dimensions are duplicated in Map3DRoadTunnelPortals.swift for native meshes.
@@ -15,6 +15,8 @@ from mathutils import Vector
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", required=True)
 parser.add_argument("--composition-only", action="store_true")
+parser.add_argument("--scene-check-only", action="store_true")
+parser.add_argument("--scene-view", choices=("all","overview","front","side"), default="all")
 parser.add_argument("--validate-only", action="store_true")
 parser.add_argument("--views-only", action="store_true")
 parser.add_argument("--fronts-only", action="store_true")
@@ -47,12 +49,6 @@ ballast = mat('ballast_7E786D', (.35,.33,.30))
 railmat = mat('rail_6E7379', (.35,.37,.39))
 roadline = mat('road_edge', (.93,.90,.76))
 ground = mat('ground_ECEEF6', (236/255,238/255,246/255))
-ground.node_tree.nodes.clear()
-ground_out=ground.node_tree.nodes.new('ShaderNodeOutputMaterial')
-ground_emit=ground.node_tree.nodes.new('ShaderNodeEmission')
-def to_linear(c): return ((c/255+0.055)/1.055)**2.4
-ground_emit.inputs['Color'].default_value=(*(to_linear(c) for c in (236,238,246)),1)
-ground.node_tree.links.new(ground_emit.outputs[0],ground_out.inputs['Surface'])
 mountain = mat('embankment_9DB07E', (.40,.51,.32))
 mountain2 = mat('embankment_light', (.48,.58,.38))
 
@@ -220,6 +216,24 @@ def validate_occlusion(s):
                 assert hit and point.x <= end+.05, (s['kind'],across,target_across,'see-through')
 
 
+def validate_ground_contact():
+    """Model-space geometry must meet the same ground elevation within 5 cm."""
+    def heights(prefixes):
+        return [(obj.matrix_world @ vertex.co).z
+                for obj in scene.objects if obj.type=='MESH'
+                and obj.name.startswith(prefixes)
+                for vertex in obj.data.vertices]
+    ground_z=max(heights(('map_ground',)))
+    for label,prefixes in (
+        ('mountain',('earth_','mountain_','joined_bank_','wing_slope_')),
+        ('wings',('wing_inner','wing_outer')),
+        ('road and rail surfaces',('road_surface','rail_bed')),
+    ):
+        low=min(heights(prefixes))
+        assert abs(low-ground_z)<=.05, f'{label} lowest {low:.3f} m, ground {ground_z:.3f} m'
+    print(f'GROUND CONTACT: mountain, wings, roads/rails at {ground_z:.3f} m (±0.05 m)',flush=True)
+
+
 scene=bpy.context.scene
 scene.render.engine='BLENDER_EEVEE_NEXT' if args.engine=='eevee' else 'CYCLES'
 scene.cycles.samples=32
@@ -292,71 +306,178 @@ placements=[('mountain-arch','two-way',-57),('daylight-gallery','one-way',-29),
             ('rail-daylight-double',None,58)]
 scene_specs=[]
 for kind,width,y in placements:
-    s=build(kind,width,offset=(0,y,0))
+    # The authored portal mesh stays unchanged. Its buried wing base sits on
+    # z=0 in this scene; an approach grade joins its surface to that ground.
+    elevation=-spec(kind,width)['floor']
+    s=build(kind,width,offset=(0,y,elevation))
     scene_specs.append(s)
-    front=s['front']
-    if s['track']:
-        box('rail_bed',((front-10)/2,y,-.12),((0-(front-10))+1,2*s['half']-.7,.23),ballast)
-        for side in (-1,1):
-            ry=y+side*.75
-            box('rail',((front-10)/2,ry,.08),(0-(front-10)+1,.12,.12),railmat)
-    else:
-        box('road_surface',((front-12)/2,y,-.10),(0-(front-12)+1,2*s['half']-.35,.18),asphalt)
-        for side in (-1,1):
-            ly=y+side*(s['half']-.45)
-            box('road_edge_line',((front-12)/2,ly,.012),(0-(front-12)+1,.11,.025),roadline)
-    # Continuous slope contacts the wing's outer crest at both ends.
+    front=s['front']; half=s['half']; approach=front-24
+    bed_half=half-(.35 if s['track'] else .18)
+    bed_mat=ballast if s['track'] else asphalt
+    bed_name='rail_bed' if s['track'] else 'road_surface'
+    def route(x,across,height): return p(x,y+across,height)
+    poly(bed_name,[route(approach,-bed_half,0),route(approach,bed_half,0),
+                   route(front,bed_half,elevation),route(front,-bed_half,elevation)],
+         bed_mat,(0,0,1))
+    for side in (-1,1):
+        edge=side*bed_half
+        poly('route_ramp_side',[route(approach,edge,0),route(front,edge,0),
+                                route(front,edge,elevation)],bed_mat,(0,side,0))
+    if s['gallery']:
+        poly(bed_name,[route(front,-bed_half,elevation),route(front,bed_half,elevation),
+                       route(1.2,bed_half,elevation),route(1.2,-bed_half,elevation)],
+             bed_mat,(0,0,1))
+    for side in (-1,1):
+        if s['track']:
+            stripe=side*.75; stripe_half=.06; stripe_mat=railmat; stripe_name='rail'
+        else:
+            stripe=side*(half-.45); stripe_half=.055; stripe_mat=roadline; stripe_name='road_edge_line'
+        poly(stripe_name,[route(approach,stripe-stripe_half,.04),route(approach,stripe+stripe_half,.04),
+                          route(front,stripe+stripe_half,elevation+.04),route(front,stripe-stripe_half,elevation+.04)],
+             stripe_mat,(0,0,1))
+        if s['gallery']:
+            poly(stripe_name,[route(front,stripe-stripe_half,elevation+.04),route(front,stripe+stripe_half,elevation+.04),
+                              route(1.2,stripe+stripe_half,elevation+.04),route(1.2,stripe-stripe_half,elevation+.04)],
+                 stripe_mat,(0,0,1))
+    # The bank descends from the wing coping to ground and joins the roof
+    # slope. There is no raised point behind the wing.
     for side in (-1,1):
         f=s['front']; o=s['outer']; t=s['top']
-        a=p(f,y+side*(o+.45),t-.2)
-        b=p(f-8,y+side*(o+2+.45),.6)
-        c=p(f-8,y+side*(o+13),3.6)
-        d=p(f+3,y+side*(o+15),t+4)
-        e=p(f+3,y+side*(o+.45),t+1.2)
-        poly('wing_embedded_slope_lower',[a,b,c],mountain,(0,0,1))
-        poly('wing_embedded_slope_mid',[a,c,d],mountain2,(0,0,1))
-        poly('wing_embedded_slope_upper',[a,d,e],mountain,(0,0,1))
-    # Faceted local earth cap seats on the portal coping and joins the ridge.
+        cap=p(f,y+side*o,t+elevation+.02)
+        root=p(f,y+side*(o+.45),t+elevation-.2)
+        tip=p(f-8,y+side*(o+2+.45),elevation+.6)
+        foot_near=p(f-9,y+side*(o+2+.45),0)
+        foot_tip=p(f-5,y+side*(o+7),0)
+        foot_root=p(f-2,y+side*(o+12),0)
+        ridge_outer=p(12,y+side*(o+12),12.5)
+        ridge_inner=p(12,y+side*o,12.5)
+        poly('wing_slope_lower_a',[root,tip,foot_near],mountain,(0,0,1))
+        poly('wing_slope_lower_b',[root,foot_near,foot_tip],mountain,(0,0,1))
+        poly('wing_slope_lower_c',[root,foot_tip,foot_root],mountain,(0,0,1))
+        poly('wing_slope_upper_a',[root,foot_root,ridge_outer],mountain,(0,0,1))
+        poly('wing_slope_upper_b',[root,ridge_outer,ridge_inner],mountain2,(0,0,1))
+        poly('wing_slope_join',[cap,root,ridge_inner],mountain,(0,0,1))
     f=s['front']; o=s['outer']; t=s['top']
-    ridge=max(f+12,12)
-    poly('earth_over_portal',[p(f,y-o,t+.02),p(f,y+o,t+.02),
-                              p(ridge,y+o,11),p(ridge,y-o,11)],mountain,(0,0,1))
-# Fill the spaces between portal shoulders with a continuous bank down to
-# ground level. Its boundary heights match each adjacent cap at x=0.
+    poly('earth_over_portal',[p(f,y-o,t+elevation+.02),p(f,y+o,t+elevation+.02),
+                              p(12,y+o,12.5),p(12,y-o,12.5)],mountain,(0,0,1))
+# Fill gaps between the portal banks from ground to the common ridge.
 edges=[]
 for s in scene_specs:
     y=s['offset'][1]; o=s['outer']; f=s['front']; t=s['top']
-    at_zero=t+.02+(11-t-.02)*((0-f)/(12-f))
+    front_height=t+s['offset'][2]+.02
+    at_zero=front_height+(12.5-front_height)*((-f)/(12-f))
     edges.append((y-o,at_zero,y+o,at_zero))
 gaps=[(-82,7.5,edges[0][0],edges[0][1])]
 gaps += [(a[2],a[3],b[0],b[1]) for a,b in zip(edges,edges[1:])]
 gaps.append((edges[-1][2],edges[-1][3],82,7.5))
 for left,hleft,right,hright in gaps:
     a=p(0,left,hleft); b=p(0,right,hright)
-    c=p(12,right,11); d=p(12,left,11)
-    e=p(-10,right,0); f=p(-10,left,0)
+    c=p(12,right,12.5); d=p(12,left,12.5)
+    e=p(-7,right,0); f=p(-7,left,0)
     poly('joined_bank_upper_a',[a,b,c],mountain,(0,0,1))
     poly('joined_bank_upper_b',[a,c,d],mountain2,(0,0,1))
-    poly('joined_bank_foot_a',[a,b,e],mountain2,(0,0,1))
+    poly('joined_bank_foot_a',[a,b,e],mountain,(0,0,1))
     poly('joined_bank_foot_b',[a,e,f],mountain,(0,0,1))
-# A continuous faceted mountain with a varied ridge, then a back slope.
+# Continuous faceted mountain: front bank, varied ridge, and closed flanks.
 ridge_y=(-82,-43,-14,14,43,82)
 ridge_h=(17,22,19,23,18,21)
 for i,(y0,y1) in enumerate(zip(ridge_y,ridge_y[1:])):
     h0,h1=ridge_h[i:i+2]
     tint=mountain if i%2==0 else mountain2
-    a=p(12,y0,11); b=p(12,y1,11); c=p(32,y1,h1); d=p(32,y0,h0)
+    a=p(12,y0,12.5); b=p(12,y1,12.5); c=p(32,y1,h1); d=p(32,y0,h0)
     poly('mountain_rise_a',[a,b,c],tint,(0,0,1))
     poly('mountain_rise_b',[a,c,d],mountain2 if i%2==0 else mountain,(0,0,1))
     poly('mountain_back_slope',[d,c,p(53,y1,h1-3),p(53,y0,h0-3)],mountain,(0,0,1))
-# Pale game ground visible beyond the four paved approaches.
-box('map_ground',(0,0,-.52),(2000,1000,.22),ground)
-bpy.ops.object.camera_add(location=(-95,-19,28))
-cam=bpy.context.object
-cam.rotation_euler=(Vector((-6,0,4))-cam.location).to_track_quat('-Z','Y').to_euler()
-cam.data.type='ORTHO'
-cam.data.ortho_scale=176
-scene.camera=cam
+    poly('mountain_rear',[p(53,y0,0),p(53,y1,0),p(53,y1,h1-3),p(53,y0,h0-3)],mountain,(1,0,0))
+for side,height in ((-1,ridge_h[0]),(1,ridge_h[-1])):
+    y=82*side
+    spine=[(-10,0),(0,7.5),(12,12.5),(32,height),(53,height-3)]
+    for (x0,z0),(x1,z1) in zip(spine,spine[1:]):
+        poly('mountain_side',[p(x0,y,0),p(x1,y,0),p(x1,y,z1),p(x0,y,z0)],mountain,(0,side,0))
+# The ground slab's upper face is exactly z=0 m.
+box('map_ground',(0,0,-.1),(20000,20000,.2),ground)
+validate_ground_contact()
+if args.scene_check_only:
+    print('SCENE CHECK PASSED',flush=True)
+    sys.exit(0)
 scene.cycles.samples=48
-scene.render.filepath=str(out/'mountain-road-rail-composition.png')
-bpy.ops.render.render(write_still=True)
+
+def scene_camera(name,location,target,scale):
+    location=Vector(location); target=Vector(target)
+    # The orthographic image plane must stay above z=0 across its full frame.
+    # Moving backward along the same ray keeps the chosen view unchanged.
+    ray=target-location
+    minimum_camera_z=scale*.52
+    if location.z < minimum_camera_z:
+        location-=ray*((minimum_camera_z-location.z)/(-ray.z))
+    bpy.ops.object.camera_add(location=location)
+    cam=bpy.context.object
+    cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler()
+    cam.data.type='ORTHO'
+    cam.data.ortho_scale=scale
+    cam.data.clip_end=10000
+    scene.camera=cam
+    scene.render.filepath=str(out/name)
+    bpy.ops.render.render(write_still=True)
+    bpy.data.objects.remove(cam,do_unlink=True)
+
+if args.scene_view in ('all','overview'):
+    scene_camera('mountain-road-rail-composition.png',(-95,-19,28),(-6,0,4),176)
+if args.scene_view in ('all','front'):
+    scene_camera('mountain-road-rail-front.png',(-115,0,8),(-5,0,4),176)
+if args.scene_view in ('all','side'):
+    # Isolate the same road portal as the leftmost one in the shared scene.
+    # This removes overlapping tunnels behind it from the side inspection.
+    clear_except_lights()
+    sample=spec('mountain-arch','two-way')
+    height=-sample['floor']
+    s=build('mountain-arch','two-way',offset=(0,0,height))
+    o=s['outer']; top=s['top']+height; half=s['half']-.18
+    poly('road_surface',[p(-30,-half,0),p(-30,half,0),
+                         p(0,half,height),p(0,-half,height)],asphalt,(0,0,1))
+    for side in (-1,1):
+        edge=side*half
+        poly('route_ramp_side',[p(-30,edge,0),p(0,edge,0),p(0,edge,height)],asphalt,(0,side,0))
+        root=p(0,side*(o+.45),top-.2)
+        tip=p(-8,side*(o+2+.45),height+.6)
+        foot_near=p(-9,side*(o+2+.45),0)
+        foot_tip=p(-5,side*(o+7),0)
+        foot_root=p(-2,side*(o+12),0)
+        ridge_outer=p(12,side*(o+12),12.5)
+        ridge_inner=p(12,side*o,12.5)
+        cap=p(0,side*o,top+.02)
+        poly('wing_slope_lower_a',[root,tip,foot_near],mountain,(0,0,1))
+        poly('wing_slope_lower_b',[root,foot_near,foot_tip],mountain,(0,0,1))
+        poly('wing_slope_lower_c',[root,foot_tip,foot_root],mountain,(0,0,1))
+        poly('wing_slope_upper_a',[root,foot_root,ridge_outer],mountain,(0,0,1))
+        poly('wing_slope_upper_b',[root,ridge_outer,ridge_inner],mountain2,(0,0,1))
+        poly('wing_slope_join',[cap,root,ridge_inner],mountain,(0,0,1))
+    poly('earth_over_portal',[p(0,-o,top+.02),p(0,o,top+.02),
+                              p(12,o,12.5),p(12,-o,12.5)],mountain,(0,0,1))
+    for side in (-1,1):
+        y=side*(o+12)
+        spine=[(-9,0),(-2,0),(12,12.5),(32,19),(53,16)]
+        for (x0,z0),(x1,z1) in zip(spine,spine[1:]):
+            poly('mountain_side',[p(x0,y,0),p(x1,y,0),p(x1,y,z1),p(x0,y,z0)],
+                 mountain,(0,side,0))
+    poly('mountain_rise',[p(12,-o-12,12.5),p(12,o+12,12.5),
+                          p(32,o+12,19),p(32,-o-12,19)],mountain,(0,0,1))
+    poly('mountain_back_slope',[p(32,-o-12,19),p(32,o+12,19),
+                                p(53,o+12,16),p(53,-o-12,16)],mountain2,(0,0,1))
+    box('map_ground',(0,0,-.1),(20000,20000,.2),ground)
+    validate_ground_contact()
+    scene_camera('mountain-road-rail-side.png',(-40,-37,19),(-9,0,4),75)
+
+# Plain HTML and local PNG/GLB paths work directly from file://, offline.
+model_stems=[f'{kind}-{width}' for kind in ('divided-expressway','mountain-arch',
+             'nameplate','narrow-lane','daylight-gallery') for width in ('one-way','two-way')]
+model_stems += ['rail-single','rail-double','rail-daylight-single','rail-daylight-double']
+html='''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公路與鐵路隧道洞口 revision 3</title>
+<style>body{margin:0;padding:20px;background:#eceef6;color:#262c57;font:16px system-ui,sans-serif}main{max-width:1100px;margin:auto}h1{font-size:1.5rem}button,select,input{font:inherit;margin:3px;padding:7px}img{display:block;max-width:100%;max-height:70vh;margin:12px auto;background:#eceef6}section{background:#fff;padding:14px;margin:12px 0;border-radius:10px}.controls{display:flex;flex-wrap:wrap;align-items:center;gap:4px}a{color:#2f6db5}</style>
+<main><h1>隧道洞口 revision 3 · 離線檢視</h1><p>七向預覽使用 revision 2 原模型；下方另可檢視組景、正面與側面接地圖。此頁不連網。</p>
+<section><div class="controls"><label>模型 <select id="model"></select></label><button id="previous">◀</button><label>方向 <input id="view" type="range" min="1" max="7" value="1"></label><button id="next">▶</button><output id="direction"></output><a id="glb" download>下載 GLB</a></div><img id="model-image" alt="洞口預覽"></section>
+<section><div class="controls"><button data-scene="mountain-road-rail-composition.png">共用山體</button><button data-scene="mountain-road-rail-front.png">正面接地</button><button data-scene="mountain-road-rail-side.png">側面接地</button></div><img id="scene-image" src="mountain-road-rail-composition.png" alt="公路與鐵路共用山體組景"><p>側面圖隔離最左側公路洞口，便於看道路坡道、翼牆及山腳。地面頂面為 0.00 m。</p></section>
+<p>重建指令、尺寸、來源及授權見 <a href="README.md">README</a>；接點見 <a href="connectors.json">connectors.json</a>。</p></main>
+<script>const stems=__MODELS__,model=document.querySelector('#model'),view=document.querySelector('#view'),preview=document.querySelector('#model-image'),label=document.querySelector('#direction'),glb=document.querySelector('#glb');
+stems.forEach(stem=>model.add(new Option(stem,stem)));function draw(){const stem=model.value,n=Number(view.value);preview.src=`${stem}-view-${n}.png`;preview.alt=`${stem} 第 ${n} 向`;label.value=`${n} / 7`;glb.href=`${stem}.glb`;glb.download=`${stem}.glb`;}model.onchange=draw;view.oninput=draw;document.querySelector('#previous').onclick=()=>{view.value=Math.max(1,Number(view.value)-1);draw()};document.querySelector('#next').onclick=()=>{view.value=Math.min(7,Number(view.value)+1);draw()};document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>document.querySelector('#scene-image').src=b.dataset.scene);draw();</script></html>'''
+(out/'viewer.html').write_text(html.replace('__MODELS__',json.dumps(model_stems)),encoding='utf-8')
