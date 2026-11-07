@@ -185,6 +185,14 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// looking over the harbour mouth: the ferry mode's pale blue shore.
     case cijinShore
 
+    /// Decision 611 (ROADTUNNEL): a new game round the road tunnels'
+    /// portals, its ground read, at 10:00: the Hsuehshan Tunnel's two
+    /// bores at Toucheng, Provincial Highway 9's (蘇花改) tunnels north of
+    /// Nanao, and its gallery south of Su'ao.
+    case hsuehshanTunnel
+    case suhuaTunnel
+    case suhuaGallery
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -217,6 +225,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerry, .gushanFerryEvening, .cijinShore: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
+        // Decision 611: between each pair of portals (the base map's ends).
+        case .hsuehshanTunnel: (24.84776, 121.79127)
+        case .suhuaTunnel: (24.52307, 121.82816)
+        case .suhuaGallery: (24.60857, 121.85564)
         default: nil
         }
     }
@@ -237,6 +249,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101, .taichungViaduct, .interchange, .changhuaRoundhouse: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .hsuehshanTunnel, .suhuaTunnel, .suhuaGallery: Self.groundWorld(at: self, in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
@@ -330,6 +343,21 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         } catch {
             preconditionFailure("The follow-a-bus screenshot scene no longer builds: \(error)")
         }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 611: a new game round `scene`'s place, its ground read (the
+    /// hills the road tunnels go into), on to 10:00.
+    private static func groundWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor)
+        try? world.mapGround()
+        // .fast is ten minutes a tick.
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 60)
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world

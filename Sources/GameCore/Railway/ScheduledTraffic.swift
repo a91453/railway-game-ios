@@ -174,19 +174,20 @@ extension GameWorld {
         if let step = memo.stepTraffic { return step }
         let key = trafficPlanKey()
         if let kept = memo.traffic, kept.key == key { return kept.plan }
-        let plan = trafficPlan(parts: &memo.trafficParts)
+        let plan = trafficPlan(parts: &memo.trafficParts, paths: &memo.paths)
         memo.traffic = (key, plan)
         return plan
     }
 
     func trafficPlan() -> TrafficPlan {
-        var parts = questionMemo().trafficParts
-        return trafficPlan(parts: &parts)
+        var memo = questionMemo()
+        return trafficPlan(parts: &memo.trafficParts, paths: &memo.paths)
     }
 
     /// The plan, with what it reads that only a command changes from
-    /// `parts`, and kept there.
-    func trafficPlan(parts: inout TrafficParts) -> TrafficPlan {
+    /// `parts`, and kept there; the paths its services' points search for
+    /// kept in `paths` (decision 620).
+    func trafficPlan(parts: inout TrafficParts, paths: inout PathMemo) -> TrafficPlan {
         guard isTrafficControlEnabled else { return TrafficPlan() }
         var plan = TrafficPlan()
         // Running services, and finished ones whose visits a waiting train
@@ -201,7 +202,7 @@ extension GameWorld {
             if let kept = parts.points[run] {
                 points = kept
             } else {
-                points = trafficPoints(of: source, cycle: cycle)
+                points = trafficPoints(of: source, cycle: cycle, paths: &paths)
                 parts.points[run] = .some(points)
             }
             if let points, points.count >= 2 {
@@ -239,6 +240,17 @@ extension GameWorld {
     /// the same W1 curve as assignRunProfiles/profProgToTime. A reversal
     /// splits the run; no shunting or new reversal is introduced.
     func trafficPoints(of train: Train, cycle: Int64) -> [TrafficPoint]? {
+        var paths = PathMemo()
+        return trafficPoints(of: train, cycle: cycle, paths: &paths)
+    }
+
+    /// ``trafficPoints(of:cycle:)``, with the paths it searches for kept in
+    /// `paths`. Decision 620: each leg's way is searched for once, not
+    /// twice (``plannedPath(for:from:departing:to:)`` and again to see
+    /// whether it is the line's chosen way), and a leg another run of the
+    /// line (or another cycle) already searched for is not searched again:
+    /// the searches read only the network, so the points are the same.
+    func trafficPoints(of train: Train, cycle: Int64, paths: inout PathMemo) -> [TrafficPoint]? {
         let first = train.timetable[0]
         var best: (points: [TrafficPoint], distance: Int64, matched: Int)?
         for berth in berths(of: first.station, length: train.length) {
@@ -253,8 +265,12 @@ extension GameWorld {
             for stop in 1..<train.timetable.count {
                 if train.timetable[stop - 1].reverses { placement = turnedRound(placement) }
                 let target = train.timetable[stop].station
-                guard let path = plannedPath(for: train, from: placement.position, departing: stop - 1, to: stop) else { valid = false; break }
-                if let route = routePreference(for: train, from: stop - 1, to: stop), preferredPath(from: placement.position, preference: route, length: train.length) == path { matched += 1 }
+                // plannedPath(for:from:departing:to:), with the searches kept.
+                let preferred = routePreference(for: train, from: stop - 1, to: stop).flatMap {
+                    preferredPath(from: placement.position, preference: $0, length: train.length, memo: &paths)
+                }
+                guard let path = preferred ?? self.path(from: placement.position, toStation: target, length: train.length, memo: &paths) else { valid = false; break }
+                if preferred != nil { matched += 1 }
                 let duration = train.scheduledArrival(of: stop, cycle: cycle).seconds - train.scheduledDeparture(of: stop - 1, cycle: cycle).seconds
                 let legLimits = speedLimits(from: placement, along: path, below: train.performance.topSpeed)
                 // No interpolated points without a physically buildable run.

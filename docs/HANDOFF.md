@@ -1,5 +1,7 @@
 > 文湖線機廠照真實車場鋪（派工單 REALYARD，REALYARD session_01YGNNum5jtnCLRcfQAB8QLc 寫、REALYARD-B session_01YGNNumiit3QNFdxjzTiXqM 接手，`claude/real-yard-wenhu`，#1870，[決策 602](decisions/602.md)，存檔、golden、GameCore 不動，2026-11-05）：木柵、內湖機廠照 OSM 的真實車場鋪，兩條入出庫線；俯視圖、兩天逐分（三種規則）、收購價都量完寫進決策 602。**REALYARD-C session_01YGNNupzv42xmKss77XvBoS 2026-11-06 接手做完**：① 南港展覽館的 U 形彎修好（站用真實月台 OSM 節點 3501186380，決策 602 下一步第 6 點，回歸測試 `WenhuLineTests.testNangangExhibitionCenterStandsOnItsOwnPlatform`）；⓪ 修好之後號誌控制下內湖的死結也不見了：三種規則兩天都沒有死結（寫實 0/532、空車 189 km；簡化 0/532、135 km；簡化＋號誌控制 7/532、201 km，和 main 一樣 7），木柵、內湖都是 0；收購價台北 NT$ 214,393,680、板橋 213,895,095、桃園 312,012,269；② 截圖：作者 2026-11-06 指示免截圖，條件是不死結；③ Release archive 已綠。合併條件（遊戲規劃第 52 任轉達）：兩天不死結＋CI 綠，CI 綠後轉 ready。**還留下的**：④ PR-2：淡海、安坑、三峽照同樣做法鋪（決策 602 下一步第 1 點），另派 session；⑤ 後加機廠（`RealLineDepotAddition`）還沒有第二條入出庫線（第 3 點）；⑥ 真實車場沒鋪到的地方先不加（第 7 點，作者同意）；共用端點站的清單在第 6 點（之後收購板南線要先量）。
 
+> 3D 地圖的公路隧道口（派工單 ROADTUNNEL，`claude/road-tunnel`，[決策 611](decisions/611.md)，存檔、golden、GameCore 不動，2026-11-07）：真實道路進山的地方立 #1885 的洞口（依道路等級與單／雙向選款，貼 64 m 地形），山坡蓋到洞口上緣、洞內法線朝下所以是暗的；鐵路維持決策 359 的洞口（比較在決策 611 第 9 點）。截圖第 2 輪已審過、通過（原圖在私庫 `game-art-previews/docs/art/road-tunnel-2026-11-07/`）。**還留下的**：山的顏色只看洞口那一點的地表，林地邊緣會取到底色（決策 611 缺口）；玩家自己的路沒有隧道（要動 GameCore，決策 611 下一步第 2 點）。另外，坡上的底圖路面有兩個舊問題，`main` 本來就有，不在這個 PR 修，要另開工作：一是並行的兩座橋面高低交錯（蘇花改南澳北，決策 391）；二是抬高的路上人行道比路面高 2 cm。原因與座標寫在決策 611 的缺口。
+
 > 纜車吊廂照地點自動換（派工單 CABLE-SUNMOON，session_01YGNNuntWn7xdRjXi7bwXHE，`claude/cable-sunmoon`，[決策 615](decisions/615.md)，存檔、golden、GameCore 不動，2026-11-06）：任一站在日月潭纜車兩端站 5 km 內的纜車畫日月潭吊廂（#1813 翻成 Swift，紅黃藍＋水晶綠，地板降到和貓空同高），其他地方照舊貓空；兩種吊廂的近景玻璃改用 #1817 的透明玻璃，遠景不透明。**還留下的**：iPhone 實機量透明玻璃每幀排序的成本（決策 615 下一步第 1 點）；纜車模式「照真實路線鋪」要不要加日月潭（第 2 點）；站房玻璃、烏來吊廂（第 3 點）。
 
 > Codex 吊廂、玻璃與機場 studies 的交接（遊戲規劃第 49 任 2026-11-05 補寫；Codex 合併時沒寫進這裡）。都只是 studies，遊戲沒有引用，GameCore、存檔、golden、fixtures 不動；模型、GLB、日夜七向與離線 viewer 在私庫 `game-art-previews/docs/art/` 同名資料夾，外觀都還沒經作者接受。
@@ -356,7 +358,7 @@
   - 發版準備時（派 WHATSNEW 的同時）：檢查下面的「固定要派的三件事」。數上一輪審查終點之後合併的程式 PR 點數，看 HEALTH、CIOPT 的上一輪，到時機就派，結果寫進交接。作者 2026-11-07 問：「之前不是說30點就要做pr review為何現在都都要我提醒才做」。
 - **固定要派的三件事**（作者 2026-11-01：「好像很久沒有 pr review 跟 ci 優化還有 debug」「那為什麼每次都忘記做」）。遊戲規劃平常是被通知推著走（合併、CI、session 回報），這三件沒有通知會提醒，換手和壓縮的摘要也常漏掉，所以照下面的時機派，不等作者提：
   - **PR 審查**：每發一版之後，或上一輪之後合併了約 30 個改程式的 PR（以先到者為準），派下一輪 REVIEW-L（獨立審查已合併的程式 PR，GameCore 優先，只寫文件；範圍接上一輪的終點）。發現 P1 當天派修。
-  - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。
+  - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。上一輪：CIOPT（session_01YGNNukiXhE7LK51UdBYf4o，2026-11-07，[決策 620](decisions/620.md)，[量測](research/CI_MEASURE_2026-11-07.md)）：完整 tier 32 分是 `rest` 一片 22.6 分（環狀輕軌一個類別 428 s），不是排隊；交通計畫每段路只找一次路徑、`rest` 分兩片，估約 20–21 分。門檻在量測 §6。
   - **除錯**：作者或玩家的問題回報、main 的 `ci.yml` 或 full lane 紅、`PLAYER_FEEDBACK.md` 新的 bug 列，當天派。另外每發一版之後派一次健檢：可買的真實路線與示範地圖，逐分與最高倍速（一次 10 分鐘）各跑兩天，數發車、死結、誤點（DEBUG-BATCH 的做法）。
   - 換手時，§2.0 的交接寫上這三件的上一輪是誰、範圍或數字到哪。上一輪：REVIEW-L4（session_01YGNNunjEfxiHkJqASKZyZB，#1601–#1686）、CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D）、DEBUG-BATCH（session_01YGNNunTUt7aXu7pMTNAzrn），都是第 41 任 2026-11-01 派的。
 - **踩過的坑**：
@@ -425,7 +427,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（18 個 job：決策 544 續把測試片從 20 減到 14，加上 Changes、決策 563 的自我檢查 job、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（19 個 job：決策 544 續把測試片從 20 減到 14、決策 620 把 rest 分成兩片成 15，加上 Changes、決策 563 的自我檢查 job、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
@@ -3430,6 +3432,8 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 **CABVIEW-2（2026-11-07，作者 Mac 上的 session，`claude/cabview-2-mac`，決策 379 續三）**：實機 Instruments 量到高雄環狀輕軌 10× 的走走停停不是主執行緒，是一步裡的 tick 擠在一起（前幾個 0.1 秒內、最後一個被 `TrafficReading` 拖 0.75–1.2 秒）；改成一步滑一段，作者看了「有順很多了」。②已做。①還在：交通讀數每步 0.7–1.2 秒，10× 只跑到約三成。另有作者回報「第一次跟車沒多久跳回 2D」，原因未明（`docs/research/CABVIEW2_MAC_TRACE_2026-11-07.md`「還沒做的」）。
 
 **① 的後續（TRAFFIC-READ，`claude/traffic-reading-speed`，2026-11-07）**：交通讀數改借 `advance` 留在世界裡的 `RouteMemo`（決策 138 補充「交通讀數借用 advance 留下的計畫零件」），高雄環狀輕軌 10× 一次讀數在 Mac M6 release 561.7 → 33.1 ms，結果逐位元相同。還沒做的：實機重錄（UNVERIFIED）；3D 跟車時少讀與 `readTrafficOffTheMainActor` 一次只跑一個，讀數變快後暫時不需要。
+
+**CABVIEW-3（2026-11-07，session_01YGNNuo1avNxcoZmdFdC825，`claude/cabview-3`，決策 379 續四）**：審查 P3 a、b、d 做了（迴圈的一步成為 `runLoopStep`、地圖看 `glideKey`、`stopGameLoop` 清旗標）。Linux 量 3D 跟車 10× 實際 ÷ 設定：#1924 前 0.10 → 後 0.50（2D 不跟車 0.48）；A（3D 跟車少讀交通）量到 0.49，不採用。還沒做的：10× 跑不滿要從 GameCore 每個 tick 的推進下手（TICKPERF 做了，決策 622：210–270 ms 只在有車卡著等出發時出現，#1928 之後 main 已是 1.00 of 10x；卡住時改後 17–23 ms）；1× 沒做；實機量測與 P3 c（機場捷運高架段 3D 高度與滑行差一步）照 `docs/research/CABVIEW3_DEVICE_SHEET_2026-11-07.md`，UNVERIFIED。
 
 ### 4.55 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL → FACADE-B，`claude/facade-real`，#1879，2026-11-07）
 

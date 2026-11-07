@@ -250,7 +250,9 @@ public final class GameSession {
     /// CABVIEW-2 (decision 379 續三): the ``worldRevision`` of a world the
     /// game loop put in with more ticks of the same step still to come
     /// (``LoopTick/stepGoesOn``); see ``glidesOnThroughTheStep``.
-    @ObservationIgnored private var stepGoesOnAtRevision: Int?
+    /// Observed (decision 379 續四): the maps take a glide when it ends,
+    /// even when the step's last tick moved no train (``glideKey``).
+    private var stepGoesOnAtRevision: Int?
     /// Decision 485: the trains' body heights the 3D map puts its cars at
     /// (``map3DTrainHeights()``), kept for the ``worldRevision`` they were
     /// read for: worked out with the tick off the main actor while the 3D
@@ -2435,7 +2437,9 @@ public final class GameSession {
         }
         guard tick.revision == worldRevision else { return false }
         FrameCostMeter.shared.measure(.afterStep) { finish(outcome, fromLoop: true) }
-        stepGoesOnAtRevision = tick.stepGoesOn && (try? outcome.get()) != nil ? worldRevision : nil
+        let goesOn = tick.stepGoesOn && (try? outcome.get()) != nil ? worldRevision : nil
+        // Only when it changes: it is observed.
+        if goesOn != stepGoesOnAtRevision { stepGoesOnAtRevision = goesOn }
         return true
     }
 
@@ -2451,6 +2455,19 @@ public final class GameSession {
     public var glidesOnThroughTheStep: Bool {
         stepGoesOnAtRevision != nil && stepGoesOnAtRevision == worldRevision
     }
+
+    /// Decision 379 續四 (review P3 b): what the maps take a new glide on:
+    /// the trains, and whether the glide goes on through the step. On the
+    /// trains alone, a step whose last tick moved no train after its first
+    /// ones did left the glide of the step before shown until a train
+    /// moved again.
+    public struct GlideKey: Equatable {
+        public let trains: [Train]
+        public let goesOn: Bool
+    }
+
+    /// The maps' ``GlideKey`` for the world as it is now.
+    public var glideKey: GlideKey { GlideKey(trains: world.trains, goesOn: glidesOnThroughTheStep) }
 
     /// Starts advancing the world in real time. Calling it while the loop is
     /// already running does nothing, so the world is never ticked twice.
@@ -2484,25 +2501,7 @@ public final class GameSession {
                 let elapsed = now - last
                 let ticks = self.dueTicks(realElapsed: elapsed)
                 last = now
-                for index in 0..<ticks {
-                    guard var tick = self.beginLoopTick() else { break }
-                    tick.readsTraffic = index == ticks - 1
-                    // CABVIEW-2: the maps glide over the whole step.
-                    if index < ticks - 1 { tick.goesOnInTheStep() }
-                    let outcome = await tick.work()
-                    // Nor may a stop while the tick was worked out.
-                    guard !Task.isCancelled else { return }
-                    self.finish(tick, with: outcome)
-                    // Decision 330: the world the tick replaced is let go
-                    // here, timed for the map's frame readout. Decision
-                    // 459: off the main actor, where the tick holds the
-                    // last of it (92.1's game: up to tens of ms a tick).
-                    let releasing = ContinuousClock.now
-                    let replaced = consume tick
-                    Task.detached(priority: .utility) { _ = consume replaced }
-                    FrameCostMeter.shared.record(.release, since: releasing)
-                    if case .failure = outcome { break }
-                }
+                guard await self.runLoopStep(ticks: ticks) else { return }
                 // Decision 195: how fast the game really ran.
                 self.noteRealTime(elapsed)
                 // Decision 460: the rest before the next step, longer when
@@ -2512,6 +2511,40 @@ public final class GameSession {
         }
     }
 
+    /// One step of the game loop (decision 379 續四, review P3 a): up to
+    /// `ticks` ticks, each worked out off the main actor and taken as soon
+    /// as it is done, all but the last gliding on through the step
+    /// (``glidesOnThroughTheStep``). `taken` is told after each tick is
+    /// taken (for tests). Returns `false` when the loop was stopped while
+    /// a tick was worked out.
+    func runLoopStep(ticks: Int, taken: (() -> Void)? = nil) async -> Bool {
+        for index in 0..<ticks {
+            // A `let`, which `consume` below lets go of.
+            guard let tick = beginLoopTick().map({ begun in
+                var tick = begun
+                tick.readsTraffic = index == ticks - 1
+                // CABVIEW-2: the maps glide over the whole step.
+                if index < ticks - 1 { tick.goesOnInTheStep() }
+                return tick
+            }) else { break }
+            let outcome = await tick.work()
+            // Nor may a stop while the tick was worked out.
+            guard !Task.isCancelled else { return false }
+            finish(tick, with: outcome)
+            // Decision 330: the world the tick replaced is let go here,
+            // timed for the map's frame readout. Decision 459: off the main
+            // actor, where the tick holds the last of it (92.1's game: up
+            // to tens of ms a tick).
+            let releasing = ContinuousClock.now
+            let replaced = consume tick
+            Task.detached(priority: .utility) { _ = consume replaced }
+            FrameCostMeter.shared.record(.release, since: releasing)
+            taken?()
+            if case .failure = outcome { break }
+        }
+        return true
+    }
+
     /// Stops the loop and drops any partial tick. The host calls this when the
     /// app leaves the foreground; restarting later does not replay the time
     /// spent away.
@@ -2519,6 +2552,8 @@ public final class GameSession {
         gameLoop?.cancel()
         gameLoop = nil
         loopTickRevision = nil
+        // Decision 379 續四 (review P3 d): no step goes on.
+        if stepGoesOnAtRevision != nil { stepGoesOnAtRevision = nil }
         applyHeldSpeed()
         tickAccumulator.reset()
         // The time away is not time the game failed to run.
