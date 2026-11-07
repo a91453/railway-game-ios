@@ -20,7 +20,36 @@ public enum Map3DStationExteriorBatch1 {
         case .tainanHSR: builder.tainanHSRExteriorStudy(detail: detail)
         case .zuoyingHSR: builder.zuoyingHSRExteriorStudy(detail: detail)
         }
+        let litColours = nightGlassColours(for: station)
+        builder.mesh.restyleVertices { vertex in
+            if litColours.contains(vertex.color) && abs(vertex.ny) < 0.55 {
+                vertex.layer = Map3DVertex.glowing
+            }
+        }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
+    }
+
+    private static func nightGlassColours(for station: Station) -> Set<UInt32> {
+        let colours: [UInt32]
+        // StationKitBuilder.box shades each of its four vertical sides.
+        let sideShades: [Float] = [1, 0.92, 0.80, 0.70, 0.86]
+        switch station {
+        case .taichungTRA:
+            return Set(sideShades.map { Map3DColor.shaded(Map3DPalette.glazing, $0) })
+        case .hsinchuTRA: colours = [0xAFC7CD]
+        case .hualienTRA: colours = [0x9BB7B9]
+        case .taitungTRA: colours = [0x8CACB1]
+        case .banqiaoTRA: colours = [0x728C94, 0x688189, 0x5B6970]
+        case .nangangTRA: colours = [0x607D84]
+        case .taoyuanHSR: colours = [0x8EABB0, 0x607F86]
+        case .hsinchuHSR: colours = [0x8EAEB2, 0x66878B]
+        case .taichungHSR: colours = [0x98B7B8, 0x6A8589]
+        case .tainanHSR: colours = [0x9CB5B9, 0x637F86]
+        case .zuoyingHSR: colours = [0x91B7BD, 0x648991]
+        }
+        return Set(colours.flatMap { colour in
+            sideShades.map { Map3DColor.shaded(Map3DColor.rgb(colour), $0) }
+        })
     }
 
     // OSM ways 442234244 and 223056023, osmtoday Taiwan extract 2026-11-06.
@@ -629,10 +658,34 @@ public enum Map3DStationExteriorBatch1 {
 }
 
 private extension StationKitBuilder {
+    mutating func litBox(_ x: Float, _ y: Float, _ z: Float,
+                         _ length: Float, _ width: Float, _ height: Float, _ color: UInt32) {
+        let start = mesh.vertices.count
+        box(x, y, z, length, width, height, color)
+        mesh.makeGlowing(from: start)
+    }
+
+    mutating func litFace(_ points: [Map3DPoint], inside: Map3DPoint, color: UInt32) {
+        let start = mesh.vertices.count
+        face(points, inside: inside, color: color)
+        mesh.makeGlowing(from: start)
+    }
+
     mutating func footprint(_ points: [(Float, Float)], color: UInt32, baseY: Float = 0, height: Float = 0.32) {
         guard points.count >= 3 else { return }
-        // A shallow closed plinth carries the surveyed ground outline.
+        // Keep every surveyed vertex without exposing a coloured polygon
+        // outside the station. Ground outlines are only a thin ground-colour
+        // edge; elevated roof outlines retain their filled top surface.
         let p = points.map { Map3DPoint($0.0, baseY + height, $0.1) }
+        if baseY == 0 {
+            for i in points.indices {
+                let j = (i + 1) % points.count
+                let a = p[i], b = p[j]
+                face([a, b, Map3DPoint(b.x, 0, b.z), Map3DPoint(a.x, 0, a.z)],
+                     inside: .zero, color: Map3DPalette.ground)
+            }
+            return
+        }
         var remaining = Array(p.indices)
         let area = points.indices.reduce(Float(0)) { total, i in
             let j = (i + 1) % points.count
@@ -692,7 +745,11 @@ private extension StationKitBuilder {
         hall.box(0, 0.32, 0, 243, 65, 11.7, warmWall)
         hall.box(0, 12.02, 0, 242, 65, 1.1, Map3DPalette.concrete)
         hall.canopy(0, 27.8, 0, length: 250, width: 75, rise: 9.2, color: paleRoof)
+        hall.litBox(0, 27.36, -28, 204, 0.34, 0.18, warmWall)
         hall.box(0, 12.9, 0, 239, 0.55, 14.5, StationKitBuilder.glass)
+        for z: Float in [-32.65, 32.65] {
+            hall.box(0, 13.12, z, 231, 0.24, 14.3, StationKitBuilder.glass)
+        }
         if detail == .near {
             for x in stride(from: Float(-112), through: 112, by: 16) {
                 for z: Float in [-31, 31] { hall.box(x, 0.32, z, 0.75, 0.75, 27.0, StationKitBuilder.white) }
@@ -742,20 +799,23 @@ private extension StationKitBuilder {
         var station = StationKitBuilder()
         // OSM's 9 m is used for the two-level wing. Roof ridge and clock tower
         // are estimates from photos because the way has no building:part tags.
-        station.box(0, 0.32, 0, 139, 15.2, 8.68, wall)
-        station.hip(0, 9, 0, 142, 16.2, 2.0, roof)
+        station.box(-46, 0.32, 0, 47, 15.2, 8.68, wall)
+        station.box(46, 0.32, 0, 47, 15.2, 8.68, wall)
+        station.hip(-46, 9, 0, 49, 16.2, 4.3, roof)
+        station.hip(46, 9, 0, 49, 16.2, 4.3, roof)
         // The broad raised central roof and its pale Baroque entrance.
-        station.box(0, 0.32, -8.0, 22, 3.2, 11.2, wall)
-        station.gable(0, 11.52, -8.0, 23.0, 4.3, 2.0, trim)
-        station.hip(0, 9.72, 0, 54, 19.5, 3.2, roof)
-        station.box(0, 1.2, -9.68, 8, 0.2, 7.2, glass)
-        station.box(0, 8.4, -9.78, 14, 0.35, 0.8, trim)
+        station.box(0, 0.32, 0, 45, 17.2, 13.88, wall)
+        station.box(0, 0.32, -8.0, 22, 3.2, 13.88, wall)
+        station.gable(0, 14.2, -8.0, 23.0, 4.3, 3.0, trim)
+        station.hip(0, 14.2, 0, 47, 19.5, 4.5, roof)
+        station.box(0, 1.2, -9.68, 8, 0.2, 10.0, glass)
+        station.box(0, 11.2, -9.78, 14, 0.35, 0.8, trim)
         station.box(0, 0.32, -9.62, 22, 0.5, 1.0, brick)
         // Clock tower is separate from the measured OSM height.
-        station.box(0, 11.4, 0, 7.2, 7.2, 6.3, wall)
-        station.hip(0, 17.7, 0, 8, 8, 2.0, roof)
-        station.box(0, 19.7, 0, 0.35, 0.35, 1.2, StationKitBuilder.steel)
-        station.clockFace(0, 14.0, -3.73, size: 2.2)
+        station.box(0, 16.0, 0, 8.2, 8.2, 7.0, wall)
+        station.hip(0, 23.0, 0, 9, 9, 3.5, roof)
+        station.box(0, 26.5, 0, 0.35, 0.35, 1.2, StationKitBuilder.steel)
+        station.clockFace(0, 19.4, -4.23, size: 2.2)
         if detail == .near {
             for x in stride(from: Float(-63), through: 63, by: 8) {
                 if abs(x) < 19 { continue }
@@ -767,6 +827,7 @@ private extension StationKitBuilder {
                 station.box(x, 0.32, -10.2, 0.35, 0.35, 4.5, trim)
             }
             station.box(0, 4.7, -10.2, 137, 2.8, 0.25, roof)
+            station.litBox(0, 4.45, -10.5, 124, 0.24, 0.14, trim)
             for x: Float in [-17, 17] {
                 station.box(x, 0.32, -7.8, 0.8, 0.8, 9.4, trim)
                 station.box(x, 8.8, -8.0, 1.3, 1.3, 0.5, brick)
@@ -777,6 +838,7 @@ private extension StationKitBuilder {
                 station.box(x, 2.1, -7.75, 5, 0.2, 3.7, glass)
             }
             station.box(0, 4.7, -9.5, 136, 1.5, 0.22, roof)
+            station.litBox(0, 4.45, -10.0, 120, 0.24, 0.14, trim)
         }
         // OSM's minimum-area rectangle long axis bears 32.2° north of east.
         add(.flat(named: "hsinchu-station", from: station.mesh), at: .zero, angle: 32.2 * .pi / 180)
@@ -818,7 +880,7 @@ private extension StationKitBuilder {
                 for z: Float in [-18.9, 18.9] { bridge.box(x, 6.4, z, 0.4, 0.45, 9.0, warmWall) }
             }
         } else {
-            for x in stride(from: Float(-60), through: 60, by: 20) {
+            for x in stride(from: Float(-60), through: 60, by: 40) {
                 for z: Float in [-18.9, 18.9] { bridge.box(x, 6.4, z, 0.55, 0.55, 9.0, warmWall) }
             }
         }
@@ -830,7 +892,7 @@ private extension StationKitBuilder {
         ticket.box(0, 0.32, 0, 51, 46, 9.7, warmWall)
         ticket.box(0, 10.02, 0, 54, 50, 1.1, paleRoof)
         ticket.box(0, 1.4, -23.13, 43, 0.25, 7.8, glass)
-        let screenStep: Float = detail == .near ? 3.3 : 8.2
+        let screenStep: Float = detail == .near ? 3.3 : 12.4
         for x in stride(from: Float(-23), through: 23, by: screenStep) {
             ticket.box(x, 0.32, -23.45, 0.8, 0.85, 10.4, paleRoof)
         }
@@ -844,7 +906,12 @@ private extension StationKitBuilder {
         var umbrella = StationKitBuilder()
         for (index, x) in stride(from: Float(-29), through: 29, by: 14.5).enumerated() {
             let edgeHeight: Float = index.isMultiple(of: 2) ? 11.0 : 12.0
-            umbrella.canopy(x, edgeHeight, 0, length: 15.5, width: 28.5, rise: 1.8, color: paleRoof)
+            if detail == .near {
+                umbrella.canopy(x, edgeHeight, 0, length: 15.5, width: 28.5, rise: 1.8, color: paleRoof)
+            } else {
+                umbrella.gable(x, edgeHeight, 0, 15.5, 28.5, 1.8, paleRoof)
+            }
+            umbrella.litBox(x, edgeHeight - 0.3, -9, 12, 0.26, 0.16, warmWall)
             umbrella.box(x, 0.32, 0, 0.7, 0.7, 10.98, rib)
             umbrella.box(x, 9.2, 0, 0.8, 27.2, 0.28, rib)
         }
@@ -865,7 +932,7 @@ private extension StationKitBuilder {
         front.box(0, 0.32, 0, 84, 17.5, 8.2, concrete)
         front.box(0, 8.52, 0, 88, 19, 0.5, darkRoof)
         front.box(0, 1.1, -8.9, 80, 0.2, 5.7, glass)
-        for x in stride(from: Float(-37), through: 37, by: detail == .near ? 7.5 : 15) {
+        for x in stride(from: Float(-37), through: 37, by: detail == .near ? 7.5 : 20) {
             front.box(x, 1.1, -9.05, 0.5, 0.35, 6.0, paleRoof)
         }
         front.box(0, 5.0, -10.5, 84, 3.2, 0.5, darkRoof)
@@ -887,7 +954,7 @@ private extension StationKitBuilder {
                                                    (4.65, -61.65, 65.8247)]
         for (east, north, rotation) in platforms {
             var columns = StationKitBuilder()
-            for x in stride(from: Float(-87), through: 87, by: detail == .near ? 15 : 35) {
+            for x in stride(from: Float(-87), through: 87, by: detail == .near ? 15 : 65) {
                 columns.box(x, 0.32, 0, 0.55, 0.55, 5.28, rib)
                 if detail == .near { columns.box(x, 5.15, 0, 0.28, 9.0, 0.3, rib) }
             }
@@ -915,11 +982,13 @@ private extension StationKitBuilder {
             footprint(outline, color: platformRoof, baseY: 5.3, height: 0.32)
         }
 
-        // The hall's low, tiled rear wall and broad glass entrance are based on
-        // photographs. 13.5 m total is the reference's illustrative height.
+        // The entrance hall rises above the two vault rows and remains readable
+        // from the street; its raised glass front is estimated from photographs.
         var hall = StationKitBuilder()
-        hall.box(0, 0.32, 0, 85, 22.8, 12.3, tiledWall)
-        hall.box(0, 12.62, 0, 87.5, 24, 0.88, platformRoof)
+        hall.box(0, 0.32, 0, 85, 22.8, 15.1, tiledWall)
+        hall.box(0, 15.42, 0, 87.5, 24, 0.88, platformRoof)
+        hall.box(0, 8.0, -11.62, 45, 0.24, 6.5, glass)
+        hall.box(0, 14.5, -11.85, 48, 0.45, 0.75, tiledWall)
         hall.box(0, 1.0, -11.56, 76, 0.22, 5.6, glass)
         hall.box(0, 1.0, -11.82, 17, 0.3, 7.0, darkRoof)
         hall.box(0, 8.15, -12.0, 20, 0.3, 0.65, brick)
@@ -932,15 +1001,22 @@ private extension StationKitBuilder {
         // Two rows of shallow vaults reproduce the station's characteristic
         // front profile. Vault curvature, rhythm and height are estimates.
         var portico = StationKitBuilder()
-        let pitch: Float = detail == .near ? 10.5 : 18.0
-        let span: Float = detail == .near ? 11.1 : 18.8
-        for x in stride(from: Float(-38), through: 38, by: pitch) {
+        let pitch: Float = detail == .near ? 10.5 : 38.0
+        if detail == .far {
+            // Two shallow continuous roofs retain the double-row entrance.
             for (z, edgeHeight) in [(Float(-5.75), Float(6.6)), (Float(5.75), Float(9.5))] {
-                var vault = StationKitBuilder()
-                vault.canopy(0, 0, 0, length: 12.0, width: span,
-                             rise: detail == .near ? 1.8 : 1.65, color: arcRoof)
-                portico.add(.flat(named: "taitung-vault", from: vault.mesh),
-                            at: Map3DPoint(x, edgeHeight, z), angle: Float.pi / 2)
+                portico.gable(0, edgeHeight, z, 88, 11.8, 1.65, arcRoof)
+            }
+        }
+        for x in stride(from: Float(-38), through: 38, by: pitch) {
+            if detail == .near {
+                for (z, edgeHeight) in [(Float(-5.75), Float(6.6)), (Float(5.75), Float(9.5))] {
+                    var vault = StationKitBuilder()
+                    vault.canopy(0, 0, 0, length: 12.0, width: 11.1,
+                                 rise: 1.8, color: arcRoof)
+                    portico.add(.flat(named: "taitung-vault", from: vault.mesh),
+                                at: Map3DPoint(x, edgeHeight, z), angle: Float.pi / 2)
+                }
             }
             for z: Float in [-10.5, 0.0, 10.5] {
                 portico.box(x, 0.32, z, 0.65, 0.65, z == -10.5 ? 6.28 : 9.18, columns)
@@ -950,6 +1026,7 @@ private extension StationKitBuilder {
             }
         }
         portico.box(0, 0.32, -11.7, 88, 0.55, 0.75, brick)
+        portico.litBox(0, 6.25, -8.5, 74, 0.35, 0.18, tiledWall)
         add(.flat(named: "taitung-front-vaults", from: portico.mesh),
             at: Map3DPoint(53.11, 0, 26.87), angle: 83.1805 * .pi / 180)
 
@@ -962,7 +1039,7 @@ private extension StationKitBuilder {
         ]
         for (east, north, rotation, length) in platforms {
             var supports = StationKitBuilder()
-            let step: Float = detail == .near ? 14 : 31
+            let step: Float = detail == .near ? 14 : 56
             for x in stride(from: -length / 2 + 7, through: length / 2 - 7, by: step) {
                 supports.box(x, 0.32, 0, 0.65, 0.65, 4.98, columns)
                 if detail == .near {
@@ -971,6 +1048,7 @@ private extension StationKitBuilder {
             }
             supports.box(0, 5.62, -4.3, length - 1, 0.3, 0.3, darkRoof)
             supports.box(0, 5.62, 4.3, length - 1, 0.3, 0.3, darkRoof)
+            supports.litBox(0, 5.42, -3.9, length - 15, 0.3, 0.14, tiledWall)
             add(.flat(named: "taitung-platform-supports", from: supports.mesh),
                 at: Map3DPoint(east, 0, north), angle: rotation * .pi / 180)
         }
@@ -1016,6 +1094,7 @@ private extension StationKitBuilder {
         for x: Float in [-47, 0, 47] {
             podium.canopy(x, 19.4, -43, length: 27, width: 17,
                           rise: 1.8, color: paleRoof)
+            podium.litBox(x, 19.1, -49, 21, 0.3, 0.16, trim)
         }
         add(.flat(named: "banqiao-podium", from: podium.mesh),
             at: Map3DPoint(-13.09, 0, -32.37), angle: 52.2644 * .pi / 180)
@@ -1099,9 +1178,9 @@ private extension StationKitBuilder {
             box(x, 28.32, 0, 0.7, width - 1, 109.38, frame)
         }
         let floors = detail == .near ? Array(stride(from: 0, through: 22, by: 1))
-                                        : Array(stride(from: 0, through: 22, by: 3))
-        let frontColumns = detail == .near ? Int(length / 5.0) : Int(length / 12.0)
-        let sideColumns = detail == .near ? Int(width / 5.0) : Int(width / 11.0)
+                                        : [0, 11, 22]
+        let frontColumns = detail == .near ? Int(length / 5.0) : 3
+        let sideColumns = detail == .near ? Int(width / 5.0) : 2
         for floor in floors {
             let y = Float(31.0 + Double(floor) * 4.55)
             let height: Float = detail == .near ? 2.6 : 3.1
@@ -1111,7 +1190,7 @@ private extension StationKitBuilder {
                     let panel = [Map3DPoint(x - 1.8, y, z), Map3DPoint(x + 1.8, y, z),
                                  Map3DPoint(x + 1.8, y + height, z),
                                  Map3DPoint(x - 1.8, y + height, z)]
-                    face(panel, inside: Map3DPoint(0, y, 0), color: roof)
+                    litFace(panel, inside: Map3DPoint(0, y, 0), color: roof)
                 }
             }
             for index in 0..<sideColumns {
@@ -1120,7 +1199,7 @@ private extension StationKitBuilder {
                     let panel = [Map3DPoint(x, y, z - 1.7), Map3DPoint(x, y, z + 1.7),
                                  Map3DPoint(x, y + height, z + 1.7),
                                  Map3DPoint(x, y + height, z - 1.7)]
-                    face(panel, inside: Map3DPoint(0, y, 0), color: roof)
+                    litFace(panel, inside: Map3DPoint(0, y, 0), color: roof)
                 }
             }
         }
@@ -1149,7 +1228,7 @@ private extension StationKitBuilder {
         var main = StationKitBuilder()
         main.box(0, 0.32, 0, 207, 126, 24.7, brick)
         main.box(0, 25.02, 0, 212, 133, 2.98, concrete)
-        for y in stride(from: Float(5), through: 23, by: detail == .near ? 4 : 9) {
+        for y in stride(from: Float(5), through: 23, by: detail == .near ? 4 : 18) {
             for z: Float in [-63.2, 63.2] {
                 main.box(0, y, z, 204, 0.22, 0.45, white)
             }
@@ -1157,7 +1236,8 @@ private extension StationKitBuilder {
         main.box(0, 1.0, -63.18, 59, 0.26, 15.5, darkGlass)
         main.canopy(0, 17.0, -67, length: 75, width: 33,
                     rise: 2.8, color: paleRoof)
-        for x in stride(from: Float(-32), through: 32, by: detail == .near ? 8 : 16) {
+        main.litBox(0, 16.7, -76, 62, 0.34, 0.18, white)
+        for x in stride(from: Float(-32), through: 32, by: detail == .near ? 8 : 32) {
             main.box(x, 0.32, -76, 0.55, 0.55, 16.6, white)
             if detail == .near {
                 main.beam(Map3DPoint(x, 9, -76), Map3DPoint(x, 17.5, -58),
@@ -1190,7 +1270,7 @@ private extension StationKitBuilder {
                 blockC.box(0, y, z, 103, 0.22, 1.1, darkRim)
             }
         }
-        for x in stride(from: Float(-49), through: 49, by: detail == .near ? 7 : 17) {
+        for x in stride(from: Float(-49), through: 49, by: detail == .near ? 7 : 26) {
             for z: Float in [-20.68, 20.68] {
                 blockC.box(x, 47, z, 4.0, 0.18, 18.5, darkGlass)
             }
@@ -1209,6 +1289,7 @@ private extension StationKitBuilder {
         east.box(0, 1.0, -20.48, 52, 0.2, 15.0, glass)
         east.canopy(0, 18.12, 0, length: 83.0, width: 42.0,
                     rise: 4.8, color: paleRoof)
+        east.litBox(0, 17.82, -15, 68, 0.34, 0.18, white)
         east.cylinder(34, 0.32, -15.0, radius: 7.5, height: 19.5,
                       color: white, sides: detail == .near ? 14 : 8)
         east.cylinder(34, 19.82, -15.0, radius: 8.0, height: 0.6,
@@ -1218,7 +1299,7 @@ private extension StationKitBuilder {
                 east.box(x, 1.0, -20.68, 0.42, 0.28, 15.0, frame)
             }
         } else {
-            for x in stride(from: Float(-32), through: 24, by: 16) {
+            for x in stride(from: Float(-32), through: 24, by: 28) {
                 east.box(x, 1.0, -20.68, 0.55, 0.28, 15.0, frame)
             }
         }
@@ -1246,6 +1327,7 @@ private extension StationKitBuilder {
         var hsr = StationKitBuilder()
         hsr.box(0, 0.32, 0, 119, 69.5, 17.5, glass)
         hsr.box(0, 17.82, 0, 121.7, 73.4, 2.18, roof)
+        hsr.litBox(0, 17.55, -32, 100, 0.35, 0.16, frame)
         for z in stride(from: Float(-27), through: 27, by: detail == .near ? 7 : 14) {
             hsr.box(0, 19.9, z, 110, detail == .near ? 2.6 : 3.4, 0.16, skylight)
             if detail == .near {
@@ -1289,6 +1371,7 @@ private extension StationKitBuilder {
         }
         a18.canopy(0, 21.3, 0, length: 152, width: 52,
                    rise: 8.7, color: roof)
+        a18.litBox(0, 20.98, -19, 126, 0.35, 0.16, frame)
         for x in stride(from: Float(-66), through: 66, by: detail == .near ? 18 : 36) {
             a18.beam(Map3DPoint(x, 21.6, -24.5),
                      Map3DPoint(x, 27.8, 0), 0.32, steel)
@@ -1330,6 +1413,7 @@ private extension StationKitBuilder {
         }
         hsr.canopy(0, 18.9, 0, length: 342, width: 94,
                    rise: 9.1, color: whiteRoof)
+        hsr.litBox(0, 18.55, -39, 292, 0.4, 0.18, trim)
         for z in stride(from: Float(-39), through: 39, by: detail == .near ? 9.75 : 19.5) {
             let y = 18.9 + sinf((z + 47) / 94 * .pi) * 9.1
             hsr.box(0, y + 0.02, z, 340, 0.15, 0.06, trim)
@@ -1393,11 +1477,12 @@ private extension StationKitBuilder {
         hsr.box(0, 19.02, 0, 348, 83, 5.8, trim)
         hsr.canopy(0, 25, 0, length: 360, width: 95,
                    rise: 5, color: roof)
-        for z in stride(from: Float(-38), through: 38, by: detail == .near ? 9.5 : 19) {
+        hsr.litBox(0, 24.7, -40, 306, 0.4, 0.18, trim)
+        for z in stride(from: Float(-38), through: 38, by: detail == .near ? 9.5 : 100) {
             let y = 25 + sinf((z + 47.5) / 95 * .pi) * 5
             hsr.box(0, y + 0.02, z, 356, 0.14, 0.06, trim)
         }
-        for x in stride(from: Float(-160), through: 160, by: detail == .near ? 16 : 40) {
+        for x in stride(from: Float(-160), through: 160, by: detail == .near ? 16 : 100) {
             for z: Float in [-43, 43] {
                 hsr.box(x, 0.32, z, 0.85, 0.85, 24.4, steel)
                 if detail == .near {
@@ -1409,7 +1494,7 @@ private extension StationKitBuilder {
         for z: Float in [-42.1, 42.1] {
             hsr.box(0, 0.32, z, 347, 0.28, 8.5, darkGlass)
         }
-        for x in stride(from: Float(-162), through: 162, by: detail == .near ? 9 : 27) {
+        for x in stride(from: Float(-162), through: 162, by: detail == .near ? 9 : 64) {
             for z: Float in [-42.35, 42.35] {
                 hsr.box(x, 1.0, z, 0.38, 0.2, 18.0, trim)
             }
@@ -1425,7 +1510,7 @@ private extension StationKitBuilder {
         for x in stride(from: Float(-20), through: 20, by: detail == .near ? 4 : 10) {
             tra.box(x, 0.32, -46.65, 0.3, 0.2, 17.0, steel)
         }
-        for x in stride(from: Float(-96), through: 96, by: detail == .near ? 12 : 30) {
+        for x in stride(from: Float(-96), through: 96, by: detail == .near ? 12 : 64) {
             for z: Float in [-37.5, 37.5] {
                 tra.box(x, 0.32, z, 0.6, 0.5, 12, trim)
             }
@@ -1438,7 +1523,7 @@ private extension StationKitBuilder {
             at: Map3DPoint(-48.18, 0, 174.11), angle: 0.6372 * .pi / 180)
 
         var mrt = StationKitBuilder()
-        for x in stride(from: Float(-76), through: 76, by: detail == .near ? 19 : 38) {
+        for x in stride(from: Float(-76), through: 76, by: detail == .near ? 19 : 76) {
             for z: Float in [-8.5, 8.5] {
                 mrt.box(x, 0, z, 0.8, 0.8, 8, steel)
             }
@@ -1447,16 +1532,19 @@ private extension StationKitBuilder {
         for z: Float in [-10.2, 10.2] {
             mrt.box(0, 8.32, z, 174, 0.25, 8.8, darkGlass)
         }
-        for x in stride(from: Float(-78), through: 78, by: detail == .near ? 9 : 26) {
+        for x in stride(from: Float(-78), through: 78, by: detail == .near ? 9 : 100) {
             for z: Float in [-10.45, 10.45] {
                 mrt.box(x, 8.32, z, 0.3, 0.2, 10.0, trim)
             }
         }
         mrt.canopy(0, 18.5, 0, length: 180, width: 21.5,
                    rise: 4.5, color: roof)
-        for x in stride(from: Float(-72), through: 72, by: detail == .near ? 18 : 36) {
-            mrt.beam(Map3DPoint(x, 18.5, -10),
-                     Map3DPoint(x, 22.7, 0), 0.25, steel)
+        mrt.litBox(0, 18.22, -8.8, 150, 0.32, 0.16, trim)
+        if detail == .near {
+            for x in stride(from: Float(-72), through: 72, by: 18) {
+                mrt.beam(Map3DPoint(x, 18.5, -10),
+                         Map3DPoint(x, 22.7, 0), 0.25, steel)
+            }
         }
         add(.flat(named: "taichung-mrt", from: mrt.mesh),
             at: Map3DPoint(-58.18, 0, 131.47), angle: -6.5481 * .pi / 180)
@@ -1468,10 +1556,11 @@ private extension StationKitBuilder {
             var link = StationKitBuilder()
             link.box(0, 4.32, 0, length, width, 6.8, glass)
             link.box(0, 11.12, 0, length + 0.5, width + 0.4, 0.88, roof)
-            for x in stride(from: -length / 2 + 4, through: length / 2 - 4,
-                            by: detail == .near ? 6 : 12) {
-                for z in [-width / 2, width / 2] {
-                    link.box(x, 4.32, z, 0.25, 0.2, 6.8, steel)
+            if detail == .near {
+                for x in stride(from: -length / 2 + 4, through: length / 2 - 4, by: 6) {
+                    for z in [-width / 2, width / 2] {
+                        link.box(x, 4.32, z, 0.25, 0.2, 6.8, steel)
+                    }
                 }
             }
             add(.flat(named: name, from: link.mesh), at: at,
@@ -1505,6 +1594,7 @@ private extension StationKitBuilder {
         hall.box(0, 0.5, -22.68, 103, 0.28, 7.0, darkGlass)
         hall.canopy(0, 18.3, 0, length: 113, width: 55,
                     rise: 2.8, color: roof)
+        hall.litBox(0, 18.0, -23, 91, 0.35, 0.17, fascia)
         hall.box(0, 21.0, 0, 63, 31, 5.7, fascia)
         hall.box(0, 26.7, 0, 64, 32, 0.3, roof)
         for x in stride(from: Float(-48), through: 48,
@@ -1536,6 +1626,7 @@ private extension StationKitBuilder {
             platform.box(0, 11.6, 0, length - 2, width - 1.5, 1.7, wall)
             platform.box(0, 13.3, 0, length - 2, width - 1.5, 0.3, shadow)
             platform.box(0, 22.2, 0, length, width, 1.8, roof)
+            platform.litBox(0, 21.92, -width * 0.32, length - 24, 0.3, 0.16, fascia)
             platform.box(0, 23.7, 0, length, 0.32, 0.3, fascia)
             for x in stride(from: -length / 2 + 10, through: length / 2 - 10,
                             by: detail == .near ? 18 : 42) {
@@ -1597,6 +1688,7 @@ private extension StationKitBuilder {
         hsr.box(0, 0.32, -27.4, 27, 0.22, 8.7, darkGlass)
         hsr.canopy(0, 26.5, 0, length: 186, width: 80,
                    rise: 5.5, color: roof)
+        hsr.litBox(0, 26.2, -33, 160, 0.36, 0.18, fascia)
         for x in stride(from: Float(-82), through: 82,
                         by: detail == .near ? 13.6 : 41) {
             for z: Float in [-29.5, 29.5] {

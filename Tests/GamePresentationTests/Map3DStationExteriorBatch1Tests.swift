@@ -2,6 +2,30 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch1Tests: XCTestCase {
+    func testAllStudiesLightGlassAndCanopiesWithoutGroundPads() {
+        for station in Map3DStationExteriorBatch1.Station.allCases {
+            for detail: Map3DStationExteriorBatch1.LevelOfDetail in [.near, .far] {
+                let model = Map3DStationExteriorBatch1.model(for: station, detail: detail)
+                XCTAssertGreaterThan(model.vertices.filter { $0.layer == Map3DVertex.glowing }.count, 12,
+                                     "\(station.rawValue) \(detail) has no night lighting")
+                let ground = Map3DPalette.ground
+                for start in stride(from: 0, to: model.vertices.count, by: 3) {
+                    let triangle = model.vertices[start..<(start + 3)]
+                    XCTAssertFalse(triangle.allSatisfy { $0.color == ground && abs($0.z - 0.32) < 0.002 },
+                                   "\(station.rawValue) has an exposed ground footprint")
+                }
+            }
+        }
+    }
+
+    func testReducedDistantStudiesStayWithinTarget() {
+        for station: Map3DStationExteriorBatch1.Station in
+            [.hualienTRA, .taitungTRA, .nangangTRA, .taichungHSR] {
+            let far = Map3DStationExteriorBatch1.model(for: station, detail: .far)
+            XCTAssertLessThanOrEqual(far.triangleCount, 1_200, "\(station.rawValue)")
+        }
+    }
+
     func testZuoyingHSRStudyKeepsBothOSMWaysAndTwoRoofHeights() {
         let near = Map3DStationExteriorBatch1.model(for: .zuoyingHSR, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .zuoyingHSR, detail: .far)
@@ -270,6 +294,8 @@ final class Map3DStationExteriorBatch1Tests: XCTestCase {
         XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
         XCTAssertNil(Map3DStationKit.model(id: near.name))
         XCTAssertNil(Map3DStationKit.model(id: far.name))
+        XCTAssertTrue(near.vertices.contains { $0.color == Map3DColor.rgb(0x8CACB1) && $0.z > 13 },
+                      "Entrance hall glazing must rise above the front vaults")
         let outlines: [([(Float, Float)], Float)] = [
             (Map3DStationExteriorBatch1.taitungHallFootprint, 0.32),
             (Map3DStationExteriorBatch1.taitungPorticoFootprint, 5.92),
@@ -352,6 +378,9 @@ final class Map3DStationExteriorBatch1Tests: XCTestCase {
         XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
         XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
         XCTAssertNil(Map3DStationKit.model(id: near.name))
+        XCTAssertGreaterThan(near.maximum.z, 26) // clock tower above the central hall
+        XCTAssertTrue(near.vertices.contains { abs($0.z - 18.7) < 0.05 }) // raised central ridge
+        XCTAssertTrue(near.vertices.contains { abs($0.z - 13.3) < 0.05 }) // pitched wing ridges
         for (east, north) in Map3DStationExteriorBatch1.hsinchuFootprint {
             XCTAssertTrue(near.vertices.contains {
                 abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002 && abs($0.z - 0.32) < 0.002
