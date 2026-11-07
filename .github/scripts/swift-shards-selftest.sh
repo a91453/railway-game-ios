@@ -373,6 +373,8 @@ expect_full_run() {
 }
 expect_full_run "https://x/1" "a successful run whose rest shard passed" \
   FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Changes (does the Swift package need testing?),Swift 6.4 (Linux) / campaigns-1,Swift 6.4 (Linux) / rest,Swift CI (gate)"
+expect_full_run "https://x/1" "a successful run whose rest-1 shard passed (decision 620)" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Swift 6.4 (Linux) / campaigns-1,Swift 6.4 (Linux) / rest-1,Swift 6.4 (Linux) / rest-2,Swift CI (gate)"
 expect_full_run "https://x/2" "the first full run among several" \
   FAKE_RUNS="1 https://x/1 2 https://x/2" FAKE_JOBS_1="Swift 6.4 (Linux) / selected-1,Swift CI (gate)" FAKE_JOBS_2="Swift 6.4 (Linux) / rest"
 WHY='No successful full' expect_full_run "" "a smaller tier's run is not full" \
@@ -643,6 +645,18 @@ if [[ "$parts" == $'GamePresentationTests.HighSpeedDemoTests/t \nGameCoreTests.G
   echo "ok   pass  selected parts weigh the GameCore classes a fixture adds"
 else
   echo "FAIL selected parts with GameCore classes: $parts"
+  failures=$((failures + 1))
+fi
+# Decision 620: rest's two parts split rest exactly, each class in one
+# part, a weighted class in a part of its own.
+printf 'M.A/t\nM.B/t\nM.KaohsiungLightRailDayTests/t1\nM.KaohsiungLightRailDayTests/t2\nM.%s/t\n' "$("$script" classes | head -1)" >"$work/rest.txt"
+rest_all="$(SWIFT_TEST_LIST_FILE="$work/rest.txt" "$script" select rest | sort | tr '\n' ' ')"
+rest_parts="$(for k in 1 2; do SWIFT_TEST_LIST_FILE="$work/rest.txt" "$script" select "rest-$k" | tr '\n' ' '; echo; done)"
+rest_union="$(tr ' ' '\n' <<<"$rest_parts" | sed '/^$/d' | sort | tr '\n' ' ')"
+if [[ "$rest_parts" == $'M.KaohsiungLightRailDayTests/t1 M.KaohsiungLightRailDayTests/t2 \nM.A/t M.B/t ' && "$rest_union" == "$rest_all" ]]; then
+  echo "ok   pass  rest's parts split rest by the classes' weights"
+else
+  echo "FAIL rest parts: $rest_parts (rest: $rest_all)"
   failures=$((failures + 1))
 fi
 SELECTED_TESTS='GoneTests' WHY='GoneTests has no tests' expect fail "a selected class that does not exist fails" "$script" run selected
