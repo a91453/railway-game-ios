@@ -45,7 +45,7 @@ final class SingleLineThreeTrainsTests: XCTestCase {
             XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         }
         session.selectTool(.select)
-        let stations = session.world.stations.filter { $0.operationMode != .closed }.sorted { $0.position.x < $1.position.x }.map(\.id)
+        let stations = session.world.stations.filter { $0.operationMode != .closed }.sorted { $0.point.x < $1.point.x }.map(\.id)
         let signal = session.world.stations.first { $0.operationMode == .closed }?.id
         for stops in layout.lines {
             for index in stops {
@@ -65,7 +65,7 @@ final class SingleLineThreeTrainsTests: XCTestCase {
         var legs: [TrainID: Int] = [:]
         var last: [TrainID: Int] = [:]
         var minutes = 0, run = 0, longest = 0
-        for _ in 0..<(GameTime.minutesPerDay * days) {
+        for _ in 0..<(Int(GameTime.minutesPerDay) * days) {
             try world.advance(ticks: 1)
             if world.deadlockedTrains().isEmpty { run = 0 } else { minutes += 1; run += 1 }
             longest = max(longest, run)
