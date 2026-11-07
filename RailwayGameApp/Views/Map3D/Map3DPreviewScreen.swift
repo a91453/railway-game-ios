@@ -282,10 +282,15 @@ struct Map3DPreviewScreen: View {
             UITestTrace.action("map3D.models ready after \(waited.components.seconds * 1000 + waited.components.attoseconds / 1_000_000_000_000_000) ms")
             modelsReady = true
         }
-        .onChange(of: session.world.trains, initial: true) { _, _ in
+        // CABVIEW-2: once the step's last tick is in (``GameSession/GlideKey``).
+        .onChange(of: session.glideKey, initial: true) { _, key in
+            guard !key.waits else { return }
             feed.update(session: session, palette: linePalette)
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
+            // CABVIEW-2: after the step's last tick, over the whole step,
+            // as the trains' glide (``GameSession/glideWaitsForStepEnd``).
+            guard !session.glideWaitsForStepEnd else { return }
             // Decision 339: the real trains glide with the game clock.
             feed.updateRealClock(world: session.world, shown: showsRealTrains,
                                  glides: !session.world.clock.isPaused && !reduceMotion)

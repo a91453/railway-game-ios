@@ -1158,8 +1158,10 @@ struct MapView: View {
             // Decision 64, later fix: read with the tick, off the main actor.
             FrameCostMeter.shared.measure(.mapTraffic) { traffic = session.trafficOverlay }
         }
-        .onChange(of: session.world.trains, initial: true) { _, _ in
+        // CABVIEW-2: and once the step's last tick is in (``GameSession/GlideKey``).
+        .onChange(of: session.glideKey, initial: true) { _, key in
             // Decision 182: each tick's trains glide from the last tick's.
+            guard !key.waits else { return }
             FrameCostMeter.shared.measure(.mapGlide) {
                 // Decision 379: worked out with the tick, off the main actor.
                 trainMotion = session.trainMotion(after: trainMotion, at: Date().timeIntervalSinceReferenceDate)
@@ -1168,7 +1170,8 @@ struct MapView: View {
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
             // Decision 304: the real trains glide with the game clock.
-            guard realTrains != nil else { return }
+            // CABVIEW-2: after the step's last tick, over the whole step.
+            guard realTrains != nil, !session.glideWaitsForStepEnd else { return }
             FrameCostMeter.shared.measure(.mapTick) {
                 realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
             }

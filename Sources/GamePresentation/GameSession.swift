@@ -232,6 +232,30 @@ public final class GameSession {
     /// Decision 497 (P2-3): the reading of traffic control worked out off
     /// the main actor after a command, and for which ``worldRevision``.
     @ObservationIgnored var trafficReadTask: (revision: Int, task: Task<Void, Never>)?
+    /// CABVIEW-2: the game minute of the last reading a tick took, and the
+    /// ``commandRevision`` it was taken at.
+    @ObservationIgnored var trafficTickRead: (commandRevision: Int, minute: Int64)?
+    /// CABVIEW-2: whether a tick of the game loop that is not its step's
+    /// last has just been taken, at 10× or below: the map's glide
+    /// (``trainMotion(after:at:)``) and the clocks the real trains and
+    /// buses glide by wait for the step's last tick, then glide over the
+    /// whole step. A step's five ticks came within some 0.3 s and its last
+    /// read traffic for some 2 s on the bought Kaohsiung light rail: each
+    /// tick's glide lasted the 0.1 s since the one before, and the cab view
+    /// stood still between steps.
+    /// Observed: the map takes the glide when it turns false, even if the
+    /// step's last tick moved no train (``GlideKey``).
+    public internal(set) var glideWaitsForStepEnd = false
+
+    /// CABVIEW-2: what the map takes a new glide on: the trains, and
+    /// whether the glide waits for the step's last tick.
+    public struct GlideKey: Equatable {
+        public let trains: [Train]
+        public let waits: Bool
+    }
+
+    /// The map's ``GlideKey`` for the world as it is now.
+    public var glideKey: GlideKey { GlideKey(trains: world.trains, waits: glideWaitsForStepEnd) }
     /// Counts the readings of traffic control worked out off the main
     /// actor after a command once each is in: the map takes
     /// ``trafficOverlay`` again when it changes.
@@ -2092,7 +2116,10 @@ public final class GameSession {
             applyHeldSpeed()
             // Decision 195: the ticks that ran, and the followed train's way.
             ticksRun += Int64(step.ticks)
-            if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
+            if let traffic = step.traffic {
+                trafficMemo = (worldRevision, traffic)
+                trafficTickRead = (commandRevision, world.clock.now.seconds / GameTime.secondsPerMinute)
+            }
             // Decision 379: likewise, the map's glide.
             glideMemo = step.glide.map { glide in
                 var motion = glide.motion
@@ -2274,6 +2301,8 @@ public final class GameSession {
     /// one worked out again on the main actor.
     public func trainMotion(after previous: TrainMotion, at time: Double) -> TrainMotion {
         if let shown = shownGlide, shown.source == worldRevision { return shown }
+        // CABVIEW-2: the step's last tick glides on from the glide shown.
+        if glideWaitsForStepEnd, let shown = shownGlide { return shown }
         var motion: TrainMotion
         if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.source, world.clock.speed != .x1 {
             motion = memo.motion.seen(at: time, after: previous)
@@ -2327,12 +2356,32 @@ public final class GameSession {
         return text
     }
 
+    /// CABVIEW-2: whether traffic control is read once a game minute: on
+    /// the 3D map following a train, a bus, a cabin or a boat, where the
+    /// 2D map's traffic is hidden (``CoveredMap``) and the follow bar's
+    /// words of a wait are all that read it. On the bought Kaohsiung light
+    /// rail its deadlock search took some 2 s of a step's 2.5 s at 10×.
+    var readsTrafficSparsely: Bool { isSpeedCappedIn3D }
+
+    /// Whether the tick beginning from `world` reads traffic control: at
+    /// every step, or once a game minute and after each command while
+    /// ``readsTrafficSparsely``.
+    func trafficIsDue(before world: GameWorld) -> Bool {
+        guard readsTrafficSparsely, let read = trafficTickRead, read.commandRevision == commandRevision else { return true }
+        return world.clock.now.seconds / GameTime.secondsPerMinute != read.minute
+    }
+
     private func trafficReading() -> TrafficReading {
         if let memo = trafficMemo, memo.revision == worldRevision { return memo.reading }
         // Decision 497 (P2-3): after a command, the last reading until the
         // new one, worked out off the main actor, is in. Only the game as
         // it opens is read here.
         if let last = trafficMemo?.reading {
+            // CABVIEW-2: following on the 3D map, the tick's last reading
+            // until a tick reads the next (``trafficIsDue(before:)``).
+            if readsTrafficSparsely, let read = trafficTickRead, read.commandRevision == commandRevision {
+                return last
+            }
             readTrafficOffTheMainActor(after: last)
             return last
         }
@@ -2434,23 +2483,7 @@ public final class GameSession {
                 let elapsed = now - last
                 let ticks = self.dueTicks(realElapsed: elapsed)
                 last = now
-                for index in 0..<ticks {
-                    guard var tick = self.beginLoopTick() else { break }
-                    tick.readsTraffic = index == ticks - 1
-                    let outcome = await tick.work()
-                    // Nor may a stop while the tick was worked out.
-                    guard !Task.isCancelled else { return }
-                    self.finish(tick, with: outcome)
-                    // Decision 330: the world the tick replaced is let go
-                    // here, timed for the map's frame readout. Decision
-                    // 459: off the main actor, where the tick holds the
-                    // last of it (92.1's game: up to tens of ms a tick).
-                    let releasing = ContinuousClock.now
-                    let replaced = consume tick
-                    Task.detached(priority: .utility) { _ = consume replaced }
-                    FrameCostMeter.shared.record(.release, since: releasing)
-                    if case .failure = outcome { break }
-                }
+                guard await self.runLoopStep(ticks: ticks) else { return }
                 // Decision 195: how fast the game really ran.
                 self.noteRealTime(elapsed)
                 // Decision 460: the rest before the next step, longer when
@@ -2458,6 +2491,48 @@ public final class GameSession {
                 rest = GameSession.tickPace.rest(afterWorking: clock.now - now, interval: GameSession.tickInterval)
             }
         }
+    }
+
+    /// One step of the game loop: up to `ticks` ticks, each worked out off
+    /// the main actor and taken as soon as it is done. `taken` is told
+    /// after each tick is taken (for tests). Returns `false` when the loop
+    /// was stopped while a tick was worked out.
+    ///
+    /// CABVIEW-2: at 10× and below, the map's glide waits for the step's
+    /// last tick (``glideWaitsForStepEnd``), which then glides over the
+    /// whole step; the ticks before it work out no glide.
+    func runLoopStep(ticks: Int, taken: (() -> Void)? = nil) async -> Bool {
+        let holdsGlide = ticks > 1 && world.clock.speed.tenthsPerTick <= GameSpeed.x10.tenthsPerTick
+        defer { if glideWaitsForStepEnd { glideWaitsForStepEnd = false } }
+        for index in 0..<ticks {
+            let isLast = index == ticks - 1
+            // A `let`, which `consume` below lets go of.
+            guard let tick = beginLoopTick().map({ begun in
+                var tick = begun
+                tick.readsTraffic = isLast && trafficIsDue(before: tick.world)
+                if holdsGlide, !isLast { tick.glide = nil }
+                return tick
+            }) else { break }
+            if holdsGlide, !isLast, !glideWaitsForStepEnd { glideWaitsForStepEnd = true }
+            let outcome = await tick.work()
+            // Nor may a stop while the tick was worked out.
+            guard !Task.isCancelled else { return false }
+            finish(tick, with: outcome)
+            // In the same turn as the world the last tick made, so the map
+            // sees the two together.
+            if isLast, glideWaitsForStepEnd { glideWaitsForStepEnd = false }
+            // Decision 330: the world the tick replaced is let go here,
+            // timed for the map's frame readout. Decision 459: off the main
+            // actor, where the tick holds the last of it (92.1's game: up
+            // to tens of ms a tick).
+            let releasing = ContinuousClock.now
+            let replaced = consume tick
+            Task.detached(priority: .utility) { _ = consume replaced }
+            FrameCostMeter.shared.record(.release, since: releasing)
+            taken?()
+            if case .failure = outcome { break }
+        }
+        return true
     }
 
     /// Stops the loop and drops any partial tick. The host calls this when the
