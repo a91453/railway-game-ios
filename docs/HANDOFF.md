@@ -616,7 +616,7 @@
   - 帳號分配與分工在上面「第 54 任現況」的表，以及 AGENTS.md、GEMINI.md。
 - **排隊**（還沒派）：
   1. full lane 的 `HUDAlignmentUITests.testTheLinesPanelKeepsTheLines`（上面）。
-  2. 六家的軌道疊在路線帶上，南端蓋在頭前溪上。
+  2. 六家的軌道疊在路線帶上，南端蓋在頭前溪上。→ LIUJIA-RIVER（[決策 634](decisions/634.md)，`claude/liujia-river`）修了高鐵示範六家基地南端蓋在頭前溪上；2D 機廠股道畫在路線色帶裡沒改，見決策 634「沒做的」。
   3. 高雄輕軌機廠：道路穿過軌道；三角線彎道約 13 m；北入出庫線沒接（要 GameCore 的折返規則，決策 621「下一步」）。
   4. 南港 7 組對 8 組。
   5. `firstLineWithoutPlaceToPass` 一次要 0.14 秒。
