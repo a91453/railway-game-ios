@@ -1591,9 +1591,11 @@ extension GameWorld {
     func followingAuthority(of candidate: Train, route: TrackCover, limit: Int64 = .max, memo: inout DirectionMemo) -> Train? {
         let holders = trackHolders(memo: &memo)
         let holding = holders.holding(route, except: candidate.id, fouling: true, in: network)
+        var leaders: [Train] = []
         for (place, other) in trains.enumerated() where other.id != candidate.id && other.position != nil {
             guard holding[place] || holder(of: route, except: candidate.id, waitedForBy: other, holders: holders) else { continue }
             guard isLeading(other, onto: route, for: candidate) else { return nil }
+            leaders.append(other)
         }
         // The longest distance whose track no other train holds.
         let blocked = blockedTrack(except: candidate.id, holders: holders)
@@ -1602,7 +1604,21 @@ extension GameWorld {
         let free = longestAuthority(envelopes, from: 0, clearBase: clear.base(envelopes.base), clear: clear.stretch)
         let authority = min(followingAuthority(envelopes, free: free), limit)
         guard authority >= 1 else { return nil }
-        if Self.followProbe > 0, !blockSections, let clears = againstClearance(of: candidate, envelopes, memo: &memo), authority < clears { return nil }
+        if Self.followProbe > 0, !blockSections, let clears = againstClearance(of: candidate, envelopes, memo: &memo), authority < clears {
+            guard Self.followProbe == 3 else { return nil }
+            // DEBUG-TYMC4 mode 3: where each leader will stand at its call, along the follower's way.
+            for leader in leaders {
+                var arrived = leader
+                arrived.reservation = []
+                let end = travelling(arrived, distance: routeLength(of: leader))
+                arrived.position = end.position
+                arrived.movement.cursor = end.cursor
+                let edges = Set(bodyStretches(of: arrived).map(\.traversal.edge))
+                guard let index = envelopes.stretches.firstIndex(where: { edges.contains($0.traversal.edge) }) else { continue }
+                let reach = (index == 0 ? 0 : envelopes.ends[index - 1]) - Self.followingGap
+                if reach < clears { return nil }
+            }
+        }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()
         return train
