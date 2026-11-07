@@ -250,120 +250,405 @@ public enum Map3DStationExteriorBatch2 {
         switch station {
         case .keelung:
             b.studyOutline(way929730121, elevation: 0)
-            b.studyBuilding(way929730121, elevation: 0, wood: false, detail: detail)
             b.studyOutline(way1069178919, elevation: 0)
-            b.studyBuilding(way1069178919, elevation: 0, wood: false, detail: detail)
             b.studyOutline(way367861777, elevation: 0)
-            b.studyBuilding(way367861777, elevation: 0, wood: false, detail: detail)
-            b.studyCanopy(way929730121, elevation: 8, detail: detail)
-            b.studyCanopy(way1069178919, elevation: 8, detail: detail)
+            b.keelungSouth(detail)
+            b.keelungNorth(detail)
+            b.keelungOld(detail)
         case .chiayi:
             b.studyOutline(way286891391, elevation: 0)
-            b.studyBuilding(way286891391, elevation: 0, wood: false, flat: true, detail: detail)
-            b.studyClock(way286891391, detail: detail)
+            b.chiayi1933(detail)
         case .tainan:
             b.studyOutline(way204493488, elevation: 0)
-            b.studyBuilding(way204493488, elevation: 0, wood: false, flat: true, detail: detail)
             b.studyOutline(way204493489, elevation: 0)
-            b.studyBuilding(way204493489, elevation: 0, wood: false, flat: true, detail: detail)
-            b.studyClock(way204493488, detail: detail)
             b.studyOutline(way1568887226, elevation: 0)
-            b.studyBuilding(way1568887226, elevation: 0, wood: false, detail: detail)
             b.studyOutline(way1568933253, elevation: 8)
-            b.studyCanopy(way1568933253, elevation: 8, detail: detail)
+            b.tainan1936(detail)
+            b.tainanUndergroundEntrance(detail)
         case .beimen:
             b.studyOutline(way353120128, elevation: 0)
-            b.studyBuilding(way353120128, elevation: 0, wood: true, greenWood: true, detail: detail)
+            b.beimenTimber(detail)
         case .fenqihu:
             b.studyOutline(way444296747, elevation: 0)
-            b.studyBuilding(way444296747, elevation: 0, wood: true, detail: detail)
+            b.fenqihuTimber(detail)
         case .alishan:
             b.studyOutline(way344586161, elevation: 0)
-            b.studyBuilding(way344586161, elevation: 0, wood: false, flat: true, detail: detail)
-            b.studyUpperHall(way344586161, detail: detail)
-        case .wushulin:
-            b.studyBuilding(at: 0, north: 0, length: 22, width: 10, wood: true, detail: detail) // OSM has a station point but no building outline.
-        case .xihu:
-            b.studyBuilding(at: 0, north: 0, length: 18, width: 11, wood: true, detail: detail) // OSM has a station point but no building outline.
+            b.alishanCurrent(detail)
+        case .wushulin: b.wushulinSugar(detail)
+        case .xihu: b.xihuSugar(detail)
         case .qiaotou:
             b.studyOutline(way112644875, elevation: 8)
-            b.studyBuilding(way112644875, elevation: 8, wood: true, detail: detail)
+            b.qiaotouSugar(detail)
         }
+        b.mesh = clippedForRailClearance(b.mesh, station: station)
         return .flat(named: "station-exterior-batch2-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: b.mesh)
+    }
+
+    // Surface track and platform edges from the same 2026-11-07 OSM PBF, in each station's metres.
+    // Tainan's new platforms and tracks are underground and do not constrain its surface entrance.
+    static func clearancePaths(for station: Station) -> [[(Float, Float)]] {
+        switch station {
+        case .keelung: return [
+            [(-72.6,-127.0),(-67.6,-130.0),(50.6,70.7),(45.5,73.6)], // platforms 525611054
+            [(-57.3,-135.8),(-62.2,-132.8),(57.2,67.4),(62.2,64.4)], // 525611064
+        ]
+        case .chiayi: return [
+            [(97.6,118.6),(99.9,116.7),(17.4,17.0),(23.4,12.0),(19.2,7.0),(10.1,-4.0),(-94.0,-129.8),(-102.3,-123.0)], // platform 286891395
+            [(98.2,123.6),(4.4,8.2),(-121.6,-141.4)], // rail 374524088, local section
+            [(-124.7,-138.9),(96.1,125.5)], // rail 518370754, local section
+        ]
+        case .tainan: return []
+        case .beimen: return [[(-24.0,15.0),(32.3,39.9),(35.1,33.5),(-21.1,8.5)]] // platform 1283227169
+        case .fenqihu: return [
+            [(26.1,15.9),(-48.9,-61.1)], // platform 320332839
+            [(23.6,5.8),(6.1,-11.6),(-3.0,-21.0),(-8.8,-27.0)], // platform 444714191
+        ]
+        case .alishan: return [[(44.4,49.9),(48.2,46.1),(-36.0,-40.2),(-39.9,-36.4),(-25.0,-21.2),(27.4,32.6)]] // platform 1138466088
+        case .wushulin, .xihu: return [] // OSM has only station nodes here
+        case .qiaotou: return [[(-43.5,124.4),(17.5,1.5),(8.2,-3.1),(-52.8,119.8)]] // elevated platform 1316259255; model starts at 8 m
+        }
+    }
+
+    static func clippedForRailClearance(_ mesh: Map3DMesh, station: Station) -> Map3DMesh {
+        let paths = clearancePaths(for: station)
+        guard !paths.isEmpty else { return mesh }
+        var kept = Map3DMesh()
+        for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+            let triangle = (0..<3).map { mesh.vertices[Int(mesh.indices[i + $0])] }
+            let ground = triangle.map { ($0.x, $0.z) }
+            let hits = triangle.map(\.y).min()! < 5.5 && paths.contains { path in
+                path.indices.dropLast().contains { j in
+                    triangleTouchesCorridor(ground, path[j], path[j + 1], radius: 2.2)
+                }
+            }
+            if !hits { kept.appendTriangle(triangle) }
+        }
+        return kept
+    }
+
+    static func triangleTouchesCorridor(_ t: [(Float, Float)], _ a: (Float, Float), _ b: (Float, Float), radius: Float) -> Bool {
+        func cross(_ p: (Float,Float), _ q: (Float,Float), _ r: (Float,Float)) -> Float {
+            (q.0-p.0)*(r.1-p.1)-(q.1-p.1)*(r.0-p.0)
+        }
+        func distance(_ p: (Float,Float), _ u: (Float,Float), _ v: (Float,Float)) -> Float {
+            let dx=v.0-u.0, dy=v.1-u.1
+            let f=max(0,min(1,((p.0-u.0)*dx+(p.1-u.1)*dy)/max(dx*dx+dy*dy,0.0001)))
+            let x=p.0-u.0-f*dx, y=p.1-u.1-f*dy
+            return x*x+y*y
+        }
+        func inside(_ p: (Float,Float)) -> Bool {
+            guard abs(cross(t[0],t[1],t[2])) > 0.0001 else { return false }
+            let c=(0..<3).map { cross(t[$0],t[($0+1)%3],p) }
+            return c.allSatisfy { $0 >= 0 } || c.allSatisfy { $0 <= 0 }
+        }
+        if inside(a) || inside(b) { return true }
+        for j in 0..<3 {
+            let u=t[j], v=t[(j+1)%3]
+            if cross(a,b,u)*cross(a,b,v) <= 0 && cross(u,v,a)*cross(u,v,b) <= 0 { return true }
+            if min(distance(u,a,b),distance(v,a,b),distance(a,u,v),distance(b,u,v)) < radius*radius { return true }
+        }
+        return false
     }
 }
 
 private extension StationKitBuilder {
-    mutating func studyClock(_ points: [(Float, Float)], detail: Map3DStationExteriorBatch2.LevelOfDetail) {
-        guard detail == .near else { return }
-        let xs = points.map(\.0), zs = points.map(\.1)
-        guard let hiX = xs.max(), let loZ = zs.min(), let hiZ = zs.max() else { return }
-        let z = (loZ + hiZ) / 2
-        box(hiX - 3, 8.5, z, 6, 7, 3.8, Map3DColor.rgb(0xD7D2C5))
-        clockFace(hiX + 0.1, 10.9, z, size: 2.2)
+    typealias Detail = Map3DStationExteriorBatch2.LevelOfDetail
+    func rgb(_ n: UInt32) -> UInt32 { Map3DColor.rgb(n) }
+    mutating func lit(_ x: Float,_ y: Float,_ z: Float,_ l: Float,_ w: Float,_ h: Float,_ color: UInt32) {
+        let start = mesh.vertices.count
+        box(x,y,z,l,w,h,color)
+        mesh.makeGlowing(from:start)
     }
-    mutating func studyUpperHall(_ points: [(Float, Float)], detail: Map3DStationExteriorBatch2.LevelOfDetail) {
-        let xs = points.map(\.0), zs = points.map(\.1)
-        guard let loX = xs.min(), let hiX = xs.max(), let loZ = zs.min(), let hiZ = zs.max() else { return }
-        let x = (loX + hiX) / 2, z = (loZ + hiZ) / 2
-        let timber = Map3DColor.rgb(0x76513F)
-        for side: Float in [-1, 1] {
-            let zz = z + side * 10
-            gable(x, 12.5, zz, 25, 18, 4.2, timber)
-            for xx in [x - 10, x + 10] {
-                box(xx, 8.5, zz - 7, 0.35, 0.35, 4, timber)
-                box(xx, 8.5, zz + 7, 0.35, 0.35, 4, timber)
-            }
+    mutating func studyHip(_ x: Float,_ y: Float,_ z: Float,_ length: Float,_ width: Float,_ rise: Float,_ color: UInt32) {
+        let halfL=length/2+0.4, halfW=width/2+0.4
+        let a=Map3DPoint(x+halfL,y,z-halfW), b=Map3DPoint(x+halfL,y,z+halfW)
+        let c=Map3DPoint(x-halfL,y,z+halfW), d=Map3DPoint(x-halfL,y,z-halfW)
+        let inside=Map3DPoint(x,y-1,z)
+        if halfL >= halfW {
+            let ridge=halfL-halfW
+            let rf=Map3DPoint(x+ridge,y+rise,z), rb=Map3DPoint(x-ridge,y+rise,z)
+            face([rf,b,a],inside:inside,color:color)
+            face([rf,rb,c,b],inside:inside,color:Map3DColor.shaded(color,0.94))
+            face([rb,d,c],inside:inside,color:Map3DColor.shaded(color,0.82))
+            face([rb,rf,a,d],inside:inside,color:Map3DColor.shaded(color,0.88))
+        } else {
+            let ridge=halfW-halfL
+            let rp=Map3DPoint(x,y+rise,z+ridge), rn=Map3DPoint(x,y+rise,z-ridge)
+            face([rp,b,c],inside:inside,color:color)
+            face([rp,rn,d,c],inside:inside,color:Map3DColor.shaded(color,0.94))
+            face([rn,d,a],inside:inside,color:Map3DColor.shaded(color,0.82))
+            face([rn,rp,b,a],inside:inside,color:Map3DColor.shaded(color,0.88))
         }
+        box(x,y-0.12,z,length+0.8,width+0.8,0.12,color)
     }
     mutating func studyOutline(_ points: [(Float, Float)], elevation: Float) {
-        // Vertical ground-colour edges retain every OSM vertex; no filled ground polygon.
+        // OpenStreetMap survey edges: no opaque ground pad. Elevated parts stay above train clearance.
         for i in points.indices {
             let a = points[i], c = points[(i + 1) % points.count]
-            let p = Map3DPoint(a.0, elevation + 0.32, a.1)
-            let q = Map3DPoint(c.0, elevation + 0.32, c.1)
-            mesh.addQuad(p, q, Map3DPoint(c.0, elevation, c.1), Map3DPoint(a.0, elevation, a.1), color: Map3DPalette.ground)
+            mesh.addQuad(Map3DPoint(a.0,elevation+0.32,a.1),Map3DPoint(c.0,elevation+0.32,c.1),
+                         Map3DPoint(c.0,elevation,c.1),Map3DPoint(a.0,elevation,a.1),color:Map3DPalette.ground)
         }
     }
-    mutating func studyBuilding(_ points: [(Float, Float)], elevation: Float, wood: Bool, flat: Bool = false, greenWood: Bool = false, detail: Map3DStationExteriorBatch2.LevelOfDetail) {
-        let xs = points.map(\.0), zs = points.map(\.1)
-        guard let loX = xs.min(), let hiX = xs.max(), let loZ = zs.min(), let hiZ = zs.max() else { return }
-        studyBuilding(at: (loX + hiX) / 2, north: (loZ + hiZ) / 2, length: min(hiX - loX, 56), width: min(hiZ - loZ, 25), elevation: elevation, wood: wood, flat: flat, greenWood: greenWood, detail: detail)
-    }
-    mutating func studyBuilding(at x: Float, north z: Float, length: Float, width: Float, elevation: Float = 0, wood: Bool, flat: Bool = false, greenWood: Bool = false, detail: Map3DStationExteriorBatch2.LevelOfDetail) {
-        let wall: UInt32 = Map3DColor.rgb(greenWood ? 0x758A7B : wood ? 0x9A7658 : 0xD7D2C5)
-        let roof: UInt32 = Map3DColor.rgb(wood ? 0x44444A : 0x5A6769)
-        let h: Float = wood ? 5.4 : 8.5
-        let l = max(length - 2, 8), w = max(width - 2, 7)
-        box(x, elevation, z, l, w, h, wall)
-        if flat { box(x, elevation + h, z, l + 2, w + 2, 0.3, roof) }
-        else { hip(x, elevation + h, z, l + 2, w + 2, wood ? 2.0 : 2.8, roof) }
-        // The kit marks the glass itself as emissive for night renderers.
-        let count = detail == .near ? 5 : 2
+    mutating func windows(_ front: Float,_ y: Float,_ z: Float, _ span: Float, count: Int, glass: UInt32, frame: UInt32, tall: Float = 2.4, detail: Detail) {
         for i in 0..<count {
-            let zz = z - w * 0.40 + w * 0.80 * (Float(i) + 0.5) / Float(count)
-            let start = mesh.vertices.count
-            box(x + l / 2 + 0.03, elevation + 1.4, zz, 0.10, min(w / Float(count) * 0.52, 3.2), 2.4, Map3DPalette.glazing)
-            mesh.makeGlowing(from: start)
-        }
-        if detail == .near {
-            for sign: Float in [-1, 1] {
-                for i in 0..<4 {
-                    let xx = x - l * 0.38 + l * 0.76 * Float(i) / 3
-                    cylinder(xx, elevation, z + sign * (w / 2 + 0.65), radius: 0.17, height: h, color: wood ? Map3DColor.rgb(0x715238) : Map3DPalette.concrete, sides: 6)
-                }
+            let zz = z - span/2 + span*(Float(i)+0.5)/Float(count)
+            let width = span/Float(count)*0.62
+            box(front,y-0.12,zz,0.18,width+0.28,tall+0.24,frame)
+            lit(front+0.12,y,zz,0.06,width,tall,glass)
+            if detail == .near {
+                box(front+0.18,y+tall*0.51,zz,0.08,width+0.12,0.09,frame)
+                box(front+0.18,y,zz,0.08,0.08,tall,frame)
             }
         }
     }
-    mutating func studyCanopy(_ points: [(Float, Float)], elevation: Float, detail: Map3DStationExteriorBatch2.LevelOfDetail) {
-        let xs = points.map(\.0), zs = points.map(\.1)
-        guard let loX = xs.min(), let hiX = xs.max(), let loZ = zs.min(), let hiZ = zs.max() else { return }
-        let x = (loX + hiX) / 2, z = (loZ + hiZ) / 2
-        canopy(x, elevation + 5, z, length: min(hiX - loX, 80), width: min(hiZ - loZ, 30), rise: 1.6, color: Map3DColor.rgb(0xD5DAD8))
-        if detail == .near {
+    mutating func archRow(_ front: Float,_ y: Float,_ z: Float, _ span: Float, count: Int, stone: UInt32, glass: UInt32, detail: Detail) {
+        for i in 0..<count {
+            let dz = span/Float(count), centre = z-span/2+(Float(i)+0.5)*dz
+            let side = dz*0.34
+            box(front,y,centre-side,0.6,0.55,3.2,stone)
+            box(front,y,centre+side,0.6,0.55,3.2,stone)
             let start = mesh.vertices.count
-            box(x, elevation + 3.2, z, min(hiX - loX, 60), 0.4, 0.18, Map3DPalette.glazing)
-            mesh.makeGlowing(from: start)
+            box(front+0.04,y+0.1,centre,0.10,dz*0.53,2.55,glass)
+            mesh.makeGlowing(from:start)
+            if detail == .near {
+                // Five short voussoirs give the arcade a visible arch rather than a flat lintel.
+                let q: [(Float,Float)] = [(-side,3.05),(-side*0.8,3.55),(-side*0.36,3.83),(side*0.36,3.83),(side*0.8,3.55),(side,3.05)]
+                for k in 0..<5 {
+                    beam(Map3DPoint(front+0.3,y+q[k].1,centre+q[k].0),
+                         Map3DPoint(front+0.3,y+q[k+1].1,centre+q[k+1].0),0.20,stone)
+                }
+            } else { box(front,y+3.0,centre,0.7,dz,0.38,stone) }
         }
+    }
+    mutating func roofDetail(_ x: Float,_ y: Float,_ z: Float,_ length: Float,_ width: Float,_ color: UInt32, detail: Detail, rise: Float = 0, hipped: Bool = false) {
+        guard detail == .near else { return }
+        // Tile ribs follow the roof planes. Flat horizontal bars used to poke through pitched roofs.
+        for i in 0..<20 {
+            let xx=x-length/2+(Float(i)+0.5)*length/20
+            if rise > 0 {
+                if hipped && width > length {
+                    let zz=z-width/2+(Float(i)+0.5)*width/20
+                    let endHeight=min(rise,(width/2-abs(zz-z))*rise/(width*0.17))
+                    beam(Map3DPoint(x-length*0.45,y+0.12,zz),Map3DPoint(x,y+endHeight+0.12,zz),0.055,color)
+                    beam(Map3DPoint(x,y+endHeight+0.12,zz),Map3DPoint(x+length*0.45,y+0.12,zz),0.055,color)
+                } else {
+                    let endHeight = hipped ? min(rise, (length/2-abs(xx-x))*rise/(length*0.17)) : rise
+                    let a=Map3DPoint(xx,y+0.12,z-width*0.45)
+                    let b=Map3DPoint(xx,y+max(0,endHeight)+0.12,z)
+                    let c=Map3DPoint(xx,y+0.12,z+width*0.45)
+                    beam(a,b,0.055,color)
+                    beam(b,c,0.055,color)
+                }
+            } else {
+                box(xx,y+0.08,z,0.055,width*0.9,0.07,color)
+            }
+        }
+        for i in 0..<12 {
+            let xx=x-length/2+(Float(i)+0.5)*length/12
+            for side: Float in [-1,1] {
+                box(xx,y-0.35,z+side*width/2,0.16,0.32,0.38,color)
+            }
+        }
+    }
+    mutating func timberSiding(_ x: Float,_ y: Float,_ z: Float,_ depth: Float,_ span: Float,_ color: UInt32, detail: Detail) {
+        guard detail == .near else { return }
+        // Repeated boards across the two long walls, plus corner posts.
+        for i in 0..<22 {
+            let zz=z-span/2+(Float(i)+0.5)*span/22
+            for side: Float in [-1,1] {
+                box(x+side*depth/2,y,zz,0.10,0.055,4.1,color)
+            }
+        }
+        for zz in [z-span/2,z+span/2] {
+            for xx in [x-depth/2,x+depth/2] { box(xx,y,zz,0.36,0.36,4.9,color) }
+        }
+    }
+    mutating func eaveLights(_ x: Float,_ y: Float,_ z: Float,_ span: Float, detail: Detail) {
+        for i in 0..<(detail == .near ? 14 : 6) {
+            let zz=z-span/2+(Float(i)+0.5)*span/Float(detail == .near ? 14 : 6)
+            lit(x,y,zz,0.14,0.65,0.10,Map3DPalette.glazing)
+        }
+    }
+    mutating func keelungSouth(_ detail: Detail) {
+        let x:Float = -84, z:Float = -137, steel=rgb(0xB8C5C9), dark=rgb(0x42525A)
+        box(x,0,z,30,46,7,rgb(0xE0E5E4))
+        windows(x+15.1,1.5,z,39,count:12,glass:rgb(0x8CACB4),frame:steel,detail:detail)
+        canopy(x,8.2,z,length:43,width:54,rise:2.8,color:rgb(0xD4DEE0))
+        if detail == .near {
+            for i in 0..<12 {
+                let zz=z-23+Float(i)*46/11
+                beam(Map3DPoint(x-18,6.3,zz),Map3DPoint(x+18,10.5,zz),0.16,dark)
+            }
+            for side: Float in [-1,1] { for i in 0..<9 { box(x+side*16,0,z-21+Float(i)*42/8,0.30,0.30,6.2,steel) } }
+        }
+        roofDetail(x,8.25,z,37,49,steel,detail:detail)
+        eaveLights(x+14.8,6.9,z,45,detail:detail)
+    }
+    mutating func keelungNorth(_ detail: Detail) {
+        let x:Float = 87,z:Float = 118,steel=rgb(0xBFCACD),dark=rgb(0x4D5B60)
+        box(x,0,z,35,62,6.5,rgb(0xD6DCDD))
+        windows(x+17.6,1.5,z,50,count:13,glass:rgb(0x78A2AC),frame:steel,detail:detail)
+        // North entrance has a light steel-and-glass elliptical canopy over a lower masonry base.
+        canopy(x,8.5,z,length:60,width:70,rise:1.5,color:rgb(0xC7D9DA))
+        if detail == .near {
+            for i in 0..<18 {
+                let zz=z-30+Float(i)*60/17
+                beam(Map3DPoint(x-24,8,zz),Map3DPoint(x+24,8,zz),0.13,dark)
+            }
+            for side: Float in [-1,1] { for i in 0..<7 { box(x+side*18,0,z-28+Float(i)*56/6,0.35,0.35,7.8,steel) } }
+        }
+        eaveLights(x+18,6.5,z,55,detail:detail)
+        roofDetail(x,8.5,z,50,62,steel,detail:detail)
+    }
+    mutating func keelungOld(_ detail: Detail) {
+        let x:Float = 18,z:Float = -80
+        box(x,0,z,23,32,7,rgb(0xD1C8B7))
+        studyHip(x,7,z,26,35,2.2,rgb(0x55585B))
+        windows(x+11.6,1.4,z,26,count:7,glass:rgb(0x9AB4B4),frame:rgb(0xEEE9DD),detail:detail)
+        roofDetail(x,7,z,23,32,rgb(0x6B6E70),detail:detail)
+    }
+    mutating func chiayi1933(_ detail: Detail) {
+        let x:Float = -40,z:Float = -82, ivory=rgb(0xE8DECB),ochre=rgb(0xB89968),red=rgb(0x985747)
+        box(x,0,z,26,52,8,ivory)
+        studyHip(x,8,z,30,56,2.4,red)
+        archRow(x+13.2,0.8,z,43,count:7,stone:ochre,glass:rgb(0x9EBCBA),detail:detail)
+        // Central square clock tower rises above the red tiled hipped wings.
+        box(x+9,0,z,18,16,14,ivory)
+        studyHip(x+9,14,z,20,18,2,red)
+        clockFace(x+18.2,11,z,size:2.6)
+        windows(x+18.2,6.5,z,12,count:3,glass:rgb(0x9DB8B9),frame:ochre,tall:3.0,detail:detail)
+        if detail == .near {
+            for i in 0..<21 { let zz=z-25+Float(i)*50/20; box(x-12,0.5,zz,0.15,0.12,7.5,ochre) }
+        }
+        roofDetail(x,8.1,z,27,52,rgb(0xA96A57),detail:detail,rise:2.4,hipped:true)
+        eaveLights(x+13.2,5.1,z,45,detail:detail)
+    }
+    mutating func tainan1936(_ detail: Detail) {
+        let white=rgb(0xE8E7DF),trim=rgb(0xB7B7AE),glass=rgb(0x9FB5B6),roof=rgb(0x737A78)
+        for (x,z,span) in [(-205 as Float,50 as Float,30 as Float),(-212,-10,37)] {
+            box(x,0,z,25,span,10,white)
+            box(x,10,z,27,span+2,0.4,roof)
+            archRow(x+12.7,0.8,z,span-3,count:span>35 ? 6:5,stone:trim,glass:glass,detail:detail)
+            windows(x+12.6,6.0,z,span-4,count:span>35 ? 7:6,glass:glass,frame:trim,tall:2.5,detail:detail)
+            if detail == .near {
+                for i in 0..<14 { let zz=z-span/2+(Float(i)+0.5)*span/14;box(x-12.6,0,zz,0.16,0.14,9,trim) }
+            }
+            eaveLights(x+12.8,4.5,z,span-2,detail:detail)
+        }
+        // A recessed central hall joins the two mapped 1936 station wings.
+        box(-208,0,21,25,30,10,white)
+        box(-208,10,21,26,31,0.4,roof)
+        archRow(-195.3,0.8,21,26,count:4,stone:trim,glass:glass,detail:detail)
+        windows(-195.2,6,21,26,count:5,glass:glass,frame:trim,tall:2.5,detail:detail)
+        eaveLights(-195.1,4.5,21,27,detail:detail)
+        // The white, two-storey 1936 frontage has a restrained raised central hall.
+        box(-203,10,50,12,13,2,white)
+        clockFace(-196.8,10.6,50,size:1.8)
+    }
+    mutating func tainanUndergroundEntrance(_ detail: Detail) {
+        let x:Float = -6,z:Float = -16,white=rgb(0xE9EEEB),glass=rgb(0x86A9AF)
+        // Surface entrance belongs beside the underground platforms; no slab across rail tracks.
+        box(x,0,z,22,38,6,white)
+        windows(x+11.1,0.9,z,32,count:9,glass:glass,frame:rgb(0xCAD8D8),tall:3.8,detail:detail)
+        canopy(x,6.3,z,length:27,width:46,rise:1.2,color:rgb(0xDCE7E5))
+        if detail == .near { for i in 0..<10 { box(x+12.5,0,z-18+Float(i)*4,0.28,0.28,6,rgb(0xC9D3D1)) } }
+        eaveLights(x+11,5.8,z,37,detail:detail)
+    }
+    mutating func beimenTimber(_ detail: Detail) {
+        let x:Float=29,z:Float = -1,green=rgb(0x718370),dark=rgb(0x3E4740),frame=rgb(0xC3C7AF)
+        box(x,0,z,18,22,5,green)
+        gable(x,5,z,21,25,2.5,dark)
+        windows(x+9.1,1.1,z,16,count:5,glass:rgb(0xA9C3BD),frame:frame,tall:2.6,detail:detail)
+        // Hinoki gable end and projecting eave are the landmark silhouette.
+        if detail == .near {
+            for i in 0..<7 { let zz=z-11+Float(i)*22/6;box(x+10,0,zz,0.35,0.35,5,frame) }
+            beam(Map3DPoint(x+10,5,z-11),Map3DPoint(x+10,7.5,z),0.25,frame)
+            beam(Map3DPoint(x+10,7.5,z),Map3DPoint(x+10,5,z+11),0.25,frame)
+        }
+        timberSiding(x,0,z,18,22,dark,detail:detail)
+        roofDetail(x,5.2,z,19,23,rgb(0x59635A),detail:detail,rise:2.5)
+        eaveLights(x+9.5,4.8,z,19,detail:detail)
+    }
+    mutating func fenqihuTimber(_ detail: Detail) {
+        let x:Float=21,z:Float = -7,wood=rgb(0x917257),dark=rgb(0x464547)
+        box(x,0,z,18,21,5.6,wood)
+        studyHip(x,5.6,z,21,25,1.8,dark)
+        windows(x+9.1,1.4,z,18,count:6,glass:rgb(0xAFBFAD),frame:rgb(0xC7B295),detail:detail)
+        // Separate narrow platform shelter with an open underside and repeated timber posts.
+        canopy(x-13,5.8,z,length:9,width:31,rise:0.25,color:rgb(0x77746D))
+        for i in 0..<(detail == .near ? 9 : 4) { let zz=z-14+Float(i)*28/Float(detail == .near ? 8:3);box(x-15,0,zz,0.3,0.3,5.6,wood) }
+        timberSiding(x,0,z,18,21,rgb(0x70553E),detail:detail)
+        roofDetail(x,5.7,z,19,23,rgb(0x616063),detail:detail,rise:1.8,hipped:true)
+        eaveLights(x+9.4,5,z,20,detail:detail)
+    }
+    mutating func alishanCurrent(_ detail: Detail) {
+        let x:Float = -2,z:Float=9,concrete=rgb(0xD2D4CF),timber=rgb(0x815C48),roof=rgb(0x5C4845)
+        box(x,0,z,34,52,8.5,concrete)
+        archRow(x+17.2,0.7,z,43,count:7,stone:concrete,glass:rgb(0x9BAEAA),detail:detail)
+        // Two separate front gables sit side by side; their roofs do not overlap.
+        for side: Float in [-1,1] {
+            let zz=z+side*13
+            for xx in [x-12,x+12] { for dz in [-9 as Float,9] { box(xx,8.5,zz+dz,0.45,0.45,6,timber) } }
+            gable(x,14.5,zz,29,21,4.2,roof)
+            windows(x+14.6,10.3,zz,14,count:4,glass:rgb(0xA6B4AA),frame:timber,tall:3.3,detail:detail)
+            roofDetail(x,14.6,zz,27,20,rgb(0x7B5E52),detail:detail,rise:4.2)
+        }
+        if detail == .near {
+            for side: Float in [-1,1] { let zz=z+side*13
+                beam(Map3DPoint(x+14.6,14.5,zz-9),Map3DPoint(x+14.6,18.7,zz),0.35,timber)
+                beam(Map3DPoint(x+14.6,18.7,zz),Map3DPoint(x+14.6,14.5,zz+9),0.35,timber)
+            }
+        }
+        eaveLights(x+17.4,7.8,z,46,detail:detail)
+    }
+    mutating func wushulinSugar(_ detail: Detail) {
+        let x:Float=0,z:Float=0,wall=rgb(0xD2D1C5),roof=rgb(0x404A4B),green=rgb(0x54766B)
+        box(x,0,z,12,34,4.8,wall)
+        gable(x,4.8,z,16,38,1.6,roof)
+        windows(x+6.1,1.2,z,28,count:9,glass:rgb(0xA6C1B2),frame:green,detail:detail)
+        canopy(x+8,4,z,length:6,width:39,rise:0.2,color:roof)
+        for i in 0..<(detail == .near ? 11 : 4) {let zz=z-18+Float(i)*36/Float(detail == .near ? 10:3);box(x+10,0,zz,0.35,0.35,4,green)}
+        timberSiding(x,0,z,12,34,green,detail:detail)
+        roofDetail(x,4.9,z,15,36,rgb(0x66706B),detail:detail,rise:1.6)
+        eaveLights(x+6.2,4.3,z,31,detail:detail)
+    }
+    mutating func xihuSugar(_ detail: Detail) {
+        let x:Float=0,z:Float=0,wall=rgb(0xD4B685),roof=rgb(0x65534C),frame=rgb(0x6C866F)
+        box(x,0,z,17,25,5.1,wall)
+        studyHip(x,5.1,z,20,29,1.7,roof)
+        windows(x+8.6,1.1,z,20,count:6,glass:rgb(0xA7C3BA),frame:frame,detail:detail)
+        // Xihu's open boarding shed is deeper and offset from the small ticket room.
+        canopy(x-13,4.8,z+5,length:10,width:35,rise:0.35,color:rgb(0xAAA58E))
+        for i in 0..<(detail == .near ? 10 : 4) {let zz=z-11+Float(i)*33/Float(detail == .near ? 9:3);box(x-16,0,zz,0.36,0.36,4.8,frame)}
+        timberSiding(x,0,z,17,25,rgb(0x9E7957),detail:detail)
+        roofDetail(x,5.2,z,19,27,rgb(0x806B5B),detail:detail,rise:1.7,hipped:true)
+        eaveLights(x+8.7,4.5,z,23,detail:detail)
+    }
+    mutating func qiaotouSugar(_ detail: Detail) {
+        let x:Float = -10,z:Float=51,brick=rgb(0xB87665),roof=rgb(0x454D50),glass=rgb(0x91B1B6)
+        // OSM way 112644875 spans roughly 86 x 144 m at layer=1: do not cap it to a 25 m hut.
+        // Keep the whole elevated envelope above the 5.5 m train clearance.
+        box(x,8,z,48,134,10,brick)
+        windows(x+24.1,10,z,122,count:22,glass:glass,frame:rgb(0xCFB5A7),tall:4,detail:detail)
+        canopy(x,18,z,length:57,width:143,rise:1.4,color:roof)
+        if detail == .near {
+            for i in 0..<28 { let zz=z-67+Float(i)*134/27;box(x+24.4,8,zz,0.23,0.23,10,rgb(0x695C59)) }
+            for i in 0..<16 { let zz=z-65+Float(i)*130/15;beam(Map3DPoint(x-26,17,zz),Map3DPoint(x+26,19,zz),0.15,rgb(0x707C7C)) }
+        }
+        roofDetail(x,18,z,52,140,rgb(0x717A7A),detail:detail)
+        eaveLights(x+24.3,17,z,132,detail:detail)
+        // The photographed sugar-rail ticket office and open shelter sit beside
+        // the much larger MRT station. Their plan position and sizes are estimates.
+        let boothX:Float=32, boothZ:Float=25
+        box(boothX,0,boothZ,10,13,4.2,rgb(0xA95D4B))
+        box(boothX,4.2,boothZ,11,14,0.35,rgb(0xC7C7BA))
+        windows(boothX+5.2,1.0,boothZ,10,count:3,glass:rgb(0xB8CAC9),frame:rgb(0xE5D6C3),tall:2.3,detail:detail)
+        box(boothX+5.4,3.6,boothZ,0.18,10,0.5,rgb(0x5E635D))
+        canopy(boothX+12,4.1,boothZ+14,length:8,width:39,rise:0.2,color:rgb(0xBEC6C1))
+        for i in 0..<(detail == .near ? 11:4) {
+            let zz=boothZ-4+Float(i)*36/Float(detail == .near ? 10:3)
+            box(boothX+15,0,zz,0.38,0.38,4.1,rgb(0x716B5F))
+        }
+        eaveLights(boothX+14,3.8,boothZ+14,35,detail:detail)
     }
 }
