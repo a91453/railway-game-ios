@@ -227,6 +227,7 @@ SHARD_LIMIT_MINUTES=45 JOB_STARTED=$(($(date +%s) - 1550)) says 'near its 45-min
 ci_yml="$(cd "$(dirname "$script")/../workflows" && pwd)/ci.yml"
 ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^    timeout-minutes:/ { print $2; exit }' "$ci_yml")"
 ci_limit="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^ *SHARD_LIMIT_MINUTES:/ { print $2; exit }' "$ci_yml")"
+# shellcheck disable=SC2016 # the $ is the literal text sed matches
 script_limit="$(sed -n 's/^SHARD_LIMIT_MINUTES="\${SHARD_LIMIT_MINUTES:-\([0-9]*\)}"$/\1/p' "$script")"
 if [[ -n "$ci_timeout" && "$ci_timeout" == "$ci_limit" && "$ci_timeout" == "$script_limit" ]]; then
   echo "ok   says  the shard job's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"

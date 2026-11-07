@@ -352,7 +352,7 @@
 - **每次發版**：
   - 發版前：改 `.github/testflight-whats-new.md`（它只在上一版之後有改動時才會被用，沒改就是自動列出的 PR 清單）。
   - 發版前，同時改 App 裡的「這版新增」卡：`Sources/GamePresentation/WhatsNew.swift` 的 `WhatsNew.entries`（兩種語言、只寫玩家能做什麼；上一則已發出去就在最前面加新的一則、id 用當天日期，還沒發就改最前面那則；步驟在決策 415）。
-  - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號是 0.5.0 (run 號.1)。
+  - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號從 120 起是 0.5.0 (run 號)，例如 0.5.0 (120)；重跑失敗的 job 才是 run 號.attempt（120.2）；119 以前是 run 號.1（決策 616，作者：119 照舊 119.1）。**下一版（120）`.github/testflight-whats-new.md` 的標題寫 `0.5.0 (120)`**，不帶 .1。
   - 發版準備時（派 WHATSNEW 的同時）：檢查下面的「固定要派的三件事」。數上一輪審查終點之後合併的程式 PR 點數，看 HEALTH、CIOPT 的上一輪，到時機就派，結果寫進交接。作者 2026-11-07 問：「之前不是說30點就要做pr review為何現在都都要我提醒才做」。
 - **固定要派的三件事**（作者 2026-11-01：「好像很久沒有 pr review 跟 ci 優化還有 debug」「那為什麼每次都忘記做」）。遊戲規劃平常是被通知推著走（合併、CI、session 回報），這三件沒有通知會提醒，換手和壓縮的摘要也常漏掉，所以照下面的時機派，不等作者提：
   - **PR 審查**：每發一版之後，或上一輪之後合併了約 30 個改程式的 PR（以先到者為準），派下一輪 REVIEW-L（獨立審查已合併的程式 PR，GameCore 優先，只寫文件；範圍接上一輪的終點）。發現 P1 當天派修。
@@ -729,10 +729,12 @@
 - **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
 - **HEALTH-119**（119 發版前健檢，session_01YGNNun6TLuYjVPgudJWRuN，固定三件之「除錯」）：[報告](research/HEALTH_119_2026-11-07.md)。CONCERNS：沒有清不掉的死結、沒發的班沒有大增（文湖新局預設 6/532、機捷 9/333 同決策 609）；高雄環狀輕軌三種規則 0/168。**退步：文湖擬實誤點 281 → 308/532**，二分出決策 609（#1881）+9、決策 602（#1870）+18；修法建議（併進下面「待派：文湖＋機捷擬實誤點」）與機捷擬實夜裡第二航廈 5 小時死結的重現在報告 §2.2、§4。
 - **HEALTH-114**（114.1 發版後健檢，session_01YGNNupSpkPtU1khcsbCqsS，固定三件之「除錯」的這一輪）：[報告](research/HEALTH_114_2026-11-05.md)。CONCERNS，沒有退步：原有 18 個名字每一格同 HEALTH-112；新量的桃園機場捷運同決策 556 最後的表（新局預設第二天 5/333 沒發、擬實 141/333 誤點，死結都會清掉）；兩條渡輪、貓空纜車兩天沒停。還開著的四件與重現指令在報告 §4。
+  - **WENHU-LATE**（session_01YGNNupx87VTqB5nRR1X67X，`claude/wenhu-late`，2026-11-07，[決策 609 的續](decisions/609.md)、[602 的續](decisions/602.md)）：HEALTH-119 的文湖擬實 308 → **286**：決策 609 第一段「多出來的車回機廠」改成只在沒有閉塞區間時作用（GameCore 兩個條件；簡單規則不變）。淡海綠山 4 分、機捷第二航廈夜裡 5 小時的死結都沒了；機捷擬實誤點 138 → 141（回到 609 之前）。剩下 +5 是決策 602，每小時差一兩班，不改布局。**還留下的**：高雄輕軌擬實第 1 天上午 18 次各 1 分鐘的死結（剛出廠的備用車站在下一站月台擋住營運車，下一分鐘讓開；609 下一步續 2，另派）；281 本身是下面這件。
   - **待派：文湖＋機捷擬實誤點合成一件**（遊戲規劃第 50 任 2026-11-05 定；Opus、GameCore）：文湖擬實第二天 281/532、機捷擬實 141/333 班晚超過 5 分，一起查。先讓 `DepotReturnReportTests` 在號誌關也記誤點，比較擬實與號誌關兩種規則，判斷是時刻表在閉塞間隔下本來就跑不出來，還是死結拖的；再決定修法。**等 REALYARD-B（文湖機廠，決策 602）與 TYMC-EXPRESS 都合併後才開**：兩者都會動這兩條線的入出庫與待避，先開會量到舊的行為。重現指令在 [HEALTH-114 報告](research/HEALTH_114_2026-11-05.md) §4 第 1、4 件。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
 - **REVIEW-L10**（session_01YGNNuoB7f2rfxdhAmyP2L8，第 50 任派）：審 #1803–#1857，報告 `docs/archive/PR1803_1857_REVIEW_HANDOFF.md`。P1 0、P2 1（**L10-1**：#1843 買來的線拿掉一站後，那站留著常客人數，`RealTransfers.swift` 的 `TransferMemo` 鍵少了停靠站）、P3 12，都**還沒派**。下一輪 REVIEW-L11 從 #1858 起。
 - **REVIEW-L11**（session_01YGNNumFayrcJEfodjKj3Px，第 52 任派）：審 #1858–#1907（32 點，一輪看完），報告 `docs/archive/PR1858_1907_REVIEW_HANDOFF.md`。P1 0、P2 1（**L11-1**：#1899 在真實鐵路旁鋪線後，局部重蓋的 3D 和整個重蓋不同，遠處真實線的路堤或高架錯開，`Map3DSceneRebuild.changes` 漏了 `layRealRun` 下游的區塊）、P3 7，都**還沒派**。L10-1、L10-2、L10-3 確認修好。下一輪 REVIEW-L12 從 #1908 起。
+- **REVIEW-L12**（session_01YGNNupGkWdzqJpt3YuWtZQ，第 53 任派）：審 #1908–#1914（7 點，沒有 GameCore），報告 `docs/archive/PR1908_1914_REVIEW_HANDOFF.md`。P1 0、P2 1（**L12-1**：#1879 的立面層 CPU 那份一直留在場景與 Metal 的區塊裡，最低等級、省電不畫時也留著，板橋約 +44 MB；決策 610 說「不是常駐的」只對 GPU 成立）、P3 3，都**還沒派**。L11-1 到 L11-7 確認修好（#1911、#1912），L11-8 還成立。下一輪 REVIEW-L13 從 #1915 起。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 
@@ -857,7 +859,7 @@
 
 - **112.1 發版（作者自己按）**：作者說「好 那我發了」，`testflight.yml` 由作者按，**規劃不按**。main HEAD `bef26cae`（#1796）。作者把 full lane 交給規劃看（「那full lane給你跑」）：
   - 同 commit 手動跑的完整 `ci.yml` **41817277687**、full lane（`ios-build.yml`）**41817301541**，11:00 UTC 時都還在跑。跑完告訴作者結果；紅的先分偶發（Simulator「Failed to launch」之類，重跑）還是真的，真的就派人修進下一版。
-  - 作者的 `testflight.yml` run 出現後：記 run 編號與 commit，版號 0.5.0（run 編號.1）；用小 PR 在 `docs/research/PLAYER_FEEDBACK.md` 照 111.1 那段記；提醒作者看 App Store Connect 的出口合規。
+  - 作者的 `testflight.yml` run 出現後：記 run 編號與 commit，版號 0.5.0（run 編號，不帶 .1；決策 616）；用小 PR 在 `docs/research/PLAYER_FEEDBACK.md` 照 111.1 那段記；提醒作者看 App Store Connect 的出口合規。
   - 然後派 WEB session 拍網站新功能截圖（纜車 2D／3D、跟隨公車、車窗視角），在 private repo 開 draft PR，作者部署（作者：「好 發完再派人拍」）。
   - 112.1 的內容見 `.github/testflight-whats-new.md`（#1796）。
 - **第 46 任已合**（這次壓縮前後）：#1788（`4fc02514`）、#1798（`ce3011f3`）、#1802（`8d3bde20`）、#1796（`bef26cae`）；更早的見 #1579 合併留言。

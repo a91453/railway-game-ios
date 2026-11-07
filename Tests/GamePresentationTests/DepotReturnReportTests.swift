@@ -248,6 +248,16 @@ final class DepotReturnReportTests: XCTestCase {
             return String(format: "day %d %02d:%02d", seconds / GameTime.secondsPerDay, minutes / 60, minutes % 60)
         }
         var hour = start / 3_600
+        // WENHU-LATE: `DEPOT_RETURN_LATE=1` counts the counted day's late
+        // trips by the hour and the station where each ended (the trains
+        // standing at their trip's last call as the count went up), so two
+        // builds tell where the extra late trips are. A minute a tick only.
+        let byHour = environment["DEPOT_RETURN_LATE"] != nil
+        func lateOnCountedDay(_ world: GameWorld) -> Int64 {
+            world.lines.reduce(0) { sum, line in sum + (world.lineDays(line.id).first { $0.day == counted }?.tally.lateTrips ?? 0) + ((world.clock.now.seconds - 1) / GameTime.secondsPerDay == counted ? world.lineAccounts?.records(of: line.id)?.pending.lateTrips ?? 0 : 0) }
+        }
+        var lateSoFar: Int64 = 0
+        var lateBy: [String: Int] = [:]
         while world.clock.now.seconds < end {
             if let at = saveAt, world.clock.now.seconds >= at, let path = environment["DEPOT_RETURN_SAVE"] {
                 try JSONEncoder().encode(SavedGame(world: world)).write(to: URL(fileURLWithPath: path))
@@ -267,6 +277,22 @@ final class DepotReturnReportTests: XCTestCase {
                 FileHandle.standardError.write(Data("DEPOT_RETURN \(label) deadlock \(clock(world.clock.now.seconds)): \(names.isEmpty ? "cleared" : names.joined(separator: "; "))\n".utf8))
             }
             lastStuck = stuck
+            if byHour, world.clock.now.seconds / GameTime.secondsPerDay == counted || world.clock.now.seconds / GameTime.secondsPerDay == counted + 1 {
+                let lateNow = lateOnCountedDay(world)
+                if lateNow > lateSoFar {
+                    let now = world.clock.now.seconds
+                    let ended = world.trains.compactMap { train -> String? in
+                        guard let last = train.timetable.last, now - last.arrival.seconds > 300,
+                              world.stationsStoppedAt(by: train.id).contains(last.station) else { return nil }
+                        return "\(world.station(id: last.station)?.name ?? "?") \((now - last.arrival.seconds) / 60) min"
+                    }
+                    let at = ended.isEmpty ? "?" : ended.joined(separator: ", ")
+                    let key = String(format: "%02d ", now % GameTime.secondsPerDay / 3_600) + (ended.first.map { String($0.split(separator: " ").first ?? "?") } ?? "?")
+                    lateBy[key, default: 0] += Int(lateNow - lateSoFar)
+                    FileHandle.standardError.write(Data("DEPOT_RETURN \(label) late \(clock(now)) +\(lateNow - lateSoFar): \(at)\n".utf8))
+                    lateSoFar = lateNow
+                }
+            }
             if stuck.count > deadlocked {
                 deadlocked = stuck.count
                 let places = stuck.compactMap { id -> String? in
@@ -321,6 +347,9 @@ final class DepotReturnReportTests: XCTestCase {
             guard let day = world.lineDays(line.id).first(where: { $0.day == counted }) else { continue }
             trips += day.tally.trips
             late += day.tally.lateTrips
+        }
+        for (key, count) in lateBy.sorted(by: { $0.key < $1.key }) {
+            FileHandle.standardError.write(Data("DEPOT_RETURN \(label) late by hour \(key): \(count)\n".utf8))
         }
         let most = standing.sorted { $0.key.rawValue < $1.key.rawValue }
             .map { "\(world.station(id: $0.key)?.name ?? "?") \($0.value)" }.joined(separator: ", ")

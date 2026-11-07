@@ -279,11 +279,14 @@ EOF
   make_ipa device-list distribution 7.2 false "$devices"
   make_ipa missing-profile distribution 7.2 false "" no-profile
   make_ipa development-signing development 7.2 false ""
+  # A first attempt's plain build number (decision 616), and the old ".1"
+  # form, which must not pass for it.
+  make_ipa plain distribution 7 false ""
 
-  # check <fixture> <expected exit> [error text]
+  # check <fixture> <expected exit> [error text] [expected build, default 7.2]
   check() {
-    local name="$1" expected="$2" text="${3:-}" status=0
-    EXPECTED_BUNDLE_ID="$bundle" EXPECTED_VERSION=0.1.0 EXPECTED_BUILD=7.2 EXPECTED_TEAM_ID="$team" \
+    local name="$1" expected="$2" text="${3:-}" build="${4:-7.2}" status=0
+    EXPECTED_BUNDLE_ID="$bundle" EXPECTED_VERSION=0.1.0 EXPECTED_BUILD="$build" EXPECTED_TEAM_ID="$team" \
       GITHUB_STEP_SUMMARY=/dev/null "$here/testflight-verify-ipa.sh" "$tmp/$name.ipa" >"$tmp/$name.log" 2>&1 ||
       status=$?
     if [[ "$status" -ne "$expected" ]]; then
@@ -305,6 +308,8 @@ EOF
   check device-list 1 "lists devices"
   check missing-profile 1 "The app has no embedded.mobileprovision."
   check development-signing 1 "signed with a development certificate"
+  check plain 0 "" 7
+  check wrong-build 1 "The build number is 7.1, not 7." 7
   finish
 }
 
