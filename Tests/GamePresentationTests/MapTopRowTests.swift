@@ -14,7 +14,9 @@ final class MapTopRowTests: XCTestCase {
         // before More among them), the line 1 and 2 either side, the glass
         // 3 each side.
         // Decision 631: and the button that puts it away (28, 2 apart).
-        XCTAssertEqual(MapTopRow.stripWidth, 6 * 46 + 6 * 2 + 5 + 6 + 2 + 28)
+        let buttons: Double = 6 * 46
+        let gaps: Double = 6 * 2
+        XCTAssertEqual(MapTopRow.stripWidth, buttons + gaps + 5 + 6 + 2 + 28)
         XCTAssertEqual(MapTopRow.stripWidth, 329)
         XCTAssertEqual(MapTopRow.layersButtonWidth, 82)
     }
