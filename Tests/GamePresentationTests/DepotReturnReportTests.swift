@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
-/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, danhai, ankeng, ankeng-added, sanying,
+/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, tymc-old, tymc-rebuilt, danhai, ankeng, ankeng-added, sanying,
 /// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off,
 /// and `DEPOT_RETURN_CONTROLLED=1` as well to keep it on). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute (HEALTH-110: `DEPOT_RETURN_FAST=1` at the
@@ -44,7 +44,7 @@ final class DepotReturnReportTests: XCTestCase {
     /// Decision 556: the Taoyuan Airport MRT, on a map wide enough for it.
     func testTheTaoyuanAirportLine() throws {
         try wanted("tymc")
-        try report("tymc", Self.bought("tymc:A", side: 1 << 22))
+        try report("tymc", Self.resumed() ?? Self.bought("tymc:A", side: 1 << 22))
     }
 
     /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
@@ -78,6 +78,36 @@ final class DepotReturnReportTests: XCTestCase {
         session.selectLine(id)
         XCTAssertTrue(session.addRealDepot(try XCTUnwrap(session.selectedLineRealDepotOffer)), session.message?.text ?? "")
         try report("ankeng-added", session.world)
+    }
+
+    /// Decision 605 (continued): the Taoyuan Airport MRT bought as it was
+    /// before its expresses came, run a day, and at two in the morning
+    /// left as it is (`tymc-old`) or rebuilt from the line's panel
+    /// (`tymc-rebuilt`); played 51 hours from there.
+    func testTheTaoyuanAirportLineBoughtBefore() throws {
+        try wanted("tymc-old")
+        let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
+        let (session, _) = try Self.taoyuanAirportBoughtBefore(simple: simple)
+        try report("tymc-old", session.world)
+    }
+
+    func testTheTaoyuanAirportLineRebuilt() throws {
+        try wanted("tymc-rebuilt")
+        let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
+        let (session, id) = try Self.taoyuanAirportBoughtBefore(simple: simple)
+        session.selectLine(id)
+        XCTAssertTrue(session.rebuildRealLine(try XCTUnwrap(session.selectedLineRealRebuildOffer)), session.message?.text ?? "")
+        try report("tymc-rebuilt", session.world)
+    }
+
+    /// The old line's first day, to two in the morning of the next.
+    private static func taoyuanAirportBoughtBefore(simple: Bool) throws -> (session: GameSession, line: LineID) {
+        let (session, id) = try RealLineRebuildTests.boughtAsBefore(rules: simple ? .simple : .realistic)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 26 * 60)
+            return ""
+        })
+        return (session, id)
     }
 
     func testTheSanyingLine() throws {

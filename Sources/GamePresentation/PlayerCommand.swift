@@ -69,6 +69,11 @@ public enum PlayerCommand: Hashable, Sendable {
     /// track from the end of the line's, the depot and its sidings, made
     /// one of the line's depots, all or none.
     case addRealLineDepot(RealLineDepotAddition)
+    /// A line bought before its real layout came rebuilt as real (decision
+    /// 605, ``GameSession/selectedLineRealRebuildOffer``): a platform track
+    /// beside the overtaking station's platforms and the timetable whose
+    /// expresses overtake there, all or none.
+    case rebuildRealLine(RealLineRebuild)
     /// A real station bought (decision 400 A.8, ``GameSession/realStationOffer(for:system:)``):
     /// a short stretch of track along the real line, traced as
     /// ``buildTrackChain(_:)`` lays it, and the station's platform the
@@ -239,6 +244,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .autoService: "autoService"
         case .acquireRealLine: "acquireRealLine"
         case .addRealLineDepot: "addRealLineDepot"
+        case .rebuildRealLine: "rebuildRealLine"
         case .buyRealStation: "buyRealStation"
         case .buildStationLayout: "buildStationLayout"
         case .buildStationCrossovers: "buildStationCrossovers"
@@ -341,6 +347,9 @@ extension GameSession {
         case .addRealLineDepot(let addition):
             try build(addition, in: &world)
             outcome.line = world.line(id: addition.line)
+        case .rebuildRealLine(let rebuild):
+            try build(rebuild, in: &world)
+            outcome.line = world.line(id: rebuild.line)
         case .buyRealStation(let purchase):
             outcome.station = try build(purchase, in: &world)
         case .buildStationLayout(let plan):
@@ -430,6 +439,8 @@ extension PlayerCommand: Codable {
         var acquisition: RealLineAcquisition?
         /// Decision 557.
         var realDepot: RealLineDepotAddition?
+        /// Decision 605.
+        var realRebuild: RealLineRebuild?
         var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
         /// Decision 285: the platform's twin on the track beside it;
@@ -563,6 +574,9 @@ extension PlayerCommand: Codable {
         case "addRealLineDepot":
             guard let addition = record.realDepot else { throw invalid("a depot added needs its layout") }
             self = .addRealLineDepot(addition)
+        case "rebuildRealLine":
+            guard let rebuild = record.realRebuild else { throw invalid("a line rebuilt needs its layout") }
+            self = .rebuildRealLine(rebuild)
         case "buyRealStation":
             let stretches = try (record.stretches ?? []).map { command in
                 guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
@@ -705,6 +719,8 @@ extension PlayerCommand: Codable {
             record.acquisition = acquisition
         case .addRealLineDepot(let addition):
             record.realDepot = addition
+        case .rebuildRealLine(let rebuild):
+            record.realRebuild = rebuild
         case .buyRealStation(let purchase):
             record.stretches = purchase.stretches.map(PlayerCommand.buildTrack)
             record.platformStretch = purchase.platform
@@ -778,6 +794,8 @@ extension PlayerCommand {
             language.text("buy \(acquisition.lineName)", "收購\(acquisition.lineName)")
         case .addRealLineDepot(let addition):
             language.text("add \(addition.depot.name)", "加建\(addition.depot.name)")
+        case .rebuildRealLine:
+            language.text("rebuild the line as real", "照真實改建")
         case .buyRealStation(let purchase):
             language.text("buy \(purchase.name) station", "收購\(purchase.name)站")
         case .removePlatform, .removeTrack:

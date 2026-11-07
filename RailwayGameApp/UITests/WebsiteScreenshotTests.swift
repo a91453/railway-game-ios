@@ -166,6 +166,60 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("xiaobitan-single-3d", app)
     }
 
+    /// Decision 605 (continued): the Taoyuan Airport MRT bought as it was
+    /// before its expresses came, at 02:00 with its last trains in: its
+    /// panel's 「照真實改建」, the card saying what it lays and what it
+    /// costs, and Chang Gung Memorial Hospital station after it with four
+    /// tracks, a loop outside each platform. For the screenshot review of
+    /// the pull request that made the rebuild work.
+    func testTaoyuanAirportRebuild() {
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "tymcRebuild", "-screenshot-buy-real-before", "tymc:A"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let done = app.buttons["acquired.done"]
+        XCTAssertTrue(done.appears(within: 600), "The line is bought")
+        settle(seconds: 3)
+        keep("tymc-rebuild-before-2d", app)
+        if done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        let rebuild = app.buttons["line.rebuildAsReal"]
+        if !rebuild.appears(within: 5) {
+            let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'line.row.'")).firstMatch
+            XCTAssertTrue(row.appears(within: 10), "The bought line is listed")
+            row.tap()
+        }
+        for _ in 0..<6 where !(rebuild.exists && rebuild.isHittable) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(rebuild.becomesHittable(within: 10), "The line's panel offers the rebuild")
+        settle(seconds: 2)
+        keep("tymc-rebuild-panel", app)
+        rebuild.tap()
+        let confirm = app.buttons["line.rebuildAsReal.confirm"]
+        XCTAssertTrue(confirm.appears(within: 30), "The card offers to rebuild")
+        settle(seconds: 2)
+        keep("tymc-rebuild-card", app)
+        confirm.tap()
+        XCTAssertTrue(rebuild.disappears(within: 60), "Nothing is left to rebuild")
+        settle(seconds: 2)
+        keep("tymc-rebuild-panel-after", app)
+
+        let close = app.navigationBars.buttons["完成"].firstMatch
+        XCTAssertTrue(close.becomesHittable(within: 10), "The panel can be closed")
+        close.tap()
+        XCTAssertTrue(close.disappears(within: 10), "The panel closes")
+        settle(seconds: 5)
+        keep("tymc-rebuild-after-2d", app)
+    }
+
     /// Decision 535 (continued, KLRT): the Kaohsiung Circular Light Rail
     /// on a real map of Kaohsiung: its purchase card (round the ring, no
     /// terminal named), the card once bought, then run on to 07:40 with a

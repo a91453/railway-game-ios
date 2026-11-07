@@ -112,6 +112,15 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// request that put it on sale.
     case klrt
 
+    /// Decision 605 (continued): the same empty map, four times as wide,
+    /// round Chang Gung Memorial Hospital station at 02:00, for
+    /// `-screenshot-buy-real-before tymc:A` to buy the Taoyuan Airport MRT
+    /// as it was before its expresses came
+    /// (``GameSession/buyAsBeforeForScreenshot(_:)``): its panel's
+    /// rebuild, the card, and the station's four tracks after it. For
+    /// the screenshot review of the pull request that made it work.
+    case tymcRebuild
+
     /// Decision 565: a new real-world game round Taipei Main Station, a
     /// line of two stations 800 m apart whose platforms are four 20 m cars
     /// long, as the platform tool builds them, and its train of four
@@ -204,6 +213,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .xiaobitan: (24.9734, 121.5368)
         // The middle of the ring's 38 stations.
         case .klrt: (22.6281, 120.3036)
+        // Chang Gung Memorial Hospital station, as the bundled tymc.json.
+        case .tymcRebuild: (25.06053, 121.37073)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
@@ -241,6 +252,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
+        // The line runs 50 km; the map opens at 02:00, its last trains in.
+        case .tymcRebuild: Self.realLineWorld(at: self, side: 1 << 22, ticks: 12, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
 
@@ -341,15 +354,15 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the Xiaobitan Branch Line's too), twice the usual a side as the
     /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
     /// with money enough for it; bought once the app's real data is read.
-    private static func realLineWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+    private static func realLineWorld(at scene: ScreenshotScene, side: Int64 = 1 << 21, ticks: Int = 33, in language: DisplayLanguage) -> GameWorld {
         guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
-              let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
+              let bounds = try? WorldBounds(width: side, height: side) else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
         try? world.mapGround()
         // On to 05:30 while the map is empty, ten minutes a tick: the Debug
         // app then runs only the morning itself after it buys the line.
         world.setSpeed(.fast)
-        try? world.advance(ticks: 33)
+        try? world.advance(ticks: ticks)
         world.setSpeed(.paused)
         return world
     }
@@ -816,6 +829,30 @@ extension GameSession {
             world.setSpeed(.paused)
             return ""
         }
+    }
+
+    /// Decision 605 (continued): real line `id` bought from its timetable
+    /// as it was before decision 605, every train stopping everywhere
+    /// (``ScreenshotScene/tymcRebuild``), the game paused and the line
+    /// picked; `false` when it is not on sale or not bought.
+    public func buyAsBeforeForScreenshot(_ id: String) -> Bool {
+        guard let current = railways, let runs = current.metroRuns[id] else { return false }
+        var before = current
+        before.metroRuns[id] = runs.stoppingEverywhere()
+        railways = before
+        let bought = buyForScreenshot(id)
+        railways = current
+        if bought, let line = world.acquisition(of: id)?.line { selectLine(line) }
+        return bought
+    }
+
+    /// Decision 605 (continued): the map looked over `metres` round the
+    /// scene's place, for a screenshot of what stands there.
+    public func lookOverForScreenshot(_ scene: ScreenshotScene, metres: Double) {
+        guard let place = scene.place, let frame = RealWorldFrame(world: world) else { return }
+        let (x, y) = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
+        let reach = metres * Double(WorldCoordinate.unitsPerMetre)
+        lookOver(WorldRegion(minX: x - reach, minY: y - reach, maxX: x + reach, maxY: y + reach))
     }
 
     /// Decision 564: the game run on to `seconds` into the day, then
