@@ -50,7 +50,7 @@ final class DepotReturnReportTests: XCTestCase {
     /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
     func testTheKaohsiungLightRail() throws {
         try wanted("klrt")
-        try report("klrt", Self.bought("krtc:C"))
+        try report("klrt", Self.resumed() ?? Self.bought("krtc:C"))
     }
 
     func testTheGreenMountainLine() throws {

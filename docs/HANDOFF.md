@@ -596,7 +596,7 @@
   - 還沒排：其他會自己跳出來的 alert／sheet（PassingLoopCards、年報）可能也會把 3D 關掉，CABVIEW-3 或下一個 bug 單一起查。
 - **在做的 session**（都改向第 54 任回報）：
   - MAP3D-MEM-2 session_01YGNNup5eXUdVqRswxUnp5D：#1919（決策 610 續二，ready，head `0619eb01`）Swift CI 綠；Xcode build 被 patch-id 快取跳過，所以手動跑了 ios-build `only_testing` run 42336336796，交接時還在跑。綠了就合（`expectedHeadSha` = `0619eb0101ad4cc92557767b1f9a9de68ccd1f51`）。它自己有 07:12 UTC 的提醒排程。
-  - KLRT-SPARE session_01YGNNuou5XfVJGfy5r9Q77i：`claude/klrt-spare`，決策 609 續（備用車死結的根因在 609「下一步（續）」第 2 項），動 GameCore，佔一個 GameCore 名額。
+  - KLRT-SPARE session_01YGNNuou5XfVJGfy5r9Q77i：`claude/klrt-spare`，[決策 609 續（KLRT-SPARE）](decisions/609.md)，動 GameCore。擋路的是跑完一圈、停在那站唯一月台的車（不是剛出廠的車）；決策 609 第一段改成環狀線每個方向也算，高雄輕軌擬實第二天誤點 5 → 0、死結 18 分 → 0，空車 46 → 54 趟。非環線不變。
   - ROADTUNNEL session_01YGNNunPRoXT1mpxPNA7FfC：`claude/road-tunnel`，決策 611（`docs/decisions/611.md` 由它新增）；修審圖意見（隧道口上方一塊平的長方形、洞內太亮），第 3 級截圖寄單給 M6。
   - TYMC-REBUILD-2 session_01YGNNunUa7SsAyeQMn5nwEN（#1875，draft，壓縮 1 次，不接新工作）：成因 1（改建當天晚點還在三重的車被收起）已修；第 2 天簡單＋行車控制還是 241/333、死結 32，現買的線 18/333、死結 11，卡在西段與青埔機廠，看起來是 GameCore 派車／行車控制對初始狀態敏感。第 53 任決定：它不動 GameCore、#1875 不合，由第 54 任之後另開 GameCore 的 **TYMC-REBUILD-3** 接（起點在決策 605 §3「續」下一步 2）。它推完交接就停，之後封存。
   - Codex #1904（站房外觀第一批）：等 Codex。
