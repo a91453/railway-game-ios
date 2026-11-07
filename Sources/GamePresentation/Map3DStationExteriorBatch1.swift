@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -16,6 +16,7 @@ public enum Map3DStationExteriorBatch1 {
         case .nangangTRA: builder.nangangExteriorStudy(detail: detail)
         case .taoyuanHSR: builder.taoyuanHSRExteriorStudy(detail: detail)
         case .hsinchuHSR: builder.hsinchuHSRExteriorStudy(detail: detail)
+        case .taichungHSR: builder.taichungHSRExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -534,6 +535,48 @@ public enum Map3DStationExteriorBatch1 {
         (-43.618, -69.753), (-47.282, -69.641), (-46.889, -59.812),
         (-61.120, -58.700), (-74.272, -57.866), (-75.019, -69.363),
         (-77.159, -69.219), (-77.350, -75.446),
+    ]
+
+    // Taichung HSR / TRA Xinwuri / Taichung MRT / two transfer links.
+    // osmtoday Taiwan PBF 2026-11-06. Metres east/north from
+    // (120.61474665, 24.1112536); © OpenStreetMap contributors, ODbL 1.0.
+    static let xinwuriFootprint: [(Float, Float)] = [ // OSM way 337921979
+        (7.688, -149.713), (-93.034, -138.137), (-116.692, -135.413),
+        (-125.989, -134.757), (-135.986, -134.868), (-144.826, -135.258),
+        (-150.226, -135.647), (-153.250, -167.304), (-148.257, -170.039),
+        (-139.630, -172.841), (-130.018, -174.787), (-121.483, -176.044),
+        (-60.485, -182.793), (-60.769, -185.284), (-63.936, -213.817),
+        (-52.599, -214.829), (-38.897, -215.941), (-37.192, -196.893),
+        (-36.259, -185.273), (4.562, -189.543), (21.928, -190.266),
+        (29.174, -201.696), (36.908, -199.295), (37.700, -189.654),
+        (43.972, -188.575), (49.301, -186.074), (50.630, -169.283),
+        (46.915, -164.491), (39.638, -159.820), (31.965, -157.241),
+        (56.486, -133.656), (32.473, -130.888),
+    ]
+    static let taichungHSRFootprint: [(Float, Float)] = [ // OSM way 544377825
+        (110.684, 215.941), (119.443, 201.696), (142.218, 199.906),
+        (153.250, 212.360), (145.577, 69.074), (141.944, 19.526),
+        (138.716, -9.207), (137.620, -18.903), (133.023, -59.890),
+        (132.008, -68.874), (127.684, -107.392), (121.128, -141.329),
+        (112.511, -127.674), (89.786, -124.772), (78.744, -136.147),
+        (65.702, -134.757), (56.486, -133.656), (32.473, -130.888),
+        (26.373, -125.617), (44.409, -111.373), (60.901, -97.451),
+        (69.630, -98.285), (76.085, 25.041), (80.824, 74.645),
+        (103.792, 195.914),
+    ]
+    static let taichungLinkEWFootprint: [(Float, Float)] = [ // OSM way 862779520
+        (-87.807, -84.575), (-79.799, -85.320), (-69.873, -86.332),
+        (-65.742, -86.676), (-64.657, -75.468), (-111.750, -70.142),
+        (-112.592, -77.725), (-87.361, -80.839),
+    ]
+    static let taichungLinkNSFootprint: [(Float, Float)] = [ // OSM way 862779521
+        (-79.799, -85.320), (-83.098, -117.622),
+        (-73.172, -118.767), (-69.873, -86.332),
+    ]
+    static let taichungMRTFootprint: [(Float, Float)] = [ // OSM way 862779522
+        (-116.692, -135.413), (-93.034, -138.137), (7.688, -149.713),
+        (15.392, -143.864), (32.473, -130.888), (-73.172, -118.767),
+        (-83.098, -117.622), (-146.257, -110.372), (-148.632, -131.699),
     ]
 
 }
@@ -1275,5 +1318,117 @@ private extension StationKitBuilder {
         liujia.box(0, 6.52, -15.4, 42, 0.22, 0.42, steel)
         add(.flat(named: "liujia-station", from: liujia.mesh),
             at: Map3DPoint(-61.24, 0, 82.58), angle: 86.1353 * .pi / 180)
+    }
+
+    mutating func taichungHSRExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let roof = Map3DColor.rgb(0xE6EAE6)
+        let trim = Map3DColor.rgb(0xD8E0DD)
+        let wall = Map3DColor.rgb(0xD4D8D1)
+        let steel = Map3DColor.rgb(0xA8B8B6)
+        let glass = Map3DColor.rgb(0x98B7B8)
+        let darkGlass = Map3DColor.rgb(0x6A8589)
+        let shade = Map3DColor.rgb(0x697A7B)
+
+        footprint(Map3DStationExteriorBatch1.taichungHSRFootprint, color: wall)
+        footprint(Map3DStationExteriorBatch1.xinwuriFootprint, color: wall)
+        footprint(Map3DStationExteriorBatch1.taichungMRTFootprint, color: trim,
+                  baseY: 8, height: 0.32)
+        for outline in [Map3DStationExteriorBatch1.taichungLinkEWFootprint,
+                        Map3DStationExteriorBatch1.taichungLinkNSFootprint] {
+            footprint(outline, color: steel, baseY: 4, height: 0.32)
+        }
+
+        // The three halls have no OSM height tags. The 30/18/23 m peaks are
+        // reference-display estimates; roof and facade come from photos.
+        var hsr = StationKitBuilder()
+        hsr.box(0, 0.32, 0, 351, 75, 11.5, wall)
+        hsr.box(0, 11.82, 0, 350, 84, 7.2, glass)
+        hsr.box(0, 19.02, 0, 348, 83, 5.8, trim)
+        hsr.canopy(0, 25, 0, length: 360, width: 95,
+                   rise: 5, color: roof)
+        for z in stride(from: Float(-38), through: 38, by: detail == .near ? 9.5 : 19) {
+            let y = 25 + sinf((z + 47.5) / 95 * .pi) * 5
+            hsr.box(0, y + 0.02, z, 356, 0.14, 0.06, trim)
+        }
+        for x in stride(from: Float(-160), through: 160, by: detail == .near ? 16 : 40) {
+            for z: Float in [-43, 43] {
+                hsr.box(x, 0.32, z, 0.85, 0.85, 24.4, steel)
+                if detail == .near {
+                    hsr.beam(Map3DPoint(x, 20, z),
+                             Map3DPoint(x, 25.2, z * 0.77), 0.3, shade)
+                }
+            }
+        }
+        for z: Float in [-42.1, 42.1] {
+            hsr.box(0, 0.32, z, 347, 0.28, 8.5, darkGlass)
+        }
+        for x in stride(from: Float(-162), through: 162, by: detail == .near ? 9 : 27) {
+            for z: Float in [-42.35, 42.35] {
+                hsr.box(x, 1.0, z, 0.38, 0.2, 18.0, trim)
+            }
+        }
+        add(.flat(named: "taichung-hsr-hall", from: hsr.mesh),
+            at: Map3DPoint(107.0, 0, -38.07), angle: 79.0653 * .pi / 180)
+
+        var tra = StationKitBuilder()
+        tra.box(0, 0.32, 0, 204, 74, 12.0, wall)
+        tra.box(0, 12.32, 0, 208, 84, 5.68, roof)
+        tra.box(0, 1, -37.2, 52, 0.25, 15.8, darkGlass)
+        tra.box(0, 0.32, -42.5, 45, 8.0, 17.0, darkGlass)
+        for x in stride(from: Float(-20), through: 20, by: detail == .near ? 4 : 10) {
+            tra.box(x, 0.32, -46.65, 0.3, 0.2, 17.0, steel)
+        }
+        for x in stride(from: Float(-96), through: 96, by: detail == .near ? 12 : 30) {
+            for z: Float in [-37.5, 37.5] {
+                tra.box(x, 0.32, z, 0.6, 0.5, 12, trim)
+            }
+        }
+        tra.box(0, 18, -24, 58, 43, 1.0, roof)
+        for x in stride(from: Float(-21), through: 21, by: detail == .near ? 10.5 : 21) {
+            tra.box(x, 0.32, -43, 0.6, 0.6, 18.0, steel)
+        }
+        add(.flat(named: "xinwuri-station", from: tra.mesh),
+            at: Map3DPoint(-48.18, 0, 174.11), angle: 0.6372 * .pi / 180)
+
+        var mrt = StationKitBuilder()
+        for x in stride(from: Float(-76), through: 76, by: detail == .near ? 19 : 38) {
+            for z: Float in [-8.5, 8.5] {
+                mrt.box(x, 0, z, 0.8, 0.8, 8, steel)
+            }
+        }
+        mrt.box(0, 8.32, 0, 176, 20, 10.2, glass)
+        for z: Float in [-10.2, 10.2] {
+            mrt.box(0, 8.32, z, 174, 0.25, 8.8, darkGlass)
+        }
+        for x in stride(from: Float(-78), through: 78, by: detail == .near ? 9 : 26) {
+            for z: Float in [-10.45, 10.45] {
+                mrt.box(x, 8.32, z, 0.3, 0.2, 10.0, trim)
+            }
+        }
+        mrt.canopy(0, 18.5, 0, length: 180, width: 21.5,
+                   rise: 4.5, color: roof)
+        for x in stride(from: Float(-72), through: 72, by: detail == .near ? 18 : 36) {
+            mrt.beam(Map3DPoint(x, 18.5, -10),
+                     Map3DPoint(x, 22.7, 0), 0.25, steel)
+        }
+        add(.flat(named: "taichung-mrt", from: mrt.mesh),
+            at: Map3DPoint(-58.18, 0, 131.47), angle: -6.5481 * .pi / 180)
+
+        for (name, at, angle, length, width) in [
+            ("taichung-link-east-west", Map3DPoint(-88.87, 0, 78.69), Float(-6.4527), Float(47.6), Float(11.6)),
+            ("taichung-link-north-south", Map3DPoint(-76.57, 0, 102.16), Float(84.1794), Float(32.6), Float(10.0))
+        ] {
+            var link = StationKitBuilder()
+            link.box(0, 4.32, 0, length, width, 6.8, glass)
+            link.box(0, 11.12, 0, length + 0.5, width + 0.4, 0.88, roof)
+            for x in stride(from: -length / 2 + 4, through: length / 2 - 4,
+                            by: detail == .near ? 6 : 12) {
+                for z in [-width / 2, width / 2] {
+                    link.box(x, 4.32, z, 0.25, 0.2, 6.8, steel)
+                }
+            }
+            add(.flat(named: name, from: link.mesh), at: at,
+                angle: angle * .pi / 180)
+        }
     }
 }
