@@ -94,15 +94,23 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Depot past Taipei Zoo and over Neihu Depot past Nangang Exhibition
     /// Center, from the side and from higher up. For the screenshot review
     /// of the pull request that laid the depots as the real yards.
-    func testWenhuDepotMuzha() { shootWenhuDepot("muzha", at: "25.000776,121.586414") }
-    func testWenhuDepotNeihu() { shootWenhuDepot("neihu", at: "25.059900,121.619920") }
+    func testWenhuDepotMuzha() { shootRealDepot("wenhu-depot-muzha", at: "25.000776,121.586414") }
+    func testWenhuDepotNeihu() { shootRealDepot("wenhu-depot-neihu", at: "25.059900,121.619920") }
 
-    private func shootWenhuDepot(_ name: String, at place: String) {
+    /// Decision 621: the Kaohsiung Circular Light Rail bought on a real map
+    /// of Kaohsiung, its trains in its depot, laid as a strip beside the
+    /// line as the real one, on the 3D map from the side and from higher
+    /// up. For the screenshot review of the pull request that laid it.
+    func testKaohsiungLightRailDepot() {
+        shootRealDepot("klrt-depot", at: "22.609000,120.325500", scene: "klrt", line: "krtc:C")
+    }
+
+    private func shootRealDepot(_ name: String, at place: String, scene: String = "wenhu", line: String = "trtc:BR") {
         // The buying takes minutes in the Debug app (the workflow allows up
         // to 30 minutes a test).
         executionTimeAllowance = 1_500
         for (shot, view) in [("side", "450,200,55"), ("high", "900,200,20")] {
-            let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-3d-view", view,
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-buy-real", line, "-screenshot-3d-view", view,
                                      "-screenshot-3d-at", place, "-map3D.quality", "high"])
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy buying for a minute at a
@@ -121,7 +129,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
             XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
             settle(seconds: 12)
-            keep("wenhu-depot-\(name)-\(shot)", app)
+            keep("\(name)-\(shot)", app)
             app.terminate()
         }
     }
