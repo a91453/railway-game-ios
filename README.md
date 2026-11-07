@@ -8,7 +8,7 @@ AppIcon 使用定稿 package 的兩張原始 1024×1024 PNG：Any／Default 為�
 
 ## 目前狀態
 
-**早期開發，內部 TestFlight 0.5.0。** 2026-10-12 起功能凍結，正在修 bug。
+**早期開發，內部 TestFlight 0.6.0。** 2026-10-12 起功能凍結，正在修 bug。
 
 - 現況、已有的系統、各內容開了哪些規則、文件地圖與決策索引：[docs/OVERVIEW.md](docs/OVERVIEW.md)
 - 下一步做什麼（唯一的優先順序），以及機廠、行駛時間、比例、車站商業的可行性：[docs/research/NEXT_PRIORITIES_2026-10-12.md](docs/research/NEXT_PRIORITIES_2026-10-12.md)
