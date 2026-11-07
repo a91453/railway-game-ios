@@ -78,10 +78,21 @@ extension Map3DStationExteriorBatch1 {
     /// The study turned into the scene's axes (x east, y up, z south) about
     /// its origin: north mirrored to south, each triangle's turn and normal
     /// with it, so it still faces out.
+    ///
+    /// Decision 625 續: its glass walls (``nightGlassColours(for:)``) as
+    /// the landmarks' curtain glass (``Map3DVertex/curtainGlass``), `u`
+    /// metres along the wall and `v` metres up: mullions and floors by
+    /// day, one bay in three lit after dark as the city's windows are (a
+    /// glass wall glowing in its own pale colour was too faint to read).
     static func sceneMesh(for station: Station, detail: LevelOfDetail) -> Map3DMesh {
         let study = mesh(for: station, detail: detail)
+        let glass = nightGlassColours(for: station)
         let vertices = study.vertices.map { v in
-            Map3DVertex(Map3DPoint(v.x, v.y, -v.z), normal: Map3DPoint(v.nx, v.ny, -v.nz), color: v.color, u: v.u, v: v.v, layer: v.layer)
+            let position = Map3DPoint(v.x, v.y, -v.z), normal = Map3DPoint(v.nx, v.ny, -v.nz)
+            guard v.layer == Map3DVertex.glowing, glass.contains(v.color), let along = Map3DPoint(-normal.z, 0, normal.x).normalized else {
+                return Map3DVertex(position, normal: normal, color: v.color, u: v.u, v: v.v, layer: v.layer)
+            }
+            return Map3DVertex(position, normal: normal, color: v.color, u: position.dot(along), v: position.y, layer: Map3DVertex.curtainGlass)
         }
         var indices: [UInt32] = []
         indices.reserveCapacity(study.indices.count)
@@ -234,13 +245,20 @@ struct Map3DTrainRoom {
     /// polygons: cut by each stretch it reaches, across the ground either
     /// side of the stretch's middle (and `half` past its ends, so a bend
     /// leaves no gap), then over and under it.
-    func outside(_ polygon: [Map3DVertex]) -> [[Map3DVertex]] {
+    /// A piece of a polygon out of the room: `over`, the way along the
+    /// track (on the ground) when it lies over the room.
+    struct Piece {
+        var polygon: [Map3DVertex]
+        var over: Map3DPoint?
+    }
+
+    func outside(_ polygon: [Map3DVertex]) -> [Piece] {
         let xs = polygon.map(\.x), zs = polygon.map(\.z)
         let x0 = Int((xs.min()! / Self.cell).rounded(.down)), x1 = Int((xs.max()! / Self.cell).rounded(.down))
         let z0 = Int((zs.min()! / Self.cell).rounded(.down)), z1 = Int((zs.max()! / Self.cell).rounded(.down))
         var near = Set<Int>()
         for x in x0...x1 { for z in z0...z1 { near.formUnion(cells[Self.key(x, z)] ?? []) } }
-        var pending = [polygon]
+        var pending = [Piece(polygon: polygon, over: nil)]
         // In an order of their own places, not of how the lines were
         // listed, so the same track cuts the same pieces.
         let order = near.sorted { i, j in
@@ -255,9 +273,10 @@ struct Map3DTrainRoom {
     }
 
     /// What of `polygon` is out of the one stretch `s`.
-    private static func outside(_ polygon: [Map3DVertex], _ s: Stretch) -> [[Map3DVertex]] {
+    private static func outside(_ piece: Piece, _ s: Stretch) -> [Piece] {
+        let polygon = piece.polygon
         let flat = Map3DPoint(s.b.x - s.a.x, 0, s.b.z - s.a.z), length = flat.length
-        guard length > 1e-4 else { return [polygon] }
+        guard length > 1e-4 else { return [piece] }
         let along = flat * (1 / length), across = Map3DPoint(-along.z, 0, along.x)
         func t(_ v: Map3DVertex) -> Float { along.dot(Map3DPoint(v.x - s.a.x, 0, v.z - s.a.z)) }
         func d(_ v: Map3DVertex) -> Float { across.dot(Map3DPoint(v.x - s.a.x, 0, v.z - s.a.z)) }
@@ -265,17 +284,18 @@ struct Map3DTrainRoom {
         // Wholly to one side: as it is.
         if polygon.allSatisfy({ d($0) >= s.half }) || polygon.allSatisfy({ d($0) <= -s.half })
             || polygon.allSatisfy({ t($0) <= -reach }) || polygon.allSatisfy({ t($0) >= length + reach }) {
-            return [polygon]
+            return [piece]
         }
         // Linear in the vertex: the rails' height along the stretch is,
         // within it, so the planes over and under it are planes.
         func railsLinear(_ v: Map3DVertex) -> Float { s.a.y + (s.b.y - s.a.y) * (t(v) / length) }
-        // Nothing of it in this stretch's room: as it is, not cut up.
+        // Nothing of it in this stretch's room or over it: as it is, not
+        // cut up.
         var inside = polygon
         for plane in [{ (v: Map3DVertex) in -d(v) - s.half }, { d($0) - s.half }, { -t($0) - reach }, { t($0) - length - reach },
-                      { $0.y - railsLinear($0) - s.above }, { railsLinear($0) - s.below - $0.y }] as [(Map3DVertex) -> Float] {
+                      { railsLinear($0) - s.below - $0.y }] as [(Map3DVertex) -> Float] {
             inside = cut(inside, by: plane).0
-            if inside.count < 3 { return [polygon] }
+            if inside.count < 3 { return [piece] }
         }
         var kept: [[Map3DVertex]] = []
         let (left, rest) = cut(polygon) { d($0) + s.half }
@@ -287,10 +307,35 @@ struct Map3DTrainRoom {
         let (within, after) = cut(rest2) { t($0) - length - reach }
         kept.append(after)
         let (under, high) = cut(within) { $0.y - railsLinear($0) - s.above }
-        kept.append(high)
         let (low, _) = cut(under) { $0.y - railsLinear($0) + s.below }
         kept.append(low)
-        return kept.filter { $0.count >= 3 }
+        return kept.filter { $0.count >= 3 }.map { Piece(polygon: $0, over: piece.over) }
+            + (high.count >= 3 ? [Piece(polygon: high, over: piece.over ?? along)] : [])
+    }
+
+    /// Decision 625 續: a roof over the track only as its frame, a rib
+    /// ``frameWidth`` wide every ``frameSpacing`` metres along the track
+    /// (``Map3DStationExterior/carved(_:clearOf:ground:)``).
+    static let frameSpacing: Float = 16
+    static let frameWidth: Float = 1
+    /// From afar, every other rib (the far study's budget).
+    static let farFrameSpacing: Float = 32
+
+    /// The ribs of `polygon`, each where a multiple of ``frameSpacing``
+    /// metres along `along` (from the scene's origin, either way, so
+    /// tracks side by side cut the same ribs) lies within half
+    /// ``frameWidth``.
+    static func frame(_ polygon: [Map3DVertex], along: Map3DPoint, spacing frameSpacing: Float = frameSpacing) -> [[Map3DVertex]] {
+        guard polygon.count >= 3 else { return [] }
+        func t(_ v: Map3DVertex) -> Float { along.x * v.x + along.z * v.z }
+        let ts = polygon.map(t), half = frameWidth / 2
+        let first = Int(((ts.min()! - half) / frameSpacing).rounded(.up)), last = Int(((ts.max()! + half) / frameSpacing).rounded(.down))
+        guard first <= last else { return [] }
+        return (first...last).map { k in
+            let middle = Float(k) * frameSpacing
+            let (from, _) = cut(polygon) { middle - half - t($0) }
+            return cut(from) { t($0) - middle - half }.0
+        }
     }
 
     /// `polygon` cut by the plane `f = 0` (`f` linear in the vertex's
@@ -328,7 +373,8 @@ extension Map3DStationExterior {
     /// track and a roof over it stays. A part stands when
     /// its foot is within 0.6 m of `ground` or its bounds are within 0.6 m
     /// of a part that stands.
-    static func carved(_ mesh: Map3DMesh, clearOf room: Map3DTrainRoom, ground: Float) -> (mesh: Map3DMesh, kept: Float) {
+    static func carved(_ mesh: Map3DMesh, clearOf room: Map3DTrainRoom, ground: Float,
+                       frameSpacing: Float = Map3DTrainRoom.frameSpacing) -> (mesh: Map3DMesh, kept: Float) {
         let count = mesh.triangleCount
         guard count > 0 else { return (mesh, 1) }
         // The parts: triangles joined through corners at the same place.
@@ -360,23 +406,57 @@ extension Map3DStationExterior {
             members[parts[r]!].append(triangle)
         }
         func area(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint) -> Float { (b - a).cross(c - a).length / 2 }
-        // The pieces of a triangle clear of the room, the winding kept.
-        func clear(_ a: Map3DVertex, _ b: Map3DVertex, _ c: Map3DVertex, into pieces: inout [(Map3DVertex, Map3DVertex, Map3DVertex)]) {
-            for polygon in room.outside([a, b, c]) {
-                for k in 1..<(polygon.count - 1) where area(polygon[0].position, polygon[k].position, polygon[k + 1].position) > 1e-5 {
-                    pieces.append((polygon[0], polygon[k], polygon[k + 1]))
-                }
+        func polygonArea(_ p: [Map3DVertex]) -> Float {
+            (1..<(p.count - 1)).reduce(0) { $0 + area(p[0].position, p[$1].position, p[$1 + 1].position) }
+        }
+        // The pieces of a polygon as triangles, the winding kept; none
+        // thinner than a centimetre (slivers the cuts leave, drawn as
+        // stray fins).
+        func triangles(_ polygon: [Map3DVertex], into pieces: inout [(Map3DVertex, Map3DVertex, Map3DVertex)]) {
+            for k in 1..<(polygon.count - 1) {
+                let (a, b, c) = (polygon[0], polygon[k], polygon[k + 1])
+                guard !Self.isSliver(a.position, b.position, c.position) else { continue }
+                pieces.append((a, b, c))
             }
         }
-        var total: Float = 0
+        var total: Float = 0, framed: [Float?] = []
         var kept: [[(Map3DVertex, Map3DVertex, Map3DVertex)]] = []
         var low = [Map3DPoint](), high = [Map3DPoint]()
         for part in members {
             var pieces: [(Map3DVertex, Map3DVertex, Map3DVertex)] = []
+            var cut: [Map3DTrainRoom.Piece] = []
+            var partArea: Float = 0
             for triangle in part {
                 let v = (0..<3).map { mesh.vertices[Int(mesh.indices[triangle * 3 + $0])] }
-                total += area(v[0].position, v[1].position, v[2].position)
-                clear(v[0], v[1], v[2], into: &pieces)
+                partArea += area(v[0].position, v[1].position, v[2].position)
+                cut += room.outside([v[0], v[1], v[2]])
+            }
+            total += partArea
+            // Decision 625 續: a part whose share over the track and
+            // platforms is ``framedShare`` or more (a station's roof over
+            // its tracks) stands as its frame alone, ribs across the
+            // track, so the trains and platforms under it show; its area
+            // counts as left. Less (a hall's edge over a track or a
+            // platform) is cut back to the room's side, so no solid
+            // building hangs over the trains.
+            let over = cut.filter { $0.over != nil }.map { ($0, polygonArea($0.polygon)) }
+            if partArea > 0, let way = over.max(by: { $0.1 < $1.1 })?.0.over,
+               over.reduce(0, { $0 + $1.1 }) >= Self.framedShare * partArea {
+                framed.append(partArea)
+                // Its faces seen from above only: the camera never looks
+                // up at a roof's underside, and the ribs cost half as much.
+                // Ribs of its own triangles, then clear of the room (a rib
+                // is cut only across), not of the many pieces the room cut.
+                for triangle in part {
+                    let v = (0..<3).map { mesh.vertices[Int(mesh.indices[triangle * 3 + $0])] }
+                    guard v[0].ny > -0.3 else { continue }
+                    for rib in Map3DTrainRoom.frame(v, along: way, spacing: frameSpacing) where rib.count >= 3 {
+                        for piece in room.outside(rib) { triangles(piece.polygon, into: &pieces) }
+                    }
+                }
+            } else {
+                framed.append(nil)
+                for piece in cut where piece.over == nil { triangles(piece.polygon, into: &pieces) }
             }
             var lo = Map3DPoint(.infinity, .infinity, .infinity), hi = Map3DPoint(-.infinity, -.infinity, -.infinity)
             for piece in pieces {
@@ -404,15 +484,28 @@ extension Map3DStationExterior {
         }
         var vertices: [Map3DVertex] = [], indices: [UInt32] = [], left: Float = 0
         for (index, pieces) in kept.enumerated() where stands[index] {
+            if let whole = framed[index] { left += whole }
             for piece in pieces {
                 for vertex in [piece.0, piece.1, piece.2] {
                     indices.append(UInt32(vertices.count))
                     vertices.append(vertex)
                 }
-                left += area(piece.0.position, piece.1.position, piece.2.position)
+                if framed[index] == nil { left += area(piece.0.position, piece.1.position, piece.2.position) }
             }
         }
-        return (Map3DMesh(vertices: vertices, indices: indices), total > 0 ? left / total : 1)
+        return (Map3DMesh(vertices: vertices, indices: indices), total > 0 ? min(left / total, 1) : 1)
+    }
+
+    /// Decision 625 續: the share of a part over the room from which it
+    /// stands as its frame.
+    static let framedShare: Float = 0.25
+
+    /// Whether the triangle is a sliver: thinner than a centimetre across
+    /// its longest side, or of no area.
+    static func isSliver(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint) -> Bool {
+        let doubled = (b - a).cross(c - a).length
+        let longest = max((b - a).length, (c - b).length, (a - c).length)
+        return doubled < 1e-5 || doubled / max(longest, 1e-6) < 0.01
     }
 }
 
@@ -546,7 +639,8 @@ extension Map3DScene.Builder {
                                at origin: Map3DPoint, clearOf room: Map3DTrainRoom) -> (mesh: Map3DMesh, kept: Float) {
         var placed = Map3DMesh()
         placed.append(Map3DStationExteriorBatch1.sceneMesh(for: station, detail: detail), at: origin, forward: Map3DPoint(1, 0, 0))
-        return Map3DStationExterior.carved(placed, clearOf: room, ground: origin.y)
+        return Map3DStationExterior.carved(placed, clearOf: room, ground: origin.y,
+                                           frameSpacing: detail == .near ? Map3DTrainRoom.frameSpacing : Map3DTrainRoom.farFrameSpacing)
     }
 
     /// Whether `station`'s study stands (``addStationExterior(_:snapshot:frame:)``),
@@ -566,6 +660,11 @@ extension Map3DScene.Builder {
         let near = Self.exteriorCarved(station, detail: .near, at: origin, clearOf: room)
         guard near.kept >= Self.exteriorLeast else { return nil }
         let far = Self.exteriorCarved(station, detail: .far, at: origin, clearOf: room)
+        // Decision 625 續: in their own colours, as the landmarks are
+        // (decision 370): the look's pale version left the glass bands,
+        // the brick and the coloured fascias all near white.
+        keptColours.formUnion(near.mesh.vertices.map(\.color))
+        keptColours.formUnion(far.mesh.vertices.map(\.color))
         let saved = target
         defer { target = saved }
         // In the chunk of its origin, as a landmark's: the one block of

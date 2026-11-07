@@ -3452,6 +3452,8 @@ M6 重拍的一對（`docs/art/facade-real-screenshots-2026-11-07b/`）遊戲規
 - 機捷 A18 與高鐵桃園的真實層位（決策 625「下一步」）。
 - App 的 `-screenshot-lay-demo` 與新 UI 測試只能在 macOS CI 驗（UNVERIFIED）。
 
+STATION-EXT-2（session_01YGNNun8XcCE7vJPpVNXCYZ，同一條分支，2026-11-07）接手，改了遊戲規劃第 55 任看截圖的七點，寫在決策 625「續」：玻璃改帷幕玻璃（夜裡亮窗）、study 用自己的顏色、蓋在軌道上的屋頂只留骨架、邊緣懸在軌道上的切回、碎片不畫、左營與高鐵桃園加立面、高鐵台中截圖改看月台、`-screenshot-3d-clean` 藏提示列與 fps。還沒做的：遊戲規劃在 Mac 拍那六張截圖、看過才合；新竹 study 的正面朝向（決策 625「續」最後）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

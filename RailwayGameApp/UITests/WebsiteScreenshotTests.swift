@@ -144,11 +144,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         // Laying the lines and running half an hour take minutes in the
         // Debug app (the workflow allows up to 30 minutes a test).
         executionTimeAllowance = 1_500
+        // Each study's OSM origin, but the HSR Taichung one: its platforms'
+        // middle, 180 m north-east (the origin is by the high-rises).
         let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
-                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.1112536,120.61474665", "exteriorZuoying": "22.68726485,120.3074864"]
+                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864"]
         for (hour, suffix) in [("day", ""), ("night", "Night")] {
             let app = launch(extra: ["-screenshot-scene", scene + suffix, "-screenshot-lay-demo", view, "-screenshot-3d-view", "380,215,40",
-                                     "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high"])
+                                     "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high",
+                                     // Decision 625 續: no frame rate or gesture hint over the stations.
+                                     "-screenshot-3d-clean"])
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy laying the lines for a
             // minute at a time, longer than a UI query waits.

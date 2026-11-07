@@ -168,6 +168,61 @@ final class Map3DStationExteriorsTests: XCTestCase {
         XCTAssertEqual(clear.mesh.triangleCount, kit.mesh.triangleCount)
     }
 
+    /// Decision 625 續: a roof mostly over the track stands as its frame,
+    /// ribs across the track every ``Map3DTrainRoom/frameSpacing`` metres,
+    /// so the trains under it show; its area counts as left.
+    func testARoofOverTheTrackIsItsFrame() {
+        // A 60 m roof 12 m up, 20 m across, the track along its middle.
+        var kit = StationKitBuilder()
+        kit.box(0, 12, 0, 60, 20, 0.4, Map3DPalette.concrete)
+        for (x, z): (Float, Float) in [(-29, -9), (29, -9), (-29, 9), (29, 9)] { kit.box(x, 0, z, 0.5, 0.5, 12, Map3DPalette.concrete) }
+        var room = Map3DTrainRoom()
+        room.add(line: [Map3DPoint(-80, 0.3, 0), Map3DPoint(80, 0.3, 0)], half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: 0)
+        let cut = Map3DStationExterior.carved(kit.mesh, clearOf: room, ground: 0)
+        XCTAssertEqual(cut.kept, 1, accuracy: 0.001, "a frame counts as the roof")
+        // From above, the roof's top is ribs 1 m wide at x = -15, 0, 15.
+        var top: [Float: Float] = [:]
+        for t in 0..<cut.mesh.triangleCount {
+            let v = (0..<3).map { cut.mesh.vertices[Int(cut.mesh.indices[t * 3 + $0])].position }
+            guard v.allSatisfy({ $0.y > 12.3 }) else { continue }
+            let middle = ((v[0].x + v[1].x + v[2].x) / 3 / Map3DTrainRoom.frameSpacing).rounded() * Map3DTrainRoom.frameSpacing
+            top[middle, default: 0] += (v[1] - v[0]).cross(v[2] - v[0]).length / 2
+        }
+        XCTAssertEqual(Set(top.keys), [-15, 0, 15])
+        for (_, area) in top { XCTAssertEqual(area, Map3DTrainRoom.frameWidth * 20, accuracy: 0.5) }
+        // The ribs cross the track.
+        XCTAssertTrue(cut.mesh.vertices.contains { $0.y > 12 && $0.z < -Map3DTrainRoom.trackHalf }
+                      && cut.mesh.vertices.contains { $0.y > 12 && $0.z > Map3DTrainRoom.trackHalf })
+        // Every other rib from afar.
+        let far = Map3DStationExterior.carved(kit.mesh, clearOf: room, ground: 0, frameSpacing: Map3DTrainRoom.farFrameSpacing)
+        XCTAssertLessThan(far.mesh.triangleCount, cut.mesh.triangleCount)
+    }
+
+    /// Decision 625 續: a building whose edge only reaches over the track
+    /// (less than ``Map3DStationExterior/framedShare`` of it) is cut back
+    /// to the room's side, high as it is: nothing hangs over the trains.
+    func testAnEdgeOverTheTrackIsCutBack() {
+        // A 30 m hall 20 m high, its edge 2 m past the track's middle.
+        var kit = StationKitBuilder()
+        kit.box(0, 0, -13, 30, 30, 20, Map3DPalette.concrete)
+        var room = Map3DTrainRoom()
+        room.add(line: [Map3DPoint(-60, 0.3, 0), Map3DPoint(60, 0.3, 0)], half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: 0)
+        let cut = Map3DStationExterior.carved(kit.mesh, clearOf: room, ground: 0)
+        XCTAssertGreaterThan(cut.kept, 0.8)
+        for t in 0..<cut.mesh.triangleCount {
+            let v = (0..<3).map { cut.mesh.vertices[Int(cut.mesh.indices[t * 3 + $0])].position }
+            let middle = (v[0] + v[1] + v[2]) * (1 / 3)
+            XCTAssertLessThanOrEqual(middle.z, -Map3DTrainRoom.trackHalf + 0.01, "nothing over the track")
+        }
+    }
+
+    /// Decision 625 續: the cuts leave no sliver (a stray fin).
+    func testASliverIsNone() {
+        XCTAssertTrue(Map3DStationExterior.isSliver(Map3DPoint(0, 0, 0), Map3DPoint(10, 0, 0), Map3DPoint(5, 0.005, 0)))
+        XCTAssertTrue(Map3DStationExterior.isSliver(Map3DPoint(0, 0, 0), Map3DPoint(10, 0, 0), Map3DPoint(20, 0, 0)))
+        XCTAssertFalse(Map3DStationExterior.isSliver(Map3DPoint(0, 0, 0), Map3DPoint(10, 0, 0), Map3DPoint(5, 0.05, 0)))
+    }
+
     /// On a map of nowhere, and on a real map far from them, none stands.
     func testNoneOffTheRealStations() throws {
         XCTAssertTrue(Map3DScene(world: GameWorld.newGame()).stationExteriors.isEmpty)
@@ -212,6 +267,75 @@ final class Map3DStationExteriorsTests: XCTestCase {
             XCTAssertEqual(Self.inTheGauge(exterior.near, built.builder, ground: exterior.origin.y), 0, "\(study) near")
             XCTAssertEqual(Self.inTheGauge(exterior.far, built.builder, ground: exterior.origin.y), 0, "\(study) far")
         }
+    }
+
+    /// Decision 625 續: each study as it stands is lit at night (its glass
+    /// the landmarks' curtain glass, windows lit after dark), in its own
+    /// colours (not paled with the city's, so it reads solid), opaque,
+    /// and with no sliver left by the cuts.
+    func testLitAtNightInItsOwnColoursWithoutSlivers() async throws {
+        for study in Study.allCases {
+            let (_, built) = try await Self.built(round: study)
+            guard let exterior = built.builder.stationExteriors.first(where: { $0.station == study }) else { continue }
+            for (detail, mesh) in [("near", exterior.near), ("far", exterior.far)] {
+                XCTAssertGreaterThan(mesh.vertices.filter { $0.layer == Map3DVertex.curtainGlass }.count, 12, "\(study) \(detail): lit at night")
+                XCTAssertTrue(mesh.vertices.allSatisfy { built.builder.keptColours.contains($0.color) }, "\(study) \(detail): its own colours")
+                XCTAssertTrue(mesh.vertices.allSatisfy { $0.color >> 24 == 0xFF }, "\(study) \(detail): opaque")
+                let slivers = (0..<mesh.triangleCount).filter { t in
+                    let v = (0..<3).map { mesh.vertices[Int(mesh.indices[t * 3 + $0])].position }
+                    return Map3DStationExterior.isSliver(v[0], v[1], v[2])
+                }
+                XCTAssertEqual(slivers.count, 0, "\(study) \(detail): slivers")
+            }
+        }
+    }
+
+    /// Decision 625 續: with the demo's real lines laid round HSR Taoyuan
+    /// (as its screenshot has them), the study leaves the airport line's
+    /// A18 platforms open to the sky: nothing over them at any height.
+    func testTheA18PlatformsAreOpen() async throws {
+        let (session, view) = try DemoRealLinesTrackReportTests.game(at: "桃園", in: "thsr_sched", half: 3_000)
+        _ = await session.layDemoRealLines(in: view)
+        let built = try Self.built(round: .taoyuanHSR, in: session.world, heights: session.heights, railways: session.railways)
+        let exterior = try XCTUnwrap(built.builder.stationExteriors.first { $0.station == .taoyuanHSR })
+        let platforms = built.builder.laidPlatforms.filter { platform in platform.line.contains { exterior.covers($0, margin: 30) } }
+        XCTAssertFalse(platforms.isEmpty, "A18's platforms beside the study")
+        XCTAssertEqual(Self.inTheGauge(exterior.near, built.builder, ground: exterior.origin.y), 0)
+        var over = 0
+        for t in 0..<exterior.near.triangleCount {
+            let v = (0..<3).map { exterior.near.vertices[Int(exterior.near.indices[t * 3 + $0])].position }
+            let p = (v[0] + v[1] + v[2]) * (1 / 3)
+            for platform in platforms {
+                for (a, b) in zip(platform.line, platform.line.dropFirst()) {
+                    guard let along = Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized else { continue }
+                    let right = along.cross(.up)
+                    let (pa, pb) = (a + right * platform.offset, b + right * platform.offset)
+                    let ab = Map3DPoint(pb.x - pa.x, 0, pb.z - pa.z), ap = Map3DPoint(p.x - pa.x, 0, p.z - pa.z)
+                    let share = ab.dot(ap) / max(ab.dot(ab), 1e-6)
+                    if share > 0, share < 1, (ap - ab * share).length < platform.width / 2, p.y > pa.y { over += 1 }
+                }
+            }
+        }
+        XCTAssertEqual(over, 0, "nothing over A18's platforms")
+    }
+
+    /// Decision 625 續: the HSR Taichung screenshot
+    /// (`WebsiteScreenshotTests.shootStationExterior`, its
+    /// `exteriorTaichungHSR` place, 24.11248, 120.61598) looks at the
+    /// middle of the station's platforms, not at the study's origin by the
+    /// high-rises.
+    func testTheHSRTaichungScreenshotLooksAtItsPlatforms() async throws {
+        let (world, built) = try await Self.built(round: .taichungHSR)
+        let exterior = try XCTUnwrap(built.builder.stationExteriors.first { $0.station == .taichungHSR })
+        let points = world.railwaySnapshot().platforms
+            .filter { platform in platform.points.contains { exterior.covers(built.builder.point($0), margin: Map3DScene.Builder.exteriorCovers) } }
+            .flatMap(\.points)
+        XCTAssertFalse(points.isEmpty)
+        let x = points.reduce(0.0) { $0 + Double($1.x) } / Double(points.count)
+        let y = points.reduce(0.0) { $0 + Double($1.y) } / Double(points.count)
+        let shot = built.frame.worldPosition(latitude: 24.11248, longitude: 120.61598)
+        let apart = Double(hypot(shot.x - x, shot.y - y)) / Double(WorldCoordinate.unitsPerMetre)
+        XCTAssertLessThan(apart, 20, "the screenshot's place is the platforms' middle")
     }
 
     /// How many corners and middles of `mesh`'s triangles are in a track's
