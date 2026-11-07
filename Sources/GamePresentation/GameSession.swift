@@ -791,9 +791,12 @@ public final class GameSession {
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
-    /// which side of the track's end they fan out to, and the end picked.
+    /// which side of the track's end they fan out to (decision 619: none,
+    /// the default, fans them out about it, as real yards stand), what kind
+    /// of yard, and the end picked.
     public var networkDepotSidings = DepotYard.defaultSidings
-    public var networkDepotSide: PlatformTrackSide = .left
+    public var networkDepotSide: PlatformTrackSide?
+    public var networkDepotTemplate: DepotYardTemplate = .lightRail
     public internal(set) var networkDepotEnd: TrackNodeID?
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends (the default, decision 164),
