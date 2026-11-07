@@ -21,6 +21,21 @@ public enum Map3DRealFacade {
         return !quality.plan(lowPower: lowPower, heat: heat).fewerPixels
     }
 
+    /// Decision 610 續 (review L12-1): whether the map may ever draw them
+    /// on this device with this 3D look: only above the lowest tier, the
+    /// highest rung it climbs to (``Map3DQuality/tier(device:)``). The scene
+    /// is built without them when not, so their memory is not kept; Low
+    /// Power Mode and heat change while the map is open, so they only stop
+    /// the drawing (``draws(quality:lowPower:heat:tier:)``).
+    public static func mayDraw(quality: Map3DQuality, device: Map3DDeviceTier?) -> Bool {
+        guard let tier = quality.tier(device: device) else { return false }
+        return tier > .lower
+    }
+
+    /// Decision 610 續 (review L12-2): the most chunks' street fronts the
+    /// 3D map puts on the GPU in one frame (each at most some 0.9 MB).
+    public static let uploadsAFrame = 2
+
     /// A shopfront's bay along a street wall (§c.1: columns 4–6 m apart).
     static let bay: Float = 5
     /// The most bays a wall is given, and walls a building.
@@ -86,7 +101,7 @@ extension Map3DScene.Builder {
     /// ``facadeStreets`` is set and its chunk is built in full.
     mutating func addRealFacade(_ outline: [Map3DPoint], centre: Map3DPoint, ground: Float, height: Float, storeys: Int, kind: RealKind,
                                 wall: UInt32, street: FrontStreetLevel, rooms: Bool, r: (Int32) -> Float) {
-        guard let streets = facadeStreets, outline.count >= 3, !isCoarse(key(of: centre)) else { return }
+        guard buildsFacades, let streets = facadeStreets, outline.count >= 3, !isCoarse(key(of: centre)) else { return }
         let homes: Bool
         switch kind {
         case .shophouse, .house: homes = true
