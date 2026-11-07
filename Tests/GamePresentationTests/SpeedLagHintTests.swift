@@ -141,6 +141,29 @@ final class SpeedLagHintTests: XCTestCase {
         XCTAssertEqual(watch.hint?.speed, .fast)
     }
 
+    /// MAP3D-BOUNCE: the hint is a popover beside the 2D map's speed;
+    /// coming by itself under the 3D map, it took the 3D map's cover away
+    /// (an iPhone 17 Pro, 2026-11-07: 62 ms after it came). It waits while
+    /// the 3D map is open and comes as it closes.
+    @MainActor
+    func testTheHintWaitsWhileTheMap3DIsOpen() {
+        let session = GameSession(world: try! makeWorld(speed: .paused))
+        session.setMap3DOpen(true)
+        for second in 1...21 {
+            session.speedLagWatch.record(real: .seconds(second), speed: .x10, permille: 100, heat: .nominal)
+        }
+        session.syncSpeedLagHint()
+        XCTAssertNotNil(session.speedLagWatch.hint)
+        XCTAssertNil(session.speedLagHint, "the 3D map is open: not on the 2D map under it")
+        session.setMap3DOpen(false)
+        XCTAssertEqual(session.speedLagHint?.speed, .x10, "the 3D map closed: it comes")
+        // One on screen goes as the 3D map opens, and is not taken as dismissed.
+        session.setMap3DOpen(true)
+        XCTAssertNil(session.speedLagHint)
+        session.setMap3DOpen(false)
+        XCTAssertNotNil(session.speedLagHint, "back on the 2D map: it comes again")
+    }
+
     @MainActor
     func testTheSwitchKeepsTheHintFromComingByItself() {
         let session = GameSession(world: try! makeWorld(speed: .paused))

@@ -1151,8 +1151,14 @@ public final class GameSession {
     }
 
     /// Shows what ``speedLagWatch`` says, unless hints are switched off.
+    /// MAP3D-BOUNCE: not while the 3D map is open. The hint is a popover
+    /// beside the 2D map's speed, under the 3D map's full-screen cover; it
+    /// came by itself there 20 seconds behind, and putting it up took the
+    /// cover away, the 3D map closing onto the 2D one. The session has it
+    /// again as the 3D map closes (``setMap3DOpen(_:)``); on the phone it
+    /// came on the 2D map some 20 seconds later.
     func syncSpeedLagHint() {
-        let hint = Self.showsSpeedLagHint ? speedLagWatch.hint : nil
+        let hint = Self.showsSpeedLagHint && !isMap3DOpen ? speedLagWatch.hint : nil
         if hint != speedLagHint {
             speedLagHint = hint
             speedLagHintSeen = false
@@ -1540,6 +1546,8 @@ public final class GameSession {
         // Decision 585 PR-4: nor ferry boats.
         if !open, followedFerryBoatID != nil { followedFerryBoatID = nil }
         updateMap3DSpeedCap()
+        // MAP3D-BOUNCE: the speed hint waits while the 3D map is open.
+        syncSpeedLagHint()
     }
 
     @ObservationIgnored private var isMap3DOpen = false
