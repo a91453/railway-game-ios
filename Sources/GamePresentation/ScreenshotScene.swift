@@ -194,7 +194,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case suhuaGallery
 
     /// Decision 625 (STATION-EXT-1): an empty real-world map round TRA
-    /// Taichung (the old station beside the new), TRA Hsinchu, TRA Banqiao, HSR Taichung (with Xinwuri) and HSR Zuoying
+    /// Taichung (the old station beside the new), TRA Hsinchu, TRA Banqiao, HSR Taoyuan (with the Airport MRT's A18), HSR Taichung (with Xinwuri) and HSR Zuoying
     /// (with Xinzuoying), run on empty to 09:30 or, `…Night`, 19:30: for
     /// the Debug app's `-screenshot-lay-demo` to lay the demo's real lines
     /// round it (``GameSession/layDemoForScreenshot(_:)``) and run on half
@@ -204,6 +204,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case exteriorTaichung, exteriorTaichungNight
     case exteriorHsinchu, exteriorHsinchuNight
     case exteriorBanqiao, exteriorBanqiaoNight
+    case exteriorTaoyuanHSR, exteriorTaoyuanHSRNight
     case exteriorTaichungHSR, exteriorTaichungHSRNight
     case exteriorZuoying, exteriorZuoyingNight
 
@@ -247,6 +248,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .exteriorTaichung, .exteriorTaichungNight: (24.13732601, 120.68671829)
         case .exteriorHsinchu, .exteriorHsinchuNight: (24.80160443, 120.97165154)
         case .exteriorBanqiao, .exteriorBanqiaoNight: (25.0144511, 121.4640451)
+        case .exteriorTaoyuanHSR, .exteriorTaoyuanHSRNight: (25.01347985, 121.214539)
         case .exteriorTaichungHSR, .exteriorTaichungHSRNight: (24.1112536, 120.61474665)
         case .exteriorZuoying, .exteriorZuoyingNight: (22.68726485, 120.3074864)
         default: nil
@@ -274,9 +276,9 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
-        case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaichungHSR, .exteriorZuoying:
+        case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaoyuanHSR, .exteriorTaichungHSR, .exteriorZuoying:
             Self.realLineWorld(at: self, ticks: 57, in: language)
-        case .exteriorTaichungNight, .exteriorHsinchuNight, .exteriorBanqiaoNight, .exteriorTaichungHSRNight, .exteriorZuoyingNight:
+        case .exteriorTaichungNight, .exteriorHsinchuNight, .exteriorBanqiaoNight, .exteriorTaoyuanHSRNight, .exteriorTaichungHSRNight, .exteriorZuoyingNight:
             Self.realLineWorld(at: self, ticks: 117, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)

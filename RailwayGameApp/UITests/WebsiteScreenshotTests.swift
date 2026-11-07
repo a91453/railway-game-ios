@@ -129,13 +129,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Decision 625: the real stations' exterior studies on the 3D map,
     /// in the demo's real lines laid round TRA Taichung (the old station
     /// beside the new: one building each), TRA Hsinchu, TRA Banqiao, HSR
-    /// Taichung with TRA Xinwuri, and HSR Zuoying with TRA Xinzuoying, by
-    /// day (09:30) and by night (19:30), close over the platforms and
-    /// trains. For the screenshot review of the pull request that stood
+    /// Taoyuan with the Airport MRT's A18, HSR Taichung with TRA
+    /// Xinwuri, and HSR Zuoying with TRA Xinzuoying, by day (09:30) and
+    /// by night (19:30), close over the platforms and trains. For the screenshot review of the pull request that stood
     /// them there.
     func testStationExteriorTaichung() { shootStationExterior("exteriorTaichung", lay: "24.115,120.660,24.160,120.715") }
     func testStationExteriorHsinchu() { shootStationExterior("exteriorHsinchu", lay: "24.775,120.945,24.828,121.000") }
     func testStationExteriorBanqiao() { shootStationExterior("exteriorBanqiao", lay: "24.990,121.440,25.040,121.490") }
+    func testStationExteriorTaoyuanHSR() { shootStationExterior("exteriorTaoyuanHSR", lay: "24.990,121.190,25.040,121.240") }
     func testStationExteriorTaichungHSR() { shootStationExterior("exteriorTaichungHSR", lay: "23.870,120.570,24.130,120.640") }
     func testStationExteriorZuoying() { shootStationExterior("exteriorZuoying", lay: "22.670,120.270,22.940,120.330") }
 
@@ -144,7 +145,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // Debug app (the workflow allows up to 30 minutes a test).
         executionTimeAllowance = 1_500
         let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
-                      "exteriorTaichungHSR": "24.1112536,120.61474665", "exteriorZuoying": "22.68726485,120.3074864"]
+                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.1112536,120.61474665", "exteriorZuoying": "22.68726485,120.3074864"]
         for (hour, suffix) in [("day", ""), ("night", "Night")] {
             let app = launch(extra: ["-screenshot-scene", scene + suffix, "-screenshot-lay-demo", view, "-screenshot-3d-view", "380,215,40",
                                      "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high"])
