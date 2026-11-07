@@ -50,8 +50,9 @@ struct RealLineDepotSite: Sendable {
     /// (``RealLineDepotLayout/Fan``): its lead along the real leads, its
     /// sidings along the real stabling tracks; `nil` for a ladder.
     var fan: Fan? = nil
-    /// Decision 621: a yard laid as a strip beside the line, as its real
-    /// one lies (``RealLineDepotLayout/Strip``); `nil` for a wye.
+    /// Decision 621: a yard laid along the line off the wye, as its real
+    /// one lies (``RealLineDepotLayout/Strip``); `nil` for one fanned
+    /// along a lead.
     var strip: Strip? = nil
 
     /// Decision 602: where a fanned yard's lead runs and how its sidings
@@ -239,19 +240,20 @@ struct RealLineDepotSite: Sendable {
     /// of the Circular Light Rail, inside the ring beside the line between
     /// Lizihnei and Kaisyuan Ersheng, west of it.
     /// Decision 621: laid as the real yard lies (`tools/rail-depots`,
-    /// osmtoday's whole extract of 2026-11-07): a strip 0 to 57 m west of
-    /// the line's west track, its leads leaving that track straight off
-    /// the line at both ends, where the real south lead does (the node of
-    /// ways 1561884684, 1561884686 and 501281475, some 155 m past
-    /// Lizihnei) and some 650 m on, where the real north lead (way
-    /// 1561884685) does. The game's runs along the strip beside the line
-    /// as the real south lead does, past Light Rail Depot Station, its
-    /// sidings in two banks one after the other, each siding open at both
-    /// ends as the real north bank's are, so a train leaves it either way
-    /// round the ring. ``yard`` is the middle of the real south bank (way
-    /// 1153379543) and of the real north bank (way 501281477). Its
-    /// sidings hold the trains the timetable needs at once, the 20 of a
-    /// rest day, one each; all of them stand there overnight.
+    /// osmtoday's whole extract of 2026-11-07): a strip some 60 m wide
+    /// along the line's west track, from the real south lead's junction
+    /// (the node of ways 1561884684, 1561884686 and 501281475, some 155 m
+    /// past Lizihnei) some 650 m on, past Light Rail Depot Station. The
+    /// wye stays, its first arm at that junction, so a train leaves the
+    /// yard either way round the ring short of the station; its sidings
+    /// in two banks one after the other between the running track and
+    /// the line, each siding open at both ends as the real north bank's
+    /// are. The real north lead (way 1561884685) is not laid: a train
+    /// would leave by it past the station and have to turn round there.
+    /// ``yard`` is the real south bank's ends (ways 1153379542 to
+    /// 1153379546). Its sidings hold the trains the timetable needs at
+    /// once, the 20 of a rest day, one each; all of them stand there
+    /// overnight.
     static let klrt = RealLineDepotSite(
         line: "krtc:C", english: "Light Rail Depot", chinese: "輕軌機廠",
         junction: (22.605961, 120.325089),
