@@ -25,7 +25,11 @@ public struct Map3DScreenshotView: Equatable, Sendable {
                        viewport: (width: Float, height: Float)) -> Map3DCamera? {
         guard let frame = RealWorldFrame(world: world) else { return nil }
         let at = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
-        let camera = Map3DCamera(target: scene.point(worldX: at.x, worldY: at.y, height: 0), distance: distance, heading: heading, viewport: viewport)
+        // Decision 611: on the drawn ground (a portal in the hills stands
+        // hundreds of metres up), as the cable car's view is.
+        let flat = scene.point(worldX: at.x, worldY: at.y, height: 0)
+        let target = Map3DPoint(flat.x, scene.drawnGround.height(x: flat.x, z: flat.z, world: world), flat.z)
+        let camera = Map3DCamera(target: target, distance: distance, heading: heading, viewport: viewport)
         guard tilt > camera.tilt else { return camera }
         return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
     }

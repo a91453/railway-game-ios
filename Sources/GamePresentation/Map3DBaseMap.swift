@@ -85,8 +85,27 @@ struct Map3DBaseMap: Sendable {
         let bounds: Bounds
     }
 
+    /// Decision 611: where a road tunnel (the tiles' `brunnel` `tunnel`)
+    /// opens: its end inside its own tile that no other tunnel's end
+    /// meets (a tunnel cut at a tile's edge or drawn in two ways goes on),
+    /// with the tunnel's line from it inward.
+    struct TunnelEnd: Sendable {
+        let kind: RoadKind
+        let isRamp: Bool
+        /// The tiles' `oneway` 1: traffic takes the tunnel one way.
+        let oneway: Bool
+        let point: Point
+        /// The tunnel's points from ``point`` inward, at most
+        /// ``tunnelReach`` metres of it.
+        let inward: [Point]
+    }
+
+    /// Decision 611: how much of a tunnel's line in from its end is kept.
+    static let tunnelReach: Double = 60
+
     var areas: [Area] = []
     var roads: [Road] = []
+    var tunnelEnds: [TunnelEnd] = []
     var waterways: [Waterway] = []
     var bridges: [Bridge] = []
     /// Decision 391: the roads on the ground (out of a tunnel, on no
@@ -97,8 +116,9 @@ struct Map3DBaseMap: Sendable {
     /// A base map of the features given (a scene laid by hand): its
     /// bridges the roads' on bridges, each kept to its bounds, and the
     /// others its ground roads.
-    init(areas: [Area] = [], roads: [Road] = [], waterways: [Waterway] = []) {
+    init(areas: [Area] = [], roads: [Road] = [], waterways: [Waterway] = [], tunnelEnds: [TunnelEnd] = []) {
         self.areas = areas
+        self.tunnelEnds = tunnelEnds
         self.roads = roads
         self.waterways = waterways
         for road in roads {
@@ -181,6 +201,10 @@ struct Map3DBaseMap: Sendable {
                     let bounds = Bounds(minX: max(westX, low.x), minZ: max(northZ, low.z), maxX: min(westX + span, high.x), maxZ: min(northZ + span, high.z))
                     guard bounds.minX < bounds.maxX, bounds.minZ < bounds.maxZ else { continue }
                     add(layer, bounds: bounds, scene: scene)
+                    if layer.name == "transportation" {
+                        addTunnelEnds(layer, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), bounds: bounds,
+                                      scene: scene)
+                    }
                 }
             }
         }
@@ -235,6 +259,50 @@ struct Map3DBaseMap: Sendable {
                 continue
             }
         }
+    }
+
+    /// Decision 611: the tunnels' open ends in `layer` (a tile's
+    /// `transportation`) within `bounds`, half a metre or more inside
+    /// `tile`: an end the tile's clipping made lies on its edge or past it.
+    private mutating func addTunnelEnds(_ layer: VectorTile.Layer, tile: Bounds, bounds: Bounds, scene: (VectorTile.Point) -> Point) {
+        var lines: [(kind: RoadKind, ramp: Bool, oneway: Bool, points: [Point])] = []
+        for feature in layer.features where feature.kind == .line && feature.string("brunnel") == "tunnel" {
+            guard let kind = Self.roadKind(feature.string("class")) else { continue }
+            var ramp = false, oneway = false
+            if case .number(let value) = feature.properties["ramp"] { ramp = value != 0 }
+            if case .number(let value) = feature.properties["oneway"] { oneway = value != 0 }
+            for part in feature.parts where part.count >= 2 { lines.append((kind, ramp, oneway, part.map(scene))) }
+        }
+        tunnelEnds += Self.openEnds(of: lines, tile: tile, bounds: bounds)
+    }
+
+    /// Decision 611: the ends of `lines` (a tile's tunnels) that open:
+    /// inside `bounds`, half a metre or more inside `tile`, and no other
+    /// line's end within a metre.
+    static func openEnds(of lines: [(kind: RoadKind, ramp: Bool, oneway: Bool, points: [Point])], tile: Bounds, bounds: Bounds) -> [TunnelEnd] {
+        let ends = lines.flatMap { [$0.points[0], $0.points[$0.points.count - 1]] }
+        func near(_ a: Point, _ b: Point) -> Bool { abs(a.x - b.x) < 1 && abs(a.z - b.z) < 1 }
+        var open: [TunnelEnd] = []
+        for (number, line) in lines.enumerated() {
+            for (side, points) in [line.points, line.points.reversed()].enumerated() {
+                let end = points[0]
+                let margin = 0.5
+                guard end.x >= bounds.minX, end.x < bounds.maxX, end.z >= bounds.minZ, end.z < bounds.maxZ,
+                      end.x > tile.minX + margin, end.x < tile.maxX - margin, end.z > tile.minZ + margin, end.z < tile.maxZ - margin
+                else { continue }
+                // Another line's end, or this line's other end, meeting it.
+                let mine = 2 * number + side
+                guard !ends.enumerated().contains(where: { $0.offset != mine && near($0.element, end) }) else { continue }
+                var inward = [end], travelled = 0.0
+                for point in points.dropFirst() where travelled < tunnelReach {
+                    let last = inward[inward.count - 1]
+                    travelled += ((point.x - last.x) * (point.x - last.x) + (point.z - last.z) * (point.z - last.z)).squareRoot()
+                    inward.append(point)
+                }
+                open.append(TunnelEnd(kind: line.kind, isRamp: line.ramp, oneway: line.oneway, point: end, inward: inward))
+            }
+        }
+        return open
     }
 
     static func cover(layer: String, class name: String?) -> Cover? {

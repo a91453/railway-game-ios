@@ -1,5 +1,7 @@
-/// Decision 611 art studies. Metres: +x into the tunnel, +y up, +z right.
-/// No scene registration: ROADTUNNEL owns placement and terrain integration.
+/// Decision 611: the road tunnels' portals (and the rail studies, which
+/// the map does not draw: decision 359's portal stays). Metres: +x into
+/// the tunnel, +y up, +z right. The scene places them
+/// (`Map3DRoadTunnels.swift`) and covers their tops with the hillside.
 public enum Map3DRoadTunnelPortals {
     public enum Style: String, CaseIterable, Sendable {
         case dividedExpressway, mountainArch, nameplate, narrowLane, daylightGallery
@@ -20,6 +22,16 @@ public enum Map3DRoadTunnelPortals {
         public let clearHeight: Float
         /// The cap at the deep end prevents a see-through preview.
         public let liningDepth: Float
+        /// Decision 611: how far the facade reaches each side of the
+        /// middle, the head wall's top, the outer entrance (0, or the
+        /// gallery's 12 m out) and the foot, all metres; the cap's depth.
+        public let outerHalfWidth: Float
+        public let top: Float
+        public let front: Float
+        public let floor: Float
+        public let innerEnd: Float
+        /// The bores' middles across.
+        public let centres: [Float]
     }
 
     public static let wallThickness: Float = 1.2
@@ -30,7 +42,14 @@ public enum Map3DRoadTunnelPortals {
     public static let liningDepth: Float = 8
     public static let galleryLength: Float = 12
 
-    public static func make(_ style: Style, width: Width) -> Part {
+    /// Decision 611: the lining's colours, which face down (``make``).
+    static let liningShades: [UInt32] = [Map3DPalette.tunnelWall, Map3DPalette.tunnelLining,
+                                         Map3DColor.rgb(0x4B5162), Map3DColor.rgb(0x353948)]
+    static let capColor = Map3DColor.rgb(0x222630)
+
+    /// `depth`: how far in the lining reaches before its cap (decision
+    /// 611: less where the drawn ground rises inside it).
+    public static func make(_ style: Style, width: Width, depth: Float = liningDepth) -> Part {
         let half: Float
         switch (style, width) {
         case (.dividedExpressway, .oneWay): half = 3.75
@@ -52,7 +71,7 @@ public enum Map3DRoadTunnelPortals {
                      shoulder: style == .narrowLane ? 1.2 : 2,
                      nameplate: style == .nameplate, gallery: style == .daylightGallery,
                      shape: style == .mountainArch ? .roadArch : (style == .narrowLane ? .narrow : .box),
-                     floor: -embed)
+                     floor: -embed, depth: depth)
     }
 
     /// Decision 359's 3.2 m half bore, 2.8 m spring and 6 m crown. The
@@ -61,23 +80,23 @@ public enum Map3DRoadTunnelPortals {
         let half: Float = tracks == .single ? 3.2 : 6.3
         return build(half: half, clear: 6, spring: 2.8, centres: [0],
                      shoulder: 2, nameplate: false, gallery: daylight,
-                     shape: .railArch, floor: -1.2)
+                     shape: .railArch, floor: -1.2, depth: liningDepth)
     }
 
     private enum Shape { case box, roadArch, narrow, railArch }
 
     private static func build(half: Float, clear: Float, spring: Float, centres: [Float],
                               shoulder: Float, nameplate: Bool, gallery: Bool,
-                              shape: Shape, floor: Float) -> Part {
+                              shape: Shape, floor: Float, depth: Float) -> Part {
         let outer = (centres.last ?? 0) + half + shoulder
         let top = clear + overRoof + (nameplate ? 1.1 : 0)
         let front: Float = gallery ? -galleryLength : 0
         let innerStart: Float = gallery ? wallThickness : front + wallThickness
-        let innerEnd = innerStart + liningDepth
+        let depth = min(max(depth, 1), liningDepth)
+        let innerEnd = innerStart + depth
+        let bandLength = depth / Float(liningShades.count)
         let wall = Map3DPalette.concrete, trim = Map3DPalette.portal
-        let shades: [UInt32] = [Map3DPalette.tunnelWall, Map3DPalette.tunnelLining,
-                                 Map3DColor.rgb(0x4B5162), Map3DColor.rgb(0x353948)]
-        let cap = Map3DColor.rgb(0x222630)
+        let shades = liningShades, cap = capColor
         var mesh = Map3DMesh()
         func p(_ z: Float, _ y: Float, _ x: Float) -> Map3DPoint { Map3DPoint(x, y, z) }
         func face(_ corners: [Map3DPoint], toward: Map3DPoint, color: UInt32) {
@@ -140,10 +159,10 @@ public enum Map3DRoadTunnelPortals {
                 face([p(-outer, top, front), p(outer, top, front), p(outer, top, 0), p(-outer, top, 0)],
                      toward: .up, color: trim)
             }
-            // Four full-depth 2 m bands: the deep wall becomes darker.
+            // Four bands, a quarter of the depth each: the deep wall darker.
             for band in 0..<shades.count {
-                let x0 = innerStart + Float(band) * 2
-                let x1 = x0 + 2
+                let x0 = innerStart + Float(band) * bandLength
+                let x1 = x0 + bandLength
                 for side: Float in [-1, 1] {
                     let z = c + half * side
                     face([p(z, floor, x0), p(z, spring, x0), p(z, spring, x1), p(z, floor, x1)],
@@ -176,9 +195,8 @@ public enum Map3DRoadTunnelPortals {
             face([p(z, floor, 0), p(z, top, 0), p(z, top, innerEnd), p(z, floor, innerEnd)],
                  toward: Map3DPoint(0, 0, side), color: wall)
         }
-        face([p(-outer, top, 0), p(outer, top, 0),
-              p(outer, top, innerEnd), p(-outer, top, innerEnd)],
-             toward: .up, color: wall)
+        // Decision 611 (#1885's review, 1): no flat roof over it; the
+        // scene lays the hillside over the head wall's top instead.
         // The same 8 m / 2 m splay as decision 359, attached at the entrance.
         for side: Float in [-1, 1] {
             let z = outer * side, tip = (outer + wingSplay) * side
@@ -200,9 +218,18 @@ public enum Map3DRoadTunnelPortals {
                   p(-half * 0.8, top - 0.28, front - 0.24)],
                  toward: Map3DPoint(-1, 0, 0), color: trim)
         }
+        // Decision 611 (#1885's review, 2): the lining and its cap face
+        // down, so neither the sun nor the sky lights them; only the
+        // ground's dim light reaches in, as into a real bore.
+        let lining = Set(shades + [cap])
+        mesh.restyleVertices { vertex in
+            guard lining.contains(vertex.color) else { return }
+            (vertex.nx, vertex.ny, vertex.nz) = (0, -1, 0)
+        }
         return Part(mesh: mesh,
                     connector: Connector(roadCenter: p(0, 0, front), roadElevation: 0,
                                          intoTunnel: Map3DPoint(1, 0, 0)),
-                    clearWidth: 2 * half, clearHeight: clear, liningDepth: liningDepth)
+                    clearWidth: 2 * half, clearHeight: clear, liningDepth: depth,
+                    outerHalfWidth: outer, top: top, front: front, floor: floor, innerEnd: innerEnd, centres: centres)
     }
 }
