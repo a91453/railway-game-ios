@@ -4,6 +4,9 @@ import SwiftUI
 /// Sheet controlling map overlay visibility and display options.
 struct MapLayerSheet: View {
     @Binding var layers: MapLayerPreferences
+    /// Decision 631: whether the small map shows in the corner (it has no
+    /// button of its own on the map once put away).
+    @Binding var overviewMap: Bool
     /// A real-world map's style, at the top (decision 226, step 3).
     var mapStyle: AnyView?
     @Environment(\.dismiss) private var dismiss
@@ -35,6 +38,17 @@ struct MapLayerSheet: View {
                         Label("Fares and Full Trains", systemImage: "dollarsign.circle")
                     }
                     .accessibilityIdentifier("layer.faresAndStamps")
+
+                    // Decision 631: the same names as the map's.
+                    Toggle(isOn: $layers.showsTrackNumbers) {
+                        Label("Track Numbers", systemImage: "number")
+                    }
+                    .accessibilityIdentifier("layer.trackNumbers")
+
+                    Toggle(isOn: $overviewMap) {
+                        Label("Overview Map", systemImage: "rectangle.inset.bottomright.filled")
+                    }
+                    .accessibilityIdentifier("layer.overviewMap")
                 } header: {
                     Text("Station Overlays")
                 } footer: {

@@ -15,7 +15,9 @@ struct MiniMapView: View {
     let language: DisplayLanguage
     /// Moves the map to the world point given.
     let onJump: (MiniMap.WorldPoint) -> Void
-    @AppStorage("map.minimap.open") private var isOpen = true
+    /// The stored choice, shared with the layer list's switch.
+    static let openKey = "map.minimap.open"
+    @AppStorage(MiniMapView.openKey) private var isOpen = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The small map's longer side, in points.
@@ -23,10 +25,11 @@ struct MiniMapView: View {
 
     var body: some View {
         Group {
+            // Decision 631: put away, it leaves no button on the map (it was
+            // a second round button beside the 3D and zoom buttons); the
+            // layer list's "Overview Map" brings it back.
             if isOpen, let map {
                 content(map)
-            } else {
-                foldedButton
             }
         }
         .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: isOpen)
@@ -77,22 +80,6 @@ struct MiniMapView: View {
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
         .transition(.pop(from: 0.6, anchor: .bottomTrailing, reduceMotion: reduceMotion))
-    }
-
-    private var foldedButton: some View {
-        Button {
-            isOpen = true
-        } label: {
-            // Not the map style menu's "map" (decision 123): a small map in
-            // the corner of a larger one.
-            Image(systemName: "rectangle.inset.bottomright.filled")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
-        }
-        .disabled(map == nil)
-        .accessibilityLabel(Text(verbatim: language.text("Show the overview map", "顯示小地圖")))
-        .accessibilityIdentifier("map.minimap.open")
     }
 }
 

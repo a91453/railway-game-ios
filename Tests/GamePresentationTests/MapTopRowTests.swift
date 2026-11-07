@@ -13,9 +13,22 @@ final class MapTopRowTests: XCTestCase {
         // Five layers and More, 46 each; seven pieces 2 apart (the line
         // before More among them), the line 1 and 2 either side, the glass
         // 3 each side.
-        XCTAssertEqual(MapTopRow.stripWidth, 6 * 46 + 6 * 2 + 5 + 6)
-        XCTAssertEqual(MapTopRow.stripWidth, 299)
-        XCTAssertEqual(MapTopRow.layersButtonWidth, 52)
+        // Decision 631: and the button that puts it away (28, 2 apart).
+        XCTAssertEqual(MapTopRow.stripWidth, 6 * 46 + 6 * 2 + 5 + 6 + 2 + 28)
+        XCTAssertEqual(MapTopRow.stripWidth, 329)
+        XCTAssertEqual(MapTopRow.layersButtonWidth, 82)
+    }
+
+    func testAStripPutAwayIsOneSmallButtonAtEveryWidth() {
+        // Decision 631: the player put the strip away.
+        let wide = MapTopRow.arrange(width: 800, showsLayers: true, nightSkipWidth: 190, nextStep: true, follows: false, layersCollapsed: true)
+        XCTAssertEqual(wide, .init(layers: .collapsed, showsNextStep: true, nightSkip: .full))
+        XCTAssertEqual(MapTopRow.width(of: wide, showsLayers: true, nightSkipWidth: 0, follows: false), 44 + 10 + 64)
+        let narrow = MapTopRow.arrange(width: 100, showsLayers: true, nightSkipWidth: 190, nextStep: true, follows: false, layersCollapsed: true)
+        XCTAssertEqual(narrow, .init(layers: .collapsed, showsNextStep: false, nightSkip: .icon))
+        // Building shows no strip at all, put away or not.
+        let building = MapTopRow.arrange(width: 120, showsLayers: false, nightSkipWidth: 190, nextStep: true, follows: true, layersCollapsed: true)
+        XCTAssertEqual(MapTopRow.width(of: building, showsLayers: false, nightSkipWidth: 190, follows: true), MapTopRow.followBarLeast)
     }
 
     func testAnIPadKeepsEverything() {
@@ -73,7 +86,7 @@ final class MapTopRowTests: XCTestCase {
     }
 
     func testTheNextStepGoesBeforeTheNightSkipLosesItsName() {
-        // 190 + 52 + 64 and two gaps is 326; 300 points are short of it.
+        // 190 + 82 + 64 and two gaps is 352; 300 points are short of it.
         let row = MapTopRow.arrange(width: 300, showsLayers: true, nightSkipWidth: 190, nextStep: true, follows: false)
         XCTAssertEqual(row, .init(layers: .button, showsNextStep: false, nightSkip: .full))
     }
@@ -92,7 +105,7 @@ final class MapTopRowTests: XCTestCase {
 
     func testTheStripFoldsBesideTheFollowBarOnAPhoneOnItsSide() {
         // An iPhone SE on its side, 667 points, with the card open (233):
-        // the strip (299), a gap and the follow bar's least (110) are 419,
+        // the strip (329), a gap and the follow bar's least (110) are 447,
         // and 404 are left.
         let card = SidePanelWidth.card(screenWidth: 667, compactHeight: true)
         let width = room(screen: 667, card: card)

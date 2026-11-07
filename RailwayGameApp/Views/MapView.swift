@@ -75,6 +75,7 @@ struct MapView: View {
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
     @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
+    @AppStorage("mapShowsTrackNumbers") private var showsTrackNumbers = true
     /// Decision 311: whether the building layer shows as soon as building
     /// begins (the player puts it away with the corner button), which of
     /// its two it shows and the hours of where people are; device
@@ -259,7 +260,8 @@ struct MapView: View {
             showsWaitingCounts: showsWaitingCounts,
             showsCatchmentRings: showsCatchmentRings,
             popTravelMode: buildingLayer.layer(over: PopTravelMode(rawValue: popTravelModeName)),
-            showsFaresAndStamps: showsFaresAndStamps
+            showsFaresAndStamps: showsFaresAndStamps,
+            showsTrackNumbers: showsTrackNumbers
         )
     }
 
@@ -2421,7 +2423,8 @@ private struct MapLabelCanvas: View, Equatable {
             FrameCostMeter.shared.measure(.labels) {
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
                 if part == .marks {
-                    MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
+                    MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges,
+                                          showsTrackNumbers: layers.showsTrackNumbers, in: context)
                 } else {
                     MapArt.drawStationLabels(
                         world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
@@ -3584,6 +3587,8 @@ struct StoredMapLayerSheet: View {
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
     @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
+    @AppStorage("mapShowsTrackNumbers") private var showsTrackNumbers = true
+    @AppStorage(MiniMapView.openKey) private var showsOverviewMap = true
 
     var body: some View {
         MapLayerSheet(layers: Binding(
@@ -3593,7 +3598,8 @@ struct StoredMapLayerSheet: View {
                     showsWaitingCounts: showsWaitingCounts,
                     showsCatchmentRings: showsCatchmentRings,
                     popTravelMode: PopTravelMode(rawValue: popTravelModeName),
-                    showsFaresAndStamps: showsFaresAndStamps
+                    showsFaresAndStamps: showsFaresAndStamps,
+                    showsTrackNumbers: showsTrackNumbers
                 )
             },
             set: { layers in
@@ -3602,8 +3608,9 @@ struct StoredMapLayerSheet: View {
                 showsCatchmentRings = layers.showsCatchmentRings
                 popTravelModeName = layers.popTravelMode?.rawValue ?? ""
                 showsFaresAndStamps = layers.showsFaresAndStamps
+                showsTrackNumbers = layers.showsTrackNumbers
             }
-        ), mapStyle: mapStyleSection)
+        ), overviewMap: $showsOverviewMap, mapStyle: mapStyleSection)
     }
 
     /// Decision 226, step 3: how Apple's map under a real-world game looks,
