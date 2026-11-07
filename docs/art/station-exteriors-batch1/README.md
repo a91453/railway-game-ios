@@ -1,4 +1,4 @@
-# 車站外觀第一批 studies：第 7 次交付
+# 車站外觀第一批 studies：第 8 次交付
 
 這是獨立研究配方，沒有接到 `Map3DStationKit` 的站點選型、地圖或存檔。公開庫只有配方、測試與一張總覽；逐方向原生模型、GLB、日夜圖與離線檢視頁在私有素材庫的同名資料夾。
 
@@ -88,11 +88,21 @@
 
 照片只看 Wikimedia Commons [高鐵站房斜向外觀](https://commons.wikimedia.org/wiki/File:THSR_Taoyuan_Station_Exterior.jpg)、[2020 年高鐵站房與採光帶](https://commons.wikimedia.org/wiki/File:THSR_Taoyuan_Station_2020-08-15.jpg)、[高鐵站房正面](https://commons.wikimedia.org/wiki/File:THSR-Taoyuan.JPG)、[A18 高架站紅色立面與弧棚](https://commons.wikimedia.org/wiki/File:高鐵桃園站(機場捷運)外觀THSR_Taoyuan.jpg) 及[站區空照](https://commons.wikimedia.org/wiki/File:高鐵桃園站空照圖.jpg)。另核對[桃園捷運 A18 官方站頁](https://www.tymetro.com.tw/tymetro-new/tw/_pages/travel-guide/A18) 的站區配置，但不拿配置圖當比例尺。照片不打包、不作貼圖。現有 station kit 的盒體、曲棚、圓柱及柱列分件組成兩個獨立模型部分，最後調為淡灰白、淡砂牆、青灰玻璃與淡紅立面，保留明暗次序。採光帶節距、柱距、玻璃分格、弧棚曲率及所有估計高度仍待作者核對。近景 **2,124 三角**、遠景 **968 三角**。
 
-## 尚缺的四站
+## 已完成：高鐵新竹（含臺鐵六家）
+
+| 部件 | OSM 足跡最小旋轉矩形 | 高度、屋頂與外觀判斷 |
+| --- | --- | --- |
+| 高鐵新竹站體 | [way 321663134](https://www.openstreetmap.org/way/321663134)，**343.597 × 101.181 m**，23 個不重複頂點；`building:levels=3`、`building:material=concrete`、`layer=2` | OSM 沒有高度或屋頂標籤。約 **28 m** 曲棚峰高是參考展示推估；長白色弧棚、玻璃大廳、鋼桁架及外側柱列依外觀照片簡化。 |
+| 臺鐵六家站房 | [way 321663135](https://www.openstreetmap.org/way/321663135)，**47.533 × 33.789 m**，11 個不重複頂點；`building:levels=2`、`roof:shape=flat`、`layer=1` | OSM 有平頂形狀，沒有高度或 `roof:height`。約 **13 m** 總高、玻璃上層與低層柱距依參考比例和照片推估。 |
+
+兩個 way 的全部非閉合邊界頂點從 2026-11-06 下載的 osmtoday `asia/taiwan.pbf` 以 pyosmium 擷取，轉為局部公尺座標；原點為 121.04001555°E、24.8083231°N。尺寸、方向與兩棟相對位置和參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/hsinchu-hsr-v1/metadata.json` 核對；`blender-buildings-v1/hsinchu-hsr-v1/model.json` 只量曲棚、站廳與六家站的體量比例，不用原網格。OSM 輪廓 © OpenStreetMap contributors，ODbL 1.0。
+
+外觀只看 Wikimedia Commons [高鐵站長曲棚與玻璃大廳](https://commons.wikimedia.org/wiki/File:THSR_Hsinchu_Station_01.jpg)、[另一側弧棚與鋼構](https://commons.wikimedia.org/wiki/File:THSR_Hsinchu_Station_20120911.jpg)、[高鐵新竹與六家站相對位置](https://commons.wikimedia.org/wiki/File:THSR_Hsinchu_Station_and_TRA_Liujia_Station_2022-02-13.jpg)、[六家站正面](https://commons.wikimedia.org/wiki/File:TRA_Liujia_Station_2022-02-13.jpg) 及[轉乘外廊夜景](https://commons.wikimedia.org/wiki/File:The_walkway_between_THSR_Hsinchu_Station_and_TRA_Liujia_Station_night_scene_20111113.jpg)；[高鐵官方站區圖](https://www.thsrc.com.tw/ArticleContent/a7a04c89-900b-4798-95a3-c01c455622f4/assets/1f4c3f57-f8ec-4834-bb14-26fa003f8085.pdf) 只核對配置，沒有當測量尺度。照片不打包、不作貼圖。以現有 station kit 盒體、曲棚、柱與鋼架配方組成兩棟，淡白屋頂、淡混凝土、青灰玻璃和深色桁架保留明暗順序。棚面板縫、弧度、站廳比例、柱距與六家站高均為推估；未有 OSM 輪廓的轉乘通廊及精確月台位置未建模。近景 **1,950 三角**、遠景 **894 三角**，仍待作者核對外觀。
+
+## 尚缺的三站
 
 | 站 | 來源與目前量到的部件足跡（m） | 還缺的核對 |
 | --- | --- | --- |
-| 高鐵新竹 | 參考庫 `stations/hsinchu-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵新竹 344 × 101（321663134）；六家 48 × 34（321663135） | 長曲頂與真實高度。 |
 | 高鐵台中（含新烏日） | 參考庫 `stations/xinwuri-complex-v1/metadata.json` 的 OSM 輪廓：高鐵臺中 360 × 96（544377825）；新烏日 210 × 84（337921979）；中捷高鐵臺中 180 × 22（862779522）；轉乘通廊 33 × 10（862779521）；轉乘通廊 48 × 12（862779520） | 高鐵／臺鐵／中捷共構關係與各屋頂、真實高度。 |
 | 高鐵台南 | 參考庫 `stations/tainan-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵臺南 114 × 57（r9351022:1）；高鐵月台棚 336 × 14（r9351022:0）；高鐵月台棚 332 × 11（266850895）；沙崙 149 × 27（316034163） | 挑簷、月台棚與真實高度。 |
 | 高鐵左營 | 參考庫 `stations/zuoying-complex-v1/metadata.json` 的 OSM 輪廓：高鐵左營 186 × 78（111991261）；臺鐵新左營 168 × 67（303296097） | 大頂與真實高度。 |

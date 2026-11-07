@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -15,6 +15,7 @@ public enum Map3DStationExteriorBatch1 {
         case .banqiaoTRA: builder.banqiaoExteriorStudy(detail: detail)
         case .nangangTRA: builder.nangangExteriorStudy(detail: detail)
         case .taoyuanHSR: builder.taoyuanHSRExteriorStudy(detail: detail)
+        case .hsinchuHSR: builder.hsinchuHSRExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -514,6 +515,25 @@ public enum Map3DStationExteriorBatch1 {
         (-30.703, -21.744), (-33.495, -24.813), (-34.422, -25.936),
         (-50.957, -9.568), (-59.724, -18.931), (-75.584, -3.664),
         (-86.296, -5.354), (-76.451, 5.754), (-68.420, 14.205),
+    ]
+
+    // Hsinchu HSR and TRA Liujia: osmtoday Taiwan PBF, 2026-11-06.
+    // Metres east/north from (121.04001555, 24.8083231); © OpenStreetMap contributors, ODbL 1.0.
+    static let hsinchuHSRFootprint: [(Float, Float)] = [ // OSM way 321663134
+        (37.078, 173.509), (46.394, 165.958), (67.782, 161.110),
+        (79.601, 162.111), (48.473, 38.707), (60.777, 23.584),
+        (75.513, -0.200), (65.905, -10.096), (55.660, -20.627),
+        (43.578, -32.413), (39.510, -36.372), (34.302, -41.453),
+        (29.720, -45.924), (1.125, -173.509), (-9.140, -170.573),
+        (-30.679, -162.934), (-33.888, -161.488), (-3.467, -28.833),
+        (-26.944, -21.105), (-37.976, -17.836), (-8.160, 37.473),
+        (-2.660, 46.324), (8.857, 64.816),
+    ]
+    static let liujiaFootprint: [(Float, Float)] = [ // OSM way 321663135
+        (-79.601, -105.001), (-45.930, -107.314), (-43.871, -72.154),
+        (-43.618, -69.753), (-47.282, -69.641), (-46.889, -59.812),
+        (-61.120, -58.700), (-74.272, -57.866), (-75.019, -69.363),
+        (-77.159, -69.219), (-77.350, -75.446),
     ]
 
 }
@@ -1187,5 +1207,73 @@ private extension StationKitBuilder {
         }
         add(.flat(named: "taoyuan-a18", from: a18.mesh),
             at: Map3DPoint(-15.42, 0, -33.94), angle: 47.7138 * .pi / 180)
+    }
+
+    mutating func hsinchuHSRExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let whiteRoof = Map3DColor.rgb(0xE9ECE8)
+        let trim = Map3DColor.rgb(0xD9E1DF)
+        let concrete = Map3DColor.rgb(0xCDD2CE)
+        let steel = Map3DColor.rgb(0xAABAB9)
+        let glass = Map3DColor.rgb(0x8EAEB2)
+        let darkGlass = Map3DColor.rgb(0x66878B)
+        let shadow = Map3DColor.rgb(0x657577)
+
+        footprint(Map3DStationExteriorBatch1.hsinchuHSRFootprint, color: concrete)
+        footprint(Map3DStationExteriorBatch1.liujiaFootprint, color: trim)
+
+        // OSM has three levels and concrete material, but no height or roof
+        // tags. The 28 m peak follows the reference display and exterior photos.
+        var hsr = StationKitBuilder()
+        hsr.box(0, 0.32, 0, 335, 66, 8.3, concrete)
+        hsr.box(0, 8.62, 0, 330, 75, 0.75, trim)
+        hsr.box(0, 9.37, 0, 142, 65, 9.0, glass)
+        hsr.box(0, 9.37, -32.58, 138, 0.28, 8.6, darkGlass)
+        for x in stride(from: Float(-63), through: 63, by: detail == .near ? 7 : 21) {
+            for z: Float in [-32.8, 32.8] {
+                hsr.box(x, 9.37, z, 0.42, 0.42, 9.0, trim)
+            }
+        }
+        for y: Float in [12.5, 15.8] {
+            for z: Float in [-32.8, 32.8] {
+                hsr.box(0, y, z, 138, 0.16, 0.28, steel)
+            }
+        }
+        hsr.canopy(0, 18.9, 0, length: 342, width: 94,
+                   rise: 9.1, color: whiteRoof)
+        for z in stride(from: Float(-39), through: 39, by: detail == .near ? 9.75 : 19.5) {
+            let y = 18.9 + sinf((z + 47) / 94 * .pi) * 9.1
+            hsr.box(0, y + 0.02, z, 340, 0.15, 0.06, trim)
+        }
+        for x in stride(from: Float(-153), through: 153, by: detail == .near ? 18 : 36) {
+            for z: Float in [-41, 41] {
+                hsr.box(x, 8.62, z, 0.68, 0.68, 10.2, steel)
+                if detail == .near {
+                    hsr.beam(Map3DPoint(x, 19.2, z),
+                             Map3DPoint(x, 25.7, 0), 0.34, shadow)
+                }
+            }
+        }
+        // Slender glass end walls make the exposed hall visible below the roof.
+        for x: Float in [-70.8, 70.8] {
+            hsr.box(x, 9.37, 0, 0.26, 61.5, 8.2, glass)
+        }
+        add(.flat(named: "hsinchu-hsr-hall", from: hsr.mesh),
+            at: Map3DPoint(22.14, 0, -0.42), angle: 70.4724 * .pi / 180)
+
+        // Liujia has two OSM levels and a flat roof. Its 13 m height,
+        // open lower level and column rhythm remain photo/reference estimates.
+        var liujia = StationKitBuilder()
+        liujia.box(0, 0.32, 0, 45.5, 32.2, 6.2, concrete)
+        liujia.box(0, 6.52, 0, 43.2, 30.5, 5.8, glass)
+        liujia.box(0, 12.32, 0, 47.5, 33.8, 0.68, whiteRoof)
+        for x in stride(from: Float(-19), through: 19, by: detail == .near ? 7.5 : 19) {
+            for z: Float in [-16.0, 16.0] {
+                liujia.box(x, 0.32, z, 0.62, 0.62, 12.0, trim)
+            }
+        }
+        liujia.box(0, 1.0, -16.18, 20, 0.22, 5.5, darkGlass)
+        liujia.box(0, 6.52, -15.4, 42, 0.22, 0.42, steel)
+        add(.flat(named: "liujia-station", from: liujia.mesh),
+            at: Map3DPoint(-61.24, 0, 82.58), angle: 86.1353 * .pi / 180)
     }
 }
