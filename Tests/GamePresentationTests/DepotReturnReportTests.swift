@@ -216,10 +216,10 @@ final class DepotReturnReportTests: XCTestCase {
         // simple rules too, as a new game has it.
         let environment = ProcessInfo.processInfo.environment
         if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
-        // Decision 618: the high-speed demo opens with traffic control and
-        // realistic operation off; `DEPOT_RETURN_SIGNALS=1` turns the one
-        // on, `DEPOT_RETURN_REALISTIC=1` the other.
-        if environment["DEPOT_RETURN_SIGNALS"] != nil { try world.setTrafficControl(true) }
+        // Decision 618: the high-speed demo opens with realistic operation
+        // off; `DEPOT_RETURN_REALISTIC=1` turns it on. (Traffic control
+        // cannot be turned on with its sets out on the line;
+        // `TrafficControlTimingReportTests` measures it on.)
         if environment["DEPOT_RETURN_REALISTIC"] != nil { world.setRealisticOperation(true) }
         // HEALTH-110: a minute a tick, or ten at the top speed.
         let fast = environment["DEPOT_RETURN_FAST"] != nil
