@@ -1167,8 +1167,10 @@ struct MapView: View {
             trainMotionVersion &+= 1
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
-            // Decision 304: the real trains glide with the game clock.
-            guard realTrains != nil else { return }
+            // Decision 304: the real trains glide with the game clock;
+            // CABVIEW-2 (decision 379 續三): over the game loop's whole
+            // step, as the trains do.
+            guard realTrains != nil, !session.glidesOnThroughTheStep else { return }
             FrameCostMeter.shared.measure(.mapTick) {
                 realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
             }
