@@ -26,6 +26,6 @@
 | #1924 前 | 0.10 |
 | #1924 後（這個 PR 的基底） | 0.50 |
 | 再加 A（交通讀數移出迴圈） | 0.49（不採用） |
-| 2D 地圖，不跟車 | 見下 |
+| 2D 地圖，不跟車（#1924 後） | 0.48 |
 
 重跑：`CABVIEW_REPORT=1 CABVIEW_STEPS=1 CABVIEW_LOOP_SECONDS=40 CABVIEW_CPU=standard swift test --skip-build --filter CabViewTickCostReportTests`，2D 加 `CABVIEW_2D=1`。
