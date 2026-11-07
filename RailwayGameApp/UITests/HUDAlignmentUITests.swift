@@ -116,7 +116,20 @@ final class HUDAlignmentUITests: XCTestCase {
         for way in ways {
             let lines = openDemo(way)
             tap("entry.lines")
-            XCTAssertTrue(app.navigationBars["Lines"].appears(within: 10), "\(way): the lines panel opens")
+            // The press on Lines can be cancelled while the demo is still
+            // drawing its first frames (the app's trace: "touch cancelled
+            // at (100, 292)" 141 ms after it began, 33 frames in the 2 s
+            // before it with a 598 ms gap, and no action; main ff15345's
+            // full lane, run 42373639750), and the panel never opens. A
+            // cancelled touch is no press, so press once more if it did
+            // not open, as followTrainOne does for Build. The button sets
+            // the panel rather than toggling it (ControlPanel.entry), so
+            // a second press never closes a panel the first one opened.
+            let bar = app.navigationBars["Lines"]
+            if !bar.appears(within: 10), app.buttons["entry.lines"].exists {
+                tap("entry.lines")
+            }
+            XCTAssertTrue(bar.appears(within: 10), "\(way): the lines panel opens")
             checkPanel("\(way) lines panel", lines)
         }
     }
