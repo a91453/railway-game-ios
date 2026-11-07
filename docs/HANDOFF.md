@@ -564,7 +564,13 @@
 - **在做的 session**（都向第 54 任回報）：
   - CIOPT-5 session_01YGNNukiXhE7LK51UdBYf4o（決策 620，佔 GameCore 名額）：`rest` shard 470→1268 秒，主因 `KaohsiungLightRailDayTests`（約 430 秒）；`trafficPlan`→`trafficPoints` 同一條路找兩次、沒用 `PathMemo`。改 `ScheduledTraffic.swift` 一次找完並記住，調 shard 權重；要和 #1924 借的 RouteMemo 一致。
   - KLRT-SPARE session_01YGNNuou5XfVJGfy5r9Q77i：#1928（draft，`RunDepot.swift`，決策 609 續），佔 GameCore 名額。
-  - TYMC-REBUILD-3 session_01YGNNunyB4yjbdPs7s4GCye：接 #1875（交接只在 #1875 分支的決策 605 §3「續」與下一步 2，不在 main）；要 GameCore 名額時排在 CIOPT-5／KLRT-SPARE 之後。TYMC-REBUILD-2 已停。
+  - TYMC-REBUILD-3 session_01YGNNunyB4yjbdPs7s4GCye（#1875，壓縮 1 次，**已停**，2026-11-07）：沒有修成。
+    - 試過、撤回一條 GameCore 修法：決策 290 出廠的路避開線只往反方向用的股道，曾預留決策 623，已在 #1579 釋出。它讓改建 241 → 7/333，卻讓照原樣的舊線 6 → 41/333。
+    - 查到它改的只是青埔 → 老街溪空車停哪一股，732 尾端月台改成 353 到站月台，不是正線逆向。
+    - 改建與現買的 老街溪 設定相同，只差邊號。
+    - #1875 仍是 draft，分支沒有動；不合。
+    - 查證、量測表、重現指令與下一個 session 的起點在 main 的決策 605 §3 與下一步 2；#1875 分支上的 §3 全文是改建本身。
+    - 由遊戲規劃另派。TYMC-REBUILD-2 已停。
   - CABVIEW-2 session_01YGNNuo1avNxcoZmdFdC825：`claude/cabview-3`（決策 379 續四），只做 #1921 審查的 P3 a/b/d，再量「實際 ÷ 設定倍速」。
   - ROADTUNNEL session_01YGNNunPRoXT1mpxPNA7FfC：#1925（決策 611）。`801890a7` 審圖沒過：雪山、蘇澳南的山是平地上孤立的綠包，要接地形的坡；蘇澳南是有柱子的明隧道；蘇花口前的路面補丁與斷掉的車道線要修；蘇花南的景可以。修好給新的截圖單，作者 Mac 重拍（第 3 級，規劃看過才合）。
   - HSR-NORTH-DEPOT session_01YGNNupkrTyJU9cc3yScri8（決策 618）：南港盡頭線＋六家基地。
