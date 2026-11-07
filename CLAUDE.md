@@ -336,7 +336,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   pushing, not the whole suite:
   `swift build --build-tests -Xswiftc -warnings-as-errors` (keep it clean;
   on Linux `Package.swift` builds GameCore and GameCoreTests with -O,
-  decision 544),
+  decision 544; Xcode's iOS builds GameCore and GamePresentation with -O
+  in Debug too, decision 624),
   then the tests the change touches with
   `swift test --skip-build --filter <Class>`, and the shard of any campaign
   whose code or behaviour it changes with
