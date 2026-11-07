@@ -426,6 +426,21 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertGreaterThan(hours, 3)
         XCTAssertEqual(session.stationMasterAdvice, .noPlaceToPass(line: lines[0], name: session.world.lines[0].name))
         XCTAssertEqual(session.placeToPassMemo.workedOut, 1, "\(hours) hours, one command revision")
+        // Decision 627: a pause, a resume and a change of speed are
+        // commands that change only the clock's speed: the next hours ask
+        // what was kept, and the advice is still the one worked out afresh.
+        let losingWorkedOut = session.worstLosingLineWorkedOut
+        let adviceWorkedOut = session.stationMasterAdviceWorkedOut
+        session.togglePause()
+        session.togglePause()
+        session.setSpeed(.double)
+        session.setSpeed(.fast)
+        XCTAssertEqual(session.stationMasterAdvice, .noPlaceToPass(line: lines[0], name: session.world.lines[0].name))
+        XCTAssertEqual(session.stationMasterAdviceWorkedOut, adviceWorkedOut, "the hour's advice kept on")
+        let hoursAfter = try await play(30)
+        XCTAssertGreaterThan(hoursAfter, 3)
+        XCTAssertEqual(session.placeToPassMemo.workedOut, 1, "pausing and changing speed work nothing out again")
+        XCTAssertEqual(session.worstLosingLineWorkedOut, losingWorkedOut)
         session.selectLine(lines[1])
         session.addPassingLoopToSelectedLine()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
