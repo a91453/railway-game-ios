@@ -381,6 +381,10 @@ private extension StationKitBuilder {
         }
         box(x,y-0.12,z,length+0.8,width+0.8,0.12,color)
     }
+    mutating func studyGable(_ x: Float,_ y: Float,_ z: Float,_ length: Float,_ width: Float,_ rise: Float,_ roof: UInt32,_ gableWall: UInt32) {
+        mesh.addGableRoof(base:Map3DPoint(x,y,z),forward:Self.forward,length:length,width:width,rise:rise,overhang:0.35,color:roof,gable:gableWall)
+        box(x,y-0.12,z,length+0.7,width+0.7,0.12,roof)
+    }
     mutating func studyOutline(_ points: [(Float, Float)], elevation: Float) {
         // OpenStreetMap survey edges: no opaque ground pad. Elevated parts stay above train clearance.
         for i in points.indices {
@@ -428,9 +432,11 @@ private extension StationKitBuilder {
             if rise > 0 {
                 if hipped && width > length {
                     let zz=z-width/2+(Float(i)+0.5)*width/20
-                    let endHeight=min(rise,(width/2-abs(zz-z))*rise/(width*0.17))
-                    beam(Map3DPoint(x-length*0.45,y+0.12,zz),Map3DPoint(x,y+endHeight+0.12,zz),0.055,color)
-                    beam(Map3DPoint(x,y+endHeight+0.12,zz),Map3DPoint(x+length*0.45,y+0.12,zz),0.055,color)
+                    // Small tile ends stay on the eaves. Long beams projected
+                    // above a hipped silhouette as a row of floating poles.
+                    for side: Float in [-1,1] {
+                        box(x+side*length*0.49,y-0.26,zz,0.16,0.13,0.16,color)
+                    }
                 } else {
                     let endHeight = hipped ? min(rise, (length/2-abs(xx-x))*rise/(length*0.17)) : rise
                     let a=Map3DPoint(xx,y+0.12,z-width*0.45)
@@ -508,24 +514,30 @@ private extension StationKitBuilder {
         roofDetail(x,7,z,23,32,rgb(0x6B6E70),detail:detail)
     }
     mutating func chiayi1933(_ detail: Detail) {
-        let x:Float = -40,z:Float = -82, ivory=rgb(0xE8DECB),ochre=rgb(0xB89968),red=rgb(0x985747)
+        let x:Float = -40,z:Float = -82, ivory=rgb(0xE8DECB),ochre=rgb(0xB89968),cap=rgb(0xB69A75)
         box(x,0,z,26,52,8,ivory)
-        studyHip(x,8,z,30,56,2.4,red)
+        box(x,8,z,27,53,0.28,cap)
+        for side: Float in [-1,1] { box(x+side*13.1,8.28,z,0.55,53,1.2,ivory) }
+        for side: Float in [-1,1] { box(x,8.28,z+side*26.1,27,0.55,1.2,ivory) }
         archRow(x+13.2,0.8,z,43,count:7,stone:ochre,glass:rgb(0x9EBCBA),detail:detail)
-        // Central square clock tower rises above the red tiled hipped wings.
+        // The current photograph shows a flat roof, parapet and taller central block.
         box(x+9,0,z,18,16,14,ivory)
-        studyHip(x+9,14,z,20,18,2,red)
+        box(x+9,14,z,19,17,0.3,cap)
+        for side: Float in [-1,1] { box(x+9+side*9.1,14.3,z,0.55,17,0.9,ivory) }
+        for side: Float in [-1,1] { box(x+9,14.3,z+side*8.1,19,0.55,0.9,ivory) }
         clockFace(x+18.2,11,z,size:2.6)
         windows(x+18.2,6.5,z,12,count:3,glass:rgb(0x9DB8B9),frame:ochre,tall:3.0,detail:detail)
         if detail == .near {
             for i in 0..<21 { let zz=z-25+Float(i)*50/20; box(x-12,0.5,zz,0.15,0.12,7.5,ochre) }
+            for i in 0..<18 { let zz=z-25+Float(i)*50/17;box(x+13.5,8.5,zz,0.15,0.18,0.7,ochre) }
         }
-        roofDetail(x,8.1,z,27,52,rgb(0xA96A57),detail:detail,rise:2.4,hipped:true)
+        // Entrance awning begins in front of the wall, below the parapet.
+        canopy(x+17.3,4.9,z,length:7,width:24,rise:0.15,color:rgb(0xBBC0BC))
         eaveLights(x+13.2,5.1,z,45,detail:detail)
     }
     mutating func tainan1936(_ detail: Detail) {
         let white=rgb(0xE8E7DF),trim=rgb(0xB7B7AE),glass=rgb(0x9FB5B6),roof=rgb(0x737A78)
-        for (x,z,span) in [(-205 as Float,50 as Float,30 as Float),(-212,-10,37)] {
+        for (x,z,span) in [(-208 as Float,46 as Float,35 as Float),(-208,-6,35)] {
             box(x,0,z,25,span,10,white)
             box(x,10,z,27,span+2,0.4,roof)
             archRow(x+12.7,0.8,z,span-3,count:span>35 ? 6:5,stone:trim,glass:glass,detail:detail)
@@ -535,15 +547,12 @@ private extension StationKitBuilder {
             }
             eaveLights(x+12.8,4.5,z,span-2,detail:detail)
         }
-        // A recessed central hall joins the two mapped 1936 station wings.
-        box(-208,0,21,25,30,10,white)
-        box(-208,10,21,26,31,0.4,roof)
-        archRow(-195.3,0.8,21,26,count:4,stone:trim,glass:glass,detail:detail)
-        windows(-195.2,6,21,26,count:5,glass:glass,frame:trim,tall:2.5,detail:detail)
-        eaveLights(-195.1,4.5,21,27,detail:detail)
-        // The white, two-storey 1936 frontage has a restrained raised central hall.
-        box(-203,10,50,12,13,2,white)
-        clockFace(-196.8,10.6,50,size:1.8)
+        // Symmetric wings frame a higher central hall, as in the 1936 facade photo.
+        box(-208,0,20,27,20,14,white)
+        box(-208,14,20,28,21,0.4,roof)
+        archRow(-194.3,0.8,20,17,count:3,stone:trim,glass:glass,detail:detail)
+        windows(-194.2,7.3,20,16,count:3,glass:glass,frame:trim,tall:4.0,detail:detail)
+        eaveLights(-194.1,5.2,20,18,detail:detail)
     }
     mutating func tainanUndergroundEntrance(_ detail: Detail) {
         let x:Float = -6,z:Float = -16,white=rgb(0xE9EEEB),glass=rgb(0x86A9AF)
@@ -557,7 +566,7 @@ private extension StationKitBuilder {
     mutating func beimenTimber(_ detail: Detail) {
         let x:Float=29,z:Float = -1,green=rgb(0x718370),dark=rgb(0x3E4740),frame=rgb(0xC3C7AF)
         box(x,0,z,18,22,5,green)
-        gable(x,5,z,21,25,2.5,dark)
+        studyGable(x,5,z,21,25,2.5,dark,green)
         windows(x+9.1,1.1,z,16,count:5,glass:rgb(0xA9C3BD),frame:frame,tall:2.6,detail:detail)
         // Hinoki gable end and projecting eave are the landmark silhouette.
         if detail == .near {
@@ -575,36 +584,66 @@ private extension StationKitBuilder {
         studyHip(x,5.6,z,21,25,1.8,dark)
         windows(x+9.1,1.4,z,18,count:6,glass:rgb(0xAFBFAD),frame:rgb(0xC7B295),detail:detail)
         // Separate narrow platform shelter with an open underside and repeated timber posts.
-        canopy(x-13,5.8,z,length:9,width:31,rise:0.25,color:rgb(0x77746D))
-        for i in 0..<(detail == .near ? 9 : 4) { let zz=z-14+Float(i)*28/Float(detail == .near ? 8:3);box(x-15,0,zz,0.3,0.3,5.6,wood) }
+        canopy(x+15,4.7,z,length:8,width:31,rise:0.2,color:rgb(0x77746D))
+        for i in 0..<(detail == .near ? 9 : 4) { let zz=z-14+Float(i)*28/Float(detail == .near ? 8:3);box(x+18,0,zz,0.3,0.3,4.5,wood) }
         timberSiding(x,0,z,18,21,rgb(0x70553E),detail:detail)
         roofDetail(x,5.7,z,19,23,rgb(0x616063),detail:detail,rise:1.8,hipped:true)
         eaveLights(x+9.4,5,z,20,detail:detail)
     }
     mutating func alishanCurrent(_ detail: Detail) {
         let x:Float = -2,z:Float=9,concrete=rgb(0xD2D4CF),timber=rgb(0x815C48),roof=rgb(0x5C4845)
-        box(x,0,z,34,52,8.5,concrete)
-        archRow(x+17.2,0.7,z,43,count:7,stone:concrete,glass:rgb(0x9BAEAA),detail:detail)
+        // Recessed lower concourse and open front bays, not a solid platform block.
+        box(x-5,0,z,24,52,8.5,concrete)
+        box(x,8.1,z,34,52,0.4,concrete)
+        for i in 0..<8 {
+            let zz=z-23+Float(i)*46/7
+            box(x+15,0,zz,0.9,0.9,8.1,concrete)
+        }
+        // Leave the lower concourse bays open as in the reference photograph.
+        // Recessed glazing was visible as disconnected panes after clearance clipping.
         // Two separate front gables sit side by side; their roofs do not overlap.
         for side: Float in [-1,1] {
             let zz=z+side*13
             for xx in [x-12,x+12] { for dz in [-9 as Float,9] { box(xx,8.5,zz+dz,0.45,0.45,6,timber) } }
-            gable(x,14.5,zz,29,21,4.2,roof)
-            windows(x+14.6,10.3,zz,14,count:4,glass:rgb(0xA6B4AA),frame:timber,tall:3.3,detail:detail)
+            studyGable(x,14.5,zz,29,21,4.2,roof,timber)
+            // The photographed upper level is an open timber truss and railing,
+            // not a wall with windows suspended below the two roofs.
+            box(x+14.6,9.2,zz,0.35,19,0.22,timber)
+            box(x+14.6,10.6,zz,0.35,19,0.22,timber)
+            box(x+14.6,14.35,zz,0.45,19,0.30,timber)
+            let lampCount=detail == .near ? 7 : 4
+            for i in 0..<lampCount {
+                let lampZ=zz-7.5+Float(i)*15/Float(lampCount-1)
+                lit(x+14.95,10.7,lampZ,0.25,0.8,0.7,Map3DPalette.glazing)
+            }
+            beam(Map3DPoint(x+14.6,14.5,zz-9),Map3DPoint(x+14.6,18.7,zz),0.35,timber)
+            beam(Map3DPoint(x+14.6,18.7,zz),Map3DPoint(x+14.6,14.5,zz+9),0.35,timber)
+            for i in 0..<4 {
+                let a=zz-9+Float(i)*4.5, b=a+4.5
+                box(x+14.6,8.5,a,0.28,0.28,2.1,timber)
+                if detail == .near {
+                    beam(Map3DPoint(x+14.6,9.3,a),Map3DPoint(x+14.6,10.6,b),0.16,timber)
+                    beam(Map3DPoint(x+14.6,10.6,a),Map3DPoint(x+14.6,9.3,b),0.16,timber)
+                }
+            }
             roofDetail(x,14.6,zz,27,20,rgb(0x7B5E52),detail:detail,rise:4.2)
         }
         if detail == .near {
             for side: Float in [-1,1] { let zz=z+side*13
-                beam(Map3DPoint(x+14.6,14.5,zz-9),Map3DPoint(x+14.6,18.7,zz),0.35,timber)
-                beam(Map3DPoint(x+14.6,18.7,zz),Map3DPoint(x+14.6,14.5,zz+9),0.35,timber)
+                beam(Map3DPoint(x+14.6,14.5,zz-9),Map3DPoint(x+14.6,14.5,zz+9),0.30,timber)
+                beam(Map3DPoint(x+14.6,14.5,zz-9),Map3DPoint(x+14.6,16.6,zz),0.24,timber)
+                beam(Map3DPoint(x+14.6,16.6,zz),Map3DPoint(x+14.6,14.5,zz+9),0.24,timber)
             }
         }
-        eaveLights(x+17.4,7.8,z,46,detail:detail)
+        // Continuous lighting is fixed to the concrete soffit above the
+        // entrance bays, rather than glazing floating in the open concourse.
+        lit(x+15.1,7.84,z,0.25,46,0.24,Map3DPalette.glazing)
+        eaveLights(x+15.2,7.8,z,46,detail:detail)
     }
     mutating func wushulinSugar(_ detail: Detail) {
         let x:Float=0,z:Float=0,wall=rgb(0xD2D1C5),roof=rgb(0x404A4B),green=rgb(0x54766B)
         box(x,0,z,12,34,4.8,wall)
-        gable(x,4.8,z,16,38,1.6,roof)
+        studyGable(x,4.8,z,16,38,1.6,roof,wall)
         windows(x+6.1,1.2,z,28,count:9,glass:rgb(0xA6C1B2),frame:green,detail:detail)
         canopy(x+8,4,z,length:6,width:39,rise:0.2,color:roof)
         for i in 0..<(detail == .near ? 11 : 4) {let zz=z-18+Float(i)*36/Float(detail == .near ? 10:3);box(x+10,0,zz,0.35,0.35,4,green)}
@@ -618,8 +657,8 @@ private extension StationKitBuilder {
         studyHip(x,5.1,z,20,29,1.7,roof)
         windows(x+8.6,1.1,z,20,count:6,glass:rgb(0xA7C3BA),frame:frame,detail:detail)
         // Xihu's open boarding shed is deeper and offset from the small ticket room.
-        canopy(x-13,4.8,z+5,length:10,width:35,rise:0.35,color:rgb(0xAAA58E))
-        for i in 0..<(detail == .near ? 10 : 4) {let zz=z-11+Float(i)*33/Float(detail == .near ? 9:3);box(x-16,0,zz,0.36,0.36,4.8,frame)}
+        canopy(x+15,4.35,z+5,length:9,width:35,rise:0.25,color:rgb(0xAAA58E))
+        for i in 0..<(detail == .near ? 10 : 4) {let zz=z-11+Float(i)*33/Float(detail == .near ? 9:3);box(x+18,0,zz,0.36,0.36,4.2,frame)}
         timberSiding(x,0,z,17,25,rgb(0x9E7957),detail:detail)
         roofDetail(x,5.2,z,19,27,rgb(0x806B5B),detail:detail,rise:1.7,hipped:true)
         eaveLights(x+8.7,4.5,z,23,detail:detail)
