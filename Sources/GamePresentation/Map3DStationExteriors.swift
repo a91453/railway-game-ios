@@ -665,24 +665,28 @@ extension Map3DScene.Builder {
         let near = Self.exteriorCarved(station, detail: .near, at: origin, clearOf: room)
         guard near.kept >= Self.exteriorLeast else { return nil }
         let far = Self.exteriorCarved(station, detail: .far, at: origin, clearOf: room)
-        // Decision 625 續: in their own colours, as the landmarks are
-        // (decision 370): the look's pale version left the glass bands,
-        // the brick and the coloured fascias all near white.
-        keptColours.formUnion(near.mesh.vertices.map(\.color))
-        keptColours.formUnion(far.mesh.vertices.map(\.color))
-        let saved = target
-        defer { target = saved }
         // In the chunk of its origin, as a landmark's: the one block of
-        // chunks built apart that holds the origin draws it.
-        target = .near
-        mesh(at: origin) { $0.append(near.mesh) }
-        target = .far
-        mesh(at: origin) { $0.append(far.mesh) }
+        // chunks built apart that holds the origin draws it. Decision 625
+        // 續: in its own colours, added after the look (the look's pale
+        // version left the glass bands, the brick and the coloured
+        // fascias all near white).
+        // Its outlines' edges in the ground's colour stay the ground's,
+        // in the look as the ground round them is.
+        func grounded(_ mesh: Map3DMesh) -> Map3DMesh {
+            var mesh = mesh
+            let ground = Map3DPalette.ground, looked = Map3DLook.colour(Map3DPalette.ground)
+            mesh.restyleVertices { if $0.color == ground { $0.color = looked } }
+            return mesh
+        }
+        let (nearMesh, farMesh) = (grounded(near.mesh), grounded(far.mesh))
+        let key = key(of: origin)
+        if !isCoarse(key) { ownColourNear[key, default: Map3DMesh()].append(nearMesh) }
+        ownColourFar[key, default: Map3DMesh()].append(farMesh)
         // No shadow under it: its parts left out over the track would
         // leave one there. The streets and the commercial kit keep off it.
         for outline in outlines { houseFootprints.append(Map3DStationExterior.rectangle(round: outline)) }
         return Map3DStationExterior(station: station, origin: origin, outlines: outlines, kept: (near.kept, far.kept),
-                                    near: near.mesh, far: far.mesh)
+                                    near: nearMesh, far: farMesh)
     }
 
     /// Decision 625 with decision 506's: an expanded station's wings

@@ -868,6 +868,12 @@ extension Map3DScene {
         var instancingBoxes = false
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
         var standInMeshes: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 625 續: what keeps its own colours, added to a chunk's
+        /// near and far meshes after the look (the station studies): left
+        /// out of ``keptColours``, which would keep the same colours
+        /// elsewhere only in a build that holds them.
+        var ownColourNear: [ChunkKey: Map3DMesh] = [:]
+        var ownColourFar: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
@@ -1032,7 +1038,7 @@ extension Map3DScene {
                 drawn.addFacadeParts()
                 return drawn.chunks()
             }
-            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
+            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(ownColourNear.keys).union(ownColourFar.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
@@ -1050,6 +1056,8 @@ extension Map3DScene {
                 var facade = facadeMeshes[key] ?? Map3DMesh()
                 Map3DLook.restyle(&facade, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
+                if let own = ownColourNear[key] { mesh.append(own) }
+                if let own = ownColourFar[key] { far.append(own) }
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }

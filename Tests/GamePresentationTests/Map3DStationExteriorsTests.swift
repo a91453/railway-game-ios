@@ -280,9 +280,13 @@ final class Map3DStationExteriorsTests: XCTestCase {
         for study in Study.allCases {
             let (_, built) = try await Self.built(round: study)
             guard let exterior = built.builder.stationExteriors.first(where: { $0.station == study }) else { continue }
+            let chunks = built.builder.chunks(), key = built.builder.key(of: exterior.origin)
             for (detail, mesh) in [("near", exterior.near), ("far", exterior.far)] {
                 XCTAssertGreaterThan(mesh.vertices.filter { $0.layer == Map3DVertex.curtainGlass }.count, 12, "\(study) \(detail): lit at night")
-                XCTAssertTrue(mesh.vertices.allSatisfy { built.builder.keptColours.contains($0.color) }, "\(study) \(detail): its own colours")
+                // Every colour of it reaches its chunk as it is.
+                let chunk = try XCTUnwrap(chunks.first { $0.column == key.column && $0.row == key.row })
+                let drawn = Set((detail == "near" ? chunk.mesh : chunk.far).vertices.map(\.color))
+                XCTAssertTrue(Set(mesh.vertices.map(\.color)).isSubset(of: drawn), "\(study) \(detail): its own colours")
                 XCTAssertTrue(mesh.vertices.allSatisfy { $0.color >> 24 == 0xFF }, "\(study) \(detail): opaque")
                 let slivers = (0..<mesh.triangleCount).filter { t in
                     let v = (0..<3).map { mesh.vertices[Int(mesh.indices[t * 3 + $0])].position }
