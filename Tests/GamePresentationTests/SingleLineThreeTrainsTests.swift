@@ -159,4 +159,56 @@ final class SingleLineThreeTrainsTests: XCTestCase {
         XCTAssertNil(session.world.singleTrackShortfall(of: line))
         XCTAssertNil(session.world.firstLineWithoutPlaceToPass())
     }
+
+    /// The owner's Mac playtest (D2): two stations on a single track, the
+    /// line opened with its passing loops as stops, two trains passing each
+    /// other and earning. Waiting at a loop for the train coming the other
+    /// way is the meet itself: the card about single track is not shown.
+    /// Before, any train waiting on a line with single track showed it.
+    func testTrainsMeetingAtTheLineOwnLoopGetNoCard() throws {
+        var world = GameWorld.newGame(rules: .simple)
+        world.setSpeed(.normal)
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.network)
+        session.tapNetwork(at: PlanPoint(x: Self.west, y: Self.y), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: Self.west + 8 * Self.km, y: Self.y), reach: 16)
+        session.buildNetworkTrack()
+        session.setNetworkMode(.platform)
+        for x in [Self.west + 2_000, Self.west + 8 * Self.km - 2_000] {
+            session.platformStationID = nil
+            session.tapNetwork(at: PlanPoint(x: x, y: Self.y), reach: 64)
+            session.addNetworkPlatform()
+            XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        }
+        session.selectTool(.select)
+        for station in session.world.stations.sorted(by: { $0.point.x < $1.point.x }) {
+            session.selectStation(station.id)
+            session.addSelectedStationToLineDraft()
+        }
+        session.createLineFromDraft()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let line = try XCTUnwrap(session.world.lines.first).id
+        session.selectLine(line)
+        while session.world.trains.count < 2 {
+            session.addTrainToSelectedLine()
+            XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        }
+        XCTAssertTrue(session.world.line(id: line)?.stops.contains { stop in
+            session.world.station(id: stop)?.operationMode == .closed
+        } == true, "the loop is one of the line's stops")
+        var waited = 0
+        var world2 = session.world
+        for _ in 0..<(2 * Int(GameTime.minutesPerDay)) {
+            try world2.advance(ticks: 1)
+            let waits = TrafficReading(world: world2, in: .english).overlay.waits.filter { !$0.isDeadlocked }
+            guard !waits.isEmpty else { continue }
+            waited += 1
+            let card = PassingLoopHint.waitingLine(waits, in: world2)
+            XCTAssertNil(card, "waiting at its own loop is the meet")
+            if card != nil { break }
+        }
+        XCTAssertGreaterThan(waited, 0, "the trains did wait for each other")
+        let day = try DoubleTrackDeadlockTests.runDay(world2)
+        XCTAssertEqual(day.deadlockMinutes, 0, "\(day)")
+    }
 }
