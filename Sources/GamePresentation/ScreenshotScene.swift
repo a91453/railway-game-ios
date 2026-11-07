@@ -286,19 +286,22 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         session.tapNetwork(at: north.plan, reach: 64)
         session.addDepotYard()
         // Decision 619: the yard is at the map's top edge, under the HUD
-        // and the banner, as the demo opens; the camera is asked to put it
-        // in the middle, again each second for a minute (the map follows a
-        // request made after it is up), with 60 m round it.
+        // and the banner, as the demo opens; the camera is asked to put its
+        // middle in view, at the zoom the map has (asked to show the yard
+        // whole, the map fits it in what the banner and panels leave clear,
+        // a sliver, and zooms out to the island), again each second for a
+        // minute (the map follows a request made after it is up).
         let yard = session.world.network.nodes.filter { !before.contains($0.id) }.map(\.position) + [north]
         let region = WorldRegion(
             minX: Double(yard.map(\.x).min() ?? north.x), minY: Double(yard.map(\.y).min() ?? north.y),
             maxX: Double(yard.map(\.x).max() ?? north.x), maxY: Double(yard.map(\.y).max() ?? north.y)
-        ).expanded(by: Double(60 * WorldCoordinate.unitsPerMetre))
-        session.lookOver(region)
+        )
+        let middle = PlanPoint(x: Int64(((region.minX + region.maxX) / 2).rounded()), y: Int64(((region.minY + region.maxY) / 2).rounded()))
+        session.lookAt(middle)
         Task { @MainActor in
             for _ in 0..<60 {
                 try? await Task.sleep(for: .seconds(1))
-                session.lookOver(region)
+                session.lookAt(middle)
             }
         }
     }

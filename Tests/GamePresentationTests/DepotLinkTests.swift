@@ -175,14 +175,15 @@ final class DepotLinkTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         let offer = try XCTUnwrap(session.message?.depotOffer, session.message?.text ?? "")
         XCTAssertEqual(offer.lines.compactMap { session.world.line(id: $0)?.name }, ["2 號線", "環狀線"])
-        // Decision 619: the camera is turned to the whole yard.
-        let region = try XCTUnwrap(session.cameraRequest?.region)
+        // Decision 619: the camera is turned to the yard's middle, between
+        // the lead's end and the buffers, the depot station within 150 m.
+        let request = try XCTUnwrap(session.cameraRequest)
+        XCTAssertNil(request.region)
         let depot = try XCTUnwrap(session.world.stations.first(where: \.isDepot))
         let buffers = session.world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 && abs($0.position.x - depot.point.x) < 64 * 300 && abs($0.position.y - depot.point.y) < 64 * 300 }
         XCTAssertEqual(buffers.count, 3)
-        for point in buffers.map(\.position.plan) + [depot.point] {
-            XCTAssertTrue((region.minX...region.maxX).contains(Double(point.x)) && (region.minY...region.maxY).contains(Double(point.y)), "\(point)")
-        }
+        XCTAssertLessThan(abs(request.location.x - depot.point.x) + abs(request.location.y - depot.point.y), 64 * 150)
+        XCTAssertTrue(buffers.allSatisfy { $0.position.y < request.location.y })
     }
 }
 

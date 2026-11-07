@@ -2971,9 +2971,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.buttons["banner.depotLine"].firstMatch.tap()
         settle(seconds: 1)
         keep("depot-offer-chosen", app)
-        // Decision 619: the yard's fan once the banner has gone (it stays
-        // 10 s), the camera on it.
-        XCTAssertTrue(offer.disappears(within: 15), "The banner goes")
+        // Decision 619: the yard's fan with the banner closed, the camera
+        // on it.
+        let dismiss = app.buttons["banner.dismiss"].firstMatch
+        if dismiss.appears(within: 2) { dismiss.tap() }
+        XCTAssertTrue(dismiss.disappears(within: 5), "The banner goes")
         settle(seconds: 1)
         keep("depot-yard", app)
 
