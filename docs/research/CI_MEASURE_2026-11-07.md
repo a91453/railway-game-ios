@@ -90,6 +90,23 @@ gdb 取樣 42 次（改前，本機）。下面是包含該函式的樣本數，
   - 最多誤點 5 分（交通管制關掉時 3 分），沒有死結。
 - `rest` 分兩片的模擬（11-06 夜間與 11-07 手動 run 的逐類別秒數、改後的權重，環狀線照本機比例算成 300 s）：兩片 548／467 s 與 555／467 s，原本一片 1,015–1,022 s。
 
+### 5.1 3D 跟車 10×（CABVIEW-3 的報告測試，規劃要求加量）
+
+在 #1930 的分支 `d325139` 上，加決策 620 的 GameCore 修正前後各跑兩次。指令是 `CABVIEW_REPORT=1 CABVIEW_STEPS=1 CABVIEW_LOOP_SECONDS=40 CABVIEW_CPU=standard swift test --skip-build --filter CabViewTickCostReportTests`，本機 debug 建置。
+
+| | 修正前 | 修正後 |
+| --- | --- | --- |
+| 迴圈 40 s 跑的遊戲秒數（of 10x） | 161 s（0.40）、139 s（0.35） | 139 s（0.35）、154 s（0.38） |
+| 每 tick `advance` | 209–270 ms | 210–270 ms |
+| 每 tick work 中位數／最長 | 287／568、283／578 ms | 276／567、274／609 ms |
+| `trafficPlan`（空的 memo） | 3,052、3,371 ms | 316、284 ms |
+| `deadlock`（空的 memo） | 3,814、3,913 ms | 554、532 ms |
+| `routeWaits`（借 `RouteMemo`） | 194、229 ms | 250、246 ms |
+
+- 跟車 10× 沒有變快。穩定跑著時，路徑本來就在借來的 memo 裡，修正只讓 memo 是空的時候快約 10 倍。
+- 每 tick 的 200–270 ms 在別處，要另外取樣（決策 620「下一步」第 3 項）。
+- `routeWaits` 前後的差（194–229 對 246–250 ms）在兩次重跑之間的起伏之內（每 tick 的 traffic 本身就在 200–314 ms 之間跳）。
+
 ## 6. 之後的門檻
 
 下一輪 CIOPT 看下面幾項（每發一版之後看，HANDOFF §1.1）：
@@ -104,5 +121,9 @@ gdb 取樣 42 次（改前，本機）。下面是包含該函式的樣本數，
 - VERIFIED（Linux 本機）：
   - `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；
   - `KaohsiungLightRailDayTests` 改前改後（上表）；
-  - `.github/scripts/swift-shards-selftest.sh` 通過。
+  - `.github/scripts/swift-shards-selftest.sh` 通過；
+  - `swift test --skip-build --filter 'ScheduledTrafficTests|CurveSpeedRunTests|GoldenScenarioTests|ReplayFixtureTests|SavedGameTests|QuestionMemoTests|TrafficControlTests|KaohsiungLightRailTests\b'`：147 個測試、0 失敗（1 個要環境變數的跳過）；
+  - `.github/scripts/swift-shards.sh run campaigns-12`（`TrafficControlPropertyTests` 等）：106／106 通過，374 s；
+  - `.github/scripts/swift-shards.sh run campaigns-9`（`ScheduledTrafficPropertyTests` 等）：88／88 通過，346 s；
+  - §5.1 的跟車量測，在 #1930 的分支上。
 - 交給 CI：這個 PR 的完整 tier（所有分片）與合併後的夜間 run 的實際牆鐘。
