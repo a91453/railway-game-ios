@@ -120,7 +120,7 @@ extension GameWorld {
     /// call, never saved.
     public func routeWaits() -> [RouteWait] {
         guard isTrafficControlEnabled else { return [] }
-        var memo = DirectionMemo()
+        var memo = questionMemo()
         let deadlocked = Set(deadlock(memo: &memo).keys)
         return trains.sorted { $0.id < $1.id }.compactMap { train in
             guard let wait = awaitedRoute(of: train.id, memo: &memo) else { return nil }
@@ -142,7 +142,7 @@ extension GameWorld {
     /// ``trainHoldingRoute(of:)``), with the track that route needs; `nil`
     /// track for a scheduled wait.
     private func awaitedRoute(of id: TrainID) -> (holder: TrainID, needs: Set<TrackResource>?)? {
-        var memo = DirectionMemo()
+        var memo = questionMemo()
         return awaitedRoute(of: id, memo: &memo)
     }
 

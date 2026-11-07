@@ -140,7 +140,7 @@ extension GameWorld {
     /// The scheduled wait currently keeping this train at its station.
     public func scheduledTrafficWait(of id: TrainID) -> ScheduledTrafficWait? {
         guard let train = train(id: id) else { return nil }
-        var memo = DirectionMemo()
+        var memo = questionMemo()
         return currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo)
     }
 
@@ -180,7 +180,7 @@ extension GameWorld {
     }
 
     func trafficPlan() -> TrafficPlan {
-        var parts = TrafficParts()
+        var parts = questionMemo().trafficParts
         return trafficPlan(parts: &parts)
     }
 

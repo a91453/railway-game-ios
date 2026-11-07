@@ -4,6 +4,16 @@
 // memo belongs to one advance/query; it is never world or save state.
 
 extension GameWorld {
+    /// A memo for one question asked of the world as it is, lent what the
+    /// last advances kept for its network, lines and settings (see
+    /// ``RouteMemo/lend(toQuestion:of:)``): the same answers as a new
+    /// one, worked out with less.
+    func questionMemo() -> DirectionMemo {
+        var memo = DirectionMemo()
+        routeMemo.lend(toQuestion: &memo, of: self)
+        return memo
+    }
+
     struct DirectionMemo {
         struct Call: Hashable {
             let station: StationID
@@ -207,6 +217,26 @@ extension GameWorld {
             guard self.key == key else { return }
             memo.paths = paths
             memo.curves = curves
+        }
+
+        /// Decision 138 (continued, TRAFFIC-READ): gives `memo`, a new one
+        /// for a question asked of `world` (not an advance), what an
+        /// ``advance(ticks:)`` would be lent were it to start now: the paths
+        /// and curves while `world`'s ``Key`` is the one they were kept
+        /// for, and the traffic plan's parts while its ``ServiceKey`` is.
+        /// The game loop's traffic reading (``routeWaits()``) worked out
+        /// every running train's ``trafficPoints(of:cycle:)`` again at
+        /// every tick, some 1 s a reading on the bought Kaohsiung Circular
+        /// Light Rail on an iPhone 17 Pro. A question never keeps what it
+        /// works out: the world is not changed by asking it.
+        func lend(toQuestion memo: inout DirectionMemo, of world: GameWorld) {
+            if key != nil, key == Key(world) {
+                memo.paths = paths
+                memo.curves = curves
+            }
+            if serviceKey != nil, serviceKey == ServiceKey(world) {
+                memo.trafficParts = trafficParts
+            }
         }
 
         /// Gives `memo`, a new one, the services' journeys, capacities and

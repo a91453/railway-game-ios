@@ -27,7 +27,7 @@ extension GameWorld {
     /// decision 280). Derived on every call, never saved.
     public func heldDeparture(of id: TrainID) -> HeldDeparture? {
         guard let train = train(id: id) else { return nil }
-        var memo = DirectionMemo()
+        var memo = questionMemo()
         if let station = stranding(train, memo: &memo) { return .noRoute(to: station) }
         var dispatch = DispatchMemo()
         return waitsForDepotRoom(train, memo: &dispatch).map(HeldDeparture.depotFull)
@@ -38,7 +38,7 @@ extension GameWorld {
     /// once, not once a train.
     public func heldDepartures() -> [TrainID: HeldDeparture] {
         var held: [TrainID: HeldDeparture] = [:]
-        var memo = DirectionMemo()
+        var memo = questionMemo()
         for train in trains {
             if let station = stranding(train, memo: &memo) { held[train.id] = .noRoute(to: station) }
         }

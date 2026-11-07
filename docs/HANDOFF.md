@@ -3368,6 +3368,8 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 修好的：列車、真實列車、公車、纜車、渡輪的滑行長度跟著 tick 實際的間隔（最多 5 秒），tick 慢時跟車畫面不再「動半秒、停三秒」。**還留下的**：① 大路網（機場捷運買下、32 列車）每 tick 的交通讀數 `TrafficReading` Linux 367 ms，是 tick 慢的大頭，3D 跟車時可以少讀（決策 379 續的下一步）；② 實機請作者在 119 重錄同一段（UNVERIFIED，Linux 量不到手機上的 tick 間隔）。
 
+**① 的後續（TRAFFIC-READ，`claude/traffic-reading-speed`，2026-11-07）**：交通讀數改借 `advance` 留在世界裡的 `RouteMemo`（決策 138 補充「交通讀數借用 advance 留下的計畫零件」），高雄環狀輕軌 10× 一次讀數在 Mac M6 release 561.7 → 33.1 ms，結果逐位元相同。還沒做的：實機重錄（UNVERIFIED）；3D 跟車時少讀與 `readTrafficOffTheMainActor` 一次只跑一個，讀數變快後暫時不需要。
+
 ### 4.55 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL → FACADE-B，`claude/facade-real`，#1879，2026-11-07）
 
 做了的在 [決策 610](decisions/610.md)。原 session（session_01YGNNumNpoVRp8aubiDyfHE）在第二次壓縮後停手，由 FACADE-B（session_01YGNNuor6x7d79RdjNBkAm9）接手。
