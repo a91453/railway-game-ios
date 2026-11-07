@@ -243,6 +243,7 @@ jobs:
           if [[ -n "$PROMO_TESTS" ]]; then
             IFS=', ' read -r -a tests <<<"$PROMO_TESTS"
           else
+            # shellcheck disable=SC2207 # test names have no spaces; mapfile is not in bash 3.2
             tests=($(grep -oE 'func test[A-Za-z0-9]+\(' RailwayGameApp/UITests/PromoMaterialTests.swift | sed -E 's/func (.*)\(/\1/'))
           fi
           if [[ "$PROMO_APPEARANCE" == both ]]; then appearances=(dark light); else appearances=("$PROMO_APPEARANCE"); fi
@@ -260,7 +261,7 @@ jobs:
                 xcrun simctl io "$SIMULATOR_UDID" recordVideo --codec=h264 --force "$video" >"$root/logs/$name-record.log" 2>&1 &
                 recording=$!
                 sleep 3
-                echo "$(date +%s)" >"$root/logs/$name.recording-start"
+                date +%s >"$root/logs/$name.recording-start"
               fi
               echo "::group::$appearance $test"
               xcodebuild test-without-building \
@@ -270,7 +271,7 @@ jobs:
                 -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
                 -derivedDataPath "$RUNNER_TEMP/DerivedData" \
                 -resultBundlePath "$bundle" \
-                -only-testing:RailwayGameUITests/PromoMaterialTests/$test \
+                "-only-testing:RailwayGameUITests/PromoMaterialTests/$test" \
                 -parallel-testing-enabled NO \
                 -test-timeouts-enabled YES \
                 -default-test-execution-time-allowance 1500 \

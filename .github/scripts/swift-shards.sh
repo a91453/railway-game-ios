@@ -1210,7 +1210,8 @@ watchdog() {
   local nap=$!
   trap 'kill "$nap" 2>/dev/null; exit 0' TERM
   wait "$nap"
-  local what="slowest classes so far: $(class_seconds "$@" | slowest_text)"
+  local what
+  what="slowest classes so far: $(class_seconds "$@" | slowest_text)"
   if [[ -n "${WATCH_EXPECTED:-}" ]]; then
     # A parallel run prints a test only once it ends: name those still running.
     what="$what; still running: $(started_tests "$@" | comm -23 "$WATCH_EXPECTED" - | awk 'NR <= 4 { printf "%s%s", (NR > 1 ? ", " : ""), $0 }')"
