@@ -134,6 +134,45 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 625: the real stations' exterior studies on the 3D map,
+    /// in the demo's real lines laid round TRA Taichung (the old station
+    /// beside the new: one building each), TRA Hsinchu, TRA Banqiao, HSR
+    /// Taoyuan with the Airport MRT's A18, HSR Taichung with TRA
+    /// Xinwuri, and HSR Zuoying with TRA Xinzuoying, by day (09:30) and
+    /// by night (19:30), close over the platforms and trains. For the screenshot review of the pull request that stood
+    /// them there.
+    func testStationExteriorTaichung() { shootStationExterior("exteriorTaichung", lay: "24.115,120.660,24.160,120.715") }
+    func testStationExteriorHsinchu() { shootStationExterior("exteriorHsinchu", lay: "24.775,120.945,24.828,121.000") }
+    func testStationExteriorBanqiao() { shootStationExterior("exteriorBanqiao", lay: "24.990,121.440,25.040,121.490") }
+    func testStationExteriorTaoyuanHSR() { shootStationExterior("exteriorTaoyuanHSR", lay: "24.990,121.190,25.040,121.240") }
+    func testStationExteriorTaichungHSR() { shootStationExterior("exteriorTaichungHSR", lay: "23.870,120.570,24.130,120.640") }
+    func testStationExteriorZuoying() { shootStationExterior("exteriorZuoying", lay: "22.670,120.270,22.940,120.330") }
+
+    private func shootStationExterior(_ scene: String, lay view: String) {
+        // Laying the lines and running half an hour take minutes in the
+        // Debug app (the workflow allows up to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
+                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.1112536,120.61474665", "exteriorZuoying": "22.68726485,120.3074864"]
+        for (hour, suffix) in [("day", ""), ("night", "Night")] {
+            let app = launch(extra: ["-screenshot-scene", scene + suffix, "-screenshot-lay-demo", view, "-screenshot-3d-view", "380,215,40",
+                                     "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            // The Debug app's main thread is busy laying the lines for a
+            // minute at a time, longer than a UI query waits.
+            Thread.sleep(forTimeInterval: 240)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 600))
+            XCTAssertTrue(open3D.becomesHittable(within: 300))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep("station-exterior-\(scene.dropFirst("exterior".count).lowercased())-\(hour)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 603: the Xiaobitan Branch Line bought on a real map of
     /// New Taipei and run on to 07:40, its one train followed: on the 2D
     /// map and in 3D, a single track with one platform track at each

@@ -3450,6 +3450,15 @@ M6 第一次拍的改前改後完全拍不到立面，根因是截圖場景的�
 
 M6 重拍的一對（`docs/art/facade-real-screenshots-2026-11-07b/`）遊戲規劃第 53 任審過，第 3 級通過。還沒做的寫在決策 610 的「下一步」：前排兩棟 5–6 層建物的面街牆沒有零件，以及要補一張看得到騎樓柱的低角度截圖。
 
+### 4.47 11 個真實站房外觀接進 3D 地圖（決策 625，派工單 STATION-EXT-1，session_01YGNNup2ntPd7nzyvdsnKN1，`claude/station-exteriors-integrate`，2026-11-07）
+
+做了的在 [決策 625](decisions/625.md)：#1904 的 11 個站房照地標的做法放在 OSM 的位置，輪廓下的格子併進 `landmarkCells`，站型套件只拿掉站房本體與入口（月台、雨棚、跨線橋、決策 506 的兩翼照舊），碰到軌道與月台空間的三角形切開丟掉。這個 session 在第二次壓縮後停手，PR 保持 draft。
+
+還沒做的：
+- 第三級截圖：`WebsiteScreenshotTests.testStationExteriorTaichung`、`…Hsinchu`、`…Banqiao`、`…TaoyuanHSR`、`…TaichungHSR`、`…Zuoying`（白天、晚上各一張），等遊戲規劃在 Mac 拍、看過才合。看：舊臺中驛一帶只有一棟、軌道淨空、月台與列車看得到、A18 的地面站體。
+- 機捷 A18 與高鐵桃園的真實層位（決策 625「下一步」）。
+- App 的 `-screenshot-lay-demo` 與新 UI 測試只能在 macOS CI 驗（UNVERIFIED）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

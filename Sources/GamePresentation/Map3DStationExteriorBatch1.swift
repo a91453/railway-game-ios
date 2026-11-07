@@ -1,11 +1,18 @@
 import Foundation
 
-/// Isolated exterior study. No station catalog or live-map lookup calls this type.
+/// The exterior studies of #1904. Decision 625 stands them on the 3D map
+/// (`Map3DStationExteriors.swift`); the station kit's catalogue does not list them.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
     public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung", tainanHSR = "hsr-tainan", zuoyingHSR = "hsr-zuoying" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
+        .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: mesh(for: station, detail: detail))
+    }
+
+    /// Decision 625: the study as built, in its own metres east (+x), up
+    /// (+y) and north (+z) of ``origin(of:)``, its night glass glowing.
+    static func mesh(for station: Station, detail: LevelOfDetail) -> Map3DMesh {
         var builder = StationKitBuilder()
         switch station {
         case .taichungTRA: builder.taichungExteriorStudy(detail: detail)
@@ -26,7 +33,7 @@ public enum Map3DStationExteriorBatch1 {
                 vertex.layer = Map3DVertex.glowing
             }
         }
-        return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
+        return builder.mesh
     }
 
     private static func nightGlassColours(for station: Station) -> Set<UInt32> {

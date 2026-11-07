@@ -273,6 +273,9 @@ extension Map3DScene.Builder {
         for platform in laidPlatforms { laid[platform.station, default: []].append(platform) }
         for platform in tunnels { under[platform.platform.station, default: []].append(platform.points.map { point($0) + Self.lifted }) }
         var cells = Set<Map3DScene.ChunkKey>()
+        typealias Found = (id: StationID, station: Map3DStationKit.Station, open: [LaidPlatform], longest: Map3DStreetLife.Path,
+                           middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint))
+        var found: [Found] = []
         for id in Set(laid.keys).union(under.keys).sorted() {
             // A station with platforms both on the ground and on a viaduct
             // (two lines crossing) stands by those on the ground.
@@ -286,12 +289,49 @@ extension Map3DScene.Builder {
             let world = (x: originX + Double(middle.point.x) * Self.metre, y: originY + Double(middle.point.z) * Self.metre)
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
             stationSystems[id] = station.system
+            found.append((id, station, open, longest, middle))
+        }
+        // Decision 625: each station's middle from all its platforms, not
+        // only those in the scene, so every block of chunks agrees.
+        var longestOf: [StationID: Map3DStreetLife.Path] = [:]
+        for platform in snapshot.platforms where platform.points.count > 1 {
+            guard let path = Map3DStreetLife.Path(platform.points.map { point($0) }) else { continue }
+            let id = platform.platform.station
+            if let held = longestOf[id], held.length >= path.length { continue }
+            longestOf[id] = path
+        }
+        let anchors = longestOf.mapValues { $0.at($0.length / 2).point }
+        // Decision 625: a station a real exterior study stands for (one of
+        // its recipes, or its platforms within the study's outlines) draws
+        // no building of its own, but an expanded one's wings beside it.
+        // Whether the study stands is asked of the whole network, so a
+        // block of chunks without the study's origin agrees.
+        var standing: [Map3DStationExteriorBatch1.Station: Bool] = [:]
+        func exterior(for id: StationID, profile: Map3DStationKit.Profile, at anchor: Map3DPoint) -> Map3DStationExteriorBatch1.Station? {
+            guard let frame else { return nil }
+            let within = Map3DStationExteriorBatch1.Station.allCases.filter { study in
+                sceneOutlines(of: study, frame: frame).contains { Map3DStationExterior.distance(from: anchor, to: $0) <= Self.exteriorCovers }
+            }
+            for study in (Map3DStationExteriorBatch1.study(for: profile).map { [$0] } ?? []) + within {
+                if standing[study] == nil {
+                    standing[study] = stationExteriors.contains { $0.station == study } || exteriorStands(study, snapshot: snapshot, frame: frame)
+                }
+                if standing[study] == true { return study }
+            }
+            return nil
+        }
+        for (id, station, open, longest, middle) in found {
             if self.world.station(id: id)?.isDepot == true {
                 // Decision 441: a depot's maintenance shed, not a station's
                 // building; none by sidings under ground.
                 if !open.isEmpty { cells.formUnion(addDepotShed(platforms: open, path: longest, middle: middle)) }
             } else if drawnElsewhere.contains(station.profile) {
                 continue
+            } else if let study = exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) {
+                // Decision 625: the real building stands for it.
+                if let expansion = self.world.station(id: id)?.expansion, let frame {
+                    cells.formUnion(addExpansionWings(expansion, beside: study, frame: frame, snapshot: snapshot))
+                }
             } else if Map3DStationKit.hasHouse(station.profile) {
                 cells.formUnion(addHouse(station, id: id, platforms: open, middle: middle))
             } else {
