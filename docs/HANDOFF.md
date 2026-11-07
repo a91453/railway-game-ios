@@ -3400,6 +3400,8 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 **CABVIEW-2（2026-11-07，作者 Mac 上的 session，`claude/cabview-2-mac`，決策 379 續三）**：實機 Instruments 量到高雄環狀輕軌 10× 的走走停停不是主執行緒，是一步裡的 tick 擠在一起（前幾個 0.1 秒內、最後一個被 `TrafficReading` 拖 0.75–1.2 秒）；改成一步滑一段，作者看了「有順很多了」。②已做。①還在：交通讀數每步 0.7–1.2 秒，10× 只跑到約三成。另有作者回報「第一次跟車沒多久跳回 2D」，原因未明（`docs/research/CABVIEW2_MAC_TRACE_2026-11-07.md`「還沒做的」）。
 
+**① 的後續（TRAFFIC-READ，`claude/traffic-reading-speed`，2026-11-07）**：交通讀數改借 `advance` 留在世界裡的 `RouteMemo`（決策 138 補充「交通讀數借用 advance 留下的計畫零件」），高雄環狀輕軌 10× 一次讀數在 Mac M6 release 561.7 → 33.1 ms，結果逐位元相同。還沒做的：實機重錄（UNVERIFIED）；3D 跟車時少讀與 `readTrafficOffTheMainActor` 一次只跑一個，讀數變快後暫時不需要。
+
 ### 4.55 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL → FACADE-B，`claude/facade-real`，#1879，2026-11-07）
 
 做了的在 [決策 610](decisions/610.md)。原 session（session_01YGNNumNpoVRp8aubiDyfHE）在第二次壓縮後停手，由 FACADE-B（session_01YGNNuor6x7d79RdjNBkAm9）接手。
