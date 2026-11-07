@@ -12,11 +12,16 @@ import UIKit
 /// picture is tapped. Its photos are the 3D map's (decision 403, 續二).
 /// Decision 492: open to every player as the garage, from the settings;
 /// the train pack's trains are listed only once it is unlocked.
+///
+/// Decision 632: with `exhibit`, the collection's ferries or cable cars on
+/// the same stage, with the same buttons but the train picker.
 struct TrainShowcaseScreen: View {
+    var exhibit: Map3DCollectionShowcase.Exhibit? = nil
     let close: () -> Void
     @State private var selection: Map3DShowcase.Selection
 
-    init(close: @escaping () -> Void) {
+    init(exhibit: Map3DCollectionShowcase.Exhibit? = nil, close: @escaping () -> Void) {
+        self.exhibit = exhibit
         self.close = close
         // Decision 492: the pack's sets as the 3D map reads them
         // (``Map3DPreviewScreen``), when the garage opens.
@@ -51,12 +56,17 @@ struct TrainShowcaseScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .forThisDevice
 
+    /// What the stage shows: the trains picked, or the exhibit.
+    private var content: Map3DShowcaseContent {
+        if let exhibit { return .exhibit(Map3DCollectionShowcase.layout(exhibit, far: far)) }
+        return .trains(Map3DShowcase.layout(keys: selection.keys, cars: selection.cars, far: far))
+    }
+
     var body: some View {
         let language = DisplayLanguage.app
         ZStack {
             if ready {
-                TrainShowcaseStage(rows: Map3DShowcase.layout(keys: selection.keys, cars: selection.cars, far: far),
-                                   cameraView: cameraView, viewRequests: viewRequests, light: light, turntable: turntable,
+                TrainShowcaseStage(content: content, cameraView: cameraView, viewRequests: viewRequests, light: light, turntable: turntable,
                                    quality: quality.drawn, cameraLink: cameraLink)
                     .ignoresSafeArea()
                     .accessibilityIdentifier("trainShowcase.view")
@@ -127,7 +137,8 @@ struct TrainShowcaseScreen: View {
                     .background(.regularMaterial, in: Circle())
             }
             .accessibilityLabel(Text(verbatim: language.text("Take Photo", "拍照")))
-            .accessibilityHint(Text(verbatim: language.text("Takes a photo of the trains to save or share.", "拍下列車的照片，可以存起來或分享。")))
+            .accessibilityHint(Text(verbatim: exhibit?.photoHint(in: language)
+                    ?? language.text("Takes a photo of the trains to save or share.", "拍下列車的照片，可以存起來或分享。")))
             .accessibilityIdentifier("trainShowcase.photo")
             Button {
                 controlsHidden = true
@@ -138,8 +149,9 @@ struct TrainShowcaseScreen: View {
                     .background(.regularMaterial, in: Circle())
             }
             .accessibilityLabel(Text(verbatim: language.text("Hide Buttons", "隱藏按鈕")))
-            .accessibilityHint(Text(verbatim: language.text("Leaves only the trains on screen. Tap the picture to bring the buttons back.",
-                                                            "畫面只留下列車。點一下畫面，按鈕就回來。")))
+            .accessibilityHint(Text(verbatim: exhibit?.hideHint(in: language)
+                    ?? language.text("Leaves only the trains on screen. Tap the picture to bring the buttons back.",
+                                     "畫面只留下列車。點一下畫面，按鈕就回來。")))
             .accessibilityIdentifier("trainShowcase.hide")
         }
     }
@@ -172,7 +184,8 @@ struct TrainShowcaseScreen: View {
                     }
                 }
                 .toggleStyle(.button)
-                .accessibilityHint(Text(verbatim: language.text("Turns the camera slowly round the trains.", "鏡頭慢慢繞著列車轉。")))
+                .accessibilityHint(Text(verbatim: exhibit?.turntableHint(in: language)
+                        ?? language.text("Turns the camera slowly round the trains.", "鏡頭慢慢繞著列車轉。")))
                 .accessibilityIdentifier("trainShowcase.turntable")
             }
             HStack(spacing: 8) {
@@ -181,7 +194,7 @@ struct TrainShowcaseScreen: View {
                         cameraView = view
                         viewRequests &+= 1
                     } label: {
-                        Text(verbatim: view.name(in: language))
+                        Text(verbatim: exhibit?.viewName(view, in: language) ?? view.name(in: language))
                             .font(.subheadline)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -190,21 +203,23 @@ struct TrainShowcaseScreen: View {
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("trainShowcase.camera.\(view.rawValue)")
                 }
-                Button {
-                    picking = true
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Trains", "選車"))
-                    } icon: {
-                        Image(systemName: "tram")
+                if exhibit == nil {
+                    Button {
+                        picking = true
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Trains", "選車"))
+                        } icon: {
+                            Image(systemName: "tram")
+                        }
+                        .font(.subheadline)
+                        .lineLimit(1)
+                        .frame(minHeight: 36)
                     }
-                    .font(.subheadline)
-                    .lineLimit(1)
-                    .frame(minHeight: 36)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityHint(Text(verbatim: language.text("Chooses the trains shown and their cars.", "選要展示的列車與節數。")))
+                    .accessibilityIdentifier("trainShowcase.pick")
                 }
-                .buttonStyle(.borderedProminent)
-                .accessibilityHint(Text(verbatim: language.text("Chooses the trains shown and their cars.", "選要展示的列車與節數。")))
-                .accessibilityIdentifier("trainShowcase.pick")
             }
         }
         .padding(12)
@@ -219,7 +234,7 @@ struct TrainShowcaseScreen: View {
     private func takePhoto() {
         guard let view = cameraLink.view else { return }
         let language = DisplayLanguage.app
-        let title = language.text("Train Garage", "車庫")
+        let title = exhibit?.title(in: language) ?? language.text("Train Garage", "車庫")
         let credit = Map3DShowcase.photoCredit(in: language)
         let photo = photo
         view.capture { image in
@@ -234,7 +249,8 @@ struct TrainShowcaseScreen: View {
 /// preview can use it as it is. The ground and the cars are made again
 /// only when the rows change; turning the camera makes nothing again.
 struct TrainShowcaseStage: UIViewRepresentable {
-    let rows: [Map3DShowcase.Row]
+    /// Decision 632: the trains' rows or the collection's exhibit.
+    let content: Map3DShowcaseContent
     let cameraView: Map3DShowcase.View
     let viewRequests: Int
     let light: Map3DShowcase.Light
@@ -278,11 +294,11 @@ struct TrainShowcaseStage: UIViewRepresentable {
         view.lighting = light.lighting
         view.quality = quality
         view.reduceMotion = context.environment.accessibilityReduceMotion
-        if coordinator.shownRows != rows {
-            let first = coordinator.shownRows == nil
-            coordinator.shownRows = rows
-            view.place([Map3DShowcase.ground(rows)], at: [Self.groundKey])
-            let frame = Map3DShowcase.frame(rows)
+        if coordinator.shownContent != content {
+            let first = coordinator.shownContent == nil
+            coordinator.shownContent = content
+            view.place([content.ground()], at: [Self.groundKey])
+            let frame = content.frame()
             view.trains = { _, _ in frame }
             if first { show(cameraView, in: view) }
         }
@@ -300,16 +316,16 @@ struct TrainShowcaseStage: UIViewRepresentable {
     /// The camera of `cameraView` at once, worked out at the next frame
     /// from the view as laid out.
     private func show(_ cameraView: Map3DShowcase.View, in view: Map3DMetalView) {
-        let rows = rows
+        let content = content
         view.fly(reduceMotion: true) { camera in
-            Map3DShowcase.camera(cameraView, rows: rows, viewport: camera.viewport)
+            content.camera(cameraView, viewport: camera.viewport)
         }
     }
 
     @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
-        var shownRows: [Map3DShowcase.Row]?
+        var shownContent: Map3DShowcaseContent?
         var shownRequests = 0
         /// The turntable, a frame at a time.
         private var turning: CADisplayLink?

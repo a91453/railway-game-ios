@@ -2720,6 +2720,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 632: the collection's ferry and cable car pages, and each
+    /// one's 3D stage (the phone on its side, as every screenshot here):
+    /// the close view and the side by day, the close view at night and the
+    /// view from above. For the screenshot review of the pull request that
+    /// added them.
+    func testCollectionFerriesAndCableCarsIn3D() {
+        for (page, exhibit, entry) in [("渡輪", "ferries", "settings.ferry.chigu2"), ("纜車", "cableways", "settings.cableway.sunMoonLake")] {
+            let app = launch()
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            // As testFerryMode: bring the garage row up, then the page's
+            // segment above it.
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+            let segment = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", page)).firstMatch
+            XCTAssertTrue(segment.becomesHittable(within: 10), "Missing the collection's \(exhibit) page")
+            segment.tap()
+            let open = app.buttons["settings.collection.\(exhibit)"]
+            XCTAssertTrue(open.appears(within: 10), "The \(exhibit) page")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)[entry].firstMatch, clearOf: .slider))
+            settle()
+            keep("collection-\(exhibit)-page", app)
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(open, clearOf: .slider), "The \(exhibit) button")
+            open.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The \(exhibit) stage did not open")
+            settle(seconds: 6)
+            keep("collection-\(exhibit)-day-close", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-day-side", app)
+            let light = app.segmentedControls["trainShowcase.light"]
+            light.buttons.element(boundBy: 2).tap()
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-close", app)
+            app.buttons["trainShowcase.camera.overhead"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-above", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 560: the EMU700 local train in the garage (the 3D map's
     /// own models, eight cars), by day: the front close up and the side,
     /// near models, then the far models from the side and the front. For
