@@ -779,6 +779,31 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day", extra: ["-screenshot-device-tier", "1"]) }
     func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night", extra: ["-screenshot-device-tier", "1"]) }
 
+    /// Decision 617 (NIGHT-GLOW): the same junction at 20:00 closer and
+    /// lower, its street lights, signals, signs and windows, and the
+    /// scene's train followed from behind and from beside it, its lamps:
+    /// the before and after of the glows round the lights.
+    func testNightGlowStreet() { shootLean("streetStopNight", "70,200,22", "night-glow-street", extra: ["-screenshot-device-tier", "1"]) }
+    func testNightGlowFollowBack() { shootNightGlowFollow("back", "night-glow-follow-back") }
+    func testNightGlowFollowSide() { shootNightGlowFollow("side", "night-glow-follow-side") }
+
+    private func shootNightGlowFollow(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "streetStopNight", "-screenshot-follow-train", "-map3DFollowView", view,
+                                 "-map3D.quality", "high", "-screenshot-device-tier", "1"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle(seconds: 5)
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The train is followed")
+        settle(seconds: 12)
+        keep(name, app)
+    }
+
     /// Decision 610: Banqiao's low-rise blocks north of Fuzhong close up
     /// and leaned, over their roofs (decision 610 續: not against a
     /// tower's wall), the real buildings' street fronts (arcade pillars, grilles,
