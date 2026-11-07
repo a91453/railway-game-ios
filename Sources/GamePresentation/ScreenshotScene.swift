@@ -129,7 +129,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the depot tool off Line 2's north end (on its viaduct, so the
     /// sidings pass over the ring): Line 2 and the Ring Line both end or
     /// call near it, so the banner offers each. For the screenshot review
-    /// of the pull request that added the offer.
+    /// of the pull request that added the offer. Decision 619: the camera
+    /// is turned to the yard, which the demo opens at the top edge.
     case depotOffer
 
     /// Decision 574: a new real-world game round Muzha with the Maokong
@@ -294,8 +295,41 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
+        // Decision 619: four sidings, which the throat splits two and two,
+        // the sides mirroring each other (three, which two-way turnouts
+        // cannot halve, is one turnout deeper on one side).
+        session.networkDepotSidings = 4
+        let before = Set(session.world.network.nodes.map(\.id))
         session.tapNetwork(at: north.plan, reach: 64)
         session.addDepotYard()
+        // Decision 619: the yard is at the map's top edge, under the HUD
+        // and the banner, as the demo opens; the camera is asked to put its
+        // throat in the middle, at the zoom the map has (asked to show it
+        // whole, the map fits it in what the banner and panels leave clear,
+        // a sliver, and zooms out to the island), again each second for a
+        // minute (the map follows a request made after it is up). The
+        // throat: the track's end, the turnouts, and the bends 40 m past the
+        // last of them.
+        let middle = Self.depotOfferThroatMiddle(in: session.world, end: north, built: before)
+        session.lookAt(middle)
+        Task { @MainActor in
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .seconds(1))
+                session.lookAt(middle)
+            }
+        }
+    }
+
+    /// The middle of the throat of the yard laid at `end` (the nodes not
+    /// in `built`): see ``prepare(_:)``.
+    static func depotOfferThroatMiddle(in world: GameWorld, end: WorldCoordinate, built: Set<TrackNodeID>) -> PlanPoint {
+        let laid = world.network.nodes.filter { !built.contains($0.id) }
+        func distance(_ point: WorldCoordinate) -> Int64 { abs(point.x - end.x) + abs(point.y - end.y) }
+        let turnouts = laid.filter { $0.ends.count >= 3 }.map(\.position)
+        let reach = (turnouts.map(distance).max() ?? 0) + 40 * WorldCoordinate.unitsPerMetre
+        let throat = laid.filter { $0.ends.count >= 2 && distance($0.position) <= reach }.map(\.position) + [end]
+        let xs = throat.map(\.x), ys = throat.map(\.y)
+        return PlanPoint(x: (xs.min()! + xs.max()!) / 2, y: (ys.min()! + ys.max()!) / 2)
     }
 
     /// Line 2's north end: the demo's highest track end furthest north.
