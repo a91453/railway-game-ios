@@ -142,8 +142,9 @@ enum MapArt {
             drawMapExpansion(expansion, land: land, clear: expansionClear, projection: projection, in: context)
         }
 
-        if layers.showsCatchmentRings {
-            drawCatchmentRings(world, projection: projection, in: context)
+        let ringStations = MapLayers.catchmentStations(in: world, layers: layers)
+        if !ringStations.isEmpty {
+            drawCatchmentRings(ringStations, projection: projection, in: context)
         }
 
         // Decision 213: the real lines the network tool traces, under the
@@ -1659,13 +1660,13 @@ enum MapArt {
         context.fill(nose, with: .color(body == nil ? colour : livery.cab.map(Palette.rgb) ?? colour))
     }
 
-    private static func drawCatchmentRings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
+    private static func drawCatchmentRings(_ stations: [Station], projection: some MapProjection, in context: GraphicsContext) {
         let radiusWorldUnits = MapLayers.catchmentRadiusWorldUnits
         let screenRadius = MapLayers.catchmentScreenRadius(pointsPerUnit: projection.pointsPerUnit)
         guard screenRadius > 1 else { return }
 
         let region = drawingRegion(projection)
-        for station in world.stations {
+        for station in stations {
             let stationRegion = WorldRegion(
                 minX: Double(station.location.x) - radiusWorldUnits,
                 minY: Double(station.location.y) - radiusWorldUnits,

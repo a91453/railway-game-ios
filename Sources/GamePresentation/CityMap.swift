@@ -58,11 +58,11 @@ public struct CityMap: Sendable {
 
     /// The cells whose middles are within ``Land/catchmentRadius`` of a
     /// station's, in a straight line; a closed station reaches no one
-    /// (decision 77). A cell two stations reach is one cell.
+    /// (decision 77), nor does a depot (decision 630). A cell two stations reach is one cell.
     static func coveredCells(of world: GameWorld, rows: Int, columns: Int) -> Set<CellPosition> {
         var covered: Set<CellPosition> = []
         let length = Land.cellLength, radius = Land.catchmentRadius
-        for station in world.stations where station.operationMode != .closed {
+        for station in world.stations where station.operationMode != .closed && !station.isDepot {
             let point = station.location
             let firstRow = max(0, Int((point.y - radius) / length) - 1), lastRow = min(rows - 1, Int((point.y + radius) / length) + 1)
             let firstColumn = max(0, Int((point.x - radius) / length) - 1), lastColumn = min(columns - 1, Int((point.x + radius) / length) + 1)
