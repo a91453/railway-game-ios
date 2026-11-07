@@ -2971,6 +2971,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.buttons["banner.depotLine"].firstMatch.tap()
         settle(seconds: 1)
         keep("depot-offer-chosen", app)
+        // Decision 619: the yard's fan once the banner has gone (it stays
+        // 10 s), the camera on it.
+        XCTAssertTrue(offer.disappears(within: 15), "The banner goes")
+        settle(seconds: 1)
+        keep("depot-yard", app)
 
         let menu = app.buttons["hud.menu"]
         menu.waitUntilSettled()

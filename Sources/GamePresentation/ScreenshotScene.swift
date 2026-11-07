@@ -129,7 +129,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the depot tool off Line 2's north end (on its viaduct, so the
     /// sidings pass over the ring): Line 2 and the Ring Line both end or
     /// call near it, so the banner offers each. For the screenshot review
-    /// of the pull request that added the offer.
+    /// of the pull request that added the offer. Decision 619: the camera
+    /// is turned to the yard, which the demo opens at the top edge.
     case depotOffer
 
     /// Decision 574: a new real-world game round Muzha with the Maokong
@@ -281,8 +282,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
+        let before = Set(session.world.network.nodes.map(\.id))
         session.tapNetwork(at: north.plan, reach: 64)
         session.addDepotYard()
+        // Decision 619: the yard is at the map's top edge, under the HUD
+        // and the banner, as the demo opens; the camera is asked to put it
+        // in the middle, again each second for a minute (the map follows a
+        // request made after it is up), with 60 m round it.
+        let yard = session.world.network.nodes.filter { !before.contains($0.id) }.map(\.position) + [north]
+        let region = WorldRegion(
+            minX: Double(yard.map(\.x).min() ?? north.x), minY: Double(yard.map(\.y).min() ?? north.y),
+            maxX: Double(yard.map(\.x).max() ?? north.x), maxY: Double(yard.map(\.y).max() ?? north.y)
+        ).expanded(by: Double(60 * WorldCoordinate.unitsPerMetre))
+        session.lookOver(region)
+        Task { @MainActor in
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .seconds(1))
+                session.lookOver(region)
+            }
+        }
     }
 
     /// Line 2's north end: the demo's highest track end furthest north.
