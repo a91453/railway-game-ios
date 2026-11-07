@@ -126,5 +126,52 @@ Mac 上的測試（`swift test`）：`TrainMotionTests.testAFollowedTrainMovesEv
 
 - **代價**：畫面上的車比世界晚一步（這條線約 1.4 秒），到站聲會比畫面上的車早到（決策 379 續已經接受晚一個 tick 的間隔，這次多了一步裡其他的 tick）。
 - **交通讀數本身**：每一步仍要 0.7–1.2 秒，遊戲在這條線上的 10× 實際只跑到約三成（一步 4.4 個 tick／1.5 秒 ≈ 每秒 2.9 個 tick，應有 10 個），背景一直佔一顆核心。3D 跟車時沒人看交通圖，可以少讀（HANDOFF §4.54 ①），但讀數會被列車面板的等候文字與單線待避提示讀到，改之前要先讓過期時的背景讀（`readTrafficOffTheMainActor`）一次只跑一個。
-- **作者回報：第一次跟車沒多久就跳回 2D**。程式裡會自動關 3D 的只有放空模式（從選單才會開）、3D 的「2D」「建設」按鈕、捏合交回（跟車時不會）；這次的修法沒有動這些。還不知道原因，要作者再遇到時記下：怎麼開始跟的（2D 跟車列的 3D 按鈕、或 3D 裡點車）、有沒有轉手機、跳回之前有沒有跳出卡片或報表。
+- **作者回報：第一次跟車沒多久就跳回 2D**：原因與修法見下一節「跳回 2D」。
 - 真實列車的時鐘只在 App 這邊用 `glidesOnThroughTheStep` 擋，GamePresentation 的 `RealTrainClock` 本身沒有改。
+
+## 跳回 2D：速度落後提示的 popover 把 3D 蓋層擠掉（MAP3D-BOUNCE，2026-11-07）
+
+作者回報：第一次跟車進 3D 沒多久，畫面自己跳回 2D。
+
+### 怎麼查的
+
+- 在 App 裡加暫時的 `print`（沒有提交）：
+  - `GameScreenState.showsMap3D` 從開變關時印出呼叫堆疊（`Thread.callStackSymbols`）。
+  - `Map3DPreviewScreen` 的 `onAppear`／`onDisappear`、記憶體警告、`stopFollowingTrain`、`scenePhase` 各印一行。
+  - 後來再加上 `syncSpeedLagHint()` 改變提示時印一行。
+- 建 Release 版裝到 iPhone 17 Pro，用 `xcrun devicectl device process launch --console --environment-variables '{"OS_ACTIVITY_DT_MODE":"1"}'` 開 App，把主控台存在 Mac 上。作者照平常的方式操作：高雄環狀輕軌、10×、跟車進 3D 車窗視角，放著不碰。
+  - 先用 Debug 版時，GameCore 沒有最佳化，一個 tick 要好幾秒，遊戲時間看起來不動，所以改用 Release 版。
+- UIKit、SwiftUI 的堆疊用 `~/Library/Developer/Xcode/iOS DeviceSupport/iPhone18,1 27.3 (24C5037i)` 的符號和 `atos` 符號化。
+
+### 看到的
+
+- 第一次關掉是作者自己按的：堆疊經過 `Map3DPreviewScreen.leave(to:)`（3D 的「2D」按鈕）。
+- 自己跳回 2D 的那兩次：
+  - 3D 開了 8 秒和 21 秒之後，`showsMap3D` 都不是 App 的程式設成 false 的。
+  - 堆疊是 UIKit `-[_UICurrentContextPresentationController transitionDidFinish:]` → `-[UIViewController __viewDidDisappear:]` → SwiftUI `PresentationHostingController.viewDidDisappear` → `SheetBridge.didDismissViewController(_:wasPreempted:modifierRemoved:)` → `PresentationState.presentationDidDisappear()` → `Binding.wrappedValue.setter`（`ContentView` 的 `.fullScreenCover(isPresented: $screen.showsMap3D)`）。也就是另一個呈現把 3D 的全螢幕蓋層換掉，SwiftUI 以為蓋層收起來了，就把 binding 設回 false。
+  - 第二次加了提示的 log：
+
+    ```
+    BOUNCE speedLagHint Optional(SpeedLagHint(speed: x10, actualTenths: 10, reason: warm)) at 815715200.715767
+    BOUNCE showsMap3D true -> false at 815715200.77846
+    BOUNCE map3D disappear at 815715200.793808
+    ```
+
+    提示出現 62 ms 後，3D 就關了。
+- 主控台沒有記憶體警告，`scenePhase` 也沒變。
+
+### 根因
+
+- 決策 464 的速度落後提示：遊戲連續 20 秒跑不到設定速度的七成，就會自己跳出來，每局每種速度一次。它是 `HUDView` 裡速度旁邊的 `.popover`（`presentationCompactAdaptation(.popover)`），而 `HUDView` 在 3D 的 `fullScreenCover` 底下。
+- 3D 開著時提示跳出來，UIKit 就用 current-context 的方式把 popover 呈現出來，3D 的蓋層因此被拿掉。
+- 這條線 10× 只跑到約三成（手機熱的時候只跑到 ×1，提示說「裝置有點燙」），開 10× 約 20 秒就會跳，所以「第一次跟車沒多久」就發生。每局每種速度只跳一次，所以之後再跟車就不會。
+
+### 修法（分支 `claude/map3d-bounce-2d`，只動 GamePresentation，GameCore 不動）
+
+- `GameSession.syncSpeedLagHint()`：3D 地圖開著時不顯示提示（`!isMap3DOpen`）；`setMap3DOpen(_:)` 時重新同步，所以 3D 一關、回到 2D，提示照樣出現。
+- 提示因為 3D 打開而收起時，不算玩家按了「知道了」，`speedLagWatch` 裡的提示還在。
+- 測試：`SpeedLagHintTests.testTheHintWaitsWhileTheMap3DIsOpen`，沒有修法時紅（3D 開著時提示照樣出現），有修法時綠。
+
+### 還沒做的
+
+- 同一類風險：`ContentView` 底下其他會自己跳出來的 alert 或 sheet，例如第一次單線待避的提示卡（`PassingLoopCards`），以及年度結算、月報、課程結果這些面板，在 3D 開著時跳出來，也可能把 3D 蓋層擠掉。這次只修了實機重現的那一個。
