@@ -1006,7 +1006,10 @@ private struct SpeedLagHintCard: View {
             }
         }
         .padding()
-        .frame(maxWidth: 280, alignment: .leading)
+        // One width, not at most one: the popover sized itself to the
+        // sentence on one line and cut it short at 280 (Mac playtest
+        // 2026-11-08, A6); at a set width it takes the lines it wraps to.
+        .frame(width: 280, alignment: .leading)
         .accessibilityIdentifier("hud.lagHint")
     }
 }

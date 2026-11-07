@@ -640,7 +640,7 @@ final class TutorialSessionTests: XCTestCase {
             "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
             "line.loss.fix", "line.addTrain", "inspector.track.double", "line.staff.headway", "line.headway.change",
             "lines.advanced", "line.window", "line.pattern.add", "line.depots", "station.freight.build", "building.kind.hotel",
-            "hud.requests", "line.addSelectedStation", "tool.bus",
+            "hud.requests", "line.addSelectedStation", "tool.bus", "map.build.card", "map.banner",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")
@@ -668,7 +668,7 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(steps.map { $0.title(in: .english) }, [
             "Tap Build", "Zoom out to see the town", "Tap the start, then the end", "Tap ✓ to build the track",
             "Tap Station", "Tap your track near one end", "Tap ✓ to build the station", "Tap the track near the other end",
-            "Tap ✓ for the second station", "Tap Done to stop building",
+            "Tap ✓ for the second station", "Tap ✕ to stop building",
             "Tap Lines", "Tap one station, then the other", "Tap ✓, then Open Line",
             "Tap Buy … and Start Service", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
             "Tap Lines to check your line", "Read your line's card",
@@ -677,7 +677,7 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
             "點「建設」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
             "點「車站」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
-            "點「完成」結束建造",
+            "按 ✕ 結束建造",
             "點「路線」", "點一座車站，再點另一座", "按 ✓，再按「開通路線」",
             "按「購買…列並開始營運」", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
             "點「路線」看營運收支", "看懂路線卡",

@@ -3036,6 +3036,9 @@ private struct MapTopColumnOverlay: ViewModifier {
                 // or else the traffic key at the leading edge.
                 VStack(spacing: 0) {
                     StatusBanner(session: session)
+                        // The tutorial's folded card keeps clear of the
+                        // message (Mac playtest 2026-11-08, A2).
+                        .tutorialTarget(session.message == nil ? nil : .statusBanner)
                     // While the network tool previews a stretch.
                 if session.tool == .network, let preview = session.networkPreview {
                         MapConstructionHUD(preview: preview, language: session.language)
@@ -3155,13 +3158,13 @@ private struct MapMarkOverlays: ViewModifier {
             .overlay(alignment: .topLeading) {
                 if showsFaresAndStamps {
                     FareFloatMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                        .mask { attribution.fill().mask { BelowStatusBar(top: clear.top) } }
                 }
             }
             .overlay(alignment: .topLeading) {
                 if showsFaresAndStamps {
                     TripStampMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                        .mask { attribution.fill().mask { BelowStatusBar(top: clear.top) } }
                 }
             }
             // Decision 353: a station stamp collected lands over its
@@ -3173,6 +3176,22 @@ private struct MapMarkOverlays: ViewModifier {
             .overlay {
                 GoalMetCheck(pulse: session.goalPulse, language: session.language)
             }
+    }
+}
+
+/// The map below the status bar, faded in over its first 16 points: the
+/// fares and the full trips float up and out there rather than over the
+/// date (Mac playtest 2026-11-08, A10).
+private struct BelowStatusBar: View {
+    let top: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: max(0, top))
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: 16)
+            Color.black
+        }
     }
 }
 

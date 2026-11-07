@@ -52,6 +52,9 @@ struct MapBuildConfirm: View {
                 }
                 pill(build)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { pillSize = $0 }
+                    // The tutorial's folded card keeps clear of it all,
+                    // not only its ✓ (Mac playtest 2026-11-08, A2).
+                    .tutorialTarget(.mapConfirmCard)
                     .offset(placement(below: camera.screenPoint(of: build.anchor), clearance: build.clearance))
                     .transition(.pop(reduceMotion: reduceMotion))
             }

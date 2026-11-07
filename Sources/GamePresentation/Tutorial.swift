@@ -116,6 +116,15 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case addSelectedStation = "line.addSelectedStation"
     /// The bus tool (decision 400, 10i-5): no step points at it yet.
     case busTool = "tool.bus"
+    /// The whole bubble over the map round ``mapConfirm``, with its take
+    /// back and cancel: never outlined, but the folded card keeps clear of
+    /// it (Mac playtest 2026-11-08, A2: the pill covered them at the
+    /// line step).
+    case mapConfirmCard = "map.build.card"
+    /// The message over the top of the map: never outlined, but the folded
+    /// card keeps clear of it (Mac playtest 2026-11-08, A2: the pill
+    /// covered "Opened Line 1 …" at the last step).
+    case statusBanner = "map.banner"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).
@@ -770,7 +779,7 @@ extension Tutorial {
             targets: [.selectTool],
             goal: .chooseTool(.select),
             panel: .closed,
-            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            title: ("Tap ✕ to stop building", "按 ✕ 結束建造"),
             body: (
                 "Time runs again. Next, a line joins your two stations.",
                 "時間會繼續走。接著用路線把兩站連起來。"

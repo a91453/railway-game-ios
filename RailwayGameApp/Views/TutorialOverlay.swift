@@ -711,10 +711,13 @@ private struct FoldedTutorialCard: View {
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Theme.primary)
                         .lineLimit(1)
+                        // Two lines where it is narrow, rather than cut
+                        // short (Mac playtest 2026-11-08, A2: step 8).
                         Text(verbatim: tutorial.step.title(in: session.language))
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     HStack(spacing: 3) {
                         Text(verbatim: session.language.text("Tap for help", "點我看說明"))

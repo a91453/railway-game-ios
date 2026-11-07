@@ -115,7 +115,9 @@ final class MapLockTests: XCTestCase {
             taps += 1
         }
         XCTAssertFalse(session.mapLocks(on: camera, viewport: phone, clearOf: clear).isEmpty)
-        XCTAssertGreaterThan(taps, 4, "The opening is closer than the UI test once thought")
+        // Since the Mac playtest's A9 the opening shows the first town
+        // whole, three taps from the locks; the UI test taps until one shows.
+        XCTAssertGreaterThan(taps, 0, "The opening already shows a lock")
         XCTAssertLessThanOrEqual(taps, 9)
     }
 }
