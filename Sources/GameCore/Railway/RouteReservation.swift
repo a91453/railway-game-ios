@@ -1588,9 +1588,9 @@ extension GameWorld {
     /// `route` is asked a resource at a time (see ``TrackCover``), and
     /// `memo` keeps the trains' holders.
     /// With `limit` (decision 294) it never reaches beyond that. Decision
-    /// 636: it is `nil` too when the reservation would end before the
-    /// train is past track its line runs only the other way
-    /// (``againstClearance(of:_:memo:)``).
+    /// 636: it is `nil` too when the train would stand on track its line
+    /// runs only the other way where the reservation ends
+    /// (``standsAgainstTheLine(_:_:authority:memo:)``).
     func followingAuthority(of candidate: Train, route: TrackCover, limit: Int64 = .max, memo: inout DirectionMemo) -> Train? {
         let holders = trackHolders(memo: &memo)
         let holding = holders.holding(route, except: candidate.id, fouling: true, in: network)
@@ -1607,36 +1607,41 @@ extension GameWorld {
         guard authority >= 1 else { return nil }
         // Decision 636: never left standing on track its line runs only
         // the other way.
-        if !blockSections, let clears = againstClearance(of: candidate, envelopes, memo: &memo), authority < clears {
-            return nil
-        }
+        if !blockSections, standsAgainstTheLine(candidate, envelopes, authority: authority, memo: &memo) { return nil }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()
         return train
     }
 
-    /// Decision 636: how far along its route `candidate`'s head must reach
-    /// for the whole train to be past the last stretch its line runs only
-    /// the other way (decision 527's ``oneWayAgainst(_:length:)``), or `nil`
-    /// when its route has no such stretch, or it stands on one already. A
-    /// train following another (Stage U2) given less than this could be
-    /// left standing there, head on with the line's own trains, when the
-    /// one ahead stops short: an empty run out of the Qingpu depot of the
-    /// Taoyuan Airport MRT, whose track joins only the eastbound line, met
-    /// an eastbound service at THSR Taoyuan, and neither moved again
-    /// (TYMC-REBUILD-4).
-    private func againstClearance(of candidate: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> Int64? {
-        guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(candidate.id) }) else { return nil }
+    /// Decision 636: whether `candidate`, its head stopped `authority`
+    /// along its route short of its end, would stand on track its line
+    /// runs only the other way (decision 527's
+    /// ``oneWayAgainst(_:length:)``). Never when it stands on such track
+    /// already. A train following another (Stage U2) could be left there,
+    /// head on with the line's own trains, when the one ahead stops short:
+    /// an empty run out of the Qingpu depot of the Taoyuan Airport MRT,
+    /// whose track joins only the eastbound line, met an eastbound service
+    /// at THSR Taoyuan, and neither moved again (TYMC-REBUILD-4). It may
+    /// still stop short of such track, or reach its end there.
+    private func standsAgainstTheLine(_ candidate: Train, _ envelopes: AuthorityEnvelopes, authority: Int64, memo: inout DirectionMemo) -> Bool {
+        guard authority < envelopes.length,
+              let line = lines.first(where: { $0.hasRuns && $0.trains.contains(candidate.id) }) else { return false }
         let key = PathMemo.LineAgainst(line: line.id, length: candidate.length)
         let against: Set<TrackTraversal>
         if let known = memo.paths.against[key] { against = known } else {
             against = oneWayAgainst(line, length: candidate.length)
             memo.paths.against[key] = against
         }
-        guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }),
-              let last = envelopes.stretches.lastIndex(where: { against.contains($0.traversal) }) else { return nil }
-        let (sum, overflow) = envelopes.ends[last].addingReportingOverflow(candidate.length)
-        return overflow ? .max : sum
+        guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }) else { return false }
+        // Its body, from `tail` to its head, along its route.
+        let tail = authority - candidate.length
+        var start: Int64 = 0
+        for (stretch, end) in zip(envelopes.stretches, envelopes.ends) {
+            defer { start = end }
+            guard start < authority else { break }
+            if end > tail, end > start, against.contains(stretch.traversal) { return true }
+        }
+        return false
     }
 
     /// Whether train `other`, following a train, waits for any of

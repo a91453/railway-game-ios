@@ -34,7 +34,7 @@ final class FollowerAgainstTheLineTests: XCTestCase {
         let f = try world.purchaseTrain(named: "F").id
         try world.placeTrain(f, at: KeepLeftTests.fromEast)
         try world.assignTrain(f, to: line)
-        try world.setTrainContinuation(f, along: way, stoppingAt: 3_072)
+        try world.setTrainContinuation(f, along: [], stoppingAt: 3_072)
         try world.setTrainMovementRate(f, to: 16_384)
         let l = try world.purchaseTrain(named: "L").id
         try world.placeTrain(l, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .backward), offset: 1_024))
@@ -58,6 +58,10 @@ final class FollowerAgainstTheLineTests: XCTestCase {
         ]
         follower.isDeadheading = true
         follower.execution = .travellingToStop(1, cycle: 0)
+        // Its way to West, set as a departure's is.
+        follower.movement.edges = way.map(\.edge)
+        follower.movement.cursor = 0
+        follower.movement.end = 3_072
         follower.reservation = []
         return (world, follower)
     }
