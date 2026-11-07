@@ -286,6 +286,9 @@ struct Map3DPreviewScreen: View {
             feed.update(session: session, palette: linePalette)
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
+            // CABVIEW-2 (decision 379 續三): over the game loop's whole
+            // step, as the trains do.
+            guard !session.glidesOnThroughTheStep else { return }
             // Decision 339: the real trains glide with the game clock.
             feed.updateRealClock(world: session.world, shown: showsRealTrains,
                                  glides: !session.world.clock.isPaused && !reduceMotion)
