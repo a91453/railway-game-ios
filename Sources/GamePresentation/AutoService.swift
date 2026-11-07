@@ -714,14 +714,30 @@ extension GameSession {
     }
 
     /// What it says of the trains taken off the track for a loop and put
-    /// back where their lines' trips start.
+    /// back where their lines' trips start, or left off it.
     static func liftedText(_ outcome: PlayerCommand.Outcome, in language: DisplayLanguage) -> String {
         let count = outcome.left.count
-        guard count > 0 else { return "" }
-        return language.text(
+        var text = count == 0 ? "" : language.text(
             " \(count) \(count == 1 ? "train was" : "trains were") in the way and went back to the start of \(count == 1 ? "its" : "their") line.",
             "有 \(count) 列車擋在那段軌道上，已經回到路線起點。"
         )
+        if !outcome.parked.isEmpty {
+            let names = outcome.parked.joined(separator: language.text(", ", "、"))
+            text += language.text(
+                " \(names) left the track: the line already runs every train it can there. Give \(outcome.parked.count == 1 ? "it" : "them") another line, or sell \(outcome.parked.count == 1 ? "it" : "them").",
+                "\(names) 先離開軌道：這條線在那裡能跑的列車已經都在跑了。可以配到別條線，或賣掉。"
+            )
+        }
+        return text
+    }
+
+    /// Decision 628: whether line `id` has on its track as many of its
+    /// trains as it runs at the busiest time of day.
+    static func runsEveryTrainOnItsTrack(_ id: LineID, in world: GameWorld) -> Bool {
+        guard let line = world.line(id: id) else { return false }
+        let runs = ServiceLevel.allCases.compactMap { world.lineTrainsInService(id, at: $0) }.max() ?? 0
+        let onTrack = line.assignedTrains.filter { world.train(id: $0)?.position != nil }.count
+        return onTrack >= runs
     }
 
     /// The cars a train bought for line `id` has: as many as its shortest
@@ -904,6 +920,13 @@ extension GameSession {
                 var atBack = world
                 if let back = Self.farEndJourney(of: line, in: world), (try? Self.placeAtStart(train, of: back, in: &atBack)) != nil {
                     placed = atBack
+                } else if Self.runsEveryTrainOnItsTrack(line, in: world) {
+                    // Decision 628: both ends taken, and the line already
+                    // has on its track every train it runs. Put back, the
+                    // train would only stand on a platform of the single
+                    // track, in the way of the others; off it, it waits.
+                    outcome.parked.append(world.train(id: train)?.name ?? "")
+                    continue
                 } else if let anywhere = Self.placeAtAnyStop(train, of: line, in: world) {
                     // Decision 628: both ends taken; a stop between them.
                     placed = anywhere

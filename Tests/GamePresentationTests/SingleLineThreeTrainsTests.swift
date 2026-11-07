@@ -182,4 +182,34 @@ final class SingleLineThreeTrainsTests: XCTestCase {
             print("[SL628D] \(name) done lines \(world.lines.count)")
         }
     }
+
+    func testProbeFix() throws {
+        guard ProcessInfo.processInfo.environment["SINGLELINE_EXPLORE"] != nil else { throw XCTSkip("set SINGLELINE_EXPLORE") }
+        let session = try build(Layout(stations: 3, loopAt: nil, lines: [[0, 1, 2]]), rules: .simple, controlled: true)
+        let line = try XCTUnwrap(session.world.lines.first).id
+        let stations = session.world.stations.map(\.id)
+        for index in session.world.trains.count..<3 {
+            session.purchaseTrain()
+            let train = try XCTUnwrap(session.world.trains.last).id
+            session.selectStation(stations[index % stations.count])
+            session.selectTrain(train)
+            session.placeSelectedTrain()
+            session.assignTrain(train, toLine: line)
+            print("[SL628F] assign: \(session.message?.text ?? "")")
+        }
+        session.selectLine(line)
+        session.addPassingLoopToSelectedLine()
+        print("[SL628F] fix: \(session.message?.text ?? "")")
+        let w = session.world
+        print("[SL628F] stops \(w.line(id: line)!.stops.map { w.station(id: $0)!.name }) inService \(w.lineTrainsInService(line, at: .peak) ?? -1)")
+        for p in w.network.platforms { print("[SL628F] platform \(w.station(id: p.station)!.name) \(p.edge) \(p.start)-\(p.end)") }
+        var world = w
+        for minute in [400, 30, 30, 30] {
+            try world.advance(ticks: minute)
+            for train in world.trains {
+                print("[SL628F]  \(train.name) pos \(String(describing: train.position)) exec \(String(describing: train.execution).prefix(80))")
+            }
+            print("[SL628F]  waits \(world.routeWaits().map { "\($0.train)->\($0.holder) \($0.isDeadlocked)" })")
+        }
+    }
 }
