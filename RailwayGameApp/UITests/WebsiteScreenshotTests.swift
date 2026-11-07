@@ -2979,6 +2979,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(dismiss.disappears(within: 5), "The banner goes")
         let done = app.buttons["tool.select"]
         if done.becomesHittable(within: 10) { done.tap() }
+        let fold = app.buttons["map.minimap.fold"].firstMatch
+        if fold.becomesHittable(within: 5) { fold.tap() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         for _ in 0..<2 {
             map.pinch(withScale: 2.5, velocity: 2)
@@ -2989,8 +2991,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         let menu = app.buttons["hud.menu"]
         menu.waitUntilSettled()
         menu.tap()
-        // The menu's grid may not show its items as buttons: any element.
-        let report = app.descendants(matching: .any)["menu.report"].firstMatch
+        // The menu's rows side by side (a ControlGroup) drop their
+        // identifiers: found by the label too, in either language.
+        let report = app.buttons.matching(NSPredicate(format: "identifier == 'menu.report' OR label == 'Report a Problem' OR label == '回報問題'")).firstMatch
         XCTAssertTrue(report.appears(within: 30), "The menu opens")
         report.waitUntilSettled()
         let frame = report.frame

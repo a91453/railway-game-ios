@@ -91,6 +91,30 @@ final class DepotYardTemplateTests: XCTestCase {
         }
     }
 
+    /// About the lead the two sides mirror each other: an even yard's
+    /// legs on one side are the other's turned over, so each siding
+    /// leaves at the same depth as its mirror; an odd yard, which two-way
+    /// turnouts cannot halve, has its middle siding one turnout deeper on
+    /// one side at most.
+    func testTheSidesAboutTheLeadMirrorEachOther() {
+        for sidings in 2...DepotYard.mostSidings {
+            let fan = DepotYardFan(sidings: sidings, spacing: DepotYard.spacing, anchor: nil)
+            func depth(_ leg: DepotYardFan.Leg) -> Int {
+                guard let parent = fan.legs.first(where: { $0.to == leg.from && $0.toAcross == leg.fromAcross }) else { return 1 }
+                return depth(parent) + 1
+            }
+            var depths: [Int: Int] = [:]
+            for leg in fan.legs { if let siding = leg.siding { depths[siding] = depth(leg) } }
+            if sidings % 2 == 0 {
+                let mirrored = Set(fan.legs.map { DepotYardFan.Leg(from: $0.from, fromAcross: -$0.fromAcross, to: $0.to, toAcross: -$0.toAcross, siding: $0.siding.map { sidings - 1 - $0 }) })
+                XCTAssertEqual(Set(fan.legs), mirrored, "\(sidings) sidings")
+                for siding in 0..<sidings { XCTAssertEqual(depths[siding], depths[sidings - 1 - siding], "\(sidings) sidings, siding \(siding)") }
+            } else {
+                for siding in 0..<sidings { XCTAssertLessThanOrEqual(abs((depths[siding] ?? 0) - (depths[sidings - 1 - siding] ?? 0)), 1, "\(sidings) sidings, siding \(siding)") }
+            }
+        }
+    }
+
     /// Built, its turnouts stand at least 22 m apart (the real 20-26 m),
     /// its sidings 5 m apart about the track's end, each as long as the
     /// kind's for the longest train with a platform for it, and GameCore

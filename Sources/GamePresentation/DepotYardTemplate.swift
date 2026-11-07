@@ -137,11 +137,14 @@ struct DepotYardFan: Hashable, Sendable {
             anchor == nil ? (across[group.lowerBound] + across[group.upperBound - 1]) / 2 : across[group.lowerBound]
         }
         var legs: [Leg] = []
-        // The group `group` arriving `along` the yard: split in two, the
-        // first half the larger, each half bending to its own arrival.
+        // The group `group` arriving `along` the yard: split in two, each
+        // half bending to its own arrival. The larger half (of an odd
+        // group) is the one nearer the lead, so the sides about the lead
+        // mirror each other; to one side, and at the lead, the first.
         func split(_ group: Range<Int>, along: Int64) {
             guard group.count > 1 else { return }
-            let from = arrival(group), middle = group.lowerBound + (group.count + 1) / 2
+            let from = arrival(group)
+            let middle = group.lowerBound + (anchor == nil && from < 0 ? group.count / 2 : (group.count + 1) / 2)
             for half in [group.lowerBound..<middle, middle..<group.upperBound] {
                 let to = arrival(half)
                 let end = along + Self.reach(across: to - from)
