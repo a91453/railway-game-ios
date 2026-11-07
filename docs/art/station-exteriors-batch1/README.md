@@ -1,4 +1,4 @@
-# 車站外觀第一批 studies：第 9 次交付
+# 車站外觀第一批 studies：第 10 次交付
 
 這是獨立研究配方，沒有接到 `Map3DStationKit` 的站點選型、地圖或存檔。公開庫只有配方、測試與一張總覽；逐方向原生模型、GLB、日夜圖與離線檢視頁在私有素材庫的同名資料夾。
 
@@ -113,14 +113,26 @@
 
 外觀只看 Wikimedia Commons [高鐵台中站長棚與入口鋼架](https://commons.wikimedia.org/wiki/File:THSR_Taichung_Station_01.jpg)、[高鐵與新烏日全景](https://commons.wikimedia.org/wiki/File:THSR_Taichung_Station_and_TRA_New_Wurih_Station_20111008a.JPG)、[新烏日正面玻璃入口](https://commons.wikimedia.org/wiki/File:新烏日車站.JPG)、[中捷白色曲棚與玻璃立面](https://commons.wikimedia.org/wiki/File:HSR_Taichung_Station_(Taichung_MRT).jpg)、[中捷與高鐵之間的空橋](https://commons.wikimedia.org/wiki/File:View_at_skyway_between_exit_2_and_the_main_building_of_TMRT_HSR_Taichung_Station.jpg)；[臺中觀旅高鐵頁](https://travel.taichung.gov.tw/zh-tw/Traffic/THSR) 只核對站區關係，沒有當測量尺度。照片不打包、不作貼圖。以現有 station kit 盒體、曲棚、梁柱和淡色玻璃組成近／遠景，保留淺屋頂、青灰窗與暗桁架的明暗次序。高鐵棚曲度、中捷波浪節奏、新烏日入口比例和通廊高程仍待作者核對。近景 **4,291 三角**、遠景 **2,011 三角**。
 
-## 尚缺的兩站
+## 已完成：高鐵台南（含臺鐵沙崙與兩條月台棚）
+
+| 部件 | OSM 足跡最小旋轉矩形 | 高度、屋頂與外觀判斷 |
+| --- | --- | --- |
+| 高鐵台南站房 | [relation 9351022](https://www.openstreetmap.org/relation/9351022) 外環 `r9351022:1`，由 ways 672619073、672619075 接成，**114.299 × 56.615 m**，18 個頂點；母 relation 標 `building:levels=3`、`layer=1` | OSM 無 `height`、`roof:shape` 或 `roof:height`。約 **27 m** 最高點、淺灰寬屋面、較高中央採光段與長玻璃立面均為參考展示比例及照片推估。 |
+| 西側高鐵月台棚 | 同 relation 外環 `r9351022:0`，由 ways 672619074、672619076 接成，**335.978 × 13.981 m**，7 個頂點 | 約 **24 m** 棚頂、架高月台、柱位與棚形全屬推估；照片顯示細長淺色棚。 |
+| 東側高鐵月台棚 | [way 266850895](https://www.openstreetmap.org/way/266850895)，**331.538 × 10.946 m**，4 個頂點；`building:levels=3`、`layer=1` | OSM 無實際高度或屋頂標籤；約 **24 m** 棚頂與支承節距推估。 |
+| 臺鐵沙崙站 | [way 316034163](https://www.openstreetmap.org/way/316034163)，**149.056 × 26.880 m**，7 個頂點；`building:levels=3`、`layer=1` | OSM 無實際高度或屋頂標籤；照片顯示長斜坡金屬屋頂、上層窗帶，約 **17 m** 屋脊、柱窗間距為推估。 |
+
+四個輪廓的全部非閉合頂點從 2026-11-06 下載的 osmtoday `asia/taiwan.pbf` 以 pyosmium 擷取；relation 的兩個外環按成員 way 端點接合，避免把整個 relation 當單一足跡。局部公尺座標原點為 120.28626105°E、22.92464555°N。尺寸、方向和四件相對位置與參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/tainan-hsr-v1/metadata.json` 核對；`blender-buildings-v1/tainan-hsr-v1/model.json` 僅量比例，不搬原網格。OSM 輪廓 © OpenStreetMap contributors，ODbL 1.0。
+
+照片只看 Wikimedia Commons [高鐵台南站正面與寬屋頂](https://commons.wikimedia.org/wiki/File:HSR_Tainan_Station.JPG)、[沙崙站長斜屋頂與窗帶](https://commons.wikimedia.org/wiki/File:Shalun_Station_Exterior.jpg)、[兩站與月台相對位置](https://commons.wikimedia.org/wiki/File:THSR_Tainan_Station_and_TRA_Shalun_Station_2010-05.jpg)；[高鐵台南官方站頁](https://www.thsrc.com.tw/ArticleContent/9c5ac6ca-ec89-48f8-aab0-41b738cb1814) 只核對站區配置。照片不打包、不作貼圖。以現有 station kit 盒體、封閉曲棚、斜屋頂、梁柱與調淡的白灰、青灰色階重建；淺屋頂比立面亮、玻璃與棚下更暗。沙崙斜屋頂不是中式屋頂。近景 **4,065 三角**、遠景 **1,533 三角**；作者尚未驗收外觀。
+
+## 尚缺的一站
 
 | 站 | 來源與目前量到的部件足跡（m） | 還缺的核對 |
 | --- | --- | --- |
-| 高鐵台南 | 參考庫 `stations/tainan-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵臺南 114 × 57（r9351022:1）；高鐵月台棚 336 × 14（r9351022:0）；高鐵月台棚 332 × 11（266850895）；沙崙 149 × 27（316034163） | 挑簷、月台棚與真實高度。 |
 | 高鐵左營 | 參考庫 `stations/zuoying-complex-v1/metadata.json` 的 OSM 輪廓：高鐵左營 186 × 78（111991261）；臺鐵新左營 168 × 67（303296097） | 大頂與真實高度。 |
 
-上表尺寸是參考庫依 OSM 輪廓量出的最小矩形，括號內為 OSM way／relation 識別；這些站的 `displayHeightM` 都是展示推估，**尚未**作為真實高度。每站完成前須從整份 Taiwan PBF 重新核對 way、`building:part`、高度與屋頂標籤，再看照片選各部件，並另做近遠兩版。資料出處同為 © OpenStreetMap contributors，ODbL 1.0。
+上表尺寸是參考庫依 OSM 輪廓量出的最小矩形，括號內為 OSM way 識別；`displayHeightM` 是展示推估，**尚未**作為真實高度。完成前須從整份 Taiwan PBF 重新核對 way、`building:part`、高度與屋頂標籤，再看照片選各部件，並另做近遠兩版。資料出處同為 © OpenStreetMap contributors，ODbL 1.0。
 
 ## 檢查與邊界
 

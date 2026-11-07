@@ -2,6 +2,43 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch1Tests: XCTestCase {
+    func testTainanHSRStudyKeepsFourOSMOutlinesAndTwoDetails() {
+        let near = Map3DStationExteriorBatch1.model(for: .tainanHSR, detail: .near)
+        let far = Map3DStationExteriorBatch1.model(for: .tainanHSR, detail: .far)
+        XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
+        XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
+        XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
+        XCTAssertNil(Map3DStationKit.model(id: near.name))
+        XCTAssertNil(Map3DStationKit.model(id: far.name))
+        let outlines: [([(Float, Float)], Float)] = [
+            (Map3DStationExteriorBatch1.tainanHSRFootprint, 0.32),
+            (Map3DStationExteriorBatch1.tainanPlatformWestFootprint, 24),
+            (Map3DStationExteriorBatch1.tainanPlatformEastFootprint, 24),
+            (Map3DStationExteriorBatch1.shalunFootprint, 0.32),
+        ]
+        XCTAssertEqual(outlines.map { $0.0.count }, [18, 7, 4, 7])
+        for (outline, top) in outlines {
+            for (east, north) in outline {
+                XCTAssertTrue(near.vertices.contains {
+                    abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002
+                        && abs($0.z - top) < 0.002
+                })
+            }
+        }
+        XCTAssertEqual(near.maximum.z, 27, accuracy: 0.01)
+        let colours = Set(near.vertices.map(\.color))
+        let ordered = [UInt32(0xE7EBEA), 0xD8E0DF, 0xC9D3D2,
+                       0xAABABB, 0x9CB5B9, 0x637F86, 0x687779].map(Map3DColor.rgb)
+        func luminance(_ colour: UInt32) -> Float {
+            Float(colour & 255) * 0.2126 + Float((colour >> 8) & 255) * 0.7152
+                + Float((colour >> 16) & 255) * 0.0722
+        }
+        for (lighter, darker) in zip(ordered, ordered.dropFirst()) {
+            XCTAssertTrue(colours.contains(lighter))
+            XCTAssertGreaterThan(luminance(lighter), luminance(darker))
+        }
+    }
+
     func testTaichungHSRStudyPreservesFiveWaysAndThreeDistinctHalls() {
         let near = Map3DStationExteriorBatch1.model(for: .taichungHSR, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .taichungHSR, detail: .far)

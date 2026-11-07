@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung", tainanHSR = "hsr-tainan" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -17,6 +17,7 @@ public enum Map3DStationExteriorBatch1 {
         case .taoyuanHSR: builder.taoyuanHSRExteriorStudy(detail: detail)
         case .hsinchuHSR: builder.hsinchuHSRExteriorStudy(detail: detail)
         case .taichungHSR: builder.taichungHSRExteriorStudy(detail: detail)
+        case .tainanHSR: builder.tainanHSRExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -577,6 +578,33 @@ public enum Map3DStationExteriorBatch1 {
         (-116.692, -135.413), (-93.034, -138.137), (7.688, -149.713),
         (15.392, -143.864), (32.473, -130.888), (-73.172, -118.767),
         (-83.098, -117.622), (-146.257, -110.372), (-148.632, -131.699),
+    ]
+
+    // Relation 9351022 outer rings: station = ways 672619073+075;
+    // platform = ways 672619074+076. The other two outlines are ways.
+    // PBF 2026-11-06, metres east/north from 120.28626105 E, 22.92464555 N.
+    // © OpenStreetMap contributors, ODbL 1.0.
+    static let tainanHSRFootprint: [(Float, Float)] = [
+        (-33.955, 15.806), (-51.703, 55.547), (-66.686, 56.037),
+        (-93.477, 45.462), (-89.483, 35.354), (-99.284, 26.581),
+        (-64.556, -53.412), (-56.506, -52.656), (-53.208, -51.222),
+        (-48.180, -46.307), (-43.418, -57.271), (-29.459, -51.211),
+        (-24.164, -48.909), (-27.103, -42.137), (-10.861, -35.088),
+        (-18.019, -18.608), (-29.223, 7.189), (-31.487, 11.314),
+    ]
+    static let tainanPlatformWestFootprint: [(Float, Float)] = [
+        (-6.795, 13.382), (60.265, -130.737), (72.544, -125.022),
+        (-68.980, 179.274), (-81.618, 173.392), (-11.690, 22.978),
+        (-9.704, 19.098),
+    ]
+    static let tainanPlatformEastFootprint: [(Float, Float)] = [ // way 266850895
+        (89.534, -122.631), (99.284, -117.661),
+        (-39.680, 181.754), (-47.965, 178.640),
+    ]
+    static let shalunFootprint: [(Float, Float)] = [ // way 316034163
+        (50.607, -181.754), (62.129, -176.539),
+        (0.702, -40.914), (-6.488, -44.172), (-23.755, -51.989),
+        (-5.935, -91.341), (7.020, -85.470),
     ]
 
 }
@@ -1430,5 +1458,97 @@ private extension StationKitBuilder {
             add(.flat(named: name, from: link.mesh), at: at,
                 angle: angle * .pi / 180)
         }
+    }
+
+
+    mutating func tainanHSRExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let roof = Map3DColor.rgb(0xE7EBEA)
+        let fascia = Map3DColor.rgb(0xD8E0DF)
+        let wall = Map3DColor.rgb(0xC9D3D2)
+        let glass = Map3DColor.rgb(0x9CB5B9)
+        let steel = Map3DColor.rgb(0xAABABB)
+        let darkGlass = Map3DColor.rgb(0x637F86)
+        let shadow = Map3DColor.rgb(0x687779)
+
+        footprint(Map3DStationExteriorBatch1.tainanHSRFootprint, color: wall)
+        footprint(Map3DStationExteriorBatch1.tainanPlatformWestFootprint,
+                  color: fascia, baseY: 23.68)
+        footprint(Map3DStationExteriorBatch1.tainanPlatformEastFootprint,
+                  color: fascia, baseY: 23.68)
+        footprint(Map3DStationExteriorBatch1.shalunFootprint, color: wall)
+
+        // The HSR relation has three levels, but no height or roof tags.
+        // Low, broad metal canopy and raised central monitor follow photos;
+        // 27 m is the reference display estimate, not an OSM height.
+        var hall = StationKitBuilder()
+        hall.box(0, 0.32, 0, 106, 43, 9.4, wall)
+        hall.box(0, 9.72, 0, 108, 45, 8.5, glass)
+        hall.box(0, 0.5, -22.68, 103, 0.28, 7.0, darkGlass)
+        hall.canopy(0, 18.3, 0, length: 113, width: 55,
+                    rise: 2.8, color: roof)
+        hall.box(0, 21.0, 0, 63, 31, 5.7, fascia)
+        hall.box(0, 26.7, 0, 64, 32, 0.3, roof)
+        for x in stride(from: Float(-48), through: 48,
+                        by: detail == .near ? 8 : 24) {
+            for z: Float in [-22.9, 22.9] {
+                hall.box(x, 0.32, z, 0.46, 0.46, 18, steel)
+            }
+            if detail == .near {
+                hall.box(x, 18.4, -27.2, 0.12, 0.16, 0.75, fascia)
+            }
+        }
+        for x in stride(from: Float(-28), through: 28,
+                        by: detail == .near ? 8 : 28) {
+            for z: Float in [-15.7, 15.7] {
+                hall.box(x, 21, z, 0.23, 0.22, 5.7, glass)
+            }
+        }
+        hall.box(0, 9.72, -22.9, 100, 0.2, 0.48, shadow)
+        add(.flat(named: "tainan-hsr-hall", from: hall.mesh),
+            at: Map3DPoint(-56.7, 0, -0.75), angle: -66.5323 * .pi / 180)
+
+        // Two separate, long elevated canopies: relation ring and way.
+        // Deck, roof height and support interval are visual estimates.
+        for (name, centre, length, width, angle) in [
+            ("tainan-platform-west", Map3DPoint(-4.55, 24.2, 0), Float(335.98), Float(13.98), Float(-65.0575)),
+            ("tainan-platform-east", Map3DPoint(25.8, 30.3, 0), Float(331.54), Float(10.95), Float(-65.4683)),
+        ] {
+            var platform = StationKitBuilder()
+            platform.box(0, 11.6, 0, length - 2, width - 1.5, 1.7, wall)
+            platform.box(0, 13.3, 0, length - 2, width - 1.5, 0.3, shadow)
+            platform.box(0, 22.2, 0, length, width, 1.8, roof)
+            platform.box(0, 23.7, 0, length, 0.32, 0.3, fascia)
+            for x in stride(from: -length / 2 + 10, through: length / 2 - 10,
+                            by: detail == .near ? 18 : 42) {
+                for z in [-width * 0.32, width * 0.32] {
+                    platform.box(x, 0.32, z, 0.62, 0.62, 11.28, wall)
+                    platform.box(x, 13.6, z, 0.36, 0.36, 8.6, steel)
+                }
+                if detail == .near {
+                    platform.beam(Map3DPoint(x, 21.1, -width * 0.32),
+                                  Map3DPoint(x, 22.2, -width * 0.48), 0.2, shadow)
+                    platform.beam(Map3DPoint(x, 21.1, width * 0.32),
+                                  Map3DPoint(x, 22.2, width * 0.48), 0.2, shadow)
+                }
+            }
+            add(.flat(named: name, from: platform.mesh),
+                at: Map3DPoint(centre.x, 0, centre.y), angle: angle * .pi / 180)
+        }
+
+        // Shalun: photo shows the long pitched metal roof and window band.
+        // Its 17 m peak is the reference display estimate.
+        var shalun = StationKitBuilder()
+        shalun.box(0, 0.32, 0, 146, 22, 6.3, wall)
+        shalun.box(0, 6.62, 0, 147, 24, 6.3, glass)
+        shalun.gable(0, 12.9, 0, 149, 27, 4.1, roof)
+        for x in stride(from: Float(-68), through: 68,
+                        by: detail == .near ? 9 : 27) {
+            for z: Float in [-12.1, 12.1] {
+                shalun.box(x, 6.62, z, 0.33, 0.28, 6.1, steel)
+            }
+        }
+        shalun.box(0, 6.62, -12.3, 142, 0.2, 0.44, darkGlass)
+        add(.flat(named: "shalun-station", from: shalun.mesh),
+            at: Map3DPoint(19.2, 0, -114.3), angle: -65.6331 * .pi / 180)
     }
 }
