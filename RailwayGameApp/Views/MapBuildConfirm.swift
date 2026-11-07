@@ -230,28 +230,35 @@ struct MapBuildConfirm: View {
         }
     }
 
+    /// At most one fix up and one down; written out rather than with a
+    /// `ForEach`, whose row closure a `ViewThatFits` would measure off the
+    /// main thread (CRASH101).
+    @ViewBuilder
     private func fixButtons(_ fixes: [NetworkHeightFix]) -> some View {
+        if let up = fixes.first(where: { $0.change > 0 }) { fixButton(up) }
+        if let down = fixes.first(where: { $0.change < 0 }) { fixButton(down) }
+    }
+
+    private func fixButton(_ fix: NetworkHeightFix) -> some View {
         let language = session.language
-        return ForEach(fixes, id: \.self) { fix in
-            Button {
-                session.applyNetworkHeightFix(fix)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: fix.change > 0 ? "arrow.up.to.line" : "arrow.down.to.line")
-                        .font(.body.weight(.bold))
-                    Text(verbatim: fix.title(in: language))
-                        .font(.subheadline.weight(.bold))
-                    Text(verbatim: fix.cost.compactText(in: language))
-                        .font(.subheadline)
-                        .monospacedDigit()
-                }
-                .padding(.horizontal, 6)
-                .frame(minHeight: 40)
+        return Button {
+            session.applyNetworkHeightFix(fix)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: fix.change > 0 ? "arrow.up.to.line" : "arrow.down.to.line")
+                    .font(.body.weight(.bold))
+                Text(verbatim: fix.title(in: language))
+                    .font(.subheadline.weight(.bold))
+                Text(verbatim: fix.cost.compactText(in: language))
+                    .font(.subheadline)
+                    .monospacedDigit()
             }
-            .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-            .fixedSize()
-            .accessibilityIdentifier(fix.change > 0 ? "map.build.fixUp" : "map.build.fixDown")
+            .padding(.horizontal, 6)
+            .frame(minHeight: 40)
         }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .fixedSize()
+        .accessibilityIdentifier(fix.change > 0 ? "map.build.fixUp" : "map.build.fixDown")
     }
 
     private func buttons(_ build: BuildConfirmation) -> some View {
