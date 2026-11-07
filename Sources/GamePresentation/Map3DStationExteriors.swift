@@ -177,6 +177,9 @@ struct Map3DTrainRoom {
     /// Room along `line` at the rails' height, the station's ground at
     /// `ground`: under it too where it runs `raised` over that.
     mutating func add(line: [Map3DPoint], half: Float, above: Float, ground: Float) {
+        // In long straight stretches, a few centimetres off the line: the
+        // track is drawn every metre or two, and each stretch cuts.
+        let line = Self.simplified(line, within: 0.1)
         for (a, b) in zip(line, line.dropFirst()) {
             let below = min(a.y, b.y) - ground > Self.raised ? max(a.y, b.y) - ground + 1 : 0.3
             let index = stretches.count
@@ -187,6 +190,30 @@ struct Map3DTrainRoom {
             guard x1 - x0 < 64, z1 - z0 < 64 else { continue }
             for x in x0...x1 { for z in z0...z1 { cells[Self.key(x, z), default: []].append(index) } }
         }
+    }
+
+    /// `line` with the points left out that lie within `tolerance` metres
+    /// of the line between those kept either side (Douglas–Peucker).
+    static func simplified(_ line: [Map3DPoint], within tolerance: Float) -> [Map3DPoint] {
+        guard line.count > 2 else { return line }
+        var keep = [Bool](repeating: false, count: line.count)
+        keep[0] = true; keep[line.count - 1] = true
+        var spans = [(0, line.count - 1)]
+        while let (first, last) = spans.popLast() {
+            guard last > first + 1 else { continue }
+            let a = line[first], ab = line[last] - a, length = max(ab.dot(ab), 1e-8)
+            var farthest = first, distance: Float = 0
+            for i in (first + 1)..<last {
+                let ap = line[i] - a, share = min(max(ab.dot(ap) / length, 0), 1)
+                let off = (ap - ab * share).length
+                if off > distance { distance = off; farthest = i }
+            }
+            if distance > tolerance {
+                keep[farthest] = true
+                spans.append((first, farthest)); spans.append((farthest, last))
+            }
+        }
+        return line.indices.filter { keep[$0] }.map { line[$0] }
     }
 
     /// Whether `point` is in the room.
@@ -237,6 +264,13 @@ struct Map3DTrainRoom {
         // Linear in the vertex: the rails' height along the stretch is,
         // within it, so the planes over and under it are planes.
         func railsLinear(_ v: Map3DVertex) -> Float { s.a.y + (s.b.y - s.a.y) * (t(v) / length) }
+        // Nothing of it in this stretch's room: as it is, not cut up.
+        var inside = polygon
+        for plane in [{ (v: Map3DVertex) in -d(v) - s.half }, { d($0) - s.half }, { -t($0) - reach }, { t($0) - length - reach },
+                      { $0.y - railsLinear($0) - s.above }, { railsLinear($0) - s.below - $0.y }] as [(Map3DVertex) -> Float] {
+            inside = cut(inside, by: plane).0
+            if inside.count < 3 { return [polygon] }
+        }
         var kept: [[Map3DVertex]] = []
         let (left, rest) = cut(polygon) { d($0) + s.half }
         kept.append(left)

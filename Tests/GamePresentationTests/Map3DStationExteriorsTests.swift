@@ -195,7 +195,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
             XCTAssertEqual(exterior.origin.x, expected.x, accuracy: 0.01, "\(study)")
             XCTAssertEqual(exterior.origin.z, expected.z, accuracy: 0.01, "\(study)")
             XCTAssertGreaterThanOrEqual(exterior.kept.near, Map3DScene.Builder.exteriorLeast, "\(study)")
-            XCTAssertLessThanOrEqual(exterior.near.triangleCount, 12_000, "\(study) near")
+            XCTAssertLessThanOrEqual(exterior.near.triangleCount, 8_000, "\(study) near")
             XCTAssertLessThanOrEqual(exterior.far.triangleCount, 3_000, "\(study) far")
             let lowest = exterior.near.vertices.map(\.y).min() ?? 0
             XCTAssertGreaterThanOrEqual(lowest, exterior.origin.y - 0.01, "\(study)")
@@ -336,7 +336,8 @@ final class Map3DStationExteriorsTests: XCTestCase {
     /// and how long it takes. `STATION_EXTERIOR_REPORT=1` only.
     func testReportWhatStands() async throws {
         guard ProcessInfo.processInfo.environment["STATION_EXTERIOR_REPORT"] == "1" else { throw XCTSkip("report") }
-        for study in Study.allCases {
+        let only = ProcessInfo.processInfo.environment["STATION_EXTERIOR_ONLY"]
+        for study in Study.allCases where only == nil || only == study.rawValue {
             let started = Date()
             let (world, heights, railways) = try await Self.world(round: study)
             let scene = try Self.scene(round: study, in: world, heights: heights, railways: railways)
