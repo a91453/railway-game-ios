@@ -761,7 +761,13 @@ selected_pattern() {
 # them in one part made selected-1 or selected-5 take 460-510 s of tests
 # while others took 180-250; dealt by these weights the same runs' parts
 # come to 341-375 s.
-CLASS_WEIGHTS="KaohsiungLightRailDayTests:9999 Map3DSceneMemoryTests:221
+# Decision 620 (CIOPT, 2026-11-07): every class of rest measured at 2 s or
+# more in the full runs 41928730361, 42124703223, 42211389525, 42303936063
+# and 42317048280 and the pull request run 42343885098 that had no weight
+# or a lower one takes the slowest of those times (none was lowered).
+# KaohsiungLightRailDayTests took 428 s; decision 620 made its traffic plan
+# about 30 % faster (364 -> 255 s locally), so it weighs 300.
+CLASS_WEIGHTS="KaohsiungLightRailDayTests:300 Map3DSceneMemoryTests:221
   Map3DModelPackLockTests:145 WenhuLineTests:139
   SaveMutationSecondHalfTests:107 TaoyuanAirportLineTests:105
   Map3DBusesTests:84 Map3DSceneRebuildTests:84 RealLineAcquisitionTests:81
