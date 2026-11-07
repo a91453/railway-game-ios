@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -13,6 +13,7 @@ public enum Map3DStationExteriorBatch1 {
         case .hualienTRA: builder.hualienExteriorStudy(detail: detail)
         case .taitungTRA: builder.taitungExteriorStudy(detail: detail)
         case .banqiaoTRA: builder.banqiaoExteriorStudy(detail: detail)
+        case .nangangTRA: builder.nangangExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -372,6 +373,124 @@ public enum Map3DStationExteriorBatch1 {
         (0.595, 22.228),
         (-23.367, -12.309),
         (-59.613, 12.821),
+    ]
+
+    // Nangang complex: OSM ways from osmtoday Taiwan PBF, downloaded 2026-11-06.
+    // Metres east/north from (121.60664345, 25.0528905); © OpenStreetMap contributors, ODbL 1.0.
+    static let nangangMainFootprint: [(Float, Float)] = [ // OSM way 233331393
+        (-6.200, 67.651),
+        (35.493, 75.535),
+        (37.135, 67.529),
+        (41.719, 68.363),
+        (46.896, 77.292),
+        (87.512, 84.186),
+        (91.773, 60.079),
+        (64.686, 55.964),
+        (65.925, 48.214),
+        (66.761, 42.999),
+        (69.148, 27.309),
+        (89.527, 31.146),
+        (97.354, -7.094),
+        (98.986, -15.045),
+        (94.060, -15.912),
+        (86.787, -17.180),
+        (57.101, -22.361),
+        (27.425, -27.543),
+        (12.838, -30.067),
+        (8.275, -30.890),
+        (-4.185, -33.069),
+        (-20.152, -35.849),
+        (-14.289, -69.041),
+        (-18.500, -69.819),
+        (-98.804, -84.052),
+        (-100.688, -73.934),
+        (-105.946, -43.666),
+        (-109.966, -20.193),
+        (-113.451, -2.113),
+        (-29.077, 12.965),
+        (-26.256, -2.769),
+        (-10.109, 0.356),
+        (1.405, 2.580),
+        (-2.020, 15.979),
+        (33.831, 21.172),
+        (31.535, 36.639),
+        (30.507, 42.421),
+        (29.601, 48.248),
+        (-1.949, 43.533),
+    ]
+    static let nangangBlockCFootprint: [(Float, Float)] = [ // OSM way 410390808
+        (-211.283, -30.290),
+        (-207.536, -28.933),
+        (-208.191, -24.307),
+        (-208.624, -21.361),
+        (-155.034, -13.721),
+        (-153.281, -27.165),
+        (-132.419, -23.796),
+        (-123.958, -22.417),
+        (-109.966, -20.193),
+        (-105.946, -43.666),
+        (-120.724, -45.890),
+        (-129.165, -47.225),
+        (-149.715, -50.483),
+        (-148.809, -54.608),
+        (-202.701, -62.547),
+        (-203.195, -59.178),
+        (-208.382, -58.455),
+        (-212.875, -56.142),
+        (-216.381, -52.495),
+        (-218.526, -47.914),
+        (-219.080, -42.832),
+        (-217.942, -37.851),
+        (-215.242, -33.514),
+    ]
+    static let nangangBlockBFootprint: [(Float, Float)] = [ // OSM way 411044008
+        (-104.848, -46.624),
+        (-111.598, -7.906),
+        (-28.714, 6.716),
+        (-21.874, -32.080),
+    ]
+    static let nangangEastFootprint: [(Float, Float)] = [ // OSM way 556511660
+        (139.450, -3.736),
+        (154.208, -1.201),
+        (154.339, -3.025),
+        (173.921, 0.400),
+        (174.536, -1.601),
+        (184.398, 0.022),
+        (184.307, 2.213),
+        (194.934, 4.070),
+        (194.602, 5.560),
+        (217.730, 9.374),
+        (210.709, 50.316),
+        (192.748, 47.603),
+        (194.642, 36.650),
+        (186.030, 34.704),
+        (176.651, 30.668),
+        (169.963, 26.131),
+        (170.134, 23.673),
+        (149.332, 20.393),
+        (145.988, 22.762),
+        (142.523, 24.441),
+        (139.511, 24.496),
+        (136.791, 23.273),
+        (134.424, 21.071),
+        (133.074, 18.536),
+        (132.762, 15.323),
+        (133.195, 13.299),
+        (134.051, 11.475),
+        (135.109, 9.985),
+        (136.821, 8.807),
+        (137.667, 8.162),
+        (139.047, 0.200),
+    ]
+    static let nangangBlockAFootprint: [(Float, Float)] = [ // OSM way 908843920
+        (15.055, 13.455),
+        (69.259, 23.195),
+        (71.455, 11.008),
+        (77.036, 12.009),
+        (78.839, 2.046),
+        (72.795, 0.956),
+        (75.011, -11.364),
+        (21.260, -21.027),
     ]
 
 }
@@ -834,5 +953,143 @@ private extension StationKitBuilder {
         }
         add(.flat(named: "banqiao-circular-line", from: circular.mesh),
             at: Map3DPoint(55.42, 0, 83.86), angle: -36.3842 * .pi / 180)
+    }
+
+    mutating func nangangGlassTower(length: Float, width: Float,
+                                   detail: Map3DStationExteriorBatch1.LevelOfDetail,
+                                   glass: UInt32, frame: UInt32, roof: UInt32) {
+        // A/B both carry OSM height=139 and 30 levels; the 28 m starting
+        // plane comes from the reference display and is not an OSM height.
+        box(0, 28.32, 0, length - 0.9, width - 0.9, 109.38, glass)
+        box(0, 137.7, 0, length, width, 1.3, roof)
+        for x: Float in [-length / 2 + 2.5, length / 2 - 2.5] {
+            box(x, 28.32, 0, 0.7, width - 1, 109.38, frame)
+        }
+        let floors = detail == .near ? Array(stride(from: 0, through: 22, by: 1))
+                                        : Array(stride(from: 0, through: 22, by: 3))
+        let frontColumns = detail == .near ? Int(length / 5.0) : Int(length / 12.0)
+        let sideColumns = detail == .near ? Int(width / 5.0) : Int(width / 11.0)
+        for floor in floors {
+            let y = Float(31.0 + Double(floor) * 4.55)
+            let height: Float = detail == .near ? 2.6 : 3.1
+            for index in 0..<frontColumns {
+                let x = -length / 2 + (Float(index) + 0.5) * length / Float(frontColumns)
+                for z: Float in [-(width - 0.9) / 2 - 0.05, (width - 0.9) / 2 + 0.05] {
+                    let panel = [Map3DPoint(x - 1.8, y, z), Map3DPoint(x + 1.8, y, z),
+                                 Map3DPoint(x + 1.8, y + height, z),
+                                 Map3DPoint(x - 1.8, y + height, z)]
+                    face(panel, inside: Map3DPoint(0, y, 0), color: roof)
+                }
+            }
+            for index in 0..<sideColumns {
+                let z = -width / 2 + (Float(index) + 0.5) * width / Float(sideColumns)
+                for x: Float in [-(length - 0.9) / 2 - 0.05, (length - 0.9) / 2 + 0.05] {
+                    let panel = [Map3DPoint(x, y, z - 1.7), Map3DPoint(x, y, z + 1.7),
+                                 Map3DPoint(x, y + height, z + 1.7),
+                                 Map3DPoint(x, y + height, z - 1.7)]
+                    face(panel, inside: Map3DPoint(0, y, 0), color: roof)
+                }
+            }
+        }
+    }
+
+    mutating func nangangExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let white = Map3DColor.rgb(0xE8E9E2)
+        let paleRoof = Map3DColor.rgb(0xD8E1DE)
+        let frame = Map3DColor.rgb(0xB7C6C4)
+        let glass = Map3DColor.rgb(0x97B8BA)
+        let concrete = Map3DColor.rgb(0xAAB3B1)
+        let brick = Map3DColor.rgb(0xBE9F91)
+        let darkGlass = Map3DColor.rgb(0x607D84)
+        let darkRim = Map3DColor.rgb(0x6F7879)
+
+        footprint(Map3DStationExteriorBatch1.nangangMainFootprint, color: brick)
+        footprint(Map3DStationExteriorBatch1.nangangBlockCFootprint, color: white)
+        footprint(Map3DStationExteriorBatch1.nangangEastFootprint, color: white)
+        for outline in [Map3DStationExteriorBatch1.nangangBlockAFootprint,
+                        Map3DStationExteriorBatch1.nangangBlockBFootprint] {
+            footprint(outline, color: frame, baseY: 28, height: 0.32)
+        }
+
+        // Seven OSM levels on the station body; the 28 m roof and front
+        // entrance canopy are photo/reference estimates.
+        var main = StationKitBuilder()
+        main.box(0, 0.32, 0, 207, 126, 24.7, brick)
+        main.box(0, 25.02, 0, 212, 133, 2.98, concrete)
+        for y in stride(from: Float(5), through: 23, by: detail == .near ? 4 : 9) {
+            for z: Float in [-63.2, 63.2] {
+                main.box(0, y, z, 204, 0.22, 0.45, white)
+            }
+        }
+        main.box(0, 1.0, -63.18, 59, 0.26, 15.5, darkGlass)
+        main.canopy(0, 17.0, -67, length: 75, width: 33,
+                    rise: 2.8, color: paleRoof)
+        for x in stride(from: Float(-32), through: 32, by: detail == .near ? 8 : 16) {
+            main.box(x, 0.32, -76, 0.55, 0.55, 16.6, white)
+            if detail == .near {
+                main.beam(Map3DPoint(x, 9, -76), Map3DPoint(x, 17.5, -58),
+                          0.26, frame)
+            }
+        }
+        add(.flat(named: "nangang-main-station", from: main.mesh),
+            at: Map3DPoint(-5.75, 0, 0.31), angle: 10.1304 * .pi / 180)
+
+        var blockA = StationKitBuilder()
+        blockA.nangangGlassTower(length: 60.0, width: 34.6, detail: detail,
+                                glass: glass, frame: frame, roof: paleRoof)
+        add(.flat(named: "nangang-block-a", from: blockA.mesh),
+            at: Map3DPoint(48.05, 0, 1.59), angle: 10.1912 * .pi / 180)
+
+        var blockB = StationKitBuilder()
+        blockB.nangangGlassTower(length: 83.5, width: 38.8, detail: detail,
+                                glass: glass, frame: frame, roof: paleRoof)
+        add(.flat(named: "nangang-block-b", from: blockB.mesh),
+            at: Map3DPoint(-66.76, 0, -19.95), angle: 9.9422 * .pi / 180)
+
+        // C has its own tagged 70 m/14 levels. White lower walls, a glass
+        // upper band and a rounded dark end follow the developer's photos.
+        var blockC = StationKitBuilder()
+        blockC.box(0, 0.32, 0, 110, 40.8, 43.7, white)
+        blockC.box(0, 44.02, 0, 111, 41.2, 25.3, glass)
+        blockC.box(0, 69.32, 0, 112, 41.65, 0.68, paleRoof)
+        for y: Float in [12, 24, 37] {
+            for z: Float in [-20.6, 20.6] {
+                blockC.box(0, y, z, 103, 0.22, 1.1, darkRim)
+            }
+        }
+        for x in stride(from: Float(-49), through: 49, by: detail == .near ? 7 : 17) {
+            for z: Float in [-20.68, 20.68] {
+                blockC.box(x, 47, z, 4.0, 0.18, 18.5, darkGlass)
+            }
+        }
+        blockC.cylinder(44, 0.32, 25, radius: 9.5, height: 63,
+                        color: darkGlass, sides: detail == .near ? 16 : 10)
+        blockC.cylinder(44, 63.32, 25, radius: 10.1, height: 1.0,
+                        color: darkRim, sides: detail == .near ? 16 : 10)
+        add(.flat(named: "nangang-block-c", from: blockC.mesh),
+            at: Map3DPoint(-163.71, 0, -35.77), angle: 8.3804 * .pi / 180)
+
+        // East-side station retail building: OSM has no height. The broad
+        // glass entrance and curved steel roof come from exterior photos.
+        var east = StationKitBuilder()
+        east.box(0, 0.32, 0, 81.5, 40.5, 17.8, white)
+        east.box(0, 1.0, -20.48, 52, 0.2, 15.0, glass)
+        east.canopy(0, 18.12, 0, length: 83.0, width: 42.0,
+                    rise: 4.8, color: paleRoof)
+        east.cylinder(34, 0.32, -15.0, radius: 7.5, height: 19.5,
+                      color: white, sides: detail == .near ? 14 : 8)
+        east.cylinder(34, 19.82, -15.0, radius: 8.0, height: 0.6,
+                      color: darkRim, sides: detail == .near ? 14 : 8)
+        if detail == .near {
+            for x in stride(from: Float(-35), through: 28, by: 8) {
+                east.box(x, 1.0, -20.68, 0.42, 0.28, 15.0, frame)
+            }
+        } else {
+            for x in stride(from: Float(-32), through: 24, by: 16) {
+                east.box(x, 1.0, -20.68, 0.55, 0.28, 15.0, frame)
+            }
+        }
+        add(.flat(named: "nangang-east-station", from: east.mesh),
+            at: Map3DPoint(175.0, 0, 20.99), angle: 9.951 * .pi / 180)
     }
 }

@@ -2,6 +2,45 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch1Tests: XCTestCase {
+    func testNangangStudyUsesFiveOSMWaysAndTaggedTowerHeights() {
+        let near = Map3DStationExteriorBatch1.model(for: .nangangTRA, detail: .near)
+        let far = Map3DStationExteriorBatch1.model(for: .nangangTRA, detail: .far)
+        XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
+        XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
+        XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
+        XCTAssertNil(Map3DStationKit.model(id: near.name))
+        XCTAssertNil(Map3DStationKit.model(id: far.name))
+        XCTAssertEqual(near.maximum.z, 139, accuracy: 0.01)
+        XCTAssertTrue(near.vertices.contains { abs($0.z - 70) < 0.01 })
+        let outlines: [([(Float, Float)], Float)] = [
+            (Map3DStationExteriorBatch1.nangangMainFootprint, 0.32),
+            (Map3DStationExteriorBatch1.nangangBlockAFootprint, 28.32),
+            (Map3DStationExteriorBatch1.nangangBlockBFootprint, 28.32),
+            (Map3DStationExteriorBatch1.nangangBlockCFootprint, 0.32),
+            (Map3DStationExteriorBatch1.nangangEastFootprint, 0.32)
+        ]
+        for (outline, top) in outlines {
+            for (east, north) in outline {
+                XCTAssertTrue(near.vertices.contains {
+                    abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002
+                        && abs($0.z - top) < 0.002
+                })
+            }
+        }
+        let colours = Set(near.vertices.map(\.color))
+        let ordered = [UInt32(0xE8E9E2), 0xD8E1DE, 0xB7C6C4,
+                       0xBE9F91, 0x607D84].map(Map3DColor.rgb)
+        func luminance(_ colour: UInt32) -> Float {
+            Float(colour & 255) * 0.2126 + Float((colour >> 8) & 255) * 0.7152
+                + Float((colour >> 16) & 255) * 0.0722
+        }
+        for (lighter, darker) in zip(ordered, ordered.dropFirst()) {
+            XCTAssertTrue(colours.contains(lighter))
+            XCTAssertGreaterThan(luminance(lighter), luminance(darker))
+        }
+        XCTAssertTrue(colours.contains(ordered.last!))
+    }
+
     func testBanqiaoStudyPreservesFourOSMWaysAndTaggedTowerHeight() {
         let near = Map3DStationExteriorBatch1.model(for: .banqiaoTRA, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .banqiaoTRA, detail: .far)

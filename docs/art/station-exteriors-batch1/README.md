@@ -1,4 +1,4 @@
-# 車站外觀第一批 studies：第 5 次交付
+# 車站外觀第一批 studies：第 6 次交付
 
 這是獨立研究配方，沒有接到 `Map3DStationKit` 的站點選型、地圖或存檔。公開庫只有配方、測試與一張總覽；逐方向原生模型、GLB、日夜圖與離線檢視頁在私有素材庫的同名資料夾。
 
@@ -63,11 +63,24 @@
 
 外觀照片只看 Wikimedia Commons [2014 年板橋車站大樓](https://commons.wikimedia.org/wiki/File:Banqiao_Station_Building_20140610.jpg)、[從新北市政府望向站體](https://commons.wikimedia.org/wiki/File:新北市_板橋車站大樓_Banciao_Station_From_New_Taipei_City_Hall_-_panoramio.jpg)、[塔樓入口](https://commons.wikimedia.org/wiki/File:Banqiao_Station_Building_N1A_20230909.jpg) 及[環狀線列車望向高架站](https://commons.wikimedia.org/wiki/File:Train_on_MRT_Circular_Line_Meeting_near_Banqiao_Station_01.jpg)。照片不作貼圖。以 station kit 盒體、圓柱、曲棚與淡色玻璃抽象重建；近景 **3,609 三角**、遠景 **1,693 三角**。窗格、低層平面、環狀線棚面與兩端圓筒仍待作者核對外觀。
 
-## 尚缺的六站
+## 已完成：臺鐵南港
+
+| 部件 | OSM 足跡最小旋轉矩形 | 高度、屋頂與外觀判斷 |
+| --- | --- | --- |
+| 南港車站主體 | [way 233331393](https://www.openstreetmap.org/way/233331393)，**213.365 × 133.741 m**，39 個不重複頂點；`building:levels=7` | OSM 沒有高度或屋頂標籤。低層站體約 **28 m**、正面白色鋼架入口與平頂、紅褐牆面依外觀照片及參考展示比例推估。 |
+| A 棟 | [way 908843920](https://www.openstreetmap.org/way/908843920)，**60.828 × 35.075 m**，8 個頂點；`building:part=commercial`、`building:levels=30`、`building:min_level=8` | OSM `height=139` m，作塔頂標高。從約 **28 m** 起建是推估；青灰玻璃窗格及頂部淺色檐板依照片簡化。 |
+| B 棟 | [way 411044008](https://www.openstreetmap.org/way/411044008)，**84.334 × 39.439 m**，4 個頂點；`building:part=hotel`、`building:levels=30` | OSM `height=139` m，作塔頂標高。起建標高、窗格節距及屋頂邊線推估。 |
+| C 棟 | [way 410390808](https://www.openstreetmap.org/way/410390808)，**112.123 × 41.657 m**，23 個頂點；`building:levels=14`、`layer=1` | OSM `height=70` m，作頂部標高。白色下層、玻璃上層與圓筒端部依開發商外觀照片；分層高度、窗距與圓筒尺寸推估。 |
+| 東側站房 | [way 556511660](https://www.openstreetmap.org/way/556511660)，**83.080 × 42.289 m**，31 個頂點；`building=retail` | OSM 沒有高度或屋頂標籤。約 **23 m** 的淺色曲棚、玻璃入口及圓筒端部依外觀照片推估。 |
+
+五個 way 的全部非閉合邊界頂點從 2026-11-06 下載的 osmtoday `asia/taiwan.pbf` 以 pyosmium 擷取，轉為局部公尺座標；原點為 121.60664345°E、25.0528905°N。尺寸、旋轉角及五棟相對位置與參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/nangang-v1/metadata.json` 核對；`blender-buildings-v1/nangang-v1/model.json` 只量大樓與低層站體比例，沒有搬用網格。OSM 輪廓 © OpenStreetMap contributors，ODbL 1.0。
+
+外觀只看 Wikimedia Commons [2016 年忠孝東路側站體](https://commons.wikimedia.org/wiki/File:Nangang_Station_Building_face_to_Zhongxiao_East_Road_20160723b.jpg)、[2018 年 A／B 棟上段](https://commons.wikimedia.org/wiki/File:Nangang_Station_Building_A_%26_B_top_20180714.jpg)、[2012 年東側站房遠景](https://commons.wikimedia.org/wiki/File:Nangang_Station_view_from_Taipei_Extreme_Sports_Training_Center_20120909.jpg)、[東出口](https://commons.wikimedia.org/wiki/File:East_Exit,_Nangang_Station_20120909.jpg)，以及[三菱地所台灣南港開發案外觀](https://www.mectw.tw/project/investment/-MKzV0WreYKQtFywQCGo)。開發案頁面另列兩棟 30 層和商場 14 層，與 OSM 層數相符。照片不打包、不作貼圖。用現有 station kit 盒體、曲棚與圓柱組成淡色近／遠景，保留淺屋頂、紅褐牆、青灰玻璃與暗窗的明暗次序。近景 **5,565 三角**、遠景 **1,773 三角**；窗格、入口鋼架與東站房外形仍待作者核對。
+
+## 尚缺的五站
 
 | 站 | 來源與目前量到的部件足跡（m） | 還缺的核對 |
 | --- | --- | --- |
-| 臺鐵南港 | 參考庫 `stations/nangang-v1/metadata.json` 的 OSM 輪廓：南港車站 213 × 134（233331393）；南港 A 棟 61 × 35（908843920）；南港 B 棟 84 × 39（411044008）；南港 C 棟 112 × 42（410390808）；南港東側站房 83 × 42（556511660） | A／B／C 棟真實高度與外觀。 |
 | 高鐵桃園 | 參考庫 `stations/taoyuan-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵桃園 122 × 74（23547222）；機捷 A18 154 × 52（560119012） | 挑簷、採光頂與真實高度。 |
 | 高鐵新竹 | 參考庫 `stations/hsinchu-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵新竹 344 × 101（321663134）；六家 48 × 34（321663135） | 長曲頂與真實高度。 |
 | 高鐵台中（含新烏日） | 參考庫 `stations/xinwuri-complex-v1/metadata.json` 的 OSM 輪廓：高鐵臺中 360 × 96（544377825）；新烏日 210 × 84（337921979）；中捷高鐵臺中 180 × 22（862779522）；轉乘通廊 33 × 10（862779521）；轉乘通廊 48 × 12（862779520） | 高鐵／臺鐵／中捷共構關係與各屋頂、真實高度。 |
