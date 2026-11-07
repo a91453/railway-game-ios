@@ -156,6 +156,6 @@ final class NetworkHeightFixTests: XCTestCase {
         let card = try XCTUnwrap(session.networkHeightCard)
         XCTAssertEqual(card.label, "End on the ground")
         XCTAssertEqual(card.fixes.map(\.kind), [.bridge, .tunnel])
-        XCTAssertEqual(card.note, "Tap a fix below, or set the height yourself.")
+        XCTAssertNil(card.note, "the fixes say what they do")
     }
 }

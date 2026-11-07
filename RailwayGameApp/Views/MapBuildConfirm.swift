@@ -152,17 +152,27 @@ struct MapBuildConfirm: View {
                     .accessibilityIdentifier("map.build.catchment")
             }
             if let heights = build.heights {
-                heightRows(heights)
+                heightNoteAndFixes(heights)
+                // Decision 629: on a phone on its side the +/- goes
+                // beside ✕ and ✓, so the pill stays clear of the
+                // construction HUD above it (its first screenshots).
+                let layout = verticalSizeClass == .compact
+                    ? AnyLayout(HStackLayout(spacing: 6)) : AnyLayout(VStackLayout(spacing: 4))
+                layout {
+                    heightAdjuster(heights)
+                    buttons(build)
+                        .fixedSize()
+                }
+            } else {
+                buttons(build)
+                    .fixedSize()
             }
-            buttons(build)
-                .fixedSize()
         }
     }
 
-    /// Decision 629: the new end's height, one metre a tap, and a button
-    /// for each height that gets the stretch built where it was refused.
+    /// Decision 629: the new end's height, one metre a tap.
     @ViewBuilder
-    private func heightRows(_ card: NetworkHeightCard) -> some View {
+    private func heightAdjuster(_ card: NetworkHeightCard) -> some View {
         let language = session.language
         if !card.label.isEmpty {
             HStack(spacing: 6) {
@@ -181,7 +191,6 @@ struct MapBuildConfirm: View {
                     .font(.footnote.weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textPrimary)
-                    .frame(minWidth: 96)
                     .accessibilityIdentifier("map.build.height")
                 Button {
                     session.raiseNetworkEnd(by: 1)
@@ -197,6 +206,13 @@ struct MapBuildConfirm: View {
             }
             .fixedSize()
         }
+    }
+
+    /// Decision 629: what to do where no fix is offered, and a button
+    /// for each height that gets the stretch built where it was refused,
+    /// side by side where they fit.
+    @ViewBuilder
+    private func heightNoteAndFixes(_ card: NetworkHeightCard) -> some View {
         if let note = card.note {
             Text(verbatim: note)
                 .font(.caption)
@@ -206,7 +222,17 @@ struct MapBuildConfirm: View {
                 .padding(.horizontal, 8)
                 .accessibilityIdentifier("map.build.heightNote")
         }
-        ForEach(card.fixes, id: \.self) { fix in
+        if !card.fixes.isEmpty {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) { fixButtons(card.fixes) }
+                VStack(spacing: 4) { fixButtons(card.fixes) }
+            }
+        }
+    }
+
+    private func fixButtons(_ fixes: [NetworkHeightFix]) -> some View {
+        let language = session.language
+        return ForEach(fixes, id: \.self) { fix in
             Button {
                 session.applyNetworkHeightFix(fix)
             } label: {

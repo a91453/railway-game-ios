@@ -83,8 +83,9 @@ public struct NetworkHeightCard: Hashable, Sendable {
     public let canLower: Bool
     /// At most one up and one down, the nearer first.
     public let fixes: [NetworkHeightFix]
-    /// For a refusal the heights may get round: what to do, or that no end
-    /// can move; `nil` otherwise.
+    /// For a refusal the heights may get round with no fix offered: that
+    /// one is being looked for, what to do instead, or that no end can
+    /// move; `nil` otherwise.
     public let note: String?
 }
 
@@ -143,7 +144,8 @@ extension GameSession {
                 "這兩端怎麼調高度都過不去。請把這段鋪短一點，或在水的兩岸各點一個點。"
             )
         } else {
-            language.text("Tap a fix below, or set the height yourself.", "點下面的調整就能鋪，也可以自己調高度。")
+            // The fixes' own words say what each does.
+            nil
         }
         let raise = adjusts == .end ? networkEndRaise : networkStartRaise
         let limit = RailwayNetwork.heightRange
