@@ -425,8 +425,14 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             if (lights > 0.0 && rule.x > 0.0) {
                 float glass = (1.0 - texel.a) * step(bright, rule.y);
                 float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
-                on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0)) * glass;
+                float roomLit = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0));
+                on = roomLit * glass;
                 glow += windowWarm * mix(0.55, 1.1, hash12(room + 1.3)) * on * lights;
+                // Decision 617: a lit room's light on the wall round its
+                // window, strongest at the room's middle (Map3DGlow.windowGlow
+                // in shade.z; 0 when glows are off).
+                float2 fromMiddle = fract(in.surfaceAt) - 0.5;
+                glow += windowWarm * (uniforms.shade.z * roomLit * (1.0 - glass) * lights * exp(-7.0 * dot(fromMiddle, fromMiddle)));
             }
             if (mirrorGlass > 0.0) {
                 // Each pane a little out of true (materials.js's wobble),
@@ -823,3 +829,125 @@ fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUn
     return map3dLit(base, glow, float4(0.0), normal, in.world, map3dSunSeen(in.world, normal, uniforms, sunShadow), uniforms);
 }
 
+
+// Decision 617 (NIGHT-GLOW): a soft glow round each light the city already
+// lights at night, a square facing the eye added to what is behind it (the
+// pipeline adds, tests the depth and writes none). Each spot as
+// Map3DGlow.Spot.floats lays it out: its middle (in its model's space) and
+// radius, its colour and strength; six corners a spot, drawn over the
+// instances its model is drawn with (a train's lamps: one instance, the
+// scene's own space). Beside them, as Map3DGlow.axes writes it: the eye's
+// right and the city's lights times the peak, the eye's up. Its size and
+// strength by distance as Map3DGlow.drawnRadius and strength work them out.
+struct Map3DGlowSpot {
+    float4 middle;
+    float4 colour;
+};
+
+struct Map3DGlowAxes {
+    float4 right;
+    float4 up;
+};
+
+struct Map3DGlowOut {
+    float4 position [[position]];
+    float2 at;
+    float3 colour;
+};
+
+constant float glowNarrowest = 0.0025;
+constant float glowReach = 2400.0;
+
+vertex Map3DGlowOut map3dGlowVertex(uint vertexID [[vertex_id]], uint instance [[instance_id]], const device Map3DGlowSpot *spots [[buffer(0)]],
+                                    constant Map3DUniforms &uniforms [[buffer(1)]], const device Map3DInstance *instances [[buffer(2)]],
+                                    constant Map3DGlowAxes &axes [[buffer(3)]]) {
+    Map3DGlowSpot spot = spots[vertexID / 6u];
+    uint corner = vertexID % 6u;
+    // Two triangles: 0 1 2, 0 2 3 of the square's corners.
+    uint index = corner < 3u ? corner : (corner == 3u ? 0u : corner - 2u);
+    float2 at = float2((index == 1u || index == 2u) ? 1.0 : -1.0, index >= 2u ? 1.0 : -1.0);
+    float3 world = (instances[instance].transform * float4(spot.middle.xyz, 1.0)).xyz;
+    float3 toEye = uniforms.eye.xyz - world;
+    float far = length(toEye);
+    float radius = spot.middle.w;
+    float drawn = max(radius, far * glowNarrowest);
+    float strength = radius / drawn * smoothstep(radius * 1.2, radius * 3.0, far) * (1.0 - smoothstep(glowReach * 0.6, glowReach, far));
+    // Drawn a little toward the eye, clear of the lamp's own housing.
+    world += toEye / max(far, 1e-3) * min(drawn * 0.5, far * 0.3);
+    world += (axes.right.xyz * at.x + axes.up.xyz * at.y) * drawn;
+    // Faded into the fog as the lights are (map3dLit's glow).
+    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
+    Map3DGlowOut out;
+    out.position = uniforms.viewProjection * float4(world, 1.0);
+    out.at = at;
+    out.colour = spot.colour.rgb * (spot.colour.w * strength * axes.right.w * (1.0 - fog * 0.7));
+    // Nothing to draw: every corner past the far plane.
+    if (strength <= 0.0 || axes.right.w <= 0.0) { out.position = float4(0.0, 0.0, -1.0, 1.0); }
+    return out;
+}
+
+// Map3DGlow.falloff: a soft bell, nothing at the edge, a brighter core.
+fragment float4 map3dGlowFragment(Map3DGlowOut in [[stage_in]]) {
+    float q2 = min(dot(in.at, in.at), 1.0);
+    float edge = exp(-4.5);
+    float bell = max(0.0, (exp(-4.5 * q2) - edge) / (1.0 - edge)) + 0.35 * exp(-30.0 * q2);
+    return float4(in.colour * bell, 0.0);
+}
+
+// Decision 617: a sign's glow, its board's square drawn larger round it,
+// lit only outside the board (the board is drawn itself): a poster's or a
+// screen's picture's own colour on average (its cell's smallest mipmap),
+// a shop's board its letters', after dark and while it is lit. `axes`
+// carries the city's lights times the peak in right.w.
+struct Map3DSignGlowOut {
+    float4 position [[position]];
+    float2 at;
+    float2 board;
+    float3 colour;
+};
+
+vertex Map3DSignGlowOut map3dSignGlowVertex(uint corner [[vertex_id]], uint instance [[instance_id]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                            const device Map3DSignIn *signs [[buffer(2)]], constant float4 &clock [[buffer(3)]],
+                                            constant Map3DGlowAxes &axes [[buffer(4)]], texture2d<float> atlas [[texture(0)]]) {
+    Map3DSignIn sign = signs[instance];
+    float2 extent = float2(length(sign.right.xyz), length(sign.up.xyz));
+    float margin = clamp(extent.y * 0.6 + 0.3, 0.3, 1.6);
+    float2 grown = (extent + margin) / max(extent, float2(1e-3));
+    float2 at = float2((corner & 1u) ? 1.0 : -1.0, (corner & 2u) ? 1.0 : -1.0) * grown;
+    float3 world = sign.middle.xyz + sign.right.xyz * at.x + sign.up.xyz * at.y;
+    float3 toEye = uniforms.eye.xyz - sign.middle.xyz;
+    float far = length(toEye);
+    world += toEye / max(far, 1e-3) * min(0.3, far * 0.1);
+    Map3DSignGlowOut out;
+    out.position = uniforms.viewProjection * float4(world, 1.0);
+    // In metres from the board's middle; the board's extent size beside.
+    out.at = at * extent;
+    out.board = extent;
+    uint kind = uint(sign.middle.w + 0.5);
+    float3 colour;
+    if (kind <= 2u) {
+        constexpr sampler s(address::clamp_to_edge, filter::linear, mip_filter::linear);
+        float i = kind == 2u ? 24.0 + floor(sign.right.w + 0.5) : floor(sign.right.w + 0.5);
+        float2 cell = (float2(fmod(i, 8.0), floor(i / 8.0)) + 0.5) / 8.0;
+        float lod = max(log2(float(atlas.get_width()) / 8.0), 0.0);
+        colour = atlas.sample(s, cell, level(lod)).rgb;
+        colour /= max(max(colour.r, max(colour.g, colour.b)), 0.05);
+    } else {
+        colour = map3dUnpack(sign.colours.y);
+    }
+    float lit = clock.y < sign.colours.z ? 1.0 : 0.0;
+    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
+    out.colour = colour * (axes.right.w * 0.7 * lit * (1.0 - fog * 0.7));
+    if (lit <= 0.0 || axes.right.w <= 0.0 || far > clock.z) { out.position = float4(0.0, 0.0, -1.0, 1.0); }
+    return out;
+}
+
+fragment float4 map3dSignGlowFragment(Map3DSignGlowOut in [[stage_in]]) {
+    // How far outside the board, metres, against the margin it fades over.
+    float2 outside = max(abs(in.at) - in.board, 0.0);
+    float d = length(outside);
+    float margin = clamp(in.board.y * 0.6 + 0.3, 0.3, 1.6);
+    float inside = step(d, 0.0);
+    float glow = exp(-3.0 * (d / margin) * (d / margin)) * (1.0 - smoothstep(margin * 0.7, margin, d)) * (1.0 - inside);
+    return float4(in.colour * glow, 0.0);
+}

@@ -18,6 +18,8 @@ public struct Map3DFrameBuffers<Buffer> {
     /// What each buffer of a set holds.
     public enum Use: Int, CaseIterable, Sendable {
         case boxVertices, boxIndices, shadowVertices, shadowIndices, cars, life, glass
+        /// Decision 617: the glows round the trains' lamps (``Map3DGlow/trainSpots(of:pack:)``).
+        case glows
     }
 
     /// How many sets there are: as many frames as the GPU may have in
