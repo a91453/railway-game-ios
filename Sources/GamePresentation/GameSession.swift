@@ -3254,9 +3254,9 @@ public final class GameSession {
             }
             // Decision 284: a train too long for a call never leaves; say
             // so, last, as it is assigned.
-            let tooLong = world.shortPlatformCall(ofTrain: train.id).map { short in
+            let tooLong = (world.shortPlatformCall(ofTrain: train.id).map { short in
                 language.text(" ", "") + world.shortPlatformText(short, in: language) + language.text(".", "。")
-            } ?? ""
+            } ?? "") + Self.passingWarningText(for: line.id, in: world, language: language)
             // TestFlight 60.1: a line already running trains keeps its
             // counts, so the new train would wait: say so, and how.
             if started == 0, let unused = world.lineUnusedTrains(ofTrain: train.id) {

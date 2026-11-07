@@ -94,7 +94,7 @@ final class SingleLineThreeTrainsTests: XCTestCase {
         ]
         for layout in layouts {
             for (rules, controlled) in [(NewGameRules.simple, true), (.simple, false), (.realistic, true)] {
-                for way in ["plus", "hand"] {
+                for way in ["plus", "hand", "fix"] {
                     let session = try build(layout, rules: rules, controlled: controlled)
                     var notes: [String] = []
                     let lines = session.world.lines.map(\.id)
@@ -126,10 +126,60 @@ final class SingleLineThreeTrainsTests: XCTestCase {
                         }
                     }
                     let advice = session.world.firstLineWithoutPlaceToPass()?.name ?? "-"
+                    notes.append("assignMsg: " + String((session.message?.text ?? "").suffix(160)))
+                    if way == "fix" {
+                        for line in lines where session.world.singleTrackShortfall(of: line) != nil {
+                            session.selectLine(line)
+                            session.addPassingLoopToSelectedLine()
+                            notes.append("fix: " + (session.message?.text ?? ""))
+                        }
+                    }
                     let day = try Self.runDay(session.world, days: 2)
-                    print("[SL628] \(layout) \(rules) tc=\(controlled) \(way): trains \(session.world.trains.count) legs \(day.legs) deadlock \(day.deadlockMinutes) longest \(day.longest) advice \(advice) \(notes.prefix(2))")
+                    print("[SL628] \(layout) \(rules) tc=\(controlled) \(way): trains \(session.world.trains.count) legs \(day.legs) deadlock \(day.deadlockMinutes) longest \(day.longest) advice \(advice) \(notes)")
                 }
             }
+        }
+    }
+
+    func testProbe() throws {
+        guard ProcessInfo.processInfo.environment["SINGLELINE_EXPLORE"] != nil else { throw XCTSkip("set SINGLELINE_EXPLORE") }
+        for (rules, st) in [(NewGameRules.simple, 3), (.realistic, 2)] {
+            let session = try build(Layout(stations: st, loopAt: nil, lines: [Array(0..<st)]), rules: rules, controlled: true)
+            let line = try XCTUnwrap(session.world.lines.first).id
+            let stations = session.world.stations.map(\.id)
+            for index in session.world.trains.count..<3 {
+                session.purchaseTrain()
+                let train = try XCTUnwrap(session.world.trains.last).id
+                session.selectStation(stations[index % stations.count])
+                session.selectTrain(train)
+                session.placeSelectedTrain()
+                print("[SL628P] place \(index): \(session.message?.text ?? "")")
+                session.assignTrain(train, toLine: line)
+                print("[SL628P] assign \(index): \(session.message?.text ?? "")")
+            }
+            session.selectLine(line)
+            for level in ServiceLevel.allCases { session.setSelectedLineTrains(3, at: level) }
+            print("[SL628P] \(rules) st\(st) inService \(session.world.lineTrainsInService(line, at: .peak) ?? -1) line.trains \(session.world.line(id: line)!.trains)")
+            var world = session.world
+            for minute in [420, 5, 30] {
+                try world.advance(ticks: minute)
+                for train in world.trains {
+                    print("[SL628P]  t\(minute) \(train.name) pos \(String(describing: train.position)) exec \(String(describing: train.execution))")
+                }
+                print("[SL628P]  waits \(world.routeWaits())")
+            }
+        }
+    }
+
+    func testDemoOwnShortfalls() throws {
+        guard ProcessInfo.processInfo.environment["SINGLELINE_EXPLORE"] != nil else { throw XCTSkip("set SINGLELINE_EXPLORE") }
+        for (name, world) in [("hsr", try HighSpeedDemoTests.opened.get()), ("tra", try TRADemoTests.opened.get())] {
+            for line in world.lines where !line.assignedTrains.isEmpty {
+                if let s = world.passingPlaceShortfall(of: line.id, trains: line.assignedTrains.count) {
+                    print("[SL628D] \(name) \(line.name) trains \(line.assignedTrains.count) others \(s.others.count) legs \(s.legs.count)")
+                }
+            }
+            print("[SL628D] \(name) done lines \(world.lines.count)")
         }
     }
 }

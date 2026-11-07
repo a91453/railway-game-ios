@@ -297,6 +297,33 @@ extension GameSession {
         return nil
     }
 
+    /// Decision 628: train `id` placed at a free berth of any stop of line
+    /// `line` from which a way leads on to the stop before or after it,
+    /// stops in order, or `nil` where none takes it. The last resort for a
+    /// train lifted for a passing loop when the line's ends are both
+    /// taken: three trains on a single track stand at all of its stations,
+    /// and the loops are where the third can go.
+    static func placeAtAnyStop(_ id: TrainID, of line: LineID, in world: GameWorld) -> GameWorld? {
+        guard let stops = world.line(id: line)?.stops, stops.count >= 2 else { return nil }
+        for (index, station) in stops.enumerated() {
+            let neighbours = [index + 1, index - 1].filter { stops.indices.contains($0) }.map { stops[$0] }
+            for platform in world.network.platforms(of: station) {
+                guard let edge = world.network.edge(platform.edge) else { continue }
+                let berths: [TrainPosition] = [
+                    .onEdge(TrackTraversal(edge: platform.edge, direction: .forward), offset: platform.end),
+                    .onEdge(TrackTraversal(edge: platform.edge, direction: .backward), offset: edge.length - platform.start),
+                ]
+                for berth in berths where neighbours.contains(where: { world.path(from: berth, toStation: $0) != nil }) {
+                    var placed = world
+                    let here = LineJourney(start: berth, legs: [], roundTripSeconds: 0)
+                    guard (try? Self.placeAtStart(id, of: here, in: &placed)) != nil else { continue }
+                    return placed
+                }
+            }
+        }
+        return nil
+    }
+
     /// Line `id`'s journey the other way round, from its last stop: where a
     /// train starts its trips from that end (decision 264). `nil` for a ring.
     static func farEndJourney(of id: LineID, in world: GameWorld) -> LineJourney? {
