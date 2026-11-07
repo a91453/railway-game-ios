@@ -160,6 +160,7 @@ extension Map3DScene {
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre)
         var built: [Chunk] = []
         var life = Map3DStreetLife()
+        var exteriors = old.stationExteriors
         var left = keys.sorted()
         while !left.isEmpty {
             let block = Map3DStreaming.block(of: left)
@@ -173,8 +174,13 @@ extension Map3DScene {
                                   temples: temples, noBuild: noBuild, trackCover: cover, detail: detail, facades: facades)
             let wanted = Set(block)
             built += part.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+            for exterior in part.stationExteriors {
+                exteriors.removeAll { $0.station == exterior.station }
+                exteriors.append(exterior)
+            }
             life.spots += part.streetLife.spots.filter { Self.isStations($0) && wanted.contains(grid.key(of: $0.path.points[0])) }
         }
+        stationExteriors = exteriors
         chunks = (old.chunks.filter { !keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } + built)
             .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         var streetLife = old.streetLife

@@ -131,6 +131,8 @@ public struct Map3DScene: Sendable {
     /// Decision 359: the player's track, where it runs in a tunnel and
     /// the ground drawn over it.
     public let trackCover: Map3DTrackCover
+    /// Decision 625: the real stations' exterior studies stood in the scene.
+    let stationExteriors: [Map3DStationExterior]
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
@@ -468,6 +470,7 @@ public struct Map3DScene: Sendable {
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
+        builder.realTrackLines = realTrains?.shownLanes ?? []
         // Decision 407: the viaducts, each pair of tracks on its piers.
         builder.addViaducts()
         // Decision 238: the city twice, in full and simplified for afar.
@@ -476,7 +479,11 @@ public struct Map3DScene: Sendable {
         // track; on ground no real building, temple, scene or city lot
         // takes.
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
+        // Decision 625: the real stations' exterior studies, as landmarks,
+        // cut clear of the track.
+        let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
         let landmarkCells = landmarks.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) }
+            .union(exteriors.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) })
         // Decision 441: the Changhua Roundhouse's turntable; no street
         // furniture or city lot on it, but the real buildings round it stay.
         let turntable = RealWorldFrame(world: world).map { builder.addRoundhouseTurntable(frame: $0) } ?? []
@@ -490,6 +497,7 @@ public struct Map3DScene: Sendable {
         // they cross it, and of the stations' buildings.
         if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
         seededStreets = SeededStreetPlan(edges: builder.streetEdges)
+        stationExteriors = builder.stationExteriors
         // Decision 322: the shops, clear of the streets.
         builder.addShopStreets()
         // Decision 326: the overhead line, its masts clear of the platforms;
@@ -845,6 +853,11 @@ extension Map3DScene {
         /// Decision 339: the 64 m cells the real lines' track runs through
         /// above the ground, which keep no city lot.
         var realTrackCells = Set<ChunkKey>()
+        /// Decision 625: the real lines' track drawn (decision 402), each
+        /// lane where a car shows, for the room the exterior studies keep.
+        var realTrackLines: [[Map3DPoint]] = []
+        /// Decision 625: the exterior studies stood.
+        var stationExteriors: [Map3DStationExterior] = []
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 370: colours the model look leaves as they are besides
         /// ``Map3DLook``'s own (the lines' bands).

@@ -265,6 +265,19 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 625: the demo's real lines laid round the scene's
+            // station once the app's real data is read, and run on half an
+            // hour, for the 3D map over the real stations' exteriors.
+            if let view = DebugLaunch.value(of: "-screenshot-lay-demo") {
+                Task {
+                    await opening.value
+                    guard let session = launcher.session else { return }
+                    for _ in 0..<240 {
+                        if await session.layDemoForScreenshot(view) { break }
+                        try? await Task.sleep(for: .milliseconds(500))
+                    }
+                }
+            }
             // Decision 602: the real line bought and left at the scene's
             // hour, its trains in their depots, for the 3D map over them.
             if let real = DebugLaunch.value(of: "-screenshot-buy-real"), DebugLaunch.value(of: "-screenshot-follow-bought") == nil {
