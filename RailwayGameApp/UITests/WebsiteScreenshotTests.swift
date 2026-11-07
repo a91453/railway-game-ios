@@ -478,6 +478,33 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's
     /// screenshot review.
+    /// Decision 629 (TRACKHEIGHT): a stretch drawn across a river on the
+    /// ground, refused, its card offering a bridge and a tunnel; then the
+    /// bridge tapped, and the end raised a metre by hand. In Chinese and
+    /// in English. For the screenshot review of the pull request that
+    /// added them.
+    func testTrackHeightFixes() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackHeight"], english: english)
+            let suffix = english ? "-en" : ""
+            let fixUp = app.buttons["map.build.fixUp"]
+            XCTAssertTrue(fixUp.appears(within: 180), "The card offers a bridge")
+            XCTAssertTrue(app.buttons["map.build.fixDown"].exists, "and a tunnel")
+            settle(seconds: 3)
+            keep("track-height-refused\(suffix)", app)
+            fixUp.tap()
+            XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered, nothing left to fix")
+            settle(seconds: 2)
+            keep("track-height-bridge\(suffix)", app)
+            let raise = app.buttons["map.build.raise"]
+            XCTAssertTrue(raise.becomesHittable(within: 10))
+            raise.tap()
+            settle(seconds: 2)
+            keep("track-height-raised\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     func testFerryShoreCijin() {
         let app = launch(extra: ["-screenshot-scene", "cijinShore"])
         defer { app.terminate() }

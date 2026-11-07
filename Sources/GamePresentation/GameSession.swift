@@ -712,8 +712,20 @@ public final class GameSession {
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
-    public internal(set) var networkStart: NetworkAnchor?
-    public internal(set) var networkEnd: NetworkAnchor?
+    public internal(set) var networkStart: NetworkAnchor? {
+        didSet { if networkStart != oldValue { networkStartRaise = 0 } }
+    }
+    public internal(set) var networkEnd: NetworkAnchor? {
+        didSet { if networkEnd != oldValue { networkEndRaise = 0 } }
+    }
+    /// Decision 629: how much higher (or, below 0, lower) than
+    /// ``networkHeight`` the player has set the next stretch's start and
+    /// end, where each is a new point, in world units; back to 0 when that
+    /// end is picked again.
+    public internal(set) var networkStartRaise: Int64 = 0
+    public internal(set) var networkEndRaise: Int64 = 0
+    /// ``networkHeightCard``'s fixes, kept for the draft they were found for.
+    @ObservationIgnored var networkHeightFixMemo: (key: NetworkHeightFixKey, fixes: [NetworkHeightFix])?
     /// While a finger draws track (decision 102): the end picked before the
     /// drag began, which a cancelled drag puts back.
     @ObservationIgnored var networkDragEndBefore: NetworkAnchor??

@@ -128,6 +128,9 @@ public struct NetworkPreview: Hashable, Sendable {
     /// Decision 468, later: the real line for sale a traced stretch runs
     /// along, which the player may buy as it is (``GameSession/tracedSaleHint``).
     public var forSale: RealBranchLine? = nil
+    /// Decision 629: GameCore's refusal, for the build card to offer the
+    /// height that gets round it; `nil` when it would be built.
+    public var refusal: GameError? = nil
 }
 
 /// What a stretch of track the network tool would build costs, part by

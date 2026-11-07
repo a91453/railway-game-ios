@@ -151,8 +151,80 @@ struct MapBuildConfirm: View {
                     .padding(.horizontal, 8)
                     .accessibilityIdentifier("map.build.catchment")
             }
+            if let heights = build.heights {
+                heightRows(heights)
+            }
             buttons(build)
                 .fixedSize()
+        }
+    }
+
+    /// Decision 629: the new end's height, one metre a tap, and a button
+    /// for each height that gets the stretch built where it was refused.
+    @ViewBuilder
+    private func heightRows(_ card: NetworkHeightCard) -> some View {
+        let language = session.language
+        if !card.label.isEmpty {
+            HStack(spacing: 6) {
+                Button {
+                    session.raiseNetworkEnd(by: -1)
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.body.weight(.bold))
+                        .frame(width: 44, height: 40)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                .disabled(!card.canLower)
+                .accessibilityLabel(Text(verbatim: language.text("Lower 1 m", "降低 1 公尺")))
+                .accessibilityIdentifier("map.build.lower")
+                Text(verbatim: card.label)
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(minWidth: 96)
+                    .accessibilityIdentifier("map.build.height")
+                Button {
+                    session.raiseNetworkEnd(by: 1)
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.bold))
+                        .frame(width: 44, height: 40)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                .disabled(!card.canRaise)
+                .accessibilityLabel(Text(verbatim: language.text("Raise 1 m", "架高 1 公尺")))
+                .accessibilityIdentifier("map.build.raise")
+            }
+            .fixedSize()
+        }
+        if let note = card.note {
+            Text(verbatim: note)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
+                .accessibilityIdentifier("map.build.heightNote")
+        }
+        ForEach(card.fixes, id: \.self) { fix in
+            Button {
+                session.applyNetworkHeightFix(fix)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: fix.change > 0 ? "arrow.up.to.line" : "arrow.down.to.line")
+                        .font(.body.weight(.bold))
+                    Text(verbatim: fix.title(in: language))
+                        .font(.subheadline.weight(.bold))
+                    Text(verbatim: fix.cost.compactText(in: language))
+                        .font(.subheadline)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 6)
+                .frame(minHeight: 40)
+            }
+            .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+            .fixedSize()
+            .accessibilityIdentifier(fix.change > 0 ? "map.build.fixUp" : "map.build.fixDown")
         }
     }
 
@@ -327,6 +399,9 @@ private struct BuildConfirmation {
     /// Decision 468, later: the trace runs along a real line for sale,
     /// and the pill offers its purchase card.
     var buysLine = false
+    /// Decision 629: the stretch's new end moved up and down, and the
+    /// heights that get round a refusal.
+    var heights: NetworkHeightCard?
 
     enum Kind {
         case track, platform, building, sale, mapTile, line, addStop, busRoute, road, roadRemoval, ferryRoute
@@ -461,6 +536,7 @@ private struct BuildConfirmation {
             confirm = { session.buildNetworkTrack() }
             expandsMap = session.offersMapExpansion(for: preview.problem)
             buysLine = sale != nil
+            heights = session.networkHeightCard
         case .building where session.buildingMode == .sell:
             // Decision 130: the building chosen to sell, and what it brings.
             guard let sale = session.salePreview else { return nil }
