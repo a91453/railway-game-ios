@@ -458,9 +458,14 @@ extension Map3DStationExterior {
                 framed.append(nil)
                 for piece in cut where piece.over == nil { triangles(piece.polygon, into: &pieces) }
             }
+            // Whether it stands is asked of what is drawn, but of a frame
+            // the whole roof's bounds (a rib between posts still rests
+            // on them).
             var lo = Map3DPoint(.infinity, .infinity, .infinity), hi = Map3DPoint(-.infinity, -.infinity, -.infinity)
-            for piece in pieces {
-                for p in [piece.0.position, piece.1.position, piece.2.position] {
+            let bounding = framed.last! == nil ? pieces.map { [$0.0.position, $0.1.position, $0.2.position] }
+                : (pieces.isEmpty ? [] : part.map { t in (0..<3).map { points[Int(mesh.indices[t * 3 + $0])] } })
+            for corners in bounding {
+                for p in corners {
                     lo = Map3DPoint(min(lo.x, p.x), min(lo.y, p.y), min(lo.z, p.z))
                     hi = Map3DPoint(max(hi.x, p.x), max(hi.y, p.y), max(hi.z, p.z))
                 }

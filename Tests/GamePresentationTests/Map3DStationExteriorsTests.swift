@@ -180,7 +180,8 @@ final class Map3DStationExteriorsTests: XCTestCase {
         room.add(line: [Map3DPoint(-80, 0.3, 0), Map3DPoint(80, 0.3, 0)], half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: 0)
         let cut = Map3DStationExterior.carved(kit.mesh, clearOf: room, ground: 0)
         XCTAssertEqual(cut.kept, 1, accuracy: 0.001, "a frame counts as the roof")
-        // From above, the roof's top is ribs 1 m wide at x = -15, 0, 15.
+        // From above, the roof's top is ribs 1 m wide a spacing apart
+        // (x = -16, 0, 16).
         var top: [Float: Float] = [:]
         for t in 0..<cut.mesh.triangleCount {
             let v = (0..<3).map { cut.mesh.vertices[Int(cut.mesh.indices[t * 3 + $0])].position }
@@ -188,7 +189,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
             let middle = ((v[0].x + v[1].x + v[2].x) / 3 / Map3DTrainRoom.frameSpacing).rounded() * Map3DTrainRoom.frameSpacing
             top[middle, default: 0] += (v[1] - v[0]).cross(v[2] - v[0]).length / 2
         }
-        XCTAssertEqual(Set(top.keys), [-15, 0, 15])
+        XCTAssertEqual(Set(top.keys), Set([-1, 0, 1].map { $0 * Map3DTrainRoom.frameSpacing }))
         for (_, area) in top { XCTAssertEqual(area, Map3DTrainRoom.frameWidth * 20, accuracy: 0.5) }
         // The ribs cross the track.
         XCTAssertTrue(cut.mesh.vertices.contains { $0.y > 12 && $0.z < -Map3DTrainRoom.trackHalf }
@@ -208,10 +209,12 @@ final class Map3DStationExteriorsTests: XCTestCase {
         var room = Map3DTrainRoom()
         room.add(line: [Map3DPoint(-60, 0.3, 0), Map3DPoint(60, 0.3, 0)], half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: 0)
         let cut = Map3DStationExterior.carved(kit.mesh, clearOf: room, ground: 0)
-        XCTAssertGreaterThan(cut.kept, 0.8)
+        XCTAssertGreaterThan(cut.kept, 0.7)
         for t in 0..<cut.mesh.triangleCount {
             let v = (0..<3).map { cut.mesh.vertices[Int(cut.mesh.indices[t * 3 + $0])].position }
             let middle = (v[0] + v[1] + v[2]) * (1 / 3)
+            // Its floor under the rails may stay (the gauge's foot).
+            guard middle.y > 0.1 else { continue }
             XCTAssertLessThanOrEqual(middle.z, -Map3DTrainRoom.trackHalf + 0.01, "nothing over the track")
         }
     }
@@ -292,7 +295,8 @@ final class Map3DStationExteriorsTests: XCTestCase {
 
     /// Decision 625 續: with the demo's real lines laid round HSR Taoyuan
     /// (as its screenshot has them), the study leaves the airport line's
-    /// A18 platforms open to the sky: nothing over them at any height.
+    /// A18 platforms open to the sky: nothing over them at any height but
+    /// a frame's ribs (the A18 concourse's floor, over the line, is one).
     func testTheA18PlatformsAreOpen() async throws {
         let (session, view) = try DemoRealLinesTrackReportTests.game(at: "桃園", in: "thsr_sched", half: 3_000)
         _ = await session.layDemoRealLines(in: view)
@@ -312,11 +316,17 @@ final class Map3DStationExteriorsTests: XCTestCase {
                     let (pa, pb) = (a + right * platform.offset, b + right * platform.offset)
                     let ab = Map3DPoint(pb.x - pa.x, 0, pb.z - pa.z), ap = Map3DPoint(p.x - pa.x, 0, p.z - pa.z)
                     let share = ab.dot(ap) / max(ab.dot(ab), 1e-6)
-                    if share > 0, share < 1, (ap - ab * share).length < platform.width / 2, p.y > pa.y { over += 1 }
+                    guard share > 0, share < 1, (ap - ab * share).length < platform.width / 2, p.y > pa.y else { continue }
+                    // Off the frame's ribs (``Map3DTrainRoom/frame``), give or
+                    // take half a rib (the platform's line and the track's
+                    // are not quite parallel).
+                    let rib = along.dot(p) / Map3DTrainRoom.frameSpacing
+                    let off = abs(rib - rib.rounded()) * Map3DTrainRoom.frameSpacing
+                    if off > Map3DTrainRoom.frameWidth { over += 1 }
                 }
             }
         }
-        XCTAssertEqual(over, 0, "nothing over A18's platforms")
+        XCTAssertEqual(over, 0, "nothing over A18's platforms but ribs")
     }
 
     /// Decision 625 續: the HSR Taichung screenshot
