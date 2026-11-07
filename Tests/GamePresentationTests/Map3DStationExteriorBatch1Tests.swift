@@ -2,6 +2,40 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch1Tests: XCTestCase {
+    func testZuoyingHSRStudyKeepsBothOSMWaysAndTwoRoofHeights() {
+        let near = Map3DStationExteriorBatch1.model(for: .zuoyingHSR, detail: .near)
+        let far = Map3DStationExteriorBatch1.model(for: .zuoyingHSR, detail: .far)
+        XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
+        XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
+        XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
+        XCTAssertNil(Map3DStationKit.model(id: near.name))
+        XCTAssertNil(Map3DStationKit.model(id: far.name))
+        let outlines = [Map3DStationExteriorBatch1.zuoyingHSRFootprint,
+                        Map3DStationExteriorBatch1.xinzuoyingFootprint]
+        XCTAssertEqual(outlines.map(\.count), [10, 17])
+        for outline in outlines {
+            for (east, north) in outline {
+                XCTAssertTrue(near.vertices.contains {
+                    abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002
+                        && abs($0.z - 0.32) < 0.002
+                })
+            }
+        }
+        XCTAssertEqual(near.maximum.z, 32, accuracy: 0.1) // estimated HSR crown
+        XCTAssertTrue(near.vertices.contains { abs($0.z - 26) < 0.01 }) // TRA roof
+        let colours = Set(near.vertices.map(\.color))
+        let ordered = [UInt32(0xEEF1EE), 0xDEE5E3, 0xD0D8D7,
+                       0xB0C0C1, 0x91B7BD, 0x648991, 0x667B80].map(Map3DColor.rgb)
+        func luminance(_ colour: UInt32) -> Float {
+            Float(colour & 255) * 0.2126 + Float((colour >> 8) & 255) * 0.7152
+                + Float((colour >> 16) & 255) * 0.0722
+        }
+        for (lighter, darker) in zip(ordered, ordered.dropFirst()) {
+            XCTAssertTrue(colours.contains(lighter))
+            XCTAssertGreaterThan(luminance(lighter), luminance(darker))
+        }
+    }
+
     func testTainanHSRStudyKeepsFourOSMOutlinesAndTwoDetails() {
         let near = Map3DStationExteriorBatch1.model(for: .tainanHSR, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .tainanHSR, detail: .far)

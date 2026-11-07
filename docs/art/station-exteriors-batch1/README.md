@@ -1,4 +1,4 @@
-# 車站外觀第一批 studies：第 10 次交付
+# 車站外觀第一批 studies：第 11 次交付
 
 這是獨立研究配方，沒有接到 `Map3DStationKit` 的站點選型、地圖或存檔。公開庫只有配方、測試與一張總覽；逐方向原生模型、GLB、日夜圖與離線檢視頁在私有素材庫的同名資料夾。
 
@@ -126,13 +126,20 @@
 
 照片只看 Wikimedia Commons [高鐵台南站正面與寬屋頂](https://commons.wikimedia.org/wiki/File:HSR_Tainan_Station.JPG)、[沙崙站長斜屋頂與窗帶](https://commons.wikimedia.org/wiki/File:Shalun_Station_Exterior.jpg)、[兩站與月台相對位置](https://commons.wikimedia.org/wiki/File:THSR_Tainan_Station_and_TRA_Shalun_Station_2010-05.jpg)；[高鐵台南官方站頁](https://www.thsrc.com.tw/ArticleContent/9c5ac6ca-ec89-48f8-aab0-41b738cb1814) 只核對站區配置。照片不打包、不作貼圖。以現有 station kit 盒體、封閉曲棚、斜屋頂、梁柱與調淡的白灰、青灰色階重建；淺屋頂比立面亮、玻璃與棚下更暗。沙崙斜屋頂不是中式屋頂。近景 **4,065 三角**、遠景 **1,533 三角**；作者尚未驗收外觀。
 
-## 尚缺的一站
+## 已完成：高鐵左營（含臺鐵新左營）
 
-| 站 | 來源與目前量到的部件足跡（m） | 還缺的核對 |
+| 部件 | OSM 足跡最小旋轉矩形 | 高度、屋頂與外觀判斷 |
 | --- | --- | --- |
-| 高鐵左營 | 參考庫 `stations/zuoying-complex-v1/metadata.json` 的 OSM 輪廓：高鐵左營 186 × 78（111991261）；臺鐵新左營 168 × 67（303296097） | 大頂與真實高度。 |
+| 高鐵左營站 | [way 111991261](https://www.openstreetmap.org/way/111991261)，**185.853 × 78.235 m**，10 個不重複頂點；`building=train_station`、`building:levels=8`、`layer=1` | OSM 無 `height`、`roof:shape` 或 `roof:height`。約 **32 m** 大白棚頂、深出簷、外露白色桁架、白柱與青灰窗帶依外觀照片及參考展示比例推估。 |
+| 臺鐵新左營站 | [way 303296097](https://www.openstreetmap.org/way/303296097)，**168.193 × 66.870 m**，17 個不重複頂點；同樣 `building=train_station`、`building:levels=8`、`layer=1` | OSM 無實際高度或屋頂標籤。照片顯示較平的長白屋頂、細長採光條、懸挑上層與前側柱列；約 **26 m** 屋頂、柱距及窗帶節奏均為推估。 |
 
-上表尺寸是參考庫依 OSM 輪廓量出的最小矩形，括號內為 OSM way 識別；`displayHeightM` 是展示推估，**尚未**作為真實高度。完成前須從整份 Taiwan PBF 重新核對 way、`building:part`、高度與屋頂標籤，再看照片選各部件，並另做近遠兩版。資料出處同為 © OpenStreetMap contributors，ODbL 1.0。
+兩個 way 的全部非閉合頂點從 2026-11-06 下載的 osmtoday `asia/taiwan.pbf` 以 pyosmium 擷取，轉為局部公尺座標；原點 120.3074864°E、22.68726485°N。兩件的長寬、方向與相對位置同參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/zuoying-complex-v1/metadata.json` 核對；`blender-buildings-v1/zuoying-complex-v1/model.json` 只量體量比例，不使用原網格。OSM 輪廓 © OpenStreetMap contributors，ODbL 1.0。八層標籤不能直接換算為真實建物高度。
+
+照片只看 Wikimedia Commons [高鐵左營站的長白大棚、窗帶與柱廊](https://commons.wikimedia.org/wiki/File:HSR_Zuoying_Station.JPG)、[兩站共構的遠景與新左營屋頂採光條](https://commons.wikimedia.org/wiki/File:THSR_Zuoying_Station_and_TRA_New_Zuoying_Station_20080712.jpg)、[新左營外立面與柱廊](https://commons.wikimedia.org/wiki/File:TRA_New_Zuoying_Station_in_Morning_20151024.jpg)、[新左營正面窗帶](https://commons.wikimedia.org/wiki/File:TRA_New_Zuoying_Station_20081130.jpg)；[高鐵左營官方站頁](https://www.thsrc.com.tw/ArticleContent/f2519629-5973-4d08-913b-479cce78a356) 只核對站區配置。照片不打包、不作貼圖。高鐵大棚取照片的寬出簷與露出桁架，新左營較平的屋頂取參考比例及照片中的採光條；最後用現有 station kit 盒體、曲棚、梁柱及淡白、青灰色階組合，保留屋頂、牆、玻璃、桁架的明暗順序。近景 **2,793 三角**、遠景 **957 三角**；作者尚未驗收外觀。
+
+## 第一批進度
+
+11 站研究模型及近遠景、來源表、總覽已完成。這批只供作者外觀審看；尚未接進遊戲，實際站體高度、月台高程及細部仍需進一步資料核對。
 
 ## 檢查與邊界
 

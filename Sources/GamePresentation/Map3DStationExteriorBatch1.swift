@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung", tainanHSR = "hsr-tainan" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung", tainanHSR = "hsr-tainan", zuoyingHSR = "hsr-zuoying" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -18,6 +18,7 @@ public enum Map3DStationExteriorBatch1 {
         case .hsinchuHSR: builder.hsinchuHSRExteriorStudy(detail: detail)
         case .taichungHSR: builder.taichungHSRExteriorStudy(detail: detail)
         case .tainanHSR: builder.tainanHSRExteriorStudy(detail: detail)
+        case .zuoyingHSR: builder.zuoyingHSRExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -605,6 +606,24 @@ public enum Map3DStationExteriorBatch1 {
         (50.607, -181.754), (62.129, -176.539),
         (0.702, -40.914), (-6.488, -44.172), (-23.755, -51.989),
         (-5.935, -91.341), (7.020, -85.470),
+    ]
+
+    // OSM ways 111991261 and 303296097, Taiwan PBF 2026-11-06.
+    // Metres east/north from 120.3074864 E, 22.68726485 N.
+    // © OpenStreetMap contributors, ODbL 1.0.
+    static let zuoyingHSRFootprint: [(Float, Float)] = [
+        (78.739, 24.146), (90.065, 34.498), (108.983, 13.783),
+        (43.960, -45.595), (-28.089, -111.390), (-30.603, -108.665),
+        (-45.920, -91.875), (-32.480, -79.599), (-67.351, -41.415),
+        (45.161, 60.918),
+    ]
+    static let xinzuoyingFootprint: [(Float, Float)] = [
+        (15.183, 111.390), (17.748, 108.565), (22.119, 103.762),
+        (32.275, 92.598), (26.048, 86.938), (47.643, 63.187),
+        (45.161, 60.918), (-67.351, -41.415), (-70.408, -44.194),
+        (-95.399, -16.718), (-102.160, -9.279), (-105.618, -5.476),
+        (-108.983, -1.785), (-80.236, 24.368), (-86.741, 31.240),
+        (-13.070, 98.191), (-6.709, 91.475),
     ]
 
 }
@@ -1550,5 +1569,102 @@ private extension StationKitBuilder {
         shalun.box(0, 6.62, -12.3, 142, 0.2, 0.44, darkGlass)
         add(.flat(named: "shalun-station", from: shalun.mesh),
             at: Map3DPoint(19.2, 0, -114.3), angle: -65.6331 * .pi / 180)
+    }
+
+    mutating func zuoyingHSRExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let roof = Map3DColor.rgb(0xEEF1EE)
+        let fascia = Map3DColor.rgb(0xDEE5E3)
+        let wall = Map3DColor.rgb(0xD0D8D7)
+        let steel = Map3DColor.rgb(0xB0C0C1)
+        let glass = Map3DColor.rgb(0x91B7BD)
+        let darkGlass = Map3DColor.rgb(0x648991)
+        let truss = Map3DColor.rgb(0x667B80)
+
+        footprint(Map3DStationExteriorBatch1.zuoyingHSRFootprint, color: wall)
+        footprint(Map3DStationExteriorBatch1.xinzuoyingFootprint, color: wall)
+
+        // Both OSM ways carry eight levels but no height or roof shape.
+        // The HSR roof's 32 m crown is reference-display scale. Photos
+        // supply its deep white eave, exposed steel and teal window bands.
+        var hsr = StationKitBuilder()
+        hsr.box(0, 0.32, 0, 177, 52, 8.7, wall)
+        hsr.box(0, 9.02, 0, 178, 54, 13.7, fascia)
+        for z: Float in [-27.1, 27.1] {
+            hsr.box(0, 10.3, z, 172, 0.24, 2.9, glass)
+            hsr.box(0, 16.2, z, 172, 0.24, 2.8, glass)
+            hsr.box(0, 22.8, z, 172, 0.35, 0.7, truss)
+        }
+        hsr.box(0, 0.32, -27.4, 27, 0.22, 8.7, darkGlass)
+        hsr.canopy(0, 26.5, 0, length: 186, width: 80,
+                   rise: 5.5, color: roof)
+        for x in stride(from: Float(-82), through: 82,
+                        by: detail == .near ? 13.6 : 41) {
+            for z: Float in [-29.5, 29.5] {
+                hsr.box(x, 0.32, z, 0.85, 0.85, 24.4, steel)
+                if detail == .near {
+                    hsr.beam(Map3DPoint(x, 23.8, z),
+                             Map3DPoint(x, 26.5, z.sign == .minus ? -39 : 39),
+                             0.28, truss)
+                }
+            }
+        }
+        if detail == .near {
+            for x in stride(from: Float(-80), through: 80, by: 16) {
+                for side: Float in [-1, 1] {
+                    hsr.beam(Map3DPoint(x, 23.4, side * 27),
+                             Map3DPoint(x + 3.5, 26.5, side * 37),
+                             0.22, steel)
+                }
+            }
+        }
+        for x in stride(from: Float(-80), through: 80,
+                        by: detail == .near ? 10 : 32) {
+            for z: Float in [-27.35, 27.35] {
+                hsr.box(x, 10.3, z, 0.22, 0.14, 8.7, steel)
+            }
+        }
+        add(.flat(named: "zuoying-hsr-hall", from: hsr.mesh),
+            at: Map3DPoint(14.1, 0, -19.96), angle: 42.4015 * .pi / 180)
+
+        // New Zuoying's long white slab is lower and flatter. Skylight
+        // strips and the front colonnade are photo-based approximations.
+        var tra = StationKitBuilder()
+        tra.box(0, 0.32, 0, 158, 47, 8.2, wall)
+        tra.box(0, 8.52, 0, 160, 50, 13.5, fascia)
+        for z: Float in [-25.15, 25.15] {
+            tra.box(0, 11.5, z, 155, 0.24, 2.8, glass)
+            tra.box(0, 17.5, z, 155, 0.24, 2.2, glass)
+            tra.box(0, 22.02, z, 156, 0.28, 0.55, truss)
+        }
+        tra.box(0, 0.32, -25.4, 26, 0.22, 8.2, darkGlass)
+        tra.box(0, 24.5, 0, 170, 68, 1.5, roof)
+        if detail == .near {
+            for x in stride(from: Float(-70), through: 70, by: 17.5) {
+                tra.box(x, 26.01, 0, 2.1, 46, 0.10, glass)
+            }
+        } else {
+            for x in stride(from: Float(-63), through: 63, by: 42) {
+                tra.box(x, 26.01, 0, 2.1, 46, 0.10, glass)
+            }
+        }
+        for x in stride(from: Float(-72), through: 72,
+                        by: detail == .near ? 12 : 36) {
+            for z: Float in [-27, 27] {
+                tra.box(x, 0.32, z, 0.82, 0.82, 23.7, steel)
+                if detail == .near {
+                    tra.beam(Map3DPoint(x, 22.2, z),
+                             Map3DPoint(x, 24.5, z.sign == .minus ? -33 : 33),
+                             0.22, truss)
+                }
+            }
+        }
+        for x in stride(from: Float(-72), through: 72,
+                        by: detail == .near ? 10 : 30) {
+            for z: Float in [-25.4, 25.4] {
+                tra.box(x, 11.5, z, 0.24, 0.14, 8.2, steel)
+            }
+        }
+        add(.flat(named: "xinzuoying-station", from: tra.mesh),
+            at: Map3DPoint(-30.7, 0, 37.04), angle: 42.2875 * .pi / 180)
     }
 }
