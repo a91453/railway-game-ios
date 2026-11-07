@@ -39,7 +39,7 @@ WORKFLOW = "testflight.yml"
 LIMIT = 4000
 # The last TestFlight run whose first attempt still uploaded "<n>.1"; later
 # runs upload the plain number on their first attempt (decision 616).
-LAST_DOTTED_RUN = 118
+LAST_DOTTED_RUN = 119
 RECENT = 20
 # The planning session's short text for the next release: what was decided,
 # what stays as it was, what to look at. Under .github because the
@@ -84,8 +84,8 @@ def previous_release(repository, run_id):
 def build_label(offset, run_number, attempt):
     """The build number that run uploaded, as testflight-preflight.sh made it.
 
-    Since decision 616 the first attempt is the plain number (119) and a re-run
-    adds the attempt (119.2); runs up to LAST_DOTTED_RUN always added it (118.1)."""
+    Since decision 616 the first attempt is the plain number (120) and a re-run
+    adds the attempt (120.2); runs up to LAST_DOTTED_RUN always added it (119.1)."""
     number = offset + run_number
     if attempt > 1 or run_number <= LAST_DOTTED_RUN:
         return f"{number}.{attempt}"

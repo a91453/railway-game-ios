@@ -135,15 +135,15 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 
 ## Build number
 
-- **規則**（[決策 616](decisions/616.md)，2026-11-07 起，run 119 開始）：第一次執行是 `<BUILD_NUMBER_OFFSET + run number>`，只有重跑（run attempt ≥ 2）才加 `.<run attempt>`。
-  - 例如第 119 次執行是 `119`，重跑失敗的 job 是 `119.2`、再重跑 `119.3`，下一次執行是 `120`。
-  - run 118 以前第一次執行也帶 `.1`（例如 `118.1`）；`testflight-changes.py` 的 `LAST_DOTTED_RUN` 照這個寫上一版的號碼。
+- **規則**（[決策 616](decisions/616.md)，2026-11-07 起，run 120 開始）：第一次執行是 `<BUILD_NUMBER_OFFSET + run number>`，只有重跑（run attempt ≥ 2）才加 `.<run attempt>`。
+  - 例如第 120 次執行是 `120`，重跑失敗的 job 是 `120.2`、再重跑 `120.3`，下一次執行是 `121`。
+  - run 119 以前第一次執行也帶 `.1`（例如 `119.1`）；`testflight-changes.py` 的 `LAST_DOTTED_RUN` 照這個寫上一版的號碼。
   - 版本號（目前 0.5.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
 - **GitHub**：run number 每次新執行加一、重跑不變；run attempt 每次重跑加一。所以每次執行與重跑都會得到從未用過的 build number，新的執行一定比舊的大。
   - release job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 release job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。
 - **Apple**：
-  - `CFBundleVersion` 使用整數段；Apple 對第一段限制最多 4 位、第二段最多 2 位，所以 `119` 與 `119.2` 都合法，而 workflow 會拒絕第一段大於 9999 或 attempt 大於 99。
-  - App Store Connect 要求版本號與 build number 的組合不重複，並把 build number 當成以點分開的整數一段一段比，缺的段當 0，所以 `119` < `119.2` < `119.3` < `120`（`118.1` < `119`）。第一次執行不用 `.1`，因此沒有兩次 attempt 會得到同一個號碼。
+  - `CFBundleVersion` 使用整數段；Apple 對第一段限制最多 4 位、第二段最多 2 位，所以 `120` 與 `120.2` 都合法，而 workflow 會拒絕第一段大於 9999 或 attempt 大於 99。
+  - App Store Connect 要求版本號與 build number 的組合不重複，並把 build number 當成以點分開的整數一段一段比，缺的段當 0，所以 `120` < `120.2` < `120.3` < `121`（`119.1` < `120`）。第一次執行不用 `.1`，因此沒有兩次 attempt 會得到同一個號碼。
   - Apple 舊技術文件（TN2420）另寫明：同一版本內 build number 要遞增。所以同一版本已上傳較新的 build 之後，**不要重跑更舊的執行**，改按一次新的 Run workflow。
 - **需要跳號時**設定 `BUILD_NUMBER_OFFSET`，例如 workflow 改名讓 run number 從 1 重新起算，或曾用其他方式上傳過較大的 build。Offset 與 run number 相加後必須 ≤ 9999；若此 workflow 真正累積到 10,000 次手動發佈，需要先改 build-number 編碼方案。
 

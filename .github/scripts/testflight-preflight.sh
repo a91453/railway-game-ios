@@ -96,7 +96,7 @@ fi
 # on a re-run (decision 616). Apple limits CFBundleVersion's first integer to
 # four digits and the second to two, so preflight enforces <= 9999 and <= 99
 # before constructing it. App Store Connect compares the integers one by one
-# and reads a missing one as zero, so 119 < 119.2 < 119.3 < 120: a new run
+# and reads a missing one as zero, so 120 < 120.2 < 120.3 < 121: a new run
 # gets a higher first number and a re-run of that run a higher second number.
 # Attempt 1 never takes ".1", so no two attempts share a number.
 build_number="$((offset + run_number))"
