@@ -49,6 +49,17 @@ public enum Map3DTrainLights {
     public struct Lamps: Sendable {
         public let head: [Map3DVertex]
         public let tail: [Map3DVertex]
+        /// Decision 617: the glows round them, in model space
+        /// (``Map3DGlow/spots(in:strength:where:)``).
+        public let headGlows: [Map3DGlow.Spot]
+        public let tailGlows: [Map3DGlow.Spot]
+
+        public init(head: [Map3DVertex], tail: [Map3DVertex]) {
+            self.head = head
+            self.tail = tail
+            headGlows = Map3DGlow.spots(in: head) { _ in true }
+            tailGlows = Map3DGlow.spots(in: tail, strength: Map3DGlow.tailStrength) { _ in true }
+        }
     }
 
     /// Where a train's first car's headlamps or its last car's tail lamps

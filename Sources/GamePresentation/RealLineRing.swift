@@ -157,7 +157,14 @@ extension RealLineLaying {
         }
         let cars = line.cars
         let platformLength = Int64(cars + 1) * Train.carLength
-        let yardSamples = RealLineDepotLayout.groundSamples(of: sitePoints, site: site, length: platformLength, back: 50 * metre, step: step)
+        // Decision 621: a strip yard's ground, along the line from its wye.
+        let leads = path.nearest(sitePoints[0]).along
+        let yardSamples = site.strip != nil
+            ? RealLineDepotLayout.Strip.groundSamples(
+                along: path, at: leads, side: (sitePoints[1] - path.point(at: leads)).dot(path.tangent(at: leads).normal) >= 0 ? 1 : -1,
+                site: site, length: platformLength, back: 50 * metre, step: step
+            )
+            : RealLineDepotLayout.groundSamples(of: sitePoints, site: site, length: platformLength, back: 50 * metre, step: step)
         var tiles: [MapTile] = []
         if let expansion = world.mapExpansion {
             let wanted = Set((samples + yardSamples).map { MapExpansion.tile(at: $0) }).filter { world.isOnMap($0) && !expansion.owns($0) }
@@ -290,10 +297,15 @@ extension RealLineLaying {
                 together: entry.together, ground: ground
             )
         }
-        guard let laidDepot = RealLineDepotLayout.lay(
-            site, points: sitePoints, along: path, at: j, second: second, marks: depotMarks, first: pieces.count, length: platformLength,
-            ground: ground, water: water, in: language
-        ) else {
+        let laidDepot = site.strip != nil
+            ? RealLineDepotLayout.strip(
+                site, along: path, at: j, second: second, marks: depotMarks, first: pieces.count, length: platformLength, ground: ground, in: language
+            )
+            : RealLineDepotLayout.lay(
+                site, points: sitePoints, along: path, at: j, second: second, marks: depotMarks, first: pieces.count, length: platformLength,
+                ground: ground, water: water, in: language
+            )
+        guard let laidDepot else {
             return refused("The line's depot does not fit here.", "這條線的機廠放不下。")
         }
         pieces += laidDepot.pieces

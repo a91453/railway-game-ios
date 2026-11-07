@@ -175,6 +175,17 @@ final class DepotLinkTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         let offer = try XCTUnwrap(session.message?.depotOffer, session.message?.text ?? "")
         XCTAssertEqual(offer.lines.compactMap { session.world.line(id: $0)?.name }, ["2 號線", "環狀線"])
+        // Decision 619: four sidings, and the camera turned to the
+        // throat's middle: past the track's end, short of the platforms.
+        let request = try XCTUnwrap(session.cameraRequest)
+        XCTAssertNil(request.region)
+        let depot = try XCTUnwrap(session.world.stations.first(where: \.isDepot))
+        let buffers = session.world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 && abs($0.position.x - depot.point.x) < 64 * 300 && abs($0.position.y - depot.point.y) < 64 * 300 }
+        XCTAssertEqual(buffers.count, 4)
+        let end = try XCTUnwrap(ScreenshotScene.depotOfferEnd(in: ScreenshotScene.depotOffer.make(in: .traditionalChinese)))
+        XCTAssertLessThan(request.location.y, end.y, "past the end")
+        XCTAssertGreaterThan(request.location.y, depot.point.y, "short of the platforms")
+        XCTAssertLessThan(abs(request.location.x - end.x), 64 * 5)
     }
 }
 

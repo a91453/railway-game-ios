@@ -4,6 +4,16 @@
 // memo belongs to one advance/query; it is never world or save state.
 
 extension GameWorld {
+    /// A memo for one question asked of the world as it is, lent what the
+    /// last advances kept for its network, lines and settings (see
+    /// ``RouteMemo/lend(toQuestion:of:)``): the same answers as a new
+    /// one, worked out with less.
+    func questionMemo() -> DirectionMemo {
+        var memo = DirectionMemo()
+        routeMemo.lend(toQuestion: &memo, of: self)
+        return memo
+    }
+
     struct DirectionMemo {
         struct Call: Hashable {
             let station: StationID
@@ -209,6 +219,26 @@ extension GameWorld {
             memo.curves = curves
         }
 
+        /// Decision 138 (continued, TRAFFIC-READ): gives `memo`, a new one
+        /// for a question asked of `world` (not an advance), what an
+        /// ``advance(ticks:)`` would be lent were it to start now: the paths
+        /// and curves while `world`'s ``Key`` is the one they were kept
+        /// for, and the traffic plan's parts while its ``ServiceKey`` is.
+        /// The game loop's traffic reading (``routeWaits()``) worked out
+        /// every running train's ``trafficPoints(of:cycle:)`` again at
+        /// every tick, some 1 s a reading on the bought Kaohsiung Circular
+        /// Light Rail on an iPhone 17 Pro. A question never keeps what it
+        /// works out: the world is not changed by asking it.
+        func lend(toQuestion memo: inout DirectionMemo, of world: GameWorld) {
+            if key != nil, key == Key(world) {
+                memo.paths = paths
+                memo.curves = curves
+            }
+            if serviceKey != nil, serviceKey == ServiceKey(world) {
+                memo.trafficParts = trafficParts
+            }
+        }
+
         /// Gives `memo`, a new one, the services' journeys, capacities and
         /// whether they run, and the empty runs out of depots (each for
         /// where its train stood), when they were kept for `key`: a
@@ -278,13 +308,13 @@ extension GameWorld {
     /// `start` standing for call `stop`: walk the order on, including
     /// reversals and repeat seams, until the placement/order state repeats
     /// or is unroutable. No time, occupancy or fixed lookahead enters it.
-    private func walkedDirections(_ plan: DirectionMemo.Plan, from start: TrainPlacement, stop: Int) -> Set<TrackTraversal> {
+    private func walkedDirections(_ plan: DirectionMemo.Plan, from start: TrainPlacement, stop: Int, paths: inout PathMemo) -> Set<TrackTraversal> {
         var directions: Set<TrackTraversal> = []
         var place = start
         var stop = stop
         var visited: Set<DirectionState> = []
         while visited.insert(DirectionState(placement: place, stop: stop)).inserted {
-            guard let leg = leg(of: plan, from: place, stop: stop) else { break }
+            guard let leg = leg(of: plan, from: place, stop: stop, paths: &paths) else { break }
             directions.formUnion(leg.directions)
             place = leg.place
             stop = leg.stop
@@ -295,18 +325,21 @@ extension GameWorld {
     /// The traversals of `plan`'s leg from a train at `start` standing for
     /// call `stop` (see ``walkedDirections(_:from:stop:)``), where it ends
     /// and the call it ends at; `nil` at the end of a plan that does not
-    /// repeat, or where there is no way on.
-    private func leg(of plan: DirectionMemo.Plan, from start: TrainPlacement, stop: Int) -> (directions: Set<TrackTraversal>, place: TrainPlacement, stop: Int)? {
+    /// repeat, or where there is no way on. Decision 622: the searches are
+    /// kept in `paths` (they read only the network, ``PathMemo``), so a
+    /// departure tried again at every step does not search every line's
+    /// plan afresh.
+    private func leg(of plan: DirectionMemo.Plan, from start: TrainPlacement, stop: Int, paths: inout PathMemo) -> (directions: Set<TrackTraversal>, place: TrainPlacement, stop: Int)? {
         let next = stop + 1 == plan.calls.count ? 0 : stop + 1
         if next == 0 && !plan.repeats { return nil }
         var from = plan.calls[stop].reverses ? turnedRound(start) : start
         let preference = plan.routes.indices.contains(stop) ? plan.routes[stop] : nil
-        var chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
-            ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
+        var chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length, memo: &paths) }
+            ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length, memo: &paths)
         if chosen == nil, plan.intermediateTurnbacks, stop > 0, stop < plan.calls.count - 1, !plan.calls[stop].reverses {
             from = turnedRound(from)
-            chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
-                ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
+            chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length, memo: &paths) }
+                ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length, memo: &paths)
         }
         guard let path = chosen else { return nil }
         return (directions(of: path, from: from), placement(from, after: path), next)
@@ -325,9 +358,9 @@ extension GameWorld {
             var later: Set<TrackTraversal> = []
             for berth in berths(of: first.station, length: plan.length) {
                 let place = TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: plan.length)
-                guard let leg = leg(of: plan, from: place, stop: 0) else { continue }
+                guard let leg = leg(of: plan, from: place, stop: 0, paths: &memo.paths) else { continue }
                 firstLegs.append(leg.directions)
-                later.formUnion(walkedDirections(plan, from: leg.place, stop: leg.stop))
+                later.formUnion(walkedDirections(plan, from: leg.place, stop: leg.stop, paths: &memo.paths))
             }
             var legsTaking: [TrackTraversal: Int] = [:]
             for firstLeg in firstLegs {
@@ -381,7 +414,7 @@ extension GameWorld {
             // it goes along the edge it is on.
             let travel = DirectionMemo.Travel(plan: plan, moving: moving, end: start, call: next)
             if let known = memo.travels[travel] { return known }
-            let ordinary = path(from: start.position, toStation: plan.calls[next].station, length: plan.length)
+            let ordinary = path(from: start.position, toStation: plan.calls[next].station, length: plan.length, memo: &memo.paths)
             let continuation = ordinary.map { (start: start, path: $0) }
                 ?? passingContinuation(from: start, to: plan.calls[next].station)
             guard let continuation else {
@@ -391,7 +424,7 @@ extension GameWorld {
             directions.formUnion(self.directions(of: continuation.path, from: continuation.start))
             start = placement(continuation.start, after: continuation.path)
             let walk = DirectionMemo.Walk(plan: plan, start: start, stop: next)
-            let walked = memo.walks[walk] ?? walkedDirections(plan, from: start, stop: next)
+            let walked = memo.walks[walk] ?? walkedDirections(plan, from: start, stop: next, paths: &memo.paths)
             memo.walks[walk] = walked
             let all = directions.union(walked)
             memo.travels[travel] = all
@@ -399,7 +432,7 @@ extension GameWorld {
         }
         let walk = DirectionMemo.Walk(plan: plan, start: start, stop: stop)
         if let known = memo.walks[walk] { return directions.union(known) }
-        let walked = walkedDirections(plan, from: start, stop: stop)
+        let walked = walkedDirections(plan, from: start, stop: stop, paths: &memo.paths)
         memo.walks[walk] = walked
         return directions.union(walked)
     }

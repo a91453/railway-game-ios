@@ -338,9 +338,9 @@ struct NetworkControls: View {
 
     // MARK: - Depot
 
-    /// Decision 214: how many sidings, and which side of the picked end
-    /// they fan out to, by compass (the inspector says what the tap picked
-    /// and why it cannot go there).
+    /// Decision 214: how many sidings (the inspector says what the tap
+    /// picked and why it cannot go there). Decision 619 fans them out about
+    /// the picked end, as real yards stand, so the side is no longer asked.
     private var depotOptions: some View {
         VStack(alignment: .leading, spacing: 6) {
             Stepper(value: $session.networkDepotSidings, in: DepotYard.sidings) {
@@ -349,18 +349,6 @@ struct NetworkControls: View {
                     .monospacedDigit()
             }
             .accessibilityIdentifier("network.depotSidings")
-            if session.networkDepotSidings > 1, session.networkDepotEnd != nil {
-                Picker(selection: $session.networkDepotSide) {
-                    ForEach(PlatformTrackSide.allCases, id: \.self) { side in
-                        Text(verbatim: session.depotSideText(side) ?? "").tag(side)
-                    }
-                } label: {
-                    Text(verbatim: session.language.text("Side", "側"))
-                }
-                .pickerStyle(.segmented)
-                .font(.footnote)
-                .accessibilityIdentifier("network.depotSide")
-            }
         }
     }
 

@@ -336,7 +336,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   pushing, not the whole suite:
   `swift build --build-tests -Xswiftc -warnings-as-errors` (keep it clean;
   on Linux `Package.swift` builds GameCore and GameCoreTests with -O,
-  decision 544),
+  decision 544; Xcode's iOS builds GameCore and GamePresentation with -O
+  in Debug too, decision 624),
   then the tests the change touches with
   `swift test --skip-build --filter <Class>`, and the shard of any campaign
   whose code or behaviour it changes with
@@ -458,9 +459,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
 - The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
-  tier is 18 jobs (ARCHITECTURE decision 187; decision 411's shared build
+  tier is 19 jobs (ARCHITECTURE decision 187; decision 411's shared build
   added the build job, decision 544's continuation cut the shards from 20
-  to 14, decision 563 made the self-test a job of its own;
+  to 14, decision 563 made the self-test a job of its own, decision 620
+  split rest in two;
   `docs/research/CI_INCIDENT_2026-10-12.md`). So:
   - Never cancel a push run of `main` (`ci.yml`), by hand or from a session:
     its concurrency group already keeps a burst of merges to the run in

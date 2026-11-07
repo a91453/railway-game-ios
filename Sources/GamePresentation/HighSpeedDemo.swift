@@ -368,13 +368,36 @@ public enum HighSpeedDemo {
         /// where the real yard is (decision 240): beyond a station's own
         /// tracks, or a curve, where the yard lies by them.
         var shift: Double = 0
+        /// Decision 618: how many sets the real one stables, when the demo
+        /// lays that many sidings rather than one for each set standing
+        /// there on the first night and ``spareSidings``; the sets of the
+        /// stations it is nearest beyond that stand in the next nearest.
+        var sidings: Int? = nil
+        /// Decision 618: the timetable's lines, by their index, whose sets
+        /// it keeps; `nil`, every line's. A line keeps its sets in the
+        /// depots that list it, or none.
+        var lines: [Int]? = nil
     }
 
     /// The High Speed Rail's depots the demo keeps its sets in: Nangang's
-    /// sidings beyond its station (towards Xizhi), Wuri's south of Taichung
-    /// and Zuoying's north of its station.
+    /// sidings beyond its station (towards Xizhi), Liujia's south of
+    /// Hsinchu, Wuri's south of Taichung and Zuoying's north of its
+    /// station.
+    ///
+    /// Decision 618: the real line has no depot at its north end (decision
+    /// 280): beyond Nangang's platforms, two dead-end sidings of some
+    /// 1,300 m run on east, one off each main track, room for four sets
+    /// each; the nearest base is Liujia's by Hsinchu, eight tracks of some
+    /// 420 m, a set each (`tools/hsr-depots/hsr_depots.json`, ODbL 1.0).
+    /// A siding of the game's takes one set, so Nangang's two are laid as
+    /// eight, four off each track. A set goes in at night to the depot it
+    /// reaches soonest (decision 280), so the north end's eleven sets at
+    /// night would leave three on Nangang's platforms: the five-stop
+    /// expresses keep theirs at Liujia instead, the other two lines at
+    /// Nangang (eight at night, seven on the first).
     static let realDepots = [
-        RealDepot(english: "Nangang Depot", chinese: "南港機廠", latitude: 25.054203, longitude: 121.615057),
+        RealDepot(english: "Nangang Sidings", chinese: "南港留置線", latitude: 25.054203, longitude: 121.615057, sidings: 8, lines: [0, 1]),
+        RealDepot(english: "Liujia Depot", chinese: "六家基地", latitude: 24.798603, longitude: 121.042793, sidings: 8, lines: [2]),
         RealDepot(english: "Wuri Depot", chinese: "烏日機廠", latitude: 24.093566, longitude: 120.624164),
         RealDepot(english: "Zuoying Depot", chinese: "左營機廠", latitude: 22.696992, longitude: 120.318536),
     ]
@@ -535,18 +558,38 @@ public enum HighSpeedDemo {
                 let along = path.project(point)
                 return (along + depot.shift, (point - path.point(at: along)).dot(path.tangent(at: along).normal))
             }
+            // Decision 618: a depot of a fixed size takes as many as it has
+            // sidings, the rest the next nearest.
             var serving = places.map { _ in [Int]() }
+            var keeping = places.map { _ in 0 }
+            var nearestDepot: [Int: Int] = [:]
             for station in standing.indices where standing[station] > 0 {
-                let nearest = places.indices.min { abs(places[$0].along - middles[station]) < abs(places[$1].along - middles[station]) }!
-                serving[nearest].append(station)
+                let nearest = places.indices.sorted { (abs(places[$0].along - middles[station]), $0) < (abs(places[$1].along - middles[station]), $1) }
+                nearestDepot[station] = nearest[0]
+                // The nearest serves it though full, or kept for other
+                // lines (``RealDepot/lines``).
+                serving[nearest[0]].append(station)
+                for (kind, line) in timetable.lines.enumerated() {
+                    var left = line.overnight.count { $0.station == station }
+                    for depot in nearest where left > 0 && spec.depots[depot].lines?.contains(kind) != false {
+                        let room = spec.depots[depot].sidings.map { $0 - keeping[depot] } ?? left
+                        guard room > 0 else { continue }
+                        let taken = min(room, left)
+                        if !serving[depot].contains(station) { serving[depot].append(station) }
+                        keeping[depot] += taken
+                        left -= taken
+                    }
+                    precondition(left == 0, "No depot has room for the sets of \(spec.stationNames[station])")
+                }
             }
             // Decision 228: a station between the ends whose sets stand at
             // night in the depot beyond Nangang (Taipei's) turns them north
             // there and back: a crossover beyond its north end, so a set on
             // its down side goes over to the up track at once rather than
-            // north along the down track to Nangang.
+            // north along the down track to Nangang. Decision 618: the
+            // depot nearest it, though its sets may stand in another.
             for (index, place) in places.enumerated() where place.along < platforms[0].lowerBound {
-                for station in serving[index] where station != 0 && station != last {
+                for station in nearestDepot.keys.sorted() where nearestDepot[station] == index && station != 0 && station != last {
                     turns[station] = (true, turns[station]?.south ?? false)
                 }
             }
@@ -586,9 +629,9 @@ public enum HighSpeedDemo {
             // Where each depot's sidings leave the down track and end, and
             // how many on each side.
             let ladders = places.indices.compactMap { index -> (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])? in
-                let standingThere = serving[index].reduce(0) { $0 + standing[$1] }
+                let standingThere = keeping[index]
                 guard standingThere > 0 else { return nil }
-                let sets = standingThere + spec.spareSidings
+                let sets = spec.depots[index].sidings ?? standingThere + spec.spareSidings
                 let place = places[index], real = spec.depots[index]
                 if place.along < platforms[0].lowerBound {
                     // Beyond the north end: both sides of the down track,
@@ -607,9 +650,16 @@ public enum HighSpeedDemo {
             }
             // A depot south of a station between the ends, entered from its
             // north (Wuri's): the crossover from the up track a reach and two
-            // before its entry.
-            let crossingInto = ladders.filter { $0.deadEnd > $0.entry && $0.serving.allSatisfy { between.contains($0) } }
-                .map { [$0.entry - 2 * reach, $0.entry - reach] }
+            // before its entry. Decision 618: or of a fixed size beside the
+            // line, keeping the sets of an end north of it (Liujia's): its
+            // sets leave it northbound to the up track over a crossover
+            // from its entry itself, as an empty run keeps off the down
+            // track northbound (decision 527) and from a crossover a reach
+            // on it could not.
+            let crossingInto = ladders.filter { ladder in
+                ladder.deadEnd > ladder.entry && (ladder.serving.allSatisfy { between.contains($0) } || ladder.real.sidings != nil)
+            }
+                .map { $0.real.sidings != nil ? [$0.entry - reach, $0.entry] : [$0.entry - 2 * reach, $0.entry - reach] }
             func depotNodes(_ ladder: (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])) -> [Double] {
                 let way: Double = ladder.deadEnd > ladder.entry ? 1 : -1
                 let far = ladder.deadEnd - way * (2 * margin + Double(spec.platformLength))
@@ -933,7 +983,7 @@ public enum HighSpeedDemo {
                     berths.append(TrackPlatform(station: id, edge: edge, start: offset, end: offset + spec.platformLength))
                 }
                 try world.setStationDepot(id, to: true)
-                builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving))
+                builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving, lines: depot.real.lines))
             }
             // Decision 325: the real fare between each two stations.
             if let fares = spec.fares {
@@ -1050,6 +1100,8 @@ public enum HighSpeedDemo {
             let berths: [TrackPlatform]
             let southward: Bool
             let serving: [Int]
+            /// ``RealDepot/lines``.
+            let lines: [Int]?
         }
 
         let down: RealWorldDemo.Track
@@ -1103,7 +1155,7 @@ public enum HighSpeedDemo {
         func endPlatform(of stop: Int) -> TrackPlatform? {
             ends[stop]?.first
         }
-        var placing: [Int: [(train: TrainID, southbound: Bool, leaving: Int64)]] = [:]
+        var placing: [Int: [(train: TrainID, southbound: Bool, leaving: Int64, kind: Int)]] = [:]
         var number = 0
         for (kind, timetableLine) in timetable.lines.enumerated() {
             let stops = timetableLine.stops
@@ -1148,8 +1200,8 @@ public enum HighSpeedDemo {
             }
             try world.setLineRoutePreferences(line, to: preferences)
             // Decision 221: every line keeps its sets in the depots, each
-            // going into the nearest.
-            try world.setLineDepots(line, to: depots.map(\.station))
+            // going into the nearest; decision 618, those that keep its.
+            try world.setLineDepots(line, to: depots.filter { $0.lines?.contains(kind) != false }.map(\.station))
             for set in timetableLine.overnight {
                 number += 1
                 let train = try world.purchaseTrain(named: language.text("\(kindSpec.set.english) \(number)", "\(kindSpec.set.chinese) \(number)")).id
@@ -1157,17 +1209,22 @@ public enum HighSpeedDemo {
                 try world.setTrainCars(train, to: kindSpec.cars)
                 try world.setTrainPerformance(train, to: kindSpec.performance)
                 try world.assignTrain(train, to: line)
-                placing[set.station, default: []].append((train, set.southbound, set.leaving))
+                placing[set.station, default: []].append((train, set.southbound, set.leaving, kind))
             }
         }
         // At midnight each set stands in the depot of the station its first
         // run leaves, a siding each, facing the way out: the earliest to
         // leave nearest the down track. Each leaves the depot in time for
         // its run (decision 221).
+        // Decision 618: only the sets of the lines it keeps (Nangang's
+        // and Liujia's, ``RealDepot/lines``).
+        var placed: Set<TrainID> = []
         for depot in depots {
-            let sets = depot.serving.flatMap { placing[$0] ?? [] }.sorted { ($0.leaving, $0.train) < ($1.leaving, $1.train) }
+            let sets = depot.serving.flatMap { placing[$0] ?? [] }.filter { !placed.contains($0.train) && depot.lines?.contains($0.kind) != false }
+                .sorted { ($0.leaving, $0.train) < ($1.leaving, $1.train) }
             for (set, berth) in zip(sets, depot.berths) {
                 try place(set.train, at: berth, southbound: !depot.southward, in: &world)
+                placed.insert(set.train)
             }
         }
     }

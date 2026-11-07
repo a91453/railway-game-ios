@@ -4437,6 +4437,16 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**：私有參考 repo 沒有以資源表示的保留或路徑快取可以移植（理由同上）；OpenTTD 的 YAPF 有路段快取（GPL-2.0，只看想法，沒有複製）。這些作法是本專案自己的。
 
+**補充：交通讀數借用 advance 留下的計畫零件**（2026-11-07，派工單 TRAFFIC-READ，`claude/traffic-reading-speed`；號碼依工作登記 #1579：沿用決策 138，不另取號；存檔版本、golden schema、replay 都不動）。作者 iPhone 17 Pro 實機 Instruments（`docs/research/CABVIEW2_MAC_TRACE_2026-11-07.md`，#1921）：已收購的高雄環狀輕軌 10× 時，遊戲迴圈每一步最後一個 tick 的 `TrafficReading` 要 0.7–1.2 秒，幾乎全在 `routeWaits()` → `deadlock(memo:)` → `trafficPlan(parts:)` → `trafficPoints(of:cycle:)` → `preferredPath`／`TrainRoute.shortest`；一步約 1.5 秒，10× 實際只跑到約三成，背景一直佔一顆核心。
+
+1. **原因**：`routeWaits()` 與其他給地圖、列車面板問的查詢每次都從空的 `DirectionMemo()` 開始，所以每次讀數都把每一列行駛中列車的 `trafficPoints` 從頭算一遍（每一站每個月台的路徑搜尋）。這些只跟路網、路線、車站與設定有關，`advance` 早就留在世界的 `RouteMemo` 裡（上面第二輪第 2 點），只是查詢沒有借。
+2. **做法**：`RouteMemo.lend(toQuestion:of:)`：查詢開始時，世界的 `RouteMemo.Key` 和留下時相同才借路徑與曲線，`RouteMemo.ServiceKey` 相同才借交通計畫的 `TrafficParts`，和 `advance` 開始時借用的規則一樣（只是拿查詢當下的世界比）。查詢只借不留，問世界不會改到世界。`GameWorld.questionMemo()` 給下列公開查詢用：`routeWaits()`、`trainHoldingRoute(of:)`、`contestedResources(of:)`、`deadlockedTrains()`、`scheduledTrafficWait(of:)`、`scheduledTrafficWaits()`、`heldDeparture(of:)`、`heldDepartures()`。GameCore 內部（`advance`、指令）不呼叫這些，所以遊戲狀態完全不受影響；給指令用的 `reserving`、`holder(of:except:)` 等照舊。
+3. **效果**（作者的 Mac M6、release，`TrafficReadingCostReportTests`，`TRAFFIC_READING_REPORT=50`：高雄環狀輕軌收購後 20 列車，第二天 08:00 起 10× 的 50 個 tick，同一個世界清空 `routeMemo` 當改前）：一次讀數平均 561.7 → 33.1 ms（中位數 551.7 → 32.1、最長 642.3 → 54.2），同時一個 tick 的 `advance` 平均 32.9 ms。手機上照比例約 1 秒 → 約 0.06 秒，一步 5 個 tick 加一次讀數可以放進 0.5 秒，10× 應能跑足（實機 UNVERIFIED，要作者重錄）。
+4. **驗證**：50 個 tick 每一個的 `TrafficOverlay` 與 `routeWaits()` 改前改後相同（同一個測試裡比）；`QuestionMemoTests`：單線交會與待避兩個世界逐秒比對上面每個查詢和清空 `routeMemo` 的世界相同，並確認真的借到（多於 100 秒）；蓋了軌道之後什麼都不借。`DeadlockPropertyTests` 等既有的性質測試每一步把 `routeWaits()`、`deadlockedTrains()`、`trainHoldingRoute(of:)`、`contestedResources(of:)` 和獨立的參考模型比。golden、SaveFixtures、ReplayFixtures 一個都不改。
+5. **沒有做的**：3D 跟車時少讀（HANDOFF §4.54 ①的另一個做法，雲端 CABVIEW-2 在 `claude/cabview-2` 有 WIP、沒開 PR）；讀數只剩約一個 `advance` 的時間，暫時不需要。讀數過期時的背景讀（`GameSession.readTrafficOffTheMainActor`）一次只跑一個也沒改。
+
+**參考**：私有參考 repo 沒有交通讀數的快取可移植；只用本專案既有的 `RouteMemo`，這個作法是本專案自己的。
+
 ### 139. 城市的住商工需求（RCI）
 
 2026-10-10，作者排的第 3 項（城市項目：成長動畫、住商工的需求閥）的需求閥。號碼依工作登記 #231：存檔版本 32、決策 139、golden schema 53（138 是實景示範 6000× 的 session）。成長動畫是畫面的事，另開 PR。

@@ -138,7 +138,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the depot tool off Line 2's north end (on its viaduct, so the
     /// sidings pass over the ring): Line 2 and the Ring Line both end or
     /// call near it, so the banner offers each. For the screenshot review
-    /// of the pull request that added the offer.
+    /// of the pull request that added the offer. Decision 619: the camera
+    /// is turned to the yard, which the demo opens at the top edge.
     case depotOffer
 
     /// Decision 574: a new real-world game round Muzha with the Maokong
@@ -194,6 +195,14 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// looking over the harbour mouth: the ferry mode's pale blue shore.
     case cijinShore
 
+    /// Decision 611 (ROADTUNNEL): a new game round the road tunnels'
+    /// portals, its ground read, at 10:00: the Hsuehshan Tunnel's two
+    /// bores at Toucheng, Provincial Highway 9's (蘇花改) tunnels north of
+    /// Nanao, and its gallery south of Su'ao.
+    case hsuehshanTunnel
+    case suhuaTunnel
+    case suhuaGallery
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -228,6 +237,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerry, .gushanFerryEvening, .cijinShore: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
+        // Decision 611: between each pair of portals (the base map's ends).
+        case .hsuehshanTunnel: (24.84776, 121.79127)
+        case .suhuaTunnel: (24.52307, 121.82816)
+        case .suhuaGallery: (24.60857, 121.85564)
         default: nil
         }
     }
@@ -248,6 +261,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101, .taichungViaduct, .interchange, .changhuaRoundhouse: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .hsuehshanTunnel, .suhuaTunnel, .suhuaGallery: Self.groundWorld(at: self, in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
@@ -294,8 +308,41 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
+        // Decision 619: four sidings, which the throat splits two and two,
+        // the sides mirroring each other (three, which two-way turnouts
+        // cannot halve, is one turnout deeper on one side).
+        session.networkDepotSidings = 4
+        let before = Set(session.world.network.nodes.map(\.id))
         session.tapNetwork(at: north.plan, reach: 64)
         session.addDepotYard()
+        // Decision 619: the yard is at the map's top edge, under the HUD
+        // and the banner, as the demo opens; the camera is asked to put its
+        // throat in the middle, at the zoom the map has (asked to show it
+        // whole, the map fits it in what the banner and panels leave clear,
+        // a sliver, and zooms out to the island), again each second for a
+        // minute (the map follows a request made after it is up). The
+        // throat: the track's end, the turnouts, and the bends 40 m past the
+        // last of them.
+        let middle = Self.depotOfferThroatMiddle(in: session.world, end: north, built: before)
+        session.lookAt(middle)
+        Task { @MainActor in
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .seconds(1))
+                session.lookAt(middle)
+            }
+        }
+    }
+
+    /// The middle of the throat of the yard laid at `end` (the nodes not
+    /// in `built`): see ``prepare(_:)``.
+    static func depotOfferThroatMiddle(in world: GameWorld, end: WorldCoordinate, built: Set<TrackNodeID>) -> PlanPoint {
+        let laid = world.network.nodes.filter { !built.contains($0.id) }
+        func distance(_ point: WorldCoordinate) -> Int64 { abs(point.x - end.x) + abs(point.y - end.y) }
+        let turnouts = laid.filter { $0.ends.count >= 3 }.map(\.position)
+        let reach = (turnouts.map(distance).max() ?? 0) + 40 * WorldCoordinate.unitsPerMetre
+        let throat = laid.filter { $0.ends.count >= 2 && distance($0.position) <= reach }.map(\.position) + [end]
+        let xs = throat.map(\.x), ys = throat.map(\.y)
+        return PlanPoint(x: (xs.min()! + xs.max()!) / 2, y: (ys.min()! + ys.max()!) / 2)
     }
 
     /// Line 2's north end: the demo's highest track end furthest north.
@@ -343,6 +390,21 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         } catch {
             preconditionFailure("The follow-a-bus screenshot scene no longer builds: \(error)")
         }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 611: a new game round `scene`'s place, its ground read (the
+    /// hills the road tunnels go into), on to 10:00.
+    private static func groundWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor)
+        try? world.mapGround()
+        // .fast is ten minutes a tick.
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 60)
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world

@@ -247,6 +247,12 @@ public final class GameSession {
     /// `revision`, from a glide of the trains seen in the world of
     /// revision `from` (its ``TrainMotion/source``).
     @ObservationIgnored var glideMemo: (revision: Int, from: Int, motion: TrainMotion)?
+    /// CABVIEW-2 (decision 379 續三): the ``worldRevision`` of a world the
+    /// game loop put in with more ticks of the same step still to come
+    /// (``LoopTick/stepGoesOn``); see ``glidesOnThroughTheStep``.
+    /// Observed (decision 379 續四): the maps take a glide when it ends,
+    /// even when the step's last tick moved no train (``glideKey``).
+    private var stepGoesOnAtRevision: Int?
     /// Decision 485: the trains' body heights the 3D map puts its cars at
     /// (``map3DTrainHeights()``), kept for the ``worldRevision`` they were
     /// read for: worked out with the tick off the main actor while the 3D
@@ -787,9 +793,12 @@ public final class GameSession {
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
-    /// which side of the track's end they fan out to, and the end picked.
+    /// which side of the track's end they fan out to (decision 619: none,
+    /// the default, fans them out about it, as real yards stand), what kind
+    /// of yard, and the end picked.
     public var networkDepotSidings = DepotYard.defaultSidings
-    public var networkDepotSide: PlatformTrackSide = .left
+    public var networkDepotSide: PlatformTrackSide?
+    public var networkDepotTemplate: DepotYardTemplate = .lightRail
     public internal(set) var networkDepotEnd: TrackNodeID?
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends (the default, decision 164),
@@ -1147,8 +1156,14 @@ public final class GameSession {
     }
 
     /// Shows what ``speedLagWatch`` says, unless hints are switched off.
+    /// MAP3D-BOUNCE: not while the 3D map is open. The hint is a popover
+    /// beside the 2D map's speed, under the 3D map's full-screen cover; it
+    /// came by itself there 20 seconds behind, and putting it up took the
+    /// cover away, the 3D map closing onto the 2D one. The session has it
+    /// again as the 3D map closes (``setMap3DOpen(_:)``); on the phone it
+    /// came on the 2D map some 20 seconds later.
     func syncSpeedLagHint() {
-        let hint = Self.showsSpeedLagHint ? speedLagWatch.hint : nil
+        let hint = Self.showsSpeedLagHint && !isMap3DOpen ? speedLagWatch.hint : nil
         if hint != speedLagHint {
             speedLagHint = hint
             speedLagHintSeen = false
@@ -1536,6 +1551,8 @@ public final class GameSession {
         // Decision 585 PR-4: nor ferry boats.
         if !open, followedFerryBoatID != nil { followedFerryBoatID = nil }
         updateMap3DSpeedCap()
+        // MAP3D-BOUNCE: the speed hint waits while the 3D map is open.
+        syncSpeedLagHint()
     }
 
     @ObservationIgnored private var isMap3DOpen = false
@@ -2188,6 +2205,26 @@ public final class GameSession {
         /// Decision 485: whether the 3D map shows the trains, whose body
         /// heights the tick then reads when it moved them.
         var trainHeights = false
+        /// CABVIEW-2 (decision 379 續三): more ticks of the same step come
+        /// after this one, back to back (``glidesOnThroughTheStep``).
+        var stepGoesOn = false
+
+        /// CABVIEW-2: the game loop's step has more ticks after this one.
+        /// At 10× and 60×, the maps glide over the whole step, from the
+        /// glide shown before it, so this tick works out no glide of its
+        /// own. Faster, a step's track may run past a few calls (five
+        /// ticks are 25 minutes at 600×), further than a glide follows,
+        /// so each tick glides on its own as before.
+        mutating func goesOnInTheStep() {
+            guard Self.glidesOverTheStep(at: world.clock.speed) else { return }
+            stepGoesOn = true
+            glide = nil
+        }
+
+        /// The speeds a step's ticks glide as one: 10× and 60×.
+        static func glidesOverTheStep(at speed: GameSpeed) -> Bool {
+            speed == .x10 || speed == .x60
+        }
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -2274,6 +2311,10 @@ public final class GameSession {
     /// one worked out again on the main actor.
     public func trainMotion(after previous: TrainMotion, at time: Double) -> TrainMotion {
         if let shown = shownGlide, shown.source == worldRevision { return shown }
+        // CABVIEW-2: a step's ticks but its last come back to back; the
+        // glide shown goes on, and the step's last tick glides from it
+        // over the whole step.
+        if glidesOnThroughTheStep, let shown = shownGlide { return shown }
         var motion: TrainMotion
         if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.source, world.clock.speed != .x1 {
             motion = memo.motion.seen(at: time, after: previous)
@@ -2399,8 +2440,37 @@ public final class GameSession {
         }
         guard tick.revision == worldRevision else { return false }
         FrameCostMeter.shared.measure(.afterStep) { finish(outcome, fromLoop: true) }
+        let goesOn = tick.stepGoesOn && (try? outcome.get()) != nil ? worldRevision : nil
+        // Only when it changes: it is observed.
+        if goesOn != stepGoesOnAtRevision { stepGoesOnAtRevision = goesOn }
         return true
     }
+
+    /// CABVIEW-2 (decision 379 續三): whether the world as it is now is a
+    /// tick of the game loop's step with more ticks of the step to come,
+    /// back to back. The maps then keep gliding as they were (the trains,
+    /// and the real trains', buses' and cable cars' clock), and the step's
+    /// last tick glides over the whole step: when a step's last tick
+    /// takes long (the traffic reading of a big network, a second or two
+    /// on a phone), its first ticks came within a tenth of a second, and
+    /// gliding each on its own moved the cab view in a burst and then
+    /// stood it still until the last. A command since makes it false.
+    public var glidesOnThroughTheStep: Bool {
+        stepGoesOnAtRevision != nil && stepGoesOnAtRevision == worldRevision
+    }
+
+    /// Decision 379 續四 (review P3 b): what the maps take a new glide on:
+    /// the trains, and whether the glide goes on through the step. On the
+    /// trains alone, a step whose last tick moved no train after its first
+    /// ones did left the glide of the step before shown until a train
+    /// moved again.
+    public struct GlideKey: Equatable {
+        public let trains: [Train]
+        public let goesOn: Bool
+    }
+
+    /// The maps' ``GlideKey`` for the world as it is now.
+    public var glideKey: GlideKey { GlideKey(trains: world.trains, goesOn: glidesOnThroughTheStep) }
 
     /// Starts advancing the world in real time. Calling it while the loop is
     /// already running does nothing, so the world is never ticked twice.
@@ -2434,23 +2504,7 @@ public final class GameSession {
                 let elapsed = now - last
                 let ticks = self.dueTicks(realElapsed: elapsed)
                 last = now
-                for index in 0..<ticks {
-                    guard var tick = self.beginLoopTick() else { break }
-                    tick.readsTraffic = index == ticks - 1
-                    let outcome = await tick.work()
-                    // Nor may a stop while the tick was worked out.
-                    guard !Task.isCancelled else { return }
-                    self.finish(tick, with: outcome)
-                    // Decision 330: the world the tick replaced is let go
-                    // here, timed for the map's frame readout. Decision
-                    // 459: off the main actor, where the tick holds the
-                    // last of it (92.1's game: up to tens of ms a tick).
-                    let releasing = ContinuousClock.now
-                    let replaced = consume tick
-                    Task.detached(priority: .utility) { _ = consume replaced }
-                    FrameCostMeter.shared.record(.release, since: releasing)
-                    if case .failure = outcome { break }
-                }
+                guard await self.runLoopStep(ticks: ticks) else { return }
                 // Decision 195: how fast the game really ran.
                 self.noteRealTime(elapsed)
                 // Decision 460: the rest before the next step, longer when
@@ -2460,6 +2514,40 @@ public final class GameSession {
         }
     }
 
+    /// One step of the game loop (decision 379 續四, review P3 a): up to
+    /// `ticks` ticks, each worked out off the main actor and taken as soon
+    /// as it is done, all but the last gliding on through the step
+    /// (``glidesOnThroughTheStep``). `taken` is told after each tick is
+    /// taken (for tests). Returns `false` when the loop was stopped while
+    /// a tick was worked out.
+    func runLoopStep(ticks: Int, taken: (() -> Void)? = nil) async -> Bool {
+        for index in 0..<ticks {
+            // A `let`, which `consume` below lets go of.
+            guard let tick = beginLoopTick().map({ begun in
+                var tick = begun
+                tick.readsTraffic = index == ticks - 1
+                // CABVIEW-2: the maps glide over the whole step.
+                if index < ticks - 1 { tick.goesOnInTheStep() }
+                return tick
+            }) else { break }
+            let outcome = await tick.work()
+            // Nor may a stop while the tick was worked out.
+            guard !Task.isCancelled else { return false }
+            finish(tick, with: outcome)
+            // Decision 330: the world the tick replaced is let go here,
+            // timed for the map's frame readout. Decision 459: off the main
+            // actor, where the tick holds the last of it (92.1's game: up
+            // to tens of ms a tick).
+            let releasing = ContinuousClock.now
+            let replaced = consume tick
+            Task.detached(priority: .utility) { _ = consume replaced }
+            FrameCostMeter.shared.record(.release, since: releasing)
+            taken?()
+            if case .failure = outcome { break }
+        }
+        return true
+    }
+
     /// Stops the loop and drops any partial tick. The host calls this when the
     /// app leaves the foreground; restarting later does not replay the time
     /// spent away.
@@ -2467,6 +2555,8 @@ public final class GameSession {
         gameLoop?.cancel()
         gameLoop = nil
         loopTickRevision = nil
+        // Decision 379 續四 (review P3 d): no step goes on.
+        if stepGoesOnAtRevision != nil { stepGoesOnAtRevision = nil }
         applyHeldSpeed()
         tickAccumulator.reset()
         // The time away is not time the game failed to run.

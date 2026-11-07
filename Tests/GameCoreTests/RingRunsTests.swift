@@ -335,6 +335,62 @@ final class RingRunsTests: XCTestCase {
         XCTAssertEqual(seconds(try XCTUnwrap(sent[anticlockwise])[0]).first?.last, 21_600)
     }
 
+    /// Decision 609, continued (KLRT-SPARE): under traffic control with
+    /// block sections, the inner way round: one train runs D to A at
+    /// 05:00, in at 05:17, and another, behind it, C to A at 05:01, in at
+    /// 05:24; the next inner run from A is the 06:00 lap. The first, its
+    /// run over, is one too many at A: the lap finds the second there. It
+    /// goes into the depot beside A rather than stand on A's one inner
+    /// platform, which the second then finds free and takes the lap from.
+    /// Before, it stood there kept for the lap, and the second, due on the
+    /// same platform first, waited behind it in a deadlock (on the
+    /// Kaohsiung light rail, a minute each time, 18 times a morning).
+    func testATrainWhoseRunEndedGoesInWhenATrainOnItsWayTakesTheNextRun() throws {
+        var world = try makeWorld(runs: [
+            run(from: 3, to: 0, .inner, legs: 3, at: 18_000),
+            run(from: 2, to: 0, .inner, legs: 4, at: 18_060),
+            run(from: 0, to: 0, .inner, legs: 6, at: 21_600),
+        ], minute: 290, trains: false)
+        // The depot: a dead-end siding off the inner track just past A
+        // into the middle of the ring, node 2 (5120, 3072) to node 17
+        // (5376, 3584), edge 17, and on to node 18 (5376, 4352), edge 18,
+        // its platform the first 512 of edge 18: a train in it stands
+        // clear of all the ring's track.
+        try world.buildTrackNode(at: WorldCoordinate(x: 5_376, y: 3_584))
+        try world.buildTrackNode(at: WorldCoordinate(x: 5_376, y: 4_352))
+        try world.buildTrackEdge(from: .node(2), to: .node(17), curve: .cubic(PlanPoint(x: 5_376, y: 3_072), PlanPoint(x: 5_376, y: 3_328)))
+        try world.buildTrackEdge(from: .node(17), to: .node(18), curve: .straight)
+        let depot = try world.buildStation(named: "G", at: TestLine.centre(8, 1)).id
+        try world.addTrackPlatform(depot, on: .edge(18), from: 0, to: 512)
+        try world.setStationDepot(depot, to: true)
+        try world.setLineDepots(ring, to: [depot])
+        try world.setTrafficControl(true)
+        world.setBlockSections(true)
+        var ids: [TrainID] = []
+        for (name, edge) in [("First", 5), ("Second", 3)] {
+            let train = try world.purchaseTrain(named: name).id
+            try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: .edge(edge), direction: .forward), offset: try length(edge, in: world)))
+            try world.setTrainMovementRate(train, to: 1_024)
+            try world.assignTrain(train, to: ring)
+            ids.append(train)
+        }
+        var deadlocked = 0
+        var sent: [TrainID: [String]] = [:]
+        var running: Set<TrainID> = []
+        for _ in 0..<80 {
+            try world.advance(ticks: 1)
+            if !world.deadlockedTrains().isEmpty { deadlocked += 1 }
+            for train in world.trains {
+                if train.execution != nil, !running.contains(train.id) { sent[train.id, default: []].append(names(train.timetable)) }
+                if train.execution == nil { running.remove(train.id) } else { running.insert(train.id) }
+            }
+        }
+        XCTAssertEqual(sent[ids[0]], ["DEFA", "AG"], "the first goes in once its run ends")
+        XCTAssertEqual(sent[ids[1]]?.prefix(2), ["CDEFA", "ABCDEFA"], "the second takes the 06:00 lap")
+        XCTAssertEqual(deadlocked, 0)
+        XCTAssertEqual(world.stationsStoppedAt(by: ids[0]), [depot])
+    }
+
     /// Decision 612: with traffic control off, a train of a line with runs
     /// may be put on another of a station's platforms when its own is due
     /// to be taken (decision 228), but not on a ring: there the other

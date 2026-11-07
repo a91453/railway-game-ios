@@ -94,15 +94,23 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Depot past Taipei Zoo and over Neihu Depot past Nangang Exhibition
     /// Center, from the side and from higher up. For the screenshot review
     /// of the pull request that laid the depots as the real yards.
-    func testWenhuDepotMuzha() { shootWenhuDepot("muzha", at: "25.000776,121.586414") }
-    func testWenhuDepotNeihu() { shootWenhuDepot("neihu", at: "25.059900,121.619920") }
+    func testWenhuDepotMuzha() { shootRealDepot("wenhu-depot-muzha", at: "25.000776,121.586414") }
+    func testWenhuDepotNeihu() { shootRealDepot("wenhu-depot-neihu", at: "25.059900,121.619920") }
 
-    private func shootWenhuDepot(_ name: String, at place: String) {
+    /// Decision 621: the Kaohsiung Circular Light Rail bought on a real map
+    /// of Kaohsiung, its trains in its depot, laid as a strip beside the
+    /// line as the real one, on the 3D map from the side and from higher
+    /// up. For the screenshot review of the pull request that laid it.
+    func testKaohsiungLightRailDepot() {
+        shootRealDepot("klrt-depot", at: "22.609000,120.325500", scene: "klrt", line: "krtc:C")
+    }
+
+    private func shootRealDepot(_ name: String, at place: String, scene: String = "wenhu", line: String = "trtc:BR") {
         // The buying takes minutes in the Debug app (the workflow allows up
         // to 30 minutes a test).
         executionTimeAllowance = 1_500
         for (shot, view) in [("side", "450,200,55"), ("high", "900,200,20")] {
-            let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-3d-view", view,
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-buy-real", line, "-screenshot-3d-view", view,
                                      "-screenshot-3d-at", place, "-map3D.quality", "high"])
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy buying for a minute at a
@@ -121,7 +129,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
             XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
             settle(seconds: 12)
-            keep("wenhu-depot-\(name)-\(shot)", app)
+            keep("\(name)-\(shot)", app)
             app.terminate()
         }
     }
@@ -811,6 +819,25 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 
+    /// Decision 611 (ROADTUNNEL): the real roads' tunnel portals, close up
+    /// and from above: the Hsuehshan Tunnel's two bores at Toucheng (the
+    /// freeway, west into the hill), Provincial Highway 9's (蘇花改) tunnels
+    /// north of Nanao, and its gallery south of Su'ao. For the screenshot
+    /// review of the pull request that drew them, not the website.
+    func testRoadTunnelHsuehshan() {
+        shootLean("hsuehshanTunnel", "160,0,60", "road-tunnel-hsuehshan-near")
+        shootLean("hsuehshanTunnel", "500,270,0", "road-tunnel-hsuehshan-high")
+    }
+    func testRoadTunnelSuhua() {
+        shootLean("suhuaTunnel", "160,180,60", "road-tunnel-suhua-near-south")
+        shootLean("suhuaTunnel", "160,0,60", "road-tunnel-suhua-near-north")
+        shootLean("suhuaTunnel", "500,0,0", "road-tunnel-suhua-high")
+    }
+    func testRoadTunnelGallery() {
+        shootLean("suhuaGallery", "140,180,60", "road-tunnel-gallery-near-south")
+        shootLean("suhuaGallery", "140,0,60", "road-tunnel-gallery-near-north")
+    }
+
     private func shootLean(_ scene: String, _ view: String, _ name: String, extra: [String] = []) {
         let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"] + extra)
         defer { app.terminate() }
@@ -832,6 +859,31 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// the standard tier is asked for.
     func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day", extra: ["-screenshot-device-tier", "1"]) }
     func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night", extra: ["-screenshot-device-tier", "1"]) }
+
+    /// Decision 617 (NIGHT-GLOW): the same junction at 20:00 closer and
+    /// lower, its street lights, signals, signs and windows, and the
+    /// scene's train followed from behind and from beside it, its lamps:
+    /// the before and after of the glows round the lights.
+    func testNightGlowStreet() { shootLean("streetStopNight", "70,200,22", "night-glow-street", extra: ["-screenshot-device-tier", "1"]) }
+    func testNightGlowFollowBack() { shootNightGlowFollow("back", "night-glow-follow-back") }
+    func testNightGlowFollowSide() { shootNightGlowFollow("side", "night-glow-follow-side") }
+
+    private func shootNightGlowFollow(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "streetStopNight", "-screenshot-follow-train", "-map3DFollowView", view,
+                                 "-map3D.quality", "high", "-screenshot-device-tier", "1"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle(seconds: 5)
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The train is followed")
+        settle(seconds: 12)
+        keep(name, app)
+    }
 
     /// Decision 610: Banqiao's low-rise blocks north of Fuzhong close up
     /// and leaned, over their roofs (decision 610 續: not against a
@@ -3025,11 +3077,29 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.buttons["banner.depotLine"].firstMatch.tap()
         settle(seconds: 1)
         keep("depot-offer-chosen", app)
+        // Decision 619: the yard's fan with the banner and the building
+        // tools closed, pinched in (the scene centres the map on the yard
+        // each second for a minute).
+        let dismiss = app.buttons["banner.dismiss"].firstMatch
+        if dismiss.appears(within: 2) { dismiss.tap() }
+        XCTAssertTrue(dismiss.disappears(within: 5), "The banner goes")
+        let done = app.buttons["tool.select"]
+        if done.becomesHittable(within: 10) { done.tap() }
+        let fold = app.buttons["map.minimap.fold"].firstMatch
+        if fold.becomesHittable(within: 5) { fold.tap() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        for _ in 0..<2 {
+            map.pinch(withScale: 2.5, velocity: 2)
+            settle(seconds: 2)
+        }
+        keep("depot-yard", app)
 
         let menu = app.buttons["hud.menu"]
         menu.waitUntilSettled()
         menu.tap()
-        let report = app.buttons["menu.report"]
+        // The menu's rows side by side (a ControlGroup) drop their
+        // identifiers: found by the label too, in either language.
+        let report = app.buttons.matching(NSPredicate(format: "identifier == 'menu.report' OR label == 'Report a Problem' OR label == '回報問題'")).firstMatch
         XCTAssertTrue(report.appears(within: 30), "The menu opens")
         report.waitUntilSettled()
         let frame = report.frame

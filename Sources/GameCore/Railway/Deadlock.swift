@@ -288,7 +288,7 @@ extension GameWorld {
     /// platforms, a passing loop, fewer trains). Derived on every call,
     /// never saved.
     public func deadlockedTrains() -> [TrainID] {
-        var memo = DirectionMemo()
+        var memo = questionMemo()
         return deadlock(memo: &memo).keys.sorted()
     }
 

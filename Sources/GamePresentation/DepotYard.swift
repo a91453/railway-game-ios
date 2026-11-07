@@ -11,6 +11,13 @@ import GameCore
 // train on each. One command (``PlayerCommand/buildDepotYard(_:)``), all
 // or nothing.
 //
+// Decision 619 lays the sidings as a real yard's throat instead
+// (``DepotYardFan``, DepotYardTemplate.swift): a tree of turnouts fanning
+// them out about the track's end, each turnout splitting the tracks it
+// carries in two, so a yard's throat grows with the halvings, not with
+// every siding (six sidings: about 80 m, not 360 m). A log from before it
+// still replays its ladder: ``GameSession/build(_:in:)`` lays either.
+//
 // The parallels are the double-track tool's (``DoubleTrack/beside(_:way:side:distance:)``,
 // the normal of the way out of the end); the S-curves are the platform
 // track's (``NetworkBuilding/curve(from:leaving:to:leaving:)``). The
@@ -30,6 +37,9 @@ public enum DepotYard {
     /// How many sidings the tool lays.
     public static let sidings = 1...6
     public static let defaultSidings = 3
+    /// The most sidings a yard is laid with (decision 619): a metro
+    /// yard's (``DepotYardTemplate/metro``).
+    public static let mostSidings = DepotYardTemplate.metro.sidings.upperBound
 }
 
 /// A depot's sidings worked out from the world: where each track runs and
@@ -62,7 +72,8 @@ public struct DepotYardPlan: Hashable, Sendable, Codable {
     /// The centre lines, for the map's preview.
     var points: [[WorldCoordinate]] {
         [[origin, lead]] + branches.map { branch in
-            (TrackGeometry(from: branch.turnout, to: branch.bend, curve: branch.curve)?.points ?? [branch.turnout, branch.bend]) + [branch.end]
+            (TrackGeometry(from: branch.turnout, to: branch.bend, curve: branch.curve)?.points ?? [branch.turnout, branch.bend])
+                + (branch.end == branch.bend ? [] : [branch.end])
         }
     }
 }
@@ -99,39 +110,53 @@ extension DoubleTrack {
 
 extension GameSession {
     /// The yard of `sidings` sidings running on from node `id`, a track's
-    /// end, fanning out to `side` of the way out of it.
-    func depotYardPlan(from id: TrackNodeID, sidings: Int, side: PlatformTrackSide) -> Result<DepotYardPlan, DepotYardProblem> {
+    /// end: decision 619's throat (``DepotYardFan``), about the way out of
+    /// the end, or with `side` all to that side of it, its sidings as
+    /// `template`'s.
+    func depotYardPlan(
+        from id: TrackNodeID, sidings: Int, side: PlatformTrackSide?, template: DepotYardTemplate = .lightRail
+    ) -> Result<DepotYardPlan, DepotYardProblem> {
         guard let node = world.network.node(id), node.ends.count == 1, let edge = world.network.edge(node.ends[0].edge) else {
             return .failure(.notAnEnd)
         }
-        let count = min(max(sidings, DepotYard.sidings.lowerBound), DepotYard.sidings.upperBound)
+        let count = min(max(sidings, 1), DepotYard.mostSidings)
         let way = node.ends[0].direction.reversed
         let origin = node.position
-        func at(_ along: Int64, siding: Int) -> WorldCoordinate {
-            DoubleTrack.beside(DoubleTrack.ahead(origin, way: way, distance: along), way: way, side: side, distance: Int64(siding) * DepotYard.spacing)
+        // The lead runs straight on to the first turnout; the throat fans
+        // out from there.
+        let lead = DepotYard.straight
+        let fan = DepotYardFan(sidings: count, spacing: template.spacing, anchor: side)
+        func at(_ along: Int64, _ across: Int64) -> WorldCoordinate {
+            DoubleTrack.beside(
+                DoubleTrack.ahead(origin, way: way, distance: lead + along), way: way, side: across >= 0 ? .left : .right, distance: abs(across)
+            )
         }
-        // Siding k (from 1) leaves siding k − 1 at `turnout(k)`, and is
-        // beside it a reach on; the platforms all start where the outer
-        // one's S-curve ends, and are as long as the longest train.
-        func turnout(_ k: Int) -> Int64 {
-            DepotYard.straight + Int64(k - 1) * (DepotYard.reach + DepotYard.straight)
-        }
-        let start = count > 1 ? turnout(count - 1) + DepotYard.reach : DepotYard.straight
-        let far = start + passingLoopLength
+        // Every siding as long as the template's for the longest train,
+        // from where the throat ends; the platforms side by side on them,
+        // a junction zone (16 m) past the last turnout, so a train standing
+        // there keeps clear of it.
+        let length = passingLoopLength
+        let start = fan.length + RailwayNetwork.junctionZone
+        let far = fan.length + template.sidingLength(for: length)
         var branches: [DepotYardPlan.Branch] = []
-        for k in 1..<max(count, 1) {
-            let from = at(turnout(k), siding: k - 1), bend = at(turnout(k) + DepotYard.reach, siding: k)
-            guard let curve = NetworkBuilding.curve(from: from.plan, leaving: way, to: bend.plan, leaving: way.reversed) else {
-                return .failure(.cannotBend)
+        for leg in fan.legs {
+            let from = at(leg.from, leg.fromAcross), bend = at(leg.to, leg.toAcross)
+            let curve: TrackCurve
+            if leg.bends {
+                guard let found = NetworkBuilding.curve(from: from.plan, leaving: way, to: bend.plan, leaving: way.reversed) else {
+                    return .failure(.cannotBend)
+                }
+                curve = found
+            } else {
+                curve = .straight
             }
-            branches.append(.init(turnout: from, bend: bend, curve: curve, end: at(far, siding: k)))
+            branches.append(.init(turnout: from, bend: bend, curve: curve, end: leg.siding == nil ? bend : at(far, leg.toAcross)))
         }
-        let middle = at((start + far) / 2, siding: 0)
-        let across = DoubleTrack.beside(middle, way: way, side: side, distance: Int64(count - 1) * DepotYard.spacing / 2)
+        let middle = (fan.across[0] + fan.across[count - 1]) / 2
         return .success(DepotYardPlan(
-            end: node.id.number, origin: origin, lead: at(far, siding: 0), branches: branches,
-            platforms: (0..<count).map { [at(start, siding: $0), at(far, siding: $0)] },
-            structure: edge.structure, name: depotName(), station: across.plan
+            end: node.id.number, origin: origin, lead: count > 1 ? at(0, 0) : at(far, 0), branches: branches,
+            platforms: fan.across.map { [at(start, $0), at(start + length, $0)] },
+            structure: edge.structure, name: depotName(), station: at((start + far) / 2, middle).plan
         ))
     }
 
@@ -162,14 +187,23 @@ extension GameSession {
         let lead = try world.buildTrackNode(at: plan.lead)
         _ = try world.buildTrackEdge(from: end, to: lead, structure: plan.structure)
         for branch in plan.branches {
-            guard let point = world.trackEdgePoint(near: branch.turnout.plan, within: 16) else { throw .invalidTrackGeometry }
-            let turnout = try world.splitTrackEdge(point.edge, at: point.distance)
+            // Decision 619: a throat's turnout is where the track it leaves
+            // came out (a node already there); a ladder's (decision 214,
+            // in logs from before it) is on the siding inside it.
+            let turnout: TrackNodeID
+            if let node = world.trackNode(at: branch.turnout, within: 16) {
+                turnout = node.id
+            } else {
+                guard let point = world.trackEdgePoint(near: branch.turnout.plan, within: 16) else { throw .invalidTrackGeometry }
+                turnout = try world.splitTrackEdge(point.edge, at: point.distance)
+            }
             let bend = try world.buildTrackNode(at: branch.bend)
-            let far = try world.buildTrackNode(at: branch.end)
-            _ = try world.buildTrackEdges([
-                TrackEdgePlan(from: turnout, to: bend, curve: branch.curve, structure: plan.structure),
-                TrackEdgePlan(from: bend, to: far, structure: plan.structure),
-            ])
+            var edges = [TrackEdgePlan(from: turnout, to: bend, curve: branch.curve, structure: plan.structure)]
+            // A track that splits again ends where it comes out.
+            if branch.end != branch.bend {
+                edges.append(TrackEdgePlan(from: bend, to: try world.buildTrackNode(at: branch.end), structure: plan.structure))
+            }
+            _ = try world.buildTrackEdges(edges)
         }
         let station = try world.buildStation(named: plan.name, at: plan.station)
         for platform in plan.platforms {
@@ -185,22 +219,24 @@ extension GameSession {
     }
 
     /// The depot's sidings at ``networkDepotEnd`` (``networkDepotSidings``
-    /// of them, on ``networkDepotSide``): what they cost or why they cannot
+    /// of them, about it or on ``networkDepotSide``): what they cost or why they cannot
     /// be built, and where they run; worked out once for each end, choice
     /// and command, as the track preview is.
     public var networkDepotPreview: DepotYardPreview? {
         guard networkMode == .depot, let end = networkDepotEnd else { return nil }
         _ = world
-        let key = DepotYardMemo.Key(end: end, sidings: networkDepotSidings, side: networkDepotSide, commandRevision: commandRevision)
+        let key = DepotYardMemo.Key(
+            end: end, sidings: networkDepotSidings, side: networkDepotSide, template: networkDepotTemplate, commandRevision: commandRevision
+        )
         if let memo = depotYardMemo, memo.key == key, memo.affordable == affords(memo.preview.cost) { return memo.preview }
-        let preview = depotYardPreview(from: end, sidings: networkDepotSidings, side: networkDepotSide)
+        let preview = depotYardPreview(from: end, sidings: networkDepotSidings, side: networkDepotSide, template: networkDepotTemplate)
         depotYardMemo = DepotYardMemo(key: key, preview: preview, affordable: affords(preview.cost))
         buildPreviewsWorkedOut += 1
         return preview
     }
 
-    func depotYardPreview(from end: TrackNodeID, sidings: Int, side: PlatformTrackSide) -> DepotYardPreview {
-        switch depotYardPlan(from: end, sidings: sidings, side: side) {
+    func depotYardPreview(from end: TrackNodeID, sidings: Int, side: PlatformTrackSide?, template: DepotYardTemplate) -> DepotYardPreview {
+        switch depotYardPlan(from: end, sidings: sidings, side: side, template: template) {
         case .failure(let problem):
             return DepotYardPreview(cost: nil, problem: problem.text(in: language), tracks: [])
         case .success(let plan):
@@ -222,7 +258,7 @@ extension GameSession {
             return
         }
         let plan: DepotYardPlan
-        switch depotYardPlan(from: end, sidings: networkDepotSidings, side: networkDepotSide) {
+        switch depotYardPlan(from: end, sidings: networkDepotSidings, side: networkDepotSide, template: networkDepotTemplate) {
         case .success(let found): plan = found
         case .failure(let problem):
             message = StatusMessage(kind: .failure, text: problem.text(in: language))
@@ -289,7 +325,8 @@ struct DepotYardMemo {
     struct Key: Equatable {
         let end: TrackNodeID
         let sidings: Int
-        let side: PlatformTrackSide
+        let side: PlatformTrackSide?
+        let template: DepotYardTemplate
         let commandRevision: Int
     }
 

@@ -352,14 +352,15 @@ public struct Map3DScene: Sendable {
     /// city's own only where there are none.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
-                lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil) {
+                lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil,
+                facades: Bool = true) {
         // Decision 368: on a map the camera builds ahead on (decision 358),
         // the city in full only round the middle, which the window builds
         // in full as the camera comes near.
         self.init(world: world, snapshot: snapshot, skyline: skyline, frame: Self.frame(world: world, focus: focus), baseMap: baseMap,
                   cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
                   noBuild: noBuild,
-                  detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil)
+                  detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil, facades: facades)
     }
 
     /// Decision 358: chunks `keys` of `streaming`'s scene (its origin),
@@ -370,13 +371,14 @@ public struct Map3DScene: Sendable {
     /// are not kept. Decision 359 (續): `trackCover` is the whole scene's
     /// (``trackCover``), worked out again when `nil`. Decision 368: with
     /// `detail`, a scene point, only the chunks within ``detailRadius`` of
-    /// it in full (``Chunk/coarse``).
+    /// it in full (``Chunk/coarse``). Decision 610 續: the real buildings'
+    /// street fronts only with `facades` (``Map3DRealFacade/mayDraw(quality:device:)``).
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
                               cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
                               lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
                               noBuild: RealNoBuildLand? = nil,
-                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) -> [Chunk] {
+                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, facades: Bool = true) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
         let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
@@ -386,7 +388,8 @@ public struct Map3DScene: Sendable {
         // scene's, or worked out again), which lays the tunnels.
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
                                baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands,
-                               railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail)
+                               railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail,
+                               facades: facades)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -424,14 +427,16 @@ public struct Map3DScene: Sendable {
     /// with `detail`, the city in full only within ``detailRadius`` of it.
     /// Decision 455: the city's lots' simplified boxes as instances, or
     /// as vertices without `instancingBoxes` (as before it, for the tests).
+    /// Decision 610 續: the real buildings' street fronts only with `facades`.
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
          lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
-         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true) {
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         builder.detail = detail
+        builder.buildsFacades = facades
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 234: on a real-world map, the base map's water, cover
         // and roads; the ground's own water then gives way to its finer
@@ -775,6 +780,10 @@ extension Map3DScene {
         /// 4 m cells by their streets (``streetCells(within:)``), for
         /// ``addRealFacade``; `nil` builds no street fronts.
         var facadeStreets: Set<ChunkKey>?
+        /// Decision 610 續 (review L12-1): whether the street fronts are
+        /// built at all; not on a device or 3D look that never draws them,
+        /// so their memory is not kept for nothing.
+        var buildsFacades = true
         /// Decision 244: the street furniture, by chunk.
         var props: [ChunkKey: [Map3DInstance]] = [:]
         /// Decision 352: the signs, by chunk.
