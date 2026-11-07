@@ -1150,8 +1150,9 @@ public final class GameSession {
     /// MAP3D-BOUNCE: not while the 3D map is open. The hint is a popover
     /// beside the 2D map's speed, under the 3D map's full-screen cover; it
     /// came by itself there 20 seconds behind, and putting it up took the
-    /// cover away, the 3D map closing onto the 2D one. It comes as the 3D
-    /// map closes (``setMap3DOpen(_:)``).
+    /// cover away, the 3D map closing onto the 2D one. The session has it
+    /// again as the 3D map closes (``setMap3DOpen(_:)``); on the phone it
+    /// came on the 2D map some 20 seconds later.
     func syncSpeedLagHint() {
         let hint = Self.showsSpeedLagHint && !isMap3DOpen ? speedLagWatch.hint : nil
         if hint != speedLagHint {
