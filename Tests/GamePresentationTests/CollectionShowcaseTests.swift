@@ -80,6 +80,10 @@ final class CollectionShowcaseTests: XCTestCase {
             let along = try? XCTUnwrap(rope, cabin.model)
             if let along { XCTAssertTrue((along.from.x...along.to.x).contains(cabin.at.x), cabin.model) }
         }
+        // No tower within the close view's reach of a cabin.
+        for tower in layout.pieces where tower.model == "cablecar-tower" {
+            XCTAssertTrue(cabins.allSatisfy { abs($0.at.x - tower.at.x) > layout.closeDistance }, "\(tower.at)")
+        }
         // Its body clears the ground.
         XCTAssertGreaterThan(height - Map3DCableCar.cabinDrop, 5)
     }
@@ -94,6 +98,9 @@ final class CollectionShowcaseTests: XCTestCase {
                 XCTAssertLessThanOrEqual(camera.distance, Map3DShowcase.farthest)
                 XCTAssertGreaterThanOrEqual(camera.target.x, layout.low.x - 0.001)
                 XCTAssertLessThanOrEqual(camera.target.x, layout.high.x + 0.001)
+                // Below what it shows, which the buttons would cover.
+                XCTAssertLessThanOrEqual(view == .overhead ? camera.target.z : camera.target.y,
+                                         view == .overhead ? (layout.low.z + layout.high.z) / 2 : layout.focus.y)
             }
             // The view from above takes in more than the close one.
             XCTAssertGreaterThan(content.camera(.overhead, viewport: (844, 390)).distance, content.camera(.closeUp, viewport: (844, 390)).distance)

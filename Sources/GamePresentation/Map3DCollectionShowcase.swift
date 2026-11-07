@@ -115,10 +115,17 @@ public enum Map3DCollectionShowcase {
     /// The cabins' distance apart along the rope, and the lines' apart.
     public static let cabinSpacing: Float = 7
     public static let lineSpacing: Float = 18
-    /// How far the towers stand past the first and last cabin.
-    static let towerClearance: Float = 6
-    /// The ground or water's reach past what is shown.
-    static let margin: Float = 40
+    /// How far the towers stand past the first and last cabin: past the
+    /// close view's eye (``Layout/closeDistance``), so no tower stands
+    /// between it and the cabin.
+    static let towerClearance: Float = 14
+    /// The ground or water's reach past what is shown: to the horizon of
+    /// the view from above (the edge showed in the first screenshots).
+    static let margin: Float = 400
+    /// How much of the screen's height the buttons under the picture
+    /// cover (on a phone on its side, about the lower half): every view
+    /// raises what it shows by this much (decision 632's screenshots).
+    static let coveredBelow: Float = 0.45
 
     /// The cabins of each line, in order: Maokong's two, Sun Moon Lake's four.
     static let cableLines: [[String]] = [
@@ -213,24 +220,29 @@ public enum Map3DCollectionShowcase {
         var camera = Map3DCamera(viewport: viewport)
         let aspect = max(viewport.width, 1) / max(viewport.height, 1)
         let halfTall = tanf(Map3DCamera.fieldOfView / 2), halfWide = halfTall * aspect
+        // Half the screen's height at the target, and the part of it the
+        // buttons leave: the target goes that far below what is shown.
+        let raise = coveredBelow / 2
         switch view {
         case .closeUp:
-            camera.target = layout.focus
             camera.heading = -120 * .pi / 180
             camera.pitch = .pi / 2 - 0.39
             camera.distance = layout.closeDistance
+            camera.target = layout.focus - Map3DPoint(0, raise * camera.distance * halfTall, 0)
         case .side:
-            camera.target = layout.focus
             camera.heading = .pi
             camera.pitch = 82 * .pi / 180
             camera.distance = min(max(layout.focusLength / 2 * 1.15 / halfWide, 12), Map3DShowcase.farthest)
+            camera.target = layout.focus - Map3DPoint(0, raise * camera.distance * halfTall, 0)
         case .overhead:
+            // Looking nearly straight down with +z up the screen.
             let along = layout.high.x - layout.low.x, across = layout.high.z - layout.low.z
-            camera.target = Map3DPoint((layout.low.x + layout.high.x) / 2, 0, (layout.low.z + layout.high.z) / 2)
             camera.heading = .pi
             camera.pitch = 20 * .pi / 180
-            let fit = max(along / 2 * 1.15 / halfWide, (across / 2 + 6) * 1.3 / halfTall)
+            let fit = max(along / 2 * 1.15 / halfWide, (across / 2 + 6) * 1.3 / ((1 - coveredBelow) * halfTall))
             camera.distance = min(max(fit, 30), Map3DShowcase.farthest)
+            camera.target = Map3DPoint((layout.low.x + layout.high.x) / 2, 0,
+                                       (layout.low.z + layout.high.z) / 2 - coveredBelow * camera.distance * halfTall)
         }
         return camera
     }

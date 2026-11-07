@@ -2747,6 +2747,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             open.tap()
             let closeUp = app.buttons["trainShowcase.camera.closeUp"]
             XCTAssertTrue(closeUp.appears(within: 120), "The \(exhibit) stage did not open")
+            // The picture shows once the models are made (the first run's
+            // day shots caught the spinner).
+            XCTAssertTrue(app.activityIndicators.firstMatch.disappears(within: 180), "The \(exhibit) models")
+            closeUp.tap()
             settle(seconds: 6)
             keep("collection-\(exhibit)-day-close", app)
             app.buttons["trainShowcase.camera.side"].tap()
