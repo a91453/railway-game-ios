@@ -104,7 +104,13 @@ final class HighSpeedDemoTests: XCTestCase {
                 for station in depot.serving {
                     let zone = layout.platforms[station]
                     let near = depot.entry < zone.lowerBound ? zone.lowerBound : zone.upperBound
-                    reaches.append(min(near, depot.entry)...max(near, depot.entry))
+                    let reach = min(near, depot.entry)...max(near, depot.entry)
+                    // Decision 618: nor past stations it does not serve
+                    // (Liujia's, for Nangang and Taipei): its sets go in
+                    // on the down track and out over its crossover on the
+                    // up track, each the way of its track.
+                    if layout.platforms.indices.contains(where: { !depot.serving.contains($0) && reach.contains(layout.platforms[$0].lowerBound) }) { continue }
+                    reaches.append(reach)
                 }
             }
             for reach in reaches {
@@ -148,36 +154,43 @@ final class HighSpeedDemoTests: XCTestCase {
             world.stations.filter { !$0.isDepot }.map(\.name),
             ["Nangang", "Taipei", "Banqiao", "Taoyuan", "Hsinchu", "Miaoli", "Taichung", "Changhua", "Yunlin", "Chiayi", "Tainan", "Zuoying"]
         )
-        XCTAssertEqual(world.stations.filter(\.isDepot).map(\.name), ["Nangang Depot", "Wuri Depot", "Zuoying Depot"])
+        XCTAssertEqual(world.stations.filter(\.isDepot).map(\.name), ["Nangang Sidings", "Liujia Depot", "Wuri Depot", "Zuoying Depot"])
     }
 
     /// Decision 221: the depots stand where OpenStreetMap has the real
     /// ones along the line (`tools/hsr-depots/hsr_depots.json`), on their
-    /// side of it: Nangang's beyond its station, Wuri's south of Taichung,
-    /// Zuoying's north of its station, the sidings within a kilometre
-    /// either way of the real yard's middle along the line; each a siding
-    /// for each set that stands there on the first night and one to spare,
-    /// every line keeping its sets in all three.
+    /// side of it: Nangang's beyond its station, Liujia's south of Hsinchu
+    /// (decision 618), Wuri's south of Taichung, Zuoying's north of its
+    /// station, the sidings within a kilometre either way of the real
+    /// yard's middle along the line; Nangang's and Liujia's the eight the
+    /// real ones stable, the others a siding for each set that stands
+    /// there on the first night and one to spare; the five-stop expresses
+    /// keeping their north end's sets at Liujia, the other lines at
+    /// Nangang, and every line its others at Wuri and Zuoying.
     func testItsDepotsStandWhereTheRealOnesDo() throws {
         let (layout, world, _) = try Self.built.get()
-        XCTAssertEqual(layout.depots.map(\.real.chinese), ["南港機廠", "烏日機廠", "左營機廠"])
+        XCTAssertEqual(layout.depots.map(\.real.chinese), ["南港留置線", "六家基地", "烏日機廠", "左營機廠"])
         let names = layout.depots.map { $0.serving.map { HighSpeedDemo.stationNames[$0] } }
-        XCTAssertEqual(names, [["南港", "台北"], ["台中"], ["左營"]])
+        XCTAssertEqual(names, [["南港", "台北"], ["南港", "台北"], ["台中"], ["左營"]])
         XCTAssertLessThan(layout.depots[0].entry, layout.platforms[0].lowerBound, "beyond Nangang's platform")
-        XCTAssertGreaterThan(layout.depots[1].entry, layout.platforms[6].upperBound, "south of Taichung")
-        XCTAssertLessThan(layout.depots[2].entry, layout.platforms[11].lowerBound, "north of Zuoying")
+        XCTAssertGreaterThan(layout.depots[1].entry, layout.platforms[4].upperBound, "south of Hsinchu")
+        XCTAssertLessThan(layout.depots[1].deadEnd, layout.platforms[5].lowerBound, "north of Miaoli")
+        XCTAssertGreaterThan(layout.depots[2].entry, layout.platforms[6].upperBound, "south of Taichung")
+        XCTAssertLessThan(layout.depots[3].entry, layout.platforms[11].lowerBound, "north of Zuoying")
         for depot in layout.depots {
             let point = WorldVector(HighSpeedDemo.frame.worldPosition(latitude: depot.real.latitude, longitude: depot.real.longitude))
             let real = layout.plan.path.project(point)
             let span = min(depot.entry, depot.deadEnd)...max(depot.entry, depot.deadEnd)
             XCTAssertLessThan(max(0, span.lowerBound - real, real - span.upperBound) / Self.metre, 1_000, depot.real.english)
         }
-        XCTAssertEqual(layout.depots.map { $0.east.count + $0.west.count }, [11, 7, 20], "10, 6 and 19 sets, and one to spare")
+        XCTAssertEqual(layout.depots.map { $0.east.count + $0.west.count }, [8, 8, 7, 20], "the real eight and eight, then 6 and 19 sets and one to spare")
         let depots = world.stations.filter(\.isDepot).map(\.id)
-        for line in world.lines {
-            XCTAssertEqual(line.depots, depots, line.name)
+        // Decision 618: the five-stop expresses keep their north end's sets
+        // at Liujia, the other two lines at Nangang.
+        for (line, kept) in zip(world.lines, [[0, 2, 3], [0, 2, 3], [1, 2, 3]]) {
+            XCTAssertEqual(line.depots, kept.map { depots[$0] }, line.name)
         }
-        for (depot, count) in zip(depots, [11, 7, 20]) {
+        for (depot, count) in zip(depots, [8, 8, 7, 20]) {
             XCTAssertEqual(world.network.platforms(of: depot).count, count, "a platform on each siding")
         }
     }
@@ -190,12 +203,13 @@ final class HighSpeedDemoTests: XCTestCase {
     func testZuoyingsDepotHasItsOwnTrack() throws {
         let (layout, world, tracks) = try Self.built.get()
         XCTAssertNil(layout.depots[0].lead, "Nangang's")
-        XCTAssertNil(layout.depots[1].lead, "Wuri's")
-        let lead = try XCTUnwrap(layout.depots[2].lead, "Zuoying's")
+        XCTAssertNil(layout.depots[1].lead, "Liujia's")
+        XCTAssertNil(layout.depots[2].lead, "Wuri's")
+        let lead = try XCTUnwrap(layout.depots[3].lead, "Zuoying's")
         let turnout = lead.distances[lead.distances.count - 1]
         XCTAssertGreaterThan(turnout, layout.junctions.south, "beyond the up track's turnout")
         XCTAssertLessThan(turnout, layout.platforms[11].lowerBound, "in the throat, north of the platforms")
-        XCTAssertEqual(lead.distances[0], layout.depots[2].entry, accuracy: 1, "on to where the sidings begin")
+        XCTAssertEqual(lead.distances[0], layout.depots[3].entry, accuracy: 1, "on to where the sidings begin")
         // Every node of Zuoying's depot's tracks the down track has.
         let downNodes = Set(tracks.down.flatMap { id in world.network.edge(id).map { [$0.from, $0.to] } ?? [] })
         let edges = Self.zuoyingDepotEdges(layout: layout, world: world, tracks: tracks)
@@ -205,7 +219,7 @@ final class HighSpeedDemoTests: XCTestCase {
         // southbound: the sets no longer run north along it into the depot.
         let distances = layout.plan.distances
         let approach = tracks.down.indices.filter {
-            distances[$0] >= layout.depots[2].entry - 1 && distances[$0 + 1] <= layout.junctions.south + 1
+            distances[$0] >= layout.depots[3].entry - 1 && distances[$0 + 1] <= layout.junctions.south + 1
         }.map { tracks.down[$0] }
         XCTAssertFalse(approach.isEmpty)
         XCTAssertTrue(Set(approach).isSubset(of: tracks.southbound), "only southbound from the depot to the turnout")
@@ -214,7 +228,7 @@ final class HighSpeedDemoTests: XCTestCase {
     /// The edges of Zuoying's depot's sidings and lead: the depots' track
     /// joined to its platforms' sidings.
     private static func zuoyingDepotEdges(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: Tracks) -> Set<TrackEdgeID> {
-        let depot = world.stations.filter(\.isDepot)[2].id
+        let depot = world.stations.filter(\.isDepot)[3].id
         var edges: Set<TrackEdgeID> = [], frontier = Set(world.network.platforms(of: depot).map(\.edge))
         while let id = frontier.popFirst() {
             guard edges.insert(id).inserted, let edge = world.network.edge(id) else { continue }
@@ -343,12 +357,13 @@ final class HighSpeedDemoTests: XCTestCase {
         // ends, a second at Taichung, a crossover north of Taichung and one
         // south of Taipei, where sets turn back, one north of Taipei, whose
         // sets stand at night in Nangang's depot (decision 228), one south
-        // of Taichung into Wuri's depot, the three depots' sidings, and the
+        // of Taichung into Wuri's depot, one south of Hsinchu into Liujia's
+        // (decision 618), the four depots' sidings, and the
         // ends' tracks beside the down track (decision 228): with them, the
         // whole network.
         XCTAssertEqual(tracks.downLoops.count, 33)
         XCTAssertEqual(tracks.upLoops.count, 33)
-        XCTAssertEqual(tracks.crossovers.count, 4)
+        XCTAssertEqual(tracks.crossovers.count, 5)
         XCTAssertEqual(
             tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.sidings.count
                 + tracks.ends.count,
@@ -437,10 +452,14 @@ final class HighSpeedDemoTests: XCTestCase {
         let (layout, world, _) = try Self.built.get()
         let depots = world.stations.filter(\.isDepot).map(\.id)
         var edges: Set<TrackEdgeID> = []
+        var standing = [Int](repeating: 0, count: depots.count)
         for (line, planned) in zip(world.lines, layout.timetable.lines) {
             XCTAssertEqual(line.trains.count, planned.sets, planned.english)
             var expected = planned.overnight.map { set in layout.depots.firstIndex { $0.serving.contains(set.station) }! }.sorted()
             var found: [Int] = []
+            // Decision 618: the north end's sets of one line stand at
+            // Liujia, which serves the same stations as Nangang's sidings.
+            let north = Set(layout.depots[0].serving)
             for id in line.trains {
                 let train = try XCTUnwrap(world.train(id: id))
                 guard case .onEdge(let traversal, _)? = train.position, let station = world.stationsStoppedAt(by: id).first,
@@ -448,12 +467,14 @@ final class HighSpeedDemoTests: XCTestCase {
                 else { XCTFail("\(train.name) stands in no depot"); continue }
                 XCTAssertTrue(edges.insert(traversal.edge).inserted, "\(train.name): a siding of its own")
                 XCTAssertEqual(traversal.direction == .forward, !layout.depots[index].southward, "\(train.name) faces the way out")
-                found.append(index)
+                standing[index] += 1
+                found.append(index == 1 && north == Set(layout.depots[1].serving) ? 0 : index)
             }
             found.sort()
             expected.sort()
             XCTAssertEqual(found, expected, planned.english)
         }
+        XCTAssertEqual(standing, [7, 3, 6, 19], "decision 618: the north end's five-stop sets at Liujia, the others' at Nangang")
     }
 
     /// Each way keeps to its own track (the author saw the sets of the two
@@ -604,7 +625,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(world.clock.now.minute, 7 * 60)
         XCTAssertEqual(world.clock.speed, .normal, "it runs at once, like the other demos")
         XCTAssertFalse(world.doorCrowding)
-        XCTAssertEqual(world.stations.count, 15, "twelve and the three depots")
+        XCTAssertEqual(world.stations.count, 16, "twelve and the four depots (decision 618: Nangang's sidings and Liujia's)")
         for line in world.lines {
             for (index, run) in line.runs.enumerated() where run.times[0].departure <= 7 * 3_600 {
                 XCTAssertEqual(line.runDays[index], 0, "\(line.name): the run leaving at \(run.times[0].departure / 60) min has gone")
@@ -658,7 +679,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertNil(launcher.session, "still on the start screen")
         await task?.value
         XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
-        XCTAssertEqual(launcher.session?.world.stations.count, 15, "the game is open")
+        XCTAssertEqual(launcher.session?.world.stations.count, 16, "the game is open")
         XCTAssertEqual(launcher.session?.world.lines.first?.isHighSpeed, true)
         // Decision 313, later: its 3D map opens where the 2D map looks.
         Map3DOpenEveryStartTests.assertOpensWhereThe2DMapLooks(try XCTUnwrap(launcher.session?.world), "openHighSpeedDemo")
