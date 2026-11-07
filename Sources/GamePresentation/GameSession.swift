@@ -3146,11 +3146,11 @@ public final class GameSession {
         case .low: counts.low = count
         }
         let changed = counts
-        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, _ in
+        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, world in
             language.text(
                 "\(line.name): \(count) \(count == 1 ? "train" : "trains") at \(level.title(in: language).lowercased()).",
                 "\(line.name)：\(level.title(in: language))上線 \(count) 列。"
-            )
+            ) + Self.passingWarningText(for: line.id, in: world, language: language)
         }
     }
 

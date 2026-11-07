@@ -797,9 +797,16 @@ extension GameSession {
         let edges = edges
             .compactMap { id in world.network.edge(id).map { (id: id, length: $0.length) } }
             .sorted { $0.length > $1.length }
+        // Decision 628: a loop whose turnouts or platform would reach onto
+        // a station's platform is refused only when it is built (the
+        // platform may not overlap another), so it is passed over here.
+        func clear(_ plan: PassingLoopPlan) -> Bool {
+            let reach = PassingLoopPlan.reach
+            return !world.network.platforms.contains { $0.edge == plan.edge && $0.start < plan.end + reach && plan.start - reach < $0.end }
+        }
         func plan(at point: NetworkEdgePoint) -> PassingLoopPlan? {
             for side in [PlatformTrackSide.left, .right] {
-                if case .success(let plan) = passingLoopPlan(at: point, side: side) { return plan }
+                if case .success(let plan) = passingLoopPlan(at: point, side: side), clear(plan) { return plan }
             }
             return nil
         }
