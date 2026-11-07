@@ -1,31 +1,28 @@
-# 台灣公路與鐵路隧道洞口（決策 611／359，revision-2）
+# 台灣公路與鐵路隧道洞口（決策 611／359，revision-3）
 
-`Map3DRoadTunnelPortals` 是供接線 session 使用的原生 `Map3DMesh` 配方，目前沒有接進地圖。公路有五款各單向／雙向，鐵路有單線／雙線各普通洞口和明洞，共 14 個模型。所有洞口內有 8 m 分四段漸暗的牆、頂與底，最深處以雙面不透光面封住。接線時應由 ROADTUNNEL 處理與實際隧道內路／軌的遮擋關係。
+本輪只改組景的山體、翼牆接坡、道路與軌道接地；`Map3DRoadTunnelPortals.swift` 的 14 款洞口幾何、內襯漸暗及深色封底維持 revision-2。私有素材庫的 revision-3 沿用 revision-2 的 14 個 GLB 和 98 張七向 PNG，逐檔位元組與 SHA-256 不變。revision-2 只保留 PNG 與 README，完整模型與離線檢視頁移到 revision-3。沒有接進地圖。
 
-| 模型 | 開口與寬度 | 淨高 | 特徵 |
-| --- | --- | ---: | --- |
-| dividedExpressway | 雙孔，每孔 7.5／10.5 m | 5.2 m | 1.4 m 中央分隔牆 |
-| mountainArch | 單孔 6.2／9.2 m | 5.2 m | 折面拱與翼牆 |
-| nameplate | 單孔 8.0／11.0 m | 5.2 m | 空白名牌面 |
-| narrowLane | 單孔 5.0／7.0 m | 4.7 m | 鄉道與產業道路 |
-| daylightGallery | 單孔 7.5／10.5 m | 5.2 m | 12 m 箱型頂蓋、兩側擋土牆 |
-| rail single／double | 單孔 6.4／12.6 m | 6.0 m | 決策 359 的折面頂 |
-| rail daylight single／double | 單孔 6.4／12.6 m | 6.0 m | 12 m 明洞頂蓋與擋土牆 |
+## 接地做法
 
-共同尺寸：牆厚 1.2 m、洞頂上方加高 1.3 m、基礎埋入 0.8 m、翼牆長 8 m 外張 2 m。鐵路洞頂、拱起點、淨寬採 `Map3DTunnels.swift` 的決策 359 尺寸；雙線為共用寬孔的素材研究版。局部 Swift 座標以公尺計，`+x` 入洞、`+y` 向上、`+z` 道路／軌道右側；`Part.connector` 是外側入口路面／軌面中心，標高 0。明洞從山壁外伸 12 m，其接點為 `(-12,0,0)`；其他款為 `(0,0,0)`。
+組景地面頂面是 `z = 0.00 m`。放置洞口時，依各模型原有的埋地深度把洞口抬高 0.8 m（公路）或 1.2 m（鐵路），使翼牆底落在地面。洞外道路／軌道在 24 m 的進路內，由地面高度逐漸接到洞口標高。翼牆背後的坡面從山坡蓋到翼牆頂，再沿外側降到地面；山體前緣、兩側和後緣均接地。這些只是組景位置與地形，不更動可供遊戲載入的原生洞口網格。
 
-## 重建與審查
+`tools/road_tunnel_portals.py` 的 `validate_ground_contact()` 量測實際 Blender 頂點：山體、翼牆、路面／軌面各自的最低點與地面頂面，差值必須在 0.05 m 內。`tools/test_road_tunnel_scene.py` 以無渲染模式執行此檢查。修改前測得山腳 0.00 m、地面 −0.41 m，會使測試失敗；修正後四者均為 0.00 m。組景另有正面和獨立側視驗收圖。
 
-本分支 producer commit `bfcf8f16f0f835a230851fbd4bf4559de1b89790` 含 Swift 配方與 Blender 4.x 工具。從該 commit checkout 後執行：
+## 重建
+
+本輪組景 producer commit：`06726b4d85785535d4b24aa158c435fd28a293c3`。Blender 4.x：
 
 ```sh
-blender -b --python tools/road_tunnel_portals.py -- --output /path/to/railway-assets-private/game-art-previews/docs/art/road-tunnel-portals-2026-11/revision-2
+python3 tools/test_road_tunnel_scene.py
+blender -b --python tools/road_tunnel_portals.py -- --output /path/to/revision-3 --composition-only
 ```
 
-私庫同路徑 `revision-2/` 收 14 個 GLB、每模型七張透明 PNG、`connectors.json` 和一張公路／鐵路同山組景圖。第 1 向是正面（0°），第 2–7 向依序 −30°、+30°、−60°、+60°、−120°、+120°。組景背景採遊戲 `#ECEEF6` 淺色地面。舊 `revision-1/` 僅留 PNG 與 README；舊 GLB 在同一素材 PR 刪除。
+先將私庫 revision-2 的既有模型與七向預覽逐檔複製到 revision-3；原檔來源為私庫 commit `c0ce6a7aa1b4069175fd2ec5b702786480ba474d`，不可重製後取代。上列 Blender 指令只會產生三張組景與 `viewer.html`，不改模型或七向圖。完整模型的原始配方仍見本分支舊 producer commit `bfcf8f16f0f835a230851fbd4bf4559de1b89790`。
+
+[總覽圖](overview.png)和私庫 revision-3 的 `mountain-road-rail-front.png`、`mountain-road-rail-side.png` 供規劃審圖；側視圖隔離組景最左側的同款公路洞口，以免其他入口互相遮擋。離線檢視頁使用本地 PNG 與 GLB 連結，不連外。
 
 ## 來源、授權與限制
 
-本專案原創幾何與配色，依本庫 `LICENSE.md`（著作權所有）及私庫規範管理，未使用第三方模型或貼圖。規格參考本庫 `Sources/GamePresentation/Map3DTunnels.swift`（決策 359）及使用者的決策 611 指示；照片僅看來源連結，沒有下載或提交：[Wikimedia Commons 台灣公路隧道](https://commons.wikimedia.org/wiki/Category:Road_tunnels_in_Taiwan)、[交通部高速公路局](https://www.freeway.gov.tw/)。沒有使用 Quaternius 或 Polyfork。
+洞口和組景均是本專案原創，依本庫 `LICENSE.md`（著作權所有）及私有素材庫規範管理。尺寸沿用 `Sources/GamePresentation/Map3DTunnels.swift`（決策 359）與決策 611 指示。照片只作參考，沒有下載或提交：[Wikimedia Commons 台灣公路隧道](https://commons.wikimedia.org/wiki/Category:Road_tunnels_in_Taiwan)、[交通部高速公路局](https://www.freeway.gov.tw/)。沒有使用 Quaternius 或 Polyfork 素材。
 
-組景使用低多邊形示意山體與路軌，不代表真實 DEM 切面；遊戲地圖的實際接線、地形裁切、iOS Metal 表現仍待後續 session 驗證。
+組景是低多邊形示意地形；實際 DEM 裁切、iOS 畫面與地圖接線仍待後續 session 驗證。
