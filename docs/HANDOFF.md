@@ -3433,7 +3433,7 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 **① 的後續（TRAFFIC-READ，`claude/traffic-reading-speed`，2026-11-07）**：交通讀數改借 `advance` 留在世界裡的 `RouteMemo`（決策 138 補充「交通讀數借用 advance 留下的計畫零件」），高雄環狀輕軌 10× 一次讀數在 Mac M6 release 561.7 → 33.1 ms，結果逐位元相同。還沒做的：實機重錄（UNVERIFIED）；3D 跟車時少讀與 `readTrafficOffTheMainActor` 一次只跑一個，讀數變快後暫時不需要。
 
-**CABVIEW-3（2026-11-07，session_01YGNNuo1avNxcoZmdFdC825，`claude/cabview-3`，決策 379 續四）**：審查 P3 a、b、d 做了（迴圈的一步成為 `runLoopStep`、地圖看 `glideKey`、`stopGameLoop` 清旗標）。Linux 量 3D 跟車 10× 實際 ÷ 設定：#1924 前 0.10 → 後 0.50（2D 不跟車 0.48）；A（3D 跟車少讀交通）量到 0.49，不採用。還沒做的：10× 跑不滿要從 GameCore 每個 tick 的推進下手（另派）；1× 沒做；實機量測與 P3 c（機場捷運高架段 3D 高度與滑行差一步）照 `docs/research/CABVIEW3_DEVICE_SHEET_2026-11-07.md`，UNVERIFIED。
+**CABVIEW-3（2026-11-07，session_01YGNNuo1avNxcoZmdFdC825，`claude/cabview-3`，決策 379 續四）**：審查 P3 a、b、d 做了（迴圈的一步成為 `runLoopStep`、地圖看 `glideKey`、`stopGameLoop` 清旗標）。Linux 量 3D 跟車 10× 實際 ÷ 設定：#1924 前 0.10 → 後 0.50（2D 不跟車 0.48）；A（3D 跟車少讀交通）量到 0.49，不採用。還沒做的：10× 跑不滿要從 GameCore 每個 tick 的推進下手（TICKPERF 做了，決策 622：210–270 ms 只在有車卡著等出發時出現，#1928 之後 main 已是 1.00 of 10x；卡住時改後 17–23 ms）；1× 沒做；實機量測與 P3 c（機場捷運高架段 3D 高度與滑行差一步）照 `docs/research/CABVIEW3_DEVICE_SHEET_2026-11-07.md`，UNVERIFIED。
 
 ### 4.55 實景建物沿街立面的近景層（決策 610，派工單 FACADE-REAL → FACADE-B，`claude/facade-real`，#1879，2026-11-07）
 
