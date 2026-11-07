@@ -161,6 +161,48 @@ final class RealLineRebuildTests: XCTestCase {
         XCTAssertFalse(session.rebuildRealLine(offer))
     }
 
+    /// Decision 605 (continued): a train still out on a late run when the
+    /// line is rebuilt is taken off it where it stands. Left there, between
+    /// the ends, it took the next run from that station, one a line bought
+    /// now has no train for, and the west end had no room for the train it
+    /// sent there: under a new game's rules the whole line stood still from
+    /// 07:30 (the release report `tymc-rebuilt`, 333 of 333 runs not sent
+    /// out on its second day). It goes to a free depot track instead, of
+    /// the nearest depot first; a train already in a depot stays.
+    func testATrainTakenOffBetweenTheEndsGoesToADepot() throws {
+        let (session, id) = try Self.boughtAsBefore(rules: .simple)
+        var world = session.world
+        let line = try XCTUnwrap(world.line(id: id))
+        let sanchong = try XCTUnwrap(line.stops.first { world.station(id: $0)?.name == "三重站" })
+        let luzhu = try XCTUnwrap(line.depots.first { world.station(id: $0)?.name == "蘆竹機廠" })
+        let inDepots = line.trains.filter { !Set(world.stationsStoppedAt(by: $0)).isDisjoint(with: line.depots) }
+        XCTAssertGreaterThan(inDepots.count, 2)
+        let train = inDepots[0], staying = inDepots[1]
+        let stayingAt = try XCTUnwrap(world.train(id: staying)).position
+        let platform = try XCTUnwrap(world.trackPlatforms(of: sanchong).first)
+        let length = try XCTUnwrap(world.train(id: train)).length
+        try world.unassignTrain(train)
+        try world.unplaceTrain(train)
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: platform.edge, direction: .forward), offset: platform.start + length))
+        try world.setTrainContinuation(train, along: [], stoppingAt: platform.start + length)
+        XCTAssertEqual(world.stationsStoppedAt(by: train), [sanchong])
+
+        try GameSession.berthInDepots([train, staying], of: line, in: &world)
+        XCTAssertEqual(world.stationsStoppedAt(by: train), [luzhu])
+        XCTAssertEqual(world.train(id: train)?.movement.rate, 512)
+        XCTAssertEqual(world.train(id: staying)?.position, stayingAt)
+        // Not on a track another train stands on.
+        func edges(_ train: Train) -> [TrackEdgeID] {
+            guard case .onEdge(let traversal, _)? = train.position else { return [] }
+            return [traversal.edge] + train.trailEdges
+        }
+        let berth = try XCTUnwrap(world.train(id: train)).position
+        let edge = try XCTUnwrap(world.train(id: train).flatMap(edges)?.first, "\(String(describing: berth))")
+        XCTAssertFalse(world.trains.contains { $0.id != train && edges($0).contains(edge) })
+        try world.assignTrain(train, to: id)
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
+    }
+
     /// A line bought now has its loops: nothing to rebuild.
     func testALineBoughtNowHasNothingToRebuild() throws {
         let session = try RealLineAcquisitionTests.game(round: Self.id, side: 1 << 22, heights: true)

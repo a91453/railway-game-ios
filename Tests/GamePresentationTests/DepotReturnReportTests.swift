@@ -44,7 +44,7 @@ final class DepotReturnReportTests: XCTestCase {
     /// Decision 556: the Taoyuan Airport MRT, on a map wide enough for it.
     func testTheTaoyuanAirportLine() throws {
         try wanted("tymc")
-        try report("tymc", Self.bought("tymc:A", side: 1 << 22))
+        try report("tymc", Self.resumed() ?? Self.bought("tymc:A", side: 1 << 22))
     }
 
     func testTheGreenMountainLine() throws {
