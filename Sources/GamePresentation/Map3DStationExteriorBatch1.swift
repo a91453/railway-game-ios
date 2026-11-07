@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -14,6 +14,7 @@ public enum Map3DStationExteriorBatch1 {
         case .taitungTRA: builder.taitungExteriorStudy(detail: detail)
         case .banqiaoTRA: builder.banqiaoExteriorStudy(detail: detail)
         case .nangangTRA: builder.nangangExteriorStudy(detail: detail)
+        case .taoyuanHSR: builder.taoyuanHSRExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -491,6 +492,28 @@ public enum Map3DStationExteriorBatch1 {
         (72.795, 0.956),
         (75.011, -11.364),
         (21.260, -21.027),
+    ]
+
+    // Taoyuan HSR and Airport MRT A18: osmtoday Taiwan PBF, 2026-11-06.
+    // Metres east/north from (121.214539, 25.01347985); © OpenStreetMap contributors, ODbL 1.0.
+    static let taoyuanHSRFootprint: [(Float, Float)] = [ // OSM way 23547222
+        (-18.067, -53.613), (-10.732, -45.584), (-4.585, -38.879),
+        (-1.370, -35.277), (15.810, -15.962), (30.975, 1.073),
+        (33.716, -1.418), (41.344, -8.012), (46.272, -12.137),
+        (62.243, 5.654), (86.296, -17.052), (70.717, -34.987),
+        (75.897, -39.869), (82.255, -45.851), (85.137, -48.553),
+        (69.669, -65.255), (51.612, -84.736), (35.893, -101.704),
+        (32.366, -98.524), (23.922, -91.386), (20.838, -88.772),
+        (4.031, -106.286), (-21.292, -82.534), (-4.907, -65.677),
+        (-7.578, -63.220), (-14.541, -56.837),
+    ]
+    static let taoyuanA18Footprint: [(Float, Float)] = [ // OSM way 560119012
+        (15.730, 106.286), (25.222, 97.368), (26.380, 99.503),
+        (38.341, 88.839), (-42.604, 0.128), (-30.885, -10.914),
+        (-28.013, -7.878), (-22.954, -12.526), (-27.237, -17.964),
+        (-30.703, -21.744), (-33.495, -24.813), (-34.422, -25.936),
+        (-50.957, -9.568), (-59.724, -18.931), (-75.584, -3.664),
+        (-86.296, -5.354), (-76.451, 5.754), (-68.420, 14.205),
     ]
 
 }
@@ -1091,5 +1114,78 @@ private extension StationKitBuilder {
         }
         add(.flat(named: "nangang-east-station", from: east.mesh),
             at: Map3DPoint(175.0, 0, 20.99), angle: 9.951 * .pi / 180)
+    }
+
+    mutating func taoyuanHSRExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let roof = Map3DColor.rgb(0xE6E9E6)
+        let frame = Map3DColor.rgb(0xCBD6D3)
+        let stone = Map3DColor.rgb(0xD5CDC0)
+        let glass = Map3DColor.rgb(0x8EABB0)
+        let darkGlass = Map3DColor.rgb(0x607F86)
+        let skylight = Map3DColor.rgb(0xB6CACB)
+        let red = Map3DColor.rgb(0xB98E8E)
+        let steel = Map3DColor.rgb(0x8F9E9C)
+
+        footprint(Map3DStationExteriorBatch1.taoyuanHSRFootprint, color: stone)
+        // A18 is tagged min_level=2/layer=1, but no measured base height.
+        footprint(Map3DStationExteriorBatch1.taoyuanA18Footprint,
+                  color: frame, baseY: 8.0, height: 0.32)
+
+        // The 20 m hall is the reference display estimate. The flat, striped
+        // skylight roof and glass colonnade follow exterior photographs.
+        var hsr = StationKitBuilder()
+        hsr.box(0, 0.32, 0, 119, 69.5, 17.5, glass)
+        hsr.box(0, 17.82, 0, 121.7, 73.4, 2.18, roof)
+        for z in stride(from: Float(-27), through: 27, by: detail == .near ? 7 : 14) {
+            hsr.box(0, 19.9, z, 110, detail == .near ? 2.6 : 3.4, 0.16, skylight)
+            if detail == .near {
+                hsr.box(0, 20.06, z, 110, 0.15, 0.10, steel)
+            }
+        }
+        for x in stride(from: Float(-54), through: 54, by: detail == .near ? 7.2 : 18) {
+            for z: Float in [-35.1, 35.1] {
+                hsr.cylinder(x, 0.32, z, radius: 0.42, height: 17.5,
+                             color: frame, sides: detail == .near ? 8 : 6)
+            }
+        }
+        for y: Float in [6.2, 12.2] {
+            for z: Float in [-34.8, 34.8] {
+                hsr.box(0, y, z, 116, 0.16, 0.27, frame)
+            }
+        }
+        hsr.box(0, 0.32, -35.2, 14, 0.28, 13.8, darkGlass)
+        hsr.box(-58, 0.32, 0, 0.5, 69, 17.5, stone)
+        hsr.box(58, 0.32, 0, 0.5, 69, 17.5, stone)
+        add(.flat(named: "taoyuan-hsr-hall", from: hsr.mesh),
+            at: Map3DPoint(33.34, 0, 50.46), angle: 47.1966 * .pi / 180)
+
+        // The MRT concourse floats over its OSM outline. Its 8 m base,
+        // 22 m eaves and 30 m vault peak are illustrative, not OSM heights.
+        var a18 = StationKitBuilder()
+        for x in stride(from: Float(-66), through: 66, by: detail == .near ? 22 : 44) {
+            for z: Float in [-20, 20] {
+                a18.box(x, 0, z, 1.2, 1.2, 8, stone)
+            }
+        }
+        a18.box(0, 8.32, 0, 148, 47, 12.5, glass)
+        a18.box(0, 8.32, -23.55, 146, 0.25, 9.0, red)
+        a18.box(0, 8.32, 23.55, 146, 0.25, 8.0, stone)
+        for x in stride(from: Float(-66), through: 66, by: detail == .near ? 12 : 30) {
+            a18.box(x, 8.32, -23.78, 0.5, 0.2, 12.4, steel)
+            if detail == .near {
+                a18.beam(Map3DPoint(x - 5, 10, -23.9),
+                         Map3DPoint(x + 5, 19, -23.9), 0.42, red)
+            }
+        }
+        a18.canopy(0, 21.3, 0, length: 152, width: 52,
+                   rise: 8.7, color: roof)
+        for x in stride(from: Float(-66), through: 66, by: detail == .near ? 18 : 36) {
+            a18.beam(Map3DPoint(x, 21.6, -24.5),
+                     Map3DPoint(x, 27.8, 0), 0.32, steel)
+            a18.beam(Map3DPoint(x, 27.8, 0),
+                     Map3DPoint(x, 21.6, 24.5), 0.32, steel)
+        }
+        add(.flat(named: "taoyuan-a18", from: a18.mesh),
+            at: Map3DPoint(-15.42, 0, -33.94), angle: 47.7138 * .pi / 180)
     }
 }
