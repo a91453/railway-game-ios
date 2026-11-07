@@ -151,7 +151,11 @@ extension GameWorld {
         guard lineAccounts != nil, let line = line(id: id) else { return nil }
         let today = FinanceHistory.floorDay(clock.now)
         let lineDays = lineDays(id)
-        let days = lineDays.filter { $0.day < today }.map(LineOperatingDay.init)
+        // Decision 635 (Mac playtest D3): a bought line's day of purchase is
+        // no day of its: its costs ran from the purchase, its trains mostly
+        // not yet. Past days count from the day after.
+        let bought = acquisitions.first { $0.line == id }?.day
+        let days = lineDays.filter { record in record.day < today && bought.map { day in record.day > day } ?? true }.map(LineOperatingDay.init)
         let current = lineDays.first { $0.day == today }.map(LineOperatingDay.init)
         return LineReport(line: id, name: line.name, today: current, yesterday: days.first { $0.day == today - 1 }, days: days)
     }

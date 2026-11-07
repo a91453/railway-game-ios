@@ -99,6 +99,9 @@ struct StationMasterCorner: View {
     /// Advice a story card has said already, not said again by itself.
     @State private var coveredAdvice: StationMasterAdvice?
     @State private var storyTalk = 0
+    /// Decision 635 (Mac playtest D1): while a goal's check shows in the
+    /// middle of the map, new advice waits, and is said once it has gone.
+    @State private var goalCheckShows = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 194, later: a losing line's bubble opens the line panel.
     @Environment(GameScreenState.self) private var screen
@@ -195,6 +198,14 @@ struct StationMasterCorner: View {
             try? await Task.sleep(for: Self.storyTime)
             guard !Task.isCancelled else { return }
             finishBeat()
+        }
+        .task(id: session.goalPulse?.serial) {
+            guard session.goalPulse != nil else { return }
+            goalCheckShows = true
+            try? await Task.sleep(for: .seconds(GoalPulse.shownSeconds))
+            guard !Task.isCancelled else { return }
+            goalCheckShows = false
+            sayIfNew(advice)
         }
         .task(id: talk) {
             try? await Task.sleep(for: Self.speakingTime)
@@ -557,7 +568,7 @@ struct StationMasterCorner: View {
     /// New advice is said once by itself; the same again is not. Without
     /// room for the bubble it is kept, with its dot, until there is.
     private func sayIfNew(_ advice: StationMasterAdvice?) {
-        guard let advice, advice != lastSpoken, advice != coveredAdvice, storyBeat == nil, hasRoom, !offersTutorial else { return }
+        guard let advice, advice != lastSpoken, advice != coveredAdvice, storyBeat == nil, hasRoom, !offersTutorial, !goalCheckShows else { return }
         if case .modeShift = advice {
             // Decision 332: said once, leaving what was said before it as
             // said, so that is not said again when the hint goes.

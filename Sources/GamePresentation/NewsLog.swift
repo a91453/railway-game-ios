@@ -235,7 +235,7 @@ extension StationMasterAdvice {
         case .stationFull(let station, _): (.advice, "full:\(station.rawValue)", .station(station.rawValue))
         case .lineWithoutTrains(let line, _): (.advice, "empty:\(line.rawValue)", .line(line.rawValue))
         case .noPlaceToPass(let line, _): (.advice, "noPlaceToPass:\(line.rawValue)", .line(line.rawValue))
-        case .lineLosing(let line, _, _): (.advice, "losing:\(line.rawValue)", .line(line.rawValue))
+        case .lineLosing(let line, _, _, _): (.advice, "losing:\(line.rawValue)", .line(line.rawValue))
         case .stationCrowded(let station, _): (.advice, "crowded:\(station.rawValue)", .station(station.rawValue))
         case .firstLineLosing: (.advice, "firstLineLosing", nil)
         case .buildTrack: (.advice, "buildTrack", nil)

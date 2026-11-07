@@ -30,7 +30,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case noPlaceToPass(line: LineID, name: String)
     /// Decision 194, later: the line that lost most over its report's
     /// days, and the first reason why (``GameWorld/worstLosingLine()``).
-    case lineLosing(line: LineID, name: String, reason: LineLossReason.Kind)
+    case lineLosing(line: LineID, name: String, reason: LineLossReason.Kind, timetable: Bool = false)
     /// Half a station's room is taken.
     case stationCrowded(station: StationID, name: String)
     /// No track yet.
@@ -146,7 +146,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// The line a tap on the bubble opens in the line panel, or `nil`
     /// (decision 194, later).
     public var line: LineID? {
-        if case .lineLosing(let line, _, _) = self { return line }
+        if case .lineLosing(let line, _, _, _) = self { return line }
         // Decision 264: its card has the passing loop's button.
         if case .noPlaceToPass(let line, _) = self { return line }
         return nil
@@ -224,7 +224,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         // loses most and why. A short first line losing money has been told
         // to extend (``firstLineLosing``) above.
         if let losing = worstLosingLine() {
-            self = .lineLosing(line: losing.line, name: losing.name, reason: losing.reason)
+            self = .lineLosing(line: losing.line, name: losing.name, reason: losing.reason, timetable: losing.timetable)
             return
         }
         if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }), let station = crowded.station {
@@ -536,8 +536,17 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// (decision 123): before, a tap then did nothing, as if it were broken.
     /// "<line> loses money, mostly from too many trains: try taking one
     /// off." (decision 194, later).
-    static func lineLosingText(_ name: String, _ reason: LineLossReason.Kind, in language: DisplayLanguage) -> String {
+    ///
+    /// Decision 635: a line on a real timetable runs a train at each run's
+    /// time whatever its trains or targets, so it is told none of those.
+    static func lineLosingText(_ name: String, _ reason: LineLossReason.Kind, timetable: Bool = false, in language: DisplayLanguage) -> String {
         let why = reason.title(in: language)
+        if timetable, reason != .emptyRuns {
+            return language.text(
+                "\(name) loses money, mostly: \(why.lowercased()). It runs its real timetable, every train it has. Tap to open it.",
+                "「\(name)」虧錢，主要是\(why)：它照真實時刻表開，每一班都要用到車。點一下打開路線。"
+            )
+        }
         let tryThis = switch reason {
         case .tooManyTrains: language.text("try taking one off", "撤下一列試試")
         case .longHeadway: language.text("try running more trains", "加開列車試試")
@@ -587,8 +596,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "\(name)'s trains have no place to pass on the single track they share with another line. Tap to add a passing loop.",
                 "「\(name)」和別條線共用單線，列車沒有地方交會。點一下加待避線。"
             )
-        case .lineLosing(_, let name, let reason):
-            Self.lineLosingText(name, reason, in: language)
+        case .lineLosing(_, let name, let reason, let timetable):
+            Self.lineLosingText(name, reason, timetable: timetable, in: language)
         case .stationCrowded(_, let name):
             language.text(
                 "\(name) is getting crowded. A train more would help.",

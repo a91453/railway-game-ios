@@ -358,8 +358,15 @@ extension PlanCamera {
     /// line selected beside a panel).
     public func showing(_ region: WorldRegion, clearOf insets: ScreenInsets) -> PlanCamera {
         let clear = clearArea(insets)
-        let width = max(clear.width - 2 * Self.focusPadding, 1)
-        let height = max(clear.height - 2 * Self.focusPadding, 1)
+        // Decision 635 (Mac playtest D4): along a side the insets leave
+        // less than a fingertip of, the region fits the whole view rather
+        // than that strip, which zoomed the map out to the whole island.
+        func room(_ clear: Double, _ whole: Double) -> Double {
+            let inside = clear > 4 * Self.focusPadding ? clear - 2 * Self.focusPadding : clear
+            return inside >= Self.smallestClearSpan ? inside : max(whole - 2 * Self.focusPadding, 1)
+        }
+        let width = room(clear.width, viewport.width)
+        let height = room(clear.height, viewport.height)
         let fits = min(
             region.width > 0 ? width / region.width : .infinity,
             region.height > 0 ? height / region.height : .infinity

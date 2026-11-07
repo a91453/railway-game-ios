@@ -494,7 +494,7 @@ extension GameSession {
 
     /// Whether `station` is a passing loop's signal station: closed to
     /// passengers, with a track each way.
-    static func isPassingPlace(_ station: Station, in world: GameWorld) -> Bool {
+    nonisolated static func isPassingPlace(_ station: Station, in world: GameWorld) -> Bool {
         station.operationMode == .closed && world.trackPlatforms(of: station.id).count >= 2
     }
 
@@ -622,12 +622,20 @@ extension GameSession {
         let count = line.trains.count
         var text: String
         if plan.newLine != nil {
-            text = count > 0
-                ? language.text(
-                    "Created \(line.name) with \(line.stops.count) stops and a train, for \(cost.moneyText).",
-                    "已建立 \(line.name)，共 \(line.stops.count) 站，配了一列車，花費 \(cost.moneyText)。"
-                )
-                : language.text("Created \(line.name) with \(line.stops.count) stops.", "已建立 \(line.name)，共 \(line.stops.count) 站。")
+            // Decision 635: the stations riders use, not the passing loops'
+            // signal stations, and every train it was bought with.
+            let stops = passengerStopCount(of: line, in: world)
+            text = switch count {
+            case 0: language.text("Created \(line.name) with \(stops) stops.", "已建立 \(line.name)，共 \(stops) 站。")
+            case 1: language.text(
+                "Created \(line.name) with \(stops) stops and a train, for \(cost.moneyText).",
+                "已建立 \(line.name)，共 \(stops) 站，配了一列車，花費 \(cost.moneyText)。"
+            )
+            default: language.text(
+                "Created \(line.name) with \(stops) stops and \(count) trains, for \(cost.moneyText).",
+                "已建立 \(line.name)，共 \(stops) 站，配了 \(count) 列車，花費 \(cost.moneyText)。"
+            )
+            }
         } else {
             text = language.text(
                 "\(line.name) now runs \(count) \(count == 1 ? "train" : "trains"), for \(cost.moneyText).",
@@ -661,6 +669,13 @@ extension GameSession {
             )
         }
         return text
+    }
+
+    /// Decision 635: how many of `line`'s stops riders use: its distinct
+    /// stations, less those closed to passengers (a passing loop's signal
+    /// station, decision 204).
+    static func passengerStopCount(of line: ServiceLine, in world: GameWorld) -> Int {
+        Set(line.stops).count { world.station(id: $0)?.operationMode.allowsService ?? false }
     }
 
     /// What it says of the trains taken off the track for a loop and put

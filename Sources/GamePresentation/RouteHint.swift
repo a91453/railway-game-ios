@@ -134,7 +134,11 @@ extension GameSession {
     private func noteRouteHint(legs: Set<RouteHint.Leg>) {
         defer { routeHintLegs = legs }
         guard let known = routeHintLegs, tutorial == nil, routeHint == nil else { return }
-        if let new = legs.subtracting(known).min(by: { ($0.line, $0.stop) < ($1.line, $1.stop) }) {
+        // Decision 635 (Mac playtest A11): a bought real line's double track
+        // is the real line's, and its trains already take its real tracks;
+        // the card comes up with the route menus on its page instead.
+        let bought = Set(world.acquisitions.compactMap(\.line))
+        if let new = legs.subtracting(known).filter({ !bought.contains($0.line) }).min(by: { ($0.line, $0.stop) < ($1.line, $1.stop) }) {
             routeHint = .parallelTrack(new.line)
         }
     }

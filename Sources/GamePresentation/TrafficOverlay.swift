@@ -127,6 +127,29 @@ public struct TrafficOverlay: Hashable, Sendable {
 
     public var isEmpty: Bool { authorities.isEmpty && waits.isEmpty }
 
+    /// Decision 635 (Mac playtest D7): the waiting trains whose tag names
+    /// the train they wait for. Where several wait for the same train for
+    /// the same reason (two trains behind train 24), only the one nearest
+    /// the track it waits for names it, the lowest ID on a tie; the others'
+    /// tags give the reason alone, so one train's name is not on the map
+    /// twice, read as the same train in two places.
+    public var namingHolders: Set<TrainID> {
+        var nearest: [WaitKey: (distance: Double, train: TrainID)] = [:]
+        for wait in waits {
+            let dx = Double(wait.to.x - wait.from.x), dy = Double(wait.to.y - wait.from.y)
+            let distance = dx * dx + dy * dy
+            let key = WaitKey(holder: wait.holder, reason: wait.reason)
+            if let kept = nearest[key], (kept.distance, kept.train) <= (distance, wait.train) { continue }
+            nearest[key] = (distance, wait.train)
+        }
+        return Set(nearest.values.map(\.train))
+    }
+
+    private struct WaitKey: Hashable {
+        let holder: TrainID
+        let reason: WaitReason
+    }
+
     /// For VoiceOver and the map's description: "Movement authority for 2
     /// trains · 1 waiting · 2 deadlocked"; "2 列車有行車授權 · 1 列等候
     /// · 2 列死結". `nil` when there is nothing to show.
