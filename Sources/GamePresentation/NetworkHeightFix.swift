@@ -69,6 +69,20 @@ public struct NetworkHeightFix: Hashable, Sendable {
         guard let what else { return verb }
         return language.text("\(verb): \(what)", "\(verb)，\(what)")
     }
+
+    /// The button's words where the two full ones do not fit side by side
+    /// (a phone on its side): its arrow says up or down, so "4 m, bridge".
+    public func shortTitle(in language: DisplayLanguage) -> String {
+        let metres = NetworkBuilding.lengthText(abs(change), in: language)
+        let what: String? = switch kind {
+        case .bridge: language.text("bridge", "用橋")
+        case .tunnel: language.text("tunnel", "走隧道")
+        case .viaduct: language.text("viaduct", "走高架")
+        case .raised, .lowered: nil
+        }
+        guard let what else { return metres }
+        return language.text("\(metres), \(what)", "\(metres)，\(what)")
+    }
 }
 
 /// The build card's heights (decision 629): the new end the player moves

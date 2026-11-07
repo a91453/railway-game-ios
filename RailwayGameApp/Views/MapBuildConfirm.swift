@@ -223,9 +223,13 @@ struct MapBuildConfirm: View {
                 .accessibilityIdentifier("map.build.heightNote")
         }
         if !card.fixes.isEmpty {
+            // Round 2's screenshots: stacked, the pill was too tall to
+            // stand under the HUD on a phone on its side, and covered the
+            // refusal; the short words keep the two on one row there.
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) { fixButtons(card.fixes) }
-                VStack(spacing: 4) { fixButtons(card.fixes) }
+                HStack(spacing: 6) { fixButtons(card.fixes, short: false) }
+                HStack(spacing: 6) { fixButtons(card.fixes, short: true) }
+                VStack(spacing: 4) { fixButtons(card.fixes, short: false) }
             }
         }
     }
@@ -234,12 +238,12 @@ struct MapBuildConfirm: View {
     /// `ForEach`, whose row closure a `ViewThatFits` would measure off the
     /// main thread (CRASH101).
     @ViewBuilder
-    private func fixButtons(_ fixes: [NetworkHeightFix]) -> some View {
-        if let up = fixes.first(where: { $0.change > 0 }) { fixButton(up) }
-        if let down = fixes.first(where: { $0.change < 0 }) { fixButton(down) }
+    private func fixButtons(_ fixes: [NetworkHeightFix], short: Bool) -> some View {
+        if let up = fixes.first(where: { $0.change > 0 }) { fixButton(up, short: short) }
+        if let down = fixes.first(where: { $0.change < 0 }) { fixButton(down, short: short) }
     }
 
-    private func fixButton(_ fix: NetworkHeightFix) -> some View {
+    private func fixButton(_ fix: NetworkHeightFix, short: Bool) -> some View {
         let language = session.language
         return Button {
             session.applyNetworkHeightFix(fix)
@@ -247,7 +251,7 @@ struct MapBuildConfirm: View {
             HStack(spacing: 6) {
                 Image(systemName: fix.change > 0 ? "arrow.up.to.line" : "arrow.down.to.line")
                     .font(.body.weight(.bold))
-                Text(verbatim: fix.title(in: language))
+                Text(verbatim: short ? fix.shortTitle(in: language) : fix.title(in: language))
                     .font(.subheadline.weight(.bold))
                 Text(verbatim: fix.cost.compactText(in: language))
                     .font(.subheadline)
@@ -258,6 +262,7 @@ struct MapBuildConfirm: View {
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
         .fixedSize()
+        .accessibilityLabel(Text(verbatim: "\(fix.title(in: language)) \(fix.cost.compactText(in: language))"))
         .accessibilityIdentifier(fix.change > 0 ? "map.build.fixUp" : "map.build.fixDown")
     }
 
