@@ -43,6 +43,13 @@ extension RealLineDepotLayout {
         /// The running track between two banks, where it bends from one's
         /// way to the next's.
         static let bankGap = 30 * metre
+        /// Where along the first bank, from its start, the middle lead
+        /// leaves the running track for the second track, going up the
+        /// line.
+        static let middleAlong = 40 * metre
+        /// How far along the line the middle lead joins the second track
+        /// past the south lead.
+        static var middle: Double { 2 * leadReach + middleAlong }
         static let spacing = Double(DepotYard.spacing)
 
         static var arcAlong: Double { radius * sin(angle) }
@@ -103,19 +110,19 @@ extension RealLineDepotLayout {
 
     /// Decision 621: the depot's pieces, from piece `first` on, and the
     /// depot, laid as a strip (``Strip``) beside the second track (piece
-    /// 1) of `path`, its leads leaving it at `marks[2]` and `marks[3]`
-    /// (``RealLineLaying/ringDepotMarks(at:span:)``), `j` along the path
+    /// 1) of `path`, its leads leaving it at `marks[2]`, `marks[3]` and
+    /// `marks[6]` (``RealLineLaying/ringStripMarks(at:site:length:)``), `j` along the path
     /// at the first; each siding with a platform `length` long. `nil`
     /// where the yard cannot stand level within the leads' grade.
     static func strip(
         _ site: RealLineDepotSite, along path: WorldPath, at j: Double, second: RealWorldDemo.TrackPlan,
         marks: [(main: Int, second: Int)], first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
-        guard marks.count == 6, site.sidings > 0 else { return nil }
+        guard marks.count == 9, site.sidings > 0 else { return nil }
         func node(_ mark: (main: Int, second: Int)) -> (point: WorldVector, direction: WorldVector, height: Int64) {
             (WorldVector(second.nodes[mark.second].point), second.nodes[mark.second].direction.unit, second.heights[mark.second])
         }
-        let south = node(marks[2]), north = node(marks[3])
+        let south = node(marks[2]), middle = node(marks[3]), north = node(marks[6])
         // The yard's side of the line: the second track's.
         let side: Double = (south.point - path.point(at: j)).dot(path.tangent(at: j).normal) >= 0 ? 1 : -1
         let counts = Strip.counts(of: site)
@@ -147,10 +154,11 @@ extension RealLineDepotLayout {
         // The yard level, within the leads' grade of the second track at
         // both ends, as near the ground as that lets it.
         let climb = grade * Strip.leadReach
-        let low = Double(max(south.height, north.height)) - climb, high = Double(min(south.height, north.height)) + climb
+        let ends = [south.height, middle.height, north.height]
+        let low = Double(ends.max()!) - climb, high = Double(ends.min()!) + climb
         guard low <= high else { return nil }
-        let middle = banks[banks.count / 2].at(banks[banks.count / 2].length / 2, spacing * Double(counts.max()! + 1) / 2)
-        let height = Int64(max(low, min(high, ground(middle))).rounded())
+        let centre = banks[banks.count / 2].at(banks[banks.count / 2].length / 2, spacing * Double(counts.max()! + 1) / 2)
+        let height = Int64(max(low, min(high, ground(centre))).rounded())
         func coordinate(_ point: WorldVector, _ z: Int64 = height) -> WorldCoordinate { Self.coordinate(point, z) }
 
         // The running track: off the second track, along each bank (a
@@ -170,6 +178,7 @@ extension RealLineDepotLayout {
             }
             var alongs: [Double] = [0, bank.length]
             if bank.count >= 1 { alongs += [Strip.firstAfter, bank.length - Strip.firstAfter] }
+            if index == 0 { alongs.append(Strip.middleAlong) }
             alongs = Array(Set(alongs)).sorted()
             var nodes: [Double: Int] = [:]
             for (number, along) in alongs.enumerated() {
@@ -184,8 +193,20 @@ extension RealLineDepotLayout {
         runningPoints.append(coordinate(north.point, north.height))
         var pieces = [piece(
             runningPoints, runningCurves, start: RealLineAcquisition.NodeAt(piece: 1, node: marks[2].second),
-            end: RealLineAcquisition.NodeAt(piece: 1, node: marks[3].second)
+            end: RealLineAcquisition.NodeAt(piece: 1, node: marks[6].second)
         )]
+        // The middle lead: off the running track along the first bank,
+        // onto the second track going up the line, so a train leaves the
+        // yard that way short of a station beside it.
+        do {
+            let bank = banks[0], start = bank.at(Strip.middleAlong, 0)
+            pieces.append(piece(
+                [coordinate(start), coordinate(middle.point, middle.height)],
+                [cubic(start, leaving: bank.way, middle.point, arriving: middle.direction, handle: Strip.leadReach / 2)],
+                start: RealLineAcquisition.NodeAt(piece: first, node: runningNodes[0][Strip.middleAlong]!),
+                end: RealLineAcquisition.NodeAt(piece: 1, node: marks[3].second)
+            ))
+        }
 
         // Each bank's sidings, open at both ends, their platforms side by
         // side along the bank.

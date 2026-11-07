@@ -37,12 +37,20 @@ extension RealLineLaying {
 
     /// The main track's nodes of a ring's depot (as
     /// ``RealLineDepotLayout/marks(at:)``, with ``ringCrossover``).
-    /// Decision 621: `span` apart where its leads leave the line, a strip
-    /// yard's (``RealLineDepotLayout/Strip/span(of:length:)``); otherwise
-    /// the wye's two arms.
-    static func ringDepotMarks(at j: Double, span: Double = 2 * RealLineDepotLayout.armReach) -> [Double] {
-        let gap = RealLineDepotLayout.gap
-        return [j - gap - ringCrossover, j - gap, j, j + span, j + span + gap, j + span + gap + ringCrossover]
+    static func ringDepotMarks(at j: Double) -> [Double] {
+        let gap = RealLineDepotLayout.gap, arms = 2 * RealLineDepotLayout.armReach
+        return [j - gap - ringCrossover, j - gap, j, j + arms, j + arms + gap, j + arms + gap + ringCrossover]
+    }
+
+    /// Decision 621: a strip yard's main-track nodes: the crossover onto
+    /// the second track before its south lead, that lead, its middle lead
+    /// and the crossover off the second track after it (where a train
+    /// leaves the yard going up the line, short of a station beside the
+    /// yard), and its north lead and the crossover after that.
+    static func ringStripMarks(at j: Double, site: RealLineDepotSite, length: Int64) -> [Double] {
+        let gap = RealLineDepotLayout.gap, strip = RealLineDepotLayout.Strip.self
+        let middle = j + strip.middle, north = j + strip.span(of: site, length: length)
+        return [j - gap - ringCrossover, j - gap, j, middle, middle + gap, middle + gap + ringCrossover, north, north + gap, north + gap + ringCrossover]
     }
 
     /// `runs` with its stops the other way round the ring, from the same
@@ -237,12 +245,12 @@ extension RealLineLaying {
         // The depot's wye and crossovers, clear of the stations.
         let j = path.nearest(sitePoints[0]).along
         let marks = site.strip != nil
-            ? Self.ringDepotMarks(at: j, span: RealLineDepotLayout.Strip.span(of: site, length: platformLength))
+            ? Self.ringStripMarks(at: j, site: site, length: platformLength)
             : Self.ringDepotMarks(at: j)
         let reach = marks[0]...marks[marks.count - 1]
         // Decision 621: a strip yard runs on beside the stations between
         // its leads; only its leads and crossovers keep clear of them.
-        let clear = site.strip != nil ? [marks[0]...marks[2], marks[3]...marks[5]] : [reach]
+        let clear = site.strip != nil ? [marks[0]...marks[5], marks[6]...marks[8]] : [reach]
         guard reach.lowerBound > RealWorldDemo.shortestEdge, reach.upperBound < path.length - RealWorldDemo.shortestEdge,
               !spans.contains(where: { span in clear.contains { span.overlaps($0) } }),
               (sitePoints[1] - path.point(at: j)).dot(path.tangent(at: j).normal) < 0 else {
@@ -283,7 +291,7 @@ extension RealLineLaying {
         // (decision 479): onto the second track before it, off it after.
         let node = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
         let depotNodes = marks.compactMap(node)
-        guard depotNodes.count == 6 else { return refused("The line's depot does not fit here.", "這條線的機廠放不下。") }
+        guard depotNodes.count == marks.count else { return refused("The line's depot does not fit here.", "這條線的機廠放不下。") }
         let depotMarks = depotNodes.map { (main: $0, second: $0) }
         plans.append((
             RealWorldDemo.TrackPlan(beside: main, at: [depotNodes[0], depotNodes[1]], offsets: [0, offset]),
@@ -293,6 +301,13 @@ extension RealLineLaying {
             RealWorldDemo.TrackPlan(beside: main, at: [depotNodes[4], depotNodes[5]], offsets: [offset, 0]),
             RealLineAcquisition.NodeAt(piece: 1, node: depotNodes[4]), RealLineAcquisition.NodeAt(piece: 0, node: depotNodes[5]), true
         ))
+        if depotNodes.count == 9 {
+            // Decision 621: off the second track after the strip's north lead too.
+            plans.append((
+                RealWorldDemo.TrackPlan(beside: main, at: [depotNodes[7], depotNodes[8]], offsets: [offset, 0]),
+                RealLineAcquisition.NodeAt(piece: 1, node: depotNodes[7]), RealLineAcquisition.NodeAt(piece: 0, node: depotNodes[8]), true
+            ))
+        }
         var pieces = plans.map { entry in
             let plan = entry.plan
             let nodes = plan.nodes.indices.map { WorldCoordinate(x: plan.nodes[$0].point.x, y: plan.nodes[$0].point.y, z: plan.heights[$0]) }
