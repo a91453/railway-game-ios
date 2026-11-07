@@ -1631,10 +1631,19 @@ extension GameWorld {
     func againstClearance(of candidate: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> Int64? {
         guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(candidate.id) }) else { return nil }
         let key = PathMemo.LineAgainst(line: line.id, length: candidate.length)
-        let against: Set<TrackTraversal>
-        if let known = memo.paths.against[key] { against = known } else {
-            against = oneWayAgainst(line, length: candidate.length)
-            memo.paths.against[key] = against
+        let oneWay: Set<TrackTraversal>
+        if let known = memo.paths.against[key] { oneWay = known } else {
+            oneWay = oneWayAgainst(line, length: candidate.length)
+            memo.paths.against[key] = oneWay
+        }
+        var against = oneWay
+        if Self.followProbe == 4 {
+            // DEBUG-TYMC4 mode 4: only track a running service is planned along the other way.
+            var running: Set<TrackTraversal> = []
+            for train in trains where train.id != candidate.id && train.execution != nil && train.position != nil {
+                running.formUnion(serviceDirections(of: train, memo: &memo))
+            }
+            against = against.filter { running.contains($0.reversed) }
         }
         guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }) else { return nil }
         var last = envelopes.stretches.lastIndex { against.contains($0.traversal) }
