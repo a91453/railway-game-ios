@@ -315,6 +315,13 @@ final class LineLossLeaderMemo {
         kept = worked.leader
         workedOut += 1
     }
+
+    /// Decision 627: what it keeps at `old` still answers at `new` (a
+    /// command that changed only the clock's speed).
+    func keep(from old: Int, to new: Int) {
+        guard let key, key.revision == old else { return }
+        self.key = Key(revision: new, day: key.day)
+    }
 }
 
 /// Decision 597: keeps ``GameWorld/firstLineWithoutPlaceToPass()`` for the
@@ -350,6 +357,13 @@ final class PlaceToPassMemo {
         self.revision = revision
         kept = worked
         workedOut += 1
+    }
+
+    /// Decision 627: what it keeps at `old` still answers at `new` (a
+    /// command that changed only the clock's speed).
+    func keep(from old: Int, to new: Int) {
+        guard revision == old else { return }
+        revision = new
     }
 }
 

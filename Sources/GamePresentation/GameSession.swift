@@ -3523,13 +3523,40 @@ public final class GameSession {
     /// Changes ``world`` by `change`, which ``commandLog`` keeps as
     /// `action` (decision 193).
     func logging(_ action: CommandLog.Action, _ change: (inout GameWorld) -> Void) {
+        let revision = commandRevision
         isLogging = true
         change(&world)
         isLogging = false
+        if Self.changesOnlyTheClock(action) { keepStationMasterWork(from: revision) }
         log(action)
         // Decision 343: a pause or a change of speed starts or stops the
         // followed train's sound at once, not at the next step.
         updateFollowSounds()
+    }
+
+    /// Decision 627: a pause, a resume and a change of speed change the
+    /// clock's speed and nothing else of the world.
+    private static func changesOnlyTheClock(_ action: CommandLog.Action) -> Bool {
+        switch action {
+        case .setSpeed, .pause, .resume: true
+        default: false
+        }
+    }
+
+    /// Decision 627: what the station master's advice was worked out from
+    /// at command revision `revision` (the losing line, the line without a
+    /// place to pass, the hour's advice) still answers after a command that
+    /// changed only the clock's speed: none of it reads the speed. Kept on
+    /// at the new revision, so the next hour does not work it all out again
+    /// (the high-speed demo's Debug app stood still some 4 s at 11:00 after
+    /// it was set to 10×).
+    private func keepStationMasterWork(from revision: Int) {
+        guard revision != commandRevision else { return }
+        lineLossLeaderMemo.keep(from: revision, to: commandRevision)
+        placeToPassMemo.keep(from: revision, to: commandRevision)
+        if let kept = hourAdvice, kept.revision == revision {
+            hourAdvice = HourAdvice(hour: kept.hour, revision: commandRevision, advice: kept.advice)
+        }
     }
 
     /// What the weather's sound is worked out from (decision 346).
