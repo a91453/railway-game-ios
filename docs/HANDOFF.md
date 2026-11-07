@@ -356,7 +356,7 @@
   - 發版準備時（派 WHATSNEW 的同時）：檢查下面的「固定要派的三件事」。數上一輪審查終點之後合併的程式 PR 點數，看 HEALTH、CIOPT 的上一輪，到時機就派，結果寫進交接。作者 2026-11-07 問：「之前不是說30點就要做pr review為何現在都都要我提醒才做」。
 - **固定要派的三件事**（作者 2026-11-01：「好像很久沒有 pr review 跟 ci 優化還有 debug」「那為什麼每次都忘記做」）。遊戲規劃平常是被通知推著走（合併、CI、session 回報），這三件沒有通知會提醒，換手和壓縮的摘要也常漏掉，所以照下面的時機派，不等作者提：
   - **PR 審查**：每發一版之後，或上一輪之後合併了約 30 個改程式的 PR（以先到者為準），派下一輪 REVIEW-L（獨立審查已合併的程式 PR，GameCore 優先，只寫文件；範圍接上一輪的終點）。發現 P1 當天派修。
-  - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。
+  - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。上一輪：CIOPT（session_01YGNNukiXhE7LK51UdBYf4o，2026-11-07，[決策 620](decisions/620.md)，[量測](research/CI_MEASURE_2026-11-07.md)）：完整 tier 32 分是 `rest` 一片 22.6 分（環狀輕軌一個類別 428 s），不是排隊；交通計畫每段路只找一次路徑、`rest` 分兩片，估約 20–21 分。門檻在量測 §6。
   - **除錯**：作者或玩家的問題回報、main 的 `ci.yml` 或 full lane 紅、`PLAYER_FEEDBACK.md` 新的 bug 列，當天派。另外每發一版之後派一次健檢：可買的真實路線與示範地圖，逐分與最高倍速（一次 10 分鐘）各跑兩天，數發車、死結、誤點（DEBUG-BATCH 的做法）。
   - 換手時，§2.0 的交接寫上這三件的上一輪是誰、範圍或數字到哪。上一輪：REVIEW-L4（session_01YGNNunjEfxiHkJqASKZyZB，#1601–#1686）、CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D）、DEBUG-BATCH（session_01YGNNunTUt7aXu7pMTNAzrn），都是第 41 任 2026-11-01 派的。
 - **踩過的坑**：
@@ -425,7 +425,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（18 個 job：決策 544 續把測試片從 20 減到 14，加上 Changes、決策 563 的自我檢查 job、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（19 個 job：決策 544 續把測試片從 20 減到 14、決策 620 把 rest 分成兩片成 15，加上 Changes、決策 563 的自我檢查 job、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 

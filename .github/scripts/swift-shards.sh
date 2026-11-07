@@ -682,7 +682,15 @@ classes_of() {
   esac
 }
 CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13)
-SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
+# Decision 620 (2026-11-07): rest is two jobs, rest-1 and rest-2, each
+# half of rest's classes dealt by CLASS_WEIGHTS as selected_part deals a
+# selection. rest had grown from 470 s of tests (2026-11-04) to 1,270 s
+# (run 42303936063, 22.6 of its job's 30 minutes): every new class that no
+# campaign names lands in it. `run rest` still runs both halves at once.
+REST_PARTS=2
+REST_SHARDS=()
+for ((part = 1; part <= REST_PARTS; part++)); do REST_SHARDS+=("rest-$part"); done
+SHARDS=("${CAMPAIGN_SHARDS[@]}" "${REST_SHARDS[@]}")
 
 WORK=""
 trap '[[ -z "$WORK" ]] || rm -rf "$WORK"' EXIT
@@ -712,7 +720,7 @@ all_campaign_classes() {
 is_shard() {
   local shard
   [[ "$1" != selected || -n "${SELECTED_TESTS:-}" ]] || return 1
-  for shard in "${SHARDS[@]}" all selected; do
+  for shard in "${SHARDS[@]}" all selected rest; do
     [[ "$shard" == "$1" ]] && return 0
   done
   return 1
@@ -753,22 +761,31 @@ selected_pattern() {
 # them in one part made selected-1 or selected-5 take 460-510 s of tests
 # while others took 180-250; dealt by these weights the same runs' parts
 # come to 341-375 s.
-CLASS_WEIGHTS="Map3DSceneMemoryTests:221 WenhuLineTests:139 SaveMutationSecondHalfTests:107
-  Map3DModelPackLockTests:100 Map3DBusesTests:84 RealLineAcquisitionTests:81
+# Decision 620 (CIOPT, 2026-11-07): every class of rest measured at 2 s or
+# more in the full runs 41928730361, 42124703223, 42211389525, 42303936063
+# and 42317048280 and the pull request run 42343885098 that had no weight
+# or a lower one takes the slowest of those times (none was lowered).
+# KaohsiungLightRailDayTests took 428 s; decision 620 made its traffic plan
+# about 30 % faster (364 -> 255 s locally), so it weighs 300.
+CLASS_WEIGHTS="KaohsiungLightRailDayTests:300 Map3DSceneMemoryTests:221
+  Map3DModelPackLockTests:145 WenhuLineTests:139
+  SaveMutationSecondHalfTests:107 TaoyuanAirportLineTests:105
+  Map3DBusesTests:84 Map3DSceneRebuildTests:84 RealLineAcquisitionTests:81
   SaveMutationTests:80 Map3DBusLayerTests:79 HighSpeedDemoTests:77
   LiujiaLineTrainsTests:71 HighSpeedDemoDayTests:70 ServicePropertyTests:70
   ServiceRepeatingPropertyTests:66 Map3DStreetLifeTests:62
   TrafficControlPropertyTests:61 LinePatternPropertyTests:60
-  Map3DPlatformClearanceTests:58 LineDispatchPropertyTests:55
-  Map3DCoarseChunkTests:54 Map3DModelTests:54 GoldenScenarioTests:47
-  TrafficFollowingPropertyTests:46 Map3DC341IntegrationTests:45
-  Map3DTests:45 ServiceLinePropertyTests:45 TaoyuanAirportLineTests:45
+  SingleTrackLengthTests:59 Map3DPlatformClearanceTests:58
+  LineDispatchPropertyTests:55 Map3DCoarseChunkTests:54 Map3DModelTests:54
+  GoldenScenarioTests:47 TrafficFollowingPropertyTests:46
+  Map3DC341IntegrationTests:45 Map3DTests:45 ServiceLinePropertyTests:45
   Map3DStreetsTests:44 Map3DBuildReturnTests:43
   NetworkServicePropertyTests:43 DemoRealLinesTrackTests:42
   BoardingPropertyTests:40 SanyingLineSimpleDayTests:40
   Map3DRealBuildingsTests:39 Map3DTrainSetTests:37
   PassengerCheckOnceTests:37 ServiceRepeatingSecondHalfPropertyTests:37
-  Map3DSurfaceTests:36 DanhaiBothLinesDayTests:34
+  Map3DSurfaceTests:36 RealLineDepotAdditionTests:36
+  DanhaiBothLinesDayTests:34 OldStationCrossoverTests:34
   DemoSightsAndTransfersTests:33 HighSpeedDemoBatchTests:33
   Map3DNightAndGroundTests:33 ScheduledTrafficPropertyTests:33
   SeededStreetPlanTests:33 DanhaiBlueThenGreenSimpleDayTests:32
@@ -778,66 +795,75 @@ CLASS_WEIGHTS="Map3DSceneMemoryTests:221 WenhuLineTests:139 SaveMutationSecondHa
   ReservationShortcutTests:29 SanyingLineRealisticDayTests:29
   DanhaiGreenLineDayTests:26 EconomyPropertyTests:26
   Map3DEMU900IntegrationTests:26 Map3DSceneryPropsTests:26
-  Map3DEMU700IntegrationTests:25 RealLineDepotAdditionTests:25
+  Map3DEMU700IntegrationTests:25 FollowBusTests:24
   KernelDifferentialTests:24 Map3DRealGroundTests:24
   ScheduledOvertakeTrackMiddlePropertyTests:24
   Map3DEMU800IntegrationTests:23 Map3DPropsTests:22
   Map3DTrainOcclusionTests:22 PassengerPlanKeyTests:22
-  Map3DPPIntegrationTests:21 ScheduledTrafficSecondHalfPropertyTests:21
+  AmbientRealTrainsTests:21 Map3DPPIntegrationTests:21
+  RealLineRunningSideTests:21 ScheduledTrafficSecondHalfPropertyTests:21
   Map3DEMU3000Tests:20 Map3DEMU500Tests:20 TimetablePropertyTests:20
   DeadlockPropertyTests:19 EconomySecondHalfPropertyTests:19
   Map3DNextDepartureTests:19 RealRailwayTracingTests:19
-  VerticalRailwayPropertyTests:18 BusOneWayAndTunnelRealMapTests:17
-  Map3DSignTests:17 ScheduledOvertakeTrackLastPropertyTests:17
-  TRADemoTests:17 DanhaiDepotTests:16 Map3DChuKuangIntegrationTests:16
-  Map3DTourismEMU500Tests:16 NewGameSavePropertyTests:16
-  RealWorldDataLoadTests:16 ContinuousTrackPropertyTests:15
-  Map3DDetailTests:15 Map3DShadowTests:15
+  Map3DDuplexSteamTests:18 VerticalRailwayPropertyTests:18
+  BusOneWayAndTunnelRealMapTests:17 Map3DSignTests:17 PlatformStopTests:17
+  ScheduledOvertakeTrackLastPropertyTests:17 ScreenshotLandmarkTests:17
+  TRADemoTests:17 DanhaiDepotTests:16 DoubleTrackDeadlockTests:16
+  Map3DChuKuangIntegrationTests:16 Map3DTourismEMU500Tests:16
+  NewGameSavePropertyTests:16 RealWorldDataLoadTests:16
+  WorldSharedAcrossTasksTests:16 ContinuousTrackPropertyTests:15
+  FollowBusVisibleTests:15 Map3DDetailTests:15 Map3DShadowTests:15
   ScheduledOvertakeTrackFinalPropertyTests:15 AnkengLineTests:14
-  Map3DBoxInstanceTests:14 Map3DC371C381Tests:14 Map3DFrontageTests:14
-  Map3DKaohsiungLightRailTests:14 Map3DMeshSimplifierTests:14
-  Map3DTrainMaterialTests:14 OnboardingTests:14 Map3DNewTaipeiLRTTests:13
-  Map3DTaichungGreenTests:13 MetroStructuresTests:13 TRADemoDayTests:13
+  Map3DBoxInstanceTests:14 Map3DC371C381Tests:14 Map3DCableCarTests:14
+  Map3DFrontageTests:14 Map3DKaohsiungLightRailTests:14
+  Map3DMeshSimplifierTests:14 Map3DTrainMaterialTests:14 OnboardingTests:14
+  Map3DFerriesTests:13 Map3DNewTaipeiLRTTests:13 Map3DTaichungGreenTests:13
+  MetroStructuresTests:13 ScreenshotStreetFrontsTests:13 TRADemoDayTests:13
   BusReadAheadTests:12 CommandLogTests:12 Map3DE500Tests:12
   Map3DKaohsiungTests:12 Map3DTEMU2000Tests:12 RealBusesTests:12
   ScheduledOvertakeTrackPropertyTests:12 Map3DBreezyBlueIntegrationTests:11
   Map3DHighSpeedSetsTests:11 Map3DOpenEveryStartTests:11
   PassengerPropertyTests:11 RealWorldDemoGroundTests:11
-  DeadlockSearchCostTests:10 Map3DDuplexSteamTests:10
-  Map3DRealTracksTests:10 TrainNightLightsReadBackTests:10
-  LineLossFixesTests:9 Map3DTaipeiLandmarksTests:9 RealWorldDemoTests:9
-  RoadDrawRealMapTests:9 ScreenshotSceneTests:9 FrameTimeBenchTests:8
-  IdleTrainDeadlockTests:8 Map3DParksTests:8 Map3DRealTrainsTests:8
-  Map3DSceneKitTests:8 Map3DTrainLabelsTests:8 NetworkPostcardTests:8
-  NetworkSectionPropertyTests:8 NightSkipTests:8 SanyingDepotTests:8
-  DemoRealLinesTests:7 LessonGuideTests:7 LocalPassTests:7
-  Map3DStationKitTests:7 Map3DStationsTests:7 OccupiedRoutingPropertyTests:7
-  PassengerRouteSearchTests:7 RoadsTurnOnTests:7 SharedNetworkTests:7
-  FlexDispatchPropertyTests:6 RealWorldDemoRoadsTests:6
-  WorldStateMachineTests:6 BusRoadsRealMapTests:5 RealWorldExpansionTests:5
-  SparseCityLandTests:5 TurnbackPropertyTests:5 TurnbackTests:5
-  LandImportTests:4 LineRoutePreferencePropertyTests:4
-  LoadJourneyCacheTests:4 Map3DEMU900Tests:4 Map3DEstateKitTests:4
-  Map3DRoadBridgeTests:4 Map3DTaoyuanAirportTests:4 PolicyTests:4
-  RealLineOfferPreparingTests:4 RealRoadCellsTests:4
-  SanyingLineFreezeTests:4 ScheduledTrafficTests:4 TrafficSpeedTests:4
-  WeeklyPunctualityTests:4 WholeTaiwanTests:4 BusStopLabelsRealMapTests:3
-  CityRequestsTests:3 CoverageGridTests:3 LiveOvertakeTests:3
-  Map3DLotGroundTests:3 MoneyTextSourceTests:3 PingxiChallengeTests:3
-  ReplayFixtureTests:3 SingleTrackCapacityPropertyTests:3
-  TraceDragCostTests:3 WaterGridTests:3 AchievementsTests:2
-  AsyncRenderClosureSourceTests:2 BusRouteTests:2 CityGrowthTests:2
-  DemoAtTests:2 LessonTests:2 LineAccountsTests:2 LineLossDiagnosisTests:2
-  LongLegReplayTests:2 LoopLineBoardingTests:2 Map3DBreezyBlueTests:2
-  Map3DEMU700Tests:2 Map3DFarSets422Tests:2 Map3DFreightTrainTests:2
-  Map3DLandmarksTests:2 Map3DSimplifiedCacheTests:2 Map3DTEMU1000Tests:2
-  Map3DTaipeiMetro461Tests:2 Map3DTrainShapeRefreshTests:2
-  Map3DTrenchTests:2 Map3DWorksKitTests:2 MapTrainCarsOnTrackTests:2
-  MonthlyReportTests:2 NewGameBalanceTests:2 NewGameCampaignTests:2
-  NewsSessionTests:2 OneRowPerGameTests:2 RealLineStockTests:2
-  RealTRAScheduleTests:2 SavedGameTests:2 ScheduledOvertakeTrackTests:2
-  StationCommerceCardTests:2 TraceOverlapTests:2 TrafficControlTests:2
-  TrainSessionPropertyTests:2 TrainTripLogTests:2 TutorialSessionTests:2"
+  DeadlockSearchCostTests:10 Map3DRealTracksTests:10
+  Map3DRoundhouseStockTests:10 TrainNightLightsReadBackTests:10
+  LineLossFixesTests:9 Map3DFiveSectionLRTTests:9
+  Map3DInterchangeStreetTests:9 Map3DTaipeiLandmarksTests:9
+  RealWorldDemoTests:9 RoadDrawRealMapTests:9 ScreenshotSceneTests:9
+  FrameTimeBenchTests:8 IdleTrainDeadlockTests:8 Map3DParksTests:8
+  Map3DRealTrainsTests:8 Map3DSceneKitTests:8 Map3DTrainLabelsTests:8
+  NetworkPostcardTests:8 NetworkSectionPropertyTests:8 NightSkipTests:8
+  SanyingDepotTests:8 CablewayToolTests:7 DemoRealLinesTests:7
+  FerryPierSnapTests:7 LessonGuideTests:7 LiveOvertakeTests:7
+  LocalPassTests:7 Map3DRealDispatchTests:7 Map3DStationKitTests:7
+  Map3DStationsTests:7 OccupiedRoutingPropertyTests:7
+  PassengerRouteSearchTests:7 QuestionMemoTests:7 RoadsTurnOnTests:7
+  SharedNetworkTests:7 FlexDispatchPropertyTests:6 RealWorldDemoRoadsTests:6
+  WorldStateMachineTests:6 BusRoadsRealMapTests:5 FerryCijinShoreTests:5
+  KaohsiungLightRailTests:5 RealWorldExpansionTests:5 SparseCityLandTests:5
+  TurnbackPropertyTests:5 TurnbackTests:5 BusMotionTests:4 LandImportTests:4
+  LineRoutePreferencePropertyTests:4 LoadJourneyCacheTests:4
+  Map3DEMU900Tests:4 Map3DEstateKitTests:4 Map3DRoadBridgeTests:4
+  Map3DTaoyuanAirportTests:4 PolicyTests:4 RealLineOfferPreparingTests:4
+  RealRoadCellsTests:4 SanyingLineFreezeTests:4 ScheduledTrafficTests:4
+  TrafficSpeedTests:4 WeeklyPunctualityTests:4 WholeTaiwanTests:4
+  AchievementsTests:3 BusStopLabelsRealMapTests:3 CityRequestsTests:3
+  CoverageGridTests:3 LineConfirmationTests:3 Map3DLotGroundTests:3
+  MoneyTextSourceTests:3 PingxiChallengeTests:3 ReplayFixtureTests:3
+  SingleTrackCapacityPropertyTests:3 TraceDragCostTests:3 WaterGridTests:3
+  AsyncRenderClosureSourceTests:2 BusRouteTests:2 CabinFollowTests:2
+  CablewayTests:2 CityGrowthTests:2 DemoAtTests:2 LessonTests:2
+  LineAccountsTests:2 LineLossDiagnosisTests:2 LinePanelMemoTests:2
+  LineRoutePreferenceTests:2 LongLegReplayTests:2 LoopLineBoardingTests:2
+  Map3DBreezyBlueTests:2 Map3DEMU700Tests:2 Map3DFarSets422Tests:2
+  Map3DFreightTrainTests:2 Map3DLandmarksTests:2 Map3DSimplifiedCacheTests:2
+  Map3DSunMoonCabinTests:2 Map3DTEMU1000Tests:2 Map3DTaipeiMetro461Tests:2
+  Map3DTrainShapeRefreshTests:2 Map3DTrenchTests:2 Map3DWorksKitTests:2
+  MapTrainCarsOnTrackTests:2 MonthlyReportTests:2 NewGameBalanceTests:2
+  NewGameCampaignTests:2 NewsSessionTests:2 OneRowPerGameTests:2
+  RealLineStockTests:2 RealTRAScheduleTests:2 SaveSyncTests:2
+  SavedGameTests:2 ScheduledOvertakeTrackTests:2 StationCommerceCardTests:2
+  TraceOverlapTests:2 TrafficControlTests:2 TrainSessionPropertyTests:2
+  TrainTripLogTests:2 TutorialSessionTests:2"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
@@ -848,9 +874,15 @@ CLASS_WEIGHT_DEFAULT=1
 # put HighSpeedDemoTests, RealWorldDemoTests and LineLossDiagnosisTests in
 # one part: 2.9, 7.2 and 9.6 minutes of tests on run 38525866535.
 selected_part() {
-  local part="${SELECTED_PART:-1/1}"
+  deal_part "${SELECTED_PART:-1/1}" SELECTED_PART
+}
+
+# deal_part <k/n> <what>: the test IDs on stdin of the k-th of n parts, as
+# selected_part describes (decision 620: rest's parts too).
+deal_part() {
+  local part="$1"
   [[ "$part" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ && "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ]] ||
-    die "SELECTED_PART '$part' is not k/n."
+    die "$2 '$part' is not k/n."
   sort | awk -v k="${BASH_REMATCH[1]}" -v n="${BASH_REMATCH[2]}" \
     -v weights="$CLASS_WEIGHTS" -v fallback="$CLASS_WEIGHT_DEFAULT" '
     BEGIN {
@@ -893,6 +925,7 @@ select_ids() {
     all) cat "$2" ;;
     selected) grep -E "$(selected_pattern)" "$2" | selected_part || true ;;
     rest) grep -v -E "$(pattern_for "$(all_campaign_classes | tr '\n' ' ')")" "$2" || true ;;
+    rest-*) select_ids rest "$2" | deal_part "${1#rest-}/$REST_PARTS" "rest part" ;;
     *) grep -E "$(pattern_for "$(classes_of "$1")")" "$2" || true ;;
   esac
 }
@@ -1329,7 +1362,7 @@ run_shard() {
       echo "- selected **$expected_count** of $total tests; executed **$executed_count**; failed **$failed_count**; ${seconds}s"
       if [[ "$shard" == selected ]]; then
         echo "- tests: $SELECTED_TESTS"
-      elif [[ "$shard" != rest && "$shard" != all ]]; then
+      elif [[ "$shard" != rest && "$shard" != rest-* && "$shard" != all ]]; then
         echo "- classes: $(classes_of "$shard")"
       fi
     } >>"$GITHUB_STEP_SUMMARY"
@@ -1892,7 +1925,9 @@ head_full_run() {
       echo "::warning::Could not list the jobs of run $id." >&2
       continue
     fi
-    if grep -q -x -F "Swift 6.4 (Linux) / rest" <<<"$jobs"; then
+    # rest-1 since decision 620; rest before it (a full run of an older
+    # commit).
+    if grep -q -x -E "Swift 6\.4 \(Linux\) / rest(-1)?" <<<"$jobs"; then
       echo "$url"
       return 0
     fi
