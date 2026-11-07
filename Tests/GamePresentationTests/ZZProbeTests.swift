@@ -31,7 +31,7 @@ final class ZZProbeTests: XCTestCase {
             print(text)
         }
         if env["PROBE_NET"] != nil {
-            for s in world.stations where ["環北站", "老街溪站", "高鐵桃園站", "青埔機廠", "興南站", "領航站", "桃園體育園區站"].contains(s.name) {
+            for s in world.stations where (env["PROBE_STATIONS"] ?? "環北站,老街溪站,高鐵桃園站,青埔機廠").split(separator: ",").map(String.init).contains(s.name) {
                 print("PROBE station \(s.name) \(s.id) platforms \(world.network.platforms(of: s.id).map { "\($0.edge)[\($0.start)-\($0.end)]" })")
             }
             for raw in (Int(env["PROBE_E0"] ?? "0") ?? 0)...(Int(env["PROBE_E1"] ?? "0") ?? 0) {
