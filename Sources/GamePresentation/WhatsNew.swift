@@ -30,6 +30,54 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 120.
+        Entry(
+            id: "2026-11-07-120",
+            items: [
+                Line(
+                    english: "The depot throat of a depot you build is now a symmetric fan like a real train yard.",
+                    chinese: "自己蓋的機廠，咽喉改成像真實車場的對稱扇形。"
+                ),
+                Line(
+                    english: "The high-speed demo's northern end now has the Nangang stabling tracks and the six bases beside Hsinchu laid out as in real life.",
+                    chinese: "高鐵示範北端：南港留置線和新竹旁的六家基地，照真實配置。"
+                ),
+                Line(
+                    english: "On the Kaohsiung Circular Light Rail the depot lines up in a strip along the real Qianzhen depot, and fewer empty trains run.",
+                    chinese: "高雄環狀輕軌的機廠照真實前鎮機廠沿線排成一條帶，空車少跑。"
+                ),
+                Line(
+                    english: "The 3D map shows road tunnel mouths, and lights glow at night.",
+                    chinese: "3D 地圖多了公路隧道口，晚上的燈有光暈。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "At 10x speed game time keeps up, even with trains waiting at stations to depart.",
+                    chinese: "10 倍速時遊戲時間跟得上，有車在站上等出發也不再拖慢。"
+                ),
+                Line(
+                    english: "Correction to the last build: the cab window view only now glides smoothly instead of jerking, at 10x and at 1x.",
+                    chinese: "更正上一版：車窗視角走走停停，這一版才真的改好，10 倍速和 1 倍速都滑行連貫。"
+                ),
+                Line(
+                    english: "Following a train in 3D no longer drops you back to 2D after a short while.",
+                    chinese: "3D 跟車不會沒多久自己跳回 2D。"
+                ),
+                Line(
+                    english: "The 3D map uses less memory.",
+                    chinese: "3D 地圖比較省記憶體。"
+                ),
+                Line(
+                    english: "The Wenhu Line runs late less often in realistic mode.",
+                    chinese: "文湖線擬真模式誤點變少。"
+                ),
+                Line(
+                    english: "Vehicle dispatch on the Kaohsiung Circular Light Rail is more accurate.",
+                    chinese: "高雄環狀輕軌的車輛調度更準。"
+                ),
+            ]
+        ),
         // 119.1.
         Entry(
             id: "2026-11-07-119-1",
