@@ -3,7 +3,7 @@ import Foundation
 /// Isolated exterior study. No station catalog or live-map lookup calls this type.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
-    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung" }
+    public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -12,6 +12,7 @@ public enum Map3DStationExteriorBatch1 {
         case .hsinchuTRA: builder.hsinchuExteriorStudy(detail: detail)
         case .hualienTRA: builder.hualienExteriorStudy(detail: detail)
         case .taitungTRA: builder.taitungExteriorStudy(detail: detail)
+        case .banqiaoTRA: builder.banqiaoExteriorStudy(detail: detail)
         }
         return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
     }
@@ -302,6 +303,75 @@ public enum Map3DStationExteriorBatch1 {
         (53.526, 71.849),
         (46.463, 72.660),
         (44.977, 60.051),
+    ]
+
+    // Banqiao complex: OSM ways from osmtoday Taiwan PBF, downloaded 2026-11-06.
+    // Metres east/north from (121.4640451, 25.0144511); © OpenStreetMap contributors, ODbL 1.0.
+    static let banqiaoMainFootprint: [(Float, Float)] = [ // OSM way 232201616
+        (-101.440, -47.035),
+        (-76.974, -16.724),
+        (-56.892, 8.740),
+        (-33.716, 38.940),
+        (-11.659, 67.673),
+        (-0.947, 82.418),
+        (30.189, 58.322),
+        (41.697, 50.049),
+        (62.787, 34.893),
+        (71.442, 22.673),
+        (74.737, 18.014),
+        (76.178, 15.979),
+        (78.889, 12.142),
+        (85.892, 11.787),
+        (90.799, 6.182),
+        (89.469, 1.357),
+        (86.497, -3.191),
+        (80.894, -4.770),
+        (75.110, -3.547),
+        (60.580, -17.547),
+        (27.146, -28.054),
+        (-0.695, -46.969),
+        (-3.688, -50.004),
+        (-24.677, -71.298),
+        (-28.436, -78.315),
+        (-42.714, -104.912),
+        (-50.765, -109.471),
+        (-51.118, -114.019),
+        (-53.395, -118.567),
+        (-58.293, -120.847),
+        (-63.895, -118.567),
+        (-67.220, -114.542),
+        (-78.466, -106.503),
+        (-99.788, -91.258),
+        (-92.734, -81.117),
+        (-84.058, -68.618),
+        (-79.473, -62.025),
+    ]
+    static let banqiaoCircularLineFootprint: [(Float, Float)] = [ // OSM way 818694787
+        (98.558, 67.451),
+        (99.425, 66.806),
+        (82.940, 44.434),
+        (81.841, 42.944),
+        (8.515, 96.973),
+        (26.108, 120.847),
+        (49.355, 103.712),
+        (52.257, 107.648),
+        (78.073, 88.589),
+        (75.191, 84.675),
+        (91.132, 72.933),
+        (94.004, 76.836),
+        (101.440, 71.343),
+    ]
+    static let banqiaoTowerSouthFootprint: [(Float, Float)] = [ // OSM way 1491394339
+        (-74.334, -12.854),
+        (-38.805, -39.007),
+        (-63.724, -72.866),
+        (-99.254, -46.713),
+    ]
+    static let banqiaoTowerNorthFootprint: [(Float, Float)] = [ // OSM way 1491394340
+        (-35.661, 47.369),
+        (0.595, 22.228),
+        (-23.367, -12.309),
+        (-59.613, 12.821),
     ]
 
 }
@@ -652,5 +722,117 @@ private extension StationKitBuilder {
             add(.flat(named: "taitung-platform-supports", from: supports.mesh),
                 at: Map3DPoint(east, 0, north), angle: rotation * .pi / 180)
         }
+    }
+
+    mutating func banqiaoExteriorStudy(detail: Map3DStationExteriorBatch1.LevelOfDetail) {
+        let trim = Map3DColor.rgb(0xEEE5DA)
+        let towerWall = Map3DColor.rgb(0xDDCEC2)
+        let podiumWall = Map3DColor.rgb(0xCDBEB5)
+        let paleRoof = Map3DColor.rgb(0xBEC7C6)
+        let windows = Map3DColor.rgb(0x728C94)
+        let glass = Map3DColor.rgb(0x688189)
+        let darkGlass = Map3DColor.rgb(0x5B6970)
+
+        // The parent OSM building has height=116.8 m and 25 above-ground
+        // levels. Its two commercial building:part ways have no own heights.
+        footprint(Map3DStationExteriorBatch1.banqiaoMainFootprint, color: podiumWall)
+        for outline in [Map3DStationExteriorBatch1.banqiaoTowerSouthFootprint,
+                        Map3DStationExteriorBatch1.banqiaoTowerNorthFootprint] {
+            footprint(outline, color: towerWall, baseY: 20, height: 0.32)
+        }
+        // The circular-line station is tagged layer=1, without height tags.
+        footprint(Map3DStationExteriorBatch1.banqiaoCircularLineFootprint,
+                  color: paleRoof, baseY: 7, height: 0.32)
+
+        // A low, long station podium with two cylindrical end pavilions and
+        // a shallow curved roof rhythm. Podium height and all subdivisions
+        // are photo/reference estimates, separate from OSM's tower height.
+        var podium = StationKitBuilder()
+        podium.box(0, 0.32, 0, 181, 91, 17.6, podiumWall)
+        podium.box(0, 0.32, -48, 161, 20, 18.3, podiumWall)
+        podium.box(0, 18.0, 0, 191, 113, 1.4, trim)
+        for x: Float in [-85, 85] {
+            podium.cylinder(x, 0.32, -47, radius: 11.0, height: 18.5,
+                            color: podiumWall, sides: detail == .near ? 16 : 10)
+            podium.cylinder(x, 18.82, -47, radius: 11.8, height: 0.7,
+                            color: trim, sides: detail == .near ? 16 : 10)
+        }
+        for x in stride(from: Float(-68), through: 68, by: detail == .near ? 10 : 20) {
+            podium.box(x, 2.8, -58.18, 6.0, 0.18, 10.4, windows)
+            if detail == .near { podium.box(x, 13.8, -58.2, 0.55, 0.25, 3.9, trim) }
+        }
+        for x: Float in [-47, 0, 47] {
+            podium.canopy(x, 19.4, -43, length: 27, width: 17,
+                          rise: 1.8, color: paleRoof)
+        }
+        add(.flat(named: "banqiao-podium", from: podium.mesh),
+            at: Map3DPoint(-13.09, 0, -32.37), angle: 52.2644 * .pi / 180)
+
+        // The two towers keep their individual OSM part outlines. The parent
+        // way supplies only their shared 116.8 m top; 20 m start is estimated.
+        let towers: [(Float, Float, Float)] = [(-69.03, -42.86, -36.3563),
+                                               (-29.51, 17.53, -34.7394)]
+        for (east, north, rotation) in towers {
+            var tower = StationKitBuilder()
+            tower.box(0, 20.32, 0, 43.4, 41.4, 85.2, towerWall)
+            tower.box(0, 105.52, 0, 39.4, 37.4, 8.78, towerWall)
+            tower.box(0, 114.3, 0, 47.1, 45.0, 2.5, trim)
+            tower.box(0, 112.7, 0, 40.2, 38.2, 1.6, podiumWall)
+            let floorStep: Int = detail == .near ? 1 : 3
+            let columns: [Float] = detail == .near ? [-15.4, -7.7, 0, 7.7, 15.4]
+                                                   : [-14, 0, 14]
+            for floor in stride(from: 0, through: 21, by: floorStep) {
+                let y = Float(23.0 + Double(floor) * 3.7)
+                let height: Float = detail == .near ? 2.45 : 2.9
+                for x in columns {
+                    for z: Float in [-20.75, 20.75] {
+                        let panel = [Map3DPoint(x - 2.6, y, z),
+                                     Map3DPoint(x + 2.6, y, z),
+                                     Map3DPoint(x + 2.6, y + height, z),
+                                     Map3DPoint(x - 2.6, y + height, z)]
+                        tower.face(panel, inside: Map3DPoint(0, y, 0), color: windows)
+                    }
+                }
+                let sideColumns: [Float] = detail == .near ? [-13, 0, 13] : [-11, 11]
+                for z in sideColumns {
+                    for x: Float in [-21.75, 21.75] {
+                        let panel = [Map3DPoint(x, y, z - 2.6),
+                                     Map3DPoint(x, y, z + 2.6),
+                                     Map3DPoint(x, y + height, z + 2.6),
+                                     Map3DPoint(x, y + height, z - 2.6)]
+                        tower.face(panel, inside: Map3DPoint(0, y, 0), color: windows)
+                    }
+                }
+            }
+            for x: Float in [-14, 14] {
+                tower.box(x, 106.6, -18.9, 5.6, 0.18, 4.9, glass)
+            }
+            add(.flat(named: "banqiao-tower", from: tower.mesh),
+                at: Map3DPoint(east, 0, north), angle: rotation * .pi / 180)
+        }
+
+        // Dark central glazed link between the two station towers.
+        var link = StationKitBuilder()
+        link.box(0, 20.32, 0, 30.0, 37.0, 66.0, darkGlass)
+        for y in stride(from: Float(25), through: 82, by: detail == .near ? 5.5 : 12) {
+            for z: Float in [-18.65, 18.65] {
+                link.box(0, y, z, 30.5, 0.24, 0.34, paleRoof)
+            }
+        }
+        add(.flat(named: "banqiao-glass-link", from: link.mesh),
+            at: Map3DPoint(-49.27, 0, -12.67), angle: 52.2644 * .pi / 180)
+
+        var circular = StationKitBuilder()
+        circular.box(0, 7.32, 0, 87, 32, 11.0, glass)
+        circular.canopy(0, 18.32, 0, length: 91, width: 34,
+                        rise: 3.7, color: paleRoof)
+        for x in stride(from: Float(-39), through: 39, by: detail == .near ? 7 : 19) {
+            for z: Float in [-15.8, 15.8] {
+                circular.box(x, 7.32, z, 0.46, 0.52, 10.7, trim)
+                circular.box(x, 0.32, z, 0.75, 0.75, 7.0, podiumWall)
+            }
+        }
+        add(.flat(named: "banqiao-circular-line", from: circular.mesh),
+            at: Map3DPoint(55.42, 0, 83.86), angle: -36.3842 * .pi / 180)
     }
 }

@@ -1,4 +1,4 @@
-# 車站外觀第一批 studies：第 4 次交付
+# 車站外觀第一批 studies：第 5 次交付
 
 這是獨立研究配方，沒有接到 `Map3DStationKit` 的站點選型、地圖或存檔。公開庫只有配方、測試與一張總覽；逐方向原生模型、GLB、日夜圖與離線檢視頁在私有素材庫的同名資料夾。
 
@@ -50,11 +50,23 @@
 
 外觀只看 Wikimedia Commons [2018 年站房正面](https://commons.wikimedia.org/wiki/File:TRA_Taitung_Station_20180502.jpg)、[2013 年入口夜景](https://commons.wikimedia.org/wiki/File:TRA_Taitung_Station_main_entrance_20131203_night.jpg)、[2008 年月台棚下方](https://commons.wikimedia.org/wiki/File:Platform_2,_TRA_Taitung_Station_20080606.jpg)。照片沒有作貼圖。以現有 station kit 的盒體、封閉曲棚和淡色調組出近景／遠景；保留淺色拱棚比牆亮、窗與棚底較暗的順序。近景 **3,722 三角**、遠景 **1,754 三角**；拱棚桁架與細部仍需作者看外觀後確認。
 
-## 尚缺的七站
+## 已完成：臺鐵板橋
+
+| 部件 | OSM 足跡最小旋轉矩形 | 高度與外觀判斷 |
+| --- | --- | --- |
+| 板橋車站大樓母體 | [way 232201616](https://www.openstreetmap.org/way/232201616)，**199.488 × 121.932 m**，37 個不重複頂點；OSM 標 `height=116.8` m、`building:levels=25`、地下 5 層 | **116.8 m 是 OSM 母體標籤**，作雙塔頂標高。照片顯示低層長站體、兩端圓筒與中央深色玻璃；約 20 m 低層高度、柱窗和三段淺棚曲度都是推估，地下層不建模。 |
+| 南側塔樓分件 | [way 1491394339](https://www.openstreetmap.org/way/1491394339)，**44.170 × 42.088 m**，4 個頂點；`building:part=commercial` | 分件沒有自己的高度標籤；以母體 116.8 m 為頂、約 20 m 為起點。淺粉灰窗格、頂部外挑檐板依照片推估。 |
+| 北側塔樓分件 | [way 1491394340](https://www.openstreetmap.org/way/1491394340)，**44.169 × 42.086 m**，4 個頂點；`building:part=commercial` | 同上。雙塔及深色中段按照片和 OSM 分件相對位置組合，窗距不當作實測樓層分隔。 |
+| 環狀線板橋站 | [way 818694787](https://www.openstreetmap.org/way/818694787)，**91.185 × 34.580 m**，13 個頂點；`layer=1` | OSM 沒有高度或屋頂形狀。底部約 7 m、頂部約 22 m、低弧棚與柱距依參考展示比例和外觀照片推估。 |
+
+四個 way 的全部非閉合頂點取自 2026-11-06 下載的 osmtoday `asia/taiwan.pbf`，以 pyosmium 擷取；局部公尺座標原點為 121.4640451°E、25.0144511°N。同 way 尺寸和相對位置與參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/banqiao-v1/metadata.json` 核對；`blender-buildings-v1/banqiao-v1/model.json` 僅看雙塔、低層與高架站比例，不用網格。OSM 輪廓 © OpenStreetMap contributors，ODbL 1.0。
+
+外觀照片只看 Wikimedia Commons [2014 年板橋車站大樓](https://commons.wikimedia.org/wiki/File:Banqiao_Station_Building_20140610.jpg)、[從新北市政府望向站體](https://commons.wikimedia.org/wiki/File:新北市_板橋車站大樓_Banciao_Station_From_New_Taipei_City_Hall_-_panoramio.jpg)、[塔樓入口](https://commons.wikimedia.org/wiki/File:Banqiao_Station_Building_N1A_20230909.jpg) 及[環狀線列車望向高架站](https://commons.wikimedia.org/wiki/File:Train_on_MRT_Circular_Line_Meeting_near_Banqiao_Station_01.jpg)。照片不作貼圖。以 station kit 盒體、圓柱、曲棚與淡色玻璃抽象重建；近景 **3,609 三角**、遠景 **1,693 三角**。窗格、低層平面、環狀線棚面與兩端圓筒仍待作者核對外觀。
+
+## 尚缺的六站
 
 | 站 | 來源與目前量到的部件足跡（m） | 還缺的核對 |
 | --- | --- | --- |
-| 臺鐵板橋 | 參考庫 `stations/banqiao-v1/metadata.json` 的 OSM 輪廓：板橋車站 199 × 122（232201616）；板橋站塔樓 44 × 42（1491394339）；板橋站塔樓 44 × 42（1491394340）；環狀線板橋 91 × 35（818694787） | 雙塔與站體真實高度及照片細節。 |
 | 臺鐵南港 | 參考庫 `stations/nangang-v1/metadata.json` 的 OSM 輪廓：南港車站 213 × 134（233331393）；南港 A 棟 61 × 35（908843920）；南港 B 棟 84 × 39（411044008）；南港 C 棟 112 × 42（410390808）；南港東側站房 83 × 42（556511660） | A／B／C 棟真實高度與外觀。 |
 | 高鐵桃園 | 參考庫 `stations/taoyuan-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵桃園 122 × 74（23547222）；機捷 A18 154 × 52（560119012） | 挑簷、採光頂與真實高度。 |
 | 高鐵新竹 | 參考庫 `stations/hsinchu-hsr-v1/metadata.json` 的 OSM 輪廓：高鐵新竹 344 × 101（321663134）；六家 48 × 34（321663135） | 長曲頂與真實高度。 |
