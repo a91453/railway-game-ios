@@ -14,7 +14,7 @@ Inputs (environment):
   ASC_KEY_ID           secret: the App Store Connect team API key ID
   ASC_ISSUER_ID        secret: the issuer ID
   ASC_PRIVATE_KEY      secret: the whole text of AuthKey_<key id>.p8
-  BUILD_NUMBER         the uploaded build's CFBundleVersion, such as 52.1
+  BUILD_NUMBER         the uploaded build's CFBundleVersion, such as 119 or 119.2
   APP_VERSION          its CFBundleShortVersionString, such as 0.5.0
   GITHUB_STEP_SUMMARY  set by GitHub Actions; the report is added to it
   PROCESSING_TIMEOUT   optional: seconds to wait in all; default 3600

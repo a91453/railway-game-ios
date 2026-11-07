@@ -65,23 +65,26 @@ expect_errors() {
 
 # --- Passing cases and the build-number scheme ------------------------------
 run valid 0 "${valid[@]}"
-expect_build valid 7.1
+expect_build valid 7
 run rerun 0 "${valid[@]}" GITHUB_RUN_ATTEMPT=2
 expect_build rerun 7.2
+run third-attempt 0 "${valid[@]}" GITHUB_RUN_ATTEMPT=3
+expect_build third-attempt 7.3
 run next-run 0 "${valid[@]}" GITHUB_RUN_NUMBER=8
-expect_build next-run 8.1
+expect_build next-run 8
 run offset 0 "${valid[@]}" BUILD_NUMBER_OFFSET=100
-expect_build offset 107.1
+expect_build offset 107
 run offset-zero 0 "${valid[@]}" BUILD_NUMBER_OFFSET=0
-expect_build offset-zero 7.1
+expect_build offset-zero 7
 run max-components 0 "${valid[@]}" GITHUB_RUN_NUMBER=9999 GITHUB_RUN_ATTEMPT=99
 expect_build max-components 9999.99
 run max-offset-sum 0 "${valid[@]}" GITHUB_RUN_NUMBER=7 BUILD_NUMBER_OFFSET=9992
-expect_build max-offset-sum 9999.1
+expect_build max-offset-sum 9999
 # Each later build number must sort after the earlier ones, as App Store
-# Connect compares them: component by component, as integers.
-ordered="$(printf '%s\n' 8.1 7.2 7.1 107.1 | sort -t. -k1,1n -k2,2n | tr '\n' ' ')"
-[[ "$ordered" == "7.1 7.2 8.1 107.1 " ]] || fail "build numbers sort as '$ordered'"
+# Connect compares them: component by component, as integers, a missing
+# component read as zero (7 < 7.2 < 7.3 < 8).
+ordered="$(printf '%s\n' 8 7.3 7.2 7 107 | sort -t. -k1,1n -k2,2n | tr '\n' ' ')"
+[[ "$ordered" == "7 7.2 7.3 8 107 " ]] || fail "build numbers sort as '$ordered'"
 # A .p8 pasted with CR line endings and a leading blank line is accepted.
 run crlf-key 0 "${valid[@]}" ASC_PRIVATE_KEY=$'\r\n'"${fake_key//$'\n'/$'\r\n'}"$'\r\n'
 

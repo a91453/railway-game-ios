@@ -455,6 +455,23 @@ class ChangesTests(Fixture):
         # Without a title from GitHub: the merge body, else the branch name.
         self.assertIn("- owner/claude/one (#10)\n", result.stdout)
 
+    def test_names_a_first_attempt_after_decision_616_without_a_dot(self):
+        # Runs after LAST_DOTTED_RUN (118) upload the plain number on their
+        # first attempt and <n>.<attempt> on a re-run.
+        result = self.run_changes(self.github(self.runs(number=119, attempt=1), {}))
+        self.assertTrue(result.stdout.startswith("Changes since build 119:\n"), result.stdout)
+        result = self.run_changes(self.github(self.runs(number=119, attempt=2), {}))
+        self.assertTrue(result.stdout.startswith("Changes since build 119.2:\n"), result.stdout)
+        result = self.run_changes(self.github(self.runs(number=119, attempt=1), {}), BUILD_NUMBER_OFFSET="100")
+        self.assertTrue(result.stdout.startswith("Changes since build 219:\n"), result.stdout)
+
+    def test_build_labels_match_testflight_preflight(self):
+        module = load(CHANGES, "changes_labels")
+        self.assertEqual(module.LAST_DOTTED_RUN, 118)
+        self.assertEqual([module.build_label(0, run, attempt) for run, attempt in
+                          ((118, 1), (118, 2), (119, 1), (119, 2), (119, 3), (120, 1))],
+                         ["118.1", "118.2", "119", "119.2", "119.3", "120"])
+
     def test_names_the_attempt_that_uploaded_not_a_later_rerun_of_processing(self):
         # Run 51 uploaded build 51.1; only its processing job was run again
         # (attempt 2), so the run's own run_attempt reads 2.

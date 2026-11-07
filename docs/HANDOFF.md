@@ -352,7 +352,7 @@
 - **每次發版**：
   - 發版前：改 `.github/testflight-whats-new.md`（它只在上一版之後有改動時才會被用，沒改就是自動列出的 PR 清單）。
   - 發版前，同時改 App 裡的「這版新增」卡：`Sources/GamePresentation/WhatsNew.swift` 的 `WhatsNew.entries`（兩種語言、只寫玩家能做什麼；上一則已發出去就在最前面加新的一則、id 用當天日期，還沒發就改最前面那則；步驟在決策 415）。
-  - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號是 0.5.0 (run 號.1)。
+  - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號是 0.5.0 (run 號)，例如 0.5.0 (119)；重跑失敗的 job 才是 run 號.attempt（119.2），118 以前是 run 號.1（決策 616）。
   - 發版準備時（派 WHATSNEW 的同時）：檢查下面的「固定要派的三件事」。數上一輪審查終點之後合併的程式 PR 點數，看 HEALTH、CIOPT 的上一輪，到時機就派，結果寫進交接。作者 2026-11-07 問：「之前不是說30點就要做pr review為何現在都都要我提醒才做」。
 - **固定要派的三件事**（作者 2026-11-01：「好像很久沒有 pr review 跟 ci 優化還有 debug」「那為什麼每次都忘記做」）。遊戲規劃平常是被通知推著走（合併、CI、session 回報），這三件沒有通知會提醒，換手和壓縮的摘要也常漏掉，所以照下面的時機派，不等作者提：
   - **PR 審查**：每發一版之後，或上一輪之後合併了約 30 個改程式的 PR（以先到者為準），派下一輪 REVIEW-L（獨立審查已合併的程式 PR，GameCore 優先，只寫文件；範圍接上一輪的終點）。發現 P1 當天派修。
@@ -857,7 +857,7 @@
 
 - **112.1 發版（作者自己按）**：作者說「好 那我發了」，`testflight.yml` 由作者按，**規劃不按**。main HEAD `bef26cae`（#1796）。作者把 full lane 交給規劃看（「那full lane給你跑」）：
   - 同 commit 手動跑的完整 `ci.yml` **41817277687**、full lane（`ios-build.yml`）**41817301541**，11:00 UTC 時都還在跑。跑完告訴作者結果；紅的先分偶發（Simulator「Failed to launch」之類，重跑）還是真的，真的就派人修進下一版。
-  - 作者的 `testflight.yml` run 出現後：記 run 編號與 commit，版號 0.5.0（run 編號.1）；用小 PR 在 `docs/research/PLAYER_FEEDBACK.md` 照 111.1 那段記；提醒作者看 App Store Connect 的出口合規。
+  - 作者的 `testflight.yml` run 出現後：記 run 編號與 commit，版號 0.5.0（run 編號，不帶 .1；決策 616）；用小 PR 在 `docs/research/PLAYER_FEEDBACK.md` 照 111.1 那段記；提醒作者看 App Store Connect 的出口合規。
   - 然後派 WEB session 拍網站新功能截圖（纜車 2D／3D、跟隨公車、車窗視角），在 private repo 開 draft PR，作者部署（作者：「好 發完再派人拍」）。
   - 112.1 的內容見 `.github/testflight-whats-new.md`（#1796）。
 - **第 46 任已合**（這次壓縮前後）：#1788（`4fc02514`）、#1798（`ce3011f3`）、#1802（`8d3bde20`）、#1796（`bef26cae`）；更早的見 #1579 合併留言。

@@ -17,8 +17,9 @@
 #   ASC_KEY_ID           secret: App Store Connect team API key ID
 #   ASC_ISSUER_ID        secret: App Store Connect issuer ID
 #   ASC_PRIVATE_KEY      secret: the whole text of AuthKey_<key id>.p8
-# Output: build_number=<n>.<attempt> appended to $GITHUB_OUTPUT, and
-# BUILD_NUMBER=<n>.<attempt> to $GITHUB_ENV, when those are set.
+# Output: build_number=<n> (first attempt) or <n>.<attempt> (a re-run)
+# appended to $GITHUB_OUTPUT, and BUILD_NUMBER with the same value to
+# $GITHUB_ENV, when those are set (decision 616).
 set -euo pipefail
 
 guide="docs/TESTFLIGHT_GITHUB_ACTIONS.md"
@@ -91,11 +92,17 @@ if ((problems > 0)); then
   exit 1
 fi
 
-# <offset + run number>.<attempt>. Apple limits CFBundleVersion's first
-# integer to four digits and the second to two, so preflight enforces
-# <= 9999 and <= 99 before constructing it. A new run gets a higher first
-# number and a re-run of that run a higher second number.
-build_number="$((offset + run_number)).$attempt"
+# <offset + run number> on the first attempt, <offset + run number>.<attempt>
+# on a re-run (decision 616). Apple limits CFBundleVersion's first integer to
+# four digits and the second to two, so preflight enforces <= 9999 and <= 99
+# before constructing it. App Store Connect compares the integers one by one
+# and reads a missing one as zero, so 119 < 119.2 < 119.3 < 120: a new run
+# gets a higher first number and a re-run of that run a higher second number.
+# Attempt 1 never takes ".1", so no two attempts share a number.
+build_number="$((offset + run_number))"
+if ((attempt > 1)); then
+  build_number="$build_number.$attempt"
+fi
 echo "Preflight passed. Build number for this run: $build_number"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   echo "build_number=$build_number" >>"$GITHUB_OUTPUT"
