@@ -267,6 +267,7 @@ final class DepotReturnReportTests: XCTestCase {
         // train deadlocked, to tell one cleared at once from one that stays.
         var deadlockedSamples = 0
         var lastStuck: [TrainID] = []
+        var dumpedStuck = false
         let timetabled = world.lines.filter(\.hasRuns)
         let lines = timetabled.filter { !$0.depots.isEmpty }
         let ends = Set(lines.flatMap { [$0.stops.first, $0.stops.last].compactMap(\.self) })
@@ -310,6 +311,25 @@ final class DepotReturnReportTests: XCTestCase {
                     return "\(train.name) at \(at.isEmpty ? "line" : at)"
                 }
                 FileHandle.standardError.write(Data("DEPOT_RETURN \(label) deadlock \(clock(world.clock.now.seconds)): \(names.isEmpty ? "cleared" : names.joined(separator: "; "))\n".utf8))
+            }
+            // `DEPOT_RETURN_STUCK_MIN=n`: the first deadlock of n trains or
+            // more (each one with `DEPOT_RETURN_STUCK_ALL`): where each
+            // stands, where it is bound, the way it wants and its timetable.
+            if let least = Int(environment["DEPOT_RETURN_STUCK_MIN"] ?? ""), stuck.count >= least, !dumpedStuck || environment["DEPOT_RETURN_STUCK_ALL"] != nil, Set(stuck) != Set(lastStuck) {
+                dumpedStuck = true
+                var memo = GameWorld.DirectionMemo()
+                let requests = world.deadlock(memo: &memo)
+                func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "?" }
+                func hm(_ seconds: Int64) -> String { String(format: "%02d:%02d", seconds % GameTime.secondsPerDay / 3_600, seconds % 3_600 / 60) }
+                var text = "DEPOT_RETURN \(label) stuck \(clock(world.clock.now.seconds)) \(requests.count)\n"
+                for id in requests.keys.sorted() {
+                    guard let request = requests[id], let train = world.train(id: id) else { continue }
+                    let to: String = if case .travellingToStop(let s, _)? = request.candidate.execution { name(request.candidate.timetable[s].station) } else { "-" }
+                    let edge: String = if case .onEdge(let t, let o)? = train.position { "\(t.edge)\(t.direction == .forward ? "+" : "-")@\(o)" } else { "-" }
+                    let at = world.stationsStoppedAt(by: id).map(name).joined(separator: "/")
+                    text += "  \(train.name) on \(edge) (\(at.isEmpty ? "line" : at)) departs \(request.departs) dead \(train.isDeadheading) exec \(String(describing: train.execution).prefix(50)) to \(to) via \(request.candidate.movement.edges.dropFirst(request.candidate.movement.cursor).prefix(12).map { "\($0)" }.joined(separator: ",")) timetable \(train.timetable.map { "\(name($0.station))@\(hm($0.departure.seconds))" }.joined(separator: " ").prefix(220))\n"
+                }
+                FileHandle.standardError.write(Data(text.utf8))
             }
             lastStuck = stuck
             if byHour, world.clock.now.seconds / GameTime.secondsPerDay == counted || world.clock.now.seconds / GameTime.secondsPerDay == counted + 1 {
