@@ -84,7 +84,7 @@ extension Map3DScene.Builder {
         addRoads(map.roads, taking: &taken.byRoads)
         addRoadBridges(map.roads)
         // Decision 611: where the roads go into a hill.
-        addRoadTunnels(map.tunnelEnds)
+        addRoadTunnels(map.tunnelEnds, areas: map.areas)
         taken.byRoads.subtract(taken.whole)
         return taken
     }

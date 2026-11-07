@@ -763,7 +763,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// north of Nanao, and its gallery south of Su'ao. For the screenshot
     /// review of the pull request that drew them, not the website.
     func testRoadTunnelHsuehshan() {
-        shootLean("hsuehshanTunnel", "160,270,60", "road-tunnel-hsuehshan-near")
+        shootLean("hsuehshanTunnel", "160,0,60", "road-tunnel-hsuehshan-near")
         shootLean("hsuehshanTunnel", "500,270,0", "road-tunnel-hsuehshan-high")
     }
     func testRoadTunnelSuhua() {

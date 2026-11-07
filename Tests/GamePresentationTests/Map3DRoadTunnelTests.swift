@@ -112,7 +112,8 @@ final class Map3DRoadTunnelTests: XCTestCase {
         }
         let portal = Builder.RoadPortal(point: start, into: best.into, style: .nameplate, width: .twoWay, depth: 6)
         var mesh = Map3DMesh()
-        builder.addRoadPortal(portal, into: &mesh)
+        let cover = Map3DPalette.cover(.wood)
+        builder.addRoadPortal(portal, cover: (cover, nil), into: &mesh)
         let part = Map3DRoadTunnelPortals.make(.nameplate, width: .twoWay, depth: 6)
         // Every concrete foot under the ground it stands on.
         for vertex in mesh.vertices where vertex.color == Map3DPalette.concrete && vertex.y < start.y + part.floor + 0.01 {
@@ -120,7 +121,7 @@ final class Map3DRoadTunnelTests: XCTestCase {
         }
         // The hillside starts on the head wall's top, and its edges go
         // into the ground.
-        let hill = mesh.vertices.filter { $0.color == Map3DPalette.embankment }
+        let hill = mesh.vertices.filter { $0.color == cover }
         XCTAssertFalse(hill.isEmpty)
         XCTAssertTrue(hill.contains { abs($0.y - (start.y + part.top)) < 0.01 })
         XCTAssertTrue(hill.allSatisfy { $0.y >= builder.drawnGround(x: $0.x, z: $0.z) - 0.51 })
@@ -163,6 +164,77 @@ final class Map3DRoadTunnelTests: XCTestCase {
         XCTAssertLessThan(try XCTUnwrap(triangles["pinglin"]) / max(portals["pinglin"]?.count ?? 1, 1), 1_500)
     }
 
+    /// #1925's review, 1: on level ground the hill over a portal is wide
+    /// and low, in the ground's own colour: it reaches 20 m and more out
+    /// beside it, and most of it falls no steeper than 1 : 2.
+    func testOnLevelGroundTheHillIsWideAndGentle() throws {
+        var (builder, _) = try real(latitude: 25.0478, longitude: 121.5170, half: 300)
+        let start = Map3DPoint(0, builder.drawnGround(x: 0, z: 0), 0)
+        let portal = Builder.RoadPortal(point: start, into: Map3DPoint(1, 0, 0), style: .nameplate, width: .twoWay, depth: 6)
+        var mesh = Map3DMesh()
+        builder.addRoadPortal(portal, into: &mesh)
+        let hill = Map3DPalette.ground
+        var faces = 0, steep = 0, widest: Float = 0
+        var index = 0
+        while index + 2 < mesh.indices.count {
+            let corners = mesh.indices[index..<index + 3].map { mesh.vertices[Int($0)] }
+            index += 3
+            guard corners.allSatisfy({ $0.color == hill }),
+                  corners.allSatisfy({ $0.y > builder.drawnGround(x: $0.x, z: $0.z) + 0.05 }) else { continue }
+            faces += 1
+            if corners[0].ny < 0.894 { steep += 1 } // steeper than 1 : 2
+            widest = max(widest, corners.map { abs($0.z) }.max() ?? 0)
+        }
+        XCTAssertGreaterThan(faces, 0)
+        XCTAssertGreaterThanOrEqual(widest, 20)
+        XCTAssertLessThan(Double(steep), Double(faces) * 0.25)
+    }
+
+    /// #1925's review, 1: two bores side by side 13 m apart: each one's
+    /// hill keeps out of the other's way in, which stays clear.
+    func testAHillKeepsOutOfTheNextBoresWayIn() throws {
+        var (builder, _) = try real(latitude: 25.0478, longitude: 121.5170, half: 300)
+        let y = builder.drawnGround(x: 0, z: 0)
+        let a = Builder.RoadPortal(point: Map3DPoint(0, y, 0), into: Map3DPoint(1, 0, 0), style: .nameplate, width: .oneWay, depth: 4)
+        let b = Builder.RoadPortal(point: Map3DPoint(0, y, 13), into: Map3DPoint(1, 0, 0), style: .nameplate, width: .oneWay, depth: 4)
+        let zone = Builder.clearZone(of: b)
+        XCTAssertTrue(zone.contains(Map3DPoint(-4, y, 13)))
+        XCTAssertFalse(zone.contains(Map3DPoint(4, y, 13)))
+        var mesh = Map3DMesh()
+        builder.addRoadPortal(a, clear: [zone], into: &mesh)
+        let inside = mesh.vertices.filter { $0.color == Map3DPalette.ground && zone.contains(Map3DPoint($0.x, $0.y, $0.z)) }
+        XCTAssertFalse(inside.isEmpty)
+        XCTAssertTrue(inside.allSatisfy { $0.y <= builder.drawnGround(x: $0.x, z: $0.z) - 0.49 })
+    }
+
+    /// #1925's review, 2: a gallery is a roof on columns, open at the
+    /// sides: no wall down its sides, a column every 3 m, and no wing
+    /// walls at its outer end.
+    func testAGalleryStandsOnColumnsOpenAtItsSides() {
+        let part = Map3DRoadTunnelPortals.make(.daylightGallery, width: .oneWay)
+        let feet = part.mesh.vertices.filter { abs($0.y - part.floor) < 1e-4 && $0.x > part.front + 0.01 && $0.x < -0.01 }
+        // Only columns stand there, inside the roof's edge.
+        XCTAssertFalse(feet.isEmpty)
+        XCTAssertTrue(feet.allSatisfy { abs($0.z) < part.outerHalfWidth - 0.01 && $0.color == Map3DPalette.concrete })
+        // Four along each side, 3 m apart: the faces of all but the first
+        // one's outer face (at the end, not counted).
+        XCTAssertEqual(Set(feet.map { ($0.x * 10).rounded() }).count, 2 * Int((-part.front / 3).rounded()) - 1)
+        // Nothing in front of the gallery's outer end.
+        XCTAssertGreaterThanOrEqual(part.mesh.vertices.map(\.x).min() ?? 0, part.front - 0.25)
+    }
+
+    /// The hill takes the colour of the cover drawn on top where the
+    /// portal stands, else the plain ground's.
+    func testTheHillTakesTheCoverUnderIt() {
+        let square = [Point(x: -50, z: -50), Point(x: 50, z: -50), Point(x: 50, z: 50), Point(x: -50, z: 50)]
+        let bounds = Map3DBaseMap.Bounds(minX: -50, minZ: -50, maxX: 50, maxZ: 50)
+        let areas = [Map3DBaseMap.Area(cover: .grass, rings: [square], bounds: bounds),
+                     Map3DBaseMap.Area(cover: .wood, rings: [square], bounds: bounds)]
+        XCTAssertEqual(Builder.cover(at: Map3DPoint(0, 0, 0), in: areas).color, Map3DPalette.cover(.wood))
+        XCTAssertEqual(Builder.cover(at: Map3DPoint(80, 0, 0), in: areas).color, Map3DPalette.ground)
+        XCTAssertNil(Builder.cover(at: Map3DPoint(80, 0, 0), in: areas).paint)
+    }
+
     /// The screenshot scene at Toucheng: the whole scene, as the app
     /// builds it, draws the two portals there, in full detail only, and
     /// the camera looks at them on the hill's ground, not 60 m under it.
@@ -179,7 +251,7 @@ final class Map3DRoadTunnelTests: XCTestCase {
         // None in the far city or the closest detail.
         XCTAssertTrue(scene.chunks.allSatisfy { chunk in !chunk.far.vertices.contains { $0.color == cap } && !chunk.close.vertices.contains { $0.color == cap } })
         let place = try XCTUnwrap(ScreenshotScene.hsuehshanTunnel.place)
-        let camera = try XCTUnwrap(Map3DScreenshotView("160,270,60")?.camera(at: place, in: scene, of: world, viewport: (874, 402)))
+        let camera = try XCTUnwrap(Map3DScreenshotView("160,0,60")?.camera(at: place, in: scene, of: world, viewport: (874, 402)))
         XCTAssertEqual(camera.target.y, scene.drawnGround.height(x: camera.target.x, z: camera.target.z, world: world), accuracy: 0.01)
         XCTAssertGreaterThan(camera.target.y, 30)
     }

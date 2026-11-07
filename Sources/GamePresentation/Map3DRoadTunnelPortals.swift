@@ -128,8 +128,10 @@ public enum Map3DRoadTunnelPortals {
             for (index, c) in centres.enumerated() {
                 let left = c - half, right = c + half
                 let leftEnd = index == 0 ? -outer : centres[index - 1] + half
-                panel(leftEnd, left, floor, top, x, wall)
-                if index == centres.count - 1 { panel(right, outer, floor, top, x, wall) }
+                // A gallery's outer end: the roof's beam, over open sides.
+                let low = gallery && x == front ? clear : floor
+                panel(leftEnd, left, low, top, x, wall)
+                if index == centres.count - 1 { panel(right, outer, low, top, x, wall) }
                 let profile = roof(c)
                 for i in 1..<profile.count {
                     let a = profile[i - 1], b = profile[i]
@@ -140,16 +142,25 @@ public enum Map3DRoadTunnelPortals {
         }
         for c in centres {
             let profile = roof(c)
-            // Gallery is an open-air retaining shell: 12 m concrete cover and
-            // sidewalls between the outer entrance and the mountain face.
+            // Decision 611 (#1925's review, 2): a gallery (明隧道) is a
+            // roof out from the mountain face on columns, open at the
+            // sides: a column every 3 m each side, a beam along the roof's
+            // edge, its underside beyond the road.
             if gallery {
                 for side: Float in [-1, 1] {
-                    let z = c + half * side
-                    face([p(z, floor, front), p(z, spring, front), p(z, spring, 0), p(z, floor, 0)],
-                         toward: Map3DPoint(0, 0, -side), color: Map3DPalette.tunnelWall)
-                    face([p(z + side * shoulder, floor, front), p(z + side * shoulder, top, front),
-                          p(z + side * shoulder, top, 0), p(z + side * shoulder, floor, 0)],
+                    let z = c + half * side, outside = z + side * shoulder
+                    let column: Float = 0.6, middle = z + side * shoulder / 2
+                    for x in stride(from: front, through: -column, by: 3) {
+                        let x0 = x, x1 = x + column, z0 = middle - column / 2, z1 = middle + column / 2
+                        face([p(z0, floor, x0), p(z1, floor, x0), p(z1, clear, x0), p(z0, clear, x0)], toward: Map3DPoint(-1, 0, 0), color: wall)
+                        face([p(z0, floor, x1), p(z1, floor, x1), p(z1, clear, x1), p(z0, clear, x1)], toward: Map3DPoint(1, 0, 0), color: wall)
+                        face([p(z0, floor, x0), p(z0, clear, x0), p(z0, clear, x1), p(z0, floor, x1)], toward: Map3DPoint(0, 0, -1), color: wall)
+                        face([p(z1, floor, x0), p(z1, clear, x0), p(z1, clear, x1), p(z1, floor, x1)], toward: Map3DPoint(0, 0, 1), color: wall)
+                    }
+                    face([p(outside, clear, front), p(outside, top, front), p(outside, top, 0), p(outside, clear, 0)],
                          toward: Map3DPoint(0, 0, side), color: wall)
+                    face([p(z, clear, front), p(outside, clear, front), p(outside, clear, 0), p(z, clear, 0)],
+                         toward: Map3DPoint(0, -1, 0), color: Map3DPalette.tunnelWall)
                 }
                 for i in 1..<profile.count {
                     let a = profile[i - 1], b = profile[i]
@@ -198,7 +209,7 @@ public enum Map3DRoadTunnelPortals {
         // Decision 611 (#1885's review, 1): no flat roof over it; the
         // scene lays the hillside over the head wall's top instead.
         // The same 8 m / 2 m splay as decision 359, attached at the entrance.
-        for side: Float in [-1, 1] {
+        for side: Float in [-1, 1] where !gallery {
             let z = outer * side, tip = (outer + wingSplay) * side
             let edge = 0.45 * side
             face([p(z, floor, front), p(z, top - 0.2, front),
