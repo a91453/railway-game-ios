@@ -31,18 +31,10 @@ extension RealLineDepotSite {
 extension RealLineDepotLayout {
     /// Decision 621: a strip yard's measures.
     enum Strip {
-        /// How far the wye's foot stands off the line's second track, and
-        /// how far along the line past the first arm's turnout: the first
-        /// arm a quarter circle 40 m round, the second (from 140 m on,
-        /// ``RealLineDepotLayout/armReach`` twice) some 25 m round at the
-        /// foot at its tightest.
+        /// How far the wye's foot stands off the line's second track: each
+        /// arm a quarter ellipse ``RealLineDepotLayout/armReach`` along and
+        /// this across, its tightest bend (at the turnout) some 23 m round.
         static let foot = 40 * metre
-        static let footAlong = 40 * metre
-        /// The second arm's cubic handles, along the line and across it.
-        static let secondArmHandles = (along: 55 * metre, across: 32 * metre)
-        /// The north lead: an S-curve from the last bank's innermost
-        /// siding onto the second track, its bends some 25 m round.
-        static let leadReach = 42 * metre
         /// The running track's turn from the foot along the line, a light
         /// rail's 25 m round.
         static let turn = 25 * metre
@@ -94,11 +86,11 @@ extension RealLineDepotLayout {
             2 * platformStart(count) + Double(length)
         }
 
-        /// How far along the line, past the wye's first arm, the north
-        /// lead joins the second track.
+        /// How far along the line, past the wye's first arm, the yard's
+        /// last bank ends.
         static func span(of site: RealLineDepotSite, length: Int64) -> Double {
             let banks = counts(of: site)
-            return footAlong + turn + banks.map { bankLength($0, length: length) }.reduce(0, +) + Double(banks.count - 1) * bankGap + leadReach
+            return armReach + turn + banks.map { bankLength($0, length: length) }.reduce(0, +) + Double(banks.count - 1) * bankGap
         }
 
         /// The ground a strip yard stands on, every `step` along `path`
@@ -117,30 +109,29 @@ extension RealLineDepotLayout {
 
     /// Decision 621: the depot's pieces, from piece `first` on, and the
     /// depot, laid as a strip (``Strip``) beside the second track (piece
-    /// 1) of `path`: the wye off it at `marks[2]` and `marks[3]`, the
-    /// north lead at `marks[6]` (see
-    /// ``RealLineLaying/ringStripMarks(at:site:length:)``), `j` along the
-    /// path at the first, and the yard along the line from the wye's foot;
-    /// each siding with a platform `length` long. `nil` where the yard
-    /// cannot stand level within the arms' and the lead's grade.
+    /// 1) of `path`: the wye off it at `marks[2]` and `marks[3]` (see
+    /// ``RealLineLaying/ringDepotMarks(at:)``), `j` along the path at the
+    /// first, and the yard along the line from its foot; each siding with
+    /// a platform `length` long. `nil` where the yard cannot stand level
+    /// within the arms' grade.
     static func strip(
         _ site: RealLineDepotSite, along path: WorldPath, at j: Double, second: RealWorldDemo.TrackPlan,
         marks: [(main: Int, second: Int)], first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
-        guard marks.count == 9, site.sidings > 0, Strip.counts(of: site).last! >= 3 else { return nil }
+        guard marks.count == 6, site.sidings > 0 else { return nil }
         func node(_ mark: (main: Int, second: Int)) -> (point: WorldVector, direction: WorldVector, height: Int64) {
             (WorldVector(second.nodes[mark.second].point), second.nodes[mark.second].direction.unit, second.heights[mark.second])
         }
-        let up = node(marks[2]), down = node(marks[3]), north = node(marks[6])
+        let up = node(marks[2]), down = node(marks[3])
         // The yard's side of the line: the second track's.
         let side: Double = (up.point - path.point(at: j)).dot(path.tangent(at: j).normal) >= 0 ? 1 : -1
         let counts = Strip.counts(of: site)
         let spacing = Strip.spacing
         let trackOffset = HighSpeedDemo.trackOffset
 
-        // The wye's foot, `foot` off the second track and `footAlong`
-        // past the first arm's turnout, its lead straight off the line.
-        let middle = j + Strip.footAlong
+        // The wye's foot, `foot` off the second track between its arms,
+        // its lead straight off the line.
+        let middle = j + armReach
         let away = path.tangent(at: middle).normal * side
         let foot = path.point(at: middle) + away * (trackOffset + Strip.foot)
 
@@ -156,7 +147,7 @@ extension RealLineDepotLayout {
             func at(_ along: Double, _ off: Double) -> WorldVector { origin + way * along + across * off }
         }
         var banks: [Bank] = []
-        var from = Strip.footAlong + Strip.turn
+        var from = armReach + Strip.turn
         for count in counts {
             let length = Strip.bankLength(count, length: length)
             let a = path.point(at: j + from), b = path.point(at: j + from + length)
@@ -166,10 +157,9 @@ extension RealLineDepotLayout {
             from += length + Strip.bankGap
         }
 
-        // The yard level, the foot's: within the arms' and the north lead's
-        // grade of the second track at their turnouts, as near the ground
-        // as that lets it.
-        let rises = [(up.height, (foot - up.point).length), (down.height, (foot - down.point).length), (north.height, Strip.leadReach)]
+        // The yard level, the foot's: within the arms' grade of the second
+        // track at both turnouts, as near the ground as that lets it.
+        let rises = [(up.height, (foot - up.point).length), (down.height, (foot - down.point).length)]
         let low = rises.map { Double($0.0) - grade * $0.1 }.max()!, high = rises.map { Double($0.0) + grade * $0.1 }.min()!
         guard low <= high else { return nil }
         let centre = banks[banks.count / 2].at(banks[banks.count / 2].length / 2, spacing * Double(counts.max()! + 1) / 2)
@@ -178,9 +168,8 @@ extension RealLineDepotLayout {
 
         // The running track: from the foot, turning along the line, along
         // each bank (a node where each of its sidings leaves and joins
-        // it), bending from one bank's way to the next's, ending where the
-        // last bank's north ladder reaches it (``Strip/throat(_:)`` short
-        // of its end).
+        // it), bending from one bank's way to the next's, ending past the
+        // last.
         var runningPoints = [coordinate(foot)]
         var runningCurves: [TrackCurve] = []
         var runningNodes: [[Double: Int]] = []
@@ -192,9 +181,8 @@ extension RealLineDepotLayout {
                 let before = banks[index - 1]
                 runningCurves.append(cubic(before.at(before.length, 0), leaving: before.way, start, arriving: bank.way, handle: Strip.bankGap / 3))
             }
-            let last = index == banks.count - 1
-            var alongs: [Double] = [0, last ? bank.length - Strip.throat(bank.count) : bank.length]
-            if bank.count >= 1 { alongs += last ? [Strip.firstAfter] : [Strip.firstAfter, bank.length - Strip.firstAfter] }
+            var alongs: [Double] = [0, bank.length]
+            if bank.count >= 1 { alongs += [Strip.firstAfter, bank.length - Strip.firstAfter] }
             alongs = Array(Set(alongs)).sorted()
             var nodes: [Double: Int] = [:]
             for (number, along) in alongs.enumerated() {
@@ -205,22 +193,22 @@ extension RealLineDepotLayout {
             runningNodes.append(nodes)
         }
         let footNode = RealLineAcquisition.NodeAt(piece: first, node: 0)
-        // Each arm's handles, along the line and across it.
-        func arm(_ turnout: WorldVector, leaving way: WorldVector, handles: (along: Double, across: Double)) -> TrackCurve {
-            .cubic((turnout + way * handles.along).plan, (foot - away * handles.across).plan)
+        // A quarter ellipse's handles, along the line and across it.
+        let along = 0.55 * armReach, across = 0.55 * Strip.foot
+        func arm(_ turnout: WorldVector, leaving way: WorldVector) -> TrackCurve {
+            .cubic((turnout + way * along).plan, (foot - away * across).plan)
         }
         var pieces = [
             piece(runningPoints, runningCurves, start: nil),
             // The wye: an arm leaving the second track along the line
             // from each turnout, both reaching the foot off the line.
             piece(
-                [coordinate(up.point, up.height), coordinate(foot)],
-                [arm(up.point, leaving: up.direction, handles: (0.55 * Strip.footAlong, 0.55 * Strip.foot))],
+                [coordinate(up.point, up.height), coordinate(foot)], [arm(up.point, leaving: up.direction)],
                 start: RealLineAcquisition.NodeAt(piece: 1, node: marks[2].second), end: footNode
             ),
             piece(
                 [coordinate(down.point, down.height), coordinate(foot)],
-                [arm(down.point, leaving: down.direction.reversed, handles: Strip.secondArmHandles)],
+                [arm(down.point, leaving: down.direction.reversed)],
                 start: RealLineAcquisition.NodeAt(piece: 1, node: marks[3].second), end: footNode
             ),
         ]
@@ -237,89 +225,13 @@ extension RealLineDepotLayout {
             }
             // A siding's piece, its platform on its straight from node
             // `straight` on.
-            // (`straight` nil: no siding, no platform.)
-            var laid: [(piece: RealLineAcquisition.Piece, straight: Int?, off: Double)] = []
-            func add(_ points: [WorldVector], _ curves: [TrackCurve], straight: Int?, off: Double, start: RealLineAcquisition.NodeAt, end: RealLineAcquisition.NodeAt) {
+            var laid: [(piece: RealLineAcquisition.Piece, straight: Int, off: Double)] = []
+            func add(_ points: [WorldVector], _ curves: [TrackCurve], straight: Int, off: Double, start: RealLineAcquisition.NodeAt, end: RealLineAcquisition.NodeAt) {
                 laid.append((piece(points.map { coordinate($0) }, curves, start: start, end: end), straight, off))
             }
             let w = bank.way
             let out = (w * cos(Strip.angle) + bank.across * sin(Strip.angle)).unit
             let back = (w * cos(Strip.angle) - bank.across * sin(Strip.angle)).unit
-            if index == banks.count - 1 {
-                // The last bank's north end mirrored: its ladder in from the
-                // running track to the innermost siding, which goes on as
-                // the north lead onto the second track.
-                let n = bank.count, l = bank.length, inner = spacing * Double(n)
-                let bend = Strip.ladderTurnout(n) + Strip.arcAlong
-                let lead = first + pieces.count + laid.count, mirror = lead + 1
-                // The south ladder into the innermost siding, its base past
-                // the platform, and the lead.
-                var points = [bank.at(0, 0), bank.at(Strip.arcAlong, Strip.arcAcross)]
-                var curves = [cubic(points[0], leaving: w, points[1], arriving: out, handle: handle)]
-                for k in 2...n {
-                    points.append(bank.at(Strip.ladderTurnout(k), spacing * Double(k) - Strip.arcAcross))
-                    curves.append(.straight)
-                }
-                points.append(bank.at(bend, inner))
-                curves.append(cubic(points[points.count - 2], leaving: out, points[points.count - 1], arriving: w, handle: handle))
-                let straight = points.count - 1
-                points += [bank.at(l - Strip.firstAfter, inner), bank.at(l, inner)]
-                curves += [.straight, .straight]
-                let base = points.count - 1
-                curves.append(cubic(points[base], leaving: w, north.point, arriving: north.direction, handle: Strip.leadReach / 2))
-                laid.append((
-                    piece(points.map { coordinate($0) } + [coordinate(north.point, north.height)], curves, start: onRunning(0),
-                          end: RealLineAcquisition.NodeAt(piece: 1, node: marks[6].second)),
-                    straight, inner
-                ))
-                // The north ladder: from the base out across the sidings,
-                // past each one's turnout, back onto the running track.
-                let reversed = w.reversed, outward = out.reversed
-                var ladder = [bank.at(l, inner), bank.at(l - Strip.arcAlong, inner - Strip.arcAcross)]
-                var ladderCurves = [cubic(ladder[0], leaving: reversed, ladder[1], arriving: outward, handle: handle)]
-                for k in 2...n {
-                    ladder.append(bank.at(l - Strip.ladderTurnout(k), inner - spacing * Double(k) + Strip.arcAcross))
-                    ladderCurves.append(.straight)
-                }
-                ladder.append(bank.at(l - bend, 0))
-                ladderCurves.append(cubic(ladder[ladder.count - 2], leaving: outward, ladder[ladder.count - 1], arriving: reversed, handle: handle))
-                add(ladder, ladderCurves, straight: nil, off: 0,
-                    start: RealLineAcquisition.NodeAt(piece: lead, node: base), end: onRunning(l - bend))
-                // Siding k's north end: onto the north ladder's turnout
-                // n - k (from 2), or the next-to-innermost by an S-curve
-                // onto the base.
-                func northEnd(_ k: Int) -> (points: [WorldVector], curves: [TrackCurve], end: RealLineAcquisition.NodeAt) {
-                    let off = spacing * Double(k)
-                    if k == n - 1 {
-                        let a = l - Strip.firstAfter - Strip.firstReach, b = bank.at(l - Strip.firstAfter, inner)
-                        return ([bank.at(a, off), b], [cubic(bank.at(a, off), leaving: w, b, arriving: w, handle: Strip.firstReach / 2)],
-                                RealLineAcquisition.NodeAt(piece: lead, node: straight + 1))
-                    }
-                    let turnout = n - k, end = ladder[turnout], along = Strip.ladderTurnout(turnout) + Strip.arcAlong
-                    return ([bank.at(l - along, off), end], [cubic(bank.at(l - along, off), leaving: w, end, arriving: out, handle: handle)],
-                            RealLineAcquisition.NodeAt(piece: mirror, node: turnout))
-                }
-                // The first siding, by an S-curve off the running track.
-                do {
-                    let a = Strip.firstAfter, b = a + Strip.firstReach
-                    let north = northEnd(1)
-                    add(
-                        [bank.at(a, 0), bank.at(b, spacing)] + north.points,
-                        [cubic(bank.at(a, 0), leaving: w, bank.at(b, spacing), arriving: w, handle: Strip.firstReach / 2), .straight] + north.curves,
-                        straight: 1, off: spacing, start: onRunning(a), end: north.end
-                    )
-                }
-                // The sidings between, each off the south ladder's turnout k.
-                for k in (2..<n).reversed() {
-                    let north = northEnd(k), off = spacing * Double(k)
-                    let along = Strip.ladderTurnout(k) + Strip.arcAlong
-                    add(
-                        [points[k], bank.at(along, off)] + north.points,
-                        [cubic(points[k], leaving: out, bank.at(along, off), arriving: w, handle: handle), .straight] + north.curves,
-                        straight: 1, off: off, start: RealLineAcquisition.NodeAt(piece: lead, node: k), end: north.end
-                    )
-                }
-            } else {
             // The first siding, by an S-curve off the running track at
             // each end.
             do {
@@ -376,17 +288,12 @@ extension RealLineDepotLayout {
                     )
                 }
             }
-            }
             // The platforms, inner siding first.
             var bankPlatforms: [(off: Double, at: RealLineAcquisition.PieceAt)] = []
             for entry in laid {
-                guard let straight = entry.straight else {
-                    pieces.append(entry.piece)
-                    continue
-                }
-                let a = WorldVector(entry.piece.nodes[straight].plan), b = WorldVector(entry.piece.nodes[straight + 1].plan)
+                let a = WorldVector(entry.piece.nodes[entry.straight].plan), b = WorldVector(entry.piece.nodes[entry.straight + 1].plan)
                 let at = bank.at(platformStart, entry.off)
-                let distance = entry.piece.distances[straight] + (at - a).dot((b - a).unit)
+                let distance = entry.piece.distances[entry.straight] + (at - a).dot((b - a).unit)
                 bankPlatforms.append((entry.off, RealLineAcquisition.PieceAt(piece: first + pieces.count, distance: distance)))
                 middles.append(bank.at(platformStart + Double(length) / 2, entry.off))
                 pieces.append(entry.piece)
