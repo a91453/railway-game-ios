@@ -168,9 +168,10 @@ Mac 上的測試（`swift test`）：`TrainMotionTests.testAFollowedTrainMovesEv
 
 ### 修法（分支 `claude/map3d-bounce-2d`，只動 GamePresentation，GameCore 不動）
 
-- `GameSession.syncSpeedLagHint()`：3D 地圖開著時不顯示提示（`!isMap3DOpen`）；`setMap3DOpen(_:)` 時重新同步，所以 3D 一關、回到 2D，提示照樣出現。
+- `GameSession.syncSpeedLagHint()`：3D 地圖開著時不顯示提示（`!isMap3DOpen`）；`setMap3DOpen(_:)` 時重新同步，回到 2D 後提示照樣會出現。
 - 提示因為 3D 打開而收起時，不算玩家按了「知道了」，`speedLagWatch` 裡的提示還在。
 - 測試：`SpeedLagHintTests.testTheHintWaitsWhileTheMap3DIsOpen`，沒有修法時紅（3D 開著時提示照樣出現），有修法時綠。
+- 實機確認（iPhone 17 Pro，Release，PR #1922）：10× 跟車放一分鐘，3D 沒有跳回 2D。回到 2D 時提示沒有馬上出現，再放約 20 秒才出現。推測是 3D 蓋層收起時 popover 呈現不出來，被當成還沒看到而撤回（`withdraw()`），要再落後一段時間才會回來；沒有 log 證實。
 
 ### 還沒做的
 
