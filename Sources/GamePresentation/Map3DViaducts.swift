@@ -154,14 +154,20 @@ struct Map3DViaducts: Sendable {
     /// Lays `line` (its rails' middle) on its viaduct, and a pier every
     /// span along it where the girder stands over the ground (`grounds`)
     /// by half a metre; the first half a span on, or a span on from the
-    /// last pier of the piece it goes on from.
-    mutating func add(_ line: [Map3DPoint], grounds: [Float], kind: TrackSectionKind, viaduct: Map3DViaduct) {
+    /// last pier of the piece it goes on from. With `along` (how far
+    /// along its whole track the line starts, metres: a real track's,
+    /// review L11-1), a pier every span from half a span along the whole
+    /// track, so a piece laid from elsewhere puts them in the same places.
+    mutating func add(_ line: [Map3DPoint], grounds: [Float], kind: TrackSectionKind, viaduct: Map3DViaduct, from along: Float? = nil) {
         guard line.count > 1 else { return }
         let look = viaduct.look(over: kind)
         pieces.append(Piece(line: line, kind: kind, viaduct: viaduct))
         var travelled: Float = 0
         var next = look.span / 2
-        if let last, last.kind == kind, last.viaduct == viaduct, (last.end - line[0]).length < 0.01 { next = last.next }
+        if let along {
+            let behind = (along - look.span / 2).truncatingRemainder(dividingBy: look.span)
+            next = behind >= 0 ? look.span - behind : -behind
+        } else if let last, last.kind == kind, last.viaduct == viaduct, (last.end - line[0]).length < 0.01 { next = last.next }
         for index in 1..<line.count {
             let a = line[index - 1], b = line[index], step = (b - a).length
             guard step > 0 else { continue }

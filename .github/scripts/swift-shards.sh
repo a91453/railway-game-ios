@@ -1163,7 +1163,7 @@ test_workers() {
 # The Class.method names XCTest's lines in the given logs say have started:
 # in a parallel run, the tests that have ended.
 started_tests() {
-  cat "$@" 2>/dev/null | sed -n -E "s/^Test Case '([^']+)' started.*/\\1/p" | sort -u
+  cat "$@" 2>/dev/null | sed -n -E "s/^.*Test Case '([^']+)' started.*/\\1/p" | sort -u
 }
 
 # "a 274 s, b 113 s, c 92 s" from class_seconds lines on stdin.
@@ -1210,7 +1210,8 @@ watchdog() {
   local nap=$!
   trap 'kill "$nap" 2>/dev/null; exit 0' TERM
   wait "$nap"
-  local what="slowest classes so far: $(class_seconds "$@" | slowest_text)"
+  local what
+  what="slowest classes so far: $(class_seconds "$@" | slowest_text)"
   if [[ -n "${WATCH_EXPECTED:-}" ]]; then
     # A parallel run prints a test only once it ends: name those still running.
     what="$what; still running: $(started_tests "$@" | comm -23 "$WATCH_EXPECTED" - | awk 'NR <= 4 { printf "%s%s", (NR > 1 ? ", " : ""), $0 }')"
@@ -1284,7 +1285,7 @@ run_shard() {
       # shellcheck disable=SC2086
       swift test --skip-build ${SWIFT_EXTRA_ARGS:-} ${parallel[@]+"${parallel[@]}"} --filter "$(pattern_for "$classes")" 2>&1 | tee "$batch_log" || batch_rc=${PIPESTATUS[0]}
       cat "$batch_log" >>"$log"
-      if ((attempt == 1)) && killed_by_signal "$batch_rc" && ! grep -q -E "^Test Case '.*' started" "$batch_log"; then
+      if ((attempt == 1)) && killed_by_signal "$batch_rc" && ! grep -q -E "Test Case '.*' started" "$batch_log"; then
         echo "::warning::swift test was killed by signal $((batch_rc - 128)) (exit code $batch_rc) before any test started: the tool crashed. Running this batch once more."
         continue
       fi
@@ -1297,10 +1298,13 @@ run_shard() {
   wait "$watcher" 2>/dev/null || true
 
   local executed="$WORK/executed.txt"
-  sed -n -E "s/^Test Case '([^']+)' started.*/\\1/p" "$log" | sort >"$executed"
+  # Not anchored to the start of the line: a test's own print that has no
+  # line end yet when XCTest writes its line glues the two (PR #1904's run
+  # 42258969164 lost HighSpeedDemoTests.testZuoyingsDepotHasItsOwnTrack so).
+  sed -n -E "s/^.*Test Case '([^']+)' started.*/\\1/p" "$log" | sort >"$executed"
   local executed_count failed_count
   executed_count="$(wc -l <"$executed" | tr -d ' ')"
-  failed_count="$(grep -c -E "^Test Case '.*' failed" "$log" || true)"
+  failed_count="$(grep -c -E "Test Case '.*' failed" "$log" || true)"
 
   echo "::group::Coverage check for shard $shard"
   echo "selected $expected_count, executed $executed_count, failed $failed_count, swift test exit code $rc, ${seconds}s"

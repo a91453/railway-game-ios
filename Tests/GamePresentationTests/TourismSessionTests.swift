@@ -373,13 +373,23 @@ final class TourismSessionTests: XCTestCase {
         ])
         // 60,000 units (940 m) from Foot: within 5 km, but not 800 m.
         let advice = try XCTUnwrap(StationMasterAdvice(world: world))
-        guard case .sightUnreachable(_, let english, let chinese, let stars, let status) = advice else {
+        guard case .sightUnreachable(_, let english, let chinese, let stars, let status, _) = advice else {
             return XCTFail("\(advice)")
         }
         XCTAssertEqual([english, chinese, status], ["Jiufen", "九份", AttractionStatus.noStation] as [AnyHashable])
         XCTAssertEqual(stars, 400)
         XCTAssertEqual(advice.text(in: .traditionalChinese), "九份 4★ 沒有車站可到。在 800 公尺內蓋車站，再開一條線過去吧。")
         XCTAssertTrue(advice.text(in: .english).hasPrefix("Jiufen 4★ has no station to reach it."))
+    }
+
+    /// L11-7: the "no source" advice names the map's edge only where there is one.
+    func testTheNoSourceAdviceNamesTheEdgeOnlyWhereThereIsOne() {
+        for edge in [true, false] {
+            let advice = StationMasterAdvice.sightUnreachable(
+                attraction: AttractionID(rawValue: 1), english: "Jiufen", chinese: "九份", stars: 4, status: .noSource, edge: edge)
+            XCTAssertEqual(advice.text(in: .english).contains("edge"), edge)
+            XCTAssertEqual(advice.text(in: .traditionalChinese).contains("地圖邊緣"), edge)
+        }
     }
 
     func testTheStationMasterWarnsOfTouristsBeforeAHoliday() throws {

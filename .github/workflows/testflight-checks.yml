@@ -74,7 +74,9 @@ jobs:
   macos-dry-run:
     name: macOS dry run (no Apple account; nothing signed or uploaded)
     runs-on: macos-26
-    timeout-minutes: 30
+    # Two unsigned archives: 7 and 5 minutes on 2026-10-14, 20 and 9 minutes
+    # on 2026-11-07 (#1915, where 30 minutes stopped it before the IPA check).
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

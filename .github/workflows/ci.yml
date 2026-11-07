@@ -450,7 +450,7 @@ jobs:
           python3 -I tools/stack-frames/frames.py report \
             --title "Stack frames of GameCore and GamePresentation (-O, x86_64)" \
             --baseline tools/stack-frames/baseline-linux-x86_64.txt $objects >"$RUNNER_TEMP/frames.md"
-          cat "$RUNNER_TEMP/frames.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          tee -a "$GITHUB_STEP_SUMMARY" <"$RUNNER_TEMP/frames.md"
           if grep -q "not in the baseline" "$RUNNER_TEMP/frames.md"; then
             echo "::warning::A stack frame over 32 KB is new (decision 590): see the job summary."
           fi

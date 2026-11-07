@@ -98,6 +98,8 @@ while IFS= read -r name; do
   # held-last: the last test is still running for FAKE_SLEEP seconds (a
   # parallel run prints a test once it ends).
   [[ "${FAKE_MODE:-ok}" != held-last || "$name" != "$last" ]] || sleep "${FAKE_SLEEP:-0}"
+  # glued: a test's own print has no line end when XCTest writes its line.
+  [[ "${FAKE_MODE:-ok}" != glued || "$name" != "$last" ]] || printf 'THSR 1→2: real 420 s, '
   echo "Test Case '$name' started at 2026-01-01 00:00:00.000"
   if [[ "${FAKE_MODE:-ok}" == failline && "$name" == *testOne ]]; then
     echo "Test Case '$name' failed (0.001 seconds)"
@@ -149,6 +151,7 @@ for shard in $("$script" shards) all; do
 done
 FAKE_MODE=drop WHY='not the tests the shard selects' expect fail "a selected test that does not run fails the shard" "$script" run campaigns-2
 FAKE_MODE=extra WHY='not the tests the shard selects' expect fail "a test outside the selection that runs fails the shard" "$script" run campaigns-2
+FAKE_MODE=glued expect pass "a started line glued after a test's own print still counts" "$script" run campaigns-2
 FAKE_MODE=exit1 WHY='swift test failed in shard rest' expect fail "swift test exiting non-zero fails the shard" "$script" run rest
 FAKE_MODE=failline WHY='tests failed in shard campaigns-1' expect fail "a failed test fails the shard" "$script" run campaigns-1
 
@@ -224,6 +227,7 @@ SHARD_LIMIT_MINUTES=45 JOB_STARTED=$(($(date +%s) - 1550)) says 'near its 45-min
 ci_yml="$(cd "$(dirname "$script")/../workflows" && pwd)/ci.yml"
 ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^    timeout-minutes:/ { print $2; exit }' "$ci_yml")"
 ci_limit="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^ *SHARD_LIMIT_MINUTES:/ { print $2; exit }' "$ci_yml")"
+# shellcheck disable=SC2016 # the $ is the literal text sed matches
 script_limit="$(sed -n 's/^SHARD_LIMIT_MINUTES="\${SHARD_LIMIT_MINUTES:-\([0-9]*\)}"$/\1/p' "$script")"
 if [[ -n "$ci_timeout" && "$ci_timeout" == "$ci_limit" && "$ci_timeout" == "$script_limit" ]]; then
   echo "ok   says  the shard job's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"

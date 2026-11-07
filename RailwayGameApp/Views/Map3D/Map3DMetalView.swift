@@ -121,10 +121,11 @@ final class Map3DMetalView: MTKView {
     var streetLife: (@MainActor (Map3DCamera, Float, Map3DMotionBudget) -> Map3DStreetLife.Frame)?
     /// Decision 259: three buffers of their instances, a frame's each in
     /// turn, so none is made each frame; a frame waits for the GPU to be
-    /// done with the one it fills.
-    private var lifeBuffers: [MTLBuffer] = []
-    private var lifeBuffer = 0
-    private let lifeInFlight = DispatchSemaphore(value: 3)
+    /// done with the one it fills. Decision 608, second continuation: and
+    /// so the trains' boxes and shadows, the cars' instances and the glass
+    /// (``Map3DFrameBuffers``), with the same wait.
+    private var frameBuffers = Map3DFrameBuffers<MTLBuffer>()
+    private let frameInFlight = DispatchSemaphore(value: Map3DFrameBuffers<MTLBuffer>.sets)
     /// Decision 417: how much that moves this device draws at most, by its
     /// GPU, and as the 3D look in Settings has it (decision 259's street
     /// detail with it).
@@ -140,6 +141,9 @@ final class Map3DMetalView: MTKView {
     private var memoryWatch = Map3DMemoryWatch()
     private var level: Map3DLoadLevel? { quality.tier(device: deviceTier) == nil ? nil : load.level }
     private var drawsFewerPixels = false
+    /// Decision 610: whether the real buildings' street fronts are drawn
+    /// (``Map3DRealFacade/draws(quality:lowPower:heat:tier:)``).
+    private var drawsFacades = false
     /// Decision 238's later note: the 3D look chosen in Settings.
     var quality = Map3DQuality.automatic {
         didSet {
@@ -151,7 +155,9 @@ final class Map3DMetalView: MTKView {
     /// Decision 352: with Reduce Motion the screens hold one picture;
     /// decision 356: and the water's ripples stand still.
     var reduceMotion = false
-    /// Decision 230: the train models, and a buffer of each one's vertices.
+    /// Decision 230: the train models, and a buffer of each one's vertices;
+    /// decision 608: the pack without its vertices, which are only in the
+    /// buffers (``Map3DUploadedModels``, shared by every 3D view).
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     private var transparentGlass = Map3DTransparentGlass.Cache(models: [])
     private var glassDrawing: Map3DGlassPipeline?
@@ -220,6 +226,13 @@ final class Map3DMetalView: MTKView {
         /// Decision 368: built without its city in full, so drawn
         /// simplified until built again.
         let coarse: Bool
+        /// Decision 610: the real buildings' street fronts, made into
+        /// buffers only once the chunk is drawn close up with them on
+        /// (``drawsFacades``), and let go when they go off; whether they
+        /// were drawn last frame.
+        let facadeMesh: Map3DMesh
+        var facade: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        var frontsUp = false
     }
 
     private let queue: MTLCommandQueue
@@ -594,7 +607,7 @@ final class Map3DMetalView: MTKView {
                 for run in props.shapes where run.model < models.buffers.count && !leftOut.contains(run.model) && walkModels?.places(run.model) != true {
                     encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
-                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertexCount,
                                            instanceCount: run.count)
                     drawCalls += 1
                     triangles += models.pack.models[run.model].triangleCount * run.count
@@ -611,6 +624,17 @@ final class Map3DMetalView: MTKView {
         load.relieve()
         rememberRung()
         applyQuality()
+        // Decision 610: the street fronts' buffers let go, made again only
+        // where they are still drawn.
+        releaseFacades()
+    }
+
+    /// Decision 610: lets go of every chunk's street fronts' buffers.
+    private func releaseFacades() {
+        for index in chunks.indices where chunks[index].facade != nil {
+            chunks[index].facade = nil
+            chunks[index].frontsUp = false
+        }
     }
 
     private func applyQuality() {
@@ -624,6 +648,11 @@ final class Map3DMetalView: MTKView {
         sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.level.drawing.fewerPixels)
         trainMaterials = Map3DReflection.trainStrength(quality, lowPower: process.isLowPowerModeEnabled, heat: heat)
         let fewer = plan.fewerPixels || load.level.drawing.fewerPixels
+        let facades = Map3DRealFacade.draws(quality: quality, lowPower: process.isLowPowerModeEnabled, heat: heat, tier: level?.tier)
+        if facades != drawsFacades {
+            drawsFacades = facades
+            if !facades { releaseFacades() }
+        }
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
             setNeedsLayout()
@@ -891,12 +920,14 @@ final class Map3DMetalView: MTKView {
         }
     }
 
-    /// Decision 230: draws the trains near the eye with `pack`'s models.
-    func useModels(_ pack: Map3DModelPack) {
-        let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
-        guard buffers.count == pack.models.count else { return }
-        models = (pack, buffers)
-        transparentGlass = Map3DTransparentGlass.Cache(models: pack.models)
+    /// Decision 230: draws the trains near the eye with `uploaded`'s
+    /// models; decision 608: their buffers made once, off the main thread,
+    /// and shared, so this only takes them.
+    func useModels(_ uploaded: Map3DUploadedModels) {
+        guard let device, uploaded.buffers.allSatisfy({ $0.device === device }) else { return }
+        let pack = uploaded.pack
+        models = (pack, uploaded.buffers)
+        transparentGlass = uploaded.glass
         signalModels = Map3DSignalTiming.Models(pack: pack)
         walkModels = Map3DPedestrianSignal.Models(pack: pack)
     }
@@ -968,12 +999,12 @@ final class Map3DMetalView: MTKView {
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
                      far: far, farBoxes: farBoxes, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
-                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse)
+                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse, facadeMesh: chunk.facade)
     }
 
     /// Decision 259: the most figures and vehicles a frame draws (the
-    /// fullest detail's), and the next of the three buffers for them,
-    /// once the GPU is done with it.
+    /// fullest detail's); their buffer is the frame's set's
+    /// (``Map3DFrameBuffers``).
     /// Decision 417: the most a higher tier draws, the player's buses (at
     /// most its buses) besides its vehicles.
     private static let lifeCapacity = {
@@ -981,14 +1012,19 @@ final class Map3DMetalView: MTKView {
         return most.people + most.vehicles + most.buses
     }()
 
-    private func nextLifeBuffer() -> MTLBuffer? {
-        if lifeBuffers.isEmpty, let device {
-            lifeBuffers = (0..<3).compactMap { _ in device.makeBuffer(length: Self.lifeCapacity * Self.instanceStride, options: .storageModeShared) }
+    /// Decision 608, second continuation: the current set's buffer for
+    /// `use` with `array`'s bytes copied in (made larger first when too
+    /// small); the frame has taken its set.
+    private func fill<Element>(_ use: Map3DFrameBuffers<MTLBuffer>.Use, _ array: [Element]) -> MTLBuffer? {
+        guard !array.isEmpty, let device else { return nil }
+        return array.withUnsafeBytes { bytes in
+            guard let base = bytes.baseAddress,
+                  let buffer = frameBuffers.buffer(use, bytes: bytes.count,
+                                                   make: { device.makeBuffer(length: $0, options: .storageModeShared) })
+            else { return nil }
+            buffer.contents().copyMemory(from: base, byteCount: bytes.count)
+            return buffer
         }
-        guard lifeBuffers.count == 3 else { return nil }
-        lifeInFlight.wait()
-        lifeBuffer = (lifeBuffer + 1) % 3
-        return lifeBuffers[lifeBuffer]
     }
 
     private func makeBuffer<Element>(_ array: [Element]) -> MTLBuffer? {
@@ -1003,7 +1039,7 @@ final class Map3DMetalView: MTKView {
     /// CPU work comes first (which chunks show and how, the trains, the
     /// street life and their buffers), and only then the drawable, as
     /// Apple advises: held as briefly as possible. The time spent waiting
-    /// for it, and for a street life buffer the GPU still reads, is
+    /// for it, and for a set of buffers the GPU still reads, is
     /// counted apart (``Stats/waitMilliseconds``): the CPU's time was
     /// measured from before the drawable, so a wait for the screen read
     /// as work.
@@ -1050,6 +1086,15 @@ final class Map3DMetalView: MTKView {
                                      coarse: chunks[index].coarse, wasClose: chunks[index].closeUp)
             chunks[index].walksClose = camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum,
                                                          detailed: chunks[index].detailed, coarse: false, wasClose: chunks[index].walksClose)
+            // Decision 610: and the real buildings' street fronts, made into
+            // buffers the first time.
+            chunks[index].frontsUp = drawsFacades && !chunks[index].facadeMesh.isEmpty
+                && camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, detailed: chunks[index].detailed,
+                                     coarse: chunks[index].coarse, wasClose: chunks[index].frontsUp)
+            if chunks[index].frontsUp, chunks[index].facade == nil,
+               let vertices = makeBuffer(chunks[index].facadeMesh.vertices), let indices = makeBuffer(chunks[index].facadeMesh.indices) {
+                chunks[index].facade = (vertices, indices, chunks[index].facadeMesh.indices.count)
+            }
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
             }
@@ -1058,20 +1103,11 @@ final class Map3DMetalView: MTKView {
         // Decision 342: the cars the city in front of is seen through.
         // Supplement: and the cabin followed, as one point.
         let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix, followed: followedSeeThrough)
-        var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
-        if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
-            trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
-        }
-        var trainShadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
-        if let mesh = frame?.shadows, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
-            trainShadows = (vertices, indices, mesh.indices.count, mesh.triangleCount)
-        }
         // Decision 230: the cars near the eye, one draw call a model, every
         // car of it an instance.
-        var cars: (sorted: [Map3DInstance], buffer: MTLBuffer)?
+        var carsSorted: [Map3DInstance] = []
         if let instances = frame?.instances, !instances.isEmpty, models != nil {
-            let sorted = instances.sorted { $0.model < $1.model }
-            if let buffer = makeBuffer(sorted.flatMap(\.floats)) { cars = (sorted, buffer) }
+            carsSorted = instances.sorted { $0.model < $1.model }
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
@@ -1085,33 +1121,47 @@ final class Map3DMetalView: MTKView {
             }
         }
         let life = below ? nil : streetLife?(camera, shown.lights, budget)
-        var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
+        var lifeSorted: [Map3DInstance] = []
         if let instances = life?.instances, !instances.isEmpty, models != nil {
-            let waiting = CACurrentMediaTime()
-            let buffer = nextLifeBuffer()
-            waited += CACurrentMediaTime() - waiting
-            if let buffer {
-                let sorted = Array(instances.sorted { $0.model < $1.model }.prefix(Self.lifeCapacity))
-                let floats = sorted.flatMap(\.floats)
-                floats.withUnsafeBytes { bytes in
-                    if let base = bytes.baseAddress { buffer.contents().copyMemory(from: base, byteCount: bytes.count) }
-                }
-                lifeDraw = (sorted, buffer)
-            }
+            lifeSorted = Array(instances.sorted { $0.model < $1.model }.prefix(Self.lifeCapacity))
         }
         // Build one globally sorted scene-space glass batch for the selected
-        // native model instances. Ordinary model packs allocate no batch.
-        var glassBuffer: (buffer: MTLBuffer, vertices: Int)?
+        // native model instances. Ordinary model packs fill no batch.
+        var glassVertices: [Map3DVertex] = []
         if !transparentGlass.isEmpty, glassDrawing != nil {
-            let vertices = transparentGlass.vertices(instances: (cars?.sorted ?? []) + (lifeDraw?.sorted ?? []),
-                                                     eye: camera.eye, toward: camera.target)
-            if !vertices.isEmpty, let buffer = makeBuffer(vertices) { glassBuffer = (buffer, vertices.count) }
+            glassVertices = transparentGlass.vertices(instances: carsSorted + lifeSorted, eye: camera.eye, toward: camera.target)
         }
+        // Decision 608, second continuation: this frame's buffers are the
+        // next of three sets, once the GPU is done with it, none made anew
+        // unless a set is too small for this frame.
+        let boxMesh = frame.flatMap { $0.boxes.isEmpty ? nil : $0.boxes }
+        let shadowMesh = frame.flatMap { $0.shadows.isEmpty ? nil : $0.shadows }
+        let fills = boxMesh != nil || shadowMesh != nil || !carsSorted.isEmpty || !lifeSorted.isEmpty || !glassVertices.isEmpty
+        if fills {
+            let waiting = CACurrentMediaTime()
+            frameInFlight.wait()
+            waited += CACurrentMediaTime() - waiting
+            frameBuffers.advance()
+        }
+        var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
+        if let mesh = boxMesh, let vertices = fill(.boxVertices, mesh.vertices), let indices = fill(.boxIndices, mesh.indices) {
+            trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
+        }
+        var trainShadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
+        if let mesh = shadowMesh, let vertices = fill(.shadowVertices, mesh.vertices), let indices = fill(.shadowIndices, mesh.indices) {
+            trainShadows = (vertices, indices, mesh.indices.count, mesh.triangleCount)
+        }
+        var cars: (sorted: [Map3DInstance], buffer: MTLBuffer)?
+        if let buffer = fill(.cars, carsSorted.flatMap(\.floats)) { cars = (carsSorted, buffer) }
+        var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
+        if let buffer = fill(.life, lifeSorted.flatMap(\.floats)) { lifeDraw = (lifeSorted, buffer) }
+        var glassBuffer: (buffer: MTLBuffer, vertices: Int)?
+        if let buffer = fill(.glass, glassVertices) { glassBuffer = (buffer, glassVertices.count) }
         let waiting = CACurrentMediaTime()
         guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable, let commands = queue.makeCommandBuffer()
         else {
-            // The street life buffer taken goes back unused.
-            if lifeDraw != nil { lifeInFlight.signal() }
+            // The frame's set taken goes back unused.
+            if fills { frameInFlight.signal() }
             return
         }
         waited += CACurrentMediaTime() - waiting
@@ -1120,9 +1170,9 @@ final class Map3DMetalView: MTKView {
             drawSunMap(redraw, commands: commands, drawCalls: &drawCalls, triangles: &triangles)
         }
         guard let encoder = commands.makeRenderCommandEncoder(descriptor: pass) else {
-            // The street life buffer taken goes back unused, and the sun's
-            // map is drawn again next frame.
-            if lifeDraw != nil { lifeInFlight.signal() }
+            // The frame's set taken goes back unused, and the sun's map is
+            // drawn again next frame.
+            if fills { frameInFlight.signal() }
             if sunRegion.redraw != nil { sunDrawn = nil }
             return
         }
@@ -1169,6 +1219,13 @@ final class Map3DMetalView: MTKView {
                                               indexBuffer: close.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += close.indexCount / 3
+            }
+            if chunk.frontsUp, let facade = chunk.facade {
+                encoder.setVertexBuffer(facade.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: facade.indexCount, indexType: .uint32,
+                                              indexBuffer: facade.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += facade.indexCount / 3
             }
             if seen { encoder.setRenderPipelineState(seeThroughPipeline) }
             if detailed, seen, chunk.indexCount > chunk.baseIndexCount {
@@ -1232,7 +1289,7 @@ final class Map3DMetalView: MTKView {
                     if model < models.buffers.count {
                         encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
                         encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
-                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertices.count,
+                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertexCount,
                                                instanceCount: count)
                         drawCalls += 1
                         triangles += models.pack.models[model].triangleCount * count
@@ -1271,7 +1328,7 @@ final class Map3DMetalView: MTKView {
                     }
                     encoder.setVertexBuffer(models.buffers[drawn], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
-                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertices.count,
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertexCount,
                                            instanceCount: run.count)
                     drawCalls += 1
                     triangles += models.pack.models[drawn].triangleCount * run.count
@@ -1346,8 +1403,8 @@ final class Map3DMetalView: MTKView {
             copyForCapture(drawable.texture, commands: commands)
         }
         let gpuTimes = gpuTimes
-        if lifeDraw != nil {
-            let inFlight = lifeInFlight
+        if fills {
+            let inFlight = frameInFlight
             commands.addCompletedHandler { @Sendable _ in inFlight.signal() }
         }
         // Decision 421: each frame's GPU time and when it reached the screen

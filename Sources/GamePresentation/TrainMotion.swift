@@ -400,8 +400,18 @@ public struct TrainMotion: Sendable {
     /// `previous`, both seconds on the caller's clock: the time between
     /// them, within ``durations``. The real trains', buses' and cable
     /// cars' clock glides the same (``RealTrainClock``).
+    ///
+    /// Review L11-3 (decision 379 續): longer apart than the longest glide
+    /// (more than a slow tick and its rest, ``TickPace/longestRest``, ever
+    /// take), the tick before was not the one just gone: the game was
+    /// paused, in the background, or the train stood still. Its glide then
+    /// lasts ``tickSeconds``, as when the tick before is not known; one of
+    /// five seconds was cut short by the next tick a second later and the
+    /// train jumped the rest of the way.
     public static func glideSeconds(since previous: Double, at time: Double) -> Double {
-        min(max(time - previous, durations.lowerBound), durations.upperBound)
+        let gap = time - previous
+        guard gap <= durations.upperBound else { return tickSeconds }
+        return max(gap, durations.lowerBound)
     }
 
     /// Decision 379: these trains seen at `time` (seconds on the caller's

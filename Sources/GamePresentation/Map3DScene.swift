@@ -65,6 +65,12 @@ public struct Map3DScene: Sendable {
         /// camera looked), so drawn simplified, as from afar, until it is
         /// built again in full (``Map3DStreaming/Window``).
         public let coarse: Bool
+        /// Decision 610: what stands out of the real buildings' street
+        /// fronts (arcade pillars, window grilles, air conditioners, blade
+        /// signs, rooftop rooms): drawn as ``close`` is, but left out on
+        /// Battery Saver and when memory runs short
+        /// (``Map3DRealFacade/draws(quality:lowPower:heat:tier:)``).
+        public var facade = Map3DMesh()
 
         /// Decision 455: ``far`` and ``farBoxes`` as one mesh, the boxes as
         /// the app's shader draws them.
@@ -756,8 +762,19 @@ extension Map3DScene {
             /// in a coarse chunk too (decision 368 leaves the rest of the
             /// closest detail out of one), so it runs all along the line.
             case wires
+            /// Decision 610: the real buildings' street fronts (``Chunk/facade``).
+            case facade
         }
         var target = Target.base
+        /// Decision 610: the street fronts, by chunk.
+        var facadeMeshes: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 610: each chunk's buildings' street fronts as built, with
+        /// the number they are kept by (``addFacadeParts()``).
+        var facadeParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
+        /// Decision 610: while the real buildings are built in full, the
+        /// 4 m cells by their streets (``streetCells(within:)``), for
+        /// ``addRealFacade``; `nil` builds no street fronts.
+        var facadeStreets: Set<ChunkKey>?
         /// Decision 244: the street furniture, by chunk.
         var props: [ChunkKey: [Map3DInstance]] = [:]
         /// Decision 352: the signs, by chunk.
@@ -968,6 +985,7 @@ extension Map3DScene {
                 farMeshes[key, default: Map3DMesh()].collectsBoxes = instancingBoxes
                 build(&farMeshes[key, default: Map3DMesh()])
             case .close, .wires: build(&closeMeshes[key, default: Map3DMesh()])
+            case .facade: build(&facadeMeshes[key, default: Map3DMesh()])
             case .standIn: build(&standInMeshes[key, default: Map3DMesh()])
             }
         }
@@ -986,7 +1004,13 @@ extension Map3DScene {
                 drawn.addViaducts()
                 return drawn.chunks()
             }
-            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
+            // Decision 610: the street fronts not yet kept, kept first.
+            guard facadeParts.isEmpty else {
+                var drawn = self
+                drawn.addFacadeParts()
+                return drawn.chunks()
+            }
+            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
@@ -1001,6 +1025,8 @@ extension Map3DScene {
                 Map3DLook.restyle(&far, keeping: keptColours)
                 Map3DLook.restyle(&farBoxes, keeping: keptColours)
                 Map3DLook.restyle(&close, keeping: keptColours, strength: Map3DLook.close)
+                var facade = facadeMeshes[key] ?? Map3DMesh()
+                Map3DLook.restyle(&facade, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
@@ -1011,16 +1037,18 @@ extension Map3DScene {
                         (Map3DPoint(min($0.min.x, $1.x), min($0.min.y, $1.y), min($0.min.z, $1.z)), Map3DPoint(max($0.max.x, $1.x), max($0.max.y, $1.y), max($0.max.z, $1.z)))
                     }
                 }
-                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds, standIn.bounds].compactMap { $0 } + farBoxes.map(\.bounds)
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds, facade.bounds, standIn.bounds].compactMap { $0 } + farBoxes.map(\.bounds)
                     + propBoxes + signBoxes
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
-                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, farBoxes: farBoxes, close: close,
+                var chunk = Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, farBoxes: farBoxes, close: close,
                              standIn: standIn, shadows: shadows, props: props[key] ?? [], minimum: low, maximum: high,
                              cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0), (standIn, 0)],
                                                             boxes: farBoxes),
                              signs: signs[key] ?? [], coarse: isCoarse(key))
+                chunk.facade = facade
+                return chunk
             }
         }
 
@@ -1218,7 +1246,12 @@ extension Map3DScene {
         /// detail (``Target/near``), its bed, banks and viaducts at every
         /// distance: the real lines' tracks, which far out are most of what
         /// a scene draws.
-        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false) {
+        ///
+        /// `from`: how far along its whole track `line` starts, metres
+        /// (a real track's, review L11-1), so a viaduct's piers stand where
+        /// the whole track puts them, wherever the piece starts.
+        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false,
+                                    from along: Float? = nil) {
             let middle = line[line.count / 2]
             switch kind {
             case .tunnel:
@@ -1234,7 +1267,7 @@ extension Map3DScene {
                 // Decision 407: drawn with the rest (addViaducts()).
                 let grounds = line.map { ground(at: $0) }
                 addDeckShadow(line, grounds: grounds, width: viaduct.look(over: kind).deckWidth)
-                viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct)
+                viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct, from: along)
             case .surface, .embankment, .cutting:
                 let lifts = line.map { $0.y - ground(at: $0) }
                 let depth = max(0.45, (lifts.reduce(0, +) / Float(lifts.count)) - Self.bedDrop)

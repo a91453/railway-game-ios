@@ -30,20 +30,68 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 119.1.
+        Entry(
+            id: "2026-11-07-119-1",
+            items: [
+                Line(
+                    english: "The Kaohsiung Circular Light Rail can now be bought: it follows the real tracks, has a light rail depot, and keeps running every trip with traffic control off.",
+                    chinese: "高雄環狀輕軌開放收購：照真實股道鋪、有輕軌機廠，行車控制關掉也不漏班。"
+                ),
+                Line(
+                    english: "Cable car cabins now change with the place: near Sun Moon Lake you get the Sun Moon Lake cabin, and the cabin glass is clear.",
+                    chinese: "纜車吊廂照地點換，日月潭附近是日月潭吊廂，玻璃改透明。"
+                ),
+                Line(
+                    english: "Real-world buildings along a street now show arcade pillars, window grilles, air conditioners, upright signs and rooftop add-ons.",
+                    chinese: "實景建物沿街立面多了騎樓柱、鐵窗、冷氣機、直立招牌和頂樓加蓋。"
+                ),
+                Line(
+                    english: "The Changhua roundhouse now has locomotives parked in its stalls.",
+                    chinese: "彰化扇形車庫的庫位停著機車。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Laying track or adding a platform on the 3D map now redraws only the area around it, so it feels smoother.",
+                    chinese: "3D 地圖鋪軌、加月台只重畫周圍，操作更順。"
+                ),
+                Line(
+                    english: "The 3D map uses less memory.",
+                    chinese: "3D 地圖比較省記憶體。"
+                ),
+                Line(
+                    english: "The cab window view no longer jerks along in fits and starts.",
+                    chinese: "車窗視角走走停停的問題修好了。"
+                ),
+                Line(
+                    english: "After you rebuild a real-world line, the whole scene updates with it.",
+                    chinese: "改建實景線後，整片場景跟著更新。"
+                ),
+                Line(
+                    english: "The picture no longer jumps after you pause.",
+                    chinese: "暫停後畫面不再跳一下。"
+                ),
+                Line(
+                    english: "Small fixes to the sights panel and a few other spots.",
+                    chinese: "觀光景點面板等幾處小修。"
+                ),
+            ]
+        ),
         // 118.1.
         Entry(
             id: "2026-11-06-118-1",
             items: [
                 Line(
-                    english: "On the Wenhu line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
+                    english: "On the Wenhu Line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
                     chinese: "收購的文湖線，木柵、內湖機廠照真實車場鋪，多一條進出機廠的線，收購也便宜一點。"
                 ),
                 Line(
-                    english: "On the Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
-                    chinese: "收購的機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
+                    english: "On the Taoyuan Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
+                    chinese: "收購的桃園機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
                 ),
                 Line(
-                    english: "With train control on, spare trains that cannot depart and block the way go back to the depot first.",
+                    english: "With traffic control on, spare trains that cannot depart and block the way go back to the depot first.",
                     chinese: "行車控制下多出來、發不出去又擋路的空車會先回機廠。"
                 ),
             ],
@@ -83,7 +131,7 @@ public enum WhatsNew {
                     chinese: "放空模式也會跟著地圖上跑的真實列車，角落淡淡寫出車名與往哪裡。"
                 ),
                 Line(
-                    english: "A Xiaobitan branch you buy is now a single track with one train shuttling back and forth, and costs less.",
+                    english: "The Xiaobitan Branch Line you buy is now a single track with one train shuttling back and forth, and costs less.",
                     chinese: "新買的小碧潭支線照真實鋪成單線，一列車來回，收購價也便宜了。"
                 ),
                 Line(

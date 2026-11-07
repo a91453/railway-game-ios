@@ -515,8 +515,11 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         var builder = builder(world)
         let built = builder.addTaipeiLandmarks(frame: frame)
         XCTAssertEqual(Set(built.keys), [roundhouse])
-        XCTAssertEqual(triangles(builder.nearMeshes), roundhouse.model(full: true).indices.count / 3)
-        XCTAssertEqual(triangles(builder.farMeshes), roundhouse.model(full: false).indices.count / 3)
+        // With decision 581's later parked locomotives (Map3DRoundhouseStockTests).
+        XCTAssertEqual(triangles(builder.nearMeshes),
+                       (roundhouse.model(full: true).indices.count + Map3DRoundhouseStock.model(full: true).indices.count) / 3)
+        XCTAssertEqual(triangles(builder.farMeshes),
+                       (roundhouse.model(full: false).indices.count + Map3DRoundhouseStock.model(full: false).indices.count) / 3)
         XCTAssertTrue(builder.keptColours.contains(crownRoof))
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }

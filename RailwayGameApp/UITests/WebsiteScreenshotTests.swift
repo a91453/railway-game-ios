@@ -792,6 +792,17 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// they are assigned, the double track on one deck, close and leaned.
     func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
     func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
+
+    /// Decision 581, later (ROUNDHOUSE-STOCK): the Changhua Roundhouse's
+    /// parked locomotives, their noses out of the doorways towards the
+    /// turntable, from the turntable's side close by and higher up. For the
+    /// pull request's screenshot review.
+    func testChanghuaRoundhouseStock() {
+        for (view, name) in [("90,0,60", "roundhouse-stock-close"), ("80,320,55", "roundhouse-stock-west"),
+                             ("220,10,40", "roundhouse-stock-high")] {
+            shootLean("changhuaRoundhouse", view, name)
+        }
+    }
     /// Decision 607: the interchange west of Taichung over the high-speed
     /// line, beside the Fazi River: its link roads meeting the decks at
     /// one height, from above and leaned low.
@@ -821,6 +832,15 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// the standard tier is asked for.
     func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day", extra: ["-screenshot-device-tier", "1"]) }
     func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night", extra: ["-screenshot-device-tier", "1"]) }
+
+    /// Decision 610: Banqiao's low-rise blocks north of Fuzhong close up
+    /// and leaned, over their roofs (decision 610 續: not against a
+    /// tower's wall), the real buildings' street fronts (arcade pillars, grilles,
+    /// air conditioners, blade signs, rooftop rooms). The standard tier is
+    /// asked for: the Simulator's GPU has none, and the lowest leaves the
+    /// fronts out.
+    func testRealStreetFronts() { shootLean("streetFronts", "70,240,55", "street-fronts", extra: ["-screenshot-device-tier", "1"]) }
+    func testRealStreetFrontsAbove() { shootLean("streetFronts", "140,60,35", "street-fronts-above", extra: ["-screenshot-device-tier", "1"]) }
 
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.

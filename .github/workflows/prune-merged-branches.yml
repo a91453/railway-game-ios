@@ -99,6 +99,7 @@ jobs:
             echo "- Dry run: $DRY_RUN"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$moved" -gt 0 ]; then
+            # shellcheck disable=SC2016 # the backticks are Markdown, not a command
             { echo; echo "Kept, commits after the merge:"; echo; sed 's/^/- `/; s/$/`/' "$work/moved"; } >> "$GITHUB_STEP_SUMMARY"
           fi
 

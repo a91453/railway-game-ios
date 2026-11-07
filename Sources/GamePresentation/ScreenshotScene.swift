@@ -76,6 +76,9 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Taichung over the high-speed line, the Fazi River beside it, for
     /// the screenshots of its link roads meeting the decks at one height.
     case interchange
+    /// Decision 581, later: the same map at the Changhua Roundhouse, for
+    /// the screenshots of the locomotives standing in its doorways.
+    case changhuaRoundhouse
 
     /// Decision 596: the same map round the big junction 380 m east of
     /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
@@ -83,6 +86,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// at its crossings (`-screenshot-3d-view`), paused to go on at 10×.
     case streetStop
     case streetStopNight
+
+    /// Decision 610: the same map round Banqiao's low-rise blocks north
+    /// of Fuzhong (decision 610 續: no towers within 80 m), for the close-up screenshots of the real buildings' street
+    /// fronts (arcade pillars, grilles, blade signs, rooftop rooms).
+    case streetFronts
 
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
@@ -195,7 +203,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipei101: (25.033946307135494, 121.56455513294843)
         case .taichungViaduct: (24.1369, 120.6850)
         case .interchange: (24.1489, 120.6233)
+        // In front of the roundhouse's doorways, 12 m south and 5 m east of
+        // its middle (``Map3DTaipeiLandmark/changhuaRoundhouse``).
+        case .changhuaRoundhouse: (24.0858608 - 12 / 110_759, 120.5401168 + 5 / 101_684)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
+        case .streetFronts: (25.0185, 121.4536)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
@@ -235,9 +247,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
-        case .taipeiMain, .taipei101, .taichungViaduct, .interchange: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .taipeiMain, .taipei101, .taichungViaduct, .interchange, .changhuaRoundhouse: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
+        case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         // The line runs 50 km; the map opens at 02:00, its last trains in.
         case .tymcRebuild: Self.realLineWorld(at: self, side: 1 << 22, ticks: 12, in: language)

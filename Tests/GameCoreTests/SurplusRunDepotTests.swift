@@ -18,6 +18,13 @@ import XCTest
 ///                               └──e3── D (Depot)
 ///
 /// A's one platform is on `e1`, B's and X's on `e0`; edge `en` is `.edge(n + 1)`.
+///
+/// Decision 609, continued (WENHU-LATE): only without block sections, as
+/// its second part (``GameWorld/heldRunDepartures(memo:)``). With them it
+/// sent trains in and out of the Wenhu line's depots all day under the
+/// realistic rules (second day 286 → 308 trips late, the Tamsui line's
+/// Green Mountain line deadlocked) and kept one at the Taoyuan Airport
+/// MRT's Terminal 2 for five hours a night.
 final class SurplusRunDepotTests: XCTestCase {
     private func forward(_ edge: Int) -> TrackTraversal {
         TrackTraversal(edge: .edge(edge + 1), direction: .forward)
@@ -33,9 +40,9 @@ final class SurplusRunDepotTests: XCTestCase {
 
     /// At 10:00, the line Main calling at B, X, A and C, with runs from B
     /// to C at 10:30 and 11:30 and the depot D; T1 and T2, Main's, at B,
-    /// T2 ahead. With traffic control (and block sections) when
-    /// `controlled`.
-    private func makeScene(controlled: Bool = true) throws -> Scene {
+    /// T2 ahead. With traffic control when `controlled`, and block
+    /// sections when `blocks`.
+    private func makeScene(controlled: Bool = true, blocks: Bool = false) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 362_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 600), speed: .normal)
@@ -84,8 +91,8 @@ final class SurplusRunDepotTests: XCTestCase {
         }
         if controlled {
             try world.setTrafficControl(true)
-            world.setBlockSections(true)
         }
+        if blocks { world.setBlockSections(true) }
         return Scene(world: world, line: line, depot: depot, t1: trains[0], t2: trains[1])
     }
 
@@ -113,14 +120,31 @@ final class SurplusRunDepotTests: XCTestCase {
         XCTAssertFalse(scene.world.stationsStoppedAt(by: scene.t1).contains(scene.depot), "T1 stayed at B")
     }
 
+    /// WENHU-LATE: with block sections the rule stands aside, as decision
+    /// 609's second part does: both trains wait for the runs, and both
+    /// runs leave.
+    func testWithBlockSectionsBothWait() throws {
+        var scene = try makeScene(blocks: true)
+        for _ in 0..<20 { try scene.world.advance(ticks: 1) }
+        XCTAssertFalse(scene.world.stationsStoppedAt(by: scene.t2).contains(scene.depot), "T2 stayed at B")
+        XCTAssertFalse(scene.world.stationsStoppedAt(by: scene.t1).contains(scene.depot), "T1 stayed at B")
+        for _ in 0..<100 { try scene.world.advance(ticks: 1) }
+        let line = try XCTUnwrap(scene.world.line(id: scene.line))
+        XCTAssertEqual(line.runDays[0], 0, "the 10:30 left")
+        XCTAssertEqual(line.runDays[1], 0, "the 11:30 left")
+        XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
+    }
+
     /// The trains move at whole minutes, so a batch ends where minute by
-    /// minute does.
+    /// minute does, with block sections or without.
     func testABatchEndsWhereMinutesDo() throws {
-        let scene = try makeScene()
-        var single = scene.world
-        for _ in 0..<120 { try single.advance(ticks: 1) }
-        var batched = scene.world
-        try batched.advance(ticks: 120)
-        XCTAssertEqual(batched, single)
+        for blocks in [false, true] {
+            let scene = try makeScene(blocks: blocks)
+            var single = scene.world
+            for _ in 0..<120 { try single.advance(ticks: 1) }
+            var batched = scene.world
+            try batched.advance(ticks: 120)
+            XCTAssertEqual(batched, single, "block sections \(blocks)")
+        }
     }
 }

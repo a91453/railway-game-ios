@@ -37,6 +37,9 @@ import urllib.request
 UPLOAD_JOB = "Archive, sign, export, check and upload"
 WORKFLOW = "testflight.yml"
 LIMIT = 4000
+# The last TestFlight run whose first attempt still uploaded "<n>.1"; later
+# runs upload the plain number on their first attempt (decision 616).
+LAST_DOTTED_RUN = 119
 RECENT = 20
 # The planning session's short text for the next release: what was decided,
 # what stays as it was, what to look at. Under .github because the
@@ -78,11 +81,23 @@ def previous_release(repository, run_id):
     return None
 
 
+def build_label(offset, run_number, attempt):
+    """The build number that run uploaded, as testflight-preflight.sh made it.
+
+    Since decision 616 the first attempt is the plain number (120) and a re-run
+    adds the attempt (120.2); runs up to LAST_DOTTED_RUN always added it (119.1)."""
+    number = offset + run_number
+    if attempt > 1 or run_number <= LAST_DOTTED_RUN:
+        return f"{number}.{attempt}"
+    return str(number)
+
+
 def upload_attempt(repository, run_id):
-    """The attempt whose upload job succeeded, which is the build's number after the dot.
+    """The attempt whose upload job succeeded, which names the build (see build_label).
 
     The run's own run_attempt is its latest attempt: after only the processing
-    job is run again it reads 2, while the build that was uploaded is still .1.
+    job is run again it reads 2, while the build that was uploaded is still
+    the first attempt's.
     None when GitHub does not list the jobs."""
     answer = github(f"/repos/{repository}/actions/runs/{run_id}/jobs?filter=all&per_page=100")
     attempts = [int(job.get("run_attempt") or 0) for job in (answer or {}).get("jobs") or []
@@ -159,7 +174,7 @@ def whats_new(repo, repository, run_id, offset):
             warn(f"The last release's commit {sha[:7]} is not in main's history here.")
     commits = first_parent_commits(repo, base)
     if base:
-        since = f"build {offset + run_number}.{attempt}"
+        since = f"build {build_label(offset, run_number, attempt)}"
         if not commits:
             return f"No changes since {since}: the same commit."
         text = curated(repo, base)
