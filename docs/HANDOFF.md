@@ -554,6 +554,35 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 54 任現況（2026-11-07 約 07:20 UTC＝台灣 15:20，session_01YGNNupJUx5viUadNmXs45j，第 3 層，壓縮 1 次）**
+- 和「第 53 任交第 54 任」不同時以這段為準。
+- **這一輪合併的**（merge commit）：#1919 MEM-2 續二、#1923、#1921 CABVIEW-2（一步裡的 tick 滑成一段）、#1922（3D 跟車不再自己跳回 2D）、#1927 YARDTYPE-1（研究＋`tools/rail-depots/yard_types.py`）、#1924 TRAFFIC-READ（交通讀數在作者 Mac release 562→33 ms）、#1926 NIGHT-GLOW（決策 617）。main 的 `ci.yml` 到 `fd90b5b4` 都綠（run 42347313093）。
+- **10× 走走停停**：#1921＋#1924 都合了；實機手感 UNVERIFIED，下一版請作者看高雄環狀輕軌 10×。
+- **重工的教訓**：雲端 CABVIEW-2 與作者 Mac 的 TRAFFIC-READ 同時做交通讀數變快。CABVIEW-2 的 B 段（GameCore 加速）**取消**；A 段（少讀交通）等 120 實機重量，真的還不夠才做。一件事只派一個 session；作者 Mac 的 Claude 開工前先問規劃。
+- **在做的 session**（都向第 54 任回報）：
+  - CIOPT-5 session_01YGNNukiXhE7LK51UdBYf4o（決策 620，佔 GameCore 名額）：`rest` shard 470→1268 秒，主因 `KaohsiungLightRailDayTests`（約 430 秒）；`trafficPlan`→`trafficPoints` 同一條路找兩次、沒用 `PathMemo`。改 `ScheduledTraffic.swift` 一次找完並記住，調 shard 權重；要和 #1924 借的 RouteMemo 一致。
+  - KLRT-SPARE session_01YGNNuou5XfVJGfy5r9Q77i：#1928（draft，`RunDepot.swift`，決策 609 續），佔 GameCore 名額。
+  - TYMC-REBUILD-3 session_01YGNNunyB4yjbdPs7s4GCye：接 #1875（交接只在 #1875 分支的決策 605 §3「續」與下一步 2，不在 main）；要 GameCore 名額時排在 CIOPT-5／KLRT-SPARE 之後。TYMC-REBUILD-2 已停。
+  - CABVIEW-2 session_01YGNNuo1avNxcoZmdFdC825：`claude/cabview-3`（決策 379 續四），只做 #1921 審查的 P3 a/b/d，再量「實際 ÷ 設定倍速」。
+  - ROADTUNNEL session_01YGNNunPRoXT1mpxPNA7FfC：#1925（決策 611）。`801890a7` 審圖沒過：雪山、蘇澳南的山是平地上孤立的綠包，要接地形的坡；蘇澳南是有柱子的明隧道；蘇花口前的路面補丁與斷掉的車道線要修；蘇花南的景可以。修好給新的截圖單，作者 Mac 重拍（第 3 級，規劃看過才合）。
+  - HSR-NORTH-DEPOT session_01YGNNupkrTyJU9cc3yScri8（決策 618）：南港盡頭線＋六家基地。
+  - YARDTYPE-2 session_01YGNNuq28USUq3M4hqzGACF（決策 619）：玩家機廠照真實車場排，PR-1 引擎（可能要第 2 級截圖），PR-2～PR-4 在研究文件 `research/YARD_TYPES_2026-11-07.md`。
+  - Codex #1904（站房外觀第一批）：等 Codex。
+- **截圖**：先問作者 Mac（M6）能不能拍（Desktop App 的 Remote Control 遠端叫模擬器），作者 Mac 在拍就不跑 `website-screenshots.yml`（作者請我取消了 ROADTUNNEL 的 run 42343920651）。
+- **帳號分配**（作者有 1 Claude Max、1 Claude Pro、2 ChatGPT Business、1 Gemini Pro；一個軟體只登一個帳號）：
+  | 帳號 | 用在 |
+  | --- | --- |
+  | Claude Max | 雲端 session＋作者 Mac 的 Desktop App（Claude Code 分頁、Remote Control）；不用另裝 CLI |
+  | Claude Pro | Xcode Intelligence 的 Claude Agent |
+  | ChatGPT 1 | 網頁 Codex：3D 素材、站房外觀 |
+  | ChatGPT 2 | 網頁 Codex：PR 審查、資料整理 |
+  | Gemini Pro | 網頁，只在作者在場時用 |
+- **119**：export compliance 作者已答。WHATSNEW-120 要更正 119 的「車窗走走停停修好了」（現在才真的改好）。
+- **REVIEW-L13**：從 #1885 起 11 點（#1916、#1924 各 2 點），未到 30 點。作者還沒決定要不要把 Codex（ChatGPT 2）審 #1885–#1926 的提示貼過去（輸出 `docs/archive/PR1885_1926_REVIEW_L13.md`，branch `codex/review-l13`）。
+- **分支**：作者 Mac 跑了 `prune-merged-branches.yml`（只刪合併後沒再動的）。剩 47 條，約 40 條是放棄的，之後列清單給作者。
+- **排隊**：輕軌機廠照真實（KLRT-SPARE 之後）、國道客運（GameCore＋存檔，要名額）、MEM-3（要作者實機數字）、WHATSNEW-120、YARDTYPE PR-2～4。
+- **號碼**：下一個決策 **621**（617 已合，618 HSR-NORTH-DEPOT、619 YARDTYPE-2、620 CIOPT-5 已登記）；存檔 **87**。
+
 **第 53 任交第 54 任（2026-11-07 約 04:15 UTC＝台灣 12:15，session_01YGNNunyQhaha49M1KRzGVB，第 2 層，壓縮 3 次）**
 - 換手原因：壓縮第 3 次（§1，#1579 已留言）。照這段接手；和「第 52 任交第 53 任」不同時以這段為準。
 - 第 54 任 session_01YGNNupJUx5viUadNmXs45j，由第 53 任用 `create_session` 開（第 3 層）。開工先在 #1579 登記，§1 表格的遊戲規劃改成新 session。沒有排程綁在第 53 任（`list_triggers` 只剩 MEM-2 自己的提醒），不用改綁。
