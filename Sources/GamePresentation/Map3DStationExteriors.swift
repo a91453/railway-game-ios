@@ -203,33 +203,89 @@ struct Map3DTrainRoom {
         }
     }
 
-    /// Whether any of the triangle `a b c` is in the room, looked at every
-    /// 1.5 m or so over it.
-    func touches(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint) -> Bool {
-        let longest = max((b - a).length, (c - b).length, (a - c).length)
-        let steps = min(max(1, Int((longest / 1.5).rounded(.up))), 96)
-        for i in 0...steps {
-            for j in 0...(steps - i) {
-                let u = Float(i) / Float(steps), v = Float(j) / Float(steps)
-                if contains(a + (b - a) * u + (c - a) * v) { return true }
+    /// What of the convex polygon `polygon` is out of the room, as convex
+    /// polygons: cut by each stretch it reaches, across the ground either
+    /// side of the stretch's middle (and `half` past its ends, so a bend
+    /// leaves no gap), then over and under it.
+    func outside(_ polygon: [Map3DVertex]) -> [[Map3DVertex]] {
+        let xs = polygon.map(\.x), zs = polygon.map(\.z)
+        let x0 = Int((xs.min()! / Self.cell).rounded(.down)), x1 = Int((xs.max()! / Self.cell).rounded(.down))
+        let z0 = Int((zs.min()! / Self.cell).rounded(.down)), z1 = Int((zs.max()! / Self.cell).rounded(.down))
+        var near = Set<Int>()
+        for x in x0...x1 { for z in z0...z1 { near.formUnion(cells[Self.key(x, z)] ?? []) } }
+        var pending = [polygon]
+        for index in near.sorted() {
+            pending = pending.flatMap { Self.outside($0, stretches[index]) }
+            if pending.isEmpty { break }
+        }
+        return pending
+    }
+
+    /// What of `polygon` is out of the one stretch `s`.
+    private static func outside(_ polygon: [Map3DVertex], _ s: Stretch) -> [[Map3DVertex]] {
+        let flat = Map3DPoint(s.b.x - s.a.x, 0, s.b.z - s.a.z), length = flat.length
+        guard length > 1e-4 else { return [polygon] }
+        let along = flat * (1 / length), across = Map3DPoint(-along.z, 0, along.x)
+        func t(_ v: Map3DVertex) -> Float { along.dot(Map3DPoint(v.x - s.a.x, 0, v.z - s.a.z)) }
+        func d(_ v: Map3DVertex) -> Float { across.dot(Map3DPoint(v.x - s.a.x, 0, v.z - s.a.z)) }
+        let reach = s.half
+        // Wholly to one side: as it is.
+        if polygon.allSatisfy({ d($0) >= s.half }) || polygon.allSatisfy({ d($0) <= -s.half })
+            || polygon.allSatisfy({ t($0) <= -reach }) || polygon.allSatisfy({ t($0) >= length + reach }) {
+            return [polygon]
+        }
+        // Linear in the vertex: the rails' height along the stretch is,
+        // within it, so the planes over and under it are planes.
+        func railsLinear(_ v: Map3DVertex) -> Float { s.a.y + (s.b.y - s.a.y) * (t(v) / length) }
+        var kept: [[Map3DVertex]] = []
+        let (left, rest) = cut(polygon) { d($0) + s.half }
+        kept.append(left)
+        let (middle, right) = cut(rest) { d($0) - s.half }
+        kept.append(right)
+        let (before, rest2) = cut(middle) { t($0) + reach }
+        kept.append(before)
+        let (within, after) = cut(rest2) { t($0) - length - reach }
+        kept.append(after)
+        let (under, high) = cut(within) { $0.y - railsLinear($0) - s.above }
+        kept.append(high)
+        let (low, _) = cut(under) { $0.y - railsLinear($0) + s.below }
+        kept.append(low)
+        return kept.filter { $0.count >= 3 }
+    }
+
+    /// `polygon` cut by the plane `f = 0` (`f` linear in the vertex's
+    /// place): the part where `f ≤ 0`, then where `f ≥ 0`.
+    private static func cut(_ polygon: [Map3DVertex], by f: (Map3DVertex) -> Float) -> ([Map3DVertex], [Map3DVertex]) {
+        guard polygon.count >= 3 else { return ([], []) }
+        let values = polygon.map(f)
+        if values.allSatisfy({ $0 <= 0 }) { return (polygon, []) }
+        if values.allSatisfy({ $0 >= 0 }) { return ([], polygon) }
+        var negative: [Map3DVertex] = [], positive: [Map3DVertex] = []
+        for i in polygon.indices {
+            let j = (i + 1) % polygon.count
+            let (a, b, fa, fb) = (polygon[i], polygon[j], values[i], values[j])
+            if fa <= 0 { negative.append(a) }
+            if fa >= 0 { positive.append(a) }
+            if (fa < 0 && fb > 0) || (fa > 0 && fb < 0) {
+                let share = fa / (fa - fb)
+                var m = a
+                m.x = a.x + (b.x - a.x) * share; m.y = a.y + (b.y - a.y) * share; m.z = a.z + (b.z - a.z) * share
+                m.u = a.u + (b.u - a.u) * share; m.v = a.v + (b.v - a.v) * share
+                negative.append(m); positive.append(m)
             }
         }
-        return false
+        return (negative, positive)
     }
 }
 
 extension Map3DStationExterior {
-    /// Pieces of a triangle cut to at most this long, in metres, where it
-    /// comes into the room: the cut a wall or a roof takes either side of
-    /// a track.
-    static let cutLength: Float = 1.5
-
     /// `mesh` (in the scene) cut clear of `room`, without the parts then
     /// standing on nothing, and how much of it, by area, is left. A part
     /// is a run of triangles sharing corners (a box, a roof); a triangle
-    /// that comes into the room is cut into pieces at most
-    /// ``cutLength`` long and those in the room left out, so a wall stops
-    /// either side of a track and a roof over it stays. A part stands when
+    /// that comes into the room is cut along the room's sides, top and
+    /// bottom and what is in it left out
+    /// (``Map3DTrainRoom/outside(_:)``), so a wall stops either side of a
+    /// track and a roof over it stays. A part stands when
     /// its foot is within 0.6 m of `ground` or its bounds are within 0.6 m
     /// of a part that stands.
     static func carved(_ mesh: Map3DMesh, clearOf room: Map3DTrainRoom, ground: Float) -> (mesh: Map3DMesh, kept: Float) {
@@ -264,25 +320,12 @@ extension Map3DStationExterior {
             members[parts[r]!].append(triangle)
         }
         func area(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint) -> Float { (b - a).cross(c - a).length / 2 }
-        func middle(_ a: Map3DVertex, _ b: Map3DVertex) -> Map3DVertex {
-            var m = a
-            m.x = (a.x + b.x) / 2; m.y = (a.y + b.y) / 2; m.z = (a.z + b.z) / 2
-            m.u = (a.u + b.u) / 2; m.v = (a.v + b.v) / 2
-            return m
-        }
-        // The pieces of a triangle clear of the room.
+        // The pieces of a triangle clear of the room, the winding kept.
         func clear(_ a: Map3DVertex, _ b: Map3DVertex, _ c: Map3DVertex, into pieces: inout [(Map3DVertex, Map3DVertex, Map3DVertex)]) {
-            let (pa, pb, pc) = (a.position, b.position, c.position)
-            guard room.touches(pa, pb, pc) else { pieces.append((a, b, c)); return }
-            let ab = (pb - pa).length, bc = (pc - pb).length, ca = (pa - pc).length
-            guard max(ab, bc, ca) > cutLength else { return }
-            // Halved across its longest side, the winding kept.
-            if ab >= bc && ab >= ca {
-                let m = middle(a, b); clear(a, m, c, into: &pieces); clear(m, b, c, into: &pieces)
-            } else if bc >= ca {
-                let m = middle(b, c); clear(a, b, m, into: &pieces); clear(a, m, c, into: &pieces)
-            } else {
-                let m = middle(c, a); clear(a, b, m, into: &pieces); clear(m, b, c, into: &pieces)
+            for polygon in room.outside([a, b, c]) {
+                for k in 1..<(polygon.count - 1) where area(polygon[0].position, polygon[k].position, polygon[k + 1].position) > 1e-5 {
+                    pieces.append((polygon[0], polygon[k], polygon[k + 1]))
+                }
             }
         }
         var total: Float = 0

@@ -156,7 +156,11 @@ final class Map3DStationExteriorsTests: XCTestCase {
         XCTAssertLessThan(cut.kept, 1)
         let left = cut.mesh.vertices.map(\.position)
         XCTAssertFalse(left.contains { abs($0.z) < Self.gaugeHalf && $0.y > 0.1 && $0.y < 0.3 + Self.gaugeAbove }, "nothing in the room")
-        XCTAssertTrue(left.contains { $0.y > 10 && abs($0.z) < 1 }, "the roof over the track")
+        let over = (0..<cut.mesh.triangleCount).contains { t in
+            let v = (0..<3).map { cut.mesh.vertices[Int(cut.mesh.indices[t * 3 + $0])].position }
+            return v.allSatisfy { $0.y > 10 } && v.contains { $0.z < 0 } && v.contains { $0.z > 0 }
+        }
+        XCTAssertTrue(over, "the roof over the track")
         XCTAssertTrue(left.contains { $0.y > 3.9 && $0.y < 4.1 && abs($0.z) > 4 }, "the box's top either side")
         // Nothing in the way: all of it.
         let clear = Map3DStationExterior.carved(kit.mesh, clearOf: Map3DTrainRoom(), ground: 0)
@@ -299,12 +303,33 @@ final class Map3DStationExteriorsTests: XCTestCase {
             platform.points.contains { study.covers(plain.builder.point($0), margin: Map3DScene.Builder.exteriorCovers) }
         }
         let id = try XCTUnwrap(within.first?.platform.station)
-        var expanded = world
-        try expanded.expandStation(at: id)
+        // Expanded as a save would have it (a day of passengers enough
+        // to expand it would take minutes here).
+        let name = try XCTUnwrap(world.station(id: id)?.name)
+        var tree = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        var stations = try XCTUnwrap(tree["stations"] as? [[String: Any]])
+        let index = try XCTUnwrap(stations.firstIndex { $0["name"] as? String == name })
+        stations[index]["expansion"] = StationExpansion.hall.rawValue
+        tree["stations"] = stations
+        let expanded = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: tree))
+        XCTAssertEqual(expanded.station(id: id)?.expansion, .hall)
         let grown = try Self.built(round: .banqiaoTRA, in: expanded, heights: heights, railways: railways)
         func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } }
         XCTAssertGreaterThan(triangles(grown.builder), triangles(plain.builder))
         XCTAssertTrue(grown.stations.isStrictSuperset(of: plain.stations))
+        // The wings alone: what they add to the plain scene's meshes.
+        var alone = plain.builder
+        let before = alone.nearMeshes
+        let taken = alone.addExpansionWings(.hall, beside: .banqiaoTRA, frame: plain.frame, snapshot: snapshot)
+        XCTAssertFalse(taken.isEmpty)
+        var wings = Map3DMesh()
+        for (key, mesh) in alone.nearMeshes {
+            let from = (before[key]?.indices.count ?? 0)
+            guard mesh.indices.count > from else { continue }
+            wings.append(Map3DMesh(vertices: mesh.vertices, indices: Array(mesh.indices[from...])), at: Map3DPoint(0, 0, 0), forward: Map3DPoint(1, 0, 0))
+        }
+        XCTAssertGreaterThan(wings.triangleCount, 0)
+        XCTAssertEqual(Self.inTheGauge(wings, plain.builder, ground: study.origin.y), 0, "the wings clear of the track")
     }
 
     /// For the session's own look: what stands round each, how much of it
