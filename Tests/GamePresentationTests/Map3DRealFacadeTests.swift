@@ -23,11 +23,12 @@ final class Map3DRealFacadeTests: XCTestCase {
     /// the scene's origin at (`shift`, `shift / 2`) metres; the scene's
     /// street-front vertices put back where they stand on the map.
     private func front(x: Float = 0, shift: Float = 0, streets: Set<Map3DScene.ChunkKey>?, target: Map3DScene.Builder.Target = .near,
-                       kind: Map3DScene.Builder.RealKind = .shophouse) -> [Map3DVertex] {
+                       kind: Map3DScene.Builder.RealKind = .shophouse, facades: Bool = true) -> [Map3DVertex] {
         let world = GameWorld.newGame()
         var builder = Map3DScene.Builder(originX: Double(shift) * metre, originY: Double(shift / 2) * metre, region: WorldRegion(bounds: world.bounds),
                                          world: world)
         builder.target = target
+        builder.buildsFacades = facades
         builder.facadeStreets = streets.map { cells in
             // The cells, as the scene of that origin keeps them.
             Set(cells.map { Map3DScene.ChunkKey(column: $0.column - Int(shift / 4), row: $0.row - Int(shift / 8)) })
@@ -131,5 +132,38 @@ final class Map3DRealFacadeTests: XCTestCase {
         XCTAssertFalse(Map3DRealFacade.draws(quality: .high, lowPower: false, heat: .critical, tier: .higher))
         XCTAssertFalse(Map3DRealFacade.draws(quality: .automatic, lowPower: false, heat: .nominal, tier: .lower))
         XCTAssertFalse(Map3DRealFacade.draws(quality: .automatic, lowPower: false, heat: .nominal, tier: nil))
+    }
+
+    /// Decision 610 續 (review L12-1): a scene built for a device or 3D
+    /// look that never draws the street fronts builds none, so it keeps no
+    /// memory for them; above the lowest tier it does.
+    func testASceneThatNeverDrawsThemBuildsNone() {
+        let streets = street(z: 14, to: 22)
+        XCTAssertFalse(front(streets: streets).isEmpty)
+        XCTAssertTrue(front(streets: streets, facades: false).isEmpty)
+        // The building itself is the same without them.
+        let world = GameWorld.newGame()
+        func building(_ facades: Bool) -> Map3DMesh {
+            var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
+            builder.target = .near
+            builder.buildsFacades = facades
+            builder.facadeStreets = streets
+            let ring = [Map3DPoint(0, 0, 0), Map3DPoint(8, 0, 0), Map3DPoint(8, 0, 14), Map3DPoint(0, 0, 14)]
+            builder.addRealBuilding([[ring]], ground: 0, height: 14.2, storeys: 4, kind: .shophouse)
+            var near = Map3DMesh()
+            for chunk in builder.chunks() { near.append(chunk.mesh) }
+            return near
+        }
+        XCTAssertEqual(bits(building(true).vertices), bits(building(false).vertices))
+    }
+
+    /// Which device and 3D look ever draw them (the highest rung's tier).
+    func testWhichScenesBuildTheFronts() {
+        XCTAssertTrue(Map3DRealFacade.mayDraw(quality: .automatic, device: .standard))
+        XCTAssertTrue(Map3DRealFacade.mayDraw(quality: .automatic, device: .higher))
+        XCTAssertTrue(Map3DRealFacade.mayDraw(quality: .high, device: .lower))
+        XCTAssertFalse(Map3DRealFacade.mayDraw(quality: .automatic, device: .lower))
+        XCTAssertFalse(Map3DRealFacade.mayDraw(quality: .saving, device: .higher))
+        XCTAssertFalse(Map3DRealFacade.mayDraw(quality: .automatic, device: nil))
     }
 }

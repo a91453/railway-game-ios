@@ -457,17 +457,7 @@ final class Map3DMetalView: MTKView {
         // Decision 342: reversed depth, 0 the farthest.
         clearDepth = 0
         preferredFramesPerSecond = 60
-        deviceTier = Map3DDeviceTier.forGPU(family: Self.appleFamily(of: device), name: device.name)
-        #if DEBUG
-        // Decision 596: the Simulator's GPU (Apple2, decision 580) has no
-        // tier, so its streets draw nothing; a screenshot of the street's
-        // traffic asks for one (`-screenshot-device-tier 0…2`).
-        let arguments = ProcessInfo.processInfo.arguments
-        if let index = arguments.firstIndex(of: "-screenshot-device-tier"), arguments.indices.contains(index + 1),
-           let asked = Int(arguments[index + 1]).flatMap(Map3DDeviceTier.init(rawValue:)) {
-            deviceTier = asked
-        }
-        #endif
+        deviceTier = Self.tier(of: device)
         // Decision 417: memory running short steps down on any look.
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
@@ -624,14 +614,17 @@ final class Map3DMetalView: MTKView {
         load.relieve()
         rememberRung()
         applyQuality()
-        // Decision 610: the street fronts' buffers let go, made again only
-        // where they are still drawn.
-        releaseFacades()
+        // Decision 610: the street fronts' buffers let go (all of them, by
+        // applyQuality, when the step down stops drawing them). Decision
+        // 610 續 (review L12-2): those drawn this frame are kept, since
+        // the next frame would make them again at once.
+        releaseFacades(keepingDrawn: true)
     }
 
-    /// Decision 610: lets go of every chunk's street fronts' buffers.
-    private func releaseFacades() {
-        for index in chunks.indices where chunks[index].facade != nil {
+    /// Decision 610: lets go of every chunk's street fronts' buffers, or
+    /// with `keepingDrawn` of those not drawn last frame.
+    private func releaseFacades(keepingDrawn: Bool = false) {
+        for index in chunks.indices where chunks[index].facade != nil && !(keepingDrawn && chunks[index].frontsUp) {
             chunks[index].facade = nil
             chunks[index].frontsUp = false
         }
@@ -661,6 +654,21 @@ final class Map3DMetalView: MTKView {
 
     /// The newest Apple GPU family `device` belongs to, as a number (9 for
     /// `.apple9`), 0 for none.
+    /// Decision 417: `device`'s tier.
+    nonisolated static func tier(of device: MTLDevice) -> Map3DDeviceTier? {
+        #if DEBUG
+        // Decision 596: the Simulator's GPU (Apple2, decision 580) has no
+        // tier, so its streets draw nothing; a screenshot of the street's
+        // traffic asks for one (`-screenshot-device-tier 0…2`).
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-screenshot-device-tier"), arguments.indices.contains(index + 1),
+           let asked = Int(arguments[index + 1]).flatMap(Map3DDeviceTier.init(rawValue:)) {
+            return asked
+        }
+        #endif
+        return Map3DDeviceTier.forGPU(family: appleFamily(of: device), name: device.name)
+    }
+
     nonisolated static func appleFamily(of device: MTLDevice) -> Int {
         let families: [(MTLGPUFamily, Int)] = [(.apple9, 9), (.apple8, 8), (.apple7, 7), (.apple6, 6), (.apple5, 5), (.apple4, 4)]
         return families.first { device.supportsFamily($0.0) }?.1 ?? 0
@@ -1074,6 +1082,7 @@ final class Map3DMetalView: MTKView {
         let sunRegion: (drawn: Map3DSunShadow.Region?, redraw: Map3DSunShadow.Region?) = below ? (nil, nil) : wantedSunRegion(at: start)
         let uniforms = uniformValues(matrix, seconds: start, sun: sunRegion.drawn)
         var visible: [Chunk] = []
+        var facadeUploads = 0
         for index in chunks.indices {
             // Decision 238: in full near the camera, whether in view or not,
             // so the margin holds.
@@ -1091,9 +1100,14 @@ final class Map3DMetalView: MTKView {
             chunks[index].frontsUp = drawsFacades && !chunks[index].facadeMesh.isEmpty
                 && camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, detailed: chunks[index].detailed,
                                      coarse: chunks[index].coarse, wasClose: chunks[index].frontsUp)
-            if chunks[index].frontsUp, chunks[index].facade == nil,
+            // Decision 610 續 (review L12-2): at most a few a frame, so a
+            // city's close-up opening (or the frame after a memory
+            // warning) does not copy them all in one frame; the rest show
+            // in the frames after.
+            if chunks[index].frontsUp, chunks[index].facade == nil, facadeUploads < Map3DRealFacade.uploadsAFrame,
                let vertices = makeBuffer(chunks[index].facadeMesh.vertices), let indices = makeBuffer(chunks[index].facadeMesh.indices) {
                 chunks[index].facade = (vertices, indices, chunks[index].facadeMesh.indices.count)
+                facadeUploads += 1
             }
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
@@ -1603,6 +1617,18 @@ extension Map3DQuality {
         return startingChoice(gpuFamily: Map3DMetalView.appleFamily(of: device))
         #endif
     }()
+
+    /// Decision 610 續 (review L12-1): the tier of the GPU every 3D view
+    /// draws with (``Map3DMetalView/tier(of:)``).
+    static let systemDeviceTier: Map3DDeviceTier? = MTLCreateSystemDefaultDevice().flatMap(Map3DMetalView.tier(of:))
+
+    /// Decision 610 續 (review L12-1): whether a scene built now keeps the
+    /// real buildings' street fronts: only when the 3D look chosen in
+    /// Settings may draw them on this device.
+    static var scenesKeepFacades: Bool {
+        let chosen = UserDefaults.standard.string(forKey: key).flatMap(Map3DQuality.init(rawValue:)) ?? forThisDevice
+        return Map3DRealFacade.mayDraw(quality: chosen.drawn, device: systemDeviceTier)
+    }
 }
 
 /// Decision 403 (續二): a frame copied out of the 3D map's drawable
