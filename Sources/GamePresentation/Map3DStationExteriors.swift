@@ -241,7 +241,13 @@ struct Map3DTrainRoom {
         var near = Set<Int>()
         for x in x0...x1 { for z in z0...z1 { near.formUnion(cells[Self.key(x, z)] ?? []) } }
         var pending = [polygon]
-        for index in near.sorted() {
+        // In an order of their own places, not of how the lines were
+        // listed, so the same track cuts the same pieces.
+        let order = near.sorted { i, j in
+            let a = stretches[i], b = stretches[j]
+            return (a.a.x, a.a.z, a.b.x, a.b.z, a.half) < (b.a.x, b.a.z, b.b.x, b.b.z, b.half)
+        }
+        for index in order {
             pending = pending.flatMap { Self.outside($0, stretches[index]) }
             if pending.isEmpty { break }
         }
@@ -466,25 +472,44 @@ extension Map3DScene.Builder {
     /// keeps the same room as the whole scene.
     func trainRoom(_ snapshot: RailwaySnapshot, within box: (min: Map3DPoint, max: Map3DPoint), ground: Float) -> Map3DTrainRoom {
         var room = Map3DTrainRoom()
-        func near(_ line: [Map3DPoint]) -> Bool {
-            line.contains { $0.x > box.min.x - 20 && $0.x < box.max.x + 20 && $0.z > box.min.z - 20 && $0.z < box.max.z + 20 }
+        // Each run of a line's segments that reach round the box: so what
+        // the room is does not hang on how far the line runs on.
+        func reaches(_ a: Map3DPoint, _ b: Map3DPoint) -> Bool {
+            max(a.x, b.x) > box.min.x - 20 && min(a.x, b.x) < box.max.x + 20 && max(a.z, b.z) > box.min.z - 20 && min(a.z, b.z) < box.max.z + 20
+        }
+        func runs(_ line: [Map3DPoint]) -> [[Map3DPoint]] {
+            var runs: [[Map3DPoint]] = [], run: [Map3DPoint] = []
+            for (a, b) in zip(line, line.dropFirst()) {
+                if reaches(a, b) {
+                    if run.isEmpty { run.append(a) }
+                    run.append(b)
+                } else if !run.isEmpty {
+                    runs.append(run); run = []
+                }
+            }
+            if run.count > 1 { runs.append(run) }
+            return runs
         }
         for alignment in snapshot.edges {
             for span in alignment.edge.sectionSpans where span.end > span.start && span.kind != .tunnel {
                 let line = sample(alignment.geometry, from: span.start, to: span.end).map { point($0) + Self.lifted }
-                guard line.count > 1, near(line) else { continue }
-                room.add(line: line, half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: ground)
+                for run in runs(line) {
+                    room.add(line: run, half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: ground)
+                }
             }
         }
-        for line in realTrackLines where near(line) {
-            room.add(line: line, half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: ground)
+        for line in realTrackLines {
+            for run in runs(line) {
+                room.add(line: run, half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: ground)
+            }
         }
         // A platform either side of its track, as wide as any is laid
         // (``addPlatforms(_:)``).
         for platform in snapshot.platforms where platform.structure != .tunnel && platform.points.count > 1 {
             let line = platform.points.map { point($0) + Self.lifted }
-            guard near(line) else { continue }
-            room.add(line: line, half: Self.highSpeedPlatformEdge + Self.platformWidth + 0.5, above: Map3DTrainRoom.platformAbove, ground: ground)
+            for run in runs(line) {
+                room.add(line: run, half: Self.highSpeedPlatformEdge + Self.platformWidth + 0.5, above: Map3DTrainRoom.platformAbove, ground: ground)
+            }
         }
         return room
     }
