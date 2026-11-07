@@ -29,7 +29,7 @@ public enum Map3DLook {
             // The player's tunnels (decision 359), which the preview had
             // none of: their bore keeps its shade.
             Map3DPalette.portal, Map3DPalette.tunnelWall, Map3DPalette.tunnelLining, Map3DPalette.tunnelLamp,
-        ]
+        ] + Map3DRoadTunnelPortals.liningShades + [Map3DRoadTunnelPortals.capColor] // decision 611: the road portals' dark lining
         let played: [UInt32] = [
             0xFFC86B, 0xFFE2A6, 0x26385C, // the player's buildings (decision 205)
             0x6E7379, 0xC9CED4, // rail, rail top

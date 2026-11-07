@@ -757,6 +757,25 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 
+    /// Decision 611 (ROADTUNNEL): the real roads' tunnel portals, close up
+    /// and from above: the Hsuehshan Tunnel's two bores at Toucheng (the
+    /// freeway, west into the hill), Provincial Highway 9's (蘇花改) tunnels
+    /// north of Nanao, and its gallery south of Su'ao. For the screenshot
+    /// review of the pull request that drew them, not the website.
+    func testRoadTunnelHsuehshan() {
+        shootLean("hsuehshanTunnel", "160,0,60", "road-tunnel-hsuehshan-near")
+        shootLean("hsuehshanTunnel", "500,270,0", "road-tunnel-hsuehshan-high")
+    }
+    func testRoadTunnelSuhua() {
+        shootLean("suhuaTunnel", "160,180,60", "road-tunnel-suhua-near-south")
+        shootLean("suhuaTunnel", "160,0,60", "road-tunnel-suhua-near-north")
+        shootLean("suhuaTunnel", "500,0,0", "road-tunnel-suhua-high")
+    }
+    func testRoadTunnelGallery() {
+        shootLean("suhuaGallery", "140,180,60", "road-tunnel-gallery-near-south")
+        shootLean("suhuaGallery", "140,0,60", "road-tunnel-gallery-near-north")
+    }
+
     private func shootLean(_ scene: String, _ view: String, _ name: String, extra: [String] = []) {
         let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"] + extra)
         defer { app.terminate() }
