@@ -15,13 +15,13 @@ land (landuse=railway); blue: water.
 """
 import json
 import math
+import os
 import sys
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
-import os
 
 import osmium
 
@@ -29,6 +29,11 @@ SITES = [
     ("木柵機廠", (25.001270, 121.585081), 670, 71266521),
     ("內湖機廠", (25.058581, 121.621212), 600, 499801370),
 ]
+# Decision 621: PLOT_SITES=klrt draws the Kaohsiung Light Rail's depot
+# instead (KaohsiungLightRailDepotDumpTests, KLRT_DEPOT_DUMP), round the
+# middle of its real yard; dashed: the workshop (way 445644637).
+if os.environ.get("PLOT_SITES") == "klrt":
+    SITES = [("輕軌機廠", (22.6090, 120.3255), 450, 445644637)]
 REACH = 900  # metres around each throat read from OSM
 
 
@@ -83,7 +88,7 @@ def main():
     reader = Reader()
     reader.apply_file(pbf, locations=True)
     games = [json.load(open(d)) for d in dumps]
-    fig, axes = plt.subplots(len(games), 2, figsize=(12.8, 6.4 * len(games)), squeeze=False)
+    fig, axes = plt.subplots(len(games), len(SITES), figsize=(6.4 * len(SITES), 6.4 * len(games)), squeeze=False)
     cmap = plt.get_cmap("viridis")
     for row, (game, name) in enumerate(zip(games, dumps)):
         for i, (title, origin, extent, _) in enumerate(SITES):

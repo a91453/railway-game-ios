@@ -50,6 +50,9 @@ struct RealLineDepotSite: Sendable {
     /// (``RealLineDepotLayout/Fan``): its lead along the real leads, its
     /// sidings along the real stabling tracks; `nil` for a ladder.
     var fan: Fan? = nil
+    /// Decision 621: a yard laid as a strip beside the line, as its real
+    /// one lies (``RealLineDepotLayout/Strip``); `nil` for a wye.
+    var strip: Strip? = nil
 
     /// Decision 602: where a fanned yard's lead runs and how its sidings
     /// split. The lead goes on from the line's end through `leads` (the
@@ -232,26 +235,29 @@ struct RealLineDepotSite: Sendable {
 
     /// Decision 535 (continued, KLRT): the Kaohsiung Light Rail depot
     /// (輕軌機廠: the workshop, way 445644637, and its yard tracks, ways
-    /// 501281474 to 501281484 and 1153379542 to 1153379546) of the
-    /// Circular Light Rail, inside the ring beside the line between
-    /// Lizihnei and Light Rail Depot Station, some 30 to 50 m west of it.
-    /// The game's leads leave the line where the real yard's south lead
-    /// meets it (the node of ways 1561884684, 1561884686 and 501281475,
-    /// some 155 m past Lizihnei), and its yard runs north-north-east along
-    /// the real one, parallel to the line, from 200 m to 600 m past there.
-    /// The real yard is a strip some 60 m wide; the game's sidings, one
-    /// train each, either side of the lead, are wider, so the lead lies
-    /// 100 m off the line and the inner sidings clear it where it bends
-    /// toward them at Kaisyuan Ersheng (`tools/rail-depots`, decision 535
-    /// continued: read from OpenStreetMap's API for a box round the depot,
-    /// the whole extract not to be had that day). Its sidings hold the
-    /// trains the timetable needs at once, the 20 of a rest day; all of
-    /// them stand there overnight.
+    /// 501281474 to 501281484, 1153379542 to 1153379546 and 1342616485)
+    /// of the Circular Light Rail, inside the ring beside the line between
+    /// Lizihnei and Kaisyuan Ersheng, west of it.
+    /// Decision 621: laid as the real yard lies (`tools/rail-depots`,
+    /// osmtoday's whole extract of 2026-11-07): a strip 0 to 57 m west of
+    /// the line's west track, its leads leaving that track straight off
+    /// the line at both ends, where the real south lead does (the node of
+    /// ways 1561884684, 1561884686 and 501281475, some 155 m past
+    /// Lizihnei) and some 650 m on, where the real north lead (way
+    /// 1561884685) does. The game's runs along the strip beside the line
+    /// as the real south lead does, past Light Rail Depot Station, its
+    /// sidings in two banks one after the other, each siding open at both
+    /// ends as the real north bank's are, so a train leaves it either way
+    /// round the ring. ``yard`` is the middle of the real south bank (way
+    /// 1153379543) and of the real north bank (way 501281477). Its
+    /// sidings hold the trains the timetable needs at once, the 20 of a
+    /// rest day, one each; all of them stand there overnight.
     static let klrt = RealLineDepotSite(
         line: "krtc:C", english: "Light Rail Depot", chinese: "輕軌機廠",
         junction: (22.605961, 120.325089),
-        yard: ((22.607960, 120.324816), (22.611359, 120.326107)),
-        sidings: 20, beyond: nil, compact: true
+        yard: ((22.607947, 120.325549), (22.610101, 120.326153)),
+        sidings: 20, beyond: nil, compact: true,
+        strip: Strip(banks: 2)
     )
 
     /// The real depots line `line` is bought with (decision 535: the
@@ -742,16 +748,16 @@ extension RealLineDepotLayout {
         return (pieces, RealLineAcquisition.Depot(name: site.name(in: language), at: station.plan, platforms: platforms, length: length))
     }
 
-    private static func coordinate(_ point: WorldVector, _ height: Int64) -> WorldCoordinate {
+    static func coordinate(_ point: WorldVector, _ height: Int64) -> WorldCoordinate {
         let plan = point.plan
         return WorldCoordinate(x: plan.x, y: plan.y, z: height)
     }
 
-    private static func cubic(_ a: WorldVector, leaving: WorldVector, _ b: WorldVector, arriving: WorldVector, handle: Double) -> TrackCurve {
+    static func cubic(_ a: WorldVector, leaving: WorldVector, _ b: WorldVector, arriving: WorldVector, handle: Double) -> TrackCurve {
         .cubic((a + leaving * handle).plan, (b - arriving * handle).plan)
     }
 
-    private static func piece(
+    static func piece(
         _ points: [WorldCoordinate], _ curves: [TrackCurve], start: RealLineAcquisition.NodeAt?, end: RealLineAcquisition.NodeAt? = nil
     ) -> RealLineAcquisition.Piece {
         var distances = [0.0]
