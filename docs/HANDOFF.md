@@ -4091,3 +4091,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **北入出庫線停下了**：遊戲規劃後來要求把最後一組股道的北端照真實接回正線（條件在決策 621「下一步」）。commit bdfa16f 做到鋪得出來、買得下，但從 wye 的腳轉上走行線那一彎半徑約 13.6 m（要 ≥ 20 m 和 ≥ 26 m），三種模式也沒量完；依條件已 revert（365567d），分支上是 A。本 session 第二次壓縮後停手。
 - **接手的人**：(1) 那一彎在 `RealLineDepotLayout.strip` 的 `cubic(foot, leaving: away, start, arriving: bank.way, handle: 0.55 * Strip.turn)`；腳在分岔點北方 40 m、離第二條軌道 40 m，走行線離第二條軌道 65 m，所以那一彎沿線、橫向距離不相等，把手要照兩個實際距離算（A 也是 13.1 m）。(2) 修好後 `git cherry-pick bdfa16f` 再試北入出庫線。(3) 量法：release 建置（`swift build -c release -Xswiftc -enable-testing --build-tests`），`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=klrt swift test -c release --skip-build --filter DepotReturnReportTests.testTheKaohsiungLightRail`，再各加 `DEPOT_RETURN_FAST=1`、`DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1`，看第二天那行。半徑用 `KLRT_DEPOT_DUMP=1 swift test --filter KaohsiungLightRailDepotDumpTests` 印出的軌道點量。
 - **號碼**：決策 621（已在 #1579 登記）；存檔、golden、GameCore 不動。
+
+### 4.56 3D 的入口、時鐘、遠處夜窗與陡坡（決策 635，派工單 PLAYTEST-3D，session_01YGNNupp5gXA5cHePwHoKd3，`claude/playtest-3d`，2026-11-08）
+
+Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6（夜裡遠處沒亮窗）、D8（山坡深色方格）做了，見 `docs/decisions/635.md`。**留下的**：D6 回報的「6000× 過了午夜、或 03:11 進 3D 變回白天亮度」在 Linux 重現不了（光的算法 20:51 與 03:11 相同，Linux 預覽也是暗的）。3D 的 fps 小框點開後最後一行是這一幀實際畫的時刻、夜的程度、城市燈光：下一位在實機或模擬器上跑高鐵示範 20:51 → 6000× 過午夜，看那一行。時刻跟著走而畫面變亮，就找哪一層在夜裡用了白天的顏色；時刻不走，就查 `Map3DView.updateUIView` 有沒有在跑。遠處車站的夜燈（決策 617 光暈 2,400 m 外淡出）沒動。

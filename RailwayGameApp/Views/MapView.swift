@@ -1945,8 +1945,13 @@ struct MapView: View {
     private func map3DButton(compactReach: CGFloat?) -> some View {
         Button {
             screen.map3DHandoff = nil
-            // Decision 313, later: over the place the 2D map shows.
-            screen.map3DOpenedAt = camera.map { Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize) }
+            // Decision 313, later: over the place the 2D map shows;
+            // decision 635 (D5): pulled out further than a 3D scene holds,
+            // over the selected station or train, or the nearest track.
+            screen.map3DOpenedAt = camera.map {
+                Map3DHandoff.opening(from: $0, in: session.world, station: session.selectedStationID,
+                                     train: session.selectedTrainID ?? session.followedTrainID)
+            }
             screen.showsMap3D = true
         } label: {
             Image("Glyph3DMap")

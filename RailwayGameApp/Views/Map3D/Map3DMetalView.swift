@@ -55,6 +55,12 @@ final class Map3DMetalView: MTKView {
         /// (`preferredFramesPerSecond`), which the rain over the map
         /// keeps to.
         var aim: Int
+        /// Decision 635 (D6): the light the last frame drew: its hour,
+        /// how far night it was and how far the city's lights were on, so
+        /// a device shows whether the 3D map's light followed the clock.
+        var drawnHour: Float = 12
+        var drawnNight: Float = 0
+        var drawnLights: Float = 0
     }
 
     var camera = Map3DCamera()
@@ -1690,7 +1696,10 @@ final class Map3DMetalView: MTKView {
             level: level,
             drawScale: Double(contentScaleFactor),
             underground: underground.isUnderground,
-            aim: preferredFramesPerSecond
+            aim: preferredFramesPerSecond,
+            drawnHour: shown.hour,
+            drawnNight: shown.night,
+            drawnLights: shown.lights
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.
