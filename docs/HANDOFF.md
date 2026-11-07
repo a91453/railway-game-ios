@@ -4007,3 +4007,10 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 ### 4.46 文湖線 VAL256 與 370 型接進營運（決策 558，派工單 WENHUTRN，session_01JMHz9ZoBVGyQkvmiA5uieN，`claude/wenhutrn-operation`，2026-11-03）
 
 做了的在 [決策 558](decisions/558.md)：實景文湖線與玩家的 `APM` 改畫 #1742 的兩款車，A-B-A-B 兩對、每節 13.78 m，照車次約三列一列 VAL256（51 對比 101 對），不混編；舊的 `wenhu` 只在模型包沒有新車時當後備。第三級截圖：`WebsiteScreenshotTests.testWenhuTrains`，遊戲規劃看過才合。留下的（決策 558「下一步」）：實機幀數與 500 m 換遠景、A-B-A-B／A-B-B-A 等實號資料再定（UNVERIFIED）、兩款外觀等作者接受。
+
+### 4.47 高雄環狀輕軌機廠照真實（決策 621，派工單 KLRT-DEPOT-REAL，session_01YGNNuoGeXzPfDVDMWmKQ4G，`claude/klrt-depot-real`，#1935，2026-11-07）
+
+- **狀態**：#1935（draft）是遊戲規劃選的 A：wye 留著、股道沿線排成兩組一前一後（`RealLineDepotStrip.swift`）。三種模式第二天 0/0/0（表在決策 621）。CI 綠了也維持 draft；截圖等作者的 Mac 拍 `WebsiteScreenshotTests.testKaohsiungLightRailDepot`（iPhone），先不要跑 `website-screenshots.yml`。
+- **北入出庫線停下了**：遊戲規劃後來要求把最後一組股道的北端照真實接回正線（條件在決策 621「下一步」）。commit bdfa16f 做到鋪得出來、買得下，但從 wye 的腳轉上走行線那一彎半徑約 13.6 m（要 ≥ 20 m 和 ≥ 26 m），三種模式也沒量完；依條件已 revert（365567d），分支上是 A。本 session 第二次壓縮後停手。
+- **接手的人**：(1) 那一彎在 `RealLineDepotLayout.strip` 的 `cubic(foot, leaving: away, start, arriving: bank.way, handle: 0.55 * Strip.turn)`；腳在分岔點北方 40 m、離第二條軌道 40 m，走行線離第二條軌道 65 m，所以那一彎沿線、橫向距離不相等，把手要照兩個實際距離算（A 也是 13.1 m）。(2) 修好後 `git cherry-pick bdfa16f` 再試北入出庫線。(3) 量法：release 建置（`swift build -c release -Xswiftc -enable-testing --build-tests`），`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=klrt swift test -c release --skip-build --filter DepotReturnReportTests.testTheKaohsiungLightRail`，再各加 `DEPOT_RETURN_FAST=1`、`DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1`，看第二天那行。半徑用 `KLRT_DEPOT_DUMP=1 swift test --filter KaohsiungLightRailDepotDumpTests` 印出的軌道點量。
+- **號碼**：決策 621（已在 #1579 登記）；存檔、golden、GameCore 不動。

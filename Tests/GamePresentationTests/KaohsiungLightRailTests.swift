@@ -209,3 +209,44 @@ final class KaohsiungLightRailLapTests: XCTestCase {
         }
     }
 }
+
+/// Decision 621: run only with `KLRT_DEPOT_DUMP=<file.json>`: the bought
+/// ring's track round its depot, for `tools/rail-depots/plot_depots.py`
+/// (`PLOT_SITES=klrt`), drawn over OpenStreetMap's real yard.
+@MainActor
+final class KaohsiungLightRailDepotDumpTests: XCTestCase {
+    func testDumpTheDepotTrack() throws {
+        guard let path = ProcessInfo.processInfo.environment["KLRT_DEPOT_DUMP"] else {
+            throw XCTSkip("KLRT_DEPOT_DUMP=<file.json> writes the depot's track")
+        }
+        let session = try RealLineAcquisitionTests.game(round: KaohsiungLightRailTests.id, side: 1 << 21, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == KaohsiungLightRailTests.id }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let world = session.world
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let perMetre = frame.mapPointsPerMetre, units = Double(WorldCoordinate.unitsPerMetre)
+        func geo(_ point: WorldCoordinate) -> [Double] {
+            let east = (Double(point.x) - frame.middleX) / units, south = (Double(point.y) - frame.middleY) / units
+            let longitude = (RealWorldFrame.mercatorX(frame.anchor.longitudeDegrees) + east * perMetre) / RealWorldFrame.worldPoints * 360 - 180
+            let y = RealWorldFrame.mercatorY(frame.anchor.latitudeDegrees) + south * perMetre
+            let latitude = atan(sinh(Double.pi * (1 - 2 * y / RealWorldFrame.worldPoints))) * 180 / .pi
+            return [latitude, longitude, Double(point.z) / units]
+        }
+        let middle = frame.worldPosition(latitude: 22.6090, longitude: 120.3255)
+        var edges: [[[Double]]] = []
+        for edge in world.network.edges {
+            guard let geometry = world.network.geometry(of: edge.id) else { continue }
+            let close = geometry.points.contains { point in
+                let (dx, dy) = (Double(point.x) - middle.x, Double(point.y) - middle.y)
+                return (dx * dx + dy * dy).squareRoot() / units < 900
+            }
+            if close { edges.append(geometry.points.map(geo)) }
+        }
+        let station = world.stations.first(where: \.isDepot)
+        let data = try JSONSerialization.data(withJSONObject: ["sites": [[
+            "name": RealLineDepotSite.klrt.english, "edges": edges,
+            "station": station.map { geo(WorldCoordinate(x: $0.location.x, y: $0.location.y, z: 0)) } ?? [],
+        ] as [String: Any]]])
+        try data.write(to: URL(fileURLWithPath: path))
+    }
+}
