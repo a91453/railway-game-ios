@@ -17,6 +17,7 @@ found=false
 for dir in "$app"/*.lproj; do
   [[ -d "$dir" ]] || continue
   found=true
+  # shellcheck disable=SC2012 # the folder names are .lproj names, no odd characters
   echo "  $(basename "$dir"): $(cd "$dir" && ls | paste -sd' ' -)"
 done
 [[ "$found" == true ]] || echo "  (none)"
