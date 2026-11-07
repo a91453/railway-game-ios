@@ -378,7 +378,7 @@ extension GameWorld {
     /// place's, Stage V2), and its timetable on from that call. The legs
     /// it has run already, and the berths it does not stand at, are not in
     /// it.
-    func serviceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
+    private func serviceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
         // Kept by the train as it is: it depends on nothing else but the
         // network and the lines, which do not change within one memo. A
         // few of each train's last values are kept (the steps of an advance

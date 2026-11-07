@@ -1587,15 +1587,16 @@ extension GameWorld {
     ///
     /// `route` is asked a resource at a time (see ``TrackCover``), and
     /// `memo` keeps the trains' holders.
-    /// With `limit` (decision 294) it never reaches beyond that.
+    /// With `limit` (decision 294) it never reaches beyond that. Decision
+    /// 636: it is `nil` too when the reservation would end before the
+    /// train is past track its line runs only the other way
+    /// (``againstClearance(of:_:memo:)``).
     func followingAuthority(of candidate: Train, route: TrackCover, limit: Int64 = .max, memo: inout DirectionMemo) -> Train? {
         let holders = trackHolders(memo: &memo)
         let holding = holders.holding(route, except: candidate.id, fouling: true, in: network)
-        var leaders: [Train] = []
         for (place, other) in trains.enumerated() where other.id != candidate.id && other.position != nil {
             guard holding[place] || holder(of: route, except: candidate.id, waitedForBy: other, holders: holders) else { continue }
             guard isLeading(other, onto: route, for: candidate) else { return nil }
-            leaders.append(other)
         }
         // The longest distance whose track no other train holds.
         let blocked = blockedTrack(except: candidate.id, holders: holders)
@@ -1604,54 +1605,36 @@ extension GameWorld {
         let free = longestAuthority(envelopes, from: 0, clearBase: clear.base(envelopes.base), clear: clear.stretch)
         let authority = min(followingAuthority(envelopes, free: free), limit)
         guard authority >= 1 else { return nil }
-        if Self.followProbe > 0, !blockSections, let clears = againstClearance(of: candidate, envelopes, memo: &memo), authority < clears {
-            guard Self.followProbe == 3 else { return nil }
-            // DEBUG-TYMC4 mode 3: where each leader will stand at its call, along the follower's way.
-            for leader in leaders {
-                var arrived = leader
-                arrived.reservation = []
-                let end = travelling(arrived, distance: routeLength(of: leader))
-                arrived.position = end.position
-                arrived.movement.cursor = end.cursor
-                let edges = Set(bodyStretches(of: arrived).map(\.traversal.edge))
-                guard let index = envelopes.stretches.firstIndex(where: { edges.contains($0.traversal.edge) }) else { continue }
-                let reach = (index == 0 ? 0 : envelopes.ends[index - 1]) - Self.followingGap
-                if reach < clears { return nil }
-            }
+        // Decision 636: never left standing on track its line runs only
+        // the other way.
+        if !blockSections, let clears = againstClearance(of: candidate, envelopes, memo: &memo), authority < clears {
+            return nil
         }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()
         return train
     }
 
-    // DEBUG-TYMC4 probe switch.
-    nonisolated(unsafe) static var followProbe = 0
-
-    // DEBUG-TYMC4: how far the head must go for the whole train to be off the track its line runs only the other way.
-    func againstClearance(of candidate: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> Int64? {
+    /// Decision 636: how far along its route `candidate`'s head must reach
+    /// for the whole train to be past the last stretch its line runs only
+    /// the other way (decision 527's ``oneWayAgainst(_:length:)``), or `nil`
+    /// when its route has no such stretch, or it stands on one already. A
+    /// train following another (Stage U2) given less than this could be
+    /// left standing there, head on with the line's own trains, when the
+    /// one ahead stops short: an empty run out of the Qingpu depot of the
+    /// Taoyuan Airport MRT, whose track joins only the eastbound line, met
+    /// an eastbound service at THSR Taoyuan, and neither moved again
+    /// (TYMC-REBUILD-4).
+    private func againstClearance(of candidate: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> Int64? {
         guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(candidate.id) }) else { return nil }
         let key = PathMemo.LineAgainst(line: line.id, length: candidate.length)
-        let oneWay: Set<TrackTraversal>
-        if let known = memo.paths.against[key] { oneWay = known } else {
-            oneWay = oneWayAgainst(line, length: candidate.length)
-            memo.paths.against[key] = oneWay
+        let against: Set<TrackTraversal>
+        if let known = memo.paths.against[key] { against = known } else {
+            against = oneWayAgainst(line, length: candidate.length)
+            memo.paths.against[key] = against
         }
-        var against = oneWay
-        if Self.followProbe == 4 {
-            // DEBUG-TYMC4 mode 4: only track a running service is planned along the other way.
-            var running: Set<TrackTraversal> = []
-            for train in trains where train.id != candidate.id && train.execution != nil && train.position != nil {
-                running.formUnion(serviceDirections(of: train, memo: &memo))
-            }
-            against = against.filter { running.contains($0.reversed) }
-        }
-        guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }) else { return nil }
-        var last = envelopes.stretches.lastIndex { against.contains($0.traversal) }
-        if Self.followProbe == 2, var index = last, index == envelopes.stretches.count - 1 {
-            while index > 0, against.contains(envelopes.stretches[index - 1].traversal) { index -= 1 }
-            last = envelopes.stretches[..<index].lastIndex { against.contains($0.traversal) }
-        }
-        guard let last else { return nil }
+        guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }),
+              let last = envelopes.stretches.lastIndex(where: { against.contains($0.traversal) }) else { return nil }
         let (sum, overflow) = envelopes.ends[last].addingReportingOverflow(candidate.length)
         return overflow ? .max : sum
     }

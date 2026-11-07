@@ -245,7 +245,6 @@ final class DepotReturnReportTests: XCTestCase {
         // Decision 549: `DEPOT_RETURN_CONTROLLED=1` keeps it on under
         // simple rules too, as a new game has it.
         let environment = ProcessInfo.processInfo.environment
-        GameWorld.followProbe = Int(environment["FOLLOW_PROBE"] ?? "") ?? 0 // DEBUG-TYMC4
         if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
         // Decision 618: the high-speed demo opens with realistic operation
         // off; `DEPOT_RETURN_REALISTIC=1` turns it on. (Traffic control
@@ -371,6 +370,11 @@ final class DepotReturnReportTests: XCTestCase {
                     let key = "\(id.rawValue) \(first.departure.seconds)"
                     if empty[key] == nil {
                         empty[key] = train.movement.edges.dropFirst(train.movement.cursor).reduce(0) { $0 + (world.network.edge($1)?.length ?? 0) }
+                        // `DEPOT_RETURN_EMPTY_RUNS=1`: each empty run as it is planned.
+                        if environment["DEPOT_RETURN_EMPTY_RUNS"] != nil {
+                            let names = [first.station, last.station].map { world.station(id: $0)?.name ?? "?" }
+                            FileHandle.standardError.write(Data("DEPOT_RETURN \(label) empty \(clock(world.clock.now.seconds)): \(train.name) \(names[0])@\(clock(first.departure.seconds)) to \(names[1]), \(empty[key]! / Int64(WorldCoordinate.unitsPerMetre)) m\n".utf8))
+                        }
                     }
                     if line.depots.contains(last.station) { into.insert(key) }
                     if line.depots.contains(first.station) { outOf.insert(key) }
