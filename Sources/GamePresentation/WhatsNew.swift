@@ -35,15 +35,15 @@ public enum WhatsNew {
             id: "2026-11-07-120",
             items: [
                 Line(
-                    english: "The depot throat of a depot you build is now a symmetric fan like a real train yard.",
-                    chinese: "自己蓋的機廠，咽喉改成像真實車場的對稱扇形。"
+                    english: "The tracks into a depot you build now fan out symmetrically, like a real train yard.",
+                    chinese: "自己蓋的機廠，進出的分岔改成像真實車場的對稱扇形。"
                 ),
                 Line(
-                    english: "The high-speed demo's northern end now has the Nangang stabling tracks and the six bases beside Hsinchu laid out as in real life.",
+                    english: "The high-speed demo's northern end now has Nangang's stabling sidings and the Liujia depot beside Hsinchu, laid out as in real life.",
                     chinese: "高鐵示範北端：南港留置線和新竹旁的六家基地，照真實配置。"
                 ),
                 Line(
-                    english: "On the Kaohsiung Circular Light Rail the depot lines up in a strip along the real Qianzhen depot, and fewer empty trains run.",
+                    english: "On the Kaohsiung Circular Light Rail, the depot's tracks now run in a strip along the line like the real Qianzhen depot, so fewer empty trains run.",
                     chinese: "高雄環狀輕軌的機廠照真實前鎮機廠沿線排成一條帶，空車少跑。"
                 ),
                 Line(
