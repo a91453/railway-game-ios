@@ -30,6 +30,50 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 121.
+        Entry(
+            id: "2026-11-08-121",
+            items: [
+                Line(
+                    english: "Track building lets you raise or lower the end of the track yourself for bridges and tunnels, and when a track is refused it offers a height that works.",
+                    chinese: "鋪軌時可以自己調終點的高度（橋、隧道），被拒絕時直接給你一個能過的高度。"
+                ),
+                Line(
+                    english: "On a single line with three trains, one tap adds the passing loops it needs.",
+                    chinese: "單線上跑三列車時，一鍵加齊需要的待避線。"
+                ),
+                Line(
+                    english: "Track numbers on the map keep clear of switches and station names, and can be turned off in the layers list.",
+                    chinese: "地圖上的軌道編號避開道岔和站名，可在圖層清單關掉。"
+                ),
+                Line(
+                    english: "The layers bar on the map can be folded away.",
+                    chinese: "地圖上的圖層列可以收起來。"
+                ),
+                Line(
+                    english: "The Collection now shows the ferries as 3D ships, and has a new Cable Car page.",
+                    chinese: "圖鑑的渡輪改用 3D 船展示，並新增纜車頁。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Pausing, resuming or changing speed no longer makes the game stall on the hour.",
+                    chinese: "暫停、繼續或換速度，整點不再卡一下。"
+                ),
+                Line(
+                    english: "Three trains on one single line no longer lock up.",
+                    chinese: "單線上三列車不再卡死。"
+                ),
+                Line(
+                    english: "A depot no longer shows \"crowded\" or a service area, and the service-area switch now really turns it off.",
+                    chinese: "機廠不再顯示「擠」和服務圈，服務圈開關關了就真的關。"
+                ),
+                Line(
+                    english: "On the high-speed demo, the Liujia depot now sits north of the Touqian River instead of over the water.",
+                    chinese: "高鐵示範的六家基地收在頭前溪北岸，不再蓋在河上。"
+                ),
+            ]
+        ),
         // 120.
         Entry(
             id: "2026-11-07-120",
