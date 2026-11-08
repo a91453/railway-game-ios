@@ -29,16 +29,22 @@ public struct Map3DModelPack: Sendable {
         public let vertexCount: Int
         public let minimum: Map3DPoint
         public let maximum: Map3DPoint
+        /// Decision 653: the texture its ``Map3DVertex/modelTexture``
+        /// vertices are painted with (a `.m3dmodel` of version 2), `nil`
+        /// for the models made in code. Let go of with the vertices
+        /// (``withoutVertices``): the app keeps it only on the GPU.
+        public let texture: Map3DModelTexture?
 
         public var length: Float { maximum.x - minimum.x }
         public var triangleCount: Int { vertexCount / 3 }
 
-        init(name: String, vertices: [Map3DVertex], minimum: Map3DPoint, maximum: Map3DPoint) {
+        init(name: String, vertices: [Map3DVertex], minimum: Map3DPoint, maximum: Map3DPoint, texture: Map3DModelTexture? = nil) {
             self.name = name
             self.vertices = vertices
             vertexCount = vertices.count
             self.minimum = minimum
             self.maximum = maximum
+            self.texture = texture
         }
 
         /// Decision 608: the model with its name, vertex count and bounds
@@ -53,6 +59,7 @@ public struct Map3DModelPack: Sendable {
             self.vertexCount = vertexCount
             self.minimum = minimum
             self.maximum = maximum
+            texture = nil
         }
     }
 

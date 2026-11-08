@@ -124,12 +124,46 @@ triangles; the converter removes two with zero area and writes **1,543
 triangles, eight colors** (about 80 KB). The source contains no separate
 headlight material, so no bus triangle gets the night glow flag.
 
+## Textured models (`.m3dmodel` version 2, decision 653)
+
+`textured.mjs` keeps a model's own texture instead of baking it to eight
+colours. Each corner keeps its normal and its u, v, and the one base-colour
+image is stored as the GLB holds it (PNG or JPEG). It uses only Node's
+standard library, and `convert.mjs`'s version 1 output does not change.
+
+```sh
+node textured.mjs --input car.glb --output car.m3dmodel --id car --front +x \
+  --length-m 20 --source source.json [--texture car.ktx]
+```
+
+- `--source` is the provenance record kept in the file. Without it, the
+  GLB must say it is generated, or `--generated` must list its tasks (as in
+  `convert.mjs`).
+- `--texture` replaces the image with a KTX (version 1) made ahead of time,
+  for example ASTC for iPhone with `astcenc` or `texturetool`. This tool
+  does not compress textures.
+- One image per model. Bake an atlas first if there are more.
+- `TEXCOORD_0` only, and no `KHR_texture_transform`.
+- A clamped or mirrored sampler is accepted only when every u, v is within
+  0…1, because the app's sampler repeats.
+- At most 4 MB of texture and 15,000 triangles.
+- Normals turn by the node's inverse transpose, then by `--front`. A node
+  that mirrors has its triangles' corners swapped back, so they keep facing
+  out.
+- Skins, animations and normal, roughness or metallic maps are not
+  supported yet.
+
+`fixtures/tiny-textured.m3dmodel` is `tiny.glb` written this way, and
+`Map3DModelFileTests` reads it in Swift. Do not commit converted models
+from games or other sources whose licence does not allow it, because this
+repository is public.
+
 ## Before a model goes into the App
 
 The first PR that puts a converted model into the App also adds the
 Khronos glTF-Validator (`gltf-validator`, Apache-2.0, pinned) to this tool
 and checks the input GLB before conversion. It checks the glTF spec only;
-the game's own limits (no textures, triangle budget) stay checked here.
+the game's own limits (one texture, triangle budget) stay checked here.
 Timing: `docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3.
 
 ## Dependencies and licenses
