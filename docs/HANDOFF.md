@@ -554,6 +554,12 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**TYMC-AFTERNOON（2026-11-08，session_01YGNNunbExVayKkapyynSdu，第 57 任派）：機捷第 2 天下午環北↔機場第一航廈沒發，沒有修好，交回遊戲規劃**
+- 查到的、試過的 10 種寫法、建議的 3 個方向：`docs/research/TYMC_AFTERNOON_2026-11-08.md`。
+- 根因：#1984 之後，傍晚區間車收班停在 A12，進了蘆竹，第 2 天青埔是空的。15:44 只能從蘆竹出車，空車要一次拿下 13 分鐘的整段路，沒有閉塞時每分鐘都被擋。
+- 改進機廠選哪一座的規則都不行：不是沒用，就是死結從 7 列變成 10 到 18 列。要改的是出機廠空車怎麼拿路，GameCore，要量每條線。
+- 回歸測試 `AirportShuttleDepotTests`（`TYMC_AFTERNOON=1`）現在是紅的，修好的人讓它變綠。決策 662 已釋出，存檔、golden 沒動。
+
 **FLAKY-1106（2026-11-06，session_01YGNNungyjShoiFjNiD1Mhu）：full lane 三支不穩 UI 測試的根因**
 - `MapInteractionTests.testTheStationTagsPencilRenamesAtOnce`
   - 原因：第一次彈窗沒拿到鍵盤時，測試會按 Cancel 再按筆。但 Cancel 後，筆打開的車站面板還開著，而車站標籤只在沒有面板時才畫，所以筆不存在。4 次紅都是這樣：run 41935318468、41959689553、42130736583、42173934715，最後一次跑的是修正前的程式。
