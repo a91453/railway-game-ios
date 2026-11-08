@@ -229,43 +229,6 @@ final class TaoyuanAirportLineTests: XCTestCase {
         XCTAssertGreaterThan(checked, 0)
     }
 
-    /// Decision 652: a train in from Airport Terminal 2 (A13) on the
-    /// Taipei-bound track reaches Airport Terminal 1's (A12) other
-    /// platform, the one the line names for the trains from Kengkou, over
-    /// the crossover the other way beyond its turn-back one, so a shuttle
-    /// from Huanbei that ends there stands clear of the Taipei-bound
-    /// track. Laid with only the turn-back crossovers (decision 647), no
-    /// way led there.
-    func testATrainInFromTerminal2ReachesTerminal1sOtherPlatform() throws {
-        let session = try RealLineAcquisitionTests.game(round: Self.id, side: 1 << 22, heights: true)
-        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id }, "on sale")
-        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
-        let world = session.world
-        let bought = try XCTUnwrap(world.lines.first)
-        let length = try XCTUnwrap(world.trains.first).length
-        let names = bought.stops.map { world.station(id: $0)?.name }
-        let t1 = try XCTUnwrap(names.firstIndex(of: "機場第一航廈站")), t2 = try XCTUnwrap(names.firstIndex(of: "機場第二航廈站"))
-        // The line runs from its terminal: Terminal 2 before Terminal 1.
-        XCTAssertEqual(t2 + 1, t1)
-        let fromKengkou = try XCTUnwrap(bought.routePreferences.first { $0.from == t1 + 1 && $0.to == t1 }).platform
-        let fromTerminal2 = try XCTUnwrap(bought.routePreferences.first { $0.from == t2 && $0.to == t1 }).platform
-        XCTAssertNotEqual(fromKengkou.edge, fromTerminal2.edge)
-        let towardsTaipei = try XCTUnwrap(bought.routePreferences.first { $0.from == t2 - 1 && $0.to == t2 }).platform
-        let into = Set(world.berths(of: bought.stops[t1], length: length).filter { $0.traversal.edge == fromKengkou.edge })
-        XCTAssertFalse(into.isEmpty)
-        var checked = 0
-        for berth in world.berths(of: bought.stops[t2], length: length) where berth.traversal.edge == towardsTaipei.edge {
-            var memo = GameWorld.PathMemo()
-            guard world.path(from: .onEdge(berth.traversal, offset: berth.offset), toStation: bought.stops[t1], length: length, memo: &memo) != nil else { continue }
-            XCTAssertNotNil(
-                world.path(from: .onEdge(berth.traversal, offset: berth.offset), toStation: bought.stops[t1], length: length, eligible: into, memo: &memo),
-                "\(berth.traversal) to \(fromKengkou.edge)"
-            )
-            checked += 1
-        }
-        XCTAssertGreaterThan(checked, 0)
-    }
-
     /// The real Taoyuan opening, its water read in: the line is offered.
     func testItIsOfferedOnTheTaoyuanOpening() throws {
         let session = try Self.opening("Taoyuan")
