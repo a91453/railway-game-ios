@@ -485,6 +485,8 @@ final class LessonUITests: XCTestCase {
             tap(row)
             XCTAssertTrue(page.appears(within: 10), "The line's page did not open")
         }
+        // Mac playtest C2: what the page reads, worked out off the main actor.
+        XCTAssertTrue(element("line.detail.preparing").disappears(within: 10), "The line's page stayed waiting")
         page.waitUntilStill()
     }
 

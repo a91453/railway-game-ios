@@ -59,6 +59,13 @@ struct Map3DPreviewScreen: View {
     @State private var modelsReady = false
     @State private var stats: Map3DMetalView.Stats?
     @State private var showsDetails = false
+    /// Decision 625 續: the Debug app's `-screenshot-3d-clean` leaves out
+    /// the frame rate and the gesture hint, for screenshots of the map alone.
+    #if DEBUG
+    private static let screenshotClean = ProcessInfo.processInfo.arguments.contains("-screenshot-3d-clean")
+    #else
+    private static let screenshotClean = false
+    #endif
     @State private var feed = Map3DTrainFeed()
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
@@ -198,7 +205,7 @@ struct Map3DPreviewScreen: View {
                         // map's clock, so it shows the same one here.
                         Map3DClock(session: session)
                     }
-                    if let stats {
+                    if let stats, !Self.screenshotClean {
                         Button {
                             showsDetails.toggle()
                         } label: {
@@ -241,7 +248,7 @@ struct Map3DPreviewScreen: View {
                     // Decision 585 PR-4 (FERRYFOLLOW).
                     Map3DFerryFollowBar(facts: ferry, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
-                } else {
+                } else if !Self.screenshotClean {
                     Text(verbatim: handedOver == nil
                          ? language.text("Pinch closer to tilt the map, and push two fingers up to tilt it more. Drag to move, two fingers to turn.",
                                          "兩指拉近，地圖就會傾斜；兩指往上推，斜得更多。拖曳移動，兩指旋轉。")

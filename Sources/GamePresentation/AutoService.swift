@@ -319,15 +319,43 @@ extension GameWorld {
         return shortfall
     }
 
-    /// The first line, by ID, with a ``sharedSingleTrackShortfall(of:)``:
-    /// what the station master warns of. Each line's journey is driven once.
+    /// Line `id`'s shortfall with the trains it has (decision 628): a
+    /// ``sharedSingleTrackShortfall(of:)``, or its own trains more than
+    /// its single track has places for them to pass. Trains bought and set
+    /// on a line by hand stand on its track even when it runs fewer
+    /// (TestFlight 115.1, "three trains cannot run on the line"): three on
+    /// a single track whose stations each have one platform stand at the
+    /// stations all day, each waiting for the platform another stands on.
+    /// `nil` when it has places enough or runs on no single track.
+    public func singleTrackShortfall(of id: LineID) -> PassingPlaceShortfall? {
+        var edges: [LineID: Set<TrackEdgeID>] = [:]
+        return singleTrackShortfall(of: id, edges: &edges)
+    }
+
+    private func singleTrackShortfall(of id: LineID, edges: inout [LineID: Set<TrackEdgeID>]) -> PassingPlaceShortfall? {
+        guard let line = line(id: id), !line.assignedTrains.isEmpty else { return nil }
+        if let shared = sharedSingleTrackShortfall(of: id, edges: &edges) { return shared }
+        // Its own: only trains on the track stand in the way (a spare
+        // assigned off it waits there).
+        let onTrack = trainsOnTrack(of: line)
+        guard onTrack >= 2, let own = passingPlaceShortfall(of: id, trains: onTrack, readyFor: 0, edges: &edges), own.others.isEmpty else { return nil }
+        return own
+    }
+
+    /// How many of `line`'s trains stand on the track.
+    func trainsOnTrack(of line: ServiceLine) -> Int {
+        line.assignedTrains.filter { train(id: $0)?.position != nil }.count
+    }
+
+    /// The first line, by ID, with a ``singleTrackShortfall(of:)``: what
+    /// the station master warns of. Each line's journey is driven once.
     public func firstLineWithoutPlaceToPass() -> ServiceLine? {
         var edges: [LineID: Set<TrackEdgeID>] = [:]
         // Only lines that share a single-track edge with another line's
-        // trains can fall short this way: most networks have none.
+        // trains, or that have two trains or more, can fall short this way.
         let running = lines.filter { !$0.assignedTrains.isEmpty }
-        guard running.count >= 2 else { return nil }
-        return running.sorted { $0.id < $1.id }.first { sharedSingleTrackShortfall(of: $0.id, edges: &edges) != nil }
+        let candidates = running.count >= 2 ? running : running.filter { trainsOnTrack(of: $0) >= 2 }
+        return candidates.sorted { $0.id < $1.id }.first { singleTrackShortfall(of: $0.id, edges: &edges) != nil }
     }
 
     /// Each leg of `journey` with the edges it runs over, the one it
@@ -553,7 +581,7 @@ extension GameSession {
         guard let id = selectedLine?.id else { return nil }
         let key = PassingShortfallMemo.Key(line: id, revision: commandRevision)
         if let memo = passingShortfallMemo, memo.key == key { return memo.shortfall }
-        let shortfall = world.sharedSingleTrackShortfall(of: id)
+        let shortfall = world.singleTrackShortfall(of: id)
         passingShortfallMemo = PassingShortfallMemo(key: key, shortfall: shortfall)
         return shortfall
     }
@@ -561,10 +589,38 @@ extension GameSession {
     /// What the line card says of `shortfall`: the two lines share single
     /// track with no place to pass, so a train turns back early.
     public func passingShortfallText(_ shortfall: PassingPlaceShortfall) -> String {
+        Self.passingShortfallText(shortfall, in: world, language: language)
+    }
+
+    /// Decision 628: what a message about line `id` adds when, with the
+    /// trains it now has, they have no place to pass on its single track
+    /// (``GameWorld/singleTrackShortfall(of:)``): the leg, and where the
+    /// fix is. Empty when they have.
+    static func passingWarningText(for id: LineID, in world: GameWorld, language: DisplayLanguage) -> String {
+        guard let shortfall = world.singleTrackShortfall(of: id), shortfall.others.isEmpty,
+              let line = world.line(id: id), let leg = shortfall.legs.first,
+              leg.from < line.stops.count, leg.to < line.stops.count else { return "" }
+        let from = world.station(id: line.stops[leg.from])?.name ?? ""
+        let to = world.station(id: line.stops[leg.to])?.name ?? ""
+        return language.text(
+            " Its single track has no place for \(world.trainsOnTrack(of: line)) trains to pass between \(from) and \(to), so they would stand waiting for each other: tap Add a Passing Loop Here on the line's card.",
+            "單線上 \(from)—\(to) 沒有地方讓 \(world.trainsOnTrack(of: line)) 列車交會，會互相等著不動：請在路線卡按「在這裡加待避線」。"
+        )
+    }
+
+    static func passingShortfallText(_ shortfall: PassingPlaceShortfall, in world: GameWorld, language: DisplayLanguage) -> String {
         guard let line = world.line(id: shortfall.line), let leg = shortfall.legs.first,
               leg.from < line.stops.count, leg.to < line.stops.count else { return "" }
         let from = world.station(id: line.stops[leg.from])?.name ?? ""
         let to = world.station(id: line.stops[leg.to])?.name ?? ""
+        guard !shortfall.others.isEmpty else {
+            // Decision 628: its own trains, with no other line's.
+            let count = world.trainsOnTrack(of: line)
+            return language.text(
+                "\(line.name)'s \(count) trains have no place to pass on the single track between \(from) and \(to): they stand waiting for each other. A passing loop there lets them pass.",
+                "\(line.name) 的 \(count) 列車在 \(from)—\(to) 的單線上沒有地方交會，會互相等著不動。在那裡加一處待避線就能交會。"
+            )
+        }
         let others = shortfall.others.compactMap { world.line(id: $0)?.name }.joined(separator: language.text(", ", "、"))
         return language.text(
             "\(line.name) shares the single track between \(from) and \(to) with \(others), with no place to pass: a train may turn back early at \(from). A passing loop lets them pass.",
@@ -579,7 +635,9 @@ extension GameSession {
     /// in under a train; the message says to wait for it to pass.
     public func addPassingLoopToSelectedLine() {
         guard let line = requireSelectedLine() else { return }
-        let plans = passingLoopsNeeded(for: line.id, trains: line.assignedTrains.count, in: world)
+        // Decision 628: every place to pass its trains need, in one tap.
+        let trains = world.sharedSingleTrackShortfall(of: line.id) == nil ? world.trainsOnTrack(of: line) : line.assignedTrains.count
+        let plans = passingLoopsNeeded(for: line.id, trains: trains, limit: max(1, trains - 1), in: world)
         guard !plans.isEmpty else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "There is no room for a passing loop on \(line.name)'s single track: build a second track beside it instead.",
@@ -664,14 +722,30 @@ extension GameSession {
     }
 
     /// What it says of the trains taken off the track for a loop and put
-    /// back where their lines' trips start.
+    /// back where their lines' trips start, or left off it.
     static func liftedText(_ outcome: PlayerCommand.Outcome, in language: DisplayLanguage) -> String {
         let count = outcome.left.count
-        guard count > 0 else { return "" }
-        return language.text(
+        var text = count == 0 ? "" : language.text(
             " \(count) \(count == 1 ? "train was" : "trains were") in the way and went back to the start of \(count == 1 ? "its" : "their") line.",
             "有 \(count) 列車擋在那段軌道上，已經回到路線起點。"
         )
+        if !outcome.parked.isEmpty {
+            let names = outcome.parked.joined(separator: language.text(", ", "、"))
+            text += language.text(
+                " \(names) left the track: the line already runs every train it can there. Give \(outcome.parked.count == 1 ? "it" : "them") another line, or sell \(outcome.parked.count == 1 ? "it" : "them").",
+                "\(names) 先離開軌道：這條線在那裡能跑的列車已經都在跑了。可以配到別條線，或賣掉。"
+            )
+        }
+        return text
+    }
+
+    /// Decision 628: whether line `id` has on its track as many of its
+    /// trains as it runs at the busiest time of day.
+    static func runsEveryTrainOnItsTrack(_ id: LineID, in world: GameWorld) -> Bool {
+        guard let line = world.line(id: id) else { return false }
+        let runs = ServiceLevel.allCases.compactMap { world.lineTrainsInService(id, at: $0) }.max() ?? 0
+        let onTrack = line.assignedTrains.filter { world.train(id: $0)?.position != nil }.count
+        return onTrack >= runs
     }
 
     /// The cars a train bought for line `id` has: as many as its shortest
@@ -716,7 +790,12 @@ extension GameSession {
                 planner.heights = heights
                 planner.coverage = coverage
             }
-            guard let plan = shortfall.legs.lazy.filter({ $0.distance >= shortestLeg }).compactMap({ planner.passingLoopPlan(along: $0.edges) }).first
+            let stops = scratch.line(id: id)?.stops ?? []
+            guard let plan = shortfall.legs.lazy.filter({ $0.distance >= shortestLeg }).compactMap({ leg in
+                planner.passingLoopPlan(
+                    along: leg.edges, from: stops.indices.contains(leg.from) ? stops[leg.from] : nil, to: stops.indices.contains(leg.to) ? stops[leg.to] : nil
+                )
+            }).first
             else { break }
             plans.append(plan)
             guard plans.count < limit else { break }
@@ -726,19 +805,66 @@ extension GameSession {
         return plans
     }
 
-    /// A passing loop in the middle of a leg over `edges`: on its longest
-    /// edge, centred on the edge's middle, on either side; `nil` where none
-    /// fits.
-    private func passingLoopPlan(along edges: [TrackEdgeID]) -> PassingLoopPlan? {
+    /// A passing loop in the middle of a leg over `edges`, from stop
+    /// `from` to stop `to`: on its longest edge, centred on the edge's
+    /// middle, on either side; `nil` where none fits.
+    ///
+    /// Decision 628: the platform tool sets every station's platform on
+    /// the one track the player drew, so a line of three stations or more
+    /// often runs on a single edge whose middle is a station's platform,
+    /// and no loop went in ("Add a Train" said a platform must not overlap
+    /// another). Where the edges' middles all fail, the loop goes in the
+    /// middle of the longest stretch of the leg clear of platforms: on an
+    /// edge, between two platforms or a platform and the edge's end, not
+    /// reaching past a station that is neither of the leg's.
+    private func passingLoopPlan(along edges: [TrackEdgeID], from: StationID? = nil, to: StationID? = nil) -> PassingLoopPlan? {
         let edges = edges
             .compactMap { id in world.network.edge(id).map { (id: id, length: $0.length) } }
             .sorted { $0.length > $1.length }
-        for edge in edges {
+        // Decision 628: a loop whose turnouts or platform would reach onto
+        // a station's platform is refused only when it is built (the
+        // platform may not overlap another), so it is passed over here.
+        func clear(_ plan: PassingLoopPlan) -> Bool {
+            let reach = PassingLoopPlan.reach
+            return !world.network.platforms.contains { $0.edge == plan.edge && $0.start < plan.end + reach && plan.start - reach < $0.end }
+        }
+        func plan(at point: NetworkEdgePoint) -> PassingLoopPlan? {
             for side in [PlatformTrackSide.left, .right] {
-                if case .success(let plan) = passingLoopPlan(at: NetworkEdgePoint(edge: edge.id, distance: edge.length / 2), side: side) {
-                    return plan
-                }
+                if case .success(let plan) = passingLoopPlan(at: point, side: side), clear(plan) { return plan }
             }
+            return nil
+        }
+        for edge in edges {
+            if let found = plan(at: NetworkEdgePoint(edge: edge.id, distance: edge.length / 2)) { return found }
+        }
+        guard let from, let to else { return nil }
+        // The stretches clear of platforms, longest first.
+        var stretches: [(edge: TrackEdgeID, start: Int64, end: Int64, between: Bool)] = []
+        for edge in edges {
+            let platforms = world.network.platforms.filter { $0.edge == edge.id }.sorted { $0.start < $1.start }
+            // Each bound: where it is along the edge, and the station whose
+            // platform it is (`nil` for the edge's end).
+            var bounds: [(at: Int64, station: StationID?)] = [(0, nil)]
+            for platform in platforms {
+                bounds.append((platform.start, platform.station))
+                bounds.append((platform.end, platform.station))
+            }
+            bounds.append((edge.length, nil))
+            for index in stride(from: 0, to: bounds.count - 1, by: 2) {
+                let (low, high) = (bounds[index], bounds[index + 1])
+                let inLeg = [low.station, high.station].allSatisfy { $0 == nil || $0 == from || $0 == to }
+                guard inLeg, high.at > low.at else { continue }
+                stretches.append((edge.id, low.at, high.at, low.station != nil && high.station != nil))
+            }
+        }
+        // Between the leg's two stations first: a stretch from a platform to
+        // the edge's end may run on past the line's end.
+        let ordered = stretches.sorted { a, b in
+            if a.between != b.between { return a.between }
+            return a.end - a.start > b.end - b.start
+        }
+        for stretch in ordered {
+            if let found = plan(at: NetworkEdgePoint(edge: stretch.edge, distance: (stretch.start + stretch.end) / 2)) { return found }
         }
         return nil
     }
@@ -797,10 +923,25 @@ extension GameSession {
         }
         for (train, line, pattern) in lifted {
             guard let journey = world.lineJourney(line) else { throw .trackReserved(train) }
+            if plan.newLine == nil, plan.trains == 0, Self.runsEveryTrainOnItsTrack(line, in: world) {
+                // Decision 628: the line card's loop alone, and the line
+                // already has on its track every train it runs. Put back,
+                // the train would only stand as a spare on a platform of
+                // the single track, in the way of the others; off it, it
+                // waits. (Add a Train and a new line still put it back:
+                // they would buy a train and take another off.)
+                outcome.parked.append(world.train(id: train)?.name ?? "")
+                continue
+            }
             var placed = world
             if (try? Self.placeAtStart(train, of: journey, in: &placed)) == nil {
-                placed = world
-                guard let back = Self.farEndJourney(of: line, in: world), (try? Self.placeAtStart(train, of: back, in: &placed)) != nil else {
+                var atBack = world
+                if let back = Self.farEndJourney(of: line, in: world), (try? Self.placeAtStart(train, of: back, in: &atBack)) != nil {
+                    placed = atBack
+                } else if let anywhere = Self.placeAtAnyStop(train, of: line, in: world) {
+                    // Decision 628: both ends taken; a stop between them.
+                    placed = anywhere
+                } else {
                     throw .trackReserved(train)
                 }
             }

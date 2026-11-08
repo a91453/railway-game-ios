@@ -56,6 +56,9 @@ public final class LinePanelMemo {
 
     private var rowKey: RowKey?
     private var rowTexts: [LineID: String] = [:]
+    /// Mac playtest C2: the lines whose page this memo has had ready
+    /// (``prepare(_:headway:of:)``).
+    private var preparedLines: Set<LineID> = []
 
     public init() {}
 
@@ -192,5 +195,71 @@ public final class LinePanelMemo {
         let text = session.world.lineTrainsRowText(id, in: session.language)
         rowTexts[id] = text
         return text
+    }
+
+    // MARK: - The page ready before it shows (Mac playtest C2)
+
+    /// What a line's page reads first, worked out together from one world.
+    struct Prepared: Sendable {
+        let summaries: [LineServiceSummary]
+        let journeyText: String?
+        let trackCountTexts: [String]
+        let coverageTexts: [ServiceLevel: String?]
+        let capacityWarning: String?
+        let shortfall: LineTrainShortfall?
+        let runningHeadway: Int64?
+        let rowText: String
+        let headwayChange: (headway: Int64, change: LineHeadwayChange?)?
+
+        init(world: GameWorld, line id: LineID, headway: Int64?, language: DisplayLanguage) {
+            summaries = world.lineServiceSummaries(id, in: language)
+            journeyText = world.lineJourneyText(id, in: language)
+            trackCountTexts = world.lineTrackCountTexts(id, in: language)
+            coverageTexts = Dictionary(uniqueKeysWithValues: ServiceLevel.allCases.map { ($0, world.lineCoverageText(id, at: $0, in: language)) })
+            capacityWarning = world.lineCapacityWarning(id, in: language)
+            shortfall = world.lineTrainShortfall(id)
+            runningHeadway = world.lineRunningHeadway(id)
+            rowText = world.lineTrainsRowText(id, in: language)
+            headwayChange = headway.map { ($0, world.lineHeadwayChange(id, headway: $0)) }
+        }
+    }
+
+    /// Whether this memo has had `id`'s page ready (``prepare(_:headway:of:)``):
+    /// until then the page shows its first lines and a wait.
+    public func hasPrepared(_ id: LineID) -> Bool {
+        preparedLines.contains(id)
+    }
+
+    /// Mac playtest C2 (2026-11-08): what `id`'s page reads first (its
+    /// services, trains, coverage and headway; some 400 ms of track
+    /// searches on the bought Wenhu Line's main actor, the frame rate
+    /// down to 5–10 as it opened), worked out off the main actor on the
+    /// world as it is now, and kept as if read here when no command
+    /// changed the world meanwhile. `headway` is the one the page offers
+    /// to staff. Once a line's page has been ready it is read as before.
+    public func prepare(_ id: LineID, headway: Int64?, of session: GameSession) async {
+        guard !preparedLines.contains(id) else { return }
+        let (world, language, revision) = (session.world, session.language, session.commandRevision)
+        let worked = await Task.detached(priority: .userInitiated) {
+            Prepared(world: world, line: id, headway: headway, language: language)
+        }.value
+        defer { preparedLines.insert(id) }
+        // A command since: the page works out what it reads itself.
+        guard session.commandRevision == revision, session.language == language else { return }
+        keep(id, of: session)
+        if summaries == nil { summaries = worked.summaries }
+        if journeyText == nil { journeyText = .some(worked.journeyText) }
+        if trackCountTexts == nil { trackCountTexts = worked.trackCountTexts }
+        for (level, text) in worked.coverageTexts where coverageTexts[level] == nil { coverageTexts[level] = .some(text) }
+        if capacityWarning == nil { capacityWarning = .some(worked.capacityWarning) }
+        if shortfall == nil { shortfall = .some(worked.shortfall) }
+        if runningHeadway == nil { runningHeadway = .some(worked.runningHeadway) }
+        if let change = worked.headwayChange, headwayChanges[change.headway] == nil { headwayChanges[change.headway] = .some(change.change) }
+        let row = RowKey(session: ObjectIdentifier(session), revision: revision, language: language)
+        if row != rowKey {
+            rowKey = row
+            rowTexts = [:]
+        }
+        if rowTexts[id] == nil { rowTexts[id] = worked.rowText }
     }
 }

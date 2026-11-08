@@ -235,6 +235,41 @@ final class TrafficOverlayTests: XCTestCase {
         XCTAssertNil(session.routeWaitText(of: east))
     }
 
+    /// Mac playtest C1 (2026-11-08): only a loop step's last tick reads
+    /// traffic control. The map, drawn after each tick of the step, keeps
+    /// the last reading meanwhile rather than reading off the main actor a
+    /// world the next tick replaces; the step's last tick brings the
+    /// reading of the world it made.
+    @MainActor
+    func testAStepsTicksButItsLastAreNotReadAgainForTheMap() async throws {
+        for speed in [GameSpeed.x10, .normal] {
+            var world = try passingLoopWorld(speed: speed)
+            try world.setTrafficControl(true)
+            let session = GameSession(world: world)
+            let tick = try XCTUnwrap(session.beginLoopTick())
+            let outcome = await tick.work()
+            XCTAssertTrue(session.finish(tick, with: outcome))
+            let readsBefore = session.trafficReadsStarted
+            var shown: [Int] = []
+            let stepped = await session.runLoopStep(ticks: 3) {
+                _ = session.trafficOverlay
+                shown.append(session.worldRevision)
+            }
+            XCTAssertTrue(stepped)
+            XCTAssertEqual(shown.count, 3, "\(speed)")
+            XCTAssertEqual(session.trafficReadsStarted, readsBefore, "\(speed): no reading of a world the step's next tick replaces")
+            XCTAssertEqual(session.trafficMemo?.revision, session.worldRevision, "\(speed): the step's last tick read its world")
+            XCTAssertEqual(session.trafficOverlay, session.world.trafficOverlay(), "\(speed)")
+
+            // A command still has its world read, once, off the main actor.
+            session.setTrafficControl(false)
+            _ = session.trafficOverlay
+            XCTAssertEqual(session.trafficReadsStarted, readsBefore + 1, "\(speed)")
+            await session.mapReadsSettled()
+            XCTAssertEqual(session.trafficOverlay, TrafficOverlay(), "\(speed)")
+        }
+    }
+
     /// Decision 497 (P2-7): a wait for a train that will not move off by
     /// itself is not a deadlock, but nothing tells the player which train
     /// to move. The words and a stuck bubble name it and why.

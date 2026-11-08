@@ -18,19 +18,25 @@ public struct MapLayerPreferences: Equatable, Hashable, Sendable {
     /// Whether the fares over the stations ("+$12", decision 256) and the
     /// trips stamped full (decisions 276, 310) are drawn.
     public var showsFaresAndStamps: Bool
+    /// Whether every track's number ("#14", decision 201) is drawn when
+    /// the map is close enough; the previewed leg's are drawn either way
+    /// (decision 631).
+    public var showsTrackNumbers: Bool
 
     public init(
         showsStationNames: Bool = true,
         showsWaitingCounts: Bool = true,
         showsCatchmentRings: Bool = true,
         popTravelMode: PopTravelMode? = nil,
-        showsFaresAndStamps: Bool = true
+        showsFaresAndStamps: Bool = true,
+        showsTrackNumbers: Bool = true
     ) {
         self.showsStationNames = showsStationNames
         self.showsWaitingCounts = showsWaitingCounts
         self.showsCatchmentRings = showsCatchmentRings
         self.popTravelMode = popTravelMode
         self.showsFaresAndStamps = showsFaresAndStamps
+        self.showsTrackNumbers = showsTrackNumbers
     }
 
     /// Whether the population grid is drawn (the reference's
@@ -78,6 +84,14 @@ public enum MapLayers {
     /// Calculates the screen radius in points for the catchment area at the given projection scale.
     public static func catchmentScreenRadius(pointsPerUnit: Double) -> Double {
         catchmentRadiusWorldUnits * pointsPerUnit
+    }
+
+    /// The stations that get a catchment ring: none when the layer is off,
+    /// and never a depot (decision 630): a depot is where trains rest, not
+    /// where people board, so it reaches no one.
+    public static func catchmentStations(in world: GameWorld, layers: MapLayerPreferences) -> [Station] {
+        guard layers.showsCatchmentRings else { return [] }
+        return world.stations.filter { !$0.isDepot }
     }
 
     /// Derives a snapshot of waiting passenger counts for each station in the world.

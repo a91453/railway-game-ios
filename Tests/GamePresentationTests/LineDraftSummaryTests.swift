@@ -94,13 +94,15 @@ final class LineDraftSummaryTests: XCTestCase {
         let summary = try XCTUnwrap(session.lineDraftSummary)
         XCTAssertFalse(summary.isProblem)
         XCTAssertEqual(summary.text, "3 stops · 5.0 km · about 6 min · \(price.moneyText)")
-        // The map's ✓ says the same, and what the price brings.
-        XCTAssertEqual(session.mapLineDraft?.caption, summary.text + "\nWith a train")
+        // The map's ✓ says the same, and what the price brings. Every
+        // platform lies on the one edge: before decision 628 the loop was
+        // planned onto Centre's platform and silently dropped.
+        XCTAssertEqual(session.mapLineDraft?.caption, summary.text + "\nWith a train and a passing loop")
 
         let chinese = GameSession(world: map.world, language: .traditionalChinese)
         pick([map.west, map.east], in: chinese)
         XCTAssertEqual(chinese.lineDraftSummary?.text, "3 站 · 5.0 km · 約 6 分 · \(price.moneyText)")
-        XCTAssertEqual(chinese.mapLineDraft?.caption, "3 站 · 5.0 km · 約 6 分 · \(price.moneyText)\n含一列車")
+        XCTAssertEqual(chinese.mapLineDraft?.caption, "3 站 · 5.0 km · 約 6 分 · \(price.moneyText)\n含一列車與一處待避線")
     }
 
     /// The time is the trains' own: every leg, and a minute at each call

@@ -46,7 +46,7 @@ private final class TutorialJourney {
         "Tap ✓ to build the station",
         "Tap your track in the other town",
         "Tap ✓ for the second station",
-        "Tap Done to stop building",
+        "Tap ✕ to stop building",
         "Tap Lines",
         "Tap one station, then the other",
         "Tap ✓, then Open Line",

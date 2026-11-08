@@ -73,6 +73,8 @@ struct StationMasterCorner: View {
     var firstLineGuide: FirstLineGuide.Choice?
     var answerFirstLineGuide: (FirstLineGuide.Choice) -> Void = { _ in }
     @State private var isTalking = false
+    /// Mac playtest A4: this view's key in ``GameScreenState/stationMasterFrames``.
+    @State private var frameKey = UUID()
     @State private var lastSpoken: StationMasterAdvice?
     @State private var talk = 0
     /// The advice, worked out again only when an edit or a new game hour
@@ -257,8 +259,8 @@ struct StationMasterCorner: View {
             // A layer's legend under a phone's panel keeps above it
             // (``HUDMargins/legendFootUnderPanel``); the bubble, a few
             // seconds' word, does not move it.
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationMasterFrame = $0 }
-            .onDisappear { screen.stationMasterFrame = .zero }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationMasterFrames[frameKey] = $0 }
+            .onDisappear { screen.stationMasterFrames[frameKey] = nil }
             if offersTutorial, storyBeat == nil, hasRoom {
                 offerCard
             } else if let storyBeat, hasRoom {

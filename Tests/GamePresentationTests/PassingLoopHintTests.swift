@@ -123,7 +123,10 @@ final class PassingLoopHintTests: XCTestCase {
         let signal = try XCTUnwrap(world.stations.first { $0.operationMode == .closed }).id
         XCTAssertEqual(PassingLoopHint.waitingLine([wait(train)], in: world), single, "a loop it does not stop at is still single")
         try world.setLineStops(single, to: [try XCTUnwrap(world.line(id: single)?.stops.first), signal, try XCTUnwrap(world.line(id: single)?.stops.last)])
-        XCTAssertNotNil(PassingLoopHint.waitingLine([wait(train)], in: world), "the legs either side are still single")
+        // Decision 628 (the owner's Mac playtest D2): the legs either side
+        // are still single, but its trains meet at the loop now, and a
+        // train waiting there for the other is that meet.
+        XCTAssertNil(PassingLoopHint.waitingLine([wait(train)], in: world), "stopping at the loop, its trains pass there")
     }
 
     func testTheCardsButtonOpensTheLoopTool() throws {

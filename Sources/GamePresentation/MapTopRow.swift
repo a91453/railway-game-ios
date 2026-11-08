@@ -14,6 +14,9 @@ public enum MapTopRow {
     public enum Layers: Hashable, Sendable {
         case strip
         case button
+        /// Decision 631: put away by the player, one small button that
+        /// brings the strip back.
+        case collapsed
     }
 
     /// The night skip (decision 305): its name and the time, or its icon
@@ -41,11 +44,16 @@ public enum MapTopRow {
     public static var stripWidth: Double {
         let buttons = Double(MapQuickLayer.allCases.count + 1)
         let gaps = buttons
-        return buttons * cellWidth + gaps * 2 + (1 + 2 * 2) + 2 * 3
+        return buttons * cellWidth + gaps * 2 + (1 + 2 * 2) + 2 * 3 + 2 + collapseCellWidth
     }
 
-    /// The strip put away: More alone in its glass.
-    public static var layersButtonWidth: Double { cellWidth + 2 * 3 }
+    /// Decision 631: the button that puts the strip away, after More.
+    public static let collapseCellWidth: Double = 28
+    /// The strip put away by the width: More alone in its glass, and the
+    /// button that puts it away.
+    public static var layersButtonWidth: Double { cellWidth + 2 * 3 + 2 + collapseCellWidth }
+    /// The strip put away by the player: one round button (decision 631).
+    public static let collapsedWidth: Double = 44
     /// The night skip with its icon alone: a finger's 44 points.
     public static let nightSkipIconWidth: Double = 44
     /// The next step's flag and count, the narrowest the chip draws.
@@ -64,9 +72,16 @@ public enum MapTopRow {
     /// the night skip stay: one is what the camera is doing, the other
     /// ends with the night.
     public static func arrange(
-        width: Double, showsLayers: Bool, nightSkipWidth: Double, nextStep: Bool, follows: Bool
+        width: Double, showsLayers: Bool, nightSkipWidth: Double, nextStep: Bool, follows: Bool,
+        layersCollapsed: Bool = false
     ) -> Arrangement {
-        let tries: [Arrangement] = [
+        // Decision 631: put away by the player, the strip is one small
+        // button at every width.
+        let tries: [Arrangement] = layersCollapsed ? [
+            Arrangement(layers: .collapsed, showsNextStep: nextStep, nightSkip: .full),
+            Arrangement(layers: .collapsed, showsNextStep: false, nightSkip: .full),
+            Arrangement(layers: .collapsed, showsNextStep: false, nightSkip: .icon),
+        ] : [
             Arrangement(layers: .strip, showsNextStep: nextStep, nightSkip: .full),
             Arrangement(layers: .button, showsNextStep: nextStep, nightSkip: .full),
             Arrangement(layers: .button, showsNextStep: false, nightSkip: .full),
@@ -85,7 +100,11 @@ public enum MapTopRow {
             if nightSkipWidth > 0 {
                 pieces.append(arrangement.nightSkip == .full ? nightSkipWidth : nightSkipIconWidth)
             }
-            pieces.append(arrangement.layers == .strip ? stripWidth : layersButtonWidth)
+            switch arrangement.layers {
+            case .strip: pieces.append(stripWidth)
+            case .button: pieces.append(layersButtonWidth)
+            case .collapsed: pieces.append(collapsedWidth)
+            }
             if arrangement.showsNextStep { pieces.append(nextStepLeast) }
         }
         if follows { pieces.append(followBarLeast) }

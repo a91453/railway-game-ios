@@ -1,3 +1,5 @@
+> 鋪軌的建造卡自己調高度（派工單 TRACKHEIGHT，session_01YGNNuoEkCKP7RXR1n4H3H9，`claude/track-height`，[決策 629](decisions/629.md)，存檔、golden、GameCore 不動，2026-11-07）：膠囊多一列「− 終點離地 N 公尺 ＋」（每次 1 公尺，只動新點），被拒的原因是過水、太陡或太高時給「兩端架高 4 公尺，用橋」「兩端降低 10 公尺，走隧道」這類按鈕與價錢，按下就能鋪。截圖第 3 級，要遊戲規劃看過才合併。**還留下的**：接在既有軌道上的端點不能動；不能只調中途；被拒的那幾段沒在地圖上標出；HUD 的海拔與膠囊的離地高度要不要統一（決策 629 下一步）。**狀態（2026-11-07，實作 session 第 2 次壓縮後停手）**：#1945 實作完成、CI 全綠，等遊戲規劃看第三級截圖（#1945 留言 6709691369；預覽在 a91453/railway-assets-private#66，`game-art-previews/docs/art/track-height-2026-11-07/`）後決定合併；截圖要再改時由遊戲規劃另派 session 接手。
+
 > 文湖線機廠照真實車場鋪（派工單 REALYARD，REALYARD session_01YGNNum5jtnCLRcfQAB8QLc 寫、REALYARD-B session_01YGNNumiit3QNFdxjzTiXqM 接手，`claude/real-yard-wenhu`，#1870，[決策 602](decisions/602.md)，存檔、golden、GameCore 不動，2026-11-05）：木柵、內湖機廠照 OSM 的真實車場鋪，兩條入出庫線；俯視圖、兩天逐分（三種規則）、收購價都量完寫進決策 602。**REALYARD-C session_01YGNNupzv42xmKss77XvBoS 2026-11-06 接手做完**：① 南港展覽館的 U 形彎修好（站用真實月台 OSM 節點 3501186380，決策 602 下一步第 6 點，回歸測試 `WenhuLineTests.testNangangExhibitionCenterStandsOnItsOwnPlatform`）；⓪ 修好之後號誌控制下內湖的死結也不見了：三種規則兩天都沒有死結（寫實 0/532、空車 189 km；簡化 0/532、135 km；簡化＋號誌控制 7/532、201 km，和 main 一樣 7），木柵、內湖都是 0；收購價台北 NT$ 214,393,680、板橋 213,895,095、桃園 312,012,269；② 截圖：作者 2026-11-06 指示免截圖，條件是不死結；③ Release archive 已綠。合併條件（遊戲規劃第 52 任轉達）：兩天不死結＋CI 綠，CI 綠後轉 ready。**還留下的**：④ PR-2：淡海、安坑、三峽照同樣做法鋪（決策 602 下一步第 1 點），另派 session；⑤ 後加機廠（`RealLineDepotAddition`）還沒有第二條入出庫線（第 3 點）；⑥ 真實車場沒鋪到的地方先不加（第 7 點，作者同意）；共用端點站的清單在第 6 點（之後收購板南線要先量）。
 
 > 3D 地圖的公路隧道口（派工單 ROADTUNNEL，`claude/road-tunnel`，[決策 611](decisions/611.md)，存檔、golden、GameCore 不動，2026-11-07）：真實道路進山的地方立 #1885 的洞口（依道路等級與單／雙向選款，貼 64 m 地形），山坡蓋到洞口上緣、洞內法線朝下所以是暗的；鐵路維持決策 359 的洞口（比較在決策 611 第 9 點）。截圖第 2 輪已審過、通過（原圖在私庫 `game-art-previews/docs/art/road-tunnel-2026-11-07/`）。**還留下的**：山的顏色只看洞口那一點的地表，林地邊緣會取到底色（決策 611 缺口）；玩家自己的路沒有隧道（要動 GameCore，決策 611 下一步第 2 點）。另外，坡上的底圖路面有兩個舊問題，`main` 本來就有，不在這個 PR 修，要另開工作：一是並行的兩座橋面高低交錯（蘇花改南澳北，決策 391）；二是抬高的路上人行道比路面高 2 cm。原因與座標寫在決策 611 的缺口。
@@ -616,7 +618,7 @@
   - 帳號分配與分工在上面「第 54 任現況」的表，以及 AGENTS.md、GEMINI.md。
 - **排隊**（還沒派）：
   1. full lane 的 `HUDAlignmentUITests.testTheLinesPanelKeepsTheLines`（上面）。
-  2. 六家的軌道疊在路線帶上，南端蓋在頭前溪上。
+  2. 六家的軌道疊在路線帶上，南端蓋在頭前溪上。→ LIUJIA-RIVER（[決策 634](decisions/634.md)，`claude/liujia-river`）修了高鐵示範六家基地南端蓋在頭前溪上；2D 機廠股道畫在路線色帶裡沒改，見決策 634「沒做的」。
   3. 高雄輕軌機廠：道路穿過軌道；三角線彎道約 13 m；北入出庫線沒接（要 GameCore 的折返規則，決策 621「下一步」）。
   4. 南港 7 組對 8 組。
   5. `firstLineWithoutPlaceToPass` 一次要 0.14 秒。
@@ -874,6 +876,7 @@
 - **REVIEW-L10**（session_01YGNNuoB7f2rfxdhAmyP2L8，第 50 任派）：審 #1803–#1857，報告 `docs/archive/PR1803_1857_REVIEW_HANDOFF.md`。P1 0、P2 1（**L10-1**：#1843 買來的線拿掉一站後，那站留著常客人數，`RealTransfers.swift` 的 `TransferMemo` 鍵少了停靠站）、P3 12，都**還沒派**。下一輪 REVIEW-L11 從 #1858 起。
 - **REVIEW-L11**（session_01YGNNumFayrcJEfodjKj3Px，第 52 任派）：審 #1858–#1907（32 點，一輪看完），報告 `docs/archive/PR1858_1907_REVIEW_HANDOFF.md`。P1 0、P2 1（**L11-1**：#1899 在真實鐵路旁鋪線後，局部重蓋的 3D 和整個重蓋不同，遠處真實線的路堤或高架錯開，`Map3DSceneRebuild.changes` 漏了 `layRealRun` 下游的區塊）、P3 7，都**還沒派**。L10-1、L10-2、L10-3 確認修好。下一輪 REVIEW-L12 從 #1908 起。
 - **REVIEW-L12**（session_01YGNNupGkWdzqJpt3YuWtZQ，第 53 任派）：審 #1908–#1914（7 點，沒有 GameCore），報告 `docs/archive/PR1908_1914_REVIEW_HANDOFF.md`。P1 0、P2 1（**L12-1**：#1879 的立面層 CPU 那份一直留在場景與 Metal 的區塊裡，最低等級、省電不畫時也留著，板橋約 +44 MB；決策 610 說「不是常駐的」只對 GPU 成立）、P3 3，都**還沒派**。L11-1 到 L11-7 確認修好（#1911、#1912），L11-8 還成立。下一輪 REVIEW-L13 從 #1915 起。
+- **REVIEW-L13**（session_01YGNNupyftbiKxGpeFY3pP8，第 55 任派，0.6.0 (121) 發版前）：審 #1915–#1952（27 點，GameCore 5 個），報告 `docs/archive/PR1915_1952_REVIEW_HANDOFF.md`。P1 0（不擋 121）、P2 2（**L13-1**：120 的更新說明說 1× 車窗視角也修好，實際只改 10×／60×，121 的說明要更正；**L13-2**：#1922 只在 3D 打開時擋住跑不到倍速的提示，其他 cover／sheet 底下可能同樣被 UIKit 關掉，UNVERIFIED）、P3 9，都**還沒派**。L12-1 大部分修好（#1919），L12-2 部分修好，L12-3、L12-4 後半、L11-8 還成立。下一輪 REVIEW-L14 從 #1953 起。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 
@@ -3521,6 +3524,25 @@ M6 第一次拍的改前改後完全拍不到立面，根因是截圖場景的�
 
 M6 重拍的一對（`docs/art/facade-real-screenshots-2026-11-07b/`）遊戲規劃第 53 任審過，第 3 級通過。還沒做的寫在決策 610 的「下一步」：前排兩棟 5–6 層建物的面街牆沒有零件，以及要補一張看得到騎樓柱的低角度截圖。
 
+### 4.47 11 個真實站房外觀接進 3D 地圖（決策 625，派工單 STATION-EXT-1，session_01YGNNup2ntPd7nzyvdsnKN1，`claude/station-exteriors-integrate`，2026-11-07）
+
+做了的在 [決策 625](decisions/625.md)：#1904 的 11 個站房照地標的做法放在 OSM 的位置，輪廓下的格子併進 `landmarkCells`，站型套件只拿掉站房本體與入口（月台、雨棚、跨線橋、決策 506 的兩翼照舊），碰到軌道與月台空間的三角形切開丟掉。這個 session 在第二次壓縮後停手，PR 保持 draft。
+
+還沒做的：
+- 第三級截圖：`WebsiteScreenshotTests.testStationExteriorTaichung`、`…Hsinchu`、`…Banqiao`、`…TaoyuanHSR`、`…TaichungHSR`、`…Zuoying`（白天、晚上各一張），等遊戲規劃在 Mac 拍、看過才合。看：舊臺中驛一帶只有一棟、軌道淨空、月台與列車看得到、A18 的地面站體。
+- 機捷 A18 與高鐵桃園的真實層位（決策 625「下一步」）。
+- App 的 `-screenshot-lay-demo` 與新 UI 測試只能在 macOS CI 驗（UNVERIFIED）。
+
+STATION-EXT-2（session_01YGNNun8XcCE7vJPpVNXCYZ，同一條分支，2026-11-07）接手，改了遊戲規劃第 55 任看截圖的七點，寫在決策 625「續」：玻璃改帷幕玻璃（夜裡亮窗）、study 用自己的顏色、蓋在軌道上的屋頂只留骨架、邊緣懸在軌道上的切回、碎片不畫、左營與高鐵桃園加立面、高鐵台中截圖改看月台、`-screenshot-3d-clean` 藏提示列與 fps。還沒做的：遊戲規劃在 Mac 拍那六張截圖、看過才合；新竹 study 的正面朝向（決策 625「續」最後）。
+
+STATION-EXT-2 在壓縮第 2 次時停下（2026-11-08），交接如下：
+
+- #1946 已合過 `main`（衝突在 `ScreenshotScene.swift`，兩邊都留：車站外觀的 case 與決策 629 的 `trackHeight`），本機 build（-warnings-as-errors）與 `Map3DStationExteriorsTests`、`ScreenshotScene` 測試 31 支全綠（VERIFIED，Linux），已推、已轉 ready。擁有者決定不等截圖、放進 0.6.0。
+- **還沒做：iOS UI smoke 紅。** run 42437965509（commit 99301bf）只有 `TutorialUITests.testTheLineStepLeavesTheLinesPanelUsable` 失敗（`TutorialUITests.swift:165`「The lines panel did not open」，結果包 artifact 13601318319，trace 裡有一段 4244 ms 沒有畫格）；同一個 `main` 上 #1956、#1957 這支是綠的。遊戲規劃要的下一步：用 `ios-build.yml` 的 `only_testing` 單跑這支兩次；是車站外觀（主緒卡住，例如建網格太久）造成的就修好再推，是不穩就寫理由、重跑失敗的 job，結果在 #1579 回報。CI 全綠時在 #1579 留一行「可合併」。
+- 截圖從沒拍齊：`website-screenshots.yml` 一次跑 12 張會在 45 分鐘逾時（拍到 7 張），要分兩次 `only_testing` 跑。
+- 新竹 study 正面朝向、高鐵桃園 A18 月台的實際高度（決策 625「續」最後）還沒定。
+- CI 提醒 `Map3DStationExteriorsTests` 約 179 秒、`CLASS_WEIGHTS` 沒有它，分片時間偏了可補一列。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
@@ -4091,6 +4113,17 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **北入出庫線停下了**：遊戲規劃後來要求把最後一組股道的北端照真實接回正線（條件在決策 621「下一步」）。commit bdfa16f 做到鋪得出來、買得下，但從 wye 的腳轉上走行線那一彎半徑約 13.6 m（要 ≥ 20 m 和 ≥ 26 m），三種模式也沒量完；依條件已 revert（365567d），分支上是 A。本 session 第二次壓縮後停手。
 - **接手的人**：(1) 那一彎在 `RealLineDepotLayout.strip` 的 `cubic(foot, leaving: away, start, arriving: bank.way, handle: 0.55 * Strip.turn)`；腳在分岔點北方 40 m、離第二條軌道 40 m，走行線離第二條軌道 65 m，所以那一彎沿線、橫向距離不相等，把手要照兩個實際距離算（A 也是 13.1 m）。(2) 修好後 `git cherry-pick bdfa16f` 再試北入出庫線。(3) 量法：release 建置（`swift build -c release -Xswiftc -enable-testing --build-tests`），`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=klrt swift test -c release --skip-build --filter DepotReturnReportTests.testTheKaohsiungLightRail`，再各加 `DEPOT_RETURN_FAST=1`、`DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1`，看第二天那行。半徑用 `KLRT_DEPOT_DUMP=1 swift test --filter KaohsiungLightRailDepotDumpTests` 印出的軌道點量。
 - **號碼**：決策 621（已在 #1579 登記）；存檔、golden、GameCore 不動。
+
+### 4.48 收購路線後倍速跑不到：卡在 GameCore 的待避規劃（Mac 試玩 C1，作者 Mac 的 Claude，`claude/mac-2d-perf`，2026-11-08）
+
+- **量到的**（Release、iPhone 17 Pro 模擬器、作者的 Mac；台北收購文湖線 44 列，同一個存檔第 2 日 09:43 起跑）：600× 實際約 17–20×（一個 tick 約 4 秒，遊戲內「推進」4068.6 ms、×1），10× 實際約 5.5×。2D 主執行緒只忙 13–15%，56–60 fps，**瓶頸不在畫面**。
+- **表現層已修**（本 PR）：一步裡還有下一個 tick 時，地圖在每個 tick 之間另起一次交通讀數，算完又被下一個 tick 丟掉；10× 時佔全部 CPU 的 39%。修後 CPU 少 36%（20 秒 30,156 → 19,251 個樣本），但遊戲速度不變（5.4× → 5.5×），因為每個 tick 本身就慢。
+- **交給雲端（GameCore，本 session 不能改）**：600× 時 89%、10× 時 78% 的 tick 時間在 `GameWorld.advance(ticks:)` → `trafficPlan(memo:)` → `planHeadwayOvertakes(_:)`（`Sources/GameCore/Railway/HeadwayOvertake.swift`）→ `headwayOvertake` → `overtakeTrackFree` → `trafficOvertakeTracks`（`ScheduledOvertakeTracks.swift`）。`Hasher` 佔全部 CPU 約 25%。看起來的原因：
+  1. `planHeadwayOvertakes` 對所有照班距跑的列車兩兩配對（44 列約 1,900 對），每對都走一次 `headwayOvertake`。
+  2. `trafficOvertakeTracks` 每次都把其他每一列的 `trafficNominalDirections` 聯集成 `opposite`，而 `TrafficParts.Nominal` 的鍵要雜湊整份時刻表與停靠點；同一個 plan 內每個 service 的 opposite 只需算一次。
+  3. `trafficPlanKey` 含每列車的 execution 與 arrival／departure，幾乎每個 tick 都變，plan 每個 tick 都重算。
+- **建議的方向**（雲端判斷）：opposite 方向集合每個 plan 每個 service 只算一次；`Nominal` 照 service 編號記在 plan 裡，不重新雜湊整份點；配對前先依線路、方向、軌道篩掉不可能追上的對。改了要跑 golden、replay fixture 與 `swift-shards.sh` 的戰役 shard，tick 的結果不能變。
+- **量法**：`xcrun xctrace record --template 'Time Profiler' --device <模擬器> --attach <pid> --time-limit 20s`，再 `xcrun xctrace export --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]'`，依函式彙總；遊戲內「幀數」細目的「推進」是 tick 的時間。
 
 ### 4.56 3D 的入口、時鐘、遠處夜窗與陡坡（決策 635，派工單 PLAYTEST-3D，session_01YGNNupp5gXA5cHePwHoKd3，`claude/playtest-3d`，2026-11-08）
 

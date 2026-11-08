@@ -142,8 +142,9 @@ enum MapArt {
             drawMapExpansion(expansion, land: land, clear: expansionClear, projection: projection, in: context)
         }
 
-        if layers.showsCatchmentRings {
-            drawCatchmentRings(world, projection: projection, in: context)
+        let ringStations = MapLayers.catchmentStations(in: world, layers: layers)
+        if !ringStations.isEmpty {
+            drawCatchmentRings(ringStations, projection: projection, in: context)
         }
 
         // Decision 213: the real lines the network tool traces, under the
@@ -151,7 +152,9 @@ enum MapArt {
         if let overlay, !overlay.traceable.isEmpty {
             drawTraceableLines(overlay, projection: projection, in: context)
         }
-        drawNetwork(world, projection: projection, cached: edges, in: context)
+        // Mac playtest 2026-11-08, A5: over a data layer's colours the
+        // track has a white edge, as the dark teal bed vanished on navy.
+        drawNetwork(world, projection: projection, cached: edges, halo: layers.popTravelMode != nil, in: context)
         if flowStrokes.isEmpty {
             drawLines(lines, world: world, projection: projection, cached: edges, codes: lineCodes, in: context)
         } else {
@@ -235,7 +238,8 @@ enum MapArt {
         if drawsLabels {
             drawStationLabels(world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
                               lineCodes: lineCodes, projection: projection, in: context)
-            drawBuildMarks(world, network: overlay, routePreview: routePreview, projection: projection, cached: edges, in: context)
+            drawBuildMarks(world, network: overlay, routePreview: routePreview, projection: projection, cached: edges,
+                           showsTrackNumbers: layers.showsTrackNumbers, in: context)
         }
         drawWaits(traffic, projection: projection, in: context)
         // The trains and the rings round the waiting ones are drawn over
@@ -256,10 +260,11 @@ enum MapArt {
         routePreview: RoutePreview?,
         projection: some MapProjection,
         cached edges: [TrackEdgeID: MapEdgeDrawing],
+        showsTrackNumbers: Bool = true,
         in context: GraphicsContext
     ) {
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
-        drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
+        drawTrackNumbers(world, preview: routePreview, showsEveryTrack: showsTrackNumbers, projection: projection, cached: edges, in: context)
     }
 
     /// The stations' names (with their lines' badges under them, decision
@@ -608,7 +613,9 @@ enum MapArt {
         }
     }
 
-    private static func drawNetwork(_ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+    private static func drawNetwork(
+        _ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], halo: Bool = false, in context: GraphicsContext
+    ) {
         let region = drawingRegion(projection)
         let referenceSize = projection.referenceSize
         let detail = projection.detail
@@ -645,7 +652,7 @@ enum MapArt {
                 // would restart at the cut and shift as the map pans. Draw
                 // it whole.
                 let line = span.kind == .tunnel ? wholePolyline(points, projection: projection) : polyline(points, projection: projection)
-                drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, in: context)
+                drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, halo: halo, in: context)
             }
         }
         guard detail == .full else { return }
@@ -793,8 +800,16 @@ enum MapArt {
     /// The track as the app icon draws it (decision 84): a teal bed with a
     /// pale line down the middle; a viaduct or bridge with a navy casing,
     /// a tunnel dashed.
-    private static func drawEdge(_ line: Path, structure: TrackStructure, detail: MapDetail, referenceSize: Double, in context: GraphicsContext) {
+    private static func drawEdge(
+        _ line: Path, structure: TrackStructure, detail: MapDetail, referenceSize: Double, halo: Bool = false, in context: GraphicsContext
+    ) {
         let centre = StrokeStyle(lineWidth: max(1, referenceSize * 0.08), lineCap: .round, lineJoin: .round)
+        if halo {
+            // Under the bed (and a viaduct's casing), 3 points wider each side.
+            let bed = detail == .overview || structure == .tunnel
+                ? max(1.5, referenceSize * 0.16) : trackWidth(referenceSize) * 0.58 / 0.42
+            context.stroke(line, with: .color(.white.opacity(0.9)), style: StrokeStyle(lineWidth: bed + 6, lineCap: .round, lineJoin: .round))
+        }
         switch (structure, detail) {
         case (.tunnel, _):
             context.stroke(line, with: .color(Palette.track.opacity(0.6)), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.14), lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.3), max(2, referenceSize * 0.2)]))
@@ -1018,50 +1033,96 @@ enum MapArt {
     private static let trackNumberLimit = 80
 
     /// Decision 201: each track's number ("#7"), the one the line panel's
-    /// routes and the select tool use, at its middle. The previewed leg's
-    /// tracks always, on navy plates beside the path; zoomed in from
-    /// ``trackNumbersFromSize``, every track in view, on pale plates. A
-    /// number that would cover one already drawn is left out.
+    /// routes and the select tool use. The previewed leg's tracks always,
+    /// on navy plates beside the path; zoomed in from
+    /// ``trackNumbersFromSize`` and unless the player turned them off
+    /// (``MapLayerPreferences/showsTrackNumbers``), every track in view,
+    /// on pale plates. Decision 631: a number keeps off the switches, the
+    /// stations' names and the numbers already placed
+    /// (``TrackNumberPlacement``): it moves along its track, then shrinks,
+    /// and is left out when there is no room.
     private static func drawTrackNumbers(
-        _ world: GameWorld, preview: RoutePreview?, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext
+        _ world: GameWorld, preview: RoutePreview?, showsEveryTrack: Bool, projection: some MapProjection,
+        cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext
     ) {
-        let view = context.clipBoundingRect
-        var placed: [CGRect] = []
-        var numbered = Set<TrackEdgeID>()
-        func plate(_ edge: TrackEdgeID, at mark: PolylineMarks.Mark, beside distance: Double, strong: Bool) {
-            guard placed.count < trackNumberLimit else { return }
-            let point = cgPoint(PolylineMarks.shifted(mark, by: distance).point)
-            let text = context.resolve(
-                Text(verbatim: RoutePreview.label(of: edge))
+        typealias Placement = TrackNumberPlacement
+        let clip = context.clipBoundingRect
+        let view = Placement.Box(minX: clip.minX, minY: clip.minY, maxX: clip.maxX, maxY: clip.maxY)
+        let everyTrack = showsEveryTrack && projection.detail == .full && projection.referenceSize >= trackNumbersFromSize
+        guard preview != nil || everyTrack else { return }
+
+        // What a number keeps clear of: the switches (a node where three
+        // or more tracks end) and the stations' names.
+        var obstacles: [Placement.Box] = []
+        if everyTrack {
+            for node in world.network.nodes where node.ends.count >= 3 {
+                let point = projection.screenPoint(of: node.position)
+                let box = Placement.switchBox(at: point, radius: 12)
+                if box.intersects(view) { obstacles.append(box) }
+            }
+        }
+        let nameTop = MapProblems.nameTop(stationRadius: stationRadius(projection))
+        for station in world.stations {
+            let center = projection.screenPoint(of: station.location)
+            let box = Placement.nameBox(
+                station: center, nameTop: nameTop, nameWidth: Double(station.name.count) * 11 + 16, height: 30
+            )
+            if box.intersects(view) { obstacles.append(box) }
+        }
+
+        func candidate(_ edge: TrackEdgeID, points: [ScreenPoint], beside: Double) -> Placement.Candidate? {
+            let positions = Placement.positions(along: points, beside: beside)
+            guard !positions.isEmpty else { return nil }
+            let text = context.resolve(Text(verbatim: RoutePreview.label(of: edge)).font(.caption2.weight(.bold).monospacedDigit()))
+            let size = text.measure(in: CGSize(width: 120, height: 40))
+            return Placement.Candidate(id: RoutePreview.number(of: edge), positions: positions, width: size.width + 8, height: size.height + 2)
+        }
+        func draw(_ placed: Placement.Placed, strong: Bool) {
+            var scaled = context
+            scaled.translateBy(x: placed.center.x, y: placed.center.y)
+            scaled.scaleBy(x: placed.scale, y: placed.scale)
+            let text = scaled.resolve(
+                Text(verbatim: "#\(placed.id)")
                     .font(.caption2.weight(.bold).monospacedDigit())
                     .foregroundStyle(strong ? Palette.land : Palette.ink)
             )
             let size = text.measure(in: CGSize(width: 120, height: 40))
-            let rect = CGRect(x: point.x - size.width / 2 - 4, y: point.y - size.height / 2 - 1, width: size.width + 8, height: size.height + 2)
-            guard rect.intersects(view), !placed.contains(where: { $0.intersects(rect) }) else { return }
-            placed.append(rect)
+            let rect = CGRect(x: -size.width / 2 - 4, y: -size.height / 2 - 1, width: size.width + 8, height: size.height + 2)
             let shape = Path(roundedRect: rect, cornerRadius: rect.height / 2)
-            context.fill(shape, with: .color(strong ? Palette.ink : Palette.land.opacity(0.92)))
-            context.stroke(shape, with: .color(strong ? Palette.land : Palette.ink), lineWidth: 1)
-            context.draw(text, at: point, anchor: .center)
+            scaled.fill(shape, with: .color(strong ? Palette.ink : Palette.land.opacity(0.92)))
+            scaled.stroke(shape, with: .color(strong ? Palette.land : Palette.ink), lineWidth: 1)
+            scaled.draw(text, at: .zero, anchor: .center)
         }
+
+        var numbered = Set<TrackEdgeID>()
+        var taken: [Placement.Box] = []
         if let preview {
             let beside = lineWidth(projection) * 1.4 * 8.5 / 4.4 / 2 + 10
+            var candidates: [Placement.Candidate] = []
             for piece in previewPolylines(preview, world: world, projection: projection, cached: cached) where !numbered.contains(piece.edge) {
-                guard let middle = PolylineMarks.middle(of: piece.points) else { continue }
                 numbered.insert(piece.edge)
-                plate(piece.edge, at: middle, beside: beside, strong: true)
+                if let found = candidate(piece.edge, points: piece.points, beside: beside) { candidates.append(found) }
             }
+            // The previewed leg is the tool's own answer: it keeps clear of
+            // the names but is placed before every other number.
+            let placed = Placement.place(candidates, obstacles: obstacles, view: view, limit: trackNumberLimit)
+            for number in placed { draw(number, strong: true) }
+            taken = placed.map(\.box)
         }
-        guard projection.detail == .full, projection.referenceSize >= trackNumbersFromSize else { return }
+        guard everyTrack else { return }
         let region = drawingRegion(projection)
         let beside = trackWidth(projection.referenceSize) / 2 + 9
+        var candidates: [Placement.Candidate] = []
         for edge in world.network.edges where !numbered.contains(edge.id) {
             guard let drawing = cached[edge.id] ?? MapEdgeDrawing(edge: edge, world: world), region.intersects(drawing.bounds) else { continue }
             let points = drawing.geometry.points.map { projection.screenPoint(of: $0) }
-            guard PolylineMarks.length(of: points) >= trackNumberMinimumLength, let middle = PolylineMarks.middle(of: points) else { continue }
-            plate(edge.id, at: middle, beside: beside, strong: false)
+            guard PolylineMarks.length(of: points) >= trackNumberMinimumLength,
+                  let found = candidate(edge.id, points: points, beside: beside) else { continue }
+            candidates.append(found)
         }
+        let placed = Placement.place(candidates, obstacles: obstacles, taken: taken, view: view,
+                                     limit: max(0, trackNumberLimit - taken.count))
+        for number in placed { draw(number, strong: false) }
     }
 
     /// Decision 178: the passenger load layer. Each section of track in the
@@ -1659,13 +1720,13 @@ enum MapArt {
         context.fill(nose, with: .color(body == nil ? colour : livery.cab.map(Palette.rgb) ?? colour))
     }
 
-    private static func drawCatchmentRings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
+    private static func drawCatchmentRings(_ stations: [Station], projection: some MapProjection, in context: GraphicsContext) {
         let radiusWorldUnits = MapLayers.catchmentRadiusWorldUnits
         let screenRadius = MapLayers.catchmentScreenRadius(pointsPerUnit: projection.pointsPerUnit)
         guard screenRadius > 1 else { return }
 
         let region = drawingRegion(projection)
-        for station in world.stations {
+        for station in stations {
             let stationRegion = WorldRegion(
                 minX: Double(station.location.x) - radiusWorldUnits,
                 minY: Double(station.location.y) - radiusWorldUnits,

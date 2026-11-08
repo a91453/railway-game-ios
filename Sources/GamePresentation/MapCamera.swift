@@ -119,9 +119,23 @@ public struct WorldRegion: Hashable, Sendable {
     /// `nil`, the camera's own opening, otherwise.
     public static func opening(in world: GameWorld) -> WorldRegion? {
         if let built = built(in: world) { return built }
+        // Mac playtest 2026-11-08, A9: a blank map with nothing built
+        // opens on its first town, the one in the middle, whole, not on a
+        // block or two of it.
+        if let town = world.roads?.towns.first {
+            let middle = town.middle, reach = Double(Self.openingTownReach)
+            return WorldRegion(
+                minX: Double(middle.x) - reach, minY: Double(middle.y) - reach,
+                maxX: Double(middle.x) + reach, maxY: Double(middle.y) + reach
+            )
+        }
         guard world.landBlocks != nil else { return nil }
         return owned(in: world) ?? WorldRegion(bounds: world.bounds)
     }
+
+    /// How far round its middle a blank map's first town is shown when the
+    /// map opens: its 12 cells (``Land``'s middle town, 768 m) each way.
+    public static let openingTownReach = 12 * Land.cellLength
 }
 
 /// Where the world is drawn on the map view, and back: everything the map's

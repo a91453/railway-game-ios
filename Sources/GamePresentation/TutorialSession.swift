@@ -747,11 +747,11 @@ extension GameSession {
             }
         case .selectStation:
             if tool != .select {
-                return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
+                return TutorialHint(language.text("Tap ✕ first, then a station.", "先按 ✕，再點車站。"))
             }
         case .selectPassingLoop:
             if tool != .select {
-                return TutorialHint(language.text("Tap Done first, then the passing loop.", "先點「完成」，再點待避線。"))
+                return TutorialHint(language.text("Tap ✕ first, then the passing loop.", "先按 ✕，再點待避線。"))
             }
             if tutorialPlacesToTap.isEmpty {
                 return TutorialHint(language.text(
@@ -767,7 +767,7 @@ extension GameSession {
             }
         case .selectTrack:
             if tool != .select {
-                return TutorialHint(language.text("Tap Done first, then the track.", "先點「完成」，再點軌道。"))
+                return TutorialHint(language.text("Tap ✕ first, then the track.", "先按 ✕，再點軌道。"))
             }
             if tutorialDoubleTrackStretch != nil {
                 return TutorialHint(tutorialDoubleTrackPlace)
@@ -838,7 +838,7 @@ extension GameSession {
             }
         case .selectStationForFreight:
             if tool != .select {
-                return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
+                return TutorialHint(language.text("Tap ✕ first, then a station.", "先按 ✕，再點車站。"))
             }
             if let station = selectedStation, world.freightFacility(at: station.id) != nil {
                 return TutorialHint(language.text(
@@ -903,7 +903,7 @@ extension GameSession {
             }
         case .selectStationOffLine:
             if tool != .select {
-                return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
+                return TutorialHint(language.text("Tap ✕ first, then a station.", "先按 ✕，再點車站。"))
             }
             if let station = selectedStation, !isOffEveryLine(station) {
                 return TutorialHint(language.text(
