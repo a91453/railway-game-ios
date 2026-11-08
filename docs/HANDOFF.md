@@ -4317,3 +4317,9 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **做了的**在 [決策 656](decisions/656.md)：L15-6（`WindowLayout`，分割畫面與 Slide Over 照 iPhone；框城鎮超過 5 km／400 點不框）、L15-7（只在蓋車站那幾步不列月台）、L15-8（Mac 叫 Mac、示範線跟著存檔、框鏡頭等面板量好、註解、待避卡測試走 session）、L13-2（任何 sheet／cover 蓋住 2D 地圖時倍速提示都等）。
 - **還沒做、要實機或 Simulator 的**：分割畫面、Slide Over、台前調度的實際版面；L13-2 的機制在 sheet 底下是否真的會發生；L15-8.5 的 A4 位置測試仍由測試自己傳圖層列的框。都寫在決策 656「下一步」。
 - **號碼**：決策 656；存檔、golden 不動。
+
+### 4.59 iPad 開地圖時的停頓（決策 659，派工單 IPAD-LAUNCH-STALL，session_01YGNNum8AkZJedsA92gfV3H，`claude/ipad-launch-stall`，2026-11-08）
+
+- **做了的**在 [決策 659](decisions/659.md)：2D 地圖的街道計畫只選街不鋪街（-O 306 → 1.3 ms，選出的街一樣）；教學 UI 測試不把 XCTest 的 log 抄到 App 的 stderr，並帶主執行緒停頓的取樣。iPad 教學 trace 的 ≥3 秒空檔 7 → 1。
+- **還沒做、要實機的**：剩下的停頓在系統框架裡（第一次讀 SF Symbol 的冷 catalog、RenderBox 等待、`UITextField` 清除鈕圖）。先在實機上量到真的慢，再考慮開地圖前暖身；`TutorialUITests` 的第二次按留著。都寫在決策 659「沒修的」。
+- **號碼**：決策 659；存檔、golden 不動。
