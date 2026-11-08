@@ -44,9 +44,11 @@ final class DepotToolsTests: XCTestCase {
         XCTAssertEqual(session.networkDepotEnd, end)
         let preview = try XCTUnwrap(session.networkDepotPreview)
         XCTAssertNil(preview.problem, preview.problem ?? "")
-        XCTAssertEqual(preview.tracks.count, DepotYard.defaultSidings)
+        // Decision 619: the lead, and the throat's two tracks out of each
+        // of its turnouts.
+        XCTAssertEqual(preview.tracks.count, 1 + 2 * (DepotYard.defaultSidings - 1))
         XCTAssertEqual(session.networkOverlay?.preview, preview.tracks.first)
-        XCTAssertEqual(session.networkOverlay?.crossovers.count, DepotYard.defaultSidings - 1)
+        XCTAssertEqual(session.networkOverlay?.crossovers.count, 2 * (DepotYard.defaultSidings - 1))
         let cost = try XCTUnwrap(preview.cost)
         session.addDepotYard()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
@@ -62,11 +64,11 @@ final class DepotToolsTests: XCTestCase {
         for platform in platforms {
             XCTAssertEqual(platform.end - platform.start, Int64(PassingLoopPlan.minimumCars) * Train.carLength, accuracy: 16)
         }
-        // A ladder: two turnouts, and each siding's far end a dead end, 5 m
-        // apart to the north (left of the way east).
+        // Decision 619's throat: two turnouts, and each siding's far end a
+        // dead end, 5 m apart about the track's end.
         XCTAssertEqual(after.network.nodes.count { $0.ends.count == 3 }, 2)
         let ends = after.network.nodes.filter { $0.ends.count == 1 && $0.position.x > 16_384 }.map(\.position.y).sorted()
-        XCTAssertEqual(ends, [8_192 - 640, 8_192 - 320, 8_192])
+        XCTAssertEqual(ends, [8_192 - 320, 8_192, 8_192 + 320])
                 XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(after)), after)
     }
 
@@ -97,18 +99,19 @@ final class DepotToolsTests: XCTestCase {
         XCTAssertEqual(session.world, world)
     }
 
-    /// Every number of sidings, on either side, bends out from a track's
+    /// Every number of sidings, about the end or on either side of it
+    /// (decision 619), bends out from a track's
     /// end: the S-curves run on ahead, so the plan never fails for want of
     /// one. Were one ever refused, it says so, not "tap the end".
     func testTheSidingsBendOutFromAnyEnd() throws {
         let (world, _, _, end) = try world()
         let session = session(world)
         for sidings in DepotYard.sidings {
-            for side in PlatformTrackSide.allCases {
+            for side in [nil] + PlatformTrackSide.allCases {
                 guard case .success(let plan) = session.depotYardPlan(from: end, sidings: sidings, side: side) else {
-                    return XCTFail("\(sidings) sidings on the \(side) side")
+                    return XCTFail("\(sidings) sidings on the \(side.map { "\($0)" } ?? "middle") side")
                 }
-                XCTAssertEqual(plan.branches.count, sidings - 1)
+                XCTAssertEqual(plan.branches.count, 2 * (sidings - 1))
             }
         }
         XCTAssertNotEqual(DepotYardProblem.cannotBend.text(in: .traditionalChinese), DepotYardProblem.notAnEnd.text(in: .traditionalChinese))

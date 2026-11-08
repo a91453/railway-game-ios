@@ -717,7 +717,10 @@ jobs:
       - name: Export Swift strings with Xcode
         id: localization-export
         if: ${{ !cancelled() && steps.localization-selftest.outcome == 'success' }}
-        timeout-minutes: 15
+        # Usually 4 to 12 minutes; on 2026-11-07, with a full lane and a
+        # release archive holding the other macOS runners, it passed 15 twice
+        # (runs 42374084736, 42376691119) with no error, only slower.
+        timeout-minutes: 25
         run: |
           xcodebuild -exportLocalizations \
             -project RailwayGameApp/RailwayGame.xcodeproj \

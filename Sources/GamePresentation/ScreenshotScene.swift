@@ -129,7 +129,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the depot tool off Line 2's north end (on its viaduct, so the
     /// sidings pass over the ring): Line 2 and the Ring Line both end or
     /// call near it, so the banner offers each. For the screenshot review
-    /// of the pull request that added the offer.
+    /// of the pull request that added the offer. Decision 619: the camera
+    /// is turned to the yard, which the demo opens at the top edge.
     case depotOffer
 
     /// Decision 574: a new real-world game round Muzha with the Maokong
@@ -207,6 +208,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case exteriorTaoyuanHSR, exteriorTaoyuanHSRNight
     case exteriorTaichungHSR, exteriorTaichungHSRNight
     case exteriorZuoying, exteriorZuoyingNight
+
+    /// Decision 629 (TRACKHEIGHT): flat ground 4 km a side, 5 m up, with
+    /// a river 192 m wide across it, and a stretch of track drawn across
+    /// the river on the ground: the build card refusing it and offering
+    /// the heights that get it over or under. For the screenshot review of
+    /// the pull request that added them.
+    case trackHeight
 
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
@@ -294,6 +302,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         case .cijinShore: Self.cijinShoreWorld(water: water)
+        case .trackHeight: Self.trackHeightWorld()
         }
     }
 
@@ -317,16 +326,95 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             }
             return
         }
+        if self == .trackHeight {
+            // Decision 629: the stretch drawn across the river, as two taps.
+            let (from, to, middle) = Self.trackHeightStretch
+            session.selectTool(.network)
+            session.networkSnapsToTrack = false
+            session.tapNetwork(at: from, reach: 16)
+            session.tapNetwork(at: to, reach: 16)
+            session.lookAt(middle)
+            Task { @MainActor in
+                for _ in 0..<30 {
+                    try? await Task.sleep(for: .seconds(1))
+                    session.lookAt(middle)
+                }
+            }
+            return
+        }
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
+        // Decision 619: four sidings, which the throat splits two and two,
+        // the sides mirroring each other (three, which two-way turnouts
+        // cannot halve, is one turnout deeper on one side).
+        session.networkDepotSidings = 4
+        let before = Set(session.world.network.nodes.map(\.id))
         session.tapNetwork(at: north.plan, reach: 64)
         session.addDepotYard()
+        // Decision 619: the yard is at the map's top edge, under the HUD
+        // and the banner, as the demo opens; the camera is asked to put its
+        // throat in the middle, at the zoom the map has (asked to show it
+        // whole, the map fits it in what the banner and panels leave clear,
+        // a sliver, and zooms out to the island), again each second for a
+        // minute (the map follows a request made after it is up). The
+        // throat: the track's end, the turnouts, and the bends 40 m past the
+        // last of them.
+        let middle = Self.depotOfferThroatMiddle(in: session.world, end: north, built: before)
+        session.lookAt(middle)
+        Task { @MainActor in
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .seconds(1))
+                session.lookAt(middle)
+            }
+        }
+    }
+
+    /// The middle of the throat of the yard laid at `end` (the nodes not
+    /// in `built`): see ``prepare(_:)``.
+    static func depotOfferThroatMiddle(in world: GameWorld, end: WorldCoordinate, built: Set<TrackNodeID>) -> PlanPoint {
+        let laid = world.network.nodes.filter { !built.contains($0.id) }
+        func distance(_ point: WorldCoordinate) -> Int64 { abs(point.x - end.x) + abs(point.y - end.y) }
+        let turnouts = laid.filter { $0.ends.count >= 3 }.map(\.position)
+        let reach = (turnouts.map(distance).max() ?? 0) + 40 * WorldCoordinate.unitsPerMetre
+        let throat = laid.filter { $0.ends.count >= 2 && distance($0.position) <= reach }.map(\.position) + [end]
+        let xs = throat.map(\.x), ys = throat.map(\.y)
+        return PlanPoint(x: (xs.min()! + xs.max()!) / 2, y: (ys.min()! + ys.max()!) / 2)
     }
 
     /// Line 2's north end: the demo's highest track end furthest north.
     static func depotOfferEnd(in world: GameWorld) -> WorldCoordinate? {
         world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 }.min { $0.position.y < $1.position.y }?.position
+    }
+
+    /// ``trackHeight``'s ends, 896 m apart either side of its river, and
+    /// the river's middle.
+    static let trackHeightStretch = (
+        from: PlanPoint(x: 26 * 4_096, y: 32 * 4_096), to: PlanPoint(x: 40 * 4_096, y: 32 * 4_096),
+        middle: PlanPoint(x: 33 * 4_096, y: 32 * 4_096)
+    )
+
+    /// ``trackHeight``'s world: 4 × 4 blocks of ground 5 m up, cell
+    /// columns 31 to 33 water, paused at the start.
+    static func trackHeightWorld() -> GameWorld {
+        var world = GameWorld(
+            bounds: try! WorldBounds(width: 262_144, height: 262_144),
+            economy: GameEconomy(balance: Money(500_000_000), costs: .standard),
+            clock: GameClock(speed: .paused)
+        )
+        let side = GroundBlock.side
+        let blocks = (0..<4).flatMap { row in
+            (0..<4).compactMap { column in
+                GroundBlock(block: LandBlock(row: row, column: column), heights: Array(repeating: 5, count: side * side))
+            }
+        }
+        do throws(GameError) {
+            try world.setGround(blocks)
+            try world.setWater((0..<64).flatMap { row in (31...33).map { CellPosition(row: row, column: $0) } })
+        } catch {
+            preconditionFailure("The track height screenshot scene no longer builds: \(error)")
+        }
+        return world
     }
 
     private static func pausedDemo(in language: DisplayLanguage) -> GameWorld {

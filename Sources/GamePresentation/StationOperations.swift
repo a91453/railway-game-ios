@@ -233,6 +233,9 @@ public struct StationOperations: Equatable, Sendable {
             }
         }
         let now = world.clock.now
+        // Decision 630: a depot's platforms hold resting trains all day, which
+        // is not a crowd: they show no busyness.
+        let isDepot = world.station(id: station)?.isDepot ?? false
         self.platforms = world.trackPlatforms(of: station).enumerated().map { index, platform in
             let trainID = standing[platform]
             let train = trainID.flatMap { world.train(id: $0) }
@@ -250,7 +253,7 @@ public struct StationOperations: Equatable, Sendable {
                 lineColor: line.flatMap { world.line(id: $0)?.color },
                 cars: train?.cars ?? 0,
                 destination: last == nil || last == station ? nil : last.map { world.stationName($0) },
-                busyPercent: seen.sampled > 0 ? (seen.taken * 100 + seen.sampled / 2) / seen.sampled : nil,
+                busyPercent: !isDepot && seen.sampled > 0 ? (seen.taken * 100 + seen.sampled / 2) / seen.sampled : nil,
                 sampledMinutes: seen.minutes
             )
         }

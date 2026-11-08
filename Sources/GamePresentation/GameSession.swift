@@ -712,8 +712,20 @@ public final class GameSession {
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
-    public internal(set) var networkStart: NetworkAnchor?
-    public internal(set) var networkEnd: NetworkAnchor?
+    public internal(set) var networkStart: NetworkAnchor? {
+        didSet { if networkStart != oldValue { networkStartRaise = 0 } }
+    }
+    public internal(set) var networkEnd: NetworkAnchor? {
+        didSet { if networkEnd != oldValue { networkEndRaise = 0 } }
+    }
+    /// Decision 629: how much higher (or, below 0, lower) than
+    /// ``networkHeight`` the player has set the next stretch's start and
+    /// end, where each is a new point, in world units; back to 0 when that
+    /// end is picked again.
+    public internal(set) var networkStartRaise: Int64 = 0
+    public internal(set) var networkEndRaise: Int64 = 0
+    /// ``networkHeightCard``'s fixes, kept for the draft they were found for.
+    @ObservationIgnored var networkHeightFixMemo: (key: NetworkHeightFixKey, fixes: [NetworkHeightFix])?
     /// While a finger draws track (decision 102): the end picked before the
     /// drag began, which a cancelled drag puts back.
     @ObservationIgnored var networkDragEndBefore: NetworkAnchor??
@@ -793,9 +805,12 @@ public final class GameSession {
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
-    /// which side of the track's end they fan out to, and the end picked.
+    /// which side of the track's end they fan out to (decision 619: none,
+    /// the default, fans them out about it, as real yards stand), what kind
+    /// of yard, and the end picked.
     public var networkDepotSidings = DepotYard.defaultSidings
-    public var networkDepotSide: PlatformTrackSide = .left
+    public var networkDepotSide: PlatformTrackSide?
+    public var networkDepotTemplate: DepotYardTemplate = .lightRail
     public internal(set) var networkDepotEnd: TrackNodeID?
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends (the default, decision 164),
@@ -3143,11 +3158,11 @@ public final class GameSession {
         case .low: counts.low = count
         }
         let changed = counts
-        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, _ in
+        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, world in
             language.text(
                 "\(line.name): \(count) \(count == 1 ? "train" : "trains") at \(level.title(in: language).lowercased()).",
                 "\(line.name)：\(level.title(in: language))上線 \(count) 列。"
-            )
+            ) + Self.passingWarningText(for: line.id, in: world, language: language)
         }
     }
 
@@ -3251,9 +3266,9 @@ public final class GameSession {
             }
             // Decision 284: a train too long for a call never leaves; say
             // so, last, as it is assigned.
-            let tooLong = world.shortPlatformCall(ofTrain: train.id).map { short in
+            let tooLong = (world.shortPlatformCall(ofTrain: train.id).map { short in
                 language.text(" ", "") + world.shortPlatformText(short, in: language) + language.text(".", "。")
-            } ?? ""
+            } ?? "") + Self.passingWarningText(for: line.id, in: world, language: language)
             // TestFlight 60.1: a line already running trains keeps its
             // counts, so the new train would wait: say so, and how.
             if started == 0, let unused = world.lineUnusedTrains(ofTrain: train.id) {
@@ -3508,13 +3523,40 @@ public final class GameSession {
     /// Changes ``world`` by `change`, which ``commandLog`` keeps as
     /// `action` (decision 193).
     func logging(_ action: CommandLog.Action, _ change: (inout GameWorld) -> Void) {
+        let revision = commandRevision
         isLogging = true
         change(&world)
         isLogging = false
+        if Self.changesOnlyTheClock(action) { keepStationMasterWork(from: revision) }
         log(action)
         // Decision 343: a pause or a change of speed starts or stops the
         // followed train's sound at once, not at the next step.
         updateFollowSounds()
+    }
+
+    /// Decision 627: a pause, a resume and a change of speed change the
+    /// clock's speed and nothing else of the world.
+    private static func changesOnlyTheClock(_ action: CommandLog.Action) -> Bool {
+        switch action {
+        case .setSpeed, .pause, .resume: true
+        default: false
+        }
+    }
+
+    /// Decision 627: what the station master's advice was worked out from
+    /// at command revision `revision` (the losing line, the line without a
+    /// place to pass, the hour's advice) still answers after a command that
+    /// changed only the clock's speed: none of it reads the speed. Kept on
+    /// at the new revision, so the next hour does not work it all out again
+    /// (the high-speed demo's Debug app stood still some 4 s at 11:00 after
+    /// it was set to 10×).
+    private func keepStationMasterWork(from revision: Int) {
+        guard revision != commandRevision else { return }
+        lineLossLeaderMemo.keep(from: revision, to: commandRevision)
+        placeToPassMemo.keep(from: revision, to: commandRevision)
+        if let kept = hourAdvice, kept.revision == revision {
+            hourAdvice = HourAdvice(hour: kept.hour, revision: commandRevision, advice: kept.advice)
+        }
     }
 
     /// What the weather's sound is worked out from (decision 346).

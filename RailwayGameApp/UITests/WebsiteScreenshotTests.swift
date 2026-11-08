@@ -94,15 +94,23 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Depot past Taipei Zoo and over Neihu Depot past Nangang Exhibition
     /// Center, from the side and from higher up. For the screenshot review
     /// of the pull request that laid the depots as the real yards.
-    func testWenhuDepotMuzha() { shootWenhuDepot("muzha", at: "25.000776,121.586414") }
-    func testWenhuDepotNeihu() { shootWenhuDepot("neihu", at: "25.059900,121.619920") }
+    func testWenhuDepotMuzha() { shootRealDepot("wenhu-depot-muzha", at: "25.000776,121.586414") }
+    func testWenhuDepotNeihu() { shootRealDepot("wenhu-depot-neihu", at: "25.059900,121.619920") }
 
-    private func shootWenhuDepot(_ name: String, at place: String) {
+    /// Decision 621: the Kaohsiung Circular Light Rail bought on a real map
+    /// of Kaohsiung, its trains in its depot, laid as a strip beside the
+    /// line as the real one, on the 3D map from the side and from higher
+    /// up. For the screenshot review of the pull request that laid it.
+    func testKaohsiungLightRailDepot() {
+        shootRealDepot("klrt-depot", at: "22.609000,120.325500", scene: "klrt", line: "krtc:C")
+    }
+
+    private func shootRealDepot(_ name: String, at place: String, scene: String = "wenhu", line: String = "trtc:BR") {
         // The buying takes minutes in the Debug app (the workflow allows up
         // to 30 minutes a test).
         executionTimeAllowance = 1_500
         for (shot, view) in [("side", "450,200,55"), ("high", "900,200,20")] {
-            let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-3d-view", view,
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-buy-real", line, "-screenshot-3d-view", view,
                                      "-screenshot-3d-at", place, "-map3D.quality", "high"])
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy buying for a minute at a
@@ -121,7 +129,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
             XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
             settle(seconds: 12)
-            keep("wenhu-depot-\(name)-\(shot)", app)
+            keep("\(name)-\(shot)", app)
             app.terminate()
         }
     }
@@ -513,6 +521,33 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's
     /// screenshot review.
+    /// Decision 629 (TRACKHEIGHT): a stretch drawn across a river on the
+    /// ground, refused, its card offering a bridge and a tunnel; then the
+    /// bridge tapped, and the end raised a metre by hand. In Chinese and
+    /// in English. For the screenshot review of the pull request that
+    /// added them.
+    func testTrackHeightFixes() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackHeight"], english: english)
+            let suffix = english ? "-en" : ""
+            let fixUp = app.buttons["map.build.fixUp"]
+            XCTAssertTrue(fixUp.appears(within: 180), "The card offers a bridge")
+            XCTAssertTrue(app.buttons["map.build.fixDown"].exists, "and a tunnel")
+            settle(seconds: 3)
+            keep("track-height-refused\(suffix)", app)
+            fixUp.tap()
+            XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered, nothing left to fix")
+            settle(seconds: 2)
+            keep("track-height-bridge\(suffix)", app)
+            let raise = app.buttons["map.build.raise"]
+            XCTAssertTrue(raise.becomesHittable(within: 10))
+            raise.tap()
+            settle(seconds: 2)
+            keep("track-height-raised\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     func testFerryShoreCijin() {
         let app = launch(extra: ["-screenshot-scene", "cijinShore"])
         defer { app.terminate() }
@@ -2755,6 +2790,54 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 632: the collection's ferry and cable car pages, and each
+    /// one's 3D stage (the phone on its side, as every screenshot here):
+    /// the close view and the side by day, the close view at night and the
+    /// view from above. For the screenshot review of the pull request that
+    /// added them.
+    func testCollectionFerriesAndCableCarsIn3D() {
+        for (page, exhibit, entry) in [("渡輪", "ferries", "settings.ferry.chigu2"), ("纜車", "cableways", "settings.cableway.sunMoonLake")] {
+            let app = launch()
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            // As testFerryMode: bring the garage row up, then the page's
+            // segment above it.
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+            let segment = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", page)).firstMatch
+            XCTAssertTrue(segment.becomesHittable(within: 10), "Missing the collection's \(exhibit) page")
+            segment.tap()
+            let open = app.buttons["settings.collection.\(exhibit)"]
+            XCTAssertTrue(open.appears(within: 10), "The \(exhibit) page")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)[entry].firstMatch, clearOf: .slider))
+            settle()
+            keep("collection-\(exhibit)-page", app)
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(open, clearOf: .slider), "The \(exhibit) button")
+            open.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The \(exhibit) stage did not open")
+            // The picture shows once the models are made (the first run's
+            // day shots caught the spinner).
+            XCTAssertTrue(app.activityIndicators.firstMatch.disappears(within: 180), "The \(exhibit) models")
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("collection-\(exhibit)-day-close", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-day-side", app)
+            let light = app.segmentedControls["trainShowcase.light"]
+            light.buttons.element(boundBy: 2).tap()
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-close", app)
+            app.buttons["trainShowcase.camera.overhead"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-above", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 560: the EMU700 local train in the garage (the 3D map's
     /// own models, eight cars), by day: the front close up and the side,
     /// near models, then the far models from the side and the front. For
@@ -3058,11 +3141,29 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.buttons["banner.depotLine"].firstMatch.tap()
         settle(seconds: 1)
         keep("depot-offer-chosen", app)
+        // Decision 619: the yard's fan with the banner and the building
+        // tools closed, pinched in (the scene centres the map on the yard
+        // each second for a minute).
+        let dismiss = app.buttons["banner.dismiss"].firstMatch
+        if dismiss.appears(within: 2) { dismiss.tap() }
+        XCTAssertTrue(dismiss.disappears(within: 5), "The banner goes")
+        let done = app.buttons["tool.select"]
+        if done.becomesHittable(within: 10) { done.tap() }
+        let fold = app.buttons["map.minimap.fold"].firstMatch
+        if fold.becomesHittable(within: 5) { fold.tap() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        for _ in 0..<2 {
+            map.pinch(withScale: 2.5, velocity: 2)
+            settle(seconds: 2)
+        }
+        keep("depot-yard", app)
 
         let menu = app.buttons["hud.menu"]
         menu.waitUntilSettled()
         menu.tap()
-        let report = app.buttons["menu.report"]
+        // The menu's rows side by side (a ControlGroup) drop their
+        // identifiers: found by the label too, in either language.
+        let report = app.buttons.matching(NSPredicate(format: "identifier == 'menu.report' OR label == 'Report a Problem' OR label == '回報問題'")).firstMatch
         XCTAssertTrue(report.appears(within: 30), "The menu opens")
         report.waitUntilSettled()
         let frame = report.frame

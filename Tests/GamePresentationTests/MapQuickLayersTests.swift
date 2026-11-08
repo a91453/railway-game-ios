@@ -32,6 +32,8 @@ final class MapQuickLayersTests: XCTestCase {
     /// player turns them off, and only they.
     func testFaresAndStampsAreOnUntilTurnedOff() {
         XCTAssertTrue(MapLayerPreferences.default.showsFaresAndStamps)
+        // Decision 631: the tracks' numbers show by default, as before the switch.
+        XCTAssertTrue(MapLayerPreferences.default.showsTrackNumbers)
         XCTAssertTrue(MapQuickLayer.faresAndStamps.isOn(in: .default))
         let off = MapQuickLayer.faresAndStamps.toggled(.default)
         XCTAssertFalse(off.showsFaresAndStamps)

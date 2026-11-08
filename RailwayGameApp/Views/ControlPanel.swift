@@ -1493,6 +1493,7 @@ struct StatusBanner: View {
                 .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 26, height: 26)))
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityLabel("Dismiss message")
+                .accessibilityIdentifier("banner.dismiss")
             }
             // Decision 584: the train in the way, to go and see it, in the
             // row under the message (as decision 573's depot chips): beside

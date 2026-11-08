@@ -429,6 +429,13 @@ public struct BuildingLayerShortcut: Equatable, Sendable {
         if shown != nil { shown = mode }
     }
 
+    /// The player switched the 800 m catchment rings off: the coverage
+    /// layer, which shows the same reach as coloured land, goes with them
+    /// (decision 630).
+    public mutating func catchmentRingsSwitched(on: Bool) {
+        if !on, shown == .coverage { shown = nil }
+    }
+
     /// The player chose a layer of their own (the layer list or the quick
     /// layers): it shows instead.
     public mutating func playerChoseLayer() {

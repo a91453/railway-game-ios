@@ -17,6 +17,9 @@ enum WaitingPreview: Hashable {
     case lineConfirmation
     /// The network tool's stretch drawn (``GameSession/networkDraftPreview``).
     case networkDraft
+    /// The heights that let a refused stretch be built (decision 629,
+    /// ``GameSession/networkHeightCard``).
+    case networkHeightFixes
     /// The platform tool's station layout (``GameSession/networkStationLayoutPreview``).
     case stationLayout
     /// The crossovers of a platform on both tracks (``GameSession/networkPlatformCrossovers``).

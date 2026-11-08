@@ -173,7 +173,7 @@ public struct RoutePreview: Equatable, Sendable {
         "#\(number(of: edge))"
     }
 
-    static func number(of edge: TrackEdgeID) -> Int {
+    public static func number(of edge: TrackEdgeID) -> Int {
         switch edge { case .edge(let number): number }
     }
 
@@ -250,7 +250,7 @@ public enum PolylineMarks {
     }
 
     /// The mark `distance` points along `points`.
-    static func mark(along points: [ScreenPoint], at distance: Double) -> Mark? {
+    public static func mark(along points: [ScreenPoint], at distance: Double) -> Mark? {
         var travelled = 0.0
         for (a, b) in zip(points, points.dropFirst()) {
             let dx = b.x - a.x, dy = b.y - a.y

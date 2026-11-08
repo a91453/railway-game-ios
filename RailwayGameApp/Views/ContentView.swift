@@ -23,6 +23,8 @@ struct ContentView: View {
     /// Decision 365: Off plays on the flat map only.
     @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
     @AppStorage(SecretarySettings.nightSkipKey) private var skipsQuietNights = false
+    /// Decision 631: the layer strip put away by the player.
+    @AppStorage("mapLayerStripCollapsed") private var layerStripCollapsed = false
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Lives above the layout: rebuilding it must not discard the camera.
     @State private var mapCamera: PlanCamera?
@@ -605,16 +607,17 @@ struct ContentView: View {
                         let row = MapTopRow.arrange(
                             width: Double(rowWidth), showsLayers: showsLayerStrip,
                             nightSkipWidth: nightSkips ? Double(max(nightSkipWidth, CGFloat(MapTopRow.nightSkipIconWidth))) : 0,
-                            nextStep: nextSteps?.current != nil, follows: followed != nil
+                            nextStep: nextSteps?.current != nil, follows: followed != nil,
+                            layersCollapsed: layerStripCollapsed
                         )
                         HStack(alignment: .center, spacing: margin) {
                             if showsLayerStrip {
                                 // Decision 305: under the speed, a night with
                                 // no train to skip.
                                 NightSkipChip(session: session, iconOnly: row.nightSkip == .icon) { nightSkipWidth = $0 }
-                                MapQuickLayerStrip(language: session.language, folded: row.layers == .button) {
+                                MapQuickLayerStrip(language: session.language, layout: row.layers) {
                                     screen.panel = .mapLayers
-                                }
+                                } setCollapsed: { layerStripCollapsed = $0 }
                                 // CTM study M2: a free game's next step.
                                 if row.showsNextStep, let steps = nextSteps {
                                     NextStepChip(steps: steps, language: session.language) {
