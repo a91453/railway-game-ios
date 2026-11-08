@@ -126,6 +126,19 @@ public struct RealBranchLine: Hashable, Sendable {
         system == "tymc" && network == "A" ? ["長庚醫院站"] : []
     }
 
+    /// Decision 652: the stations between its ends (by their names in the
+    /// timetable) whose turn-back crossover on the next stop's side is
+    /// laid the other way round, facing the trains coming in: a train in
+    /// on its own track crosses there to the other way's platform, stops,
+    /// and leaves from it back the way it came. The Taoyuan Airport MRT's
+    /// Airport Terminal 1 (A12), where the shuttles from Huanbei turn, so
+    /// they need not stand on the Taipei-bound track the expresses from
+    /// Terminal 2 need. Its next stop, Terminal 2, turns trains back too,
+    /// and its crossover on that side, between the two, still takes a
+    /// train turned back at Terminal 1 over to its own track; the 455 m
+    /// between the stations has no room for a third.
+    var facingTurnbackStations: [String] { isTaoyuanAirport ? ["機場第一航廈站"] : [] }
+
     /// Decision 556: whether the ground under its depots beside the line
     /// is read in as far as their ladders may reach, as under a yard past
     /// an end (decision 549, continued), so a yard over water (Qingpu's,
@@ -1252,19 +1265,26 @@ extension RealLineLaying {
         // the second, each trailing for the trains running through.
         // Where one does not fit clear of the stations, the depots' wyes
         // and the second track's ramps, it is left out.
-        var turnbacks: [(low: Double, high: Double)] = []
+        var turnbacks: [(low: Double, high: Double, facing: Bool)] = []
         if line.turnsBackBetween, let second {
             let turning = Set(runs.runs.filter { !$0.positioning }.flatMap { run in
                 [run.calls[0].station, run.calls[run.calls.count - 1].station]
             }).compactMap { runs.stops.firstIndex(of: $0) }.filter { $0 > 0 && $0 < runs.stops.count - 1 }.sorted()
+            let facingStops = Set(line.facingTurnbackStations.compactMap { runs.stops.firstIndex(of: $0) })
             for stop in turning {
                 let span = spans[stop]
-                for (low, high) in [(span.lowerBound - 2 * gap - ramp, span.lowerBound - 2 * gap), (span.upperBound + 2 * gap, span.upperBound + 2 * gap + ramp)] {
+                // Decision 652: on the next stop's side, facing the trains
+                // coming in.
+                let sides: [(low: Double, high: Double, facing: Bool)] = [
+                    (span.lowerBound - 2 * gap - ramp, span.lowerBound - 2 * gap, false),
+                    (span.upperBound + 2 * gap, span.upperBound + 2 * gap + ramp, facingStops.contains(stop))
+                ]
+                for (low, high, isFacing) in sides {
                     let reach = (low - gap)...(high + gap)
                     guard low > second.a + ramp + gap, high < second.b - ramp - gap,
                           !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) else { continue }
                     forced += [low, high]
-                    turnbacks.append((low, high))
+                    turnbacks.append((low, high, isFacing))
                     taken.append(reach)
                 }
             }
@@ -1381,11 +1401,12 @@ extension RealLineLaying {
         // the junction to the first further from it, still trailing for
         // the trains running through and still taking a train turned back
         // onto the other way's track over to its own.
-        for (low, high) in turnbacks {
+        // Decision 652: a facing one the other way round.
+        for (low, high, facing) in turnbacks {
             guard let a = mainNode(low), let b = mainNode(high), let secondA = besideNodes.firstIndex(of: a),
                   let secondB = besideNodes.firstIndex(of: b)
             else { continue }
-            plans.append(line.keepsRight ? (
+            plans.append(line.keepsRight != facing ? (
                 RealWorldDemo.TrackPlan(beside: main, at: [a, b], offsets: [-HighSpeedDemo.trackOffset, 0]),
                 RealLineAcquisition.NodeAt(piece: 1, node: secondA), RealLineAcquisition.NodeAt(piece: 0, node: b), true
             ) : (
