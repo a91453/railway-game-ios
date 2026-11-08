@@ -4,9 +4,9 @@ name: iOS App Build
 # committed Xcode project still matches project.yml.
 # GameCore tests stay in ci.yml (Linux); the unsigned Release device archive
 # lives in release-archive.yml. The iPhone job also checks the Traditional
-# Chinese translations (an Xcode string export), which had a macOS job of its
-# own until 2026-10-09: that job ran about a minute and waited for a runner up
-# to 23 minutes.
+# Chinese translations (the strings its build extracts from the code, decision
+# 638), which had a macOS job of its own until 2026-10-09: that job ran about
+# a minute and waited for a runner up to 23 minutes.
 #
 # Two lanes, chosen by the event:
 #
@@ -342,6 +342,8 @@ jobs:
     # its UI step got 90 (below): on 2026-11-02 the Simulator took 6 minutes
     # to boot, the warm-up 5, the UI step 74 and the string export 10, and
     # the job was cut at 95 in the export (main 68a4cfc, run 41432636112).
+    # Decision 638 replaced the export with a sync of the build's own
+    # strings (seconds, not 14 to 18 minutes).
     timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 115 }}
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
@@ -456,6 +458,11 @@ jobs:
       # these products without building (decision 199). Until 2026-10-13 this
       # step built the app unsigned, and the UI test step then built the test
       # target and relinked and signed the app (12 to 25 s of that step).
+      # Decision 638: SWIFT_EMIT_LOC_STRINGS makes the Swift compiler write
+      # the strings each file localizes (.stringsdata) beside its objects,
+      # for the translation check below; until then that check exported the
+      # strings with xcodebuild -exportLocalizations, which compiled the
+      # whole app again for the device SDK (14 to 18 minutes on 2026-11-08).
       - name: Build for iOS Simulator
         id: app-build
         run: |
@@ -466,6 +473,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
+            SWIFT_EMIT_LOC_STRINGS=YES \
             CODE_SIGN_IDENTITY=-
 
       # Decision 590: the stack frames of the app's own code, as the build
@@ -698,48 +706,64 @@ jobs:
       # The Traditional Chinese translations, on a pull request and the full
       # lane; not on a run by hand of named UI tests (only_testing), which
       # is there to fix a test: the pull request and the full lane still
-      # check them, and on 2026-10-16 the 94 runs by hand spent 283 macOS
-      # minutes on the export, as much as on their UI tests, and one (run
-      # 38929483452) went red when its export passed 15 minutes on a slow
-      # runner (decision 265). It runs after the
-      # UI tests, and also when they failed, so each reports on its own. The
-      # export builds with SWIFT_EMIT_LOC_STRINGS into its own derived data,
-      # leaving the tested build alone. It cannot reuse the tested build:
-      # -exportLocalizations builds for the iOS device SDK (Debug-iphoneos)
-      # whatever -destination says, so #356, which gave it this job's
-      # Simulator, derived data and settings, still compiled all 226 files
-      # (run 38111831569, 86 s against 97 s before).
+      # check them (decision 265). It runs after the UI tests, and also when
+      # they failed, so each reports on its own.
+      # Decision 638: the strings come from the build above, not from an
+      # export. xcodebuild -exportLocalizations built the whole app again
+      # for the iOS device SDK whatever -destination said (#356 gave it this
+      # job's Simulator, derived data and settings and it still compiled
+      # every file), 14 to 18 minutes on 2026-11-08 (runs 42437724301,
+      # 42439105982, 42437717820), longer than the build and the UI tests
+      # together. What it did, done here from the build's own files:
+      # xcstringstool sync merges the app target's .stringsdata into a copy
+      # of the committed catalog (a key the code uses and the catalog lacks
+      # is added untranslated), and the checker fails on every unit the
+      # export's XLIFF would have failed on: a key missing from the catalog,
+      # a zh-Hant translation missing, empty or needing review in any
+      # variant, and an InfoPlist string (InfoPlist.strings or the built
+      # Info.plist) with no zh-Hant value.
       - name: Test the localization checker
         id: localization-selftest
         if: ${{ !cancelled() && steps.app-build.outcome == 'success' && !inputs.only_testing }}
         run: python3 .github/scripts/check-localization-selftest.py
 
-      - name: Export Swift strings with Xcode
+      - name: Sync the build's Swift strings into a copy of the catalog
         id: localization-export
         if: ${{ !cancelled() && steps.localization-selftest.outcome == 'success' }}
-        # Usually 4 to 12 minutes; on 2026-11-07, with a full lane and a
-        # release archive holding the other macOS runners, it passed 15 twice
-        # (runs 42374084736, 42376691119) with no error, only slower.
-        timeout-minutes: 25
+        timeout-minutes: 5
         run: |
-          xcodebuild -exportLocalizations \
-            -project RailwayGameApp/RailwayGame.xcodeproj \
-            -scheme RailwayGame \
-            -localizationPath "$RUNNER_TEMP/loc" \
-            -exportLanguage zh-Hant \
-            -destination "generic/platform=iOS Simulator" \
-            -disableAutomaticPackageResolution \
-            SWIFT_EMIT_LOC_STRINGS=YES \
-            CODE_SIGNING_ALLOWED=NO
+          loc="$RUNNER_TEMP/loc"
+          mkdir -p "$loc"
+          # The app target's own files, not the UI tests' or the package's.
+          find "$RUNNER_TEMP/DerivedData/Build/Intermediates.noindex" -name '*.stringsdata' \
+            -path '*/Debug-iphonesimulator/RailwayGame.build/*' | sort >"$loc/stringsdata.txt"
+          count="$(wc -l <"$loc/stringsdata.txt" | tr -d ' ')"
+          if (( count == 0 )); then
+            echo "::error::The build wrote no .stringsdata for the app (SWIFT_EMIT_LOC_STRINGS); these are all it wrote:"
+            find "$RUNNER_TEMP/DerivedData/Build/Intermediates.noindex" -name '*.stringsdata' | head -20
+            exit 1
+          fi
+          echo "The app's build wrote $count .stringsdata file(s)."
+          args=()
+          while IFS= read -r file; do
+            args+=(--stringsdata "$file")
+          done <"$loc/stringsdata.txt"
+          cp "$RUNNER_TEMP/Localizable.xcstrings" "$loc/Localizable.xcstrings"
+          xcrun xcstringstool sync "$loc/Localizable.xcstrings" "${args[@]}"
+          plutil -convert json -o "$loc/Info.json" \
+            "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app/Info.plist"
 
       - name: Check zh-Hant targets and committed catalog keys
         if: ${{ !cancelled() && steps.localization-export.outcome == 'success' }}
         run: |
           python3 .github/scripts/check-localization.py \
-            --export "$RUNNER_TEMP/loc" \
-            --catalog "$RUNNER_TEMP/Localizable.xcstrings"
+            --synced "$RUNNER_TEMP/loc/Localizable.xcstrings" \
+            --catalog "$RUNNER_TEMP/Localizable.xcstrings" \
+            --info-plist "$RUNNER_TEMP/loc/Info.json" \
+            --infoplist-source RailwayGameApp/Resources/en.lproj/InfoPlist.strings \
+            --infoplist-target RailwayGameApp/Resources/zh-Hant.lproj/InfoPlist.strings
 
-      - name: Upload localization export for diagnostics
+      - name: Upload the synced strings for diagnostics
         if: ${{ !cancelled() && steps.localization-export.outcome != 'skipped' }}
         uses: actions/upload-artifact@v7
         with:
