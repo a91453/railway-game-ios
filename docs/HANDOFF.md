@@ -3966,6 +3966,12 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 ### 7.5 只等實機確認的
 
 這些不擋任何工作，在 TestFlight 的「請測試者看」裡輪流問：
+- **點車站就當機**（玩家回報 118.1，iPhone 15 Pro Max，CRASH-STATION 決策 644）：Linux 上沒重現，原因還不知道。修了一部分：車站面板開著時，地圖上的旅客去向在背景少算一半，整條線的從幾分鐘變幾秒。請玩家在 121 或下一版試：點車站、點站牌、長按車站開面板、面板開著連點幾站，2D 和 3D 都試。還會當的話，請作者從 TestFlight 拿當機紀錄，看三件事：
+  - 例外類型：`0x8badf00d`（卡太久被殺）、`EXC_BREAKPOINT`／`SIGTRAP`（程式停下）或 `EXC_RESOURCE`（CPU 或記憶體）；
+  - 主執行緒（或 `DisplayLink.asyncThread`）的堆疊有沒有 `StationPanel`、`StationTag`、`MapAlertBubbles`、`stationRidership`、`PassengerRouteGraph`；
+  - 當時是哪一張地圖、幾站幾線、2D 還是 3D、幾倍速。最好附「回報問題」的存檔。
+
+  量法：`STATION_COST_REPORT=1 swift test --skip-build --filter StationTapCostTests`。旅運量本身還是約 10 秒（背景），要再快得動 GameCore，見決策 644「下一步」。
 - **一直跳景點、一直當機**（玩家回報 115.1，CRASH-SIGHTS #1889，118 起）：原因是觀光景點面板開著時，每個 tick 每個景點都重建一次路網。台北文湖線、16 個景點有車站服務時，每次重畫要 1.6 秒，遊戲卡住，最後被系統關掉。現在一天只算一次，所有景點一起算（0.1 秒）。這個在實機沒有重現，也沒有當機紀錄。118 請玩家在路線多的局打開觀光景點面板，或點地圖上的景點星號，看還會不會卡、會不會跳出。還會的話，請作者從 TestFlight 拿當機紀錄，看三件事：
   - 例外類型：`0x8badf00d`（watchdog，卡太久被殺）或 `EXC_BREAKPOINT`；
   - 主執行緒的堆疊有沒有 `attractionRows`、`attractionStatus`、`PassengerRouteGraph`；
