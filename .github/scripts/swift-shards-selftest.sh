@@ -649,11 +649,11 @@ else
 fi
 # Decision 620: rest's two parts split rest exactly, each class in one
 # part, a weighted class in a part of its own.
-printf 'M.A/t\nM.B/t\nM.KaohsiungLightRailDayTests/t1\nM.KaohsiungLightRailDayTests/t2\nM.%s/t\n' "$("$script" classes | head -1)" >"$work/rest.txt"
+printf 'M.A/t\nM.B/t\nM.Map3DStationExteriorsTests/t1\nM.Map3DStationExteriorsTests/t2\nM.%s/t\n' "$("$script" classes | head -1)" >"$work/rest.txt"
 rest_all="$(SWIFT_TEST_LIST_FILE="$work/rest.txt" "$script" select rest | sort | tr '\n' ' ')"
 rest_parts="$(for k in 1 2; do SWIFT_TEST_LIST_FILE="$work/rest.txt" "$script" select "rest-$k" | tr '\n' ' '; echo; done)"
 rest_union="$(tr ' ' '\n' <<<"$rest_parts" | sed '/^$/d' | sort | tr '\n' ' ')"
-if [[ "$rest_parts" == $'M.KaohsiungLightRailDayTests/t1 M.KaohsiungLightRailDayTests/t2 \nM.A/t M.B/t ' && "$rest_union" == "$rest_all" ]]; then
+if [[ "$rest_parts" == $'M.Map3DStationExteriorsTests/t1 M.Map3DStationExteriorsTests/t2 \nM.A/t M.B/t ' && "$rest_union" == "$rest_all" ]]; then
   echo "ok   pass  rest's parts split rest by the classes' weights"
 else
   echo "FAIL rest parts: $rest_parts (rest: $rest_all)"
