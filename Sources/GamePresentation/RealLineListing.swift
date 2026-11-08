@@ -62,12 +62,26 @@ extension GameSession {
         }.sorted { ($0.metres, $0.line.id) < ($1.metres, $1.line.id) }
     }
 
+    /// Review L14-5: the panel shows the list (`true`, as it appears) or
+    /// no longer does. While it shows, the list is checked again whenever
+    /// the land owned changes (the map expanded with the panel open), not
+    /// only as it opens.
+    public func showRealLineList(_ shown: Bool) {
+        realLineListShown = shown
+        if shown { refreshRealLineAvailability() }
+    }
+
     /// Works out, off the main actor, which of the lines for sale the land
     /// owned does not reach, nearest first; the panel calls it as it opens
     /// and the notes arrive in ``realLineOutOfReach``. Worked out again only
     /// when the commands or the railways have changed since.
+    ///
+    /// Review L14-5: each line's answer arrives as it is found, nearest
+    /// first, so a line the land has come to reach is not left greyed out
+    /// by the check before until the whole list is done.
     public func refreshRealLineAvailability() {
         let key = [commandRevision, railwaysRevision]
+        realLineCheckedLand = world.mapExpansion?.owned
         guard realLineAvailabilityKey != key else { return }
         realLineAvailabilityKey = key
         realLineAvailabilityTask?.cancel()
@@ -80,16 +94,20 @@ extension GameSession {
         let lines = realLineListings.map(\.line)
         let checking = laying
         realLineAvailabilityTask = Task {
-            let failed = await Task.detached(priority: .utility) { () -> Set<String> in
-                var failed: Set<String> = []
-                for line in lines {
-                    if Task.isCancelled { break }
+            var failed: Set<String> = []
+            for line in lines {
+                let out = await Task.detached(priority: .utility) { () -> Bool in
                     let offer = checking.offer(for: line)
-                    if offer.acquisition == nil, offer.problem == Self.landProblem(in: checking.language) { failed.insert(line.id) }
+                    return offer.acquisition == nil && offer.problem == Self.landProblem(in: checking.language)
+                }.value
+                guard !Task.isCancelled, realLineAvailabilityKey == key else { return }
+                if out {
+                    failed.insert(line.id)
+                    realLineOutOfReach.insert(line.id)
+                } else {
+                    realLineOutOfReach.remove(line.id)
                 }
-                return failed
-            }.value
-            guard !Task.isCancelled, realLineAvailabilityKey == key else { return }
+            }
             realLineOutOfReach = failed
             realLineAvailabilityTask = nil
         }

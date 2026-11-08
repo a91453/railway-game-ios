@@ -143,6 +143,41 @@ public enum TrackHeightDrag {
     public static func steps(forTranslation translation: Double, card: NetworkHeightCard) -> Int {
         card.clamped(steps: Int((-translation / pointsPerMetre).rounded(.towardZero)))
     }
+
+    /// Review L14-2: the cell while a finger holds it. The view keeps it as
+    /// gesture state, which goes back to ``idle`` when the gesture ends or
+    /// is cancelled (a second finger, a sheet, the cell changing under the
+    /// finger), so a cancelled slide leaves no tint and no metres counted
+    /// that were never applied.
+    public struct Hold: Equatable, Sendable {
+        /// Whether the hold has lasted ``holdSeconds``, so a slide counts.
+        public var isHeld = false
+        /// The metres slid so far, not yet applied.
+        public var steps = 0
+
+        public static let idle = Hold()
+
+        public init(isHeld: Bool = false, steps: Int = 0) {
+            self.isHeld = isHeld
+            self.steps = steps
+        }
+
+        /// Held, the finger at `translation` (`nil` before it has moved,
+        /// which keeps the metres slid so far).
+        public mutating func hold(at translation: Double?, card: NetworkHeightCard) {
+            isHeld = true
+            if let translation { steps = TrackHeightDrag.steps(forTranslation: translation, card: card) }
+        }
+    }
+
+    /// The metres a hold that ended with the finger at `translation`
+    /// applies: those the finger slid, as ``steps(forTranslation:card:)``
+    /// counts them, 0 when it never moved.
+    public static func stepsApplied(endingAt translation: Double?, card: NetworkHeightCard) -> Int {
+        var hold = Hold.idle
+        hold.hold(at: translation, card: card)
+        return hold.steps
+    }
 }
 
 /// What ``GameSession/networkHeightCard``'s fixes were found for.

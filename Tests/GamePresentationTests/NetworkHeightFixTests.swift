@@ -106,6 +106,27 @@ final class NetworkHeightFixTests: XCTestCase {
         XCTAssertEqual(raised.stepsDown, card.stepsDown + 11)
     }
 
+    /// Review L14-2: the held cell's state is gesture state; what it goes
+    /// back to when a hold is cancelled (no tint, no metres) is the state
+    /// before any hold, and the metres a hold applies are those of where
+    /// the finger let go, not a figure left over from an earlier hold.
+    /// (That SwiftUI resets it on a cancel is left to the Simulator.)
+    func testAHeldCellGoesBackToNothingAndAppliesWhereTheFingerLetGo() throws {
+        let session = try lakeSession()
+        let card = try XCTUnwrap(session.networkHeightCard)
+        XCTAssertEqual(TrackHeightDrag.Hold.idle, TrackHeightDrag.Hold(isHeld: false, steps: 0))
+        var hold = TrackHeightDrag.Hold.idle
+        hold.hold(at: nil, card: card)
+        XCTAssertEqual(hold, TrackHeightDrag.Hold(isHeld: true, steps: 0), "held, not moved yet")
+        hold.hold(at: -29, card: card)
+        XCTAssertEqual(hold.steps, 2)
+        hold.hold(at: nil, card: card)
+        XCTAssertEqual(hold.steps, 2, "a value without a slide keeps the metres slid")
+        XCTAssertEqual(TrackHeightDrag.stepsApplied(endingAt: -29, card: card), 2)
+        XCTAssertEqual(TrackHeightDrag.stepsApplied(endingAt: nil, card: card), 0)
+        XCTAssertEqual(TrackHeightDrag.stepsApplied(endingAt: -100_000, card: card), card.stepsUp)
+    }
+
     func testFirstStretchHintIsSaidOnlyBeforeAnythingIsBuilt() throws {
         let session = try lakeSession()
         XCTAssertTrue(session.networkOffersFreeFirstHint)

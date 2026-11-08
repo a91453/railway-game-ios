@@ -362,7 +362,16 @@ public struct Map3DScene: Sendable {
         self.init(world: world, snapshot: snapshot, skyline: skyline, frame: Self.frame(world: world, focus: focus), baseMap: baseMap,
                   cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
                   noBuild: noBuild,
-                  detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil, facades: facades)
+                  detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil, facades: facades,
+                  studies: Self.studyRegion(world: world, scene: Self.frame(world: world, focus: focus).region))
+    }
+
+    /// Review L14-7: where a station study (decision 625) of a scene of
+    /// `scene`'s region can be drawn: the whole map where the camera builds
+    /// ahead (decision 358), as a block of chunks there may hold its
+    /// origin, else the scene's own region.
+    static func studyRegion(world: GameWorld, scene: WorldRegion) -> WorldRegion {
+        Map3DStreaming.streams(world) ? WorldRegion(bounds: world.bounds) : scene
     }
 
     /// Decision 358: chunks `keys` of `streaming`'s scene (its origin),
@@ -391,7 +400,7 @@ public struct Map3DScene: Sendable {
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
                                baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands,
                                railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail,
-                               facades: facades)
+                               facades: facades, studies: map)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -430,14 +439,18 @@ public struct Map3DScene: Sendable {
     /// Decision 455: the city's lots' simplified boxes as instances, or
     /// as vertices without `instancingBoxes` (as before it, for the tests).
     /// Decision 610 續: the real buildings' street fronts only with `facades`.
+    /// Review L14-7: `studies`, where a station study can be drawn
+    /// (``Builder/studyRegion``).
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
          lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
-         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true) {
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
+         studies: WorldRegion? = nil) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         builder.detail = detail
+        builder.studyRegion = studies
         builder.buildsFacades = facades
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 234: on a real-world map, the base map's water, cover
@@ -858,6 +871,12 @@ extension Map3DScene {
         var realTrackLines: [[Map3DPoint]] = []
         /// Decision 625: the exterior studies stood.
         var stationExteriors: [Map3DStationExterior] = []
+        /// Review L14-7: where a study can be drawn (its origin in a chunk
+        /// some block of the scene builds): a station stands for one only
+        /// whose origin is in it, else it draws its own building, as a
+        /// study out of it is drawn nowhere. Not asked when `nil` (a
+        /// scene built apart in the tests).
+        var studyRegion: WorldRegion?
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 370: colours the model look leaves as they are besides
         /// ``Map3DLook``'s own (the lines' bands).

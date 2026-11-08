@@ -16,9 +16,10 @@ struct MapConstructionHUD: View {
     /// Raises the end by whole metres once the finger lets go.
     var onRaise: (Int) -> Void = { _ in }
 
-    /// The metres the finger has slid while held, not yet applied.
-    @State private var slidSteps = 0
-    @State private var isHeld = false
+    /// The metres the finger has slid while held, not yet applied, and
+    /// whether it holds the cell: gesture state, so a cancelled hold
+    /// (which never ends) goes back to nothing (review L14-2).
+    @GestureState private var hold = TrackHeightDrag.Hold.idle
     @State private var showsStepper = false
 
     var body: some View {
@@ -122,20 +123,16 @@ struct MapConstructionHUD: View {
     /// slid up or down a metre at a time (a tap opens − and +, for a
     /// finger that cannot slide; VoiceOver adjusts it).
     private func slidingHeightFigure(_ card: NetworkHeightCard) -> some View {
-        let reading = card.readout(steps: slidSteps, in: language)
-        let hold = LongPressGesture(minimumDuration: TrackHeightDrag.holdSeconds)
+        let reading = card.readout(steps: hold.steps, in: language)
+        let holdAndSlide = LongPressGesture(minimumDuration: TrackHeightDrag.holdSeconds)
             .sequenced(before: DragGesture(minimumDistance: 0))
-            .onChanged { value in
+            .updating($hold) { value, state, _ in
                 guard case .second(true, let drag) = value else { return }
-                isHeld = true
-                if let drag {
-                    slidSteps = TrackHeightDrag.steps(forTranslation: Double(drag.translation.height), card: card)
-                }
+                state.hold(at: drag.map { Double($0.translation.height) }, card: card)
             }
-            .onEnded { _ in
-                let steps = slidSteps
-                slidSteps = 0
-                isHeld = false
+            .onEnded { value in
+                guard case .second(true, let drag) = value else { return }
+                let steps = TrackHeightDrag.stepsApplied(endingAt: drag.map { Double($0.translation.height) }, card: card)
                 if steps != 0 { onRaise(steps) }
             }
         return HStack(spacing: 6) {
@@ -159,11 +156,11 @@ struct MapConstructionHUD: View {
         }
         .padding(.horizontal, 8)
         .frame(minHeight: 44)
-        .background(isHeld ? Theme.primary.opacity(0.18) : Color.clear, in: Capsule())
+        .background(hold.isHeld ? Theme.primary.opacity(0.18) : Color.clear, in: Capsule())
         .contentShape(Rectangle())
         .onTapGesture { showsStepper.toggle() }
-        .gesture(hold)
-        .sensoryFeedback(.selection, trigger: slidSteps)
+        .gesture(holdAndSlide)
+        .sensoryFeedback(.selection, trigger: hold.steps)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(text("Height above ground", "離地高度"))
         .accessibilityValue(reading)

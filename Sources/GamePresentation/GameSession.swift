@@ -44,6 +44,9 @@ public final class GameSession {
             refreshScreenFacts()
             refreshMapMarks()
             refreshFollowBar()
+            // Review L14-5: the list of lines for sale, showing, checked
+            // again once the land owned has changed under it.
+            if !isApplyingTick, realLineListShown, world.mapExpansion?.owned != realLineCheckedLand { refreshRealLineAvailability() }
         }
     }
     /// Decision 367: what the screen's frame shows of the world, changed
@@ -607,6 +610,11 @@ public final class GameSession {
     public internal(set) var realLineOutOfReach: Set<String> = []
     @ObservationIgnored var realLineAvailabilityTask: Task<Void, Never>?
     @ObservationIgnored var realLineAvailabilityKey: [Int]?
+    /// Review L14-5: whether the lines panel shows the list
+    /// (``showRealLineList(_:)``), and the land owned it was last checked
+    /// on.
+    @ObservationIgnored var realLineListShown = false
+    @ObservationIgnored var realLineCheckedLand: [MapTile]?
     /// Decision 468, later: the offer of the line for sale a trace runs
     /// along, laid out off the main actor, and on which world
     /// (``tracedSaleHint``).

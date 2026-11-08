@@ -313,6 +313,12 @@ extension Map3DScene.Builder {
                 sceneOutlines(of: study, frame: frame).contains { Map3DStationExterior.distance(from: anchor, to: $0) <= Self.exteriorCovers }
             }
             for study in (Map3DStationExteriorBatch1.study(for: profile).map { [$0] } ?? []) + within {
+                // Review L14-7: a study drawn nowhere stands for no station.
+                if let reach = studyRegion {
+                    let origin = Map3DStationExteriorBatch1.origin(of: study)
+                    let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
+                    guard place.x >= reach.minX, place.x <= reach.maxX, place.y >= reach.minY, place.y <= reach.maxY else { continue }
+                }
                 if standing[study] == nil {
                     standing[study] = stationExteriors.contains { $0.station == study } || exteriorStands(study, snapshot: snapshot, frame: frame)
                 }

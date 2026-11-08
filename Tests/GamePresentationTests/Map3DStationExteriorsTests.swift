@@ -70,10 +70,12 @@ final class Map3DStationExteriorsTests: XCTestCase {
         let stations: Set<Map3DScene.ChunkKey>
     }
 
-    static func built(round study: Study, in world: GameWorld, heights: HeightGrid?, railways: RealRailways?) throws -> Built {
+    static func built(round study: Study, in world: GameWorld, heights: HeightGrid?, railways: RealRailways?,
+                      studies: WorldRegion? = nil) throws -> Built {
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         let (region, x, y) = region(round: study, frame: frame)
         var builder = Map3DScene.Builder(originX: x, originY: y, region: region, world: world, heights: heights)
+        builder.studyRegion = studies
         let snapshot = world.railwaySnapshot()
         builder.trackCover = Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround(water: true)
@@ -428,6 +430,24 @@ final class Map3DStationExteriorsTests: XCTestCase {
             let standing = built.builder.addFootprints(Map3DFootprints(buildings: buildings), clearOf: built.stations.union(cells), takenBy: [])
             XCTAssertTrue(standing.isEmpty, "\(study): a real building drawn on it")
         }
+    }
+
+    /// Review L14-7: a study whose origin is where the scene draws no
+    /// chunk (``Map3DScene/Builder/studyRegion``) is drawn nowhere, so the
+    /// station it would stand for draws its own building or entrances,
+    /// not nothing.
+    func testAStationWhoseStudyIsDrawnNowhereDrawsItsOwn() async throws {
+        let (world, heights, railways) = try await Self.world(round: .banqiaoTRA)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let (region, _, _) = Self.region(round: .banqiaoTRA, frame: frame)
+        let plain = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways, studies: region)
+        XCTAssertTrue(plain.builder.stationExteriors.contains { $0.station == .banqiaoTRA })
+        // The same, the study's origin outside where studies are drawn.
+        let east = WorldRegion(minX: region.maxX, minY: region.minY, maxX: region.maxX + 1, maxY: region.maxY)
+        let without = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways, studies: east)
+        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } }
+        XCTAssertGreaterThan(triangles(without.builder), triangles(plain.builder), "the station's own building or entrances")
+        XCTAssertTrue(without.stations.isSuperset(of: plain.stations))
     }
 
     /// An expanded station a study stands for keeps its wings, beside the

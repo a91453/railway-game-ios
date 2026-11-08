@@ -754,12 +754,23 @@ extension GameSession {
         return text
     }
 
-    /// Decision 628: whether line `id` has on its track as many of its
-    /// trains as it runs at the busiest time of day.
-    static func runsEveryTrainOnItsTrack(_ id: LineID, in world: GameWorld) -> Bool {
-        guard let line = world.line(id: id) else { return false }
-        let runs = ServiceLevel.allCases.compactMap { world.lineTrainsInService(id, at: $0) }.max() ?? 0
-        let onTrack = line.assignedTrains.filter { world.train(id: $0)?.position != nil }.count
+    /// Decision 628: whether line `id`'s own service, or its pattern at
+    /// index `pattern`, already has on its track as many of its trains as
+    /// it runs at the busiest time of day, so `train`, taken off it for a
+    /// loop, would only stand as a spare.
+    ///
+    /// Review L14-1: weighed with `train` still the service's (assigned
+    /// again, off the track, on a copy), as before it was taken off: what
+    /// a service runs can hang on the trains it has (a line on a timetable
+    /// runs every one, decision 133), so counting after it was taken off
+    /// would always find it spare. Only the service's own trains count, not
+    /// those of the line's other services.
+    static func runsEveryTrainOnItsTrack(_ id: LineID, pattern: Int? = nil, without train: TrainID, in world: GameWorld) -> Bool {
+        var before = world
+        guard (try? before.assignTrain(train, to: id, pattern: pattern)) != nil, let line = before.line(id: id) else { return false }
+        let trains = pattern.map { line.patterns[$0].trains } ?? line.trains
+        let runs = ServiceLevel.allCases.compactMap { before.lineTrainsInService(id, at: $0, pattern: pattern) }.max() ?? 0
+        let onTrack = trains.filter { $0 != train && before.train(id: $0)?.position != nil }.count
         return onTrack >= runs
     }
 
@@ -938,7 +949,7 @@ extension GameSession {
         }
         for (train, line, pattern) in lifted {
             guard let journey = world.lineJourney(line) else { throw .trackReserved(train) }
-            if plan.newLine == nil, plan.trains == 0, Self.runsEveryTrainOnItsTrack(line, in: world) {
+            if plan.newLine == nil, plan.trains == 0, Self.runsEveryTrainOnItsTrack(line, pattern: pattern, without: train, in: world) {
                 // Decision 628: the line card's loop alone, and the line
                 // already has on its track every train it runs. Put back,
                 // the train would only stand as a spare on a platform of
