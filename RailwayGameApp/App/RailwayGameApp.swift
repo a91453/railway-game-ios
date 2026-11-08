@@ -718,7 +718,9 @@ final class StallSampler: @unchecked Sendable {
         var samples: [[UInt]] = []
         var stallStart: CFTimeInterval = 0
         while true {
-            Thread.sleep(forTimeInterval: 0.2)
+            // Twenty looks a second once it stalls, so a stall of one or
+            // two seconds still gets a few dozen (IPAD-LAUNCH-STALL).
+            Thread.sleep(forTimeInterval: stallStart > 0 ? 0.05 : 0.2)
             let now = CACurrentMediaTime()
             let last = lock.withLock { lastBeat }
             if now - last > 1 {
@@ -803,10 +805,17 @@ final class StallSampler: @unchecked Sendable {
         for (leaf, count) in leaves.sorted(by: { $0.value > $1.value }).prefix(milliseconds >= 2_000 ? 8 : 3) {
             UITestTrace.stall("running \(count)/\(total) \(leaf)")
         }
+        // The app's own functions the looks found, however deep: what of
+        // the game's code the stall is in (IPAD-LAUNCH-STALL).
+        let own = inclusive.filter { $0.key.hasPrefix("RailwayGame") && $0.value * 10 >= total }
+        for (function, count) in own.sorted(by: { $0.value > $1.value }).prefix(25) {
+            UITestTrace.stall("app \(count)/\(total) \(function)")
+        }
         guard milliseconds >= 2_000 else { return }
-        let typical = named.max { lhs, rhs in
-            lhs.reduce(0) { $0 + inclusive[$1, default: 0] } < rhs.reduce(0) { $0 + inclusive[$1, default: 0] }
-        } ?? []
+        // A look at the commonest place it was running, not the longest
+        // stack (that had named a 1-in-8 look).
+        let commonest = leaves.max { $0.value < $1.value }?.key
+        let typical = named.first { $0.first == commonest } ?? []
         for (index, function) in typical.prefix(90).enumerated() {
             UITestTrace.stall("#\(index) \(inclusive[function, default: 0])/\(total) \(function)")
         }

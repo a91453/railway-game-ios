@@ -13,6 +13,8 @@ import XCTest
 /// One test for a phone on its side and one for an iPad, each skipped on
 /// the other device. Not in the pull request gate: the full lane runs the
 /// phone's on its iPhone and the iPad's in its iPad job (ios-build.yml).
+/// Its launch samples stalls and keeps XCTest's log out of standard error
+/// as ``TutorialUITests`` does (decision 659).
 @MainActor
 final class TutorialJourneyUITests: XCTestCase {
     func testTheWholeTutorialOnAPhoneOnItsSide() throws {
@@ -82,7 +84,8 @@ private final class TutorialJourney {
     func walk() {
         test.continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
 

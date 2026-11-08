@@ -1110,7 +1110,7 @@ jobs:
 
       # The app's touches and actions, as for the iPhone's UI tests (K4).
       - name: Save the app's iPad UI test trace
-        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled' || inputs.only_testing != '')
         continue-on-error: true
         run: |
           xcrun simctl spawn "$IPAD_SIMULATOR_UDID" log show --last 3h --style compact \
@@ -1118,7 +1118,7 @@ jobs:
             > "$RUNNER_TEMP/ipad-tutorial-trace.log" || echo "::warning::Could not read the app's UI test trace"
 
       - name: Upload the app's iPad UI test trace
-        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled' || inputs.only_testing != '')
         uses: actions/upload-artifact@v7
         with:
           overwrite: true

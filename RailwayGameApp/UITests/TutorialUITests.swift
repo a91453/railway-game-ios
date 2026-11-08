@@ -5,6 +5,12 @@ import XCTest
 /// steps from `-tutorial-step`). Gameplay goals are tested in
 /// TutorialSessionTests; these checks prove the overlay passes touches
 /// through to the tool, observes completion and exposes its navigation.
+///
+/// Decision 659: each launch samples the main thread's stacks while it
+/// draws nothing (`-ui-test-stall-stacks`), and keeps XCTest's own log
+/// lines out of the app's standard error (`OS_ACTIVITY_DT_MODE`): copying
+/// them had held the main thread 1.3–3.7 s at a time on the iPad, the
+/// stalls the touches were cancelled in.
 @MainActor
 final class TutorialUITests: XCTestCase {
     func testEnglishTutorialNavigation() {
@@ -27,7 +33,8 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         startFirstLesson(app)
@@ -143,7 +150,8 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.open"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.open"]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -212,7 +220,8 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.create"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.create"]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -259,8 +268,9 @@ final class TutorialUITests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = [
-            "-ui-testing", "-demo-layout", "-map-layer", "movement", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-ui-testing", "-ui-test-stall-stacks", "-demo-layout", "-map-layer", "movement", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
         ]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         let legend = app.descendants(matching: .any).matching(identifier: "map.populationLegend").firstMatch
@@ -370,9 +380,10 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = [
-            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-tutorial-step", "map.move", "-tutorial-advance-ms", "25000",
         ]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -436,10 +447,11 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         if largeText {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
         }
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer {
             app.terminate()
