@@ -62,7 +62,7 @@ extension GameWorld {
         let before = j > 0 ? points[j - 1].station : nil
         let after = j + 1 < points.count ? points[j + 1].station : nil
         var moves: [TrafficTrack] = []
-        for source in plan.services {
+        for (n, source) in plan.services.enumerated() {
             for k in source.points.indices {
                 let p = source.points[k]
                 guard p.station == point.station, p.calls == point.calls,
@@ -75,7 +75,7 @@ extension GameWorld {
                    case .onEdge(let run, let offset)? = source.train.position {
                     berth = Berth(traversal: run, offset: offset)
                 }
-                if let move = trafficTrack(source, at: k, berth: berth),
+                if let move = keptTrafficTrack(&plan, service: n, at: k, berth: berth),
                    !moves.contains(where: { $0.route == move.route }) { moves.append(move) }
             }
         }
@@ -88,20 +88,25 @@ extension GameWorld {
         if let kept = plan.sidings[key] { return kept }
         let service = plan.services[s], point = service.points[j]
         guard trafficHasSiding(at: point, train: service.train, known: &plan.hasSiding) else { return [] }
+        // Decision 637: the traversals services other than this one run the
+        // other way, less its own; counted once a plan, not collected for
+        // every service.
         let own = trafficNominalDirections(&plan, service: s)
-        let opposite = Set(plan.services.indices.filter { plan.services[$0].train.id != service.train.id }
-            .flatMap { trafficNominalDirections(&plan, service: $0).map(\.reversed) }).subtracting(own)
+        let against = trafficOppositeCounts(&plan)
+        func opposes(_ t: TrackTraversal) -> Bool {
+            (against[t] ?? 0) - (own.contains(t.reversed) ? 1 : 0) > 0 && !own.contains(t)
+        }
         // Decision 526: where keeping left takes the train off the straight
         // way, the track it keeps to is the loop and the straight way is the
         // main a passing train keeps to (see ``trafficStraightBerth(_:at:)``).
         let assignedSiding = trafficAssignedSiding(plan, service: s, at: j)
-            || trafficStraightBerth(service, at: j).traversal.edge != point.berth.traversal.edge
+            || keptStraightBerth(&plan, service: s, at: j).traversal.edge != point.berth.traversal.edge
         let tracks = berths(of: point.station, length: service.train.length).compactMap { berth -> TrafficTrack? in
             guard berth.traversal.edge != point.berth.traversal.edge || assignedSiding,
-                  let track = trafficTrack(service, at: j, berth: berth),
+                  let track = keptTrafficTrack(&plan, service: s, at: j, berth: berth),
                   // Resource sets carry no direction, so check both local
                   // paths too before admitting a newly borrowed main line.
-                  trafficTrackDirections(service, at: j, berth: berth).isDisjoint(with: opposite) else { return nil }
+                  !keptTrackDirections(&plan, service: s, at: j, berth: berth).contains(where: opposes) else { return nil }
             return track
         }
         plan.sidings[key] = tracks
@@ -161,18 +166,72 @@ extension GameWorld {
         return directions
     }
 
+    /// Decision 637: for each traversal, how many of `plan`'s services run
+    /// it the other way (their ``trafficNominalDirections(_:)`` reversed),
+    /// worked out once a plan. A service's opposite directions are those
+    /// some other service runs the other way, less its own: those counted
+    /// for more services than itself.
+    func trafficOppositeCounts(_ plan: inout TrafficPlan) -> [TrackTraversal: Int] {
+        if let known = plan.opposite { return known }
+        var counts: [TrackTraversal: Int] = [:]
+        for s in plan.services.indices {
+            for t in Set(trafficNominalDirections(&plan, service: s).map(\.reversed)) { counts[t, default: 0] += 1 }
+        }
+        plan.opposite = counts
+        return counts
+    }
+
+    /// Decision 637: ``trafficTrack(_:at:berth:)`` of service `s` of
+    /// `plan`, kept in it (see ``TrafficParts/Kept``); at the first point,
+    /// for a train standing at that berth, by where its body trails too.
+    func keptTrafficTrack(_ plan: inout TrafficPlan, service s: Int, at j: Int, berth: Berth) -> TrafficTrack? {
+        let service = plan.services[s]
+        guard plan.kept[service.train.id] != nil else { return trafficTrack(service, at: j, berth: berth) }
+        let standing = j == 0 && service.train.position == .onEdge(berth.traversal, offset: berth.offset)
+        let query = TrafficParts.KeptQuery(point: j, berth: berth, trail: standing ? service.train.trailEdges : nil)
+        if let known = plan.kept[service.train.id]?.tracks[query] { return known }
+        let track = trafficTrack(service, at: j, berth: berth)
+        plan.kept[service.train.id]?.tracks[query] = .some(track)
+        return track
+    }
+
+    /// Decision 637: ``trafficTrackDirections(_:at:berth:)`` of service `s`
+    /// of `plan`, kept in it (see ``TrafficParts/Kept``).
+    func keptTrackDirections(_ plan: inout TrafficPlan, service s: Int, at j: Int, berth: Berth) -> Set<TrackTraversal> {
+        let service = plan.services[s]
+        guard plan.kept[service.train.id] != nil else { return trafficTrackDirections(service, at: j, berth: berth) }
+        let query = TrafficParts.KeptQuery(point: j, berth: berth)
+        if let known = plan.kept[service.train.id]?.directions[query] { return known }
+        let directions = trafficTrackDirections(service, at: j, berth: berth)
+        plan.kept[service.train.id]?.directions[query] = directions
+        return directions
+    }
+
+    /// Decision 637: ``trafficStraightBerth(_:at:)`` of service `s` of
+    /// `plan`, kept in it (see ``TrafficParts/Kept``).
+    func keptStraightBerth(_ plan: inout TrafficPlan, service s: Int, at j: Int) -> Berth {
+        let service = plan.services[s]
+        guard plan.kept[service.train.id] != nil else { return trafficStraightBerth(service, at: j) }
+        if let known = plan.kept[service.train.id]?.straight[j] { return known }
+        let berth = trafficStraightBerth(service, at: j)
+        plan.kept[service.train.id]?.straight[j] = berth
+        return berth
+    }
+
     /// ``trafficNominalDirections(_:)`` of service `s`, kept in `plan` by
     /// what it reads (see ``TrafficParts/Nominal``); the network, the
     /// lines and keeping left do not change while it is kept.
     func trafficNominalDirections(_ plan: inout TrafficPlan, service s: Int) -> Set<TrackTraversal> {
         let service = plan.services[s]
+        // Decision 637: kept by train too, so as not to hash the key.
+        if let known = plan.kept[service.train.id]?.nominal { return known }
         let key = TrafficParts.Nominal(
             train: service.train.id, length: service.train.length, timetable: service.train.timetable,
             points: service.points.map { .init(station: $0.station, stop: $0.stop, calls: $0.calls, berth: $0.berth) }
         )
-        if let known = plan.nominal[key] { return known }
-        let directions = trafficNominalDirections(service)
+        let directions = plan.nominal[key] ?? trafficNominalDirections(service)
         plan.nominal[key] = directions
+        if plan.kept[service.train.id] != nil { plan.kept[service.train.id]?.nominal = directions }
         return directions
     }
 
