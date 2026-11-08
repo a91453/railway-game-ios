@@ -714,6 +714,11 @@ struct RealLineLaying: Sendable {
     let water: WaterGrid?
     let coverage: CoverageGrid?
     let heights: HeightGrid?
+    /// Decision 649: stops each offer once the land check (the tiles under
+    /// the line touch the company's) has passed, with no problem and no
+    /// purchase, for the list of lines for sale to grey out those whose
+    /// land does not.
+    var landCheckOnly = false
 
     static func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
         railways.stations.first { $0.id == "\(system)|\(name)" }.map {
@@ -747,6 +752,7 @@ extension RealLineLaying {
     /// whichever it was.
     func offer(for line: RealBranchLine) -> RealLineOffer {
         let laid = laidOffer(for: line)
+        if landCheckOnly { return laid.offer }
         // Decision 528: refused where the same line, bought and removed
         // before, left its track, laid again on the world without that
         // track, which is taken up first. A first purchase, or one nothing
@@ -1071,6 +1077,7 @@ extension RealLineLaying {
         if let expansion = world.mapExpansion {
             let wanted = Set(samples.map { MapExpansion.tile(at: $0) }).filter { world.isOnMap($0) && !expansion.owns($0) }
             guard let order = RealLineAcquisition.buyingOrder(of: wanted, owned: expansion.owned) else { return refusedForLand() }
+            if landCheckOnly { return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: nil), false, nil) }
             tiles = order
             for tile in tiles {
                 try? draft.buyMapTile(tile, passingMilestone: true)

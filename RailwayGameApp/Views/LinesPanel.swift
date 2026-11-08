@@ -616,21 +616,34 @@ struct LinesPanel: View {
                         .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("line.acquire.none")
                 }
-                ForEach(lines, id: \.id) { line in
+                // Decision 649: nearest the land owned first; one the
+                // land does not reach is greyed, with how far it is.
+                ForEach(session.realLineListings, id: \.line.id) { listing in
+                    let line = listing.line
                     Button {
                         session.offerRealLine(line)
                     } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Buy \(line.name(in: session.language))…", "收購\(line.name(in: session.language))…"))
-                        } icon: {
-                            Image(systemName: "signature")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Label {
+                                Text(verbatim: session.language.text("Buy \(line.name(in: session.language))…", "收購\(line.name(in: session.language))…"))
+                            } icon: {
+                                Image(systemName: "signature")
+                            }
+                            if let note = listing.note {
+                                Text(verbatim: note.text(in: session.language))
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
+                    .disabled(!listing.isBuyable)
                     .accessibilityIdentifier("line.acquire.\(line.network)")
                 }
             } header: {
                 Text(verbatim: session.language.text("Real lines for sale", "可收購的真實路線"))
             }
+            .onAppear { session.refreshRealLineAvailability() }
         }
     }
 
