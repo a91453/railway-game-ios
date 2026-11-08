@@ -158,8 +158,17 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(sited(), "A tap did not choose a site the house can stand on. \(screenText(in: app))")
         XCTAssertEqual(count.label, "0 buildings placed", "A tap only chooses where it goes")
         build.tap()
-        let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 building placed"), object: count)
+        // A house built in the town takes in the residents and jobs of the
+        // buildings it bought out (#1843), and the count then says so:
+        // "1 building placed · 0 residents, 2 jobs" (full lane run
+        // 42463093583). So the count starts with "1 building placed", and
+        // after continuing it must read exactly as it did before saving.
+        let built = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == %@ OR label BEGINSWITH %@", "1 building placed", "1 building placed · "),
+            object: count
+        )
         XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "The house was not built. \(screenText(in: app))")
+        let builtCount = count.label
 
         openGameMenu(in: app)
         tapMenuAction("menu.saveGame", in: app)
@@ -171,7 +180,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         XCTAssertTrue(count.appears(within: 10), "Missing the building count after continuing")
-        XCTAssertEqual(count.label, "1 building placed", "The house did not survive saving and continuing")
+        XCTAssertEqual(count.label, builtCount, "The house did not survive saving and continuing")
     }
 
     /// City building P0-B (decision 98): the building tool's zoning mode
