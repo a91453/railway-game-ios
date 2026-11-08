@@ -4137,4 +4137,5 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
   2. 若只有本 PR 會紅，最可疑的是 A2：`LineConfirmationCard` 加了 `safeAreaInset` 的 `TutorialStepNote`，iPad 的 sheet 只給 `.large`（`SheetHeight.offered(on:)`、Theme `gameSheetDetents()`）。可能卡片升起的時機變了，或卡片被擋住了。
   3. 修好且 CI 綠了再轉 ready，並在 #1579 回報。依作者規則（遊戲規劃第 56 任轉達）不開 iPad 截圖 run。
 - **UNVERIFIED**（要實機看）：A5 選單位置、iPad 各畫面的版面。
+- **IPAD-FIXES-2（session_01YGNNuoprHzncZPaPnbhuHC）接手查過**：兩次紅都是點擊被取消，不是 #1966 的改動。第二次的 App 紀錄（run 42459382878 的 ipad-tutorial-trace）在按 ✓ 時有 `touch cancelled at (834, 602)`：開始後 141 ms 就被取消，前面有 1.5 s 沒畫面，所以沒建出路線，卡片也沒升起。第一次的紀錄被重跑蓋掉了；當時 30 秒後還停在 Step 2，表示 Zoom out 沒生效，最可能是同一種點擊被取消。main 上同一個 job 也有一樣的情形（#1978：路線鈕的點擊被取消）。修法照 #1951，只改測試：✓ 沒升起卡片而且 ✓ 還在，就再按一次；Zoom out 3 秒內 `map.camera` 沒變，就再按一次（步驟延遲 20→25 s、按住 30→35 s 留餘裕）。斷言都不變。
 - **號碼**：決策 643（已在 #1579 登記）；存檔、golden 不動。

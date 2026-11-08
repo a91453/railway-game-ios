@@ -221,6 +221,17 @@ final class TutorialUITests: XCTestCase {
             XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers the ✓")
         }
         create.tap()
+        // The press on ✓ can be cancelled while the app is busy (#1966's
+        // iPad run 42459382878, the app's trace: "touch cancelled at
+        // (834, 602)" 141 ms after it began, after a 1.5 s gap between
+        // frames), and no line is made. A cancelled touch is no press:
+        // press once more when the new line's card has not risen and the
+        // ✓ is still there, as #1951 did. A ✓ that made the line raises
+        // the card, so a second press never makes a second line.
+        if !app.buttons["line.confirm.done"].appears(within: 10),
+           !app.buttons["line.confirm.back"].exists, create.exists {
+            create.tap()
+        }
         app.openNewLineFromItsCard()
 
         // Decision 226, later: Done came before the line, and set time
@@ -337,9 +348,10 @@ final class TutorialUITests: XCTestCase {
     /// slow runner (main 30e3492's full lane, run 40076217572: XCTest asked
     /// for the pill twice and checked for interruptions, 6 s, and the app,
     /// at ten frames a second, had the touch 4 s after that, 10 s after
-    /// Zoom out). So the point is worked out before Zoom out, nothing is
-    /// asked between the two touches, and the step waits twenty seconds,
-    /// the press held thirty. On a slow runner the pill had "Skip this
+    /// Zoom out). So the point is worked out before Zoom out, only the
+    /// zoom is asked between the two touches, and the step waits twenty seconds,
+    /// the press held thirty (25 and 35 since a lost Zoom out is pressed
+    /// again, #1966). On a slow runner the pill had "Skip this
     /// step" when it was measured, and lost it as Zoom out did the step:
     /// narrower, it was centred again and the press fell beside its leading
     /// end (main 947c23a's full lane, run 40093122899). The pill now keeps
@@ -349,7 +361,7 @@ final class TutorialUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-            "-tutorial-step", "map.move", "-tutorial-advance-ms", "20000",
+            "-tutorial-step", "map.move", "-tutorial-advance-ms", "25000",
         ]
         app.launch()
         defer { app.terminate() }
@@ -368,9 +380,28 @@ final class TutorialUITests: XCTestCase {
         let pill = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
             dx: before.minX + before.width * 0.1 - screen.minX, dy: before.midY - screen.minY
         ))
-        // Done: the step moves on twenty seconds from now.
+        // The camera's zoom, read once it has kept still for two seconds
+        // (the opening may frame the map again as its layout settles).
+        let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(zoom.appears(within: 10))
+        var settled = zoom.value as? String
+        for _ in 0..<10 {
+            let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", settled ?? ""), object: zoom)
+            guard XCTWaiter().wait(for: [changed], timeout: 2) == .completed else { break }
+            settled = zoom.value as? String
+        }
+        // Done: the step moves on 25 seconds from now. The press on
+        // Zoom out can be cancelled while the app is busy, and the step
+        // then never moves on (#1966's iPad run 42459382878, first
+        // attempt: still Step 2 after the hold, its trace not kept; most
+        // likely the lost touch its second attempt showed at ✓). Pressed once more only when the zoom
+        // has not changed in three seconds, so the step waits five seconds
+        // longer than the twenty it had, and the hold is five longer; a
+        // second step out after a slow first one does no harm here.
         zoomOut.tap()
-        pill.press(forDuration: 30)
+        let zoomed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", settled ?? ""), object: zoom)
+        if XCTWaiter().wait(for: [zoomed], timeout: 3) != .completed { zoomOut.tap() }
+        pill.press(forDuration: 35)
         let progress = app.staticTexts.matching(identifier: "tutorial.progress").firstMatch
         XCTAssertTrue(
             card.appears(within: 5),
