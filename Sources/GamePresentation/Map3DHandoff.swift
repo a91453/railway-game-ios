@@ -144,10 +144,19 @@ public enum Map3DHandoff {
         let shown = camera.visibleRegion
         let middle = Plan(x: camera.centerX, y: camera.centerY, referenceSize: camera.referenceSize)
         guard max(shown.width, shown.height) / metre > opensOverTheMiddleUpTo else { return middle }
-        let target = station.flatMap { world.station(id: $0) }.map { (x: Double($0.location.x), y: Double($0.location.y)) }
-            ?? train.flatMap { world.train(id: $0)?.position }.flatMap { world.location(of: $0) }
-                .map { (x: Double($0.position.x), y: Double($0.position.y)) }
-            ?? nearestTrack(to: (x: middle.x, y: middle.y), in: world)
+        // Spelled out step by step: one chained expression took Xcode's
+        // type checker too long (the iOS build failed on it).
+        var target: (x: Double, y: Double)?
+        if let id = station, let found = world.station(id: id) {
+            target = (x: Double(found.location.x), y: Double(found.location.y))
+        }
+        if target == nil, let id = train, let position = world.train(id: id)?.position,
+           let location = world.location(of: position) {
+            target = (x: Double(location.position.x), y: Double(location.position.y))
+        }
+        if target == nil {
+            target = nearestTrack(to: (x: middle.x, y: middle.y), in: world)
+        }
         guard let target else { return middle }
         let size = max(camera.viewport.height, 1) / groundShownOverTarget * referenceMetres
         return Plan(x: target.x, y: target.y, referenceSize: size)
