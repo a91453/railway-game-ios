@@ -932,8 +932,9 @@ extension DisplayLanguage {
 
 extension DeviceFamily {
     /// The device the game runs on, for text that names it (decision 643).
-    /// A Mac running the iPad app counts as an iPad.
-    static var current: DeviceFamily {
+    /// A Mac running the iPad app counts as an iPad. Main-actor, as
+    /// `UIDevice` is; every caller is a view.
+    @MainActor static var current: DeviceFamily {
         UIDevice.current.userInterfaceIdiom == .phone ? .iPhone : .iPad
     }
 }
