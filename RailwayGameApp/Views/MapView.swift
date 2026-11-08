@@ -3057,7 +3057,10 @@ private struct MapTopColumnOverlay: ViewModifier {
                         .tutorialTarget(session.message == nil ? nil : .statusBanner)
                     // While the network tool previews a stretch.
                 if session.tool == .network, let preview = session.networkPreview {
-                        MapConstructionHUD(preview: preview, language: session.language)
+                        MapConstructionHUD(
+                            preview: preview, language: session.language, heights: session.networkHeightCard,
+                            onRaise: { session.raiseNetworkEnd(by: $0) }
+                        )
                             .padding(.top, 12)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     } else {

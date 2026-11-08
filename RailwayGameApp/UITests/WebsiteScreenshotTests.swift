@@ -539,6 +539,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered, nothing left to fix")
             settle(seconds: 2)
             keep("track-height-bridge\(suffix)", app)
+            // Decision 646: a tap on the HUD's height cell opens − and +.
+            let cell = app.descendants(matching: .any)["map.constructionHUD.height"].firstMatch
+            XCTAssertTrue(cell.becomesHittable(within: 10))
+            cell.tap()
             let raise = app.buttons["map.build.raise"]
             XCTAssertTrue(raise.becomesHittable(within: 10))
             raise.tap()
