@@ -285,7 +285,7 @@ final class TourismSessionTests: XCTestCase {
     }
 
     /// Decision 286: a sightseeing train calling at Foot shows on the row and
-    /// in its stars; the help names the sightseeing trains.
+    /// in its stars; the help says a sightseeing train raises them.
     func testThePanelSaysASightseeingTrainCalls() throws {
         var world = try world()
         XCTAssertNil(world.attractionRows(in: .english)[0].sightseeingTrainText)
@@ -297,10 +297,9 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(row.starsText, "4★")
         XCTAssertEqual(row.sightseeingTrainText, "A sightseeing train calls here (+0.5★)")
         XCTAssertEqual(world.attractionRows(in: .traditionalChinese)[0].sightseeingTrainText, "有觀光列車停靠（+0.5★）")
-        XCTAssertTrue(world.tourismHelp(in: .english).hasSuffix(
-            "A sightseeing train (Hai-Feng sightseeing train, Blue Train sightseeing train, Shan-Lan sightseeing train) calling at a station within 800 m adds 0.5 stars; the Formosa Star sightseeing train adds 0.75 stars; the Ming-Ri sightseeing train adds 1 star; the Midsummer Formosa steam train adds 1.25 stars."
-        ), world.tourismHelp(in: .english))
-        XCTAssertTrue(world.tourismHelp(in: .traditionalChinese).hasSuffix("觀光列車（海風號、藍皮解憂號、山嵐號）停靠 800 公尺內的車站時，景點加 0.5 星；環島之星加 0.75 星；鳴日號加 1 星；仲夏寶島號加 1.25 星。"))
+        // Decision 663: the help says what sights do in two sentences; what
+        // each sightseeing train adds is on its row and in the catalog's note.
+        XCTAssertTrue(world.tourismHelp(in: .english).contains("sightseeing train"))
         // The train catalog's note: only under a sightseeing type, only with sights.
         XCTAssertEqual(world.sightseeingNote(for: .blueTrain, in: .traditionalChinese), "觀光列車：停靠景點 800 公尺內的車站時，景點加 0.5 星，觀光客會變多。")
         XCTAssertEqual(world.sightseeingNote(for: .haiFeng, in: .english),

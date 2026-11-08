@@ -412,6 +412,54 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// with the gondola's card, in Chinese and in English (six modes in
     /// the row). For the screenshot review of the pull request that added
     /// the mode.
+    /// Decision 663 (the Mac playtest's A12): the sights panel on a map
+    /// bought tile by tile: its short help, the sights on the company's
+    /// map, then those off it folded away and opened. For the screenshot
+    /// review of the pull request that folded them.
+    func testSightsOffTheMap() {
+        let app = launch(extra: ["-screenshot-scene", "sightsOffMap"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        if !app.buttons["menu.tourism"].appears(within: 5) {
+            app.buttons["menu.more"].tap()
+        }
+        app.buttons["menu.tourism"].tap()
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+        settle(seconds: 2)
+        keep("sights-on-the-map", app)
+        let list = app.collectionViews.firstMatch
+        let folded = app.descendants(matching: .any)["tourism.offMap"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(folded, in: list), "The sights off the map come into reach")
+        keep("sights-off-the-map-folded", app)
+        folded.tap()
+        settle(seconds: 2)
+        keep("sights-off-the-map-open", app)
+    }
+
+    /// Decision 663 (the Mac playtest's D9): the High Speed Rail demo's
+    /// fares, the distance steps with what high-speed trips pay instead.
+    func testHighSpeedDemoFares() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The demo opens")
+        settle()
+        let economy = app.buttons["entry.economy"]
+        XCTAssertTrue(economy.appears(within: 10))
+        economy.waitUntilSettled()
+        economy.tap()
+        let fares = app.staticTexts["economy.highSpeedFares"]
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10), "The economy panel opens")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list), "What high-speed trips pay comes into reach")
+        settle(seconds: 1)
+        keep("hsr-demo-fares", app)
+    }
+
     func testCablewayMode() {
         for english in [false, true] {
             let app = launch(extra: ["-screenshot-scene", "maokong"], english: english)

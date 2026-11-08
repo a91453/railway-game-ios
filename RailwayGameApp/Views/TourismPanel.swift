@@ -16,6 +16,9 @@ struct TourismPanel: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var marked: AttractionID?
+    /// Whether the sights off the company's map are shown (decision 663):
+    /// folded away at first, unless the map's tap is on one of them.
+    @State private var showsOffMap = false
 
     var body: some View {
         let language = session.language
@@ -23,6 +26,10 @@ struct TourismPanel: View {
         // CRASH-SIGHTS: kept by the session for the day, not worked out
         // at every tick.
         let rows = session.sightsPanelRows
+        // Decision 663: the sights on the company's map, then those off it,
+        // nearest first, folded away.
+        let onMap = rows.filter { $0.offMapMetres == nil }
+        let offMap = rows.filter { $0.offMapMetres != nil }
         NavigationStack {
             ScrollViewReader { proxy in
                 List {
@@ -36,7 +43,7 @@ struct TourismPanel: View {
                     } footer: {
                         Text(verbatim: world.tourismHelp(in: language))
                     }
-                    ForEach(rows) { row in
+                    ForEach(onMap) { row in
                         Section {
                             header(row)
                             Label {
@@ -74,9 +81,23 @@ struct TourismPanel: View {
                         }
                         .listRowBackground(marked == row.id ? Theme.accent.opacity(0.18) : nil)
                     }
+                    if !offMap.isEmpty {
+                        Section {
+                            DisclosureGroup(isExpanded: $showsOffMap) {
+                                ForEach(offMap) { row in
+                                    offMapRow(row)
+                                        .listRowBackground(marked == row.id ? Theme.accent.opacity(0.18) : nil)
+                                }
+                            } label: {
+                                Text(verbatim: language.text("Off your map (\(offMap.count))", "地圖外的景點（\(offMap.count)）"))
+                            }
+                            .accessibilityIdentifier("tourism.offMap")
+                        }
+                    }
                 }
                 .task {
                     guard let target = SightFocus.row(for: focus, in: rows) else { return }
+                    if offMap.contains(where: { $0.id == target }) { showsOffMap = true }
                     marked = target
                     // Once the sheet has laid its rows out.
                     try? await Task.sleep(for: .milliseconds(150))
@@ -118,6 +139,19 @@ struct TourismPanel: View {
         // Where the panel scrolls to for a sight tapped on the map.
         .id(row.id)
         .accessibilityIdentifier("tourism.row.\(row.id.rawValue)")
+    }
+
+    /// A sight off the company's map (decision 663): its name, stars and
+    /// how far off; nothing to build there yet.
+    private func offMapRow(_ row: AttractionRow) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            header(row)
+            if let text = row.offMapText(in: session.language) {
+                Text(verbatim: text)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
     }
 
     @ViewBuilder

@@ -7,6 +7,32 @@ import GameCore
 // What the session adds here is the second of those, and the words.
 
 extension GameWorld {
+    /// What the fares page says of high-speed trips (decision 663, the Mac
+    /// playtest's D9: the High Speed Rail demo's page showed only the
+    /// distance steps, "32 km and more NT$24", though a trip from Nangang
+    /// to Zuoying pays the real NT$1,530): with a table of real fares
+    /// (decision 325), its cheapest and dearest fare and the pair that pays
+    /// the dearest; without one, a world with a high-speed line, the
+    /// kilometre fare; otherwise `nil`.
+    public func highSpeedFareText(in language: DisplayLanguage) -> String? {
+        let table = accounts.highSpeedFares
+        if let cheapest = table.min(by: { $0.fare < $1.fare }), let dearest = table.max(by: { $0.fare < $1.fare }) {
+            let from = station(id: dearest.from)?.name ?? "", to = station(id: dearest.to)?.name ?? ""
+            return language.text(
+                "High-speed riders pay the fare between their two stations, not the fares above: \(cheapest.fare.wholeText) to \(dearest.fare.wholeText) (\(from)–\(to)).",
+                "搭高鐵的旅客照兩站之間的高鐵票價付，不用上面的票價：\(cheapest.fare.wholeText) 到 \(dearest.fare.wholeText)（\(from)－\(to)）。"
+            )
+        }
+        guard lines.contains(where: \.isHighSpeed) else { return nil }
+        let perKilometre = Money(HighSpeed.centsPerKilometre).centsText
+        return language.text(
+            "High-speed riders pay \(perKilometre) a kilometre, or the fare above when it is more.",
+            "搭高鐵路線的旅客每公里付 \(perKilometre)；上面的票價比較高時付上面的。"
+        )
+    }
+}
+
+extension GameWorld {
     /// What a high-speed line is paid and filled by, as the line's panel
     /// says it: the fare, where the trips come from and where they go.
     public func highSpeedLineHelp(in language: DisplayLanguage) -> String {

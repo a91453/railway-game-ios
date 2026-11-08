@@ -542,6 +542,11 @@ final class TutorialSessionTests: XCTestCase {
             Self.runUntilFares(session)
             session.showNextTutorialStep()
             XCTAssertNil(session.tutorial)
+            // Decision 663: finished before lesson 1 is passed, the status
+            // line says what passes it and that more lessons follow.
+            XCTAssertNil(session.world.scenario?.outcome)
+            XCTAssertEqual(session.message?.text, Lesson.firstLessonLeftText(over: session.world, in: .english))
+            XCTAssertNotNil(session.message)
             XCTAssertNil(launcher.preferences.tutorialStepToResume, "finished")
             XCTAssertTrue(launcher.preferences.tutorialCompleted)
 

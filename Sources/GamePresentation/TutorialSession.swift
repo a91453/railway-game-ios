@@ -190,6 +190,9 @@ extension GameSession {
         guard let shown = tutorial, isTutorialStepDone(shown.index, in: shown, now: true) else { return }
         if shown.isLastStep {
             tutorial = nil
+            if let left = Lesson.firstLessonLeftText(over: world, in: language) {
+                message = StatusMessage(kind: .success, text: left)
+            }
             onTutorialCompleted?()
         } else {
             moveTutorialForward(to: shown.index + 1)

@@ -225,6 +225,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the pull request that added them.
     case trackHeight
 
+    /// Decision 663 (the Mac playtest's A12): a blank map bought tile by
+    /// tile, its middle tile owned, with the sights drawn in every tile:
+    /// the sights panel's own sights, then those off the map folded away.
+    /// For the screenshot review of the pull request that folded them.
+    case sightsOffMap
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -316,6 +322,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         case .cijinShore: Self.cijinShoreWorld(water: water)
         case .trackHeight: Self.trackHeightWorld()
+        case .sightsOffMap: GameWorld.newGame(eventSeed: 1, buysMap: true)
         }
     }
 

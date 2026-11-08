@@ -452,6 +452,15 @@ struct EconomyPanel: View {
             .monospacedDigit()
             .foregroundStyle(Theme.textSecondary)
             .accessibilityIdentifier("economy.bandPreview")
+            // Decision 663: what high-speed trips pay instead.
+            if let highSpeed = session.world.highSpeedFareText(in: language) {
+                Text(verbatim: highSpeed)
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("economy.highSpeedFares")
+            }
             fareDemandText(.distance(bands), id: "economy.bandDemand")
             Button {
                 session.setFareRules(.distance(bands))
