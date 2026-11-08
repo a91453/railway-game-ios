@@ -275,7 +275,9 @@ final class DepotReturnReportTests: XCTestCase {
         // The day counted is the one before the day 51 hours on, as before;
         // played on until its runs past midnight have had their last chance
         // (decision 547's `RunsNotSent`).
-        let counted = (start + 51 * 3_600) / GameTime.secondsPerDay - 1
+        // TYMC-A12A13: `DEPOT_RETURN_DAY=<n>` counts game day n instead,
+        // for a world resumed from `DEPOT_RETURN_FROM` part way through it.
+        let counted = environment["DEPOT_RETURN_DAY"].flatMap { Int64($0) } ?? (start + 51 * 3_600) / GameTime.secondsPerDay - 1
         let until = environment["DEPOT_RETURN_UNTIL"].flatMap { Int64($0) }
         let end = until ?? max(start + 51 * 3_600, RunsNotSent.closed(day: counted, of: timetabled))
         var saveAt = environment["DEPOT_RETURN_SAVE_AT"].flatMap { Int64($0) }
@@ -332,6 +334,28 @@ final class DepotReturnReportTests: XCTestCase {
                 FileHandle.standardError.write(Data(text.utf8))
             }
             lastStuck = stuck
+            // TYMC-A12A13: `DEPOT_RETURN_WATCH=<from>-<to>` (clock seconds):
+            // each train at a station whose name has `DEPOT_RETURN_WATCH_AT`
+            // in it, what it does, where it stands and whom it waits for.
+            if let window = environment["DEPOT_RETURN_WATCH"]?.split(separator: "-").compactMap({ Int64($0) }), window.count == 2,
+               (window[0]...window[1]).contains(world.clock.now.seconds) {
+                let key = environment["DEPOT_RETURN_WATCH_AT"] ?? "航廈"
+                let waits = Dictionary(world.routeWaits().map { ($0.train, $0) }, uniquingKeysWith: { a, _ in a })
+                var text = "DEPOT_RETURN \(label) watch \(clock(world.clock.now.seconds))\n"
+                for train in world.trains {
+                    let at = world.stationsStoppedAt(by: train.id).compactMap { world.station(id: $0)?.name }
+                    let next = train.timetable.first { $0.arrival > world.clock.now }.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    let named = (environment["DEPOT_RETURN_WATCH_TRAINS"] ?? "").split(separator: ",").contains { train.name.hasSuffix(" \($0)") }
+                    guard named || at.contains(where: { $0.contains(key) }) || (train.execution != nil && next.contains(key)) else { continue }
+                    let edge: String = if case .onEdge(let t, let o)? = train.position { "\(t.edge)\(t.direction == .forward ? "+" : "-")@\(o)" } else { "-" }
+                    let wait = waits[train.id].map { "waits for \(world.train(id: $0.holder)?.name ?? "?") on \($0.contested.prefix(2))" } ?? "no wait"
+                    let tt = train.timetable.map { "\(world.station(id: $0.station)?.name ?? "?")@\(clock($0.departure.seconds).suffix(5))" }.joined(separator: " ")
+                    let ends = train.timetable.first.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    let last = train.timetable.last.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    text += "  \(train.name) on \(edge) at \(at.joined(separator: "/")) exec \(String(describing: train.execution).prefix(40)) dead \(train.isDeadheading) tt \(ends)->\(last) next \(next) \(wait) edges \(train.movement.edges.dropFirst(train.movement.cursor).prefix(8).map { "\($0)" }.joined(separator: ",")) timetable \(tt.prefix(400))\n"
+                }
+                FileHandle.standardError.write(Data(text.utf8))
+            }
             if byHour, world.clock.now.seconds / GameTime.secondsPerDay == counted || world.clock.now.seconds / GameTime.secondsPerDay == counted + 1 {
                 let lateNow = lateOnCountedDay(world)
                 if lateNow > lateSoFar {
