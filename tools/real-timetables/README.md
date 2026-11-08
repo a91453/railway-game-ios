@@ -55,7 +55,7 @@ python3 -I tools/real-timetables/extract_metro_runs.py \
 
 ## 臺鐵一週的每一班車（決策 532）
 
-`extract_tra_schedule.py` 從參考庫新版 `Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json`（臺鐵開放資料，2026-10-16 起 14 天，政府資料開放授權條款第 1 版）取一週的每一班車，寫成 App 的 `RailwayGameApp/Resources/RealRailways/tra-schedule.json`，讓 2D 與 3D 的真實地圖照真實班次畫臺鐵列車（車種、停站、到開時刻），車站卡的「下一班」也用它。決策 511 原本另外打包的 DR3100 四班（`extract_dr3100_schedule.py`、`tra-dr3100-schedule.json`）併進這一份，舊工具與檔案已刪除。
+`extract_tra_schedule.py` 從參考網站格式的 `tra_schedule_dense.json`（臺鐵開放資料，14 天，政府資料開放授權條款第 1 版；現在的是 2026-11-08 抓的，決策 650）取一週的每一班車，寫成 App 的 `RailwayGameApp/Resources/RealRailways/tra-schedule.json`，讓 2D 與 3D 的真實地圖照真實班次畫臺鐵列車（車種、停站、到開時刻），車站卡的「下一班」也用它。決策 511 原本另外打包的 DR3100 四班（`extract_dr3100_schedule.py`、`tra-dr3100-schedule.json`）併進這一份，舊工具與檔案已刪除。
 
 ```sh
 python3 -I tools/real-timetables/extract_tra_schedule.py \
@@ -64,7 +64,22 @@ python3 -I tools/real-timetables/extract_tra_schedule.py \
   RailwayGameApp/Resources/RealRailways/tra-schedule.json
 ```
 
-- 每個星期幾取 14 天裡第一個不是假日的日子（星期日 10-18 到星期六 10-17），再取一個落在平日的假日（10-26 星期一，光復節補假），只收這八天開的車：1,038 班、38,678 個停靠與通過站、242 站。
+- 第一次（決策 532）讀參考庫的 2026-10-16 版：1,038 班。決策 650（2026-11-08，台南地下化第一階段 10-17 通車後）重抓：
+  1. 在 GitHub 執行器上抓臺鐵開放資料（雲端連不到 ods.railway.gov.tw）：Actions → Fetch TRA timetable (ODS) → Run workflow（`.github/workflows/tra-ods-fetch.yml`，預設今天起 14 天加 12-25），下載它的 artifact `tra-ods`。
+  2. 照參考庫的兩支原工具排成 `tra_schedule_dense.json`（原工具不改，只把下載換成這些檔；`--skip` 去掉有停駛的日子，見下）：
+
+     ```sh
+     python3 -I tools/real-timetables/rebuild_tra_schedule.py \
+       /tmp/ref/Railway/taiwan-rail-reference-clean/source \
+       <tra-ods 解開的資料夾> 2026-11-08 /tmp/dense/tra_schedule_dense.json --skip 2026-11-09
+     python3 -I tools/real-timetables/extract_tra_schedule.py \
+       /tmp/dense/tra_schedule_dense.json \
+       RailwayGameApp/Resources/RealRailways/tra.json \
+       RailwayGameApp/Resources/RealRailways/tra-schedule.json
+     ```
+
+     ODS 抓不到時，同一支工具也讀 TDX 的逐日檔（`tdx-check.yml` 抓的 `day-YYYY-MM-DD.json` 與 `station.json`），但只到分鐘；TDX 標了停駛（`SuspendedFlag`）的日子自動不收。
+  3. 結果：每個星期幾取第一個不是假日、也沒有停駛的日子（星期日 11-08、星期一 11-16（11-09 集集線全天停駛、全日 106 班停駛，不收）、星期二 11-10 到星期六 11-14），假日取 12-25（行憲紀念日，星期五；14 天裡沒有平日的假日）：1,007 班、36,879 個停靠與通過站、242 站。假日表在本工具的 `PUBLIC_HOLIDAYS`（同遊戲的 `RealTimetables.publicHolidays`）。
 - 每班只留車次、車種（`typeName`）、車型（`carName`）、開的日子（8 個位元）與每站的到開時刻（第一站的到達秒，之後是距上一站開出的秒數，再加停站秒數；通過站的站號存成負數）。7.06 MB 的來源變成 445 KB（gzip 後約 92 KB）。
 - 站名照遊戲的 `tra.json`：時刻表的「左營」「新城」改成「左營(舊城)」「新城 (太魯閣)」；`tra.json` 沒有的站（環島列車的「臺北-環島」）不收。
-- 參考庫的檔案更新時重跑，並重跑 `RealTRAScheduleTests`、`Map3DDR3100Tests`。
+- 重抓或參考庫的檔案更新時重跑，並重跑 `RealTRAScheduleTests`、`Map3DDR3100Tests`。
