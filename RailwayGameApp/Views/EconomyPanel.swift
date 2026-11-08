@@ -528,6 +528,7 @@ struct EconomyPanel: View {
             let totals = session.world.recentLedgerTotals()
             if totals.isEmpty {
                 Text("Nothing settled in the last hour.")
+                Text("CI-LOC-EXPORT proof: not in the catalog")
                     .foregroundStyle(Theme.textSecondary)
             }
             ForEach(totals, id: \.item) { total in

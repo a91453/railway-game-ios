@@ -35,14 +35,7 @@
     },
 
     "Net profit" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "淨利"
-          }
-        }
-      }
+
     },
     "Network passenger routes" : {
       "localizations" : {
