@@ -290,6 +290,23 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 605 (continued): the real line bought as it was
+            // before its expresses came, its panel's line picked, and the
+            // map over the station it rebuilds.
+            if let real = DebugLaunch.value(of: "-screenshot-buy-real-before") {
+                Task {
+                    await opening.value
+                    guard let session = launcher.session else { return }
+                    for _ in 0..<240 {
+                        if session.buyAsBeforeForScreenshot(real) { break }
+                        try? await Task.sleep(for: .milliseconds(500))
+                    }
+                    for _ in 0..<30 {
+                        session.lookOverForScreenshot(.tymcRebuild, metres: 500)
+                        try? await Task.sleep(for: .seconds(1))
+                    }
+                }
+            }
             // Decision 565: the first train on the track picked and
             // followed, standing at its platform.
             if DebugLaunch.isSet("-screenshot-follow-train") {

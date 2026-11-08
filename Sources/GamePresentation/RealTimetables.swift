@@ -396,6 +396,18 @@ public struct RealLineRuns: Sendable, Equatable {
     /// its last stop followed by its first.
     public var ring = false
 
+    /// The timetable with every run stopping at each station it calls at:
+    /// the Taoyuan Airport MRT's as it was before decision 605.
+    func stoppingEverywhere() -> RealLineRuns {
+        var copy = self
+        copy.runs = runs.map { run in
+            var run = run
+            run.passes = []
+            return run
+        }
+        return copy
+    }
+
     /// Reads the file. Throws for one out of shape: a call that is not
     /// `[station, arrival, departure]`, or a run calling at a station that
     /// is not one of the line's.
