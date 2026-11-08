@@ -92,6 +92,10 @@ public enum WhatsNew {
                     english: "A train following another no longer stops on track the line only uses the other way, which jammed the Taoyuan Airport MRT.",
                     chinese: "跟著前車走的列車不再停在逆向軌道上，機場捷運不再互等卡死。"
                 ),
+                Line(
+                    english: "A newly bought Taoyuan Airport MRT now runs about fourteen more trips a day, because trains ending at Airport Terminal 1 can wait at another platform and no longer block the express.",
+                    chinese: "現在買下機場捷運，每天多開約十四班；在第一航廈站結束的車停到另一個月台，不再卡住直達車。"
+                ),
             ]
         ),
         // 121.
