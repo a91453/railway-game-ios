@@ -4125,6 +4125,6 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **建議的方向**（雲端判斷）：opposite 方向集合每個 plan 每個 service 只算一次；`Nominal` 照 service 編號記在 plan 裡，不重新雜湊整份點；配對前先依線路、方向、軌道篩掉不可能追上的對。改了要跑 golden、replay fixture 與 `swift-shards.sh` 的戰役 shard，tick 的結果不能變。
 - **量法**：`xcrun xctrace record --template 'Time Profiler' --device <模擬器> --attach <pid> --time-limit 20s`，再 `xcrun xctrace export --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]'`，依函式彙總；遊戲內「幀數」細目的「推進」是 tick 的時間。
 
-### 4.56 3D 的入口、時鐘、遠處夜窗與陡坡（決策 635，派工單 PLAYTEST-3D，session_01YGNNupp5gXA5cHePwHoKd3，`claude/playtest-3d`，2026-11-08）
+### 4.56 3D 的入口、時鐘、遠處夜窗與陡坡（決策 645，派工單 PLAYTEST-3D，session_01YGNNupp5gXA5cHePwHoKd3，`claude/playtest-3d`，2026-11-08）
 
-Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6（夜裡遠處沒亮窗）、D8（山坡深色方格）做了，見 `docs/decisions/635.md`。**留下的**：D6 回報的「6000× 過了午夜、或 03:11 進 3D 變回白天亮度」在 Linux 重現不了（光的算法 20:51 與 03:11 相同，Linux 預覽也是暗的）。3D 的 fps 小框點開後最後一行是這一幀實際畫的時刻、夜的程度、城市燈光：下一位在實機或模擬器上跑高鐵示範 20:51 → 6000× 過午夜，看那一行。時刻跟著走而畫面變亮，就找哪一層在夜裡用了白天的顏色；時刻不走，就查 `Map3DView.updateUIView` 有沒有在跑。遠處車站的夜燈（決策 617 光暈 2,400 m 外淡出）沒動。
+Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6（夜裡遠處沒亮窗）、D8（山坡深色方格）做了，見 `docs/decisions/645.md`。**留下的**：D6 回報的「6000× 過了午夜、或 03:11 進 3D 變回白天亮度」在 Linux 重現不了（光的算法 20:51 與 03:11 相同，Linux 預覽也是暗的）。3D 的 fps 小框點開後最後一行是這一幀實際畫的時刻、夜的程度、城市燈光：下一位在實機或模擬器上跑高鐵示範 20:51 → 6000× 過午夜，看那一行。時刻跟著走而畫面變亮，就找哪一層在夜裡用了白天的顏色；時刻不走，就查 `Map3DView.updateUIView` 有沒有在跑。遠處車站的夜燈（決策 617 光暈 2,400 m 外淡出）沒動。

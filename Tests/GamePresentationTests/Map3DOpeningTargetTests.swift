@@ -2,7 +2,7 @@
 @testable import GamePresentation
 import XCTest
 
-/// Decision 635 (D5, the Mac playtest of 2026-11-08): the high-speed demo
+/// Decision 645 (D5, the Mac playtest of 2026-11-08): the high-speed demo
 /// with the 2D map pulled out to the whole island, the 3D button opened
 /// over the Central Mountain Range, no track in sight and no way to pull
 /// the 3D map out to find it; with Taichung selected, the same; pulled

@@ -55,7 +55,7 @@ final class Map3DMetalView: MTKView {
         /// (`preferredFramesPerSecond`), which the rain over the map
         /// keeps to.
         var aim: Int
-        /// Decision 635 (D6): the light the last frame drew: its hour,
+        /// Decision 645 (D6): the light the last frame drew: its hour,
         /// how far night it was and how far the city's lights were on, so
         /// a device shows whether the 3D map's light followed the clock.
         var drawnHour: Float = 12

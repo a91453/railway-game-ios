@@ -1,7 +1,7 @@
 @testable import GamePresentation
 import XCTest
 
-/// Decision 635 (D8): `map3dShade` in Map3DShaders.metal gives a steep face
+/// Decision 645 (D8): `map3dShade` in Map3DShaders.metal gives a steep face
 /// a wall's bay lines, stronger detail and darker foot only when its
 /// surface is not layer 0, the ground's grass. A steep grass slope (the
 /// real ground's cover, fields, parks, banks) took them all, and showed

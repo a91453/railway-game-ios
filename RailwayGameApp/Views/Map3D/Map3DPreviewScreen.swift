@@ -201,7 +201,7 @@ struct Map3DPreviewScreen: View {
                             .padding(4)
                             .background(.regularMaterial, in: Capsule())
                             .accessibilityIdentifier("map3D.speed")
-                        // Decision 635 (B5): the 3D map covers the 2D
+                        // Decision 645 (B5): the 3D map covers the 2D
                         // map's clock, so it shows the same one here.
                         Map3DClock(session: session)
                     }
@@ -514,7 +514,7 @@ struct Map3DPreviewScreen: View {
                     // Decision 394: the cab deep in a tunnel draws only
                     // what is under the ground.
                     if stats.underground { Text(verbatim: "underground") }
-                    // Decision 635 (D6): the light the last frame drew.
+                    // Decision 645 (D6): the light the last frame drew.
                     Text(verbatim: String(format: "light %02d:%02d · night %.2f · lights %.2f", Int(stats.drawnHour) % 24,
                                           Int(stats.drawnHour * 60) % 60, stats.drawnNight, stats.drawnLights))
                 }
@@ -1284,7 +1284,7 @@ final class Map3DTrainFeed {
     }
 }
 
-/// Decision 635 (B5, the Mac playtest of 2026-11-08: "3D 看不到時間"):
+/// Decision 645 (B5, the Mac playtest of 2026-11-08: "3D 看不到時間"):
 /// the game's date and time in the 3D map's corner, the status bar's
 /// shorter clock (``GameClock/shortCalendarText(in:)``) read from the
 /// session's world as the 2D map's is; nothing kept of its own. Only
@@ -1532,7 +1532,7 @@ private struct Map3DView: UIViewRepresentable {
         } else if first {
             // Open over the place the 2D map showed (decision 313, later),
             // as close as it was but never further than the whole scene
-            // (decision 635, D5), or from the settings the middle of what
+            // (decision 645, D5), or from the settings the middle of what
             // is built, the whole scene in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
             let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))

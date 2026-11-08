@@ -1965,7 +1965,7 @@ struct MapView: View {
         Button {
             screen.map3DHandoff = nil
             // Decision 313, later: over the place the 2D map shows;
-            // decision 635 (D5): pulled out further than a 3D scene holds,
+            // decision 645 (D5): pulled out further than a 3D scene holds,
             // over the selected station or train, or the nearest track.
             screen.map3DOpenedAt = camera.map {
                 Map3DHandoff.opening(from: $0, in: session.world, station: session.selectedStationID,

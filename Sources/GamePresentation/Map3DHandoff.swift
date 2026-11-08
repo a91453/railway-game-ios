@@ -118,7 +118,7 @@ public enum Map3DHandoff {
         return camera
     }
 
-    // MARK: Decision 635 (D5): where the 3D button opens
+    // MARK: Decision 645 (D5): where the 3D button opens
 
     /// The most ground, in metres across, the 2D map may show for the 3D
     /// button to open over its middle: as much as a 3D scene holds
@@ -179,7 +179,7 @@ public enum Map3DHandoff {
     /// over (`plan`), in a scene `sceneSpan` metres across, for a view
     /// `viewportHeight` points tall: as close as the 2D map was
     /// (``distance(referenceSize:viewportHeight:)``), and never further than
-    /// the whole scene in view, as it opened before decision 635 (D5: "2D
+    /// the whole scene in view, as it opened before decision 645 (D5: "2D
     /// 拉得很近時按 3D，3D 也是開在遠景"). From the settings, with no plan,
     /// the whole scene.
     public static func openingDistance(of plan: Plan?, sceneSpan: Float, viewportHeight: Double) -> Float {
