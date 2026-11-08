@@ -557,6 +557,29 @@ class ChangesTests(Fixture):
         self.assertEqual(len(text), 4000)
         self.assertTrue(text.endswith("…"))
 
+    def test_characters_app_store_connect_refuses_are_found_with_their_place(self):
+        module = load(CHANGES, "changes_chars")
+        self.assertEqual(module.invalid_characters("按 ✕ 結束\n第二行 ⭐"), [(1, 3, "✕"), (2, 5, "⭐")])
+        for bad in ("😀", "\u2764\ufe0f", "\u200d", "\x07"):
+            self.assertTrue(module.invalid_characters(bad), repr(bad))
+        self.assertEqual(module.invalid_characters("按關閉結束建造（3D）：10 個、〔舊〕—…\n\t- ok"), [])
+
+    def test_the_text_check_is_red_for_a_refused_character_and_names_it(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "whats-new.md"
+            path.write_text("0.6.0 (1)\n\n按 ✕ 結束建造\n", encoding="utf-8")
+            result = subprocess.run([sys.executable, "-I", str(CHANGES), "--check-text", str(path)],
+                                    capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("U+2715", result.stderr)
+        self.assertIn("line 3, column 3", result.stderr)
+
+    def test_the_committed_whats_new_text_has_no_refused_character(self):
+        path = HERE.parent / "testflight-whats-new.md"
+        result = subprocess.run([sys.executable, "-I", str(CHANGES), "--check-text", str(path)],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual((result.returncode, result.stderr), (0, ""))
+
     def test_missing_settings(self):
         result = self.run_changes(self.github(self.runs(), {}), GITHUB_TOKEN=None, GITHUB_RUN_ID=None)
         self.assertEqual(result.returncode, 1)
