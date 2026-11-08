@@ -239,7 +239,7 @@ enum MapArt {
             drawStationLabels(world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
                               lineCodes: lineCodes, projection: projection, in: context)
             drawBuildMarks(world, network: overlay, routePreview: routePreview, projection: projection, cached: edges,
-                           showsTrackNumbers: layers.showsTrackNumbers, in: context)
+                           showsTrackNumbers: layers.showsTrackNumbers, showsWaitingCounts: layers.showsWaitingCounts, in: context)
         }
         drawWaits(traffic, projection: projection, in: context)
         // The trains and the rings round the waiting ones are drawn over
@@ -261,10 +261,12 @@ enum MapArt {
         projection: some MapProjection,
         cached edges: [TrackEdgeID: MapEdgeDrawing],
         showsTrackNumbers: Bool = true,
+        showsWaitingCounts: Bool = true,
         in context: GraphicsContext
     ) {
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
-        drawTrackNumbers(world, preview: routePreview, showsEveryTrack: showsTrackNumbers, projection: projection, cached: edges, in: context)
+        drawTrackNumbers(world, preview: routePreview, showsEveryTrack: showsTrackNumbers, keepsWaitingRoom: showsWaitingCounts,
+                         projection: projection, cached: edges, in: context)
     }
 
     /// The stations' names (with their lines' badges under them, decision
@@ -1040,9 +1042,11 @@ enum MapArt {
     /// on pale plates. Decision 631: a number keeps off the switches, the
     /// stations' names and the numbers already placed
     /// (``TrackNumberPlacement``): it moves along its track, then shrinks,
-    /// and is left out when there is no room.
+    /// and is left out when there is no room. Decision 642: and off the
+    /// stations' badges, their waiting counts' pills (when that layer is
+    /// on, `keepsWaitingRoom`) and the points where two tracks cross.
     private static func drawTrackNumbers(
-        _ world: GameWorld, preview: RoutePreview?, showsEveryTrack: Bool, projection: some MapProjection,
+        _ world: GameWorld, preview: RoutePreview?, showsEveryTrack: Bool, keepsWaitingRoom: Bool, projection: some MapProjection,
         cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext
     ) {
         typealias Placement = TrackNumberPlacement
@@ -1052,22 +1056,38 @@ enum MapArt {
         guard preview != nil || everyTrack else { return }
 
         // What a number keeps clear of: the switches (a node where three
-        // or more tracks end) and the stations' names.
+        // or more tracks end), the points where two tracks cross, and each
+        // station's badge, waiting count and name.
         var obstacles: [Placement.Box] = []
+        let region = drawingRegion(projection)
+        var tracks: [(edge: TrackEdge, points: [ScreenPoint])] = []
         if everyTrack {
             for node in world.network.nodes where node.ends.count >= 3 {
                 let point = projection.screenPoint(of: node.position)
-                let box = Placement.switchBox(at: point, radius: 12)
+                let box = Placement.switchBox(at: point, radius: Placement.junctionClearance)
                 if box.intersects(view) { obstacles.append(box) }
             }
+            for edge in world.network.edges {
+                guard let drawing = cached[edge.id] ?? MapEdgeDrawing(edge: edge, world: world), region.intersects(drawing.bounds) else { continue }
+                tracks.append((edge, drawing.geometry.points.map { projection.screenPoint(of: $0) }))
+            }
+            for point in Placement.crossings(of: tracks.map(\.points), in: view) {
+                obstacles.append(Placement.switchBox(at: point, radius: Placement.junctionClearance))
+            }
         }
-        let nameTop = MapProblems.nameTop(stationRadius: stationRadius(projection))
+        let radius = stationRadius(projection)
+        let nameTop = MapProblems.nameTop(stationRadius: radius)
+        let countLevel = MapProblems.level(referenceSize: projection.referenceSize)
+        let keepsCounts = keepsWaitingRoom && countLevel != .hidden
+        let countFont = MapProblems.countFontSize(countLevel, stationRadius: radius)
         for station in world.stations {
             let center = projection.screenPoint(of: station.location)
-            let box = Placement.nameBox(
-                station: center, nameTop: nameTop, nameWidth: Double(station.name.count) * 11 + 16, height: 30
-            )
-            if box.intersects(view) { obstacles.append(box) }
+            var boxes = [
+                Placement.stationBox(at: center, stationRadius: radius),
+                Placement.nameBox(station: center, nameTop: nameTop, nameWidth: Double(station.name.count) * 11 + 16, height: 30),
+            ]
+            if keepsCounts { boxes.append(Placement.waitingBox(at: center, stationRadius: radius, fontSize: countFont)) }
+            obstacles += boxes.filter { $0.intersects(view) }
         }
 
         func candidate(_ edge: TrackEdgeID, points: [ScreenPoint], beside: Double) -> Placement.Candidate? {
@@ -1110,12 +1130,9 @@ enum MapArt {
             taken = placed.map(\.box)
         }
         guard everyTrack else { return }
-        let region = drawingRegion(projection)
         let beside = trackWidth(projection.referenceSize) / 2 + 9
         var candidates: [Placement.Candidate] = []
-        for edge in world.network.edges where !numbered.contains(edge.id) {
-            guard let drawing = cached[edge.id] ?? MapEdgeDrawing(edge: edge, world: world), region.intersects(drawing.bounds) else { continue }
-            let points = drawing.geometry.points.map { projection.screenPoint(of: $0) }
+        for (edge, points) in tracks where !numbered.contains(edge.id) {
             guard PolylineMarks.length(of: points) >= trackNumberMinimumLength,
                   let found = candidate(edge.id, points: points, beside: beside) else { continue }
             candidates.append(found)
@@ -2478,7 +2495,7 @@ enum MapArt {
         let limit = MapProblems.pillLimit(level)
         var placement = MapProblems.Placement(limit: limit)
         var rings = 0
-        let fontSize = level == .full ? max(8, min(11, radius * 0.7)) : 8
+        let fontSize = MapProblems.countFontSize(level, stationRadius: radius)
         for entry in MapProblems.stationOrder(visible, holds: holds) {
             guard !placement.isFull || rings < limit else { break }
             guard let center = centers[entry.station] else { continue }

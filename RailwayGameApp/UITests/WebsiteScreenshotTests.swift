@@ -3029,6 +3029,47 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(confirm.disappears(within: 10), "Cancel keeps the saves")
     }
 
+    /// Decisions 631 and 642: the freight scene's yards and stations
+    /// zoomed in one and two steps, where every track shows its number;
+    /// a number keeps off the switches, the points where tracks cross,
+    /// the stations' badges, waiting counts and names. Then the layer
+    /// strip folded into its one round button, and the layers sheet with
+    /// its track numbers switch. For the screenshot review of the pull
+    /// request that made the numbers keep clear.
+    func testTrackNumbersAndFoldedLayerStrip() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons.matching(identifier: "map.alert").firstMatch.appears(within: 30), "The scene has run on")
+        zoomInOnce(app)
+        settle(seconds: 2)
+        keep("track-numbers-zoom1", app)
+        zoomInOnce(app)
+        settle(seconds: 2)
+        keep("track-numbers-zoom2", app)
+
+        let collapse = app.buttons["map.quickLayer.collapse"]
+        XCTAssertTrue(collapse.appears(within: 10), "The layer strip has its fold button")
+        XCTAssertTrue(collapse.becomesHittable(within: 5))
+        collapse.tap()
+        let expand = app.buttons["map.quickLayer.expand"]
+        XCTAssertTrue(expand.appears(within: 10), "The strip folds into one button")
+        settle(seconds: 2)
+        keep("layer-strip-folded", app)
+        expand.tap()
+        XCTAssertTrue(collapse.appears(within: 10), "The strip opens again")
+
+        let more = app.buttons["map.quickLayer.more"]
+        guard more.appears(within: 5), more.becomesHittable(within: 5) else { return }
+        more.tap()
+        let numbers = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '軌道編號'")).firstMatch
+        if numbers.appears(within: 10) {
+            _ = app.dragUntilWhollyOnScreen(numbers, drags: 8)
+        }
+        settle(seconds: 2)
+        keep("layers-sheet-track-numbers", app)
+    }
+
     private func zoomInOnce(_ app: XCUIApplication) {
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 5), zoomIn.becomesHittable(within: 3) {
