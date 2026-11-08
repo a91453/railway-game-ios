@@ -186,8 +186,11 @@ final class RealWorldMapUITests: XCTestCase {
 
     /// Stage V4e: the real-world demo runs under traffic control, and the
     /// map's traffic key appears and reads out the movement authority its
-    /// trains take. Full lane only (not in the pull request gate).
-    func testTheRealWorldDemoShowsMovementAuthorityOnTheMap() {
+    /// trains take. Decision 191: the short credit in the real-world map's
+    /// corner is always there and opens the data sources page. Decision
+    /// 640: one test, as both opened the same demo. Full lane only (not in
+    /// the pull request gate).
+    func testTheRealWorldDemoShowsMovementAuthorityAndItsCreditOpensTheDataSources() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
@@ -201,6 +204,12 @@ final class RealWorldMapUITests: XCTestCase {
         let authority = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "map.traffic", "cleared to run")).firstMatch
         XCTAssertTrue(authority.appears(within: 60), "The demo's trains take their routes under traffic control")
+
+        let credit = app.descendants(matching: .any)["map.credit"].firstMatch
+        XCTAssertTrue(credit.appears(within: 30), "The map's corner credits its sources")
+        XCTAssertTrue(credit.label.contains("© OpenMapTiles © OpenStreetMap"), credit.label)
+        credit.tap()
+        XCTAssertTrue(app.navigationBars["Data Sources"].appears(within: 10), "Tapping the credit opens the data sources")
     }
 
     /// Decision 170: the High Speed Rail demo is built off the main actor (a
@@ -272,27 +281,6 @@ final class RealWorldMapUITests: XCTestCase {
             return
         }
         super.record(issue)
-    }
-
-    /// Decision 191: the short credit in the real-world map's corner is
-    /// always there and opens the data sources page. Full lane only (not
-    /// in the pull request gate).
-    func testTheMapCreditOpensTheDataSources() {
-        continueAfterFailure = false
-        XCUIDevice.shared.orientation = .landscapeLeft
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        defer { app.terminate() }
-
-        app.openDemo("demo.realWorld")
-
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
-        let credit = app.descendants(matching: .any)["map.credit"].firstMatch
-        XCTAssertTrue(credit.appears(within: 30), "The map's corner credits its sources")
-        XCTAssertTrue(credit.label.contains("© OpenMapTiles © OpenStreetMap"), credit.label)
-        credit.tap()
-        XCTAssertTrue(app.navigationBars["Data Sources"].appears(within: 10), "Tapping the credit opens the data sources")
     }
 
     /// TestFlight 56.1: changing from OpenStreetMap to satellite imagery,

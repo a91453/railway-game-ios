@@ -143,6 +143,35 @@ final class LessonTests: XCTestCase {
         }
     }
 
+    /// Decision 271: Depot in the network tool's modes once lesson 7 has
+    /// taught it. The tool lists the modes `allows` lets through
+    /// (`NetworkControls`); decision 640 moved this half of
+    /// `LessonUITests`' depot test here.
+    func testDepotModeFromLessonSeven() {
+        for (index, offered) in [(5, false), (6, true)] {
+            let session = GameSession(world: .newGame(lesson: Lesson.all[index]))
+            XCTAssertEqual(NetworkToolMode.allCases.filter { session.allows($0) }.contains(.depot), offered, "lesson \(index + 1)")
+            XCTAssertTrue(session.allows(NetworkToolMode.passingLoop), "lesson \(index + 1)")
+        }
+    }
+
+    /// Decision 266: a lesson opens once the one before has a star, from
+    /// the stars kept on the device (what `-lesson-stars` writes for the UI
+    /// tests). Decision 640 moved the locked half of `LessonUITests`'
+    /// fourth-lesson test here.
+    func testTheFourthLessonOpensOnlyAfterTheThirdHasStars() throws {
+        for (stars, open) in [([3, 3, 0], false), ([3, 3, 1], true)] {
+            let folder = directory()
+            defer { try? FileManager.default.removeItem(at: folder) }
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            var preferences = LauncherPreferences()
+            preferences.lessonStars = Dictionary(uniqueKeysWithValues: zip(Lesson.all.map(\.id), stars))
+            try JSONEncoder().encode(preferences).write(to: folder.appendingPathComponent(GameLauncher.preferencesFileName))
+            let launcher = GameLauncher(library: SaveLibrary(directory: folder), language: .english)
+            XCTAssertEqual(Lesson.all.prefix(4).map(launcher.isOpen), [true, true, true, open], "\(stars)")
+        }
+    }
+
     /// Decision 266: in a lesson only the tools unlocked up to it; in any
     /// other game, all of them.
     func testALessonHasOnlyItsTools() {

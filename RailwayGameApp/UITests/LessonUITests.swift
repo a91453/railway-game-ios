@@ -39,23 +39,19 @@ final class LessonUITests: XCTestCase {
         }
     }
 
-    func testTheFourthLessonOpensOnlyAfterTheThirdHasStars() {
+    /// Decision 640: whether a lesson is open is `GameLauncher.isOpen`
+    /// (`LessonTests.testTheFourthLessonOpensOnlyAfterTheThirdHasStars`),
+    /// and how a locked card reads is the fresh install's test above; this
+    /// one launches once, for the opened card's Start a finger reaches.
+    func testTheFourthLessonOpensOnceTheThirdHasAStar() {
         defer { app?.terminate() }
-        for (stars, open) in [("3,3,0", false), ("3,3,1", true)] {
-            launch(stars: stars)
-            openLessons()
-            let card = element("lesson.4")
-            XCTAssertTrue(app.scrollUntilShown(card, in: list))
-            if open {
-                reveal(app.buttons["lesson.4.start"])
-                XCTAssertTrue(app.buttons["lesson.4.start"].becomesHittable(within: 5))
-                XCTAssertFalse(card.staticTexts["Pass lesson 3 to open it."].exists)
-            } else {
-                XCTAssertTrue(card.staticTexts["Pass lesson 3 to open it."].appears(within: 5))
-                XCTAssertFalse(app.buttons["lesson.4.start"].exists)
-            }
-            app.terminate()
-        }
+        launch(stars: "3,3,1")
+        openLessons()
+        let card = element("lesson.4")
+        XCTAssertTrue(app.scrollUntilShown(card, in: list))
+        reveal(app.buttons["lesson.4.start"])
+        XCTAssertTrue(app.buttons["lesson.4.start"].becomesHittable(within: 5))
+        XCTAssertFalse(card.staticTexts["Pass lesson 3 to open it."].exists)
     }
 
     func testTheFirstLessonsOnlyBuildingToolIsNetworkWithoutLoopOrDepot() {
@@ -73,17 +69,12 @@ final class LessonUITests: XCTestCase {
         XCTAssertFalse(mode("Depot").exists)
     }
 
-    func testAddATrainIsAbsentInTheFirstLessonAndReachableInTheThird() {
+    /// Decision 640: that lesson 1's line card has no Add a Train is
+    /// `session.allows(.addTrain)`, which the card asks
+    /// (`LessonTests.testALessonHasOnlyItsTools`); this test reaches it in
+    /// lesson 3.
+    func testAddATrainIsReachableInTheThirdLesson() {
         defer { app?.terminate() }
-        // The existing later-step fixture supplies lesson 1's line, without
-        // changing its scenario or granting tools.
-        launch(step: "first.fare")
-        dismissGuide()
-        pause()
-        openLineCard()
-        assertAbsent(app.buttons.matching(identifier: "line.addTrain"), through: app.buttons["line.rename"])
-        app.terminate()
-
         startLesson(3)
         dismissGuide()
         pause()
@@ -94,92 +85,83 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(add.becomesHittable(within: 5))
     }
 
-    func testDoubleTrackIsAbsentInTheFourthLessonAndReachableInTheFifth() {
+    /// Decision 640: that lesson 4 offers no double track is
+    /// `canDoubleSelectedTrack`, which the track card asks, on the same
+    /// tapped track (`LessonTests.testDoubleTrackFromLessonFive`); this
+    /// test reaches the button in lesson 5.
+    func testDoubleTrackIsReachableInTheFifthLesson() {
         defer { app?.terminate() }
-        for number in [4, 5] {
-            startLesson(number)
-            // Pause first: lesson 5's card stands beside the stretch with
-            // no train on it (decision 378), which changes as the trains
-            // run, so the card moves between S0, S1 and S2 every few
-            // seconds and a touch on Skip found where it was lands on the
-            // map (the screen recording of main 12c1235's full lane, run
-            // 40085460126). With the clock stopped it stays put.
-            pause()
-            dismissGuide()
-            let fixture = GameWorld.newGame(lesson: Lesson.all[number - 1])
-            // Use the actual curved alignment for the tap, away from its
-            // stations and the opening's passing loops.
-            let alignment = fixture.railwaySnapshot().edges.max { $0.geometry.length < $1.geometry.length }!
-            // A train can stand on the tapped point when the game pauses (main
-            // a2374a0's full lane, run 39722267769: "Train 2 · running"); the
-            // game is paused, so another point along the same track finds it.
-            // The points lie more than a finger's reach apart: lesson 5's
-            // opening shows nearly the whole map, where the 24 points a tap
-            // reaches cover about 66,000 world units of its 378,527-unit
-            // track, and one train took the taps at 1/3, 2/5 and 1/4,
-            // 25,000 units apart (main 29ebf5e's full lane, run
-            // 39802411409). Its 3/5 point lies by the map's top edge, where
-            // that view cannot pan: all 16 drags left it at y 135.6, short
-            // of the clear area. Zoom in there, as lesson 9's sight does.
-            for (part, whole) in [(1, 3), (2, 3), (1, 2), (2, 5), (3, 5)] as [(Int64, Int64)] {
-                let point = alignment.geometry.location(at: alignment.geometry.length * part / whole).position
-                tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location, zoomIfClamped: true))
-                if ((map.value as? String) ?? "").contains("Track") { break }
-            }
-            XCTAssertTrue(((map.value as? String) ?? "").contains("Track"), "No track selected: \(String(describing: map.value))")
-            openControls()
-            XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'inspector.line.'")).firstMatch.becomesHittable(within: 5), "The selected track's line card must be open")
-            let double = app.buttons["inspector.track.double"]
-            if number == 5 {
-                XCTAssertTrue(double.appears(within: 10))
-                XCTAssertTrue(double.becomesHittable(within: 5))
-                XCTAssertEqual(double.label, "Make double track")
-            } else {
-                XCTAssertFalse(double.exists)
-            }
-            app.terminate()
+        startLesson(5)
+        // Pause first: lesson 5's card stands beside the stretch with
+        // no train on it (decision 378), which changes as the trains
+        // run, so the card moves between S0, S1 and S2 every few
+        // seconds and a touch on Skip found where it was lands on the
+        // map (the screen recording of main 12c1235's full lane, run
+        // 40085460126). With the clock stopped it stays put.
+        pause()
+        dismissGuide()
+        let fixture = GameWorld.newGame(lesson: Lesson.all[4])
+        // Use the actual curved alignment for the tap, away from its
+        // stations and the opening's passing loops.
+        let alignment = fixture.railwaySnapshot().edges.max { $0.geometry.length < $1.geometry.length }!
+        // A train can stand on the tapped point when the game pauses (main
+        // a2374a0's full lane, run 39722267769: "Train 2 · running"); the
+        // game is paused, so another point along the same track finds it.
+        // The points lie more than a finger's reach apart: lesson 5's
+        // opening shows nearly the whole map, where the 24 points a tap
+        // reaches cover about 66,000 world units of its 378,527-unit
+        // track, and one train took the taps at 1/3, 2/5 and 1/4,
+        // 25,000 units apart (main 29ebf5e's full lane, run
+        // 39802411409). Its 3/5 point lies by the map's top edge, where
+        // that view cannot pan: all 16 drags left it at y 135.6, short
+        // of the clear area. Zoom in there, as lesson 9's sight does.
+        for (part, whole) in [(1, 3), (2, 3), (1, 2), (2, 5), (3, 5)] as [(Int64, Int64)] {
+            let point = alignment.geometry.location(at: alignment.geometry.length * part / whole).position
+            tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location, zoomIfClamped: true))
+            if ((map.value as? String) ?? "").contains("Track") { break }
         }
+        XCTAssertTrue(((map.value as? String) ?? "").contains("Track"), "No track selected: \(String(describing: map.value))")
+        openControls()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'inspector.line.'")).firstMatch.becomesHittable(within: 5), "The selected track's line card must be open")
+        let double = app.buttons["inspector.track.double"]
+        XCTAssertTrue(double.appears(within: 10))
+        XCTAssertTrue(double.becomesHittable(within: 5))
+        XCTAssertEqual(double.label, "Make double track")
     }
 
-    func testDepotModeStartsInTheSeventhLesson() {
+    /// Decision 640: the network tool lists the modes `session.allows`
+    /// lets through, no Depot in lesson 6
+    /// (`LessonTests.testDepotModeFromLessonSeven`); this test reaches its
+    /// sidings in lesson 7.
+    func testDepotModeIsReachableInTheSeventhLesson() {
         defer { app?.terminate() }
-        for number in [6, 7] {
-            startLesson(number)
-            dismissGuide()
-            pause()
-            tap(app.buttons["dock.build"])
-            XCTAssertTrue(mode("Lay").appears(within: 5))
-            if number == 7 {
-                tap(app.networkMode("Depot"))
-                XCTAssertTrue(element("network.depotSidings").appears(within: 5))
-                XCTAssertTrue(element("network.depotSidings").becomesHittable(within: 5))
-            } else {
-                XCTAssertFalse(mode("Depot").exists)
-            }
-            app.terminate()
-        }
+        startLesson(7)
+        dismissGuide()
+        pause()
+        tap(app.buttons["dock.build"])
+        XCTAssertTrue(mode("Lay").appears(within: 5))
+        tap(app.networkMode("Depot"))
+        XCTAssertTrue(element("network.depotSidings").appears(within: 5))
+        XCTAssertTrue(element("network.depotSidings").becomesHittable(within: 5))
     }
 
-    func testFreightYardsStartInTheEighthLesson() {
+    /// Decision 640: the station panel shows freight when
+    /// `session.showsFreight`, false in lesson 7
+    /// (`LessonTests.testTheLaterLessonsGames`); this test reaches the
+    /// freight yard in lesson 8.
+    func testFreightYardsAreReachableInTheEighthLesson() {
         defer { app?.terminate() }
-        for number in [7, 8] {
-            startLesson(number)
-            dismissGuide()
-            pause()
-            let stations = stationPoints()
-            XCTAssertFalse(stations.isEmpty)
-            // Holding a station is the existing way into its panel.
-            coordinate(stations[0]).press(forDuration: 1)
-            XCTAssertTrue(element("station.operations").appears(within: 10), "The station panel must be open before looking for freight")
-            if number == 8 {
-                let freight = app.buttons["station.freight.build"]
-                revealPastMenus(freight)
-                XCTAssertTrue(freight.becomesHittable(within: 5))
-            } else {
-                assertAbsent(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'station.freight.'")), through: app.buttons["station.remove"])
-            }
-            app.terminate()
-        }
+        startLesson(8)
+        dismissGuide()
+        pause()
+        let stations = stationPoints()
+        XCTAssertFalse(stations.isEmpty)
+        // Holding a station is the existing way into its panel.
+        coordinate(stations[0]).press(forDuration: 1)
+        XCTAssertTrue(element("station.operations").appears(within: 10), "The station panel must be open before looking for freight")
+        let freight = app.buttons["station.freight.build"]
+        revealPastMenus(freight)
+        XCTAssertTrue(freight.becomesHittable(within: 5))
     }
 
     func testTheNinthLessonsSightOpensItsTourismPanel() {
@@ -332,7 +314,7 @@ final class LessonUITests: XCTestCase {
 
     /// Scrolls a panel's `list` until the middle of `control` shows in it,
     /// as `scrollUntilShown` does, but dragging at the list's left edge,
-    /// clear of its rows (as `assertAbsent` does): a drag that starts on a
+    /// clear of its rows: a drag that starts on a
     /// row's menu (a station's "Platform 1: add a platform track") opens
     /// the menu instead of scrolling, and the station panel stayed at that
     /// row for 40 drags, short of its Freight section (main abb306a's full
@@ -380,22 +362,6 @@ final class LessonUITests: XCTestCase {
         }
         XCTAssertTrue(shown(), "Cannot scroll to \(control)")
         control.waitUntilSettled()
-    }
-
-    /// Negative assertions visit the section, rather than treating an
-    /// off-screen lazy row as proof that a locked control is absent.
-    private func assertAbsent(_ query: XCUIElementQuery, through marker: XCUIElement) {
-        for _ in 0..<60 {
-            XCTAssertFalse(query.firstMatch.exists, "Locked control is present: \(query)")
-            if marker.exists, list.frame.insetBy(dx: 0, dy: 24).contains(CGPoint(x: marker.frame.midX, y: marker.frame.midY)) {
-                marker.waitUntilSettled()
-                return
-            }
-            list.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.85))
-                .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.3)),
-                       withVelocity: XCUIGestureVelocity(rawValue: 250), thenHoldForDuration: 0.3)
-        }
-        XCTFail("Did not reach \(marker) while checking locked controls")
     }
 
     private func tap(_ control: XCUIElement) {

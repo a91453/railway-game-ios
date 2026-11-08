@@ -67,9 +67,14 @@ final class ToolbarSmokeTests: XCTestCase {
 /// This class is absent from ios-build.yml's PR gate selection.
 @MainActor
 final class LineRoutePreferenceUITests: XCTestCase {
-    /// Decision 61: a new UI test stays in the full lane. The menu binds a
-    /// platform to a real-world demo leg and can restore automatic routing.
-    func testALineLegCanSelectAPhysicalPlatform() {
+    /// Decision 61: a new UI test stays in the full lane. Decision 196,
+    /// later: the lines panel's "Advanced" switch folds the tracks each leg
+    /// takes on a phone and shows them again when turned on; decision 481:
+    /// the service day is on the network's own page. Then the leg's menu
+    /// binds a platform to a real-world demo leg and can restore automatic
+    /// routing. Decision 640: one test, as both opened the same demo's
+    /// Lines panel (some three minutes each on the runners).
+    func testTheAdvancedSwitchShowsTheTracksAndALegCanSelectAPhysicalPlatform() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -77,9 +82,15 @@ final class LineRoutePreferenceUITests: XCTestCase {
         defer { app.terminate() }
         app.openDemo("demo.realWorld")
         openLinesPanel(in: app)
-        // Decision 196, later: the tracks a leg takes are an advanced detail.
+        setAdvanced(false, in: app)
+        // Decision 481: the switch, and the service day behind "Whole
+        // network", on the list; the tracks on the line's own page.
+        XCTAssertTrue(app.buttons["lines.network"].appears(within: 10))
+        XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
+        app.openLinePage()
+        XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
+        app.closeLinePage()
         setAdvanced(true, in: app)
-        // Decision 481: on the line's own page.
         app.openLinePage()
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
@@ -98,33 +109,6 @@ final class LineRoutePreferenceUITests: XCTestCase {
         bringIntoView(route, in: app)
         route.tap()
         chooseMenuAction(app.buttons["Automatic route"], of: route, showing: "Automatic route", in: app)
-    }
-
-    /// Decision 196, later: the lines panel's "Advanced" switch folds the
-    /// tracks each leg takes on a phone and shows them again when turned
-    /// on; decision 481: the service day is on the network's own page.
-    func testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay() {
-        continueAfterFailure = false
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        defer { app.terminate() }
-        app.openDemo("demo.realWorld")
-        let pause = app.buttons["Pause"]
-        XCTAssertTrue(pause.appears(within: 15)); pause.tap()
-        let lines = app.buttons["Lines"]
-        XCTAssertTrue(lines.appears(within: 10)); lines.tap()
-        setAdvanced(false, in: app)
-        // Decision 481: the switch, and the service day behind "Whole
-        // network", on the list; the tracks on the line's own page.
-        XCTAssertTrue(app.buttons["lines.network"].appears(within: 10))
-        XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
-        app.openLinePage()
-        XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
-        app.closeLinePage()
-        setAdvanced(true, in: app)
-        app.openLinePage()
-        bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
     }
 
     /// Pauses the game and opens the Lines panel, tapping again while it
