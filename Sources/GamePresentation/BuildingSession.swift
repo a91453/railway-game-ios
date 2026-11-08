@@ -404,10 +404,90 @@ extension GameSession {
             cost = nil
             problem = error.playerMessage(in: language)
         }
+        let quote = world.placedBuildingQuote(kind, at: site) ?? PlacedBuildingQuote(building: .zero, land: .zero)
+        // Decision 660: short of cash because of the city's buildings it
+        // buys out, the refusal names the nearest site the cash covers.
+        var cheaperSite: (centre: PlanPoint, cost: Money)?
+        var shown = problem
+        if let problem, let cost, quote.buyOut > .zero, !world.economy.canAfford(cost),
+           let cheaper = cheaperBuildingSite(than: site, in: draft) {
+            cheaperSite = cheaper
+            shown = problem + language.text(" ", "") + Self.cheaperSiteText(from: site, to: cheaper.centre, cost: cheaper.cost, in: language)
+        }
         return BuildingPreview(
-            kind: kind, centre: site, cost: cost, problem: problem,
-            quote: world.placedBuildingQuote(kind, at: site) ?? PlacedBuildingQuote(building: .zero, land: .zero),
-            residentsMovingIn: movingIn.residents, jobsMovingIn: movingIn.jobs
+            kind: kind, centre: site, cost: cost, problem: shown,
+            quote: quote,
+            residentsMovingIn: movingIn.residents, jobsMovingIn: movingIn.jobs,
+            cheaperSite: cheaperSite.map { CheaperBuildingSite(centre: $0.centre, cost: $0.cost) }
+        )
+    }
+
+    /// How far a cheaper site is looked for round a site the cash does not
+    /// cover (decision 660): 8 cells, 512 m, each of the 8 ways round.
+    static let cheaperSiteReach = 8
+
+    /// The nearest site, one cell (64 m) at a time along the 8 compass
+    /// ways round `site`, where ``buildingKind`` stands and costs a tenth
+    /// of the cash or less, so the first line stays affordable; failing
+    /// that, the nearest the cash covers at all. Of sites as near, the
+    /// cheaper, then the first way from north round clockwise. Only on
+    /// land read in, so a price is never quoted for land not yet known.
+    /// `nil` when none within ``cheaperSiteReach`` (decision 660).
+    func cheaperBuildingSite(than site: PlanPoint, in draft: GameWorld) -> (centre: PlanPoint, cost: Money)? {
+        let kind = buildingKind, look = buildingLook
+        let balance = world.economy.balance
+        let modest = Money(balance.amount / 10)
+        var affordable: (centre: PlanPoint, cost: Money)?
+        for ring in 1...Self.cheaperSiteReach {
+            var cheapest: (centre: PlanPoint, cost: Money)?
+            for way in Self.compassWays {
+                let centre = PlanPoint(x: site.x + way.x * Int64(ring) * Land.cellLength, y: site.y + way.y * Int64(ring) * Land.cellLength)
+                guard world.bounds.contains(centre), isLandRead(at: centre),
+                      let placed = try? draft.buildingPlacement(kind, at: centre, look: look),
+                      world.economy.canAfford(placed.cost) else { continue }
+                if affordable == nil { affordable = (centre, placed.cost) }
+                if placed.cost <= modest, cheapest.map({ placed.cost < $0.cost }) ?? true {
+                    cheapest = (centre, placed.cost)
+                }
+            }
+            if let cheapest { return cheapest }
+        }
+        return affordable
+    }
+
+    /// The 8 compass ways, from north round clockwise, in world units
+    /// (`y` grows southward).
+    private static let compassWays: [(x: Int64, y: Int64)] = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
+
+    /// Whether the land at `point` is known: always, unless it is read in
+    /// as it is needed (decision 88) and its block has not been.
+    private func isLandRead(at point: PlanPoint) -> Bool {
+        guard let blocks = world.landBlocks else { return true }
+        guard point.x >= 0, point.y >= 0 else { return false }
+        let block = LandBlock(cellRow: Int(point.y / Land.cellLength), column: Int(point.x / Land.cellLength))
+        return blocks.contains(block)
+    }
+
+    /// "About 270 m north-west it costs NT$ 101,184.": where the cheaper site is
+    /// from `site`, to the nearest 10 m, and its price (decision 660).
+    static func cheaperSiteText(from site: PlanPoint, to centre: PlanPoint, cost: Money, in language: DisplayLanguage) -> String {
+        let dx = centre.x - site.x, dy = centre.y - site.y
+        let units = Double(dx * dx + dy * dy).squareRoot()
+        let metres = Int64((units / Double(WorldCoordinate.unitsPerMetre) / 10).rounded()) * 10
+        let way: (english: String, chinese: String)
+        switch (dx.signum(), dy.signum()) {
+        case (0, -1): way = ("north", "北")
+        case (1, -1): way = ("north-east", "東北")
+        case (1, 0): way = ("east", "東")
+        case (1, 1): way = ("south-east", "東南")
+        case (0, 1): way = ("south", "南")
+        case (-1, 1): way = ("south-west", "西南")
+        case (-1, 0): way = ("west", "西")
+        default: way = ("north-west", "西北")
+        }
+        return language.text(
+            "About \(metres) m \(way.english) it costs \(cost.moneyText).",
+            "往\(way.chinese)約 \(metres) 公尺只要 \(cost.moneyText)。"
         )
     }
 
@@ -558,6 +638,18 @@ public struct BuildingPreview: Hashable, Sendable {
     /// out (decision 146: a share of each, by area); 0 when it is refused.
     public var residentsMovingIn: Int64 = 0
     public var jobsMovingIn: Int64 = 0
+    /// Decision 660: when the cash does not cover it for the city's
+    /// buildings it buys out, the nearest site the cash covers
+    /// (``GameSession/cheaperBuildingSite(than:in:)``), which ``problem``
+    /// names; `nil` otherwise.
+    public var cheaperSite: CheaperBuildingSite?
+}
+
+/// A site near a building's that the cash covers, and its price (decision
+/// 660).
+public struct CheaperBuildingSite: Hashable, Sendable {
+    public let centre: PlanPoint
+    public let cost: Money
 }
 
 /// A rectangle of the plan, in world units: `minX ..< maxX` by `minY ..< maxY`.
