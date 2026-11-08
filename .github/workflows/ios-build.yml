@@ -34,7 +34,7 @@ name: iOS App Build
 # The full lane runs the build job and two more iPhone jobs in parallel, and
 # the iPad job after the two (decision 582). Each boots its Simulator once.
 # Its four jobs hold at most three of the five macOS runners, so pull
-# requests always have two; the iPad job's 20 to 35 minutes after the
+# requests always have two; the iPad job's 25 to 45 minutes after the
 # iPhone jobs' 65 to 90 end about when the build job's 65 to 110 do.
 #
 # A pull request whose change to the app has already passed here is not
@@ -991,8 +991,9 @@ jobs:
     needs: [changes, ui-full-lane]
     if: ${{ !cancelled() && needs.changes.outputs.ipad == 'true' && needs.changes.outputs.passed != 'true' }}
     runs-on: macos-26
-    # Room for the step limits below (boot 14, tests 30) and the rest.
-    timeout-minutes: 55
+    # Room for the step limits below (build 30, boot 14, tests 30) and the
+    # rest (decision 658).
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v7
 
@@ -1022,6 +1023,25 @@ jobs:
               env.write(f"IPAD_SIMULATOR_UDID={device['udid']}\n")
           PY
 
+      # Decision 658: built before the boot, as the iPhone jobs do, and in a
+      # step of its own. Compiled inside the test step, beside the booted
+      # iPad, the build took 9 minutes before decision 624 (GameCore and
+      # GamePresentation at -O in Debug) and 16 to 19 after it, and the
+      # step's 30 minutes ran out with the tests passed (run 42417467175)
+      # or with one red test to go (42489862739). The iPhone jobs built in
+      # 10 to 15 minutes before their boot on the same commits.
+      - name: Build for iOS Simulator
+        timeout-minutes: 30
+        run: |
+          xcodebuild build-for-testing \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -disableAutomaticPackageResolution \
+            CODE_SIGN_IDENTITY=-
+
       - name: Boot the selected iPad Simulator
         # A first boot's data migration can take most of 8 minutes (see the
         # iPhone job).
@@ -1030,10 +1050,10 @@ jobs:
 
       - name: iPad tutorial tests (bilingual and large text)
         id: ipad-tutorial
-        # This step also compiles the app and the UI tests. It took 7 to 12
-        # minutes on different runners (11m40s once), so leave room; the
-        # whole tutorial's walk (TutorialJourneyUITests, not on a pull
-        # request) adds a few minutes.
+        # The tests only, built above (decision 658): 8 to 9 minutes when
+        # all pass, the whole tutorial's walk (TutorialJourneyUITests, not
+        # on a pull request) among them; a failing test can take up to its
+        # 10-minute allowance.
         timeout-minutes: 30
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
@@ -1063,7 +1083,7 @@ jobs:
             fi
           fi
           echo "iPad UI tests: ${only[*]}"
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
             -configuration Debug \
@@ -1075,8 +1095,7 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution \
-            CODE_SIGN_IDENTITY=-
+            -disableAutomaticPackageResolution
 
       - name: Upload failed iPad tutorial results
         if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')

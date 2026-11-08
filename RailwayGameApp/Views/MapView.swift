@@ -1049,6 +1049,7 @@ struct MapView: View {
                 baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
                 cameraZoomReadout(projection.pointsPerUnit)
                 stationReadout(projection)
+                placesToConnectReadout(projection)
                 expansionTileReadout(projection)
             }
             .sensoryFeedback(.impact(weight: .medium), trigger: holdFeedback)
@@ -1917,6 +1918,31 @@ struct MapView: View {
                 .accessibilityElement()
                 .accessibilityIdentifier("map.stations")
                 .accessibilityValue(Text(verbatim: points.joined(separator: ";")))
+        }
+    }
+
+    /// Where the places the game's first goal asks to connect are (a
+    /// lesson's two towns), in the map's points ("x,y" each, split by
+    /// ";"), under UI tests only: the iPad's tutorial walk lays its track
+    /// from one town to the other once the track step has framed both
+    /// (decision 658).
+    @ViewBuilder
+    private func placesToConnectReadout(_ projection: PlanCamera) -> some View {
+        if Self.readsBaseMap {
+            let points = (session.world.scenario?.scenario.goals ?? []).lazy.compactMap { goal -> [PlanPoint]? in
+                if case .connect(let points, _) = goal { return points }
+                return nil
+            }.first ?? []
+            let text = points.map { place in
+                let point = projection.screenPoint(of: place)
+                return "\(Int(point.x.rounded())),\(Int(point.y.rounded()))"
+            }
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.places")
+                .accessibilityValue(Text(verbatim: text.joined(separator: ";")))
         }
     }
 
