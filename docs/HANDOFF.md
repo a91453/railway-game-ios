@@ -3535,6 +3535,14 @@ M6 重拍的一對（`docs/art/facade-real-screenshots-2026-11-07b/`）遊戲規
 
 STATION-EXT-2（session_01YGNNun8XcCE7vJPpVNXCYZ，同一條分支，2026-11-07）接手，改了遊戲規劃第 55 任看截圖的七點，寫在決策 625「續」：玻璃改帷幕玻璃（夜裡亮窗）、study 用自己的顏色、蓋在軌道上的屋頂只留骨架、邊緣懸在軌道上的切回、碎片不畫、左營與高鐵桃園加立面、高鐵台中截圖改看月台、`-screenshot-3d-clean` 藏提示列與 fps。還沒做的：遊戲規劃在 Mac 拍那六張截圖、看過才合；新竹 study 的正面朝向（決策 625「續」最後）。
 
+STATION-EXT-2 在壓縮第 2 次時停下（2026-11-08），交接如下：
+
+- #1946 已合過 `main`（衝突在 `ScreenshotScene.swift`，兩邊都留：車站外觀的 case 與決策 629 的 `trackHeight`），本機 build（-warnings-as-errors）與 `Map3DStationExteriorsTests`、`ScreenshotScene` 測試 31 支全綠（VERIFIED，Linux），已推、已轉 ready。擁有者決定不等截圖、放進 0.6.0。
+- **還沒做：iOS UI smoke 紅。** run 42437965509（commit 99301bf）只有 `TutorialUITests.testTheLineStepLeavesTheLinesPanelUsable` 失敗（`TutorialUITests.swift:165`「The lines panel did not open」，結果包 artifact 13601318319，trace 裡有一段 4244 ms 沒有畫格）；同一個 `main` 上 #1956、#1957 這支是綠的。遊戲規劃要的下一步：用 `ios-build.yml` 的 `only_testing` 單跑這支兩次；是車站外觀（主緒卡住，例如建網格太久）造成的就修好再推，是不穩就寫理由、重跑失敗的 job，結果在 #1579 回報。CI 全綠時在 #1579 留一行「可合併」。
+- 截圖從沒拍齊：`website-screenshots.yml` 一次跑 12 張會在 45 分鐘逾時（拍到 7 張），要分兩次 `only_testing` 跑。
+- 新竹 study 正面朝向、高鐵桃園 A18 月台的實際高度（決策 625「續」最後）還沒定。
+- CI 提醒 `Map3DStationExteriorsTests` 約 179 秒、`CLASS_WEIGHTS` 沒有它，分片時間偏了可補一列。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
