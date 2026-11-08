@@ -8,7 +8,7 @@ name: TestFlight Checks
 # docs/TESTFLIGHT_GITHUB_ACTIONS.md for what is verified where.
 #
 # Runs on pull requests that change the release workflow, this workflow or
-# the scripts, and by hand (Actions -> TestFlight Checks -> Run workflow).
+# the scripts or the What to Test text, and by hand (Actions -> TestFlight Checks -> Run workflow).
 
 on:
   pull_request:
@@ -16,6 +16,7 @@ on:
       - .github/workflows/testflight.yml
       - .github/workflows/testflight-checks.yml
       - .github/scripts/testflight-*
+      - .github/testflight-whats-new.md
   workflow_dispatch:
 
 permissions:
