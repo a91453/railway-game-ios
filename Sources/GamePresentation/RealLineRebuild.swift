@@ -271,7 +271,7 @@ extension GameSession {
             // to the end, which then had no room for it (decision 605
             // continued). It goes to a free track of a depot instead, as
             // the purchase leaves the trains it has no run for.
-            try Self.berthInDepots(lifted.map(\.0), of: line, in: &world)
+            Self.berthInDepots(lifted.map(\.0), of: line, in: &world)
             reached = .takingUp
             for platform in rebuild.platforms {
                 try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
@@ -351,36 +351,66 @@ extension GameSession {
     /// purchase places a train there (``RealLineLaying``): facing up the
     /// track, standing still at its far end. A train that fits no free
     /// track stays where it is.
-    static func berthInDepots(_ trains: [TrainID], of line: ServiceLine, in world: inout GameWorld) throws(GameError) {
-        for id in trains {
-            guard let train = world.train(id: id), case .onEdge(let traversal, _)? = train.position,
-                  Set(world.stationsStoppedAt(by: id)).isDisjoint(with: line.depots),
-                  let at = world.network.edge(traversal.edge).flatMap({ world.network.node($0.from) })?.position
-            else { continue }
-            let standing = world
-            func distance(_ depot: StationID) -> Int64 {
-                guard let point = standing.station(id: depot)?.location else { return .max }
-                let dx = point.x - at.x, dy = point.y - at.y
-                return dx * dx + dy * dy
+    ///
+    /// Decision 654: under traffic control a train still holding its way
+    /// (an empty run stopped on the line behind a train standing at a
+    /// station, all night) keeps a berth's track reserved until it is
+    /// berthed itself. A berth refused so is tried on a copy and left for
+    /// another pass, after the other trains have gone in, rather than
+    /// failing the rebuild; a train no pass can berth stays where it is.
+    static func berthInDepots(_ trains: [TrainID], of line: ServiceLine, in world: inout GameWorld) {
+        var waiting = trains
+        while !waiting.isEmpty {
+            var refused: [TrainID] = []
+            for id in waiting where !berthInDepot(id, of: line, in: &world) {
+                refused.append(id)
             }
-            // The edges a train stands or reaches back along.
-            let taken = Set(standing.trains.flatMap { other -> [TrackEdgeID] in
-                guard case .onEdge(let traversal, _)? = other.position else { return [] }
-                return [traversal.edge] + other.trailEdges
-            })
-            let length = train.length
-            let berth = line.depots.sorted { (distance($0), $0.rawValue) < (distance($1), $1.rawValue) }
-                .flatMap { standing.trackPlatforms(of: $0) }
-                .first { platform in
-                    !taken.contains(platform.edge) && platform.start + length <= min(platform.end, standing.network.edge(platform.edge)?.length ?? 0)
-                }
-            guard let berth else { continue }
-            try world.unplaceTrain(id)
-            let offset = berth.start + length
-            try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: berth.edge, direction: .forward), offset: offset))
-            try world.setTrainContinuation(id, along: [], stoppingAt: offset)
-            try world.setTrainMovementRate(id, to: 512)
+            if refused.count == waiting.count { return }
+            waiting = refused
         }
+    }
+
+    /// Berths train `id` as ``berthInDepots(_:of:in:)`` says, on the first
+    /// free track GameCore lets it stand on; `false` where a free track
+    /// was refused, `true` where it was berthed or fits none.
+    private static func berthInDepot(_ id: TrainID, of line: ServiceLine, in world: inout GameWorld) -> Bool {
+        guard let train = world.train(id: id), case .onEdge(let traversal, _)? = train.position,
+              Set(world.stationsStoppedAt(by: id)).isDisjoint(with: line.depots),
+              let at = world.network.edge(traversal.edge).flatMap({ world.network.node($0.from) })?.position
+        else { return true }
+        let standing = world
+        func distance(_ depot: StationID) -> Int64 {
+            guard let point = standing.station(id: depot)?.location else { return .max }
+            let dx = point.x - at.x, dy = point.y - at.y
+            return dx * dx + dy * dy
+        }
+        // The edges a train stands or reaches back along.
+        let taken = Set(standing.trains.flatMap { other -> [TrackEdgeID] in
+            guard case .onEdge(let traversal, _)? = other.position else { return [] }
+            return [traversal.edge] + other.trailEdges
+        })
+        let length = train.length
+        let berths = line.depots.sorted { (distance($0), $0.rawValue) < (distance($1), $1.rawValue) }
+            .flatMap { standing.trackPlatforms(of: $0) }
+            .filter { platform in
+                !taken.contains(platform.edge) && platform.start + length <= min(platform.end, standing.network.edge(platform.edge)?.length ?? 0)
+            }
+        guard !berths.isEmpty else { return true }
+        for berth in berths {
+            var trial = world
+            do throws(GameError) {
+                try trial.unplaceTrain(id)
+                let offset = berth.start + length
+                try trial.placeTrain(id, at: .onEdge(TrackTraversal(edge: berth.edge, direction: .forward), offset: offset))
+                try trial.setTrainContinuation(id, along: [], stoppingAt: offset)
+                try trial.setTrainMovementRate(id, to: 512)
+            } catch {
+                continue
+            }
+            world = trial
+            return true
+        }
+        return false
     }
 }
 

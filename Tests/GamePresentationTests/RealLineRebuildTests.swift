@@ -187,7 +187,7 @@ final class RealLineRebuildTests: XCTestCase {
         try world.setTrainContinuation(train, along: [], stoppingAt: platform.start + length)
         XCTAssertEqual(world.stationsStoppedAt(by: train), [sanchong])
 
-        try GameSession.berthInDepots([train, staying], of: line, in: &world)
+        GameSession.berthInDepots([train, staying], of: line, in: &world)
         XCTAssertEqual(world.stationsStoppedAt(by: train), [luzhu])
         XCTAssertEqual(world.train(id: train)?.movement.rate, 512)
         XCTAssertEqual(world.train(id: staying)?.position, stayingAt)
@@ -201,6 +201,33 @@ final class RealLineRebuildTests: XCTestCase {
         XCTAssertFalse(world.trains.contains { $0.id != train && edges($0).contains(edge) })
         try world.assignTrain(train, to: id)
         XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
+    }
+
+    /// Decision 654: the old line's first night, simple rules and traffic
+    /// control (a new game's), at two in the morning. An empty run stands
+    /// all night on the line behind a train at Shanbi with its way still
+    /// reserved, which refused the first trains' berths in the depots, so
+    /// the rebuild could not be built until the third day. Now the trains
+    /// refused go in after the others and it is built that night. Some five
+    /// minutes (a day of the line): `TYMC_FIRST_NIGHT=1`.
+    func testItIsBuiltOnTheFirstNight() throws {
+        guard ProcessInfo.processInfo.environment["TYMC_FIRST_NIGHT"] != nil else {
+            throw XCTSkip("Set TYMC_FIRST_NIGHT=1 (a day of the line, some five minutes).")
+        }
+        let (session, id) = try Self.boughtAsBefore(rules: .simple)
+        XCTAssertTrue(session.world.isTrafficControlEnabled)
+        // At the top speed, ten minutes a tick, as a player waits a night out.
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            world.setSpeed(.fast)
+            try world.advance(ticks: 26 * 6)
+            return ""
+        })
+        session.selectLine(id)
+        let offer = try XCTUnwrap(session.selectedLineRealRebuildOffer)
+        XCTAssertFalse(offer.waitsForTheLastTrain)
+        XCTAssertNil(offer.problem, offer.problem ?? "")
+        XCTAssertTrue(session.rebuildRealLine(offer), session.message?.text ?? "")
+        XCTAssertTrue(try XCTUnwrap(session.world.line(id: id)).runs.contains { !$0.passes.isEmpty })
     }
 
     /// A line bought now has its loops: nothing to rebuild.

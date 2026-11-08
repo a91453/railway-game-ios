@@ -98,9 +98,10 @@ final class DepotReturnReportTests: XCTestCase {
         session.selectLine(id)
         // Decision 652: as a player would, ten minutes at a time until the
         // rebuild can be built now (at most two days): after the last
-        // train, with no train's way over the stretch rebuilt. With A12's
-        // crossover facing the trains in, two empty runs still cross Chang
-        // Gung at two in the morning.
+        // train, with no train's way over the stretch rebuilt. Decision 654:
+        // the first night's trains are berthed in the depots even where an
+        // empty run stopped on the line holds a berth's way, so it is built
+        // at two in the morning (it waited for the third day's 01:10).
         for _ in 0..<288 where session.selectedLineRealRebuildOffer.map({ $0.rebuild == nil || $0.waitsForTheLastTrain }) ?? true {
             XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
                 try world.advance(ticks: 10)
