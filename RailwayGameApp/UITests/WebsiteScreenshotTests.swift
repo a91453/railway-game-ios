@@ -2223,6 +2223,32 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 645 (D5, B5): the high-speed demo as it opens, the whole
+    /// line on the 2D map, then 3D: it opens on the nearest track, not on
+    /// the mountains in the middle of the island, with the game's clock in
+    /// its corner. For the screenshot review of the pull request.
+    func testHighSpeedDemo3DFromTheWholeIsland() {
+        let app = launch(extra: ["-map3D.quality", "high", "-screenshot-device-tier", "1"])
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        settle(seconds: 8)
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        // Touched again when the 3D map has not opened: run 42459052431's
+        // tap left the 2D map up for a minute (the demo at 600x; the touch
+        // cancelled while the main thread stood still, as in decision 604).
+        // Map3DHandoff.opening itself takes 0.13 s over the whole demo.
+        if !app.buttons["map3D.close"].appears(within: 10), open3D.isHittable { open3D.tap() }
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.clock"].firstMatch.appears(within: 10), "The game's clock shows")
+        settle(seconds: 12)
+        keep("high-speed-demo-3d-from-island", app)
+    }
+
     /// The selection card of a station on a phone on its side (a player's
     /// report: its summary was cut short with "…"): a station of the
     /// high-speed demo picked from its tag, the card in the side panel with
