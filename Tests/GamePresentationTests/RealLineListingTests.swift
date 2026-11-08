@@ -71,6 +71,7 @@ final class RealLineListingTests: XCTestCase {
         let owned = try XCTUnwrap(session.world.mapExpansion?.owned)
         let tile = try XCTUnwrap(session.world.mapTilesForSale().sorted().first)
         XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) -> String in
+            world.setUnlimitedFunds(true)
             try world.buyMapTile(tile, passingMilestone: true)
             return ""
         })
@@ -85,6 +86,7 @@ final class RealLineListingTests: XCTestCase {
         let closed = session.realLineAvailabilityKey
         let next = try XCTUnwrap(session.world.mapTilesForSale().sorted().first)
         XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) -> String in
+            world.setUnlimitedFunds(true)
             try world.buyMapTile(next, passingMilestone: true)
             return ""
         })
@@ -92,5 +94,23 @@ final class RealLineListingTests: XCTestCase {
         session.showRealLineList(true)
         XCTAssertNotEqual(session.realLineAvailabilityKey, closed)
         await session.realLineAvailabilityChecked()
+    }
+
+    /// Review L14-4: the list's land check stops before the tiles the track
+    /// reaches between its samples (32 m apart) are added; each of those
+    /// touches a tile the check already has, so the purchase never refuses
+    /// a line the list offers for its land. Every buyable line in the list
+    /// round Kaohsiung and Taipei, bought in full.
+    func testNoLineTheListOffersIsRefusedForItsLand() async throws {
+        for (latitude, longitude) in [(22.6273, 120.3014), (25.047882, 121.517219)] {
+            let session = try game(at: latitude, longitude)
+            session.refreshRealLineAvailability()
+            await session.realLineAvailabilityChecked()
+            let buyable = session.realLineListings.filter(\.isBuyable)
+            XCTAssertFalse(buyable.isEmpty)
+            for listing in buyable {
+                XCTAssertNotEqual(session.realLineOffer(for: listing.line).problem, GameSession.landProblem(in: .traditionalChinese), listing.line.id)
+            }
+        }
     }
 }

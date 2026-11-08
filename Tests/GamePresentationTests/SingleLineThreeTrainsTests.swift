@@ -127,51 +127,63 @@ final class SingleLineThreeTrainsTests: XCTestCase {
     }
 
     /// Review L14-1: whether a train taken off for a loop stays off
-    /// (decision 628) is asked once it is off, so it must not count the
-    /// trains the line has. A line on a timetable runs as many as it has
-    /// (decision 133), one fewer once one is off, so it is never said to
-    /// run them all; a pattern's train is weighed against the pattern's
-    /// own trains, not the line's other service's.
+    /// (decision 628) is weighed with it still on its service, as before
+    /// it was taken off: a line on a timetable runs as many as it has
+    /// (decision 133), so counting after it was off always found it spare;
+    /// and a service counts only its own trains on the track, not those of
+    /// the line's other services.
     func testATrainTakenOffIsWeighedAgainstItsOwnService() throws {
         let session = try playerLine(rules: .simple)
         _ = try placeByHand(in: session)
-        let line = try XCTUnwrap(session.world.lines.first)
-        XCTAssertEqual(line.trains.count, 3)
-        let lifted = line.trains[2]
+        let id = try XCTUnwrap(session.world.lines.first).id
+        session.selectLine(id)
+        session.addPassingLoopToSelectedLine()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        // Decision 628's own case: two on the track run, the third waits off it.
+        let looped = session.world
+        let line = try XCTUnwrap(looped.line(id: id))
+        XCTAssertEqual(line.trains.count, 2)
+        let (first, second) = (line.trains[0], line.trains[1])
+        let spare = try XCTUnwrap(looped.trains.first { looped.assignedLine(of: $0.id) == nil }).id
+        XCTAssertEqual(ServiceLevel.allCases.map { looped.lineTrainsInService(id, at: $0) }, [2, 2, 2])
+        /// `train` taken off its line and the track, as a loop's build does.
+        func lift(_ train: TrainID, in world: inout GameWorld) throws {
+            if world.assignedLine(of: train) != nil { try world.unassignTrain(train) }
+            if world.train(id: train)?.execution != nil { try world.stopTrainService(train) }
+            if world.train(id: train)?.position != nil { try world.unplaceTrain(train) }
+        }
 
-        // Its own service runs three: one off leaves it short.
-        var plain = session.world
-        try plain.unassignTrain(lifted)
-        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(line.id, in: plain))
-        // Set to run two, the third is a spare (decision 628 itself).
-        var two = session.world
-        try two.setLineTrainsInService(line.id, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
-        try two.unassignTrain(lifted)
-        XCTAssertTrue(GameSession.runsEveryTrainOnItsTrack(line.id, in: two))
+        // A third taken off: the two on the track are all it runs.
+        var third = looped
+        try third.assignTrain(spare, to: id)
+        try lift(spare, in: &third)
+        XCTAssertTrue(GameSession.runsEveryTrainOnItsTrack(id, without: spare, in: third))
+        // One of the two taken off: it is needed.
+        var needed = looped
+        try lift(second, in: &needed)
+        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(id, without: second, in: needed))
 
-        // On a timetable it runs every train it has, so none is spare.
-        var timed = two
-        try timed.assignTrain(lifted, to: line.id)
+        // On a timetable the line runs every train it has, so none is
+        // spare; on main the count after the train was off said it was.
+        var timed = looped
         let times = (0..<line.stops.count).map { LineRunTime(arrival: 8 * 3_600 + Int64($0) * 600, departure: 8 * 3_600 + Int64($0) * 600) }
-        try timed.setLineRuns(line.id, to: (0..<12).map { _ in LineRun(from: 0, to: line.stops.count - 1, times: times) })
-        XCTAssertEqual(timed.line(id: line.id)?.trains.count, 3)
-        try timed.unassignTrain(lifted)
-        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(line.id, in: timed), "a timetabled line needs every train it has")
+        try timed.setLineRuns(id, to: (0..<12).map { _ in LineRun(from: 0, to: line.stops.count - 1, times: times) })
+        XCTAssertEqual(timed.line(id: id)?.trains.count, 2)
+        try lift(second, in: &timed)
+        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(id, without: second, in: timed), "a timetabled line needs every train it has")
 
-        // A pattern running two, its second train taken off: the line's
-        // own two trains on the track do not make it spare.
-        var patterned = session.world
-        try patterned.setLineTrainsInService(line.id, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
-        let pattern = try patterned.addLinePattern(line.id, calling: [0, line.stops.count - 1])
-        try patterned.setLineTrainsInService(line.id, to: TrainsInService(peak: 2, offPeak: 2, low: 2), pattern: pattern)
-        try patterned.unassignTrain(lifted)
-        try patterned.assignTrain(lifted, to: line.id, pattern: pattern)
-        let second = try patterned.purchaseTrain(named: "Pattern 2").id
-        try patterned.assignTrain(second, to: line.id, pattern: pattern)
-        try patterned.unassignTrain(lifted)
-        XCTAssertEqual(patterned.line(id: line.id)?.trains.count, 2)
-        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(line.id, pattern: pattern, in: patterned), "the pattern is short of its train")
-        XCTAssertTrue(GameSession.runsEveryTrainOnItsTrack(line.id, in: patterned), "the line's own service runs its two")
+        // The own service weighed by its own trains: a pattern's train on
+        // the track (its pattern runs none) is not one of them. On main
+        // it was counted, and the own service's needed train was left off.
+        var patterned = looped
+        let pattern = try patterned.addLinePattern(id, calling: [0, line.stops.count - 1])
+        try patterned.unassignTrain(second)
+        try patterned.assignTrain(second, to: id, pattern: pattern)
+        try patterned.assignTrain(spare, to: id)
+        try lift(spare, in: &patterned)
+        XCTAssertEqual(patterned.line(id: id)?.trains, [first])
+        XCTAssertEqual(ServiceLevel.allCases.map { patterned.lineTrainsInService(id, at: $0, pattern: pattern) }, [0, 0, 0])
+        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(id, without: spare, in: patterned), "the own service runs two, one on the track")
     }
 
     /// The challenge's way (a station both lines stop at): two lines over

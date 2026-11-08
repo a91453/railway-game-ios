@@ -176,8 +176,25 @@ public enum Map3DHandoff {
                 best = (Double(x), Double(y))
             }
         }
-        for node in world.network.nodes { consider(node.position.x, node.position.y) }
+        var ends: [TrackNodeID: (x: Double, y: Double)] = [:]
+        for node in world.network.nodes {
+            consider(node.position.x, node.position.y)
+            ends[node.id] = (Double(node.position.x), Double(node.position.y))
+        }
+        // Review L14-3: an edge none of whose points can be nearer than the
+        // nearest so far is not laid out. A point P along an edge `length`
+        // long from A to B has |PA| + |PB| ≤ length, so it is at least
+        // (|QA| + |QB| − length) / 2 from the point Q asked of. Laying out
+        // every edge's points took 80–120 ms on the main actor on the demos
+        // (Linux tests), skipping them 2–4 ms.
+        func distance(to end: TrackNodeID) -> Double? {
+            ends[end].map { ((point.x - $0.x) * (point.x - $0.x) + (point.y - $0.y) * (point.y - $0.y)).squareRoot() }
+        }
         for edge in world.network.edges {
+            if let a = distance(to: edge.from), let b = distance(to: edge.to), bestDistance.isFinite,
+               (a + b - Double(edge.length)) / 2 > bestDistance.squareRoot() + 1 {
+                continue
+            }
             for p in world.trackGeometry(of: edge.id)?.points ?? [] { consider(p.x, p.y) }
         }
         for station in world.stations { consider(station.location.x, station.location.y) }
