@@ -54,8 +54,36 @@ public enum WhatsNew {
                     english: "The Collection now shows the ferries as 3D ships, and has a new Cable Car page.",
                     chinese: "圖鑑的渡輪改用 3D 船展示，並新增纜車頁。"
                 ),
+                Line(
+                    english: "The 3D map shows eleven real station buildings (Taiwan Railway and high-speed rail) in their real places, with the tracks left clear and windows lit at night.",
+                    chinese: "3D 地圖多了 11 個真實站房外觀（臺鐵與高鐵），照真實位置放，軌道讓開，晚上亮窗。"
+                ),
+                Line(
+                    english: "A new game opens on the first town, and the help page's search box no longer covers the first entry.",
+                    chinese: "新遊戲開場直接框住第一座城鎮；說明頁的搜尋框不再蓋住第一條。"
+                ),
+                Line(
+                    english: "A heat map now outlines the tracks so they stay visible.",
+                    chinese: "熱圖開著時，軌道多一圈白邊，看得到。"
+                ),
             ],
             fixes: [
+                Line(
+                    english: "The tutorial card no longer covers buttons, banners or the clock, and the tutorial now says to press \u{2715} to finish building.",
+                    chinese: "教學卡片不再擋住按鈕、通知和時鐘，教學也改成「按 ✕ 結束建造」。"
+                ),
+                Line(
+                    english: "Notices at the top of the map keep their width when a side panel is open, the speed warning shows in full, and income pop-ups fade out before the status bar.",
+                    chinese: "開側面板時地圖上緣的通知不再被擠窄，倍速提示完整顯示，收入飄字在狀態列前淡出。"
+                ),
+                Line(
+                    english: "The \"where people are\" legend is no longer hidden behind the station master.",
+                    chinese: "「哪裡人多」圖例不再被站務員蓋住。"
+                ),
+                Line(
+                    english: "After you buy a real line, the 2D map runs smoother, and the line page opens with less stutter.",
+                    chinese: "收購真實路線後 2D 地圖比較順，路線頁打開不再卡一下。"
+                ),
                 Line(
                     english: "Pausing, resuming or changing speed no longer makes the game stall on the hour.",
                     chinese: "暫停、繼續或換速度，整點不再卡一下。"
