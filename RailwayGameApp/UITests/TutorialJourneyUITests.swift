@@ -117,13 +117,17 @@ private final class TutorialJourney {
         zoomOut.tap()
 
         arrive(at: 3)
-        // Once more, so the stretch the walk lays (it must stay clear of the
-        // lines panel, half of a phone's width) is well over 160 m: the
-        // track is laid at about 1 m a point once zoomed out, 2 m twice.
-        if zoomOut.exists, zoomOut.isHittable, zoomOut.isEnabled {
-            zoomOut.tap()
-            Thread.sleep(forTimeInterval: 1)
-        }
+        // The walk lays its track at about 2 m a point (7 points per 16 m
+        // and closer), so the stretch, which must stay clear of the lines
+        // panel (half of a phone's width), is well over 160 m and both
+        // stations stand in the first town, about the middle of the map.
+        // The map opens on that whole town (Mac playtest A9, #1955), some
+        // 4.5 m a point on a phone, and the step's zoom out takes it to 9:
+        // the zoom buttons bring it back in. Laid at 18 m a point (0.6.0
+        // (121)'s full lane, run 42444107304, zoomed out twice) the
+        // stations stood in the fields 2–3 km from either town, and no
+        // fares ever came (reproduced on Linux with lesson 1's world).
+        zoomBackIn(toAtLeast: 7.0 / 1_024)
         planTrack()
         check(map: trackStart, "the track's start")
         tap(trackStart)
@@ -387,6 +391,32 @@ private final class TutorialJourney {
     }
 
     // MARK: - The map
+
+    /// Taps Zoom in, a step at a time, until the camera's zoom
+    /// (`map.camera`, points per world unit) is at least `size`. A step
+    /// whose camera did not move had its touch lost on a slow Simulator and
+    /// is tapped once more; one that moved is never made up by another.
+    private func zoomBackIn(toAtLeast size: Double) {
+        let zoomIn = app.buttons["Zoom in"]
+        let readout = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10), failure("No camera readout"))
+        func zoom() -> Double? { (readout.value as? String).flatMap(Double.init) }
+        for _ in 0..<6 {
+            guard let now = zoom(), now < size * 0.999 else { return }
+            // Not what the step points at, so the card may stand near it: a
+            // touch that does not reach it leaves the camera where it was.
+            XCTAssertTrue(zoomIn.becomesHittable(within: 10), failure("Zoom in cannot be tapped"))
+            let before = readout.value as? String ?? ""
+            func moved() -> Bool {
+                XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", before), object: readout)],
+                                 timeout: 10) == .completed
+            }
+            zoomIn.tap()
+            if !moved() { zoomIn.tap() }
+            XCTAssertTrue(moved(), failure("Zoom in did not move the camera"))
+        }
+        XCTAssertGreaterThanOrEqual(zoom() ?? 0, size * 0.999, failure("Zoom in did not come back to \(size * 1_024) points per 16 m"))
+    }
 
     /// Where the walk lays its track: a row across the map from beside the
     /// tool rail to short of where the lines panel opens (decision 106:

@@ -131,7 +131,24 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // 0.3) no full run since P0-A (main's 37828454679, the manual runs
         // 37837094185 and 37838371614) ever built the house. A failure
         // says what the screen showed.
+        //
+        // The middle of the map is the middle of the first town since a
+        // blank map opens on the whole town (Mac playtest A9, #1955): there
+        // a house buys out the town's offices, NT$ 9.4 million, more than a
+        // new game's cash (0.6.0 (121)'s full lane, run 42444107304). It
+        // had opened on the world's middle, a corner of the town's four
+        // middle blocks, where a house cost NT$ 119,808. So the tap is 7
+        // blocks (448 m) west of the middle, among the town's homes, where
+        // a house costs NT$ 4.35 million at most from 3 to 14 blocks out
+        // (measured on Linux): a block either way still builds. Points
+        // from the camera's zoom (`map.camera`, points per world unit; a
+        // block is 4,096 units).
+        let camera = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(camera.appears(within: 10), "Missing the camera readout")
+        let pointsPerUnit = (camera.value as? String).flatMap(Double.init) ?? 0
+        XCTAssertGreaterThan(pointsPerUnit, 0, "The camera readout says no zoom: \(String(describing: camera.value))")
         let ground = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .withOffset(CGVector(dx: -7 * 4_096 * pointsPerUnit, dy: 0))
         let build = app.buttons["panel.action"]
         func sited() -> Bool {
             XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND isEnabled == true"), object: build)],
@@ -142,8 +159,17 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(sited(), "A tap did not choose a site the house can stand on. \(screenText(in: app))")
         XCTAssertEqual(count.label, "0 buildings placed", "A tap only chooses where it goes")
         build.tap()
-        let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 building placed"), object: count)
+        // A house built in the town takes in the residents and jobs of the
+        // buildings it bought out (#1843), and the count then says so:
+        // "1 building placed · 0 residents, 2 jobs" (full lane run
+        // 42463093583). So the count starts with "1 building placed", and
+        // after continuing it must read exactly as it did before saving.
+        let built = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == %@ OR label BEGINSWITH %@", "1 building placed", "1 building placed · "),
+            object: count
+        )
         XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "The house was not built. \(screenText(in: app))")
+        let builtCount = count.label
 
         openGameMenu(in: app)
         tapMenuAction("menu.saveGame", in: app)
@@ -155,7 +181,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         XCTAssertTrue(count.appears(within: 10), "Missing the building count after continuing")
-        XCTAssertEqual(count.label, "1 building placed", "The house did not survive saving and continuing")
+        XCTAssertEqual(count.label, builtCount, "The house did not survive saving and continuing")
     }
 
     /// City building P0-B (decision 98): the building tool's zoning mode
