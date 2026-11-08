@@ -326,8 +326,8 @@ public struct Map3DScene: Sendable {
     /// Decision 270: the seeded streets of `world` alone, as the scene
     /// would lay them (decision 263: the track and platforms first), for
     /// the 2D map: the track and platforms are laid, the city is not, so
-    /// this is a small part of building the scene. None on a real-world
-    /// map.
+    /// this is a small part of building the scene; the streets are chosen,
+    /// not laid (decision 659). None on a real-world map.
     public static func seededStreets(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil) -> SeededStreetPlan {
         guard world.geoAnchor == nil else { return SeededStreetPlan(edges: [:]) }
         let frame = frame(world: world, focus: nil)
@@ -336,7 +336,7 @@ public struct Map3DScene: Sendable {
         let cleared = builder.addTrack(snapshot)
         builder.addViaducts()
         builder.addPlatforms(snapshot)
-        builder.addSeededStreets(skyline ?? CitySkyline(world: world), clearOf: cleared)
+        builder.addSeededStreets(skyline ?? CitySkyline(world: world), clearOf: cleared, laying: false)
         return SeededStreetPlan(edges: builder.streetEdges)
     }
 

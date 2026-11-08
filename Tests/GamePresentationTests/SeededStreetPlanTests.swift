@@ -72,7 +72,25 @@ final class SeededStreetPlanTests: XCTestCase {
         _ = Map3DScene(world: world)
         let scene = threadSeconds() - sceneStart
         print("SEEDED plan \(plan) s, scene \(scene) s")
-        XCTAssertLessThan(plan, scene)
+        // Decision 659: the streets chosen, not laid. Laid, the plan had
+        // cost as much as the scene (7.26 s against 7.23 s above), which
+        // the 2D map paid on every new track while the tutorial began.
+        XCTAssertLessThan(plan * 10, scene)
+    }
+
+    /// Decision 659: the tutorial's first map, where the 2D map's plan
+    /// took 16 s of a Linux debug build (the iPad's first seconds), is the
+    /// 3D map's streets too.
+    @MainActor
+    func testTheTutorialsPlanIsTheThreeDMapsStreets() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("SeededStreetPlanTests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.startTutorial(atStep: "line.open")
+        let world = try XCTUnwrap(launcher.session).world
+        let plan = Map3DScene.seededStreets(world: world)
+        XCTAssertFalse(plan.isEmpty)
+        XCTAssertEqual(plan.roads, Map3DScene(world: world).seededStreets.roads)
     }
 
     private func threadSeconds() -> Double {

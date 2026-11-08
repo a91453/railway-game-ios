@@ -337,8 +337,11 @@ extension Map3DScene.Builder {
     /// Decision 263: the seeded streets between `skyline`'s lots (a map with
     /// no base map), clear of the cells in `cleared` that the track takes
     /// unless a street crosses it there, then laid as a real map's roads
-    /// are, with their level crossings.
-    mutating func addSeededStreets(_ skyline: CitySkyline, clearOf cleared: Set<Map3DScene.ChunkKey>) {
+    /// are, with their level crossings. Decision 659: with `laying` false,
+    /// only which edges are streets (``streetEdges``), all the 2D map
+    /// draws: laying them, their meshes, paint, props and traffic, was
+    /// nearly all the time and the 2D map threw it away.
+    mutating func addSeededStreets(_ skyline: CitySkyline, clearOf cleared: Set<Map3DScene.ChunkKey>, laying: Bool = true) {
         var built: [Map3DScene.ChunkKey: Int] = [:]
         for lot in skyline.lots(in: region) where !lot.isOpenGround {
             let cell = Map3DScene.ChunkKey(column: lot.column, row: lot.row)
@@ -381,6 +384,7 @@ extension Map3DScene.Builder {
             }
         }
         streetEdges = kept
+        guard laying else { return }
         // The level crossings first: their decks lift the traffic.
         crossings = crossingsOn.sorted(by: { $0.key < $1.key }).map(\.value)
         // Each line's edges next to one another of one kind, one road.
