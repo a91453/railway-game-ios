@@ -447,9 +447,22 @@ final class WebsiteScreenshotTests: XCTestCase {
             keep("sights-not-reached", app)
         }
         XCTAssertTrue(reached, "The sights off the map come into reach")
+        // "Hittable" came while the row still sat under the bottom edge
+        // (run 42528453980): bring it up to the middle before the shot.
+        for _ in 0..<6 where folded.frame.midY > app.frame.height * 0.55 {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 0.5)
+        }
         keep("sights-off-the-map-folded", app)
         folded.tap()
         settle(seconds: 2)
+        // The opened rows below it.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        settle(seconds: 1)
         keep("sights-off-the-map-open", app)
     }
 
