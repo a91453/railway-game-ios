@@ -148,23 +148,43 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testStationExteriorTaichungHSR() { shootStationExterior("exteriorTaichungHSR", lay: "23.870,120.570,24.130,120.640") }
     func testStationExteriorZuoying() { shootStationExterior("exteriorZuoying", lay: "22.670,120.270,22.940,120.330") }
 
-    private func shootStationExterior(_ scene: String, lay view: String) {
+    /// Decision 665: the second batch's studies the same way. Keelung,
+    /// Chiayi and Tainan in the demo's real lines laid round them; the
+    /// forest and sugar railways' stations on the empty map, their real
+    /// lines' track drawn. Each looked at from its buildings' middle
+    /// (Keelung's between the north and south stations, Tainan's at the
+    /// 1936 station).
+    func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765") }
+    func testStationExteriorChiayi() { shootStationExterior("exteriorChiayi", lay: "23.455,120.415,23.505,120.470") }
+    func testStationExteriorTainan() { shootStationExterior("exteriorTainan", lay: "22.975,120.190,23.020,120.240") }
+    func testStationExteriorBeimen() { shootStationExterior("exteriorBeimen", lay: nil) }
+    func testStationExteriorFenqihu() { shootStationExterior("exteriorFenqihu", lay: nil) }
+    func testStationExteriorAlishan() { shootStationExterior("exteriorAlishan", lay: nil) }
+    func testStationExteriorWushulin() { shootStationExterior("exteriorWushulin", lay: nil) }
+    func testStationExteriorXihu() { shootStationExterior("exteriorXihu", lay: nil) }
+    func testStationExteriorQiaotou() { shootStationExterior("exteriorQiaotou", lay: nil) }
+
+    private func shootStationExterior(_ scene: String, lay view: String?) {
         // Laying the lines and running half an hour take minutes in the
         // Debug app (the workflow allows up to 30 minutes a test).
         executionTimeAllowance = 1_500
         // Each study's OSM origin, but the HSR Taichung one: its platforms'
         // middle, 180 m north-east (the origin is by the high-rises).
         let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
-                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864"]
+                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864",
+                      "exteriorKeelung": "25.13303,121.73923", "exteriorChiayi": "23.479162,120.441182", "exteriorTainan": "22.996996,120.213261",
+                      "exteriorBeimen": "23.487621,120.454664", "exteriorFenqihu": "23.505276,120.695147", "exteriorAlishan": "23.510083,120.804323",
+                      "exteriorWushulin": "23.328660,120.373799", "exteriorXihu": "23.952050,120.481810", "exteriorQiaotou": "22.753488,120.314640"]
         for (hour, suffix) in [("day", ""), ("night", "Night")] {
-            let app = launch(extra: ["-screenshot-scene", scene + suffix, "-screenshot-lay-demo", view, "-screenshot-3d-view", "380,215,40",
+            let laying = view.map { ["-screenshot-lay-demo", $0] } ?? []
+            let app = launch(extra: ["-screenshot-scene", scene + suffix] + laying + ["-screenshot-3d-view", "380,215,40",
                                      "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high",
                                      // Decision 625 續: no frame rate or gesture hint over the stations.
                                      "-screenshot-3d-clean"])
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy laying the lines for a
             // minute at a time, longer than a UI query waits.
-            Thread.sleep(forTimeInterval: 240)
+            if view != nil { Thread.sleep(forTimeInterval: 240) }
             let open3D = app.buttons["map.open3D"]
             XCTAssertTrue(open3D.appears(within: 600))
             XCTAssertTrue(open3D.becomesHittable(within: 300))

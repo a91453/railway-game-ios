@@ -217,6 +217,20 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case exteriorTaoyuanHSR, exteriorTaoyuanHSRNight
     case exteriorTaichungHSR, exteriorTaichungHSRNight
     case exteriorZuoying, exteriorZuoyingNight
+    /// Decision 665: the same round the second batch's studies (decision
+    /// 626): TRA Keelung, Chiayi and Tainan (the demo's real lines laid
+    /// round them), the forest railway's Beimen, Fenqihu and Alishan, and
+    /// the sugar railways' Wushulin, Xihu and Qiaotou (their real lines'
+    /// track only, none laid).
+    case exteriorKeelung, exteriorKeelungNight
+    case exteriorChiayi, exteriorChiayiNight
+    case exteriorTainan, exteriorTainanNight
+    case exteriorBeimen, exteriorBeimenNight
+    case exteriorFenqihu, exteriorFenqihuNight
+    case exteriorAlishan, exteriorAlishanNight
+    case exteriorWushulin, exteriorWushulinNight
+    case exteriorXihu, exteriorXihuNight
+    case exteriorQiaotou, exteriorQiaotouNight
 
     /// Decision 629 (TRACKHEIGHT): flat ground 4 km a side, 5 m up, with
     /// a river 192 m wide across it, and a stretch of track drawn across
@@ -270,6 +284,16 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .exteriorTaoyuanHSR, .exteriorTaoyuanHSRNight: (25.01347985, 121.214539)
         case .exteriorTaichungHSR, .exteriorTaichungHSRNight: (24.1112536, 120.61474665)
         case .exteriorZuoying, .exteriorZuoyingNight: (22.68726485, 120.3074864)
+        // Decision 665: each study's origin (``Map3DExteriorStudy/origin``).
+        case .exteriorKeelung, .exteriorKeelungNight: (25.13303, 121.73923)
+        case .exteriorChiayi, .exteriorChiayiNight: (23.4799, 120.44158)
+        case .exteriorTainan, .exteriorTainanNight: (22.99714, 120.21332)
+        case .exteriorBeimen, .exteriorBeimenNight: (23.48763, 120.45438)
+        case .exteriorFenqihu, .exteriorFenqihuNight: (23.50534, 120.69492)
+        case .exteriorAlishan, .exteriorAlishanNight: (23.51, 120.80434)
+        case .exteriorWushulin, .exteriorWushulinNight: (23.32866, 120.37378)
+        case .exteriorXihu, .exteriorXihuNight: (23.95205, 120.481765)
+        case .exteriorQiaotou, .exteriorQiaotouNight: (22.75303, 120.31468)
         default: nil
         }
     }
@@ -297,9 +321,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         // The line runs 50 km; the map opens at 02:00, its last trains in.
         case .tymcRebuild: Self.realLineWorld(at: self, side: 1 << 22, ticks: 12, in: language)
-        case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaoyuanHSR, .exteriorTaichungHSR, .exteriorZuoying:
+        case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaoyuanHSR, .exteriorTaichungHSR, .exteriorZuoying,
+             .exteriorKeelung, .exteriorChiayi, .exteriorTainan, .exteriorBeimen, .exteriorFenqihu, .exteriorAlishan,
+             .exteriorWushulin, .exteriorXihu, .exteriorQiaotou:
             Self.realLineWorld(at: self, ticks: 57, in: language)
-        case .exteriorTaichungNight, .exteriorHsinchuNight, .exteriorBanqiaoNight, .exteriorTaoyuanHSRNight, .exteriorTaichungHSRNight, .exteriorZuoyingNight:
+        case .exteriorTaichungNight, .exteriorHsinchuNight, .exteriorBanqiaoNight, .exteriorTaoyuanHSRNight, .exteriorTaichungHSRNight, .exteriorZuoyingNight,
+             .exteriorKeelungNight, .exteriorChiayiNight, .exteriorTainanNight, .exteriorBeimenNight, .exteriorFenqihuNight, .exteriorAlishanNight,
+             .exteriorWushulinNight, .exteriorXihuNight, .exteriorQiaotouNight:
             Self.realLineWorld(at: self, ticks: 117, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
