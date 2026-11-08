@@ -1367,6 +1367,10 @@ struct MapView: View {
                 buildingLayer.buildingEnded()
             }
         }
+        .onChange(of: showsCatchmentRings) { _, on in
+            // Decision 630: the rings off take the coverage shortcut with them.
+            buildingLayer.catchmentRingsSwitched(on: on)
+        }
         .onChange(of: popTravelModeName) {
             // A layer the player chose shows instead (decision 311).
             buildingLayer.playerChoseLayer()

@@ -80,6 +80,14 @@ public enum MapLayers {
         catchmentRadiusWorldUnits * pointsPerUnit
     }
 
+    /// The stations that get a catchment ring: none when the layer is off,
+    /// and never a depot (decision 630): a depot is where trains rest, not
+    /// where people board, so it reaches no one.
+    public static func catchmentStations(in world: GameWorld, layers: MapLayerPreferences) -> [Station] {
+        guard layers.showsCatchmentRings else { return [] }
+        return world.stations.filter { !$0.isDepot }
+    }
+
     /// Derives a snapshot of waiting passenger counts for each station in the world.
     ///
     /// Provides explicit Equatable dependency for MapCanvas to redraw when waiting counts change.
