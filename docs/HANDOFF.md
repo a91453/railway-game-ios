@@ -572,7 +572,7 @@
 - 第 57 任由第 56 任用 `create_session` 開（第 6 層）。開工先做兩件事：在 #1579 登記，再把 §1 表格的遊戲規劃改成新 session。第 57 任開的下一任會是第 7 層：到那時（下一任會在第 7 層）改請作者在 claude.ai 開（CLAUDE.md 的層數規則）。
 - **0.6.0 (122) 已發**：作者自己按（testflight run 42489785280，commit `dc4a436e`），What to Test 有自動填上（沒有警告）。作者說會自己測。
   - 發版後的檢查：完整 `ci.yml` 42489852187 **綠**；full lane（ios-build 42489862739）**紅**：iPhone 四個 job 綠，**iPad 教學 job 在 30 分鐘時逾時**（最後一步是「Wait for io.github.a91453.RailwayGame to idle」）。
-  - **iPad 教學連三輪紅**：11-07 的 42417467175、121 的 42444107304（那一輪 build 和 map 兩個 iPhone job 也紅）、122 的 42489862739。結果檔在各 run 的 `ipad-tutorial-xcresult`、`ipad-tutorial-trace`（保留 7 天）。**第 57 任要先派人查**（§1.1 的「除錯」：full lane 紅，當天派），照 §1.2「full lane 紅了」的步驟和綠的那輪比。IPAD-FIXES-2（#1966 的 iPad 教學測試紅）和 FULLLANE-121（#1978）都碰過這個 job，先讀它們留在 §4.49 和 #1978 的紀錄。要跟作者說 122 的 full lane 結果：iPhone 都綠，iPad 教學測試逾時，還不知道是 App 還是測試的問題。
+  - **iPad 教學連三輪紅**：11-07 的 42417467175、121 的 42444107304（那一輪 build 和 map 兩個 iPhone job 也紅）、122 的 42489862739。結果檔在各 run 的 `ipad-tutorial-xcresult`、`ipad-tutorial-trace`（保留 7 天）。**第 57 任要先派人查**（§1.1 的「除錯」：full lane 紅，當天派），照 §1.2「full lane 紅了」的步驟和綠的那輪比。IPAD-FIXES-2（#1966 的 iPad 教學測試紅）和 FULLLANE-121（#1978）都碰過這個 job，先讀 §4.57（IPAD-FIXES-2 查到點擊被取消，改測試再按一次）和 #1978 的紀錄；這次是整個 job 逾時，不一定是同一個原因。要跟作者說 122 的 full lane 結果：iPhone 都綠，iPad 教學測試逾時，還不知道是 App 還是測試的問題。
 - **這一任合併的**（main 從 059a4b4 到 152da4b）：#1965、#1969、#1959、#1970、#1967、#1964、#1971、#1972、#1963、#1961、#1975、#1973、#1974、#1977、#1962、#1976、#1979、#1981、#1982、#1966、#1983、#1978、#1938、#1984、#1985、#1986、#1987、#1988、#1989（有些是 PATROL 或作者合的）。
 - **開著的 PR**：只有 **#1990 TYMC-REBUILD-GAPS**（draft，決策 654，只改 GamePresentation）：機捷改建在第一晚收班後就做得成，改建死結 3 → 0；傍晚 環北↔A12 還沒試，寫在決策 654 下一步。CI 綠了它自己轉 ready，PATROL 合。
 - **還在做的 session**：
