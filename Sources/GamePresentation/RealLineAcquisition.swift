@@ -127,13 +127,16 @@ public struct RealBranchLine: Hashable, Sendable {
     }
 
     /// Decision 652: the stations between its ends (by their names in the
-    /// timetable) whose turn-back crossover on the next stop's side gets a
-    /// second one the other way, just beyond it: a train coming in on its
-    /// own track crosses there to the other way's platform, stops, and
-    /// leaves from it back the way it came. The Taoyuan Airport MRT's
-    /// Airport Terminal 1 (A12), where the shuttles from Huanbei turn,
-    /// so they do not stand on the Taipei-bound track the expresses from
-    /// Terminal 2 need.
+    /// timetable) whose turn-back crossover on the next stop's side is
+    /// laid the other way round, facing the trains coming in: a train in
+    /// on its own track crosses there to the other way's platform, stops,
+    /// and leaves from it back the way it came. The Taoyuan Airport MRT's
+    /// Airport Terminal 1 (A12), where the shuttles from Huanbei turn, so
+    /// they need not stand on the Taipei-bound track the expresses from
+    /// Terminal 2 need. Its next stop, Terminal 2, turns trains back too,
+    /// and its crossover on that side, between the two, still takes a
+    /// train turned back at Terminal 1 over to its own track; the 455 m
+    /// between the stations has no room for a third.
     var facingTurnbackStations: [String] { isTaoyuanAirport ? ["機場第一航廈站"] : [] }
 
     /// Decision 556: whether the ground under its depots beside the line
@@ -1270,13 +1273,12 @@ extension RealLineLaying {
             let facingStops = Set(line.facingTurnbackStations.compactMap { runs.stops.firstIndex(of: $0) })
             for stop in turning {
                 let span = spans[stop]
-                // Decision 652: beyond the crossover on the next stop's
-                // side, one the other way.
-                let facing = facingStops.contains(stop) ? 2 * gap + ramp + 2 * gap : nil
-                var sides: [(low: Double, high: Double, facing: Bool)] = [
-                    (span.lowerBound - 2 * gap - ramp, span.lowerBound - 2 * gap, false), (span.upperBound + 2 * gap, span.upperBound + 2 * gap + ramp, false)
+                // Decision 652: on the next stop's side, facing the trains
+                // coming in.
+                let sides: [(low: Double, high: Double, facing: Bool)] = [
+                    (span.lowerBound - 2 * gap - ramp, span.lowerBound - 2 * gap, false),
+                    (span.upperBound + 2 * gap, span.upperBound + 2 * gap + ramp, facingStops.contains(stop))
                 ]
-                if let facing { sides.append((span.upperBound + facing, span.upperBound + facing + ramp, true)) }
                 for (low, high, isFacing) in sides {
                     let reach = (low - gap)...(high + gap)
                     guard low > second.a + ramp + gap, high < second.b - ramp - gap,
