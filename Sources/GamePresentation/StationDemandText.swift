@@ -383,7 +383,35 @@ extension GameWorld {
     /// exchanges any with (``dailyDemand(from:to:)`` both ways), by
     /// ascending station ID.
     public func stationDemandPairs(of id: StationID) -> [StationDemandPair] {
-        stationRidership(of: id).pairs
+        var days: [StationID: [StationID: Int64]] = [:]
+        return stationDemandPairs(of: id, days: &days)
+    }
+
+    /// The same, reading each station's day (``dailyDemands(from:)``)
+    /// from `days` and keeping there the ones it works out, for a caller
+    /// asking for several stations' pairs (a line's journey trace).
+    /// CRASH-STATION (decision 644): the pairs alone, not through
+    /// ``stationRidership(of:)``, which shares every pair among the hours,
+    /// and each share works the day's tourists out again: on Taipei with
+    /// the Wenhu Line bought that was half of a station's ten seconds.
+    func stationDemandPairs(of id: StationID, days: inout [StationID: [StationID: Int64]]) -> [StationDemandPair] {
+        guard stationDemand(of: id) != nil else { return [] }
+        func day(_ station: StationID) -> [StationID: Int64] {
+            if let known = days[station] { return known }
+            let worked = dailyDemands(from: station)
+            days[station] = worked
+            return worked
+        }
+        let outbound = day(id)
+        var pairs: [StationDemandPair] = []
+        for other in stations where other.id != id && stationDemand(of: other.id) != nil {
+            let there = outbound[other.id] ?? 0
+            let back = day(other.id)[id] ?? 0
+            if there > 0 || back > 0 {
+                pairs.append(StationDemandPair(station: other.id, outbound: there, inbound: back))
+            }
+        }
+        return pairs
     }
 
     /// One pair as the station panel lists it: "Beta · 6,000 there · 4,000
