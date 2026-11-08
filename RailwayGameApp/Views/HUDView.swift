@@ -643,6 +643,48 @@ private struct GameMenu: View, Equatable {
                 "收起按鈕，鏡頭自己在你的列車、車站、路線和地圖上跑的真實列車之間切換。碰一下螢幕就回來。"
             )))
             .accessibilityIdentifier("menu.ambient")
+        case .explore:
+            // Decision 648: the gallery and the 3D city preview, found in
+            // the menu rather than halfway down Settings.
+            Menu {
+                Button {
+                    screen.showsTrainGarage = true
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Trains up close", "近看列車"))
+                    } icon: {
+                        Image(systemName: "tram.fill")
+                    }
+                }
+                .accessibilityIdentifier("menu.trainGarage")
+                Button {
+                    screen.cityPreview = .kaohsiung
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("3D City: Kaohsiung Station", "3D 城市：高雄車站"))
+                    } icon: {
+                        Image(systemName: "building.2")
+                    }
+                }
+                .accessibilityIdentifier("menu.cityView")
+                Button {
+                    screen.cityPreview = .taichung
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("3D City: Taichung Station", "3D 城市：臺中車站"))
+                    } icon: {
+                        Image(systemName: "tram")
+                    }
+                }
+                .accessibilityIdentifier("menu.cityView.taichung")
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Trains & 3D City", "列車與 3D 城市"))
+                } icon: {
+                    Image(systemName: "binoculars")
+                }
+            }
+            .accessibilityIdentifier("menu.explore")
         case .settings:
             Button {
                 screen.panel = .settings

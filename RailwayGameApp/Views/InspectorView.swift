@@ -76,19 +76,10 @@ struct InspectorView: View {
             // Build since decision 114. The card's head never scrolls, so
             // the button shows with the line beside it. The train tool has
             // its own button among its options.
-            let line = session.world.assignedLine(of: train)
-            let followable = session.tool == .select && session.world.train(id: train)?.position != nil
-            if line != nil || followable {
-                HStack(spacing: 6) {
-                    if let line {
-                        lineButtons([line])
-                    } else {
-                        Spacer(minLength: 0)
-                    }
-                    if followable {
-                        followButton(train)
-                    }
-                }
+            // Decision 648: Follow stands in the card's head now, beside
+            // the title, so it never waits below the fold.
+            if let line = session.world.assignedLine(of: train) {
+                lineButtons([line])
             }
             // Decision 336, later: the train's timetable and the fleet
             // (where trains are sold), not only behind Build → Train.
@@ -295,6 +286,16 @@ struct InspectorView: View {
             && session.selectedTrackEdge != nil ? "point.topleft.down.to.point.bottomright.curvepath" : "tram.fill"
     }
 
+    /// Decision 648: the train the head's Follow button follows.
+    private var followableTrain: TrainID? {
+        guard let train = session.tappedTrainID,
+              SelectionHeadLayout.showsFollow(
+                  selectTool: session.tool == .select,
+                  trainOnMap: session.world.train(id: train)?.position != nil
+              ) else { return nil }
+        return train
+    }
+
     private var selectionInspector: some View {
         // On an iPhone held sideways the side panel's card is narrow: the
         // buttons go under the words, so neither is cut short.
@@ -346,8 +347,11 @@ struct InspectorView: View {
                 Spacer(minLength: 0)
             }
             // Only with a button: an empty row would add its spacing.
-            if session.selectedBuildingID != nil || session.selectedStation != nil {
+            if session.selectedBuildingID != nil || session.selectedStation != nil || followableTrain != nil {
                 HStack(spacing: 10) {
+                    if let train = followableTrain {
+                        followButton(train)
+                    }
                     if session.selectedBuildingID != nil {
                         Button {
                             session.sellSelectedBuilding()
