@@ -176,13 +176,19 @@ public enum PassingLoopHint {
 
     /// The line of the first train in `waits` (trains waiting for others,
     /// ascending) that waits for another train, not in a deadlock, on a
-    /// line with a leg on single track (``GameWorld/lineTrackCounts(_:)``
-    /// of 1): where a passing loop would help. `nil` for none.
+    /// line with a leg on single track and no passing place for the two
+    /// (``GameWorld/passingPlaceShortfall(of:trains:readyFor:)``): where a
+    /// passing loop would help. A train waiting at a loop the line already
+    /// stops at is meeting the other there, as it should (decision 628,
+    /// the owner's Mac playtest D2). `nil` for none.
     public static func waitingLine(_ waits: [TrafficOverlay.Wait], in world: GameWorld) -> LineID? {
         var single: [LineID: Bool] = [:]
         for wait in waits where !wait.isDeadlocked {
             guard let line = world.lines.first(where: { $0.trains.contains(wait.train) }) else { continue }
-            let isSingle = single[line.id] ?? (world.lineTrackCounts(line.id) ?? []).contains(1)
+            let isSingle = single[line.id] ?? (
+                (world.lineTrackCounts(line.id) ?? []).contains(1)
+                    && world.passingPlaceShortfall(of: line.id, trains: max(2, world.trainsOnTrack(of: line))) != nil
+            )
             single[line.id] = isSingle
             if isSingle { return line.id }
         }

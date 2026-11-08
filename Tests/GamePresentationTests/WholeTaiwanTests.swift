@@ -310,7 +310,7 @@ final class WholeTaiwanTests: XCTestCase {
 
     /// An empty whole-Taiwan map opens on the whole island (decision 89);
     /// once something is built, on what is built, as any map does. A blank
-    /// new game opens where the camera puts it.
+    /// new game opens on its first town (Mac playtest 2026-11-08, A9).
     func testAnEmptyWholeTaiwanMapOpensOnTheWholeIsland() throws {
         var world = GameWorld.newWholeTaiwanGame()
         XCTAssertEqual(WorldRegion.opening(in: world), WorldRegion(bounds: world.bounds))
@@ -321,7 +321,11 @@ final class WholeTaiwanTests: XCTestCase {
         let taipei = point(25.0479308, 121.5170046)
         _ = try world.buildStation(named: "Taipei", at: taipei)
         XCTAssertEqual(WorldRegion.opening(in: world), WorldRegion.built(in: world))
-        XCTAssertNil(WorldRegion.opening(in: .newGame()))
+        let blank = GameWorld.newGame()
+        let town = try XCTUnwrap(blank.roads?.towns.first).middle
+        let opening = try XCTUnwrap(WorldRegion.opening(in: blank))
+        XCTAssertEqual(opening.minX + opening.width / 2, Double(town.x))
+        XCTAssertEqual(opening.width, 2 * Double(WorldRegion.openingTownReach))
     }
 
     func testTheLauncherStartsTheWholeOfTaiwan() throws {

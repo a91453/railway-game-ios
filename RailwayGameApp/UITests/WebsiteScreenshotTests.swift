@@ -134,6 +134,49 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 625: the real stations' exterior studies on the 3D map,
+    /// in the demo's real lines laid round TRA Taichung (the old station
+    /// beside the new: one building each), TRA Hsinchu, TRA Banqiao, HSR
+    /// Taoyuan with the Airport MRT's A18, HSR Taichung with TRA
+    /// Xinwuri, and HSR Zuoying with TRA Xinzuoying, by day (09:30) and
+    /// by night (19:30), close over the platforms and trains. For the screenshot review of the pull request that stood
+    /// them there.
+    func testStationExteriorTaichung() { shootStationExterior("exteriorTaichung", lay: "24.115,120.660,24.160,120.715") }
+    func testStationExteriorHsinchu() { shootStationExterior("exteriorHsinchu", lay: "24.775,120.945,24.828,121.000") }
+    func testStationExteriorBanqiao() { shootStationExterior("exteriorBanqiao", lay: "24.990,121.440,25.040,121.490") }
+    func testStationExteriorTaoyuanHSR() { shootStationExterior("exteriorTaoyuanHSR", lay: "24.990,121.190,25.040,121.240") }
+    func testStationExteriorTaichungHSR() { shootStationExterior("exteriorTaichungHSR", lay: "23.870,120.570,24.130,120.640") }
+    func testStationExteriorZuoying() { shootStationExterior("exteriorZuoying", lay: "22.670,120.270,22.940,120.330") }
+
+    private func shootStationExterior(_ scene: String, lay view: String) {
+        // Laying the lines and running half an hour take minutes in the
+        // Debug app (the workflow allows up to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        // Each study's OSM origin, but the HSR Taichung one: its platforms'
+        // middle, 180 m north-east (the origin is by the high-rises).
+        let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
+                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864"]
+        for (hour, suffix) in [("day", ""), ("night", "Night")] {
+            let app = launch(extra: ["-screenshot-scene", scene + suffix, "-screenshot-lay-demo", view, "-screenshot-3d-view", "380,215,40",
+                                     "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high",
+                                     // Decision 625 續: no frame rate or gesture hint over the stations.
+                                     "-screenshot-3d-clean"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            // The Debug app's main thread is busy laying the lines for a
+            // minute at a time, longer than a UI query waits.
+            Thread.sleep(forTimeInterval: 240)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 600))
+            XCTAssertTrue(open3D.becomesHittable(within: 300))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep("station-exterior-\(scene.dropFirst("exterior".count).lowercased())-\(hour)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 603: the Xiaobitan Branch Line bought on a real map of
     /// New Taipei and run on to 07:40, its one train followed: on the 2D
     /// map and in 3D, a single track with one platform track at each
@@ -532,6 +575,33 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's
     /// screenshot review.
+    /// Decision 629 (TRACKHEIGHT): a stretch drawn across a river on the
+    /// ground, refused, its card offering a bridge and a tunnel; then the
+    /// bridge tapped, and the end raised a metre by hand. In Chinese and
+    /// in English. For the screenshot review of the pull request that
+    /// added them.
+    func testTrackHeightFixes() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackHeight"], english: english)
+            let suffix = english ? "-en" : ""
+            let fixUp = app.buttons["map.build.fixUp"]
+            XCTAssertTrue(fixUp.appears(within: 180), "The card offers a bridge")
+            XCTAssertTrue(app.buttons["map.build.fixDown"].exists, "and a tunnel")
+            settle(seconds: 3)
+            keep("track-height-refused\(suffix)", app)
+            fixUp.tap()
+            XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered, nothing left to fix")
+            settle(seconds: 2)
+            keep("track-height-bridge\(suffix)", app)
+            let raise = app.buttons["map.build.raise"]
+            XCTAssertTrue(raise.becomesHittable(within: 10))
+            raise.tap()
+            settle(seconds: 2)
+            keep("track-height-raised\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     func testFerryShoreCijin() {
         let app = launch(extra: ["-screenshot-scene", "cijinShore"])
         defer { app.terminate() }
@@ -2771,6 +2841,54 @@ final class WebsiteScreenshotTests: XCTestCase {
             _ = app.buttons["fleet.done"].appears(within: 10)
             settle()
             keep("trains-fleet", app)
+        }
+    }
+
+    /// Decision 632: the collection's ferry and cable car pages, and each
+    /// one's 3D stage (the phone on its side, as every screenshot here):
+    /// the close view and the side by day, the close view at night and the
+    /// view from above. For the screenshot review of the pull request that
+    /// added them.
+    func testCollectionFerriesAndCableCarsIn3D() {
+        for (page, exhibit, entry) in [("渡輪", "ferries", "settings.ferry.chigu2"), ("纜車", "cableways", "settings.cableway.sunMoonLake")] {
+            let app = launch()
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            // As testFerryMode: bring the garage row up, then the page's
+            // segment above it.
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+            let segment = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", page)).firstMatch
+            XCTAssertTrue(segment.becomesHittable(within: 10), "Missing the collection's \(exhibit) page")
+            segment.tap()
+            let open = app.buttons["settings.collection.\(exhibit)"]
+            XCTAssertTrue(open.appears(within: 10), "The \(exhibit) page")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)[entry].firstMatch, clearOf: .slider))
+            settle()
+            keep("collection-\(exhibit)-page", app)
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(open, clearOf: .slider), "The \(exhibit) button")
+            open.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The \(exhibit) stage did not open")
+            // The picture shows once the models are made (the first run's
+            // day shots caught the spinner).
+            XCTAssertTrue(app.activityIndicators.firstMatch.disappears(within: 180), "The \(exhibit) models")
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("collection-\(exhibit)-day-close", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-day-side", app)
+            let light = app.segmentedControls["trainShowcase.light"]
+            light.buttons.element(boundBy: 2).tap()
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-close", app)
+            app.buttons["trainShowcase.camera.overhead"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-above", app)
+            app.terminate()
         }
     }
 

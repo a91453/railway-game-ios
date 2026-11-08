@@ -377,6 +377,12 @@ public enum HighSpeedDemo {
         /// it keeps; `nil`, every line's. A line keeps its sets in the
         /// depots that list it, or none.
         var lines: [Int]? = nil
+        /// Decision 634: how long the real one's tracks are, in world
+        /// units, when the demo's sidings end where they do, half that
+        /// beyond its middle, rather than being centred on it: Liujia's
+        /// ladder and sidings are twice its tracks' length, and centred
+        /// they ran out over the Touqian River.
+        var trackLength: Double? = nil
     }
 
     /// The High Speed Rail's depots the demo keeps its sets in: Nangang's
@@ -397,7 +403,7 @@ public enum HighSpeedDemo {
     /// Nangang (eight at night, seven on the first).
     static let realDepots = [
         RealDepot(english: "Nangang Sidings", chinese: "南港留置線", latitude: 25.054203, longitude: 121.615057, sidings: 8, lines: [0, 1]),
-        RealDepot(english: "Liujia Depot", chinese: "六家基地", latitude: 24.798603, longitude: 121.042793, sidings: 8, lines: [2]),
+        RealDepot(english: "Liujia Depot", chinese: "六家基地", latitude: 24.798603, longitude: 121.042793, sidings: 8, lines: [2], trackLength: 420 * RealWorldDemo.metre),
         RealDepot(english: "Wuri Depot", chinese: "烏日機廠", latitude: 24.093566, longitude: 120.624164),
         RealDepot(english: "Zuoying Depot", chinese: "左營機廠", latitude: 22.696992, longitude: 120.318536),
     ]
@@ -413,7 +419,8 @@ public enum HighSpeedDemo {
 
     /// A depot as laid out (decision 221): a ladder of dead-end sidings
     /// beside the down track, on the side OpenStreetMap has the real one,
-    /// centred where it lies along the line. Each side's first siding
+    /// centred where it lies along the line (or, decision 634, ending where
+    /// its tracks do). Each side's first siding
     /// leaves the down track at ``entry``, each other from the one before
     /// it a `yardStep` further in and a track's width further out; all run
     /// beside the down track to ``deadEnd``, each with a platform for one
@@ -642,11 +649,13 @@ public enum HighSpeedDemo {
                 }
                 // Beside the line: on the down track's side, east, where the
                 // real ones are; entered from the way of the stations it
-                // serves, and centred on the real one.
+                // serves, and centred on the real one, or (decision 634)
+                // ending where its tracks do.
                 precondition(place.side < 0, "\(real.english) is not on the down track's side")
                 let away: Double = place.along > middles[serving[index][0]] ? 1 : -1
                 let extent = Double(sets) * step + spec.sidingRun
-                return (real, place.along - away * extent / 2, place.along + away * extent / 2, sets, 0, serving[index])
+                let deadEnd = place.along + away * (real.trackLength.map { $0 / 2 } ?? extent / 2)
+                return (real, deadEnd - away * extent, deadEnd, sets, 0, serving[index])
             }
             // A depot south of a station between the ends, entered from its
             // north (Wuri's): the crossover from the up track a reach and two

@@ -170,7 +170,8 @@ extension GameSession {
         // changes; the revision below says whether it did.
         _ = world
         let key = NetworkPreviewMemo.Key(
-            start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
+            start: start, end: end, structure: networkStructure, height: networkHeight,
+            startRaise: networkStartRaise, endRaise: networkEndRaise, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
             buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, commandRevision: commandRevision
         )
@@ -281,19 +282,24 @@ extension GameSession {
         }
     }
 
-    private func preview(from start: NetworkAnchor, to end: NetworkAnchor) -> (NetworkPreview, [WorldCoordinate])? {
+    /// `raises` and `structure` in place of the player's (decision 629's
+    /// fixes try them).
+    func preview(
+        from start: NetworkAnchor, to end: NetworkAnchor, raises: NetworkRaises? = nil, structure: TrackStructure? = nil
+    ) -> (NetworkPreview, [WorldCoordinate])? {
+        let networkStructure = structure ?? self.networkStructure
         // Decision 124: on a copy, the ground at both ends first, so a new
         // point stands on it; the rest of the way as it is built.
         var draft = world
         try? draft.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
         var plan: EdgePlan
-        switch edgePlan(from: start, to: end, in: draft) {
+        switch edgePlan(from: start, to: end, in: draft, raises: raises) {
         case .success(let found): plan = found
         case .failure(let problem):
             // No curve: the straight line between the ends, drawn as one
             // that cannot be built, and the reason. Without the ends (a node
             // was removed) there is nothing to show.
-            guard let (from, to) = endPositions(from: start, to: end, in: draft) else {
+            guard let (from, to) = endPositions(from: start, to: end, in: draft, raises: raises) else {
                 return nil
             }
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
@@ -306,6 +312,7 @@ extension GameSession {
         if networkBuildsDouble { (plan, parallel) = doublePlans(plan, in: draft) }
         let cost: Money?
         let problem: String?
+        var refusal: GameError?
         var longSection: TrackLongSection?
         var crossovers: [[WorldCoordinate]] = []
         var crossoverOutcome = DoubleTrack.CrossoverOutcome.none
@@ -332,6 +339,7 @@ extension GameSession {
             problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
         } catch {
             cost = nil
+            refusal = error
             problem = networkBuildsDouble && parallel == nil
                 ? Self.noParallelText(in: language)
                 // Decision 513: which check, where GameCore's error covers several.
@@ -349,7 +357,8 @@ extension GameSession {
             longSection: longSection,
             crossovers: crossovers,
             crossoverNote: problem == nil && crossoverOutcome != .none
-                ? String(Self.crossoverText(crossoverOutcome, in: language).drop { $0 == " " }) : nil
+                ? String(Self.crossoverText(crossoverOutcome, in: language).drop { $0 == " " }) : nil,
+            refusal: refusal
         ), besides)
     }
 
@@ -378,8 +387,10 @@ extension GameSession {
     /// The edge the picked ends make: where they are, the curve that
     /// continues the track at each end that has some (when
     /// ``networkFollowsTrack`` is on), and the vertical profile.
-    private func edgePlan(from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld) -> Result<EdgePlan, NetworkProblem> {
-        guard let (from, to) = endPositions(from: start, to: end, in: world) else {
+    func edgePlan(
+        from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld, raises: NetworkRaises? = nil
+    ) -> Result<EdgePlan, NetworkProblem> {
+        guard let (from, to) = endPositions(from: start, to: end, in: world, raises: raises) else {
             return .failure(.missingNode)
         }
         // A turnout splits the track, and GameCore splits it only on a
@@ -454,16 +465,26 @@ extension GameSession {
     /// takes that height: track on flat ground is laid level, and only
     /// ground that rises or falls more makes a grade. Two new points level
     /// with the first; a blank map, which has no ground, is unchanged.
-    func endPositions(from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld) -> (WorldCoordinate, WorldCoordinate)? {
+    ///
+    /// Decision 629: then a new point is raised (or lowered) by what the
+    /// player set for that end (``networkStartRaise``,
+    /// ``networkEndRaise``), or by `raises` in their place.
+    func endPositions(
+        from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld, raises: NetworkRaises? = nil
+    ) -> (WorldCoordinate, WorldCoordinate)? {
         guard var from = world.position(of: start, height: networkHeight), var to = world.position(of: end, height: networkHeight) else {
             return nil
         }
-        guard world.ground.isMapped else { return (from, to) }
-        if case .point = end {
-            to = NetworkBuilding.levelled(to, with: from)
-        } else if case .point = start {
-            from = NetworkBuilding.levelled(from, with: to)
+        if world.ground.isMapped {
+            if case .point = end {
+                to = NetworkBuilding.levelled(to, with: from)
+            } else if case .point = start {
+                from = NetworkBuilding.levelled(from, with: to)
+            }
         }
+        let raises = raises ?? NetworkRaises(start: networkStartRaise, end: networkEndRaise)
+        if case .point = start, raises.start != 0 { from = WorldCoordinate(x: from.x, y: from.y, z: from.z + raises.start) }
+        if case .point = end, raises.end != 0 { to = WorldCoordinate(x: to.x, y: to.y, z: to.z + raises.end) }
         return (from, to)
     }
 
@@ -1585,6 +1606,8 @@ struct NetworkPreviewMemo {
         let end: NetworkAnchor
         let structure: TrackStructure
         let height: Int64
+        let startRaise: Int64
+        let endRaise: Int64
         let followsTrack: Bool
         let buildsScissors: Bool
         let easesGrade: Bool

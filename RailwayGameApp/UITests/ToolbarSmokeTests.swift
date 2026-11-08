@@ -837,7 +837,10 @@ extension XCUIApplication {
     @discardableResult
     func openLinePage(_ id: Int? = nil, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         let page = collectionViews["line.detail"].firstMatch
-        if page.exists { return page }
+        if page.exists {
+            _ = descendants(matching: .any)["line.detail.preparing"].firstMatch.disappears(within: 10)
+            return page
+        }
         // The panel's bar, in either language.
         let bar = navigationBars.firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel is not open", file: file, line: line)
@@ -862,6 +865,9 @@ extension XCUIApplication {
         row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(page.appears(within: 10), "The line's page did not open", file: file, line: line)
+        // Mac playtest C2: what the page reads, worked out off the main actor.
+        XCTAssertTrue(descendants(matching: .any)["line.detail.preparing"].firstMatch.disappears(within: 10),
+                      "The line's page stayed waiting", file: file, line: line)
         page.waitUntilStill()
         return page
     }

@@ -232,6 +232,18 @@ public final class GameSession {
     /// Decision 497 (P2-3): the reading of traffic control worked out off
     /// the main actor after a command, and for which ``worldRevision``.
     @ObservationIgnored var trafficReadTask: (revision: Int, task: Task<Void, Never>)?
+    /// How many readings of traffic control were started off the main
+    /// actor (``readTrafficOffTheMainActor(after:)``), for tests.
+    @ObservationIgnored var trafficReadsStarted = 0
+    /// Mac playtest C1 (2026-11-08): the ``worldRevision`` of a world the
+    /// game loop put in from a tick with more ticks of the same step to
+    /// come. Only a step's last tick reads traffic control
+    /// (``LoopTick/readsTraffic``), so the map keeps the last reading until
+    /// that tick brings the next, instead of reading off the main actor a
+    /// world the next tick replaces a moment later: at 10x on the bought
+    /// Wenhu Line those readings, all thrown away, took as much CPU as the
+    /// ticks themselves.
+    @ObservationIgnored private var trafficComesWithStepAt: Int?
     /// Counts the readings of traffic control worked out off the main
     /// actor after a command once each is in: the map takes
     /// ``trafficOverlay`` again when it changes.
@@ -712,8 +724,20 @@ public final class GameSession {
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
-    public internal(set) var networkStart: NetworkAnchor?
-    public internal(set) var networkEnd: NetworkAnchor?
+    public internal(set) var networkStart: NetworkAnchor? {
+        didSet { if networkStart != oldValue { networkStartRaise = 0 } }
+    }
+    public internal(set) var networkEnd: NetworkAnchor? {
+        didSet { if networkEnd != oldValue { networkEndRaise = 0 } }
+    }
+    /// Decision 629: how much higher (or, below 0, lower) than
+    /// ``networkHeight`` the player has set the next stretch's start and
+    /// end, where each is a new point, in world units; back to 0 when that
+    /// end is picked again.
+    public internal(set) var networkStartRaise: Int64 = 0
+    public internal(set) var networkEndRaise: Int64 = 0
+    /// ``networkHeightCard``'s fixes, kept for the draft they were found for.
+    @ObservationIgnored var networkHeightFixMemo: (key: NetworkHeightFixKey, fixes: [NetworkHeightFix])?
     /// While a finger draws track (decision 102): the end picked before the
     /// drag began, which a cancelled drag puts back.
     @ObservationIgnored var networkDragEndBefore: NetworkAnchor??
@@ -2374,7 +2398,8 @@ public final class GameSession {
         // new one, worked out off the main actor, is in. Only the game as
         // it opens is read here.
         if let last = trafficMemo?.reading {
-            readTrafficOffTheMainActor(after: last)
+            // Mac playtest C1: the step's last tick brings the next one.
+            if trafficComesWithStepAt != worldRevision { readTrafficOffTheMainActor(after: last) }
             return last
         }
         trafficReadOnTheMainActor += 1
@@ -2389,6 +2414,7 @@ public final class GameSession {
     private func readTrafficOffTheMainActor(after last: TrafficReading) {
         let revision = worldRevision
         guard trafficReadTask?.revision != revision else { return }
+        trafficReadsStarted += 1
         let (world, train, language) = (world, selectedTrainID, language)
         let task = Task { [weak self] in
             let reading = await Task.detached(priority: .userInitiated) {
@@ -2443,6 +2469,9 @@ public final class GameSession {
         let goesOn = tick.stepGoesOn && (try? outcome.get()) != nil ? worldRevision : nil
         // Only when it changes: it is observed.
         if goesOn != stepGoesOnAtRevision { stepGoesOnAtRevision = goesOn }
+        // Mac playtest C1: a tick that read no traffic has more of its
+        // step to come, at any speed.
+        trafficComesWithStepAt = !tick.readsTraffic && (try? outcome.get()) != nil ? worldRevision : nil
         return true
     }
 
@@ -2557,6 +2586,8 @@ public final class GameSession {
         loopTickRevision = nil
         // Decision 379 續四 (review P3 d): no step goes on.
         if stepGoesOnAtRevision != nil { stepGoesOnAtRevision = nil }
+        // Mac playtest C1: nor does the step's last tick bring a reading.
+        trafficComesWithStepAt = nil
         applyHeldSpeed()
         tickAccumulator.reset()
         // The time away is not time the game failed to run.
@@ -3146,11 +3177,11 @@ public final class GameSession {
         case .low: counts.low = count
         }
         let changed = counts
-        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, _ in
+        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, world in
             language.text(
                 "\(line.name): \(count) \(count == 1 ? "train" : "trains") at \(level.title(in: language).lowercased()).",
                 "\(line.name)：\(level.title(in: language))上線 \(count) 列。"
-            )
+            ) + Self.passingWarningText(for: line.id, in: world, language: language)
         }
     }
 
@@ -3254,9 +3285,9 @@ public final class GameSession {
             }
             // Decision 284: a train too long for a call never leaves; say
             // so, last, as it is assigned.
-            let tooLong = world.shortPlatformCall(ofTrain: train.id).map { short in
+            let tooLong = (world.shortPlatformCall(ofTrain: train.id).map { short in
                 language.text(" ", "") + world.shortPlatformText(short, in: language) + language.text(".", "。")
-            } ?? ""
+            } ?? "") + Self.passingWarningText(for: line.id, in: world, language: language)
             // TestFlight 60.1: a line already running trains keeps its
             // counts, so the new train would wait: say so, and how.
             if started == 0, let unused = world.lineUnusedTrains(ofTrain: train.id) {
@@ -3511,13 +3542,40 @@ public final class GameSession {
     /// Changes ``world`` by `change`, which ``commandLog`` keeps as
     /// `action` (decision 193).
     func logging(_ action: CommandLog.Action, _ change: (inout GameWorld) -> Void) {
+        let revision = commandRevision
         isLogging = true
         change(&world)
         isLogging = false
+        if Self.changesOnlyTheClock(action) { keepStationMasterWork(from: revision) }
         log(action)
         // Decision 343: a pause or a change of speed starts or stops the
         // followed train's sound at once, not at the next step.
         updateFollowSounds()
+    }
+
+    /// Decision 627: a pause, a resume and a change of speed change the
+    /// clock's speed and nothing else of the world.
+    private static func changesOnlyTheClock(_ action: CommandLog.Action) -> Bool {
+        switch action {
+        case .setSpeed, .pause, .resume: true
+        default: false
+        }
+    }
+
+    /// Decision 627: what the station master's advice was worked out from
+    /// at command revision `revision` (the losing line, the line without a
+    /// place to pass, the hour's advice) still answers after a command that
+    /// changed only the clock's speed: none of it reads the speed. Kept on
+    /// at the new revision, so the next hour does not work it all out again
+    /// (the high-speed demo's Debug app stood still some 4 s at 11:00 after
+    /// it was set to 10×).
+    private func keepStationMasterWork(from revision: Int) {
+        guard revision != commandRevision else { return }
+        lineLossLeaderMemo.keep(from: revision, to: commandRevision)
+        placeToPassMemo.keep(from: revision, to: commandRevision)
+        if let kept = hourAdvice, kept.revision == revision {
+            hourAdvice = HourAdvice(hour: kept.hour, revision: commandRevision, advice: kept.advice)
+        }
     }
 
     /// What the weather's sound is worked out from (decision 346).

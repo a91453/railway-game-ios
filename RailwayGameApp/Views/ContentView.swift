@@ -23,6 +23,8 @@ struct ContentView: View {
     /// Decision 365: Off plays on the flat map only.
     @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
     @AppStorage(SecretarySettings.nightSkipKey) private var skipsQuietNights = false
+    /// Decision 631: the layer strip put away by the player.
+    @AppStorage("mapLayerStripCollapsed") private var layerStripCollapsed = false
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Lives above the layout: rebuilding it must not discard the camera.
     @State private var mapCamera: PlanCamera?
@@ -605,16 +607,17 @@ struct ContentView: View {
                         let row = MapTopRow.arrange(
                             width: Double(rowWidth), showsLayers: showsLayerStrip,
                             nightSkipWidth: nightSkips ? Double(max(nightSkipWidth, CGFloat(MapTopRow.nightSkipIconWidth))) : 0,
-                            nextStep: nextSteps?.current != nil, follows: followed != nil
+                            nextStep: nextSteps?.current != nil, follows: followed != nil,
+                            layersCollapsed: layerStripCollapsed
                         )
                         HStack(alignment: .center, spacing: margin) {
                             if showsLayerStrip {
                                 // Decision 305: under the speed, a night with
                                 // no train to skip.
                                 NightSkipChip(session: session, iconOnly: row.nightSkip == .icon) { nightSkipWidth = $0 }
-                                MapQuickLayerStrip(language: session.language, folded: row.layers == .button) {
+                                MapQuickLayerStrip(language: session.language, layout: row.layers) {
                                     screen.panel = .mapLayers
-                                }
+                                } setCollapsed: { layerStripCollapsed = $0 }
                                 // CTM study M2: a free game's next step.
                                 if row.showsNextStep, let steps = nextSteps {
                                     NextStepChip(steps: steps, language: session.language) {
@@ -721,6 +724,8 @@ struct ContentView: View {
                             }
                             ControlPanel(session: session, arrangement: .editsRow)
                         }
+                            // Mac playtest A2: the tutorial's pill keeps clear of it.
+                            .tutorialTarget(.editsRow)
                             // The whole row, the toggle with Undo and Redo:
                             // the legend under a panel keeps clear of it.
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.editsFrame = $0 }
@@ -856,6 +861,8 @@ struct ContentView: View {
                         .environment(\.mapDetailsOpen, isOpen)
                         .environment(\.mapSafeArea, proxy.safeAreaInsets)
                         .environment(\.mapCreditsLeading, toolsColumn ? dockSize.width : 0)
+                        // Mac playtest A3: at the top, the column alone.
+                        .environment(\.mapTopLeading, toolsColumn ? dockSize.width : nil)
                         .environment(\.mapShowsLayerStrip, showsLayerStrip)
                         // Decision 226 (2026-10-15, the owner): on a phone
                         // the map's layers and expansion buttons stand on
@@ -1563,7 +1570,12 @@ final class GameScreenState {
     /// under a phone's panel keeps above them
     /// (``HUDMargins/legendFootUnderPanel``).
     var editsFrame: CGRect = .zero
-    var stationMasterFrame: CGRect = .zero
+    /// Mac playtest A4 (2026-11-08): each station master shown, by its
+    /// view, so that one going away (beginning to build shows it anew,
+    /// the new one measured before the old one went) does not clear the
+    /// frame of the one still showing.
+    var stationMasterFrames: [UUID: CGRect] = [:]
+    var stationMasterFrame: CGRect { stationMasterFrames.values.first { !$0.isEmpty } ?? .zero }
     /// Decision 226: where the tools stand on the screen (global
     /// coordinates; the column down a phone's leading edge, or the dock),
     /// as the screen measured them; a finger drawing on the map compares

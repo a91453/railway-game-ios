@@ -203,6 +203,28 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case suhuaTunnel
     case suhuaGallery
 
+    /// Decision 625 (STATION-EXT-1): an empty real-world map round TRA
+    /// Taichung (the old station beside the new), TRA Hsinchu, TRA Banqiao, HSR Taoyuan (with the Airport MRT's A18), HSR Taichung (with Xinwuri) and HSR Zuoying
+    /// (with Xinzuoying), run on empty to 09:30 or, `…Night`, 19:30: for
+    /// the Debug app's `-screenshot-lay-demo` to lay the demo's real lines
+    /// round it (``GameSession/layDemoForScreenshot(_:)``) and run on half
+    /// an hour, for the screenshots of the real stations' exterior studies
+    /// over the platforms and trains, by day and by night. For the
+    /// screenshot review of the pull request that stood them there.
+    case exteriorTaichung, exteriorTaichungNight
+    case exteriorHsinchu, exteriorHsinchuNight
+    case exteriorBanqiao, exteriorBanqiaoNight
+    case exteriorTaoyuanHSR, exteriorTaoyuanHSRNight
+    case exteriorTaichungHSR, exteriorTaichungHSRNight
+    case exteriorZuoying, exteriorZuoyingNight
+
+    /// Decision 629 (TRACKHEIGHT): flat ground 4 km a side, 5 m up, with
+    /// a river 192 m wide across it, and a stretch of track drawn across
+    /// the river on the ground: the build card refusing it and offering
+    /// the heights that get it over or under. For the screenshot review of
+    /// the pull request that added them.
+    case trackHeight
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -241,6 +263,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .hsuehshanTunnel: (24.84776, 121.79127)
         case .suhuaTunnel: (24.52307, 121.82816)
         case .suhuaGallery: (24.60857, 121.85564)
+        // Decision 625: each study's origin (``Map3DStationExteriorBatch1/origin(of:)``).
+        case .exteriorTaichung, .exteriorTaichungNight: (24.13732601, 120.68671829)
+        case .exteriorHsinchu, .exteriorHsinchuNight: (24.80160443, 120.97165154)
+        case .exteriorBanqiao, .exteriorBanqiaoNight: (25.0144511, 121.4640451)
+        case .exteriorTaoyuanHSR, .exteriorTaoyuanHSRNight: (25.01347985, 121.214539)
+        case .exteriorTaichungHSR, .exteriorTaichungHSRNight: (24.1112536, 120.61474665)
+        case .exteriorZuoying, .exteriorZuoyingNight: (22.68726485, 120.3074864)
         default: nil
         }
     }
@@ -268,6 +297,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         // The line runs 50 km; the map opens at 02:00, its last trains in.
         case .tymcRebuild: Self.realLineWorld(at: self, side: 1 << 22, ticks: 12, in: language)
+        case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaoyuanHSR, .exteriorTaichungHSR, .exteriorZuoying:
+            Self.realLineWorld(at: self, ticks: 57, in: language)
+        case .exteriorTaichungNight, .exteriorHsinchuNight, .exteriorBanqiaoNight, .exteriorTaoyuanHSRNight, .exteriorTaichungHSRNight, .exteriorZuoyingNight:
+            Self.realLineWorld(at: self, ticks: 117, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
 
@@ -282,6 +315,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         case .cijinShore: Self.cijinShoreWorld(water: water)
+        case .trackHeight: Self.trackHeightWorld()
         }
     }
 
@@ -301,6 +335,22 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
                 for _ in 0..<180 {
                     try? await Task.sleep(for: .seconds(1))
                     session.lookOver(region)
+                }
+            }
+            return
+        }
+        if self == .trackHeight {
+            // Decision 629: the stretch drawn across the river, as two taps.
+            let (from, to, middle) = Self.trackHeightStretch
+            session.selectTool(.network)
+            session.networkSnapsToTrack = false
+            session.tapNetwork(at: from, reach: 16)
+            session.tapNetwork(at: to, reach: 16)
+            session.lookAt(middle)
+            Task { @MainActor in
+                for _ in 0..<30 {
+                    try? await Task.sleep(for: .seconds(1))
+                    session.lookAt(middle)
                 }
             }
             return
@@ -348,6 +398,36 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Line 2's north end: the demo's highest track end furthest north.
     static func depotOfferEnd(in world: GameWorld) -> WorldCoordinate? {
         world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 }.min { $0.position.y < $1.position.y }?.position
+    }
+
+    /// ``trackHeight``'s ends, 896 m apart either side of its river, and
+    /// the river's middle.
+    static let trackHeightStretch = (
+        from: PlanPoint(x: 26 * 4_096, y: 32 * 4_096), to: PlanPoint(x: 40 * 4_096, y: 32 * 4_096),
+        middle: PlanPoint(x: 33 * 4_096, y: 32 * 4_096)
+    )
+
+    /// ``trackHeight``'s world: 4 × 4 blocks of ground 5 m up, cell
+    /// columns 31 to 33 water, paused at the start.
+    static func trackHeightWorld() -> GameWorld {
+        var world = GameWorld(
+            bounds: try! WorldBounds(width: 262_144, height: 262_144),
+            economy: GameEconomy(balance: Money(500_000_000), costs: .standard),
+            clock: GameClock(speed: .paused)
+        )
+        let side = GroundBlock.side
+        let blocks = (0..<4).flatMap { row in
+            (0..<4).compactMap { column in
+                GroundBlock(block: LandBlock(row: row, column: column), heights: Array(repeating: 5, count: side * side))
+            }
+        }
+        do throws(GameError) {
+            try world.setGround(blocks)
+            try world.setWater((0..<64).flatMap { row in (31...33).map { CellPosition(row: row, column: $0) } })
+        } catch {
+            preconditionFailure("The track height screenshot scene no longer builds: \(error)")
+        }
+        return world
     }
 
     private static func pausedDemo(in language: DisplayLanguage) -> GameWorld {
@@ -423,6 +503,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         try? world.mapGround()
         // On to 05:30 while the map is empty, ten minutes a tick: the Debug
         // app then runs only the morning itself after it buys the line.
+        // Decision 625: on to 09:30 (57) or 19:30 (117) for the exteriors.
         world.setSpeed(.fast)
         try? world.advance(ticks: ticks)
         world.setSpeed(.paused)
@@ -915,6 +996,22 @@ extension GameSession {
         let (x, y) = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
         let reach = metres * Double(WorldCoordinate.unitsPerMetre)
         lookOver(WorldRegion(minX: x - reach, minY: y - reach, maxX: x + reach, maxY: y + reach))
+    }
+
+    /// Decision 625: the demo's real lines (decision 351) laid in the
+    /// view `"south,west,north,east"` (degrees), on a map the scene opened
+    /// as the demo's, then the game run on half an hour, so the trains are
+    /// out. `false` when the real data is not read yet.
+    public func layDemoForScreenshot(_ view: String) async -> Bool {
+        let parts = view.split(separator: ",").compactMap { Double($0) }
+        guard parts.count == 4, railways != nil, let frame = RealWorldFrame(world: world) else { return false }
+        let southWest = frame.worldPosition(latitude: parts[0], longitude: parts[1])
+        let northEast = frame.worldPosition(latitude: parts[2], longitude: parts[3])
+        news.isDemo = true
+        _ = await layDemoRealLines(in: WorldRegion(minX: southWest.x, minY: northEast.y, maxX: northEast.x, maxY: southWest.y))
+        let now = world.clock.now.seconds % GameTime.secondsPerDay
+        await runForScreenshot(until: now + 30 * 60)
+        return true
     }
 
     /// Decision 564: the game run on to `seconds` into the day, then

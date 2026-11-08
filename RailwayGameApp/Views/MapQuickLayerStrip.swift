@@ -11,9 +11,12 @@ import SwiftUI
 struct MapQuickLayerStrip: View {
     let language: DisplayLanguage
     /// Decision 469: on a narrow screen only the button that opens the
-    /// full list, named for the layers.
-    var folded = false
+    /// full list, named for the layers. Decision 631: put away by the
+    /// player, one round button that brings the strip back.
+    var layout: MapTopRow.Layers = .strip
     let openList: () -> Void
+    /// Decision 631: puts the strip away or brings it back.
+    let setCollapsed: (Bool) -> Void
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
@@ -31,12 +34,21 @@ struct MapQuickLayerStrip: View {
     }
 
     var body: some View {
+        if layout == .collapsed {
+            expandButton
+        } else {
+            strip
+        }
+    }
+
+    private var strip: some View {
         HStack(spacing: 2) {
-            if folded {
+            if layout == .button {
                 more(title: language.text("Layers", "圖層"))
             } else {
                 cells
             }
+            collapseButton
         }
         .padding(3)
         // Glass, as the status pill above it and the tools (decision 226,
@@ -65,6 +77,35 @@ struct MapQuickLayerStrip: View {
             .frame(width: 1, height: 26)
             .padding(.horizontal, 2)
         more(title: language.text("More", "更多"))
+    }
+
+    /// Decision 631: puts the strip away, so it no longer covers the map.
+    private var collapseButton: some View {
+        Button { setCollapsed(true) } label: {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: MapTopRow.collapseCellWidth, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: language.text("Hide the layer buttons", "收起圖層按鈕")))
+        .accessibilityIdentifier("map.quickLayer.collapse")
+    }
+
+    /// Decision 631: the strip put away, one round glass button.
+    private var expandButton: some View {
+        Button { setCollapsed(false) } label: {
+            Image(systemName: "square.3.layers.3d")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: MapTopRow.collapsedWidth, height: MapTopRow.collapsedWidth)
+                .glassBackground(in: Circle(), interactive: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: language.text("Show the layer buttons", "顯示圖層按鈕")))
+        .accessibilityIdentifier("map.quickLayer.expand")
+        .hudFrameMark("map.quickLayer.strip")
     }
 
     /// The button that opens the full layer list, the same id folded or

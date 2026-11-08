@@ -1,11 +1,18 @@
 import Foundation
 
-/// Isolated exterior study. No station catalog or live-map lookup calls this type.
+/// The exterior studies of #1904. Decision 625 stands them on the 3D map
+/// (`Map3DStationExteriors.swift`); the station kit's catalogue does not list them.
 public enum Map3DStationExteriorBatch1 {
     public enum LevelOfDetail: Sendable { case near, far }
     public enum Station: String, CaseIterable, Sendable { case taichungTRA = "tra-taichung", hsinchuTRA = "tra-hsinchu", hualienTRA = "tra-hualien", taitungTRA = "tra-taitung", banqiaoTRA = "tra-banqiao", nangangTRA = "tra-nangang", taoyuanHSR = "hsr-taoyuan", hsinchuHSR = "hsr-hsinchu", taichungHSR = "hsr-taichung", tainanHSR = "hsr-tainan", zuoyingHSR = "hsr-zuoying" }
 
     public static func model(for station: Station, detail: LevelOfDetail) -> Map3DModelPack.Model {
+        .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: mesh(for: station, detail: detail))
+    }
+
+    /// Decision 625: the study as built, in its own metres east (+x), up
+    /// (+y) and north (+z) of ``origin(of:)``, its night glass glowing.
+    static func mesh(for station: Station, detail: LevelOfDetail) -> Map3DMesh {
         var builder = StationKitBuilder()
         switch station {
         case .taichungTRA: builder.taichungExteriorStudy(detail: detail)
@@ -26,10 +33,10 @@ public enum Map3DStationExteriorBatch1 {
                 vertex.layer = Map3DVertex.glowing
             }
         }
-        return .flat(named: "station-exterior-study-\(station.rawValue)-\(detail == .near ? "near" : "far")", from: builder.mesh)
+        return builder.mesh
     }
 
-    private static func nightGlassColours(for station: Station) -> Set<UInt32> {
+    static func nightGlassColours(for station: Station) -> Set<UInt32> {
         let colours: [UInt32]
         // StationKitBuilder.box shades each of its four vertical sides.
         let sideShades: [Float] = [1, 0.92, 0.80, 0.70, 0.86]
@@ -1348,6 +1355,20 @@ private extension StationKitBuilder {
         hsr.box(0, 0.32, -35.2, 14, 0.28, 13.8, darkGlass)
         hsr.box(-58, 0.32, 0, 0.5, 69, 17.5, stone)
         hsr.box(58, 0.32, 0, 0.5, 69, 17.5, stone)
+        // Decision 625 續: facade cues seen from the map's camera: the
+        // roof's dark steel edge, the ground floor's dark glazing between
+        // stone piers, and an entrance canopy each side in the red accent.
+        for z: Float in [-36.85, 36.85] {
+            hsr.box(0, 17.82, z, 122.3, 0.5, 2.3, steel)
+        }
+        for x: Float in [-61, 61] {
+            hsr.box(x, 17.82, 0, 0.5, 74.2, 2.3, steel)
+        }
+        for z: Float in [-35.45, 35.45] {
+            hsr.box(0, 0.32, z, 112, 0.2, 5.4, darkGlass)
+            hsr.box(0, 0.32, z * 1.004, 118, 0.2, 0.9, stone)
+            hsr.box(0, 5.6, z + (z < 0 ? -3 : 3), 26, 6, 0.45, red)
+        }
         add(.flat(named: "taoyuan-hsr-hall", from: hsr.mesh),
             at: Map3DPoint(33.34, 0, 50.46), angle: 47.1966 * .pi / 180)
 
@@ -1686,6 +1707,19 @@ private extension StationKitBuilder {
             hsr.box(0, 22.8, z, 172, 0.35, 0.7, truss)
         }
         hsr.box(0, 0.32, -27.4, 27, 0.22, 8.7, darkGlass)
+        // Decision 625 續: facade cues seen from the map's camera: the
+        // ground floor's dark glazing over a grey plinth, glass bands
+        // round the ends, and an entrance canopy each side.
+        for z: Float in [-26.2, 26.2] {
+            hsr.box(0, 2.0, z, 170, 0.22, 5.2, darkGlass)
+            hsr.box(0, 0.32, z, 176, 0.24, 1.2, truss)
+            hsr.box(0, 7.4, z + (z < 0 ? -3.6 : 3.6), 34, 7, 0.5, truss)
+        }
+        for x: Float in [-89.2, 89.2] {
+            hsr.box(x, 10.3, 0, 0.24, 50, 2.9, glass)
+            hsr.box(x, 16.2, 0, 0.24, 50, 2.8, glass)
+            hsr.box(x * 0.994, 2.0, 0, 0.22, 48, 5.2, darkGlass)
+        }
         hsr.canopy(0, 26.5, 0, length: 186, width: 80,
                    rise: 5.5, color: roof)
         hsr.litBox(0, 26.2, -33, 160, 0.36, 0.18, fascia)
@@ -1729,6 +1763,11 @@ private extension StationKitBuilder {
             tra.box(0, 22.02, z, 156, 0.28, 0.55, truss)
         }
         tra.box(0, 0.32, -25.4, 26, 0.22, 8.2, darkGlass)
+        for z: Float in [-23.7, 23.7] {
+            tra.box(0, 2.0, z, 150, 0.22, 4.8, darkGlass)
+            tra.box(0, 0.32, z, 157, 0.24, 1.1, truss)
+            tra.box(0, 7.0, z + (z < 0 ? -3.4 : 3.4), 30, 6.6, 0.5, truss)
+        }
         tra.box(0, 24.5, 0, 170, 68, 1.5, roof)
         if detail == .near {
             for x in stride(from: Float(-70), through: 70, by: 17.5) {

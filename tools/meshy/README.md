@@ -20,11 +20,11 @@
 從 repository 根目錄，需要 Node 22.12 以上與 `Web/CityView` 的套件（`cd Web/CityView && npm ci`，`pack` 用其中的 sharp）。CLI 不用安裝，以 `npm exec --yes --package=meshy-cli@0.4.0 -- meshy …` 執行。
 
 1. 在 `models.json` 加一筆：id、prompt、面數、`out`。
-2. 照 skill 的流程生成（文字或照片轉 3D、要遊戲用的低面數就用 smart topology）。`WORKSPACE` 是 `Web/CityView/data/raw/meshy/<id>/`（不提交），交付的檔案是那裡的 `<id>.glb`。花點數之前先報價、等作者同意。
+2. 照 skill 的流程生成（文字或照片轉 3D；用標準模式：`meshy-7.1`、2K 貼圖、不要 PBR，不要在 Meshy 端用 smart topology 壓面數，要低面數之後再減面，例如 meshoptimizer simplify；教訓在 `a91453/railway-assets-private` 的 `meshy-batch-2026-10/LESSONS_AND_HANDOFF.md`）。`WORKSPACE` 是 `Web/CityView/data/raw/meshy/<id>/`（不提交），交付的檔案是那裡的 `<id>.glb`。花點數之前先報價、等作者同意。
 3. `node tools/meshy/meshy.mjs pack <id>`：GLB 的圖縮到 1024 px（`--size=` 可改），不透明的轉 JPEG，寫到 `models.json` 的 `out`，更新同一個資料夾的 `index.json`（那一行原本手寫的 `colour`、`ao`、`aoChannel`、`fit` 照樣保留；`node --test tools/meshy/index-entry.test.mjs` 測這件事）；workspace 裡 CLI 的任務紀錄（任務編號、prompt、模型、點數）記進 `generated.json`。GLB 的 `asset`、`extras` 原樣保留：Meshy 條款 §2.4 要求不移除輸出裡的 AI 識別資訊。
 4. `tools/procedural-city/build_city_view.sh <官網>/site/city` 重新建置官網上的頁面（決策 163），再部署官網。
 
-價格（2026-10，Meshy 7.1）：文字轉 3D 的網格 20 點、上貼圖 10 點；照片轉 3D 含 2K 貼圖 30 點；smart topology（meshy-t2）的網格 5 點。實際用掉的看任務的 `consumed_credits`。
+價格（2026-10，Meshy 7.1）：標準模式（文字轉 3D）網格 20 點、上貼圖 10 點，每個 30 點；照片轉 3D 含 2K 貼圖 30 點；smart topology（meshy-t2）網格 5 點、含貼圖每個 15 點，**不建議用於遊戲模型**（壓到 300–600 面品質差，一批 8 個重做，第一組白花 375 點）。實際用掉的看任務的 `consumed_credits`。
 
 ## 做好之後
 

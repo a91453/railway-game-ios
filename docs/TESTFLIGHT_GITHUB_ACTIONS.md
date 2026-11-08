@@ -138,7 +138,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 - **規則**（[決策 616](decisions/616.md)，2026-11-07 起，run 120 開始）：第一次執行是 `<BUILD_NUMBER_OFFSET + run number>`，只有重跑（run attempt ≥ 2）才加 `.<run attempt>`。
   - 例如第 120 次執行是 `120`，重跑失敗的 job 是 `120.2`、再重跑 `120.3`，下一次執行是 `121`。
   - run 119 以前第一次執行也帶 `.1`（例如 `119.1`）；`testflight-changes.py` 的 `LAST_DOTTED_RUN` 照這個寫上一版的號碼。
-  - 版本號（目前 0.5.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
+  - 版本號（目前 0.6.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
 - **GitHub**：run number 每次新執行加一、重跑不變；run attempt 每次重跑加一。所以每次執行與重跑都會得到從未用過的 build number，新的執行一定比舊的大。
   - release job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 release job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。
 - **Apple**：

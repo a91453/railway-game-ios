@@ -131,6 +131,8 @@ public struct Map3DScene: Sendable {
     /// Decision 359: the player's track, where it runs in a tunnel and
     /// the ground drawn over it.
     public let trackCover: Map3DTrackCover
+    /// Decision 625: the real stations' exterior studies stood in the scene.
+    let stationExteriors: [Map3DStationExterior]
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
@@ -468,6 +470,7 @@ public struct Map3DScene: Sendable {
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
+        builder.realTrackLines = realTrains?.shownLanes ?? []
         // Decision 407: the viaducts, each pair of tracks on its piers.
         builder.addViaducts()
         // Decision 238: the city twice, in full and simplified for afar.
@@ -476,7 +479,11 @@ public struct Map3DScene: Sendable {
         // track; on ground no real building, temple, scene or city lot
         // takes.
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
+        // Decision 625: the real stations' exterior studies, as landmarks,
+        // cut clear of the track.
+        let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
         let landmarkCells = landmarks.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) }
+            .union(exteriors.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) })
         // Decision 441: the Changhua Roundhouse's turntable; no street
         // furniture or city lot on it, but the real buildings round it stay.
         let turntable = RealWorldFrame(world: world).map { builder.addRoundhouseTurntable(frame: $0) } ?? []
@@ -490,6 +497,7 @@ public struct Map3DScene: Sendable {
         // they cross it, and of the stations' buildings.
         if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
         seededStreets = SeededStreetPlan(edges: builder.streetEdges)
+        stationExteriors = builder.stationExteriors
         // Decision 322: the shops, clear of the streets.
         builder.addShopStreets()
         // Decision 326: the overhead line, its masts clear of the platforms;
@@ -845,6 +853,11 @@ extension Map3DScene {
         /// Decision 339: the 64 m cells the real lines' track runs through
         /// above the ground, which keep no city lot.
         var realTrackCells = Set<ChunkKey>()
+        /// Decision 625: the real lines' track drawn (decision 402), each
+        /// lane where a car shows, for the room the exterior studies keep.
+        var realTrackLines: [[Map3DPoint]] = []
+        /// Decision 625: the exterior studies stood.
+        var stationExteriors: [Map3DStationExterior] = []
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 370: colours the model look leaves as they are besides
         /// ``Map3DLook``'s own (the lines' bands).
@@ -855,6 +868,12 @@ extension Map3DScene {
         var instancingBoxes = false
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
         var standInMeshes: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 625 續: what keeps its own colours, added to a chunk's
+        /// near and far meshes after the look (the station studies): left
+        /// out of ``keptColours``, which would keep the same colours
+        /// elsewhere only in a build that holds them.
+        var ownColourNear: [ChunkKey: Map3DMesh] = [:]
+        var ownColourFar: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
@@ -1019,7 +1038,7 @@ extension Map3DScene {
                 drawn.addFacadeParts()
                 return drawn.chunks()
             }
-            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
+            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(ownColourNear.keys).union(ownColourFar.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
@@ -1037,6 +1056,8 @@ extension Map3DScene {
                 var facade = facadeMeshes[key] ?? Map3DMesh()
                 Map3DLook.restyle(&facade, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
+                if let own = ownColourNear[key] { mesh.append(own) }
+                if let own = ownColourFar[key] { far.append(own) }
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }

@@ -45,12 +45,20 @@ public enum HUDMargins {
     /// `end`, the map's points), `beside` the frames it keeps above (the
     /// buttons' row, the map's leading buttons, Undo and Redo, the station
     /// master), on a map `mapHeight` tall. Never higher than `standard`,
-    /// where it stood before.
+    /// where it stood before, but always above what `above` holds that
+    /// stands under it (the station master, taller than the bottom row).
     public static func legendFootUnderPanel(standard: Double, screenBottom: Double, mapHeight: Double,
-                                            legendStart: Double, legendEnd: Double, beside: [ScreenFrame]) -> Double {
-        let under = beside.filter { $0.width > 0 && $0.height > 0 && $0.x < legendEnd && $0.x + $0.width > legendStart }
-        let foot = under.map { mapHeight - $0.y }.reduce(screenBottom, max)
-        return min(standard, foot)
+                                            legendStart: Double, legendEnd: Double, beside: [ScreenFrame],
+                                            above: [ScreenFrame] = []) -> Double {
+        func under(_ frame: ScreenFrame) -> Bool {
+            frame.width > 0 && frame.height > 0 && frame.x < legendEnd && frame.x + frame.width > legendStart
+        }
+        let foot = min(standard, beside.filter(under).map { mapHeight - $0.y }.reduce(screenBottom, max))
+        // Mac playtest A4 (2026-11-08, an iPhone on its side, laying
+        // track): the station master stands taller than the row the
+        // standard foot clears, and sat over the legend. What `above`
+        // holds the legend keeps above even past `standard`.
+        return above.filter(under).map { mapHeight - $0.y }.reduce(foot, max)
     }
 
     /// The four lines the floating controls keep to on a screen `screen`
