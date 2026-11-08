@@ -2441,7 +2441,7 @@ private struct MapLabelCanvas: View, Equatable {
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
                 if part == .marks {
                     MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges,
-                                          showsTrackNumbers: layers.showsTrackNumbers, in: context)
+                                          showsTrackNumbers: layers.showsTrackNumbers, showsWaitingCounts: layers.showsWaitingCounts, in: context)
                 } else {
                     MapArt.drawStationLabels(
                         world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
