@@ -154,6 +154,7 @@ struct FleetOverviewSheet: View {
         }
         .fullScreenCover(isPresented: $showsRoster) {
             TrainRosterView(session: session)
+                .coversTheMap(session)
         }
     }
 

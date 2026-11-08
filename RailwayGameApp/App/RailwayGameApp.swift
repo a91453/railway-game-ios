@@ -877,8 +877,14 @@ private struct AppRoot: View {
     let audio: GameAudio
     let gameCenter: GameCenterLink
 
+    /// The window's width class, which the layout follows (decision 656):
+    /// read here, at the window's root, since a sheet's own size class is
+    /// its card's, not the window's.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     var body: some View {
         RootView(launcher: launcher)
+            .environment(\.windowLayout, WindowLayout(device: .current, compactWidth: horizontalSizeClass == .compact))
             .environment(audio)
             .environment(gameCenter)
             // Sendable: SwiftUI keeps it and calls it when a tap comes.
@@ -949,11 +955,18 @@ extension DisplayLanguage {
 
 extension DeviceFamily {
     /// The device the game runs on, for text that names it (decision 643).
-    /// A Mac running the iPad app counts as an iPad. Main-actor, as
+    /// A Mac running the iPad app is a Mac (decision 656). Main-actor, as
     /// `UIDevice` is; every caller is a view.
     @MainActor static var current: DeviceFamily {
-        UIDevice.current.userInterfaceIdiom == .phone ? .iPhone : .iPad
+        if ProcessInfo.processInfo.isiOSAppOnMac { return .mac }
+        return UIDevice.current.userInterfaceIdiom == .phone ? .iPhone : .iPad
     }
+}
+
+extension EnvironmentValues {
+    /// How much room the game's window has (``WindowLayout``, decision
+    /// 656), set at the window's root and handed down into its sheets.
+    @Entry var windowLayout = WindowLayout.narrow
 }
 
 extension LanguageChoice {

@@ -461,6 +461,7 @@ struct StationPanel: View {
                 .accessibilityIdentifier("journey.destination")
                 .sheet(isPresented: $choosingDestination) {
                     destinationChooser(from: station)
+                        .coversTheMap(session)
                 }
                 if let destination {
                     journeyResults(from: station, to: destination, language: language)
@@ -1190,6 +1191,7 @@ struct StationPanel: View {
             .accessibilityIdentifier("station.choose")
             .sheet(isPresented: $choosingStation) {
                 stationChooser
+                    .coversTheMap(session)
             }
         }
     }

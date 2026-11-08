@@ -387,6 +387,22 @@ extension PlanCamera {
         return showing(region, clearOf: insets)
     }
 
+    /// The farthest ``lessonFraming(_:clearOf:)`` zooms out: 5 km across
+    /// 400 points (decision 656). The lesson's iPad windows frame both
+    /// towns at 2.7 km (a 13-inch on its side) to 4.2 km (upright); an
+    /// iPhone on its side, Split View and Slide Over at 7.6–9.7 km, where
+    /// the first stretch tapped is too long to afford (decision 643).
+    public static let farthestLessonFramingMetres = 5_000.0
+
+    /// ``framing(_:clearOf:)`` for the lesson's two towns, `nil` too when
+    /// fitting them would zoom out farther than
+    /// ``farthestLessonFramingMetres`` across 400 points.
+    public func lessonFraming(_ region: WorldRegion, clearOf insets: ScreenInsets) -> PlanCamera? {
+        guard let framed = framing(region, clearOf: insets) else { return nil }
+        let metres = 400 / framed.pointsPerUnit / Double(WorldCoordinate.unitsPerMetre)
+        return metres <= Self.farthestLessonFramingMetres ? framed : nil
+    }
+
     /// The part of the view `insets` leave clear: its leading and top
     /// edges and its size; the whole view along a side where they would
     /// leave less than a point.

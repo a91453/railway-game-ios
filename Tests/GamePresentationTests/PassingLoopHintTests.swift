@@ -128,6 +128,18 @@ final class PassingLoopHintTests: XCTestCase {
         XCTAssertNil(PassingLoopHint.waitingLine([wait(train)], in: session.world, skipping: session.linesLaidByTheDemo))
         session.linesLaidByTheDemo = []
         XCTAssertEqual(PassingLoopHint.waitingLine([wait(train)], in: session.world, skipping: session.linesLaidByTheDemo), single)
+
+        // The session's own watch (the L15 review's L15-8.5), with the
+        // demo's lines read back from a save (decision 656).
+        var news = NewsLog()
+        news.demoLines = [single]
+        let restored = GameSession(world: world)
+        restored.restoreNews(try JSONDecoder().decode(NewsLog.self, from: JSONEncoder().encode(news)))
+        restored.watchPassingLoopHint(waits: [wait(train)])
+        XCTAssertNil(restored.passingLoopHint, "the demo laid it")
+        restored.linesLaidByTheDemo = []
+        restored.watchPassingLoopHint(waits: [wait(train)])
+        XCTAssertNotNil(restored.passingLoopHint, "the player's line")
     }
 
     func testALoopTheLineDoesNotStopAtLeavesItSingle() throws {

@@ -85,6 +85,7 @@ struct HUDView: View {
         .lineLimit(1)
         .sheet(isPresented: $reportingProblem) {
             ProblemReportSheet(game: session.problemReportGame, session: session, lessons: launcher.lessonReport(in: .app))
+                .coversTheMap(session)
         }
         .alert(Text(verbatim: session.language.text("Save As", "另存新檔")), isPresented: $namingSave) {
             TextField(text: $saveName) {

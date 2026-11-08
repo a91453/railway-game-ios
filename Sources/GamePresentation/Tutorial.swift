@@ -289,6 +289,19 @@ public enum TutorialGoal: Hashable, Sendable {
     case addStopToLine
 }
 
+extension TutorialGoal {
+    /// Whether the step has the player build a station: picking its
+    /// platform's place or building it, where the platform mode lists no
+    /// platforms already on the track (decision 643, narrowed to these
+    /// steps by decision 656).
+    public var buildsAStation: Bool {
+        switch self {
+        case .pickPlatformSite, .buildStation: true
+        default: false
+        }
+    }
+}
+
 /// What the session does when a step is first shown, going forward
 /// (decision 188), so the step starts from what it needs. None of them
 /// changes the world or the message on screen (but `clearSelection` and

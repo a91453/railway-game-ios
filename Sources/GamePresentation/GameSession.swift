@@ -774,8 +774,12 @@ public final class GameSession {
     /// The lines the demo mode laid itself (decision 351): the one-time
     /// passing-loop card leaves them out, since their track is the game's
     /// trace of the real line, not the player's (decision 643, the owner's
-    /// iPad playtest §6.4). Not saved: the card is seen once per device.
-    public internal(set) var linesLaidByTheDemo: Set<LineID> = []
+    /// iPad playtest §6.4). Kept in the news log, which the save keeps
+    /// (decision 656).
+    public internal(set) var linesLaidByTheDemo: Set<LineID> {
+        get { news.demoLines }
+        set { news.demoLines = newValue }
+    }
     /// Whether a trace keeps the real line's tunnels and viaducts at any
     /// ``networkHeight``, as the demo mode's real lines are laid, each on
     /// its own level where they would cross (decision 351).
@@ -1198,8 +1202,12 @@ public final class GameSession {
     /// cover away, the 3D map closing onto the 2D one. The session has it
     /// again as the 3D map closes (``setMap3DOpen(_:)``); on the phone it
     /// came on the 2D map some 20 seconds later.
+    ///
+    /// Decision 656 (the L15 review's L13-2): nor while any other sheet or
+    /// full-screen cover is over the 2D map (``coverOpened()``), under
+    /// which the popover came the same way and took it away.
     func syncSpeedLagHint() {
-        let hint = Self.showsSpeedLagHint && !isMap3DOpen ? speedLagWatch.hint : nil
+        let hint = Self.showsSpeedLagHint && !isMap3DOpen && mapCovers.isEmpty ? speedLagWatch.hint : nil
         if hint != speedLagHint {
             speedLagHint = hint
             speedLagHintSeen = false
@@ -1592,6 +1600,31 @@ public final class GameSession {
     }
 
     @ObservationIgnored private var isMap3DOpen = false
+
+    /// The sheets and full-screen covers over the 2D map now, each by the
+    /// token ``coverOpened()`` gave it (decision 656).
+    @ObservationIgnored private var mapCovers: Set<Int> = []
+    @ObservationIgnored private var nextMapCover = 1
+
+    /// Whether a sheet or a full-screen cover is over the 2D map.
+    public var isMapCovered: Bool { !mapCovers.isEmpty }
+
+    /// A sheet or a full-screen cover came over the 2D map: the speed hint
+    /// waits until every one has gone (decision 656). Returns its token for
+    /// ``coverClosed(_:)``.
+    public func coverOpened() -> Int {
+        let token = nextMapCover
+        nextMapCover += 1
+        mapCovers.insert(token)
+        syncSpeedLagHint()
+        return token
+    }
+
+    /// The sheet or cover `token` named went.
+    public func coverClosed(_ token: Int) {
+        guard mapCovers.remove(token) != nil else { return }
+        syncSpeedLagHint()
+    }
 
     /// Decision 403 (續二): blows the followed train's horn (``TrainHorn``),
     /// the 3D follow bar's button. Nothing when no train is followed; the

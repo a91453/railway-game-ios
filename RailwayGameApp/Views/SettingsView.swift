@@ -210,10 +210,7 @@ struct SettingsView: View {
         } header: {
             Text("Sound")
         } footer: {
-            Text(verbatim: language.text(
-                "Station chimes ring when a train arrives. Other effects: building, changing tools, income and warnings. In silent mode the game makes no sound.",
-                "車站鈴聲在列車到站時響。其他音效：建造、換工具、收入與警告。\(DeviceFamily.current.name) 在靜音模式時，遊戲不會發出聲音。"
-            ))
+            Text(verbatim: DeviceFamily.current.soundNote(in: language))
         }
     }
 

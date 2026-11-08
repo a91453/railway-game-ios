@@ -125,6 +125,11 @@ public struct NewsLog: Hashable, Codable, Sendable {
     /// Whether the game is one of the demos (decision 181): kept with the
     /// save, so a demo continued later still unlocks no achievements.
     public var isDemo = false
+    /// The lines the demo mode laid itself (decision 351), which the
+    /// passing-loop card leaves out (decision 643): kept with the save
+    /// (decision 656, the L15 review's L15-8.2), so a demo saved before
+    /// the card came up does not raise it for them once read back.
+    public var demoLines: Set<LineID> = []
 
     public init() {
         items = []
@@ -179,7 +184,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
-        case version, items, nextID, readThrough, baseline, isDemo
+        case version, items, nextID, readThrough, baseline, isDemo, demoLines
     }
 
     private static let version = 1
@@ -208,6 +213,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
         self.readThrough = readThrough
         baseline = try container.decodeIfPresent(MonthlyBaseline.self, forKey: .baseline)
         isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
+        demoLines = try Set(container.decodeIfPresent([LineID].self, forKey: .demoLines) ?? [])
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -218,6 +224,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
         try container.encode(readThrough, forKey: .readThrough)
         try container.encodeIfPresent(baseline, forKey: .baseline)
         if isDemo { try container.encode(isDemo, forKey: .isDemo) }
+        if !demoLines.isEmpty { try container.encode(demoLines.sorted(), forKey: .demoLines) }
     }
 }
 
