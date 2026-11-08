@@ -431,13 +431,23 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
         settle(seconds: 2)
         keep("sights-on-the-map", app)
-        let list = app.collectionViews.firstMatch
         // The identifier on a DisclosureGroup may not reach the element
-        // its row becomes; its label always does (run 42519070451).
+        // its row becomes; its label always does (run 42519070451). The
+        // panel fills the phone on its side, and dragging the first
+        // collection view did not bring the last section in (run
+        // 42521476908), so swipe the panel itself.
         let folded = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier == 'tourism.offMap' OR label BEGINSWITH '地圖外的景點'")
         ).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(folded, in: list), "The sights off the map come into reach")
+        var reached = false
+        for _ in 0..<30 {
+            if folded.exists, folded.isHittable, app.windows.firstMatch.frame.contains(folded.frame) {
+                reached = true
+                break
+            }
+            app.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(reached, "The sights off the map come into reach")
         keep("sights-off-the-map-folded", app)
         folded.tap()
         settle(seconds: 2)
