@@ -125,6 +125,16 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     /// card keeps clear of it (Mac playtest 2026-11-08, A2: the pill
     /// covered "Opened Line 1 …" at the last step).
     case statusBanner = "map.banner"
+    /// The row beside the tools column's foot (Done, the card's toggle,
+    /// Undo and Redo): never outlined, but the folded card keeps clear of
+    /// it (Mac playtest 2026-11-08, A2: at "Tap ✕" the pill stood over the
+    /// toggle beside ✕).
+    case editsRow = "edits.row"
+    /// The game's date and time on the status bar: never outlined, but
+    /// the folded card keeps clear of it (Mac playtest 2026-11-08, A2:
+    /// kept off the banner at the last step, the pill went over the clock
+    /// the step asks to watch).
+    case gameClock = "hud.time"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).

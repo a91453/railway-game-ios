@@ -47,4 +47,22 @@ final class LegendFootUnderPanelTests: XCTestCase {
         )
         XCTAssertEqual(foot, standard)
     }
+
+    /// Mac playtest A4 (2026-11-08): the station master stands taller than
+    /// the row `standard` clears; the legend keeps above it all the same.
+    func testRisesAboveAStationMasterTallerThanTheRow() {
+        let master = ScreenFrame(x: 380, y: 402 - 10 - 160, width: 70, height: 160)
+        let foot = HUDMargins.legendFootUnderPanel(
+            standard: standard, screenBottom: screenBottom, mapHeight: mapHeight,
+            legendStart: 300, legendEnd: 480, beside: [], above: [master]
+        )
+        XCTAssertEqual(foot, mapHeight - master.y)
+        XCTAssertGreaterThan(foot, standard)
+        // Beside the legend, it changes nothing.
+        let aside = ScreenFrame(x: 120, y: 402 - 10 - 120, width: 70, height: 120)
+        XCTAssertEqual(HUDMargins.legendFootUnderPanel(
+            standard: standard, screenBottom: screenBottom, mapHeight: mapHeight,
+            legendStart: 300, legendEnd: 480, beside: [], above: [aside]
+        ), screenBottom)
+    }
 }

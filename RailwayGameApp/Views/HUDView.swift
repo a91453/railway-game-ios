@@ -350,6 +350,8 @@ private struct HUDTime: View {
         .accessibilityValue(Text(verbatim: holiday ?? ""))
         .accessibilityHint(Text(verbatim: language.text("Shows the forecast of the next seven days.", "顯示未來七天的預報。")))
         .accessibilityIdentifier("hud.time")
+        // Mac playtest A2: the tutorial's pill keeps clear of the clock.
+        .tutorialTarget(.gameClock)
     }
 }
 
@@ -993,7 +995,12 @@ private struct SpeedLagHintCard: View {
             Text(verbatim: hint.text(in: language))
                 .font(.subheadline)
                 .foregroundStyle(Theme.textPrimary)
+                // Mac playtest 2026-11-08, A6: the status bar keeps its
+                // words to one line (`lineLimit(1)`), and its popover took
+                // that too and cut the sentence short; here it wraps.
+                .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 248, alignment: .leading)
             HStack(spacing: 16) {
                 if let switchText = hint.switchText(in: language) {
                     Button(switchText) { session.acceptSpeedLagHint() }
@@ -1006,10 +1013,8 @@ private struct SpeedLagHintCard: View {
             }
         }
         .padding()
-        // One width, not at most one: the popover sized itself to the
-        // sentence on one line and cut it short at 280 (Mac playtest
-        // 2026-11-08, A6); at a set width it takes the lines it wraps to.
-        .frame(width: 280, alignment: .leading)
+        // Its own size, which the popover takes (A6).
+        .fixedSize()
         .accessibilityIdentifier("hud.lagHint")
     }
 }
