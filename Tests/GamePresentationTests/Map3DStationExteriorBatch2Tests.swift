@@ -2,6 +2,46 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch2Tests: XCTestCase {
+    func testAlishanEveryUpperDeckCornerHasConcreteBelow() {
+        let model = Map3DStationExteriorBatch2.model(for: .alishan, detail: .near)
+        let concrete = Map3DColor.rgb(0xD2D4CF)
+        // Sample just inside the four corners of the 34 x 52 m deck. A lower
+        // volume must cover each point at its 8.5 m top, not merely a railing.
+        for east: Float in [-18.7,14.7] {
+            for north: Float in [-16.7,34.7] {
+                let point = (east,-north)
+                let supported = stride(from: 0,to: model.vertices.count,by: 3).contains { i in
+                    let triangle = Array(model.vertices[i..<(i+3)])
+                    guard triangle.allSatisfy({ $0.color == concrete && abs($0.z-8.5) < 0.02 }) else { return false }
+                    let a=(triangle[0].x,triangle[0].y),b=(triangle[1].x,triangle[1].y),c=(triangle[2].x,triangle[2].y)
+                    func cross(_ p:(Float,Float),_ q:(Float,Float),_ r:(Float,Float)) -> Float {
+                        (q.0-p.0)*(r.1-p.1)-(q.1-p.1)*(r.0-p.0)
+                    }
+                    let signs=[cross(a,b,point),cross(b,c,point),cross(c,a,point)]
+                    return signs.allSatisfy { $0 >= -0.001 } || signs.allSatisfy { $0 <= 0.001 }
+                }
+                XCTAssertTrue(supported,"Upper deck corner (\(east),\(north)) has no lower volume")
+            }
+        }
+    }
+    func testFenqihuRoofProjectionFitsWallAndEaves() {
+        let model = Map3DStationExteriorBatch2.model(for: .fenqihu, detail: .near)
+        let wood = Map3DColor.rgb(0x858784)
+        let wallColours = Set([wood] + [0.92,0.80,0.70,0.86].map { Map3DColor.shaded(wood,$0) })
+        let wall = model.vertices.filter { wallColours.contains($0.color) && $0.z < 5.6 }
+        let roof = model.vertices.filter { $0.color == Map3DColor.rgb(0x697973) && $0.z > 5.4 }
+        XCTAssertFalse(wall.isEmpty)
+        XCTAssertFalse(roof.isEmpty)
+        guard !wall.isEmpty,!roof.isEmpty else { return }
+        let wallX=wall.map(\.x),wallY=wall.map(\.y),roofX=roof.map(\.x),roofY=roof.map(\.y)
+        let wallArea=(wallX.max()!-wallX.min()!)*(wallY.max()!-wallY.min()!)
+        let roofArea=(roofX.max()!-roofX.min()!)*(roofY.max()!-roofY.min()!)
+        XCTAssertLessThanOrEqual(roofArea/wallArea,1.4)
+        XCTAssertGreaterThanOrEqual((wallX.min()!-roofX.min()!),0.79)
+        XCTAssertLessThanOrEqual((wallX.min()!-roofX.min()!),1.21)
+        XCTAssertGreaterThanOrEqual((wallY.min()!-roofY.min()!),0.79)
+        XCTAssertLessThanOrEqual((wallY.min()!-roofY.min()!),1.21)
+    }
     func testFenqihuHasNoDetachedRearSidingRods() {
         let model = Map3DStationExteriorBatch2.model(for: .fenqihu, detail: .near)
         let oldRod = Map3DColor.rgb(0x70553E)
