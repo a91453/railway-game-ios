@@ -678,8 +678,13 @@ set -euo pipefail
 # The pull request run 42448198498 (#1969) then took 474, 486 and 497 s
 # in -3, -4 and -5 (9.1-9.3 minutes; KaohsiungLightRailDayTests 187 s),
 # so each gave a class to a campaign that has stayed under 300 s:
-# Map3DBusesTests (75 s) to -9, Map3DBusLayerTests (84) to -6,
+# Map3DBusesTests (75 s) to -13, Map3DBusLayerTests (84) to -6,
 # Map3DModelTests (54) to -10, DemoSightsAndTransfersTests (31) to -11.
+# (Map3DBusesTests first went to -9, which then took 536 s in run
+# 42449200714: its 278 s had been a fast runner's, Taoyuan included;
+# -13 has the lowest mean of the four runs, some 280 s.) A campaign still
+# takes up to twice as long on one runner as on another, so a single run
+# can pass 8 minutes; judge by several runs before moving more.
 classes_of() {
   case "$1" in
     campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests" ;;
@@ -690,11 +695,11 @@ classes_of() {
     campaigns-6) echo "RealLineAcquisitionTests Map3DTests DanhaiBlueThenGreenSimpleDayTests Map3DStreetsTests EconomyPropertyTests DanhaiGreenLineDayTests NewGameSavePropertyTests MetroStructuresTests FrameTimeBenchTests Map3DTrainLabelsTests TurnbackTests WeeklyPunctualityTests Map3DLotGroundTests Map3DEMU800Tests Map3DSceneRebuildTests Map3DBusLayerTests" ;;
     campaigns-7) echo "HighSpeedDemoTests Map3DStreetLifeTests Map3DBuildReturnTests HighSpeedDemoBatchTests Map3DTrainSetTests Map3DNextDepartureTests DanhaiDepotTests Map3DC371C381Tests ScreenshotSceneTests DemoRealLinesTests WorldStateMachineTests ReplayFixtureTests Map3DMeshSimplifierTests TraceOverlapTests" ;;
     campaigns-8) echo "LineDispatchPropertyTests BoardingPropertyTests ReservationShortcutTests Map3DFrontageTests Map3DSceneryPropsTests ScheduledOvertakeTrackFinalPropertyTests AnkengLineTests LocalPassTests OccupiedRoutingPropertyTests Map3DEMU900IntegrationTests BusRoadsRealMapTests LineAccountsTests LessonTests LoopLineBoardingTests" ;;
-    campaigns-9) echo "SaveMutationTests Map3DPlatformClearanceTests ScheduledTrafficPropertyTests DanhaiBothLinesDayTests SanyingLineRealisticDayTests RealRailwayTracingTests ContinuousTrackPropertyTests DeadlockSearchCostTests LineLossFixesTests NetworkPostcardTests LoadJourneyCacheTests WaterGridTests BusStopLabelsRealMapTests Map3DTrainShapeRefreshTests TaoyuanAirportLineTests Map3DBusesTests" ;;
+    campaigns-9) echo "SaveMutationTests Map3DPlatformClearanceTests ScheduledTrafficPropertyTests DanhaiBothLinesDayTests SanyingLineRealisticDayTests RealRailwayTracingTests ContinuousTrackPropertyTests DeadlockSearchCostTests LineLossFixesTests NetworkPostcardTests LoadJourneyCacheTests WaterGridTests BusStopLabelsRealMapTests Map3DTrainShapeRefreshTests TaoyuanAirportLineTests" ;;
     campaigns-10) echo "ServiceLinePropertyTests ServiceRepeatingSecondHalfPropertyTests BusOneWayAndTunnelRealMapTests PassengerPlanKeyTests Map3DTEMU1000Tests ScheduledOvertakeTrackPropertyTests TRADemoDayTests CommandLogTests RealWorldDemoTests ScheduledTrafficTests SparseCityLandTests WholeTaiwanTests Map3DFreightTrainTests Map3DKaohsiungLightRailTests Map3DModelTests" ;;
     campaigns-11) echo "LiujiaLineTrainsTests Map3DCoarseChunkTests SanyingLineSimpleDayTests Map3DRealTrainsTests Map3DEMU800IntegrationTests TimetablePropertyTests Map3DTourismEMU500Tests Map3DShadowTests Map3DEMU3000Tests Map3DStationKitTests SharedNetworkTests LineRoutePreferencePropertyTests MoneyTextSourceTests DemoSightsAndTransfersTests" ;;
     campaigns-12) echo "ServicePropertyTests TrafficControlPropertyTests HighSpeedDemoDayTests Map3DParksTests DanhaiBlueThenGreenRealisticDayTests Map3DRealGroundTests Map3DHandoffTests PassengerPropertyTests RealWorldDemoGroundTests Map3DSceneKitTests Map3DEMU900Tests LandImportTests Map3DTrainMaterialTests OneRowPerGameTests" ;;
-    campaigns-13) echo "ServiceRepeatingPropertyTests LinePatternPropertyTests PassengerCheckOnceTests Map3DTrainOcclusionTests Map3DStreamingTests Map3DChuKuangIntegrationTests Map3DNightAndGroundTests Map3DOpenEveryStartTests IdleTrainDeadlockTests SanyingDepotTests TurnbackPropertyTests TrafficSpeedTests SavedGameTests NewGameBalanceTests" ;;
+    campaigns-13) echo "ServiceRepeatingPropertyTests LinePatternPropertyTests PassengerCheckOnceTests Map3DTrainOcclusionTests Map3DStreamingTests Map3DChuKuangIntegrationTests Map3DNightAndGroundTests Map3DOpenEveryStartTests IdleTrainDeadlockTests SanyingDepotTests TurnbackPropertyTests TrafficSpeedTests SavedGameTests NewGameBalanceTests Map3DBusesTests" ;;
     *) return 1 ;;
   esac
 }
