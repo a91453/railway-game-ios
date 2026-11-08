@@ -162,6 +162,16 @@ final class TutorialUITests: XCTestCase {
                       "The Lines button is covered: button \(lines.frame), card \(card.exists ? card.frame : .null), folded \(folded.exists ? folded.frame : .null)")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
+        // The press on Lines can be cancelled while the map draws its first
+        // frames (the app's trace in 0.6.0 (121)'s full lane, run
+        // 42444107304, iPad: "touch cancelled" 111 ms after it began, after
+        // a 4.5 s gap between frames), and the panel never opens. A
+        // cancelled touch is no press: press once more, as
+        // HUDAlignmentUITests does (#1951). Lines sets the panel rather than
+        // toggling it, so a second press never closes one the first opened.
+        if !pick.appears(within: 10), lines.exists {
+            lines.tap()
+        }
         XCTAssertTrue(pick.appears(within: 10), "The lines panel did not open")
         // Picking starts by itself; Pick on Map is not tapped.
         let stop = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "line.draft.pick", "Stop Picking")).firstMatch

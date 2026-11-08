@@ -403,6 +403,12 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
         app.chooseBlankMap()
+        // The blank map opens on its whole first town, some steps out (Mac
+        // playtest A9, #1955): the zoom buttons bring it to within a step of
+        // the maximum zoom, where it had opened, so the pinch below passes
+        // the maximum as it did. Done before the tools are out, while the
+        // buttons show on a phone.
+        XCTAssertTrue(app.zoomIn(until: { $0 >= 32.0 / 1_024 * 0.999 }), "Zoom in must come within a step of the maximum zoom")
         // Decision 114: Build opens the tools, starting with the network.
         let buildEntry = app.buttons["dock.build"]
         XCTAssertTrue(buildEntry.appears(within: 10))
@@ -514,16 +520,14 @@ final class MapInteractionTests: XCTestCase {
         let zoomIn = app.buttons["Zoom in"]
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.appears(within: 10))
-        // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
-        // maximum zoom. On a slow Simulator a touch was lost and the map
+        // A step doubles the size (Stage E1), up to 64 points per 16 m, the
+        // maximum zoom; a blank map opens on its whole first town, some
+        // steps out (Mac playtest A9, #1955; it had opened at 32, one step
+        // from the maximum). On a slow Simulator a touch was lost and the map
         // never moved (full lane run 38458089903, its screen recording):
         // the tap is tried again only when the camera's zoom (`map.camera`)
         // has not changed, so a step that grows less than double is not
         // made up by a second one (the PR #526–#626 review, C6).
-        func atMaximum() -> Bool {
-            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
-                             timeout: 10) == .completed
-        }
         let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
         XCTAssertTrue(zoom.appears(within: 10))
         // The opening camera may frame the game again as its layout
@@ -544,7 +548,11 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(moved(), "Zoom in did not move the camera")
         let after = try XCTUnwrap((zoom.value as? String).flatMap(Double.init))
         XCTAssertEqual(after / before, 2, accuracy: 0.001, "A step doubles the size: \(before) to \(after)")
-        XCTAssertTrue(atMaximum(), "64 points per 16 m is the maximum zoom")
+        // The steps after it end at the maximum zoom, where the button
+        // turns off.
+        XCTAssertTrue(app.zoomInToClosest(), "Zoom in must reach the maximum zoom")
+        let closest = try XCTUnwrap(app.cameraZoom)
+        XCTAssertEqual(closest, 64.0 / 1_024, accuracy: 1e-9, "64 points per 16 m is the maximum zoom")
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
         XCTAssertTrue(zoomIn.isEnabled)
@@ -634,8 +642,8 @@ final class MapInteractionTests: XCTestCase {
         app.chooseBlankMap()
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10))
-        zoomIn.tap()
-        XCTAssertFalse(zoomIn.isEnabled)
+        // The blank map opens several steps out (Mac playtest A9).
+        XCTAssertTrue(app.zoomInToClosest(), "Zoom in must reach the camera's closest zoom")
 
         XCUIDevice.shared.orientation = .landscapeRight
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
@@ -670,15 +678,10 @@ final class MapInteractionTests: XCTestCase {
         app.chooseBlankMap()
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10))
-        // A slow Simulator can lose the tap (main 81f3d4f's full lane):
-        // tap once more if the camera has not reached its closest zoom.
-        func closest() -> Bool {
-            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
-                             timeout: 10) == .completed
-        }
-        zoomIn.tap()
-        if !closest() { zoomIn.tap() }
-        XCTAssertTrue(closest(), "Zoom in must reach the camera's closest zoom")
+        // A slow Simulator can lose a tap (main 81f3d4f's full lane): each
+        // step the camera did not take is tapped once more. The blank map
+        // opens several steps out (Mac playtest A9).
+        XCTAssertTrue(app.zoomInToClosest(), "Zoom in must reach the camera's closest zoom")
         let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
         XCTAssertTrue(zoom.appears(within: 5))
         let zoomed = zoom.value as? String
@@ -1833,5 +1836,51 @@ final class MapInteractionTests: XCTestCase {
         }
         let after = first.exists ? first.frame.minY : -.infinity
         XCTAssertLessThan(after, before.minY - 60, "A drag up on a card moves the list up (from \(before.minY) to \(after))")
+    }
+}
+
+private extension XCUIApplication {
+    /// The camera's zoom (`map.camera`): points per world unit; the
+    /// closest zoom, 64 points per 16 m, is 0.0625.
+    var cameraZoom: Double? {
+        (descendants(matching: .any)["map.camera"].firstMatch.value as? String).flatMap(Double.init)
+    }
+
+    /// Mac playtest A9 (#1955): a blank map opens on its whole first town,
+    /// some five zoom steps from the closest zoom on a phone, where it had
+    /// opened one step from it. Taps Zoom in, a step at a time, until
+    /// `reached` says so of the camera's zoom, or the button turns off at
+    /// the closest zoom; whether `reached` came. A step whose camera did not
+    /// move had its touch lost on a slow Simulator (full lane run
+    /// 38458089903) and is tapped once more; a step that moved is never
+    /// made up by another, so each tap is one step.
+    @discardableResult
+    func zoomIn(until reached: (Double) -> Bool = { _ in false }, steps: Int = 10) -> Bool {
+        let button = buttons["Zoom in"]
+        let readout = descendants(matching: .any)["map.camera"].firstMatch
+        guard button.appears(within: 10), readout.appears(within: 10) else { return false }
+        for _ in 0..<steps {
+            guard let zoom = cameraZoom else { return false }
+            if reached(zoom) { return true }
+            guard button.isEnabled else { return false }
+            let before = readout.value as? String ?? ""
+            func moved() -> Bool {
+                XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", before), object: readout)],
+                                 timeout: 10) == .completed
+            }
+            button.tap()
+            if !moved() { button.tap() }
+            guard moved() else { return false }
+        }
+        return cameraZoom.map(reached) ?? false
+    }
+
+    /// Zooms in to the camera's closest zoom, where Zoom in turns off;
+    /// whether it got there.
+    func zoomInToClosest() -> Bool {
+        zoomIn()
+        let button = buttons["Zoom in"]
+        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: button)],
+                                timeout: 10) == .completed
     }
 }
