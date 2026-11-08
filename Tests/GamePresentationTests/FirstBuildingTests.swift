@@ -28,9 +28,10 @@ final class FirstBuildingTests: XCTestCase {
             let cheaper = try XCTUnwrap(preview.cheaperSite, "\(language): no cheaper site is named")
             XCTAssertEqual(cheaper.cost, Money(10_118_400))
             XCTAssertEqual(cheaper.centre, PlanPoint(x: middle.x - 3 * Land.cellLength, y: middle.y - 3 * Land.cellLength))
+            let cost = Money(940_492_800).moneyText, cash = Money(900_000_000).moneyText, cheap = Money(10_118_400).moneyText
             XCTAssertEqual(session.buildingPreviewText, language.text(
-                "Not enough cash to put up this building: it costs NT$ 9,404,928 and you have NT$ 9,000,000. About 270 m north-west it costs NT$ 101,184.",
-                "餘額不足，無法蓋這棟建物：需要 NT$ 9,404,928，目前只有 NT$ 9,000,000。往西北約 270 公尺只要 NT$ 101,184。"
+                "Not enough cash to put up this building: it costs \(cost) and you have \(cash). About 270 m north-west it costs \(cheap).",
+                "餘額不足，無法蓋這棟建物：需要 \(cost)，目前只有 \(cash)。往西北約 270 公尺只要 \(cheap)。"
             ))
 
             // The site named builds, at the price named.
