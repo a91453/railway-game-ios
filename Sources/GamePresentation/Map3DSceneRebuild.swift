@@ -171,13 +171,11 @@ extension Map3DScene {
             guard area.minX < area.maxX, area.minY < area.maxY else { continue }
             let part = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (area, originX, originY), baseMap: baseMap,
                                   cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways,
-                                  temples: temples, noBuild: noBuild, trackCover: cover, detail: detail, facades: facades)
+                                  temples: temples, noBuild: noBuild, trackCover: cover, detail: detail, facades: facades,
+                                  studies: Self.studyRegion(world: world, scene: region))
             let wanted = Set(block)
             built += part.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
-            for exterior in part.stationExteriors {
-                exteriors.removeAll { $0.station == exterior.station }
-                exteriors.append(exterior)
-            }
+            exteriors = Self.exteriors(exteriors, rebuilt: part.stationExteriors) { wanted.contains(grid.key(of: $0)) }
             life.spots += part.streetLife.spots.filter { Self.isStations($0) && wanted.contains(grid.key(of: $0.path.points[0])) }
         }
         stationExteriors = exteriors
@@ -187,6 +185,18 @@ extension Map3DScene {
         streetLife.spots.removeAll { Self.isStations($0) && keys.contains(grid.key(of: $0.path.points[0])) }
         streetLife.spots += life.spots
         self.streetLife = streetLife
+    }
+
+    /// Review L14-6: the studies standing once the chunks `rebuilt(_:)`
+    /// says hold an origin are built again: those of `old` elsewhere, and
+    /// those `rebuilt` stood in them. One of `old` in them that `rebuilt`
+    /// no longer stands (cut by new track to less than
+    /// ``Builder/exteriorLeast``) goes, as it went from the drawing; one
+    /// `rebuilt` stood only in the apron round them is drawn in no chunk
+    /// kept, and is not taken.
+    static func exteriors(_ old: [Map3DStationExterior], rebuilt: [Map3DStationExterior],
+                          in block: (Map3DPoint) -> Bool) -> [Map3DStationExterior] {
+        old.filter { !block($0.origin) } + rebuilt.filter { block($0.origin) }
     }
 
     /// Whether `spot` is a station's or its shops' (what a change of the

@@ -59,4 +59,38 @@ final class RealLineListingTests: XCTestCase {
         XCTAssertLessThan(try XCTUnwrap(listings.firstIndex { $0.isBuyable } ?? 0), try XCTUnwrap(listings.firstIndex { !$0.isBuyable }),
                           "the buyable ones come first here")
     }
+
+    /// Review L14-5: with the panel open, the map expanded is checked again
+    /// at once, not only when the panel is opened again; with it closed,
+    /// nothing is worked out.
+    func testTheListShowingIsCheckedAgainWhenTheLandGrows() async throws {
+        let session = try game(at: 22.6273, 120.3014)
+        session.showRealLineList(true)
+        await session.realLineAvailabilityChecked()
+        let checked = try XCTUnwrap(session.realLineAvailabilityKey)
+        let owned = try XCTUnwrap(session.world.mapExpansion?.owned)
+        let tile = try XCTUnwrap(session.world.mapTilesForSale().sorted().first)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) -> String in
+            try world.buyMapTile(tile, passingMilestone: true)
+            return ""
+        })
+        XCTAssertEqual(session.world.mapExpansion?.owned.count, owned.count + 1)
+        XCTAssertNotEqual(session.realLineAvailabilityKey, checked, "checked again on the land bought")
+        XCTAssertEqual(session.realLineCheckedLand, session.world.mapExpansion?.owned)
+        await session.realLineAvailabilityChecked()
+        XCTAssertNil(session.realLineAvailabilityTask)
+
+        // Closed, a tile bought is checked only once the panel opens.
+        session.showRealLineList(false)
+        let closed = session.realLineAvailabilityKey
+        let next = try XCTUnwrap(session.world.mapTilesForSale().sorted().first)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) -> String in
+            try world.buyMapTile(next, passingMilestone: true)
+            return ""
+        })
+        XCTAssertEqual(session.realLineAvailabilityKey, closed)
+        session.showRealLineList(true)
+        XCTAssertNotEqual(session.realLineAvailabilityKey, closed)
+        await session.realLineAvailabilityChecked()
+    }
 }

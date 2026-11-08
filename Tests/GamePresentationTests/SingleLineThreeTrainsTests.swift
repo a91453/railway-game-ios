@@ -126,6 +126,54 @@ final class SingleLineThreeTrainsTests: XCTestCase {
         }
     }
 
+    /// Review L14-1: whether a train taken off for a loop stays off
+    /// (decision 628) is asked once it is off, so it must not count the
+    /// trains the line has. A line on a timetable runs as many as it has
+    /// (decision 133), one fewer once one is off, so it is never said to
+    /// run them all; a pattern's train is weighed against the pattern's
+    /// own trains, not the line's other service's.
+    func testATrainTakenOffIsWeighedAgainstItsOwnService() throws {
+        let session = try playerLine(rules: .simple)
+        _ = try placeByHand(in: session)
+        let line = try XCTUnwrap(session.world.lines.first)
+        XCTAssertEqual(line.trains.count, 3)
+        let lifted = line.trains[2]
+
+        // Its own service runs three: one off leaves it short.
+        var plain = session.world
+        try plain.unassignTrain(lifted)
+        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(line.id, in: plain))
+        // Set to run two, the third is a spare (decision 628 itself).
+        var two = session.world
+        try two.setLineTrainsInService(line.id, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+        try two.unassignTrain(lifted)
+        XCTAssertTrue(GameSession.runsEveryTrainOnItsTrack(line.id, in: two))
+
+        // On a timetable it runs every train it has, so none is spare.
+        var timed = two
+        try timed.assignTrain(lifted, to: line.id)
+        let times = (0..<line.stops.count).map { LineRunTime(arrival: 8 * 3_600 + Int64($0) * 600, departure: 8 * 3_600 + Int64($0) * 600) }
+        try timed.setLineRuns(line.id, to: (0..<12).map { _ in LineRun(from: 0, to: line.stops.count - 1, times: times) })
+        XCTAssertEqual(timed.line(id: line.id)?.trains.count, 3)
+        try timed.unassignTrain(lifted)
+        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(line.id, in: timed), "a timetabled line needs every train it has")
+
+        // A pattern running two, its second train taken off: the line's
+        // own two trains on the track do not make it spare.
+        var patterned = session.world
+        try patterned.setLineTrainsInService(line.id, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+        let pattern = try patterned.addLinePattern(line.id, calling: [0, line.stops.count - 1])
+        try patterned.setLineTrainsInService(line.id, to: TrainsInService(peak: 2, offPeak: 2, low: 2), pattern: pattern)
+        try patterned.unassignTrain(lifted)
+        try patterned.assignTrain(lifted, to: line.id, pattern: pattern)
+        let second = try patterned.purchaseTrain(named: "Pattern 2").id
+        try patterned.assignTrain(second, to: line.id, pattern: pattern)
+        try patterned.unassignTrain(lifted)
+        XCTAssertEqual(patterned.line(id: line.id)?.trains.count, 2)
+        XCTAssertFalse(GameSession.runsEveryTrainOnItsTrack(line.id, pattern: pattern, in: patterned), "the pattern is short of its train")
+        XCTAssertTrue(GameSession.runsEveryTrainOnItsTrack(line.id, in: patterned), "the line's own service runs its two")
+    }
+
     /// The challenge's way (a station both lines stop at): two lines over
     /// the same single track, trains set by hand. The same tap fixes it.
     func testTwoLinesOverTheSingleTrackRunOnceTheLoopsAreIn() throws {

@@ -647,7 +647,8 @@ struct LinesPanel: View {
             } header: {
                 Text(verbatim: session.language.text("Real lines for sale", "可收購的真實路線"))
             }
-            .onAppear { session.refreshRealLineAvailability() }
+            .onAppear { session.showRealLineList(true) }
+            .onDisappear { session.showRealLineList(false) }
         }
     }
 

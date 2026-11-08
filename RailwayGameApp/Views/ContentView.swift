@@ -1591,8 +1591,10 @@ final class GameScreenState {
     /// view, so that one going away (beginning to build shows it anew,
     /// the new one measured before the old one went) does not clear the
     /// frame of the one still showing.
-    var stationMasterFrames: [UUID: CGRect] = [:]
-    var stationMasterFrame: CGRect { stationMasterFrames.values.first { !$0.isEmpty } ?? .zero }
+    /// Review L14-8: the newest one's frame, so the legend keeps above the
+    /// one staying while both are measured.
+    var stationMasterFrames = NewestShownFrames<UUID, CGRect>()
+    var stationMasterFrame: CGRect { stationMasterFrames.newest { !$0.isEmpty } ?? .zero }
     /// Decision 226: where the tools stand on the screen (global
     /// coordinates; the column down a phone's leading edge, or the dock),
     /// as the screen measured them; a finger drawing on the map compares

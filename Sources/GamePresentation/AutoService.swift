@@ -754,12 +754,27 @@ extension GameSession {
         return text
     }
 
-    /// Decision 628: whether line `id` has on its track as many of its
-    /// trains as it runs at the busiest time of day.
-    static func runsEveryTrainOnItsTrack(_ id: LineID, in world: GameWorld) -> Bool {
-        guard let line = world.line(id: id) else { return false }
-        let runs = ServiceLevel.allCases.compactMap { world.lineTrainsInService(id, at: $0) }.max() ?? 0
-        let onTrack = line.assignedTrains.filter { world.train(id: $0)?.position != nil }.count
+    /// Decision 628: whether line `id`'s own service, or its pattern at
+    /// index `pattern`, has on its track as many of its trains as it runs
+    /// at the busiest time of day.
+    ///
+    /// Review L14-1: asked once a train is taken off, so it counts only
+    /// what does not move with the trains the line has. A line on a
+    /// timetable (decision 133) runs as many trains as it has, one fewer
+    /// once one is taken off, so it is never so (its trains are all
+    /// needed); and a service counts only its own trains, not those of the
+    /// line's other services.
+    static func runsEveryTrainOnItsTrack(_ id: LineID, pattern: Int? = nil, in world: GameWorld) -> Bool {
+        guard let line = world.line(id: id), !line.hasRuns else { return false }
+        let trains: [TrainID]
+        if let pattern {
+            guard line.patterns.indices.contains(pattern) else { return false }
+            trains = line.patterns[pattern].trains
+        } else {
+            trains = line.trains
+        }
+        let runs = ServiceLevel.allCases.compactMap { world.lineTrainsInService(id, at: $0, pattern: pattern) }.max() ?? 0
+        let onTrack = trains.filter { world.train(id: $0)?.position != nil }.count
         return onTrack >= runs
     }
 
@@ -938,7 +953,7 @@ extension GameSession {
         }
         for (train, line, pattern) in lifted {
             guard let journey = world.lineJourney(line) else { throw .trackReserved(train) }
-            if plan.newLine == nil, plan.trains == 0, Self.runsEveryTrainOnItsTrack(line, in: world) {
+            if plan.newLine == nil, plan.trains == 0, Self.runsEveryTrainOnItsTrack(line, pattern: pattern, in: world) {
                 // Decision 628: the line card's loop alone, and the line
                 // already has on its track every train it runs. Put back,
                 // the train would only stand as a spare on a platform of
