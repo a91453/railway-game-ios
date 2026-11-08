@@ -4124,3 +4124,17 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
   3. `trafficPlanKey` 含每列車的 execution 與 arrival／departure，幾乎每個 tick 都變，plan 每個 tick 都重算。
 - **建議的方向**（雲端判斷）：opposite 方向集合每個 plan 每個 service 只算一次；`Nominal` 照 service 編號記在 plan 裡，不重新雜湊整份點；配對前先依線路、方向、軌道篩掉不可能追上的對。改了要跑 golden、replay fixture 與 `swift-shards.sh` 的戰役 shard，tick 的結果不能變。
 - **量法**：`xcrun xctrace record --template 'Time Profiler' --device <模擬器> --attach <pid> --time-limit 20s`，再 `xcrun xctrace export --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]'`，依函式彙總；遊戲內「幀數」細目的「推進」是 tick 的時間。
+
+### 4.49 iPad 試玩的修正（決策 643，派工單 IPAD-FIXES，session_01YGNNun7AFhERsLzs7MjbvR，`claude/ipad-fixes`，#1966，2026-11-08）
+
+- **做了的**在 [決策 643](decisions/643.md)：`docs/research/MAC_PLAYTEST_2026-11-08.md` §6 的 iPad A1–A6，以及 §6.4 的四個疑點。四個都是表現層的 bug，iPhone 也有：月台清單標錯、天數算成原始日而非經過天數、票價步進預設 500 分、示範鋪的線觸發待避卡（`linesLaidByTheDemo`）。四個都修了，也加了 Linux 測試。A1 的教學取景只在 iPad 做（`DeviceFamily.framesTheLessonsTowns`），因為手機橫放時兩鎮要約 9 km 才放得下，第一段軌道太長、買不起，iPhone 閘門的 `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` 會逾時。A6 的開始選單兩欄改用 `onGeometryChange` 量寬度，不用 `ViewThatFits`（CRASH101）。GameCore、存檔 86、golden 76、fixture 都不動。
+- **狀態**（head 51a9e90）：Linux 建置與全部 shard、Release archive、Xcode build（iPhone 閘門 UI 測試）都是綠的。**「iPad tutorial tests」紅了兩次，兩次是不同的測試**：
+  - 第一次是 `testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt`，停在 Step 2 of 15。
+  - 重跑一次後是 `testCreateLineAndBuyAreInReach`：按 ✓（`map.build.confirm`）約 30 秒後，10 秒內沒有 `line.confirm.done`，失敗訊息是「The new line's card did not rise」。
+  - 兩個測試在 121fac3 都綠，在 51a9e90 也各自綠過一次。所以「Swift CI (gate)」是紅的，PR 還是 draft。本 session 第二次壓縮後停手。
+- **接手的人**：
+  1. 先看別的分支紅掉的 iPad 工作，判斷這兩個測試是不是本來就不穩：run 42444107304（job 128650463751）和 run 42417467175（job 128561088087）。這兩個還沒查。
+  2. 若只有本 PR 會紅，最可疑的是 A2：`LineConfirmationCard` 加了 `safeAreaInset` 的 `TutorialStepNote`，iPad 的 sheet 只給 `.large`（`SheetHeight.offered(on:)`、Theme `gameSheetDetents()`）。可能卡片升起的時機變了，或卡片被擋住了。
+  3. 修好且 CI 綠了再轉 ready，並在 #1579 回報。依作者規則（遊戲規劃第 56 任轉達）不開 iPad 截圖 run。
+- **UNVERIFIED**（要實機看）：A5 選單位置、iPad 各畫面的版面。
+- **號碼**：決策 643（已在 #1579 登記）；存檔、golden 不動。
