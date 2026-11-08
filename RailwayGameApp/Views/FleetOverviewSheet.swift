@@ -123,7 +123,7 @@ struct FleetOverviewSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
         .presentationDragIndicator(.visible)
         .confirmationDialog(
             Text(verbatim: sellingTrain.map {

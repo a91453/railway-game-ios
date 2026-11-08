@@ -33,9 +33,10 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
 
     /// The menu's name for the choice: each language in itself, so a player
     /// who cannot read the current one still finds theirs.
-    public func title(in language: DisplayLanguage) -> String {
+    /// The first choice names the device the game runs on (decision 642).
+    public func title(in language: DisplayLanguage, on device: DeviceFamily) -> String {
         switch self {
-        case .system: language.text("Same as iPhone", "跟隨 iPhone")
+        case .system: language.text("Same as \(device.name)", "跟隨 \(device.name)")
         case .english: "English"
         case .traditionalChinese: "繁體中文"
         }
@@ -55,17 +56,17 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
 
     /// What the player is told after choosing this: the game changes
     /// language the next time it opens.
-    public func restartNote(in language: DisplayLanguage) -> String {
+    public func restartNote(in language: DisplayLanguage, on device: DeviceFamily) -> String {
         switch self {
         case .system:
             language.text(
-                "The game will use the iPhone's language the next time it opens. Close it from the app switcher and open it again.",
-                "下次開啟遊戲時會跟隨 iPhone 的語言。請從多工畫面關掉遊戲，再重新開啟。"
+                "The game will use the \(device.name)'s language the next time it opens. Close it from the app switcher and open it again.",
+                "下次開啟遊戲時會跟隨 \(device.name) 的語言。請從多工畫面關掉遊戲，再重新開啟。"
             )
         case .english, .traditionalChinese:
             language.text(
-                "The game will be in \(title(in: language)) the next time it opens. Close it from the app switcher and open it again.",
-                "下次開啟遊戲時會換成\(title(in: language))。請從多工畫面關掉遊戲，再重新開啟。"
+                "The game will be in \(title(in: language, on: device)) the next time it opens. Close it from the app switcher and open it again.",
+                "下次開啟遊戲時會換成\(title(in: language, on: device))。請從多工畫面關掉遊戲，再重新開啟。"
             )
         }
     }

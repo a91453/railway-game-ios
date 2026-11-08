@@ -46,6 +46,13 @@ struct LineConfirmationCard: View {
             .safeAreaInset(edge: .bottom) {
                 purchaseBar(session.lineConfirmationPreview, in: language)
             }
+            // Decision 642: this card covers the tutorial's own, so it
+            // shows the step it is at.
+            .safeAreaInset(edge: .top) {
+                if let tutorial = session.tutorialStepInLineCard {
+                    TutorialStepNote(session: session, tutorial: tutorial)
+                }
+            }
             .navigationTitle(Text(verbatim: language.text("New line", "新路線")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

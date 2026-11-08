@@ -581,6 +581,7 @@ extension GameSession {
             "\(route.name.split(separator: "（").first.map(String.init) ?? route.name) \(ends.joined(separator: "–"))"
         )
         guard let line = try? performCommand(.edit(.createLine(name: name, stops: stations, targets: targets))).line else { return false }
+        linesLaidByTheDemo.insert(line.id)
         let color = route.color
         if let rgb = LineColor(rgb: Int(color.red) << 16 | Int(color.green) << 8 | Int(color.blue)) {
             _ = try? performCommand(.edit(.setLineColor(line.id, rgb)))

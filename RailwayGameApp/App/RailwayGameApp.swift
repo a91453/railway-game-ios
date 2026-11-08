@@ -930,6 +930,14 @@ extension DisplayLanguage {
     }
 }
 
+extension DeviceFamily {
+    /// The device the game runs on, for text that names it (decision 642).
+    /// A Mac running the iPad app counts as an iPad.
+    static var current: DeviceFamily {
+        UIDevice.current.userInterfaceIdiom == .phone ? .iPhone : .iPad
+    }
+}
+
 extension LanguageChoice {
     /// The start screen's language choice, from the app's own
     /// `AppleLanguages` (decision 257). Read from the app's domain alone:

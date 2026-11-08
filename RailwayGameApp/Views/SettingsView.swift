@@ -158,7 +158,7 @@ struct SettingsView: View {
         return Section {
             Picker(selection: languageChoiceBinding) {
                 ForEach(LanguageChoice.allCases, id: \.self) { choice in
-                    Text(verbatim: choice.title(in: language)).tag(choice)
+                    Text(verbatim: choice.title(in: language, on: .current)).tag(choice)
                 }
             } label: {
                 Label("Language", systemImage: "globe")
@@ -180,7 +180,7 @@ struct SettingsView: View {
             languageChoice
         } set: { choice in
             if choice.needsRestart(from: languageChoice, showing: .app) {
-                languageNote = choice.restartNote(in: .app)
+                languageNote = choice.restartNote(in: .app, on: .current)
             }
             languageChoice = choice
             choice.save()
@@ -212,7 +212,7 @@ struct SettingsView: View {
         } footer: {
             Text(verbatim: language.text(
                 "Station chimes ring when a train arrives. Other effects: building, changing tools, income and warnings. In silent mode the game makes no sound.",
-                "車站鈴聲在列車到站時響。其他音效：建造、換工具、收入與警告。iPhone 在靜音模式時，遊戲不會發出聲音。"
+                "車站鈴聲在列車到站時響。其他音效：建造、換工具、收入與警告。\(DeviceFamily.current.name) 在靜音模式時，遊戲不會發出聲音。"
             ))
         }
     }

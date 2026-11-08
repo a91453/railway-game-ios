@@ -764,6 +764,11 @@ public final class GameSession {
     public var isLayingDemoRealLines: Bool {
         demoRealLinesProgress != nil
     }
+    /// The lines the demo mode laid itself (decision 351): the one-time
+    /// passing-loop card leaves them out, since their track is the game's
+    /// trace of the real line, not the player's (decision 642, the owner's
+    /// iPad playtest §6.4). Not saved: the card is seen once per device.
+    public internal(set) var linesLaidByTheDemo: Set<LineID> = []
     /// Whether a trace keeps the real line's tunnels and viaducts at any
     /// ``networkHeight``, as the demo mode's real lines are laid, each on
     /// its own level where they would cross (decision 351).

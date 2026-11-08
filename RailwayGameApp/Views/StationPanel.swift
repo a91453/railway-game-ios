@@ -607,7 +607,7 @@ struct StationPanel: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
     }
 
     /// Decision 334: the 3D map over the platform train `train` stops at
@@ -1236,7 +1236,7 @@ struct StationPanel: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
     }
 
     // MARK: - Real station

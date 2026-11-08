@@ -243,6 +243,18 @@ extension View {
         }
     }
 
+    /// The heights a card raised over the map opens at (decision 642,
+    /// ``SheetHeight``): half the screen and pulled up on an iPhone, its
+    /// full height on an iPad.
+    func gameSheetDetents() -> some View {
+        presentationDetents(Set(SheetHeight.offered(on: .current).map { height -> PresentationDetent in
+            switch height {
+            case .half: .medium
+            case .full: .large
+            }
+        }))
+    }
+
     /// Glass behind this view, in `shape`, for the controls that float over
     /// the map: Liquid Glass on iOS 26 and later (reacting to touches when
     /// `interactive`), a material on earlier versions.

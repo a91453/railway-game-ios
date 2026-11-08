@@ -514,6 +514,33 @@ final class TutorialCardPlacementTests: XCTestCase {
         }
     }
 
+    /// Decision 642, the iPad playtest's A4: at "Tap Lines" on an iPad
+    /// Pro 13-inch held on its side (1376 × 1032 points, measured from
+    /// `docs/art/mac-playtest-2026-11-08/ipad/tutorial-11-pill-over-layers.jpg`),
+    /// the folded pill stood over the round layers button above the dock,
+    /// which the card did not know of. Known, the pill keeps clear of it.
+    func testOnAnIPadThePillAtTheLinesStepLeavesTheLayersButtonFree() {
+        let screen = Frame(x: 0, y: 0, width: 1376, height: 1012)
+        let dock = [
+            Frame(x: 21, y: 943, width: 48, height: 48),
+            Frame(x: 83, y: 943, width: 48, height: 48),
+            Frame(x: 137, y: 943, width: 48, height: 48),
+            Frame(x: 193, y: 943, width: 48, height: 48),
+        ]
+        let lines = dock[1]
+        let layers = Frame(x: 22, y: 884, width: 44, height: 44)
+        let hud = [Frame(x: 28, y: 50, width: 120, height: 40), Frame(x: 470, y: 50, width: 100, height: 40), Frame(x: 680, y: 50, width: 40, height: 40)]
+        let zoom = Frame(x: 1276, y: 958, width: 88, height: 44)
+        let map = Frame(x: 0, y: 100, width: 1376, height: 830)
+        let measure = { (proposal: Size) in Size(width: min(280, proposal.width), height: 44) }
+        let placement = TutorialCardPlacement(
+            target: lines, controls: hud + dock + [layers, zoom], required: [lines], map: map
+        ).folded
+        let pill = placement.frame(in: screen, measure: measure)
+        XCTAssertFalse(pill.intersects(layers), "the pill \(pill) covers the layers button \(layers)")
+        for control in dock { XCTAssertFalse(pill.intersects(control), "the pill \(pill) covers \(control)") }
+    }
+
     /// The map step on that phone, folded: the pill beside the zoom
     /// buttons, which the step asks for.
     private static var mapMoveStep: TutorialCardPlacement {

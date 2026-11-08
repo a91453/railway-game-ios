@@ -728,6 +728,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             let platform = world.network.platforms(on: .edge(1))[0]
             XCTAssertEqual(session.platformsOnPickedEdge, [platform])
             XCTAssertEqual(session.removePlatformTitle(platform), "拆除月台（赤土崎）")
+            XCTAssertEqual(session.platformText(platform), "這段軌道上已有：赤土崎的月台，距起點 15–79 公尺")
             session.removeNetworkEdge()
             XCTAssertEqual(session.message?.text, "軌段 #1 上有赤土崎站的月台。請先在下方按「拆除月台」，或在車站面板拆除整個車站。")
             session.removeNetworkPlatform(platform)

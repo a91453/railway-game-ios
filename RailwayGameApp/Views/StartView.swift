@@ -58,10 +58,22 @@ struct StartView: View {
                 ScrollView {
                     VStack(spacing: 28) {
                         header
-                        buttons
+                            .frame(maxWidth: Self.columnWidth)
+                        // Decision 642 (the iPad playtest's A6): two
+                        // columns where they fit, an iPad's width.
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top, spacing: Self.columnSpacing) {
+                                ForEach(Array(StartMenuEntry.columns(hasAutosave: launcher.autosave != nil).enumerated()), id: \.offset) { index, entries in
+                                    buttons(entries, top: index == 0, foot: index > 0)
+                                        .frame(width: Self.columnWidth)
+                                }
+                            }
+                            buttons
+                                .frame(maxWidth: Self.columnWidth)
+                        }
                         footer
+                            .frame(maxWidth: Self.columnWidth)
                     }
-                    .frame(maxWidth: 420)
                     .padding(.horizontal)
                     .padding(.vertical, 40)
                     .frame(maxWidth: .infinity)
@@ -114,19 +126,32 @@ struct StartView: View {
         }
     }
 
+    /// One column's width, and the room between two (decision 642).
+    private static let columnWidth: CGFloat = 420
+    private static let columnSpacing: CGFloat = 24
+
     /// The ways into a game (decision 381: ``StartMenuEntry``).
     private var buttons: some View {
+        buttons(StartMenuEntry.entries(hasAutosave: launcher.autosave != nil), top: true, foot: true)
+    }
+
+    /// `entries`' buttons in a column, with the first game's card at its
+    /// `top` and the iCloud line at its `foot` (under Saves, in the
+    /// column that has it).
+    private func buttons(_ entries: [StartMenuEntry], top: Bool, foot: Bool) -> some View {
         VStack(spacing: 12) {
-            if launcher.showsFirstGameCard {
+            if top, launcher.showsFirstGameCard {
                 firstGameCard
             }
-            ForEach(StartMenuEntry.entries(hasAutosave: launcher.autosave != nil), id: \.self) { entry in
+            ForEach(entries, id: \.self) { entry in
                 button(entry)
                     // Stable across localizations for the UI tests.
                     .accessibilityIdentifier(entry.identifier)
             }
             // Decision 397, later: whether the saves are in iCloud.
-            CloudSaveStatusLine(launcher: launcher, identifier: "start.syncNow")
+            if foot {
+                CloudSaveStatusLine(launcher: launcher, identifier: "start.syncNow")
+            }
         }
     }
 
@@ -456,7 +481,7 @@ private struct DemoPicker: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
     }
 }
 

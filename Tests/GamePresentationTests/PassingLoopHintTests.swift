@@ -114,6 +114,22 @@ final class PassingLoopHintTests: XCTestCase {
         XCTAssertNil(PassingLoopHint.waitingLine([wait(unassigned)], in: world))
     }
 
+    /// Decision 642 (the owner's iPad playtest §6.4): the demo mode's real
+    /// lines are the game's trace of the real ones, double where the real
+    /// line is; a single stretch left where a second track could not go is
+    /// not the player's to fix, so the card does not come for them.
+    func testTheCardLeavesOutTheLinesTheDemoLaid() throws {
+        var (world, _, _, single, _) = try world()
+        let train = try world.purchaseTrain(named: "Train 1").id
+        try world.assignTrain(train, to: single)
+        XCTAssertNil(PassingLoopHint.waitingLine([wait(train)], in: world, skipping: [single]))
+        let session = GameSession(world: world)
+        session.linesLaidByTheDemo = [single]
+        XCTAssertNil(PassingLoopHint.waitingLine([wait(train)], in: session.world, skipping: session.linesLaidByTheDemo))
+        session.linesLaidByTheDemo = []
+        XCTAssertEqual(PassingLoopHint.waitingLine([wait(train)], in: session.world, skipping: session.linesLaidByTheDemo), single)
+    }
+
     func testALoopTheLineDoesNotStopAtLeavesItSingle() throws {
         var (world, _, _, single, _) = try world()
         let train = try world.purchaseTrain(named: "Train 1").id
