@@ -26,6 +26,8 @@ struct StartView: View {
     @State private var showsAchievements = false
     /// Decision 415: the news of an update, once.
     @State private var showsWhatsNew = false
+    /// How wide the start menu can be (decision 643).
+    @State private var menuWidth: CGFloat = 0
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -60,14 +62,19 @@ struct StartView: View {
                         header
                             .frame(maxWidth: Self.columnWidth)
                         // Decision 643 (the iPad playtest's A6): two
-                        // columns where they fit, an iPad's width.
-                        ViewThatFits(in: .horizontal) {
+                        // columns where they fit, an iPad's width. Not a
+                        // ViewThatFits: it measures its layouts off the
+                        // main thread, and these rows' closures are
+                        // main-actor code (CRASH101).
+                        if menuWidth >= 2 * Self.columnWidth + Self.columnSpacing {
+                            let columns = StartMenuEntry.columns(hasAutosave: launcher.autosave != nil)
                             HStack(alignment: .top, spacing: Self.columnSpacing) {
-                                ForEach(Array(StartMenuEntry.columns(hasAutosave: launcher.autosave != nil).enumerated()), id: \.offset) { index, entries in
-                                    buttons(entries, top: index == 0, foot: index > 0)
-                                        .frame(width: Self.columnWidth)
-                                }
+                                buttons(columns[0], top: true, foot: false)
+                                    .frame(width: Self.columnWidth)
+                                buttons(columns[1], top: false, foot: true)
+                                    .frame(width: Self.columnWidth)
                             }
+                        } else {
                             buttons
                                 .frame(maxWidth: Self.columnWidth)
                         }
@@ -78,6 +85,8 @@ struct StartView: View {
                     .padding(.vertical, 40)
                     .frame(maxWidth: .infinity)
                 }
+                // The room for the buttons: the width less the padding.
+                .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { menuWidth = $0 }
             }
         }
         .background(Theme.background)
