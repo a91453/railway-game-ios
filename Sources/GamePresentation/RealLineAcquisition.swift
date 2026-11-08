@@ -1282,7 +1282,16 @@ extension RealLineLaying {
                 for (low, high, isFacing) in sides {
                     let reach = (low - gap)...(high + gap)
                     guard low > second.a + ramp + gap, high < second.b - ramp - gap,
-                          !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) else { continue }
+                          !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) else {
+                        // Decision 654 (REVIEW-L15-5): the line's trains need
+                        // a facing one (decision 652), so a line whose facing
+                        // crossover does not fit is not laid, rather than laid
+                        // without it: every purchase of it then turns red.
+                        if isFacing {
+                            return refused("A crossover does not fit here.", "這裡放不下渡線。")
+                        }
+                        continue
+                    }
                     forced += [low, high]
                     turnbacks.append((low, high, isFacing))
                     taken.append(reach)
