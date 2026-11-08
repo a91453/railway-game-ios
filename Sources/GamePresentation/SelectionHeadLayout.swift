@@ -17,3 +17,12 @@ public enum SelectionHeadLayout {
         width > 0 && width < leastBeside
     }
 }
+
+extension SelectionHeadLayout {
+    /// Decision 648: whether the head carries the Follow button of a train
+    /// looked at with no tool, so it shows without scrolling the card on
+    /// any screen: the train is on the map and no tool is in hand.
+    public static func showsFollow(selectTool: Bool, trainOnMap: Bool) -> Bool {
+        selectTool && trainOnMap
+    }
+}

@@ -26,7 +26,9 @@ public struct GameMenuLayout: Equatable, Sendable {
     /// Decision 414: one of the last row's items side by side: the idle
     /// mode, then Settings.
     public enum SettingsItem: String, CaseIterable, Sendable {
-        case ambient, settings
+        /// Decision 648: the train gallery and the 3D city preview, one
+        /// tap from the menu rather than inside Settings.
+        case ambient, explore, settings
     }
 
     /// One of the shortcuts side by side in the first level.
@@ -113,7 +115,7 @@ public struct GameMenuLayout: Equatable, Sendable {
             [.settings],
         ]
         shortcuts = [.tutorial, .postcard, .achievements]
-        settingsRow = [.ambient, .settings]
+        settingsRow = [.ambient, .explore, .settings]
         var more: [MoreRow] = []
         if showsGoals { more.append(.goals) }
         if showsTourism { more.append(.tourism) }

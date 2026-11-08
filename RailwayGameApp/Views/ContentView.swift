@@ -201,6 +201,12 @@ struct ContentView: View {
             .sheet(item: presentedPanel) { panel in
                 panelSheet(panel)
             }
+            .fullScreenCover(isPresented: $screen.showsTrainGarage) {
+                TrainShowcaseScreen(close: { screen.showsTrainGarage = false })
+            }
+            .fullScreenCover(item: $screen.cityPreview) { area in
+                CityView3D(area: area, close: { screen.cityPreview = nil })
+            }
             // Decision 229, later: this game's 3D map, from the map's own
             // button (``Map3DShortcut``).
             .fullScreenCover(isPresented: $screen.showsMap3D) {
@@ -1516,6 +1522,10 @@ final class GameScreenState {
     /// Decision 229, later: whether this game's 3D map is open, from the
     /// map's 3D button.
     var showsMap3D = false
+    /// Decision 648: the train gallery and the 3D city preview, opened
+    /// from the game menu.
+    var showsTrainGarage = false
+    var cityPreview: CityViewArea?
     /// Decision 269: the 2D map's view when a pinch handed it over to the
     /// 3D map (`nil` when the 3D button opened it), and the 3D map's when
     /// it handed it back, for the 2D map to take up.
