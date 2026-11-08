@@ -167,7 +167,11 @@ final class Map3DMetalView: MTKView {
     /// Decision 230: the train models, and a buffer of each one's vertices;
     /// decision 608: the pack without its vertices, which are only in the
     /// buffers (``Map3DUploadedModels``, shared by every 3D view).
-    private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
+    /// Decision 653: and each model's own texture (``Map3DUploadedModels/textures``).
+    private var models: (pack: Map3DModelPack, buffers: [MTLBuffer], textures: [MTLTexture?])?
+    /// Decision 653: one white texel, `map3dFragment`'s model texture for
+    /// every draw but a model with its own.
+    private var noModelTexture: MTLTexture?
     /// Decision 617: every model's glow spots (``Map3DGlow/Table``) and
     /// the buffer holding them, made once with the models.
     private var glowSpots: (table: Map3DGlow.Table, buffer: MTLBuffer)?
@@ -507,6 +511,7 @@ final class Map3DMetalView: MTKView {
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
         noSunMap = makeSunMap(device: device, side: 1)
+        noModelTexture = makeWhiteTexel(device: device)
         startClimbing()
         applyQuality()
     }
@@ -530,6 +535,17 @@ final class Map3DMetalView: MTKView {
     private func rememberRung() {
         UserDefaults.standard.set(Map3DLoadGovernor.remembering(load.rung, quality: quality, system: UIDevice.current.systemVersion),
                                   forKey: Self.rungKey)
+    }
+
+    /// Decision 653: see ``noModelTexture``.
+    private func makeWhiteTexel(device: MTLDevice) -> MTLTexture? {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 1, height: 1, mipmapped: false)
+        descriptor.usage = .shaderRead
+        descriptor.storageMode = .shared
+        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        let white: [UInt8] = [255, 255, 255, 255]
+        texture.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: white, bytesPerRow: 4)
+        return texture
     }
 
     /// Decision 357: a depth texture `side` texels square for the sun's
@@ -984,7 +1000,7 @@ final class Map3DMetalView: MTKView {
     func useModels(_ uploaded: Map3DUploadedModels) {
         guard let device, uploaded.buffers.allSatisfy({ $0.device === device }) else { return }
         let pack = uploaded.pack
-        models = (pack, uploaded.buffers)
+        models = (pack, uploaded.buffers, uploaded.textures)
         glowSpots = uploaded.glowBuffer.map { (table: uploaded.glows, buffer: $0) }
         transparentGlass = uploaded.glass
         signalModels = Map3DSignalTiming.Models(pack: pack)
@@ -1258,6 +1274,7 @@ final class Map3DMetalView: MTKView {
         encoder.setCullMode(.none)
         encoder.setFragmentTexture(surfaces, index: 0)
         encoder.setFragmentTexture(sunRegion.drawn == nil ? noSunMap : sunMap, index: 1)
+        encoder.setFragmentTexture(noModelTexture, index: 2)
         uniforms.withUnsafeBytes { bytes in
             guard let base = bytes.baseAddress else { return }
             encoder.setVertexBytes(base, length: bytes.count, index: 1)
@@ -1365,6 +1382,7 @@ final class Map3DMetalView: MTKView {
                     let count = last - first + 1
                     if model < models.buffers.count {
                         encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
+                        encoder.setFragmentTexture(models.textures[model] ?? noModelTexture, index: 2)
                         encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
                         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertexCount,
                                                instanceCount: count)
@@ -1405,6 +1423,7 @@ final class Map3DMetalView: MTKView {
                         drawn = signalModels?.model(run.model, group: run.group, clock: signalClock) ?? run.model
                     }
                     encoder.setVertexBuffer(models.buffers[drawn], offset: 0, index: 0)
+                    encoder.setFragmentTexture(models.textures[drawn] ?? noModelTexture, index: 2)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertexCount,
                                            instanceCount: run.count)

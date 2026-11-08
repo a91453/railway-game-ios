@@ -109,7 +109,7 @@ function paletteOf(triangles, recolorLightPaint) {
   return { packed, assignments };
 }
 
-function provenance(gltf, bytes, modelId, generatedPath, sourceRecord) {
+export function provenance(gltf, bytes, modelId, generatedPath, sourceRecord) {
   const { asset, extras } = gltf.json;
   const original = { asset, ...(extras === undefined ? {} : { extras }) };
   if (sourceRecord) return JSON.stringify({ ...original, source: sourceRecord });

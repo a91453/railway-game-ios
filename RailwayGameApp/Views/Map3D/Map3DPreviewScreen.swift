@@ -1,7 +1,8 @@
 import Foundation
 import GameCore
 import GamePresentation
-import Metal
+import MetalKit
+import os
 import SwiftUI
 import UIKit
 
@@ -635,10 +636,16 @@ final class Map3DUploadedModels: @unchecked Sendable {
     /// (`nil` when no model glows).
     let glows: Map3DGlow.Table
     let glowBuffer: MTLBuffer?
+    /// Decision 653: each model's own texture (``Map3DModelTexture``), one
+    /// a model, `nil` where it has none (or its bytes would not load: it
+    /// then shows its vertices' colours).
+    let textures: [MTLTexture?]
 
-    private init(pack: Map3DModelPack, buffers: [MTLBuffer], glass: Map3DTransparentGlass.Cache, glows: Map3DGlow.Table, glowBuffer: MTLBuffer?) {
+    private init(pack: Map3DModelPack, buffers: [MTLBuffer], textures: [MTLTexture?], glass: Map3DTransparentGlass.Cache,
+                 glows: Map3DGlow.Table, glowBuffer: MTLBuffer?) {
         self.pack = pack
         self.buffers = buffers
+        self.textures = textures
         self.glass = glass
         self.glows = glows
         self.glowBuffer = glowBuffer
@@ -657,14 +664,37 @@ final class Map3DUploadedModels: @unchecked Sendable {
             }
         }
         guard buffers.count == full.models.count else { return nil }
+        let loader = MTKTextureLoader(device: device)
+        let textures = full.models.map { model in model.texture.flatMap { texture(of: model.name, $0, loader: loader) } }
         let glass = Map3DTransparentGlass.Cache(models: full.models)
         let glows = Map3DGlow.Table(models: full.models)
         let glowBuffer = glows.floats.withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
-        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, glass: glass, glows: glows, glowBuffer: glowBuffer)
+        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, textures: textures, glass: glass, glows: glows,
+                                           glowBuffer: glowBuffer)
         Map3DModelPack.letGoOfStandardVertices()
         return uploaded
+    }
+
+    /// Decision 653: `texture` on the GPU, its texels as stored (not sRGB:
+    /// they tint and are tinted as the vertices' colours are). A PNG or
+    /// JPEG has its mipmaps made here; a KTX (ASTC on iPhone) brings its
+    /// own, compressed ahead.
+    private static func texture(of name: String, _ texture: Map3DModelTexture, loader: MTKTextureLoader) -> MTLTexture? {
+        let options: [MTKTextureLoader.Option: Any] = [
+            .SRGB: false,
+            .generateMipmaps: texture.kind != .ktx,
+            .textureUsage: MTLTextureUsage.shaderRead.rawValue,
+            .textureStorageMode: MTLStorageMode.private.rawValue,
+        ]
+        do {
+            return try loader.newTexture(data: Data(texture.bytes), options: options)
+        } catch {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "RailwayGame", category: "map3d")
+                .error("model \(name, privacy: .public): texture not loaded: \(error, privacy: .public)")
+            return nil
+        }
     }
 }
 

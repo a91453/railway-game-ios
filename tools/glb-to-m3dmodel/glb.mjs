@@ -60,6 +60,15 @@ export function accessor(gltf, index) {
 }
 
 export function image(gltf, index) {
+  const { data, mimeType } = imageBytes(gltf, index);
+  if (mimeType === 'image/jpeg') return decodeJpegAverages(data);
+  if (mimeType === 'image/png') return decodePng(data);
+  throw new Error(`GLB: unsupported image type ${mimeType}`);
+}
+
+// Decision 653: an embedded image's file bytes, undecoded, as a textured
+// .m3dmodel keeps them.
+export function imageBytes(gltf, index) {
   const { json, binary } = gltf;
   const entry = json.images?.[index];
   if (!entry) throw new Error(`GLB: missing image ${index}`);
@@ -75,9 +84,7 @@ export function image(gltf, index) {
     if (!match) throw new Error('GLB: unsupported image data URI');
     data = Buffer.from(match[2], 'base64');
   } else throw new Error('GLB: external images are unsupported');
-  if (entry.mimeType === 'image/jpeg') return decodeJpegAverages(data);
-  if (entry.mimeType === 'image/png') return decodePng(data);
-  throw new Error(`GLB: unsupported image type ${entry.mimeType}`);
+  return { data, mimeType: entry.mimeType };
 }
 
 const MAX_PNG_PIXELS = 4096 * 4096;

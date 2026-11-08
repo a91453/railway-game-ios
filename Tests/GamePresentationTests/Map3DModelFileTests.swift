@@ -135,7 +135,8 @@ final class Map3DModelFileTests: XCTestCase {
         let good = Self.file(Self.sample)
         XCTAssertEqual(refusal([]), .notAModel)
         XCTAssertEqual(refusal(Array("GLTF".utf8) + good.dropFirst(4)), .notAModel)
-        XCTAssertEqual(refusal(Self.file(Self.sample, version: 2)), .unsupportedVersion(2))
+        XCTAssertEqual(refusal(Self.file(Self.sample, version: 3)), .unsupportedVersion(3))
+        XCTAssertEqual(refusal(Self.file(Self.sample, version: 0)), .unsupportedVersion(0))
         XCTAssertEqual(refusal(Array(good.dropLast())), .wrongSize(expected: good.count, actual: good.count - 1))
         XCTAssertEqual(refusal(good + [0]), .wrongSize(expected: good.count, actual: good.count + 1))
         XCTAssertEqual(refusal(Self.file([], count: Map3DModelFile.maximumTriangles + 1)),
@@ -147,6 +148,8 @@ final class Map3DModelFileTests: XCTestCase {
         XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(8))
         flagged[0].flags = 6
         XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(6), "glass and stainless at once")
+        flagged[0].flags = 9
+        XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(9), "version 1 has no texture to paint with")
         // Decision 450: a train's glass, lit glass and stainless read back.
         for (bits, layer) in [(UInt32(2), Map3DVertex.trainGlass), (3, Map3DVertex.trainGlassLit), (4, Map3DVertex.trainSteel)] {
             flagged[0].flags = bits
@@ -167,6 +170,182 @@ final class Map3DModelFileTests: XCTestCase {
                 XCTAssertEqual(error as? Map3DModelFile.Error, .nothingToDraw)
             }
         }
+    }
+}
+
+/// Decision 653: a model painted by a texture of its own (`.m3dmodel`
+/// version 2), written here byte by byte as `tools/glb-to-m3dmodel`'s
+/// `--textured` writes it. The texture is a few bytes that start as a PNG
+/// does: the file only keeps them; Metal's loader reads them in the app.
+final class Map3DTexturedModelFileTests: XCTestCase {
+    struct Corner {
+        var position: (Float, Float, Float)
+        var normal: (Float, Float, Float)
+        var uv: (Float, Float)
+    }
+
+    struct Triangle {
+        var corners: [Corner]
+        var colour: UInt32 = 0xFFFF_FFFF
+        var flags: UInt32 = 8
+    }
+
+    static let provenance = #"{"asset":{"generator":"test"},"source":"made in the test"}"#
+    static let png: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]
+
+    static func file(_ triangles: [Triangle], provenance: String = provenance, kind: UInt32 = 1,
+                     texture: [UInt8] = png, count: Int? = nil) -> [UInt8] {
+        var bytes = Array("M3DM".utf8)
+        func put16(_ value: UInt16) { bytes += [UInt8(value & 0xFF), UInt8(value >> 8)] }
+        func put32(_ value: UInt32) { bytes += (0..<4).map { UInt8((value >> ($0 * 8)) & 0xFF) } }
+        func pad() { bytes += [UInt8](repeating: 0, count: (4 - bytes.count % 4) % 4) }
+        let text = Array(provenance.utf8)
+        put16(2)
+        put16(0)
+        put32(UInt32(count ?? triangles.count))
+        put32(UInt32(text.count))
+        put32(kind)
+        put32(UInt32(texture.count))
+        bytes += text
+        pad()
+        bytes += texture
+        pad()
+        for triangle in triangles {
+            put32(triangle.flags)
+            for corner in triangle.corners {
+                for value in [corner.position.0, corner.position.1, corner.position.2,
+                              corner.normal.0, corner.normal.1, corner.normal.2, corner.uv.0, corner.uv.1] {
+                    put32(value.bitPattern)
+                }
+                put32(triangle.colour)
+            }
+        }
+        return bytes
+    }
+
+    /// A rounded roof's two halves, each corner with its own normal (one
+    /// left zero, to take the flat one), a lit sign, and an untextured
+    /// stainless panel.
+    static let sample: [Triangle] = [
+        Triangle(corners: [Corner(position: (0, -1, 3), normal: (0, -0.6, 0.8), uv: (0, 0)),
+                           Corner(position: (4, -1, 3), normal: (0, -0.6, 0.8), uv: (1, 0)),
+                           Corner(position: (4, 0, 3.4), normal: (0, 0, 0), uv: (1, 0.5))]),
+        Triangle(corners: [Corner(position: (0, 0, 0), normal: (1, 0, 0), uv: (0.25, 0.75)),
+                           Corner(position: (0, 1, 0), normal: (1, 0, 0), uv: (0.5, 0.75)),
+                           Corner(position: (0, 1, 1), normal: (1, 0, 0), uv: (0.5, 1))], colour: 0xFF80_8080, flags: 9),
+        Triangle(corners: [Corner(position: (4, 1, 0), normal: (0, 1, 0), uv: (0.9, 0.9)),
+                           Corner(position: (0, 1, 0), normal: (0, 1, 0), uv: (0.9, 0.9)),
+                           Corner(position: (4, 1, 2), normal: (0, 1, 0), uv: (0.9, 0.9))], flags: 4),
+    ]
+
+    func testATexturedModelReadsBackWithItsUVsNormalsAndTexture() throws {
+        let file = try Map3DModelFile(decoding: Self.file(Self.sample), named: "car")
+        let model = file.model
+        XCTAssertEqual(file.provenance, Self.provenance)
+        XCTAssertEqual(model.triangleCount, 3)
+        XCTAssertEqual(model.texture, Map3DModelTexture(kind: .png, bytes: Self.png))
+        XCTAssertEqual(model.minimum, Map3DPoint(0, -1, 0))
+        XCTAssertEqual(model.maximum, Map3DPoint(4, 1, 3.4))
+
+        let roof = Array(model.vertices[0..<3]), sign = Array(model.vertices[3..<6]), panel = Array(model.vertices[6..<9])
+        XCTAssertEqual(roof.map(\.layer), [Map3DVertex.modelTexture, Map3DVertex.modelTexture, Map3DVertex.modelTexture])
+        XCTAssertEqual(roof.map(\.u), [0, 1, 1])
+        XCTAssertEqual(roof.map(\.v), [0, 0, 0.5])
+        XCTAssertEqual(roof[0].ny, -0.6, accuracy: 1e-6)
+        XCTAssertEqual(roof[0].nz, 0.8, accuracy: 1e-6)
+        // The zero normal takes the triangle's flat one.
+        let flat = (Map3DPoint(4, -1, 3) - Map3DPoint(0, -1, 3)).cross(Map3DPoint(4, 0, 3.4) - Map3DPoint(0, -1, 3)).normalized!
+        XCTAssertEqual(roof[2].nx, flat.x, accuracy: 1e-6)
+        XCTAssertEqual(roof[2].ny, flat.y, accuracy: 1e-6)
+        XCTAssertEqual(roof[2].nz, flat.z, accuracy: 1e-6)
+        XCTAssertTrue(roof.allSatisfy { $0.isModelTextured && !$0.glows })
+
+        XCTAssertTrue(sign.allSatisfy { $0.layer == Map3DVertex.modelTextureLit && $0.isModelTextured && $0.glows })
+        XCTAssertEqual(sign.map(\.color), [0xFF80_8080, 0xFF80_8080, 0xFF80_8080])
+
+        XCTAssertTrue(panel.allSatisfy { $0.layer == Map3DVertex.trainSteel && !$0.isModelTextured })
+        XCTAssertTrue(panel.allSatisfy { $0.u == 0 && $0.v == 0 }, "an untextured triangle keeps no u, v")
+    }
+
+    func testAFileOfNoTextureReadsWhenNothingIsPaintedByIt() throws {
+        let unpainted = Self.sample.map { triangle -> Triangle in
+            var triangle = triangle
+            triangle.flags &= ~8
+            return triangle
+        }
+        let model = try Map3DModelFile(decoding: Self.file(unpainted, kind: 0, texture: []), named: "car").model
+        XCTAssertNil(model.texture)
+        XCTAssertEqual(model.vertices[0].layer, Map3DVertex.plain)
+        XCTAssertEqual(model.vertices[3].layer, Map3DVertex.glowing)
+    }
+
+    func testEveryKindOfTextureIsKeptAsItsFileIs() throws {
+        let jpeg: [UInt8] = [0xFF, 0xD8, 0xFF, 0xE0, 0]
+        let ktx: [UInt8] = [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4]
+        for (kind, bytes) in [(Map3DModelTexture.Kind.jpeg, jpeg), (.ktx, ktx)] {
+            let model = try Map3DModelFile(decoding: Self.file(Self.sample, kind: kind.rawValue, texture: bytes), named: "car").model
+            XCTAssertEqual(model.texture?.kind, kind)
+            XCTAssertEqual(model.texture?.bytes, bytes)
+        }
+    }
+
+    func testAnythingElseIsRefused() {
+        func refusal(_ bytes: [UInt8]) -> Map3DModelFile.Error? {
+            do {
+                _ = try Map3DModelFile(decoding: bytes, named: "car")
+                return nil
+            } catch {
+                return error
+            }
+        }
+        let good = Self.file(Self.sample)
+        XCTAssertEqual(refusal(Array(good.dropLast())), .wrongSize(expected: good.count, actual: good.count - 1))
+        XCTAssertEqual(refusal(Array(good.prefix(20))), .wrongSize(expected: 24, actual: 20))
+        XCTAssertEqual(refusal(Self.file([], count: Map3DModelFile.maximumTriangles + 1)), .tooManyTriangles(Map3DModelFile.maximumTriangles + 1))
+        XCTAssertEqual(refusal(Self.file(Self.sample, provenance: " ")), .noProvenance)
+        XCTAssertEqual(refusal(Self.file(Self.sample, kind: 4)), .badTexture, "an unknown kind")
+        XCTAssertEqual(refusal(Self.file(Self.sample, kind: 3)), .badTexture, "PNG bytes called KTX")
+        XCTAssertEqual(refusal(Self.file(Self.sample, kind: 1, texture: [0x89, 0x50])), .badTexture, "too short to be a PNG")
+        XCTAssertEqual(refusal(Self.file(Self.sample, kind: 0, texture: [])), .noTexture)
+        var flagged = Self.sample
+        for flags: UInt32 in [10, 12, 16] {
+            flagged[0].flags = flags
+            XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(flags))
+        }
+        var broken = Self.sample
+        broken[0].corners[1].uv = (.infinity, 0)
+        XCTAssertEqual(refusal(Self.file(broken)), .notFinite)
+        broken = Self.sample
+        broken[0].corners[1].normal = (.nan, 0, 0)
+        XCTAssertEqual(refusal(Self.file(broken)), .notFinite)
+        let flat = Triangle(corners: [Corner(position: (0, 0, 0), normal: (0, 0, 1), uv: (0, 0)),
+                                      Corner(position: (1, 0, 0), normal: (0, 0, 1), uv: (0, 0)),
+                                      Corner(position: (2, 0, 0), normal: (0, 0, 1), uv: (0, 0))])
+        XCTAssertEqual(refusal(Self.file([flat])), .nothingToDraw)
+    }
+
+    /// `tools/glb-to-m3dmodel/textured.mjs` on its own tiny GLB: what the
+    /// node writer writes, the app reads.
+    func testTheNodeWritersTexturedFixtureReads() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("tools/glb-to-m3dmodel/fixtures/tiny-textured.m3dmodel")
+        let decoded = try Map3DModelFile(decoding: Data(contentsOf: url), named: "fixture")
+        let model = decoded.model
+        XCTAssertEqual(model.triangleCount, 2)
+        XCTAssertEqual(model.length, 12)
+        XCTAssertEqual(model.texture?.kind, .png)
+        XCTAssertEqual(model.vertices[0].layer, Map3DVertex.modelTexture)
+        XCTAssertEqual(model.vertices[0].color, 0xFFFF_FFFF, "the texture shows untinted")
+        XCTAssertEqual(model.vertices[0].x, 6, "-x GLB front becomes +x")
+        XCTAssertEqual(model.vertices.map(\.u)[0..<3], [0, 1, 1])
+        XCTAssertEqual(model.vertices[3].layer, Map3DVertex.glowing, "the headlight, untextured, keeps its night flag")
+        XCTAssertTrue(decoded.provenance.contains("Meshy fixture"))
+    }
+
+    func testATextureTooLargeIsRefused() {
+        XCTAssertNil(Map3DModelTexture(kind: .png, bytes: Self.png + [UInt8](repeating: 0, count: Map3DModelTexture.maximumBytes)))
+        XCTAssertNotNil(Map3DModelTexture(kind: .png, bytes: Self.png))
     }
 }
 

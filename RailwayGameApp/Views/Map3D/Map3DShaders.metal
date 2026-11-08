@@ -58,6 +58,8 @@ struct Map3DVertexOut {
 
 // Opt-in native glass only. Existing trainGlass/steel retain their old pass.
 static bool map3dIsTransparentGlass(float layer) { return layer < -15.5 && layer > -17.5; }
+// Decision 653: Map3DVertex.isModelTextured.
+static bool map3dIsModelTextured(float layer) { return layer < -17.5 && layer > -19.5; }
 
 vertex Map3DVertexOut map3dVertex(Map3DVertexIn in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
     Map3DVertexOut out;
@@ -97,8 +99,11 @@ vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     bool glowing = layer < -1.5 && layer > -2.5;
     bool material = layer < -12.5 && layer > -15.5;
     bool transparent = map3dIsTransparentGlass(layer);
-    out.surfaceAt = transparent ? in.texture.xy : material ? float2(in.texture.x, 0.0) : float2(0.0);
-    out.layer = (glowing || material || transparent) ? layer : -1.0;
+    // Decision 653: a file-made model painted by its own texture
+    // (Map3DVertex.modelTexture, modelTextureLit), its u, v where.
+    bool painted = map3dIsModelTextured(layer);
+    out.surfaceAt = (transparent || painted) ? in.texture.xy : material ? float2(in.texture.x, 0.0) : float2(0.0);
+    out.layer = (glowing || material || transparent || painted) ? layer : -1.0;
     out.plane = 0.0;
     return out;
 }
@@ -490,10 +495,26 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     return map3dLit(base, glow, mirrored, normal, in.world, sunSeen, uniforms, true);
 }
 
+// Decision 653: `model` is the texture of the model drawn (a white texel
+// for any other draw). A painted fragment takes its texel times its
+// colour, then is shaded as a plain one, or one lit at night (the sun's
+// shadow and the night's glow as any model's); a texel less than half
+// opaque (a railing's or a pantograph's gaps) is not drawn.
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
-                              texture2d_array<float> surfaces [[texture(0)]], depth2d<float> sunShadow [[texture(1)]]) {
+                              texture2d_array<float> surfaces [[texture(0)]], depth2d<float> sunShadow [[texture(1)]],
+                              texture2d<float> model [[texture(2)]]) {
     // Glass must not write opaque colour or depth before its sorted pass.
     if (map3dIsTransparentGlass(in.layer)) { discard_fragment(); }
+    if (map3dIsModelTextured(in.layer)) {
+        constexpr sampler painting(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
+        float4 texel = model.sample(painting, in.surfaceAt);
+        if (texel.a < 0.5) { discard_fragment(); }
+        Map3DVertexOut painted = in;
+        painted.color = in.color * texel.rgb;
+        painted.layer = in.layer < -18.5 ? -2.0 : -1.0;
+        painted.surfaceAt = float2(0.0);
+        return map3dShade(painted, uniforms, surfaces, sunShadow);
+    }
     return map3dShade(in, uniforms, surfaces, sunShadow);
 }
 
