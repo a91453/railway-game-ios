@@ -215,7 +215,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 return
             }
         }
-        // Decision 264: trains that cannot pass on shared single track.
+        // Decision 264: trains that cannot pass on shared single track;
+        // decision 628: or on a line's own.
         if let line = withoutPlaceToPass() {
             self = .noPlaceToPass(line: line.id, name: line.name)
             return
@@ -584,8 +585,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .noPlaceToPass(_, let name):
             language.text(
-                "\(name)'s trains have no place to pass on the single track they share with another line. Tap to add a passing loop.",
-                "「\(name)」和別條線共用單線，列車沒有地方交會。點一下加待避線。"
+                "\(name)'s trains have no place to pass on its single track. Tap to add a passing loop.",
+                "「\(name)」的列車在單線上沒有地方交會。點一下加待避線。"
             )
         case .lineLosing(_, let name, let reason):
             Self.lineLosingText(name, reason, in: language)
