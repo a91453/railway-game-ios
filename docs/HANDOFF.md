@@ -4094,3 +4094,14 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **北入出庫線停下了**：遊戲規劃後來要求把最後一組股道的北端照真實接回正線（條件在決策 621「下一步」）。commit bdfa16f 做到鋪得出來、買得下，但從 wye 的腳轉上走行線那一彎半徑約 13.6 m（要 ≥ 20 m 和 ≥ 26 m），三種模式也沒量完；依條件已 revert（365567d），分支上是 A。本 session 第二次壓縮後停手。
 - **接手的人**：(1) 那一彎在 `RealLineDepotLayout.strip` 的 `cubic(foot, leaving: away, start, arriving: bank.way, handle: 0.55 * Strip.turn)`；腳在分岔點北方 40 m、離第二條軌道 40 m，走行線離第二條軌道 65 m，所以那一彎沿線、橫向距離不相等，把手要照兩個實際距離算（A 也是 13.1 m）。(2) 修好後 `git cherry-pick bdfa16f` 再試北入出庫線。(3) 量法：release 建置（`swift build -c release -Xswiftc -enable-testing --build-tests`），`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=klrt swift test -c release --skip-build --filter DepotReturnReportTests.testTheKaohsiungLightRail`，再各加 `DEPOT_RETURN_FAST=1`、`DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1`，看第二天那行。半徑用 `KLRT_DEPOT_DUMP=1 swift test --filter KaohsiungLightRailDepotDumpTests` 印出的軌道點量。
 - **號碼**：決策 621（已在 #1579 登記）；存檔、golden、GameCore 不動。
+
+### 4.48 收購路線後倍速跑不到：卡在 GameCore 的待避規劃（Mac 試玩 C1，作者 Mac 的 Claude，`claude/mac-2d-perf`，2026-11-08）
+
+- **量到的**（Release、iPhone 17 Pro 模擬器、作者的 Mac；台北收購文湖線 44 列，同一個存檔第 2 日 09:43 起跑）：600× 實際約 17–20×（一個 tick 約 4 秒，遊戲內「推進」4068.6 ms、×1），10× 實際約 5.5×。2D 主執行緒只忙 13–15%，56–60 fps，**瓶頸不在畫面**。
+- **表現層已修**（本 PR）：一步裡還有下一個 tick 時，地圖在每個 tick 之間另起一次交通讀數，算完又被下一個 tick 丟掉；10× 時佔全部 CPU 的 39%。修後 CPU 少 36%（20 秒 30,156 → 19,251 個樣本），但遊戲速度不變（5.4× → 5.5×），因為每個 tick 本身就慢。
+- **交給雲端（GameCore，本 session 不能改）**：600× 時 89%、10× 時 78% 的 tick 時間在 `GameWorld.advance(ticks:)` → `trafficPlan(memo:)` → `planHeadwayOvertakes(_:)`（`Sources/GameCore/Railway/HeadwayOvertake.swift`）→ `headwayOvertake` → `overtakeTrackFree` → `trafficOvertakeTracks`（`ScheduledOvertakeTracks.swift`）。`Hasher` 佔全部 CPU 約 25%。看起來的原因：
+  1. `planHeadwayOvertakes` 對所有照班距跑的列車兩兩配對（44 列約 1,900 對），每對都走一次 `headwayOvertake`。
+  2. `trafficOvertakeTracks` 每次都把其他每一列的 `trafficNominalDirections` 聯集成 `opposite`，而 `TrafficParts.Nominal` 的鍵要雜湊整份時刻表與停靠點；同一個 plan 內每個 service 的 opposite 只需算一次。
+  3. `trafficPlanKey` 含每列車的 execution 與 arrival／departure，幾乎每個 tick 都變，plan 每個 tick 都重算。
+- **建議的方向**（雲端判斷）：opposite 方向集合每個 plan 每個 service 只算一次；`Nominal` 照 service 編號記在 plan 裡，不重新雜湊整份點；配對前先依線路、方向、軌道篩掉不可能追上的對。改了要跑 golden、replay fixture 與 `swift-shards.sh` 的戰役 shard，tick 的結果不能變。
+- **量法**：`xcrun xctrace record --template 'Time Profiler' --device <模擬器> --attach <pid> --time-limit 20s`，再 `xcrun xctrace export --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]'`，依函式彙總；遊戲內「幀數」細目的「推進」是 tick 的時間。

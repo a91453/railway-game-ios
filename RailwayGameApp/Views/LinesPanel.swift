@@ -66,6 +66,9 @@ struct LinesPanel: View {
     /// What the selected line shows that only a command changes, kept
     /// while the game runs (decision 184, later).
     @State private var memo = LinePanelMemo()
+    /// Mac playtest C2: the line whose page ``memo`` made ready last, so
+    /// the page is drawn again once it is.
+    @State private var preparedPage: LineID?
     /// Its fares, costs and why it loses money, kept for a command and a
     /// game day (decision 194).
     @State private var lossMemo = LineLossMemo()
@@ -467,13 +470,27 @@ struct LinesPanel: View {
         if let line = session.openedLine {
             Form {
                 lineSummarySection(line)
-                trainsSection(line)
-                depotSection(line)
-                stopsSection(line)
-                lineSection(line)
-                operatingSection(line)
-                loadSection(line)
-                servicesSections(line)
+                // Mac playtest C2: what the rest reads is worked out off
+                // the main actor the first time the page shows.
+                if preparedPage == line.id || memo.hasPrepared(line.id) {
+                    trainsSection(line)
+                    depotSection(line)
+                    stopsSection(line)
+                    lineSection(line)
+                    operatingSection(line)
+                    loadSection(line)
+                    servicesSections(line)
+                } else {
+                    Section {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .accessibilityIdentifier("line.detail.preparing")
+                    }
+                }
+            }
+            .task(id: line.id) {
+                await memo.prepare(line.id, headway: staffHeadway, of: session)
+                preparedPage = line.id
             }
             // Another line (the arrows, the map) starts at the top.
             .id(line.id)

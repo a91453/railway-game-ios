@@ -148,4 +148,37 @@ final class LinePanelMemoTests: XCTestCase {
         XCTAssertEqual(world.lines(keeping: [ids[1]]).map(\.id), [ids[1], ids[0], ids[2]], "lines made since go last")
         XCTAssertEqual(world.lines(keeping: [LineID(rawValue: 99), ids[2]]).map(\.id), [ids[2], ids[0], ids[1]], "a line gone is left out")
     }
+
+    /// Mac playtest C2 (2026-11-08): the line's page has what it reads
+    /// worked out off the main actor before it shows, the same as the
+    /// world works out; a command meanwhile leaves the page to work it
+    /// out itself, as before.
+    func testAPageMadeReadyOffTheMainActorReadsWhatTheWorldDoes() async throws {
+        let session = try runningSession()
+        let memo = LinePanelMemo()
+        XCTAssertFalse(memo.hasPrepared(Self.main))
+        await memo.prepare(Self.main, headway: 5, of: session)
+        XCTAssertTrue(memo.hasPrepared(Self.main))
+        let world = session.world, language = session.language
+        XCTAssertEqual(memo.trainShortfall(Self.main, of: session), world.lineTrainShortfall(Self.main))
+        XCTAssertEqual(memo.runningHeadway(Self.main, of: session), world.lineRunningHeadway(Self.main))
+        XCTAssertEqual(memo.capacityWarning(Self.main, of: session), world.lineCapacityWarning(Self.main, in: language))
+        XCTAssertEqual(memo.headwayChange(Self.main, headway: 5, of: session), world.lineHeadwayChange(Self.main, headway: 5))
+        XCTAssertEqual(memo.trainsRowText(Self.main, of: session), world.lineTrainsRowText(Self.main, in: language))
+        for level in ServiceLevel.allCases {
+            XCTAssertEqual(memo.coverageText(Self.main, at: level, of: session), world.lineCoverageText(Self.main, at: level, in: language))
+        }
+        try assertSameAsTheWorld(memo, session, "made ready")
+        // Once ready, a second call works nothing out again.
+        await memo.prepare(Self.main, headway: 5, of: session)
+
+        // A command as it is worked out: what it reads is the new world's.
+        let other = LinePanelMemo()
+        async let ready: Void = other.prepare(Self.main, headway: 5, of: session)
+        session.staffSelectedLine(headway: 10)
+        await ready
+        XCTAssertTrue(other.hasPrepared(Self.main))
+        try assertSameAsTheWorld(other, session, "after a command")
+        XCTAssertEqual(other.trainsRowText(Self.main, of: session), session.world.lineTrainsRowText(Self.main, in: session.language))
+    }
 }

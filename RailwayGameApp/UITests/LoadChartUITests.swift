@@ -29,6 +29,8 @@ final class LoadChartUITests: XCTestCase {
         // Decision 481: on the line's own page.
         let linePage = app.collectionViews["line.detail"].firstMatch
         XCTAssertTrue(linePage.appears(within: 10), "The line's page opens")
+        // Mac playtest C2: what the page reads, worked out off the main actor.
+        XCTAssertTrue(app.descendants(matching: .any)["line.detail.preparing"].firstMatch.disappears(within: 10), "The line's page stayed waiting")
         let chart = app.descendants(matching: .any)["line.load.chart"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(chart, in: linePage), "The line's riders between stops come into view")
         // The flow report's button is on the list's bar.

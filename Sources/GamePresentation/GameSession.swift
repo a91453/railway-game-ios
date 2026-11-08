@@ -232,6 +232,18 @@ public final class GameSession {
     /// Decision 497 (P2-3): the reading of traffic control worked out off
     /// the main actor after a command, and for which ``worldRevision``.
     @ObservationIgnored var trafficReadTask: (revision: Int, task: Task<Void, Never>)?
+    /// How many readings of traffic control were started off the main
+    /// actor (``readTrafficOffTheMainActor(after:)``), for tests.
+    @ObservationIgnored var trafficReadsStarted = 0
+    /// Mac playtest C1 (2026-11-08): the ``worldRevision`` of a world the
+    /// game loop put in from a tick with more ticks of the same step to
+    /// come. Only a step's last tick reads traffic control
+    /// (``LoopTick/readsTraffic``), so the map keeps the last reading until
+    /// that tick brings the next, instead of reading off the main actor a
+    /// world the next tick replaces a moment later: at 10x on the bought
+    /// Wenhu Line those readings, all thrown away, took as much CPU as the
+    /// ticks themselves.
+    @ObservationIgnored private var trafficComesWithStepAt: Int?
     /// Counts the readings of traffic control worked out off the main
     /// actor after a command once each is in: the map takes
     /// ``trafficOverlay`` again when it changes.
@@ -2386,7 +2398,8 @@ public final class GameSession {
         // new one, worked out off the main actor, is in. Only the game as
         // it opens is read here.
         if let last = trafficMemo?.reading {
-            readTrafficOffTheMainActor(after: last)
+            // Mac playtest C1: the step's last tick brings the next one.
+            if trafficComesWithStepAt != worldRevision { readTrafficOffTheMainActor(after: last) }
             return last
         }
         trafficReadOnTheMainActor += 1
@@ -2401,6 +2414,7 @@ public final class GameSession {
     private func readTrafficOffTheMainActor(after last: TrafficReading) {
         let revision = worldRevision
         guard trafficReadTask?.revision != revision else { return }
+        trafficReadsStarted += 1
         let (world, train, language) = (world, selectedTrainID, language)
         let task = Task { [weak self] in
             let reading = await Task.detached(priority: .userInitiated) {
@@ -2455,6 +2469,9 @@ public final class GameSession {
         let goesOn = tick.stepGoesOn && (try? outcome.get()) != nil ? worldRevision : nil
         // Only when it changes: it is observed.
         if goesOn != stepGoesOnAtRevision { stepGoesOnAtRevision = goesOn }
+        // Mac playtest C1: a tick that read no traffic has more of its
+        // step to come, at any speed.
+        trafficComesWithStepAt = !tick.readsTraffic && (try? outcome.get()) != nil ? worldRevision : nil
         return true
     }
 
@@ -2569,6 +2586,8 @@ public final class GameSession {
         loopTickRevision = nil
         // Decision 379 續四 (review P3 d): no step goes on.
         if stepGoesOnAtRevision != nil { stepGoesOnAtRevision = nil }
+        // Mac playtest C1: nor does the step's last tick bring a reading.
+        trafficComesWithStepAt = nil
         applyHeldSpeed()
         tickAccumulator.reset()
         // The time away is not time the game failed to run.
