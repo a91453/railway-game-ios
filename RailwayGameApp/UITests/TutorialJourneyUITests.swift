@@ -82,7 +82,7 @@ private final class TutorialJourney {
     func walk() {
         test.continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
 

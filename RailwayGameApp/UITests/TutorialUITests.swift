@@ -27,7 +27,7 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         startFirstLesson(app)
@@ -143,7 +143,7 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.open"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.open"]
         app.launch()
         defer { app.terminate() }
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -212,7 +212,7 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.create"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.create"]
         app.launch()
         defer { app.terminate() }
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -259,7 +259,7 @@ final class TutorialUITests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = [
-            "-ui-testing", "-demo-layout", "-map-layer", "movement", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-ui-testing", "-ui-test-stall-stacks", "-demo-layout", "-map-layer", "movement", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
         ]
         app.launch()
         defer { app.terminate() }
@@ -370,7 +370,7 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = [
-            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-tutorial-step", "map.move", "-tutorial-advance-ms", "25000",
         ]
         app.launch()
@@ -436,7 +436,7 @@ final class TutorialUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         if largeText {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
         }
