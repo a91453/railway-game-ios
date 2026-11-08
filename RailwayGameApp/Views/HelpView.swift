@@ -100,7 +100,13 @@ struct HelpView: View {
                     DataSourcesView(launcher: launcher)
                 }
             }
-            .searchable(text: $query, prompt: Text(verbatim: HelpGuide.searchPrompt(in: language)))
+            // At the top, under the title: the system's floating field at
+            // the bottom covered the first answer on a phone on its side
+            // (Mac playtest 2026-11-08, A7).
+            .searchable(
+                text: $query, placement: .navigationBarDrawer(displayMode: .always),
+                prompt: Text(verbatim: HelpGuide.searchPrompt(in: language))
+            )
             .navigationTitle(language.text("Help", "說明"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

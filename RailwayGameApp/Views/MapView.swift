@@ -26,6 +26,13 @@ extension EnvironmentValues {
     /// credit, so the tools column, which runs down beside them on a phone
     /// on its side, covers none of them.
     @Entry var mapCreditsLeading: CGFloat = 0
+    /// Mac playtest A3 (2026-11-08): how far past the safe area's leading
+    /// edge the top of the map is covered: the tools column (or the build
+    /// rail) alone. ``mapInsets``' leading edge also clears Undo and Redo
+    /// in the bottom row, wider than the column, which squeezed the
+    /// banner at the top between the column and a side panel into a
+    /// narrow strip. `nil`: the same as the insets' leading edge.
+    @Entry var mapTopLeading: CGFloat?
     /// Decision 226: where the map's bottom-leading buttons (layers, map
     /// style, expansion) stand when they share the bottom row with the
     /// tools column and the station master: their foot this far above the
@@ -204,6 +211,7 @@ struct MapView: View {
     @Environment(\.mapButtonsUnderPanel) private var buttonsUnderPanel
     @Environment(\.mapSafeArea) private var safeArea
     @Environment(\.mapCreditsLeading) private var creditsLeading
+    @Environment(\.mapTopLeading) private var topLeading
     /// The height of the bottom-trailing buttons and key, with their margin.
     @State private var bottomTrailingHeight: CGFloat = 0
     /// How far down the column at the top of the map (the status banner,
@@ -758,7 +766,10 @@ struct MapView: View {
                 // their own, so that what they hold is not part of this
                 // closure's own value and stack.
                 .modifier(MapTopColumnOverlay(
-                    session: session, traffic: traffic, showsFrameRate: showsFrameRate, clear: clear,
+                    session: session, traffic: traffic, showsFrameRate: showsFrameRate,
+                    // Mac playtest A3: clear of the tools column only.
+                    clear: EdgeInsets(top: clear.top, leading: (topLeading ?? insets.leading) + screenEdges.leading,
+                                      bottom: clear.bottom, trailing: clear.trailing),
                     topColumnDepth: $topColumnDepth
                 ))
                 .overlay(alignment: .bottomTrailing) {
@@ -771,8 +782,10 @@ struct MapView: View {
                         standard: Double(standardFoot), screenBottom: Double(screenEdges.bottom), mapHeight: viewport.height,
                         legendStart: Double(bottomTrailingFrame.minX), legendEnd: Double(bottomTrailingFrame.maxX),
                         beside: ([cornerRowFrame, bottomLeadingFrame] + attributionFrames
-                            + [screen.editsFrame, screen.stationMasterFrame].map { $0.offsetBy(dx: -global.minX, dy: -global.minY) })
-                            .map { ScreenFrame($0) }
+                            + [screen.editsFrame.offsetBy(dx: -global.minX, dy: -global.minY)])
+                            .map { ScreenFrame($0) },
+                        // Mac playtest A4: kept above the station master.
+                        above: [ScreenFrame(screen.stationMasterFrame.offsetBy(dx: -global.minX, dy: -global.minY))]
                     ))
                     // Decision 382: the legend, the overview map and the
                     // buttons end on the status bar's trailing line, and the
@@ -3039,6 +3052,9 @@ private struct MapTopColumnOverlay: ViewModifier {
                 // or else the traffic key at the leading edge.
                 VStack(spacing: 0) {
                     StatusBanner(session: session)
+                        // The tutorial's folded card keeps clear of the
+                        // message (Mac playtest 2026-11-08, A2).
+                        .tutorialTarget(session.message == nil ? nil : .statusBanner)
                     // While the network tool previews a stretch.
                 if session.tool == .network, let preview = session.networkPreview {
                         MapConstructionHUD(preview: preview, language: session.language)
@@ -3158,13 +3174,13 @@ private struct MapMarkOverlays: ViewModifier {
             .overlay(alignment: .topLeading) {
                 if showsFaresAndStamps {
                     FareFloatMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                        .mask { attribution.fill().mask { BelowStatusBar(top: clear.top) } }
                 }
             }
             .overlay(alignment: .topLeading) {
                 if showsFaresAndStamps {
                     TripStampMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                        .mask { attribution.fill().mask { BelowStatusBar(top: clear.top) } }
                 }
             }
             // Decision 353: a station stamp collected lands over its
@@ -3176,6 +3192,22 @@ private struct MapMarkOverlays: ViewModifier {
             .overlay {
                 GoalMetCheck(pulse: session.goalPulse, language: session.language)
             }
+    }
+}
+
+/// The map below the status bar, faded in over its first 16 points: the
+/// fares and the full trips float up and out there rather than over the
+/// date (Mac playtest 2026-11-08, A10).
+private struct BelowStatusBar: View {
+    let top: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: max(0, top))
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: 16)
+            Color.black
+        }
     }
 }
 

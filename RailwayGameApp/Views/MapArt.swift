@@ -152,7 +152,9 @@ enum MapArt {
         if let overlay, !overlay.traceable.isEmpty {
             drawTraceableLines(overlay, projection: projection, in: context)
         }
-        drawNetwork(world, projection: projection, cached: edges, in: context)
+        // Mac playtest 2026-11-08, A5: over a data layer's colours the
+        // track has a white edge, as the dark teal bed vanished on navy.
+        drawNetwork(world, projection: projection, cached: edges, halo: layers.popTravelMode != nil, in: context)
         if flowStrokes.isEmpty {
             drawLines(lines, world: world, projection: projection, cached: edges, codes: lineCodes, in: context)
         } else {
@@ -611,7 +613,9 @@ enum MapArt {
         }
     }
 
-    private static func drawNetwork(_ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+    private static func drawNetwork(
+        _ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], halo: Bool = false, in context: GraphicsContext
+    ) {
         let region = drawingRegion(projection)
         let referenceSize = projection.referenceSize
         let detail = projection.detail
@@ -648,7 +652,7 @@ enum MapArt {
                 // would restart at the cut and shift as the map pans. Draw
                 // it whole.
                 let line = span.kind == .tunnel ? wholePolyline(points, projection: projection) : polyline(points, projection: projection)
-                drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, in: context)
+                drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, halo: halo, in: context)
             }
         }
         guard detail == .full else { return }
@@ -796,8 +800,16 @@ enum MapArt {
     /// The track as the app icon draws it (decision 84): a teal bed with a
     /// pale line down the middle; a viaduct or bridge with a navy casing,
     /// a tunnel dashed.
-    private static func drawEdge(_ line: Path, structure: TrackStructure, detail: MapDetail, referenceSize: Double, in context: GraphicsContext) {
+    private static func drawEdge(
+        _ line: Path, structure: TrackStructure, detail: MapDetail, referenceSize: Double, halo: Bool = false, in context: GraphicsContext
+    ) {
         let centre = StrokeStyle(lineWidth: max(1, referenceSize * 0.08), lineCap: .round, lineJoin: .round)
+        if halo {
+            // Under the bed (and a viaduct's casing), 3 points wider each side.
+            let bed = detail == .overview || structure == .tunnel
+                ? max(1.5, referenceSize * 0.16) : trackWidth(referenceSize) * 0.58 / 0.42
+            context.stroke(line, with: .color(.white.opacity(0.9)), style: StrokeStyle(lineWidth: bed + 6, lineCap: .round, lineJoin: .round))
+        }
         switch (structure, detail) {
         case (.tunnel, _):
             context.stroke(line, with: .color(Palette.track.opacity(0.6)), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.14), lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.3), max(2, referenceSize * 0.2)]))

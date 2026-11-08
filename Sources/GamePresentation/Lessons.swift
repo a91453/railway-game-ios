@@ -421,7 +421,7 @@ extension Lesson {
             targets: [.selectTool],
             goal: .chooseTool(.select),
             panel: .closed,
-            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            title: ("Tap ✕ to stop building", "按 ✕ 結束建造"),
             body: ("Time runs again. Next, add the station to your line.", "時間會繼續走。接著把新車站加進路線。")
         ),
         TutorialStep(
@@ -528,7 +528,7 @@ extension Lesson {
             targets: [.selectTool],
             goal: .chooseTool(.select),
             panel: .closed,
-            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            title: ("Tap ✕ to stop building", "按 ✕ 結束建造"),
             body: ("Time runs again. Next, a second line.", "時間會繼續走。接著開第二條線。")
         ),
     ] + steps(["line.open"]) + [
@@ -674,7 +674,7 @@ extension Lesson {
             targets: [.selectTool],
             goal: .chooseTool(.select),
             panel: .closed,
-            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            title: ("Tap ✕ to stop building", "按 ✕ 結束建造"),
             body: ("Next, send a line's trains to the depot.", "接著讓路線的列車回機廠。")
         ),
         TutorialStep(
@@ -814,7 +814,7 @@ extension Lesson {
             targets: [.selectTool],
             goal: .chooseTool(.select),
             panel: .closed,
-            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            title: ("Tap ✕ to stop building", "按 ✕ 結束建造"),
             body: ("Next, a line to the sight.", "接著開一條線到景點。")
         ),
     ] + steps(["line.open"]) + [

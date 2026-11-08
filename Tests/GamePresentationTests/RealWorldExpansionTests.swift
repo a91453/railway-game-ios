@@ -326,7 +326,8 @@ final class RealWorldExpansionTests: XCTestCase {
     }
 
     /// The map opens on the land owned until something is built; the whole
-    /// of Taiwan and a blank map open as they did.
+    /// of Taiwan as it did, and a blank map on its first town (Mac
+    /// playtest 2026-11-08, A9).
     func testTheMapOpensOnTheLandOwned() throws {
         let layout = try expansion("tra-chiayi")
         let world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: 10_000)
@@ -335,7 +336,12 @@ final class RealWorldExpansionTests: XCTestCase {
         XCTAssertEqual(region.width, tile, accuracy: 1)
         XCTAssertEqual(region.height, tile, accuracy: 1)
         XCTAssertEqual(WorldRegion.opening(in: .newWholeTaiwanGame()), WorldRegion(bounds: WholeTaiwan.bounds))
-        XCTAssertNil(WorldRegion.opening(in: .newGame(buysMap: true)), "a blank map opens as its camera does")
+        let blank = GameWorld.newGame(buysMap: true)
+        let town = try XCTUnwrap(blank.roads?.towns.first).middle
+        let reach = Double(WorldRegion.openingTownReach)
+        XCTAssertEqual(WorldRegion.opening(in: blank), WorldRegion(
+            minX: Double(town.x) - reach, minY: Double(town.y) - reach, maxX: Double(town.x) + reach, maxY: Double(town.y) + reach
+        ), "a blank map opens on its first town")
     }
 
     /// A game on the first tile runs: a line between two of its towns
