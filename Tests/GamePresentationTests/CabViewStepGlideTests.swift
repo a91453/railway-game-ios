@@ -131,4 +131,38 @@ final class CabViewStepGlideTests: XCTestCase {
         session.stopGameLoop()
         XCTAssertFalse(session.glidesOnThroughTheStep)
     }
+
+    /// Decision 661 (review L13-9): the real trains', buses' and cable
+    /// cars' clock, as MapView and Map3DPreviewScreen take it: on each
+    /// change of what they follow, unless the step's glide goes on. A step
+    /// that ends early (the loop stopped, or a command, after a tick whose
+    /// step went on) leaves the clock where the tick left it: the maps then
+    /// take it, rather than standing at the step's start until the next
+    /// tick moves the clock again.
+    func testTheRealTrainsClockIsTakenWhenAStepEndsEarly() async throws {
+        let (session, _) = try session()
+        let before = session.world.clock.now
+        var key = session.realClockKey
+        var taken = before
+        func look() {
+            let next = session.realClockKey
+            guard next != key else { return }
+            key = next
+            guard !next.goesOn else { return }
+            taken = session.world.clock.now
+        }
+        let tick = try XCTUnwrap(session.beginLoopTick().map { begun in
+            var tick = begun
+            tick.goesOnInTheStep()
+            return tick
+        })
+        let outcome = await tick.work()
+        XCTAssertTrue(session.finish(tick, with: outcome))
+        look()
+        XCTAssertGreaterThan(session.world.clock.now, before)
+        XCTAssertEqual(taken, before, "the step goes on: the glide goes on")
+        session.stopGameLoop()
+        look()
+        XCTAssertEqual(taken, session.world.clock.now, "the step ended early: the maps take the clock as it is")
+    }
 }

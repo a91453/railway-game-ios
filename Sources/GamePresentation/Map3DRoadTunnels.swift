@@ -80,19 +80,20 @@ extension Map3DScene.Builder {
             guard rise(Self.riseReach) >= Self.roadTunnelRise else { continue }
             found.append(Found(end: end, point: Map3DPoint(start.x, ground, start.z), into: into, rise: rise))
         }
+        // Decision 661 (review L13-7): the ends in an order of their own
+        // (by place), and the pairs closest first, so that the portals do
+        // not depend on the order the tiles gave the ends: a chunk built
+        // apart (its tiles and an apron) pairs as the whole scene does.
+        found.sort { (one, other) in
+            (one.point.x, one.point.z, one.into.x, one.into.z) < (other.point.x, other.point.z, other.into.x, other.into.z)
+        }
+        let partner = Self.pairedCarriageways(found.map { (paired: $0.end.kind == .motorway && !$0.end.isRamp, point: $0.point, into: $0.into) })
         var portals: [RoadPortal] = []
-        var taken = Set<Int>()
-        for (index, one) in found.enumerated() where !taken.contains(index) {
-            taken.insert(index)
+        for (index, one) in found.enumerated() {
             var point = one.point, into = one.into, paired = false
-            if one.end.kind == .motorway, !one.end.isRamp,
-               let other = found.indices.first(where: { other in
-                   guard !taken.contains(other), found[other].end.kind == .motorway, !found[other].end.isRamp,
-                         one.into.dot(found[other].into) >= 0.985 else { return false }
-                   let gap = found[other].point - one.point, sideways = Map3DPoint(-one.into.z, 0, one.into.x)
-                   return abs(gap.dot(one.into)) < 12 && (6...14).contains(abs(gap.dot(sideways)))
-               }) {
-                taken.insert(other)
+            if let other = partner[index] {
+                // Each pair once, at the first of its two.
+                guard other > index else { continue }
                 paired = true
                 let a = one.point, b = found[other].point
                 into = (one.into + found[other].into).normalized ?? one.into
@@ -114,6 +115,36 @@ extension Map3DScene.Builder {
             portals.append(RoadPortal(point: point, into: into, style: style, width: width, depth: depth, kind: one.end.kind))
         }
         return portals
+    }
+
+    /// Decision 661 (review L13-7): which of `ends` are two freeway
+    /// carriageways side by side (both `paired`, facing the same way within
+    /// 10°, 6 to 14 m apart across, 12 m along), each end's partner by
+    /// index or `nil`. The closest such pairs are taken first (ties by
+    /// index), so that three or more ends crowded together pair the same
+    /// whichever order they come in, given the same order of `ends`.
+    static func pairedCarriageways(_ ends: [(paired: Bool, point: Map3DPoint, into: Map3DPoint)]) -> [Int?] {
+        var candidates: [(gap: Float, a: Int, b: Int)] = []
+        for a in ends.indices where ends[a].paired {
+            for b in ends.indices where b > a && ends[b].paired {
+                func fits(_ one: Int, _ other: Int) -> Bool {
+                    guard ends[one].into.dot(ends[other].into) >= 0.985 else { return false }
+                    let gap = ends[other].point - ends[one].point, sideways = Map3DPoint(-ends[one].into.z, 0, ends[one].into.x)
+                    return abs(gap.dot(ends[one].into)) < 12 && (6...14).contains(abs(gap.dot(sideways)))
+                }
+                // Either way round, as the earlier pairing tried from
+                // whichever came first.
+                guard fits(a, b) || fits(b, a) else { continue }
+                candidates.append(((ends[b].point - ends[a].point).length, a, b))
+            }
+        }
+        candidates.sort { ($0.gap, $0.a, $0.b) < ($1.gap, $1.a, $1.b) }
+        var partner = [Int?](repeating: nil, count: ends.count)
+        for pair in candidates where partner[pair.a] == nil && partner[pair.b] == nil {
+            partner[pair.a] = pair.b
+            partner[pair.b] = pair.a
+        }
+        return partner
     }
 
     /// Decision 611: each real road tunnel's portal in the region, in the

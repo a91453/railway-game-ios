@@ -680,6 +680,10 @@ final class Map3DMetalView: MTKView {
         // 610 續 (review L12-2): those drawn this frame are kept, since
         // the next frame would make them again at once.
         releaseFacades(keepingDrawn: true)
+        // Decision 661 (review L13-4): and the per-frame buffers, grown to
+        // the largest frame drawn; the next frames make them again at
+        // what they need (a frame in flight keeps those it reads).
+        frameBuffers.release()
     }
 
     /// Decision 610: lets go of every chunk's street fronts' buffers, or
@@ -1164,9 +1168,17 @@ final class Map3DMetalView: MTKView {
                                                          detailed: chunks[index].detailed, coarse: false, wasClose: chunks[index].walksClose)
             // Decision 610: and the real buildings' street fronts, made into
             // buffers the first time.
+            let frontsWereUp = chunks[index].frontsUp
             chunks[index].frontsUp = drawsFacades && !chunks[index].facadeMesh.isEmpty
                 && camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, detailed: chunks[index].detailed,
                                      coarse: chunks[index].coarse, wasClose: chunks[index].frontsUp)
+            // Decision 661 (review L13-6): a chunk leaving the close-up
+            // lets go of its street fronts' buffers, as decision 610 meant
+            // ("let go when not drawn"): kept, every chunk once close in a
+            // dense city held them (up to some 0.9 MB each). The close-up's
+            // own margin keeps a chunk at its edge from letting go and
+            // making them again frame after frame.
+            if frontsWereUp, !chunks[index].frontsUp { chunks[index].facade = nil }
             // Decision 610 續 (review L12-2): at most a few a frame, so a
             // city's close-up opening (or the frame after a memory
             // warning) does not copy them all in one frame; the rest show

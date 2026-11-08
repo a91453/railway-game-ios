@@ -103,4 +103,33 @@ final class Map3DFrameBuffersTests: XCTestCase {
         XCTAssertEqual(ring.buffer(.life, bytes: 100, make: make)!.id, kept.id)
         XCTAssertEqual(ring.madeCount, 1)
     }
+
+    /// Decision 661 (review L13-4): a buffer grown for one large frame (a
+    /// train show, a scene full of glass) is let go once the frames have
+    /// needed no more than a quarter of it for ``shrinkAfter`` turns, and
+    /// one no frame asks for any more too; a memory warning lets go of all.
+    func testABufferTooLargeForLongIsLetGo() {
+        typealias Ring = Map3DFrameBuffers<Fake>
+        var ring = Ring()
+        func frame(_ bytes: [Ring.Use: Int]) {
+            ring.advance()
+            for (use, count) in bytes { XCTAssertNotNil(ring.buffer(use, bytes: count, make: make)) }
+        }
+        for _ in 0..<Ring.sets { frame([.cars: 1_000_000, .glass: 2_000_000]) }
+        XCTAssertEqual(ring.kept.bytes, 3 * (1_048_576 + 2_097_152))
+        // Then small frames with no glass: just short of the turns, kept.
+        for _ in 0..<(Ring.sets * Ring.shrinkAfter - 1) { frame([.cars: 10_000]) }
+        XCTAssertEqual(ring.kept.count, 6)
+        for _ in 0..<(Ring.sets + 1) { frame([.cars: 10_000]) }
+        XCTAssertEqual(ring.kept.count, 3, "the glass let go")
+        XCTAssertEqual(ring.kept.bytes, 3 * 16_384, "the cars' made again at what the frames need")
+        // Needing a third of it (more than a quarter) keeps it.
+        let made = ring.madeCount
+        for _ in 0..<(Ring.sets * Ring.shrinkAfter * 2) { frame([.cars: 6_000]) }
+        XCTAssertEqual(ring.madeCount, made)
+        ring.release()
+        XCTAssertEqual(ring.kept.count, 0)
+        frame([.cars: 6_000])
+        XCTAssertEqual(ring.kept.count, 1)
+    }
 }

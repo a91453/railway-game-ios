@@ -2554,6 +2554,20 @@ public final class GameSession {
     /// The maps' ``GlideKey`` for the world as it is now.
     public var glideKey: GlideKey { GlideKey(trains: world.trains, goesOn: glidesOnThroughTheStep) }
 
+    /// Decision 661 (review L13-9): what the maps take the real trains',
+    /// buses' and cable cars' clock on: the game clock, and whether the
+    /// step's glide goes on (``glidesOnThroughTheStep``). On the clock
+    /// alone, a step that ended early (the loop stopped, or a command, after
+    /// a tick whose step went on) left the clock untaken until the next
+    /// tick moved it: the real trains stood a tick behind.
+    public struct RealClockKey: Equatable {
+        public let now: GameTime
+        public let goesOn: Bool
+    }
+
+    /// The maps' ``RealClockKey`` for the world as it is now.
+    public var realClockKey: RealClockKey { RealClockKey(now: world.clock.now, goesOn: glidesOnThroughTheStep) }
+
     /// Starts advancing the world in real time. Calling it while the loop is
     /// already running does nothing, so the world is never ticked twice.
     ///
