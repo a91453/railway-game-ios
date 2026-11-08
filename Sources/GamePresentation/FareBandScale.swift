@@ -32,7 +32,7 @@ extension FareRules {
     }
 
     /// The flat fare the stepper starts at, in cents: this flat fare, or,
-    /// under distance fares, the city's baseline (decision 642, the iPad
+    /// under distance fares, the city's baseline (decision 643, the iPad
     /// playtest's §6.4: it started at NT$5, the fare before decision 499
     /// tripled it, under rules that read NT$15). Within ``flatFareRange``.
     public func flatStart(baseline: Money) -> Int64 {

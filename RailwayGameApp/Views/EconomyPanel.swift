@@ -20,7 +20,7 @@ struct EconomyPanel: View {
     @State private var statement: Statement = .income
     @State private var trendRange: FinanceTrendRange = .thirtyDays
     /// The flat fare on the stepper, in cents; until the player steps it,
-    /// the fare in force (``FareRules/flatStart(baseline:)``, decision 642).
+    /// the fare in force (``FareRules/flatStart(baseline:)``, decision 643).
     @State private var flatFareChoice: Int64?
     /// The distance steps' first fare, in cents; `nil` until the panel
     /// takes the world's (``FareRules/bandStart(baseline:)``).

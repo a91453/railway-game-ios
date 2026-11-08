@@ -982,7 +982,7 @@ public struct LessonResult: Hashable, Sendable, Identifiable {
     /// 1 to 3 stars, or 0 when the days ran out.
     public let stars: Int
     /// The days it took, the first day counted as one, as the best results
-    /// count them (decision 642, the iPad playtest's §6.4: "Done in 0 days"
+    /// count them (decision 643, the iPad playtest's §6.4: "Done in 0 days"
     /// beside "Best: 1 days" for the same game).
     public let days: Int64
 

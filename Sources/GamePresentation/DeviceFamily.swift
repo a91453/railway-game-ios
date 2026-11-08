@@ -1,5 +1,5 @@
 /// Which kind of device the game runs on, for text that names it
-/// (decision 642): the language menu's "Same as iPhone" and the sound
+/// (decision 643): the language menu's "Same as iPhone" and the sound
 /// footer's silent mode read "iPad" on an iPad. The app reads it from
 /// `UIDevice`; GamePresentation only words it.
 public enum DeviceFamily: CaseIterable, Hashable, Sendable {
@@ -15,7 +15,7 @@ public enum DeviceFamily: CaseIterable, Hashable, Sendable {
     }
 }
 
-/// How tall a card the game raises over the map can be (decision 642,
+/// How tall a card the game raises over the map can be (decision 643,
 /// the iPad playtest's A2): on an iPhone it opens at half the screen,
 /// the map still in sight, and is pulled up for the rest; on an iPad half
 /// the screen was a short card at the bottom of a tall one, its form cut

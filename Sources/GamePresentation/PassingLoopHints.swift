@@ -181,7 +181,7 @@ public enum PassingLoopHint {
     /// passing loop would help. A train waiting at a loop the line already
     /// stops at is meeting the other there, as it should (decision 628,
     /// the owner's Mac playtest D2). A line in `skipping` is left out: the
-    /// demo mode's real lines (decision 642). `nil` for none.
+    /// demo mode's real lines (decision 643). `nil` for none.
     public static func waitingLine(_ waits: [TrafficOverlay.Wait], in world: GameWorld, skipping: Set<LineID> = []) -> LineID? {
         var single: [LineID: Bool] = [:]
         for wait in waits where !wait.isDeadlocked {

@@ -1113,7 +1113,7 @@ struct MapView: View {
                     camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
                 }
             }
-            // Decision 642 (the iPad playtest's A1): a lesson's step to lay
+            // Decision 643 (the iPad playtest's A1): a lesson's step to lay
             // the track shows both towns, clear of the building panel and
             // the toolbar, when one of them is hidden.
             .onChange(of: session.tutorialFraming, initial: true) { _, region in
@@ -1843,7 +1843,7 @@ struct MapView: View {
         }
         .accessibilityLabel("Map Layers")
         .accessibilityIdentifier("map.layers")
-        // Decision 642: the tutorial's card keeps clear of it.
+        // Decision 643: the tutorial's card keeps clear of it.
         .tutorialTarget(.mapLayers)
     }
 

@@ -59,7 +59,7 @@ struct StartView: View {
                     VStack(spacing: 28) {
                         header
                             .frame(maxWidth: Self.columnWidth)
-                        // Decision 642 (the iPad playtest's A6): two
+                        // Decision 643 (the iPad playtest's A6): two
                         // columns where they fit, an iPad's width.
                         ViewThatFits(in: .horizontal) {
                             HStack(alignment: .top, spacing: Self.columnSpacing) {
@@ -126,7 +126,7 @@ struct StartView: View {
         }
     }
 
-    /// One column's width, and the room between two (decision 642).
+    /// One column's width, and the room between two (decision 643).
     private static let columnWidth: CGFloat = 420
     private static let columnSpacing: CGFloat = 24
 

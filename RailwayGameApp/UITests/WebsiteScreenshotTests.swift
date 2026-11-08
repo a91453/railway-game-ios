@@ -3039,7 +3039,7 @@ final class WebsiteScreenshotTests: XCTestCase {
 
     /// Lesson 1's first card on a phone on its side (decision 498): its
     /// explanation ends on a whole line, the goal not cut in half.
-    /// Decision 642, for its screenshot review on an iPad: the start
+    /// Decision 643, for its screenshot review on an iPad: the start
     /// screen, in two columns where they fit.
     func testStartScreen() {
         let app = launch()

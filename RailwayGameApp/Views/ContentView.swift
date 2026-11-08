@@ -1044,7 +1044,7 @@ private struct StatusPill: View {
         HUDView(session: session, launcher: launcher)
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
-            // Decision 642 (the iPad playtest's A5): the glass is a layer
+            // Decision 643 (the iPad playtest's A5): the glass is a layer
             // behind the bar, not round it. Round it, the speed menu and
             // the game menu grew out of the whole pill, which went while
             // they were open, and on an iPad they opened at the pill's

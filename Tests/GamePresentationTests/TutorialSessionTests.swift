@@ -167,7 +167,7 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertNil(session.networkEdgePoint, "the bubble on the first station is gone")
             XCTAssertEqual(session.message?.text.hasPrefix("Built station"), true, "the first station's message stays")
             session.tapNetwork(at: at(11), reach: reach)
-            // Decision 642: the first station's platform and its Remove
+            // Decision 643: the first station's platform and its Remove
             // are not listed under the second station's name.
             XCTAssertEqual(session.platformsOnPickedEdge, [])
         case "station.second.build":

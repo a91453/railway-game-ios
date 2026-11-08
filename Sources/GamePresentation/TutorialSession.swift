@@ -518,14 +518,14 @@ extension GameSession {
     /// The tutorial, when its step goes on in the new line's card
     /// (``TutorialGoal/createLine``: "Tap ✓, then Open Line"), which then
     /// covers the tutorial's own card: the card shows the step itself
-    /// (decision 642, the iPad playtest's A2). `nil` otherwise.
+    /// (decision 643, the iPad playtest's A2). `nil` otherwise.
     public var tutorialStepInLineCard: Tutorial? {
         guard let tutorial, tutorial.step.goal == .createLine else { return nil }
         return tutorial
     }
 
     /// What the map frames when a lesson's step to lay the track comes up
-    /// (decision 642, the iPad playtest's A1): every place its goal links,
+    /// (decision 643, the iPad playtest's A1): every place its goal links,
     /// each with its walking ring, so the player sees both towns at once,
     /// clear of the building panel and the toolbar (the map view frames
     /// it, and only when one of them is hidden). `nil` on every other step

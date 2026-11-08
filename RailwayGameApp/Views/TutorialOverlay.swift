@@ -678,7 +678,7 @@ private struct TutorialCard: View {
 }
 
 /// The tutorial's step, its number and title, at the top of a card that
-/// covers the tutorial's own (decision 642): the new line's card at
+/// covers the tutorial's own (decision 643): the new line's card at
 /// "Tap ✓, then Open Line". Only read; the card's own buttons do the step.
 struct TutorialStepNote: View {
     let session: GameSession

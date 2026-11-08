@@ -303,7 +303,7 @@ final class LessonTests: XCTestCase {
         XCTAssertEqual(gold.stars, 3)
         XCTAssertEqual(gold.next?.number, 2)
         XCTAssertEqual(gold.title(in: .traditionalChinese), "第 1 關過關")
-        // Decision 642: counted as the best results count them, the first
+        // Decision 643: counted as the best results count them, the first
         // day as one (lesson 1 met on its first day said "0 days").
         let state = try XCTUnwrap(world.scenario)
         XCTAssertEqual(gold.days, state.elapsedDays(through: 1))

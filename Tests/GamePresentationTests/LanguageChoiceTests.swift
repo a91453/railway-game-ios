@@ -34,7 +34,7 @@ final class LanguageChoiceTests: XCTestCase {
         }
         XCTAssertEqual(LanguageChoice.system.title(in: .english, on: .iPhone), "Same as iPhone")
         XCTAssertEqual(LanguageChoice.system.title(in: .traditionalChinese, on: .iPhone), "跟隨 iPhone")
-        // Decision 642: an iPad's menu names the iPad.
+        // Decision 643: an iPad's menu names the iPad.
         XCTAssertEqual(LanguageChoice.system.title(in: .english, on: .iPad), "Same as iPad")
         XCTAssertEqual(LanguageChoice.system.title(in: .traditionalChinese, on: .iPad), "跟隨 iPad")
         XCTAssertTrue(LanguageChoice.system.restartNote(in: .traditionalChinese, on: .iPad).contains("iPad"))

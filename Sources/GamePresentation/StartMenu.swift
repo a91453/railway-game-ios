@@ -28,7 +28,7 @@ public enum StartMenuEntry: String, CaseIterable, Sendable {
     }
 
     /// The buttons in two columns, where the start screen is wide enough
-    /// (decision 642, the iPad playtest's A6: on an iPad on its side one
+    /// (decision 643, the iPad playtest's A6: on an iPad on its side one
     /// column took the middle third): the ways into a game on the left,
     /// the lesson among them, and the demos, the saves and the
     /// achievements on the right, each in the order of ``entries(hasAutosave:)``.

@@ -46,7 +46,7 @@ struct LineConfirmationCard: View {
             .safeAreaInset(edge: .bottom) {
                 purchaseBar(session.lineConfirmationPreview, in: language)
             }
-            // Decision 642: this card covers the tutorial's own, so it
+            // Decision 643: this card covers the tutorial's own, so it
             // shows the step it is at.
             .safeAreaInset(edge: .top) {
                 if let tutorial = session.tutorialStepInLineCard {

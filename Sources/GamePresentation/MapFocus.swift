@@ -371,7 +371,7 @@ extension PlanCamera {
 
     /// ``showing(_:clearOf:)`` when part of `region` is out of the part of
     /// the view `insets` leave clear (one of its corners is), `nil` when it
-    /// all shows there already: the tutorial's two towns (decision 642),
+    /// all shows there already: the tutorial's two towns (decision 643),
     /// framed only when the panel or the toolbar hides one.
     public func framing(_ region: WorldRegion, clearOf insets: ScreenInsets) -> PlanCamera? {
         let corners = [(region.minX, region.minY), (region.minX, region.maxY), (region.maxX, region.minY), (region.maxX, region.maxY)]

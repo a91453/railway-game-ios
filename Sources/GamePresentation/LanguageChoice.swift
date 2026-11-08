@@ -33,7 +33,7 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
 
     /// The menu's name for the choice: each language in itself, so a player
     /// who cannot read the current one still finds theirs.
-    /// The first choice names the device the game runs on (decision 642).
+    /// The first choice names the device the game runs on (decision 643).
     public func title(in language: DisplayLanguage, on device: DeviceFamily) -> String {
         switch self {
         case .system: language.text("Same as \(device.name)", "跟隨 \(device.name)")

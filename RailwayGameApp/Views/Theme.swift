@@ -243,7 +243,7 @@ extension View {
         }
     }
 
-    /// The heights a card raised over the map opens at (decision 642,
+    /// The heights a card raised over the map opens at (decision 643,
     /// ``SheetHeight``): half the screen and pulled up on an iPhone, its
     /// full height on an iPad.
     func gameSheetDetents() -> some View {

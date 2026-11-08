@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 642: the iPad playtest of 2026-11-08
+/// Decision 643: the iPad playtest of 2026-11-08
 /// (`docs/research/MAC_PLAYTEST_2026-11-08.md` §6), the parts that are
 /// worked out off Apple's platforms.
 @MainActor

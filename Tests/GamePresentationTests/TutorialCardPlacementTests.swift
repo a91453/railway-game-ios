@@ -514,7 +514,7 @@ final class TutorialCardPlacementTests: XCTestCase {
         }
     }
 
-    /// Decision 642, the iPad playtest's A4: at "Tap Lines" on an iPad
+    /// Decision 643, the iPad playtest's A4: at "Tap Lines" on an iPad
     /// Pro 13-inch held on its side (1376 × 1032 points, measured from
     /// `docs/art/mac-playtest-2026-11-08/ipad/tutorial-11-pill-over-layers.jpg`),
     /// the folded pill stood over the round layers button above the dock,

@@ -114,7 +114,7 @@ final class PassingLoopHintTests: XCTestCase {
         XCTAssertNil(PassingLoopHint.waitingLine([wait(unassigned)], in: world))
     }
 
-    /// Decision 642 (the owner's iPad playtest §6.4): the demo mode's real
+    /// Decision 643 (the owner's iPad playtest §6.4): the demo mode's real
     /// lines are the game's trace of the real ones, double where the real
     /// line is; a single stretch left where a second track could not go is
     /// not the player's to fix, so the card does not come for them.

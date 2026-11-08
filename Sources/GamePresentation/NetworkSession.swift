@@ -1548,7 +1548,7 @@ extension GameSession {
     /// remove (56.1: track with a platform on it cannot be removed, so the
     /// remove mode lists them too).
     ///
-    /// Decision 642 (the iPad playtest's §6.4): not in the tutorial's
+    /// Decision 643 (the iPad playtest's §6.4): not in the tutorial's
     /// platform mode, where the second station's card listed the first's
     /// platform and its red Remove under the new station's name, which read
     /// as the station being built.
@@ -1561,7 +1561,7 @@ extension GameSession {
     /// "Already on this track: Station 1's platform, 15–79 m along" for one
     /// of ``platformsOnPickedEdge``: said to be on the track, so in the
     /// platform mode it does not read as the station being built (decision
-    /// 642).
+    /// 643).
     public func platformText(_ platform: TrackPlatform) -> String {
         let name = platformStationName(platform)
         let span = Self.metresSpanText(platform.start, platform.end)
