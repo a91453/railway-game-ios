@@ -18,19 +18,25 @@ public struct MapLayerPreferences: Equatable, Hashable, Sendable {
     /// Whether the fares over the stations ("+$12", decision 256) and the
     /// trips stamped full (decisions 276, 310) are drawn.
     public var showsFaresAndStamps: Bool
+    /// Whether every track's number ("#14", decision 201) is drawn when
+    /// the map is close enough; the previewed leg's are drawn either way
+    /// (decision 631).
+    public var showsTrackNumbers: Bool
 
     public init(
         showsStationNames: Bool = true,
         showsWaitingCounts: Bool = true,
         showsCatchmentRings: Bool = true,
         popTravelMode: PopTravelMode? = nil,
-        showsFaresAndStamps: Bool = true
+        showsFaresAndStamps: Bool = true,
+        showsTrackNumbers: Bool = true
     ) {
         self.showsStationNames = showsStationNames
         self.showsWaitingCounts = showsWaitingCounts
         self.showsCatchmentRings = showsCatchmentRings
         self.popTravelMode = popTravelMode
         self.showsFaresAndStamps = showsFaresAndStamps
+        self.showsTrackNumbers = showsTrackNumbers
     }
 
     /// Whether the population grid is drawn (the reference's
