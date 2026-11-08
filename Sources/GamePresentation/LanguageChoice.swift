@@ -60,13 +60,13 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
         switch self {
         case .system:
             language.text(
-                "The game will use the \(device.name)'s language the next time it opens. Close it from the app switcher and open it again.",
-                "下次開啟遊戲時會跟隨 \(device.name) 的語言。請從多工畫面關掉遊戲，再重新開啟。"
+                "The game will use the \(device.name)'s language the next time it opens. \(device.reopenNote(in: .english))",
+                "下次開啟遊戲時會跟隨 \(device.name) 的語言。\(device.reopenNote(in: .traditionalChinese))"
             )
         case .english, .traditionalChinese:
             language.text(
-                "The game will be in \(title(in: language, on: device)) the next time it opens. Close it from the app switcher and open it again.",
-                "下次開啟遊戲時會換成\(title(in: language, on: device))。請從多工畫面關掉遊戲，再重新開啟。"
+                "The game will be in \(title(in: language, on: device)) the next time it opens. \(device.reopenNote(in: .english))",
+                "下次開啟遊戲時會換成\(title(in: language, on: device))。\(device.reopenNote(in: .traditionalChinese))"
             )
         }
     }

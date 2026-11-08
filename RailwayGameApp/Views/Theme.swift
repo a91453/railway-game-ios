@@ -244,15 +244,11 @@ extension View {
     }
 
     /// The heights a card raised over the map opens at (decision 643,
-    /// ``SheetHeight``): half the screen and pulled up on an iPhone, its
-    /// full height on an iPad.
+    /// ``SheetHeight``): half the screen and pulled up in a narrow window
+    /// (an iPhone, an iPad's Split View or Slide Over), its full height in
+    /// a wide one (decision 656).
     func gameSheetDetents() -> some View {
-        presentationDetents(Set(SheetHeight.offered(on: .current).map { height -> PresentationDetent in
-            switch height {
-            case .half: .medium
-            case .full: .large
-            }
-        }))
+        modifier(GameSheetDetents())
     }
 
     /// Glass behind this view, in `shape`, for the controls that float over
@@ -446,5 +442,52 @@ private struct PanelTitle: ViewModifier {
             .minimumScaleFactor(0.8)
             .multilineTextAlignment(.center)
             .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// ``View/gameSheetDetents()``: the heights ``SheetHeight`` offers in the
+/// window's layout, read from the environment the window's root sets.
+private struct GameSheetDetents: ViewModifier {
+    @Environment(\.windowLayout) private var layout
+
+    func body(content: Content) -> some View {
+        content.presentationDetents(Set(SheetHeight.offered(in: layout).map { height -> PresentationDetent in
+            switch height {
+            case .half: .medium
+            case .full: .large
+            }
+        }))
+    }
+}
+
+extension View {
+    /// Tells `session` this sheet or full-screen cover is over the 2D map
+    /// while it is on screen (decision 656): the speed hint's popover, by
+    /// the 2D map's speed, waits until it has gone, since coming under it
+    /// took it away. Nothing without a game (`nil`, the start screen).
+    func coversTheMap(_ session: GameSession?) -> some View {
+        modifier(CoversTheMap(session: session))
+    }
+}
+
+/// ``View/coversTheMap(_:)``.
+private struct CoversTheMap: ViewModifier {
+    let session: GameSession?
+    @State private var token: Int?
+    /// The session the token is from.
+    @State private var covered: GameSession?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard token == nil, let session else { return }
+                token = session.coverOpened()
+                covered = session
+            }
+            .onDisappear {
+                if let token { covered?.coverClosed(token) }
+                token = nil
+                covered = nil
+            }
     }
 }

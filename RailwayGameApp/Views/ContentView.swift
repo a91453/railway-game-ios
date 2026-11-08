@@ -198,14 +198,20 @@ struct ContentView: View {
             // Presented from here, above the layout, so rebuilding it
             // neither closes the panel nor loses what is typed in it. The
             // panels shown beside the map are not presented (decision 106).
+            // Decision 656: each sheet and cover over the 2D map holds the
+            // speed hint's popover back while it is there
+            // (``View/coversTheMap(_:)``); the 3D map's does as it opens.
             .sheet(item: presentedPanel) { panel in
                 panelSheet(panel)
+                    .coversTheMap(session)
             }
             .fullScreenCover(isPresented: $screen.showsTrainGarage) {
                 TrainShowcaseScreen(close: { screen.showsTrainGarage = false })
+                    .coversTheMap(session)
             }
             .fullScreenCover(item: $screen.cityPreview) { area in
                 CityView3D(area: area, close: { screen.cityPreview = nil })
+                    .coversTheMap(session)
             }
             // Decision 229, later: this game's 3D map, from the map's own
             // button (``Map3DShortcut``).
@@ -291,6 +297,7 @@ struct ContentView: View {
                     }
                 )
                 .gameSheetDetents()
+                .coversTheMap(session)
             }
             // Decision 315: a real branch line offered, and in the same
             // sheet the card its purchase ends on. Decision 497: open while
@@ -299,6 +306,7 @@ struct ContentView: View {
                 get: { session.shownRealLineOffer != nil || session.preparingRealLine != nil || session.lastLineAcquired != nil },
                 set: { if !$0 { session.closeRealLineOffer(); session.lastLineAcquired = nil } }
             )) {
+                Group {
                 if let acquired = session.lastLineAcquired {
                     AcquisitionCompleteCard(acquired: acquired, language: session.language) {
                         session.lastLineAcquired = nil
@@ -312,6 +320,8 @@ struct ContentView: View {
                     RealLineOfferCard(session: session, line: line, offer: nil)
                         .gameSheetDetents()
                 }
+                }
+                .coversTheMap(session)
             }
             // Decision 400 A.8: a real station offered from its pin.
             .sheet(isPresented: Binding(
@@ -321,6 +331,7 @@ struct ContentView: View {
                 if let offer = session.shownRealStationOffer {
                     RealStationOfferCard(session: session, offer: offer)
                         .gameSheetDetents()
+                        .coversTheMap(session)
                 }
             }
             // Decision 303: a new line's hours and trains, before they are
@@ -333,6 +344,7 @@ struct ContentView: View {
                     screen.panel = .lines
                 }
                 .gameSheetDetents()
+                .coversTheMap(session)
             }
             .onChange(of: screen.panel) { old, new in
                 // The report or the goals that were shown have been seen.

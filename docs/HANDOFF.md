@@ -4261,3 +4261,9 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **UNVERIFIED**（要實機看）：A5 選單位置、iPad 各畫面的版面。
 - **IPAD-FIXES-2（session_01YGNNuoprHzncZPaPnbhuHC）接手查過**：兩次紅都是點擊被取消，不是 #1966 的改動。第二次的 App 紀錄（run 42459382878 的 ipad-tutorial-trace）在按 ✓ 時有 `touch cancelled at (834, 602)`：開始後 141 ms 就被取消，前面有 1.5 s 沒畫面，所以沒建出路線，卡片也沒升起。第一次的紀錄被重跑蓋掉了；當時 30 秒後還停在 Step 2，表示 Zoom out 沒生效，最可能是同一種點擊被取消。main 上同一個 job 也有一樣的情形（#1978：路線鈕的點擊被取消）。修法照 #1951，只改測試：✓ 沒升起卡片而且 ✓ 還在，就再按一次；Zoom out 3 秒內 `map.camera` 沒變，就再按一次（步驟延遲 20→25 s、按住 30→35 s 留餘裕）。斷言都不變。
 - **號碼**：決策 643（已在 #1579 登記）；存檔、golden 不動。
+
+### 4.58 iPad 版面看視窗大小、教學月台範圍、倍速提示（決策 656，派工單 FIX-L15-UI，session_01YGNNunLWBrDQpWke2J2CiT，`claude/fix-l15-ui`，2026-11-08）
+
+- **做了的**在 [決策 656](decisions/656.md)：L15-6（`WindowLayout`，分割畫面與 Slide Over 照 iPhone；框城鎮超過 5 km／400 點不框）、L15-7（只在蓋車站那幾步不列月台）、L15-8（Mac 叫 Mac、示範線跟著存檔、框鏡頭等面板量好、註解、待避卡測試走 session）、L13-2（任何 sheet／cover 蓋住 2D 地圖時倍速提示都等）。
+- **還沒做、要實機或 Simulator 的**：分割畫面、Slide Over、台前調度的實際版面；L13-2 的機制在 sheet 底下是否真的會發生；L15-8.5 的 A4 位置測試仍由測試自己傳圖層列的框。都寫在決策 656「下一步」。
+- **號碼**：決策 656；存檔、golden 不動。

@@ -261,6 +261,11 @@ struct MapView: View {
     @State private var followCamera = FollowCamera()
     /// The camera a game opened on, and when (``openCamera(viewport:clearOf:)``).
     @State private var openedCamera: OpenedCamera?
+    /// The lesson's framing of both towns, at most once a step, and when
+    /// the step's region appeared (decision 656).
+    @State private var lessonFraming = LessonFramingLatch()
+    @State private var lessonFramingSince = Date.distantPast
+    @Environment(\.windowLayout) private var windowLayout
 
     private var mapLayers: MapLayerPreferences {
         MapLayerPreferences(
@@ -1115,10 +1120,15 @@ struct MapView: View {
             }
             // Decision 643 (the iPad playtest's A1): a lesson's step to lay
             // the track shows both towns, clear of the building panel and
-            // the toolbar, when one of them is hidden; on an iPad.
+            // the toolbar, when one of them is hidden; in a wide window
+            // (decision 656). Looked at again as the panel is measured,
+            // just after the step appears; once a step.
             .onChange(of: session.tutorialFraming, initial: true) { _, region in
-                guard DeviceFamily.current.framesTheLessonsTowns, let region, let framed = projection.framing(region, clearOf: framing) else { return }
-                camera = framed
+                lessonFramingSince = .now
+                frameTheLesson(region, from: projection, clearOf: framing)
+            }
+            .onChange(of: framing) { _, framing in
+                frameTheLesson(session.tutorialFraming, from: projection, clearOf: framing)
             }
             // Decision 188, later fix: where the places the tutorial's
             // step has the player tap stand, which its card keeps clear of.
@@ -1676,6 +1686,15 @@ struct MapView: View {
     /// measured and frame it again: their first layout, not a legend opened
     /// later by the player.
     private static let openingSettles: TimeInterval = 2
+
+    /// Moves the camera to the lesson's two towns when
+    /// ``LessonFramingLatch`` says to (decision 656).
+    private func frameTheLesson(_ region: WorldRegion?, from projection: PlanCamera, clearOf framing: ScreenInsets) {
+        let settling = Date.now.timeIntervalSince(lessonFramingSince) < Self.openingSettles
+        if let framed = lessonFraming.camera(for: region, from: projection, clearOf: framing, layout: windowLayout, settling: settling) {
+            camera = framed
+        }
+    }
 
     private var selectionDescription: String {
         let selection = session.selectionText() ?? String(localized: "Nothing selected")

@@ -64,7 +64,6 @@ final class IPadPlaytestFixesTests: XCTestCase {
         XCTAssertNil(session.tutorialFraming)
     }
 
-    /// A1: outside a lesson, the tutorial frames nothing.
     /// A1 on an iPhone on its side: fitting both towns in the short map
     /// left clear would zoom out to kilometres a tap, so only an iPad
     /// frames them (the gate's TutorialUITests taps 400 points apart).
@@ -82,10 +81,12 @@ final class IPadPlaytestFixesTests: XCTestCase {
         let framed = try XCTUnwrap(phone.framing(region, clearOf: ScreenInsets(top: 60, leading: 70, bottom: 60, trailing: 0)))
         let metres = 400 / framed.pointsPerUnit / Double(WorldCoordinate.unitsPerMetre)
         XCTAssertGreaterThan(metres, 8_000, "400 points would lay \(Int(metres)) m")
-        XCTAssertFalse(DeviceFamily.iPhone.framesTheLessonsTowns)
-        XCTAssertTrue(DeviceFamily.iPad.framesTheLessonsTowns)
+        XCTAssertNil(phone.lessonFraming(region, clearOf: ScreenInsets(top: 60, leading: 70, bottom: 60, trailing: 0)))
+        XCTAssertFalse(WindowLayout(device: .iPhone, compactWidth: false).framesTheLessonsTowns)
+        XCTAssertTrue(WindowLayout(device: .iPad, compactWidth: false).framesTheLessonsTowns)
     }
 
+    /// A1: outside a lesson, the tutorial frames nothing.
     func testTheTutorialOutsideALessonFramesNothing() {
         let session = GameSession(world: .newGame(), language: .english)
         session.startTutorial(atStep: "track.draw")
@@ -94,10 +95,11 @@ final class IPadPlaytestFixesTests: XCTestCase {
     }
 
     /// A2: a card raised over the map opens at half the screen on an
-    /// iPhone and at its full height on an iPad.
+    /// iPhone and at its full height on an iPad (by the window since
+    /// decision 656, ``WindowLayoutTests``).
     func testACardOpensAtItsFullHeightOnAnIPad() {
-        XCTAssertEqual(SheetHeight.offered(on: .iPhone), [.half, .full])
-        XCTAssertEqual(SheetHeight.offered(on: .iPad), [.full])
+        XCTAssertEqual(SheetHeight.offered(in: WindowLayout(device: .iPhone, compactWidth: true)), [.half, .full])
+        XCTAssertEqual(SheetHeight.offered(in: WindowLayout(device: .iPad, compactWidth: false)), [.full])
     }
 
     /// A2: the new line's card shows the tutorial's step while it covers

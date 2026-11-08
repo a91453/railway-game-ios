@@ -151,6 +151,7 @@ struct ReceivesSharedNetworks: ViewModifier {
             )) {
                 if let network = launcher.receivedNetwork {
                     ReceivedNetworkSheet(network: network, launcher: launcher)
+                        .coversTheMap(launcher.session)
                 }
             }
             .overlay {

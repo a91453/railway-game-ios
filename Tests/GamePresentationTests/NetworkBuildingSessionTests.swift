@@ -713,6 +713,28 @@ final class NetworkBuildingSessionTests: XCTestCase {
         }
     }
 
+    /// Decision 656 (the L15 review's L15-7): the tutorial leaves out the
+    /// platforms on the track only at its steps that build a station
+    /// (decision 643); at its other steps the platform mode lists them,
+    /// so one can still be removed from there.
+    func testTheTutorialLeavesOutThePlatformsOnlyWhileAStationIsBuilt() async throws {
+        var world = try makeLineWorld()
+        let station = try world.buildStation(named: "Mid", at: PlanPoint(x: 4_608, y: 3_584))
+        try world.addTrackPlatform(station.id, on: .edge(1), from: 952, to: 5_048)
+        await MainActor.run { [world] in
+            let platform = world.network.platforms(on: .edge(1))[0]
+            for (step, listed) in [("station.first.site", false), ("line.open", true)] {
+                let session = GameSession(world: world)
+                session.startTutorial(atStep: step)
+                XCTAssertEqual(session.tutorial?.step.id, step)
+                session.selectTool(.network)
+                session.setNetworkMode(.platform)
+                session.tapNetwork(at: PlanPoint(x: 6_000, y: 3_072), reach: Self.reach)
+                XCTAssertEqual(session.platformsOnPickedEdge, listed ? [platform] : [], step)
+            }
+        }
+    }
+
     func testTheRemoveModeNamesThePlatformsStationsInChinese() async throws {
         var world = try makeLineWorld()
         let station = try world.buildStation(named: "赤土崎", at: PlanPoint(x: 4_608, y: 3_584))

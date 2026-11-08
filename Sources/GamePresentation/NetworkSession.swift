@@ -1548,13 +1548,15 @@ extension GameSession {
     /// remove (56.1: track with a platform on it cannot be removed, so the
     /// remove mode lists them too).
     ///
-    /// Decision 643 (the iPad playtest's §6.4): not in the tutorial's
-    /// platform mode, where the second station's card listed the first's
-    /// platform and its red Remove under the new station's name, which read
-    /// as the station being built.
+    /// Decision 643 (the iPad playtest's §6.4): not at the tutorial's
+    /// steps that build a station, where the second station's card listed
+    /// the first's platform and its red Remove under the new station's
+    /// name, which read as the station being built. Decision 656 (the L15
+    /// review's L15-7): only at those steps, so at a lesson's other steps
+    /// the platform mode lists them as it does outside one.
     public var platformsOnPickedEdge: [TrackPlatform] {
         guard networkMode == .platform || networkMode == .remove, let edge = networkEdgePoint?.edge else { return [] }
-        if networkMode == .platform, tutorial != nil { return [] }
+        if networkMode == .platform, tutorial?.step.goal.buildsAStation == true { return [] }
         return world.network.platforms(on: edge)
     }
 

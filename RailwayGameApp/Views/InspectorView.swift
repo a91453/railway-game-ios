@@ -28,6 +28,7 @@ struct InspectorView: View {
             .themeCard(padding: 10, cornerRadius: 12)
             .fullScreenCover(item: $rosterTrain) { focus in
                 TrainRosterView(session: session, focus: focus.id)
+                    .coversTheMap(session)
             }
     }
 

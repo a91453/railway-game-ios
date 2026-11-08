@@ -2503,6 +2503,7 @@ struct LinesPanel: View {
             .accessibilityIdentifier("line.staff.catalog")
             .sheet(isPresented: $showsCatalog) {
                 RollingStockCatalogView(session: session, type: $staffType, cars: $staffCars)
+                    .coversTheMap(session)
             }
             capacityWarning(line)
             Stepper(value: $staffCars, in: Train.minimumCars...Train.maximumCars) {
@@ -2778,11 +2779,13 @@ extension LinesPanel {
             .fullScreenCover(isPresented: active ? $showsDiagram : .constant(false)) {
                 if let id = session.selectedLineID {
                     TrainDiagramView(session: session, line: id)
+                        .coversTheMap(session)
                 }
             }
             .fullScreenCover(isPresented: active ? $showsRoster : .constant(false)) {
                 if let id = session.selectedLineID {
                     TrainRosterView(session: session, line: id)
+                        .coversTheMap(session)
                 }
             }
     }

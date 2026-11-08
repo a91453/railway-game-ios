@@ -203,7 +203,12 @@ extension GameSession {
     /// tutorial is on or another card is waiting.
     public func watchPassingLoopHint() {
         guard tutorial == nil, passingLoopHint == nil, routeHint == nil, passingLoopOffer == nil else { return }
-        let waits = trafficOverlay.waits
+        watchPassingLoopHint(waits: trafficOverlay.waits)
+    }
+
+    /// ``watchPassingLoopHint()`` for the trains waiting in `waits`.
+    func watchPassingLoopHint(waits: [TrafficOverlay.Wait]) {
+        guard tutorial == nil, passingLoopHint == nil, routeHint == nil, passingLoopOffer == nil else { return }
         guard !waits.isEmpty else { return }
         passingLoopHint = PassingLoopHint.waitingLine(waits, in: world, skipping: linesLaidByTheDemo)
     }
