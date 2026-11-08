@@ -135,6 +135,10 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     /// kept off the banner at the last step, the pill went over the clock
     /// the step asks to watch).
     case gameClock = "hud.time"
+    /// The map's round layers button at its bottom leading corner: never
+    /// outlined, but the card keeps clear of it (decision 643, the iPad
+    /// playtest's A4: at "Tap Lines" the pill stood over it).
+    case mapLayers = "map.layers"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).

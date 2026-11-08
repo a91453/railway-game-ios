@@ -112,7 +112,7 @@ struct TrainShowcaseScreen: View {
         }
         .sheet(isPresented: $picking) {
             TrainShowcasePicker(selection: $selection, language: language)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         }
         .sheet(item: $photo.snapshot) { snapshot in
             Map3DSnapshotSheet(snapshot: snapshot, language: language)

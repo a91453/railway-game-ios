@@ -27,11 +27,18 @@ final class LanguageChoiceTests: XCTestCase {
 
     func testTheMenuNamesEachLanguageInItself() {
         for language in DisplayLanguage.allCases {
-            XCTAssertEqual(LanguageChoice.english.title(in: language), "English")
-            XCTAssertEqual(LanguageChoice.traditionalChinese.title(in: language), "繁體中文")
+            for device in DeviceFamily.allCases {
+                XCTAssertEqual(LanguageChoice.english.title(in: language, on: device), "English")
+                XCTAssertEqual(LanguageChoice.traditionalChinese.title(in: language, on: device), "繁體中文")
+            }
         }
-        XCTAssertEqual(LanguageChoice.system.title(in: .english), "Same as iPhone")
-        XCTAssertEqual(LanguageChoice.system.title(in: .traditionalChinese), "跟隨 iPhone")
+        XCTAssertEqual(LanguageChoice.system.title(in: .english, on: .iPhone), "Same as iPhone")
+        XCTAssertEqual(LanguageChoice.system.title(in: .traditionalChinese, on: .iPhone), "跟隨 iPhone")
+        // Decision 643: an iPad's menu names the iPad.
+        XCTAssertEqual(LanguageChoice.system.title(in: .english, on: .iPad), "Same as iPad")
+        XCTAssertEqual(LanguageChoice.system.title(in: .traditionalChinese, on: .iPad), "跟隨 iPad")
+        XCTAssertTrue(LanguageChoice.system.restartNote(in: .traditionalChinese, on: .iPad).contains("iPad"))
+        XCTAssertFalse(LanguageChoice.system.restartNote(in: .english, on: .iPad).contains("iPhone"))
     }
 
     func testAChangeAsksForARestartOnlyWhenTheLanguageMayChange() {
@@ -39,8 +46,8 @@ final class LanguageChoiceTests: XCTestCase {
         XCTAssertTrue(LanguageChoice.traditionalChinese.needsRestart(from: .english, showing: .english))
         XCTAssertTrue(LanguageChoice.system.needsRestart(from: .english, showing: .english))
         XCTAssertFalse(LanguageChoice.system.needsRestart(from: .system, showing: .english))
-        let note = LanguageChoice.traditionalChinese.restartNote(in: .english)
+        let note = LanguageChoice.traditionalChinese.restartNote(in: .english, on: .iPhone)
         XCTAssertFalse(note.isEmpty)
-        XCTAssertNotEqual(note, LanguageChoice.traditionalChinese.restartNote(in: .traditionalChinese))
+        XCTAssertNotEqual(note, LanguageChoice.traditionalChinese.restartNote(in: .traditionalChinese, on: .iPhone))
     }
 }

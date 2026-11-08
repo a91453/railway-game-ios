@@ -290,7 +290,7 @@ struct ContentView: View {
                         session.keepPlaying()
                     }
                 )
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
             }
             // Decision 315: a real branch line offered, and in the same
             // sheet the card its purchase ends on. Decision 497: open while
@@ -304,13 +304,13 @@ struct ContentView: View {
                         session.lastLineAcquired = nil
                         screen.panel = .lines
                     }
-                    .presentationDetents([.medium, .large])
+                    .gameSheetDetents()
                 } else if let offer = session.shownRealLineOffer {
                     RealLineOfferCard(session: session, line: offer.line, offer: offer)
-                        .presentationDetents([.medium, .large])
+                        .gameSheetDetents()
                 } else if let line = session.preparingRealLine {
                     RealLineOfferCard(session: session, line: line, offer: nil)
-                        .presentationDetents([.medium, .large])
+                        .gameSheetDetents()
                 }
             }
             // Decision 400 A.8: a real station offered from its pin.
@@ -320,7 +320,7 @@ struct ContentView: View {
             )) {
                 if let offer = session.shownRealStationOffer {
                     RealStationOfferCard(session: session, offer: offer)
-                        .presentationDetents([.medium, .large])
+                        .gameSheetDetents()
                 }
             }
             // Decision 303: a new line's hours and trains, before they are
@@ -332,7 +332,7 @@ struct ContentView: View {
                 LineConfirmationCard(session: session) {
                     screen.panel = .lines
                 }
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
             }
             .onChange(of: screen.panel) { old, new in
                 // The report or the goals that were shown have been seen.
@@ -450,7 +450,7 @@ struct ContentView: View {
             // Its line button opens the lines panel through the screen.
             TimetableEditor(session: session)
                 .environment(screen)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         case .fleet:
             FleetOverviewSheet(session: session)
         case .networkFlow:
@@ -467,26 +467,26 @@ struct ContentView: View {
             SettingsView(audio: audio, launcher: launcher, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
         case .yearEnd:
             YearEndSheet(session: session)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         case .goals:
             GoalsPanel(session: session, achievements: launcher.achievements, stamps: launcher.stationStamps)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         case .tourism:
             TourismPanel(session: session, focus: screen.sightFocus)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         case .news:
             NewsLogView(session: session)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         case .monthEnd:
             MonthlyReportSheet(session: session)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         case .help:
             HelpView(language: session.language, launcher: launcher)
         case .postcard:
             PostcardSheet(session: session, launcher: launcher)
         case .achievements:
             AchievementsSheet(session: session, records: launcher.achievements, stamps: launcher.stationStamps)
-                .presentationDetents([.medium, .large])
+                .gameSheetDetents()
         }
     }
 
@@ -1050,7 +1050,14 @@ private struct StatusPill: View {
         HUDView(session: session, launcher: launcher)
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
-            .glassBackground(cornerRadius: 22)
+            // Decision 643 (the iPad playtest's A5): the glass is a layer
+            // behind the bar, not round it. Round it, the speed menu and
+            // the game menu grew out of the whole pill, which went while
+            // they were open, and on an iPad they opened at the pill's
+            // top leading corner instead of at their buttons.
+            .background {
+                Color.clear.glassBackground(cornerRadius: 22)
+            }
             .hudFrameMark("hud.bar")
     }
 }

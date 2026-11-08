@@ -180,11 +180,12 @@ public enum PassingLoopHint {
     /// (``GameWorld/passingPlaceShortfall(of:trains:readyFor:)``): where a
     /// passing loop would help. A train waiting at a loop the line already
     /// stops at is meeting the other there, as it should (decision 628,
-    /// the owner's Mac playtest D2). `nil` for none.
-    public static func waitingLine(_ waits: [TrafficOverlay.Wait], in world: GameWorld) -> LineID? {
+    /// the owner's Mac playtest D2). A line in `skipping` is left out: the
+    /// demo mode's real lines (decision 643). `nil` for none.
+    public static func waitingLine(_ waits: [TrafficOverlay.Wait], in world: GameWorld, skipping: Set<LineID> = []) -> LineID? {
         var single: [LineID: Bool] = [:]
         for wait in waits where !wait.isDeadlocked {
-            guard let line = world.lines.first(where: { $0.trains.contains(wait.train) }) else { continue }
+            guard let line = world.lines.first(where: { $0.trains.contains(wait.train) }), !skipping.contains(line.id) else { continue }
             let isSingle = single[line.id] ?? (
                 (world.lineTrackCounts(line.id) ?? []).contains(1)
                     && world.passingPlaceShortfall(of: line.id, trains: max(2, world.trainsOnTrack(of: line))) != nil
@@ -204,7 +205,7 @@ extension GameSession {
         guard tutorial == nil, passingLoopHint == nil, routeHint == nil, passingLoopOffer == nil else { return }
         let waits = trafficOverlay.waits
         guard !waits.isEmpty else { return }
-        passingLoopHint = PassingLoopHint.waitingLine(waits, in: world)
+        passingLoopHint = PassingLoopHint.waitingLine(waits, in: world, skipping: linesLaidByTheDemo)
     }
 
     /// The card's button: the network tool's passing-loop mode.

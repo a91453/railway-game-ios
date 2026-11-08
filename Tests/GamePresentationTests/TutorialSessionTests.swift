@@ -167,6 +167,9 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertNil(session.networkEdgePoint, "the bubble on the first station is gone")
             XCTAssertEqual(session.message?.text.hasPrefix("Built station"), true, "the first station's message stays")
             session.tapNetwork(at: at(11), reach: reach)
+            // Decision 643: the first station's platform and its Remove
+            // are not listed under the second station's name.
+            XCTAssertEqual(session.platformsOnPickedEdge, [])
         case "station.second.build":
             session.addNetworkPlatform()
         case "line.open":
@@ -640,7 +643,7 @@ final class TutorialSessionTests: XCTestCase {
             "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
             "line.loss.fix", "line.addTrain", "inspector.track.double", "line.staff.headway", "line.headway.change",
             "lines.advanced", "line.window", "line.pattern.add", "line.depots", "station.freight.build", "building.kind.hotel",
-            "hud.requests", "line.addSelectedStation", "tool.bus", "map.build.card", "map.banner", "edits.row", "hud.time",
+            "hud.requests", "line.addSelectedStation", "tool.bus", "map.build.card", "map.banner", "edits.row", "hud.time", "map.layers",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")

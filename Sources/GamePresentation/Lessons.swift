@@ -981,19 +981,21 @@ public struct LessonResult: Hashable, Sendable, Identifiable {
     public let lesson: Int
     /// 1 to 3 stars, or 0 when the days ran out.
     public let stars: Int
-    /// The days it took.
+    /// The days it took, the first day counted as one, as the best results
+    /// count them (decision 643, the iPad playtest's §6.4: "Done in 0 days"
+    /// beside "Best: 1 days" for the same game).
     public let days: Int64
 
     public init?(world: GameWorld) {
-        guard let lesson = world.lesson, let outcome = world.scenario?.outcome else { return nil }
+        guard let lesson = world.lesson, let state = world.scenario, let outcome = state.outcome else { return nil }
         self.lesson = lesson.number
         switch outcome {
         case .completed(let day, let rating):
             stars = Lesson.stars(for: rating)
-            days = day
+            days = state.elapsedDays(through: day)
         case .failed(let day, _):
             stars = 0
-            days = day
+            days = state.elapsedDays(through: day)
         }
     }
 

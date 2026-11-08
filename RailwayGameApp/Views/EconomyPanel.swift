@@ -19,7 +19,9 @@ struct EconomyPanel: View {
     @State private var period: FinancePeriod = .day
     @State private var statement: Statement = .income
     @State private var trendRange: FinanceTrendRange = .thirtyDays
-    @State private var flatFare: Int64 = 500
+    /// The flat fare on the stepper, in cents; until the player steps it,
+    /// the fare in force (``FareRules/flatStart(baseline:)``, decision 643).
+    @State private var flatFareChoice: Int64?
     /// The distance steps' first fare, in cents; `nil` until the panel
     /// takes the world's (``FareRules/bandStart(baseline:)``).
     @State private var bandStart: Int64?
@@ -419,7 +421,8 @@ struct EconomyPanel: View {
     private var faresSection: some View {
         Section {
             LabeledContent("Rules", value: accounts.effectiveFareRules.displayText(in: session.language))
-            Stepper(value: $flatFare, in: 0...10_000, step: 25) {
+            let flatFare = flatFareChoice ?? accounts.effectiveFareRules.flatStart(baseline: accounts.fareBaseline)
+            Stepper(value: Binding(get: { flatFare }, set: { flatFareChoice = $0 }), in: FareRules.flatFareRange, step: 25) {
                 Text("Flat fare \(Money(flatFare).centsText)")
                     .monospacedDigit()
             }

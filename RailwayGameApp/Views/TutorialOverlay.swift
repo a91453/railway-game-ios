@@ -677,6 +677,43 @@ private struct TutorialCard: View {
     }
 }
 
+/// The tutorial's step, its number and title, at the top of a card that
+/// covers the tutorial's own (decision 643): the new line's card at
+/// "Tap ✓, then Open Line". Only read; the card's own buttons do the step.
+struct TutorialStepNote: View {
+    let session: GameSession
+    let tutorial: Tutorial
+
+    var body: some View {
+        HStack(spacing: 8) {
+            StationMasterAvatar(size: 24, mood: .normal)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 0) {
+                    Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                        .monospacedDigit()
+                    Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
+                }
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.primary)
+                .lineLimit(1)
+                Text(verbatim: tutorial.step.title(in: session.language))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
+        .background(Theme.primary.opacity(0.14), in: Capsule())
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("tutorial.sheetStep")
+    }
+}
+
 /// The card folded to its step and title, at the card's place, so the
 /// controls it covered are in reach; a tap opens it again, which its
 /// trailing "Tap for help" says (a player's report on 59.1 did not find

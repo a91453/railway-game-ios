@@ -26,6 +26,8 @@ struct StartView: View {
     @State private var showsAchievements = false
     /// Decision 415: the news of an update, once.
     @State private var showsWhatsNew = false
+    /// How wide the start menu can be (decision 643).
+    @State private var menuWidth: CGFloat = 0
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -58,14 +60,33 @@ struct StartView: View {
                 ScrollView {
                     VStack(spacing: 28) {
                         header
-                        buttons
+                            .frame(maxWidth: Self.columnWidth)
+                        // Decision 643 (the iPad playtest's A6): two
+                        // columns where they fit, an iPad's width. Not a
+                        // ViewThatFits: it measures its layouts off the
+                        // main thread, and these rows' closures are
+                        // main-actor code (CRASH101).
+                        if menuWidth >= 2 * Self.columnWidth + Self.columnSpacing {
+                            let columns = StartMenuEntry.columns(hasAutosave: launcher.autosave != nil)
+                            HStack(alignment: .top, spacing: Self.columnSpacing) {
+                                buttons(columns[0], top: true, foot: false)
+                                    .frame(width: Self.columnWidth)
+                                buttons(columns[1], top: false, foot: true)
+                                    .frame(width: Self.columnWidth)
+                            }
+                        } else {
+                            buttons
+                                .frame(maxWidth: Self.columnWidth)
+                        }
                         footer
+                            .frame(maxWidth: Self.columnWidth)
                     }
-                    .frame(maxWidth: 420)
                     .padding(.horizontal)
                     .padding(.vertical, 40)
                     .frame(maxWidth: .infinity)
                 }
+                // The room for the buttons: the width less the padding.
+                .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { menuWidth = $0 }
             }
         }
         .background(Theme.background)
@@ -114,19 +135,32 @@ struct StartView: View {
         }
     }
 
+    /// One column's width, and the room between two (decision 643).
+    private static let columnWidth: CGFloat = 420
+    private static let columnSpacing: CGFloat = 24
+
     /// The ways into a game (decision 381: ``StartMenuEntry``).
     private var buttons: some View {
+        buttons(StartMenuEntry.entries(hasAutosave: launcher.autosave != nil), top: true, foot: true)
+    }
+
+    /// `entries`' buttons in a column, with the first game's card at its
+    /// `top` and the iCloud line at its `foot` (under Saves, in the
+    /// column that has it).
+    private func buttons(_ entries: [StartMenuEntry], top: Bool, foot: Bool) -> some View {
         VStack(spacing: 12) {
-            if launcher.showsFirstGameCard {
+            if top, launcher.showsFirstGameCard {
                 firstGameCard
             }
-            ForEach(StartMenuEntry.entries(hasAutosave: launcher.autosave != nil), id: \.self) { entry in
+            ForEach(entries, id: \.self) { entry in
                 button(entry)
                     // Stable across localizations for the UI tests.
                     .accessibilityIdentifier(entry.identifier)
             }
             // Decision 397, later: whether the saves are in iCloud.
-            CloudSaveStatusLine(launcher: launcher, identifier: "start.syncNow")
+            if foot {
+                CloudSaveStatusLine(launcher: launcher, identifier: "start.syncNow")
+            }
         }
     }
 
@@ -456,7 +490,7 @@ private struct DemoPicker: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
     }
 }
 

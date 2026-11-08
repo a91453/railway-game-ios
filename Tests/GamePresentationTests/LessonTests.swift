@@ -332,6 +332,15 @@ final class LessonTests: XCTestCase {
         XCTAssertEqual(gold.stars, 3)
         XCTAssertEqual(gold.next?.number, 2)
         XCTAssertEqual(gold.title(in: .traditionalChinese), "第 1 關過關")
+        // Decision 643: counted as the best results count them, the first
+        // day as one (lesson 1 met on its first day said "0 days").
+        let state = try XCTUnwrap(world.scenario)
+        XCTAssertEqual(gold.days, state.elapsedDays(through: 1))
+        world.scenario?.outcome = .completed(day: state.startDay, rating: .gold)
+        let firstDay = try XCTUnwrap(LessonResult(world: world))
+        XCTAssertEqual(firstDay.days, 1)
+        XCTAssertEqual(firstDay.detail(in: .traditionalChinese), "用了 1 天完成。")
+        XCTAssertEqual(firstDay.detail(in: .english), "Done in 1 day.")
         world.scenario?.outcome = .failed(day: 3, reason: .deadline)
         let failed = try XCTUnwrap(LessonResult(world: world))
         XCTAssertEqual(failed.stars, 0)

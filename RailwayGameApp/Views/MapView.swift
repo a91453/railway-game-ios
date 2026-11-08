@@ -1113,6 +1113,13 @@ struct MapView: View {
                     camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
                 }
             }
+            // Decision 643 (the iPad playtest's A1): a lesson's step to lay
+            // the track shows both towns, clear of the building panel and
+            // the toolbar, when one of them is hidden; on an iPad.
+            .onChange(of: session.tutorialFraming, initial: true) { _, region in
+                guard DeviceFamily.current.framesTheLessonsTowns, let region, let framed = projection.framing(region, clearOf: framing) else { return }
+                camera = framed
+            }
             // Decision 188, later fix: where the places the tutorial's
             // step has the player tap stand, which its card keeps clear of.
             .onChange(of: tutorialSites(projection: projection, origin: proxy.frame(in: .global).origin), initial: true) { _, sites in
@@ -1836,6 +1843,8 @@ struct MapView: View {
         }
         .accessibilityLabel("Map Layers")
         .accessibilityIdentifier("map.layers")
+        // Decision 643: the tutorial's card keeps clear of it.
+        .tutorialTarget(.mapLayers)
     }
 
     /// Whether the zoom-in button zooms: not past the closest zoom, nor

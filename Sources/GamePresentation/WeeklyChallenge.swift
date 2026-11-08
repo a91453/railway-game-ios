@@ -169,7 +169,7 @@ public struct ChallengeRecord: Hashable, Codable, Sendable {
 
     /// "Best: 34 days, gold".
     public func text(in language: DisplayLanguage) -> String {
-        language.text("Best: \(days) days, \(rating.displayName(in: language))", "最佳紀錄：\(days) 天，\(rating.displayName(in: language))")
+        language.text("Best: \(days) \(days == 1 ? "day" : "days"), \(rating.displayName(in: language))", "最佳紀錄：\(days) 天，\(rating.displayName(in: language))")
     }
 }
 

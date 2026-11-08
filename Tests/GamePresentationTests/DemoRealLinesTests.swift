@@ -85,6 +85,8 @@ final class DemoRealLinesTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertTrue(session.world.lines.allSatisfy { $0.stops.count >= 2 && $0.color != nil })
         XCTAssertTrue(session.world.lines.contains { $0.name.hasPrefix("板南線") }, "\(session.world.lines.map(\.name))")
+        // Decision 643: the passing-loop card leaves these lines out.
+        XCTAssertEqual(session.linesLaidByTheDemo, Set(session.world.lines.map(\.id)))
         // Trains on every line, on the track.
         for line in session.world.lines {
             XCTAssertFalse(line.assignedTrains.isEmpty, line.name)

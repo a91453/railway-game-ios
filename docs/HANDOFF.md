@@ -4235,3 +4235,18 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 ### 4.56 3D 的入口、時鐘、遠處夜窗與陡坡（決策 645，派工單 PLAYTEST-3D，session_01YGNNupp5gXA5cHePwHoKd3，`claude/playtest-3d`，2026-11-08）
 
 Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6（夜裡遠處沒亮窗）、D8（山坡深色方格）做了，見 `docs/decisions/645.md`。**留下的**：D6 回報的「6000× 過了午夜、或 03:11 進 3D 變回白天亮度」在 Linux 重現不了（光的算法 20:51 與 03:11 相同，Linux 預覽也是暗的）。3D 的 fps 小框點開後最後一行是這一幀實際畫的時刻、夜的程度、城市燈光：下一位在實機或模擬器上跑高鐵示範 20:51 → 6000× 過午夜，看那一行。時刻跟著走而畫面變亮，就找哪一層在夜裡用了白天的顏色；時刻不走，就查 `Map3DView.updateUIView` 有沒有在跑。遠處車站的夜燈（決策 617 光暈 2,400 m 外淡出）沒動。
+
+### 4.57 iPad 試玩的修正（決策 643，派工單 IPAD-FIXES，session_01YGNNun7AFhERsLzs7MjbvR，`claude/ipad-fixes`，#1966，2026-11-08）
+
+- **做了的**在 [決策 643](decisions/643.md)：`docs/research/MAC_PLAYTEST_2026-11-08.md` §6 的 iPad A1–A6，以及 §6.4 的四個疑點。四個都是表現層的 bug，iPhone 也有：月台清單標錯、天數算成原始日而非經過天數、票價步進預設 500 分、示範鋪的線觸發待避卡（`linesLaidByTheDemo`）。四個都修了，也加了 Linux 測試。A1 的教學取景只在 iPad 做（`DeviceFamily.framesTheLessonsTowns`），因為手機橫放時兩鎮要約 9 km 才放得下，第一段軌道太長、買不起，iPhone 閘門的 `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` 會逾時。A6 的開始選單兩欄改用 `onGeometryChange` 量寬度，不用 `ViewThatFits`（CRASH101）。GameCore、存檔 86、golden 76、fixture 都不動。
+- **狀態**（head 51a9e90）：Linux 建置與全部 shard、Release archive、Xcode build（iPhone 閘門 UI 測試）都是綠的。**「iPad tutorial tests」紅了兩次，兩次是不同的測試**：
+  - 第一次是 `testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt`，停在 Step 2 of 15。
+  - 重跑一次後是 `testCreateLineAndBuyAreInReach`：按 ✓（`map.build.confirm`）約 30 秒後，10 秒內沒有 `line.confirm.done`，失敗訊息是「The new line's card did not rise」。
+  - 兩個測試在 121fac3 都綠，在 51a9e90 也各自綠過一次。所以「Swift CI (gate)」是紅的，PR 還是 draft。本 session 第二次壓縮後停手。
+- **接手的人**：
+  1. 先看別的分支紅掉的 iPad 工作，判斷這兩個測試是不是本來就不穩：run 42444107304（job 128650463751）和 run 42417467175（job 128561088087）。這兩個還沒查。
+  2. 若只有本 PR 會紅，最可疑的是 A2：`LineConfirmationCard` 加了 `safeAreaInset` 的 `TutorialStepNote`，iPad 的 sheet 只給 `.large`（`SheetHeight.offered(on:)`、Theme `gameSheetDetents()`）。可能卡片升起的時機變了，或卡片被擋住了。
+  3. 修好且 CI 綠了再轉 ready，並在 #1579 回報。依作者規則（遊戲規劃第 56 任轉達）不開 iPad 截圖 run。
+- **UNVERIFIED**（要實機看）：A5 選單位置、iPad 各畫面的版面。
+- **IPAD-FIXES-2（session_01YGNNuoprHzncZPaPnbhuHC）接手查過**：兩次紅都是點擊被取消，不是 #1966 的改動。第二次的 App 紀錄（run 42459382878 的 ipad-tutorial-trace）在按 ✓ 時有 `touch cancelled at (834, 602)`：開始後 141 ms 就被取消，前面有 1.5 s 沒畫面，所以沒建出路線，卡片也沒升起。第一次的紀錄被重跑蓋掉了；當時 30 秒後還停在 Step 2，表示 Zoom out 沒生效，最可能是同一種點擊被取消。main 上同一個 job 也有一樣的情形（#1978：路線鈕的點擊被取消）。修法照 #1951，只改測試：✓ 沒升起卡片而且 ✓ 還在，就再按一次；Zoom out 3 秒內 `map.camera` 沒變，就再按一次（步驟延遲 20→25 s、按住 30→35 s 留餘裕）。斷言都不變。
+- **號碼**：決策 643（已在 #1579 登記）；存檔、golden 不動。

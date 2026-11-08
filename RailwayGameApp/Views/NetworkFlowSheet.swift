@@ -69,7 +69,7 @@ struct NetworkFlowSheet: View {
                 report = worked
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
     }
 
     // MARK: - Lines

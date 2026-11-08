@@ -515,6 +515,30 @@ extension GameSession {
         return nil
     }
 
+    /// The tutorial, when its step goes on in the new line's card
+    /// (``TutorialGoal/createLine``: "Tap ✓, then Open Line"), which then
+    /// covers the tutorial's own card: the card shows the step itself
+    /// (decision 643, the iPad playtest's A2). `nil` otherwise.
+    public var tutorialStepInLineCard: Tutorial? {
+        guard let tutorial, tutorial.step.goal == .createLine else { return nil }
+        return tutorial
+    }
+
+    /// What the map frames when a lesson's step to lay the track comes up
+    /// (decision 643, the iPad playtest's A1): every place its goal links,
+    /// each with its walking ring, so the player sees both towns at once,
+    /// clear of the building panel and the toolbar (the map view frames
+    /// it, and only when one of them is hidden). `nil` on every other step
+    /// and outside a lesson.
+    public var tutorialFraming: WorldRegion? {
+        guard let tutorial, tutorial.step.goal == .drawTrack, lesson != nil,
+              let goals = world.scenario?.scenario.goals else { return nil }
+        for case .connect(let points, let radius) in goals {
+            return WorldRegion(enclosing: points.map { WorldCoordinate(x: $0.x, y: $0.y) })?.expanded(by: Double(radius))
+        }
+        return nil
+    }
+
     /// Whether the track and station steps wait for the places to reach
     /// (decision 390): when the railway is being extended to them, the map
     /// having had stations when the chapter began (lessons 2, 4 and 9).

@@ -145,7 +145,7 @@ struct MapLayerSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .gameSheetDetents()
         .presentationDragIndicator(.visible)
     }
 

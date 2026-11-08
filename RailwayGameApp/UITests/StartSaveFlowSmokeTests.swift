@@ -41,7 +41,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(language.appears(within: 10), "Settings has no Language. \(screenText(in: app))")
         XCTAssertTrue(language.becomesHittable(within: 5), "Language cannot be tapped")
         language.tap()
-        for name in ["Same as iPhone", "English", "繁體中文"] {
+        let device = UIDevice.current.userInterfaceIdiom == .phone ? "iPhone" : "iPad"
+        for name in ["Same as \(device)", "English", "繁體中文"] {
             let item = app.buttons[name].firstMatch
             XCTAssertTrue(item.appears(within: 5), "The language menu has no \(name). \(screenText(in: app))")
             XCTAssertTrue(item.becomesHittable(within: 5), "\(name) cannot be tapped")

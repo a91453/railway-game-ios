@@ -31,6 +31,22 @@ extension FareRules {
         }
     }
 
+    /// The flat fare the stepper starts at, in cents: this flat fare, or,
+    /// under distance fares, the city's baseline (decision 643, the iPad
+    /// playtest's §6.4: it started at NT$5, the fare before decision 499
+    /// tripled it, under rules that read NT$15). Within ``flatFareRange``.
+    public func flatStart(baseline: Money) -> Int64 {
+        let fare: Int64
+        switch self {
+        case .flat(let money): fare = money.amount
+        case .distance: fare = baseline.amount
+        }
+        return min(max(fare, Self.flatFareRange.lowerBound), Self.flatFareRange.upperBound)
+    }
+
+    /// The flat fares the stepper offers, in cents: NT$0 to NT$100.
+    public static let flatFareRange: ClosedRange<Int64> = 0...10_000
+
     /// Where the distance steps start for the stepper: the first step's fare
     /// when these rules are by distance, else the city's standard first
     /// step; within ``bandStartRange``, on its NT$1 steps.

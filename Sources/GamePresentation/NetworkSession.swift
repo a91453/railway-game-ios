@@ -1547,16 +1547,25 @@ extension GameSession {
     /// The platforms on the edge the platform or remove mode picked, to
     /// remove (56.1: track with a platform on it cannot be removed, so the
     /// remove mode lists them too).
+    ///
+    /// Decision 643 (the iPad playtest's §6.4): not in the tutorial's
+    /// platform mode, where the second station's card listed the first's
+    /// platform and its red Remove under the new station's name, which read
+    /// as the station being built.
     public var platformsOnPickedEdge: [TrackPlatform] {
         guard networkMode == .platform || networkMode == .remove, let edge = networkEdgePoint?.edge else { return [] }
+        if networkMode == .platform, tutorial != nil { return [] }
         return world.network.platforms(on: edge)
     }
 
-    /// "Station 1, 15–79 m along" for one of ``platformsOnPickedEdge``.
+    /// "Already on this track: Station 1's platform, 15–79 m along" for one
+    /// of ``platformsOnPickedEdge``: said to be on the track, so in the
+    /// platform mode it does not read as the station being built (decision
+    /// 643).
     public func platformText(_ platform: TrackPlatform) -> String {
         let name = platformStationName(platform)
         let span = Self.metresSpanText(platform.start, platform.end)
-        return language.text("\(name), \(span) m along", "\(name)，距起點 \(span) 公尺")
+        return language.text("Already on this track: \(name)’s platform, \(span) m along", "這段軌道上已有：\(name)的月台，距起點 \(span) 公尺")
     }
 
     /// Two distances along an edge in whole metres, "15–79", for a

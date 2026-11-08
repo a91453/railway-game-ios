@@ -27,6 +27,17 @@ public enum StartMenuEntry: String, CaseIterable, Sendable {
         allCases.filter { $0 != .continueGame || hasAutosave }
     }
 
+    /// The buttons in two columns, where the start screen is wide enough
+    /// (decision 643, the iPad playtest's A6: on an iPad on its side one
+    /// column took the middle third): the ways into a game on the left,
+    /// the lesson among them, and the demos, the saves and the
+    /// achievements on the right, each in the order of ``entries(hasAutosave:)``.
+    public static func columns(hasAutosave: Bool) -> [[StartMenuEntry]] {
+        let entries = entries(hasAutosave: hasAutosave)
+        let play: Set<StartMenuEntry> = [.continueGame, .newGame, .lessons]
+        return [entries.filter { play.contains($0) }, entries.filter { !play.contains($0) }]
+    }
+
     /// The button's identifier, the same in every language, for the UI
     /// tests.
     public var identifier: String {
