@@ -432,7 +432,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("sights-on-the-map", app)
         let list = app.collectionViews.firstMatch
-        let folded = app.descendants(matching: .any)["tourism.offMap"].firstMatch
+        // The identifier on a DisclosureGroup may not reach the element
+        // its row becomes; its label always does (run 42519070451).
+        let folded = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == 'tourism.offMap' OR label BEGINSWITH '地圖外的景點'")
+        ).firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(folded, in: list), "The sights off the map come into reach")
         keep("sights-off-the-map-folded", app)
         folded.tap()
