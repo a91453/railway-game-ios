@@ -117,7 +117,7 @@ public struct NetworkHeightCard: Hashable, Sendable {
     /// "6 m above the ground", "6 m underground" (decision 646: the same
     /// meaning as the pill's, how high the end stands over the ground).
     public func readout(steps: Int = 0, in language: DisplayLanguage) -> String {
-        let above = aboveGround + Int64(clamped(steps: steps)) * GameSession.networkRaiseStep
+        let above = aboveGround + Int64(clamped(steps: steps)) * WorldCoordinate.unitsPerMetre
         let height = NetworkBuilding.lengthText(abs(above), in: language)
         if above >= WorldCoordinate.unitsPerMetre / 2 {
             return language.text("\(height) above ground", "離地 \(height)")
@@ -189,11 +189,11 @@ extension GameSession {
             guard canFix, let start = networkStart, let end = networkEnd, case .node = start, case .node = end else { return nil }
             return NetworkHeightCard(
                 adjusts: .end, label: "", canRaise: false, canLower: false, fixes: [],
-                aboveGround: 0, stepsUp: 0, stepsDown: 0,
                 note: language.text(
                     "Both ends are on track already, so their height cannot change. Tap a new point on each side and raise the stretch between them.",
                     "兩端都接在已有的軌道上，高度不能改。請在兩側各點一個新點，再調高中間那一段。"
-                )
+                ),
+                aboveGround: 0, stepsUp: 0, stepsDown: 0
             )
         }
         let adjusts: NetworkHeightFix.Ends = movable.end ? .end : .start
