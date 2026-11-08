@@ -13,6 +13,17 @@ public enum DeviceFamily: CaseIterable, Hashable, Sendable {
         case .iPad: "iPad"
         }
     }
+
+    /// Whether a lesson's track step moves the map to show both towns
+    /// (``GameSession/tutorialFraming``, decision 643, the iPad
+    /// playtest's A1): on an iPad, where the building panel and the
+    /// toolbar hid one. Not on an iPhone on its side: the map left clear
+    /// there is so short that both towns fit only zoomed out to about
+    /// 9 km across 400 points, where the first stretch tapped is too long
+    /// to afford; there the player zooms out at the step before.
+    public var framesTheLessonsTowns: Bool {
+        self == .iPad
+    }
 }
 
 /// How tall a card the game raises over the map can be (decision 643,

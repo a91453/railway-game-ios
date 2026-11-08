@@ -65,6 +65,27 @@ final class IPadPlaytestFixesTests: XCTestCase {
     }
 
     /// A1: outside a lesson, the tutorial frames nothing.
+    /// A1 on an iPhone on its side: fitting both towns in the short map
+    /// left clear would zoom out to kilometres a tap, so only an iPad
+    /// frames them (the gate's TutorialUITests taps 400 points apart).
+    func testOnAnIPhoneTheTrackStepLeavesTheZoomToThePlayer() throws {
+        let session = GameSession(world: .newGame(lesson: Lesson.all[0]), language: .english)
+        session.startTutorial()
+        session.selectTool(.network)
+        session.showNextTutorialStep()
+        session.mapDidMove()
+        session.showNextTutorialStep()
+        let region = try XCTUnwrap(session.tutorialFraming)
+        let phone = PlanCamera(
+            bounds: session.world.bounds, viewport: ScreenSize(width: 874, height: 402), showing: WorldRegion.opening(in: session.world)
+        ).zoomedOut()
+        let framed = try XCTUnwrap(phone.framing(region, clearOf: ScreenInsets(top: 60, leading: 70, bottom: 60, trailing: 0)))
+        let metres = 400 / framed.pointsPerUnit / Double(WorldCoordinate.unitsPerMetre)
+        XCTAssertGreaterThan(metres, 8_000, "400 points would lay \(Int(metres)) m")
+        XCTAssertFalse(DeviceFamily.iPhone.framesTheLessonsTowns)
+        XCTAssertTrue(DeviceFamily.iPad.framesTheLessonsTowns)
+    }
+
     func testTheTutorialOutsideALessonFramesNothing() {
         let session = GameSession(world: .newGame(), language: .english)
         session.startTutorial(atStep: "track.draw")

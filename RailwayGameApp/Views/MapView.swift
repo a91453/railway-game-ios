@@ -1115,9 +1115,9 @@ struct MapView: View {
             }
             // Decision 643 (the iPad playtest's A1): a lesson's step to lay
             // the track shows both towns, clear of the building panel and
-            // the toolbar, when one of them is hidden.
+            // the toolbar, when one of them is hidden; on an iPad.
             .onChange(of: session.tutorialFraming, initial: true) { _, region in
-                guard let region, let framed = projection.framing(region, clearOf: framing) else { return }
+                guard DeviceFamily.current.framesTheLessonsTowns, let region, let framed = projection.framing(region, clearOf: framing) else { return }
                 camera = framed
             }
             // Decision 188, later fix: where the places the tutorial's
