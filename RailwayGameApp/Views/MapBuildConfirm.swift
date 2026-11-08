@@ -156,58 +156,14 @@ struct MapBuildConfirm: View {
             }
             if let heights = build.heights {
                 heightNoteAndFixes(heights)
-                // Decision 629: on a phone on its side the +/- goes
-                // beside ✕ and ✓, so the pill stays clear of the
-                // construction HUD above it (its first screenshots).
-                let layout = verticalSizeClass == .compact
-                    ? AnyLayout(HStackLayout(spacing: 6)) : AnyLayout(VStackLayout(spacing: 4))
-                layout {
-                    heightAdjuster(heights)
-                    buttons(build)
-                        .fixedSize()
-                }
+                // Decision 646: the height is slid on the construction
+                // HUD's cell; the pill keeps only ✕ ✓ and a refusal's fixes.
+                buttons(build)
+                    .fixedSize()
             } else {
                 buttons(build)
                     .fixedSize()
             }
-        }
-    }
-
-    /// Decision 629: the new end's height, one metre a tap.
-    @ViewBuilder
-    private func heightAdjuster(_ card: NetworkHeightCard) -> some View {
-        let language = session.language
-        if !card.label.isEmpty {
-            HStack(spacing: 6) {
-                Button {
-                    session.raiseNetworkEnd(by: -1)
-                } label: {
-                    Image(systemName: "minus")
-                        .font(.body.weight(.bold))
-                        .frame(width: 44, height: 40)
-                }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-                .disabled(!card.canLower)
-                .accessibilityLabel(Text(verbatim: language.text("Lower 1 m", "降低 1 公尺")))
-                .accessibilityIdentifier("map.build.lower")
-                Text(verbatim: card.label)
-                    .font(.footnote.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textPrimary)
-                    .accessibilityIdentifier("map.build.height")
-                Button {
-                    session.raiseNetworkEnd(by: 1)
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.body.weight(.bold))
-                        .frame(width: 44, height: 40)
-                }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-                .disabled(!card.canRaise)
-                .accessibilityLabel(Text(verbatim: language.text("Raise 1 m", "架高 1 公尺")))
-                .accessibilityIdentifier("map.build.raise")
-            }
-            .fixedSize()
         }
     }
 
@@ -569,7 +525,7 @@ private struct BuildConfirmation {
             // Decision 468, later: a trace along a real line for sale says
             // so, and the pill offers its purchase card.
             let sale = session.tracedSaleHint
-            let hint = session.networkFollowsTrack ? preview.freeFirstHint(in: session.language) : nil
+            let hint = session.networkFollowsTrack && session.networkOffersFreeFirstHint ? preview.freeFirstHint(in: session.language) : nil
             let lines = [hint, preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
             caption = lines.isEmpty ? nil : lines.joined(separator: "\n")
             showsCatchment = false
