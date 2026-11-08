@@ -36,6 +36,10 @@ final class GameAudio {
     @ObservationIgnored private var runningLoops: [RunningSound.Loop: AVAudioPlayer] = [:]
     /// The loop heard now, `nil` for none.
     @ObservationIgnored private var audibleLoop: RunningSound.Loop?
+    /// Decision 664: the motor loops over the wheels, made when first
+    /// heard, and the one heard now.
+    @ObservationIgnored private var motorLoops: [MotorSound.Loop: AVAudioPlayer] = [:]
+    @ObservationIgnored private var audibleMotor: MotorSound.Loop?
     /// Decision 346: the sound of the weather the session last asked for
     /// (``WeatherSound``), `nil` for a clear sky.
     @ObservationIgnored private var weather: WeatherSound?
@@ -301,6 +305,30 @@ final class GameAudio {
                 }
             }
         }
+        // Decision 664: the motors over the wheels, the same way: a change
+        // of loop as the speed passes between two cross-fades them.
+        let motor = running?.motor
+        let motorLevel = motor.map { volumes.volume(Self.runningVolume * Float($0.volume), for: .effects) } ?? 0
+        let motorPlaying = plays && soundsOn && isActive && motorLevel > 0 ? motor?.loop : nil
+        audibleMotor = motorPlaying
+        for loop in MotorSound.Loop.allCases {
+            if loop == motorPlaying, let motor {
+                guard let player = motorLoops[loop] ?? loadMotor(loop) else { continue }
+                player.rate = Float(motor.rate)
+                if !player.isPlaying {
+                    player.volume = 0
+                    player.play()
+                }
+                player.setVolume(motorLevel, fadeDuration: 0.5)
+            } else if let player = motorLoops[loop], player.isPlaying {
+                player.setVolume(0, fadeDuration: 0.5)
+                Task { @MainActor [weak self, weak player] in
+                    try? await Task.sleep(for: .milliseconds(600))
+                    guard let self, let player, self.audibleMotor != loop else { return }
+                    player.pause()
+                }
+            }
+        }
     }
 
     /// Starts, moves or fades out the weather's loops (decision 346) as
@@ -415,6 +443,14 @@ final class GameAudio {
         guard let player = Self.player(named: file.name, extension: file.extension, volume: 0, rate: true) else { return nil }
         player.numberOfLoops = -1
         runningLoops[loop] = player
+        return player
+    }
+
+    private func loadMotor(_ loop: MotorSound.Loop) -> AVAudioPlayer? {
+        let file = loop.resource
+        guard let player = Self.player(named: file.name, extension: file.extension, volume: 0, rate: true) else { return nil }
+        player.numberOfLoops = -1
+        motorLoops[loop] = player
         return player
     }
 

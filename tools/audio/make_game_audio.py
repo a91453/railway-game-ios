@@ -374,6 +374,77 @@ def diesel(kind):
     return from_zero(x)
 
 
+# Decision 664: the motor loops of an electric train, made to the
+# Gepponkoku's (Simulation Country GAPAN 月本國, https://gepponkoku.nation.jp)
+# recordings of a JR Central 313 series (3000 番台, IGBT VVVF) on the Gotemba
+# Line (`measure_motor_sound.py`; the files, the stretches measured, how
+# their speed was read and the site's terms are in README.md and decision
+# 664). For each speed (km/h) a loop is made at, pulling away (`power`, from
+# `313-3k_go-top`) and braking (`brake`, from `313-3k_top-stop`): the
+# motors' tones, each [Hz, dB], and their level together, both in dB under
+# the recording's whole sound there; `steady` where the tones hold still
+# as the speed changes (the inverter's carrier at low speed), so the app
+# plays that loop at its own rate rather than faster or slower with the
+# speed. Where no tone was heard (pulling away at 45 km/h) there is no
+# loop: the app plays the nearest one faster or slower.
+MOTOR_TONES = {
+    "power": {
+        4: {"level": -5.2, "steady": True, "tones": [[60.0, -23], [64.0, -22], [134.0, -22], [160.0, -18], [166.0, -21], [220.0, -11], [224.0, -11], [256.0, -11], [360.0, -24], [408.0, -23], [796.0, -26], [938.0, -24]]},
+        6: {"level": -4.0, "steady": True, "tones": [[142.0, -14], [148.0, -5], [186.0, -13], [218.0, -20]]},
+        9: {"level": -9.0, "steady": True, "tones": [[64.0, -22], [114.0, -20], [154.0, -17], [222.0, -20], [252.0, -22], [406.0, -19], [430.0, -25], [506.0, -17], [612.0, -15], [972.0, -25], [1194.0, -24], [1752.0, -26]]},
+        14: {"level": -7.1, "steady": True, "tones": [[362.0, -21], [638.0, -23], [690.0, -24], [754.0, -19], [758.0, -20], [818.0, -12], [848.0, -18], [860.0, -15], [866.0, -15], [880.0, -23], [912.0, -18], [1012.0, -23]]},
+        20: {"level": -8.2, "tones": [[94.0, -25], [158.0, -11], [218.0, -20], [754.0, -25], [800.0, -15], [882.0, -20], [932.0, -18]]},
+        30: {"level": -11.3, "tones": [[242.0, -11]]},
+        68: {"level": -12.2, "tones": [[92.0, -13], [690.0, -19]]},
+    },
+    "brake": {
+        4: {"level": -7.7, "steady": True, "tones": [[60.0, -18], [118.0, -16], [126.0, -15], [194.0, -19], [214.0, -20], [276.0, -20], [318.0, -18], [426.0, -24], [1470.0, -23], [1476.0, -23], [1540.0, -17], [1562.0, -18]]},
+        6: {"level": -6.6, "steady": True, "tones": [[92.0, -20], [120.0, -18], [148.0, -12], [188.0, -14], [316.0, -20], [692.0, -17], [728.0, -13], [1486.0, -27], [1550.0, -23]]},
+        9: {"level": -6.0, "tones": [[76.0, -19], [102.0, -22], [260.0, -8], [310.0, -13], [966.0, -15]]},
+        14: {"level": -5.6, "tones": [[160.0, -8], [178.0, -15], [250.0, -13], [794.0, -18]]},
+        20: {"level": -6.2, "tones": [[100.0, -18], [190.0, -8], [260.0, -20], [380.0, -13]]},
+        30: {"level": -5.4, "tones": [[428.0, -22], [642.0, -20], [692.0, -11], [830.0, -7]]},
+        45: {"level": -15.5, "tones": [[62.0, -15]]},
+        68: {"level": -9.7, "tones": [[94.0, -11], [372.0, -15], [556.0, -23]]},
+    },
+}
+# 2 s at 48 kHz: whole IMA4 packets; every tone (to 0.5 Hz) runs a whole
+# number of cycles in it, so the loop has no seam.
+MOTOR_FRAMES = 2 * SR
+# How much louder the motors are made than measured, in dB: the recordings
+# are from inside a two-car train with one motor car, and a phone's speaker
+# would lose them under the wheels.
+MOTOR_LIFT = 6
+
+
+def motor_files():
+    """Each motor loop's file name, mode and speed."""
+    return [(f"run-motor-{mode}-{kmh:02d}.caf", mode, kmh) for mode in MOTOR_TONES for kmh in MOTOR_TONES[mode]]
+
+
+def motor(mode, kmh):
+    """A 2-second loop of an electric train's motors at `kmh`: the measured
+    tones, each a sine at its level, under a slow swell of about half a
+    decibel; its RMS the electric running loop's (decision 343, as the app
+    plays it) times the tones' level and `MOTOR_LIFT`, so the app plays both
+    at the same volume and the motors sit under the wheels, a little above
+    where they are in the recording."""
+    entry = MOTOR_TONES[mode][kmh]
+    n = MOTOR_FRAMES
+    t = np.arange(n) / SR
+    phases = np.random.default_rng(664 + kmh).uniform(0, 2 * np.pi, len(entry["tones"]))
+    x = np.zeros(n)
+    for (hz, level), phase in zip(entry["tones"], phases):
+        assert (hz * n / SR).is_integer(), "every tone runs whole cycles in the loop"
+        x += np.sqrt(2 * 10 ** (level / 10)) * np.sin(2 * np.pi * hz * t + phase)
+    x *= 1 + 0.03 * np.sin(2 * np.pi * t / (n / SR))
+    wheels = normalized(running("electric"), 0.5)
+    rms = np.sqrt(np.mean(wheels**2)) * 10 ** ((entry["level"] + MOTOR_LIFT) / 20)
+    x = x / np.sqrt(np.mean(x**2)) * rms
+    assert np.abs(x).max() < 0.95, "the motor loop clips"
+    return from_zero(x)
+
+
 # Decision 346: the weather's rain and the thunder of its storms, made to
 # recordings of rain and thunder in Taipei and Tamsui
 # (`measure_running_spectrum.py` and `measure_thunder.py`; the recordings,
@@ -731,6 +802,10 @@ SYNTH_SOURCES = {
     "run-diesel.caf": "diesel(\"diesel\"), decision 567",
     "run-diesel-idle.caf": "diesel(\"dieselIdle\"), decision 567",
     "run-diesel-coast.caf": "diesel(\"dieselCoast\"), decision 567",
+    **{
+        file: f"motor(\"{mode}\", {kmh}){', steady' if MOTOR_TONES[mode][kmh].get('steady') else ''}, decision 664"
+        for file, mode, kmh in motor_files()
+    },
     "rain-steady.caf": "weather(\"rain\"), decision 346",
     "rain-typhoon.caf": "weather(\"typhoon\"), decision 346",
     "thunder.caf": "thunder(), decision 346",
@@ -802,6 +877,9 @@ def main(out_dir):
     write_caf(os.path.join(out_dir, "run-diesel.caf"), normalized(diesel("diesel"), 0.5))
     write_caf(os.path.join(out_dir, "run-diesel-idle.caf"), normalized(diesel("dieselIdle"), 0.5))
     write_caf(os.path.join(out_dir, "run-diesel-coast.caf"), normalized(diesel("dieselCoast"), 0.5))
+    # Decision 664: an electric train's motors, pulling away and braking.
+    for file, mode, kmh in motor_files():
+        write_caf(os.path.join(out_dir, file), motor(mode, kmh))
     # Decision 346: the weather's loops and its thunder.
     write_caf(os.path.join(out_dir, "rain-steady.caf"), normalized(weather("rain"), 0.5))
     write_caf(os.path.join(out_dir, "rain-typhoon.caf"), normalized(weather("typhoon"), 0.5))

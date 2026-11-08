@@ -900,6 +900,23 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "Simulation Country GAPAN 月本國", url: gepponkokuURL),
                         ]
                     ),
+                    // Decision 664: an electric train's motors, made the
+                    // same way from the same site's 313 series recordings.
+                    DataSourceCredit(
+                        id: "motorSound",
+                        title: language.text("Electric train recordings", "電車錄音"),
+                        detail: language.text(
+                            "The motors of an electric train you follow, pulling away and braking, which the game makes to sound like these recordings of a 313 series train in Japan.",
+                            "跟隨電車時的馬達聲：起步加速與煞車，遊戲照這些日本 313 系電車的錄音自己合成。"
+                        ),
+                        notice: language.text(
+                            "Railway sound materials (てつおん素材), 313 series (3000 番台), from Simulation Country GAPAN 月本國, https://gepponkoku.nation.jp. The game plays none of the recordings themselves: its sounds are made after them.",
+                            "てつおん素材「313系(3000番台)近郊型直流電車」，出自 Simulation Country GAPAN 月本國，https://gepponkoku.nation.jp。遊戲不播放錄音本身，聲音是照它們合成的。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Simulation Country GAPAN 月本國", url: gepponkokuURL),
+                        ]
+                    ),
                     // Decision 346: the weather's sounds, made the same way.
                     DataSourceCredit(
                         id: "weatherSound",
