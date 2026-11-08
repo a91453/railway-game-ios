@@ -64,6 +64,87 @@ final class IPadPlaytestFixesTests: XCTestCase {
         XCTAssertNil(session.tutorialFraming)
     }
 
+    /// Decision 658: what the iPad's tutorial walk (TutorialJourneyUITests)
+    /// does once the track step has framed both towns. Laid as the card
+    /// says, from one town's middle to the other's, with a station 8 % in
+    /// from each end, the line earns its first fares on the first day.
+    /// Zoomed back in about the framing's middle and laid along one row,
+    /// as the phone's walk does, the stations stood 2.6–3.2 km from either
+    /// town and no fares came in three days (0.6.0 (122)'s full lane, run
+    /// 42489862739).
+    func testTheIPadWalkFromTownToTownEarnsItsFirstFares() throws {
+        func walk(townToTown: Bool) throws -> (fares: Bool, nearest: [Double]) {
+            let session = GameSession(world: .newGame(lesson: Lesson.all[0]), language: .english)
+            session.startTutorial()
+            var camera = PlanCamera(bounds: session.world.bounds, viewport: Self.viewport, showing: WorldRegion.opening(in: session.world)).zoomedOut()
+            let towns = Lesson.towns(in: session.world.bounds).prefix(2)
+            var ends: [ScreenPoint] = []
+            var stops: [ScreenPoint] = []
+            func world(_ point: ScreenPoint) -> PlanPoint {
+                let position = camera.worldPosition(at: point)
+                return PlanPoint(x: Int64(position.x.rounded()), y: Int64(position.y.rounded()))
+            }
+            func tapNetwork(_ point: ScreenPoint) { session.tapNetwork(at: world(point), reach: camera.worldDistance(12)) }
+            for _ in 0..<20 {
+                guard let step = session.tutorial?.step.id else { break }
+                switch step {
+                case "build.network": session.selectTool(.network)
+                case "map.move": session.mapDidMove()
+                case "track.draw":
+                    camera = try XCTUnwrap(camera.lessonFraming(try XCTUnwrap(session.tutorialFraming), clearOf: Self.cover))
+                    if townToTown {
+                        let (first, second) = (camera.screenPoint(of: towns.first!), camera.screenPoint(of: towns.last!))
+                        func along(_ fraction: Double) -> ScreenPoint {
+                            ScreenPoint(x: first.x + (second.x - first.x) * fraction, y: first.y + (second.y - first.y) * fraction)
+                        }
+                        ends = [first, second]
+                        stops = [along(0.08), along(0.92)]
+                    } else {
+                        while camera.pointsPerUnit < 7.0 / 1_024 * 0.999 { camera = camera.zoomedIn() }
+                        ends = [ScreenPoint(x: 106, y: 849), ScreenPoint(x: 914, y: 849)]
+                        stops = [ScreenPoint(x: 308, y: 849), ScreenPoint(x: 712, y: 849)]
+                    }
+                    ends.forEach(tapNetwork)
+                case "track.build": session.buildNetworkTrack()
+                case "station.mode": session.setNetworkMode(.platform)
+                case "station.first.site": tapNetwork(stops[0])
+                case "station.second.site": tapNetwork(stops[1])
+                case "station.first.build", "station.second.build": session.addNetworkPlatform()
+                case "build.done": session.selectTool(.select)
+                case "line.open": session.startPickingLineStops(announces: false)
+                case "line.stations":
+                    for stop in stops { session.tapMap(at: world(stop), reach: camera.worldDistance(12)) }
+                case "line.create": session.createLineFromDraft()
+                case "first.fare":
+                    let end = session.world.clock.now.seconds + 3 * GameTime.secondsPerDay
+                    while !session.isTutorialStepDone, session.world.clock.now.seconds < end {
+                        session.advance(realElapsed: GameSession.maximumStepDuration)
+                    }
+                    // The two the walk built, not the passing loop a long
+                    // line opens with (decision 264).
+                    let metres = session.world.stations.filter { !$0.isDepot }.prefix(2).map { station in
+                        towns.map { town in
+                            let dx = Double(station.point.x - town.x), dy = Double(station.point.y - town.y)
+                            return (dx * dx + dy * dy).squareRoot() / Double(WorldCoordinate.unitsPerMetre)
+                        }.min() ?? .infinity
+                    }
+                    return (session.isTutorialStepDone, metres)
+                default: break
+                }
+                session.showNextTutorialStep()
+            }
+            XCTFail("the walk did not reach the first fares")
+            return (false, [])
+        }
+        let laid = try walk(townToTown: true)
+        XCTAssertTrue(laid.fares, "no fares from town to town")
+        XCTAssertEqual(laid.nearest.count, 2)
+        for metres in laid.nearest { XCTAssertLessThan(metres, 800, "a station \(Int(metres)) m from its town") }
+        let alongARow = try walk(townToTown: false)
+        XCTAssertFalse(alongARow.fares, "the row zoomed in about the middle earns fares again: the iPad walk could go back to it")
+        for metres in alongARow.nearest { XCTAssertGreaterThan(metres, 2_000) }
+    }
+
     /// A1 on an iPhone on its side: fitting both towns in the short map
     /// left clear would zoom out to kilometres a tap, so only an iPad
     /// frames them (the gate's TutorialUITests taps 400 points apart).

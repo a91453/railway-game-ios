@@ -127,8 +127,17 @@ private final class TutorialJourney {
         // (121)'s full lane, run 42444107304, zoomed out twice) the
         // stations stood in the fields 2–3 km from either town, and no
         // fares ever came (reproduced on Linux with lesson 1's world).
-        zoomBackIn(toAtLeast: 7.0 / 1_024)
-        planTrack()
+        // On an iPad the step frames both towns itself (decision 643's A1),
+        // some 2.3 points per 16 m, and zoomed back in about the middle the
+        // track lay between them, 2.6–3.2 km from either (0.6.0 (122)'s
+        // full lane, run 42489862739): no fares. There the walk lays it as
+        // the card says, from one town to the other (decision 658).
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            planTrackFromTownToTown()
+        } else {
+            zoomBackIn(toAtLeast: 7.0 / 1_024)
+            planTrack()
+        }
         check(map: trackStart, "the track's start")
         tap(trackStart)
         // The start is picked: the card asks for the end.
@@ -416,6 +425,53 @@ private final class TutorialJourney {
             XCTAssertTrue(moved(), failure("Zoom in did not move the camera"))
         }
         XCTAssertGreaterThanOrEqual(zoom() ?? 0, size * 0.999, failure("Zoom in did not come back to \(size * 1_024) points per 16 m"))
+    }
+
+    /// Where the iPad's walk lays its track: from the first town's middle
+    /// to the second's, read from `map.places` once the step has framed
+    /// both on the screen, clear of the card and the map's buttons; the
+    /// stations stand 8 % of the way in from each end, some 440 m from
+    /// each town's middle, within its walking ring (decision 658).
+    private func planTrackFromTownToTown() {
+        let readout = app.descendants(matching: .any)["map.places"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10), failure("No readout of the towns"))
+        var obstacles: [CGRect] = []
+        for identifier in ["map.layers", "Zoom out", "Zoom in", "map.expansion", "hud.menu", "dock.build", "tool.select"] {
+            let button = app.buttons[identifier]
+            if button.exists { obstacles.append(button.frame.insetBy(dx: -24, dy: -24)) }
+        }
+        func towns() -> [CGPoint] {
+            ((readout.value as? String) ?? "").split(separator: ";").compactMap { pair in
+                let numbers = pair.split(separator: ",").compactMap { Double($0) }
+                return numbers.count == 2 ? CGPoint(x: numbers[0], y: numbers[1]) : nil
+            }
+        }
+        func clear(_ point: CGPoint) -> Bool {
+            let target = CGRect(x: point.x - 24, y: point.y - 24, width: 48, height: 48)
+            return app.frame.contains(target) && !obstacles.contains { $0.contains(point) } && coveringCard(target) == nil
+        }
+        // The framing lands as the step appears, or a frame later, once the
+        // building panel is measured: the same two places twice running.
+        let deadline = Date().addingTimeInterval(10)
+        var last: [CGPoint] = []
+        repeat {
+            let now = towns()
+            if now.count >= 2, now == last, now.prefix(2).allSatisfy(clear) { break }
+            last = now
+            Thread.sleep(forTimeInterval: 0.5)
+        } while Date() < deadline
+        let places = towns()
+        XCTAssertGreaterThanOrEqual(places.count, 2, failure("The readout has no two towns: \(String(describing: readout.value))"))
+        guard places.count >= 2 else { return }
+        XCTAssertTrue(places.prefix(2).allSatisfy(clear), failure("The towns at \(places) are not both clear on the screen: \(obstacles)"))
+        let first = places[0], second = places[1]
+        func along(_ fraction: CGFloat) -> CGPoint {
+            CGPoint(x: first.x + (second.x - first.x) * fraction, y: first.y + (second.y - first.y) * fraction)
+        }
+        trackStart = first
+        trackEnd = second
+        firstStation = along(0.08)
+        secondStation = along(0.92)
     }
 
     /// Where the walk lays its track: a row across the map from beside the
