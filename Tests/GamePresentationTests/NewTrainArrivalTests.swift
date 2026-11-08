@@ -41,6 +41,26 @@ final class NewTrainArrivalTests: XCTestCase {
         XCTAssertTrue(session.trainArrivals.isEmpty)
     }
 
+    /// Decision 635 (Mac playtest A11): buying the Wenhu Line brings its
+    /// two models on one card, and no card about which track its trains
+    /// take: its double track and its routes are the real line's.
+    @MainActor
+    func testABoughtLinesModelsComeOnOneCard() throws {
+        let session = try RealLineAcquisitionTests.game(round: "trtc:BR", side: 1 << 21)
+        session.watchRouteHint()
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        session.watchRouteHint()
+        XCTAssertEqual(session.trainArrivals.count, 1, session.trainArrivals.map(\.key).description)
+        let card = try XCTUnwrap(session.trainArrivals.first)
+        XCTAssertEqual(card.title(in: .traditionalChinese), "新車抵台：文湖線 VAL256、文湖線 370 型")
+        XCTAssertEqual(card.story(in: .traditionalChinese), "首批抵台。")
+        XCTAssertEqual(session.news.items.count { $0.category == .newTrain }, 2, "each model in the news log")
+        XCTAssertNil(session.routeHint)
+        session.dismissTrainArrival()
+        XCTAssertTrue(session.trainArrivals.isEmpty)
+    }
+
     /// The trains a game starts or is opened with have no card, and the
     /// demo shows none.
     @MainActor

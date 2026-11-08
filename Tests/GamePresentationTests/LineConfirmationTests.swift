@@ -188,6 +188,29 @@ final class LineConfirmationTests: XCTestCase {
         XCTAssertEqual(session.world, before)
     }
 
+    /// Decision 635 (Mac playtest D1, A8): a line opened with two trains
+    /// says two, and counts the stations riders use, not the passing
+    /// loop's signal station its single track came with.
+    func testTheMessageCountsTheTrainsBoughtAndOnlyTheStations() throws {
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            let (session, _) = try session(language: language)
+            session.confirmLineDraft()
+            session.updateLineConfirmation { $0.setting(.peak, to: 2) }
+            session.confirmLine()
+            let line = try XCTUnwrap(session.world.lines.last)
+            XCTAssertEqual(line.trains.count, 2)
+            let loops = Set(line.stops.dropFirst().dropLast())
+            XCTAssertFalse(loops.isEmpty, "passing loops between West and East")
+            let text = session.message?.text ?? ""
+            XCTAssertTrue(text.contains(language.text("2 stops and 2 trains", "共 2 站，配了 2 列車")), text)
+            // On the map the signal station is named in smaller type, after
+            // the stations.
+            let labels = StationLabels(world: session.world)
+            XCTAssertEqual(labels.signalStations, loops)
+            XCTAssertEqual(Set(labels.ranked.suffix(loops.count).map(\.station)), loops)
+        }
+    }
+
     /// The preview is worked out once for each setting and command, and
     /// the card leaves the world as it is.
     func testThePreviewIsWorkedOutOnce() throws {

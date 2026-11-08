@@ -137,6 +137,24 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(camera.showing(short, clearOf: insets).pointsPerUnit, camera.pointsPerUnit)
     }
 
+    /// Decision 635 (Mac playtest D4): a line's page that leaves only a
+    /// strip of the map clear does not zoom the map out to the whole
+    /// island to fit the line into that strip; along a side with less than
+    /// a fingertip's room the line fits the whole view, as a station keeps
+    /// its place there.
+    func testAThinStripBesideTheLinesPageDoesNotZoomOutToTheIsland() {
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 131_072, y: 131_072))
+        let line = WorldRegion(minX: 130_000, minY: 130_000, maxX: 130_000 + camera.worldDistanceDouble(200), maxY: 130_000 + camera.worldDistanceDouble(100))
+        for insets in [ScreenInsets(top: 330), ScreenInsets(bottom: 340), ScreenInsets(leading: 700)] {
+            XCTAssertEqual(camera.showing(line, clearOf: insets).pointsPerUnit, camera.pointsPerUnit, "\(insets)")
+        }
+        // A strip with room still fits the line in it.
+        let tall = WorldRegion(minX: 130_000, minY: 130_000, maxX: 130_100, maxY: 130_000 + camera.worldDistanceDouble(300))
+        let fitted = camera.showing(tall, clearOf: ScreenInsets(top: 200))
+        XCTAssertLessThan(fitted.pointsPerUnit, camera.pointsPerUnit)
+        XCTAssertGreaterThan(fitted.pointsPerUnit, camera.pointsPerUnit / 4)
+    }
+
     /// #593: the zoom buttons in the bottom-trailing corner push in the
     /// side, which leaves more of a phone held sideways; the layer buttons
     /// along the bottom-leading edge push in the bottom.

@@ -473,4 +473,25 @@ final class TrafficOverlayTests: XCTestCase {
             XCTAssertEqual(TrafficOverlay.deadlockStrength(at: time, reduceMotion: true), 1)
         }
     }
+
+    /// Decision 635 (Mac playtest D7): two trains waiting for train 24's
+    /// route each had a tag "Route · Train 24", which read as train 24 in
+    /// two places. Only the one nearer the track it waits for names it;
+    /// a wait for another train, or for another reason, keeps its name.
+    func testATrainWaitedForBySeveralIsNamedOnce() {
+        func wait(_ train: Int, holder: Int, gap: Int64, reason: TrafficOverlay.WaitReason = .route) -> TrafficOverlay.Wait {
+            TrafficOverlay.Wait(
+                train: TrainID(rawValue: train), holder: TrainID(rawValue: holder), holderName: "Train \(holder)", reason: reason,
+                isDeadlocked: false, contested: .init(), from: WorldCoordinate(x: 0, y: Int64(train) * 1_000),
+                to: WorldCoordinate(x: gap, y: Int64(train) * 1_000), heading: PlanVector(dx: 1, dy: 0)
+            )
+        }
+        var overlay = TrafficOverlay()
+        overlay.waits = [
+            wait(3, holder: 24, gap: 900), wait(5, holder: 24, gap: 300), wait(7, holder: 24, gap: 300, reason: .following),
+            wait(9, holder: 30, gap: 5_000),
+        ]
+        XCTAssertEqual(overlay.namingHolders, [TrainID(rawValue: 5), TrainID(rawValue: 7), TrainID(rawValue: 9)])
+        XCTAssertEqual(overlay.waits[0].reason.tag(holder: "", in: .traditionalChinese), "等進路")
+    }
 }

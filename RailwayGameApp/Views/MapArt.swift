@@ -291,7 +291,8 @@ enum MapArt {
                 // station, under its name.
                 let badges = stationBadges(world, codes: lineCodes)
                 for station in world.stations {
-                    drawStationName(station, badges: badges[station.id] ?? [], projection: projection, in: context)
+                    drawStationName(station, badges: badges[station.id] ?? [], signal: labels.signalStations.contains(station.id),
+                                    projection: projection, in: context)
                 }
             } else {
                 drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
@@ -539,6 +540,8 @@ enum MapArt {
         let offsets = WaitMarkSides.offsets(marks, size: radius * 2 + 6)
         let tags = MapProblems.level(referenceSize: projection.referenceSize) != .hidden
         var placement = MapProblems.Placement(limit: MapProblems.waitTagLimit)
+        // Decision 635: a train waited for by several is named on one tag.
+        let naming = tags ? traffic.namingHolders : []
         for (wait, placed) in zip(shown, marks) {
             var center = placed.center
             if let offset = offsets[wait.train] {
@@ -548,7 +551,7 @@ enum MapArt {
             var context = context
             if wait.isDeadlocked { context.opacity = deadlock }
             if tags, !placement.isFull {
-                drawWaitTag(wait, at: center, radius: radius, language: language, placement: &placement, in: context)
+                drawWaitTag(wait, names: naming.contains(wait.train), at: center, radius: radius, language: language, placement: &placement, in: context)
             }
             let ring = disc(at: center, radius: radius)
             if !wait.isDeadlocked, let pulse {
@@ -576,11 +579,11 @@ enum MapArt {
     /// Decision 210: why a waiting train waits, on a white plate edged in
     /// navy (red for a deadlock) to the right of its ring: "等交會 · 莒光 3".
     private static func drawWaitTag(
-        _ wait: TrafficOverlay.Wait, at center: ScreenPoint, radius: Double, language: DisplayLanguage,
+        _ wait: TrafficOverlay.Wait, names: Bool, at center: ScreenPoint, radius: Double, language: DisplayLanguage,
         placement: inout MapProblems.Placement, in context: GraphicsContext
     ) {
         let text = context.resolve(
-            Text(verbatim: wait.reason.tag(holder: wait.holderName, in: language))
+            Text(verbatim: wait.reason.tag(holder: names ? wait.holderName : "", in: language))
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(Palette.ink)
         )
@@ -2295,6 +2298,7 @@ enum MapArt {
     private static func drawStationName(
         _ station: Station,
         badges: [(code: String, color: Color)],
+        signal: Bool = false,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -2309,7 +2313,7 @@ enum MapArt {
         let reach = Double(station.name.count) * 12 + 20
         let largest = CGRect(x: center.x - reach, y: center.y + nameTop, width: reach * 2, height: 4 + 48 + 14)
         guard largest.intersects(context.clipBoundingRect) else { return }
-        let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
+        let name = context.resolve(stationNameText(station.name, signal: signal))
         let nameSize = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
         let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + nameTop, width: nameSize.width, height: nameSize.height)
         // Decision 205: on the same pale plate as the names zoomed out
@@ -2548,6 +2552,15 @@ enum MapArt {
     /// left out, and at most ``overviewNameLimit`` are drawn of the first
     /// ``overviewNamesMeasured`` near the view. Each sits on
     /// a pale plate so it reads over the lines and Apple's map.
+    /// A station's name on the map; decision 635 (Mac playtest A8): a
+    /// passing loop's signal station in smaller, lighter type than the
+    /// stations riders use.
+    private static func stationNameText(_ name: String, signal: Bool) -> Text {
+        signal
+            ? Text(verbatim: name).font(.system(size: 9, weight: .medium)).foregroundStyle(Palette.ink.opacity(0.7))
+            : Text(verbatim: name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink)
+    }
+
     private static func drawOverviewNames(
         _ world: GameWorld, labels: StationLabels, latitude: Double, projection: some MapProjection, in context: GraphicsContext
     ) {
@@ -2566,7 +2579,7 @@ enum MapArt {
             let center = projection.screenPoint(of: station.location)
             guard near.contains(CGPoint(x: center.x, y: center.y)) else { continue }
             measured += 1
-            let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
+            let name = context.resolve(stationNameText(station.name, signal: labels.signalStations.contains(station.id)))
             let size = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
             let rect = CGRect(x: center.x - size.width / 2, y: center.y + nameTop, width: size.width, height: size.height)
             guard rect.intersects(view), !placed.contains(where: { $0.insetBy(dx: -3, dy: -1).intersects(rect) }) else { continue }
