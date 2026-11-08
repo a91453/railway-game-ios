@@ -1633,13 +1633,6 @@ extension GameWorld {
             memo.paths.against[key] = against
         }
         guard !against.isEmpty, !bodyStretches(of: candidate).contains(where: { against.contains($0.traversal) }) else { return false }
-        // Out of a depot, not before it can be past all such track: one
-        // waiting at the depot's mouth still stands in the line's way.
-        if line.depots.contains(where: { isStopped(candidate, at: $0) }) {
-            guard let last = envelopes.stretches.lastIndex(where: { against.contains($0.traversal) }) else { return false }
-            let (clears, overflow) = envelopes.ends[last].addingReportingOverflow(candidate.length)
-            return overflow || authority < clears
-        }
         // Its body, from `tail` to its head, along its route.
         let tail = authority - candidate.length
         var start: Int64 = 0
