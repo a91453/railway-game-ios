@@ -51,7 +51,7 @@ struct RealLineDemoSpec: Sendable {
     /// The stations between the ends where the expresses call on the
     /// through tracks, by index (island platforms serving every track).
     let islandStations: Set<Int>
-    let depots: [HighSpeedDemo.RealDepot]
+    var depots: [HighSpeedDemo.RealDepot]
     /// How far the track may stray from the real alignment, and how long
     /// an edge may be (``RealWorldDemo/TrackPlan``).
     let tolerance: Double

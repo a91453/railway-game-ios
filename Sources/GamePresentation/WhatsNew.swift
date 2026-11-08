@@ -235,7 +235,7 @@ public enum WhatsNew {
                     chinese: "實景建物沿街立面多了騎樓柱、鐵窗、冷氣機、直立招牌和頂樓加蓋。"
                 ),
                 Line(
-                    english: "The Changhua roundhouse now has locomotives parked in its stalls.",
+                    english: "The Changhua Roundhouse now has locomotives parked in its stalls.",
                     chinese: "彰化扇形車庫的庫位停著機車。"
                 ),
             ],
@@ -1271,7 +1271,7 @@ public enum WhatsNew {
                     chinese: "3D 路口有行人號誌：小綠人和倒數。"
                 ),
                 Line(
-                    english: "3D depots have maintenance sheds, and the Changhua roundhouse has its turntable.",
+                    english: "3D depots have maintenance sheds, and the Changhua Roundhouse has its turntable.",
                     chinese: "3D 機廠多了檢修庫，彰化的扇形車庫有轉車台。"
                 ),
                 Line(

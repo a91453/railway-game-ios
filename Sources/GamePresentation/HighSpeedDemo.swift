@@ -195,6 +195,11 @@ public enum HighSpeedDemo {
         /// The railways have no day of High Speed Rail trains
         /// (`thsr-schedule.json`).
         case noTimetable
+        /// Decision 661: the depots have no room for the sets standing at
+        /// night (a station's sets fit in no depot that keeps their line),
+        /// or a depot keeps a line the timetable does not have. A changed
+        /// timetable throws this rather than stopping the app.
+        case depotsDoNotFit
     }
 
     /// The minute of the first day the game opens at: 07:00, an hour after
@@ -373,16 +378,29 @@ public enum HighSpeedDemo {
         /// there on the first night and ``spareSidings``; the sets of the
         /// stations it is nearest beyond that stand in the next nearest.
         var sidings: Int? = nil
-        /// Decision 618: the timetable's lines, by their index, whose sets
-        /// it keeps; `nil`, every line's. A line keeps its sets in the
-        /// depots that list it, or none.
-        var lines: [Int]? = nil
+        /// Decision 618: the lines whose sets it keeps, by their kinds'
+        /// English names (``RealLineDemoSpec/Kind/english``); `nil`, every
+        /// line's. A line keeps its sets in the depots that list it, or
+        /// none. Decision 661: by name, not by the kinds' order, so that
+        /// reordering the spec's kinds does not move a line's sets to
+        /// another depot; a name no kind has makes the layout throw
+        /// ``Failure/depotsDoNotFit``.
+        var lines: [String]? = nil
         /// Decision 634: how long the real one's tracks are, in world
         /// units, when the demo's sidings end where they do, half that
         /// beyond its middle, rather than being centred on it: Liujia's
         /// ladder and sidings are twice its tracks' length, and centred
         /// they ran out over the Touqian River.
         var trackLength: Double? = nil
+
+        /// Decision 661: the indices in `kinds` of the lines it keeps
+        /// (``lines``); `nil`, every line's, and also when a name is not
+        /// one of `kinds` (``HighSpeedDemo/Layout`` throws before then).
+        func lineIndices(in kinds: [RealLineDemoSpec.Kind]) -> [Int]? {
+            guard let lines else { return nil }
+            let indices = lines.compactMap { name in kinds.firstIndex { $0.english == name } }
+            return indices.count == lines.count ? indices : nil
+        }
     }
 
     /// The High Speed Rail's depots the demo keeps its sets in: Nangang's
@@ -402,8 +420,8 @@ public enum HighSpeedDemo {
     /// expresses keep theirs at Liujia instead, the other two lines at
     /// Nangang (eight at night, seven on the first).
     static let realDepots = [
-        RealDepot(english: "Nangang Sidings", chinese: "南港留置線", latitude: 25.054203, longitude: 121.615057, sidings: 8, lines: [0, 1]),
-        RealDepot(english: "Liujia Depot", chinese: "六家基地", latitude: 24.798603, longitude: 121.042793, sidings: 8, lines: [2], trackLength: 420 * RealWorldDemo.metre),
+        RealDepot(english: "Nangang Sidings", chinese: "南港留置線", latitude: 25.054203, longitude: 121.615057, sidings: 8, lines: ["THSR All Stops", "THSR Nine Stops"]),
+        RealDepot(english: "Liujia Depot", chinese: "六家基地", latitude: 24.798603, longitude: 121.042793, sidings: 8, lines: ["THSR Five Stops"], trackLength: 420 * RealWorldDemo.metre),
         RealDepot(english: "Wuri Depot", chinese: "烏日機廠", latitude: 24.093566, longitude: 120.624164),
         RealDepot(english: "Zuoying Depot", chinese: "左營機廠", latitude: 22.696992, longitude: 120.318536),
     ]
@@ -528,6 +546,9 @@ public enum HighSpeedDemo {
             }
             guard points.count > 1, stops.count == spec.stationNames.count else { throw .noHighSpeedRail }
             guard let schedule = railways.operations?.schedule(forSystem: spec.schedule) else { throw .noTimetable }
+            // Decision 661: every line a depot keeps is one of the kinds.
+            guard spec.depots.allSatisfy({ $0.lines == nil || $0.lineIndices(in: spec.kinds) != nil }) else { throw .depotsDoNotFit }
+            let depotLines = spec.depots.map { $0.lineIndices(in: spec.kinds) }
             let path = WorldPath(points)
             let platforms = stops.map { HighSpeedDemo.platformZone(on: path, at: $0.point, length: spec.platformLength) }
             self.stops = stops
@@ -578,7 +599,7 @@ public enum HighSpeedDemo {
                 serving[nearest[0]].append(station)
                 for (kind, line) in timetable.lines.enumerated() {
                     var left = line.overnight.count { $0.station == station }
-                    for depot in nearest where left > 0 && spec.depots[depot].lines?.contains(kind) != false {
+                    for depot in nearest where left > 0 && depotLines[depot]?.contains(kind) != false {
                         let room = spec.depots[depot].sidings.map { $0 - keeping[depot] } ?? left
                         guard room > 0 else { continue }
                         let taken = min(room, left)
@@ -586,7 +607,10 @@ public enum HighSpeedDemo {
                         keeping[depot] += taken
                         left -= taken
                     }
-                    precondition(left == 0, "No depot has room for the sets of \(spec.stationNames[station])")
+                    // Decision 661: a timetable with more sets at night
+                    // than the depots keeping their lines have room for
+                    // throws, rather than stopping the app.
+                    guard left == 0 else { throw .depotsDoNotFit }
                 }
             }
             // Decision 228: a station between the ends whose sets stand at
@@ -992,7 +1016,7 @@ public enum HighSpeedDemo {
                     berths.append(TrackPlatform(station: id, edge: edge, start: offset, end: offset + spec.platformLength))
                 }
                 try world.setStationDepot(id, to: true)
-                builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving, lines: depot.real.lines))
+                builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving, lines: depot.real.lineIndices(in: spec.kinds)))
             }
             // Decision 325: the real fare between each two stations.
             if let fares = spec.fares {

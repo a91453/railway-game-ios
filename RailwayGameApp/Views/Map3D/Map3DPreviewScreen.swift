@@ -301,10 +301,11 @@ struct Map3DPreviewScreen: View {
             guard !key.goesOn else { return }
             feed.update(session: session, palette: linePalette)
         }
-        .onChange(of: session.world.clock.now, initial: true) { _, _ in
+        .onChange(of: session.realClockKey, initial: true) { _, key in
             // CABVIEW-2 (decision 379 續三): over the game loop's whole
-            // step, as the trains do.
-            guard !session.glidesOnThroughTheStep else { return }
+            // step, as the trains do. Decision 661: and taken when a step
+            // ends early with the clock where its last tick left it.
+            guard !key.goesOn else { return }
             // Decision 339: the real trains glide with the game clock.
             feed.updateRealClock(world: session.world, shown: showsRealTrains,
                                  glides: !session.world.clock.isPaused && !reduceMotion)

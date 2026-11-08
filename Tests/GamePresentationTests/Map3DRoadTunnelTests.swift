@@ -255,4 +255,74 @@ final class Map3DRoadTunnelTests: XCTestCase {
         XCTAssertEqual(camera.target.y, scene.drawnGround.height(x: camera.target.x, z: camera.target.z, world: world), accuracy: 0.01)
         XCTAssertGreaterThan(camera.target.y, 30)
     }
+
+    // MARK: Decision 661 (review L13-7)
+
+    /// Three freeway ends crowded together, two of them the closer pair:
+    /// the closer two pair whichever order the three come in.
+    func testCrowdedCarriagewaysPairTheClosestWhateverTheirOrder() {
+        let into = Map3DPoint(0, 0, 1)
+        let ends: [(paired: Bool, point: Map3DPoint, into: Map3DPoint)] = [
+            (true, Map3DPoint(0, 0, 0), into),
+            (true, Map3DPoint(13, 0, 0), into),
+            (true, Map3DPoint(20, 0, 0), into),
+        ]
+        func pairs(_ order: [Int]) -> Set<Set<Int>> {
+            let partner = Builder.pairedCarriageways(order.map { ends[$0] })
+            return Set(partner.indices.compactMap { index in partner[index].map { Set([order[index], order[$0]]) } })
+        }
+        XCTAssertEqual(pairs([0, 1, 2]), [[1, 2]], "13 m and 20 m apart: the 7 m pair")
+        for order in [[0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]] {
+            XCTAssertEqual(pairs(order), [[1, 2]], "\(order)")
+        }
+        // A ramp (not `paired`) or another way does not pair.
+        XCTAssertEqual(Builder.pairedCarriageways([ends[1], (false, ends[2].point, into)]), [nil, nil])
+        XCTAssertEqual(Builder.pairedCarriageways([ends[1], (true, ends[2].point, Map3DPoint(1, 0, 0))]), [nil, nil])
+    }
+
+    /// The portals do not depend on the order of the tunnel ends.
+    func testThePortalsAreTheSameWhateverTheEndsOrder() throws {
+        var (builder, map) = try real(latitude: 24.86, longitude: 121.78, half: 3_000)
+        let ends = map.tunnelEnds
+        XCTAssertGreaterThan(ends.count, 2)
+        let forward = builder.roadPortals(ends)
+        XCTAssertFalse(forward.isEmpty)
+        let reversed: [Map3DBaseMap.TunnelEnd] = ends.reversed()
+        XCTAssertEqual(builder.roadPortals(reversed), forward)
+        let half = ends.count / 2
+        let turned: [Map3DBaseMap.TunnelEnd] = Array(ends[half...]) + Array(ends[..<half])
+        XCTAssertEqual(builder.roadPortals(turned), forward)
+    }
+
+    /// The chunks round the Hsuehshan Tunnel's portals at Toucheng built a
+    /// block at a time (streaming, a local rebuild: their tiles and the
+    /// apron) stand the same portals as the whole scene, vertex for vertex.
+    func testChunksBuiltApartStandTheWholeScenesPortals() throws {
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.86, longitudeDegrees: 121.78)))
+        try world.mapGround()
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let at = frame.worldPosition(latitude: 24.86, longitude: 121.78)
+        let origin = (x: at.x.rounded(), y: at.y.rounded())
+        let grid = Map3DStreaming(originX: origin.x, originY: origin.y, map: WorldRegion(bounds: world.bounds))
+        let tiles = try Self.tiles.get(), heights = try Self.heights.get()
+        typealias Key = Map3DStreaming.Key
+        let whole = try XCTUnwrap(grid.region(of: [Key(column: -4, row: -4), Key(column: 3, row: 3)]))
+        let scene = Map3DScene(world: world, snapshot: nil, skyline: nil, frame: (whole, origin.x, origin.y), baseMap: tiles, cityTiles: [],
+                               heights: heights, lineBands: nil, railways: nil, temples: nil)
+        let cap = Map3DRoadTunnelPortals.capColor
+        func capped(_ mesh: Map3DMesh) -> [Map3DVertex] { mesh.vertices.filter { $0.color == cap } }
+        let inner = (-3...2).flatMap { row in (-3...2).map { Key(column: $0, row: row) } }
+        let wholeChunks = Dictionary(uniqueKeysWithValues: scene.chunks.map { (Key(column: $0.column, row: $0.row), $0) })
+        var portals = 0
+        for block in [inner.filter { $0.column < 0 && $0.row < 0 }, inner.filter { $0.column >= 0 && $0.row < 0 },
+                      inner.filter { $0.column < 0 && $0.row >= 0 }, inner.filter { $0.column >= 0 && $0.row >= 0 }] {
+            for chunk in Map3DScene.chunks(block, of: grid, world: world, baseMap: tiles, heights: heights) {
+                let key = Key(column: chunk.column, row: chunk.row)
+                let same = try XCTUnwrap(wholeChunks[key])
+                XCTAssertEqual(capped(chunk.mesh), capped(same.mesh), "\(key)")
+                portals += capped(chunk.mesh).count
+            }
+        }
+        XCTAssertGreaterThan(portals, 0, "The Hsuehshan Tunnel's portals are in the chunks compared")
+    }
 }
