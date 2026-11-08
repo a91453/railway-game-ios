@@ -30,6 +30,74 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 122.
+        Entry(
+            id: "2026-11-08",
+            items: [
+                Line(
+                    english: "Track height is now set right on the preview bar: press and drag the ↕ cell up or down to change the end height in metres.",
+                    chinese: "鋪軌時按住上方預覽列的「↕」格上下滑，就能調終點高度（公尺）。"
+                ),
+                Line(
+                    english: "The real lines for sale are listed nearest first, and the ones you cannot buy yet are greyed out with how far away they are.",
+                    chinese: "可買的真實路線依距離由近到遠排，買不到的灰掉，並寫約幾公里外。"
+                ),
+                Line(
+                    english: "A line you already bought, such as the Taoyuan Airport MRT, can be rebuilt as the real railway at Chang Gung Hospital; if something is in the way, the card says where.",
+                    chinese: "已收購的機場捷運可選擇照真實改建長庚醫院站一段，被擋住時會說哪裡。"
+                ),
+                Line(
+                    english: "The 3D map opens on the nearest track when you zoom in from the whole island, shows the game clock in the corner, and distant windows now light up at night.",
+                    chinese: "從全台進 3D 會開在最近的軌道上；角落有遊戲時鐘，遠處夜窗也會亮。"
+                ),
+                Line(
+                    english: "Taiwan Railway has the new timetable, and Tainan station and its tracks are now underground as since the undergrounding opened.",
+                    chinese: "臺鐵換上台南地下化後的新時刻表，臺南站與鄰近軌道改畫成地下。"
+                ),
+                Line(
+                    english: "Track numbers also keep clear of station circles and waiting-passenger bubbles.",
+                    chinese: "軌道編號也避開站點圓圈和候車人數泡泡。"
+                ),
+                Line(
+                    english: "The train card has Follow beside its title, and the game menu has a Trains and 3D City entry.",
+                    chinese: "列車卡的「跟隨」移到標題旁；☰ 選單新增「列車與 3D 城市」。"
+                ),
+                Line(
+                    english: "On iPad, the tutorial frames both towns, sheets use the full height, settings say iPad, and the start screen has two columns.",
+                    chinese: "iPad 上教學框住兩座城鎮、下半卡開成全高、設定寫對裝置、開始畫面分兩欄。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Tapping a station is much quicker, because its passenger flows are worked out faster.",
+                    chinese: "點車站快很多，客流計算加速了。"
+                ),
+                Line(
+                    english: "After you buy a large line such as the Wenhu line, fast speeds keep up again.",
+                    chinese: "收購文湖線這類大路線後，高倍速又跑得動了。"
+                ),
+                Line(
+                    english: "The map library is upgraded, which fixes a possible crash while labels are drawn.",
+                    chinese: "地圖套件升級，修掉一個畫站名時可能的當機。"
+                ),
+                Line(
+                    english: "The line page no longer zooms out to the whole island, and the first message of a new line counts trains and stops correctly.",
+                    chinese: "路線頁不再縮到整個台灣；開線訊息照實際列數和站數寫。"
+                ),
+                Line(
+                    english: "A bought line shows its first-day loss correctly, and a waiting train's label names the blocking train only once.",
+                    chinese: "收購當天的虧損算對了；等進路標籤只在最近一列寫擋住的車名。"
+                ),
+                Line(
+                    english: "A train following another no longer stops on track the line only uses the other way, which jammed the Taoyuan Airport MRT.",
+                    chinese: "跟著前車走的列車不再停在逆向軌道上，機場捷運不再互等卡死。"
+                ),
+                Line(
+                    english: "A newly bought Taoyuan Airport MRT now runs about fourteen more trips a day, because trains ending at Airport Terminal 1 can wait at another platform and no longer block the express.",
+                    chinese: "現在買下機場捷運，每天多開約十四班；在第一航廈站結束的車停到另一個月台，不再卡住直達車。"
+                ),
+            ]
+        ),
         // 121.
         Entry(
             id: "2026-11-08-121",
