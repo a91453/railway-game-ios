@@ -975,6 +975,22 @@ extension GameSession {
     }
 }
 
+extension Lesson {
+    /// What the tutorial says as it finishes in lesson 1 before the lesson
+    /// is passed (decision 663, the Mac playtest's D10: a player who went
+    /// back to the start at once read "★ 0/30" with no word why): its
+    /// stars come once a day's riders reach its goal, and the lessons go
+    /// on. `nil` in any other game, or once lesson 1 has an outcome.
+    public static func firstLessonLeftText(over world: GameWorld, in language: DisplayLanguage) -> String? {
+        guard world.lesson?.number == 1, world.scenario?.outcome == nil else { return nil }
+        let riders = firstRiders.groupedText, more = all.count - 1
+        return language.text(
+            "Tour done. Lesson 1 is passed, with its stars, once a day's riders reach \(riders); Lessons on the start screen has \(more) more.",
+            "導覽完成。一天的人次到 \(riders)，入門第 1 關就過關、拿到星星；開始畫面的「入門」還有 \(more) 關。"
+        )
+    }
+}
+
 /// How a lesson ended (decision 266), for its result card.
 public struct LessonResult: Hashable, Sendable, Identifiable {
     public var id: Int { lesson }

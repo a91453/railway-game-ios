@@ -94,6 +94,17 @@ public struct AttractionRow: Identifiable, Hashable, Sendable {
     public let nextShop: ShopOffer?
     /// Where the point lies, for the map.
     public let point: PlanPoint
+    /// How far it lies off the tiles the company owns, in metres, on a
+    /// map bought tile by tile (decision 160); `nil` on them, or on a map
+    /// that is the company's everywhere (decision 663).
+    public var offMapMetres: Int64? = nil
+
+    /// "About 8 km off your map", for a sight off it; `nil` on it.
+    public func offMapText(in language: DisplayLanguage) -> String? {
+        guard let metres = offMapMetres else { return nil }
+        let kilometres = max(1, (metres + 500) / 1_000)
+        return language.text("About \(kilometres) km off your map", "在你的地圖外約 \(kilometres) 公里")
+    }
 }
 
 /// The next level of a souvenir shop.
@@ -139,10 +150,36 @@ extension GameWorld {
                 sightseeingTrainText: Self.sightseeingTrainText(stars: sightseeingTrainStars(near: sight), in: language),
                 status: status, statusText: status.title(in: language, edge: outsideConnections),
                 stationName: attractionStation(of: sight.id).flatMap { station(id: $0)?.name }, today: today,
-                yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point
+                yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point,
+                offMapMetres: metresOffOwnedGround(sight.point)
             )
         }
-        return rows.sorted { $0.stars != $1.stars ? $0.stars > $1.stars : $0.id < $1.id }
+        // Decision 663 (the Mac playtest's A12): the sights on the
+        // company's map by stars, then those off it, nearest first.
+        return rows.sorted { a, b in
+            switch (a.offMapMetres, b.offMapMetres) {
+            case (nil, nil): a.stars != b.stars ? a.stars > b.stars : a.id < b.id
+            case (nil, _): true
+            case (_, nil): false
+            case let (x?, y?): x != y ? x < y : a.id < b.id
+            }
+        }
+    }
+
+    /// How far `point` lies from the nearest tile the company owns, in
+    /// whole metres (decision 663); `nil` when it lies on one, or the map
+    /// is not bought tile by tile.
+    func metresOffOwnedGround(_ point: PlanPoint) -> Int64? {
+        guard let owned = mapExpansion?.owned, !ownsGround(at: point) else { return nil }
+        var nearest: Int64?
+        for tile in owned {
+            let area = mapArea(of: tile)
+            let dx = max(area.minX - point.x, 0, point.x - area.maxX)
+            let dy = max(area.minY - point.y, 0, point.y - area.maxY)
+            let squared = dx * dx + dy * dy
+            if nearest.map({ squared < $0 }) ?? true { nearest = squared }
+        }
+        return nearest.map { Int64(Double($0).squareRoot()) / WorldCoordinate.unitsPerMetre }
     }
 
     /// What the panel says of a sight a sightseeing train calls near, the
@@ -176,23 +213,6 @@ extension GameWorld {
         TrainType.offered.filter { $0.sightseeingStars == stars }.map { $0.title(in: language) }.joined(separator: language.text(", ", "、"))
     }
 
-    /// The help's sentence on sightseeing trains: the half-star ones, then
-    /// each that adds more, fewest stars first (decision 286, later).
-    static func sightseeingTrainHelp(in language: DisplayLanguage) -> String {
-        let half = Tourism.starsPerSightseeingTrain
-        let more = Set(TrainType.offered.map(\.sightseeingStars).filter { $0 > half }).sorted()
-        let rest = more.map { stars in
-            language.text(
-                "; the \(sightseeingTrainNames(adding: stars, in: language)) adds \(starsCount(stars, in: language))",
-                "；\(sightseeingTrainNames(adding: stars, in: language))加 \(starsCount(stars, in: language))"
-            )
-        }.joined()
-        return language.text(
-            "A sightseeing train (\(sightseeingTrainNames(adding: half, in: language))) calling at a station within 800 m adds \(starsCount(half, in: language))\(rest).",
-            "觀光列車（\(sightseeingTrainNames(adding: half, in: language))）停靠 800 公尺內的車站時，景點加 \(starsCount(half, in: language))\(rest)。"
-        )
-    }
-
     /// The year's tourists at every sight, for the panel's heading.
     public var touristsThisYear: Int64 {
         tourism?.attractions.reduce(0) { $0 + $1.thisYear } ?? 0
@@ -200,9 +220,12 @@ extension GameWorld {
 
     /// The tourism panel's help text.
     public func tourismHelp(in language: DisplayLanguage) -> String {
+        // Decision 663 (the Mac playtest's A12): what the sights do for the
+        // player, not how their stars are counted (CLAUDE.md, the words
+        // players read); the rows say what each shop, hotel and train adds.
         language.text(
-            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Money(Tourism.spendPerLevel).moneyText) a tourist a level. A hotel within 800 m adds a quarter star too (two count) and takes in \(Tourism.hotelStayPermille / 10)% of the tourists as guests. \(Self.sightseeingTrainHelp(in: language))",
-            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Money(Tourism.spendPerLevel).moneyText)。800 公尺內的飯店也各加 0.25 星（算兩家），並接待 \(Tourism.hotelStayPermille / 10)% 的觀光客住宿。\(Self.sightseeingTrainHelp(in: language))"
+            "Tourists ride to a sight from a station within 800 m. A souvenir shop, a hotel or a sightseeing train calling nearby raises its stars, and more of them come.",
+            "觀光客搭車到景點 800 公尺內的車站。附近開名產店、蓋飯店或有觀光列車停靠，景點的星等提高，來的人更多。"
         )
     }
 }

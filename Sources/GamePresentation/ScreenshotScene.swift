@@ -225,6 +225,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the pull request that added them.
     case trackHeight
 
+    /// Decision 663 (the Mac playtest's A12): a blank map bought tile by
+    /// tile, its middle tile owned, with the sights drawn in every tile:
+    /// the sights panel's own sights, then those off the map folded away.
+    /// For the screenshot review of the pull request that folded them.
+    case sightsOffMap
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -316,7 +322,21 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         case .cijinShore: Self.cijinShoreWorld(water: water)
         case .trackHeight: Self.trackHeightWorld()
+        case .sightsOffMap: Self.sightsOffMapWorld()
         }
+    }
+
+    /// Decision 663: a blank map bought tile by tile, its sights cut to the
+    /// two best on the company's tile and the three nearest off it, so the
+    /// folded section is a short drag below the cards (the whole map's 108
+    /// sights put it past what a UI test's drags reach).
+    static func sightsOffMapWorld() -> GameWorld {
+        var world = GameWorld.newGame(eventSeed: 1, buysMap: true)
+        let rows = world.attractionRows(in: .english)
+        let kept = Set(rows.filter { $0.offMapMetres == nil }.prefix(2).map(\.id))
+            .union(rows.filter { $0.offMapMetres != nil }.prefix(3).map(\.id))
+        world.setTourism(world.tourism?.attractions.filter { kept.contains($0.id) })
+        return world
     }
 
     /// What the scene does once its game is open, with the player's own

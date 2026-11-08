@@ -412,6 +412,80 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// with the gondola's card, in Chinese and in English (six modes in
     /// the row). For the screenshot review of the pull request that added
     /// the mode.
+    /// Decision 663 (the Mac playtest's A12): the sights panel on a map
+    /// bought tile by tile: its short help, the sights on the company's
+    /// map, then those off it folded away and opened. For the screenshot
+    /// review of the pull request that folded them.
+    func testSightsOffTheMap() {
+        let app = launch(extra: ["-screenshot-scene", "sightsOffMap"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        if !app.buttons["menu.tourism"].appears(within: 5) {
+            app.buttons["menu.more"].tap()
+        }
+        app.buttons["menu.tourism"].tap()
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+        settle(seconds: 2)
+        keep("sights-on-the-map", app)
+        // The identifier on a DisclosureGroup may not reach the element
+        // its row becomes; its label always does (run 42519070451). Quick
+        // swipes left the list at its top (its scroll bar at 0% after 12,
+        // run 42526811886): press and drag, as the other panels' shots do.
+        let folded = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == 'tourism.offMap' OR label BEGINSWITH '地圖外的景點'")
+        ).firstMatch
+        let reached = scrollScreen(to: folded, in: app, drags: 12)
+        if !reached {
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = "sights-tree"
+            tree.lifetime = .keepAlways
+            add(tree)
+            keep("sights-not-reached", app)
+        }
+        XCTAssertTrue(reached, "The sights off the map come into reach")
+        // "Hittable" came while the row still sat under the bottom edge
+        // (run 42528453980): bring it up to the middle before the shot.
+        for _ in 0..<6 where folded.frame.midY > app.frame.height * 0.55 {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 0.5)
+        }
+        keep("sights-off-the-map-folded", app)
+        folded.tap()
+        settle(seconds: 2)
+        // The opened rows below it.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        settle(seconds: 1)
+        keep("sights-off-the-map-open", app)
+    }
+
+    /// Decision 663 (the Mac playtest's D9): the High Speed Rail demo's
+    /// fares, the distance steps with what high-speed trips pay instead.
+    func testHighSpeedDemoFares() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The demo opens")
+        settle()
+        let economy = app.buttons["entry.economy"]
+        XCTAssertTrue(economy.appears(within: 10))
+        economy.waitUntilSettled()
+        economy.tap()
+        let fares = app.staticTexts["economy.highSpeedFares"]
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10), "The economy panel opens")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list), "What high-speed trips pay comes into reach")
+        settle(seconds: 1)
+        keep("hsr-demo-fares", app)
+    }
+
     func testCablewayMode() {
         for english in [false, true] {
             let app = launch(extra: ["-screenshot-scene", "maokong"], english: english)
