@@ -27,20 +27,46 @@ final class Map3DStationExteriorBatch2Tests: XCTestCase {
     func testFenqihuRoofProjectionFitsWallAndEaves() {
         let model = Map3DStationExteriorBatch2.model(for: .fenqihu, detail: .near)
         let wood = Map3DColor.rgb(0x858784)
-        let wallColours = Set([wood] + [0.92,0.80,0.70,0.86].map { Map3DColor.shaded(wood,$0) })
-        let wall = model.vertices.filter { wallColours.contains($0.color) && $0.z < 5.6 }
-        let roof = model.vertices.filter { $0.color == Map3DColor.rgb(0x697973) && $0.z > 5.4 }
-        XCTAssertFalse(wall.isEmpty)
+        let wallCaps = stride(from:0,to:model.vertices.count,by:3).compactMap { i -> [Map3DVertex]? in
+            let triangle = Array(model.vertices[i..<(i+3)])
+            return triangle.allSatisfy { $0.color == wood && abs($0.z-4.0) < 0.002 } ? triangle : nil
+        }
+        let wall = wallCaps.flatMap { $0 }
+        // The old test used a bounding box of a few surviving wall fragments;
+        // the actual wall under the left roof had been removed by clearance.
+        XCTAssertEqual(wallCaps.count,2,"The complete low wall cap must survive clearance")
+        let wallSideColours = Set([0.92,0.80,0.70,0.86].map { Map3DColor.shaded(wood,$0) })
+        let wallSides = stride(from:0,to:model.vertices.count,by:3).filter { i in
+            let triangle = model.vertices[i..<(i+3)]
+            return triangle.allSatisfy { wallSideColours.contains($0.color) } &&
+                triangle.map(\.z).min()! < 0.01 && triangle.map(\.z).max()! > 3.99
+        }
+        XCTAssertGreaterThanOrEqual(wallSides.count,4,"The wall must reach the ground")
+        let roof = model.vertices.filter { $0.color == Map3DColor.rgb(0x697973) && $0.z >= 3.87 }
         XCTAssertFalse(roof.isEmpty)
         guard !wall.isEmpty,!roof.isEmpty else { return }
         let wallX=wall.map(\.x),wallY=wall.map(\.y),roofX=roof.map(\.x),roofY=roof.map(\.y)
         let wallArea=(wallX.max()!-wallX.min()!)*(wallY.max()!-wallY.min()!)
         let roofArea=(roofX.max()!-roofX.min()!)*(roofY.max()!-roofY.min()!)
         XCTAssertLessThanOrEqual(roofArea/wallArea,1.4)
-        XCTAssertGreaterThanOrEqual((wallX.min()!-roofX.min()!),0.79)
-        XCTAssertLessThanOrEqual((wallX.min()!-roofX.min()!),1.21)
-        XCTAssertGreaterThanOrEqual((wallY.min()!-roofY.min()!),0.79)
-        XCTAssertLessThanOrEqual((wallY.min()!-roofY.min()!),1.21)
+        for eave in [wallX.min()!-roofX.min()!,roofX.max()!-wallX.max()!,wallY.min()!-roofY.min()!,roofY.max()!-wallY.max()!] {
+            XCTAssertGreaterThanOrEqual(eave,0.79)
+            XCTAssertLessThanOrEqual(eave,1.21)
+        }
+        func coveredByWall(_ point:(Float,Float)) -> Bool {
+            func cross(_ a:Map3DVertex,_ b:Map3DVertex,_ p:(Float,Float)) -> Float {
+                (b.x-a.x)*(p.1-a.y)-(b.y-a.y)*(p.0-a.x)
+            }
+            return wallCaps.contains { t in
+                let signed=[cross(t[0],t[1],point),cross(t[1],t[2],point),cross(t[2],t[0],point)]
+                return signed.allSatisfy { $0 >= -0.001 } || signed.allSatisfy { $0 <= 0.001 }
+            }
+        }
+        for east in [roofX.min()!+1.5,roofX.max()!-1.5] {
+            for south in [roofY.min()!+1.5,roofY.max()!-1.5] {
+                XCTAssertTrue(coveredByWall((east,south)),"No wall under roof corner inset 1.5 m at (\(east),\(south))")
+            }
+        }
     }
     func testFenqihuHasNoDetachedRearSidingRods() {
         let model = Map3DStationExteriorBatch2.model(for: .fenqihu, detail: .near)

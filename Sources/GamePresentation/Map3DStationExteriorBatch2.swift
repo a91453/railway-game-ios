@@ -558,13 +558,18 @@ private extension StationKitBuilder {
     mutating func keelungSouth(_ detail: Detail) {
         let x:Float = -84, z:Float = -137, steel=rgb(0xB8C5C9), dark=rgb(0x42525A)
         // Stone-grey backing keeps the front glazing legible against the pale sky.
-        box(x,0,z,30,46,7,rgb(0xBBC5C7))
-        // Short facade bays survive the rail-envelope triangle cut where the
-        // single long wall face does not; each pane now has real stone behind it.
+        // Split the stone volume at each window bay. A long face crossed the
+        // mapped rails, was cut in full, and left only two detached end faces.
         for i in 0..<12 {
             let zz=z-19.5+(Float(i)+0.5)*39/12
+            box(x,0,zz,30,39/12,7,rgb(0xBBC5C7))
             box(x+14.96,0,zz,0.22,39/12,6.7,rgb(0xBBC5C7))
         }
+        // The mapped rail corridor removes the centre facade bays. A recessed
+        // dark entrance closes the view through that opening without entering
+        // the 2.2 m ground-level clearance envelope.
+        box(x+6,0,z+8,0.30,9.5,5.25,rgb(0x394B52))
+        box(x+15.2,5.5,z+8,0.34,10.2,0.55,rgb(0xA9B6B8))
         windows(x+15.1,1.5,z,39,count:12,glass:rgb(0x8CACB4),frame:steel,detail:detail)
         canopy(x,8.2,z,length:43,width:54,rise:2.8,color:rgb(0xD4DEE0))
         if detail == .near {
@@ -572,7 +577,6 @@ private extension StationKitBuilder {
                 let zz=z-23+Float(i)*46/11
                 beam(Map3DPoint(x-18,6.35,zz),Map3DPoint(x+18,7.45,zz),0.16,dark)
             }
-            for side: Float in [-1,1] { for i in 0..<9 { box(x+side*16,0,z-21+Float(i)*42/8,0.30,0.30,6.2,steel) } }
         }
         stationSign(x+15.4,6.1,z,width:24)
         eaveLights(x+14.8,6.9,z,45,detail:detail)
@@ -586,19 +590,19 @@ private extension StationKitBuilder {
         // front of its stone wall, with ribs and cross members on the curve.
         // Back edge lands on the station facade; the short front edge is
         // carried by a column at every transverse rib.
-        let canopyX=x+24, canopyHalfLength:Float=6.5
-        canopy(canopyX,7.5,z,length:13,width:68,rise:3.4,color:rgb(0xA9CDD1))
+        let canopyX=x+24, canopyHalfLength:Float=6.5, canopyHalfWidth:Float=26
+        canopy(canopyX,7.5,z,length:13,width:canopyHalfWidth*2,rise:3.4,color:rgb(0xA9CDD1))
         if detail == .near {
             for i in 0..<8 {
-                let zz=z-34+Float(i)*68/7
-                let yy=7.5+3.4*sinf((zz-z+34)/68*Float.pi)+0.08
+                let zz=z-canopyHalfWidth+Float(i)*canopyHalfWidth*2/7
+                let yy=7.5+3.4*sinf((zz-z+canopyHalfWidth)/(canopyHalfWidth*2)*Float.pi)+0.08
                 beam(Map3DPoint(canopyX-canopyHalfLength,yy,zz),Map3DPoint(canopyX+canopyHalfLength,yy,zz),0.16,dark)
                 box(canopyX+canopyHalfLength,0,zz,0.56,0.56,yy,steel)
                 box(canopyX-canopyHalfLength,7.35,zz,0.36,0.36,yy-7.35,steel)
             }
             for xx: Float in [canopyX-4,canopyX,canopyX+4] {
                 for i in 0..<12 {
-                    let za=z-34+Float(i)*68/12,zb=z-34+Float(i+1)*68/12
+                    let za=z-canopyHalfWidth+Float(i)*canopyHalfWidth*2/12,zb=z-canopyHalfWidth+Float(i+1)*canopyHalfWidth*2/12
                     let ya=7.5+3.4*sinf(Float(i)*Float.pi/12)+0.10
                     let yb=7.5+3.4*sinf(Float(i+1)*Float.pi/12)+0.10
                     beam(Map3DPoint(xx,ya,za),Map3DPoint(xx,yb,zb),0.14,dark)
@@ -606,7 +610,7 @@ private extension StationKitBuilder {
             }
         }
         if detail == .far {
-            for zz in [z-34,z,z+34] { box(canopyX+canopyHalfLength,0,zz,0.56,0.56,7.55,steel) }
+            for zz in [z-canopyHalfWidth,z,z+canopyHalfWidth] { box(canopyX+canopyHalfLength,0,zz,0.56,0.56,7.55,steel) }
         }
         stationSign(x+17.9,5.25,z,width:34,board:rgb(0xE0E3E3),ink:rgb(0x245697))
         box(x+18.0,3.5,z,0.30,27,0.35,rgb(0xC9823D))
@@ -636,8 +640,8 @@ private extension StationKitBuilder {
         archedWindows(x+18.2,7.2,z,15,count:5,tall:4.9,glass:rgb(0x9DB8B9),frame:ochre,detail:detail)
         roundWindow(x+18.4,13.25,z,radius:0.78,frame:ochre,glass:rgb(0xF4F2E8))
         roofNameTiles(x+18.1,15.1,z,span:17)
-        box(x+18.25,4.55,z-8.0,0.30,0.35,9.45,ochre)
-        box(x+18.25,4.55,z+8.0,0.30,0.35,9.45,ochre)
+        box(x+18.25,5.03,z-8.0,0.30,0.35,8.97,ochre)
+        box(x+18.25,5.03,z+8.0,0.30,0.35,8.97,ochre)
         box(x+18.4,12.25,z,0.22,16.2,0.22,ochre)
         box(x+18.3,14.0,z,0.30,17.5,0.25,ochre)
         box(x+18.3,15.0,z,0.22,0.22,3.4,rgb(0x777B78))
@@ -725,31 +729,33 @@ private extension StationKitBuilder {
         eaveLights(x+9.4,4.20,z,19,detail:detail)
     }
     mutating func fenqihuTimber(_ detail: Detail) {
-        // The photographed wall follows the diagonal OSM footprint beside
-        // the platform. Keep the study near that footprint; the broad roof
-        // clears trains above 5.5 m instead of losing a whole clipped facet.
-        let x:Float=21,z:Float = -7,wood=rgb(0x858784),dark=rgb(0x697973),frame=rgb(0xEDEDE8)
-        box(x,0,z,20,23,5.6,wood)
-        // studyHip adds 0.4 m at each edge: 21.6 x 24.6 roof above a
-        // 20 x 23 wall, giving 0.8 m eaves and a 1.155 area ratio.
-        studyHip(x,5.6,z,20.8,23.8,1.7,dark)
-        windows(x+10.1,1.3,z,20,count:6,glass:rgb(0xAFC2BF),frame:frame,tall:2.5,detail:detail)
+        // The OSM way includes the platform-side roof projection. A 4 m wall
+        // across that whole polygon was removed by the rail clearance cut,
+        // leaving a large roof with only a facade strip. Keep the photographed
+        // station volume in the safe south-east part of the surveyed outline.
+        let x:Float=27.5,z:Float = -9,wood=rgb(0x858784),dark=rgb(0x697973),frame=rgb(0xEDEDE8)
+        box(x,0,z,8,18,4,wood)
+        // studyHip adds 0.4 m per edge: 10 x 20 m roof, 8 x 18 m wall.
+        // All four 1 m eaves remain outside the mapped rail corridor.
+        studyHip(x,4,z,9.2,19.2,1.7,dark)
+        windows(x+4.1,1.0,z,16,count:6,glass:rgb(0xAFC2BF),frame:frame,tall:2.3,detail:detail)
         if detail == .near {
-            // Wall boards stay attached to the surviving front facade, unlike
-            // the old clipped rear siding and roof tile tips.
             for i in 0..<54 {
-                let zz=z-11+(Float(i)+0.5)*22/54
-                box(x+10.08,0.25,zz,0.10,0.07,4.45,rgb(0x747B78))
+                let zz=z-9+(Float(i)+0.5)*18/54
+                box(x+4.08,0.25,zz,0.10,0.07,3.6,rgb(0x747B78))
+            }
+            for side: Float in [-1,1] {
+                for i in 0..<5 {
+                    box(x-3.2+Float(i)*1.6,0.25,z+side*9.03,0.10,0.10,3.6,rgb(0x747B78))
+                }
             }
         }
-        // The 2023 platform shelter is fully in front of the main eave;
-        // old rear siding boxes were clipped into unsupported rods.
-        canopy(x+13.5,2.7,z,length:6,width:25,rise:0.12,color:rgb(0x77746D))
-        for i in 0..<(detail == .near ? 8 : 4) { let zz=z-11.5+Float(i)*23/Float(detail == .near ? 7:3);box(x+16.4,0,zz,0.34,0.34,2.5,rgb(0x666863)) }
-        timberSiding(x,0,z,20,23,rgb(0x69716E),detail:detail,rear:false)
-        box(x,8.05,z,0.22,3,0.18,rgb(0x475651))
-        stationSign(x+10.4,4.72,z,width:11)
-        eaveLights(x+10.4,5.30,z,20,detail:detail)
+        // Separate platform shelter attaches below the station eave.
+        canopy(x+7,2.7,z,length:6,width:21,rise:0.12,color:rgb(0x77746D))
+        for i in 0..<(detail == .near ? 8 : 4) { let zz=z-9.5+Float(i)*19/Float(detail == .near ? 7:3);box(x+9.9,0,zz,0.34,0.34,2.5,rgb(0x666863)) }
+        box(x,5.65,z,0.22,3,0.18,rgb(0x475651))
+        stationSign(x+4.4,3.15,z,width:10)
+        eaveLights(x+4.4,3.82,z,17,detail:detail)
     }
     mutating func alishanCurrent(_ detail: Detail) {
         let x:Float = -2,z:Float=9,concrete=rgb(0xD2D4CF),timber=rgb(0x815C48),roof=rgb(0x5C4845)
