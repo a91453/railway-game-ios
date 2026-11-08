@@ -194,6 +194,21 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case suhuaTunnel
     case suhuaGallery
 
+    /// Decision 625 (STATION-EXT-1): an empty real-world map round TRA
+    /// Taichung (the old station beside the new), TRA Hsinchu, TRA Banqiao, HSR Taoyuan (with the Airport MRT's A18), HSR Taichung (with Xinwuri) and HSR Zuoying
+    /// (with Xinzuoying), run on empty to 09:30 or, `…Night`, 19:30: for
+    /// the Debug app's `-screenshot-lay-demo` to lay the demo's real lines
+    /// round it (``GameSession/layDemoForScreenshot(_:)``) and run on half
+    /// an hour, for the screenshots of the real stations' exterior studies
+    /// over the platforms and trains, by day and by night. For the
+    /// screenshot review of the pull request that stood them there.
+    case exteriorTaichung, exteriorTaichungNight
+    case exteriorHsinchu, exteriorHsinchuNight
+    case exteriorBanqiao, exteriorBanqiaoNight
+    case exteriorTaoyuanHSR, exteriorTaoyuanHSRNight
+    case exteriorTaichungHSR, exteriorTaichungHSRNight
+    case exteriorZuoying, exteriorZuoyingNight
+
     /// Decision 629 (TRACKHEIGHT): flat ground 4 km a side, 5 m up, with
     /// a river 192 m wide across it, and a stretch of track drawn across
     /// the river on the ground: the build card refusing it and offering
@@ -237,6 +252,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .hsuehshanTunnel: (24.84776, 121.79127)
         case .suhuaTunnel: (24.52307, 121.82816)
         case .suhuaGallery: (24.60857, 121.85564)
+        // Decision 625: each study's origin (``Map3DStationExteriorBatch1/origin(of:)``).
+        case .exteriorTaichung, .exteriorTaichungNight: (24.13732601, 120.68671829)
+        case .exteriorHsinchu, .exteriorHsinchuNight: (24.80160443, 120.97165154)
+        case .exteriorBanqiao, .exteriorBanqiaoNight: (25.0144511, 121.4640451)
+        case .exteriorTaoyuanHSR, .exteriorTaoyuanHSRNight: (25.01347985, 121.214539)
+        case .exteriorTaichungHSR, .exteriorTaichungHSRNight: (24.1112536, 120.61474665)
+        case .exteriorZuoying, .exteriorZuoyingNight: (22.68726485, 120.3074864)
         default: nil
         }
     }
@@ -262,6 +284,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
+        case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaoyuanHSR, .exteriorTaichungHSR, .exteriorZuoying:
+            Self.realLineWorld(at: self, ticks: 57, in: language)
+        case .exteriorTaichungNight, .exteriorHsinchuNight, .exteriorBanqiaoNight, .exteriorTaoyuanHSRNight, .exteriorTaichungHSRNight, .exteriorZuoyingNight:
+            Self.realLineWorld(at: self, ticks: 117, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
 
@@ -457,15 +483,16 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the Xiaobitan Branch Line's too), twice the usual a side as the
     /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
     /// with money enough for it; bought once the app's real data is read.
-    private static func realLineWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+    private static func realLineWorld(at scene: ScreenshotScene, ticks: Int = 33, in language: DisplayLanguage) -> GameWorld {
         guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
               let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
         try? world.mapGround()
         // On to 05:30 while the map is empty, ten minutes a tick: the Debug
         // app then runs only the morning itself after it buys the line.
+        // Decision 625: on to 09:30 (57) or 19:30 (117) for the exteriors.
         world.setSpeed(.fast)
-        try? world.advance(ticks: 33)
+        try? world.advance(ticks: ticks)
         world.setSpeed(.paused)
         return world
     }
@@ -932,6 +959,22 @@ extension GameSession {
             world.setSpeed(.paused)
             return ""
         }
+    }
+
+    /// Decision 625: the demo's real lines (decision 351) laid in the
+    /// view `"south,west,north,east"` (degrees), on a map the scene opened
+    /// as the demo's, then the game run on half an hour, so the trains are
+    /// out. `false` when the real data is not read yet.
+    public func layDemoForScreenshot(_ view: String) async -> Bool {
+        let parts = view.split(separator: ",").compactMap { Double($0) }
+        guard parts.count == 4, railways != nil, let frame = RealWorldFrame(world: world) else { return false }
+        let southWest = frame.worldPosition(latitude: parts[0], longitude: parts[1])
+        let northEast = frame.worldPosition(latitude: parts[2], longitude: parts[3])
+        news.isDemo = true
+        _ = await layDemoRealLines(in: WorldRegion(minX: southWest.x, minY: northEast.y, maxX: northEast.x, maxY: southWest.y))
+        let now = world.clock.now.seconds % GameTime.secondsPerDay
+        await runForScreenshot(until: now + 30 * 60)
+        return true
     }
 
     /// Decision 564: the game run on to `seconds` into the day, then

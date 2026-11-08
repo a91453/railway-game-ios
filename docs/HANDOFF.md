@@ -3524,6 +3524,25 @@ M6 第一次拍的改前改後完全拍不到立面，根因是截圖場景的�
 
 M6 重拍的一對（`docs/art/facade-real-screenshots-2026-11-07b/`）遊戲規劃第 53 任審過，第 3 級通過。還沒做的寫在決策 610 的「下一步」：前排兩棟 5–6 層建物的面街牆沒有零件，以及要補一張看得到騎樓柱的低角度截圖。
 
+### 4.47 11 個真實站房外觀接進 3D 地圖（決策 625，派工單 STATION-EXT-1，session_01YGNNup2ntPd7nzyvdsnKN1，`claude/station-exteriors-integrate`，2026-11-07）
+
+做了的在 [決策 625](decisions/625.md)：#1904 的 11 個站房照地標的做法放在 OSM 的位置，輪廓下的格子併進 `landmarkCells`，站型套件只拿掉站房本體與入口（月台、雨棚、跨線橋、決策 506 的兩翼照舊），碰到軌道與月台空間的三角形切開丟掉。這個 session 在第二次壓縮後停手，PR 保持 draft。
+
+還沒做的：
+- 第三級截圖：`WebsiteScreenshotTests.testStationExteriorTaichung`、`…Hsinchu`、`…Banqiao`、`…TaoyuanHSR`、`…TaichungHSR`、`…Zuoying`（白天、晚上各一張），等遊戲規劃在 Mac 拍、看過才合。看：舊臺中驛一帶只有一棟、軌道淨空、月台與列車看得到、A18 的地面站體。
+- 機捷 A18 與高鐵桃園的真實層位（決策 625「下一步」）。
+- App 的 `-screenshot-lay-demo` 與新 UI 測試只能在 macOS CI 驗（UNVERIFIED）。
+
+STATION-EXT-2（session_01YGNNun8XcCE7vJPpVNXCYZ，同一條分支，2026-11-07）接手，改了遊戲規劃第 55 任看截圖的七點，寫在決策 625「續」：玻璃改帷幕玻璃（夜裡亮窗）、study 用自己的顏色、蓋在軌道上的屋頂只留骨架、邊緣懸在軌道上的切回、碎片不畫、左營與高鐵桃園加立面、高鐵台中截圖改看月台、`-screenshot-3d-clean` 藏提示列與 fps。還沒做的：遊戲規劃在 Mac 拍那六張截圖、看過才合；新竹 study 的正面朝向（決策 625「續」最後）。
+
+STATION-EXT-2 在壓縮第 2 次時停下（2026-11-08），交接如下：
+
+- #1946 已合過 `main`（衝突在 `ScreenshotScene.swift`，兩邊都留：車站外觀的 case 與決策 629 的 `trackHeight`），本機 build（-warnings-as-errors）與 `Map3DStationExteriorsTests`、`ScreenshotScene` 測試 31 支全綠（VERIFIED，Linux），已推、已轉 ready。擁有者決定不等截圖、放進 0.6.0。
+- **還沒做：iOS UI smoke 紅。** run 42437965509（commit 99301bf）只有 `TutorialUITests.testTheLineStepLeavesTheLinesPanelUsable` 失敗（`TutorialUITests.swift:165`「The lines panel did not open」，結果包 artifact 13601318319，trace 裡有一段 4244 ms 沒有畫格）；同一個 `main` 上 #1956、#1957 這支是綠的。遊戲規劃要的下一步：用 `ios-build.yml` 的 `only_testing` 單跑這支兩次；是車站外觀（主緒卡住，例如建網格太久）造成的就修好再推，是不穩就寫理由、重跑失敗的 job，結果在 #1579 回報。CI 全綠時在 #1579 留一行「可合併」。
+- 截圖從沒拍齊：`website-screenshots.yml` 一次跑 12 張會在 45 分鐘逾時（拍到 7 張），要分兩次 `only_testing` 跑。
+- 新竹 study 正面朝向、高鐵桃園 A18 月台的實際高度（決策 625「續」最後）還沒定。
+- CI 提醒 `Map3DStationExteriorsTests` 約 179 秒、`CLASS_WEIGHTS` 沒有它，分片時間偏了可補一列。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
