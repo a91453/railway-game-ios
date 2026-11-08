@@ -45,6 +45,8 @@ final class SightsOffTheMapTests: XCTestCase {
         let rows = ScreenshotScene.sightsOffMap.make(in: .traditionalChinese).attractionRows(in: .traditionalChinese)
         XCTAssertTrue(rows.contains { $0.offMapMetres == nil }, "\(rows.map(\.name))")
         XCTAssertTrue(rows.contains { $0.offMapMetres != nil }, "\(rows.map(\.name))")
+        // Short, so a UI test's drags reach the folded section.
+        XCTAssertEqual(rows.count, 5, "\(rows.map(\.name))")
     }
 
     /// A map that is not bought tile by tile is the company's everywhere.

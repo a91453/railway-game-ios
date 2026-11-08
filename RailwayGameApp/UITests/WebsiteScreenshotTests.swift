@@ -440,12 +440,19 @@ final class WebsiteScreenshotTests: XCTestCase {
             NSPredicate(format: "identifier == 'tourism.offMap' OR label BEGINSWITH '地圖外的景點'")
         ).firstMatch
         var reached = false
-        for _ in 0..<30 {
+        for _ in 0..<12 {
             if folded.exists, folded.isHittable, app.windows.firstMatch.frame.contains(folded.frame) {
                 reached = true
                 break
             }
             app.swipeUp(velocity: .slow)
+        }
+        if !reached {
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = "sights-tree"
+            tree.lifetime = .keepAlways
+            add(tree)
+            keep("sights-not-reached", app)
         }
         XCTAssertTrue(reached, "The sights off the map come into reach")
         keep("sights-off-the-map-folded", app)
