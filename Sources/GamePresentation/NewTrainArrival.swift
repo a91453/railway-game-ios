@@ -65,6 +65,18 @@ public struct NewTrainArrival: Hashable, Sendable, Identifiable {
         }
     }
 
+    /// Decision 635: `arrivals` on one card: the first's picture, every
+    /// name in its title, and how the first ones arrived only when there is
+    /// one model. One arrival is itself.
+    static func together(_ arrivals: [NewTrainArrival]) -> NewTrainArrival {
+        guard let first = arrivals.first, arrivals.count > 1 else { return arrivals[0] }
+        return NewTrainArrival(
+            key: arrivals.map(\.key).joined(separator: "+"),
+            english: arrivals.map(\.english).joined(separator: ", "), chinese: arrivals.map(\.chinese).joined(separator: "、"),
+            body: first.body, stripe: first.stripe, cab: first.cab, landing: nil
+        )
+    }
+
     /// The news log's line.
     public func newsText(in language: DisplayLanguage) -> String {
         language.text("A new train joined the fleet: \(english)", "新車抵台：\(chinese)加入車隊")
@@ -173,7 +185,9 @@ extension GameSession {
             trainArrivalsShown.insert(arrival.key)
             news.add(day: today, .newTrain) { arrival.newsText(in: $0) }
         }
-        trainArrivals += new
+        // Decision 635 (Mac playtest A11): the models one command brings
+        // (a bought line's two) come on one card, not one card each.
+        trainArrivals.append(NewTrainArrival.together(new))
     }
 
     /// Shows the cards of the models `keys` (catalog keys), whatever the

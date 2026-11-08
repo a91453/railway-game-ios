@@ -600,6 +600,13 @@ public final class GameSession {
     public internal(set) var preparingRealLine: RealBranchLine?
     /// Lays out the offer of ``preparingRealLine`` off the main actor.
     @ObservationIgnored var realLineOfferTask: Task<Void, Never>?
+    /// Decision 649: why each real line for sale cannot be bought from the
+    /// land owned (by its id), worked out off the main actor
+    /// (``refreshRealLineAvailability()``); a line not here is buyable or
+    /// not yet checked.
+    public internal(set) var realLineOutOfReach: Set<String> = []
+    @ObservationIgnored var realLineAvailabilityTask: Task<Void, Never>?
+    @ObservationIgnored var realLineAvailabilityKey: [Int]?
     /// Decision 468, later: the offer of the line for sale a trace runs
     /// along, laid out off the main actor, and on which world
     /// (``tracedSaleHint``).

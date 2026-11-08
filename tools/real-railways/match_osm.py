@@ -11,7 +11,13 @@ bridges, tunnels and cuttings are; its stations
         <railway-reference-private>/Railway/site_archive_clean/data/track_stations.geojson \\
         tools/real-railways/osm_exceptions.json \\
         RailwayGameApp/Resources/RealRailways/track_lines.geojson \\
-        RailwayGameApp/Resources/RealRailways/track_stations.geojson
+        RailwayGameApp/Resources/RealRailways/track_stations.geojson \\
+        [--only <lineKey>]
+
+With `--only` (decision 650) only that line is redrawn on this extract;
+every other line and station stays as the outputs already have them, and a
+station moves only when that line is the nearest of its system's. The
+outputs' `osm` keep their date and list the redrawn line under `redrawn`.
 
 The inputs are the owner's `Railway/` site's original files (checked by
 sha256 against the exceptions file's `base`); the lines' and stations'
@@ -381,7 +387,7 @@ def shortest(graph, sources, targets):
     return path[::-1]
 
 
-def main(extract, lines_path, stations_path, exceptions_path, lines_out, stations_out):
+def main(extract, lines_path, stations_path, exceptions_path, lines_out, stations_out, only=None):
     exceptions = json.load(open(exceptions_path, encoding='utf-8'))
     for path, key in ((lines_path, 'lines'), (stations_path, 'stations')):
         digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()
@@ -391,6 +397,15 @@ def main(extract, lines_path, stations_path, exceptions_path, lines_out, station
     print(f'{len(ways)} tracks in the extract, OSM data to {newest}', flush=True)
     lines = json.load(open(lines_path, encoding='utf-8'))
     stations = json.load(open(stations_path, encoding='utf-8'))
+    if only:
+        # --only: every other line and station stays as the outputs already
+        # have it (their earlier extract), not redrawn on this one.
+        current_lines = json.load(open(lines_out, encoding='utf-8'))
+        current_stations = json.load(open(stations_out, encoding='utf-8'))
+        assert [f['properties'] for f in current_lines['features']] == [f['properties'] for f in lines['features']]
+        assert [f['properties'] for f in current_stations['features']] == [f['properties'] for f in stations['features']]
+        assert any(f['properties']['lineKey'] == only for f in lines['features']), f'no line {only}'
+        current_at = {id(f): c['geometry']['coordinates'] for f, c in zip(stations['features'], current_stations['features'])}
     by_key = {}
     moved, worst = [], []
     line_ends = []
@@ -398,6 +413,12 @@ def main(extract, lines_path, stations_path, exceptions_path, lines_out, station
         p = feature['properties']
         coords = feature['geometry']['coordinates']
         line_ends.append((tuple(coords[0]), tuple(coords[-1])))
+        if only and p['lineKey'] != only:
+            kept = current_lines['features'][len(line_ends) - 1]['geometry']['coordinates']
+            feature['geometry']['coordinates'] = kept
+            local = Local(sum(c[1] for c in coords) / len(coords))
+            by_key.setdefault(p['lineKey'], []).append((Polyline([local(lon, lat) for lon, lat in kept]), local))
+            continue
         lat0 = sum(c[1] for c in coords) / len(coords)
         local = Local(lat0)
         points = [local(lon, lat) for lon, lat in coords]
@@ -426,7 +447,10 @@ def main(extract, lines_path, stations_path, exceptions_path, lines_out, station
         coords = feature['geometry']['coordinates']
         for index, key in ((0, old_ends[0]), (-1, old_ends[1])):
             if key in joints:
-                coords[index] = list(joints[key])
+                if coords[index] != list(joints[key]):
+                    if only:
+                        print(f'  joint of {feature["properties"]["lineKey"]} moved to {joints[key]}')
+                    coords[index] = list(joints[key])
             else:
                 joints[key] = tuple(coords[index])
     # A station, one point for every line it is on (a station of several
@@ -437,7 +461,7 @@ def main(extract, lines_path, stations_path, exceptions_path, lines_out, station
         p = feature['properties']
         groups.setdefault((p['sys'], p['name'], tuple(feature['geometry']['coordinates'])), []).append(feature)
     for (system, name, (lon, lat)), members in groups.items():
-        best = (math.inf, None)
+        best = (math.inf, None, None)
         for key, shapes in by_key.items():
             if not key.startswith(system + '|'):
                 continue
@@ -445,32 +469,53 @@ def main(extract, lines_path, stations_path, exceptions_path, lines_out, station
                 d, s = new.nearest(local(lon, lat), STATION_REACH)
                 if d < best[0]:
                     at = new.at(s)
-                    best = (d, [round(at[0] / local.kx, 6), round(at[1] / local.ky, 6)])
-        if best[1] is None:
+                    best = (d, [round(at[0] / local.kx, 6), round(at[1] / local.ky, 6)], key)
+        if best[1] is None or (only and best[2] != only):
+            if only:
+                for feature in members:
+                    feature['geometry']['coordinates'] = current_at[id(feature)]
+                continue
             print(f'  station {system} {name}: not within {STATION_REACH:.0f} m of a line, stays')
             continue
+        if only:
+            print(f'  station {system} {name}: moved {best[0]:.1f} m onto {only}')
         moved.append(best[0])
         for feature in members:
             feature['geometry']['coordinates'] = list(best[1])
-    lines['osm'] = {
-        'credit': '© OpenStreetMap contributors', 'license': 'ODbL-1.0',
-        'extract': os.path.basename(extract), 'osmData': newest,
-        'method': 'tools/real-railways/match_osm.py: each line on the extract\'s tracks; the exceptions file\'s stretches kept',
-        'kept': [e['id'] for e in exceptions['keep']],
-    }
-    stations['osm'] = {'credit': '© OpenStreetMap contributors', 'license': 'ODbL-1.0', 'osmData': newest,
-                       'method': 'each station on the nearest point of its line, match_osm.py'}
+    if only:
+        # The others keep their extract's date; this line says its own.
+        lines['osm'] = current_lines['osm']
+        stations['osm'] = current_stations['osm']
+        for data in (lines, stations):
+            data['osm']['redrawn'] = [r for r in data['osm'].get('redrawn', []) if r['lineKey'] != only] + [
+                {'lineKey': only, 'extract': os.path.basename(extract), 'osmData': newest}]
+    else:
+        lines['osm'] = {
+            'credit': '© OpenStreetMap contributors', 'license': 'ODbL-1.0',
+            'extract': os.path.basename(extract), 'osmData': newest,
+            'method': 'tools/real-railways/match_osm.py: each line on the extract\'s tracks; the exceptions file\'s stretches kept',
+            'kept': [e['id'] for e in exceptions['keep']],
+        }
+        stations['osm'] = {'credit': '© OpenStreetMap contributors', 'license': 'ODbL-1.0', 'osmData': newest,
+                           'method': 'each station on the nearest point of its line, match_osm.py'}
     for path, data in ((lines_out, lines), (stations_out, stations)):
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
             f.write('\n')
     moved.sort()
     worst.sort(reverse=True)
-    print(f'stations: {len(moved)} points on their lines, moved {moved[len(moved) // 2]:.0f} m (median), {moved[-1]:.0f} m (most)')
+    if moved:
+        print(f'stations: {len(moved)} points on their lines, moved {moved[len(moved) // 2]:.0f} m (median), {moved[-1]:.0f} m (most)')
     print('lines that moved most: ' + ', '.join(f'{k} {n} {d:.0f} m' for d, k, n in worst[:8]))
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 7:
+    args = sys.argv[1:]
+    only = None
+    if '--only' in args:
+        at = args.index('--only')
+        only = args[at + 1]
+        del args[at:at + 2]
+    if len(args) != 6:
         sys.exit(__doc__)
-    main(*sys.argv[1:])
+    main(*args, only=only)

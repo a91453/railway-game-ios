@@ -174,6 +174,7 @@ extension RealLineLaying {
                     "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。"
                 )
             }
+            if landCheckOnly { return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: nil), false, nil) }
             tiles = order
             for tile in tiles {
                 try? draft.buyMapTile(tile, passingMilestone: true)

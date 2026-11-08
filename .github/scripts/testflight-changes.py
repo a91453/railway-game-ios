@@ -10,6 +10,7 @@ testflight-processing.py puts the text into App Store Connect. Only Python's
 standard library and git are used. Tested by testflight-selftest-processing.py.
 
   testflight-changes.py [--repo PATH] > whats-new.txt
+  testflight-changes.py --check-text .github/testflight-whats-new.md
 
 The checkout needs main's history (actions/checkout with fetch-depth: 0).
 Inputs (environment):
@@ -47,6 +48,48 @@ RECENT = 20
 CURATED = ".github/testflight-whats-new.md"
 MERGE = re.compile(r"^Merge pull request #(\d+) from (\S+)")
 SQUASH = re.compile(r"^(.*\S)\s+\(#(\d+)\)$")
+
+
+# Characters App Store Connect refuses in "What to Test" (HTTP 409 "Text for
+# whatsNew contains invalid characters"): run 42443826122 was refused for "✕"
+# (U+2715, Dingbats). Apple publishes no list, so this is an ESTIMATE, kept
+# narrower than what is known to work: Basic Multilingual Plane only, and none
+# of the symbol blocks emoji and dingbats live in, no variation selector or
+# joiner, no control character other than a new line, no private use.
+REFUSED_RANGES = (
+    (0x0000, 0x0008), (0x000B, 0x001F), (0x007F, 0x009F),  # controls (tab and new line stay)
+    (0x200B, 0x200F), (0x2028, 0x202E), (0x2060, 0x206F),  # invisible marks, joiners
+    (0x2300, 0x23FF),  # Miscellaneous Technical (⌚ ⏰)
+    (0x25A0, 0x25FF),  # Geometric Shapes (▶ ◀)
+    (0x2600, 0x27BF),  # Miscellaneous Symbols and Dingbats (☀ ✕ ✓ ❤)
+    (0x2B00, 0x2BFF),  # Miscellaneous Symbols and Arrows (⭐)
+    (0xD800, 0xF8FF),  # surrogates, private use
+    (0xFE00, 0xFE0F),  # variation selectors (emoji style)
+    (0xFFF0, 0xFFFF),  # specials
+    (0x10000, 0x10FFFF),  # outside the BMP: emoji, rare ideographs
+)
+
+
+def invalid_characters(text):
+    """[(line, column, character)] App Store Connect would probably refuse in `text` (estimate, see above)."""
+    found = []
+    for line_number, line in enumerate(text.split("\n"), 1):
+        for column, character in enumerate(line, 1):
+            code = ord(character)
+            if any(low <= code <= high for low, high in REFUSED_RANGES):
+                found.append((line_number, column, character))
+    return found
+
+
+def check_text(path):
+    """Print one error per refused character in the file; 0 when it is clean."""
+    with open(path, encoding="utf-8") as handle:
+        found = invalid_characters(handle.read())
+    for line, column, character in found:
+        print(f"::error file={path},line={line},title=What to Test::"
+              f"U+{ord(character):04X} {character!r} (line {line}, column {column}) is a character "
+              "App Store Connect may refuse in What to Test; write it as words.", file=sys.stderr)
+    return 1 if found else 0
 
 
 def warn(message):
@@ -200,7 +243,11 @@ def whats_new(repo, repository, run_id, offset):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--repo", default=".", help="the checkout (default: the current folder)")
+    parser.add_argument("--check-text", metavar="FILE",
+                        help="only check FILE for characters App Store Connect refuses, then exit")
     args = parser.parse_args(argv)
+    if args.check_text:
+        return check_text(args.check_text)
     missing = [name for name in ("GITHUB_TOKEN", "GITHUB_REPOSITORY", "GITHUB_RUN_ID") if not os.environ.get(name)]
     for name in missing:
         print(f"::error title=What to Test::{name} is not set.", file=sys.stderr)

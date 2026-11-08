@@ -15,13 +15,15 @@ final class RealTRAScheduleTests: XCTestCase {
     }
 
     /// The file: a real day of each weekday and a weekday holiday of TRA's
-    /// timetable from 2026-10-16, every train with two or more stops whose
+    /// timetable fetched on 2026-11-08 (decision 650; 2026-11-09, a disrupted
+    /// Monday, left out for 11-16, and Christmas Day for the holiday), every
+    /// train with two or more stops whose
     /// times never run backwards, its stations all the game's TRA stations.
     func testTheFile() throws {
         let week = try week
-        XCTAssertEqual(week.days, ["2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-16", "2026-10-17"])
-        XCTAssertEqual(week.holiday, "2026-10-26")
-        XCTAssertEqual(week.trains.count, 1_038)
+        XCTAssertEqual(week.days, ["2026-11-08", "2026-11-16", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14"])
+        XCTAssertEqual(week.holiday, "2026-12-25")
+        XCTAssertEqual(week.trains.count, 1_007)
         let stations = Set(try operations.lines(inSystem: "tra").flatMap(\.stations).map(\.name))
         for train in week.trains {
             XCTAssertGreaterThanOrEqual(train.stops.count, 2, train.number)

@@ -160,10 +160,13 @@ extension GameWorld {
         var stops: [StationID] = []
         for stop in line.stops where !stops.contains(stop) { stops.append(stop) }
         var pairs: [(from: StationID, pair: StationDemandPair)] = []
+        // CRASH-STATION (decision 644): each station's day once for the
+        // whole line, not again for every stop that trades with it.
+        var days: [StationID: [StationID: Int64]] = [:]
         for (index, stop) in stops.enumerated() {
             let later = Set(stops.dropFirst(index + 1))
             guard !later.isEmpty else { continue }
-            pairs += stationDemandPairs(of: stop).filter { later.contains($0.station) }.map { (from: stop, pair: $0) }
+            pairs += stationDemandPairs(of: stop, days: &days).filter { later.contains($0.station) }.map { (from: stop, pair: $0) }
         }
         return JourneyTrace(line: id, pairs: pairs)
     }

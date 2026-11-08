@@ -279,6 +279,14 @@ static float map3dGridLine(float t, float step) {
 constant float roadLamp = 0.5;
 constant float2 roadLampSky = {0.50, 0.70};
 constant float3 windowWarm = {1.0, 0.784, 0.420};
+// Decision 645 (D6): from where a pixel spans this much of a bay (fwidth)
+// to this much the night windows turn to their face's share of lit rooms,
+// and how bright that share shows (above a near window's 0.825 average, as
+// a lone lit pixel reads brighter than its share); tools/map3d-preview
+// draws the same. The handover is tw3d-reference-clean's buildFarLod
+// (js/buildings.js, slop-newyork, MIT, Copyright (c) 2026 Mr.doob):
+// `far = smoothstep(0.25, 0.7, max(fwidth(cell)))`, the grid's mean.
+constant float3 nightWindowsFar = {0.25, 0.7, 1.4};
 
 float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces, depth2d<float> sunShadow) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
@@ -381,7 +389,13 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         float2 pane = glassMirror[min(packed % 64u, 23u)];
         float3 tinted = base;
         if (pane.x > 0.6 && pane.y < 0.5) { tinted = mix(tinted, float3(0.80, 0.87, 0.93), 0.6); }
-        float contrast = abs(normal.y) < 0.7 ? 0.60 : 0.35;
+        // Decision 645 (D8): a wall is steep and not the ground's grass
+        // (Map3DSurface.grass, layer 0: the real ground's cover, the
+        // fields, parks and banks); steep grass on a mountainside took
+        // the walls' bay lines every tile and their darker foot, dark
+        // hatched squares on the slopes.
+        bool wall = abs(normal.y) < 0.7 && (packed % 64u) != 0u;
+        float contrast = wall ? 0.60 : 0.35;
         tinted *= mix(1.0, clamp(dot(texel.rgb, float3(0.2126, 0.7152, 0.0722)) * 2.0, 0.6, 1.2), contrast);
         uint material = packed / 64u;
         if (material > 0u) {
@@ -398,10 +412,10 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
                 tinted *= mix(1.0, detail, near * contrast);
             }
         }
-        if (abs(normal.y) < 0.7) {
+        if (wall) {
             tinted *= 1.0 - 0.13 * max(map3dGridLine(in.surfaceAt.x, 1.0) * 0.7, map3dGridLine(in.surfaceAt.y, 1.0));
         }
-        if (abs(normal.y) < 0.6) { tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, in.surfaceAt.y * 3.2)); }
+        if (wall && abs(normal.y) < 0.6) { tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, in.surfaceAt.y * 3.2)); }
         base = tinted;
         // The road's paint (crosswalk 22, laneArrows 23): its own white on
         // the road's colour, lit by the street lights as the road is; the
@@ -418,6 +432,9 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         float2 rule = (surface % 2u == 0u) ? row.xy : row.zw;
         float bright = dot(texel.rgb, float3(0.2126, 0.7152, 0.0722));
         float mirrorGlass = mirrors ? (1.0 - texel.a) * step(bright, 0.45) * pane.x : 0.0;
+        // Decision 645 (D6): how far out the bays are, taken before the
+        // branch below (a derivative needs its neighbours' pixels).
+        float distant = smoothstep(nightWindowsFar.x, nightWindowsFar.y, max(fwidth(in.surfaceAt.x), fwidth(in.surfaceAt.y)));
         if ((lights > 0.0 && rule.x > 0.0) || mirrorGlass > 0.0) {
             float2 face = float2(floor(in.plane / 4.0), dot(round(normal * 4.0), float3(1.0, 17.0, 289.0)));
             float2 room = floor(in.surfaceAt) + fract(face * float2(0.1373, 0.2719)) * 512.0;
@@ -427,7 +444,13 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
                 float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
                 float roomLit = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0));
                 on = roomLit * glass;
-                glow += windowWarm * mix(0.55, 1.1, hash12(room + 1.3)) * on * lights;
+                // Decision 645 (D6): a bay under about two pixels (far
+                // out) shows the face's share of lit windows, its glass as
+                // the mipmap averages it: one pixel's bay and the texel's
+                // brightness (wall and glass averaged, over rule.y) left
+                // no window lit from a few kilometres.
+                float average = clamp(rule.x * busy, 0.0, 0.95) * (1.0 - texel.a) * nightWindowsFar.z;
+                glow += windowWarm * mix(mix(0.55, 1.1, hash12(room + 1.3)) * on, average, distant) * lights;
                 // Decision 617: a lit room's light on the wall round its
                 // window, strongest at the room's middle (Map3DGlow.windowGlow
                 // in shade.z; 0 when glows are off).

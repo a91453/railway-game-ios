@@ -196,10 +196,15 @@ struct Map3DPreviewScreen: View {
                     // The 3D map covers the status pill: the same pause
                     // and speeds, so a train followed here does not stand
                     // still in a paused game (the owner, 2026-10-22).
-                    SpeedControl(session: session, tutorialTarget: nil)
-                        .padding(4)
-                        .background(.regularMaterial, in: Capsule())
-                        .accessibilityIdentifier("map3D.speed")
+                    VStack(alignment: .trailing, spacing: 6) {
+                        SpeedControl(session: session, tutorialTarget: nil)
+                            .padding(4)
+                            .background(.regularMaterial, in: Capsule())
+                            .accessibilityIdentifier("map3D.speed")
+                        // Decision 645 (B5): the 3D map covers the 2D
+                        // map's clock, so it shows the same one here.
+                        Map3DClock(session: session)
+                    }
                     if let stats, !Self.screenshotClean {
                         Button {
                             showsDetails.toggle()
@@ -509,6 +514,9 @@ struct Map3DPreviewScreen: View {
                     // Decision 394: the cab deep in a tunnel draws only
                     // what is under the ground.
                     if stats.underground { Text(verbatim: "underground") }
+                    // Decision 645 (D6): the light the last frame drew.
+                    Text(verbatim: String(format: "light %02d:%02d · night %.2f · lights %.2f", Int(stats.drawnHour) % 24,
+                                          Int(stats.drawnHour * 60) % 60, stats.drawnNight, stats.drawnLights))
                 }
                 .font(.caption.monospacedDigit())
             }
@@ -1276,6 +1284,34 @@ final class Map3DTrainFeed {
     }
 }
 
+/// Decision 645 (B5, the Mac playtest of 2026-11-08: "3D 看不到時間"):
+/// the game's date and time in the 3D map's corner, the status bar's
+/// shorter clock (``GameClock/shortCalendarText(in:)``) read from the
+/// session's world as the 2D map's is; nothing kept of its own. Only
+/// shown, not a button: the forecast stays on the 2D map.
+private struct Map3DClock: View {
+    let session: GameSession
+
+    var body: some View {
+        let text = session.world.clock.shortCalendarText(in: session.language)
+        Label {
+            Text(verbatim: text)
+                .monospacedDigit()
+        } icon: {
+            Image(systemName: "clock.fill")
+                .foregroundStyle(Theme.primary)
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(Theme.textPrimary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: session.language.text("Game time \(text)", "遊戲時間 \(text)")))
+        .accessibilityIdentifier("map3D.clock")
+    }
+}
+
 /// The Metal view in SwiftUI, with its gestures.
 private struct Map3DView: UIViewRepresentable {
     /// Decision 358: the scene, and what it was built from.
@@ -1495,12 +1531,15 @@ private struct Map3DView: UIViewRepresentable {
             view.camera = resumes.camera(in: scene, viewport: view.camera.viewport)
         } else if first {
             // Open over the place the 2D map showed (decision 313, later),
-            // or from the settings the middle of what is built, the whole
-            // scene in view.
+            // as close as it was but never further than the whole scene
+            // (decision 645, D5), or from the settings the middle of what
+            // is built, the whole scene in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
             let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))
             let target = openedAt.map { scene.point(worldX: $0.x, worldY: $0.y, height: 0) } ?? .zero
-            view.camera = Map3DCamera(target: target, distance: max(width, height) * 0.9, viewport: view.camera.viewport)
+            let distance = Map3DHandoff.openingDistance(of: openedAt, sceneSpan: max(width, height),
+                                                        viewportHeight: Double(view.camera.viewport.height))
+            view.camera = Map3DCamera(target: target, distance: distance, viewport: view.camera.viewport)
         }
         #if DEBUG
         // Decision 555: a screenshot's camera, over its scene's place.

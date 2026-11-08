@@ -25,6 +25,8 @@ for name in sys.argv[1:]:
 PY
 
 set +e
+# The build step's settings, SWIFT_EMIT_LOC_STRINGS too (decision 638), so
+# only the edited files compile again.
 xcodebuild test \
   -project RailwayGameApp/RailwayGame.xcodeproj \
   -scheme RailwayGame \
@@ -35,6 +37,7 @@ xcodebuild test \
   -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar \
   -parallel-testing-enabled NO \
   -disableAutomaticPackageResolution \
+  SWIFT_EMIT_LOC_STRINGS=YES \
   CODE_SIGN_IDENTITY=- 2>&1 | tee "$RUNNER_TEMP/ui-smoke-missing-button.log"
 test_status=${PIPESTATUS[0]}
 set -e

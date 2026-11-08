@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
-/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, danhai, ankeng, ankeng-added, sanying,
+/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, tymc-old, tymc-rebuilt, danhai, ankeng, ankeng-added, sanying,
 /// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off,
 /// and `DEPOT_RETURN_CONTROLLED=1` as well to keep it on). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute (HEALTH-110: `DEPOT_RETURN_FAST=1` at the
@@ -44,7 +44,7 @@ final class DepotReturnReportTests: XCTestCase {
     /// Decision 556: the Taoyuan Airport MRT, on a map wide enough for it.
     func testTheTaoyuanAirportLine() throws {
         try wanted("tymc")
-        try report("tymc", Self.bought("tymc:A", side: 1 << 22))
+        try report("tymc", Self.resumed() ?? Self.bought("tymc:A", side: 1 << 22))
     }
 
     /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
@@ -78,6 +78,36 @@ final class DepotReturnReportTests: XCTestCase {
         session.selectLine(id)
         XCTAssertTrue(session.addRealDepot(try XCTUnwrap(session.selectedLineRealDepotOffer)), session.message?.text ?? "")
         try report("ankeng-added", session.world)
+    }
+
+    /// Decision 605 (continued): the Taoyuan Airport MRT bought as it was
+    /// before its expresses came, run a day, and at two in the morning
+    /// left as it is (`tymc-old`) or rebuilt from the line's panel
+    /// (`tymc-rebuilt`); played 51 hours from there.
+    func testTheTaoyuanAirportLineBoughtBefore() throws {
+        try wanted("tymc-old")
+        let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
+        let (session, _) = try Self.taoyuanAirportBoughtBefore(simple: simple)
+        try report("tymc-old", session.world)
+    }
+
+    func testTheTaoyuanAirportLineRebuilt() throws {
+        try wanted("tymc-rebuilt")
+        let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
+        let (session, id) = try Self.taoyuanAirportBoughtBefore(simple: simple)
+        session.selectLine(id)
+        XCTAssertTrue(session.rebuildRealLine(try XCTUnwrap(session.selectedLineRealRebuildOffer)), session.message?.text ?? "")
+        try report("tymc-rebuilt", session.world)
+    }
+
+    /// The old line's first day, to two in the morning of the next.
+    private static func taoyuanAirportBoughtBefore(simple: Bool) throws -> (session: GameSession, line: LineID) {
+        let (session, id) = try RealLineRebuildTests.boughtAsBefore(rules: simple ? .simple : .realistic)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 26 * 60)
+            return ""
+        })
+        return (session, id)
     }
 
     func testTheSanyingLine() throws {
@@ -237,6 +267,7 @@ final class DepotReturnReportTests: XCTestCase {
         // train deadlocked, to tell one cleared at once from one that stays.
         var deadlockedSamples = 0
         var lastStuck: [TrainID] = []
+        var dumpedStuck = false
         let timetabled = world.lines.filter(\.hasRuns)
         let lines = timetabled.filter { !$0.depots.isEmpty }
         let ends = Set(lines.flatMap { [$0.stops.first, $0.stops.last].compactMap(\.self) })
@@ -244,7 +275,9 @@ final class DepotReturnReportTests: XCTestCase {
         // The day counted is the one before the day 51 hours on, as before;
         // played on until its runs past midnight have had their last chance
         // (decision 547's `RunsNotSent`).
-        let counted = (start + 51 * 3_600) / GameTime.secondsPerDay - 1
+        // TYMC-A12A13: `DEPOT_RETURN_DAY=<n>` counts game day n instead,
+        // for a world resumed from `DEPOT_RETURN_FROM` part way through it.
+        let counted = environment["DEPOT_RETURN_DAY"].flatMap { Int64($0) } ?? (start + 51 * 3_600) / GameTime.secondsPerDay - 1
         let until = environment["DEPOT_RETURN_UNTIL"].flatMap { Int64($0) }
         let end = until ?? max(start + 51 * 3_600, RunsNotSent.closed(day: counted, of: timetabled))
         var saveAt = environment["DEPOT_RETURN_SAVE_AT"].flatMap { Int64($0) }
@@ -281,7 +314,48 @@ final class DepotReturnReportTests: XCTestCase {
                 }
                 FileHandle.standardError.write(Data("DEPOT_RETURN \(label) deadlock \(clock(world.clock.now.seconds)): \(names.isEmpty ? "cleared" : names.joined(separator: "; "))\n".utf8))
             }
+            // `DEPOT_RETURN_STUCK_MIN=n`: the first deadlock of n trains or
+            // more (each one with `DEPOT_RETURN_STUCK_ALL`): where each
+            // stands, where it is bound, the way it wants and its timetable.
+            if let least = Int(environment["DEPOT_RETURN_STUCK_MIN"] ?? ""), stuck.count >= least, !dumpedStuck || environment["DEPOT_RETURN_STUCK_ALL"] != nil, Set(stuck) != Set(lastStuck) {
+                dumpedStuck = true
+                var memo = GameWorld.DirectionMemo()
+                let requests = world.deadlock(memo: &memo)
+                func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "?" }
+                func hm(_ seconds: Int64) -> String { String(format: "%02d:%02d", seconds % GameTime.secondsPerDay / 3_600, seconds % 3_600 / 60) }
+                var text = "DEPOT_RETURN \(label) stuck \(clock(world.clock.now.seconds)) \(requests.count)\n"
+                for id in requests.keys.sorted() {
+                    guard let request = requests[id], let train = world.train(id: id) else { continue }
+                    let to: String = if case .travellingToStop(let s, _)? = request.candidate.execution { name(request.candidate.timetable[s].station) } else { "-" }
+                    let edge: String = if case .onEdge(let t, let o)? = train.position { "\(t.edge)\(t.direction == .forward ? "+" : "-")@\(o)" } else { "-" }
+                    let at = world.stationsStoppedAt(by: id).map(name).joined(separator: "/")
+                    text += "  \(train.name) on \(edge) (\(at.isEmpty ? "line" : at)) departs \(request.departs) dead \(train.isDeadheading) exec \(String(describing: train.execution).prefix(50)) to \(to) via \(request.candidate.movement.edges.dropFirst(request.candidate.movement.cursor).prefix(12).map { "\($0)" }.joined(separator: ",")) timetable \(train.timetable.map { "\(name($0.station))@\(hm($0.departure.seconds))" }.joined(separator: " ").prefix(220))\n"
+                }
+                FileHandle.standardError.write(Data(text.utf8))
+            }
             lastStuck = stuck
+            // TYMC-A12A13: `DEPOT_RETURN_WATCH=<from>-<to>` (clock seconds):
+            // each train at a station whose name has `DEPOT_RETURN_WATCH_AT`
+            // in it, what it does, where it stands and whom it waits for.
+            if let window = environment["DEPOT_RETURN_WATCH"]?.split(separator: "-").compactMap({ Int64($0) }), window.count == 2,
+               (window[0]...window[1]).contains(world.clock.now.seconds) {
+                let key = environment["DEPOT_RETURN_WATCH_AT"] ?? "航廈"
+                let waits = Dictionary(world.routeWaits().map { ($0.train, $0) }, uniquingKeysWith: { a, _ in a })
+                var text = "DEPOT_RETURN \(label) watch \(clock(world.clock.now.seconds))\n"
+                for train in world.trains {
+                    let at = world.stationsStoppedAt(by: train.id).compactMap { world.station(id: $0)?.name }
+                    let next = train.timetable.first { $0.arrival > world.clock.now }.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    let named = (environment["DEPOT_RETURN_WATCH_TRAINS"] ?? "").split(separator: ",").contains { train.name.hasSuffix(" \($0)") }
+                    guard named || at.contains(where: { $0.contains(key) }) || (train.execution != nil && next.contains(key)) else { continue }
+                    let edge: String = if case .onEdge(let t, let o)? = train.position { "\(t.edge)\(t.direction == .forward ? "+" : "-")@\(o)" } else { "-" }
+                    let wait = waits[train.id].map { "waits for \(world.train(id: $0.holder)?.name ?? "?") on \($0.contested.prefix(2))" } ?? "no wait"
+                    let tt = train.timetable.map { "\(world.station(id: $0.station)?.name ?? "?")@\(clock($0.departure.seconds).suffix(5))" }.joined(separator: " ")
+                    let ends = train.timetable.first.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    let last = train.timetable.last.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    text += "  \(train.name) on \(edge) at \(at.joined(separator: "/")) exec \(String(describing: train.execution).prefix(40)) dead \(train.isDeadheading) tt \(ends)->\(last) next \(next) \(wait) edges \(train.movement.edges.dropFirst(train.movement.cursor).prefix(8).map { "\($0)" }.joined(separator: ",")) timetable \(tt.prefix(400))\n"
+                }
+                FileHandle.standardError.write(Data(text.utf8))
+            }
             if byHour, world.clock.now.seconds / GameTime.secondsPerDay == counted || world.clock.now.seconds / GameTime.secondsPerDay == counted + 1 {
                 let lateNow = lateOnCountedDay(world)
                 if lateNow > lateSoFar {
@@ -320,6 +394,11 @@ final class DepotReturnReportTests: XCTestCase {
                     let key = "\(id.rawValue) \(first.departure.seconds)"
                     if empty[key] == nil {
                         empty[key] = train.movement.edges.dropFirst(train.movement.cursor).reduce(0) { $0 + (world.network.edge($1)?.length ?? 0) }
+                        // `DEPOT_RETURN_EMPTY_RUNS=1`: each empty run as it is planned.
+                        if environment["DEPOT_RETURN_EMPTY_RUNS"] != nil {
+                            let names = [first.station, last.station].map { world.station(id: $0)?.name ?? "?" }
+                            FileHandle.standardError.write(Data("DEPOT_RETURN \(label) empty \(clock(world.clock.now.seconds)): \(train.name) \(names[0])@\(clock(first.departure.seconds)) to \(names[1]), \(empty[key]! / Int64(WorldCoordinate.unitsPerMetre)) m\n".utf8))
+                        }
                     }
                     if line.depots.contains(last.station) { into.insert(key) }
                     if line.depots.contains(first.station) { outOf.insert(key) }

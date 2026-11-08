@@ -101,6 +101,48 @@ public struct NetworkHeightCard: Hashable, Sendable {
     /// one is being looked for, what to do instead, or that no end can
     /// move; `nil` otherwise.
     public let note: String?
+    /// Decision 646: how high the moved end stands over the ground now, in
+    /// world units (negative underground), and how many 1 m steps it may
+    /// still go up and down.
+    public let aboveGround: Int64
+    public let stepsUp: Int
+    public let stepsDown: Int
+
+    /// `steps` held to what the range allows (up is positive).
+    public func clamped(steps: Int) -> Int {
+        min(max(steps, -stepsDown), stepsUp)
+    }
+
+    /// The height cell's words after `steps` more metres: "On the ground",
+    /// "6 m above the ground", "6 m underground" (decision 646: the same
+    /// meaning as the pill's, how high the end stands over the ground).
+    public func readout(steps: Int = 0, in language: DisplayLanguage) -> String {
+        let above = aboveGround + Int64(clamped(steps: steps)) * WorldCoordinate.unitsPerMetre
+        let height = NetworkBuilding.lengthText(abs(above), in: language)
+        if above >= WorldCoordinate.unitsPerMetre / 2 {
+            return language.text("\(height) above ground", "離地 \(height)")
+        } else if above <= -WorldCoordinate.unitsPerMetre / 2 {
+            return language.text("\(height) underground", "地下 \(height)")
+        }
+        return language.text("On the ground", "地面")
+    }
+}
+
+/// Decision 646: the height cell of the construction HUD, held and slid
+/// up and down: how far a finger has moved, in whole metres.
+public enum TrackHeightDrag {
+    /// A finger's travel for one metre, in points.
+    public static let pointsPerMetre: Double = 14
+    /// How long the cell is held before a slide counts, in seconds (a
+    /// quicker touch is a tap).
+    public static let holdSeconds: Double = 0.25
+
+    /// Whole metres for a vertical `translation` (points, down positive as
+    /// SwiftUI gives it): up is higher, one per ``pointsPerMetre``, kept
+    /// within what `card` allows.
+    public static func steps(forTranslation translation: Double, card: NetworkHeightCard) -> Int {
+        card.clamped(steps: Int((-translation / pointsPerMetre).rounded(.towardZero)))
+    }
 }
 
 /// What ``GameSession/networkHeightCard``'s fixes were found for.
@@ -109,7 +151,14 @@ struct NetworkHeightFixKey: Equatable {
 }
 
 extension GameSession {
-    /// The step of the build card's +/-: 1 m.
+    /// Decision 646: the build card's "the first stretch is straight" line
+    /// is said once, while nothing is built yet; afterwards the player
+    /// knows.
+    public var networkOffersFreeFirstHint: Bool {
+        world.network.edges.isEmpty
+    }
+
+    /// The step of the height cell's slide and +/-: 1 m.
     public static let networkRaiseStep: Int64 = WorldCoordinate.unitsPerMetre
 
     /// The refusals a height can get round (decision 629).
@@ -143,7 +192,8 @@ extension GameSession {
                 note: language.text(
                     "Both ends are on track already, so their height cannot change. Tap a new point on each side and raise the stretch between them.",
                     "兩端都接在已有的軌道上，高度不能改。請在兩側各點一個新點，再調高中間那一段。"
-                )
+                ),
+                aboveGround: 0, stepsUp: 0, stepsDown: 0
             )
         }
         let adjusts: NetworkHeightFix.Ends = movable.end ? .end : .start
@@ -163,17 +213,26 @@ extension GameSession {
         }
         let raise = adjusts == .end ? networkEndRaise : networkStartRaise
         let limit = RailwayNetwork.heightRange
+        let step = Self.networkRaiseStep
+        let stepsUp = max(0, Int((limit.upperBound - networkHeight - raise) / step))
+        let stepsDown = max(0, Int((networkHeight + raise - limit.lowerBound) / step))
         return NetworkHeightCard(
-            adjusts: adjusts, label: networkEndHeightText(adjusts), canRaise: networkHeight + raise + Self.networkRaiseStep <= limit.upperBound,
-            canLower: networkHeight + raise - Self.networkRaiseStep >= limit.lowerBound, fixes: fixes, note: note
+            adjusts: adjusts, label: networkEndHeightText(adjusts), canRaise: stepsUp > 0,
+            canLower: stepsDown > 0, fixes: fixes, note: note,
+            aboveGround: networkEndAboveGround(adjusts) ?? 0, stepsUp: stepsUp, stepsDown: stepsDown
         )
+    }
+
+    /// How high the end the card moves stands over the ground, in world units.
+    private func networkEndAboveGround(_ ends: NetworkHeightFix.Ends) -> Int64? {
+        guard let start = networkStart, let end = networkEnd, let (from, to) = endPositions(from: start, to: end, in: world) else { return nil }
+        let position = ends == .end ? to : from
+        return position.z - (world.groundHeight(at: position.plan) ?? 0)
     }
 
     /// "End 6 m above the ground", for the end the card moves.
     private func networkEndHeightText(_ ends: NetworkHeightFix.Ends) -> String {
-        guard let start = networkStart, let end = networkEnd, let (from, to) = endPositions(from: start, to: end, in: world) else { return "" }
-        let position = ends == .end ? to : from
-        let above = position.z - (world.groundHeight(at: position.plan) ?? 0)
+        guard let above = networkEndAboveGround(ends) else { return "" }
         let height = NetworkBuilding.lengthText(abs(above), in: language)
         let which = ends == .end ? language.text("End", "終點") : language.text("Start", "起點")
         if above >= WorldCoordinate.unitsPerMetre / 2 {

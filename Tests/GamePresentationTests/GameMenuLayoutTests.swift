@@ -65,7 +65,7 @@ final class GameMenuLayoutTests: XCTestCase {
     /// level keeps its six rows.
     func testTheIdleModeStandsBesideSettings() {
         let layout = GameMenuLayout(showsGoals: false, showsTourism: false)
-        XCTAssertEqual(layout.settingsRow, [.ambient, .settings])
+        XCTAssertEqual(layout.settingsRow, [.ambient, .explore, .settings])
         XCTAssertLessThanOrEqual(layout.settingsRow.count, GameMenuLayout.itemsInRow, "one row, side by side")
         XCTAssertEqual(layout.sections.last, [.settings])
     }

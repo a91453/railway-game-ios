@@ -224,7 +224,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | 第 55 任 session_01YGNNupgr773NrRPUr8CDiZ（2026-11-07 14:48 UTC 起，第 54 任開，第 4 層；交接在 §2.0「第 54 任交第 55 任」）；再之前第 54 任 session_01YGNNupJUx5viUadNmXs45j（11-07 04:10–14:50 UTC，第 3 層，壓縮 3 次）；再之前第 53 任 session_01YGNNunyQhaha49M1KRzGVB（11-06 18:00–11-07 04:15 UTC，第 2 層，壓縮 3 次）；再之前第 52 任 session_01YGNNun5Pr4b6AHKwn6MneD（11-06 08:10–18:00 UTC，第 1 層，壓縮 2 次，作者要它換手）；再之前第 51 任 session_01YGNNuqBHdTZ3Bkm15qu36v（11-06，作者在 claude.ai 開，第 0 層，壓縮 3 次）；再之前第 50 任 session_01YGNNumyd5kmn2HrCenU1qN（11-05，第 6 層，壓縮 3 次）、第 49 任 session_01YGNNupMtajwSvF2wPZDUjt（11-05，第 5 層）；第 37–48 任見 §2.0 各段；第 36 任（2026-10-30 16:50 UTC 起，第 5 層；交接在 §2.0「第三十六次換手」）；再之前第 35 任 session_01YGNNukwV4BudeNCor4i52r（10-30 13:20–16:50，壓縮 3 次）；再之前 作者 10-28 在 claude.ai 手動開的新規劃（三個 repository；現況在 §2.0「第二十四次換手」）；再之前 session_01YGNNupfaTiuQSAJ5tsf5a4（10-28 00:20–05:15，第 3 層，壓縮 3 次後換手）；再之前 session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45–10-28 00:20，第 2 層，壓縮 2 次後換手）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 第 56 任 session_01YGNNuqMnQwhbSmiaZzhLsX（2026-11-08 04:40 UTC 起，第 55 任開，第 5 層；交接在 §2.0「第 55 任交第 56 任」）；再之前第 55 任 session_01YGNNupgr773NrRPUr8CDiZ（11-07 14:48–11-08 04:40 UTC，第 4 層，壓縮 3 次）；再之前第 54 任 session_01YGNNupJUx5viUadNmXs45j（11-07 04:10–14:50 UTC，第 3 層，壓縮 3 次）；再之前第 53 任 session_01YGNNunyQhaha49M1KRzGVB（11-06 18:00–11-07 04:15 UTC，第 2 層，壓縮 3 次）；再之前第 52 任 session_01YGNNun5Pr4b6AHKwn6MneD（11-06 08:10–18:00 UTC，第 1 層，壓縮 2 次，作者要它換手）；再之前第 51 任 session_01YGNNuqBHdTZ3Bkm15qu36v（11-06，作者在 claude.ai 開，第 0 層，壓縮 3 次）；再之前第 50 任 session_01YGNNumyd5kmn2HrCenU1qN（11-05，第 6 層，壓縮 3 次）、第 49 任 session_01YGNNupMtajwSvF2wPZDUjt（11-05，第 5 層）；第 37–48 任見 §2.0 各段；第 36 任（2026-10-30 16:50 UTC 起，第 5 層；交接在 §2.0「第三十六次換手」）；再之前第 35 任 session_01YGNNukwV4BudeNCor4i52r（10-30 13:20–16:50，壓縮 3 次）；再之前 作者 10-28 在 claude.ai 手動開的新規劃（三個 repository；現況在 §2.0「第二十四次換手」）；再之前 session_01YGNNupfaTiuQSAJ5tsf5a4（10-28 00:20–05:15，第 3 層，壓縮 3 次後換手）；再之前 session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45–10-28 00:20，第 2 層，壓縮 2 次後換手）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | Threads 開發日誌（看進度） | 排程「Threads 開發日誌（看進度）」（台灣時間每晚 21:43 檢查，2026-10-27 規劃五方決定恢復，作者：「我不知道 你自己決定」「排程要看每日進度我也不確定有固定時間發文」）。它只檢查，不一定寫：#1041 最後一則「Threads 草稿交付：涵蓋到 main <sha>」之後，合進 main、玩家看得到的 PR 滿 3 個，或發了新的 TestFlight，才由規劃開寫作 session（Sonnet）；不夠就什麼都不做。現在綁 session_01YGNNunBu1rxrPwN6bsA7g2 的是 `trig_01KEzqJPTdvXeUFCNUy8go3Z`；第二十三次換手時前任代建綁新任的，新 id 在 #1041；綁前任的 `trig_019CQWcaMbiqRpfDwdNvV2qR` 已刪。排程的綁定改不了：換手時現任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉舊的。更早留下、停用但刪不掉的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`、`trig_01ABYQAarHbVxBbEShiVWDr3` 不會觸發，作者要清可以在排程列表刪 | 寫這段期間的串文草稿，用 SendUserFile 交給作者；草稿不寫日期與時間點；交完在 #1041 留「Threads 草稿交付：涵蓋到 main <sha>」，再封存自己；不 commit、不發布 | `docs/research/THREADS_WRITING.md`（寫法、規則、發到哪一版；新的寫作 session 先讀它）；最早的派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -558,6 +558,83 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 55 任交第 56 任（2026-11-08 約 04:40 UTC＝台灣 12:40，session_01YGNNupgr773NrRPUr8CDiZ，第 4 層，壓縮 3 次）**
+- 換手原因：壓縮第 3 次（#1579 已留言）。照這段接手；和「第 54 任交第 55 任」不同時，以這段為準。這段是照 #1579、開著的 PR 與 `list_sessions` 寫的。
+- 第 56 任由第 55 任用 `create_session` 開（第 5 層，帶 `source_url`）。開工先做兩件事：在 #1579 登記，再把 §1 表格的遊戲規劃改成新 session。
+- **作者這一任新說的規則**：
+  - **每次作者傳訊息，都先讀 #1579 的新留言**（作者：「以後登記處要記得看」）。
+    - 起因：規劃收不到別的 session 的 `send_message`（信任卡沒過），session 都改在 #1579 回報。
+    - 第 55 任漏看 TYMC-REBUILD-4 00:33 UTC 的決策請求，機捷因此慢了幾小時。
+  - **每次發版後，確認 TestFlight 的「測試項目」（What to Test）有填上**（作者：「下次記得填 給我文字」）。
+    - 0.6.0 (121) 是空的，原因是 `.github/testflight-whats-new.md` 有「✕」，App Store Connect 回 409，workflow 只記成警告。
+    - 第 55 任當場把白話版文字給作者貼上。
+    - WHATSNEW-CHARS 的 #1965 把它換掉，並在 PR 檢查不收的字元。
+    - 以後發版完要看 testflight run 的 `--whats-new` 步驟有沒有警告；有就馬上給作者文字。
+  - **規劃 session 不要按 Mac 的信任卡。**
+- **PATROL**（session_01YGNNukiUy4GqUuXDdGdsjY）：每小時巡一次，合併符合條件的 PR。條件是：
+  - 非 draft、clean、checks 全綠；
+  - 作者給的合併規則：不限批數，不要求截圖；
+  - 只有 `codex/` 的 PR，要等規劃留「Codex PR 已看過」才合。
+  - 它的回報在 #1579。
+- **0.6.0 (121) 已發**：
+  - 作者說「發」後由規劃按：testflight run 42443826122，commit `4abcc0c5`（#1946 的合併），App Store Connect VALID。
+  - 發版後的檢查：
+    - 完整 `ci.yml` 42444099325：綠。
+    - full lane 42444107304：交接時還在跑，第 56 任要看結果。
+    - 11-07 兩輪 full lane 都紅過：run 42417467175 紅在 iPad 教學；run 42373639750 紅在 second、map 與字串匯出逾時。
+  - 官網 Deploy website：run 42441380173，成功。
+- **新的玩家回報**：「只要一點車站就當機」（0.5.0 (118.1)，iPhone 15 Pro Max，作者 11-08 轉述）。
+  - 已派 **CRASH-STATION**（session_01YGNNup5VbYNJnUrRbVGXuJ，Opus，`claude/crash-station`，決策 644）。
+  - 第 55 任還沒回覆作者兩件事，第 56 任開工就跟作者說：
+    - 請作者從 TestFlight 或 App Store Connect →「TestFlight」→「當機」拿當機紀錄。
+    - 請玩家更新到 121 再試。
+  - 景點當機是 118 修的（CRASH-SIGHTS #1889，見 §2 那條「一直跳景點」）。
+- **決策號**（第 55 任重排過，#1579 有表）：
+
+  | 決策 | 誰 |
+  |---|---|
+  | 635 | PLAYTEST-LINES #1959 |
+  | 636 | TYMC #1961 |
+  | 637 | OVERTAKE-PERF #1967 |
+  | 638 | CI-LOC-EXPORT #1963 |
+  | 640 | CI-SLIM |
+  | 641 | TYMC-A12A13 |
+  | 642 | MAP-LABELS-2 #1964 |
+  | 643 | IPAD-FIXES #1966（原登記 642，已請它改） |
+  | 644 | CRASH-STATION |
+  | 645 | PLAYTEST-3D #1962（原用 635，已請它改；改好前 PATROL 不合） |
+
+  下一個可用 646。
+- **開著的 PR**（都是 draft）：
+  - **#1961 TYMC-REBUILD-4**（決策 636，GameCore）：機捷照真實改建，加上跟車不停在逆向軌道。
+    - 原本和 TYMC-A12A13 一起合。07:00 UTC 後若 TYMC-A12A13 還沒有 ready 的 PR，PATROL 可以單獨合（#1579 03:56 那則）。
+    - #1961 的 CI 由 TYMC-A12A13 看。
+  - **TYMC-A12A13**（session_01YGNNuo8NDeefR6VszonbR8，決策 641）：機捷機場航廈 A12、A13 等班車卡住，作者要「快點把他做完」。
+  - **#1967 OVERTAKE-PERF**（決策 637，GameCore）：文湖線收購後一個 tick 快 11 倍，行車結果逐位元相同。
+    - 綠了就能合。
+    - 高雄環狀輕軌在 Linux 沒重現，要作者說是哪個時段、2D 還是 3D，或給一份存檔。
+    - 合了以後，在 Mac 和實機 iPad 量 iPad-C1、C2 的幀率。
+  - **#1959 PLAYTEST-LINES**（決策 635）、**#1962 PLAYTEST-3D**（改 645）：Mac 試玩的 D1、D3–D8、A8、A11、B5。
+  - **#1964 MAP-LABELS-2**（642）：軌道編號避開站點圓圈、泡泡和交叉點，截圖 run 在排。
+  - **#1966 IPAD-FIXES**（643）：iPad-A1–A6 與 §6.4 四個疑點。
+    - 它推測的「HUD 選單玻璃」修法是 UNVERIFIED。
+    - session 已壓縮 1 次，不再接新工作。
+  - **#1963 CI-LOC-EXPORT**（638）：翻譯檢查改用建置時抽出的字串，PR 的 iOS 檢查不再整個 App 重編一次（省 14–18 分鐘）。head 有一個故意紅的暫時 commit，還原後再綠才合。
+  - **CI-SLIM**（session_01YGNNuoyM27Qk37v9D2GPR3，640）：拉平最慢的 Swift 分片 rest-2（13.8 分），合併重複的 UI 測試。作者問過要不要刪舊測試，這輪只做合併與加速，不跳過測試。
+  - **#1965 WHATSNEW-CHARS**：見上面的發版規則。
+  - **#1938 Codex 車站外觀第二批**：第三輪修改的 prompt 在 #1938 的留言 6716994779，共 7 項：阿里山上層浮空、奮起湖屋頂比例、基隆北站玻璃格、台南牆色、嘉義雨棚、基隆南站牆色、橋頭的「五分車售票亭」招牌。
+    - Codex 推第三輪後，規劃並排看過，沒問題就留「Codex PR 已看過」。
+  - **#1875**：舊的機捷改建，被 #1961 取代，合 #1961 後關掉（只有作者能關，請作者關）。
+- **還在等作者的**：
+  - 作者說這個月訂閱完就取消。第 55 任問過「取消前要不要先用 TDX 補抓資料」，作者還沒回。
+- **之後要派的**：
+  - Mac 試玩報告（`docs/research/MAC_PLAYTEST_2026-11-08.md`）裡還沒派的：B1–B4、A12、D9、D10。
+  - iPad-C1／C2 幀率：等 OVERTAKE-PERF 合併後再量。
+  - 固定三件（§1.1）：
+    - 審查上一輪是 REVIEW-L13（#1915 起，0.6.0 前）。
+    - CI 優化這一輪是 CI-SLIM、CI-LOC-EXPORT。
+    - 121 發版後的健檢（DEBUG-BATCH 做法）還沒派。
+
 **第 54 任交第 55 任（2026-11-07 約 14:50 UTC＝台灣 22:50，session_01YGNNupJUx5viUadNmXs45j，第 3 層，壓縮 3 次）**
 - 換手原因：壓縮第 3 次（§1；#1579 已留言）。照這段接手。這段和「第 54 任現況」、「第 53 任交第 54 任」不同時，以這段為準。
 - 第 55 任是 session_01YGNNupgr773NrRPUr8CDiZ，由第 54 任用 `create_session` 開（第 4 層，帶 `source_url`）。開工先在 #1579 登記，再把 §1 表格的遊戲規劃改成新 session。這段是照 #1579、開著的 PR 與 `list_sessions` 寫的。
@@ -644,6 +721,13 @@
     - #1875 仍是 draft，分支沒有動；不合。
     - 查證、量測表、重現指令與下一個 session 的起點在 main 的決策 605 §3 與下一步 2；#1875 分支上的 §3 全文是改建本身。
     - 由遊戲規劃另派。TYMC-REBUILD-2 已停。
+  - TYMC-REBUILD-4 session_01YGNNumQewngmee7atEvgGn（接 #1875，分支 `claude/tymc-rebuild-4`＝#1875 的分支＋main＋修法，決策 636，GameCore，壓縮 1 次，2026-11-08）：找到成因，修了。
+    - 成因：青埔機廠只接東行股；往環北的空車跟著前車出廠，授權停在逆向段中間，在高鐵桃園和往東的車對頭。
+    - 修法（決策 636）：沒有閉塞時，跟車的授權不會讓列車停在本線只反向行駛的軌道上。
+    - 簡單＋行車控制第 2 天：改建 241 → 9/333、死結 0；舊線 6 → 8；現買 9 → **26**。現買多的 17 班都是決策 609 下一步 ① 的 A12／A13 陷阱（15:49–19:49）。
+    - 擬實機捷不變；文湖、高雄輕軌、淡海、安坑、三鶯兩種規則逐行相同。
+    - 遊戲規劃第 55 任判（2026-11-08）：決策 636 照這個寫法採用；現買變差不單獨上 main，另派 TYMC-A12A13 以這個分支為底修 609 下一步 ①，兩個 PR 一起合。數字與試過的寫法在決策 636，接續在決策 605 下一步 2。TYMC-REBUILD-4 到此停。
+  - TYMC-A12A13 session_01YGNNuo8NDeefR6VszonbR8（遊戲規劃第 55 任派，接決策 609 下一步 ①，2026-11-08）：**到時限（07:00 UTC）停手，沒有修成**；遊戲規劃已定 #1961 單獨合（改建死結 32→0、現買死結 11→3，代價現買傍晚多 17 班沒發）。查到的成因、排除的兩條、重現指令與下一步寫在決策 609「下一步（續三）」。它只在 #1961 加了兩個報告探針（`DEPOT_RETURN_DAY`、`DEPOT_RETURN_WATCH`）與這段交接；預留的決策 641 釋出。
   - CABVIEW-2 session_01YGNNuo1avNxcoZmdFdC825：`claude/cabview-3`（決策 379 續四），只做 #1921 審查的 P3 a/b/d，再量「實際 ÷ 設定倍速」。
   - ROADTUNNEL session_01YGNNunPRoXT1mpxPNA7FfC：#1925（決策 611）。`801890a7` 審圖沒過：雪山、蘇澳南的山是平地上孤立的綠包，要接地形的坡；蘇澳南是有柱子的明隧道；蘇花口前的路面補丁與斷掉的車道線要修；蘇花南的景可以。修好給新的截圖單，作者 Mac 重拍（第 3 級，規劃看過才合）。
   - HSR-NORTH-DEPOT session_01YGNNupkrTyJU9cc3yScri8（決策 618）：南港盡頭線＋六家基地。
@@ -852,7 +936,7 @@
 - **放空模式也看真實列車**（作者 2026-11-05：「放空模式……可以不要局限自己的車，在路上跑的尚未收購也能跟隨」「放空模式原本就不需要那麼多頭腦」「要顯示車名」）：**#1861（RAILTRACK402）合了再派**，只動畫面層，第 3 級截圖。範圍刻意小：不做點真實列車跟車、資訊列、視角選單；`AmbientDirector` 的候選加上 3D 正在跑的真實列車（`Map3DRealTrains`），鏡頭跟一段再淡出換下一班，挑法照參考網站 `pickTourTrain`（稀有車種權重高、最近五班不重複、60–120 秒），有自己的車時輪流；角落淡淡顯示一行車名與往哪（例「普悠瑪號 往樹林」），幾秒後淡掉（ui-review、motion skill）。
   - **IDLEREAL 已做大半，第二次壓縮後停手**（session_01YGNNuki1C7kQgjT4YjyrZE，`claude/idle-real-trains`，#1873，決策 606）：遊戲規劃看過第一次截圖（run 42097299809）還不能合；陰影加深已做。**IDLEREAL-B 接手**（session_01YGNNuoPgTKroWFmzsC558t）：跟的車旁地面沒蓋好連 3 秒就換班、車名只在地面蓋好時亮，已做（[決策 606](decisions/606.md)「跟車」）；重拍同一支截圖、遊戲規劃看過才合。真實列車壓在大樓上是 `main` 本來就有的，也記在那裡，另派。
 - **TYMC-EXPRESS**（作者 2026-11-05：「為什麼桃園捷運沒有做待避線」，同意排法）：GameCore 班次跳站（存檔 +1，舊存檔預設每站停）、直達車照真實站停、長庚醫院（A8）兩側各一條待避線（研究：直達車平日 144 次越車全在 A8）、已收購線的「照真實改建」按鈕（玩家選、付工程費、地被佔就說哪裡擋；舊存檔不自動改），併機捷回本量測。等 TOURSRC-1 或 L10FIX 空出 GameCore 名額再派（同時最多 2 個）。A3／A11／A17 第三、四股排後。
-  - **進度（TYMC-EXPRESS-B session_01YGNNupwCoioP9xE3UpvXyG，2026-11-05）**：#1874 新局預設退步的成因 1 找到並修了（從兩端之間出發的 7 班直達車多停下一站，第一段才有指定路線）；成因 2（A13 多出來的車整天佔一股）由 GameCore 決策 609 **#1881**（`claude/tymc-surplus-depot`，draft）處理：行車控制下多出來的車回機廠。合起來簡單＋行車控制第 2 天 **64/333** 沒發（main 5），還不能 ready；擬實 1/333（main 0）、簡單 0/333。剩下的卡點、重現指令、試過不用的做法都在決策 605 §2「查到的」與下一步 1、決策 609 下一步。**TYMC-EXPRESS-B 已在壓縮第 2 次時停手**：剩下的 A12／A13 互換位置，(a)「A12 折返的班改用另一股」已查過、不採用（路線偏好每一段只有一個，真實 A12 只有兩股島式）。下一個 session 接 (c)「派車改成先派等最久的車」，要量 golden、replay、其他線；(b) 最後才用。細節在決策 609 下一步。#1874、#1881 都是 draft；#1874 的條件是三種規則兩天都不比 main 差。**TYMC-EXPRESS-C（2026-11-06）**：#1881 已合（決策 609「續」）；#1874 併了 #1881 與 main 後，簡單＋行車控制第 2 天 9/333（main 5，遊戲規劃第 51 任認定已回到 main 的水準）、擬實 1/333、簡單 0/333，CI 綠就轉 ready，留下一版（不進 118）。
+  - **進度（TYMC-EXPRESS-B session_01YGNNupwCoioP9xE3UpvXyG，2026-11-05）**：#1874 新局預設退步的成因 1 找到並修了（從兩端之間出發的 7 班直達車多停下一站，第一段才有指定路線）；成因 2（A13 多出來的車整天佔一股）由 GameCore 決策 609 **#1881**（`claude/tymc-surplus-depot`，draft）處理：行車控制下多出來的車回機廠。合起來簡單＋行車控制第 2 天 **64/333** 沒發（main 5），還不能 ready；擬實 1/333（main 0）、簡單 0/333。剩下的卡點、重現指令、試過不用的做法都在決策 605 §2「查到的」與下一步 1、決策 609 下一步。**TYMC-EXPRESS-B 已在壓縮第 2 次時停手**：剩下的 A12／A13 互換位置，(a)「A12 折返的班改用另一股」已查過、不採用（路線偏好每一段只有一個，真實 A12 只有兩股島式）。下一個 session 接 (c)「派車改成先派等最久的車」，要量 golden、replay、其他線；(b) 最後才用。細節在決策 609 下一步。#1874、#1881 都是 draft；#1874 的條件是三種規則兩天都不比 main 差。**TYMC-EXPRESS-C（2026-11-06）**：#1881 已合（決策 609「續」）；#1874 併了 #1881 與 main 後，簡單＋行車控制第 2 天 9/333（main 5，遊戲規劃第 51 任認定已回到 main 的水準）、擬實 1/333、簡單 0/333，CI 綠就轉 ready，留下一版（不進 118）。**TYMC-REBUILD（#1875，session_01YGNNumziZiL2wg5iCpJkMA，2026-11-06 停手）**：長庚重鋪、待避線、`isAtRest` 都做了，CI 綠，可是簡單＋行車控制下改建後整條線卡死（333/333 沒發）；現買的線同樣量只有 18/333，差別在改建從舊線接過來的列車。量測、死結位置、接手要試的三個做法在決策 605 第 3 節與下一步 2。#1875 留 draft，截圖修好後才拍。**TYMC-REBUILD-2（session_01YGNNunUa7SsAyeQMn5nwEN，2026-11-07）**：成因 1 修了（改建收起、停在兩端之間的車進機廠），改建當天不卡；第 2 天簡單＋行車控制仍 241/333（現買 18/333），簡單、擬實 0/333。剩下的看起來要動 GameCore，等遊戲規劃決定；細節在決策 605 第 3 節「續」與下一步 2。
   - **進度（TYMC-EXPRESS session_01YGNNuqDsf4QaTnBiWceQq1，2026-11-05，壓縮第 2 次停手）**：**PR-1 #1872**（GameCore 班次跳站，決策 605 §1）已改成存檔 86（決策 595 沒改存檔、86 釋出給這裡，87 不用），fixture `SaveFixtures/v86-passing-runs.json`，PR-2、PR-3 分支已併上去。**PR-2 #1874**（`claude/tymc-express-acquire`，直達車＋長庚兩側待避線，§2，draft）**新局預設（簡單＋行車控制）第二天 114/333 沒發（HEALTH-114 是 5/333）**，南段 07:20 起停住，量測表與線索在決策 605 §2。原因還沒找到，遊戲規劃另派 session 查；照 diagnosing-bugs：先做一個只跑「簡單＋行車控制、機捷」會紅的指令（`DepotReturnReportTests.testTheTaoyuanAirportLine`，`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=tymc DEPOT_RETURN_FAST=1 DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1`，release 建置約 20 分鐘一次，直接跑 test-runner 避開 SwiftPM 的鎖），再一次改一個變數：先拿掉 A8 待避線只留跳站（`overtakeStations` 給空），再反過來（留待避線、班次用 `RealLineRuns.stoppingEverywhere()`），看是哪一個造成的，修好才 ready。**PR-3 #1875**（`claude/tymc-express-rebuild`，「照真實改建」，§3，draft）卡片、指令、按鈕與「哪裡擋住」做好、測試過；舊存檔長庚月台外 25–38‰ 坡、再外是折返渡線，轉轍器放不下（決策 233），卡片照實說擋住。下一步：把 A8 一段重鋪成平的（照新收購的布局，接回兩側既有節點）；另外 tymc 的回送車填滿 02:20–05:25，`RealLineDepotAddition.isAtRest` 永遠不成立、「末班車收班後」永遠等不到，要改成看班次的時段或星期。PR-3 要第 3 級截圖（先問遊戲規劃）。由遊戲規劃另派。
 - **交流道高架破碎**（作者 2026-11-05 截圖）：見決策 607（`docs/decisions/607.md`）。匝道從橋面接到地面時同高（橋面與地面路的交會差 0.5–4.5 m 的地點，從 main 的 104 降到 76；全部從 236 降到 213）。剩下的，最多的是決策 391 的坡道落地時壓過的側街（137 處），要改坡道本身，寫在決策 607 的「還沒做的」。測試上限 215／80，修掉一些就調低。
   - ROADIX-2（2026-11-06，#1880）：作者截圖少掉的行道樹和公車亭，是截圖時街具還沒畫上（決策 546 等模型好才畫），不是被拿掉。`Map3DInterchangeStreetTests` 在 main 和分支數到的一樣多（畫面前方 31 棵樹、2 座公車亭）。唯一少的是鏡頭後方台 74 高架上的樹（80→17），因為橋面抬高了，照決策 391 橋上不放街具。運河上約 140 m 的塔是遊戲自己的城市把樓蓋在水上，記在決策 607 的「還沒做的」，遊戲規劃另外排，ROADIX-2 沒做。
@@ -3547,6 +3631,7 @@ STATION-EXT-2 在壓縮第 2 次時停下（2026-11-08），交接如下：
 
 | 事項 | 來源 | 狀態 |
 | --- | --- | --- |
+| 實景鐵道整包重跑 OSM：決策 650 只用 2026-11-08 的整包檔重畫縱貫線南段（台南地下化）；其他線與這一個月的 OSM 編輯差 5–19 m（台北、新竹、山線、海線、高鐵南港等），整包重跑 `match_osm.py` 要連著重跑讀 `track_lines` 的 `tools/hsr-depots`、`tools/hsr-platforms`、`tools/station-kit`；`rail_structures.json`、`rail_tracks.json`、`tra_platforms.json`（臺南仍是地面月台，遊戲只用各站等的估計長度）等參考庫 `rail-3d/physical/network.json` 有通車後的版本再重產 | 派工單 TRA-REFRESH（session_01YGNNuoi9xbc3dvnERToAzN，`claude/tra-refresh`，[決策 650](decisions/650.md)「下一步」） | 沒派 |
 | 每天 06:00 第一次算乘客計畫（`passengerRelease` → `makeNetworkPassengerPlan`）的 tick 很慢，約為車站數的三次方：Linux debug 高雄示範 54 站 0.75 s、74 站 2.6 s，其他 tick 約 1 ms；作者回報那局的存檔（78 站，高雄）在 Linux debug 第 2 天、第 3 天 06:00 各約 238 s、236 s，白天 6000× 每個 tick 也要 2–5 s，取樣全在 `PassengerRouteGraph.shortest`，關掉真實轉乘仍超過 600 s，所以倍數不是轉乘、原因未明；計畫的路線記憶（`PassengerRouteMemo`）跟著 `PassengerRouteGraph` 每天換掉。按速度把它拖成時鐘停住的部分已修（決策 143「後來（2026-10-27）」），車站很多的地圖 06:00 仍會停頓（作者那局實機估一分鐘以上）| 玩家回報 91.1「車多 時間軸會卡住不前進」，派工單 AL（session_01YGNNunTGjhacnQNuZoH1FS） | 派工單 AQ（#1385）逐位元相同地加快了約 6 倍，剩下的見下一列；作者的存檔在私庫 branch `bug-reports/clock-stuck-2026-10-27` |
 | 每天第一次算乘客計畫仍要幾秒（91.1「車多 時間軸會卡住不前進」的 GameCore 那一半）：作者那局（高雄、78 站、63 列車）06:00 的 tick 在 Linux release 約 5.2 秒（原 32.5 秒），debug 約 55 秒（原 238 秒）；結果逐位元相同 | 派工單 AQ（session_01YGNNun1Kn1yX2orJ1cGjgj，#1385），表現層那一半是 #1376（AL） | **做了一半**：同一起點的搜尋只做一次、接著答下一個終點，禁用邊的搜尋從不禁用的那次分岔（`PassengerRouteSearches`）。一天的計畫仍有約 430 萬次 pop：每個起點約 240 組禁用邊，各自幾乎走完整張圖。下一步（都要逐位元相同，或改規則用新決策）：(1) 圖沒變的部分跨天沿用路線（`PassengerRouteMemo` 每天因 `dailyCapacity`、班距變了就清掉）；(2) 第二層禁用邊也從第一層的搜尋分岔；(3) 標籤的 `order` 陣列改成共用前綴，少配置記憶體；(4) 把計畫移到背景算、算好才換上（表現層）。**(1)、(4) 已由派工單 CF（session_01YGNNuqWY2PSBocJBUDh9eW，`claude/passenger-plan-after-edit`，[決策 470](decisions/470.md)，10/31 後合併）做了**：(1) 依路線圖連通的部分沿用，作者那兩局路線圖都是一整塊，沒變快；(4) 改成 tick 開始前用每個核心先算好這次計畫要重搜的路線再交給 tick（不是算好才換上，決定論不變），92.1 那局載入後、改路線後、隔天 06:00 的 5–17.5 秒在 Linux release 4 核變成 1.4–4.1 秒，整份 command log 重播的結尾世界 SHA-256 和 main 相同。還沒做的寫在決策 470「下一步」：暫停或編輯時就先算、實機時間。**(2)、(3) 已由派工單 PLANDAY 做了**（session_01YGNNuqEZL9bfYRQGsEEG44，`planday-route-search`，[決策 470「續」](decisions/470.md)）：搜尋記下自己的經過，禁兩條邊的搜尋從禁一條邊的搜尋在那條邊的停靠點之前分岔（拿掉檢查點與重播），標籤的順序改成共用前綴的節點；逐位元相同（兩份存檔 2 分鐘與 92 那局兩天的世界 SHA-256 和 main 相同），92 那局載入後第一個 06:00 在 Linux release 單核從約 13 秒變約 7 秒（pop 1,113 萬 → 660 萬），AQ 那局 4.0 → 2.2 秒；標籤上限 40 萬 → 20 萬，記憶體和 main 相當（92 那局 159 → 162 MB，合成 200 站 176 → 148 MB）。剩下最大的是禁兩條邊的搜尋（約 395 萬 pop）。**派工單 PLANDAY-2**（session_01YGNNupKp56159yj4t686J8，`claude/passenger-route-astar`，[決策 470「續二」](decisions/470.md)）試了以目的地為界的 A*：逐位元相同，但沒有變快（AQ 那局 3.3 → 4.3 秒），已推翻。原因是 84% 的禁兩條邊查詢接著用別的目的地留下的搜尋，以單一目的地為界就不能共用。改做的是把搜尋的前緣從每個狀態一個陣列攤平成串在標籤上的鏈：逐位元相同（兩份存檔的世界 SHA-256 和 main 相同），pop 次數不變，Linux release 92 那局 12.2–12.7 → 7.5–8.0 秒，AQ 那局 4.2–4.4 → 2.3–2.5 秒。還沒做的（不破壞共用的界、分岔時複製標籤、暫停或編輯時先算）見「續二」的下一步。記憶體（審查 K2-2，派工單 BB，`claude/passenger-route-memory`）：#1385 每個停靠點、每組禁用邊都留一份整個搜尋，合成 200 站尖峰 1,460 MB（舊 137 MB）；改成不禁用搜尋最多 16 份檢查點、禁用搜尋照最近使用最多 512 份且合計 40 萬個標籤，逐位元相同，200 站 194 MB、120 站 170 MB，作者那局 136 MB、4.4 秒不變；200 站的時間從 282 秒變 394 秒（舊 1,061 秒），合成路網量法 `PASSENGER_ROUTE_SYNTHETIC=200 swift test -c release -Xswiftc -enable-testing --filter PassengerRouteMemoryReportTests`。量法：`PASSENGER_ROUTE_SAVE=<存檔> swift test --filter PassengerRouteSaveReportTests`（存檔在私庫 `bug-reports/clock-stuck-2026-10-27`，不進公開 repository） |
 | 92.1「CPU 過高」與 6000× 的停頓（實景地圖、81 站、22 線、145 列車、1 條公車；第 10 日 05:59:57）：(1) 每天 06:00 的 tick 在 Linux release 約 14 秒，**每天都重做**；(2) 白天 6000× 每個 tick 平均約 0.24 秒（預算 0.1 秒），290 個 tick 有 215 個在 0.2–1 秒，推進的執行緒一直滿載，遊戲只跑約四成速度；(3) 主執行緒每個遊戲小時（6000× 下不到 1 秒一次）停約 0.4 秒，回報裡的「畫面更新 500 ms」 | 派工單 BK（session_01YGNNun8RfEVUbCYxFcr7kV，`claude/cpu-stall-0600`）；回報、command log 與作者給的存檔在私庫 branch `bug-reports/cpu-stall-0600-92-2026-10-28`（存檔是作者在對話裡直接給的，沒進私庫，要的話請作者再附） | **(1) 修了**：`PassengerRouteMemo` 只記一張圖，夜裡沒有車時算的計畫是空圖，把白天的圖換掉，所以每天 06:00 全部重搜；改成多記前一張圖，逐位元相同（同一個 binary 兩天後的世界 SHA-256 相同），第 11、12 日 06:00 從 14 秒降到 1 秒以下；載入後第一天、改了路線後的那一天仍約 14 秒。和 AQ 那局（78 站、5 線，4.4 秒）比：`shortest` 呼叫數一樣，pop 是 2.6 倍（11.1M 對 4.3M），慢在線多、圖大（44 條路徑），不是車站、列車、公車或道路；拿掉 512 個搜尋的上限、檢查點 16→64 都不變（假說推翻）。重播整份 command log（1,154 個 tick）結尾和裝置相同；修好後仍慢的是載入後第一次、玩家改路線之後那一刻（第 8 日 06:29、18:59、21:59 各 5–14 秒），以及晚上改過路線後的隔天 06:00（晚上與早上的班距不同，圖不同）。重播裡每天 02:30 的「session after」1–2 秒是無頭測試在呼叫端跑夜間快轉，App 是在背景跑（決策 369），不代表實機。剩下的照上一列 (2)–(4)；(4) 由派工單 CF 做成「tick 之前先在背景用每個核心算好路線」，見下一句。**(2) 沒修**：取樣分散在列車模擬（`dropRunsHeldUp`／`routeStretches`／`RailwayNetwork.edgeIndex`、`extendAuthorities` 複製整個 `Train`、`stepDwell` 的上下車），沒有單一熱點，要更多取樣。**(3) 已由 #1415 修**（派工單 BP，[決策 459](decisions/459.md)）：`StationMasterView` 每個遊戲小時在主執行緒重算 `StationMasterAdvice(world:)`（這局 Linux release 350–470 ms）；改成讀新聞已經算好的這一小時的建議（背景 tick 的 `AdviceProbe`），被換掉的世界也改在背景放掉；合成 81 站、144 列車主執行緒每小時 20.8 ms → 0.01 ms（release），實機 UNVERIFIED。量法：`PASSENGER_ROUTE_SAVE=<存檔> PASSENGER_ROUTE_SPEED=fast PASSENGER_ROUTE_UNTIL=174000 swift test -c release -Xswiftc -enable-testing --filter PassengerRouteSaveReportTests`；`COMMAND_LOG_SAVE=<存檔>` 跑 `CommandLogTickReportTests/testWhatTheScreenWorksOutOnTheHour`；`COMMAND_LOG_TICKS=<command-log.json>` 跑 `CommandLogTickReportTests/testTheTicksOfACommandLog`（重播整份紀錄、逐 tick 計時）。實機時間 UNVERIFIED |
@@ -3774,6 +3859,8 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 **Meshy 第一批街道小物、簡化器補三件、glTF-Validator 進 CI（決策 467，session_01YGNNuqASY5sxbk5kKzVByD，`claude/meshy-batch-1`，10/31 後合）**：紅綠郵筒一對與公車站牌接進 3D 地圖（`tools/meshy-props/`）；簡化器加了誤差上限、鎖住單面板的轉角、`Map3DSimplifiedCache`（背景建、裝置快取），但 App 還沒用它畫東西；`tools/gltf-validate/` 與 `gltf-validate.yml` 查 repo 裡的 GLB。這批其他小物、方形郵筒重生成、簡化器接到畫面與小零件保護在 [決策 467](decisions/467.md) 的「下一步」。這個 session 壓縮兩次後停手（2026-10-28），PR #1446 留給下一位接手：草稿，10/31 後轉 ready 再請作者合；本機跑過的只有改到的五個類別與 `DataSourceCredit`（Linux 上 `--filter` 要寫類別名、不加 `GamePresentationTests.` 前綴，否則跑 0 個），其餘 3D 類別、Xcode 建置與 iOS UI 測試看 PR 的 CI；`gltf-validate.yml` 第一次在 GitHub 上跑 15 秒過。
 
+**UI 測試瘦身（決策 640，CI-SLIM session_01YGNNuoyM27Qk37v9D2GPR3，`claude/ci-slim-ui`，2026-11-08）**：`LessonUITests` 五支只留「按得到」那一半（「沒有某按鈕」改由 `LessonTests` 在 Linux 驗），`LineRoutePreferenceUITests`、`RealWorldMapUITests` 各兩支合成一支。沒做的：三支成績卡測試各自用 UI 過第 1 課（約 3 分一支），要加一個只在 `-ui-testing` 下有效、直接開在成績卡的啟動參數（改 App），寫在[決策 640](decisions/640.md) 的「下一步」。
+
 **Codex 蒸汽機車＋煤水車（2026-10-23，issue #1103）**：作者回報前導輪區過空後，新增汽缸外罩／煙箱承座／導輪架共408三角，其餘原模型13,672三角逐頂點不變；真正前版與同相機局部對照在私庫history/front-before及previews/steam-front-side-by-side.png。本輪10張參考的獨立兩單元原生靜態素材，霧綠／石墨／金砂、無紅色。配方`Map3DSteamTender.swift`，入口僅靜態註冊；完整編組14,080三角。公開只配方／工具／必要測試／文件／一張總覽，完整native／GLB／35七向／白模／剪影／同尺度／真前後／viewer／來源與ZIP在私庫`Railway/game-art-previews/docs/art/steam-tender-2026-10-23/`。重建與外觀／技術結論見[本批交接](art/steam-tender-2026-10-23/README.md)與`tools/steam-tender/README.md`，兩庫互鏈draft PR與最新head CI見issue #1103。 作者續報#1106紅字：selected-1在20分鐘job上限取消（無測試失敗），已同步main的#1120五份測試／新權重；模型與素材producer仍為1da739ca，原生／GLB逐bytes核對保持。最新CI狀態與timeout證據見#1103／#1106；不重複改CI分份規則。Linux Swift6.4 warnings-as-errors與20相關測試、實際幾何／支承／故障拒收、GLB／PNG／viewer／ZIP已驗證；真機Metal／效能／動畫及工程尺寸／真實車型仍未驗證。不改GameCore／存檔／golden／replay。**合併只增加靜態素材，不會讓營運列車自動換成這台**；車型映射、煤水車跟隨與連桿動畫是另案，不擅稱CT273。
 
 **第二台霧藍雙走行組蒸汽機車＋煤水車（Codex，#1118，`codex/duplex-steam-2026-10-23`）**：新11圖逐張檢視，靠前駕駛室／前短煙箱後長鍋爐／兩組三個近等大輻條輪／前欄杆平臺／獨立煤水車，獨立`Map3DDuplexSteam.swift`，不依賴未合併第一台。修初版汽缸偏小、前階輪區重疊及前梁／踏階支持；真前版、同相機公尺對照保留。24.830×3.300×4.680m／11128三角為比例推估，型號／工程規格／隱藏鉸接未知。[外觀／技術／私有交付](art/duplex-steam-2026-10-23/README.md)、[重建組裝](../tools/duplex-steam/README.md)。VERIFIED Swift6.4 warnings-as-errors、20測試、封閉／法線／支持射線／輪組淨空／492實體接觸圖、六故障拒收、5native／5GLB／35七向、Blender／PNG／viewer／ZIP。真機Metal／效能／動畫UNVERIFIED；僅靜態註冊，合併不自動出現在營運列車。雙draft PR與最新head CI見#1118；無GameCore／存檔／golden／replay變更，不合併／auto-merge／TestFlight。
@@ -3887,6 +3974,12 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 ### 7.5 只等實機確認的
 
 這些不擋任何工作，在 TestFlight 的「請測試者看」裡輪流問：
+- **點車站就當機**（玩家回報 118.1，iPhone 15 Pro Max，CRASH-STATION 決策 644）：Linux 上沒重現，原因還不知道。修了一部分：車站面板開著時，地圖上的旅客去向在背景少算一半，整條線的從幾分鐘變幾秒。請玩家在 121 或下一版試：點車站、點站牌、長按車站開面板、面板開著連點幾站，2D 和 3D 都試。還會當的話，請作者從 TestFlight 拿當機紀錄，看三件事：
+  - 例外類型：`0x8badf00d`（卡太久被殺）、`EXC_BREAKPOINT`／`SIGTRAP`（程式停下）或 `EXC_RESOURCE`（CPU 或記憶體）；
+  - 主執行緒（或 `DisplayLink.asyncThread`）的堆疊有沒有 `StationPanel`、`StationTag`、`MapAlertBubbles`、`stationRidership`、`PassengerRouteGraph`；
+  - 當時是哪一張地圖、幾站幾線、2D 還是 3D、幾倍速。最好附「回報問題」的存檔。
+
+  量法：`STATION_COST_REPORT=1 swift test --skip-build --filter StationTapCostTests`。旅運量本身還是約 10 秒（背景），要再快得動 GameCore，見決策 644「下一步」。
 - **一直跳景點、一直當機**（玩家回報 115.1，CRASH-SIGHTS #1889，118 起）：原因是觀光景點面板開著時，每個 tick 每個景點都重建一次路網。台北文湖線、16 個景點有車站服務時，每次重畫要 1.6 秒，遊戲卡住，最後被系統關掉。現在一天只算一次，所有景點一起算（0.1 秒）。這個在實機沒有重現，也沒有當機紀錄。118 請玩家在路線多的局打開觀光景點面板，或點地圖上的景點星號，看還會不會卡、會不會跳出。還會的話，請作者從 TestFlight 拿當機紀錄，看三件事：
   - 例外類型：`0x8badf00d`（watchdog，卡太久被殺）或 `EXC_BREAKPOINT`；
   - 主執行緒的堆疊有沒有 `attractionRows`、`attractionStatus`、`PassengerRouteGraph`；
@@ -4125,7 +4218,11 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **建議的方向**（雲端判斷）：opposite 方向集合每個 plan 每個 service 只算一次；`Nominal` 照 service 編號記在 plan 裡，不重新雜湊整份點；配對前先依線路、方向、軌道篩掉不可能追上的對。改了要跑 golden、replay fixture 與 `swift-shards.sh` 的戰役 shard，tick 的結果不能變。
 - **量法**：`xcrun xctrace record --template 'Time Profiler' --device <模擬器> --attach <pid> --time-limit 20s`，再 `xcrun xctrace export --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]'`，依函式彙總；遊戲內「幀數」細目的「推進」是 tick 的時間。
 
-### 4.49 iPad 試玩的修正（決策 643，派工單 IPAD-FIXES，session_01YGNNun7AFhERsLzs7MjbvR，`claude/ipad-fixes`，#1966，2026-11-08）
+### 4.56 3D 的入口、時鐘、遠處夜窗與陡坡（決策 645，派工單 PLAYTEST-3D，session_01YGNNupp5gXA5cHePwHoKd3，`claude/playtest-3d`，2026-11-08）
+
+Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6（夜裡遠處沒亮窗）、D8（山坡深色方格）做了，見 `docs/decisions/645.md`。**留下的**：D6 回報的「6000× 過了午夜、或 03:11 進 3D 變回白天亮度」在 Linux 重現不了（光的算法 20:51 與 03:11 相同，Linux 預覽也是暗的）。3D 的 fps 小框點開後最後一行是這一幀實際畫的時刻、夜的程度、城市燈光：下一位在實機或模擬器上跑高鐵示範 20:51 → 6000× 過午夜，看那一行。時刻跟著走而畫面變亮，就找哪一層在夜裡用了白天的顏色；時刻不走，就查 `Map3DView.updateUIView` 有沒有在跑。遠處車站的夜燈（決策 617 光暈 2,400 m 外淡出）沒動。
+
+### 4.57 iPad 試玩的修正（決策 643，派工單 IPAD-FIXES，session_01YGNNun7AFhERsLzs7MjbvR，`claude/ipad-fixes`，#1966，2026-11-08）
 
 - **做了的**在 [決策 643](decisions/643.md)：`docs/research/MAC_PLAYTEST_2026-11-08.md` §6 的 iPad A1–A6，以及 §6.4 的四個疑點。四個都是表現層的 bug，iPhone 也有：月台清單標錯、天數算成原始日而非經過天數、票價步進預設 500 分、示範鋪的線觸發待避卡（`linesLaidByTheDemo`）。四個都修了，也加了 Linux 測試。A1 的教學取景只在 iPad 做（`DeviceFamily.framesTheLessonsTowns`），因為手機橫放時兩鎮要約 9 km 才放得下，第一段軌道太長、買不起，iPhone 閘門的 `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` 會逾時。A6 的開始選單兩欄改用 `onGeometryChange` 量寬度，不用 `ViewThatFits`（CRASH101）。GameCore、存檔 86、golden 76、fixture 都不動。
 - **狀態**（head 51a9e90）：Linux 建置與全部 shard、Release archive、Xcode build（iPhone 閘門 UI 測試）都是綠的。**「iPad tutorial tests」紅了兩次，兩次是不同的測試**：

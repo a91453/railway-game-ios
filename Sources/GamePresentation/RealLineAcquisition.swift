@@ -119,7 +119,12 @@ public struct RealBranchLine: Hashable, Sendable {
     /// overtake the stopping ones: the Taoyuan Airport MRT's Chang Gung
     /// Memorial Hospital (A8), where every one of the real timetable's
     /// overtakes is.
-    var overtakeStations: [String] { isTaoyuanAirport ? ["長庚醫院站"] : [] }
+    var overtakeStations: [String] { Self.overtakeStations(system: system, network: network) }
+
+    /// ``overtakeStations`` of the line `network` of `system`.
+    static func overtakeStations(system: String, network: String) -> [String] {
+        system == "tymc" && network == "A" ? ["長庚醫院站"] : []
+    }
 
     /// Decision 556: whether the ground under its depots beside the line
     /// is read in as far as their ladders may reach, as under a yard past
@@ -714,6 +719,11 @@ struct RealLineLaying: Sendable {
     let water: WaterGrid?
     let coverage: CoverageGrid?
     let heights: HeightGrid?
+    /// Decision 649: stops each offer once the land check (the tiles under
+    /// the line touch the company's) has passed, with no problem and no
+    /// purchase, for the list of lines for sale to grey out those whose
+    /// land does not.
+    var landCheckOnly = false
 
     static func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
         railways.stations.first { $0.id == "\(system)|\(name)" }.map {
@@ -747,6 +757,7 @@ extension RealLineLaying {
     /// whichever it was.
     func offer(for line: RealBranchLine) -> RealLineOffer {
         let laid = laidOffer(for: line)
+        if landCheckOnly { return laid.offer }
         // Decision 528: refused where the same line, bought and removed
         // before, left its track, laid again on the world without that
         // track, which is taken up first. A first purchase, or one nothing
@@ -1071,6 +1082,7 @@ extension RealLineLaying {
         if let expansion = world.mapExpansion {
             let wanted = Set(samples.map { MapExpansion.tile(at: $0) }).filter { world.isOnMap($0) && !expansion.owns($0) }
             guard let order = RealLineAcquisition.buyingOrder(of: wanted, owned: expansion.owned) else { return refusedForLand() }
+            if landCheckOnly { return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: nil), false, nil) }
             tiles = order
             for tile in tiles {
                 try? draft.buyMapTile(tile, passingMilestone: true)
@@ -1126,8 +1138,9 @@ extension RealLineLaying {
             zones.append(zone)
             let between = double && index > 0 && index < runs.stops.count - 1
             // Decision 605: a station where the expresses overtake has a
-            // loop outside each track, whatever its timetable stands there.
-            let overtakes = between && line.overtakeStations.contains(name)
+            // loop outside each track, whatever its timetable stands there;
+            // a timetable with no expresses (as it was before) none.
+            let overtakes = between && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
             let loops = overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1)
             // A positive offset is on the right going up the line; on a
             // double track the second track is on the left, so a loop

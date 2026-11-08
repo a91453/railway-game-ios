@@ -8,17 +8,19 @@ timetable.
         RailwayGameApp/Resources/RealRailways/tra.json \\
         RailwayGameApp/Resources/RealRailways/tra-schedule.json
 
-The input is the newer snapshot's `data/tra_schedule_dense.json`: every TRA
-train of 14 days from 2026-10-16 (TRA's open data, ods.railway.gov.tw,
-under the Open Government Data License, version 1), each with its number,
+The input is a `tra_schedule_dense.json` in the reference site's shape:
+first the newer snapshot's `data/tra_schedule_dense.json` (14 days from
+2026-10-16), now `rebuild_tra_schedule.py`'s from TRA's own files fetched
+on 2026-11-08 (decision 650); TRA's open data, ods.railway.gov.tw, under
+the Open Government Data License, version 1. Every train has its number,
 kind (`typeName`), model (`carName`), its stops' arrival and departure
 seconds of the service day (past 86,400 after midnight), the stations it
 passes timed between its calls along the line, and which dates it runs.
 
 The game runs a week, so the output keeps one real day of each weekday,
-the first of the 14 that is not a public holiday (Sunday 10-18 to Saturday
-10-17), and one public holiday on a weekday (Monday 10-26, the day off
-for Retrocession Day), and only the trains of those eight days. Each train
+the first that is not a public holiday (`PUBLIC_HOLIDAYS`), and the first
+public holiday on a weekday (in 2026-11-08's, Friday 12-25, fetched beside
+the fortnight), and only the trains of those eight days. Each train
 keeps only what the game draws and lists:
 
     {"n": number, "t": kind index, "k": model index, "d": day bits,
@@ -35,6 +37,19 @@ game's `tra.json` names them (the timetable's 左營 and 新城 are its
 """
 import json
 import sys
+
+# The site's `TW_DAYTYPE`, the game's `RealTimetables.publicHolidays`:
+# Taiwan's public holidays of 2026 and 2027.
+PUBLIC_HOLIDAYS = {
+    "2026-01-01", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19",
+    "2026-02-20", "2026-02-27", "2026-02-28", "2026-04-03", "2026-04-04", "2026-04-05",
+    "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-09-28", "2026-10-09",
+    "2026-10-10", "2026-10-25", "2026-10-26", "2026-12-25",
+    "2027-01-01", "2027-02-04", "2027-02-05", "2027-02-06", "2027-02-07", "2027-02-08",
+    "2027-02-09", "2027-02-10", "2027-02-28", "2027-03-01", "2027-04-04", "2027-04-05",
+    "2027-04-06", "2027-04-30", "2027-05-01", "2027-06-09", "2027-09-15", "2027-09-28",
+    "2027-10-10", "2027-10-11", "2027-10-25", "2027-12-24", "2027-12-25", "2027-12-31",
+}
 
 # The timetable's names that `tra.json` spells otherwise.
 RENAMED = {"左營": "左營(舊城)", "新城": "新城 (太魯閣)"}
@@ -109,18 +124,36 @@ def main():
     with open(game_tra, encoding="utf-8") as f:
         game = json.load(f)
     game_stations = {s["name"] for line in game["lines"] for s in line["stations"]}
-    # The site's `TW_DAYTYPE` (the game's `RealTimetables.publicHolidays`)
-    # for the 14 days: 2026-10-25 (Retrocession Day) and 10-26 (its day
-    # off).
-    holidays = {"2026-10-25", "2026-10-26"}
+    holidays = PUBLIC_HOLIDAYS
     days, holiday, kinds, models, stations, trains, dropped = extract(data, game_stations, holidays)
     first, last = data["dateRange"]
+    notes = data.get("source_notes", "")
+    if notes.startswith("經 TDX"):
+        # tools/real-timetables/rebuild_tra_schedule.py from TDX (decision 650).
+        origin = (
+            "臺鐵時刻表（資料權責臺鐵，經交通部 TDX 的 Rail/TRA/DailyTrainTimetable 逐日檔，"
+            "政府資料開放授權條款第 1 版），由 tools/real-timetables/rebuild_tra_schedule.py "
+            "照參考庫 Railway/taiwan-rail-reference-clean 的 fetch_tra_schedule.py、densify_schedule.py "
+            f"排成 tra_schedule_dense.json（{first} 到 {last}，有停駛的日子不收）"
+        )
+    elif "rebuild_tra_schedule.py" in notes.split(" | ")[0]:
+        # The same from ODS's own files (decision 650).
+        origin = (
+            "臺鐵開放資料（ods.railway.gov.tw，政府資料開放授權條款第 1 版，"
+            f"{data.get('date', first)} 由 .github/workflows/tra-ods-fetch.yml 抓下），"
+            "由 tools/real-timetables/rebuild_tra_schedule.py 照參考庫 Railway/taiwan-rail-reference-clean 的 "
+            f"fetch_tra_schedule.py、densify_schedule.py 排成 tra_schedule_dense.json（{first} 到 {last}，有停駛的日子不收）"
+        )
+    else:
+        origin = (
+            "臺鐵開放資料（ods.railway.gov.tw，政府資料開放授權條款第 1 版），經參考庫 "
+            "Railway/taiwan-rail-reference-clean 的 data/tra_schedule_dense.json"
+            f"（{first} 到 {last}）"
+        )
     out = {
         "system": "tra",
         "source_notes": (
-            "臺鐵開放資料（ods.railway.gov.tw，政府資料開放授權條款第 1 版），經參考庫 "
-            "Railway/taiwan-rail-reference-clean 的 data/tra_schedule_dense.json"
-            f"（{first} 到 {last}）；每個星期幾取一個不是假日的日子、再取一個平日的假日，"
+            origin + "；每個星期幾取一個不是假日的日子、再取一個平日的假日，"
             "只收這八天開的列車。通過站的時刻照網站的沿線內插。"
             "由 tools/real-timetables/extract_tra_schedule.py 產生。"
         ),

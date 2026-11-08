@@ -268,6 +268,52 @@ final class LineLossFixesTests: XCTestCase {
         XCTAssertNil(free.worstLosingLine())
     }
 
+    /// Decision 635 (Mac playtest D3): a line bought yesterday has no day
+    /// of its own yet. The day of the purchase is left out of its report
+    /// and its diagnosis, so it is not said to lose money, nor told to take
+    /// a train off, before its first full day.
+    func testTheDayALineWasBoughtIsNotCounted() throws {
+        var world = try tooManyTrains()
+        XCTAssertNotNil(world.lineReport(Self.line)?.yesterday)
+        let yesterday = world.clock.now.seconds / GameTime.secondsPerDay - 1
+        world.acquisitions.append(LineAcquisition(realLine: "test:BOUGHT", line: Self.line, day: yesterday, value: .zero))
+        XCTAssertNil(world.lineReport(Self.line)?.yesterday, "the day it was bought")
+        XCTAssertEqual(world.lineReport(Self.line)?.days.map(\.day) ?? [], [], "nor the day before, when it was not the company's")
+        XCTAssertNil(world.lineLossDiagnosis(Self.line))
+        XCTAssertNil(world.worstLosingLine())
+        if case .lineLosing? = StationMasterAdvice(world: world) { XCTFail("no losing line the day after it was bought") }
+
+        // Bought the day before yesterday: yesterday counts.
+        world.acquisitions[0] = LineAcquisition(realLine: "test:BOUGHT", line: Self.line, day: yesterday - 1, value: .zero)
+        XCTAssertEqual(world.lineReport(Self.line)?.yesterday?.day, yesterday)
+        XCTAssertEqual(world.lineLossDiagnosis(Self.line)?.days, 1)
+    }
+
+    /// Decision 635: a line on a real timetable sends a train out at each
+    /// run's time whatever its trains or targets, so it is offered no train
+    /// taken off (nor more, nor a longer headway), and the station master
+    /// says so rather than "try taking one off".
+    func testALineOnARealTimetableIsNotToldToTakeATrainOff() throws {
+        var world = try lineBetweenTwoTowns()
+        for index in 0..<60 {
+            let train = try world.purchaseTrain(named: "Spare \(index)").id
+            try world.setTrainCars(train, to: 4)
+            try world.assignTrain(train, to: Self.line)
+        }
+        let line = try XCTUnwrap(world.line(id: Self.line))
+        let times = (0..<line.stops.count).map { LineRunTime(arrival: 8 * 3_600 + Int64($0) * 600, departure: 8 * 3_600 + Int64($0) * 600) }
+        try world.setLineRuns(Self.line, to: [LineRun(from: 0, to: line.stops.count - 1, times: times)])
+        try world.advance(ticks: 1 + 2 * 1_440)
+        XCTAssertEqual(world.lineLossDiagnosis(Self.line)?.reasons.first?.kind, .tooManyTrains)
+        for kind in [LineLossReason.Kind.tooManyTrains, .longHeadway, .lowLoad] {
+            XCTAssertNil(world.lineLossFix(kind, on: Self.line), "\(kind)")
+        }
+        XCTAssertEqual(world.worstLosingLine()?.timetable, true)
+        let advice = StationMasterAdvice.lineLosing(line: Self.line, name: "Line 1", reason: .tooManyTrains, timetable: true)
+        XCTAssertEqual(advice.text(in: .traditionalChinese), "「Line 1」虧錢，主要是車太多：它照真實時刻表開，每一班都要用到車。點一下打開路線。")
+        XCTAssertFalse(advice.text(in: .english).contains("taking one off"), advice.text(in: .english))
+    }
+
     func testEachReasonSaysWhatToTry() {
         let said = LineLossReason.Kind.allCases.map {
             StationMasterAdvice.lineLosing(line: Self.line, name: "藍線", reason: $0).text(in: .traditionalChinese)

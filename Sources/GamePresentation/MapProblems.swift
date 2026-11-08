@@ -42,6 +42,13 @@ public enum MapProblems {
         }
     }
 
+    /// The size of a waiting count's figures at `level` beside a badge of
+    /// `stationRadius` (the pill and the room the tracks' numbers keep
+    /// for it, decision 642, use the same).
+    public static func countFontSize(_ level: Level, stationRadius: Double) -> Double {
+        level == .full ? max(8, min(11, stationRadius * 0.7)) : 8
+    }
+
     /// The most rings round waiting trains drawn at once, and of them the
     /// most with a tag saying why.
     public static let waitMarkLimit = 12

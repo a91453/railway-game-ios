@@ -127,6 +127,10 @@ extension GameWorld {
     /// trains, or a headway already at the end of ``LineLossFix/headways``.
     public func lineLossFix(_ kind: LineLossReason.Kind, on id: LineID) -> LineLossFix? {
         guard let line = line(id: id) else { return nil }
+        // Decision 635: a line on a real timetable sends a train out at each
+        // of its runs' times, whatever its trains or headway targets: taking
+        // one off, buying more or a longer target changes none of them.
+        if line.hasRuns, kind != .emptyRuns { return nil }
         switch kind {
         case .tooManyTrains:
             // The last one assigned: its trip under way is finished.
@@ -201,6 +205,10 @@ public struct LineLossLeader: Hashable, Sendable {
     public let name: String
     public let reason: LineLossReason.Kind
     public let loss: Money
+    /// Decision 635: the line runs a real timetable, which the station
+    /// master's remedies (a train fewer or more, another headway) do not
+    /// change.
+    public var timetable: Bool = false
 }
 
 extension GameWorld {
@@ -215,7 +223,7 @@ extension GameWorld {
             guard let diagnosis = lineLossDiagnosis(line.id), diagnosis.isLosing, let reason = diagnosis.reasons.first else { continue }
             let loss = Money(-diagnosis.profit.amount)
             if worst.map({ loss > $0.loss }) ?? true {
-                worst = LineLossLeader(line: line.id, name: line.name, reason: reason.kind, loss: loss)
+                worst = LineLossLeader(line: line.id, name: line.name, reason: reason.kind, loss: loss, timetable: line.hasRuns)
             }
         }
         return worst

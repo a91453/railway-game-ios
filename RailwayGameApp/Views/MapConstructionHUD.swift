@@ -9,6 +9,17 @@ import SwiftUI
 struct MapConstructionHUD: View {
     let preview: NetworkPreview
     let language: DisplayLanguage
+    /// Decision 646: the end's height as the build card holds it; the
+    /// height cell is slid up and down (held first, so the map still
+    /// pans) while it is not `nil`.
+    var heights: NetworkHeightCard?
+    /// Raises the end by whole metres once the finger lets go.
+    var onRaise: (Int) -> Void = { _ in }
+
+    /// The metres the finger has slid while held, not yet applied.
+    @State private var slidSteps = 0
+    @State private var isHeld = false
+    @State private var showsStepper = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -50,6 +61,7 @@ struct MapConstructionHUD: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .allowsHitTesting(false)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
             } else if preview.joinsStart || preview.joinsEnd {
@@ -66,17 +78,26 @@ struct MapConstructionHUD: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .foregroundStyle(Theme.textPrimary)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background {
+            // The panel itself lets touches through to the map.
+            Color.clear
+                .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .allowsHitTesting(false)
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
+                .allowsHitTesting(false)
         }
-        .allowsHitTesting(false)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("map.constructionHUD")
     }
 
     private var lengthFigure: some View {
+        lengthFigureContent.allowsHitTesting(false)
+    }
+
+    private var lengthFigureContent: some View {
         HStack(spacing: 4) {
             Image(systemName: "ruler")
                 .font(.caption2.weight(.bold))
@@ -89,7 +110,89 @@ struct MapConstructionHUD: View {
         .accessibilityLabel(text("Length: \(NetworkBuilding.lengthText(preview.length, in: language))", "長度：\(NetworkBuilding.lengthText(preview.length, in: language))"))
     }
 
-    private var heightFigure: some View {
+    @ViewBuilder private var heightFigure: some View {
+        if let heights, !heights.label.isEmpty {
+            slidingHeightFigure(heights)
+        } else {
+            plainHeightFigure.allowsHitTesting(false)
+        }
+    }
+
+    /// Decision 646: how high the end stands over the ground; held and
+    /// slid up or down a metre at a time (a tap opens − and +, for a
+    /// finger that cannot slide; VoiceOver adjusts it).
+    private func slidingHeightFigure(_ card: NetworkHeightCard) -> some View {
+        let reading = card.readout(steps: slidSteps, in: language)
+        let hold = LongPressGesture(minimumDuration: TrackHeightDrag.holdSeconds)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                guard case .second(true, let drag) = value else { return }
+                isHeld = true
+                if let drag {
+                    slidSteps = TrackHeightDrag.steps(forTranslation: Double(drag.translation.height), card: card)
+                }
+            }
+            .onEnded { _ in
+                let steps = slidSteps
+                slidSteps = 0
+                isHeld = false
+                if steps != 0 { onRaise(steps) }
+            }
+        return HStack(spacing: 6) {
+            if showsStepper {
+                stepButton(systemName: "minus", enabled: card.canLower, steps: -1,
+                           label: text("Lower 1 m", "降低 1 公尺"), identifier: "map.build.lower")
+            }
+            VStack(spacing: 0) {
+                Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold))
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(Theme.primary)
+            Text(verbatim: reading)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+            if showsStepper {
+                stepButton(systemName: "plus", enabled: card.canRaise, steps: 1,
+                           label: text("Raise 1 m", "架高 1 公尺"), identifier: "map.build.raise")
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(minHeight: 44)
+        .background(isHeld ? Theme.primary.opacity(0.18) : Color.clear, in: Capsule())
+        .contentShape(Rectangle())
+        .onTapGesture { showsStepper.toggle() }
+        .gesture(hold)
+        .sensoryFeedback(.selection, trigger: slidSteps)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text("Height above ground", "離地高度"))
+        .accessibilityValue(reading)
+        .accessibilityHint(text("Hold and slide up or down, or swipe up or down to adjust by 1 m.", "按住上下滑動，或用上下滑調整，每次 1 公尺。"))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: if card.canRaise { onRaise(1) }
+            case .decrement: if card.canLower { onRaise(-1) }
+            @unknown default: break
+            }
+        }
+        .accessibilityIdentifier("map.constructionHUD.height")
+    }
+
+    private func stepButton(systemName: String, enabled: Bool, steps: Int, label: String, identifier: String) -> some View {
+        Button {
+            onRaise(steps)
+        } label: {
+            Image(systemName: systemName)
+                .font(.body.weight(.bold))
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .disabled(!enabled)
+        .accessibilityLabel(Text(verbatim: label))
+        .accessibilityIdentifier(identifier)
+    }
+
+    private var plainHeightFigure: some View {
         HStack(spacing: 4) {
             Image(systemName: "arrow.up.and.down")
                 .font(.caption2.weight(.bold))
@@ -125,6 +228,7 @@ struct MapConstructionHUD: View {
                     .monospacedDigit()
             }
         }
+        .allowsHitTesting(false)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.compactText(in: language))"))
     }

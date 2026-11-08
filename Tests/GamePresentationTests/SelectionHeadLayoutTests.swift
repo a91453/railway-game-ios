@@ -15,4 +15,11 @@ final class SelectionHeadLayoutTests: XCTestCase {
         // Not measured yet: beside, as before.
         XCTAssertFalse(SelectionHeadLayout.buttonsBelow(width: 0))
     }
+
+    /// Decision 648: Follow stands in the head for a train on the map.
+    func testFollowStandsInTheHeadOnlyForATrainOnTheMapWithNoTool() {
+        XCTAssertTrue(SelectionHeadLayout.showsFollow(selectTool: true, trainOnMap: true))
+        XCTAssertFalse(SelectionHeadLayout.showsFollow(selectTool: false, trainOnMap: true))
+        XCTAssertFalse(SelectionHeadLayout.showsFollow(selectTool: true, trainOnMap: false))
+    }
 }

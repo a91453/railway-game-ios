@@ -69,9 +69,14 @@ public struct StationLabels: Equatable, Sendable {
 
     /// Every station, first named first.
     public let ranked: [Entry]
+    /// Decision 635 (Mac playtest A8): the passing loops' signal stations
+    /// (decision 204), closed to passengers: named in smaller type than a
+    /// station, and after every station.
+    public let signalStations: Set<StationID>
 
     public init() {
         ranked = []
+        signalStations = []
     }
 
     public init(world: GameWorld) {
@@ -85,9 +90,15 @@ public struct StationLabels: Equatable, Sendable {
                 counts[station, default: 0] += 1
             }
         }
+        let signals = Set(world.stations.filter { GameSession.isPassingPlace($0, in: world) }.map(\.id))
+        signalStations = signals
         ranked = world.stations
             .map { Entry(station: $0.id, level: levels[$0.id] ?? .local, lines: counts[$0.id] ?? 0) }
-            .sorted { ($1.level, $1.lines, $0.station) < ($0.level, $0.lines, $1.station) }
+            .sorted { left, right in
+                let a = signals.contains(left.station), b = signals.contains(right.station)
+                if a != b { return b }
+                return (right.level, right.lines, left.station) < (left.level, left.lines, right.station)
+            }
     }
 
     /// The level of `line`: the average straight-line distance between

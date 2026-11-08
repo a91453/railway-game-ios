@@ -1973,8 +1973,13 @@ struct MapView: View {
     private func map3DButton(compactReach: CGFloat?) -> some View {
         Button {
             screen.map3DHandoff = nil
-            // Decision 313, later: over the place the 2D map shows.
-            screen.map3DOpenedAt = camera.map { Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize) }
+            // Decision 313, later: over the place the 2D map shows;
+            // decision 645 (D5): pulled out further than a 3D scene holds,
+            // over the selected station or train, or the nearest track.
+            screen.map3DOpenedAt = camera.map {
+                Map3DHandoff.opening(from: $0, in: session.world, station: session.selectedStationID,
+                                     train: session.selectedTrainID ?? session.followedTrainID)
+            }
             screen.showsMap3D = true
         } label: {
             Image("Glyph3DMap")
@@ -2450,7 +2455,7 @@ private struct MapLabelCanvas: View, Equatable {
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
                 if part == .marks {
                     MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges,
-                                          showsTrackNumbers: layers.showsTrackNumbers, in: context)
+                                          showsTrackNumbers: layers.showsTrackNumbers, showsWaitingCounts: layers.showsWaitingCounts, in: context)
                 } else {
                     MapArt.drawStationLabels(
                         world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
@@ -3066,7 +3071,10 @@ private struct MapTopColumnOverlay: ViewModifier {
                         .tutorialTarget(session.message == nil ? nil : .statusBanner)
                     // While the network tool previews a stretch.
                 if session.tool == .network, let preview = session.networkPreview {
-                        MapConstructionHUD(preview: preview, language: session.language)
+                        MapConstructionHUD(
+                            preview: preview, language: session.language, heights: session.networkHeightCard,
+                            onRaise: { session.raiseNetworkEnd(by: $0) }
+                        )
                             .padding(.top, 12)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     } else {

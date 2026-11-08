@@ -20,22 +20,15 @@ extension GameWorld {
     /// the other way. Trip times are not changed, and a point a decision 59
     /// wait already holds is left to it.
     func planHeadwayOvertakes(_ plan: inout TrafficPlan) {
-        var headway: Set<TrainID> = []
-        // Decision 542: and of lines with runs (decision 133), whose real
-        // timetables decision 59 and 294 plan by, from where the trains
-        // actually are once one runs late.
-        for line in lines {
-            for service in 0..<line.serviceCount { headway.formUnion(line.trains(ofService: service)) }
-        }
-        let eligible = plan.services.indices.filter { s in
-            let train = plan.services[s].train
-            return headway.contains(train.id) && train.timetablePeriod == nil && !train.isDeadheading && progress(of: plan.services[s]) != nil
-        }
+        let eligible = headwayEligible(plan)
         guard eligible.count >= 2 else { return }
+        // Decision 637: where each is, worked out once, not for every pair.
+        var progresses: [Int: (point: Int, waiting: Bool, late: Int64)] = [:]
+        for s in eligible { progresses[s] = progress(of: plan.services[s]) }
         var proposals: [(slow: Int, point: Int, wait: ScheduledTrafficWait, pass: Int64)] = []
         for slow in eligible {
             for fast in eligible where fast != slow {
-                guard let proposal = headwayOvertake(&plan, slow: slow, fast: fast) else { continue }
+                guard let proposal = headwayOvertake(&plan, slow: slow, fast: fast, progresses: progresses) else { continue }
                 // One wait at a point: for the train that comes first.
                 if let old = proposals.firstIndex(where: { $0.slow == slow && $0.point == proposal.point }) {
                     if proposal.pass < proposals[old].pass { proposals[old] = (slow, proposal.point, proposal.wait, proposal.pass) }
@@ -48,6 +41,22 @@ extension GameWorld {
             let wait = proposal.wait
             guard !plan.waits.contains(where: { $0.train == wait.train && $0.station == wait.station && $0.stop == wait.stop && $0.cycle == wait.cycle }) else { continue }
             plan.waits.append(wait)
+        }
+    }
+
+    /// The services of `plan` ``planHeadwayOvertakes(_:)`` pairs: trips
+    /// of a line, not deadheading, placed at a call.
+    func headwayEligible(_ plan: TrafficPlan) -> [Int] {
+        var headway: Set<TrainID> = []
+        // Decision 542: and of lines with runs (decision 133), whose real
+        // timetables decision 59 and 294 plan by, from where the trains
+        // actually are once one runs late.
+        for line in lines {
+            for service in 0..<line.serviceCount { headway.formUnion(line.trains(ofService: service)) }
+        }
+        return plan.services.indices.filter { s in
+            let train = plan.services[s].train
+            return headway.contains(train.id) && train.timetablePeriod == nil && !train.isDeadheading && progress(of: plan.services[s]) != nil
         }
     }
 
@@ -72,9 +81,10 @@ extension GameWorld {
     /// Decision 366: the wait of `slow` for `fast` behind it (see
     /// ``planHeadwayOvertakes(_:)``), the point it is at, and when `fast`
     /// is expected to pass there; `nil` when there is none.
-    func headwayOvertake(_ plan: inout TrafficPlan, slow s: Int, fast f: Int) -> (point: Int, wait: ScheduledTrafficWait, pass: Int64)? {
+    func headwayOvertake(_ plan: inout TrafficPlan, slow s: Int, fast f: Int,
+                         progresses: [Int: (point: Int, waiting: Bool, late: Int64)] = [:]) -> (point: Int, wait: ScheduledTrafficWait, pass: Int64)? {
         let l = plan.services[s], x = plan.services[f]
-        guard let lp = progress(of: l), let fp = progress(of: x), let arrived = l.train.times?.arrival else { return nil }
+        guard let lp = progresses[s] ?? progress(of: l), let fp = progresses[f] ?? progress(of: x), let arrived = l.train.times?.arrival else { return nil }
         let at = l.points[lp.point]
         // The fast one's point at the slow one's call, on the same track,
         // not yet passed.
@@ -132,7 +142,7 @@ extension GameWorld {
             guard lp.waiting, case .onEdge(let standing, _)? = l.train.position else { return false }
             // Decision 542: off the straight track, which decision 526 makes
             // the main where keeping left takes the nominal way into a loop.
-            return standing.edge != at.berth.traversal.edge && standing.edge != trafficStraightBerth(l, at: lp.point).traversal.edge
+            return standing.edge != at.berth.traversal.edge && standing.edge != keptStraightBerth(&plan, service: s, at: lp.point).traversal.edge
         }
         func usable(_ n: Int) -> Bool {
             let c = common[n]

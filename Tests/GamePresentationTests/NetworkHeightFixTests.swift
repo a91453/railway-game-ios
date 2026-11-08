@@ -82,6 +82,38 @@ final class NetworkHeightFixTests: XCTestCase {
         XCTAssertEqual(session.networkEndRaise, 0)
     }
 
+    /// Decision 646: the HUD's height cell reads how high the end stands
+    /// over the ground, and a slide of the finger is whole metres.
+    func testHeightCellReadsAndSlidesInWholeMetres() throws {
+        let session = try lakeSession()
+        let card = try XCTUnwrap(session.networkHeightCard)
+        XCTAssertEqual(card.readout(in: .english), "On the ground")
+        XCTAssertEqual(card.readout(in: .traditionalChinese), "地面")
+        XCTAssertEqual(card.readout(steps: 11, in: .traditionalChinese), "離地 11 公尺")
+        XCTAssertEqual(card.readout(steps: -2, in: .english), "2 m underground")
+        // 14 points a metre, up (negative y) is higher; short of one metre is none.
+        XCTAssertEqual(TrackHeightDrag.steps(forTranslation: -29, card: card), 2)
+        XCTAssertEqual(TrackHeightDrag.steps(forTranslation: 14, card: card), -1)
+        XCTAssertEqual(TrackHeightDrag.steps(forTranslation: -13, card: card), 0)
+        // Held to the range GameCore takes.
+        XCTAssertEqual(TrackHeightDrag.steps(forTranslation: -100_000, card: card), card.stepsUp)
+        XCTAssertEqual(TrackHeightDrag.steps(forTranslation: 100_000, card: card), -card.stepsDown)
+        // Letting go applies the metres at once; the cell then reads them.
+        session.raiseNetworkEnd(by: 11)
+        let raised = try XCTUnwrap(session.networkHeightCard)
+        XCTAssertEqual(raised.readout(in: .english), "11 m above ground")
+        XCTAssertEqual(raised.stepsUp, card.stepsUp - 11)
+        XCTAssertEqual(raised.stepsDown, card.stepsDown + 11)
+    }
+
+    func testFirstStretchHintIsSaidOnlyBeforeAnythingIsBuilt() throws {
+        let session = try lakeSession()
+        XCTAssertTrue(session.networkOffersFreeFirstHint)
+        session.applyNetworkHeightFix(try XCTUnwrap(session.networkHeightCard?.fixes.first))
+        session.buildNetworkTrack()
+        XCTAssertFalse(session.networkOffersFreeFirstHint)
+    }
+
     func testABuildableStretchHasNoFixButKeepsTheControl() throws {
         var world = GameWorld(
             bounds: try WorldBounds(width: 262_144, height: 262_144),

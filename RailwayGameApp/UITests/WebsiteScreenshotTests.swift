@@ -217,6 +217,60 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("xiaobitan-single-3d", app)
     }
 
+    /// Decision 605 (continued): the Taoyuan Airport MRT bought as it was
+    /// before its expresses came, at 02:00 with its last trains in: its
+    /// panel's 「照真實改建」, the card saying what it lays and what it
+    /// costs, and Chang Gung Memorial Hospital station after it with four
+    /// tracks, a loop outside each platform. For the screenshot review of
+    /// the pull request that made the rebuild work.
+    func testTaoyuanAirportRebuild() {
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "tymcRebuild", "-screenshot-buy-real-before", "tymc:A"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let done = app.buttons["acquired.done"]
+        XCTAssertTrue(done.appears(within: 600), "The line is bought")
+        settle(seconds: 3)
+        keep("tymc-rebuild-before-2d", app)
+        if done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        let rebuild = app.buttons["line.rebuildAsReal"]
+        if !rebuild.appears(within: 5) {
+            let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'line.row.'")).firstMatch
+            XCTAssertTrue(row.appears(within: 10), "The bought line is listed")
+            row.tap()
+        }
+        for _ in 0..<6 where !(rebuild.exists && rebuild.isHittable) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(rebuild.becomesHittable(within: 10), "The line's panel offers the rebuild")
+        settle(seconds: 2)
+        keep("tymc-rebuild-panel", app)
+        rebuild.tap()
+        let confirm = app.buttons["line.rebuildAsReal.confirm"]
+        XCTAssertTrue(confirm.appears(within: 30), "The card offers to rebuild")
+        settle(seconds: 2)
+        keep("tymc-rebuild-card", app)
+        confirm.tap()
+        XCTAssertTrue(rebuild.disappears(within: 60), "Nothing is left to rebuild")
+        settle(seconds: 2)
+        keep("tymc-rebuild-panel-after", app)
+
+        let close = app.navigationBars.buttons["完成"].firstMatch
+        XCTAssertTrue(close.becomesHittable(within: 10), "The panel can be closed")
+        close.tap()
+        XCTAssertTrue(close.disappears(within: 10), "The panel closes")
+        settle(seconds: 5)
+        keep("tymc-rebuild-after-2d", app)
+    }
+
     /// Decision 535 (continued, KLRT): the Kaohsiung Circular Light Rail
     /// on a real map of Kaohsiung: its purchase card (round the ring, no
     /// terminal named), the card once bought, then run on to 07:40 with a
@@ -539,6 +593,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered, nothing left to fix")
             settle(seconds: 2)
             keep("track-height-bridge\(suffix)", app)
+            // Decision 646: a tap on the HUD's height cell opens − and +.
+            let cell = app.descendants(matching: .any)["map.constructionHUD.height"].firstMatch
+            XCTAssertTrue(cell.becomesHittable(within: 10))
+            cell.tap()
             let raise = app.buttons["map.build.raise"]
             XCTAssertTrue(raise.becomesHittable(within: 10))
             raise.tap()
@@ -2165,6 +2223,32 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 645 (D5, B5): the high-speed demo as it opens, the whole
+    /// line on the 2D map, then 3D: it opens on the nearest track, not on
+    /// the mountains in the middle of the island, with the game's clock in
+    /// its corner. For the screenshot review of the pull request.
+    func testHighSpeedDemo3DFromTheWholeIsland() {
+        let app = launch(extra: ["-map3D.quality", "high", "-screenshot-device-tier", "1"])
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        settle(seconds: 8)
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        // Touched again when the 3D map has not opened: run 42459052431's
+        // tap left the 2D map up for a minute (the demo at 600x; the touch
+        // cancelled while the main thread stood still, as in decision 604).
+        // Map3DHandoff.opening itself takes 0.13 s over the whole demo.
+        if !app.buttons["map3D.close"].appears(within: 10), open3D.isHittable { open3D.tap() }
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.clock"].firstMatch.appears(within: 10), "The game's clock shows")
+        settle(seconds: 12)
+        keep("high-speed-demo-3d-from-island", app)
+    }
+
     /// The selection card of a station on a phone on its side (a player's
     /// report: its summary was cut short with "…"): a station of the
     /// high-speed demo picked from its tag, the card in the side panel with
@@ -3027,6 +3111,47 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(cancel.exists)
         cancel.tap()
         XCTAssertTrue(confirm.disappears(within: 10), "Cancel keeps the saves")
+    }
+
+    /// Decisions 631 and 642: the freight scene's yards and stations
+    /// zoomed in one and two steps, where every track shows its number;
+    /// a number keeps off the switches, the points where tracks cross,
+    /// the stations' badges, waiting counts and names. Then the layer
+    /// strip folded into its one round button, and the layers sheet with
+    /// its track numbers switch. For the screenshot review of the pull
+    /// request that made the numbers keep clear.
+    func testTrackNumbersAndFoldedLayerStrip() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons.matching(identifier: "map.alert").firstMatch.appears(within: 30), "The scene has run on")
+        zoomInOnce(app)
+        settle(seconds: 2)
+        keep("track-numbers-zoom1", app)
+        zoomInOnce(app)
+        settle(seconds: 2)
+        keep("track-numbers-zoom2", app)
+
+        let collapse = app.buttons["map.quickLayer.collapse"]
+        XCTAssertTrue(collapse.appears(within: 10), "The layer strip has its fold button")
+        XCTAssertTrue(collapse.becomesHittable(within: 5))
+        collapse.tap()
+        let expand = app.buttons["map.quickLayer.expand"]
+        XCTAssertTrue(expand.appears(within: 10), "The strip folds into one button")
+        settle(seconds: 2)
+        keep("layer-strip-folded", app)
+        expand.tap()
+        XCTAssertTrue(collapse.appears(within: 10), "The strip opens again")
+
+        let more = app.buttons["map.quickLayer.more"]
+        guard more.appears(within: 5), more.becomesHittable(within: 5) else { return }
+        more.tap()
+        let numbers = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '軌道編號'")).firstMatch
+        if numbers.appears(within: 10) {
+            _ = app.dragUntilWhollyOnScreen(numbers, drags: 8)
+        }
+        settle(seconds: 2)
+        keep("layers-sheet-track-numbers", app)
     }
 
     private func zoomInOnce(_ app: XCUIApplication) {

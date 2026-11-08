@@ -84,6 +84,12 @@ extension GameWorld {
         /// Each service's ``trafficNominalDirections(_:)`` (see
         /// ``TrafficParts/nominal``), kept as the plan is worked out.
         var nominal: [TrafficParts.Nominal: Set<TrackTraversal>] = [:]
+        /// Decision 637: each service's tracks and directions at its points
+        /// (see ``TrafficParts/kept``), kept as the plan is worked out.
+        var kept: [TrainID: TrafficParts.Kept] = [:]
+        /// Decision 637: how many services run each traversal the other
+        /// way (see ``trafficOppositeCounts(_:)``).
+        var opposite: [TrackTraversal: Int]?
     }
     /// A berth of a station, the next call's station and a train's length:
     /// what ``trafficHasSiding(at:train:known:)`` reads of the network.
@@ -129,6 +135,85 @@ extension GameWorld {
         }
         /// Each service's ``trafficNominalDirections(_:)``, by what it reads.
         var nominal: [Nominal: Set<TrackTraversal>] = [:]
+        /// Decision 637: a point of a service and a berth of its station,
+        /// and at the first point, for a train standing at that berth, the
+        /// edges its body trails over.
+        struct KeptQuery: Hashable {
+            var point: Int
+            var berth: Berth
+            var trail: [TrackEdgeID]? = nil
+        }
+        /// Decision 637: what ``trafficTrack(_:at:berth:)``,
+        /// ``trafficTrackDirections(_:at:berth:)``,
+        /// ``trafficStraightBerth(_:at:)`` and
+        /// ``trafficNominalDirections(_:)`` read of a service besides the
+        /// network and the lines: its train's length, the stations of its
+        /// timetable and where it reverses, and where its points are (never
+        /// their times). Two trips of a train along the same way read the
+        /// same.
+        struct Shape: Equatable {
+            struct Stop: Equatable {
+                var station: StationID
+                var reverses: Bool
+            }
+            struct Point: Equatable {
+                var station: StationID
+                var stop: Int
+                var calls: Bool
+                var berth: Berth
+                var distance: Int64
+            }
+            var length: Int64
+            var stops: [Stop]
+            var points: [Point]
+
+            init(_ service: TrafficService) {
+                length = service.train.length
+                stops = service.train.timetable.map { Stop(station: $0.station, reverses: $0.reverses) }
+                points = service.points.map { Point(station: $0.station, stop: $0.stop, calls: $0.calls, berth: $0.berth, distance: $0.distance) }
+            }
+        }
+        /// Decision 637: what those four found for a train's points, for
+        /// the last run of the train it was kept for (a run's points are
+        /// the same in every plan, so a run needs no shape compared again).
+        struct Kept {
+            var run: Run
+            var shape: Shape
+            var tracks: [KeptQuery: TrafficTrack?] = [:]
+            var directions: [KeptQuery: Set<TrackTraversal>] = [:]
+            var straight: [Int: Berth] = [:]
+            var nominal: Set<TrackTraversal>?
+        }
+        /// By train, the last ``keptShapes`` ways it ran, the latest first:
+        /// a train going back and forth along a line runs two.
+        var kept: [TrainID: [Kept]] = [:]
+        static let keptShapes = 2
+
+        /// Keeps what `plan` worked out that a later plan reads.
+        mutating func keep(_ plan: TrafficPlan) {
+            tracks = plan.tracks
+            hasSiding = plan.hasSiding
+            nominal = plan.nominal
+            for (id, entry) in plan.kept { kept[id]?[0] = entry }
+        }
+
+        /// Puts what is kept for `service`, of `run`, first among its
+        /// train's, kept for another run of the same shape or new.
+        mutating func keep(_ service: TrafficService, run: Run) {
+            let id = service.train.id
+            var list = kept[id] ?? []
+            if list.first?.run == run { return }
+            let shape = Shape(service)
+            if let same = list.firstIndex(where: { $0.shape == shape }) {
+                var entry = list.remove(at: same)
+                entry.run = run
+                list.insert(entry, at: 0)
+            } else {
+                list.insert(Kept(run: run, shape: shape), at: 0)
+                if list.count > Self.keptShapes { list.removeLast() }
+            }
+            kept[id] = list
+        }
     }
 
     /// Scheduled meets and overtakes, including future visits, in train,
@@ -187,7 +272,7 @@ extension GameWorld {
     /// The plan, with what it reads that only a command changes from
     /// `parts`, and kept there; the paths its services' points search for
     /// kept in `paths` (decision 620).
-    func trafficPlan(parts: inout TrafficParts, paths: inout PathMemo) -> TrafficPlan {
+    func trafficPlan(parts: inout TrafficParts, paths: inout PathMemo, headwayOvertakes: Bool = true) -> TrafficPlan {
         guard isTrafficControlEnabled else { return TrafficPlan() }
         var plan = TrafficPlan()
         // Running services, and finished ones whose visits a waiting train
@@ -207,17 +292,15 @@ extension GameWorld {
             }
             if let points, points.count >= 2 {
                 plan.services.append(TrafficService(train: source, points: points))
+                parts.keep(plan.services[plan.services.count - 1], run: run)
             }
         }
         guard plan.services.count >= 2 else { return plan }
         plan.tracks = parts.tracks
         plan.hasSiding = parts.hasSiding
         plan.nominal = parts.nominal
-        defer {
-            parts.tracks = plan.tracks
-            parts.hasSiding = plan.hasSiding
-            parts.nominal = plan.nominal
-        }
+        for service in plan.services { plan.kept[service.train.id] = parts.kept[service.train.id]?.first }
+        defer { parts.keep(plan) }
         inferTrafficMeets(&plan)
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;
         // each accepted overtake rebuilds that train's meets immediately.
@@ -225,7 +308,8 @@ extension GameWorld {
             if !planTrafficOvertakes(&plan) { break }
         }
         // Decision 366: trips of lines that run at a headway.
-        planHeadwayOvertakes(&plan)
+        // Decision 637: left out only by the report that times it.
+        if headwayOvertakes { planHeadwayOvertakes(&plan) }
         plan.waits.sort {
             if $0.train != $1.train { return $0.train < $1.train }
             if $0.cycle != $1.cycle { return $0.cycle < $1.cycle }

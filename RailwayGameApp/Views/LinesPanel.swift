@@ -37,6 +37,8 @@ struct LinesPanel: View {
     @State private var confirmsRemoval = false
     /// Decision 557: the real depot being offered to the selected line.
     @State private var realDepotOffer: RealLineDepotOffer?
+    /// Decision 605: the rebuild as real being offered to the selected line.
+    @State private var realRebuildOffer: RealLineRebuildOffer?
     /// The panel removal asking first (UI review 2026-10-28, A): Undo is
     /// emptied by the next tick, and the panel leaves the game running.
     @State private var confirmingPanelRemoval: RemovalConfirmation?
@@ -158,6 +160,7 @@ struct LinesPanel: View {
                         linesSection
                         advancedSection
                         if let line = session.selectedLine {
+                            realRebuildSection(line)
                             depotSection(line)
                             lineSection(line)
                             operatingSection(line)
@@ -474,6 +477,7 @@ struct LinesPanel: View {
                 // the main actor the first time the page shows.
                 if preparedPage == line.id || memo.hasPrepared(line.id) {
                     trainsSection(line)
+                    realRebuildSection(line)
                     depotSection(line)
                     stopsSection(line)
                     lineSection(line)
@@ -616,21 +620,34 @@ struct LinesPanel: View {
                         .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("line.acquire.none")
                 }
-                ForEach(lines, id: \.id) { line in
+                // Decision 649: nearest the land owned first; one the
+                // land does not reach is greyed, with how far it is.
+                ForEach(session.realLineListings, id: \.line.id) { listing in
+                    let line = listing.line
                     Button {
                         session.offerRealLine(line)
                     } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Buy \(line.name(in: session.language))…", "收購\(line.name(in: session.language))…"))
-                        } icon: {
-                            Image(systemName: "signature")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Label {
+                                Text(verbatim: session.language.text("Buy \(line.name(in: session.language))…", "收購\(line.name(in: session.language))…"))
+                            } icon: {
+                                Image(systemName: "signature")
+                            }
+                            if let note = listing.note {
+                                Text(verbatim: note.text(in: session.language))
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
+                    .disabled(!listing.isBuyable)
                     .accessibilityIdentifier("line.acquire.\(line.network)")
                 }
             } header: {
                 Text(verbatim: session.language.text("Real lines for sale", "可收購的真實路線"))
             }
+            .onAppear { session.refreshRealLineAvailability() }
         }
     }
 
@@ -1349,6 +1366,53 @@ struct LinesPanel: View {
     }
 
     // MARK: - The selected line
+
+    /// Decision 605: a line bought before its real layout came can be
+    /// rebuilt as real, as a depot it lacks can be added (decision 557).
+    @ViewBuilder
+    private func realRebuildSection(_ line: ServiceLine) -> some View {
+        if session.rebuildsAsReal(line.id) {
+            let language = session.language
+            Section {
+                Button {
+                    realRebuildOffer = session.selectedLineRealRebuildOffer
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .foregroundStyle(Theme.primary)
+                            .frame(width: 18, height: 18)
+                            .accessibilityHidden(true)
+                        Text(verbatim: RealLineRebuildOffer.buttonTitle(in: language))
+                            .foregroundStyle(Theme.primary)
+                        Spacer(minLength: 8)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier("line.rebuildAsReal")
+                .confirmationDialog(
+                    Text(verbatim: language.text("Rebuild the line as real?", "照真實改建這條線？")),
+                    isPresented: Binding(get: { realRebuildOffer != nil }, set: { if !$0 { realRebuildOffer = nil } }),
+                    titleVisibility: .visible,
+                    presenting: realRebuildOffer
+                ) { offer in
+                    if offer.canRebuild(balance: session.world.economy.balance) {
+                        Button {
+                            session.rebuildRealLine(offer)
+                        } label: {
+                            Text(verbatim: language.text("Rebuild for \(offer.price?.moneyText ?? "")", "改建（\(offer.price?.moneyText ?? "")）"))
+                        }
+                        .accessibilityIdentifier("line.rebuildAsReal.confirm")
+                    }
+                    Button(role: .cancel) {} label: {
+                        Text(verbatim: language.text("Cancel", "取消"))
+                    }
+                } message: { offer in
+                    Text(verbatim: [offer.summaryText(in: language), offer.shortfallText(balance: session.world.economy.balance, in: language)]
+                        .compactMap(\.self).joined(separator: "\n"))
+                }
+            }
+        }
+    }
 
     /// Decision 214: the depots the line keeps its trains at (decision
     /// 209), a checklist since a line may have several (decision 221), with

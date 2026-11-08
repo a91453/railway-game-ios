@@ -118,6 +118,85 @@ public enum Map3DHandoff {
         return camera
     }
 
+    // MARK: Decision 645 (D5): where the 3D button opens
+
+    /// The most ground, in metres across, the 2D map may show for the 3D
+    /// button to open over its middle: as much as a 3D scene holds
+    /// (``Map3DScene/reach`` each way). Further out (the whole island) the
+    /// middle is mostly mountain with no track near, and the 3D map
+    /// cannot be pulled out to find the line (the Mac playtest of
+    /// 2026-11-08, D5).
+    public static let opensOverTheMiddleUpTo: Double = 2 * Map3DScene.reach
+
+    /// The ground, in metres from top to bottom, a 3D map opened over a
+    /// station, a train or the nearest track (``opening(from:in:station:train:)``)
+    /// shows: a town and its station.
+    public static let groundShownOverTarget: Double = 3_000
+
+    /// What the 3D button opens over, from the 2D map's `camera`: its
+    /// middle and zoom while it shows no more than
+    /// ``opensOverTheMiddleUpTo``; further out, the selected station
+    /// (`station`), else the selected or followed train (`train`), else the
+    /// track nearest the middle, shown ``groundShownOverTarget`` tall; with
+    /// none of those (nothing built), still the middle.
+    public static func opening(from camera: PlanCamera, in world: GameWorld, station: StationID? = nil, train: TrainID? = nil) -> Plan {
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        let shown = camera.visibleRegion
+        let middle = Plan(x: camera.centerX, y: camera.centerY, referenceSize: camera.referenceSize)
+        guard max(shown.width, shown.height) / metre > opensOverTheMiddleUpTo else { return middle }
+        // Spelled out step by step: one chained expression took Xcode's
+        // type checker too long (the iOS build failed on it).
+        var target: (x: Double, y: Double)?
+        if let id = station, let found = world.station(id: id) {
+            target = (x: Double(found.location.x), y: Double(found.location.y))
+        }
+        if target == nil, let id = train, let position = world.train(id: id)?.position,
+           let location = world.location(of: position) {
+            target = (x: Double(location.position.x), y: Double(location.position.y))
+        }
+        if target == nil {
+            target = nearestTrack(to: (x: middle.x, y: middle.y), in: world)
+        }
+        guard let target else { return middle }
+        let size = max(camera.viewport.height, 1) / groundShownOverTarget * referenceMetres
+        return Plan(x: target.x, y: target.y, referenceSize: size)
+    }
+
+    /// The point of `world`'s track (its nodes and the points along its
+    /// edges) or of a station nearest `point`, seen from above; `nil` with
+    /// none built.
+    static func nearestTrack(to point: (x: Double, y: Double), in world: GameWorld) -> (x: Double, y: Double)? {
+        var best: (x: Double, y: Double)?
+        var bestDistance = Double.infinity
+        func consider(_ x: Int64, _ y: Int64) {
+            let dx = Double(x) - point.x, dy = Double(y) - point.y
+            let distance = dx * dx + dy * dy
+            if distance < bestDistance {
+                bestDistance = distance
+                best = (Double(x), Double(y))
+            }
+        }
+        for node in world.network.nodes { consider(node.position.x, node.position.y) }
+        for edge in world.network.edges {
+            for p in world.trackGeometry(of: edge.id)?.points ?? [] { consider(p.x, p.y) }
+        }
+        for station in world.stations { consider(station.location.x, station.location.y) }
+        return best
+    }
+
+    /// How far out the 3D camera opens over the plan the 3D button handed
+    /// over (`plan`), in a scene `sceneSpan` metres across, for a view
+    /// `viewportHeight` points tall: as close as the 2D map was
+    /// (``distance(referenceSize:viewportHeight:)``), and never further than
+    /// the whole scene in view, as it opened before decision 645 (D5: "2D
+    /// 拉得很近時按 3D，3D 也是開在遠景"). From the settings, with no plan,
+    /// the whole scene.
+    public static func openingDistance(of plan: Plan?, sceneSpan: Float, viewportHeight: Double) -> Float {
+        let whole = sceneSpan * 0.9
+        guard let plan else { return whole }
+        return min(whole, distance(referenceSize: plan.referenceSize, viewportHeight: viewportHeight))
+    }
+
     /// Where the 2D map comes back: the world point the 3D camera looked
     /// at, and the 2D zoom showing as much ground (the 2D map keeps it
     /// within its own zoom range). The 3D map's "2D" button too (decision

@@ -1,0 +1,107 @@
+name: Fetch TRA timetable (ODS)
+
+# Downloads Taiwan Railway's daily timetables from TRA's open data,
+# ods.railway.gov.tw (no key; Open Government Data License, version 1),
+# for tools/real-timetables/tdx_tra_schedule.py (decision 650): the
+# cloud sessions cannot reach that host (the connection is reset), a
+# GitHub runner may. It saves the list page, the station list and each
+# daily JSON of `days` days from `start` (those the list publishes) and of
+# the `extra` dates, as the artifact `tra-ods` for a week. No secret is
+# used; the log shows only sizes and counts.
+#
+# Runs by hand (Actions -> Fetch TRA timetable (ODS) -> Run workflow) and
+# on pull requests that change this file, with the defaults.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/tra-ods-fetch.yml
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "First date, YYYY-MM-DD (empty: today in Taiwan)"
+        required: false
+        default: ""
+      days:
+        description: "How many days from the start"
+        required: false
+        default: "14"
+      extra:
+        description: "More dates, YYYY-MM-DD separated by spaces (a weekday holiday after the fortnight)"
+        required: false
+        default: "2026-12-25"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tra-ods-fetch-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download
+        env:
+          START: ${{ inputs.start }}
+          DAYS: ${{ inputs.days || '14' }}
+          EXTRA: ${{ inputs.extra || '2026-12-25' }}
+        run: |
+          python3 - <<'PY'
+          import datetime, os, pathlib, re, sys, time, urllib.error, urllib.request
+
+          base = "https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/"
+          out = pathlib.Path("tra-ods")
+          out.mkdir()
+
+          def get(url):
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(url, timeout=90) as response:
+                          return response.read()
+                  except urllib.error.HTTPError as error:
+                      sys.exit(f"{url}: HTTP {error.code}")
+                  except (urllib.error.URLError, OSError) as error:
+                      if attempt == 3:
+                          sys.exit(f"{url}: {error}")
+                      print(f"{url}: {error}; retrying")
+                      time.sleep(10 * (attempt + 1))
+
+          for value in [os.environ["START"], *os.environ["EXTRA"].split()]:
+              if value and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+                  sys.exit(f"not a date: {value}")
+          if not re.fullmatch(r"\d{1,2}", os.environ["DAYS"]):
+              sys.exit("days must be a number below 100")
+          taiwan = datetime.timezone(datetime.timedelta(hours=8))
+          start = (datetime.date.fromisoformat(os.environ["START"]) if os.environ["START"]
+                   else datetime.datetime.now(taiwan).date())
+          wanted = [start + datetime.timedelta(days=i) for i in range(int(os.environ["DAYS"]))]
+          wanted += [datetime.date.fromisoformat(d) for d in os.environ["EXTRA"].split()]
+
+          listing = get(base + "railway_schedule/JSON/list")
+          (out / "list.html").write_bytes(listing)
+          published = {date: rid for rid, date in re.findall(
+              r'exceptionDataResource/([0-9a-f]+)">(\d{8})\.json</a>', listing.decode("utf-8"))}
+          print(f"The list publishes {len(published)} days, {min(published)} to {max(published)}")
+          stations = get(base + "0518b833e8964d53bfea3f7691aea0ee")
+          (out / "stations.json").write_bytes(stations)
+          print(f"Stations: {len(stations):,} bytes")
+          for date in sorted(set(wanted)):
+              key = date.strftime("%Y%m%d")
+              if key not in published:
+                  print(f"{key}: not published")
+                  continue
+              body = get(base + "exceptionDataResource/" + published[key])
+              (out / f"{key}.json").write_bytes(body)
+              print(f"{key}: {len(body):,} bytes")
+          PY
+
+      - name: Keep the files
+        uses: actions/upload-artifact@v7
+        with:
+          name: tra-ods
+          path: tra-ods
+          retention-days: 7
+          if-no-files-found: error
