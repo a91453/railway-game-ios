@@ -10,12 +10,12 @@
 | --- | --- | --- |
 | 臺鐵基隆 `121.73923, 25.13303` | [way 929730121](https://www.openstreetmap.org/way/929730121)：89 頂點；height／levels／roof 無標籤<br>[way 1069178919](https://www.openstreetmap.org/way/1069178919)：21 頂點；layer=-1<br>[way 367861777](https://www.openstreetmap.org/way/367861777)：4 頂點；building:levels=3 | [File:North_Entrance,_TRA_Keelung_Station_20150705.jpg](https://commons.wikimedia.org/wiki/File:North_Entrance%2C_TRA_Keelung_Station_20150705.jpg)<br>[File:TRA_Keelung_Station_North_Exit_20170309.jpg](https://commons.wikimedia.org/wiki/File:TRA_Keelung_Station_North_Exit_20170309.jpg)<br>[File:KKMT_Keelung_Terminal_former_site_and_TRA_Keelung_Station_South_20181028.jpg](https://commons.wikimedia.org/wiki/File:KKMT_Keelung_Terminal_former_site_and_TRA_Keelung_Station_South_20181028.jpg) |
 | 臺鐵嘉義 `120.44158, 23.4799` | [way 286891391](https://www.openstreetmap.org/way/286891391)：13 頂點；height／levels／roof 無標籤 | [File:嘉義火車站(嘉義車站).jpg](https://commons.wikimedia.org/wiki/File:%E5%98%89%E7%BE%A9%E7%81%AB%E8%BB%8A%E7%AB%99%28%E5%98%89%E7%BE%A9%E8%BB%8A%E7%AB%99%29.jpg) |
-| 臺鐵臺南 `120.21332, 22.99714` | [way 204493488](https://www.openstreetmap.org/way/204493488)：15 頂點；height／levels／roof 無標籤<br>[way 204493489](https://www.openstreetmap.org/way/204493489)：12 頂點；height／levels／roof 無標籤<br>[way 1568887226](https://www.openstreetmap.org/way/1568887226)：4 頂點；building:levels=2<br>[way 1568933253](https://www.openstreetmap.org/way/1568933253)：4 頂點；start_date=2026-10-17 | [File:臺南車站前.jpg](https://commons.wikimedia.org/wiki/File:%E8%87%BA%E5%8D%97%E8%BB%8A%E7%AB%99%E5%89%8D.jpg)<br>[File:Tainan_Station_(2026)_-_exterior_-_img_01.jpg](https://commons.wikimedia.org/wiki/File:Tainan_Station_%282026%29_-_exterior_-_img_01.jpg) |
+| 臺鐵臺南 `120.21332, 22.99714` | [way 204493488](https://www.openstreetmap.org/way/204493488)：15 頂點；height／levels／roof 無標籤<br>[way 204493489](https://www.openstreetmap.org/way/204493489)：12 頂點；height／levels／roof 無標籤<br>[way 1568887226](https://www.openstreetmap.org/way/1568887226)：4 頂點；building:levels=2<br>[way 1568933253](https://www.openstreetmap.org/way/1568933253)：4 頂點；start_date=2026-10-17 | [File:Front Station, TRA Tainan Station 20060110.jpg](https://commons.wikimedia.org/wiki/File:Front_Station,_TRA_Tainan_Station_20060110.jpg)（2006 年正面）<br>[File:臺南車站前.jpg](https://commons.wikimedia.org/wiki/File:%E8%87%BA%E5%8D%97%E8%BB%8A%E7%AB%99%E5%89%8D.jpg)<br>[File:Tainan_Station_(2026)_-_exterior_-_img_01.jpg](https://commons.wikimedia.org/wiki/File:Tainan_Station_%282026%29_-_exterior_-_img_01.jpg) |
 | 阿里山林鐵北門 `120.45438, 23.48763` | [way 353120128](https://www.openstreetmap.org/way/353120128)：4 頂點；height／levels／roof 無標籤 | [File:北門車站.jpg](https://commons.wikimedia.org/wiki/File:%E5%8C%97%E9%96%80%E8%BB%8A%E7%AB%99.jpg) |
 | 阿里山林鐵奮起湖 `120.69492, 23.50534` | [way 444296747](https://www.openstreetmap.org/way/444296747)：4 頂點；height／levels／roof 無標籤 | [File:Funkiko Station of Arisan Railway.jpg](https://commons.wikimedia.org/wiki/File:Funkiko_Station_of_Arisan_Railway.jpg)（歷史木造站房）<br>[File:Fenqihu Station 2023.jpg](https://commons.wikimedia.org/wiki/File:Fenqihu_Station_2023.jpg)（現況站房與月台） |
 | 阿里山林鐵阿里山 `120.80434, 23.51` | [way 344586161](https://www.openstreetmap.org/way/344586161)：8 頂點；height／levels／roof 無標籤 | [File:Alishan_station_阿里山車站_-_panoramio.jpg](https://commons.wikimedia.org/wiki/File:Alishan_station_%E9%98%BF%E9%87%8C%E5%B1%B1%E8%BB%8A%E7%AB%99_-_panoramio.jpg) |
 | 糖鐵烏樹林 `120.37378, 23.32866` | 僅有 OSM 站點，無可確認的站房建物輪廓；此站外形、尺寸全為推估。 | [File:Wushulin Station building,Tainan Houbi,Taiwan.JPG](https://commons.wikimedia.org/wiki/File:Wushulin_Station_building,Tainan_Houbi,Taiwan.JPG) |
-| 糖鐵溪湖 `120.481765, 23.95205` | 僅有 OSM 站點，無可確認的站房建物輪廓；此站外形、尺寸全為推估。 | 本輪無可確認的照片連結；外觀待照片核對。 |
+| 糖鐵溪湖 `120.481765, 23.95205` | 僅有 OSM 站點，無可確認的站房建物輪廓；此站外形、尺寸全為推估。 | [File:溪湖車站 2020.jpg](https://commons.wikimedia.org/wiki/File:%E6%BA%AA%E6%B9%96%E8%BB%8A%E7%AB%99_2020.jpg)（Pbdragonwang，2020-08-16，CC BY-SA 4.0，可確認的溪湖糖廠五分車站）<br>[File:Sihu Station 01.jpg](https://commons.wikimedia.org/wiki/File:Sihu_Station_01.jpg)（2008 年站房） |
 | 糖鐵橋頭 `120.31468, 22.75303` | [way 112644875](https://www.openstreetmap.org/way/112644875)：4 頂點；layer=1，height／levels／roof 無標籤，名稱「橋頭糖廠」，實為捷運高架站體；它只作比例輪廓，**不能當成糖鐵站房的實測資料**。 | [File:Ciaotou Sugar Refinery Station 20240617.jpg](https://commons.wikimedia.org/wiki/File:Ciaotou_Sugar_Refinery_Station_20240617.jpg)（捷運站）<br>[File:五分車站 (5142751780).jpg](https://commons.wikimedia.org/wiki/File:%E4%BA%94%E5%88%86%E8%BB%8A%E7%AB%99_%285142751780%29.jpg)（糖鐵售票亭與雨棚） |
 
 ## 臺南地下化狀態
@@ -24,28 +24,38 @@
 
 ## 建模與限制
 
-九站改成各自的建築組合：基隆南北站兩個曲棚並保留舊站輪廓；嘉義以米白立面、正面拱窗、平屋頂女兒牆與中央高塊體表現站房；臺南以較高中央廳連起白色兩層站房的左右對稱兩翼，並把它與新地下站地面入口分開；北門做木構山牆；奮起湖做木造站房和獨立月台雨棚；阿里山是開敞的混凝土下層與兩個互不重疊的木構山牆；烏樹林、溪湖採不同長寬與雨棚排列；橋頭把 OSM 高架站輪廓回復到約 86 × 144 m，另依五分車照片放大紅磚售票亭與獨立雨棚。糖鐵售票亭與高架捷運站不是同一棟建築；售票亭的平面位置及尺寸是照片推估，後續仍需找到糖鐵站房的獨立 OSM 輪廓。只有真實站體是中式屋頂才會畫中式屋頂，本批沒有任意加上中式屋脊。
+依 [STATION-B2-REVIEW](https://github.com/a91453/railway-game-ios/pull/1938#issuecomment-6710977468) 的逐站照片對照，再修正外形：
 
-本輪審圖以表中照片為準：嘉義照片的米白磚牆、拱窗、站名字牌與鐘面位於高起的平頂女兒牆上，並沒有原版所畫的巨大紅瓦四坡頂，因此移除紅瓦頂；臺南 2026 年照片仍見舊站白色兩層入口與拱廊，中央廳較高、兩翼對稱是研究版的簡化；北門現況照片顯示檜木牆面已刷成灰綠色，故採照片中的灰綠色，不將「檜木原色」直接當作現況顏色。奮起湖研究版沿用表中的歷史木造照片，2023 年照片顯示現況站房已是灰色，兩個年代不能混作同一份實測。阿里山照片顯示木桁架與兩個山牆立於混凝土下層之上，故保留後方混凝土牆體、將前方做成開放柱列，並以木桁架與欄杆取代懸空窗列；灰色量體不是地面底板。
+| 站 | 本輪照片判讀與模型修正 |
+| --- | --- |
+| 基隆 | 北站為灰色石材量體，正面長招牌及橘色楣板，入口前是鋼格弧形玻璃頂；南站弧頂內的鋼件壓到屋面以下，舊站輪廓上的孤立深色三角已移除。南北站照片年代分別為 2015、2018 年。 |
+| 嘉義 | 1933 站房是米白平屋頂、中央較高塊體，五扇高圓拱窗、赭黃拱圈及牆角、鐘面、屋頂立牌與深雨庇；不沿用第一稿的紅瓦四坡頂。 |
+| 臺南 | 2006 年正面照片顯示白色兩層、中央挑高、兩翼對稱、上層拱窗、下層三拱入口與圓窗；平屋頂藏於女兒牆後，入口有厚車寄，頂部有立牌旗桿。新地下化車站地面入口獨立呈現；OSM 的啟用與未證實完工範圍見上節。 |
+| 北門 | 2021 照片的現況檜木板牆**刷深綠漆**，非裸檜木咖啡色；四面白框窗、灰黑陡坡瓦頂與深色屋脊。 |
+| 奮起湖 | 以 2023 現況照的灰色木板牆、灰綠瓦頂與月台雨棚為準；歷史照片只說明舊站年代，沒有混入此模型。雨棚低於主屋簷，裁切後曾留在後簷的細桿已移除。為保留接近 OSM 輪廓的屋面，屋簷高度推估為 5.6 m，使跨入月台包絡的部分高過 5.5 m 淨空；此高度並非實測。 |
+| 阿里山 | 照片下層是封閉的淺灰混凝土量體與三個入口，前方寬石階通往上層；上層兩座山牆加紅褐木桁架和欄杆。石階為獨立可選情境零件。 |
+| 烏樹林 | 深褐木板牆、白與淺藍窗框、灰黑陡坡瓦頂、同色山牆及站名匾。月台與淺藍欄杆置於獨立情境零件。 |
+| 溪湖 | 新找到的 2020 [溪湖車站照片](https://commons.wikimedia.org/wiki/File:%E6%BA%AA%E6%B9%96%E8%BB%8A%E7%AB%99_2020.jpg) 可確認是五分車站；可見深褐木構、淺色填牆、長而低的木柱雨棚。審查圖原照片中的右側混凝土建物身分不明，故不以它作站房外形依據。 |
+| 橋頭 | 捷運橋頭糖廠站是灰色混凝土高架站體與弧頂；紅磚僅屬糖鐵售票亭。售票亭加售票窗及招牌，旁側淺灰綠單斜雨棚低於亭頂、與亭體分離。月台與欄杆置於獨立情境零件。 |
 
-所有模型都使用 StationKitBuilder 的盒體、坡頂、曲棚、柱列及發光窗列。牆面、屋頂、窗框按可見照片分色；木造小站有木牆、深色瓦頂與出簷。阿里山開放上層的夜燈裝在木欄杆，下層燈帶貼在頂板簷底，燈具的尺寸與數量是推估。山牆封面與牆體同色，入口雨棚移到主屋簷前下方或與主屋頂分離；奮起湖原本裁切後剩下的孤立細桿已移除。四坡頂瓦條改為出簷上的短瓦端，不再從正面露出細桿。所有 OSM 輪廓以非實心薄邊保留在原生模型及 GLB，預覽圖為了站房完整取景隱藏薄邊。沒有地面底板。
+照片只用於觀察輪廓、顏色和比例，不作貼圖。站名以幾何色塊示意，不是真實文字。模型均使用 StationKitBuilder 的盒體、坡頂、曲棚、柱列及發光窗列；牆高、屋頂坡度、出簷、窗框和裝飾尺寸仍屬照片推估，非實測。小木站屋頂平面約為牆面的 1.2–1.4 倍。OSM 輪廓以非實心薄邊保留在原生模型及 GLB，近鏡預覽隱藏薄邊。站房本體沒有實心地面底板；阿里山石階、烏樹林及橋頭的月台欄杆是可選、獨立模型，不參與遊戲選型。
 
 地面軌道與月台邊緣的 2.2 m 水平、5.5 m 高度包絡內三角形會裁掉；臺南地下月台與軌道依地下化標示處理，地面入口不受地下月台的地面包絡約束。橋頭高架站體從 8 m 起建。8 m 是保守研究推估，正式工程淨空須另測。近景目標 1,500–5,000 三角、上限 6,000；遠景上限 2,500。實際數量見下表及私庫 `manifest.json`。
 
 | 站點 | 近景三角 | 遠景三角 |
 | --- | ---: | ---: |
-| 臺鐵基隆 | 4537 | 1303 |
-| 臺鐵嘉義 | 1689 | 777 |
-| 臺鐵臺南 | 3782 | 1742 |
-| 林鐵北門 | 1898 | 230 |
-| 林鐵奮起湖 | 1664 | 386 |
-| 林鐵阿里山 | 2598 | 630 |
-| 糖鐵烏樹林 | 2206 | 466 |
-| 糖鐵溪湖 | 2050 | 394 |
-| 糖鐵橋頭 | 2980 | 1048 |
+| 臺鐵基隆 | 3307 | 1513 |
+| 臺鐵嘉義 | 2334 | 1119 |
+| 臺鐵臺南 | 4600 | 2278 |
+| 林鐵北門 | 1982 | 686 |
+| 林鐵奮起湖 | 1718 | 482 |
+| 林鐵阿里山 | 2861 | 893 |
+| 糖鐵烏樹林 | 1558 | 598 |
+| 糖鐵溪湖 | 2374 | 562 |
+| 糖鐵橋頭 | 2432 | 1220 |
 
-烏樹林和溪湖在 OSM 只有站點，沒有可認定的站房輪廓，因此不借用附近咖啡館或工廠當站房。溪湖照片資料目前不足，站房和雨棚尺寸、顏色仍是待核對的推估。
+烏樹林和溪湖在 OSM 只有站點，沒有可認定的站房輪廓，因此不借用附近咖啡館或工廠當站房。溪湖已有可確認的 2020 年站房照片，但站房與雨棚的三維尺寸仍是推估。
 
 ## 交付與檢查
 
-公開庫保留 Swift 配方、測試、本 README、九站各一張完整近景的 `overview.png`、舊版 `overview-before.png`、`before/` 原始近景、九張改前／改後對照圖及 `front/` 正面平視圖。基隆、臺南、橋頭的對照圖另用站房局部近鏡頭，主體占畫面過半；橋頭對照圖聚焦糖鐵售票亭，完整高架站與售票亭仍同列總覽。逐方向原生模型、GLB、日夜七向透明 PNG 和可離線 viewer 在私有素材庫 `game-art-previews/docs/art/station-exteriors-batch2/`，只保留最新一輪。測試鎖住站數、近遠景預算、夜間發光、OSM 非閉合頂點資料、無地面底板，以及地面軌道與月台包絡的逐三角淨空；不代表 iOS Metal 實機驗證。
+公開庫保留 Swift 配方、測試、本 README、九站各有日間近景、夜間近景與日間遠景的 `overview.png`、舊版 `overview-before.png`、`before/` 原始近景、十張同審查鏡頭的改前／改後對照圖（基隆南北站各一）及 `front/` 正面平視圖。基隆、臺南、橋頭的對照圖另用站房局部近鏡頭，主體占畫面過半；橋頭局部圖隱藏被近鏡裁成碎片的捷運墩柱，完整高架站與售票亭均保留在原生模型與遠景。私有庫 `review/pairs/` 另有十張真實照片／修改後模型同角度並排圖，其照片來源、作者與授權列於 `REVIEW-README.md`。逐方向原生模型、GLB、日夜七向透明 PNG 和可離線 viewer 在私有素材庫 `game-art-previews/docs/art/station-exteriors-batch2/`，只保留最新一輪。測試鎖住站數、近遠景預算、夜間發光、OSM 非閉合頂點資料、無地面底板，以及地面軌道與月台包絡的逐三角淨空；不代表 iOS Metal 實機驗證。

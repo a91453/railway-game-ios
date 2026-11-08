@@ -2,6 +2,49 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DStationExteriorBatch2Tests: XCTestCase {
+    func testFenqihuHasNoDetachedRearSidingRods() {
+        let model = Map3DStationExteriorBatch2.model(for: .fenqihu, detail: .near)
+        let oldRod = Map3DColor.rgb(0x70553E)
+        // The old rear wall was cut by the platform clearance, leaving 4.1 m
+        // high, 0.055 m wide cladding boxes without a supporting wall.
+        XCTAssertFalse(model.vertices.contains {
+            $0.color == oldRod && abs($0.x - 12) < 0.12 &&
+            $0.z > 3.9 && abs($0.y - 7) < 9
+        })
+        XCTAssertFalse(model.vertices.contains {
+            $0.color == Map3DColor.rgb(0xEDEDE8) && $0.x < 20 && $0.z > 1.0
+        }, "Rear white window frames were clipped into detached rods")
+    }
+    func testFenqihuShelterIsBelowAndSeparateFromMainRoof() {
+        let model = Map3DStationExteriorBatch2.model(for: .fenqihu, detail: .near)
+        let shelter = model.vertices.filter { $0.color == Map3DColor.rgb(0x77746D) }
+        XCTAssertFalse(shelter.isEmpty)
+        // The shelter starts past the front wall and remains below the roof
+        // eave, leaving no triangle intersection despite a shallow eave overlap.
+        guard let shelterFront = shelter.map(\.x).min(),let shelterTop=shelter.map(\.z).max() else { return }
+        XCTAssertGreaterThan(shelterFront, 30.5)
+        XCTAssertLessThan(shelterTop + 0.3, 5.48)
+    }
+    func testKeelungSouthInternalSteelStaysBelowCanopyAndOldRoofCannotFragment() {
+        let model = Map3DStationExteriorBatch2.model(for: .keelung, detail: .near)
+        let steel = model.vertices.filter { $0.color == Map3DColor.rgb(0x42525A) && $0.x < -60 }
+        XCTAssertFalse(steel.isEmpty)
+        XCTAssertLessThan(steel.map(\.z).max()!, 8.0)
+        XCTAssertFalse(model.vertices.contains { $0.color == Map3DColor.rgb(0x55585B) })
+    }
+    func testQiaotouShelterRoofIsBelowTicketBoothRoof() {
+        let model = Map3DStationExteriorBatch2.model(for: .qiaotou, detail: .near)
+        let shelter = model.vertices.filter { $0.color == Map3DColor.rgb(0xBEC6C1) && $0.x > 30 }
+        XCTAssertFalse(shelter.isEmpty)
+        XCTAssertLessThan(shelter.map(\.z).max()!, 4.05)
+        XCTAssertGreaterThan(shelter.map(\.x).min()!, 37.1)
+    }
+    func testWushulinGableUsesTheDarkTimberWallColor() {
+        let model = Map3DStationExteriorBatch2.model(for: .wushulin, detail: .near)
+        let timber = Map3DColor.rgb(0x604637)
+        XCTAssertTrue(model.vertices.contains { $0.color == timber && $0.z > 3 && $0.x > 5 })
+        XCTAssertFalse(model.vertices.contains { $0.color == Map3DColor.rgb(0xD2D1C5) && $0.z > 4.8 })
+    }
     func testNineStudiesKeepBudgetsLightingAndIsolation() {
         XCTAssertEqual(Map3DStationExteriorBatch2.Station.allCases.count, 9)
         for station in Map3DStationExteriorBatch2.Station.allCases {
@@ -19,6 +62,29 @@ final class Map3DStationExteriorBatch2Tests: XCTestCase {
             for i in stride(from: 0, to: near.vertices.count, by: 3) {
                 let t = near.vertices[i..<(i + 3)]
                 XCTAssertFalse(t.allSatisfy { $0.color == Map3DPalette.ground && abs($0.z - 0.32) < 0.002 }, station.rawValue)
+            }
+        }
+    }
+    func testOptionalContextRemainsSeparateAndWithinClearance() {
+        for station: Map3DStationExteriorBatch2.Station in [.alishan,.wushulin,.qiaotou] {
+            let body = Map3DStationExteriorBatch2.model(for: station, detail: .near)
+            let context = Map3DStationExteriorBatch2.contextModel(for: station, detail: .near)
+            let scene = Map3DStationExteriorBatch2.model(for: station, detail: .near, includeContext: true)
+            XCTAssertNotNil(context)
+            XCTAssertNotEqual(body.name, scene.name)
+            XCTAssertLessThanOrEqual(scene.triangleCount, 6_000)
+            XCTAssertNil(Map3DStationKit.model(id: scene.name))
+            for model in [context,scene].compactMap({ $0 }) {
+                for i in stride(from: 0, to: model.vertices.count, by: 3) {
+                    let triangle = Array(model.vertices[i..<(i+3)])
+                    guard triangle.map(\.z).min()! < 5.5 else { continue }
+                    let plan = triangle.map { ($0.x,-$0.y) }
+                    for path in Map3DStationExteriorBatch2.clearancePaths(for: station) {
+                        for j in path.indices.dropLast() {
+                            XCTAssertFalse(Map3DStationExteriorBatch2.triangleTouchesCorridor(plan,path[j],path[j+1],radius:2.2),"\(station.rawValue) optional context triangle \(i/3)")
+                        }
+                    }
+                }
             }
         }
     }
@@ -74,7 +140,7 @@ final class Map3DStationExteriorBatch2Tests: XCTestCase {
         // The estimated sugar-rail ticket office is at ground level outside the
         // mapped MRT platform. The full-size MRT envelope remains above 8 m.
         XCTAssertTrue(qiaotou.vertices.contains { $0.z >= 8 && $0.x < 15 })
-        XCTAssertTrue(qiaotou.vertices.filter { $0.z < 5.5 }.allSatisfy { $0.x > 20 })
+        XCTAssertTrue(qiaotou.vertices.filter { $0.z < 5.5 && $0.x < 20 }.allSatisfy { $0.color != Map3DColor.rgb(0xA95D4B) })
         let tainan = Map3DStationExteriorBatch2.model(for: .tainan, detail: .near)
         for (east, north) in Map3DStationExteriorBatch2.way1568933253 {
             XCTAssertTrue(tainan.vertices.contains { abs($0.x - east) < 0.002 && abs($0.y + north) < 0.002 && abs($0.z - 8.32) < 0.002 })
