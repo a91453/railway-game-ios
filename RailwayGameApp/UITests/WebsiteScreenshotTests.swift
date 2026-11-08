@@ -432,21 +432,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("sights-on-the-map", app)
         // The identifier on a DisclosureGroup may not reach the element
-        // its row becomes; its label always does (run 42519070451). The
-        // panel fills the phone on its side, and dragging the first
-        // collection view did not bring the last section in (run
-        // 42521476908), so swipe the panel itself.
+        // its row becomes; its label always does (run 42519070451). Quick
+        // swipes left the list at its top (its scroll bar at 0% after 12,
+        // run 42526811886): press and drag, as the other panels' shots do.
         let folded = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier == 'tourism.offMap' OR label BEGINSWITH '地圖外的景點'")
         ).firstMatch
-        var reached = false
-        for _ in 0..<12 {
-            if folded.exists, folded.isHittable, app.windows.firstMatch.frame.contains(folded.frame) {
-                reached = true
-                break
-            }
-            app.swipeUp(velocity: .slow)
-        }
+        let reached = scrollScreen(to: folded, in: app, drags: 12)
         if !reached {
             let tree = XCTAttachment(string: app.debugDescription)
             tree.name = "sights-tree"
