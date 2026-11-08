@@ -96,14 +96,17 @@ final class DepotReturnReportTests: XCTestCase {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let (session, id) = try Self.taoyuanAirportBoughtBefore(simple: simple)
         session.selectLine(id)
-        // Decision 652: as a player would, a minute at a time until no
-        // train's way runs over the stretch rebuilt (at most three hours).
-        for _ in 0..<180 where session.selectedLineRealRebuildOffer?.problem != nil {
+        // Decision 652: as a player would, ten minutes at a time until no
+        // train's way runs over the stretch rebuilt (at most a day): with
+        // A12's crossover facing the trains in, two empty runs still cross
+        // Chang Gung at two in the morning.
+        for _ in 0..<144 where session.selectedLineRealRebuildOffer?.problem != nil {
             XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
-                try world.advance(ticks: 1)
+                try world.advance(ticks: 10)
                 return ""
             })
         }
+        print("DEPOT_RETURN tymc-rebuilt: rebuilt at \(session.world.clock.now.seconds / 60) min")
         XCTAssertTrue(session.rebuildRealLine(try XCTUnwrap(session.selectedLineRealRebuildOffer)), session.message?.text ?? "")
         try report("tymc-rebuilt", session.world)
     }
