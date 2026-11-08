@@ -2179,6 +2179,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(open3D.appears(within: 10))
         XCTAssertTrue(open3D.becomesHittable(within: 10))
         open3D.tap()
+        // Touched again when the 3D map has not opened: run 42459052431's
+        // tap left the 2D map up for a minute (the demo at 600x; the touch
+        // cancelled while the main thread stood still, as in decision 604).
+        // Map3DHandoff.opening itself takes 0.13 s over the whole demo.
+        if !app.buttons["map3D.close"].appears(within: 10), open3D.isHittable { open3D.tap() }
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
         XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
         XCTAssertTrue(app.descendants(matching: .any)["map3D.clock"].firstMatch.appears(within: 10), "The game's clock shows")
