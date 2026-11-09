@@ -602,6 +602,25 @@ private extension StationKitBuilder {
         box(x+15.2,5.5,z+8,0.34,10.2,0.55,rgb(0xA9B6B8))
         windows(x+15.1,1.5,z,39,count:12,glass:rgb(0x8CACB4),frame:steel,detail:detail)
         canopy(x,8.2,z,length:43,width:54,rise:2.8,color:rgb(0xD4DEE0))
+        // Raised seams divide the metal sheets every 3.6 m in the close LOD.
+        // The pale ridge strip reads as a skylight at the 30-degree approach;
+        // both are ordinary opaque geometry so they work on Vulkan as well.
+        let topSeam=rgb(0x9BAEB3), skylight=rgb(0xBFE3E5)
+        let seamCount=detail == .near ? 15 : 7
+        for i in 0...seamCount {
+            let t=Float(i)/Float(seamCount)
+            let zz=z-27+t*54
+            let yy=8.2+2.8*sinf(t*Float.pi)+0.075
+            beam(Map3DPoint(x-21.35,yy,zz),Map3DPoint(x+21.35,yy,zz),
+                 detail == .near ? 0.12 : 0.16,topSeam)
+        }
+        box(x,10.99,z,41.8,3.6,0.12,skylight)
+        if detail == .near {
+            for side: Float in [-1,1] {
+                beam(Map3DPoint(x-20.9,11.11,z+side*1.87),
+                     Map3DPoint(x+20.9,11.11,z+side*1.87),0.09,topSeam)
+            }
+        }
         // The south forecourt canopy projects 6.5 m beyond the 30 m hall.
         // Its pale skin needs a separate dark steel edge and an open underside:
         // the low approach hides the upper wall behind this large projection.

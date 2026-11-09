@@ -108,6 +108,14 @@ final class Map3DStationExteriorBatch2Tests: XCTestCase {
         let columnColors = Set([1.0,0.92,0.80,0.70,0.86].map { Map3DColor.shaded(Map3DColor.rgb(0xB8C5C9),$0) })
         let columns = near.vertices.filter { columnColors.contains($0.color) && $0.x > -64 && $0.x < -62 && $0.z < 1 }
         XCTAssertFalse(columns.isEmpty)
+        let roofSeam = Map3DColor.rgb(0x9BAEB3)
+        let nearRoofSeams = near.vertices.filter { $0.color == roofSeam && $0.x < -60 && $0.z > 8.0 }
+        let farRoofSeams = far.vertices.filter { $0.color == roofSeam && $0.x < -60 && $0.z > 8.0 }
+        XCTAssertGreaterThan(nearRoofSeams.count, farRoofSeams.count)
+        XCTAssertGreaterThan(nearRoofSeams.count, 400)
+        let skylight = Map3DColor.rgb(0xBFE3E5)
+        XCTAssertTrue(near.vertices.contains { $0.color == skylight && $0.x < -60 && $0.z > 10.9 })
+        XCTAssertTrue(far.vertices.contains { $0.color == skylight && $0.x < -60 && $0.z > 10.9 })
         XCTAssertLessThan(near.triangleCount, 8_000)
         XCTAssertLessThan(far.triangleCount, 3_000)
     }
