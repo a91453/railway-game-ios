@@ -27,13 +27,13 @@ var records: [[String:Any]]=[]
     records.append(record)
 }
 for part in Map3DResidentialKit.Part.allCases {
-    try export(Map3DResidentialKit.model(for:part),info:["name":part.name,"category":part.category.rawValue,"mount":part.mount.rawValue,"fidelity":"remixed-native-game-asset",
+    try export(Map3DResidentialKit.model(for:part,far:false),info:["name":part.name,"category":part.category.rawValue,"mount":part.mount.rawValue,"fidelity":"remixed-native-game-asset",
         "connectors":part.connectors.map { ["name":$0.name,"position":[$0.position.x,$0.position.y,$0.position.z],"normal":[$0.normal.x,$0.normal.y,$0.normal.z]] }])
 }
 for example in Map3DResidentialKit.Example.allCases {
     try export(Map3DResidentialKit.model(for:example),info:["name":example.name,"category":"example","fidelity":"illustrative-assembly"])
 }
-let manifest: [String:Any]=["schema_version":1,"generator":"Map3DResidentialKit","recipe_version":1,"model_count":records.count,"part_count":24,"example_count":4,
+let manifest: [String:Any]=["schema_version":1,"generator":"Map3DResidentialKit","recipe_version":1,"model_count":records.count,"part_count":26,"example_count":4,
     "native_coordinates":"metres; +x front, +y left, +z up","gltf_coordinates":"metres; +x front, +y up, -z left",
     "directions":["top","bottom","left","right","front","back","isometric"],"models":records,
     "notes":"Static game models, recomposed from private reference construction methods and original geometry; illustrative Taiwan neighbourhood assets, not surveyed buildings or navigation meshes."]
