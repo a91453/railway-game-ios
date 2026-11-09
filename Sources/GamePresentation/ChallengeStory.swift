@@ -40,6 +40,15 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
     /// Ah-Kun's letters (Jiji): a worker on the Sun Moon Lake works in the
     /// 1920s, who never appears; his letters to his mother do.
     case ahKun
+    /// Granny Peng (Neiwan): a Hakka woman who keeps a rice-noodle shop on
+    /// Neiwan's old street.
+    case pengPo
+    /// Uncle Luo (Neiwan): a retired worker from Zhudong who rode the line
+    /// to work in the 1950s and '60s.
+    case luo
+    /// Xiaoyu (Neiwan): a young person working in Taipei who goes home to
+    /// Zhudong to help the family.
+    case xiaoYu
     /// Mr Chou (the sandbox challenges): the young founder of the company,
     /// who keeps a close eye on its books.
     case chou
@@ -62,6 +71,9 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .lin: language.text("Master Lin", "林師傅")
         case .xiulan: language.text("Xiulan", "秀蘭")
         case .ahKun: language.text("Ah-Kun's letter home", "阿坤的家書")
+        case .pengPo: language.text("Granny Peng", "彭阿婆")
+        case .luo: language.text("Uncle Luo", "阿羅伯")
+        case .xiaoYu: language.text("Xiaoyu", "小宇")
         case .chou: language.text("Mr Chou", "周老闆")
         case .fang: language.text("Fang", "阿芳")
         case .mayorChen: language.text("Mayor Chen", "陳鎮長")
@@ -82,6 +94,9 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .lin: "StoryLin"
         case .xiulan: "StoryXiulan"
         case .ahKun: "StoryAhKunLetter"
+        case .pengPo: "StoryPengPo"
+        case .luo: "StoryLuo"
+        case .xiaoYu: "StoryXiaoYu"
         case .chou: "StoryChou"
         case .fang: "StoryFang"
         case .mayorChen: "StoryMayorChen"
@@ -239,7 +254,7 @@ public struct ChallengeStory: Sendable {
     let beats: [StoryBeat]
 
     /// Every challenge's story there is.
-    static let all: [ChallengeStory] = [PingxiChallenge.story, LiuMingchuanChallenge.story, BranchLineChallenge.jijiStory] + Challenge.sandboxStories
+    static let all: [ChallengeStory] = [PingxiChallenge.story, LiuMingchuanChallenge.story, BranchLineChallenge.jijiStory, BranchLineChallenge.neiwanStory] + Challenge.sandboxStories
 
     /// The story of the challenge `id`, if it has one.
     public static func named(_ id: String) -> ChallengeStory? {
