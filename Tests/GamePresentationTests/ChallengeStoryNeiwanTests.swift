@@ -24,6 +24,7 @@ final class ChallengeStoryNeiwanTests: XCTestCase {
         )
         XCTAssertEqual(StoryCharacter.pengPo.name(in: .traditionalChinese), "彭阿婆")
         XCTAssertEqual(StoryCharacter.luo.name(in: .english), "Uncle Luo")
+        XCTAssertEqual(StoryCharacter.luo.name(in: .traditionalChinese), "阿羅伯")
         XCTAssertEqual(StoryCharacter.xiaoYu.portrait, "StoryXiaoYu")
     }
 

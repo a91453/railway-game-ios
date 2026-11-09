@@ -72,7 +72,7 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .xiulan: language.text("Xiulan", "秀蘭")
         case .ahKun: language.text("Ah-Kun's letter home", "阿坤的家書")
         case .pengPo: language.text("Granny Peng", "彭阿婆")
-        case .luo: language.text("Uncle Luo", "羅伯")
+        case .luo: language.text("Uncle Luo", "阿羅伯")
         case .xiaoYu: language.text("Xiaoyu", "小宇")
         case .chou: language.text("Mr Chou", "周老闆")
         case .fang: language.text("Fang", "阿芳")

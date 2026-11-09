@@ -34,7 +34,7 @@ extension BranchLineChallenge {
         StoryBeat(
             "neiwan.2", .day(10), .luo,
             "Back in the fifties I rode this line to work every morning, and the freight cars behind us were stacked with timber and cement. The train was never on time, but it never left us behind.",
-            "民國五十幾年，我天天坐這條線去上工，後頭的貨車裝的都是木頭和水泥。火車從來不準時，可是也從來沒有丟下我們。"
+            "民國四十幾年，我天天坐這條線去上工，後頭的貨車裝的都是木頭和水泥。火車從來不準時，可是也從來沒有丟下我們。"
         ),
         StoryBeat(
             "neiwan.3", .milestone(0), .xiaoYu,
@@ -49,8 +49,8 @@ extension BranchLineChallenge {
         ),
         StoryBeat(
             "neiwan.5", .riders(percent: 25), .xiaoYu,
-            "Past Zhudong is Hexing, a little wooden station. People came from all over to take photos of it. It's quiet since last October, but I still tell my friends to come and see it.",
-            "過了竹東就是合興，一座木頭小站。以前很多人專程來拍照；去年 10 月熄燈之後安靜了，我還是會叫朋友來看看。"
+            "Past Zhudong is Hexing, a little wooden station. People came from all over to take photos of it. It's been quiet since October 2025, but I still tell my friends to come and see it.",
+            "過了竹東就是合興，一座木頭小站。以前很多人專程來拍照；2025 年 10 月熄燈之後安靜了，我還是會叫朋友來看看。"
         ),
         StoryBeat(
             "neiwan.6", .cashBelowZero, .stationMaster,
