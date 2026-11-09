@@ -22,7 +22,8 @@ extension GameWorld {
     /// time when it cannot take it whole: an empty run under traffic
     /// control without block sections.
     func takesRouteByWaitingPoints(_ train: Train) -> Bool {
-        isTrafficControlEnabled && !blockSections && train.isDeadheading
+        guard isTrafficControlEnabled, !blockSections, train.isDeadheading, let first = train.timetable.first else { return false }
+        return station(id: first.station)?.isDepot == true
     }
 
     /// How far along its route (see ``AuthorityEnvelopes``) `train`'s
@@ -35,7 +36,8 @@ extension GameWorld {
         var fitting: [StationID: Int] = [:]
         for platform in network.platforms where platform.length >= train.length { fitting[platform.station, default: 0] += 1 }
         for platform in network.platforms where platform.length >= train.length {
-            guard fitting[platform.station, default: 0] >= 3, station(id: platform.station)?.isDepot == false, let edge = network.edge(platform.edge) else { continue }
+            guard fitting[platform.station, default: 0] >= 3, station(id: platform.station)?.isDepot == false,
+                  !train.timetable.contains(where: { $0.station == platform.station }), let edge = network.edge(platform.edge) else { continue }
             ends[TrackTraversal(edge: platform.edge, direction: .forward), default: []].append(platform.end)
             ends[TrackTraversal(edge: platform.edge, direction: .backward), default: []].append(edge.length - platform.start)
         }
