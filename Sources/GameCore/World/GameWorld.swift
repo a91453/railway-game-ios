@@ -2918,7 +2918,10 @@ public struct GameWorld: Equatable, Sendable {
             // deadlock to a passing place; failing that (decision 278), a
             // train following others onto a berth a train without a
             // service stands on goes to another berth.
-            if start.isWholeMinute, let resolved = resolveDeadlock(memo: &memo) ?? changeBerth(memo: &memo) {
+            // Decision 666: failing that, a train between runs in the way
+            // of a train waiting for its route, its own way into a depot
+            // held, steps aside.
+            if start.isWholeMinute, let resolved = resolveDeadlock(memo: &memo) ?? changeBerth(memo: &memo) ?? makeWayForDepot(memo: &memo) {
                 held.removeAll { $0.candidate.id == resolved }
                 changed = true
             }
@@ -4022,6 +4025,44 @@ public struct GameWorld: Equatable, Sendable {
         guard let changed = berthChange(memo: &memo.directions), let index = trains.firstIndex(where: { $0.id == changed.id }) else { return nil }
         trains[index] = changed
         return changed.id
+    }
+
+    /// Decision 666: once a minute, after the dispatcher's deadlock phase
+    /// and decision 278's change of berth have done nothing, a train of a
+    /// line with runs, between them, that its line would send into a depot
+    /// but for its way there, and that stands in the way of a train waiting
+    /// for its route, steps aside (see ``depotBoundMakingWay(memo:)``). On
+    /// the Taoyuan Airport MRT under the simple rules with traffic
+    /// control, a train out of Luzhu depot came to the National Taiwan
+    /// Sport University too late for its run and stood on the platform
+    /// towards Taipei, facing it: its way back to the depot went on to
+    /// Taipei and back, never free at once, and the services behind it
+    /// bound for that platform waited for it all day. It goes as an empty
+    /// run of its line does (decision 172), as fast as it can, not at the
+    /// crawl of a train without a service: a long way held at a crawl held
+    /// up the services behind it. Returns the train's ID, or `nil`.
+    private mutating func makeWayForDepot(memo: inout DispatchMemo) -> TrainID? {
+        guard let (aside, station, distance) = depotBoundMakingWay(memo: &memo),
+              let index = trains.firstIndex(where: { $0.id == aside.id }),
+              let here = stationsStoppedAt(by: aside.id).first
+        else { return nil }
+        let now = clock.now
+        var moved = aside
+        let run = run(of: moved, length: distance)
+        let seconds = run?.seconds ?? 0
+        moved.trafficVisits = []
+        moved.timetable = [
+            ScheduledStop(station: here, arrival: now, departure: now),
+            ScheduledStop(station: station, arrival: GameTime(seconds: now.seconds + seconds), departure: GameTime(seconds: now.seconds + seconds)),
+        ]
+        moved.timetablePeriod = nil
+        moved.execution = .travellingToStop(1, cycle: 0)
+        moved.isDeadheading = true
+        moved.isStandingAside = false
+        moved.times = ServiceTimes(arrival: now, departure: now, run: run)
+        trains[index] = moved
+        countDeadhead(distance, of: aside.id)
+        return aside.id
     }
 
     /// Whether a train without a service may be due to be sent out by its

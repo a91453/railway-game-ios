@@ -400,49 +400,98 @@ extension GameWorld {
         guard isTrafficControlEnabled, !stuck.isEmpty else { return nil }
         var dispatch = DispatchMemo()
         for spare in trains where isSpare(spare, memo: &dispatch) {
-            guard let place = spare.placement else { continue }
-            let own = held(spare)
-            let waiting = stuck.keys.sorted().filter { network.fouls(own, routeEnvelope(of: stuck[$0]!.candidate).resources) }
-            guard !waiting.isEmpty else { continue }
-            let blocked = blockedTrack(except: spare.id, holders: trackHolders(memo: &memo))
-            let starts = stationsBesideWholeTrain(spare.id).isEmpty ? [place] : [place, turnedRound(place)]
-            var best: (train: Train, distance: Int64)?
-            let targets = standingAsideTargets(for: spare)
-            for start in starts {
-                for target in targets {
-                    guard let way = path(from: start.position, toStation: target.station, length: spare.length, avoiding: blocked, only: target.berth),
-                          way.distance > 0, way.distance < best?.distance ?? .max
-                    else { continue }
-                    var moving = spare
-                    moving.position = start.position
-                    moving.trailEdges = start.trailEdges
-                    follow(way, &moving)
-                    guard case .granted(let granted) = reserving(moving, memo: &memo) else { continue }
-                    // Standing there, it must let a train it held up go.
-                    let there = placement(start, after: way)
-                    var standing = spare
-                    standing.position = there.position
-                    standing.trailEdges = there.trailEdges
-                    standing.movement.edges = []
-                    standing.movement.cursor = 0
-                    standing.movement.end = way.end
-                    standing.reservation = []
-                    let aside = replacing(standing)
-                    let frees = waiting.contains { id in
-                        let request = stuck[id]!
-                        guard request.departs else {
-                            return aside.holder(of: aside.envelopeCover(of: request.candidate), except: id, holders: aside.trackHolders(memo: &memo)) == nil
-                        }
-                        if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { return true }
-                        return false
-                    }
-                    guard frees else { continue }
-                    best = (granted, way.distance)
-                }
-            }
-            if let best { return best.train }
+            if let aside = standingAside(spare, at: standingAsideTargets(for: spare), in: stuck, memo: &memo) { return aside.train }
         }
         return nil
+    }
+
+    /// Decision 666: without block sections, the first train of a line
+    /// with runs and depots, in the order its line would send them in (see
+    /// ``runDepotEntryCandidates(of:memo:)``), that its line would send
+    /// into a depot now but for its way there, and that stands in the way
+    /// of a train waiting for its route (see ``waitingRoute(of:memo:)``),
+    /// moved out of the way to the nearest berth of any station where,
+    /// standing, it lets one of them go, as a spare in a deadlock is (see
+    /// ``spareStandingAside(in:memo:)``): the train set off on that way,
+    /// the station and the way's length; or `nil`. From there its line
+    /// sends it into a depot, or out on a run, as from any station. Its
+    /// way into the depot may be long and never free at once on a busy
+    /// line, and nothing else moves it.
+    func depotBoundMakingWay(memo: inout DispatchMemo) -> (train: Train, to: StationID, distance: Int64)? {
+        guard isTrafficControlEnabled, !blockSections, trains.contains(where: { $0.execution == nil }) else { return nil }
+        let targets: [(station: StationID, berth: Berth?)] = stations.map { ($0.id, nil) }
+        var waiting: [TrainID: (candidate: Train, departs: Bool)]?
+        for line in lines where line.hasRuns && !line.depots.isEmpty {
+            for index in runDepotEntryCandidates(of: line, memo: &memo) {
+                guard let leaving = runDepotEntry(of: line, index: index, memo: &memo)?.leaving,
+                      case .held = reservingDeparture(leaving, memo: &memo.directions)
+                else { continue }
+                if waiting == nil { waiting = routeWaiting(memo: &memo.directions) }
+                guard !waiting!.isEmpty else { return nil }
+                if let aside = standingAside(trains[index], at: targets, in: waiting!, memo: &memo.directions) { return aside }
+            }
+        }
+        return nil
+    }
+
+    /// Every train waiting for its route, with the route (see
+    /// ``waitingRoute(of:memo:)``), as ``deadlock(memo:)`` finds them.
+    private func routeWaiting(memo: inout DirectionMemo) -> [TrainID: (candidate: Train, departs: Bool)] {
+        var waiting: [TrainID: (candidate: Train, departs: Bool)] = [:]
+        for train in trains {
+            if train.execution == nil, let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), line.hasRuns,
+               !dueRunHasStarted(of: train, on: line) { continue }
+            if let request = waitingRoute(of: train, memo: &memo) { waiting[train.id] = request }
+        }
+        return waiting
+    }
+
+    /// `spare`, a train without a service, moved out of the way of deadlock
+    /// `stuck` to the nearest of `targets` (see
+    /// ``spareStandingAside(in:memo:)``), with the station and the way's
+    /// length, or `nil`.
+    private func standingAside(_ spare: Train, at targets: [(station: StationID, berth: Berth?)],
+                               in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DirectionMemo) -> (train: Train, to: StationID, distance: Int64)? {
+        guard let place = spare.placement else { return nil }
+        let own = held(spare)
+        let waiting = stuck.keys.sorted().filter { $0 != spare.id && network.fouls(own, routeEnvelope(of: stuck[$0]!.candidate).resources) }
+        guard !waiting.isEmpty else { return nil }
+        let blocked = blockedTrack(except: spare.id, holders: trackHolders(memo: &memo))
+        let starts = stationsBesideWholeTrain(spare.id).isEmpty ? [place] : [place, turnedRound(place)]
+        var best: (train: Train, to: StationID, distance: Int64)?
+        for start in starts {
+            for target in targets {
+                guard let way = path(from: start.position, toStation: target.station, length: spare.length, avoiding: blocked, only: target.berth),
+                      way.distance > 0, way.distance < best?.distance ?? .max
+                else { continue }
+                var moving = spare
+                moving.position = start.position
+                moving.trailEdges = start.trailEdges
+                follow(way, &moving)
+                guard case .granted(let granted) = reserving(moving, memo: &memo) else { continue }
+                // Standing there, it must let a train it held up go.
+                let there = placement(start, after: way)
+                var standing = spare
+                standing.position = there.position
+                standing.trailEdges = there.trailEdges
+                standing.movement.edges = []
+                standing.movement.cursor = 0
+                standing.movement.end = way.end
+                standing.reservation = []
+                let aside = replacing(standing)
+                let frees = waiting.contains { id in
+                    let request = stuck[id]!
+                    guard request.departs else {
+                        return aside.holder(of: aside.envelopeCover(of: request.candidate), except: id, holders: aside.trackHolders(memo: &memo)) == nil
+                    }
+                    if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { return true }
+                    return false
+                }
+                guard frees else { continue }
+                best = (granted, target.station, way.distance)
+            }
+        }
+        return best
     }
 
     // MARK: - Another berth
