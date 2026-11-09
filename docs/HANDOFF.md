@@ -558,16 +558,16 @@
 **第 57 任停工交接，給 Pro 接手（2026-11-09 約 04:10 UTC＝台灣 12:10，session_01YGNNum8VrDTbqa8SHkYC4q，第 6 層，壓縮 2 次）**
 - 作者先說「沒額度了不要再派工作了」，再說「除了 MacBook 的作業其他全停」，最後說「全停只留 MacBook 寫交接給 pro」。所以現在**除了作者 MacBook 上的 session，全部停了**：沒有在做的雲端 session，沒有巡查，也沒有排程。這段寫給下一個接手的人（作者的 Pro 帳號），和「第 56 任交第 57 任」不同時以這段為準。
 - **下一任遊戲規劃請作者在 claude.ai 開**：第 57 任在第 6 層，它開的下一任會在第 7 層（CLAUDE.md 的層數規則）。開工先在 #1579 登記，再改 §1 表格的遊戲規劃。作者說可以再派工之前，不派新工作。
-- **main**：c21982ba（#2002 合併後）。開著的 PR：沒有。這一任合的最後幾個：#2003（TYMC-AFTERNOON 的研究與門檻測試）、#2004（決策 667，full lane build job 先暖 XCTest，`docs/research/LAUNCH_TIMEOUT_2026-11-09.md`）、#2002（決策 665，第二批 9 座車站外觀）；railway-assets-private#70（近景截圖換掉遠景那批）。
-- **中斷、沒封存的兩個 session，分支都推上去了，還沒開 PR**（接手的人接著做，或另開 session 從分支接；session 本身停在半路，不要叫它繼續，免得用到額度）：
+- **main**：c21982ba（#2002 合併後）。開著的 PR：draft #2006（內灣線，下面）。這一任合的最後幾個：#2003（TYMC-AFTERNOON 的研究與門檻測試）、#2004（決策 667，full lane build job 先暖 XCTest，`docs/research/LAUNCH_TIMEOUT_2026-11-09.md`）、#2002（決策 665，第二批 9 座車站外觀）；railway-assets-private#70（近景截圖換掉遠景那批）。
+- **做到一半的兩條，分支都推上去了**。兩個 session 中斷後被自己的排程與 PR 事件叫醒又繼續做，04:13 UTC 已封存（連 PATROL、PERF-COLLECTIONS 一起），它們的排程也刪了。接手的人另開 session 從分支接：
   - TYMC-AUTH-AHEAD session_01YGNNupEpvkZTkUCaq3RgaH，分支 `claude/tymc-afternoon-2`（head 897ae6bc），**決策 666 預留**。要修的是機捷第 2 天下午環北↔機場第一航廈沒發（研究在 `docs/research/TYMC_AFTERNOON_2026-11-08.md`，門檻測試 `AirportShuttleDepotTests` 用 `TYMC_AFTERNOON=1`，現在紅）。它試的方向：出機廠的空車一次只拿到下一個等候點的路，不再一次拿整段（新檔 `Sources/GameCore/Railway/StagedEmptyRuns.swift`，改 `RouteReservation.swift`、`RunDepot.swift`、`GameWorld.swift`）；五個 commit 是一路縮小範圍的實驗（最後是「只給停在等候點上的空車」）。**結果沒量過**：門檻測試綠不綠、其他線、golden 與 replay 有沒有動，都不知道。會動 GameCore，要整層 CI。
-  - BRANCH-NEIWAN session_01YGNNupkiXTxZ1MuRFG2omh，分支 `claude/branch-neiwan`（head e2a3ee3b），**決策 668 預留**（`docs/decisions/668.md` 是草稿）。內灣線支線挑戰：資料、報告、乘客目標、九讚頭折返都寫了（`Sources/GamePresentation/BranchLineChallenge.swift` 與三個挑戰測試），沒跑過 CI，畫面沒截圖。只動 GamePresentation。
-  - PATROL session_01YGNNukiUy4GqUuXDdGdsjY 已中斷，排程 trig_01UPTznGkRye5puhAPryE8QD 已停用（沒刪）。要恢復巡查就打開它，或刪了重建。
+  - BRANCH-NEIWAN session_01YGNNupkiXTxZ1MuRFG2omh，分支 `claude/branch-neiwan`，**決策 668 預留**，封存前開了 **draft #2006**。內灣線支線挑戰 `branch.neiwan`：新竹—竹中、竹東、內灣三個里程碑，每日 50,000 人次、一年淨利 NT$1 億、資金 NT$2,400 萬（release 報告量的），九讚頭折返（`Sources/GamePresentation/BranchLineChallenge.swift` 與三個挑戰測試）。CI 看 #2006，畫面還沒截圖。只動 GamePresentation。
+  - PATROL session_01YGNNukiUy4GqUuXDdGdsjY 已封存，排程 trig_01UPTznGkRye5puhAPryE8QD 已停用（沒刪）。要恢復巡查就另開一個 PATROL，照它的 prompt（`get_trigger` 讀得到）建新排程。
 - **號碼**：決策 665、667 已用；666、668 預留給上面兩條分支；**下一個可用 669**。存檔版本、golden schema 這一任沒動。
 - **審查點數 L16**：從 #1986 起算，**11 點**；到 30 點或下一次發版後派 REVIEW-L16。
 - **等作者說可以再派之後的順序**：
   1. 機捷下午（上面的 TYMC-AUTH-AHEAD，最先）。修好之後才做 L15-4「A12 重鋪」（決策 654 下一步第 5 項）。
-  2. 內灣線（上面的 BRANCH-NEIWAN），CI 綠、截圖過了就合（新挑戰畫面是第 3 級，規劃要看截圖）。
+  2. 內灣線（上面的 BRANCH-NEIWAN，#2006），CI 綠、截圖過了就合（新挑戰畫面是第 3 級，規劃要看截圖）。
   3. NEXT_PRIORITIES §22.2 的 7d（中式屋頂與立面細節接進 civic-kit、residential-kit）、10c（地下月台、地下透視開關、洞口地形、洞內車頭燈）。
   4. 決策 665 的下一步：基隆南站雨棚細節、嘉義截圖角度（被高樓擋）。
   5. 「第 56 任交第 57 任」的「之後要派的」第 2–4 項還沒人接的。
@@ -575,7 +575,7 @@
 - **下一版（123）的 What to Test**：WHATSNEW-123 要把 L13-1、L15-1、L15-2、L15-3 的更正寫進去（`.github/testflight-whats-new.md` 的「點車站快很多」不準，見 L15-1）。發不發照舊是作者決定。
 - **只能在實機確認、還是 UNVERIFIED 的**：iPad 幀率（iPad-C1／C2）、L13-8、馬達聲（決策 664）、iPad 冷啟動。
 - **還在等作者的**：Sentry 要不要註冊、當機紀錄、TDX、railway-assets-private#65。
-- **作者 MacBook 上的工作**：railway-reference-private#128 紅，不是測試失敗：474 支 0 失敗，5 支要 Mac 的 Metal、在 Linux 被跳過，那個 job 不收跳過所以紅。那是作者 Mac session 的 PR，雲端不動它。**不要按 Mac 的信任卡**（作者交代）。
+- **作者 MacBook 上的工作**：還在做的是作者從手機開、在 Mac 上跑的 session（例如「列車運行邏輯殘餘項目」），雲端不碰。railway-reference-private#128 紅，不是測試失敗：474 支 0 失敗，5 支要 Mac 的 Metal、在 Linux 被跳過，那個 job 不收跳過所以紅。那是作者 Mac session 的 PR，雲端不動它。**不要按 Mac 的信任卡**（作者交代）。
 
 **TYMC-AFTERNOON（2026-11-08，session_01YGNNunbExVayKkapyynSdu，第 57 任派）：機捷第 2 天下午環北↔機場第一航廈沒發，沒有修好，交回遊戲規劃**
 - 查到的、試過的 10 種寫法、建議的 3 個方向：`docs/research/TYMC_AFTERNOON_2026-11-08.md`。
