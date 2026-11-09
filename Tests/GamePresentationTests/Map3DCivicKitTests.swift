@@ -64,13 +64,13 @@ final class Map3DCivicKitTests: XCTestCase {
         let ends=Map3DCivicKit.Part.templeWall.connectors.filter { $0.name != "mount" }
         XCTAssertEqual(abs(ends[0].position.y-ends[1].position.y),4)
     }
-    func testTraditionalRoofsRetainOriginalFarFallbackAndPortableLayers() {
+    func testRevisedRoofsShareShapeAndKeepExplicitFallback() {
         for p: Map3DCivicKit.Part in [.templeGate,.templeHall,.templeSideHall,.templeWall] {
-            let near=Map3DCivicKit.model(for:p),far=Map3DCivicKit.model(for:p,far:true)
-            XCTAssertEqual(far.vertices,Map3DCivicKit.model(for:p,far:false,traditional:false).vertices)
+            let near=Map3DCivicKit.model(for:p,far:false),far=Map3DCivicKit.model(for:p,far:true)
+            XCTAssertNotEqual(far.vertices,Map3DCivicKit.model(for:p,far:false,traditional:false).vertices)
             XCTAssertGreaterThan(near.triangleCount,far.triangleCount,p.id)
             XCTAssertTrue(near.vertices.allSatisfy { $0.layer == Map3DVertex.plain })
-            XCTAssertEqual(near.vertices,Map3DCivicKit.model(for:p).vertices)
+            XCTAssertEqual(near.vertices,Map3DCivicKit.model(for:p,far:false).vertices)
             print("ROOF-COST \(p.id) near=\(near.triangleCount) far=\(far.triangleCount) delta=\(near.triangleCount-far.triangleCount)")
         }
         var roof=StationKitBuilder()
@@ -91,7 +91,21 @@ final class Map3DCivicKitTests: XCTestCase {
             var tail=StationKitBuilder()
             tail.kitChineseRoof(0,0,0,length:l,width:w,rise:r,sweep:s,swallowtail:true)
             XCTAssertEqual(tail.mesh.triangleCount-base,48)
-            print("ROOF-PIECE \(l)x\(w) curved=\(base) swallowtail=\(tail.mesh.triangleCount-base) far-addition=0")
+            print("ROOF-PIECE \(l)x\(w) curved=\(base) swallowtail=\(tail.mesh.triangleCount-base) explicit-far-roof-budget-in-manifest")
+        }
+    }
+
+    func testDramaticSwallowtailsStayUnderFiftyTrianglesPerEnd() {
+        var plain=StationKitBuilder(),tails=StationKitBuilder()
+        plain.kitChineseRoof(0,0,0,length:10,width:12,rise:2,sweep:0.4)
+        tails.kitChineseRoof(0,0,0,length:10,width:12,rise:2,sweep:0.4,swallowtail:true,dramatic:true)
+        XCTAssertEqual(tails.mesh.triangleCount-plain.mesh.triangleCount,72)
+        XCTAssertLessThanOrEqual((tails.mesh.triangleCount-plain.mesh.triangleCount)/2,50)
+        let near=Map3DModelPack.Model.flat(named:"tails",from:tails.mesh)
+        XCTAssertGreaterThan(near.maximum.z,3.2)
+        // The existing map-facing API remains the original recipe.
+        for p: Map3DCivicKit.Part in [.templeGate,.templeHall,.templeSideHall,.templeWall] {
+            XCTAssertTrue(Map3DCivicKit.model(for:p).vertices==Map3DCivicKit.model(for:p,far:false,traditional:false).vertices)
         }
     }
 

@@ -51,16 +51,17 @@ extension StationKitBuilder {
     mutating func residentialHome(_ part: Map3DResidentialKit.Part, far: Bool = false, traditional: Bool = true) {
         let cream=Self.white,stone=wallColor,tile=Map3DPalette.playerRoof,roof=Map3DPalette.roof,blue=Map3DPalette.canopy
         switch part {
-        case .narrowTownhouse:
-            box(0,0,0,7.4,5.8,0.18,stone);box(-0.4,0.18,0,5.5,5.3,8.9,traditional && !far ? Self.civicRed : cream)
+        case .narrowTownhouse,.oldNarrowTownhouse:
+            let old=part == .oldNarrowTownhouse && traditional
+            box(0,0,0,7.4,5.8,0.18,stone);box(-0.4,0.18,0,5.5,5.3,8.9,old ? Self.civicRed : cream)
             for floor in 0..<3 { for z: Float in [-1.4,1.4] { residentialWindow(2.39,0.95+Float(floor)*2.85,z,width:1.1) } }
             residentialDoor(2.43,0.18,0,width:1.25)
             for y: Float in [3.05,5.90] { box(2.49,y,0,0.20,5.45,0.12,tile) }
-            if traditional && !far {
-                kitChineseRoof(-0.4,9.08,0,length:5.5,width:5.3,rise:1.25,sweep:0.12)
-                oldHouseFacade(2.35,0.18,0,width:5.3,floors:3)
-            } else { box(-0.4,9.08,0,6.2,5.8,0.25,roof) }
-            if far || !traditional { for z: Float in [-2.4,2.4] { box(-0.4,9.33,z,6.2,0.18,0.8,stone) } }
+            box(-0.4,9.08,0,6.2,5.8,0.25,roof)
+            for z: Float in [-2.4,2.4] { box(-0.4,9.33,z,6.2,0.18,0.8,stone) }
+            if old { oldHouseFacade(2.35,0.18,0,width:5.3,floors:3,far:far) }
+        case .oldShophouse:
+            residentialOldShophouse(far:far,traditional:traditional)
         case .arcadeTownhouse:
             box(0,0,0,9,8.0,0.18,stone)
             box(-2.0,0.18,0,2.8,7.5,3.05,cream) // recessed shopfront wall
@@ -123,14 +124,14 @@ extension StationKitBuilder {
             for z: Float in [-5.7,5.7] { box(-0.5,12.40,z,9.2,0.16,0.85,stone) }
         case .courtyardHouse:
             box(0,0,0,15,18,0.16,Map3DPalette.plaza)
-            box(-3,0.16,0,5.7,14.5,3.1,traditional && !far ? Self.civicRed : cream)
-            box(2.4,0.16,-6.0,5.5,2.5,3.1,traditional && !far ? Self.civicRed : cream);box(2.4,0.16,6.0,5.5,2.5,3.1,traditional && !far ? Self.civicRed : cream)
+            box(-3,0.16,0,5.7,14.5,3.1,traditional ? Self.civicRed : cream)
+            box(2.4,0.16,-6.0,5.5,2.5,3.1,traditional ? Self.civicRed : cream);box(2.4,0.16,6.0,5.5,2.5,3.1,traditional ? Self.civicRed : cream)
             residentialDoor(-0.07,0.16,0,width:1.8)
             for z: Float in [-5,-2.5,2.5,5] { residentialWindow(-0.07,1.1,z,width:1.1) }
-            if traditional && !far {
-                kitChineseRoof(-3,3.26,0,length:5.7,width:14.5,rise:1.35,sweep:0.16)
-                for z: Float in [-6,6] { kitChineseRoof(2.4,3.26,z,length:5.5,width:2.5,rise:0.8,sweep:0.12) }
-                oldHouseFacade(-0.15,0.16,0,width:14.5,floors:1)
+            if traditional {
+                residentialHardRoof(-3,3.26,0,length:5.7,width:14.5,rise:1.35,far:far)
+                for z: Float in [-6,6] { residentialHardRoof(2.4,3.26,z,length:5.5,width:2.5,rise:0.8,far:far) }
+                oldHouseFacade(-0.15,0.16,0,width:14.5,floors:1,far:far)
             } else {
                 gable(-3,3.26,0,6.5,15,1.35,Map3DPalette.templeRoof)
                 for z: Float in [-6,6] { gable(2.4,3.26,z,6.0,3.0,0.8,Map3DPalette.templeRoof) }
@@ -161,12 +162,13 @@ extension StationKitBuilder {
 extension StationKitBuilder {
     /// Brick-red fields with pale courses; kept below the windows so the
     /// existing backed openings stay visible. Mounted AC reuses decision 610.
-    mutating func oldHouseFacade(_ x: Float,_ y: Float,_ z: Float,width: Float,floors: Int) {
+    mutating func oldHouseFacade(_ x: Float,_ y: Float,_ z: Float,width: Float,floors: Int,far: Bool = false) {
         for floor in 0..<floors {
             let level=y+Float(floor)*2.85
             box(x+0.015,level+0.22,z,0.04,width,0.48,Map3DPalette.templeRidge)
             box(x+0.04,level+0.70,z,0.05,width,0.12,Self.white)
-            residentialOldAwning(x+0.07,level+2.62,z,width:width-0.4)
+            if far { continue }
+            residentialOldAwning(x,level+2.62,z,width:width-0.4)
             Map3DScene.Builder.addStub(&mesh,base:Map3DPoint(x+0.175,level+0.78,z+width*0.36),out:Self.forward,
                 depth:0.35,width:0.8,height:0.55,top:Map3DPalette.acUnit,side:Map3DPalette.acUnit)
         }
@@ -175,7 +177,7 @@ extension StationKitBuilder {
 
 extension StationKitBuilder {
     mutating func residentialOldAwning(_ x: Float,_ y: Float,_ z: Float,width: Float) {
-        let color=Map3DPalette.tinAwnings[0]
+        let color=Map3DPalette.concrete
         Map3DScene.Builder.addSlope(&mesh,from:Map3DPoint(x,y,z),facing:Self.forward,
             width:width,depth:0.55,drop:0.18,color:color)
         let top=[Map3DPoint(x,y,z-width/2),Map3DPoint(x,y,z+width/2),
@@ -184,5 +186,78 @@ extension StationKitBuilder {
         let inside=Map3DPoint(x+0.275,y-0.12,z)
         face(bottom,inside:inside,color:color)
         for i in 0..<4 { let j=(i+1)%4;face([top[i],bottom[i],bottom[j],top[j]],inside:inside,color:color) }
+    }
+}
+
+// Decision 669 revision 2. Household hard gables are independent of the
+// palace roof kernel: straight ridges, closed ends and rounded 馬背 plaster.
+extension StationKitBuilder {
+    mutating func residentialProfile(_ profile: [(Float,Float)],at base: Map3DPoint,
+                                     along axis: Map3DPoint,depth: Float,color: UInt32) {
+        let across=Map3DPoint(-axis.z,0,axis.x)
+        let a=profile.map { base+across*$0.0+Map3DPoint(0,$0.1,0)-axis*(depth/2) }
+        let b=a.map { $0+axis*depth }
+        // Counter-clockwise profile. Ear clipping preserves the stepped
+        // parapet recesses; a fan would cover them with overlapping faces.
+        for (i,j,k) in Map3DScooter.triangulate(profile) {
+            mesh.addFacet([a[i],a[j],a[k]],color:color)
+            mesh.addFacet([b[k],b[j],b[i]],color:color)
+        }
+        for i in a.indices { let j=(i+1)%a.count;mesh.addQuad(a[i],b[i],b[j],a[j],color:color) }
+    }
+    mutating func residentialPitchedRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,rise: Float,along: Map3DPoint) {
+        residentialProfile([(-width/2-0.2,0),(width/2+0.2,0),(0,rise)],at:Map3DPoint(x,y,z),along:along,depth:length+0.4,color:Map3DPalette.templeRoof)
+        let across=abs(along.z)>0.5
+        box(x,y-0.08,z,across ? width+0.4 : length+0.4,across ? length+0.4 : width+0.4,0.08,Map3DPalette.templeRoof)
+    }
+    mutating func residentialHorseback(_ x: Float,_ y: Float,_ z: Float,width: Float,rise: Float,
+                                      along: Map3DPoint = Self.forward,far: Bool) {
+        let radius=min(0.6,width*0.2),n=far ? 6 : 12
+        var outline: [(Float,Float)]=[(-width/2,-0.08),(width/2,-0.08),(width/2,0.16)]
+        for i in 0...n {
+            let a=Float(i)*Float.pi/Float(n)
+            outline.append((radius*cosf(a),rise-0.20+radius*sinf(a)))
+        }
+        outline.append((-width/2,0.16))
+        residentialProfile(outline,at:Map3DPoint(x,y,z),along:along,depth:0.16,color:Self.white)
+    }
+    mutating func residentialHardRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,rise: Float,far: Bool) {
+        let long=max(length,width),short=min(length,width),along=width>length ? Map3DPoint(0,0,1) : Self.forward
+        residentialPitchedRoof(x,y,z,length:long,width:short,rise:rise,along:along)
+        for sign: Float in [-1,1] {
+            let p=Map3DPoint(x,y,z)+along*(sign*long/2)
+            residentialHorseback(p.x,p.y,p.z,width:short+0.4,rise:rise,along:along,far:far)
+        }
+    }
+    mutating func residentialOldShophouse(far: Bool,traditional: Bool) {
+        let brick=traditional ? Self.civicRed : Self.white
+        box(0,0,0,12,7,0.15,Map3DPalette.plaza)
+        box(-0.7,0.15,0,10,5.8,5.9,brick)
+        residentialPitchedRoof(-0.85,6.05,0,length:9.7,width:5.8,rise:1.05,along:Self.forward)
+        // Two storeys and a stepped street parapet taller than the roof.
+        let crown: [(Float,Float)]=[(-3.1,0),(3.1,0),(3.1,6.75),(2.1,6.75),(2.1,7.2),
+            (1.0,7.2),(1.0,7.75),(-1.0,7.75),(-1.0,7.2),(-2.1,7.2),(-2.1,6.75),(-3.1,6.75)]
+        residentialProfile(crown,at:Map3DPoint(4.38,0.15,0),along:Self.forward,depth:0.22,color:brick)
+        // Major pale pilasters and horizontal divisions remain at both LODs.
+        for z: Float in [-2.94,-0.98,0.98,2.94] { box(4.52,0.15,z,0.18,0.16,6.75,Self.white) }
+        for y: Float in [0.25,3.10,6.18,6.72] { box(4.54,y,0,0.20,6.2,0.16,Self.white) }
+        for z: Float in [-1.85,0,1.85] { residentialWindow(4.53,3.65,z,width:1.2,height:1.7) }
+        residentialDoor(4.54,0.15,0,width:1.4)
+        for z: Float in [-1.9,1.9] { residentialWindow(4.53,0.90,z,width:1.25,height:1.6) }
+        box(4.53,6.65,0,0.24,1.55,0.60,Self.white)
+        if traditional && !far {
+            residentialOldAwning(4.49,5.65,0,width:5.5)
+            Map3DScene.Builder.addStub(&mesh,base:Map3DPoint(4.665,3.25,2.35),out:Self.forward,
+                depth:0.35,width:0.8,height:0.55,top:Map3DPalette.acUnit,side:Map3DPalette.acUnit)
+        }
+    }
+}
+
+extension Map3DResidentialKit {
+    /// Standalone wall-top part for review and triangle accounting (metres).
+    public static func horsebackGable(far: Bool = false) -> Map3DModelPack.Model {
+        var b=StationKitBuilder()
+        b.residentialHorseback(0,0.08,0,width:3,rise:1,far:far)
+        return .flat(named:"residential-horsebackGable",from:b.mesh)
     }
 }

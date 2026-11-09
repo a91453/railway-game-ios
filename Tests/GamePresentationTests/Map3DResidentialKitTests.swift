@@ -5,10 +5,10 @@ import XCTest
 final class Map3DResidentialKitTests: XCTestCase {
     func testDistinctCatalogAndOnDemandPack() {
         let parts = Map3DResidentialKit.Part.allCases
-        XCTAssertEqual(parts.count,24)
-        XCTAssertEqual(Set(parts.map(\.id)).count,24)
+        XCTAssertEqual(parts.count,26)
+        XCTAssertEqual(Set(parts.map(\.id)).count,26)
         for category in Map3DResidentialKit.Category.allCases {
-            XCTAssertEqual(parts.filter { $0.category == category }.count,8)
+            XCTAssertEqual(parts.filter { $0.category == category }.count,category == .home ? 10 : 8)
         }
         let models=parts.map(Map3DResidentialKit.model(for:))
         for i in models.indices { for j in 0..<i {
@@ -103,22 +103,63 @@ final class Map3DResidentialKitTests: XCTestCase {
         XCTAssertEqual(first.vertices,Map3DResidentialKit.model(for:.roofGarden).vertices)
     }
 
-    func testTraditionalHomesKeepFallbackAndUseExistingFacadePrimitives() {
-        for p: Map3DResidentialKit.Part in [.courtyardHouse,.narrowTownhouse] {
-            let near=Map3DResidentialKit.model(for:p),far=Map3DResidentialKit.model(for:p,far:true)
-            XCTAssertEqual(far.vertices,Map3DResidentialKit.model(for:p,far:false,traditional:false).vertices)
+    func testRevisedRoofTypesAndLODColours() {
+        for p: Map3DResidentialKit.Part in [.courtyardHouse,.oldNarrowTownhouse,.oldShophouse] {
+            let near=Map3DResidentialKit.model(for:p,far:false),far=Map3DResidentialKit.model(for:p,far:true)
             XCTAssertGreaterThan(near.triangleCount,far.triangleCount)
-            XCTAssertTrue(near.vertices.allSatisfy { $0.layer == Map3DVertex.plain })
-            print("ROOF-COST \(p.id) near=\(near.triangleCount) far=\(far.triangleCount) delta=\(near.triangleCount-far.triangleCount)")
+            XCTAssertEqual(near.minimum,far.minimum)
+            XCTAssertEqual(near.maximum.z,far.maximum.z,accuracy:0.001)
+            let brick=Map3DColor.shaded(Map3DPalette.templeRidge,0.92)
+            XCTAssertTrue(near.vertices.contains { $0.color==brick })
+            XCTAssertTrue(far.vertices.contains { $0.color==brick })
+            print("ROOF-COST \(p.id) near=\(near.triangleCount) far=\(far.triangleCount)")
         }
-        var facade=StationKitBuilder()
-        facade.oldHouseFacade(0,0,0,width:5.3,floors:1)
-        // Two closed colour fields (24), decision 267/610 slope (12),
-        // decision 610's wall-mounted AC stub (8).
+        let modern=Map3DResidentialKit.model(for:.narrowTownhouse,far:false)
+        XCTAssertEqual(modern.vertices,Map3DResidentialKit.model(for:.narrowTownhouse,far:true).vertices)
+        XCTAssertEqual(modern.vertices,Map3DResidentialKit.model(for:.narrowTownhouse,far:false,traditional:false).vertices)
+        XCTAssertEqual(modern.maximum.z,10.13,accuracy:0.01)
+        let horse=Map3DResidentialKit.horsebackGable(),coarse=Map3DResidentialKit.horsebackGable(far:true)
+        XCTAssertEqual(horse.minimum,coarse.minimum);XCTAssertEqual(horse.maximum,coarse.maximum)
+        XCTAssertGreaterThan(horse.triangleCount,coarse.triangleCount)
+        print("HORSE-COST near=\(horse.triangleCount) far=\(coarse.triangleCount)")
+        let shop=Map3DResidentialKit.model(for:.oldShophouse,far:false)
+        XCTAssertGreaterThan(shop.maximum.z,7.8)
+        let units=shop.vertices.filter { $0.color==Map3DPalette.acUnit }
+        XCTAssertEqual(units.map(\.x).min()!,4.49,accuracy:0.001,"AC back must meet the real facade")
+        let tiles=shop.vertices.filter { $0.color==Map3DPalette.templeRoof }
+        XCTAssertLessThan(tiles.map(\.x).max()!,4.27,"The pitched roof must stay behind the street parapet")
+        var facade=StationKitBuilder();facade.oldHouseFacade(0,0,0,width:5.3,floors:1)
         XCTAssertEqual(facade.mesh.triangleCount,44)
-        let v=facade.mesh.vertices
-        XCTAssertTrue(v.contains { $0.color == Map3DPalette.acUnit })
-        XCTAssertTrue(v.contains { $0.color == Map3DPalette.tileWhite })
+        var distant=StationKitBuilder();distant.oldHouseFacade(0,0,0,width:5.3,floors:1,far:true)
+        XCTAssertEqual(distant.mesh.triangleCount,24)
+    }
+
+    func testHardRoofHasStraightTileRidgeAndRoundPlasterGables() {
+        var b=StationKitBuilder()
+        b.residentialHardRoof(0,0.08,0,length:8,width:4,rise:1,far:false)
+        let m=Map3DModelPack.Model.flat(named:"hard-roof",from:b.mesh)
+        let tile=m.vertices.filter { $0.color==Map3DPalette.templeRoof }
+        XCTAssertEqual(tile.map(\.z).max()!,1.08,accuracy:0.001)
+        XCTAssertTrue(tile.filter { abs($0.z-1.08)<0.001 }.allSatisfy { abs($0.y)<0.001 })
+        let plaster=m.vertices.filter { $0.color==Map3DPalette.tileWhite }
+        XCTAssertGreaterThan(plaster.map(\.z).max()!,1.4)
+        XCTAssertTrue(plaster.contains { $0.z>1.1 && $0.z<1.4 })
+        for v in m.vertices { XCTAssertTrue([v.x,v.y,v.z,v.nx,v.ny,v.nz].allSatisfy(\.isFinite)) }
+    }
+
+    func testSteppedParapetCapsDoNotFillTheRecesses() {
+        var b=StationKitBuilder()
+        b.residentialProfile([(0,0),(4,0),(4,4),(3,4),(3,1),(1,1),(1,4),(0,4)],
+            at:.zero,along:StationKitBuilder.forward,depth:0.2,color:Map3DPalette.tileWhite)
+        let m=Map3DModelPack.Model.flat(named:"stepped-crown",from:b.mesh)
+        var area: Float=0
+        for i in stride(from:0,to:m.vertices.count,by:3) {
+            let t=m.vertices[i..<i+3];guard t.allSatisfy({abs($0.nx)>0.99}) else { continue }
+            let p=t.map { Map3DPoint($0.x,$0.y,$0.z) }
+            let n=(p[1]-p[0]).cross(p[2]-p[0]);area+=sqrt(n.dot(n))/2
+        }
+        // Two caps, each 4*4 minus a 2*3 recess.
+        XCTAssertEqual(area,20,accuracy:0.001)
     }
 
     private func backingDistance(from origin: Map3DPoint,vertices: [Map3DVertex]) -> Float {

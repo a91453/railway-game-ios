@@ -77,10 +77,10 @@ public enum Map3DCivicKit {
         public let normal: Map3DPoint
     }
     public static func model(for part: Part) -> Map3DModelPack.Model {
-        model(for: part, far: false)
+        model(for: part, far: false, traditional: false)
     }
-    /// Detailed traditional roof near the camera; original recipe for distance
-    /// or an explicit fallback. These optional kits do not select map LODs.
+    /// Opt-in revised kit: near/far share colours and the primary silhouette.
+    /// The one-argument entry preserves existing map geometry until integration.
     public static func model(for part: Part, far: Bool, traditional: Bool = true) -> Map3DModelPack.Model {
         var b=StationKitBuilder();b.civic(part, far: far, traditional: traditional)
         return .flat(named:part.id,from:b.mesh)

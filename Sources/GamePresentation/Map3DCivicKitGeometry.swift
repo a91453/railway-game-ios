@@ -56,9 +56,9 @@ extension StationKitBuilder {
         box(x+0.7,y+2.6,z,1.6,width+1.0,0.15,Map3DPalette.canopy)
         for side: Float in [-1,1] { box(x+1.2,y,z+side*(width/2+0.35),0.12,0.12,2.6,Self.steel) }
     }
-    mutating func civicTempleRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,rise: Float, far: Bool = false, traditional: Bool = true) {
-        if traditional && !far {
-            kitChineseRoof(x,y,z,length:length,width:width,rise:rise,sweep:0.4,swallowtail:true)
+    mutating func civicTempleRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,rise: Float, far: Bool = false, traditional: Bool = true, dramatic: Bool = false) {
+        if traditional {
+            kitChineseRoof(x,y,z,length:length,width:width,rise:rise,sweep:0.4,swallowtail:true,far:far,dramatic:dramatic)
             return
         }
         // Put the ridge along the longer dimension; its straight section must
@@ -81,9 +81,9 @@ extension StationKitBuilder {
 // and reduced to house scale; no shader-only tile layer enters the kits.
 extension StationKitBuilder {
     mutating func kitChineseRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,
-                                rise: Float,sweep: Float,swallowtail: Bool = false) {
+                                rise: Float,sweep: Float,swallowtail: Bool = false,far: Bool = false,dramatic: Bool = false) {
         let long=max(length,width),short=min(length,width),scale: Float=0.2
-        var roof=LandmarkMesh(full:true)
+        var roof=LandmarkMesh(full:!far)
         roof.chineseRoof(long/2/scale,short/2/scale,eaves:0.5,over:0.4/scale,
                          rise:rise/scale,sweep:sweep/scale,kind:.hipGable,
                          colours:ChineseRoofColours(tile:Map3DPalette.templeRoof,ridge:Self.civicRed,
@@ -96,14 +96,22 @@ extension StationKitBuilder {
             let t=roof.vertices[i..<i+3]
             mesh.addFacet([point(t[t.startIndex]),point(t[t.startIndex+1]),point(t[t.startIndex+2])],color:t[t.startIndex].color)
         }
-        if swallowtail {
+        if swallowtail && !far {
             let along=across ? Map3DPoint(0,0,1) : Self.forward
             let half=(long/2+0.4)-(short/2+0.4)*0.45+0.08
             for sign: Float in [-1,1] {
                 let a=Map3DPoint(x,y+rise+0.10,z)+along*(sign*half)
-                let b=a+along*(sign*0.28)+Map3DPoint(0,0.20,0)
-                beam(a,b,0.10,Self.civicRed)
-                beam(b,b+along*(sign*0.25)+Map3DPoint(0,0.30,0),0.08,Self.civicRed)
+                if dramatic {
+                    // Three closed beams per end: 36 triangles, under 50.
+                    let b=a+along*(sign*0.55)+Map3DPoint(0,0.30,0)
+                    beam(a,b,0.16,Self.civicRed)
+                    beam(b,b+along*(sign*0.55)+Map3DPoint(0,0.95,0),0.13,Self.civicRed)
+                    beam(b,b-along*(sign*0.18)+Map3DPoint(0,0.80,0),0.11,Self.civicRed)
+                } else {
+                    let b=a+along*(sign*0.28)+Map3DPoint(0,0.20,0)
+                    beam(a,b,0.10,Self.civicRed)
+                    beam(b,b+along*(sign*0.25)+Map3DPoint(0,0.30,0),0.08,Self.civicRed)
+                }
             }
         }
     }

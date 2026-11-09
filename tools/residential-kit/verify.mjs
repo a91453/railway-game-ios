@@ -4,8 +4,8 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {readNative,glbFromNative} from '../station-kit/package.mjs';
 const root=resolve(process.argv[2]),manifest=JSON.parse(readFileSync(resolve(root,'manifest.json'))),ids=new Set(),hash=b=>createHash('sha256').update(b).digest('hex');
-assert.equal(manifest.models.length,28);assert.equal(manifest.models.filter(m=>m.category==='example').length,4);
-for(const c of ['home','boundary','yard'])assert.equal(manifest.models.filter(m=>m.category===c).length,8);
+assert.equal(manifest.models.length,30);assert.equal(manifest.models.filter(m=>m.category==='example').length,4);
+for(const c of ['home','boundary','yard'])assert.equal(manifest.models.filter(m=>m.category===c).length,c==='home'?10:8);
 let views=0,triangles=0;
 for(const m of manifest.models){
  assert(!ids.has(m.id));ids.add(m.id);
@@ -17,8 +17,8 @@ for(const m of manifest.models){
  for(const c of m.connectors||[])assert(Math.abs(Math.hypot(...c.normal)-1)<0.0001);
  for(const view of manifest.directions){const p=readFileSync(resolve(root,m.views[view])),metric=m.view_metrics[view];assert.equal(p.toString('hex',0,8),'89504e470d0a1a0a');assert.equal(p.readUInt32BE(16),384);assert.equal(p.readUInt32BE(20),384);assert.equal(p[25],6);assert.equal(hash(p),metric.sha256);assert(metric.opaque_pixels>=20);const [l,t,r,b]=metric.visible_bounds;assert(l>=2&&t>=2&&r<=382&&b<=382);views++;}
 }
-assert.equal(views,196);
+assert.equal(views,210);
 const names=['Map3DResidentialKit.swift','Map3DResidentialKitGeometry.swift','Map3DResidentialKitParts.swift','Map3DResidentialKitExamples.swift','Map3DStationKitGeometry.swift'];
 manifest.recipe_sha256=Object.fromEntries(names.map(n=>[n,hash(readFileSync(new URL('../../Sources/GamePresentation/'+n,import.meta.url)))]));writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
-const result={status:'VERIFIED',environment:'Linux / Swift 6.4 / Node / Chromium WebGL 2',parts:24,examples:4,models:28,views,triangles,maximum_triangles:Math.max(...manifest.models.map(m=>m.triangles)),checks:['all native vertices round-trip through the game loader','native / GLB / PNG SHA-256','complete native-to-GLB conversion','three categories: 8 homes, 8 boundary parts, 8 yard parts','all seven transparent views nonempty and unclipped','opaque finite native vertices and connector normals'],not_verified:['iPhone / iPad Metal rendering and performance','live map placement, collisions, vehicle clearance or pedestrian navigation','surveyed architectural dimensions','source pack browser rendering / pixel comparison; raw sources are not redistributed']};
+const result={status:'VERIFIED',environment:'Linux / Swift 6.4 / Node / Chromium WebGL 2',parts:26,examples:4,models:30,views,triangles,maximum_triangles:Math.max(...manifest.models.map(m=>m.triangles)),checks:['all native vertices round-trip through the game loader','native / GLB / PNG SHA-256','complete native-to-GLB conversion','three categories: 10 homes, 8 boundary parts, 8 yard parts','all seven transparent views nonempty and unclipped','opaque finite native vertices and connector normals'],not_verified:['iPhone / iPad Metal rendering and performance','live map placement, collisions, vehicle clearance or pedestrian navigation','surveyed architectural dimensions','source pack browser rendering / pixel comparison; raw sources are not redistributed']};
 writeFileSync(resolve(root,'verification.json'),JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));

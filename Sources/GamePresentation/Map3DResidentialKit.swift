@@ -5,6 +5,7 @@ public enum Map3DResidentialKit {
     public enum Category: String, CaseIterable, Sendable { case home, boundary, yard }
     public enum Mount: String, Sendable { case ground, wall }
     public enum Part: String, CaseIterable, Sendable {
+        case oldNarrowTownhouse, oldShophouse
         case narrowTownhouse, arcadeTownhouse, duplexHouse, roofTerraceHouse
         case cornerHouse, walkupApartment, courtyardHouse, farmHouse
         case brickWall, tileWall, ironGate, slidingGate, porchCanopy, carport, balconyModule, drainageChannel
@@ -12,6 +13,8 @@ public enum Map3DResidentialKit {
         public var id: String { "residential-" + rawValue }
         public var name: String { switch self {
         case .narrowTownhouse: "窄面透天厝"
+        case .oldNarrowTownhouse: "老透天厝（平頂）"
+        case .oldShophouse: "兩層牌樓老街屋"
         case .arcadeTownhouse: "有騎樓的透天厝"
         case .duplexHouse: "雙戶連棟住宅"
         case .roofTerraceHouse: "頂樓露台住宅"
@@ -37,7 +40,7 @@ public enum Map3DResidentialKit {
         case .cornerKiosk: "轉角雜貨小亭"
         } }
         public var category: Category { switch self {
-        case .narrowTownhouse,.arcadeTownhouse,.duplexHouse,.roofTerraceHouse,.cornerHouse,.walkupApartment,.courtyardHouse,.farmHouse: .home
+        case .oldNarrowTownhouse,.oldShophouse,.narrowTownhouse,.arcadeTownhouse,.duplexHouse,.roofTerraceHouse,.cornerHouse,.walkupApartment,.courtyardHouse,.farmHouse: .home
         case .brickWall,.tileWall,.ironGate,.slidingGate,.porchCanopy,.carport,.balconyModule,.drainageChannel: .boundary
         default: .yard
         } }
@@ -50,10 +53,10 @@ public enum Map3DResidentialKit {
         public let normal: Map3DPoint
     }
     public static func model(for part: Part) -> Map3DModelPack.Model {
-        model(for: part, far: false)
+        model(for: part, far: false, traditional: part == .oldNarrowTownhouse || part == .oldShophouse)
     }
-    /// Detailed traditional roof near the camera; original recipe for distance
-    /// or an explicit fallback. These optional kits do not select map LODs.
+    /// Opt-in revised kit: near/far share colours and the primary silhouette.
+    /// The one-argument entry preserves existing map geometry until integration.
     public static func model(for part: Part, far: Bool, traditional: Bool = true) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
         builder.residential(part, far: far, traditional: traditional)

@@ -5,7 +5,7 @@ description: 公共建築、室內家具、台式廟宇與市場的原生 3D 配
 
 # 公共建築、家具、廟宇市場
 
-先讀 CLAUDE.md、art-style、station-kit 與工作登記 #231。只延伸 Map3DCivicKit*.swift、tools/civic-kit、本skill、對應測試及文件；不要改既有車站、地圖放置或商店街。
+先讀 CLAUDE.md、art-style、station-kit 與工作登記 #1579。只延伸 Map3DCivicKit*.swift、tools/civic-kit、本skill、對應測試及文件；不要改既有車站、地圖放置或商店街。
 
 48件：building12、furniture24、culture12；4個組景。內部 x前/y上/z右；輸出模型與connector是native x前/y左/z上，公尺。Map3DCivicKit.model(for:) 按需建置；Map3DModelPack(civicKit:) 不自動加入常駐standard。
 
@@ -15,45 +15,20 @@ description: 公共建築、室內家具、台式廟宇與市場的原生 3D 配
 
 ```sh
 export PATH=/path/to/swift-6.4/usr/bin:$PATH
-tools/civic-kit/rebuild.sh /path/to/railway-reference-private/Railway/game-art-previews/docs/art/civic-kit-2026-10-21
+tools/civic-kit/rebuild.sh /path/to/railway-assets-private/game-art-previews/docs/art/civic-kit-2026-10-21
 ```
 
-沿用station-kit的native、GLB、renderer；52模型、364張384px透明圖。Swift6.4 warnings-as-errors；21項指定XCTest、4項既有Node編碼測試；逐頂點native讀回、完整GLB重編、圖片SHA/非空/不裁邊、分類、安裝面、桌面、窗戶背板、預算與決定性都要通過。瀏覽器測試搜尋分類、52模型、七向、旋轉縮放、下載hash、390px排版。快取需native、renderer及每張PNG的SHA全相同。
+沿用station-kit的native、GLB、renderer；52模型、364張384px透明圖。Swift6.4 warnings-as-errors；相關kit／原生格式XCTest、4項既有Node編碼測試；逐頂點native讀回、完整GLB重編、圖片SHA/非空/不裁邊、分類、安裝面、桌面、窗戶背板、預算與決定性都要通過。瀏覽器測試搜尋分類、52模型、七向、旋轉縮放、下載hash、390px排版。快取需native、renderer及每張PNG的SHA全相同。
 
 人工看parts、三類表、examples、directions、undersides、style-checks，檢查腳、背板、吊架、屋簷。公開只放配方／工具／測試／單一總覽／小驗證JSON。大型native、GLB、PNG、viewer與來源對照放私有庫。各開draft PR，不推main、不自行合併。報告VERIFIED／UNVERIFIED；WebGL不等於真機Metal或App已採用。正式採用前仍需來源並排與實機效能、場景碰撞驗證。
 
-## 傳統建築：中式屋頂零件＋照片定比例＋OSM 外框（決策 669）
+## 傳統建築（決策669第二輪，以此取代第一輪）
 
-1. 先在 #1579 登記；讀本 skill、art-style、決策 457／610／669。先找現有
-   `Map3DChineseRoof.swift` 與 `Map3DRealFacade.swift` 的零件，不另外寫一套屋頂或冷氣機。
-2. 一棟有名稱的真實建築先記錄照片 URL、拍攝角度／日期／授權及 OSM way/relation ID、
-   資料日期與 ODbL 致謝。OSM 從 Taiwan 全島 PBF 讀取，不能用 Overpass。
-   將外框轉成公尺局部座標，量長寬、朝向、前後殿／護龍位置；不要拿包圍盒填滿三合院中庭。
-3. 用正面與側面照片，以已知門寬或 OSM 面寬為比例尺，分別估牆高、屋脊高、出簷、
-   開間與護龍高。透視照片不能當正投影；遮蔽處標推估或未知。尺寸與照片比值逐項寫進
-   每輪 README／SOURCE，不能把通用 kit 尺寸宣稱為測繪值。沒有照片或可靠外框時只做
-   明確標示 illustrative 的通用建築，本輪即為這種情況。
-4. kit 內座標 x前/y上/z右；`kitChineseRoof` 轉接既有 `LandmarkMesh.chineseRoof`，
-   以 5 倍建屋頂再縮回，讓地標原有的脊飾厚度適合小建築。長邊是屋脊方向；
-   廟門／正側殿用歇山、翹角和簡化燕尾；住宅用低翹角歇山。現有零件不能精確表現
-   馬背山牆時必須記缺口，不把歇山稱為馬背。屋簷底要接牆頂，不用抬高藏交界。
-5. 小口磚用磚紅牆面與淺色帶分塊，不逐塊堆砌。窗雨遮出挑 0.55m、有厚度和底面；
-   冷氣用決策 610 的 `addStub`（0.35 × 0.8 × 0.55m、8 三角），貼實牆。
-   既有鐵窗、騎樓、水塔與頂加不重做。所有轉入的屋頂只輸出 plain 色面，不依賴 Metal tile shader。
-6. `model(for:)` 取新近景；`model(for:far:true)` 保留原配方；
-   `model(for:far:false,traditional:false)` 明確回退。近景選用是呼叫者責任；
-   本輪不改地圖 LOD／Map3DScene。每個零件和整棟量近／遠三角形，寫進 PR。
-7. 重建六種本輪模型（兩個 kit 共用同一工具）：
-
-   ```sh
-   tools/civic-kit/rebuild-roofs.sh ../railway-assets-private/game-art-previews/docs/art/chinese-roof-kits-2026-11/revision-1
-   ```
-
-   每個模型一個資料夾，near／far／fallback 各七向透明 PNG、GLB、原生檔與離線 viewer。
-   每模型最多 21 張 PNG、單張 ≤2MB；不放 ZIP、不建 history。
-   新一輪刪掉上一輪同模型的重檔；保留 PNG、README、SOURCE。
-   本輪是通用建築配方的獨立比較包，未替換舊整套 kit 的歷史交付。
-8. 跑 Swift 6.4 warnings-as-errors 與兩個 kit 測試 class；看上／下／前後／兩側／斜視，
-   尤其窗背、屋簷、曲面法線與冷氣貼牆。素材庫提交前跑
-   `python3 tools/asset_guard.py --base origin/main`。PR 附總覽與 README；
-   第 3 級須遊戲規劃看過總覽才能合併。CI 綠可轉 ready，不等於外觀已接受。
+1. 先登記#1579，查照片／參考庫，再定建築類型：現代透天平頂；老透天也平頂、另用老立面變體；兩層老街屋用高牌樓立面＋後方直脊兩坡；一般三合院用硬山兩坡＋馬背。翹角、燕尾留給廟宇，不把所有老房子套同一屋頂。
+2. 具名建築：SOURCE記照片URL／作者／日期／授權，至少正面、側面；由門寬或OSM面寬估牆高、開間、屋脊、出簷。OSM從Taiwan全島PBF讀取、記way/relation ID／日期／ODbL。U形外框不能用包圍盒填中庭。透視觀察標誤差、遮蔽處標推估；沒有可靠外框的只做明確示意模型。
+3. 照片定比例先列比值，再列遊戲尺寸。例如本輪三峽上層窗高／層高約0.5–0.65，模型1.7/2.95；大溪牌樓冠／層高約0.35–0.65，模型1.85/2.95。迪化街取分格、窗框節奏，不複製店招／花飾。比值是透視估計，誤差約±20%，不是實測。來源逐輪寫進README／SOURCE。
+4. 廟宇重用Map3DChineseRoof，kitChineseRoof轉軸、只輸出plain色面。一般住宅用residentialPitchedRoof／residentialHardRoof；residentialHorseback是圓弧封閉山牆，近12弧段、遠6段。馬背新件在residential-kit，不能改台北地標的ChineseRoof／TaipeiPalaces幾何；既有地標測試及逐位元比對要過。
+5. 近遠共用主牆色、屋頂種類與極值，遠景只減曲面細分與小零件；modern／old窄透天都不能加翹頂。老立面用磚紅＋淺帶；灰concrete雨遮0.55m出挑、0.06m厚，底邊封閉；冷氣直接重用610的addStub（8三角）。鐵窗、騎樓、水塔、頂加不重做。
+6. 新配方明確呼叫model(for:part,far:false/true)；traditional:false才回退。既有單參數API的既有part保持原配方，因為地圖已使用civic-kit，不能藉改kit偷偷改地圖或突破其預算。新part無前版時SOURCE要說明fallback是簡化示意，不能冒稱舊版。地圖接入仍另派。
+7. tools/civic-kit/rebuild-roofs.sh（或residential同名入口）輸出私有chinese-roof-kits-2026-11/revision-N。每模型一資料夾，三態×七向透明PNG、GLB、原生與自包含viewer。總覽前三欄近／遠／回退，第四欄用同角度、同公尺相機並排近遠，不各自fit。單張≤2MB、每模型≤21PNG；無ZIP/history。開新輪同PR刪前輪重檔，留PNG／README／SOURCE。
+8. 每個新零件列近遠三角形成本；正側殿燕尾每端≤50三角。跑Swift6.4 WAE及兩個kit、Map3DLandmarksTests、Map3DTaipeiLandmarksTests等相關測試；人工看正／側／俯／下及剪影。素材staged tree與HEAD各跑asset_guard。兩PR維持draft，CI綠在#1579交規劃看總覽，看過才ready，不自行合併。

@@ -50,14 +50,14 @@ try{
  async function sheet(name,title,html){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+css+'<h1>'+title+'</h1>'+html);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}
  const parts=manifest.models.filter(m=>m.category!=='example'),examples=manifest.models.filter(m=>m.category==='example');
  const cards=records=>'<main>'+records.map(m=>'<article><img src="'+m.views.isometric+'"><h3>'+m.name+'</h3></article>').join('')+'</main>';
- await sheet('parts.png','24 種台灣住宅街廓素材',cards(parts));
+ await sheet('parts.png','26 種台灣住宅街廓素材',cards(parts));
  await sheet('examples.png','四個原生組景｜實際模型組裝',cards(examples));
  const groups={home:'住宅',boundary:'界牆與出入口',yard:'庭院與街邊'};
  for(const [category,title] of Object.entries(groups))await sheet(category+'.png',title,cards(parts.filter(m=>m.category===category)));
  const picks=['narrowTownhouse','arcadeTownhouse','ironGate','balconyModule','waterTank','clothesline'].map(p=>parts.find(m=>m.id==='residential-'+p));
  await sheet('directions.png','上／下／左／右／前／後／立體｜同一個原生模型',picks.map(m=>'<section><h3>'+m.name+'</h3><div class="row">'+Object.entries(m.views).map(([v,p])=>'<div><img src="'+p+'"><p>'+v+'</p></div>').join('')+'</div></section>').join(''));
  const overview=[...examples,...parts];
- await sheet('overview.png','24 種重組素材 · 住宅／界牆／庭院 · 4 個組景',cards(overview));
+ await sheet('overview.png','26 種重組素材 · 住宅／界牆／庭院 · 4 個組景',cards(overview));
  const under=[];for(const m of picks.concat(['carport','bikeShed'].map(p=>parts.find(m=>m.id==='residential-'+p)))){const png=await page.evaluate(async m=>{renderer.load(await(await fetch(m.native)).arrayBuffer());renderer.render('isometric',{width:384,height:384,vector:[1,-1,-0.45]});return renderer.png();},m);const path='previews/'+m.id+'-underside.png';writeFileSync(resolve(root,path),Buffer.from(png.split(',')[1],'base64'));under.push({...m,views:{isometric:path}});}
  await sheet('undersides.png','下斜視｜立柱、安裝面、屋簷與底面',cards(under));
  await sheet('style-checks.png','四底色、小尺寸、模糊與灰階',picks.filter(m=>!m.id.includes('Office')).slice(0,4).map(m=>'<section><h3>'+m.name+'</h3><div style="display:flex">'+['#fff','#262c57','#dce9da','#263c40'].map(c=>'<img style="width:23%;background:'+c+'" src="'+m.views.isometric+'">').join('')+'</div><p>'+[120,64,44,28].map(s=>'<img style="width:'+s+'px" src="'+m.views.isometric+'">').join('')+'<img style="width:120px;filter:blur(3px)" src="'+m.views.isometric+'"><img style="width:120px;filter:grayscale(1)" src="'+m.views.isometric+'"></p></section>').join(''));

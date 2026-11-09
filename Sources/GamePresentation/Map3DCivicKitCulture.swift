@@ -20,7 +20,7 @@ extension StationKitBuilder {
                 box(l/2-0.3,0.35,z,0.5,0.5,0.30,Map3DPalette.concrete)
                 cylinder(l/2-0.3,0.65,z,0.17,3.0,red)
             }
-            box(0,3.65,0,l,w,0.22,red);civicTempleRoof(0,3.87,0,length:l,width:w,rise:big ? 2.0 : 1.45,far:far,traditional:traditional)
+            box(0,3.65,0,l,w,0.22,red);civicTempleRoof(0,3.87,0,length:l,width:w,rise:big ? 2.0 : 1.45,far:far,traditional:traditional,dramatic:true)
             for z: Float in [-1.1,1.1] { box(l/2-1.48,0.35,z,0.04,1.4,2.6,red) }
             civicBoard(l/2-1.46,2.98,0,width:3.0,height:0.5,color:Map3DPalette.playerRoof)
             box(l/2+0.65,0,0,1.3,3.5,0.18,Map3DPalette.concrete)
@@ -43,8 +43,8 @@ extension StationKitBuilder {
         case .templeWall:
             box(0,0,0,0.40,4,0.25,Map3DPalette.concrete);box(0,0.25,0,0.28,4,1.5,Map3DPalette.playerRoof)
             for z: Float in [-1.85,1.85] { box(0,0.25,z,0.45,0.3,1.75,red) }
-            if traditional && !far {
-                kitChineseRoof(0,2.0,0,length:0.5,width:4,rise:0.30,sweep:0.08)
+            if traditional {
+                kitChineseRoof(0,2.0,0,length:0.5,width:4,rise:0.30,sweep:0.08,far:far)
             } else { gable(0,2.0,0,0.5,4,0.30,Map3DPalette.templeRoof) }
             box(0.15,0.75,0,0.025,1.35,0.55,red)
         case .offeringTable:

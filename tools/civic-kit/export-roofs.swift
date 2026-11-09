@@ -33,10 +33,11 @@ for state in ["near","far","fallback"] {
         let model=Map3DCivicKit.model(for:part,far:far,traditional:traditional)
         try export(model,info:["id":part.id+"-"+state,"name":part.name,"category":"culture","state":state,"base_id":part.id])
     }
-    for part: Map3DResidentialKit.Part in [.courtyardHouse,.narrowTownhouse] {
+    for part: Map3DResidentialKit.Part in [.courtyardHouse,.narrowTownhouse,.oldNarrowTownhouse,.oldShophouse] {
         let model=Map3DResidentialKit.model(for:part,far:far,traditional:traditional)
         try export(model,info:["id":part.id+"-"+state,"name":part.name,"category":"home","state":state,"base_id":part.id])
     }
+    try export(Map3DResidentialKit.horsebackGable(far:far || !traditional),info:["id":"residential-horsebackGable-"+state,"name":"馬背山牆零件","category":"part","state":state,"base_id":"residential-horsebackGable"])
 }
 let manifest: [String:Any] = ["schema_version":1,"generator":"ChineseRoofKits669","models":records,
     "directions":["top","bottom","left","right","front","back","isometric"]]
