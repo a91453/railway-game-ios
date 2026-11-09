@@ -2,7 +2,7 @@
 
 九處站點的研究配方。決策 665 把它們照決策 625 的做法接進 3D 地圖（OSM 位置、切開讓出軌道、代替套件的站房）；存檔不動。所有照片僅供外形比對，不作貼圖。站房高度、屋頂坡度、出簷、窗列、柱距及入口細節，除非表中另有 OSM 標籤，**全部是推估，並非實測**。
 
-接進地圖後的近景截圖（九站白天，阿里山、溪湖晚上）：`map-overview.png`；原圖在 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/station-exteriors-batch2-map-2026-11-09/close/`。
+接進地圖後的近景截圖（九站白天，阿里山、溪湖晚上）：`map-overview.png`；原圖在 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/station-exteriors-batch2-map-2026-11-09/`。
 
 ## 資料與比例
 
