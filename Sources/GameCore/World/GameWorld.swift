@@ -4969,6 +4969,15 @@ public struct GameWorld: Equatable, Sendable {
         return zip(trains, authorities).contains { train, authority in
             guard let (held, envelopes) = authority else { return false }
             if let limit = approachLimit(of: train, envelopes), held >= limit { return false }
+            // Decision 666: an empty run takes all its route, or on to a
+            // station on its way, or nothing.
+            if takesRouteByWaitingPoints(train) {
+                let route = followingCover(of: train, envelopes, memo: &memo)
+                if holder(of: route, except: train.id, holders: holders) == nil { return true }
+                let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
+                let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
+                return nextWaitingPoint(of: train, envelopes, held: held, free: free) != nil
+            }
             let reach = reachToExtend(envelopes, beyond: held) ?? .max
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
             return isAuthority(envelopes, to: reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)
