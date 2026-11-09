@@ -2,6 +2,8 @@
 
 九處站點的研究配方。決策 665 把它們照決策 625 的做法接進 3D 地圖（OSM 位置、切開讓出軌道、代替套件的站房）；存檔不動。所有照片僅供外形比對，不作貼圖。站房高度、屋頂坡度、出簷、窗列、柱距及入口細節，除非表中另有 OSM 標籤，**全部是推估，並非實測**。
 
+接進地圖後的截圖（九站白天與晚上）：`map-overview.png`；原圖在 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/station-exteriors-batch2-map-2026-11-09/`。
+
 ## 資料與比例
 
 足跡來自 osmtoday `asia/taiwan.pbf`（2026-11-07），由 pyosmium 讀取並將每個 way 的全部非閉合頂點以 `x=(lon-lon₀)·111320·cos(lat₀)`、`y=(lat-lat₀)·111320` 轉成局部公尺。表中未另列的 height、building:levels 與 roof 標籤代表 OSM 沒有標記，不能當作實測高度。輪廓 © OpenStreetMap contributors，ODbL 1.0。參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/stations/` 目前沒有這九站同站的 metadata；`blender-buildings-v1` 只作比例參考，沒有搬用網格。
