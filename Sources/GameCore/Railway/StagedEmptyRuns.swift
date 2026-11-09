@@ -32,8 +32,10 @@ extension GameWorld {
     func waitingPoints(of train: Train, _ envelopes: AuthorityEnvelopes) -> [Int64] {
         guard !envelopes.stretches.isEmpty else { return [] }
         var ends: [TrackTraversal: [Int64]] = [:]
+        var fitting: [StationID: Int] = [:]
+        for platform in network.platforms where platform.length >= train.length { fitting[platform.station, default: 0] += 1 }
         for platform in network.platforms where platform.length >= train.length {
-            guard station(id: platform.station)?.isDepot == false, let edge = network.edge(platform.edge) else { continue }
+            guard fitting[platform.station, default: 0] >= 3, station(id: platform.station)?.isDepot == false, let edge = network.edge(platform.edge) else { continue }
             ends[TrackTraversal(edge: platform.edge, direction: .forward), default: []].append(platform.end)
             ends[TrackTraversal(edge: platform.edge, direction: .backward), default: []].append(edge.length - platform.start)
         }
