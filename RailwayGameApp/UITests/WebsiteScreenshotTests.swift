@@ -152,8 +152,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Chiayi and Tainan in the demo's real lines laid round them; the
     /// forest and sugar railways' stations on the empty map, their real
     /// lines' track drawn. Each looked at from its buildings' middle
-    /// (Keelung's between the north and south stations, Tainan's at the
-    /// 1936 station).
+    /// (Keelung's at the south station, 160 m south-west of the origin;
+    /// Tainan's at the 1936 station, 210 m west of it).
     func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765") }
     func testStationExteriorChiayi() { shootStationExterior("exteriorChiayi", lay: "23.455,120.415,23.505,120.470") }
     func testStationExteriorTainan() { shootStationExterior("exteriorTainan", lay: "22.975,120.190,23.020,120.240") }
@@ -172,7 +172,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // middle, 180 m north-east (the origin is by the high-rises).
         let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
                       "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864",
-                      "exteriorKeelung": "25.13303,121.73923", "exteriorChiayi": "23.479162,120.441182", "exteriorTainan": "22.996996,120.213261",
+                      "exteriorKeelung": "25.131791,121.738397", "exteriorChiayi": "23.479162,120.441182", "exteriorTainan": "22.997321,120.21129",
                       "exteriorBeimen": "23.487621,120.454664", "exteriorFenqihu": "23.505276,120.695147", "exteriorAlishan": "23.510083,120.804323",
                       "exteriorWushulin": "23.328660,120.373799", "exteriorXihu": "23.952050,120.481810", "exteriorQiaotou": "22.753488,120.314640"]
         for (hour, suffix) in [("day", ""), ("night", "Night")] {
