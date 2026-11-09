@@ -1634,8 +1634,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(scrollScreen(to: neiwan, in: app, drags: 40), "The Neiwan Line scrolls into view in the challenge list")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: neiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 60), .completed, "The real-world data loads")
+        // The card has just come into view at the bottom: bring all of it up.
+        dragUp(app)
         settle(seconds: 2)
         keep("neiwan-\(suffix)-1-menu", app)
+        dragUp(app)
+        settle(seconds: 1)
+        keep("neiwan-\(suffix)-1b-menu-below", app)
         neiwan.tap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The challenge starts")
         let card = app.descendants(matching: .any)["storyCard"].firstMatch
@@ -1645,6 +1650,19 @@ final class WebsiteScreenshotTests: XCTestCase {
         openFromGameMenu("menu.goals", in: app)
         settle(seconds: 3)
         keep("neiwan-\(suffix)-3-goals", app)
+        // The milestones and the two numbers are below the story.
+        for step in ["a", "b", "c"] {
+            dragUp(app)
+            settle(seconds: 1)
+            keep("neiwan-\(suffix)-3\(step)-goals-below", app)
+        }
+    }
+
+    /// One slow drag up the middle of the screen: half a screen further down a list.
+    private func dragUp(_ app: XCUIApplication) {
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
     }
 
     /// The real-world demo on the game's own base map (decision 151), the
