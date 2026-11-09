@@ -3426,12 +3426,14 @@ public struct GameWorld: Equatable, Sendable {
     /// it would be once it has left the first call: turned round first if
     /// the trip says so, on its way along the first leg. `nil` if the
     /// trip's times would not fit.
-    func firstDeparture(of train: Train, on trip: LineTrip, calling stops: [StationID]) -> Train? {
+    func firstDeparture(of train: Train, on trip: LineTrip, calling stops: [StationID], deadheading: Bool = false) -> Train? {
         guard let timetable = trip.timetable(calling: stops, sentOutAt: clock.now) else { return nil }
         var sent = train
         sent.timetable = timetable
         sent.timetablePeriod = nil
         sent.execution = .waitingAtStop(0)
+        // Decision 666: an empty run out of a depot takes its route as one.
+        sent.isDeadheading = deadheading
         sent.times = ServiceTimes(arrival: clock.now)
         return leaving(sent, stop: 0, cycle: 0).train
     }
@@ -4932,10 +4934,18 @@ public struct GameWorld: Equatable, Sendable {
                 holders = nil
                 continue
             }
-            if approachesStandingTrain(train, along: route, holders: holders!) { continue }
+            // Decision 666: an empty run, on to a station on its way.
+            let byWaitingPoints = takesRouteByWaitingPoints(train)
+            if !byWaitingPoints, approachesStandingTrain(train, along: route, holders: holders!) { continue }
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders!))
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
-            let authority = min(followingAuthority(envelopes, free: free), limit ?? .max)
+            let authority: Int64
+            if byWaitingPoints {
+                guard let point = nextWaitingPoint(of: train, envelopes, held: held, free: free) else { continue }
+                authority = point
+            } else {
+                authority = min(followingAuthority(envelopes, free: free), limit ?? .max)
+            }
             guard authority > held else { continue }
             trains[index].reservation = reservation(train.reservation, extending: envelopes, from: held, to: authority)
             extended = true

@@ -205,6 +205,10 @@ extension GameWorld {
             if following, route.moves, let train = followingAuthority(of: candidate, route: envelope, memo: &memo) {
                 return .granted(train)
             }
+            // Decision 666: an empty run, as far as a station on its way.
+            if following, route.moves, takesRouteByWaitingPoints(candidate), let train = waitingPointAuthority(of: candidate, memo: &memo) {
+                return .granted(train)
+            }
             return .held(by: holder)
         }
         var train = candidate
@@ -1077,7 +1081,7 @@ extension GameWorld {
         var claims: [TrainID: Claim] = [:]
         // With block sections (decision 212) a following train holds only
         // what it has taken, and waits for nothing more.
-        for (train, route) in zip(trains, covers) where !blockSections {
+        for (train, route) in zip(trains, covers) where !blockSections && !takesRouteByWaitingPoints(train) {
             // A following train's route envelope (see ``routeEnvelope(of:)``)
             // is the base and the track of every stretch; it waits for
             // the track of its route no other placed train holds.
@@ -1561,7 +1565,7 @@ extension GameWorld {
     /// of the trains ahead, which it follows. `nil` for a train that does
     /// not follow another.
     func claim(of train: Train) -> (route: Set<TrackResource>, waiting: Set<TrackResource>)? {
-        guard !blockSections, isFollowing(train) else { return nil }
+        guard !blockSections, !takesRouteByWaitingPoints(train), isFollowing(train) else { return nil }
         let route = routeEnvelope(of: train).resources
         var waiting = route
         for other in trains where other.id != train.id && other.position != nil {

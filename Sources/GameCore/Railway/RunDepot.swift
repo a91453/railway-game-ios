@@ -368,7 +368,7 @@ extension GameWorld {
                 // Decision 290: under traffic control, only with a berth there
                 // for it; without one it stays in the depot.
                 if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
-                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
+                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops, deadheading: true),
                    case .held = reservingDeparture(leaving, memo: &memo.directions) {
                     continue
                 }
