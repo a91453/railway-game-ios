@@ -68,12 +68,12 @@ final class JijiReportTests: XCTestCase {
     /// Decision 668: the Neiwan Line, Hsinchu to Neiwan (the app's
     /// `tra_sched|NEIWAN`). Hsinchu to Zhuzhong is double track
     /// (`tra_track_sections.json`), laid here as a loop at each of its
-    /// stations; past Zhuzhong it is single, and only Zhudong has a second
-    /// platform track (OpenStreetMap's stop positions in the reference's
-    /// `rail-3d/physical/network.json`; Wikipedia's 「竹東車站」).
+    /// stations; past Zhuzhong it is single, with a second track to pass at
+    /// Zhudong and Jiuzantou (OpenStreetMap's stop positions on a second
+    /// track in the reference's `rail-3d/physical/network.json`).
     nonisolated static let neiwan = Survey(
         prefix: "內灣線", stations: ["新竹", "北新竹", "千甲", "新莊", "竹中", "上員", "榮華", "竹東", "橫山", "九讚頭", "合興", "富貴", "內灣"],
-        loops: ["北新竹", "千甲", "新莊", "竹中", "竹東"]
+        loops: ["北新竹", "千甲", "新莊", "竹中", "竹東", "九讚頭"]
     )
 
     func testTheJijiChallenge() throws {

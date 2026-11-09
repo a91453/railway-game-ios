@@ -334,9 +334,12 @@ extension BranchLineChallenge {
 /// The Neiwan challenge's targets (decision 668), measured by
 /// `JijiReportTests.testTheNeiwanChallenge`.
 enum NeiwanTargets {
-    static let riders: Int64 = 20_000
-    static let profit = Money(900_000_000)
-    static let startingBalance = Money(2_100_000_000)
+    static let riders: Int64 = 50_000
+    /// A closed year's net profit: NT$100,000,000.
+    static let profit = Money(10_000_000_000)
+    /// NT$24 million: the line on flat ground and NT$6 million to spare, for
+    /// the app's embankments, cuttings and tunnels and the first weeks.
+    static let startingBalance = Money(2_400_000_000)
     static let goldDays = FinancePeriod.year.days
     static let silverDays = 2 * FinancePeriod.year.days
     static let deadlineDays = 3 * FinancePeriod.year.days
