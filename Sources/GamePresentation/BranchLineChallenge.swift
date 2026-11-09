@@ -332,7 +332,16 @@ extension BranchLineChallenge {
 }
 
 /// The Neiwan challenge's targets (decision 668), measured by
-/// `JijiReportTests.testTheNeiwanChallenge`.
+/// `JijiReportTests.testTheNeiwanChallenge` (release build, flat ground,
+/// the whole line laid on the first day for some $18.2 million, a new
+/// line's hours): Hsinchu's end brings riders at once, so the challenge is
+/// the trains' room. One train of two cars carries 30,500 a day in its
+/// first week and stays near 33,000, full, with $74.9 million net a year:
+/// it fails at the deadline. One train of four reaches 50,000 on day 11
+/// and $163.5 million net in its first year, and two trains of two
+/// $153.2 million: gold on day 360. A flat $8 fare slows the towns and goes
+/// bankrupt on day 341; the Blue Train, 50 a car, carries some 4,000 and
+/// goes bankrupt on day 90.
 enum NeiwanTargets {
     static let riders: Int64 = 50_000
     /// A closed year's net profit: NT$100,000,000.
