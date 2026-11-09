@@ -110,6 +110,22 @@ final class Map3DXRayTests: XCTestCase {
         XCTAssertGreaterThan(with.mesh.vertices.count, without.mesh.vertices.count)
     }
 
+    /// What seeing underground costs, as the decision's table gives it:
+    /// four triangles a 16 m piece of tunnel, ten a car, one draw call
+    /// each; the lamps' light 20 triangles with the trains' boxes.
+    func testWhatSeeingUndergroundCosts() throws {
+        let (world, train) = try tunnelWorld()
+        let scene = Map3DScene(world: world)
+        let shown = scene.trackCover.pieces.filter(Map3DXRay.shows).count
+        let xray = Map3DXRay(scene: scene, snapshot: world.railwaySnapshot())
+        XCTAssertEqual(xray.mesh.triangleCount, 4 * shown)
+        var cars = Map3DMesh()
+        Map3DXRay.addCars(frame(world, scene: scene, buried: true).buried, to: &cars)
+        XCTAssertEqual(cars.triangleCount, 4 * 10)
+        let lamps = frame(world, scene: scene, headlamp: train).boxes.triangleCount - frame(world, scene: scene).boxes.triangleCount
+        XCTAssertEqual(lamps, 2 * Int(Map3DHeadlamp.reach / Map3DHeadlamp.step))
+    }
+
     // MARK: Headlamps
 
     /// Following a train in a tunnel, its lamps light the track ahead: a
