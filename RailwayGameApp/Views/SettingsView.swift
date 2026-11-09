@@ -56,6 +56,8 @@ struct SettingsView: View {
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
     @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
     @AppStorage(MapAmbienceSettings.frameRateKey) private var showsFrameRate = false
+    /// Decision 672: the tunnels seen through the ground in the 3D map.
+    @AppStorage(MapAmbienceSettings.undergroundKey) private var showsUnderground = false
     /// Decision 216: the lines' colours, on the device.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 338: the train pack, unlocked in a test build.
@@ -427,6 +429,17 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings.pinchOpens3D")
             .disabled(!map3DQuality.shows3D)
+            // Decision 672: the tunnels seen through the ground, off by
+            // default.
+            Toggle(isOn: $showsUnderground) {
+                Label {
+                    Text(verbatim: language.text("Show Underground", "顯示地下"))
+                } icon: {
+                    Image(systemName: "square.3.layers.3d.down.right")
+                }
+            }
+            .accessibilityIdentifier("settings.map3DUnderground")
+            .disabled(!map3DQuality.shows3D)
             // Decision 238's later note: three looks, no sliders; decision
             // 365: and Off, the flat map only; decision 417: a short line
             // on what each gives, under the section.
@@ -444,8 +457,8 @@ struct SettingsView: View {
             .accessibilityIdentifier("settings.map3DQuality")
         } footer: {
             Text(verbatim: ([language.text(
-                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. The flat map is not affected.",
-                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。2D 地圖不受影響。"
+                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. Show underground: looking over the map, your tunnels, the trains in them and the underground platforms show through the ground. The flat map is not affected.",
+                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。顯示地下：俯瞰地圖時，隔著地面看得到你的隧道、隧道裡的列車和地下月台。2D 地圖不受影響。"
             )] + [Map3DQuality.automatic, .saving, .high, .off].map {
                 language.text("\($0.name(in: language)): ", "\($0.name(in: language))：") + $0.explanation(in: language)
             }).joined(separator: "\n"))
@@ -915,6 +928,8 @@ enum MapAmbienceSettings {
     static let realTrainsKey = "map.showsRealTrains"
     /// Decision 328: the flat map's frame readout.
     static let frameRateKey = "map.showsFrameRate"
+    /// Decision 672: the 3D map's tunnels seen through the ground.
+    static let undergroundKey = "map.showsUnderground"
 }
 
 /// Decision 338: whether this is a test build, Xcode's or TestFlight's,

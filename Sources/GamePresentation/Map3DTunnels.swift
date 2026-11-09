@@ -22,6 +22,21 @@ extension Map3DScene.Builder {
     /// How far apart two tunnel tracks may run and still share one bore,
     /// in metres: closer, their covers would cross.
     static let sharedBore: Float = 2 * (boreHalfWidth + coverThickness)
+    /// Decision 672: whether the drawn ground is cut away along the piece
+    /// of bore between two samples (the rails' heights, the drawn ground
+    /// over them): where the bank of earth stands over it (the ground
+    /// does not cover it) and the ground at both ends is over the bore's
+    /// floor, so the ground lies in the bore, which from the cab or a
+    /// portal showed as a plane run through the tunnel. Cut out as a
+    /// trench is (decision 375), the bank's top and sides close it.
+    static func boreCutsGround(rails: (Float, Float), grounds: (Float, Float)) -> Bool {
+        let top = boreCrown + coverThickness
+        let covered = rails.0 + top <= grounds.0 && rails.1 + top <= grounds.1
+        return !covered && grounds.0 > rails.0 - boreFloor && grounds.1 > rails.1 - boreFloor
+    }
+    /// How far either side of the rails the ground is cut away there: the
+    /// bank's top.
+    static let boreCutReach: Float = boreHalfWidth + coverThickness
     /// A lamp on a wall every so many metres, on the two walls in turn.
     static let lampSpacing: Float = 24
     static let lampHeight: Float = 2.2
@@ -77,6 +92,15 @@ extension Map3DScene.Builder {
             func at(_ end: Int, _ u: Float, _ y: Float) -> Map3DPoint { line[end] + across[end] * u + Map3DPoint(0, y, 0) }
             let ends = [index - 1, index]
             let covered = ends.allSatisfy { line[$0].y + top <= grounds[$0] }
+            // Decision 672: where the ground is cut away round the bank
+            // (``boreCutsGround``), the bank comes up to the ground at an
+            // end it is under, so the cut leaves no step.
+            let cut = Self.boreCutsGround(rails: (line[index - 1].y, line[index].y), grounds: (grounds[index - 1], grounds[index]))
+            let tops = ends.map { cut ? max(top, grounds[$0] - line[$0].y) : top }
+            func bank(_ p: Float, _ q: Float, facing: Map3DPoint, side: Float) {
+                Self.face(&mesh, [at(ends[0], side * p, tops[0]), at(ends[0], side * q, tops[0]), at(ends[1], side * q, tops[1]),
+                                  at(ends[1], side * p, tops[1])], facing: facing, color: Map3DPalette.embankment, paint: Self.bank)
+            }
             for side: Float in [-1, 1] {
                 // Shared on this side where either end has a tunnel beside.
                 let shared = ends.map { side < 0 ? beside[$0].minus : beside[$0].plus }
@@ -89,7 +113,7 @@ extension Map3DScene.Builder {
                 if let far = reach.max() {
                     strip((0, floor), (far, floor), facing: Map3DPoint.up, color: Map3DPalette.tunnelLining)
                     strip((0, crown), (far, crown), facing: Map3DPoint.up * -1, color: Map3DPalette.tunnelLining)
-                    if !covered { strip((0, top), (far, top), facing: Map3DPoint.up, color: Map3DPalette.embankment, paint: Self.bank) }
+                    if !covered { bank(0, far, facing: Map3DPoint.up, side: side) }
                     continue
                 }
                 strip((0, floor), (hw, floor), facing: Map3DPoint.up, color: Map3DPalette.tunnelLining)
@@ -97,13 +121,13 @@ extension Map3DScene.Builder {
                 strip((hw, Self.boreSpring), (roofEdge, crown), facing: inward + Map3DPoint.up * -1, color: Map3DPalette.tunnelWall, paint: Self.concrete)
                 strip((roofEdge, crown), (0, crown), facing: Map3DPoint.up * -1, color: Map3DPalette.tunnelLining)
                 if !covered {
-                    strip((0, top), (outer, top), facing: Map3DPoint.up, color: Map3DPalette.embankment, paint: Self.bank)
+                    bank(0, outer, facing: Map3DPoint.up, side: side)
                     // Its side down to a little under the ground.
-                    let feet = ends.map { end in
-                        let foot = max(min(grounds[end] - line[end].y - 0.3, top), floor - Self.coverThickness)
-                        return at(end, side * (outer + top - foot), foot)
+                    let feet = ends.enumerated().map { number, end in
+                        let foot = max(min(grounds[end] - line[end].y - 0.3, tops[number]), floor - Self.coverThickness)
+                        return at(end, side * (outer + tops[number] - foot), foot)
                     }
-                    Self.face(&mesh, [at(ends[0], side * outer, top), feet[0], feet[1], at(ends[1], side * outer, top)],
+                    Self.face(&mesh, [at(ends[0], side * outer, tops[0]), feet[0], feet[1], at(ends[1], side * outer, tops[1])],
                               facing: inward * -1 + Map3DPoint.up, color: Map3DPalette.embankment, paint: Self.bank)
                 }
             }
@@ -168,10 +192,16 @@ extension Map3DScene.Builder {
 
     /// `ends` grouped as the reference's `groupTunnelPortals`: facing the
     /// same way (within 10°), less than 12 m apart along it, 11 m across
-    /// it and 2 m in height, under one wider opening.
+    /// it and 2 m in height, under one wider opening. The ends are taken
+    /// in a fixed order of where they stand (decision 672, review L13-7),
+    /// so the same ends make the same portals whatever order the snapshot
+    /// lists its edges in.
     static func portals(_ ends: [PortalEnd]) -> [Portal] {
+        let ordered = ends.sorted {
+            ($0.point.x, $0.point.z, $0.into.x, $0.into.z) < ($1.point.x, $1.point.z, $1.into.x, $1.into.z)
+        }
         var groups: [[PortalEnd]] = []
-        for end in ends {
+        for end in ordered {
             func fits(_ other: PortalEnd) -> Bool {
                 let gap = other.point - end.point
                 let sideways = Map3DPoint(-end.into.z, 0, end.into.x)
@@ -270,6 +300,21 @@ extension Map3DScene.Builder {
             Self.face(&mesh, outerFace, facing: toTrack * -1, color: wall, paint: Self.concrete)
             Self.face(&mesh, [inner[1], outerFace[1], outerFace[2], inner[2]], facing: Map3DPoint.up, color: trim)
             Self.face(&mesh, [inner[2], outerFace[2], outerFace[3], inner[3]], facing: out, color: wall, paint: Self.concrete)
+        }
+        // Decision 672: where the bank of earth over a shallow bore
+        // (``addBore(_:into:)``) comes out to the portal, its end past the
+        // head wall's shoulders, so the bank does not stand open there.
+        let bankTop = crown + Self.coverThickness, bankEdge = hw + Self.coverThickness
+        let centreGround = ground(0)
+        if centreGround < bankTop {
+            let bankFoot = max(min(centreGround - 0.3, bankTop), floor - Self.coverThickness)
+            let atShoulder = bankTop - (outer - bankEdge)
+            if atShoulder > bankFoot + 0.01 {
+                for side: Float in [-1, 1] {
+                    Self.face(&mesh, [at(side * outer, bankFoot), at(side * outer, atShoulder), at(side * (bankEdge + bankTop - bankFoot), bankFoot)],
+                              facing: out, color: Map3DPalette.embankment, paint: Self.bank)
+                }
+            }
         }
     }
 

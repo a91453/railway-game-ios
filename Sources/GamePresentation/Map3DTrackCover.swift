@@ -74,6 +74,8 @@ public struct Map3DTrackCover: Sendable {
         var pieces: [Piece] = []
         let portals = Set(snapshot.nodes.filter(\.isTunnelPortal).map(\.id))
         var trenchLines: [(line: [Map3DPoint], runs: [ClosedRange<Int>], opens: (first: Bool, last: Bool))] = []
+        // Decision 672: the bores whose bank the ground is cut away round.
+        var bores: [[Map3DTrenches.Section]] = []
         let fast = builder.highSpeedTrack()
         for alignment in snapshot.edges {
             let spans = alignment.edge.sectionSpans
@@ -96,6 +98,7 @@ public struct Map3DTrackCover: Sendable {
                         }
                     }
                 }
+                if span.kind == .tunnel { bores += Self.boreCuts(line, grounds: grounds) }
                 for index in 1..<line.count {
                     pieces.append(Piece(a: line[index - 1], b: line[index], groundA: grounds[index - 1], groundB: grounds[index],
                                         opensBefore: index == 1, opensAfter: index == line.count - 1, isTunnel: span.kind == .tunnel,
@@ -115,7 +118,7 @@ public struct Map3DTrackCover: Sendable {
         }
         self.pieces = pieces
         self.cells = cells
-        trenches = Self.trenches(trenchLines, builder: &builder)
+        trenches = Self.trenches(trenchLines, bores: bores, builder: &builder)
         openings = builder.portalEnds(snapshot).map(\.point)
     }
 
@@ -124,6 +127,32 @@ public struct Map3DTrackCover: Sendable {
     }
 
     public var isEmpty: Bool { pieces.isEmpty }
+
+    /// Decision 672: the runs of `line` (a tunnel at the rails' height,
+    /// `grounds` the drawn ground over it) whose bank the ground is cut
+    /// away round (``Map3DScene/Builder/boreCutsGround(rails:grounds:)``),
+    /// as sections reaching ``Map3DScene/Builder/boreCutReach`` each way.
+    static func boreCuts(_ line: [Map3DPoint], grounds: [Float]) -> [[Map3DTrenches.Section]] {
+        guard line.count > 1 else { return [] }
+        let across = Map3DMesh.acrossDirections(line)
+        let reach = Map3DScene.Builder.boreCutReach
+        var runs: [[Map3DTrenches.Section]] = []
+        var run: [Map3DTrenches.Section] = []
+        func section(_ index: Int) -> Map3DTrenches.Section {
+            Map3DTrenches.Section(rail: line[index], across: across[index], floor: (reach, reach), rim: (reach, reach))
+        }
+        for index in 1..<line.count {
+            if Map3DScene.Builder.boreCutsGround(rails: (line[index - 1].y, line[index].y), grounds: (grounds[index - 1], grounds[index])) {
+                if run.isEmpty { run.append(section(index - 1)) }
+                run.append(section(index))
+            } else if !run.isEmpty {
+                runs.append(run)
+                run = []
+            }
+        }
+        if !run.isEmpty { runs.append(run) }
+        return runs
+    }
 
     /// The drawn ground's height at `point` on the rails, in metres, and
     /// whether it is in a tunnel; `nil` if it is on none of the track.

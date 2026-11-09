@@ -686,6 +686,29 @@ fragment float4 map3dShadowFragment(Map3DShadowOut in [[stage_in]], constant Map
     return float4(0.10, 0.12, 0.20, in.darkness * uniforms.shade.x * 0.65 * (1.0 - fog));
 }
 
+// Decision 672: seeing underground. The tunnels, their trains and the
+// underground platforms drawn through the ground in flat colours, how
+// much of each shows in the vertex's alpha, faded with the fog. Neither
+// tested against the depth nor written into it.
+struct Map3DXRayOut {
+    float4 position [[position]];
+    float4 color;
+    float3 world;
+};
+
+vertex Map3DXRayOut map3dXRayVertex(Map3DVertexIn in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
+    Map3DXRayOut out;
+    out.position = uniforms.viewProjection * float4(in.position, 1.0);
+    out.color = in.color;
+    out.world = in.position;
+    return out;
+}
+
+fragment float4 map3dXRayFragment(Map3DXRayOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
+    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, distance(in.world, uniforms.eye.xyz));
+    return float4(in.color.rgb, in.color.a * (1.0 - fog));
+}
+
 // Decision 347: the sky, one triangle over the whole screen at the far
 // plane (depth 0, decision 342), drawn where nothing else was. Laid out as
 // Map3DSky.floats writes it; the colour worked out as Map3DSky.colour(toward:)
