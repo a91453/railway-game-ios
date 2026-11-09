@@ -545,6 +545,36 @@ jobs:
             echo "::warning::The warm-up launch failed; the UI tests launch the app themselves."
           fi
 
+      # Decision 667: the other iPhone jobs' XCTest warm-up (below, in
+      # ui-full-lane), here too. In main fa31385's full lane (run
+      # 42527935599) this job's first XCTest launch timed out after 85 s
+      # (CoverageShortcutUITests, the first class that opens the app), the
+      # next could not be resumed (DTServiceHub "Failed to send signal 19
+      # ... 3") and hung its 8 minutes (FinanceCompositionUITests), the
+      # third timed out too (LoadChartUITests), and once the runner
+      # restarted the remaining 45 tests passed at their usual times. The
+      # green nights' first launch here took 17 to 47 s. Not on a pull
+      # request: its gate keeps to about 6 minutes (decision 199), and this
+      # adds 2 to 3.
+      - name: Warm up XCTest's first launch
+        if: ${{ github.event_name != 'pull_request' }}
+        timeout-minutes: 8
+        continue-on-error: true
+        run: |
+          xcrun simctl terminate "$SIMULATOR_UDID" io.github.a91453.RailwayGame 2>/dev/null || true
+          if ! xcodebuild test-without-building \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/ui-smoke-warm-up.xcresult" \
+            -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testTheAppOpensOnItsStartScreen \
+            -parallel-testing-enabled NO \
+            -disableAutomaticPackageResolution; then
+            echo "::warning::The XCTest warm-up launch failed; the UI tests launch the app themselves."
+          fi
+
       # A pull request runs the gate list; everything else runs all the UI
       # tests. The gate keeps what only a Simulator can answer and leaves the
       # gesture, large-text and landscape tests, the slowest and the least

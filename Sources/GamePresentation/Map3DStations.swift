@@ -306,16 +306,16 @@ extension Map3DScene.Builder {
         // no building of its own, but an expanded one's wings beside it.
         // Whether the study stands is asked of the whole network, so a
         // block of chunks without the study's origin agrees.
-        var standing: [Map3DStationExteriorBatch1.Station: Bool] = [:]
-        func exterior(for id: StationID, profile: Map3DStationKit.Profile, at anchor: Map3DPoint) -> Map3DStationExteriorBatch1.Station? {
+        var standing: [Map3DExteriorStudy: Bool] = [:]
+        func exterior(for id: StationID, profile: Map3DStationKit.Profile, at anchor: Map3DPoint) -> Map3DExteriorStudy? {
             guard let frame else { return nil }
-            let within = Map3DStationExteriorBatch1.Station.allCases.filter { study in
+            let within = Map3DExteriorStudy.allCases.filter { study in
                 sceneOutlines(of: study, frame: frame).contains { Map3DStationExterior.distance(from: anchor, to: $0) <= Self.exteriorCovers }
             }
-            for study in (Map3DStationExteriorBatch1.study(for: profile).map { [$0] } ?? []) + within {
+            for study in (Map3DExteriorStudy.study(for: profile).map { [$0] } ?? []) + within {
                 // Review L14-7: a study drawn nowhere stands for no station.
                 if let reach = studyRegion {
-                    let origin = Map3DStationExteriorBatch1.origin(of: study)
+                    let origin = study.origin
                     let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
                     guard place.x >= reach.minX, place.x <= reach.maxX, place.y >= reach.minY, place.y <= reach.maxY else { continue }
                 }

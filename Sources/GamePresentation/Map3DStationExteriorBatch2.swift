@@ -1,6 +1,7 @@
 import Foundation
 
-/// Isolated exterior studies; the live station catalog never references this type.
+/// Decision 626's exterior studies; decision 665 stands them on the 3D map
+/// (``Map3DExteriorStudy``), as decision 625 stands the first batch's.
 public enum Map3DStationExteriorBatch2 {
     public enum LevelOfDetail: Sendable { case near, far }
     public enum Station: String, CaseIterable, Sendable {
@@ -245,7 +246,39 @@ public enum Map3DStationExteriorBatch2 {
         (-33.743, 122.719),
     ]
 
+    /// The documented origin (degrees east, north) of `station`'s metres.
+    static func origin(of station: Station) -> (Double, Double) {
+        switch station {
+        case .keelung: keelungOrigin
+        case .chiayi: chiayiOrigin
+        case .tainan: tainanOrigin
+        case .beimen: beimenOrigin
+        case .fenqihu: fenqihuOrigin
+        case .alishan: alishanOrigin
+        case .wushulin: wushulinOrigin
+        case .xihu: xihuOrigin
+        case .qiaotou: qiaotouOrigin
+        }
+    }
+
     public static func model(for station: Station, detail: LevelOfDetail, includeContext: Bool = false) -> Map3DModelPack.Model {
+        var b = StationKitBuilder()
+        b.mesh = clippedForRailClearance(mesh(for: station, detail: detail), station: station)
+        if includeContext {
+            var context = StationKitBuilder()
+            context.optionalContext(station, detail: detail)
+            b.mesh.append(clippedForRailClearance(context.mesh, station: station))
+        }
+        let suffix=detail == .near ? "near" : "far"
+        return .flat(named: "station-exterior-batch2-\(station.rawValue)-\(includeContext ? "scene-" : "")\(suffix)", from: b.mesh)
+    }
+
+    /// The study in its own metres (x east, y up, z north of its origin),
+    /// without the optional context, and not yet cut clear of the real
+    /// surface track (``clearancePaths(for:)``): on the 3D map the scene
+    /// cuts it clear of the track it draws (decision 665), each part
+    /// still sharing its vertices.
+    static func mesh(for station: Station, detail: LevelOfDetail) -> Map3DMesh {
         var b = StationKitBuilder()
         switch station {
         case .keelung:
@@ -280,10 +313,7 @@ public enum Map3DStationExteriorBatch2 {
             b.studyOutline(way112644875, elevation: 8)
             b.qiaotouSugar(detail)
         }
-        if includeContext { b.optionalContext(station,detail:detail) }
-        b.mesh = clippedForRailClearance(b.mesh, station: station)
-        let suffix=detail == .near ? "near" : "far"
-        return .flat(named: "station-exterior-batch2-\(station.rawValue)-\(includeContext ? "scene-" : "")\(suffix)", from: b.mesh)
+        return b.mesh
     }
 
     /// Optional display context stays separate from the station body model.
