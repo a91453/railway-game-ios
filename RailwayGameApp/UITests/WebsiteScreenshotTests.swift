@@ -1608,6 +1608,44 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("liu-mingchuan", app)
     }
 
+    /// Decision 668: the Neiwan Line branch-line challenge, in Traditional
+    /// Chinese and in English: its card in the challenge list, the opening
+    /// story card on the map, and the goals panel with the three
+    /// milestones. For the screenshot review of the pull request that added
+    /// it, not the website.
+    func testNeiwanChallengeZh() { shootNeiwanChallenge(english: false, suffix: "zh") }
+    func testNeiwanChallengeEn() { shootNeiwanChallenge(english: true, suffix: "en") }
+
+    private func shootNeiwanChallenge(english: Bool, suffix: String) {
+        executionTimeAllowance = 900
+        let app = launch(extra: ["-story-card-ms", "120000"], english: english)
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        let challenges = app.buttons["newGame.challenges"]
+        XCTAssertTrue(challenges.appears(within: 10))
+        XCTAssertTrue(challenges.becomesHittable(within: 5))
+        challenges.tap()
+        let neiwan = app.buttons["challenge.branch.neiwan"]
+        XCTAssertTrue(neiwan.appears(within: 10), "The Neiwan Line is in the challenge list")
+        XCTAssertTrue(scrollScreen(to: neiwan, in: app), "The card scrolls into view")
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: neiwan)
+        XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 60), .completed, "The real-world data loads")
+        settle(seconds: 2)
+        keep("neiwan-\(suffix)-1-menu", app)
+        neiwan.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The challenge starts")
+        let card = app.descendants(matching: .any)["storyCard"].firstMatch
+        if card.appears(within: 90) { card.waitUntilSettled() }
+        settle(seconds: 3)
+        keep("neiwan-\(suffix)-2-start", app)
+        openFromGameMenu("menu.goals", in: app)
+        settle(seconds: 3)
+        keep("neiwan-\(suffix)-3-goals", app)
+    }
+
     /// The real-world demo on the game's own base map (decision 151), the
     /// hills shaded from the game's heights.
     func testRealWorldDemoBaseMap() {
