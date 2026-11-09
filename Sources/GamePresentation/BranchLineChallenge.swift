@@ -163,7 +163,7 @@ public struct BranchLineChallenge: Sendable {
     public func cardText(in language: DisplayLanguage) -> String { language.text(card.english, card.chinese) }
 
     /// Every branch line's challenge, in the order the menu lists them.
-    public static let all: [BranchLineChallenge] = [jiji]
+    public static let all: [BranchLineChallenge] = [jiji, neiwan]
 
     /// The branch line whose challenge is `id` ("branch.jiji"), if any.
     public static func named(_ id: String) -> BranchLineChallenge? {
@@ -261,6 +261,81 @@ enum JijiTargets {
     static let profit = Money(900_000_000)
     /// NT$21 million: the line on flat ground and NT$5.1 million to spare, for
     /// the app's embankments, cuttings and tunnels and the first months.
+    static let startingBalance = Money(2_100_000_000)
+    static let goldDays = FinancePeriod.year.days
+    static let silverDays = 2 * FinancePeriod.year.days
+    static let deadlineDays = 3 * FinancePeriod.year.days
+}
+
+// MARK: - The Neiwan Line
+
+// The history in its story is from public sources (the owner's
+// `Railway/taiwan-rail-reference-clean/source/data/tra_special_trains.json`
+// `branchLines` `neiwan`; the Chinese Wikipedia's 「內灣線」「合興車站」, the
+// English Wikipedia's "Neiwan line", read on 2026-11-09; decision 668): work
+// began in 1944 and stopped with the war; Hsinchu to Zhudong was laid in
+// 1947, the first branch line built in Taiwan after the war, for timber,
+// cement and the hills' lime and coal; it reached Neiwan and was named the
+// Neiwan Line on 1951-09-11; Hsinchu to Zhuzhong was closed in 2007 and
+// opened again on 2011-11-11 raised and double; Hexing's is the line's only
+// wooden station, once a switchback; visitors come for the fireflies and
+// the Hakka towns. The line is Hsinchu to Neiwan, Zhuzhong not cut off
+// (the owner, 2026-11-06). Its targets, money and days are this project's.
+
+extension BranchLineChallenge {
+    /// The stations are the TRA stations of the app's real railways
+    /// (`track_stations.geojson`, `tra_sched|NEIWAN`).
+    static let neiwan = BranchLineChallenge(
+        id: "neiwan",
+        titles: ("Neiwan Line: Into the Hakka Hills", "內灣線：駛進客家山城"),
+        stories: (
+            "Work on a line from Hsinchu into the hills began in 1944 and stopped with the war. Hsinchu to Zhudong was laid in 1947, the first branch line built in Taiwan after the war, to bring out timber, cement and coal; in 1951 it reached Neiwan and took its name. Lay it again, Hsinchu to Neiwan: through Zhudong, past Hexing's wooden station, to Neiwan's old street in the hills, and fill its trains with visitors.",
+            "1944 年開工的這條往山裡的鐵路，因為戰爭停了下來。1947 年新竹到竹東通車，是台灣戰後第一條興建的支線，運出木材、水泥和煤；1951 年鋪到內灣，取名內灣線。把它重新鋪回來：從新竹經過竹東、合興的木造車站，一路到山裡的內灣老街，讓列車載滿遊客。"
+        ),
+        west: 120.94, east: 121.21, north: 24.83, south: 24.69,
+        places: [
+            Place(english: "Hsinchu", chinese: "新竹", latitude: 24.801366, longitude: 120.971706),
+            Place(english: "Zhuzhong", chinese: "竹中", latitude: 24.781465, longitude: 121.031413),
+            Place(english: "Zhudong", chinese: "竹東", latitude: 24.738344, longitude: 121.094854),
+            Place(english: "Neiwan", chinese: "內灣", latitude: 24.705388, longitude: 121.182642),
+        ],
+        milestones: [
+            Milestone(
+                places: [0, 1], english: "Hsinchu to Zhuzhong", chinese: "新竹—竹中",
+                cheer: ("Trains from Hsinchu reach Zhuzhong!", "新竹的列車開到竹中了！")
+            ),
+            Milestone(
+                places: [0, 2], english: "On to Zhudong", chinese: "延伸到竹東",
+                cheer: ("On to Zhudong, the biggest town on the line!", "延伸到竹東了，沿線最大的鎮熱鬧起來了！")
+            ),
+            Milestone(
+                places: [0, 3], english: "Neiwan, the end of the line", chinese: "終點內灣",
+                cheer: ("Neiwan! The whole Neiwan Line runs again, Hsinchu to the old street in the hills.", "到內灣了！整條內灣線又通了，從新竹一路到山裡的老街。")
+            ),
+        ],
+        sights: ["t044", "t047"],
+        ridersTarget: NeiwanTargets.riders,
+        profitTarget: NeiwanTargets.profit,
+        startingBalance: NeiwanTargets.startingBalance,
+        goldDays: NeiwanTargets.goldDays,
+        silverDays: NeiwanTargets.silverDays,
+        deadlineDays: NeiwanTargets.deadlineDays,
+        welcome: (
+            "The Neiwan Line is ours to lay again: from Hsinchu through Zhudong into the hills to Neiwan. Reach Zhuzhong, then Zhudong, then Neiwan, carry \(NeiwanTargets.riders.groupedText) riders a day and make a year's net profit of \(NeiwanTargets.profit.moneyText). Turn on Trace real in Network to follow the old line.",
+            "內灣線交給我們重新鋪：從新竹經過竹東，一路進山到內灣。先到竹中、再到竹東、最後到內灣，每日運量達到 \(NeiwanTargets.riders.groupedText) 人次、一年淨利 \(NeiwanTargets.profit.moneyText)。在「路網」打開「沿真實鐵路」就能沿著舊線鋪。"
+        ),
+        card: (
+            "Milestones: Zhuzhong, Zhudong, Neiwan · sights: Hsinchu City God Temple, Neiwan Old Street",
+            "里程碑：竹中、竹東、內灣 · 景點：新竹城隍廟、內灣老街"
+        )
+    )
+}
+
+/// The Neiwan challenge's targets (decision 668), measured by
+/// `JijiReportTests.testTheNeiwanChallenge`.
+enum NeiwanTargets {
+    static let riders: Int64 = 20_000
+    static let profit = Money(900_000_000)
     static let startingBalance = Money(2_100_000_000)
     static let goldDays = FinancePeriod.year.days
     static let silverDays = 2 * FinancePeriod.year.days

@@ -50,17 +50,52 @@ final class JijiReportTests: XCTestCase {
     }
 
     static let checkpoints: [Int64] = [7, 30, 60, 120, 180, 360, 720, 1_080]
-    nonisolated static let stations = ["二水", "源泉", "濁水", "龍泉", "集集", "水里", "車埕"]
-    nonisolated static let loops: Set<String> = ["源泉", "濁水", "龍泉", "集集", "水里"]
+
+    /// A branch line as the report lays it: the real line's name in
+    /// ``RealRailways`` begins with `prefix`; its stations, first the one it
+    /// leaves the main line at; where a second track lets trains pass.
+    struct Survey: Sendable {
+        let prefix: String
+        let stations: [String]
+        let loops: Set<String>
+    }
+
+    nonisolated static let jiji = Survey(
+        prefix: "集集線", stations: ["二水", "源泉", "濁水", "龍泉", "集集", "水里", "車埕"],
+        loops: ["源泉", "濁水", "龍泉", "集集", "水里"]
+    )
+
+    /// Decision 668: the Neiwan Line, Hsinchu to Neiwan (the app's
+    /// `tra_sched|NEIWAN`). Hsinchu to Zhuzhong is double track
+    /// (`tra_track_sections.json`), laid here as a loop at each of its
+    /// stations; past Zhuzhong it is single, and only Zhudong has a second
+    /// platform track (OpenStreetMap's stop positions in the reference's
+    /// `rail-3d/physical/network.json`; Wikipedia's 「竹東車站」).
+    nonisolated static let neiwan = Survey(
+        prefix: "內灣線", stations: ["新竹", "北新竹", "千甲", "新莊", "竹中", "上員", "榮華", "竹東", "橫山", "九讚頭", "合興", "富貴", "內灣"],
+        loops: ["北新竹", "千甲", "新莊", "竹中", "竹東"]
+    )
 
     func testTheJijiChallenge() throws {
         guard ProcessInfo.processInfo.environment["JIJI_REPORT"] != nil else {
             throw XCTSkip("set JIJI_REPORT=1 to print the Jiji challenge report")
         }
+        try report(BranchLineChallenge.jiji, survey: Self.jiji)
+    }
+
+    /// Decision 668: the Neiwan challenge, as the Jiji one
+    /// (`NEIWAN_REPORT=1`; the other `JIJI_` settings apply to it too).
+    func testTheNeiwanChallenge() throws {
+        guard ProcessInfo.processInfo.environment["NEIWAN_REPORT"] != nil else {
+            throw XCTSkip("set NEIWAN_REPORT=1 to print the Neiwan challenge report")
+        }
+        try report(BranchLineChallenge.neiwan, survey: Self.neiwan)
+    }
+
+    private func report(_ line: BranchLineChallenge, survey: Survey) throws {
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways), population = try XCTUnwrap(data.population)
         let plays = Play.allCases.filter { play in ProcessInfo.processInfo.environment["JIJI_PLAY"].map { $0 == "\(play)" } ?? true }
-        let line = BranchLineChallenge.jiji
         let challenge = line.challenge
         let goals = challenge.goalsText(in: .english)
         var lines = [
@@ -71,21 +106,21 @@ final class JijiReportTests: XCTestCase {
         ]
         for play in plays {
             let started = Date()
-            lines.append(try row(play, line: line, railways: railways, population: population, places: data.places, water: data.water))
+            lines.append(try row(play, line: line, survey: survey, railways: railways, population: population, places: data.places, water: data.water))
             FileHandle.standardError.write(Data("\(lines.last!) (\(Int(Date().timeIntervalSince(started))) s)\n".utf8))
         }
         print(lines.joined(separator: "\n"))
     }
 
     private func row(
-        _ play: Play, line: BranchLineChallenge, railways: RealRailways, population: PopulationGrid, places: PlaceGrid?, water: WaterGrid?
+        _ play: Play, line: BranchLineChallenge, survey: Survey, railways: RealRailways, population: PopulationGrid, places: PlaceGrid?, water: WaterGrid?
     ) throws -> String {
         let environment = ProcessInfo.processInfo.environment
         var world = line.make()
         if environment["JIJI_RICH"] != nil {
             try world.borrow(CompanyAccounts.maximumLoan)
         }
-        let route = Route(line: line, railways: railways, water: water, cars: play.cars)
+        let route = Route(line: line, survey: survey, railways: railways, water: water, cars: play.cars)
         let before = world.economy.balance.amount
         try route.build(in: &world, trains: play.trains, cars: play.cars, type: play.type)
         let cost = before - world.economy.balance.amount
@@ -131,15 +166,16 @@ final class JijiReportTests: XCTestCase {
         let wet: [ClosedRange<Double>]
         let stops: [String: Double]
         let platformLength: Int64
+        let survey: JijiReportTests.Survey
 
         static let metre = Double(WorldCoordinate.unitsPerMetre)
         static let runOn = 300 * metre
         static let loopReach = 250 * metre
         nonisolated(unsafe) static var pending: [(train: TrainID, line: LineID, position: TrainPosition, offset: Int64)] = []
 
-        init(line: BranchLineChallenge, railways: RealRailways, water: WaterGrid?, cars: Int) {
+        init(line: BranchLineChallenge, survey: JijiReportTests.Survey, railways: RealRailways, water: WaterGrid?, cars: Int) {
             let frame = RealWorldFrame(anchor: line.anchor, bounds: line.bounds)
-            let coordinates = railways.lines.filter { $0.name.hasPrefix("集集線") }.flatMap(\.points)
+            let coordinates = railways.lines.filter { $0.name.hasPrefix(survey.prefix) }.flatMap(\.points)
             var points: [WorldVector] = []
             var wetAt: [Double] = []
             var distance = 0.0
@@ -157,20 +193,21 @@ final class JijiReportTests: XCTestCase {
                 }
             }
             var full = WorldPath(points).smoothed()
-            // The surveyed line runs Ershui to Checheng; if it was drawn the
-            // other way, turn it round.
-            let ershui = Self.point(of: "二水", railways: railways, frame: frame)
-            if (full.point(at: 0) - ershui).length > (full.point(at: full.length) - ershui).length {
+            // The surveyed line runs from its first station (Ershui to
+            // Checheng); if it was drawn the other way, turn it round.
+            let first = Self.point(of: survey.stations[0], railways: railways, frame: frame)
+            if (full.point(at: 0) - first).length > (full.point(at: full.length) - first).length {
                 full = WorldPath(full.points(from: 0, to: full.length).reversed())
                 wetAt = wetAt.map { distance - $0 }
             }
             path = full
             wet = wetAt.map { ($0 - 24 * Self.metre)...($0 + 24 * Self.metre) }
             var stops: [String: Double] = [:]
-            for name in JijiReportTests.stations {
+            for name in survey.stations {
                 stops[name] = full.project(Self.point(of: name, railways: railways, frame: frame))
             }
             self.stops = stops
+            self.survey = survey
             platformLength = Int64(cars + 1) * Train.carLength
         }
 
@@ -188,9 +225,9 @@ final class JijiReportTests: XCTestCase {
         /// Lays the whole line with its stations and loops, and a line
         /// calling at every station with `trains` trains of `cars` cars.
         func build(in world: inout GameWorld, trains: Int, cars: Int, type: TrainType?) throws {
-            let names = JijiReportTests.stations
+            let names = survey.stations
             let zones = names.map(zone)
-            let loopNames = names.filter { JijiReportTests.loops.contains($0) }
+            let loopNames = names.filter { survey.loops.contains($0) }
             let loopEnds = loopNames.map { (stops[$0]! - Self.loopReach, stops[$0]! + Self.loopReach) }
             let plan = RealWorldDemo.TrackPlan(path, forced: [0, path.length] + loopEnds.flatMap { [$0.0, $0.1] }, avoiding: zones, start: nil)
             var ids: [TrackNodeID] = []
