@@ -87,6 +87,9 @@ struct Map3DPreviewScreen: View {
     @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .forThisDevice
     /// Decision 339: the real timetables' trains, as on the 2D map.
     @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
+    /// Decision 672: whether the map shows the tunnels and their trains
+    /// through the ground (off by default).
+    @AppStorage(MapAmbienceSettings.undergroundKey) private var showsUnderground = false
     /// Decision 333: from where the camera follows a train, kept.
     @AppStorage("map3DFollowView") private var followView: Map3DFollow.View = .back
 
@@ -100,7 +103,7 @@ struct Map3DPreviewScreen: View {
                       start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: followed(ambient: ambient),
                       departure: departure, world: session.world, modelsReady: modelsReady,
-                      stationTag: stationTag,
+                      stationTag: stationTag, showsUnderground: showsUnderground,
                       onTap: openStation == nil || ambient != nil ? nil : { @MainActor camera, point in tapped(camera, at: point) },
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
@@ -1102,6 +1105,12 @@ final class Map3DTrainFeed {
     private var ferriesScene: (x: Double, y: Double)?
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
+    /// Decision 672: the train the camera follows, whose lamps light its
+    /// tunnel ahead.
+    var followedTrain: TrainID?
+    /// Decision 672: whether the cars in tunnels are kept, to be seen
+    /// through the ground (``Map3DTrains/Frame/buried``).
+    var buried = false
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
     /// drawn whole, its way the cable cars' ahead.
     var followedCabin: CabinID?
@@ -1206,7 +1215,7 @@ final class Map3DTrainFeed {
         let now = Date().timeIntervalSinceReferenceDate
         let progress = motion.isMoving ? motion.progress(at: now) : 1
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
-                                      ringed: ringed, reach: reach)
+                                      ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain)
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
@@ -1381,6 +1390,8 @@ private struct Map3DView: UIViewRepresentable {
     let modelsReady: Bool
     /// Decision 517 續: placed under its station each frame.
     let stationTag: Map3DStationTagState
+    /// Decision 672: the tunnels and their trains seen through the ground.
+    let showsUnderground: Bool
     /// Decision 517 續: a tap on the map, with the camera then and where,
     /// in points; `nil` takes none.
     let onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
@@ -1470,6 +1481,17 @@ private struct Map3DView: UIViewRepresentable {
             }
             feed.followedBus = followedBus
             feed.followedCabin = followedCabin
+            // Decision 672: the lamps of the train followed light its
+            // tunnel; over the map, with the switch on, the cars in the
+            // tunnels are kept to be seen through the ground, and the
+            // tunnels laid for it once a scene (nothing of it when off).
+            feed.followedTrain = followedTrain
+            feed.buried = showsUnderground && follow == nil
+            let xrayFor = showsUnderground ? context.coordinator.shownVersion : nil
+            if context.coordinator.xrayVersion != xrayFor {
+                context.coordinator.xrayVersion = xrayFor
+                view.xray = xrayFor == nil ? nil : built.map { Map3DXRay(scene: $0.scene, snapshot: $0.source.snapshot) }
+            }
             feed.followedFerry = followedFerry
             if let id = followedTrain, follow?.view == .station, let scene {
                 follow?.lookout = Map3DFollow.lookout(of: id, in: world, scene: scene)
@@ -1628,6 +1650,9 @@ private struct Map3DView: UIViewRepresentable {
         /// (``Map3DSceneBuildLog``), whose chunks a scene built again from
         /// it replaces only where it built them again.
         var shownBuild: Int?
+        /// Decision 672: the scene the see-through tunnels were laid for;
+        /// `nil` while the switch is off.
+        var xrayVersion: Int?
         /// Decision 546: whether the view has the train models.
         var hasModels = false
         /// Decision 358.

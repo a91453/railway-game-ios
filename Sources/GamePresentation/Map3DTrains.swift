@@ -96,6 +96,10 @@ public enum Map3DTrains {
         /// Decision 449: each train's first car and last car among
         /// ``instances``, the ends whose lamps are lit at night.
         public var ends: [Map3DTrainLights.End] = []
+        /// Decision 672: the cars in tunnels, under no more than
+        /// ``Map3DXRay/deepest`` of ground, when asked for (`buried`):
+        /// the see-through view draws them over the ground.
+        public var buried: [Map3DXRay.Car] = []
 
         public init() {}
 
@@ -180,7 +184,7 @@ public enum Map3DTrains {
     public static func frame(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
         models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard, ringed: TrainID? = nil,
-        reach: Map3DModelReach = .standard
+        reach: Map3DModelReach = .standard, buried: Bool = false, headlamp: TrainID? = nil
     ) -> Frame {
         var frame = Frame()
         for run in motion.runs {
@@ -201,6 +205,14 @@ public enum Map3DTrains {
             let headIndex = frame.heads.count
             defer {
                 if run.train == ringed { frame.boxes.addRing(round: line) }
+                // Decision 672: the train followed lights the track ahead
+                // of it in a tunnel.
+                if run.train == headlamp, frame.heads.count > headIndex, frame.heads[headIndex].inTunnel {
+                    let head = frame.heads[headIndex]
+                    let ahead = run.track(at: progress).ahead.map { scene.point(worldX: $0.x, worldY: $0.y, height: 0) }
+                    frame.boxes.addHeadlamp(along: Map3DHeadlamp.path(nose: head.nose, forward: head.forward, ahead: ahead,
+                                                                      cover: scene.trackCover))
+                }
                 if frame.heads.count > headIndex, !bases.isEmpty {
                     frame.heads[headIndex].middle = bases.reduce(Map3DPoint.zero, +) * (1 / Float(bases.count))
                     frame.heads[headIndex].length = zip(line, line.dropFirst()).reduce(0) { $0 + ($1.0 - $1.1).length }
@@ -238,7 +250,13 @@ public enum Map3DTrains {
                 line.append(b)
                 // Decision 359 (續): drawn in its tunnel's bore, but no car
                 // to see through buildings for: the ground hides it.
-                if !scene.trackCover.isInTunnel(base) { frame.cars.append(base) }
+                // Decision 672: and, seeing underground, drawn through the
+                // ground where it is not too deep.
+                if let under = scene.trackCover.ground(at: base), under.inTunnel {
+                    if buried, under.height - base.y <= Map3DXRay.deepest { frame.buried.append(Map3DXRay.Car(back: b, front: a, colour: side)) }
+                } else {
+                    frame.cars.append(base)
+                }
                 // Decision 232: a soft shadow on the bed under the car.
                 let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
                 frame.shadows.addShadow(

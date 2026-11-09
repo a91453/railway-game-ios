@@ -177,6 +177,22 @@ final class Map3DMetalView: MTKView {
     private var glowSpots: (table: Map3DGlow.Table, buffer: MTLBuffer)?
     private var transparentGlass = Map3DTransparentGlass.Cache(models: [])
     private var glassDrawing: Map3DGlassPipeline?
+    /// Decision 672: seeing underground, see-through, neither tested
+    /// against the depth nor writing it.
+    private var xrayDrawing: (pipeline: MTLRenderPipelineState, depth: MTLDepthStencilState)?
+    /// Decision 672: the tunnels and underground platforms seen through
+    /// the ground, made into buffers when given; `nil` (the switch off,
+    /// the default): nothing of it is kept or drawn.
+    var xray: Map3DXRay? {
+        didSet {
+            guard let mesh = xray?.mesh, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) else {
+                xrayBuffers = nil
+                return
+            }
+            xrayBuffers = (vertices, indices, mesh.indices.count)
+        }
+    }
+    private var xrayBuffers: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
     /// Decision 429: the signals' three models in `models`, and the game
     /// clock their lights follow (`nil`: as they stand, the main road
     /// green).
@@ -455,6 +471,18 @@ final class Map3DMetalView: MTKView {
                     signs = try? device.makeRenderPipelineState(descriptor: glows)
                 }
                 view.glowDrawing = (spots, signs, state)
+            }
+        }
+        // Decision 672: seeing underground, blended as the shadows are.
+        if let xrayVertex = library.makeFunction(name: "map3dXRayVertex"), let xrayFragment = library.makeFunction(name: "map3dXRayFragment") {
+            descriptor.vertexFunction = xrayVertex
+            descriptor.fragmentFunction = xrayFragment
+            descriptor.vertexDescriptor = vertexDescriptor
+            let depth = MTLDepthStencilDescriptor()
+            depth.depthCompareFunction = .always
+            depth.isDepthWriteEnabled = false
+            if let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor), let state = device.makeDepthStencilState(descriptor: depth) {
+                view.xrayDrawing = (pipeline, state)
             }
         }
         // Decision 357: the city's depth from the sun, no colour.
@@ -1233,8 +1261,17 @@ final class Map3DMetalView: MTKView {
         let glows = glowsNow
         let trainGlowFloats = glows && models != nil && frame != nil
             ? Map3DGlow.trainSpots(of: frame!, pack: models!.pack).flatMap(\.floats) : []
+        // Decision 672: seeing underground, over the map only; the cars in
+        // the tunnels this frame.
+        let drawsXRay = xrayDrawing != nil && Map3DXRay.draws(switchOn: xray != nil, following: following != nil)
+        var xrayCarMesh: Map3DMesh?
+        if drawsXRay, let buried = frame?.buried, !buried.isEmpty {
+            var mesh = Map3DMesh()
+            Map3DXRay.addCars(buried, to: &mesh)
+            xrayCarMesh = mesh.isEmpty ? nil : mesh
+        }
         let fills = boxMesh != nil || shadowMesh != nil || !carsSorted.isEmpty || !lifeSorted.isEmpty || !glassVertices.isEmpty
-            || !trainGlowFloats.isEmpty
+            || !trainGlowFloats.isEmpty || xrayCarMesh != nil
         if fills {
             let waiting = CACurrentMediaTime()
             frameInFlight.wait()
@@ -1248,6 +1285,10 @@ final class Map3DMetalView: MTKView {
         var trainShadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = shadowMesh, let vertices = fill(.shadowVertices, mesh.vertices), let indices = fill(.shadowIndices, mesh.indices) {
             trainShadows = (vertices, indices, mesh.indices.count, mesh.triangleCount)
+        }
+        var xrayCars: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        if let mesh = xrayCarMesh, let vertices = fill(.xrayVertices, mesh.vertices), let indices = fill(.xrayIndices, mesh.indices) {
+            xrayCars = (vertices, indices, mesh.indices.count)
         }
         var cars: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let buffer = fill(.cars, carsSorted.flatMap(\.floats)) { cars = (carsSorted, buffer) }
@@ -1493,6 +1534,19 @@ final class Map3DMetalView: MTKView {
                                           indexBuffer: shadows.indices, indexBufferOffset: 0)
             drawCalls += 1
             triangles += shadows.triangles
+        }
+        // Decision 672: seeing underground, through everything drawn: the
+        // tunnels and platforms, then the cars in them.
+        if drawsXRay, let xrayDrawing {
+            encoder.setRenderPipelineState(xrayDrawing.pipeline)
+            encoder.setDepthStencilState(xrayDrawing.depth)
+            for part in [xrayBuffers, xrayCars].compactMap({ $0 }) {
+                encoder.setVertexBuffer(part.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: part.indexCount, indexType: .uint32,
+                                              indexBuffer: part.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += part.indexCount / 3
+            }
         }
         // After opaque geometry, sky and ground shadows: none can paint
         // over a window afterwards. Reversed-Z tests opaque depth; glass

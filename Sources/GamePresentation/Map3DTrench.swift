@@ -80,11 +80,14 @@ struct Map3DTrenches: Sendable {
     /// bridge over it: a train and its overhead line under its deck.
     static let bridgeDepth: Float = 6.5
 
-    init(runs: [[Section]], portalEnds: [(first: Bool, last: Bool)]) {
+    /// `bores`: decision 672's runs along tunnels whose bank the ground is
+    /// cut away round, cut as the trenches are but not drawn (the bank is
+    /// the bore's, ``Map3DScene/Builder/addBore(_:into:)``).
+    init(runs: [[Section]], portalEnds: [(first: Bool, last: Bool)], bores: [[Section]] = []) {
         self.runs = runs
         self.portalEnds = portalEnds
         var pieces: [(ring: [Map3DBaseMap.Point], floor: Float, along: Map3DPoint)] = []
-        for run in runs {
+        for run in runs + bores {
             for (a, b) in zip(run, run.dropFirst()) {
                 let corners = [a.edge(-1, a.rim.minus), b.edge(-1, b.rim.minus), b.edge(1, b.rim.plus), a.edge(1, a.rim.plus)]
                 let ring = Self.hull(corners.map { Map3DBaseMap.Point(x: Double($0.x), z: Double($0.z)) })
@@ -231,7 +234,7 @@ extension Map3DTrackCover {
     /// them: each section's floor and rim, the floor shared halfway to a
     /// trench beside.
     static func trenches(_ lines: [(line: [Map3DPoint], runs: [ClosedRange<Int>], opens: (first: Bool, last: Bool))],
-                         builder: inout Map3DScene.Builder) -> Map3DTrenches {
+                         bores: [[Map3DTrenches.Section]] = [], builder: inout Map3DScene.Builder) -> Map3DTrenches {
         // Every trench's centre line, to find one beside.
         var segments: [(a: Map3DPoint, b: Map3DPoint)] = []
         var cells: [Map3DScene.ChunkKey: [Int]] = [:]
@@ -293,7 +296,7 @@ extension Map3DTrackCover {
                 portalEnds.append((opens.first && run.lowerBound == 0, opens.last && run.upperBound == line.count - 1))
             }
         }
-        return Map3DTrenches(runs: runs, portalEnds: portalEnds)
+        return Map3DTrenches(runs: runs, portalEnds: portalEnds, bores: bores)
     }
 }
 

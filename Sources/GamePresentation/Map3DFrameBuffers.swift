@@ -26,6 +26,9 @@ public struct Map3DFrameBuffers<Buffer> {
         case boxVertices, boxIndices, shadowVertices, shadowIndices, cars, life, glass
         /// Decision 617: the glows round the trains' lamps (``Map3DGlow/trainSpots(of:pack:)``).
         case glows
+        /// Decision 672: the cars seen through the ground (``Map3DXRay/addCars(_:to:)``),
+        /// filled only while seeing underground is on.
+        case xrayVertices, xrayIndices
     }
 
     /// How many sets there are: as many frames as the GPU may have in
