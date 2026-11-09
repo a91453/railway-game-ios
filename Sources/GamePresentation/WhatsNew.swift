@@ -39,6 +39,14 @@ public enum WhatsNew {
                     chinese: "3D 地圖多了 9 座真實站房：基隆、嘉義、臺南、北門、奮起湖、阿里山、烏樹林、溪湖、橋頭。"
                 ),
                 Line(
+                    english: "A new challenge, Neiwan Line: Into the Hakka Hills, with three new characters: Granny Peng, Uncle Luo and Xiaoyu.",
+                    chinese: "新挑戰「內灣線：駛進客家山城」，有三個新角色：彭阿婆、阿羅伯、小宇。"
+                ),
+                Line(
+                    english: "On the 3D map, temples, courtyard houses and old shophouses have Chinese roofs and red-brick fronts, and Keelung South station's canopy has its roof frame and skylights.",
+                    chinese: "3D 地圖的廟宇、三合院、老街屋有中式屋頂與紅磚立面；基隆南站雨棚有屋頂結構與天窗。"
+                ),
+                Line(
                     english: "Electric trains hum as they speed up and brake, and go quiet when coasting.",
                     chinese: "電車加速和煞車時有馬達聲，惰行時安靜。"
                 ),
@@ -67,6 +75,10 @@ public enum WhatsNew {
                 Line(
                     english: "The Taoyuan Airport MRT can be rebuilt right after the first night's last train, a day sooner.",
                     chinese: "機場捷運第一晚收班後就能改建，早一天。"
+                ),
+                Line(
+                    english: "On the Taoyuan Airport MRT, trains between Huanbei and Airport Terminal 1 now run on the second afternoon, and far fewer trips are missed all day.",
+                    chinese: "機場捷運第 2 天下午環北到機場第一航廈不再停開，全天沒發的班次少很多。"
                 ),
                 Line(
                     english: "From the second lesson on, platform mode can remove platforms again.",
