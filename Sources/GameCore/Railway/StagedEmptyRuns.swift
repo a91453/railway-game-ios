@@ -32,7 +32,10 @@ extension GameWorld {
         let from = trip.turnsFirst ? turnedRound(placement) : placement
         guard let path = path(from: from.position, toStation: run.to, length: train.length), path.distance > 0,
               case .onEdge(let first, let offset) = from.position, let edge = network.edge(first.edge) else { return nil }
-        let stops = Set(line.stops).subtracting([run.from, run.to])
+        // Not where runs start or end: trains turn back there, and one
+        // standing there empty keeps them from their platforms.
+        let ends = Set(line.runs.flatMap { [line.stops[$0.from], line.stops[$0.to]] })
+        let stops = Set(line.stops).subtracting(ends).subtracting([run.from, run.to])
         // How far along the way the head stops at each station's
         // platform, the first it reaches of each.
         var platforms: [TrackEdgeID: [TrackPlatform]] = [:]
