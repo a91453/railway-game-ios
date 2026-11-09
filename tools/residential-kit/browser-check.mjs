@@ -14,7 +14,7 @@ try {
  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)failed.push(r.url());});page.on('request',r=>{if(!r.url().startsWith(base)&&!r.url().startsWith('data:'))external.push(r.url());});
  await page.goto(base+'/index.html');await page.waitForFunction(()=>window.currentAsset);
  assert.equal(await page.locator('.tile').count(),manifest.model_count);
- for(const c of ['home','boundary','yard']){await page.selectOption('#category',c);assert.equal(await page.locator('.tile').count(),8);}
+ for(const c of ['home','boundary','yard']){await page.selectOption('#category',c);assert.equal(await page.locator('.tile').count(),c==='home'?10:8);}
  await page.selectOption('#category','example');assert.equal(await page.locator('.tile').count(),4);
  await page.selectOption('#category','all');await page.fill('#search','屋頂水塔');assert.equal(await page.locator('.tile').count(),1);await page.fill('#search','');
  const total=await page.evaluate(async()=>{let n=0;for(const m of manifest.models){await loadAsset(m.id);if(!renderer.count)throw Error('Empty '+m.id);n++;}return n;});assert.equal(total,manifest.model_count);

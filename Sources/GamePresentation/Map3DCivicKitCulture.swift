@@ -1,7 +1,7 @@
 import Foundation
 
 extension StationKitBuilder {
-    mutating func civicCulture(_ p: Map3DCivicKit.Part) {
+    mutating func civicCulture(_ p: Map3DCivicKit.Part, far: Bool = false, traditional: Bool = true) {
         let red=Self.civicRed,wood=Self.civicWood,white=Self.white,steel=Self.steel
         switch p {
         case .templeGate:
@@ -10,7 +10,7 @@ extension StationKitBuilder {
                 box(x,0.25,z,0.55,0.55,0.30,Map3DPalette.concrete);cylinder(x,0.55,z,0.18,3.4,red)
             } }
             box(0,3.7,0,2.3,8.0,0.3,red)
-            civicTempleRoof(0,4,0,length:3,width:9,rise:1.5)
+            civicTempleRoof(0,4,0,length:3,width:9,rise:1.5,far:far,traditional:traditional)
             civicBoard(1.19,3.7,1.75,width:2.3,height:0.3,color:Map3DPalette.playerRoof)
         case .templeHall,.templeSideHall:
             let big=p == .templeHall,l: Float=big ? 10 : 7,w: Float=big ? 12 : 7
@@ -20,7 +20,7 @@ extension StationKitBuilder {
                 box(l/2-0.3,0.35,z,0.5,0.5,0.30,Map3DPalette.concrete)
                 cylinder(l/2-0.3,0.65,z,0.17,3.0,red)
             }
-            box(0,3.65,0,l,w,0.22,red);civicTempleRoof(0,3.87,0,length:l,width:w,rise:big ? 2.0 : 1.45)
+            box(0,3.65,0,l,w,0.22,red);civicTempleRoof(0,3.87,0,length:l,width:w,rise:big ? 2.0 : 1.45,far:far,traditional:traditional,dramatic:true)
             for z: Float in [-1.1,1.1] { box(l/2-1.48,0.35,z,0.04,1.4,2.6,red) }
             civicBoard(l/2-1.46,2.98,0,width:3.0,height:0.5,color:Map3DPalette.playerRoof)
             box(l/2+0.65,0,0,1.3,3.5,0.18,Map3DPalette.concrete)
@@ -43,7 +43,9 @@ extension StationKitBuilder {
         case .templeWall:
             box(0,0,0,0.40,4,0.25,Map3DPalette.concrete);box(0,0.25,0,0.28,4,1.5,Map3DPalette.playerRoof)
             for z: Float in [-1.85,1.85] { box(0,0.25,z,0.45,0.3,1.75,red) }
-            gable(0,2.0,0,0.5,4,0.30,Map3DPalette.templeRoof)
+            if traditional {
+                kitChineseRoof(0,2.0,0,length:0.5,width:4,rise:0.30,sweep:0.08,far:far)
+            } else { gable(0,2.0,0,0.5,4,0.30,Map3DPalette.templeRoof) }
             box(0.15,0.75,0,0.025,1.35,0.55,red)
         case .offeringTable:
             civicLegs(0,0,0,length:0.5,width:1.5,height:0.95,color:red);box(0,0.95,0,0.75,1.8,0.09,wood)

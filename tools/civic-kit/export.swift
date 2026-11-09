@@ -27,7 +27,7 @@ var records: [[String:Any]]=[]
     records.append(record)
 }
 for part in Map3DCivicKit.Part.allCases {
-    try export(Map3DCivicKit.model(for:part),info:["name":part.name,"category":part.category.rawValue,"mount":part.mount.rawValue,"fidelity":"remixed-native-game-asset",
+    try export(Map3DCivicKit.model(for:part,far:false),info:["name":part.name,"category":part.category.rawValue,"mount":part.mount.rawValue,"fidelity":"remixed-native-game-asset",
         "connectors":part.connectors.map { ["name":$0.name,"position":[$0.position.x,$0.position.y,$0.position.z],"normal":[$0.normal.x,$0.normal.y,$0.normal.z]] }])
 }
 for example in Map3DCivicKit.Example.allCases {

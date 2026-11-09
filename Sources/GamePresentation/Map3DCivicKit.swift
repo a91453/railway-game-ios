@@ -77,7 +77,12 @@ public enum Map3DCivicKit {
         public let normal: Map3DPoint
     }
     public static func model(for part: Part) -> Map3DModelPack.Model {
-        var b=StationKitBuilder();b.civic(part)
+        model(for: part, far: false, traditional: false)
+    }
+    /// Opt-in revised kit: near/far share colours and the primary silhouette.
+    /// The one-argument entry preserves existing map geometry until integration.
+    public static func model(for part: Part, far: Bool, traditional: Bool = true) -> Map3DModelPack.Model {
+        var b=StationKitBuilder();b.civic(part, far: far, traditional: traditional)
         return .flat(named:part.id,from:b.mesh)
     }
 }

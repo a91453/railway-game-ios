@@ -1,6 +1,6 @@
 # ResidentialKit
 
-24 optional static native game assets (eight homes, eight boundary/access parts and eight yard/street parts) plus four assembled scenes. Each model has M3DM v1, GLB and seven transparent 384px views generated from the same native geometry. Existing `tools/station-kit` code supplies the loader round trip, GLB encoder and renderer.
+26 optional static native game assets (ten homes, eight boundary/access parts and eight yard/street parts) plus four assembled scenes. Each model has M3DM v1, GLB and seven transparent 384px views generated from the same native geometry. Existing `tools/station-kit` code supplies the loader round trip, GLB encoder and renderer.
 
 Requires Swift 6.4, Node, Python, Playwright and Chromium already installed. No new App dependency.
 
