@@ -7,11 +7,11 @@ extension StationKitBuilder {
     mutating func cylinder(_ x: Float,_ y: Float,_ z: Float,_ radius: Float,_ height: Float,_ color: UInt32,sides: Int = 12) {
         cylinder(x,y,z,radius:radius,height:height,color:color,sides:sides)
     }
-    mutating func civic(_ part: Map3DCivicKit.Part) {
+    mutating func civic(_ part: Map3DCivicKit.Part, far: Bool = false, traditional: Bool = true) {
         switch part.category {
         case .building: civicBuilding(part)
         case .furniture: civicFurniture(part)
-        case .culture: civicCulture(part)
+        case .culture: civicCulture(part, far: far, traditional: traditional)
         }
     }
     mutating func civicTube(_ a: Map3DPoint,_ b: Map3DPoint,radius: Float,color: UInt32,sides: Int = 12) {
@@ -56,7 +56,11 @@ extension StationKitBuilder {
         box(x+0.7,y+2.6,z,1.6,width+1.0,0.15,Map3DPalette.canopy)
         for side: Float in [-1,1] { box(x+1.2,y,z+side*(width/2+0.35),0.12,0.12,2.6,Self.steel) }
     }
-    mutating func civicTempleRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,rise: Float) {
+    mutating func civicTempleRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,rise: Float, far: Bool = false, traditional: Bool = true) {
+        if traditional && !far {
+            kitChineseRoof(x,y,z,length:length,width:width,rise:rise,sweep:0.4,swallowtail:true)
+            return
+        }
         // Put the ridge along the longer dimension; its straight section must
         // coincide with the actual hip roof, not float above its sloping faces.
         let along=width>length ? Map3DPoint(0,0,1) : Self.forward
@@ -68,6 +72,39 @@ extension StationKitBuilder {
         for sign: Float in [-1,1] {
             beam(ridge+along*(sign*end),ridge+along*(sign*(end+0.45))+Map3DPoint(0,0.18,0),0.10,Self.civicRed)
             beam(ridge+along*(sign*(end+0.45))+Map3DPoint(0,0.18,0),ridge+along*(sign*(end+0.85))+Map3DPoint(0,0.55,0),0.08,Self.civicRed)
+        }
+    }
+}
+
+// Decision 669. Adapter from the landmark's native x/y/z-up geometry to
+// the kits' x/y-up/z-right geometry. Palace mouldings are built at 5x scale
+// and reduced to house scale; no shader-only tile layer enters the kits.
+extension StationKitBuilder {
+    mutating func kitChineseRoof(_ x: Float,_ y: Float,_ z: Float,length: Float,width: Float,
+                                rise: Float,sweep: Float,swallowtail: Bool = false) {
+        let long=max(length,width),short=min(length,width),scale: Float=0.2
+        var roof=LandmarkMesh(full:true)
+        roof.chineseRoof(long/2/scale,short/2/scale,eaves:0.5,over:0.4/scale,
+                         rise:rise/scale,sweep:sweep/scale,kind:.hipGable,
+                         colours:ChineseRoofColours(tile:Map3DPalette.templeRoof,ridge:Self.civicRed,
+                             underside:Self.civicWood,gable:Map3DPalette.templeRoof,wall:Self.white))
+        let across=width>length
+        func point(_ v: Map3DVertex) -> Map3DPoint {
+            (across ? Map3DPoint(v.y,v.z,v.x) : Map3DPoint(v.x,v.z,-v.y))*scale+Map3DPoint(x,y,z)
+        }
+        for i in stride(from:0,to:roof.vertices.count,by:3) {
+            let t=roof.vertices[i..<i+3]
+            mesh.addFacet([point(t[t.startIndex]),point(t[t.startIndex+1]),point(t[t.startIndex+2])],color:t[t.startIndex].color)
+        }
+        if swallowtail {
+            let along=across ? Map3DPoint(0,0,1) : Self.forward
+            let half=(long/2+0.4)-(short/2+0.4)*0.45+0.08
+            for sign: Float in [-1,1] {
+                let a=Map3DPoint(x,y+rise+0.10,z)+along*(sign*half)
+                let b=a+along*(sign*0.28)+Map3DPoint(0,0.20,0)
+                beam(a,b,0.10,Self.civicRed)
+                beam(b,b+along*(sign*0.25)+Map3DPoint(0,0.30,0),0.08,Self.civicRed)
+            }
         }
     }
 }

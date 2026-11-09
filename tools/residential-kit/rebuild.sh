@@ -28,4 +28,3 @@ for name in ['Map3DResidentialKitTests','Map3DStationKitTests','Map3DModelFileTe
     if not re.search(r"Test Suite '"+name+r"' passed",text):raise SystemExit('Missing passing suite: '+name)
 print('VERIFIED all three intended XCTest suites passed (not only the runner exit code).')
 PYTEST
-python3 tools/residential-kit/bundle.py "$output"

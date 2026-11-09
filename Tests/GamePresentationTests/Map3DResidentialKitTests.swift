@@ -103,6 +103,24 @@ final class Map3DResidentialKitTests: XCTestCase {
         XCTAssertEqual(first.vertices,Map3DResidentialKit.model(for:.roofGarden).vertices)
     }
 
+    func testTraditionalHomesKeepFallbackAndUseExistingFacadePrimitives() {
+        for p: Map3DResidentialKit.Part in [.courtyardHouse,.narrowTownhouse] {
+            let near=Map3DResidentialKit.model(for:p),far=Map3DResidentialKit.model(for:p,far:true)
+            XCTAssertEqual(far.vertices,Map3DResidentialKit.model(for:p,far:false,traditional:false).vertices)
+            XCTAssertGreaterThan(near.triangleCount,far.triangleCount)
+            XCTAssertTrue(near.vertices.allSatisfy { $0.layer == Map3DVertex.plain })
+            print("ROOF-COST \(p.id) near=\(near.triangleCount) far=\(far.triangleCount) delta=\(near.triangleCount-far.triangleCount)")
+        }
+        var facade=StationKitBuilder()
+        facade.oldHouseFacade(0,0,0,width:5.3,floors:1)
+        // Two closed colour fields (24), decision 267/610 slope (12),
+        // decision 610's wall-mounted AC stub (8).
+        XCTAssertEqual(facade.mesh.triangleCount,44)
+        let v=facade.mesh.vertices
+        XCTAssertTrue(v.contains { $0.color == Map3DPalette.acUnit })
+        XCTAssertTrue(v.contains { $0.color == Map3DPalette.tileWhite })
+    }
+
     private func backingDistance(from origin: Map3DPoint,vertices: [Map3DVertex]) -> Float {
         let direction=Map3DPoint(-1,0,0)
         var result=Float.infinity

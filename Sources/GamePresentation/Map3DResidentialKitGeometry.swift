@@ -48,16 +48,19 @@ extension StationKitBuilder {
         box(x+0.08,y+2.25,z,0.08,1.74,0.08,Self.white)
         box(x+0.08,y+0.04,z,0.12,1.74,0.10,Map3DPalette.concrete)
     }
-    mutating func residentialHome(_ part: Map3DResidentialKit.Part) {
+    mutating func residentialHome(_ part: Map3DResidentialKit.Part, far: Bool = false, traditional: Bool = true) {
         let cream=Self.white,stone=wallColor,tile=Map3DPalette.playerRoof,roof=Map3DPalette.roof,blue=Map3DPalette.canopy
         switch part {
         case .narrowTownhouse:
-            box(0,0,0,7.4,5.8,0.18,stone);box(-0.4,0.18,0,5.5,5.3,8.9,cream)
+            box(0,0,0,7.4,5.8,0.18,stone);box(-0.4,0.18,0,5.5,5.3,8.9,traditional && !far ? Self.civicRed : cream)
             for floor in 0..<3 { for z: Float in [-1.4,1.4] { residentialWindow(2.39,0.95+Float(floor)*2.85,z,width:1.1) } }
             residentialDoor(2.43,0.18,0,width:1.25)
             for y: Float in [3.05,5.90] { box(2.49,y,0,0.20,5.45,0.12,tile) }
-            box(-0.4,9.08,0,6.2,5.8,0.25,roof)
-            for z: Float in [-2.4,2.4] { box(-0.4,9.33,z,6.2,0.18,0.8,stone) }
+            if traditional && !far {
+                kitChineseRoof(-0.4,9.08,0,length:5.5,width:5.3,rise:1.25,sweep:0.12)
+                oldHouseFacade(2.35,0.18,0,width:5.3,floors:3)
+            } else { box(-0.4,9.08,0,6.2,5.8,0.25,roof) }
+            if far || !traditional { for z: Float in [-2.4,2.4] { box(-0.4,9.33,z,6.2,0.18,0.8,stone) } }
         case .arcadeTownhouse:
             box(0,0,0,9,8.0,0.18,stone)
             box(-2.0,0.18,0,2.8,7.5,3.05,cream) // recessed shopfront wall
@@ -120,12 +123,18 @@ extension StationKitBuilder {
             for z: Float in [-5.7,5.7] { box(-0.5,12.40,z,9.2,0.16,0.85,stone) }
         case .courtyardHouse:
             box(0,0,0,15,18,0.16,Map3DPalette.plaza)
-            box(-3,0.16,0,5.7,14.5,3.1,cream)
-            box(2.4,0.16,-6.0,5.5,2.5,3.1,cream);box(2.4,0.16,6.0,5.5,2.5,3.1,cream)
+            box(-3,0.16,0,5.7,14.5,3.1,traditional && !far ? Self.civicRed : cream)
+            box(2.4,0.16,-6.0,5.5,2.5,3.1,traditional && !far ? Self.civicRed : cream);box(2.4,0.16,6.0,5.5,2.5,3.1,traditional && !far ? Self.civicRed : cream)
             residentialDoor(-0.07,0.16,0,width:1.8)
             for z: Float in [-5,-2.5,2.5,5] { residentialWindow(-0.07,1.1,z,width:1.1) }
-            gable(-3,3.26,0,6.5,15,1.35,Map3DPalette.templeRoof)
-            for z: Float in [-6,6] { gable(2.4,3.26,z,6.0,3.0,0.8,Map3DPalette.templeRoof) }
+            if traditional && !far {
+                kitChineseRoof(-3,3.26,0,length:5.7,width:14.5,rise:1.35,sweep:0.16)
+                for z: Float in [-6,6] { kitChineseRoof(2.4,3.26,z,length:5.5,width:2.5,rise:0.8,sweep:0.12) }
+                oldHouseFacade(-0.15,0.16,0,width:14.5,floors:1)
+            } else {
+                gable(-3,3.26,0,6.5,15,1.35,Map3DPalette.templeRoof)
+                for z: Float in [-6,6] { gable(2.4,3.26,z,6.0,3.0,0.8,Map3DPalette.templeRoof) }
+            }
             box(4.7,0.16,0,0.12,9.2,0.95,stone)
         case .farmHouse:
             box(0,0,0,15,17,0.16,Map3DPalette.park)
@@ -140,11 +149,40 @@ extension StationKitBuilder {
         }
     }
 
-    mutating func residential(_ part: Map3DResidentialKit.Part) {
+    mutating func residential(_ part: Map3DResidentialKit.Part, far: Bool = false, traditional: Bool = true) {
         switch part.category {
-        case .home: residentialHome(part)
+        case .home: residentialHome(part, far: far, traditional: traditional)
         case .boundary: residentialBoundary(part)
         case .yard: residentialYard(part)
         }
+    }
+}
+
+extension StationKitBuilder {
+    /// Brick-red fields with pale courses; kept below the windows so the
+    /// existing backed openings stay visible. Mounted AC reuses decision 610.
+    mutating func oldHouseFacade(_ x: Float,_ y: Float,_ z: Float,width: Float,floors: Int) {
+        for floor in 0..<floors {
+            let level=y+Float(floor)*2.85
+            box(x+0.015,level+0.22,z,0.04,width,0.48,Map3DPalette.templeRidge)
+            box(x+0.04,level+0.70,z,0.05,width,0.12,Self.white)
+            residentialOldAwning(x+0.07,level+2.62,z,width:width-0.4)
+            Map3DScene.Builder.addStub(&mesh,base:Map3DPoint(x+0.175,level+0.78,z+width*0.36),out:Self.forward,
+                depth:0.35,width:0.8,height:0.55,top:Map3DPalette.acUnit,side:Map3DPalette.acUnit)
+        }
+    }
+}
+
+extension StationKitBuilder {
+    mutating func residentialOldAwning(_ x: Float,_ y: Float,_ z: Float,width: Float) {
+        let color=Map3DPalette.tinAwnings[0]
+        Map3DScene.Builder.addSlope(&mesh,from:Map3DPoint(x,y,z),facing:Self.forward,
+            width:width,depth:0.55,drop:0.18,color:color)
+        let top=[Map3DPoint(x,y,z-width/2),Map3DPoint(x,y,z+width/2),
+                 Map3DPoint(x+0.55,y-0.18,z+width/2),Map3DPoint(x+0.55,y-0.18,z-width/2)]
+        let bottom=top.map { $0-Map3DPoint(0,0.06,0) }
+        let inside=Map3DPoint(x+0.275,y-0.12,z)
+        face(bottom,inside:inside,color:color)
+        for i in 0..<4 { let j=(i+1)%4;face([top[i],bottom[i],bottom[j],top[j]],inside:inside,color:color) }
     }
 }

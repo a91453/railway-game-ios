@@ -50,8 +50,13 @@ public enum Map3DResidentialKit {
         public let normal: Map3DPoint
     }
     public static func model(for part: Part) -> Map3DModelPack.Model {
+        model(for: part, far: false)
+    }
+    /// Detailed traditional roof near the camera; original recipe for distance
+    /// or an explicit fallback. These optional kits do not select map LODs.
+    public static func model(for part: Part, far: Bool, traditional: Bool = true) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
-        builder.residential(part)
+        builder.residential(part, far: far, traditional: traditional)
         return .flat(named: part.id, from: builder.mesh)
     }
 }
