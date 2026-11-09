@@ -22,9 +22,12 @@ description: 產生台灣車站完整遊戲站型、月台站廳與建築小零�
 ```sh
 python3 tools/station-kit/catalog.py      # 站點來源或對照有改時
 tools/station-kit/rebuild.sh ../railway-reference-private/Railway/game-art-previews/docs/art/station-kit-2026-10-21
+PATH=/workspace/scratch/swift/usr/bin:$PATH bash tools/station-kit/rebuild-keelung.sh ../railway-assets-private/game-art-previews/docs/art/station-exteriors-batch2/revision-2
 ```
 
 需要 PATH 上 Swift 6.4、Node、Python 3、既有 Playwright／Chromium；工具不下載套件或瀏覽器。`CHROMIUM_PATH` 可指定既有瀏覽器。輸出不能位於公開遊戲 checkout 裡。
+基隆南站的單站重建輸出兩個 LOD 的原生模型與 GLB、七向日間透明 PNG 及離線 viewer；只更新私有素材庫 `revision-2/`，上一輪 `models/` 的基隆重檔同 PR 刪除，舊 PNG 保留。
+南站 `front` 預覽固定從正面仰角 30°、同一焦點拍攝；比較新舊配方時用同一套相機參數。`isometric` 的右下角若見米色角片，那是模型中獨立的 `keelungOld` 舊站屋頂，近鏡裁到其角落，並非雨棚零件。
 
 配方改動後，原生檔、GLB、PNG、manifest 一起更新。渲染器只有在「原生檔 SHA、renderer.js SHA、七張 PNG SHA」全部相同時才重用圖片；刪除 `render-cache.json` 即可強制重畫。後續 verify 仍檢查每個模型與每張圖。
 
