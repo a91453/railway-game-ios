@@ -602,6 +602,53 @@ private extension StationKitBuilder {
         box(x+15.2,5.5,z+8,0.34,10.2,0.55,rgb(0xA9B6B8))
         windows(x+15.1,1.5,z,39,count:12,glass:rgb(0x8CACB4),frame:steel,detail:detail)
         canopy(x,8.2,z,length:43,width:54,rise:2.8,color:rgb(0xD4DEE0))
+        // The south forecourt canopy projects 6.5 m beyond the 30 m hall.
+        // Its pale skin needs a separate dark steel edge and an open underside:
+        // the low approach hides the upper wall behind this large projection.
+        let front=x+21.5, back=x-21.5, halfWidth:Float=27
+        let rib=rgb(0x64777D), fascia=rgb(0xA6B5B9)
+        if detail == .near {
+            for i in 0...12 {
+                let zz=z-halfWidth+Float(i)*54/12
+                let yy=8.2+2.8*sinf(Float(i)*Float.pi/12)-0.28
+                beam(Map3DPoint(back,yy,zz),Map3DPoint(front,yy,zz),0.20,rib)
+                // The front edge follows the same twelve facets as the skin.
+                if i < 12 {
+                    let nextZ=z-halfWidth+Float(i+1)*54/12
+                    let nextY=8.2+2.8*sinf(Float(i+1)*Float.pi/12)-0.28
+                    beam(Map3DPoint(front,yy,zz),Map3DPoint(front,nextY,nextZ),0.18,rib)
+                    box(front+0.08,min(yy,nextY)-0.36,(zz+nextZ)/2,
+                        0.34,nextZ-zz,0.36,fascia)
+                }
+            }
+            // Four spaced columns leave the middle entrance and rail gap open.
+            for i in [1,3,9,11] {
+                let zz=z-halfWidth+Float(i)*54/12
+                let yy=8.2+2.8*sinf(Float(i)*Float.pi/12)-0.28
+                box(front-0.25,0,zz,0.46,0.46,yy-0.05,steel)
+                beam(Map3DPoint(front-0.25,yy-1.4,zz),
+                     Map3DPoint(front-2.6,yy-0.06,zz),0.12,rib)
+            }
+            // Wall piers, entrance glazing and its lintel sit on the real
+            // front wall, behind the columns rather than in the open forecourt.
+            for zz in [z-19.4,z-9.8,z+18.9] {
+                box(x+15.28,0,zz,0.28,0.38,5.7,steel)
+            }
+            lit(x+15.36,0.55,z+8,0.08,5.6,4.5,rgb(0x718F99))
+            box(x+15.5,5.2,z+8,0.26,7.1,0.28,fascia)
+        } else {
+            // Three columns and one continuous cap preserve the silhouette.
+            for zz in [z-18,z,z+18] {
+                let t=(zz-z+halfWidth)/54
+                let yy=8.2+2.8*sinf(t*Float.pi)-0.28
+                box(front-0.25,0,zz,0.46,0.46,yy-0.05,steel)
+            }
+            for i in 0..<6 {
+                let zz=z-halfWidth+(Float(i)+0.5)*9
+                let yy=8.2+2.8*sinf((Float(i)+0.5)*Float.pi/6)-0.28
+                box(front+0.08,yy-0.40,zz,0.34,9,0.40,fascia)
+            }
+        }
         if detail == .near {
             for i in 0..<12 {
                 let zz=z-23+Float(i)*46/11
