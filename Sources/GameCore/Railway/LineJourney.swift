@@ -123,8 +123,19 @@ struct LineTrip: Hashable, Sendable {
         let from: StationID
         let to: StationID
         /// The least whole seconds the line's performance takes over the
-        /// path's distance (0 for no distance).
+        /// path's distance (0 for no distance); with ``calls``, the whole
+        /// run's, its dwells there included.
         let seconds: Int64
+        /// Decision 666: the stations it calls at on its way, without
+        /// passengers, each with the seconds from leaving the call before
+        /// to arriving there; empty for a run straight to ``to``.
+        var calls: [Call] = []
+
+        /// Decision 666: a call of an empty run on its way.
+        struct Call: Hashable, Sendable {
+            let station: StationID
+            let seconds: Int64
+        }
     }
 
     /// The trip's timetable, calling at the line's `stops` that the legs
@@ -161,10 +172,17 @@ struct LineTrip: Hashable, Sendable {
             let (departure, overflow) = dispatch.seconds.addingReportingOverflow(ServiceDwell.terminalMinimum)
             let (arrival, late) = departure.addingReportingOverflow(deadhead.seconds)
             guard !overflow, !late else { return nil }
-            return [
-                ScheduledStop(station: deadhead.from, arrival: dispatch, departure: GameTime(seconds: departure), reverses: turnsFirst),
-                ScheduledStop(station: deadhead.to, arrival: GameTime(seconds: arrival), departure: GameTime(seconds: arrival)),
-            ]
+            var timetable = [ScheduledStop(station: deadhead.from, arrival: dispatch, departure: GameTime(seconds: departure), reverses: turnsFirst)]
+            // Decision 666: a call on the way for each station it stops at,
+            // the least dwell each.
+            var time = departure
+            for call in deadhead.calls {
+                let reached = time + call.seconds
+                time = reached + ServiceDwell.minimum
+                timetable.append(ScheduledStop(station: call.station, arrival: GameTime(seconds: reached), departure: GameTime(seconds: time)))
+            }
+            timetable.append(ScheduledStop(station: deadhead.to, arrival: GameTime(seconds: arrival), departure: GameTime(seconds: arrival)))
+            return timetable
         }
         let legs = journey.legs
         if journey.isRing {

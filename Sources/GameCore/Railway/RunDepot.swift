@@ -368,9 +368,18 @@ extension GameWorld {
                 // Decision 290: under traffic control, only with a berth there
                 // for it; without one it stays in the depot.
                 if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
-                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops, deadheading: true),
+                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                    case .held = reservingDeparture(leaving, memo: &memo.directions) {
-                    continue
+                    // Decision 666: when its whole way is held, a station at
+                    // a time, if it still stands there in time for a run.
+                    guard let staged = stagedEmptyRun(of: line, for: trains[index], trip), let stagedRun = staged.deadhead else { continue }
+                    let later = Self.lead(of: stagedRun) * GameTime.secondsPerMinute
+                    let inTime = soon.filter { $0 + LineRun.latestDispatch >= now + later && $0 - LineRun.earliestDispatch - later <= now }
+                    let ahead = ready.map { $0 > now && $0 <= now + later ? Int64.min : $0 }.sorted()
+                    guard Self.runsWithoutTrains(inTime, ready: ahead) > 0,
+                          let first = firstDeparture(of: trains[index], on: staged, calling: line.stops),
+                          case .granted = reservingDeparture(first, memo: &memo.directions) else { continue }
+                    return (index, staged)
                 }
                 return (index, trip)
             }

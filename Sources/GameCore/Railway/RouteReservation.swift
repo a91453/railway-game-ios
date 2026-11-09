@@ -205,10 +205,6 @@ extension GameWorld {
             if following, route.moves, let train = followingAuthority(of: candidate, route: envelope, memo: &memo) {
                 return .granted(train)
             }
-            // Decision 666: an empty run, as far as a station on its way.
-            if following, route.moves, takesRouteByWaitingPoints(candidate), let train = waitingPointAuthority(of: candidate, memo: &memo) {
-                return .granted(train)
-            }
             return .held(by: holder)
         }
         var train = candidate

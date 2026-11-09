@@ -304,10 +304,12 @@ extension Train: Codable {
         reservation = container.contains(.reservation) ? try container.decode([TrackResource].self, forKey: .reservation) : []
         performance = container.contains(.performance) ? try container.decode(TrainPerformance.self, forKey: .performance) : .standard
         isDeadheading = container.contains(.deadhead) ? try container.decode(Bool.self, forKey: .deadhead) : false
-        guard !isDeadheading || (execution != nil && timetable.count == 2) else {
+        // Decision 666: two stops, or more for an empty run calling at
+        // stations on its way.
+        guard !isDeadheading || (execution != nil && timetable.count >= 2) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .deadhead, in: container,
-                debugDescription: "Train \(id.rawValue) is marked as running empty to a line's end without a service of two stops."
+                debugDescription: "Train \(id.rawValue) is marked as running empty to a line's end without a service of two stops or more."
             )
         }
         // Decision 209 (save version 54): written only when true, for a
