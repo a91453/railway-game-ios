@@ -17,13 +17,48 @@ public enum Map3DHeadlamp {
     public static let reach: Float = 40
     static let step: Float = 4
     /// The band's width at the nose and at its far end: within the bed's
-    /// top (``Map3DScene/Builder/bedTop``, 3.4 m).
-    static let nearWidth: Float = 2.2
-    static let farWidth: Float = 3.2
+    /// top (``Map3DScene/Builder/bedTop``, 3.4 m). Decision 674: wider,
+    /// the whole top by the far end.
+    static let nearWidth: Float = 2.8
+    static let farWidth: Float = 3.4
     /// Over the bed's top, under the rails.
     static let lift: Float = 0.03
     /// The lamps' light, the palette's tunnel lamp a little whiter.
     static let colour = Map3DColor.rgb(0xFFF1CF)
+    /// Decision 674: how far along the light (a share of ``reach``) it
+    /// keeps its full colour before it fades to the surface's own: 672's
+    /// fade began at the nose and was gone in a few metres.
+    static let full: Float = 0.3
+    /// Decision 674: the light on the bore's walls, where a wall stands
+    /// (not on the side another track shares the bore): from the bed up
+    /// to ``wallLow`` by the nose, ``wallHigh`` at the far end, the
+    /// beam spreading; a third of the way to the wall's own colour, so it
+    /// reads as light on concrete, not a lamp.
+    static let wallLow: Float = 0.5
+    static let wallHigh: Float = 2.4
+    static let wallColour = mix(colour, Map3DPalette.tunnelWall, 0.35)
+    /// Just in front of the wall (``Map3DScene/Builder/boreHalfWidth``).
+    static let wallInset: Float = 0.05
+
+    /// How much of the light is gone `share` (0–1) of the way to
+    /// ``reach``: none to ``full``, then all of it, smoothly.
+    static func fade(_ share: Float) -> Float {
+        let t = min(max((share - full) / (1 - full), 0), 1)
+        return t * t * (3 - 2 * t)
+    }
+
+    /// Decision 674: whether a wall of the bore stands to the left and to
+    /// the right of each point of `path` (``path(nose:forward:ahead:cover:)``):
+    /// not where another tunnel's track runs beside within the shared
+    /// bore (``Map3DScene/Builder/sharedBore``), as the bore is built.
+    static func walls(along path: [Map3DPoint], cover: Map3DTrackCover) -> [(left: Bool, right: Bool)] {
+        guard path.count > 1 else { return [] }
+        let across = Map3DMesh.acrossDirections(path)
+        return path.indices.map { index in
+            let beside = cover.tunnelsBeside(path[index], across: across[index], within: Map3DScene.Builder.sharedBore)
+            return (beside.minus == nil, beside.plus == nil)
+        }
+    }
 
     /// The rails' middle ahead of `nose` (on the rails, facing `forward`),
     /// every ``step`` to ``reach``: along `ahead` (the track ahead, seen
@@ -62,18 +97,20 @@ public enum Map3DHeadlamp {
 extension Map3DMesh {
     /// Decision 672: the headlamps' light along `path` (the rails' middle,
     /// from the nose out, as ``Map3DHeadlamp/path(nose:forward:ahead:cover:)``
-    /// lays it) on the bed's top.
-    public mutating func addHeadlamp(along path: [Map3DPoint]) {
+    /// lays it) on the bed's top. Decision 674: its full colour for the
+    /// first third, then fading; and on the bore's walls where `walls`
+    /// (``Map3DHeadlamp/walls(along:cover:)``, one a point) says one
+    /// stands.
+    public mutating func addHeadlamp(along path: [Map3DPoint], walls: [(left: Bool, right: Bool)] = []) {
         guard path.count > 1 else { return }
         let start = vertices.count
         let across = Self.acrossDirections(path)
-        let lift = Map3DPoint(0, Map3DHeadlamp.lift - Map3DScene.Builder.bedDrop, 0)
+        let bed = Map3DPoint(0, Map3DHeadlamp.lift - Map3DScene.Builder.bedDrop, 0)
+        func share(_ index: Int) -> Float { Float(index) / Float(path.count - 1) }
         func row(_ index: Int) -> (left: Map3DVertex, right: Map3DVertex) {
-            let share = Float(index) / Float(path.count - 1)
-            let half = (Map3DHeadlamp.nearWidth + (Map3DHeadlamp.farWidth - Map3DHeadlamp.nearWidth) * share) / 2
-            // Bright near the lamps, falling off faster than linearly.
-            let colour = Map3DHeadlamp.mix(Map3DHeadlamp.colour, Map3DPalette.ballast, share.squareRoot())
-            let middle = path[index] + lift
+            let half = (Map3DHeadlamp.nearWidth + (Map3DHeadlamp.farWidth - Map3DHeadlamp.nearWidth) * share(index)) / 2
+            let colour = Map3DHeadlamp.mix(Map3DHeadlamp.colour, Map3DPalette.ballast, Map3DHeadlamp.fade(share(index)))
+            let middle = path[index] + bed
             return (Map3DVertex(middle - across[index] * half, normal: .up, color: colour),
                     Map3DVertex(middle + across[index] * half, normal: .up, color: colour))
         }
@@ -83,6 +120,31 @@ extension Map3DMesh {
             appendTriangle([before.left, next.left, next.right])
             appendTriangle([before.left, next.right, before.right])
             before = next
+        }
+        if walls.count == path.count {
+            let out = Map3DScene.Builder.boreHalfWidth - Map3DHeadlamp.wallInset
+            for side: Float in [-1, 1] {
+                func wall(_ index: Int) -> (low: Map3DVertex, high: Map3DVertex) {
+                    let s = share(index)
+                    // Dark at the nose (the beam has not reached the
+                    // wall yet), full a little way on, then fading.
+                    let reached = min(s / 0.15, 1)
+                    let colour = Map3DHeadlamp.mix(Map3DHeadlamp.wallColour, Map3DPalette.tunnelWall,
+                                                   max(1 - reached, Map3DHeadlamp.fade(s)))
+                    let foot = path[index] + bed + across[index] * (side * out)
+                    let up = Map3DHeadlamp.wallLow + (Map3DHeadlamp.wallHigh - Map3DHeadlamp.wallLow) * s
+                    let normal = across[index] * -side
+                    return (Map3DVertex(foot, normal: normal, color: colour),
+                            Map3DVertex(foot + Map3DPoint(0, up, 0), normal: normal, color: colour))
+                }
+                for index in 1..<path.count {
+                    let stands = side < 0 ? walls[index - 1].left && walls[index].left : walls[index - 1].right && walls[index].right
+                    guard stands else { continue }
+                    let a = wall(index - 1), b = wall(index)
+                    appendTriangle([a.low, b.low, b.high])
+                    appendTriangle([a.low, b.high, a.high])
+                }
+            }
         }
         makeGlowing(from: start)
     }

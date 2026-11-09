@@ -78,8 +78,36 @@ public struct Map3DTrainLabels: Sendable {
         }
         seen.sort { ($0.off, $0.train) < ($1.off, $1.train) }
         let (width, height) = camera.viewport
+        let byTrain = Dictionary(heads.map { ($0.train, $0) }, uniquingKeysWith: { first, _ in first })
         return seen.prefix(Self.most).map {
-            Label(train: $0.train, info: $0.info, x: ($0.x + 1) / 2 * width, y: (1 - $0.y) / 2 * height)
+            var x = ($0.x + 1) / 2 * width, y = (1 - $0.y) / 2 * height
+            if let head = byTrain[$0.train], head.inTunnel, let shift = Self.besideShift(of: head, matrix: matrix, viewport: (width, height)) {
+                x += shift.x
+                y += shift.y
+            }
+            return Label(train: $0.train, info: $0.info, x: x, y: y)
         }
+    }
+
+    /// Decision 674: how far, in points, a tunnel's train's tag stands
+    /// off its foot, so it does not cover the car seen through the ground:
+    /// square across the train's way on the screen, to the side that is
+    /// up; the tag's half width and a gap where the train runs up the
+    /// screen (the tag beside it), only the gap where it runs across (the
+    /// tag, standing on its foot, already over it).
+    static let tagHalfWidth: Float = 40
+    static let tagGap: Float = 10
+
+    static func besideShift(of head: Map3DTrains.Head, matrix: Map3DMatrix, viewport: (Float, Float)) -> (x: Float, y: Float)? {
+        guard let from = matrix.project(head.point), let to = matrix.project(head.point + head.forward * 10) else { return nil }
+        // The way on the screen, in points, y down.
+        let dx = (to.x - from.x) * viewport.0 / 2, dy = -(to.y - from.y) * viewport.1 / 2
+        let length = (dx * dx + dy * dy).squareRoot()
+        guard length > 0.001 else { return (0, -tagGap) }
+        // Square across it, pointing up the screen (or right when level).
+        var px = -dy / length, py = dx / length
+        if py > 0 || (py == 0 && px < 0) { px = -px; py = -py }
+        let reach = abs(px) * (tagHalfWidth + tagGap) + abs(py) * tagGap
+        return (px * reach, py * reach)
     }
 }

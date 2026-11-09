@@ -210,8 +210,9 @@ public enum Map3DTrains {
                 if run.train == headlamp, frame.heads.count > headIndex, frame.heads[headIndex].inTunnel {
                     let head = frame.heads[headIndex]
                     let ahead = run.track(at: progress).ahead.map { scene.point(worldX: $0.x, worldY: $0.y, height: 0) }
-                    frame.boxes.addHeadlamp(along: Map3DHeadlamp.path(nose: head.nose, forward: head.forward, ahead: ahead,
-                                                                      cover: scene.trackCover))
+                    let path = Map3DHeadlamp.path(nose: head.nose, forward: head.forward, ahead: ahead, cover: scene.trackCover)
+                    // Decision 674: and the bore's walls beside it.
+                    frame.boxes.addHeadlamp(along: path, walls: Map3DHeadlamp.walls(along: path, cover: scene.trackCover))
                 }
                 if frame.heads.count > headIndex, !bases.isEmpty {
                     frame.heads[headIndex].middle = bases.reduce(Map3DPoint.zero, +) * (1 / Float(bases.count))
@@ -251,9 +252,13 @@ public enum Map3DTrains {
                 // Decision 359 (續): drawn in its tunnel's bore, but no car
                 // to see through buildings for: the ground hides it.
                 // Decision 672: and, seeing underground, drawn through the
-                // ground where it is not too deep.
+                // ground where it is not too deep; decision 674: in its
+                // line's colour, a white or silver body being lost on the
+                // light ground.
                 if let under = scene.trackCover.ground(at: base), under.inTunnel {
-                    if buried, under.height - base.y <= Map3DXRay.deepest { frame.buried.append(Map3DXRay.Car(back: b, front: a, colour: side)) }
+                    if buried, under.height - base.y <= Map3DXRay.deepest {
+                        frame.buried.append(Map3DXRay.Car(back: b, front: a, colour: stripe ?? side))
+                    }
                 } else {
                     frame.cars.append(base)
                 }
