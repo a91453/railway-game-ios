@@ -103,9 +103,122 @@ extension Map3DStationExteriorBatch1 {
     }
 }
 
+/// Decision 665: a real station's exterior study of either batch, the
+/// first (decision 625, #1904) or the second (decision 626, #1938), as the
+/// scene stands it (``Map3DScene/Builder/addStationExteriors(_:frame:)``).
+enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
+    case batch1(Map3DStationExteriorBatch1.Station)
+    case batch2(Map3DStationExteriorBatch2.Station)
+
+    typealias LevelOfDetail = Map3DStationExteriorBatch1.LevelOfDetail
+
+    static let allCases: [Self] = Map3DStationExteriorBatch1.Station.allCases.map(Self.batch1)
+        + Map3DStationExteriorBatch2.Station.allCases.map(Self.batch2)
+
+    var rawValue: String {
+        switch self {
+        case .batch1(let station): station.rawValue
+        case .batch2(let station): "b2-" + station.rawValue
+        }
+    }
+
+    /// The study for a station of the kit's `profile`: the first batch's
+    /// eleven, and the second batch's Keelung, Chiayi and Tainan (the kit
+    /// gives them a profile of their own). The forest and sugar railways'
+    /// stations share the kit's timber and halt profiles with many
+    /// others, so they stand for a station only whose platforms lie
+    /// within them.
+    static func study(for profile: Map3DStationKit.Profile) -> Self? {
+        if let station = Map3DStationExteriorBatch1.study(for: profile) { return .batch1(station) }
+        switch profile {
+        case .keelung: return .batch2(.keelung)
+        case .chiayi: return .batch2(.chiayi)
+        case .tainan: return .batch2(.tainan)
+        default: return nil
+        }
+    }
+
+    /// The point (degrees north, east) the study's metres are measured
+    /// from.
+    var origin: (latitude: Double, longitude: Double) {
+        switch self {
+        case .batch1(let station): return Map3DStationExteriorBatch1.origin(of: station)
+        case .batch2(let station):
+            // The second batch keeps (longitude, latitude).
+            let (longitude, latitude) = Map3DStationExteriorBatch2.origin(of: station)
+            return (latitude, longitude)
+        }
+    }
+
+    /// The outlines the study stands on, metres east and north of
+    /// ``origin``: OpenStreetMap's buildings. For Tainan, not the new
+    /// underground station's outline (530 m long, under the ground);
+    /// for Wushulin and Xihu, where OpenStreetMap has only the station's
+    /// node, the rectangle round the study.
+    var outlines: [[(Float, Float)]] {
+        switch self {
+        case .batch1(let station): return Map3DStationExteriorBatch1.outlines(of: station)
+        case .batch2(let station):
+            typealias B = Map3DStationExteriorBatch2
+            switch station {
+            case .keelung: return [B.way929730121, B.way1069178919, B.way367861777]
+            case .chiayi: return [B.way286891391]
+            case .tainan: return [B.way204493488, B.way204493489, B.way1568887226]
+            case .beimen: return [B.way353120128]
+            case .fenqihu: return [B.way444296747]
+            case .alishan: return [B.way344586161]
+            case .qiaotou: return [B.way112644875]
+            case .wushulin: return [Self.wushulinOutline]
+            case .xihu: return [Self.xihuOutline]
+            }
+        }
+    }
+
+    private static let wushulinOutline = rectangle(round: .wushulin)
+    private static let xihuOutline = rectangle(round: .xihu)
+
+    /// The rectangle round the far study of `station`, on the ground.
+    private static func rectangle(round station: Map3DStationExteriorBatch2.Station) -> [(Float, Float)] {
+        guard let bounds = Map3DStationExteriorBatch2.mesh(for: station, detail: .far).bounds else { return [] }
+        return [(bounds.min.x, bounds.min.z), (bounds.max.x, bounds.min.z), (bounds.max.x, bounds.max.z), (bounds.min.x, bounds.max.z)]
+    }
+
+    /// The study in its own metres, as it is drawn before it is turned.
+    func mesh(detail: LevelOfDetail) -> Map3DMesh {
+        switch self {
+        case .batch1(let station): Map3DStationExteriorBatch1.mesh(for: station, detail: detail)
+        case .batch2(let station): Map3DStationExteriorBatch2.mesh(for: station, detail: detail == .near ? .near : .far)
+        }
+    }
+
+    /// The study in the scene's axes about its origin
+    /// (``Map3DStationExteriorBatch1/sceneMesh(for:detail:)``). The second
+    /// batch's windows are small panes, each lit warm after dark
+    /// (``Map3DVertex/floodlit``) rather than one bay in three of a
+    /// curtain wall; their tops and bottoms, which no one sees lit, plain.
+    func sceneMesh(detail: LevelOfDetail) -> Map3DMesh {
+        switch self {
+        case .batch1(let station): return Map3DStationExteriorBatch1.sceneMesh(for: station, detail: detail)
+        case .batch2:
+            let study = mesh(detail: detail)
+            let vertices = study.vertices.map { v in
+                let position = Map3DPoint(v.x, v.y, -v.z), normal = Map3DPoint(v.nx, v.ny, -v.nz)
+                let layer = v.layer != Map3DVertex.glowing ? v.layer : abs(normal.y) < 0.55 ? Map3DVertex.floodlit : Map3DVertex.plain
+                return Map3DVertex(position, normal: normal, color: v.color, u: v.u, v: v.v, layer: layer)
+            }
+            var indices: [UInt32] = []
+            indices.reserveCapacity(study.indices.count)
+            for start in stride(from: 0, to: study.indices.count, by: 3) {
+                indices += [study.indices[start], study.indices[start + 2], study.indices[start + 1]]
+            }
+            return Map3DMesh(vertices: vertices, indices: indices)
+        }
+    }
+}
+
 /// Decision 625: a study stood in the scene.
 struct Map3DStationExterior: Sendable {
-    let station: Map3DStationExteriorBatch1.Station
+    let station: Map3DExteriorStudy
     /// The study's origin in the scene, at the ground it stands on.
     let origin: Map3DPoint
     /// Its outlines in the scene, on the ground.
@@ -551,10 +664,10 @@ extension Map3DScene.Builder {
     /// origin is in the scene, where OpenStreetMap has it, cut clear of
     /// the track and platforms; the cells under its outlines, on which no
     /// real building, footprint, temple, scene or city lot stands.
-    mutating func addStationExteriors(_ snapshot: RailwaySnapshot, frame: RealWorldFrame) -> [Map3DStationExteriorBatch1.Station: Set<Map3DScene.ChunkKey>] {
-        var built: [Map3DStationExteriorBatch1.Station: Set<Map3DScene.ChunkKey>] = [:]
-        for station in Map3DStationExteriorBatch1.Station.allCases {
-            let origin = Map3DStationExteriorBatch1.origin(of: station)
+    mutating func addStationExteriors(_ snapshot: RailwaySnapshot, frame: RealWorldFrame) -> [Map3DExteriorStudy: Set<Map3DScene.ChunkKey>] {
+        var built: [Map3DExteriorStudy: Set<Map3DScene.ChunkKey>] = [:]
+        for station in Map3DExteriorStudy.allCases {
+            let origin = station.origin
             let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
             guard contains(x: place.x, y: place.y), let placed = addStationExterior(station, snapshot: snapshot, frame: frame) else { continue }
             stationExteriors.append(placed)
@@ -613,11 +726,11 @@ extension Map3DScene.Builder {
     }
 
     /// `station`'s outlines in the scene, on level ground.
-    func sceneOutlines(of station: Map3DStationExteriorBatch1.Station, frame: RealWorldFrame) -> [[Map3DPoint]] {
-        let origin = Map3DStationExteriorBatch1.origin(of: station)
+    func sceneOutlines(of station: Map3DExteriorStudy, frame: RealWorldFrame) -> [[Map3DPoint]] {
+        let origin = station.origin
         let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
         let centre = point(x: place.x, y: place.y, height: 0)
-        return Map3DStationExteriorBatch1.outlines(of: station).map { outline in
+        return station.outlines.map { outline in
             outline.map { Map3DPoint(centre.x + $0.0, 0, centre.z - $0.1) }
         }
     }
@@ -625,10 +738,9 @@ extension Map3DScene.Builder {
     /// Decision 625: where `station`'s study stands in the scene, where
     /// OpenStreetMap has it, on the lowest ground under it; its outlines
     /// there, and the room the track and platforms need round it.
-    mutating func exteriorPlace(_ station: Map3DStationExteriorBatch1.Station, snapshot: RailwaySnapshot, frame: RealWorldFrame)
+    mutating func exteriorPlace(_ station: Map3DExteriorStudy, snapshot: RailwaySnapshot, frame: RealWorldFrame)
         -> (origin: Map3DPoint, outlines: [[Map3DPoint]], ground: Float, room: Map3DTrainRoom) {
-        let place = frame.worldPosition(latitude: Map3DStationExteriorBatch1.origin(of: station).latitude,
-                                        longitude: Map3DStationExteriorBatch1.origin(of: station).longitude)
+        let place = frame.worldPosition(latitude: station.origin.latitude, longitude: station.origin.longitude)
         let centre = point(x: place.x, y: place.y, height: 0)
         var outlines = sceneOutlines(of: station, frame: frame)
         // On the lowest ground under it, so no corner is in the air.
@@ -640,17 +752,17 @@ extension Map3DScene.Builder {
     }
 
     /// `station`'s study at `origin`, cut clear of `room`.
-    static func exteriorCarved(_ station: Map3DStationExteriorBatch1.Station, detail: Map3DStationExteriorBatch1.LevelOfDetail,
+    static func exteriorCarved(_ station: Map3DExteriorStudy, detail: Map3DExteriorStudy.LevelOfDetail,
                                at origin: Map3DPoint, clearOf room: Map3DTrainRoom) -> (mesh: Map3DMesh, kept: Float) {
         var placed = Map3DMesh()
-        placed.append(Map3DStationExteriorBatch1.sceneMesh(for: station, detail: detail), at: origin, forward: Map3DPoint(1, 0, 0))
+        placed.append(station.sceneMesh(detail: detail), at: origin, forward: Map3DPoint(1, 0, 0))
         return Map3DStationExterior.carved(placed, clearOf: room, ground: origin.y,
                                            frameSpacing: detail == .near ? Map3DTrainRoom.frameSpacing : Map3DTrainRoom.farFrameSpacing)
     }
 
     /// Whether `station`'s study stands (``addStationExterior(_:snapshot:frame:)``),
     /// asked without drawing it, by a block of chunks without its origin.
-    mutating func exteriorStands(_ station: Map3DStationExteriorBatch1.Station, snapshot: RailwaySnapshot, frame: RealWorldFrame) -> Bool {
+    mutating func exteriorStands(_ station: Map3DExteriorStudy, snapshot: RailwaySnapshot, frame: RealWorldFrame) -> Bool {
         let place = exteriorPlace(station, snapshot: snapshot, frame: frame)
         return Self.exteriorCarved(station, detail: .near, at: place.origin, clearOf: place.room).kept >= Self.exteriorLeast
     }
@@ -659,7 +771,7 @@ extension Map3DScene.Builder {
     /// least ``exteriorLeast`` of it is clear of the track and platforms;
     /// close by the near study, from afar the far one, each cut clear the
     /// same way. `nil` when it does not stand.
-    mutating func addStationExterior(_ station: Map3DStationExteriorBatch1.Station, snapshot: RailwaySnapshot,
+    mutating func addStationExterior(_ station: Map3DExteriorStudy, snapshot: RailwaySnapshot,
                                      frame: RealWorldFrame) -> Map3DStationExterior? {
         let (origin, outlines, _, room) = exteriorPlace(station, snapshot: snapshot, frame: frame)
         let near = Self.exteriorCarved(station, detail: .near, at: origin, clearOf: room)
@@ -695,7 +807,7 @@ extension Map3DScene.Builder {
     /// study's largest outline along its long side, their backs on its
     /// side nearer the track, cut clear of the track as the study is. The
     /// cells they stand on.
-    mutating func addExpansionWings(_ expansion: StationExpansion, beside station: Map3DStationExteriorBatch1.Station,
+    mutating func addExpansionWings(_ expansion: StationExpansion, beside station: Map3DExteriorStudy,
                                     frame: RealWorldFrame, snapshot: RailwaySnapshot) -> Set<Map3DScene.ChunkKey> {
         let (_, outlines, ground, room) = exteriorPlace(station, snapshot: snapshot, frame: frame)
         let rectangles = outlines.map(Map3DStationExterior.rectangle(round:)).filter { $0.count == 4 }

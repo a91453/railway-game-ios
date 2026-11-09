@@ -148,23 +148,52 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testStationExteriorTaichungHSR() { shootStationExterior("exteriorTaichungHSR", lay: "23.870,120.570,24.130,120.640") }
     func testStationExteriorZuoying() { shootStationExterior("exteriorZuoying", lay: "22.670,120.270,22.940,120.330") }
 
-    private func shootStationExterior(_ scene: String, lay view: String) {
+    /// Decision 665: the second batch's studies the same way. Keelung,
+    /// Chiayi and Tainan in the demo's real lines laid round them; the
+    /// forest and sugar railways' stations on the empty map, their real
+    /// lines' track drawn. Each close, low and from its front (the
+    /// studies' fronts face east), the building about a third of the
+    /// view: by day, and at night for Alishan and Xihu only (Keelung's
+    /// at the south station, closer and lower, under the canopy that
+    /// overhangs its front 6.5 m at 8 m; Tainan's at the 1936 station,
+    /// Qiaotou's between the sugar railway's booth and the metro station).
+    func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765", close: 80, low: 60) }
+    func testStationExteriorChiayi() { shootStationExterior("exteriorChiayi", lay: "23.455,120.415,23.505,120.470", close: 120) }
+    func testStationExteriorTainan() { shootStationExterior("exteriorTainan", lay: "22.975,120.190,23.020,120.240", close: 160) }
+    func testStationExteriorBeimen() { shootStationExterior("exteriorBeimen", lay: nil, close: 60) }
+    func testStationExteriorFenqihu() { shootStationExterior("exteriorFenqihu", lay: nil, close: 60) }
+    func testStationExteriorAlishan() { shootStationExterior("exteriorAlishan", lay: nil, close: 100, night: true) }
+    func testStationExteriorWushulin() { shootStationExterior("exteriorWushulin", lay: nil, close: 60) }
+    func testStationExteriorXihu() { shootStationExterior("exteriorXihu", lay: nil, close: 60, night: true) }
+    func testStationExteriorQiaotou() { shootStationExterior("exteriorQiaotou", lay: nil, close: 110) }
+
+    /// `close`: decision 665's camera, that many metres from the front
+    /// and `low` degrees from straight down (55: 35° over the ground), by day, and at night too when
+    /// `night`; without it decision 625's, over it, day and night.
+    private func shootStationExterior(_ scene: String, lay view: String?, close: Int? = nil, low: Int = 55, night: Bool? = nil) {
         // Laying the lines and running half an hour take minutes in the
         // Debug app (the workflow allows up to 30 minutes a test).
         executionTimeAllowance = 1_500
         // Each study's OSM origin, but the HSR Taichung one: its platforms'
         // middle, 180 m north-east (the origin is by the high-rises).
         let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
-                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864"]
-        for (hour, suffix) in [("day", ""), ("night", "Night")] {
-            let app = launch(extra: ["-screenshot-scene", scene + suffix, "-screenshot-lay-demo", view, "-screenshot-3d-view", "380,215,40",
+                      "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864",
+                      "exteriorKeelung": "25.131799,121.738397", "exteriorChiayi": "23.479163,120.441188", "exteriorTainan": "22.997320,120.211290",
+                      "exteriorBeimen": "23.487621,120.454664", "exteriorFenqihu": "23.505259,120.695189", "exteriorAlishan": "23.510045,120.804389",
+                      "exteriorWushulin": "23.328660,120.373780", "exteriorXihu": "23.952050,120.481765", "exteriorQiaotou": "22.753344,120.314875"]
+        // Facing west at the fronts, 55° from straight down.
+        let camera = close.map { "\($0),250,\(low)" } ?? "380,215,40"
+        let hours = night ?? (close == nil) ? [("day", ""), ("night", "Night")] : [("day", "")]
+        for (hour, suffix) in hours {
+            let laying = view.map { ["-screenshot-lay-demo", $0] } ?? []
+            let app = launch(extra: ["-screenshot-scene", scene + suffix] + laying + ["-screenshot-3d-view", camera,
                                      "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high",
                                      // Decision 625 續: no frame rate or gesture hint over the stations.
                                      "-screenshot-3d-clean"])
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy laying the lines for a
             // minute at a time, longer than a UI query waits.
-            Thread.sleep(forTimeInterval: 240)
+            if view != nil { Thread.sleep(forTimeInterval: 240) }
             let open3D = app.buttons["map.open3D"]
             XCTAssertTrue(open3D.appears(within: 600))
             XCTAssertTrue(open3D.becomesHittable(within: 300))
