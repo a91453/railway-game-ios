@@ -15,9 +15,10 @@ import GameCore
 //   Neiwan Line;
 // - the towns on it are Hakka, and Neiwan's old street grew round the
 //   station after the timber and coal trade faded;
-// - Hexing's wooden station and its "Love Station" shop put their lights
-//   out in October 2025 when the railway ended the lease (Chinese Wikipedia,
-//   「合興車站」, its references).
+// - Hexing's wooden station is still served by trains; what closed in
+//   October 2025, when the railway ended the lease, is the "Love Station"
+//   park beside it (Chinese Wikipedia, 「合興車站」, its references; the
+//   owner's correction, 2026-11-09).
 // What the three say of their own lives (the cement works and the forest
 // yard where Uncle Luo worked, the noodle shop, the fireflies in spring) is
 // colour, not a record, which is why they say "they say" where it is not
@@ -49,8 +50,8 @@ extension BranchLineChallenge {
         ),
         StoryBeat(
             "neiwan.5", .riders(percent: 25), .xiaoYu,
-            "Past Zhudong is Hexing, a little wooden station. People came from all over to take photos of it. It's been quiet since October 2025, but I still tell my friends to come and see it.",
-            "過了竹東就是合興，一座木頭小站。以前很多人專程來拍照；2025 年 10 月熄燈之後安靜了，我還是會叫朋友來看看。"
+            "Past Zhudong is Hexing, a little wooden station where the trains still stop. People used to come from all over to take photos at the Love Station park beside it. The park closed in October 2025, but I still tell my friends to ride out and see it.",
+            "過了竹東就是合興，一座木頭小站，火車到現在還會停。以前很多人專程來旁邊的「愛情車站」園區拍照；園區 2025 年 10 月關了，我還是會叫朋友坐車來看看。"
         ),
         StoryBeat(
             "neiwan.6", .cashBelowZero, .stationMaster,
