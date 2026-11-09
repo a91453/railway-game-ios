@@ -1067,6 +1067,8 @@
   - **留給 Simulator**（**UNVERIFIED**）：
     - L14-2：手勢被系統取消時，`@GestureState` 真的歸零（亮底消失、讀數回到原值）。可以在 UI 測試裡按住高度格時跳出 sheet 來驗；目前沒有這支 UI 測試。
     - L14-5：清單在面板開著時，視覺上會更新。
+- **FIX-L13-L15**（session_01JMHz9ZjHb7MUvdkxcnVr8T，第 58 任派，`claude/fix-l13-l15`，[決策 673](decisions/673.md)；存檔、golden、GameCore 不動）：123 的說明（`WhatsNew.swift`、`.github/testflight-whats-new.md`）寫好，更正 L13-1、L13-3、L15-1、L15-2、L15-3；120–122 說錯的字改在原筆。逐條核對後，L13-4 後半、L13-5、L13-6、L13-9、L13-10 已在 #1996（決策 661），L15-9 兩件已在 #1998（659）與 #1997（660），不重做。
+  - **留給實機**（**UNVERIFIED**）：L13-4 前半（`Map3DMetalView.draw` 每幀建的 CPU 陣列；先用 Instruments Allocations 量每幀配置，超過幾十 KB 再改成 view 成員、`removeAll(keepingCapacity: true)`）；L13-6 CPU 那份常駐（照決策 610 續二留著）；L15-9 第 1 件剩下的系統冷啟動成本（決策 659「沒修的」）；L13-8。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 

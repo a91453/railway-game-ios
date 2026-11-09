@@ -30,6 +30,82 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 123.
+        Entry(
+            id: "2026-11-09-123",
+            items: [
+                Line(
+                    english: "The 3D map has nine more real station buildings: Keelung, Chiayi, Tainan, Beimen, Fenqihu, Alishan, Wushulin, Xihu and Qiaotou.",
+                    chinese: "3D 地圖多了 9 座真實站房：基隆、嘉義、臺南、北門、奮起湖、阿里山、烏樹林、溪湖、橋頭。"
+                ),
+                Line(
+                    english: "Electric trains hum as they speed up and brake, and go quiet when coasting.",
+                    chinese: "電車加速和煞車時有馬達聲，惰行時安靜。"
+                ),
+                Line(
+                    english: "When you cannot afford a building, the message says where nearby it costs less.",
+                    chinese: "錢不夠蓋建物時，說明會指出附近哪裡蓋得起。"
+                ),
+                Line(
+                    english: "The tourism page says what attractions do, and the ones outside your map are folded away.",
+                    chinese: "觀光頁只說景點做什麼，地圖外的景點收起來。"
+                ),
+                Line(
+                    english: "On the high-speed demo, the fares page shows the high-speed fares passengers pay.",
+                    chinese: "高鐵示範的票價頁寫出旅客實際付的高鐵票價。"
+                ),
+                Line(
+                    english: "When the tutorial ends, you are told how to pass the first lesson.",
+                    chinese: "教學結束時告訴你第 1 關怎麼過關。"
+                ),
+                Line(
+                    english: "On iPad in Split View or Slide Over, sheets open at half height so the map stays in view.",
+                    chinese: "iPad 分割畫面或 Slide Over 時，下半卡開半高，看得到地圖。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "The Taoyuan Airport MRT can be rebuilt right after the first night's last train, a day sooner.",
+                    chinese: "機場捷運第一晚收班後就能改建，早一天。"
+                ),
+                Line(
+                    english: "From the second lesson on, platform mode can remove platforms again.",
+                    chinese: "教學第 2 課起，月台模式又能拆月台。"
+                ),
+                Line(
+                    english: "The speed hint no longer closes a route map or other window you have open.",
+                    chinese: "倍速提示不會再把開著的路線圖等畫面關掉。"
+                ),
+                Line(
+                    english: "Opening the map and laying track leave the screen less busy, so it answers sooner.",
+                    chinese: "開地圖和鋪軌後背景少算很多，畫面比較快有反應。"
+                ),
+                Line(
+                    english: "On a Mac, settings say Mac.",
+                    chinese: "在 Mac 上，設定寫 Mac。"
+                ),
+                Line(
+                    english: "Correction to the last build: tapping a station is no quicker; what got faster are the passenger arcs of stations and lines on the map.",
+                    chinese: "更正上一版：點車站本身沒有變快；變快的是地圖上車站和路線的旅客去向弧線。"
+                ),
+                Line(
+                    english: "Correction to the last build: only the Taoyuan Airport MRT can be rebuilt as the real railway, at Chang Gung Hospital.",
+                    chinese: "更正上一版：照真實改建只有機場捷運的長庚醫院站一段。"
+                ),
+                Line(
+                    english: "Correction to the last build: the Taoyuan Airport MRT jams much less, not never; the extra trips are under simple rules, and a few evening trips still do not run.",
+                    chinese: "更正上一版：機場捷運卡住少很多，但沒有完全不卡；多開的班次是簡單規則下的，傍晚仍有幾班沒開。"
+                ),
+                Line(
+                    english: "Correction to an earlier build: the cab window view glides at 10× and 60×; 1× is unchanged.",
+                    chinese: "更正之前的版本：車窗視角滑行連貫的是 10 倍速和 60 倍速，1 倍速沒有改。"
+                ),
+                Line(
+                    english: "Correction to an earlier build: on the Kaohsiung Circular Light Rail, empty trains run shorter distances, not fewer trips.",
+                    chinese: "更正之前的版本：高雄環狀輕軌的空車是跑得比較短，趟數沒有變少。"
+                ),
+            ]
+        ),
         // 122.
         Entry(
             id: "2026-11-08",
@@ -43,15 +119,15 @@ public enum WhatsNew {
                     chinese: "可買的真實路線依距離由近到遠排，買不到的灰掉，並寫約幾公里外。"
                 ),
                 Line(
-                    english: "A line you already bought, such as the Taoyuan Airport MRT, can be rebuilt as the real railway at Chang Gung Hospital; if something is in the way, the card says where.",
+                    english: "The Taoyuan Airport MRT you already bought can be rebuilt as the real railway at Chang Gung Hospital; if something is in the way, the card says where.",
                     chinese: "已收購的機場捷運可選擇照真實改建長庚醫院站一段，被擋住時會說哪裡。"
                 ),
                 Line(
-                    english: "The 3D map opens on the nearest track when you zoom in from the whole island, shows the game clock in the corner, and distant windows now light up at night.",
+                    english: "The 3D map opens on the nearest track when you open it with the whole island in view, shows the game clock in the corner, and distant windows now light up at night.",
                     chinese: "從全台進 3D 會開在最近的軌道上；角落有遊戲時鐘，遠處夜窗也會亮。"
                 ),
                 Line(
-                    english: "Taiwan Railway has the new timetable, and Tainan station and its tracks are now underground as since the undergrounding opened.",
+                    english: "Taiwan Railway has the new timetable, and Tainan station and its tracks are now drawn underground, as they have been since the line moved underground.",
                     chinese: "臺鐵換上台南地下化後的新時刻表，臺南站與鄰近軌道改畫成地下。"
                 ),
                 Line(
@@ -69,8 +145,8 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
-                    english: "Tapping a station is much quicker, because its passenger flows are worked out faster.",
-                    chinese: "點車站快很多，客流計算加速了。"
+                    english: "The passenger arcs of a station or a line appear on the map much sooner.",
+                    chinese: "地圖上車站和路線的旅客去向弧線出現得快很多。"
                 ),
                 Line(
                     english: "After you buy a large line such as the Wenhu line, fast speeds keep up again.",
@@ -89,12 +165,12 @@ public enum WhatsNew {
                     chinese: "收購當天的虧損算對了；等進路標籤只在最近一列寫擋住的車名。"
                 ),
                 Line(
-                    english: "A train following another no longer stops on track the line only uses the other way, which jammed the Taoyuan Airport MRT.",
-                    chinese: "跟著前車走的列車不再停在逆向軌道上，機場捷運不再互等卡死。"
+                    english: "A train following another no longer stops on track the line only uses the other way, so the Taoyuan Airport MRT jams much less.",
+                    chinese: "跟著前車走的列車不再停在逆向軌道上，機場捷運互等卡死少很多。"
                 ),
                 Line(
-                    english: "A newly bought Taoyuan Airport MRT now runs about fourteen more trips a day, because trains ending at Airport Terminal 1 can wait at another platform and no longer block the express.",
-                    chinese: "現在買下機場捷運，每天多開約十四班；在第一航廈站結束的車停到另一個月台，不再卡住直達車。"
+                    english: "A newly bought Taoyuan Airport MRT now runs about fourteen more trips a day, because trains ending at Airport Terminal 1 can wait at another platform and mostly no longer block the express.",
+                    chinese: "現在買下機場捷運，每天多開約十四班；在第一航廈站結束的車停到另一個月台，大多不再卡住直達車。"
                 ),
             ]
         ),
@@ -165,7 +241,7 @@ public enum WhatsNew {
                     chinese: "機廠不再顯示「擠」和服務圈，服務圈開關關了就真的關。"
                 ),
                 Line(
-                    english: "On the high-speed demo, the Liujia depot now sits north of the Touqian River instead of over the water.",
+                    english: "On the high-speed demo, Liujia Depot now sits north of the Touqian River instead of over the water.",
                     chinese: "高鐵示範的六家基地收在頭前溪北岸，不再蓋在河上。"
                 ),
             ]
@@ -175,16 +251,16 @@ public enum WhatsNew {
             id: "2026-11-07-120",
             items: [
                 Line(
-                    english: "The tracks into a depot you build now fan out symmetrically, like a real train yard.",
-                    chinese: "自己蓋的機廠，進出的分岔改成像真實車場的對稱扇形。"
+                    english: "The tracks into a depot you build now fan out like a real train yard.",
+                    chinese: "自己蓋的機廠，進出的分岔改成像真實車場的扇形。"
                 ),
                 Line(
-                    english: "The high-speed demo's northern end now has Nangang's stabling sidings and the Liujia depot beside Hsinchu, laid out as in real life.",
+                    english: "The high-speed demo's northern end now has Nangang Sidings and Liujia Depot beside Hsinchu, laid out as in real life.",
                     chinese: "高鐵示範北端：南港留置線和新竹旁的六家基地，照真實配置。"
                 ),
                 Line(
-                    english: "On the Kaohsiung Circular Light Rail, the depot's tracks now run in a strip along the line like the real Qianzhen depot, so fewer empty trains run.",
-                    chinese: "高雄環狀輕軌的機廠照真實前鎮機廠沿線排成一條帶，空車少跑。"
+                    english: "On the Kaohsiung Circular Light Rail, the depot's tracks now run in a strip along the line like the real Light Rail Depot, so empty trains run shorter distances.",
+                    chinese: "高雄環狀輕軌的機廠照真實輕軌機廠沿線排成一條帶，空車跑得比較短。"
                 ),
                 Line(
                     english: "The 3D map shows road tunnel mouths, and lights glow at night.",
@@ -193,12 +269,12 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
-                    english: "At 10x speed game time keeps up, even with trains waiting at stations to depart.",
+                    english: "At 10× speed game time keeps up, even with trains waiting at stations to depart.",
                     chinese: "10 倍速時遊戲時間跟得上，有車在站上等出發也不再拖慢。"
                 ),
                 Line(
-                    english: "Correction to the last build: the cab window view only now glides smoothly instead of jerking, at 10x and at 1x.",
-                    chinese: "更正上一版：車窗視角走走停停，這一版才真的改好，10 倍速和 1 倍速都滑行連貫。"
+                    english: "Correction to the last build: the cab window view only now glides smoothly instead of jerking, at 10× and 60×.",
+                    chinese: "更正上一版：車窗視角走走停停，這一版才真的改好，10 倍速和 60 倍速都滑行連貫。"
                 ),
                 Line(
                     english: "Following a train in 3D no longer drops you back to 2D after a short while.",
@@ -1017,7 +1093,7 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
-                    english: "Following a train on the 3D map at 10x speed is smoother.",
+                    english: "Following a train on the 3D map at 10× speed is smoother.",
                     chinese: "3D 地圖跟著列車、開 10 倍速時更順。"
                 ),
                 Line(
