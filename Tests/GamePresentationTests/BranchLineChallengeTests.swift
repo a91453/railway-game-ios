@@ -5,7 +5,8 @@ import XCTest
 
 /// Decision 289: the branch-line challenges, played as the Liu Mingchuan
 /// challenge is: a real map round the line with nothing built, its
-/// milestones, its riders and its sights. The Jiji Line first.
+/// milestones, its riders and its sights. The Jiji Line first, then the
+/// Neiwan Line (decision 668).
 final class BranchLineChallengeTests: XCTestCase {
     let jiji = BranchLineChallenge.jiji
 
@@ -67,6 +68,52 @@ final class BranchLineChallengeTests: XCTestCase {
         let met = try XCTUnwrap(StationMasterAdvice(world: world))
         XCTAssertEqual(met, .goalMet(scenario: "branch.jiji", goal: 0, titles: ["Ershui to Jiji", "二水—集集"]))
         XCTAssertEqual(met.text(in: .traditionalChinese), "二水的列車開到集集了，木造車站迎接遊客！")
+    }
+
+    // MARK: - The Neiwan Line (decision 668)
+
+    let neiwan = BranchLineChallenge.neiwan
+
+    func testTheNeiwanMapReachesFromHsinchuToNeiwanWithNothingBuilt() throws {
+        let world = neiwan.make()
+        XCTAssertEqual(world.bounds, neiwan.bounds)
+        // Some 27 by 16 km round the line's 28 km.
+        XCTAssertEqual(Double(world.bounds.width) / Double(WorldCoordinate.unitsPerMetre) / 1_000, 27, accuracy: 1)
+        XCTAssertEqual(Double(world.bounds.height) / Double(WorldCoordinate.unitsPerMetre) / 1_000, 16, accuracy: 1)
+        XCTAssertTrue(neiwan.townPoints.allSatisfy { world.bounds.contains($0) })
+        XCTAssertTrue(world.stations.isEmpty)
+        XCTAssertTrue(world.network.edges.isEmpty)
+        XCTAssertEqual(world.economy.balance, neiwan.startingBalance)
+        XCTAssertFalse(world.outsideConnections)
+        // Its two sights, one at each end.
+        XCTAssertEqual(world.tourism?.attractions.map(\.name), ["新竹城隍廟", "內灣老街"])
+    }
+
+    func testNeiwansGoalsAreTheMilestonesAndTheRiders() throws {
+        var world = neiwan.make()
+        let state = try XCTUnwrap(world.scenario)
+        XCTAssertEqual(state.scenario.id, "branch.neiwan")
+        XCTAssertEqual(state.scenario.goals.suffix(2), [.dailyRiders(NeiwanTargets.riders), .annualNetProfit(NeiwanTargets.profit)])
+        XCTAssertEqual(world.goalProgress(in: .traditionalChinese).map(\.title).prefix(3), ["新竹—竹中", "延伸到竹東", "終點內灣"])
+        let challenge = try XCTUnwrap(Challenge.named("branch.neiwan"))
+        XCTAssertEqual(challenge.map, .branchLine("neiwan"))
+        XCTAssertEqual(world.scenarioTitle(in: .traditionalChinese), "內灣線：駛進客家山城")
+        XCTAssertTrue(challenge.story(in: .traditionalChinese).contains("1951"))
+        XCTAssertEqual(BranchLineChallenge.line("neiwan")?.challengeID, "branch.neiwan")
+        XCTAssertTrue(try XCTUnwrap(StationMasterAdvice(world: world)?.text(in: .traditionalChinese)).hasPrefix("內灣線交給我們重新鋪"))
+        // Hsinchu and Zhuzhong joined by a line with a train: the first
+        // milestone, cheered.
+        let hsinchu = try world.buildStation(named: "新竹", at: neiwan.townPoints[0]).id
+        let zhuzhong = try world.buildStation(named: "竹中", at: neiwan.townPoints[1]).id
+        let line = try world.createLine(named: "內灣線", stops: [hsinchu, zhuzhong]).id
+        let train = try world.purchaseTrain(named: "內灣 1").id
+        try world.assignTrain(train, to: line, pattern: nil)
+        try world.advance(ticks: 1_441)
+        let met = try XCTUnwrap(StationMasterAdvice(world: world))
+        XCTAssertEqual(met, .goalMet(scenario: "branch.neiwan", goal: 0, titles: ["Hsinchu to Zhuzhong", "新竹—竹中"]))
+        XCTAssertEqual(met.text(in: .traditionalChinese), "新竹的列車開到竹中了！")
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
     }
 
     @MainActor

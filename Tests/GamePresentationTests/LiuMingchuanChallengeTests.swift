@@ -43,7 +43,7 @@ final class LiuMingchuanChallengeTests: XCTestCase {
         XCTAssertEqual(world.scenarioTitle(in: .traditionalChinese), "劉銘傳鐵路：基隆到新竹")
         XCTAssertTrue(Challenge.liuMingchuan.story(in: .traditionalChinese).contains("1891"))
         // The oldest era first, then the branch lines (decision 289).
-        XCTAssertEqual(Challenge.history.map(\.id), ["history.liuMingchuan", "history.pingxi", "branch.jiji"])
+        XCTAssertEqual(Challenge.history.map(\.id), ["history.liuMingchuan", "history.pingxi", "branch.jiji", "branch.neiwan"])
         // A milestone's name is the Liu Mingchuan challenge's alone.
         XCTAssertEqual(Challenge.threeTowns.goalsText(in: .english).first, "Link all 3 towns by rail")
         // It saves and loads as it is.
