@@ -154,9 +154,10 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// lines' track drawn. Each close, low and from its front (the
     /// studies' fronts face east), the building about a third of the
     /// view: by day, and at night for Alishan and Xihu only (Keelung's
-    /// at the south station, Tainan's at the 1936 station, Qiaotou's
-    /// between the sugar railway's booth and the metro station).
-    func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765", close: 130) }
+    /// at the south station, closer and lower, under the canopy that
+    /// overhangs its front 6.5 m at 8 m; Tainan's at the 1936 station,
+    /// Qiaotou's between the sugar railway's booth and the metro station).
+    func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765", close: 80, low: 60) }
     func testStationExteriorChiayi() { shootStationExterior("exteriorChiayi", lay: "23.455,120.415,23.505,120.470", close: 120) }
     func testStationExteriorTainan() { shootStationExterior("exteriorTainan", lay: "22.975,120.190,23.020,120.240", close: 160) }
     func testStationExteriorBeimen() { shootStationExterior("exteriorBeimen", lay: nil, close: 60) }
@@ -167,9 +168,9 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testStationExteriorQiaotou() { shootStationExterior("exteriorQiaotou", lay: nil, close: 110) }
 
     /// `close`: decision 665's camera, that many metres from the front
-    /// and low (35° over the ground), by day, and at night too when
+    /// and `low` degrees from straight down (55: 35° over the ground), by day, and at night too when
     /// `night`; without it decision 625's, over it, day and night.
-    private func shootStationExterior(_ scene: String, lay view: String?, close: Int? = nil, night: Bool? = nil) {
+    private func shootStationExterior(_ scene: String, lay view: String?, close: Int? = nil, low: Int = 55, night: Bool? = nil) {
         // Laying the lines and running half an hour take minutes in the
         // Debug app (the workflow allows up to 30 minutes a test).
         executionTimeAllowance = 1_500
@@ -181,7 +182,7 @@ final class WebsiteScreenshotTests: XCTestCase {
                       "exteriorBeimen": "23.487621,120.454664", "exteriorFenqihu": "23.505259,120.695189", "exteriorAlishan": "23.510045,120.804389",
                       "exteriorWushulin": "23.328660,120.373780", "exteriorXihu": "23.952050,120.481765", "exteriorQiaotou": "22.753344,120.314875"]
         // Facing west at the fronts, 55° from straight down.
-        let camera = close.map { "\($0),250,55" } ?? "380,215,40"
+        let camera = close.map { "\($0),250,\(low)" } ?? "380,215,40"
         let hours = night ?? (close == nil) ? [("day", ""), ("night", "Night")] : [("day", "")]
         for (hour, suffix) in hours {
             let laying = view.map { ["-screenshot-lay-demo", $0] } ?? []
