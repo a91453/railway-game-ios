@@ -151,20 +151,25 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Decision 665: the second batch's studies the same way. Keelung,
     /// Chiayi and Tainan in the demo's real lines laid round them; the
     /// forest and sugar railways' stations on the empty map, their real
-    /// lines' track drawn. Each looked at from its buildings' middle
-    /// (Keelung's at the south station, 160 m south-west of the origin;
-    /// Tainan's at the 1936 station, 210 m west of it).
-    func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765") }
-    func testStationExteriorChiayi() { shootStationExterior("exteriorChiayi", lay: "23.455,120.415,23.505,120.470") }
-    func testStationExteriorTainan() { shootStationExterior("exteriorTainan", lay: "22.975,120.190,23.020,120.240") }
-    func testStationExteriorBeimen() { shootStationExterior("exteriorBeimen", lay: nil) }
-    func testStationExteriorFenqihu() { shootStationExterior("exteriorFenqihu", lay: nil) }
-    func testStationExteriorAlishan() { shootStationExterior("exteriorAlishan", lay: nil) }
-    func testStationExteriorWushulin() { shootStationExterior("exteriorWushulin", lay: nil) }
-    func testStationExteriorXihu() { shootStationExterior("exteriorXihu", lay: nil) }
-    func testStationExteriorQiaotou() { shootStationExterior("exteriorQiaotou", lay: nil) }
+    /// lines' track drawn. Each close, low and from its front (the
+    /// studies' fronts face east), the building about a third of the
+    /// view: by day, and at night for Alishan and Xihu only (Keelung's
+    /// at the south station, Tainan's at the 1936 station, Qiaotou's
+    /// between the sugar railway's booth and the metro station).
+    func testStationExteriorKeelung() { shootStationExterior("exteriorKeelung", lay: "25.110,121.715,25.155,121.765", close: 130) }
+    func testStationExteriorChiayi() { shootStationExterior("exteriorChiayi", lay: "23.455,120.415,23.505,120.470", close: 120) }
+    func testStationExteriorTainan() { shootStationExterior("exteriorTainan", lay: "22.975,120.190,23.020,120.240", close: 160) }
+    func testStationExteriorBeimen() { shootStationExterior("exteriorBeimen", lay: nil, close: 60) }
+    func testStationExteriorFenqihu() { shootStationExterior("exteriorFenqihu", lay: nil, close: 60) }
+    func testStationExteriorAlishan() { shootStationExterior("exteriorAlishan", lay: nil, close: 100, night: true) }
+    func testStationExteriorWushulin() { shootStationExterior("exteriorWushulin", lay: nil, close: 60) }
+    func testStationExteriorXihu() { shootStationExterior("exteriorXihu", lay: nil, close: 60, night: true) }
+    func testStationExteriorQiaotou() { shootStationExterior("exteriorQiaotou", lay: nil, close: 110) }
 
-    private func shootStationExterior(_ scene: String, lay view: String?) {
+    /// `close`: decision 665's camera, that many metres from the front
+    /// and low (35° over the ground), by day, and at night too when
+    /// `night`; without it decision 625's, over it, day and night.
+    private func shootStationExterior(_ scene: String, lay view: String?, close: Int? = nil, night: Bool? = nil) {
         // Laying the lines and running half an hour take minutes in the
         // Debug app (the workflow allows up to 30 minutes a test).
         executionTimeAllowance = 1_500
@@ -172,12 +177,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         // middle, 180 m north-east (the origin is by the high-rises).
         let places = ["exteriorTaichung": "24.13732601,120.68671829", "exteriorHsinchu": "24.80160443,120.97165154", "exteriorBanqiao": "25.0144511,121.4640451",
                       "exteriorTaoyuanHSR": "25.01347985,121.214539", "exteriorTaichungHSR": "24.11248,120.61598", "exteriorZuoying": "22.68726485,120.3074864",
-                      "exteriorKeelung": "25.131791,121.738397", "exteriorChiayi": "23.479162,120.441182", "exteriorTainan": "22.997321,120.21129",
-                      "exteriorBeimen": "23.487621,120.454664", "exteriorFenqihu": "23.505276,120.695147", "exteriorAlishan": "23.510083,120.804323",
-                      "exteriorWushulin": "23.328660,120.373799", "exteriorXihu": "23.952050,120.481810", "exteriorQiaotou": "22.753488,120.314640"]
-        for (hour, suffix) in [("day", ""), ("night", "Night")] {
+                      "exteriorKeelung": "25.131799,121.738397", "exteriorChiayi": "23.479163,120.441188", "exteriorTainan": "22.997320,120.211290",
+                      "exteriorBeimen": "23.487621,120.454664", "exteriorFenqihu": "23.505259,120.695189", "exteriorAlishan": "23.510045,120.804389",
+                      "exteriorWushulin": "23.328660,120.373780", "exteriorXihu": "23.952050,120.481765", "exteriorQiaotou": "22.753344,120.314875"]
+        // Facing west at the fronts, 55° from straight down.
+        let camera = close.map { "\($0),250,55" } ?? "380,215,40"
+        let hours = night ?? (close == nil) ? [("day", ""), ("night", "Night")] : [("day", "")]
+        for (hour, suffix) in hours {
             let laying = view.map { ["-screenshot-lay-demo", $0] } ?? []
-            let app = launch(extra: ["-screenshot-scene", scene + suffix] + laying + ["-screenshot-3d-view", "380,215,40",
+            let app = launch(extra: ["-screenshot-scene", scene + suffix] + laying + ["-screenshot-3d-view", camera,
                                      "-screenshot-3d-at", places[scene] ?? "", "-map3D.quality", "high",
                                      // Decision 625 續: no frame rate or gesture hint over the stations.
                                      "-screenshot-3d-clean"])
