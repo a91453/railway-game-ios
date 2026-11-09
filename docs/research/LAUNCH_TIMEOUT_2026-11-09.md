@@ -43,7 +43,7 @@ build job 只有第一次暖身。所以 full lane 裡，只有 build job 第一
 
 ## 驗證
 
-- 本分支用 `ios-build.yml` 的 `only_testing` 跑 `CoverageShortcutUITests FinanceCompositionUITests LoadChartUITests` 一次（workflow_dispatch，所以暖身步驟會跑）。結果寫在決策 667。
+- 本分支用 `ios-build.yml` 的 `only_testing` 跑 `CoverageShortcutUITests FinanceCompositionUITests LoadChartUITests` 一次（workflow_dispatch，所以暖身步驟會跑）：run 42541966404 綠。暖身 91 s，其中經 XCTest 開 App 10.6 s；之後 Coverage、Finance、LoadChart 開 App 是 8.0、1.5、1.6 s，三支都綠。
 - 真正的證明要看之後幾晚 full lane 的 build job：「Warm up XCTest's first launch」綠（或只有警告），UI smoke 第一個開 App 的 class 不再出現「Failed to launch … via Xcode」。
 
 ## 以後怎麼認
