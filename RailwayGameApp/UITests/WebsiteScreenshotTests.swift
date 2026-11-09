@@ -1629,8 +1629,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(challenges.becomesHittable(within: 5))
         challenges.tap()
         let neiwan = app.buttons["challenge.branch.neiwan"]
-        XCTAssertTrue(neiwan.appears(within: 10), "The Neiwan Line is in the challenge list")
-        XCTAssertTrue(scrollScreen(to: neiwan, in: app), "The card scrolls into view")
+        // The list builds a row as it is scrolled to, so the card is not
+        // there to be found before the scroll reaches it.
+        XCTAssertTrue(scrollScreen(to: neiwan, in: app, drags: 40), "The Neiwan Line scrolls into view in the challenge list")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: neiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 60), .completed, "The real-world data loads")
         settle(seconds: 2)
