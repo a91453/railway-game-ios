@@ -140,34 +140,42 @@ extension GameWorld {
     /// however soon its next run there (decision 297).
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for index in runDepotEntryCandidates(of: line, memo: &memo) {
-            guard var trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
-            // Decision 280: only with a siding for it; without one it
-            // stays where it waits. Decision 547: with traffic control off
-            // too, where it ran onto a siding a train stood on and stood
-            // behind it for good.
-            // Decision 556, continued (TYMCLIST9): a train in the way of a
-            // service waiting for its route (decision 297), when the depot
-            // it reaches soonest has none, goes to the one it reaches
-            // soonest of those that do. On the Taoyuan Airport MRT,
-            // Luzhu's sidings were full each night and Qingpu's half
-            // empty, and trains that had ended their runs at the airport
-            // terminals stood on the berths the last services were bound
-            // for. Only such a train: one merely one too many still waits
-            // for the depot it reaches soonest, as long empty runs across
-            // the line to the other one jammed the evening under the
-            // realistic rules.
-            if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) {
-                guard let other = otherDepotRun(of: line, for: trains[index], besides: depot, memo: &memo.directions) else { continue }
-                trip = other
-            }
-            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reservingDeparture(leaving, memo: &memo.directions) {
+            guard let entry = runDepotEntry(of: line, index: index, memo: &memo) else { continue }
+            if isTrafficControlEnabled, let leaving = entry.leaving, case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
             }
-            return (index, trip)
+            return (index, entry.trip)
         }
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         return makingWay(of: line)
+    }
+
+    /// The empty run ``runTrainEnteringDepot(of:memo:)`` would send
+    /// `trains[index]`, of `line`, into a depot on, and the train as it
+    /// would leave on it, whether or not its route is free; `nil` where it
+    /// has none.
+    func runDepotEntry(of line: ServiceLine, index: Int, memo: inout DispatchMemo) -> (trip: LineTrip, leaving: Train?)? {
+        guard var trip = emptyRun(of: line, for: trains[index], to: line.depots) else { return nil }
+        // Decision 280: only with a siding for it; without one it
+        // stays where it waits. Decision 547: with traffic control off
+        // too, where it ran onto a siding a train stood on and stood
+        // behind it for good.
+        // Decision 556, continued (TYMCLIST9): a train in the way of a
+        // service waiting for its route (decision 297), when the depot
+        // it reaches soonest has none, goes to the one it reaches
+        // soonest of those that do. On the Taoyuan Airport MRT,
+        // Luzhu's sidings were full each night and Qingpu's half
+        // empty, and trains that had ended their runs at the airport
+        // terminals stood on the berths the last services were bound
+        // for. Only such a train: one merely one too many still waits
+        // for the depot it reaches soonest, as long empty runs across
+        // the line to the other one jammed the evening under the
+        // realistic rules.
+        if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) {
+            guard let other = otherDepotRun(of: line, for: trains[index], besides: depot, memo: &memo.directions) else { return nil }
+            trip = other
+        }
+        return (trip, firstDeparture(of: trains[index], on: trip, calling: line.stops))
     }
 
     /// The trains ``runTrainEnteringDepot(of:memo:)`` would send into a
