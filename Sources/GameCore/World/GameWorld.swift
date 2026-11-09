@@ -4935,7 +4935,7 @@ public struct GameWorld: Equatable, Sendable {
                 continue
             }
             // Decision 666: an empty run, on to a station on its way.
-            let byWaitingPoints = takesRouteByWaitingPoints(train)
+            let byWaitingPoints = takesRouteByWaitingPoints(train) && waitingPoints(of: train, envelopes).contains(held)
             if !byWaitingPoints, approachesStandingTrain(train, along: route, holders: holders!) { continue }
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders!))
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
@@ -4971,7 +4971,7 @@ public struct GameWorld: Equatable, Sendable {
             if let limit = approachLimit(of: train, envelopes), held >= limit { return false }
             // Decision 666: an empty run takes all its route, or on to a
             // station on its way, or nothing.
-            if takesRouteByWaitingPoints(train) {
+            if takesRouteByWaitingPoints(train), waitingPoints(of: train, envelopes).contains(held) {
                 let route = followingCover(of: train, envelopes, memo: &memo)
                 if holder(of: route, except: train.id, holders: holders) == nil { return true }
                 let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
