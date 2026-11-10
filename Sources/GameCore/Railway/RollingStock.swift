@@ -1,11 +1,10 @@
 // What a train costs by its type (decision 180).
 //
 // The references have no price list for rolling stock: the Ci reference
-// buys every car from one quota (`metro.cars`) and the A-Train series, the
-// game this one aims at, prices each type and car on its own and buys one
-// back at 70 % of its book value. The prices and the running-cost weights
-// are this project's (gap); the 70 % sale and the 30 % refit are the series'
-// shape.
+// buys every car from one quota (`metro.cars`). This game prices each type
+// and car on its own and buys one back at 70 % of its book value. The
+// prices, the running-cost weights, the 70 % sale and the 30 % refit are
+// this project's (gap).
 //
 // With ``GameWorld/rollingStockEconomics`` on, a train is bought at its
 // type's price, a car added costs the type's car price, a change of type

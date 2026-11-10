@@ -5,7 +5,7 @@ description: 這個遊戲的畫風與畫圖流程。畫或改任何圖時先讀�
 
 # 畫風與畫圖流程
 
-作者在 2026-10-09 定下的畫風（ARCHITECTURE 決策 84、121、122，`docs/UI_THEME.md`）。方向是：玩法照《A 列車》的深度，外觀與操作照 SimCity BuildIt，畫風照 App 圖示。照這份規則畫，不用每次從頭試。
+作者在 2026-10-09 定下的畫風（ARCHITECTURE 決策 84、121、122，`docs/UI_THEME.md`）。方向是：玩法要有深度的鐵路與城市經營，外觀與操作照 SimCity BuildIt，畫風照 App 圖示。照這份規則畫，不用每次從頭試。
 
 ## 1. 畫風
 

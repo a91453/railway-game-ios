@@ -1,8 +1,7 @@
 // Sights and tourists (ARCHITECTURE decision 174): the second demand curve,
 // beside the commuters'. Native: the reference has no tourism rules (its
 // OpenWorld destination catalog only lists places), so the stars, the
-// seasons and the shop are this project's own, after the idea of A-Train's
-// sightseeing development.
+// seasons and the shop are this project's own.
 //
 // An attraction has a base rating in hundredths of a star (100 to 500) and
 // may have a souvenir shop of level 0 to 2 (a quarter star a level, up to

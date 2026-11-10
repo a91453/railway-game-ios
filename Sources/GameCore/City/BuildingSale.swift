@@ -1,5 +1,5 @@
 // Selling the company's buildings (city building P0-D, ARCHITECTURE
-// decision 130): the A-Train way, where a building that has grown a town
+// decision 130): this game's way, where a building that has grown a town
 // round it is sold and the city takes it over. The price is the right to
 // use its land at what the land is worth now, less a twentieth, and what is
 // left of its building on the books, in full once it is half full and

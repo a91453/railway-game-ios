@@ -282,7 +282,7 @@
 | `Railway/street_scene_reference_clean/MODEL_CATALOG.json` | `vehicles` 一類，是香港街景的車；沒有卡車種類 | 不用 | — |
 | `Railway/town-scene-reference-clean/.../car-kit/.../truck.glb`（Kenney CC0） | 低模卡車 | 備選；首選 works-kit（畫風一致，art-style） | F1 |
 | `Railway/tdx-snapshot-2026-10/data/TRA_Shape.json.gz` | 20 條營業線 | 沒有臨港線（gap，改用 OSM） | — |
-| OpenTTD／Simutrans／A 列車 | 前作 §3 | 只讀概念，「收貨的產業」與「港口是收發點」的想法；不複製 | F2 |
+| OpenTTD／Simutrans | 前作 §3 | 只讀概念，「收貨的產業」與「港口是收發點」的想法；不複製 | F2 |
 
 固定點：
 

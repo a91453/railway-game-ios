@@ -249,6 +249,6 @@ PR 在第一段之後（branch `claude/station-commerce-core`），等合併 ses
 | `Railway/city_world_reference/source/` | 無 | 搜過 shop、store、mall、retail：只有任務與城市區塊的文字，沒有車站商業的規則 |
 | `Ci/reference_snapshot/station-icon-shopping__q_….png` | 無 | 這是「購物站」的車站種類圖示（已有 `StationKind.shopping`），不是商業設施；圖片照 art-style §7 只取用途，購物袋是重畫的 |
 | `OpenWorld/reference_snapshot/play/src/game/convenience-shop.js`（`ConvenienceShop`：走到櫃台、花 NT$18 買茶葉蛋補體力）、`world/convenience-storefront.js` | 無 | 開放世界裡玩家角色的購物，不是車站經營；它的名字仿真實品牌，照 art-style §7 不搬。只取「便利商店」做第一級的想法 |
-| 外部：A 列車 9 的子公司（`docs/research/CITY_BUILDING_STUDY.md` §2） | 決策 173 | 已經用過的做法；這次的「掛在車站上的投資」照名產店（決策 174） |
+| 本作的子公司事業（`docs/research/CITY_BUILDING_STUDY.md` §2） | 決策 173 | 已經用過的做法；這次的「掛在車站上的投資」照名產店（決策 174） |
 
 **參考庫沒有的**：以車站人次算商業收入的公式、轉乘去重、三級的價錢與回本、拆除與資產沖銷。全部是本專案自己的（§1、§2）。外部專案（OpenTTD、Simutrans）沒有車站內商業，沒有可用的。

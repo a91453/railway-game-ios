@@ -1,6 +1,6 @@
 # railway-game-ios
 
-一款鐵路與城市發展模擬遊戲，以 iPhone / iPad 為主要平台。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。核心概念：「鐵路是原因，城市是結果。」長期目標是玩法深度接近《A列車》系列的原生 Apple 平台遊戲。
+一款鐵路與城市發展模擬遊戲，以 iPhone / iPad 為主要平台。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。核心概念：「鐵路是原因，城市是結果。」長期目標是做出有深度的鐵路與城市經營玩法的原生 Apple 平台遊戲。
 
 App 顯示名稱由 `project.yml` 的英文預設值與 `Resources/{en,zh-Hant}.lproj/InfoPlist.strings` 設定；畫面字串在 String Catalog 與 GamePresentation 的文字裡（繁體中文與英文，決策 38）。日文在 #171 移除。內部 `RailwayGame` target、scheme、module、Bundle ID 與存檔識別碼保留。
 

@@ -1513,7 +1513,7 @@
   1. #1582 PLATLAYOUT（決策 507，session_01YGNNunAE46kn6nhKToQVDQ）：截圖 run 41150887362，看過就合，再通知 UICLUTTER 與 TRACKHINT。
   2. #1583 UICLUTTER（決策 510，session_01YGNNuoCZyhdimmFomU4tcG）：#1582 合後 merge main，再拍截圖。
   3. #1586 TRACKHINT（session_01YGNNunAhpgqKXr3duUqhN9）：第一段鋪軌是直線（`NetworkBuilding.curve` 兩端都空就畫直線，設計如此）的提示。免截圖，排在 #1583 後。
-  4. #1581 ZONE1（決策 509，session_01YGNNuo27fcYAGK3J1GdZHo）：還差小 iPhone 的截圖。之前誤說「A 列車有分區」，作者更正，文字已改成「SimCity／Cities: Skylines」。
+  4. #1581 ZONE1（決策 509，session_01YGNNuo27fcYAGK3J1GdZHo）：還差小 iPhone 的截圖。之前分區的參考來源寫錯，作者更正，文字已改成「SimCity／Cities: Skylines」。
   5. #1592 ZONE2（決策 514，session_01YGNNuns1js3JryrY9ZEZpK）：排在 #1581 後，要截圖。作者說「分區看起來沒什麼作用」：決策 98 只在成長中車站的範圍內填空格，需求是負的用途就跳過。ZONE2 讓圖層說出原因，後續 PR 放下一版。
   6. #1588 ROSTER2（決策 512，session_01YGNNumBRTdCpYye3rq4eep）：修正已推（b7e6c20）。要派車流程的前後截圖；「之前」的 run 41151250233 失敗，ROSTER2 在處理。作者問過「直接點派出列車」不受影響。
   7. GEOMSG（決策 513，session_01YGNNuoRrRTXXysd6fhDuj8）：還沒 PR。內容如下：

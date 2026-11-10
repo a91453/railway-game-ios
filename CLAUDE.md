@@ -4,8 +4,8 @@ Instructions for Claude Code sessions in this repository.
 
 ## Project
 
-A native iPhone / iPad railway and city management game (long-term goal: gameplay
-depth close to the A-Train series). Current status, doc map and decision
+A native iPhone / iPad railway and city management game (long-term goal: deep
+railway and city management gameplay). Current status, doc map and decision
 index: `docs/OVERVIEW.md`; who is doing what, what the owner said to leave
 alone, and every handoff: `docs/HANDOFF.md`; the one priority list:
 `docs/research/NEXT_PRIORITIES_2026-10-12.md`; stage history: `docs/ROADMAP.md`.

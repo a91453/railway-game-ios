@@ -1125,7 +1125,7 @@ V 實際放行 → T、U（保證不互穿）
 
 固定小數：金額是美分；樓地板 $40／m² = 4,000 美分；維護與稅是萬分之 2 與 1（basis point）；入住速度是千分比（20 + S × 80 / 1000，S 是 0…1000 的服務）；租金公式除以 10,000,000（人數 × 1000／1500 是千分之一美分的權重，× (1000 + S/2) 是千分比，× 地價美分／m²）。
 
-外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：A 列車 Exp 的官方說明書（商業遊戲）：建造費買的是土地使用權、拆除不補償、子公司誘導城市開發；OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
+外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
 
 ## 城市建造 P0-C2：收購、拆遷與預覽（決策 95）
 
@@ -1140,7 +1140,7 @@ V 實際放行 → T、U（保證不互穿）
 
 固定小數：城市建物的正方形 2,560 單位（40 m，每公尺 64 單位），在 4,096 單位的格子中央（內縮 768）；收購價是百分比（120）；金額美分。
 
-外部專案（研究 §3，只取想法、沒有複製程式碼）：A 列車 Exp 說明書（他人的建物要「買收撤去」，比自己蓋貴）、OpenTTD（GPL-2.0：拆城鎮房屋要付 `removal_cost`）、OpenRCT2（GPL-3.0：可以付費清除擋路的景物）。都是 copyleft 或商業作品，只採用概念；收購價的公式與數值是本專案的。
+外部專案（研究 §3，只取想法、沒有複製程式碼）：OpenTTD（GPL-2.0：拆城鎮房屋要付 `removal_cost`）、OpenRCT2（GPL-3.0：可以付費清除擋路的景物）。都是 copyleft 作品，只採用概念；收購價的公式與數值是本專案的。
 
 ## 實景地圖的 OpenStreetMap 底圖（決策 97）
 
@@ -1172,7 +1172,7 @@ V 實際放行 → T、U（保證不互穿）
 
 固定小數：格是 4,096 單位（64 m）；一次最多 128 格一邊；地價加成 600 美分／m²、距離 25,600 單位（400 m），比較的是平方（整數）；新格的人數以 `LandDemand.newCellResidents`（4）為底。
 
-外部專案（研究文件 §3 已讀，這次再確認做法，沒有程式碼進入本 repository）：Micropolis（GPL-3.0）分區依需求閥與地價評估成長、Cytopia（GPL-3.0）每格的分區層、Citybound（AGPL-3.0）多邊形分區，都是 copyleft，只取「分區是另一層」「地價高的分區先長」的想法；A 列車 Exp（商業遊戲，說明書）的開發凍結區與保留地、子公司誘導開發，只參考玩法。規則與數值是本專案的。
+外部專案（研究文件 §3 已讀，這次再確認做法，沒有程式碼進入本 repository）：Micropolis（GPL-3.0）分區依需求閥與地價評估成長、Cytopia（GPL-3.0）每格的分區層、Citybound（AGPL-3.0）多邊形分區，都是 copyleft，只取「分區是另一層」「地價高的分區先長」的想法。規則與數值是本專案的。
 
 ## 地形：水域（決策 105）
 
@@ -1334,7 +1334,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9 | `LandDemand.stationFrontRadius`、`stationFrontGrowth`、`upgradeFullness`，`GameWorld.stationFront(of:)`、`grow(around:residents:jobs:)` | 只有方向（成長讀交通的可及性），規則是 gap → 原生 |
 | （參考沒有） | `BalanceReportTests` 的「Fullest D3」欄 | gap → 原生 |
 
-外部只取想法：OpenTTD（GPL-2.0，[wiki](https://wiki.openttd.org/en/Manual/Towns)）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的；A 列車的站前開發。沒有程式碼或數字。
+外部只取想法：OpenTTD（GPL-2.0，[wiki](https://wiki.openttd.org/en/Manual/Towns)）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的。沒有程式碼或數字。
 
 ## 出售公司的建物（決策 130）
 
@@ -1347,7 +1347,7 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `GameWorld.sellPlacedBuilding(_:)`、`saleQuote(of:)`、`PlacedBuildingSaleQuote`、`PlacedBuildingRules.saleLandPercent`（95%）、`handOverToCity(_:)`、`CapitalDay.saleProceeds`／`saleBookValue`、`FinanceSummary.realizedGain`、存檔 29、golden schema 50 | gap → 原生（`docs/research/CITY_BUILDING_STUDY.md` §4.3 的公式） |
 | （參考沒有） | `GameSession.saleCandidate`、`salePreview`、`salePreviewLines`、`confirmSale()`、建築工具的「出售」模式 | gap → 原生 |
 
-外部只取想法，沒有程式碼或數字：A 列車（Artdink，商業遊戲，[官方說明書](https://www.artdink.co.jp/manual/aexp/const02/const02.html)）的子公司發展後出售、賣掉的建物由城市接手；OpenTTD（GPL-2.0）賣車時拿回的是折舊後的現值；會計上處分固定資產的損益是收入減帳面價值（IAS 16 的處分損益）。
+外部只取想法，沒有程式碼或數字：OpenTTD（GPL-2.0）賣車時拿回的是折舊後的現值；會計上處分固定資產的損益是收入減帳面價值（IAS 16 的處分損益）。
 
 ## 實景示範用地面重建（決策 132）
 

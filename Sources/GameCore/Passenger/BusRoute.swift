@@ -34,7 +34,7 @@
 // of a station it feeds that station as a feeder does. A bus holds
 // ``BusRoute/capacity``; the riders past that stay off. The island city's
 // buses earn a fixed sum while its metro's grows with the town (g11.js),
-// and A-Train's buses hold far fewer than its trains: the capacity keeps
+// and a bus holds far fewer than a train: the capacity keeps
 // the buses below the trains here. The trips between stops are the
 // project's own (gap): no reference runs town buses on demand.
 

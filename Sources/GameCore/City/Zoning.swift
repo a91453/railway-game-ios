@@ -3,7 +3,7 @@
 // The player marks 64 m cells of the world for a use, and a growing
 // station's town spreads onto the empty cells marked for a use, putting up
 // that use, before it spreads anywhere else; or marks them so the city
-// keeps off: "no development" (the A-Train's frozen land: nothing new,
+// keeps off: "no development" (frozen land: nothing new,
 // nothing grows, nothing is raised) and "reserved" (land kept for the
 // player's track or buildings: nothing new). Zones are a layer of their own,
 // not cells of land with no one in them, so land, its counts and its
@@ -11,7 +11,7 @@
 //
 // The company's buildings (decision 94) make the zoned cells within 400 m of
 // them worth more, as a park does (decision 91), and the zoned cells worth
-// most are built on first: the A-Train's subsidiaries leading the city's
+// most are built on first: the company's buildings leading the city's
 // development.
 //
 // The owner's references have no zoning (decision 98's reference check):

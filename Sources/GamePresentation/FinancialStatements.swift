@@ -258,7 +258,7 @@ extension AnnualStatement {
     }
 
     /// The year-end report's title: "Year 1 closing" (the year-end
-    /// settlement of A-Train-style games).
+    /// settlement, 決算).
     public func titleText(in language: DisplayLanguage) -> String {
         language.text("\(yearText(in: language)) closing", "\(yearText(in: language))度決算")
     }

@@ -12,8 +12,7 @@ import GameCore
 //
 // The reference has nothing to port: `Ci/`'s lines come with their trains
 // (`spawnTrains`) and its track is never single. Mini Metro hands out a
-// train with each new line; A-Train runs a line nobody set up with a
-// train stopping 5 minutes at each station (CORE_LOOP §6.1). Native.
+// train with each new line (CORE_LOOP §6.1). Native.
 
 /// What one tap of simple rules' service does, worked out in the session
 /// before it runs: a new line, or one already there; the passing loops

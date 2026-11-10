@@ -1,6 +1,6 @@
 // Demand from land (Phase 6b, ARCHITECTURE decision 73): a managed
 // company's stations draw their ridership from the land round them, and
-// the land round well-served stations grows and spreads, the A-Train loop
+// the land round well-served stations grows and spreads, this game's loop
 // of a railway that makes its city.
 //
 // The owner's references have no rule for it (the study, PR #172): `Ci/`

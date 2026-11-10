@@ -2,7 +2,7 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// The new game's options (decision 177), after A-Train's difficulty choice:
+/// The new game's options (decision 177):
 /// the rules, simple or realistic (decision 258);
 /// easy, standard or expert, with the cash each starts with; how much the
 /// holidays and weather disturb the traffic; whether building materials,
