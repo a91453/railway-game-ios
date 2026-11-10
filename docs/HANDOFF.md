@@ -2516,7 +2516,7 @@
   - #1150（full lane 重新分配，session_01VZJVMsPVmSxC3WeNiv9Yuw）：只改 CI 與 UI 測試，綠了隨時可合，之後封存 01VZJV。
   - #1159（決策 391，公路橋照 `layer` 架高，session_01MZ2KiwLCyJErN9jbfH6p78）：CI 跑中。#1157 已合，它要照 §4.12 用 `layer` 重切圖磚（若和農地圖磚衝突就併 main）。
   - #1156（決策 396 Game Center 第一個 PR，不含 entitlement，session_01V99archiZKLqZkwqTnsajc）：綠了可合。
-  - #1158（396 成就圖 38 張）：美術審查 session_01T1XUaZrPxBZmiPFch6oLWZ 審完，13 張要改、全套要 1024 px，總覽在 `claude/art-review-1158:docs/game-center/review/overview.png`；01V99 改完再合，總覽圖用 SendUserFile 給作者看（作者：「那你記得請美術重新看過一次成就圖片」）。01T1XU 可封存。
+  - #1158（396 成就圖 38 張）：美術審查 session_01T1XUaZrPxBZmiPFch6oLWZ 審完，13 張要改、全套要 1024 px，總覽在 a91453/railway-assets-private `game-art-previews/docs/art/game-center-achievements-review-2026-10-24/overview.png`；01V99 改完再合，總覽圖用 SendUserFile 給作者看（作者：「那你記得請美術重新看過一次成就圖片」）。01T1XU 可封存。
   - session_01UNbeShXpVCYqZfpuchUPVe：Game Center 用 App Store Connect API 自動建排行榜與成就的工具（作者「用 B」；`game-center-setup.yml`，先 dry run 再 apply）。碰 secrets，**合併前要獨立審查**（§1.2）。
   - #1160（決策 397 iCloud 存檔，session_01MsxSwi6ituX5dsw6ZQNmEx）：在補兩項（新版存檔在舊 App 打開時顯示「請更新 App」、只同步玩家存檔與最新自動存檔）。碰存檔，**合併前要獨立審查**。存檔格式現在不改（規劃 10-24 判斷）。
   - session_01NDDS2s5myyGvhD26ZW26zB（`claude/lesson-pause-retry`）：86.1 分支 full lane 的 lessons 紅（`LessonUITests.pause()` 只給 Pause 鈕 2 秒，慢 runner 要約 4 秒，`testFreightYardsStartInTheEighthLesson`），修好推了、等 run 40063446628。只改 UI 測試，綠了可合，之後封存。
