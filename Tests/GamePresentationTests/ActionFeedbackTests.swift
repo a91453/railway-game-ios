@@ -131,7 +131,7 @@ final class ActionFeedbackTests: XCTestCase {
         XCTAssertEqual(pulse.text(in: .english), "Goal met: \(title)")
         XCTAssertEqual(heard.filter { $0 == .goalMet }.count, 1)
         XCTAssertEqual(SoundCue.goalMet.category, .effects, "the tune follows the effects' volume")
-        XCTAssertEqual(SoundCue.goalMet.resource.name, "goal-met")
+        XCTAssertEqual(SoundCue.goalMet.resource.name, "kenney-jingle-goal")
 
         // Met already: the next step pulses nothing.
         session.advance(realElapsed: GameSession.tickInterval)
