@@ -1657,7 +1657,7 @@
 - **今天合併的**（作者說「綠了就合」）：
   - #1536 iPhone 橫拿的文字：損益表的 `ViewThatFits`、土地資訊框拆三行、選取卡片的按鈕在 300 pt 以下改到摘要下面（`SelectionHeadLayout`）、車站卡發車列換行。
   - #1537 收購真實路線卡將近一分鐘：`GameSession.build` 和 `removeLineSellingTrains` 改在 `GameWorld.editTrackAsOne` 裡做一次。留下的：6000× 一 tick 0.7 s 還沒修（GameCore，公測後），見 [`research/PERF_REAL_MAP_2026-10-30.md`](research/PERF_REAL_MAP_2026-10-30.md) §3。
-  - #1538 3D 駕駛室在大存檔卡：3D 蓋著時，下面的 2D 地圖不跟車、不滑行、不更新雨和車流（`CoveredMap`）。預估主執行緒一格 10–17 ms，實機 UNVERIFIED。留下的見 [`research/PERF_3D_COCKPIT_2026-10-30.md`](research/PERF_3D_COCKPIT_2026-10-30.md) §3。雨改用 GPU 畫的版本在分支 `claude/perf-3d-rain-gpu`（80908c4d），公測後再開 PR。
+  - #1538 3D 駕駛室在大存檔卡：3D 蓋著時，下面的 2D 地圖不跟車、不滑行、不更新雨和車流（`CoveredMap`）。預估主執行緒一格 10–17 ms，實機 UNVERIFIED。留下的見 [`research/PERF_3D_COCKPIT_2026-10-30.md`](research/PERF_3D_COCKPIT_2026-10-30.md) §3。雨改用 GPU 畫的版本在分支 `claude/perf-3d-rain-gpu`，公測後（2026-11-11）接到 main 開了 PR；模擬器建置通過，實機下雨時的樣子與幀數 UNVERIFIED。
   - 官網：railway-reference-private #118 已合併（c47b854b），`website-deploy.yml` 已部署（run 41020652758）。現在首頁寫「公測開放中」，按鈕連到 TestFlight。
 - **還開著的**：
   - #1540（TW，決策 496，草稿，`claude/light-rail-fleets`）：淡海與安坑輕軌、高雄 CAF／Citadis 3:5 接進營運，+27 MB。CI 綠。作者說 **10/31 之後才合**；合之前在實機看輕軌近景的幀數（§4.30）。
