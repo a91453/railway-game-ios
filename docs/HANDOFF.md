@@ -468,6 +468,7 @@
 
 **發版前**（作者 2026-10-23：「改成我說可以發你才能替我發」。發不發由作者決定；作者在遊戲規劃 session 裡說「發」之後，遊戲規劃照下面確認，都綠才用 `workflow_dispatch` 在 `main` 跑一次 `testflight.yml`，輸入照作者上一次發版的 run，作者另外指定的話照作者說的。不是綠的就告訴作者哪裡紅，等作者再說一次才發。作者也可以自己按。實作 session 一律不碰。第 84 版（2026-10-23）遊戲規劃去按時被 session 的權限檢查（自動模式，理由「正式發布」）擋下，由作者自己按；要遊戲規劃替作者按，作者須在那個 session 的權限設定允許啟動 `testflight.yml`，否則照舊告訴作者「可以發（commit X）」與輸入，請作者按）：
 - **作者先發、遊戲規劃後報（作者 2026-11-01：「以後都這樣我自己先試 你再告訴我結果省效率」）**：作者想發就自己按 `testflight.yml`，不等完整 `ci.yml` 與 full lane。遊戲規劃照常替那個 commit 跑完整 `ci.yml` 與 full lane（還沒跑的話），跑完把結果報給作者；紅的寫原因、會不會影響玩家，並記進 PLAYER_FEEDBACK。所以 What to Test 和「這版新增」卡不能等作者說「發」才寫：遊戲規劃每合一批玩家看得到的 PR，就在同一批（或緊接的 PR）更新 `.github/testflight-whats-new.md` 與 `WhatsNew.entries` 最前面那一則（寫成「下一版」，版號照上一版加一），讓作者任何時候按都是對的。103.1 就是作者先按、這兩份還停在 102.1：App Store Connect 的 What to Test 由遊戲規劃把寫好的文字交給作者貼上，App 裡的卡沒有 103.1 那一則，下一版的那一則把 103.1 的新增一起寫進去。遊戲規劃自己替作者按（作者說「發」）時，下面的條件照舊。
+- **一律選外部（作者 2026-11-09：「我要外部⋯」）**：按 `testflight.yml` 時 `archive_signing=adhoc`、`testing_scope=external`。預設的 `internal` 上傳後只有內部測試拿得到，App Store Connect 也不能改成外部；123（run 42705652066）就是這樣誤發，只好用同一個 commit 再發 124。再發的那版 What to Test 不會自動帶前一版的說明（策展文字自上次發版後沒變），要作者手動貼。
 - **先寫 What to Test**：`.github/testflight-whats-new.md` 寫好這一版給玩家看的說明（照 83.1 的格式：新增的、修好的、沿用的、請幫忙看），合進 main，這個合併的 commit 才是要發的 commit。沒寫就不說「可以發」：`testflight-changes.py` 只在這個檔案自上一版之後改過才用它，否則填 PR 標題，作者不要那個（84.1 漏寫，作者：「每次都改我這個 說了幾次」）。
 - **同一個 PR 改「這版新增」卡**：`WhatsNew.entries` 最前面那一則寫這版給玩家的新增與修好的（兩種語言；決策 415 的步驟）。沒改的話更新上來的玩家看到的是上一版的內容，或沒有卡。
 - 要發的 commit 就是 main HEAD，它要有一輪綠的**完整** `ci.yml`（跑了全部分片的：每晚台灣 01:37 那輪，或用 `workflow_dispatch` 手動跑的；push run 從決策 413 起只跑它的 tier，不算），它自己的 full lane 也要綠。HEAD 是當天晚上之後才合的，就手動跑一輪 `ci.yml`（`actions_run_trigger` 的 run_workflow，workflow `ci.yml`，ref main）。
@@ -556,6 +557,19 @@
 ## 2. 正在做的線（2026-10-20）
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
+
+**第 58 任的現況（2026-11-09 23:50 UTC＝台灣 11-10 07:50，session_01JMHz9bbBEU9WWGDKXgoJoU，第 0 層，壓縮 1 次）**
+- **發版**：124（TestFlight run 42711543111，external，commit aeb3eef3）VALID，What to Test 已自動填（內容要作者確認，不對就貼 123 的說明）。123（run 42705652066）同一個 commit，誤發成 internal（§1.2「一律選外部」）。作者決定不等完整檢查先發；事後 aeb3eef3 的完整 `ci.yml`（run 42702212708）與 full lane（iOS App Build run 42702233354 第 2 次，含 iPad）**都綠**。
+- **這一任合的**：#2007、#2010、#2009（＋assets #72）、#2008（＋assets #71）、#2014（決策 666，機捷第 2 天下午）、#2006（決策 668，內灣線）、#2012（決策 671，內灣劇情）、#2011、#2015（決策 673，123 說明）、#2013（決策 672，地下視角，123 之後合，main 973552a2）。
+- **進行中**：UNDERGROUND-2 session_01JMHz9aYwmFA1fdQNhSxPPn（決策 674，`claude/underground-2`）：隧道裡列車太淡、被車號標籤蓋住；頭燈太暗；找有地下站的線補驗地下月台。第 3 級，截圖給遊戲規劃看過才合。基準截圖是作者 Mac 拍的（assets 分支 `claude/underground-view-shots`，#1579 留言 6752308004）。
+- **記下、還沒派**：
+  - 文湖線大直往南過基隆河，遊戲裡是開在河面上的路塹，不是隧道（同一組截圖的 x）。
+  - 機捷（決策 666 之後）：讓路的車有時連讓好幾站；方向 2 還沒看；L15-4「A12 重鋪」。
+  - 決策 669 的牌樓老街屋立面要比屋頂高出更多、比例更窄更深（Codex 審查意見，不擋）。
+  - Codex 決策 670（station-kit 地下月台零件，只做模型）還沒交；交了以後 UNDERGROUND-2 的 `Map3DXRay.addPlatform` 換內容。
+- **TRELLIS 授權研究**（assets #73，draft，session_01JMHz9YGh9Y4mGYd9PLyKmC 已做完第一輪）：Mac 版 trellis-silicon 走得出能商用的流程；官方 CUDA 版會用到 NVIDIA 不能商用的元件；RMBG-2.0 要從程式拿掉（補丁已寫，沒套到遊戲）；DINOv3 能商用但要接受條款；訓練資料與輸出權利要問律師。等作者在 Mac 上照 `mac-validation/README.md` 跑完、把 RESULTS.md 貼到 #73。授權確認前，生成的模型不進遊戲。
+- **可以封存的 session**：BRANCH-NEIWAN-2 session_01JMHz9YRdQsSAPUqqQerPzo、NEIWAN-STORY session_01JMHz9YL72YRUeZoJ8Q7MNb、FIX-L13-L15 session_01JMHz9ZjHb7MUvdkxcnVr8T、UNDERGROUND-VIEW session_01JMHz9abBhYq5qwdVNBJME7。
+- **號碼**：決策用到 674（UNDERGROUND-2 預留），下一個 675；存檔版本與 golden schema 這一任沒動。
 
 **第 57 任停工交接，給 Pro 接手（2026-11-09 約 04:10 UTC＝台灣 12:10，session_01YGNNum8VrDTbqa8SHkYC4q，第 6 層，壓縮 2 次）**
 - 作者先說「沒額度了不要再派工作了」，再說「除了 MacBook 的作業其他全停」，最後說「全停只留 MacBook 寫交接給 pro」。所以現在**除了作者 MacBook 上的 session，全部停了**：沒有在做的雲端 session，沒有巡查，也沒有排程。這段寫給下一個接手的人（作者的 Pro 帳號），和「第 56 任交第 57 任」不同時以這段為準。
