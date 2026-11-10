@@ -569,7 +569,12 @@
   - Codex 決策 670（station-kit 地下月台零件，只做模型）還沒交；交了以後 UNDERGROUND-2 的 `Map3DXRay.addPlatform` 換內容。
 - **TRELLIS 授權研究**（assets #73，draft，session_01JMHz9YGh9Y4mGYd9PLyKmC 已做完第一輪）：Mac 版 trellis-silicon 走得出能商用的流程；官方 CUDA 版會用到 NVIDIA 不能商用的元件；RMBG-2.0 要從程式拿掉（補丁已寫，沒套到遊戲）；DINOv3 能商用但要接受條款；訓練資料與輸出權利要問律師。等作者在 Mac 上照 `mac-validation/README.md` 跑完、把 RESULTS.md 貼到 #73。授權確認前，生成的模型不進遊戲。
 - **可以封存的 session**：BRANCH-NEIWAN-2 session_01JMHz9YRdQsSAPUqqQerPzo、NEIWAN-STORY session_01JMHz9YL72YRUeZoJ8Q7MNb、FIX-L13-L15 session_01JMHz9ZjHb7MUvdkxcnVr8T、UNDERGROUND-VIEW session_01JMHz9abBhYq5qwdVNBJME7。
-- **號碼**：決策用到 674（UNDERGROUND-2 預留），下一個 675；存檔版本與 golden schema 這一任沒動。
+- **號碼**：決策用到 675（674 UNDERGROUND-2、675 KENNEY-SFX），下一個 676；存檔版本與 golden schema 這一任沒動。
+- **11-10 補充（第 58 任交給作者用 Ultra 開的下一任）**：
+  - **#2016**（UNDERGROUND-2，決策 674，draft，CI 待看）：等作者用 Mac 拍三張截圖（PR 說明列了：672 的 a、d 重拍＋示範模式台北車站俯瞰），第 3 級，看過才合。
+  - **#2018**（KENNEY-SFX session_01JMHz9bDeBn55oTBMZQaBMX，決策 675，draft，head 2e5b802 CI 全綠）：Kenney CC0 的 6 個介面音（面板只在打開時響）與過關短樂句。等作者在 Mac 模擬器聽過才合（每個按鈕都會出聲）；不好聽就換 PR 裡的候選。
+  - **ORCHESTRA-STUDY** session_01JMHz9a23PqQuV5T9eq2Zmw 做完：本地五 AI 工作室的「回家照做手冊」是私人 Artifact https://claude.ai/artifact/MRKGcJYT4MrxaKbf2hnFH9（第 2 版；沒有 commit）。Orchestra v0.23.0 只當底座，缺的檔案鎖、三輪上限由手冊附的 studio.py 與 git hook 補；Antigravity 要手按執行。作者決定 Codex A、B 各用自己名下一席 Business（條款 UNVERIFIED，要問工作區管理員）。等作者回家照手冊在 Mac 上驗。
+  - **可以封存的 session** 再加：UNDERGROUND-2（#2016 合併後）、KENNEY-SFX（#2018 合併後）、ORCHESTRA-STUDY、TRELLIS-LICENSE（等作者 Mac 驗證結果再叫醒或另開）。
 
 **第 57 任停工交接，給 Pro 接手（2026-11-09 約 04:10 UTC＝台灣 12:10，session_01YGNNum8VrDTbqa8SHkYC4q，第 6 層，壓縮 2 次）**
 - 作者先說「沒額度了不要再派工作了」，再說「除了 MacBook 的作業其他全停」，最後說「全停只留 MacBook 寫交接給 pro」。所以現在**除了作者 MacBook 上的 session，全部停了**：沒有在做的雲端 session，沒有巡查，也沒有排程。這段寫給下一個接手的人（作者的 Pro 帳號），和「第 56 任交第 57 任」不同時以這段為準。
