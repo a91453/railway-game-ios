@@ -2,8 +2,7 @@ import GameCore
 
 // The whole map, small, in a corner of the game screen (ARCHITECTURE
 // decision 116): the track and the lines over a plain ground, with a frame
-// round what the map view shows; a tap moves the map there. TheoTown keeps
-// such a map in its status bar and OpenTTD has a "map of the world"
+// round what the map view shows; a tap moves the map there. OpenTTD has a "map of the world"
 // window; the references have none (the web maps zoom out instead). What it
 // draws is read from the world when the network or the lines change, and
 // the frame from the camera; nothing is stored.

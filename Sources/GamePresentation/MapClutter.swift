@@ -15,9 +15,8 @@ import GameCore
 // - Taps: a station's or a track's area wins over a sight's mark, and a
 //   warning bubble over a sight (the bubbles are drawn over the marks).
 //
-// The references float no marks on a map to port (decision 250); SimCity
-// BuildIt's bubbles and Unciv's notices folded to an edge are where the
-// badge comes from (decision 109's sources).
+// The references float no marks on a map to port (decision 250); Unciv's
+// notices folded to an edge are where the badge comes from (decision 109's sources).
 
 public enum MapClutter {
     // MARK: - Sights

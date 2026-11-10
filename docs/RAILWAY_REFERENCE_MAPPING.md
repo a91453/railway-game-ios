@@ -1125,7 +1125,7 @@ V 實際放行 → T、U（保證不互穿）
 
 固定小數：金額是美分；樓地板 $40／m² = 4,000 美分；維護與稅是萬分之 2 與 1（basis point）；入住速度是千分比（20 + S × 80 / 1000，S 是 0…1000 的服務）；租金公式除以 10,000,000（人數 × 1000／1500 是千分之一美分的權重，× (1000 + S/2) 是千分比，× 地價美分／m²）。
 
-外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
+外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長。都是 copyleft 作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
 
 ## 城市建造 P0-C2：收購、拆遷與預覽（決策 95）
 
@@ -1200,12 +1200,12 @@ V 實際放行 → T、U（保證不互穿）
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | `Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的 `UD()`（建物的取樣點都要落在允許的地面） | `GameWorld.straddlesShore(_:)`：岸邊的建物正方形下面要同時有水和陸地 | 改寫：允許的地面從「一種」變成「兩種都要有」 |
-| 作者提供的 SimCity BuildIt 截圖（海岸的碼頭、遊艇港、海上建物；景觀的池塘與湖泊；跨河的橋） | `PlacedBuildingKind.wharf`、`.marina`、`standsOnShore`、`needsShore`；`LandValueRules.waterPremium` | 只參考玩法（商業遊戲，不取數值與素材）；挖湖、填海、橋列為之後 |
+| 作者提供的城市建造遊戲截圖（海岸的碼頭、遊艇港、海上建物；景觀的池塘與湖泊；跨河的橋） | `PlacedBuildingKind.wharf`、`.marina`、`standsOnShore`、`needsShore`；`LandValueRules.waterPremium` | 只參考玩法（商業遊戲，不取數值與素材）；挖湖、填海、橋列為之後 |
 | （參考沒有） | 岸邊建物的規則、`waterPremium`／`waterReach`、`Terrain.isNearWater`、存檔版本 25、golden schema 45 | gap → 原生 |
 
 固定小數：臨水的距離 10,240 單位（160 m），比較的是中點距離的平方（整數）；溢價 600 美分／m²，和公園、公司建物的溢價相同。
 
-外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）的碼頭要蓋在海岸格；Cities: Skylines（商業遊戲）的港口沿著岸線放。
+外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）的碼頭要蓋在海岸格。
 
 ## 地形：陡坡（決策 115）
 
@@ -1220,7 +1220,7 @@ V 實際放行 → T、U（保證不互穿）
 
 比例：水域格 1.875″；DEM 1″（馬祖 3″）取最近的樣本；3 × 3 中位數約 170 m；坡度用跨兩格（約 106–116 m）的中央差分；門檻 0.30；3 × 3 至少 5 格。
 
-外部專案（只取想法）：SimCity 4、Cities: Skylines（商業遊戲）的建物不放在太陡的地形上。資料：Copernicus DEM GLO-30／GLO-90（ESA，授權要求標示出處，資料來源畫面已列）。門檻依據：建築技術規則建築設計施工編第 262 條（平均坡度超過 30% 不得開發建築）。
+資料：Copernicus DEM GLO-30／GLO-90（ESA，授權要求標示出處，資料來源畫面已列）。門檻依據：建築技術規則建築設計施工編第 262 條（平均坡度超過 30% 不得開發建築）。
 
 ## 地面高度（決策 124）
 
@@ -1286,7 +1286,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Website/site/assets/app-icon-light.png`、`app-icon-dark.png` | 圖示的畫風：實心、粗線、圓角；顏色經 `Theme`／`Palette` | 取畫風 |
 | （參考沒有） | 客滿、死結警告、漁人碼頭、遊艇港、辦公的圖示；`MapGlyph`；泡泡的圓形底 | gap → 原生 |
 
-外部專案（只取想法，沒有程式碼或素材）：SimCity BuildIt（作者的截圖，商業遊戲）狀態泡泡裡的圓形圖示。
+外部只看做法，沒有程式碼或素材。
 
 ## 機廠的圖示（2026-10-13，決策 209 的畫面）
 
@@ -1311,7 +1311,7 @@ V 實際放行 → T、U（保證不互穿）
 
 2026-10-09 改成正面的圓胖黃山雀（決策 122 第 6 點）：再查一次參考庫，仍然沒有角色可用。三張 SVG 是作者選定、用 Gemini 生的圖（作者提供），頭換成藏青、翅膀換成深灰；取輪廓用 [scikit-image](https://scikit-image.org/)（BSD，只在 scratchpad 用，沒有放進專案）；羽色的根據是農業部的鳥類圖鑑（只取「哪裡是什麼顏色」，沒有用圖鑑的圖）。
 
-外部只取想法，沒有用到素材：SimCity BuildIt 的顧問頭像（作者的截圖）、和歌山電鐵的站長貓「小玉」（動物站長的前例）；作者提供的 [neonwatty/logo-designer-skill](https://github.com/neonwatty/logo-designer-skill)（MIT，取它的流程：幾種方案讓作者挑、深淺色與小尺寸檢查）與 [supermemoryai/skills 的 svg-animations](https://github.com/supermemoryai/skills/blob/main/svg-animations/SKILL.md)（沒有授權，只讀想法）。
+外部只取想法，沒有用到素材：和歌山電鐵的站長貓「小玉」（動物站長的前例）；作者提供的 [neonwatty/logo-designer-skill](https://github.com/neonwatty/logo-designer-skill)（MIT，取它的流程：幾種方案讓作者挑、深淺色與小尺寸檢查）與 [supermemoryai/skills 的 svg-animations](https://github.com/supermemoryai/skills/blob/main/svg-animations/SKILL.md)（沒有授權，只讀想法）。
 
 ## 城市建物畫在一般地圖上（決策 126）
 
@@ -1323,7 +1323,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/city_world_reference/source/assets/buildWorker-*.js`（three.js 的 3D 台北，`extrudeXY` 擠出建物） | — | 不用：真實的 3D 幾何，留給 Phase 8 |
 | （參考沒有） | `CitySkyline`、`MapArt.drawSkyline`、`Palette.cityRoof`／`cityWall`／`parkGround`／`farmGround`、`SkylineLayer` | gap → 原生 |
 
-外部只取想法：SimCity BuildIt（作者的截圖，商業遊戲）建物依密度長高、用途用顏色分。沒有程式碼或素材。
+外部只看做法，沒有程式碼或素材。
 
 ## 站前長得快、九成滿就改建（決策 129）
 

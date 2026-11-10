@@ -3,7 +3,7 @@ import GameCore
 /// Decision 220: the journey trace. Holding a station on the map draws an
 /// arc from it to each of the stations it trades the most trips with, at
 /// most ``limit``, each as wide as its trips; holding a line (decision
-/// 276), an arc between each of the busiest pairs of its stops (SC4's Route Query, after the
+/// 276), an arc between each of the busiest pairs of its stops (after the
 /// `Ci/` reference's station OD layer: `showStationODForStation` →
 /// `renderStationODLayerFromMatrix` with a focus station). Worked out from
 /// the world's daily demand (``GameWorld/stationDemandPairs(of:)``), not

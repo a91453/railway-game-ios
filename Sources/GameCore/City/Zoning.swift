@@ -1,4 +1,4 @@
-// Zoning (city building P0-B, ARCHITECTURE decision 98): the SimCity half
+// Zoning (city building P0-B, ARCHITECTURE decision 98): the zoning half
 // of the city building study (docs/research/CITY_BUILDING_STUDY.md §4.4).
 // The player marks 64 m cells of the world for a use, and a growing
 // station's town spreads onto the empty cells marked for a use, putting up

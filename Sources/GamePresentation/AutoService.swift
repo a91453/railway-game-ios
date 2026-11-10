@@ -11,8 +11,7 @@ import GameCore
 // Realistic rules ask the player, as before.
 //
 // The reference has nothing to port: `Ci/`'s lines come with their trains
-// (`spawnTrains`) and its track is never single. Mini Metro hands out a
-// train with each new line (CORE_LOOP §6.1). Native.
+// (`spawnTrains`) and its track is never single. Native.
 
 /// What one tap of simple rules' service does, worked out in the session
 /// before it runs: a new line, or one already there; the passing loops

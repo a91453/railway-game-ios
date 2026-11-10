@@ -1,10 +1,7 @@
 import GameCore
 
-// Tap to look, hold to change (ARCHITECTURE decision 119). SimCity BuildIt
-// answers a tap on a building with a small tag over it (its name and what
-// it gives) and a long press with picking it up to change; TheoTown opens a
-// dialog in the middle of the screen, which hides the map. Here a tap on a
-// station shows a tag over it; the tag opens the details, and holding the
+// Tap to look, hold to change (ARCHITECTURE decision 119). Here a tap on
+// a station shows a tag over it; the tag opens the details, and holding the
 // station (or the tag's pencil) opens the station's panel. Read from the
 // world each time it is drawn; nothing is stored.
 

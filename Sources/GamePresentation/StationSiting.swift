@@ -7,9 +7,7 @@ import GameCore
 // building it. The count is the land GameCore's station demand draws on
 // (``Land/totals(within:of:)`` over ``Land/catchmentRadius``, 800 m), so
 // it is what the station would actually get, on a blank map and a
-// real-world one alike. SimCity BuildIt shows what a building would add
-// on the ghost being placed, and TheoTown colours the ground good or bad
-// for it; the reference has nothing to port.
+// real-world one alike. The reference has nothing to port.
 
 extension GameSession {
     /// Where the next platform would go: the place on track picked with

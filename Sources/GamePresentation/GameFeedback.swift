@@ -1,10 +1,8 @@
 import GameCore
 
 // A moment of motion and a sound for what went well (ARCHITECTURE decision
-// 117): something put up, and money coming in. SimCity BuildIt and
-// TheoTown answer a finished building with a pop and a sound, and float
-// what was earned up from where it came; the reference's `Ci/` plays a
-// sound on its buttons (`data-metro-sfx`). Presentation only: what
+// 117): something put up, and money coming in. The reference's
+// `Ci/` plays a sound on its buttons (`data-metro-sfx`). Presentation only: what
 // happened is read from the world after it happened, and nothing here is
 // saved.
 

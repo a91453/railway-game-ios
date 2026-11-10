@@ -1,9 +1,7 @@
 import GameCore
 
 // The station master (ARCHITECTURE decision 118): one character who says,
-// in a sentence, the one thing most worth doing now. SimCity BuildIt has
-// an advisor's face say what happened, TheoTown a little man in its
-// tutorial; the reference's `Railway/city_world_reference/` keeps one
+// in a sentence, the one thing most worth doing now. The reference's `Railway/city_world_reference/` keeps one
 // objective line on screen (`.hud-obj`). Worked out from the world each
 // time it is asked, so it changes as soon as its cause does, and nothing is
 // stored.

@@ -9,8 +9,7 @@ import SwiftUI
 /// says who lives and works within a station's walk, and a ring shows how
 /// far that is. The finger that drew it is already there, so the player need
 /// not look away to the details card, whose button does the same.
-/// SimCity BuildIt puts ✗ and ✓ beside what is placed, and Train Valley 2
-/// and OpenTTD's touch build ask once, at the end of a drag; the code is
+/// OpenTTD's touch build asks once, at the end of a drag; the code is
 /// the project's own.
 struct MapBuildConfirm: View {
     let session: GameSession

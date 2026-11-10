@@ -59,7 +59,6 @@
 | --- | --- | --- | --- |
 | OpenTTD | 程式碼 GPL-2.0（`COPYING.md`）；OpenGFX 圖像同為 GPL-2.0 | **否**（copyleft）。圖像也不拿 | 貨物易腐度、車站評等、產業產量浮動、城鎮成長與被服務車站數、集貨半徑 |
 | Simutrans | Artistic License 1.0（官方 README 與 `LICENSE.txt`）；各 pakset 的資料授權不一，現況未查到 | 理論上可，需遵守修改標示與散布條款；本專案是 Swift 重寫，**只讀概念** | 產業鏈（煤礦→發電廠）、供電提升工廠產量、消費端只吃生產端的一部分 |
-| Transport Fever 2 | 商用專有 | **否** | 貨物供給對城鎮成長有加成（只有玩家社群說法，不可當規格） |
 
 ### 3.1 OpenTTD 的貨物與產業（來源：wiki.openttd.org 的 Manual／Game Mechanics 頁）
 
@@ -278,7 +277,7 @@ C1 是風險最集中的 PR（存檔、golden、決策編號、`GameWorld` 的�
 
 ## 9. 查閱方法與尚未檢查到的部分
 
-- 外部專案是用網頁查（wiki、官方 README、日文與英文評論），標「未查到」的就是沒有明確數字，沒有用記憶補。OpenTTD 的運費公式、二級產業的投入產出比例、貨車容量，Simutrans 的官方數字，Transport Fever 2 的官方規格，都沒有查到。若之後要更準，OpenTTD 的原始碼文件（docs.openttd.org）可讀概念，但同樣不複製。
+- 外部專案是用網頁查（wiki、官方 README、日文與英文評論），標「未查到」的就是沒有明確數字，沒有用記憶補。OpenTTD 的運費公式、二級產業的投入產出比例、貨車容量，Simutrans 的官方數字，都沒有查到。若之後要更準，OpenTTD 的原始碼文件（docs.openttd.org）可讀概念，但同樣不複製。
 - 台鐵貨運的真實歷史（貨運站名單、停辦年代、貨種、運量）沒有查；參考庫只有幾何。如果方案要貼近台灣史實，需要另一個資料研究。
 - 量測只涵蓋台鐵車站與 OSM 的工業區；沒有量港口、發電廠、礦場（`taiwan_places.json` 的工業區已把礦場併進去，但沒有分種類）。
 - 本文沒有跑任何 GameCore 測試（只寫文件）；平衡數字都是起始值，**UNVERIFIED**，要由 `BalanceReportTests` 的貨運場景量過才算數。

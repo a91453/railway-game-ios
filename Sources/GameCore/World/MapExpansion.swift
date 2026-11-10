@@ -17,9 +17,7 @@
 // The owner's references have nothing to port (gap): `Ci/`'s "扩建"
 // buys capacity quotas for stations, airports and halls
 // (`hsr.capacity.platform_expanded`, `metroQuotaFormatValue`), not land,
-// and the reference pack has no map that grows. Cities: Skylines buys
-// tiles of its map once milestones are reached; it is not open source,
-// so only the idea is taken. The tile size, prices and milestones are this
+// and the reference pack has no map that grows. The tile size, prices and milestones are this
 // project's, chosen by `BalanceReportTests`.
 
 /// One tile of a world's map that can be bought (decision 160): its row,

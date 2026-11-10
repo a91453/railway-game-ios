@@ -1,5 +1,6 @@
 // The city's demand for homes, shops and workplaces (ARCHITECTURE decision
-// 139): SimCity's RCI valves, on the city of Phase 6.
+// 139): demand valves for homes, shops and workplaces, on the city of
+// Phase 6.
 //
 // A city keeps the mix it started with: so many shop jobs and so many jobs
 // in offices, factories and farms for every resident (its ``CityMix``,
