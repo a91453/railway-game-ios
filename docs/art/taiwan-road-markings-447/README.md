@@ -14,6 +14,6 @@
 
 ![做法 B](option-b.jpg)
 
-每個鏡頭含／不含陰影的原尺寸圖在 `a91453/railway-reference-private` 的 `Railway/game-art-previews/docs/art/taiwan-road-markings-447/`。
+每個鏡頭含／不含陰影的原尺寸圖在 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/taiwan-road-markings-447/`。
 
 高雄的建物與道路來自 © OpenStreetMap 貢獻者（ODbL）。
