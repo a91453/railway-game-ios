@@ -1,7 +1,6 @@
 import GameCore
 
-// The new line's draft in one line (City Transport Manager study, 4.2,
-// step M0): "3 stops · 4.2 km · about 6 min · $ 1,200,000" at the top of
+// The new line's draft in one line: "3 stops · 4.2 km · about 6 min · $ 1,200,000" at the top of
 // the draft, so the player sees what the line will be while picking its
 // stations, not after it is made. Every figure is what the world already
 // knows: the path and running time a line through the stops would have

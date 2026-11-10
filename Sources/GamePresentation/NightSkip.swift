@@ -1,7 +1,6 @@
 import GameCore
 
-/// Decision 305: the shortcut over a night no train runs in (research
-/// `CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` §4.15). While every train
+/// Decision 305: the shortcut over a night no train runs in. While every train
 /// stands still, the session can run the game at its fastest speed up to
 /// a little before the first train moves again, tick by tick through
 /// `GameWorld.advance(ticks:)`, so midnight, the books and the city run

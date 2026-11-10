@@ -2,8 +2,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// The new line's draft in one line (City Transport Manager study 4.2,
-/// step M0): its stops, length, time end to end and, under simple rules,
+/// The new line's draft in one line: its stops, length, time end to end and, under simple rules,
 /// price; what to tap next; or why no track joins the stations picked
 /// (decision 284). On a blank map and on a real map of Taiwan.
 @MainActor

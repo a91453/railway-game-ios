@@ -46,7 +46,7 @@ extension GameSession {
         if !canCreate {
             caption = language.text("Tap the line's next station", "點路線的下一站")
         } else {
-            // The draft's one line (CTM study 4.2): its stops, length,
+            // The draft's one line: its stops, length,
             // time and price, or why no track joins them.
             caption = lineDraftSummary?.text ?? ""
         }

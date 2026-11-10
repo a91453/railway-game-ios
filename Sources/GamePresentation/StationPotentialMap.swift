@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-// Decision 311 (City Transport Manager study 4.1): while a station or a
+// Decision 311: while a station or a
 // line is being built, the map shows where a station would have riders.
 // With no station of a new line picked yet, each 64 m cell counts the
 // residents and jobs within ``Land/catchmentRadius`` of its middle, as

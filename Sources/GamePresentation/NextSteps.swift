@@ -1,6 +1,6 @@
 import GameCore
 
-// City Transport Manager study 4.0, step M2 (4.3, first stage): a free game
+// Next steps: a free game
 // shows a short chain of next steps, each with its progress, and the map
 // answers when one is met (decision 256's check and tune). The steps teach
 // what a railway is made of: a line, a day that pays, a second line, a

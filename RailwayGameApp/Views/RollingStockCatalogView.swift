@@ -190,7 +190,7 @@ struct RollingStockCatalogView: View {
                     }
                 }
             }
-            // Decision 301 (the City Transport Manager study's 4.11): what
+            // Decision 301: what
             // the train shown costs an hour, to set beside its fares.
             Text(verbatim: language.text(
                 "This train costs \(train.hourly.moneyText) an hour on a line, plus its trips.",

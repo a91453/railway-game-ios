@@ -100,7 +100,7 @@
 
 | 種類 | 有的 | 沒有的 |
 | --- | --- | --- |
-| 公車、客運 | 這包：20 個縣市的公車路線形狀（`bus/`）、公車沿路線進度移動與淡入淡出（`src/engines/BusEngine.ts`、`src/three/BusScene.ts`）。`taiwan-rail-reference-clean`：43,363 個公車站牌的索引（`source/data/bus_stops_index.json`）、542 個鐵道車站各自 600 m 內的站牌與路線（`source/data/bus-transfer/`）。競品研究 #832（City Transport Manager 是公車經營遊戲）。`OpenWorld` 的環島公路路線與交通規則（`play/src/world/taiwan-route-data.js`、`play/src/game/traffic-rules.js`） | 路線沒有台北市，也沒有站序與班次；即時到站要 TDX 金鑰（`bus_providers.json`），不用 |
+| 公車、客運 | 這包：20 個縣市的公車路線形狀（`bus/`）、公車沿路線進度移動與淡入淡出（`src/engines/BusEngine.ts`、`src/three/BusScene.ts`）。`taiwan-rail-reference-clean`：43,363 個公車站牌的索引（`source/data/bus_stops_index.json`）、542 個鐵道車站各自 600 m 內的站牌與路線（`source/data/bus-transfer/`）。`OpenWorld` 的環島公路路線與交通規則（`play/src/world/taiwan-route-data.js`、`play/src/game/traffic-rules.js`） | 路線沒有台北市，也沒有站序與班次；即時到站要 TDX 金鑰（`bus_providers.json`），不用 |
 | 公路 | 這包：國道交流道 207、服務區 22、省道里程與號誌（`geo/`） | 車流量；遊戲的貨運只走鐵路（決策 155） |
 | 航空 | 這包：16 座機場範圍，有 ICAO／IATA（`geo/airports.geojson`）、`FlightScene.ts`、歷史航跡的畫法（`docs/features/historical-flight-trails/`） | 航線與班次；歷史航跡的資料不在包裡，原專案標 `license_status=unverified`；載客量要接 API |
 | 船運 | 這包：277 個港區範圍（多數是漁港，`geo/port_polygons.geojson`）、`ShipScene.ts`、AIS 船位的程式 | 渡輪航線與班次：整個參考庫都沒有（`world-rail-reference-clean` 的 12 個城市也沒有）；AIS 是即時資料、沒有附檔 |

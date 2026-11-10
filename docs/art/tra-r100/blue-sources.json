@@ -44,8 +44,8 @@
     },
     {
       "id": "tpk32200",
-      "url": "https://emu300ct.web.fc2.com/index/trapc/ot_cars/32200s.htm",
-      "author": "Kashiwa / Train Collection",
+      "url": "third-party railway photo site (full record in the private assets repository)",
+      "author": "third-party railway photo site",
       "date": "page sections updated through restored Breezy Blue appearance; individual side photograph dates not provided",
       "file": "32200s-original.html",
       "sha256": "5fe9d6f1e5e5b57c019bf536baa5bbb4df0fea499bc38198f37a321ced674320",
@@ -61,8 +61,8 @@
     },
     {
       "id": "tp32850",
-      "url": "https://emu300ct.web.fc2.com/index/trapc/ot_cars/32850s.htm",
-      "author": "Kashiwa / Train Collection",
+      "url": "third-party railway photo site (full record in the private assets repository)",
+      "author": "third-party railway photo site",
       "date": "individual side photograph dates not supplied",
       "file": "32850s.html",
       "sha256": "6a901a431f588ed56643340c90b150f450f338ed2bb08ee41cf6fe107386129b",
@@ -78,8 +78,8 @@
     },
     {
       "id": "spk32700",
-      "url": "https://emu300ct.web.fc2.com/index/trapc/ot_cars/35SPK32700.htm",
-      "author": "Kashiwa / Train Collection",
+      "url": "third-party railway photo site (full record in the private assets repository)",
+      "author": "third-party railway photo site",
       "date": "individual side photograph dates not supplied",
       "file": "35SPK32700.html",
       "sha256": "439e82027b0ac19473d22f9c4979de51dd6c83e9e8fad1cc26fc4c21068f81e8",
@@ -97,9 +97,9 @@
   "photos": [
     {
       "file": "tpk32228-left.jpg",
-      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32200s/40TPK32220-L_32228.JPG",
+      "url": "third-party railway photo site (full record in the private assets repository)",
       "sha256": "1f1c17f4e7da20fca04e2c1c3ea08f95b6df31b4bf545f5c5d8dfe954da1d3bf",
-      "author": "Kashiwa / Train Collection",
+      "author": "third-party railway photo site",
       "date": "not supplied for this photograph",
       "vehicle": "40TPK32228",
       "view": "full left side",
@@ -110,9 +110,9 @@
     },
     {
       "file": "tpk32228-right.jpg",
-      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32200s/40TPK32220-R_32228.JPG",
+      "url": "third-party railway photo site (full record in the private assets repository)",
       "sha256": "41b2fade99b0117acbf12ab6c4bf7648ee1f1c8c2aa5482e510fdc44fc07670a",
-      "author": "Kashiwa / Train Collection",
+      "author": "third-party railway photo site",
       "date": "not supplied for this photograph",
       "vehicle": "40TPK32228",
       "view": "full right side",
@@ -123,9 +123,9 @@
     },
     {
       "file": "spk32717-right.jpg",
-      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/35SPK32700/35SPK32700-R_32717.JPG",
+      "url": "third-party railway photo site (full record in the private assets repository)",
       "sha256": "8817d862ea53a80b877c0941d9195b784f99db45585af3c5daf93423bc470252",
-      "author": "Kashiwa / Train Collection",
+      "author": "third-party railway photo site",
       "date": "not supplied for this photograph",
       "vehicle": "35SPK32717",
       "view": "full right side",
@@ -136,9 +136,9 @@
     },
     {
       "file": "spk32757-left.jpg",
-      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/35SPK32700/35SPK32700-L_32757.JPG",
+      "url": "third-party railway photo site (full record in the private assets repository)",
       "sha256": "11f6a3d8f6efa4fdb0a25ada0b73e5ef3f3908790d2c5ff60f65ec51ebab7c9d",
-      "author": "Kashiwa / Train Collection",
+      "author": "third-party railway photo site",
       "date": "not supplied for this photograph",
       "vehicle": "35SPK32757",
       "view": "full left side",
@@ -149,9 +149,9 @@
     },
     {
       "file": "tp32869-left.jpg",
-      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32850s/35TP32850-L_32869.JPG",
+      "url": "third-party railway photo site (full record in the private assets repository)",
       "sha256": "d64aa95ec04c5e140c1dd6d075bb69a68460390b68524b163e01420b4a5f5977",
-      "author": "Kashiwa / Train Collection",
+      "author": "third-party railway photo site",
       "date": "not supplied for this photograph",
       "vehicle": "35TP32869 according to source filename/caption; markings not used as dated identity",
       "view": "full left side",
@@ -162,9 +162,9 @@
     },
     {
       "file": "tp32869-right.jpg",
-      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32850s/35TP32850-R_32869.JPG",
+      "url": "third-party railway photo site (full record in the private assets repository)",
       "sha256": "b7760dd02e69084057193b00b1a5e0bdb770197a4244921d965a91829ca2a546",
-      "author": "Kashiwa / Train Collection",
+      "author": "third-party railway photo site",
       "date": "not supplied for this photograph",
       "vehicle": "35TP32869 according to source filename/caption; markings not used as dated identity",
       "view": "full right side",
@@ -356,5 +356,5 @@
     "full interior reconstruction",
     "separate wheelchair/service-coach hardware not established; no invented accessible role"
   ],
-  "height_disagreement": "35TP32850 source maximum height 3963 mm vs secondary Wikipedia 3953 mm; this model uses specific Train Collection family value and does not claim surveyed precision"
+  "height_disagreement": "35TP32850 source maximum height 3963 mm vs secondary Wikipedia 3953 mm; this model uses the third-party railway photo site's specific family value and does not claim surveyed precision"
 }

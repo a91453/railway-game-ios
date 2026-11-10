@@ -82,8 +82,7 @@ public struct RollingStockCatalog: Equatable, Sendable {
     }
 
     /// What a train whose fixed running cost on a line is `daily` a day
-    /// costs an hour (decision 301, the City Transport Manager study's
-    /// 4.11): the day's cost over its 24 hours, to the nearest dollar, half
+    /// costs an hour (decision 301): the day's cost over its 24 hours, to the nearest dollar, half
     /// up. Its departures and kilometres are paid on top as it runs.
     public static func hourlyCost(daily: Money) -> Money {
         Money((max(0, daily.amount) + 1_200) / 2_400 * 100)

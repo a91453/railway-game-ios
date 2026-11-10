@@ -3072,7 +3072,7 @@
   "metadata_inputs": [
     {
       "file": "source-record.json",
-      "sha256": "ebba96121572f6b259f8227912bde9332ede8005fec4a81071e3b176c88bff2b"
+      "sha256": "1bfce493bced5310b45c1030ae29dfa4b56daa7986007cf643bc6bf1157cbab6"
     },
     {
       "file": "status.json",
@@ -3080,7 +3080,7 @@
     },
     {
       "file": "configuration.json",
-      "sha256": "2a56679947819e63d6b194f241a262bd5ef56b3347949002c583eb1a985db805"
+      "sha256": "5516d0546f62ddda275f9ece2e21a9f44ee4f8879715f59ee843702721ba4e84"
     },
     {
       "file": "delivery-spec.json",

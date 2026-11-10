@@ -1,6 +1,6 @@
 import GameCore
 
-// Decision 374 (City Transport Manager study 4.12): before the player
+// Decision 374: before the player
 // borrows, what the next step of the loan costs. The loan has no term
 // (decision 67): its interest is paid every midnight on what is owed, and
 // what is owed is repaid a step at a time whenever the player likes. So

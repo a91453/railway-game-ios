@@ -27,8 +27,8 @@ public enum Map3D45DR1000 {
         public static let dr1000 = Livery(silver: Map3D45DR1000.silver, orange: Map3D45DR1000.orange, topBand: Map3D45DR1000.yellow,
                                           yellow: Map3D45DR1000.yellow, name: "45dr1000-drc1025")
         /// Decision 511: the DR3100 diesel express on this shape until it
-        /// has its own, in the colours of two photographs of DR3120 the
-        /// author gave (2026-10-30, KASHIWA Train Collection): the stainless
+        /// has its own, in the colours of two photographs of DR3120 from a
+        /// third-party railway photo site (2026-10-30): the stainless
         /// body, the red-orange band under the windows that runs on as the
         /// ends' brow and V, a thin yellow line along the windows' top and
         /// the yellow face, each the median of its colour in both.

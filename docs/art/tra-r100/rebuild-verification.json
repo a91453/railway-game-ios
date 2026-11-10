@@ -10,7 +10,7 @@
     },
     {
       "file": "IDENTITY.md",
-      "sha256": "356e11ac08199183ce0b377c3df6ba08be0abc8458dea817f371d24b48e5cf77",
+      "sha256": "d373efb9e2dce9eddc0e69db32077ece84154577a3fe3c3c73952ea710be1d59",
       "identical": true
     },
     {
@@ -30,7 +30,7 @@
     },
     {
       "file": "blue-sources.json",
-      "sha256": "345ccef1bd6eb15f3b0b649ab46e96602e5bd2d8d53270d14495c045e931064d",
+      "sha256": "5f14c9f057e76f5e07b66b2481b6d114baf0defa1a12772ef8c8b575c75b27d1",
       "identical": true
     },
     {
@@ -320,7 +320,7 @@
     },
     {
       "file": "source-record.json",
-      "sha256": "b37ca653ede282ec80af283093ca2c290d82953e75d195ff9b88754eb31c6ae4",
+      "sha256": "e54e7df1ee97b07cff074744e910b2eebcccc2441edbe5784507cc313bc00bea",
       "identical": true
     },
     {

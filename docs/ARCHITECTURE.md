@@ -5368,7 +5368,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 區塊價格跟著起點定，不跟著被買的那一塊：從臺東起手的人買到高雄的區塊也只付 $105 萬 × 已擁有塊數。
 - 沒有驗證的：選點畫面與 App 的 SwiftUI 在 macOS CI 看；啟動時間與買地的卡頓要 TestFlight 實機看（Linux 的 release 在表上）。
 
-**後來：還沒買的地塊畫鎖頭**（2026-10-21，NEXT_PRIORITIES §19 第 4 名，`docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.7；遊戲規劃派工，不另取決策號）。空白地圖的購地擴建（決策 160）與實景地圖的「先給一塊、之後買地」（本決策）都用 `GameWorld.mapExpansion`，所以「還沒買」就是不在 `mapExpansion.owned` 裡的地塊；依面積收購（決策 146）是買建物，不是地塊，沒有鎖頭。
+**後來：還沒買的地塊畫鎖頭**（2026-10-21，NEXT_PRIORITIES §19 第 4 名；遊戲規劃派工，不另取決策號）。空白地圖的購地擴建（決策 160）與實景地圖的「先給一塊、之後買地」（本決策）都用 `GameWorld.mapExpansion`，所以「還沒買」就是不在 `mapExpansion.owned` 裡的地塊；依面積收購（決策 146）是買建物，不是地塊，沒有鎖頭。
 1. **哪幾塊有鎖頭**（GamePresentation 的 `GameSession.mapLocks(on:viewport:clearOf:)`、`MapLock`）：和擁有的土地相鄰、現在就能買的那幾塊（`mapTilesForSale()`）各一個；更外面的照決策 160 只淡化。只在沒有拿建造工具、沒有教學、沒有在擴建時出現（`showsMapLocks`）；擴建時那幾塊照舊顯示價格。
 2. **畫在哪裡**：那一塊在畫面上露出來的部分（扣掉蓋在地圖邊上的按鈕與面板）的正中間；露出來的部分任一邊不到 56 點（`MapLock.smallestPart`，拉得很遠，或只露出一條邊）就不畫。
 3. **鎖上或打開**：最佳一天的運量還不夠買那一塊時是鎖上的鎖（`MapGlyphLock`），夠了是打開的鎖（`MapGlyphLockOpen`，暖黃底，「購買」的顏色）；自由模式一律打開。
@@ -11612,7 +11612,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - **UNVERIFIED**：App 的編譯（macOS CI）；實機的記憶體與電池（TestFlight）。
 - GameCore、存檔版本、golden schema 都不動。
 
-**之後的補充**（2026-10-21，3D 的指北針；NEXT_PRIORITIES §19 第 2 名「3D 拉近時的三個小做法」的第一項，規格在 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.14；遊戲規劃 session 派工，不另取決策號）：
+**之後的補充**（2026-10-21，3D 的指北針；NEXT_PRIORITIES §19 第 2 名「3D 拉近時的三個小做法」的第一項；遊戲規劃 session 派工，不另取決策號）：
 - 原因：3D 可以兩指旋轉，但轉過之後畫面上沒有東西說北在哪，也沒有轉回北方的方法；拉遠交回 2D 時（2D 永遠北朝上）畫面會突然轉回去。作者 2026-10-19 問「旋轉的時候我遊戲需要指南針嗎」，研究的答案是要、只在 3D。
 - 做法：
   - **只在 3D、只在方向不是北的時候出現**（和 Apple 地圖一樣）。「算北」的容差是 0.05°（`Map3DCamera.northTolerance`），和參考庫網站地圖判斷「轉過了」的值一樣；更小的角度在手機上連半點都不到。
@@ -12991,9 +12991,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 292. 建站、建線時一鍵切換「腹地涵蓋」層，並說出車站涵蓋多少居民與工作
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M1（4.1 的「覆蓋」）。作者 2026-10-20：「M0 做完後直接開 M1」。號碼依 #231：main 上最大 290，291 已被登記，所以取 292。只改 GamePresentation 與 App 的 2D 地圖；GameCore、存檔版本、golden schema、replay 不動。
+2026-10-20。M1（服務範圍一鍵切換，「覆蓋」）。作者 2026-10-20：「M0 做完後直接開 M1」。號碼依 #231：main 上最大 290，291 已被登記，所以取 292。只改 GamePresentation 與 App 的 2D 地圖；GameCore、存檔版本、golden schema、replay 不動。
 
-**為什麼**：「站要放哪」是新玩家最常卡住的地方。我們早就有「腹地涵蓋」層（決策 76），但要從圖層選單自己去開；建站、建線的當下，玩家不知道它在那裡。CTM 的做法是建線時一顆同心圓鈕就切過去，而且說得出覆蓋了多少。
+**為什麼**：「站要放哪」是新玩家最常卡住的地方。我們早就有「腹地涵蓋」層（決策 76），但要從圖層選單自己去開；建站、建線的當下，玩家不知道它在那裡。
 
 **規則**：
 1. **什麼時候有這顆鈕**（`GameSession.offersCoverageShortcut`）：路網工具在「鋪軌」或「月台」模式，或正在挑新路線的站（決策 100）時。教學進行中不出現：卡片在帶路。鈕在地圖右下，3D 與縮放鈕旁邊（`MapCoverageButton`，同心圓，開著時有青色框，和常用圖層一樣）。
@@ -13020,10 +13020,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **建造時自動打開涵蓋層**（研究 4.1 的「建線時預設開」；決策 311 改成自動打開潛力圖，涵蓋在它的圖例裡切換）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
+- **建造時自動打開涵蓋層**（「建線時預設開」；決策 311 改成自動打開潛力圖，涵蓋在它的圖例裡切換）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
 - **百分比四捨五入**：有人沒被涵蓋時也可能出現「100%」。預覽：「…：100%（直線範圍的估算）」。
 - **用 WorldPop 人口格當分母**（`PopulationHeatmap`）：那是另一套 1 km 格網，和涵蓋層的 64 m 土地格對不起來，畫面和數字會不一致。
-- **潛力熱圖、白天／夜晚**（研究 4.1 其餘部分）：是遊戲需求模型的推估，要另外定顏色與說明，留在之後。
+- **潛力熱圖、白天／夜晚**：是遊戲需求模型的推估，要另外定顏色與說明，留在之後。
 
 **參考庫與外部專案**（`a91453/railway-reference-private` 058f833）：
 
@@ -13047,9 +13047,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 293. 自由遊戲的「下一步」：六個步驟、進度與打勾，不給錢
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M2（4.3 的第一階段）。作者 2026-10-20：「Claude platform 已經在做（高鐵）了，你做不會擋到衝突的部分」。號碼依 #231：main 上最大 292，沒有未釋出的登記，取 293。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
+2026-10-20。M2（下一步的短目標，第一階段）。作者 2026-10-20：「Claude platform 已經在做（高鐵）了，你做不會擋到衝突的部分」。號碼依 #231：main 上最大 292，沒有未釋出的登記，取 293。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
 
-**為什麼**：CORE_LOOP §0 的「一開始沒有目標」。入門關卡（決策 266）一關一個目標，但關卡打完、開自由遊戲之後，畫面上只有錢、城市委託與公司評等（決策 181、183），新玩家不知道接下來做什麼。CTM 的做法是一串短目標掛在地圖上，做到一個出下一個。
+**為什麼**：CORE_LOOP §0 的「一開始沒有目標」。入門關卡（決策 266）一關一個目標，但關卡打完、開自由遊戲之後，畫面上只有錢、城市委託與公司評等（決策 181、183），新玩家不知道接下來做什麼。
 
 **規則**（`NextSteps.swift`）：
 1. **什麼時候有**（`GameSession.nextSteps`）：沒有劇本（挑戰與關卡都有劇本）、不在教學、不是示範地圖（`NewsLog.isDemo`）、公司經營（不是自由遊玩）的遊戲。
@@ -13069,10 +13069,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
    - 地圖上方常用圖層（決策 224）旁一行：「下一步：開第二條線 · 3/6」，下面一條細的進度條；位置不夠時只剩旗子與「3/6」（`NextStepChip`）。點了開目標面板。和常用圖層一起，在建造與教學時收起；六步都做到就不見。
    - 目標面板（`GoalsPanel`）最上面「下一步」一區：每一步打勾或空心圈、進度（「1/2」「34% / 50%」）與進度條；正在做的那一步多一句怎麼做。
    - 自由遊戲有下一步時，遊戲選單也有「目標」。
-5. **不給錢**：研究 4.3 的第二階段（點一下領獎金、領過不能重領）是 GameCore 的新規則，要取決策號、升存檔，等 TestFlight 看過這一版再決定。
+5. **不給錢**：第二階段（點一下領獎金、領過不能重領）是 GameCore 的新規則，要取決策號、升存檔，等 TestFlight 看過這一版再決定。
 6. **效能**：每個指令與每個遊戲日算一次（`NextStepsMemo`，照 `commandRevision` 與日子），不是每個 tick；涵蓋那一步要加總土地格，在台灣實景是幾毫秒。
 
-**為什麼不用「每日運量」當步驟**（研究 4.3 照 CTM 寫了 500 → 2,000 人次）：量過簡單規則的新局，兩個城鎮之間一條線第一天就載 3–6 萬人次、而且有賺錢（三組城鎮各 6 天，`GameWorld.newGame(rules: .simple)`，各一條線、自動配一列車）。人次的門檻一開線就到，教不到什麼；台灣實景各地的人口又差太多，同一個數字在不同地方意思不同。所以步驟改成「做了什麼」：第二條線、加車、轉乘、涵蓋，每一步對應一個工具。
+**為什麼不用「每日運量」當步驟**：量過簡單規則的新局，兩個城鎮之間一條線第一天就載 3–6 萬人次、而且有賺錢（三組城鎮各 6 天，`GameWorld.newGame(rules: .simple)`，各一條線、自動配一列車）。人次的門檻一開線就到，教不到什麼；台灣實景各地的人口又差太多，同一個數字在不同地方意思不同。所以步驟改成「做了什麼」：第二條線、加車、轉乘、涵蓋，每一步對應一個工具。
 
 **四方**：
 - 玩家：自由遊戲一開始就知道下一步做什麼，做到時「叮」一聲；地圖上只有一行字，不擋手指，想看全部再點開。
@@ -13081,10 +13081,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：沿用目標旋律（`goal-met.wav`），不加新的聲音。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **照 CTM 用每日運量**：「下一步：一天載 500 人次 · 0/500」。一開線就達成，見上。
+- **用每日運量**：「下一步：一天載 500 人次 · 0/500」。一開線就達成，見上。
 - **每一步給小額獎金**：「開第一條線 ✓ 領取 $ 50,000」。要 GameCore 入帳、存檔、防重領，留給第二階段。
-- **常駐的目標卡**（CTM 的浮動卡）：地圖右上一張卡寫目前目標、進度條、獎金與「打開路線選單」。研究 §6 指出它和其他抽屜互相遮擋，所以只用一行，細節在目標面板。
-- **自由遊戲的按鈕跟著步驟一個一個出現**（研究 4.3 提到的決策 266 做法）：要改決策 266「自由模式一開始就什麼都有」，老玩家也會受影響；等這一版的回饋。
+- **常駐的目標卡**：地圖右上一張卡寫目前目標、進度條、獎金與「打開路線選單」。它會和其他抽屜互相遮擋，所以只用一行，細節在目標面板。
+- **自由遊戲的按鈕跟著步驟一個一個出現**（決策 266 的做法）：要改決策 266「自由模式一開始就什麼都有」，老玩家也會受影響；等這一版的回饋。
 
 **參考庫與外部專案**（`a91453/railway-reference-private` 058f833）：
 
@@ -13181,9 +13181,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 295. 實景地圖的月台工具：真實車站當「建議站點」
 
-2026-10-20。NEXT_PRIORITIES §17.1 第 1 名、§17.2 乙線「現實路網」第一步；競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.5。作者交辦（經 session_01MBXXssxDUz9h5gZ9EDVnZb 派工）。號碼依 #231：main 上最大 293，高鐵示範的 Claude platform 可能取 294（#231 沒有它的登記），所以取 295。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
+2026-10-20。NEXT_PRIORITIES §17.1 第 1 名、§17.2 乙線「現實路網」第一步。作者交辦（經 session_01MBXXssxDUz9h5gZ9EDVnZb 派工）。號碼依 #231：main 上最大 293，高鐵示範的 Claude platform 可能取 294（#231 沒有它的登記），所以取 295。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
 
-**為什麼**：實景地圖底下已經畫出真實的鐵路與車站（`RealRailways.swift`，決策 213 也用它描線），玩家的站名在真實車站 450 m 內就認得是哪一站（`RealRailwayGameplay.swift`），但玩家要自己找到那個位置、點到軌道上，站名也要靠 800 m 內的自動命名（決策 159）。CTM 建線時把真實站牌畫成圖釘，點了就用那個位置與站名。
+**為什麼**：實景地圖底下已經畫出真實的鐵路與車站（`RealRailways.swift`，決策 213 也用它描線），玩家的站名在真實車站 450 m 內就認得是哪一站（`RealRailwayGameplay.swift`），但玩家要自己找到那個位置、點到軌道上，站名也要靠 800 m 內的自動命名（決策 159）。
 
 **規則**（`RealStationSuggestions.swift`）：
 1. **什麼時候有**（`GameSession.offersRealStations`）：實景地圖、真實鐵路資料已載入、路網工具的月台模式。其他工具、鋪軌、空白地圖都沒有。
@@ -13418,7 +13418,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 2026-10-20。修 main 的 full lane 紅燈時找到的（遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工；號碼依 #231：main 與未釋出的登記最大 298）。只改 App 的 `LinesPanel`；GameCore、GamePresentation、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：已經有路線時，面板先列路線，新路線的表單收成路線下面的一列「新路線…」（決策 196）。打開它、按「加入選取的車站」之後，草稿有了第一站，表單就回到面板最上面（決策 100），但面板還停在原來捲到的地方，也就是選取路線的停靠站那一段。剛點的站、這條線的摘要（CTM 研究 4.2 的 M0）都在畫面外，看起來像沒有反應。`LineDraftSummaryUITests` 兩個測試在 full lane 一直紅，就是卡在這裡（run 39451668395 的錄影：按下去之後面板仍停在「Add Qidu to Pingxi Line」那一段）。
+**為什麼**：已經有路線時，面板先列路線，新路線的表單收成路線下面的一列「新路線…」（決策 196）。打開它、按「加入選取的車站」之後，草稿有了第一站，表單就回到面板最上面（決策 100），但面板還停在原來捲到的地方，也就是選取路線的停靠站那一段。剛點的站、這條線的摘要（M0）都在畫面外，看起來像沒有反應。`LineDraftSummaryUITests` 兩個測試在 full lane 一直紅，就是卡在這裡（run 39451668395 的錄影：按下去之後面板仍停在「Add Qidu to Pingxi Line」那一段）。
 
 **規則**：面板從「路線在前」換成「新路線在前」時（`listsLinesFirst` 由真變假：加了第一站，或開始在地圖上選站），捲到新路線表單的「在地圖上選站」按鈕，放在畫面中間，它上面的摘要與「已點選」一起出現。用的是決策 188 同一個 `ScrollViewReader`，一樣先讓出一輪再捲，有動畫。教學進行時面板本來就是新路線在前，不會觸發。
 
@@ -13473,9 +13473,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 301. 路線卡的「乘客感受」：候車、擁擠、準點三項，有數字才給分；買車卡寫每營運小時的成本
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M3（4.13），同一批做 4.11 的一行字（NEXT_PRIORITIES §17 第 7、11 名）。遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 299，#859 保留 300，取 301。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-20。M3（有來源的滿意度），同一批做車型每小時成本的一行字（NEXT_PRIORITIES §17 第 7、11 名）。遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 299，#859 保留 300，取 301。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：決策 194 回答「公司為什麼在這條線賠錢」，但沒有地方回答「乘客覺得這條線怎樣、為什麼」。CTM 的路線卡把候車、擁擠等幾項各給一個分數與一個字，低的那項旁邊就是解法。研究 4.0 要求先只用有來源的數字，樣本不夠就說「尚未評分」，不要給一個看起來精確、卻沒有對應數據的分數。
+**為什麼**：決策 194 回答「公司為什麼在這條線賠錢」，但沒有地方回答「乘客覺得這條線怎樣、為什麼」。先只用有來源的數字，樣本不夠就說「尚未評分」，不要給一個看起來精確、卻沒有對應數據的分數。
 
 **規則**（`LineSatisfaction.swift`）：
 1. **讀什麼**：和決策 194 的成本卡同一段已結算的日子（`lineLossDiagnosis` 的 `LineLossMeasures`），不另外記任何東西。開線還沒滿一個結算日時，整張寫「乘客感受：尚未評分」與「這條線營運滿一天之後才有分數」。貨運線、沒有逐線帳的世界沒有這張。
@@ -13499,14 +13499,14 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 鐵道迷：準點照台鐵「晚 5 分鐘以內算準點」的定義（決策 207，參考網站 `delay-stats.json` 的同一條）；擁擠用的是額定載客的比例，和營運單位說的「尖峰載客率」同一個意思；候車寫明是由班距估算，不假裝量過月台上的人。
 - 開發：只讀決策 194 已經算好的數字，GameCore、存檔、golden、replay 都不動；門檻與分數由 Linux 測試釘住；修正沿用決策 194 的指令與確認。
 - 美術：表情是我們自己畫的，和站長同一套眼睛，扁平、單色模板、藏青外框不需要（模板在畫的地方上色）；三張模糊後彼此差 24–27%（art-style 的「一眼分得出」約 20%）；進度條沿用經濟面板的樣式；不加動畫。
-- 音樂：無（分數變好時可以接目標旋律，研究 4.13 說先不做，避免太吵）。
+- 音樂：無（分數變好時可以接目標旋律，先不做，避免太吵）。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **整條線一個總分**（CTM 的「😊 86%」）：三項的來源與意義不同，平均起來的數字沒有對應的量。預覽：「乘客感受 86%」。
-- **CTM 的乘車時間與站的品質**：我們沒有「目標旅行時間」的來源，站也沒有等級（研究 4.13 用準點取代「站的品質」）；乘車時間要另定一個速度目標，留給之後。
+- **整條線一個總分**：三項的來源與意義不同，平均起來的數字沒有對應的量。預覽：「乘客感受 86%」。
+- **乘車時間與站的品質**：我們沒有「目標旅行時間」的來源，站也沒有等級（用準點取代「站的品質」）；乘車時間要另定一個速度目標，留給之後。
 - **用站長的三個表情當評分的臉**：20 點時三張只差在眼睛，看不出來（模糊後幾乎一樣）。預覽：上面的檢查表，站長在 28 點就只剩剪影。
-- **用 SF Symbols 的臉或 emoji**：研究 4.13 與 art-style 要我們自己的畫風；emoji 在不同系統長得不一樣。
-- **路線清單每列一張臉、照分數排序**（研究 4.13 的清單部分）：派工單只要路線卡的三項；清單的列（`LineReportText`）要另外改版面，留給之後。
+- **用 SF Symbols 的臉或 emoji**：art-style 要我們自己的畫風；emoji 在不同系統長得不一樣。
+- **路線清單每列一張臉、照分數排序**：派工單只要路線卡的三項；清單的列（`LineReportText`）要另外改版面，留給之後。
 - **每營運小時含行駛與發車**：要先知道一小時跑幾公里、發幾次車，車型展示間還沒有路線，只能編一個速度，不採用。
 
 **參考庫與外部專案**（`a91453/railway-reference-private` b3af6d8）：
@@ -13617,9 +13617,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 303. 新路線的「確認路線」卡：名稱、顏色、首末班、四個時段各幾列，一次買齊
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.4（它的圖 18、19；NEXT_PRIORITIES §17 第 9 名）。作者 2026-10-20「你五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 301，302 已保留，取 303。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-20。NEXT_PRIORITIES §17 第 9 名。作者 2026-10-20「你五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 301，302 已保留，取 303。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：簡單規則下按 ✓ 就直接開線、買一列車（決策 258、264），玩家第一次知道營運時間與班距是事後打開路線卡的「進階」。CTM 在確認那一步就把整條線攤開：名稱、顏色、一行數字、首末班、每個時段幾列車與多久一班、還要買幾列、總價。研究 4.4 要的是同一件事，而且全部有預設值，不改也能直接確認。
+**為什麼**：簡單規則下按 ✓ 就直接開線、買一列車（決策 258、264），玩家第一次知道營運時間與班距是事後打開路線卡的「進階」。這裡在確認那一步就把整條線攤開：名稱、顏色、一行數字、首末班、每個時段幾列車與多久一班、還要買幾列、總價，而且全部有預設值，不改也能直接確認。
 
 **規則**（`LineConfirmation.swift`）：
 1. **什麼時候出現**：簡單規則、經營模式、草稿至少兩站、而且照原本的做法開得了線（`autoServicePlan` 可行）時，地圖的 ✓ 與路線面板的「建立路線」改成升起這張卡（`confirmLineDraft()`）；寫實規則、沙盒、開不了線時照舊直接開（決策 258 的行為不變）。卡收起來（返回）時草稿留著。
@@ -13642,9 +13642,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無（開線的音效照舊）。
 
 **沒選的**（預覽是玩家會看到的樣子）：
-- **四個時段各自一個數字**：要 GameCore 的服務日多一個等級（存檔版本、golden 都會動），研究 4.4 也說先保留三個等級。預覽：「早尖峰 3 列／晚尖峰 2 列」。
+- **四個時段各自一個數字**：要 GameCore 的服務日多一個等級（存檔版本、golden 都會動），先保留三個等級。預覽：「早尖峰 3 列／晚尖峰 2 列」。
 - **讓玩家選來回或環線**：環線要三站以上、列車成對，規則不同（決策 49）；派工單說這次不做。預覽：卡上多一個「環線」開關。
-- **每列一個班距滑桿（CTM 的做法）**：我們的數字是列車數，班距由它算出；用滑桿調班距會出現買不到整數列車的班距。預覽：「班距 7 分 ——●——」。
+- **每列一個班距滑桿**：我們的數字是列車數，班距由它算出；用滑桿調班距會出現買不到整數列車的班距。預覽：「班距 7 分 ——●——」。
 - **一次買到卡片要的列數，多的先停在軌道外**：那些車會一直停在機廠外不跑（決策 264 的 held），玩家多花了錢卻看不到車。預覽：「還要買 5 列」但只有 2 列在跑。
 - **用 1 小時為單位調首末班**：多數時刻表的首末班不是整點；10 分一格、長按連續調就夠快。
 - **卡片畫在地圖上（不用 sheet）**：手機橫拿時地圖上已經有 ✓ 的泡泡、教學卡與狀態列，再放一張表格會擋住路線本身。
@@ -13656,7 +13656,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 | `Ci/reference_snapshot/` 的開線流程（新線帶著列車，加減列車兩個鈕） | 無 | 沒有確認卡、沒有時段；決策 258 已經移植它的「開線就有車」 |
 | `Simulator/`、`MapBuilder/` 的路線編輯 | 無 | 是時刻表與路線畫法，沒有開線前的設定卡 |
 
-外部專案：沒有另外找（CTM 是閉源，只看它的畫面）。卡片的規則與程式是這個專案自己的。
+外部專案：沒有另外找。卡片的規則與程式是這個專案自己的。
 
 **存檔、golden、replay**：不動（`AutoService` 的新欄位只在有值時寫出）。
 
@@ -13833,9 +13833,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 305. 夜裡沒有車時的「快轉到早上」：跑到第一列車動起來前，照常逐 tick；設定可以自動，預設關
 
-2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.15（第 79–81 張；NEXT_PRIORITIES §19 第 3）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 303，304 由 R2 保留，取 305。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-21。NEXT_PRIORITIES §19 第 3。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 303，304 由 R2 保留，取 305。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：收班後到首班前，地圖上什麼都不動，玩家只能把速度調到最快、再記得調回來。競品收班後自己快轉過夜（作者 2026-10-20 確認）。我們的夜裡常常不空（全天路線、真實時刻表的深夜車、貨運、高鐵回送），所以主要做法是玩家按的捷徑，自動的放在設定、預設關（研究 4.15 的建議）。
+**為什麼**：收班後到首班前，地圖上什麼都不動，玩家只能把速度調到最快、再記得調回來。我們的夜裡常常不空（全天路線、真實時刻表的深夜車、貨運、高鐵回送），所以主要做法是玩家按的捷徑，自動的放在設定、預設關。
 
 **規則**（`NightSkip.swift`）：
 1. **什麼時候有**：有放在軌道上的列車，而且現在沒有一列在路上（有行程、空車回送中，或還有路要走：`NightSkip.isRunning`），而且第一列車要動起來之前至少還有 1 小時（`shortest`，含下面的 10 分）。在蓋東西而自動暫停時（決策 99）、快轉中都不另外提供。
@@ -13856,7 +13856,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無（快轉時配樂收小留給之後）。
 
 **沒選的**（預覽是玩家會看到的樣子）：
-- **自動快轉預設開（競品的做法）**：速度沒人碰就自己變，夜裡常有車的玩家會以為壞了；研究 4.15 說看 TestFlight 回饋再決定。預覽：收班後速度自己變成「6000×」。
+- **自動快轉預設開**：速度沒人碰就自己變，夜裡常有車的玩家會以為壞了；看 TestFlight 回饋再決定。預覽：收班後速度自己變成「6000×」。
 - **停在首班前 30 分、或寫死 05:30**：首班 08:00 的線會白等兩個多小時；機廠出庫比首班早，固定的時間會跳過出庫。預覽：「快轉到早上 · 05:30」。
 - **停在第一列車動的那一刻（不留 10 分）**：一停下來車就已經在開，看不到早上開始。預覽：「快轉到早上 · 06:00」。
 - **把按鈕放進狀態列、速度鈕旁邊**：狀態列會在出現與消失時換版面（決策 251）。預覽：「$ 1,000 | 23:10 | ⏸ 600× ⏭ | …」。
@@ -13944,9 +13944,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
 
-2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-21。NEXT_PRIORITIES §19 第 6。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：在實景地圖選好地點按「開始」後，台灣的地點要讀整塊地塊的土地，主執行緒卡住、畫面停在開始畫面上，玩家不知道遊戲是不是當了。競品在這段時間放公司名與城市名，讓等待變成「我的公司要在這裡開業」。
+**為什麼**：在實景地圖選好地點按「開始」後，台灣的地點要讀整塊地塊的土地，主執行緒卡住、畫面停在開始畫面上，玩家不知道遊戲是不是當了。
 
 **規則**：
 1. **什麼時候出現**（`GameLauncher.realWorldLoading`）：從實景地點挑選開新遊戲（`openRealWorldGame(at:)`），以及高鐵、宜蘭線兩個示範地圖讀取時。世界改在背景建（`Task.detached`，和示範地圖一樣；`GameLauncher.newWorld(at:options:data:)` 是原本 `startNewGame(at:)` 的內容，搬成不碰主執行緒的靜態函式），建好就收起畫面、開始遊戲；建的時候已經開了別的遊戲（例如讀檔）就留著那一局。同時只建一張。
@@ -14069,7 +14069,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 311. 建線時自動出現的「哪裡人多」潛力熱圖，與角落一鍵收起
 
-2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 #5，設計來源 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` §4.1），實作 session_01XcsvN9dp6TVNhLU2TY4sJD。只動 GamePresentation 與 App；GameCore、存檔版本、golden、SaveFixtures、ReplayFixtures 都不動。**修改決策 292 的「沒選的」第一項**（建造時自動打開涵蓋層）：自動打開的改成這張潛力圖，涵蓋留在圖例裡一鍵切換。
+2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 #5），實作 session_01XcsvN9dp6TVNhLU2TY4sJD。只動 GamePresentation 與 App；GameCore、存檔版本、golden、SaveFixtures、ReplayFixtures 都不動。**修改決策 292 的「沒選的」第一項**（建造時自動打開涵蓋層）：自動打開的改成這張潛力圖，涵蓋留在圖例裡一鍵切換。
 
 1. **潛力圖**（`StationPotentialMap`，`Sources/GamePresentation/StationPotentialMap.swift`；`PopTravelMode.potential`）：每格是它 `Land.catchmentRadius`（800 m 直線）內的居民加就業，和 `Land.totals` 同一個圓、同一個數法（整數的列前綴和，一列一段）。六段固定的人數門檻 250、1,000、2,500、5,000、10,000、20,000，不到 250 不畫；門檻是絕對人數，不跟著畫面裡的最大值走，所以同一個顏色在台北和鄉下是同樣多的人。
 2. **有新線的站時**（`session.lineDraft` 有站）：每格乘上決策 137 的距離權重（`DistanceDemand.share`，到最近一個草稿站的直線距離；世界沒開 `distanceDemand` 時不乘），已經在營運中車站（不是關閉的站）800 m 內的格乘 `servedShare` = 0.4，標題改「從你的站可以去哪」。只是畫面上的估計，不是 GameCore 的需求模型（不做潮汐、不做路徑）。
@@ -14078,7 +14078,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 5. **只算畫面裡的、算過的留著**：地圖切成 32 × 32 個區塊（依縮放的 `CityMap.blockSize`）一塊的 chunk，畫到哪一塊才算哪一塊，結果放在 `StationPotentialMap` 的 chunk 快取（鎖保護，值型別外殼）。`StationPotentialMap.Key`（土地、營運中車站的點、草稿站的點、`distanceDemand`、時段、大小）在 tick 之間相等，只有指令（建站、拆站、開關站、土地改變、草稿改變）或時段改變才換一張新的；不會每個 tick 重算全圖。合併的區塊照 800 m 圓的格數換算回每格的人數。
    - **台灣實景量測**（Linux、debug build，台北 25.047882, 121.517219 的新遊戲，`testTaipeisDenseLandIsWorkedOutInView`）：整張圖、4 格一塊：4095 塊、4 個 chunk，第一次 30 ms（有草稿站 38 ms），之後 3 ms；一個畫面大小（±33 × ±70 格、1 格一塊）：9447 塊、24 個 chunk，第一次 98 ms（有草稿站 160 ms），之後 12 ms。Release build 與實機沒有量。
 6. **App**：建軌道、月台或新線的工具一打開（`GameSession.offersCoverageShortcut`）就蓋上去（`BuildingLayerShortcut`），蓋在玩家自己的圖層上面但**不寫進**玩家的圖層設定（`@AppStorage("mapPopTravelMode")`），所以關掉工具就回到玩家原本的圖層；玩家在建造中自己選了別的圖層，就照玩家的。角落的按鈕（決策 292 的 `MapCoverageButton`）與圖例的關閉鈕收起它，收起會記住（`mapBuildingLayerAutoShows`，裝置偏好），下次建造不再自動出現，再按一次角落的按鈕拿回來。潛力／涵蓋與時段也是裝置偏好（`mapBuildingLayer`、`mapPotentialPeriod`）。圖例一行說明加一個 ⓘ（`StationPotentialMap.title`、`line`、`info`）。潛力圖畫在自己的 Canvas：城市底圖之上、路線與站名之下，不蓋站名與路線；出現與消失照 `MotionRule.change` 淡入淡出，「減少動態效果」時立刻切換（`.identity`）。UI 測試（`-ui-testing`）預設收起，除非給 `-show-building-layer`，免得圖例擋住其他測試要點的角落。
-7. **顏色**（docs/UI_THEME.md）：淡暖黃 → 綠 → 青 → 圖示的深藍，六段 #FFE7A8、#C6D98B、#7CC08C、#3A9BA6、#2D6890、#262C57，不透明度 0.7；不用 CTM 的藍／橘／紅。亮度單調上升，三種常見色盲下仍分得出深淺。
+7. **顏色**（docs/UI_THEME.md）：淡暖黃 → 綠 → 青 → 圖示的深藍，六段 #FFE7A8、#C6D98B、#7CC08C、#3A9BA6、#2D6890、#262C57，不透明度 0.7。亮度單調上升，三種常見色盲下仍分得出深淺。
 
 **限制**（不寫進玩家看的字）：800 m 是直線，不看河、山與路；人數是遊戲土地模型的估計（`Land.totals`：WorldPop 與 OSM 換算的居民與就業），不含玩家蓋的建物；「從你的站可以去哪」只是距離權重乘上未服務的人，不是真的路徑或需求；0.4 是畫面上的淡化，不是規則。
 
@@ -14112,9 +14112,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 312. 實景開局：點地圖把起始範圍移過去，卡片寫面積與「之後可以買地擴大」，最近用過的地點列在前面
 
-2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.6（NEXT_PRIORITIES §19 第 7 名）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：派工單保留 312。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-21。NEXT_PRIORITIES §19 第 7 名。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：派工單保留 312。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：實景選點（`RealWorldPicker`）只能拖地圖讓中心對準，說明寫「每邊 16 公里」，玩家不知道一開始有多大、之後能不能變大；每次開新遊戲都要重新找地點。競品是點地圖就把範圍移過去、寫「20.4 km²」與「之後可以擴大」、已下載的城市列在前面。
+**為什麼**：實景選點（`RealWorldPicker`）只能拖地圖讓中心對準，說明寫「每邊 16 公里」，玩家不知道一開始有多大、之後能不能變大；每次開新遊戲都要重新找地點。
 
 **規則**（GamePresentation 的 `RealWorldStartArea`、`RecentStartPlaces`；App 只畫）：
 1. **框**：起始範圍照決策 167 決定：台灣框內的地點是起手那一塊地塊（`RealWorldExpansion.start`），其他地方是 16 km 的整張地圖。四個角（`corners`，西北起順時針）用遊戲鋪世界的同一個 Web Mercator 算（`RealWorldFrame`），App 不再自己用 `MKMapPoint` 算一份。畫法沿用購地卡選中地塊的框（決策 160、`MapArt.drawMapExpansion`）：`Palette.metroGreen` 虛線（寬 3、虛線 8／5）、同色 18% 的底。原本的暖色底、深藍實線不用了。
@@ -14127,7 +14127,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **「用我的位置」**：要 CoreLocation 與 Info.plist 的用途字串，App Store 的隱私標籤要更新（App Store Connect 是作者的事）。等作者決定，寫在 `docs/HANDOFF.md` §3。
   - **後來**（2026-10-22）：作者交給遊戲規劃決定，規劃決定做，見決策 335（`docs/decisions/335.md`）。隱私標籤不用加「位置」：位置只在裝置上用來移框，不傳出去。
 - **「已下載的地點」**：存檔的摘要（`SaveSummary`）沒有記錨點，要列出存檔的地點得讀每一個存檔或改摘要的格式。最近用過已經涵蓋「上次玩的地方」，所以先不做。
-- 公司名稱放在同一張卡（研究 4.6 的三步）：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
+- 公司名稱放在同一張卡：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
 
 **參考對照**（a91453/railway-reference-private b3af6d8）：
 
