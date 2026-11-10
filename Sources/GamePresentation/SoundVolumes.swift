@@ -13,7 +13,7 @@ extension SoundCue {
     public var category: SoundCategory {
         switch self {
         case .arrival: .chimes
-        case .track, .transition, .built, .income, .refused, .warning, .goalMet, .lineAcquired, .ticketIssued, .horn, .newTrain, .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .uiClose: .effects
+        case .track, .transition, .built, .income, .refused, .warning, .goalMet, .lineAcquired, .ticketIssued, .horn, .newTrain, .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen: .effects
         }
     }
 }

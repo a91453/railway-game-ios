@@ -225,14 +225,14 @@ private struct PressSound: ViewModifier {
     }
 }
 
-/// Decision 675: a panel's page opening and closing.
+/// Decision 675: a panel's page opening. Only the opening sounds: a page
+/// change would otherwise ring the old page's close and the new one's open.
 private struct PanelSound: ViewModifier {
     @Environment(GameAudio.self) private var audio: GameAudio?
 
     func body(content: Content) -> some View {
         content
             .onAppear { audio?.play(.uiOpen) }
-            .onDisappear { audio?.play(.uiClose) }
     }
 }
 

@@ -47,13 +47,12 @@ public enum SoundCue: Hashable, Sendable {
     case newTrain
     /// Decision 675, Kenney's Interface Sounds: a button pressed, a switch or
     /// choice changed, a main action confirmed, a removal or back, a panel
-    /// opened and closed. Short, soft and quiet; heard only with the sounds on.
+    /// opened. Short, soft and quiet; heard only with the sounds on.
     case uiTap
     case uiToggle
     case uiConfirm
     case uiCancel
     case uiOpen
-    case uiClose
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -191,7 +190,6 @@ public enum SoundCue: Hashable, Sendable {
         case .uiConfirm: ("kenney-ui-confirm", "wav")
         case .uiCancel: ("kenney-ui-cancel", "wav")
         case .uiOpen: ("kenney-ui-open", "wav")
-        case .uiClose: ("kenney-ui-close", "wav")
         }
     }
 }

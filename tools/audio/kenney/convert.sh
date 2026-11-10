@@ -11,5 +11,4 @@ conv "$is/toggle_001.ogg"         kenney-ui-toggle
 conv "$is/confirmation_001.ogg"   kenney-ui-confirm
 conv "$is/back_002.ogg"           kenney-ui-cancel
 conv "$is/maximize_009.ogg"       kenney-ui-open
-conv "$is/minimize_009.ogg"       kenney-ui-close
 conv "$jg/jingles_PIZZA/jingles_PIZZA02.ogg" kenney-jingle-goal

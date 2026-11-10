@@ -352,7 +352,7 @@ final class SoundCueTests: XCTestCase {
     func testKenneyCuesAreBundledAndCredited() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let source = try String(contentsOf: root.appendingPathComponent("tools/audio/kenney/SOURCE.md"), encoding: .utf8)
-        let cues: [SoundCue] = [.goalMet, .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .uiClose]
+        let cues: [SoundCue] = [.goalMet, .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen]
         for cue in cues {
             let file = "\(cue.resource.name).\(cue.resource.extension)"
             XCTAssertTrue(file.hasPrefix("kenney-"), file)

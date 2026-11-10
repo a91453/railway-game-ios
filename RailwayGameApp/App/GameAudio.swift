@@ -489,7 +489,7 @@ final class GameAudio {
         case .uiToggle: 0.25
         case .uiConfirm: 0.3
         case .uiCancel: 0.25
-        case .uiOpen, .uiClose: 0.2
+        case .uiOpen: 0.2
         // Decision 403 (續二): over the running sound (0.35), a little
         // under a watched train's chime, which comes after it at the stop.
         case .horn: 0.45
@@ -534,7 +534,7 @@ final class GameAudio {
         // Decision 675: one press never sounds twice, and a quick run of
         // presses stays a soft patter.
         case .uiTap, .uiToggle, .uiConfirm, .uiCancel: .milliseconds(90)
-        case .uiOpen, .uiClose: .milliseconds(250)
+        case .uiOpen: .milliseconds(250)
         }
     }
 
@@ -545,7 +545,7 @@ final class GameAudio {
         case .warning: .warning
         case .built, .goalMet, .lineAcquired, .newTrain: .success
         case .arrival, .track, .transition, .income, .ticketIssued, .horn,
-             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .uiClose: nil
+             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen: nil
         }
     }
 

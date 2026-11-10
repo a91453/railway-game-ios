@@ -76,7 +76,6 @@
 		3F4E6EB1D04071F2D7E13A02 /* WebsiteScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */; };
 		3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 905E65E0102E822A86C5ECF8 /* trtc_codes.json */; };
 		4184B0AB3459B06FE09BA962 /* kenney-tank.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 55F952CE174D1B497CCB8868 /* kenney-tank.m3dmodel */; };
-		41E453FF9F4D743249C56196 /* kenney-ui-close.wav in Resources */ = {isa = PBXBuildFile; fileRef = 25936A0CFAFB3628B002D007 /* kenney-ui-close.wav */; };
 		4489962C91DD2C4BB7CB59F9 /* real_buses_Tainan.json in Resources */ = {isa = PBXBuildFile; fileRef = 34B82DF09E631D3E80C62A16 /* real_buses_Tainan.json */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
 		47D1900E3FE4045E389BE121 /* Map3DSigns.png in Resources */ = {isa = PBXBuildFile; fileRef = 782C96DBD713D96F9EADF2EE /* Map3DSigns.png */; };
@@ -339,7 +338,6 @@
 		222E67E267AF07C25D4745C9 /* DataSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourcesView.swift; sourceTree = "<group>"; };
 		22B3E573D7A6A1CB02F279FF /* NextStepChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChip.swift; sourceTree = "<group>"; };
 		24B425FF34AEB844CE2FA815 /* StationMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationMasterView.swift; sourceTree = "<group>"; };
-		25936A0CFAFB3628B002D007 /* kenney-ui-close.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "kenney-ui-close.wav"; sourceTree = "<group>"; };
 		284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */ = {isa = PBXFileReference; path = "rain-typhoon.caf"; sourceTree = "<group>"; };
 		2A779D8969EEF8D75DD97FF5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebsiteScreenshotTests.swift; sourceTree = "<group>"; };
@@ -979,7 +977,6 @@
 			children = (
 				8157EAC6550F3247EE215CEC /* kenney-jingle-goal.wav */,
 				E28390FC7EE0974B5F944298 /* kenney-ui-cancel.wav */,
-				25936A0CFAFB3628B002D007 /* kenney-ui-close.wav */,
 				D2D657C1161282C2624EADB0 /* kenney-ui-confirm.wav */,
 				EBFE12DC5EE8EA16F13F9F9A /* kenney-ui-open.wav */,
 				535E4B77240016D98921A482 /* kenney-ui-tap.wav */,
@@ -1134,7 +1131,6 @@
 				9F2A0CB036624C7848B09486 /* kenney-pine.m3dmodel in Resources */,
 				4184B0AB3459B06FE09BA962 /* kenney-tank.m3dmodel in Resources */,
 				2DCE279E5CF4BD0F98310A87 /* kenney-ui-cancel.wav in Resources */,
-				41E453FF9F4D743249C56196 /* kenney-ui-close.wav in Resources */,
 				D16311050B604A50B31629E3 /* kenney-ui-confirm.wav in Resources */,
 				CC9E99100E350FA519724E36 /* kenney-ui-open.wav in Resources */,
 				74A70319B196A3033145C87B /* kenney-ui-tap.wav in Resources */,
