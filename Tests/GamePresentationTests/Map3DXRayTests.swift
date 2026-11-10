@@ -73,18 +73,24 @@ final class Map3DXRayTests: XCTestCase {
         Map3DXRay.addCars(frame.buried, to: &cars)
         XCTAssertFalse(cars.isEmpty)
         XCTAssertTrue(cars.vertices.allSatisfy { $0.color >> 24 == Map3DXRay.carOpacity })
+        // Decision 674: in the line's colour (a plain train's band), over
+        // the navy rim, the car's top drawn last.
+        let band = try XCTUnwrap(Map3DTrains.colours(of: .plain, palette: .standard).1)
+        XCTAssertTrue(frame.buried.allSatisfy { $0.colour == band })
+        XCTAssertEqual(cars.vertices.last?.color, Map3DXRay.seen(band, Map3DXRay.carOpacity))
+        XCTAssertEqual(cars.vertices.first?.color, Map3DXRay.seen(Map3DXRay.railColour, Map3DXRay.carOpacity))
     }
 
     /// A tunnel deeper than ``Map3DXRay/deepest`` (a mountain's) does not
-    /// show; one under 30 m of a city does.
+    /// show; one under 40 m of a city does (decision 674; 672's 30 m).
     func testOnlyShallowTunnelsShow() {
         func piece(cover: Float, tunnel: Bool = true) -> Map3DTrackCover.Piece {
             Map3DTrackCover.Piece(a: Map3DPoint(0, -cover, 0), b: Map3DPoint(16, -cover, 0), groundA: 0, groundB: 0,
                                   opensBefore: false, opensAfter: false, isTunnel: tunnel)
         }
         XCTAssertTrue(Map3DXRay.shows(piece(cover: 4)))
-        XCTAssertTrue(Map3DXRay.shows(piece(cover: 30)))
-        XCTAssertFalse(Map3DXRay.shows(piece(cover: 31)))
+        XCTAssertTrue(Map3DXRay.shows(piece(cover: 40)), "decision 674: a city's deep subway")
+        XCTAssertFalse(Map3DXRay.shows(piece(cover: 41)))
         XCTAssertFalse(Map3DXRay.shows(piece(cover: 4, tunnel: false)), "track in the open is drawn as it is")
     }
 
@@ -111,8 +117,10 @@ final class Map3DXRayTests: XCTestCase {
     }
 
     /// What seeing underground costs, as the decision's table gives it:
-    /// four triangles a 16 m piece of tunnel, ten a car, one draw call
-    /// each; the lamps' light 20 triangles with the trains' boxes.
+    /// four triangles a 16 m piece of tunnel, one draw call each;
+    /// decision 674: twenty a car (its rim, its sides, its top), and the
+    /// lamps' light 60 triangles with the trains' boxes (the bed and both
+    /// walls of a bore of its own).
     func testWhatSeeingUndergroundCosts() throws {
         let (world, train) = try tunnelWorld()
         let scene = Map3DScene(world: world)
@@ -121,9 +129,9 @@ final class Map3DXRayTests: XCTestCase {
         XCTAssertEqual(xray.mesh.triangleCount, 4 * shown)
         var cars = Map3DMesh()
         Map3DXRay.addCars(frame(world, scene: scene, buried: true).buried, to: &cars)
-        XCTAssertEqual(cars.triangleCount, 4 * 10)
+        XCTAssertEqual(cars.triangleCount, 4 * 20)
         let lamps = frame(world, scene: scene, headlamp: train).boxes.triangleCount - frame(world, scene: scene).boxes.triangleCount
-        XCTAssertEqual(lamps, 2 * Int(Map3DHeadlamp.reach / Map3DHeadlamp.step))
+        XCTAssertEqual(lamps, 6 * Int(Map3DHeadlamp.reach / Map3DHeadlamp.step))
     }
 
     // MARK: Headlamps
@@ -143,8 +151,49 @@ final class Map3DXRayTests: XCTestCase {
         let ahead = added.map { ($0.position - head.nose).dot(head.forward) }
         XCTAssertGreaterThan(ahead.max() ?? 0, Map3DHeadlamp.reach - 2)
         XCTAssertGreaterThan(ahead.min() ?? -1, -0.5, "ahead of the nose")
-        for vertex in added { XCTAssertLessThan(vertex.y, head.rail.y, "on the bed, under the rails") }
+        // Decision 674: on the bed, under the rails, and on the bore's
+        // walls, within the bore.
+        let bed = added.filter { $0.ny > 0.9 }, walls = added.filter { $0.ny < 0.1 }
+        XCTAssertEqual(bed.count + walls.count, added.count)
+        XCTAssertFalse(walls.isEmpty, "a bore of its own: both walls lit")
+        for vertex in bed { XCTAssertLessThan(vertex.y, head.rail.y, "on the bed, under the rails") }
+        for vertex in walls {
+            XCTAssertLessThanOrEqual(abs(vertex.z - head.nose.z), Map3DScene.Builder.boreHalfWidth, "inside the bore")
+            XCTAssertLessThan(vertex.y, head.rail.y + Map3DScene.Builder.boreSpring, "under where the wall turns into the roof")
+        }
+        // Full near the nose, the ballast's own colour by the far end.
+        func along(_ vertex: Map3DVertex) -> Float { (vertex.position - head.nose).dot(head.forward) }
+        let first = try XCTUnwrap(bed.min { along($0) < along($1) }), last = try XCTUnwrap(bed.max { along($0) < along($1) })
+        XCTAssertEqual(first.color, Map3DHeadlamp.colour)
+        XCTAssertEqual(last.color, Map3DPalette.ballast)
+        XCTAssertEqual(Map3DHeadlamp.fade(Map3DHeadlamp.full), 0)
         XCTAssertEqual(frame(world, scene: scene, headlamp: TrainID(rawValue: 99)).boxes.vertices.count, plain.boxes.vertices.count)
+    }
+
+    /// Decision 674: the light reaches a wall only where one stands: not on
+    /// the side a second track shares the bore.
+    func testTheLampsLightOnlyTheWallsThatStand() throws {
+        var world = try GameWorld(bounds: WorldBounds(width: 81_920, height: 32_768),
+                                  economy: GameEconomy(balance: 100_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        // Two tunnels 4.5 m apart (one bore), z = -256 (4 m down).
+        for y: Int64 in [16_384, 16_384 + 288] {
+            let a = try world.buildTrackNode(at: WorldCoordinate(x: 20_480, y: y, z: -256))
+            let b = try world.buildTrackNode(at: WorldCoordinate(x: 40_960, y: y, z: -256))
+            try world.buildTrackEdge(from: a, to: b, structure: .tunnel)
+        }
+        let scene = Map3DScene(world: world)
+        let rails = scene.point(worldX: 30_720, worldY: 16_384, height: 0)
+        let height = try XCTUnwrap(scene.trackCover.railHeight(near: Map3DPoint(rails.x, -4, rails.z), rise: 3))
+        let path = Map3DHeadlamp.path(nose: Map3DPoint(rails.x, height, rails.z), forward: Map3DPoint(1, 0, 0), ahead: [],
+                                      cover: scene.trackCover)
+        let walls = Map3DHeadlamp.walls(along: path, cover: scene.trackCover)
+        XCTAssertEqual(walls.count, path.count)
+        // Heading +x, the left (−across) is −z... whichever: one side
+        // shared, the other a wall, all the way.
+        XCTAssertTrue(walls.allSatisfy { $0.left != $0.right }, "\(walls)")
+        var mesh = Map3DMesh()
+        mesh.addHeadlamp(along: path, walls: walls)
+        XCTAssertEqual(mesh.triangleCount, 4 * (path.count - 1), "the bed and one wall")
     }
 
     /// The path runs on along the track and then straight on, every 4 m.

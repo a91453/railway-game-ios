@@ -49,9 +49,11 @@ public struct Map3DXRay: Sendable {
     // MARK: Look
 
     /// How much rock or earth over the rails still lets them show, metres:
-    /// the reference's 30 m (flat land and a city's subway, not a
-    /// mountain's tunnel).
-    public static let deepest: Float = 30
+    /// flat land and a city's subway, not a mountain's tunnel. Decision
+    /// 674: 40 m, not the reference's 30 m, which hid the Tamsui–Xinyi
+    /// Line from Zhongshan to NTU Hospital (Taipei Main Station 36 m
+    /// under the drawn ground).
+    public static let deepest: Float = 40
     /// The bore's band, as wide as the bore, and the rails' band in it.
     static let boreWidth: Float = 2 * Map3DScene.Builder.boreHalfWidth
     static let railWidth: Float = 1.6
@@ -59,7 +61,9 @@ public struct Map3DXRay: Sendable {
     static let boreOpacity: UInt32 = 110
     static let railOpacity: UInt32 = 190
     static let platformOpacity: UInt32 = 170
-    static let carOpacity: UInt32 = 215
+    /// Decision 674: the cars nearly solid, so a train in a tunnel reads
+    /// at a glance (672's 215 over a white body was a faint ghost).
+    static let carOpacity: UInt32 = 240
     /// The palette's tunnel lining and the player's dark navy; the
     /// platform's own paving and edge (``Map3DPalette``).
     static let boreColour = Map3DPalette.tunnelLining
@@ -104,6 +108,9 @@ public struct Map3DXRay: Sendable {
     /// `snapshot`'s platforms in tunnels, in `scene`'s space: beside their
     /// track on its left, or, where another platform of the same station
     /// runs beside within 15 m, an island halfway between the two.
+    /// Decision 674: beside it at the same level and the same way, not a
+    /// line crossing over or under it (Taipei Main Station's Bannan Line,
+    /// 21 m over the Tamsui–Xinyi Line, was laid an island with it).
     static func platforms(_ snapshot: RailwaySnapshot, in scene: Map3DScene) -> [Platform] {
         let buried = snapshot.platforms.filter { $0.structure == .tunnel && $0.points.count > 1 }
         let lines = buried.map { $0.points.map { scene.point($0) + Map3DScene.Builder.lifted } }
@@ -112,20 +119,40 @@ public struct Map3DXRay: Sendable {
         for (index, platform) in buried.enumerated() {
             let line = lines[index], middle = line[line.count / 2]
             let across = Map3DMesh.acrossDirections(line)[line.count / 2]
-            let partner = buried.indices
+            let way = Self.way(of: line)
+            let beside = buried.indices
                 .filter { $0 != index && buried[$0].platform.station == platform.platform.station }
+                .filter { abs(lines[$0][lines[$0].count / 2].y - middle.y) <= sameLevel && abs(Self.way(of: lines[$0]).dot(way)) >= alongside }
                 .map { (lines[$0][lines[$0].count / 2] - middle).dot(across) }
-                .filter { abs($0) < 15 && abs($0) / 2 - edge >= Map3DScene.Builder.narrowestPlatform }
+                .filter { abs($0) < 15 }
+            let partner = beside
+                .filter { abs($0) / 2 - edge >= Map3DScene.Builder.narrowestPlatform }
                 .min { abs($0) < abs($1) }
             if let partner {
                 let width = abs(partner) - 2 * edge
                 laid.append(Platform(station: platform.platform.station, line: line, offset: partner / 2, width: width))
             } else {
+                // Decision 674: on the side away from a track beside it too
+                // near for an island (Taipei Main's Tamsui–Xinyi Line, its
+                // two tracks 5 m apart), not over that track.
                 let width = Map3DScene.Builder.platformWidth
-                laid.append(Platform(station: platform.platform.station, line: line, offset: -(edge + width / 2), width: width))
+                let side: Float = beside.contains { $0 < 0 } && !beside.contains { $0 > 0 } ? 1 : -1
+                laid.append(Platform(station: platform.platform.station, line: line, offset: side * (edge + width / 2), width: width))
             }
         }
         return laid
+    }
+
+    /// Decision 674: how far up or down, metres, and how near the same way
+    /// (the cosine between them) another platform runs to make an island
+    /// with this one.
+    static let sameLevel: Float = 2
+    static let alongside: Float = 0.9
+
+    /// The level way from a line's first point to its last.
+    static func way(of line: [Map3DPoint]) -> Map3DPoint {
+        guard let first = line.first, let last = line.last else { return .zero }
+        return Map3DPoint(last.x - first.x, 0, last.z - first.z).normalized ?? .zero
     }
 
     /// Decision 672: one underground platform drawn, a plain slab at the
@@ -152,23 +179,41 @@ public struct Map3DXRay: Sendable {
     // MARK: Cars
 
     /// A car in a tunnel this frame, as ``Map3DTrains/frame(_:progress:heights:in:models:eye:palette:ringed:reach:buried:headlamp:)``
-    /// finds it: from its back to its front on the rails, and its body's
-    /// colour.
+    /// finds it: from its back to its front on the rails, and its colour
+    /// (decision 674: its line's, else its body's).
     public struct Car: Equatable, Sendable {
         public let back: Map3DPoint
         public let front: Map3DPoint
         public let colour: UInt32
     }
 
+    /// Decision 674: how far the dark rim round a car reaches past it,
+    /// each way and over its roof, metres: the outline the game's flat
+    /// look draws round what it picks out (the 2D map's trains, the
+    /// labels' ink border), here in the tunnels' navy.
+    static let rim: Float = 0.6
+
     /// `cars` as see-through boxes, as long as each car and as wide and
-    /// high as the trains' boxes (``Map3DTrains/carWidth``).
+    /// high as the trains' boxes (``Map3DTrains/carWidth``). Decision 674:
+    /// in the line's colour, nearly solid, its sides a shade darker and
+    /// its top last (nothing here is depth tested, so what is added later
+    /// shows over what came before), over a navy rim a little larger.
     public static func addCars(_ cars: [Car], to mesh: inout Map3DMesh) {
+        let base = Map3DPoint(0, 0.3, 0), height = Map3DTrains.carHeight - 0.3
         for car in cars {
             let length = (car.front - car.back).length
             guard length > 1 else { continue }
+            let middle = (car.front + car.back) * 0.5 + base, forward = car.front - car.back
+            let rim = seen(railColour, carOpacity)
+            mesh.addBox(base: middle - Map3DPoint(0, Self.rim, 0), forward: forward, length: length + 2 * Self.rim,
+                        width: Map3DTrains.carWidth + 2 * Self.rim, height: height + 2 * Self.rim, top: rim, side: rim, shaded: false)
             let colour = seen(car.colour, carOpacity)
-            mesh.addBox(base: (car.front + car.back) * 0.5 + Map3DPoint(0, 0.3, 0), forward: car.front - car.back, length: length,
-                        width: Map3DTrains.carWidth, height: Map3DTrains.carHeight - 0.3, top: colour, side: colour)
+            mesh.addBox(base: middle, forward: forward, length: length, width: Map3DTrains.carWidth, height: height,
+                        top: colour, side: colour, capped: false)
+            guard let along = Map3DPoint(forward.x, 0, forward.z).normalized else { continue }
+            let f = along * (length / 2), r = Map3DPoint(-along.z, 0, along.x) * (Map3DTrains.carWidth / 2)
+            let top = middle + Map3DPoint(0, height, 0)
+            mesh.addQuad(top + f - r, top - f - r, top - f + r, top + f + r, color: colour)
         }
     }
 }

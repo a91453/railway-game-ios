@@ -69,4 +69,35 @@ final class Map3DTrainLabelsTests: XCTestCase {
         // Decision 337: the nose, where the cab view looks out, is ahead of the label.
         XCTAssertTrue(frame.heads.allSatisfy { ($0.nose - $0.rail).dot($0.forward) > 1 })
     }
+
+    /// Decision 674: a train in a tunnel, seen through the ground, has its
+    /// tag beside it rather than over it: moved square across its way on
+    /// the screen, upwards; by the tag's half width and a gap when it runs
+    /// up the screen, by the gap when it runs across. On the ground, as
+    /// before.
+    func testATunnelsTrainHasItsTagBesideIt() throws {
+        let labels = Map3DTrainLabels(infos: [TrainID(rawValue: 1): info("BR")])
+        let matrix = camera.viewProjection
+        for forward in [Map3DPoint(1, 0, 0), Map3DPoint(0, 0, -1), Map3DPoint(0.6, 0, 0.8)] {
+            func label(inTunnel: Bool) throws -> Map3DTrainLabels.Label {
+                let head = Map3DTrains.Head(train: TrainID(rawValue: 1), point: .zero, forward: forward, inTunnel: inTunnel)
+                return try XCTUnwrap(labels.labels(heads: [head], camera: camera).first)
+            }
+            let open = try label(inTunnel: false), buried = try label(inTunnel: true)
+            XCTAssertEqual(open.x, 200, accuracy: 0.5)
+            XCTAssertEqual(open.y, 400, accuracy: 0.5)
+            let shift = (x: buried.x - open.x, y: buried.y - open.y)
+            let from = try XCTUnwrap(matrix.project(.zero)), to = try XCTUnwrap(matrix.project(forward * 10))
+            var way = (x: (to.x - from.x) * 200, y: -(to.y - from.y) * 400)
+            let length = (way.x * way.x + way.y * way.y).squareRoot()
+            way = (way.x / length, way.y / length)
+            let off = (shift.x * shift.x + shift.y * shift.y).squareRoot()
+            XCTAssertEqual(shift.x * way.x + shift.y * way.y, 0, accuracy: 0.5, "square across its way")
+            XCTAssertLessThanOrEqual(shift.y, 0.01, "upwards")
+            XCTAssertGreaterThanOrEqual(off, Map3DTrainLabels.tagGap - 0.5)
+            let across = abs(way.y) // 1 when it runs up the screen
+            XCTAssertEqual(off, across * (Map3DTrainLabels.tagHalfWidth + Map3DTrainLabels.tagGap) + abs(way.x) * Map3DTrainLabels.tagGap,
+                           accuracy: 1)
+        }
+    }
 }
