@@ -19,7 +19,7 @@
 
 ## 美術審查後改了什麼（2026-10-24）
 
-審查是 session_01T1XU 做的，總覽在 `claude/art-review-1158:docs/game-center/review/overview.png`。
+審查是 session_01T1XU 做的，總覽在 a91453/railway-assets-private `game-art-previews/docs/art/game-center-achievements-review-2026-10-24/overview.png`。
 
 - 輸出改成 1024×1024。
 - 拿掉最外圈 30 px 的藏青，圖示放大約 13%。
@@ -43,7 +43,7 @@
 - 多角經營：購物袋上一顆星（原本像公事包或急救箱）。
 - 轉乘：兩條線的兩端收在圓面裡，不碰綠圈。
 
-第二輪審查（session_01XHRSea，`claude/art-review-1158:docs/game-center/review/round2.png`）之後：
+第二輪審查（session_01XHRSea，a91453/railway-assets-private `game-art-previews/docs/art/game-center-achievements-review-2026-10-24/round2.png`）之後：
 - 轉乘：改成路線圖的轉乘站記號，一個白底、藏青粗框的膠囊形站體，一條水平線、一條斜線穿過它，兩端都接到圓面邊緣（原本的橢圓加六根輻條像蜘蛛或雪花，斷在站外的版本像太陽）。
 - 環狀線：兩條軌道圍成一圈，枕木畫在兩軌之間（原本伸出外面，像晶片針腳）。
 - 企業集團：摩天輪是主體，百貨和飯店小小地放在下面。
