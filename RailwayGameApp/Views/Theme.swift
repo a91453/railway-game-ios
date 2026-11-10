@@ -123,6 +123,7 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(MotionRule.press.running(reduceMotion: reduceMotion)?.animation, value: configuration.isPressed)
             .contentShape(shape)
+            .pressSound(.uiToggle, isPressed: configuration.isPressed)
     }
 }
 
@@ -140,6 +141,7 @@ struct TouchTargetButtonStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.5 : 1)
             .touchTarget(around: size, reach: reach)
+            .pressSound(.uiTap, isPressed: configuration.isPressed)
     }
 }
 
@@ -203,10 +205,42 @@ struct ThemeProminentButtonStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(MotionRule.press.running(reduceMotion: reduceMotion)?.animation, value: configuration.isPressed)
             .contentShape(shape)
+            .pressSound(isDestructive ? .uiCancel : .uiConfirm, isPressed: configuration.isPressed)
+    }
+}
+
+/// Decision 675: plays a Kenney interface sound (``SoundCue``) as a button
+/// goes down, through the app's ``GameAudio``, which keeps to the sound
+/// switch and volumes and to the silent switch. Nothing plays where the
+/// environment holds no audio (previews, tests).
+private struct PressSound: ViewModifier {
+    let cue: SoundCue
+    let isPressed: Bool
+    @Environment(GameAudio.self) private var audio: GameAudio?
+
+    func body(content: Content) -> some View {
+        content.onChange(of: isPressed) { _, pressed in
+            if pressed { audio?.play(cue) }
+        }
+    }
+}
+
+/// Decision 675: a panel's page opening and closing.
+private struct PanelSound: ViewModifier {
+    @Environment(GameAudio.self) private var audio: GameAudio?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { audio?.play(.uiOpen) }
+            .onDisappear { audio?.play(.uiClose) }
     }
 }
 
 extension View {
+    func pressSound(_ cue: SoundCue, isPressed: Bool) -> some View {
+        modifier(PressSound(cue: cue, isPressed: isPressed))
+    }
+
     /// A flat card in ``Theme`` colours: ``Theme/panel`` with a
     /// ``Theme/panelBorder`` edge, so text on it keeps its stated contrast
     /// even over glass.
@@ -407,6 +441,7 @@ private struct PanelTitle: ViewModifier {
     func body(content: Content) -> some View {
         let placement = PanelTitlePlacement.place(compactHeight: verticalSizeClass == .compact)
         content
+            .modifier(PanelSound())
             // Kept in both places: the back button of the page pushed
             // from this one reads it.
             .navigationTitle(Text(verbatim: title))

@@ -45,6 +45,15 @@ public enum SoundCue: Hashable, Sendable {
     /// A model new to the fleet came ashore (decision 566): a short
     /// fanfare on the station chime's pentatonic scale, drum taps under it.
     case newTrain
+    /// Decision 675, Kenney's Interface Sounds: a button pressed, a switch or
+    /// choice changed, a main action confirmed, a removal or back, a panel
+    /// opened and closed. Short, soft and quiet; heard only with the sounds on.
+    case uiTap
+    case uiToggle
+    case uiConfirm
+    case uiCancel
+    case uiOpen
+    case uiClose
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -171,11 +180,18 @@ public enum SoundCue: Hashable, Sendable {
         case .income: ("coins", "wav")
         case .refused: ("refused", "wav")
         case .warning: ("warning", "wav")
-        case .goalMet: ("goal-met", "wav")
+        // Decision 675: Kenney's short jingle (`tools/audio/kenney/SOURCE.md`).
+        case .goalMet: ("kenney-jingle-goal", "wav")
         case .lineAcquired: ("line-acquired", "wav")
         case .ticketIssued: ("ticket-issued", "wav")
         case .horn(let horn): horn.resource
         case .newTrain: ("new-train", "wav")
+        case .uiTap: ("kenney-ui-tap", "wav")
+        case .uiToggle: ("kenney-ui-toggle", "wav")
+        case .uiConfirm: ("kenney-ui-confirm", "wav")
+        case .uiCancel: ("kenney-ui-cancel", "wav")
+        case .uiOpen: ("kenney-ui-open", "wav")
+        case .uiClose: ("kenney-ui-close", "wav")
         }
     }
 }

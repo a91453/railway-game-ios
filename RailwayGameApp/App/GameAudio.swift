@@ -475,12 +475,21 @@ final class GameAudio {
         case .warning: 0.45
         // Decision 256: as loud as a watched train's chime, which it
         // shares its phrase with.
-        case .goalMet: 0.55
+        // Decision 675: Kenney's jingle is a plucked tune; a little softer.
+        case .goalMet: 0.45
         // Decision 315: as loud as the goal-met tune.
         case .lineAcquired: 0.55
         case .ticketIssued: 0.5
         // Decision 566: as loud as the line-acquired tune.
         case .newTrain: 0.55
+        // Decision 675: the button sounds sit well under the game's own
+        // (a click is pressed again and again), the jingle's file is the
+        // goal-met tune's.
+        case .uiTap: 0.22
+        case .uiToggle: 0.25
+        case .uiConfirm: 0.3
+        case .uiCancel: 0.25
+        case .uiOpen, .uiClose: 0.2
         // Decision 403 (續二): over the running sound (0.35), a little
         // under a watched train's chime, which comes after it at the stop.
         case .horn: 0.45
@@ -522,6 +531,10 @@ final class GameAudio {
         // Decision 403 (續二): a tap while the horn still sounds blows it
         // again, but not faster than about two blows a second.
         case .horn: .milliseconds(450)
+        // Decision 675: one press never sounds twice, and a quick run of
+        // presses stays a soft patter.
+        case .uiTap, .uiToggle, .uiConfirm, .uiCancel: .milliseconds(90)
+        case .uiOpen, .uiClose: .milliseconds(250)
         }
     }
 
@@ -531,7 +544,8 @@ final class GameAudio {
         case .refused: .error
         case .warning: .warning
         case .built, .goalMet, .lineAcquired, .newTrain: .success
-        case .arrival, .track, .transition, .income, .ticketIssued, .horn: nil
+        case .arrival, .track, .transition, .income, .ticketIssued, .horn,
+             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .uiClose: nil
         }
     }
 
