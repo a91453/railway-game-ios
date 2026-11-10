@@ -2713,6 +2713,7 @@
 
 | 事項 | 狀態 | 在哪裡 |
 | --- | --- | --- |
+| 作者 Mac 上的本地五 AI 工作室（不是遊戲功能） | 研究 session ORCHESTRA-STUDY 2026-11-10 寫完手冊與工具，作者說「可以，放 assets-private，HANDOFF 開 PR」。結論：Orchestra 開五個 session（兩個 Claude、兩個 Codex 各用自己的帳號、一個 Antigravity），缺的認領、三輪上限、git hook 由 `studio.py` 補；本地模型用 Ollama（`qwen3.5:9b`、`gemma4:26b`），只當唯讀的第二意見；Antigravity 用它官方的 hooks 接上 Orchestra 的自動投遞，審批不略過。**Mac 上全部沒有實測**，作者回家照手冊的 D 節、F.10、G.7 驗收。還沒做：讀 Maestro 的原始碼（Orchestra 跑不順時第一個試的替代品）；請 Orchestra 上游替 Antigravity 加活動回報。手冊寫了作者的帳號配置與本機路徑，所以不放這個公開的 repository。雲端 session 照舊工作，工作室的 AI 不 push、不合併、不碰 TestFlight | `a91453/railway-assets-private` 的 `local-studio-2026-11-10/`（`README.md` 先讀），#1579 |
 | 行車規則統一，高鐵例外 | **固定規則**（作者 2026-11-05：「多出來的車回機廠做成通用 然後如果其他捷運遇到要改規則也盡量統一 高鐵就當例外」）。GameCore 的派車、進出機廠、閉塞、跳站、環線班次是所有線共用的一套規則；某條線卡住時，先改那條線的資料（股道、機廠、班表、停站），要改規則就寫成所有線通用的條件（例如「多出來的車」「有可達的機廠」），不用線的 ID 或「機捷」「文湖線」特判。捷運、輕軌、台鐵支線都照這條。**例外只有高鐵**：高鐵示範照決策 197 關掉行車控制、用決策 228 的讓車規則，之後高鐵需要的特別規則也可以只套在高鐵。第一個照這條做的是決策 609（多出來的車回最近的機廠，TYMC-EXPRESS-B） | 決策 197、228、609 |
 | TestFlight 說明與這版新增的結尾 | **固定規則**（作者 2026-11-05：「每一則我都會看不要再寫了」「寫謝謝就好」）。`.github/testflight-whats-new.md` 與 App 內「這版新增」的結尾只寫「謝謝！」（英文 "Thank you!"），不寫「每一則我都會看」，也不寫回報問題與附上畫面的說明 | `.github/testflight-whats-new.md`、`Sources/GamePresentation/WhatsNew.swift` |
 | 車流與路人照號誌停走 | 作者 2026-11-05：「號誌輪替排進114.1之後 寫進md」。號誌已會輪替（決策 429、445），剩車與人看燈；做法參考 bumpinto-world，只讀不抄 | §2.0「第 48 任的現況」、[BUMPINTO_WORLD_2026-11-05.md](research/BUMPINTO_WORLD_2026-11-05.md) |
