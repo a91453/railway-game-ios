@@ -581,6 +581,15 @@
     - 這類要在模擬器或實機看的外觀改動，之後先問作者要不要交給 Mac 本機做，再決定派不派雲端。
   - 號碼：決策 676 已佔用、677 留給 Mac 接手 LIQUIDGLASS 的 session，**下一個 678**。
   - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
+- **11-11 04:10 UTC 補充：派了四個雲端 session**（作者睡前：「那你判斷哪些可以先在雲端做的／Mac還在改之前的liquid glass／你這邊也同步開幾個適合雲端的去做」；先前「我說可以派之前先不派」到此解除）。四個都在第 1 層、都帶 `source_url`，模型照 §1.1 的 11-11 那條。派工單在各 session 的開頭，摘要在 #1579 留言 6786741855。
+  - **REVIEW-L16** session_01YGNNupozifvTzHdaz6hs68：審查 #1986–#2031 已合併的程式 PR（規劃粗數 27 點，且已發過 123、124 兩版），只寫 `docs/archive/PR1986_2031_REVIEW_HANDOFF.md`；發現 P1 會立刻通知規劃，當天派修。
+  - **HEALTH-124** session_01YGNNukuAfZWX59qB3uEsuw：照 HEALTH-122 的量法重量，只寫 `docs/research/HEALTH_124_2026-11-11.md`；特別看機捷「簡單＋行車控制」沒發的班與決策 666 的連讓次數。
+  - **CIOPT-7** session_01YGNNuqLntc6Wem467zU1ac（決策 679，只量不改就釋出）：完整 tier 的 pull request 最近 25.2、26.4、27.5 分，每晚完整 run 23–27 分，過了 `CI_MEASURE_2026-11-07.md` 第 6 節「25 分」的線；先量是排隊還是哪一片變長，過線的才改，不跳過不放寬。
+  - **WENHU-UNDER** session_01YGNNumuuqGrusBMJCQ9dLU（決策 678）：文湖線中山國中—大直—松山機場真實隧道段在遊戲裡是河面上的路塹（決策 672 下一步，作者 Mac 截圖），照 `research/LINE_HEIGHTS_2026-11-05.md` 的選項改成地下；先寫會紅的測試，舊存檔不能壞，對其他 13 條線的影響用報告測試前後對照。
+  - **等著派的**：機捷讓路的車連讓好幾站、方向 2、L15-4「A12 重鋪」（等 HEALTH-124 的數字，也免得同時三個完整 tier）；決策 669 老街屋立面比例、駕駛室在隧道裡畫雨絲（要看畫面）。
+  - **iOS 26 之後可以做的外觀小項**：打分在 NEXT_PRIORITIES §26，都排在現有新功能之後，要在模擬器或實機看，留給 Mac 本機做（LIQUIDGLASS 之後先做 App 圖示）。
+  - 號碼：決策 677 Mac 的 LIQUIDGLASS（session_01YGNNumP1xpBTwXqpouPFrE，分支 `claude/liquid-glass-677`）、678 WENHU-UNDER、679 CIOPT-7，**下一個 680**。
+  - 規劃的巡查：每次被叫醒先讀 #1579 新留言；數審查點數：從 #2032 起，滿 30 點或剛發完一版就派 REVIEW-L17。
 
 **第 59 任交第 60 任（2026-11-10 約 23:58 UTC＝台灣 11-11 07:58，session_01YGNNuotpQDktgGusuFc8kz，第 0 層，沒壓縮過）**
 - 換手原因：作者說「封存給新 session 接手」。照這段接手；和下面「第 58 任的現況」不同時以這段為準。這段是照 #1579 與開著的 PR 寫的。
