@@ -396,8 +396,16 @@ private struct TutorialCardSlot: View {
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { bounds = $0 }
         // Review I: turned or resized, the card is placed afresh, not kept
-        // where it stood on the screen before.
-        .onChange(of: bounds.size) { placed = nil }
+        // where it stood on the screen before. Not as its bounds are first
+        // measured: the card is new for each step, and it would forget its
+        // place at once (``TutorialCardPlacement/placesAfresh(boundsFrom:to:)``).
+        .onChange(of: bounds.size) { old, new in
+            let afresh = TutorialCardPlacement.placesAfresh(
+                boundsFrom: TutorialCardPlacement.Size(width: Double(old.width), height: Double(old.height)),
+                to: TutorialCardPlacement.Size(width: Double(new.width), height: Double(new.height))
+            )
+            if afresh { placed = nil }
+        }
         // What is on screen changed: a new screen (a panel opened or closed,
         // the device turned, a button the step asks for came into view)
         // opens the card again to see whether it fits now; the places to tap
