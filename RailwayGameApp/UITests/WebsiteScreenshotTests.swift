@@ -561,7 +561,21 @@ final class WebsiteScreenshotTests: XCTestCase {
             first.waitUntilSettled()
             keep("museum-building-list\(suffix)", app)
             let card = app.buttons["building.kind.railwayMuseum"]
-            XCTAssertTrue(scrollScreen(to: card, in: app, over: first.frame), "The museum's card comes into reach")
+            // A phone on its side shows a row and a half of them, and a
+            // drag begun lower than the cards moves the map under the
+            // tool's card instead (run 42999075894): drag from the first
+            // card's foot to above its head, inside the grid.
+            let row = first.frame
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            for _ in 0..<20 where !(card.exists && card.isHittable && card.frame.maxY <= row.maxY + row.height * 0.6) {
+                origin.withOffset(CGVector(dx: row.midX, dy: row.maxY - 12))
+                    .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: row.midX, dy: row.minY - 30)),
+                           withVelocity: .slow, thenHoldForDuration: 0.3)
+                settle(seconds: 0.5)
+            }
+            let cardReached = card.exists && card.isHittable
+            if !cardReached { keep("museum-building-not-reached\(suffix)", app) }
+            XCTAssertTrue(cardReached, "The museum's card comes into reach")
             card.tap()
             settle(seconds: 2)
             keep("museum-building-card\(suffix)", app)
