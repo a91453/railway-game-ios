@@ -2330,6 +2330,12 @@ struct LinesPanel: View {
                         .foregroundStyle(Theme.warning)
                         .accessibilityIdentifier("line.headway.limit")
                 }
+                // Decision 682: what the trains it buys would do to the line's day.
+                if change.buying > 0, let estimate = memo.purchaseEstimate(
+                    line.id, buying: change.buying, type: change.type, cars: change.cars, headway: staffHeadway, price: change.cost, of: session
+                ) {
+                    purchaseEstimate(estimate, identifier: "line.headway.estimate")
+                }
                 Button {
                     session.changeSelectedLineHeadway(change)
                 } label: {
@@ -2434,6 +2440,33 @@ struct LinesPanel: View {
     /// How often a train should come on `line`, and what that takes: the
     /// trains its round trip needs, their price, and one button that buys,
     /// places and assigns them.
+    /// Decision 682: a day of the line with the trains about to be bought,
+    /// beside its day now.
+    private func purchaseEstimate(_ estimate: TrainPurchaseEstimate, identifier: String) -> some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: estimate.headline(in: language))
+                .font(.footnote.monospacedDigit())
+            if let change = estimate.changeText(in: language) {
+                Text(verbatim: change)
+                    .font(.footnote.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(estimate.tone == .better ? Theme.success : estimate.tone == .worse ? Theme.error : Theme.textSecondary)
+            }
+            if let riders = estimate.ridersText(in: language) {
+                Text(verbatim: riders)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Text(verbatim: estimate.note(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: estimate.spokenText(in: language)))
+        .accessibilityIdentifier(identifier)
+    }
+
     private func staffSection(_ line: ServiceLine) -> some View {
         let language = session.language
         let plan = memo.staffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars, of: session)
@@ -2531,6 +2564,12 @@ struct LinesPanel: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.staff.plan")
+                // Decision 682: what these trains would do to the line's day.
+                if let estimate = memo.purchaseEstimate(
+                    line.id, buying: plan.trains, type: plan.type, cars: plan.cars, headway: staffHeadway, price: plan.cost, of: session
+                ) {
+                    purchaseEstimate(estimate, identifier: "line.staff.estimate")
+                }
                 Button {
                     session.staffSelectedLine(headway: staffHeadway, type: staffType, cars: staffCars)
                 } label: {

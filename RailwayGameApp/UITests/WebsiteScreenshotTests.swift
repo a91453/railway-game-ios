@@ -2107,6 +2107,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("idle-train-banner", app)
     }
 
+    /// Decision 682: where trains are bought, what they would do to the
+    /// line's day. A line two days run, a shorter headway picked (two
+    /// more trains); then a line with no train before the clock has run,
+    /// its fares not yet known. In both languages.
+    func testTrainPurchaseEstimate() {
+        for english in [false, true] {
+            let suffix = english ? "-en" : ""
+            var app = launch(extra: ["-ui-test-world", "buy-estimate"], english: english)
+            var map = app.descendants(matching: .any)["map"].firstMatch
+            XCTAssertTrue(map.appears(within: 60), "The world opens")
+            map.waitUntilSettled()
+            var lines = app.buttons["entry.lines"]
+            lines.waitUntilSettled()
+            lines.tap()
+            var page = app.openLinePage()
+            let picker = app.segmentedControls["line.staff.headway"].firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(picker, in: page), "The headway picker shows")
+            picker.buttons["5"].firstMatch.tap()
+            var estimate = app.descendants(matching: .any)["line.headway.estimate"].firstMatch
+            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
+            let change = app.buttons["line.headway.change"].firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page), "The button under it shows")
+            settle()
+            keep("buy-estimate-more-trains\(suffix)", app)
+            app.terminate()
+
+            app = launch(extra: ["-ui-test-world", "buy-estimate-new"], english: english)
+            map = app.descendants(matching: .any)["map"].firstMatch
+            XCTAssertTrue(map.appears(within: 60), "The world opens")
+            map.waitUntilSettled()
+            lines = app.buttons["entry.lines"]
+            lines.waitUntilSettled()
+            lines.tap()
+            page = app.openLinePage()
+            estimate = app.descendants(matching: .any)["line.staff.estimate"].firstMatch
+            let start = app.buttons["line.staff.start"].firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page), "The buy button shows")
+            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
+            settle()
+            keep("buy-estimate-new-line\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 584, PR-2: the train tool at 海岸, a station of two
     /// platforms on two tracks that do not meet, with 列車 3 off the track
     /// and given 海岸線: the platforms listed, the one on 海岸線's track
