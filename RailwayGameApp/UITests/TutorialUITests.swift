@@ -350,6 +350,20 @@ final class TutorialUITests: XCTestCase {
             // (``testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt``).
             folded.waitUntilSettled()
             folded.tap()
+            // The pill can change its place after it has stood still: at
+            // "Tap Station" on an iPad it stood at (726, 876) for a second,
+            // the touch XCTest sent to its middle, (870, 898), came down on
+            // the map, and the pill was at (94, 104) afterwards (main
+            // cd0fbab's full lane, run 42736226266, and #1999's run
+            // 42523483957, the app's trace both times: "touch began at
+            // (870, 898) view MapGestureView", no "action tutorial.unfold").
+            // A touch that came down beside the pill is no press on it:
+            // press it once more where it stands now. A pill that was
+            // pressed and opened nothing still fails below.
+            if !card.appears(within: 3), folded.exists {
+                folded.waitUntilSettled()
+                folded.tap()
+            }
             XCTAssertTrue(card.appears(within: 10), "The folded card did not open", file: file, line: line)
         }
     }

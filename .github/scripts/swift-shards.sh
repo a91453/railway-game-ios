@@ -795,9 +795,17 @@ selected_pattern() {
 # rest's next three heaviest classes in rest-2 together, 13.8 minutes),
 # Map3DStationExteriorsTests (new) 231, Map3DModelPackLockTests 152,
 # TaoyuanAirportLineTests 107, Map3DSceneRebuildTests 88.
+# Decision 679 (CIOPT-7, 2026-11-11): RealLineRebuildTests (66-106 s) and
+# RealLineListingTests (58-100 s), new since decision 639 and the only two
+# classes the full runs 42915103667 and 42954245069 and the pull request
+# run 42949150339 named as having no weight, take the slowest of those
+# times. Without one, RealLineRebuildTests fell in rest-1 beside
+# Map3DStationExteriorsTests: 754-759 s of tests on a slow runner while
+# rest-2 took 450-584.
 CLASS_WEIGHTS="Map3DStationExteriorsTests:231 Map3DSceneMemoryTests:221
   Map3DModelPackLockTests:152 KaohsiungLightRailDayTests:187
   WenhuLineTests:139 SaveMutationSecondHalfTests:107
+  RealLineRebuildTests:106 RealLineListingTests:100
   TaoyuanAirportLineTests:107 Map3DSceneRebuildTests:88
   Map3DBusesTests:84 RealLineAcquisitionTests:81
   SaveMutationTests:80 Map3DBusLayerTests:79 HighSpeedDemoTests:77
