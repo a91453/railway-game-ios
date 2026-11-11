@@ -533,8 +533,21 @@ final class WebsiteScreenshotTests: XCTestCase {
             }
             app.buttons["menu.tourism"].tap()
             XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
-            XCTAssertTrue(app.staticTexts["tourism.exhibits"].appears(within: 10), "The museum's row says what it shows")
             settle(seconds: 2)
+            keep("museum-sights-top\(suffix)", app)
+            // The list is lazy and a phone on its side shows little of it:
+            // the museum's row, the second, is below (run 42995007804).
+            // Brought up to the middle, clear of the bar over the list.
+            let exhibits = app.staticTexts["tourism.exhibits"]
+            let reached = scrollScreen(to: exhibits, in: app, drags: 12)
+            if !reached { keep("museum-sights-not-reached\(suffix)", app) }
+            XCTAssertTrue(reached, "The museum's row says what it shows")
+            for _ in 0..<6 where exhibits.frame.midY > app.frame.height * 0.6 {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)),
+                           withVelocity: .slow, thenHoldForDuration: 0.3)
+                settle(seconds: 0.5)
+            }
             keep("museum-sights\(suffix)", app)
             app.buttons["tourism.done"].tap()
             XCTAssertTrue(app.buttons["tourism.done"].disappears(within: 10), "The sights close")
@@ -885,6 +898,63 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.follow.station"].appears(within: 10))
             settle(seconds: 3)
             keep("follow-station-too-far", app)
+        }
+    }
+
+    /// Decision 686: driving the followed train by hand from its cab: the
+    /// start button on the follow bar, the handle and the run's figures
+    /// (the game paused, so they stand still), and a run's result.
+    func testManualDrive() {
+        func open3DFollowing(extra: [String] = []) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", "farStops", "-screenshot-follow-train", "-map3D.quality", "high"] + extra)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            let cab = app.buttons["map3D.follow.cab"]
+            XCTAssertTrue(cab.becomesHittable(within: 10))
+            cab.tap()
+            if !cab.isSelectedWithin(5) {
+                XCTAssertTrue(cab.becomesHittable(within: 10))
+                cab.tap()
+            }
+            XCTAssertTrue(cab.isSelectedWithin(5), "The cab view is chosen")
+            return app
+        }
+        do {
+            let app = open3DFollowing()
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10), "A train on a timetable can be driven")
+            settle(seconds: 6)
+            keep("drive-start", app)
+            start.tap()
+            let power = app.buttons["map3D.drive.power"]
+            XCTAssertTrue(power.becomesHittable(within: 10), "The handle shows")
+            for _ in 0..<3 { power.tap() }
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.drive.figures"].firstMatch.appears(within: 5))
+            settle(seconds: 3)
+            keep("drive-power", app)
+            let brake = app.buttons["map3D.drive.brake"]
+            for _ in 0..<7 { brake.tap() }
+            settle(seconds: 2)
+            keep("drive-brake", app)
+            app.buttons["map3D.drive.end"].tap()
+            XCTAssertTrue(start.appears(within: 5), "Giving the handle back brings the start button back")
+        }
+        do {
+            let app = open3DFollowing(extra: ["-screenshot-drive-result"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.done"].becomesHittable(within: 10), "The run's result shows")
+            settle(seconds: 3)
+            keep("drive-result", app)
         }
     }
 
@@ -2168,6 +2238,78 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("idle-train-banner", app)
     }
 
+    /// Decision 682: where trains are bought, what they would do to the
+    /// line's day. A line two days run, a shorter headway picked (two
+    /// more trains); then a line with no train before the clock has run,
+    /// its fares not yet known. In both languages.
+    func testTrainPurchaseEstimate() {
+        for english in [false, true] {
+            let suffix = english ? "-en" : ""
+            var app = launch(extra: ["-ui-test-world", "buy-estimate"], english: english)
+            var map = app.descendants(matching: .any)["map"].firstMatch
+            XCTAssertTrue(map.appears(within: 60), "The world opens")
+            map.waitUntilSettled()
+            var lines = app.buttons["entry.lines"]
+            lines.waitUntilSettled()
+            lines.tap()
+            var page = app.openLinePage()
+            // The page's bar lies over the top of its list: a row under it
+            // counts as on screen and a tap there lands on the bar (the
+            // first runs' recording: the picker still at 15). Every row is
+            // brought below the bar.
+            // The bar's own frame, and the line's name under its buttons.
+            func barBottom() -> CGFloat {
+                let names = app.staticTexts.matching(NSPredicate(format: "label == %@", "Line 1")).allElementsBoundByIndex
+                    .map(\.frame.maxY).filter { $0 < page.frame.midY }
+                return max(app.navigationBars.firstMatch.frame.maxY, names.max() ?? 0) + 4
+            }
+            var bar = barBottom()
+            let change = app.buttons["line.headway.change"].firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page, below: bar, clearOf: .button), "The headway section shows")
+            let five = page.buttons.matching(NSPredicate(format: "label IN %@", ["5 分", "5 min"])).firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(five, in: page, below: bar, clearOf: .button), "The picker offers 5 minutes")
+            five.waitUntilSettled()
+            five.tap()
+            var estimate = app.descendants(matching: .any)["line.headway.estimate"].firstMatch
+            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows over the button")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page, below: bar, clearOf: .button), "The button under it shows")
+            settle()
+            keep("buy-estimate-more-trains\(suffix)", app)
+            var detail = app.descendants(matching: .any)["line.headway.estimate.detail"].firstMatch
+            // Taller than the page on a phone on its side: as much of it
+            // as there is room for.
+            _ = app.dragUntilWhollyOnScreen(detail, in: page, below: bar, drags: 3, clearOf: .button)
+            XCTAssertTrue(detail.exists, "The details show under the button")
+            settle()
+            keep("buy-estimate-more-trains-detail\(suffix)", app)
+            app.terminate()
+
+            app = launch(extra: ["-ui-test-world", "buy-estimate-new"], english: english)
+            map = app.descendants(matching: .any)["map"].firstMatch
+            XCTAssertTrue(map.appears(within: 60), "The world opens")
+            map.waitUntilSettled()
+            lines = app.buttons["entry.lines"]
+            lines.waitUntilSettled()
+            lines.tap()
+            page = app.openLinePage()
+            bar = barBottom()
+            let start = app.buttons["line.staff.start"].firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page, below: bar, clearOf: .button), "The buy button shows")
+            estimate = app.descendants(matching: .any)["line.staff.estimate"].firstMatch
+            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows over the button")
+            settle()
+            keep("buy-estimate-new-line\(suffix)", app)
+            detail = app.descendants(matching: .any)["line.staff.estimate.detail"].firstMatch
+            // Taller than the page on a phone on its side: as much of it
+            // as there is room for.
+            _ = app.dragUntilWhollyOnScreen(detail, in: page, below: bar, drags: 3, clearOf: .button)
+            XCTAssertTrue(detail.exists, "The details show under the button")
+            settle()
+            keep("buy-estimate-new-line-detail\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 584, PR-2: the train tool at 海岸, a station of two
     /// platforms on two tracks that do not meet, with 列車 3 off the track
     /// and given 海岸線: the platforms listed, the one on 海岸線's track
@@ -2601,6 +2743,52 @@ final class WebsiteScreenshotTests: XCTestCase {
         openFromGameMenu("menu.goals", in: app)
         settle(seconds: 3)
         keep("goals-requests", app)
+    }
+
+    /// Decision 683: the city's size and kind at the foot of the goals, on
+    /// a blank new game in both languages and on the real-world demo.
+    func testCityTitleInGoals() {
+        for english in [false, true] {
+            let app = launch(english: english)
+            defer { app.terminate() }
+            let newGame = app.buttons["start.newGame"]
+            XCTAssertTrue(newGame.appears(within: 10))
+            app.bringStartButtonIntoView(newGame)
+            newGame.tap()
+            app.chooseBlankMap()
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
+            shootCityTitle(english ? "city-title-blank-english" : "city-title-blank", in: app)
+        }
+        // A new game in Taipei: the demo has no goals in its menu.
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 30))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let place = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(place, in: app.collectionViews.firstMatch), "Taipei is among the places")
+        place.waitUntilSettled()
+        app.tapMiddle(of: place)
+        let start = app.buttons.matching(identifier: "realWorld.start").firstMatch
+        XCTAssertTrue(start.appears(within: 30))
+        start.waitUntilSettled()
+        start.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        settle()
+        shootCityTitle("city-title-real", in: app)
+    }
+
+    private func shootCityTitle(_ name: String, in app: XCUIApplication) {
+        openFromGameMenu("menu.goals", in: app)
+        let row = app.descendants(matching: .any)["goals.cityTitle"].firstMatch
+        let shown = scrollScreen(to: row, in: app)
+        // Its help is under it: one more drag brings the footer up.
+        dragUp(app)
+        settle(seconds: 1)
+        keep(name, app)
+        XCTAssertTrue(shown, "The city's size and kind come into view in the goals")
     }
 
     /// The lines' reports of the day before (decision 179) and the

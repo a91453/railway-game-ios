@@ -34,7 +34,19 @@ public final class LinePanelMemo {
         let cars: Int
     }
 
+    /// Decision 682: a purchase's estimate, and the hour of the game it
+    /// was worked out in.
+    private struct Purchase: Hashable {
+        let buying: Int
+        let type: TrainType?
+        let cars: Int
+        let headway: Int64
+        let price: Money
+    }
+
     private var key: Key?
+    private var journey: LineJourney??
+    private var purchaseEstimates: [Purchase: (hour: Int64, estimate: TrainPurchaseEstimate?)] = [:]
     private var summaries: [LineServiceSummary]?
     private var routeChoices: [Leg: [LineRoutePreference]] = [:]
     private var journeyText: String??
@@ -78,6 +90,8 @@ public final class LinePanelMemo {
         headwayChanges = [:]
         shortfall = nil
         runningHeadway = nil
+        journey = nil
+        purchaseEstimates = [:]
     }
 
     /// ``GameWorld/lineServiceSummaries(_:in:)``, with the trains on a trip
@@ -164,6 +178,32 @@ public final class LinePanelMemo {
         let change = session.world.lineHeadwayChange(id, headway: headway)
         headwayChanges[headway] = .some(change)
         return change
+    }
+
+    /// ``GameWorld/trainPurchaseEstimate(_:buying:type:cars:headway:price:journey:)``
+    /// (decision 682). Its riders and the line's days move with the clock,
+    /// not with commands: it is worked out again each hour of the game,
+    /// on the line's journey kept for the command.
+    public func purchaseEstimate(
+        _ id: LineID, buying: Int, type: TrainType?, cars: Int, headway: Int64, price: Money, of session: GameSession
+    ) -> TrainPurchaseEstimate? {
+        keep(id, of: session)
+        let purchase = Purchase(buying: buying, type: type, cars: cars, headway: headway, price: price)
+        let hour = session.world.clock.now.seconds / GameTime.secondsPerHour
+        if let kept = purchaseEstimates[purchase], kept.hour == hour { return kept.estimate }
+        let world = session.world
+        let line: LineJourney?
+        if let kept = journey {
+            line = kept
+        } else {
+            line = world.lineJourney(id)
+            journey = .some(line)
+        }
+        let estimate = line.flatMap {
+            world.trainPurchaseEstimate(id, buying: buying, type: type, cars: cars, headway: headway, price: price, journey: $0)
+        }
+        purchaseEstimates[purchase] = (hour, estimate)
+        return estimate
     }
 
     /// ``GameWorld/lineTrainShortfall(_:)``.

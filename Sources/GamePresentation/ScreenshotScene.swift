@@ -400,7 +400,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             for (index, type) in [TrainType.a, .b, .c, .steam, .emu3000].enumerated() {
                 try world.purchaseTrain(named: language.text("Train \(index + 2)", "\(index + 2) 號車"), as: type)
             }
-            try world.placeBuilding(.railwayMuseum, at: PlanPoint(x: 31_000, y: 26_768))
+            try world.placeBuilding(.railwayMuseum, at: PlanPoint(x: 27_000, y: 37_768))
             world.setSpeed(.fast)
             try world.advance(ticks: Int(freightRunSeconds / 600))
         } catch {

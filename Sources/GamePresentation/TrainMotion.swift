@@ -426,6 +426,14 @@ public struct TrainMotion: Sendable {
         return motion
     }
 
+    /// Decision 686: these trains with `runs` in their place, seen when
+    /// these were.
+    func replacing(runs: [Run]) -> TrainMotion {
+        var motion = TrainMotion(runs: runs, samples: samples, second: second, time: time, duration: duration)
+        motion.source = source
+        return motion
+    }
+
     /// How far the glide has gone at `time`: 0 at the tick, 1 once it has
     /// lasted ``duration``.
     public func progress(at time: Double) -> Double {

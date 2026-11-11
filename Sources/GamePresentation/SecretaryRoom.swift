@@ -24,6 +24,9 @@ struct NewsWatch {
     /// The day cash last fell below zero and said so: cash that hovers
     /// about zero crosses it again and again, which is told once in ten days.
     var debtNewsDay: Int64 = -100
+    /// Decision 683: the largest size the city has been seen at, so the
+    /// news says each step up once; `nil` until there is anyone on the map.
+    var cityRank: CityTitle.Rank?
 
     init(world: GameWorld) {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
@@ -41,6 +44,13 @@ struct NewsWatch {
         } ?? false
         announcedTyphoons = Set(world.typhoons(onDay: today).filter { $0.announced <= today }.map(\.start))
         landUnlocked = Self.isLandUnlocked(world)
+        cityRank = Self.cityRank(of: world)
+    }
+
+    /// The size of the city on `world`'s land, or `nil` with no one on it.
+    static func cityRank(of world: GameWorld) -> CityTitle.Rank? {
+        let residents = world.totalResidents()
+        return residents > 0 ? CityTitle.Rank(residents: residents) : nil
     }
 
     /// Whether the company's best day lets it buy another tile of the map
@@ -304,6 +314,20 @@ extension GameSession {
             }
         }
         newsWatch.landUnlocked = unlocked
+
+        // Decision 683: the city reached a larger size. The first size
+        // seen (a map whose land comes in with its first station) is no
+        // step up, and a city that shrinks and grows back says nothing.
+        if let rank = NewsWatch.cityRank(of: world) {
+            if let before = newsWatch.cityRank, rank > before {
+                news.add(day: today, .growth) { CityTitle.promotionText(rank, in: $0) }
+                isMessageKeptOutOfNews = true
+                message = StatusMessage(kind: .success, text: CityTitle.promotionText(rank, in: language))
+                isMessageKeptOutOfNews = false
+                playSound?(.goalMet)
+            }
+            newsWatch.cityRank = max(rank, newsWatch.cityRank ?? rank)
+        }
 
         if today / FinancePeriod.month.days > newsWatch.month {
             newsWatch.month = today / FinancePeriod.month.days

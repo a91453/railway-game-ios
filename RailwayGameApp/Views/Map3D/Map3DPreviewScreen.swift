@@ -96,6 +96,7 @@ struct Map3DPreviewScreen: View {
     var body: some View {
         let language = DisplayLanguage.app
         let driver = self.driver
+        let driving = session.manualDrivePhase
         let ambient = ambientScreen?.ambient
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
@@ -225,13 +226,19 @@ struct Map3DPreviewScreen: View {
                         .padding(.top, 8)
                         .transition(.card(from: .top, reduceMotion: reduceMotion))
                 }
-                if let prompt = driver?.promptText(in: language) {
+                if driving == nil, let prompt = driver?.promptText(in: language) {
                     Map3DDriverPrompt(text: prompt)
                         .padding(.top, 8)
                         .transition(.card(from: .top, reduceMotion: reduceMotion))
                 }
                 Spacer()
-                if let driver {
+                if driving != nil {
+                    // Decision 686: the handle and the run's figures, in
+                    // the speed card's place.
+                    Map3DDrivePanel(session: session)
+                        .padding(.bottom, 8)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                } else if let driver {
                     HStack {
                         Map3DSpeedCard(hud: driver)
                         Spacer(minLength: 0)
@@ -273,6 +280,7 @@ struct Map3DPreviewScreen: View {
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.cabinFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.ferryFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driving)
             .ambientHidden(ambient != nil)
             // Decision 414: the idle mode's veil and caption, and its tap.
             if ambient != nil, let ambientScreen, let endAmbient {
@@ -339,8 +347,10 @@ struct Map3DPreviewScreen: View {
             FrameTimeRecorder.shared.show3D(true)
             let audio = audio
             feed.garbageTruckSound = { [weak audio] sound in audio?.setGarbageTruck(sound) }
+            feed.manualDrive = { [weak session] now in session?.stepManualDrive(at: now) }
         }
         .onDisappear {
+            session.endManualDrive()
             session.setMap3DOpen(false)
             FrameTimeRecorder.shared.show3D(false)
             // Decision 460: a device of little memory does not keep the
@@ -1120,6 +1130,9 @@ final class Map3DTrainFeed {
     /// Decision 585 PR-4 (FERRYFOLLOW): the boat the camera follows, always
     /// drawn whole, its way the ferries' ahead.
     var followedFerry: FerryBoatID?
+    /// Decision 686: steps the run the player drives by hand to the
+    /// frame's time and says where its train is drawn; `nil` for none.
+    var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double)?)?
     /// Decision 437: told the evening garbage truck's tune as heard from
     /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
     /// acts only on a change), `nil` when there is none near.
@@ -1217,6 +1230,13 @@ final class Map3DTrainFeed {
                reach: Map3DModelReach) -> Map3DTrains.Frame {
         let now = Date().timeIntervalSinceReferenceDate
         let progress = motion.isMoving ? motion.progress(at: now) : 1
+        // Decision 686: the train driven by hand where the player has
+        // driven it, at its track's heights there.
+        var motion = motion, heights = heights
+        if let driven = manualDrive?(now) {
+            motion = motion.driving(on: driven.track, metres: driven.metres)
+            heights = heights.driving(on: driven.track, metres: driven.metres, length: driven.length)
+        }
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
                                       ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain)
         // Decision 339: and the real timetables' trains, on their own track.
@@ -2238,6 +2258,30 @@ private struct Map3DFollowBar: View {
     /// Decision 403 (續二): the horn (the train's own, by its kind) and the
     /// photo, round buttons beside the stop.
     @ViewBuilder private var actions: some View {
+        // Decision 686: takes the handle of a train on a timetable.
+        if session.manualDrivePhase == nil, session.canManualDrive {
+            Button {
+                UITestTrace.action("map3D.drive.start")
+                session.startManualDrive()
+                // The screenshot review's look at a run's result.
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
+                #endif
+            } label: {
+                Text(verbatim: ManualDrive.startText(in: session.language))
+                    .font(.caption.weight(.bold))
+                    .fixedSize()
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 26)
+                    .background(Theme.primary, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .foregroundStyle(Theme.onPrimary)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text(verbatim: ManualDrive.startHint(in: session.language)))
+            .accessibilityIdentifier("map3D.drive.start")
+        }
         Button {
             session.soundHorn()
         } label: {
@@ -2679,6 +2723,199 @@ private struct Map3DSpeedCard: View {
                 .background(Theme.panel, in: Circle())
                 .overlay(Circle().strokeBorder(ring, lineWidth: size * 0.12))
         }
+    }
+}
+
+/// Decision 686: while the player drives the followed train by hand: the
+/// handle's position, the speed, the limit and how far the stopping point
+/// is, with the two buttons that move the handle; at the stop, the run's
+/// marks. Reads the run's figures itself, so only this is laid out again
+/// as they change.
+private struct Map3DDrivePanel: View {
+    let session: GameSession
+
+    var body: some View {
+        let language = session.language
+        let reading = session.manualDriveReading ?? .waiting
+        HStack(alignment: .bottom, spacing: 9) {
+            if let result = reading.result {
+                Spacer(minLength: 0)
+                resultCard(result.text(in: language), language: language)
+                Spacer(minLength: 0)
+            } else {
+                figures(reading, language: language)
+                Spacer(minLength: 0)
+                handle(reading, language: language)
+            }
+        }
+        .sensoryFeedback(.selection, trigger: reading.notch)
+        .sensoryFeedback(trigger: reading.result) { _, result in
+            result.map { $0.outcome == .stopped ? SensoryFeedback.success : SensoryFeedback.error }
+        }
+    }
+
+    /// The handle's mark on its colour: power the primary, braking the
+    /// warning (the emergency brake the error), neutral plain.
+    private func mark(_ notch: ManualDrive.Notch) -> some View {
+        let colours: (Color, Color) = notch.isEmergency ? (Theme.error, Theme.onError)
+            : notch.step > 0 ? (Theme.primary, Theme.onPrimary)
+            : notch.step < 0 ? (Theme.warning, Theme.onPrimary) : (Theme.chip, Theme.textPrimary)
+        return Text(verbatim: notch.mark)
+            .font(.headline.weight(.heavy))
+            .foregroundStyle(colours.1)
+            .frame(minWidth: 44, minHeight: 34)
+            .background(colours.0, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    @ViewBuilder private func figures(_ reading: ManualDrive.Reading, language: DisplayLanguage) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            if reading.phase == .waiting {
+                Text(verbatim: ManualDrive.waitingText(in: language))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+            } else {
+                mark(reading.notch)
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(verbatim: "\(reading.speed)")
+                        .font(.title2.weight(.heavy))
+                        .foregroundStyle(reading.isOverspeed ? Theme.error : Theme.textPrimary)
+                    Text(verbatim: "km/h")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                if let limit = reading.limit {
+                    Text(verbatim: "\(limit)")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(Theme.textPrimary)
+                        .minimumScaleFactor(0.6)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.panel, in: Circle())
+                        .overlay(Circle().strokeBorder(Theme.error, lineWidth: 4))
+                }
+                if let distance = reading.distanceText(in: language) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(verbatim: ManualDrive.stopLabel(in: language))
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: distance)
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                }
+            }
+        }
+        .monospacedDigit()
+        .fixedSize()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(minHeight: 48)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: reading.phase == .waiting ? ManualDrive.waitingText(in: language) : reading.label(in: language)))
+        .accessibilityIdentifier("map3D.drive.figures")
+        .hudFrameMark("map3D.drive.figures")
+    }
+
+    private func handle(_ reading: ManualDrive.Reading, language: DisplayLanguage) -> some View {
+        let waits = reading.phase != .driving
+        return HStack(spacing: 8) {
+            Button {
+                session.endManualDrive()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.heavy))
+                    .frame(width: 26, height: 26)
+                    .background(Theme.chip, in: Circle())
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: ManualDrive.endText(in: language)))
+            .accessibilityIdentifier("map3D.drive.end")
+            lever(ManualDrive.brakeText(in: language), symbol: "chevron.down", fill: Theme.chip, ink: Theme.textPrimary,
+                  identifier: "map3D.drive.brake", up: false)
+                .disabled(waits || reading.notch == .emergency)
+            lever(ManualDrive.powerText(in: language), symbol: "chevron.up", fill: Theme.primary, ink: Theme.onPrimary,
+                  identifier: "map3D.drive.power", up: true)
+                .disabled(waits || reading.notch == .fullPower)
+        }
+        .opacity(waits ? 0.6 : 1)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .hudFrameMark("map3D.drive.handle")
+    }
+
+    /// One of the handle's two buttons: a step towards power or the brake
+    /// at each press.
+    private func lever(_ title: String, symbol: String, fill: Color, ink: Color, identifier: String, up: Bool) -> some View {
+        Button {
+            session.moveManualDriveNotch(up: up)
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: symbol)
+                    .font(.subheadline.weight(.heavy))
+                Text(verbatim: title)
+                    .font(.caption.weight(.bold))
+                    .fixedSize()
+            }
+            .foregroundStyle(ink)
+            .frame(minWidth: 68, minHeight: 52)
+            .background(fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func resultCard(_ text: ManualDrive.ResultText, language: DisplayLanguage) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            if let grade = text.grade, let total = text.total {
+                VStack(spacing: 0) {
+                    Text(verbatim: grade)
+                        .font(.largeTitle.weight(.heavy))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: ManualDrive.marksText(total, in: language))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: text.title)
+                    .font(.headline.weight(.heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                ForEach(text.lines, id: \.self) { line in
+                    Text(verbatim: line)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+            Button {
+                session.endManualDrive()
+            } label: {
+                Text(verbatim: ManualDrive.doneText(in: language))
+                    .font(.subheadline.weight(.bold))
+                    .fixedSize()
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 36)
+                    .background(Theme.primary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .foregroundStyle(Theme.onPrimary)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("map3D.drive.done")
+        }
+        .monospacedDigit()
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("map3D.drive.result")
+        .hudFrameMark("map3D.drive.result")
     }
 }
 

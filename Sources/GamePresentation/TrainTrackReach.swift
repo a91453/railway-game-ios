@@ -53,7 +53,9 @@ enum TrainTrackReach {
     /// first: along the edge it is on, then the way it is to go
     /// (``GameWorld/pathAhead(of:)``), then the lowest numbered way on.
     /// Shorter where the track ends; empty for a train not placed.
-    static func front(of train: Train, in world: GameWorld) -> [WorldCoordinate] {
+    /// Decision 686: or `ahead` world units of it, for a run driven by
+    /// hand (``ManualDriveTrack``).
+    static func front(of train: Train, in world: GameWorld, ahead: Int64 = Self.ahead) -> [WorldCoordinate] {
         guard let position = train.position, let head = world.location(of: position),
               case .onEdge(var traversal, var start) = position else { return [] }
         var points = [head.position]

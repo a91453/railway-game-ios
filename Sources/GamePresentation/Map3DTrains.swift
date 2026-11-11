@@ -23,7 +23,7 @@ public enum Map3DTrains {
     /// The heights of the trains' bodies at a tick, to put the 2D cars at:
     /// ``RailwaySnapshot/Train/body`` in world units.
     public struct Heights: Sendable {
-        let bodies: [TrainID: [WorldCoordinate]]
+        private(set) var bodies: [TrainID: [WorldCoordinate]]
         /// Each train's type code (``TrainTypeSpec/code``), `""` for none
         /// (decision 230: which model it is drawn with).
         let types: [TrainID: String]
@@ -58,6 +58,13 @@ public enum Map3DTrains {
             }
             self.bodies = bodies
             self.types = types
+        }
+
+        /// Decision 686: these with train `id`'s heights read from `body`.
+        func replacing(body: [WorldCoordinate], of id: TrainID) -> Heights {
+            var heights = self
+            heights.bodies[id] = body
+            return heights
         }
 
         func type(of id: TrainID) -> String {

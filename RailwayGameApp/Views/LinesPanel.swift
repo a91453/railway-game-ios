@@ -2330,6 +2330,13 @@ struct LinesPanel: View {
                         .foregroundStyle(Theme.warning)
                         .accessibilityIdentifier("line.headway.limit")
                 }
+                // Decision 682: what the trains it buys would do to the line's day.
+                let estimate = change.buying > 0 ? memo.purchaseEstimate(
+                    line.id, buying: change.buying, type: change.type, cars: change.cars, headway: staffHeadway, price: change.cost, of: session
+                ) : nil
+                if let estimate {
+                    purchaseEstimate(estimate, identifier: "line.headway.estimate")
+                }
                 Button {
                     session.changeSelectedLineHeadway(change)
                 } label: {
@@ -2347,6 +2354,9 @@ struct LinesPanel: View {
                 // Decision 376: lesson 6's guide.
                 .tutorialPanelTarget(.headwayChange)
                 .id(TutorialTarget.headwayChange)
+                if let estimate {
+                    purchaseEstimateDetail(estimate, identifier: "line.headway.estimate.detail")
+                }
             }
         } header: {
             Text(verbatim: language.text("Headway and trains", "班距與列車數"))
@@ -2434,6 +2444,36 @@ struct LinesPanel: View {
     /// How often a train should come on `line`, and what that takes: the
     /// trains its round trip needs, their price, and one button that buys,
     /// places and assigns them.
+    /// Decision 682: over the button that buys, in one line, what the
+    /// line would make a day with the trains and how that compares with
+    /// now. On a phone on its side the page is a few lines high: the
+    /// headway, this line and the button fit it together.
+    private func purchaseEstimate(_ estimate: TrainPurchaseEstimate, identifier: String) -> some View {
+        let language = session.language
+        return Text(verbatim: estimate.summary(in: language))
+            .font(.footnote.weight(.semibold).monospacedDigit())
+            .foregroundStyle(estimate.tone == .better ? Theme.success : estimate.tone == .worse ? Theme.error : Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier(identifier)
+    }
+
+    /// Decision 682: under the button, the estimate's fares and running
+    /// cost, how soon the trains pay for themselves, the riders, and what
+    /// to make of it.
+    private func purchaseEstimateDetail(_ estimate: TrainPurchaseEstimate, identifier: String) -> some View {
+        let texts = estimate.detailTexts(in: session.language)
+        return VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(texts.enumerated()), id: \.offset) { _, text in
+                Text(verbatim: text)
+            }
+        }
+        .font(.caption.monospacedDigit())
+        .foregroundStyle(Theme.textSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier)
+    }
+
     private func staffSection(_ line: ServiceLine) -> some View {
         let language = session.language
         let plan = memo.staffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars, of: session)
@@ -2531,6 +2571,13 @@ struct LinesPanel: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.staff.plan")
+                // Decision 682: what these trains would do to the line's day.
+                let estimate = memo.purchaseEstimate(
+                    line.id, buying: plan.trains, type: plan.type, cars: plan.cars, headway: staffHeadway, price: plan.cost, of: session
+                )
+                if let estimate {
+                    purchaseEstimate(estimate, identifier: "line.staff.estimate")
+                }
                 Button {
                     session.staffSelectedLine(headway: staffHeadway, type: staffType, cars: staffCars)
                 } label: {
@@ -2552,6 +2599,9 @@ struct LinesPanel: View {
                 // Decision 125: the tutorial's first line starts here.
                 .tutorialPanelTarget(.staffLine)
                 .id(TutorialTarget.staffLine)
+                if let estimate {
+                    purchaseEstimateDetail(estimate, identifier: "line.staff.estimate.detail")
+                }
                 // Decision 180: the trains already on the line, into this type and cars.
                 if !line.assignedTrains.isEmpty {
                     Button {

@@ -36,6 +36,58 @@ struct GoalsPanel: View {
     }
 }
 
+/// Decision 683: what the city on the map is, its size by its residents and
+/// its kind by its jobs, and how many more residents the next size needs.
+/// Read when the panel opens and once a game day, not every tick: it reads
+/// the whole land.
+struct CityTitleSection: View {
+    let session: GameSession
+    @State private var title: CityTitle?
+    @State private var isRead = false
+
+    private var today: Int64 {
+        session.world.clock.now.seconds / GameTime.secondsPerDay
+    }
+
+    var body: some View {
+        let language = session.language
+        Section {
+            if let title {
+                Label {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: title.headline(in: language))
+                            .fontWeight(.semibold)
+                        Text(verbatim: title.detail(in: language))
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                } icon: {
+                    Image(systemName: "building.2.fill")
+                        .foregroundStyle(Theme.primary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("goals.cityTitle")
+            } else if isRead {
+                Text(verbatim: CityTitle.emptyText(in: language))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("goals.cityTitle")
+            } else {
+                ProgressView()
+            }
+        } header: {
+            Text(verbatim: language.text("The city", "城市"))
+        } footer: {
+            Text(verbatim: CityTitle.helpText(in: language))
+        }
+        .task(id: today) {
+            title = CityTitle(world: session.world)
+            isRead = true
+        }
+    }
+}
+
 /// The goals panel's sections, also shown in the economy panel.
 struct GoalsSections: View {
     let session: GameSession
@@ -144,6 +196,8 @@ struct GoalsSections: View {
             }
             TodaySettlementsSection(session: session)
         }
+        // Decision 683: the city's size and kind, in every game.
+        CityTitleSection(session: session)
     }
 
     private func icon(of outcome: ScenarioOutcome?) -> String {

@@ -428,7 +428,11 @@ public final class GameSession {
     /// stops existing or its line is removed.
     public internal(set) var followedTrainID: TrainID? {
         didSet {
-            if followedTrainID != oldValue { updateMap3DSpeedCap() }
+            if followedTrainID != oldValue {
+                updateMap3DSpeedCap()
+                // Decision 686: a run driven by hand ends with the follow.
+                if manualDriveRun != nil { endManualDrive() }
+            }
             refreshFollowBar()
         }
     }
@@ -1059,6 +1063,17 @@ public final class GameSession {
     /// (``RunningSound``), told to the app when it changes; `nil` for
     /// silence. `nil` tells no one.
     @ObservationIgnored public var runningSound: (@MainActor (RunningSound?) -> Void)?
+    /// Decision 686: the run the player drives by hand on the 3D map
+    /// (``ManualDrive``), stepped each frame the map draws; never part of
+    /// the world. `nil` when none.
+    @ObservationIgnored var manualDriveRun: ManualDriveRun?
+    /// Decision 686: what the driving panel shows of it, changed only when
+    /// one of its figures does; `nil` when the player is not driving.
+    public internal(set) var manualDriveReading: ManualDrive.Reading?
+    /// Decision 686: whether the player waits to drive, drives or has
+    /// finished, for what only changes then (the reading's figures change
+    /// as the train moves); `nil` when not driving.
+    public internal(set) var manualDrivePhase: ManualDrive.Reading.Phase?
     /// The sound last told to ``runningSound``.
     @ObservationIgnored private var lastRunningSound: RunningSound?
     /// Decision 346: the sound of the weather the map shows
@@ -1442,7 +1457,7 @@ public final class GameSession {
     /// they changed: after a step, and when following starts or stops.
     func updateFollowSounds() {
         if let runningSound {
-            let sound = RunningSound.of(following: followedTrain, in: world)
+            let sound = RunningSound.of(following: followedTrain, in: world, driven: manualDriveSound)
             if sound != lastRunningSound {
                 lastRunningSound = sound
                 runningSound(sound)
