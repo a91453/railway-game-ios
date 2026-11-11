@@ -234,4 +234,27 @@ final class TrainPurchaseEstimateTests: XCTestCase {
         XCTAssertEqual(first.historyDays, 1)
         XCTAssertEqual(read(), first)
     }
+
+    /// When the page shows it: for every headway that buys trains, and
+    /// for none that does not (the screenshots' line, two days run: its
+    /// one train comes every 13 minutes).
+    func testEveryHeadwayThatBuysTrainsHasAnEstimate() throws {
+        let session = GameSession(world: try played(try lineBetweenTwoTowns(), days: 2))
+        session.selectLine(Self.line)
+        let memo = LinePanelMemo()
+        var buying: [Int64: Int] = [:]
+        for headway in GameWorld.staffingHeadways {
+            let change = try XCTUnwrap(memo.headwayChange(Self.line, headway: headway, of: session))
+            buying[headway] = change.buying
+            let estimate = memo.purchaseEstimate(
+                Self.line, buying: change.buying, type: change.type, cars: change.cars, headway: headway, price: change.cost, of: session
+            )
+            XCTAssertEqual(estimate != nil, change.buying > 0, "\(headway) min")
+            if let estimate {
+                XCTAssertEqual(estimate.demand, .planned)
+                XCTAssertEqual(estimate.price, change.cost)
+            }
+        }
+        XCTAssertEqual(buying, [3: 4, 5: 2, 10: 1, 15: 0, 20: 0, 30: 0])
+    }
 }

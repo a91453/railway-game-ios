@@ -2127,11 +2127,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             let change = app.buttons["line.headway.change"].firstMatch
             XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page), "The headway section shows")
             let five = page.buttons.matching(NSPredicate(format: "label IN %@", ["5 分", "5 min", "5"])).firstMatch
-            XCTAssertTrue(five.appears(within: 10), "The picker offers 5 minutes")
+            // On a phone on its side the page is a few lines high: the
+            // segment is under the page's bar until it is brought down.
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(five, in: page), "The picker offers 5 minutes")
+            five.waitUntilSettled()
             five.tap()
             var estimate = app.descendants(matching: .any)["line.headway.estimate"].firstMatch
             XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page), "The button under it shows")
+            // As much of it as the page has room for.
+            _ = app.dragUntilWhollyOnScreen(estimate, in: page, drags: 4)
             settle()
             keep("buy-estimate-more-trains\(suffix)", app)
             app.terminate()
@@ -2148,6 +2152,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             let start = app.buttons["line.staff.start"].firstMatch
             XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page), "The buy button shows")
             XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
+            _ = app.dragUntilWhollyOnScreen(estimate, in: page, drags: 4)
             settle()
             keep("buy-estimate-new-line\(suffix)", app)
             app.terminate()
