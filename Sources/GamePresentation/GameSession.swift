@@ -220,6 +220,11 @@ public final class GameSession {
     /// on a copy of the world), kept for the platform and the
     /// ``commandRevision`` they were worked out for.
     @ObservationIgnored var platformTrackMenuMemo: [TrackPlatform: (revision: Int, choices: [MenuChoice<PlatformTrackPlacement>])] = [:]
+    /// Decision 691: the platform lengthening menu's choices (each a dry
+    /// run on the track), kept for the platform, the ``commandRevision``
+    /// and the language they were worked out for.
+    @ObservationIgnored var platformExtensionMenuMemo:
+        [TrackPlatform: (revision: Int, language: DisplayLanguage, choices: [MenuChoice<PlatformExtension>])] = [:]
     /// Decision 488: the building tool's preview (``buildingPreview``) and
     /// what it was worked out for.
     @ObservationIgnored var buildingPreviewMemo: (key: BuildingPreviewKey, preview: BuildingPreview)?

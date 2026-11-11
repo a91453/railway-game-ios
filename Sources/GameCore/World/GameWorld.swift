@@ -1033,6 +1033,552 @@ public struct GameWorld: Equatable, Sendable {
         return (platform.start - low, high - platform.end)
     }
 
+    // MARK: - Decision 691: a station's tracks lengthened with their turnouts
+
+    /// Decision 691: a station's tracks between its two turnouts: the main
+    /// track, an edge straight from one turnout to the other, and each
+    /// loop beside it, a connector out from the near turnout (the main
+    /// edge's `from` node), a straight track along and a connector back to
+    /// the far one. What the platform track tool builds, and any track
+    /// laid by hand to the same shape.
+    struct StationThroat {
+        struct Loop {
+            let out: TrackEdgeID
+            let along: TrackEdge
+            let back: TrackEdgeID
+            /// The along edge's node on the near turnout's side, and the other.
+            let start: TrackNodeID
+            let end: TrackNodeID
+        }
+
+        let main: TrackEdge
+        /// The line beyond the near turnout, and beyond the far one.
+        let outerNear: TrackEdge
+        let outerFar: TrackEdge
+        let loops: [Loop]
+
+        /// The tracks a platform can stand on: the main one and each loop's.
+        var tracks: [TrackEdgeID] { [main.id] + loops.map(\.along.id) }
+        /// Every edge a turnout's move reshapes.
+        var edges: [TrackEdgeID] { [outerNear.id, main.id, outerFar.id] + loops.flatMap { [$0.out, $0.along.id, $0.back] } }
+        /// Every node a turnout's move moves.
+        var nodes: [TrackNodeID] { [main.from, main.to] + loops.flatMap { [$0.start, $0.end] } }
+
+        /// Whether `track`'s `from` node is on the near turnout's side.
+        func runsWithMain(_ track: TrackEdgeID) -> Bool {
+            loops.first { $0.along.id == track }.map { $0.along.from == $0.start } ?? true
+        }
+    }
+
+    /// How far past what a platform's lengthening needs a turnout moves
+    /// (decision 691): 2 units, 3 cm. The moved nodes stand on whole
+    /// units, so a track's new length is within 2 units of the sum.
+    static let loopExtensionMargin: Int64 = 2
+
+    /// Whether `edge` is straight and level. The track tools lay a
+    /// straight track as a curve whose two control points lie on the line
+    /// between its ends, a third and two thirds along.
+    private func isLevelStraight(_ edge: TrackEdge) -> Bool {
+        guard edge.profile == .uniform, edge.from != edge.to,
+              let from = network.node(edge.from), let to = network.node(edge.to), from.position.z == to.position.z else { return false }
+        guard case .cubic(let first, let second) = edge.curve else { return true }
+        let line = to.position.plan.vector(from: from.position.plan)
+        let a = first.vector(from: from.position.plan), b = second.vector(from: from.position.plan)
+        let along = line.dot(line)
+        return abs(a.cross(line)) <= 2 * line.length && abs(b.cross(line)) <= 2 * line.length
+            && a.dot(line) > 0 && a.dot(line) < b.dot(line) && b.dot(line) < along
+    }
+
+    /// The line beyond `main` at its node `id` and the connectors that
+    /// leave the line there, when the node is a station's turnout: a train
+    /// from the line may go on along any of the others, and each of them
+    /// leads only to the line.
+    private func throatEnd(of main: TrackEdge, at id: TrackNodeID) -> (outer: TrackEdge, connectors: [TrackEdgeID])? {
+        guard let node = network.node(id), node.ends.count >= 3, let exits = node.end(of: main.id)?.exits, exits.count == 1,
+              let outer = network.edge(exits[0]), isLevelStraight(outer) else { return nil }
+        let connectors = node.ends.map(\.edge).filter { $0 != main.id && $0 != outer.id }
+        guard connectors.allSatisfy({ node.end(of: $0)?.exits == [outer.id] }),
+              Set(node.end(of: outer.id)?.exits ?? []) == Set(connectors + [main.id]) else { return nil }
+        return (outer, connectors)
+    }
+
+    /// The station throat whose main track is `main`, or `nil`.
+    private func stationThroat(main: TrackEdge) -> StationThroat? {
+        guard isLevelStraight(main), let near = throatEnd(of: main, at: main.from), let far = throatEnd(of: main, at: main.to),
+              near.connectors.count == far.connectors.count,
+              let nearNode = network.node(main.from)?.position.plan, let farNode = network.node(main.to)?.position.plan else { return nil }
+        let way = farNode.vector(from: nearNode)
+        // The line runs straight on through each turnout: a turnout slides
+        // along it without bending the main track.
+        func isOnLine(_ point: PlanPoint, from a: PlanPoint, to b: PlanPoint) -> Bool {
+            let line = b.vector(from: a)
+            return abs(point.vector(from: a).cross(line)) <= 2 * line.length
+        }
+        guard let beyondNear = network.node(near.outer.from == main.from ? near.outer.to : near.outer.from)?.position.plan,
+              let beyondFar = network.node(far.outer.from == main.to ? far.outer.to : far.outer.from)?.position.plan,
+              isOnLine(nearNode, from: beyondNear, to: farNode), isOnLine(farNode, from: nearNode, to: beyondFar) else { return nil }
+        var backs = Set(far.connectors)
+        var loops: [StationThroat.Loop] = []
+        for out in near.connectors {
+            guard let outEdge = network.edge(out) else { return nil }
+            let startID = outEdge.from == main.from ? outEdge.to : outEdge.from
+            guard let start = network.node(startID), start.ends.count == 2,
+                  let along = start.ends.first(where: { $0.edge != out }).flatMap({ network.edge($0.edge) }), isLevelStraight(along) else { return nil }
+            let endID = along.from == startID ? along.to : along.from
+            guard let end = network.node(endID), end.ends.count == 2,
+                  let back = end.ends.first(where: { $0.edge != along.id })?.edge, backs.remove(back) != nil else { return nil }
+            // Beside the main track, the same way.
+            let beside = end.position.plan.vector(from: start.position.plan)
+            guard beside.dot(way) > 0, abs(beside.cross(way)) <= beside.length * way.length / 256 else { return nil }
+            loops.append(StationThroat.Loop(out: out, along: along, back: back, start: startID, end: endID))
+        }
+        let throat = StationThroat(main: main, outerNear: near.outer, outerFar: far.outer, loops: loops)
+        guard Set(throat.edges).count == throat.edges.count, Set(throat.nodes).count == throat.nodes.count,
+              !network.spacingExemptions.contains(where: { pair in throat.edges.contains { pair.contains($0) } }) else { return nil }
+        return throat
+    }
+
+    /// The station throat `edge` is a track of (its main track or a
+    /// loop's), or `nil`.
+    func stationThroat(of id: TrackEdgeID) -> StationThroat? {
+        guard let edge = network.edge(id) else { return nil }
+        if let throat = stationThroat(main: edge) { return throat }
+        guard let from = network.node(edge.from), let to = network.node(edge.to), from.ends.count == 2, to.ends.count == 2,
+              let out = from.ends.first(where: { $0.edge != id }).flatMap({ network.edge($0.edge) }),
+              let back = to.ends.first(where: { $0.edge != id }).flatMap({ network.edge($0.edge) }) else { return nil }
+        let turnouts: Set<TrackNodeID> = [out.from == edge.from ? out.to : out.from, back.from == edge.to ? back.to : back.from]
+        for end in network.node(out.from == edge.from ? out.to : out.from)?.ends ?? [] {
+            guard let main = network.edge(end.edge), Set([main.from, main.to]) == turnouts, main.id != out.id, main.id != back.id,
+                  let throat = stationThroat(main: main), throat.loops.contains(where: { $0.along.id == id }) else { continue }
+            return throat
+        }
+        return nil
+    }
+
+    /// How far the turnout at one end of `throat` can move out along the
+    /// line: the line beyond it stays a split's least piece long
+    /// (``minimumSplitPiece``) and keeps its platforms.
+    private func reach(of throat: StationThroat, near: Bool) -> Int64 {
+        let outer = near ? throat.outerNear : throat.outerFar, node = near ? throat.main.from : throat.main.to
+        var reach = outer.length - Self.minimumSplitPiece
+        for platform in network.platforms(on: outer.id) {
+            reach = min(reach, outer.from == node ? platform.start : outer.length - platform.end)
+        }
+        return max(0, reach - Self.loopExtensionMargin)
+    }
+
+    /// Decision 691: how far past the ends of its edge `platform` could be
+    /// lengthened by moving the station's turnouts out
+    /// (``extendPlatformLoop(_:on:from:toStart:end:)``), at each end of its
+    /// edge; with ``trackPlatformRoom(of:)``, all the room it has. `nil`
+    /// when the platform is not on a track between a station's two
+    /// turnouts (``StationThroat``).
+    public func platformLoopRoom(of platform: TrackPlatform) -> (before: Int64, after: Int64)? {
+        guard network.platforms.contains(platform), let throat = stationThroat(of: platform.edge) else { return nil }
+        let near = reach(of: throat, near: true), far = reach(of: throat, near: false)
+        return throat.runsWithMain(platform.edge) ? (near, far) : (far, near)
+    }
+
+    /// How a platform `extra` longer grows at its two ends, with room for
+    /// `before` and `after` (decision 687): half to each end; what one end
+    /// has no room for goes to the other. `nil` when there is no room for
+    /// it all.
+    public static func platformGrowth(_ extra: Int64, before: Int64, after: Int64) -> (before: Int64, after: Int64)? {
+        guard extra > 0, before >= 0, after >= 0, extra - before <= after else { return nil }
+        var first = min(before, extra / 2)
+        var second = extra - first
+        if second > after {
+            second = after
+            first = extra - second
+        }
+        return (first, second)
+    }
+
+    /// A platform a station's lengthening lengthens (decision 691): how
+    /// far towards each turnout, and the room it has on its own edge.
+    private struct GrowingPlatform {
+        let platform: TrackPlatform
+        /// Whether its edge runs from the near turnout's side.
+        let forward: Bool
+        let near: Int64
+        let far: Int64
+        let roomNear: Int64
+        let roomFar: Int64
+
+        /// How far it grows towards its edge's `from` node, and its `to`.
+        var before: Int64 { forward ? near : far }
+        var after: Int64 { forward ? far : near }
+    }
+
+    /// What ``extendPlatformLoop(_:on:from:toStart:end:)`` does to the
+    /// track, worked out before anything changes: the platforms that grow
+    /// and how far each turnout moves.
+    private struct LoopShift {
+        let throat: StationThroat
+        let growing: [GrowingPlatform]
+        /// How far the near and the far turnout move out; 0 when it stays.
+        let near: Int64
+        let far: Int64
+    }
+
+    private func loopShift(
+        _ id: StationID, on edge: TrackEdgeID, from start: Int64, toStart newStart: Int64, end newEnd: Int64
+    ) throws(GameError) -> LoopShift {
+        guard station(id: id) != nil else { throw .unknownStation(id) }
+        let limit = Int64(1) << 40
+        guard let old = network.platforms.first(where: { $0.station == id && $0.edge == edge && $0.start == start }),
+              -limit < newStart, newStart <= old.start, old.end <= newEnd, newEnd < limit, newEnd - newStart > old.length,
+              let throat = stationThroat(of: edge) else { throw .invalidPlatform }
+        let reach = (near: reach(of: throat, near: true), far: reach(of: throat, near: false))
+        let length = newEnd - newStart
+        func room(_ platform: TrackPlatform) -> (forward: Bool, near: Int64, far: Int64)? {
+            guard let room = trackPlatformRoom(of: platform) else { return nil }
+            let forward = throat.runsWithMain(platform.edge)
+            return (forward, forward ? room.before : room.after, forward ? room.after : room.before)
+        }
+        guard let own = room(old) else { throw .invalidPlatform }
+        let before = old.start - newStart, after = newEnd - old.end
+        let asked = GrowingPlatform(platform: old, forward: own.forward, near: own.forward ? before : after, far: own.forward ? after : before,
+                                    roomNear: own.near, roomFar: own.far)
+        guard asked.near <= asked.roomNear + reach.near, asked.far <= asked.roomFar + reach.far else { throw .invalidPlatform }
+        var growing = [asked]
+        // The station's platform on each other track grows to the same
+        // length where it is shorter and has the room: as the asked one
+        // does when they are as long, so two platforms side by side stay
+        // side by side.
+        for track in throat.tracks where track != edge {
+            let partners = network.platforms(on: track).filter { $0.station == id }
+            guard partners.count == 1, partners[0].length < length, let room = room(partners[0]) else { continue }
+            let most = (near: room.near + reach.near, far: room.far + reach.far)
+            let growth: (before: Int64, after: Int64)
+            if partners[0].length == old.length, asked.near <= most.near, asked.far <= most.far {
+                growth = (asked.near, asked.far)
+            } else if let halves = Self.platformGrowth(length - partners[0].length, before: most.near, after: most.far) {
+                growth = halves
+            } else {
+                continue
+            }
+            growing.append(GrowingPlatform(platform: partners[0], forward: room.forward, near: growth.before, far: growth.after,
+                                           roomNear: room.near, roomFar: room.far))
+        }
+        let near = growing.map { $0.near - $0.roomNear }.max() ?? 0, far = growing.map { $0.far - $0.roomFar }.max() ?? 0
+        return LoopShift(throat: throat, growing: growing, near: near > 0 ? near + Self.loopExtensionMargin : 0,
+                         far: far > 0 ? far + Self.loopExtensionMargin : 0)
+    }
+
+    /// Where the turnout at `node` of `outer` stands once moved `distance`
+    /// out along it.
+    private func slid(_ node: TrackNodeID, along outer: TrackEdge, by distance: Int64) -> WorldCoordinate? {
+        guard let here = network.node(node)?.position, let geometry = network.geometry(of: outer.id), distance <= geometry.length else { return nil }
+        guard distance > 0 else { return here }
+        let point = geometry.location(at: outer.from == node ? distance : geometry.length - distance).position
+        return WorldCoordinate(x: point.x, y: point.y, z: here.z)
+    }
+
+    /// The track and platforms after a ``LoopShift``, its price and what
+    /// else changes with it.
+    private struct LoopExtensionPlan {
+        var network: RailwayNetwork
+        /// What the longer loops cost, by their along edge's number.
+        var prices: [(edge: Int, cost: Money)] = []
+        var cleared: [PlacedBuilding] = []
+        /// Each platform whose stretch changed, and what it became.
+        var replaced: [(old: TrackPlatform, new: TrackPlatform)] = []
+        /// How far each reshaped edge grew at its `from` node and at its `to`.
+        var grown: [TrackEdgeID: (from: Int64, to: Int64)] = [:]
+
+        var price: Money { Money(prices.reduce(0) { $0 + $1.cost.amount }) }
+    }
+
+    private func loopExtensionPlan(_ shift: LoopShift) throws(GameError) -> LoopExtensionPlan {
+        let throat = shift.throat
+        let ids = throat.edges
+        let olds = ids.compactMap { network.edge($0) }
+        guard olds.count == ids.count,
+              let near = slid(throat.main.from, along: throat.outerNear, by: shift.near),
+              let far = slid(throat.main.to, along: throat.outerFar, by: shift.far),
+              let nearNow = network.node(throat.main.from)?.position, let farNow = network.node(throat.main.to)?.position
+        else { throw .invalidTrackGeometry }
+        let nearWay = near.plan.vector(from: nearNow.plan), farWay = far.plan.vector(from: farNow.plan)
+        func moved(_ point: PlanPoint, by way: PlanVector) -> PlanPoint { PlanPoint(x: point.x + way.dx, y: point.y + way.dy) }
+        func moved(_ curve: TrackCurve, by way: PlanVector) -> TrackCurve {
+            switch curve {
+            case .straight: .straight
+            case .cubic(let first, let second): .cubic(moved(first, by: way), moved(second, by: way))
+            }
+        }
+
+        var plan = LoopExtensionPlan(network: network)
+        let platforms = network.platforms.filter { ids.contains($0.edge) }
+        for platform in platforms {
+            guard let index = plan.network.platforms.firstIndex(of: platform) else { continue }
+            plan.network.removePlatform(at: index)
+        }
+        for id in ids { plan.network.removeEdge(id, updatingFouling: false) }
+        var curves: [TrackEdgeID: TrackCurve] = [:]
+        var positions: [(TrackNodeID, WorldCoordinate)] = [(throat.main.from, near), (throat.main.to, far)]
+        plan.grown[throat.main.id] = (shift.near, shift.far)
+        plan.grown[throat.outerNear.id] = throat.outerNear.from == throat.main.from ? (-shift.near, 0) : (0, -shift.near)
+        plan.grown[throat.outerFar.id] = throat.outerFar.from == throat.main.to ? (-shift.far, 0) : (0, -shift.far)
+        for loop in throat.loops {
+            guard let start = network.node(loop.start)?.position, let end = network.node(loop.end)?.position,
+                  let out = network.edge(loop.out), let back = network.edge(loop.back) else { throw .invalidTrackGeometry }
+            let startPlan = moved(start.plan, by: nearWay), endPlan = moved(end.plan, by: farWay)
+            positions.append((loop.start, WorldCoordinate(x: startPlan.x, y: startPlan.y, z: start.z)))
+            positions.append((loop.end, WorldCoordinate(x: endPlan.x, y: endPlan.y, z: end.z)))
+            curves[loop.out] = moved(out.curve, by: nearWay)
+            curves[loop.back] = moved(back.curve, by: farWay)
+            plan.grown[loop.along.id] = loop.along.from == loop.start ? (shift.near, shift.far) : (shift.far, shift.near)
+        }
+        for (node, position) in positions {
+            guard isInWorld(position) else { throw .invalidTrackGeometry }
+            plan.network.moveNode(node, to: position)
+        }
+        guard positions.allSatisfy({ moved in plan.network.nodes.filter { $0.position == moved.1 }.count == 1 }) else { throw .invalidTrackGeometry }
+
+        var geometries: [TrackEdgeID: (geometry: TrackGeometry, sections: [TrackSection])] = [:]
+        for old in olds {
+            guard let from = plan.network.node(old.from), let to = plan.network.node(old.to) else { throw .invalidTrackGeometry }
+            // A straight track stays the kind of curve it was: its control
+            // points a third and two thirds along again.
+            var curve = curves[old.id] ?? old.curve
+            if curves[old.id] == nil, case .cubic = old.curve {
+                let a = from.position.plan, b = to.position.plan
+                curve = .cubic(
+                    PlanPoint(x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3),
+                    PlanPoint(x: a.x + (b.x - a.x) * 2 / 3, y: a.y + (b.y - a.y) * 2 / 3)
+                )
+            }
+            guard curve.controlPoints.allSatisfy(bounds.contains),
+                  let geometry = TrackGeometry(from: from.position, to: to.position, curve: curve, profile: old.profile),
+                  geometry.steepestGrade.isNoSteeper(than: old.maximumGrade) else { throw .invalidTrackGeometry }
+            if let tile = firstTileNotOwned(along: geometry.points.map(\.plan)) { throw .mapTileNotOwned(tile) }
+            let sections = try sections(of: geometry, structure: old.structure)
+            if let other = plan.network.firstConflict(from: old.from, to: old.to, curve: curve, geometry: geometry) { throw .trackConflict(other) }
+            plan.network.restoreEdge(old, curve: curve, sections: sections, geometry: geometry)
+            geometries[old.id] = (geometry, sections)
+        }
+        for id in ids {
+            if let other = plan.network.firstTooClose(existing: id, besides: []) { throw .trackTooClose(other) }
+        }
+        // Every end joins what it joined.
+        let touched = Set(olds.flatMap { [$0.from, $0.to] })
+        for id in touched {
+            guard let before = network.node(id), let after = plan.network.node(id), before.ends.count == after.ends.count,
+                  zip(before.ends, after.ends).allSatisfy({ $0.edge == $1.edge && Set($0.exits) == Set($1.exits) })
+            else { throw .invalidTrackGeometry }
+        }
+
+        // The platforms again, where their track lies now: each as far from
+        // the same place on the ground as it was, the growing ones longer.
+        for platform in platforms {
+            guard let length = plan.network.edge(platform.edge)?.length else { continue }
+            let grown = plan.grown[platform.edge] ?? (0, 0)
+            var start = platform.start + grown.from, end = platform.end + grown.from
+            let longer = shift.growing.first { $0.platform == platform }
+            if let longer {
+                start -= longer.before
+                end += longer.after
+                // The moved nodes stand on whole units: within a few of
+                // an end of its track, the platform runs to that end.
+                if start <= 4 * Self.loopExtensionMargin { start = 0 }
+                if length - end <= 4 * Self.loopExtensionMargin { end = length }
+                guard end - start >= platform.length + longer.before + longer.after else { throw .invalidPlatform }
+            } else {
+                end = min(end, length)
+                start = max(0, min(start, end - platform.length))
+            }
+            let moved = TrackPlatform(station: platform.station, edge: platform.edge, start: start, end: end)
+            guard start >= 0, start < end, end <= length, !plan.network.platforms.contains(where: { $0.overlaps(moved) }) else { throw .invalidPlatform }
+            plan.network.addPlatform(moved)
+            if moved != platform { plan.replaced.append((platform, moved)) }
+        }
+        plan.network.dropSpacedExemptions()
+        var changed = Set(ids)
+        for (a, b) in zip(throat.nodes, throat.nodes.dropFirst()) {
+            changed.formUnion(network.edgesNear(a, b))
+            changed.formUnion(plan.network.edgesNear(a, b))
+        }
+        plan.network.refreshFouling(of: changed)
+
+        // What the longer loops cost beyond what they did, and what stands
+        // in their way (decision 95). The main track lies where it lay.
+        for loop in throat.loops {
+            var new: Int64 = 0, old: Int64 = 0
+            for id in [loop.out, loop.along.id, loop.back] {
+                guard let edge = network.edge(id), let was = network.geometry(of: id), let now = geometries[id] else { throw .invalidTrackGeometry }
+                old += try edgeCost(of: was, structure: edge.structure, sections: edge.sections).amount
+                let (sum, overflow) = new.addingReportingOverflow(try edgeCost(of: now.geometry, structure: edge.structure, sections: now.sections).amount)
+                guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
+                new = sum
+                let open = TrackEdge(id: id, from: edge.from, to: edge.to, curve: curves[id] ?? edge.curve, length: now.geometry.length,
+                                     profile: edge.profile, structure: edge.structure, sections: now.sections).openStretches(of: now.geometry)
+                for building in placedBuildings where !plan.cleared.contains(building) && open.contains(where: { Self.line($0, comesNear: building) }) {
+                    plan.cleared.append(building)
+                }
+            }
+            plan.prices.append((loop.along.id.networkNumber ?? 0, Money(max(0, new - old))))
+        }
+        guard plan.prices.reduce(Int64(0), { $0.addingReportingOverflow($1.cost.amount).overflow ? .max : $0 + $1.cost.amount }) < .max else {
+            throw .insufficientFunds(required: Money(.max), available: economy.balance)
+        }
+        return plan
+    }
+
+    /// Decision 691: what ``extendPlatformLoop(_:on:from:toStart:end:)``
+    /// would do now, whatever trains are about and whatever the company
+    /// has. Changes nothing.
+    ///
+    /// - Throws: what the command would, but for the trains and the money.
+    public func platformLoopExtensionPreview(
+        _ id: StationID, on edge: TrackEdgeID, from start: Int64, toStart newStart: Int64, end newEnd: Int64
+    ) throws(GameError) -> PlatformLoopExtensionPreview {
+        let shift = try loopShift(id, on: edge, from: start, toStart: newStart, end: newEnd)
+        // Within each platform's own room (``trackPlatformRoom(of:)``).
+        guard shift.near > 0 || shift.far > 0 else {
+            return PlatformLoopExtensionPreview(cost: .zero, platforms: shift.growing.count, movesTurnouts: false)
+        }
+        let plan = try loopExtensionPlan(shift)
+        let (total, overflow) = plan.price.amount.addingReportingOverflow(clearingCost(of: plan.cleared).amount)
+        return PlatformLoopExtensionPreview(cost: Money(overflow ? .max : total), platforms: shift.growing.count, movesTurnouts: true)
+    }
+
+    /// Decision 691: the places on the ground the new track of
+    /// ``extendPlatformLoop(_:on:from:toStart:end:)`` would lie over that
+    /// the station's track does not lie over now, for a world with ground
+    /// to read it there first. Empty when the command would be refused
+    /// before its track is worked out, or moves no turnout.
+    public func platformLoopExtensionGround(
+        _ id: StationID, on edge: TrackEdgeID, from start: Int64, toStart newStart: Int64, end newEnd: Int64
+    ) -> [PlanPoint] {
+        guard let shift = try? loopShift(id, on: edge, from: start, toStart: newStart, end: newEnd) else { return [] }
+        var points: [PlanPoint] = []
+        let throat = shift.throat
+        for (turnout, outer, distance, near) in [(throat.main.from, throat.outerNear, shift.near, true), (throat.main.to, throat.outerFar, shift.far, false)]
+        where distance > 0 {
+            guard let here = network.node(turnout)?.position.plan else { continue }
+            var along: Int64 = 0
+            while true {
+                along = min(distance, along + ConstructionCosts.trackPricingLength / 2)
+                guard let there = slid(turnout, along: outer, by: along)?.plan else { break }
+                let way = there.vector(from: here)
+                for loop in throat.loops {
+                    guard let beside = network.node(near ? loop.start : loop.end)?.position.plan else { continue }
+                    let moved = PlanPoint(x: beside.x + way.dx, y: beside.y + way.dy)
+                    points.append(moved)
+                    points.append(PlanPoint(x: (moved.x + there.x) / 2, y: (moved.y + there.y) / 2))
+                }
+                if along == distance { break }
+            }
+        }
+        return points
+    }
+
+    /// Lengthens each of `growing` on its own edge
+    /// (``extendTrackPlatform(_:on:from:toStart:end:)``).
+    private mutating func lengthen(_ growing: [GrowingPlatform]) throws(GameError) {
+        for longer in growing {
+            let platform = longer.platform
+            try extendTrackPlatform(platform.station, on: platform.edge, from: platform.start,
+                                    toStart: platform.start - longer.before, end: platform.end + longer.after)
+        }
+    }
+
+    /// Decision 691: lengthens station `id`'s platform on edge `edge` that
+    /// starts at `start` to the stretch from `newStart` to `newEnd`,
+    /// measured along its edge as it lies now, which may reach past the
+    /// edge's ends when the platform stands between a station's two
+    /// turnouts (``StationThroat``): a turnout the stretch reaches past
+    /// moves out along the line with everything joined to it. The main
+    /// track and each loop's track grow by as much, each loop's
+    /// connectors keep their shape, and every node and edge keeps its ID,
+    /// so the lines' chosen tracks stay chosen. The station's platform on
+    /// each other track between the turnouts grows to the same length
+    /// where it is shorter and has the room. A platform track built with
+    /// its platform from end to end (the platform track tool's) could not
+    /// be lengthened at all (``extendTrackPlatform(_:on:from:toStart:end:)``
+    /// stays on its edge).
+    ///
+    /// Charges what the longer loops cost beyond what they cost as they
+    /// were (the main track lies where it lay; a platform is free), and
+    /// clears the company's buildings in their way (decision 95). When no
+    /// turnout need move it lengthens the platforms where they stand, free.
+    ///
+    /// A train on its way whose path runs through the station keeps its
+    /// path and stops where it would have. All or nothing.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
+    ///   ``GameError/invalidPlatform`` when the station has no such
+    ///   platform, the new stretch does not hold the old one or is no
+    ///   longer, the platform is not between a station's turnouts, or the
+    ///   stretch reaches farther than a turnout can move
+    ///   (``platformLoopRoom(of:)``); when no turnout moves, what
+    ///   ``extendTrackPlatform(_:on:from:toStart:end:)`` throws; otherwise
+    ///   what ``buildTrackEdge(from:to:curve:profile:structure:mountain:)``
+    ///   throws for the reshaped track, ``GameError/invalidPlatform`` for
+    ///   a platform that no longer fits its track;
+    ///   ``GameError/trackReserved(_:)`` naming the lowest numbered train
+    ///   that stands on the station's track or the line next to a turnout,
+    ///   has its body there, has reserved or (under traffic control)
+    ///   holds some of it, or whose path ends there where no track would
+    ///   be; or ``GameError/insufficientFunds(required:available:)``.
+    public mutating func extendPlatformLoop(
+        _ id: StationID, on edge: TrackEdgeID, from start: Int64, toStart newStart: Int64, end newEnd: Int64
+    ) throws(GameError) {
+        let shift = try loopShift(id, on: edge, from: start, toStart: newStart, end: newEnd)
+        guard shift.near > 0 || shift.far > 0 else {
+            var after = self
+            try after.lengthen(shift.growing)
+            self = after
+            return
+        }
+        let plan = try loopExtensionPlan(shift)
+        let edges = Set(shift.throat.edges), nodes = shift.throat.nodes
+        // Where each train's path ends, measured along its last edge as it
+        // will lie.
+        var ends: [(train: Int, end: Int64)] = []
+        for (index, train) in trains.enumerated() {
+            guard case .onEdge(let traversal, _)? = train.position else { continue }
+            let holds = edges.contains(traversal.edge) || train.trailEdges.contains(where: edges.contains)
+                || train.reservation.contains { resource in edges.contains { resource.isSpan(of: $0) } }
+                || (isTrafficControlEnabled && held(train).contains { resource in
+                    edges.contains { resource.isSpan(of: $0) } || nodes.contains { isWithinJunctionZone(resource, of: $0) }
+                })
+            guard !holds else { throw .trackReserved(train.id) }
+            guard let end = train.movement.end, let last = train.movement.remainingEdges.last, let grown = plan.grown[last],
+                  grown.from != 0 || grown.to != 0 else { continue }
+            // Which way it runs along its last edge: followed from where it is.
+            var node = network.edge(traversal.edge)?.end(of: traversal.direction)
+            var forward: Bool?
+            for id in train.movement.remainingEdges {
+                guard let edge = network.edge(id), let here = node, edge.from == here || edge.to == here else { throw .trackReserved(train.id) }
+                forward = edge.from == here
+                node = forward == true ? edge.to : edge.from
+            }
+            let moved = end + (forward == true ? grown.from : grown.to)
+            guard let length = plan.network.edge(last)?.length, moved > 0, moved < length else { throw .trackReserved(train.id) }
+            ends.append((index, moved))
+        }
+        try checkFunds(plan.price, clearing: plan.cleared)
+        try economy.spend(plan.price)
+
+        network = plan.network
+        for (old, new) in plan.replaced {
+            for line in lines.indices {
+                lines[line].routePreferences = lines[line].routePreferences.map { $0.platform == old ? $0.onPlatform(new) : $0 }
+                for pattern in lines[line].patterns.indices {
+                    lines[line].patterns[pattern].routePreferences = lines[line].patterns[pattern].routePreferences.map {
+                        $0.platform == old ? $0.onPlatform(new) : $0
+                    }
+                }
+            }
+        }
+        for (index, end) in ends { trains[index].movement.end = end }
+        for (edge, cost) in plan.prices { extendTrackAsset(edge, cost: cost) }
+        clear(plan.cleared)
+        abandonUnservedPassengers()
+    }
+
     /// Whether `train`'s service needs `platform` (Stage S5): it waits at
     /// the platform's station with its head on the platform, or travels to
     /// that station along a path whose last edge is the platform's. Since
@@ -6242,4 +6788,16 @@ extension GameWorld {
             }
         }
     }
+}
+
+/// Decision 691: what lengthening a station's platforms between its
+/// turnouts would do (`GameWorld.platformLoopExtensionPreview`).
+public struct PlatformLoopExtensionPreview: Hashable, Sendable {
+    /// The longer track and what it clears; zero when no turnout moves.
+    public let cost: Money
+    /// How many of the station's platforms grow: the one asked for and
+    /// those beside it.
+    public let platforms: Int
+    /// Whether a turnout moves out along the line.
+    public let movesTurnouts: Bool
 }

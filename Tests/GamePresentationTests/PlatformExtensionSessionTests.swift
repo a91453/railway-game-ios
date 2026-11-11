@@ -75,7 +75,10 @@ final class PlatformExtensionSessionTests: XCTestCase {
         let full = try XCTUnwrap(session.world.trackPlatforms(of: station).first)
         XCTAssertEqual([full.start, full.end], [0, 10_240])
         XCTAssertEqual(session.platformExtensionMenuChoices(for: full), [])
-        XCTAssertEqual(session.platformExtensionNoRoomText, "No room to lengthen: the track ends, slopes or meets another platform here.")
+        XCTAssertEqual(
+            session.platformExtensionNoRoomText,
+            "No room to lengthen: the track ends, slopes or meets another platform here, or the turnouts cannot move farther out."
+        )
     }
 
     /// Through the session: one platform, longer, for nothing; said, logged

@@ -445,6 +445,37 @@ public struct RailwayNetwork: Hashable, Sendable {
         }
     }
 
+    /// Decision 691: node `id`, at which no edge ends for the moment, stands
+    /// at `position` from now on. With ``restoreEdge(_:curve:sections:geometry:)``
+    /// it lets a station's turnouts slide along the line with every ID kept.
+    mutating func moveNode(_ id: TrackNodeID, to position: WorldCoordinate) {
+        guard let index = nodeIndex(id), nodes[index].ends.isEmpty else { preconditionFailure("moveNode(_:to:) needs a node with no edges") }
+        nodes[index] = TrackNode(id: id, position: position)
+    }
+
+    /// Decision 691: puts back `edge`, taken out with
+    /// ``removeEdge(_:updatingFouling:)``, under its own ID between its own
+    /// nodes, shaped by `curve` into `geometry` (worked out from where its
+    /// nodes stand now), carried as `sections` say. The fouling is left to
+    /// ``refreshFouling(of:)``.
+    mutating func restoreEdge(_ edge: TrackEdge, curve: TrackCurve, sections: [TrackSection], geometry: TrackGeometry) {
+        precondition(self.edge(edge.id) == nil, "restoreEdge(_:curve:sections:geometry:) needs an edge taken out")
+        let restored = TrackEdge(
+            id: edge.id, from: edge.from, to: edge.to, curve: curve, length: geometry.length, profile: edge.profile, structure: edge.structure,
+            sections: sections, speedLimits: MountainTrack.speedLimits(of: geometry, curve: curve, mountain: edge.mountain), mountain: edge.mountain
+        )
+        edges.insert(restored, at: edges.firstIndex { $0.id > edge.id } ?? edges.count)
+        attach(edge.id, direction: geometry.startDirection, at: edge.from)
+        attach(edge.id, direction: geometry.endDirection, at: edge.to)
+        recutSpans(of: edge.id)
+    }
+
+    /// Decision 691: works out the fouling again between every pair of
+    /// edges with one of `changed` in it.
+    mutating func refreshFouling(of changed: Set<TrackEdgeID>) {
+        foulingSpans = foulingAfterChange(to: changed)
+    }
+
     /// Sets the spacing exemptions to `pairs`: the pairs of edges too close
     /// in a world loaded from a save made before Stage F2.
     mutating func exemptFromSpacing(_ pairs: [TrackEdgePair]) {
