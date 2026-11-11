@@ -1,8 +1,8 @@
 # 香港港鐵的地圖資料（決策 697）
 
-把香港港鐵十條鐵路綫（機場快綫、東涌綫、屯馬綫、東鐵綫、荃灣綫、港島綫、觀塘綫、將軍澳綫、南港島綫、迪士尼綫；輕鐵不在內）做成遊戲讀得進去的檔案，格式和台灣的真實鐵道一樣。研究、來源與授權在 `docs/research/HK_MAP_2026-11-12.md`。
+把香港港鐵十條鐵路綫（機場快綫、東涌綫、屯馬綫、東鐵綫、荃灣綫、港島綫、觀塘綫、將軍澳綫、南港島綫、迪士尼綫；輕鐵不在內）做成一個自成一包的地圖包 `RailwayGameApp/Resources/MapPacks/hongkong/`：檔名與格式和台灣的真實鐵道一樣，`pack.json` 列出每個檔的大小與每一部分的來源。研究、來源與授權在 `docs/research/HK_MAP_2026-11-12.md`。
 
-遊戲現在**不會讀**這些檔案：`OverseasMaps.open` 是空的，等「開航解鎖」的規則接上才打開（決策 697 的下一步）。
+遊戲現在**不會讀**這一包：`OverseasMaps.open` 是空的，等「開航解鎖」的規則接上才打開（決策 697 的下一步）。
 
 ## 來源
 
@@ -34,10 +34,10 @@ python3 -I tools/hk-map/next_train_service.py /tmp/hk/osm/hong_kong.pbf \
 
 # 3. 建地圖檔與時刻。
 python3 -I tools/hk-map/build_hk_mtr.py /tmp/hk/osm/hong_kong.pbf \
-  /tmp/hk/mtr/mtr_lines_and_stations.csv tools/hk-map/service.json RailwayGameApp/Resources/RealRailways
+  /tmp/hk/mtr/mtr_lines_and_stations.csv tools/hk-map/service.json RailwayGameApp/Resources/MapPacks/hongkong
 
 # 4. 把每條綫一天的車排成車組的班次（買下之後照這個跑）。
-python3 -I tools/hk-map/extract_hk_runs.py RailwayGameApp/Resources/RealRailways
+python3 -I tools/hk-map/extract_hk_runs.py RailwayGameApp/Resources/MapPacks/hongkong
 
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter HongKongRailwaysTests
@@ -47,14 +47,18 @@ swift test --skip-build --filter HongKongRailwaysTests
 
 ## 每支工具做什麼
 
-- **`build_hk_mtr.py`**：站序與中英文站名照港鐵的 CSV（上行方向 `UT`，落馬洲與康城兩條支綫各自成一條，從上水、將軍澳起）。每條綫在 OSM 找一條站名順序和 CSV 完全相同的路線關係（`route=subway|train`），沿它的軌道從第一站走到最後一站，得到綫形、每站的里程、橋與隧道。站序對不上就停，不猜。路綫色是 OSM 關係的 `colour`，和港鐵的標準色相同。時刻由 `service.json` 的班距與行車時間排出一整天雙向的車（`estimated: true`）：不是港鐵公布的時刻表（港鐵沒有公開）。
-  寫出 `hkmtr.json`（營運資料）、`hkmtr_times.json`（時刻）、`hk_track_lines.geojson`、`hk_track_stations.geojson`、`hk_station_names.json`、`hk_rail_structures.json`。
+- **`build_hk_mtr.py`**：每條綫在 OSM 找一條路線關係（`route=subway|train`），它停的站要和港鐵 CSV 的站序（上行方向 `UT`；落馬洲與康城兩條支綫各自成一條，從上水、將軍澳起）一站一站相同；沿它的軌道從第一站走到最後一站，得到綫形、站位、每站的里程、橋與隧道。中英文站名取 OSM 的，逐站和 CSV 核對，對不上就停，不猜；只有「茘景」「茘枝角」照港鐵的寫法（`MTR_SPELLING`）。車站代號取 CSV。路綫色是 OSM 關係的 `colour`，和港鐵的標準色相同。時刻由 `service.json` 的班距與行車時間排出一整天雙向的車（`estimated: true`）：不是港鐵公布的時刻表（港鐵沒有公開）。
+  寫出 `hkmtr.json`（營運資料）、`hkmtr_times.json`（時刻）、`track_lines.geojson`、`track_stations.geojson`、`station_names.json`、`rail_structures.json`、`pack.json`。
 - **`sample_next_train.py`**：把每條綫每一站的「下一班列車」問一輪，原樣存成一輪一個 JSON。
 - **`next_train_service.py`**：同一班車在相鄰兩站的預計到站時間相減，是那一段的行車加停站時間；取每一段所有樣本的中位數。只收「A 站看得到的每一班車在 B 站都對得上」的差（15 秒內、至少兩班、30 秒內沒有第二個答案），其餘不算。班距是同一站開往終點的相鄰兩班的間隔，尖峰（07:30–09:30、17:30–19:30）與其餘時段各取中位數。頭班車取樣本裡 04:00 之後最早的一班；末班車樣本沒有涵蓋，寫 00:30（估計，檔案裡註明）。哪一段沒有可用的樣本，用這條綫的中位速度乘距離補，並在 `service.json` 寫 `runSamples: 0`。
-- **`extract_hk_runs.py`**：用 `tools/real-timetables/extract_metro_runs.py` 同一套排法（一列車到終點後折返接下一班，夜裡停在哪就從哪出車），把 `hkmtr_times.json` 排成 `hk_metro_runs.json`。終點站停不下那麼多車的綫會被留在外面並列出來：那條綫就還不能買。
+- **`extract_hk_runs.py`**：用 `tools/real-timetables/extract_metro_runs.py` 同一套排法（一列車到終點後折返接下一班，夜裡停在哪就從哪出車），把 `hkmtr_times.json` 排成 `metro_runs.json`，並更新 `pack.json`。終點站停不下那麼多車的綫會被留在外面並列出來：那條綫就還不能買。
+
+## 哪些來自哪一邊
+
+`build_hk_mtr.py` 的 `SOURCES` 是唯一的一張表，寫進 `pack.json`：綫形、站位、里程、橋隧、綫色、站名來自 OpenStreetMap；車站與路綫代號、兩個「茘」字、班距與行車時間（以及由它們排出來的時刻與班次）來自港鐵開放資料。要抽掉港鐵那一邊：拿掉 `code` 與 `MTR_SPELLING`，班距與行車時間另找來源寫成同格式的 `service.json`，重跑第 3、4 步；綫、站、站名、橋隧不變。
 
 ## 沒有的
 
-港鐵沒有公開：正式時刻表、各站進出人次（只有全綫月總數）、車廠的位置與軌道配置、列車的編組資料。清單與之後可以怎麼補在 `docs/research/HK_MAP_2026-11-12.md` §4。
+港鐵沒有公開：正式時刻表、各站進出人次（只有全綫月總數）、車廠的位置與軌道配置、列車的編組資料。清單與之後可以怎麼補在 `docs/research/HK_MAP_2026-11-12.md` §3.5。
 
 參考庫 `Railway/world-rail-reference-clean/` 沒有香港；這裡移植的是它的做法（`source/tools/build_singapore.mjs` 用營運者的站序定範圍、OSM 路線關係給綫形；`headway2sched.mjs` 用班距排出一天的車），沒有複製它的資料。

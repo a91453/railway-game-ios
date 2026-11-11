@@ -191,8 +191,8 @@ public enum DataSourceCredits {
                             "香港港鐵的十條鐵路綫，從機場快綫到迪士尼綫，每條綫用自己的路綫色，車站有中文與英文站名。列車的時刻是照觀察那幾天真實列車的班距與行車時間估出來的。"
                         ),
                         notice: language.text(
-                            "Lines, station order and station names: MTR Corporation Limited’s open data on DATA.GOV.HK (MTR Lines and Stations), used under DATA.GOV.HK’s Terms and Conditions of Use. Headways and running times: worked out from MTR’s Next Train open data on DATA.GOV.HK, November 2026. Track, station positions, bridges, tunnels and line colours: © OpenStreetMap contributors, ODbL 1.0. The intellectual property rights in the MTR data belong to MTR Corporation Limited. The game is not affiliated with MTR Corporation Limited or the Hong Kong SAR Government.",
-                            "路綫、站序與站名：香港鐵路有限公司在「資料一線通」（DATA.GOV.HK）公開的「港鐵路綫及車站」資料，依「資料一線通」的使用條款及條件使用。班距與行車時間：由港鐵在「資料一線通」公開的「下一班列車」資料（2026 年 11 月）算出。軌道、車站位置、橋梁、隧道與路綫色：© OpenStreetMap 貢獻者，ODbL 1.0。港鐵資料的知識產權屬香港鐵路有限公司所有。本遊戲與香港鐵路有限公司、香港特別行政區政府沒有任何關係。"
+                            "Track, station positions, station names, bridges, tunnels and line colours: © OpenStreetMap contributors, ODbL 1.0. Station names and order are checked against, and station codes come from, MTR Corporation Limited’s open data on DATA.GOV.HK (MTR Lines and Stations), used under DATA.GOV.HK’s Terms and Conditions of Use. Headways and running times: worked out from MTR’s Next Train open data on DATA.GOV.HK, November 2026. The intellectual property rights in the MTR data belong to MTR Corporation Limited. The game is not affiliated with MTR Corporation Limited or the Hong Kong SAR Government.",
+                            "軌道、車站位置、站名、橋梁、隧道與路綫色：© OpenStreetMap 貢獻者，ODbL 1.0。站名與站序用香港鐵路有限公司在「資料一線通」（DATA.GOV.HK）公開的「港鐵路綫及車站」資料核對，車站代號取自該資料，依「資料一線通」的使用條款及條件使用。班距與行車時間：由港鐵在「資料一線通」公開的「下一班列車」資料（2026 年 11 月）算出。港鐵資料的知識產權屬香港鐵路有限公司所有。本遊戲與香港鐵路有限公司、香港特別行政區政府沒有任何關係。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),

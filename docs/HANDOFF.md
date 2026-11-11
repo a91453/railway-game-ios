@@ -4552,6 +4552,7 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 
 研究在 `docs/research/HK_MAP_2026-11-12.md`，做了什麼與下一步在 `docs/decisions/697.md`，工具與重做的指令在 `tools/hk-map/README.md`。留給之後的：
 
+- **香港是一個地圖包**：`RailwayGameApp/Resources/MapPacks/hongkong/`（`pack.json` 列每個檔的大小與來源），遊戲用 `MapPack(root:)` 讀。作者要它之後用 Background Assets 另外下載（交 Mac）：下載後把根目錄換掉，格式不用改。
 - **開關還關著**：`OverseasMaps.open` 是空的，玩家選不到香港。「開航解鎖」的規則（決策 695 之後）把 `.hongKong` 放進去；同一個 PR 改網站的 `credits.html`（`DataSourceCredits` 的「香港的鐵道」那一節已寫好，打開才列出）。
 - **台灣以外的地圖固定 16 km**，放不下機場快綫、東涌綫、東鐵綫、屯馬綫；放不下的綫不會列出來賣。香港要一張大一點的地圖（決策 697 下一步第 2 點）。
 - **時刻是估計的**（港鐵沒有公開時刻表）：班距與行車時間取樣自「下一班列車」開放資料，末班車 00:30 是估計。要更準，照 README 多取幾天的樣本重跑。
