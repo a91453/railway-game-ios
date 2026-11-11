@@ -1070,6 +1070,10 @@ public final class GameSession {
     /// Decision 686: what the driving panel shows of it, changed only when
     /// one of its figures does; `nil` when the player is not driving.
     public internal(set) var manualDriveReading: ManualDrive.Reading?
+    /// Decision 686: whether the player waits to drive, drives or has
+    /// finished, for what only changes then (the reading's figures change
+    /// as the train moves); `nil` when not driving.
+    public internal(set) var manualDrivePhase: ManualDrive.Reading.Phase?
     /// The sound last told to ``runningSound``.
     @ObservationIgnored private var lastRunningSound: RunningSound?
     /// Decision 346: the sound of the weather the map shows

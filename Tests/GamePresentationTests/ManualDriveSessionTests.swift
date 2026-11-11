@@ -178,6 +178,23 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertNil(session.manualDriveRun)
     }
 
+    func testTheScreenshotReviewsResultIsAStopJustShortAFewSecondsLate() throws {
+        let (session, _) = try makeSession()
+        session.finishManualDriveForScreenshot()
+        XCTAssertNil(session.manualDrivePhase, "nothing while not driving")
+        session.startManualDrive()
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDrivePhase == .driving })
+        session.finishManualDriveForScreenshot()
+        XCTAssertEqual(session.manualDrivePhase, .over)
+        let result = try XCTUnwrap(session.manualDriveReading?.result)
+        XCTAssertEqual(result.outcome, .stopped)
+        XCTAssertEqual(result.offset, -0.7, accuracy: 0.2)
+        XCTAssertEqual(result.lateness, 5, accuracy: 2)
+        XCTAssertGreaterThanOrEqual(result.total, 95)
+        XCTAssertEqual(result.text(in: .traditionalChinese).lines.count, 2)
+    }
+
     func testTheMotorsAreHeardAsTheHandleStands() throws {
         let (session, train) = try makeSession()
         var told: [RunningSound?] = []

@@ -846,6 +846,63 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 686: driving the followed train by hand from its cab: the
+    /// start button on the follow bar, the handle and the run's figures
+    /// (the game paused, so they stand still), and a run's result.
+    func testManualDrive() {
+        func open3DFollowing(extra: [String] = []) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", "farStops", "-screenshot-follow-train", "-map3D.quality", "high"] + extra)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            let cab = app.buttons["map3D.follow.cab"]
+            XCTAssertTrue(cab.becomesHittable(within: 10))
+            cab.tap()
+            if !cab.isSelectedWithin(5) {
+                XCTAssertTrue(cab.becomesHittable(within: 10))
+                cab.tap()
+            }
+            XCTAssertTrue(cab.isSelectedWithin(5), "The cab view is chosen")
+            return app
+        }
+        do {
+            let app = open3DFollowing()
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10), "A train on a timetable can be driven")
+            settle(seconds: 6)
+            keep("drive-start", app)
+            start.tap()
+            let power = app.buttons["map3D.drive.power"]
+            XCTAssertTrue(power.becomesHittable(within: 10), "The handle shows")
+            for _ in 0..<3 { power.tap() }
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.drive.figures"].firstMatch.appears(within: 5))
+            settle(seconds: 3)
+            keep("drive-power", app)
+            let brake = app.buttons["map3D.drive.brake"]
+            for _ in 0..<7 { brake.tap() }
+            settle(seconds: 2)
+            keep("drive-brake", app)
+            app.buttons["map3D.drive.end"].tap()
+            XCTAssertTrue(start.appears(within: 5), "Giving the handle back brings the start button back")
+        }
+        do {
+            let app = open3DFollowing(extra: ["-screenshot-drive-result"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.done"].becomesHittable(within: 10), "The run's result shows")
+            settle(seconds: 3)
+            keep("drive-result", app)
+        }
+    }
+
     /// Decision 565: a train of four 20 m cars standing at a platform four
     /// cars long on a real map, close up on the 2D map and on the 3D one:
     /// every car inside the platform, its nose at the platform's end. For

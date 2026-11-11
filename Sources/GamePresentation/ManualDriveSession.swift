@@ -69,6 +69,7 @@ extension GameSession {
         if world.clock.speed.tenthsPerTick > GameSpeed.x1.tenthsPerTick { setSpeed(.x1) }
         manualDriveRun = ManualDriveRun(train: id)
         manualDriveReading = .waiting
+        manualDrivePhase = .waiting
         stepManualDrive(at: nil)
     }
 
@@ -78,6 +79,7 @@ extension GameSession {
         guard manualDriveRun != nil || manualDriveReading != nil else { return }
         manualDriveRun = nil
         manualDriveReading = nil
+        manualDrivePhase = nil
         updateFollowSounds()
     }
 
@@ -119,6 +121,19 @@ extension GameSession {
         return run.driving.map { ($0.track, $0.drive.distance, $0.length) }
     }
 
+    /// Decision 686: for the screenshot review only: the run being driven
+    /// ends as one stopped just short of the mark, a few seconds late, so
+    /// its result can be looked at without driving a whole run.
+    public func finishManualDriveForScreenshot() {
+        guard var run = manualDriveRun, let driving = run.driving else { return }
+        var drive = ManualDrive(train: driving.drive.train, course: .init(stop: 0.8, scheduled: -4), speed: 0.3)
+        drive.set(ManualDrive.Notch(step: -ManualDrive.timetableBrakeStep))
+        drive.advance(seconds: 5)
+        run.driving = (driving.track, drive, driving.length)
+        manualDriveRun = run
+        publishManualDrive()
+    }
+
     /// The speed and the drive the followed train is heard with while it is
     /// driven by hand.
     var manualDriveSound: (kmh: Double, drive: GameWorld.TrainDrive?)? {
@@ -130,6 +145,7 @@ extension GameSession {
         let reading = manualDriveRun?.driving?.drive.reading ?? (manualDriveRun == nil ? nil : .waiting)
         guard reading != manualDriveReading else { return }
         manualDriveReading = reading
+        if manualDrivePhase != reading?.phase { manualDrivePhase = reading?.phase }
         updateFollowSounds()
     }
 }
