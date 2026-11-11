@@ -1235,7 +1235,9 @@ extension RealLineLaying {
             let low = raised
                 ? height + RealLineAcquisition.raisedStation
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
-            levels.append(TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach))
+            var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
+            level.staysUnder = sunk
+            levels.append(level)
         }
         // A double track's second track, for the trains toward the
         // terminal, on their left (Taiwan's trains keep left, and the

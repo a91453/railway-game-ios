@@ -28,14 +28,24 @@ final class WenhuUndergroundTests: XCTestCase {
 
     /// The line bought on the Taipei opening, built on a pricing copy as
     /// ``LineHeightReportTests`` builds it.
-    static func laid() throws -> Laid {
+    ///
+    /// `centred`: on a map with its middle on the line instead (the
+    /// screenshot scene's, ``ScreenshotScene/wenhu``): the same ground and
+    /// water sampled from another origin, where the first fix still left
+    /// Songshan Airport in a cutting and 80 m open on the river's bank.
+    static func laid(centred: Bool = false) throws -> Laid {
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
-        let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == "Taipei" })
-        let start = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
-        let world = GameLauncher.newWorld(at: start, options: NewGameOptions(), data: GameLauncher.NewWorldData(
-            population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
-        ))
+        let world: GameWorld
+        if centred {
+            world = try XCTUnwrap(data.water.map { ScreenshotScene.wenhu.make(in: .traditionalChinese, water: $0) })
+        } else {
+            let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == "Taipei" })
+            let start = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
+            world = GameLauncher.newWorld(at: start, options: NewGameOptions(), data: GameLauncher.NewWorldData(
+                population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
+            ))
+        }
         let session = GameSession(world: world, language: .traditionalChinese)
         session.coverage = data.coverage
         session.railways = railways
@@ -66,7 +76,14 @@ final class WenhuUndergroundTests: XCTestCase {
     }
 
     func testTheRealTunnelIsATunnelAndItsStationsAreUnderground() throws {
-        let laid = try Self.laid()
+        try theRealTunnelIsATunnel(try Self.laid())
+    }
+
+    func testTheRealTunnelIsATunnelOnAMapCentredOnTheLine() throws {
+        try theRealTunnelIsATunnel(try Self.laid(centred: true))
+    }
+
+    private func theRealTunnelIsATunnel(_ laid: Laid) throws {
         let world = laid.world, metre = Self.metre
         func ground(at point: WorldVector) -> Double {
             Double(world.groundHeight(at: PlanPoint(x: Int64(point.x.rounded()), y: Int64(point.y.rounded()))) ?? 0)
