@@ -426,20 +426,36 @@ jobs:
             echo "changed=true" >>"$GITHUB_OUTPUT"
           fi
 
+      # objdump and python3 are not in the Swift image; they come from the
+      # Ubuntu archive, which a runner sometimes cannot reach (#2061 and
+      # #2062: "Could not resolve archive.ubuntu.com"). This job is only a
+      # reminder, so when they cannot be installed (after one more try) it
+      # says so and lists nothing, rather than turning red on a pull request
+      # whose frames nobody looked at.
       - name: Tools
+        id: tools
         if: steps.sources.outputs.changed == 'true'
         run: |
-          if ! command -v objdump >/dev/null || ! command -v python3 >/dev/null; then
-            apt-get update -qq && apt-get install -y -qq binutils python3-minimal >/dev/null
+          have_tools() { command -v objdump >/dev/null && command -v python3 >/dev/null; }
+          install_tools() { apt-get update -qq && apt-get install -y -qq binutils python3-minimal >/dev/null; }
+          if ! have_tools; then
+            install_tools || { sleep 20; install_tools; } || true
           fi
+          if ! have_tools; then
+            echo "::notice::objdump or python3 could not be installed (the package archive did not answer): the stack frames were not listed for this run."
+            echo "The tools could not be installed (the package archive did not answer): no frames listed. Re-run this job to list them." >>"$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ready=true" >>"$GITHUB_OUTPUT"
           python3 -I -m unittest discover -s tools/stack-frames -p 'test_*.py'
 
       - name: Build GamePresentation and GameCore optimised
-        if: steps.sources.outputs.changed == 'true'
+        if: steps.tools.outputs.ready == 'true'
         run: swift build -c release --target GamePresentation
 
       - name: List the frames
-        if: steps.sources.outputs.changed == 'true'
+        if: steps.tools.outputs.ready == 'true'
         run: |
           objects="$(find .build -path '*Release*' \( -path '*/GameCore-t.build/*' -o -path '*/GamePresentation-t.build/*' \) -name '*.o' | sort)"
           if [ -z "$objects" ]; then
