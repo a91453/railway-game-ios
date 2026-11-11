@@ -166,6 +166,17 @@ public struct RealBranchLine: Hashable, Sendable {
         isTaoyuanAirport ? TrackRise.slack + [24.0, 36, 48].map { $0 * RealWorldDemo.metre } : TrackRise.slack
     }
 
+    /// Decision 678: whether its stations in the real line's tunnels are
+    /// laid under the ground (``RealLineAcquisition/isSunk(at:before:after:carried:)``)
+    /// and the water over those tunnels is passed under, not bridged
+    /// (``TrackRise``'s `sunk`). Only the Wenhu Line, whose Songshan
+    /// Airport and Dazhi stations and the Keelung River between them were
+    /// laid on the ground and bridged; the other lines with real stations
+    /// underground (Qizhang on the Xiaobitan branch, the Taoyuan Airport
+    /// MRT under the Tamsui River and at Huanbei) stay as they were until
+    /// each is measured.
+    var followsRealTunnels: Bool { id == "trtc:BR" }
+
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
     /// rail joins the one bought before, whose riders that paid for.
@@ -437,6 +448,26 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         let reach = TrackRise.shortestCarried
         return carried.contains { stretch in
             stretch.kind == .bridge && stretch.range.contains(at)
+                && before.map { stretch.range.lowerBound <= at - min(reach, at - $0) } ?? true
+                && after.map { stretch.range.upperBound >= at + min(reach, $0 - at) } ?? true
+        }
+    }
+
+    /// Decision 678: how far under the ground a station in the real line's
+    /// tunnel stands at least: where the real tunnel's bounds keep the
+    /// track either side of it (``TrackRise/carriedDepth``), so they and
+    /// the station's do not clash.
+    static let sunkStation = TrackRise.carriedDepth
+
+    /// Decision 678, decision 462's other half: whether a station `at`
+    /// along a line's path, its neighbours `before` and `after` (`nil` at
+    /// an end), stands in the real line's tunnel: a tunnel at least
+    /// ``TrackRise/shortestCarried`` long over it carries the line on at
+    /// least that far toward each neighbour.
+    static func isSunk(at: Double, before: Double?, after: Double?, carried: [TrackRise.Carried]) -> Bool {
+        let reach = TrackRise.shortestCarried
+        return carried.contains { stretch in
+            stretch.kind == .tunnel && stretch.isLong && stretch.range.contains(at)
                 && before.map { stretch.range.lowerBound <= at - min(reach, at - $0) } ?? true
                 && after.map { stretch.range.upperBound >= at + min(reach, $0 - at) } ?? true
         }
@@ -1196,8 +1227,17 @@ extension RealLineLaying {
                     at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
                 )
             }
-            let low = raised ? height + RealLineAcquisition.raisedStation : height - RealWorldDemo.stationReach
-            levels.append(TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach))
+            // Decision 678: one in its line's real tunnel stands down in
+            // it (the Wenhu Line's Songshan Airport and Dazhi).
+            let sunk = !raised && line.followsRealTunnels && RealLineAcquisition.isSunk(
+                at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
+            )
+            let low = raised
+                ? height + RealLineAcquisition.raisedStation
+                : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
+            var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
+            level.staysUnder = sunk
+            levels.append(level)
         }
         // A double track's second track, for the trains toward the
         // terminal, on their left (Taiwan's trains keep left, and the
@@ -1299,7 +1339,8 @@ extension RealLineLaying {
             }
         }
         guard var rise = TrackRise(
-            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack
+            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack,
+            sunk: line.followsRealTunnels
         ) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
@@ -1310,7 +1351,8 @@ extension RealLineLaying {
             let crossings = RealLineLaying.crossingLevels(of: world.network, along: path, rise: rise)
             guard !crossings.isEmpty,
                   let clear = TrackRise(
-                      path: path, ground: ground, water: water, levels: levels + crossings, grade: line.rulingGrade, carried: carried, slack: line.stationSlack
+                      path: path, ground: ground, water: water, levels: levels + crossings, grade: line.rulingGrade, carried: carried, slack: line.stationSlack,
+                      sunk: line.followsRealTunnels
                   ) else {
                 return refused(
                     "The track cannot climb along this line within the steepest grade.",
