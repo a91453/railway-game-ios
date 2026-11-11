@@ -396,12 +396,20 @@ public struct RealRailways: Sendable {
         structures: RealRailStructures? = nil,
         tracks: RealRailTracks? = nil,
         ridership: RealRidership? = nil,
-        loadIssues: [RealDataLoadIssue] = []
+        loadIssues: [RealDataLoadIssue] = [],
+        overseas: [OverseasFiles] = []
     ) throws {
         let decoder = JSONDecoder()
-        let lineFeatures = try decoder.decode(FeatureCollection<LineProperties, LineGeometry>.self, from: linesFile).features
-        let stationFeatures = try decoder.decode(FeatureCollection<StationProperties, PointGeometry>.self, from: stationsFile).features
-        let names = try decoder.decode(NameFile.self, from: namesFile).systems
+        var lineFeatures = try decoder.decode(FeatureCollection<LineProperties, LineGeometry>.self, from: linesFile).features
+        var stationFeatures = try decoder.decode(FeatureCollection<StationProperties, PointGeometry>.self, from: stationsFile).features
+        var names = try decoder.decode(NameFile.self, from: namesFile).systems
+        // Decision 697: an open overseas city's lines and stations after
+        // Taiwan's, which keep their places in the lists.
+        for city in overseas {
+            lineFeatures += try decoder.decode(FeatureCollection<LineProperties, LineGeometry>.self, from: city.lines).features
+            stationFeatures += try decoder.decode(FeatureCollection<StationProperties, PointGeometry>.self, from: city.stations).features
+            names.merge(try decoder.decode(NameFile.self, from: city.names).systems) { taiwan, _ in taiwan }
+        }
 
         lines = try lineFeatures.enumerated().map { index, feature in
             let points = try feature.geometry.coordinates.map(Self.coordinate)
@@ -525,7 +533,11 @@ public struct RealRailways: Sendable {
     }
 
     private static func system(_ id: String) throws -> System {
-        guard let system = System.all.first(where: { $0.id == id }) else { throw LoadError.unknownSystem(id) }
+        // Taiwan's, or an overseas city's (decision 697), whose features
+        // only an open city's files hold.
+        guard let system = System.all.first(where: { $0.id == id }) ?? System.overseas.values.first(where: { $0.id == id }) else {
+            throw LoadError.unknownSystem(id)
+        }
         return system
     }
 
@@ -660,6 +672,21 @@ extension RealRailways {
         public let issues: [RealDataLoadIssue]
     }
 
+    /// An overseas city's three map files (decision 697), in the formats of
+    /// `track_lines.geojson`, `track_stations.geojson` and
+    /// `station_names.json`.
+    public struct OverseasFiles: Sendable {
+        public let lines: Data
+        public let stations: Data
+        public let names: Data
+
+        public init(lines: Data, stations: Data, names: Data) {
+            self.lines = lines
+            self.stations = stations
+            self.names = names
+        }
+    }
+
     /// A bundled file could not be found.
     public enum ResourceError: Error, Hashable {
         case missing(String)
@@ -675,7 +702,16 @@ extension RealRailways {
     /// the timetables only when first asked for. Each optional file that
     /// cannot be read is left out and listed in ``Loaded/issues`` (and the
     /// railways' ``loadIssues``) rather than dropped silently.
-    public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> Loaded {
+    ///
+    /// Decision 697: for each city of `overseas` its own files are read
+    /// too (`hk_track_lines.geojson`, `hkmtr.json`, …): its lines and
+    /// stations after Taiwan's, its timetable, its runs and its bridges
+    /// and tunnels. A city whose three map files cannot be read is left
+    /// out and listed, Taiwan's railways as they are.
+    public static func load(
+        overseas: Set<OverseasMap> = OverseasMaps.open,
+        file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data
+    ) -> Loaded {
         var issues: [RealDataLoadIssue] = []
         func read(_ name: String, _ ext: String) -> Data? {
             do {
@@ -723,6 +759,28 @@ extension RealRailways {
         for key in bundledTimetables {
             timetables[key] = { try file("\(key)_times", "json") }
         }
+        // Decision 697: the open overseas cities, in a fixed order.
+        let cities = OverseasMap.allCases.filter(overseas.contains)
+        var overseasFiles: [OverseasFiles] = []
+        var overseasRuns: [String: RealLineRuns] = [:]
+        var overseasStructures: [RealRailStructures.Structure] = []
+        for city in cities {
+            guard let lines = read("\(city.filePrefix)_track_lines", "geojson"),
+                  let stations = read("\(city.filePrefix)_track_stations", "geojson"),
+                  let names = read("\(city.filePrefix)_station_names", "json") else { continue }
+            overseasFiles.append(OverseasFiles(lines: lines, stations: stations, names: names))
+            systems[city.system] = read(city.system, "json")
+            let key = city.system
+            timetables[key] = { try file("\(key)_times", "json") }
+            if let data = read("\(city.filePrefix)_metro_runs", "json"),
+               let runs = parse("\(city.filePrefix)_metro_runs.json", { try RealLineRuns.metroLines(data: data) }) {
+                overseasRuns.merge(runs) { first, _ in first }
+            }
+            if let data = read("\(city.filePrefix)_rail_structures", "json"),
+               let found = parse("\(city.filePrefix)_rail_structures.json", { try RealRailStructures(data: data) }) {
+                overseasStructures += found.structures
+            }
+        }
         let operations = RealRailwayOperations(
             systems: systems,
             timetables: timetables,
@@ -748,8 +806,11 @@ extension RealRailways {
         let metroRuns = read("metro_runs", "json").flatMap { data in
             parse("metro_runs.json") { try RealLineRuns.metroLines(data: data) }
         }
-        let structures = read("rail_structures", "json").flatMap { data in
+        var structures = read("rail_structures", "json").flatMap { data in
             parse("rail_structures.json") { try RealRailStructures(data: data) }
+        }
+        if !overseasStructures.isEmpty {
+            structures = RealRailStructures(structures: (structures?.structures ?? []) + overseasStructures)
         }
         var tracks = read("rail_tracks", "json").flatMap { data in
             parse("rail_tracks.json") { try RealRailTracks(data: data) }
@@ -789,11 +850,12 @@ extension RealRailways {
                 transfers: transfers,
                 pingxiRuns: pingxiRuns,
                 branchRuns: branchRuns ?? [:],
-                metroRuns: metroRuns ?? [:],
+                metroRuns: (metroRuns ?? [:]).merging(overseasRuns) { taiwan, _ in taiwan },
                 structures: structures,
                 tracks: tracks,
                 ridership: ridership,
-                loadIssues: issues
+                loadIssues: issues,
+                overseas: overseasFiles
             )
             return Loaded(railways: railways, issues: railways.loadIssues)
         } catch {

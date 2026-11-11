@@ -1,0 +1,526 @@
+{
+ "sampled": "3 sweeps, 20261111T192948Z to 20261111T193605Z",
+ "feed": "https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php",
+ "lines": {
+  "AEL": {
+   "runSec": [
+    120,
+    420,
+    780,
+    60
+   ],
+   "runSamples": [
+    3,
+    3,
+    3,
+    3
+   ],
+   "peakHeadwaySec": 600,
+   "offpeakHeadwaySec": 600,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 72
+   },
+   "firstTrainSec": 21000,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TCL": {
+   "runSec": [
+    168,
+    123,
+    120,
+    240,
+    756,
+    420,
+    420
+   ],
+   "runSamples": [
+    3,
+    4,
+    2,
+    4,
+    4,
+    2,
+    3
+   ],
+   "peakHeadwaySec": 540,
+   "offpeakHeadwaySec": 540,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 126
+   },
+   "firstTrainSec": 21657,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TML": {
+   "runSec": [
+    167,
+    131,
+    121,
+    229,
+    129,
+    144,
+    129,
+    128,
+    157,
+    275,
+    153,
+    116,
+    130,
+    133,
+    124,
+    135,
+    167,
+    173,
+    183,
+    270,
+    381,
+    226,
+    119,
+    186,
+    272,
+    151
+   ],
+   "runSamples": [
+    3,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    3,
+    6,
+    6,
+    6,
+    6,
+    6,
+    3,
+    0,
+    3,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    3
+   ],
+   "peakHeadwaySec": 390,
+   "offpeakHeadwaySec": 390,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 468
+   },
+   "firstTrainSec": 20280,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "EAL": {
+   "runSec": [
+    111,
+    212,
+    351,
+    209,
+    285,
+    169,
+    175,
+    226,
+    256,
+    135,
+    608,
+    146,
+    351
+   ],
+   "runSamples": [
+    0,
+    3,
+    3,
+    3,
+    6,
+    6,
+    0,
+    6,
+    6,
+    6,
+    0,
+    3,
+    0
+   ],
+   "peakHeadwaySec": 360,
+   "offpeakHeadwaySec": 360,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 153
+   },
+   "firstTrainSec": 21976,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "EAL_LMC": {
+   "runSec": [
+    503
+   ],
+   "runSamples": [
+    1
+   ],
+   "peakHeadwaySec": 725,
+   "offpeakHeadwaySec": 725,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 3
+   },
+   "firstTrainSec": 21580,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TWL": {
+   "runSec": [
+    86,
+    208,
+    114,
+    108,
+    111,
+    97,
+    113,
+    104,
+    108,
+    111,
+    174,
+    124,
+    100,
+    136,
+    104
+   ],
+   "runSamples": [
+    3,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    3
+   ],
+   "peakHeadwaySec": 430,
+   "offpeakHeadwaySec": 430,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 270
+   },
+   "firstTrainSec": 21600,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "ISL": {
+   "runSec": [
+    75,
+    106,
+    130,
+    110,
+    115,
+    116,
+    130,
+    105,
+    88,
+    100,
+    108,
+    113,
+    90,
+    102,
+    126,
+    162
+   ],
+   "runSamples": [
+    3,
+    6,
+    0,
+    3,
+    6,
+    3,
+    6,
+    6,
+    6,
+    6,
+    6,
+    3,
+    6,
+    6,
+    6,
+    3
+   ],
+   "peakHeadwaySec": 393,
+   "offpeakHeadwaySec": 393,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 288
+   },
+   "firstTrainSec": 21300,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "KTL": {
+   "runSec": [
+    79,
+    150,
+    100,
+    89,
+    101,
+    137,
+    108,
+    104,
+    102,
+    112,
+    155,
+    120,
+    101,
+    112,
+    419,
+    251
+   ],
+   "runSamples": [
+    3,
+    3,
+    3,
+    6,
+    6,
+    3,
+    3,
+    6,
+    6,
+    6,
+    0,
+    3,
+    6,
+    6,
+    6,
+    0
+   ],
+   "peakHeadwaySec": 284,
+   "offpeakHeadwaySec": 284,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 288
+   },
+   "firstTrainSec": 22020,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TKL": {
+   "runSec": [
+    106,
+    248,
+    180,
+    120,
+    122,
+    330
+   ],
+   "runSamples": [
+    0,
+    1,
+    2,
+    2,
+    0,
+    2
+   ],
+   "peakHeadwaySec": 300,
+   "offpeakHeadwaySec": 300,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 81
+   },
+   "firstTrainSec": 21629,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TKL_LHP": {
+   "runSec": [
+    171
+   ],
+   "runSamples": [
+    1
+   ],
+   "peakHeadwaySec": 600,
+   "offpeakHeadwaySec": 600,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 1
+   },
+   "firstTrainSec": 21600,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "SIL": {
+   "runSec": [
+    228,
+    114,
+    154,
+    89
+   ],
+   "runSamples": [
+    3,
+    6,
+    6,
+    3
+   ],
+   "peakHeadwaySec": 411,
+   "offpeakHeadwaySec": 411,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 72
+   },
+   "firstTrainSec": 21621,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "DRL": {
+   "runSec": [
+    245
+   ],
+   "runSamples": [
+    1
+   ],
+   "peakHeadwaySec": 600,
+   "offpeakHeadwaySec": 600,
+   "headwaySamples": {
+    "peak": 0,
+    "offpeak": 18
+   },
+   "firstTrainSec": 22487,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  }
+ }
+}

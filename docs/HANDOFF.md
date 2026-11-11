@@ -4542,3 +4542,12 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **車站目錄在 `main` 就過期**：`python3 tools/station-kit/catalog.py --check` 回報保安、岡山、臺南、高雄四列座標與來源資料不同；這次只手改追分一列，沒有重新產生。
 - **考題只跑了一回合、每題一次**，評分是做的 session 自己對的，沒有盲評，也沒有跑 skill-creator 的說明文字觸發測試。
 - **Mac 上沒有 Playwright／Chromium**：拍圖工具要它，裝法在 `tools/model-look/README.md`（裝在 scratchpad，每個 session 自己裝）。
+
+### 4.64 香港港鐵的地圖資料（決策 697，HK-MAP session_01YGNNupiPcuij4C6SpjsRmf，2026-11-12）
+
+研究在 `docs/research/HK_MAP_2026-11-12.md`，做了什麼與下一步在 `docs/decisions/697.md`，工具與重做的指令在 `tools/hk-map/README.md`。留給之後的：
+
+- **開關還關著**：`OverseasMaps.open` 是空的，玩家選不到香港。「開航解鎖」的規則（決策 695 之後）把 `.hongKong` 放進去；同一個 PR 改網站的 `credits.html`（`DataSourceCredits` 的「香港的鐵道」那一節已寫好，打開才列出）。
+- **台灣以外的地圖固定 16 km**，放不下機場快綫、東涌綫、東鐵綫、屯馬綫；放不下的綫不會列出來賣。香港要一張大一點的地圖（決策 697 下一步第 2 點）。
+- **時刻是估計的**（港鐵沒有公開時刻表）：班距與行車時間取樣自「下一班列車」開放資料，末班車 00:30 是估計。要更準，照 README 多取幾天的樣本重跑。
+- **GameCore 裡只對台灣成立的假設**沒有動，清單在研究文件 §5.3。
