@@ -427,6 +427,7 @@
       - 本地工作室（Orchestra，紀錄在 a91453/railway-assets-private 的 `local-studio-2026-11-10/`）不排優先順序、不自己找工作，只做 #1579 上標了「Mac 本機」的派工。
       - 兩邊只透過 #1579 溝通：雲端傳不到 Mac，Mac 的 session 把登記、進度、「可合併、head <SHA>」都留在 #1579。
       - 一個分支同時只有一個 session 寫。
+      - 本地工作室裡負責派工的 Claude session 也數壓縮：壓縮 2 次就換手（規劃 3 次；實作 session 1 次不接新工作、2 次停），次數一樣留在 #1579。這條是第 60 任定的，不是作者原話（作者 11-11 問「那本地派也需要壓縮三次換手嗎」，照「都以這個當預設」由規劃決定）；只管 Claude 的 session，別家工具不算。
       - **Mac 本機的 PR，等它在 #1579 留「可合併、head <SHA>」或自己轉 ready 才合**，只看檢查綠不夠：11-11 規劃在全綠時就合了 #2048 與 assets #91，Mac 當時還在推，各漏了一筆（補在 #2050、assets #92）。
     - **先拆再選**（作者 2026-11-04：「之前不是要你根據難易度用sonnet或是opus嗎怎麼全部給我opus」）：第 45 任把 DEPOTLINK（鋪機廠自動選路線＋「回報問題」補說明）整件給 Opus，其中補說明只是文字。一件派工裡混了難的和簡單的，把簡單的（文字、照現成寫法的小畫面、workflow）拆成另一個 Sonnet session；派工單寫一句「選這個模型的理由」。「新決策要寫程式」不是一律 Opus：只動 GamePresentation 的小規則、照現成函式就能做的，也可以 Sonnet。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
@@ -576,6 +577,28 @@
 ## 2. 正在做的線（2026-10-20）
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
+
+**第 60 任交第 61 任（2026-11-11 約 11:10 UTC＝台灣 19:10，session_01YGNNumCi7AYjpiS4ntJZjK，第 0 層，壓縮 3 次照規則換手）**
+- 這段是照 #1579、開著的 PR 與各 session 的狀態寫的；和下面「11-11 08:00 UTC 補充」不同時以這段為準。第 61 任開工：在 #1579 登記，把 §1 表格的遊戲規劃改成自己。
+- 作者交代照舊：跟作者講話用簡短白話的中文、不講技術細節；每次作者傳訊息先讀 #1579 的新留言；**不要按 Mac 的信任卡**；每件派工寫雲端／Mac 本機與一句理由；實作 session 現在以 `claude-fable-5-2` 為主（§1.1）；「全綠你就合 之後的pr都是」「記得考慮會不會衝突 排優先合併的順序」。本週額度已到警告線（各 session 的 `rate_limit_info` 是 `allowed_warning`），作者怕浪費額度：沒必要不多開 session。
+- **這一任 08:00 之後合的**：#2042（CITY-TITLE，決策 683）、#2045（SUBSIDIARY-DESIGN）、#2047（MANUAL-DRIVE，決策 686）、#2043（BUY-PNL，決策 682）、#2048（LOOK-LOOP，決策 685）、#2046（MUSEUM，決策 684，存檔版本 87，合併 commit 982dfd92）、#2050（LOOK-LOOP 交接，§4.63，3a644459）；assets #90、#91。這些 session 都已封存（LOOK-LOOP 在 Mac，作者封存）。
+  - 合 #2050 時 main 最新跑完的 push `ci.yml` 是 e77669ed（綠）；**982dfd92 的那一輪還在跑，第 61 任先看它綠了沒有**，再合下一批。
+- **開著的 PR**：
+  - **#2051 PLATFORM-EXTEND**（session_01YGNNunVGHfYHRRvpzVLxVz，`claude/platform-extend-687`，決策 687，完整 tier，draft）：玩家回報「月台不拆直接加長」。GameCore 新指令、車站面板「加長」選單（到 16 節）；存檔、golden、ReplayFixtures 都不動。它自己跑截圖驗收（`testLengtheningAPlatform`）；改的是既有面板的一列，等它回報全綠與驗收結論就合，規劃順手看一眼截圖。
+  - **#2049 PRIORITIES-27**（Mac 本機，`claude/priorities-27-3d-render`，只改 NEXT_PRIORITIES 加 §27，draft）：等它在 #1579 留「可合併、head <SHA>」才合（§1.1）。
+  - **assets #92**（Mac，mode.sh 修正與驗收之六，draft）：同樣等 Mac 說做完。**assets #73**（TRELLIS 授權）等作者在 Mac 驗證。
+- **進行中、還沒開 PR**：**TYMC-YIELD** session_01YGNNupyS1CVXKpxSqb1jsv（`claude/tymc-yield-681`，決策 681，GameCore `Deadlock.swift`，完整 tier）：11:00 UTC 時在跑三組情境模擬、整理量測文件，上下文用了約七成。門檻：`TYMC_AFTERNOON=1 AirportShuttleDepotTests` 綠、tymc ≤5/333、tymc-old ≤2/333、重建 ≤9/333；動 golden 或 replay 的值前要先問規劃。完整 tier 同時最多兩個，現在就是它和 #2051。
+- **號碼**：決策 681 TYMC-YIELD、687 PLATFORM-EXTEND，其餘到 686 都已合併；**下一個決策 688**。存檔版本 main 87，**下一個 88**。golden schema 76 不動。
+- **審查點數**（L16 之後，從 #2032 起）：#2035、#2037、#2038、#2040、#2039、#2042、#2047、#2043、#2048 各 1，#2046 算 2，**共 11**；滿 30 或發完一版派 REVIEW-L17。
+- **給 Mac 本機的清單**（#1579 找「給 Mac 本機 session 的工作清單」6786821644 與之後的補充；作者一次貼一件：「讀 a91453/railway-game-ios 的 #1579，找「給 Mac 本機 session 的工作清單」和之後的補充，做第 N 件。」）：LOOK-LOOP 已完成。接著 TUTORIAL-CAPSULE；GLASS-POLISH（加上：買車估算那一行在橫放加車時可能被標題列蓋住（UNVERIFIED）、「駕駛」「駕駛室」兩顆都是實心青色、兩個 ✕ 靠太近、英文博物館卡名被截成「Railway m…」、橫放時建造卡清單與說明被截）；MANUAL-DRIVE 的手感、觸覺、馬達聲、直放與 iPad；FACADE-669；CAB-RAIN；FPS-DEVICE；MUSEUM 第二步（3D 館舍、圖示、館內，照 `model-look`）；把 `coastTimber` 型式套到日南、談文、大山、新埔；保安、集集的試做 patch（assets `model-look-2026-11-11/evals/`）等作者看。
+- **記著、還沒派**（有完整 tier 名額再派）：
+  - 子公司設計第 ① 步（`research/SUBSIDIARY_DESIGN_2026-11-11.md`），連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因不明。
+  - MANUAL-DRIVE 第二步（開車要算數，動 GameCore，§4.61）。
+  - `python3 tools/station-kit/catalog.py --check` 在 main 就過期（4 列）。
+  - HEALTH-124 §6.5 的 (c)(d)；決策 682「之後可以做的」。
+  - 不採用、不用再研究：Fenn 的「Anywhere」App（#1579 留言 6790826760）；Metal 4。
+- **下次發版前**（只在作者說發的時候；先看 main HEAD 的完整 `ci.yml` 與 full lane 都綠）：`.github/testflight-whats-new.md` 要寫到最低 iOS 26、文湖線河底、聲音、雨、Liquid Glass、新圖示、城市稱號、買車估算、手動駕駛、鐵道博物館、月台加長（合了才寫）。
+- **第 60 任的教訓**：Mac 的 PR 不要看到綠就合（§1.1 新增那條）；用 shell 改 #1579 留言時不要用含 `**` 的字串取代，整則重貼。
 
 **第 60 任接手（2026-11-11 02:30 UTC＝台灣 10:30，session_01YGNNumCi7AYjpiS4ntJZjK，作者在 claude.ai 開，第 0 層）**
 - **CITY-TITLE（決策 683，`claude/city-title-683`，session_01YGNNupYoAuDo7yAXiwVvbL，壓縮 1 次）**：城市的規模稱號（九級）與類型（八種）放在「目標」最下面，升級時新聞、狀態列與原有音效；只動 GamePresentation 與面板。沒做、留給下一張單的（[決策 683](decisions/683.md)「下一步」）：成就（要作者在 App Store Connect 加 Game Center 成就）、徽章與升級卡片（要美術審）、觀光類型接決策 174 的遊客、高雄與新竹的類型不準（`LandImport` 的工作資料）、外國地圖的類型基準（作者 11-11 定：用各國通用的一份）。
