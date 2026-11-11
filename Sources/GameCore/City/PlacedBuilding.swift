@@ -13,7 +13,8 @@
 // of their own stand among them, a park and a temple, and a building can
 // have one of its kind's looks; since its sequel three more, a school and
 // a hospital, which the city grows round, and a night market, a sight as a
-// temple is.
+// temple is; since decision 684 a railway museum, a sight whose exhibits
+// are the types of train the company has owned.
 
 /// Identifies a building the player placed. IDs are allocated by
 /// ``GameWorld`` from 1 and never handed out again.
@@ -32,7 +33,7 @@ public struct PlacedBuildingID: RawRepresentable, Hashable, Comparable, Codable,
 /// What the player can place: the three basic buildings, since decision
 /// 111 two that stand on the shore, since decision 173 three subsidiaries,
 /// since decision 361 a park and a temple, and since its sequel a school,
-/// a hospital and a night market.
+/// a hospital and a night market, and since decision 684 a railway museum.
 public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// A small house: 16 m a side.
     case house
@@ -80,6 +81,12 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// ``Tourism/nightMarketStars``, and a subsidiary whose customers eat
     /// and play there; it holds no one.
     case nightMarket
+    /// A railway museum (decision 684): 64 m a side, two storeys of halls.
+    /// A sight as a temple is (Tourism.swift), rated by its exhibits
+    /// (``PlacedBuilding/exhibits``, ``Tourism/museumStars(exhibits:)``), and
+    /// a subsidiary that takes its visitors' tickets; it holds no one. A
+    /// world has one at most.
+    case railwayMuseum
 
     /// The length of a side, in world units.
     public var side: Int64 {
@@ -88,6 +95,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
         case .shop, .wharf, .park: 1_536
         case .office, .marina, .hotel, .temple, .hospital, .nightMarket: 2_048
         case .departmentStore, .school: 3_072
+        case .railwayMuseum: 4_096
         case .amusementPark: 7_168
         }
     }
@@ -99,7 +107,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
         case .shop, .wharf, .departmentStore, .hotel, .nightMarket: .commercial
         case .office: .office
         case .school, .hospital: .civic
-        case .marina, .amusementPark, .temple: .leisure
+        case .marina, .amusementPark, .temple, .railwayMuseum: .leisure
         case .park: .park
         }
     }
@@ -108,7 +116,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// an office block 6.
     public var floors: Int64 {
         switch self {
-        case .house, .shop, .wharf, .marina, .temple: 2
+        case .house, .shop, .wharf, .marina, .temple, .railwayMuseum: 2
         case .school: 3
         case .office, .hospital: 6
         case .departmentStore: 8
@@ -121,7 +129,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// water, part on land. The others stand on land only.
     public var standsOnShore: Bool {
         switch self {
-        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark, .park, .temple, .school, .hospital, .nightMarket: false
+        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark, .park, .temple, .school, .hospital, .nightMarket, .railwayMuseum: false
         case .wharf, .marina: true
         }
     }
@@ -142,10 +150,10 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// at 32 m², each rounded down. A house 9 residents and 2 jobs, a shop
     /// and a wharf 6 and 27, an office block 16 and 168, a marina 5 and 56.
     /// A park and a temple (decision 361), a school, a hospital and a night
-    /// market (its sequel) hold no one.
+    /// market (its sequel) and a railway museum (decision 684) hold no one.
     public var capacity: BuildingCapacity {
         switch self {
-        case .park, .temple, .school, .hospital, .nightMarket: return BuildingCapacity(residents: 0, jobs: 0)
+        case .park, .temple, .school, .hospital, .nightMarket, .railwayMuseum: return BuildingCapacity(residents: 0, jobs: 0)
         default: break
         }
         let homes = Building.homeEighths(of: use)
@@ -174,10 +182,11 @@ extension PlacedBuildingKind {
     }
 
     /// Whether it is a sight of the company's (decision 361 and its
-    /// sequel): a temple or a night market, whose customers are the
-    /// tourists it draws (``GameWorld/sightVisitors(of:onDay:)``).
+    /// sequel): a temple or a night market, and since decision 684 a
+    /// railway museum, whose customers are the tourists it draws
+    /// (``GameWorld/sightVisitors(of:onDay:)``).
     public var isSight: Bool {
-        self == .temple || self == .nightMarket
+        self == .temple || self == .nightMarket || self == .railwayMuseum
     }
 }
 
@@ -206,6 +215,11 @@ public struct PlacedBuilding: Hashable, Sendable {
     /// A temple's or a night market's tourists of the day that last ended
     /// (decision 361 and its sequel); 0 for the others.
     public internal(set) var visitors: Int64 = 0
+    /// A railway museum's exhibits (decision 684): the types of train the
+    /// company owned when it was built or at any midnight since, each
+    /// once, in the catalog's order; a type stays after its last train is
+    /// sold. Empty for the others.
+    public internal(set) var exhibits: [TrainType] = []
 
     public init(id: PlacedBuildingID, kind: PlacedBuildingKind, centre: PlanPoint, look: Int = 0) {
         self.id = id
@@ -258,6 +272,8 @@ extension GameWorld {
     ///
     /// - Throws, checked in this order: ``GameError/invalidBuildingLook``
     ///   unless `look` is one of the kind's ``PlacedBuildingKind/looks``;
+    ///   ``GameError/museumAlreadyBuilt(_:)`` naming the world's railway
+    ///   museum for a second one (decision 684);
     ///   ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
     ///   ``GameError/mapTileNotOwned(_:)`` naming the first tile of the map
@@ -319,6 +335,8 @@ extension GameWorld {
         moved: [(cell: LandCell, residents: Int64, jobs: Int64, isLast: Bool)]
     ) {
         guard (0..<kind.looks).contains(look) else { throw .invalidBuildingLook }
+        // Decision 684: one railway museum a world.
+        if kind == .railwayMuseum, let museum = railwayMuseum { throw .museumAlreadyBuilt(museum.id) }
         let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: nextPlacedBuildingID), kind: kind, centre: centre)
         guard Self.lies(candidate, in: bounds) else { throw .outOfBounds(centre) }
         // Decision 160: the whole square on the company's own ground.
@@ -350,6 +368,7 @@ extension GameWorld {
         var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre, look: look)
         building.buildingCost = quote.building
         building.landCost = quote.land + quote.buyOut
+        if kind == .railwayMuseum { building.exhibits = ownedTrainTypes() }
         let cleared = areaBuyOut ? [] : cityCells(claimedBy: candidate)
         // Decision 146, later: each covered cell's people in the share of
         // its ground the company's buildings left that this one covers, so
@@ -460,6 +479,16 @@ extension GameWorld {
             else {
                 return "Placed building \(building.id.rawValue) has a look or visitors out of range."
             }
+            // Decision 684: exhibits only in a museum, each type once, in
+            // the catalog's order.
+            guard building.kind == .railwayMuseum || building.exhibits.isEmpty,
+                  zip(building.exhibits, building.exhibits.dropFirst()).allSatisfy({ $0.row < $1.row })
+            else {
+                return "Placed building \(building.id.rawValue) has exhibits it may not."
+            }
+        }
+        guard placedBuildings.count(where: { $0.kind == .railwayMuseum }) <= 1 else {
+            return "A world has one railway museum at most."
         }
         return nil
     }
@@ -467,7 +496,7 @@ extension GameWorld {
 
 extension PlacedBuilding: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, centre, residents, jobs, buildingCost, landCost, books, look, visitors
+        case id, kind, centre, residents, jobs, buildingCost, landCost, books, look, visitors, exhibits
     }
 
     /// Decodes `{"id", "kind", "centre"}` and, since save version 22
@@ -476,7 +505,9 @@ extension PlacedBuilding: Codable {
     /// is empty and was paid nothing for. Since save version 71 (decision
     /// 361) `"look"` and a temple's `"visitors"`, each written only when
     /// not 0: a building before has the first look. Since save version 74
-    /// (its sequel) a night market's `"visitors"` too.
+    /// (its sequel) a night market's `"visitors"` too. Since save version
+    /// 87 (decision 684) a railway museum's `"visitors"` and its
+    /// `"exhibits"`, the types' codes, written only when it has any.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(PlacedBuildingID.self, forKey: .id)
@@ -489,6 +520,7 @@ extension PlacedBuilding: Codable {
         books = try container.decodeIfPresent(SubsidiaryBooks.self, forKey: .books) ?? SubsidiaryBooks()
         look = try container.decodeIfPresent(Int.self, forKey: .look) ?? 0
         visitors = try container.decodeIfPresent(Int64.self, forKey: .visitors) ?? 0
+        exhibits = try container.decodeIfPresent([TrainType].self, forKey: .exhibits) ?? []
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -503,5 +535,6 @@ extension PlacedBuilding: Codable {
         if books != SubsidiaryBooks() { try container.encode(books, forKey: .books) }
         if look != 0 { try container.encode(look, forKey: .look) }
         if visitors != 0 { try container.encode(visitors, forKey: .visitors) }
+        if !exhibits.isEmpty { try container.encode(exhibits, forKey: .exhibits) }
     }
 }

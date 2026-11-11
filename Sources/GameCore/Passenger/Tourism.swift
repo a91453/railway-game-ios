@@ -172,6 +172,21 @@ public struct Tourism: Hashable, Sendable {
     /// sequel), the same way: two and a half stars, a district's night
     /// market, below the famous ones the catalog holds as towns.
     public static let nightMarketStars = 250
+    /// The rating of a railway museum the company built (decision 684)
+    /// with nothing to show but papers and models, in hundredths of a
+    /// star: a star and a half, a small local exhibition hall's.
+    public static let museumStars = 150
+    /// What each exhibit, a type of train the company has owned, adds to
+    /// its museum, and how many count: fifteen hundredths of a star each,
+    /// twelve, so a museum of twelve types is 3.3 stars, a city's well
+    /// known museum below the island's famous sights.
+    public static let starsPerExhibit = 15
+    public static let exhibitsCounted = 12
+    /// The rating of a railway museum with `exhibits` exhibits (decision
+    /// 684), before any hotel or train near it.
+    public static func museumStars(exhibits: Int) -> Int {
+        museumStars + starsPerExhibit * max(0, min(exhibitsCounted, exhibits))
+    }
     /// The share of an attraction's tourists who stay the night in a hotel
     /// near it, in thousandths (shared among the hotels there).
     public static let hotelStayPermille: Int64 = 80
@@ -766,11 +781,52 @@ extension GameWorld {
                 let dx = other.centre.x - building.centre.x, dy = other.centre.y - building.centre.y
                 return other.kind == building.kind && dx * dx + dy * dy <= reach
             }
-            let temple = building.kind == .temple
-            let sight = Attraction(id: Self.companySightID(of: building.id), name: temple ? "廟" : "夜市", englishName: temple ? "Temple" : "Night market",
-                                   point: building.centre, kind: .town, baseStars: temple ? Tourism.templeStars : Tourism.nightMarketStars)
+            let (name, englishName, stars) = switch building.kind {
+            case .temple: ("廟", "Temple", Tourism.templeStars)
+            case .railwayMuseum: ("鐵道博物館", "Railway museum", Tourism.museumStars(exhibits: building.exhibits.count))
+            default: ("夜市", "Night market", Tourism.nightMarketStars)
+            }
+            let sight = Attraction(id: Self.companySightID(of: building.id), name: name, englishName: englishName,
+                                   point: building.centre, kind: .town, baseStars: stars)
             return (building.id, sight, Int64(max(1, sharing)))
         }
+    }
+
+    /// The world's railway museum (decision 684), or `nil`.
+    public var railwayMuseum: PlacedBuilding? {
+        placedBuildings.first { $0.kind == .railwayMuseum }
+    }
+
+    /// The types of train the company owns now, each once, in the
+    /// catalog's order (decision 684): what a museum takes as exhibits. A
+    /// train of the standard car, of no type, is none.
+    public func ownedTrainTypes() -> [TrainType] {
+        Set(trains.compactMap(\.type)).sorted { $0.row < $1.row }
+    }
+
+    /// Adds the types of train the company owns now to its museum's
+    /// exhibits (decision 684); those it has stay.
+    mutating func collectMuseumExhibits() {
+        guard let index = placedBuildings.firstIndex(where: { $0.kind == .railwayMuseum }) else { return }
+        let owned = ownedTrainTypes()
+        guard !owned.allSatisfy(placedBuildings[index].exhibits.contains) else { return }
+        placedBuildings[index].exhibits = Set(placedBuildings[index].exhibits + owned).sorted { $0.row < $1.row }
+    }
+
+    /// Why the company's sight `id`, a temple, a night market or a railway
+    /// museum, draws no tourists now, or ``AttractionStatus/ok``
+    /// (decision 684, for the sights panel); ``AttractionStatus/noStation``
+    /// for none or without tourism.
+    public func companySightStatus(of id: PlacedBuildingID) -> AttractionStatus {
+        guard let sight = companySight(of: id) else { return .noStation }
+        var asked = AttractionStatusAsked(day: dayIndex(of: clock.now))
+        return attractionStatus(of: sight, asked: &asked)
+    }
+
+    /// The station that serves `sight`, any sight value, on foot, as
+    /// ``attractionStation(of:)`` an attraction's (decision 684).
+    public func servingStationID(of sight: Attraction) -> StationID? {
+        servingStation(at: sight.point)
     }
 
     /// The company's temple or night market `id` as a sight (decision 361
@@ -1085,6 +1141,9 @@ extension GameWorld {
         for index in placedBuildings.indices where placedBuildings[index].kind.isSight {
             placedBuildings[index].visitors = arrived[Self.companySightID(of: placedBuildings[index].id)] ?? 0
         }
+        // Decision 684: the museum takes in the types bought since, after
+        // the day's visitors are counted at the rating they came for.
+        collectMuseumExhibits()
     }
 
     /// Settles day `day`'s shop takings and upkeep as one ledger row at

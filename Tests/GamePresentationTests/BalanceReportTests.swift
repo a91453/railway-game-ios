@@ -609,6 +609,66 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 684's railway museum: built on day 10 beside the first
+    /// line's last station, with no other sight, showing 0, 1, 4, 8 and 12
+    /// types of train (bought that day in both worlds, so what they cost
+    /// cancels). Its visitors, profit a day and the days to pay back what
+    /// it cost, against the temple's (some 965 days) and the hotel's aim
+    /// of 2 to 4 years; and what the company gains a day with it, fares
+    /// and upkeep counted (the balances' difference, the museum's cost
+    /// added back, over the days since).
+    func testARailwayMuseumOnTheFirstLine() throws {
+        let days = try requestedDays()
+        var lines = [
+            "### A railway museum beside the first line's last station (built on day 10)",
+            "",
+            "| Exhibits | Stars | Museum cost | Visitors a day (mean) | Profit a day (mean) | Payback days | Company gain a day (fares and upkeep counted) | Balance with museum | without |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        var start = try firstLine()
+        let station = try XCTUnwrap(start.stations.last)
+        start.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "Far", englishName: "Far", point: PlanPoint(x: 0, y: 0), kind: .town, baseStars: 100)])
+        try start.advance(ticks: 1)
+        for exhibits in [0, 1, 4, 8, 12] {
+            var base = start
+            var with = start
+            var museum: PlacedBuildingID?
+            var visitors: Int64 = 0, profit: Int64 = 0, counted: Int64 = 0
+            for day in 1...days {
+                try base.advance(ticks: 1_440)
+                try with.advance(ticks: 1_440)
+                if day == 10 {
+                    with.economy.earn(Money(30_000_000_000))
+                    base.economy.earn(Money(30_000_000_000))
+                    var bought = 0
+                    for type in TrainType.allCases where bought < exhibits {
+                        guard (try? base.purchaseTrain(named: "Exhibit \(bought)", as: type)) != nil else { continue }
+                        try with.purchaseTrain(named: "Exhibit \(bought)", as: type)
+                        bought += 1
+                    }
+                    XCTAssertEqual(bought, exhibits)
+                    museum = try with.placeBuilding(.railwayMuseum, at: PlanPoint(x: station.point.x + 3_000, y: station.point.y - 6_000)).id
+                }
+                if day > 10, let id = museum, let building = with.placedBuilding(id: id) {
+                    let result = with.subsidiaryDay(of: building, onDay: Int64(day) - 1)
+                    visitors += result.customers
+                    profit += (result.sales - result.cost).amount
+                    counted += 1
+                }
+            }
+            let building = try XCTUnwrap(museum.flatMap { with.placedBuilding(id: $0) })
+            let sight = try XCTUnwrap(with.companySight(of: building.id))
+            let mean = max(1, counted)
+            let payback = profit > 0 ? building.cost.amount * mean / profit : 0
+            let gain = (with.economy.balance.amount - base.economy.balance.amount + building.cost.amount) / mean
+            lines.append(
+                "| \(building.exhibits.count) | \(with.starsText(of: sight)) | \(dollars(building.cost.amount)) | \(visitors / mean) | \(dollars(profit / mean)) | \(payback) | "
+                    + "\(dollars(gain)) | \(dollars(with.economy.balance.amount)) | \(dollars(base.economy.balance.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 533: a school or a hospital beside the last station of the
     /// first line and of the line between two towns (built on day 10),
     /// against the same line without one: the riders it brings, the fares

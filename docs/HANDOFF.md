@@ -4475,3 +4475,10 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **Mac／實機要看**（全部 UNVERIFIED）：把手一格的手感與煞車距離好不好抓、觸覺、馬達聲跟把手、iPhone 直放與 iPad 上面板有沒有擋到跟車列或司機資訊列、結束時鏡頭跳回去會不會太突兀。
 - 還沒做的在決策 686「已知的限制與下一步」（連續幾站、開關門、彎道速限、讓結果算數要動 GameCore）。
 - **號碼**：決策 686；存檔、golden 不動。
+
+### 4.62 鐵道博物館第一步（決策 684，派工單 MUSEUM，session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，2026-11-11）
+
+- **做了的**在 [決策 684](decisions/684.md)：建築清單多一種「鐵道博物館」（一張地圖一座），是公司的景點；展示公司擁有過的車種，每種 +0.15★（空館 1.5★，十二種 3.3★）；遊客每人 NT$150、每件展品維護 NT$1,000／天，記在子公司帳。存檔版本 87（`v87-railway-museum.json`）。
+- **還沒做、給 Mac 本機的第二步**（決策 684「下一步」1）：館舍自己的 3D 外觀與停在館前的展品（現在 3D、卡片圖、地圖記號都暫用百貨的）、新圖示、點博物館逐件看展品的館內瀏覽。要看畫面，截圖驗收屬「規劃看過才合」。
+- **平衡**：量法與數字在決策 684 第 6 節（`BalanceReportTests.testARailwayMuseumOnTheFirstLine`）；實機玩過覺得太賺或太少，只動 `Tourism.starsPerExhibit` 與 `SubsidiaryRules.museumExhibitUpkeep`。
+- **號碼**：決策 684、存檔 87；golden schema、ReplayFixtures 不動。

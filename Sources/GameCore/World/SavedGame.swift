@@ -451,9 +451,15 @@
 ///     line with it, so it says the save is newer than it instead. A save
 ///     of any earlier version needs no step: a run without `"passes"`
 ///     calls at every stop, as every run did.
+/// 87. The railway museum (decision 684): a building of the company's can
+///     be of the kind `"railwayMuseum"`, with its `"visitors"` and its
+///     `"exhibits"`. A build that reads only an earlier version would
+///     refuse the kind and the whole save with it, so it says the save is
+///     newer than it instead. A save of any earlier version needs no step:
+///     it has no museum.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 86
+    public static let currentVersion = 87
 
     public let world: GameWorld
 
@@ -673,6 +679,8 @@ extension SavedGame: Codable {
         // none (decision 585): nothing to turn.
         // Version 85 or earlier to 86: a run without `"passes"` calls at
         // every stop (decision 605): nothing to turn.
+        // Version 86 or earlier to 87: a world before version 87 has no
+        // railway museum (decision 684): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
