@@ -4482,3 +4482,14 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **還沒做、給 Mac 本機的第二步**（決策 684「下一步」1）：館舍自己的 3D 外觀與停在館前的展品（現在 3D、卡片圖、地圖記號都暫用百貨的）、新圖示、點博物館逐件看展品的館內瀏覽。要看畫面，截圖驗收屬「規劃看過才合」。
 - **平衡**：量法與數字在決策 684 第 6 節（`BalanceReportTests.testARailwayMuseumOnTheFirstLine`）；實機玩過覺得太賺或太少，只動 `Tourism.starsPerExhibit` 與 `SubsidiaryRules.museumExhibitUpkeep`。
 - **號碼**：決策 684、存檔 87；golden schema、ReplayFixtures 不動。
+
+### 4.63 3D 模型「看圖再改」的規矩與追分試做（決策 685，派工單 LOOK-LOOP，Mac 本機 session_01YGNNuoActmxTfeAsLPJBWL，`claude/look-loop-685`，#2048，2026-11-11）
+
+規矩是 `.claude/skills/model-look/`，工具是 `tools/model-look/`，紀錄與考題結果在 `docs/art/model-look-2026-11-11/README.md`；含照片的圖與考題的 patch 在 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/model-look-2026-11-11/`（assets #90）。留給之後的：
+
+- **追分已合併**（#2048，遊戲規劃第 60 任看過總覽圖；assets #90 也已合併）。還不好的地方列在 README 最後，最大的是 800 m 遠看只剩灰屋頂、沒有放進真實地圖場景與 Metal 看過（UNVERIFIED，Mac 或實機要看）。
+- **保安、集集有做好的試做，沒有採用**：考題的四份 `changes.patch` 在素材庫那個資料夾的 `evals/`（各有「有規矩／沒規矩」兩版；assets 已合併）。要用的話挑一版另開 PR，照 model-look 再看一輪。
+- **日南、談文、大山、新埔**和追分是同型式的木造站房，確認照片後可以共用 `coastTimber`；這次沒有動，仍是通用站型。
+- **車站目錄在 `main` 就過期**：`python3 tools/station-kit/catalog.py --check` 回報保安、岡山、臺南、高雄四列座標與來源資料不同；這次只手改追分一列，沒有重新產生。
+- **考題只跑了一回合、每題一次**，評分是做的 session 自己對的，沒有盲評，也沒有跑 skill-creator 的說明文字觸發測試。
+- **Mac 上沒有 Playwright／Chromium**：拍圖工具要它，裝法在 `tools/model-look/README.md`（裝在 scratchpad，每個 session 自己裝）。
