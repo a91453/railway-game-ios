@@ -1163,6 +1163,9 @@ extension PlacedBuildingKind {
         case .school: .school
         case .hospital: .hospital
         case .nightMarket: .nightMarket
+        // Decision 684: the museum's own glyph and card picture come with
+        // its model; until then the department store's.
+        case .railwayMuseum: .departmentStore
         }
     }
 
@@ -1183,6 +1186,7 @@ extension PlacedBuildingKind {
         case .school: "BuildingSchool"
         case .hospital: "BuildingHospital"
         case .nightMarket: "BuildingNightMarket"
+        case .railwayMuseum: "BuildingDepartmentStore"
         }
     }
 }

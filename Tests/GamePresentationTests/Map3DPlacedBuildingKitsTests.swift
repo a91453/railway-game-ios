@@ -9,7 +9,7 @@ import XCTest
 /// civic, park and commercial kits), close up
 /// only; from farther a box round each tall model.
 final class Map3DPlacedBuildingKitsTests: XCTestCase {
-    private static let kinds: [PlacedBuildingKind] = [.hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket]
+    private static let kinds: [PlacedBuildingKind] = [.hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket, .railwayMuseum]
 
     private func builder(_ world: GameWorld) -> Map3DScene.Builder {
         let (region, originX, originY) = Map3DScene.frame(world: world, focus: nil)

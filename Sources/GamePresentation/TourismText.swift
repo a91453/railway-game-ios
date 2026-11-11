@@ -100,6 +100,10 @@ public struct AttractionRow: Identifiable, Hashable, Sendable {
     /// the company's tiles, within a station's reach of them, served, or
     /// with a souvenir shop (``foldedOffMapMetres(distance:hasStation:souvenir:)``).
     public var offMapMetres: Int64? = nil
+    /// For the company's railway museum (decision 684), what it shows:
+    /// "Shows 3 types of train: …"; `nil` for any other sight. A museum
+    /// has no souvenir shop to build, and counts only today and yesterday.
+    public var exhibitsText: String? = nil
 
     /// "About 8 km off your map", for a sight off it; `nil` on it.
     public func offMapText(in language: DisplayLanguage) -> String? {
@@ -148,7 +152,7 @@ extension GameWorld {
         let day = clock.now.seconds / GameTime.secondsPerDay
         // One network for every sight, not one each (CRASH-SIGHTS).
         let statuses = attractionStatuses()
-        let rows: [AttractionRow] = tourism.attractions.map { sight in
+        var rows: [AttractionRow] = tourism.attractions.map { sight in
             let status = statuses[sight.id] ?? .noStation
             let serving = attractionStation(of: sight.id)
             let today = status == .ok ? touristsExpected(for: sight, onDay: day) : 0
@@ -178,6 +182,21 @@ extension GameWorld {
                 )
             )
         }
+        // Decision 684: the company's railway museum among the sights.
+        if let museum = railwayMuseum, let sight = companySight(of: museum.id) {
+            let status = companySightStatus(of: museum.id)
+            let serving = servingStationID(of: sight)
+            rows.append(AttractionRow(
+                id: sight.id, name: sight.name(in: language), kind: language.text("Your museum", "你的博物館"), stars: stars(of: sight),
+                starsText: starsText(of: sight), souvenir: 0, hotels: hotelsNear(sight),
+                sightseeingTrainText: Self.sightseeingTrainText(stars: sightseeingTrainStars(near: sight), in: language),
+                status: status, statusText: status.title(in: language, edge: outsideConnections),
+                stationName: serving.flatMap { station(id: $0)?.name },
+                today: status == .ok ? touristsExpected(for: sight, onDay: day) : 0,
+                yesterday: museum.visitors, thisYear: 0, lastYear: 0, nextShop: nil, point: sight.point,
+                exhibitsText: Self.exhibitsText(of: museum, in: language)
+            ))
+        }
         // Decision 663 (the Mac playtest's A12): the sights on the
         // company's map by stars, then those off it, nearest first.
         return rows.sorted { a, b in
@@ -188,6 +207,25 @@ extension GameWorld {
             case let (x?, y?): x != y ? x < y : a.id < b.id
             }
         }
+    }
+
+    /// What the sights panel says a railway museum shows (decision 684).
+    static func exhibitsText(of museum: PlacedBuilding, in language: DisplayLanguage) -> String {
+        let names = museum.exhibits.map { $0.title(in: language) }.joined(separator: language.text(", ", "、"))
+        let count = museum.exhibits.count
+        if count == 0 {
+            return language.text(
+                "Nothing to show yet. Each type of train your company owns goes on show the next day and raises its stars.",
+                "還沒有展示車輛。公司擁有的每一種列車，隔天會進館展示，星等跟著提高。"
+            )
+        }
+        let more = count < Tourism.exhibitsCounted
+            ? language.text(" Buy a type you have never owned and it goes on show the next day, raising its stars.", "買一種沒擁有過的列車，隔天進館展示，星等再提高。")
+            : ""
+        return language.text(
+            "Shows \(count) \(count == 1 ? "type" : "types") of train: \(names).\(more)",
+            "展示 \(count) 種列車：\(names)。\(more)"
+        )
     }
 
     /// How far `point` lies from the nearest tile the company owns, in
