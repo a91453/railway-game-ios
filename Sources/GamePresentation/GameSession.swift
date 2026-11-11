@@ -1082,6 +1082,10 @@ public final class GameSession {
     /// Decision 690: the line, the way and the stop of the run driven by
     /// hand, for the driving card; `nil` when not driving.
     public internal(set) var manualDriveHeading: ManualDrive.Heading?
+    /// Decision 693: what the world made of the run driven by hand that
+    /// just ended, for the result card; `nil` until it is settled, and
+    /// when the world refused it.
+    public internal(set) var manualDriveSettlement: DrivenRunSettlement?
     /// The sound last told to ``runningSound``.
     @ObservationIgnored private var lastRunningSound: RunningSound?
     /// Decision 346: the sound of the weather the map shows
