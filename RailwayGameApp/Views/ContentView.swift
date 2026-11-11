@@ -486,6 +486,11 @@ struct ContentView: View {
         case .tourism:
             TourismPanel(session: session, focus: screen.sightFocus)
                 .gameSheetDetents()
+        case .museum:
+            NavigationStack {
+                RailwayMuseumPage(session: session, closes: true)
+            }
+            .gameSheetDetents()
         case .news:
             NewsLogView(session: session)
                 .gameSheetDetents()
@@ -1506,6 +1511,9 @@ final class GameScreenState {
         case monthEnd
         /// The sights and their souvenir shops (decision 174).
         case tourism
+        /// The railway museum's exhibits (decision 696), from the museum
+        /// tapped on the map.
+        case museum
         /// The help guide (decision 177), from the game menu.
         case help
         /// The network postcard (decision 215), from the game menu.
@@ -1524,7 +1532,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard, .achievements, .networkFlow: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .museum, .news, .monthEnd, .help, .postcard, .achievements, .networkFlow: false
             }
         }
     }

@@ -372,6 +372,29 @@ struct InspectorView: View {
                         .accessibilityLabel("Sell")
                         .accessibilityHint("Opens the building tool's sale of this building, with the price it would bring.")
                     }
+                    // Decision 696: the railway museum opens its exhibits.
+                    if let id = session.selectedBuildingID, session.world.railwayMuseum?.id == id {
+                        Button {
+                            screen.panel = .museum
+                        } label: {
+                            HStack(spacing: 4) {
+                                MapGlyph.railwayMuseum.image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 14, height: 14)
+                                Text(verbatim: session.language.text("Exhibits…", "館藏…"))
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 8)
+                            .frame(height: 30)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                        .accessibilityLabel(Text(verbatim: session.language.text("Exhibits", "館藏")))
+                        .accessibilityHint(Text(verbatim: session.language.text("Opens the museum's exhibits, one type of train at a time.", "打開博物館的館藏，一種列車一種列車地看。")))
+                        .accessibilityIdentifier("inspector.museum")
+                    }
                     if session.selectedStation != nil {
                         Button {
                             // The tutorial's ridership step: at the riders it speaks of.

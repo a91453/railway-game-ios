@@ -78,6 +78,7 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 1. 在自己的分支手動跑 `website-screenshots.yml`（Actions 分頁，選自己的分支）。它在 iPhone Pro Simulator 上橫拿、深色模式，跑 `WebsiteScreenshotTests`，PNG 在 artifact `website-screenshots`。
 2. 改的畫面沒被拍到，就在 `RailwayGameApp/UITests/WebsiteScreenshotTests.swift` 加一個 `test…` 方法：打開那個畫面，用 `keep("名字", app)` 留下來（每張匯出成 `名字.png`）。
 3. **一次只跑一個截圖 run**：macOS runner 只有五台，full lane 佔四台。別的 session 的截圖 run 還在跑就等它。
+4. **Mac 本機的 session 在自己的模擬器拍過、看過，就不要再開 CI 的截圖 run 重拍一次**（作者 2026-11-12：「你本地驗證過就不用再跑模型了浪費時間」「就是跑模擬器」）。本機的做法：複製一台模擬器（`xcrun simctl clone`）、深色、橫放，`xcodebuild test-without-building -only-testing:RailwayGameUITests/WebsiteScreenshotTests/<測試> -resultBundlePath …`，再用 `xcrun xcresulttool export attachments` 取圖；圖放私有素材庫那個 PR 的 `app/`，在遊戲的 PR 與 #1579 寫明「截圖是本機模擬器拍的、在哪裡」，規劃看那裡。雲端的 session 沒有模擬器，照第 1 步用 CI。
 4. 這個 workflow 只拍 iPhone Pro、橫拿、深色。iPhone SE 寬、iPad、淺色、最大字級拍不到的，在 PR 寫「沒拍到」與原因（UNVERIFIED），有實機截圖時再補。
 
 **看**（每一輪）：
