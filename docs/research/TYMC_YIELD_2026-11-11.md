@@ -6,7 +6,7 @@
 
 ## 量法
 
-Linux 雲端容器（4 核），Swift 6.4.0，debug（GameCore -O），main a714b812。簡單＋行車控制（新局預設）、最高倍速（十分鐘一格）、`DepotReturnReportTests`，和 HEALTH-124 第 4 節同一條指令（那邊是 release；沒發的班逐班相同）。讓路次數用 GameCore 裡暫時的探針數（每次 `depotBoundMakingWay` 回傳時印一行，已拿掉），所以最高倍速下也是確實的次數；「最長連讓」是同一列車從上一次讓到的站、30 分鐘內再讓的次數。全部 **VERIFIED（Linux，本機）**。
+Linux 雲端容器（4 核），Swift 6.4.0，debug（GameCore -O），main a714b812。簡單＋行車控制（新局預設）、最高倍速（十分鐘一格）、`DepotReturnReportTests`，和 HEALTH-124 第 4 節同一條指令（那邊是 release；沒發的班逐班相同）。讓路次數用 GameCore 裡暫時的探針數（每次 `depotBoundMakingWay` 回傳時印一行，已拿掉），所以最高倍速下也是確實的次數；「最長連讓」是同一列車從上一次讓到的站、30 分鐘內再讓的次數。（`DepotReturnReportTests` 印的「最長連讓」沒有 30 分鐘的時間窗：同一列車連續讓路，中間載客或進機廠才歸零。這份的數字兩種算法相同（機捷 63 次、最長 14 站）；之後拿報告的數字對門檻時，以測試的定義為準。審查 L17-22。）全部 **VERIFIED（Linux，本機）**。
 
 ## 重現（紅）
 

@@ -39,6 +39,10 @@ public struct TrainPurchaseEstimate: Hashable, Sendable {
         /// No plan yet, or none with the line in it (a line just made,
         /// before the clock has run): the fares cannot be said.
         case unknown
+        /// There is a plan and no one in it rides the line (review L17-2,
+        /// decision 689's next step): the clock has run, so
+        /// ``unknown``'s words would be wrong.
+        case noRiders
     }
 
     public let demand: Demand
@@ -50,7 +54,7 @@ public struct TrainPurchaseEstimate: Hashable, Sendable {
     public let faresNow: Money
     public let costNow: Money
     /// With the trains bought. The fares and what is left are `nil` with
-    /// ``Demand/unknown``.
+    /// ``Demand/unknown`` and ``Demand/noRiders``.
     public let fares: Money?
     public let cost: Money
     /// Of ``cost``, what the trains bought add.
@@ -175,6 +179,11 @@ extension TrainPurchaseEstimate {
                 "Riders are counted once the clock has run: the fares show then.",
                 "時間開始走以後才算得出乘客，票收到時會顯示。"
             )
+        case .noRiders:
+            language.text(
+                "No one rides this line yet, so its fares cannot be estimated.",
+                "這條線還沒有乘客，估不出票收。"
+            )
         case .planned:
             language.text(
                 "An estimate from today's riders and fares. Weather, holidays and late trains change the real day.",
@@ -225,6 +234,12 @@ struct LineDayModel: Equatable {
 enum TrainPurchaseModel {
     /// The most the completed days "now" is the average of.
     static let historyDays = 7
+
+    /// The trips each way, in thousandths, of `minutes` open minutes at a
+    /// train every `headway` minutes (review L17-9).
+    static func tripThousandths(minutes: Int64, headway: Int64) -> Int64 {
+        headway > 0 ? minutes * 1_000 / headway : 0
+    }
 
     /// Whether a completed day that cost `day` dollars to run was run by
     /// the trains the model costs at `model` dollars a day (review L17-3,
@@ -307,18 +322,29 @@ extension GameWorld {
         if own > 0 {
             for level in ServiceLevel.allCases { nowHeadways[level] = lineHeadway(id, at: level) }
         }
+        // Review L17-9: the open minutes of each hour are counted first
+        // and divided once. A thousandth of a trip cut off at every minute
+        // (1_000 / headway) lost a tenth of the trips at a headway of 150
+        // minutes and all of them over 1,000.
         var open: Int64 = 0
+        var openMinutes = Array(repeating: Int64(0), count: 24)
+        var nowMinutes = Array(repeating: [Int64: Int64](), count: 24)
         for minute in 0..<1_440 where line.window.contains(minuteOfDay: minute) {
             open += 1
             let hour = minute / 60
-            after.hourlyTrips[hour] += 1_000 / afterHeadway
+            openMinutes[hour] += 1
             if let now = nowHeadways[serviceDay.level(atMinuteOfDay: minute)], now > 0 {
-                before.hourlyTrips[hour] += 1_000 / now
+                nowMinutes[hour][now, default: 0] += 1
             }
+        }
+        for hour in 0..<24 {
+            after.hourlyTrips[hour] = TrainPurchaseModel.tripThousandths(minutes: openMinutes[hour], headway: afterHeadway)
+            before.hourlyTrips[hour] = nowMinutes[hour].reduce(0) { $0 + TrainPurchaseModel.tripThousandths(minutes: $1.value, headway: $1.key) }
         }
 
         // The plan's riders of the line, by leg.
-        let flows = plannedPassengerLegFlows()?.filter { $0.line == id } ?? []
+        let plan = plannedPassengerLegFlows()
+        let flows = plan?.filter { $0.line == id } ?? []
         let planned = !flows.isEmpty
         let modelBefore = lineDay(line, journey: journey, fleet: before, flows: flows, openMinutes: open)
         let modelAfter = lineDay(line, journey: journey, fleet: after, flows: flows, openMinutes: open)
@@ -357,7 +383,7 @@ extension GameWorld {
         let averageFare = planFare ?? historyFare ?? meanStopFare(of: line)
         func money(_ dollars: Double) -> Money { Money(Int64(dollars.rounded()) * 100) }
         return TrainPurchaseEstimate(
-            demand: planned ? .planned : .unknown,
+            demand: planned ? .planned : plan == nil ? .unknown : .noRiders,
             historyDays: days.count,
             faresNow: money(faresNow), costNow: money(costNow),
             fares: planned ? money(fares) : nil,

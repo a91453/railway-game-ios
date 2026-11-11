@@ -174,6 +174,10 @@ extension GameSession {
     /// driven by hand.
     var manualDriveSound: (kmh: Double, drive: GameWorld.TrainDrive?)? {
         guard let drive = manualDriveRun?.driving?.drive else { return nil }
+        // Review L17-14: a run that ended past the mark or out of time
+        // keeps the speed it ended at, and the train is drawn standing:
+        // it is heard standing too, not running until the card is closed.
+        if drive.isOver { return (0, nil) }
         return (drive.speedKMH, drive.drive)
     }
 
