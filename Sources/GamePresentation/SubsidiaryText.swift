@@ -15,9 +15,15 @@ extension GameSession {
             "\(building.residents + building.jobs) of \(capacity.residents + capacity.jobs) people",
             "入住 \(building.residents + building.jobs) / \(capacity.residents + capacity.jobs) 人"
         )
-        guard building.kind.isSubsidiary, world.accounts.mode == .management else {
-            return "\(name) · \(people)"
-        }
+        guard world.accounts.mode == .management else { return "\(name) · \(people)" }
+        let price = world.saleQuote(of: id)?.price ?? .zero
+        // Decision 692: what it cost beside what it would sell for now,
+        // and how far that is up or down.
+        let estimate = language.text(
+            "Would sell for \(price.moneyText) · paid \(building.cost.moneyText)\(changeText(from: building.cost, to: price))",
+            "估計售價 \(price.moneyText) · 買價 \(building.cost.moneyText)\(changeText(from: building.cost, to: price))"
+        )
+        guard building.kind.isSubsidiary else { return "\(name) · \(people)\n\(estimate)" }
         let books = building.books
         func line(_ title: String, _ month: SubsidiaryMonth) -> String {
             language.text(
@@ -33,14 +39,24 @@ extension GameSession {
         let yield = language.text(
             "12-month return \(Self.tenthsText(roi))% of its cost", "近 12 個月報酬率 \(Self.tenthsText(roi))%（占造價）"
         )
-        let price = world.saleQuote(of: id)?.price ?? .zero
-        let estimate = language.text("Would sell for \(price.moneyText)", "估計售價 \(price.moneyText)")
         return [
             "\(name) · \(people)",
             line(language.text("This month", "本月"), books.thisMonth),
             line(language.text("Last month", "上月"), books.lastMonth),
             total, yield, estimate,
         ].joined(separator: "\n")
+    }
+
+    /// Decision 692: how far `now` is above or below what was `paid`, as
+    /// " (up 12.5%)" or " (down 88.2%)"; nothing when nothing was paid.
+    public func changeText(from paid: Money, to now: Money) -> String {
+        guard paid > .zero else { return "" }
+        // Tenths of a percent, rounded down toward no change.
+        let tenths = abs(now.amount - paid.amount) * 1_000 / paid.amount
+        let text = Self.tenthsText(tenths)
+        return now < paid
+            ? language.text(" (down \(text)%)", "（跌 \(text)%）")
+            : language.text(" (up \(text)%)", "（漲 \(text)%）")
     }
 
     /// Tenths of a percent as "12.5" or "-0.5".
