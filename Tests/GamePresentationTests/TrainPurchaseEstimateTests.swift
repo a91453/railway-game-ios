@@ -241,6 +241,48 @@ final class TrainPurchaseEstimateTests: XCTestCase {
         XCTAssertEqual(read(), first)
     }
 
+    /// Review L17-2: read before the first tick, there is no passenger
+    /// plan and the fares are not said. The tick that makes the plan is no
+    /// command, and the panel kept "once the clock has run" for the rest
+    /// of the hour while the clock ran. It is worked out again as soon as
+    /// the plan is there, and again in the next hour.
+    func testAnEstimateWithNoPlanIsNotKeptOnceTheClockRuns() throws {
+        let session = GameSession(world: try lineBetweenTwoTowns())
+        session.selectLine(Self.line)
+        let memo = LinePanelMemo()
+        func read() -> TrainPurchaseEstimate? {
+            memo.purchaseEstimate(Self.line, buying: 1, type: nil, cars: 4, headway: 10, price: Money(100_000_000), of: session)
+        }
+        XCTAssertFalse(session.world.keepsPassengerPlan)
+        XCTAssertEqual(try XCTUnwrap(read()).demand, .unknown)
+        let commands = session.commandRevision
+        let hour = session.world.clock.now.seconds / GameTime.secondsPerHour
+        session.advance(realElapsed: .milliseconds(100))
+        XCTAssertEqual(session.commandRevision, commands, "the clock is no command")
+        XCTAssertEqual(session.world.clock.now.seconds / GameTime.secondsPerHour, hour, "the same hour")
+        XCTAssertTrue(session.world.keepsPassengerPlan)
+        let planned = try XCTUnwrap(read())
+        XCTAssertEqual(planned.demand, .planned)
+        XCTAssertNotNil(planned.fares)
+        XCTAssertEqual(planned, session.world.trainPurchaseEstimate(
+            Self.line, buying: 1, type: nil, cars: 4, headway: 10, price: Money(100_000_000)
+        ))
+        // Kept within the hour, worked out again in a later one.
+        let kept = session.world
+        session.advance(realElapsed: .milliseconds(100))
+        XCTAssertNotEqual(session.world.clock.now, kept.clock.now)
+        XCTAssertEqual(session.world.clock.now.seconds / GameTime.secondsPerHour, hour)
+        XCTAssertEqual(read(), planned)
+        while session.world.clock.now.seconds / GameTime.secondsPerHour < hour + 24 {
+            session.advance(realElapsed: .seconds(1))
+        }
+        XCTAssertEqual(session.commandRevision, commands)
+        XCTAssertEqual(read(), session.world.trainPurchaseEstimate(
+            Self.line, buying: 1, type: nil, cars: 4, headway: 10, price: Money(100_000_000)
+        ))
+        XCTAssertEqual(read()?.historyDays, 1, "a day of the line's own by then, which the first hour's had not")
+    }
+
     /// When the page shows it: for every headway that buys trains, and
     /// for none that does not (the screenshots' line, two days run: its
     /// one train comes every 13 minutes).

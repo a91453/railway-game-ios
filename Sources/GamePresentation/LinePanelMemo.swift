@@ -46,7 +46,7 @@ public final class LinePanelMemo {
 
     private var key: Key?
     private var journey: LineJourney??
-    private var purchaseEstimates: [Purchase: (hour: Int64, estimate: TrainPurchaseEstimate?)] = [:]
+    private var purchaseEstimates: [Purchase: (hour: Int64, planned: Bool, estimate: TrainPurchaseEstimate?)] = [:]
     private var summaries: [LineServiceSummary]?
     private var routeChoices: [Leg: [LineRoutePreference]] = [:]
     private var journeyText: String??
@@ -183,15 +183,19 @@ public final class LinePanelMemo {
     /// ``GameWorld/trainPurchaseEstimate(_:buying:type:cars:headway:price:journey:)``
     /// (decision 682). Its riders and the line's days move with the clock,
     /// not with commands: it is worked out again each hour of the game,
-    /// on the line's journey kept for the command.
+    /// on the line's journey kept for the command, and when the world
+    /// comes to keep a passenger plan (review L17-2): one read before the
+    /// plan was made, which a tick makes and no command, has no fares, and
+    /// kept for the hour it said "once the clock has run" while it ran.
     public func purchaseEstimate(
         _ id: LineID, buying: Int, type: TrainType?, cars: Int, headway: Int64, price: Money, of session: GameSession
     ) -> TrainPurchaseEstimate? {
         keep(id, of: session)
         let purchase = Purchase(buying: buying, type: type, cars: cars, headway: headway, price: price)
         let hour = session.world.clock.now.seconds / GameTime.secondsPerHour
-        if let kept = purchaseEstimates[purchase], kept.hour == hour { return kept.estimate }
         let world = session.world
+        let planned = world.keepsPassengerPlan
+        if let kept = purchaseEstimates[purchase], kept.hour == hour, kept.planned == planned { return kept.estimate }
         let line: LineJourney?
         if let kept = journey {
             line = kept
@@ -202,7 +206,7 @@ public final class LinePanelMemo {
         let estimate = line.flatMap {
             world.trainPurchaseEstimate(id, buying: buying, type: type, cars: cars, headway: headway, price: price, journey: $0)
         }
-        purchaseEstimates[purchase] = (hour, estimate)
+        purchaseEstimates[purchase] = (hour, planned, estimate)
         return estimate
     }
 
