@@ -53,6 +53,7 @@ public enum DataSourceCredits {
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let travelSurveyURL = "https://data.gov.tw/dataset/6248"
+    static let civilAviationURL = "https://www.caa.gov.tw"
     static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
     static let overtureURL = "https://overturemaps.org"
     static let overtureAttributionURL = "https://docs.overturemaps.org/attribution/"
@@ -474,6 +475,24 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: language.text("Dataset (data.gov.tw)", "資料集（政府資料開放平臺）"), url: travelSurveyURL),
                             openGovernmentLicense(in: language),
+                        ]
+                    ),
+                    // Decision 695: each airport's passengers and flights of
+                    // a year, which set its flights and how many of its
+                    // passengers ride the company's trains.
+                    DataSourceCredit(
+                        id: "airports",
+                        title: language.text("Airport passengers and flights", "機場旅客與航班架次"),
+                        detail: language.text(
+                            "How many passengers and flights Taoyuan, Songshan, Taichung and Kaohsiung airports have in a year: on a real-world map, they set each airport's flights and how many of its passengers ride your trains.",
+                            "桃園、松山、臺中、高雄機場一年的旅客與航班架次：在實景地圖上，決定每座機場的航班數，以及有多少旅客搭你的車。"
+                        ),
+                        notice: language.text(
+                            "Source: Civil Aviation Administration, Ministry of Transportation and Communications, civil air transport statistics, 2025, as given on each airport's page of the Chinese Wikipedia. Terminal positions: OpenStreetMap contributors.",
+                            "資料來源：交通部民用航空局民航運輸統計，114 年（取自中文維基百科各機場條目）。航廈位置：OpenStreetMap 貢獻者。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
                         ]
                     ),
                     // Decision 147: how much of the ground real buildings

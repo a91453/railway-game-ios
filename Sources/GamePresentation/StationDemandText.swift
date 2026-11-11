@@ -154,11 +154,14 @@ public struct StationRidership: Hashable, Sendable {
     /// Decision 533: the riders the company's schools and hospitals near
     /// the station bring today.
     public let civic: [CivicRiders]
+    /// Decision 695: the days of the airports the station serves.
+    public let airports: [AirportDay]
 
-    public init(flow: StationFlow?, pairs: [StationDemandPair], civic: [CivicRiders] = []) {
+    public init(flow: StationFlow?, pairs: [StationDemandPair], civic: [CivicRiders] = [], airports: [AirportDay] = []) {
         self.flow = flow
         self.pairs = pairs
         self.civic = civic
+        self.airports = airports
     }
 }
 
@@ -307,6 +310,7 @@ extension GameWorld {
     func stationRidership(of id: StationID, days: [StationID: [StationID: Int64]]?) -> StationRidership {
         guard let demand = stationDemand(of: id) else { return StationRidership(flow: nil, pairs: []) }
         let civic = days == nil ? civicRiders(at: id) : []
+        let airports = days == nil ? airportDays(at: id) : []
         let outbound = days?[id] ?? dailyDemands(from: id)
         var entries = Array(repeating: Int64(0), count: 24)
         var exits = entries
@@ -325,7 +329,7 @@ extension GameWorld {
             }
         }
         guard entries.allSatisfy({ $0 == 0 }), exits.allSatisfy({ $0 == 0 }) else {
-            return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs, civic: civic)
+            return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs, civic: civic, airports: airports)
         }
         // B4 of the #911–#944 review: today's hours, as GameCore shares a
         // pair's trips (`hourly(_:from:to:weekend:tidal:)`): a weekend or
@@ -337,7 +341,7 @@ extension GameWorld {
             exits: Self.shared(demand.dailyTrips, by: demand.arrivalShape(tidal: tide), tidal: tidalDemand, weekend: weekend),
             isShape: true
         )
-        return StationRidership(flow: shape, pairs: pairs, civic: civic)
+        return StationRidership(flow: shape, pairs: pairs, civic: civic, airports: airports)
     }
 
     /// The trips that start and end at station `id` in each hour (see

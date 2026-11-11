@@ -1282,7 +1282,9 @@ public final class GameSession {
     /// (``StationDemand/cityDefault``), as stations built since do; saves
     /// from before ARCHITECTURE decision 46 may have such stations.
     public init(world: GameWorld, language: DisplayLanguage = .english) {
-        let world = Self.withCityRidership(world)
+        // Decision 695: a free game on a real-world map saved before there
+        // were airports gets its map's.
+        let world = AirportCatalog.withAirports(Self.withCityRidership(world))
         self.world = world
         self.commandLog = CommandLog(start: world)
         self.language = language

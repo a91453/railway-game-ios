@@ -989,6 +989,14 @@ extension GameWorld {
             if candidate.outside, rides(candidate.station) { weights[candidate.station, default: 0] += Tourism.outsideWeight }
             if candidate.residents > 0 { residential.append((candidate.station, candidate.residents)) }
         }
+        // Decision 695: those who land at an airport set out from its
+        // station, at the airport's passengers of a day.
+        if !airports.isEmpty {
+            let landing = airportTouristWeights()
+            for id in landing.keys.sorted() where id != station && rides(id) {
+                weights[id, default: 0] += landing[id]!
+            }
+        }
         residential.sort { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
         var picked = 0
         for (id, residents) in residential where picked < Tourism.busiestSources && rides(id) {
@@ -1087,7 +1095,7 @@ extension GameWorld {
     /// Since decision 533 with the riders of the company's schools and
     /// hospitals too (``passengerExtraFlows(onDay:reaches:)``).
     func currentTouristFlows() -> TouristFlows {
-        guard tourism != nil || !civicRiderBuildings.isEmpty else { return TouristFlows() }
+        guard tourism != nil || !civicRiderBuildings.isEmpty || !airports.isEmpty else { return TouristFlows() }
         let world = self
         let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
         return world.passengerExtraFlows(onDay: dayIndex(of: clock.now)) { world.reaches(from: $0, to: $1, graph: graph) }
@@ -1099,6 +1107,7 @@ extension GameWorld {
     func passengerExtraFlows(onDay day: Int64, reaches: (StationID, StationID) -> Bool) -> TouristFlows {
         var flows = tourism == nil ? TouristFlows() : touristFlows(onDay: day, reaches: reaches).flows
         addCivicFlows(onDay: day, to: &flows, reaches: reaches)
+        addAirportFlows(onDay: day, to: &flows, reaches: reaches)
         return flows
     }
 
