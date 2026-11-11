@@ -45,7 +45,7 @@ struct GoalsSections: View {
     var body: some View {
         let language = session.language
         let world = session.world
-        // CTM study M2: a free game's next steps, first.
+        // A free game's next steps, first.
         if let steps = session.nextSteps {
             NextStepsSection(steps: steps, language: language)
         }

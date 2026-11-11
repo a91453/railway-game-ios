@@ -1,7 +1,6 @@
 // The help guide (ARCHITECTURE decision 177): questions players ask, with
 // answers in the game's language, searchable in English and Traditional
-// Chinese. A-Train Tourism has
-// hint pages sorted by the problem the player has; the reference's `Ci/`
+// Chinese. The reference's `Ci/`
 // keeps six questions of its own (`guide.metro.faq.0` to `.5` in
 // `lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`: how to create a line, add a
 // node or station, move or delete a station, get trains running, extend a

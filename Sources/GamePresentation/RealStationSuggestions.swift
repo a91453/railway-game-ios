@@ -2,7 +2,7 @@ import Foundation
 import GameCore
 
 // Real stations as suggested sites (ARCHITECTURE decision 295; NEXT_PRIORITIES
-// §17.1 first, the City Transport Manager study 4.5): on a real-world map,
+// §17.1 first): on a real-world map,
 // while the platform tool is chosen, the real stations on the company's land
 // that no station of the world is yet are offered as faint pins. A tap on
 // one picks the nearest place on the track within reach of it for the next

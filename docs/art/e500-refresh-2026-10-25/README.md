@@ -50,7 +50,7 @@ Swift6.4 warnings-as-errors與38項相關測試（1項既有成本skip、0失敗
 | 東芝原廠 [2024 Vol79 No5 f02.pdf](https://www.global.toshiba/content/dam/toshiba/jp/technology/corporate/review/2024/05/f02.pdf)，頁47–49、圖1／4／5 | 實際讀文及查看實車、拆解圖、屋頂示意。20,770mm、Co-Co、雙端駕駛、單機客貨與推拉用途；本輪新增查看圖4／5，區分單弓高壓模組、中央格柵箱與另一端長箱。未把E200對照欄移作E500尺寸。 |
 | [E506 彰化實車照](https://commons.wikimedia.org/wiki/File:TRA_E506_at_Changhua_Station_20240410.jpg) | 再看前／側／屋頂：平側板、上斜風擋與圓收黑罩、成對燈、乘務門、厚實輪架與端部機件。只觀察，不提取圖素或散布原圖。 |
 | [E500 公開彙整](https://zh.wikipedia.org/w/index.php?title=台鐵E500型電力機車&oldid=94736285) | 寬2.759m、降弓4.280m、輪徑0.924m、軌距1.067m；屬二手資料，未取得完整工程圖。升弓包絡不能稱降弓高度。 |
-| 第一輪使用者七圖 | 一張署名K.Y.Chung／Nanyue Express、CC BY-NC-ND示意，另六張模型展示；逐張看，未描圖／取mesh／稱實車照。 |
+| 第一輪使用者七圖 | 一張CC BY-NC-ND車輛示意圖，另六張模型展示；逐張看，未描圖／取mesh／稱實車照。 |
 | 本輪使用者五圖 | 三張實體鐵道模型照片（前斜、正面、完整側面）、兩張彩色結構示意（輪架、屋頂）。逐張看；輪架厚度與屋頂分區有幫助，模型的橘色罩不直接取代實車深色罩，像素不當工程尺寸。 |
 | 私庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/e500.webp`、`e500.json`，同source的iOS兩張la-side-e500及Android一張圖示 | 首輪四張圖片均實看、metadata已讀；Q比例長9.818m且工程尺寸null，整排側格柵不符實車。本版不取其mesh／比例。 |
 | 已接受Codex E200／EMU3000 | 同尺度比較色票、霧面及細節密度；不移植車殼、車頭、門窗、底盤。 |

@@ -1,6 +1,6 @@
 import GameCore
 
-// Decision 374 (City Transport Manager study 4.11): in the lessons the train
+// Decision 374: in the lessons the train
 // types open lesson by lesson, as the tools do (decision 266), and the
 // showroom lists the ones still shut with the lesson that opens them, so a
 // player sees what comes later. Every other game has them all. The types

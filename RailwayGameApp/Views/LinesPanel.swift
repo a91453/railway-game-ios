@@ -2619,7 +2619,7 @@ struct LinesPanel: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
             } else {
-                // CTM study 4.2 (M0): stops, length, time and price, or
+                // The draft's one line: stops, length, time and price, or
                 // why no track joins them. Decision 568: not while the
                 // map's pill says it, beside the last station picked.
                 if !drawsOnMap {

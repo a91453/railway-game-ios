@@ -66,7 +66,7 @@ struct NextStepChip: View {
     }
 }
 
-/// The goals panel's "Next steps" (CTM study, step M2): each step with its
+/// The goals panel's "Next steps": each step with its
 /// progress and what to do, the met ones ticked. Nothing is paid for them.
 struct NextStepsSection: View {
     let steps: NextSteps

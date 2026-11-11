@@ -636,7 +636,7 @@ struct ContentView: View {
                                 MapQuickLayerStrip(language: session.language, layout: row.layers) {
                                     screen.panel = .mapLayers
                                 } setCollapsed: { layerStripCollapsed = $0 }
-                                // CTM study M2: a free game's next step.
+                                // A free game's next step.
                                 if row.showsNextStep, let steps = nextSteps {
                                     NextStepChip(steps: steps, language: session.language) {
                                         screen.panel = .goals

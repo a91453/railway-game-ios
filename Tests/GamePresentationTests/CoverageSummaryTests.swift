@@ -3,7 +3,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Decision 292 (City Transport Manager study, step M1): the share of the
+/// Decision 292: the share of the
 /// residents and jobs within 800 m of a station, as the coverage layer
 /// counts them, on a small map and on Taipei's; and when the coverage
 /// layer's switch is offered.

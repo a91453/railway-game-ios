@@ -2,8 +2,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// The economy panel's first card (City Transport Manager study 4.12, step
-/// M0): today's fares, running costs and result, to the last full hour,
+/// The economy panel's first card: today's fares, running costs and result, to the last full hour,
 /// read from the hours settled so far, the same books the lines' first-day
 /// row (#834) is a breakdown of.
 @MainActor

@@ -542,8 +542,8 @@ public enum NewGameRules: String, CaseIterable, Codable, Sendable {
     }
 }
 
-/// What a new game is set up with (ARCHITECTURE decision 177), after A-Train's
-/// difficulty choice (やさしい／標準／達人): the starting cash, how much the
+/// What a new game is set up with (ARCHITECTURE decision 177): the
+/// difficulty (easy, standard or expert) and its starting cash, how much the
 /// holidays, weather and typhoons disturb the traffic, and the rules a new
 /// game turns on. The default is the new game as it was before the options
 /// were asked: standard, $3,000,000, light disruptions. Presentation only:

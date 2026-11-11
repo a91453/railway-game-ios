@@ -1,6 +1,6 @@
 import GameCore
 
-// Decision 374 (City Transport Manager study 4.12): beside the fare
+// Decision 374: beside the fare
 // steppers, a line on how many riders the fare shown would keep, against
 // the city's usual fare, before the player charges it. The share is
 // GameCore's own (`FareRules.demandFactor`, decision 36): a flat fare's for

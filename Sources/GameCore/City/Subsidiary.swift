@@ -1,16 +1,16 @@
-// Subsidiary businesses (ARCHITECTURE decision 173): the A-Train 9 way of
+// Subsidiary businesses (ARCHITECTURE decision 173): this game's way of
 // spending a rich company's cash. A department store, a hotel or an
 // amusement park does not let its floors; it trades, and each midnight takes
 // in what the passengers of the stations round it spend, pays its goods and
 // its staff, and books the profit or loss on its own account. Built early,
 // where the district has not grown yet, and sold once it has, it makes the
-// A-Train's loop of building, waiting and selling high. A temple (decision
+// game's loop of building, waiting and selling high. A temple (decision
 // 361) trades too: its customers are the tourists it draws as a sight
 // (Tourism.swift), who leave offerings and buy incense and snacks.
 //
-// The reference has no property and A-Train 9's manual lists only the
-// categories (docs/research/CITY_BUILDING_STUDY.md §2): every number below
-// is this project's, tuned by `BalanceReportTests`.
+// The reference has no property (docs/research/CITY_BUILDING_STUDY.md §2):
+// the categories and every number below are this project's, tuned by
+// `BalanceReportTests`.
 
 /// The rules of a subsidiary's trade (decision 173).
 public enum SubsidiaryRules {

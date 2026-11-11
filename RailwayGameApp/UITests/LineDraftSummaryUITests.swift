@@ -1,7 +1,6 @@
 import XCTest
 
-/// The new line's draft in one line (City Transport Manager study 4.2,
-/// step M0), on a blank map and on a real map of Taiwan: once two stations
+/// The new line's draft in one line, on a blank map and on a real map of Taiwan: once two stations
 /// are picked, the line shows in the map's ✓ pill beside the last one, and
 /// not again in the lines panel (decision 568). Full
 /// lane only (decision 199): what it says is `LineDraftSummaryTests` on

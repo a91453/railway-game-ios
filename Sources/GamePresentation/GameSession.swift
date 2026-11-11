@@ -172,7 +172,7 @@ public final class GameSession {
     /// Decision 303: what the new line's confirmation card shows, kept
     /// likewise.
     @ObservationIgnored var lineConfirmationMemo: LineConfirmationMemo?
-    /// CTM study M2: the next steps (``nextSteps``), kept likewise, and
+    /// The next steps (``nextSteps``), kept likewise, and
     /// those already answered with the check (``newlyMetNextSteps()``).
     @ObservationIgnored var nextStepsMemo: NextStepsMemo?
     @ObservationIgnored var nextStepsCelebrated: Set<NextStep>?
@@ -3799,7 +3799,7 @@ public final class GameSession {
         let before = world
         logging(action) { $0 = edited }
         editSerial &+= 1
-        // CTM study M2: a next step the edit met is answered at once.
+        // A next step the edit met is answered at once.
         noteNextSteps(since: before)
         // Decision 298: a station built, moved or taken away by a real one.
         refreshTransfers()

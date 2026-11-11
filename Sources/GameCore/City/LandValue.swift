@@ -28,7 +28,7 @@
 //   company's parks count, by their centres;
 // - C, decision 98: 600 for a cell zoned for a use whose middle lies
 //   within 400 m of the centre of one of the company's buildings, else 0
-//   (the A-Train's subsidiaries leading development; only zoned cells, so
+//   (the company's buildings leading development; only zoned cells, so
 //   a world without zones is worth what it was);
 // - W, decision 111: 600 for a cell whose middle lies within 160 m of a
 //   cell of water's (water included), else 0: the sea view and the river

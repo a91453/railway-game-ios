@@ -1,7 +1,6 @@
 import GameCore
 
-// The economy panel's first card (City Transport Manager study 4.12, step
-// M0): today's fares, running costs and what is left, so a new player sees
+// The economy panel's first card: today's fares, running costs and what is left, so a new player sees
 // where the money comes from and goes in three lines before the reports.
 // Read from the hours settled so far today (the company's day account, of
 // which the lines' records that #834 reads for a new line are the

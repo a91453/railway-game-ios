@@ -3,8 +3,7 @@ import GameCore
 // What needs the player, on the map where it is (ARCHITECTURE decision
 // 109, UI/UX step UX-5c): a crowded station, or a line with no train to
 // run it, shows a small bubble over its station, and a tap on the bubble
-// goes to it. SimCity BuildIt floats such bubbles over its buildings, and
-// Unciv folds its notices to an edge; the reference's `Ci/` posts crowding
+// goes to it. Unciv folds its notices to an edge; the reference's `Ci/` posts crowding
 // as a notice with a cooldown (`emitCrowdAndFullTrainNotices`). Here the
 // bubbles are worked out from the world each time it is drawn, so nothing
 // is stored and nothing needs dismissing: a bubble goes when its cause

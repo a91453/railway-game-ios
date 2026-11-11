@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 311 (City Transport Manager study 4.1): where a station would
+/// Decision 311: where a station would
 /// have riders while building, on a small map and on Taipei's; the
 /// building layer's switch.
 @MainActor

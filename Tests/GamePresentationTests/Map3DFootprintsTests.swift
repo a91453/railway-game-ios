@@ -109,7 +109,7 @@ final class Map3DFootprintsTests: XCTestCase {
         XCTAssertEqual(top, Float(7) * 3.2 + tall.ground(x: middle.x, y: middle.y), accuracy: 3)
     }
 
-    /// As in the A-Train, a building the player puts up clears the real
+    /// A building the player puts up clears the real
     /// ones it reaches: none of them is drawn, near or far, while one
     /// beside it that it does not reach still is.
     func testAPlacedBuildingClearsTheFootprintsItReaches() {

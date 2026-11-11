@@ -1,6 +1,6 @@
 import GameCore
 
-// Decision 292 (City Transport Manager study 4.0, step M1): while a station
+// Decision 292: while a station
 // or a line is being built, one tap shows the catchment coverage layer
 // (``PopTravelMode/coverage``, decision 76) and another, or leaving the
 // tool, puts back the layer the player had (decision 311 shows it, or where

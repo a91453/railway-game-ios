@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 374 (City Transport Manager study 4.11, 4.12): the demand line
+/// Decision 374: the demand line
 /// beside the fares, the loan's preview before borrowing, and the train
 /// types a lesson has not opened yet.
 final class FareAndLoanPreviewTests: XCTestCase {

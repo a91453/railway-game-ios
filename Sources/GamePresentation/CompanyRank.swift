@@ -5,9 +5,7 @@ import GameCore
 // seven measures, each counting linearly up to its full marks (the two of
 // how well it is run scaled down for a railway of few stations), and a title
 // for every 100 points, from trainee station clerk to chairman, with
-// railway tycoon from 960. A-Train's tourism game rates the company
-// (格付) and A-Train 9 has milestones by cash; OpenTTD has a performance
-// rating and titles. Derived from the world when asked: nothing here is
+// railway tycoon from 960. OpenTTD has a performance rating and titles. Derived from the world when asked: nothing here is
 // saved, and GameCore is untouched.
 
 /// What the rank is measured on, each with its full marks and the value

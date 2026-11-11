@@ -37,7 +37,7 @@ struct EconomyPanel: View {
     var body: some View {
         NavigationStack {
             Form {
-                // CTM study 4.12 (M0): today's money in three lines first.
+                // Today's money in three lines first.
                 let today = session.world.todayAccount()
                 if let today {
                     todaySection(today)
@@ -101,7 +101,7 @@ struct EconomyPanel: View {
     // MARK: - Sections
 
     /// Today's fares, running costs and result, to the last full hour
-    /// (CTM study 4.12, step M0; ``TodayAccount``).
+    /// (``TodayAccount``).
     private func todaySection(_ today: TodayAccount) -> some View {
         let language = session.language
         let rows = today.rows(in: language)

@@ -636,7 +636,7 @@
     "Sources/GamePresentation/ZoningOutlook.swift": "5771d50f684da6129ec168df91d5964b750c4c95fb9cbc904308a2467fc71a66",
     "Sources/GamePresentation/ZoningSession.swift": "e871e96c2dab7da7ae80457f52bb86584e9f35c095afd9f74932800f1dbc8be9",
     "Sources/GameSim/main.swift": "1289652f4bbe4174037dbc3d6c2e99232f2b4a814e9223a1a76cd76f4caf5f99",
-    "docs/art/taoyuan-airport/source-record.json": "16013af5e9016dbfc90479d9d2a362b4d15af88d138e435ec3c7169d218e7da4",
+    "docs/art/taoyuan-airport/source-record.json": "1dad4cb2eb97c991d1852043e884439c5365448c0ee33d6622206c78588a5f9a",
     "tools/taoyuan-airport/README.md": "b813245df085203b7fb5f45a7aaf415ba017b08f44af3bf6fbc9a0bfa975093a",
     "tools/taoyuan-airport/assembly.json": "3e6033cfde6e615084488237370ca72b66444f0de1f94aa176facf0e950f8f93",
     "tools/taoyuan-airport/audit.py": "e7e88307d57c7be0e292f6ab53c151dda39a5575dd0c2edb5586fbcc0706b46c",
@@ -671,7 +671,7 @@
   },
   "frozen_delivery_inputs": {
     "status.json": "f705ca5111552cbeb1f274d8bf91bc01a690f9d468fdc12132fd093c7371bb2a",
-    "source-record.json": "16013af5e9016dbfc90479d9d2a362b4d15af88d138e435ec3c7169d218e7da4",
+    "source-record.json": "1dad4cb2eb97c991d1852043e884439c5365448c0ee33d6622206c78588a5f9a",
     "project-license.md": "bcae087842d1c15a94f2f09828f6d7646e1385e08cc8d183b01597f004639209",
     "manifest.json": "922483b5c176dc97c05f44bb58371b31891a51a52f37d8c0d6afc11f2350deb7"
   },
@@ -729,7 +729,7 @@
   "scope": "All tracked Sources and train tools bound to producer; prior payloads used only by fixed-camera comparison. Delivery status/config fixed before viewer generation.",
   "curated_viewer_inputs": {
     "manifest.json": "93f17f2e79239f92aef8689a2aa48319769aec601c2fe5b920d4902e3c2d30a1",
-    "source-record.json": "16013af5e9016dbfc90479d9d2a362b4d15af88d138e435ec3c7169d218e7da4",
+    "source-record.json": "1dad4cb2eb97c991d1852043e884439c5365448c0ee33d6622206c78588a5f9a",
     "status.json": "f705ca5111552cbeb1f274d8bf91bc01a690f9d468fdc12132fd093c7371bb2a",
     "index.html": "3442d886611692905bbfefbb3598a1ddcdb16d4b3e81898bbc33f82c29e0ba73"
   }

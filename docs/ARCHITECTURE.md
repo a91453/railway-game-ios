@@ -2975,7 +2975,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 70. 城鎮成長（Phase 6 的第一步）
 
-2026-10-06。作者的移植順序第 5 項（城鎮成長與產業，A 列車的核心循環）。來源檢查：`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 第 9 項「Town growth / industry demand」只列出 OpenTTD 的 `src/town_cmd.cpp`、`src/industry_cmd.cpp`、`src/subsidy.cpp` 路徑並要求它們「consume transport accessibility metrics rather than directly controlling train movement」，原始碼與數值不在參考包；`Ci/` 沒有成長規則（人口格與 poptravel 只是資料與畫面）；`Railway/site_archive_clean`、`taipei_gta_reference` 也沒有。所以規則是原生的（gap → 原生），只讀遊戲已有的量測，不控制列車。
+2026-10-06。作者的移植順序第 5 項（城鎮成長與產業，本作的核心循環）。來源檢查：`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 第 9 項「Town growth / industry demand」只列出 OpenTTD 的 `src/town_cmd.cpp`、`src/industry_cmd.cpp`、`src/subsidy.cpp` 路徑並要求它們「consume transport accessibility metrics rather than directly controlling train movement」，原始碼與數值不在參考包；`Ci/` 沒有成長規則（人口格與 poptravel 只是資料與畫面）；`Railway/site_archive_clean`、`taipei_gta_reference` 也沒有。所以規則是原生的（gap → 原生），只讀遊戲已有的量測，不控制列車。
 
 1. **量測**：服務 = 昨天從該站出發、已抵達迄點的乘客（該站守恆帳 `arrived` 的日增量）佔當天旅次的比例；可達性 = 昨天的釋出計畫裡該站有旅次的迄點數（第 1 項的全網路徑）。
 2. **成長率**（每日千分比）：滿載服務 +10（1%），每個可達車站 +1，最多 5 個，所以每天最多 +1.5%；整天沒有任何乘客抵達則 −2（−0.2%）。四捨五入，正成長至少 +1 人次。
@@ -3205,7 +3205,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 86. 目標、挑戰與快轉
 
-2026-10-08，作者交給 Claude Code 決定（「用台灣玩家會想玩的角度，以及對未來耐玩性的選擇」）。教學結束後玩家沒有方向，這是 A 列車式遊戲最大的缺口。參考庫沒有可移植的鐵路目標：`Ci/` 有一個已停用的挑戰模式（`openMetroChallengeStartModal` 直接回傳「挑战模式已从当前经济设计中移除」；`startMetroChallengeFromModal` 跑 1 個模擬日、以當天載客數 `metroChallengeCurrentPassengerScore` 計分，事件是 Holiday Peak／May Day Rush，計分引擎 `MetroEconomy.startChallenge`、`calculateChallengeScore` 不在快照），是單日的計分賽而不是目標與期限；`Railway/taipei_gta_reference/` 的 missions 是動作遊戲的小任務。所以目標、評等與期限是原生（gap → 原生）；`Ci/` 挑戰模式的成績上傳與排行榜留給決策 87 之後的排行榜。存檔版本 17。
+2026-10-08，作者交給 Claude Code 決定（「用台灣玩家會想玩的角度，以及對未來耐玩性的選擇」）。教學結束後玩家沒有方向，這是這類經營遊戲最大的缺口。參考庫沒有可移植的鐵路目標：`Ci/` 有一個已停用的挑戰模式（`openMetroChallengeStartModal` 直接回傳「挑战模式已从当前经济设计中移除」；`startMetroChallengeFromModal` 跑 1 個模擬日、以當天載客數 `metroChallengeCurrentPassengerScore` 計分，事件是 Holiday Peak／May Day Rush，計分引擎 `MetroEconomy.startChallenge`、`calculateChallengeScore` 不在快照），是單日的計分賽而不是目標與期限；`Railway/taipei_gta_reference/` 的 missions 是動作遊戲的小任務。所以目標、評等與期限是原生（gap → 原生）；`Ci/` 挑戰模式的成績上傳與排行榜留給決策 87 之後的排行榜。存檔版本 17。
 
 1. **目標**（GameCore，`Goal`）：只讀遊戲已經有的資料，判定是 deterministic 的。
    - `connect(points:radius:)`：每個地點半徑內都有路線停靠的車站，而且這些車站在同一個路網（路線共用車站，或停靠同一個轉乘群組的車站，決策 81）。
@@ -3213,7 +3213,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
    - `population`：地圖土地上的居民總數；`tallBuildings`：D4 城市建物數（Phase 6）。
    - `annualNetProfit`：任一個已決算年度的淨利；`equity`：資產負債表的權益（決策 85）。
 2. **劇本**（`Scenario`、`ScenarioState`，`GameWorld.scenario`）：目標（1–16 個）、金牌／銀牌／期限的天數（從開始那天算，那天是第 1 天）、連續幾個午夜現金為負就破產、以及年代可用的車種（`trainTypes`；`setTrainType` 拒絕其他車種，新的 `trainTypeUnavailable`；沒有車種的列車一律可以）。`startScenario(_:)` 只能在經營模式開始（新的 `invalidScenario`）。
-3. **判定**：每個經營中的午夜，在折舊、年度決算之後：還沒達成的目標若現在達成，記下這一天；全部達成時依花的天數給金、銀、銅牌；超過期限或連續赤字太久就失敗。結束之後不再改變，遊戲照樣繼續（A 列車的無限模式）。所以不論怎麼推進時間（逐分鐘、批次、快轉），結果都一樣。
+3. **判定**：每個經營中的午夜，在折舊、年度決算之後：還沒達成的目標若現在達成，記下這一天；全部達成時依花的天數給金、銀、銅牌；超過期限或連續赤字太久就失敗。結束之後不再改變，遊戲照樣繼續（無限模式）。所以不論怎麼推進時間（逐分鐘、批次、快轉），結果都一樣。
 4. **快轉**（`GameSpeed.fast`）：每個 tick 10 遊戲分鐘，真實時間的 6000 倍，一天約 14 秒、一年約 1.5 小時。正常速度（600×）一年要 14 小時，以「年」為單位的目標與年度決算玩不到；快轉和其他速度一樣逐分鐘結算，所以只影響實際時間。實機效能待 TestFlight 量測。
 5. **挑戰**（GamePresentation，`Challenge`）：開始畫面的「挑戰」在空白地圖開新遊戲，城鎮用新的隨機種子，每局不同。第一批三個沙盒挑戰：「三鎮連線」（連通三座城鎮、每日運量 10 萬人次，60／120／360 天）、「鐵道造鎮」（城市人口 100 萬、高樓 500 棟、每日運量 50 萬人次，1／1.5／2 年）、「鐵道大亨」（年度淨利 $3 億、公司權益 $10 億，1.5／2／3 年）；都是連續 60 個午夜赤字就破產。目標以無頭模擬量過：一條固定不擴張的第一條線（`BalanceReportTests` 的那條），每日運量第 1、60、120、180 天約 3.5、6.8、11.1、18 萬人次，人口 9.1、14.1、24.0、34.2 萬，D4 38（開局）、56、279、325 棟，權益 $3.1M、$14M、$37M、$75M；所以只蓋一條線拿不到金牌，要擴張路網。之後依實機調整。（決策 145 依現況重量：這條線在決策 137 之後每天只載約 4,000 人次、天天虧錢，這些數字不再成立；三個挑戰的目標都改了。）`Land.townCentres(seed:in:)` 給出城鎮中心（從 `towns(seed:in:)` 抽出，行為不變）。
 6. **畫面**：遊戲選單與經營面板的「目標」顯示狀態（第幾天、下一個評等的期限、結果）、每個目標的進度條與達成日，以及各評等的天數；挑戰結束時自動打開（年度決算同時發生時，先看決算再看目標）。字串都有台灣用語的中文。
@@ -3380,12 +3380,12 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 分區格約 230 × 210 m，比 64 m 格粗；格裡的位置照分區格決定，不是精確的邊界。
 - 打包的整包檔沒有時間戳，`osmData` 是那些地點（或三種土地）裡最新的一筆編輯時間。
 
-### 94. 城市建造 P0-C1：公司的建物（A 列車式）
+### 94. 城市建造 P0-C1：公司的建物
 
-2026-10-08，作者選「A 列車式並融合兩者優點」：玩家蓋的建物是公司的資產，有建造費、租金、維護、拆除（A 列車），也帶來居民與就業、讓車站有運量（SimCity），並要求把 P0 與 7b／7c 融合（`docs/research/CITY_BUILDING_STUDY.md`）。研究列的六個問題作者交給本專案決定（「用你覺得對遊戲行最好的方式」），採用研究的建議。P0-C 拆成 C1（這一步：費用、帳上資產、入住、運量、每日租金維護土地稅、拆除）與 C2（收購城市的建物、軌道穿過建物的費用、預覽與旋轉）。號碼依工作登記 #231：存檔 22、golden schema 42；決策 93 是實景的工業區、公園與農地。參考庫沒有不動產經營（`Ci/` 只有運輸與票價），所以規則是原生的，公式來自 Phase 7 研究（`docs/research/PHASE7_COMPANY_STUDY.md` §3.3）（gap → 原生）。
+2026-10-08，作者選公司經營建物並融合兩者優點：玩家蓋的建物是公司的資產，有建造費、租金、維護、拆除，也帶來居民與就業、讓車站有運量，並要求把 P0 與 7b／7c 融合（`docs/research/CITY_BUILDING_STUDY.md`）。研究列的六個問題作者交給本專案決定（「用你覺得對遊戲行最好的方式」），採用研究的建議。P0-C 拆成 C1（這一步：費用、帳上資產、入住、運量、每日租金維護土地稅、拆除）與 C2（收購城市的建物、軌道穿過建物的費用、預覽與旋轉）。號碼依工作登記 #231：存檔 22、golden schema 42；決策 93 是實景的工業區、公園與農地。參考庫沒有不動產經營（`Ci/` 只有運輸與票價），所以規則是原生的，公式來自 Phase 7 研究（`docs/research/PHASE7_COMPANY_STUDY.md` §3.3）（gap → 原生）。
 
 1. **大小與容量**（`PlacedBuildingKind`）：小住宅與商店 2 層、辦公大樓 6 層；占地 256、576、1,024 m²，樓地板 512、1,152、6,144 m²。容量照決策 74 的規則（住宅 7/8、商業 2/8、辦公 1/8 的樓地板給居民，每人 48 m²，其餘就業每人 32 m²）：小住宅 9 人／2 個、商店 6／27、辦公大樓 16／168。
-2. **建造費**（`placedBuildingQuote`）：經營模式下 = 樓地板 × $40（`PlacedBuildingRules.floorCost`）＋ 占地 × 中心那一格的地價（土地使用權，A 列車的「土地代」）；餘額不足拒絕（`insufficientFunds`，檢查在位置之後）。記成一筆資產（`AssetClass.buildings`、`AssetRecord.Kind.building`），30 年（10,800 天）直線折舊，土地使用權也一起折舊（沒有永久土地）。自由模式免費、不記帳，P0-A 的行為不變。
+2. **建造費**（`placedBuildingQuote`）：經營模式下 = 樓地板 × $40（`PlacedBuildingRules.floorCost`）＋ 占地 × 中心那一格的地價（土地使用權）；餘額不足拒絕（`insufficientFunds`，檢查在位置之後）。記成一筆資產（`AssetClass.buildings`、`AssetRecord.Kind.building`），30 年（10,800 天）直線折舊，土地使用權也一起折舊（沒有永久土地）。自由模式免費、不記帳，P0-A 的行為不變。
 3. **入住**（`fillPlacedBuildings`，每個午夜在土地成長 `growLand` 的最後）：建物中心那一格地價的服務 `S`（0…1000，服務溢價 ÷ 15）> 0 時，居民與就業各加 `max(1, 容量 × (20 + S × 80 / 1000) / 1000)`，不超過容量；沒有車站服務時各減 `max(1, 現有 × 20 / 1000)`。蓋好時是空的。
 4. **運量**：有人的建物加入 `LandDemand.shares`，和土地一樣以中心點分給 800 m 內的車站（每 100 人每天 40 旅次），依 ID 順序；入住或拆除後立刻重算。
 5. **每日收支**（`settleProperty`，午夜結算在折舊之前，一列 `.dailyProperty`）：租金 `floor((R×1000 + J×1500) × (1000 + floor(S/2)) × V / 10,000,000)` 美分（R、J 是居民與就業、V 是地價）、維護 `ceil(建造費 × 2 / 10,000)`、土地資產稅 `round(土地使用權 × 1 / 10,000)`。用的是當晚入住之後的人數。三項都是 0 時不寫。`DayAccount` 與 `FinanceSummary` 多 `propertyRevenue`、`propertyCost`（不算 `totalCost`），營業利益 = 票收 − 營運成本 ＋ 不動產收入 − 不動產支出；只在不是 0 時寫進存檔。
@@ -3467,7 +3467,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
    - 車站腹地裡有**劃了用途、空的、沒被玩家建物佔住**的格時，蓋在**地價最高**的那格（再依距離、列、行），用途是分區的用途，不必在有人的格旁邊（玩家允許了）；新格的人數照空白地圖城鎮的比例（決策 72、91）以 4 人為底：住宅 4／0、商業與辦公 1／12、公共設施 1／4、觀光 0／4、工業 0／8。
    - 沒有這種格時照舊：離車站最近、在有人的格旁邊的空格蓋 4 人住宅，但**跳過劃了分區的格**（走到這一步時，腹地裡劃了分區的空格只剩不開發與保留地）。
    - 腹地裡沒有任何分區時，結果和之前完全相同；沒有分區的世界不查地價。
-4. **兩種保護區**（A 列車的開發凍結與保留地）：
+4. **兩種保護區**（開發凍結與保留地）：
    - 不開發：不蓋新格；已有的格不再成長（`grow` 不加人，那一份不補給別格）、不升級（`raiseBuildings` 跳過）。
    - 保留地：不蓋新格；已有的照常成長與升級（留給玩家之後蓋軌道或公司建物）。
 5. **誘導開發**（地價，決策 76 的公式多一項 `C`）：**劃了用途分區**的格，中點離任何一棟玩家建物的中心不到 400 m（25,600 單位）時加 600 美分／m²（`LandValueRules.companyPremium`，和公園溢價相同）；`LandValue.companyPremium`。只加在劃了用途的格，所以沒有分區的世界地價不變（P0-C 的建造費、租金、收購價也不變）；玩家可以在自己的建物旁劃分區，提高那裡的地價，城市就先往那裡長。成長只為了選分區格讀地價，升級仍不讀（決策 75）。
@@ -3476,7 +3476,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 8. **golden**：schema 43，新指令 `setZone`、觀察 `zone`、結果 `invalidZoneArea`、最終狀態選填的 `zones`（各分區的格數）、`landValue` 選填的 `companyPremium`；新的 `zoning.json`（`city-buildings-growth.json` 加上分區：新格蓋在商業區、跳過不開發）與 `zoning-land-value.json`。既有 golden、存檔與 replay 的預期值都沒有改變（規則只在有分區時改變結果）。
 9. **UI 測試**：`StartSaveFlowSmokeTests.testCellsZonedByADragAreKeptBySavingAndContinuing`（拖曳劃商業區，存檔、繼續後仍在），在完整的 UI 測試，不在 PR 的 gate。
 
-**限制**：分區不會把已經有的格改成那個用途（只影響空格）；沒有住商工的需求閥（模擬城市的 RCI；決策 139 起有，App 的新遊戲開啟），成長量仍是決策 70／75 的車站服務；分區格的地價基準仍是空地，不因分區而提高；拖曳只能畫矩形（參考的筆刷是圓形一筆一筆畫，之後需要時再加）。
+**限制**：分區不會把已經有的格改成那個用途（只影響空格）；沒有住商工的需求閥（RCI；決策 139 起有，App 的新遊戲開啟），成長量仍是決策 70／75 的車站服務；分區格的地價基準仍是空地，不因分區而提高；拖曳只能畫矩形（參考的筆刷是圓形一筆一筆畫，之後需要時再加）。
 
 ### 99. 建造時自動暫停
 
@@ -3627,9 +3627,9 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 106. 地圖優先的主畫面：手機只橫拿、地圖滿版、狀態膠囊、底部工具列、細節卡片、地區外觀
 
-2026-10-09，作者看了實機截圖（手機直拿時：兩行的 HUD、往下疊的訊息、固定佔 42% 高度的抽屜，地圖只剩約三分之一），比較 TheoTown、SimCity BuildIt 的實機截圖、參考庫的網站與遊戲，以及開源遊戲之後決定的 UI/UX 改版第一步（UX-5a）。只改 App 與 GamePresentation 的一處訊息時間：GameCore、存檔、golden、replay 都不變。
+2026-10-09，作者看了實機截圖（手機直拿時：兩行的 HUD、往下疊的訊息、固定佔 42% 高度的抽屜，地圖只剩約三分之一），比較其他手機建造遊戲的實機截圖、參考庫的網站與遊戲，以及開源遊戲之後決定的 UI/UX 改版第一步（UX-5a）。只改 App 與 GamePresentation 的一處訊息時間：GameCore、存檔、golden、replay 都不變。
 
-1. **iPhone 只橫拿**（`project.yml` 的 `UISupportedInterfaceOrientations_iPhone` 只剩左右橫向，Xcode 專案重新產生）；iPad 照舊四個方向。建造類遊戲的工具列、類別選單與確認鈕在橫向排得下，直向要另做一套；作者提供的 TheoTown 與 SimCity BuildIt 都只有橫向。以後要做各國，國家的形狀各不相同，方向不依某國決定。
+1. **iPhone 只橫拿**（`project.yml` 的 `UISupportedInterfaceOrientations_iPhone` 只剩左右橫向，Xcode 專案重新產生）；iPad 照舊四個方向。建造類遊戲的工具列、類別選單與確認鈕在橫向排得下，直向要另做一套。以後要做各國，國家的形狀各不相同，方向不依某國決定。
 2. **同一個版面給所有裝置**（`ContentView.gameLayout`）：地圖鋪滿，控制項浮在邊上，不再擠壓地圖。
    - 左上是**狀態膠囊**（`StatusPill`，裡面是 `HUDView`：現金、時間、速度、選單），放得下時一行，寬度跟著內容。
    - 左下是**工具列**（`ControlDock`：工具、路線與資料、復原、顯示／隱藏細節的按鈕）。
@@ -3646,7 +3646,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **沒有做的**（之後的 UX-5b 起）：拿掉「選取」按鈕與「建設」入口（UI 測試與教學都用 `tool.select`）；鋪軌時的側邊工具列、預覽終點旁的確認與費用、起終點旗子；點一下物件浮出的小標籤與地圖上的狀態泡泡；車站選址的人口熱度與涵蓋人數。
 
-**參考**：參考庫的網站（`Railway/site_archive_clean/index.html`）iPhone 上地圖約佔 85%：頂端一顆時鐘膠囊（`#clock`）、底部分頁（`.tabbar`）、點列車時左下的小卡片（`.follow-panel`）而不是半屏面板，訊息最多 3 則、5 秒（`showToast()`）；`Ci/` 的底部列（`#bottombar`）只有一排圓形圖示；`Simulator/` 手機版的進階選項收在預設關閉、有把手的抽屜（`.mobile-sheet-handle`）；`Railway/taipei_gta_reference/` 的 `notify()`（`game-vXklz4A8.js`）訊息時間 `min(9, 3.2 + 長度 × 0.09)` 秒、同樣的訊息不疊而是彈一下。外部的遊戲只看做法：TheoTown、SimCity BuildIt（作者的實機截圖）、Mindustry（GPL-3.0）、Unciv（MPL-2.0）、OpenTTD Android（GPL-2.0），沒有拿程式碼。程式是本專案自己寫的。
+**參考**：參考庫的網站（`Railway/site_archive_clean/index.html`）iPhone 上地圖約佔 85%：頂端一顆時鐘膠囊（`#clock`）、底部分頁（`.tabbar`）、點列車時左下的小卡片（`.follow-panel`）而不是半屏面板，訊息最多 3 則、5 秒（`showToast()`）；`Ci/` 的底部列（`#bottombar`）只有一排圓形圖示；`Simulator/` 手機版的進階選項收在預設關閉、有把手的抽屜（`.mobile-sheet-handle`）；`Railway/taipei_gta_reference/` 的 `notify()`（`game-vXklz4A8.js`）訊息時間 `min(9, 3.2 + 長度 × 0.09)` 秒、同樣的訊息不疊而是彈一下。外部的遊戲只看做法：Mindustry（GPL-3.0）、Unciv（MPL-2.0）、OpenTTD Android（GPL-2.0），沒有拿程式碼。程式是本專案自己寫的。
 
 **之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：地圖旁有面板（路線、數據、車站的客源）時細節卡片讓位，dock 的「顯示控制項」按了只會改面板關掉之後要不要開卡片，當下沒有任何變化，關掉面板時卡片又突然打開。現在面板開著時這個按鈕是停用的（`ControlDock.canToggle`）。UI 測試 `MapInteractionTests.testASidePanelLeavesNoDeadToggleAndCoversNoStationMaster`。
 
@@ -3676,7 +3676,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 2. **在預覽旁確認**：終點下方（下方放不下時在上方）浮出一顆膠囊：「✗」取消（`clearNetworkDraft`）、「✓ $費用」建造（`buildNetworkTrack`），有問題或沒有費用時 ✓ 不能按。建築工具的虛影下方也是同一顆（✗ 是新的 `clearBuildingSite()`，✓ 是 `confirmBuilding()`）。膠囊避開狀態膠囊、工具列與細節卡片（`mapInsets`）。細節卡片的「鋪設軌道」按鈕照舊（教學與 UI 測試用它）；膠囊的無障礙名稱是「建造這一段，$…」「蓋在這裡，$…」，不以「Build Track」開頭，教學 UI 測試用這個前綴只找到卡片上那一顆。識別字 `map.build.confirm`、`map.build.cancel`。
 3. **進階選項收起**：構造、新節點高度、平順曲線、緩和坡度、吸附軌道收進「進階選項」，預設收起（每次選路網工具都收起，是畫面狀態）；收起時一行字說目前的設定（構造，以及關掉的開關）。「清除」與交叉渡線（只在選到兩條軌道時出現）照舊在外面。
 
-**參考**：參考庫 `Simulator/` 手機版的進階選項在預設關閉的抽屜（`.mobile-sheet-handle`，控制分頁）；`Ci/` 的費用膠囊（`.metro-cost-preview-pill`）已經是決策 102 的 `MapConstructionHUD`。作者的 SimCity BuildIt 截圖在拉好的路徑與擺好的建築旁放 ✗ 與 ✓、起終點插旗；OpenTTD Android（`build_confirmation_gui.cpp`，GPL-2.0）與 Mindustry（`MobileInput.java`，GPL-3.0）在拖曳結束處確認，只看做法。程式是本專案自己寫的。
+**參考**：參考庫 `Simulator/` 手機版的進階選項在預設關閉的抽屜（`.mobile-sheet-handle`，控制分頁）；`Ci/` 的費用膠囊（`.metro-cost-preview-pill`）已經是決策 102 的 `MapConstructionHUD`。OpenTTD Android（`build_confirmation_gui.cpp`，GPL-2.0）與 Mindustry（`MobileInput.java`，GPL-3.0）在拖曳結束處確認，只看做法。程式是本專案自己寫的。
 
 **之後的修正（2026-10-12，決策 190 的回報）**：膠囊下方與上方都放不下時，原本夾在頂部欄（狀態膠囊與其下的橫幅、卡片）之下，橫幅很高時就超過 dock、伸進 dock 底下，只露出一半。現在那時改用地圖本身的上緣（不含頂部欄），膠囊蓋在橫幅的下緣，✓／✗ 完整可點（`MapBuildConfirm.placement`）。
 
@@ -3688,7 +3688,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 2. **地圖上**：那個位置畫出 800 公尺的虛線涵蓋圈，旁邊的膠囊（決策 107 的 `MapBuildConfirm`）上方一行「800 公尺內：居民 N · 工作 M」（`catchmentText`），下面「✗ 取消／✓ 在這裡加月台」（`addNetworkPlatform`，和細節卡片的「加月台」相同）。無障礙名稱不和卡片的按鈕同名。
 3. **顯示人口分布**：月台模式的選項多一顆「顯示人口分布」，把地圖的人口與交通圖層切到人口（`mapPopTravelMode` 偏好，和圖層選單是同一個）；圖層的圖例可以關掉它。
 
-**參考**：參考庫沒有可以移植的選址提示（`Ci/` 的車站服務範圍是建好之後畫的 800 m 圈，決策 84 的 `showsCatchmentRings`）。作者的 SimCity BuildIt 截圖在擺放中的建築上顯示它帶來的效果（「+0 👥」），TheoTown 擺放時把地面染成好或不好；只看做法。程式是本專案自己寫的。
+**參考**：參考庫沒有可以移植的選址提示（`Ci/` 的車站服務範圍是建好之後畫的 800 m 圈，決策 84 的 `showsCatchmentRings`）。程式是本專案自己寫的。
 
 **之後的修正**（2026-10-12，修 bug 輪，作者實機截圖：教學第 5→6 步）：月台蓋好後 `networkEdgePoint` 還留著，地圖上的「800 公尺內…」膠囊與 ✗／✓ 留在原地（切到路線面板也還在），再按 ✓ 會被 GameCore 以「月台重疊」拒絕，看起來像壞掉。`addNetworkPlatform` 成功後清掉選的位置（和拆軌道成功後一樣），膠囊與涵蓋圈跟著消失；成功訊息保留，`platformStationID` 不動。要再蓋月台就再點一次軌道。失敗時選取不變，玩家可以改了再按。
 
@@ -3703,7 +3703,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 2. **點泡泡就前往**（`GameSession.respond(to:)`，不改世界）：擁擠或滿站選取那座車站（細節卡片顯示它，決策 106）；沒有列車的路線選取那條路線並打開路線面板，那裡可以一步配車（決策 101）。
 3. **只在檢視時出現**：選取工具時才畫，建造工具時不畫，泡泡不會擋住正在蓋的東西；泡泡避開狀態膠囊、工具列與細節卡片（`mapInsets`），站在畫面外的不畫。
 
-**參考**：參考庫 `Ci/` 把擁擠與滿車做成訊息，有 10 分鐘的冷卻（`emitCrowdAndFullTrainNotices`）、通知盒只留最新一則（`renderNotifBox`）；這裡改成畫在地圖上、由狀態算出，不另外記冷卻。作者的 SimCity BuildIt 截圖把要處理的事做成建物上方的小泡泡；Unciv（MPL-2.0）把通知收到畫面邊緣，只看做法。程式是本專案自己寫的。
+**參考**：參考庫 `Ci/` 把擁擠與滿車做成訊息，有 10 分鐘的冷卻（`emitCrowdAndFullTrainNotices`）、通知盒只留最新一則（`renderNotifBox`）；這裡改成畫在地圖上、由狀態算出，不另外記冷卻。Unciv（MPL-2.0）把通知收到畫面邊緣，只看做法。程式是本專案自己寫的。
 
 **之後的修正**（2026-10-11，決策 165 的官網截圖看到）：泡泡用 `alignmentGuide` 對齊到車站在畫面上的點，但它們所在的 `ZStack` 只有泡泡、沒有佔滿地圖的底，所以泡泡只彼此對齊，整群被放在地圖的左上角（貨運截圖場景的五座車站，五個「缺建材」擠在狀態膠囊旁邊）。改成每個泡泡站在一個零大小的框上、用 `position` 放到車站上方（`MapAlertBubbles`）。
 
@@ -3718,9 +3718,9 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 111. 水岸建物與臨水地價
 
-2026-10-09，作者看了 SimCity BuildIt 的海岸截圖（碼頭、遊艇港、海上建物；景觀的池塘與湖泊；跨河的橋），問要不要讓玩家擺水上建築與景觀，順序交給 Claude Code 判斷。判斷：水是障礙（決策 105），岸邊是機會；先做水岸建物與臨水地價（改動小、立刻讓海邊和河岸有意義），之後依序是玩家挖湖與填海造陸、軌道過水要用橋、坡度與高度。號碼依工作登記 #231：存檔 25、golden schema 45（106–110 是 UX-5a 到 UX-5e 的登記）。
+2026-10-09，作者看了一款城市建造遊戲的海岸截圖（碼頭、遊艇港、海上建物；景觀的池塘與湖泊；跨河的橋），問要不要讓玩家擺水上建築與景觀，順序交給 Claude Code 判斷。判斷：水是障礙（決策 105），岸邊是機會；先做水岸建物與臨水地價（改動小、立刻讓海邊和河岸有意義），之後依序是玩家挖湖與填海造陸、軌道過水要用橋、坡度與高度。號碼依工作登記 #231：存檔 25、golden schema 45（106–110 是 UX-5a 到 UX-5e 的登記）。
 
-參考檢查（`a91453/railway-reference-private`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「水岸建物與臨水地價（決策 111）」）：參考庫沒有水岸建物、也沒有地價（決策 76 已查過），規則與數值是本專案的（gap → 原生）。作者的 SimCity BuildIt 截圖只參考玩法（商業遊戲，不取數值與素材）。外部專案（只取想法）：OpenTTD（GPL-2.0）的碼頭要蓋在海岸格；Cities: Skylines（商業遊戲）的港口沿著岸線放。
+參考檢查（`a91453/railway-reference-private`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「水岸建物與臨水地價（決策 111）」）：參考庫沒有水岸建物、也沒有地價（決策 76 已查過），規則與數值是本專案的（gap → 原生）。作者的截圖只參考玩法（商業遊戲，不取數值與素材）。外部專案（只取想法）：OpenTTD（GPL-2.0）的碼頭要蓋在海岸格。
 
 1. **兩種岸邊的建物**（GameCore，`PlacedBuildingKind`）：**漁人碼頭**（`wharf`，24 m、商業、2 層，像淡水漁人碼頭，容量同商店 6／27）與**遊艇港**（`marina`，32 m、觀光、2 層，5／56）。`standsOnShore`：正方形碰到的格要**同時有水和陸地**，否則拒絕（`GameError.needsShore`）；整個在陸地或整個在海上都不行。其餘照 P0-C（決策 94、95）：付建造費與占地 × 地價（中心那格的地價）、住人、帶運量、收租；陸地那一側的城市建物照樣收購。小住宅、商店、辦公大樓照舊碰到水就拒絕（`onWater`）。
 2. **臨水地價**（決策 76 的公式多一項 W）：格的中點離任何一格水的中點不到 160 m（10,240 單位，兩格半），地價加 600 美分／m²（`LandValueRules.waterPremium`、`waterReach`，`LandValue.waterPremium`），水格本身也算（所以蓋在岸邊、中心落在水上的建物也有）。`Terrain.isNearWater` 只看上下兩列各一段，所以全圖的地價圖層不會因此變慢。和公園溢價一樣只是查詢；**沒有水的世界地價不變**，所以既有 golden 與存檔不變。效果：劃了分區的海邊、河岸格先被開發（決策 98 依地價選格），岸邊的公司建物占地費與租金都高一點。實景地圖的人口匯入不受影響。
@@ -3742,7 +3742,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 1. **路線標籤**（`StationLineChips`）：選取工具下選了車站，細節卡的站名板下排出停靠這站的路線（`GameWorld.lines(callingAt:)`，依 ID），每條一個路線色外框的標籤（色點加路線名，32 點高）；點了選取那條路線（`selectLine`）並打開路線面板。路線多時左右捲動。
 2. **從這站開新路線**：標籤列最後一個按鈕（識別字 `station.newLine`）。`GameSession.startLineFromSelectedStation()` 丟掉進行中的草稿，以選取的車站為第一站，開始在地圖上點選（決策 100 的 `isPickingLineStops`），提示玩家點終點站；沒有選取車站時照 `addSelectedStationToLineDraft()` 回報失敗。App 同時打開路線面板。不改世界。
 
-**參考**：參考庫的網站在停靠站旁用有外框的轉乘標籤（`Railway/site_archive_clean/index.html` 的 `.xfer-tag`：路線色的 1.5 px 外框、圓角、粗體小字），這裡照它的樣子做成可點的標籤。從車站開路線是本專案自己的設計（SimCity BuildIt 與 TheoTown 點建物後的資訊框裡有動作按鈕），程式是本專案自己寫的。
+**參考**：參考庫的網站在停靠站旁用有外框的轉乘標籤（`Railway/site_archive_clean/index.html` 的 `.xfer-tag`：路線色的 1.5 px 外框、圓角、粗體小字），這裡照它的樣子做成可點的標籤。從車站開路線是本專案自己的設計，程式是本專案自己寫的。
 
 ### 113. 路線示意條上的列車
 
@@ -3759,18 +3759,18 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 1. **底部的四顆工具換成一顆「建設」**（`BuildEntry`，錘子圖示，識別字 `dock.build`，無障礙名稱「Construction／建設」）。沒有工具時按它，選路網工具（最常用）並打開工具列；建造中再按一次，回到選取（同決策 104 的「再點一下回到檢視」；教學進行中照舊不這樣做）。平常在地圖上點就是選取，不需要「選取」按鈕。
 2. **建造中，工具在地圖左側（leading）直排**（`BuildToolRail`，寬 72 點，在狀態膠囊下、底部工具列上，放不下時捲動）：路網、列車、建築，分隔線下是「完成」（✕，回到選取）。按目前的工具不再回到選取：離開用「完成」或「建設」，避免誤觸。按鈕的識別字、無障礙名稱與教學的聚光目標照舊（`tool.network`、`tool.train`、`tool.building`）；「完成」接下 `tool.select`，無障礙名稱改成「Done building／完成建設」。
-3. **只在建造時出現**（有工具，或教學進行中：教學的步驟會指著工具，包括選取）。出現時 `mapInsets` 的 leading 讓出它的寬度：交通圖例、狀態訊息、圖層與底圖按鈕、提示框、確認膠囊（決策 107）與狀態泡泡（決策 109）都往右讓。研究紀錄原本想放右側（TheoTown、SimCity BuildIt 都在右），但我們右側是細節卡片（工具的選項與動作鈕），所以放左側，和底部的「建設」上下相連。
+3. **只在建造時出現**（有工具，或教學進行中：教學的步驟會指著工具，包括選取）。出現時 `mapInsets` 的 leading 讓出它的寬度：交通圖例、狀態訊息、圖層與底圖按鈕、提示框、確認膠囊（決策 107）與狀態泡泡（決策 109）都往右讓。研究紀錄原本想放右側，但我們右側是細節卡片（工具的選項與動作鈕），所以放左側，和底部的「建設」上下相連。
 4. **UI 測試**：要用工具的測試先按 `dock.build`；新遊戲一開始就是選取，不再按 `tool.select`；工具列的測試依「建設 → 三個工具 → 完成」的順序按；教學的鋪軌測試在地圖上找空位時，也避開左側的工具列；教學結束後按「完成」，等工具列消失。
 
 **沒有做的**：研究紀錄的側邊工具列還有鋪設／月台／拆除、橋與隧道、上／下、吸附與「↶ n」（現在仍在細節卡片的路網工具裡）；「建設」展開分類選單（現在直接進路網）；點一下看、長按改。
 
-**參考**：參考庫 `Ci/` 的底部列（`#bottombar`）只有一排圓形圖示，多的收進「更多」（`#nav-btn-more`），這裡照它讓底部只留少數入口；參考庫沒有「建造模式換掉工具列」的介面（MapBuilder 的工具在網頁的固定側欄）。外部遊戲只看做法：TheoTown 的主畫面只有一把錘子，進入建造後右側直排工具與「✕ 離開」；SimCity BuildIt 建造模式時平常的按鈕消失、側邊直排三顆（作者的實機截圖）。程式是本專案自己寫的。
+**參考**：參考庫 `Ci/` 的底部列（`#bottombar`）只有一排圓形圖示，多的收進「更多」（`#nav-btn-more`），這裡照它讓底部只留少數入口；參考庫沒有「建造模式換掉工具列」的介面（MapBuilder 的工具在網頁的固定側欄）。程式是本專案自己寫的。
 
 ### 115. 地形：陡坡（城市不能開發的山坡地）
 
 2026-10-09，作者問要不要先做山、再用地形坡度限制。判斷（作者同意）：山比挖湖、填海重要，台灣的鐵道難處在山線；但坡度要分兩層。這一步是第一層：只限制**城市**（地形層多一份陡坡格），鐵路照舊不擋；第二層是軌道與地形的高度（隧道、高架、挖填方的造價、過水用橋），會動到既有的軌道規則與 golden，先寫設計說明再做。作者另外要求避開 UI 改版 #256–#260 會改的檔案：這一步不動 `RailwayGameApp/Views/`、`GameSession`、`BuildingSession`、`NetworkDrag`、`project.yml`／xcodeproj（陡坡併入既有的 `taiwan_water.json`，不新增資源檔），也不畫高度圖層。號碼依工作登記 #231：存檔 26、golden schema 46。
 
-參考檢查（`a91453/railway-reference-private`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「地形：陡坡（決策 115）」）：`Simulator/` 有稀疏的地形格（`cells[{col,row,layers}]`、`cellMm`、B-spline 取樣）與地形筆刷，`Railway/site_archive_clean/rail-3d/` 從 Mapterhorn 的 DEM 圖磚讀高度（`terrain-source.js`），`railway_game_reference_clean` 只列了 OpenTTD 的 `heightmap.cpp`、`terraform_cmd.cpp` 路徑：都是軌道與地形那一層（下一步）用得到的；參考沒有「陡坡不能開發」的規則或資料（gap → 原生）。外部（只取想法）：SimCity 4 與 Cities: Skylines 的建物不放在太陡的地形上（商業遊戲）。
+參考檢查（`a91453/railway-reference-private`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「地形：陡坡（決策 115）」）：`Simulator/` 有稀疏的地形格（`cells[{col,row,layers}]`、`cellMm`、B-spline 取樣）與地形筆刷，`Railway/site_archive_clean/rail-3d/` 從 Mapterhorn 的 DEM 圖磚讀高度（`terrain-source.js`），`railway_game_reference_clean` 只列了 OpenTTD 的 `heightmap.cpp`、`terraform_cmd.cpp` 路徑：都是軌道與地形那一層（下一步）用得到的；參考沒有「陡坡不能開發」的規則或資料（gap → 原生）。
 
 1. **門檻**：建築技術規則建築設計施工編第 262 條，山坡地依坵塊圖的平均坡度區劃，**超過 30% 的部分不得開發建築**。遊戲照這條線：坡度超過 30% 的乾格是陡坡。
 2. **資料**（`tools/real-world-population/build_slope_grid.py`，併入 `taiwan_water.json` 的 `"steep"`，檔案 530 KB → 2.1 MB）：
@@ -3819,7 +3819,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **沒有做的**：地形與水域（海岸線、河湖，決策 105）還沒畫進小地圖；列車的位置；在小地圖上縮放。
 
-**參考**：參考庫只有 `Railway/taipei_gta_reference/` 有小地圖（`game-vXklz4A8.js` 的 `sr`：右上角 200 px 的畫布，跟著玩家轉，位置或縮放沒變就不重畫）；這裡的地圖是固定的整張地圖，只借用「沒變就不重畫」。網站與 `Ci/` 用網頁地圖的縮小代替小地圖。外部只看做法：TheoTown 的狀態列有小地圖、OpenTTD（GPL-2.0）有「世界地圖」視窗，都點了就移過去。程式是本專案自己寫的。
+**參考**：參考庫只有 `Railway/taipei_gta_reference/` 有小地圖（`game-vXklz4A8.js` 的 `sr`：右上角 200 px 的畫布，跟著玩家轉，位置或縮放沒變就不重畫）；這裡的地圖是固定的整張地圖，只借用「沒變就不重畫」。網站與 `Ci/` 用網頁地圖的縮小代替小地圖。外部只看做法：OpenTTD（GPL-2.0）有「世界地圖」視窗，點了就移過去。程式是本專案自己寫的。
 
 ### 117. 建造完成與收到錢：一下動態與音效
 
@@ -3833,7 +3833,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **沒有做的**：升級、配車、開新路線的回饋；年度結算或達成目標的大獎勵畫面；觸覺回饋（haptics）。
 
-**參考**：參考庫 `Ci/` 的按鈕帶 `data-metro-sfx`，有 12 套音效主題，並照顧「減少動態效果」；`Railway/taipei_gta_reference/` 的 `notify()` 伴隨音效、超出再彈回的進場動畫（研究紀錄 3.2、3.5 節）。這裡沒有拿它們的音檔（音效由本專案合成）。外部遊戲只看做法：SimCity BuildIt 蓋好時的彈跳與收錢時金額從建物上浮起、TheoTown 的建造音效。程式是本專案自己寫的。
+**參考**：參考庫 `Ci/` 的按鈕帶 `data-metro-sfx`，有 12 套音效主題，並照顧「減少動態效果」；`Railway/taipei_gta_reference/` 的 `notify()` 伴隨音效、超出再彈回的進場動畫（研究紀錄 3.2、3.5 節）。這裡沒有拿它們的音檔（音效由本專案合成）。程式是本專案自己寫的。
 
 ### 118. 站長：一句話說現在最該做的事
 
@@ -3844,9 +3844,9 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 3. **長什麼樣**（`StationMasterAvatar`）：用 SwiftUI 圖形畫的圓臉、眼睛、微笑與帽子，不需要美術素材；帽子與帽徽的顏色是地區外觀的（`RegionStyle.stationMasterCap`、`stationMasterBadge`，台灣是台鐵的深藍帽與金色帽徽，近似值，要實機確認）。換國家只換顏色，之後有美術時換掉這個 View。（決策 122 起換成黃山雀的圖，帽子的顏色拿掉。）
 4. **教學也是站長說的**：教學卡片的「第 n 步」前面是同一張臉（28 點）。教學進行時角落的站長不出現（卡片已經在說話）。
 
-**沒有做的**：事件的即時報告（年度結算、達成目標、第一班車到站）；多位顧問（SimCity BuildIt 每類一位）；美術素材。
+**沒有做的**：事件的即時報告（年度結算、達成目標、第一班車到站）；多位顧問；美術素材。
 
-**參考**：參考庫 `Railway/taipei_gta_reference/` 有一行持續顯示的目標句（`.hud-obj`）與只在需要時出現的提示（`.hud-prompts`，研究紀錄 3.5 節）；這裡照它一次只說一件事、有需要才說。外部遊戲只看做法：SimCity BuildIt 用顧問的頭像加一句話通知，TheoTown 的教學是一個小人加對話泡泡、不蓋地圖（研究紀錄 4.1、4.2 節）。程式是本專案自己寫的，臉是本專案畫的。
+**參考**：參考庫 `Railway/taipei_gta_reference/` 有一行持續顯示的目標句（`.hud-obj`）與只在需要時出現的提示（`.hud-prompts`，研究紀錄 3.5 節）；這裡照它一次只說一件事、有需要才說。程式是本專案自己寫的，臉是本專案畫的。
 
 **之後的修正**（#366 留下的項目，2026-10-11）：泡泡的寬度原本只扣掉 dock 和卡片，沒扣地圖右下角那一欄（小地圖、縮放鈕、圖例）。幾何推算 iPhone 17 Pro 橫向時泡泡蓋住「縮小」，iPhone SE 橫向時兩個縮放鈕都被蓋住約 7 秒，點下去只會關掉泡泡。現在地圖量那一欄在螢幕上的位置（`GameScreenState.mapCornerFrame`），泡泡停在它前面。不等實機確認就改：多扣一欄最壞只是泡泡窄一點、多換一行；窄到放不下（`StationMasterCorner` 的 140 點）時照舊只亮點，等有空間再說。**UNVERIFIED**：只能在 macOS 與實機上看。
 
@@ -3864,7 +3864,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **沒有做的**：列車的標籤（車次、下一站、誤點；列車在動，標籤要跟著）；長按時畫出腹地圈；把蓋好的東西拿起來移動（需要 GameCore 的新指令）。
 
-**參考**：參考庫 `MapBuilder/` 點車站旁邊跳出捷徑（`Shortcut`，`renderButtons()`，研究紀錄 3.4 節），`Simulator/` 選取物件時浮出一條動作列（`.canvas-selection-actions`：名稱與刪除等，3.3 節）；這裡照它們把動作放在物件旁而不是側欄。外部遊戲只看做法：SimCity BuildIt 點一下只在建物頭上浮出名字與加成的小標籤、長按把建物拿起來（4.2 節）；TheoTown 點建物是畫面中央的對話框、地圖變模糊（不要學）。程式是本專案自己寫的。
+**參考**：參考庫 `MapBuilder/` 點車站旁邊跳出捷徑（`Shortcut`，`renderButtons()`，研究紀錄 3.4 節），`Simulator/` 選取物件時浮出一條動作列（`.canvas-selection-actions`：名稱與刪除等，3.3 節）；這裡照它們把動作放在物件旁而不是側欄。程式是本專案自己寫的。
 
 ### 120. 地圖畫到螢幕邊緣
 
@@ -3883,21 +3883,21 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 121. 地圖上的圖示改用 App 圖示的畫風
 
-2026-10-09，作者問遊戲該像《A 列車》還是 SimCity BuildIt，Claude Code 建議玩法照 A 列車的深度、外觀與操作照 BuildIt，作者同意，並要求先把地圖上的圖示換成同一個畫風。地圖鋪滿畫面之後（決策 106、120），地圖上的東西就是玩家最常看的畫面，但車站、泡泡和警告用的還是 Apple 的 SF Symbols，線條細，和 App 圖示的扁平、粗線、圓角對不起來。GameCore、存檔、golden、replay 都不變。
+2026-10-09，作者問遊戲的方向，Claude Code 建議玩法做出鐵路與城市經營的深度、外觀與操作簡潔、適合手機，作者同意，並要求先把地圖上的圖示換成同一個畫風。地圖鋪滿畫面之後（決策 106、120），地圖上的東西就是玩家最常看的畫面，但車站、泡泡和警告用的還是 Apple 的 SF Symbols，線條細，和 App 圖示的扁平、粗線、圓角對不起來。GameCore、存檔、golden、replay 都不變。
 
-1. **自己畫的圖示**：`Assets.xcassets` 的 `MapGlyph*` imageset，每個是 24 × 24 的 SVG，只用實心形狀（挖空用 even-odd），粗到縮成幾點也看得出來，轉角是圓的。共十個：列車（`MapGlyphTrain`）、住宅、商店、辦公、漁人碼頭、遊艇港、人群、客滿的車廂、警告，和警告的實心外形（墊在警告下面）。程式用 `MapGlyph`（`Palette.swift`）取用，不寫字串。（2026-10-09 照 art-style skill 檢查整組：漁人碼頭原本只有一條魚，比其他圖示小、淡很多，墨量 21%、高 9 格，其他是 32–43%、約 18 格；改成魚躍過一道浪，墨量 36%，16 點與模糊後也看得出是水邊。擁擠與客滿照 Google 地圖的擁擠度圖示改成同一組等級，用人數表示：擁擠是兩個圓肩的人，客滿是三個（先試過三人中一人空心，但 13 點、3 倍螢幕時和客滿只差 3.5% 的像素，一眼分不出；兩個人對三個人差 32%，模糊後 38%，灰階下也分得出）；之前試過的車廂畫法（窗裡的人頭、擠出車頂、車門夾人、容量條、對齊像素格的簡化版）都比較難讀，沒有採用。）
+1. **自己畫的圖示**：`Assets.xcassets` 的 `MapGlyph*` imageset，每個是 24 × 24 的 SVG，只用實心形狀（挖空用 even-odd），粗到縮成幾點也看得出來，轉角是圓的。共十個：列車（`MapGlyphTrain`）、住宅、商店、辦公、漁人碼頭、遊艇港、人群、客滿的車廂、警告，和警告的實心外形（墊在警告下面）。程式用 `MapGlyph`（`Palette.swift`）取用，不寫字串。（2026-10-09 照 art-style skill 檢查整組：漁人碼頭原本只有一條魚，比其他圖示小、淡很多，墨量 21%、高 9 格，其他是 32–43%、約 18 格；改成魚躍過一道浪，墨量 36%，16 點與模糊後也看得出是水邊。擁擠與客滿改成同一組等級，用人數表示：擁擠是兩個圓肩的人，客滿是三個（先試過三人中一人空心，但 13 點、3 倍螢幕時和客滿只差 3.5% 的像素，一眼分不出；兩個人對三個人差 32%，模糊後 38%，灰階下也分得出）；之前試過的車廂畫法（窗裡的人頭、擠出車頂、車門夾人、容量條、對齊像素格的簡化版）都比較難讀，沒有採用。）
 2. **單色模板，顏色由程式給**：每個 imageset 都設 `template-rendering-intent: template`、保留向量，在哪裡畫就用那裡的顏色（Canvas 的 `shading`、SwiftUI 的 `foregroundStyle`）。一張圖同時用在淺色與深色，顏色仍只來自 `Theme` 與 `Palette`。
 3. **換掉的地方**（只換地圖上的東西）：
    - 車站徽章裡的符號：`tram.fill` → 列車，照舊是 `Palette.stationSymbol`。
    - 死結的警告（`drawWaitMarks`）：先墊一個大一號、系統底色的實心外形，再畫紅色的警告，驚嘆號是挖空的，所以在任何底圖上都讀得到。
-   - 狀態泡泡（決策 109）：圖示改放在泡泡顏色的圓上，圖示用 `Theme.panel`（淺色 5.5:1 以上、深色 5.5:1 以上），像 App 圖示的膠囊；擁擠是兩個人，客滿是三個人（同一組等級，照 Google 地圖的擁擠度圖示：人越多越擠），沒有列車是列車。
+   - 狀態泡泡（決策 109）：圖示改放在泡泡顏色的圓上，圖示用 `Theme.panel`（淺色 5.5:1 以上、深色 5.5:1 以上），像 App 圖示的膠囊；擁擠是兩個人，客滿是三個人（同一組等級：人越多越擠），沒有列車是列車。
    - 玩家建物（決策 92、111）：方塊有 14 點以上時，中間畫它種類的圖示，大小是邊長的 62%，用固定的藏青 `Palette.buildingGlyph`（建物的顏色在深色地圖上偏淺，跟著換色的 `ink` 會看不清；十種底色上最低 3.11:1）。建築工具的種類按鈕用同一組圖示（`PlacedBuildingKind.mapGlyph`，取代 `systemImage`），跟著字的大小縮放。
    - 路線示意條（決策 113）上的列車：`tram.fill` → 列車。
 4. **照舊用 SF Symbols 的**：工具列、面板、表單裡的按鈕與標示。它們是介面，和系統的樣子一致比較好讀；地圖上的列車本身仍是圓點加車頭方向的短線。
 
 **沒有驗證的**：Linux 不能建置 App；Asset Catalog 的 SVG、Canvas 與按鈕上的樣子要看 CI 的 Xcode 建置與實機。
 
-**參考**：參考庫 `Ci/reference_snapshot/` 的車站與路線圖示（`station-icon-residential`、`-shopping`、`-scenic`、`-waiting`，icons8 的 `get-on-bus` 等）與 `MapBuilder/reference_snapshot/assets/map/` 的車站、轉乘標記是黑白的細線圖，只取它們標示的東西（住宅、商業、等車、轉乘），圖形重畫；icons8 的素材要標示出處，重畫就不用帶進來。外部只看做法：SimCity BuildIt（作者的截圖，商業遊戲）泡泡裡的圓形圖示。圖示和程式是本專案自己畫、自己寫的。
+**參考**：參考庫 `Ci/reference_snapshot/` 的車站與路線圖示（`station-icon-residential`、`-shopping`、`-scenic`、`-waiting`，icons8 的 `get-on-bus` 等）與 `MapBuilder/reference_snapshot/assets/map/` 的車站、轉乘標記是黑白的細線圖，只取它們標示的東西（住宅、商業、等車、轉乘），圖形重畫；icons8 的素材要標示出處，重畫就不用帶進來。圖示和程式是本專案自己畫、自己寫的。
 
 ### 122. 站長的角色：提著號誌燈的黃山雀
 
@@ -3916,7 +3916,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **做法的參考**：作者提供的兩個 skill，只取做法、沒有複製內容。`neonwatty/logo-designer-skill`（MIT）：先做幾種差異明顯的方案讓作者挑，每一版都在淺色與深色、從大到 28 點檢查認不認得出來，實心色塊多於細線。`supermemoryai/skills` 的 `svg-animations`（沒有授權，只讀）：光暈的呼吸、分層做動畫、照顧「減少動態效果」。
 
-**參考**：參考庫 `Railway/taipei_gta_reference/source/avatars/` 有八個 3D 人物（`.glb`，寫實的貼圖），畫風不合，沒有用；其餘的參考沒有角色。外部只看做法：SimCity BuildIt 的顧問頭像（作者的截圖）、和歌山電鐵的站長貓「小玉」（只作為「動物站長」的前例，造型沒有參考）。角色與圖是本專案自己畫的。
+**參考**：參考庫 `Railway/taipei_gta_reference/source/avatars/` 有八個 3D 人物（`.glb`，寫實的貼圖），畫風不合，沒有用；其餘的參考沒有角色。外部只看做法：和歌山電鐵的站長貓「小玉」（只作為「動物站長」的前例，造型沒有參考）。角色與圖是本專案自己畫的。
 
 **之後的修正（2026-10-13，美術線：空狀態的插圖）**：作者要求把 #514 的原稿（`docs/art/generated-2026-10-13/`，作者要 Codex 生的 43 張）照第 6 點的做法描成平塗 SVG，先做三張空狀態，由美術 session 照遊戲美術的判斷決定細節（作者 2026-10-13：「用你是遊戲美術的方式決定」）。
 - **圖**：`Assets.xcassets` 的 `EmptyLines`、`EmptySaves`、`EmptyTrains`，120 × 120 的多色 SVG，保留向量，淺色深色共用；原稿 `ui-empty-lines.png`、`ui-empty-saves.png`、`ui-empty-trains.png`。
@@ -4068,7 +4068,7 @@ GameCore、存檔、golden、replay 都不變。
 
 **沒有驗證的**：Linux 不能建置 App；樣子是用 Chromium 照同一個畫法、用新遊戲第一座城鎮的真實資料模擬的（PR 附圖），實際的 Canvas、效能與深色模式要看 CI 的 Xcode 建置與實機。
 
-**參考**：參考庫沒有可以移植的 2D 城市畫法：`Ci/` 的土地來自它沒有附上的向量圖磚；`Railway/taipei_gta_reference/` 是 three.js 的 3D 台北（真實的建物幾何），留給 Phase 8 的 3D renderer。畫法是本專案自己的；SimCity BuildIt（作者的截圖，商業遊戲）只取「建物依密度長高、用途用顏色分」的想法。
+**參考**：參考庫沒有可以移植的 2D 城市畫法：`Ci/` 的土地來自它沒有附上的向量圖磚；`Railway/taipei_gta_reference/` 是 three.js 的 3D 台北（真實的建物幾何），留給 Phase 8 的 3D renderer。畫法是本專案自己的：建物依密度長高、用途用顏色分。
 
 **之後的修正（2026-10-13，作者決定：玩家的東西一律暖黃）**：用途色原本有三套互相打架：城鎮建物是住宅綠、商業藍、辦公橘（`cityRoof`、`CityMap.useShades`、說明頁圖例），玩家建物卻是住宅橘、商店紅、辦公藍（`Palette.house`／`shop`／`office`），碼頭、遊艇港、子公司又各一色；TestFlight 玩家問「地圖上的藍、橘、紫、綠是什麼」（`docs/research/PLAYER_FEEDBACK.md` 54.1 第二位 #5）。現在玩家蓋的建物（決策 92、111、173 的八種）一律用車站的暖黃（`Palette.playerBuilding` = `station`，`#FFC86B`），藏青外框不變，種類只靠圖示（決策 121；14 點以下沒有圖示，只看得出是自己的）。城鎮的顏色不變。說明頁「地圖上的顏色是什麼？」多一句玩家建物是暖黃；`docs/UI_THEME.md` 跟著改。作者看過三案（一律暖黃、暖黃三深淺、暖黃加雙框）的預覽，照「一律暖黃」做。
 
@@ -4108,7 +4108,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能建置 App；站長泡泡放不放得下較長的句子（原本就會換行）要看實機。
 
-**參考**：參考庫沒有對應（`Ci/` 的提示是固定的導覽；`Railway/taipei_gta_reference/` 的 `.hud-obj` 是決策 118 已參考的一行目標）。SimCity BuildIt 的顧問會說城市發生了什麼（作者的截圖，只取想法）。
+**參考**：參考庫沒有對應（`Ci/` 的提示是固定的導覽；`Railway/taipei_gta_reference/` 的 `.hud-obj` 是決策 118 已參考的一行目標）。
 
 ### 129. 站前長得快、九成滿就改建（城市長高的速度）
 
@@ -4138,7 +4138,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 存檔格式不變（只改規則的數字），舊存檔讀入後從下一個午夜起照新規則成長，SaveFixtures 不變。Golden：五份 fixture 的值改變，改成 schema 49（沒有新的指令或欄位，表示這一版的成長規則），逐項說明在 `GoldenScenarios/README.md`；新值都由 GameCore 取得，再由照新規則改寫的 `tools/golden-checks/city_growth.py`、`city_buildings.py` 與手算核對。ReplayFixtures 沒有土地，不變。
 
-**參考**：參考庫沒有成長規則（`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9 只點名 OpenTTD 的 town growth）。OpenTTD（GPL-2.0，只取想法）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的；A 列車的站前開發是同一個方向。數字是本專案自己的（gap），由 `BalanceReportTests` 選出。
+**參考**：參考庫沒有成長規則（`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9 只點名 OpenTTD 的 town growth）。OpenTTD（GPL-2.0，只取想法）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的。數字是本專案自己的（gap），由 `BalanceReportTests` 選出。
 
 ### 130. 城市建造 P0-D：出售公司的建物（賣給城市）
 
@@ -4173,11 +4173,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 兩棟合計每天的不動產淨收入約 $8,100（租金減維護與土地稅），只有鐵路營業利益（第 180 天約 $94 萬／天）的 1%。第 180 天兩棟一起賣，收入 $716,560，已實現損失 $7,354,252，現金從 $97,836,120 變成 $98,552,680；沒買的第一條線同一天是 $105,932,531。
 - 出售對現金的影響只有售價這一筆，約等於兩棟留著再收 88 天的淨收入。所以照現在的數字，留著不如賣掉，但兩者都遠低於買價。
 - 虧損主要是收購費（決策 95 的 120%）。土地依現在的地價計，收購付的 D4 樓地板賣掉時不算錢。A 收購後那一格成了空地，地價從 $245／m² 掉到約 $185／m²（決策 95 的限制），售價跟著降。
-- 不收購的建物入住過半就能拿回建物的帳面價值，所以「在空地上蓋、等車站把它住滿再賣」最划算，和 A 列車的玩法一致。
+- 不收購的建物入住過半就能拿回建物的帳面價值，所以「在空地上蓋、等車站把它住滿再賣」最划算，這是本作想要的玩法。
 
 這一步只照研究的規則做出售；租金的水準、收購費要不要算進售價、地價受收購影響，屬於 Phase 7 的平衡，寫進 ROADMAP 的待觀察，不在這裡改。
 
-**限制**：只能賣給城市，不能買回或買入既有城市建物（之後另做）；沒有旋轉；出售不另外課稅（A 列車的出售稅留給 Phase 7 的稅制；決策 131 起，已實現損益算進每天的營利事業所得稅的稅前淨利）；城市接手只留在一格，不保留建物的實際大小與位置。
+**限制**：只能賣給城市，不能買回或買入既有城市建物（之後另做）；沒有旋轉；出售不另外課稅（出售稅留給 Phase 7 的稅制；決策 131 起，已實現損益算進每天的營利事業所得稅的稅前淨利）；城市接手只留在一格，不保留建物的實際大小與位置。
 
 ### 131. 營利事業所得稅（回本後的現金）
 
@@ -4214,7 +4214,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 之後要看：鐵道大亨挑戰（一年淨利 $3 億、權益 $10 億）現在以稅後計算，變難了，實機或模擬看到達不到時再調目標；平溪線的挑戰（一年 $200 萬）每天遠低於 $100,000，不受影響。
 
-**參考**：參考庫沒有稅（這次在整個參考庫搜尋 `tax`，只有地圖圖層名稱與 OpenTTD 的文件；`docs/research/PHASE7_COMPANY_STUDY.md` 已盤點 `Ci/reference_snapshot/lib/` 的 `taxRate`、`propertyTax` 等詞，沒有命中；`Ci/` 的經濟只有票價與營運、維護、能源、人事，見決策 36），也沒有通貨膨脹或費用隨規模。OpenTTD（GPL-2.0，只取想法）以通貨膨脹讓錢長期保持意義，但它以年計，這裡要的是 60 天內；《A 列車》系列的法人稅是同一個方向。稅率與門檻是本專案自己的數字（gap），由 `BalanceReportTests` 選出。
+**參考**：參考庫沒有稅（這次在整個參考庫搜尋 `tax`，只有地圖圖層名稱與 OpenTTD 的文件；`docs/research/PHASE7_COMPANY_STUDY.md` 已盤點 `Ci/reference_snapshot/lib/` 的 `taxRate`、`propertyTax` 等詞，沒有命中；`Ci/` 的經濟只有票價與營運、維護、能源、人事，見決策 36），也沒有通貨膨脹或費用隨規模。OpenTTD（GPL-2.0，只取想法）以通貨膨脹讓錢長期保持意義，但它以年計，這裡要的是 60 天內。稅率與門檻是本專案自己的數字（gap），由 `BalanceReportTests` 選出。
 
 ### 132. 實景示範地圖用地面重建，路線加長
 
@@ -4354,7 +4354,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 2026-10-10，作者排的第 2 項：「外地連絡和『短線也載走 40% 的人』可以一起做。兩個都是『需求隨距離變化』，做一次規則同時解決：外地站給長途收入，短線圖利的問題也一起處理。」號碼依工作登記 #231：存檔版本 31、決策 137、golden schema 52。
 
-參考庫沒有可以移植的規則（gap）：`Ci/` 的起訖流量來自快照沒有的伺服器（`/api/flowFull`），參考包只列出 OpenTTD 的 `demand_distance` 設定名稱，沒有公式（`docs/research/WHOLE_TAIWAN_MAP.md` 第 93 行）。外部專案：沒有讀也沒有複製任何程式碼；OpenTTD 的 cargodist 依距離調整需求（GPL-2.0，只是想法）、A 列車的地圖邊緣連絡線是外地收入的玩法來源。以下規則與數字是這個專案的，用 `BalanceReportTests.testLinesByDistance` 量出來。
+參考庫沒有可以移植的規則（gap）：`Ci/` 的起訖流量來自快照沒有的伺服器（`/api/flowFull`），參考包只列出 OpenTTD 的 `demand_distance` 設定名稱，沒有公式（`docs/research/WHOLE_TAIWAN_MAP.md` 第 93 行）。外部專案：沒有讀也沒有複製任何程式碼；OpenTTD 的 cargodist 依距離調整需求（GPL-2.0，只是想法）。以下規則與數字是這個專案的，用 `BalanceReportTests.testLinesByDistance` 量出來。
 
 1. **短程用走的**（`DistanceDemand.share(squaredDistance:)`）：出發站的旅次照舊依各站的旅次分給能到的站之後，每一對再依兩站的直線距離（票價用的同一個距離）保留一部分：500 m 以內 10%，2 km 以上全部，中間直線內插（距離取整數單位的平方根往下取整，千分之一往下取整），四捨五入。順序是分配 → 距離 → 票價對需求的影響 → 全網路徑的分鐘衰減，三條路（`dailyDemand(from:)`、直達與全網的計畫）都經過 `keptTrips`。
    - 所以 448 m、站距 224 m 的線只留一成的旅次，不再能載走腹地的四成（平衡報告待觀察的第 3 項）；能到遠站的車站送出的旅次也比只能到鄰站的多（「可達站數」自然出現，不另設規則）。
@@ -4376,7 +4376,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    | 第二座城鎮經第一座到邊緣 | $2,441,200 | +$301,727 | 約 8 天 |
 
    先試過全額距離 3 km、外地 12,000 旅次、加收兩倍基準票價：到邊緣的線 2 天回本（城鎮只連到外地連絡站時全部旅次都付外地票價），城鎮內 1.5 km 的線每天虧 $22,512，所以改成 2 km（城鎮內的線接近打平）、6,000、一倍。之後城鎮連到更多站時外地的吸引力（6,000）相對變小，外地收入佔的比例自然下降。
-   - 第一條線要連兩座城鎮或連到地圖邊緣才賺錢（A 列車「連起城鎮」的玩法），起始資金 $3,000,000 夠蓋其中一條。`NewGameBalanceTests` 改成：兩鎮之間的線 4–10 天回本、到邊緣的線也是、448 m 的線虧損且每一對只留一成。
+   - 第一條線要連兩座城鎮或連到地圖邊緣才賺錢（「連起城鎮」的玩法），起始資金 $3,000,000 夠蓋其中一條。`NewGameBalanceTests` 改成：兩鎮之間的線 4–10 天回本、到邊緣的線也是、448 m 的線虧損且每一對只留一成。
    - 一座城鎮內的線（城鎮半徑 768 m）只靠自己不賺錢，要接上城鎮間的線才有意義。
 5. **畫面**：選月台位置時，邊緣 1 km 內的位置在腹地人數下多一行「外地連絡站：每趟多收 $ 5」；外地連絡站開站時說「外地連絡站：地圖外的旅客由這裡進出，每趟多付 $ 5。」教學第二座車站的說明改成「距離近的人會用走的：兩站離得越遠（到 2 公里為止），搭車的人越多」。
 
@@ -4451,7 +4451,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 2026-10-10，作者排的第 3 項（城市項目：成長動畫、住商工的需求閥）的需求閥。號碼依工作登記 #231：存檔版本 32、決策 139、golden schema 53（138 是實景示範 6000× 的 session）。成長動畫是畫面的事，另開 PR。
 
-參考檢查：參考庫沒有城市需求（決策 98 已查；這次在為決策 137 clone 的 `a91453/railway-reference-private` 全部的 JS、JSON、MD、HTML 再搜尋 RCI、demand valve、zoneDemand、residential／commercial／industrialDemand、需求閥、住商工，只有無關的 `Ci/reference_snapshot/external/scidb/` 雜訊）。外部專案：Micropolis（開源的 SimCity，GPL-3.0）有由人口普查算出的 RCI 需求閥，只取這個想法，沒有讀也沒有複製它的程式碼或數字。規則與數字是這個專案的（gap），用 `BalanceReportTests` 量出來。
+參考檢查：參考庫沒有城市需求（決策 98 已查；這次在為決策 137 clone 的 `a91453/railway-reference-private` 全部的 JS、JSON、MD、HTML 再搜尋 RCI、demand valve、zoneDemand、residential／commercial／industrialDemand、需求閥、住商工，只有無關的 `Ci/reference_snapshot/external/scidb/` 雜訊）。外部專案：Micropolis（開源，GPL-3.0）有由人口普查算出的 RCI 需求閥，只取這個想法，沒有讀也沒有複製它的程式碼或數字。規則與數字是這個專案的（gap），用 `BalanceReportTests` 量出來。
 
 1. **城市保持它開始時的比例**（`CityMix`）：每百萬居民有多少商店就業（住宅、商店、公園的就業）與多少辦公與工業就業（辦公、工業、農業）。學校、公部門與景點不算。開關打開時取當時的土地；土地被整個換掉（`setLand`、`foundTowns`）時重新取；開的時候還沒有人住（全台灣的地圖開局沒有土地）就等第一個有居民的午夜再取。所以空白地圖與實景地圖都從 0 開始，各自保持自己的比例，不用一組固定的目標（空白地圖約 0.41 與 0.59，實景地圖差很多）。
 2. **需求**（`cityDemandLevels`，千分之一，−1000 到 1000）：商店與辦公是「應有的比例 − 現在的比例」除以兩者中較大的，住宅是「現在每位居民的就業 − 開始時的」除以較大的；都乘 10（`CityDemand.gain`），所以差一成就是滿格。
@@ -4509,7 +4509,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 參考檢查：參考庫（`a91453/railway-reference-private` `581db83`）沒有收購或城市建物的足跡（決策 95 已查，研究 §2；`Railway/city_world_reference/` 的 `lots` 是 3D 城市的地塊，不是本專案的格子統計）。外部專案沒有找：一個依密度取邊長的表。數字是這個專案的（gap）。
 
-1. **方塊的大小**（`PlacedBuildingRules.cityBuildingSide(of:)`）：D1 20 m（1,280 單位）、D2 28 m（1,792）、D3 34 m（2,176）、D4 與既有存量 40 m（2,560，和決策 95 相同），都在格子中央。一格 D1 的兩邊各空 22 m：旁邊是 D1 時，兩棟之間有 44 m，辦公大樓（要 36 m）擺得下；市中心的 D4 照舊要收購，和 A 列車一樣。
+1. **方塊的大小**（`PlacedBuildingRules.cityBuildingSide(of:)`）：D1 20 m（1,280 單位）、D2 28 m（1,792）、D3 34 m（2,176）、D4 與既有存量 40 m（2,560，和決策 95 相同），都在格子中央。一格 D1 的兩邊各空 22 m：旁邊是 D1 時，兩棟之間有 44 m，辦公大樓（要 36 m）擺得下；市中心的 D4 照舊要收購。
 2. **哪個密度**（`GameWorld.cityBuildingSide(row:column:)`）：那一格的城市建物的密度；城市建物關閉時，城市會蓋的密度（`Building.fitting`，和決策 95 的收購價相同）；還沒有土地的格（城市擴張的新格）用 D1，因為新格都從小的蓋起。讀入的土地（`setLand`、`foundTowns`、全島地圖的 `expandLand`）用那一格會蓋的密度。
 3. **同一套方塊用在**：
    - 玩家建物收購哪些城市建物（`cityCells(claimedBy:)`）與預覽；
@@ -4930,7 +4930,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 存檔版本 38：世界可以有 `"freight"`、路線可以有 `"freight": true`、帳本有 `hourlyFreight` 列與 `"freightRevenue"` 合計。舊版本的 build 會丟掉它們，所以它說存檔比自己新。為什麼貨運走路線的旗標而不是新的車種：`TrainType` 是參考庫 `TRAIN_TYPES` 的九種客車；`Train` 不動，貨運的狀態（車上的貨）放在 `FreightState`，不碰 `Train` 的編碼。為什麼運費不放進 `HourlyAccrual`：它是合成的 `Codable`，多一個欄位所有存檔都要有那個鍵。
 
-**參考**：參考庫沒有貨運規則（gap，見研究文件第 2 節）；OpenTTD（GPL-2.0）、Simutrans（Artistic 1.0）與 A 列車只讀概念，沒有複製任何程式碼或資料。
+**參考**：參考庫沒有貨運規則（gap，見研究文件第 2 節）；OpenTTD（GPL-2.0）與 Simutrans（Artistic 1.0）只讀概念，沒有複製任何程式碼或資料。
 
 **golden、存檔、replay**：新的 `freight.json`（schema 58）：貨運指令在沒打開時被拒、車站不存在被拒、同一站第二座貨運場被拒；三小時後 100 個就業做出 6 噸，全在 Alpha。新存檔 `SaveFixtures/v38-freight.json`（列車載著 40 噸、帳本有 `hourlyFreight`）。既有 golden、存檔與 replay fixture 都沒有改（`ReplayState` 只在貨運打開時多一行）。`GoldenScenarioTests` 與 `ReplayFixtureTests` 照舊全過。測試：`FreightTests`、`FreightSessionTests`。
 
@@ -4961,7 +4961,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 存檔版本 39：`"freight"` 可以有 `"buildingMaterials": true`、`"materials"` 與四個合計，貨運場 `"product": "materials"`，車上的貨 `"kind": "materials"`；一般貨物都不寫，舊存檔照舊。新錯誤 `buildingMaterialsNotEnabled`。
 
-**參考**：參考庫沒有建材或資材（研究文件第 2 節）；A 列車的資材置場只讀概念。
+**參考**：參考庫沒有建材或資材（研究文件第 2 節）。
 
 **golden、存檔、replay**：新的 `materials.json`（schema 59）；`freight.json`（schema 58）的預期值不變。新存檔 `SaveFixtures/v39-materials.json`。既有 golden、存檔與 replay 都沒有改。測試：`BuildingMaterialsTests`、`FreightSessionTests`。
 
@@ -4989,7 +4989,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 新的 D4 在前 5 天就出現（早期節奏不變）；之後沒有鐵路運建材，成長大約剩一半。全速成長兩站一天約要 400 噸，一列四節貨運列車在 5.4 km 上一天能運約 5,900 噸（決策 155），一條建材貨運線就夠：這就是要給玩家的理由。第一條線（`testAFirstLine`）兩種設定完全相同（它不升級建物）。
 
-**參考**：參考庫沒有建材（gap）；A 列車「資材不足蓋不了」只讀概念，改成軟閘門。
+**參考**：參考庫沒有建材（gap）；建材不足用軟閘門。
 
 **golden、存檔、replay**：新的 `materials-growth.json`（schema 60，`city-buildings-raise.json` 打開建材）；`tools/golden-checks/city_growth.py` 擴充成也驗這份（獨立寫法，值全部一致）；`city_buildings.py` 驗的是建物的初建，不受影響。既有 golden、存檔與 replay 都沒有改。測試：`BuildingMaterialsTests`。
 
@@ -5066,7 +5066,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 8. **新遊戲**（GamePresentation）：開始畫面的「新遊戲」（空白地圖）是 5 × 5 塊（81.92 km 見方，`GameWorld.buyingMapBounds`）、擁有中央一塊；世界的中心就是中央那塊的中心，所以 `Land.towns` 畫出的城鎮和 16 km 的新遊戲完全相同、位置移到中央那塊。5 × 5 是為了空白地圖也放得下城際的路線：高鐵的站距約 30 km，82 km 放得下三站以上（3 × 3 只有 49 km）。教學、挑戰、每週挑戰、劇本、示範地圖、實景地圖與全台灣都不變。
 9. **畫面**：地圖把沒擁有的地方塗成和地圖外一樣的顏色；左下角多一顆「擴建地圖」按鈕（只有這種地圖才有），按了把地圖拉到擁有與可買的區塊，可買的區塊畫虛線框與價格（還沒解鎖的加鎖），點一塊在中間出現取消／購買的小框（決策 107 的那一個），寫出差多少人次解鎖、或哪些外地連絡站會變回一般車站；買下是一次可以復原的編輯。經濟面板寫出「已擁有 n / 25 塊、下一塊的價格與解鎖的人次」。小地圖只畫擁有的區塊。在沒擁有的地方蓋東西，訊息請玩家先用「擴建地圖」買下那一塊。
 
-**參考**：私有參考庫沒有可以移植的（gap）：`Ci/` 的「扩建」是車站、機場與候車室的容量配額（`hsr.capacity.platform_expanded`、`metroQuotaFormatValue`），不是土地；參考包沒有會變大的地圖。外部專案：Cities: Skylines 的買地（依人口里程碑解鎖可買的塊數）不是開源，只取概念；OpenTTD、Simutrans 的地圖一開始就是全部，沒有可用的。程式是這個專案自己的。
+**參考**：私有參考庫沒有可以移植的（gap）：`Ci/` 的「扩建」是車站、機場與候車室的容量配額（`hsr.capacity.platform_expanded`、`metroQuotaFormatValue`），不是土地；參考包沒有會變大的地圖。外部專案：OpenTTD、Simutrans 的地圖一開始就是全部，沒有可用的。程式是這個專案自己的。
 
 **量測**（`BalanceReportTests.testBuyingTheMap`，release，60 天）：決策 137 的兩鎮之間的線（種子 1，5.4 km，一列四節）放在 5 × 5 的新遊戲，玩家只在里程碑允許、而且買完還剩 $1M 時買離第一座城鎮最近的一塊，其他什麼都不蓋：
 
@@ -5358,7 +5358,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 手機會更慢，只是量級；每個讀入土地的編輯讓復原的快照各留一份土地與建物，所以復原最多保留 3 個讀入土地的編輯（`GameSession.landReadingUndoLimit`，決策 88）。
 
-**參考**：私有參考庫沒有可以移植的（gap，和決策 160 同）：`Ci/` 的「扩建」是車站、機場與候車室的容量配額，不是土地；`MapBuilder/`、`Railway/` 與其他參考包沒有會變大的地圖。外部專案：Cities: Skylines 的買地（依人口里程碑解鎖）不是開源，只取概念；OpenTTD、Simutrans 的地圖一開始就是全部。版面的計算、步長的公式與價格是這個專案的，用上面的量測定出來。
+**參考**：私有參考庫沒有可以移植的（gap，和決策 160 同）：`Ci/` 的「扩建」是車站、機場與候車室的容量配額，不是土地；`MapBuilder/`、`Railway/` 與其他參考包沒有會變大的地圖。外部專案：OpenTTD、Simutrans 的地圖一開始就是全部。版面的計算、步長的公式與價格是這個專案的，用上面的量測定出來。
 
 **golden、存檔、replay**：新的 `map-expansion-step.json`（schema 64）、`SaveFixtures/v42-map-expansion-step.json`（存檔版本 42）；版本 41 以前的存檔讀成標準步長。既有 golden、存檔與 replay 都沒有改（標準步長的價格公式和以前相同）。測試：`MapExpansionTests`（步長、價格、存檔）、`RealWorldExpansionTests`（版面、新遊戲、土地讀入、買下與復原、啟動器）、`RealWorldDataLoadTests`、`LandImportTests`（兩個舊測試改用金門當作「框外的 16 km 地圖」）。
 
@@ -5368,7 +5368,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 區塊價格跟著起點定，不跟著被買的那一塊：從臺東起手的人買到高雄的區塊也只付 $105 萬 × 已擁有塊數。
 - 沒有驗證的：選點畫面與 App 的 SwiftUI 在 macOS CI 看；啟動時間與買地的卡頓要 TestFlight 實機看（Linux 的 release 在表上）。
 
-**後來：還沒買的地塊畫鎖頭**（2026-10-21，NEXT_PRIORITIES §19 第 4 名，`docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.7；遊戲規劃派工，不另取決策號）。空白地圖的購地擴建（決策 160）與實景地圖的「先給一塊、之後買地」（本決策）都用 `GameWorld.mapExpansion`，所以「還沒買」就是不在 `mapExpansion.owned` 裡的地塊；依面積收購（決策 146）是買建物，不是地塊，沒有鎖頭。
+**後來：還沒買的地塊畫鎖頭**（2026-10-21，NEXT_PRIORITIES §19 第 4 名；遊戲規劃派工，不另取決策號）。空白地圖的購地擴建（決策 160）與實景地圖的「先給一塊、之後買地」（本決策）都用 `GameWorld.mapExpansion`，所以「還沒買」就是不在 `mapExpansion.owned` 裡的地塊；依面積收購（決策 146）是買建物，不是地塊，沒有鎖頭。
 1. **哪幾塊有鎖頭**（GamePresentation 的 `GameSession.mapLocks(on:viewport:clearOf:)`、`MapLock`）：和擁有的土地相鄰、現在就能買的那幾塊（`mapTilesForSale()`）各一個；更外面的照決策 160 只淡化。只在沒有拿建造工具、沒有教學、沒有在擴建時出現（`showsMapLocks`）；擴建時那幾塊照舊顯示價格。
 2. **畫在哪裡**：那一塊在畫面上露出來的部分（扣掉蓋在地圖邊上的按鈕與面板）的正中間；露出來的部分任一邊不到 56 點（`MapLock.smallestPart`，拉得很遠，或只露出一條邊）就不畫。
 3. **鎖上或打開**：最佳一天的運量還不夠買那一塊時是鎖上的鎖（`MapGlyphLock`），夠了是打開的鎖（`MapGlyphLockOpen`，暖黃底，「購買」的顏色）；自由模式一律打開。
@@ -5387,7 +5387,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 一條以高鐵性能規劃的路線就是高鐵路線：它的乘客照搭乘的距離付高鐵票價（每公里 $0.45，沒有比路網低的）；它的車站從八公里內的居民與就業取得城際旅次，去其他十公里以上的高鐵站；高鐵列車不超載。高鐵在全台灣上測（決策 167：擴建模式裡高鐵要買 26 塊，是最後的目標），用真實高鐵的 12 站定出運量。
 
-**高鐵不是另一種系統**（作者 2026-10-11：「那你的高鐵不要像 ci 那樣分開，一樣可以直接蓋，但是有不一樣的表示，類似 cities skyline 城際列車那樣」）。Ci 把高鐵做成另一種路線（`lineKind: "hsr"`，自己的車組選項、整組載客量、配額與結算）。這裡沒有另一種路線、沒有開關、沒有新的指令或存檔欄位：高鐵路線用蓋一般路線的方法蓋，同樣的軌道、車站與路線，只是用高鐵的性能規劃（路線選單本來就有的「高鐵」，或把高鐵列車放到只跑高鐵列車的新路線上），然後用不同的樣子表示（地圖、站牌、清單，規則 7），像 Cities: Skylines 的城際列車是同一套軌道與車站上另一種車、另一種樣子。
+**高鐵不是另一種系統**（作者 2026-10-11：「那你的高鐵不要像 ci 那樣分開，一樣可以直接蓋，但是有不一樣的表示」）。Ci 把高鐵做成另一種路線（`lineKind: "hsr"`，自己的車組選項、整組載客量、配額與結算）。這裡沒有另一種路線、沒有開關、沒有新的指令或存檔欄位：高鐵路線用蓋一般路線的方法蓋，同樣的軌道、車站與路線，只是用高鐵的性能規劃（路線選單本來就有的「高鐵」，或把高鐵列車放到只跑高鐵列車的新路線上），然後用不同的樣子表示（地圖、站牌、清單，規則 7）：同一套軌道與車站上另一種車、另一種樣子。
 
 **參考庫有什麼、沒有什麼**（`a91453/railway-reference-private`，`Ci/`、`Railway/`、`Simulator/`、`MapBuilder/`、`OpenWorld/` 都找過）：
 - 有而且移植了：`Ci/` 的高鐵車組選項（`HSR_TRAIN_CARS_CAPACITY` 8／16／17 節 650／1,200／1,283 人）與「高鐵不超載」（`metroTrainUsesOperationalOverload` 對 `lineKind === "hsr"` 為假）、票價（`hsrFarePassengerPrice` 沒有各車種費率時的舊式公式 `Math.max(20, Math.round(Math.max(1, km) × .45))`，參考的美元，地鐵的均一票價是 5）；`Railway/` 的 `PERF_HSR`、停站時間與 `thsr_track.json`、`thsr-schedule.json`（早就在遊戲裡）。
@@ -5409,7 +5409,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 6. **土地**：App 在每個編輯之後讀入車站周圍的土地（決策 88）；高鐵站讀 `WholeTaiwan.highSpeedLandReach`（8 km，其他站 2 km）。所以路線改以高鐵性能規劃的當下，那一圈土地跟著讀入（同一個編輯，復原一起拿掉）。
 7. **蓋法與畫面**（GamePresentation 與 App，macOS CI 看）：
    - **蓋法**：沒有新的按鈕或步驟。路線選單的性能本來就有「高鐵」；車種選單多一個「高鐵列車」（`TrainType.offered`）；把高鐵列車放到只跑高鐵列車、還是標準性能的路線上（`GameSession.assignSelectedTrainToSelectedLine`），或是把已經在線上的列車改成高鐵列車（`setSelectedTrainType`），那條路線在同一個編輯裡改以 PERF_HSR 規劃（`planAtHighSpeedWhenRunByHighSpeedSets`，復原一起拿掉）；玩家自己選過性能的路線不動，混跑其他列車的路線也不動。「幾分鐘一班」（`staffSelectedLine`）在高鐵路線上買的是高鐵列車。
-   - **表示**（同一套軌道、車站與路線，另一種樣子，像 Cities: Skylines 的城際列車）：地圖上高鐵路線有藏青的外框，畫在所有路線的下面，不挪動旁邊的路線（`LineMap.Stretch.isHighSpeed`）；高鐵列車的車頭是一個箭頭，不是圓點（用形狀不用顏色分，色弱也看得出）；高鐵站多一圈環；站牌的路線標籤與路線清單的路線名帶一個閃電；路線面板在性能選單下面說明票價與城際旅次，並列出每站 8 公里內的人口。顏色都是現有的 `Palette`（藏青），沒有新的色碼。
+   - **表示**（同一套軌道、車站與路線，另一種樣子）：地圖上高鐵路線有藏青的外框，畫在所有路線的下面，不挪動旁邊的路線（`LineMap.Stretch.isHighSpeed`）；高鐵列車的車頭是一個箭頭，不是圓點（用形狀不用顏色分，色弱也看得出）；高鐵站多一圈環；站牌的路線標籤與路線清單的路線名帶一個閃電；路線面板在性能選單下面說明票價與城際旅次，並列出每站 8 公里內的人口。顏色都是現有的 `Palette`（藏青），沒有新的色碼。
 
 **量測**（`HighSpeedReportTests`，Linux、Swift 6.4、release）：真實高鐵的 12 站（`thsr_track.json`）放在全台灣上，一條高鐵路線，土地照遊戲的方式讀入；再把 12 個腹地放到一條按里程擺直的路上，跑真實一天的三種停站（12 站、9 站、5 站，`thsr-schedule.json` 的 32、58、28 班），列車數讓班距是 30、15、12 分鐘。
 
@@ -5637,11 +5637,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 173. 子公司事業化：百貨公司、飯店、遊樂園與逐棟損益
 
-2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊遊戲缺口）。號碼依工作登記 #231：決策 173、存檔版本 46、golden schema 68（最後沒有用到，釋出）。
+2026-10-12。作者睡覺期間的派工（補齊遊戲缺口）。號碼依工作登記 #231：決策 173、存檔版本 46、golden schema 68（最後沒有用到，釋出）。
 
-**問題**：公司建物（`PlacedBuildingKind` 原本五種）只有每天的租金，報酬遠低於鐵路：兩棟辦公大樓 $818 萬，一天淨賺約 $8,100，等於陷阱；中後期現金滾雪球卻沒地方花。A 列車 9 的玩法是在熱鬧的車站旁開百貨、飯店、遊樂園，營收跟著旅客走，趁地區還沒發展時蓋、發展起來再高價賣掉。
+**問題**：公司建物（`PlacedBuildingKind` 原本五種）只有每天的租金，報酬遠低於鐵路：兩棟辦公大樓 $818 萬，一天淨賺約 $8,100，等於陷阱；中後期現金滾雪球卻沒地方花。本作的做法是在熱鬧的車站旁開百貨、飯店、遊樂園，營收跟著旅客走，趁地區還沒發展時蓋、發展起來再高價賣掉。
 
-**參考**：A9 手冊只列子會社的類別，沒有公式；參考庫（`a91453/railway-reference-private`）沒有可用的資料（只有地名裡的「百貨公司」）；所以類別與名稱參考 A9，規則與數字都是本專案自己的。
+**參考**：參考庫（`a91453/railway-reference-private`）沒有可用的資料（只有地名裡的「百貨公司」）；所以類別、名稱、規則與數字都是本專案自己的。
 
 **規則**（`Sources/GameCore/City/Subsidiary.swift`，全是整數）：
 1. **三種新建物**：百貨公司 `departmentStore`（48 m、8 層、商業）、飯店 `hotel`（32 m、14 層、商業）、遊樂園 `amusementPark`（112 m、1 層、休閒）。造價沿用決策 94 的樓地板加土地公式（所以百貨約 $735 萬、飯店 $383 萬、遊樂園 $1,101 萬，在量測的地價下）。住滿與人口照決策 94 一樣，只是**不收租金**（`dailyRent` 為 0），改記營業損益。原本五種完全不變，所以既有的 golden、存檔、replay 都不動。沒有新的世界開關：新種類只在玩家蓋了才出現，舊世界不會有。
@@ -5709,7 +5709,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 2026-10-12（作者睡覺期間派工）。號碼依工作登記 #231：決策 175；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動。**
 
-**問題**：HUD 只寫「第 N 天」；連假、颱風、破產倒數、站長的提醒看過一次就沒了；年報要大約 14 小時實際時間才出現一次。A 列車觀光有「カレンダー」（行事、期限、結算日）與通知履歷，A9 有「資金低於門檻自動暫停」。
+**問題**：HUD 只寫「第 N 天」；連假、颱風、破產倒數、站長的提醒看過一次就沒了；年報要大約 14 小時實際時間才出現一次。
 
 **日曆**（`GameDate`、`GameTime.calendarText`、`GameClock.calendarText`，`DisplayText.swift`）：用遊戲規則已經在用的曆法，一年 360 天、十二個月各 30 天（`FinancePeriod`），第一天是星期一（`StationDemand.weekday(ofDay:)`）：「第 2 年 5 月 12 日（二）08:40」。原來的「第 N 日 · 時間」（`displayText`）沒動，存檔清單還用它。HUD 的時鐘旁是今天的天氣圖示（晴、雨、雷雨；颱風經過時是颱風）和節日標籤（`todaySymbol()`、`todayHoliday()`，讀 `Weather.swift` 與 `Holidays.swift` 既有的查詢；沒打開「連假與事件」就都不顯示）。點時鐘彈出未來 7 天預報（`GameWorld.forecast()`、`ForecastDay`）：假日、天氣、颱風來襲（只有已經預警的）、油電價格。
 
@@ -5732,7 +5732,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 | --- | --- |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` `flowDashboardBuildEconomyReport`（本期與上期的收入、成本、淨額比較） | `MonthlyReport.make`、`MonthlyFigure.percent`（本月與上月，整數百分比） |
 | 同檔的通知履歷與 `notify()` | `NewsLog`（300 則、新的在前；參考的通知只有幾秒鐘，這裡留著） |
-| 沒有可用的：日曆／行事、資金低於門檻自動暫停（A 列車的）、天氣圖示 | 自己寫：`GameDate`、`pausesForImportantEvents`、`todaySymbol()` |
+| 沒有可用的：日曆／行事、資金低於門檻自動暫停、天氣圖示 | 自己寫：`GameDate`、`pausesForImportantEvents`、`todaySymbol()` |
 
 外部專案：沒有搜尋到可以直接用的（OpenTTD 有新聞訊息與「暫停於事件」的設定，只讀概念，沒有複製程式碼，GPL）。
 
@@ -5767,9 +5767,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 177. 開局體驗：新遊戲選項、第一次玩的引導、首條線虧損教學、說明手冊
 
-2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車：開始吧觀光補缺口）。號碼依工作登記 #231：決策 177；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動**。
+2026-10-12。作者睡覺期間的派工（補缺口）。號碼依工作登記 #231：決策 177；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動**。
 
-**問題**：前 15 分鐘決定玩家會不會留下來。照教學蓋出的短線一天虧約 $40,000，遊戲卻一直發金幣音效（`noteIncome` 只報收入）；站長在負債時只會叫玩家漲價；新遊戲沒有任何設定；沒有可查的說明。A 列車觀光有難度（やさしい／標準／達人）、教學劇本與依問題分類的ヒント頁。
+**問題**：前 15 分鐘決定玩家會不會留下來。照教學蓋出的短線一天虧約 $40,000，遊戲卻一直發金幣音效（`noteIncome` 只報收入）；站長在負債時只會叫玩家漲價；新遊戲沒有任何設定；沒有可查的說明。
 
 **1. 新遊戲選項**（`NewGameOptions`，`NewGameOptionsView`；開始畫面「新遊戲」下的一行「新遊戲選項 · 標準 · $ 3,000,000」）：
 - 難度輕鬆／標準／達人 = 起始資金 $5M／$3M／$1.5M，干擾事件（決策 154、162）關／輕／標準；干擾事件可以另外選，改難度時回到難度的預設。
@@ -5787,7 +5787,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考與外部專案**（CLAUDE.md 的順序）：
 - `Ci/reference_snapshot/lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`（`guide.metro.faq.0`–`.5`、`guide.metro.placeholder` 的搜尋提示）：六則 FAQ 與搜尋提示的做法，簡轉繁並換成本作的操作。direct（文字）／adapted。
-- `Simulator/`、`MapBuilder/`、`Railway/`：沒有難度設定、首次啟動引導或虧損教學可用。外部專案：A-Train 的難度與ヒント頁只當概念（沒有程式可複製）；「nothing usable」，程式是這個專案自己的。
+- `Simulator/`、`MapBuilder/`、`Railway/`：沒有難度設定、首次啟動引導或虧損教學可用。外部專案：「nothing usable」，程式是這個專案自己的。
 
 **限制**：
 - 首條線教學只看「車站數」與「前 30 天」：一座車站數很多但仍然虧的公司拿到的是 `inDebt`；全台灣地圖的土地是按需讀入的，未讀入的城鎮找不到，站長會省略方向那一句。
@@ -5857,9 +5857,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 174. 觀光景點與觀光客：第二條需求曲線
 
-2026-10-12。作者睡覺期間由派工 session 交付；作者點名要參考《A 列車：開始吧觀光開發計畫》：把鐵路接到九份、日月潭、阿里山、平溪，週末與連假就會湧進觀光客，形成跟通勤錯開的第二條需求曲線，玩家有明確目標（拉高星等、增加年觀光客）。號碼依工作登記 #231：決策 174、存檔版本 47、golden schema 69（存檔 45、46 與決策 172、173 是同批派工的彈性發車與子公司事業，這個 build 沒有）。
+2026-10-12。作者睡覺期間由派工 session 交付：把鐵路接到九份、日月潭、阿里山、平溪，週末與連假就會湧進觀光客，形成跟通勤錯開的第二條需求曲線，玩家有明確目標（拉高星等、增加年觀光客）。號碼依工作登記 #231：決策 174、存檔版本 47、golden schema 69（存檔 45、46 與決策 172、173 是同批派工的彈性發車與子公司事業，這個 build 沒有）。
 
-**規則（GameCore，`Passenger/Tourism.swift`，世界開關 `tourism`）**——參考庫沒有觀光規則（OpenWorld 的 `destination-catalog.js` 只列地點），下面都是依 A 列車觀光的星等與設施加成概念自己寫的：
+**規則（GameCore，`Passenger/Tourism.swift`，世界開關 `tourism`）**——參考庫沒有觀光規則（OpenWorld 的 `destination-catalog.js` 只列地點），下面都是本專案自己寫的：
 - **景點** `Attraction {id, name, englishName, point, kind 海岸／山岳／溫泉／城鎮文化, baseStars, souvenir 0–2, yesterday, thisYear, lastYear}`，`GameWorld.tourism` 是它們（沒有景點就是 `nil`）。
 - **星等**以**百分之一星**記（100–500；派工建議十分之一星，但名產店每級 0.25 星要四分之一星，十分之一星表示不了）。有效星等 = 基礎星等 + 名產店每級 25，上限 500。旅館加成這一版不做（旅館只有一種，歸子公司事業；之後用一個小 PR 讓景點附近的飯店提升星等；`Attraction`、`attraction(id:)`、`attractionStation(of:)` 都能查）。
 - **每日潛在觀光客**：1★ 300、2★ 800、3★ 2,000、4★ 4,500、5★ 9,000，星等之間照線性（3.25★ = 2,625）。
@@ -5891,8 +5891,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 待觀察（ROADMAP 的表）：實機上景點多、星等高時，觀光客會不會把通勤的列車擠滿（有門的擁擠與溢出會限制它）；名產店兩級是不是太快回本。
 
 **參考庫與外部專案**（CLAUDE.md 的順序）：
-- `OpenWorld/reference_snapshot/play/src/world/destination-catalog.js`：27 個景點（沒有座標、星等）。direct（資料，清理後）：上面。`world/landmark-data.js`、`game/destination-progress.js`、`Railway/city_world_reference/source/assets/sightsData-BtAFTse6.js`：地點與解鎖進度的資料，沒有觀光客的規則；沒有採用（星等與設施加成沒有來源，依 A 列車的概念自己寫）。
-- 外部專案：沒有可用的（OpenTTD、Simutrans、A/B Street 沒有「景點星等與季節」的需求模型）；「nothing usable」，程式是這個專案自己的。A 列車只讀概念（星等、設施加成），不取素材。
+- `OpenWorld/reference_snapshot/play/src/world/destination-catalog.js`：27 個景點（沒有座標、星等）。direct（資料，清理後）：上面。`world/landmark-data.js`、`game/destination-progress.js`、`Railway/city_world_reference/source/assets/sightsData-BtAFTse6.js`：地點與解鎖進度的資料，沒有觀光客的規則；沒有採用（星等與設施加成沒有來源，本專案自己寫）。
+- 外部專案：沒有可用的（OpenTTD、Simutrans、A/B Street 沒有「景點星等與季節」的需求模型）；「nothing usable」，程式是這個專案自己的。
 
 **限制**：
 - 觀光客人數是計畫的人數，不是實際下車人數（上面）。
@@ -5928,7 +5928,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 179. 逐線營運報表：每條線的運量、票收、成本與損益
 
-2026-10-12，作者睡覺期間派工的缺口（依 A 列車 9 V5／A 列車：開始吧觀光的盤點：帳只有全公司合計，玩家看不出哪條線賺錢、該加車或砍掉；OpenTTD 有每車年度利潤，A9 的每列車「運行表示」有收支）。號碼依工作登記 #231：決策 179、存檔版本 48、golden schema 70。
+2026-10-12，作者睡覺期間派工的缺口（帳只有全公司合計，玩家看不出哪條線賺錢、該加車或砍掉；OpenTTD 有每車年度利潤）。號碼依工作登記 #231：決策 179、存檔版本 48、golden schema 70。
 
 **世界開關 `lineAccounts`**（`setLineAccounts`，存檔 `"lineAccounts": {...}`，沒有開關就沒有這個鍵）：新遊戲打開；舊存檔、golden、replay 關著（讀到沒有這個鍵的存檔就是關）。和彈性發車（決策 172）等不同的是，這個開關**不改任何玩法**，只是記錄，所以挑戰、教學與示範地圖（都用 `GameWorld.newGame` 建）不特別關掉，玩家在那些地圖也看得到報表。只有經營模式記錄：自由模式不計票價，也不記。
 
@@ -6007,7 +6007,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 178. 載客量圖層與車站「即將進站」看板
 
-2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
+2026-10-12。作者睡覺期間的派工（補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
 
 **唯讀存取子（GameCore 唯一的改動）**：`GameWorld.plannedPassengerLegFlows()` 讀已經快取的旅客計畫（`passengerPlan`，由 `advance` 算出並保留），回傳每條路線、每個方向、每段乘車（上車站到下車站）每小時的乘客數（24 個數）；一對 OD 每小時的旅次依各路徑選項的權重分給它們（和 `passengerRouteAllocations` 同一個最大餘數法 `apportion`），路徑上每一段乘車各得一份。沒有快取時回 `nil`（`keepsPassengerPlan` 是便宜的檢查）。它不改世界、不存檔、不在畫面端重算任何一對 OD 的路徑（全台灣的圖會太慢）。
 
@@ -6035,7 +6035,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 2026-10-12（作者睡覺期間派工）。號碼依工作登記 #231：決策 181；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動。**
 
-**問題**：自由遊戲打完挑戰之後沒有長期目標，`GoalsPanel` 寫著「這局沒有目標」。A 列車觀光有公司格付與劇本評價，A9 有依資金達標的里程碑，OpenTTD 有 performance rating 與職稱。
+**問題**：自由遊戲打完挑戰之後沒有長期目標，`GoalsPanel` 寫著「這局沒有目標」。OpenTTD 有 performance rating 與職稱。
 
 **公司評等**（`CompanyRank.swift`：`RankMeasure`、`CompanyTitle`、`CompanyFigures`、`CompanyRank`）：0–1000 分，七項各自線性加到滿分：
 
@@ -6088,7 +6088,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 182. 晝夜與天氣畫面、列車依路線上色與平滑移動
 
-2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：看列車跑是鐵道遊戲最大的樂趣，但地圖沒有時間感：夜裡和白天一樣、雨天和颱風看不出來，列車每個 tick（100 ms，一般速度是一遊戲分鐘）跳一大段。A9 有晝夜光影、夜間建物燈光與天候；A 列車觀光有時間色調。號碼依工作登記 #231：決策 182；**只改 presentation，GameCore 不動**，存檔版本、golden schema 不動，沒有新的 fixture，golden 與 replay 不受影響。
+2026-10-12。作者睡覺期間的派工（補齊缺口）：看列車跑是鐵道遊戲最大的樂趣，但地圖沒有時間感：夜裡和白天一樣、雨天和颱風看不出來，列車每個 tick（100 ms，一般速度是一遊戲分鐘）跳一大段。號碼依工作登記 #231：決策 182；**只改 presentation，GameCore 不動**，存檔版本、golden schema 不動，沒有新的 fixture，golden 與 replay 不受影響。
 
 **時間的色調（`DayNight`，GamePresentation，純函式）**：由遊戲時鐘（到秒）算：19:00–05:00 夜間深藍 `#0E1640` 25%；05:00 起轉成黎明的暖橘 `#FF9F55`，05:30 15%，06:30 退完；白天沒有；17:30 起黃昏的橘 `#F07A3C` 升到 18:15 的 25%，19:00 轉成夜間的藍。兩個轉折點之間顏色與強度直線內插，所以不會跳。地圖用 multiply 疊在底圖、城市、軌道與車站上，列車、光暈與天氣在它上面。
 - **派工建議夜間 40%，改成 25%**：multiply 讓地面與軌道一起變暗，淺色地圖上軌道對地面 40% 時只剩 2.70:1，不到圖形的 3:1；25% 是 3.01:1，站名 7.74:1（`docs/UI_THEME.md`）。夜間不再比黃昏更暗，只是由橘轉藍。
@@ -6143,7 +6143,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 183. 城市委託案與補助金
 
-2026-10-12，作者睡覺期間派工（參考 A 列車：開始吧觀光開發計畫的「行政施策」與 OpenTTD 的 subsidies，只讀概念）：自由遊戲中期缺少節奏。給限期任務、獎勵清楚、失敗不罰錢。號碼依工作登記 #231：存檔版本 50、決策 183、golden schema 72（存檔 49、schema 71 是同批派工的車輛經濟，決策 180）。
+2026-10-12，作者睡覺期間派工（參考 OpenTTD 的 subsidies，只讀概念）：自由遊戲中期缺少節奏。給限期任務、獎勵清楚、失敗不罰錢。號碼依工作登記 #231：存檔版本 50、決策 183、golden schema 72（存檔 49、schema 71 是同批派工的車輛經濟，決策 180）。
 
 **世界開關 `cityRequests`**（`setCityRequests(seed:)`，`nil` 是關閉，免費；存檔 `"cityRequests": {...}`）：`GameWorld.newGame` 用遊戲種子打開（空白、實景、全台灣、擴建）；教學、挑戰（沙盒、平溪線、劉銘傳）、示範地圖（`DemoWorld`、實景示範、高鐵示範）關閉，和決策 154、169–174 一樣自己決定，它們量過的數字不變；舊存檔、golden、replay 沒有這個鍵就是關。只有經營模式判定與入帳：自由模式不判、不抽新的。
 
@@ -6331,7 +6331,6 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 - 蓋回軌道救不回來，所以只加警示等於留一個陷阱。
 - 和既有的拒絕一致：`trackEdgeInUse`（站在上面），`splitTrackEdge` 本來就對 `remainingEdges` 丟 `trackReserved`。
-- A 列車系列也不讓玩家拆列車正要經過的軌道。
 - 等列車通過就能拆，玩家不會被永久擋住。
 
 **刻意改掉的測試**：`TrainServiceTests.testATravellingTrainWaitsForRemovedTrackAndIsNotRerouted` 原本斷言拆除成功、列車停在 c 等待並丟掉 run、蓋回軌道後仍不改路。它改成 `testTrackAheadOfATravellingTrainCannotBeRemoved`：拆除被拒、世界不變；列車到站後可以拆。「班次不改路徑」仍然成立，寫在註解裡。
@@ -6533,7 +6532,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **原因**：GameCore 的月台要區間兩端一樣高（`GameWorld.addTrackPlatform` 的 `invalidPlatform`），轉轍器也只能切水平的邊（`splitTrackEdge` 的 `invalidTrackGeometry`）。決策 164 的「能平就平」只在兩端地面差 2 m 內時拉平；派工 session 從車站 3 km 內隨機取兩點量過，500 m 一段會鋪成水平的只有新竹 25%、中壢 27%、桃園 28%、台中 29%、台北 43%，800 m 一段 17–18%，100 m 一段 57–74%。照一般站距鋪，多半是 7‰ 這樣的小坡；「緩和坡度」「構造」「高度」都不能讓它變平，提示也沒說另鋪短軌道這條路。
 
-**參考庫與外部專案**：參考庫（`382b9f8`）的 `Simulator/`、`MapBuilder/`、`Ci/`、`Railway/` 都沒有玩家放月台時處理坡度的做法（`Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 的車站水平只用在預先算好的線，決策 164 已查）。外部：OpenTTD（GPL-2.0）在斜坡上蓋車站時自動加基座，A 列車系列放車站時整平地面，只看做法；切曲線用的 de Casteljau 法是教科書的算法。程式是本專案自己寫的。
+**參考庫與外部專案**：參考庫（`382b9f8`）的 `Simulator/`、`MapBuilder/`、`Ci/`、`Railway/` 都沒有玩家放月台時處理坡度的做法（`Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 的車站水平只用在預先算好的線，決策 164 已查）。外部：OpenTTD（GPL-2.0）在斜坡上蓋車站時自動加基座，只看做法；切曲線用的 de Casteljau 法是教科書的算法。程式是本專案自己寫的。
 
 **做法**（GamePresentation 的 `LevelPlatformTrack.swift`）：
 1. **整平**（`GameSession.platformLevelling(of:from:to:in:)`、`build(_:in:)`）：月台模式選到的區間（`networkPlatformStretch`）兩端不一樣高時，按 ✓ 在世界的副本上用 GameCore 自己的指令做完：`removeTrackEdge` 拆掉那條邊；在區間的起點、終點各 `buildTrackNode`，高度取區間中點的軌面高度；`buildTrackEdges` 一次建 A→P、P→Q、Q→B 三條，P→Q 水平，兩旁的坡照路網工具的做法緩和（`networkEasesGrade`，緩和後超過 40‰ 時用固定坡度）；然後照舊建站或加月台在 P→Q 上（整條）。全部在同一個 `performEdit`：全有或全無，一次復原退回。
@@ -6614,7 +6613,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 ### 192. 多槽輪替的自動存檔：回到幾分鐘前
 
-2026-10-13，`docs/research/NEXT_PRIORITIES_2026-10-12.md` 波次 1 第 7 項、§10 第 18 題；玩家意見 54.1 第 4 項「蓋錯了不能復原」。遊戲時間一走 Undo 就清空（決策 82），而自動存檔只有一份，每 15 分鐘與離開時都寫同一個 `autosave.json`，新手蓋錯了回不去。A 列車 9 Evolution 把多份自動存檔當主打功能。存檔的內容（`SavedGame`）不變，存檔版本不動；只改 GamePresentation 的存檔資料夾與 App 的畫面。
+2026-10-13，`docs/research/NEXT_PRIORITIES_2026-10-12.md` 波次 1 第 7 項、§10 第 18 題；玩家意見 54.1 第 4 項「蓋錯了不能復原」。遊戲時間一走 Undo 就清空（決策 82），而自動存檔只有一份，每 15 分鐘與離開時都寫同一個 `autosave.json`，新手蓋錯了回不去。存檔的內容（`SavedGame`）不變，存檔版本不動；只改 GamePresentation 的存檔資料夾與 App 的畫面。
 
 **參考庫與外部專案**（私有 repo `382b9f8`）：
 - `Ci/reference_snapshot/` 的雲端自動存檔每 15 分鐘一次（`METRO_CLOUD_AUTOSAVE_INTERVAL_MS = 900 * 1e3`，`runMetroCloudAutosave`），但每次都寫第 1 槽（`saveCurrentCityCloudSlot(1, {automatic: true})`），沒有輪替；本機有 3 槽（`normalizeMetroAppLocalSlotNo`），存檔時間顯示成絕對時間（`formatCloudSlotTime`）；`archiveMetroAppCurrentDraftBeforeFreshStart` 把草稿放進第 2、3 槽的空位，滿了就不存。
@@ -7495,7 +7494,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 的 `rail_depot_reverse_penalty`、`binary_reference/relevant_symbols_and_settings.txt` 的 `CmdBuildTrainDepot` | 無 | 只有名稱，沒有數值或規則 |
 | `Ci/`、`Simulator/`、`MapBuilder/`、`OpenWorld/`、`Railway/` 其他目錄（找 depot、yard、garage、siding、回送、入庫、出庫、車庫、機廠） | 無 | 沒有可用的（`train-garage.js` 是車輛收藏頁，不是車庫） |
 
-外部專案：沒有另外搜尋；入出庫的時機、成本與一次一台的規則是這個專案自己的（《A列車》只讀概念，§9.1）。
+外部專案：沒有另外搜尋；入出庫的時機、成本與一次一台的規則是這個專案自己的。
 
 **測試**：`DepotTests`（指令與錯誤、停車線不給路線走、06:00 前出庫且首班準點、收班後入庫並留到早上、只出路線要跑的列數、多的列車入庫、留在別的機廠的車回路線、彈性發車到較近的一端、一次推進＝逐分鐘、只付保養與停車線費、存檔來回與 v54 fixture）；`LineLossFixesTests.testEmptyRunningToADepotMovesItOrKeepsTheTrainsAtTheEnds`；`CommandEditTests` 多兩個指令；`IdleTrainDeadlockTests` 的備用車測試。
 
@@ -8009,7 +8008,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 `Simulator/`、`OpenWorld/`、`train_loop`、`island_city`、`street_scene`、`commuter_journey`、`city_world` 沒有起訖弧線（搜尋 OD、origin、destination、arc、desire line）。
 
-**外部**：SimCity 4 的 Route Query（點一格看經過的車流），只取「點一下、看見人往哪裡去」的做法，沒有程式碼。程式是這個專案自己寫的。
+**外部**：沒有程式碼。程式是這個專案自己寫的。
 
 **測試**：`JourneyTraceTests`（前 5 名與排序、0 人不畫、線寬、彎的方向、動畫步數與減少動態效果、從世界的需求推導、示範地圖每站最多 5 條且是最多的）；UI 測試 `MapInteractionTests/testHoldingAStationTracesItsBusiestTrips`（長按 Central 打開面板、地圖的值寫出旅程；只在完整流程跑，不進閘門清單）。
 
@@ -8267,7 +8266,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **四方的理由**（推薦的組合 A／B／A）：
 
-- **玩家**：一張卡就看得到「走到哪、還要多久、準不準」，不用讀一段文字。看板保留方向分組，轉乘時找得到自己的車；「前車誤點」說出誤點從哪裡來。運用表讓玩家找出閒著的車和連環誤點的時段，這是 A 列車排車輛運用的玩法。
+- **玩家**：一張卡就看得到「走到哪、還要多久、準不準」，不用讀一段文字。看板保留方向分組，轉乘時找得到自己的車；「前車誤點」說出誤點從哪裡來。運用表讓玩家找出閒著的車和連環誤點的時段，這是排車輛運用的玩法。
 - **開發**：卡與看板都是 GamePresentation 的推導，加 App 的畫法，不動 GameCore 與存檔。運用表若要整天的班次與每趟收入，要動 GameCore（見下）；第一步可以只做畫面的部分。
 - **美術**：版型借航空，畫法全是《沿線》的：
   - 平塗色塊、藏青外框、暖黃列車圓章；
@@ -8579,7 +8578,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
   - 在 iPhone 上它們站在左欄底部的旁邊，不疊進左欄：橫拿的高度放不下詳細卡開關、建造工具、建設和它們。
   - 建造時左欄換成建造工具（路網、列車、建物、完成），「建設」留在最下面亮著，再點一次收起，和平常同一個位置。詳細卡開關一直在左欄最上面（選了工具時詳細卡會打開，收起它才看得到地圖）。
 - **教學照舊**：教學的每一步指著固定位置的按鈕，iPhone 的教學仍用底部的工具列，教學結束才換成左欄。（2026-10-16 改了：教學也用左欄，見下面「後來：教學用和平常遊戲同一套選單」。）
-- **從 SimCity BuildIt 只學操作**：點建築看資訊、泡泡標出問題、常用的在拇指下、不用的收起來。不學它的雜亂：字一定在格子上、只有通知有數字、地圖中間只有車站上的泡泡、只有一種畫風。
+- **操作**：點建築看資訊、泡泡標出問題、常用的在拇指下、不用的收起來。不要雜亂：字一定在格子上、只有通知有數字、地圖中間只有車站上的泡泡、只有一種畫風。
 
 **細節**：
 - **看板**：
@@ -10068,7 +10067,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - Linux：`RequestsOnMapTests`（進行中的委託有旗子、「在地圖上看」移鏡頭並指出、卡片的名稱與進度、新車站的 800 m 圈、委託沒了旗子也沒了、全網的委託不指出、UI 測試用的示範地圖有指得到地方的委託）。
 - UI：`MapInteractionTests.testARequestShownOnTheMapIsFlaggedThere`（狀態列按鈕 → 「在地圖上看」 → 旗子在地圖中間附近、卡片出現、關掉卡片），跑在完整測試（決策 199），不進 gate。Debug 的啟動參數 `-city-requests` 讓示範地圖有委託（種子 1）。
 
-**參考**：參考庫沒有委託的地圖標記；外部專案沒有用到（SimCity BuildIt 的任務會指向地圖上的建物，只看做法）。
+**參考**：參考庫沒有委託的地圖標記；外部專案沒有用到。
 
 ### 247. 複線化：描真實鐵路也能複線、點選軌道「升級為複線」「加 X 渡線」
 
@@ -11613,7 +11612,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - **UNVERIFIED**：App 的編譯（macOS CI）；實機的記憶體與電池（TestFlight）。
 - GameCore、存檔版本、golden schema 都不動。
 
-**之後的補充**（2026-10-21，3D 的指北針；NEXT_PRIORITIES §19 第 2 名「3D 拉近時的三個小做法」的第一項，規格在 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.14；遊戲規劃 session 派工，不另取決策號）：
+**之後的補充**（2026-10-21，3D 的指北針；NEXT_PRIORITIES §19 第 2 名「3D 拉近時的三個小做法」的第一項；遊戲規劃 session 派工，不另取決策號）：
 - 原因：3D 可以兩指旋轉，但轉過之後畫面上沒有東西說北在哪，也沒有轉回北方的方法；拉遠交回 2D 時（2D 永遠北朝上）畫面會突然轉回去。作者 2026-10-19 問「旋轉的時候我遊戲需要指南針嗎」，研究的答案是要、只在 3D。
 - 做法：
   - **只在 3D、只在方向不是北的時候出現**（和 Apple 地圖一樣）。「算北」的容差是 0.05°（`Map3DCamera.northTolerance`），和參考庫網站地圖判斷「轉過了」的值一樣；更小的角度在手機上連半點都不到。
@@ -12595,7 +12594,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 | `source/train-garage-catalog.js` `bluecoach`（照片出處） | 無 | 只確認車款 |
 | 參考庫沒有：觀光列車對景點、觀光客的規則 | `Tourism.starsPerSightseeingTrain` | 本專案自己的（決策 174 的星等加成同一種做法） |
 
-外部專案：沒有可用的（OpenTTD、Simutrans 的車輛只有速度、容量、維護費，沒有「觀光列車吸引遊客」的規則）；「nothing usable」，程式是這個專案自己的。A 列車只讀概念，不取素材。
+外部專案：沒有可用的（OpenTTD、Simutrans 的車輛只有速度、容量、維護費，沒有「觀光列車吸引遊客」的規則）；「nothing usable」，程式是這個專案自己的。
 
 **存檔、golden、replay**：不動。存檔裡列車的車型是代號字串，新的一列不改格式（決策 225）；`SightseeingTrainTests` 有存檔來回。golden 與 replay 沒有觀光列車，也沒有海風號。
 
@@ -12992,9 +12991,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 292. 建站、建線時一鍵切換「腹地涵蓋」層，並說出車站涵蓋多少居民與工作
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M1（4.1 的「覆蓋」）。作者 2026-10-20：「M0 做完後直接開 M1」。號碼依 #231：main 上最大 290，291 已被登記，所以取 292。只改 GamePresentation 與 App 的 2D 地圖；GameCore、存檔版本、golden schema、replay 不動。
+2026-10-20。M1（服務範圍一鍵切換，「覆蓋」）。作者 2026-10-20：「M0 做完後直接開 M1」。號碼依 #231：main 上最大 290，291 已被登記，所以取 292。只改 GamePresentation 與 App 的 2D 地圖；GameCore、存檔版本、golden schema、replay 不動。
 
-**為什麼**：「站要放哪」是新玩家最常卡住的地方。我們早就有「腹地涵蓋」層（決策 76），但要從圖層選單自己去開；建站、建線的當下，玩家不知道它在那裡。CTM 的做法是建線時一顆同心圓鈕就切過去，而且說得出覆蓋了多少。
+**為什麼**：「站要放哪」是新玩家最常卡住的地方。我們早就有「腹地涵蓋」層（決策 76），但要從圖層選單自己去開；建站、建線的當下，玩家不知道它在那裡。
 
 **規則**：
 1. **什麼時候有這顆鈕**（`GameSession.offersCoverageShortcut`）：路網工具在「鋪軌」或「月台」模式，或正在挑新路線的站（決策 100）時。教學進行中不出現：卡片在帶路。鈕在地圖右下，3D 與縮放鈕旁邊（`MapCoverageButton`，同心圓，開著時有青色框，和常用圖層一樣）。
@@ -13021,10 +13020,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **建造時自動打開涵蓋層**（研究 4.1 的「建線時預設開」；決策 311 改成自動打開潛力圖，涵蓋在它的圖例裡切換）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
+- **建造時自動打開涵蓋層**（「建線時預設開」；決策 311 改成自動打開潛力圖，涵蓋在它的圖例裡切換）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
 - **百分比四捨五入**：有人沒被涵蓋時也可能出現「100%」。預覽：「…：100%（直線範圍的估算）」。
 - **用 WorldPop 人口格當分母**（`PopulationHeatmap`）：那是另一套 1 km 格網，和涵蓋層的 64 m 土地格對不起來，畫面和數字會不一致。
-- **潛力熱圖、白天／夜晚**（研究 4.1 其餘部分）：是遊戲需求模型的推估，要另外定顏色與說明，留在之後。
+- **潛力熱圖、白天／夜晚**：是遊戲需求模型的推估，要另外定顏色與說明，留在之後。
 
 **參考庫與外部專案**（`a91453/railway-reference-private` 058f833）：
 
@@ -13048,9 +13047,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 293. 自由遊戲的「下一步」：六個步驟、進度與打勾，不給錢
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M2（4.3 的第一階段）。作者 2026-10-20：「Claude platform 已經在做（高鐵）了，你做不會擋到衝突的部分」。號碼依 #231：main 上最大 292，沒有未釋出的登記，取 293。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
+2026-10-20。M2（下一步的短目標，第一階段）。作者 2026-10-20：「Claude platform 已經在做（高鐵）了，你做不會擋到衝突的部分」。號碼依 #231：main 上最大 292，沒有未釋出的登記，取 293。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
 
-**為什麼**：CORE_LOOP §0 的「一開始沒有目標」。入門關卡（決策 266）一關一個目標，但關卡打完、開自由遊戲之後，畫面上只有錢、城市委託與公司評等（決策 181、183），新玩家不知道接下來做什麼。CTM 的做法是一串短目標掛在地圖上，做到一個出下一個。
+**為什麼**：CORE_LOOP §0 的「一開始沒有目標」。入門關卡（決策 266）一關一個目標，但關卡打完、開自由遊戲之後，畫面上只有錢、城市委託與公司評等（決策 181、183），新玩家不知道接下來做什麼。
 
 **規則**（`NextSteps.swift`）：
 1. **什麼時候有**（`GameSession.nextSteps`）：沒有劇本（挑戰與關卡都有劇本）、不在教學、不是示範地圖（`NewsLog.isDemo`）、公司經營（不是自由遊玩）的遊戲。
@@ -13070,10 +13069,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
    - 地圖上方常用圖層（決策 224）旁一行：「下一步：開第二條線 · 3/6」，下面一條細的進度條；位置不夠時只剩旗子與「3/6」（`NextStepChip`）。點了開目標面板。和常用圖層一起，在建造與教學時收起；六步都做到就不見。
    - 目標面板（`GoalsPanel`）最上面「下一步」一區：每一步打勾或空心圈、進度（「1/2」「34% / 50%」）與進度條；正在做的那一步多一句怎麼做。
    - 自由遊戲有下一步時，遊戲選單也有「目標」。
-5. **不給錢**：研究 4.3 的第二階段（點一下領獎金、領過不能重領）是 GameCore 的新規則，要取決策號、升存檔，等 TestFlight 看過這一版再決定。
+5. **不給錢**：第二階段（點一下領獎金、領過不能重領）是 GameCore 的新規則，要取決策號、升存檔，等 TestFlight 看過這一版再決定。
 6. **效能**：每個指令與每個遊戲日算一次（`NextStepsMemo`，照 `commandRevision` 與日子），不是每個 tick；涵蓋那一步要加總土地格，在台灣實景是幾毫秒。
 
-**為什麼不用「每日運量」當步驟**（研究 4.3 照 CTM 寫了 500 → 2,000 人次）：量過簡單規則的新局，兩個城鎮之間一條線第一天就載 3–6 萬人次、而且有賺錢（三組城鎮各 6 天，`GameWorld.newGame(rules: .simple)`，各一條線、自動配一列車）。人次的門檻一開線就到，教不到什麼；台灣實景各地的人口又差太多，同一個數字在不同地方意思不同。所以步驟改成「做了什麼」：第二條線、加車、轉乘、涵蓋，每一步對應一個工具。
+**為什麼不用「每日運量」當步驟**：量過簡單規則的新局，兩個城鎮之間一條線第一天就載 3–6 萬人次、而且有賺錢（三組城鎮各 6 天，`GameWorld.newGame(rules: .simple)`，各一條線、自動配一列車）。人次的門檻一開線就到，教不到什麼；台灣實景各地的人口又差太多，同一個數字在不同地方意思不同。所以步驟改成「做了什麼」：第二條線、加車、轉乘、涵蓋，每一步對應一個工具。
 
 **四方**：
 - 玩家：自由遊戲一開始就知道下一步做什麼，做到時「叮」一聲；地圖上只有一行字，不擋手指，想看全部再點開。
@@ -13082,10 +13081,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：沿用目標旋律（`goal-met.wav`），不加新的聲音。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **照 CTM 用每日運量**：「下一步：一天載 500 人次 · 0/500」。一開線就達成，見上。
+- **用每日運量**：「下一步：一天載 500 人次 · 0/500」。一開線就達成，見上。
 - **每一步給小額獎金**：「開第一條線 ✓ 領取 $ 50,000」。要 GameCore 入帳、存檔、防重領，留給第二階段。
-- **常駐的目標卡**（CTM 的浮動卡）：地圖右上一張卡寫目前目標、進度條、獎金與「打開路線選單」。研究 §6 指出它和其他抽屜互相遮擋，所以只用一行，細節在目標面板。
-- **自由遊戲的按鈕跟著步驟一個一個出現**（研究 4.3 提到的決策 266 做法）：要改決策 266「自由模式一開始就什麼都有」，老玩家也會受影響；等這一版的回饋。
+- **常駐的目標卡**：地圖右上一張卡寫目前目標、進度條、獎金與「打開路線選單」。它會和其他抽屜互相遮擋，所以只用一行，細節在目標面板。
+- **自由遊戲的按鈕跟著步驟一個一個出現**（決策 266 的做法）：要改決策 266「自由模式一開始就什麼都有」，老玩家也會受影響；等這一版的回饋。
 
 **參考庫與外部專案**（`a91453/railway-reference-private` 058f833）：
 
@@ -13182,9 +13181,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 295. 實景地圖的月台工具：真實車站當「建議站點」
 
-2026-10-20。NEXT_PRIORITIES §17.1 第 1 名、§17.2 乙線「現實路網」第一步；競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.5。作者交辦（經 session_01MBXXssxDUz9h5gZ9EDVnZb 派工）。號碼依 #231：main 上最大 293，高鐵示範的 Claude platform 可能取 294（#231 沒有它的登記），所以取 295。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
+2026-10-20。NEXT_PRIORITIES §17.1 第 1 名、§17.2 乙線「現實路網」第一步。作者交辦（經 session_01MBXXssxDUz9h5gZ9EDVnZb 派工）。號碼依 #231：main 上最大 293，高鐵示範的 Claude platform 可能取 294（#231 沒有它的登記），所以取 295。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
 
-**為什麼**：實景地圖底下已經畫出真實的鐵路與車站（`RealRailways.swift`，決策 213 也用它描線），玩家的站名在真實車站 450 m 內就認得是哪一站（`RealRailwayGameplay.swift`），但玩家要自己找到那個位置、點到軌道上，站名也要靠 800 m 內的自動命名（決策 159）。CTM 建線時把真實站牌畫成圖釘，點了就用那個位置與站名。
+**為什麼**：實景地圖底下已經畫出真實的鐵路與車站（`RealRailways.swift`，決策 213 也用它描線），玩家的站名在真實車站 450 m 內就認得是哪一站（`RealRailwayGameplay.swift`），但玩家要自己找到那個位置、點到軌道上，站名也要靠 800 m 內的自動命名（決策 159）。
 
 **規則**（`RealStationSuggestions.swift`）：
 1. **什麼時候有**（`GameSession.offersRealStations`）：實景地圖、真實鐵路資料已載入、路網工具的月台模式。其他工具、鋪軌、空白地圖都沒有。
@@ -13419,7 +13418,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 2026-10-20。修 main 的 full lane 紅燈時找到的（遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工；號碼依 #231：main 與未釋出的登記最大 298）。只改 App 的 `LinesPanel`；GameCore、GamePresentation、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：已經有路線時，面板先列路線，新路線的表單收成路線下面的一列「新路線…」（決策 196）。打開它、按「加入選取的車站」之後，草稿有了第一站，表單就回到面板最上面（決策 100），但面板還停在原來捲到的地方，也就是選取路線的停靠站那一段。剛點的站、這條線的摘要（CTM 研究 4.2 的 M0）都在畫面外，看起來像沒有反應。`LineDraftSummaryUITests` 兩個測試在 full lane 一直紅，就是卡在這裡（run 39451668395 的錄影：按下去之後面板仍停在「Add Qidu to Pingxi Line」那一段）。
+**為什麼**：已經有路線時，面板先列路線，新路線的表單收成路線下面的一列「新路線…」（決策 196）。打開它、按「加入選取的車站」之後，草稿有了第一站，表單就回到面板最上面（決策 100），但面板還停在原來捲到的地方，也就是選取路線的停靠站那一段。剛點的站、這條線的摘要（M0）都在畫面外，看起來像沒有反應。`LineDraftSummaryUITests` 兩個測試在 full lane 一直紅，就是卡在這裡（run 39451668395 的錄影：按下去之後面板仍停在「Add Qidu to Pingxi Line」那一段）。
 
 **規則**：面板從「路線在前」換成「新路線在前」時（`listsLinesFirst` 由真變假：加了第一站，或開始在地圖上選站），捲到新路線表單的「在地圖上選站」按鈕，放在畫面中間，它上面的摘要與「已點選」一起出現。用的是決策 188 同一個 `ScrollViewReader`，一樣先讓出一輪再捲，有動畫。教學進行時面板本來就是新路線在前，不會觸發。
 
@@ -13474,9 +13473,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 301. 路線卡的「乘客感受」：候車、擁擠、準點三項，有數字才給分；買車卡寫每營運小時的成本
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M3（4.13），同一批做 4.11 的一行字（NEXT_PRIORITIES §17 第 7、11 名）。遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 299，#859 保留 300，取 301。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-20。M3（有來源的滿意度），同一批做車型每小時成本的一行字（NEXT_PRIORITIES §17 第 7、11 名）。遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 299，#859 保留 300，取 301。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：決策 194 回答「公司為什麼在這條線賠錢」，但沒有地方回答「乘客覺得這條線怎樣、為什麼」。CTM 的路線卡把候車、擁擠等幾項各給一個分數與一個字，低的那項旁邊就是解法。研究 4.0 要求先只用有來源的數字，樣本不夠就說「尚未評分」，不要給一個看起來精確、卻沒有對應數據的分數。
+**為什麼**：決策 194 回答「公司為什麼在這條線賠錢」，但沒有地方回答「乘客覺得這條線怎樣、為什麼」。先只用有來源的數字，樣本不夠就說「尚未評分」，不要給一個看起來精確、卻沒有對應數據的分數。
 
 **規則**（`LineSatisfaction.swift`）：
 1. **讀什麼**：和決策 194 的成本卡同一段已結算的日子（`lineLossDiagnosis` 的 `LineLossMeasures`），不另外記任何東西。開線還沒滿一個結算日時，整張寫「乘客感受：尚未評分」與「這條線營運滿一天之後才有分數」。貨運線、沒有逐線帳的世界沒有這張。
@@ -13500,14 +13499,14 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 鐵道迷：準點照台鐵「晚 5 分鐘以內算準點」的定義（決策 207，參考網站 `delay-stats.json` 的同一條）；擁擠用的是額定載客的比例，和營運單位說的「尖峰載客率」同一個意思；候車寫明是由班距估算，不假裝量過月台上的人。
 - 開發：只讀決策 194 已經算好的數字，GameCore、存檔、golden、replay 都不動；門檻與分數由 Linux 測試釘住；修正沿用決策 194 的指令與確認。
 - 美術：表情是我們自己畫的，和站長同一套眼睛，扁平、單色模板、藏青外框不需要（模板在畫的地方上色）；三張模糊後彼此差 24–27%（art-style 的「一眼分得出」約 20%）；進度條沿用經濟面板的樣式；不加動畫。
-- 音樂：無（分數變好時可以接目標旋律，研究 4.13 說先不做，避免太吵）。
+- 音樂：無（分數變好時可以接目標旋律，先不做，避免太吵）。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **整條線一個總分**（CTM 的「😊 86%」）：三項的來源與意義不同，平均起來的數字沒有對應的量。預覽：「乘客感受 86%」。
-- **CTM 的乘車時間與站的品質**：我們沒有「目標旅行時間」的來源，站也沒有等級（研究 4.13 用準點取代「站的品質」）；乘車時間要另定一個速度目標，留給之後。
+- **整條線一個總分**：三項的來源與意義不同，平均起來的數字沒有對應的量。預覽：「乘客感受 86%」。
+- **乘車時間與站的品質**：我們沒有「目標旅行時間」的來源，站也沒有等級（用準點取代「站的品質」）；乘車時間要另定一個速度目標，留給之後。
 - **用站長的三個表情當評分的臉**：20 點時三張只差在眼睛，看不出來（模糊後幾乎一樣）。預覽：上面的檢查表，站長在 28 點就只剩剪影。
-- **用 SF Symbols 的臉或 emoji**：研究 4.13 與 art-style 要我們自己的畫風；emoji 在不同系統長得不一樣。
-- **路線清單每列一張臉、照分數排序**（研究 4.13 的清單部分）：派工單只要路線卡的三項；清單的列（`LineReportText`）要另外改版面，留給之後。
+- **用 SF Symbols 的臉或 emoji**：art-style 要我們自己的畫風；emoji 在不同系統長得不一樣。
+- **路線清單每列一張臉、照分數排序**：派工單只要路線卡的三項；清單的列（`LineReportText`）要另外改版面，留給之後。
 - **每營運小時含行駛與發車**：要先知道一小時跑幾公里、發幾次車，車型展示間還沒有路線，只能編一個速度，不採用。
 
 **參考庫與外部專案**（`a91453/railway-reference-private` b3af6d8）：
@@ -13618,9 +13617,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 303. 新路線的「確認路線」卡：名稱、顏色、首末班、四個時段各幾列，一次買齊
 
-2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.4（它的圖 18、19；NEXT_PRIORITIES §17 第 9 名）。作者 2026-10-20「你五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 301，302 已保留，取 303。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-20。NEXT_PRIORITIES §17 第 9 名。作者 2026-10-20「你五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 301，302 已保留，取 303。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：簡單規則下按 ✓ 就直接開線、買一列車（決策 258、264），玩家第一次知道營運時間與班距是事後打開路線卡的「進階」。CTM 在確認那一步就把整條線攤開：名稱、顏色、一行數字、首末班、每個時段幾列車與多久一班、還要買幾列、總價。研究 4.4 要的是同一件事，而且全部有預設值，不改也能直接確認。
+**為什麼**：簡單規則下按 ✓ 就直接開線、買一列車（決策 258、264），玩家第一次知道營運時間與班距是事後打開路線卡的「進階」。這裡在確認那一步就把整條線攤開：名稱、顏色、一行數字、首末班、每個時段幾列車與多久一班、還要買幾列、總價，而且全部有預設值，不改也能直接確認。
 
 **規則**（`LineConfirmation.swift`）：
 1. **什麼時候出現**：簡單規則、經營模式、草稿至少兩站、而且照原本的做法開得了線（`autoServicePlan` 可行）時，地圖的 ✓ 與路線面板的「建立路線」改成升起這張卡（`confirmLineDraft()`）；寫實規則、沙盒、開不了線時照舊直接開（決策 258 的行為不變）。卡收起來（返回）時草稿留著。
@@ -13643,9 +13642,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無（開線的音效照舊）。
 
 **沒選的**（預覽是玩家會看到的樣子）：
-- **四個時段各自一個數字**：要 GameCore 的服務日多一個等級（存檔版本、golden 都會動），研究 4.4 也說先保留三個等級。預覽：「早尖峰 3 列／晚尖峰 2 列」。
+- **四個時段各自一個數字**：要 GameCore 的服務日多一個等級（存檔版本、golden 都會動），先保留三個等級。預覽：「早尖峰 3 列／晚尖峰 2 列」。
 - **讓玩家選來回或環線**：環線要三站以上、列車成對，規則不同（決策 49）；派工單說這次不做。預覽：卡上多一個「環線」開關。
-- **每列一個班距滑桿（CTM 的做法）**：我們的數字是列車數，班距由它算出；用滑桿調班距會出現買不到整數列車的班距。預覽：「班距 7 分 ——●——」。
+- **每列一個班距滑桿**：我們的數字是列車數，班距由它算出；用滑桿調班距會出現買不到整數列車的班距。預覽：「班距 7 分 ——●——」。
 - **一次買到卡片要的列數，多的先停在軌道外**：那些車會一直停在機廠外不跑（決策 264 的 held），玩家多花了錢卻看不到車。預覽：「還要買 5 列」但只有 2 列在跑。
 - **用 1 小時為單位調首末班**：多數時刻表的首末班不是整點；10 分一格、長按連續調就夠快。
 - **卡片畫在地圖上（不用 sheet）**：手機橫拿時地圖上已經有 ✓ 的泡泡、教學卡與狀態列，再放一張表格會擋住路線本身。
@@ -13657,7 +13656,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 | `Ci/reference_snapshot/` 的開線流程（新線帶著列車，加減列車兩個鈕） | 無 | 沒有確認卡、沒有時段；決策 258 已經移植它的「開線就有車」 |
 | `Simulator/`、`MapBuilder/` 的路線編輯 | 無 | 是時刻表與路線畫法，沒有開線前的設定卡 |
 
-外部專案：沒有另外找（CTM 是閉源，只看它的畫面）。卡片的規則與程式是這個專案自己的。
+外部專案：沒有另外找。卡片的規則與程式是這個專案自己的。
 
 **存檔、golden、replay**：不動（`AutoService` 的新欄位只在有值時寫出）。
 
@@ -13834,9 +13833,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 305. 夜裡沒有車時的「快轉到早上」：跑到第一列車動起來前，照常逐 tick；設定可以自動，預設關
 
-2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.15（第 79–81 張；NEXT_PRIORITIES §19 第 3）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 303，304 由 R2 保留，取 305。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-21。NEXT_PRIORITIES §19 第 3。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 303，304 由 R2 保留，取 305。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：收班後到首班前，地圖上什麼都不動，玩家只能把速度調到最快、再記得調回來。競品收班後自己快轉過夜（作者 2026-10-20 確認）。我們的夜裡常常不空（全天路線、真實時刻表的深夜車、貨運、高鐵回送），所以主要做法是玩家按的捷徑，自動的放在設定、預設關（研究 4.15 的建議）。
+**為什麼**：收班後到首班前，地圖上什麼都不動，玩家只能把速度調到最快、再記得調回來。我們的夜裡常常不空（全天路線、真實時刻表的深夜車、貨運、高鐵回送），所以主要做法是玩家按的捷徑，自動的放在設定、預設關。
 
 **規則**（`NightSkip.swift`）：
 1. **什麼時候有**：有放在軌道上的列車，而且現在沒有一列在路上（有行程、空車回送中，或還有路要走：`NightSkip.isRunning`），而且第一列車要動起來之前至少還有 1 小時（`shortest`，含下面的 10 分）。在蓋東西而自動暫停時（決策 99）、快轉中都不另外提供。
@@ -13857,7 +13856,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無（快轉時配樂收小留給之後）。
 
 **沒選的**（預覽是玩家會看到的樣子）：
-- **自動快轉預設開（競品的做法）**：速度沒人碰就自己變，夜裡常有車的玩家會以為壞了；研究 4.15 說看 TestFlight 回饋再決定。預覽：收班後速度自己變成「6000×」。
+- **自動快轉預設開**：速度沒人碰就自己變，夜裡常有車的玩家會以為壞了；看 TestFlight 回饋再決定。預覽：收班後速度自己變成「6000×」。
 - **停在首班前 30 分、或寫死 05:30**：首班 08:00 的線會白等兩個多小時；機廠出庫比首班早，固定的時間會跳過出庫。預覽：「快轉到早上 · 05:30」。
 - **停在第一列車動的那一刻（不留 10 分）**：一停下來車就已經在開，看不到早上開始。預覽：「快轉到早上 · 06:00」。
 - **把按鈕放進狀態列、速度鈕旁邊**：狀態列會在出現與消失時換版面（決策 251）。預覽：「$ 1,000 | 23:10 | ⏸ 600× ⏭ | …」。
@@ -13945,9 +13944,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
 
-2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-21。NEXT_PRIORITIES §19 第 6。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：在實景地圖選好地點按「開始」後，台灣的地點要讀整塊地塊的土地，主執行緒卡住、畫面停在開始畫面上，玩家不知道遊戲是不是當了。競品在這段時間放公司名與城市名，讓等待變成「我的公司要在這裡開業」。
+**為什麼**：在實景地圖選好地點按「開始」後，台灣的地點要讀整塊地塊的土地，主執行緒卡住、畫面停在開始畫面上，玩家不知道遊戲是不是當了。
 
 **規則**：
 1. **什麼時候出現**（`GameLauncher.realWorldLoading`）：從實景地點挑選開新遊戲（`openRealWorldGame(at:)`），以及高鐵、宜蘭線兩個示範地圖讀取時。世界改在背景建（`Task.detached`，和示範地圖一樣；`GameLauncher.newWorld(at:options:data:)` 是原本 `startNewGame(at:)` 的內容，搬成不碰主執行緒的靜態函式），建好就收起畫面、開始遊戲；建的時候已經開了別的遊戲（例如讀檔）就留著那一局。同時只建一張。
@@ -14070,7 +14069,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 311. 建線時自動出現的「哪裡人多」潛力熱圖，與角落一鍵收起
 
-2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 #5，設計來源 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` §4.1），實作 session_01XcsvN9dp6TVNhLU2TY4sJD。只動 GamePresentation 與 App；GameCore、存檔版本、golden、SaveFixtures、ReplayFixtures 都不動。**修改決策 292 的「沒選的」第一項**（建造時自動打開涵蓋層）：自動打開的改成這張潛力圖，涵蓋留在圖例裡一鍵切換。
+2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 #5），實作 session_01XcsvN9dp6TVNhLU2TY4sJD。只動 GamePresentation 與 App；GameCore、存檔版本、golden、SaveFixtures、ReplayFixtures 都不動。**修改決策 292 的「沒選的」第一項**（建造時自動打開涵蓋層）：自動打開的改成這張潛力圖，涵蓋留在圖例裡一鍵切換。
 
 1. **潛力圖**（`StationPotentialMap`，`Sources/GamePresentation/StationPotentialMap.swift`；`PopTravelMode.potential`）：每格是它 `Land.catchmentRadius`（800 m 直線）內的居民加就業，和 `Land.totals` 同一個圓、同一個數法（整數的列前綴和，一列一段）。六段固定的人數門檻 250、1,000、2,500、5,000、10,000、20,000，不到 250 不畫；門檻是絕對人數，不跟著畫面裡的最大值走，所以同一個顏色在台北和鄉下是同樣多的人。
 2. **有新線的站時**（`session.lineDraft` 有站）：每格乘上決策 137 的距離權重（`DistanceDemand.share`，到最近一個草稿站的直線距離；世界沒開 `distanceDemand` 時不乘），已經在營運中車站（不是關閉的站）800 m 內的格乘 `servedShare` = 0.4，標題改「從你的站可以去哪」。只是畫面上的估計，不是 GameCore 的需求模型（不做潮汐、不做路徑）。
@@ -14079,7 +14078,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 5. **只算畫面裡的、算過的留著**：地圖切成 32 × 32 個區塊（依縮放的 `CityMap.blockSize`）一塊的 chunk，畫到哪一塊才算哪一塊，結果放在 `StationPotentialMap` 的 chunk 快取（鎖保護，值型別外殼）。`StationPotentialMap.Key`（土地、營運中車站的點、草稿站的點、`distanceDemand`、時段、大小）在 tick 之間相等，只有指令（建站、拆站、開關站、土地改變、草稿改變）或時段改變才換一張新的；不會每個 tick 重算全圖。合併的區塊照 800 m 圓的格數換算回每格的人數。
    - **台灣實景量測**（Linux、debug build，台北 25.047882, 121.517219 的新遊戲，`testTaipeisDenseLandIsWorkedOutInView`）：整張圖、4 格一塊：4095 塊、4 個 chunk，第一次 30 ms（有草稿站 38 ms），之後 3 ms；一個畫面大小（±33 × ±70 格、1 格一塊）：9447 塊、24 個 chunk，第一次 98 ms（有草稿站 160 ms），之後 12 ms。Release build 與實機沒有量。
 6. **App**：建軌道、月台或新線的工具一打開（`GameSession.offersCoverageShortcut`）就蓋上去（`BuildingLayerShortcut`），蓋在玩家自己的圖層上面但**不寫進**玩家的圖層設定（`@AppStorage("mapPopTravelMode")`），所以關掉工具就回到玩家原本的圖層；玩家在建造中自己選了別的圖層，就照玩家的。角落的按鈕（決策 292 的 `MapCoverageButton`）與圖例的關閉鈕收起它，收起會記住（`mapBuildingLayerAutoShows`，裝置偏好），下次建造不再自動出現，再按一次角落的按鈕拿回來。潛力／涵蓋與時段也是裝置偏好（`mapBuildingLayer`、`mapPotentialPeriod`）。圖例一行說明加一個 ⓘ（`StationPotentialMap.title`、`line`、`info`）。潛力圖畫在自己的 Canvas：城市底圖之上、路線與站名之下，不蓋站名與路線；出現與消失照 `MotionRule.change` 淡入淡出，「減少動態效果」時立刻切換（`.identity`）。UI 測試（`-ui-testing`）預設收起，除非給 `-show-building-layer`，免得圖例擋住其他測試要點的角落。
-7. **顏色**（docs/UI_THEME.md）：淡暖黃 → 綠 → 青 → 圖示的深藍，六段 #FFE7A8、#C6D98B、#7CC08C、#3A9BA6、#2D6890、#262C57，不透明度 0.7；不用 CTM 的藍／橘／紅。亮度單調上升，三種常見色盲下仍分得出深淺。
+7. **顏色**（docs/UI_THEME.md）：淡暖黃 → 綠 → 青 → 圖示的深藍，六段 #FFE7A8、#C6D98B、#7CC08C、#3A9BA6、#2D6890、#262C57，不透明度 0.7。亮度單調上升，三種常見色盲下仍分得出深淺。
 
 **限制**（不寫進玩家看的字）：800 m 是直線，不看河、山與路；人數是遊戲土地模型的估計（`Land.totals`：WorldPop 與 OSM 換算的居民與就業），不含玩家蓋的建物；「從你的站可以去哪」只是距離權重乘上未服務的人，不是真的路徑或需求；0.4 是畫面上的淡化，不是規則。
 
@@ -14113,9 +14112,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 312. 實景開局：點地圖把起始範圍移過去，卡片寫面積與「之後可以買地擴大」，最近用過的地點列在前面
 
-2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.6（NEXT_PRIORITIES §19 第 7 名）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：派工單保留 312。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+2026-10-21。NEXT_PRIORITIES §19 第 7 名。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：派工單保留 312。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
 
-**為什麼**：實景選點（`RealWorldPicker`）只能拖地圖讓中心對準，說明寫「每邊 16 公里」，玩家不知道一開始有多大、之後能不能變大；每次開新遊戲都要重新找地點。競品是點地圖就把範圍移過去、寫「20.4 km²」與「之後可以擴大」、已下載的城市列在前面。
+**為什麼**：實景選點（`RealWorldPicker`）只能拖地圖讓中心對準，說明寫「每邊 16 公里」，玩家不知道一開始有多大、之後能不能變大；每次開新遊戲都要重新找地點。
 
 **規則**（GamePresentation 的 `RealWorldStartArea`、`RecentStartPlaces`；App 只畫）：
 1. **框**：起始範圍照決策 167 決定：台灣框內的地點是起手那一塊地塊（`RealWorldExpansion.start`），其他地方是 16 km 的整張地圖。四個角（`corners`，西北起順時針）用遊戲鋪世界的同一個 Web Mercator 算（`RealWorldFrame`），App 不再自己用 `MKMapPoint` 算一份。畫法沿用購地卡選中地塊的框（決策 160、`MapArt.drawMapExpansion`）：`Palette.metroGreen` 虛線（寬 3、虛線 8／5）、同色 18% 的底。原本的暖色底、深藍實線不用了。
@@ -14128,7 +14127,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **「用我的位置」**：要 CoreLocation 與 Info.plist 的用途字串，App Store 的隱私標籤要更新（App Store Connect 是作者的事）。等作者決定，寫在 `docs/HANDOFF.md` §3。
   - **後來**（2026-10-22）：作者交給遊戲規劃決定，規劃決定做，見決策 335（`docs/decisions/335.md`）。隱私標籤不用加「位置」：位置只在裝置上用來移框，不傳出去。
 - **「已下載的地點」**：存檔的摘要（`SaveSummary`）沒有記錨點，要列出存檔的地點得讀每一個存檔或改摘要的格式。最近用過已經涵蓋「上次玩的地方」，所以先不做。
-- 公司名稱放在同一張卡（研究 4.6 的三步）：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
+- 公司名稱放在同一張卡：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
 
 **參考對照**（a91453/railway-reference-private b3af6d8）：
 
@@ -14198,8 +14197,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **之後**（這次不做）：
 - 兩指上下拖改傾斜角（Apple 地圖的做法）：現在傾斜跟著距離。
 - 不用 `fullScreenCover`，讓 2D 與 3D 共用同一套介面（HUD、工具列）。
-- 建造時 3D 把建物簡化（Cities: Skylines II 的做法），讓 3D 也能建造。
-- 3D 上的資料圖層（Transport Fever 2 的做法）。
+- 建造時 3D 把建物簡化，讓 3D 也能建造。
+- 3D 上的資料圖層。
 - HANDOFF §7.5：實機看「拉近自動變 3D」預設開是不是還會誤進 3D；常誤觸就把預設改成關，不必重做。
 
 **參考**：

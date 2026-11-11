@@ -1,5 +1,5 @@
 // The company's buildings (city building P0-C1, ARCHITECTURE decision 94):
-// the A-Train way. The buildings the player places (decision 92) are the
+// the company builds as well as runs trains. The buildings the player places (decision 92) are the
 // company's: a managed company pays for each, the building and the right to
 // use the land under it, and keeps it on its books; it fills with residents
 // and jobs while a station serves it, who ride from the stations near it as
@@ -9,7 +9,7 @@
 // there a building costs nothing and earns nothing.
 //
 // P0-C2 (decision 95): a building buys out the city's buildings in its way,
-// the A-Train's buy-out and demolition, and track and stations built later
+// this game's buy-out and demolition, and track and stations built later
 // clear the company's buildings in theirs for the fee demolishing costs.
 // A city building stands on the middle of its cell, a square
 // ``PlacedBuildingRules/cityBuildingSide`` across: the cell is statistics,
@@ -64,7 +64,7 @@ extension PlacedBuildingRules {
     }
     /// What buying out a city building costs, in hundredths of its value:
     /// its floor at ``floorCost`` and the land of its square at the cell's
-    /// land value, and a fifth more (the A-Train's buy-out costs more than
+    /// land value, and a fifth more (buying out costs more than
     /// building).
     public static let buyOutPercent: Int64 = 120
 }

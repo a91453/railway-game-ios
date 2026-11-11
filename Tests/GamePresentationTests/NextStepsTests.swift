@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// City Transport Manager study, step M2: a free game's next steps, their
+/// A free game's next steps, their
 /// progress read from the world, and the check and tune when one is met
 /// (decision 256), with nothing paid and nothing saved.
 @MainActor

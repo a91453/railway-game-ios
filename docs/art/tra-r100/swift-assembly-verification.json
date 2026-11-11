@@ -188,7 +188,7 @@
       "vertices" : 100734
     }
   ],
-  "configuration_sha256" : "12a0fd4a42c9e1fe888aa4c355cd69da25f2c7a330832eef15b52776d3708e97",
+  "configuration_sha256" : "381ff61495c5973f53e5a9c7926475b303e3d16523080f0fcaa8bf025b0b2627",
   "faults_tested" : [
     "different_embedded_unit_bytes",
     "double_reversal",

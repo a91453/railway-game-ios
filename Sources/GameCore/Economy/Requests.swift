@@ -1,6 +1,6 @@
 // The city's requests and subsidies (ARCHITECTURE decision 183): errands
 // with a deadline, a clear reward and no fine, for the middle of a free
-// game, after A-Train's administrative measures and OpenTTD's subsidies
+// game, after OpenTTD's subsidies
 // (read for the idea only).
 //
 // The shape is the owner's references': a mission has a kind, a target, a

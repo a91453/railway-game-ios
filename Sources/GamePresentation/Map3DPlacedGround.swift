@@ -1,7 +1,7 @@
 import GameCore
 
-/// The ground the player's and the company's buildings take: as in the
-/// A-Train, putting one up clears what stood there, so no real building,
+/// The ground the player's and the company's buildings take: putting one
+/// up clears what stood there, so no real building,
 /// footprint, temple, kit's scene or street house is drawn on it.
 extension Map3DScene.Builder {
     /// One building's square in the scene, grown by

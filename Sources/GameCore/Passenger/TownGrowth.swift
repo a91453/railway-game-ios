@@ -1,5 +1,5 @@
 // Town growth (item 5 of the author's order, Phase 6 groundwork): the
-// A-Train loop of a railway that makes the places it serves grow. The
+// game's loop of a railway that makes the places it serves grow. The
 // reference pack names OpenTTD's town and industry systems
 // (`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`, "Town growth /
 // industry demand": `src/town_cmd.cpp`, `src/industry_cmd.cpp`) and asks that
