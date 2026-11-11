@@ -948,6 +948,91 @@ public struct GameWorld: Equatable, Sendable {
         abandonUnservedPassengers()
     }
 
+    /// Decision 687: lengthens station `id`'s platform on edge `edge` that
+    /// starts at `start`, where it stands, to the stretch from `newStart`
+    /// to `newEnd`, which holds all of the old one and more. Free, as a
+    /// platform is (``addTrackPlatform(_:on:from:to:)``): a platform built
+    /// long costs what one built short does. The platform stays on its
+    /// edge: it grows only as far as the edge's ends, the level stretch it
+    /// lies on and the next platform along (``trackPlatformRoom(of:)``).
+    ///
+    /// A service waiting at the platform stays at its call (its head is on
+    /// the longer platform too), and one on its way arrives as before. A
+    /// line's chosen platform (``LineRoutePreference``) that was this one
+    /// follows it to its new length.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
+    ///   ``GameError/invalidPlatform`` when the station has no such
+    ///   platform, the new stretch does not hold the old one or is no
+    ///   longer, or it does not fit the edge, is not level or overlaps
+    ///   another platform; ``GameError/trainServiceActive(_:)`` naming the
+    ///   lowest numbered train whose service stands at a passing place
+    ///   (Stage V2) with its head on a part the platform would gain, of
+    ///   the station of its call; or, under traffic control (Stage T),
+    ///   ``GameError/trackReserved(_:)`` while a train holds a span of the
+    ///   edge, whose spans the platform's ends cut.
+    public mutating func extendTrackPlatform(
+        _ id: StationID, on edge: TrackEdgeID, from start: Int64, toStart newStart: Int64, end newEnd: Int64
+    ) throws(GameError) {
+        guard station(id: id) != nil else { throw .unknownStation(id) }
+        guard let index = network.platforms.firstIndex(where: { $0.station == id && $0.edge == edge && $0.start == start }) else {
+            throw .invalidPlatform
+        }
+        let old = network.platforms[index]
+        let longer = TrackPlatform(station: id, edge: edge, start: newStart, end: newEnd)
+        guard newStart <= old.start, old.end <= newEnd, longer.length > old.length, isValidPlatform(longer),
+              !network.platforms.contains(where: { $0 != old && $0.overlaps(longer) }) else {
+            throw .invalidPlatform
+        }
+        // As a new platform there (addTrackPlatform): a service at a
+        // passing place with its head on a part gained would be at its
+        // call without arriving.
+        if let train = trains.first(where: { train in
+            guard isAtPassingPlace(train), case .travellingToStop(let stop, _)? = train.execution,
+                  train.timetable[stop].station == id, let (standing, chainage) = standingPoint(of: train) else { return false }
+            return standing == edge && newStart <= chainage && chainage <= newEnd && !(old.start <= chainage && chainage <= old.end)
+        }) {
+            throw .trainServiceActive(train.id)
+        }
+        try requireSpansUnheld(on: edge)
+
+        network.replacePlatform(at: index, with: longer)
+        for line in lines.indices {
+            lines[line].routePreferences = lines[line].routePreferences.map { $0.platform == old ? $0.onPlatform(longer) : $0 }
+            for pattern in lines[line].patterns.indices {
+                lines[line].patterns[pattern].routePreferences = lines[line].patterns[pattern].routePreferences.map {
+                    $0.platform == old ? $0.onPlatform(longer) : $0
+                }
+            }
+        }
+        abandonUnservedPassengers()
+    }
+
+    /// Decision 687: how far `platform` could be lengthened
+    /// (``extendTrackPlatform(_:on:from:toStart:end:)``) towards each end
+    /// of its edge: over level track, up to the edge's end or the next
+    /// platform along. `nil` when the network has no such platform.
+    public func trackPlatformRoom(of platform: TrackPlatform) -> (before: Int64, after: Int64)? {
+        guard network.platforms.contains(platform), let geometry = network.geometry(of: platform.edge) else { return nil }
+        let others = network.platforms(on: platform.edge).filter { $0 != platform }
+        var low = others.filter { $0.end <= platform.start }.map(\.end).max() ?? 0
+        var high = others.filter { $0.start >= platform.end }.map(\.start).min() ?? geometry.length
+        // Heights never turn back along an edge, so the level stretch
+        // round the platform is one run: halve towards where it ends.
+        let level = geometry.height(at: platform.start)
+        var known = platform.start
+        while low < known {
+            let middle = low + (known - low) / 2
+            if geometry.height(at: middle) == level { known = middle } else { low = middle + 1 }
+        }
+        known = platform.end
+        while known < high {
+            let middle = known + (high - known + 1) / 2
+            if geometry.height(at: middle) == level { known = middle } else { high = middle - 1 }
+        }
+        return (platform.start - low, high - platform.end)
+    }
+
     /// Whether `train`'s service needs `platform` (Stage S5): it waits at
     /// the platform's station with its head on the platform, or travels to
     /// that station along a path whose last edge is the platform's. Since

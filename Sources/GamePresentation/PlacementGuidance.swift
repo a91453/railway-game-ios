@@ -98,8 +98,8 @@ extension GameWorld {
             let whole = Int64(train?.cars ?? 1) * (train?.carPitch ?? 0)
             let count = train?.cars ?? 1
             return language.text(
-                "\(name) is too long for \(stationName(station)): its longest platform is \(NetworkBuilding.lengthText(longest, in: language)), the train \(count) \(count == 1 ? "car" : "cars"), \(NetworkBuilding.lengthText(whole, in: language)). Shorten it to \(cars) \(cars == 1 ? "car" : "cars"), or lengthen a platform.",
-                "\(name) 太長，\(stationName(station)) 放不下：最長的月台 \(NetworkBuilding.lengthText(longest, in: language))，列車 \(count) 節共 \(NetworkBuilding.lengthText(whole, in: language))。減到 \(cars) 節，或把月台加長。"
+                "\(name) is too long for \(stationName(station)): its longest platform is \(NetworkBuilding.lengthText(longest, in: language)), the train \(count) \(count == 1 ? "car" : "cars"), \(NetworkBuilding.lengthText(whole, in: language)). Shorten it to \(cars) \(cars == 1 ? "car" : "cars"), or lengthen a platform (tap the station, then Platforms).",
+                "\(name) 太長，\(stationName(station)) 放不下：最長的月台 \(NetworkBuilding.lengthText(longest, in: language))，列車 \(count) 節共 \(NetworkBuilding.lengthText(whole, in: language))。減到 \(cars) 節，或把月台加長（點車站，在「月台」裡加長）。"
             )
         case .pickedTooShort(let station, let number, let length, let cars):
             let train = train(id: id)

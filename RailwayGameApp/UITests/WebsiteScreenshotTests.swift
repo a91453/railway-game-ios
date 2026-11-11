@@ -2226,6 +2226,51 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-crossovers-laid", app)
     }
 
+    /// Decision 687: the station panel's row that lengthens a platform
+    /// where it stands: the row, its menu of longer lengths, and the row
+    /// once a length is chosen.
+    func testLengtheningAPlatform() {
+        let app = launch(extra: ["-ui-test-world", "old-crossovers"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let select = app.buttons["tool.select"]
+        if select.appears(within: 5), select.becomesHittable(within: 5) { select.tap() }
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).press(forDuration: 1)
+        XCTAssertTrue(app.descendants(matching: .any)["station.operations"].firstMatch.appears(within: 10), "The station panel opens")
+        let row = app.buttons["station.extendPlatform.0"].firstMatch
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10))
+        list.waitUntilStill()
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: app.navigationBars.firstMatch.frame.maxY + 32), "The row shows")
+        row.waitUntilSettled()
+        XCTAssertTrue(row.label.contains("加長（現在 4 節車廂"), row.label)
+        settle()
+        keep("platform-lengthen-row", app)
+        row.tap()
+        let longer = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6 節車廂")).firstMatch
+        XCTAssertTrue(longer.appears(within: 10), "The menu lists longer lengths")
+        settle()
+        keep("platform-lengthen-menu", app)
+        longer.tap()
+        XCTAssertTrue(longer.disappears(within: 10), "The menu closes")
+        let after = app.buttons["station.extendPlatform.0"].firstMatch
+        XCTAssertTrue(after.appears(within: 10))
+        let lengthened = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "現在 6 節車廂"), object: after)
+        XCTAssertEqual(XCTWaiter.wait(for: [lengthened], timeout: 10), .completed, after.label)
+        settle()
+        keep("platform-lengthen-done", app)
+    }
+
     /// Decision 584: a line with no trains, and 列車 4 standing with no
     /// line where its trips start: the line page offers it to the line,
     /// and buying trains instead says it is in the way, with "Go" to it.

@@ -255,4 +255,26 @@ final class DeadlockTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
     }
+
+    /// Decision 687: nor can a platform of its call be lengthened under
+    /// its head, which a new one there could not be either.
+    func testAPassingPlaceRefusesItsCallsPlatformLengthenedUnderIt() throws {
+        var world = try SingleTrackMeet.world()
+        let (east, _) = try expresses(&world)
+        world.setSpeed(.x1)
+        try world.advance(ticks: 1_200)
+        XCTAssertEqual(world.train(id: east)?.position, .onEdge(SingleTrackMeet.forward(2), offset: 9_216))
+        try world.setTrafficControl(false)
+        // A platform of its call ahead of it on the same edge.
+        try world.addTrackPlatform(SingleTrackMeet.east, on: .edge(2), from: 10_240, to: 12_288)
+        let before = world
+        XCTAssertThrowsError(try world.extendTrackPlatform(SingleTrackMeet.east, on: .edge(2), from: 10_240, toStart: 9_216, end: 12_288)) {
+            XCTAssertEqual($0 as? GameError, .trainServiceActive(east))
+        }
+        XCTAssertEqual(world, before)
+        // Short of its head it grows.
+        try world.extendTrackPlatform(SingleTrackMeet.east, on: .edge(2), from: 10_240, toStart: 9_217, end: 12_288)
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+    }
 }
