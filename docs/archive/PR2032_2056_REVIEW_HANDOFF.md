@@ -58,7 +58,7 @@
 
 ### L17-1（P2，已重現）#2046：沒有觀光的世界蓋得起博物館，但它永遠沒有遊客，展品也不更新
 
-- **位置**：`Sources/GameCore/Passenger/Tourism.swift:1109`（`closeTourismDay` 的 `guard var tourism`）、`:1146`（`collectMuseumExhibits()` 在這個 guard 後面）、`:776`（`companySights()` 沒有觀光就回空）；`RailwayGameApp/Views/ControlPanel.swift:929`（建築清單列出 `PlacedBuildingKind.allCases`，不看有沒有觀光）；`Sources/GamePresentation/TourismText.swift`（博物館那一列只在 `tourism != nil` 時才有）。
+- **位置**：`Sources/GameCore/Passenger/Tourism.swift:1110`（`closeTourismDay` 的 `guard var tourism`）、`:1146`（`collectMuseumExhibits()` 在這個 guard 後面）、`:776`（`companySights()` 沒有觀光就回空）；`RailwayGameApp/Views/ControlPanel.swift:929`（建築清單列出 `PlacedBuildingKind.allCases`，不看有沒有觀光）；`Sources/GamePresentation/TourismText.swift`（博物館那一列只在 `tourism != nil` 時才有）。
 - **問題**：`tourism == nil` 的世界裡：
   - `placeBuilding(.railwayMuseum)` 照樣成功、照樣收錢；
   - 博物館不是景點（`companySight(of:)` 回 nil），遊客永遠 0，觀光面板沒有它那一列；
