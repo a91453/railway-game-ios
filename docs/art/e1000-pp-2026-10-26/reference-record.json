@@ -21,7 +21,7 @@
   "actual_photos": [
     {
       "file": "actual-00.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "e0dd1d3226fc1e534fbe508c9be09b932ae30e25b3a5f3460d912215efa6a4be",
       "reviewed": true,
       "kind": "actual vehicle photo",
@@ -29,7 +29,7 @@
     },
     {
       "file": "actual-01.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "61bab6b6dab170dea0f44e2362e5c1c6f82e5aad02d42e223181e3b4cd0daba5",
       "reviewed": true,
       "kind": "actual vehicle photo",
@@ -37,7 +37,7 @@
     },
     {
       "file": "actual-02.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "835af71bc5f2d4bdad0a7b1b7e6947eb31508998cc62fe56a9f33de160b8a0fe",
       "reviewed": true,
       "kind": "manufacturer plaque, not used on model",
@@ -45,7 +45,7 @@
     },
     {
       "file": "actual-03.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "2947e8b8564eb937ca53a690ba3e481f96acddb7f103ef70dc476421ee9ef04a",
       "reviewed": true,
       "kind": "actual vehicle photo",
@@ -53,7 +53,7 @@
     },
     {
       "file": "actual-04.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "a1364193aa29482c5a3bda2e93dbe7c16b78aedbae4b7bb37c03bf44c38a5206",
       "reviewed": true,
       "kind": "actual vehicle photo",
@@ -61,7 +61,7 @@
     },
     {
       "file": "actual-05.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "09c82cc8158d10dc995b5b47d5dfcf15b664e0f148cd78f752d6c41894870e61",
       "reviewed": true,
       "kind": "actual vehicle photo",
@@ -69,7 +69,7 @@
     },
     {
       "file": "actual-06.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "a055d7e0b201cfe3c821aba530bfdc7f5ae1a529918ca577033a2cf7149300d4",
       "reviewed": true,
       "kind": "manufacturer plaque, not used on model",
@@ -77,7 +77,7 @@
     },
     {
       "file": "actual-07.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "768d03dbca29ba6ecc8813bc5deb66143ac70723984d673c35bc456d34dce551",
       "reviewed": true,
       "kind": "actual vehicle photo",
@@ -85,7 +85,7 @@
     },
     {
       "file": "actual-08.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "0650398e6cdbdb1231ffb6396a86a47c8b1fbc25ff6ec502c0c0cfe343a8cd85",
       "reviewed": true,
       "kind": "manufacturer plaque, not used on model",
@@ -93,7 +93,7 @@
     },
     {
       "file": "actual-09.jpg",
-      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "url": "reference photo (observation only, not redistributed)",
       "sha256": "1b870499d92a13e586bcc851919508ffde95c98ff385e104a993178255f70604",
       "reviewed": true,
       "kind": "actual vehicle photo",

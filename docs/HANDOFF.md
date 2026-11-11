@@ -78,7 +78,7 @@
 
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。
 
-> Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與第三方鐵道攝影部落格 C341外觀原圖已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
+> Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與C341實車參考照片已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
 
 > Codex E1000 #1296第二版：使用者否定2be9daca車頭，已撤回舊自評；重修圓頂／橫向圓鼻／低雙風擋／小側窗／曲面燈座與內收下裙。真前版為2be9daca／私庫58e929e7，非更早簡模；同相機比較、局部裙板差異與設備payload證據見自有文件。PP #1291修正69a6eb7f已合入此分支，兩PR維持draft，最新CI另查，不視為使用者接受／真機／推拉動畫驗收。
 
@@ -4261,7 +4261,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 
 ### 台中綠線第四版（Codex，正面塗裝回饋）
 
-使用者指出第三版正面塗裝奇怪，重看官方與第三方鐵道攝影部落格原圖確認少了接肩部／燈座的深色兩頰；第四版只補正面分色、上肩綠色與相接肩帶，保留車殼／玻璃／燈／設備。producer `498d85ef`，真前版`0b6d26df`／素材`1adbab9f`；新素材`e9c8de91`的revision-4與原公開draft[#1437](https://github.com/a91453/railway-game-ios/pull/1437)↔素材draft[#21](https://github.com/a91453/railway-assets-private/pull/21)互鏈。第三輪重檔同PR刪除，保留PNG／README／來源／授權。近4804／遠2208、兩車9608／4416；20私庫PNG＋1公開小總覽，asset_guard通過，PR新增13.3MB。
+使用者指出第三版正面塗裝奇怪，重看官方照片與實車參考照片確認少了接肩部／燈座的深色兩頰；第四版只補正面分色、上肩綠色與相接肩帶，保留車殼／玻璃／燈／設備。producer `498d85ef`，真前版`0b6d26df`／素材`1adbab9f`；新素材`e9c8de91`的revision-4與原公開draft[#1437](https://github.com/a91453/railway-game-ios/pull/1437)↔素材draft[#21](https://github.com/a91453/railway-assets-private/pull/21)互鏈。第三輪重檔同PR刪除，保留PNG／README／來源／授權。近4804／遠2208、兩車9608／4416；20私庫PNG＋1公開小總覽，asset_guard通過，PR新增13.3MB。
 
 本機Swift6.4 warnings-as-errors與最終12測試通過；前臉第一可見材質／實際塗白故障反例拒收、真第三版四單元拒收，逐三角驗分色包絡外幾何與車頭後方頂點色保持（相鄰車頭烘焙遮蔽可變）。既有六模型幾何／玻璃／八輪／支承反例、Blender、Swift42072頂點編組、170PNG與六下載PNG完整解碼、最終七向配色白模剪影目視、viewer18下載SHA通過；14檔獨立producer重建bytes相同，684其他原生與FNV保持。本型四鎖正確，分支繼承28他車舊鎖差異不擅改。詳見[交接／來源／重建／驗證](art/taichung-green/README.md)；最終CI見本輪PR checks及#1041。真實綠藍柔和過渡簡化成乾淨色塊，第四版外觀接受／營運接入／Simulator與真機Metal效能動畫仍UNVERIFIED。仍studies、tmrt映射不動，不合併／auto-merge／TestFlight。
 

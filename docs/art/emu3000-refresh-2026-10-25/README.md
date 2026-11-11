@@ -24,9 +24,9 @@
 | 門窗／設備 | 先前修好的薄門縫與實體玻璃保持；側窗按新截面貼合；中間設備全同 | 乘務門輪廓位置保持，側向投影隨真正曲面變化 |
 | 走行 | 每節兩架各兩軸、8輪胎貼軌，輪架／下設備／連結器payload保持 | 隱藏動力、輪徑／軸距與弓接觸高度為估計 |
 
-原10張圖、前輪各新ED／EM側圖與本輪兩張重附 ED 正面（D3732175、DBF082D8）均實際打開。新圖為 第三方插畫作者 插畫局部，原標 CC BY-NC-ND4.0；只觀察結構與輪廓，不自動描線／取像素／重散布。日立 img_03 是實車正面，img_02 是設計視覺圖，不混稱照片。原圖／mesh／貼圖／品牌字不公開、不隨包散布、不送外部生成服務。
+原10張圖、前輪各新ED／EM側圖與本輪兩張重附 ED 正面（D3732175、DBF082D8）均實際打開。新圖為車輛示意圖局部，原標 CC BY-NC-ND4.0；只觀察結構與輪廓，不自動描線／取像素／重散布。日立 img_03 是實車正面，img_02 是設計視覺圖，不混稱照片。原圖／mesh／貼圖／品牌字不公開、不隨包散布、不送外部生成服務。
 
-來源：[日立設計](https://www.hitachi.co.jp/rd/research/design/product/taiwan_tra/index.html)、[維基EMU3000](https://zh.wikipedia.org/wiki/台鐵EMU3000型電聯車)、私庫 Railway/taiwan-rail-reference-clean/source/memories/tainan-2026-10-16/fleet/catalog.json。手冊索引讀到但原PDF未取得；猜測的第三方實車照片網站網址 404，不當證據。每張參考的 SHA／尺寸／查看用途列私包 reference-review.json。既有已接受車只比較色票／霧面／細節密度；沒有複製其車體、底盤、車頭、門窗或編組，沒有新增依賴／外部模型程式碼。
+來源：[日立設計](https://www.hitachi.co.jp/rd/research/design/product/taiwan_tra/index.html)、[維基EMU3000](https://zh.wikipedia.org/wiki/台鐵EMU3000型電聯車)、私庫 Railway/taiwan-rail-reference-clean/source/memories/tainan-2026-10-16/fleet/catalog.json。手冊索引讀到但原PDF未取得；猜測的實車參考資料網址 404，不當證據。每張參考的 SHA／尺寸／查看用途列私包 reference-review.json。既有已接受車只比較色票／霧面／細節密度；沒有複製其車體、底盤、車頭、門窗或編組，沒有新增依賴／外部模型程式碼。
 
 ## 幾何修正與外觀
 

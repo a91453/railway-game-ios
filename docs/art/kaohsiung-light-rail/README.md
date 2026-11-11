@@ -20,7 +20,7 @@
 
 來源優先：[運安會 CAF 技術報告](https://www.ttsb.gov.tw/media/5181/0527高雄捷運公司輕軌第t05編組前鎮之星站重大鐵道事故調查報告.pdf)、[CAF 高雄 EPD](https://environdec.com/library/epd749)、[土木水利一期車輛概述](https://www.ciche.org.tw/wordpress/wp-content/uploads/2018/03/DB4501-P082-%E9%AB%98%E9%9B%84%E7%92%B0%E7%8B%80%E8%BC%95%E8%BB%8C%E6%8D%B7%E9%81%8B-%E7%80%8F%E8%A6%BD.pdf)、[市府 Citadis 外觀介紹](https://mtbu.kcg.gov.tw/Activities/C002100?PageType=1&id=9d430f60-418d-47f7-9fe7-e8a140d75d14)、[市府二階儲能／集電設備](https://mtbu.kcg.gov.tw/Activities/C002100?PageType=1&id=d306a750-6725-4513-9c51-ab5aa2d369c5)、[Alstom 載客時序](https://www.alstom.com/press-releases-news/2021/1/alstom-introduces-citadis-x05-trams-kaohsiung)。2019-05-02市府議會[採購專案報告](https://cissearch.kcc.gov.tw/Upload/Attachment/ProjectReport/91/f08f09ab-612d-4574-9a92-9327272c975c.pdf)記錄二階11列確定採購＋4列擴充權；2025-12-08高捷工安處的[官方簡報](https://www.ttsb.gov.tw/media/9350/3%E9%AB%98%E9%9B%84%E8%BC%95%E8%BB%8C%E5%88%97%E8%BB%8A%E8%88%87%E9%81%93%E8%B7%AF%E8%BB%8A%E8%BC%9B%E4%BA%8B%E6%95%85%E4%B9%8B%E9%A0%90%E9%98%B2%E8%88%87%E8%99%95%E7%BD%AE_%E9%AB%98%E6%8D%B7%E9%8D%BE%E4%BB%81%E6%8F%9A%E8%99%95%E9%95%B7-1204.pdf)確認CAF9／Alstom15、共24列。兩個工程階段是採購來源，不是列車現今的運用分界。二階車早已能在一期路段載客，不製造兩款各跑半圈的契約。
 
-實拍原圖：第三方鐵道攝影部落格第三方鐵道攝影部落格 CAF、第三方鐵道攝影部落格第三方鐵道攝影部落格 Citadis、第三方實車照片網站第三方實車照片網站 CAF、Alstom 原始照片。均實際下載，在本機開啟原圖／原圖縮圖表；不是搜尋摘要。逐檔 URL、作者、日期、授權、SHA 與查看狀態見 [sources.json](sources.json)。原照片只在本機做觀察與旁置比較，沒有照片貼圖／第三方幾何／商標文字，也不將私有來源送外部生成服務。
+實拍原圖：CAF、Citadis 的實車參考照片與 Alstom 原始照片。均實際下載，在本機開啟原圖／原圖縮圖表；不是搜尋摘要。逐檔 URL、作者、日期、授權、SHA 與查看狀態見 [sources.json](sources.json)。原照片只在本機做觀察與旁置比較，沒有照片貼圖／第三方幾何／商標文字，也不將私有來源送外部生成服務。
 
 ## 單元與共同軌面
 
