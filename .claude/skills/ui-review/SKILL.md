@@ -117,7 +117,7 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 ## 5. Liquid Glass（rshankras `liquid-glass`）
 
-- **只用在浮在地圖上的控制**（狀態列、工具列、浮動按鈕），不用在清單、列、內容上。我們的入口是 `Theme.swift` 的 `glassBackground(in:interactive:)`，iOS 26 以前退回系統材質。
+- **只用在浮在地圖上的控制**（狀態列、工具列、浮動按鈕），不用在清單、列、內容上。我們的入口是 `Theme.swift` 的 `glassBackground(in:interactive:)`（最低版本是 iOS 26，決策 676，沒有系統材質的退路）。
 - **不在玻璃上疊玻璃**：玻璃上的東西用實心色票，不再加材質。
 - **好幾塊玻璃放在一起時包進 `GlassEffectContainer`**，讓它們一起算、一起變形。
 - **只有主要動作上色**（tint）；全部上色就沒有重點。
@@ -159,7 +159,7 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 ## 7a. SwiftUI 陷阱與用法（補自 SwiftUI Pro 與 daneden，第二輪）
 
-最低版本 iOS 17（`project.yml`）。需要更新版本的 API 寫明「iOS X 以上」，要用就放 `#available` 後面。動畫的陷阱在 motion skill 第 4 節。
+最低版本 iOS 26（`project.yml`，決策 676）：iOS 26 以前就有的 API 直接用，不用 `#available`。iOS 27 以上才有的 API 寫明「iOS 27 以上」，要用就放 `#available` 後面。動畫的陷阱在 motion skill 第 4 節。
 
 **資料與狀態**（`GameSession` 是 `@MainActor @Observable`，沒有 `ObservableObject`）
 
@@ -218,7 +218,7 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 | 動態：`MotionRule`，減少動態只留淡入淡出（motion、決策 253） | taste-skill「不要進場動畫」、說彈跳是破綻；ibelick「沒要求就不加動畫」；rshankras 的彩帶、慶祝產生器 | 我們有 `cardIn`、`pop` 等規則；慶祝只用輕跳與蓋好的環。rshankras「每個效果都要有減少動態的對應」相容，已收在第 4 節 |
 | 顏色只從 `Theme`／`Palette` 取，View 裡不寫色碼（UI_THEME） | rshankras、ebuntario「用系統顏色、不寫色碼」「先用 SF Symbols 不畫自己的圖示」 | 色票本身算過對比（`ThemeContrastTests`）；地圖圖示是決策 121 畫的 |
 | Liquid Glass 用在浮在地圖上的控制 | taste-skill 禁止玻璃與模糊 | 只採 rshankras 的用法（第 5 節） |
-| 最低版本 iOS 17（`project.yml`） | SwiftUI Pro 假設 iOS 27／Xcode 27（`@ContentBuilder`、`AsyncImage` 快取） | 新 API 放在 `#available` 後面；`@ViewBuilder` 照舊 |
+| 最低版本 iOS 26（`project.yml`，決策 676） | SwiftUI Pro 假設 iOS 27／Xcode 27（`@ContentBuilder`、`AsyncImage` 快取） | iOS 27 才有的 API 放在 `#available` 後面；`@ViewBuilder` 照舊 |
 | 動作的資料流都經 `GameWorld` 指令（CLAUDE.md） | SwiftUI Pro「避免 `Binding(get:set:)`、改用 `onChange`」 | `GameSession` 上的綁定 setter 就是送指令；只有純 UI 狀態才綁 `$state`（第 7a 節） |
 | 字串走 `language.text("…","…")` 與 String Catalog | SwiftUI Pro 的 `LocalizedStringResource`、產生符號鍵 | 兩套本地化並存，換法是整個專案的決定，不在畫面技能裡改 |
 | 顏色與停用狀態從 `Theme`／`Palette` 取 | SwiftUI Pro「用階層樣式取代手動 opacity」、daneden S5 `hierarchical` | 玩家看到的色票算過對比；只有 SF Symbols 圖示可以用 |
