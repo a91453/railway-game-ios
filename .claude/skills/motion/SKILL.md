@@ -83,7 +83,7 @@ LottieFiles 原文要求每個動畫都有三層：主要、次要、背景（�
 - 不用陰影跟著移動、模糊、光暈、彩帶。
 - 不加 Lottie 的播放套件：這份只拿原則，動畫用 SwiftUI 自己做。
 - daneden A6「預設用 `.default`，不要自己挑曲線」：我們每種動作都有 `MotionRule` 規定的時間與曲線，View 裡不寫新的秒數或彈簧；「不要為了好玩選 `.bouncy`」與我們「重的不回彈」相容。
-- SwiftUI Pro 的 `@Animatable` 巨集（iOS 26 以上、Xcode 26）：自訂動畫屬性時才用，目前沒有這種 view，需要時再寫在 `#available` 後面；`AnimatableModifier` 已棄用，新的不用。
+- SwiftUI Pro 的 `@Animatable` 巨集（iOS 26 以上、Xcode 26）：自訂動畫屬性時才用，目前沒有這種 view，需要時直接用（最低版本是 iOS 26，決策 676）；`AnimatableModifier` 已棄用，新的不用。
 - `Text(date, style: .relative)` 倒數：遊戲時間不是系統時間，不適用。
 - 「深色模式降低 10–20% 的動態強度」先不做：規則的數字已經小，等實機看過再說。
 

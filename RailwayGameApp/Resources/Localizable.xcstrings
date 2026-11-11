@@ -255,6 +255,16 @@
         }
       }
     },
+    "%@ %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ %@"
+          }
+        }
+      }
+    },
     "%@ station, %@" : {
       "localizations" : {
         "zh-Hant" : {

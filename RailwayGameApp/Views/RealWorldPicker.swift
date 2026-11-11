@@ -674,9 +674,9 @@ final class PlaceSearch {
                 PlaceSearchResult(
                     id: index,
                     name: item.name ?? "",
-                    detail: item.placemark.title ?? "",
-                    latitude: item.placemark.coordinate.latitude,
-                    longitude: item.placemark.coordinate.longitude
+                    detail: item.address?.fullAddress ?? "",
+                    latitude: item.location.coordinate.latitude,
+                    longitude: item.location.coordinate.longitude
                 )
             }
             Task { @MainActor in

@@ -101,7 +101,7 @@ public struct Map3DModelFile: Sendable {
         let padded = (provenanceLength + 3) / 4 * 4
         let expected = Self.headerSize + padded + triangles * Self.triangleSize
         guard bytes.count == expected else { throw .wrongSize(expected: expected, actual: bytes.count) }
-        // Not `String(validating:as:)`: the app still runs before iOS 18.
+        // Not `String(validating:as:)`: the package still supports macOS 14.
         guard provenanceLength > 0,
               let provenance = String(bytes: bytes[Self.headerSize..<(Self.headerSize + provenanceLength)], encoding: .utf8),
               !provenance.allSatisfy(\.isWhitespace) else { throw .noProvenance }

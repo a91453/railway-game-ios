@@ -1,7 +1,7 @@
 /// An unsigned 128-bit integer for the reference models in these tests.
 ///
-/// Swift's own `UInt128` needs macOS 15 or iOS 18, and the package still
-/// supports macOS 14 and iOS 17, so `ReferenceTrafficCurve` uses this
+/// Swift's own `UInt128` needs macOS 15, and the package still supports
+/// macOS 14 (its iOS minimum, 26, has it), so `ReferenceTrafficCurve` uses this
 /// instead. It has only the operations that model uses and behaves like
 /// `UInt128` in them: `+`, `-`, `*` and `/` trap on overflow, underflow and
 /// division by zero; `<<` and `>>` drop the bits shifted out; converting a

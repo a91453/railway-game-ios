@@ -1344,7 +1344,7 @@
 - **號碼**：決策 549–552、554、555 已用；557 DEPOTADD 已用；556 TYMCLIST 保留（TYMCLIST2 沿用）、558 WENHUTRN 已用、559 給 TYMCLIST2 的 GameCore 互等（#1747）、560 EMU700 與 561 機場捷運車型已用；553 是 UIA-B1 保留後釋出的，沒有人用（#1579 11-02 20:37 的留言）；**下一個 562**。存檔 81、golden schema 77 不動。
 - **沒派、留給第 44 任排的**：
   1. **信義的台北 101 地標沒出現**：TILT60 的截圖（`docs/art/tilt60-2026-11-03/overview.jpg`，信義 260 m 兩張）只有一般大樓，看不到決策 370 的 101 模型。要查是載入距離、串流範圍還是截圖場景本來就沒放。
-  2. **ImmersiveMap 研究的排名**（`docs/research/IMMERSIVEMAP_STUDY_2026-11-03.md`）：1 SUNPCF、2 TILT60 已做；3 TRAINSHADOW、4 RELIEF30、5 SUN2WIN、6 TILT75 沒派，研究寫了各自的前提（多半要先有 SUNPCF／TILT60 的實機結果）。不升最低 iOS 18。
+  2. **ImmersiveMap 研究的排名**（`docs/research/IMMERSIVEMAP_STUDY_2026-11-03.md`）：1 SUNPCF、2 TILT60 已做；3 TRAINSHADOW、4 RELIEF30、5 SUN2WIN、6 TILT75 沒派，研究寫了各自的前提（多半要先有 SUNPCF／TILT60 的實機結果）。當時不升最低 iOS 18；2026-11-11 作者看過 TestFlight 的系統版本分布後，最低版本直接升到 iOS 26（決策 676）。
   3. **審查 L6 的 L6-2～L6-5**（#1729 的審查交接）還沒派；#1693 還沒審。
   4. **CRASHSWEEP 剩下的**：`ContentView`、`MapView`、`TutorialOverlay` 的整頁 `GeometryReader`，以及 `Chart { ForEach }`（細節在 §4.44）。
   5. 決策 554（海風號山嵐號）與 552（文湖線）各自「下一步」裡的項目。
