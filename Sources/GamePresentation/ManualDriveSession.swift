@@ -1,0 +1,151 @@
+import GameCore
+
+/// Decision 686: a run the player drives by hand, as a session keeps it:
+/// waiting for the followed train to leave its stop, or driving along the
+/// track read when it was taken over.
+struct ManualDriveRun: Sendable {
+    let train: TrainID
+    /// The track and the run, once the train has been taken over.
+    var driving: (track: ManualDriveTrack, drive: ManualDrive, length: Double)?
+    /// When the run was last stepped, on the map's clock.
+    var stepped: Double?
+}
+
+extension GameWorld {
+    /// Decision 686: how far train `id` is into its run to its next stop:
+    /// the run, the world units it has covered and the whole seconds since
+    /// it set off; `nil` unless it runs to a stop of its timetable.
+    func manualDriveTakeOver(of id: TrainID) -> (run: ServiceRun, covered: Int64, elapsed: Int64)? {
+        guard let train = train(id: id), case .travellingToStop? = train.execution, train.position != nil,
+              let run = train.times?.run, let curve = runCurve(of: run, for: train.performance) else { return nil }
+        let elapsed = max(0, clock.now.seconds - run.start.seconds)
+        guard elapsed < run.seconds else { return nil }
+        return (run, min(run.length, curve.distance(at: elapsed * 1000)), elapsed)
+    }
+
+    /// Decision 686: whether train `id` can be driven by hand: it runs to
+    /// a timetable (a stop to drive to, and an arrival to keep).
+    public func canManualDrive(_ id: TrainID) -> Bool {
+        guard let train = train(id: id), train.position != nil else { return false }
+        return train.execution != nil || assignedLine(of: id) != nil
+    }
+}
+
+extension ManualDriveRun {
+    /// A run is taken over only with this much of it left, in metres: less,
+    /// and the next one is waited for.
+    static let shortestMetres: Int64 = 300
+
+    /// The track and the run for `train` taken over now in `world`, or
+    /// `nil` while it stands at a stop or is too near its next one.
+    static func takeOver(_ id: TrainID, in world: GameWorld) -> (track: ManualDriveTrack, drive: ManualDrive, length: Double)? {
+        guard let train = world.train(id: id), let found = world.manualDriveTakeOver(of: id) else { return nil }
+        let units = WorldCoordinate.unitsPerMetre
+        let remaining = found.run.length - found.covered
+        guard remaining >= shortestMetres * units, let track = ManualDriveTrack(train: train, in: world, remaining: remaining) else { return nil }
+        let limits = found.run.limits.compactMap { limit -> ManualDrive.Limit? in
+            guard limit.end > found.covered else { return nil }
+            return ManualDrive.Limit(start: Double(limit.start - found.covered) / Double(units), end: Double(limit.end - found.covered) / Double(units),
+                                     speed: Double(limit.speed) / 3.6)
+        }
+        let course = ManualDrive.Course(stop: track.stopMetres, limits: limits, scheduled: Double(found.run.seconds - found.elapsed))
+        let drive = ManualDrive(train: ManualDrive.Train(train.performance), course: course, speed: world.trainSpeedKMH(of: id) / 3.6)
+        return (track, drive, Double(train.length))
+    }
+}
+
+extension GameSession {
+    /// Decision 686: whether the followed train can be driven by hand.
+    public var canManualDrive: Bool {
+        followedTrainID.map { world.canManualDrive($0) } ?? false
+    }
+
+    /// Decision 686: the player takes the followed train's handle: from
+    /// now (or from when it leaves its stop) to its next stop, the 3D map
+    /// draws it where the player drives it. The game runs at 1× for it.
+    /// Nothing for a train without a timetable.
+    public func startManualDrive() {
+        guard let id = followedTrainID, world.canManualDrive(id) else { return }
+        if world.clock.speed.tenthsPerTick > GameSpeed.x1.tenthsPerTick { setSpeed(.x1) }
+        manualDriveRun = ManualDriveRun(train: id)
+        manualDriveReading = .waiting
+        manualDrivePhase = .waiting
+        stepManualDrive(at: nil)
+    }
+
+    /// Decision 686: gives the handle back: the map draws the world's
+    /// train again.
+    public func endManualDrive() {
+        guard manualDriveRun != nil || manualDriveReading != nil else { return }
+        manualDriveRun = nil
+        manualDriveReading = nil
+        manualDrivePhase = nil
+        updateFollowSounds()
+    }
+
+    /// Decision 686: moves the handle a step towards power (`up`) or
+    /// towards the brake.
+    public func moveManualDriveNotch(up: Bool) {
+        guard let notch = manualDriveRun?.driving?.drive.notch else { return }
+        setManualDriveNotch(up ? notch.raised : notch.lowered)
+    }
+
+    public func setManualDriveNotch(_ notch: ManualDrive.Notch) {
+        guard manualDriveRun?.driving != nil else { return }
+        manualDriveRun?.driving?.drive.set(notch)
+        publishManualDrive()
+    }
+
+    /// Decision 686: steps the hand-driven run to `time` (seconds on the
+    /// map's clock, `nil` for no time passing) and says where the 3D map
+    /// draws its train: on which track, how many metres into the run, and
+    /// how long the train is in world units; `nil` when none is driven, or
+    /// while it waits at its stop.
+    @discardableResult
+    public func stepManualDrive(at time: Double?) -> (track: ManualDriveTrack, metres: Double, length: Double)? {
+        guard var run = manualDriveRun else { return nil }
+        guard followedTrainID == run.train, world.train(id: run.train)?.position != nil else {
+            endManualDrive()
+            return nil
+        }
+        let passed = time.flatMap { now in run.stepped.map { min(max(now - $0, 0), 0.25) } } ?? 0
+        if let time { run.stepped = time }
+        if run.driving == nil {
+            run.driving = ManualDriveRun.takeOver(run.train, in: world)
+        } else if !world.clock.isPaused {
+            // A second of the game for each of the clock's at 1×.
+            run.driving?.drive.advance(seconds: passed * Double(world.clock.speed.tenthsPerTick))
+        }
+        manualDriveRun = run
+        publishManualDrive()
+        return run.driving.map { ($0.track, $0.drive.distance, $0.length) }
+    }
+
+    /// Decision 686: for the screenshot review only: the run being driven
+    /// ends as one stopped just short of the mark, a few seconds late, so
+    /// its result can be looked at without driving a whole run.
+    public func finishManualDriveForScreenshot() {
+        guard var run = manualDriveRun, let driving = run.driving else { return }
+        var drive = ManualDrive(train: driving.drive.train, course: .init(stop: 0.8, scheduled: -4), speed: 0.3)
+        drive.set(ManualDrive.Notch(step: -ManualDrive.timetableBrakeStep))
+        drive.advance(seconds: 5)
+        run.driving = (driving.track, drive, driving.length)
+        manualDriveRun = run
+        publishManualDrive()
+    }
+
+    /// The speed and the drive the followed train is heard with while it is
+    /// driven by hand.
+    var manualDriveSound: (kmh: Double, drive: GameWorld.TrainDrive?)? {
+        guard let drive = manualDriveRun?.driving?.drive else { return nil }
+        return (drive.speedKMH, drive.drive)
+    }
+
+    private func publishManualDrive() {
+        let reading = manualDriveRun?.driving?.drive.reading ?? (manualDriveRun == nil ? nil : .waiting)
+        guard reading != manualDriveReading else { return }
+        manualDriveReading = reading
+        if manualDrivePhase != reading?.phase { manualDrivePhase = reading?.phase }
+        updateFollowSounds()
+    }
+}

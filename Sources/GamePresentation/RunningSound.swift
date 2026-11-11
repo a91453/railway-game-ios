@@ -170,16 +170,22 @@ public struct RunningSound: Hashable, Sendable {
     /// runs as a high-speed train (``TrainPerformance/isHighSpeed``) plays
     /// the high-speed loop; decision 567: a diesel (``isDiesel(_:in:)``)
     /// its engine, idling at a stand too; any other the electric one.
-    static func of(following train: Train?, in world: GameWorld) -> RunningSound? {
+    ///
+    /// Decision 686: `driven` is the speed and the drive of a run the
+    /// player drives by hand (``ManualDrive``), heard instead of the
+    /// world's train's: the motors and the engine follow the handle.
+    static func of(following train: Train?, in world: GameWorld, driven: (kmh: Double, drive: GameWorld.TrainDrive?)? = nil) -> RunningSound? {
         guard let train, !world.clock.isPaused,
               world.clock.speed.tenthsPerTick <= GameSpeed.x60.tenthsPerTick
         else { return nil }
-        let kmh = world.trainSpeedKMH(of: train.id)
+        let kmh = driven?.kmh ?? world.trainSpeedKMH(of: train.id)
         if isDiesel(train, in: world) {
-            return ofDiesel(atKMH: kmh, powering: !world.trainIsSlowing(train.id))
+            let powering = driven.map { $0.drive == .powering || $0.drive == .holding } ?? !world.trainIsSlowing(train.id)
+            return ofDiesel(atKMH: kmh, powering: powering)
         }
         let wheels: Loop = train.performance.isHighSpeed ? .highSpeed : .electric
-        let motor = hasMotors(train, in: world) ? MotorSound.of(world.trainDrive(train.id), atKMH: kmh, under: wheels) : nil
+        let drive = driven.map(\.drive) ?? world.trainDrive(train.id)
+        let motor = hasMotors(train, in: world) ? MotorSound.of(drive, atKMH: kmh, under: wheels) : nil
         guard var sound = of(wheels, atKMH: kmh) else {
             // Below 5 km/h, the motors alone.
             return motor.map { RunningSound(loop: wheels, volume: 0, rate: 1, motor: $0) }
