@@ -324,7 +324,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
-        case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
+        // Decision 678: with the water, as a player's map has it (the
+        // line is laid under the Keelung River).
+        case .wenhu: Self.realLineWorld(at: self, in: language, water: water)
+        case .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
         // The line runs 50 km; the map opens at 02:00, its last trains in.
         case .tymcRebuild: Self.realLineWorld(at: self, side: 1 << 22, ticks: 12, in: language)
         case .exteriorTaichung, .exteriorHsinchu, .exteriorBanqiao, .exteriorTaoyuanHSR, .exteriorTaichungHSR, .exteriorZuoying,
@@ -544,10 +547,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the Xiaobitan Branch Line's too), twice the usual a side as the
     /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
     /// with money enough for it; bought once the app's real data is read.
-    private static func realLineWorld(at scene: ScreenshotScene, side: Int64 = 1 << 21, ticks: Int = 33, in language: DisplayLanguage) -> GameWorld {
+    private static func realLineWorld(at scene: ScreenshotScene, side: Int64 = 1 << 21, ticks: Int = 33, in language: DisplayLanguage,
+                                      water grid: WaterGrid? = nil) -> GameWorld {
         guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
               let bounds = try? WorldBounds(width: side, height: side) else { return DemoWorld.make(in: language) }
-        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
+        let water = grid?.cells(frame: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds) ?? []
+        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000), water: water)
         try? world.mapGround()
         // On to 05:30 while the map is empty, ten minutes a tick: the Debug
         // app then runs only the morning itself after it buys the line.
@@ -594,7 +599,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Whether the scene is by the water and waits for the app's map of
     /// Taiwan's water (decision 585).
     public var needsWater: Bool {
-        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore || self == .wenhu
     }
 
     /// The point on Kaohsiung harbour's north side ``cijinShore`` reads

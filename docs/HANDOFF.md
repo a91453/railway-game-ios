@@ -1,3 +1,5 @@
+> 文湖線真實隧道段照真實在地下（派工單 WENHU-UNDER，session_01YGNNumuuqGrusBMJCQ9dLU，`claude/wenhu-under-678`，[決策 678](decisions/678.md)，存檔、golden、GameCore 不動，2026-11-11）：新買的文湖線，松山機場、大直兩站在地下 13 m，中山國中北邊到劍南路南邊 3.1 km 連續隧道，基隆河從河底過（原本是地面、路塹與離水 5 m 的橋，3D 裡是一道橫過河面的溝）。只開給文湖線，其他 14 條線逐點不變。**還留下的**（決策 678「下一步」，細節在 §4.60）：舊存檔已買的文湖線不會變，要另做「改建成地下」的按鈕；小碧潭支線七張、機捷淡水河與環北、南港展覽館還沒開。
+
 > 看得到地下（續）（派工單 UNDERGROUND-2，session_01JMHz9aYwmFA1fdQNhSxPPn，`claude/underground-2`，[決策 674](decisions/674.md)，存檔、golden、GameCore 不動，2026-11-09）：決策 672 合併後作者 Mac 截圖的三點：隧道裡的列車改路線色、深藍外框、標籤移到旁邊；車頭燈照到道床與兩側牆；地下月台在示範模式台北車站一帶 12 座真實地下月台上驗過（`deepest` 30 → 40 m，修了不同層的線被排成島式、側式月台壓到旁邊軌道）。截圖第 3 級，要遊戲規劃看過才合併。**還留下的**：截圖請作者在 Mac 上拍（重拍 672 的 a、d，加台北車站俯瞰）；基隆河大直段是河面路塹不是隧道（決策 672 下一步）；決策 670 零件換 `addPlatform`。
 
 > 3D 地圖看得到地下（派工單 UNDERGROUND-VIEW，session_01JMHz9abBhYq5qwdVNBJME7，`claude/underground-view`，[決策 672](decisions/672.md)，存檔、golden、GameCore 不動，2026-11-09）：設定「顯示地下」（預設關，關＝不建不畫）打開後，俯瞰時隔著地面看得到隧道、隧道裡的列車和地下月台；跟車進隧道時車頭燈照亮前方軌道；淺隧道段的地面挖開、隧道口補土堤端面；鐵路隧道口分組與順序無關。截圖第 3 級，要遊戲規劃看過才合併。**狀態（2026-11-09，實作 session 第 1 次壓縮後收尾）**：草稿 #2013，Linux 全綠。**還留下的**：第 3 級截圖還沒拍——`website-screenshots.yml` 現有的場景沒有隧道，要在 `WebsiteScreenshotTests` 加一個有淺隧道與地下月台的場景，拍四張：開關打開／關掉的俯瞰、隧道口近景、跟車進隧道（車頭燈）。由遊戲規劃另派 session 接手，拍完給遊戲規劃看過，PR 才轉 ready。另外：決策 670 的地下月台零件合併後換掉 `Map3DXRay.addPlatform`；實機量開與關的毫秒數（決策 672 下一步）。
@@ -588,6 +590,21 @@
     - **Mac 接手後（session_01YGNNumP1xpBTwXqpouPFrE，11-11）**：從最新 main 開分支 `claude/liquid-glass-677`，把雲端那兩個 commit 搬過來，在 Mac 上建置、在模擬器（iPhone 18 Pro、iOS 27.2）看過，補了決策 677、`docs/UI_THEME.md` 與截圖測試 `testLiquidGlass3DControls`，開 draft PR（號碼見 #1579），**等作者決定合不合**。還沒做完的只有一件，要作者做：**實機比 3D 換前換後的幀數**（模擬器兩邊都是 60 fps，分不出來）；掉了就單獨退回 3D 那個 commit，或照決策 677「下一步」試 `GlassEffectContainer`。合併後雲端的分支 `claude/liquid-glass-floating-controls` 可以刪。
   - 號碼：決策 676 已佔用、677 留給 Mac 接手 LIQUIDGLASS 的 session，**下一個 678**。
   - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
+- **11-11 08:00 UTC 補充（第 60 任，已壓縮 2 次；第 3 次後換手）**：照 #1579 與開著的 PR 寫的；和下面 04:10 那段不同時以這段為準。
+  - **今天已合併**：#2032–#2038、#2039（WENHU-UNDER，決策 678）、#2040（App 圖示，決策 680）、#2041（HEALTH-124）；assets repo #89。04:10 那段的四個 session 與 METAL4-STUDY、L16-FIX、LMSTUDIO-STUDY 都已封存。作者 11-11：「2035 全綠你就合 之後的pr都是」「記得考慮會不會衝突 排優先合併的順序」——全綠、ready、clean 就照 §1.2 合，不用再問。
+  - **進行中的雲端 session**（都是第 1 層）：
+    - **TYMC-YIELD** session_01YGNNupyS1CVXKpxSqb1jsv，`claude/tymc-yield-681`，決策 681，動 GameCore `Deadlock.swift`（HEALTH-124 §6 的機捷連讓與 tymc-old 傍晚 6 班）；門檻：`TYMC_AFTERNOON=1 AirportShuttleDepotTests` 綠、tymc ≤5/333、tymc-old ≤2/333、重建 ≤9/333；動 golden 或 replay 的值前要先問規劃。
+    - **MUSEUM** session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，決策 684，**存檔版本 87**（#1579 留言 6788990779）；只做第一步（規則與最小介面），第二步（3D 館舍、圖示、館內視角）留給 Mac。
+    - 這兩個是完整 tier，一次合一個，後合的先併 main。
+    - **BUY-PNL** session_01YGNNunjBSsACdFQKPdNK4k，#2043，決策 682；截圖測試 `testTrainPurchaseEstimate`「The estimate shows」連兩版紅，已請它查根因。
+    - **CITY-TITLE** session_01YGNNupYoAuDo7yAXiwVvbL，#2042，決策 683；檢查全綠，等它做完截圖驗收轉 ready。
+    - **MANUAL-DRIVE** session_01YGNNuqWp9HgG8hzMCrcGc9，`claude/manual-drive-686`，決策 686，不動 GameCore；新面板，截圖要規劃看過才合；手感與實機聲音留給 Mac。
+    - **SUBSIDIARY-DESIGN** session_01YGNNupuwuP8Ufz3F4WJjcF，`claude/subsidiary-design`，只寫 `docs/research/SUBSIDIARY_DESIGN_2026-11-11.md`。
+  - **Mac 本機**（雲端傳不到 Mac，作者貼一句話轉達；一次一件）：**LOOK-LOOP** session_01YGNNuoActmxTfeAsLPJBWL（決策 685，#1579 留言 6789510949：3D skill 加「看圖再改」的共用規矩，照 skill-creator 的方法寫並出考題，用一個車站試做）已登記，作者先封存、晚點再開。之後依序：TUTORIAL-CAPSULE（決策 679「下一步」）、GLASS-POLISH、FACADE-669、CAB-RAIN、FPS-DEVICE（含速度選單第一幀卡頓、L16-17 馬達聲）；清單在 #1579 留言 6786821644。assets #73 的 TRELLIS 驗證是作者自己的 session。
+  - **號碼**：決策 681–686 如上，**下一個 687**；存檔版本 main 86、87 給 MUSEUM，**下一個 88**；golden schema 76 不動。
+  - **審查點數**（從 #2032 起）：#2035、#2037、#2038、#2040、#2039 各 1，共 5；滿 30 或發完一版派 REVIEW-L17。
+  - **沒派、記著的**：HEALTH-124 §6.5 的 (c) 內灣真實地形造價、(d) 大地圖讓車成本；早上 3 班與文湖 6 班（不是退步）。舊機型若實機量到玻璃效果掉幀，再加「省電時改素色底」（現在不做）。Metal 4 不採用（`research/METAL4_VULKAN_2026-11-11.md`）。
+  - **下次發版前**（只在作者說發的時候）：`.github/testflight-whats-new.md` 要寫到最低 iOS 26、地下顯示與文湖線河底、聲音、雨（L16-9）、Liquid Glass、新圖示。
 - **11-11 04:10 UTC 補充：派了四個雲端 session**（作者睡前：「那你判斷哪些可以先在雲端做的／Mac還在改之前的liquid glass／你這邊也同步開幾個適合雲端的去做」；先前「我說可以派之前先不派」到此解除）。四個都在第 1 層、都帶 `source_url`，模型照 §1.1 的 11-11 那條。派工單在各 session 的開頭，摘要在 #1579 留言 6786741855。
   - **REVIEW-L16** session_01YGNNupozifvTzHdaz6hs68：審查 #1986–#2031 已合併的程式 PR（規劃粗數 27 點，且已發過 123、124 兩版），只寫 `docs/archive/PR1986_2031_REVIEW_HANDOFF.md`；發現 P1 會立刻通知規劃，當天派修。
   - **HEALTH-124** session_01YGNNukuAfZWX59qB3uEsuw：照 HEALTH-122 的量法重量，只寫 `docs/research/HEALTH_124_2026-11-11.md`；特別看機捷「簡單＋行車控制」沒發的班與決策 666 的連讓次數。
@@ -4440,7 +4457,17 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **還沒做、要實機的**：剩下的停頓在系統框架裡（第一次讀 SF Symbol 的冷 catalog、RenderBox 等待、`UITextField` 清除鈕圖）。先在實機上量到真的慢，再考慮開地圖前暖身；`TutorialUITests` 的第二次按留著。都寫在決策 659「沒修的」。
 - **號碼**：決策 659；存檔、golden 不動。
 
-### 4.60 鐵道博物館第一步（決策 684，派工單 MUSEUM，session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，2026-11-11）
+### 4.60 文湖線真實隧道段照真實在地下（決策 678，派工單 WENHU-UNDER，session_01YGNNumuuqGrusBMJCQ9dLU，`claude/wenhu-under-678`，2026-11-11）
+
+- **做了的**在 [決策 678](decisions/678.md)：收購的鋪法多兩條規則，真實隧道裡的站往下放（`RealLineAcquisition.isSunk`，決策 462 `isRaised` 的另一半）、真實隧道上方的河一開始就走水下（`TrackRise` 的 `sunk`）；`RealBranchLine.followsRealTunnels` 只開給 `trtc:BR`。量法：`WenhuUndergroundTests`（平常就跑）與 `LINE_HEIGHT_REPORT=1` 的 `LineHeightReportTests`。
+- **留下的**（照建議的順序）：
+  1. 舊存檔已買的文湖線照舊是地面與矮橋（讀檔不改存檔，決策 315）。要做路線面板上標價的「改建成地下」按鈕（決策 557、605 的做法），拆兩站與約 4 km 雙線再鋪，收班後才能按。
+  2. 小碧潭支線：`followsRealTunnels` 打開後七張站往下、建造費 +38 %（量過，沒提交）；還要量兩天班次，七張是端點又和松山新店線共站。
+  3. 桃園機場捷運：打開後淡水河走河底、環北站往下，但整條線的車站寬限跟著變（16 個高架站離地 10 → 16 m）；要和 `LINE_HEIGHTS_2026-11-05.md` 的 C（每站自己的寬限）一起做，重量 `TaoyuanAirportLineTests` 與兩天班次。
+  4. 南港展覽館站（真實地下）：`rail_structures.json` 沒有那段隧道，要補資料，並和內湖機廠的出入庫線（決策 602）一起看。
+- **號碼**：決策 678；存檔、golden 不動。
+
+### 4.61 鐵道博物館第一步（決策 684，派工單 MUSEUM，session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，2026-11-11）
 
 - **做了的**在 [決策 684](decisions/684.md)：建築清單多一種「鐵道博物館」（一張地圖一座），是公司的景點；展示公司擁有過的車種，每種 +0.15★（空館 1.5★，十二種 3.3★）；遊客每人 NT$150、每件展品維護 NT$1,000／天，記在子公司帳。存檔版本 87（`v87-railway-museum.json`）。
 - **還沒做、給 Mac 本機的第二步**（決策 684「下一步」1）：館舍自己的 3D 外觀與停在館前的展品（現在 3D、卡片圖、地圖記號都暫用百貨的）、新圖示、點博物館逐件看展品的館內瀏覽。要看畫面，截圖驗收屬「規劃看過才合」。

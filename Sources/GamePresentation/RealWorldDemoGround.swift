@@ -592,6 +592,10 @@ struct TrackRise {
         let range: ClosedRange<Double>
         let low: Double
         let high: Double
+        /// Decision 678: a station down in its line's real tunnel may
+        /// stand further down than it asks (``TrackRise/slack``), never
+        /// further up, out of the tunnel.
+        var staysUnder = false
 
         /// Level at exactly `height`.
         init(_ range: ClosedRange<Double>, at height: Double) {
@@ -697,9 +701,14 @@ struct TrackRise {
     /// With `carried`, the real line's structures (decision 279), the track
     /// keeps to them as ``carriedHeight`` says, as far as a line within the
     /// grade can.
+    ///
+    /// With `sunk` (decision 678), a run of water wholly over one of the
+    /// real line's long tunnels is passed under from the first, not
+    /// bridged until no grade reaches the bridge: the real line is under
+    /// that river.
     init?(
         path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level], grade: Double = RealWorldDemo.rulingGrade,
-        carried: [Carried] = [], slack: [Double] = TrackRise.slack
+        carried: [Carried] = [], slack: [Double] = TrackRise.slack, sunk: Bool = false
     ) {
         let count = max(1, Int((path.length / Self.spacing).rounded(.up)))
         let grid = (0...count).map { min(Double($0) * Self.spacing, path.length) }
@@ -748,7 +757,19 @@ struct TrackRise {
                 runs.append(index...index)
             }
         }
-        let bounds = Self.bounds(distances: distances, carried: carried, wet: wet, levels: levels.map(\.range))
+        // Decision 678: the water over a real tunnel.
+        let under = Set(runs.indices.filter { number in
+            sunk && carried.contains { stretch in
+                stretch.kind == .tunnel && stretch.isLong
+                    && stretch.range.lowerBound <= distances[runs[number].lowerBound] && distances[runs[number].upperBound] <= stretch.range.upperBound
+            }
+        })
+        // Such water takes none of the tunnel's bounds from its banks.
+        var boundedWet = wet
+        for number in under {
+            for index in runs[number] { boundedWet[index] = false }
+        }
+        let bounds = Self.bounds(distances: distances, carried: carried, wet: boundedWet, levels: levels.map(\.range))
         // Where no grade reaches the water's either way, the stations may
         // stand further from the ground, a few metres at a time.
         for slack in slack {
@@ -758,11 +779,11 @@ struct TrackRise {
                 let widen = level.low < level.high ? slack : 0
                 for index in distances.indices where level.range.contains(distances[index]) {
                     low[index] = max(low[index], level.low - widen)
-                    high[index] = min(high[index], level.high + widen)
+                    high[index] = min(high[index], level.high + (level.staysUnder ? 0 : widen))
                 }
             }
             var kept = bounds
-            var tunnels: Set<Int> = []
+            var tunnels = under
             while true {
                 var low = low, high = high
                 for bound in kept {
@@ -799,7 +820,12 @@ struct TrackRise {
                 let clashing = kept.indices.filter { kept[$0].indices.contains(clash.low) || kept[$0].indices.contains(clash.high) }
                 let onGround = clashing.filter { kept[$0].isOnGround }
                 if !clashing.isEmpty {
-                    for index in (onGround.isEmpty ? clashing : onGround).reversed() {
+                    // Decision 678: of a tunnel under a station and a
+                    // viaduct beyond it, the viaduct's (it comes down
+                    // sooner; the tunnel stays a tunnel).
+                    let overGround = sunk ? clashing.filter { kept[$0].high == .infinity } : []
+                    let first = !onGround.isEmpty ? onGround : overGround.isEmpty || overGround.count == clashing.count ? clashing : overGround
+                    for index in first.reversed() {
                         kept.remove(at: index)
                     }
                     continue
