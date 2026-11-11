@@ -11,6 +11,7 @@ enum FeatureUITestWorld {
     static func make(_ name: String) throws -> GameWorld {
         if name == "big-grid" || name == "big-grid-night" { return try bigGrid(night: name == "big-grid-night") }
         if name == "story" { return try story() }
+        if name == "buy-estimate" || name == "buy-estimate-new" { return try buyEstimate(played: name == "buy-estimate") }
         guard ["separate-tracks", "missing-platform", "double-platform", "old-crossovers", "catalog", "sightseeing", "quiet-night", "idle-blocker", "platform-choice"].contains(name) else {
             preconditionFailure("Unknown -ui-test-world: \(name)")
         }
@@ -103,6 +104,26 @@ enum FeatureUITestWorld {
             }
         }
         return world
+    }
+
+    /// Decision 682's screenshots: a new game's line between two towns,
+    /// its one train run for two days (`played`), or the line with no
+    /// train and the clock not yet run, when nobody has been counted.
+    private static func buyEstimate(played: Bool) throws -> GameWorld {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try LineBuilder.line(through: [towns[0], towns[1]], in: .newGame())
+        try world.setTrafficControl(false)
+        guard played else {
+            let train = world.trains[0].id
+            try world.unassignTrain(train)
+            try world.unplaceTrain(train)
+            world.setSpeed(.paused)
+            return world
+        }
+        var player = PolicyPlayer(world: world, policy: .none)
+        try player.advance(ticks: 1)
+        for _ in 0..<2 { try player.playDay() }
+        return player.world
     }
 
     /// Decision 371's map for timing the flat map: a new game with four
