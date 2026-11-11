@@ -31,6 +31,8 @@ final class AirportReportTests: XCTestCase {
             for airports in [false, true] {
                 var world = start
                 if !airports { world.setAirports([]) }
+                // The tick that starts at midnight counts the day that ended.
+                try world.advance(ticks: 1)
                 for day in 1...days {
                     for _ in 0..<1_440 { try world.advance(ticks: 1) }
                     let account = world.accounts.days.last

@@ -15,10 +15,12 @@ public enum AirportRules {
     /// The most airports a world holds.
     public static let maximumAirports = 16
     /// The game's rail riders for every thousand air passengers, each way,
-    /// before the stations within reach cap them: about one in four takes
-    /// the train where a line reaches the terminal, and the game's cities
-    /// ride at about a tenth of the real ones' numbers.
-    public static let ridersPerThousand: Int64 = 25
+    /// before the stations within reach cap them: Taoyuan's two Airport
+    /// MRT stations and Songshan Airport station count some 23,000 and
+    /// 5,100 riders a day beside 131,000 and 15,400 air passengers, and
+    /// 150 a thousand gives about 19,000 and 2,200 (decision 695,
+    /// measured).
+    public static let ridersPerThousand: Int64 = 150
     /// One rider a day, each way, for every this many residents of the
     /// stations the airport's station can ride to (an outside connection
     /// counts as ``Tourism/outsideWeight`` residents): a two-station line

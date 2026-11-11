@@ -62,14 +62,14 @@ final class AirportTests: XCTestCase {
         world.setAirports([airport()])
         let day = try XCTUnwrap(world.airportDays().first)
         XCTAssertEqual(day.station, foot)
-        // 15,200 passengers, 25 riders a thousand, half each way: 190 want
+        // 15,200 passengers, 150 riders a thousand, half each way: 1,140 want
         // the train; Home's 10,000 at one for 60 carries 166.
-        XCTAssertEqual(day.ridersAtMost, 190)
+        XCTAssertEqual(day.ridersAtMost, 1_140)
         XCTAssertEqual(day.ridersTo, 166)
         XCTAssertEqual(day.ridersFrom, 166)
-        // 332 of 380 on board: 174 thousandths more flights and passengers.
-        XCTAssertEqual(day.flights, 142 * 1_174 / 1_000)
-        XCTAssertEqual(day.passengers, 15_200 * 1_174 / 1_000)
+        // 332 of 2,280 on board: 29 thousandths more flights and passengers.
+        XCTAssertEqual(day.flights, 142 * 1_029 / 1_000)
+        XCTAssertEqual(day.passengers, 15_200 * 1_029 / 1_000)
         XCTAssertEqual(world.dailyDemand(from: home, to: foot), 166)
         XCTAssertEqual(world.dailyDemand(from: foot, to: home), 166)
         XCTAssertEqual(world.hourlyDemand(from: home, to: foot).reduce(0, +), 166)
@@ -79,10 +79,10 @@ final class AirportTests: XCTestCase {
 
     func testABiggerCityFillsTheAirportsShare() throws {
         var world = try world()
-        try world.setStationDemand(home, to: StationDemand(kind: .residential, dailyTrips: 30_000))
+        try world.setStationDemand(home, to: StationDemand(kind: .residential, dailyTrips: 90_000))
         world.setAirports([airport()])
         let day = try XCTUnwrap(world.airportDays().first)
-        XCTAssertEqual(day.ridersTo, 190, "all who want the train")
+        XCTAssertEqual(day.ridersTo, 1_140, "all who want the train")
         XCTAssertEqual(day.flights, 142 * 1_200 / 1_000, "a fifth more flights")
     }
 
@@ -119,8 +119,8 @@ final class AirportTests: XCTestCase {
         try world.advance(ticks: 1_442)
         let counted = try XCTUnwrap(world.airports.first)
         XCTAssertEqual(counted.yesterdayRiders, 332)
-        XCTAssertEqual(counted.yesterdayFlights, 166)
-        XCTAssertEqual(counted.yesterdayPassengers, 17_844)
+        XCTAssertEqual(counted.yesterdayFlights, 146)
+        XCTAssertEqual(counted.yesterdayPassengers, 15_640)
         XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: try JSONEncoder().encode(SavedGame(world: world))))
     }
 
@@ -165,7 +165,7 @@ final class AirportTests: XCTestCase {
         XCTAssertEqual(kept.firstHour, 6)
         XCTAssertEqual(kept.lastHour, 23)
         XCTAssertEqual(kept.yesterdayRiders, 332)
-        XCTAssertEqual(kept.yesterdayFlights, 166)
+        XCTAssertEqual(kept.yesterdayFlights, 146)
         // It runs on as the game it was saved from.
         try loaded.advance(ticks: 1_440)
         try world.advance(ticks: 1_440)
