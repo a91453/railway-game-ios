@@ -18,6 +18,7 @@
 > - **烏來第六代吊廂**（#1845，[README](art/wulai-cabin-studies-2026-11/README.md)）：白色 71 人往復式大型吊廂，近景 8,992、LOD 3,744 三角，窗與天窗透明、地板不透明。尺寸與輪系是推估；沒有旅客、開門、擺動動畫。加了 `wulai-cabin-metal.yml`（macOS，只在 PR 改到 `tools/wulai-cabin-studies/` 時跑）。**下一步**：作者看外觀；遊戲還沒有烏來纜車的路線，要先派 GameCore 的纜車路線（決策 574 的運具）才接得上。
 > - **貓空吊廂修真**（#1791，[README](art/maokong-cabin-refine-2026-11/README.md)）：已接進遊戲，CABLE3D 在 `09f95f74` 把它改成 Swift（`Map3DCableCar`、`Map3DCableCarParts`），吊廂地板和月台齊平。**下一步**：遊戲裡的玻璃還是不透明的，要改用上面的透明玻璃，先在配方裡把玻璃標出來；抱索器、角柱、吊架接頭還是簡化的。
 > - **機場與飛機**（#1844，決策 [594](decisions/594.md)，[README](art/airport-aircraft-2026-11/README.md)）：遊戲規劃第 49 任看總覽後，下一輪要改的：跑道是深藍色，應該是深灰柏油；十九座與七十座兩款螺旋槳機看不到螺旋槳；地勤車（tug、baggage、stairs、fuel）的輪子是方塊；城市航廈組景的塔台、機庫、航廈分開浮著，沒有地面把它們連起來；夜間版只是整體變暗，沒有跑道邊燈與機坪燈。接進遊戲前，要先另派一個決策，定出飛機在地圖上怎麼動、停在哪個機場（決策 594 沒有寫）。
+> - **機場與飛機，重做外觀**（決策 [698](decisions/698.md)，AIRCRAFT-LOOK，Mac 本機 2026-11-12）：上一行的五點與作者說的飛機外型都照 `model-look` 重做了四輪，[總覽與「還有哪裡不好」](art/airport-aircraft-2026-11/README.md)。等作者或規劃看總覽圖；接進遊戲是 AIRPORT-2，那時要在 Metal 實機看夜間的發光與地面顏色。
 
 > 國道客運車塗裝 studies（Codex，決策 593，`codex/coach-liveries`，2026-11-05）：三軸 coach 加八組中性塗裝（含原暖白／暖紅與觀光接駁），按需近遠景，不接營運。預設 `Map3DCoachBus.model()` 頂點與雜湊鎖住，街景選型／種子、GameCore、存檔、golden、fixtures 不動。私庫存完整模型、日夜七向 PNG、viewer 與 SOURCE.md；公開庫存配方、測試、一張總覽。外觀待作者看，Metal 實機與路線對色留後續。
 
