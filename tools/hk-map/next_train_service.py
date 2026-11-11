@@ -10,14 +10,18 @@ The feed lists, for a station and a direction, the next four trains: where
 each is bound and when it is there, to the second, from the timetable.
 
 Between two stations that follow each other, a train's time is the later
-station's less the earlier's. The feed does not say which train is which,
-so a sample counts only where one difference takes every train of the
-earlier station to a train of the later one and no other difference does
-(`run_between`): early in the day, when the trains are unevenly spaced, and
-wherever they are. The line's figure is the median over every such sample,
-the two directions together. It is from one station's time to the next's,
-so it holds the stop. A stretch no sample settles gets its length at the
-line's median speed, and `runSamples` says 0 for it.
+station's less the earlier's. The feed does not say which train is which
+and gives whole minutes, so a sample counts only where one difference takes
+every train of the earlier station to a train of the later one
+(`run_between`); of several that do (trains evenly spaced fit one headway
+later as well), the one that pairs the most trains, then the shortest no
+train could beat (130 km/h over the stretch). Only trains bound for a place
+both stations list are paired: a terminus does not list its arrivals. The
+line's figure is the median over every such sample, the two directions
+together. It is from one station's time to the next's, so it holds the
+stop. A stretch no sample settles, or whose median is no train's speed
+(under 20 km/h or over 130), gets its length at the line's median speed
+(every line's, when the line has none), and `runSamples` says 0 for it.
 
 A line's headway is the median gap between two trains bound for its end
 that follow each other at a station, over the samples taken in the peak
@@ -54,15 +58,15 @@ def seconds(stamp):
     return datetime.datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
 
 
-def run_between(at_a, at_b):
+def run_between(at_a, at_b, least):
     """The seconds from the earlier station to the later, or `None` where
-    the two lists do not settle it: the one difference that takes every
-    train of the earlier station the later's list reaches to a train of
-    the later station (within 15 s), at least two of them, and no other
-    difference does as well."""
+    the two lists do not settle it: a difference, `least` seconds or more,
+    that takes every train of the earlier station the later's list reaches
+    to a train of the later station (within 15 s), at least two of them;
+    of several, the one that pairs the most trains, then the shortest."""
     scored = []
     for took in sorted({(y - x).total_seconds() for x in at_a for y in at_b}):
-        if not 20 <= took <= 1800:
+        if not max(20, least) <= took <= 1800:
             continue
         reach = [x for x in at_a if (at_b[-1] - x).total_seconds() + 15 >= took and (at_b[0] - x).total_seconds() - 15 <= took]
         hit = sum(1 for x in reach if any(abs((y - x).total_seconds() - took) <= 15 for y in at_b))
@@ -71,9 +75,7 @@ def run_between(at_a, at_b):
     if not scored:
         return None
     most = max(hit for hit, _ in scored)
-    best = [took for hit, took in scored if hit == most]
-    # Differences a few seconds apart are the same answer.
-    return statistics.median(best) if max(best) - min(best) <= 30 else None
+    return min(took for hit, took in scored if hit == most)
 
 
 def main(extract, stations_csv, folder, out):
@@ -96,13 +98,15 @@ def main(extract, stations_csv, folder, out):
     def trains(sample, code, station, key, bound):
         answer = sample.get(f"{code}-{station}", {})
         data = answer.get("data", {}).get(f"{code}-{station}", {})
-        if not data or answer.get("status") != 1:
+        # A station the feed has no answer for says "-" for the time.
+        if not data or answer.get("status") != 1 or len(data.get("curr_time", "")) < 19:
             return None, []
         now = seconds(data["curr_time"])
-        return now, [seconds(t["time"]) for t in data.get(key, [])
+        return now, [(seconds(t["time"]), t["dest"]) for t in data.get(key, [])
                      if t.get("valid") == "Y" and (bound is None or t["dest"] == bound)]
 
     result = {}
+    every_speed = []
     for line in lines:
         code, stations = line["code"], line["stations"]
         ends = {"UP": stations[-1]["code"], "DOWN": stations[0]["code"]}
@@ -116,13 +120,16 @@ def main(extract, stations_csv, folder, out):
                     # Any train's, wherever bound: a short working takes as long.
                     _, at_a = trains(sample, code, stations[a]["code"], key, None)
                     _, at_b = trains(sample, code, stations[b]["code"], key, None)
-                    took = run_between(at_a, at_b)
+                    both = {d for _, d in at_a} & {d for _, d in at_b}
+                    least = abs(stations[a]["d"] - stations[b]["d"]) * 3600 / 130
+                    took = run_between([t for t, d in at_a if d in both], [t for t, d in at_b if d in both], least)
                     if took is not None:
                         runs[min(a, b)].append(took)
                 for index in order[:-1]:
                     now, at = trains(sample, code, stations[index]["code"], key, bound)
                     if now is None:
                         continue
+                    at = [t for t, _ in at]
                     for x, y in zip(at, at[1:]):
                         of_day = x.hour * 3600 + x.minute * 60 + x.second
                         gap = (y - x).total_seconds()
@@ -130,16 +137,21 @@ def main(extract, stations_csv, folder, out):
                             gaps["peak" if any(p <= of_day < q for p, q in PEAKS) else "offpeak"].append(gap)
                     if index == order[0] and at:
                         first.append(at[0].hour * 3600 + at[0].minute * 60 + at[0].second)
-        if not any(runs) or not gaps["offpeak"]:
+        if not gaps["offpeak"]:
             if "--provisional" not in sys.argv:
-                sys.exit(f"{line['id']}: the samples give no time between stations, or no headway")
-            runs = [r or [60 + abs(stations[i + 1]["d"] - stations[i]["d"]) * 60] for i, r in enumerate(runs)]
-            gaps["offpeak"] = gaps["offpeak"] or [600]
-        # A stretch no sample settles: its length at the line's median speed.
-        speeds = [abs(stations[i + 1]["d"] - stations[i]["d"]) * 1000 / statistics.median(r) for i, r in enumerate(runs) if r]
+                sys.exit(f"{line['id']}: the samples give no headway")
+            gaps["offpeak"] = [600]
+        # A stretch no sample settles, or settles at no train's speed: its
+        # length at the line's median speed.
+        length = lambda i: abs(stations[i + 1]["d"] - stations[i]["d"]) * 1000
+        for i, r in enumerate(runs):
+            if r and not 20 / 3.6 <= length(i) / statistics.median(r) <= 130 / 3.6:
+                runs[i] = []
+        speeds = [length(i) / statistics.median(r) for i, r in enumerate(runs) if r]
+        every_speed.extend(speeds)
         guessed = [i for i, r in enumerate(runs) if not r]
         for i in guessed:
-            runs[i] = [abs(stations[i + 1]["d"] - stations[i]["d"]) * 1000 / statistics.median(speeds)]
+            runs[i] = [length(i) / statistics.median(speeds or every_speed)]
         # Before 03:00 is the night before's last trains, not the first.
         morning = [t for t in first if t >= 4 * 3600]
         offpeak = round(statistics.median(gaps["offpeak"]))
