@@ -697,9 +697,14 @@ struct TrackRise {
     /// With `carried`, the real line's structures (decision 279), the track
     /// keeps to them as ``carriedHeight`` says, as far as a line within the
     /// grade can.
+    ///
+    /// With `sunk` (decision 678), a run of water wholly over one of the
+    /// real line's long tunnels is passed under from the first, not
+    /// bridged until no grade reaches the bridge: the real line is under
+    /// that river.
     init?(
         path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level], grade: Double = RealWorldDemo.rulingGrade,
-        carried: [Carried] = [], slack: [Double] = TrackRise.slack
+        carried: [Carried] = [], slack: [Double] = TrackRise.slack, sunk: Bool = false
     ) {
         let count = max(1, Int((path.length / Self.spacing).rounded(.up)))
         let grid = (0...count).map { min(Double($0) * Self.spacing, path.length) }
@@ -749,6 +754,13 @@ struct TrackRise {
             }
         }
         let bounds = Self.bounds(distances: distances, carried: carried, wet: wet, levels: levels.map(\.range))
+        // Decision 678: the water over a real tunnel.
+        let under = Set(runs.indices.filter { number in
+            sunk && carried.contains { stretch in
+                stretch.kind == .tunnel && stretch.isLong
+                    && stretch.range.lowerBound <= distances[runs[number].lowerBound] && distances[runs[number].upperBound] <= stretch.range.upperBound
+            }
+        })
         // Where no grade reaches the water's either way, the stations may
         // stand further from the ground, a few metres at a time.
         for slack in slack {
@@ -762,7 +774,7 @@ struct TrackRise {
                 }
             }
             var kept = bounds
-            var tunnels: Set<Int> = []
+            var tunnels = under
             while true {
                 var low = low, high = high
                 for bound in kept {

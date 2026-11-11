@@ -1,3 +1,5 @@
+> 文湖線真實隧道段照真實在地下（派工單 WENHU-UNDER，session_01YGNNumuuqGrusBMJCQ9dLU，`claude/wenhu-under-678`，[決策 678](decisions/678.md)，存檔、golden、GameCore 不動，2026-11-11）：新買的文湖線，松山機場、大直兩站在地下 13 m，中山國中北邊到劍南路南邊 3.1 km 連續隧道，基隆河從河底過（原本是地面、路塹與離水 5 m 的橋，3D 裡是一道橫過河面的溝）。只開給文湖線，其他 14 條線逐點不變。**還留下的**（決策 678「下一步」，細節在 §4.60）：舊存檔已買的文湖線不會變，要另做「改建成地下」的按鈕；小碧潭支線七張、機捷淡水河與環北、南港展覽館還沒開。
+
 > 看得到地下（續）（派工單 UNDERGROUND-2，session_01JMHz9aYwmFA1fdQNhSxPPn，`claude/underground-2`，[決策 674](decisions/674.md)，存檔、golden、GameCore 不動，2026-11-09）：決策 672 合併後作者 Mac 截圖的三點：隧道裡的列車改路線色、深藍外框、標籤移到旁邊；車頭燈照到道床與兩側牆；地下月台在示範模式台北車站一帶 12 座真實地下月台上驗過（`deepest` 30 → 40 m，修了不同層的線被排成島式、側式月台壓到旁邊軌道）。截圖第 3 級，要遊戲規劃看過才合併。**還留下的**：截圖請作者在 Mac 上拍（重拍 672 的 a、d，加台北車站俯瞰）；基隆河大直段是河面路塹不是隧道（決策 672 下一步）；決策 670 零件換 `addPlatform`。
 
 > 3D 地圖看得到地下（派工單 UNDERGROUND-VIEW，session_01JMHz9abBhYq5qwdVNBJME7，`claude/underground-view`，[決策 672](decisions/672.md)，存檔、golden、GameCore 不動，2026-11-09）：設定「顯示地下」（預設關，關＝不建不畫）打開後，俯瞰時隔著地面看得到隧道、隧道裡的列車和地下月台；跟車進隧道時車頭燈照亮前方軌道；淺隧道段的地面挖開、隧道口補土堤端面；鐵路隧道口分組與順序無關。截圖第 3 級，要遊戲規劃看過才合併。**狀態（2026-11-09，實作 session 第 1 次壓縮後收尾）**：草稿 #2013，Linux 全綠。**還留下的**：第 3 級截圖還沒拍——`website-screenshots.yml` 現有的場景沒有隧道，要在 `WebsiteScreenshotTests` 加一個有淺隧道與地下月台的場景，拍四張：開關打開／關掉的俯瞰、隧道口近景、跟車進隧道（車頭燈）。由遊戲規劃另派 session 接手，拍完給遊戲規劃看過，PR 才轉 ready。另外：決策 670 的地下月台零件合併後換掉 `Map3DXRay.addPlatform`；實機量開與關的毫秒數（決策 672 下一步）。
@@ -4422,3 +4424,13 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **做了的**在 [決策 659](decisions/659.md)：2D 地圖的街道計畫只選街不鋪街（-O 306 → 1.3 ms，選出的街一樣）；教學 UI 測試不把 XCTest 的 log 抄到 App 的 stderr，並帶主執行緒停頓的取樣。iPad 教學 trace 的 ≥3 秒空檔 7 → 1。
 - **還沒做、要實機的**：剩下的停頓在系統框架裡（第一次讀 SF Symbol 的冷 catalog、RenderBox 等待、`UITextField` 清除鈕圖）。先在實機上量到真的慢，再考慮開地圖前暖身；`TutorialUITests` 的第二次按留著。都寫在決策 659「沒修的」。
 - **號碼**：決策 659；存檔、golden 不動。
+
+### 4.60 文湖線真實隧道段照真實在地下（決策 678，派工單 WENHU-UNDER，session_01YGNNumuuqGrusBMJCQ9dLU，`claude/wenhu-under-678`，2026-11-11）
+
+- **做了的**在 [決策 678](decisions/678.md)：收購的鋪法多兩條規則，真實隧道裡的站往下放（`RealLineAcquisition.isSunk`，決策 462 `isRaised` 的另一半）、真實隧道上方的河一開始就走水下（`TrackRise` 的 `sunk`）；`RealBranchLine.followsRealTunnels` 只開給 `trtc:BR`。量法：`WenhuUndergroundTests`（平常就跑）與 `LINE_HEIGHT_REPORT=1` 的 `LineHeightReportTests`。
+- **留下的**（照建議的順序）：
+  1. 舊存檔已買的文湖線照舊是地面與矮橋（讀檔不改存檔，決策 315）。要做路線面板上標價的「改建成地下」按鈕（決策 557、605 的做法），拆兩站與約 4 km 雙線再鋪，收班後才能按。
+  2. 小碧潭支線：`followsRealTunnels` 打開後七張站往下、建造費 +38 %（量過，沒提交）；還要量兩天班次，七張是端點又和松山新店線共站。
+  3. 桃園機場捷運：打開後淡水河走河底、環北站往下，但整條線的車站寬限跟著變（16 個高架站離地 10 → 16 m）；要和 `LINE_HEIGHTS_2026-11-05.md` 的 C（每站自己的寬限）一起做，重量 `TaoyuanAirportLineTests` 與兩天班次。
+  4. 南港展覽館站（真實地下）：`rail_structures.json` 沒有那段隧道，要補資料，並和內湖機廠的出入庫線（決策 602）一起看。
+- **號碼**：決策 678；存檔、golden 不動。
