@@ -575,8 +575,11 @@
 - #1579 接手時 2,053 則留言，接近 2,400 則時照「怎麼用這份」開下一個 issue。
 - **11-11 03:45 UTC 補充**：
   - #2028（決策 676，最低版本 iOS 26）Mac 那邊修好 Release archive 後，作者說「合」，已合併，main 50fdb1df。上面寫的紅燈已經不存在。**下一次 TestFlight 的說明要寫「這一版起需要 iOS 26」**（#2028 沒改 `.github/testflight-whats-new.md`）；發出去後在 TestFlight 版本上確認設定的「測試」區照舊出現（收據的判斷寫法改過，只能在 TestFlight 驗）。
-  - **派出去的**：LIQUIDGLASS session_01YGNNumEw3RtTWpGaNrL7uM（決策 677，作者交辦，派工單原文在 #1579 留言 6785419086 與它的 session 開頭）：App 裡直接寫 `.regularMaterial`／`.thinMaterial` 的浮動控制元件改走 `Theme` 的 `glassBackground`；貼在內容上的不換、PR 逐處寫理由；3D 那幾處集中一個 commit；實機幀數 UNVERIFIED，要請作者實機比較。等級是「既有畫面的小改動」，它自己跑截圖、自己盯 CI，綠了在 #1579 留「可合併」並通知規劃。
-  - 號碼：決策 676 已佔用、677 LIQUIDGLASS 保留，**下一個 678**。
+  - **LIQUIDGLASS（決策 677，作者交辦）改由作者 Mac 本機的 session 做**（作者 11-11：「Mac」；理由是外觀改動要 Xcode 建置、模擬器截圖、實際點選單看決策 643 的變形、量 3D 幀數，雲端做不到）。派工單重點在 #1579 留言 6785419086：App 裡直接寫 `.regularMaterial`／`.thinMaterial` 的浮動控制元件改走 `Theme` 的 `glassBackground`；貼在內容上的不換、PR 逐處寫理由；3D 那幾處集中一個 commit；實機幀數要比換前換後。
+    - 雲端先派的 LIQUIDGLASS session_01YGNNumEw3RtTWpGaNrL7uM 做了一半就停手：分支 `claude/liquid-glass-floating-controls` 上兩個 commit（3D 畫面 17 處、待機說明膠囊與小地圖收起鈕改玻璃；另 9 處不換並註明原因），**沒建置過，全部 UNVERIFIED**，沒有 PR；逐處清單與 SHA 在它 #1579 的「釋出」留言。Mac 接手的 session 可以接著用或只當參考。那條分支等 Mac 的 PR 合併後可以請作者刪。
+    - 雲端 session 傳不了訊息到 Mac 上的 session（要按信任卡，作者說不要按），要跟它講的事寫在 #1579。
+    - 這類要在模擬器或實機看的外觀改動，之後先問作者要不要交給 Mac 本機做，再決定派不派雲端。
+  - 號碼：決策 676 已佔用、677 留給 Mac 接手 LIQUIDGLASS 的 session，**下一個 678**。
   - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
 
 **第 59 任交第 60 任（2026-11-10 約 23:58 UTC＝台灣 11-11 07:58，session_01YGNNuotpQDktgGusuFc8kz，第 0 層，沒壓縮過）**
