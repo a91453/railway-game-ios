@@ -344,6 +344,22 @@ extension GameWorld {
         }
     }
 
+    /// Decision 691: track edge `edge`, lengthened where it lies, cost
+    /// `cost` more: its record is worth as much more (a managed company's;
+    /// free play keeps no accounts), and the cash is capital spending. An
+    /// edge with no record (laid before the accounts, or bought with a
+    /// line) gets one for the new part.
+    mutating func extendTrackAsset(_ edge: Int, cost: Money) {
+        guard accounts.mode == .management, cost > .zero else { return }
+        guard let index = accounts.assets.firstIndex(where: { $0.kind == .track && $0.owner == edge }) else {
+            acquireAsset(.track, owner: edge, cost: cost)
+            return
+        }
+        let room = CompanyAccounts.maximumAssetCost - accounts.totalAssetCost
+        accounts.assets[index].cost = accounts.assets[index].cost + Money(max(0, min(cost.amount, room)))
+        accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending + cost }
+    }
+
     /// Removes the record of the track edge or station gone, writing off
     /// its book value for a managed company: removal refunds nothing.
     mutating func disposeAsset(_ kind: AssetRecord.Kind, owner: Int) {

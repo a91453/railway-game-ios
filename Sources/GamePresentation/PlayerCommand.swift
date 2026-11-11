@@ -32,6 +32,11 @@ public enum PlayerCommand: Hashable, Sendable {
     /// from `start` to `end` of its edge
     /// (``GameSession/extendPlatform(_:)``).
     case extendPlatform(TrackPlatform, start: Int64, end: Int64)
+    /// Decision 691: a platform between a station's two turnouts
+    /// lengthened to the stretch from `start` to `end` of its edge as it
+    /// lies, past its ends where a turnout moves out, the station's
+    /// platform beside it with it (``GameSession/extendPlatform(_:)``).
+    case extendPlatformLoop(TrackPlatform, start: Int64, end: Int64)
     /// An edge and each of its end nodes no other edge ends at
     /// (``GameSession/removeNetworkEdge()``).
     case removeTrack(TrackEdgeID)
@@ -242,6 +247,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .addPlatform: "addPlatform"
         case .removePlatform: "removePlatform"
         case .extendPlatform: "extendPlatform"
+        case .extendPlatformLoop: "extendPlatformLoop"
         case .removeTrack: "removeTrack"
         case .buildCrossover: "buildCrossover"
         case .addPlatformTrack: "addPlatformTrack"
@@ -327,6 +333,14 @@ extension GameSession {
             guard world.network.platforms.contains(platform) else { throw .invalidPlatform }
             try world.extendTrackPlatform(platform.station, on: platform.edge, from: platform.start, toStart: start, end: end)
             outcome.platform = TrackPlatform(station: platform.station, edge: platform.edge, start: start, end: end)
+        case .extendPlatformLoop(let platform, let start, let end):
+            guard world.network.platforms.contains(platform) else { throw .invalidPlatform }
+            // Decision 124: the ground under the longer loop read in first.
+            let ground = world.platformLoopExtensionGround(platform.station, on: platform.edge, from: platform.start, toStart: start, end: end)
+            try world.readGround(under: ground, from: heights)
+            try world.extendPlatformLoop(platform.station, on: platform.edge, from: platform.start, toStart: start, end: end)
+            // The platform's stretch is measured along its track as it lies now.
+            outcome.platform = world.trackPlatforms(of: platform.station).first { $0.edge == platform.edge }
         case .buildCrossover(let plan, let structure):
             // The diagonals joined at the middle: the tool says so before it
             // asks, so on the world it planned on this never happens.
@@ -577,6 +591,14 @@ extension PlayerCommand: Codable {
             self = .extendPlatform(
                 TrackPlatform(station: StationID(rawValue: station), edge: .edge(edge), start: start, end: end), start: newStart, end: newEnd
             )
+        case "extendPlatformLoop":
+            guard let station = record.station, let edge = record.edge, let start = record.startDistance, let end = record.endDistance,
+                  let newStart = record.newStartDistance, let newEnd = record.newEndDistance else {
+                throw invalid("a station's platforms lengthened need the platform's station, edge, start and end, and its new start and end")
+            }
+            self = .extendPlatformLoop(
+                TrackPlatform(station: StationID(rawValue: station), edge: .edge(edge), start: start, end: end), start: newStart, end: newEnd
+            )
         case "buildCrossover":
             guard let plan = record.crossover, let structure = record.structure.flatMap(TrackStructure.init(rawValue:)) else {
                 throw invalid("a crossover needs its plan and structure")
@@ -719,7 +741,7 @@ extension PlayerCommand: Codable {
             record.edge = platform.edge.number
             record.startDistance = platform.start
             record.endDistance = platform.end
-        case .extendPlatform(let platform, let start, let end):
+        case .extendPlatform(let platform, let start, let end), .extendPlatformLoop(let platform, let start, let end):
             record.station = platform.station.rawValue
             record.edge = platform.edge.number
             record.startDistance = platform.start
@@ -831,6 +853,8 @@ extension PlayerCommand {
             language.text("rebuild the line as real", "照真實改建")
         case .buyRealStation(let purchase):
             language.text("buy \(purchase.name) station", "收購\(purchase.name)站")
+        case .extendPlatformLoop:
+            language.text("lengthen the platforms", "加長月台")
         case .removePlatform, .removeTrack, .extendPlatform:
             nil
         case .edit(let edit):
