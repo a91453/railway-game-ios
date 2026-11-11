@@ -53,6 +53,8 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `.themeCard(padding:cornerRadius:)` | 實色 `panel` 卡片，即使放在玻璃上，文字對比也固定 |
 | `.glassBackground(in:interactive:)` | 浮在地圖上的元件：Liquid Glass（最低版本是 iOS 26，決策 676；之前 iOS 17–25 用 `.regularMaterial`） |
 
+浮在地圖、3D 地圖、列車展示上的控制元件一律用 `glassBackground`，不直接寫 `.regularMaterial`／`.thinMaterial`（決策 677）。可以按的整顆鈕加 `interactive: true`；裡面有 `Menu` 的，玻璃放在 `.background { Color.clear.glassBackground(…) }` 那一層（決策 643），選單才從按鈕彈出。留著材質的只有三類，程式裡各有一行 `// Decision 677` 的註解：貼在點到的內容上的標籤（地圖的點選標籤、收入飄字）、蓋在任何畫面上的載入圈、量測工具（幀數讀數、量幀卡）。
+
 `.borderedProminent` 固定用白字，在 Dark 的 `primary`（1.85:1）和 `error` 上都不到 AA，所以主要動作改用 `ThemeProminentButtonStyle`。`.bordered` 按鈕沿用全域 tint。
 
 同樣的理由，`error`、`warning`、`success`、`primary`、`accent` 實心底上的字不用 `.white`，用對應的 `on…`（狀態列的破產倒數與新聞未讀數：`onError` 在 `error` 上，5.62／6.59；2026-10-28 UI 健檢 C 以前是白字，Dark 約 2:1）。`Theme` 沒有「增加對比」的另一組色，打開時用同一組，數字相同。Linux 的 `ThemeContrastTests` 讀 `Theme.swift` 與 `AccentColor`，檢查每個 `on…` 對它的底到 4.5:1，並找出 View 裡主題色底上的白字。
@@ -258,7 +260,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 - 介面收起（`ambientHidden`：透明、不收觸碰、旁白不讀，位置不動）；地圖、列車、天氣照畫。
 - 換鏡頭：全螢幕黑色的幕，淡入 0.7 s、停 0.1 s、淡出 0.7 s（`MotionRule.ambientCut`）；減少動態時各 0.35 s。
-- 底部一行：`.regularMaterial` 膠囊，subheadline semibold 寫正在看什麼；剛打開 5 秒上面多一行 footnote「碰一下螢幕就回來。」（`secondary`）。
+- 底部一行：`glassBackground` 膠囊（決策 677；之前是 `.regularMaterial`），subheadline semibold 寫正在看什麼；剛打開 5 秒上面多一行 footnote「碰一下螢幕就回來。」（`secondary`）。
 
 ## 乘客感受的表情（決策 301）
 
@@ -567,7 +569,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 ## 待確認
 
-- 玻璃上的文字（未選中的工具列、狀態列、跟車列）沒辦法算出固定對比，因為 Liquid Glass 會依背後內容自動調整。要用 CI 截圖和 TestFlight 實機確認。
+- 玻璃上的文字（未選中的工具列、狀態列、跟車列，決策 677 起含 3D 地圖的時鐘、駕駛資訊、跟隨列）沒辦法算出固定對比，因為 Liquid Glass 會依背後內容自動調整。要用 CI 截圖和 TestFlight 實機確認。
 - 教學卡片的「完成這一步」提示是 `warning` 字放在 12% 的 `warning` 底上，對比會比 5.06:1 略低。
 
 ## 700T 靜態素材：白車身、綠松／黑線（2026-10-24，#1200）
