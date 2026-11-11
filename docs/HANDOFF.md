@@ -20,6 +20,7 @@
 > - **烏來第六代吊廂**（#1845，[README](art/wulai-cabin-studies-2026-11/README.md)）：白色 71 人往復式大型吊廂，近景 8,992、LOD 3,744 三角，窗與天窗透明、地板不透明。尺寸與輪系是推估；沒有旅客、開門、擺動動畫。加了 `wulai-cabin-metal.yml`（macOS，只在 PR 改到 `tools/wulai-cabin-studies/` 時跑）。**下一步**：作者看外觀；遊戲還沒有烏來纜車的路線，要先派 GameCore 的纜車路線（決策 574 的運具）才接得上。
 > - **貓空吊廂修真**（#1791，[README](art/maokong-cabin-refine-2026-11/README.md)）：已接進遊戲，CABLE3D 在 `09f95f74` 把它改成 Swift（`Map3DCableCar`、`Map3DCableCarParts`），吊廂地板和月台齊平。**下一步**：遊戲裡的玻璃還是不透明的，要改用上面的透明玻璃，先在配方裡把玻璃標出來；抱索器、角柱、吊架接頭還是簡化的。
 > - **機場與飛機**（#1844，決策 [594](decisions/594.md)，[README](art/airport-aircraft-2026-11/README.md)）：遊戲規劃第 49 任看總覽後，下一輪要改的：跑道是深藍色，應該是深灰柏油；十九座與七十座兩款螺旋槳機看不到螺旋槳；地勤車（tug、baggage、stairs、fuel）的輪子是方塊；城市航廈組景的塔台、機庫、航廈分開浮著，沒有地面把它們連起來；夜間版只是整體變暗，沒有跑道邊燈與機坪燈。接進遊戲前，要先另派一個決策，定出飛機在地圖上怎麼動、停在哪個機場（決策 594 沒有寫）。
+> - **機場與飛機，重做外觀**（決策 [698](decisions/698.md)，AIRCRAFT-LOOK，Mac 本機 2026-11-12）：上一行的五點與作者說的飛機外型都照 `model-look` 重做了四輪，[總覽與「還有哪裡不好」](art/airport-aircraft-2026-11/README.md)。等作者或規劃看總覽圖；接進遊戲是 AIRPORT-2，那時要在 Metal 實機看夜間的發光與地面顏色。
 
 > 國道客運車塗裝 studies（Codex，決策 593，`codex/coach-liveries`，2026-11-05）：三軸 coach 加八組中性塗裝（含原暖白／暖紅與觀光接駁），按需近遠景，不接營運。預設 `Map3DCoachBus.model()` 頂點與雜湊鎖住，街景選型／種子、GameCore、存檔、golden、fixtures 不動。私庫存完整模型、日夜七向 PNG、viewer 與 SOURCE.md；公開庫存配方、測試、一張總覽。外觀待作者看，Metal 實機與路線對色留後續。
 
@@ -593,7 +594,12 @@
 - **記著、還沒派**（本週額度到警告線，沒必要不多開 session）：
   - 機捷（TYMC_YIELD「建議的下一步」＝HEALTH-125 §6 第 1 項）：① 不靠讓路把車送進青埔 → ② 舊軌道兩航廈的結要清得掉 → ③「30 分鐘內還要它就不讓＋偏向機廠」。門檻見 HEALTH-125。
   - HEALTH-125 §6 第 2 項（機捷早上 3 班）、第 3 項（文湖）、第 4 項（量測缺口）。
-  - REVIEW-L17 的 P3 19 點（沒有派修，下次順手或湊一張單）。
+  - REVIEW-L17 的 P3：FIX-L17-P3（session_01YGNNup27StbDAzfYKwqhhE，`claude/fix-l17-p3`，2026-11-11）修了不動 GameCore 的幾點（L17-9 第 1 點、L17-10、L17-11、L17-14、L17-17 的用詞、L17-22、L17-23、L17-24，與 L17-2 附帶的那一句），逐點的表在它的 PR。**還沒修、留給之後的**：
+    - 要動 GameCore：L17-6 第 1 點（當天買當天賣的車種不進館）、第 2 點（博物館的今年／去年人次沒有記）；L17-7 第 3 點（沒有行車管制時月台加長的測試，測試在 GameCoreTests）。
+    - 駕駛（交給 DRIVE-2 或 Mac 的 MANUAL-DRIVE 手感，免得和它們改同一批檔案）：L17-13（結束駕駛不還原速度，要先決定還不還原；決策 686 的「不送任何指令」要補一句降速是 `setSpeed` 指令）、L17-15（等不到離站時沒有期限也沒有說明）、L17-16（接手那一刻的三個位置問題）、L17-17 其餘沒測到的路。
+    - 要 Mac 或實機：L17-6 第 3 點（博物館 3D）、L17-20（教學卡片第一次排版的位置）、L17-21（「沒開就再按一次」拿掉或記一筆活動；UI 測試，雲端編不了）。
+    - 要量或要報告測試：L17-8（估算在主執行緒重找軌道）、L17-9 第 2 點（「現在」用計畫班距）、L17-12（內灣門檻寫死，改票價／需求／容量的 PR 重跑 `NEIWAN_REPORT=1`）、L17-18（文湖水下段掃幾個開局原點）、L17-19（文湖新價格的斷言；舊存檔拿不到隧道要寫進發版說明）。
+    - `ci.yml` 的「Stack frames (reminder)」裝不到工具時不再紅（另一個 PR，`claude/stack-frames-no-apt`）；之後可以改用工具鏈自己的 `llvm-objdump`，就完全不靠 apt（`frames.py` 的解析與基準檔要跟著驗）。
   - 下面第 60 任「記著、還沒派」的各項照舊。
 - **下次發版前**：`.github/testflight-whats-new.md` 現在寫的是 0.6.0 (125)；要加月台軌道那一股能加長（合了才寫）、駕駛畫面整合（合了才寫）。
 
@@ -614,7 +620,7 @@
 - **記著、還沒派**（有完整 tier 名額再派）：
   - 子公司設計第 ① 步（`research/SUBSIDIARY_DESIGN_2026-11-11.md`），連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因查到了，不是退步：這條量測線三站排在 448 m 上，一天發車 640 次、每次 NT$225，每次只載 8–11 人（[HEALTH-125](research/HEALTH_125_2026-11-11.md) §5.4）；比子公司時改用 `testALineBetweenTwoTowns` 或只比差額。
   - MANUAL-DRIVE 第二步（開車要算數，動 GameCore，§4.61）。
-  - `python3 tools/station-kit/catalog.py --check` 在 main 就過期（4 列）。
+  - `python3 tools/station-kit/catalog.py --check` 在 main 就過期（4 列）：FIX-L17-P3 已照工具重產（保安、岡山、臺南、高雄的座標跟上打包資料）。
   - HEALTH-124 §6.5 的 (c)(d)；決策 682「之後可以做的」。
   - 不採用、不用再研究：Fenn 的「Anywhere」App（#1579 留言 6790826760）；Metal 4。
 - **下次發版前**（只在作者說發的時候；先看 main HEAD 的完整 `ci.yml` 與 full lane 都綠）：`.github/testflight-whats-new.md` 要寫到最低 iOS 26、文湖線河底、聲音、雨、Liquid Glass、新圖示、城市稱號、買車估算、手動駕駛、鐵道博物館、月台加長（合了才寫）。

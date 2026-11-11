@@ -105,8 +105,17 @@ final class CityTitleTests: XCTestCase {
             XCTAssertEqual(Set(Rank.allCases.map { $0.name(in: language) }).count, Rank.allCases.count)
             XCTAssertEqual(Set(Kind.allCases.map { $0.name(in: language) }).count, Kind.allCases.count)
         }
-        XCTAssertEqual(CityTitle.promotionText(.metropolis, in: .english), "The city has grown into a metropolis.")
-        XCTAssertEqual(CityTitle.promotionText(.metropolis, in: .traditionalChinese), "城市成長為都會。")
+        XCTAssertEqual(CityTitle.promotionText(.metropolis, in: .english), "This place has grown into a metropolis.")
+        XCTAssertEqual(CityTitle.promotionText(.metropolis, in: .traditionalChinese), "這裡成長為都會了。")
+        // Review L17-10: no rank's news names the rank twice ("The city
+        // has grown into a city.", "城市成長為城市。").
+        for rank in CityTitle.Rank.allCases {
+            for language in [DisplayLanguage.english, .traditionalChinese] {
+                let name = rank.name(in: language).lowercased()
+                let text = CityTitle.promotionText(rank, in: language).lowercased()
+                XCTAssertEqual(text.components(separatedBy: name).count, 2, text)
+            }
+        }
     }
 
     func testANewGamesMapIsATownAndAMapReadInAsNeededStartsWithNone() throws {
@@ -156,9 +165,9 @@ final class CityTitleTests: XCTestCase {
 
         setLand(session, residents: 120_000)
         try runADay(session)
-        XCTAssertEqual(promotions(session), ["城市成長為小城市。"])
-        XCTAssertEqual(session.news.items.first { $0.category == .growth }?.text(in: .english), "The city has grown into a small city.")
-        XCTAssertEqual(session.message?.text, "城市成長為小城市。")
+        XCTAssertEqual(promotions(session), ["這裡成長為小城市了。"])
+        XCTAssertEqual(session.news.items.first { $0.category == .growth }?.text(in: .english), "This place has grown into a small city.")
+        XCTAssertEqual(session.message?.text, "這裡成長為小城市了。")
         XCTAssertEqual(session.message?.kind, .success)
         XCTAssertEqual(sounds.filter { $0 == .goalMet }.count, 1)
         try runADay(session)
@@ -173,7 +182,7 @@ final class CityTitleTests: XCTestCase {
         // Two steps in a day: the size reached.
         setLand(session, residents: 1_300_000)
         try runADay(session)
-        XCTAssertEqual(promotions(session).first, "城市成長為大城市。")
+        XCTAssertEqual(promotions(session).first, "這裡成長為大城市了。")
         XCTAssertEqual(promotions(session).count, 2)
 
         // A loaded game says nothing of the size it is at.
@@ -200,6 +209,6 @@ final class CityTitleTests: XCTestCase {
             return ""
         })
         try runADay(session)
-        XCTAssertEqual(session.news.items.filter { $0.category == .growth }.map { $0.text(in: .english) }, ["The city has grown into a city."])
+        XCTAssertEqual(session.news.items.filter { $0.category == .growth }.map { $0.text(in: .english) }, ["This place has grown into a city."])
     }
 }

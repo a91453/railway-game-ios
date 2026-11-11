@@ -83,7 +83,7 @@ public final class GameSession {
     /// (the lines along the track, ``trackInspection(of:)``, the network
     /// tool's previews, ``networkPreview``) is worked out
     /// once for them, not at every tick.
-    @ObservationIgnored private(set) var commandRevision = 0
+    @ObservationIgnored public private(set) var commandRevision = 0
     /// The losing line the station master names, kept between commands and
     /// days (decision 194, later; ``worstLosingLine``).
     @ObservationIgnored let lineLossLeaderMemo = LineLossLeaderMemo()
