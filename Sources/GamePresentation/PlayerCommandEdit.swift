@@ -189,6 +189,11 @@ extension PlayerCommand {
         case setFerryRuns(FerryRouteID, BusService)
         case removeFerryRoute(FerryRouteID)
 
+        // MARK: Driving by hand (decision 693)
+        /// A run the player drove by hand, settled when it ended
+        /// (``GameWorld/settleDrivenRun(_:)``).
+        case settleDrivenRun(DrivenRun)
+
         /// A bus stop's land cell; a road's too (decision 438).
         public struct BusStop: Hashable, Sendable, Codable {
             public let row: Int
@@ -420,6 +425,7 @@ extension GameSession {
             outcome.building = try world.placeBuilding(kind, at: point, look: look ?? 0)
         case .sellBuilding(let id): outcome.sale = try world.sellPlacedBuilding(id)
         case .demolishBuilding(let id): try world.removePlacedBuilding(id)
+        case .settleDrivenRun(let run): outcome.drivenRun = try world.settleDrivenRun(run)
         case .setZone(let choice, let rows, let columns): outcome.number = try world.setZone(choice.zone, rows: rows, columns: columns)
         case .buyMapTile(let tile): try world.buyMapTile(tile)
         case .acceptRequest(let id): try world.acceptRequest(id)
