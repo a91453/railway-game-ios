@@ -135,6 +135,32 @@ final class TrainPurchaseEstimateTests: XCTestCase {
         XCTAssertFalse(TrainPurchaseModel.isOfTheFleet(dayCost: 50, modelCost: 0), "a line with no train now")
     }
 
+    /// Review L17-9: the trips of an hour are its open minutes over the
+    /// headway, divided once. Cut off minute by minute (1_000 / headway
+    /// sixty times) a train every 150 minutes ran a tenth fewer trips and
+    /// one every 1,200 minutes none.
+    func testALongHeadwayLosesNoTrips() {
+        XCTAssertEqual(TrainPurchaseModel.tripThousandths(minutes: 60, headway: 10), 6_000)
+        XCTAssertEqual(TrainPurchaseModel.tripThousandths(minutes: 60, headway: 150), 400)
+        XCTAssertEqual(TrainPurchaseModel.tripThousandths(minutes: 60, headway: 1_200), 50)
+        XCTAssertEqual(TrainPurchaseModel.tripThousandths(minutes: 0, headway: 10), 0)
+        XCTAssertEqual(TrainPurchaseModel.tripThousandths(minutes: 60, headway: 0), 0)
+    }
+
+    /// Review L17-2's rider: with a plan and no one in it on the line the
+    /// clock has run, so the note does not say to wait for it.
+    func testALineNoOneRidesSaysSoNotToWaitForTheClock() {
+        let estimate = TrainPurchaseEstimate(
+            demand: .noRiders, historyDays: 0, faresNow: .zero, costNow: Money(60_000_00),
+            fares: nil, cost: Money(80_000_00), addedCost: Money(20_000_00),
+            riders: nil, peakLoadPermille: nil, breakEvenRiders: 3_200, price: Money(380_000_00)
+        )
+        XCTAssertNil(estimate.tone)
+        XCTAssertTrue(estimate.headline(in: .traditionalChinese).hasSuffix("票收 —"))
+        XCTAssertEqual(estimate.note(in: .traditionalChinese), "這條線還沒有乘客，估不出票收。")
+        XCTAssertEqual(estimate.note(in: .english), "No one rides this line yet, so its fares cannot be estimated.")
+    }
+
     /// A line with no train yet, staffed: no day of its own to go by, and
     /// the estimate is still the days played after.
     func testStaffingALineWithNoTrainIsTheDaysPlayedAfter() throws {

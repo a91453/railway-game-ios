@@ -58,7 +58,7 @@ public struct ManualDrive: Equatable, Sendable {
         /// What VoiceOver reads for it.
         public func label(in language: DisplayLanguage) -> String {
             if isEmergency { return language.text("Emergency brake", "緊急煞車") }
-            if step > 0 { return language.text("Power \(step)", "動力 \(step) 段") }
+            if step > 0 { return language.text("Power \(step)", "加速 \(step) 段") }
             if step < 0 { return language.text("Brake \(-step)", "煞車 \(-step) 段") }
             return language.text("Neutral", "空檔")
         }

@@ -81,11 +81,19 @@ struct CityTitleSection: View {
         } footer: {
             Text(verbatim: CityTitle.helpText(in: language))
         }
-        .task(id: today) {
+        // Read again after a command too (review L17-11): a station built
+        // or land bought with the panel open adds residents at once.
+        .task(id: CityTitleReading(day: today, commands: session.commandRevision)) {
             title = CityTitle(world: session.world)
             isRead = true
         }
     }
+}
+
+/// What the city's title was read for: the day and the commands so far.
+private struct CityTitleReading: Hashable {
+    let day: Int64
+    let commands: Int
 }
 
 /// The goals panel's sections, also shown in the economy panel.

@@ -247,7 +247,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 | 「a resolved file is required…」 | 新增了遠端套件但沒提交 `Package.resolved` | 提交 `project.xcworkspace/xcshareddata/swiftpm/Package.resolved` |
 | Signing requires a development team | 沒設定 `DEVELOPMENT_TEAM` | 步驟 4 |
 | No profiles / bundle identifier 無法使用 | Bundle ID 被其他團隊占用或不一致 | 步驟 2；確認 app record、`project.yml`、Identifiers 三處相同 |
-| Missing app icon / 缺少 1024 圖示 | asset catalog 沒被打包 | `release-archive.yml` 會檢查 `Assets.car` 與 `CFBundleIcons`；圖示在 `RailwayGameApp/Resources/Assets.xcassets/AppIcon.appiconset`（1024×1024、不透明） |
+| Missing app icon / 缺少 1024 圖示 | asset catalog 沒被打包 | `release-archive.yml` 會檢查 `Assets.car` 與 `CFBundleIcons`；圖示在 `RailwayGameApp/Resources/AppIcon.icon`（決策 680 起；舊的 `Assets.xcassets/AppIcon.appiconset` 已刪） |
 | 上傳被拒：SDK / Xcode 版本太舊 | workflow 選了 Xcode 26 以前的版本 | Environment 改 Latest Release |
 | 上傳被拒：version / build 重複 | 同一個版本號下 build number 重複 | 不要手動改 build number；需要時用 Next Build Number，或提高 `MARKETING_VERSION` |
 | TestFlight 顯示 Missing Compliance | 未回答出口合規 | 步驟 9 |
