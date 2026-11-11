@@ -703,13 +703,15 @@ extension RealRailways {
     /// cannot be read is left out and listed in ``Loaded/issues`` (and the
     /// railways' ``loadIssues``) rather than dropped silently.
     ///
-    /// Decision 697: for each city of `overseas` its own files are read
-    /// too (`hk_track_lines.geojson`, `hkmtr.json`, …): its lines and
-    /// stations after Taiwan's, its timetable, its runs and its bridges
-    /// and tunnels. A city whose three map files cannot be read is left
-    /// out and listed, Taiwan's railways as they are.
+    /// Decision 697: for each city of `overseas` its map pack is read too
+    /// (`pack`: one folder with `track_lines.geojson`, `hkmtr.json`, … of
+    /// its own, in the app's bundle today, a downloaded one later): its
+    /// lines and stations after Taiwan's, its timetable, its runs and its
+    /// bridges and tunnels. A city whose pack or three map files cannot
+    /// be read is left out and listed, Taiwan's railways as they are.
     public static func load(
         overseas: Set<OverseasMap> = OverseasMaps.open,
+        pack: (OverseasMap) -> MapPack? = MapPack.bundled,
         file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data
     ) -> Loaded {
         var issues: [RealDataLoadIssue] = []
@@ -759,25 +761,40 @@ extension RealRailways {
         for key in bundledTimetables {
             timetables[key] = { try file("\(key)_times", "json") }
         }
-        // Decision 697: the open overseas cities, in a fixed order.
+        // Decision 697: the open overseas cities, in a fixed order, each
+        // from its own map pack (one folder, the names Taiwan's files
+        // have).
         let cities = OverseasMap.allCases.filter(overseas.contains)
         var overseasFiles: [OverseasFiles] = []
         var overseasRuns: [String: RealLineRuns] = [:]
         var overseasStructures: [RealRailStructures.Structure] = []
         for city in cities {
-            guard let lines = read("\(city.filePrefix)_track_lines", "geojson"),
-                  let stations = read("\(city.filePrefix)_track_stations", "geojson"),
-                  let names = read("\(city.filePrefix)_station_names", "json") else { continue }
+            let folder = city.packFolder
+            guard let pack = pack(city) else {
+                issues.append(RealDataLoadIssue(file: "MapPacks/\(folder)", error: ResourceError.missing("MapPacks/\(folder)")))
+                continue
+            }
+            func packed(_ name: String, _ ext: String) -> Data? {
+                do {
+                    return try pack.file(name, ext)
+                } catch {
+                    issues.append(RealDataLoadIssue(file: "MapPacks/\(folder)/\(name).\(ext)", error: error))
+                    return nil
+                }
+            }
+            guard let lines = packed("track_lines", "geojson"),
+                  let stations = packed("track_stations", "geojson"),
+                  let names = packed("station_names", "json") else { continue }
             overseasFiles.append(OverseasFiles(lines: lines, stations: stations, names: names))
-            systems[city.system] = read(city.system, "json")
             let key = city.system
-            timetables[key] = { try file("\(key)_times", "json") }
-            if let data = read("\(city.filePrefix)_metro_runs", "json"),
-               let runs = parse("\(city.filePrefix)_metro_runs.json", { try RealLineRuns.metroLines(data: data) }) {
+            systems[key] = packed(key, "json")
+            timetables[key] = { try pack.file("\(key)_times", "json") }
+            if let data = packed("metro_runs", "json"),
+               let runs = parse("MapPacks/\(folder)/metro_runs.json", { try RealLineRuns.metroLines(data: data) }) {
                 overseasRuns.merge(runs) { first, _ in first }
             }
-            if let data = read("\(city.filePrefix)_rail_structures", "json"),
-               let found = parse("\(city.filePrefix)_rail_structures.json", { try RealRailStructures(data: data) }) {
+            if let data = packed("rail_structures", "json"),
+               let found = parse("MapPacks/\(folder)/rail_structures.json", { try RealRailStructures(data: data) }) {
                 overseasStructures += found.structures
             }
         }

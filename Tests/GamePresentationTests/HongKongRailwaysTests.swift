@@ -8,8 +8,13 @@ import XCTest
 @MainActor
 final class HongKongRailwaysTests: XCTestCase {
     /// The bundled files read with Hong Kong open.
-    nonisolated static let open: RealRailways.Loaded = RealRailways.load(overseas: [.hongKong]) { name, ext in
+    nonisolated static let open: RealRailways.Loaded = RealRailways.load(overseas: [.hongKong], pack: pack) { name, ext in
         try BundledRealData.file(name, ext)
+    }
+
+    /// The app's map pack of a city, in the repository.
+    nonisolated static func pack(_ city: OverseasMap) -> MapPack? {
+        MapPack(root: BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder))
     }
 
     static func railways() throws -> RealRailways {
@@ -67,13 +72,45 @@ final class HongKongRailwaysTests: XCTestCase {
     /// A city whose files are missing is left out and said so; Taiwan's
     /// railways still load.
     func testAMissingHongKongFileLeavesTaiwanLoaded() throws {
-        let loaded = RealRailways.load(overseas: [.hongKong]) { name, ext in
-            if name.hasPrefix("hk") { throw RealRailways.ResourceError.missing("\(name).\(ext)") }
-            return try BundledRealData.file(name, ext)
+        let empty = MapPack(root: FileManager.default.temporaryDirectory.appendingPathComponent("no-such-map-pack"))
+        for pack in [empty, nil] {
+            let loaded = RealRailways.load(overseas: [.hongKong], pack: { _ in pack }) { name, ext in
+                try BundledRealData.file(name, ext)
+            }
+            let railways = try XCTUnwrap(loaded.railways)
+            XCTAssertEqual(railways.lines.map(\.lineKey), try BundledRealData.railways().lines.map(\.lineKey))
+            XCTAssertFalse(loaded.issues.isEmpty)
         }
-        let railways = try XCTUnwrap(loaded.railways)
-        XCTAssertEqual(railways.lines.map(\.lineKey), try BundledRealData.railways().lines.map(\.lineKey))
-        XCTAssertFalse(loaded.issues.isEmpty)
+    }
+
+    /// The pack is one folder that holds all of Hong Kong and nothing of
+    /// it is among Taiwan's files; `pack.json` lists every file in it with
+    /// where its fields come from.
+    func testThePackIsSelfContained() throws {
+        let pack = try XCTUnwrap(Self.pack(.hongKong))
+        let files = try FileManager.default.contentsOfDirectory(atPath: pack.root.path).sorted()
+        struct Manifest: Decodable {
+            struct File: Decodable {
+                let bytes: Int
+                let sources: [String: String]
+            }
+
+            let id: String
+            let system: String
+            let files: [String: File]
+        }
+        let manifest = try JSONDecoder().decode(Manifest.self, from: pack.file("pack", "json"))
+        XCTAssertEqual(manifest.id, "hongkong")
+        XCTAssertEqual(manifest.system, OverseasMap.hongKong.system)
+        XCTAssertEqual(files.filter { $0 != "pack.json" }, manifest.files.keys.sorted())
+        for (name, file) in manifest.files {
+            let size = try XCTUnwrap(try FileManager.default.attributesOfItem(atPath: pack.root.appendingPathComponent(name).path)[.size] as? Int)
+            XCTAssertEqual(size, file.bytes, name)
+            XCTAssertFalse(file.sources.isEmpty, name)
+            XCTAssertTrue(file.sources.values.allSatisfy { ["OpenStreetMap", "MTR open data", "this project"].contains($0) }, name)
+        }
+        let taiwan = try FileManager.default.contentsOfDirectory(atPath: BundledRealData.directory.path)
+        XCTAssertFalse(taiwan.contains { $0.hasPrefix("hk") })
     }
 
     // MARK: - The map

@@ -4,9 +4,10 @@ import GameCore
 // Decision 697: the real railways of cities outside Taiwan. The owner's
 // idea (2026-11-11) is that an international airport's flights open an
 // overseas city's map, Hong Kong first. This is the data's side of it: the
-// city's lines are bundled in files of their own (`hk_*.json`,
-// `hkmtr*.json`, made by `tools/hk-map/`), beside Taiwan's and in the same
-// formats, and read only for a city that is open. None is yet: the rule
+// city's lines are one self-contained folder, its map pack
+// (`Resources/MapPacks/hongkong`, made by `tools/hk-map/`), in the formats
+// and under the file names of Taiwan's, and read only for a city that is
+// open. None is yet: the rule
 // that opens one (the flights) is not written, so ``OverseasMaps/open`` is
 // empty and the game reads, lists and sells exactly what it did.
 
@@ -23,10 +24,10 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
         }
     }
 
-    /// What its map files' names start with (`hk_track_lines.geojson`).
-    var filePrefix: String {
+    /// Its map pack's folder (`MapPacks/hongkong`).
+    public var packFolder: String {
         switch self {
-        case .hongKong: "hk"
+        case .hongKong: "hongkong"
         }
     }
 
@@ -36,6 +37,30 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
         switch self {
         case .hongKong: RealRailways.Coordinate(latitude: 22.315901, longitude: 113.936517)
         }
+    }
+}
+
+/// A city's map pack: one folder that holds everything of the city the
+/// game reads (`pack.json` says what is in it and where each part comes
+/// from). It is in the app's bundle today; the owner's plan (2026-11-11) is
+/// to download it apart from the app, and a downloaded pack is read the
+/// same way, from its folder.
+public struct MapPack: Sendable {
+    /// The pack's folder.
+    public let root: URL
+
+    public init(root: URL) {
+        self.root = root
+    }
+
+    /// The contents of the pack's file `name.ext`.
+    public func file(_ name: String, _ ext: String) throws -> Data {
+        try Data(contentsOf: root.appendingPathComponent("\(name).\(ext)"))
+    }
+
+    /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
+    public static func bundled(_ city: OverseasMap) -> MapPack? {
+        Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }
     }
 }
 

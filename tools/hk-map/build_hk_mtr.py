@@ -25,9 +25,9 @@ next-train feed) holds each line's seconds between stations, its headways
 and its first train; the day's trips are laid out from them and the file
 says so (`estimated`).
 
-Writes `hkmtr.json`, `hkmtr_times.json`, `hk_track_lines.geojson`,
-`hk_track_stations.geojson`, `hk_station_names.json`,
-`hk_rail_structures.json` into the folder, and `hk_sources.json` (what
+Writes `hkmtr.json`, `hkmtr_times.json`, `track_lines.geojson`,
+`track_stations.geojson`, `station_names.json`,
+`rail_structures.json` into the folder, and `hk_sources.json` (what
 it read, with checksums) beside this tool.
 """
 import collections
@@ -166,6 +166,17 @@ def english(node):
     return name.split(" ", 1)[1] if name[:1] > "⹿" and " " in name else name
 
 
+# Where MTR writes a station's name with another form of a character than
+# OpenStreetMap does, the game shows MTR's (the name on the station).
+MTR_SPELLING = {"荔景": "茘景", "荔枝角": "茘枝角"}
+
+
+def chinese_name(node):
+    tags = node["tags"]
+    name = (tags.get("name:zh") or tags.get("name", "")).split(" ", 1)[0]
+    return MTR_SPELLING.get(name, name)
+
+
 def line_of(spec, rows, relations, parts):
     line_id, code, direction, chinese, english_name, first_kept = spec
     wanted = [r for r in rows if r["Line Code"] == code and r["Direction"] == direction]
@@ -189,6 +200,12 @@ def line_of(spec, rows, relations, parts):
     if chosen is None:
         sys.exit(f"{line_id}: no OpenStreetMap route relation stops at the CSV's stations in its order: {names}")
     relation, stops = chosen
+    # The names the game shows are OpenStreetMap's; MTR's list only checks
+    # them, so the pack stands without it.
+    for stop, row in zip(stops, wanted):
+        if chinese_name(parts.nodes[stop]) != row["Chinese Name"]:
+            sys.exit(f"{line_id}: OpenStreetMap calls {row['Chinese Name']} ({row['English Name']}) "
+                     f"{chinese_name(parts.nodes[stop])}")
     if relation["tags"].get("colour", "").upper() != COLOURS[code]:
         sys.exit(f"{line_id}: OpenStreetMap's colour is now {relation['tags'].get('colour')}, not {COLOURS[code]}")
     graph, at, way_of = collections.defaultdict(list), {}, {}
@@ -221,7 +238,7 @@ def line_of(spec, rows, relations, parts):
                     structures.append(run)
         else:
             shape.append(at[stop])
-        stations.append({"row": wanted[i], "at": at[stop], "vertex": len(shape) - 1})
+        stations.append({"row": wanted[i], "stop": stop, "at": at[stop], "vertex": len(shape) - 1})
     along = [0.0]
     for a, b in zip(shape, shape[1:]):
         along.append(along[-1] + metres(a, b))
@@ -235,7 +252,8 @@ def line_of(spec, rows, relations, parts):
     return {
         "id": line_id, "code": code, "chinese": chinese, "english": english_name, "colour": COLOURS[code],
         "relation": relation["id"],
-        "stations": [{"name": s["row"]["Chinese Name"], "english": s["row"]["English Name"], "code": s["row"]["Station Code"],
+        "stations": [{"name": chinese_name(parts.nodes[s["stop"]]), "english": english(parts.nodes[s["stop"]]),
+                      "code": s["row"]["Station Code"],
                       "lon": round(s["at"][0], 6), "lat": round(s["at"][1], 6), "d": round(along[s["vertex"]] / 1000, 4)}
                      for s in stations],
         "shape": [[round(x, 6), round(y, 6)] for x, y in shape],
@@ -279,6 +297,43 @@ def write(folder, name, value):
         f.write("\n")
 
 
+# Where each part of each file of the pack comes from (`pack.json`), so the
+# parts that are MTR's can be told from OpenStreetMap's and taken out
+# without making the rest again.
+OSM, MTR, OURS = "OpenStreetMap", "MTR open data", "this project"
+SOURCES = {
+    "track_lines.geojson": {"geometry": OSM, "color": OSM, "id (MTR's line code)": MTR, "name": OURS},
+    "track_stations.geojson": {"geometry": OSM, "name (checked against MTR's list)": OSM, "name of 茘景 and 茘枝角 (MTR's form of 荔)": MTR, "color": OSM,
+                               "code (MTR's station code)": MTR},
+    "station_names.json": {"en (checked against MTR's list)": OSM, "routes": OURS},
+    "rail_structures.json": {"structures": OSM},
+    "hkmtr.json": {"stations (order checked against MTR's list)": OSM, "shape": OSM, "color": OSM,
+                   "segs.run, peakHeadwaySec, offpeakHeadwaySec (sampled from MTR's next-train feed)": MTR,
+                   "dwellSec": OURS},
+    "hkmtr_times.json": {"sets (laid out from headways and running times sampled from MTR's next-train feed)": MTR},
+    "metro_runs.json": {"runs (hkmtr_times.json's trips)": MTR, "overnight, tracks, positioning runs": OURS},
+}
+
+
+def write_manifest(folder):
+    """`pack.json`: what the pack is and, for each file in it, its size and
+    where its parts come from."""
+    files = {name: {"bytes": os.path.getsize(os.path.join(folder, name)), "sources": SOURCES[name]}
+             for name in sorted(SOURCES) if os.path.exists(os.path.join(folder, name))}
+    write(folder, "pack.json", {
+        "id": "hongkong", "system": SYSTEM, "decision": 697,
+        "english": "Hong Kong", "chinese": "香港",
+        "_readme": "Hong Kong's map pack: MTR's ten heavy-rail lines in the formats and under the file names of "
+                   "Taiwan's real railways, read from this folder alone. Made by tools/hk-map (README.md there).",
+        "bytes": sum(f["bytes"] for f in files.values()),
+        "licences": {
+            OSM: "© OpenStreetMap contributors, ODbL 1.0",
+            MTR: "MTR Corporation Limited, DATA.GOV.HK Terms and Conditions of Use",
+        },
+        "files": files,
+    })
+
+
 def main(extract, stations_csv, service_json, out):
     with open(stations_csv, encoding="utf-8-sig") as f:
         rows = [r for r in csv.DictReader(f) if r["Line Code"]]
@@ -292,7 +347,7 @@ def main(extract, stations_csv, service_json, out):
 
     osm = {"credit": "© OpenStreetMap contributors", "license": "ODbL-1.0", "extract": os.path.basename(extract),
            "newestTrackEdit": parts.newest, "method": "tools/hk-map/build_hk_mtr.py"}
-    mtr = ("Station order and names: MTR Corporation Limited, MTR routes, fares and barrier-free facilities "
+    mtr = ("Station names and order: OpenStreetMap, checked against MTR Corporation Limited, MTR routes, fares and barrier-free facilities "
            "(mtr_lines_and_stations.csv), DATA.GOV.HK. Times between stations, headways and first trains: "
            "sampled from MTR Corporation Limited's Real-time MTR train information, DATA.GOV.HK ("
            + service["sampled"] + "). Tracks and stopping points: © OpenStreetMap contributors, ODbL 1.0.")
@@ -318,7 +373,7 @@ def main(extract, stations_csv, service_json, out):
         "lines": {line["id"]: {"days": ["每日"] * 7, "holiday": "每日",
                                "sets": {"每日": trips(line, service["lines"][line["id"]])}} for line in lines},
     })
-    write(out, "hk_track_lines.geojson", {
+    write(out, "track_lines.geojson", {
         "type": "FeatureCollection", "source": mtr, "osm": osm,
         "features": [{"type": "Feature",
                       "properties": {"sys": SYSTEM, "id": line["id"], "lineKey": f"{SYSTEM}|{line['id']}",
@@ -326,7 +381,7 @@ def main(extract, stations_csv, service_json, out):
                       "geometry": {"type": "LineString", "coordinates": line["shape"]}}
                      for n, line in enumerate(lines)],
     })
-    write(out, "hk_track_stations.geojson", {
+    write(out, "track_stations.geojson", {
         "type": "FeatureCollection", "source": mtr, "osm": osm,
         "features": [{"type": "Feature",
                       "properties": {"sys": SYSTEM, "lineId": line["id"], "lineKey": f"{SYSTEM}|{line['id']}",
@@ -339,13 +394,13 @@ def main(extract, stations_csv, service_json, out):
         for s in line["stations"]:
             if names.setdefault(s["name"], s["english"]) != s["english"]:
                 sys.exit(f"{s['name']} has two English names")
-    write(out, "hk_station_names.json", {
+    write(out, "station_names.json", {
         "source": mtr,
         "systems": {SYSTEM: {name: {"en": en} for name, en in sorted(names.items())}},
         "routes": {SYSTEM: {line["chinese"]: {"en": line["english"]} for line in lines}},
     })
-    write(out, "hk_rail_structures.json", {
-        "_readme": "Where the MTR lines of hk_track_lines.geojson are on bridges and viaducts (bridge) or in "
+    write(out, "rail_structures.json", {
+        "_readme": "Where the MTR lines of track_lines.geojson are on bridges and viaducts (bridge) or in "
                    "tunnels (tunnel), one OpenStreetMap way of the traced direction each. Made by "
                    "tools/hk-map/build_hk_mtr.py.",
         "source": {"openStreetMap": osm},
@@ -366,6 +421,7 @@ def main(extract, stations_csv, service_json, out):
         "lines": [{"id": line["id"], "osmRelation": line["relation"], "stations": len(line["stations"]),
                    "km": line["stations"][-1]["d"]} for line in lines],
     })
+    write_manifest(out)
     for line in lines:
         print(f"{line['id']:8} {len(line['stations']):2} stations {line['stations'][-1]['d']:6.2f} km "
               f"{len(line['shape']):4} points {len(line['structures']):3} structures  relation {line['relation']}")
