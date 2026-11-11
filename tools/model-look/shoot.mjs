@@ -5,7 +5,7 @@
 // same shots. .claude/skills/model-look/SKILL.md says how to read it.
 //
 //   node tools/model-look/shoot.mjs --model new.m3dmodel [--before old.m3dmodel]
-//     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--title text] --out sheet.jpg
+//     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--labels 改前,改後] [--title text] --out sheet.jpg
 //
 // heading: degrees round the model from its front (native +x), towards its
 // left (+y); elevation: degrees above the ground. --focus: the box (centre
@@ -36,7 +36,7 @@ try{
  const page=await browser.newPage({viewport:{width:800,height:600},deviceScaleFactor:1});
  page.on('pageerror',e=>{throw e;});
  await page.goto('http://127.0.0.1:'+server.address().port+'/');
- await page.evaluate(async({title,photos,hasBefore,focus})=>{
+ await page.evaluate(async({title,photos,hasBefore,focus,labels})=>{
   const {NativeRenderer}=await import('/renderer.js'),renderer=new NativeRenderer(document.getElementById('canvas'));
   const models={};for(const name of hasBefore?['before','after']:['after'])models[name]=await(await fetch('/'+name+'.m3dmodel')).arrayBuffer();
   const rad=d=>d*Math.PI/180;
@@ -55,7 +55,7 @@ try{
   }
   // Map3DCamera: 35° of view up an 844-point screen; flat from 800 m, 42° over at 120 m.
   const zooms=[400,600,800].map(distance=>{const u=Math.min(1,Math.max(0,Math.log(800/distance)/Math.log(800/120)));return {distance,tilt:42*u*u*(3-2*u),points:844/(2*distance*Math.tan(rad(17.5)))};});
-  const sheet=document.getElementById('sheet'),names=Object.keys(models),label={before:'改前',after:names.length>1?'改後':'模型'};
+  const sheet=document.getElementById('sheet'),names=Object.keys(models),label=labels?{before:labels[0],after:labels[1]||labels[0]}:{before:'改前',after:names.length>1?'改後':'模型'};
   const style=document.createElement('style');style.textContent='body{margin:0;background:#fff;font:13px system-ui,"PingFang TC";color:#262c57}#sheet{width:776px;padding:12px}h1{font-size:17px;margin:0 0 6px}h2{font-size:14px;margin:12px 0 4px}.row{display:flex;gap:8px;align-items:flex-end}.cell{flex:1;min-width:0;text-align:center}.ground{background:#eceef6;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px;overflow:hidden;margin-bottom:6px}.ground img{max-width:none;flex:none}.big{background:#eceef6;border-radius:6px}.cell img{max-width:100%}.photo img{width:100%;border-radius:6px}p{margin:2px 0;font-size:12px}';document.head.append(style);
   const add=(tag,text,parent=sheet)=>{const e=document.createElement(tag);if(text)e.textContent=text;parent.append(e);return e;};
   add('h1',title);
@@ -71,7 +71,7 @@ try{
    const cell=add('div','',row);cell.className='cell photo';const image=add('img','',cell);image.src=photo.src;add('p',photo.caption,cell);
    for(const name of names){const c=add('div','',row);c.className='cell';const w=names.length>1?250:380;const m=shot(name,photo.heading,90-photo.elevation,w,Math.round(w*0.7));m.className='big';c.append(m);add('p',label[name],c);}}
   await Promise.all([...document.images].map(i=>i.decode()));
- },{title:option.title||'model look',photos,hasBefore:!!option.before,focus:option.focus?option.focus.split(',').map(Number):null});
+ },{title:option.title||'model look',photos,hasBefore:!!option.before,focus:option.focus?option.focus.split(',').map(Number):null,labels:option.labels?option.labels.split(','):null});
  writeFileSync(resolve(option.out),await (await page.$('#sheet')).screenshot({type:'jpeg',quality:86}));
  console.log('Wrote '+option.out+' (800 px wide)');
 }finally{await browser.close();server.close();}

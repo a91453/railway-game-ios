@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: redo-jiji-station
+expected_outcome: |
+  The station gets its own recipe, rebuilt from real photographs over at least three
+  look rounds (picture at the game's angle and size, faults listed against the checklist,
+  changes recorded), ending with one overview picture for someone else to judge and a
+  report whose last section says what is still not good. Whether the model looks like the
+  real station is for a person to judge from the overview, not for a grader.
