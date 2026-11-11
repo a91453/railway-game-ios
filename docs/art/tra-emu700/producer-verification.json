@@ -3072,7 +3072,7 @@
   "metadata_inputs": [
     {
       "file": "source-record.json",
-      "sha256": "1bfce493bced5310b45c1030ae29dfa4b56daa7986007cf643bc6bf1157cbab6"
+      "sha256": "40cb173bd992cb76a83adfb3a942354579b59c9c2e310131f87d2036ec16ba7d"
     },
     {
       "file": "status.json",

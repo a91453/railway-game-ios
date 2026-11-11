@@ -31,7 +31,7 @@
 
 - [運安會事故報告](https://www.ttsb.gov.tw/media/7054/0528臺鐵第177次車竹南站重大鐵道事故調查報告.pdf)：尺寸表，屬官方資料。
 - [鐵道局公開文件](https://www.rb.gov.tw/public/files/artsinfo/1622511915-m0.pdf)、[台灣車輛2019年報](https://www.csmc.com.tw/dist/uploads/report/2019.pdf)：角色、改造背景；不將各文件混稱本車完整工程圖。
-- 實車多視角：[PPT](https://blair-train.blogspot.com/2020/08/35ppt1000.html)、[PPH](https://blair-train.blogspot.com/2013/07/35pph1300.html)、[PPC](https://blair-train.blogspot.com/2011/09/35ppc1400.html)、[PPD／後續改造照片](https://blair-train.blogspot.com/2011/04/40ppd2500.html)。最後一頁標題仍為 PPD，2021／2022 照片只用作改造外形證據，不因頁名確認現行車種。
+- 實車多視角：第三方鐵道攝影部落格PPT、第三方鐵道攝影部落格PPH、第三方鐵道攝影部落格PPC、第三方鐵道攝影部落格PPD／後續改造照片。最後一頁標題仍為 PPD，2021／2022 照片只用作改造外形證據，不因頁名確認現行車種。
 - 私庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/ppcoach.json`／`.webp`：實看簡化預覽與 metadata；工程尺寸為 null，長約9.788 m的Q比例、四窗與扁盒屋頂不能作標準PPT模板。未移植其 mesh。
 
 ## 原生契約與真正前版

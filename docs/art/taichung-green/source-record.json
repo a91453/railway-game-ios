@@ -53,10 +53,10 @@
       "redistributed": false
     },
     {
-      "file": "blair-real.jpg",
+      "file": "photoblog-real.jpg",
       "kind": "photo",
-      "url": "https://blair-bus.blogspot.com/2023/08/blog-post_20.html",
-      "author": "Blair Yu",
+      "url": "third-party railway photo blog (full record in the private assets repository)",
+      "author": "third-party railway photo blog",
       "date": "2023-08-20",
       "retrieved": "2026-10-28",
       "license": "No reuse license found; visual observation only",
@@ -105,7 +105,7 @@
   ],
   "unknowns": [
     "No confirmed numeric series designation; use 台中捷運中運量電聯車/Green line DM1/DM2, never C371/C381",
-    "TRSC shared manufacture and car-number allocation reported by Blair Yu; not independently confirmed by manufacturer primary page",
+    "TRSC shared manufacture and car-number allocation reported by third-party railway photo blog; not independently confirmed by manufacturer primary page",
     "Bogie centres, 0.39m visual tyre radius, 2.1m wheelbase, HVAC length and individual equipment stations are photo estimates",
     "DM1 and DM2 underfloor boxes simplified differently; exact hidden component identities/stations UNVERIFIED",
     "A/B side doorway count from official diagram; hidden left/right underfloor asymmetry not established",
@@ -114,10 +114,10 @@
   "user_supplied": [
     {
       "kind": "illustration",
-      "author": "K.Y.Chung / Nanyue Express",
+      "author": "third-party illustrator",
       "license": "CC BY-NC-ND 4.0 as printed",
       "use": "Observed only; no tracing or redistribution",
-      "url": "https://rail.kychung.com",
+      "url": "third-party illustrator (full record in the private assets repository)",
       "date": "unknown"
     },
     {
@@ -138,7 +138,7 @@
   "recheck": "User supplied the same four real-train photos again. All four re-inspected in chat; no downloadable originals/SHA for these attachments. Revised cab mask, green wrap, lower skirt/coupler; withdrew lenient revision2 self-assessment. Primary downloaded originals still listed below.",
   "revision4_paint_review": {
     "date": "2026-10-28",
-    "observed": "Reopened actual TMRT official front and Blair Nantun photos alongside true revision3 native views. Outer dark cheeks join shoulder to lamp housings; white U lies between central black mask and dark cheeks. Upper green returns across shoulder.",
+    "observed": "Reopened actual TMRT official front and third-party railway photo blog Nantun photos alongside true revision3 native views. Outer dark cheeks join shoulder to lamp housings; white U lies between central black mask and dark cheeks. Upper green returns across shoulder.",
     "simplification": "Real green/navy transition is soft; model uses existing solid palette boundaries, no gradient/photo texture. Paint curve dimensions remain photo estimates.",
     "geometry_protection": "Body, glazing, lights and equipment unchanged; only added front paint panels and repainted/resegmented shoulder strips. Baked cab occlusion changes nearby colours."
   }

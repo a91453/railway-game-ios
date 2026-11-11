@@ -21,7 +21,7 @@ PP 公開 #1291／私有 #87 尚未合併，因此本分支 **codex/e1000-pp-202
 
 官方來源：[運安會《0528臺鐵第177次車竹南站重大鐵道事故調查報告》](https://www.ttsb.gov.tw/media/7054/0528臺鐵第177次車竹南站重大鐵道事故調查報告.pdf)，§1.5.1／表1.5-1／表1.5-2；規格位於印刷頁10（PDF頁24）。[E1000彙整](https://zh.wikipedia.org/w/index.php?title=台鐵E1000型電力機車&oldid=94003313)只作二手交叉資料，不把它稱原廠圖。
 
-實際看過 [E1047實車](https://commons.wikimedia.org/wiki/File:E1047_at_Changhua_Station_01.jpg)、[Blair E1000搜尋頁](https://blair-train.blogspot.com/search?q=E1000)取得的7張實車正／側照片及3張銘牌（銘牌不用於造型、不轉印）、使用者原第5／7張E1000 HO照片及編組宣傳圖。來源網址、SHA與用途逐檔記record；原始圖片留在私有研究空間，不放公開庫／交付包，不送外部生成服務。
+實際看過 [E1047實車](https://commons.wikimedia.org/wiki/File:E1047_at_Changhua_Station_01.jpg)、第三方鐵道攝影部落格第三方鐵道攝影部落格 E1000搜尋頁取得的7張實車正／側照片及3張銘牌（銘牌不用於造型、不轉印）、使用者原第5／7張E1000 HO照片及編組宣傳圖。來源網址、SHA與用途逐檔記record；原始圖片留在私有研究空間，不放公開庫／交付包，不送外部生成服務。
 
 私庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/e1000.json`／`.webp` 的真預覽與metadata已讀：工程尺寸null、Q比例長9.818 m／60,710三角，與實車尺寸、平側板／兩處窄格柵不同。只觀察，不移植mesh／配色／貼圖。
 

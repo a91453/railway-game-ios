@@ -14,9 +14,9 @@
     "spec/SHA and technical reports"
   ],
   "metadata_inputs": {
-    "docs/art/tra-r200/sources.json": "84cef9a0737119a870699c98582c16247200ae539e587aec4aef8d4d00db1b04",
+    "docs/art/tra-r200/sources.json": "e99571f0809da846920360ada55a00f01419c6230de39c12930beafa26814015",
     "docs/art/tra-r200/status.json": "9943e761c4edd4e25232149bbb9d7d5d8a7c8ad6d80fcca53edcbba1d666bc71",
-    "docs/art/tra-r200/README.md": "de7b1b9bb3ec7e54cd5bb11c93353a6806bce3cf4cc962af5dea89b8f875bdb6",
+    "docs/art/tra-r200/README.md": "4bd8ba9a10e3bb5cabca558a24ddd1ec054b01635356baddc834c4cf0f85fe0c",
     "tools/tra-r200/configuration.json": "7d4a67072cabfb85846888cec12fca92b2e178cada35e924c9a019cd30858765",
     "tools/tra-r200/curate.py": "8f08dc26818e2ba372adf88633a4fcb90808b6f8f99462580e79302243e3355c",
     "tools/tra-r200/review.mjs": "97f575b4c5c789477a4447714aa72a52130ac721e0c6e90d8d6cb94ef2e88eb9",

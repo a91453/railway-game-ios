@@ -10,7 +10,7 @@
     },
     {
       "file": "IDENTITY.md",
-      "sha256": "d373efb9e2dce9eddc0e69db32077ece84154577a3fe3c3c73952ea710be1d59",
+      "sha256": "540bc1b77918be626cb0e442ae5c4fe611cff4891e1ebd162c90f3ea38b343ea",
       "identical": true
     },
     {
@@ -30,7 +30,7 @@
     },
     {
       "file": "blue-sources.json",
-      "sha256": "5f14c9f057e76f5e07b66b2481b6d114baf0defa1a12772ef8c8b575c75b27d1",
+      "sha256": "e24356a7d367debe76747ad5e535136dd01ecbd8e9ea18b7d4ed808a3190480a",
       "identical": true
     },
     {
@@ -40,7 +40,7 @@
     },
     {
       "file": "formation.json",
-      "sha256": "12a0fd4a42c9e1fe888aa4c355cd69da25f2c7a330832eef15b52776d3708e97",
+      "sha256": "d291053dc45a622db02f4497e4cf456fded4a4ab121899529c427d3da9adce5f",
       "identical": true
     },
     {
@@ -320,7 +320,7 @@
     },
     {
       "file": "source-record.json",
-      "sha256": "e54e7df1ee97b07cff074744e910b2eebcccc2441edbe5784507cc313bc00bea",
+      "sha256": "bf31bd3a8eace02bad836d00b56216ed05d94f9a0bf41491f90f004bb5dfd683",
       "identical": true
     },
     {
@@ -330,7 +330,7 @@
     },
     {
       "file": "swift-assembly-verification.json",
-      "sha256": "0977e4f33b10878f0557c0fafa7ecba2b7587c2cdeaec52795acc7ed2127c5ee",
+      "sha256": "0c7b8ffa2765a38bf4d45fe4812378d5f5aa5d383417cc6f93e23a7116bced18",
       "identical": true
     }
   ]
