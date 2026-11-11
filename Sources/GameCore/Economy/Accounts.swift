@@ -97,6 +97,8 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// in, and their boats' running, out, beside the lines' as the buses'.
     case ferryFares
     case ferryRunning
+    /// What a run the player drove well earned (decision 693; native), in.
+    case drivingBonus
 }
 
 /// One line of a ledger row's breakdown.
@@ -177,6 +179,8 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailyCableways
         /// A day's ferries: fares and running (decision 585).
         case dailyFerries
+        /// A run the player drove by hand, settled (decision 693).
+        case drivenRun
     }
 
     public let kind: Kind
@@ -243,7 +247,7 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales, .busFares, .cablewayFares, .ferryFares: propertyRevenue = propertyRevenue + line.amount
+            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales, .busFares, .cablewayFares, .ferryFares, .drivingBonus: propertyRevenue = propertyRevenue + line.amount
             case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost, .dayPassFares, .busRunning, .cablewayRunning, .ferryRunning: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount

@@ -457,14 +457,20 @@
 ///     refuse the kind and the whole save with it, so it says the save is
 ///     newer than it instead. A save of any earlier version needs no step:
 ///     it has no museum.
+/// 89. The runs driven by hand (decision 693): a world that has settled
+///     one has `"driving"`, the company's record of them, and its ledger
+///     may hold rows of the kind `"drivenRun"` with the item
+///     `"drivingBonus"`. A build that reads only an earlier version would
+///     refuse the row and the whole save with it, so it says the save is
+///     newer than it instead. A save of any earlier version needs no step:
+///     it has no such run.
 /// 90. Airports (decision 695): a world can have its `"airports"`, the
 ///     terminals of its map with their passengers, flights and hours and
 ///     the day last counted. A build that reads only an earlier version
 ///     would drop them, and the air passengers would stop riding, so it
 ///     says the save is newer than it instead. A save of any earlier
 ///     version needs no step: it has no airports (the app gives a free
-///     game on a real-world map its map's when it opens the save). (88 and
-///     89 are reserved by other tasks in the work registry.)
+///     game on a real-world map its map's when it opens the save).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
     public static let currentVersion = 90
@@ -689,7 +695,9 @@ extension SavedGame: Codable {
         // every stop (decision 605): nothing to turn.
         // Version 86 or earlier to 87: a world before version 87 has no
         // railway museum (decision 684): nothing to turn.
-        // Version 87 or earlier to 90: a world without `"airports"` has
+        // Version 88 or earlier to 89: a world before version 89 has
+        // settled no run driven by hand (decision 693): nothing to turn.
+        // Version 89 or earlier to 90: a world without `"airports"` has
         // none (decision 695): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
