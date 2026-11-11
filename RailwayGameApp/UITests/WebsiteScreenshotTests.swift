@@ -111,8 +111,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// the side and from higher up, and from higher up seeing underground
     /// (decision 672). For the screenshot review of the pull request that
     /// laid that stretch underground (it was a trench across the river).
-    func testWenhuUnderTheKeelungRiver() {
-        shootRealDepot("wenhu-keelung-river", at: "25.075958,121.546208")
+    func testWenhuUnderTheKeelungRiver() { shootRealDepot("wenhu-keelung-river", at: "25.075958,121.546208") }
+    func testWenhuUnderTheKeelungRiverSeenUnderground() {
         shootRealDepot("wenhu-keelung-river-underground", at: "25.075958,121.546208", views: [("high", "900,200,20")],
                        extra: ["-map.showsUnderground", "YES"])
     }
