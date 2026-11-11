@@ -2556,10 +2556,23 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
             shootCityTitle(english ? "city-title-blank-english" : "city-title-blank", in: app)
         }
+        // A new game in Taipei: the demo has no goals in its menu.
         let app = launch()
         defer { app.terminate() }
-        app.openDemo("demo.realWorld", timeout: 60)
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The demo opens")
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 30))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let place = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(place, in: app.collectionViews.firstMatch), "Taipei is among the places")
+        place.waitUntilSettled()
+        app.tapMiddle(of: place)
+        let start = app.buttons.matching(identifier: "realWorld.start").firstMatch
+        XCTAssertTrue(start.appears(within: 30))
+        start.waitUntilSettled()
+        start.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
         settle()
         shootCityTitle("city-title-real", in: app)
     }
