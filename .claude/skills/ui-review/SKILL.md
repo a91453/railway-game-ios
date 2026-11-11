@@ -73,8 +73,6 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 > **暫緩（作者 2026-10-29）**：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」。在作者說恢復之前，改畫面的 PR 不必自己跑 `website-screenshots.yml`；截圖驗收改在發版前做，或由作者自己拍，PR 寫「截圖驗收暫緩」與要看的畫面。下面的方法照舊用在那時候。方法改寫自 taste-skill `critique.md` 與 `app-screens.md` §2.7（研究第 5 節）。
 
-> **Mac 本機拍過的不再開 CI 截圖（作者 2026-11-11）**：「之後在 Mac 本機拍過、看過的畫面，不再另外開 CI 的截圖 run。很重要 不想浪費時間」「雲端可以截圖」。在 Mac 本機做的改動，已經在模擬器或實機拍過、看過的畫面，把圖放進 PR 就算完成截圖驗收，不要再跑 `website-screenshots.yml`。雲端的 session 看不到畫面，照下面的方法用 `website-screenshots.yml` 拍。
-
 **拍**：
 
 1. 在自己的分支手動跑 `website-screenshots.yml`（Actions 分頁，選自己的分支）。它在 iPhone Pro Simulator 上橫拿、深色模式，跑 `WebsiteScreenshotTests`，PNG 在 artifact `website-screenshots`。

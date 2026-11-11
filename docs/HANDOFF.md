@@ -586,7 +586,7 @@
   - **LOOP-EXTEND** session_01YGNNuprazF83Yje2tqL36g（雲端，`claude-fable-5-2`，決策 691，動 GameCore，完整 tier）：「月台軌道」工具加的那一股加長選單是空的（HEALTH-125 §5.3、§6 第 5 項，L17-7）；做法是加長時連兩端轉轍器一起往外移，一個指令一次復原。存檔 87 不動（要 88 先登記）。
   - **DRIVE-HUD**（Mac 本機，`claude/drive-hud`，決策 690）：駕駛畫面的資訊整合成一塊（#1579 留言 6796658375、6796683717、6797795282）。PR 要有前後對照圖；作者說綠了就合，不喜歡可以不合。
 - **給 Mac 本機的清單**（DRIVE-HUD 之後依序）：GLASS-POLISH（加一條：月台加長那一列橫放會折行，改成「加長第 1 月台」加第二行長度）→ MANUAL-DRIVE 手感 → FACADE-669 → CAB-RAIN → FPS-DEVICE → MUSEUM 第二步。assets #92 等 Mac 說做完；assets #73 等作者驗證。
-- **截圖（作者 2026-11-11）**：Mac 本機拍過、看過的畫面，不再另外開 CI 的截圖 run（圖放進 PR 就算）；雲端的 session 照舊用 `website-screenshots.yml`。寫在 `.claude/skills/ui-review/SKILL.md`。
+- **截圖（作者 2026-11-11）**：Mac 本機拍過、看過的畫面，不再另外開 CI 的截圖 run（圖放進 PR 就算）；雲端的 session 照舊用 `website-screenshots.yml`。細節由 #2067（MUSEUM-2）寫進 `.claude/skills/ui-review/SKILL.md` 截圖驗收「拍」的第 4 點。
 - **號碼**：決策 688–691 已用或預留，**下一個決策 692**；存檔版本 main 87，**下一個 88**；golden schema 76 不動。
 - **審查點數**（L18，從 #2058 起）：#2058 算 2，共 2；LOOP-EXTEND 合了再加。
 - **記著、還沒派**（本週額度到警告線，沒必要不多開 session）：
