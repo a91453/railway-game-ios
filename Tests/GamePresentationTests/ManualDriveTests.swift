@@ -39,7 +39,7 @@ final class ManualDriveTests: XCTestCase {
         XCTAssertEqual(ManualDrive.Notch.fullPower.raised, .fullPower, "no further than full power")
         XCTAssertEqual(ManualDrive.Notch.emergency.lowered, .emergency)
         XCTAssertEqual(ManualDrive.Notch.neutral.lowered.mark, "B1")
-        XCTAssertEqual(ManualDrive.Notch(step: 3).label(in: .traditionalChinese), "動力 3 段")
+        XCTAssertEqual(ManualDrive.Notch(step: 3).label(in: .traditionalChinese), "加速 3 段")
         XCTAssertEqual(ManualDrive.Notch(step: -4).label(in: .english), "Brake 4")
         XCTAssertEqual(ManualDrive.Notch.emergency.label(in: .traditionalChinese), "緊急煞車")
         XCTAssertEqual(ManualDrive.Notch.neutral.label(in: .traditionalChinese), "空檔")

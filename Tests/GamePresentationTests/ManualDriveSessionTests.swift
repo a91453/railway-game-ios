@@ -278,6 +278,26 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertEqual(result.text(in: .traditionalChinese).lines.count, 2)
     }
 
+    /// Review L17-14: a run that ends past the mark keeps the speed it
+    /// ended at for its result, and the train is drawn standing: it is
+    /// heard standing too, not running on until the card is closed.
+    func testARunThatPassedItsStopIsHeardStanding() throws {
+        let (session, _) = try makeSession()
+        var told: [RunningSound?] = []
+        session.runningSound = { told.append($0) }
+        session.startManualDrive()
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDriveReading?.phase == .driving })
+        session.setManualDriveNotch(.fullPower)
+        XCTAssertTrue(run(session, from: &time, ticks: 30_000) { session.manualDriveReading?.phase == .over })
+        XCTAssertEqual(session.manualDriveReading?.result?.outcome, .passed)
+        XCTAssertGreaterThan(session.manualDriveReading?.speed ?? 0, 0, "the speed it passed at")
+        XCTAssertTrue(told.contains { $0?.motor != nil }, "it was heard pulling on the way")
+        XCTAssertNil((told.last ?? nil)?.motor)
+        XCTAssertNil(told.last ?? nil, "an electric train standing is silent")
+        XCTAssertEqual(session.manualDriveSound?.kmh, 0)
+    }
+
     func testTheMotorsAreHeardAsTheHandleStands() throws {
         let (session, train) = try makeSession()
         var told: [RunningSound?] = []
