@@ -185,7 +185,7 @@
 - 新功能的實作 session 同時最多 3–4 個，照 NEXT_PRIORITIES §22 的順序一件一件開；開著的 PR 也不要多，免得一直解衝突。
   - 作者 2026-10-25：「你先派好了 好像3～4個session沒關係 沒有撞到相同的部分」：3–4 個可以同時派，條件是它們不改同一批檔案；改同一塊的（例如都動 LineAcquisition）照順序一個合了再派下一個。
 - PR 審查比新功能優先。上一輪是 #786–#872（§7.1）。
-- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 L（#1510–#1578，分兩段：L1 #1510–#1549，28 個程式 PR、29 點，[`archive/PR1510_1549_REVIEW_HANDOFF.md`](archive/PR1510_1549_REVIEW_HANDOFF.md)，P1 0、P2 1（L1-1：拆自己的路時每條公車線算兩次，點按卡約 2 秒）、P3 2；L2 #1551–#1578，21 個程式 PR、22 點，[`archive/PR1551_1578_REVIEW_HANDOFF.md`](archive/PR1551_1578_REVIEW_HANDOFF.md)，P1 0、P2 1（L2-1：站長的「跟我做 5 分鐘教學」沒先存目前這局）、P3 4）；下一輪從 #1579 起數。再上一輪是公測前審查 REV（#1496–#1509，[`archive/PR1496_1509_REVIEW_HANDOFF.md`](archive/PR1496_1509_REVIEW_HANDOFF.md)）與審查 K（#1288–#1385，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)）。
+- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 L16（#1986–#2031，0.6.0 (123)、(124) 發版後，21 個算 1 點的 PR 加 GameCore 的 #2014、#2025，共 25 點，[`archive/PR1986_2031_REVIEW_HANDOFF.md`](archive/PR1986_2031_REVIEW_HANDOFF.md)，P1 0、P2 3（L16-1：邊界外但有車站的景點被收起來、名產店按不到；L16-2：內灣劇情叫玩家用短車，和決策 668 量到的相反；L16-3：iPad 教學 job 仍紅過一晚）、P3 17）；**下一輪 L17 從 #2032 起數**。L13–L15 的報告也在 `archive/`。更早的審查 L（#1510–#1578，分兩段：L1 #1510–#1549，28 個程式 PR、29 點，[`archive/PR1510_1549_REVIEW_HANDOFF.md`](archive/PR1510_1549_REVIEW_HANDOFF.md)，P1 0、P2 1（L1-1：拆自己的路時每條公車線算兩次，點按卡約 2 秒）、P3 2；L2 #1551–#1578，21 個程式 PR、22 點，[`archive/PR1551_1578_REVIEW_HANDOFF.md`](archive/PR1551_1578_REVIEW_HANDOFF.md)，P1 0、P2 1（L2-1：站長的「跟我做 5 分鐘教學」沒先存目前這局）、P3 4）。再之前是公測前審查 REV（#1496–#1509，[`archive/PR1496_1509_REVIEW_HANDOFF.md`](archive/PR1496_1509_REVIEW_HANDOFF.md)）與審查 K（#1288–#1385，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)）。
   - 量的（2026-10-22，main 最近 60 個合併，約 10 小時）：文件 13、只有素材／測試 6、程式 41（其中 GameCore 5）。#962–#1017 共 51 個 PR、37 個程式、41 點：已經超過，下一個空位先開審查 D。
   - 為什麼 30 點：一個審查 session 看 30 個程式 PR（每個 diff 約 5–10 千 token）大約 15–30 萬，在第一次壓縮（約 32 萬）之前看完；上一輪 #873–#944 一次 72 個，A6–A11 到現在還開著。
   - 五方（權重照 NEXT_PRIORITIES §19；選項：A 每 30 個 PR、B 每 50 個 PR、C 每 30 點、D 每天一次、E 每 60 點）：
@@ -375,7 +375,7 @@
     - 遊戲規劃用 `send_later` 排的每一則巡查提醒，內容都要有一行「數審查點數：從 #<上一輪終點+1> 起，滿 30 點或剛發完一版就派 REVIEW-L」。
     - 巡查時照這一行數一次，寫進那一輪的 #1579 留言。
     - 壓縮或換手後，第一則巡查提醒也照抄這一行。
-    - 現況：REVIEW-L15（session_01YGNNukhsWYuJnxBUwBRNhq，第 56 任派，122 發版後）審到 #1985。下一輪 L16 從 #1986 起數。
+    - 現況：REVIEW-L16（session_01YGNNupozifvTzHdaz6hs68，第 60 任派，123、124 發版後）審到 #2031，報告 [`archive/PR1986_2031_REVIEW_HANDOFF.md`](archive/PR1986_2031_REVIEW_HANDOFF.md)：P1 0、P2 3、P3 17，都還沒派修（清單在報告第六節）。下一輪 L17 從 #2032 起數。
   - 換手時，§2.0 的交接寫上這三件的上一輪是誰、範圍或數字到哪。上一輪：REVIEW-L4（session_01YGNNunjEfxiHkJqASKZyZB，#1601–#1686）、CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D）、DEBUG-BATCH（session_01YGNNunTUt7aXu7pMTNAzrn），都是第 41 任 2026-11-01 派的。
 - **踩過的坑**：
   - 不要憑記憶說版本號，查 `testflight.yml` 的 run。2026-10-16 把 66.1 當成 64.1。
