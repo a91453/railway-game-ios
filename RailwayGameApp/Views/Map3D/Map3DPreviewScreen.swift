@@ -2264,7 +2264,7 @@ private struct Map3DFollowBar: View {
                 UITestTrace.action("map3D.drive.start")
                 session.startManualDrive()
                 // The screenshot review's look at a run's result.
-                if DebugLaunch.isSet("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
+                if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
             } label: {
                 Text(verbatim: ManualDrive.startText(in: session.language))
                     .font(.caption.weight(.bold))
