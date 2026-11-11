@@ -69,6 +69,9 @@ final class Map3DRailwayMuseumTests: XCTestCase {
         XCTAssertEqual(Museum.meshes[0].triangleCount, Museum.meshes[6].triangleCount, "empty tracks wait for their exhibits")
         XCTAssertGreaterThan(Museum.meshes[7].triangleCount, Museum.meshes[6].triangleCount)
         XCTAssertGreaterThan(Museum.meshes[10].triangleCount, Museum.meshes[9].triangleCount)
+        // A shed comes with all three of its tracks, two of them empty at first.
+        XCTAssertEqual(Museum.meshes[7].triangleCount, Museum.meshes[9].triangleCount)
+        XCTAssertEqual(Museum.meshes[10].triangleCount, Museum.meshes[12].triangleCount)
         // The left shed is on the left (−z), where the seventh track is.
         XCTAssertLessThan(Museum.trackOffsets[6], 0)
         XCTAssertEqual(Museum.shedSides(exhibits: 7), [-1])

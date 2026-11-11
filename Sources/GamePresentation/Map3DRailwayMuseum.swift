@@ -108,13 +108,13 @@ public enum Map3DRailwayMuseum {
 
     /// The museum of `exhibits` exhibits on a plot `side` metres across:
     /// the yard, the hall, the six tracks before it (empty until an
-    /// exhibit comes) and the sheds with theirs.
+    /// exhibit comes) and the sheds there are, each with its three.
     static func mesh(exhibits: Int, side: Float = 62) -> Map3DMesh {
         var b = StationKitBuilder()
         let shown = max(0, min(mostShown, exhibits)), half = side / 2
         yard(&b, shown: shown, half: half)
         hall(&b)
-        for index in 0..<max(hallTracks, shown) { track(&b, index) }
+        for index in 0..<hallTracks + shedTracks * sheds(exhibits: shown) { track(&b, index) }
         for side in shedSides(exhibits: shown) { shed(&b, side: side) }
         gate(&b, half: half)
         waterTower(&b, x: half - 6, z: -(half - 3.5))

@@ -284,6 +284,8 @@ enum MapGlyph: String {
     case school = "MapGlyphSchool"
     case hospital = "MapGlyphHospital"
     case nightMarket = "MapGlyphNightMarket"
+    /// Decision 696: the company's railway museum, a train under a roof.
+    case railwayMuseum = "MapGlyphRailwayMuseum"
     case crowd = "MapGlyphCrowd"
     /// Decision 205: one person, the waiting passengers' count beside it;
     /// the crowding set's one-person step (``crowd`` two, ``full`` three).
