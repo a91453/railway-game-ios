@@ -14,7 +14,10 @@ import XCTest
 /// runs were not sent out, how many empty runs went into a depot and came
 /// out of one, about how far the empty runs drove, the most trains in a
 /// deadlock and the most trains that stood at an end station at once. The
-/// numbers are in the decision. HEALTH-110 added every line on sale and
+/// numbers are in the decision. Decision 681: and how many empty runs went
+/// between two stations, neither a depot (the trains decision 666 moves
+/// out of the way), with the most one train made in a row; seen once a
+/// tick, so at the top speed some are missed. HEALTH-110 added every line on sale and
 /// the other demos (`danhai-blue`, `xinbeitou`, `xiaobitan`, `pingxi`,
 /// `jiji`, `neiwan`, `shenao`, `liujia`, `shalun`, `demo`, `realworld`;
 /// HEALTH-112 `maokong`; HEALTH-114 `ferry-tamsui`, `ferry-gushan`; HEALTH-119 `klrt`),
@@ -273,6 +276,13 @@ final class DepotReturnReportTests: XCTestCase {
         // The empty runs' length: what each had still to go, along the
         // edges ahead of it, when first seen.
         var empty: [String: Int64] = [:]
+        // Decision 681: the empty runs between two stations, neither a
+        // depot of the line: the trains decision 666 moves out of the way.
+        // How many, and the most one train made in a row (with no service
+        // and no depot between them), with when and where.
+        var madeWay = 0
+        var row: [TrainID: (count: Int, since: Int64, calls: [StationID])] = [:]
+        var longestRow: (train: String, count: Int, since: Int64, until: Int64, calls: [StationID])?
         var standing: [StationID: Int] = [:]
         var deadlocked = 0
         var deadlockedWhere = ""
@@ -403,8 +413,24 @@ final class DepotReturnReportTests: XCTestCase {
             for line in lines {
                 for id in line.trains {
                     guard let train = world.train(id: id), train.isDeadheading,
-                          let first = train.timetable.first, let last = train.timetable.last else { continue }
+                          let first = train.timetable.first, let last = train.timetable.last else {
+                        // A service ends a row of empty runs made to make way.
+                        if world.train(id: id)?.execution != nil { row[id] = nil }
+                        continue
+                    }
                     let key = "\(id.rawValue) \(first.departure.seconds)"
+                    let aside = !line.depots.contains(first.station) && !line.depots.contains(last.station)
+                    if !aside { row[id] = nil }
+                    if empty[key] == nil, aside {
+                        madeWay += 1
+                        var made = row[id] ?? (0, world.clock.now.seconds, [first.station])
+                        made.count += 1
+                        made.calls.append(last.station)
+                        row[id] = made
+                        if made.count > longestRow?.count ?? 0 {
+                            longestRow = (train.name, made.count, made.since, last.arrival.seconds, made.calls)
+                        }
+                    }
                     if empty[key] == nil {
                         empty[key] = train.movement.edges.dropFirst(train.movement.cursor).reduce(0) { $0 + (world.network.edge($1)?.length ?? 0) }
                         // `DEPOT_RETURN_EMPTY_RUNS=1`: each empty run as it is planned.
@@ -454,7 +480,12 @@ final class DepotReturnReportTests: XCTestCase {
         let seconds = String(format: "%.0f", Date().timeIntervalSince(started))
         var summary = "DEPOT_RETURN \(label): second day \(missed) of \(runs) runs not sent out; \(late) of \(trips) trips late; "
         summary += "\(into.count) empty runs into a depot, \(outOf.count) out, \(emptyKilometres) km empty in all; "
-        summary += "most standing at the ends: \(most); most deadlocked \(deadlocked)"
+        summary += "\(madeWay) empty runs between stations to make way"
+        if let longestRow {
+            let calls = longestRow.calls.map { world.station(id: $0)?.name ?? "?" }.joined(separator: ">")
+            summary += " (most in a row \(longestRow.count): \(longestRow.train), \(clock(longestRow.since)) to \(clock(longestRow.until).suffix(5)), \(calls))"
+        }
+        summary += "; most standing at the ends: \(most); most deadlocked \(deadlocked)"
         if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
         FileHandle.standardError.write(Data(summary.utf8))
