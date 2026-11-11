@@ -534,7 +534,9 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(row.appears(within: 10), "The airports are listed")
             settle(seconds: 2)
             keep("airport-sights\(suffix)", app)
-            _ = scrollScreen(to: app.descendants(matching: .any)["tourism.airport.2"].firstMatch, in: app, drags: 4)
+            // The second row shows its first lines already, so the list is
+            // dragged up by hand rather than scrolled until the row exists.
+            row.swipeUp()
             settle(seconds: 1)
             keep("airport-sights-second\(suffix)", app)
             app.terminate()
