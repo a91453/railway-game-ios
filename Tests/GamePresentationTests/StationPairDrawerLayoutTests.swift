@@ -53,7 +53,7 @@ final class StationPairDrawerLayoutTests: XCTestCase {
         XCTAssertTrue(StationPairDrawerLayout.ridesInPill(compactHeight: true), "A phone on its side")
         XCTAssertFalse(StationPairDrawerLayout.ridesInPill(compactHeight: false), "An iPad keeps it over the dock")
         // The map's points (it runs under the safe area): an iPhone SE and
-        // a 13 mini on their sides, the smallest the app runs on (iOS 17),
+        // a 13 mini on their sides, the smallest the app runs on (iOS 26),
         // with a real-world map's credits band of 30. Above the pill, the
         // status bar and the layer strip (ContentView's `mapTop`); below
         // it, the station master standing at the column's foot and a

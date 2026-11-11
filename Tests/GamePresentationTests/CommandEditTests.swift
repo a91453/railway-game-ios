@@ -156,8 +156,8 @@ final class CommandEditTests: XCTestCase {
         let made = try world.createLine(named: "Main", stops: stops)
         let train = try world.purchaseTrain(named: "Train 1")
         // Plain `throws` in the stored closures: typed-throws function
-        // types need the macOS 15 / iOS 18 runtime, and the package
-        // supports macOS 14 and iOS 17.
+        // types need the macOS 15 runtime, and the package supports
+        // macOS 14 (its iOS minimum, 26, has them).
         let cases: [(PlayerCommand.Edit, (inout GameWorld) throws -> Void)] = [
             (.renameStation(stops[0], name: "North"), { world in try world.renameStation(stops[0], to: "North") }),
             (.renameStation(stops[0], name: ""), { world in try world.renameStation(stops[0], to: "") }),

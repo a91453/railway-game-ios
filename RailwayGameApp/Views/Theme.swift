@@ -264,17 +264,11 @@ extension View {
         modifier(PanelTitle(title: title))
     }
 
-    /// A hard edge where a panel's form scrolls under its navigation bar,
-    /// on iOS 26 and later: the soft edge left a section's header half
-    /// under the bar, blurred (author's report, 2026-10-14). Earlier
-    /// versions draw the bar as before.
-    @ViewBuilder
+    /// A hard edge where a panel's form scrolls under its navigation bar:
+    /// the soft edge left a section's header half under the bar, blurred
+    /// (author's report, 2026-10-14).
     func hardTopScrollEdge() -> some View {
-        if #available(iOS 26.0, *) {
-            scrollEdgeEffectStyle(.hard, for: .top)
-        } else {
-            self
-        }
+        scrollEdgeEffectStyle(.hard, for: .top)
     }
 
     /// The heights a card raised over the map opens at (decision 643,
@@ -286,33 +280,21 @@ extension View {
     }
 
     /// Glass behind this view, in `shape`, for the controls that float over
-    /// the map: Liquid Glass on iOS 26 and later (reacting to touches when
-    /// `interactive`), a material on earlier versions.
-    @ViewBuilder
+    /// the map: Liquid Glass, reacting to touches when `interactive`.
     func glassBackground(in shape: some Shape, interactive: Bool = false) -> some View {
-        if #available(iOS 26.0, *) {
-            glassEffect(.regular.interactive(interactive), in: shape)
-        } else {
-            background(.regularMaterial, in: shape)
-        }
+        glassEffect(.regular.interactive(interactive), in: shape)
     }
 
     /// ``glassBackground(in:interactive:)`` in a rounded rectangle of
-    /// `radius` that, on iOS 26 and later, follows the shape round it (the
-    /// screen's corners, a card it sits in) with `radius` as its smallest
-    /// corner, so a card near a screen corner curves with the display.
-    /// Earlier versions, and a view with no shape round it, keep the plain
-    /// corner of `radius`.
-    @ViewBuilder
+    /// `radius` that follows the shape round it (the screen's corners, a
+    /// card it sits in) with `radius` as its smallest corner, so a card
+    /// near a screen corner curves with the display. A view with no shape
+    /// round it keeps the plain corner of `radius`.
     func glassBackground(cornerRadius radius: CGFloat, interactive: Bool = false) -> some View {
-        if #available(iOS 26.0, *) {
-            glassBackground(
-                in: ConcentricRectangle(corners: .concentric(minimum: .fixed(radius)), isUniform: true),
-                interactive: interactive
-            )
-        } else {
-            glassBackground(in: RoundedRectangle(cornerRadius: radius, style: .continuous), interactive: interactive)
-        }
+        glassBackground(
+            in: ConcentricRectangle(corners: .concentric(minimum: .fixed(radius)), isUniform: true),
+            interactive: interactive
+        )
     }
 
     /// Decision 388: under `-ui-testing`, in a Debug build, an element

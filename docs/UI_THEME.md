@@ -51,7 +51,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `ThemeSelectableButtonStyle(isActive:)` | 開／關按鈕：開時填 `primary`，關時只有 `panelBorder` 外框。狀態不只靠顏色區分 |
 | `ThemeProminentButtonStyle(isDestructive:)` | 主要動作：`primary`，移除類用 `error`；不能按時用 `panelBorder` 底配 `textSecondary` |
 | `.themeCard(padding:cornerRadius:)` | 實色 `panel` 卡片，即使放在玻璃上，文字對比也固定 |
-| `.glassBackground(in:interactive:)` | 浮在地圖上的元件：iOS 26 用 Liquid Glass，iOS 17–25 用 `.regularMaterial` |
+| `.glassBackground(in:interactive:)` | 浮在地圖上的元件：Liquid Glass（最低版本是 iOS 26，決策 676；之前 iOS 17–25 用 `.regularMaterial`） |
 
 `.borderedProminent` 固定用白字，在 Dark 的 `primary`（1.85:1）和 `error` 上都不到 AA，所以主要動作改用 `ThemeProminentButtonStyle`。`.bordered` 按鈕沿用全域 tint。
 

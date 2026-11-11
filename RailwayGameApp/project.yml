@@ -17,7 +17,7 @@ name: RailwayGame
 
 options:
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
 
 settings:
   base:

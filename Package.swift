@@ -21,7 +21,8 @@ let coreTests: [SwiftSetting] = [.unsafeFlags(["-O"], .when(platforms: [.linux])
 let package = Package(
     name: "RailwayGame",
     platforms: [
-        .iOS(.v17),
+        // Decision 676. A string, not `.v26`: tools version 6.0 has no such case.
+        .iOS("26.0"),
         .macOS(.v14),
     ],
     products: [

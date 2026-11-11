@@ -2199,7 +2199,7 @@ enum MapArt {
                 style: StrokeStyle(lineWidth: isChosen ? 3 : 1.5, dash: [8, 5])
             )
             let price = Text(verbatim: tile.price.moneyText).font(.caption.weight(.bold)).monospacedDigit()
-            let label = tile.isUnlocked ? price : Text(MapGlyph.lock.image).font(.caption) + Text(verbatim: " ") + price
+            let label = tile.isUnlocked ? price : Text("\(Text(MapGlyph.lock.image).font(.caption)) \(price)")
             // Decision 477: in the middle of the part of the tile clear of
             // the top bar and the cards, or not at all.
             let corners = shape(tile.area).boundingRect
