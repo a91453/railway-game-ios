@@ -221,7 +221,8 @@ final class ManualDriveTests: XCTestCase {
         var drive = ManualDrive(train: train, course: .init(stop: 1_234.4, scheduled: 100))
         XCTAssertEqual(drive.reading.phase, .driving)
         XCTAssertEqual(drive.reading.distanceText(in: .english), "1.2 km")
-        XCTAssertEqual(drive.reading.label(in: .traditionalChinese), "0 km/h，空檔，停車點 1.2 km")
+        XCTAssertEqual(drive.reading.label(in: .traditionalChinese), "0 km/h，空檔，停車點 1.2 km，準點")
+        XCTAssertEqual(drive.reading.label(in: .english, stop: "Beta"), "0 km/h, Neutral, next stop Beta, stop in 1.2 km, On time")
         drive = ManualDrive(train: train, course: .init(stop: 8.44, scheduled: 100))
         XCTAssertEqual(drive.reading.distanceText(in: .traditionalChinese), "8.4 m")
         drive = ManualDrive(train: train, course: .init(stop: -3.21, scheduled: 100))
@@ -229,5 +230,21 @@ final class ManualDriveTests: XCTestCase {
         XCTAssertEqual(drive.reading.distanceText(in: .english), "3.2 m past")
         XCTAssertNil(ManualDrive.Reading.waiting.distanceText(in: .english))
         XCTAssertEqual(ManualDrive.Reading.waiting.phase, .waiting)
+    }
+
+    /// Decision 690: the card's punctuality is the player's own run
+    /// against the timetable: on time until its arrival has passed, then
+    /// late by the whole seconds since.
+    func testThePanelSaysOnTimeUntilTheTimetablesArrivalThenHowLate() {
+        var drive = ManualDrive(train: train, course: .init(stop: 5_000, scheduled: 10))
+        XCTAssertEqual(drive.reading.lateness, 0)
+        XCTAssertEqual(drive.reading.latenessText(in: .traditionalChinese), "準點")
+        for _ in 0..<21 { drive.advance(seconds: 0.5) }
+        XCTAssertEqual(drive.reading.lateness, 0, "not a whole second yet")
+        for _ in 0..<16 { drive.advance(seconds: 0.5) }
+        XCTAssertEqual(drive.reading.lateness, 8)
+        XCTAssertEqual(drive.reading.latenessText(in: .traditionalChinese), "晚 8 秒")
+        XCTAssertEqual(drive.reading.latenessText(in: .english), "8 s late")
+        XCTAssertEqual(ManualDrive.Reading.waiting.lateness, 0)
     }
 }
