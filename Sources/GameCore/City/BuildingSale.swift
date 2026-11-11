@@ -34,13 +34,21 @@ public struct PlacedBuildingSaleQuote: Hashable, Sendable {
     public let bookValue: Money
     /// What a trading subsidiary is worth as a business (decision 173):
     /// ``SubsidiaryRules/saleProfitMultiple`` times its profit of the last
-    /// twelve months; nothing for a building that lets, or one that lost.
+    /// twelve months, and no more than building it anew would cost now,
+    /// its building at full cost and ``landRight`` (decision 692: nobody
+    /// pays more for a business than for building the same beside it);
+    /// nothing for a building that lets, or one that lost.
     public let businessValue: Money
+    /// Whether ``businessValue`` is what building it anew would cost,
+    /// its profit being worth more (decision 692).
+    public let businessCapped: Bool
 
     public init(
-        landRight: Money, buildingBookValue: Money, occupants: Int64, capacity: Int64, bookValue: Money, businessValue: Money = .zero
+        landRight: Money, buildingBookValue: Money, occupants: Int64, capacity: Int64, bookValue: Money, businessValue: Money = .zero,
+        businessCapped: Bool = false
     ) {
         self.businessValue = businessValue
+        self.businessCapped = businessCapped
         self.landRight = landRight
         self.buildingBookValue = buildingBookValue
         self.occupants = occupants
@@ -115,11 +123,17 @@ extension GameWorld {
             let written = AssetRecord.share(of: building.buildingCost, numerator: record.days, denominator: record.kind.assetClass.lifeDays)
             return min(record.bookValue, building.buildingCost - written)
         } ?? .zero
+        let landRight = Money(building.kind.footprintArea * value)
+        // Decision 692: the business sells for no more than building it
+        // anew costs, so that selling one and building the next beside it
+        // is not worth more than keeping it.
+        let earned = building.kind.isSubsidiary
+            ? Money(max(0, building.books.trailingProfit.amount) * SubsidiaryRules.saleProfitMultiple) : .zero
+        let anew = building.buildingCost + landRight
         return PlacedBuildingSaleQuote(
-            landRight: Money(building.kind.footprintArea * value), buildingBookValue: buildingBookValue,
+            landRight: landRight, buildingBookValue: buildingBookValue,
             occupants: occupants, capacity: capacity.residents + capacity.jobs, bookValue: record?.bookValue ?? .zero,
-            businessValue: building.kind.isSubsidiary
-                ? Money(max(0, building.books.trailingProfit.amount) * SubsidiaryRules.saleProfitMultiple) : .zero
+            businessValue: min(earned, anew), businessCapped: earned > anew
         )
     }
 

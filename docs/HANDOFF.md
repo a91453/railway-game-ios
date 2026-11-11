@@ -610,7 +610,7 @@
 - **LOOP-EXTEND（決策 691，`claude/loop-extend-691`，2026-11-11）留給之後的**：兩股車站加長月台已會把轉轍器往外移、各股月台一起加長。沒做的寫在 `docs/decisions/691.md`「沒做到的」：彎道或坡道上的站、轉轍器落在連接線上的站型不認（退回決策 687 只加到轉轍器）；轉轍器外側只用到下一個節點為止；站內與外側那兩段有列車或預約時拒絕。要再做的話從 `GameWorld.stationThroat(main:)` 放寬站型開始。
 - **給 Mac 本機的清單**（#1579 找「給 Mac 本機 session 的工作清單」6786821644 與之後的補充；作者一次貼一件：「讀 a91453/railway-game-ios 的 #1579，找「給 Mac 本機 session 的工作清單」和之後的補充，做第 N 件。」）：LOOK-LOOP 已完成。TUTORIAL-CAPSULE 做完（[決策 688](decisions/688.md)：每一步的卡片第一次量到版面大小就忘了原位，狀態訊息一消失膠囊就從頭挑位置；改成第一次量不算）。接著 GLASS-POLISH（加上：買車估算那一行在橫放加車時可能被標題列蓋住（UNVERIFIED）、「駕駛」「駕駛室」兩顆都是實心青色、兩個 ✕ 靠太近、英文博物館卡名被截成「Railway m…」、橫放時建造卡清單與說明被截）；MANUAL-DRIVE 的手感、觸覺、馬達聲、直放與 iPad；FACADE-669；CAB-RAIN；FPS-DEVICE；MUSEUM 第二步（3D 館舍、圖示、館內，照 `model-look`）；把 `coastTimber` 型式套到日南、談文、大山、新埔；保安、集集的試做 patch（assets `model-look-2026-11-11/evals/`）等作者看。
 - **記著、還沒派**（有完整 tier 名額再派）：
-  - 子公司設計第 ① 步（`research/SUBSIDIARY_DESIGN_2026-11-11.md`），連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因查到了，不是退步：這條量測線三站排在 448 m 上，一天發車 640 次、每次 NT$225，每次只載 8–11 人（[HEALTH-125](research/HEALTH_125_2026-11-11.md) §5.4）；比子公司時改用 `testALineBetweenTwoTowns` 或只比差額。
+  - 子公司設計第 ① 步做了（SUBSIDIARY-1，[決策 692](decisions/692.md)：建物卡看得到買價與漲跌；生意的賣價不超過現在重蓋一棟，「每年賣了再蓋」從留著的 210% 以上降下來）。**留給之後的**寫在決策 692「已知的限制與下一步」：留著的百貨帳上利潤與實際多出來的現金差三倍，原因沒查，第 ② 步（鄰地行情）開工前先查；飯店、遊樂園修好補現金後還沒量。原本這一項還連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因查到了，不是退步：這條量測線三站排在 448 m 上，一天發車 640 次、每次 NT$225，每次只載 8–11 人（[HEALTH-125](research/HEALTH_125_2026-11-11.md) §5.4）；比子公司時改用 `testALineBetweenTwoTowns` 或只比差額。
   - MANUAL-DRIVE 第二步（開車要算數，動 GameCore，§4.61）。
   - `python3 tools/station-kit/catalog.py --check` 在 main 就過期（4 列）。
   - HEALTH-124 §6.5 的 (c)(d)；決策 682「之後可以做的」。

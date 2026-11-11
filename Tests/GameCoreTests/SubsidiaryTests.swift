@@ -256,7 +256,8 @@ final class SubsidiaryTests: XCTestCase {
     // MARK: - Selling
 
     /// A sale brings the larger of the property's price and six times the
-    /// profit of the last twelve months; a loss-maker's business is worth
+    /// profit of the last twelve months, the latter no more than building
+    /// it anew costs (decision 692); a loss-maker's business is worth
     /// nothing.
     func testASaleBringsSixTimesTheYearsProfitWhenThatIsMore() throws {
         var world = try makeWorld()
@@ -266,12 +267,31 @@ final class SubsidiaryTests: XCTestCase {
         XCTAssertEqual(property.price, property.propertyPrice)
         let index = try XCTUnwrap(world.placedBuildings.firstIndex { $0.id == store.id })
         world.placedBuildings[index].books.record(sales: 900_000_000, cost: 100_000_000, day: 5)
+        // Decision 692: six times its 800,000,000 would be 4,800,000,000,
+        // more than building the store anew costs (its building at full
+        // cost and the land's right now), so it sells for that. Before
+        // decision 692 this was 4,800,000,000.
         let quote = try XCTUnwrap(world.saleQuote(of: store.id))
-        XCTAssertEqual(quote.businessValue, Money(6 * 800_000_000))
-        XCTAssertEqual(quote.price, Money(4_800_000_000))
+        let anew = store.buildingCost + property.landRight
+        XCTAssertLessThan(anew, Money(6 * 800_000_000))
+        XCTAssertTrue(quote.businessCapped)
+        XCTAssertEqual(quote.businessValue, anew)
+        XCTAssertEqual(quote.price, anew)
+        XCTAssertGreaterThan(quote.price, quote.propertyPrice)
         let before = world.economy.balance
         try world.sellPlacedBuilding(store.id)
-        XCTAssertEqual(world.economy.balance, before + Money(4_800_000_000))
+        XCTAssertEqual(world.economy.balance, before + anew)
+        // A business that earns less than that sells for six times its
+        // year's profit, as before.
+        var modest = try makeWorld()
+        let small = try place(.departmentStore, 0, 3_200, in: &modest)
+        let profit = (small.buildingCost.amount + property.landRight.amount - 6) / 6
+        let smallIndex = try XCTUnwrap(modest.placedBuildings.firstIndex { $0.id == small.id })
+        modest.placedBuildings[smallIndex].books.record(sales: Money(profit), cost: .zero, day: 5)
+        let modestQuote = try XCTUnwrap(modest.saleQuote(of: small.id))
+        XCTAssertFalse(modestQuote.businessCapped)
+        XCTAssertEqual(modestQuote.businessValue, Money(6 * profit))
+        XCTAssertEqual(modestQuote.price, Money(6 * profit))
         // A building that lost has no business value.
         var losing = try makeWorld()
         let other = try place(.hotel, 0, 2_200, in: &losing)

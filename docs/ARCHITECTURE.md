@@ -5651,7 +5651,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    - 派工建議的捕捉率是百貨 60‰、遊樂園 40‰；用 `BalanceReportTests.testAFirstLineWithSubsidiaries` 量，60‰ 的百貨在第一條線的中間站旁 370 到 580 天回本（太快），40‰ 是 560 到 900 天（1.5 到 2.5 年，派工的目標 1.5 到 3 年），遊樂園 40‰ 約 500 天、30‰ 約 700 天，所以取 40‰ 與 30‰。
 3. **逐棟損益**（`PlacedBuilding.books`，`SubsidiaryBooks`）：本月與上月（月 = 30 天）的營收、成本，最近 12 個月的月紀錄，以及開業以來累計。只有新三種有，其他不寫（`"books"` 沒有就是空的）。存檔版本 46：只多了 `"books"`、三種 kind 與帳本的新列；舊版本讀不到新種類，所以舊的建置會說存檔比它新。（存檔版本 45 是登記給決策 172 彈性發車的，這個建置沒有也不需要。）
 4. **帳目**：新的 `LedgerItem` `subsidiarySales`（收入）、`subsidiaryCost`（成本），在新的帳本列 `dailySubsidiary`（只往後面加）；損益表把它們併進「租金與子公司營業收入」與建物成本列，`GameFeedback.incomeItems` 也算營業收入。
-5. **出售**：營業類的售價 = max(土地使用權與建物帳面價值照決策 130 的價格, 6 × 近 12 個月營業利益（含本月）)，虧損的算 0（`PlacedBuildingSaleQuote.businessValue`）。「早蓋、等發展、高價賣」：量測中百貨買在第 30 天，一年後的售價約 $1,960 萬（造價 $735 萬）。實現損益照決策 130/85 記在資本日。
+5. **出售**：營業類的售價 = max(土地使用權與建物帳面價值照決策 130 的價格, 6 × 近 12 個月營業利益（含本月）)，虧損的算 0（`PlacedBuildingSaleQuote.businessValue`）。「早蓋、等發展、高價賣」：量測中百貨買在第 30 天，一年後的售價約 $1,960 萬（造價 $735 萬）。實現損益照決策 130/85 記在資本日。**後來**（[決策 692](decisions/692.md)）：6 倍年利潤不超過現在重蓋一棟的價錢（建物原造價 + 現在的土地使用權），因為量到每年賣一次再蓋遠比留著好。
 6. **點公司建物看損益**（`GameSession.tapMap` 的選取工具）：點到公司建物的方塊（沒有車站與列車時）選取它（`selectedBuildingID`），檢視面板顯示本月、上月、累計、近 12 個月報酬率（占造價）與估計售價，並有「出售」按鈕（`sellSelectedBuilding()`：切到建築工具的出售模式並選好它）。其他公司建物顯示入住人數。
 7. **給觀光的查詢**（`claude/tourism`）：飯店只有一種，`PlacedBuilding.kind == .hotel` 與 `centre` 就是位置，`SubsidiaryRules.reach`（800 m）是範圍；之後景點附近的飯店提升星等，在那邊加。這一版沒有旅館等級。
 8. **圖示**：三個地圖圖示（`MapGlyphDepartmentStore`、`MapGlyphHotel`、`MapGlyphAmusementPark`），照 art-style：單色模板、實心、24 格；建物色紫、玫瑰、綠（`Palette`，對海軍藍字形 3.5:1 以上）。
