@@ -514,6 +514,35 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("sights-off-the-map-open", app)
     }
 
+    /// Decision 695: the airports' section of the sights panel, in both
+    /// languages: an airport a station serves and one none does.
+    func testAirports() {
+        for english in [false, true] {
+            let suffix = english ? "-english" : ""
+            let app = launch(extra: ["-screenshot-scene", "airport"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle()
+            let menu = app.buttons["hud.menu"]
+            menu.waitUntilSettled()
+            menu.tap()
+            if !app.buttons["menu.tourism"].appears(within: 5) {
+                app.buttons["menu.more"].tap()
+            }
+            app.buttons["menu.tourism"].tap()
+            XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+            let row = app.descendants(matching: .any)["tourism.airport.1"].firstMatch
+            XCTAssertTrue(row.appears(within: 10), "The airports are listed")
+            settle(seconds: 2)
+            keep("airport-sights\(suffix)", app)
+            // The second row shows its first lines already, so the list is
+            // dragged up by hand rather than scrolled until the row exists.
+            row.swipeUp()
+            settle(seconds: 1)
+            keep("airport-sights-second\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 684: the railway museum: the building tool's list with its
     /// card chosen, then its row in the sights panel, in Chinese and in
     /// English. For the screenshot review of the pull request that added

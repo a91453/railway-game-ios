@@ -230,6 +230,10 @@ public struct GameWorld: Equatable, Sendable {
     public internal(set) var ferryRoutes: [FerryRoute] = []
     /// The next ferry route's number.
     public internal(set) var nextFerryRouteID = 1
+    /// The airports of the map (decision 695), numbered from 1; none in a
+    /// new world and in saves from before them. Set by
+    /// ``setAirports(_:)`` and every midnight only.
+    public internal(set) var airports: [Airport] = []
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -3503,7 +3507,7 @@ public struct GameWorld: Equatable, Sendable {
                 }
                 // Items 4 and 5: towns grow from the day that ended, and
                 // events start and end, at midnight.
-                let midnight = (demandEvents != nil || townGrowth != nil || tourism != nil) && start.seconds % GameTime.secondsPerDay == 0
+                let midnight = (demandEvents != nil || townGrowth != nil || tourism != nil || !airports.isEmpty) && start.seconds % GameTime.secondsPerDay == 0
                 // Decision 400: the roads grow at the midnight that begins
                 // each month.
                 if roads != nil, start.seconds % GameTime.secondsPerDay == 0 {
@@ -3514,6 +3518,7 @@ public struct GameWorld: Equatable, Sendable {
                     growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom, ended: endedPlan))
                     startDemandEventDay(dayIndex(of: start))
                     closeTourismDay(dayIndex(of: start) - 1)
+                    closeAirportDay(dayIndex(of: start) - 1)
                 }
                 // Weekly demand and events: each day releases its own day's
                 // trips.
@@ -5907,7 +5912,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, driving
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, driving
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -6084,6 +6089,7 @@ extension GameWorld: Codable {
         nextCablewayID = try container.decodeIfPresent(Int.self, forKey: .nextCablewayID) ?? 1
         ferryRoutes = try container.decodeIfPresent([FerryRoute].self, forKey: .ferryRoutes) ?? []
         nextFerryRouteID = try container.decodeIfPresent(Int.self, forKey: .nextFerryRouteID) ?? 1
+        airports = try container.decodeIfPresent([Airport].self, forKey: .airports) ?? []
         // Decision 528: a purchase whose line or bus route was removed
         // before it went with it is dropped, so the real line is on sale
         // again; nothing is paid back or booked again. One naming a number
@@ -6258,6 +6264,9 @@ extension GameWorld: Codable {
         }
         if nextBusRouteID != 1 {
             try container.encode(nextBusRouteID, forKey: .nextBusRouteID)
+        }
+        if !airports.isEmpty {
+            try container.encode(airports, forKey: .airports)
         }
         if !cableways.isEmpty {
             try container.encode(cableways, forKey: .cableways)
@@ -6549,7 +6558,7 @@ extension GameWorld: Codable {
             ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds) {
             return problem
         }
-        return busRoutesProblem() ?? cablewaysProblem() ?? ferryRoutesProblem()
+        return busRoutesProblem() ?? cablewaysProblem() ?? ferryRoutesProblem() ?? airportsProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

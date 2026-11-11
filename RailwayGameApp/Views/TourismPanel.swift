@@ -19,6 +19,9 @@ struct TourismPanel: View {
     /// Whether the sights off the company's map are shown (decision 663):
     /// folded away at first, unless the map's tap is on one of them.
     @State private var showsOffMap = false
+    /// Decision 695: the airports' day, worked out once when the panel
+    /// opens (it asks the network who can ride to each terminal).
+    @State private var airportDays: [AirportDay] = []
 
     var body: some View {
         let language = session.language
@@ -42,6 +45,20 @@ struct TourismPanel: View {
                         .accessibilityIdentifier("tourism.year")
                     } footer: {
                         Text(verbatim: world.tourismHelp(in: language))
+                    }
+                    if !airportDays.isEmpty {
+                        Section {
+                            ForEach(airportDays, id: \.airport.id) { day in
+                                airportRow(day)
+                            }
+                        } header: {
+                            Text(verbatim: language.text("Airports", "機場"))
+                        } footer: {
+                            Text(verbatim: language.text(
+                                "Flights come and go by themselves. A station of yours by a terminal brings its passengers onto your trains, and tourists set out from it to the sights.",
+                                "航班自己起降，不用你經營。航廈旁有你的車站時，旅客會搭你的車，觀光客也從那裡出發去景點。"
+                            ))
+                        }
                     }
                     ForEach(onMap) { row in
                         Section {
@@ -119,6 +136,7 @@ struct TourismPanel: View {
                     }
                 }
                 .task {
+                    airportDays = world.airportDays()
                     guard let target = SightFocus.row(for: focus, in: rows) else { return }
                     if offMap.contains(where: { $0.id == target }) { showsOffMap = true }
                     marked = target
@@ -142,6 +160,43 @@ struct TourismPanel: View {
                 }
             }
         }
+    }
+
+    /// One airport: its name, today's flights and passengers, who rides
+    /// the company's trains, yesterday's count and what would bring more.
+    private func airportRow(_ day: AirportDay) -> some View {
+        let language = session.language
+        return Label {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: day.airport.title(in: language))
+                    .font(.subheadline.weight(.semibold))
+                Text(verbatim: day.summary(in: language))
+                    .font(.footnote)
+                    .monospacedDigit()
+                if let yesterday = day.yesterdayText(in: language) {
+                    Text(verbatim: yesterday)
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                if let station = day.station, let name = session.world.station(id: station)?.name {
+                    Text(verbatim: language.text("Station: \(name)", "車站：\(name)"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                if let more = day.growthText(in: language) {
+                    Text(verbatim: more)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+        } icon: {
+            Image(systemName: "airplane")
+                .foregroundStyle(day.station == nil || day.isClosed ? Theme.textSecondary : Theme.primary)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("tourism.airport.\(day.airport.id)")
     }
 
     private func header(_ row: AttractionRow) -> some View {

@@ -32,7 +32,7 @@ extension GameWorld {
     var demandDay: Int64? {
         // Decision 533: a school's students come on school days only.
         weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil
-            || placedBuildings.contains(where: \.kind.bringsRiders) ? dayIndex(of: clock.now) : nil
+            || placedBuildings.contains(where: \.kind.bringsRiders) || !airports.isEmpty ? dayIndex(of: clock.now) : nil
     }
 
     /// Whether today's demand follows the weekend's hours: on a weekend,
@@ -631,6 +631,9 @@ extension GameWorld {
         /// The company's schools and hospitals (decision 533): one built or
         /// sold changes their riders' trips.
         var civic: [PlacedBuildingID] = []
+        /// The airports' stations (decision 695): a station that starts or
+        /// stops serving a terminal changes the air passengers' trips.
+        var airports: [StationID?] = []
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -917,7 +920,7 @@ extension GameWorld {
         let temples = companySights().map(\.sight)
         let civic = civicRiderBuildings
         if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples
-            || passengerPlan.civic != civic {
+            || passengerPlan.civic != civic || passengerPlan.airports != airportStations {
             passengerPlan = PassengerPlanCache()
         }
         if passengerPlan.plan == nil {
@@ -926,6 +929,7 @@ extension GameWorld {
             passengerPlan.stars = tourismStars
             passengerPlan.temples = temples
             passengerPlan.civic = civic
+            passengerPlan.airports = airportStations
             passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }

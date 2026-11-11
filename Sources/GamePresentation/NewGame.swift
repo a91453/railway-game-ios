@@ -155,6 +155,9 @@ extension GameWorld {
                 world.setTourism(AttractionCatalog.attractions(in: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
                 // Decision 576: and the festivals held at Taiwan's places.
                 world.setFestivalSites(FestivalCatalog.sites(in: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
+                // Decision 695: and Taiwan's airports, whose flights come
+                // and go by themselves.
+                world.setAirports(AirportCatalog.airports(in: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
             } else {
                 world.foundAttractions(seed: eventSeed)
             }
