@@ -89,8 +89,8 @@ final class CityTitleTests: XCTestCase {
         let village = try XCTUnwrap(CityTitle(cells: cells(residents: 1_200, jobs: 900, use: .agricultural), countsAlongTheLines: true))
         XCTAssertNil(village.kind)
         XCTAssertEqual(village.headline(in: .traditionalChinese), "村莊")
-        XCTAssertEqual(village.detail(in: .english), "1,200 residents along your lines. 3,800 more make it a small town.")
-        XCTAssertEqual(village.detail(in: .traditionalChinese), "沿線居民 1,200 人。再 3,800 人成為小鎮。")
+        XCTAssertEqual(village.detail(in: .english), "1,200 residents. 3,800 more make it a small town.")
+        XCTAssertEqual(village.detail(in: .traditionalChinese), "居民 1,200 人。再 3,800 人成為小鎮。")
 
         let largest = try XCTUnwrap(CityTitle(cells: cells(residents: 10_000_000)))
         XCTAssertEqual(largest.rank, .megalopolis)

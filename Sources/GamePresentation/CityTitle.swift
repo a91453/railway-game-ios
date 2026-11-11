@@ -139,7 +139,7 @@ public struct CityTitle: Hashable, Sendable {
     /// `nil` for a city too small to have one, or with no jobs.
     public let kind: Kind?
     /// Whether the map's land is read in as the railway reaches it
-    /// (``GameWorld/landBlocks``): its residents are those along the lines.
+    /// (``GameWorld/landBlocks``): its residents are those read in so far.
     public let countsAlongTheLines: Bool
 
     /// The title of the city on `world`'s land, or `nil` with no one on it.
@@ -204,9 +204,9 @@ public struct CityTitle: Hashable, Sendable {
     /// "4,682,180 residents. 5,317,820 more make it a megalopolis."
     public func detail(in language: DisplayLanguage) -> String {
         let count = residents.groupedText
-        let people = countsAlongTheLines
-            ? language.text(residents == 1 ? "1 resident along your lines." : "\(count) residents along your lines.", "沿線居民 \(count) 人。")
-            : language.text(residents == 1 ? "1 resident." : "\(count) residents.", "居民 \(count) 人。")
+        // The same words on a map whose land is read in as it is needed:
+        // a new game in a real city has millions there before any line.
+        let people = language.text(residents == 1 ? "1 resident." : "\(count) residents.", "居民 \(count) 人。")
         guard let next = rank.next, let more = residentsToNext else {
             return people + language.text(" The largest size there is.", "已經是最大的規模。")
         }
