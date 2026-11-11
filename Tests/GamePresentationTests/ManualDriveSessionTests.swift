@@ -46,8 +46,9 @@ final class ManualDriveSessionTests: XCTestCase {
     }
 
     /// A session following the train at 1×, the 3D map open.
-    private func makeSession(limits: Bool = true) throws -> (GameSession, TrainID) {
+    private func makeSession(limits: Bool = true, managed: Bool = false) throws -> (GameSession, TrainID) {
         var (world, train) = try world(limits: limits)
+        if managed { world.setEconomyMode(.management) }
         world.setSpeed(.x1)
         let session = GameSession(world: world)
         session.setMap3DOpen(true)
@@ -116,6 +117,18 @@ final class ManualDriveSessionTests: XCTestCase {
             return session.manualDriveReading?.phase == .over
         })
         XCTAssertEqual(session.manualDriveReading?.result?.outcome, .passed)
+        // Decision 693: the run is settled once, as a logged command; one
+        // that ran past earns nothing and is still counted.
+        let settled = try XCTUnwrap(session.manualDriveSettlement)
+        XCTAssertEqual(settled.bonus, .zero)
+        XCTAssertEqual(settled.record.runs, 1)
+        XCTAssertEqual(settled.record.arrivals, 0)
+        XCTAssertEqual(session.world.driving, settled.record)
+        let logged = session.commandLog.entries.filter {
+            if case .command(.edit(.settleDrivenRun(let run))) = $0.action { return run.train == train && run.outcome == .passed && !$0.refused }
+            return false
+        }
+        XCTAssertEqual(logged.count, 1)
         let shown = try XCTUnwrap(session.stepManualDrive(at: time), "it stays where it ended until the player lets go")
         XCTAssertGreaterThan(shown.metres, taken.track.stopMetres + ManualDrive.overrunMetres)
         XCTAssertEqual(shown.length, Double(try XCTUnwrap(session.world.train(id: train)).length))
@@ -141,9 +154,47 @@ final class ManualDriveSessionTests: XCTestCase {
         let heights = Map3DTrains.Heights(world: session.world).driving(on: taken.track, metres: taken.track.stopMetres, length: shown.length)
         XCTAssertEqual(heights.height(of: train, x: Double(stood.x), y: Double(stood.y)), Double(stood.z))
 
+        XCTAssertEqual(session.world.driving?.runs, 1, "stepping the ended run on settles nothing more")
         session.endManualDrive()
         XCTAssertNil(session.manualDriveReading)
+        XCTAssertNil(session.manualDriveSettlement)
+        XCTAssertEqual(session.world.driving?.runs, 1, "the record stays")
         XCTAssertNil(session.stepManualDrive(at: time))
+    }
+
+    /// Decision 693: a good run earns a managed company money, the card
+    /// says so, and the logged game replays to the same world.
+    func testAGoodRunEarnsAManagedCompanyMoneyAndTheCardSaysSo() throws {
+        let (session, train) = try makeSession(managed: true)
+        session.startManualDrive()
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDrivePhase == .driving })
+        let before = session.world.economy.balance
+        session.finishManualDriveForScreenshot()
+        let result = try XCTUnwrap(session.manualDriveReading?.result)
+        let settled = try XCTUnwrap(session.manualDriveSettlement)
+        XCTAssertEqual(settled.marks.total, result.total, "the card's marks are the world's")
+        XCTAssertTrue(settled.keepsAccounts)
+        XCTAssertTrue(settled.isBest)
+        XCTAssertEqual(settled.bonus, DrivenRun.bonus(marks: result.total, riders: session.world.riderCount(of: train)))
+        XCTAssertGreaterThan(settled.bonus, .zero)
+        XCTAssertEqual(session.world.economy.balance, before + settled.bonus)
+        XCTAssertEqual(session.world.driving?.earned, settled.bonus)
+        let zh = result.text(in: .traditionalChinese, settled: settled).lines
+        XCTAssertEqual(zh.count, 3)
+        XCTAssertTrue(zh[2].contains("替公司多賺"), zh[2])
+        XCTAssertFalse(zh[2].contains("新紀錄"), "the first arrival is no record beaten")
+        let en = result.text(in: .english, settled: settled).lines
+        XCTAssertTrue(en[2].hasPrefix("Earned the company NT$"), en[2])
+        // Shown again and again, it is settled once.
+        session.finishManualDriveForScreenshot()
+        session.stepManualDrive(at: time + 1)
+        XCTAssertEqual(session.world.driving?.runs, 1)
+
+        let report = try JSONDecoder().decode(
+            CommandLogReport.self, from: session.commandLogReport(version: "0.5.0", build: "57", data: [:]).encoded()
+        )
+        XCTAssertNil(try CommandLogReplay(report).stopped?.reason, "the settlement replays")
     }
 
     /// Decision 690: the driving card names the way and, once the run is
@@ -276,6 +327,26 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertEqual(result.lateness, 5, accuracy: 2)
         XCTAssertGreaterThanOrEqual(result.total, 95)
         XCTAssertEqual(result.text(in: .traditionalChinese).lines.count, 2)
+    }
+
+    /// Review L17-14: a run that ends past the mark keeps the speed it
+    /// ended at for its result, and the train is drawn standing: it is
+    /// heard standing too, not running on until the card is closed.
+    func testARunThatPassedItsStopIsHeardStanding() throws {
+        let (session, _) = try makeSession()
+        var told: [RunningSound?] = []
+        session.runningSound = { told.append($0) }
+        session.startManualDrive()
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDriveReading?.phase == .driving })
+        session.setManualDriveNotch(.fullPower)
+        XCTAssertTrue(run(session, from: &time, ticks: 30_000) { session.manualDriveReading?.phase == .over })
+        XCTAssertEqual(session.manualDriveReading?.result?.outcome, .passed)
+        XCTAssertGreaterThan(session.manualDriveReading?.speed ?? 0, 0, "the speed it passed at")
+        XCTAssertTrue(told.contains { $0?.motor != nil }, "it was heard pulling on the way")
+        XCTAssertNil((told.last ?? nil)?.motor)
+        XCTAssertNil(told.last ?? nil, "an electric train standing is silent")
+        XCTAssertEqual(session.manualDriveSound?.kmh, 0)
     }
 
     func testTheMotorsAreHeardAsTheHandleStands() throws {

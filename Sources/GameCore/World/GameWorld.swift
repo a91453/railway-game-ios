@@ -174,6 +174,10 @@ public struct GameWorld: Equatable, Sendable {
     /// in a new world and in saves from before it; the app's new games turn
     /// it on. Set by ``setTourism(_:)`` and every midnight only.
     public internal(set) var tourism: Tourism?
+    /// The company's record of the runs the player drove by hand (decision
+    /// 693), or `nil` until one is settled, and in saves from before
+    /// version 89. Set by ``settleDrivenRun(_:)`` only.
+    public internal(set) var driving: DrivingRecord?
     /// The city's requests of the company and its trust (decision 183), or
     /// `nil`: off in a new world and in saves from before them; the app's
     /// new free games turn them on. Set by ``setCityRequests(seed:)``, the
@@ -5903,7 +5907,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, driving
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -6040,6 +6044,7 @@ extension GameWorld: Codable {
             throw DecodingError.dataCorruptedError(forKey: .leftTrack, in: container, debugDescription: "A world is written with \"leftTrack\" only when a line bought left some.")
         }
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
+        driving = try container.decodeIfPresent(DrivingRecord.self, forKey: .driving)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         // Decision 298: written only when on (every save before version 64
@@ -6232,6 +6237,7 @@ extension GameWorld: Codable {
             try container.encode(acquisitions, forKey: .acquisitions)
         }
         try container.encodeIfPresent(tourism, forKey: .tourism)
+        try container.encodeIfPresent(driving, forKey: .driving)
         try container.encodeIfPresent(cityRequests, forKey: .cityRequests)
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
@@ -6431,6 +6437,7 @@ extension GameWorld: Codable {
         if let problem = placedBuildingProblem() { return problem }
         if let problem = freightProblem() { return problem }
         if let problem = tourismProblem() { return problem }
+        if let problem = drivingProblem() { return problem }
         if let problem = cityRequestsProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {

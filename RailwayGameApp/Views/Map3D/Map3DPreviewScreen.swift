@@ -2766,7 +2766,7 @@ private struct Map3DDrivePanel: View {
         HStack(alignment: .bottom, spacing: 9) {
             Spacer(minLength: 0)
             if let result = reading.result {
-                resultCard(result.text(in: language), language: language)
+                resultCard(result.text(in: language, settled: session.manualDriveSettlement), language: language)
                 Spacer(minLength: 0)
             } else {
                 card(reading, language: language)

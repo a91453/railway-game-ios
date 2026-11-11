@@ -161,9 +161,12 @@ final class BalanceReportTests: XCTestCase {
         for day in 1...days {
             try world.advance(ticks: 1_440)
             if day == 30 {
-                // A first line cannot yet pay $7.3 million for a store: the
-                // cash is topped up so the measure is of the trade alone.
-                world.economy.earn(Money(3_000_000_000))
+                // A first line cannot yet pay for the three (NT$22 million,
+                // NT$12 million and NT$33 million): the cash is topped up so
+                // the measure is of the trade alone. Decision 692: the top-up
+                // had not followed the prices into New Taiwan dollars
+                // (decision 499), so the hotel and the park were never bought.
+                world.economy.earn(Money(9_000_000_000))
                 for (kind, site) in sites {
                     let quote = try XCTUnwrap(world.placedBuildingQuote(kind, at: site))
                     do {
@@ -194,6 +197,82 @@ final class BalanceReportTests: XCTestCase {
             lines.append(
                 "\(building.kind): cost \(dollars(building.cost.amount)), booked \(dollars(building.books.totalProfit.amount)) since opening, "
                     + "last 12 months \(dollars(building.books.trailingProfit.amount))"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
+    /// Decision 692: is selling a department store every year and building
+    /// another beside it better than keeping one? Three games on decision
+    /// 137's line between two towns, each given the same cash on day 30:
+    /// one buys nothing, one buys a store by the first station and keeps
+    /// it, one sells its store every 360 days and builds the next on the
+    /// nearest free site. Printed: each game's cash, what the store added
+    /// to it (the cash less the first game's, the first store's cost put
+    /// back), so the line's own result cancels out, and the two compared
+    /// with each game's store sold that day. The aim (decision 692): after
+    /// 1,800 days the game that sold yearly has no more than 150% of the
+    /// one that kept. `BALANCE_REPORT` is the days after day 30.
+    func testSellingAStoreEveryYearAgainstKeepingIt() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var base = try newGameLine(through: [towns[0], towns[1]])
+        let tile = Int64(1_024)
+        let station = try XCTUnwrap(base.stations.first).location
+        // Sites around the station, the nearest first.
+        var sites: [PlanPoint] = []
+        for ring in 3...9 {
+            for (dx, dy) in [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)] as [(Int64, Int64)] {
+                sites.append(PlanPoint(x: station.x + dx * Int64(ring) * tile, y: station.y + dy * Int64(ring) * tile))
+            }
+        }
+        func build(in world: inout GameWorld) throws -> (id: PlacedBuildingID, cost: Money) {
+            for site in sites {
+                if let placed = try? world.placeBuilding(.departmentStore, at: site) { return (placed.id, placed.cost) }
+            }
+            throw HeadlessGameError("no free site for a department store")
+        }
+        var lines = [
+            "### Selling a department store every 360 days and building another, against keeping one (multiple \(SubsidiaryRules.saleProfitMultiple))",
+            "",
+            "| Day | No store: balance | Kept: balance | Kept: added | Kept: would sell for | Kept: 12-month profit | Sold yearly: balance | Sold yearly: added | Added and store sold, sold yearly ÷ kept |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        try base.advance(ticks: 1)
+        try base.advance(ticks: 30 * 1_440)
+        var kept = base, sold = base
+        for index in 0..<3 {
+            var world = [base, kept, sold][index]
+            world.economy.earn(Money(9_000_000_000))
+            if index == 0 { base = world } else if index == 1 { kept = world } else { sold = world }
+        }
+        let keptStore = try build(in: &kept)
+        var soldStore = try build(in: &sold)
+        lines.append("| 30 | store bought for \(dollars(keptStore.cost.amount)) | | | | | | | |")
+        for day in 1...days {
+            try base.advance(ticks: 1_440)
+            try kept.advance(ticks: 1_440)
+            try sold.advance(ticks: 1_440)
+            var note = ""
+            if day % 360 == 0 {
+                let quote = try sold.sellPlacedBuilding(soldStore.id)
+                soldStore = try build(in: &sold)
+                note = " (sold for \(dollars(quote.price.amount)), gain \(dollars(quote.gain.amount)); rebuilt for \(dollars(soldStore.cost.amount)))"
+            }
+            guard day % 30 == 0 || day == days else { continue }
+            let keptAdded = (kept.economy.balance - base.economy.balance).amount
+            let soldAdded = (sold.economy.balance - base.economy.balance).amount
+            let price = kept.saleQuote(of: keptStore.id)?.price.amount ?? 0
+            let trailing = kept.placedBuilding(id: keptStore.id)?.books.trailingProfit.amount ?? 0
+            // Both paid for one store out of the top-up: what each added
+            // is measured from there.
+            let keptNet = keptAdded + keptStore.cost.amount, soldNet = soldAdded + keptStore.cost.amount
+            // With each game's store sold that day: cash against cash.
+            let soldPrice = sold.saleQuote(of: soldStore.id)?.price.amount ?? 0
+            let ratio = keptNet + price > 0 ? "\((soldNet + soldPrice) * 100 / (keptNet + price))%" : "–"
+            lines.append(
+                "| \(30 + day) | \(dollars(base.economy.balance.amount)) | \(dollars(kept.economy.balance.amount)) | \(dollars(keptNet)) | "
+                    + "\(dollars(price)) | \(dollars(trailing)) | \(dollars(sold.economy.balance.amount))\(note) | \(dollars(soldNet)) | \(ratio) |"
             )
         }
         print(lines.joined(separator: "\n"))

@@ -136,6 +136,7 @@ final class CommandEditTests: XCTestCase {
             .buildStationCommerce(station), .upgradeStationCommerce(station), .demolishStationCommerce(station),
             .expandStation(station), .setStationDepot(station, true), .setLineDepot(line, station), .setLineDepot(line, nil),
             .setLineDepots(line, [station, StationID(rawValue: 5)]),
+            .settleDrivenRun(DrivenRun(train: train, outcome: .stopped, offset: -45, lateness: 5_200, overspeed: 0, usedEmergency: false)),
         ]
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
         let data = try JSONEncoder().encode(entries)

@@ -24,7 +24,9 @@ Where it runs:
 - `ci.yml`, job `stack-frames`: a pull request that changes GameCore or
   GamePresentation builds them with `-c release` and lists the new frames over
   32 KB and the 20 largest in its summary. A reminder only: the gate does not
-  wait for it.
+  wait for it. When the runner cannot install objdump or python3 (the Ubuntu
+  archive does not answer), it says so in its summary and lists nothing,
+  green; re-run the job to list them.
 - `ios-build.yml`, the build job: the app's 20 largest frames (Debug,
   Simulator) in its summary.
 

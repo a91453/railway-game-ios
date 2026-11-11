@@ -120,7 +120,7 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 - **只用在浮在地圖上的控制**（狀態列、工具列、浮動按鈕），不用在清單、列、內容上。我們的入口是 `Theme.swift` 的 `glassBackground(in:interactive:)`（最低版本是 iOS 26，決策 676，沒有系統材質的退路）。
 - **不在玻璃上疊玻璃**：玻璃上的東西用實心色票，不再加材質。
-- **好幾塊玻璃放在一起時包進 `GlassEffectContainer`**，讓它們一起算、一起變形。
+- **好幾塊玻璃放在一起時包進 `GlassEffectContainer`**，讓它們一起算、一起變形。目前 App 還沒採用（3D 畫面左上、右上相鄰的幾顆玻璃沒有包），是決策 677 刻意留到量過實機幀數之後；審查時不用再報這一點。
 - **只有主要動作上色**（tint）；全部上色就沒有重點。
 - 不讓內容半壓在玻璃下面停著。
 - 「降低透明度」「增加對比」打開時，系統的 `glassEffect` 與 `.regularMaterial` 會自己變不透明；自己畫的半透明底要自己接上 `accessibilityReduceTransparency`。

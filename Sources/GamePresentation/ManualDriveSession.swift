@@ -9,6 +9,8 @@ struct ManualDriveRun: Sendable {
     var driving: (track: ManualDriveTrack, drive: ManualDrive, length: Double)?
     /// When the run was last stepped, on the map's clock.
     var stepped: Double?
+    /// Decision 693: whether the run, ended, has been told to the world.
+    var settled = false
 }
 
 extension ManualDrive {
@@ -100,6 +102,7 @@ extension GameSession {
         manualDriveReading = .waiting
         manualDrivePhase = .waiting
         manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: id, in: language))
+        manualDriveSettlement = nil
         stepManualDrive(at: nil)
     }
 
@@ -111,6 +114,7 @@ extension GameSession {
         manualDriveReading = nil
         manualDrivePhase = nil
         manualDriveHeading = nil
+        manualDriveSettlement = nil
         updateFollowSounds()
     }
 
@@ -153,8 +157,21 @@ extension GameSession {
             run.driving?.drive.advance(seconds: passed * Double(rate) / Double(GameSpeed.x1.tenthsPerTick))
         }
         manualDriveRun = run
+        settleManualDrive()
         publishManualDrive()
         return run.driving.map { ($0.track, $0.drive.distance, $0.length) }
+    }
+
+    /// Decision 693: tells the world of the run once it has ended, as the
+    /// one command that makes it count
+    /// (``PlayerCommand/Edit/settleDrivenRun(_:)``, logged and replayed as
+    /// any edit), and keeps what the world made of it for the result
+    /// card. A run the world refuses is left as decision 686 had it: its
+    /// marks shown and nothing counted.
+    private func settleManualDrive() {
+        guard let run = manualDriveRun, !run.settled, let result = run.driving?.drive.result else { return }
+        manualDriveRun?.settled = true
+        manualDriveSettlement = (try? performCommand(.edit(.settleDrivenRun(result.run(of: run.train)))))?.drivenRun
     }
 
     /// Decision 686: for the screenshot review only: the run being driven
@@ -167,6 +184,7 @@ extension GameSession {
         drive.advance(seconds: 5)
         run.driving = (driving.track, drive, driving.length)
         manualDriveRun = run
+        settleManualDrive()
         publishManualDrive()
     }
 
@@ -174,6 +192,10 @@ extension GameSession {
     /// driven by hand.
     var manualDriveSound: (kmh: Double, drive: GameWorld.TrainDrive?)? {
         guard let drive = manualDriveRun?.driving?.drive else { return nil }
+        // Review L17-14: a run that ended past the mark or out of time
+        // keeps the speed it ended at, and the train is drawn standing:
+        // it is heard standing too, not running until the card is closed.
+        if drive.isOver { return (0, nil) }
         return (drive.speedKMH, drive.drive)
     }
 

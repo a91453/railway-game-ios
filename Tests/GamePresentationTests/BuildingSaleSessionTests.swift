@@ -40,6 +40,8 @@ final class BuildingSaleSessionTests: XCTestCase {
             "Land: 95% of its right now \(Money(768_000).moneyText) = \(Money(729_600).moneyText)",
             "Building: book value \(Money(6_144_000).moneyText) × 0% (under half full) = \(Money(0).moneyText)",
             "Price \(Money(729_600).moneyText) · on the books at \(Money(6_912_000).moneyText)",
+            // Decision 692: against the 6,912,000 paid, 6,182,400 down.
+            "Paid \(Money(6_912_000).moneyText) (down 89.4%)",
             "Realized loss \(Money(6_182_400).moneyText)",
         ])
         XCTAssertEqual(session.saleGainText, "Realized loss \(Money(6_182_400).moneyText)")
@@ -89,6 +91,7 @@ final class BuildingSaleSessionTests: XCTestCase {
         session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 0)
         XCTAssertEqual(session.salePreviewLines.first, "小住宅 #1 · 入住 0 / 11 人（0%）")
         XCTAssertEqual(session.salePreviewLines[1], "土地：目前的土地使用權 \(Money(768_000).moneyText) × 95% = \(Money(729_600).moneyText)")
+        XCTAssertEqual(session.salePreviewLines[4], "買價 \(Money(6_912_000).moneyText)（跌 89.4%）")
         XCTAssertTrue(session.confirmSale())
         XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "小住宅 #1 賣給城市，收入 \(Money(729_600).moneyText)。已實現損失 \(Money(6_182_400).moneyText)。"))
 

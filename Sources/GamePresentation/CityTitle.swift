@@ -229,8 +229,10 @@ public struct CityTitle: Hashable, Sendable {
         )
     }
 
-    /// The news of the city reaching `rank`: "The city has grown into a metropolis."
+    /// The news of the map reaching `rank`: "This place has grown into a
+    /// metropolis." Not "the city": one of the ranks is "city" (review
+    /// L17-10: "The city has grown into a city.").
     public static func promotionText(_ rank: Rank, in language: DisplayLanguage) -> String {
-        language.text("The city has grown into a \(rank.name(in: language).lowercased()).", "城市成長為\(rank.name(in: language))。")
+        language.text("This place has grown into a \(rank.name(in: language).lowercased()).", "這裡成長為\(rank.name(in: language))了。")
     }
 }

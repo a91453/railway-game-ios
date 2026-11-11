@@ -39,7 +39,7 @@ final class ManualDriveTests: XCTestCase {
         XCTAssertEqual(ManualDrive.Notch.fullPower.raised, .fullPower, "no further than full power")
         XCTAssertEqual(ManualDrive.Notch.emergency.lowered, .emergency)
         XCTAssertEqual(ManualDrive.Notch.neutral.lowered.mark, "B1")
-        XCTAssertEqual(ManualDrive.Notch(step: 3).label(in: .traditionalChinese), "動力 3 段")
+        XCTAssertEqual(ManualDrive.Notch(step: 3).label(in: .traditionalChinese), "加速 3 段")
         XCTAssertEqual(ManualDrive.Notch(step: -4).label(in: .english), "Brake 4")
         XCTAssertEqual(ManualDrive.Notch.emergency.label(in: .traditionalChinese), "緊急煞車")
         XCTAssertEqual(ManualDrive.Notch.neutral.label(in: .traditionalChinese), "空檔")
@@ -122,10 +122,18 @@ final class ManualDriveTests: XCTestCase {
     }
 
     func testTheMarksFallWithTheDistanceFromTheMarkAndTheTimeOffTheTimetable() {
-        XCTAssertEqual(ManualDrive.marks(50, off: 0.5, full: 0.5, none: 25), 50)
-        XCTAssertEqual(ManualDrive.marks(50, off: 12.75, full: 0.5, none: 25), 25)
-        XCTAssertEqual(ManualDrive.marks(50, off: 25, full: 0.5, none: 25), 0)
-        XCTAssertEqual(ManualDrive.marks(30, off: 32.5, full: 5, none: 60), 15)
+        // Decision 693: marked by the world's rules, from the run's figures
+        // in whole world units and milliseconds.
+        func marked(offset: Double = 0, lateness: Double = 0) -> ManualDrive.Result {
+            ManualDrive.Result(outcome: .stopped, offset: offset, lateness: lateness, overspeedSeconds: 0, usedEmergency: false)
+        }
+        XCTAssertEqual(marked(offset: -0.5).position, 50)
+        XCTAssertEqual(marked(offset: -12.75).position, 25)
+        XCTAssertEqual(marked(offset: -25).position, 0)
+        XCTAssertEqual(marked(lateness: 32.5).time, 15)
+        XCTAssertEqual(marked(offset: -12.75, lateness: 32.5).run(of: TrainID(rawValue: 4)), DrivenRun(
+            train: TrainID(rawValue: 4), outcome: .stopped, offset: -816, lateness: 32_500, overspeed: 0, usedEmergency: false
+        ))
 
         // Stopped ten metres short, late: where a light brake from 150 m
         // brings it to a stand, then the same with the mark 10 m on.

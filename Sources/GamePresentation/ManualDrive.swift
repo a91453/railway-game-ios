@@ -58,7 +58,7 @@ public struct ManualDrive: Equatable, Sendable {
         /// What VoiceOver reads for it.
         public func label(in language: DisplayLanguage) -> String {
             if isEmergency { return language.text("Emergency brake", "緊急煞車") }
-            if step > 0 { return language.text("Power \(step)", "動力 \(step) 段") }
+            if step > 0 { return language.text("Power \(step)", "加速 \(step) 段") }
             if step < 0 { return language.text("Brake \(-step)", "煞車 \(-step) 段") }
             return language.text("Neutral", "空檔")
         }
@@ -139,9 +139,8 @@ public struct ManualDrive: Equatable, Sendable {
 
     /// The marks of a run that ended.
     public struct Result: Hashable, Sendable {
-        public enum Grade: String, CaseIterable, Sendable {
-            case s = "S", a = "A", b = "B", c = "C", d = "D"
-        }
+        /// Decision 693: the world's grades, as it marks a run settled.
+        public typealias Grade = DrivenRun.Grade
 
         public let outcome: Outcome
         /// Metres past the stopping point (negative: short of it).
@@ -159,13 +158,48 @@ public struct ManualDrive: Equatable, Sendable {
         public var total: Int { position + time + handling }
 
         public var grade: Grade {
-            switch total {
-            case 95...: .s
-            case 85...: .a
-            case 70...: .b
-            case 50...: .c
-            default: .d
+            DrivenRun.Marks(position: position, time: time, handling: handling).grade
+        }
+
+        /// Decision 693: the run as the world settles it, for `train`: its
+        /// figures in whole world units and milliseconds, which the marks
+        /// here are worked out from too, so the world gives it the same.
+        public func run(of train: TrainID) -> DrivenRun {
+            Self.run(of: train, outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency)
+        }
+
+        private static func run(
+            of train: TrainID, outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool
+        ) -> DrivenRun {
+            func whole(_ value: Double) -> Int64 {
+                Int64(min(max(value.rounded(), -Double(DrivenRun.longest)), Double(DrivenRun.longest)))
             }
+            let kind: DrivenRun.Outcome = switch outcome {
+            case .stopped: .stopped
+            case .passed: .passed
+            case .timedOut: .timedOut
+            }
+            return DrivenRun(
+                train: train, outcome: kind, offset: whole(offset * Double(WorldCoordinate.unitsPerMetre)), lateness: whole(lateness * 1_000),
+                overspeed: max(0, whole(overspeedSeconds * 1_000)), usedEmergency: usedEmergency
+            )
+        }
+
+        /// A run that ended so, marked by the world's rules
+        /// (``DrivenRun/marks``).
+        init(outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool) {
+            let marks = Self.run(
+                of: TrainID(rawValue: 1), outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds,
+                usedEmergency: usedEmergency
+            ).marks
+            self.outcome = outcome
+            self.offset = offset
+            self.lateness = lateness
+            self.overspeedSeconds = overspeedSeconds
+            self.usedEmergency = usedEmergency
+            position = marks.position
+            time = marks.time
+            handling = marks.handling
         }
     }
 
@@ -307,24 +341,8 @@ public struct ManualDrive: Equatable, Sendable {
     }
 
     private mutating func finish(_ outcome: Outcome) {
-        let offset = distance - course.stop, lateness = elapsed - course.scheduled
-        var position = 0, time = 0, handling = 0
-        if outcome == .stopped {
-            position = Self.marks(Self.positionMarks, off: abs(offset), full: Self.exactMetres, none: offset < 0 ? Self.shortMetres : Self.pastMetres)
-            time = Self.marks(Self.timeMarks, off: abs(lateness), full: Self.exactSeconds, none: Self.offSeconds)
-            let lost = overspeedSeconds * Self.overspeedMarksPerSecond + (usedEmergency ? Double(Self.emergencyMarks) : 0)
-            handling = max(0, Self.handlingMarks - Int(lost.rounded()))
-        }
-        result = Result(outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds,
-                        usedEmergency: usedEmergency, position: position, time: time, handling: handling)
-    }
-
-    /// `marks` in full while `off` is within `full`, none from `none` on,
-    /// evenly between.
-    static func marks(_ marks: Int, off: Double, full: Double, none: Double) -> Int {
-        if off <= full { return marks }
-        if off >= none { return 0 }
-        return Int((Double(marks) * (none - off) / (none - full)).rounded())
+        result = Result(outcome: outcome, offset: distance - course.stop, lateness: elapsed - course.scheduled,
+                        overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency)
     }
 }
 
@@ -417,6 +435,15 @@ extension ManualDrive {
 }
 
 extension ManualDrive.Result {
+    /// What the result card says; with `settled`, what the world made of
+    /// the run (decision 693), a last line says what it brought the
+    /// company.
+    public func text(in language: DisplayLanguage, settled: DrivenRunSettlement?) -> ManualDrive.ResultText {
+        let text = text(in: language)
+        guard let line = settled.flatMap({ ManualDrive.settlementText($0, stopped: outcome == .stopped, in: language) }) else { return text }
+        return .init(title: text.title, lines: text.lines + [line], total: text.total, grade: text.grade)
+    }
+
     public func text(in language: DisplayLanguage) -> ManualDrive.ResultText {
         switch outcome {
         case .passed:
@@ -479,6 +506,28 @@ extension ManualDrive {
 
     public static func stopLabel(in language: DisplayLanguage) -> String {
         language.text("Stop in", "停車點")
+    }
+
+    /// Decision 693: what a run settled brought the company: what it
+    /// earned, with the passengers it carried, and "a new best" for the
+    /// most marks so far after the first; without accounts, which run it
+    /// was and the best so far. Nothing for a run that did not stop.
+    static func settlementText(_ settled: DrivenRunSettlement, stopped: Bool, in language: DisplayLanguage) -> String? {
+        guard stopped else { return nil }
+        let best = settled.isBest && settled.record.arrivals > 1 ? language.text(" · new best", " · 新紀錄") : ""
+        if settled.bonus > .zero {
+            let riders = settled.riders.groupedText
+            return language.text(
+                "Earned the company \(settled.bonus.moneyText) · \(riders) aboard", "替公司多賺 \(settled.bonus.moneyText) · 車上 \(riders) 人"
+            ) + best
+        }
+        if settled.keepsAccounts {
+            return language.text(
+                "Earned the company nothing: score over \(DrivenRun.bonusFloor) to earn", "沒有替公司多賺：超過 \(DrivenRun.bonusFloor) 分才有"
+            )
+        }
+        let runs = settled.record.runs.groupedText
+        return language.text("Run \(runs) by hand · best \(settled.record.best) points", "手動駕駛第 \(runs) 趟 · 最佳 \(settled.record.best) 分")
     }
 
     public static func marksText(_ total: Int, in language: DisplayLanguage) -> String {
