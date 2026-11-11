@@ -220,6 +220,8 @@ public enum PlayerCommand: Hashable, Sendable {
         /// The building put up, and the sale of one.
         public var building: PlacedBuilding?
         public var sale: PlacedBuildingSaleQuote?
+        /// Decision 693: what settling a run driven by hand came to.
+        public var drivenRun: DrivenRunSettlement?
         /// A count the edit made: the new pattern's index, the cells zoned,
         /// the city buildings cleared, the trains a service now runs.
         public var number = 0
@@ -866,6 +868,7 @@ extension PlayerCommand {
             case .reformLine: language.text("re-form the line's trains", "改編路線的列車")
             case .placeBuilding: language.text("put up this building", "蓋這棟建物")
             case .demolishBuilding: language.text("demolish this building", "拆除這棟建物")
+            case .settleDrivenRun: language.text("count this run", "計入這一趟")
             case .buyMapTile: language.text("buy this land", "買下這塊地")
             case .buildFreightYard: language.text("build a freight yard", "建貨場")
             case .buildStationRoad: language.text("build the station road", "鋪站前路")

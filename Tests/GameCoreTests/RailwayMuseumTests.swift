@@ -265,7 +265,7 @@ final class RailwayMuseumTests: XCTestCase {
             return try JSONSerialization.data(withJSONObject: save)
         }
         let save = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(save["saveVersion"] as? Int, 87)
+        XCTAssertEqual(save["saveVersion"] as? Int, SavedGame.currentVersion, "87 when the museum came (decision 684)")
         let written = try XCTUnwrap((save["world"] as? [String: Any])?["placedBuildings"] as? [[String: Any]])
         XCTAssertEqual(written.map { $0["kind"] as? String }, ["temple", "railwayMuseum"])
         XCTAssertNil(written[0]["exhibits"])

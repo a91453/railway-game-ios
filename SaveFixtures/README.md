@@ -283,3 +283,16 @@ stars), counted 84 visitors on day 0 and has a day on its books. Written by
 the version 87 build
 (`RailwayMuseumTests.testVersionEightySevenKeepsTheMuseum`,
 `RAILWAY_MUSEUM_SAVE_NEW=1`).
+
+Version 89 (decision 693) adds the runs driven by hand: the world keeps a
+record of them (`"driving"`: runs, arrivals, best marks, what they earned,
+the game second of the last; written only once a run was settled) and the
+ledger a row of a new kind for a good run's bonus (`"drivenRun"`, its item
+`"drivingBonus"`). A build before version 89 knows neither, so the version
+says so. Earlier saves have no record and load as before; there is no
+migration step (version 88 is reserved by the subsidiaries' work).
+`v89-driven-run.json` is `DrivenRunTests`' managed world with two runs
+settled, one that stopped (95 marks) and one that ran past: the record
+reads 2 runs, 1 arrival, best 95, NT$450 earned. Written by the version 89
+build (`DrivenRunTests.testVersionEightyNineKeepsTheRunsDrivenByHand`,
+`DRIVEN_RUN_SAVE_NEW=1`).
