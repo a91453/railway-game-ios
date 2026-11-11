@@ -131,6 +131,22 @@ final class TutorialUITests: XCTestCase {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
         // A new chapter: the card is folded again.
+        // The folded card stays where it stands as the message that the
+        // track was built goes from the map's top (decision 688). Placed
+        // afresh then, it moved from the map's bottom trailing corner to
+        // its top leading one, on an iPad 630 points away, and a touch
+        // sent to where it had stood fell on the map (main cd0fbab's full
+        // lane, run 42736226266). The message shows for some three
+        // seconds: watched for five.
+        let pill = app.buttons["tutorial.unfold"]
+        if pill.appears(within: 5) {
+            pill.waitUntilSettled()
+            let stood = pill.frame
+            for _ in 0..<10 where pill.exists {
+                XCTAssertEqual(pill.frame, stood, "The folded card moved")
+                Thread.sleep(forTimeInterval: 0.5)
+            }
+        }
         openCard(app)
         waitForEnabled(app, false, "The platform step waits for the mode")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)

@@ -347,6 +347,7 @@ struct Map3DPreviewScreen: View {
             FrameTimeRecorder.shared.show3D(true)
             let audio = audio
             feed.garbageTruckSound = { [weak audio] sound in audio?.setGarbageTruck(sound) }
+            let session = session
             feed.manualDrive = { [weak session] now in session?.stepManualDrive(at: now) }
         }
         .onDisappear {

@@ -549,6 +549,56 @@ final class TutorialCardPlacementTests: XCTestCase {
         ).folded
     }
 
+    /// "Tap Station" on an iPad on its side, as the app measured it
+    /// (decision 679's next step): the track just built, its message runs
+    /// along the map's top, and the folded pill stands at the map's bottom
+    /// trailing corner. When the message goes, a pill placed afresh moves
+    /// to the map's top leading corner, 630 points away; one placed where it
+    /// stood (``TutorialCardPlacement/previous``) stays.
+    func testAFoldedCardStaysWhenTheMessageOverTheMapGoes() {
+        let pill = { (proposal: Size) in Size(width: min(287.5, proposal.width), height: 44) }
+        let bounds = Frame(x: 0, y: 0, width: 1376, height: 980)
+        let modes = Frame(x: 1040, y: 194, width: 312, height: 31)
+        let message = Frame(x: 82, y: 60, width: 944, height: 62)
+        let controls = [
+            Frame(x: 24, y: 21, width: 150.5, height: 28), Frame(x: 92, y: 846, width: 44, height: 44),
+            Frame(x: 190.5, y: 21, width: 257.5, height: 28), Frame(x: 14, y: 74, width: 64, height: 48),
+            Frame(x: 14, y: 130.5, width: 64, height: 48), Frame(x: 83, y: 911, width: 48, height: 48),
+            Frame(x: 1040, y: 410.5, width: 312, height: 44), Frame(x: 21, y: 911, width: 48, height: 48),
+            Frame(x: 1277.5, y: 926, width: 88.5, height: 44), Frame(x: 464, y: 15, width: 117.5, height: 40),
+            Frame(x: 669.5, y: 19, width: 38, height: 32), modes,
+        ]
+        func step(message shown: Bool) -> TutorialCardPlacement {
+            TutorialCardPlacement(
+                target: modes, controls: controls + (shown ? [message] : []),
+                backdrops: [Frame(x: 1026, y: 70, width: 340, height: 418.5)], required: [modes],
+                map: Frame(x: 82, y: 60, width: 944, height: 840)
+            ).folded
+        }
+        let before = step(message: true).frame(in: bounds, measure: pill)
+        XCTAssertEqual(before, Frame(x: 726.5, y: 844, width: 287.5, height: 44))
+
+        let afresh = step(message: false).frame(in: bounds, measure: pill)
+        XCTAssertEqual(afresh, Frame(x: 94, y: 72, width: 287.5, height: 44), "placed afresh, the pill moves under the finger")
+
+        var staying = step(message: false)
+        staying.previous = before
+        XCTAssertEqual(staying.frame(in: bounds, measure: pill), before)
+    }
+
+    /// The card forgets its place when the screen turns or is resized, not
+    /// when its bounds are first measured: it is new for each step, and
+    /// forgot at once the place the test above has it keep.
+    func testOnlyAChangedScreenPlacesTheCardAfresh() {
+        let none = Size(width: 0, height: 0)
+        let landscape = Size(width: 1376, height: 980)
+        let portrait = Size(width: 1032, height: 1324)
+        XCTAssertFalse(TutorialCardPlacement.placesAfresh(boundsFrom: none, to: landscape))
+        XCTAssertFalse(TutorialCardPlacement.placesAfresh(boundsFrom: landscape, to: landscape))
+        XCTAssertTrue(TutorialCardPlacement.placesAfresh(boundsFrom: landscape, to: portrait))
+        XCTAssertTrue(TutorialCardPlacement.placesAfresh(boundsFrom: portrait, to: landscape))
+    }
+
     /// The folded pill narrows when "Skip this step" goes, the step done
     /// (main 947c23a's full lane, run 40093122899: 334 points wide with it,
     /// the touch at its leading end fell on the map). Placed afresh it is

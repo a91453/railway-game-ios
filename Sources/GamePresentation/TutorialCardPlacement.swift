@@ -261,6 +261,20 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         return Frame(x: best.origin.x, y: best.origin.y, width: size.width, height: size.height)
     }
 
+    /// Whether a card whose layout's bounds went from `old` to `new` is
+    /// placed afresh, forgetting where it stood (``previous``): the device
+    /// turned or the window was resized. Not the first time the bounds are
+    /// measured (`old` empty): each step's card is new, and forgetting its
+    /// place then left it placed afresh on every change for the rest of the
+    /// step. At "Tap Station" on an iPad the folded card stood at the map's
+    /// bottom trailing corner, clear of the message along the map's top,
+    /// and moved to the top leading corner when the message went, some
+    /// seconds on, under the player's finger (decision 679's next step;
+    /// main cd0fbab's full lane, run 42736226266).
+    public static func placesAfresh(boundsFrom old: Size, to new: Size) -> Bool {
+        old.width > 0 && old.height > 0 && old != new
+    }
+
     /// Whether a card at `frame`, in the screen's coordinates, leaves the
     /// step's own controls, the places to tap and the panels uncovered and
     /// a band of the map free to tap.
