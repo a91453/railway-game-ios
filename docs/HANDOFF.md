@@ -592,7 +592,7 @@
 - **審查點數**（L16 之後，從 #2032 起）：#2035、#2037、#2038、#2040、#2039、#2042、#2047、#2043、#2048 各 1，#2046 算 2，**共 11**；滿 30 或發完一版派 REVIEW-L17。
 - **給 Mac 本機的清單**（#1579 找「給 Mac 本機 session 的工作清單」6786821644 與之後的補充；作者一次貼一件：「讀 a91453/railway-game-ios 的 #1579，找「給 Mac 本機 session 的工作清單」和之後的補充，做第 N 件。」）：LOOK-LOOP 已完成。TUTORIAL-CAPSULE 做完（[決策 688](decisions/688.md)：每一步的卡片第一次量到版面大小就忘了原位，狀態訊息一消失膠囊就從頭挑位置；改成第一次量不算）。接著 GLASS-POLISH（加上：買車估算那一行在橫放加車時可能被標題列蓋住（UNVERIFIED）、「駕駛」「駕駛室」兩顆都是實心青色、兩個 ✕ 靠太近、英文博物館卡名被截成「Railway m…」、橫放時建造卡清單與說明被截）；MANUAL-DRIVE 的手感、觸覺、馬達聲、直放與 iPad；FACADE-669；CAB-RAIN；FPS-DEVICE；MUSEUM 第二步（3D 館舍、圖示、館內，照 `model-look`）；把 `coastTimber` 型式套到日南、談文、大山、新埔；保安、集集的試做 patch（assets `model-look-2026-11-11/evals/`）等作者看。
 - **記著、還沒派**（有完整 tier 名額再派）：
-  - 子公司設計第 ① 步（`research/SUBSIDIARY_DESIGN_2026-11-11.md`），連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因不明。
+  - 子公司設計第 ① 步（`research/SUBSIDIARY_DESIGN_2026-11-11.md`），連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因查到了，不是退步：這條量測線三站排在 448 m 上，一天發車 640 次、每次 NT$225，每次只載 8–11 人（[HEALTH-125](research/HEALTH_125_2026-11-11.md) §5.4）；比子公司時改用 `testALineBetweenTwoTowns` 或只比差額。
   - MANUAL-DRIVE 第二步（開車要算數，動 GameCore，§4.61）。
   - `python3 tools/station-kit/catalog.py --check` 在 main 就過期（4 列）。
   - HEALTH-124 §6.5 的 (c)(d)；決策 682「之後可以做的」。
@@ -602,6 +602,7 @@
 
 **第 60 任接手（2026-11-11 02:30 UTC＝台灣 10:30，session_01YGNNumCi7AYjpiS4ntJZjK，作者在 claude.ai 開，第 0 層）**
 - **CITY-TITLE（決策 683，`claude/city-title-683`，session_01YGNNupYoAuDo7yAXiwVvbL，壓縮 1 次）**：城市的規模稱號（九級）與類型（八種）放在「目標」最下面，升級時新聞、狀態列與原有音效；只動 GamePresentation 與面板。沒做、留給下一張單的（[決策 683](decisions/683.md)「下一步」）：成就（要作者在 App Store Connect 加 Game Center 成就）、徽章與升級卡片（要美術審）、觀光類型接決策 174 的遊客、高雄與新竹的類型不準（`LandImport` 的工作資料）、外國地圖的類型基準（作者 11-11 定：用各國通用的一份）。
+- **HEALTH-125（第 125 版後健檢，2026-11-11）：CONCERNS，沒有新的行車退步**，報告 [`research/HEALTH_125_2026-11-11.md`](research/HEALTH_125_2026-11-11.md)。150 格只有文湖擬實誤點 286 → 291/532 變了（#2039，決策 678 自己量過）；機捷三個世界 5、7、9 班沒發、讓路 63、51、90 次，同 HEALTH-124 與 TYMC_YIELD；沒有清不掉的死結。博物館 360 天 HEALTHY（同決策 684）。**月台加長（L17-7）**：示範與可買路線 685 座月台 683 座能加長（42% 只能多一節），但玩家用「月台軌道」加的那一股選單是空的（報告 §5.3、§6 第 5 項，還沒派）。
 - **HEALTH-124（第 124 版後健檢，2026-11-11）：CONCERNS**，報告 [`research/HEALTH_124_2026-11-11.md`](research/HEALTH_124_2026-11-11.md)。機捷新局預設第二天沒發 5/333（決策 666 的數字對）、改建後 9；「買了舊線不改建」從 2 變 7 班；讓路的空車仍來回跳（兩天 63 次、一列連讓 14 站）。沒有清不掉的死結，逐分與最高倍速一致。建議派修的項目在報告第 6 節。
 - **子公司買賣與擴充的設計（SUBSIDIARY-DESIGN，2026-11-11，NEXT_PRIORITIES §25 第 4 名）**：[`research/SUBSIDIARY_DESIGN_2026-11-11.md`](research/SUBSIDIARY_DESIGN_2026-11-11.md)。只有設計，還沒派實作。「先蓋、等增值再賣」的指令已經有（決策 130、173），缺的是增值不跟周圍發展走、玩家看不到漲幅、產業互相影響；切成四步（① 量「賣了再蓋」與看得見的增值 → ② 鄰地行情 → ③ 產業互相影響表 → ④ 工業、農業、公寓三種新建物，只有 ④ 升存檔），一步合了才派下一步。
 - 照下面「第 59 任交第 60 任」（含 11-11 補充）接手；已在 #1579 登記，第 59 任停手、可以封存。
