@@ -105,13 +105,28 @@ final class WebsiteScreenshotTests: XCTestCase {
         shootRealDepot("klrt-depot", at: "22.609000,120.325500", scene: "klrt", line: "krtc:C")
     }
 
-    private func shootRealDepot(_ name: String, at place: String, scene: String = "wenhu", line: String = "trtc:BR") {
+    /// Decision 678: the Wenhu Line bought on a real map of Taipei, on
+    /// the 3D map over the Keelung River between Songshan Airport and
+    /// Dazhi, where the real line is in a tunnel under the river: from
+    /// the side and from higher up, and from higher up seeing underground
+    /// (decision 672). For the screenshot review of the pull request that
+    /// laid that stretch underground (it was a trench across the river).
+    func testWenhuUnderTheKeelungRiver() {
+        shootRealDepot("wenhu-keelung-river", at: "25.075958,121.546208")
+        shootRealDepot("wenhu-keelung-river-underground", at: "25.075958,121.546208", views: [("high", "900,200,20")],
+                       extra: ["-map.showsUnderground", "YES"])
+    }
+
+    private func shootRealDepot(
+        _ name: String, at place: String, scene: String = "wenhu", line: String = "trtc:BR",
+        views: [(String, String)] = [("side", "450,200,55"), ("high", "900,200,20")], extra: [String] = []
+    ) {
         // The buying takes minutes in the Debug app (the workflow allows up
         // to 30 minutes a test).
         executionTimeAllowance = 1_500
-        for (shot, view) in [("side", "450,200,55"), ("high", "900,200,20")] {
+        for (shot, view) in views {
             let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-buy-real", line, "-screenshot-3d-view", view,
-                                     "-screenshot-3d-at", place, "-map3D.quality", "high"])
+                                     "-screenshot-3d-at", place, "-map3D.quality", "high"] + extra)
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             // The Debug app's main thread is busy buying for a minute at a
             // time, longer than a UI query waits.
