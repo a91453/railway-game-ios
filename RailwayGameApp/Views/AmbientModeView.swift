@@ -266,7 +266,7 @@ struct AmbientCurtain: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(.regularMaterial, in: Capsule())
+            .glassBackground(in: Capsule())
             .opacity(showsHint || ambient?.caption != nil ? 1 : 0)
             .padding(.bottom, CGFloat(HUDMargins.edge))
             .padding(.horizontal, CGFloat(HUDMargins.edge))
