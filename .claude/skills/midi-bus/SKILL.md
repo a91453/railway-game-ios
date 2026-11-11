@@ -7,6 +7,8 @@ description: 圓弧中型公車原生建模、五款巴士共存與七向素材�
 
 先讀 AGENTS／CLAUDE／HANDOFF、art-style、station-kit 與 shuttle／low-floor／coach skills、最新 #231。作者4張綠白圓頭兩軸車圖；改暖白＋藍綠霧面，重組多段包覆曲面風擋、凸弧前臉、連體抬高車頂、右前雙乘客門、左後緊急／設備門、圓尾燈。無品牌／原始 mesh／貼圖。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 完整跨 session 可複製指令：[VEHICLE_ASSET_HANDOFF_PROMPT.md](../../../docs/art/VEHICLE_ASSET_HANDOFF_PROMPT.md)。不要只把 prompt 交回去，作者要實際完成素材與兩庫 draft PR。
 
 Map3DMidiBus.model() → life-midiBus → Map3DStreetModel.midiBus → standard；內部 x前/y上/z右，flat只轉一次至native x前/y左/z上。約9.15m長、2.38m車身寬、2.91m含鏡寬、3.16m高，輪底0，軸x=-2.12/+2.86。兩個耳切真輪拱，風擋沿高度與前角分段且各有背板；圓肩曲面頂蓋與車身沿2.72m相接，不能同面疊兩張頂板；細門縫、同色低部漆面，不用厚灰艙蓋。支架連鏡，頂蓋本體封底，不加方形外掛頂板。

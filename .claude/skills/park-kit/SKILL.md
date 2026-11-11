@@ -7,6 +7,8 @@ description: 公園遊具、運動設施、庭園的原生 3D 配方、四組景
 
 先讀 CLAUDE.md、art-style、station-kit 與 #231 最新工作登記。只延伸 Map3DParkKit*.swift、tools/park-kit、本skill、對應測試與文件；不改其他Kit、地圖、GameCore或其他代理的整合工作。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 36件（三類各12）＋4組景。Map3DParkKit.model(for:)與Map3DModelPack(parkKit:)按需產生，不加入standard常駐。內部x前/y上/z右；native模型與connectors為x前/y左/z上、公尺。盒子的y是底。沿用StationKitBuilder、CivicKit的封閉civicTube/civicLegs與既有色票，不新增引擎依賴。
 
 所有單件ground底z=0。鞦韆繩下端接座椅最高面，上端嵌入橫樑。繩橋下段吊桿必須進入1.1m寬橋板邊，不能只懸在外側；保留接合回歸測試。滑梯斜面需封底、封邊，滑道／平台／階梯／支腳要接合。步橋弧面上下層相差.12；端面deck接點在x±2.5、z=.12，橋端接步道。庭園組景跨水池短邊，兩端橋台有落地基礎；不要讓橋台懸在池面上。球架與球網獨立，組景依地坪高度／connector放置。這是靜態遊戲資產，不是遊具安全、結構或運動模擬。

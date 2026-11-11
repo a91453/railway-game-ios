@@ -7,6 +7,8 @@ description: Generate open-front sports venues, gym equipment and pool facilitie
 
 先讀 CLAUDE.md、HANDOFF、art-style、station-kit、park-kit、civic-kit 與工作登記 #1579（#1041、#231 已滿）。登記自己的新增範圍；不動 GameCore、存檔、Golden、地圖或其他代理檔案。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 24 件，venue / fitness / sport / aquatic 各 6，另 4 個完整組景。場館前側開放供組裝與檢視，不是門洞、導航或碰撞資料。器材能獨立擺放，球、槓片、保齡球瓶、樓層與重複擺設不另計件。不重做 ParkKit 球場／單槓／坡道、CivicKit 撞球桌，也不依賴未合併 EstateKit 的 API。
 
 ## 原生配方與重建

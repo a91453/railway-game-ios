@@ -108,6 +108,7 @@ extension Map3DStationKit {
         case .kaohsiung: (Map3DPalette.tileWhite, Map3DPalette.gymGreen)
         case .timber: (Map3DPalette.counters[1], Map3DPalette.gymGreen)
         case .hsinchu, .tainan, .chiayi, .heritage, .taichung: (Map3DPalette.brick, Map3DPalette.templeRidge)
+        case .coastTimber: (Map3DPalette.schoolWalls, Map3DPalette.arcade)
         case .regional, .halt, .taitung: (Map3DPalette.schoolWalls, Map3DPalette.gymGreen)
         default: (Map3DPalette.tileWhite, Map3DPalette.tileWhite)
         }
@@ -132,6 +133,7 @@ extension StationKitBuilder {
         case .hsinchu, .tainan, .chiayi, .heritage, .timber:
             let grand = p == .hsinchu || p == .tainan
             historic(0, 0.25, 0, length: 13, width: grand ? 43 : 21 + Float(v) * 2, wood: p == .timber, clock: grand || p == .chiayi)
+        case .coastTimber: coastTimber(0, 0.25, 0)
         case .banqiao, .nangang:
             let w: Float = p == .nangang ? 74 : 64
             facade(0, 0.3, 0, 38, w, 10, Self.white, bays: 12)

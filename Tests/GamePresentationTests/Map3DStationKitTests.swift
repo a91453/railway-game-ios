@@ -34,6 +34,29 @@ final class Map3DStationKitTests: XCTestCase {
         XCTAssertEqual(Set(hero.map(\.triangleCount)).count,3,"different structures, rather than renamed copies")
         XCTAssertNil(Map3DStationKit.model(id:"missing-station"))
     }
+    /// model-look's trial: Zhuifen is the Coast Line timber hall, not the
+    /// brick archetype: a gabled roof whose ridge runs along the platforms,
+    /// a cross gable up to the ridge over the platform side only, and a
+    /// lean-to roof along both long sides whose posts stand on the ground.
+    func testZhuifenIsATimberHallWithACrossGableOverThePlatformSide() throws {
+        let station=try XCTUnwrap(Map3DStationKit.stations.first { $0.system=="tra_sched" && $0.name=="追分" })
+        XCTAssertEqual(station.profile,.coastTimber);XCTAssertTrue(station.isLandmark)
+        var builder=StationKitBuilder();builder.house(station)
+        // Native axes: x front, y left, z up; the hall's walls at x ±4.
+        let v=Map3DModelPack.Model.flat(named:"zhuifen",from:builder.mesh).vertices
+        let ridge=try XCTUnwrap(v.map(\.z).max())
+        XCTAssertEqual(ridge,8.8,accuracy:0.3)
+        // The ridge runs the hall's whole length.
+        XCTAssertTrue(v.contains { $0.z>ridge-0.4 && $0.y>10 } && v.contains { $0.z>ridge-0.4 && $0.y < -10 })
+        // The cross gable reaches past the platform-side wall near the ridge's height; nothing does at the front.
+        XCTAssertTrue(v.contains { $0.x < -4.9 && $0.z>8 })
+        XCTAssertFalse(v.contains { $0.x>4.9 && $0.z>6 })
+        // Lean-to roofs both sides, below the high windows, and posts under them down to the forecourt.
+        for side: Float in [-1,1] {
+            XCTAssertTrue(v.contains { $0.x*side>5.8 && (2.8...3.6).contains($0.z) },"lean-to \(side)")
+            XCTAssertTrue(v.contains { $0.x*side>5.5 && $0.x*side<6.1 && $0.z<0.3 },"post \(side)")
+        }
+    }
     func testLightRailAndElevatedCatalogLinesUseAppropriateGameArchetypes() {
         let stations=Map3DStationKit.stations
         let light=stations.filter { $0.system=="krtc" && $0.lines.contains("C") }
