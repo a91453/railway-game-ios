@@ -2122,12 +2122,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             lines.waitUntilSettled()
             lines.tap()
             var page = app.openLinePage()
-            let picker = app.segmentedControls["line.staff.headway"].firstMatch
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(picker, in: page), "The headway picker shows")
-            picker.buttons["5"].firstMatch.tap()
+            // The button under the picker first: the picker's segments
+            // are then on screen above it.
+            let change = app.buttons["line.headway.change"].firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page), "The headway section shows")
+            let five = page.buttons.matching(NSPredicate(format: "label IN %@", ["5 分", "5 min", "5"])).firstMatch
+            XCTAssertTrue(five.appears(within: 10), "The picker offers 5 minutes")
+            five.tap()
             var estimate = app.descendants(matching: .any)["line.headway.estimate"].firstMatch
             XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
-            let change = app.buttons["line.headway.change"].firstMatch
             XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page), "The button under it shows")
             settle()
             keep("buy-estimate-more-trains\(suffix)", app)
