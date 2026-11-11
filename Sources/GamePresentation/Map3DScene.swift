@@ -1228,17 +1228,24 @@ extension Map3DScene {
             var cleared = Set<ChunkKey>()
             let cell = Double(Land.cellLength)
             let fast = highSpeedTrack()
+            // Decision 679: ``contains(x:y:)`` asked of the region alone.
+            // Asked of the builder, an unoptimized build (the Linux tests')
+            // copied the whole builder for every point of every line.
+            let region = region
+            func inside(_ coordinate: WorldCoordinate) -> Bool {
+                let x = Double(coordinate.x), y = Double(coordinate.y)
+                return x >= region.minX && x <= region.maxX && y >= region.minY && y <= region.maxY
+            }
             for alignment in snapshot.edges {
                 // Decision 407: a high-speed line's on its box girder.
                 let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
                 for span in alignment.edge.sectionSpans where span.end > span.start {
                     let line = sample(alignment.geometry, from: span.start, to: span.end)
                     guard line.count > 1 else { continue }
-                    for coordinate in line {
-                        guard contains(x: Double(coordinate.x), y: Double(coordinate.y)) else { continue }
+                    for coordinate in line where inside(coordinate) {
                         cleared.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
                     }
-                    guard line.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
+                    guard line.contains(where: inside) else { continue }
                     let points = line.map { point($0) + Self.lifted }
                     trackLines.append((points, span.kind))
                     for piece in Self.pieces(of: points) {

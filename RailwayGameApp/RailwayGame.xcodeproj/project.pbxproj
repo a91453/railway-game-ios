@@ -102,6 +102,7 @@
 		585C09A427696BD99073713D /* refused.wav in Resources */ = {isa = PBXBuildFile; fileRef = E4631B47557CC9944903820E /* refused.wav */; };
 		5E0B13EE6BA50532BF4C2DE9 /* real_buses_Taichung.json in Resources */ = {isa = PBXBuildFile; fileRef = 7F78F65A247A49BAD8BBD3C6 /* real_buses_Taichung.json */; };
 		5E5D2D211BDC490D078CE1DA /* meshy-bus-stop-pole.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = D6F8BD91F256D7FE026E0B78 /* meshy-bus-stop-pole.m3dmodel */; };
+		602D4EB636DD03A550CCD209 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */; };
 		61BC5056DC57D08A79608972 /* tra_overtake_tracks.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA7B218F095D335A00243D1 /* tra_overtake_tracks.json */; };
 		61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F88DCCA78BB699F97926C9A /* AchievementsView.swift */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
@@ -379,6 +380,7 @@
 		4A3F11B85E0A47AF52471E65 /* LoadChartUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadChartUITests.swift; sourceTree = "<group>"; };
 		4B68167398B13543EA8C564A /* RealWorldPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldPicker.swift; sourceTree = "<group>"; };
 		4C1017DDE782DF1CF07D561E /* rail_structures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = rail_structures.json; sourceTree = "<group>"; };
+		4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTimeBenchView.swift; sourceTree = "<group>"; };
 		50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightSkipUITests.swift; sourceTree = "<group>"; };
 		52449D8DCD618CC726CACDDE /* chime-tourist.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-tourist.wav"; sourceTree = "<group>"; };
@@ -988,6 +990,7 @@
 		F93DAEBD83BEBF200EC0536D /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */,
 				41251B12461A0FD34DFCB786 /* Assets.xcassets */,
 				319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */,
 				0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */,
@@ -1097,6 +1100,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				602D4EB636DD03A550CCD209 /* AppIcon.icon in Resources */,
 				E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */,
 				CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */,
 				8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */,

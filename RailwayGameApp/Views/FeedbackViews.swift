@@ -75,6 +75,7 @@ struct IncomeFloat: View {
                     .foregroundStyle(shown.isLoss ? Theme.error : Theme.success)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
+                    // Decision 677: a label drifting from the status bar, not a control; stays a material.
                     .background(.thinMaterial, in: Capsule())
                     .offset(y: reduceMotion ? 18 : 18 + 16 * rise)
                     .opacity(1 - rise)

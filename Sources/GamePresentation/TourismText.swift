@@ -94,16 +94,37 @@ public struct AttractionRow: Identifiable, Hashable, Sendable {
     public let nextShop: ShopOffer?
     /// Where the point lies, for the map.
     public let point: PlanPoint
-    /// How far it lies off the tiles the company owns, in metres, on a
-    /// map bought tile by tile (decision 160); `nil` on them, or on a map
-    /// that is the company's everywhere (decision 663).
+    /// How far it lies off the tiles the company owns, in metres, when the
+    /// panel folds it away as off the map (decision 663, on a map bought
+    /// tile by tile, decision 160); `nil` for a sight listed in full: on
+    /// the company's tiles, within a station's reach of them, served, or
+    /// with a souvenir shop (``foldedOffMapMetres(distance:hasStation:souvenir:)``).
     public var offMapMetres: Int64? = nil
 
     /// "About 8 km off your map", for a sight off it; `nil` on it.
     public func offMapText(in language: DisplayLanguage) -> String? {
-        guard let metres = offMapMetres else { return nil }
-        let kilometres = max(1, (metres + 500) / 1_000)
+        offMapMetres.map { Self.offMapText(metres: $0, in: language) }
+    }
+
+    /// "About 8 km off your map"; in hundreds of metres under a kilometre.
+    static func offMapText(metres: Int64, in language: DisplayLanguage) -> String {
+        if metres < 950 {
+            let rounded = max(100, (metres + 50) / 100 * 100)
+            return language.text("About \(rounded) m off your map", "在你的地圖外約 \(rounded) 公尺")
+        }
+        let kilometres = (metres + 500) / 1_000
         return language.text("About \(kilometres) km off your map", "在你的地圖外約 \(kilometres) 公里")
+    }
+
+    /// Whether a sight `distance` metres off the company's tiles is folded
+    /// away as off the map, and how far off it then is (review L16-1). The
+    /// rules serve a sight whoever owns the ground under it, so one a
+    /// station serves, one with a souvenir shop, and one a station on the
+    /// company's own ground could reach (800 m) keeps its whole row: its
+    /// status and its shop button.
+    static func foldedOffMapMetres(distance: Int64?, hasStation: Bool, souvenir: Int) -> Int64? {
+        guard let distance, !hasStation, souvenir == 0, distance > Tourism.reach / WorldCoordinate.unitsPerMetre else { return nil }
+        return distance
     }
 }
 
@@ -129,6 +150,7 @@ extension GameWorld {
         let statuses = attractionStatuses()
         let rows: [AttractionRow] = tourism.attractions.map { sight in
             let status = statuses[sight.id] ?? .noStation
+            let serving = attractionStation(of: sight.id)
             let today = status == .ok ? touristsExpected(for: sight, onDay: day) : 0
             var offer: ShopOffer?
             if sight.souvenir < Tourism.maximumSouvenirLevel {
@@ -149,9 +171,11 @@ extension GameWorld {
                 starsText: starsText(of: sight), souvenir: sight.souvenir, hotels: hotelsNear(sight),
                 sightseeingTrainText: Self.sightseeingTrainText(stars: sightseeingTrainStars(near: sight), in: language),
                 status: status, statusText: status.title(in: language, edge: outsideConnections),
-                stationName: attractionStation(of: sight.id).flatMap { station(id: $0)?.name }, today: today,
+                stationName: serving.flatMap { station(id: $0)?.name }, today: today,
                 yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point,
-                offMapMetres: metresOffOwnedGround(sight.point)
+                offMapMetres: AttractionRow.foldedOffMapMetres(
+                    distance: metresOffOwnedGround(sight.point), hasStation: serving != nil, souvenir: sight.souvenir
+                )
             )
         }
         // Decision 663 (the Mac playtest's A12): the sights on the

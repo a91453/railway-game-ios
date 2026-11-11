@@ -187,7 +187,7 @@
 - 新功能的實作 session 同時最多 3–4 個，照 NEXT_PRIORITIES §22 的順序一件一件開；開著的 PR 也不要多，免得一直解衝突。
   - 作者 2026-10-25：「你先派好了 好像3～4個session沒關係 沒有撞到相同的部分」：3–4 個可以同時派，條件是它們不改同一批檔案；改同一塊的（例如都動 LineAcquisition）照順序一個合了再派下一個。
 - PR 審查比新功能優先。上一輪是 #786–#872（§7.1）。
-- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 L（#1510–#1578，分兩段：L1 #1510–#1549，28 個程式 PR、29 點，[`archive/PR1510_1549_REVIEW_HANDOFF.md`](archive/PR1510_1549_REVIEW_HANDOFF.md)，P1 0、P2 1（L1-1：拆自己的路時每條公車線算兩次，點按卡約 2 秒）、P3 2；L2 #1551–#1578，21 個程式 PR、22 點，[`archive/PR1551_1578_REVIEW_HANDOFF.md`](archive/PR1551_1578_REVIEW_HANDOFF.md)，P1 0、P2 1（L2-1：站長的「跟我做 5 分鐘教學」沒先存目前這局）、P3 4）；下一輪從 #1579 起數。再上一輪是公測前審查 REV（#1496–#1509，[`archive/PR1496_1509_REVIEW_HANDOFF.md`](archive/PR1496_1509_REVIEW_HANDOFF.md)）與審查 K（#1288–#1385，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)）。
+- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 L16（#1986–#2031，0.6.0 (123)、(124) 發版後，21 個算 1 點的 PR 加 GameCore 的 #2014、#2025，共 25 點，[`archive/PR1986_2031_REVIEW_HANDOFF.md`](archive/PR1986_2031_REVIEW_HANDOFF.md)，P1 0、P2 3（L16-1：邊界外但有車站的景點被收起來、名產店按不到；L16-2：內灣劇情叫玩家用短車，和決策 668 量到的相反；L16-3：iPad 教學 job 仍紅過一晚）、P3 17）；**下一輪 L17 從 #2032 起數**。L13–L15 的報告也在 `archive/`。更早的審查 L（#1510–#1578，分兩段：L1 #1510–#1549，28 個程式 PR、29 點，[`archive/PR1510_1549_REVIEW_HANDOFF.md`](archive/PR1510_1549_REVIEW_HANDOFF.md)，P1 0、P2 1（L1-1：拆自己的路時每條公車線算兩次，點按卡約 2 秒）、P3 2；L2 #1551–#1578，21 個程式 PR、22 點，[`archive/PR1551_1578_REVIEW_HANDOFF.md`](archive/PR1551_1578_REVIEW_HANDOFF.md)，P1 0、P2 1（L2-1：站長的「跟我做 5 分鐘教學」沒先存目前這局）、P3 4）。再之前是公測前審查 REV（#1496–#1509，[`archive/PR1496_1509_REVIEW_HANDOFF.md`](archive/PR1496_1509_REVIEW_HANDOFF.md)）與審查 K（#1288–#1385，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)）。
   - 量的（2026-10-22，main 最近 60 個合併，約 10 小時）：文件 13、只有素材／測試 6、程式 41（其中 GameCore 5）。#962–#1017 共 51 個 PR、37 個程式、41 點：已經超過，下一個空位先開審查 D。
   - 為什麼 30 點：一個審查 session 看 30 個程式 PR（每個 diff 約 5–10 千 token）大約 15–30 萬，在第一次壓縮（約 32 萬）之前看完；上一輪 #873–#944 一次 72 個，A6–A11 到現在還開著。
   - 五方（權重照 NEXT_PRIORITIES §19；選項：A 每 30 個 PR、B 每 50 個 PR、C 每 30 點、D 每天一次、E 每 60 點）：
@@ -371,13 +371,13 @@
   - 發版準備時（派 WHATSNEW 的同時）：檢查下面的「固定要派的三件事」。數上一輪審查終點之後合併的程式 PR 點數，看 HEALTH、CIOPT 的上一輪，到時機就派，結果寫進交接。作者 2026-11-07 問：「之前不是說30點就要做pr review為何現在都都要我提醒才做」。
 - **固定要派的三件事**（作者 2026-11-01：「好像很久沒有 pr review 跟 ci 優化還有 debug」「那為什麼每次都忘記做」）。遊戲規劃平常是被通知推著走（合併、CI、session 回報），這三件沒有通知會提醒，換手和壓縮的摘要也常漏掉，所以照下面的時機派，不等作者提：
   - **PR 審查**：每發一版之後，或上一輪之後合併了約 30 個改程式的 PR（以先到者為準），派下一輪 REVIEW-L（獨立審查已合併的程式 PR，GameCore 優先，只寫文件；範圍接上一輪的終點）。發現 P1 當天派修。
-  - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。上一輪：CIOPT（session_01YGNNukiXhE7LK51UdBYf4o，2026-11-07，[決策 620](decisions/620.md)，[量測](research/CI_MEASURE_2026-11-07.md)）：完整 tier 32 分是 `rest` 一片 22.6 分（環狀輕軌一個類別 428 s），不是排隊；交通計畫每段路只找一次路徑、`rest` 分兩片，估約 20–21 分。門檻在量測 §6。
+  - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。上一輪：CIOPT-7（session_01YGNNuqLntc6Wem467zU1ac，2026-11-11，[決策 679](decisions/679.md)，[量測](research/CI_MEASURE_2026-11-11.md)）：完整 tier 的 PR run 25–27 分，是慢 runner 的 build 約 12 分加 rest-1 約 14 分，不是排隊也不是程式變多（本機建置 387 s，和 11-07 一樣）；鋪軌道不再每個點複製整個 Builder（車站外觀最大的測試 −20%）、兩個新類別補權重，估約 25 分，還貼著線；iPad 教學「卡片沒打開」七天紅兩次，是膠囊站穩後搬家，測試改成沒按到再按一次，**膠囊為什麼搬家還沒查（要模擬器，玩家可能看到它跳一下），規劃決定要不要派**。PR 的 iOS gate UI 步驟約 6 分、macOS 排隊 11-09 起沒超過 20 分、full lane 各 job 離上限 17 分以上。門檻在量測 §7。再上一輪：CIOPT（2026-11-07，[決策 620](decisions/620.md)）、CI-SLIM（決策 639、640）。
   - **除錯**：作者或玩家的問題回報、main 的 `ci.yml` 或 full lane 紅、`PLAYER_FEEDBACK.md` 新的 bug 列，當天派。另外每發一版之後派一次健檢：可買的真實路線與示範地圖，逐分與最高倍速（一次 10 分鐘）各跑兩天，數發車、死結、誤點（DEBUG-BATCH 的做法）。
   - **寫進每一次巡查的提醒**（作者 2026-11-08 第三次提醒：「pr review不是30點就要排一次嗎」「每次都忘記」）：
     - 遊戲規劃用 `send_later` 排的每一則巡查提醒，內容都要有一行「數審查點數：從 #<上一輪終點+1> 起，滿 30 點或剛發完一版就派 REVIEW-L」。
     - 巡查時照這一行數一次，寫進那一輪的 #1579 留言。
     - 壓縮或換手後，第一則巡查提醒也照抄這一行。
-    - 現況：REVIEW-L15（session_01YGNNukhsWYuJnxBUwBRNhq，第 56 任派，122 發版後）審到 #1985。下一輪 L16 從 #1986 起數。
+    - 現況：REVIEW-L16（session_01YGNNupozifvTzHdaz6hs68，第 60 任派，123、124 發版後）審到 #2031，報告 [`archive/PR1986_2031_REVIEW_HANDOFF.md`](archive/PR1986_2031_REVIEW_HANDOFF.md)：P1 0、P2 3、P3 17，都還沒派修（清單在報告第六節）。下一輪 L17 從 #2032 起數。
   - 換手時，§2.0 的交接寫上這三件的上一輪是誰、範圍或數字到哪。上一輪：REVIEW-L4（session_01YGNNunjEfxiHkJqASKZyZB，#1601–#1686）、CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D）、DEBUG-BATCH（session_01YGNNunTUt7aXu7pMTNAzrn），都是第 41 任 2026-11-01 派的。
 - **踩過的坑**：
   - 不要憑記憶說版本號，查 `testflight.yml` 的 run。2026-10-16 把 66.1 當成 64.1。
@@ -418,6 +418,11 @@
       - 額度用完之後：回到上面的 Opus／Sonnet 照難易度選。什麼時候算用完，由作者說，或 `get_session` 的 `rate_limit_info` 顯示用完。
       - 之後出了新模型：不自動套用這條，到時候問作者。
       - 模型名稱照舊只寫在登記處，不寫進 repo。
+    - **每件派工也要判斷適合雲端還是 Mac 本機**（作者 2026-11-11：「那你之後再拍session的時候可以一樣按照難易度與需求除了排模型之外 再增加一個適合本地還是雲端做的方式」）。派工單和 #1579 的登記寫上「雲端／本機」與一句理由。下面的分法是第 60 任的理解，不是作者原話：
+      - **雲端**（Linux，沒有 Xcode 與模擬器）：GameCore、GamePresentation 的規則與 Linux 測試、資料工具、文件與研究、審查、健檢、CI 與 workflow。畫面改動只有「邏輯能用 Linux 測試釘住、外觀靠 CI 截圖就夠」的小改才放雲端。
+      - **Mac 本機**：要用眼睛看或要實機的事：新畫面、材質與玻璃、動畫手感、3D 外觀、圖示與插圖、聲音聽感、實機幀率與耗電、只在 Release 才編到的東西、Asset Catalog 與專案設定。
+      - 拿不準：邏輯先在雲端做完並測試，剩下「看畫面」的部分另開一件給本機。
+      - 規劃開不了 Mac 上的 session，也傳不了訊息過去（作者要規劃不按信任卡）：本機的派工寫成 #1579 的一則留言，附一句給作者貼到 Mac 新 session 的話。本機一次一件，同一批畫面檔不同時做。
     - **先拆再選**（作者 2026-11-04：「之前不是要你根據難易度用sonnet或是opus嗎怎麼全部給我opus」）：第 45 任把 DEPOTLINK（鋪機廠自動選路線＋「回報問題」補說明）整件給 Opus，其中補說明只是文字。一件派工裡混了難的和簡單的，把簡單的（文字、照現成寫法的小畫面、workflow）拆成另一個 Sonnet session；派工單寫一句「選這個模型的理由」。「新決策要寫程式」不是一律 Opus：只動 GamePresentation 的小規則、照現成函式就能做的，也可以 Sonnet。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
 
@@ -568,6 +573,7 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **第 60 任接手（2026-11-11 02:30 UTC＝台灣 10:30，session_01YGNNumCi7AYjpiS4ntJZjK，作者在 claude.ai 開，第 0 層）**
+- **HEALTH-124（第 124 版後健檢，2026-11-11）：CONCERNS**，報告 [`research/HEALTH_124_2026-11-11.md`](research/HEALTH_124_2026-11-11.md)。機捷新局預設第二天沒發 5/333（決策 666 的數字對）、改建後 9；「買了舊線不改建」從 2 變 7 班；讓路的空車仍來回跳（兩天 63 次、一列連讓 14 站）。沒有清不掉的死結，逐分與最高倍速一致。建議派修的項目在報告第 6 節。
 - 照下面「第 59 任交第 60 任」（含 11-11 補充）接手；已在 #1579 登記，第 59 任停手、可以封存。
 - 接手時 main 84cf8864。開著的 PR：遊戲庫只有 draft #2028（作者 Mac 本機的 session 開的，最低版本升到 iOS 26，決策 676），**等作者決定要不要合**；assets #73（TRELLIS 授權）仍等作者在 Mac 上驗證；reference 沒有。沒有在做的實作 session，沒有排程。
   - #2028 的檢查（head 03921fe7）：Swift 與模擬器建置綠，**「Release archive」紅**：最低版本升到 26 以後，`RailwayGameApp/Views/SettingsView.swift:942` 用的 `appStoreReceiptURL`（iOS 18 起標成過時）在 Release 建置被當成錯誤。照這樣合進去，發版的建置會過不了，要 Mac 那邊的 session 先修（#1579 有留言）。
@@ -581,8 +587,19 @@
     - 雲端先派的 LIQUIDGLASS session_01YGNNumEw3RtTWpGaNrL7uM 做了一半就停手：分支 `claude/liquid-glass-floating-controls` 上兩個 commit（3D 畫面 17 處、待機說明膠囊與小地圖收起鈕改玻璃；另 9 處不換並註明原因），**沒建置過，全部 UNVERIFIED**，沒有 PR；逐處清單與 SHA 在它 #1579 的「釋出」留言。Mac 接手的 session 可以接著用或只當參考。那條分支等 Mac 的 PR 合併後可以請作者刪。
     - 雲端 session 傳不了訊息到 Mac 上的 session（要按信任卡，作者說不要按），要跟它講的事寫在 #1579。
     - 這類要在模擬器或實機看的外觀改動，之後先問作者要不要交給 Mac 本機做，再決定派不派雲端。
+    - **Mac 接手後（session_01YGNNumP1xpBTwXqpouPFrE，11-11）**：從最新 main 開分支 `claude/liquid-glass-677`，把雲端那兩個 commit 搬過來，在 Mac 上建置、在模擬器（iPhone 18 Pro、iOS 27.2）看過，補了決策 677、`docs/UI_THEME.md` 與截圖測試 `testLiquidGlass3DControls`，開 draft PR（號碼見 #1579），**等作者決定合不合**。還沒做完的只有一件，要作者做：**實機比 3D 換前換後的幀數**（模擬器兩邊都是 60 fps，分不出來）；掉了就單獨退回 3D 那個 commit，或照決策 677「下一步」試 `GlassEffectContainer`。合併後雲端的分支 `claude/liquid-glass-floating-controls` 可以刪。
   - 號碼：決策 676 已佔用、677 留給 Mac 接手 LIQUIDGLASS 的 session，**下一個 678**。
   - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
+- **11-11 04:10 UTC 補充：派了四個雲端 session**（作者睡前：「那你判斷哪些可以先在雲端做的／Mac還在改之前的liquid glass／你這邊也同步開幾個適合雲端的去做」；先前「我說可以派之前先不派」到此解除）。四個都在第 1 層、都帶 `source_url`，模型照 §1.1 的 11-11 那條。派工單在各 session 的開頭，摘要在 #1579 留言 6786741855。
+  - **REVIEW-L16** session_01YGNNupozifvTzHdaz6hs68：審查 #1986–#2031 已合併的程式 PR（規劃粗數 27 點，且已發過 123、124 兩版），只寫 `docs/archive/PR1986_2031_REVIEW_HANDOFF.md`；發現 P1 會立刻通知規劃，當天派修。
+  - **HEALTH-124** session_01YGNNukuAfZWX59qB3uEsuw：照 HEALTH-122 的量法重量，只寫 `docs/research/HEALTH_124_2026-11-11.md`；特別看機捷「簡單＋行車控制」沒發的班與決策 666 的連讓次數。
+  - **CIOPT-7** session_01YGNNuqLntc6Wem467zU1ac（決策 679，只量不改就釋出）：完整 tier 的 pull request 最近 25.2、26.4、27.5 分，每晚完整 run 23–27 分，過了 `CI_MEASURE_2026-11-07.md` 第 6 節「25 分」的線；先量是排隊還是哪一片變長，過線的才改，不跳過不放寬。
+  - **WENHU-UNDER** session_01YGNNumuuqGrusBMJCQ9dLU（決策 678）：文湖線中山國中—大直—松山機場真實隧道段在遊戲裡是河面上的路塹（決策 672 下一步，作者 Mac 截圖），照 `research/LINE_HEIGHTS_2026-11-05.md` 的選項改成地下；先寫會紅的測試，舊存檔不能壞，對其他 13 條線的影響用報告測試前後對照。
+  - **等著派的**：機捷讓路的車連讓好幾站、方向 2、L15-4「A12 重鋪」（等 HEALTH-124 的數字，也免得同時三個完整 tier）；決策 669 老街屋立面比例、駕駛室在隧道裡畫雨絲（要看畫面）。
+  - **iOS 26 之後可以做的外觀小項**：打分在 NEXT_PRIORITIES §26，都排在現有新功能之後，要在模擬器或實機看，留給 Mac 本機做（LIQUIDGLASS 之後先做 App 圖示）。
+  - 號碼：決策 677 Mac 的 LIQUIDGLASS（session_01YGNNumP1xpBTwXqpouPFrE，分支 `claude/liquid-glass-677`）、678 WENHU-UNDER、679 CIOPT-7，**下一個 680**。
+  - 規劃的巡查：每次被叫醒先讀 #1579 新留言；數審查點數：從 #2032 起，滿 30 點或剛發完一版就派 REVIEW-L17。
+  - **L16-FIX**（session_01YGNNuqQ7ZRiPozsyiZbTBX，分支 `claude/l16-fix`）：修審查 L16 的 L16-1（決策 663「後來的修正」）與 L16-2（決策 671「後來的修正」）；沒有留下做到一半的事。L16-11 的三件小事（`neiwan.5` 的觸發、客語、決策 671 的年代）沒動。
 
 **第 59 任交第 60 任（2026-11-10 約 23:58 UTC＝台灣 11-11 07:58，session_01YGNNuotpQDktgGusuFc8kz，第 0 層，沒壓縮過）**
 - 換手原因：作者說「封存給新 session 接手」。照這段接手；和下面「第 58 任的現況」不同時以這段為準。這段是照 #1579 與開著的 PR 寫的。

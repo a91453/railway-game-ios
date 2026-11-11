@@ -2820,6 +2820,7 @@ private struct PopulationCellTooltip: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
+        // Decision 677: a label on what was tapped, not a control; stays a material.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .fixedSize()
         .accessibilityElement(children: .combine)
@@ -2844,6 +2845,7 @@ private struct CityCellTooltip: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
+        // Decision 677: a label on what was tapped, not a control; stays a material.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .fixedSize()
         .accessibilityElement(children: .combine)
@@ -2922,6 +2924,7 @@ private struct TerrainCellTooltip: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
+        // Decision 677: a label on what was tapped, not a control; stays a material.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .fixedSize()
         .accessibilityElement(children: .combine)
@@ -3035,6 +3038,7 @@ private struct SectionFlowTooltip: View {
             .font(.caption2.monospacedDigit())
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
+            // Decision 677: a label on what was tapped, not a control; stays a material.
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .frame(maxWidth: 260, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
@@ -3778,6 +3782,8 @@ private struct MapFrameReadout: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            // Decision 677: stays a material, so the frame rate read here
+            // compares with the readings before it.
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
