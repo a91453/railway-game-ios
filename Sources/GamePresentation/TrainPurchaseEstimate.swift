@@ -109,25 +109,41 @@ extension TrainPurchaseEstimate {
         )
     }
 
-    /// "$ 12,000 a day more than now · pays back in about 38 days", or how
-    /// much less; `nil` when the fares cannot be said.
-    public func changeText(in language: DisplayLanguage) -> String? {
-        guard let change, let tone else { return nil }
+    /// The one line over the button that buys: "About $ 40,000 a day
+    /// left · $ 12,000 more than now", or with no riders known, what the
+    /// running costs alone. The rest (``detailTexts(in:)``) goes under the
+    /// button: on a phone on its side the page is a few lines high, and
+    /// the headway, this line and the button have to fit it together.
+    public func summary(in language: DisplayLanguage) -> String {
+        guard let profit, let change, let tone else { return headline(in: language) }
+        let left = Money(abs(profit.amount)).moneyText
         let amount = Money(abs(change.amount)).moneyText
+        let first = profit.amount < 0
+            ? language.text("About \(left) a day lost", "估每天虧 \(left)")
+            : language.text("About \(left) a day left", "估每天賺 \(left)")
+        let second: String
         switch tone {
-        case .same:
-            return language.text("The same as now", "和現在一樣")
-        case .worse:
-            return language.text("\(amount) a day less than now", "比現在每天少 \(amount)")
-        case .better:
-            guard let days = paybackDays else {
-                return language.text("\(amount) a day more than now", "比現在每天多 \(amount)")
-            }
-            return language.text(
-                "\(amount) a day more than now · pays back in about \(days.groupedText) \(days == 1 ? "day" : "days")",
-                "比現在每天多 \(amount) · 約 \(days.groupedText) 天回本"
-            )
+        case .same: second = language.text("the same as now", "和現在一樣")
+        case .worse: second = language.text("\(amount) less than now", "比現在少 \(amount)")
+        case .better: second = language.text("\(amount) more than now", "比現在多 \(amount)")
         }
+        return first + " · " + second
+    }
+
+    /// Under the button: the fares and the running cost, how soon the
+    /// trains pay for themselves, the riders, and what to make of it.
+    public func detailTexts(in language: DisplayLanguage) -> [String] {
+        var texts: [String] = []
+        if fares != nil { texts.append(headline(in: language)) }
+        if let days = paybackDays {
+            texts.append(language.text(
+                "The trains pay for themselves in about \(days.groupedText) \(days == 1 ? "day" : "days")",
+                "約 \(days.groupedText) 天回本"
+            ))
+        }
+        if let riders = ridersText(in: language) { texts.append(riders) }
+        texts.append(note(in: language))
+        return texts
     }
 
     /// "Breaks even at 3,200 riders a day · about 4,100 expected, fullest
@@ -169,8 +185,7 @@ extension TrainPurchaseEstimate {
 
     /// The whole of it for VoiceOver.
     public func spokenText(in language: DisplayLanguage) -> String {
-        [headline(in: language), changeText(in: language), ridersText(in: language), note(in: language)]
-            .compactMap { $0 }.joined(separator: language.text(". ", "。"))
+        ([summary(in: language)] + detailTexts(in: language)).joined(separator: language.text(". ", "。"))
     }
 }
 

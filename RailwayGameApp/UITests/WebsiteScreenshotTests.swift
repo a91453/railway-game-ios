@@ -2122,22 +2122,35 @@ final class WebsiteScreenshotTests: XCTestCase {
             lines.waitUntilSettled()
             lines.tap()
             var page = app.openLinePage()
-            // The button under the picker first: the picker's segments
-            // are then on screen above it.
+            // The page's bar lies over the top of its list: a row under it
+            // counts as on screen and a tap there lands on the bar (the
+            // first runs' recording: the picker still at 15). Every row is
+            // brought below the bar.
+            // The bar's own frame, and the line's name under its buttons.
+            func barBottom() -> CGFloat {
+                let names = app.staticTexts.matching(NSPredicate(format: "label == %@", "Line 1")).allElementsBoundByIndex
+                    .map(\.frame.maxY).filter { $0 < page.frame.midY }
+                return max(app.navigationBars.firstMatch.frame.maxY, names.max() ?? 0) + 4
+            }
+            var bar = barBottom()
             let change = app.buttons["line.headway.change"].firstMatch
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page), "The headway section shows")
-            let five = page.buttons.matching(NSPredicate(format: "label IN %@", ["5 分", "5 min", "5"])).firstMatch
-            // On a phone on its side the page is a few lines high: the
-            // segment is under the page's bar until it is brought down.
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(five, in: page), "The picker offers 5 minutes")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page, below: bar, clearOf: .button), "The headway section shows")
+            let five = page.buttons.matching(NSPredicate(format: "label IN %@", ["5 分", "5 min"])).firstMatch
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(five, in: page, below: bar, clearOf: .button), "The picker offers 5 minutes")
             five.waitUntilSettled()
             five.tap()
             var estimate = app.descendants(matching: .any)["line.headway.estimate"].firstMatch
-            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
-            // As much of it as the page has room for.
-            _ = app.dragUntilWhollyOnScreen(estimate, in: page, drags: 4)
+            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows over the button")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(change, in: page, below: bar, clearOf: .button), "The button under it shows")
             settle()
             keep("buy-estimate-more-trains\(suffix)", app)
+            var detail = app.descendants(matching: .any)["line.headway.estimate.detail"].firstMatch
+            // Taller than the page on a phone on its side: as much of it
+            // as there is room for.
+            _ = app.dragUntilWhollyOnScreen(detail, in: page, below: bar, drags: 3, clearOf: .button)
+            XCTAssertTrue(detail.exists, "The details show under the button")
+            settle()
+            keep("buy-estimate-more-trains-detail\(suffix)", app)
             app.terminate()
 
             app = launch(extra: ["-ui-test-world", "buy-estimate-new"], english: english)
@@ -2148,13 +2161,20 @@ final class WebsiteScreenshotTests: XCTestCase {
             lines.waitUntilSettled()
             lines.tap()
             page = app.openLinePage()
-            estimate = app.descendants(matching: .any)["line.staff.estimate"].firstMatch
+            bar = barBottom()
             let start = app.buttons["line.staff.start"].firstMatch
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page), "The buy button shows")
-            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows")
-            _ = app.dragUntilWhollyOnScreen(estimate, in: page, drags: 4)
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page, below: bar, clearOf: .button), "The buy button shows")
+            estimate = app.descendants(matching: .any)["line.staff.estimate"].firstMatch
+            XCTAssertTrue(estimate.appears(within: 10), "The estimate shows over the button")
             settle()
             keep("buy-estimate-new-line\(suffix)", app)
+            detail = app.descendants(matching: .any)["line.staff.estimate.detail"].firstMatch
+            // Taller than the page on a phone on its side: as much of it
+            // as there is room for.
+            _ = app.dragUntilWhollyOnScreen(detail, in: page, below: bar, drags: 3, clearOf: .button)
+            XCTAssertTrue(detail.exists, "The details show under the button")
+            settle()
+            keep("buy-estimate-new-line-detail\(suffix)", app)
             app.terminate()
         }
     }
