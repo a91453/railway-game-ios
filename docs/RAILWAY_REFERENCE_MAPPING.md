@@ -1688,6 +1688,7 @@ V 實際放行 → T、U（保證不互穿）
 | 參考 | 本專案 | 怎麼改 |
 | --- | --- | --- |
 | （參考沒有）博物館的模型 | `Map3DRailwayMuseum` | gap → 原生；照鐵道部臺北工場的照片（Wikimedia Commons，CC BY-SA 4.0 等，表在 `docs/art/railway-museum-2026-11-12/README.md`）寫配方，照片不當貼圖、不進 repo |
+| `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/historic-buildings-v2/railway-department/`（鐵道部主廳舍與八角樓；沒有臺北工場） | 未用 | 不是同一棟；只照它的做法拿 OSM 輪廓（way 548623142，ODbL）核對館舍的平面尺寸 |
 | （參考沒有）博物館的圖 | `BuildingRailwayMuseum`、`MapGlyphRailwayMuseum` | gap → 原生，照 art-style 自己畫 |
 | （參考沒有）館內瀏覽 | `RailwayMuseumGuide`、`RailwayMuseumPage` | gap → 原生；3D 沿用決策 434 的列車車庫 |
 

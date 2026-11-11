@@ -36,10 +36,11 @@ public enum Map3DRailwayMuseum {
     static let railTop: Float = 0.46
 
     /// The hall, front to back and across: 25 m long, a 13 m nave and two
-    /// 8 m aisles (a third larger than the real one, so it holds its own
-    /// beside twelve tracks). The real workshop's front is about 24 m, its ridge
-    /// about 13 m and its length half as much again (estimated from the
-    /// door and a scooter in the photographs; docs/art/railway-museum-2026-11-12).
+    /// 8 m aisles. The real workshop's outline (OpenStreetMap way 548623142,
+    /// ODbL) is some 31.5 m by 30.4 m: about as wide as this and 6 m longer,
+    /// the plot's length going to the display tracks. Its ridge, about
+    /// 13 m, is estimated from the door in the photographs
+    /// (docs/art/railway-museum-2026-11-12).
     static let hallFront: Float = -5, hallBack: Float = -29.6
     static let naveHalf: Float = 6.5, naveEave: Float = 9, ridge: Float = 12.6
     static let aisleOuter: Float = 14.5, aisleEave: Float = 5.6, aisleTop: Float = 7.4
