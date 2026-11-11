@@ -2618,6 +2618,52 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("goals-requests", app)
     }
 
+    /// Decision 683: the city's size and kind at the foot of the goals, on
+    /// a blank new game in both languages and on the real-world demo.
+    func testCityTitleInGoals() {
+        for english in [false, true] {
+            let app = launch(english: english)
+            defer { app.terminate() }
+            let newGame = app.buttons["start.newGame"]
+            XCTAssertTrue(newGame.appears(within: 10))
+            app.bringStartButtonIntoView(newGame)
+            newGame.tap()
+            app.chooseBlankMap()
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
+            shootCityTitle(english ? "city-title-blank-english" : "city-title-blank", in: app)
+        }
+        // A new game in Taipei: the demo has no goals in its menu.
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 30))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let place = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(place, in: app.collectionViews.firstMatch), "Taipei is among the places")
+        place.waitUntilSettled()
+        app.tapMiddle(of: place)
+        let start = app.buttons.matching(identifier: "realWorld.start").firstMatch
+        XCTAssertTrue(start.appears(within: 30))
+        start.waitUntilSettled()
+        start.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        settle()
+        shootCityTitle("city-title-real", in: app)
+    }
+
+    private func shootCityTitle(_ name: String, in app: XCUIApplication) {
+        openFromGameMenu("menu.goals", in: app)
+        let row = app.descendants(matching: .any)["goals.cityTitle"].firstMatch
+        let shown = scrollScreen(to: row, in: app)
+        // Its help is under it: one more drag brings the footer up.
+        dragUp(app)
+        settle(seconds: 1)
+        keep(name, app)
+        XCTAssertTrue(shown, "The city's size and kind come into view in the goals")
+    }
+
     /// The lines' reports of the day before (decision 179) and the
     /// passenger load layer (decision 178) on the freight scene's second
     /// morning, when a day has been and the trains carry their loads.

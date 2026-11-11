@@ -573,6 +573,7 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **第 60 任接手（2026-11-11 02:30 UTC＝台灣 10:30，session_01YGNNumCi7AYjpiS4ntJZjK，作者在 claude.ai 開，第 0 層）**
+- **CITY-TITLE（決策 683，`claude/city-title-683`，session_01YGNNupYoAuDo7yAXiwVvbL，壓縮 1 次）**：城市的規模稱號（九級）與類型（八種）放在「目標」最下面，升級時新聞、狀態列與原有音效；只動 GamePresentation 與面板。沒做、留給下一張單的（[決策 683](decisions/683.md)「下一步」）：成就（要作者在 App Store Connect 加 Game Center 成就）、徽章與升級卡片（要美術審）、觀光類型接決策 174 的遊客、高雄與新竹的類型不準（`LandImport` 的工作資料）、外國地圖的類型基準（作者 11-11 定：用各國通用的一份）。
 - **HEALTH-124（第 124 版後健檢，2026-11-11）：CONCERNS**，報告 [`research/HEALTH_124_2026-11-11.md`](research/HEALTH_124_2026-11-11.md)。機捷新局預設第二天沒發 5/333（決策 666 的數字對）、改建後 9；「買了舊線不改建」從 2 變 7 班；讓路的空車仍來回跳（兩天 63 次、一列連讓 14 站）。沒有清不掉的死結，逐分與最高倍速一致。建議派修的項目在報告第 6 節。
 - 照下面「第 59 任交第 60 任」（含 11-11 補充）接手；已在 #1579 登記，第 59 任停手、可以封存。
 - 接手時 main 84cf8864。開著的 PR：遊戲庫只有 draft #2028（作者 Mac 本機的 session 開的，最低版本升到 iOS 26，決策 676），**等作者決定要不要合**；assets #73（TRELLIS 授權）仍等作者在 Mac 上驗證；reference 沒有。沒有在做的實作 session，沒有排程。
@@ -590,6 +591,21 @@
     - **Mac 接手後（session_01YGNNumP1xpBTwXqpouPFrE，11-11）**：從最新 main 開分支 `claude/liquid-glass-677`，把雲端那兩個 commit 搬過來，在 Mac 上建置、在模擬器（iPhone 18 Pro、iOS 27.2）看過，補了決策 677、`docs/UI_THEME.md` 與截圖測試 `testLiquidGlass3DControls`，開 draft PR（號碼見 #1579），**等作者決定合不合**。還沒做完的只有一件，要作者做：**實機比 3D 換前換後的幀數**（模擬器兩邊都是 60 fps，分不出來）；掉了就單獨退回 3D 那個 commit，或照決策 677「下一步」試 `GlassEffectContainer`。合併後雲端的分支 `claude/liquid-glass-floating-controls` 可以刪。
   - 號碼：決策 676 已佔用、677 留給 Mac 接手 LIQUIDGLASS 的 session，**下一個 678**。
   - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
+- **11-11 08:00 UTC 補充（第 60 任，已壓縮 2 次；第 3 次後換手）**：照 #1579 與開著的 PR 寫的；和下面 04:10 那段不同時以這段為準。
+  - **今天已合併**：#2032–#2038、#2039（WENHU-UNDER，決策 678）、#2040（App 圖示，決策 680）、#2041（HEALTH-124）；assets repo #89。04:10 那段的四個 session 與 METAL4-STUDY、L16-FIX、LMSTUDIO-STUDY 都已封存。作者 11-11：「2035 全綠你就合 之後的pr都是」「記得考慮會不會衝突 排優先合併的順序」——全綠、ready、clean 就照 §1.2 合，不用再問。
+  - **進行中的雲端 session**（都是第 1 層）：
+    - **TYMC-YIELD** session_01YGNNupyS1CVXKpxSqb1jsv，`claude/tymc-yield-681`，決策 681，動 GameCore `Deadlock.swift`（HEALTH-124 §6 的機捷連讓與 tymc-old 傍晚 6 班）；門檻：`TYMC_AFTERNOON=1 AirportShuttleDepotTests` 綠、tymc ≤5/333、tymc-old ≤2/333、重建 ≤9/333；動 golden 或 replay 的值前要先問規劃。
+    - **MUSEUM** session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，決策 684，**存檔版本 87**（#1579 留言 6788990779）；只做第一步（規則與最小介面），第二步（3D 館舍、圖示、館內視角）留給 Mac。
+    - 這兩個是完整 tier，一次合一個，後合的先併 main。
+    - **BUY-PNL** session_01YGNNunjBSsACdFQKPdNK4k，#2043，決策 682；截圖測試 `testTrainPurchaseEstimate`「The estimate shows」連兩版紅，已請它查根因。
+    - **CITY-TITLE** session_01YGNNupYoAuDo7yAXiwVvbL，#2042，決策 683；檢查全綠，等它做完截圖驗收轉 ready。
+    - **MANUAL-DRIVE** session_01YGNNuqWp9HgG8hzMCrcGc9，`claude/manual-drive-686`，決策 686，不動 GameCore；新面板，截圖要規劃看過才合；手感與實機聲音留給 Mac。
+    - **SUBSIDIARY-DESIGN** session_01YGNNupuwuP8Ufz3F4WJjcF，`claude/subsidiary-design`，只寫 `docs/research/SUBSIDIARY_DESIGN_2026-11-11.md`。
+  - **Mac 本機**（雲端傳不到 Mac，作者貼一句話轉達；一次一件）：**LOOK-LOOP** session_01YGNNuoActmxTfeAsLPJBWL（決策 685，#1579 留言 6789510949：3D skill 加「看圖再改」的共用規矩，照 skill-creator 的方法寫並出考題，用一個車站試做）已登記，作者先封存、晚點再開。之後依序：TUTORIAL-CAPSULE（決策 679「下一步」）、GLASS-POLISH、FACADE-669、CAB-RAIN、FPS-DEVICE（含速度選單第一幀卡頓、L16-17 馬達聲）；清單在 #1579 留言 6786821644。assets #73 的 TRELLIS 驗證是作者自己的 session。
+  - **號碼**：決策 681–686 如上，**下一個 687**；存檔版本 main 86、87 給 MUSEUM，**下一個 88**；golden schema 76 不動。
+  - **審查點數**（從 #2032 起）：#2035、#2037、#2038、#2040、#2039 各 1，共 5；滿 30 或發完一版派 REVIEW-L17。
+  - **沒派、記著的**：HEALTH-124 §6.5 的 (c) 內灣真實地形造價、(d) 大地圖讓車成本；早上 3 班與文湖 6 班（不是退步）。舊機型若實機量到玻璃效果掉幀，再加「省電時改素色底」（現在不做）。Metal 4 不採用（`research/METAL4_VULKAN_2026-11-11.md`）。
+  - **下次發版前**（只在作者說發的時候）：`.github/testflight-whats-new.md` 要寫到最低 iOS 26、地下顯示與文湖線河底、聲音、雨（L16-9）、Liquid Glass、新圖示。
 - **11-11 04:10 UTC 補充：派了四個雲端 session**（作者睡前：「那你判斷哪些可以先在雲端做的／Mac還在改之前的liquid glass／你這邊也同步開幾個適合雲端的去做」；先前「我說可以派之前先不派」到此解除）。四個都在第 1 層、都帶 `source_url`，模型照 §1.1 的 11-11 那條。派工單在各 session 的開頭，摘要在 #1579 留言 6786741855。
   - **REVIEW-L16** session_01YGNNupozifvTzHdaz6hs68：審查 #1986–#2031 已合併的程式 PR（規劃粗數 27 點，且已發過 123、124 兩版），只寫 `docs/archive/PR1986_2031_REVIEW_HANDOFF.md`；發現 P1 會立刻通知規劃，當天派修。
   - **HEALTH-124** session_01YGNNukuAfZWX59qB3uEsuw：照 HEALTH-122 的量法重量，只寫 `docs/research/HEALTH_124_2026-11-11.md`；特別看機捷「簡單＋行車控制」沒發的班與決策 666 的連讓次數。
