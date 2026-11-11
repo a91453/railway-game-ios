@@ -514,6 +514,48 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("sights-off-the-map-open", app)
     }
 
+    /// Decision 684: the railway museum: the building tool's list with its
+    /// card chosen, then its row in the sights panel, in Chinese and in
+    /// English. For the screenshot review of the pull request that added
+    /// the museum.
+    func testRailwayMuseum() {
+        for english in [false, true] {
+            let suffix = english ? "-english" : ""
+            let app = launch(extra: ["-screenshot-scene", "museum"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle()
+            keep("museum-map\(suffix)", app)
+            let menu = app.buttons["hud.menu"]
+            menu.waitUntilSettled()
+            menu.tap()
+            if !app.buttons["menu.tourism"].appears(within: 5) {
+                app.buttons["menu.more"].tap()
+            }
+            app.buttons["menu.tourism"].tap()
+            XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+            XCTAssertTrue(app.staticTexts["tourism.exhibits"].appears(within: 10), "The museum's row says what it shows")
+            settle(seconds: 2)
+            keep("museum-sights\(suffix)", app)
+            app.buttons["tourism.done"].tap()
+            XCTAssertTrue(app.buttons["tourism.done"].disappears(within: 10), "The sights close")
+            app.buttons["dock.build"].tap()
+            app.buttons["tool.building"].waitUntilSettled()
+            app.buttons["tool.building"].tap()
+            // The cards are a lazy grid in the tool's own card, three a
+            // row with the museum in the last: drag over the first card.
+            let first = app.buttons["building.kind.house"]
+            XCTAssertTrue(first.appears(within: 10), "The building tool opens")
+            first.waitUntilSettled()
+            keep("museum-building-list\(suffix)", app)
+            let card = app.buttons["building.kind.railwayMuseum"]
+            XCTAssertTrue(scrollScreen(to: card, in: app, over: first.frame), "The museum's card comes into reach")
+            card.tap()
+            settle(seconds: 2)
+            keep("museum-building-card\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 663 (the Mac playtest's D9): the High Speed Rail demo's
     /// fares, the distance steps with what high-speed trips pay instead.
     func testHighSpeedDemoFares() {

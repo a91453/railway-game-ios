@@ -245,6 +245,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// For the screenshot review of the pull request that folded them.
     case sightsOffMap
 
+    /// Decision 684: a small company with a railway museum beside its
+    /// second station, five types of train on show in it, a day after it
+    /// opened: the building tool's museum card and the museum's row in the
+    /// sights panel. For the screenshot review of the pull request that
+    /// added the museum.
+    case museum
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -354,6 +361,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .cijinShore: Self.cijinShoreWorld(water: water)
         case .trackHeight: Self.trackHeightWorld()
         case .sightsOffMap: Self.sightsOffMapWorld()
+        case .museum: Self.museumWorld(in: language)
         }
     }
 
@@ -367,6 +375,39 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let kept = Set(rows.filter { $0.offMapMetres == nil }.prefix(2).map(\.id))
             .union(rows.filter { $0.offMapMetres != nil }.prefix(3).map(\.id))
         world.setTourism(world.tourism?.attractions.filter { kept.contains($0.id) })
+        return world
+    }
+
+    /// Decision 684: two stations and a line, an old street by the first
+    /// and the company's museum by the second, with the five types of train
+    /// the company bought on show, at 08:30 of the second day.
+    static func museumWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = GameWorld(
+            bounds: try! WorldBounds(width: 131_072, height: 65_536),
+            economy: GameEconomy(balance: Money(100_000_000_000), costs: .standard)
+        )
+        do throws(GameError) {
+            world.setEconomyMode(.management)
+            let home = try world.buildStation(named: language.text("Home", "家園"), at: PlanPoint(x: 10_000, y: 32_768)).id
+            let foot = try world.buildStation(named: language.text("Museum Road", "博物館前"), at: PlanPoint(x: 30_000, y: 32_768)).id
+            let line = try world.createLine(named: language.text("Main Line", "本線"), stops: [home, foot]).id
+            try world.assignTrain(try world.purchaseTrain(named: language.text("Train 1", "1 號車")).id, to: line)
+            try world.setStationDemand(home, to: StationDemand(kind: .residential, dailyTrips: 0))
+            try world.setStationDemand(foot, to: StationDemand(kind: .scenic, dailyTrips: 0))
+            world.setOutsideConnections(true)
+            world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "老街", englishName: "Old Street",
+                                         point: PlanPoint(x: 12_000, y: 30_000), kind: .town, baseStars: 300)])
+            for (index, type) in [TrainType.a, .b, .c, .steam, .emu3000].enumerated() {
+                try world.purchaseTrain(named: language.text("Train \(index + 2)", "\(index + 2) 號車"), as: type)
+            }
+            try world.placeBuilding(.railwayMuseum, at: PlanPoint(x: 31_000, y: 26_768))
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(freightRunSeconds / 600))
+        } catch {
+            preconditionFailure("The museum screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
         return world
     }
 

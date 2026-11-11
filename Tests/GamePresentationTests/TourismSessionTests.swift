@@ -471,4 +471,18 @@ extension TourismSessionTests {
         XCTAssertEqual(world.holidays(from: 47, through: 47).first?.start, 44)
         if case .touristsComing? = StationMasterAdvice(world: world) { XCTFail("the holiday began three days ago") }
     }
+
+    /// Decision 684: the screenshot scene of the museum has it open with
+    /// five types on show and yesterday's visitors.
+    func testTheMuseumScreenshotSceneShowsFiveTypes() throws {
+        let world = ScreenshotScene.museum.make(in: .traditionalChinese)
+        let museum = try XCTUnwrap(world.railwayMuseum)
+        XCTAssertEqual(museum.exhibits.count, 5)
+        XCTAssertGreaterThan(museum.visitors, 0)
+        let row = try XCTUnwrap(world.attractionRows(in: .traditionalChinese).first { $0.exhibitsText != nil })
+        XCTAssertEqual(row.starsText, "2.25★")
+        XCTAssertEqual(row.status, .ok)
+        XCTAssertEqual(row.stationName, "博物館前")
+        XCTAssertEqual(world.attractionRows(in: .traditionalChinese).count, 2)
+    }
 }
