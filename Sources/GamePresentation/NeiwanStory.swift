@@ -5,6 +5,14 @@ import GameCore
 // master is the game's (decision 122). Uncle Luo's second memory waits for
 // the first.
 //
+// The station master's advice follows what decision 668 measured (review
+// L16-2): this line's difficulty is capacity, not the first months. One
+// two-car train stays near 33,000 riders a day for three years and fails
+// at the deadline; four cars, or two trains, win gold. So he says to
+// lengthen or add early, never to run short or sparingly, and the
+// crowding beat comes at 60% of the riders' goal (30,000), which a short
+// train reaches, not at 75% (37,500), which it never does.
+//
 // The history in it is from public sources, checked on 2026-11-09 (decision
 // 668 read them; the owner's `tra_special_trains.json` `branchLines`
 // `neiwan`; Chinese Wikipedia, 「內灣線」「合興車站」「竹東車站」; English
@@ -28,8 +36,8 @@ extension BranchLineChallenge {
     static let neiwanStory = ChallengeStory(challengeID: neiwan.challengeID, beats: [
         StoryBeat(
             "neiwan.1", .day(3), .stationMaster,
-            "Hsinchu is a big city, but past Zhuzhong the line climbs into the hills and the towns get small. Start with a short train, and keep fares kind enough that people along the line will ride.",
-            "新竹是大城市，可是過了竹中，鐵路就慢慢爬進山裡，沿線的鎮也小了。先用短車開，票價也別訂太高，讓沿線的人坐得起。",
+            "Hsinchu is a big city, and plenty of people ride from the first day; only past Zhuzhong does the line climb into the hills. A short train fills up fast here, so lengthen it or add another early, and keep fares kind enough that people along the line will ride.",
+            "新竹是大城市，第一天就有很多人要搭車；過了竹中，鐵路才慢慢爬進山裡。短車很快就會坐滿，記得早點把車加長或再加一列；票價也別訂太高，讓沿線的人坐得起。",
             carries: .welcome
         ),
         StoryBeat(
@@ -55,8 +63,8 @@ extension BranchLineChallenge {
         ),
         StoryBeat(
             "neiwan.6", .cashBelowZero, .stationMaster,
-            "We're out of money, and if this goes on we'll go bankrupt. Hold off on new trains, keep what you have running, and let the towns along the line grow into them.",
-            "錢用完了，再這樣下去會破產。先別加車，把現有的車開好，等沿線的鎮長大再說。",
+            "We're out of money, and if this goes on we'll go bankrupt. See that fares aren't so high they keep people away, and that the trains are long enough for everyone waiting: on this line it is full trains that pay.",
+            "錢用完了，再這樣下去會破產。看看票價是不是訂得太高、把人擋在車外，車夠不夠長、載不載得完等車的人；這條線要靠坐滿的車賺錢。",
             carries: .debt
         ),
         StoryBeat(
@@ -71,9 +79,9 @@ extension BranchLineChallenge {
             "內灣到了！食飽未？進來，阿婆煮碗粄條給你吃。這裡以前是運木頭、運煤的小鎮，後來冷清了；現在老街假日又擠滿人，大家都是坐火車來的。"
         ),
         StoryBeat(
-            "neiwan.9", .riders(percent: 75), .stationMaster,
-            "The line is filling up, and people are waiting on platforms. A longer train, or another one, will help.",
-            "這條線越來越擠，月台上開始有人在等車了。把車加長，或再加一列，會好一些。",
+            "neiwan.9", .riders(percent: 60), .stationMaster,
+            "The line is filling up, and people are waiting on platforms. Lengthen the train or add another: a short train alone cannot carry everyone who wants to ride.",
+            "這條線越來越擠，月台上開始有人在等車了。把車加長，或再加一列；只靠短車，載不完想搭車的人。",
             carries: .crowding
         ),
         StoryBeat(
@@ -108,8 +116,8 @@ extension BranchLineChallenge {
         ),
         StoryBeat(
             "neiwan.failed", .failed, .stationMaster,
-            "This time the Neiwan Line didn't make it. Work stopped on it in the war and began again after, so try again, and go gently with the trains in the first months.",
-            "這一次，內灣線沒能撐下去。它在戰時停過工，戰後又重新開始；再試一次，頭幾個月記得把車開得省一點。"
+            "This time the Neiwan Line didn't make it. Work stopped on it in the war and began again after, so try again, and this time lengthen the trains or add one early: more people want to ride here than a short train can carry.",
+            "這一次，內灣線沒能撐下去。它在戰時停過工，戰後又重新開始；再試一次，這次早點把車加長或加一列：這裡想搭車的人，短車載不完。"
         ),
     ])
 }

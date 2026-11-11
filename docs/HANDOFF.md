@@ -596,6 +596,7 @@
   - **iOS 26 之後可以做的外觀小項**：打分在 NEXT_PRIORITIES §26，都排在現有新功能之後，要在模擬器或實機看，留給 Mac 本機做（LIQUIDGLASS 之後先做 App 圖示）。
   - 號碼：決策 677 Mac 的 LIQUIDGLASS（session_01YGNNumP1xpBTwXqpouPFrE，分支 `claude/liquid-glass-677`）、678 WENHU-UNDER、679 CIOPT-7，**下一個 680**。
   - 規劃的巡查：每次被叫醒先讀 #1579 新留言；數審查點數：從 #2032 起，滿 30 點或剛發完一版就派 REVIEW-L17。
+  - **L16-FIX**（session_01YGNNuqQ7ZRiPozsyiZbTBX，分支 `claude/l16-fix`）：修審查 L16 的 L16-1（決策 663「後來的修正」）與 L16-2（決策 671「後來的修正」）；沒有留下做到一半的事。L16-11 的三件小事（`neiwan.5` 的觸發、客語、決策 671 的年代）沒動。
 
 **第 59 任交第 60 任（2026-11-10 約 23:58 UTC＝台灣 11-11 07:58，session_01YGNNuotpQDktgGusuFc8kz，第 0 層，沒壓縮過）**
 - 換手原因：作者說「封存給新 session 接手」。照這段接手；和下面「第 58 任的現況」不同時以這段為準。這段是照 #1579 與開著的 PR 寫的。
