@@ -1062,6 +1062,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep(name, app)
     }
 
+    /// Decision 677: the 3D map's floating controls on Liquid Glass over
+    /// the night street: a train followed from behind (the buttons, the
+    /// speeds, the clock, the follow bar) in the dark and the light
+    /// appearance, the speed menu open from its button (decision 643),
+    /// then from the cab (the driver's cards). For the screenshot review
+    /// of the pull request.
+    func testLiquidGlass3DControls() {
+        defer { XCUIDevice.shared.appearance = .dark }
+        for (view, name) in [("back", "follow"), ("cab", "cab")] {
+            let app = launch(extra: ["-screenshot-scene", "streetStopNight", "-screenshot-follow-train", "-map3DFollowView", view,
+                                     "-map3D.quality", "high", "-screenshot-device-tier", "1"])
+            defer { app.terminate() }
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The train is followed")
+            settle(seconds: 12)
+            keep("glass-3d-night-\(name)", app)
+            XCUIDevice.shared.appearance = .light
+            settle(seconds: 3)
+            keep("glass-3d-night-\(name)-light", app)
+            XCUIDevice.shared.appearance = .dark
+            guard view == "back" else { continue }
+            settle(seconds: 2)
+            let speeds = app.descendants(matching: .any)["map3D.speed"].buttons
+            XCTAssertTrue(speeds.element(boundBy: 1).becomesHittable(within: 10), "The speed menu's button shows")
+            speeds.element(boundBy: 1).tap()
+            settle(seconds: 2)
+            keep("glass-3d-speed-menu", app)
+        }
+    }
+
     /// Decision 610: Banqiao's low-rise blocks north of Fuzhong close up
     /// and leaned, over their roofs (decision 610 續: not against a
     /// tower's wall), the real buildings' street fronts (arcade pillars, grilles,

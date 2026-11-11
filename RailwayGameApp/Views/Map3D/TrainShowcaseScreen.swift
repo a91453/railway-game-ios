@@ -125,7 +125,7 @@ struct TrainShowcaseScreen: View {
                 Image(systemName: "xmark")
                     .font(.headline)
                     .frame(width: 44, height: 44)
-                    .background(.regularMaterial, in: Circle())
+                    .glassBackground(in: Circle(), interactive: true)
             }
             .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
             .accessibilityIdentifier("trainShowcase.close")
@@ -134,7 +134,7 @@ struct TrainShowcaseScreen: View {
                 Image(systemName: "camera.fill")
                     .font(.headline)
                     .frame(width: 44, height: 44)
-                    .background(.regularMaterial, in: Circle())
+                    .glassBackground(in: Circle(), interactive: true)
             }
             .accessibilityLabel(Text(verbatim: language.text("Take Photo", "拍照")))
             .accessibilityHint(Text(verbatim: exhibit?.photoHint(in: language)
@@ -146,7 +146,7 @@ struct TrainShowcaseScreen: View {
                 Image(systemName: "eye.slash")
                     .font(.headline)
                     .frame(width: 44, height: 44)
-                    .background(.regularMaterial, in: Circle())
+                    .glassBackground(in: Circle(), interactive: true)
             }
             .accessibilityLabel(Text(verbatim: language.text("Hide Buttons", "隱藏按鈕")))
             .accessibilityHint(Text(verbatim: exhibit?.hideHint(in: language)
@@ -224,7 +224,7 @@ struct TrainShowcaseScreen: View {
         }
         .padding(12)
         .frame(maxWidth: 560)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("trainShowcase.controls")
     }

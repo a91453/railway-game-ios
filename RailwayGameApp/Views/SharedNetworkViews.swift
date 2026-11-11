@@ -159,6 +159,7 @@ struct ReceivesSharedNetworks: ViewModifier {
                     ProgressView()
                         .controlSize(.large)
                         .padding(24)
+                        // Decision 677: not a control, and over any screen; stays a material.
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                         .accessibilityLabel(Text(verbatim: launcher.language.text("Opening the network", "正在打開路網")))
                 }

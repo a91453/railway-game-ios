@@ -584,6 +584,7 @@
     - 雲端先派的 LIQUIDGLASS session_01YGNNumEw3RtTWpGaNrL7uM 做了一半就停手：分支 `claude/liquid-glass-floating-controls` 上兩個 commit（3D 畫面 17 處、待機說明膠囊與小地圖收起鈕改玻璃；另 9 處不換並註明原因），**沒建置過，全部 UNVERIFIED**，沒有 PR；逐處清單與 SHA 在它 #1579 的「釋出」留言。Mac 接手的 session 可以接著用或只當參考。那條分支等 Mac 的 PR 合併後可以請作者刪。
     - 雲端 session 傳不了訊息到 Mac 上的 session（要按信任卡，作者說不要按），要跟它講的事寫在 #1579。
     - 這類要在模擬器或實機看的外觀改動，之後先問作者要不要交給 Mac 本機做，再決定派不派雲端。
+    - **Mac 接手後（session_01YGNNumP1xpBTwXqpouPFrE，11-11）**：從最新 main 開分支 `claude/liquid-glass-677`，把雲端那兩個 commit 搬過來，在 Mac 上建置、在模擬器（iPhone 18 Pro、iOS 27.2）看過，補了決策 677、`docs/UI_THEME.md` 與截圖測試 `testLiquidGlass3DControls`，開 draft PR（號碼見 #1579），**等作者決定合不合**。還沒做完的只有一件，要作者做：**實機比 3D 換前換後的幀數**（模擬器兩邊都是 60 fps，分不出來）；掉了就單獨退回 3D 那個 commit，或照決策 677「下一步」試 `GlassEffectContainer`。合併後雲端的分支 `claude/liquid-glass-floating-controls` 可以刪。
   - 號碼：決策 676 已佔用、677 留給 Mac 接手 LIQUIDGLASS 的 session，**下一個 678**。
   - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
 - **11-11 04:10 UTC 補充：派了四個雲端 session**（作者睡前：「那你判斷哪些可以先在雲端做的／Mac還在改之前的liquid glass／你這邊也同步開幾個適合雲端的去做」；先前「我說可以派之前先不派」到此解除）。四個都在第 1 層、都帶 `source_url`，模型照 §1.1 的 11-11 那條。派工單在各 session 的開頭，摘要在 #1579 留言 6786741855。

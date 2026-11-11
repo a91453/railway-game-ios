@@ -149,7 +149,7 @@ struct Map3DPreviewScreen: View {
                                 .font(.headline)
                                 .padding(.horizontal, 14)
                                 .frame(minWidth: 44, minHeight: 44)
-                                .background(.regularMaterial, in: Capsule())
+                                .glassBackground(in: Capsule(), interactive: true)
                             }
                             .accessibilityLabel(Text(verbatim: language.text("2D Map", "平面地圖")))
                             .accessibilityHint(Text(verbatim: language.text("Goes back to the flat map, here.", "回到這裡的平面地圖。")))
@@ -159,7 +159,7 @@ struct Map3DPreviewScreen: View {
                                 Image(systemName: "xmark")
                                     .font(.headline)
                                     .frame(width: 44, height: 44)
-                                    .background(.regularMaterial, in: Circle())
+                                    .glassBackground(in: Circle(), interactive: true)
                             }
                             .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
                             .accessibilityIdentifier("map3D.close")
@@ -179,7 +179,7 @@ struct Map3DPreviewScreen: View {
                                 .font(.headline)
                                 .padding(.horizontal, 14)
                                 .frame(minWidth: 44, minHeight: 44)
-                                .background(.regularMaterial, in: Capsule())
+                                .glassBackground(in: Capsule(), interactive: true)
                             }
                             .accessibilityHint(Text(verbatim: language.text("Goes back to the flat map, here, with the track, train and building tools.",
                                                                             "回到這裡的平面地圖，打開軌道、列車與建物的工具。")))
@@ -200,7 +200,11 @@ struct Map3DPreviewScreen: View {
                     VStack(alignment: .trailing, spacing: 6) {
                         SpeedControl(session: session, tutorialTarget: nil)
                             .padding(4)
-                            .background(.regularMaterial, in: Capsule())
+                            // Decision 677 (and 643, A5): the glass a layer behind, not
+                            // round the speeds, whose menu would grow out of the capsule.
+                            .background {
+                                Color.clear.glassBackground(in: Capsule())
+                            }
                             .accessibilityIdentifier("map3D.speed")
                         // Decision 645 (B5): the 3D map covers the 2D
                         // map's clock, so it shows the same one here.
@@ -258,7 +262,7 @@ struct Map3DPreviewScreen: View {
                         .font(.footnote)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(.regularMaterial, in: Capsule())
+                        .glassBackground(in: Capsule())
                 }
             }
             // Decision 388: on the 2D map's lines (``HUDMargins``), not the
@@ -525,6 +529,8 @@ struct Map3DPreviewScreen: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        // Decision 677: stays a material, so the frame rate read here
+        // compares with the readings before it.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -1342,7 +1348,7 @@ private struct Map3DClock: View {
         .foregroundStyle(Theme.textPrimary)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.regularMaterial, in: Capsule())
+        .glassBackground(in: Capsule())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: session.language.text("Game time \(text)", "遊戲時間 \(text)")))
         .accessibilityIdentifier("map3D.clock")
@@ -2196,7 +2202,7 @@ private struct Map3DFollowBar: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 13)
         .padding(.vertical, 2)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
         .hudFrameMark("map3D.followBar")
         .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
@@ -2311,7 +2317,7 @@ private struct Map3DBusFollowBar: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 13)
         .padding(.vertical, 2)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
         .hudFrameMark("map3D.busFollowBar")
         .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
@@ -2401,7 +2407,7 @@ private struct Map3DCabinFollowBar: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 13)
         .padding(.vertical, 2)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
         .hudFrameMark("map3D.cabinFollowBar")
         .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
@@ -2492,7 +2498,7 @@ private struct Map3DFerryFollowBar: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 13)
         .padding(.vertical, 2)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
         .hudFrameMark("map3D.ferryFollowBar")
         .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
@@ -2613,7 +2619,7 @@ private struct Map3DDriverStrip: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(maxWidth: 420)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("map3D.driver.strip")
         .hudFrameMark("map3D.driver.strip")
@@ -2651,7 +2657,7 @@ private struct Map3DSpeedCard: View {
         .fixedSize()
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: hud.speedLabel(in: DisplayLanguage.app)))
         .accessibilityIdentifier("map3D.driver.speed")
@@ -2689,7 +2695,7 @@ private struct Map3DDriverPrompt: View {
             .lineLimit(1)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(.regularMaterial, in: Capsule())
+            .glassBackground(in: Capsule())
             .accessibilityIdentifier("map3D.driver.prompt")
     }
 }

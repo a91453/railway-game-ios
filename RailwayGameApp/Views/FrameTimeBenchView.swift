@@ -117,6 +117,7 @@ struct FrameTimeBenchOverlay: View {
                 .buttonStyle(.bordered)
             }
             .padding(12)
+            // Decision 677: stays a material, so what the bench measures does not change.
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
             .padding(.top, 8)
             .padding(.horizontal, 16)

@@ -68,7 +68,9 @@ struct MiniMapView: View {
                 Image(systemName: "chevron.down")
                     .font(.caption2.weight(.bold))
                     .frame(width: 22, height: 22)
-                    .background(.thinMaterial, in: Circle())
+                    // Decision 677: glass, but not `interactive`: pressed, it
+                    // would swell past the small map's edge, which clips it.
+                    .glassBackground(in: Circle())
             }
             .buttonStyle(CornerFoldButtonStyle())
             .accessibilityLabel(Text(verbatim: language.text("Hide the overview map", "收起小地圖")))
