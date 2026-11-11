@@ -494,6 +494,12 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Before drawing or changing any icon, glyph, character or illustration for
   the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
   chose and how to check a drawing before showing it.
+- Before building, rebuilding or restyling a native 3D model (a station, a
+  building, a kit part, a train, a bus), read
+  `.claude/skills/model-look/SKILL.md` (decision 685): the kits' tests only
+  say nothing is broken, so the model is looked at beside real photographs
+  at the game's camera angle and on-screen size, for at least three rounds,
+  and the owner or another session judges its overview, not its maker.
 - Before adding or changing any animation or transition in the app, read
   `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
   253) and what Reduce Motion does.
