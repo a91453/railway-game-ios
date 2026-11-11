@@ -28,6 +28,10 @@ public enum PlayerCommand: Hashable, Sendable {
     case addPlatform(PlatformAddition)
     /// ``GameSession/removeNetworkPlatform(_:)``.
     case removePlatform(TrackPlatform)
+    /// Decision 687: a platform lengthened where it stands, to the stretch
+    /// from `start` to `end` of its edge
+    /// (``GameSession/extendPlatform(_:)``).
+    case extendPlatform(TrackPlatform, start: Int64, end: Int64)
     /// An edge and each of its end nodes no other edge ends at
     /// (``GameSession/removeNetworkEdge()``).
     case removeTrack(TrackEdgeID)
@@ -237,6 +241,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildDoubleTrack: "buildDoubleTrack"
         case .addPlatform: "addPlatform"
         case .removePlatform: "removePlatform"
+        case .extendPlatform: "extendPlatform"
         case .removeTrack: "removeTrack"
         case .buildCrossover: "buildCrossover"
         case .addPlatformTrack: "addPlatformTrack"
@@ -316,6 +321,12 @@ extension GameSession {
             outcome.station = station
         case .removePlatform(let platform):
             try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
+        case .extendPlatform(let platform, let start, let end):
+            // The platform as the tool saw it: one that has changed since
+            // (another player's edit, a replay gone astray) is refused.
+            guard world.network.platforms.contains(platform) else { throw .invalidPlatform }
+            try world.extendTrackPlatform(platform.station, on: platform.edge, from: platform.start, toStart: start, end: end)
+            outcome.platform = TrackPlatform(station: platform.station, edge: platform.edge, start: start, end: end)
         case .buildCrossover(let plan, let structure):
             // The diagonals joined at the middle: the tool says so before it
             // asks, so on the world it planned on this never happens.
@@ -433,6 +444,9 @@ extension PlayerCommand: Codable {
         var demand: Demand?
         var startDistance: Int64?
         var endDistance: Int64?
+        /// Decision 687: the stretch a platform is lengthened to.
+        var newStartDistance: Int64?
+        var newEndDistance: Int64?
         var edit: Edit?
         var crossover: ScissorsPlan?
         var platformTrack: PlatformTrackPlan?
@@ -555,6 +569,14 @@ extension PlayerCommand: Codable {
                 throw invalid("a platform needs its station, edge, start and end")
             }
             self = .removePlatform(TrackPlatform(station: StationID(rawValue: station), edge: .edge(edge), start: start, end: end))
+        case "extendPlatform":
+            guard let station = record.station, let edge = record.edge, let start = record.startDistance, let end = record.endDistance,
+                  let newStart = record.newStartDistance, let newEnd = record.newEndDistance else {
+                throw invalid("a platform lengthened needs its station, edge, start and end, and its new start and end")
+            }
+            self = .extendPlatform(
+                TrackPlatform(station: StationID(rawValue: station), edge: .edge(edge), start: start, end: end), start: newStart, end: newEnd
+            )
         case "buildCrossover":
             guard let plan = record.crossover, let structure = record.structure.flatMap(TrackStructure.init(rawValue:)) else {
                 throw invalid("a crossover needs its plan and structure")
@@ -697,6 +719,13 @@ extension PlayerCommand: Codable {
             record.edge = platform.edge.number
             record.startDistance = platform.start
             record.endDistance = platform.end
+        case .extendPlatform(let platform, let start, let end):
+            record.station = platform.station.rawValue
+            record.edge = platform.edge.number
+            record.startDistance = platform.start
+            record.endDistance = platform.end
+            record.newStartDistance = start
+            record.newEndDistance = end
         case .removeTrack(let edge):
             record.edge = edge.number
         case .buildCrossover(let plan, let structure):
@@ -802,7 +831,7 @@ extension PlayerCommand {
             language.text("rebuild the line as real", "照真實改建")
         case .buyRealStation(let purchase):
             language.text("buy \(purchase.name) station", "收購\(purchase.name)站")
-        case .removePlatform, .removeTrack:
+        case .removePlatform, .removeTrack, .extendPlatform:
             nil
         case .edit(let edit):
             switch edit {

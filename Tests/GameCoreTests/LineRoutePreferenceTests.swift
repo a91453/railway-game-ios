@@ -238,6 +238,19 @@ final class LineRoutePreferenceTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
     }
 
+    /// Decision 687: a line's chosen platform, lengthened, is still its
+    /// chosen platform.
+    func testALengthenedPlatformKeepsTheLinesChoice() throws {
+        var (world, _, line, _) = try Self.setup(traffic: false)
+        let preference = Self.loop(world)
+        try world.setLineRoutePreferences(line, to: [preference])
+        try world.extendTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072, toStart: 2_048, end: 6_144)
+        let longer = TrackPlatform(station: SingleTrackMeet.middle, edge: .edge(5), start: 2_048, end: 6_144)
+        XCTAssertEqual(world.lines[0].routePreferences, [LineRoutePreference(from: 0, to: 1, tracks: preference.tracks, platform: longer)])
+        XCTAssertEqual(world.preferredPath(from: world.trains[0].position!, preference: world.lines[0].routePreferences[0], length: 1_024)?.end, 6_144)
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
+    }
+
     func testPatternPreferencesAreSharedAndIsolatedFromTheBaseService() throws {
         var (world, model, line, _) = try Self.setup(patterns: true)
         let preference = Self.loop(world, pattern: true)

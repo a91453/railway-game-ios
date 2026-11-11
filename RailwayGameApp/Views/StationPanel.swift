@@ -822,6 +822,37 @@ struct StationPanel: View {
                     }
                     .accessibilityIdentifier("station.platformTrack.\(index)")
                 }
+                // Decision 687: lengthened where it stands, to a whole
+                // number of cars.
+                let longer = session.platformExtensionMenuChoices(for: platform)
+                let lengthenTitle = language.text(
+                    "Platform \(index + 1): lengthen (now \(session.platformLengthText(of: platform)))",
+                    "第 \(index + 1) 月台：加長（現在 \(session.platformLengthText(of: platform))）"
+                )
+                TickStable(StableKey(index, platform, longer, lengthenTitle)) {
+                    Menu {
+                        ForEach(longer) { choice in
+                            Button {
+                                session.extendPlatform(choice.id)
+                            } label: {
+                                Text(verbatim: choice.title)
+                                if let detail = choice.detail {
+                                    Text(verbatim: detail)
+                                }
+                            }
+                        }
+                        if longer.isEmpty {
+                            Text(verbatim: session.platformExtensionNoRoomText)
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: lengthenTitle)
+                        } icon: {
+                            Image(systemName: "arrow.left.and.right")
+                        }
+                    }
+                    .accessibilityIdentifier("station.extendPlatform.\(index)")
+                }
                 // 56.1: a platform can be removed here too (Undo brings it
                 // back); the track under it then can be.
                 Button(role: .destructive) {
@@ -866,6 +897,9 @@ struct StationPanel: View {
             Text(verbatim: language.text(
                 "A platform track runs beside the platform with a turnout at each end. Island: one platform between the tracks, 11 m apart. Side: a platform outside each track, 5 m apart.",
                 "月台軌道會建在月台旁，兩端各有一組轉轍器。島式：兩軌之間共用一座月台，軌距 11 公尺。岸式：兩軌外側各有月台，軌距 5 公尺。"
+            ) + "\n" + language.text(
+                "Lengthening a platform is free; it grows along its own track, as far as the track is level and clear.",
+                "加長月台不用錢；月台沿著自己那段軌道加長，到軌道不平或有別的月台為止。"
             ) + "\n" + session.ownTrackPlatformHelp(for: station))
             .accessibilityIdentifier("station.platforms.footer")
         }

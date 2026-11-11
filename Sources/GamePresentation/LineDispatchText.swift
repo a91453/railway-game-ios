@@ -189,13 +189,13 @@ extension GameWorld {
         let metres = (short.needed + unitsPerMetre - 1) / unitsPerMetre
         if short.overhangs {
             return language.text(
-                "Longer than the platforms at \(name), so its last car stops past the end: lengthen one to \(metres) m, or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
-                "列車比 \(name) 的月台長，停站時最後一節會在月台外：把月台加長到 \(metres) 公尺，或把列車移出軌道、減到 \(short.cars) 節"
+                "Longer than the platforms at \(name), so its last car stops past the end: lengthen one to \(metres) m (tap the station, then Platforms), or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
+                "列車比 \(name) 的月台長，停站時最後一節會在月台外：把月台加長到 \(metres) 公尺（點車站，在「月台」裡加長），或把列車移出軌道、減到 \(short.cars) 節"
             )
         }
         return language.text(
-            "Too long for the platforms at \(name): lengthen one to \(metres) m, or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
-            "列車比 \(name) 的月台長：把月台加長到 \(metres) 公尺，或把列車移出軌道、減到 \(short.cars) 節"
+            "Too long for the platforms at \(name): lengthen one to \(metres) m (tap the station, then Platforms), or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
+            "列車比 \(name) 的月台長：把月台加長到 \(metres) 公尺（點車站，在「月台」裡加長），或把列車移出軌道、減到 \(short.cars) 節"
         )
     }
 }

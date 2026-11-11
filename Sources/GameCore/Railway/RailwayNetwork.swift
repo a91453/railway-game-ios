@@ -305,6 +305,16 @@ public struct RailwayNetwork: Hashable, Sendable {
         foulingSpans = foulingAfterChange(to: [platform.edge])
     }
 
+    /// Decision 687: the platform at `index` of ``platforms`` becomes
+    /// `platform`, on the same edge, which the caller has checked fits it
+    /// and overlaps no other.
+    mutating func replacePlatform(at index: Int, with platform: TrackPlatform) {
+        platforms.remove(at: index)
+        platforms.insert(platform, at: platforms.firstIndex { platform < $0 } ?? platforms.count)
+        recutSpans(of: platform.edge)
+        foulingSpans = foulingAfterChange(to: [platform.edge])
+    }
+
     /// Works out the spans of edge `id` again, or forgets them once it is
     /// gone.
     private mutating func recutSpans(of id: TrackEdgeID) {

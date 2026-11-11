@@ -19,6 +19,12 @@ public struct LineRoutePreference: Hashable, Sendable, Codable {
         self.platform = platform
     }
 
+    /// Decision 687: the same leg and walk, to `platform` (the one it
+    /// named, lengthened).
+    func onPlatform(_ platform: TrackPlatform) -> LineRoutePreference {
+        LineRoutePreference(from: from, to: to, tracks: tracks, platform: platform)
+    }
+
     private enum CodingKeys: String, CodingKey { case from, to, tracks, platform }
     private struct Track: Codable {
         let edge: Int

@@ -156,14 +156,14 @@ final class PlatformStopTests: XCTestCase {
         XCTAssertEqual(short.cars, 4)
         XCTAssertEqual(
             world.shortPlatformText(short, in: .traditionalChinese),
-            "列車比 West 的月台長，停站時最後一節會在月台外：把月台加長到 100 公尺，或把列車移出軌道、減到 4 節"
+            "列車比 West 的月台長，停站時最後一節會在月台外：把月台加長到 100 公尺（點車站，在「月台」裡加長），或把列車移出軌道、減到 4 節"
         )
         XCTAssertEqual(
             world.shortPlatformText(short, in: .english),
-            "Longer than the platforms at West, so its last car stops past the end: lengthen one to 100 m, or take the train off the track and shorten it to 4 cars"
+            "Longer than the platforms at West, so its last car stops past the end: lengthen one to 100 m (tap the station, then Platforms), or take the train off the track and shorten it to 4 cars"
         )
         XCTAssertNil(world.lineDispatchHold(of: train), "it runs")
-        XCTAssertTrue(assigned.hasSuffix("停站時最後一節會在月台外：把月台加長到 100 公尺，或把列車移出軌道、減到 4 節。"), assigned)
+        XCTAssertTrue(assigned.hasSuffix("停站時最後一節會在月台外：把月台加長到 100 公尺（點車站，在「月台」裡加長），或把列車移出軌道、減到 4 節。"), assigned)
     }
 
     /// L9-2: four EMU3000 cars (20.3 m each, 81.2 m) on a four-car platform

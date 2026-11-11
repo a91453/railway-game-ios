@@ -159,11 +159,11 @@ final class FeedbackSeventyThreeTests: XCTestCase {
         XCTAssertFalse(short.overhangs)
         XCTAssertEqual(
             world.lineDispatchHoldText(of: train, in: .traditionalChinese),
-            "列車比 West 的月台長：把月台加長到 128 公尺，或把列車移出軌道、減到 6 節"
+            "列車比 West 的月台長：把月台加長到 128 公尺（點車站，在「月台」裡加長），或把列車移出軌道、減到 6 節"
         )
         XCTAssertEqual(
             world.lineDispatchHoldText(of: train, in: .english),
-            "Too long for the platforms at West: lengthen one to 128 m, or take the train off the track and shorten it to 6 cars"
+            "Too long for the platforms at West: lengthen one to 128 m (tap the station, then Platforms), or take the train off the track and shorten it to 6 cars"
         )
         // It never leaves: the reason stays true.
         try world.advance(ticks: 3_600)
@@ -185,7 +185,7 @@ final class FeedbackSeventyThreeTests: XCTestCase {
         let assigning = GameSession(world: w, language: .traditionalChinese)
         assigning.assignTrain(train, toLine: line)
         let text = try XCTUnwrap(assigning.message?.text)
-        XCTAssertTrue(text.hasSuffix("列車比 West 的月台長：把月台加長到 64 公尺，或把列車移出軌道、減到 1 節。"), text)
+        XCTAssertTrue(text.hasSuffix("列車比 West 的月台長：把月台加長到 64 公尺（點車站，在「月台」裡加長），或把列車移出軌道、減到 1 節。"), text)
     }
 
     func testATrainThatFitsIsNotTold() throws {

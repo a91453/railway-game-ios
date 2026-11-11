@@ -117,7 +117,7 @@ final class PlacementGuidanceTests: XCTestCase {
         let text = world.trainPlacementProblemText(try XCTUnwrap(problem), train: train.id, in: .traditionalChinese)
         XCTAssertTrue(text.hasPrefix("Long 太長，Stub 放不下：最長的月台"), text)
         XCTAssertTrue(text.contains("列車 6 節共"), text)
-        XCTAssertTrue(text.hasSuffix("減到 2 節，或把月台加長。"), text)
+        XCTAssertTrue(text.hasSuffix("減到 2 節，或把月台加長（點車站，在「月台」裡加長）。"), text)
 
         let session = GameSession(world: world)
         session.selectTrain(train.id)

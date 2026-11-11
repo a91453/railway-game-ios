@@ -202,6 +202,15 @@ final class CommandLogTests: XCTestCase {
             Case("removing a platform", withPlatform, .removePlatform(platform)) { world throws(GameError) in
                 try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
             },
+            Case("lengthening a platform", withPlatform, .extendPlatform(platform, start: 256, end: 3_072)) { world throws(GameError) in
+                try world.extendTrackPlatform(platform.station, on: platform.edge, from: platform.start, toStart: 256, end: 3_072)
+            },
+            Case("lengthening a platform past the track's end", withPlatform, .extendPlatform(platform, start: 256, end: 99_999)) { world throws(GameError) in
+                try world.extendTrackPlatform(platform.station, on: platform.edge, from: platform.start, toStart: 256, end: 99_999)
+            },
+            Case("lengthening a platform not there", line, .extendPlatform(platform, start: 256, end: 3_072)) { world throws(GameError) in
+                throw .invalidPlatform
+            },
             Case("removing a platform not there", line, .removePlatform(platform)) { world throws(GameError) in
                 try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
             },
@@ -250,6 +259,7 @@ final class CommandLogTests: XCTestCase {
                 edge: .edge(1), start: 0, end: 9, station: .new(name: "北門", at: PlanPoint(x: 4, y: 0), demand: StationDemand(kind: .civic, dailyTrips: 7, hinterland: 2))
             )))),
             .init(time: 4, action: .command(.removePlatform(TrackPlatform(station: StationID(rawValue: 2), edge: .edge(5), start: 1, end: 8)))),
+            .init(time: 4, action: .command(.extendPlatform(TrackPlatform(station: StationID(rawValue: 2), edge: .edge(5), start: 1, end: 8), start: 0, end: 12))),
             .init(time: 5, action: .command(.removeTrack(.edge(9)))),
             .init(time: 6, action: .advance(ticks: 40)),
             .init(time: 7, action: .setSpeed(.x10)),
