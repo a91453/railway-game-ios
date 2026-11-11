@@ -56,6 +56,18 @@ public struct Map3DScreenshotView: Equatable, Sendable {
         return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
     }
 
+    /// Decision 696: the camera over the company's railway museum (the
+    /// app's `-screenshot-3d-museum`), so a screenshot looks at its hall
+    /// and exhibits; `nil` with no museum.
+    public func camera(museumIn scene: Map3DScene, of world: GameWorld, viewport: (width: Float, height: Float)) -> Map3DCamera? {
+        guard let museum = world.railwayMuseum else { return nil }
+        let flat = scene.point(worldX: Double(museum.centre.x), worldY: Double(museum.centre.y), height: 0)
+        let target = Map3DPoint(flat.x, scene.drawnGround.height(x: flat.x, z: flat.z, world: world), flat.z)
+        let camera = Map3DCamera(target: target, distance: distance, heading: heading, viewport: viewport)
+        guard tilt > camera.tilt else { return camera }
+        return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
+    }
+
     /// Decision 585 PR-3 (FERRY3): the camera over the first ferry
     /// route's first boat at the world's moment (the app's
     /// `-screenshot-3d-ferry`), so a screenshot looks at a boat and its

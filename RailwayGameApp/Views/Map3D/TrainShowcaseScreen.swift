@@ -20,7 +20,9 @@ struct TrainShowcaseScreen: View {
     let close: () -> Void
     @State private var selection: Map3DShowcase.Selection
 
-    init(exhibit: Map3DCollectionShowcase.Exhibit? = nil, close: @escaping () -> Void) {
+    /// Decision 696: with `keys`, opened on those trains (a railway
+    /// museum's exhibit) rather than the garage's first ones.
+    init(exhibit: Map3DCollectionShowcase.Exhibit? = nil, keys shown: [String]? = nil, close: @escaping () -> Void) {
         self.exhibit = exhibit
         self.close = close
         // Decision 492: the pack's sets as the 3D map reads them
@@ -28,7 +30,7 @@ struct TrainShowcaseScreen: View {
         let defaults = UserDefaults.standard
         let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest, switchOn: defaults.bool(forKey: TrainPack.testUnlockKey))
         let locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: defaults.bool(forKey: TrainPack.pushPullE1000Key))
-        var keys = Map3DShowcase.defaultKeys
+        var keys = shown ?? Map3DShowcase.defaultKeys
         #if DEBUG
         // Decision 558: `-screenshot-showcase key,key` opens the garage on
         // those trains, for the website's screenshots (Debug builds only).
@@ -37,7 +39,10 @@ struct TrainShowcaseScreen: View {
             keys = arguments[index + 1].split(separator: ",").map(String.init)
         }
         #endif
-        _selection = State(initialValue: Map3DShowcase.Selection(keys: keys, hiding: locked))
+        var selection = Map3DShowcase.Selection(keys: keys, hiding: locked)
+        // An exhibit the locked train pack hides: the garage's own first ones.
+        if selection.keys.isEmpty { selection = Map3DShowcase.Selection(hiding: locked) }
+        _selection = State(initialValue: selection)
     }
     @State private var far = false
     @State private var light = Map3DShowcase.Light.day
