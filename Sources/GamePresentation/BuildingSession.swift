@@ -47,6 +47,7 @@ extension PlacedBuildingKind {
         case .school: language.text("School", "學校")
         case .hospital: language.text("Hospital", "醫院")
         case .nightMarket: language.text("Night market", "夜市")
+        case .railwayMuseum: language.text("Railway museum", "鐵道博物館")
         }
     }
 
@@ -68,6 +69,9 @@ extension PlacedBuildingKind {
         case .nightMarket:
             language.text("Draws evening crowds who ride your trains to it and spend at its stalls.",
                           "吸引人搭你的車來逛夜市，攤位的生意是它的收入。")
+        case .railwayMuseum:
+            language.text("Shows every type of train your company has owned. The more types, the more visitors ride your trains to it and buy tickets. One per map.",
+                          "展示你的公司擁有過的每一種列車。車種越多，搭你的車來參觀、買門票的人越多。一張地圖只能蓋一座。")
         default: nil
         }
     }

@@ -4439,3 +4439,10 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **做了的**在 [決策 659](decisions/659.md)：2D 地圖的街道計畫只選街不鋪街（-O 306 → 1.3 ms，選出的街一樣）；教學 UI 測試不把 XCTest 的 log 抄到 App 的 stderr，並帶主執行緒停頓的取樣。iPad 教學 trace 的 ≥3 秒空檔 7 → 1。
 - **還沒做、要實機的**：剩下的停頓在系統框架裡（第一次讀 SF Symbol 的冷 catalog、RenderBox 等待、`UITextField` 清除鈕圖）。先在實機上量到真的慢，再考慮開地圖前暖身；`TutorialUITests` 的第二次按留著。都寫在決策 659「沒修的」。
 - **號碼**：決策 659；存檔、golden 不動。
+
+### 4.60 鐵道博物館第一步（決策 684，派工單 MUSEUM，session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，2026-11-11）
+
+- **做了的**在 [決策 684](decisions/684.md)：建築清單多一種「鐵道博物館」（一張地圖一座），是公司的景點；展示公司擁有過的車種，每種 +0.15★（空館 1.5★，十二種 3.3★）；遊客每人 NT$150、每件展品維護 NT$1,000／天，記在子公司帳。存檔版本 87（`v87-railway-museum.json`）。
+- **還沒做、給 Mac 本機的第二步**（決策 684「下一步」1）：館舍自己的 3D 外觀與停在館前的展品（現在 3D、卡片圖、地圖記號都暫用百貨的）、新圖示、點博物館逐件看展品的館內瀏覽。要看畫面，截圖驗收屬「規劃看過才合」。
+- **平衡**：量法與數字在決策 684 第 6 節（`BalanceReportTests.testARailwayMuseumOnTheFirstLine`）；實機玩過覺得太賺或太少，只動 `Tourism.starsPerExhibit` 與 `SubsidiaryRules.museumExhibitUpkeep`。
+- **號碼**：決策 684、存檔 87；golden schema、ReplayFixtures 不動。

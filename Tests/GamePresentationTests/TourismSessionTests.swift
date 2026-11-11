@@ -284,6 +284,44 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice.starsText(305), "3.05★")
     }
 
+    /// Decision 684: the company's railway museum is a row among the
+    /// sights, with what it shows where the others have their shop, and
+    /// the building tool names it and says what it does.
+    func testThePanelListsTheCompanysMuseumWithItsExhibits() throws {
+        var world = try world()
+        try world.purchaseTrain(named: "A1", as: .a)
+        let museum = try world.placeBuilding(.railwayMuseum, at: PlanPoint(x: 26_000, y: 495_000))
+        let rows = world.attractionRows(in: .english)
+        XCTAssertEqual(rows.map(\.name), ["Old Street", "Railway museum"], "by stars")
+        let row = rows[1]
+        XCTAssertEqual(row.id.rawValue, -museum.id.rawValue)
+        XCTAssertEqual(row.kind, "Your museum")
+        XCTAssertEqual(row.starsText, "1.65★")
+        XCTAssertEqual(row.stationName, "Foot")
+        XCTAssertEqual(row.status, .ok)
+        XCTAssertNil(row.nextShop, "no souvenir shop to build")
+        XCTAssertNil(row.offMapMetres)
+        XCTAssertGreaterThan(row.today, 0)
+        let exhibits = try XCTUnwrap(row.exhibitsText)
+        XCTAssertTrue(exhibits.hasPrefix("Shows 1 type of train: \(TrainType.a.title(in: .english))."), exhibits)
+        XCTAssertNil(rows[0].exhibitsText)
+        let chinese = try XCTUnwrap(world.attractionRows(in: .traditionalChinese).last)
+        XCTAssertEqual(chinese.name, "鐵道博物館")
+        XCTAssertEqual(chinese.kind, "你的博物館")
+        XCTAssertTrue(chinese.exhibitsText?.hasPrefix("展示 1 種列車：") ?? false)
+        // With nothing to show yet it says how to fill it.
+        var empty = try self.world()
+        try empty.placeBuilding(.railwayMuseum, at: PlanPoint(x: 26_000, y: 495_000))
+        let bare = try XCTUnwrap(empty.attractionRows(in: .traditionalChinese).last)
+        XCTAssertEqual(bare.starsText, "1.5★")
+        XCTAssertEqual(bare.exhibitsText, "還沒有展示車輛。公司擁有的每一種列車，隔天會進館展示，星等跟著提高。")
+        // The building tool and the refusal of a second one.
+        XCTAssertEqual(PlacedBuildingKind.railwayMuseum.title(in: .traditionalChinese), "鐵道博物館")
+        XCTAssertEqual(PlacedBuildingKind.railwayMuseum.effectText(in: .traditionalChinese),
+                       "展示你的公司擁有過的每一種列車。車種越多，搭你的車來參觀、買門票的人越多。一張地圖只能蓋一座。")
+        XCTAssertEqual(GameError.museumAlreadyBuilt(museum.id).playerMessage(in: .traditionalChinese), "你的公司已經有一座鐵道博物館，一張地圖只能蓋一座。")
+    }
+
     /// Decision 286: a sightseeing train calling at Foot shows on the row and
     /// in its stars; the help says a sightseeing train raises them.
     func testThePanelSaysASightseeingTrainCalls() throws {

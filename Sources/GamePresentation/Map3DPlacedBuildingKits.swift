@@ -52,7 +52,7 @@ extension Map3DScene.Builder {
             }
             target = .base
             return true
-        case .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket:
+        case .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket, .railwayMuseum:
             let layout = Self.placedKitLayouts[building.kind]![building.look]
             let facing = building.kind.standsOnShore ? seaward(of: building) : facing
             let right = facing.cross(.up)
@@ -262,6 +262,9 @@ extension Map3DScene.Builder {
                             pad: Map3DPalette.plaza, recolours: false),
         ]
         return [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf], .marina: [marina],
-                .school: schools, .hospital: hospitals, .nightMarket: markets]
+                .school: schools, .hospital: hospitals, .nightMarket: markets,
+                // Decision 684: until the museum has a model of its own, the
+                // department store's exhibition halls stand in for it.
+                .railwayMuseum: [stores[1]]]
     }()
 }

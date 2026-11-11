@@ -71,13 +71,28 @@ struct TourismPanel: View {
                                     .font(.footnote)
                                     .foregroundStyle(Theme.textSecondary)
                             }
-                            Text(verbatim: language.text(
-                                "Today \(row.today) · yesterday \(row.yesterday) · this year \(row.thisYear.groupedText) · last year \(row.lastYear.groupedText)",
-                                "今天 \(row.today)・昨天 \(row.yesterday)・今年 \(row.thisYear.groupedText)・去年 \(row.lastYear.groupedText)"
-                            ))
-                            .font(.footnote)
-                            .monospacedDigit()
-                            shop(row)
+                            if let exhibits = row.exhibitsText {
+                                // Decision 684: the company's railway museum
+                                // has its exhibits, not a souvenir shop.
+                                Text(verbatim: language.text(
+                                    "Today \(row.today) · yesterday \(row.yesterday)",
+                                    "今天 \(row.today)・昨天 \(row.yesterday)"
+                                ))
+                                .font(.footnote)
+                                .monospacedDigit()
+                                Text(verbatim: exhibits)
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .accessibilityIdentifier("tourism.exhibits")
+                            } else {
+                                Text(verbatim: language.text(
+                                    "Today \(row.today) · yesterday \(row.yesterday) · this year \(row.thisYear.groupedText) · last year \(row.lastYear.groupedText)",
+                                    "今天 \(row.today)・昨天 \(row.yesterday)・今年 \(row.thisYear.groupedText)・去年 \(row.lastYear.groupedText)"
+                                ))
+                                .font(.footnote)
+                                .monospacedDigit()
+                                shop(row)
+                            }
                         }
                         .listRowBackground(marked == row.id ? Theme.accent.opacity(0.18) : nil)
                     }

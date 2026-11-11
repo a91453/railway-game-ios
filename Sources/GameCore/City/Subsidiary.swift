@@ -44,6 +44,7 @@ public enum SubsidiaryRules {
         case .amusementPark: 10_500
         case .temple: SubsidiaryRules.templeSpend
         case .nightMarket: SubsidiaryRules.nightMarketSpend
+        case .railwayMuseum: SubsidiaryRules.museumSpend
         default: 0
         }
     }
@@ -53,6 +54,7 @@ public enum SubsidiaryRules {
         case .departmentStore: 65
         case .temple: templeVariableCostPercent
         case .nightMarket: nightMarketVariableCostPercent
+        case .railwayMuseum: museumVariableCostPercent
         default: 55
         }
     }
@@ -70,6 +72,18 @@ public enum SubsidiaryRules {
     /// A night market's food and its stallholders' share, in hundredths of
     /// what it takes (decision 361's sequel).
     public static let nightMarketVariableCostPercent: Int64 = 60
+    /// What a railway museum's visitor spends, in cents (decision 684):
+    /// NT$150, the NT$100 of the National Railway Museum's full ticket and
+    /// half as much again in its shop and café.
+    public static let museumSpend: Int64 = 15_000
+    /// A museum's keeping of its exhibits, its guides and its shop's goods,
+    /// in hundredths of what it takes (decision 684).
+    public static let museumVariableCostPercent: Int64 = 50
+    /// What keeping one exhibit costs a museum a day, in cents (decision
+    /// 684): NT$1,000, the cleaning, paint and shelter of a preserved
+    /// train, for each exhibit that counts towards its rating
+    /// (``Tourism/exhibitsCounted``).
+    public static let museumExhibitUpkeep: Int64 = 100_000
     /// The staff, each day, in ten-thousandths of what the building cost,
     /// rounded up: 0.04 %.
     public static let staffBasisPoints: Int64 = 4
@@ -85,7 +99,7 @@ extension PlacedBuildingKind {
     /// Whether it trades (decision 173) rather than lets.
     public var isSubsidiary: Bool {
         switch self {
-        case .departmentStore, .hotel, .amusementPark, .temple, .nightMarket: true
+        case .departmentStore, .hotel, .amusementPark, .temple, .nightMarket, .railwayMuseum: true
         default: false
         }
     }
@@ -289,7 +303,9 @@ extension GameWorld {
         let sales = customers * SubsidiaryRules.spend(of: building.kind)
         let variable = sales * SubsidiaryRules.variableCostPercent(of: building.kind) / 100
         let staff = (building.cost.amount * SubsidiaryRules.staffBasisPoints + 9_999) / 10_000
-        return SubsidiaryDay(customers: customers, sales: Money(sales), cost: Money(variable + staff))
+        // Decision 684: a museum keeps its exhibits whether anyone comes.
+        let keeping = Int64(min(building.exhibits.count, Tourism.exhibitsCounted)) * SubsidiaryRules.museumExhibitUpkeep
+        return SubsidiaryDay(customers: customers, sales: Money(sales), cost: Money(variable + staff + keeping))
     }
 
     /// Settles day `day` of every subsidiary (decision 173): its books, and

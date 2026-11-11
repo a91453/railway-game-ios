@@ -506,6 +506,8 @@ extension GameError {
             language.text("A wharf or a marina goes on the shore, part over the water.", "漁人碼頭與遊艇港要蓋在岸邊，一部分在水上。")
         case .invalidBuildingLook:
             language.text("This building does not come in that look.", "這種建物沒有這個外觀。")
+        case .museumAlreadyBuilt:
+            language.text("Your company already has a railway museum. A map has only one.", "你的公司已經有一座鐵道博物館，一張地圖只能蓋一座。")
         case .groundNotLoaded:
             language.text("The ground there has not been read yet.", "那裡的地面高度還沒有讀入。")
         case .trackOverWater:

@@ -232,6 +232,9 @@ public enum GameError: Error, Hashable, Sendable {
     case needsShore
     /// A building's look is not one its kind has (decision 361).
     case invalidBuildingLook
+    /// A second railway museum (decision 684): a world has one, the
+    /// building named.
+    case museumAlreadyBuilt(PlacedBuildingID)
     /// A building would stand on a steep slope, or every cell to zone is
     /// water or steep and the first is steep (decision 115): that cell.
     case onSteepSlope(row: Int, column: Int)

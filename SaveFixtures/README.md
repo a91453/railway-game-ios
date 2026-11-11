@@ -267,3 +267,19 @@ West, saved at 00:15 of day 0 with the express sent out on a timetable of
 West and East only. Written by the version 86 build
 (`PassingRunTests.testVersionEightySixKeepsThePasses`,
 `PASSING_RUN_SAVE_NEW=1`).
+
+Version 87 (decision 684) adds the railway museum: a company building of a
+new kind (`"kind": "railwayMuseum"`) that is a sight, with the types of train
+on show in it (`exhibits`, the types' names in the catalogue's order, written
+only when there are some; only a museum has them, and a world has at most one
+museum). A build before version 87 does not know the kind, so the version
+says so and that build refuses the save whole rather than failing on one
+building. Earlier saves have no museum and load as before; there is no
+migration step. `v87-railway-museum.json` is `RailwayMuseumTests`' world (two
+stations, Home and Foot, a line and its train, one sight off the map) with a
+type A and an EMU3000 bought, the museum built beside Foot, then a steam
+train bought, saved at 00:02 of day 1: the museum shows three types (1.95
+stars), counted 84 visitors on day 0 and has a day on its books. Written by
+the version 87 build
+(`RailwayMuseumTests.testVersionEightySevenKeepsTheMuseum`,
+`RAILWAY_MUSEUM_SAVE_NEW=1`).

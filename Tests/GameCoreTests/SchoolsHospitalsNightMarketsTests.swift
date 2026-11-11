@@ -37,8 +37,8 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual([PlacedBuildingKind.school, .hospital, .nightMarket].map(\.side), [3_072, 2_048, 2_048])
         XCTAssertEqual([PlacedBuildingKind.school, .hospital, .nightMarket].map(\.floors), [3, 6, 1])
         XCTAssertEqual([PlacedBuildingKind.school, .hospital, .nightMarket].map(\.use), [.civic, .civic, .commercial])
-        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.isSight), [.temple, .nightMarket])
-        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.isSubsidiary), [.departmentStore, .hotel, .amusementPark, .temple, .nightMarket])
+        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.isSight), [.temple, .nightMarket, .railwayMuseum])
+        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.isSubsidiary), [.departmentStore, .hotel, .amusementPark, .temple, .nightMarket, .railwayMuseum])
         var world = try world()
         XCTAssertThrowsError(try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 10_000), look: 2)) {
             XCTAssertEqual($0 as? GameError, .invalidBuildingLook)
