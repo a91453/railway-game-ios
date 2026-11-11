@@ -511,6 +511,8 @@ extension GameError {
         case .sightNeedsTourism:
             language.text("No tourists come to this map, so a temple, a night market or a railway museum would have no visitors.",
                           "這張地圖沒有觀光客，廟、夜市和鐵道博物館不會有人來。")
+        case .invalidDrivenRun:
+            language.text("This run could not be counted.", "這一趟沒有辦法計入。")
         case .groundNotLoaded:
             language.text("The ground there has not been read yet.", "那裡的地面高度還沒有讀入。")
         case .trackOverWater:

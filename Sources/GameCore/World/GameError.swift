@@ -239,6 +239,10 @@ public enum GameError: Error, Hashable, Sendable {
     /// a night market, a railway museum) in a world with no tourism
     /// (decision 689): no tourist would ever come to it.
     case sightNeedsTourism
+    /// A run driven by hand (decision 693) with figures no run has, for a
+    /// train off the track or with neither a timetable nor a line, or
+    /// settled too soon after the last.
+    case invalidDrivenRun
     /// A building would stand on a steep slope, or every cell to zone is
     /// water or steep and the first is steep (decision 115): that cell.
     case onSteepSlope(row: Int, column: Int)
