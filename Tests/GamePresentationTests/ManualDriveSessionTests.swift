@@ -178,6 +178,64 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertNil(session.manualDriveRun)
     }
 
+    /// Review L17-5: a game paused at 10× resumed at 10× under the
+    /// player's hands, and the speed menu still set 10× while driving.
+    /// Paused, it stays paused and resumes at 1×; while driving the menu
+    /// stops at 1× and a faster speed asked is 1×; the handle given back,
+    /// the 3D map's own limit is the menu's again.
+    func testAPausedGameResumesAtOneTimesAndTheSpeedStaysThereWhileDriving() throws {
+        let (session, _) = try makeSession()
+        session.setSpeed(.x10)
+        XCTAssertEqual(session.speedCap, .x10)
+        session.togglePause()
+        XCTAssertTrue(session.world.clock.isPaused)
+        session.startManualDrive()
+        XCTAssertTrue(session.world.clock.isPaused, "starting does not resume it")
+        XCTAssertEqual(session.world.clock.runningSpeed, .x1)
+        session.togglePause()
+        XCTAssertFalse(session.world.clock.isPaused)
+        XCTAssertEqual(session.world.clock.speed, .x1)
+
+        XCTAssertEqual(session.speedCap, .x1)
+        XCTAssertEqual(session.speedChoices, [.x1])
+        session.setSpeed(.x10)
+        XCTAssertEqual(session.world.clock.speed, .x1)
+        session.setSpeed(.fast)
+        XCTAssertEqual(session.world.clock.speed, .x1)
+        XCTAssertEqual(Map3DFollowSpeed.limitText(upTo: .x1, in: .english), "1× while you drive the train")
+        XCTAssertEqual(Map3DFollowSpeed.limitText(upTo: .x1, in: .traditionalChinese), "自己駕駛時是 1×")
+        XCTAssertEqual(Map3DFollowSpeed.limitText(upTo: .x10, in: .english), Map3DFollowSpeed.limitText(in: .english))
+
+        session.endManualDrive()
+        XCTAssertEqual(session.speedCap, .x10)
+        XCTAssertEqual(session.speedChoices, [.x1, .x10])
+        session.setSpeed(.x10)
+        XCTAssertEqual(session.world.clock.speed, .x10)
+    }
+
+    /// The run is stepped a second of the game for each of the clock's at
+    /// 1×, whatever the clock runs at: at 10× (which the menu does not
+    /// give while driving) the driven train goes no faster.
+    func testTheDrivenTrainIsSteppedAtOneTimesWhateverTheClockRunsAt() throws {
+        func driven(at speed: GameSpeed) throws -> Double {
+            let (session, _) = try makeSession()
+            session.startManualDrive()
+            var time = 0.0
+            XCTAssertTrue(run(session, from: &time) { session.manualDrivePhase == .driving })
+            session.setManualDriveNotch(ManualDrive.Notch(step: 2))
+            let from = try XCTUnwrap(session.stepManualDrive(at: time)).metres
+            if speed != .x1 { session.changeSpeed(speed) }
+            for _ in 0..<50 {
+                time += 0.1
+                session.stepManualDrive(at: time)
+            }
+            return try XCTUnwrap(session.stepManualDrive(at: time)).metres - from
+        }
+        let slow = try driven(at: .x1)
+        XCTAssertGreaterThan(slow, 0)
+        XCTAssertEqual(try driven(at: .x10), slow, accuracy: 0.001)
+    }
+
     func testTheScreenshotReviewsResultIsAStopJustShortAFewSecondsLate() throws {
         let (session, _) = try makeSession()
         session.finishManualDriveForScreenshot()

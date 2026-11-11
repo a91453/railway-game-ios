@@ -923,7 +923,7 @@ struct SpeedControl: View {
             .buttonStyle(PauseButtonStyle(isActive: clock.isPaused))
             .accessibilityLabel(clock.isPaused ? "Resume" : "Pause")
             SpeedMenu(session: session, speed: clock.speed, runningSpeed: clock.runningSpeed, isPaused: clock.isPaused,
-                      capped: session.isSpeedCappedIn3D, language: language)
+                      cap: session.speedCap, language: language)
                 .equatable()
         }
         // Review E's E2: waits while the demo lays the real lines.
@@ -1082,8 +1082,9 @@ private struct SpeedMenu: View, Equatable {
     let speed: GameSpeed
     let runningSpeed: GameSpeed
     let isPaused: Bool
-    /// Decision 360: following a train on the 3D map, up to 10× only.
-    let capped: Bool
+    /// Decision 360: following a train on the 3D map, up to 10× only;
+    /// decision 686: driving one by hand, 1×.
+    let cap: GameSpeed?
     let language: DisplayLanguage
 
     nonisolated static func == (lhs: SpeedMenu, rhs: SpeedMenu) -> Bool {
@@ -1091,16 +1092,16 @@ private struct SpeedMenu: View, Equatable {
             && lhs.speed == rhs.speed
             && lhs.runningSpeed == rhs.runningSpeed
             && lhs.isPaused == rhs.isPaused
-            && lhs.capped == rhs.capped
+            && lhs.cap == rhs.cap
             && lhs.language == rhs.language
     }
 
     var body: some View {
         Menu {
-            if capped {
-                Text(verbatim: Map3DFollowSpeed.limitText(in: language))
+            if let cap {
+                Text(verbatim: Map3DFollowSpeed.limitText(upTo: cap, in: language))
             }
-            ForEach(Map3DFollowSpeed.choices(capped: capped), id: \.self) { candidate in
+            ForEach(Map3DFollowSpeed.choices(upTo: cap), id: \.self) { candidate in
                 Button {
                     session.setSpeed(candidate)
                 } label: {

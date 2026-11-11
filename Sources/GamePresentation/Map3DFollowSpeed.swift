@@ -16,6 +16,29 @@ public enum Map3DFollowSpeed {
         GameSpeed.allCases.filter { $0 != .paused && (!capped || $0.tenthsPerTick <= fastest.tenthsPerTick) }
     }
 
+    /// The fastest speed while a train is driven by hand (decision 686,
+    /// review L17-5): the handle and the braking distance are a real
+    /// train's, which nobody can drive at ten times the clock.
+    public static let driving: GameSpeed = .x1
+
+    /// The speeds the speed menu offers up to `cap`, all of them for `nil`.
+    public static func choices(upTo cap: GameSpeed?) -> [GameSpeed] {
+        GameSpeed.allCases.filter { speed in speed != .paused && capped(speed, to: cap) == speed }
+    }
+
+    /// `speed`, or `cap` when it is faster.
+    public static func capped(_ speed: GameSpeed, to cap: GameSpeed?) -> GameSpeed {
+        guard let cap, speed.tenthsPerTick > cap.tenthsPerTick else { return speed }
+        return cap
+    }
+
+    /// What the speed menu says under its speeds while they stop at `cap`.
+    public static func limitText(upTo cap: GameSpeed, in language: DisplayLanguage) -> String {
+        cap == driving
+            ? language.text("\(cap.label(in: language)) while you drive the train", "自己駕駛時是 \(cap.label(in: language))")
+            : limitText(in: language)
+    }
+
     /// `speed`, or ``fastest`` when it is faster.
     public static func capped(_ speed: GameSpeed) -> GameSpeed {
         speed.tenthsPerTick > fastest.tenthsPerTick ? fastest : speed
