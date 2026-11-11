@@ -7,6 +7,8 @@ description: 產生台灣車站完整遊戲站型、月台站廳與建築小零�
 
 先讀 `.claude/skills/art-style/SKILL.md`、`CLAUDE.md` 與工作登記 #231。大型成品放私有庫，不把整批 GLB／PNG 搬回公開遊戲庫。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 ## 程式入口
 
 - `Map3DStationKit.swift`：按需建模、獨立模型包與同零件組裝的站前範例。

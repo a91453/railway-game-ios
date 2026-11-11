@@ -7,6 +7,8 @@ description: Generate player-owned amusement, hotel, residential and commercial 
 
 先讀 `CLAUDE.md`、`docs/HANDOFF.md`、art-style、station-kit，以及工作登記 #1579（#1041、#231 已達留言上限）。登記自己的新增範圍，不改 GameCore、存檔、Golden、地圖接入或其他代理檔案。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 `Map3DEstateKit.Part`：24 種素材，leisure / hotel / residential / commercial 各 6。木馬、摩天輪為靜態完整設施；不把座艙、馬匹、樓層或配色計為其他素材。`Example` 有 4 個街區，各重用該類 6 件。暖黃使用既有 player / playerRoof，白牆、淡藍窗、平塗頂點色，不加品牌。沒有新增遊戲建造規則或自動註冊到地圖。
 
 ## 配方與重建

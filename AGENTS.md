@@ -43,6 +43,14 @@ Its Claude-specific parts translate as follows:
 - Claude Code loads the skills in `.claude/skills/` by itself. Another agent
   reads `.claude/skills/art-style/SKILL.md` before drawing or changing any
   icon, glyph, character or illustration for the app.
+  Before building, rebuilding or restyling a native 3D model (a station, a
+  building, a kit part, a train, a bus), it reads
+  `.claude/skills/model-look/SKILL.md`: passing tests is not enough, the
+  model is looked at beside real photographs at the game's camera angle and
+  size for at least three rounds, and someone else judges the overview.
+  An agent that cannot look at pictures (a local model without vision)
+  does not run those rounds itself: it writes the recipe and says so, and
+  an agent that can see takes the look rounds.
   Before diagnosing a hard bug, a red CI shard, a deadlock or a slowdown,
   it reads `.claude/skills/diagnosing-bugs/SKILL.md`: first a command that
   goes red on the bug, then the hypotheses.

@@ -13,6 +13,10 @@ extension StationKitBuilder {
             box(0,0,0,48,width+16,0.25,Map3DPalette.plaza)
             historic(10,0.25,0,length:13,width:width,wood:wood,clock:grand || p == .chiayi)
             railCourt(length:width+10,at:-12,platforms:1)
+        case .coastTimber:
+            box(0,0,0,48,40,0.25,Map3DPalette.plaza)
+            coastTimber(10,0.25,0)
+            railCourt(length:34,at:-12,platforms:1)
         case .banqiao,.nangang:
             let w: Float=p == .nangang ? 74 : 64
             box(0,0,0,66,w+16,0.3,Map3DPalette.plaza)
@@ -247,6 +251,119 @@ extension StationKitBuilder {
             }
         } else if profile == .centralPark {
             supportedRoof(x:0,y:6.8,z:0,length:l+3,width:26,rise:2.2,wave:true,color:Map3DPalette.gymGreen,base:0)
+        }
+    }
+}
+
+// Zhuifen (追分, 1922), a Coast Line timber station: a long gabled hall
+// under dark tiles, a band of high windows and name boards under the
+// eaves, a lean-to roof on posts along both long sides, and over the
+// platform side a cross gable with a round window. Shape and colours
+// read from photographs (docs/art/model-look-2026-11-11/README.md); the
+// sizes are estimates, not a survey.
+extension StationKitBuilder {
+    static let tile=Map3DPalette.arcade,timber=Map3DPalette.counters[1],plaster=Map3DPalette.schoolWalls,rust=Map3DPalette.brick
+
+    /// The building, its middle at (`x`, `z`) on ground `y`: its front
+    /// (+x) to the forecourt, its back to the platforms.
+    mutating func coastTimber(_ x: Float,_ y: Float,_ z: Float) {
+        let length: Float=22,depth: Float=8,eave: Float=5.3,rise: Float=3.1,porch: Float=2.0
+        // Walls: a dark boarded base, plaster above, a dark rail under the high band.
+        box(x,y,z,depth,length,1.0,Self.timber)
+        box(x,y+1.0,z,depth-0.04,length-0.04,eave-1.0,Self.plaster)
+        box(x,y+3.55,z,depth+0.06,length+0.06,0.16,Self.timber)
+        // The hall's roof, its ridge along the platforms, with its ridge tiles.
+        mesh.addGableRoof(base:Map3DPoint(x,y+eave,z),forward:Map3DPoint(0,0,1),length:length,width:depth,rise:rise,overhang:0.7,color:Self.tile,gable:Self.plaster)
+        box(x,y+eave-0.14,z,depth+0.5,length+0.5,0.14,Self.tile)
+        box(x,y+eave+rise-0.08,z,0.42,length+1.5,0.26,Map3DPalette.portal)
+        for end: Float in [-1,1] {
+            // The gable ends: posts and a tie beam in dark timber, a window between.
+            let gz=z+end*(length/2+0.03)
+            for dx: Float in [-depth/2+0.1,-1.4,1.4,depth/2-0.1] { box(x+dx,y+1.0,gz,0.2,0.08,eave-1.0,Self.timber) }
+            box(x,y+eave-0.1,gz,depth,0.08,0.2,Self.timber)
+            box(x,y+eave+0.2,gz,0.2,0.08,rise-0.6,Self.timber)
+            box(x,y+1.9,gz,1.8,0.10,1.3,Self.glass)
+        }
+        for side: Float in [-1,1] {
+            let wall=x+side*depth/2
+            // The lean-to roof, its posts and braces.
+            leanTo(from:wall,to:wall+side*porch,high:y+3.5,low:y+2.95,z:z,width:length+1.2,color:Self.rust)
+            for dz in stride(from:-length/2,through:length/2,by:Float(3.666)) {
+                box(wall+side*(porch-0.2),y,z+dz,0.18,0.18,2.9,Self.timber)
+                beam(Map3DPoint(wall+side*(porch-0.2),y+2.1,z+dz),Map3DPoint(wall+side*(porch-0.95),y+3.05,z+dz),0.12,Self.timber)
+            }
+            // The high band: windows between white name boards.
+            for (i,dz) in stride(from:-length/2+1.7,through:length/2-1.6,by:Float(2.66)).enumerated() {
+                if i%2==0 { window(wall,y+3.85,z+dz,side:side,width:1.9,height:0.95) }
+                else if side>0 { board(wall,y+3.75,z+dz,side:side,size:1.4) }
+            }
+            // Under the lean-to: doors and windows in dark frames.
+            for dz in stride(from:-length/2+2.2,through:length/2-2,by:Float(3.5)) where abs(dz-5.3)>1 { window(wall,y+1.1,z+dz,side:side,width:2.2,height:1.7) }
+            // The way through to the platform, open and in shadow.
+            if side>0 { box(wall+0.03,y,z+5.3,0.10,2.6,2.7,Self.ink) }
+        }
+        crossGable(x,y,z,depth:depth,eave:eave,rise:rise)
+        // Clipped trees between the building and the platform.
+        for dz: Float in [-8.6,-5.4,6.6] {
+            let tx=x-depth/2-porch-2.2
+            box(tx,y,z+dz,0.26,0.26,1.9,Map3DPalette.trunk)
+            box(tx,y+1.9,z+dz,2.3,2.6,0.9,Map3DPalette.crown)
+            box(tx,y+2.8,z+dz,1.5,1.8,0.35,Map3DPalette.crown)
+        }
+        // The forecourt's hedges in brick planters, either side of the way in.
+        for dz: Float in [-6.2,5.2] {
+            let w: Float=dz<0 ? 8.5 : 5
+            box(x+depth/2+porch+1.6,y,z+dz,1.5,w,0.5,Map3DPalette.brick)
+            box(x+depth/2+porch+1.6,y+0.5,z+dz,1.3,w-0.2,0.8,Map3DPalette.crown)
+        }
+    }
+
+    /// A closed sloping slab from the wall at `from` out to `to`.
+    mutating func leanTo(from: Float,to: Float,high: Float,low: Float,z: Float,width: Float,color: UInt32) {
+        let t: Float=0.12,inside=Map3DPoint((from+to)/2,(high+low)/2-t/2,z)
+        func p(_ x: Float,_ y: Float,_ s: Float) -> Map3DPoint { Map3DPoint(x,y,z+s*width/2) }
+        face([p(from,high,-1),p(to,low,-1),p(to,low,1),p(from,high,1)],inside:inside,color:color)
+        face([p(from,high-t,-1),p(to,low-t,-1),p(to,low-t,1),p(from,high-t,1)],inside:inside,color:Map3DColor.shaded(color,0.7))
+        face([p(to,low,-1),p(to,low,1),p(to,low-t,1),p(to,low-t,-1)],inside:inside,color:color)
+        face([p(from,high,-1),p(from,high,1),p(from,high-t,1),p(from,high-t,-1)],inside:inside,color:color)
+        for s: Float in [-1,1] { face([p(from,high,s),p(to,low,s),p(to,low-t,s),p(from,high-t,s)],inside:inside,color:color) }
+    }
+    /// A window on the wall at `wall`, facing `side` (+1 the front): glass in a dark frame.
+    mutating func window(_ wall: Float,_ y: Float,_ z: Float,side: Float,width: Float,height: Float) {
+        box(wall+side*0.04,y,z,0.10,width+0.24,height+0.24,Self.timber)
+        box(wall+side*0.08,y+0.12,z,0.06,width,height,Self.glass)
+    }
+    /// A white name board with a dark mark, where the station's name is written.
+    mutating func board(_ wall: Float,_ y: Float,_ z: Float,side: Float,size: Float) {
+        box(wall+side*0.06,y,z,0.10,size,size,Self.white)
+        box(wall+side*0.10,y+size*0.30,z,0.04,size*0.40,size*0.40,Map3DPalette.canopy)
+    }
+    /// The gable over the platform side (−x), with its round window.
+    mutating func crossGable(_ x: Float,_ y: Float,_ z: Float,depth: Float,eave: Float,rise: Float) {
+        let half: Float=4.2,top=y+eave+rise-0.05,low=y+eave,wall=x-depth/2-0.5,out=wall-0.6
+        let inside=Map3DPoint(wall,low,z),t=Map3DPoint(0,0.12,0)
+        // Its wall stands half a metre proud of the hall's.
+        box(wall+0.5,y,z,1.0,half*2-0.5,1.0,Self.timber)
+        box(wall+0.5,y+1.0,z,1.0,half*2-0.54,eave-1.0,Self.plaster)
+        for s: Float in [-1,1] {
+            let slope=[Map3DPoint(out,top,z),Map3DPoint(x,top,z),Map3DPoint(x-depth/2,low,z+s*half),Map3DPoint(out,low,z+s*half)]
+            face(slope.map { $0+t },inside:inside,color:Map3DColor.shaded(Self.tile,s>0 ? 0.95 : 0.85))
+            // The overhang's underside and its dark verge board.
+            face([slope[0],slope[3],Map3DPoint(wall,low,z+s*half),Map3DPoint(wall,top,z)],inside:inside+Map3DPoint(0,5,0),color:Map3DColor.shaded(Self.tile,0.7))
+            face([slope[0]+t,slope[3]+t,slope[3]-t,slope[0]-t],inside:inside,color:Self.timber)
+            box(wall,y+1.0,z+s*(half-0.35),0.08,0.2,eave-1.0,Self.timber)
+        }
+        mesh.addFacet([Map3DPoint(wall-0.02,low,z+half-0.25),Map3DPoint(wall-0.02,low,z-half+0.25),Map3DPoint(wall-0.02,top-0.2,z)],color:Self.plaster)
+        box(wall-0.03,low-0.1,z,0.08,half*2-0.5,0.2,Self.timber)
+        // The round window, and the name boards either side of it.
+        func ring(_ r: Float,_ dx: Float) -> [Map3DPoint] {
+            (0..<10).map { i in let a=Float(i)*2*Float.pi/10;return Map3DPoint(wall-dx,low+1.45+sinf(a)*r,z-cosf(a)*r) }
+        }
+        mesh.addFacet(ring(0.62,0.05),color:Self.timber)
+        mesh.addFacet(ring(0.38,0.08),color:Self.glass)
+        for s: Float in [-1,1] {
+            board(wall,low-1.2,z+s*1.9,side:-1,size:1.6)
+            window(wall,y+1.3,z+s*2.1,side:-1,width:1.6,height:1.2)
         }
     }
 }

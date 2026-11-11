@@ -7,6 +7,8 @@ description: 生成海岸、漁港與露營休憩原生 3D 素材、安裝接點
 
 先讀 CLAUDE.md、AGENTS.md、HANDOFF、art-style、station-kit、civic-kit 與工作登記 #1579（#1041、#231 為已滿的舊登記）。查最新 main 與全部 Kit 目錄去重，不能只依交接提示的既有批次。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 本批 24 獨立素材（三類各8）與4組景。Map3DCoastalKit.model(for:)、Map3DModelPack(coastalKit:) 按需建模，不加入 standard、不接地圖。只延伸自己的 Map3DCoastalKit*.swift、tools/coastal-kit、對應測試與文件。不要改 GameCore、存檔、Golden、其他 Kit 或地圖整合。
 
 Builder 內部 x前/y上/z右，box 的 y 為底；Model.flat 轉成 native x前/y左/z上，公尺。Connector 與 Placement 的位置用 native 軸；Placement.angle 沿用 StationKitBuilder，為從+z往下看順時針的弧度，x′=cos(a)x+sin(a)y、y′=−sin(a)x+cos(a)y。法線向上必須明寫 (0,0,1)，不能用內部幾何的 Map3DPoint.up（那是 y上）。24件均以底 z=0 岸置；浮台、小艇另有 waterline 接點，入水時原點 z=水面高度−接點.z。範例漁港水面 .30m，motorDinghy 原點 −.02m、pontoon .08m。slipway 高端1.2m、低端.12m；campTable 桌面 .70m、fishSortingTable .90m、trailer keelRest .62m。placements(for:) 是組景同源位置表，匯出 manifest 供後續組裝。

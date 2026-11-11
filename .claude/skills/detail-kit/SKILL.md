@@ -7,6 +7,8 @@ description: 製作、擴充及匯出鐵道、台灣建築、站內、道路、�
 
 先讀 `CLAUDE.md`、art-style 與 station-kit skill，並讀完工作登記 #231 再登記自己的檔案。此套件與地圖接入分工：只新增 `Map3DDetailKit*.swift`，不要順手改 `Map3DStationKit*.swift`、Map3DScene 或 GameCore。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 ## 新增零件
 
 1. 在 `Map3DDetailKitParts.swift` 加 case、繁體中文名、分類、安裝面。每種零件要有自己的結構，不靠改名或換色充數。

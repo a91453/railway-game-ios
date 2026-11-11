@@ -7,6 +7,8 @@ description: 台灣住宅街廓、界牆、庭院設施與四組景的原生 3D 
 
 先讀 `CLAUDE.md`、`.claude/skills/art-style/SKILL.md`、`.claude/skills/station-kit/SKILL.md` 與工作登記 #1579。只在本批新檔延伸；地圖放置、GameCore、存檔、Golden 與既有 Kit 由原負責者處理。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 `Map3DResidentialKit.Part` 有 10 種住宅、8 種界牆與出入口、8 種庭院／街邊件；`Example` 有 4 個獨立組景。`Map3DResidentialKit.model(for:)` 按需建置。`Map3DModelPack(residentialKit:)` 預設不把它們加到常駐地圖模型。
 
 內部幾何為 x 向前、y 向上、z 向右；原生檔及接點為 x 向前、y 向左、z 向上，單位公尺。落地物的最低 z=0。`balconyModule` 背板 x=0，必須貼實牆；其樓板和斜撐接到背板。`brickWall`、`tileWall` 的左右接點可接續邊牆。屋頂水塔與太陽能板須放在實體樓板上。窗面背後須有實牆，雙扇玻璃、窗框與背板需分層避免共面閃爍；騎樓和雨棚必須有接地的立柱，屋簷與門框不能懸空。住宅陽台須有接合牆體的樓板及可對應的落地門，太陽能板等斜面件要有可見的厚度與底面。
