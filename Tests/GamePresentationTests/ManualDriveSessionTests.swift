@@ -146,6 +146,31 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertNil(session.stepManualDrive(at: time))
     }
 
+    /// Decision 690: the driving card names the way and, once the run is
+    /// taken over, the stop driven to; it keeps that stop while the
+    /// world's train runs on, stands there and turns back.
+    func testTheHeadingNamesTheWayAndKeepsTheStopTheRunIsDrivenTo() throws {
+        let (session, train) = try makeSession()
+        XCTAssertNil(session.manualDriveHeading)
+        session.startManualDrive()
+        let waiting = try XCTUnwrap(session.manualDriveHeading)
+        XCTAssertEqual(waiting.line, LineID(rawValue: 1))
+        XCTAssertEqual(waiting.route, "Main", "before its first run it has only its line to name")
+        XCTAssertNil(waiting.stop, "it stands at A: no stop to drive to yet")
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDriveReading?.phase == .driving })
+        XCTAssertEqual(session.manualDriveHeading?.stop, "B")
+        XCTAssertEqual(session.manualDriveHeading?.route, "A → B")
+        // The world's train reaches B and waits there; the card still says B.
+        XCTAssertTrue(run(session, from: &time) {
+            if case .waitingAtStop(let stop, _)? = session.world.train(id: train)?.execution { return stop == 1 }
+            return false
+        })
+        XCTAssertEqual(session.manualDriveHeading?.stop, "B")
+        session.endManualDrive()
+        XCTAssertNil(session.manualDriveHeading)
+    }
+
     func testTheDrawnTrainMovesAsThePlayerDrivesAndItsBodyLiesBehindItOnTheTrack() throws {
         let (session, train) = try makeSession(limits: false)
         session.startManualDrive()

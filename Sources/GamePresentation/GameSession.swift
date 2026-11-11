@@ -1074,6 +1074,9 @@ public final class GameSession {
     /// finished, for what only changes then (the reading's figures change
     /// as the train moves); `nil` when not driving.
     public internal(set) var manualDrivePhase: ManualDrive.Reading.Phase?
+    /// Decision 690: the line, the way and the stop of the run driven by
+    /// hand, for the driving card; `nil` when not driving.
+    public internal(set) var manualDriveHeading: ManualDrive.Heading?
     /// The sound last told to ``runningSound``.
     @ObservationIgnored private var lastRunningSound: RunningSound?
     /// Decision 346: the sound of the weather the map shows

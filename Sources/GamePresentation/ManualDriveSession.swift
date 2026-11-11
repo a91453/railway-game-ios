@@ -11,6 +11,29 @@ struct ManualDriveRun: Sendable {
     var stepped: Double?
 }
 
+extension ManualDrive {
+    /// Decision 690: what the driving card says of the run above its
+    /// figures: the line and the way the train runs, and the stop it is
+    /// driven to. Read when the run is taken over and kept for it, since
+    /// the world's train runs on to its timetable and would name the stop
+    /// after.
+    public struct Heading: Hashable, Sendable {
+        public let line: LineID?
+        /// "Local · Alpha → Gamma", or the line's name.
+        public let route: String?
+        /// The stop driven to; `nil` while the train waits at one.
+        public let stop: String?
+
+        /// `waiting` is what was read when the handle was taken, kept for
+        /// the way where the train says less of it once it runs.
+        init(_ hud: Map3DDriverHUD?, after waiting: Heading? = nil) {
+            line = hud?.line ?? waiting?.line
+            route = hud?.routeText ?? waiting?.route ?? hud?.lineName
+            if waiting != nil, case .next(let name)? = hud?.place { stop = name } else { stop = nil }
+        }
+    }
+}
+
 extension GameWorld {
     /// Decision 686: how far train `id` is into its run to its next stop:
     /// the run, the world units it has covered and the whole seconds since
@@ -76,6 +99,7 @@ extension GameSession {
         manualDriveRun = ManualDriveRun(train: id)
         manualDriveReading = .waiting
         manualDrivePhase = .waiting
+        manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: id, in: language))
         stepManualDrive(at: nil)
     }
 
@@ -86,6 +110,7 @@ extension GameSession {
         manualDriveRun = nil
         manualDriveReading = nil
         manualDrivePhase = nil
+        manualDriveHeading = nil
         updateFollowSounds()
     }
 
@@ -118,6 +143,9 @@ extension GameSession {
         if let time { run.stepped = time }
         if run.driving == nil {
             run.driving = ManualDriveRun.takeOver(run.train, in: world)
+            if run.driving != nil {
+                manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: run.train, in: language), after: manualDriveHeading)
+            }
         } else if !world.clock.isPaused {
             // A second of the game for each of the clock's at 1×, and no
             // more whatever the clock runs at (a night being skipped).

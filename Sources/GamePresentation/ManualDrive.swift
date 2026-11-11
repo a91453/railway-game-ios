@@ -351,11 +351,15 @@ extension ManualDrive {
         /// Metres to the stopping point: whole metres, tenths within 10 m
         /// (``distanceText``); `nil` while waiting.
         public let remainingTenths: Int?
+        /// Decision 690: whole seconds past the timetable's arrival, 0
+        /// until then: the player's own run against the timetable, not
+        /// the world's train, which keeps to it meanwhile.
+        public let lateness: Int
         public let result: Result?
 
         /// Before the train has left its stop.
         public static let waiting = Reading(phase: .waiting, notch: .neutral, speed: 0, limit: nil, isOverspeed: false,
-                                            remainingTenths: nil, result: nil)
+                                            remainingTenths: nil, lateness: 0, result: nil)
 
         /// "640 m", "8.4 m" within 10 m, "3.2 m past" beyond the point.
         public func distanceText(in language: DisplayLanguage) -> String? {
@@ -367,11 +371,20 @@ extension ManualDrive {
             return tenths < 100 ? ManualDrive.metresText(tenths: tenths) : Map3DDriverHUD.distanceText(Int64(tenths / 10))
         }
 
-        /// What VoiceOver reads for the panel's figures.
-        public func label(in language: DisplayLanguage) -> String {
+        /// "On time", or "8 s late" once the timetable's arrival has
+        /// passed (decision 690).
+        public func latenessText(in language: DisplayLanguage) -> String {
+            Map3DDriverHUD.latenessText(Int64(lateness), in: language)
+        }
+
+        /// What VoiceOver reads for the panel's figures; with the stop the
+        /// run is driven to, when it is known (decision 690).
+        public func label(in language: DisplayLanguage, stop: String? = nil) -> String {
             var text = "\(speed) km/h" + language.text(", ", "，") + notch.label(in: language)
             if let limit { text += language.text(", limit \(limit) km/h", "，限速 \(limit) km/h") }
+            if let stop { text += language.text(", next stop \(stop)", "，下一站 \(stop)") }
             if let distance = distanceText(in: language) { text += language.text(", stop in \(distance)", "，停車點 \(distance)") }
+            if phase == .driving { text += language.text(", ", "，") + latenessText(in: language) }
             return text
         }
     }
@@ -397,6 +410,7 @@ extension ManualDrive {
             phase: isOver ? .over : .driving, notch: notch, speed: Int(speedKMH.rounded()),
             limit: limitHere.map { Int(($0 * 3.6).rounded()) }, isOverspeed: isOverspeed,
             remainingTenths: abs(tenths) < 100 ? tenths : Int(remaining.rounded()) * 10,
+            lateness: max(0, Int((elapsed - course.scheduled).rounded(.down))),
             result: result
         )
     }
@@ -456,6 +470,11 @@ extension ManualDrive {
 
     public static func doneText(in language: DisplayLanguage) -> String {
         language.text("Back to the train", "回到列車")
+    }
+
+    /// Decision 690: before the name of the stop driven to.
+    public static func nextLabel(in language: DisplayLanguage) -> String {
+        language.text("Next", "下一站")
     }
 
     public static func stopLabel(in language: DisplayLanguage) -> String {
