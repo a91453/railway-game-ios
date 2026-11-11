@@ -4475,3 +4475,14 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **Mac／實機要看**（全部 UNVERIFIED）：把手一格的手感與煞車距離好不好抓、觸覺、馬達聲跟把手、iPhone 直放與 iPad 上面板有沒有擋到跟車列或司機資訊列、結束時鏡頭跳回去會不會太突兀。
 - 還沒做的在決策 686「已知的限制與下一步」（連續幾站、開關門、彎道速限、讓結果算數要動 GameCore）。
 - **號碼**：決策 686；存檔、golden 不動。
+
+### 4.62 3D 模型「看圖再改」的規矩與追分試做（決策 685，派工單 LOOK-LOOP，Mac 本機 session_01YGNNuoActmxTfeAsLPJBWL，`claude/look-loop-685`，#2048，2026-11-11）
+
+規矩是 `.claude/skills/model-look/`，工具是 `tools/model-look/`，紀錄與考題結果在 `docs/art/model-look-2026-11-11/README.md`；含照片的圖與考題的 patch 在 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/model-look-2026-11-11/`（assets #90）。留給之後的：
+
+- **追分已合併**（#2048，遊戲規劃第 60 任看過總覽圖；assets #90 也已合併）。還不好的地方列在 README 最後，最大的是 800 m 遠看只剩灰屋頂、沒有放進真實地圖場景與 Metal 看過（UNVERIFIED，Mac 或實機要看）。
+- **保安、集集有做好的試做，沒有採用**：考題的四份 `changes.patch` 在素材庫那個資料夾的 `evals/`（各有「有規矩／沒規矩」兩版；assets 已合併）。要用的話挑一版另開 PR，照 model-look 再看一輪。
+- **日南、談文、大山、新埔**和追分是同型式的木造站房，確認照片後可以共用 `coastTimber`；這次沒有動，仍是通用站型。
+- **車站目錄在 `main` 就過期**：`python3 tools/station-kit/catalog.py --check` 回報保安、岡山、臺南、高雄四列座標與來源資料不同；這次只手改追分一列，沒有重新產生。
+- **考題只跑了一回合、每題一次**，評分是做的 session 自己對的，沒有盲評，也沒有跑 skill-creator 的說明文字觸發測試。
+- **Mac 上沒有 Playwright／Chromium**：拍圖工具要它，裝法在 `tools/model-look/README.md`（裝在 scratchpad，每個 session 自己裝）。
