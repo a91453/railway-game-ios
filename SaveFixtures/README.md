@@ -283,3 +283,16 @@ stars), counted 84 visitors on day 0 and has a day on its books. Written by
 the version 87 build
 (`RailwayMuseumTests.testVersionEightySevenKeepsTheMuseum`,
 `RAILWAY_MUSEUM_SAVE_NEW=1`).
+
+Version SAVEVERSION (decision 695) adds airports: a world can have its
+`"airports"`, the terminals of its map with the passengers and flights of
+their average day, their hours and the day last counted. A build before it
+would drop them, so the version is raised; a save of any earlier version
+has none and needs no step (the app gives a free game on a real-world map
+its map's airports when it opens the save).
+
+- `vSAVEVERSION-airports.json`: two stations, a line and a train, an airport by
+  the second station open 06:00 to 23:00, saved two minutes after the first
+  midnight, with the day's flights, air passengers and riders counted
+  (`AirportTests.testTheSaveKeepsTheAirports`, written with
+  `AIRPORT_SAVE_NEW=1` by the build that first made it).

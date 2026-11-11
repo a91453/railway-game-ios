@@ -457,9 +457,17 @@
 ///     refuse the kind and the whole save with it, so it says the save is
 ///     newer than it instead. A save of any earlier version needs no step:
 ///     it has no museum.
+/// 90. Airports (decision 695): a world can have its `"airports"`, the
+///     terminals of its map with their passengers, flights and hours and
+///     the day last counted. A build that reads only an earlier version
+///     would drop them, and the air passengers would stop riding, so it
+///     says the save is newer than it instead. A save of any earlier
+///     version needs no step: it has no airports (the app gives a free
+///     game on a real-world map its map's when it opens the save). (88 and
+///     89 are reserved by other tasks in the work registry.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 87
+    public static let currentVersion = 90
 
     public let world: GameWorld
 
@@ -681,6 +689,8 @@ extension SavedGame: Codable {
         // every stop (decision 605): nothing to turn.
         // Version 86 or earlier to 87: a world before version 87 has no
         // railway museum (decision 684): nothing to turn.
+        // Version 87 or earlier to 90: a world without `"airports"` has
+        // none (decision 695): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

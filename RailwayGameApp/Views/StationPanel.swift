@@ -1589,6 +1589,38 @@ struct StationPanel: View {
         }
     }
 
+    /// Decision 695: the airports the station serves, each with today's
+    /// flights, air passengers and riders on the company's trains.
+    private func airportsSection(_ days: [AirportDay]) -> some View {
+        Section {
+            ForEach(days, id: \.airport.id) { day in
+                Label {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: day.airport.title(in: session.language))
+                            .font(.subheadline.weight(.semibold))
+                        Text(verbatim: day.summary(in: session.language))
+                            .font(.footnote)
+                            .monospacedDigit()
+                        if let yesterday = day.yesterdayText(in: session.language) {
+                            Text(verbatim: yesterday)
+                                .font(.footnote)
+                                .monospacedDigit()
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "airplane")
+                        .foregroundStyle(Theme.primary)
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("station.airport.\(day.airport.id)")
+            }
+        } header: {
+            Text(verbatim: session.language.text("Airport", "機場"))
+        }
+    }
+
     // MARK: - Read-only
 
     /// The trips by hour, once worked out for this station; the last ones
@@ -1603,6 +1635,9 @@ struct StationPanel: View {
             // near the station bring today.
             if !ridership.value.civic.isEmpty {
                 civicRidersSection(ridership.value.civic)
+            }
+            if !ridership.value.airports.isEmpty {
+                airportsSection(ridership.value.airports)
             }
         } else {
             Section {

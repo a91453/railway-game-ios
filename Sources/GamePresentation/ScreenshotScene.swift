@@ -252,6 +252,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// added the museum.
     case museum
 
+    /// Decision 695: a small company whose second station stands by an
+    /// airport's terminal, a day after its first flights: the airports'
+    /// section of the sights panel. For the screenshot review of the pull
+    /// request that added airports.
+    case airport
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -362,7 +368,42 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .trackHeight: Self.trackHeightWorld()
         case .sightsOffMap: Self.sightsOffMapWorld()
         case .museum: Self.museumWorld(in: language)
+        case .airport: Self.airportWorld(in: language)
         }
+    }
+
+    /// Decision 695: two stations and a line, a town by the first and an
+    /// airport's terminal by the second, and a second airport no station
+    /// serves, at 08:30 of the second day.
+    static func airportWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = GameWorld(
+            bounds: try! WorldBounds(width: 131_072, height: 65_536),
+            economy: GameEconomy(balance: Money(100_000_000_000), costs: .standard)
+        )
+        do throws(GameError) {
+            world.setEconomyMode(.management)
+            let home = try world.buildStation(named: language.text("Home", "家園"), at: PlanPoint(x: 10_000, y: 32_768)).id
+            let foot = try world.buildStation(named: language.text("Airport", "機場"), at: PlanPoint(x: 30_000, y: 32_768)).id
+            let line = try world.createLine(named: language.text("Airport Line", "機場線"), stops: [home, foot]).id
+            try world.assignTrain(try world.purchaseTrain(named: language.text("Train 1", "1 號車")).id, to: line)
+            try world.setStationDemand(home, to: StationDemand(kind: .residential, dailyTrips: 9_000))
+            try world.setStationDemand(foot, to: StationDemand(kind: .civic, dailyTrips: 0))
+            world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "老街", englishName: "Old Street",
+                                         point: PlanPoint(x: 12_000, y: 30_000), kind: .town, baseStars: 300)])
+            world.setAirports([
+                Airport(id: 1, name: "臺北松山機場", englishName: "Taipei Songshan Airport", point: PlanPoint(x: 31_000, y: 26_768),
+                        dailyPassengers: 15_409, dailyFlights: 142, firstHour: 6, lastHour: 23),
+                Airport(id: 2, name: "臺中國際機場", englishName: "Taichung International Airport", point: PlanPoint(x: 100_000, y: 10_000),
+                        dailyPassengers: 7_556, dailyFlights: 74, firstHour: 7, lastHour: 23),
+            ])
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(freightRunSeconds / 600))
+        } catch {
+            preconditionFailure("The airport screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     /// Decision 663: a blank map bought tile by tile, its sights cut to the
