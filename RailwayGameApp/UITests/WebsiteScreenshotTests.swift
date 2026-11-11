@@ -135,6 +135,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(done.appears(within: 600), "The line is bought")
             if done.becomesHittable(within: 10) {
                 done.tap()
+                // The Debug app is still busy with the line it bought (the
+                // first trains set out): a tap it was too busy to take is
+                // made once more.
+                if !done.disappears(within: 20), done.becomesHittable(within: 10) { done.tap() }
                 XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
             }
             let open3D = app.buttons["map.open3D"]
