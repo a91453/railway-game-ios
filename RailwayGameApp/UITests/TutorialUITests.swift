@@ -137,13 +137,23 @@ final class TutorialUITests: XCTestCase {
         // its top leading one, on an iPad 630 points away, and a touch
         // sent to where it had stood fell on the map (main cd0fbab's full
         // lane, run 42736226266). The message shows for some three
-        // seconds: watched for five.
+        // seconds: watched for five, by the clock, since one look can
+        // take a second or more on a slow simulator and ten of them ran
+        // far past five seconds. A step that has stood for twenty seconds
+        // offers "Skip this step" beside the pill, whose frame then
+        // changes though the card has not moved: nothing is compared from
+        // then on (review L17-4). The frame is read before the offer is
+        // looked for, so a frame read as the offer came is not compared.
         let pill = app.buttons["tutorial.unfold"]
+        let skipOffer = app.buttons["tutorial.skipStep"]
         if pill.appears(within: 5) {
             pill.waitUntilSettled()
             let stood = pill.frame
-            for _ in 0..<10 where pill.exists {
-                XCTAssertEqual(pill.frame, stood, "The folded card moved")
+            let watchedUntil = Date().addingTimeInterval(5)
+            while Date() < watchedUntil, !skipOffer.exists, pill.exists {
+                let now = pill.frame
+                if skipOffer.exists { break }
+                XCTAssertEqual(now, stood, "The folded card moved")
                 Thread.sleep(forTimeInterval: 0.5)
             }
         }

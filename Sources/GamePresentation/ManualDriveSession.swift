@@ -62,11 +62,17 @@ extension GameSession {
 
     /// Decision 686: the player takes the followed train's handle: from
     /// now (or from when it leaves its stop) to its next stop, the 3D map
-    /// draws it where the player drives it. The game runs at 1× for it.
+    /// draws it where the player drives it. The game runs at 1× for it:
+    /// a faster game comes down to 1×, and one paused resumes at 1×
+    /// (review L17-5: asked of the paused clock's speed, which is none, a
+    /// game paused at 10× was left to resume at 10×). Until the handle is
+    /// given back the speed goes no higher (``speedCap``).
     /// Nothing for a train without a timetable.
     public func startManualDrive() {
         guard let id = followedTrainID, world.canManualDrive(id) else { return }
-        if world.clock.speed.tenthsPerTick > GameSpeed.x1.tenthsPerTick { setSpeed(.x1) }
+        if world.clock.runningSpeed.tenthsPerTick > Map3DFollowSpeed.driving.tenthsPerTick {
+            setRunningSpeed(Map3DFollowSpeed.driving)
+        }
         manualDriveRun = ManualDriveRun(train: id)
         manualDriveReading = .waiting
         manualDrivePhase = .waiting
@@ -113,8 +119,10 @@ extension GameSession {
         if run.driving == nil {
             run.driving = ManualDriveRun.takeOver(run.train, in: world)
         } else if !world.clock.isPaused {
-            // A second of the game for each of the clock's at 1×.
-            run.driving?.drive.advance(seconds: passed * Double(world.clock.speed.tenthsPerTick))
+            // A second of the game for each of the clock's at 1×, and no
+            // more whatever the clock runs at (a night being skipped).
+            let rate = min(world.clock.speed.tenthsPerTick, Map3DFollowSpeed.driving.tenthsPerTick)
+            run.driving?.drive.advance(seconds: passed * Double(rate) / Double(GameSpeed.x1.tenthsPerTick))
         }
         manualDriveRun = run
         publishManualDrive()

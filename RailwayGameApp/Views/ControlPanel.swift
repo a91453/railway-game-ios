@@ -926,7 +926,7 @@ private struct BuildingControls: View {
         // grid builds its cells as it lays them out, which SwiftUI's
         // asynchronous renderer may do off the main thread (CRASH101).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(PlacedBuildingKind.allCases, id: \.self) { @Sendable kind in
+            ForEach(session.buildingKindsOffered, id: \.self) { @Sendable kind in
                 BuildingKindButton(session: session, kind: kind, cardArtSize: cardArtSize)
             }
         }

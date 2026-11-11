@@ -262,6 +262,8 @@ extension AchievementsTests {
     func testATempleOrANightMarketIsNotOneOfTheNamedBusinesses() throws {
         var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: GameEconomy(balance: 1_000_000_000_000))
         world.setEconomyMode(.management)
+        // Decision 689: a sight is built only where tourists come.
+        world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "x", englishName: "x", point: PlanPoint(x: 120_000, y: 2_000), kind: .town, baseStars: 300)])
         try world.placeBuilding(.temple, at: PlanPoint(x: 20_000, y: 20_000))
         try world.placeBuilding(.nightMarket, at: PlanPoint(x: 40_000, y: 20_000))
         var facts = AchievementFacts(world: world)

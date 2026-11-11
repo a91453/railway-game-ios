@@ -235,6 +235,10 @@ public enum GameError: Error, Hashable, Sendable {
     /// A second railway museum (decision 684): a world has one, the
     /// building named.
     case museumAlreadyBuilt(PlacedBuildingID)
+    /// A sight of the company's (``PlacedBuildingKind/isSight``: a temple,
+    /// a night market, a railway museum) in a world with no tourism
+    /// (decision 689): no tourist would ever come to it.
+    case sightNeedsTourism
     /// A building would stand on a steep slope, or every cell to zone is
     /// water or steep and the first is steep (decision 115): that cell.
     case onSteepSlope(row: Int, column: Int)

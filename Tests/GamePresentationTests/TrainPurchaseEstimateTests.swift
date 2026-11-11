@@ -85,6 +85,56 @@ final class TrainPurchaseEstimateTests: XCTestCase {
         XCTAssertGreaterThan(estimate.addedCost.amount, 0)
     }
 
+    /// Review L17-3: trains added a few at a time. One train ran three
+    /// days and two were bought today: the days in the books are one
+    /// train's, the trains now are three. "Now" was those days' cost, so
+    /// the two trains just bought were in neither "now" nor the estimate.
+    /// Now it is the three trains' day, the estimate of a fourth is the
+    /// days played after within 3%, and the line's own days count again
+    /// once the three have run some.
+    func testTrainsBoughtTodayAreInNowAndInTheEstimate() throws {
+        let one = try played(try lineBetweenTwoTowns(), days: 3)
+        let single = average(one, from: 0, days: 3)
+        let session = GameSession(world: one)
+        session.selectLine(Self.line)
+        session.changeSelectedLineHeadway(try XCTUnwrap(one.lineHeadwayChange(Self.line, headway: 5)))
+        let three = session.world
+        XCTAssertEqual(three.line(id: Self.line)?.trains.count, 3)
+
+        let change = try XCTUnwrap(three.lineHeadwayChange(Self.line, headway: 3))
+        XCTAssertGreaterThan(change.buying, 0)
+        let estimate = try XCTUnwrap(three.trainPurchaseEstimate(
+            Self.line, buying: change.buying, type: change.type, cars: change.cars, headway: 3, price: change.cost
+        ))
+        XCTAssertEqual(estimate.historyDays, 0, "no day in the books is of three trains")
+        XCTAssertGreaterThan(dollars(estimate.costNow), single.cost * 1.15, "now has the two trains bought today")
+
+        // The three trains' own days are what "now" said, and count again.
+        let later = try played(three, days: 2)
+        let tripled = average(later, from: 3, days: 2)
+        XCTAssertEqual(dollars(estimate.costNow), tripled.cost, accuracy: tripled.cost * 0.03)
+        let next = try XCTUnwrap(later.trainPurchaseEstimate(
+            Self.line, buying: change.buying, type: change.type, cars: change.cars, headway: 3, price: change.cost
+        ))
+        XCTAssertEqual(next.historyDays, 2, "the two days of three trains, not the three of one")
+        XCTAssertEqual(dollars(next.costNow), tripled.cost, accuracy: 1)
+
+        // The fourth and on, bought: the days after cost what was said.
+        session.changeSelectedLineHeadway(change)
+        let after = average(try played(session.world, days: 4), from: 3, days: 4)
+        report("three trains, two of them bought today, more bought", estimate, after)
+        XCTAssertEqual(dollars(estimate.cost), after.cost, accuracy: after.cost * 0.03)
+    }
+
+    func testADayIsOfTheFleetWithinFifteenPercent() {
+        XCTAssertTrue(TrainPurchaseModel.isOfTheFleet(dayCost: 100, modelCost: 100))
+        XCTAssertTrue(TrainPurchaseModel.isOfTheFleet(dayCost: 115, modelCost: 100))
+        XCTAssertTrue(TrainPurchaseModel.isOfTheFleet(dayCost: 85, modelCost: 100))
+        XCTAssertFalse(TrainPurchaseModel.isOfTheFleet(dayCost: 116, modelCost: 100))
+        XCTAssertFalse(TrainPurchaseModel.isOfTheFleet(dayCost: 84, modelCost: 100))
+        XCTAssertFalse(TrainPurchaseModel.isOfTheFleet(dayCost: 50, modelCost: 0), "a line with no train now")
+    }
+
     /// A line with no train yet, staffed: no day of its own to go by, and
     /// the estimate is still the days played after.
     func testStaffingALineWithNoTrainIsTheDaysPlayedAfter() throws {
@@ -239,6 +289,48 @@ final class TrainPurchaseEstimateTests: XCTestCase {
         ))
         XCTAssertEqual(first.historyDays, 1)
         XCTAssertEqual(read(), first)
+    }
+
+    /// Review L17-2: read before the first tick, there is no passenger
+    /// plan and the fares are not said. The tick that makes the plan is no
+    /// command, and the panel kept "once the clock has run" for the rest
+    /// of the hour while the clock ran. It is worked out again as soon as
+    /// the plan is there, and again in the next hour.
+    func testAnEstimateWithNoPlanIsNotKeptOnceTheClockRuns() throws {
+        let session = GameSession(world: try lineBetweenTwoTowns())
+        session.selectLine(Self.line)
+        let memo = LinePanelMemo()
+        func read() -> TrainPurchaseEstimate? {
+            memo.purchaseEstimate(Self.line, buying: 1, type: nil, cars: 4, headway: 10, price: Money(100_000_000), of: session)
+        }
+        XCTAssertFalse(session.world.keepsPassengerPlan)
+        XCTAssertEqual(try XCTUnwrap(read()).demand, .unknown)
+        let commands = session.commandRevision
+        let hour = session.world.clock.now.seconds / GameTime.secondsPerHour
+        session.advance(realElapsed: .milliseconds(100))
+        XCTAssertEqual(session.commandRevision, commands, "the clock is no command")
+        XCTAssertEqual(session.world.clock.now.seconds / GameTime.secondsPerHour, hour, "the same hour")
+        XCTAssertTrue(session.world.keepsPassengerPlan)
+        let planned = try XCTUnwrap(read())
+        XCTAssertEqual(planned.demand, .planned)
+        XCTAssertNotNil(planned.fares)
+        XCTAssertEqual(planned, session.world.trainPurchaseEstimate(
+            Self.line, buying: 1, type: nil, cars: 4, headway: 10, price: Money(100_000_000)
+        ))
+        // Kept within the hour, worked out again in a later one.
+        let kept = session.world
+        session.advance(realElapsed: .milliseconds(100))
+        XCTAssertNotEqual(session.world.clock.now, kept.clock.now)
+        XCTAssertEqual(session.world.clock.now.seconds / GameTime.secondsPerHour, hour)
+        XCTAssertEqual(read(), planned)
+        while session.world.clock.now.seconds / GameTime.secondsPerHour < hour + 24 {
+            session.advance(realElapsed: .seconds(1))
+        }
+        XCTAssertEqual(session.commandRevision, commands)
+        XCTAssertEqual(read(), session.world.trainPurchaseEstimate(
+            Self.line, buying: 1, type: nil, cars: 4, headway: 10, price: Money(100_000_000)
+        ))
+        XCTAssertEqual(read()?.historyDays, 1, "a day of the line's own by then, which the first hour's had not")
     }
 
     /// When the page shows it: for every headway that buys trains, and

@@ -272,6 +272,9 @@ extension GameWorld {
     ///
     /// - Throws, checked in this order: ``GameError/invalidBuildingLook``
     ///   unless `look` is one of the kind's ``PlacedBuildingKind/looks``;
+    ///   ``GameError/sightNeedsTourism`` for a kind that
+    ///   ``PlacedBuildingKind/isSight`` in a world with no tourism
+    ///   (decision 689);
     ///   ``GameError/museumAlreadyBuilt(_:)`` naming the world's railway
     ///   museum for a second one (decision 684);
     ///   ``GameError/outOfBounds(_:)`` naming
@@ -335,6 +338,11 @@ extension GameWorld {
         moved: [(cell: LandCell, residents: Int64, jobs: Int64, isLast: Bool)]
     ) {
         guard (0..<kind.looks).contains(look) else { throw .invalidBuildingLook }
+        // Decision 689: a sight's only customers are tourists, and a world
+        // with no tourism (a challenge, the tutorial) has none, so it
+        // would only ever cost its staff. One already standing (a save of
+        // before the rule) stays, and is demolished or sold as any other.
+        if kind.isSight, tourism == nil { throw .sightNeedsTourism }
         // Decision 684: one railway museum a world.
         if kind == .railwayMuseum, let museum = railwayMuseum { throw .museumAlreadyBuilt(museum.id) }
         let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: nextPlacedBuildingID), kind: kind, centre: centre)

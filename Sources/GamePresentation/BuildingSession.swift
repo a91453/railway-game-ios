@@ -102,6 +102,15 @@ extension PlacedBuildingKind {
 }
 
 extension GameSession {
+    /// The kinds the building tool lists, in their order (decision 689):
+    /// every kind, but in a world with no tourism not the company's sights
+    /// (a temple, a night market, a railway museum), which no tourist
+    /// would come to and ``GameWorld/placeBuilding(_:at:look:)`` refuses.
+    public var buildingKindsOffered: [PlacedBuildingKind] {
+        let hasTourism = world.tourism != nil
+        return PlacedBuildingKind.allCases.filter { hasTourism || !$0.isSight }
+    }
+
     /// A tap with the building tool at `point`: in ``BuildingToolMode/build``
     /// it makes `point` the ``buildingSite`` (decision 95), reading in the
     /// land there on a map whose land is read as it is needed, so the

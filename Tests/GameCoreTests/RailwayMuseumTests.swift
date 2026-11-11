@@ -81,6 +81,50 @@ final class RailwayMuseumTests: XCTestCase {
         XCTAssertNoThrow(try world.placeBuilding(.railwayMuseum, at: PlanPoint(x: 64_000, y: 10_000)))
     }
 
+    /// Review L17-1, decision 689: a world with no tourism (a challenge,
+    /// the tutorial) took the museum's price and its staff's pay and never
+    /// sent it a visitor. No sight is built there; with tourism on again
+    /// each is.
+    func testNoSightIsBuiltInAWorldWithNoTourism() throws {
+        var world = try world()
+        world.setTourism(nil)
+        XCTAssertNil(world.tourism)
+        let before = world
+        for kind in PlacedBuildingKind.allCases where kind.isSight {
+            XCTAssertThrowsError(try world.placeBuilding(kind, at: site), "\(kind)") {
+                XCTAssertEqual($0 as? GameError, .sightNeedsTourism)
+            }
+            XCTAssertThrowsError(try world.buildingPlacement(kind, at: site), "\(kind)") {
+                XCTAssertEqual($0 as? GameError, .sightNeedsTourism)
+            }
+        }
+        XCTAssertEqual(world, before, "a refused command changes nothing")
+        // The look is still asked first, and every other kind is built.
+        XCTAssertThrowsError(try world.placeBuilding(.railwayMuseum, at: site, look: 1)) {
+            XCTAssertEqual($0 as? GameError, .invalidBuildingLook)
+        }
+        XCTAssertNoThrow(try world.placeBuilding(.park, at: site))
+        var open = try self.world()
+        var centre = site
+        for kind in PlacedBuildingKind.allCases where kind.isSight {
+            XCTAssertNoThrow(try open.placeBuilding(kind, at: centre), "\(kind)")
+            centre = PlanPoint(x: centre.x + 8_192, y: centre.y)
+        }
+    }
+
+    /// A museum of before the rule (0.6.0 (125)) in a world with no
+    /// tourism still loads, and is sold as any other building.
+    func testAMuseumOfBeforeTheRuleStillLoadsAndIsSold() throws {
+        var world = try world()
+        let museum = try world.placeBuilding(.railwayMuseum, at: site)
+        world.setTourism(nil)
+        let loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.railwayMuseum?.id, museum.id)
+        XCTAssertNoThrow(try world.sellPlacedBuilding(museum.id))
+        XCTAssertNil(world.railwayMuseum)
+    }
+
     // MARK: - Exhibits
 
     func testItShowsTheTypesTheCompanyOwnsWhenBuilt() throws {

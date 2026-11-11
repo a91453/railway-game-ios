@@ -1595,13 +1595,23 @@ public final class GameSession {
     /// would split the one Undo it lays as.
     public func setSpeed(_ speed: GameSpeed) {
         guard !isLayingDemoRealLines else { return }
-        changeSpeed(isSpeedCappedIn3D ? Map3DFollowSpeed.capped(speed) : speed)
+        changeSpeed(Map3DFollowSpeed.capped(speed, to: speedCap))
     }
 
     /// The speeds the speed menu offers (decision 360): up to 10× while
-    /// following a train on the 3D map, every speed otherwise.
+    /// following a train on the 3D map, 1× while driving one by hand
+    /// (decision 686), every speed otherwise.
     public var speedChoices: [GameSpeed] {
-        Map3DFollowSpeed.choices(capped: isSpeedCappedIn3D)
+        Map3DFollowSpeed.choices(upTo: speedCap)
+    }
+
+    /// The fastest speed the game can be set to now, or `nil` for any:
+    /// 1× while a train is driven by hand (decision 686, review L17-5),
+    /// 10× while following on the 3D map (decision 360).
+    public var speedCap: GameSpeed? {
+        // The reading is what views follow; the run itself is not observed.
+        if manualDriveReading != nil { return Map3DFollowSpeed.driving }
+        return isSpeedCappedIn3D ? Map3DFollowSpeed.fastest : nil
     }
 
     /// Tells the session the 3D map opened or closed (decision 360): while
@@ -1730,7 +1740,7 @@ public final class GameSession {
 
     /// Runs the game at `speed`, or, paused, resumes it at `speed` later,
     /// keeping the pause and what paused it.
-    private func setRunningSpeed(_ speed: GameSpeed) {
+    func setRunningSpeed(_ speed: GameSpeed) {
         applyHeldSpeed()
         guard speed != world.clock.runningSpeed else { return }
         dropNightSkip()
