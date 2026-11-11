@@ -574,6 +574,7 @@
 
 **第 60 任接手（2026-11-11 02:30 UTC＝台灣 10:30，session_01YGNNumCi7AYjpiS4ntJZjK，作者在 claude.ai 開，第 0 層）**
 - **HEALTH-124（第 124 版後健檢，2026-11-11）：CONCERNS**，報告 [`research/HEALTH_124_2026-11-11.md`](research/HEALTH_124_2026-11-11.md)。機捷新局預設第二天沒發 5/333（決策 666 的數字對）、改建後 9；「買了舊線不改建」從 2 變 7 班；讓路的空車仍來回跳（兩天 63 次、一列連讓 14 站）。沒有清不掉的死結，逐分與最高倍速一致。建議派修的項目在報告第 6 節。
+- **子公司買賣與擴充的設計（SUBSIDIARY-DESIGN，2026-11-11，NEXT_PRIORITIES §25 第 4 名）**：[`research/SUBSIDIARY_DESIGN_2026-11-11.md`](research/SUBSIDIARY_DESIGN_2026-11-11.md)。只有設計，還沒派實作。「先蓋、等增值再賣」的指令已經有（決策 130、173），缺的是增值不跟周圍發展走、玩家看不到漲幅、產業互相影響；切成四步（① 量「賣了再蓋」與看得見的增值 → ② 鄰地行情 → ③ 產業互相影響表 → ④ 工業、農業、公寓三種新建物，只有 ④ 升存檔），一步合了才派下一步。
 - 照下面「第 59 任交第 60 任」（含 11-11 補充）接手；已在 #1579 登記，第 59 任停手、可以封存。
 - 接手時 main 84cf8864。開著的 PR：遊戲庫只有 draft #2028（作者 Mac 本機的 session 開的，最低版本升到 iOS 26，決策 676），**等作者決定要不要合**；assets #73（TRELLIS 授權）仍等作者在 Mac 上驗證；reference 沒有。沒有在做的實作 session，沒有排程。
   - #2028 的檢查（head 03921fe7）：Swift 與模擬器建置綠，**「Release archive」紅**：最低版本升到 26 以後，`RailwayGameApp/Views/SettingsView.swift:942` 用的 `appStoreReceiptURL`（iOS 18 起標成過時）在 Release 建置被當成錯誤。照這樣合進去，發版的建置會過不了，要 Mac 那邊的 session 先修（#1579 有留言）。
