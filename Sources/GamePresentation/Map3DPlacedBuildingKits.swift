@@ -52,7 +52,27 @@ extension Map3DScene.Builder {
             }
             target = .base
             return true
-        case .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket, .railwayMuseum:
+        case .railwayMuseum:
+            // Decision 696: its own hall, sheds and display tracks, as many
+            // as it has exhibits; the exhibits themselves stand on them as
+            // the train pack's models (``Map3DRailwayMuseum/add(to:exhibits:at:facing:pack:eye:reach:)``).
+            let shown = min(building.exhibits.count, Map3DRailwayMuseum.mostShown), right = facing.cross(.up)
+            target = .close
+            mesh(at: base) { $0.append(Map3DRailwayMuseum.meshes[shown], at: base, forward: facing) }
+            for level in [Target.standIn, .far] {
+                target = level
+                mesh(at: base) { mesh in
+                    mesh.addBox(base: base, length: side, width: side, height: 0.1, top: Map3DPalette.forecourt, side: Map3DPalette.forecourt)
+                    for box in Map3DRailwayMuseum.boxes(exhibits: shown) {
+                        mesh.addBox(base: base + facing * box.centre.x + right * box.centre.z, forward: facing,
+                                    length: box.length, width: box.width, height: box.height, top: Map3DRailwayMuseum.slate,
+                                    side: Map3DRailwayMuseum.brick)
+                    }
+                }
+            }
+            target = .base
+            return true
+        case .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket:
             let layout = Self.placedKitLayouts[building.kind]![building.look]
             let facing = building.kind.standsOnShore ? seaward(of: building) : facing
             let right = facing.cross(.up)
@@ -262,9 +282,6 @@ extension Map3DScene.Builder {
                             pad: Map3DPalette.plaza, recolours: false),
         ]
         return [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf], .marina: [marina],
-                .school: schools, .hospital: hospitals, .nightMarket: markets,
-                // Decision 684: until the museum has a model of its own, the
-                // department store's exhibition halls stand in for it.
-                .railwayMuseum: [stores[1]]]
+                .school: schools, .hospital: hospitals, .nightMarket: markets]
     }()
 }

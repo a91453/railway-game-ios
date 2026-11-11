@@ -618,7 +618,7 @@
 - **LOOP-EXTEND（決策 691，`claude/loop-extend-691`，2026-11-11）留給之後的**：兩股車站加長月台已會把轉轍器往外移、各股月台一起加長。沒做的寫在 `docs/decisions/691.md`「沒做到的」：彎道或坡道上的站、轉轍器落在連接線上的站型不認（退回決策 687 只加到轉轍器）；轉轍器外側只用到下一個節點為止；站內與外側那兩段有列車或預約時拒絕。要再做的話從 `GameWorld.stationThroat(main:)` 放寬站型開始。
 - **給 Mac 本機的清單**（#1579 找「給 Mac 本機 session 的工作清單」6786821644 與之後的補充；作者一次貼一件：「讀 a91453/railway-game-ios 的 #1579，找「給 Mac 本機 session 的工作清單」和之後的補充，做第 N 件。」）：LOOK-LOOP 已完成。TUTORIAL-CAPSULE 做完（[決策 688](decisions/688.md)：每一步的卡片第一次量到版面大小就忘了原位，狀態訊息一消失膠囊就從頭挑位置；改成第一次量不算）。接著 GLASS-POLISH（加上：買車估算那一行在橫放加車時可能被標題列蓋住（UNVERIFIED）、「駕駛」「駕駛室」兩顆都是實心青色、兩個 ✕ 靠太近、英文博物館卡名被截成「Railway m…」、橫放時建造卡清單與說明被截）；MANUAL-DRIVE 的手感、觸覺、馬達聲、直放與 iPad；FACADE-669；CAB-RAIN；FPS-DEVICE；MUSEUM 第二步（3D 館舍、圖示、館內，照 `model-look`）；把 `coastTimber` 型式套到日南、談文、大山、新埔；保安、集集的試做 patch（assets `model-look-2026-11-11/evals/`）等作者看。
 - **記著、還沒派**（有完整 tier 名額再派）：
-  - 子公司設計第 ① 步（`research/SUBSIDIARY_DESIGN_2026-11-11.md`），連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因查到了，不是退步：這條量測線三站排在 448 m 上，一天發車 640 次、每次 NT$225，每次只載 8–11 人（[HEALTH-125](research/HEALTH_125_2026-11-11.md) §5.4）；比子公司時改用 `testALineBetweenTwoTowns` 或只比差額。
+  - 子公司設計第 ① 步做了（SUBSIDIARY-1，[決策 692](decisions/692.md)：建物卡看得到買價與漲跌；生意的賣價不超過現在重蓋一棟，「每年賣了再蓋」從留著的 210% 以上降下來）。**留給之後的**寫在決策 692「已知的限制與下一步」：留著的百貨帳上利潤與實際多出來的現金差三倍，原因沒查，第 ② 步（鄰地行情）開工前先查；飯店、遊樂園修好補現金後還沒量。原本這一項還連同查 `BalanceReportTests/testAFirstLine$`：第一條線每天虧 7–10 萬、服務 11%、第 360 天現金 −2,431 萬，原因查到了，不是退步：這條量測線三站排在 448 m 上，一天發車 640 次、每次 NT$225，每次只載 8–11 人（[HEALTH-125](research/HEALTH_125_2026-11-11.md) §5.4）；比子公司時改用 `testALineBetweenTwoTowns` 或只比差額。
   - MANUAL-DRIVE 第二步（開車要算數，動 GameCore，§4.61）。
   - `python3 tools/station-kit/catalog.py --check` 在 main 就過期（4 列）：FIX-L17-P3 已照工具重產（保安、岡山、臺南、高雄的座標跟上打包資料）。
   - HEALTH-124 §6.5 的 (c)(d)；決策 682「之後可以做的」。
@@ -4537,9 +4537,17 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 ### 4.62 鐵道博物館第一步（決策 684，派工單 MUSEUM，session_01YGNNumVW942N5M7kesb61Z，`claude/museum-684`，2026-11-11）
 
 - **做了的**在 [決策 684](decisions/684.md)：建築清單多一種「鐵道博物館」（一張地圖一座），是公司的景點；展示公司擁有過的車種，每種 +0.15★（空館 1.5★，十二種 3.3★）；遊客每人 NT$150、每件展品維護 NT$1,000／天，記在子公司帳。存檔版本 87（`v87-railway-museum.json`）。
-- **還沒做、給 Mac 本機的第二步**（決策 684「下一步」1）：館舍自己的 3D 外觀與停在館前的展品（現在 3D、卡片圖、地圖記號都暫用百貨的）、新圖示、點博物館逐件看展品的館內瀏覽。要看畫面，截圖驗收屬「規劃看過才合」。
+- **第二步做了**（決策 696，§4.64）。原本的說明：館舍自己的 3D 外觀與停在館前的展品（現在 3D、卡片圖、地圖記號都暫用百貨的）、新圖示、點博物館逐件看展品的館內瀏覽。要看畫面，截圖驗收屬「規劃看過才合」。
 - **平衡**：量法與數字在決策 684 第 6 節（`BalanceReportTests.testARailwayMuseumOnTheFirstLine`）；實機玩過覺得太賺或太少，只動 `Tourism.starsPerExhibit` 與 `SubsidiaryRules.museumExhibitUpkeep`。
 - **號碼**：決策 684、存檔 87；golden schema、ReplayFixtures 不動。
+
+### 4.64 鐵道博物館第二步（決策 696，Mac 本機 session_01YGNNukznVrhE2dkYnVEs6v，`claude/museum-2`，2026-11-12）
+
+- **做了的**在 [決策 696](decisions/696.md)：館舍照紅磚的鐵道部臺北工場重做（`Map3DRailwayMuseum`），館前六股展示線，第 7、第 10 種展品各帶出一座三股的車庫；展品是車種自己的車頭模型，每幀當實例畫；新的卡片圖與地圖記號；館內頁（觀光面板的「參觀館藏」、點地圖上博物館的「館藏…」），展品可開列車車庫看 3D，沒擁有的是剪影。GameCore、存檔、golden 不動。
+- **看圖的紀錄**與「還有哪裡不好」在 [`docs/art/railway-museum-2026-11-12/README.md`](art/railway-museum-2026-11-12/README.md)：磚色偏淡、窗沒有深度、空館冷清、800 m 遠看館舍仍是灰色長方形。要修就照 `model-look` 再看一輪。
+- **沒驗的**：iPad、直放、實機都沒看；只在 iPhone 模擬器橫放深色看過。
+- **TRELLIS**：順便驗了一次建築主體（決策 696 第 6 節），產出沒進任何 repo；數字在 assets #73 的留言。
+- **留下的**：決策 696「下一步」（館舍轉向、第 13 種以後的展品、決策 684 的第 2 項）。
 
 ### 4.63 3D 模型「看圖再改」的規矩與追分試做（決策 685，派工單 LOOK-LOOP，Mac 本機 session_01YGNNuoActmxTfeAsLPJBWL，`claude/look-loop-685`，#2048，2026-11-11）
 

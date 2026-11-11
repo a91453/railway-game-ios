@@ -101,6 +101,14 @@ struct TourismPanel: View {
                                     .font(.footnote)
                                     .foregroundStyle(Theme.textSecondary)
                                     .accessibilityIdentifier("tourism.exhibits")
+                                // Decision 696: and its exhibits, one by one.
+                                NavigationLink {
+                                    RailwayMuseumPage(session: session, closes: false)
+                                } label: {
+                                    Text(verbatim: language.text("See the exhibits", "參觀館藏"))
+                                        .font(.footnote.weight(.semibold))
+                                }
+                                .accessibilityIdentifier("tourism.museum.open")
                             } else {
                                 Text(verbatim: language.text(
                                     "Today \(row.today) · yesterday \(row.yesterday) · this year \(row.thisYear.groupedText) · last year \(row.lastYear.groupedText)",
@@ -193,7 +201,8 @@ struct TourismPanel: View {
 
     private func header(_ row: AttractionRow) -> some View {
         HStack {
-            MapGlyph.star.image
+            // Decision 696: the museum's own mark, a star for the rest.
+            (row.exhibitsText == nil ? MapGlyph.star : MapGlyph.railwayMuseum).image
                 .resizable()
                 .scaledToFit()
                 .frame(width: 18, height: 18)
@@ -249,5 +258,141 @@ struct TourismPanel: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
         }
+    }
+}
+
+/// Decision 696: the railway museum's exhibits, one type of train at a
+/// time (``RailwayMuseumGuide``): each with the catalog's picture and
+/// figures, where it stands in the yard and, when the train garage has it,
+/// a button that opens it there in 3D; then the types never owned, as
+/// silhouettes. Opened from the museum's row of the sights panel (pushed,
+/// `closes` false) and from the museum tapped on the map (a sheet of its
+/// own, with a Done button).
+struct RailwayMuseumPage: View {
+    let session: GameSession
+    let closes: Bool
+    @Environment(\.dismiss) private var dismiss
+    /// The exhibit open in the train garage.
+    @State private var inGarage: GarageKey?
+
+    private struct GarageKey: Identifiable {
+        let id: String
+    }
+
+    var body: some View {
+        let language = session.language
+        let row = session.sightsPanelRows.first { $0.exhibitsText != nil }
+        let guide = RailwayMuseumGuide(world: session.world, row: row, in: language)
+        List {
+            if let guide {
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(PlacedBuildingKind.railwayMuseum.cardArt)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 56, height: 56)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(verbatim: guide.summary)
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                                .accessibilityIdentifier("museum.summary")
+                            Text(verbatim: guide.hint)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+                let exhibits = guide.items.filter(\.isShown), waiting = guide.items.filter { !$0.isShown }
+                if !exhibits.isEmpty {
+                    Section {
+                        ForEach(exhibits) { item in exhibit(item, language: language) }
+                    } header: {
+                        Text(verbatim: language.text("On show", "展出中"))
+                    }
+                }
+                if !waiting.isEmpty {
+                    Section {
+                        ForEach(waiting) { item in exhibit(item, language: language) }
+                    } header: {
+                        Text(verbatim: language.text("Not owned yet", "還沒擁有"))
+                    }
+                }
+            } else {
+                Text(verbatim: language.text("Your company has no railway museum now.", "公司現在沒有鐵道博物館。"))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .navigationTitle(Text(verbatim: language.text("Railway museum", "鐵道博物館")))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if closes {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(verbatim: language.text("Done", "完成"))
+                    }
+                    .accessibilityIdentifier("museum.done")
+                }
+            }
+        }
+        .fullScreenCover(item: $inGarage) { key in
+            TrainShowcaseScreen(keys: [key.id], close: { inGarage = nil })
+        }
+        .accessibilityIdentifier("museum.page")
+    }
+
+    private func stripe(of type: TrainType) -> Color {
+        switch RollingStockCatalog.Family(type) {
+        case .metro: Theme.primary
+        case .railway: Theme.accent
+        case .highSpeed: Palette.ink
+        case .special: Theme.warning
+        }
+    }
+
+    private func exhibit(_ item: RailwayMuseumGuide.Item, language: DisplayLanguage) -> some View {
+        HStack(spacing: 12) {
+            CatalogTrain(stripe: stripe(of: item.type), cars: 2, silhouette: !item.isShown)
+                .frame(width: 84, height: 30)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: item.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(item.isShown ? Theme.textPrimary : Theme.textSecondary)
+                Text(verbatim: language.text(
+                    "\(item.family) · \(item.capacityPerCar) riders a car · \(item.topSpeed) km/h",
+                    "\(item.family)・每節 \(item.capacityPerCar) 人・最高 \(item.topSpeed) km/h"
+                ))
+                .font(.footnote)
+                .monospacedDigit()
+                .foregroundStyle(Theme.textSecondary)
+                if let place = item.place {
+                    Text(verbatim: place)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+            if let key = item.showcaseKey {
+                Button {
+                    inGarage = GarageKey(id: key)
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("3D", "3D"))
+                    } icon: {
+                        Image(systemName: "cube.fill")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(Text(verbatim: language.text("See \(item.name) in 3D", "看 \(item.name) 的 3D")))
+                .accessibilityIdentifier("museum.3d.\(item.type.spec.code)")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("museum.exhibit.\(item.type.spec.code)")
     }
 }

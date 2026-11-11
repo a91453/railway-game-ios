@@ -547,6 +547,81 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// card chosen, then its row in the sights panel, in Chinese and in
     /// English. For the screenshot review of the pull request that added
     /// the museum.
+    /// Decision 696: the railway museum's own hall and its exhibits on the
+    /// 3D map, from the street side close up, from higher and from far;
+    /// and its page of exhibits, opened from the museum tapped on the map
+    /// and from the sights panel. For the screenshot review of the pull
+    /// request that gave it its model, its marks and its page.
+    func testRailwayMuseumIn3D() {
+        for (shot, view) in [("front", "170,0,52"), ("side", "210,305,48"), ("high", "420,0,25"), ("far", "800,0,5")] {
+            let app = launch(extra: ["-screenshot-scene", "museum", "-screenshot-3d-view", view, "-screenshot-3d-museum", "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep("museum-3d-\(shot)", app)
+            app.terminate()
+        }
+    }
+
+    func testRailwayMuseumPage() {
+        for english in [false, true] {
+            let suffix = english ? "-english" : ""
+            let app = launch(extra: ["-screenshot-scene", "museum"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle()
+            keep("museum-2d\(suffix)", app)
+            let sights = app.buttons["hud.sights"]
+            XCTAssertTrue(sights.becomesHittable(within: 10), "The HUD has the sights' button")
+            sights.tap()
+            XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+            let open = app.buttons["tourism.museum.open"]
+            XCTAssertTrue(scrollScreen(to: open, in: app, drags: 14), "The museum's row offers its exhibits")
+            keep("museum-sights-row\(suffix)", app)
+            open.tap()
+            XCTAssertTrue(app.staticTexts["museum.summary"].appears(within: 10), "The museum's page opens")
+            settle(seconds: 2)
+            keep("museum-page\(suffix)", app)
+            // The list is lazy: the types not owned yet are further down.
+            let page = app.descendants(matching: .any)["museum.page"].firstMatch
+            page.swipeUp()
+            settle(seconds: 1)
+            keep("museum-page-more\(suffix)", app)
+            page.swipeDown()
+            // An exhibit in the train garage.
+            let inThreeD = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'museum.3d.'")).firstMatch
+            XCTAssertTrue(inThreeD.becomesHittable(within: 10), "An exhibit offers its 3D view")
+            inThreeD.tap()
+            XCTAssertTrue(app.descendants(matching: .any)["trainShowcase.view"].firstMatch.appears(within: 300), "The garage opens on the exhibit")
+            settle(seconds: 8)
+            keep("museum-exhibit-3d\(suffix)", app)
+            app.terminate()
+            guard !english else { continue }
+            // And from the museum tapped on the map: the inspector's button.
+            let again = launch(extra: ["-screenshot-scene", "museum"], english: english)
+            XCTAssertTrue(again.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle()
+            again.coordinate(withNormalizedOffset: CGVector(dx: 0.69, dy: 0.78)).tap()
+            let exhibits = again.buttons["inspector.museum"]
+            if exhibits.becomesHittable(within: 10) {
+                keep("museum-inspector", again)
+                exhibits.tap()
+                XCTAssertTrue(again.staticTexts["museum.summary"].appears(within: 10), "The museum's page opens from the map")
+                settle(seconds: 2)
+                keep("museum-page-from-map", again)
+            } else {
+                // The museum's place on the screen is this scene's on an
+                // iPhone Pro on its side; another size may miss it.
+                keep("museum-inspector-not-reached", again)
+            }
+            again.terminate()
+        }
+    }
+
     func testRailwayMuseum() {
         for english in [false, true] {
             let suffix = english ? "-english" : ""

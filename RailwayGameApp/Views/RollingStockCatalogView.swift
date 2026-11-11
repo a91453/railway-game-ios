@@ -320,19 +320,23 @@ struct RollingStockCatalogView: View {
 /// A train in the showroom, seen from the side: `cars` cars in the panel's
 /// colour with a navy outline, navy windows, a door and a stripe, the
 /// last car's nose rounded; as wide as it is given.
-private struct CatalogTrain: View {
+struct CatalogTrain: View {
     let stripe: Color
     let cars: Int
+    /// Decision 696: only its outline's shape, in one flat colour: a type
+    /// the railway museum does not have yet.
+    var silhouette = false
 
     var body: some View {
         let stripe = stripe
         let cars = cars
+        let silhouette = silhouette
         // A sendable closure, not main-actor code (CRASHSWEEP-3): SwiftUI
         // calls a GeometryReader's closure again whenever its size
         // changes, which its asynchronous renderer may do off the main
         // thread (CRASH101).
         GeometryReader { @Sendable proxy in
-            CatalogTrainCars(stripe: stripe, cars: cars, size: proxy.size)
+            CatalogTrainCars(stripe: stripe, cars: cars, size: proxy.size, silhouette: silhouette)
         }
         .accessibilityHidden(true)
     }
@@ -343,6 +347,7 @@ private struct CatalogTrainCars: View {
     let stripe: Color
     let cars: Int
     let size: CGSize
+    var silhouette = false
 
     var body: some View {
         let count = max(1, cars)
@@ -360,28 +365,31 @@ private struct CatalogTrainCars: View {
     private func car(width: CGFloat, height: CGFloat, isFront: Bool) -> some View {
         let shape = UnevenRoundedRectangle(cornerRadii: .init(topLeading: 3, bottomLeading: 3, bottomTrailing: 3,
                                                                topTrailing: isFront ? height * 0.6 : 3), style: .continuous)
+        // A silhouette is one flat colour all over.
+        let flat: Color? = silhouette ? Theme.textSecondary : nil
+        let ink = flat ?? Palette.ink
         return shape
-            .fill(Palette.markerFill)
+            .fill(flat ?? Palette.markerFill)
             .overlay(alignment: .bottom) {
-                Rectangle().fill(stripe).frame(height: height * 0.14).padding(.bottom, height * 0.2)
+                Rectangle().fill(flat ?? stripe).frame(height: height * 0.14).padding(.bottom, height * 0.2)
             }
             .overlay(alignment: .topLeading) {
                 HStack(spacing: height * 0.25) {
                     ForEach(0..<RollingStockCatalog.sideWindows(width: width, height: height), id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 1).fill(Palette.ink).frame(width: height * 0.32, height: height * 0.28)
+                        RoundedRectangle(cornerRadius: 1).fill(ink).frame(width: height * 0.32, height: height * 0.28)
                     }
                 }
                 .padding(.top, height * 0.2)
                 .padding(.leading, height * 0.25)
             }
             .clipShape(shape)
-            .overlay(shape.strokeBorder(Palette.ink, lineWidth: 1.5))
+            .overlay(shape.strokeBorder(ink, lineWidth: 1.5))
             .frame(width: width, height: height)
             .overlay(alignment: .bottom) {
                 HStack {
-                    Circle().fill(Palette.ink).frame(width: height * 0.2)
+                    Circle().fill(ink).frame(width: height * 0.2)
                     Spacer()
-                    Circle().fill(Palette.ink).frame(width: height * 0.2)
+                    Circle().fill(ink).frame(width: height * 0.2)
                 }
                 .padding(.horizontal, width * 0.15)
                 .offset(y: height * 0.12)
