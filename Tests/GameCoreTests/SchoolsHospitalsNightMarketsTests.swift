@@ -102,6 +102,10 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         ])
         let station = try world.buildStation(named: "S", at: PlanPoint(x: 63_488, y: 43_008))
         if let kind {
+            // Decision 689: a sight is built only where tourists come.
+            if kind.isSight {
+                world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "x", englishName: "x", point: PlanPoint(x: 120_000, y: 2_000), kind: .town, baseStars: 300)])
+            }
             // 13,008 units (203 m) from the west home, 53,968 (843 m) from the east.
             try world.placeBuilding(kind, at: PlanPoint(x: 30_000, y: 43_008))
         }

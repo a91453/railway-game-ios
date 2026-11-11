@@ -34,9 +34,9 @@ final class LocalizationTests: XCTestCase {
             .buildingOverlaps(PlacedBuildingID(rawValue: 2)), .buildingOnTrack(.edge(3)), .buildingOnStation(StationID(rawValue: 1)),
             .unknownPlacedBuilding(PlacedBuildingID(rawValue: 4)), .invalidZoneArea,
             .invalidTerrain, .onWater(row: 3, column: 4), .needsShore, .onSteepSlope(row: 5, column: 6),
-            .museumAlreadyBuilt(PlacedBuildingID(rawValue: 4)),
+            .museumAlreadyBuilt(PlacedBuildingID(rawValue: 4)), .sightNeedsTourism,
         ]
-        XCTAssertEqual(Set(errors).count, 57, "one of every case")
+        XCTAssertEqual(Set(errors).count, 58, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")

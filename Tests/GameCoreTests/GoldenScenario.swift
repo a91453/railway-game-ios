@@ -1390,6 +1390,9 @@ extension StepOutcome: Codable {
         // Decision 684 (no fixture uses it; the golden schema is unchanged).
         case "museumAlreadyBuilt":
             self = .rejected(.museumAlreadyBuilt(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building))))
+        // Decision 689 (no fixture uses it; the golden schema is unchanged).
+        case "sightNeedsTourism":
+            self = .rejected(.sightNeedsTourism)
         case "onWater":
             self = try .rejected(.onWater(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
         // Schema 69 (decision 174).
@@ -1630,6 +1633,8 @@ extension StepOutcome: Codable {
         case .rejected(.museumAlreadyBuilt(let id)):
             try container.encode("museumAlreadyBuilt", forKey: .result)
             try container.encode(id.rawValue, forKey: .building)
+        case .rejected(.sightNeedsTourism):
+            try container.encode("sightNeedsTourism", forKey: .result)
         case .rejected(.onSteepSlope(let row, let column)):
             try container.encode("onSteepSlope", forKey: .result)
             try container.encode(row, forKey: .row)

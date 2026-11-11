@@ -86,6 +86,30 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertFalse(String(decoding: old, as: UTF8.self).contains("look"), "an edit of the first look is written as before")
     }
 
+    /// Review L17-1, decision 689: a world with no tourism (the
+    /// challenges, the tutorial) does not list the company's sights, and a
+    /// sight chosen all the same is refused in words for the player; a
+    /// world with tourism lists every kind.
+    func testAWorldWithNoTourismDoesNotOfferTheSights() throws {
+        let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .traditionalChinese)
+        XCTAssertNil(session.world.tourism)
+        XCTAssertEqual(session.buildingKindsOffered, [.house, .shop, .office, .wharf, .marina, .departmentStore, .hotel, .amusementPark, .park, .school, .hospital])
+        for challenge in Challenge.sandbox {
+            let offered = GameSession(world: GameWorld.newGame(challenge: challenge, eventSeed: 7), language: .english).buildingKindsOffered
+            XCTAssertFalse(offered.contains(where: \.isSight), challenge.id)
+        }
+        let before = session.world
+        session.buildingKind = .railwayMuseum
+        XCTAssertFalse(session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000)))
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "這張地圖沒有觀光客，廟、夜市和鐵道博物館不會有人來。"))
+        XCTAssertEqual(session.world, before)
+        XCTAssertEqual(GameError.sightNeedsTourism.playerMessage(in: .english), "No tourists come to this map, so a temple, a night market or a railway museum would have no visitors.")
+
+        var world = try makeWorld(width: 20_480, height: 20_480)
+        world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "x", englishName: "x", point: PlanPoint(x: 18_000, y: 2_000), kind: .town, baseStars: 300)])
+        XCTAssertEqual(GameSession(world: world, language: .english).buildingKindsOffered, PlacedBuildingKind.allCases)
+    }
+
     func testTheBuildingToolReadsInChinese() throws {
         let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .traditionalChinese)
         XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公大樓", "漁人碼頭", "遊艇港", "百貨公司", "飯店", "遊樂園", "公園", "廟", "學校", "醫院", "夜市", "鐵道博物館"])
