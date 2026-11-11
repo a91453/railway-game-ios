@@ -7,6 +7,8 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 
 遊戲的 3D 是自己寫的 Metal（`RailwayGameApp/Views/Map3D/Map3DMetalView.swift`、`Map3DShaders.metal`）。列車不是貼圖模型，是 `Sources/GamePresentation` 裡的 Swift 配方，輸出三角形：**一個三角形一個顏色**（頂點色）、塗裝帶用 alpha、發光用旗標。沒有貼圖、沒有 UV、沒有 Blender 那一步。網頁版 `Web/CityView/src/world/trains.js` 的做法在最後的附錄，只在改網頁版時讀。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 ## 1. 先讀什麼
 
 | 要做什麼 | 讀 |

@@ -15,7 +15,7 @@ landmarks={
  ('thsr_sched','桃園'):'hsrTaoyuan',('thsr_sched','新竹'):'hsrHsinchu',('thsr_sched','台南'):'hsrTainan',
  ('thsr_sched','南港'):'nangang',('thsr_sched','板橋'):'banqiao',('thsr_sched','台北'):'taipei',('thsr_sched','左營'):'zuoying',
  ('tra_sched','集集'):'timber',('tra_sched','車埕'):'timber',('tra_sched','菁桐'):'timber',
- ('tra_sched','十分'):'heritage',('tra_sched','平溪'):'heritage',('tra_sched','追分'):'heritage',
+ ('tra_sched','十分'):'heritage',('tra_sched','平溪'):'heritage',('tra_sched','追分'):'coastTimber',
  ('tra_sched','日南'):'heritage',('tra_sched','保安'):'heritage',('tra_sched','山佳'):'heritage',
  ('afr_sched','阿里山'):'timber',('afr_sched','奮起湖'):'timber',('afr_sched','北門'):'timber',
  ('krtc','美麗島'):'formosa',('krtc','中央公園'):'centralPark',

@@ -7,6 +7,8 @@ description: 公共建築、室內家具、台式廟宇與市場的原生 3D 配
 
 先讀 CLAUDE.md、art-style、station-kit 與工作登記 #1579。只延伸 Map3DCivicKit*.swift、tools/civic-kit、本skill、對應測試及文件；不要改既有車站、地圖放置或商店街。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 48件：building12、furniture24、culture12；4個組景。內部 x前/y上/z右；輸出模型與connector是native x前/y左/z上，公尺。Map3DCivicKit.model(for:) 按需建置；Map3DModelPack(civicKit:) 不自動加入常駐standard。
 
 新素材必須改輪廓、比例與組件布局，使用既有霧面色票。私有來源只取建模方法，不能原樣複製factory、模型、貼圖、標誌或文字；來源SHA與改造對照只放私有庫。不得把私有原始資產送外部生成服務。

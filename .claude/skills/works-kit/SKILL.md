@@ -7,6 +7,8 @@ description: 工程車、貨運機廠、動物與自然景物的原生 3D 配方
 
 先讀 CLAUDE.md、art-style、station-kit 與工作登記 #231。只在自己的 `Map3DWorksKit*.swift`／`tools/works-kit/` 範圍延伸；不要順手改地圖、StationKit、列車、321 車站接入或 322 商店街。
 
+**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+
 ## 配方
 
 - `Map3DWorksKit.swift`：48 種素材，四類各12；原生 API、安裝面與接點、按需模型包。

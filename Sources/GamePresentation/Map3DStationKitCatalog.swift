@@ -499,7 +499,7 @@ extension Map3DStationKit {
         Station(id:"station-tra_sched-a71c6160",name:"貢寮",system:"tra_sched",latitude:25.021757,longitude:121.908813,lines:["宜蘭線"],profile:.halt,tier:4,seed:2803655008,planned:false,isLandmark:false),
         Station(id:"station-tra_sched-8e06dfd5",name:"路竹",system:"tra_sched",latitude:22.85384,longitude:120.266599,lines:["縱貫線南段"],profile:.regional,tier:3,seed:2382815189,planned:false,isLandmark:false),
         Station(id:"station-tra_sched-49f63912",name:"車埕",system:"tra_sched",latitude:23.83263,longitude:120.86572,lines:["JIJI"],profile:.timber,tier:4,seed:1240873234,planned:false,isLandmark:true),
-        Station(id:"station-tra_sched-3acfda8b",name:"追分",system:"tra_sched",latitude:24.120181,longitude:120.57011,lines:["chengzhui","海線"],profile:.heritage,tier:3,seed:986700427,planned:false,isLandmark:true),
+        Station(id:"station-tra_sched-3acfda8b",name:"追分",system:"tra_sched",latitude:24.120181,longitude:120.57011,lines:["chengzhui","海線"],profile:.coastTimber,tier:3,seed:986700427,planned:false,isLandmark:true),
         Station(id:"station-tra_sched-e6a5764e",name:"通霄",system:"tra_sched",latitude:24.491744,longitude:120.67838,lines:["海線"],profile:.regional,tier:3,seed:3869603406,planned:false,isLandmark:false),
         Station(id:"station-tra_sched-e0a760e5",name:"造橋",system:"tra_sched",latitude:24.641728,longitude:120.867444,lines:["山線"],profile:.halt,tier:4,seed:3769065701,planned:false,isLandmark:false),
         Station(id:"station-tra_sched-05eb87cb",name:"金崙",system:"tra_sched",latitude:22.531328,longitude:120.9675,lines:["南迴線"],profile:.regional,tier:3,seed:99321803,planned:false,isLandmark:false),
