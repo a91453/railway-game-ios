@@ -28,7 +28,7 @@ export class NativeRenderer {
   const d=new DataView(buffer),magic=String.fromCharCode(...new Uint8Array(buffer,0,4));
   if(magic!=='M3DM'||d.getUint16(4,true)!==1||d.getUint16(6,true)!==0)throw Error('無效的原生模型。');
   const count=d.getUint32(8,true),length=d.getUint32(12,true),start=16+Math.ceil(length/4)*4;
-  if(count<1||count>15000||start+count*52!==buffer.byteLength)throw Error('原生模型大小不符。');
+  if(count<1||count>(this.maximumTriangles||15000)||start+count*52!==buffer.byteLength)throw Error('原生模型大小不符。');
   const data=new Float32Array(count*3*10),low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];
   for(let i=0;i<count;i++){
    const at=start+i*52,flags=d.getUint32(at,true);if(flags&~1)throw Error('不支援的三角形旗標。');const points=[];

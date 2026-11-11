@@ -5,12 +5,14 @@
 // same shots. .claude/skills/model-look/SKILL.md says how to read it.
 //
 //   node tools/model-look/shoot.mjs --model new.m3dmodel [--before old.m3dmodel]
-//     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--labels 改前,改後] [--title text] --out sheet.jpg
+//     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--labels 改前,改後] [--title text] [--max-triangles n] --out sheet.jpg
 //
 // heading: degrees round the model from its front (native +x), towards its
 // left (+y); elevation: degrees above the ground. --focus: the box (centre
 // and half sizes, native metres) parts two and three frame, when the model
-// carries a forecourt or platforms that would make its building small. The drawing is
+// carries a forecourt or platforms that would make its building small.
+// --max-triangles: for a scene of several models (a museum with its exhibits),
+// more than the 15,000 one native model may have. The drawing is
 // tools/station-kit/renderer.js (orthographic, the game's flat model light).
 // Playwright: `playwright` on NODE_PATH, or PLAYWRIGHT_MODULE=<its folder>;
 // CHROMIUM_PATH names a browser other than Playwright's own.
@@ -36,8 +38,8 @@ try{
  const page=await browser.newPage({viewport:{width:800,height:600},deviceScaleFactor:1});
  page.on('pageerror',e=>{throw e;});
  await page.goto('http://127.0.0.1:'+server.address().port+'/');
- await page.evaluate(async({title,photos,hasBefore,focus,labels})=>{
-  const {NativeRenderer}=await import('/renderer.js'),renderer=new NativeRenderer(document.getElementById('canvas'));
+ await page.evaluate(async({title,photos,hasBefore,focus,labels,most})=>{
+  const {NativeRenderer}=await import('/renderer.js'),renderer=new NativeRenderer(document.getElementById('canvas'));if(most)renderer.maximumTriangles=most;
   const models={};for(const name of hasBefore?['before','after']:['after'])models[name]=await(await fetch('/'+name+'.m3dmodel')).arrayBuffer();
   const rad=d=>d*Math.PI/180;
   // From the model towards the camera: `tilt` from straight down, as the game's camera counts it.
@@ -71,7 +73,7 @@ try{
    const cell=add('div','',row);cell.className='cell photo';const image=add('img','',cell);image.src=photo.src;add('p',photo.caption,cell);
    for(const name of names){const c=add('div','',row);c.className='cell';const w=names.length>1?250:380;const m=shot(name,photo.heading,90-photo.elevation,w,Math.round(w*0.7));m.className='big';c.append(m);add('p',label[name],c);}}
   await Promise.all([...document.images].map(i=>i.decode()));
- },{title:option.title||'model look',photos,hasBefore:!!option.before,focus:option.focus?option.focus.split(',').map(Number):null,labels:option.labels?option.labels.split(','):null});
+ },{title:option.title||'model look',photos,hasBefore:!!option.before,focus:option.focus?option.focus.split(',').map(Number):null,labels:option.labels?option.labels.split(','):null,most:+option['max-triangles']||0});
  writeFileSync(resolve(option.out),await (await page.$('#sheet')).screenshot({type:'jpeg',quality:86}));
  console.log('Wrote '+option.out+' (800 px wide)');
 }finally{await browser.close();server.close();}

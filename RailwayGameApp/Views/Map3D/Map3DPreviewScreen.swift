@@ -1054,6 +1054,9 @@ struct Map3DSceneKey: Hashable {
     /// so a scene is built again when the 3D look starts or stops drawing
     /// them.
     let facades: Bool
+    /// Decision 696: the railway museum's exhibits, each new one with its
+    /// track or shed.
+    let exhibits: Int
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil,
          facades: Bool = Map3DQuality.scenesKeepFacades) {
@@ -1073,6 +1076,7 @@ struct Map3DSceneKey: Hashable {
         roads = world.roads?.roadCellCount ?? 0
         ownRoads = world.roads?.built ?? []
         expansions = Map3DStationKit.expansionSignature(of: world)
+        exhibits = Map3DRailwayMuseum.shown(in: world)
     }
 
     /// Decision 517 續 (PR 3b): whether `other` differs from this only in
@@ -1081,7 +1085,7 @@ struct Map3DSceneKey: Hashable {
         self != other && hasHeights == other.hasHeights && hasRailways == other.hasRailways && focus == other.focus
             && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
             && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
-            && facades == other.facades
+            && facades == other.facades && exhibits == other.exhibits
     }
 }
 
@@ -1120,6 +1124,10 @@ final class Map3DTrainFeed {
     /// scene, laid again when the routes or the scene change.
     private var ferries: Map3DFerries?
     private var ferriesScene: (x: Double, y: Double)?
+    /// Decision 696: the railway museum's exhibits laid in the scene, laid
+    /// again when they or the scene change.
+    private var museum: Map3DRailwayMuseum.Laid?
+    private var museumKey: (exhibits: [TrainType], x: Double, y: Double)?
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 672: the train the camera follows, whose lamps light its
@@ -1265,6 +1273,15 @@ final class Map3DTrainFeed {
             let ahead = followedFerry.flatMap { laid.pose(of: $0, second: second)?.forward }
             frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel,
                                           following: followedFerry, ahead: ahead).instances
+        }
+        // Decision 696: and the railway museum's exhibits on its display
+        // tracks.
+        if let world = busWorld, world.railwayMuseum != nil {
+            if museumKey?.exhibits != world.railwayMuseum?.exhibits || museumKey?.x != scene.originX || museumKey?.y != scene.originY {
+                museum = Map3DRailwayMuseum.Laid(world: world, scene: scene)
+                museumKey = (world.railwayMuseum?.exhibits ?? [], scene.originX, scene.originY)
+            }
+            museum?.add(to: &frame, pack: models, eye: eye, reach: reach)
         }
         return frame
     }
