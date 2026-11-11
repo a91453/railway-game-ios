@@ -16,6 +16,8 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | 建物 | `#262C57` | `#ECEEF6` |
 | 燈光／車站 | `#FFC86B` | `#FFC86B` |
 
+主畫面的 App 圖示是分層檔 `RailwayGameApp/Resources/AppIcon.icon`（決策 680），各層就用上表的顏色；透明與染色樣式裡建物用底色的淺色 `#ECEEF6`、窗用 `#262C57`。平面的定稿在 `BrandMark.imageset`。
+
 ## Theme 色票
 
 對比度用 WCAG 2 公式計算。文字色同時對 `background` 和 `panel` 檢查，表中列較差的值。
