@@ -939,7 +939,22 @@ enum TestBuild {
         #if DEBUG
         return true
         #else
-        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        return (Bundle.main as any ReceiptLocating).receiptURL?.lastPathComponent == "sandboxReceipt"
         #endif
     }()
+}
+
+/// Decision 676: where the bundle's receipt is, asked through a protocol.
+/// `appStoreReceiptURL` is deprecated from iOS 18 for `AppTransaction`,
+/// which answers only asynchronously, and ``TestBuild/isTest`` is read
+/// while views are built. It still answers, so it stays until the test
+/// switch gives way to StoreKit (decision 338); asked directly, with a
+/// minimum of iOS 26, the deprecation fails the Release build.
+private protocol ReceiptLocating {
+    var receiptURL: URL? { get }
+}
+
+extension Bundle: ReceiptLocating {
+    @available(iOS, deprecated: 18.0, message: "Decision 676: see ReceiptLocating")
+    fileprivate var receiptURL: URL? { appStoreReceiptURL }
 }
