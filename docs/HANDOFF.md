@@ -571,7 +571,7 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **第 60 任接手（2026-11-11 02:30 UTC＝台灣 10:30，session_01YGNNumCi7AYjpiS4ntJZjK，作者在 claude.ai 開，第 0 層）**
-- **CITY-TITLE（決策 683，`claude/city-title-683`，session_01YGNNupYoAuDo7yAXiwVvbL，壓縮 1 次）**：城市的規模稱號（九級）與類型（八種）放在「目標」最下面，升級時新聞、狀態列與原有音效；只動 GamePresentation 與面板。沒做、留給下一張單的（[決策 683](decisions/683.md)「下一步」）：成就（要作者在 App Store Connect 加 Game Center 成就）、徽章與升級卡片（要美術審）、觀光類型接決策 174 的遊客、高雄與新竹的類型不準（`LandImport` 的工作資料）。
+- **CITY-TITLE（決策 683，`claude/city-title-683`，session_01YGNNupYoAuDo7yAXiwVvbL，壓縮 1 次）**：城市的規模稱號（九級）與類型（八種）放在「目標」最下面，升級時新聞、狀態列與原有音效；只動 GamePresentation 與面板。沒做、留給下一張單的（[決策 683](decisions/683.md)「下一步」）：成就（要作者在 App Store Connect 加 Game Center 成就）、徽章與升級卡片（要美術審）、觀光類型接決策 174 的遊客、高雄與新竹的類型不準（`LandImport` 的工作資料）、外國地圖的類型基準（作者 11-11 定：用各國通用的一份）。
 - **HEALTH-124（第 124 版後健檢，2026-11-11）：CONCERNS**，報告 [`research/HEALTH_124_2026-11-11.md`](research/HEALTH_124_2026-11-11.md)。機捷新局預設第二天沒發 5/333（決策 666 的數字對）、改建後 9；「買了舊線不改建」從 2 變 7 班；讓路的空車仍來回跳（兩天 63 次、一列連讓 14 站）。沒有清不掉的死結，逐分與最高倍速一致。建議派修的項目在報告第 6 節。
 - 照下面「第 59 任交第 60 任」（含 11-11 補充）接手；已在 #1579 登記，第 59 任停手、可以封存。
 - 接手時 main 84cf8864。開著的 PR：遊戲庫只有 draft #2028（作者 Mac 本機的 session 開的，最低版本升到 iOS 26，決策 676），**等作者決定要不要合**；assets #73（TRELLIS 授權）仍等作者在 Mac 上驗證；reference 沒有。沒有在做的實作 session，沒有排程。
