@@ -9,7 +9,7 @@ description: 這個遊戲的畫風與畫圖流程。畫或改任何圖時先讀�
 
 ## 1. 畫風
 
-- **跟 App 圖示同一個樣子**（`RailwayGameApp/Resources/Assets.xcassets/AppIcon.appiconset/`）：扁平、實心色塊、粗的藏青外框、圓角；不用漸層、陰影、濾鏡、寫實的質感。
+- **跟 App 圖示同一個樣子**（平面的定稿在 `RailwayGameApp/Resources/Assets.xcassets/BrandMark.imageset/`；主畫面的分層圖示是 `RailwayGameApp/Resources/AppIcon.icon`，它的玻璃邊緣與陰影是系統加的，不是畫風，決策 680）：扁平、實心色塊、粗的藏青外框、圓角；不用漸層、陰影、濾鏡、寫實的質感。
 - **顏色只從現有的色票取**，不在 View 裡寫新的色碼：
   - 介面：`Theme`（`RailwayGameApp/Views/Theme.swift`）；
   - 地圖：`Palette`（`Palette.swift`）；

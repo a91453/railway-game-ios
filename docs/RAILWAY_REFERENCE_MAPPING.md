@@ -1284,6 +1284,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/reference_snapshot/station-icon-waiting__q_*.png`、`hsr-train-icons/icons8-get-on-bus-100.png` | `MapGlyphCrowd`（擁擠的泡泡） | 只取用途，重畫；icons8 要標示出處，沒有帶進來 |
 | `MapBuilder/reference_snapshot/assets/map/station.png`、`transfer.png` | `MapGlyphTrain`（車站徽章裡）；轉乘照舊是決策 84 的白線黑框 | 只取用途，重畫 |
 | `Website/site/assets/app-icon-light.png`、`app-icon-dark.png` | 圖示的畫風：實心、粗線、圓角；顏色經 `Theme`／`Palette` | 取畫風 |
+| `Website/site/assets/favicon.svg`（App 圖示淺色版的 SVG） | `RailwayGameApp/Resources/AppIcon.icon` 的五層（決策 680） | 同一個圖示的幾何，換算到 1024 格、拆成層；遮罩與筆畫算成實心外形 |
 | （參考沒有） | 客滿、死結警告、漁人碼頭、遊艇港、辦公的圖示；`MapGlyph`；泡泡的圓形底 | gap → 原生 |
 
 外部只看做法，沒有程式碼或素材。

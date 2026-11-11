@@ -4,7 +4,7 @@
 
 App 顯示名稱由 `project.yml` 的英文預設值與 `Resources/{en,zh-Hant}.lproj/InfoPlist.strings` 設定；畫面字串在 String Catalog 與 GamePresentation 的文字裡（繁體中文與英文，決策 38）。日文在 #171 移除。內部 `RailwayGame` target、scheme、module、Bundle ID 與存檔識別碼保留。
 
-AppIcon 使用定稿 package 的兩張原始 1024×1024 PNG：Any／Default 為淺色版（米白背景），Dark 為深色原稿。iOS／iPadOS 18 以上依主畫面 icon appearance 選擇；較早版本使用預設淺色版。沒有自訂 Tinted variant，由系統生成；SVG 與 preview 不放入 App bundle。
+AppIcon 是分層的圖示檔 `RailwayGameApp/Resources/AppIcon.icon`（決策 680）：定稿圖示的幾何拆成軌道、建物、黃點三組，淺色、深色、透明、染色四種主畫面樣式由系統從同一份檔案畫出。定稿的兩張平面 PNG 留在 `BrandMark.imageset`，App 裡的品牌圖照舊用它。
 
 ## 目前狀態
 

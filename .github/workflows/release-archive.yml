@@ -9,7 +9,8 @@ name: Release Archive (unsigned)
 #
 # Normally started by hand: Actions -> Release Archive (unsigned) -> Run workflow.
 # It also runs on pull requests that change the project settings, the asset
-# catalog (the app icon this job inspects), the localized Info.plist strings,
+# catalog, the layered app icon beside it (the app icon this job inspects),
+# the localized Info.plist strings,
 # the app's entry point (where the Debug-only launch arguments are) or this
 # workflow, and every night on main, which catches whatever else would break a
 # Release build.
@@ -48,6 +49,8 @@ on:
     paths:
       - RailwayGameApp/project.yml
       - RailwayGameApp/Resources/Assets.xcassets/**
+      # The layered app icon (decision 680) is a file beside the catalog.
+      - RailwayGameApp/Resources/AppIcon.icon/**
       - RailwayGameApp/Resources/*.lproj/**
       - RailwayGameApp/Resources/Localizable.xcstrings
       - RailwayGameApp/Resources/PrivacyInfo.xcprivacy

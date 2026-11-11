@@ -282,7 +282,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 - **可重現**：同一個 checkout 重新產生、不同路徑或使用者重新產生，輸出完全相同；Xcode Cloud 寫入的 `manifest.json` 與 `Package.resolved` 在重新產生時保留。限制：checkout 資料夾名稱會寫進專案（本地套件的顯示名稱），所以要在名為 `railway-game-ios` 的資料夾（`git clone` 預設）中產生。
 - **漂移檢查**：`ios-build.yml` 以固定版本、checksum 驗證的 XcodeGen 重新產生，任何差異都失敗並附上預期專案的 artifact；另外確認 shared scheme 已提交、`xcodebuild -describeAllArchivableProducts`（Xcode Cloud 用來找產品的指令）列得出 App。
 - **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 Along the Line（繁體中文／日文：沿線）；`MARKETING_VERSION` 0.5.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `-demo-layout` 啟動參數不會編進 Release（示範地圖本身從 Stage C4 起由開始畫面開啟，Release 也有）。
-- **App Icon**：作者提供的正式 Light／Dark 定稿，兩張原始 1024×1024 PNG。`AppIcon.appiconset` 的 Any／Default 指向 `along-the-line-app-icon-light.png`，Dark 指向 `along-the-line-app-icon-dark.png`；不裁切、不改色、不加圓角，由 iOS 套用 mask，Tinted 由系統生成。`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`（XcodeGen 的 iOS App 預設值）。
+- **App Icon**：分層的圖示檔 `Resources/AppIcon.icon`（2026-11-11，決策 680；取代原本 `AppIcon.appiconset` 的 Light／Dark 兩張 1024×1024 PNG）。造型與顏色是作者提供的正式定稿，只拆成層；圓角、玻璃邊緣、陰影與透明／染色樣式由系統畫。`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`（XcodeGen 的 iOS App 預設值）。
 - **未簽章 Release Archive**：`release-archive.yml` 以 Release、`generic/platform=iOS`、`-disableAutomaticPackageResolution`、`CODE_SIGNING_ALLOWED=NO` 封存並檢查 Info.plist、圖示、架構與 Release 不含示範配置。它**不能**證明簽章、上傳或 TestFlight；`CODE_SIGNING_ALLOWED=NO` 只用在這個 CI 檢查，不用於任何真正的發佈。
 
 ## 官方來源（查閱日期 2026-09-28）
