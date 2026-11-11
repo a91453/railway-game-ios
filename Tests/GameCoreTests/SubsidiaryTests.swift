@@ -256,9 +256,9 @@ final class SubsidiaryTests: XCTestCase {
     // MARK: - Selling
 
     /// A sale brings the larger of the property's price and six times the
-    /// profit of the last twelve months, the latter no more than building
-    /// it anew costs (decision 692); a loss-maker's business is worth
-    /// nothing.
+    /// profit of the last twelve months, the latter no more than what it
+    /// cost or building it anew costs (decision 692); a loss-maker's
+    /// business is worth nothing.
     func testASaleBringsSixTimesTheYearsProfitWhenThatIsMore() throws {
         var world = try makeWorld()
         let store = try place(.departmentStore, 0, 3_200, in: &world)
@@ -268,11 +268,13 @@ final class SubsidiaryTests: XCTestCase {
         let index = try XCTUnwrap(world.placedBuildings.firstIndex { $0.id == store.id })
         world.placedBuildings[index].books.record(sales: 900_000_000, cost: 100_000_000, day: 5)
         // Decision 692: six times its 800,000,000 would be 4,800,000,000,
-        // more than building the store anew costs (its building at full
-        // cost and the land's right now), so it sells for that. Before
-        // decision 692 this was 4,800,000,000.
+        // more than the store cost and than building it anew costs (its
+        // building at full cost and the land's right now), so it sells
+        // for the larger of those. Before decision 692 this was
+        // 4,800,000,000.
         let quote = try XCTUnwrap(world.saleQuote(of: store.id))
-        let anew = store.buildingCost + property.landRight
+        let anew = max(store.cost, store.buildingCost + property.landRight)
+        XCTAssertGreaterThanOrEqual(anew, store.cost)
         XCTAssertLessThan(anew, Money(6 * 800_000_000))
         XCTAssertTrue(quote.businessCapped)
         XCTAssertEqual(quote.businessValue, anew)

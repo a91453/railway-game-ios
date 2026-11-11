@@ -140,7 +140,7 @@ final class SubsidiarySessionTests: XCTestCase {
         world.setEconomyMode(.management)
         let store = try world.placeBuilding(.departmentStore, at: PlanPoint(x: 10_000, y: 10_000))
         record(&world, store.id, sales: 900_000_000, cost: 100_000_000, day: 3)
-        // Its business sells for what building it anew costs.
+        // Its business sells for at least what was paid.
         let price = try XCTUnwrap(world.saleQuote(of: store.id)).price
         XCTAssertGreaterThanOrEqual(price, store.cost)
         let tenths = (price.amount - store.cost.amount) * 1_000 / store.cost.amount
@@ -176,12 +176,12 @@ final class SubsidiarySessionTests: XCTestCase {
         session.selectTool(.building)
         session.buildingMode = .sell
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 10_000, y: 10_000), reach: 400))
-        // Decision 692: six times its profit is more than building it
-        // anew costs, so it sells for that.
+        // Decision 692: six times its profit is more than it cost and
+        // than building it anew costs, so it sells for the larger.
         let quote = try XCTUnwrap(session.salePreview?.quote)
         XCTAssertTrue(quote.businessCapped)
-        let anew = (store.buildingCost + quote.landRight).moneyText
-        XCTAssertTrue(session.salePreviewLines.contains("Business: trading well, it sells for what building it anew costs now = \(anew)"), "\(session.salePreviewLines)")
+        let anew = max(store.cost, store.buildingCost + quote.landRight).moneyText
+        XCTAssertTrue(session.salePreviewLines.contains("Business: trading well, it sells for at least what you paid = \(anew)"), "\(session.salePreviewLines)")
         XCTAssertTrue(session.salePreviewLines.contains("Price \(anew) · on the books at \(quote.bookValue.moneyText)"))
         XCTAssertTrue(session.salePreviewLines.contains("Paid \(store.cost.moneyText)\(session.changeText(from: store.cost, to: quote.price))"), "\(session.salePreviewLines)")
         // One that earns less shows the multiple.

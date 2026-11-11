@@ -55,11 +55,11 @@ extension GameSession {
                 "Building: book value \(quote.buildingBookValue.moneyText) × \(factor)% (under half full) = \(quote.building.moneyText)",
                 "建物：帳面價值 \(quote.buildingBookValue.moneyText) × \(factor)%（入住未過半）= \(quote.building.moneyText)"
             )
-        // Decision 692: a business that earns more than building it anew
-        // costs sells for that.
+        // Decision 692: a business that earns more than it cost (or than
+        // building it anew costs now) sells for that.
         let business = quote.businessValue > quote.propertyPrice ? [quote.businessCapped ? language.text(
-            "Business: trading well, it sells for what building it anew costs now = \(quote.businessValue.moneyText)",
-            "營業價值：生意好，照現在重蓋一棟的價錢 = \(quote.businessValue.moneyText)"
+            "Business: trading well, it sells for at least what you paid = \(quote.businessValue.moneyText)",
+            "營業價值：生意好，至少賣回買價 = \(quote.businessValue.moneyText)"
         ) : language.text(
             "Business: \(SubsidiaryRules.saleProfitMultiple) × its profit of the last 12 months = \(quote.businessValue.moneyText)",
             "營業價值：近 12 個月營業利益 × \(SubsidiaryRules.saleProfitMultiple) = \(quote.businessValue.moneyText)"
