@@ -411,6 +411,11 @@
     - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
     - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
     - 派工單和 #1041 的登記寫上用了哪個模型。
+    - **2026-11-11 起，Fable 5.2 開放期間以它為主**（作者：「Fable 模型只有最近5.2開放的時候能依難易度選擇」「之後新模型在看當下的決定」「但因為有重置券所以盡量用fable 5.2為主／等用完之後再改其他沒寫」）。下面是第 60 任的理解，不是作者原話：
+      - 現在：實作 session 盡量用 `claude-fable-5-2`（作者有額度重置券）。
+      - 額度用完之後：回到上面的 Opus／Sonnet 照難易度選。什麼時候算用完，由作者說，或 `get_session` 的 `rate_limit_info` 顯示用完。
+      - 之後出了新模型：不自動套用這條，到時候問作者。
+      - 模型名稱照舊只寫在登記處，不寫進 repo。
     - **先拆再選**（作者 2026-11-04：「之前不是要你根據難易度用sonnet或是opus嗎怎麼全部給我opus」）：第 45 任把 DEPOTLINK（鋪機廠自動選路線＋「回報問題」補說明）整件給 Opus，其中補說明只是文字。一件派工裡混了難的和簡單的，把簡單的（文字、照現成寫法的小畫面、workflow）拆成另一個 Sonnet session；派工單寫一句「選這個模型的理由」。「新決策要寫程式」不是一律 Opus：只動 GamePresentation 的小規則、照現成函式就能做的，也可以 Sonnet。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
 
@@ -568,6 +573,11 @@
 - **作者說可以派之前先不派**：第 124 版發版後固定要派的三件事（REVIEW-L16、健檢、CI 量測，§1.1），以及下面「記下、還沒派」的各項。
 - 號碼：決策 676 由 #2028 佔用，**下一個決策 677**；存檔版本與 golden schema 沒動。審查點數 L16 從 #1986 起算，還沒重數。
 - #1579 接手時 2,053 則留言，接近 2,400 則時照「怎麼用這份」開下一個 issue。
+- **11-11 03:45 UTC 補充**：
+  - #2028（決策 676，最低版本 iOS 26）Mac 那邊修好 Release archive 後，作者說「合」，已合併，main 50fdb1df。上面寫的紅燈已經不存在。**下一次 TestFlight 的說明要寫「這一版起需要 iOS 26」**（#2028 沒改 `.github/testflight-whats-new.md`）；發出去後在 TestFlight 版本上確認設定的「測試」區照舊出現（收據的判斷寫法改過，只能在 TestFlight 驗）。
+  - **派出去的**：LIQUIDGLASS session_01YGNNumEw3RtTWpGaNrL7uM（決策 677，作者交辦，派工單原文在 #1579 留言 6785419086 與它的 session 開頭）：App 裡直接寫 `.regularMaterial`／`.thinMaterial` 的浮動控制元件改走 `Theme` 的 `glassBackground`；貼在內容上的不換、PR 逐處寫理由；3D 那幾處集中一個 commit；實機幀數 UNVERIFIED，要請作者實機比較。等級是「既有畫面的小改動」，它自己跑截圖、自己盯 CI，綠了在 #1579 留「可合併」並通知規劃。
+  - 號碼：決策 676 已佔用、677 LIQUIDGLASS 保留，**下一個 678**。
+  - 作者 11-11 講的選模型，已寫進 §1.1「實作 session 照難易度選模型」。
 
 **第 59 任交第 60 任（2026-11-10 約 23:58 UTC＝台灣 11-11 07:58，session_01YGNNuotpQDktgGusuFc8kz，第 0 層，沒壓縮過）**
 - 換手原因：作者說「封存給新 session 接手」。照這段接手；和下面「第 58 任的現況」不同時以這段為準。這段是照 #1579 與開著的 PR 寫的。
