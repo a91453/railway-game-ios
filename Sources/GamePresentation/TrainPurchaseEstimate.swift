@@ -226,6 +226,16 @@ enum TrainPurchaseModel {
     /// The most the completed days "now" is the average of.
     static let historyDays = 7
 
+    /// Whether a completed day that cost `day` dollars to run was run by
+    /// the trains the model costs at `model` dollars a day (review L17-3,
+    /// decision 689): within 15% of it. With the trains and the headway
+    /// the line has now the model's cost is the days' within 3%
+    /// (decision 682), and a train more or fewer on a line of a few moves
+    /// it by far more.
+    static func isOfTheFleet(dayCost day: Double, modelCost model: Double) -> Bool {
+        abs(day - model) * 100 <= model * 15
+    }
+
     /// The passengers a train of `type` with `cars` cars takes at most
     /// (``Train/capacity``).
     static func room(of type: TrainType?, cars: Int) -> Int64 {
@@ -316,9 +326,20 @@ extension GameWorld {
         // Now: the line's own days, or the model's.
         let today = FinanceHistory.floorDay(clock.now)
         let bought = acquisitions.first { $0.line == id }?.day
-        let days = lineDays(id).filter { record in
+        let recent = lineDays(id).filter { record in
             record.day < today && record.tally.departures > 0 && bought.map { record.day > $0 } ?? true
         }.suffix(TrainPurchaseModel.historyDays)
+        // Review L17-3: only the newest days that the trains it has now
+        // ran. "Now" is taken with the model of today's trains
+        // (now + after − before): a day of before trains were added or
+        // the headway changed, or today's purchase not in any day yet,
+        // left the trains just bought out of "now" and of the estimate.
+        // Days of other trains cost other money, so from the first such
+        // day back they are left out, and with none left the model's day
+        // is "now", as for a line with no day of its own.
+        let days = Array(recent.reversed().prefix { record in
+            TrainPurchaseModel.isOfTheFleet(dayCost: Double(record.tally.totalCost.amount) / 100, modelCost: modelBefore.cost)
+        })
         var faresNow = modelBefore.fares, costNow = modelBefore.cost
         var historyFare: Double?
         if !days.isEmpty {
