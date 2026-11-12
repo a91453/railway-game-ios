@@ -1714,3 +1714,17 @@ V 實際放行 → T、U（保證不互穿）
 缺口：**飛機怎麼進場、落地、滑行、後推、起飛**，參考庫沒有；3° 下滑道、約 70 m/s 的進場速度、9° 爬升是公開的一般數字，加減速是本專案定的。
 
 外部專案：沒有用到程式碼。資料是 OpenStreetMap（© OpenStreetMap contributors，ODbL 1.0），資料來源頁「機場與空地」那一筆已含。
+
+## 跟著飛機看、夜間飛機的燈（決策 702）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `OpenWorld/reference_snapshot/play/src/game/maglev-view.js` `applyCamera`（旁邊看的鏡頭，決策 403 續已移植成 `Map3DFollow.View.side`） | `Map3DAircraft.pose(of:)` 轉成 `Map3DFollow.Pose` | 沒有新的鏡頭程式：飛機照渡輪、吊廂的做法交出一個 `Pose`，後方、旁邊、窗三個視角都用既有的。旁邊的距離照機身長放大（`sideLength`） |
+| `Railway/tw3d-reference-clean/source/js/controllers.js` 噴射機的航行燈（左翼尖 `0xff2b2b`、右翼尖 `0x22ff66`、白色閃燈亮 0.08 秒） | `Map3DAircraft.lamps(of:blink:)` 的 `navigationRed`、`navigationGreen` 與閃燈時間 | 顏色與 0.08 秒照用。它是發光的小球；這裡改成決策 617 的光暈（`Map3DGlow.Spot`），位置照決策 698 四型各自的翼尖、尾端 |
+| 同檔 `chaseDistance: 19`、`chaseHeight: 4.6`（玩家開噴射機時的追尾鏡頭） | 未用 | 那是玩家自己開的飛機、貼著機尾；這裡是看整架飛機起降，距離取機身長的 2.3 倍（`Map3DFollow.aircraftScale`） |
+| `Railway/tw3d-reference-clean/source/js/city-flight-shell.js`（城市上空的觀光飛行：噴射機 320 m 高繞圈） | 未用 | 不是機場的起降；這次跟的是決策 699 的航班 |
+| `Ci/reference_snapshot/lib/flight_*`（航班追蹤） | 未用 | 沒有跟隨鏡頭，也沒有機上的燈 |
+
+缺口：**紅色防撞燈（機背、機腹，約一秒閃一次）、落地燈與滑行燈、哪個階段開哪些燈**，參考庫沒有，照一般的慣例自己定；**小機場沒有滑行道資料時怎麼進出機位**（在跑道上掉頭、沿跑道滑回機坪）也是自己寫的。
+
+外部專案：沒有用到程式碼。
