@@ -574,11 +574,11 @@ struct SettingsView: View {
             }
         } header: {
             Text(verbatim: language.text("Airports", "機場"))
+                .task {
+                    if let session { airportDays = session.world.airportDays() }
+                }
         } footer: {
             Text(verbatim: AirCollection.note(in: language))
-        }
-        .task {
-            if let session { airportDays = session.world.airportDays() }
         }
     }
 

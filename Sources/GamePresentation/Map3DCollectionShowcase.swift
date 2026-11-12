@@ -178,10 +178,11 @@ public enum Map3DCollectionShowcase {
             let parked = Map3DAirShowcase.parked(exhibit)
             let shown = parked.indices.contains(focus) ? parked[focus] : parked[0]
             let extent = Map3DAirShowcase.extent(exhibit) ?? (.zero, .zero)
-            // An aircraft is as wide as it is long: the close view stands
-            // back by its length and a little, an airport's by more to
+            // An aircraft is as wide as it is long and only the upper half
+            // of the screen is clear of the buttons: the close view stands
+            // back by nearly twice its length, an airport's far enough to
             // take in the bridge or the terminal behind.
-            let close = shown.length * (exhibit == .aircraft ? 1.25 : 1.6)
+            let close = shown.length * (exhibit == .aircraft ? 1.8 : 1.6)
             var layout = Layout(exhibit: exhibit, pieces: [], ropes: [], focus: shown.middle + Map3DPoint(0, shown.height * 0.4, 0),
                                 focusLength: max(shown.length, shown.wingspan) * (exhibit == .aircraft ? 1 : 1.5),
                                 closeDistance: min(max(close, 18), Map3DShowcase.farthest), low: extent.low, high: extent.high)
@@ -284,8 +285,8 @@ public enum Map3DCollectionShowcase {
         // Half the screen's height at the target, and the part of it the
         // buttons leave: the target goes that far below what is shown.
         // Decision 701: an aircraft is as wide as it is long, so it is
-        // raised all the way into the part the buttons leave.
-        let raise = layout.exhibit.isAir ? coveredBelow * 0.9 : coveredBelow / 2
+        // raised to the middle of the part the buttons leave.
+        let raise = layout.exhibit.isAir ? Float(0.5) : coveredBelow / 2
         switch view {
         case .closeUp:
             camera.heading = layout.closeHeading
@@ -295,7 +296,10 @@ public enum Map3DCollectionShowcase {
         case .side:
             camera.heading = layout.sideHeading
             camera.pitch = 82 * .pi / 180
-            camera.distance = min(max(layout.focusLength / 2 * 1.15 / halfWide, 12), Map3DShowcase.farthest)
+            // Decision 701: an aircraft's tail stands a third of its length
+            // high, more than the clear part of a wide screen shows at the
+            // distance its length alone asks for.
+            camera.distance = min(max(layout.focusLength / 2 * (layout.exhibit == .aircraft ? 1.7 : 1.15) / halfWide, 12), Map3DShowcase.farthest)
             camera.target = layout.focus - Map3DPoint(0, raise * camera.distance * halfTall, 0)
         case .overhead:
             // Looking nearly straight down with +z up the screen (or +x:
