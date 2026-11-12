@@ -598,13 +598,17 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
-**第 63 任的現況（2026-11-12 12:00 UTC＝台灣 20:00，session_01YGNNuq9euTFvwq3qUD8j27，第 3 層，壓縮 0 次；第 3 次後換手，下一任第 4 層）**
+**第 63 任的現況（2026-11-12 12:00 UTC＝台灣 20:00，session_01YGNNuq9euTFvwq3qUD8j27，第 3 層，壓縮 1 次；第 3 次後換手，下一任第 4 層）**
 - 照 #1579 與 PR 寫的；和下面「第 62 任交第 63 任」不同時以這段為準。作者交代照舊，再加 §1.2 的兩條（作者先按發版、規劃才開 full lane；規劃自己的文件 PR 可以自己合）。
 - **0.6.0 (127) 已發**（作者 10:23 UTC 自己按）：TestFlight run 43199890141 成功，commit `11886cb`（#2090 合併的那個）。完整 `ci.yml` 43199976727 綠；full lane（iOS App Build 43200623442）build、second、lessons 綠，map 與 iPad 教學寫這段時還在跑，結果見 #1579。提醒過作者回答出口合規。
 - **`testflight-checks.yml`**：只改 What to Test 文字的 PR 不再跑 macOS 演練（作者：「這個沒必要吧 每次都這個跑最久」）；改發版流程、這個 workflow 或腳本才跑。
-- **開著的**：#2088 長途客運規則，照下面那段（COACH-MEASURE 壓縮 1 次，量測重跑中，數字還沒交）。
-- **Mac 本機**、**還沒派**、**號碼**：和下面那段一樣（決策下一個 709；存檔 91 給 #2088、下一個 92；golden schema 76）。WEB-127 還沒看到登記。
-- **127 之後要看的**：最近幾天各項檢查花多久、哪幾項常排隊（作者問「還什麼 ci 要改的嗎」，規劃答看了數字再說）。
+- **17:30 UTC 更新（壓縮 1 次）**：127 的 full lane 五組全綠。之後合的：#2088 長途客運規則（決策 706 §2，存檔 91，`4249cc7`）、#2092、#2093 FIX-L19-P3（REVIEW-L19 P3 十項，`docs/handoff/FIX-L19-P3.md` 有六項要 Mac 看）、#2094 HSR-TYPE-FIX（示範鋪線的車種，`docs/handoff/HSR-TYPE-FIX.md`；決策 709 當時釋出）、#2095 FPS-DEVICE 報告（`docs/research/FPS_DEVICE_2026-11-12.md`）。
+- **128（作者：「明天早上的版本」）**：內容就是上面幾個＋這個 PR 的 What to Test 與 `WhatsNew` 的 128。**發版前要有 COACH-HEALTH 的數字**（session_01YGNNuo6tQeX7QkcatggiHC，`claude/coach-health`，只量不改；中部、南部、東部、北捷、中捷已量、沒超護欄，全臺三個情境還在跑）。作者自己按發版，按了規劃才開完整 `ci.yml` 與 full lane。
+- **開著的**：PERF-FAR session_01YGNNuqUr4anqf9nvXJXV38（雲端，`claude/perf-far`，**決策 709**）：3D 拉最遠 267–277 萬三角形（預算 100 萬）。畫面改動，不進 128，等 Mac 拍圖、規劃看過才合。
+- **FPS-DEVICE 的結論與安排**（#1579 6828879706）：開 3D 那一下 270 ms–1.8 秒 → Mac 本機 **PERF-OPEN3D**（Time Profiler；順便量沒量到的跟飛機、手動駕駛、鏡頭移很遠、150 列車實機，並看 600× 的頓）；拉遠 → PERF-FAR；600× 以上一直頓 → 等 PERF-OPEN3D 的數字再決定 TICK-L1、L2。REVIEW-L19 P2-3 降為 P3。
+- **Mac 本機的順序**：PERF-OPEN3D → PERF-FAR 的拍圖驗收（連同 HSR-TYPE-FIX 的高鐵車與 300 m 月台、FIX-L19-P3 的六項）→ COACH-3D（決策 708）→ WEB-127 → DRIVE-STOP → FACADE-669、GLASS-POLISH、CAB-RAIN。文字由規劃給作者貼。
+- **號碼**：決策下一個 **710**（708 COACH-3D、709 PERF-FAR）；存檔下一個 92；golden schema 76。
+- **127 之後要看的**：最近幾天各項檢查花多久、哪幾項常排隊（作者問「還什麼 ci 要改的嗎」，規劃答看了數字再說；還沒看）。
 
 **第 62 任交第 63 任（2026-11-12 10:00 UTC＝台灣 18:00，session_01YGNNupmJExcmCK1xgu6s5A，第 2 層，壓縮 3 次照規則換手）**
 - 照 #1579、開著的 PR 與各 session 的狀態寫的；和下面「07:45 UTC」那段不同時以這段為準。第 63 任開工：在 #1579 登記，把 §1 表格的遊戲規劃改成自己（第 63 任是第 3 層）。
