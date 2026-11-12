@@ -1083,6 +1083,12 @@ final class Map3DMetalView: MTKView {
         openings = scene.trackCover.openings
         let old = chunks.filter { kept.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
         let held = Set(old.map { Map3DStreaming.Key(column: $0.column, row: $0.row) })
+        // Decision 713: its buffers made ahead off the main thread
+        // (``upload(_:)``), or made here.
+        if let made = takeArriving(for: scene.chunks) {
+            chunks = made.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } + old
+            return
+        }
         chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
     }
 
@@ -1101,6 +1107,11 @@ final class Map3DMetalView: MTKView {
         sunSceneChanged = true
         let replaced = Set(keys)
         chunks.removeAll { replaced.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+        // Decision 713: as ``show(_:keeping:)``.
+        if let made = takeArriving(for: built) {
+            chunks += made
+            return
+        }
         chunks += built.compactMap(makeChunk)
     }
 
@@ -1111,7 +1122,66 @@ final class Map3DMetalView: MTKView {
         sunSceneChanged = true
     }
 
+    /// Decision 713: the chunks of a scene (or of a block built ahead) as
+    /// buffers, made off the main thread and handed to the view once
+    /// (``arriving``): made in ``show(_:keeping:)`` they were a hundred
+    /// megabytes and more copied in the frame the 3D map opened on. Taken
+    /// once, so the view alone holds the buffers after.
+    final class Uploaded: @unchecked Sendable {
+        private let lock = NSLock()
+        /// ``Chunk``s (a private type of the view's, so held untyped).
+        private var chunks: [Any]?
+        private let keys: [Map3DStreaming.Key]
+        private let device: MTLDevice
+
+        fileprivate init(chunks: [Any], keys: [Map3DStreaming.Key], device: MTLDevice) {
+            self.chunks = chunks
+            self.keys = keys
+            self.device = device
+        }
+
+        /// The buffers, if they are `built`'s on `device`; let go of here
+        /// either way.
+        fileprivate func take(for built: [Map3DScene.Chunk], on device: MTLDevice?) -> [Any]? {
+            lock.lock()
+            defer {
+                chunks = nil
+                lock.unlock()
+            }
+            guard self.device === device, keys == built.map({ Map3DStreaming.Key(column: $0.column, row: $0.row) }) else { return nil }
+            return chunks
+        }
+    }
+
+    /// Decision 713: the buffers the next ``show(_:keeping:)`` or
+    /// ``place(_:at:)`` takes instead of making its own, when they are
+    /// its chunks'.
+    var arriving: Uploaded?
+
+    private func takeArriving(for built: [Map3DScene.Chunk]) -> [Chunk]? {
+        defer { arriving = nil }
+        return arriving?.take(for: built, on: device) as? [Chunk]
+    }
+
+    /// Decision 713: `built` as buffers on the system's Metal device (the
+    /// one every 3D view draws with). Slow: never on the main thread.
+    nonisolated static func upload(_ built: [Map3DScene.Chunk]) -> Uploaded? {
+        guard let device = MTLCreateSystemDefaultDevice() else { return nil }
+        return Uploaded(chunks: built.compactMap { makeChunk($0, device: device) },
+                        keys: built.map { Map3DStreaming.Key(column: $0.column, row: $0.row) }, device: device)
+    }
+
     private func makeChunk(_ chunk: Map3DScene.Chunk) -> Chunk? {
+        device.flatMap { Self.makeChunk(chunk, device: $0) }
+    }
+
+    nonisolated private static func makeChunk(_ chunk: Map3DScene.Chunk, device: MTLDevice) -> Chunk? {
+        func makeBuffer<Element>(_ array: [Element]) -> MTLBuffer? {
+            guard !array.isEmpty else { return nil }
+            return array.withUnsafeBytes { bytes in
+                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+            }
+        }
         guard !chunk.mesh.isEmpty, let vertices = makeBuffer(chunk.mesh.vertices), let indices = makeBuffer(chunk.mesh.indices)
         else { return nil }
         var shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
