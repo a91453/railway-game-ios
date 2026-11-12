@@ -3514,10 +3514,22 @@ final class WebsiteScreenshotTests: XCTestCase {
         openPage(app, "飛機")
         settle()
         keep("collection-aircraft-page", app)
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.airport.islandAirport"].firstMatch, clearOf: .slider))
-        settle()
-        keep("collection-aircraft-page-airports", app)
-        for exhibit in ["aircraft", "cityAirport", "islandAirport"] {
+        // Down the page only: a row the form has let go of above the
+        // screen no longer exists, so nothing could be dragged back to.
+        for exhibit in ["aircraft", "wideJet", "cityAirport", "islandAirport"] {
+            if exhibit == "wideJet" {
+                // From a card: the stage opens on that aircraft.
+                let card = app.descendants(matching: .any)["settings.aircraft.wideJet"].firstMatch
+                XCTAssertTrue(app.dragUntilWhollyOnScreen(card, clearOf: .slider), "The wide-body jet's card")
+                card.tap()
+                _ = stageOpens(app, "wide-body")
+                settle(seconds: 6)
+                keep("collection-aircraft-widejet-close", app)
+                let close = app.buttons["trainShowcase.close"]
+                close.tap()
+                XCTAssertTrue(close.disappears(within: 10))
+                continue
+            }
             let open = app.buttons["settings.collection.\(exhibit)"]
             XCTAssertTrue(app.dragUntilWhollyOnScreen(open, clearOf: .slider), "The \(exhibit) button")
             open.tap()
@@ -3549,13 +3561,9 @@ final class WebsiteScreenshotTests: XCTestCase {
             close.tap()
             XCTAssertTrue(close.disappears(within: 10))
         }
-        // From a card: the stage opens on that aircraft.
-        let card = app.descendants(matching: .any)["settings.aircraft.wideJet"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(card, clearOf: .slider), "The wide-body jet's card")
-        card.tap()
-        _ = stageOpens(app, "wide-body")
-        settle(seconds: 6)
-        keep("collection-aircraft-widejet-close", app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.airport.islandAirport"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-aircraft-page-airports", app)
         app.terminate()
 
         // English, light.
