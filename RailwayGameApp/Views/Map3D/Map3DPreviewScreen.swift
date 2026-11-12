@@ -1043,15 +1043,24 @@ final class Map3DChunkStreamer {
         return window.built.subtracting(window.grid.keys(within: scene.region))
     }
 
-    /// `built` is shown, with the view keeping `kept` from before.
-    func start(_ built: Map3DBuiltScene?, kept: Set<Map3DStreaming.Key>) {
+    /// `built` is shown, with the view keeping `kept` from before; `inPart`
+    /// when only some of its chunks were handed to the view (decision 517
+    /// 續, PR 3b), which then still lacks those let go.
+    func start(_ built: Map3DBuiltScene?, kept: Set<Map3DStreaming.Key>, inPart: Bool = false) {
         generation += 1
+        // Decision 711: the scene's chunks let go (``shed()``), which the
+        // view still lacks.
+        let gone = inPart ? window?.gone ?? [] : []
         guard let built, Map3DStreaming.streams(built.source.world) else {
             window = nil
             source = nil
             return
         }
         window = Map3DStreaming.Window(scene: built.scene, map: WorldRegion(bounds: built.source.world.bounds), generation: generation, kept: kept)
+        if !gone.isEmpty {
+            window?.letGo(gone)
+            view?.remove(Array(gone))
+        }
         source = built.source
         trackCover = built.scene.trackCover
     }
@@ -1070,7 +1079,7 @@ final class Map3DChunkStreamer {
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
         guard var window, let source else { return }
-        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?())
+        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance)
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
@@ -1084,6 +1093,18 @@ final class Map3DChunkStreamer {
     private func finished(_ chunks: [Map3DScene.Chunk], keys: [Map3DStreaming.Key], generation: Int) {
         guard window?.finished(keys, generation: generation) == true else { return }
         view?.place(chunks, at: keys)
+        // Decision 711: the scene's buffers within what this device holds.
+        if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed() }
+    }
+
+    /// Decision 711: memory runs short, or the buffers are over their
+    /// budget: lets go of the chunks farther from what the camera looks
+    /// at than it sees (its distance), the scene's own too.
+    func shed() {
+        guard var window, let view else { return }
+        let drop = window.shed(farFrom: view.camera.target, radius: view.camera.distance)
+        self.window = window
+        if !drop.isEmpty { view.remove(drop) }
     }
 }
 
@@ -1622,6 +1643,7 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 358: the chunks ahead of the camera, built as it moves.
         context.coordinator.streamer.view = view
         view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }
+        view.onMemoryShort = { [weak coordinator = context.coordinator] in coordinator?.streamer.shed() }
         view.lookoutBuilt = { [weak coordinator = context.coordinator] eye in coordinator?.streamer.isBuilt(round: eye) ?? true }
         view.trainGroundBuilt = { [weak coordinator = context.coordinator] rail in coordinator?.streamer.isBuiltInFull(round: rail) ?? true }
         view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
@@ -1725,11 +1747,13 @@ private struct Map3DView: UIViewRepresentable {
         // round the same place does not hold, kept until built again.
         let kept = context.coordinator.streamer.kept(for: scene)
         let showing = ContinuousClock.now
+        var inPart = false
         if !first, let rebuilt = built?.rebuilt, context.coordinator.shownBuild == rebuilt.from {
             // Decision 517 續 (PR 3b): built again from the scene shown,
             // only where the track changed: only those chunks handed over,
             // the rest drawn on as they are.
             view.replace(rebuilt.keys, from: scene)
+            inPart = true
         } else {
             view.show(scene, keeping: kept)
         }
@@ -1739,7 +1763,7 @@ private struct Map3DView: UIViewRepresentable {
             let took = ContinuousClock.now - showing
             Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
         }
-        context.coordinator.streamer.start(built, kept: kept)
+        context.coordinator.streamer.start(built, kept: kept, inPart: inPart)
         showTrains(in: scene, on: view, context: context)
         let feed = feed, labels = trainLabels, tag = stationTag, marks = airportMarks
         marks.set(world.airports.map { airport in
