@@ -6,11 +6,11 @@ import XCTest
 /// Decision 585: the collection's ferry page.
 final class FerryCollectionTests: XCTestCase {
     func testPagesAndNames() {
-        // Decision 632: trains, ferries, cable cars, in that order.
-        XCTAssertEqual(FerryCollection.Page.allCases, [.trains, .ferries, .cableways])
-        XCTAssertEqual(FerryCollection.Page.allCases.map { $0.title(in: .traditionalChinese) }, ["列車", "渡輪", "纜車"])
-        XCTAssertEqual(FerryCollection.Page.allCases.map { $0.title(in: .english) }, ["Trains", "Ferries", "Cable Cars"])
-        XCTAssertEqual(FerryCollection.Page.allCases.map(\.exhibit), [nil, .ferries, .cableways])
+        // Decision 632: trains, ferries, cable cars, in that order; decision 701: then aircraft.
+        XCTAssertEqual(FerryCollection.Page.allCases, [.trains, .ferries, .cableways, .aircraft])
+        XCTAssertEqual(FerryCollection.Page.allCases.map { $0.title(in: .traditionalChinese) }, ["列車", "渡輪", "纜車", "飛機"])
+        XCTAssertEqual(FerryCollection.Page.allCases.map { $0.title(in: .english) }, ["Trains", "Ferries", "Cable Cars", "Aircraft"])
+        XCTAssertEqual(FerryCollection.Page.allCases.map(\.exhibit), [nil, .ferries, .cableways, .aircraft])
         XCTAssertEqual(FerryCollection.name(in: .traditionalChinese), "圖鑑")
         XCTAssertEqual(FerryCollection.name(in: .english), "Collection")
     }

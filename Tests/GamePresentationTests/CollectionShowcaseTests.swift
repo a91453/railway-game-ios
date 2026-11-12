@@ -34,7 +34,8 @@ final class CollectionShowcaseTests: XCTestCase {
     /// Every piece on both stages is a model the 3D map draws, near and far.
     func testEveryPieceIsADrawnModel() {
         let pack = Map3DModelPack.standard
-        for exhibit in Map3DCollectionShowcase.Exhibit.allCases {
+        // Decision 701's aircraft and airports stand in the ground's mesh (AirCollectionTests).
+        for exhibit in Map3DCollectionShowcase.Exhibit.allCases where !exhibit.isAir {
             for far in [false, true] {
                 let layout = Map3DCollectionShowcase.layout(exhibit, far: far)
                 XCTAssertFalse(layout.pieces.isEmpty)
@@ -96,11 +97,17 @@ final class CollectionShowcaseTests: XCTestCase {
                 let camera = content.camera(view, viewport: (844, 390))
                 XCTAssertGreaterThanOrEqual(camera.distance, Map3DShowcase.nearest, "\(exhibit) \(view)")
                 XCTAssertLessThanOrEqual(camera.distance, Map3DShowcase.farthest)
-                XCTAssertGreaterThanOrEqual(camera.target.x, layout.low.x - 0.001)
-                XCTAssertLessThanOrEqual(camera.target.x, layout.high.x + 0.001)
+                // Decision 701: the view from above may have +x up the screen
+                // (the aircraft's row), and then moves down it along x.
+                let turned = view == .overhead && abs(sinf(layout.overheadHeading)) > 0.5
+                if !turned {
+                    XCTAssertGreaterThanOrEqual(camera.target.x, layout.low.x - 0.001)
+                    XCTAssertLessThanOrEqual(camera.target.x, layout.high.x + 0.001)
+                }
                 // Below what it shows, which the buttons would cover.
-                XCTAssertLessThanOrEqual(view == .overhead ? camera.target.z : camera.target.y,
-                                         view == .overhead ? (layout.low.z + layout.high.z) / 2 : layout.focus.y)
+                XCTAssertLessThanOrEqual(view != .overhead ? camera.target.y : turned ? camera.target.x : camera.target.z,
+                                         view != .overhead ? layout.focus.y
+                                             : (turned ? layout.low.x + layout.high.x : layout.low.z + layout.high.z) / 2 + 0.001)
             }
             // The view from above takes in more than the close one.
             XCTAssertGreaterThan(content.camera(.overhead, viewport: (844, 390)).distance, content.camera(.closeUp, viewport: (844, 390)).distance)

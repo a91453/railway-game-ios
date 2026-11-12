@@ -74,4 +74,33 @@ final class TrainShowcaseUITests: XCTestCase {
         close.tap()
         XCTAssertTrue(close.disappears(within: 10), "Close did not close the stage")
     }
+
+    /// Decision 701: the collection's Aircraft page is reachable, and an
+    /// aircraft's card opens the stage.
+    func testAnAircraftCardOpensItsStage() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 30), "Missing start.settings")
+        settings.tap()
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+        let aircraft = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Aircraft")).firstMatch
+        XCTAssertTrue(aircraft.becomesHittable(within: 10), "Missing the Aircraft page")
+        aircraft.tap()
+        XCTAssertTrue(app.buttons["settings.collection.aircraft"].appears(within: 10), "The aircraft page")
+        let card = app.descendants(matching: .any)["settings.aircraft.narrowJet"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(card, clearOf: .slider), "The narrow-body jet's card")
+        card.tap()
+        let close = app.buttons["trainShowcase.close"]
+        XCTAssertTrue(close.appears(within: 60), "The aircraft's stage did not open")
+        XCTAssertFalse(app.buttons["trainShowcase.pick"].exists, "The stage offers no train picker")
+        XCTAssertTrue(close.becomesHittable(within: 5))
+        close.tap()
+        XCTAssertTrue(close.disappears(within: 10), "Close did not close the stage")
+    }
 }
