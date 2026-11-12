@@ -22,6 +22,10 @@ final class TrainLineIndexTests: XCTestCase {
 
     private func check(_ world: GameWorld, _ known: inout GameWorld.TrainLineIndex, _ step: String, file: StaticString = #filePath, line: UInt = #line) {
         checkRunning(world, step, file: file, line: line)
+        for hour: Int64 in [0, 5, 6, 12, 23] {
+            let time = GameTime(seconds: world.clock.now.seconds + hour * 3_600)
+            XCTAssertEqual(world.serviceLevels(at: time), world.lines.map { world.serviceLevel(of: $0.id, at: time) }, "\(step), +\(hour) h", file: file, line: line)
+        }
         for id in world.trains.map(\.id) + [TrainID(rawValue: 9_999)] {
             let assigned = world.assignedLine(of: id)
             let searched = world.lines.firstIndex { assigned == $0.id }

@@ -3483,7 +3483,7 @@ public struct GameWorld: Equatable, Sendable {
         // When `release` was worked out: midnight's growth reads the plan
         // of the day that ended.
         var releasedFrom = clock.now
-        var passengerLevels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
+        var passengerLevels = serviceLevels(at: clock.now)
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
             let start = clock.now
@@ -3495,7 +3495,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             if start.isWholeMinute {
                 if passengerRoutingMode == .network {
-                    let levels = lines.map { serviceLevel(of: $0.id, at: start) }
+                    let levels = serviceLevels(at: start)
                     if levels != passengerLevels {
                         if let release { keepRemainders(of: release) }
                         endedPlan = passengerPlan
@@ -3649,7 +3649,7 @@ public struct GameWorld: Equatable, Sendable {
                 // train. It must still wake when passenger service opens.
                 let passengerWake: Int64?
                 if passengerRoutingMode == .network {
-                    let levels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
+                    let levels = serviceLevels(at: clock.now)
                     passengerWake = levels != passengerLevels ? 0 : lines.compactMap {
                         $0.nextChange(after: clock.now, in: serviceDay)
                     }.min().map { Self.minutes(from: clock.now, until: $0) }
