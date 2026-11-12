@@ -604,7 +604,10 @@ extension GameSession {
         }
         let station = existing.map { PlayerCommand.PlatformStation.existing($0.id) }
             ?? .new(name: name, at: middle, demand: newStationDemand(at: middle))
-        for beside in [besidePlatform(of: stretch), nil] {
+        // On both tracks even at the end of a run, where the crossover
+        // beyond the platform joins them (DEMO-KRTC, 2026-11-12): a train
+        // back on the second track calls there and turns round on it.
+        for beside in [besidePlatform(of: stretch, joined: true), nil] {
             let addition = PlayerCommand.PlatformAddition(
                 edge: edge.id, start: 0, end: edge.length, station: station, levelling: levelling, beside: beside
             )
