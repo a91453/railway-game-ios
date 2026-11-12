@@ -33,6 +33,12 @@ public struct RealRailStructures: Sendable, Equatable {
 
     public let structures: [Structure]
 
+    /// Structures already read (decision 697: Taiwan's with an open
+    /// overseas city's).
+    init(structures: [Structure]) {
+        self.structures = structures
+    }
+
     /// Reads the file. Throws for one out of shape: a structure of fewer
     /// than two points, or a point off the Earth.
     public init(data: Data) throws {

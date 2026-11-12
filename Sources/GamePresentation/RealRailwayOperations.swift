@@ -135,6 +135,8 @@ public struct RealRailwayOperations: Sendable {
         "tra": "tra_sched", "thsr": "thsr_sched", "afr": "afr_sched", "trtc": "mrt",
         "tymc": "tymc", "ntdlrt": "ntdlrt", "ntalrt": "ntalrt", "sanying": "sanying",
         "krtc": "krtc", "tmrt": "tmrt",
+        // Decision 697: Hong Kong's MTR, read only when its map is open.
+        "hkmtr": "hkmtr",
     ]
 
     /// The order systems are searched in: the site's (`SYS_DEFS`).
