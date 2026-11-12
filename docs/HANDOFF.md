@@ -1,6 +1,6 @@
 > 跟著飛機看（派工單 FOLLOW-AIR，Mac 本機，`claude/follow-air`，[決策 702](decisions/702.md)，GameCore、存檔、golden、fixtures 不動，2026-11-12）：3D 地圖點一架在動的飛機就跟上去，後方、旁邊、機艙窗三個視角，沿用列車、渡輪那套鏡頭（飛機只交一個 `Pose`）；停進機位、離地 3.6 km、那一班結束、出地圖或打開「減少動態效果」時自動放開，鏡頭留在原地。在動的飛機夜裡有燈（航行燈、紅色防撞燈、白色閃燈、落地燈）。順手看了七美、蘭嶼、綠島、嘉義：修了飛機沉到跑道底下、蘭嶼出現七十座機、蘭嶼與綠島的班機進不了機位三件。**還留下的**（決策 702「已知限制」「下一步」）：七美沒有機位、嘉義的機位在軍用區、離島上有高樓（綠島一棟在跑道旁）、跑道上掉頭是折線、客艙窗夜裡不亮、放空模式不會挑飛機；只在模擬器看過，實機幀數與夜間光暈留給 FPS-DEVICE。模擬器拍夜間的燈要加 `-screenshot-device-tier 1`。
 
-> 長途客運第一步（派工單 COACH-1，session_01YGNNuozmbRVMiB9A32gfU7，[決策 706](decisions/706.md)，2026-11-12）：資料 #2082 已合併；規則（`claude/coach-rule`，存檔 91：真實客運搶有直達車的站對最多 25% 旅次、把下車的人送上玩家列車，車站面板多一節）量過兩張圖票收 +1%～+2%，**全臺地圖上搶多少還沒量**。做到哪與接手要知道的在 §4.66。
+> 長途客運第一步（派工單 COACH-1，session_01YGNNuozmbRVMiB9A32gfU7，[決策 706](decisions/706.md)，2026-11-12）：資料 #2082 已合併；規則（`claude/coach-rule`，存檔 91：真實客運搶有直達車的站對最多 25% 旅次、把下車的人送上玩家列車，車站面板多一節）量過兩張圖票收 +1%～+3%；**全臺地圖（台鐵＋高鐵）量了**（COACH-MEASURE，session_01YGNNuqPCjmHySQjU6Wq42Q）：量出鐵路票價單位寫錯並修掉，修後客運搶一天需求的 0.06% 旅次、票收逐分鐘一天 +0.8%、一天 100 旅次以上的站對最多 22.4%，兩個護欄都在範圍內，規則數字沒有改，判定 HEALTHY。做到哪與接手要知道的在 §4.66。
 
 > 圖鑑的飛機頁與機場清單（派工單 COLLECTION-AIR，session_01YGNNum56iA31T4mcCruB46，`claude/collection-air-701`，#2074，[決策 701](decisions/701.md)，不動 GameCore、存檔、golden、fixture，2026-11-12；這個 session 壓縮兩次後停在這裡）：圖鑑多「飛機」頁，四型客機各一張卡、城市與離島機場兩個場景，都能進 3D 展示台看日夜；有機場的地圖多一段「這張地圖的機場」，列當天架次與旅客。三輪截圖驗收的圖在 `docs/art/collection-air-2026-11-12/overview.jpg` 與 PR。**還留下的**：這是第三級，規劃看過截圖才合；展示台的夜景沒有地面光池（自己畫的光池白天是暗塊、晚上過白，拿掉了），飛機晚上偏暗，要不要補一盞由規劃決定；`TrainShowcaseUITests.testAnAircraftCardOpensItsStage` 只在 full lane 跑，還沒跑過；哪型飛機在哪座機場看得到寫在 `AirCollection.airportKeys`，目錄再加機場（AIRPORT-2、金門馬祖）時那張表已先寫好代號，測試跟著目錄走，不必改。卡片上「看得到的機場」超過五座時只列前四座再寫「等 N 座」（`AirCollection.listedAirports`）。
 >
@@ -4667,12 +4667,15 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - GameCore `Sources/GameCore/Passenger/Coach.swift`：`GameWorld.coachStops`（最多 128 站、每站 16 條直達）、`setCoachStops`、搶（`coachRivals`／`coachKept`，接在 `dailyDemandDetails` 與網路旅客計畫的 `modeShiftKept` 之後）、送（`addCoachFlows`，和機場同一套，進 `TouristFlows`）、午夜 `closeCoachDay`、存檔 91（`SaveFixtures/v91-coach-stops.json`）。沒有客運站的世界每個入口直接返回。
 - 資料：`tools/real-coaches/build_coach_network.py` → `Resources/RealCoaches/coach_network.json`（934 站、11,546 條直達、0.30 MB）；`CoachNetwork`／`CoachCatalog`（`Sources/GamePresentation/CoachCatalog.swift`）；`GameLauncher.begin` 給真實地圖的自由遊戲客運站，資料晚到時 `GameSession.giveCoachStops`。
 - 面板：車站面板多一節「長途客運」（`StationPanel.coachesSection`，`StationRidership.coaches`）。
-- 量到的：機場捷運票收 +2.2%／+1.9%（搶 2,700 旅次、送 7,690 人）、文湖線 +1.3%／+1.2%（沒有直達客運跨它，搶 0）。
+- 量到的（單位修正後）：機場捷運票收 +3.0%／+2.8%（搶 680 旅次、送 7,690 人）、文湖線 +1.3%／+1.2%（沒有直達客運跨它，搶 0）。
 
 **沒做完、接手的人要知道的**：
 
-1. **全臺地圖上搶多少沒有量**（NOT ASSESSED）：臺北—臺中、臺北—宜蘭這種長距離對手只在有台鐵路網的圖上才有。`CoachReportTests`（`COACH_REPORT=<天>`，release）加一條路線量；票收掉超過 5% 就降 `CoachRules.cap`（現在 250‰）。
-2. `coachStations` 每次放行旅客都重算（128 站 × 全部車站），全臺地圖上花多少時間沒有量；慢的話改成路網變了才算。
+1. **全臺地圖量了**（COACH-MEASURE，2026-11-12，決策 706 §2「全臺地圖」）：`CoachReportTests.testWhatTheCoachesTakeAcrossTaiwan`（`COACH_TAIWAN=<天>`、`COACH_TAIWAN_ONLY=tra+hsr`，release，一次約 35 分鐘，平常的 CI 不跑）用高鐵示範世界加示範鋪的台鐵（21 線、251 站）。
+   - 量出一個錯並修了（`637f869`）：`coachKept` 把票價的「分」當「元」，NT$ 15 的票算成 300 分鐘，幾乎每一對都頂到上限；現在用整數元，走高鐵的路徑用高鐵票價。
+   - 修後：42 個有對手的站對裡 31 對被搶，一天需求少 430 旅次（0.06%）、NT$ 6,450；逐分鐘一天票收 +0.8%（送來 14,084 人）；一天 100 旅次以上的站對最多 22.4%（松山→暖暖；城市之間最多宜蘭→臺北 19.9%），小站對頂到 25% 上限（宜蘭↔南港因進位讀到 26.2%），搭高鐵的站對沒有被搶。兩個護欄（票收 −5%、單一站對 25%）都在範圍內，**`CoachRules` 的數字沒有改**，`v91` fixture 沒有動。判定 HEALTHY。
+   - 沒量到的：示範鋪的台鐵只有各站停的車（沒有自強號，對客運有利），有對手的站對都在北部；玩家自己的路網、中南部要等買得到台鐵幹線或客運站上限放寬後再量。「站滿或放棄」有客運時 +6.2%（沒有目標，沒有判）。
+2. `coachStations` 每次放行旅客都重算（128 站 × 全部車站）：全臺地圖上沒有單獨計時，有客運的一天整體多 3%–6%（兩次量測：279 秒對 270 秒、297 秒對 281 秒）；要省的話改成路網變了才算。
 3. 每班 24 人、每千人 200 人轉搭、一分鐘 NT$ 5、70%／130% 門檻都是自己訂的，沒有對統計查證。
 4. Xcode 這邊（`StationPanel` 的新一節、`coach_network.json` 進 bundle）本機驗不了，看 PR 的 iOS CI。
 5. 3D 客運站與車（決策 591／593）、玩家自己經營客運、英文站名：決策 706 的下一步。

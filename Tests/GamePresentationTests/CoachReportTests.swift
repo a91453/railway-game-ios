@@ -159,7 +159,7 @@ final class CoachReportTests: XCTestCase {
             out.append("| From | To | Rail: minutes / fare | Coach: minutes / a day / fare | Trips without | The coach takes | Share | Fares taken |")
             out.append("| --- | --- | --: | --: | --: | --: | --: | --: |")
             for pair in pairs.sorted(by: { $0.taken * $0.fare > $1.taken * $1.fare }).prefix(40) {
-                out.append("| \(pair.from) | \(pair.to) | \(pair.minutes) / \(pair.fare) | \(pair.rival.minutes) / \(pair.rival.dailyCoaches) / \(pair.rival.fare) | "
+                out.append("| \(pair.from) | \(pair.to) | \(pair.minutes) / \(pair.fare / 100) | \(pair.rival.minutes) / \(pair.rival.dailyCoaches) / \(pair.rival.fare) | "
                     + "\(pair.kept + pair.taken) | \(pair.taken) | \(percent(pair.taken, of: pair.kept + pair.taken)) | \(Money(pair.taken * pair.fare).moneyText) |")
             }
             let shares = pairs.map { $0.taken * 1_000 / max(1, $0.kept + $0.taken) }
@@ -181,14 +181,22 @@ final class CoachReportTests: XCTestCase {
                 before = played.stations.map { played.passengerLedger(of: $0.id) }.map { $0.overflowed + $0.abandoned }.reduce(0, +)
                 for day in 1...days {
                     let began = Date()
-                    for _ in 0..<1_440 { try played.advance(ticks: 1) }
+                    // Read at noon and not counted in the seconds: at
+                    // midnight a timetabled network has no train to ride.
+                    var robbed: Int64 = 0, reading: TimeInterval = 0
+                    for minute in 0..<1_440 {
+                        try played.advance(ticks: 1)
+                        guard minute == 720 else { continue }
+                        let read = Date()
+                        robbed = played.stations.map { played.tripsTakenByCoaches(from: $0.id) }.reduce(0, +)
+                        reading = Date().timeIntervalSince(read)
+                    }
                     let account = played.accounts.days.last
                     let peak = played.lines.compactMap { played.lineYesterday($0.id)?.peakLoad }.max() ?? 0
                     let lost = played.stations.map { played.passengerLedger(of: $0.id) }.map { $0.overflowed + $0.abandoned }.reduce(0, +)
-                    let robbed = played.stations.map { played.tripsTakenByCoaches(from: $0.id) }.reduce(0, +)
                     let row = "| \(coaches ? "with" : "without") | \(day) | \(played.lastDayTrips()) | \(account?.fareRevenue.moneyText ?? "") | "
                         + "\(Money(account.map(airportReportProfit) ?? 0).moneyText) | \(peak / 10)% | \(lost - before) | "
-                        + "\(played.coachStops.map(\.yesterdayRiders).reduce(0, +)) | \(robbed) | \(Int(Date().timeIntervalSince(began))) |"
+                        + "\(played.coachStops.map(\.yesterdayRiders).reduce(0, +)) | \(robbed) | \(Int(Date().timeIntervalSince(began) - reading)) |"
                     out.append(row)
                     note(row)
                     before = lost
