@@ -477,19 +477,20 @@ public enum DataSourceCredits {
                             openGovernmentLicense(in: language),
                         ]
                     ),
-                    // Decision 695: each airport's passengers and flights of
-                    // a year, which set its flights and how many of its
-                    // passengers ride the company's trains.
+                    // Decisions 695 and 700: each airport's passengers and
+                    // flights of a year and where they go, which set its
+                    // flights and how many of its passengers ride the
+                    // company's trains.
                     DataSourceCredit(
                         id: "airports",
-                        title: language.text("Airport passengers and flights", "機場旅客與航班架次"),
+                        title: language.text("Airport passengers, flights and destinations", "機場旅客、航班架次與航點"),
                         detail: language.text(
-                            "How many passengers and flights Taoyuan, Songshan, Taichung and Kaohsiung airports have in a year: on a real-world map, they set each airport's flights and how many of its passengers ride your trains.",
-                            "桃園、松山、臺中、高雄機場一年的旅客與航班架次：在實景地圖上，決定每座機場的航班數，以及有多少旅客搭你的車。"
+                            "How many passengers and flights each of Taiwan's airports has in a year, and where they fly: on a real-world map, they set each airport's flights, its domestic and international passengers, and how many of them ride your trains.",
+                            "臺灣各機場一年的旅客、航班架次與飛往哪裡：在實景地圖上，決定每座機場的航班數、國內與國際旅客，以及有多少旅客搭你的車。"
                         ),
                         notice: language.text(
-                            "Source: Civil Aviation Administration, Ministry of Transportation and Communications, civil air transport statistics, 2025, as given on each airport's page of the Chinese Wikipedia. Terminal positions: OpenStreetMap contributors.",
-                            "資料來源：交通部民用航空局民航運輸統計，114 年（取自中文維基百科各機場條目）。航廈位置：OpenStreetMap 貢獻者。"
+                            "Source: Civil Aviation Administration, Ministry of Transportation and Communications, Civil Aviation Statistics annual report 2025 and its timetable of scheduled domestic flights. Terminal positions: OpenStreetMap contributors.",
+                            "資料來源：交通部民用航空局「民航統計年報」114 年與「國內定期航線班機時刻表」。航廈位置：OpenStreetMap 貢獻者。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
