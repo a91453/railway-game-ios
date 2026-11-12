@@ -4649,6 +4649,14 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **還沒量的**（§2.6）：Mac（Release）與實機的同一份基準、Apple 平台的 JSON 編解碼、`-c release` 與 Linux debug `-O` 的差別。
 - **雲端**：不建議把 tick 搬上去；可選的雲端工作排在本地優化之後，而且先做 §6.4 階段 6 那個不建立任何資源的實驗。這次沒有註冊或建立任何雲端資源。
 
+### 4.67 列車的路線用查的（決策 703，TICK-L0 session_01YGNNunMtn9WFV5v3P2Xscx，`claude/tick-l0`，2026-11-12）
+
+§4.65 的 L0 做完了，做了什麼、前後數字、怎麼驗的在 [決策 703](decisions/703.md)。`GameCore` 只是少算：存檔、golden、三套 fixture 不動。行車控制開、100 列車的 600× 每 tick 中位數 575.5 → 約 28 ms（雲端 Linux，合成地圖，不代表 iPhone）；行車控制關、1,000 列車 267.6 → 106.6 ms。留給之後的：
+
+- **作者的存檔沒有重播**（UNVERIFIED，存檔不在 repo）：有存檔的 session 用 `PERF_SAVE=<存檔> swift test --skip-build --filter SaveTickCostReportTests` 前後各跑一次。預期差別很小，那份存檔的熱點在等路。
+- **L1、L2 還沒做**，現在更明顯：第 1、2 點之後的取樣，`trafficPlan` 整份重算佔 14／25、`trackHolders` 佔 8／25；100 列車的 p95 還在 200 ms 上下。
+- **還是線性找的幾處**列在決策 703「下一步」（`RailwayNetwork.platforms(of:)`、上下車的 `assignedLine(of:)`、`readyTrain` 的 `trains.firstIndex`、`recordTrafficVisits`）。新寫的熱路徑要找列車的路線時，用 `assignedLine(of:memo:)`（`TrainLineIndex.swift`），不要再寫 `lines.first(where: { assignedLine(of: id) == $0.id })`；要找列車在 `trains` 的位置用 `trainPosition(of:)`。
+
 ### 4.66 長途客運第一步（決策 706，COACH-1 session_01YGNNuozmbRVMiB9A32gfU7，2026-11-12）
 
 **PR-1（資料，`claude/coach-data`）做完的**：`tools/real-coaches/build_real_coaches.py` 讀 TDX 公路客運的五個回答（路線、站序、形狀、班表、票價；用 `tdx-check.yml` 一次抓一個，原始回答不進 repo），寫出 `RailwayGameApp/Resources/RealCoaches/real_coaches.json`；`Sources/GamePresentation/RealCoaches.swift` 只讀；`RealCoachesTests`；資料來源頁的 `realCoaches`。怎麼挑城際、怎麼算、已知限制在 `tools/real-coaches/README.md`。
