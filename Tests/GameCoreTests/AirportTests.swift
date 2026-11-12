@@ -152,13 +152,16 @@ final class AirportTests: XCTestCase {
         world.setSpeed(.normal)
         try world.advance(ticks: 1_442)
 
-        let url = SavedGameTests.fixtures.appendingPathComponent("v\(SavedGame.currentVersion)-airports.json")
+        // The file is version 90's, whatever this build writes: never
+        // written again under a later version's name.
+        let url = SavedGameTests.fixtures.appendingPathComponent("v90-airports.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["AIRPORT_SAVE_NEW"] != nil {
+        if ProcessInfo.processInfo.environment["AIRPORT_SAVE_NEW"] != nil, SavedGame.currentVersion == 90 {
             try encoder.encode(SavedGame(world: world)).write(to: url)
         }
         let data = try Data(contentsOf: url)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"saveVersion\" : 90"), "the fixture is a version 90 save")
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         let kept = try XCTUnwrap(loaded.airports.first)
         XCTAssertEqual(kept.name, "機場")
@@ -171,6 +174,121 @@ final class AirportTests: XCTestCase {
         try world.advance(ticks: 1_440)
         XCTAssertEqual(loaded, world)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), try encoder.encode(SavedGame(world: world)))
+    }
+
+    /// A typhoon over the terminal shuts the airport for the day: no
+    /// flight, no passenger, no rider, no destination.
+    func testATyphoonOverTheTerminalShutsTheAirport() throws {
+        var world = try world()
+        world.setAirports([airportWithDestinations()])
+        world.setDisruptions(try XCTUnwrap(Disruptions(level: .standard, country: "TW", seed: 7)))
+        let stormy = try XCTUnwrap((0..<720).first { day in world.typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(terminal) } })
+        var flows = TouristFlows()
+        let shut = try XCTUnwrap(world.addAirportFlows(onDay: stormy, to: &flows) { _, _ in true }.first)
+        XCTAssertTrue(shut.isClosed)
+        XCTAssertEqual(shut.flights, 0)
+        XCTAssertEqual(shut.passengers, 0)
+        XCTAssertEqual(shut.riders, 0)
+        XCTAssertEqual(shut.ridersAtMost, 0)
+        XCTAssertEqual(shut.landings.reduce(0, +) + shut.takeOffs.reduce(0, +), 0)
+        XCTAssertEqual(shut.departures, [])
+        XCTAssertEqual(flows.pairs.count, 0)
+        // A day with no typhoon over it flies.
+        let fair = try XCTUnwrap((0..<720).first { day in !world.typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(terminal) } })
+        var open = TouristFlows()
+        let flying = try XCTUnwrap(world.addAirportFlows(onDay: fair, to: &open) { _, _ in true }.first)
+        XCTAssertFalse(flying.isClosed)
+        XCTAssertGreaterThan(flying.flights, 0)
+        XCTAssertGreaterThan(flying.riders, 0)
+    }
+
+    // MARK: - Decision 700: destinations
+
+    /// Three passengers in four fly to the island, at six flights in seven.
+    private let island = AirDestination(name: "離島", englishName: "Island", isDomestic: true, yearlyPassengers: 3_000_000, yearlyFlights: 30_000)
+    private let abroad = AirDestination(name: "外國", englishName: "Abroad", isDomestic: false, yearlyPassengers: 1_000_000, yearlyFlights: 5_000)
+
+    private func airportWithDestinations(first: Int = 6, last: Int = 23) -> Airport {
+        Airport(id: 1, name: "機場", englishName: "Airport", point: terminal, dailyPassengers: 16_000, dailyFlights: 150,
+                firstHour: first, lastHour: last, destinations: [island, abroad])
+    }
+
+    func testTheDestinationsSplitTheDay() throws {
+        var world = try world()
+        world.setAirports([airportWithDestinations()])
+        let day = try XCTUnwrap(world.airportDays().first)
+        XCTAssertEqual(day.airport.domesticShare, 750)
+        // The totals are those of an airport with no destinations.
+        XCTAssertEqual(day.ridersTo, 166)
+        XCTAssertEqual(day.flights, 146)
+        XCTAssertEqual(day.passengers, 15_640)
+        XCTAssertEqual(day.domesticPassengers, 11_730)
+        XCTAssertEqual(day.internationalPassengers, 3_910)
+        // 73 take-offs at 6 to 1, 15,640 passengers at 3 to 1.
+        XCTAssertEqual(day.departures.map(\.flights), [63, 10])
+        XCTAssertEqual(day.departures.map(\.passengers), [11_730, 3_910])
+        XCTAssertEqual(day.departures.map(\.destination), [island, abroad])
+    }
+
+    func testDomesticRidersKeepTheirOwnHours() throws {
+        var world = try world()
+        world.setAirports([airportWithDestinations()])
+        // Flights from 06:00 to 23:00. To the airport: the international
+        // riders two hours before (04:00 to 20:00), the domestic ones one
+        // hour before (05:00 to 21:00). From it: an hour after landing
+        // (07:00 to 23:00) and within the hour (06:00 to 22:00).
+        let to = world.hourlyDemand(from: home, to: foot), from = world.hourlyDemand(from: foot, to: home)
+        XCTAssertEqual(to.reduce(0, +), 166)
+        XCTAssertEqual(from.reduce(0, +), 166)
+        XCTAssertEqual(to[0..<4].reduce(0, +), 0)
+        XCTAssertGreaterThan(to[4], 0)
+        XCTAssertGreaterThan(to[21], 0, "a domestic rider for the 22:00 flights")
+        XCTAssertEqual(to[22...23].reduce(0, +), 0)
+        XCTAssertEqual(from[0..<6].reduce(0, +), 0)
+        XCTAssertGreaterThan(from[6], 0, "off a domestic flight within the hour")
+        XCTAssertGreaterThan(from[23], 0)
+        // 124 of the 166 are domestic: 04:00 has only the other 42's share.
+        var plain = try self.world()
+        plain.setAirports([airport(first: 6, last: 23)])
+        XCTAssertLessThan(to[4], plain.hourlyDemand(from: home, to: foot)[4])
+        XCTAssertEqual(plain.hourlyDemand(from: home, to: foot)[21], 0)
+    }
+
+    func testTheSaveKeepsTheDestinations() throws {
+        var world = try world()
+        world.setAirports([airportWithDestinations()])
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        let text = String(decoding: data, as: UTF8.self)
+        XCTAssertTrue(text.contains("\"destinations\""))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+        // An airport with none writes nothing new.
+        var plain = try self.world()
+        plain.setAirports([airport()])
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(SavedGame(world: plain)), as: UTF8.self).contains("destinations"))
+        // A destination with no passengers is refused.
+        let broken = text.replacingOccurrences(of: "\"passengers\":3000000", with: "\"passengers\":0")
+        XCTAssertNotEqual(broken, text)
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: Data(broken.utf8)))
+    }
+
+    func testSettingAirportsAgainKeepsYesterdaysCount() throws {
+        var world = try world()
+        world.setAirports([airport()])
+        world.setSpeed(.normal)
+        try world.advance(ticks: 1_442)
+        XCTAssertEqual(world.airports.first?.yesterdayRiders, 332)
+        // The same airport with its destinations: the count stays.
+        let many = (0..<30).map { AirDestination(name: "地 \($0)", englishName: "Place \($0)", isDomestic: $0 < 3, yearlyPassengers: 1_000, yearlyFlights: 10) }
+            + [AirDestination(name: "空", englishName: "Empty", isDomestic: true, yearlyPassengers: 0, yearlyFlights: 10)]
+        world.setAirports([Airport(id: 1, name: "機場", englishName: "Airport", point: terminal, dailyPassengers: 16_000, dailyFlights: 150, destinations: many)])
+        let kept = try XCTUnwrap(world.airports.first)
+        XCTAssertEqual(kept.yesterdayRiders, 332)
+        XCTAssertEqual(kept.yesterdayFlights, 146)
+        XCTAssertEqual(kept.destinations.count, AirportRules.maximumDestinations)
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: try JSONEncoder().encode(SavedGame(world: world))))
+        // Another airport starts with no day counted.
+        world.setAirports([Airport(id: 1, name: "新機場", englishName: "New", point: terminal, dailyPassengers: 16_000, dailyFlights: 150)])
+        XCTAssertEqual(world.airports.first?.yesterdayRiders, 0)
     }
 
     func testASaveWithABrokenAirportIsRefused() throws {

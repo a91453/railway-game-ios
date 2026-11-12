@@ -1,0 +1,526 @@
+{
+ "sampled": "76 sweeps, 20261111T192948Z to 20261112T013916Z",
+ "feed": "https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php",
+ "lines": {
+  "AEL": {
+   "runSec": [
+    120,
+    420,
+    780,
+    60
+   ],
+   "runSamples": [
+    57,
+    57,
+    49,
+    51
+   ],
+   "peakHeadwaySec": 600,
+   "offpeakHeadwaySec": 600,
+   "headwaySamples": {
+    "peak": 560,
+    "offpeak": 1183
+   },
+   "firstTrainSec": 20940,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TCL": {
+   "runSec": [
+    180,
+    120,
+    120,
+    240,
+    192,
+    420,
+    420
+   ],
+   "runSamples": [
+    66,
+    97,
+    73,
+    92,
+    81,
+    53,
+    53
+   ],
+   "peakHeadwaySec": 360,
+   "offpeakHeadwaySec": 540,
+   "headwaySamples": {
+    "peak": 827,
+    "offpeak": 2107
+   },
+   "firstTrainSec": 21577,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TML": {
+   "runSec": [
+    167,
+    120,
+    120,
+    234,
+    122,
+    135,
+    125,
+    126,
+    157,
+    272,
+    142,
+    120,
+    120,
+    126,
+    120,
+    180,
+    178,
+    180,
+    180,
+    268,
+    381,
+    227,
+    120,
+    185,
+    271,
+    151
+   ],
+   "runSamples": [
+    64,
+    138,
+    132,
+    137,
+    132,
+    140,
+    138,
+    128,
+    109,
+    121,
+    130,
+    126,
+    136,
+    137,
+    101,
+    71,
+    90,
+    123,
+    114,
+    123,
+    99,
+    123,
+    132,
+    122,
+    118,
+    64
+   ],
+   "peakHeadwaySec": 180,
+   "offpeakHeadwaySec": 390,
+   "headwaySamples": {
+    "peak": 3714,
+    "offpeak": 7872
+   },
+   "firstTrainSec": 20280,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "EAL": {
+   "runSec": [
+    120,
+    184,
+    240,
+    180,
+    259,
+    161,
+    120,
+    210,
+    300,
+    127,
+    300,
+    136,
+    180
+   ],
+   "runSamples": [
+    26,
+    99,
+    108,
+    96,
+    123,
+    127,
+    74,
+    125,
+    97,
+    129,
+    64,
+    92,
+    22
+   ],
+   "peakHeadwaySec": 180,
+   "offpeakHeadwaySec": 351,
+   "headwaySamples": {
+    "peak": 1410,
+    "offpeak": 2702
+   },
+   "firstTrainSec": 21180,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "EAL_LMC": {
+   "runSec": [
+    598
+   ],
+   "runSamples": [
+    0
+   ],
+   "peakHeadwaySec": 450,
+   "offpeakHeadwaySec": 725,
+   "headwaySamples": {
+    "peak": 6,
+    "offpeak": 44
+   },
+   "firstTrainSec": 21580,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TWL": {
+   "runSec": [
+    60,
+    203,
+    116,
+    111,
+    120,
+    98,
+    120,
+    100,
+    120,
+    120,
+    178,
+    120,
+    99,
+    120,
+    104
+   ],
+   "runSamples": [
+    67,
+    125,
+    140,
+    138,
+    142,
+    134,
+    139,
+    136,
+    141,
+    136,
+    134,
+    132,
+    127,
+    115,
+    71
+   ],
+   "peakHeadwaySec": 120,
+   "offpeakHeadwaySec": 242,
+   "headwaySamples": {
+    "peak": 2199,
+    "offpeak": 4446
+   },
+   "firstTrainSec": 21600,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "ISL": {
+   "runSec": [
+    75,
+    107,
+    120,
+    120,
+    120,
+    120,
+    127,
+    120,
+    71,
+    100,
+    120,
+    120,
+    87,
+    102,
+    120,
+    162
+   ],
+   "runSamples": [
+    64,
+    118,
+    68,
+    89,
+    137,
+    99,
+    118,
+    129,
+    0,
+    122,
+    131,
+    102,
+    124,
+    125,
+    123,
+    63
+   ],
+   "peakHeadwaySec": 120,
+   "offpeakHeadwaySec": 300,
+   "headwaySamples": {
+    "peak": 2359,
+    "offpeak": 4176
+   },
+   "firstTrainSec": 21300,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "KTL": {
+   "runSec": [
+    79,
+    148,
+    120,
+    70,
+    113,
+    120,
+    120,
+    120,
+    113,
+    120,
+    180,
+    120,
+    120,
+    120,
+    141,
+    120
+   ],
+   "runSamples": [
+    67,
+    88,
+    102,
+    0,
+    134,
+    112,
+    103,
+    142,
+    134,
+    149,
+    69,
+    111,
+    136,
+    148,
+    147,
+    43
+   ],
+   "peakHeadwaySec": 120,
+   "offpeakHeadwaySec": 274,
+   "headwaySamples": {
+    "peak": 1568,
+    "offpeak": 4648
+   },
+   "firstTrainSec": 22020,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TKL": {
+   "runSec": [
+    120,
+    240,
+    175,
+    120,
+    120,
+    105
+   ],
+   "runSamples": [
+    32,
+    97,
+    99,
+    123,
+    50,
+    0
+   ],
+   "peakHeadwaySec": 120,
+   "offpeakHeadwaySec": 300,
+   "headwaySamples": {
+    "peak": 713,
+    "offpeak": 1487
+   },
+   "firstTrainSec": 19911,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "TKL_LHP": {
+   "runSec": [
+    180
+   ],
+   "runSamples": [
+    17
+   ],
+   "peakHeadwaySec": 360,
+   "offpeakHeadwaySec": 540,
+   "headwaySamples": {
+    "peak": 7,
+    "offpeak": 4
+   },
+   "firstTrainSec": 22833,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "SIL": {
+   "runSec": [
+    220,
+    120,
+    157,
+    84
+   ],
+   "runSamples": [
+    57,
+    137,
+    123,
+    53
+   ],
+   "peakHeadwaySec": 180,
+   "offpeakHeadwaySec": 350,
+   "headwaySamples": {
+    "peak": 592,
+    "offpeak": 1230
+   },
+   "firstTrainSec": 21621,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  },
+  "DRL": {
+   "runSec": [
+    333
+   ],
+   "runSamples": [
+    0
+   ],
+   "peakHeadwaySec": 600,
+   "offpeakHeadwaySec": 600,
+   "headwaySamples": {
+    "peak": 149,
+    "offpeak": 307
+   },
+   "firstTrainSec": 22487,
+   "lastTrainSec": 88200,
+   "lastTrainEstimated": true,
+   "peaks": [
+    [
+     27000,
+     34200
+    ],
+    [
+     63000,
+     70200
+    ]
+   ]
+  }
+ }
+}

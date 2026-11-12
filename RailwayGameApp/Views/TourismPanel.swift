@@ -173,6 +173,11 @@ struct TourismPanel: View {
                 Text(verbatim: day.summary(in: language))
                     .font(.footnote)
                     .monospacedDigit()
+                if let destinations = day.destinationsText(in: language) {
+                    Text(verbatim: destinations)
+                        .font(.footnote)
+                        .monospacedDigit()
+                }
                 if let yesterday = day.yesterdayText(in: language) {
                     Text(verbatim: yesterday)
                         .font(.footnote)
@@ -315,7 +320,7 @@ struct RailwayMuseumPage: View {
                     Section {
                         ForEach(waiting) { item in exhibit(item, language: language) }
                     } header: {
-                        Text(verbatim: language.text("Not owned yet", "還沒擁有"))
+                        Text(verbatim: language.text("Not on show yet", "還沒展出"))
                     }
                 }
             } else {

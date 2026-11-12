@@ -168,7 +168,44 @@ public enum DataSourceCredits {
     /// the owner's request: each railway system on its own, where its
     /// station order, colours and times come from, checked against
     /// `tools/real-railways/README.md` and each data file's `source_notes`).
-    public static func sections(in language: DisplayLanguage) -> [DataSourceSection] {
+    ///
+    /// Decision 697: an open overseas city's railways are a section of
+    /// their own after Taiwan's (none is open yet).
+    public static func sections(in language: DisplayLanguage, overseas: Set<OverseasMap> = OverseasMaps.open) -> [DataSourceSection] {
+        taiwanSections(in: language) + OverseasMap.allCases.filter(overseas.contains).map { section(of: $0, in: language) }
+    }
+
+    /// What an overseas city's railways are and where their data comes
+    /// from, with the notices its sources ask for.
+    static func section(of city: OverseasMap, in language: DisplayLanguage) -> DataSourceSection {
+        switch city {
+        case .hongKong:
+            DataSourceSection(
+                id: "hongKongRailways",
+                title: language.text("Hong Kong’s Railways", "香港的鐵道"),
+                credits: [
+                    DataSourceCredit(
+                        id: "hongKongMTR",
+                        title: language.text("MTR", "港鐵"),
+                        detail: language.text(
+                            "The ten railway lines of Hong Kong’s MTR, from the Airport Express to the Disneyland Resort Line, each in its own colour, with their stations’ Chinese and English names. Their trains run to times estimated from how often and how fast the real trains ran on the days they were watched.",
+                            "香港港鐵的十條鐵路綫，從機場快綫到迪士尼綫，每條綫用自己的路綫色，車站有中文與英文站名。列車的時刻是照觀察那幾天真實列車的班距與行車時間估出來的。"
+                        ),
+                        notice: language.text(
+                            "Track, station positions, station names, bridges, tunnels and line colours: © OpenStreetMap contributors, ODbL 1.0. Station names and order are checked against, and station codes come from, MTR Corporation Limited’s open data on DATA.GOV.HK (MTR Lines and Stations), used under DATA.GOV.HK’s Terms and Conditions of Use. Headways and running times: worked out from MTR’s Next Train open data on DATA.GOV.HK, November 2026. The intellectual property rights in the MTR data belong to MTR Corporation Limited. The game is not affiliated with MTR Corporation Limited or the Hong Kong SAR Government.",
+                            "軌道、車站位置、站名、橋梁、隧道與路綫色：© OpenStreetMap 貢獻者，ODbL 1.0。站名與站序用香港鐵路有限公司在「資料一線通」（DATA.GOV.HK）公開的「港鐵路綫及車站」資料核對，車站代號取自該資料，依「資料一線通」的使用條款及條件使用。班距與行車時間：由港鐵在「資料一線通」公開的「下一班列車」資料（2026 年 11 月）算出。港鐵資料的知識產權屬香港鐵路有限公司所有。本遊戲與香港鐵路有限公司、香港特別行政區政府沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
+                ]
+            )
+        }
+    }
+
+    static func taiwanSections(in language: DisplayLanguage) -> [DataSourceSection] {
         [
             // What the real railways on the map are, and where each
             // system's data comes from (`RealRailways.System.all`).
@@ -477,19 +514,20 @@ public enum DataSourceCredits {
                             openGovernmentLicense(in: language),
                         ]
                     ),
-                    // Decision 695: each airport's passengers and flights of
-                    // a year, which set its flights and how many of its
-                    // passengers ride the company's trains.
+                    // Decisions 695 and 700: each airport's passengers and
+                    // flights of a year and where they go, which set its
+                    // flights and how many of its passengers ride the
+                    // company's trains.
                     DataSourceCredit(
                         id: "airports",
-                        title: language.text("Airport passengers and flights", "機場旅客與航班架次"),
+                        title: language.text("Airport passengers, flights and destinations", "機場旅客、航班架次與航點"),
                         detail: language.text(
-                            "How many passengers and flights Taoyuan, Songshan, Taichung and Kaohsiung airports have in a year: on a real-world map, they set each airport's flights and how many of its passengers ride your trains.",
-                            "桃園、松山、臺中、高雄機場一年的旅客與航班架次：在實景地圖上，決定每座機場的航班數，以及有多少旅客搭你的車。"
+                            "How many passengers and flights each of Taiwan's airports has in a year, and where they fly: on a real-world map, they set each airport's flights, its domestic and international passengers, and how many of them ride your trains.",
+                            "臺灣各機場一年的旅客、航班架次與飛往哪裡：在實景地圖上，決定每座機場的航班數、國內與國際旅客，以及有多少旅客搭你的車。"
                         ),
                         notice: language.text(
-                            "Source: Civil Aviation Administration, Ministry of Transportation and Communications, civil air transport statistics, 2025, as given on each airport's page of the Chinese Wikipedia. Terminal positions: OpenStreetMap contributors.",
-                            "資料來源：交通部民用航空局民航運輸統計，114 年（取自中文維基百科各機場條目）。航廈位置：OpenStreetMap 貢獻者。"
+                            "Source: Civil Aviation Administration, Ministry of Transportation and Communications, Civil Aviation Statistics annual report 2025 and its timetable of scheduled domestic flights. Terminal positions: OpenStreetMap contributors.",
+                            "資料來源：交通部民用航空局「民航統計年報」114 年與「國內定期航線班機時刻表」。航廈位置：OpenStreetMap 貢獻者。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
