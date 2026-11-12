@@ -154,10 +154,13 @@ extension ManualDrive {
             looking && turns(for: result, reduceMotion: reduceMotion) ? .side : chosen
         }
 
-        /// The result card's button: "Back to the cab" for a player who
-        /// drives from the cab, "Back to the train" otherwise.
-        public static func backText(chosen: Map3DFollow.View, in language: DisplayLanguage) -> String {
-            chosen == .cab ? language.text("Back to the cab", "回駕駛室") : ManualDrive.doneText(in: language)
+        /// The result card's button: "Back to the cab" while a player who
+        /// drives from the cab looks at the stopped train from beside
+        /// (`looking`), "OK" once the camera is back in the cab (or never
+        /// left it), "Back to the train" from any other view.
+        public static func backText(chosen: Map3DFollow.View, looking: Bool, in language: DisplayLanguage) -> String {
+            guard chosen == .cab else { return ManualDrive.doneText(in: language) }
+            return looking ? language.text("Back to the cab", "回駕駛室") : language.text("OK", "好")
         }
     }
 

@@ -259,7 +259,7 @@ struct Map3DPreviewScreen: View {
                 if driving != nil {
                     // Decision 686: the handle; decision 704: a lever
                     // with the speed, at the trailing thumb.
-                    Map3DDrivePanel(session: session, view: followView)
+                    Map3DDrivePanel(session: session, view: followView, looksAtStop: looksAtStop)
                         .padding(.bottom, 8)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else if let driver {
@@ -3333,6 +3333,8 @@ private struct Map3DDrivePanel: View {
     /// Decision 710: where the player follows the train from, which the
     /// result card's button goes back to.
     let view: Map3DFollow.View
+    /// Whether the stopped train is being looked at from beside.
+    let looksAtStop: Bool
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The drag on now: where it began and the notch the handle stood on
@@ -3580,7 +3582,7 @@ private struct Map3DDrivePanel: View {
             Button {
                 session.endManualDrive()
             } label: {
-                Text(verbatim: ManualDrive.StopLook.backText(chosen: view, in: language))
+                Text(verbatim: ManualDrive.StopLook.backText(chosen: view, looking: looksAtStop && ManualDrive.StopLook.turns(for: session.manualDriveReading?.result, reduceMotion: reduceMotion), in: language))
                     .font(.subheadline.weight(.bold))
                     .fixedSize()
                     .padding(.horizontal, 12)
