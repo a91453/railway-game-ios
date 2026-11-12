@@ -1,3 +1,5 @@
+> 長途客運第一步的資料（派工單 COACH-1，session_01YGNNuozmbRVMiB9A32gfU7，`claude/coach-data`，[決策 706](decisions/706.md)，不動 GameCore、存檔、golden、fixture，2026-11-12）：TDX 公路客運的城際路線（國道客運全收、跨縣市且到過 30 km 的公路客運）打包成 `Resources/RealCoaches/real_coaches.json`（715 個方向，3.75 MB），工具在 `tools/real-coaches/`，載入是 `RealCoaches`。**還沒有規則讀它**。**還留下的**：PR-2（`claude/coach-rule`，動 GameCore、存檔 91）：真實客運自動跑、搶城際旅客、下車的人轉搭玩家的車、車站面板一節、economy-balance 量測；設計與進度見 §4.66。3D 的客運站與車、玩家自己經營客運是之後的事（決策 706「下一步」）。
+
 > 圖鑑的飛機頁與機場清單（派工單 COLLECTION-AIR，session_01YGNNum56iA31T4mcCruB46，`claude/collection-air-701`，#2074，[決策 701](decisions/701.md)，不動 GameCore、存檔、golden、fixture，2026-11-12；這個 session 壓縮兩次後停在這裡）：圖鑑多「飛機」頁，四型客機各一張卡、城市與離島機場兩個場景，都能進 3D 展示台看日夜；有機場的地圖多一段「這張地圖的機場」，列當天架次與旅客。三輪截圖驗收的圖在 `docs/art/collection-air-2026-11-12/overview.jpg` 與 PR。**還留下的**：這是第三級，規劃看過截圖才合；展示台的夜景沒有地面光池（自己畫的光池白天是暗塊、晚上過白，拿掉了），飛機晚上偏暗，要不要補一盞由規劃決定；`TrainShowcaseUITests.testAnAircraftCardOpensItsStage` 只在 full lane 跑，還沒跑過；哪型飛機在哪座機場看得到寫在 `AirCollection.airportKeys`，目錄再加機場（AIRPORT-2、金門馬祖）時那張表已先寫好代號，測試跟著目錄走，不必改。卡片上「看得到的機場」超過五座時只列前四座再寫「等 N 座」（`AirCollection.listedAirports`）。
 >
 > 機場接進 3D 地圖（派工單 AIRPORT-2，Mac 本機，`claude/airport-2`，[決策 699](decisions/699.md)，GameCore、存檔、golden、fixtures 不動，2026-11-12）：實景 3D 地圖照 OpenStreetMap 鋪 19 座機場的跑道（含標線、號碼）、滑行道、停機坪、空橋、塔台與夜間燈光（`tools/airfields/` → `Resources/BaseMap/taiwan_airfields.json`）；航廈用真實輪廓畫成藍灰屋頂；決策 698 的四型飛機停在機位，照 `airportDays()` 每小時的架次進場、落地、滑行到機位、後推、起飛（只是畫面，減少動態時不動）；2D 與 3D 地圖都有可點的機場標記，開觀光景點面板的機場那一節。之後新增的機場（決策 700 的國內線）只要在那 19 座裡就自動有場面。**還留下的**（決策 699「下一步」與[美術紀錄](art/airports-on-map-2026-11-12/README.md)的「還有哪裡不好」）：航廈沒有各自的造型；滑行的飛機不互相讓路；松山、高雄沒有塔台（OSM 沒標）；夜間飛機沒有燈；臺中等機位太少的機場，機位是補的；玩家自己蓋的機場與海外機場的場面還沒有；只在模擬器看過，實機幀數沒驗。
@@ -4631,3 +4633,13 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **照順序可以派的三件**（研究 §3.1、§6.4、§6.6）：L0 查表不要線性（先做 `planTrafficOvertakes` 裡每一對服務都重問的 `hasRoutePreferences`）、L1 軌道佔用索引增量更新與蓋軌道的格子索引、L2 交會計畫以連通塊為單位。每一件的驗收都是三套 fixture 不動且全過；L2 之後的要決策號。
 - **還沒量的**（§2.6）：Mac（Release）與實機的同一份基準、Apple 平台的 JSON 編解碼、`-c release` 與 Linux debug `-O` 的差別。
 - **雲端**：不建議把 tick 搬上去；可選的雲端工作排在本地優化之後，而且先做 §6.4 階段 6 那個不建立任何資源的實驗。這次沒有註冊或建立任何雲端資源。
+
+### 4.66 長途客運第一步（決策 706，COACH-1 session_01YGNNuozmbRVMiB9A32gfU7，2026-11-12）
+
+**PR-1（資料，`claude/coach-data`）做完的**：`tools/real-coaches/build_real_coaches.py` 讀 TDX 公路客運的五個回答（路線、站序、形狀、班表、票價；用 `tdx-check.yml` 一次抓一個，原始回答不進 repo），寫出 `RailwayGameApp/Resources/RealCoaches/real_coaches.json`；`Sources/GamePresentation/RealCoaches.swift` 只讀；`RealCoachesTests`；資料來源頁的 `realCoaches`。怎麼挑城際、怎麼算、已知限制在 `tools/real-coaches/README.md`。
+
+- **App 開遊戲時還不讀這個檔**，沒有規則用它。
+- TDX 的班表不完整（123 個方向沒有班表，沒收；有的路線班次比業者網站少），照 TDX 有的寫。
+- 重抓 TDX 之後 `RealCoachesTests` 寫死的條數與三條路線的數字要跟著改。
+
+**PR-2（規則，`claude/coach-rule`）**：PR-1 綠了才開；做到哪、量到的數字會補在這裡與決策 706。它拿存檔版本 91；golden schema 不動的話釋出 77。
