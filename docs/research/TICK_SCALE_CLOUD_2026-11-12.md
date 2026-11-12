@@ -168,3 +168,70 @@
 這些數字本身已經回答了一半的問題：**現在的遊戲在 74–145 列車、開行車控制時，600× 就已經超過每 tick 100 ms 的預算**。所以第 2 節的基準不是要證明「一萬輛跑不動」（那不用量），而是要量出成本隨列車數怎麼長、長在哪裡，才知道先修哪一條。
 
 <!-- 2–6 節在後續的 commit 補上 -->
+
+---
+
+## 附錄 A：前人怎麼做（只讀做法，沒有搬程式）
+
+照 CLAUDE.md「先找前人做法」。網頁都是 2026-11-12 讀的；沒能從原始頁面確認的寫「未確認」。
+
+### A.1 作者的參考庫（`a91453/railway-reference-private`，HEAD `fa053380`）
+
+| 來源 | 有什麼 | 能用的做法 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`（地鐵、高鐵、航空的網頁遊戲，程式壓成一個檔） | `loop(e)`：`requestAnimationFrame` 變動步長，地鐵把一步夾在 1/30 秒、多的時間丟掉（`_metroDroppedLagSec`）；每幀動列車，**換分鐘**才檢查班次與 `spawnTrains`，**換小時**才 `updateLineFlow`、結帳，**換日**才日結。高鐵一幀的工作超過 8 ms 就把下一步延後。客流分配照幀時間給每幀 400–900 列的額度（`_metroFlowDispatchSliceBudget`） | 和本專案現在的分鐘／整點／午夜節拍相同；「一幀只做一份額度」的切片本專案用不到（tick 已在背景）。 |
+| 同上，共用軌道 | `metroSharedTrackBeginHeadwayFrame`／`…RememberMove`／`…HeadwayClearance`：每幀一本帳，記每列車佔的距離區間與到期時間，後車只能走到淨空為止 | 比本專案的進路預約粗得多（沒有道岔、交會），不能取代；但「佔用記成區間、後車只問前面那一筆」正是第 3.1 節 L1 要的形狀 |
+| 同上，列車的格子 | `hsrRuntimeIndexTrain`：`"floor(lng),floor(lat)"` 的 1° 格子，只給畫面裁切用 | 是顯示用的索引，不是模擬用的 |
+| 同上，伺服器 | 客流路徑在伺服器算，客戶端讀 `X-Flow-Path-Cache` 標頭；每 900 秒雲端自動存檔；FNV-1a 驗存檔 | 伺服器的程式沒有在快照裡。「路徑在伺服器算、客戶端當快取」和第 4 節的「可選雲端」同一類 |
+| `Railway/railway_game_reference_clean/docs/`（`desync.md`、`debugging_desyncs.md`、`linkgraph.md`、`logging_and_performance_metrics.md`） | 這是 OpenTTD 的文件（名稱換過；`binary_reference/` 的 wasm 是 OpenTTD 15.3）。內容見 A.2 | 只有文件與編譯好的 wasm，沒有原始碼；OpenTTD 是 GPL-2.0，照 CLAUDE.md 只讀做法。本專案的 `ReplayFixtures` 已經是照這兩份 desync 文件做的（ARCHITECTURE 6683 行） |
+| `Simulator/reference_snapshot/` | 模型鐵道的軌道配置工具，列車只照道岔方向走 | 和規模無關 |
+| `OpenWorld/reference_snapshot/play/src/engine/world-stream.js` | `WorldStream`：玩家周圍半徑 2 的區塊才啟用 | 是畫面的串流，不是模擬的分層 |
+
+沒有找到的：依距離簡化遠處車輛的模擬、四叉樹或 kd 樹、lockstep 連線的程式。
+
+授權的觀察（留給作者判斷，這次沒有搬任何程式所以不影響）：`Ci/` 與 `Simulator/` 的快照裡沒有授權檔，`Ci/reference_snapshot/terms/index.html` 那一頁寫著禁止重製與還原工程；`Simulator/` 下沒有 CLAUDE.md 提到的 `REFERENCE_REFRESH_2026-10-07.md` 與 `SANITIZATION_REPORT.md`。
+
+### A.2 外部專案
+
+| 專案（授權） | 做法 | 出處 |
+| --- | --- | --- |
+| **OpenTTD**（GPL-2.0，只讀做法） | 一個 tick 27 ms、一天 74 tick；重的工作各有自己的週期（車站評價 185 tick、城鎮成長 70、工業 256），地形每 256 tick 輪完一遍，每 tick 只做 1/256 | `src/gfx_type.h`、`src/timer/timer_game_tick.h`、`src/landscape.cpp`（github.com/OpenTTD/OpenTTD） |
+| | YAPF 把每一段連續軌道的成本記住，只有號誌前瞻範圍內重算（為了連線時不 desync） | `src/pathfinder/yapf/yapf_costrail.hpp` |
+| | **貨物分配（link graph）在另一條執行緒算，在固定的遊戲時間接回**（每天第 21 tick 開與接；沒算完遊戲就等）：非同步但結果仍是決定性的 | `docs/linkgraph.md`、`src/linkgraph/linkgraphschedule.h` |
+| | 連線：加入時下載伺服器當下的存檔，之後只收指令；指令由伺服器排進某個網路幀，所有人同一幀同一順序執行；定期送亂數狀態當校驗，不符就斷線；`-d desync=2/3` 記指令與定期存檔供重播 | `docs/desync.md`、`docs/multiplayer.md` |
+| **Simutrans**（Artistic License） | 分 `sync_step`（列車移動，每步）與 `step`（找路、工廠生產，較慢）；連線時把存檔串流進雜湊當校驗 | `src/simutrans/world/simworld.h`（github.com/simutrans/simutrans） |
+| **A/B Street**（Apache-2.0） | **離散事件模擬**：一個全域的事件優先佇列，「不是每一步掃每個代理人」；車輛狀態是 Crossing（排在最快到達的時間）、Queued 等；每條車道一個佇列，確切位置只在要畫時才算。先前「每 0.1 秒更新每個代理人」的設計因為白做工而放棄；塞車時的重試（每 0.1 秒）仍是熱點 | a-b-street.github.io/docs/tech/trafficsim/discrete_event/ |
+| **Factorio**（專有，只有部落格） | 決定性 lockstep、只送輸入（FFF-188）；加入時下載地圖再快轉追上（FFF-149）；每 tick 的 CRC 抓 desync（FFF-55，未確認，來自搜尋摘要）；輸送帶合成一段、記物品間的空隙，更新變 O(1)（FFF-176）；閒置的物件睡眠、機器人最多隔 20–60 tick 才更新（FFF-421） | factorio.com/blog/post/fff-188、149、176、421 |
+| Glenn Fiedler | lockstep 的頻寬只和輸入有關、要求逐位元相同；浮點數跨編譯器與架構不保證相同 | gafferongames.com/post/deterministic_lockstep/、floating_point_determinism/ |
+
+Transport Fever 2、Cities: Skylines、NIMBY Rails、Mini Metro：沒有找到公開的技術說明，略過。從 Swift 或 C# 把模擬核心改寫成 Rust／C++ 的事後檢討：沒有找到附人月成本的可信文章。
+
+和本專案對照：
+- 本專案的 `advance` 已經有 OpenTTD 的「重的工作各有週期」與一半的 A/B Street（沒事的秒數跳過）；缺的是 A/B Street 的另一半：**等路的列車登記在它等的資源上，資源放出來才叫醒**（現在是每一圈全部重問）。
+- OpenTTD 的 link graph 是「可選雲端」最好的範本：重的、純函數的工作在別處算，**在固定的遊戲時間接回**，結果不因為在哪裡算而不同。
+- 連線同步要的三樣（開局存檔、指令流、定期校驗）本專案已經有離線版：`SavedGame`、指令紀錄（`CommandLog`）、`ReplayFixtures` 的校驗和。
+
+## 附錄 B：Railway 平台的公開價目（2026-11-12 讀的，沒有註冊、沒有建立資源）
+
+出處：railway.com/pricing、docs.railway.com/reference/pricing/plans、/reference/app-sleeping、/reference/cron-jobs、/networking/public-networking/specs-and-limits、/reference/regions。
+
+| 方案 | 月費 | 含的用量 | 每個服務上限（含副本） |
+| --- | --- | --- | --- |
+| Free | $0 | $1／月 | 1 vCPU、0.5 GB、磁碟 0.5 GB |
+| Hobby | $5 | $5 | 48 vCPU、48 GB、磁碟 5 GB、6 個副本 |
+| Pro | $20／工作區 | $20 | 1,000 vCPU、1 TB、磁碟 1 TB、42 個副本 |
+
+單價：CPU 每 vCPU 每月 $20（每分鐘 $0.000463）；記憶體每 GB 每月 $10（每分鐘 $0.000231）；對外流量每 GB $0.05；磁碟每 GB 每月 $0.15。
+
+行為：
+- 可以縮到零（Serverless）：約 5–10 分鐘沒有對外封包就睡，第一個請求叫醒，會慢、可能回 502。
+- HTTP 請求最長 15 分鐘、閒置 5 分鐘關；WebSocket 可以一直開；每個網域約 10,000 條連線。
+- 排程最短 5 分鐘一次。
+- 區域：美西、美東、阿姆斯特丹、**新加坡**（離臺灣最近的一個）。
+- 只有 amd64（社群論壇的回覆，官方文件未確認）。
+- 常駐的服務是預設的模型，背景 worker 沒有另外的限制（從文件推得）。
+
+對照：Fly.io shared-cpu-1x 1 GB 每月 $6.70、亞太流量每 GB $0.04（docs.fly.io/about/pricing）；Cloudflare Workers 付費 $5／月含 3,000 萬 CPU 毫秒、之後每百萬 CPU 毫秒 $0.02，每次最多 5 分鐘 CPU、128 MB（developers.cloudflare.com/workers/platform/pricing、limits）：Swift 核心得編成 Wasm 才放得進去，128 MB 放不下大地圖；AWS Lambda x86 每 GB·秒 $0.0000166667（aws.amazon.com/lambda/pricing）。
+
+Swift 在伺服器與其他平台（swift.org 文件，6.4.2）：官方 Docker 映像有 amd64 與 arm64、有 `-slim` 執行版；Static Linux SDK（musl）可以出完全靜態的執行檔；Android 與 Wasm 都有官方 SDK。GameCore 沒有任何 `import`，所以同一份原始碼今天就能在 Linux 容器裡跑（CI 與這次的量測就是）。
+
