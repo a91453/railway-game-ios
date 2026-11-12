@@ -662,6 +662,13 @@ public struct TrainDiagramViewport: Equatable, Sendable {
     /// Where now stands while following: a quarter of the way across.
     public static let followShare = 0.25
 
+    /// The line under the diagram's legend: it opens two hours across
+    /// (``openingSpan``), and nothing else on the screen says that two
+    /// fingers and a drag show the rest.
+    public static func gestureHint(in language: DisplayLanguage) -> String {
+        language.text("Pinch to zoom; drag to see other hours.", "兩指縮放；拖曳看其他時段。")
+    }
+
     public init(now: Int64, span: Double = TrainDiagramViewport.openingSpan) {
         self.span = min(max(span, Self.shortestSpan), Self.longestSpan)
         start = Double(now) - self.span * Self.followShare

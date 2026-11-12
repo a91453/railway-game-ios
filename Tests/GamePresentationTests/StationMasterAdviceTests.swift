@@ -129,4 +129,31 @@ final class StationMasterAdviceTests: XCTestCase {
         XCTAssertEqual(short.text(in: .traditionalChinese), "昨天「Alpha」只有 64% 的旅客搭上車。到 80% 附近的城市才會長高，加開列車吧。")
         XCTAssertTrue(short.isWorry)
     }
+
+    // MARK: - Where a tap on the bubble goes (HEIGHT-HINT)
+
+    /// The bubble shows its mark, and VoiceOver its action, only for
+    /// advice a tap takes somewhere.
+    func testOnlyAdviceThatGoesSomewhereHasADestination() {
+        let station = StationID(rawValue: 3), line = LineID(rawValue: 2)
+        XCTAssertEqual(StationMasterAdvice.zoneNearStation(station: station, name: "A", cells: 4).destination, .zoning(station), "the zoning tool, not just the station")
+        XCTAssertEqual(StationMasterAdvice.lineLosing(line: line, name: "L", reason: .lowLoad).destination, .line(line))
+        XCTAssertEqual(StationMasterAdvice.noPlaceToPass(line: line, name: "L").destination, .line(line))
+        XCTAssertEqual(StationMasterAdvice.stationFull(station: station, name: "A").destination, .station(station))
+        XCTAssertEqual(StationMasterAdvice.townGrew(station: station, name: "A", tenths: 12).destination, .station(station))
+        for advice in [StationMasterAdvice.buildTrack, .buildStation, .buildSecondStation, .createLine,
+                       .lineWithoutTrains(line: line, name: "L")] {
+            XCTAssertNil(advice.destination, "\(advice): a tap only puts the bubble away")
+        }
+    }
+
+    func testEachDestinationNamesItsActionInBothLanguages() {
+        let all: [StationMasterAdvice.Destination] = [
+            .zoning(StationID(rawValue: 1)), .line(LineID(rawValue: 1)), .place(PlanPoint(x: 0, y: 0)), .station(StationID(rawValue: 1)),
+        ]
+        for destination in all {
+            XCTAssertFalse(destination.actionName(in: .english).isEmpty)
+            XCTAssertNotEqual(destination.actionName(in: .english), destination.actionName(in: .traditionalChinese))
+        }
+    }
 }
