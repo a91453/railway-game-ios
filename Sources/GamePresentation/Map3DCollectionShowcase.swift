@@ -17,6 +17,8 @@ public enum Map3DCollectionShowcase {
     /// What a page shows.
     public enum Exhibit: String, CaseIterable, Identifiable, Sendable {
         case ferries, cableways
+        /// Decision 701: the four aircraft, and the two airports as scenes.
+        case aircraft, cityAirport, islandAirport
 
         public var id: String { rawValue }
 
@@ -25,14 +27,24 @@ public enum Map3DCollectionShowcase {
             switch self {
             case .ferries: language.text("Ferries", "渡輪")
             case .cableways: language.text("Cable Cars", "纜車")
+            case .aircraft: language.text("Aircraft", "飛機")
+            case .cityAirport: language.text("City Airport", "城市機場")
+            case .islandAirport: language.text("Island Airport", "離島機場")
             }
         }
+
+        /// Decision 701: whether its models are stood in the ground's own
+        /// mesh (``Map3DAirShowcase``) rather than drawn from the model pack.
+        public var isAir: Bool { self == .aircraft || self == .cityAirport || self == .islandAirport }
 
         /// The collection's button that opens it.
         public func openTitle(in language: DisplayLanguage) -> String {
             switch self {
             case .ferries: language.text("Ferries up close", "近看渡輪")
             case .cableways: language.text("Cable cars up close", "近看纜車")
+            case .aircraft: language.text("Aircraft up close", "近看飛機")
+            case .cityAirport: language.text("City airport up close", "近看城市機場")
+            case .islandAirport: language.text("Island airport up close", "近看離島機場")
             }
         }
 
@@ -41,6 +53,9 @@ public enum Map3DCollectionShowcase {
             switch self {
             case .ferries: "ferry.fill"
             case .cableways: "cablecar.fill"
+            case .aircraft: "airplane"
+            case .cityAirport: "airplane.departure"
+            case .islandAirport: "airplane.arrival"
             }
         }
 
@@ -49,6 +64,8 @@ public enum Map3DCollectionShowcase {
             switch (self, view) {
             case (.ferries, .closeUp): language.text("Bow", "船頭特寫")
             case (.cableways, .closeUp): language.text("Cabin", "吊廂特寫")
+            case (.aircraft, .closeUp): language.text("Nose", "機頭特寫")
+            case (.cityAirport, .closeUp), (.islandAirport, .closeUp): language.text("Stand", "機位特寫")
             default: view.name(in: language)
             }
         }
@@ -58,6 +75,8 @@ public enum Map3DCollectionShowcase {
             switch self {
             case .ferries: language.text("Takes a photo of the boats to save or share.", "拍下渡輪的照片，可以存起來或分享。")
             case .cableways: language.text("Takes a photo of the cabins to save or share.", "拍下吊廂的照片，可以存起來或分享。")
+            case .aircraft: language.text("Takes a photo of the aircraft to save or share.", "拍下飛機的照片，可以存起來或分享。")
+            case .cityAirport, .islandAirport: language.text("Takes a photo of the airport to save or share.", "拍下機場的照片，可以存起來或分享。")
             }
         }
 
@@ -67,6 +86,10 @@ public enum Map3DCollectionShowcase {
                                          "畫面只留下渡輪。點一下畫面，按鈕就回來。")
             case .cableways: language.text("Leaves only the cable cars on screen. Tap the picture to bring the buttons back.",
                                            "畫面只留下纜車。點一下畫面，按鈕就回來。")
+            case .aircraft: language.text("Leaves only the aircraft on screen. Tap the picture to bring the buttons back.",
+                                          "畫面只留下飛機。點一下畫面，按鈕就回來。")
+            case .cityAirport, .islandAirport: language.text("Leaves only the airport on screen. Tap the picture to bring the buttons back.",
+                                                             "畫面只留下機場。點一下畫面，按鈕就回來。")
             }
         }
 
@@ -74,6 +97,8 @@ public enum Map3DCollectionShowcase {
             switch self {
             case .ferries: language.text("Turns the camera slowly round the boats.", "鏡頭慢慢繞著渡輪轉。")
             case .cableways: language.text("Turns the camera slowly round the cabins.", "鏡頭慢慢繞著吊廂轉。")
+            case .aircraft: language.text("Turns the camera slowly round the aircraft.", "鏡頭慢慢繞著飛機轉。")
+            case .cityAirport, .islandAirport: language.text("Turns the camera slowly round the stand.", "鏡頭慢慢繞著機位轉。")
             }
         }
     }
@@ -107,6 +132,15 @@ public enum Map3DCollectionShowcase {
         /// Everything shown, low and high corners (y the ground's 0).
         public let low: Map3DPoint
         public let high: Map3DPoint
+        /// Decision 701: whether the far models are shown, and where the
+        /// close and side views stand (the camera's heading, radians): ahead
+        /// of a boat or cabin's +x and to one side, and beside it.
+        public var far = false
+        public var closeHeading: Float = -120 * .pi / 180
+        public var sideHeading: Float = .pi
+        /// The way up the screen in the view from above: +z, or +x for
+        /// what is laid across rather than along (the aircraft's row).
+        public var overheadHeading: Float = .pi
     }
 
     /// The boats' distance apart, middle to middle: the two beams' halves
@@ -133,11 +167,34 @@ public enum Map3DCollectionShowcase {
         Map3DCableCar.SunMoonCabin.allCases.map { "cablecar-cabin-sunmoon-" + $0.rawValue }
     ]
 
-    /// `exhibit` laid out, with its far models when `far`.
-    public static func layout(_ exhibit: Exhibit, far: Bool = false) -> Layout {
+    /// `exhibit` laid out, with its far models when `far`. Decision 701:
+    /// `focus` picks which of an aircraft page's aircraft the close and
+    /// side views look at (the first when out of range).
+    public static func layout(_ exhibit: Exhibit, far: Bool = false, focus: Int = 0) -> Layout {
         let suffix = far ? "-far" : ""
         let ahead = Map3DPoint(1, 0, 0)
         switch exhibit {
+        case .aircraft, .cityAirport, .islandAirport:
+            let parked = Map3DAirShowcase.parked(exhibit)
+            let shown = parked.indices.contains(focus) ? parked[focus] : parked[0]
+            let extent = Map3DAirShowcase.extent(exhibit) ?? (.zero, .zero)
+            // An aircraft is as wide as it is long: the close view stands
+            // back by its length and a little, an airport's by more to
+            // take in the bridge or the terminal behind.
+            let close = shown.length * (exhibit == .aircraft ? 1.25 : 1.6)
+            var layout = Layout(exhibit: exhibit, pieces: [], ropes: [], focus: shown.middle + Map3DPoint(0, shown.height * 0.4, 0),
+                                focusLength: max(shown.length, shown.wingspan) * (exhibit == .aircraft ? 1 : 1.5),
+                                closeDistance: min(max(close, 18), Map3DShowcase.farthest), low: extent.low, high: extent.high)
+            layout.far = far
+            // An airport is looked at from its apron, the terminal behind
+            // the aircraft: the city's from behind the first jet's tail and
+            // its open side, the island's from the runway's side.
+            switch exhibit {
+            case .cityAirport: (layout.closeHeading, layout.sideHeading) = (-60 * .pi / 180, 0)
+            case .islandAirport: (layout.sideHeading, layout.overheadHeading) = (-.pi / 2, .pi / 2)
+            default: layout.overheadHeading = .pi / 2
+            }
+            return layout
         case .ferries:
             let boats = Map3DFerry.Boat.allCases
             let pieces = boats.enumerated().map { index, boat in
@@ -187,9 +244,13 @@ public enum Map3DCollectionShowcase {
         let low = Map3DPoint(layout.low.x - margin, 0, layout.low.z - margin), high = Map3DPoint(layout.high.x + margin, 0, layout.high.z + margin)
         let water = layout.exhibit == .ferries
         let y: Float = water ? Map3DFerries.waterLift : 0
+        let colour = water ? Map3DPalette.water : layout.exhibit.isAir ? Map3DAirShowcase.groundColour : Map3DShowcase.groundColour
         mesh.addQuad(Map3DPoint(low.x, y, low.z), Map3DPoint(low.x, y, high.z), Map3DPoint(high.x, y, high.z), Map3DPoint(high.x, y, low.z),
-                     color: water ? Map3DPalette.water : Map3DShowcase.groundColour)
+                     color: colour)
         if water { mesh.makeWater(from: 0) }
+        // Decision 701: the aircraft and airports stand in the ground's
+        // own mesh, all of it drawn at every distance.
+        if layout.exhibit.isAir { mesh.append(Map3DAirShowcase.mesh(layout.exhibit, far: layout.far)) }
         let count = mesh.indices.count
         return Map3DScene.Chunk(column: 0, row: 0, mesh: mesh, baseIndexCount: count, far: Map3DMesh(), farBoxes: [], close: Map3DMesh(),
                                 standIn: Map3DMesh(), shadows: Map3DMesh(), props: [], minimum: Map3DPoint(low.x, -1, low.z),
@@ -222,27 +283,33 @@ public enum Map3DCollectionShowcase {
         let halfTall = tanf(Map3DCamera.fieldOfView / 2), halfWide = halfTall * aspect
         // Half the screen's height at the target, and the part of it the
         // buttons leave: the target goes that far below what is shown.
-        let raise = coveredBelow / 2
+        // Decision 701: an aircraft is as wide as it is long, so it is
+        // raised all the way into the part the buttons leave.
+        let raise = layout.exhibit.isAir ? coveredBelow * 0.9 : coveredBelow / 2
         switch view {
         case .closeUp:
-            camera.heading = -120 * .pi / 180
+            camera.heading = layout.closeHeading
             camera.pitch = .pi / 2 - 0.39
             camera.distance = layout.closeDistance
             camera.target = layout.focus - Map3DPoint(0, raise * camera.distance * halfTall, 0)
         case .side:
-            camera.heading = .pi
+            camera.heading = layout.sideHeading
             camera.pitch = 82 * .pi / 180
             camera.distance = min(max(layout.focusLength / 2 * 1.15 / halfWide, 12), Map3DShowcase.farthest)
             camera.target = layout.focus - Map3DPoint(0, raise * camera.distance * halfTall, 0)
         case .overhead:
-            // Looking nearly straight down with +z up the screen.
-            let along = layout.high.x - layout.low.x, across = layout.high.z - layout.low.z
-            camera.heading = .pi
+            // Looking nearly straight down with +z up the screen (or +x:
+            // decision 701's ``Layout/overheadHeading``).
+            let up = Map3DPoint(sinf(layout.overheadHeading), 0, -cosf(layout.overheadHeading))
+            let turned = abs(up.x) > 0.5
+            let along = turned ? layout.high.z - layout.low.z : layout.high.x - layout.low.x
+            let across = turned ? layout.high.x - layout.low.x : layout.high.z - layout.low.z
+            camera.heading = layout.overheadHeading
             camera.pitch = 20 * .pi / 180
             let fit = max(along / 2 * 1.15 / halfWide, (across / 2 + 6) * 1.3 / ((1 - coveredBelow) * halfTall))
             camera.distance = min(max(fit, 30), Map3DShowcase.farthest)
-            camera.target = Map3DPoint((layout.low.x + layout.high.x) / 2, 0,
-                                       (layout.low.z + layout.high.z) / 2 - coveredBelow * camera.distance * halfTall)
+            camera.target = Map3DPoint((layout.low.x + layout.high.x) / 2, 0, (layout.low.z + layout.high.z) / 2)
+                - up * (coveredBelow * camera.distance * halfTall)
         }
         return camera
     }

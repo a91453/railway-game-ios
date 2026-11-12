@@ -3483,6 +3483,119 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 701: the collection's aircraft page and its three 3D
+    /// stages (the four aircraft, the city airport, the island airport):
+    /// the page in Chinese and dark, each stage's close view and side by
+    /// day, the close view at night and the view from above, the buttons
+    /// hidden once, and the stage opened from the wide-body jet's card;
+    /// then the page in English and light, and in a game whose map has
+    /// airports. For the screenshot review of the pull request that added
+    /// the page.
+    func testCollectionAircraftAndAirportsIn3D() {
+        defer { XCUIDevice.shared.appearance = .dark }
+        func openPage(_ app: XCUIApplication, _ page: String) {
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+            let segment = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", page)).firstMatch
+            XCTAssertTrue(segment.becomesHittable(within: 10), "Missing the collection's aircraft page")
+            segment.tap()
+            XCTAssertTrue(app.buttons["settings.collection.aircraft"].appears(within: 10), "The aircraft page")
+        }
+        func stageOpens(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The \(name) stage did not open")
+            XCTAssertTrue(app.activityIndicators.firstMatch.disappears(within: 180), "The \(name) models")
+            return closeUp
+        }
+        var app = launch()
+        var settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        openPage(app, "飛機")
+        settle()
+        keep("collection-aircraft-page", app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.airport.islandAirport"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-aircraft-page-airports", app)
+        for exhibit in ["aircraft", "cityAirport", "islandAirport"] {
+            let open = app.buttons["settings.collection.\(exhibit)"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(open, clearOf: .slider), "The \(exhibit) button")
+            open.tap()
+            let closeUp = stageOpens(app, exhibit)
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("collection-\(exhibit)-day-close", app)
+            app.buttons["trainShowcase.hide"].tap()
+            settle(seconds: 2)
+            keep("collection-\(exhibit)-day-close-clear", app)
+            app.descendants(matching: .any)["trainShowcase.reveal"].firstMatch.tap()
+            let side = app.buttons["trainShowcase.camera.side"]
+            XCTAssertTrue(side.becomesHittable(within: 10))
+            side.tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-day-side", app)
+            app.buttons["trainShowcase.camera.overhead"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-day-above", app)
+            let light = app.segmentedControls["trainShowcase.light"]
+            light.buttons.element(boundBy: 2).tap()
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-close", app)
+            app.buttons["trainShowcase.camera.overhead"].tap()
+            settle(seconds: 4)
+            keep("collection-\(exhibit)-night-above", app)
+            let close = app.buttons["trainShowcase.close"]
+            close.tap()
+            XCTAssertTrue(close.disappears(within: 10))
+        }
+        // From a card: the stage opens on that aircraft.
+        let card = app.descendants(matching: .any)["settings.aircraft.wideJet"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(card, clearOf: .slider), "The wide-body jet's card")
+        card.tap()
+        _ = stageOpens(app, "wide-body")
+        settle(seconds: 6)
+        keep("collection-aircraft-widejet-close", app)
+        app.terminate()
+
+        // English, light.
+        XCUIDevice.shared.appearance = .light
+        app = launch(english: true)
+        settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        openPage(app, "Aircraft")
+        settle()
+        keep("collection-aircraft-page-english-light", app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.airport.islandAirport"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-aircraft-page-airports-english-light", app)
+        app.terminate()
+        XCUIDevice.shared.appearance = .dark
+
+        // In a game whose map has airports: each with its day.
+        for english in [false, true] {
+            app = launch(extra: ["-screenshot-scene", "airport"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle()
+            let menu = app.buttons["hud.menu"]
+            menu.waitUntilSettled()
+            menu.tap()
+            if !app.buttons["menu.settings"].appears(within: 5) {
+                app.buttons["menu.more"].tap()
+            }
+            app.buttons["menu.settings"].tap()
+            XCTAssertTrue(app.buttons["settings.done"].appears(within: 10), "The settings open")
+            openPage(app, english ? "Aircraft" : "飛機")
+            let listed = app.descendants(matching: .any)["settings.airport.2"].firstMatch
+            XCTAssertTrue(listed.appears(within: 10), "The map's airports are listed")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(listed, clearOf: .slider))
+            settle()
+            keep("collection-aircraft-map-airports\(english ? "-english" : "")", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 632: the collection's ferry and cable car pages, and each
     /// one's 3D stage (the phone on its side, as every screenshot here):
     /// the close view and the side by day, the close view at night and the
