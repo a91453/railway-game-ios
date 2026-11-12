@@ -207,7 +207,7 @@ struct Map3DPreviewScreen: View {
                         Spacer(minLength: 8)
                     } else if verticalSizeClass == .compact, driving != nil {
                         // Decision 704: the run's way and stop in its place.
-                        Map3DDriveHeading(session: session)
+                        Map3DDriveHeading(session: session, view: $followView, takePhoto: takePhoto)
                             .transition(.card(from: .top, reduceMotion: reduceMotion))
                         Spacer(minLength: 8)
                     }
@@ -243,7 +243,7 @@ struct Map3DPreviewScreen: View {
                         .transition(.card(from: .top, reduceMotion: reduceMotion))
                 }
                 if verticalSizeClass != .compact, driving != nil {
-                    Map3DDriveHeading(session: session)
+                    Map3DDriveHeading(session: session, view: $followView, takePhoto: takePhoto)
                         .padding(.top, 8)
                         .transition(.card(from: .top, reduceMotion: reduceMotion))
                 }
@@ -267,7 +267,13 @@ struct Map3DPreviewScreen: View {
                     .padding(.bottom, 8)
                     .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 }
-                if let train = session.followedTrain {
+                if driving != nil {
+                    // Decision 704 (later): nothing between the train's
+                    // nose and the vanishing point while the player
+                    // drives; the bar's views, horn and photo are a menu
+                    // on ``Map3DDriveHeading``.
+                    EmptyView()
+                } else if let train = session.followedTrain {
                     Map3DFollowBar(train: train, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else if let bus = session.busFollowBar {
@@ -2566,7 +2572,7 @@ private struct Map3DFollowBar: View {
 
     /// The horn's symbol: SF Symbols 5's horn, or a speaker where a system
     /// has none.
-    private static let hornSymbol = UIImage(systemName: "horn.blast.fill") != nil ? "horn.blast.fill" : "speaker.wave.3.fill"
+    static let hornSymbol = UIImage(systemName: "horn.blast.fill") != nil ? "horn.blast.fill" : "speaker.wave.3.fill"
 
     private func roundIcon(_ name: String) -> some View {
         Image(systemName: name)
@@ -3090,6 +3096,10 @@ private struct Map3DSpeedCard: View {
 /// figures itself, so only this is laid out again as they change.
 private struct Map3DDriveHeading: View {
     let session: GameSession
+    /// Decision 704 (later): where the train is followed from, chosen
+    /// here while the follow bar is away.
+    @Binding var view: Map3DFollow.View
+    let takePhoto: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -3119,9 +3129,9 @@ private struct Map3DDriveHeading: View {
                         .accessibilityLabel(Text(verbatim: label(reading, heading: heading, language: language)))
                         .accessibilityIdentifier("map3D.drive.figures")
                         .hudFrameMark("map3D.drive.figures")
+                    viewMenu(language)
                 }
-                .padding(.leading, 4)
-                .padding(.trailing, 14)
+                .padding(.horizontal, 4)
                 .padding(.vertical, 4)
                 .frame(minWidth: 260, maxWidth: 400)
                 .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -3133,6 +3143,68 @@ private struct Map3DDriveHeading: View {
             }
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopAhead)
         }
+    }
+
+    /// Decision 704 (later): the follow bar's views, horn and photo, one
+    /// small button while the player drives, so the bar is not across the
+    /// track ahead.
+    private func viewMenu(_ language: DisplayLanguage) -> some View {
+        let stationOffered = Map3DFollow.stationViewIsOffered(
+            remainingMetres: session.followedTrain.flatMap { session.world.map3DMetresToLookoutStop(of: $0.id) })
+        return Menu {
+            // One row for the two, so the views fit under it on an iPhone
+            // on its side.
+            ControlGroup {
+                Button {
+                    session.soundHorn()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Horn", "鳴笛"))
+                    } icon: {
+                        Image(systemName: Map3DFollowBar.hornSymbol)
+                    }
+                }
+                .accessibilityIdentifier("map3D.drive.horn")
+                Button(action: takePhoto) {
+                    Label {
+                        Text(verbatim: language.text("Take Photo", "拍照"))
+                    } icon: {
+                        Image(systemName: "camera.fill")
+                    }
+                }
+                .accessibilityIdentifier("map3D.drive.photo")
+            }
+            ForEach(Map3DFollow.View.allCases, id: \.self) { option in
+                Button {
+                    UITestTrace.action("map3D.drive.view.\(option.rawValue) (was \(view.rawValue))")
+                    view = option
+                } label: {
+                    if view == option {
+                        Label {
+                            Text(verbatim: option.text(in: language))
+                        } icon: {
+                            Image(systemName: "checkmark")
+                        }
+                    } else {
+                        Text(verbatim: option.text(in: language))
+                    }
+                }
+                .disabled(option == .station && !stationOffered && view != option)
+                .accessibilityIdentifier("map3D.drive.view.\(option.rawValue)")
+            }
+        } label: {
+            Image(systemName: "eye.fill")
+                .font(.caption.weight(.heavy))
+                .frame(width: 26, height: 26)
+                .background(Theme.chip, in: Circle())
+                .foregroundStyle(Theme.textPrimary)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(Text(verbatim: language.text("View", "視角")))
+        .accessibilityHint(Text(verbatim: language.text("Chooses where to watch the train from; the horn and the photo are here too.",
+                                                        "選從哪裡看列車；鳴笛與拍照也在這裡。")))
+        .accessibilityIdentifier("map3D.drive.view")
     }
 
     /// Two lines: the way and whether the run is on time; the stop driven
@@ -3343,7 +3415,13 @@ private struct Map3DDrivePanel: View {
         // The emergency brake has no tick: the handle stays on the last one.
         let row = min(CGFloat(ManualDrive.Lever.fraction(of: reading.notch)) * steps, CGFloat(notches.count - 1))
         let centre = pitch / 2 + row * pitch
-        let split = min(max(centre, 44), height - 44)
+        // Review L19 (P2-2): the two halves meet at the handle's middle,
+        // wherever it stands, so a tap above it is always towards power
+        // and one below it towards the brake. (Kept 44 points from each
+        // end, the split left the handle behind at the ends: a tap just
+        // above it on B7 was the brake's, and went into the emergency
+        // brake.)
+        let split = min(max(centre, 0), height)
         return ZStack(alignment: .top) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Theme.chip)
@@ -3360,7 +3438,9 @@ private struct Map3DDrivePanel: View {
                     .disabled(waits || reading.notch == .fullPower)
                 half(ManualDrive.brakeText(in: language), identifier: "map3D.drive.brake", up: false)
                     .frame(height: height - split)
-                    .disabled(waits || reading.notch == .emergency)
+                    // A tap never goes into the emergency brake: that is
+                    // its own key, or a drag past the last notch.
+                    .disabled(waits || reading.notch == .fullBrake || reading.notch == .emergency)
             }
             Capsule()
                 .fill(reading.notch.isEmergency ? Theme.error : Theme.textPrimary)

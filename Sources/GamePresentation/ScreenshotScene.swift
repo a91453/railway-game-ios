@@ -1252,6 +1252,51 @@ extension GameSession {
         }
     }
 
+    /// Decision 704 (later): the game run on, a second a tick, until a
+    /// train on its way to a stop has been on `asked`'s structure
+    /// (`"viaduct"`: 8 m or more over the ground; `"tunnel"`: as far under
+    /// it) for ten seconds with 3 km or more to its stop, at most four hours; that train then followed,
+    /// the game paused. For the screenshots of driving the high-speed
+    /// demo's trains there. `false` when none came.
+    public func followOnStructureForScreenshot(_ structure: String) async -> Bool {
+        let under = structure == "tunnel"
+        let start = world
+        let found = await Task.detached(priority: .userInitiated) { () -> (GameWorld, TrainID?) in
+            var world = start
+            world.setSpeed(.x10)
+            let clear = 8 * WorldCoordinate.unitsPerMetre
+            var held: [TrainID: Int] = [:]
+            for _ in 0..<14_400 {
+                do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+                for train in world.trains {
+                    guard case .travellingToStop? = train.execution, let position = train.position,
+                          let rail = world.location(of: position)?.position, let ground = world.groundHeight(at: rail.plan),
+                          under ? rail.z <= ground - clear : rail.z >= ground + clear,
+                          // Out on the line, not coming into a station.
+                          world.map3DMetresToLookoutStop(of: train.id) ?? 0 > 3_000 else {
+                        held[train.id] = nil
+                        continue
+                    }
+                    held[train.id, default: 0] += 1
+                    if held[train.id, default: 0] >= 10 {
+                        world.setSpeed(.paused)
+                        return (world, train.id)
+                    }
+                }
+            }
+            world.setSpeed(.paused)
+            return (world, nil)
+        }.value
+        _ = perform { (world: inout GameWorld) throws(GameError) in
+            world = found.0
+            return ""
+        }
+        guard let train = found.1 else { return false }
+        selectTrain(train)
+        if followedTrainID != train { toggleFollowTrain(train) }
+        return true
+    }
+
     /// Decision 564: the train of real line `id` bought nearest its middle
     /// station, for the screenshot to follow along its double track.
     public func screenshotTrainMidway(on id: String) -> TrainID? {

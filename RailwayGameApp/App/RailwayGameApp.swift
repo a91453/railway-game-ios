@@ -214,6 +214,20 @@ struct RailwayGameApp: App {
         }
         // Decision 165: the website screenshot test opens a scene set up
         // for it, paused at the moment it shows.
+        // Decision 704 (later): once a game with trains out is open (the
+        // high-speed demo, opened from the start screen), a train on a
+        // viaduct or in a tunnel followed, to be driven there.
+        if let structure = DebugLaunch.value(of: "-screenshot-follow-on") {
+            Task {
+                for _ in 0..<2_400 {
+                    if let session = launcher.session, session.world.trains.contains(where: { $0.position != nil }) {
+                        _ = await session.followOnStructureForScreenshot(structure)
+                        break
+                    }
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+            }
+        }
         if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
             let opening = launcher.openScreenshotScene(scene)
             // Decision 522: the zoning drag held down, its far cells grey.

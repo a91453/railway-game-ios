@@ -1404,10 +1404,34 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.descendants(matching: .any)["map3D.drive.figures"].firstMatch.appears(within: 5))
             settle(seconds: 3)
             keep("drive-power", app)
+            // Decision 704 (later): the follow bar is away while the
+            // player drives; its views are a menu on the strip at the top.
+            XCTAssertTrue(app.buttons["map3D.follow.cab"].disappears(within: 5), "The follow bar is not across the track ahead")
+            let views = app.buttons["map3D.drive.view"]
+            XCTAssertTrue(views.becomesHittable(within: 5), "The views are one button at the top")
+            views.tap()
+            let behind = app.buttons["map3D.drive.view.back"]
+            XCTAssertTrue(behind.becomesHittable(within: 5), "The menu lists the views")
+            settle(seconds: 1)
+            keep("drive-views", app)
+            behind.tap()
+            settle(seconds: 3)
+            keep("drive-behind", app)
+            XCTAssertTrue(views.becomesHittable(within: 15), "The menu is closed and the button is there in the other view")
+            views.tap()
+            let cabAgain = app.buttons["map3D.drive.view.cab"]
+            XCTAssertTrue(cabAgain.becomesHittable(within: 5))
+            cabAgain.tap()
+            settle(seconds: 2)
             let brake = app.buttons["map3D.drive.brake"]
             for _ in 0..<7 { brake.tap() }
             settle(seconds: 2)
             keep("drive-brake", app)
+            // Review L19 (P2-2): on the last brake notch a tap does not
+            // go on into the emergency brake.
+            for _ in 0..<3 { brake.tap() }
+            settle(seconds: 1)
+            XCTAssertFalse(brake.isEnabled, "A tap never puts the emergency brake on")
             // Decision 704: the lever is dragged too: up from the brake
             // to power, and it stays where it is let go.
             let notch = app.descendants(matching: .any)["map3D.drive.notch"].firstMatch
@@ -1450,6 +1474,47 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.drive.brake"].becomesHittable(within: 10), "The handle shows")
             settle(seconds: 3)
             keep("drive-near", app)
+        }
+    }
+
+    /// Decision 704 (later): a high-speed train driven by hand from its
+    /// cab on the high-speed demo's viaduct and in one of its tunnels:
+    /// nothing between the nose and the vanishing point.
+    func testManualDriveHighSpeedViaduct() { driveHighSpeed(on: "viaduct") }
+    func testManualDriveHighSpeedTunnel() { driveHighSpeed(on: "tunnel") }
+
+    private func driveHighSpeed(on structure: String) {
+        // Building the demo and the wait for a train take minutes in the
+        // Debug app.
+        executionTimeAllowance = 1_500
+        do {
+            let app = launch(extra: ["-screenshot-follow-on", structure, "-map3D.quality", "high"])
+            defer { app.terminate() }
+            app.openDemo("demo.highSpeed", timeout: 60)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+            XCTAssertTrue(app.descendants(matching: .any)["train.unfollow"].firstMatch.appears(within: 900), "A high-speed train is followed")
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 600))
+            XCTAssertTrue(open3D.becomesHittable(within: 300))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            let cab = app.buttons["map3D.follow.cab"]
+            XCTAssertTrue(cab.becomesHittable(within: 10))
+            cab.tap()
+            if !cab.isSelectedWithin(5) {
+                XCTAssertTrue(cab.becomesHittable(within: 10))
+                cab.tap()
+            }
+            XCTAssertTrue(cab.isSelectedWithin(5), "The cab view is chosen")
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10), "The train can be driven")
+            start.tap()
+            let power = app.buttons["map3D.drive.power"]
+            XCTAssertTrue(power.becomesHittable(within: 10), "The handle shows")
+            power.tap()
+            settle(seconds: 4)
+            keep("drive-hsr-\(structure)", app)
         }
     }
 
