@@ -675,6 +675,162 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 702 (FOLLOW-AIR): the 3D map following an aircraft. A
+    /// landing at Songshan a few seconds before it touches down, from
+    /// behind, from beside and from its cabin's window, by day; the same
+    /// after dark, for its lamps; then let run, to see it land, taxi and
+    /// be let go at its stand. `-screenshot-3d-follow-aircraft` follows
+    /// the aircraft nearest the view's middle: a test cannot put a finger
+    /// on one that moves. `FOLLOW_AIR_SHOTS` (the test runner's
+    /// environment) names the parts to take ("day", "night", "run"), by
+    /// default all. For the screenshot review of the pull request that
+    /// added the view.
+    func testFollowAircraft() {
+        executionTimeAllowance = 1_800
+        let shots = ProcessInfo.processInfo.environment["FOLLOW_AIR_SHOTS"]?.split(separator: ",").map(String.init) ?? []
+        func asked(_ part: String) -> Bool { shots.isEmpty || shots.contains(part) }
+        // The device's tier given, for the glows round the lamps: the
+        // Simulator's own draws none (as `testNightGlowStreet`).
+        func open(_ scene: String, view: String, at: String = "25.0701,121.5386", follows: Bool = true) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", "600,0,45", "-screenshot-3d-at", at,
+                                     "-map3D.quality", "high", "-screenshot-device-tier", "1"] + (follows ? ["-screenshot-3d-follow-aircraft"] : []))
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            if follows {
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.aircraftFollowBar"].firstMatch.appears(within: 60), "The aircraft is followed")
+                // The view is chosen on the bar, as a player does: one
+                // given as a launch argument could not be changed after.
+                let choice = app.buttons["map3D.follow.\(view)"]
+                XCTAssertTrue(choice.becomesHittable(within: 10), "The bar has the view \(view)")
+                choice.tap()
+            }
+            settle(seconds: 12)
+            return app
+        }
+        for (part, scene) in [("day", "airportSongshanLanding"), ("night", "airportSongshanLandingNight")] where asked(part) {
+            let app = open(scene, view: "back")
+            keep("follow-air-\(part)-back", app)
+            for view in ["side", "window"] {
+                let choice = app.buttons["map3D.follow.\(view)"]
+                XCTAssertTrue(choice.becomesHittable(within: 10), "The bar has the view \(view)")
+                choice.tap()
+                settle(seconds: 6)
+                keep("follow-air-\(part)-\(view)", app)
+            }
+            app.terminate()
+        }
+        // A jet at Taoyuan (Songshan's next landing is a propeller
+        // aircraft): the one moving nearest the terminal, by day and
+        // after dark.
+        for (part, scene) in [("jet", "airportTaoyuan"), ("jet-night", "airportTaoyuanNight")] where asked(part) {
+            let app = open(scene, view: "back", at: "25.0790,121.2360")
+            keep("follow-air-\(part)-back", app)
+            for view in ["side", "window"] {
+                let choice = app.buttons["map3D.follow.\(view)"]
+                XCTAssertTrue(choice.becomesHittable(within: 10), "The bar has the view \(view)")
+                choice.tap()
+                settle(seconds: 6)
+                keep("follow-air-\(part)-\(view)", app)
+            }
+            app.terminate()
+        }
+        if asked("run") {
+            // Let run from behind: it lands, slows, leaves the runway,
+            // taxis to its stand, and the camera lets go of it there.
+            let app = open("airportSongshanLanding", view: "back")
+            let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+            XCTAssertTrue(play.becomesHittable(within: 10), "The 3D map has the game's pause")
+            play.tap()
+            let bar = app.descendants(matching: .any)["map3D.aircraftFollowBar"].firstMatch
+            for (index, wait) in [1.0, 2, 3, 4, 6, 8, 10].enumerated() where bar.exists {
+                settle(seconds: wait)
+                keep(String(format: "follow-air-run-%02d", index + 1), app)
+            }
+            XCTAssertTrue(bar.disappears(within: 240), "The aircraft is let go at its stand")
+            settle(seconds: 3)
+            keep("follow-air-run-let-go", app)
+            app.terminate()
+        }
+    }
+
+    /// Decision 702: the four small airports decision 700 added, which
+    /// nobody had looked at on the 3D map: Qimei, Lanyu, Green Island and
+    /// Chiayi. Each from above its airfield a few seconds before a
+    /// landing touches down, then that landing followed from beside it
+    /// and let run. `SMALL_AIRPORTS` names the scenes to take, by default
+    /// all four.
+    func testSmallAirportsIn3D() {
+        executionTimeAllowance = 2_400
+        let named = ProcessInfo.processInfo.environment["SMALL_AIRPORTS"]?.split(separator: ",").map(String.init) ?? []
+        // Chiayi's terminal (the scene's place) is 1.3 km east of its
+        // runway's middle; the others' is by their runway.
+        let airfields = ["airportChiayi": "23.4618,120.3930"]
+        for scene in ["airportQimei", "airportLanyu", "airportLudao", "airportChiayi"] where named.isEmpty || named.contains(scene) {
+            let high = scene == "airportChiayi" ? "3200,0,30" : "1400,0,35"
+            for (shot, view, follows) in [("high", high, false), ("near", "500,30,50", false), ("follow", "600,0,45", true)] {
+                let at = shot == "high" ? airfields[scene].map { ["-screenshot-3d-at", $0] } ?? [] : []
+                let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high", "-map3DFollowView", "side"]
+                                 + at + (follows ? ["-screenshot-3d-follow-aircraft"] : []))
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 14)
+                keep("\(scene)-3d-\(shot)", app)
+                if follows {
+                    let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+                    if play.becomesHittable(within: 10) {
+                        play.tap()
+                        for (index, wait) in [1.5, 2, 3, 4].enumerated() {
+                            settle(seconds: wait)
+                            keep(String(format: "\(scene)-3d-follow-%02d", index + 1), app)
+                        }
+                    }
+                }
+                app.terminate()
+            }
+        }
+    }
+
+    /// Decision 702: what following an aircraft costs a frame: the 3D map
+    /// over Songshan with its details open, following the landing and
+    /// not, paused and with the game running.
+    func testFollowAircraftFrameCost() {
+        executionTimeAllowance = 1_500
+        for (name, extra) in [("following", ["-screenshot-3d-follow-aircraft"]), ("free", [String]())] {
+            let app = launch(extra: ["-screenshot-scene", "airportSongshanLanding", "-screenshot-3d-view", "600,0,45", "-screenshot-3d-at",
+                                     "25.0701,121.5386", "-map3D.quality", "high", "-map3DFollowView", "back"] + extra)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 15)
+            let stats = app.descendants(matching: .any)["map3D.stats"].firstMatch
+            XCTAssertTrue(stats.appears(within: 10))
+            stats.tap()
+            settle(seconds: 6)
+            keep("follow-air-cost-\(name)", app)
+            let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+            if play.becomesHittable(within: 5) {
+                play.tap()
+                settle(seconds: 8)
+                keep("follow-air-cost-\(name)-running", app)
+            }
+            app.terminate()
+        }
+    }
+
     /// Decision 699: each airport of the catalogue on the 3D map of an
     /// empty real-world game round it, by day and after dark, from the
     /// game's usual height and from higher: its terminal, runway, apron
@@ -1252,6 +1408,25 @@ final class WebsiteScreenshotTests: XCTestCase {
             for _ in 0..<7 { brake.tap() }
             settle(seconds: 2)
             keep("drive-brake", app)
+            // Decision 704: the lever is dragged too: up from the brake
+            // to power, and it stays where it is let go.
+            let notch = app.descendants(matching: .any)["map3D.drive.notch"].firstMatch
+            XCTAssertTrue(notch.appears(within: 5), "The notch the handle stands on is written beside it")
+            let braking = notch.label
+            let grip = brake.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+            grip.press(forDuration: 0.2, thenDragTo: grip.withOffset(CGVector(dx: 0, dy: -90)))
+            settle(seconds: 2)
+            let dragged = notch.label
+            XCTAssertNotEqual(dragged, braking, "Dragging the lever moves the handle")
+            settle(seconds: 1)
+            XCTAssertEqual(notch.label, dragged, "Let go, the handle stays on its notch")
+            keep("drive-dragged", app)
+            let emergency = app.buttons["map3D.drive.emergency"]
+            XCTAssertTrue(emergency.becomesHittable(within: 5), "The emergency brake has its own key")
+            emergency.tap()
+            settle(seconds: 1)
+            XCTAssertNotEqual(notch.label, dragged, "The emergency brake is on")
+            keep("drive-emergency", app)
             app.buttons["map3D.drive.end"].tap()
             XCTAssertTrue(start.appears(within: 5), "Giving the handle back brings the start button back")
         }
@@ -1264,6 +1439,17 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.drive.done"].becomesHittable(within: 10), "The run's result shows")
             settle(seconds: 3)
             keep("drive-result", app)
+        }
+        // Decision 704: near the stop, the one line that says so.
+        do {
+            let app = open3DFollowing(extra: ["-screenshot-drive-near"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.brake"].becomesHittable(within: 10), "The handle shows")
+            settle(seconds: 3)
+            keep("drive-near", app)
         }
     }
 

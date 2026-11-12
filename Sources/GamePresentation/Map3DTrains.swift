@@ -107,6 +107,10 @@ public enum Map3DTrains {
         /// ``Map3DXRay/deepest`` of ground, when asked for (`buried`):
         /// the see-through view draws them over the ground.
         public var buried: [Map3DXRay.Car] = []
+        /// Decision 702: the lamps of what is not a train (the aircraft's,
+        /// ``Map3DAircraft/lamps(of:blink:)``), in the scene: glows drawn
+        /// with the trains' (``Map3DGlow/trainSpots(of:pack:)``).
+        public var lamps: [Map3DGlow.Spot] = []
 
         public init() {}
 

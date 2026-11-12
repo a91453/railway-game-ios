@@ -200,10 +200,14 @@ struct Map3DPreviewScreen: View {
                         }
                     }
                     Spacer(minLength: 8)
-                    // Decision 690: not while the player drives: the driving
-                    // card by the handle says the way, the stop and how far.
+                    // Decision 690: not while the player drives.
                     if verticalSizeClass == .compact, driving == nil, let driver {
                         Map3DDriverStrip(hud: driver, world: session.world)
+                            .transition(.card(from: .top, reduceMotion: reduceMotion))
+                        Spacer(minLength: 8)
+                    } else if verticalSizeClass == .compact, driving != nil {
+                        // Decision 704: the run's way and stop in its place.
+                        Map3DDriveHeading(session: session)
                             .transition(.card(from: .top, reduceMotion: reduceMotion))
                         Spacer(minLength: 8)
                     }
@@ -238,6 +242,11 @@ struct Map3DPreviewScreen: View {
                         .padding(.top, 8)
                         .transition(.card(from: .top, reduceMotion: reduceMotion))
                 }
+                if verticalSizeClass != .compact, driving != nil {
+                    Map3DDriveHeading(session: session)
+                        .padding(.top, 8)
+                        .transition(.card(from: .top, reduceMotion: reduceMotion))
+                }
                 if driving == nil, let prompt = driver?.promptText(in: language) {
                     Map3DDriverPrompt(text: prompt)
                         .padding(.top, 8)
@@ -245,8 +254,8 @@ struct Map3DPreviewScreen: View {
                 }
                 Spacer()
                 if driving != nil {
-                    // Decision 686: the handle and the run's figures;
-                    // decision 690: one card, at the trailing thumb.
+                    // Decision 686: the handle; decision 704: a lever
+                    // with the speed, at the trailing thumb.
                     Map3DDrivePanel(session: session)
                         .padding(.bottom, 8)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
@@ -272,6 +281,10 @@ struct Map3DPreviewScreen: View {
                     // Decision 585 PR-4 (FERRYFOLLOW).
                     Map3DFerryFollowBar(facts: ferry, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                } else if let aircraft = session.aircraftFollowBar {
+                    // Decision 702 (FOLLOW-AIR).
+                    Map3DAircraftFollowBar(facts: aircraft, session: session, view: $followView, takePhoto: takePhoto)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else if !Self.screenshotClean {
                     Text(verbatim: handedOver == nil
                          ? language.text("Pinch closer to tilt the map, and push two fingers up to tilt it more. Drag to move, two fingers to turn.",
@@ -291,6 +304,7 @@ struct Map3DPreviewScreen: View {
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.busFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.cabinFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.ferryFollowBar != nil)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.aircraftFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driving)
             .ambientHidden(ambient != nil)
@@ -349,6 +363,9 @@ struct Map3DPreviewScreen: View {
         // this map cannot find (in a tunnel, past the scene) for a while
         // is passed over.
         .task(id: ambientScreen?.ambient?.realTrain) { await watchRealTrain() }
+        #if DEBUG
+        .task { await followAircraftForScreenshot() }
+        #endif
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
@@ -361,6 +378,9 @@ struct Map3DPreviewScreen: View {
             feed.garbageTruckSound = { [weak audio] sound in audio?.setGarbageTruck(sound) }
             let session = session
             feed.manualDrive = { [weak session] now in session?.stepManualDrive(at: now) }
+            // Decision 702: what the aircraft followed is doing, and when
+            // it can no longer be followed.
+            feed.aircraftChanged = { [weak session] state, flight in session?.noteFollowedAircraft(state, of: flight) }
         }
         .onDisappear {
             session.endManualDrive()
@@ -382,7 +402,7 @@ struct Map3DPreviewScreen: View {
     private func takePhoto() {
         guard let view = cameraLink.view else { return }
         let title = session.followedTrain.map(\.name) ?? session.busFollowBar?.routeName ?? session.cabinFollowBar?.name
-            ?? session.ferryFollowBar?.name
+            ?? session.ferryFollowBar?.name ?? session.aircraftFollowBar?.name
             ?? DisplayLanguage.app.text("3D Map", "3D 地圖")
         let photo = photo
         // A real-world map's data, written on the photo as the postcard
@@ -433,6 +453,10 @@ struct Map3DPreviewScreen: View {
         if let cabin = session.followedCabinID, session.cabinFollowBar != nil { return Map3DFollow(cabin: cabin, view: view) }
         // Decision 585 PR-4 (FERRYFOLLOW): a boat, from its bridge, its window, above or beside.
         if let boat = session.followedFerryBoatID, session.ferryFollowBar != nil { return Map3DFollow(ferry: boat, view: view) }
+        // Decision 702 (FOLLOW-AIR): an aircraft, from behind, beside or its cabin's window.
+        if let flight = session.followedAircraftID, let bar = session.aircraftFollowBar {
+            return Map3DFollow(aircraft: flight, view: view, length: Map3DAircraftStudies.dimensions(bar.state.kind).length)
+        }
         return nil
     }
 
@@ -459,6 +483,12 @@ struct Map3DPreviewScreen: View {
             session.followFerryBoat(boat)
             return
         }
+        // Decision 702 (FOLLOW-AIR): and an aircraft landing, leaving or taxiing.
+        if session.tool == .select, session.tutorial == nil,
+           let aircraft = feed.aircraft(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene) {
+            session.followAircraft(aircraft.state)
+            return
+        }
         guard let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
         else { return }
         let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
@@ -466,6 +496,23 @@ struct Map3DPreviewScreen: View {
         let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
         stationTag.show(id, at: anchor, seenBy: camera)
     }
+
+    #if DEBUG
+    /// Decision 702: the Debug app's `-screenshot-3d-follow-aircraft`
+    /// follows the aircraft landing, leaving or taxiing nearest the
+    /// middle of the view, once there is one (a finger cannot be put on
+    /// a moving aircraft by a test).
+    private func followAircraftForScreenshot() async {
+        guard ProcessInfo.processInfo.arguments.contains("-screenshot-3d-follow-aircraft") else { return }
+        while !Task.isCancelled, !session.isFollowingAircraft {
+            if let scene, let target = cameraLink.camera?.target, let found = feed.aircraft(nearest: target, in: scene) {
+                session.followAircraft(found.state)
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+    }
+    #endif
 
     /// Decision 606: tells the idle mode when the built map first shows
     /// its real train on built ground, and passes it on when it has not
@@ -1160,6 +1207,12 @@ final class Map3DTrainFeed {
     /// Decision 585 PR-4 (FERRYFOLLOW): the boat the camera follows, always
     /// drawn whole, its way the ferries' ahead.
     var followedFerry: FerryBoatID?
+    /// Decision 702 (FOLLOW-AIR): the flight whose aircraft the camera
+    /// follows, always drawn whole; and who is told what it is doing each
+    /// time that changes, `nil` once it can no longer be followed.
+    var followedAircraft: Map3DAircraft.FlightID?
+    var aircraftChanged: (@MainActor (Map3DAircraft.State?, Map3DAircraft.FlightID) -> Void)?
+    private var aircraftTold: (flight: Map3DAircraft.FlightID, state: Map3DAircraft.State?)?
     /// Decision 686: steps the run the player drives by hand to the
     /// frame's time and says where its train is drawn; `nil` for none.
     var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double)?)?
@@ -1303,18 +1356,65 @@ final class Map3DTrainFeed {
         }
         // Decision 699: and the aircraft at the airports' stands, landing
         // and leaving, on the same clock; none flies with Reduce Motion.
-        if let models, let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields, let second = cableSecond(at: now) {
-            if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
-                aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
-                aircraftKey = (scene.originX, scene.originY, world.airports.count)
-                airTraffic = nil
-            }
-            let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
-            if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
-            aircraft?.add(to: &frame, pack: models, second: second, traffic: airTraffic, eye: eye, reach: reach.farModel,
-                          still: UIAccessibility.isReduceMotionEnabled)
+        // Decision 702: the one the camera follows drawn whole, and the
+        // moving ones' lamps, which flash by the player's clock.
+        if let models, let second = cableSecond(at: now), let laid = laidAircraft(in: scene, second: second) {
+            let still = UIAccessibility.isReduceMotionEnabled
+            laid.aircraft.add(to: &frame, pack: models, second: second, traffic: laid.traffic, eye: eye, reach: reach.farModel,
+                              still: still, following: followedAircraft, blink: still ? nil : now)
         }
         return frame
+    }
+
+    /// Decision 699: the airfields laid in `scene`, laid again when the
+    /// scene or the world's airports change, and the flights of the day
+    /// of game second `second`; `nil` off a real-world map.
+    private func laidAircraft(in scene: Map3DScene, second: Double) -> (aircraft: Map3DAircraft.Laid, traffic: Map3DAircraft.Traffic?)? {
+        guard let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields else { return nil }
+        if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
+            aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
+            aircraftKey = (scene.originX, scene.originY, world.airports.count)
+            airTraffic = nil
+        }
+        let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
+        if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
+        return aircraft.map { ($0, airTraffic) }
+    }
+
+    /// Decision 702 (FOLLOW-AIR): the aircraft of flight `id` now, while
+    /// the camera can follow it.
+    private func aircraftFollowed(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
+        return laid.aircraft.followed(id, second: second, traffic: laid.traffic, still: UIAccessibility.isReduceMotionEnabled)
+    }
+
+    /// Decision 702: where the aircraft of flight `id` is now, as the
+    /// follow camera reads it; `nil` once it can no longer be followed
+    /// (the camera stays where it is). ``aircraftChanged`` is told what
+    /// it is doing when that changes, after this frame.
+    func aircraftPose(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DFollow.Pose? {
+        let found = aircraftFollowed(id, in: scene)
+        if aircraftTold?.flight != id || aircraftTold?.state != found?.state {
+            aircraftTold = (id, found?.state)
+            let state = found?.state, tell = aircraftChanged
+            Task { @MainActor in tell?(state, id) }
+        }
+        return found.map { Map3DAircraft.pose(of: $0.drawn) }
+    }
+
+    /// Decision 702: the aircraft landing, leaving or taxiing drawn under
+    /// the finger at (`x`, `y`), if any.
+    func aircraft(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
+        return laid.aircraft.followable(atX: x, y: y, camera: camera, second: second, traffic: laid.traffic,
+                                        still: UIAccessibility.isReduceMotionEnabled, within: Map3DBuses.tapReach)
+    }
+
+    /// Decision 702: the aircraft that can be followed nearest `point`,
+    /// for the Debug app's `-screenshot-3d-follow-aircraft`.
+    func aircraft(nearest point: Map3DPoint, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
+        return laid.aircraft.followable(nearest: point, second: second, traffic: laid.traffic)
     }
 
     /// Decision 606 (IDLEREAL): where real train `id` is now, as the
@@ -1553,13 +1653,16 @@ private struct Map3DView: UIViewRepresentable {
             // `follow?.bus`, `.cabin`, ...: those crashed Xcode 26.6's
             // Release optimizer (CopyPropagation). Do not change it back.
             var followedTrain: TrainID?, followedBus: BusID?, followedCabin: CabinID?, followedFerry: FerryBoatID?
+            var followedAircraft: Map3DAircraft.FlightID?
             switch follow?.subject {
             case .train(let id)?: followedTrain = id
             case .bus(let id)?: followedBus = id
             case .cabin(let id)?: followedCabin = id
             case .ferry(let id)?: followedFerry = id
+            case .aircraft(let id)?: followedAircraft = id
             case .realTrain?, nil: break
             }
+            feed.followedAircraft = followedAircraft
             feed.followedBus = followedBus
             feed.followedCabin = followedCabin
             // Decision 672: the lamps of the train followed light its
@@ -1643,6 +1746,7 @@ private struct Map3DView: UIViewRepresentable {
         view.busPose = { id in feed.busPose(id, in: scene) }
         view.cabinPose = { id in feed.cabinPose(id, in: scene) }
         view.ferryPose = { id in feed.ferryPose(id, in: scene) }
+        view.aircraftPose = { id in feed.aircraftPose(id, in: scene) }
         view.realTrainPose = { id in feed.realTrainPose(id, in: scene) }
         // Decision 583: the strip built ahead lies the way the followed
         // cabin runs; decision 585 PR-4: or boat.
@@ -1657,6 +1761,8 @@ private struct Map3DView: UIViewRepresentable {
             case .ferry(let id)?: found = feed.ferryPose(id, in: scene)
             // Decision 606: or real train.
             case .realTrain(let id)?: found = feed.realTrainPose(id, in: scene)
+            // Decision 702: or aircraft.
+            case .aircraft(let id)?: found = feed.aircraftPose(id, in: scene)
             case .train?, .bus?, nil: found = nil
             }
             guard let pose = found else { return nil }
@@ -2310,6 +2416,8 @@ private struct Map3DFollowChoice: View {
     var unavailable: String?
     /// Decision 585 PR-4 (FERRYFOLLOW): a boat's names (駕駛台, 船艙窗).
     var ferry = false
+    /// Decision 702 (FOLLOW-AIR): an aircraft's names (機艙窗).
+    var aircraft = false
 
     var body: some View {
         let blocked = unavailable != nil && selection != option
@@ -2320,7 +2428,7 @@ private struct Map3DFollowChoice: View {
             UITestTrace.action("map3D.follow.\(option.rawValue) (was \(selection.rawValue))")
             selection = option
         } label: {
-            Text(verbatim: ferry ? option.ferryText(in: language) : option.text(in: language))
+            Text(verbatim: aircraft ? option.aircraftText(in: language) : ferry ? option.ferryText(in: language) : option.text(in: language))
                 .font(.caption.weight(.bold))
                 .fixedSize()
                 .padding(.horizontal, 8)
@@ -2333,7 +2441,8 @@ private struct Map3DFollowChoice: View {
         .buttonStyle(.plain)
         .disabled(blocked)
         .opacity(blocked ? 0.4 : 1)
-        .accessibilityHint(Text(verbatim: unavailable ?? (ferry ? option.ferryHint(in: language) : option.hint(in: language))))
+        .accessibilityHint(Text(verbatim: unavailable ?? (aircraft ? option.aircraftHint(in: language)
+                                                          : ferry ? option.ferryHint(in: language) : option.hint(in: language))))
         .accessibilityAddTraits(selection == option ? .isSelected : [])
         .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
     }
@@ -2420,6 +2529,7 @@ private struct Map3DFollowBar: View {
                 // The screenshot review's look at a run's result.
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
+                if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-near") { session.nearStopForScreenshot() }
                 #endif
             } label: {
                 Text(verbatim: ManualDrive.startText(in: session.language))
@@ -2759,6 +2869,98 @@ private struct Map3DFerryFollowBar: View {
     }
 }
 
+/// Decision 702 (FOLLOW-AIR): the bar while the 3D map follows an
+/// aircraft, as the ferry boat's: its type, the airport it lands at or
+/// leaves, what it is doing, and its three views (behind, beside, window).
+private struct Map3DAircraftFollowBar: View {
+    let facts: AircraftFollowFacts
+    let session: GameSession
+    @Binding var view: Map3DFollow.View
+    let takePhoto: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) {
+                title
+                choices
+                actions
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 9) {
+                    title
+                    Spacer(minLength: 0)
+                    actions
+                }
+                HStack(spacing: 9) { choices }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 2)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .hudFrameMark("map3D.aircraftFollowBar")
+        .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+    }
+
+    private var title: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "airplane")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: [facts.name, facts.directionText].joined(separator: " · "))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: facts.stopText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var choices: some View {
+        let shown = $view
+        let selection = Binding(get: { Map3DFollow.aircraftView(shown.wrappedValue) }, set: { shown.wrappedValue = $0 })
+        let language = session.language
+        return ForEach(Map3DFollow.aircraftViews, id: \.self) { @Sendable option in
+            Map3DFollowChoice(option: option, selection: selection, language: language, aircraft: true)
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button(action: takePhoto) {
+            round("camera.fill")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Take Photo", "拍照")))
+        .accessibilityHint(Text(verbatim: session.language.text("Saves the 3D view as a picture to share.", "把現在的 3D 畫面存成照片，可以分享。")))
+        .accessibilityIdentifier("map3D.follow.photo")
+        Button {
+            session.stopFollowingTrain()
+        } label: {
+            round("xmark").foregroundStyle(Theme.onError).background(Theme.error, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Stop following", "取消跟隨")))
+        .accessibilityIdentifier("map3D.follow.stop")
+    }
+
+    private func round(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.caption.weight(.heavy))
+            .frame(width: 26, height: 26)
+            .background(Theme.chip, in: Circle())
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+    }
+}
+
 /// Decision 403: at the top of the 3D map while it follows a train: the
 /// line, the way it runs, the next stop (or the one it stands at), how far
 /// it is and how late the train runs.
@@ -2880,80 +3082,80 @@ private struct Map3DSpeedCard: View {
     }
 }
 
-/// Decision 686: while the player drives the followed train by hand: the
-/// run's figures and the two buttons that move the handle; at the stop,
-/// the run's marks. Decision 690: one card on one glass, by the trailing
-/// thumb: the way, then the speed (the largest) with the handle's position
-/// and the limit, the stop driven to with how far its stopping point is,
-/// and whether the run is on time. Reads the run's figures itself, so only
-/// this is laid out again as they change.
-private struct Map3DDrivePanel: View {
+/// Decision 704: while the player drives by hand, what is read now and
+/// then, at the top where the follow strip was (over the sky, not the
+/// track): giving the handle back, the way, the stop driven to with how
+/// far its stopping point is, and whether the run is on time; under it,
+/// only when the brake is due, one line that says so. Reads the run's
+/// figures itself, so only this is laid out again as they change.
+private struct Map3DDriveHeading: View {
     let session: GameSession
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let language = session.language
         let reading = session.manualDriveReading ?? .waiting
-        HStack(alignment: .bottom, spacing: 9) {
-            Spacer(minLength: 0)
-            if let result = reading.result {
-                resultCard(result.text(in: language, settled: session.manualDriveSettlement), language: language)
-                Spacer(minLength: 0)
-            } else {
-                card(reading, language: language)
-            }
-        }
-        .sensoryFeedback(.selection, trigger: reading.notch)
-        .sensoryFeedback(trigger: reading.result) { _, result in
-            result.map { $0.outcome == .stopped ? SensoryFeedback.success : SensoryFeedback.error }
-        }
-    }
-
-    /// The figures and the handle on one glass; the figures above the
-    /// handle at the accessibility text sizes, where they are too wide
-    /// for one row.
-    private func card(_ reading: ManualDrive.Reading, language: DisplayLanguage) -> some View {
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .trailing, spacing: 8)) : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
-        return layout {
-            figures(reading, language: language)
-            handle(reading, language: language)
-        }
-        .padding(.leading, 14)
-        .padding(.trailing, 8)
-        .padding(.vertical, 8)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .hudFrameMark("map3D.drive.card")
-    }
-
-    /// The handle's mark on its colour: power the primary, braking the
-    /// warning (the emergency brake the error), neutral plain.
-    private func mark(_ notch: ManualDrive.Notch) -> some View {
-        let colours: (Color, Color) = notch.isEmergency ? (Theme.error, Theme.onError)
-            : notch.step > 0 ? (Theme.primary, Theme.onPrimary)
-            : notch.step < 0 ? (Theme.warning, Theme.onPrimary) : (Theme.chip, Theme.textPrimary)
-        return Text(verbatim: notch.mark)
-            .font(.headline.weight(.heavy))
-            .foregroundStyle(colours.1)
-            .frame(minWidth: 44, minHeight: 34)
-            .background(colours.0, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    private func figures(_ reading: ManualDrive.Reading, language: DisplayLanguage) -> some View {
         let heading = session.manualDriveHeading
-        return VStack(alignment: .leading, spacing: 3) {
-            if let heading, heading.line != nil || heading.route != nil {
-                HStack(spacing: 5) {
-                    if let line = heading.line {
-                        LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line] ?? "",
-                                      color: Palette.lineColor(line, custom: session.world.line(id: line)?.color), size: .small)
+        if reading.result == nil {
+            VStack(spacing: 6) {
+                HStack(alignment: .center, spacing: 6) {
+                    Button {
+                        session.endManualDrive()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.heavy))
+                            .frame(width: 26, height: 26)
+                            .background(Theme.chip, in: Circle())
+                            .foregroundStyle(Theme.textPrimary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
-                    if let route = heading.route {
-                        Text(verbatim: route)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(verbatim: ManualDrive.endText(in: language)))
+                    .accessibilityIdentifier("map3D.drive.end")
+                    figures(reading, heading: heading, language: language)
+                        .monospacedDigit()
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(verbatim: label(reading, heading: heading, language: language)))
+                        .accessibilityIdentifier("map3D.drive.figures")
+                        .hudFrameMark("map3D.drive.figures")
+                }
+                .padding(.leading, 4)
+                .padding(.trailing, 14)
+                .padding(.vertical, 4)
+                .frame(minWidth: 260, maxWidth: 400)
+                .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .hudFrameMark("map3D.drive.card")
+                if let text = reading.stopAheadText(in: language) {
+                    stopAhead(text)
+                        .transition(.opacity)
+                }
+            }
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopAhead)
+        }
+    }
+
+    /// Two lines: the way and whether the run is on time; the stop driven
+    /// to and how far its stopping point is.
+    private func figures(_ reading: ManualDrive.Reading, heading: ManualDrive.Heading?, language: DisplayLanguage) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 5) {
+                if let line = heading?.line {
+                    LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line] ?? "",
+                                  color: Palette.lineColor(line, custom: session.world.line(id: line)?.color), size: .small)
+                }
+                if let route = heading?.route {
+                    Text(verbatim: route)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if reading.phase == .driving {
+                    Text(verbatim: reading.latenessText(in: language))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(reading.lateness > 0 ? Theme.warning : Theme.success)
+                        .fixedSize()
                 }
             }
             if reading.phase == .waiting {
@@ -2961,27 +3163,6 @@ private struct Map3DDrivePanel: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
             } else {
-                HStack(alignment: .center, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text(verbatim: "\(reading.speed)")
-                            .font(.largeTitle.weight(.heavy))
-                            .foregroundStyle(reading.isOverspeed ? Theme.error : Theme.textPrimary)
-                        Text(verbatim: "km/h")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .fixedSize()
-                    mark(reading.notch)
-                    if let limit = reading.limit {
-                        Text(verbatim: "\(limit)")
-                            .font(.caption.weight(.heavy))
-                            .foregroundStyle(Theme.textPrimary)
-                            .minimumScaleFactor(0.6)
-                            .frame(width: 34, height: 34)
-                            .background(Theme.panel, in: Circle())
-                            .overlay(Circle().strokeBorder(Theme.error, lineWidth: 4))
-                    }
-                }
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Text(verbatim: heading?.stop == nil ? ManualDrive.stopLabel(in: language) : ManualDrive.nextLabel(in: language))
                         .font(.caption.weight(.bold))
@@ -2993,6 +3174,7 @@ private struct Map3DDrivePanel: View {
                             .foregroundStyle(Theme.textPrimary)
                             .lineLimit(1)
                     }
+                    Spacer(minLength: 8)
                     if let distance = reading.distanceText(in: language) {
                         Text(verbatim: distance)
                             .font(.headline.weight(.heavy))
@@ -3000,76 +3182,249 @@ private struct Map3DDrivePanel: View {
                             .fixedSize()
                     }
                 }
-                if reading.phase == .driving {
-                    Text(verbatim: reading.latenessText(in: language))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(reading.lateness > 0 ? Theme.warning : Theme.success)
-                }
             }
         }
-        .monospacedDigit()
-        .frame(maxWidth: 260, alignment: .leading)
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: label(reading, heading: heading, language: language)))
-        .accessibilityIdentifier("map3D.drive.figures")
-        .hudFrameMark("map3D.drive.figures")
     }
 
-    /// What VoiceOver reads for the figures: the way first, as the card.
+    /// What VoiceOver reads for the figures: the way first, as the strip.
     private func label(_ reading: ManualDrive.Reading, heading: ManualDrive.Heading?, language: DisplayLanguage) -> String {
         let figures = reading.phase == .waiting ? ManualDrive.waitingText(in: language) : reading.label(in: language, stop: heading?.stop)
         return [heading?.route, figures].compactMap { $0 }.joined(separator: language.text(", ", "，"))
     }
 
-    private func handle(_ reading: ManualDrive.Reading, language: DisplayLanguage) -> some View {
-        let waits = reading.phase != .driving
-        return HStack(spacing: 8) {
-            Button {
-                session.endManualDrive()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.heavy))
-                    .frame(width: 26, height: 26)
-                    .background(Theme.chip, in: Circle())
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: ManualDrive.endText(in: language)))
-            .accessibilityIdentifier("map3D.drive.end")
-            lever(ManualDrive.brakeText(in: language), symbol: "chevron.down", fill: Theme.chip, ink: Theme.textPrimary,
-                  identifier: "map3D.drive.brake", up: false)
-                .disabled(waits || reading.notch == .emergency)
-            lever(ManualDrive.powerText(in: language), symbol: "chevron.up", fill: Theme.primary, ink: Theme.onPrimary,
-                  identifier: "map3D.drive.power", up: true)
-                .disabled(waits || reading.notch == .fullPower)
+    /// "Stop ahead 160 m", while the brake is due.
+    private func stopAhead(_ text: String) -> some View {
+        Label {
+            Text(verbatim: text)
+        } icon: {
+            Image(systemName: "exclamationmark.triangle.fill")
         }
+        .font(.subheadline.weight(.heavy))
+        .monospacedDigit()
+        .foregroundStyle(Theme.onPrimary)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 30)
+        .background(Theme.warning, in: Capsule())
+        .accessibilityHidden(true)
+        .hudFrameMark("map3D.drive.stopAhead")
+    }
+}
+
+/// Decision 686: while the player drives the followed train by hand, the
+/// handle; at the stop, the run's marks. Decision 704: nothing over the
+/// track ahead: the handle is one lever at the trailing edge with the
+/// speed (the largest figure) and its limit beside it, where the thumb
+/// and the eye already are; the rest is ``Map3DDriveHeading``, at the top.
+private struct Map3DDrivePanel: View {
+    let session: GameSession
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The notch the handle stood on when the drag on now began.
+    @State private var dragStart: ManualDrive.Notch?
+
+    var body: some View {
+        let language = session.language
+        let reading = session.manualDriveReading ?? .waiting
+        HStack(alignment: .bottom, spacing: 9) {
+            Spacer(minLength: 0)
+            if let result = reading.result {
+                resultCard(result.text(in: language, settled: session.manualDriveSettlement), language: language)
+                Spacer(minLength: 0)
+            } else {
+                lever(reading, language: language)
+            }
+        }
+        .sensoryFeedback(trigger: reading.notch) { old, new in
+            switch ManualDrive.Lever.detent(from: old, to: new) {
+            case .heavy: .impact(weight: .heavy)
+            case .step: .selection
+            case nil: nil
+            }
+        }
+        .sensoryFeedback(trigger: reading.result) { _, result in
+            result.map { $0.outcome == .stopped ? SensoryFeedback.success : SensoryFeedback.error }
+        }
+    }
+
+    /// The handle's colours at `notch`: power the primary, braking the
+    /// warning (the emergency brake the error), neutral plain.
+    private func colours(_ notch: ManualDrive.Notch) -> (fill: Color, ink: Color) {
+        notch.isEmergency ? (Theme.error, Theme.onError)
+            : notch.step > 0 ? (Theme.primary, Theme.onPrimary)
+            : notch.step < 0 ? (Theme.warning, Theme.onPrimary) : (Theme.chip, Theme.textPrimary)
+    }
+
+    /// The speed, the largest figure on the screen, over its unit and the
+    /// way's limit when it has one.
+    private func speed(_ reading: ManualDrive.Reading) -> some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            Text(verbatim: "\(reading.speed)")
+                .font(.largeTitle.weight(.heavy))
+                .foregroundStyle(reading.isOverspeed ? Theme.error : Theme.textPrimary)
+            Text(verbatim: "km/h")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+            Spacer(minLength: 6)
+            if let limit = reading.limit {
+                Text(verbatim: "\(limit)")
+                    .font(.footnote.weight(.heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                    .minimumScaleFactor(0.6)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.panel, in: Circle())
+                    .overlay(Circle().strokeBorder(Theme.error, lineWidth: 5))
+            }
+        }
+        .monospacedDigit()
+        .frame(minWidth: 64, alignment: .trailing)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(reading.speed) km/h"))
+        .accessibilityIdentifier("map3D.drive.speed")
+    }
+
+    /// Decision 704: the handle as one lever on its glass at the trailing
+    /// edge: the speed, then the notch it stands on in large beside the
+    /// track, the emergency brake under it. Dragging along the track moves the
+    /// handle a notch at a time from where it stood (``ManualDrive/Lever``)
+    /// and letting go leaves it there; a tap above or below the handle
+    /// moves it one notch, as the two buttons of decision 686 did (and
+    /// they are still the two buttons VoiceOver and Switch Control find).
+    private func lever(_ reading: ManualDrive.Reading, language: DisplayLanguage) -> some View {
+        let waits = reading.phase != .driving
+        let pitch: CGFloat = verticalSizeClass == .compact ? 12 : 18
+        let ink = colours(reading.notch)
+        return HStack(alignment: .center, spacing: 8) {
+            speed(reading)
+            VStack(spacing: 8) {
+                Text(verbatim: reading.notch.mark)
+                    .font(.title2.weight(.heavy))
+                    .foregroundStyle(ink.ink)
+                    .frame(minWidth: 52, minHeight: 44)
+                    .background(ink.fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityLabel(Text(verbatim: reading.notch.label(in: language)))
+                    .accessibilityIdentifier("map3D.drive.notch")
+                Spacer(minLength: 0)
+                Button {
+                    session.setManualDriveNotch(.emergency)
+                } label: {
+                    Text(verbatim: ManualDrive.Notch.emergency.mark)
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(Theme.onError)
+                        .frame(minWidth: 52, minHeight: 44)
+                        .background(Theme.error, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(waits || reading.notch.isEmergency)
+                .accessibilityLabel(Text(verbatim: ManualDrive.emergencyText(in: language)))
+                .accessibilityIdentifier("map3D.drive.emergency")
+            }
+            track(reading, pitch: pitch, waits: waits, language: language)
+        }
+        .fixedSize()
+        // As tall as its track, which does not grow with the text.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .padding(8)
+        .padding(.leading, 6)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .opacity(waits ? 0.6 : 1)
         .accessibilityElement(children: .contain)
+        .accessibilityHint(Text(verbatim: ManualDrive.leverHint(in: language)))
         .hudFrameMark("map3D.drive.handle")
     }
 
-    /// One of the handle's two buttons: a step towards power or the brake
-    /// at each press.
-    private func lever(_ title: String, symbol: String, fill: Color, ink: Color, identifier: String, up: Bool) -> some View {
+    /// The lever's track: a tick a notch from full power at the top to
+    /// the last brake notch (the emergency brake one notch further, where
+    /// the handle turns red), the handle on the one it stands on.
+    private func track(_ reading: ManualDrive.Reading, pitch: CGFloat, waits: Bool, language: DisplayLanguage) -> some View {
+        let notches = ManualDrive.Notch.all.reversed().filter { !$0.isEmergency }
+        let height = pitch * CGFloat(notches.count)
+        let steps = CGFloat(ManualDrive.Notch.all.count - 1)
+        // The emergency brake has no tick: the handle stays on the last one.
+        let row = min(CGFloat(ManualDrive.Lever.fraction(of: reading.notch)) * steps, CGFloat(notches.count - 1))
+        let centre = pitch / 2 + row * pitch
+        let split = min(max(centre, 44), height - 44)
+        return ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Theme.chip)
+            VStack(spacing: 0) {
+                ForEach(notches, id: \.self) { notch in
+                    tick(notch)
+                        .frame(height: pitch)
+                }
+            }
+            .accessibilityHidden(true)
+            VStack(spacing: 0) {
+                half(ManualDrive.powerText(in: language), identifier: "map3D.drive.power", up: true)
+                    .frame(height: split)
+                    .disabled(waits || reading.notch == .fullPower)
+                half(ManualDrive.brakeText(in: language), identifier: "map3D.drive.brake", up: false)
+                    .frame(height: height - split)
+                    .disabled(waits || reading.notch == .emergency)
+            }
+            Capsule()
+                .fill(reading.notch.isEmergency ? Theme.error : Theme.textPrimary)
+                .frame(width: 36, height: max(pitch + 6, 18))
+                .overlay {
+                    HStack(spacing: 4) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            Capsule()
+                                .fill(Theme.panel)
+                                .frame(width: 2, height: 8)
+                        }
+                    }
+                }
+                // Over the ticks, clear of their marks.
+                .offset(x: 12, y: centre - max(pitch + 6, 18) / 2)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.notch)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .frame(width: 64, height: height)
+        .contentShape(Rectangle())
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 6)
+                .onChanged { drag in
+                    guard !waits else { return }
+                    let start = dragStart ?? reading.notch
+                    dragStart = start
+                    let notch = ManualDrive.Lever.notch(from: start, dragged: Double(drag.translation.height / (pitch * steps)))
+                    if notch != reading.notch { session.setManualDriveNotch(notch) }
+                }
+                .onEnded { _ in dragStart = nil }
+        )
+        .hudFrameMark("map3D.drive.track")
+    }
+
+    /// One notch's tick: its mark at the ends, neutral and the middle of
+    /// the brake; a short line at the others.
+    private func tick(_ notch: ManualDrive.Notch) -> some View {
+        let named = notch == .fullPower || notch == .neutral || notch == .fullBrake || notch.step == -4
+        let colour = notch.step > 0 ? Theme.primary : notch.step < 0 ? Theme.warning : Theme.textPrimary
+        return HStack(spacing: 3) {
+            Text(verbatim: named ? notch.mark : "")
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(width: 18, alignment: .trailing)
+            Capsule()
+                .fill(colour)
+                .frame(width: named ? 16 : 9, height: notch == .neutral ? 3 : 2)
+            Spacer(minLength: 0)
+        }
+        .padding(.leading, 4)
+    }
+
+    /// The track above the handle, or below it: a step towards power or
+    /// the brake at each tap.
+    private func half(_ title: String, identifier: String, up: Bool) -> some View {
         Button {
             session.moveManualDriveNotch(up: up)
         } label: {
-            VStack(spacing: 2) {
-                Image(systemName: symbol)
-                    .font(.subheadline.weight(.heavy))
-                Text(verbatim: title)
-                    .font(.caption.weight(.bold))
-                    .fixedSize()
-            }
-            .foregroundStyle(ink)
-            .frame(minWidth: 68, minHeight: 52)
-            .background(fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .contentShape(Rectangle())
+            Color.clear
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: title))
         .accessibilityIdentifier(identifier)
     }
 
