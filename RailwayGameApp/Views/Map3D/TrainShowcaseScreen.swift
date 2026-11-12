@@ -14,16 +14,21 @@ import UIKit
 /// the train pack's trains are listed only once it is unlocked.
 ///
 /// Decision 632: with `exhibit`, the collection's ferries or cable cars on
-/// the same stage, with the same buttons but the train picker.
+/// the same stage, with the same buttons but the train picker. Decision
+/// 701: the aircraft and the two airports too.
 struct TrainShowcaseScreen: View {
     var exhibit: Map3DCollectionShowcase.Exhibit? = nil
+    /// Decision 701: which of the aircraft page's aircraft the close and
+    /// side views look at.
+    var focus = 0
     let close: () -> Void
     @State private var selection: Map3DShowcase.Selection
 
     /// Decision 696: with `keys`, opened on those trains (a railway
     /// museum's exhibit) rather than the garage's first ones.
-    init(exhibit: Map3DCollectionShowcase.Exhibit? = nil, keys shown: [String]? = nil, close: @escaping () -> Void) {
+    init(exhibit: Map3DCollectionShowcase.Exhibit? = nil, focus: Int = 0, keys shown: [String]? = nil, close: @escaping () -> Void) {
         self.exhibit = exhibit
+        self.focus = focus
         self.close = close
         // Decision 492: the pack's sets as the 3D map reads them
         // (``Map3DPreviewScreen``), when the garage opens.
@@ -63,7 +68,7 @@ struct TrainShowcaseScreen: View {
 
     /// What the stage shows: the trains picked, or the exhibit.
     private var content: Map3DShowcaseContent {
-        if let exhibit { return .exhibit(Map3DCollectionShowcase.layout(exhibit, far: far)) }
+        if let exhibit { return .exhibit(Map3DCollectionShowcase.layout(exhibit, far: far, focus: focus)) }
         return .trains(Map3DShowcase.layout(keys: selection.keys, cars: selection.cars, far: far))
     }
 

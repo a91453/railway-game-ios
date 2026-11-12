@@ -390,6 +390,24 @@ public enum DataSourceCredits {
                             openGovernmentLicense(in: language),
                         ]
                     ),
+                    // Decision 706: the real intercity coaches
+                    // (`tools/real-coaches/`), straight from TDX.
+                    DataSourceCredit(
+                        id: "realCoaches",
+                        title: language.text("Intercity coach routes", "長途客運路線"),
+                        detail: language.text(
+                            "Taiwan’s real freeway coaches and long highway buses between cities: their stops in order, the roads they take, when they leave and their fares.",
+                            "台灣真實的國道客運與跨縣市的公路客運：依序的站牌、走的路線、發車時刻與票價。"
+                        ),
+                        notice: language.text(
+                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: highway bus routes, stops of routes, route shapes, schedules and fares. ",
+                            "交通部運輸資料流通服務平臺（TDX）2026 年公路客運路線、路線站序、路線線型、班表與票價"
+                        ) + openGovernmentAttribution(in: language),
+                        links: [
+                            DataSourceCredit.Link(title: "TDX", url: tdxURL),
+                            openGovernmentLicense(in: language),
+                        ]
+                    ),
                     DataSourceCredit(
                         id: "traOpenData",
                         title: language.text("TRA open data", "台鐵開放資料"),
