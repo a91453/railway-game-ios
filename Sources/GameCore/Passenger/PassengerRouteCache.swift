@@ -41,11 +41,11 @@ extension GameWorld {
             times.append(clock.now)
         }
         if let steps = try? clock.basicSteps(forTicks: ticks), steps.seconds > 0 {
-            let now = lines.map { serviceLevel(of: $0.id, at: clock.now) }
+            let now = serviceLevels(at: clock.now)
             let minute = GameTime.secondsPerMinute
             var time = (clock.now.seconds / minute + 1) * minute
             while time < clock.now.seconds + steps.seconds {
-                if lines.map({ serviceLevel(of: $0.id, at: GameTime(seconds: time)) }) != now {
+                if serviceLevels(at: GameTime(seconds: time)) != now {
                     times.append(GameTime(seconds: time))
                     break
                 }
