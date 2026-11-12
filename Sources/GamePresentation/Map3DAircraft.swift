@@ -79,10 +79,13 @@ public enum Map3DAircraft {
     /// Within this of the eye an aircraft is drawn whole, metres; within
     /// ``farReach``, its far model; and the most drawn whole.
     public static let nearReach: Float = 900
-    public static let farReach: Float = 7_000
+    public static let farReach: Float = 3_600
     /// Within this of the eye an aircraft casts its shadow, metres.
-    public static let shadowReach: Float = 2_500
-    public static let mostNear = 14
+    public static let shadowReach: Float = 1_200
+    public static let mostNear = 10
+    /// The most drawn as far models: an airport's 190 would be a quarter
+    /// of a million triangles.
+    public static let mostFar = 90
 
     /// A flight's figures by type: its speed over the threshold and at
     /// lift-off (m/s), and the least runway it uses (m).
@@ -159,8 +162,9 @@ public enum Map3DAircraft {
         struct Stand: Sendable {
             let nose: Map3DPoint
             let forward: Map3DPoint
-            /// The widest wings that fit beside its neighbours, metres.
-            let room: Float
+            /// The widest wings it takes beside its neighbours, metres; 0
+            /// for a stand left empty (``giveRoom(to:seed:wide:propeller:runway:)``).
+            var room: Float
             /// Whether a jet bridge ends by it.
             var bridged = false
             /// The taxiways' point it is reached from (``Field/nodes``),
@@ -248,14 +252,10 @@ public enum Map3DAircraft {
                         // Nose in, away from the nearest runway.
                         forward = Self.away(from: runways, at: nose)
                     }
-                    var room: Float = 80
-                    for (other, place) in noses.enumerated() where other != index {
-                        if let place { room = min(room, Map3DPoint(place.x - nose.x, 0, place.z - nose.z).length) }
-                    }
                     let bridged = field.bridges.contains { bridge in
                         place(bridge.to).map { Map3DPoint($0.x - nose.x, 0, $0.z - nose.z).length < 35 } ?? false
                     }
-                    stands.append(Stand(nose: nose, forward: forward, room: room - 3, bridged: bridged))
+                    stands.append(Stand(nose: nose, forward: forward, room: 0, bridged: bridged))
                 }
                 // The game's airports within 4 km of the airfield's middle.
                 var airports: [Int] = []
@@ -276,8 +276,9 @@ public enum Map3DAircraft {
                     wide = min(0.5, max(0, (each - 100) / 200))
                     propeller = each > 150 ? 0 : 0.35
                 }
-                var laid = Field(seed: Int32(truncatingIfNeeded: number &* 7_919 &+ 17), airports: airports, stands: stands, runways: runways,
-                                 wide: wide, propeller: propeller)
+                let seed = Int32(truncatingIfNeeded: number &* 7_919 &+ 17)
+                Self.giveRoom(to: &stands, seed: seed, wide: wide, propeller: propeller, runway: runways[0].length)
+                var laid = Field(seed: seed, airports: airports, stands: stands, runways: runways, wide: wide, propeller: propeller)
                 laid.layTaxiways(field.taxiways.map { $0.line.compactMap(place) })
                 made.append(laid)
             }
@@ -297,15 +298,43 @@ public enum Map3DAircraft {
             return best?.way ?? Map3DPoint(1, 0, 0)
         }
 
+        /// Gives each of `stands` its room: the widest wings it takes with
+        /// every other stand taking its own. OpenStreetMap maps a wide
+        /// stand and the two narrow ones that share its ground as three,
+        /// 20 m apart; so the stands are taken in a fixed shuffled order,
+        /// each given the type the airport's mix picks for it, or the
+        /// largest smaller one that clears the wings already given (4 m
+        /// between wing tips), or none.
+        static func giveRoom(to stands: inout [Stand], seed: Int32, wide: Float, propeller: Float, runway: Float) {
+            let order = stands.indices.sorted { map3DRandom(seed &+ 31, Int32($0)) < map3DRandom(seed &+ 31, Int32($1)) }
+            var given: [(nose: Map3DPoint, span: Float)] = []
+            for index in order {
+                let nose = stands[index].nose
+                var room: Float = 80
+                for other in given { room = min(room, 2 * (Map3DPoint(other.nose.x - nose.x, 0, other.nose.z - nose.z).length - other.span / 2 - 4)) }
+                let kind = kind(wide: wide, propeller: propeller, share: map3DRandom(seed &+ 32, Int32(index)), runway: runway, room: room)
+                let span = Map3DAircraftStudies.dimensions(kind).wingspan
+                guard span <= room else { continue }
+                stands[index].room = span + 0.5
+                given.append((nose, span))
+            }
+        }
+
         /// The type of an aircraft of `field`, picked by `share` (0–1)
         /// among those `runway` metres of runway and `room` metres of
         /// wingspan take.
         static func kind(_ field: Field, share: Float, runway: Float, room: Float = .infinity) -> Kind {
+            kind(wide: field.wide, propeller: field.propeller, share: share, runway: runway, room: room)
+        }
+
+        /// The type `share` (0–1) picks at an airport `wide` of whose
+        /// aircraft are wide-bodied and `propeller` propeller-driven.
+        static func kind(wide: Float, propeller: Float, share: Float, runway: Float, room: Float = .infinity) -> Kind {
             var kind: Kind
-            if share < field.wide {
+            if share < wide {
                 kind = .wideJet
-            } else if share > 1 - field.propeller {
-                kind = share > 1 - field.propeller * 0.25 && field.wide == 0 ? .commuter19 : .regional70
+            } else if share > 1 - propeller {
+                kind = share > 1 - propeller * 0.25 && wide == 0 ? .commuter19 : .regional70
             } else {
                 kind = .narrowJet
             }
@@ -621,6 +650,23 @@ public enum Map3DAircraft {
             private let lock = NSLock()
             private var hours: [Hour: [Planned]] = [:]
             private var days: [Day: [Drawn]] = [:]
+            /// The last moment's aircraft: a paused game asks for the same
+            /// moment every frame.
+            private var last: (second: Double, traffic: Int64?, still: Bool, drawn: [Drawn])?
+
+            func moment(second: Double, traffic: Int64?, still: Bool, _ make: () -> [Drawn]) -> [Drawn] {
+                lock.lock()
+                if let last, last.second == second, last.traffic == traffic, last.still == still {
+                    lock.unlock()
+                    return last.drawn
+                }
+                lock.unlock()
+                let made = make()
+                lock.lock()
+                last = (second, traffic, still, made)
+                lock.unlock()
+                return made
+            }
 
             func plans(_ key: Hour, _ make: () -> [Planned]) -> [Planned] {
                 lock.lock()
@@ -649,6 +695,10 @@ public enum Map3DAircraft {
         /// Motion) none moves: the flights' aircraft stand at their stands
         /// for their time there, and that is all.
         public func aircraft(second: Double, traffic: Traffic?, still: Bool = false) -> [Drawn] {
+            kept.moment(second: second, traffic: traffic?.day, still: still) { worked(second: second, traffic: traffic, still: still) }
+        }
+
+        private func worked(second: Double, traffic: Traffic?, still: Bool) -> [Drawn] {
             let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
             let hour = Int((second - Double(day * GameTime.secondsPerDay)) / 3_600)
             let northEast = Self.landsNorthEast(day: day)
@@ -662,7 +712,7 @@ public enum Map3DAircraft {
                     var parked: [Drawn] = []
                     for (index, stand) in field.stands.enumerated() where !turning.contains(index) {
                         let r = { (n: Int32) in map3DRandom(field.seed &+ 101, Int32(index), salt: salt &* 4 &+ n) }
-                        guard r(0) < 0.85, stand.room > 18 else { continue }
+                        guard r(0) < 0.9, stand.room > 16 else { continue }
                         let kind = Self.kind(field, share: r(1), runway: field.runways[0].length, room: stand.room)
                         let length = Map3DAircraftStudies.dimensions(kind).length
                         parked.append(Drawn(ground: stand.nose - stand.forward * (length / 2), height: 0, forward: stand.forward, pitch: 0, kind: kind,
@@ -709,7 +759,7 @@ public enum Map3DAircraft {
             let vehicles = Dictionary(uniqueKeysWithValues: Vehicle.allCases.compactMap { vehicle in
                 pack.index(of: Map3DAircraft.name(vehicle)).map { (vehicle, $0) }
             })
-            var whole = 0
+            var whole = 0, far = 0
             for (distance, aircraft) in seen {
                 if distance < Map3DAircraft.vehicleReach * reach, let stand = aircraft.stand {
                     for (vehicle, at, forward) in Map3DAircraft.vehicles(by: aircraft, stand: stand) {
@@ -720,7 +770,13 @@ public enum Map3DAircraft {
                 }
                 guard let pair = models[aircraft.kind] else { continue }
                 let near = distance < Map3DAircraft.nearReach * reach && whole < Map3DAircraft.mostNear
-                if near { whole += 1 }
+                if near {
+                    whole += 1
+                } else {
+                    // The nearest first; one in the air is always drawn.
+                    guard far < Map3DAircraft.mostFar || aircraft.height > 0 else { continue }
+                    far += 1
+                }
                 frame.instances.append(Map3DAircraft.instance(near ? pair.near : pair.far, aircraft))
                 // Its shadow: the fuselage's and the wings'.
                 let size = Map3DAircraftStudies.dimensions(aircraft.kind)
@@ -869,9 +925,9 @@ extension Map3DAircraft.Laid.Field {
             let reached = standNodes[index].flatMap { node in links.contains { $0.next[node] >= 0 || $0.node == node } ? node : nil }
             stands[index].node = reached
             let best = reached
-            // Half the stands take the flights; the others keep an
+            // A third of the stands take the flights; the others keep an
             // aircraft all day, most of them.
-            if best != nil, stands[index].room > 18, map3DRandom(seed &+ 55, Int32(index)) < 0.5 { turning.append(index) }
+            if best != nil, stands[index].room > 16, map3DRandom(seed &+ 55, Int32(index)) < 0.35 { turning.append(index) }
         }
         // Given out by strides, so neighbours are not taken one after
         // another.

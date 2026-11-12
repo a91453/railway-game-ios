@@ -548,7 +548,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// took no picture of it). For the screenshot review of the pull
     /// request that put the airports on the maps.
     func testAirportMarksAndStationPanel() {
-        let app = launch(extra: ["-screenshot-scene", "airport", "-screenshot-select-station", "last"])
+        let app = launch(extra: ["-screenshot-scene", "airport"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         // The terminal is 375 m north of its station: a step or two out,
@@ -570,19 +570,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(row.appears(within: 10), "The mark opens the airports")
         settle(seconds: 2)
         keep("airport-sights-from-mark", app)
-        row.swipeUp()
+        // The next row, by a short drag: a swipe goes past it.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
         settle(seconds: 1)
         keep("airport-sights-second", app)
         let done = app.buttons["tourism.done"]
         XCTAssertTrue(done.appears(within: 5))
         done.tap()
         XCTAssertTrue(done.disappears(within: 10), "The sights close")
-        let tag = app.buttons["map.stationTag"]
-        XCTAssertTrue(tag.appears(within: 30), "The airport's station is picked")
-        tag.tap()
+        // A hold on the airport's station (the last) opens its panel: the
+        // tag's tap opens only the details card.
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        settle(seconds: 2)
+        let places = ((stations.value as? String) ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+            let xy = pair.split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+        }
+        guard let point = places.last else { return XCTFail("The scene has stations") }
+        var opened = false
+        for _ in 0..<3 where !opened {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            opened = app.buttons["station.jump"].firstMatch.appears(within: 6)
+        }
+        // Its riders' group, where the airports are, then down to them.
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "The hold opens the station's panel")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
         let section = app.descendants(matching: .any)["station.airport.1"].firstMatch
-        for _ in 0..<10 where !(section.exists && section.isHittable) { app.swipeUp() }
-        XCTAssertTrue(section.appears(within: 10), "The station's panel has its airport")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list, drags: 14), "The station's panel has its airport")
         settle()
         keep("airport-station-panel", app)
     }

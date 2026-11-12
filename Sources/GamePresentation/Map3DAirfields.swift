@@ -66,6 +66,12 @@ extension Map3DScene.Builder {
             point.x >= bounds.minX - margin && point.x <= bounds.maxX + margin && point.z >= bounds.minZ - margin && point.z <= bounds.maxZ + margin
         }
         var taken = Set<Map3DScene.ChunkKey>(), onRunways = Set<Map3DScene.ChunkKey>()
+        // The game's airports stand at their terminals' middles (decision
+        // 695): the building there is a terminal.
+        for airport in world.airports {
+            let at = point(x: Double(airport.point.x), y: Double(airport.point.y), height: 0)
+            terminalSpots.append((Map3DPoint(at.x, 0, at.z), 60))
+        }
         for field in fields.fields {
             let runways = field.runways.map { (runway: $0, line: $0.line.map(place)) }
             guard runways.contains(where: { $0.line.contains { inside($0, margin: 1_500) } })
@@ -130,6 +136,8 @@ extension Map3DScene.Builder {
         for spot in terminalSpots {
             let p = spot.at, reach = spot.reach
             guard p.x > low.x - reach, p.x < high.x + reach, p.z > low.z - reach, p.z < high.z + reach else { continue }
+            // Standing over the spot (a hall wider than the reach).
+            if NoBuild.inside(p.x, p.z, outline.map { ($0.x, $0.z) }) { return true }
             for (index, a) in outline.enumerated() {
                 let b = outline[(index + 1) % outline.count]
                 let dx = b.x - a.x, dz = b.z - a.z, length2 = dx * dx + dz * dz

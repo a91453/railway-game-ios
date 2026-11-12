@@ -392,9 +392,7 @@ struct RailwayGameApp: App {
             if DebugLaunch.isSet("-screenshot-select-station") {
                 Task {
                     await opening.value
-                    // Decision 699: "last" after it picks the last one.
-                    let last = DebugLaunch.value(of: "-screenshot-select-station") == "last"
-                    if let session = launcher.session, let station = last ? session.world.stations.last : session.world.stations.first {
+                    if let session = launcher.session, let station = session.world.stations.first {
                         session.selectStation(station.id)
                     }
                 }

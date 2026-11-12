@@ -171,7 +171,7 @@ def joined(pieces):
     return pieces
 
 
-def row_of_stands(apron, runways, most):
+def row_of_stands(apron, runways, most, terminals=()):
     """Stands along the side of `apron` (a ring) away from the nearest of
     `runways` (lines), nose in: one every `STAND_PITCH` metres, at most
     `most`. For an airport whose parking positions OpenStreetMap has not."""
@@ -185,6 +185,17 @@ def row_of_stands(apron, runways, most):
         return (apron[0][0] + q[1] / ky, apron[0][1] + q[0] / kx)
 
     ring = [flat(p) for p in apron]
+    buildings = [[flat(p) for p in terminal] for terminal in terminals]
+
+    def clear(q):
+        """On the apron, and not on or within 8 m of a terminal."""
+        if not inside((q[1], q[0]), [(r[1], r[0]) for r in ring]):
+            return False
+        for building in buildings:
+            if inside((q[1], q[0]), [(r[1], r[0]) for r in building]) or min(math.hypot(q[0] - r[0], q[1] - r[1]) for r in building) < 8:
+                return False
+        return True
+
     middle = (sum(q[0] for q in ring) / len(ring), sum(q[1] for q in ring) / len(ring))
     # Away from the runway: from its nearest point to the apron's middle.
     best = None
@@ -206,11 +217,13 @@ def row_of_stands(apron, runways, most):
     stands, at = [], low + STAND_PITCH / 2
     heading = math.degrees(math.atan2(away[0], away[1])) % 360
     while at < high and len(stands) < most:
-        # The nose 14 m inside the far side, where the apron is there.
-        for depth in range(14, 120, 6):
+        # The nose 14 m inside the far side, where the apron is there and
+        # the nose, the tail and both wing tips stand clear of the terminal.
+        for depth in range(14, 160, 6):
             q = (along[0] * at + away[0] * (far - depth), along[1] * at + away[1] * (far - depth))
             tail = (q[0] - away[0] * 40, q[1] - away[1] * 40)
-            if inside((q[1], q[0]), [(r[1], r[0]) for r in ring]) and inside((tail[1], tail[0]), [(r[1], r[0]) for r in ring]):
+            wings = [(q[0] - away[0] * 20 + along[0] * side, q[1] - away[1] * 20 + along[1] * side) for side in (-18, 18)]
+            if all(clear(point) for point in [q, tail] + wings):
                 stands.append((back(q), heading))
                 break
         at += STAND_PITCH
@@ -321,7 +334,8 @@ def main(source, out):
             near = min((metres(p, q) for terminal in parts['terminals'] for p in ring[::3] for q in terminal[::3]), default=None)
             return (0, near) if near is not None else (1, -area(ring))
         apron = min(parts['rings'], key=rank)
-        for point, heading in row_of_stands(apron, [points for _, _, points in parts['runways']], MOST_MADE - len(parts['stands'])):
+        for point, heading in row_of_stands(apron, [points for _, _, points in parts['runways']], MOST_MADE - len(parts['stands']),
+                                            parts['terminals']):
             if all(metres(point, (other[0] / 1e6, other[1] / 1e6)) > STAND_PITCH * 0.8 for other in parts['stands']):
                 parts['stands'].append([round(point[0] * 1e6), round(point[1] * 1e6), round(heading)])
     for point, tags in towers:

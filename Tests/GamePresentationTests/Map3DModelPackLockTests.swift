@@ -75,7 +75,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         let cable = Set(Map3DCableCar.drawn.map(\.name))
         let ferry = Set(Map3DFerry.drawn.map(\.name))
         // Decision 699: the 12 aircraft and airfield vehicles right after
-        // the ferries, before the route bus; left out with them.
+        // the ferries, before the route bus; left out with them (the
+        // whole pack's names and hashes and the windows' indices move by
+        // 12, the rest as before).
         let air = Set(Map3DAircraft.drawn.map(\.name))
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) }
@@ -87,7 +89,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstCable + cable.count + ferry.count..<firstCable + cable.count + ferry.count + air.count].map(\.name)),
                        Map3DAircraft.drawn.map(\.name))
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1844082a923ef304")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "cadfbf16c8f51fd0")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "524fdb48e8193551")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -100,7 +102,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
         XCTAssertEqual(lamps(movingBack: 0).count, 370)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count)), "7da72c10c44b91fb")
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "330d31822d66824a")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "7287bc570d7aa145")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a422495a9c229fba")
     }
 

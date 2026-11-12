@@ -184,12 +184,13 @@ final class Map3DAirfieldsTests: XCTestCase {
     /// back, taxis out and lines up. Neither jumps on the way.
     func testAFlightTaxisBetweenTheRunwayAndItsStand() throws {
         var field = field()
-        field.stands = (0..<12).map { .init(nose: Map3DPoint(400 + Float($0) * 60, 0, 300), forward: Map3DPoint(0, 0, 1), room: 57) }
-        field.layTaxiways([[Map3DPoint(1_800, 0, 0), Map3DPoint(1_800, 0, 200), Map3DPoint(600, 0, 200), Map3DPoint(100, 0, 200), Map3DPoint(100, 0, 0)]])
+        field.stands = (0..<40).map { .init(nose: Map3DPoint(400 + Float($0) * 60, 0, 300), forward: Map3DPoint(0, 0, 1), room: 57) }
+        field.layTaxiways([[Map3DPoint(1_800, 0, 0), Map3DPoint(1_800, 0, 200), Map3DPoint(600, 0, 200), Map3DPoint(100, 0, 200), Map3DPoint(100, 0, 0)],
+                           [Map3DPoint(1_800, 0, 200), Map3DPoint(2_900, 0, 200)]])
         XCTAssertEqual(field.links.count, 2)
         XCTAssertTrue(field.stands.allSatisfy { $0.node != nil })
-        // About half the stands take the flights.
-        XCTAssertTrue((3...9).contains(field.rotation.count), "\(field.rotation.count)")
+        // About a third of the stands take the flights.
+        XCTAssertTrue((6...24).contains(field.rotation.count), "\(field.rotation.count)")
         let stand = try XCTUnwrap(field.rotation.first)
         let parked = field.stands[stand].nose - Map3DPoint(0, 0, 1) * (Map3DAircraftStudies.dimensions(.narrowJet).length / 2)
         for landing in [true, false] {
@@ -231,9 +232,9 @@ final class Map3DAirfieldsTests: XCTestCase {
         field.stands = (0..<45).map { .init(nose: Map3DPoint(Float($0) * 60, 0, 300), forward: Map3DPoint(0, 0, 1), room: 57) }
         field.layTaxiways([[Map3DPoint(1_800, 0, 0), Map3DPoint(1_800, 0, 200), Map3DPoint(0, 0, 200), Map3DPoint(0, 0, 0)],
                            [Map3DPoint(1_800, 0, 200), Map3DPoint(2_700, 0, 200)]])
-        XCTAssertGreaterThan(field.rotation.count, 12)
+        XCTAssertGreaterThan(field.rotation.count, 8)
         let laid = Map3DAircraft.Laid(fields: [field])
-        let traffic = traffic(landings: 2, takeOffs: 2)
+        let traffic = traffic(landings: 1, takeOffs: 1)
         var flew = false
         for second in stride(from: 40_000.0, to: 47_200, by: 30) {
             XCTAssertTrue(laid.aircraft(second: second, traffic: traffic, still: true).allSatisfy { !$0.flying })
@@ -266,6 +267,23 @@ final class Map3DAirfieldsTests: XCTestCase {
         let small = field(length: 1_200, wide: 0, propeller: 1)
         XCTAssertEqual(Map3DAircraft.Laid.kind(small, share: 0.5, runway: 1_200), .regional70)
         XCTAssertEqual(Map3DAircraft.Laid.kind(small, share: 0.9, runway: 1_200), .commuter19)
+    }
+
+    /// Stands OpenStreetMap maps on top of one another (a wide one and
+    /// the two narrow ones sharing its ground) do not all take aircraft:
+    /// every pair given room keeps 4 m between wing tips.
+    func testStandsSharingGroundDoNotAllTakeAircraft() {
+        var stands: [Map3DAircraft.Laid.Stand] = (0..<30).map { .init(nose: Map3DPoint(Float($0) * 20, 0, 0), forward: Map3DPoint(0, 0, 1), room: 0) }
+        Map3DAircraft.Laid.giveRoom(to: &stands, seed: 5, wide: 0.4, propeller: 0, runway: 3_600)
+        let given = stands.filter { $0.room > 0 }
+        XCTAssertGreaterThan(given.count, 6)
+        XCTAssertLessThan(given.count, 20)
+        XCTAssertTrue(given.contains { $0.room > 60 }, "a wide-bodied jet's stand")
+        for a in given {
+            for b in given where a.nose.x < b.nose.x {
+                XCTAssertGreaterThanOrEqual(b.nose.x - a.nose.x + 0.01, (a.room - 0.5) / 2 + (b.room - 0.5) / 2 + 4)
+            }
+        }
     }
 
     /// The pack has each type near and far, lighter far, its livery left
