@@ -76,6 +76,16 @@ extension Map3DScene.Builder {
             let runways = field.runways.map { (runway: $0, line: $0.line.map(place)) }
             guard runways.contains(where: { $0.line.contains { inside($0, margin: 1_500) } })
                 || field.aprons.contains(where: { $0.contains { inside(place($0), margin: 800) } }) else { continue }
+            // Decision 707: no house of the game's by the runways, on the
+            // taxiways or on the aprons.
+            var clear = AirfieldClear.Field()
+            for (runway, line) in runways {
+                let length = zip(line, line.dropFirst()).reduce(0.0) { $0 + hypot($1.1.x - $1.0.x, $1.1.z - $1.0.z) }
+                clear.add(line, half: max(runway.width / 2, AirfieldClear.runwayStrip(length: length)))
+            }
+            for taxiway in field.taxiways { clear.add(taxiway.line.map(place), half: taxiway.width / 2 + AirfieldClear.taxiwayMargin) }
+            for apron in field.aprons { clear.add(apron: apron.map(place)) }
+            airfieldClear.fields.append(clear)
             for apron in field.aprons {
                 addPavement(apron.map(place), bounds: bounds, color: Airfield.apron, lift: Airfield.apronLift)
             }

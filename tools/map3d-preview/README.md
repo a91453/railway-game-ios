@@ -30,9 +30,10 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | 變數 | 意思 |
 | --- | --- |
 | `MAP3D_DUMP` | 輸出檔的前綴（必填） |
-| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`、`douliu`（三個車站的實景新局；`douliu` 是決策 389 加的）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385） |
+| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`、`douliu`（三個車站的實景新局；`douliu` 是決策 389 加的）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385）、`island`（任一點的新局，見 `MAP3D_AT`；決策 707） |
+| `MAP3D_AT`、`MAP3D_LAND` | 和 `MAP3D_WORLD=island` 一起用（決策 707）：`MAP3D_AT=緯度:經度` 是新局的中心；`MAP3D_LAND=towns` 不讀真實土地（空白地圖的城鎮，機場截圖場景改之前的樣子，邊長兩倍）、`empty` 沒有土地（那些場景現在的樣子）、不設就是 App 新局讀的真實人口與分區 |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
-| `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）；不設就是改之前的畫法 |
+| `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）與機場場面（`taiwan_airfields.json`，決策 699）；不設就是改之前的畫法 |
 | `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_FOOTPRINTS` | `1`：讀 App 的真實建物足跡（`taiwan_buildings.pmtiles`，決策 389；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺；可再加 `:高度`，看那個高度的點（山上的車站，決策 321） |
