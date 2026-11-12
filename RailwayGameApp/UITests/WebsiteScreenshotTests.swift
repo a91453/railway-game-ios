@@ -1213,6 +1213,83 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// HEIGHT-HINT: the line under the train diagram's legend that says
+    /// two fingers zoom and a drag moves it. For the screenshot review of
+    /// the pull request that added it.
+    func testTrainDiagramGestureHint() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        let diagram = app.buttons["line.trainDiagram"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(diagram, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's page has its diagram button")
+        diagram.waitUntilSettled()
+        diagram.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["trainDiagram.gestureHint"].firstMatch.appears(within: 30), "The diagram says how to move it")
+        settle(seconds: 3)
+        keep("train-diagram-gesture-hint", app)
+    }
+
+    /// HEIGHT-HINT: the station master's bubble, with a mark at its end
+    /// when a tap on it takes the player somewhere. For the screenshot
+    /// review of the pull request that added the mark.
+    func testStationMasterBubbleMark() {
+        // It speaks as the scene opens, and a tap while it speaks puts
+        // the bubble away: it is left to speak, for a minute.
+        let app = launch(extra: ["-screenshot-scene", "freight", "-speaking-ms", "60000"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        if !app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10) {
+            let master = app.descendants(matching: .any)["stationMaster"].firstMatch
+            XCTAssertTrue(master.becomesHittable(within: 20))
+            master.tap()
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
+        settle(seconds: 1)
+        keep("station-master-bubble", app)
+    }
+
+    /// HEIGHT-HINT: the one-time line under the construction HUD about its
+    /// height cell (``HeightSlideHint``), on the stretch of
+    /// ``testTrackHeightFixes`` once its bridge is taken (the card that
+    /// offers one lies over the place); then its ✕ tapped, and the line gone. In
+    /// Chinese and in English. For the screenshot review of the pull
+    /// request that added it.
+    func testTrackHeightHint() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackHeight", "-show-height-hint"], english: english)
+            let suffix = english ? "-en" : ""
+            let fixUp = app.buttons["map.build.fixUp"]
+            XCTAssertTrue(fixUp.appears(within: 180), "The stretch is previewed")
+            settle(seconds: 2)
+            keep("track-height-hint-waits\(suffix)", app)
+            fixUp.tap()
+            XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered")
+            let dismiss = app.buttons["map.constructionHUD.heightHint.dismiss"]
+            XCTAssertTrue(dismiss.becomesHittable(within: 20), "The line about the height cell shows")
+            settle(seconds: 2)
+            keep("track-height-hint\(suffix)", app)
+            dismiss.tap()
+            XCTAssertTrue(dismiss.disappears(within: 10), "Put away, it is gone")
+            settle(seconds: 1)
+            keep("track-height-hint-closed\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's

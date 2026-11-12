@@ -263,6 +263,18 @@ struct StationMasterCorner: View {
             .accessibilityLabel(Text(verbatim: storyBeat?.speaker.name(in: session.language) ?? session.language.text("Station master", "站長")))
             .accessibilityValue(Text(verbatim: storyBeat.map { $0.text(in: session.language) } ?? said(advice)))
             .accessibilityIdentifier("stationMaster")
+            // The bubble is hidden from VoiceOver (the button says its
+            // words): where a tap on it goes is an action of the button.
+            .accessibilityActions {
+                if storyBeat == nil, let destination = advice?.destination {
+                    Button {
+                        isTalking = false
+                        go(destination)
+                    } label: {
+                        Text(verbatim: destination.actionName(in: session.language))
+                    }
+                }
+            }
             if let title, StationMasterTitle.isShown(in: session.world) {
                 titleBadge(title)
             }
@@ -280,11 +292,13 @@ struct StationMasterCorner: View {
                 let width = min(maxBubbleWidth, 320)
                 let worry = advice?.isWorry ?? false
                 let symbol = guiding ? guide?.symbol : nil
-                let room: CGFloat = symbol == nil ? 24 : 24 + Self.symbolRoom
+                // A mark at its end when a tap takes the player somewhere.
+                let leads = advice?.destination != nil
+                let room: CGFloat = 24 + (symbol == nil ? 0 : Self.symbolRoom) + (leads ? Self.leadRoom : 0)
                 // One line when it fits, else wrapped at the width it has.
                 ViewThatFits(in: .horizontal) {
-                    bubble(said(advice), symbol: symbol, worry: worry) { $0.fixedSize() }
-                    bubble(said(advice), symbol: symbol, worry: worry) {
+                    bubble(said(advice), symbol: symbol, worry: worry, leads: leads) { $0.fixedSize() }
+                    bubble(said(advice), symbol: symbol, worry: worry, leads: leads) {
                         $0.fixedSize(horizontal: false, vertical: true).frame(width: width - room, alignment: .leading)
                     }
                 }
@@ -295,21 +309,7 @@ struct StationMasterCorner: View {
                     // station takes the map there and, while selecting,
                     // selects it; any other only puts the bubble away.
                     isTalking = false
-                    if case .zoneNearStation(let station, _, _)? = advice {
-                        // Decision 509: "zone here" opens the zoning tool
-                        // at the station.
-                        session.zone(near: station)
-                    } else if let line = advice?.line {
-                        // Decision 194, later: a losing line opens in the
-                        // line panel, its card saying why.
-                        session.openLine(line)
-                        screen.panel = .lines
-                    } else if let target = advice?.cameraTarget {
-                        session.lookAt(target)
-                    } else if let id = advice.flatMap(stationID(of:)), let station = session.world.station(id: id) {
-                        session.lookAt(station.point)
-                        if session.tool == .select { session.selectStation(id) }
-                    }
+                    go(advice?.destination)
                 }
                 .accessibilityHidden(true)
                 .transition(.scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity))
@@ -340,6 +340,9 @@ struct StationMasterCorner: View {
 
     /// The width a step's icon takes before its words.
     private static let symbolRoom: CGFloat = 22
+    /// The width the mark after the words takes, when a tap on the bubble
+    /// goes somewhere.
+    private static let leadRoom: CGFloat = 16
 
     /// Decision 508: the station master's first word in a game with no
     /// line, to a player who skipped the tutorial: the five-minute
@@ -527,15 +530,27 @@ struct StationMasterCorner: View {
     }
 
     /// The station the advice is about, if it is about one.
-    private func stationID(of advice: StationMasterAdvice) -> StationID? {
-        switch advice {
-        case .stationFull(let station, _), .stationCrowded(let station, _),
-             .underserved(let station, _, _), .townGrew(let station, _, _),
-             .materialsShort(let station, _), .modeShift(let station),
-             .zoneNearStation(let station, _, _):
-            station
-        default:
-            nil
+    /// Where a tap on the bubble takes the player
+    /// (``StationMasterAdvice/destination``).
+    private func go(_ destination: StationMasterAdvice.Destination?) {
+        switch destination {
+        case .zoning(let station):
+            // Decision 509: "zone here" opens the zoning tool at the
+            // station.
+            session.zone(near: station)
+        case .line(let line):
+            // Decision 194, later: a losing line opens in the line
+            // panel, its card saying why.
+            session.openLine(line)
+            screen.panel = .lines
+        case .place(let target):
+            session.lookAt(target)
+        case .station(let id):
+            guard let station = session.world.station(id: id) else { return }
+            session.lookAt(station.point)
+            if session.tool == .select { session.selectStation(id) }
+        case nil:
+            break
         }
     }
 
@@ -601,7 +616,7 @@ struct StationMasterCorner: View {
 
     /// What it says in a glass bubble, its text laid out by `sized`, after
     /// the icon of the control it names (decision 508), if any.
-    private func bubble<Sized: View>(_ text: String, symbol: String? = nil, worry: Bool, sized: (Text) -> Sized) -> some View {
+    private func bubble<Sized: View>(_ text: String, symbol: String? = nil, worry: Bool, leads: Bool = false, sized: (Text) -> Sized) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             if let symbol {
                 Image(systemName: symbol)
@@ -615,6 +630,13 @@ struct StationMasterCorner: View {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.textPrimary)
             )
+            if leads {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                    .frame(width: Self.leadRoom - 6)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
