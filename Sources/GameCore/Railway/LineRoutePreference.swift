@@ -292,11 +292,24 @@ extension GameWorld {
     }
 
     func hasRoutePreferences(_ train: Train) -> Bool {
-        if let id = assignedLine(of: train.id), let line = line(id: id), line.hasRuns {
+        guard let id = assignedLine(of: train.id), let line = line(id: id) else { return false }
+        return hasRoutePreferences(train, on: line)
+    }
+
+    /// ``hasRoutePreferences(_:)``, the train's line looked up in `known`
+    /// (decision 703).
+    func hasRoutePreferences(_ train: Train, known: inout TrainLineIndex) -> Bool {
+        guard let index = assignedLineIndex(of: train.id, known: &known) else { return false }
+        return hasRoutePreferences(train, on: lines[index])
+    }
+
+    /// Whether `line`, the line `train` is assigned to, has a route for
+    /// its timetable.
+    func hasRoutePreferences(_ train: Train, on line: ServiceLine) -> Bool {
+        if line.hasRuns {
             return !line.routePreferences.isEmpty && runOrder(of: train, on: line) != nil
         }
-        guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id),
-              !line.routes(ofService: stream.service).isEmpty else { return false }
+        guard let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty else { return false }
         return routeOrder(of: train, on: line, stream: stream) != nil
     }
 

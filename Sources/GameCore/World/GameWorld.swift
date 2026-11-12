@@ -4389,7 +4389,7 @@ public struct GameWorld: Equatable, Sendable {
             trains[index] = aside
             // A train of a line with runs stands aside at its own station
             // (decision 212), where its next run finds it.
-            trains[index].isStandingAside = lines.first(where: { assignedLine(of: aside.id) == $0.id })?.hasRuns != true
+            trains[index].isStandingAside = assignedLine(of: aside.id, memo: &memo.directions)?.hasRuns != true
             return aside.id
         }
         // Decision 255: with no passing place and no spare to move, a
@@ -4469,7 +4469,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func standingAsideServiceTakingAFreeBerth(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
-                  isAtPassingPlace(trains[index]), lines.first(where: { assignedLine(of: id) == $0.id })?.hasRuns == true,
+                  isAtPassingPlace(trains[index]), assignedLine(of: id, memo: &memo.directions)?.hasRuns == true,
                   case .travellingToStop(let stop, let cycle)? = request.candidate.execution,
                   let way = counterflowRoute(of: request.candidate, to: request.candidate.timetable[stop].station,
                                              avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
@@ -4498,7 +4498,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func serviceStandingAsideAnyWay(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
-                  trains[index].execution != nil, lines.first(where: { assignedLine(of: id) == $0.id })?.hasRuns == true,
+                  trains[index].execution != nil, assignedLine(of: id, memo: &memo.directions)?.hasRuns == true,
                   let passing = passingPlace(for: request.candidate, in: stuck, anyWay: true, memo: &memo.directions)
             else { continue }
             var aside = request.candidate
@@ -4542,7 +4542,7 @@ public struct GameWorld: Equatable, Sendable {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
-                  let line = lines.first(where: { assignedLine(of: id) == $0.id }), line.hasRuns, !line.depots.isEmpty,
+                  let line = assignedLine(of: id, memo: &memo.directions), line.hasRuns, !line.depots.isEmpty,
                   !isInDepot(trains[index], of: line)
             else { continue }
             let standing = Set(stationsStoppedAt(by: id))
@@ -4598,7 +4598,7 @@ public struct GameWorld: Equatable, Sendable {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
-                  let line = lines.firstIndex(where: { assignedLine(of: id) == $0.id }), lines[line].hasRuns,
+                  let line = assignedLineIndex(of: id, known: &memo.directions.trafficParts.trainLines), lines[line].hasRuns,
                   let due = dueRun(of: trains[index], on: lines[line]),
                   case .travellingToStop(let stop, let cycle)? = request.candidate.execution
             else { continue }

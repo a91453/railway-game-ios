@@ -135,6 +135,8 @@ extension GameWorld {
         }
         /// Each service's ``trafficNominalDirections(_:)``, by what it reads.
         var nominal: [Nominal: Set<TrackTraversal>] = [:]
+        /// Decision 703: the line of each train (see ``TrainLineIndex``).
+        var trainLines = TrainLineIndex()
         /// Decision 637: a point of a service and a berth of its station,
         /// and at the first point, for a train standing at that berth, the
         /// edges its body trails over.
@@ -305,7 +307,7 @@ extension GameWorld {
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;
         // each accepted overtake rebuilds that train's meets immediately.
         for _ in 0..<8 {
-            if !planTrafficOvertakes(&plan) { break }
+            if !planTrafficOvertakes(&plan, lines: &parts.trainLines) { break }
         }
         // Decision 366: trips of lines that run at a headway.
         // Decision 637: left out only by the report that times it.
@@ -616,8 +618,17 @@ extension GameWorld {
     /// Direct translation of proposal, rebuild and relied-on ordering.
     /// The game's slow trains may also use their existing dwell at a call.
     func planTrafficOvertakes(_ plan: inout TrafficPlan) -> Bool {
+        var known = TrainLineIndex()
+        return planTrafficOvertakes(&plan, lines: &known)
+    }
+
+    /// ``planTrafficOvertakes(_:)``, the trains' lines looked up in `known`
+    /// (decision 703).
+    func planTrafficOvertakes(_ plan: inout TrafficPlan, lines known: inout TrainLineIndex) -> Bool {
         typealias Proposal = TrafficOvertakeProposal
         var proposals: [Proposal] = []
+        // Decision 703: asked once of each service, not twice of each pair.
+        let prefers = plan.services.map { hasRoutePreferences($0.train, known: &known) }
         for ia in plan.services.indices {
             for ib in plan.services.indices where ib > ia {
                 let a = plan.services[ia], b = plan.services[ib]
@@ -625,7 +636,7 @@ extension GameWorld {
                 for (j, p) in b.points.enumerated() {
                     if let i = a.points.firstIndex(where: { $0.station == p.station }) { common.append((i, j)) }
                 }
-                let physical = hasRoutePreferences(a.train) || hasRoutePreferences(b.train)
+                let physical = prefers[ia] || prefers[ib]
                 let runs = physical ? preferredTrafficCommon(a, b) : [common]
                 let timetabled = blockSections && followsRealTimetable(a.train) && followsRealTimetable(b.train)
                 for common in runs {
