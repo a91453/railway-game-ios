@@ -67,8 +67,8 @@ final class CoachReportTests: XCTestCase {
     ///     COACH_TAIWAN=1 swift test -c release --skip-build --filter 'CoachReportTests/testWhatTheCoachesTakeAcrossTaiwan$'
     ///
     /// `COACH_TAIWAN` is the days to play (0 to 10; 0 reads only the day's
-    /// demand); `COACH_TAIWAN_ONLY` picks a network (`tra`, `hsr`,
-    /// `tra+hsr`). The High Speed Rail is the high-speed demo's
+    /// demand); `COACH_TAIWAN_ONLY` picks a network (`hsr`, `tra+hsr`;
+    /// `tra` alone has no game that gives its stations their trips). The High Speed Rail is the high-speed demo's
     /// (decision 170), on its real day's trains; the Taiwan Railway is laid
     /// as the demo mode lays real lines (decision 351), every station of
     /// every line, a train every 15 minutes calling at all of them. For
@@ -87,7 +87,7 @@ final class CoachReportTests: XCTestCase {
         let network = try XCTUnwrap(data.coaches)
         func note(_ text: String) { FileHandle.standardError.write(Data("\(text)\n".utf8)) }
         var out: [String] = []
-        for variant in ["tra", "hsr", "tra+hsr"] where only == nil || only == variant {
+        for variant in ["hsr", "tra+hsr"] where only == nil || only == variant {
             var world: GameWorld
             if variant.contains("hsr") {
                 world = try HighSpeedDemo.make(

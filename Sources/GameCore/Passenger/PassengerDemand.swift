@@ -519,8 +519,9 @@ extension GameWorld {
                 // Decision 706: then some ride a direct coach instead.
                 if let rival = rivals[origin]?[reached.destination] {
                     let before = trips + between
-                    trips = coachKept(trips, from: origin, to: reached.destination, minutes: minutes, rival: rival)
-                    between = coachKept(between, from: origin, to: reached.destination, minutes: minutes, rival: rival)
+                    let fast = route.map(ridesHighSpeed) ?? false
+                    trips = coachKept(trips, from: origin, to: reached.destination, minutes: minutes, highSpeed: fast, rival: rival)
+                    between = coachKept(between, from: origin, to: reached.destination, minutes: minutes, highSpeed: fast, rival: rival)
                     byCoach = before - trips - between
                 }
             }
@@ -887,8 +888,9 @@ extension GameWorld {
                 var between = PassengerCrowding.decayed(intercity, minutes: minutes)
                 // Decision 706: then some ride a direct coach instead.
                 if let rival = rivals[record.station]?[destination.station] {
-                    ordinary = coachKept(ordinary, from: record.station, to: destination.station, minutes: minutes, rival: rival)
-                    between = coachKept(between, from: record.station, to: destination.station, minutes: minutes, rival: rival)
+                    let fast = options.min { $0.route.totalMinutes < $1.route.totalMinutes }.map { ridesHighSpeed($0.route) } ?? false
+                    ordinary = coachKept(ordinary, from: record.station, to: destination.station, minutes: minutes, highSpeed: fast, rival: rival)
+                    between = coachKept(between, from: record.station, to: destination.station, minutes: minutes, highSpeed: fast, rival: rival)
                 }
                 let trips = ordinary + between
                 let extra = tourists.trips(from: record.station, to: destination.station)

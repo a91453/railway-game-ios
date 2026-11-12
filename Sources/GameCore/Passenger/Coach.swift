@@ -225,12 +225,20 @@ extension GameWorld {
     }
 
     /// `trips` less those that ride `rival`'s coach instead, when the
-    /// railway's fastest way takes `minutes`.
-    func coachKept(_ trips: Int64, from origin: StationID, to destination: StationID, minutes: Int64, rival: CoachLink?) -> Int64 {
+    /// railway's fastest way takes `minutes`, on a high-speed line or not.
+    /// The railway's fare is what the trip pays (the high-speed fare on a
+    /// high-speed line), in whole NT$ as the coach's is: ``Money`` counts
+    /// hundredths.
+    func coachKept(_ trips: Int64, from origin: StationID, to destination: StationID, minutes: Int64, highSpeed: Bool, rival: CoachLink?) -> Int64 {
         guard let rival, trips > 0 else { return trips }
-        let fare = tripFare(from: origin, to: destination)?.amount ?? 0
+        let fare = Self.wholeDollars(tripFare(from: origin, to: destination, highSpeed: highSpeed)?.amount ?? 0).amount / 100
         let rail = minutes + fare / CoachRules.moneyPerMinute
         return trips - ModeShift.lost(trips, share: CoachRules.share(rail: rail, coach: rival.cost))
+    }
+
+    /// Whether `route` rides a high-speed line.
+    func ridesHighSpeed(_ route: PassengerRoute) -> Bool {
+        route.legs.contains { isHighSpeedLine($0.line) }
     }
 
     /// How many pairs of stations, counted each way, have a direct coach

@@ -157,7 +157,8 @@ final class CoachTests: XCTestCase {
         XCTAssertEqual(plain.dailyDemand(from: home, to: foot), 10_000)
         XCTAssertEqual(try XCTUnwrap(plain.passengerRoutes(from: home, to: foot).map(\.totalMinutes).min()), 8)
         let fare = try XCTUnwrap(plain.tripFare(from: home, to: foot)).amount
-        let rail = 8 + fare / CoachRules.moneyPerMinute
+        // The fare in whole NT$, as the coaches' are.
+        let rail = 8 + fare / 100 / CoachRules.moneyPerMinute
         // The stops' own riders: 24 from A's stop to B and 24 to B's from A.
         let own: Int64 = 48
         // A coach that costs twice the train takes no one.
