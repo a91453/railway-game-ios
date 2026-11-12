@@ -716,7 +716,7 @@ extension GameWorld {
             lines: planned, stations: stations, network: network, trafficControl: isTrafficControlEnabled,
             trains: trains.map(\.id), trainLengths: trains.map(\.length),
             trainCapacities: trains.map(\.capacity), serviceDay: serviceDay,
-            levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
+            levels: serviceLevels(at: clock.now),
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
             day: demandDay, weeklyDemand: weeklyDemand, tidalDemand: tidalDemand, modeShift: modeShift, demandEvents: demandEvents, disruptions: disruptions,
