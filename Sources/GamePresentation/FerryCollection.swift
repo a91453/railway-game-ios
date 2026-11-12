@@ -17,9 +17,9 @@ public enum FerryCollection {
     }
 
     /// The pages of the collection, in the order its picker shows them
-    /// (decision 632 adds the cable cars).
+    /// (decision 632 adds the cable cars, decision 701 the aircraft).
     public enum Page: String, CaseIterable, Hashable, Sendable {
-        case trains, ferries, cableways
+        case trains, ferries, cableways, aircraft
 
         /// "Trains" / "列車", "Ferries" / "渡輪", "Cable Cars" / "纜車".
         public func title(in language: DisplayLanguage) -> String {
@@ -27,6 +27,7 @@ public enum FerryCollection {
             case .trains: language.text("Trains", "列車")
             case .ferries: language.text("Ferries", "渡輪")
             case .cableways: language.text("Cable Cars", "纜車")
+            case .aircraft: language.text("Aircraft", "飛機")
             }
         }
 
@@ -37,6 +38,7 @@ public enum FerryCollection {
             case .trains: nil
             case .ferries: .ferries
             case .cableways: .cableways
+            case .aircraft: .aircraft
             }
         }
     }
