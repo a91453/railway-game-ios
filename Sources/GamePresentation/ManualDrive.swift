@@ -244,6 +244,11 @@ public struct ManualDrive: Equatable, Sendable {
     public static let overspeedMarksPerSecond = 2.0
     public static let emergencyMarks = 10
 
+    /// Decision 704: "stop ahead" shows from this many times the
+    /// timetable's braking distance, and always within these metres.
+    public static let stopAheadShare = 1.5
+    public static let stopAheadMetres = 200.0
+
     // MARK: The run
 
     public let train: Train
@@ -292,6 +297,16 @@ public struct ManualDrive: Equatable, Sendable {
     }
 
     public var isOverspeed: Bool { speed > limit(at: distance) + Self.overspeedTolerance }
+
+    /// Decision 704: whether the brake is due: the run is on, the train
+    /// moves, and the stopping point is no farther than the timetable's
+    /// braking from this speed with ``stopAheadShare`` to spare, or than
+    /// ``stopAheadMetres``.
+    public var isStopAhead: Bool {
+        guard !isOver, speed > 0, remaining > 0 else { return false }
+        let braking = train.braking > 0 ? speed * speed / (2 * train.braking) : 0
+        return remaining <= max(braking * Self.stopAheadShare, Self.stopAheadMetres)
+    }
 
     /// What the handle asks for at `speed`, m/s².
     func asked(at speed: Double) -> Double {
@@ -373,11 +388,20 @@ extension ManualDrive {
         /// until then: the player's own run against the timetable, not
         /// the world's train, which keeps to it meanwhile.
         public let lateness: Int
+        /// Decision 704: the stopping point is near enough that the brake
+        /// is due (``ManualDrive/isStopAhead``): the panel's one line.
+        public let stopAhead: Bool
         public let result: Result?
 
         /// Before the train has left its stop.
         public static let waiting = Reading(phase: .waiting, notch: .neutral, speed: 0, limit: nil, isOverspeed: false,
-                                            remainingTenths: nil, lateness: 0, result: nil)
+                                            remainingTenths: nil, lateness: 0, stopAhead: false, result: nil)
+
+        /// Decision 704: "Stop ahead 161 m", only while ``stopAhead``.
+        public func stopAheadText(in language: DisplayLanguage) -> String? {
+            guard stopAhead, let distance = distanceText(in: language) else { return nil }
+            return language.text("Stop ahead \(distance)", "前方停車 \(distance)")
+        }
 
         /// "640 m", "8.4 m" within 10 m, "3.2 m past" beyond the point.
         public func distanceText(in language: DisplayLanguage) -> String? {
@@ -401,7 +425,10 @@ extension ManualDrive {
             var text = "\(speed) km/h" + language.text(", ", "，") + notch.label(in: language)
             if let limit { text += language.text(", limit \(limit) km/h", "，限速 \(limit) km/h") }
             if let stop { text += language.text(", next stop \(stop)", "，下一站 \(stop)") }
-            if let distance = distanceText(in: language) { text += language.text(", stop in \(distance)", "，停車點 \(distance)") }
+            if let distance = distanceText(in: language) {
+                text += stopAhead ? language.text(", stop ahead in \(distance)", "，前方停車 \(distance)")
+                    : language.text(", stop in \(distance)", "，停車點 \(distance)")
+            }
             if phase == .driving { text += language.text(", ", "，") + latenessText(in: language) }
             return text
         }
@@ -429,6 +456,7 @@ extension ManualDrive {
             limit: limitHere.map { Int(($0 * 3.6).rounded()) }, isOverspeed: isOverspeed,
             remainingTenths: abs(tenths) < 100 ? tenths : Int(remaining.rounded()) * 10,
             lateness: max(0, Int((elapsed - course.scheduled).rounded(.down))),
+            stopAhead: isStopAhead,
             result: result
         )
     }
@@ -464,6 +492,59 @@ extension ManualDrive.Result {
             if usedEmergency { lines.append(language.text("Used the emergency brake", "用了緊急煞車")) }
             return .init(title: language.text("Arrived", "到站"), lines: lines, total: total, grade: grade.rawValue)
         }
+    }
+}
+
+// MARK: - The lever
+
+extension ManualDrive {
+    /// Decision 704: the handle drawn as one lever with a notch a step,
+    /// full power at the top and the emergency brake at the bottom: where
+    /// a notch stands along it, which notch a drag ends on, and how hard
+    /// a step is felt.
+    public enum Lever {
+        /// How far down the lever `notch` stands: 0 at full power, 1 at
+        /// the emergency brake.
+        public static func fraction(of notch: Notch) -> Double {
+            Double(Notch.fullPower.step - notch.step) / Double(Notch.all.count - 1)
+        }
+
+        /// The notch a drag that began at `start` stands on after the
+        /// finger went `fraction` of the lever's length down (negative
+        /// up): the nearest one, so letting go leaves it on a notch.
+        public static func notch(from start: Notch, dragged fraction: Double) -> Notch {
+            guard fraction.isFinite else { return start }
+            let steps = (fraction * Double(Notch.all.count - 1)).rounded()
+            return Notch(step: start.step - Int(max(-100, min(100, steps))))
+        }
+
+        /// How a move of the handle is felt.
+        public enum Detent: Hashable, Sendable {
+            /// One notch among the power or the brake ones.
+            case step
+            /// Reaching or crossing neutral, and the emergency brake.
+            case heavy
+        }
+
+        /// What moving from `old` to `new` is felt as; `nil` for no move.
+        public static func detent(from old: Notch, to new: Notch) -> Detent? {
+            guard old != new else { return nil }
+            return new.isEmergency || new == .neutral || old.step * new.step < 0 ? .heavy : .step
+        }
+    }
+
+    public static func leverText(in language: DisplayLanguage) -> String {
+        language.text("Handle", "把手")
+    }
+
+    /// What VoiceOver adds to the lever.
+    public static func leverHint(in language: DisplayLanguage) -> String {
+        language.text("Drag up for power and down for the brake, or tap above or below the handle for one step.",
+                      "往上拉加速，往下拉煞車；點把手的上方或下方一次動一格。")
+    }
+
+    public static func emergencyText(in language: DisplayLanguage) -> String {
+        Notch.emergency.label(in: language)
     }
 }
 

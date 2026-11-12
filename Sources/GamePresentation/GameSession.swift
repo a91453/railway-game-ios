@@ -479,6 +479,16 @@ public final class GameSession {
 
     /// What the follow bar shows of the boat followed.
     public internal(set) var ferryFollowBar: FerryFollowFacts?
+    /// Decision 702 (FOLLOW-AIR): the flight whose aircraft the camera
+    /// follows on the 3D map, and what the bar shows of it; view state
+    /// only; see `FollowAircraft.swift`.
+    public internal(set) var followedAircraftID: Map3DAircraft.FlightID? {
+        didSet {
+            if followedAircraftID != oldValue { updateMap3DSpeedCapForBus() }
+            if followedAircraftID == nil, aircraftFollowBar != nil { aircraftFollowBar = nil }
+        }
+    }
+    public internal(set) var aircraftFollowBar: AircraftFollowFacts?
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -1453,6 +1463,7 @@ public final class GameSession {
         followedBusID = nil
         followedCabinID = nil
         followedFerryBoatID = nil
+        followedAircraftID = nil
         followedTrainID = id
         updateFollowSounds()
     }
@@ -1463,6 +1474,7 @@ public final class GameSession {
         followedBusID = nil
         followedCabinID = nil
         followedFerryBoatID = nil
+        followedAircraftID = nil
         updateFollowSounds()
     }
 
@@ -1522,6 +1534,7 @@ public final class GameSession {
         keepFollowingBus()
         keepFollowingCabin()
         keepFollowingFerry()
+        keepFollowingAircraft()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1641,6 +1654,8 @@ public final class GameSession {
         if !open, followedCabinID != nil { followedCabinID = nil }
         // Decision 585 PR-4: nor ferry boats.
         if !open, followedFerryBoatID != nil { followedFerryBoatID = nil }
+        // Decision 702: nor aircraft.
+        if !open, followedAircraftID != nil { followedAircraftID = nil }
         updateMap3DSpeedCap()
         // MAP3D-BOUNCE: the speed hint waits while the 3D map is open.
         syncSpeedLagHint()
@@ -1732,7 +1747,8 @@ public final class GameSession {
     private func updateMap3DSpeedCap() {
         // Decision 606: a real train the idle mode follows too, also in
         // the moment its 3D map is opened again round the next one.
-        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil || followedFerryBoatID != nil)
+        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil || followedFerryBoatID != nil
+                                     || followedAircraftID != nil)
             || isFollowingRealTrain
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()

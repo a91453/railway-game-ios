@@ -147,6 +147,9 @@ public struct Map3DFollow: Hashable, Sendable {
         /// Decision 606 (IDLEREAL): a real timetable's train, which only
         /// the idle mode follows.
         case realTrain(RealTrainID)
+        /// Decision 702 (FOLLOW-AIR): an aircraft landing, leaving or
+        /// taxiing at an airport.
+        case aircraft(Map3DAircraft.FlightID)
     }
 
     /// Where a followed vehicle is and which way it faces, in the scene's
@@ -191,11 +194,15 @@ public struct Map3DFollow: Hashable, Sendable {
             public var height: Float
             /// Under level, in radians.
             public var lookDown: Float
+            /// Decision 702: ahead of ``Pose/middle``, along the way the
+            /// vehicle faces (an aircraft's seat ahead of its wing).
+            public var ahead: Float
 
-            public init(across: Float, height: Float, lookDown: Float) {
+            public init(across: Float, height: Float, lookDown: Float, ahead: Float = 0) {
                 self.across = across
                 self.height = height
                 self.lookDown = lookDown
+                self.ahead = ahead
             }
         }
 
@@ -236,6 +243,11 @@ public struct Map3DFollow: Hashable, Sendable {
     /// Decision 606: the real train followed; `nil` for the others.
     public var realTrain: RealTrainID? {
         if case .realTrain(let id) = subject { id } else { nil }
+    }
+    /// Decision 702: the flight whose aircraft is followed; `nil` for the
+    /// others.
+    public var aircraft: Map3DAircraft.FlightID? {
+        if case .aircraft(let id) = subject { id } else { nil }
     }
     public var view: View
     /// Decision 403 (續): where the station view stands; `nil` follows
@@ -330,6 +342,43 @@ public struct Map3DFollow: Hashable, Sendable {
     /// Decision 585 PR-4: how close the camera starts to a boat, of the
     /// train's distance (no nearer than ``Map3DCamera/nearest``).
     public static let ferryScale: Float = 0.5
+
+    /// Decision 702 (FOLLOW-AIR): following an aircraft `length` metres
+    /// long, from one of ``aircraftViews`` (another view is taken as the
+    /// nearest of them, ``aircraftView(_:)``). The camera starts as far
+    /// off as shows all of it from behind: ``aircraftScale(length:)`` of
+    /// the train's distance.
+    public init(aircraft: Map3DAircraft.FlightID, view: View = .back, length: Float) {
+        subject = .aircraft(aircraft)
+        self.view = Self.aircraftView(view)
+        scale = Self.aircraftScale(length: length)
+    }
+
+    /// Decision 702: the views of an aircraft: from behind it, from
+    /// beside it, from a window of its cabin. Its flight deck is not one
+    /// (its nose is all the view from there), and it has no platform.
+    public static let aircraftViews: [View] = [.back, .side, .window]
+
+    /// The aircraft view nearest `view`: the window for the cab, from
+    /// behind for above behind and the station.
+    public static func aircraftView(_ view: View) -> View {
+        switch view {
+        case .window, .cab: .window
+        case .side: .side
+        case .back, .aboveBack, .station: .back
+        }
+    }
+
+    /// Decision 702: how far the camera starts from an aircraft `length`
+    /// metres long, of the train's distance: some 2.3 times its length on
+    /// a phone held on its side (where the train's distance is about
+    /// 60 m), so its wings, about as wide as it is long, take a quarter
+    /// of the view from behind: a seventy-seater's 1, a narrow-bodied
+    /// jet's 1.7, a wide-bodied jet's 2.6; no nearer than the map's
+    /// nearest (``Map3DCamera/nearest``), which a nineteen-seater is at.
+    public static func aircraftScale(length: Float) -> Float {
+        min(max(length / 26, scales.lowerBound), 3)
+    }
 
     /// The nearest and farthest a pinch takes ``scale``.
     public static let scales: ClosedRange<Float> = 0.4...4
@@ -537,7 +586,7 @@ public struct Map3DFollow: Hashable, Sendable {
             next.pitch = tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
-            var eye = (head.middle ?? head.rail) + left * seat.across + Map3DPoint(0, seat.height, 0)
+            var eye = (head.middle ?? head.rail) + left * seat.across + Map3DPoint(0, seat.height, 0) + forward * seat.ahead
             if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + seat.height) }
             next.target = eye + next.forward * (next.distance * sinf(tilt)) - Map3DPoint(0, next.distance * cosf(tilt), 0)
             return next

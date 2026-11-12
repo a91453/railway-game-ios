@@ -142,6 +142,7 @@ extension GameSession {
         followedTrainID = nil
         followedBusID = nil
         followedCabinID = nil
+        followedAircraftID = nil
         followedFerryBoatID = id
         updateFollowSounds()
     }

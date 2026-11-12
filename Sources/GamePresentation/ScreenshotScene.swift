@@ -269,6 +269,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Decision 699: the same map round Songshan a few seconds before the
     /// first landing after 09:30 touches down.
     case airportSongshanLanding
+    /// Decision 702: the same a few seconds before the first landing
+    /// after 19:30; and the maps round the four small airports decision
+    /// 700 added that nobody had looked at (Qimei, Lanyu, Green Island,
+    /// Chiayi), a few seconds before each's first landing after 13:30.
+    case airportSongshanLandingNight
+    case airportQimei, airportLanyu, airportLudao, airportChiayi
 
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
@@ -327,9 +333,14 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .exteriorQiaotou, .exteriorQiaotouNight: (22.75303, 120.31468)
         // Decision 699: the middle of each airfield.
         case .airportTaoyuan, .airportTaoyuanNight: (25.0777, 121.2328)
-        case .airportSongshan, .airportSongshanNight, .airportSongshanLanding: (25.0694, 121.5525)
+        case .airportSongshan, .airportSongshanNight, .airportSongshanLanding, .airportSongshanLandingNight: (25.0694, 121.5525)
         case .airportTaichung, .airportTaichungNight: (24.2590, 120.6120)
         case .airportKaohsiung, .airportKaohsiungNight: (22.5771, 120.3500)
+        // Decision 702: the airports' places in ``AirportCatalog``.
+        case .airportQimei: (23.2117, 119.4179)
+        case .airportLanyu: (22.0278, 121.5359)
+        case .airportLudao: (22.6725, 121.4673)
+        case .airportChiayi: (23.4546, 120.4038)
         default: nil
         }
     }
@@ -389,16 +400,19 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .airportTaoyuan, .airportSongshan, .airportTaichung, .airportKaohsiung: Self.realAirportWorld(at: self, ticks: 57, in: language)
         case .airportTaoyuanNight, .airportSongshanNight, .airportTaichungNight, .airportKaohsiungNight:
             Self.realAirportWorld(at: self, ticks: 117, in: language)
-        case .airportSongshanLanding: Self.landingWorld(at: self, in: language)
+        case .airportSongshanLanding: Self.landingWorld(at: self, ticks: 57, in: language)
+        case .airportSongshanLandingNight: Self.landingWorld(at: self, ticks: 117, in: language)
+        case .airportQimei, .airportLanyu, .airportLudao, .airportChiayi: Self.landingWorld(at: self, ticks: 81, in: language)
         }
     }
 
-    /// Decision 699: ``realAirportWorld(at:ticks:in:)`` at 09:30, run on to
+    /// Decision 699: ``realAirportWorld(at:ticks:in:)`` at 09:30 (`ticks`
+    /// 57; decision 702: or another time of day), run on to
     /// 7 seconds before its first airport's next landing touches down
     /// (``Map3DAircraft/Laid/flights(of:day:hour:traffic:)``'s times: an
     /// hour's landings spread evenly over it).
-    private static func landingWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
-        var world = realAirportWorld(at: scene, ticks: 57, in: language)
+    private static func landingWorld(at scene: ScreenshotScene, ticks: Int, in language: DisplayLanguage) -> GameWorld {
+        var world = realAirportWorld(at: scene, ticks: ticks, in: language)
         let traffic = Map3DAircraft.Traffic(world: world)
         // The airport nearest the map's middle, which the scene is round.
         let middle = (x: world.bounds.width / 2, y: world.bounds.height / 2)
@@ -407,7 +421,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let landings = traffic.landings[nearest]
         let now = world.clock.now.seconds, day = traffic.day * GameTime.secondsPerDay
         var next: Int64?
-        for hour in 9..<24 where next == nil && landings[hour] > 0 {
+        for hour in 0..<24 where next == nil && landings[hour] > 0 {
             for index in 0..<landings[hour] {
                 let time = day + Int64(hour) * 3_600 + Int64((Double(index) + 0.5) * 3_600 / Double(landings[hour]))
                 if time - 7 > now {
