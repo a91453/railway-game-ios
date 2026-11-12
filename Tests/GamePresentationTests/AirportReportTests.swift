@@ -33,7 +33,7 @@ final class AirportReportTests: XCTestCase {
                     "| --- | --- | --: | --: | --: | --: | --: | --: | --: | --: | --- |"]
         var tourists: [String] = []
         for network in Self.networks where only == nil || only == network {
-            let start = try bought(network, data: data)
+            let start = try Self.bought(network, data: data)
             for airports in [false, true] {
                 var world = start
                 // The airports' stations, as the game with them has them.
@@ -78,7 +78,7 @@ final class AirportReportTests: XCTestCase {
 
     /// A real-world game round `network` with the line bought, as
     /// `AcquisitionReportTests.play` begins it.
-    private func bought(_ network: String, data: RealWorldData) throws -> GameWorld {
+    static func bought(_ network: String, data: RealWorldData, rules: NewGameRules = .simple) throws -> GameWorld {
         let railways = try XCTUnwrap(data.railways)
         let runs = try XCTUnwrap(railways.branchRuns[network] ?? railways.metroRuns[network])
         let prefix = String(network.prefix { $0 != ":" })
@@ -89,7 +89,7 @@ final class AirportReportTests: XCTestCase {
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
         let side: Int64 = network == "tymc:A" ? 1 << 22 : 1 << 21
         var world = GameWorld.newGame(
-            anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: Money(200_000_000_000), land: [], rules: .simple
+            anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: Money(200_000_000_000), land: [], rules: rules
         )
         world.setLandOnDemand()
         world.setRealTransfers(true)

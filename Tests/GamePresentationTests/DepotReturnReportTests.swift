@@ -41,13 +41,13 @@ final class DepotReturnReportTests: XCTestCase {
 
     func testTheWenhuLine() throws {
         try wanted("wenhu")
-        try report("wenhu", Self.resumed() ?? Self.bought("trtc:BR"))
+        try report("wenhu", Self.resumed() ?? Self.peopled("trtc:BR") ?? Self.bought("trtc:BR"))
     }
 
     /// Decision 556: the Taoyuan Airport MRT, on a map wide enough for it.
     func testTheTaoyuanAirportLine() throws {
         try wanted("tymc")
-        try report("tymc", Self.resumed() ?? Self.bought("tymc:A", side: 1 << 22))
+        try report("tymc", Self.resumed() ?? Self.peopled("tymc:A") ?? Self.bought("tymc:A", side: 1 << 22))
     }
 
     /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
@@ -242,6 +242,21 @@ final class DepotReturnReportTests: XCTestCase {
         let offer = session.realLineOffer(for: line)
         XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
         return session.world
+    }
+
+    /// HEALTH-126: `DEPOT_RETURN_PEOPLED=1` measures the Wenhu line or the
+    /// Taoyuan Airport MRT in the game `AirportReportTests` plays instead:
+    /// the map's people, places and airports, so the trains carry riders
+    /// (the game ``bought(_:rules:side:)`` opens has no one to ride them);
+    /// `DEPOT_RETURN_NO_AIRPORTS=1` takes the airports out of it.
+    static func peopled(_ id: String) throws -> GameWorld? {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["DEPOT_RETURN_PEOPLED"] != nil else { return nil }
+        var world = try AirportReportTests.bought(
+            id, data: RealWorldData.load(file: RealWorldDataLoadTests.file), rules: environment["DEPOT_RETURN_SIMPLE"] != nil ? .simple : .realistic
+        )
+        if environment["DEPOT_RETURN_NO_AIRPORTS"] != nil { world.setAirports([]) }
+        return world
     }
 
     /// Decision 602: `DEPOT_RETURN_FROM=<file>` plays on from a world

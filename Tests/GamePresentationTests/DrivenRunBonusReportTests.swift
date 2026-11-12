@@ -10,9 +10,9 @@ import XCTest
 ///     swift build -c release -Xswiftc -enable-testing --build-tests
 ///     DRIVEN_RUN_REPORT=tymc:A swift test -c release --skip-build --filter DrivenRunBonusReportTests
 ///
-/// `DRIVEN_RUN_REPORT` is the real line bought (`tymc:A`, `trtc:BR`, any
-/// `DepotReturnReportTests.bought` takes), under a new game's rules
-/// (simple, traffic control on). After a day to fill the trains, one day
+/// `DRIVEN_RUN_REPORT` is the real line bought (`tymc:A`, `trtc:BR`), in
+/// the game `AirportReportTests` plays (a new game's rules: simple,
+/// traffic control on). After a day to fill the trains, one day
 /// is played a minute a tick and counted three ways:
 ///
 /// - **every tick**: a run with full marks settled each minute for the
@@ -31,7 +31,9 @@ final class DrivenRunBonusReportTests: XCTestCase {
         guard let network = ProcessInfo.processInfo.environment["DRIVEN_RUN_REPORT"] else {
             throw XCTSkip("set DRIVEN_RUN_REPORT=<real line> to print what a day of runs driven by hand earns")
         }
-        var world = try DepotReturnReportTests.bought(network, rules: .simple, side: network == "tymc:A" ? 1 << 22 : 1 << 21)
+        // The game `AirportReportTests` plays: the map's people, places
+        // and airports, so the trains carry whom a player's would.
+        var world = try AirportReportTests.bought(network, data: RealWorldData.load(file: RealWorldDataLoadTests.file))
         XCTAssertEqual(world.accounts.mode, .management)
         world.setSpeed(.normal)
         // To the next midnight, a day to fill the trains, and the tick
@@ -40,6 +42,7 @@ final class DrivenRunBonusReportTests: XCTestCase {
         try world.advance(ticks: 1_440 + 1)
         // The same day played without a settlement, to compare the cash.
         var untouched = world
+        let counted = world.dayIndex(of: world.clock.now)
         var everyTick = (runs: 0, earned: Int64(0), refused: 0)
         var player = (runs: 0, full: Int64(0), good: Int64(0), riders: Int64(0), seconds: Int64(0))
         // The run the player drives: its train and when it reaches its stop.
@@ -85,7 +88,7 @@ final class DrivenRunBonusReportTests: XCTestCase {
         }
         try world.advance(ticks: 1)
         try untouched.advance(ticks: 1)
-        let day = try XCTUnwrap(untouched.accounts.days.last)
+        let day = try XCTUnwrap(untouched.accounts.days.first { $0.day == counted })
         let fares = day.fareRevenue.amount
         func dollars(_ cents: Int64) -> String { "NT$\(cents / 100)" }
         func share(_ cents: Int64) -> String { fares > 0 ? String(format: "%.2f%%", Double(cents) * 100 / Double(fares)) : "–" }
