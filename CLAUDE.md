@@ -445,8 +445,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   than from the summary, before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
   (`docs/HANDOFF.md` §1). The game-planning session may open the next
-  one itself with `create_session`, model `claude-opus-5-5` (owner,
-  2026-10-27: 「遊戲規劃也可以自己開」「遊戲規劃的模型永遠都選opus 5.5高」),
+  one itself with `create_session`, model `claude-fable-5-2` (owner,
+  2026-10-27: 「遊戲規劃也可以自己開」; 2026-11-12: 「以後遊戲規劃都用fable」),
   but each session a session opens is one level deeper (`get_session`'s
   `lineage.depth`, limit 8), and at the eighth it can no longer open
   sessions or schedule check-ins: once the next one would be at level 7,
