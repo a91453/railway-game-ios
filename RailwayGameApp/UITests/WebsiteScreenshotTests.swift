@@ -562,6 +562,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(mark.appears(within: 10), "The airport is marked")
         settle()
         keep("airport-marks-2d", app)
+        // A tap on the mark opens the sights at the airports: the one a
+        // station serves, then the one none does.
+        XCTAssertTrue(mark.becomesHittable(within: 10), "The mark takes a tap")
+        mark.tap()
+        let row = app.descendants(matching: .any)["tourism.airport.1"].firstMatch
+        XCTAssertTrue(row.appears(within: 10), "The mark opens the airports")
+        settle(seconds: 2)
+        keep("airport-sights-from-mark", app)
+        row.swipeUp()
+        settle(seconds: 1)
+        keep("airport-sights-second", app)
+        let done = app.buttons["tourism.done"]
+        XCTAssertTrue(done.appears(within: 5))
+        done.tap()
+        XCTAssertTrue(done.disappears(within: 10), "The sights close")
         let tag = app.buttons["map.stationTag"]
         XCTAssertTrue(tag.appears(within: 30), "The airport's station is picked")
         tag.tap()

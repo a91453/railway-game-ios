@@ -184,14 +184,16 @@ final class Map3DAirfieldsTests: XCTestCase {
     /// back, taxis out and lines up. Neither jumps on the way.
     func testAFlightTaxisBetweenTheRunwayAndItsStand() throws {
         var field = field()
-        field.stands = [.init(nose: Map3DPoint(600, 0, 300), forward: Map3DPoint(0, 0, 1), room: 57)]
+        field.stands = (0..<12).map { .init(nose: Map3DPoint(400 + Float($0) * 60, 0, 300), forward: Map3DPoint(0, 0, 1), room: 57) }
         field.layTaxiways([[Map3DPoint(1_800, 0, 0), Map3DPoint(1_800, 0, 200), Map3DPoint(600, 0, 200), Map3DPoint(100, 0, 200), Map3DPoint(100, 0, 0)]])
         XCTAssertEqual(field.links.count, 2)
-        XCTAssertEqual(field.rotation, [0])
-        XCTAssertNotNil(field.stands[0].node)
-        let parked = Map3DPoint(600, 0, 300) - Map3DPoint(0, 0, 1) * (Map3DAircraftStudies.dimensions(.narrowJet).length / 2)
+        XCTAssertTrue(field.stands.allSatisfy { $0.node != nil })
+        // About half the stands take the flights.
+        XCTAssertTrue((3...9).contains(field.rotation.count), "\(field.rotation.count)")
+        let stand = try XCTUnwrap(field.rotation.first)
+        let parked = field.stands[stand].nose - Map3DPoint(0, 0, 1) * (Map3DAircraftStudies.dimensions(.narrowJet).length / 2)
         for landing in [true, false] {
-            let flight = Map3DAircraft.Laid.Flight(time: 10_000, landing: landing, runway: 0, kind: .narrowJet, livery: 0, stand: 0)
+            let flight = Map3DAircraft.Laid.Flight(time: 10_000, landing: landing, runway: 0, kind: .narrowJet, livery: 0, stand: stand)
             var last: Map3DAircraft.Drawn?, wasParked = false, moved = false
             for second in stride(from: 6_500.0, through: 13_500, by: 1) {
                 guard let pose = Map3DAircraft.Laid.pose(of: flight, on: field, second: second, northEast: true) else {
@@ -206,7 +208,7 @@ final class Map3DAirfieldsTests: XCTestCase {
                 }
                 if !pose.flying {
                     XCTAssertEqual((pose.ground - parked).length, 0, accuracy: 0.01)
-                    XCTAssertEqual(pose.stand, 0)
+                    XCTAssertEqual(pose.stand, stand)
                     wasParked = true
                 } else {
                     moved = true
@@ -217,9 +219,9 @@ final class Map3DAirfieldsTests: XCTestCase {
         }
         // A landing stands at its stand 20 minutes after; a take-off 20
         // minutes before.
-        let landing = Map3DAircraft.Laid.Flight(time: 10_000, landing: true, runway: 0, kind: .narrowJet, livery: 0, stand: 0)
+        let landing = Map3DAircraft.Laid.Flight(time: 10_000, landing: true, runway: 0, kind: .narrowJet, livery: 0, stand: stand)
         XCTAssertEqual(Map3DAircraft.Laid.pose(of: landing, on: field, second: 11_200, northEast: true)?.flying, false)
-        let takeOff = Map3DAircraft.Laid.Flight(time: 10_000, landing: false, runway: 0, kind: .narrowJet, livery: 0, stand: 0)
+        let takeOff = Map3DAircraft.Laid.Flight(time: 10_000, landing: false, runway: 0, kind: .narrowJet, livery: 0, stand: stand)
         XCTAssertEqual(Map3DAircraft.Laid.pose(of: takeOff, on: field, second: 8_800, northEast: true)?.flying, false)
     }
 
@@ -229,9 +231,9 @@ final class Map3DAirfieldsTests: XCTestCase {
         field.stands = (0..<45).map { .init(nose: Map3DPoint(Float($0) * 60, 0, 300), forward: Map3DPoint(0, 0, 1), room: 57) }
         field.layTaxiways([[Map3DPoint(1_800, 0, 0), Map3DPoint(1_800, 0, 200), Map3DPoint(0, 0, 200), Map3DPoint(0, 0, 0)],
                            [Map3DPoint(1_800, 0, 200), Map3DPoint(2_700, 0, 200)]])
-        XCTAssertGreaterThan(field.rotation.count, 25)
+        XCTAssertGreaterThan(field.rotation.count, 12)
         let laid = Map3DAircraft.Laid(fields: [field])
-        let traffic = traffic(landings: 4, takeOffs: 4)
+        let traffic = traffic(landings: 2, takeOffs: 2)
         var flew = false
         for second in stride(from: 40_000.0, to: 47_200, by: 30) {
             XCTAssertTrue(laid.aircraft(second: second, traffic: traffic, still: true).allSatisfy { !$0.flying })

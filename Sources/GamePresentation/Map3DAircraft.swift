@@ -79,7 +79,9 @@ public enum Map3DAircraft {
     /// Within this of the eye an aircraft is drawn whole, metres; within
     /// ``farReach``, its far model; and the most drawn whole.
     public static let nearReach: Float = 900
-    public static let farReach: Float = 14_000
+    public static let farReach: Float = 7_000
+    /// Within this of the eye an aircraft casts its shadow, metres.
+    public static let shadowReach: Float = 2_500
     public static let mostNear = 14
 
     /// A flight's figures by type: its speed over the threshold and at
@@ -204,6 +206,7 @@ public enum Map3DAircraft {
         }
 
         let fields: [Field]
+        private let kept = Kept()
         public var isEmpty: Bool { fields.isEmpty }
 
         init(fields: [Field]) {
@@ -385,12 +388,67 @@ public enum Map3DAircraft {
             return month >= 10 || month <= 3
         }
 
-        /// `flight` on `field` at game second `second`, or `nil` before it
-        /// is seen or after it has gone: in the air, on the runway, and
-        /// with a stand the taxiways reach, taxiing to it and standing at
-        /// it for ``Map3DAircraft/turnaround`` after landing, or standing
-        /// at it for as long, pushed back and taxiing out before leaving.
-        static func pose(of flight: Flight, on field: Field, second: Double, northEast: Bool) -> Drawn? {
+        /// A flight laid on its field: what does not change while it is
+        /// seen (its runway the way it is used, its speeds, its way along
+        /// the taxiways), worked out once (``plan(_:on:northEast:)``) so
+        /// each frame only reads where it is (``pose(_:second:)``).
+        struct Planned: Sendable {
+            let flight: Flight
+            /// The runway's ends the way it is used, the level way along
+            /// it, and its length, metres.
+            let from: Map3DPoint
+            let to: Map3DPoint
+            let forward: Map3DPoint
+            let length: Double
+            /// A landing: where it aims, its speed over the threshold, how
+            /// long it brakes and how far along it has slowed.
+            var aim = 0.0
+            var speed = 0.0
+            var stop = 0.0
+            var slowed = 0.0
+            /// A take-off: where its roll starts and how long it lasts.
+            var start = 0.0
+            var roll = 0.0
+            /// With a stand the taxiways reach: how long it rolls on the
+            /// runway to its taxiway (a landing), its way between the
+            /// runway and the stand's point (and, for a landing, on to the
+            /// stand), that way's length, and for a take-off how long its
+            /// taxi and its push back last.
+            var rolled: Double?
+            var path: [Map3DPoint] = []
+            var total = 0.0
+            var taxi = 0.0
+            var push = 0.0
+            /// Its stand: its number, where the aircraft's middle stands,
+            /// the way it points, whether a bridge reaches it, and the
+            /// taxiways' point it is pushed back to.
+            var stand: Int?
+            var parked = Map3DPoint.zero
+            var facing = Map3DPoint(1, 0, 0)
+            var bridged = false
+            var node = Map3DPoint.zero
+
+            /// On the runway `s` metres from the end it starts at, on the
+            /// runway's own ground, held level past its ends.
+            func onRunway(_ s: Double, height: Double = 0, pitch: Double = 0) -> Drawn {
+                let share = Float(min(1, max(0, s / length)))
+                let ground = Map3DPoint(from.x + forward.x * Float(s), from.y + (to.y - from.y) * share, from.z + forward.z * Float(s))
+                return Drawn(ground: ground, height: Float(height), forward: forward, pitch: Float(pitch), kind: flight.kind, livery: flight.livery,
+                             flying: true)
+            }
+
+            func drawn(at ground: Map3DPoint, forward: Map3DPoint) -> Drawn {
+                Drawn(ground: ground, height: 0, forward: forward, pitch: 0, kind: flight.kind, livery: flight.livery, flying: true)
+            }
+
+            var atStand: Drawn {
+                Drawn(ground: parked, height: 0, forward: facing, pitch: 0, kind: flight.kind, livery: flight.livery, flying: false, stand: stand,
+                      bridged: bridged)
+            }
+        }
+
+        /// `flight` laid on `field`, landing towards the north-east or not.
+        static func plan(_ flight: Flight, on field: Field, northEast: Bool) -> Planned? {
             let runway = field.runways[flight.runway]
             var from = runway.a, to = runway.b, turned = false
             // x east, z south: north-east is +x, −z.
@@ -401,114 +459,125 @@ public enum Map3DAircraft {
             }
             guard let forward = Map3DPoint(to.x - from.x, 0, to.z - from.z).normalized else { return nil }
             let length = Double(runway.length), figures = Map3DAircraft.figures(flight.kind)
-            let t = second - flight.time
-            // On the runway `s` metres from the end it starts at, on the
-            // runway's own ground, held level past its ends.
-            func onRunway(_ s: Double, height: Double = 0, pitch: Double = 0, backwards: Bool = false) -> Drawn {
-                let share = Float(min(1, max(0, s / length)))
-                let ground = Map3DPoint(from.x + forward.x * Float(s), from.y + (to.y - from.y) * share, from.z + forward.z * Float(s))
-                return Drawn(ground: ground, height: Float(height), forward: backwards ? forward * -1 : forward, pitch: Float(pitch),
-                             kind: flight.kind, livery: flight.livery, flying: true)
-            }
+            var plan = Planned(flight: flight, from: from, to: to, forward: forward, length: length)
             // The taxiways' meetings with this runway, measured the way it
-            // is used.
+            // is used, that have a way to the stand's point.
+            let stand = flight.stand.flatMap { index in field.stands[index].node.map { (index: index, stand: field.stands[index], node: $0) } }
             func links() -> [(link: Link, s: Double)] {
-                field.links.filter { $0.runway == flight.runway }.map { ($0, turned ? length - Double($0.along) : Double($0.along)) }
+                guard let stand else { return [] }
+                return field.links.filter { $0.runway == flight.runway && ($0.next[stand.node] >= 0 || $0.node == stand.node) }
+                    .map { ($0, turned ? length - Double($0.along) : Double($0.along)) }
             }
-            let stand = flight.stand.flatMap { index in field.stands[index].node == nil ? nil : (index, field.stands[index]) }
+            if let stand {
+                plan.stand = stand.index
+                plan.parked = stand.stand.nose - stand.stand.forward * (Map3DAircraftStudies.dimensions(flight.kind).length / 2)
+                plan.facing = stand.stand.forward
+                plan.bridged = stand.stand.bridged
+                plan.node = field.nodes[stand.node]
+            }
             if flight.landing {
-                let aim = min(400, length * 0.14), speed = figures.approach
+                plan.aim = min(400, length * 0.14)
+                plan.speed = figures.approach
+                plan.stop = (plan.speed - Map3DAircraft.taxiSpeed) / Map3DAircraft.braking
+                plan.slowed = plan.aim + plan.speed * plan.stop - Map3DAircraft.braking * plan.stop * plan.stop / 2
+                // Off by the first taxiway past where it has slowed, turning
+                // from 20 m before it; along the taxiways to the stand's
+                // point, and in to the stand.
+                if let stand, let exit = links().filter({ $0.s > plan.slowed + 20 }).min(by: { $0.s < $1.s }) {
+                    plan.rolled = (exit.s - 20 - plan.slowed) / Map3DAircraft.taxiSpeed
+                    plan.path = [plan.onRunway(exit.s - 20).ground, plan.onRunway(exit.s).ground]
+                        + field.way(from: stand.node, to: exit.link).reversed() + [plan.parked]
+                    plan.total = Self.length(of: plan.path)
+                }
+            } else {
+                // It rolls from where it lined up: with a stand, 25 m past
+                // the taxiway nearest the runway's start.
+                plan.start = min(70, length * 0.04)
+                plan.roll = figures.liftOff / Map3DAircraft.thrust
+                if let stand, let entry = links().filter({ $0.s < length * 0.5 }).min(by: { $0.s < $1.s }) {
+                    plan.start = max(plan.start, min(entry.s, length - Double(figures.runway) * 0.6)) + 25
+                    plan.path = field.way(from: stand.node, to: entry.link) + [plan.onRunway(entry.s).ground, plan.onRunway(plan.start).ground]
+                    plan.total = Self.length(of: plan.path)
+                    plan.taxi = plan.total / Map3DAircraft.taxiSpeed
+                    plan.push = Double((plan.node - plan.parked).length) / Map3DAircraft.pushSpeed
+                    plan.rolled = 0
+                }
+            }
+            return plan
+        }
+
+        /// `flight` on `field` at game second `second`, or `nil` before it
+        /// is seen or after it has gone (``pose(_:second:)``).
+        static func pose(of flight: Flight, on field: Field, second: Double, northEast: Bool) -> Drawn? {
+            plan(flight, on: field, northEast: northEast).flatMap { pose($0, second: second) }
+        }
+
+        /// Where `plan`'s flight is at game second `second`, or `nil`
+        /// before it is seen or after it has gone: in the air, on the
+        /// runway, and with a stand the taxiways reach, taxiing to it and
+        /// standing at it for ``Map3DAircraft/turnaround`` after landing,
+        /// or standing at it for as long, pushed back and taxiing out
+        /// before leaving.
+        static func pose(_ plan: Planned, second: Double) -> Drawn? {
+            let flight = plan.flight, t = second - flight.time
+            if flight.landing {
                 if t < 0 {
-                    let out = -t * speed
+                    let out = -t * plan.speed
                     guard out < Map3DAircraft.seenFrom else { return nil }
                     // The flare: the last 200 m level out.
-                    return onRunway(aim - out, height: out > 200 ? out * Map3DAircraft.glide : out * out / 200 * Map3DAircraft.glide,
-                                    pitch: out > 200 ? 0.05 : 0.05 + 0.04 * (1 - out / 200))
+                    return plan.onRunway(plan.aim - out, height: out > 200 ? out * Map3DAircraft.glide : out * out / 200 * Map3DAircraft.glide,
+                                         pitch: out > 200 ? 0.05 : 0.05 + 0.04 * (1 - out / 200))
                 }
-                let stop = (speed - Map3DAircraft.taxiSpeed) / Map3DAircraft.braking
-                if t < stop { return onRunway(aim + speed * t - Map3DAircraft.braking * t * t / 2, pitch: max(0, 0.09 * (1 - t / 4))) }
-                let slowed = aim + speed * stop - Map3DAircraft.braking * stop * stop / 2
-                // Off by the first taxiway past where it has slowed, and
-                // along the taxiways to its stand.
-                let exits = links().filter { $0.s > slowed + 20 && $0.link.next.indices.contains(stand?.1.node ?? -1) }.sorted { $0.s < $1.s }
-                guard let (index, stand) = stand, let node = stand.node,
-                      let exit = exits.first(where: { $0.link.next[node] >= 0 || $0.link.node == node }) else {
+                if t < plan.stop {
+                    return plan.onRunway(plan.aim + plan.speed * t - Map3DAircraft.braking * t * t / 2, pitch: max(0, 0.09 * (1 - t / 4)))
+                }
+                guard let rolled = plan.rolled else {
                     // No way to a stand: gone by the runway's end.
-                    let s = slowed + Map3DAircraft.taxiSpeed * (t - stop)
-                    return s < length - 60 ? onRunway(s) : nil
+                    let s = plan.slowed + Map3DAircraft.taxiSpeed * (t - plan.stop)
+                    return s < plan.length - 60 ? plan.onRunway(s) : nil
                 }
-                // It turns off from 20 m before the taxiway.
-                let rolled = (exit.s - 20 - slowed) / Map3DAircraft.taxiSpeed
-                if t < stop + rolled { return onRunway(slowed + Map3DAircraft.taxiSpeed * (t - stop)) }
-                // From the runway's middle line to the exit's point, along
-                // the taxiways to the stand's point, and in to the stand.
-                var path = [onRunway(exit.s - 20).ground, onRunway(exit.s).ground] + field.way(from: node, to: exit.link).reversed()
-                let size = Map3DAircraftStudies.dimensions(flight.kind)
-                let parked = stand.nose - stand.forward * (size.length / 2)
-                path.append(parked)
-                let travelled = Map3DAircraft.taxiSpeed * (t - stop - rolled)
-                let total = Self.length(of: path)
-                if travelled < total {
-                    let at = Self.point(on: path, at: travelled)
-                    return Drawn(ground: at.point, height: 0, forward: at.forward, pitch: 0, kind: flight.kind, livery: flight.livery, flying: true)
+                if t < plan.stop + rolled { return plan.onRunway(plan.slowed + Map3DAircraft.taxiSpeed * (t - plan.stop)) }
+                let travelled = Map3DAircraft.taxiSpeed * (t - plan.stop - rolled)
+                if travelled < plan.total {
+                    let at = Self.point(on: plan.path, at: travelled)
+                    return plan.drawn(at: at.point, forward: at.forward)
                 }
-                guard travelled < total + Map3DAircraft.turnaround * Map3DAircraft.taxiSpeed else { return nil }
-                return Drawn(ground: parked, height: 0, forward: stand.forward, pitch: 0, kind: flight.kind, livery: flight.livery, flying: false,
-                             stand: index, bridged: stand.bridged)
-            }
-            // A take-off: it rolls from where it lined up, `start` metres
-            // along; with a stand, from the taxiway nearest the runway's
-            // start.
-            var start = min(70, length * 0.04)
-            let roll = figures.liftOff / Map3DAircraft.thrust
-            var entry: (link: Link, s: Double)?
-            if let (_, stand) = stand, let node = stand.node {
-                entry = links().filter { $0.s < length * 0.5 && $0.link.next.indices.contains(node) && ($0.link.next[node] >= 0 || $0.link.node == node) }
-                    .min { $0.s < $1.s }
-                // It lines up 25 m past the taxiway.
-                if let entry { start = max(start, min(entry.s, length - Double(figures.runway) * 0.6)) + 25 }
+                return travelled < plan.total + Map3DAircraft.turnaround * Map3DAircraft.taxiSpeed ? plan.atStand : nil
             }
             if t > 0 {
-                if t < roll { return onRunway(start + Map3DAircraft.thrust * t * t / 2, pitch: t > roll - 3 ? 0.07 * (t - (roll - 3)) : 0) }
-                let up = (t - roll) * (figures.liftOff + 8)
+                let liftOff = plan.roll * Map3DAircraft.thrust
+                if t < plan.roll {
+                    return plan.onRunway(plan.start + Map3DAircraft.thrust * t * t / 2, pitch: t > plan.roll - 3 ? 0.07 * (t - (plan.roll - 3)) : 0)
+                }
+                let up = (t - plan.roll) * (liftOff + 8)
                 guard up < Map3DAircraft.seenFrom else { return nil }
-                return onRunway(start + Map3DAircraft.thrust * roll * roll / 2 + up, height: up * Map3DAircraft.climb, pitch: 0.21)
+                return plan.onRunway(plan.start + Map3DAircraft.thrust * plan.roll * plan.roll / 2 + up, height: up * Map3DAircraft.climb, pitch: 0.21)
             }
             // It waits lined up for 25 seconds.
-            if t > -25 { return onRunway(start) }
-            guard let (index, stand) = stand, let node = stand.node, let entry else { return nil }
-            let size = Map3DAircraftStudies.dimensions(flight.kind)
-            let parked = stand.nose - stand.forward * (size.length / 2)
-            // Backwards in time from the line-up: along the runway from the
-            // taxiway, along the taxiways from the stand's point, a pause,
-            // and the push back from the stand.
-            let path = field.way(from: node, to: entry.link) + [onRunway(entry.s).ground, onRunway(start).ground]
-            let taxi = Self.length(of: path) / Map3DAircraft.taxiSpeed
-            let push = Double((field.nodes[node] - parked).length) / Map3DAircraft.pushSpeed
+            if t > -25 { return plan.onRunway(plan.start) }
+            guard plan.rolled != nil else { return nil }
+            // Backwards in time from the line-up: its taxi from the
+            // stand's point, a pause there, and the push back.
             var before = -25 - t
-            if before < taxi {
-                let at = Self.point(on: path, at: (taxi - before) * Map3DAircraft.taxiSpeed)
-                return Drawn(ground: at.point, height: 0, forward: at.forward, pitch: 0, kind: flight.kind, livery: flight.livery, flying: true)
+            if before < plan.taxi {
+                let at = Self.point(on: plan.path, at: (plan.taxi - before) * Map3DAircraft.taxiSpeed)
+                return plan.drawn(at: at.point, forward: at.forward)
             }
-            before -= taxi
+            before -= plan.taxi
             // Pushed back tail first, then turned the way it will go.
-            let out = Map3DPoint(field.nodes[node].x - parked.x, 0, field.nodes[node].z - parked.z).normalized ?? stand.forward * -1
+            let out = Map3DPoint(plan.node.x - plan.parked.x, 0, plan.node.z - plan.parked.z).normalized ?? plan.facing * -1
             if before < Map3DAircraft.pushPause {
-                let onward = path.count > 1 ? Self.point(on: path, at: 0).forward : out
+                let onward = Self.point(on: plan.path, at: 0).forward
                 let turn = Float(before / Map3DAircraft.pushPause)
-                let facing = (onward * (1 - turn) + out * -turn).normalized ?? onward
-                return Drawn(ground: field.nodes[node], height: 0, forward: facing, pitch: 0, kind: flight.kind, livery: flight.livery, flying: true)
+                return plan.drawn(at: plan.node, forward: (onward * (1 - turn) + out * -turn).normalized ?? onward)
             }
             before -= Map3DAircraft.pushPause
-            if before < push {
-                let share = Float(before / push)
-                let facing = (out * -1 * (1 - share) + stand.forward * share).normalized ?? stand.forward
-                return Drawn(ground: field.nodes[node] + (parked - field.nodes[node]) * share, height: 0, forward: facing, pitch: 0, kind: flight.kind,
-                             livery: flight.livery, flying: true)
+            if before < plan.push {
+                let share = Float(before / plan.push)
+                return plan.drawn(at: plan.node + (plan.parked - plan.node) * share,
+                                  forward: (out * -1 * (1 - share) + plan.facing * share).normalized ?? plan.facing)
             }
-            guard before - push < Map3DAircraft.turnaround else { return nil }
-            return Drawn(ground: parked, height: 0, forward: stand.forward, pitch: 0, kind: flight.kind, livery: flight.livery, flying: false,
-                         stand: index, bridged: stand.bridged)
+            return before - plan.push < Map3DAircraft.turnaround ? plan.atStand : nil
         }
 
         /// How long the level line `path` is, metres.
@@ -533,19 +602,45 @@ public enum Map3DAircraft {
             return (at, Map3DPoint(ahead.x - behind.x, 0, ahead.z - behind.z).normalized ?? Map3DPoint(1, 0, 0))
         }
 
-        /// The flights seen about game second `second`: those whose runway
-        /// time is within an hour and a half of it.
-        func flights(of field: Field, second: Double, traffic: Traffic) -> [Flight] {
-            let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
-            let hour = Int((second - Double(day * GameTime.secondsPerDay)) / 3_600)
-            var flights: [Flight] = []
-            for offset in -2...2 {
-                let at = hour + offset
-                // The hours next to midnight take today's numbers.
-                flights += Self.flights(of: field, day: at < 0 ? day - 1 : (at > 23 ? day + 1 : day), hour: (at + 24) % 24, traffic: traffic)
-                    .filter { abs($0.time - second) < 5_400 }
+        /// What a frame reads again and again, kept: each hour's flights
+        /// laid (``Planned``), and each day's aircraft parked all day.
+        final class Kept: @unchecked Sendable {
+            struct Hour: Hashable {
+                let field: Int
+                let hours: Int64
+                let traffic: Int64
+                let northEast: Bool
             }
-            return flights
+
+            struct Day: Hashable {
+                let field: Int
+                let day: Int64
+                let turning: Bool
+            }
+
+            private let lock = NSLock()
+            private var hours: [Hour: [Planned]] = [:]
+            private var days: [Day: [Drawn]] = [:]
+
+            func plans(_ key: Hour, _ make: () -> [Planned]) -> [Planned] {
+                lock.lock()
+                defer { lock.unlock() }
+                if let known = hours[key] { return known }
+                if hours.count > 200 { hours.removeAll() }
+                let made = make()
+                hours[key] = made
+                return made
+            }
+
+            func parked(_ key: Day, _ make: () -> [Drawn]) -> [Drawn] {
+                lock.lock()
+                defer { lock.unlock() }
+                if let known = days[key] { return known }
+                if days.count > 60 { days.removeAll() }
+                let made = make()
+                days[key] = made
+                return made
+            }
         }
 
         /// The aircraft at game second `second` (since the game began):
@@ -555,26 +650,40 @@ public enum Map3DAircraft {
         /// for their time there, and that is all.
         public func aircraft(second: Double, traffic: Traffic?, still: Bool = false) -> [Drawn] {
             let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
+            let hour = Int((second - Double(day * GameTime.secondsPerDay)) / 3_600)
             let northEast = Self.landsNorthEast(day: day)
             var drawn: [Drawn] = []
-            for field in fields {
+            for (number, field) in fields.enumerated() {
+                let flies = traffic != nil && !field.airports.isEmpty
                 // Parked all day: most of the stands no flight turns round
                 // at.
-                let salt = Int32(truncatingIfNeeded: day)
-                let turning = traffic == nil || field.airports.isEmpty ? [] : Set(field.rotation)
-                for (index, stand) in field.stands.enumerated() where !turning.contains(index) {
-                    let r = { (n: Int32) in map3DRandom(field.seed &+ 101, Int32(index), salt: salt &* 4 &+ n) }
-                    guard r(0) < 0.85, stand.room > 18 else { continue }
-                    let kind = Self.kind(field, share: r(1), runway: field.runways[0].length, room: stand.room)
-                    let length = Map3DAircraftStudies.dimensions(kind).length
-                    drawn.append(Drawn(ground: stand.nose - stand.forward * (length / 2), height: 0, forward: stand.forward, pitch: 0, kind: kind,
-                                       livery: Int(r(2) * Float(Map3DAircraft.liveries.count)) % Map3DAircraft.liveries.count, flying: false,
-                                       stand: index, bridged: stand.bridged))
+                drawn += kept.parked(.init(field: number, day: day, turning: flies)) {
+                    let salt = Int32(truncatingIfNeeded: day), turning = flies ? Set(field.rotation) : []
+                    var parked: [Drawn] = []
+                    for (index, stand) in field.stands.enumerated() where !turning.contains(index) {
+                        let r = { (n: Int32) in map3DRandom(field.seed &+ 101, Int32(index), salt: salt &* 4 &+ n) }
+                        guard r(0) < 0.85, stand.room > 18 else { continue }
+                        let kind = Self.kind(field, share: r(1), runway: field.runways[0].length, room: stand.room)
+                        let length = Map3DAircraftStudies.dimensions(kind).length
+                        parked.append(Drawn(ground: stand.nose - stand.forward * (length / 2), height: 0, forward: stand.forward, pitch: 0, kind: kind,
+                                            livery: Int(r(2) * Float(Map3DAircraft.liveries.count)) % Map3DAircraft.liveries.count, flying: false,
+                                            stand: index, bridged: stand.bridged))
+                    }
+                    return parked
                 }
-                guard let traffic, !field.airports.isEmpty else { continue }
-                for flight in flights(of: field, second: second, traffic: traffic) {
-                    guard let pose = Self.pose(of: flight, on: field, second: second, northEast: northEast), !still || !pose.flying else { continue }
-                    drawn.append(pose)
+                guard let traffic, flies else { continue }
+                // The flights whose runway time is within an hour and a
+                // half: the hours next to midnight take today's numbers.
+                for offset in -2...2 {
+                    let at = hour + offset
+                    let flightDay = at < 0 ? day - 1 : (at > 23 ? day + 1 : day), flightHour = (at + 24) % 24
+                    let plans = kept.plans(.init(field: number, hours: flightDay &* 24 &+ Int64(flightHour), traffic: traffic.day, northEast: northEast)) {
+                        Self.flights(of: field, day: flightDay, hour: flightHour, traffic: traffic)
+                            .compactMap { Self.plan($0, on: field, northEast: northEast) }
+                    }
+                    for plan in plans where abs(plan.flight.time - second) < 5_400 {
+                        if let pose = Self.pose(plan, second: second), !still || !pose.flying { drawn.append(pose) }
+                    }
                 }
             }
             return drawn
@@ -616,7 +725,7 @@ public enum Map3DAircraft {
                 // Its shadow: the fuselage's and the wings'.
                 let size = Map3DAircraftStudies.dimensions(aircraft.kind)
                 let darkness = 0.3 * max(0, 1 - aircraft.height / 120)
-                guard darkness > 0.02 else { continue }
+                guard darkness > 0.02, distance < Map3DAircraft.shadowReach else { continue }
                 let lift = Map3DPoint(0, Map3DScene.Builder.Airfield.paintLift + 0.03, 0)
                 for (length, width, ahead) in [(size.length, size.height * 0.35, Float(0)), (size.length * 0.16, size.wingspan, size.length * 0.03)] {
                     let centre = aircraft.ground + lift + aircraft.forward * ahead
