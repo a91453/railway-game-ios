@@ -8,6 +8,9 @@ import SwiftUI
 /// ``ManualDrive/StopBar``'s; here only its drawing.
 struct Map3DStopBar: View {
     let bar: ManualDrive.StopBar
+    /// The stopping assist holds the brake: said in the state's place
+    /// while the train is still short of the point.
+    var assisting = false
     let language: DisplayLanguage
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The track's and the marker's sizes, with the type.
@@ -17,12 +20,12 @@ struct Map3DStopBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Label {
-                Text(verbatim: ManualDrive.StopBar.text(of: bar.state, in: language))
+                Text(verbatim: showsAssist ? ManualDrive.StopAssist.activeText(in: language) : ManualDrive.StopBar.text(of: bar.state, in: language))
             } icon: {
-                Image(systemName: symbol)
+                Image(systemName: showsAssist ? "scope" : symbol)
             }
             .font(.caption.weight(.heavy))
-            .foregroundStyle(ink)
+            .foregroundStyle(showsAssist ? Theme.textPrimary : ink)
             .fixedSize()
             track
             Text(verbatim: bar.text(in: language))
@@ -36,10 +39,12 @@ struct Map3DStopBar: View {
         .glassBackground(in: Capsule())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: ManualDrive.StopBar.title(in: language)))
-        .accessibilityValue(Text(verbatim: bar.value(in: language)))
+        .accessibilityValue(Text(verbatim: bar.value(in: language, assisting: assisting)))
         .accessibilityIdentifier("map3D.drive.stopBar")
         .hudFrameMark("map3D.drive.stopBar")
     }
+
+    private var showsAssist: Bool { assisting && bar.state == .short }
 
     /// The state is said with a sign and a word, not by colour alone.
     private var symbol: String {

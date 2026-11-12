@@ -2553,7 +2553,10 @@ private struct Map3DFollowBar: View {
         if session.manualDrivePhase == nil, session.canManualDrive {
             Button {
                 UITestTrace.action("map3D.drive.start")
-                session.startManualDrive()
+                // Decision 710: with the stopping assist unless the player
+                // turned it off.
+                session.startManualDrive(assist: UserDefaults.standard.object(forKey: ManualDrive.StopAssist.key) as? Bool
+                    ?? ManualDrive.StopAssist.isOnByDefault)
                 // The screenshot review's look at a run's result.
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
@@ -3127,6 +3130,8 @@ private struct Map3DDriveHeading: View {
     @Binding var view: Map3DFollow.View
     let takePhoto: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 710: the stopping assist, the player's choice kept.
+    @AppStorage(ManualDrive.StopAssist.key) private var assist = ManualDrive.StopAssist.isOnByDefault
 
     var body: some View {
         let language = session.language
@@ -3165,7 +3170,7 @@ private struct Map3DDriveHeading: View {
                 if let bar = reading.stopBar {
                     // Decision 710: over the last 200 m, the stopping bar
                     // in the line's place.
-                    Map3DStopBar(bar: bar, language: language)
+                    Map3DStopBar(bar: bar, assisting: reading.isAssisting, language: language)
                         .transition(.opacity)
                 } else if let text = reading.stopAheadText(in: language) {
                     stopAhead(text)
@@ -3174,6 +3179,7 @@ private struct Map3DDriveHeading: View {
             }
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopAhead)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopBar == nil)
+            .onChange(of: assist) { _, on in session.setManualDriveAssist(on) }
             // Decision 710: coming onto the target is felt, and running
             // past it; the stop itself is the result's (decision 686).
             .sensoryFeedback(trigger: reading.stopBar?.state) { old, new in
@@ -3232,6 +3238,14 @@ private struct Map3DDriveHeading: View {
                 }
                 .disabled(option == .station && !stationOffered && view != option)
                 .accessibilityIdentifier("map3D.drive.view.\(option.rawValue)")
+            }
+            // Decision 710: the stopping assist, on or off.
+            Section {
+                Toggle(isOn: $assist) {
+                    Text(verbatim: ManualDrive.StopAssist.title(in: language))
+                    Text(verbatim: ManualDrive.StopAssist.hint(in: language))
+                }
+                .accessibilityIdentifier("map3D.drive.assist")
             }
         } label: {
             Image(systemName: "eye.fill")

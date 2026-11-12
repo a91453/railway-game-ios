@@ -11,6 +11,8 @@ struct ManualDriveRun: Sendable {
     var stepped: Double?
     /// Decision 693: whether the run, ended, has been told to the world.
     var settled = false
+    /// Decision 710: whether the stopping assist is on for it.
+    var assists = false
 }
 
 extension ManualDrive {
@@ -63,7 +65,7 @@ extension ManualDriveRun {
 
     /// The track and the run for `train` taken over now in `world`, or
     /// `nil` while it stands at a stop or is too near its next one.
-    static func takeOver(_ id: TrainID, in world: GameWorld) -> (track: ManualDriveTrack, drive: ManualDrive, length: Double)? {
+    static func takeOver(_ id: TrainID, in world: GameWorld, assists: Bool = false) -> (track: ManualDriveTrack, drive: ManualDrive, length: Double)? {
         guard let train = world.train(id: id), let found = world.manualDriveTakeOver(of: id) else { return nil }
         let units = WorldCoordinate.unitsPerMetre
         let remaining = found.run.length - found.covered
@@ -74,7 +76,8 @@ extension ManualDriveRun {
                                      speed: Double(limit.speed) / 3.6)
         }
         let course = ManualDrive.Course(stop: track.stopMetres, limits: limits, scheduled: Double(found.run.seconds - found.elapsed))
-        let drive = ManualDrive(train: ManualDrive.Train(train.performance), course: course, speed: world.trainSpeedKMH(of: id) / 3.6)
+        let drive = ManualDrive(train: ManualDrive.Train(train.performance), course: course, speed: world.trainSpeedKMH(of: id) / 3.6,
+                                assists: assists)
         return (track, drive, Double(train.length))
     }
 }
@@ -92,13 +95,15 @@ extension GameSession {
     /// (review L17-5: asked of the paused clock's speed, which is none, a
     /// game paused at 10× was left to resume at 10×). Until the handle is
     /// given back the speed goes no higher (``speedCap``).
-    /// Nothing for a train without a timetable.
-    public func startManualDrive() {
+    /// Nothing for a train without a timetable. Decision 710: with
+    /// `assist`, the stopping assist is on for the run
+    /// (``ManualDrive/StopAssist``).
+    public func startManualDrive(assist: Bool = false) {
         guard let id = followedTrainID, world.canManualDrive(id) else { return }
         if world.clock.runningSpeed.tenthsPerTick > Map3DFollowSpeed.driving.tenthsPerTick {
             setRunningSpeed(Map3DFollowSpeed.driving)
         }
-        manualDriveRun = ManualDriveRun(train: id)
+        manualDriveRun = ManualDriveRun(train: id, assists: assist)
         manualDriveReading = .waiting
         manualDrivePhase = .waiting
         manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: id, in: language))
@@ -125,6 +130,15 @@ extension GameSession {
         setManualDriveNotch(up ? notch.raised : notch.lowered)
     }
 
+    /// Decision 710: turns the stopping assist on or off for the run
+    /// being driven (and the one waited for).
+    public func setManualDriveAssist(_ on: Bool) {
+        guard manualDriveRun != nil else { return }
+        manualDriveRun?.assists = on
+        manualDriveRun?.driving?.drive.setAssist(on)
+        publishManualDrive()
+    }
+
     public func setManualDriveNotch(_ notch: ManualDrive.Notch) {
         guard manualDriveRun?.driving != nil else { return }
         manualDriveRun?.driving?.drive.set(notch)
@@ -147,7 +161,7 @@ extension GameSession {
         let passed = time.flatMap { now in run.stepped.map { min(max(now - $0, 0), 0.25) } } ?? 0
         if let time { run.stepped = time }
         if run.driving == nil {
-            run.driving = ManualDriveRun.takeOver(run.train, in: world)
+            run.driving = ManualDriveRun.takeOver(run.train, in: world, assists: run.assists)
             if run.driving != nil {
                 manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: run.train, in: language), after: manualDriveHeading)
             }

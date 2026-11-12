@@ -291,6 +291,23 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertNil(session.manualDriveReading?.stopBar)
     }
 
+    /// Decision 710: the stopping assist is the run's from the start, and
+    /// turned on or off while it is driven.
+    func testTheStoppingAssistIsOnForTheRunItWasStartedWithAndCanBeTurnedOff() throws {
+        let (session, _) = try makeSession(limits: false)
+        session.startManualDrive(assist: true)
+        XCTAssertEqual(session.manualDriveRun?.assists, true, "kept while the train waits at its stop")
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDriveReading?.phase == .driving })
+        XCTAssertEqual(session.manualDriveRun?.driving?.drive.assists, true)
+        session.setManualDriveAssist(false)
+        XCTAssertEqual(session.manualDriveRun?.driving?.drive.assists, false)
+        XCTAssertEqual(session.manualDriveRun?.assists, false)
+        session.endManualDrive()
+        session.startManualDrive()
+        XCTAssertEqual(session.manualDriveRun?.assists, false, "off unless asked for")
+    }
+
     func testStartingSlowsTheGameToOneTimesAndLettingGoOfTheTrainEndsTheRun() throws {
         let (session, _) = try makeSession()
         session.setSpeed(.x10)
