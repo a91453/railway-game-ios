@@ -112,6 +112,9 @@ extension Map3DScene.Builder {
         var houses: [(house: StreetHouse, flats: Bool, shops: Bool, seed: (Int32, Int32), salt: Int32, wall: UInt32)] = []
         var spans: [(from: Map3DPoint, to: Map3DPoint, front: Map3DPoint, depth: Float)] = []
         var runs: [(from: Map3DPoint, to: Map3DPoint, front: Map3DPoint)] = []
+        /// Decision 707: the most floors a house here has (the tallest
+        /// real building round it); `nil` for as many as its hash gives.
+        var tallest: Int?
     }
 
     /// Decision 385: the real roads in pieces, and which come near each
@@ -165,7 +168,8 @@ extension Map3DScene.Builder {
 
     /// Decision 385: whether scene point `point` is on no-build land.
     func onNoBuildLand(_ point: Map3DPoint) -> Bool {
-        !noBuild.isEmpty && noBuild.contains(point, cell: chunk(of: point))
+        // Decision 707: nor by a runway, on a taxiway or an apron.
+        (!noBuild.isEmpty && noBuild.contains(point, cell: chunk(of: point))) || airfieldClear.contains(point)
     }
 
     /// Decision 385: the terminals, hangars and other buildings of `land`'s
@@ -250,6 +254,8 @@ extension Map3DScene.Builder {
     mutating func layFrontage(_ key: Map3DScene.ChunkKey, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>) -> LaidFrontage {
         var laid = LaidFrontage()
         guard let near = frontage.byCell[key] else { return laid }
+        let cell = Double(Land.cellLength)
+        laid.tallest = lowRise?.cap(worldX: (Double(key.column) + 0.5) * cell, worldY: (Double(key.row) + 0.5) * cell)
         for index in near {
             let piece = frontage.pieces[index]
             guard piece.fronted, let along = (piece.b - piece.a).normalized else { continue }
@@ -265,7 +271,9 @@ extension Map3DScene.Builder {
             case .tertiary: 0.4
             default: 0
             }
-            let flatShare: Float = density >= 2 ? 0.55 : density == 1 ? (busy ? 0.25 : 0.08) : 0
+            // Decision 707: no block of flats (three floors and more)
+            // where nothing real is over two.
+            let flatShare: Float = (laid.tallest ?? .max) < 3 ? 0 : density >= 2 ? 0.55 : density == 1 ? (busy ? 0.25 : 0.08) : 0
             for side: Float in [-1, 1] {
                 let out = Map3DPoint(-along.z, 0, along.x) * side
                 let sideSalt: Int32 = side > 0 ? 0 : 50_000
@@ -345,10 +353,10 @@ extension Map3DScene.Builder {
                 let r = { (extra: Int32) in map3DRandom(lot.seed.0, lot.seed.1, salt: lot.salt + extra) }
                 if far {
                     Self.addFarTownHouse(&mesh, middle: house.middle, front: house.front, width: house.width, depth: house.depth,
-                                         flats: lot.flats, wall: lot.wall, r: r)
+                                         flats: lot.flats, wall: lot.wall, tallest: laid.tallest, r: r)
                 } else {
                     Self.addTownHouse(&mesh, close: &closeDetail, blades: &blades, middle: house.middle, front: house.front, width: house.width,
-                                      depth: house.depth, flats: lot.flats, shops: lot.shops, wall: lot.wall, far: false, r: r)
+                                      depth: house.depth, flats: lot.flats, shops: lot.shops, wall: lot.wall, far: false, tallest: laid.tallest, r: r)
                 }
             }
         }
@@ -412,8 +420,8 @@ extension Map3DScene.Builder {
     /// (decision 238): one box of its height, its front and back painted
     /// with its windows, no roof clutter.
     static func addFarTownHouse(_ mesh: inout Map3DMesh, middle: Map3DPoint, front: Map3DPoint, width: Float, depth: Float, flats: Bool,
-                                wall: UInt32, r: (Int32) -> Float) {
-        let floors: Float = flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4)
+                                wall: UInt32, tallest: Int? = nil, r: (Int32) -> Float) {
+        let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
         let windows = flats ? Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: Int(floors))
@@ -429,8 +437,8 @@ extension Map3DScene.Builder {
     /// `front`, a shop below with `shops`; its look from `r`.
     static func addTownHouse(_ mesh: inout Map3DMesh, close closeDetail: inout Map3DMesh, blades: inout [Map3DSign], middle: Map3DPoint,
                              front: Map3DPoint, width: Float, depth: Float, flats: Bool, shops: Bool, wall: UInt32, far: Bool,
-                             r: (Int32) -> Float) {
-        let floors: Float = flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4)
+                             tallest: Int? = nil, r: (Int32) -> Float) {
+        let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
         let height = groundFloor + upper * (floors - 1)

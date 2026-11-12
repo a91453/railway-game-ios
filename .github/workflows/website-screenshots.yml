@@ -176,10 +176,10 @@ jobs:
           out = Path(os.environ["RUNNER_TEMP"], "attachments")
           dest = Path(os.environ["RUNNER_TEMP"], "website-screenshots")
           manifest = json.loads((out / "manifest.json").read_text())
-          # Only the tests' own screenshots, named in lower case with
-          # hyphens: XCTest's own attachments (failure screenshots, debug
+          # Only the tests' own screenshots, named in letters, digits and
+          # hyphens (airportQimei-3d-near): XCTest's own attachments (failure screenshots, debug
           # descriptions with quotes in their names) stay in the result bundle.
-          pattern = re.compile(r"^([a-z0-9-]+)_\d+_")
+          pattern = re.compile(r"^([A-Za-z0-9-]+)_\d+_")
           for test in manifest:
               for attachment in test.get("attachments", []):
                   exported = attachment["exportedFileName"]
@@ -310,7 +310,7 @@ jobs:
           dest = Path(os.environ["OUT"], appearance, test)
           dest.mkdir(parents=True, exist_ok=True)
           manifest = json.loads((raw / "manifest.json").read_text())
-          pattern = re.compile(r"^([a-z0-9-]+)_\d+_")
+          pattern = re.compile(r"^([A-Za-z0-9-]+)_\d+_")
           for item in manifest:
               for attachment in item.get("attachments", []):
                   exported = attachment["exportedFileName"]
