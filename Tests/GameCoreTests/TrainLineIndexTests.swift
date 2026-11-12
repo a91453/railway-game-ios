@@ -14,7 +14,12 @@ final class TrainLineIndexTests: XCTestCase {
             let searched = world.lines.firstIndex { assigned == $0.id }
             XCTAssertEqual(world.assignedLineIndex(of: id, known: &known), searched, "\(step), train \(id)", file: file, line: line)
             XCTAssertEqual(searched.map { world.lines[$0] }, assigned.flatMap { world.line(id: $0) }, "\(step), train \(id)", file: file, line: line)
+            XCTAssertEqual(known.isOnRing(id, in: world.lines), world.lines.contains { $0.isRing && $0.trains.contains(id) }, "\(step), train \(id)", file: file, line: line)
             guard let train = world.train(id: id) else { continue }
+            if case .waitingAtStop(let stop, let cycle)? = train.execution, let times = train.times {
+                XCTAssertEqual(world.closingStart(of: train, stop: stop, cycle: cycle, times: times, known: &known),
+                               world.closingStart(of: train, stop: stop, cycle: cycle, times: times), "\(step), train \(id)", file: file, line: line)
+            }
             XCTAssertEqual(world.hasRoutePreferences(train, known: &known), world.hasRoutePreferences(train), "\(step), train \(id)", file: file, line: line)
         }
     }
@@ -74,6 +79,35 @@ final class TrainLineIndexTests: XCTestCase {
             check(world, &known, "the route taken away, patterns \(patterns)")
             XCTAssertFalse(try world.hasRoutePreferences(XCTUnwrap(world.train(id: train)), known: &known), "patterns \(patterns)")
         }
+    }
+
+    /// A ring's train dwells at its first stop as at any other (decision
+    /// 49): found from the index as from the search, the line made a ring
+    /// and a line again.
+    func testARingsTrainsAreThoseSearchedFor() throws {
+        var (world, _, line, train) = try LineRoutePreferenceTests.setup()
+        var known = GameWorld.TrainLineIndex()
+        check(world, &known, "a line")
+        XCTAssertFalse(known.isOnRing(train, in: world.lines))
+        var closings = 0
+        for step in 0..<600 {
+            try world.advance(ticks: 5)
+            check(world, &known, "a line, step \(step)")
+            XCTAssertEqual(world.nextServiceEvent(after: world.clock.now, known: &known), world.nextServiceEvent(after: world.clock.now), "step \(step)")
+            // The train standing with its doors open: the same world with
+            // the line a ring, asked of the same index.
+            guard let standing = world.train(id: train), case .waitingAtStop(let stop, let cycle)? = standing.execution,
+                  let times = standing.times, times.exchangeEnd != nil else { continue }
+            closings += 1
+            var ring = world
+            try ring.setLineRing(line, to: true)
+            XCTAssertTrue(known.isOnRing(train, in: ring.lines), "step \(step)")
+            XCTAssertEqual(ring.closingStart(of: standing, stop: stop, cycle: cycle, times: times, known: &known),
+                           ring.closingStart(of: standing, stop: stop, cycle: cycle, times: times), "step \(step)")
+            check(ring, &known, "a ring, step \(step)")
+            XCTAssertFalse(known.isOnRing(train, in: world.lines), "a line again, step \(step)")
+        }
+        XCTAssertGreaterThan(closings, 0, "the train stood at a stop with its doors open")
     }
 
     /// A plan worked out with the index kept from before a command is the

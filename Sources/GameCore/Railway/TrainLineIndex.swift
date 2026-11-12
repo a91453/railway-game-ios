@@ -12,15 +12,29 @@ extension GameWorld {
     struct TrainLineIndex {
         private var lines: [ServiceLine] = []
         private var indices: [TrainID: Int] = [:]
+        private var ring: Set<TrainID> = []
 
         /// The index in `lines` of the line train `id` is assigned to (its
         /// own service or a pattern): the first line with the ID of the
         /// first line that has the train; `nil` if it is on none.
         mutating func index(of id: TrainID, in lines: [ServiceLine]) -> Int? {
+            look(at: lines)
+            return indices[id]
+        }
+
+        /// Whether train `id` is one of a ring's own trains (decision 49)
+        /// in `lines`.
+        mutating func isOnRing(_ id: TrainID, in lines: [ServiceLine]) -> Bool {
+            look(at: lines)
+            return ring.contains(id)
+        }
+
+        private mutating func look(at lines: [ServiceLine]) {
             // Arrays that share their storage compare at once: the usual
             // case, nothing having changed the lines since the last look.
             if self.lines != lines {
                 indices.removeAll(keepingCapacity: true)
+                ring.removeAll(keepingCapacity: true)
                 var first: [LineID: Int] = [:]
                 for (index, line) in lines.enumerated() {
                     let found = first[line.id] ?? index
@@ -28,11 +42,11 @@ extension GameWorld {
                     for service in 0..<line.serviceCount {
                         for train in line.trains(ofService: service) where indices[train] == nil { indices[train] = found }
                     }
+                    if line.isRing { ring.formUnion(line.trains) }
                 }
             }
             // Equal lines in other storage: compared at once from now on.
             self.lines = lines
-            return indices[id]
         }
     }
 

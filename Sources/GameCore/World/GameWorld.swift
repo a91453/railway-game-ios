@@ -3576,7 +3576,7 @@ public struct GameWorld: Equatable, Sendable {
             // Decision 248: how far the trains of real runs may go on in
             // the rest of the minute.
             assessSpacing(from: start, memo: &memo.directions)
-            if let event = nextServiceEvent(after: start) {
+            if let event = nextServiceEvent(after: start, known: &memo.directions.trafficParts.trainLines) {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
             }
@@ -4804,7 +4804,7 @@ public struct GameWorld: Equatable, Sendable {
             times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy, crowd: crowd))
             changed = true
         }
-        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {
+        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times, known: &memo.directions.trafficParts.trainLines), now >= start {
             times.closing = now
             changed = true
         }
@@ -4871,9 +4871,21 @@ public struct GameWorld: Equatable, Sendable {
     /// no terminal: it dwells at the first stop of its lap as at any other,
     /// unless it turns round there (the reference's ring dwell).
     func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes) -> GameTime? {
+        guard times.exchangeEnd != nil else { return nil }
+        return closingStart(of: train, stop: stop, cycle: cycle, times: times, onRing: lines.contains { $0.isRing && $0.trains.contains(train.id) })
+    }
+
+    /// ``closingStart(of:stop:cycle:times:)``, whether the train is a
+    /// ring's looked up in `known` (decision 703), not searched for in
+    /// every line for every train that stands at a stop.
+    func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes, known: inout TrainLineIndex) -> GameTime? {
+        guard times.exchangeEnd != nil else { return nil }
+        return closingStart(of: train, stop: stop, cycle: cycle, times: times, onRing: known.isOnRing(train.id, in: lines))
+    }
+
+    private func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes, onRing: Bool) -> GameTime? {
         guard let exchangeEnd = times.exchangeEnd else { return nil }
         let entry = train.timetable[stop]
-        let onRing = lines.contains { $0.isRing && $0.trains.contains(train.id) }
         let isTerminal = entry.reverses || (!onRing && (stop == 0 || stop == train.timetable.count - 1))
         let leastDwell = Self.saturating(times.arrival, plus: ServiceDwell.minimumDwell(isTerminal: isTerminal) - ServiceDwell.doorClosing)
         // Scheduled times are never negative, so this cannot overflow.
@@ -5248,6 +5260,13 @@ public struct GameWorld: Equatable, Sendable {
     /// train that cannot move yet. Boarding at whole minutes needs no
     /// event: every whole minute ends a step anyway.
     func nextServiceEvent(after now: GameTime) -> GameTime? {
+        var known = TrainLineIndex()
+        return nextServiceEvent(after: now, known: &known)
+    }
+
+    /// ``nextServiceEvent(after:)``, the rings' trains looked up in `known`
+    /// (decision 703).
+    func nextServiceEvent(after now: GameTime, known: inout TrainLineIndex) -> GameTime? {
         var soonest: GameTime?
         for train in trains {
             guard let execution = train.execution, let times = train.times else { continue }
@@ -5256,7 +5275,7 @@ public struct GameWorld: Equatable, Sendable {
                 if times.exchangeEnd == nil {
                     event = Self.saturating(times.arrival, plus: ServiceDwell.doorOpening)
                 } else if times.closing == nil {
-                    event = closingStart(of: train, stop: stop, cycle: cycle, times: times)
+                    event = closingStart(of: train, stop: stop, cycle: cycle, times: times, known: &known)
                 } else {
                     event = departureDue(of: train)
                 }
