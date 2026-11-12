@@ -27,6 +27,8 @@ extension Map3DScene.Builder {
         case temple
         /// 431: stations, car parks.
         case transport
+        /// Decision 699: an airport's passenger terminal, by its stands.
+        case terminal
 
         init(usage: Int) {
             switch usage {
@@ -188,6 +190,13 @@ extension Map3DScene.Builder {
         case .transport:
             wall = Self.pick(Map3DPalette.concreteWalls, seed)
             upperPaint = Self.concrete.on(.formConcrete)
+        case .terminal:
+            // Decision 698's terminal: white walls of glass under a
+            // blue-grey roof, which stands off the pale ground.
+            wall = Map3DStudyColor.wall
+            roof = Map3DStudyColor.roof
+            roofPaint = Self.metal
+            upperPaint = Map3DPaint.bays(.officeGlass, bay: 4, floors: storeys)
         }
         // A temple of a single hall under its hipped roof, the walls lower.
         let hipped = kind == .temple && polygons.count == 1 && area < 900 && box.width > 4

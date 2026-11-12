@@ -464,6 +464,7 @@ public struct Map3DScene: Sendable {
             builder.streetFrontage = true
             if let noBuild { builder.prepareNoBuild(noBuild, frame: frame) }
         }
+        let airfields = real == nil ? nil : noBuild?.airfields
         // Decision 359 (續): the whole network's, so a chunk built apart
         // lays a bore beside another as the whole scene does; decision 375:
         // first, as its trenches are cut out of the ground and what lies
@@ -474,6 +475,9 @@ public struct Map3DScene: Sendable {
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads() }
+        // Decision 699: the airports' runways, taxiways and aprons, over
+        // the base map's ground and roads.
+        if let airfields, let frame = RealWorldFrame(world: world) { builder.addAirfields(airfields, frame: frame) }
         let cleared = builder.addTrack(snapshot)
         builder.addTrenches()
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
@@ -792,6 +796,10 @@ extension Map3DScene {
             case facade
         }
         var target = Target.base
+        /// Decision 699: where the airfields' passengers board (a jet
+        /// bridge's foot, or a stand with none), and how near a building
+        /// stands to be their terminal (``isTerminal(_:)``).
+        var terminalSpots: [(at: Map3DPoint, reach: Float)] = []
         /// Decision 610: the street fronts, by chunk.
         var facadeMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 610: each chunk's buildings' street fronts as built, with

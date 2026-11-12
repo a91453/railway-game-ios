@@ -828,6 +828,8 @@ final class Map3DSceneCache {
         let footprints = world.geoAnchor == nil ? nil : BaseMapFiles.footprints
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
+        // Decision 699: and its airports' airfields.
+        let airfields = BaseMapFiles.airfields
         let facades = key.facades
         let task = Task.detached(priority: .userInitiated) {
             let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
@@ -862,7 +864,7 @@ final class Map3DSceneCache {
                                           heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
-                                          noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) },
+                                          noBuild: BaseMapFiles.noBuildLand(noBuild, airfields: airfields),
                                           facades: facades)
             let read = clock.now
             let scene = source.scene(focus: centre)
@@ -1128,6 +1130,13 @@ final class Map3DTrainFeed {
     /// again when they or the scene change.
     private var museum: Map3DRailwayMuseum.Laid?
     private var museumKey: (exhibits: [TrainType], x: Double, y: Double)?
+    /// Decision 699: the airfields laid in the scene for their aircraft,
+    /// laid again when the scene or the world's airports change, and the
+    /// day's flights, counted again each game day.
+    private var aircraft: Map3DAircraft.Laid?
+    private var aircraftKey: (x: Double, y: Double, airports: Int)?
+    private var airTraffic: Map3DAircraft.Traffic?
+    private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 672: the train the camera follows, whose lamps light its
@@ -1282,6 +1291,19 @@ final class Map3DTrainFeed {
                 museumKey = (world.railwayMuseum?.exhibits ?? [], scene.originX, scene.originY)
             }
             museum?.add(to: &frame, pack: models, eye: eye, reach: reach)
+        }
+        // Decision 699: and the aircraft at the airports' stands, landing
+        // and leaving, on the same clock; none flies with Reduce Motion.
+        if let models, let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields, let second = cableSecond(at: now) {
+            if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
+                aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
+                aircraftKey = (scene.originX, scene.originY, world.airports.count)
+                airTraffic = nil
+            }
+            let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
+            if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
+            aircraft?.add(to: &frame, pack: models, second: second, traffic: airTraffic, eye: eye, reach: reach.farModel,
+                          still: UIAccessibility.isReduceMotionEnabled)
         }
         return frame
     }

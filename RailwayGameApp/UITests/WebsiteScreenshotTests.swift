@@ -543,6 +543,37 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 699: each airport of the catalogue on the 3D map of an
+    /// empty real-world game round it, by day and after dark, from the
+    /// game's usual height and from higher: its terminal, runway, apron
+    /// and tower, the aircraft at its stands and those landing and
+    /// leaving. `AIRPORT_SHOTS` (the test runner's environment) names the
+    /// scenes to take, by default all of them. For the screenshot review
+    /// of the pull request that put the airports on the 3D map.
+    func testAirportsIn3D() {
+        executionTimeAllowance = 3_000
+        let asked = ProcessInfo.processInfo.environment["AIRPORT_SHOTS"]?.split(separator: ",").map(String.init)
+        let views = ProcessInfo.processInfo.environment["AIRPORT_VIEWS"]?.split(separator: ",").map(String.init) ?? []
+        let only = views.isEmpty ? nil : views
+        let scenes = ["airportTaoyuan", "airportSongshan", "airportTaichung", "airportKaohsiung"]
+        let cameras = [("game", "800,0,40"), ("high", "2600,0,25"), ("far", "9000,0,5")]
+        for scene in scenes.flatMap({ [$0, $0 + "Night"] }) where asked?.contains(scene) ?? true {
+            for (shot, view) in cameras where only?.contains(shot) ?? (shot == "game" || !scene.hasSuffix("Night")) {
+                let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"])
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 12)
+                keep("\(scene)-3d-\(shot)", app)
+                app.terminate()
+            }
+        }
+    }
+
     /// Decision 684: the railway museum: the building tool's list with its
     /// card chosen, then its row in the sights panel, in Chinese and in
     /// English. For the screenshot review of the pull request that added

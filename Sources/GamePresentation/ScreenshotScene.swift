@@ -258,6 +258,15 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// request that added airports.
     case airport
 
+    /// Decision 699: an empty real-world map round each of the catalogue's
+    /// airports, with its airports, at 09:30 and at 19:30: the terminals,
+    /// runways, aprons and aircraft on the 3D map. For the screenshot
+    /// review of the pull request that put them there.
+    case airportTaoyuan, airportTaoyuanNight
+    case airportSongshan, airportSongshanNight
+    case airportTaichung, airportTaichungNight
+    case airportKaohsiung, airportKaohsiungNight
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -313,6 +322,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .exteriorWushulin, .exteriorWushulinNight: (23.32866, 120.37378)
         case .exteriorXihu, .exteriorXihuNight: (23.95205, 120.481765)
         case .exteriorQiaotou, .exteriorQiaotouNight: (22.75303, 120.31468)
+        // Decision 699: the middle of each airfield.
+        case .airportTaoyuan, .airportTaoyuanNight: (25.0777, 121.2328)
+        case .airportSongshan, .airportSongshanNight: (25.0694, 121.5525)
+        case .airportTaichung, .airportTaichungNight: (24.2590, 120.6120)
+        case .airportKaohsiung, .airportKaohsiungNight: (22.5771, 120.3500)
         default: nil
         }
     }
@@ -369,7 +383,18 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .sightsOffMap: Self.sightsOffMapWorld()
         case .museum: Self.museumWorld(in: language)
         case .airport: Self.airportWorld(in: language)
+        case .airportTaoyuan, .airportSongshan, .airportTaichung, .airportKaohsiung: Self.realAirportWorld(at: self, ticks: 57, in: language)
+        case .airportTaoyuanNight, .airportSongshanNight, .airportTaichungNight, .airportKaohsiungNight:
+            Self.realAirportWorld(at: self, ticks: 117, in: language)
         }
+    }
+
+    /// Decision 699: the empty real-world map round `scene`'s airfield
+    /// (``realLineWorld(at:side:ticks:in:water:)``) with its map's airports.
+    private static func realAirportWorld(at scene: ScreenshotScene, ticks: Int, in language: DisplayLanguage) -> GameWorld {
+        var world = realLineWorld(at: scene, ticks: ticks, in: language)
+        if let frame = RealWorldFrame(world: world) { world.setAirports(AirportCatalog.airports(in: frame, bounds: world.bounds)) }
+        return world
     }
 
     /// Decision 695: two stations and a line, a town by the first and an

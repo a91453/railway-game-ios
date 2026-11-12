@@ -194,9 +194,11 @@ extension Map3DScene.Builder {
             // Cleared for a building of the player's: its cells still keep
             // no city lot.
             guard !onPlacedGround(rings[0]) else { continue }
-            let storeys = building.drawnStoreys
+            var storeys = building.drawnStoreys, kind = building.kind
+            // Decision 699: an airport's terminal, at least four storeys.
+            if isTerminal(rings[0]) { (storeys, kind) = (max(storeys, 4), .terminal) }
             addRealBuilding([rings], ground: ground(x: middle.x, y: middle.y), height: Float(storeys) * Self.storeyHeight,
-                            storeys: storeys, kind: building.kind)
+                            storeys: storeys, kind: kind)
         }
         return standing
     }
