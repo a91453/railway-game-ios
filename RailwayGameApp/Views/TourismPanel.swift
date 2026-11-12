@@ -320,7 +320,7 @@ struct RailwayMuseumPage: View {
                     Section {
                         ForEach(waiting) { item in exhibit(item, language: language) }
                     } header: {
-                        Text(verbatim: language.text("Not owned yet", "還沒擁有"))
+                        Text(verbatim: language.text("Not on show yet", "還沒展出"))
                     }
                 }
             } else {

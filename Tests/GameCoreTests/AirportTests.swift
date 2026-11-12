@@ -152,13 +152,16 @@ final class AirportTests: XCTestCase {
         world.setSpeed(.normal)
         try world.advance(ticks: 1_442)
 
-        let url = SavedGameTests.fixtures.appendingPathComponent("v\(SavedGame.currentVersion)-airports.json")
+        // The file is version 90's, whatever this build writes: never
+        // written again under a later version's name.
+        let url = SavedGameTests.fixtures.appendingPathComponent("v90-airports.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["AIRPORT_SAVE_NEW"] != nil {
+        if ProcessInfo.processInfo.environment["AIRPORT_SAVE_NEW"] != nil, SavedGame.currentVersion == 90 {
             try encoder.encode(SavedGame(world: world)).write(to: url)
         }
         let data = try Data(contentsOf: url)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"saveVersion\" : 90"), "the fixture is a version 90 save")
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         let kept = try XCTUnwrap(loaded.airports.first)
         XCTAssertEqual(kept.name, "機場")
@@ -171,6 +174,32 @@ final class AirportTests: XCTestCase {
         try world.advance(ticks: 1_440)
         XCTAssertEqual(loaded, world)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), try encoder.encode(SavedGame(world: world)))
+    }
+
+    /// A typhoon over the terminal shuts the airport for the day: no
+    /// flight, no passenger, no rider, no destination.
+    func testATyphoonOverTheTerminalShutsTheAirport() throws {
+        var world = try world()
+        world.setAirports([airportWithDestinations()])
+        world.setDisruptions(try XCTUnwrap(Disruptions(level: .standard, country: "TW", seed: 7)))
+        let stormy = try XCTUnwrap((0..<720).first { day in world.typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(terminal) } })
+        var flows = TouristFlows()
+        let shut = try XCTUnwrap(world.addAirportFlows(onDay: stormy, to: &flows) { _, _ in true }.first)
+        XCTAssertTrue(shut.isClosed)
+        XCTAssertEqual(shut.flights, 0)
+        XCTAssertEqual(shut.passengers, 0)
+        XCTAssertEqual(shut.riders, 0)
+        XCTAssertEqual(shut.ridersAtMost, 0)
+        XCTAssertEqual(shut.landings.reduce(0, +) + shut.takeOffs.reduce(0, +), 0)
+        XCTAssertEqual(shut.departures, [])
+        XCTAssertEqual(flows.pairs.count, 0)
+        // A day with no typhoon over it flies.
+        let fair = try XCTUnwrap((0..<720).first { day in !world.typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(terminal) } })
+        var open = TouristFlows()
+        let flying = try XCTUnwrap(world.addAirportFlows(onDay: fair, to: &open) { _, _ in true }.first)
+        XCTAssertFalse(flying.isClosed)
+        XCTAssertGreaterThan(flying.flights, 0)
+        XCTAssertGreaterThan(flying.riders, 0)
     }
 
     // MARK: - Decision 700: destinations
