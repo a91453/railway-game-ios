@@ -52,10 +52,17 @@ final class AirCollectionTests: XCTestCase {
 
     func testEachAircraftIsSeenAtTheCataloguesAirportsItFliesFrom() {
         func keys(_ kind: AirCollection.Kind) -> [String] { AirCollection.places(of: kind).map(\.key) }
+        // The catalogue grows as airports are added (decisions 699 and
+        // 700), so each list is what the catalogue has of the type's
+        // airports, in the catalogue's order.
+        func had(_ wanted: [String]) -> [String] { AirportCatalog.places.map(\.key).filter(wanted.contains) }
         // The 19-seat type flies to the small islands from Kaohsiung.
-        XCTAssertEqual(keys(.commuter19), ["khh"])
-        XCTAssertEqual(keys(.regional70), ["tsa", "rmq", "khh"])
-        XCTAssertEqual(keys(.narrowJet), ["tpe1", "tpe2", "tsa", "rmq", "khh"])
+        XCTAssertEqual(keys(.commuter19), had(["khh", "mzg", "ttt", "cmj", "wot", "kyd", "gni"]))
+        XCTAssertEqual(keys(.commuter19).first, "khh")
+        XCTAssertEqual(keys(.regional70), had(["tsa", "rmq", "khh", "mzg", "hun", "ttt", "tnn", "cyi", "knh", "lzn", "mfk"]))
+        XCTAssertEqual(Array(keys(.regional70).prefix(3)), ["tsa", "rmq", "khh"])
+        XCTAssertEqual(keys(.narrowJet), had(["tpe1", "tpe2", "tsa", "rmq", "khh", "mzg", "hun", "tnn", "knh"]))
+        XCTAssertFalse(keys(.narrowJet).contains("cmj"))
         XCTAssertEqual(keys(.wideJet), ["tpe1", "tpe2", "tsa", "khh"])
         // Every airport of the catalogue has an aircraft, and a larger
         // type never where no smaller jet is.
@@ -70,7 +77,7 @@ final class AirCollectionTests: XCTestCase {
         // Taoyuan's two terminals read as one airport in a card's list.
         let wide = AirCollection.aircraft(in: .traditionalChinese)[3].lines[2]
         XCTAssertEqual(wide, "看得到的機場：桃園機場、臺北松山機場、高雄國際機場")
-        XCTAssertEqual(AirCollection.aircraft(in: .english)[0].lines[2], "Seen at Kaohsiung International Airport")
+        XCTAssertTrue(AirCollection.aircraft(in: .english)[0].lines[2].hasPrefix("Seen at Kaohsiung International Airport"))
     }
 
     // MARK: - The airports of the game's map
