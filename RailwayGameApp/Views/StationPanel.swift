@@ -1601,6 +1601,11 @@ struct StationPanel: View {
                         Text(verbatim: day.summary(in: session.language))
                             .font(.footnote)
                             .monospacedDigit()
+                        if let destinations = day.destinationsText(in: session.language) {
+                            Text(verbatim: destinations)
+                                .font(.footnote)
+                                .monospacedDigit()
+                        }
                         if let yesterday = day.yesterdayText(in: session.language) {
                             Text(verbatim: yesterday)
                                 .font(.footnote)

@@ -471,6 +471,11 @@
 ///     says the save is newer than it instead. A save of any earlier
 ///     version needs no step: it has no airports (the app gives a free
 ///     game on a real-world map its map's when it opens the save).
+///     Decision 700 added an airport's optional `"destinations"` without
+///     a new version: a save without them reads as an airport that lists
+///     none, which plays as it did, and a version 90 build from before
+///     them drops them and plays on the same way (the app gives the
+///     airports their destinations again when it opens the save).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
     public static let currentVersion = 90

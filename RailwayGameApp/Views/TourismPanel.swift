@@ -173,6 +173,11 @@ struct TourismPanel: View {
                 Text(verbatim: day.summary(in: language))
                     .font(.footnote)
                     .monospacedDigit()
+                if let destinations = day.destinationsText(in: language) {
+                    Text(verbatim: destinations)
+                        .font(.footnote)
+                        .monospacedDigit()
+                }
                 if let yesterday = day.yesterdayText(in: language) {
                     Text(verbatim: yesterday)
                         .font(.footnote)
