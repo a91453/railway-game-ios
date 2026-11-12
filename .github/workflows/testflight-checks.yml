@@ -8,7 +8,8 @@ name: TestFlight Checks
 # docs/TESTFLIGHT_GITHUB_ACTIONS.md for what is verified where.
 #
 # Runs on pull requests that change the release workflow, this workflow or
-# the scripts or the What to Test text, and by hand (Actions -> TestFlight Checks -> Run workflow).
+# the scripts or the What to Test text (the macOS dry run not for the text
+# alone), and by hand (Actions -> TestFlight Checks -> Run workflow).
 
 on:
   pull_request:
@@ -72,8 +73,48 @@ jobs:
           python3 --version
           python3 -I .github/scripts/testflight-selftest-processing.py
 
+  # The macOS dry run takes two unsigned archives (the longest check a pull
+  # request has). A pull request that only rewrites the What to Test text
+  # changes nothing it reads, so it runs only for the release workflow, this
+  # workflow and the scripts; the text itself is checked by the Linux job.
+  changes:
+    name: Changes (does the macOS dry run need to run?)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.detect.outputs.macos }}
+    steps:
+      # A pull request is checked out as its merge commit, whose first
+      # parent is the base: two commits are enough to list its files.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Detect changes to the release workflow or its scripts
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          macos=true
+          if [[ "$EVENT" == pull_request ]]; then
+            if files="$(git diff --no-renames --name-only HEAD^1 HEAD)"; then
+              echo "Changed files:"
+              echo "$files"
+              if ! grep -qE '^\.github/(workflows/testflight(-checks)?\.yml|scripts/testflight-)' <<<"$files"; then
+                macos=false
+              fi
+            else
+              echo "::warning::Could not list the changed files; running the macOS dry run."
+            fi
+          fi
+          echo "macos=$macos" >>"$GITHUB_OUTPUT"
+          echo "macOS dry run: $macos"
+
   macos-dry-run:
     name: macOS dry run (no Apple account; nothing signed or uploaded)
+    needs: changes
+    if: needs.changes.outputs.macos == 'true'
     runs-on: macos-26
     # Two unsigned archives: 7 and 5 minutes on 2026-10-14, 20 and 9 minutes
     # on 2026-11-07 (#1915, where 30 minutes stopped it before the IPA check).
