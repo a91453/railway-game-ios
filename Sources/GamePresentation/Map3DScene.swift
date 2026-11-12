@@ -71,6 +71,14 @@ public struct Map3DScene: Sendable {
         /// Battery Saver and when memory runs short
         /// (``Map3DRealFacade/draws(quality:lowPower:heat:tier:)``).
         public var facade = Map3DMesh()
+        /// Decision 709: how much of its ground, track and roads (the
+        /// first ``baseIndexCount`` of ``mesh``'s indices), of ``far``, of
+        /// ``farBoxes`` and of ``shadows`` each level draws from afar
+        /// (``Map3DFarDetail``): each is kept the largest things first.
+        public var baseSteps = Map3DFarDetail.Steps()
+        public var farSteps = Map3DFarDetail.Steps()
+        public var farBoxSteps = Map3DFarDetail.Steps()
+        public var shadowSteps = Map3DFarDetail.Steps()
 
         /// Decision 455: ``far`` and ``farBoxes`` as one mesh, the boxes as
         /// the app's shader draws them.
@@ -138,6 +146,20 @@ public struct Map3DScene: Sendable {
     public let drawnGround: Map3DGroundGrid
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
+
+    /// Decision 709: the triangles one layer of the scene added as it was
+    /// built, by where they are drawn: with the ground at every distance
+    /// (`base`), with the city in full (`near`), simplified (`far`, and
+    /// its `boxes`), close up (`close`) and blended over the ground
+    /// (`shadows`).
+    struct LayerTriangles: Equatable, Sendable {
+        var layer: String
+        var base = 0, near = 0, far = 0, boxes = 0, close = 0, shadows = 0
+    }
+
+    /// Decision 709: what each layer added, in the order they were built,
+    /// for the far view's report (`Map3DFarViewTests`).
+    let layers: [LayerTriangles]
 
     /// Decision 585 PR-3: the water as drawn within `radius` metres of
     /// `centre`, for the ferry piers to stand at its shore. The ground's
@@ -471,26 +493,32 @@ public struct Map3DScene: Sendable {
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround(water: real == nil)
+        builder.mark("ground")
         drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads() }
+        builder.mark("own roads")
         // Decision 699: the airports' runways, taxiways and aprons, over
         // the base map's ground and roads.
         var runways = Set<ChunkKey>()
         if let airfields, let frame = RealWorldFrame(world: world) { runways = builder.addAirfields(airfields, frame: frame) }
+        builder.mark("airfields")
         let cleared = builder.addTrack(snapshot)
         builder.addTrenches()
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
         self.trackCover = builder.trackCover
+        builder.mark("the player's track and platforms")
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
+        builder.mark("real railways")
         builder.realTrackLines = realTrains?.shownLanes ?? []
         // Decision 407: the viaducts, each pair of tracks on its piers.
         builder.addViaducts()
+        builder.mark("viaducts")
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
         // Decision 370: Taipei 101 and Taipei Main Station, clear of the
@@ -516,6 +544,7 @@ public struct Map3DScene: Sendable {
         // between the lots, clear of the track and the platforms but where
         // they cross it, and of the stations' buildings.
         if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
+        builder.mark("landmarks and stations")
         seededStreets = SeededStreetPlan(edges: builder.streetEdges)
         stationExteriors = builder.stationExteriors
         // Decision 322: the shops, clear of the streets.
@@ -524,6 +553,7 @@ public struct Map3DScene: Sendable {
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
         builder.addOverheadLine()
+        builder.mark("overhead line")
         // Decision 436: the platforms' small things, close up.
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
@@ -536,14 +566,17 @@ public struct Map3DScene: Sendable {
         // beside the line.
         builder.addStationBushes()
         builder.addBushesBesideTrack(cleared.union(builder.realTrackCells), clearOf: stations.union(landmarkCells).union(turntable))
+        builder.mark("trees, bushes and platform things")
         // Decision 229 續: the street lights' pools, seen at night.
         builder.addLampPools()
+        builder.mark("street lights' pools")
         // Decision 239: on a real-world map, the real buildings round
         // Kaohsiung and Taichung Stations, and no city lot where they
         // stand.
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
         var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations.union(landmarkCells)) } ?? [])
+        builder.mark("real buildings (city tiles)")
         // Decision 385: the airports' own buildings; decision 389: only
         // with no footprints, which have them.
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
@@ -554,7 +587,9 @@ public struct Map3DScene: Sendable {
         }
         // Decision 331: the commercial kit's scenes before the big
         // stations, on no real building or temple.
+        builder.mark("temples")
         standing.formUnion(builder.addStationCommerce(clearOf: standing))
+        builder.mark("station commerce")
         builder.target = .near
         // Decision 331: the park kit's scenes in the real parks, on no
         // station, real building, temple or commercial scene; no city lot
@@ -563,6 +598,7 @@ public struct Map3DScene: Sendable {
             standing.formUnion(builder.addParks(real, clearOf: stations.union(standing)))
             builder.target = .near
         }
+        builder.mark("parks")
         // Decision 389: the footprints' buildings, on no station, landmark,
         // real building, temple or kit's scene; no city lot on them.
         var footprints: Map3DFootprints?
@@ -573,21 +609,31 @@ public struct Map3DScene: Sendable {
         }
         let beforeFootprints = standing
         if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
+        builder.mark("real buildings (footprints)")
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
                         besideRoads: taken.byRoads)
+        builder.mark("the game's own city")
         builder.target = .far
         // Decision 455: the city's boxes as instances: the lots', the real
         // buildings' on rectangles and their roofs'; the other real
         // outlines stay vertices.
         builder.instancingBoxes = instancingBoxes
+        // Decision 709: each building left out from afar by its own size.
+        builder.sizesFar = true
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
+        builder.mark("real buildings (city tiles)")
         if let footprints { builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints) }
+        builder.mark("real buildings (footprints)")
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
                         besideRoads: taken.byRoads)
+        builder.mark("the game's own city")
+        builder.sizesFar = false
         builder.instancingBoxes = false
         builder.target = .base
         builder.addPlacedBuildings()
+        builder.mark("the player's buildings")
+        layers = builder.layers
         chunks = builder.chunks()
         streetLife = builder.streetLife
         levelCrossings = builder.crossings
@@ -783,6 +829,60 @@ extension Map3DScene {
         let world: GameWorld
         var meshes: [ChunkKey: Map3DMesh] = [:]
         var shadows: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 709: the size (``Map3DFarDetail``) of what is being laid
+        /// with the ground (``Target/base``), left out from afar when too
+        /// small to see; `nil` for what is always drawn.
+        var sizing: Float?
+        /// Decision 709: whether the simplified city being built
+        /// (``Target/far``) is left out from afar building by building,
+        /// each by its own size: the real buildings and the lots, not the
+        /// landmarks, stations and temples.
+        var sizesFar = false
+        /// Decision 709: the parts of each chunk's ground, simplified city
+        /// and shadows that are left out from afar.
+        var baseParts: [ChunkKey: [Map3DFarDetail.Part]] = [:]
+        var farParts: [ChunkKey: [Map3DFarDetail.Part]] = [:]
+        var shadowParts: [ChunkKey: [Map3DFarDetail.Part]] = [:]
+
+        /// Decision 709: `build`'s shadows at `key`, those of a thing
+        /// `size` metres across.
+        mutating func shadow(at key: ChunkKey, size: Float, _ build: (inout Map3DMesh) -> Void) {
+            let first = shadows[key]?.indices.count ?? 0
+            build(&shadows[key, default: Map3DMesh()])
+            let count = (shadows[key]?.indices.count ?? 0) - first
+            if count > 0 {
+                shadowParts[key, default: []].append(Map3DFarDetail.Part(first: first, count: count,
+                                                                         rank: Map3DFarDetail.rank(size: size * Map3DFarDetail.shadowShare)))
+            }
+        }
+
+        /// Decision 709: what each layer added (``Map3DScene/layers``),
+        /// and the totals at the last mark.
+        var layers: [LayerTriangles] = []
+        private var marked = LayerTriangles(layer: "")
+
+        /// Decision 709: everything built since the last mark is `layer`'s.
+        mutating func mark(_ layer: String) {
+            func sum(_ meshes: [ChunkKey: Map3DMesh]) -> Int { meshes.values.reduce(0) { $0 + $1.triangleCount } }
+            let now = LayerTriangles(layer: layer, base: sum(meshes), near: sum(nearMeshes),
+                                     far: sum(farMeshes) + sum(ownColourFar),
+                                     boxes: farMeshes.values.reduce(0) { $0 + $1.boxes.reduce(0) { $0 + $1.triangleCount } },
+                                     close: sum(closeMeshes), shadows: sum(shadows))
+            let added = LayerTriangles(layer: layer, base: now.base - marked.base, near: now.near - marked.near, far: now.far - marked.far,
+                                       boxes: now.boxes - marked.boxes, close: now.close - marked.close, shadows: now.shadows - marked.shadows)
+            marked = now
+            guard added != LayerTriangles(layer: layer) else { return }
+            if let at = layers.firstIndex(where: { $0.layer == layer }) {
+                layers[at].base += added.base
+                layers[at].near += added.near
+                layers[at].far += added.far
+                layers[at].boxes += added.boxes
+                layers[at].close += added.close
+                layers[at].shadows += added.shadows
+            } else {
+                layers.append(added)
+            }
+        }
         /// Decision 238: what is being built, and so where it goes: the
         /// ground and track drawn at every distance, or the city in full
         /// or simplified. The city's shadows are made once, in full.
@@ -1045,11 +1145,34 @@ extension Map3DScene {
             // Decision 368: none of the city in full in a coarse chunk.
             guard target == .base || target == .far || target == .wires || !isCoarse(key) else { return }
             switch target {
-            case .base: build(&meshes[key, default: Map3DMesh()])
+            case .base:
+                guard let sizing else {
+                    build(&meshes[key, default: Map3DMesh()])
+                    break
+                }
+                // Decision 709: sized, so left out from afar.
+                let first = meshes[key]?.indices.count ?? 0
+                build(&meshes[key, default: Map3DMesh()])
+                let count = (meshes[key]?.indices.count ?? 0) - first
+                if count > 0 { baseParts[key, default: []].append(Map3DFarDetail.Part(first: first, count: count, rank: Map3DFarDetail.rank(size: sizing))) }
             case .near: build(&nearMeshes[key, default: Map3DMesh()])
             case .far:
                 farMeshes[key, default: Map3DMesh()].collectsBoxes = instancingBoxes
-                build(&farMeshes[key, default: Map3DMesh()])
+                guard sizesFar else {
+                    build(&farMeshes[key, default: Map3DMesh()])
+                    break
+                }
+                // Decision 709: one building, the size of what it adds.
+                var part: Map3DFarDetail.Part?
+                func sized(_ mesh: inout Map3DMesh) {
+                    let first = mesh.indices.count, firstVertex = mesh.vertices.count, firstBox = mesh.boxes.count
+                    build(&mesh)
+                    guard mesh.indices.count > first || mesh.boxes.count > firstBox else { return }
+                    part = Map3DFarDetail.Part(first: first, count: mesh.indices.count - first, firstBox: firstBox, boxCount: mesh.boxes.count - firstBox,
+                                               rank: Map3DFarDetail.rank(size: mesh.extent(fromVertex: firstVertex, fromBox: firstBox)))
+                }
+                sized(&farMeshes[key, default: Map3DMesh()])
+                if let part { farParts[key, default: []].append(part) }
             case .close, .wires: build(&closeMeshes[key, default: Map3DMesh()])
             case .facade: build(&facadeMeshes[key, default: Map3DMesh()])
             case .standIn: build(&standInMeshes[key, default: Map3DMesh()])
@@ -1079,12 +1202,18 @@ extension Map3DScene {
             return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(ownColourNear.keys).union(ownColourFar.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
+                // Decision 709: the ground's lesser roads last.
+                let baseSteps = Map3DFarDetail.order(&mesh, parts: baseParts[key] ?? []).indices
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
                 var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh(), standIn = standInMeshes[key] ?? Map3DMesh()
+                // Decision 709: the simplified city and the shadows, the
+                // largest first.
+                let farSteps = Map3DFarDetail.order(&far, parts: farParts[key] ?? [])
                 var farBoxes = far.boxes
                 far.boxes = []
                 far.collectsBoxes = false
-                let shadows = shadows[key] ?? Map3DMesh()
+                var shadows = shadows[key] ?? Map3DMesh()
+                let shadowSteps = Map3DFarDetail.order(&shadows, parts: shadowParts[key] ?? []).indices
                 // Decision 370: the city in the model look; decision 451:
                 // its closest detail nearer its own colours.
                 Map3DLook.restyle(&mesh, keeping: keptColours)
@@ -1116,6 +1245,10 @@ extension Map3DScene {
                                                             boxes: farBoxes),
                              signs: signs[key] ?? [], coarse: isCoarse(key))
                 chunk.facade = facade
+                chunk.baseSteps = baseSteps
+                chunk.farSteps = farSteps.indices
+                chunk.farBoxSteps = farSteps.boxes
+                chunk.shadowSteps = shadowSteps
                 return chunk
             }
         }
@@ -1182,7 +1315,7 @@ extension Map3DScene {
             guard !isFar else { return }
             let inner = onGround(Map3DMesh.footprint(centre: centre, forward: forward, length: length, width: width))
             let outer = onGround(Map3DMesh.footprint(centre: centre, forward: forward, length: length + 2 * spread, width: width + 2 * spread))
-            shadows[key(of: centre), default: Map3DMesh()].addShadow(inner: inner, outer: outer, darkness: darkness)
+            shadow(at: key(of: centre), size: max(length, width)) { $0.addShadow(inner: inner, outer: outer, darkness: darkness) }
         }
 
         // MARK: Ground
