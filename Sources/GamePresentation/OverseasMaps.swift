@@ -64,6 +64,103 @@ public struct MapPack: Sendable {
     }
 }
 
+// Decision 712: a city's map is as large as its pack says (`pack.json`'s
+// `extent`), not the 16 km square of any other place outside Taiwan: Hong
+// Kong's railways reach 35 km by 32 km, and the Airport Express alone 25 km.
+// Its land is the pack's people (`population.json`, WorldPop's grid in the
+// format of Taiwan's), read in round each station as the whole of Taiwan's
+// is (decision 88).
+
+extension MapPack {
+    /// How far the city's map reaches, in degrees (`pack.json`'s `extent`).
+    public struct Extent: Decodable, Hashable, Sendable {
+        public let north: Double
+        public let south: Double
+        public let west: Double
+        public let east: Double
+
+        public init(north: Double, south: Double, west: Double, east: Double) {
+            self.north = north
+            self.south = south
+            self.west = west
+            self.east = east
+        }
+
+        /// The middle of the box, as ``WholeTaiwan/anchor`` works its own
+        /// out: halfway in longitude, and at the latitude halfway between
+        /// its edges in Web Mercator. `nil` for a box that is not on the
+        /// Earth the right way up.
+        public var anchor: GeoAnchor? {
+            guard north > south, east > west, north < 85, south > -85, west >= -180, east <= 180 else { return nil }
+            let y = (RealWorldFrame.mercatorY(north) + RealWorldFrame.mercatorY(south)) / 2
+            let latitude = asin(tanh((0.5 - y / RealWorldFrame.worldPoints) * 2 * Double.pi)) * 180 / .pi
+            return GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: (west + east) / 2)
+        }
+
+        /// The world round ``anchor`` that holds the box, as
+        /// ``WholeTaiwan/bounds``: `nil` for a box larger than a world.
+        public var bounds: WorldBounds? {
+            guard let anchor else { return nil }
+            let frame = RealWorldFrame(anchor: anchor, bounds: .standard)
+            let corners = [(north, west), (south, east)].map { frame.worldPosition(latitude: $0.0, longitude: $0.1) }
+            let halfWidth = corners.map { abs($0.x - frame.middleX) }.max() ?? 0
+            let halfHeight = corners.map { abs($0.y - frame.middleY) }.max() ?? 0
+            return try? WorldBounds(width: Int64((2 * halfWidth).rounded(.up)), height: Int64((2 * halfHeight).rounded(.up)))
+        }
+    }
+
+    /// The pack's `extent`.
+    public func extent() throws -> Extent {
+        struct Manifest: Decodable {
+            let extent: Extent
+        }
+        return try JSONDecoder().decode(Manifest.self, from: file("pack", "json")).extent
+    }
+}
+
+/// The ground of a city's map (decision 712): where its world lies, how
+/// far it reaches, and the people who live on it.
+public struct OverseasGround: Sendable {
+    public let city: OverseasMap
+    /// The middle of the map.
+    public let anchor: GeoAnchor
+    /// The world that holds the pack's extent.
+    public let bounds: WorldBounds
+    /// The city's people, or `nil` for a pack without them: its stations
+    /// then get the standard ridership, and no town grows round them.
+    public let population: PopulationGrid?
+
+    /// The ground `pack` says `city` has. Throws for a pack whose
+    /// `pack.json` cannot be read or has no extent that fits a world; a
+    /// pack with no `population.json`, or one out of shape, has no people.
+    public init(city: OverseasMap, pack: MapPack) throws {
+        let extent = try pack.extent()
+        guard let anchor = extent.anchor, let bounds = extent.bounds else {
+            throw RealRailways.ResourceError.missing("MapPacks/\(city.packFolder)/pack.json: extent")
+        }
+        self.city = city
+        self.anchor = anchor
+        self.bounds = bounds
+        population = (try? pack.file("population", "json")).flatMap { try? PopulationGrid(data: $0) }
+    }
+
+    /// Whether `world` is this city's map: laid over its extent.
+    public func holds(_ world: GameWorld) -> Bool {
+        world.geoAnchor == anchor && world.bounds == bounds
+    }
+}
+
+extension GameWorld {
+    /// A new game on a city's map (decision 712): ``newGame(anchor:bounds:balance:eventSeed:land:)``
+    /// over `ground`, its land read in as it is needed, as the whole of
+    /// Taiwan's (``newWholeTaiwanGame(balance:eventSeed:)``).
+    public static func newOverseasGame(_ ground: OverseasGround, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
+        var world = newGame(anchor: ground.anchor, bounds: ground.bounds, balance: balance, eventSeed: eventSeed, land: [])
+        world.setLandOnDemand()
+        return world
+    }
+}
+
 public enum OverseasMaps {
     /// The cities whose railways the game reads and sells. Empty until the
     /// flights that open one are in the game (decision 697's next step):

@@ -44,6 +44,17 @@ public final class GameLauncher {
     /// bundled grid, or while it is read (``isLoadingRealWorldData``).
     public var population: PopulationGrid?
 
+    /// The ground of each open city outside Taiwan (decision 712), read
+    /// with the real-world data: empty while no city is open.
+    public var overseasGrounds: [OverseasGround] = []
+
+    /// Who lives on `world`'s map: a city's own people on its map
+    /// (decision 712), Taiwan's on any other.
+    func population(for world: GameWorld) -> PopulationGrid? {
+        if let ground = overseasGrounds.first(where: { $0.holds(world) }) { return ground.population }
+        return population
+    }
+
     /// What there is around places on real-world maps in Taiwan, handed to
     /// every game it starts (``GameSession/places``).
     public var places: PlaceGrid?
@@ -707,6 +718,23 @@ public final class GameLauncher {
         options.apply(to: &world)
         if isDemoMode { world.setUnlimitedFunds(true) }
         begin(Self.grounded(world, options.ground, heights: heights), keepingAutosave: true)
+    }
+
+    /// Starts a new game on the map of `city` (decision 712): as large as
+    /// its map pack says, its land read in round each station as it is
+    /// built. `false`, with a message, while the city's ground is not read
+    /// (the real-world data still loading, or the city not open).
+    @discardableResult
+    public func startOverseasMap(_ city: OverseasMap) -> Bool {
+        guard let ground = overseasGrounds.first(where: { $0.city == city }) else {
+            message = StatusMessage(kind: .failure, text: language.text("The real-world data is not ready yet.", "實景資料還沒準備好。"))
+            return false
+        }
+        let options = newGameOptions
+        var world = GameWorld.newOverseasGame(ground, balance: options.startingBalance, eventSeed: options.eventSeed())
+        options.apply(to: &world)
+        if isDemoMode { world.setUnlimitedFunds(true) }
+        return begin(world, keepingAutosave: true)
     }
 
     /// `world`, a new real-world game, with ground (decision 124) when the
@@ -1721,7 +1749,7 @@ public final class GameLauncher {
         isLookingAtSharedNetwork = false
         lookedAtCompany = nil
         let started = GameSession(world: world, language: language)
-        started.population = population
+        started.population = self.population(for: world)
         started.places = places
         started.water = water
         started.heights = heights
@@ -1811,6 +1839,7 @@ public final class GameLauncher {
 
     private func install(_ data: RealWorldData, roads: RoadsReadAhead?) {
         population = data.population
+        overseasGrounds = data.overseas
         places = data.places
         water = data.water
         heights = data.heights
@@ -1824,7 +1853,7 @@ public final class GameLauncher {
         if let session {
             // Decision 706: a game begun while the data was read.
             if let coachNetwork { session.giveCoachStops(of: coachNetwork) }
-            session.population = population
+            session.population = self.population(for: session.world)
             session.places = places
             session.water = water
             session.heights = heights
@@ -2202,6 +2231,8 @@ public struct RealWorldData: Sendable {
     /// Taiwan's place names (decision 159).
     public let placeNames: PlaceNames?
     public let railways: RealRailways?
+    /// The ground of each open city outside Taiwan (decision 712).
+    public var overseas: [OverseasGround] = []
     /// The files that could not be read, and why: the grids' and the
     /// railways' (``RealRailways/Loaded/issues``).
     public let issues: [RealDataLoadIssue]
@@ -2235,7 +2266,14 @@ public struct RealWorldData: Sendable {
     /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
     /// read (their rows decoded only when asked): call it off the
     /// main actor.
-    public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> RealWorldData {
+    ///
+    /// Decision 712: and for each city of `overseas` the ground of its map
+    /// pack (`pack`), with its railways (decision 697).
+    public static func load(
+        overseas: Set<OverseasMap> = OverseasMaps.open,
+        pack: (OverseasMap) -> MapPack? = MapPack.bundled,
+        file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data
+    ) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []
         func grid<Grid>(_ name: String, ext: String = "json", _ make: (Data) throws -> Grid) -> Grid? {
             do {
@@ -2255,14 +2293,27 @@ public struct RealWorldData: Sendable {
         var placeNames = grid("taiwan_place_names", PlaceNames.init(data:))
         // Decision 569: the landmarks go with the place names.
         placeNames?.landmarks = grid("taiwan_station_landmarks", StationLandmarks.init(data:))
-        let railways = RealRailways.load(file: file)
+        let railways = RealRailways.load(overseas: overseas, pack: pack, file: file)
+        // Decision 712: a city whose pack cannot be read is listed by the
+        // railways already; one without an extent is listed here.
+        var grounds: [OverseasGround] = []
+        for city in OverseasMap.allCases where overseas.contains(city) {
+            guard let pack = pack(city) else { continue }
+            do {
+                grounds.append(try OverseasGround(city: city, pack: pack))
+            } catch {
+                issues.append(RealDataLoadIssue(file: "MapPacks/\(city.packFolder)/pack.json", error: error))
+            }
+        }
         let realBuses = grid("real_buses_index") { try RealBusLibrary(index: $0, file: file) }
         let coaches = grid("coach_network", CoachNetwork.init(data:))
-        return RealWorldData(
+        var data = RealWorldData(
             population: population, places: places, water: water, heights: heights, coverage: coverage, placeNames: placeNames,
             realBuses: realBuses, coaches: coaches, railways: railways.railways,
             issues: issues + railways.issues
         )
+        data.overseas = grounds
+        return data
     }
 }
 
