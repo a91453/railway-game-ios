@@ -8,13 +8,27 @@ import XCTest
 final class TrainLineIndexTests: XCTestCase {
     /// Every train of `world`, and one it has not, asked of `known` and of
     /// the searches the index stands in for.
+    /// Each stream's running trains counted over its own trains are those
+    /// counted over every train of the world.
+    private func checkRunning(_ world: GameWorld, _ step: String, file: StaticString = #filePath, line: UInt = #line) {
+        for serviceLine in world.lines {
+            for stream in serviceLine.dispatchStreams {
+                let ids = Set(serviceLine.trains(of: stream))
+                let counted = world.trains.count { ids.contains($0.id) && $0.execution != nil && !world.isPullingIn($0, of: serviceLine) }
+                XCTAssertEqual(world.runningTrains(of: serviceLine, stream), counted, "\(step), line \(serviceLine.id)", file: file, line: line)
+            }
+        }
+    }
+
     private func check(_ world: GameWorld, _ known: inout GameWorld.TrainLineIndex, _ step: String, file: StaticString = #filePath, line: UInt = #line) {
+        checkRunning(world, step, file: file, line: line)
         for id in world.trains.map(\.id) + [TrainID(rawValue: 9_999)] {
             let assigned = world.assignedLine(of: id)
             let searched = world.lines.firstIndex { assigned == $0.id }
             XCTAssertEqual(world.assignedLineIndex(of: id, known: &known), searched, "\(step), train \(id)", file: file, line: line)
             XCTAssertEqual(searched.map { world.lines[$0] }, assigned.flatMap { world.line(id: $0) }, "\(step), train \(id)", file: file, line: line)
             XCTAssertEqual(known.isOnRing(id, in: world.lines), world.lines.contains { $0.isRing && $0.trains.contains(id) }, "\(step), train \(id)", file: file, line: line)
+            XCTAssertEqual(world.trainPosition(of: id), world.trains.firstIndex { $0.id == id }, "\(step), train \(id)", file: file, line: line)
             guard let train = world.train(id: id) else { continue }
             if case .waitingAtStop(let stop, let cycle)? = train.execution, let times = train.times {
                 XCTAssertEqual(world.closingStart(of: train, stop: stop, cycle: cycle, times: times, known: &known),
