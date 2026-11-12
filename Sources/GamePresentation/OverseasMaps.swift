@@ -207,4 +207,26 @@ extension RealBranchLine {
         ("hkmtr", "SIL", "South Island Line", "南港島綫", nil, .metro, false),
         ("hkmtr", "DRL", "Disneyland Resort Line", "迪士尼綫", nil, .metro, false),
     ]
+
+    /// Decision 712: the lines of the cities outside Taiwan drawn along one
+    /// another's track for much of their way, by line id: the Airport
+    /// Express and the Tung Chung Line, the same drawing or within 8 m of
+    /// it for most of the 28 km from Hong Kong to the airport island. A
+    /// line bought is laid on track of its own, 4 m and more from any
+    /// other, so whichever of the two came second was refused for its
+    /// track, after a minute's trying to lift it clear. A company that
+    /// owns one is told it cannot buy the other, at once.
+    static let overseasLinesOnOneTrack: [Set<String>] = [["hkmtr:AEL", "hkmtr:TCL"]]
+
+    /// The names of the line whose track this one is drawn along
+    /// (``overseasLinesOnOneTrack``) that `owned` says the company has, or
+    /// `nil`.
+    func lineOnItsTrack(owned: (String) -> Bool) -> (english: String, chinese: String)? {
+        for lines in Self.overseasLinesOnOneTrack where lines.contains(id) {
+            for other in lines.sorted() where other != id && owned(other) {
+                if let found = Self.overseasLines.first(where: { "\($0.system):\($0.network)" == other }) { return (found.english, found.chinese) }
+            }
+        }
+        return nil
+    }
 }

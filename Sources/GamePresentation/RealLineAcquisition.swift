@@ -147,6 +147,17 @@ public struct RealBranchLine: Hashable, Sendable {
     /// their prices stay as they were.
     var readsGroundBesideYards: Bool { isTaoyuanAirport }
 
+    /// Decision 712: whether each of its stations is laid where its own
+    /// line's point of it is (`track_stations.geojson` has one a line),
+    /// not at the station's one point, which is its first line's
+    /// (``RealRailways/stations``). The MTR's lines: Admiralty's point is
+    /// the East Rail Line's, 33 m from the South Island Line's end, so the
+    /// South Island Line's way began on the East Rail Line's drawing and
+    /// turned some 100° onto its own inside its end station; the loops
+    /// laid round that bend lay too close for a train on each, and the
+    /// line was refused. Taiwan's lines as they were.
+    var standsOnItsOwnPoints: Bool { OverseasMap.allCases.contains { $0.system == system } }
+
     /// Whether it is the Taoyuan Airport MRT (decision 556).
     var isTaoyuanAirport: Bool { system == "tymc" && network == "A" }
 
@@ -950,7 +961,21 @@ extension RealLineLaying {
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
         }
-        var points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
+        // Decision 712: not a line drawn along the track of one the company
+        // has.
+        if let other = line.lineOnItsTrack(owned: { world.acquisition(of: $0) != nil }) {
+            return refused(
+                "This line runs along the tracks of the \(other.english), which you own. Only one of the two can be bought on this map.",
+                "這條線和你已經擁有的\(other.chinese)走同一段軌道，這張地圖上只能收購其中一條。"
+            )
+        }
+        // Decision 712: an overseas line's stations where its own line has
+        // them, not where the first line of the station does.
+        let ownStops = line.standsOnItsOwnPoints ? railways.stops["\(line.system)|\(line.network)"] ?? [] : []
+        var points = runs.stops.compactMap { name in
+            ownStops.first { $0.chinese == name }.map { WorldVector(frame.worldPosition(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)) }
+                ?? realPoint(of: name, system: line.system, railways: railways, frame: frame)
+        }
         guard points.count == runs.stops.count, points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
         }

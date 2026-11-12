@@ -129,13 +129,20 @@ final class HongKongMapTests: XCTestCase {
     }
 
     /// Each line on sale is bought, one after another on the same map:
-    /// none is refused, each has its trains, and the land round its
-    /// stations is read in with Hong Kong's people.
+    /// each has its trains, and the land round its stations is read in
+    /// with Hong Kong's people. None is refused but the Tung Chung Line,
+    /// drawn along the track of the Airport Express bought before it
+    /// (``RealBranchLine/overseasLinesOnOneTrack``): it is told so and
+    /// stays on sale.
     func testEveryLineOnSaleIsBought() throws {
         let session = try hongKong()
         for id in session.buyableRealLines.map(\.id).sorted() {
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, id)
             let offer = session.realLineOffer(for: line)
+            if id == "hkmtr:TCL" {
+                XCTAssertEqual(offer.problem, "這條線和你已經擁有的機場快綫走同一段軌道，這張地圖上只能收購其中一條。")
+                continue
+            }
             XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
             XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
             let bought = try XCTUnwrap(session.world.acquisition(of: id), id)
@@ -143,7 +150,78 @@ final class HongKongMapTests: XCTestCase {
             XCTAssertFalse(ran.assignedTrains.isEmpty, id)
         }
         XCTAssertGreaterThan(session.world.land.cells.reduce(0) { $0 + $1.residents }, 100_000)
-        XCTAssertEqual(session.buyableRealLines.map(\.id), [])
+        XCTAssertEqual(session.buyableRealLines.map(\.id), ["hkmtr:TCL"])
+    }
+
+    /// The South Island Line is bought on its own, with every train of
+    /// its day: its end at Admiralty stands where the line's own point of
+    /// the station is, not at the East Rail Line's 33 m away, where its
+    /// way turned inside the station and the tracks its trains wait on lay
+    /// too close for a train on each
+    /// (``RealBranchLine/standsOnItsOwnPoints``).
+    func testTheSouthIslandLineIsBoughtAlone() throws {
+        let session = try hongKong()
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "hkmtr:SIL" })
+        XCTAssertTrue(line.standsOnItsOwnPoints)
+        let offer = session.realLineOffer(for: line)
+        XCTAssertNil(offer.problem)
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        let bought = try XCTUnwrap(session.world.acquisition(of: "hkmtr:SIL"))
+        let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)))
+        XCTAssertEqual(ran.assignedTrains.count, 10)
+        for id in ran.assignedTrains {
+            XCTAssertNotNil(try XCTUnwrap(session.world.train(id: id)).position)
+        }
+        // No line of Taiwan's is laid so.
+        XCTAssertFalse(RealBranchLine.urbanLines.contains { rail in
+            RealBranchLine(network: rail.network, english: rail.english, chinese: rail.chinese, stops: [], system: rail.system).standsOnItsOwnPoints
+        })
+    }
+
+    /// The Airport Express and the Tung Chung Line are drawn along one
+    /// track: whichever the company owns, the other is refused with that
+    /// reason, before any of it is laid (it used to be laid four times
+    /// over, for a minute, and refused for its track).
+    func testALineAlongAnOwnedLinesTrackIsRefusedAtOnce() throws {
+        for (first, second, reason) in [
+            ("hkmtr:AEL", "hkmtr:TCL", "這條線和你已經擁有的機場快綫走同一段軌道，這張地圖上只能收購其中一條。"),
+            ("hkmtr:TCL", "hkmtr:AEL", "這條線和你已經擁有的東涌綫走同一段軌道，這張地圖上只能收購其中一條。"),
+        ] {
+            let session = try hongKong()
+            let owned = try XCTUnwrap(session.buyableRealLines.first { $0.id == first })
+            XCTAssertNil(owned.lineOnItsTrack { session.world.acquisition(of: $0) != nil })
+            XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: owned)), session.message?.text ?? "")
+            let other = try XCTUnwrap(session.buyableRealLines.first { $0.id == second })
+            let offer = session.realLineOffer(for: other)
+            XCTAssertEqual(offer.problem, reason)
+            XCTAssertNil(offer.acquisition)
+        }
+        XCTAssertTrue(RealBranchLine.overseasLinesOnOneTrack.allSatisfy { $0.allSatisfy { $0.hasPrefix("hkmtr:") } })
+    }
+
+    /// No train of a line's day stands overnight between its ends in the
+    /// way of the morning's first trains: the train that leaves such a
+    /// station to begin the day is gone three minutes before the first
+    /// train through reaches it (the Tung Chung Line's four left at 7:40
+    /// to 8:00, an hour and more after the first trains queued behind
+    /// them, and 22 runs of the day found no train in time).
+    func testNoTrainStandsInTheWayOfTheFirstTrains() throws {
+        let railways = try HongKongRailwaysTests.railways()
+        var checked = 0
+        for (id, line) in railways.metroRuns where id.hasPrefix("hkmtr:") {
+            for run in line.runs where run.positioning {
+                guard let first = run.calls.first, let last = run.calls.last, first.station != line.stops.first, first.station != line.stops.last else { continue }
+                let through = line.runs.filter { !$0.positioning }.compactMap { other -> Int64? in
+                    let names = other.calls.map(\.station)
+                    guard let at = names.firstIndex(of: first.station), at > 0, let end = names.firstIndex(of: last.station), at < end else { return nil }
+                    return other.calls[at].arrival
+                }
+                guard let soonest = through.min() else { continue }
+                XCTAssertLessThanOrEqual(first.departure, soonest - 180, "\(id) from \(first.station)")
+                checked += 1
+            }
+        }
+        XCTAssertGreaterThanOrEqual(checked, 4, "the Tung Chung Line's four")
     }
 
     /// The Tung Chung Line bought and run for two days on the map: every
@@ -174,6 +252,15 @@ final class HongKongMapTests: XCTestCase {
         let outcome = await session.layDemoRealLines(in: view, routes: .max, anyWidth: true) { $0.system.id == "hkmtr" }
         XCTAssertEqual(outcome?.lines, 12, session.message?.text ?? "")
         XCTAssertEqual(session.world.lines.count, 12)
+        // Each line's drawing ends at its end stations and is run on
+        // past them (``DemoRealLines/runningOn(_:by:)``): the end stations
+        // have their platforms, and a line of two stations is laid.
+        let laid = Dictionary(session.world.lines.map { line in (line.name, line.stops.compactMap { session.world.station(id: $0)?.name }) }) { first, _ in first }
+        XCTAssertEqual(laid["迪士尼綫 迪士尼–欣澳"], ["迪士尼", "欣澳"])
+        XCTAssertEqual(laid["將軍澳綫 將軍澳–康城"], ["將軍澳", "康城"])
+        XCTAssertEqual(laid["東涌綫 香港–東涌"]?.count, 8)
+        XCTAssertEqual(laid["東鐵綫 金鐘–羅湖"]?.count, 14)
+        XCTAssertLessThanOrEqual(outcome?.missed ?? .max, 1, "the Tsuen Wan Line's start from Central")
         for line in session.world.lines {
             XCTAssertFalse(line.assignedTrains.isEmpty, "\(line.name) has no train")
             for id in line.assignedTrains {
