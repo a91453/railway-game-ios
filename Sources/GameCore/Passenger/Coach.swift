@@ -233,6 +233,12 @@ extension GameWorld {
         return trips - ModeShift.lost(trips, share: CoachRules.share(rail: rail, coach: rival.cost))
     }
 
+    /// How many pairs of stations, counted each way, have a direct coach
+    /// between coach stops they serve.
+    public func coachPairCount() -> Int {
+        coachRivals().values.reduce(0) { $0 + $1.count }
+    }
+
     /// The trips a day from `origin` that ride a direct coach instead of
     /// the company's trains, all its destinations together; 0 without
     /// coach stops. Read from the world; nothing is kept.

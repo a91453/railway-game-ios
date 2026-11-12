@@ -42,7 +42,7 @@ final class CoachReportTests: XCTestCase {
                     let lost = world.stations.map { world.passengerLedger(of: $0.id) }.map { $0.overflowed + $0.abandoned }.reduce(0, +)
                     let served = world.coachDays().filter { $0.station != nil }
                     let taken = world.stations.map { world.tripsTakenByCoaches(from: $0.id) }.reduce(0, +)
-                    let pairs = world.coachRivals().values.map(\.count).reduce(0, +)
+                    let pairs = world.coachPairCount()
                     rows.append("| \(line) | \(coaches ? "with" : "without") | \(day) | \(world.lastDayTrips()) | \(account?.fareRevenue.moneyText ?? "") | "
                         + "\(Money(account.map(airportReportProfit) ?? 0).moneyText) | \(peak / 10)% | \(lost - before) | "
                         + "\(world.coachStops.count) / \(served.count) | \(served.map(\.stop.yesterdayPassengers).reduce(0, +)) | "
