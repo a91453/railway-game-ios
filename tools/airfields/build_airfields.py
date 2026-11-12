@@ -11,7 +11,8 @@ Reads a whole OpenStreetMap extract of Taiwan (osmtoday.com's
 
 Kept, for every aerodrome with an IATA code (the ones with scheduled
 flights): its runways (centre line, width, the numbers painted at its
-ends), its taxiways (centre lines, simplified to about 1 m), its aprons
+ends), its taxiways (centre lines, simplified to about 1 m but for the points
+where they meet one another, a runway or a parking position), its aprons
 (outlines, simplified to about 2 m), its parking positions (where the nose
 stops and which way it points; an airport with fewer than six mapped gets
 a row of them on the apron by its terminal, `row_of_stands`), its jet
@@ -93,6 +94,18 @@ def simplified(points, tolerance):
     if far <= tolerance:
         return [points[0], points[-1]]
     return simplified(points[:at + 1], tolerance)[:-1] + simplified(points[at:], tolerance)
+
+
+def kept_at(points, shared, tolerance):
+    """An open line simplified between the points other lines share,
+    which stay."""
+    out, start = [], 0
+    for at in range(1, len(points)):
+        if at == len(points) - 1 or shared.get(points[at], 0) > 1:
+            piece = simplified(points[start:at + 1], tolerance)
+            out += piece if not out else piece[1:]
+            start = at
+    return out
 
 
 def simplified_ring(ring, tolerance):
@@ -207,6 +220,9 @@ def row_of_stands(apron, runways, most):
 def main(source, out):
     import osmium  # pyosmium
     fields, lines, stands, towers, aprons, terminals = [], [], [], [], [], []
+    # How many aeroway lines pass each point: a taxiway keeps the points
+    # where another meets it, so the app can find its way along them.
+    shared = {}
     newest = None
     # Only what is kept goes through Python: every building of Taiwan
     # would take half an hour.
@@ -236,9 +252,12 @@ def main(source, out):
                 towers.append(((sum(p[0] for p in ring) / len(ring), sum(p[1] for p in ring) / len(ring)), tags))
         elif thing.is_way():
             if aeroway in ('runway', 'taxiway', 'taxilane', 'parking_position', 'jet_bridge', 'stopway') and not thing.is_closed():
-                points = [(node.lat, node.lon) for node in thing.nodes if node.location.valid()]
+                nodes = [node for node in thing.nodes if node.location.valid()]
+                points = [(node.lat, node.lon) for node in nodes]
                 if len(points) >= 2:
                     lines.append((aeroway, tags, points))
+                    for point in set(points):
+                        shared[point] = shared.get(point, 0) + 1
         elif thing.is_node():
             if aeroway == 'parking_position':
                 stands.append(((thing.lat, thing.lon), None, tags))
@@ -272,7 +291,7 @@ def main(source, out):
             made[index]['runways'].append((tags.get('ref', ''), round(number(tags.get('width'), RUNWAY_WIDTH)), points))
         elif kind in ('taxiway', 'taxilane', 'stopway'):
             width = number(tags.get('width'), TAXILANE_WIDTH if kind == 'taxilane' else TAXIWAY_WIDTH)
-            made[index]['taxiways'].append({'width': round(min(width, 60)), 'line': encode(simplified(points, LINE_TOLERANCE))})
+            made[index]['taxiways'].append({'width': round(min(width, 60)), 'line': encode(kept_at(points, shared, LINE_TOLERANCE))})
         elif kind == 'jet_bridge':
             made[index]['bridges'].append(encode([points[0], points[-1]]))
         elif kind == 'parking_position':

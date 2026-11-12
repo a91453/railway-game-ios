@@ -543,6 +543,63 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 699: the airports' marks on the 2D map, and the section
+    /// 「機場」 of the panel of the station that serves one (decision 695
+    /// took no picture of it). For the screenshot review of the pull
+    /// request that put the airports on the maps.
+    func testAirportMarksAndStationPanel() {
+        let app = launch(extra: ["-screenshot-scene", "airport", "-screenshot-select-station", "last"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The terminal is 375 m north of its station: a step or two out,
+        // on a phone on its side.
+        let mark = app.descendants(matching: .any)["map.airport.1"].firstMatch
+        let zoomOut = app.buttons["縮小"]
+        for _ in 0..<3 where !mark.appears(within: 5) {
+            if zoomOut.appears(within: 5), zoomOut.becomesHittable(within: 3) { zoomOut.tap() }
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(mark.appears(within: 10), "The airport is marked")
+        settle()
+        keep("airport-marks-2d", app)
+        let tag = app.buttons["map.stationTag"]
+        XCTAssertTrue(tag.appears(within: 30), "The airport's station is picked")
+        tag.tap()
+        let section = app.descendants(matching: .any)["station.airport.1"].firstMatch
+        for _ in 0..<10 where !(section.exists && section.isHittable) { app.swipeUp() }
+        XCTAssertTrue(section.appears(within: 10), "The station's panel has its airport")
+        settle()
+        keep("airport-station-panel", app)
+    }
+
+    /// Decision 699: what the airports cost a frame: Taoyuan from the
+    /// game's usual height and from higher, with the frame rate's details
+    /// open, with the airfields and (`-map3D.noAirfields`) without. For
+    /// the numbers in the pull request.
+    func testAirportsFrameCost() {
+        executionTimeAllowance = 1_500
+        for (shot, view) in [("game", "800,0,40"), ("high", "2600,0,25")] {
+            for (name, extra) in [("with", [String]()), ("without", ["-map3D.noAirfields"])] {
+                let app = launch(extra: ["-screenshot-scene", "airportTaoyuan", "-screenshot-3d-view", view, "-screenshot-3d-at", "25.0790,121.2360",
+                                         "-map3D.quality", "high"] + extra)
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 15)
+                let stats = app.descendants(matching: .any)["map3D.stats"].firstMatch
+                XCTAssertTrue(stats.appears(within: 10))
+                stats.tap()
+                settle(seconds: 6)
+                keep("airport-cost-\(shot)-\(name)", app)
+                app.terminate()
+            }
+        }
+    }
+
     /// Decision 699: each airport of the catalogue on the 3D map of an
     /// empty real-world game round it, by day and after dark, from the
     /// game's usual height and from higher: its terminal, runway, apron
@@ -552,14 +609,42 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// of the pull request that put the airports on the 3D map.
     func testAirportsIn3D() {
         executionTimeAllowance = 3_000
-        let asked = ProcessInfo.processInfo.environment["AIRPORT_SHOTS"]?.split(separator: ",").map(String.init)
+        let shots = ProcessInfo.processInfo.environment["AIRPORT_SHOTS"]?.split(separator: ",").map(String.init) ?? []
+        let asked = shots.isEmpty ? nil : shots
         let views = ProcessInfo.processInfo.environment["AIRPORT_VIEWS"]?.split(separator: ",").map(String.init) ?? []
         let only = views.isEmpty ? nil : views
         let scenes = ["airportTaoyuan", "airportSongshan", "airportTaichung", "airportKaohsiung"]
-        let cameras = [("game", "800,0,40"), ("high", "2600,0,25"), ("far", "9000,0,5")]
+        // "game1": Taoyuan's other terminal, from the game's usual height.
+        let cameras = [("game", "800,0,40"), ("game1", "800,0,40"), ("high", "2600,0,25"), ("far", "9000,0,5")]
+        // The game's usual height looks at the stands by the terminal;
+        // the others at the airfield's middle (the scene's place).
+        let stands = ["airportTaoyuan": "25.0790,121.2360", "airportSongshan": "25.0656,121.5512", "airportTaichung": "24.2546,120.6008",
+                      "airportKaohsiung": "22.5722,120.3440"]
+        let firstTerminal = "25.0822,121.2392"
+        // A landing a few seconds before it touches down on Songshan's
+        // runway 10, from beside it and from the game's usual height.
+        if asked?.contains("airportSongshanLanding") ?? true {
+            for (shot, view) in [("side", "300,20,60"), ("game", "800,0,40")] {
+                let app = launch(extra: ["-screenshot-scene", "airportSongshanLanding", "-screenshot-3d-view", view, "-screenshot-3d-at",
+                                         "25.0701,121.5386", "-map3D.quality", "high"])
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 12)
+                keep("airportSongshanLanding-3d-\(shot)", app)
+                app.terminate()
+            }
+        }
         for scene in scenes.flatMap({ [$0, $0 + "Night"] }) where asked?.contains(scene) ?? true {
-            for (shot, view) in cameras where only?.contains(shot) ?? (shot == "game" || !scene.hasSuffix("Night")) {
-                let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"])
+            for (shot, view) in cameras where only?.contains(shot) ?? (shot.hasPrefix("game") || !scene.hasSuffix("Night")) {
+                guard shot != "game1" || scene.hasPrefix("airportTaoyuan") else { continue }
+                let at = shot == "game1" ? ["-screenshot-3d-at", firstTerminal]
+                    : shot == "game" ? stands[scene.replacingOccurrences(of: "Night", with: "")].map { ["-screenshot-3d-at", $0] } ?? [] : []
+                let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"] + at)
                 XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
                 let open3D = app.buttons["map.open3D"]
                 XCTAssertTrue(open3D.appears(within: 10))

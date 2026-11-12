@@ -37,6 +37,13 @@ extension Map3DScene.Builder {
         static let white = Map3DStudyColor.lamp
         static let green = Map3DStudyColor.lampGreen
         static let flood = Map3DColor.rgb(0xFFE9B8)
+        /// What the 3D look leaves as it is (``Map3DLook/kept``).
+        static let kept: Set<UInt32> = [asphalt, taxiway, apron, paint, yellow, terminalRoof, terminalWall, Map3DStudyColor.roof,
+                                        Map3DStudyColor.pane, Map3DStudyColor.base]
+        /// A terminal's roof and walls (``RealKind/terminal``): decision
+        /// 698's blue-grey roof a step deeper, over white walls.
+        static let terminalRoof = Map3DColor.rgb(0x6F86A6)
+        static let terminalWall = Map3DColor.rgb(0xF4F5F7)
     }
 
     /// The scene's region, in the scene's metres.
@@ -46,8 +53,10 @@ extension Map3DScene.Builder {
     }
 
     /// Decision 699: `fields`' airfields in the scene, laid on the world
-    /// by `frame`.
-    mutating func addAirfields(_ fields: RealAirfields, frame: RealWorldFrame) {
+    /// by `frame`. Returns the 64 m cells the runways lie on, which keep
+    /// no building.
+    @discardableResult
+    mutating func addAirfields(_ fields: RealAirfields, frame: RealWorldFrame) -> Set<Map3DScene.ChunkKey> {
         let bounds = sceneBounds
         func place(_ point: RealAirfields.Point) -> Map3DBaseMap.Point {
             let at = frame.worldPosition(latitude: point.latitude, longitude: point.longitude)
@@ -56,11 +65,11 @@ extension Map3DScene.Builder {
         func inside(_ point: Map3DBaseMap.Point, margin: Double = 0) -> Bool {
             point.x >= bounds.minX - margin && point.x <= bounds.maxX + margin && point.z >= bounds.minZ - margin && point.z <= bounds.maxZ + margin
         }
-        var taken = Set<Map3DScene.ChunkKey>()
+        var taken = Set<Map3DScene.ChunkKey>(), onRunways = Set<Map3DScene.ChunkKey>()
         for field in fields.fields {
             let runways = field.runways.map { (runway: $0, line: $0.line.map(place)) }
-            guard runways.contains(where: { $0.line.contains { inside($0, margin: 200) } })
-                || field.aprons.contains(where: { $0.contains { inside(place($0)) } }) else { continue }
+            guard runways.contains(where: { $0.line.contains { inside($0, margin: 1_500) } })
+                || field.aprons.contains(where: { $0.contains { inside(place($0), margin: 800) } }) else { continue }
             for apron in field.aprons {
                 addPavement(apron.map(place), bounds: bounds, color: Airfield.apron, lift: Airfield.apronLift)
             }
@@ -70,7 +79,7 @@ extension Map3DScene.Builder {
             }
             for (runway, line) in runways {
                 addStrip(Self.shortened(line, by: Double(runway.width) / 2), bounds: bounds, width: runway.width, lift: Airfield.runwayLift,
-                         color: Airfield.asphalt, paint: nil, taking: &taken)
+                         color: Airfield.asphalt, paint: nil, taking: &onRunways)
             }
             for taxiway in field.taxiways {
                 let line = taxiway.line.map(place)
@@ -83,20 +92,22 @@ extension Map3DScene.Builder {
                 guard inside(nose) else { continue }
                 // The floodlights' pool over the aircraft, behind its nose.
                 let back = stand.heading.map { Self.direction(degrees: $0) } ?? (x: 0, z: 0)
-                addPool(at: Map3DBaseMap.Point(x: nose.x - back.x * 18, z: nose.z - back.z * 18), colour: Airfield.flood, radius: 34, strength: 0.5)
+                addPool(at: Map3DBaseMap.Point(x: nose.x - back.x * 18, z: nose.z - back.z * 18), colour: Airfield.flood, radius: 28, strength: 0.42)
             }
+            // Where passengers board, past the scene's edge too: a part
+            // of the scene built alone finds the same terminals.
             for bridge in field.bridges {
                 let from = place(bridge.from), to = place(bridge.to)
+                terminalSpots.append((Map3DPoint(Float(from.x), 0, Float(from.z)), 30))
                 guard inside(from), inside(to) else { continue }
                 addJetBridge(from: from, to: to)
-                terminalSpots.append((Map3DPoint(Float(from.x), 0, Float(from.z)), 30))
             }
             // With no jet bridge mapped, the terminal is the big building
             // by the stands.
             if field.bridges.isEmpty {
                 for stand in field.stands {
                     let nose = place(stand.nose)
-                    if inside(nose) { terminalSpots.append((Map3DPoint(Float(nose.x), 0, Float(nose.z)), 70)) }
+                    terminalSpots.append((Map3DPoint(Float(nose.x), 0, Float(nose.z)), 70))
                 }
             }
             for tower in field.towers {
@@ -107,6 +118,7 @@ extension Map3DScene.Builder {
                 mesh(at: foot) { $0.append(model, at: foot, forward: Map3DPoint(1, 0, 0)) }
             }
         }
+        return onRunways
     }
 
     /// Decision 699: whether the building of `outline` (scene points) is an
@@ -127,6 +139,69 @@ extension Map3DScene.Builder {
             }
         }
         return false
+    }
+
+    /// Decision 699: the buildings of `outlines` (scene points) that stand
+    /// against a terminal (within 30 m of one, 1,500 m² or more) are
+    /// terminals too: a hall behind its piers. Each one found joins
+    /// ``terminalSpots``, so ``isTerminal(_:)`` says so; twice over, for a
+    /// hall behind a hall.
+    mutating func joinTerminals(_ outlines: [[Map3DPoint]]) {
+        guard !terminalSpots.isEmpty else { return }
+        // Only those within 600 m of where passengers board.
+        let near = outlines.filter { outline in
+            outline.count >= 3 && abs(Self.signedArea(outline)) >= 1_500 && terminalSpots.contains { spot in
+                abs(spot.at.x - outline[0].x) < 600 && abs(spot.at.z - outline[0].z) < 600
+            }
+        }
+        var found = near.map { isTerminal($0) }
+        for _ in 0..<2 {
+            var added: [(at: Map3DPoint, reach: Float)] = []
+            for (index, outline) in near.enumerated() where found[index] {
+                // Its outline, a point every 20 m or so.
+                for (at, a) in outline.enumerated() {
+                    let b = outline[(at + 1) % outline.count]
+                    let steps = max(1, Int(((b - a).length / 20).rounded(.up)))
+                    for step in 0..<steps { added.append((a + (b - a) * (Float(step) / Float(steps)), 30)) }
+                }
+            }
+            terminalSpots += added
+            var grew = false
+            for (index, outline) in near.enumerated() where !found[index] && isTerminal(outline) {
+                found[index] = true
+                grew = true
+            }
+            if !grew { break }
+        }
+    }
+
+    /// Decision 699: on a terminal's flat roof (`outline`, at the roof's
+    /// height), a white edge all round; and on a `plain` one that fills
+    /// its `box`, a skylight along its middle and white ribs across.
+    static func addTerminalRoof(to mesh: inout Map3DMesh, outline: [Map3DPoint], box: (centre: Map3DPoint, along: Map3DPoint, length: Float, width: Float),
+                                plain: Bool) {
+        let white = Airfield.terminalWall, up = Map3DPoint(0, 0.12, 0), turn = signedArea(outline) > 0 ? Float(1) : -1
+        for (at, a) in outline.enumerated() {
+            let b = outline[(at + 1) % outline.count]
+            guard let along = Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized else { continue }
+            // Inward: to the left of a counter-clockwise outline's way.
+            let inward = Map3DPoint(-along.z, 0, along.x) * (1.8 * turn)
+            mesh.addFlat([a + up, b + up, b + inward + up, a + inward + up], triangles: [0, 1, 2, 0, 2, 3], color: white)
+        }
+        guard plain, box.width > 14, abs(signedArea(outline)) > 0.85 * box.length * box.width else { return }
+        let height = outline[0].y, across = Map3DPoint(-box.along.z, 0, box.along.x)
+        let centre = Map3DPoint(box.centre.x, height, box.centre.z)
+        func strip(_ middle: Map3DPoint, _ way: Map3DPoint, length: Float, width: Float, lift: Float, _ color: UInt32) {
+            let side = Map3DPoint(-way.z, 0, way.x) * (width / 2), half = way * (length / 2), rise = Map3DPoint(0, lift, 0)
+            mesh.addFlat([middle - half - side + rise, middle + half - side + rise, middle + half + side + rise, middle - half + side + rise],
+                         triangles: [0, 1, 2, 0, 2, 3], color: color)
+        }
+        var at = -box.length / 2 + 12
+        while at < box.length / 2 - 6 {
+            strip(centre + box.along * at, across, length: box.width - 5, width: 1.4, lift: 0.14, white)
+            at += 18
+        }
+        strip(centre, box.along, length: box.length - 8, width: min(8, box.width * 0.16), lift: 0.18, Map3DStudyColor.pane)
     }
 
     /// `line` with `metres` taken off each end (``addStrip`` draws a half

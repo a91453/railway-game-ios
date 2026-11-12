@@ -178,6 +178,19 @@ extension Map3DScene.Builder {
         // decision 610 續: none where they are never drawn.
         facadeStreets = isFar || !buildsFacades ? nil : facadeStreetCells()
         defer { facadeStreets = nil }
+        // Decision 699: the halls behind the airports' piers, found once.
+        if !terminalSpots.isEmpty, !terminalsJoined {
+            terminalsJoined = true
+            let reach = Double(700 * Self.metre)
+            let spots = terminalSpots.map { (x: originX + Double($0.at.x) * Self.metre, y: originY + Double($0.at.z) * Self.metre) }
+            let low = (x: (spots.map(\.x).min() ?? 0) - reach, y: (spots.map(\.y).min() ?? 0) - reach)
+            let high = (x: (spots.map(\.x).max() ?? 0) + reach, y: (spots.map(\.y).max() ?? 0) + reach)
+            joinTerminals(footprints.buildings.compactMap { building in
+                guard let ring = building.rings.first, ring.count >= 3, ring[0].x > low.x, ring[0].x < high.x, ring[0].y > low.y, ring[0].y < high.y
+                else { return nil }
+                return ring.map { point(x: $0.x, y: $0.y, height: 0) }
+            })
+        }
         for building in footprints.buildings {
             guard let outline = building.rings.first, outline.count >= 3 else { continue }
             let middle = (x: outline.reduce(0) { $0 + $1.x } / Double(outline.count), y: outline.reduce(0) { $0 + $1.y } / Double(outline.count))
