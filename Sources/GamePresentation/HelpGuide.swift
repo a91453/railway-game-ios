@@ -91,6 +91,15 @@ public enum HelpGuide {
             keywords: "create line track station 第一條 建立 開始 新手"
         ),
         HelpEntry(
+            "trackHeight", .building,
+            question: ("How do I raise track onto a viaduct or take it underground?", "怎麼把軌道架高或放到地下？"),
+            answer: (
+                "While you lay track, the bar at the top of the map shows how high the new end stands above the ground. Hold that figure and slide up or down to change it a metre at a time, or tap it for − and +. Raise an end to cross a river or another line, or to join an elevated line; lower it to join one underground. When a stretch is refused because of what lies in its way, its card offers a height that gets through.",
+                "鋪軌時，地圖上方那一列會顯示新的一端離地多高。按住那個高度上下滑，每次調 1 公尺；點一下會出現 − 和 +。要過河、跨過別的路線或接上高架，就把這一端架高；要接地下的路線，就往下調。這一段因為被擋住而鋪不了時，卡片會提供一個過得去的高度。"
+            ),
+            keywords: "height raise lower viaduct bridge tunnel underground elevated river cross slide 高度 架高 高架 橋 隧道 地下 過河 跨越 上下滑 離地"
+        ),
+        HelpEntry(
             "addStation", .building,
             question: ("How do I add a station?", "如何增設車站？"),
             answer: (

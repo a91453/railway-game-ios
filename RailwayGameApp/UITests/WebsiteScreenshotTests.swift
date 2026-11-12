@@ -1213,6 +1213,28 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// HEIGHT-HINT: the one-time line under the construction HUD about its
+    /// height cell (``HeightSlideHint``), on the stretch of
+    /// ``testTrackHeightFixes``; then its ✕ tapped, and the line gone. In
+    /// Chinese and in English. For the screenshot review of the pull
+    /// request that added it.
+    func testTrackHeightHint() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackHeight", "-show-height-hint"], english: english)
+            let suffix = english ? "-en" : ""
+            XCTAssertTrue(app.buttons["map.build.fixUp"].appears(within: 180), "The stretch is previewed")
+            let dismiss = app.buttons["map.constructionHUD.heightHint.dismiss"]
+            XCTAssertTrue(dismiss.becomesHittable(within: 20), "The line about the height cell shows")
+            settle(seconds: 2)
+            keep("track-height-hint\(suffix)", app)
+            dismiss.tap()
+            XCTAssertTrue(dismiss.disappears(within: 10), "Put away, it is gone")
+            settle(seconds: 1)
+            keep("track-height-hint-closed\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's
