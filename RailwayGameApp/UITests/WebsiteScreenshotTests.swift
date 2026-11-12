@@ -613,8 +613,8 @@ final class WebsiteScreenshotTests: XCTestCase {
 
     /// Decision 699: what the airports cost a frame: Taoyuan from the
     /// game's usual height and from higher, with the frame rate's details
-    /// open, with the airfields and (`-map3D.noAirfields`) without. For
-    /// the numbers in the pull request.
+    /// open, with the airfields and (`-map3D.noAirfields`) without, paused
+    /// and then running. For the numbers in the pull request.
     func testAirportsFrameCost() {
         executionTimeAllowance = 1_500
         for (shot, view) in [("game", "800,0,40"), ("high", "2600,0,25")] {
@@ -634,8 +634,44 @@ final class WebsiteScreenshotTests: XCTestCase {
                 stats.tap()
                 settle(seconds: 6)
                 keep("airport-cost-\(shot)-\(name)", app)
+                // And with the game running (the scene's speed), the
+                // aircraft moving.
+                let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+                if play.becomesHittable(within: 5) {
+                    play.tap()
+                    settle(seconds: 8)
+                    keep("airport-cost-\(shot)-\(name)-running", app)
+                }
                 app.terminate()
             }
+        }
+    }
+
+    /// Decision 699: a landing at Songshan seen moving: the game let run
+    /// at ten times from 7 seconds before it touches down, a picture
+    /// every few seconds while it lands, slows, leaves the runway and
+    /// taxis to its stand. To look at the motion, which a paused picture
+    /// does not show.
+    func testAirportLandingMoves() {
+        executionTimeAllowance = 600
+        let app = launch(extra: ["-screenshot-scene", "airportSongshanLanding", "-screenshot-3d-view", "1500,0,35", "-screenshot-3d-at",
+                                 "25.0690,121.5470", "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        settle(seconds: 12)
+        keep("airport-landing-moves-00", app)
+        let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+        XCTAssertTrue(play.becomesHittable(within: 10), "The 3D map has the game's pause")
+        play.tap()
+        for (index, wait) in [1.0, 2, 3, 4, 5, 6, 8, 10].enumerated() {
+            settle(seconds: wait)
+            keep(String(format: "airport-landing-moves-%02d", index + 1), app)
         }
     }
 
