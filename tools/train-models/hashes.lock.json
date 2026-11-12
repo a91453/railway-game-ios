@@ -4356,6 +4356,54 @@
     "ferry-tamsui-single-far": {
       "hash": "a282d34f8472c388",
       "triangles": 1504
+    },
+    "aircraft-commuter19-single" : {
+      "hash" : "2be34d266542440a",
+      "triangles" : 1836
+    },
+    "aircraft-regional70-single" : {
+      "hash" : "8228e89da3204a33",
+      "triangles" : 2496
+    },
+    "aircraft-narrowJet-single" : {
+      "hash" : "61a7650b2313b812",
+      "triangles" : 3568
+    },
+    "aircraft-wideJet-single" : {
+      "hash" : "b572f98af894feeb",
+      "triangles" : 4456
+    },
+    "aircraft-commuter19-single-far" : {
+      "hash" : "bf63985aa51830a1",
+      "triangles" : 1076
+    },
+    "aircraft-regional70-single-far" : {
+      "hash" : "6ca18df17252582c",
+      "triangles" : 1108
+    },
+    "aircraft-narrowJet-single-far" : {
+      "hash" : "a0b71e984c452f65",
+      "triangles" : 1176
+    },
+    "aircraft-wideJet-single-far" : {
+      "hash" : "99899e3ea16a9570",
+      "triangles" : 1264
+    },
+    "airfield-tug-single" : {
+      "hash" : "ee4085b74fb77edf",
+      "triangles" : 188
+    },
+    "airfield-baggageCart-single" : {
+      "hash" : "db79923c6f695214",
+      "triangles" : 384
+    },
+    "airfield-boardingStairs-single" : {
+      "hash" : "10f48ce9af63f077",
+      "triangles" : 276
+    },
+    "airfield-fuelTruck-single" : {
+      "hash" : "74e6fd2e7d8afc0",
+      "triangles" : 252
     }
   }
 }

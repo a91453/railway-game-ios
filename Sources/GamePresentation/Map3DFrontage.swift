@@ -181,7 +181,7 @@ extension Map3DScene.Builder {
             let kind: RealKind
             switch building.use {
             case .hangar: kind = .industry
-            case .terminal: kind = .transport
+            case .terminal: kind = .terminal
             case .other: kind = building.height >= 12 ? .civic : .industry
             }
             addRealBuilding([[ring]], ground: ground(x: middle.x, y: middle.y), height: building.height,

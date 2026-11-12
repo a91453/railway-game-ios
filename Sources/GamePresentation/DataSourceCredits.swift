@@ -763,8 +763,8 @@ public enum DataSourceCredits {
                         id: "noBuildLand",
                         title: language.text("Airports and open land", "機場與空地"),
                         detail: language.text(
-                            "Where real-world 3D maps keep houses off airports, military land, cemeteries, golf courses, railway land and ports, and the airports’ terminals and hangars, from OpenStreetMap.",
-                            "實景 3D 地圖上機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不蓋房子的範圍，以及機場的航廈與機棚，取自 OpenStreetMap。"
+                            "Where real-world 3D maps keep houses off airports, military land, cemeteries, golf courses, railway land and ports, and the airports’ terminals, hangars, runways, taxiways, aprons and stands, from OpenStreetMap.",
+                            "實景 3D 地圖上機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不蓋房子的範圍，以及機場的航廈、機棚、跑道、滑行道、停機坪與機位，取自 OpenStreetMap。"
                         ),
                         notice: language.text(
                             "OpenStreetMap data © OpenStreetMap contributors, under the Open Database License.",

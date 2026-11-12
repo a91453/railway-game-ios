@@ -52,6 +52,26 @@ struct MapAttractionMarks: View {
                         .position(x: item.at.x, y: item.at.y)
                 }
             }
+            // Decision 699: the airports, at every zoom (a map has a few).
+            let airports = session.sightMarksTakeTouches != isPassive ? airportMarks : []
+            if !airports.isEmpty {
+                // Decision 510: a mark over a station, a track or a bubble
+                // lets the tap through, as a sight's does.
+                let guarded = isPassive ? nil : touchGuards
+                ForEach(airports, id: \.airport.id) { item in
+                    let takes = guarded.map {
+                        MapClutter.sightTakesTouch(at: item.at, stations: $0.stations, bubbles: $0.bubbles,
+                                                   onTrack: session.sightIsOnTrack(item.airport.point, within: $0.reach))
+                    } ?? false
+                    airportMark(item.airport)
+                        .opacity(takes ? 1 : 0.5)
+                        .allowsHitTesting(takes)
+                        .accessibilityHidden(isPassive)
+                        .fixedSize()
+                        .frame(width: 0, height: 0, alignment: .center)
+                        .position(x: item.at.x, y: item.at.y)
+                }
+            }
         }
         // Not on this view, which covers the whole map: hidden from
         // VoiceOver it hid the map and its zoom buttons from UI tests' taps.
@@ -129,6 +149,48 @@ struct MapAttractionMarks: View {
             let width = MapLabelPlacement.priceWidth(tile.price.moneyText, locked: !tile.isUnlocked)
             return MapLabelPlacement.tileLabel(tile: area, clear: clear, width: width, height: 18)
         }
+    }
+
+    /// Decision 699: the world's airports on screen and where.
+    private var airportMarks: [(airport: Airport, at: ScreenPoint)] {
+        session.world.airports.compactMap { airport in
+            let at = camera.screenPoint(of: airport.point)
+            guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
+                  at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) else { return nil }
+            return (airport, at)
+        }
+    }
+
+    /// Decision 699: an airport's mark, an aircraft in a capsule with its
+    /// name close up. A tap opens the sights, whose first section is the
+    /// airports'.
+    private func airportMark(_ airport: Airport) -> some View {
+        let named = MapClutter.sightStyle(referenceSize: camera.referenceSize) == .rated
+        return Button {
+            screen.panel = .tourism
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "airplane")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.accent)
+                    .accessibilityHidden(true)
+                if named {
+                    Text(verbatim: airport.title(in: session.language))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+            .padding(.horizontal, 6)
+            .frame(minHeight: 22)
+            .background(Theme.panel, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.accent, lineWidth: 1.5))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(session.world.tourism == nil)
+        .accessibilityLabel(Text(verbatim: airport.title(in: session.language)))
+        .accessibilityHint(Text(verbatim: session.language.text("Opens the airports' flights and passengers.", "打開機場的航班與旅客。")))
+        .accessibilityIdentifier("map.airport.\(airport.id)")
     }
 
     private func mark(_ fact: MapMarks.Sight, rated: Bool) -> some View {

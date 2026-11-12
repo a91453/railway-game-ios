@@ -40,6 +40,9 @@ public struct RealNoBuildLand: Sendable {
 
     public let areas: [Area]
     public let buildings: [Building]
+    /// Decision 699: its airports' airfields, when the app has their file:
+    /// the 3D map lays them where it draws the airports' buildings.
+    public var airfields: RealAirfields?
     /// The areas whose bounds reach each square of ``bucket`` degrees, by
     /// ``key(_:_:)``, so ``kind(atLatitude:longitude:)`` tries a few.
     private let index: [Int: [Int]]

@@ -652,6 +652,26 @@ enum BaseMapFiles {
     /// land is laid out by it too.
     static let noBuild = Bundle.main.url(forResource: "taiwan_no_build", withExtension: "json")
 
+    /// Decision 699: the airports' runways, taxiways, aprons and stands,
+    /// for the 3D map; `nil` if the app has none. With the base map's
+    /// files, which are copied as a folder.
+    static let airfields: URL? = {
+        #if DEBUG
+        // The Debug app's `-map3D.noAirfields` leaves them out, to measure
+        // what they cost (decision 699).
+        if ProcessInfo.processInfo.arguments.contains("-map3D.noAirfields") { return nil }
+        #endif
+        return file("taiwan_airfields.json")
+    }()
+
+    /// The no-build land with its airports' airfields, read from the
+    /// app's files; `nil` on a map not of the real world.
+    nonisolated static func noBuildLand(_ noBuild: URL?, airfields: URL?) -> RealNoBuildLand? {
+        guard var land = noBuild.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealNoBuildLand(data: $0) }) else { return nil }
+        land.airfields = airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
+        return land
+    }
+
     private static func file(_ name: String) -> URL? {
         folder.map { $0.appendingPathComponent(name) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
     }

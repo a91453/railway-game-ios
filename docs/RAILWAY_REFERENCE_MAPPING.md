@@ -1693,3 +1693,24 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有）館內瀏覽 | `RailwayMuseumGuide`、`RailwayMuseumPage` | gap → 原生；3D 沿用決策 434 的列車車庫 |
 
 外部專案：沒有用到程式碼或資料。TRELLIS（trellis-silicon）只在這台 Mac 上做了一次驗證，產出沒有進 repo（決策 696 第 6 節）。
+
+
+## 機場與飛機接進 3D 地圖（決策 699）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Railway/tw3d-reference-clean/source/js/airport.js` `buildAirport`（松山機場：從 OSM 的 aeroway 畫跑道、滑行道、邊燈、停著的客機） | `Map3DScene.Builder.addAirfields`（`Map3DAirfields.swift`） | 做法照搬：跑道與滑行道是沿中線的帶子、每 60 m 一對邊燈、機位上擺飛機。改成全台 19 座機場共用一份資料（`tools/airfields/`）；帶子貼著遊戲的地形（`addStrip`） |
+| 同上 `runwayMaterial`（著色器畫的跑道標線：邊線、中線 30 m 漆 20 m 空、跑道頭斑馬線 6–36 m、號碼、瞄準點、著陸區） | `addRunwayPaint`、`addRunwayCharacter` | 同一套 ICAO 圖樣與尺寸；遊戲的頂點色沒有逐像素著色器，改成一條條貼地的帶子，號碼用七段筆畫；線寬放大一倍（1.8 m）讓遊戲鏡頭看得到 |
+| 同上 `taxiwayMaterial`（黃色中線） | `addAirfields` 的滑行道 | 中線 1.2 m 寬的黃帶；邊線沒有畫 |
+| 同上邊燈（跑道白、滑行道藍，夜間發光的小燈具） | `addLights`、`addPool` | 改成地面的夜間光池（決策 229 續的路燈光池同一套），跑道邊白、跑道頭綠、滑行道中線綠；燈具本身在遊戲大小看不到，不畫 |
+| 同上 `airlinerGeometry`（一款通用窄體機，三分之二的機位有飛機，亂數挑大小與尾翼色） | `Map3DAircraft` | 飛機改用決策 698 的四型；哪個機位有飛機、哪一型、什麼塗裝由機場、日期、機位編號算出來（不用亂數產生器），尾翼色用實例的 tint |
+| `js/city-ground.js`（停機坪由地面那一層畫） | `addPavement` | 停機坪外框切到地形的三角形上，和底圖的地表同一個做法 |
+| `Railway/geo-scene-reference-clean/source/public/geo/airports.geojson`（16 座機場的範圍、名稱、代碼） | 未用 | 範圍遊戲已有（決策 385 的 `taiwan_no_build.json`，同樣出自 OSM）；這次要的跑道、滑行道、機位它沒有。拿它的 16 座核對了 `tools/airfields` 抓到的 19 座：它有的都在，多出恆春、新竹、望安 |
+| `Ci/reference_snapshot/lib/flight_planner_panel__q_*.js`（兩段航程之間 45 分鐘：`ae=rt+2700`） | `Map3DAircraft.turnaround` | 一架飛機落地後在機位停 45 分鐘、起飛前在機位停 45 分鐘 |
+| `Ci/…/flight_info_panel__q_*.js`（機位等級 A–F 對應機型大小）、`airport_pa__q_*.js`（挑佔用最少的機位、起飛後 600 秒釋出） | `Map3DAircraft.Laid.kind`、`flights` | 想法：機型要配得上機位。這裡用機位和鄰位的距離當翼展上限；機位照固定順序輪流給，一小時只給出三分之一，所以不會重複 |
+| `Ci/…/flight_layer__q_*.js`（全球航班的圖示、大圓航線、巡航高度的梯形） | 未用 | 那是世界地圖上的航班追蹤，沒有機場場面：滑行、起飛滾行、進場都沒有（缺口，本專案自己寫） |
+| `Ci/…/aviation_operations__q_*.js` `hourWeights`、`weekWeights` | 未用 | 每小時與星期的形狀由 GameCore 的 `AirportRules`（決策 695）決定，這次不動 GameCore |
+
+缺口：**飛機怎麼進場、落地、滑行、後推、起飛**，參考庫沒有；3° 下滑道、約 70 m/s 的進場速度、9° 爬升是公開的一般數字，加減速是本專案定的。
+
+外部專案：沒有用到程式碼。資料是 OpenStreetMap（© OpenStreetMap contributors，ODbL 1.0），資料來源頁「機場與空地」那一筆已含。
