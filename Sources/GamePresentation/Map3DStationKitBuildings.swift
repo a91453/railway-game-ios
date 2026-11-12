@@ -17,6 +17,14 @@ extension StationKitBuilder {
             box(0,0,0,48,40,0.25,Map3DPalette.plaza)
             coastTimber(10,0.25,0)
             railCourt(length:34,at:-12,platforms:1)
+        case .baoan:
+            box(0,0,0,48,36,0.25,Map3DPalette.plaza)
+            baoan(10,0.25,0)
+            railCourt(length:30,at:-12,platforms:1)
+        case .jiji:
+            box(0,0,0,48,40,0.25,Map3DPalette.plaza)
+            jiji(10,0.25,0)
+            railCourt(length:34,at:-12,platforms:1)
         case .banqiao,.nangang:
             let w: Float=p == .nangang ? 74 : 64
             box(0,0,0,66,w+16,0.3,Map3DPalette.plaza)
@@ -329,8 +337,8 @@ extension StationKitBuilder {
         for s: Float in [-1,1] { face([p(from,high,s),p(to,low,s),p(to,low-t,s),p(from,high-t,s)],inside:inside,color:color) }
     }
     /// A window on the wall at `wall`, facing `side` (+1 the front): glass in a dark frame.
-    mutating func window(_ wall: Float,_ y: Float,_ z: Float,side: Float,width: Float,height: Float) {
-        box(wall+side*0.04,y,z,0.10,width+0.24,height+0.24,Self.timber)
+    mutating func window(_ wall: Float,_ y: Float,_ z: Float,side: Float,width: Float,height: Float,frame: UInt32 = StationKitBuilder.timber) {
+        box(wall+side*0.04,y,z,0.10,width+0.24,height+0.24,frame)
         box(wall+side*0.08,y+0.12,z,0.06,width,height,Self.glass)
     }
     /// A white name board with a dark mark, where the station's name is written.
@@ -365,5 +373,175 @@ extension StationKitBuilder {
             board(wall,low-1.2,z+s*1.9,side:-1,size:1.6)
             window(wall,y+1.3,z+s*2.1,side:-1,width:1.6,height:1.2)
         }
+    }
+}
+
+// Jiji (集集, 1930, rebuilt after the 1999 earthquake), on the Jiji Line: a
+// short gabled hall of cream boards under dark tiles, its gables and the
+// band under its eaves boarded slate blue, and round all four sides a
+// wide, low veranda roof in a lighter grey on cream posts with forked
+// braces. A small white gable breaks the veranda's front, off centre,
+// carrying the four white name boards; red lanterns hang along the eaves.
+// Shape and colours read from photographs (Wikimedia Commons; the list is
+// in this round's report); the sizes are estimates from the posts and the
+// people in them, not a survey.
+extension StationKitBuilder {
+    static let slate=Map3DPalette.tinAwnings[3],cream=Map3DPalette.schoolWalls,skirt=Map3DPalette.tinRoofs[2]
+
+    /// The building, its middle at (`x`, `z`) on ground `y`: its front
+    /// (+x) to the forecourt, its back to the platforms.
+    mutating func jiji(_ x: Float,_ y: Float,_ z: Float) {
+        let length: Float=15.8,depth: Float=7.2,eave: Float=4.3,rise: Float=2.8
+        let front: Float=3.0,back: Float=2.4,end: Float=4.0,high=y+3.5,low=y+2.85
+        let hx=depth/2,hz=length/2,porchZ=z+3.4
+        // The veranda's floor, a step above the forecourt.
+        box(x+(front-back)/2,y,z,depth+front+back+0.3,length+end*2+0.3,0.12,Map3DPalette.granite)
+        // Walls: a boarded dado, cream boards above, slate boards over the veranda's roof.
+        box(x,y,z,depth+0.08,length+0.08,1.0,Map3DPalette.counters[0])
+        box(x,y+1.0,z,depth,length,2.6,Self.cream)
+        box(x,y+3.4,z,depth+0.04,length+0.04,eave-3.4,Self.slate)
+        // The hall's roof, its ridge along the platforms, with its ridge tiles and slate fascias.
+        mesh.addGableRoof(base:Map3DPoint(x,y+eave,z),forward:Map3DPoint(0,0,1),length:length,width:depth,rise:rise,overhang:0.6,color:Self.tile,gable:Self.slate)
+        box(x,y+eave-0.14,z,depth+0.4,length+0.4,0.14,Self.tile)
+        box(x,y+eave+rise-0.08,z,0.42,length+1.4,0.26,Map3DPalette.portal)
+        let drop=rise*0.6/hx
+        for side: Float in [-1,1] {
+            box(x+side*(hx+0.6),y+eave-drop-0.2,z,0.08,length+1.2,0.2,Self.slate)
+            tileCourses(low:Map3DPoint(x+side*(hx+0.6),y+eave-drop,z),high:Map3DPoint(x,y+eave+rise,z),count:5,color:Map3DColor.shaded(Self.tile,0.8)) { _ in length/2+0.6 }
+        }
+        for e: Float in [-1,1] {
+            // The gable ends: verge boards, and a small window under a hood.
+            let gz=z+e*(hz+0.6)
+            for side: Float in [-1,1] { beam(Map3DPoint(x+side*(hx+0.6),y+eave-drop-0.1,gz),Map3DPoint(x,y+eave+rise-0.1,gz),0.2,Self.slate) }
+            box(x,y+eave+0.35,z+e*(hz+0.05),1.3,0.10,1.1,Self.white)
+            box(x,y+eave+0.47,z+e*(hz+0.09),1.06,0.06,0.86,Self.glass)
+            box(x,y+eave+1.5,z+e*(hz+0.25),1.7,0.5,0.1,Self.slate)
+            // Under the veranda: a window in the end wall.
+            box(x,y+1.1,z+e*(hz+0.04),2.4,0.10,1.9,Map3DPalette.stone)
+            box(x,y+1.22,z+e*(hz+0.08),2.16,0.06,1.66,Self.glass)
+        }
+        verandaRoof(x,z,hx:hx,hz:hz,front:front,back:back,end:end,high:high,low:low)
+        // Its posts on stone feet, forked braces under the eaves' beam.
+        let beamTop=low-0.14,fx=x+hx+front-0.25,bx=x-hx-back+0.25,ez=hz+end-0.25
+        box(fx,beamTop-0.2,z,0.16,ez*2,0.2,Self.cream)
+        box(bx,beamTop-0.2,z,0.16,ez*2,0.2,Self.cream)
+        for e: Float in [-1,1] { box((fx+bx)/2,beamTop-0.2,z+e*ez,fx-bx,0.16,0.2,Self.cream) }
+        for dz: Float in [-ez,-8.4,-5.2,-2.0,8.6,ez] { post(fx,y,z+dz,top:beamTop-0.2,alongZ:true) }
+        for i in 0..<8 { post(bx,y,z-ez+Float(i)*ez*2/7,top:beamTop-0.2,alongZ:true) }
+        for e: Float in [-1,1] { for dx: Float in [-2.7,0.3,3.3] { post(x+dx,y,z+e*ez,top:beamTop-0.2,alongZ:false) } }
+        // Red lanterns hung from the eaves' edge, along the front and round both ends:
+        // half out from under the roof, so the row shows from above too.
+        let hung=low-0.14,edge=x+hx+front+0.05
+        for dz: Float in [-10.6,-8.2,-5.8,-3.4,-1.0,7.4,9.8] {
+            lantern(edge,hung,z+dz)
+        }
+        for e: Float in [-1,1] { for dx: Float in [-1.6,1.0,3.6] { lantern(x+dx,hung,z+e*(hz+end+0.05)) } }
+        // Doors and windows in pale frames; the way through to the platform, open and in shadow.
+        for side: Float in [-1,1] {
+            let wall=x+side*hx
+            for (dz,w) in [(Float(-5.6),Float(2.4)),(-2.2,2.4),(6.4,1.8)] { window(wall,y+1.1,z+dz,side:side,width:w,height:1.9,frame:Map3DPalette.stone) }
+            box(wall+side*0.03,y,porchZ,0.10,2.6,2.7,Map3DPalette.arcade)
+        }
+        namePorch(x+hx,y,porchZ,reach:front+0.5,low:low)
+        steamMonument(x+hx+front+3.6,y,z-1.2)
+        // The forecourt's green: a tree at one corner, a flower bed in a brick kerb beside it.
+        tree(x+hx+front+5.0,y,z-10.4,size:1.25)
+        box(x+hx+front+2.8,y,z-6.6,2.4,3.6,0.45,Map3DPalette.brick)
+        box(x+hx+front+2.8,y+0.45,z-6.6,2.1,3.3,0.55,Map3DPalette.crown)
+    }
+
+    /// The veranda's roof: four slopes from the walls (`hx`, `hz` from the
+    /// middle) at `high` out to the eaves at `low`, a closed slab.
+    mutating func verandaRoof(_ x: Float,_ z: Float,hx: Float,hz: Float,front: Float,back: Float,end: Float,high: Float,low: Float) {
+        let t: Float=0.14
+        func ring(_ px: Float,_ nx: Float,_ pz: Float,_ h: Float) -> [Map3DPoint] {
+            [Map3DPoint(x+px,h,z-pz),Map3DPoint(x+px,h,z+pz),Map3DPoint(x-nx,h,z+pz),Map3DPoint(x-nx,h,z-pz)]
+        }
+        let inner=ring(hx,hx,hz,high),outer=ring(hx+front,hx+back,hz+end,low)
+        let below=Map3DPoint(x,low-2,z),above=Map3DPoint(x,high+6,z),down=Map3DPoint(0,t,0)
+        for i in 0..<4 {
+            let j=(i+1)%4,shade: Float=[0.97,0.86,0.80,0.90][i]
+            face([inner[i],inner[j],outer[j],outer[i]],inside:below,color:Map3DColor.shaded(Self.skirt,shade))
+            face([inner[i]-down,inner[j]-down,outer[j]-down,outer[i]-down],inside:above,color:Map3DColor.shaded(Self.skirt,0.7))
+            // The eaves' white fascia.
+            let edge=[outer[i]+Map3DPoint(0,0.02,0),outer[j]+Map3DPoint(0,0.02,0),outer[j]-down,outer[i]-down]
+            face(edge,inside:below+Map3DPoint(0,2,0),color:Self.white)
+        }
+    }
+
+    /// A veranda post at (`x`, `z`): a stone foot, the shaft up to `top`,
+    /// and two braces forking along the eaves' beam.
+    mutating func post(_ x: Float,_ y: Float,_ z: Float,top: Float,alongZ: Bool) {
+        box(x,y,z,0.36,0.36,0.5,Map3DPalette.concrete)
+        box(x,y+0.5,z,0.2,0.2,top-y-0.5,Self.cream)
+        for s: Float in [-1,1] {
+            let reach: Float=0.8*s
+            beam(Map3DPoint(x,top-0.85,z),Map3DPoint(x+(alongZ ? 0 : reach),top+0.02,z+(alongZ ? reach : 0)),0.12,Self.cream)
+        }
+    }
+
+    /// The small gable over the way in, from the wall at `wall` out past
+    /// the veranda's eaves, with the four name boards on its white front.
+    mutating func namePorch(_ wall: Float,_ y: Float,_ z: Float,reach: Float,low: Float) {
+        let half: Float=2.3,top=y+4.3,eaves=low+0.15,out=wall+reach,t=Map3DPoint(0,0.12,0)
+        let inside=Map3DPoint(wall+reach/2,eaves,z)
+        for s: Float in [-1,1] {
+            let slope=[Map3DPoint(wall,top,z),Map3DPoint(out,top,z),Map3DPoint(out,eaves,z+s*half),Map3DPoint(wall,eaves,z+s*half)]
+            face(slope,inside:inside,color:Map3DColor.shaded(Self.skirt,s>0 ? 0.92 : 0.84))
+            face(slope.map { $0-t },inside:inside+Map3DPoint(0,5,0),color:Map3DColor.shaded(Self.skirt,0.7))
+            // The white barge board, and the post under its foot.
+            beam(Map3DPoint(out,eaves-0.05,z+s*(half+0.05)),Map3DPoint(out,top-0.05,z),0.42,Self.white)
+            box(out-0.3,y,z+s*(half-0.15),0.36,0.36,0.5,Map3DPalette.concrete)
+            box(out-0.3,y+0.5,z+s*(half-0.15),0.22,0.22,eaves-y-0.7,Self.cream)
+        }
+        // The front: a cream panel behind the barge boards, a tie beam, the boards.
+        mesh.addFacet([Map3DPoint(out-0.1,eaves-0.12,z-half),Map3DPoint(out-0.1,top-0.12,z),Map3DPoint(out-0.1,eaves-0.12,z+half)],color:Self.cream)
+        mesh.addFacet([Map3DPoint(out-0.1,eaves-0.12,z+half),Map3DPoint(out-0.1,top-0.12,z),Map3DPoint(out-0.1,eaves-0.12,z-half)],color:Map3DColor.shaded(Self.cream,0.8))
+        box(out-0.3,eaves-0.4,z,0.22,half*2,0.22,Self.cream)
+        // Its ridge tiles, and the four boards with the station's name.
+        box((wall+out)/2,top-0.02,z,reach+0.1,0.3,0.12,Map3DPalette.portal)
+        nameBoards("集集車站",x:out+0.3,y:eaves,z:z,facing:1,size:1.12,pitch:1.24,lifts:[-0.45,0.2,0.2,-0.45],board:Self.white,ink:Self.ink)
+        // The English name board, hung under the tie beam.
+        box(out-0.3,eaves-0.95,z,0.08,2.4,0.55,Self.white)
+        box(out-0.25,eaves-0.72,z,0.04,1.5,0.07,Map3DPalette.stone)
+    }
+
+    /// The forecourt's monument: a small dark steam engine on a stone
+    /// pedestal, in a round bed of white pebbles within a stone kerb.
+    mutating func steamMonument(_ x: Float,_ y: Float,_ z: Float) {
+        let iron=Map3DColor.shaded(Map3DPalette.arcade,0.55),gold=Map3DPalette.platformEdge
+        cylinder(x,y,z,radius:2.7,height:0.3,color:Map3DPalette.stone,sides:16)
+        cylinder(x,y+0.3,z,radius:2.3,height:0.08,color:Self.white,sides:16)
+        box(x,y+0.38,z,1.9,4.2,0.45,Map3DPalette.granite)
+        // The engine, side on to the station's front: frame, boiler, cab, chimney and dome.
+        box(x,y+0.83,z,1.15,3.6,0.4,iron)
+        barrel(Map3DPoint(x,y+1.72,z-0.55),Map3DPoint(x,y+1.72,z+1.75),radius:0.5,color:iron)
+        barrel(Map3DPoint(x,y+1.72,z+1.75),Map3DPoint(x,y+1.72,z+1.8),radius:0.4,color:Map3DPalette.portal)
+        box(x,y+1.23,z-1.15,1.25,1.2,1.55,iron)
+        box(x,y+2.78,z-1.15,1.4,1.35,0.08,iron)
+        cylinder(x,y+2.18,z+1.3,radius:0.2,height:0.75,color:iron,sides:8)
+        cylinder(x,y+2.18,z+0.4,radius:0.27,height:0.35,color:iron,sides:8)
+        for side: Float in [-1,1] {
+            box(x+side*0.5,y+1.3,z+0.55,0.06,1.9,0.5,iron)
+            box(x+side*0.54,y+1.42,z+0.55,0.04,1.6,0.22,gold)
+            for dz: Float in [-0.6,0.3,1.2] { box(x+side*0.6,y+0.83,z+dz,0.04,0.6,0.6,Map3DPalette.portal) }
+        }
+    }
+
+    /// A round red paper lantern hung at (`x`, `z`) from `top`, with its dark caps.
+    mutating func lantern(_ x: Float,_ top: Float,_ z: Float) {
+        box(x,top-0.12,z,0.08,0.08,0.12,Self.ink)
+        cylinder(x,top-0.2,z,radius:0.2,height:0.08,color:Self.ink,sides:8)
+        cylinder(x,top-0.72,z,radius:0.33,height:0.52,color:Map3DPalette.lantern,sides:8)
+        cylinder(x,top-0.8,z,radius:0.2,height:0.08,color:Self.ink,sides:8)
+    }
+
+    /// A round bar from `a` to `b` along z (a boiler, a tank): eight sides and its two ends.
+    mutating func barrel(_ a: Map3DPoint,_ b: Map3DPoint,radius: Float,color: UInt32) {
+        let ring=(0..<8).map { i -> Map3DPoint in let t=(Float(i)+0.5)*Float.pi/4;return Map3DPoint(cosf(t)*radius,sinf(t)*radius,0) }
+        let middle=(a+b)*0.5
+        for i in 0..<8 { face([a+ring[i],a+ring[(i+1)%8],b+ring[(i+1)%8],b+ring[i]],inside:middle,color:Map3DColor.shaded(color,i<4 ? 1 : 0.8)) }
+        face(ring.map { a+$0 },inside:middle,color:color)
+        face(ring.map { b+$0 },inside:middle,color:color)
     }
 }
