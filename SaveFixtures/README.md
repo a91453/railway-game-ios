@@ -309,3 +309,8 @@ its map's airports when it opens the save).
   midnight, with the day's flights, air passengers and riders counted
   (`AirportTests.testTheSaveKeepsTheAirports`, written with
   `AIRPORT_SAVE_NEW=1` by the build that first made it).
+- `v91-coach-stops.json`: two stations, a line and a train, a coach stop by
+  each station with direct coaches from the first to the second, saved two
+  minutes after the first midnight, with the day's coach passengers and
+  riders counted (`CoachTests.testTheSaveKeepsTheCoachStops`, written with
+  `COACH_SAVE_NEW=1` by the build that first made it).

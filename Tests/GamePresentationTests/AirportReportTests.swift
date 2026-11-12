@@ -111,6 +111,6 @@ final class AirportReportTests: XCTestCase {
     }
 }
 
-private func airportReportProfit(_ day: DayAccount) -> Int64 {
+func airportReportProfit(_ day: DayAccount) -> Int64 {
     (day.fareRevenue + day.freightRevenue + day.propertyRevenue - day.totalCost - day.propertyCost).amount
 }

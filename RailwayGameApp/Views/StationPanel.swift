@@ -1626,6 +1626,38 @@ struct StationPanel: View {
         }
     }
 
+    /// Decision 706: the coach stops the station serves, each with today's
+    /// coaches, coach passengers and riders on the company's trains.
+    private func coachesSection(_ days: [CoachDay]) -> some View {
+        Section {
+            ForEach(days, id: \.stop.id) { day in
+                Label {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: day.stop.name)
+                            .font(.subheadline.weight(.semibold))
+                        Text(verbatim: day.summary(in: session.language))
+                            .font(.footnote)
+                            .monospacedDigit()
+                        if let yesterday = day.stop.yesterdayText(in: session.language) {
+                            Text(verbatim: yesterday)
+                                .font(.footnote)
+                                .monospacedDigit()
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "bus.fill")
+                        .foregroundStyle(Theme.primary)
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("station.coach.\(day.stop.id)")
+            }
+        } header: {
+            Text(verbatim: session.language.text("Intercity Coaches", "長途客運"))
+        }
+    }
+
     // MARK: - Read-only
 
     /// The trips by hour, once worked out for this station; the last ones
@@ -1643,6 +1675,9 @@ struct StationPanel: View {
             }
             if !ridership.value.airports.isEmpty {
                 airportsSection(ridership.value.airports)
+            }
+            if !ridership.value.coaches.isEmpty {
+                coachesSection(ridership.value.coaches)
             }
         } else {
             Section {

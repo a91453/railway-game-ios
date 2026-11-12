@@ -476,9 +476,17 @@
 ///     none, which plays as it did, and a version 90 build from before
 ///     them drops them and plays on the same way (the app gives the
 ///     airports their destinations again when it opens the save).
+/// 91. Intercity coaches (decision 706): a world can have its
+///     `"coachStops"`, the stops of its map's real coaches with their
+///     coaches, passengers, hours, links and the day last counted. A build
+///     that reads only an earlier version would drop them, and the trips
+///     the coaches take and bring would change back, so it says the save
+///     is newer than it instead. A save of any earlier version needs no
+///     step: it has no coach stops (the app gives a real-world map its
+///     own when it opens the save).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 90
+    public static let currentVersion = 91
 
     public let world: GameWorld
 
@@ -704,6 +712,8 @@ extension SavedGame: Codable {
         // settled no run driven by hand (decision 693): nothing to turn.
         // Version 89 or earlier to 90: a world without `"airports"` has
         // none (decision 695): nothing to turn.
+        // Version 90 or earlier to 91: a world without `"coachStops"` has
+        // none (decision 706): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

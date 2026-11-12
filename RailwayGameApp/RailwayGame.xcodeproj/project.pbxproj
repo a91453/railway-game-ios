@@ -153,6 +153,7 @@
 		86724ACE7C79A2D3C49D8401 /* kenney-pine-young.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = A24863901005CB57D9568970 /* kenney-pine-young.m3dmodel */; };
 		86E0CE8EE136B4BD0E31D90E /* horn-highSpeed.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5417A59A2D7B4DC4A5CEEF0C /* horn-highSpeed.wav */; };
 		86EB45BA9705BF6B815B4D1B /* ntalrt.json in Resources */ = {isa = PBXBuildFile; fileRef = C604A41EF44E46BC47C90819 /* ntalrt.json */; };
+		87A7B5C3940191B63231B2F7 /* coach_network.json in Resources */ = {isa = PBXBuildFile; fileRef = 3DE8BEF1DE72647A7D9A265F /* coach_network.json */; };
 		8A77E1AFF3E0508D9C8C15CA /* goal-met.wav in Resources */ = {isa = PBXBuildFile; fileRef = F9D622682F53E544329A323C /* goal-met.wav */; };
 		8AA825EB511ADB250AD7FEC6 /* TrainShowcaseUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BEE1289DAE317B9E7290A0 /* TrainShowcaseUITests.swift */; };
 		8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A0EEF6BF7DEFF9BA44F2679A /* InfoPlist.strings */; };
@@ -365,6 +366,7 @@
 		3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialUITests.swift; sourceTree = "<group>"; };
 		3D0BB76CFCE33B148C01AADC /* garbage-truck.m3dmodel */ = {isa = PBXFileReference; path = "garbage-truck.m3dmodel"; sourceTree = "<group>"; };
 		3D5BF8179644D02716F92269 /* OneShotLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocation.swift; sourceTree = "<group>"; };
+		3DE8BEF1DE72647A7D9A265F /* coach_network.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coach_network.json; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
 		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
 		40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRealLinesButton.swift; sourceTree = "<group>"; };
@@ -1016,6 +1018,7 @@
 		FDFCACAB9AE2FFDF43EF7A64 /* RealCoaches */ = {
 			isa = PBXGroup;
 			children = (
+				3DE8BEF1DE72647A7D9A265F /* coach_network.json */,
 				90A05C92A9DF1CD8AE9EF25C /* real_coaches.json */,
 			);
 			path = RealCoaches;
@@ -1133,6 +1136,7 @@
 				70A9168E29FD6A6696023F5C /* chime-tourist-motif.wav in Resources */,
 				CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */,
 				B7D75586702143678A6E56E2 /* city-bus.m3dmodel in Resources */,
+				87A7B5C3940191B63231B2F7 /* coach_network.json in Resources */,
 				CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */,
 				2517C778FB306F8732C9F41B /* garbage-truck.caf in Resources */,
 				BDB3AC8DDFE7405D16CEC00F /* garbage-truck.m3dmodel in Resources */,

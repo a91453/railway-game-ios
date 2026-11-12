@@ -66,6 +66,10 @@ public final class GameLauncher {
     /// the bus tool asks for a place's stops (``GameSession/realBuses``);
     /// `nil` until the data is read, or without it.
     public var realBuses: RealBusLibrary?
+    /// Taiwan's coach network (decision 706), whose stops a real-world map
+    /// gets when its game begins; `nil` until the data is read, or without
+    /// it.
+    public var coachNetwork: CoachNetwork?
 
     /// Taiwan's place names, which new stations on real-world maps are
     /// named after (decision 159), handed to every game it starts
@@ -1692,7 +1696,9 @@ public final class GameLauncher {
         _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil,
         row: String? = nil, autosavingAt date: Date? = nil
     ) -> Bool {
-        let world = Self.withFreePlayFunds(world)
+        // Decision 706: a free game on a real-world map gets its map's
+        // coach stops, once the app has read them.
+        let world = Self.withFreePlayFunds(coachNetwork.map { CoachCatalog.withCoachStops(world, network: $0) } ?? world)
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {
@@ -1813,8 +1819,11 @@ public final class GameLauncher {
         realBuses = data.realBuses
         placeNames = data.placeNames
         railways = data.railways
+        coachNetwork = data.coaches
         realWorldIssues = data.issues
         if let session {
+            // Decision 706: a game begun while the data was read.
+            if let coachNetwork { session.giveCoachStops(of: coachNetwork) }
             session.population = population
             session.places = places
             session.water = water
@@ -2188,6 +2197,8 @@ public struct RealWorldData: Sendable {
     /// Taiwan's real bus stops (decision 424, C2); their files are read
     /// when the bus tool asks.
     public let realBuses: RealBusLibrary?
+    /// Taiwan's coach network (decision 706).
+    public let coaches: CoachNetwork?
     /// Taiwan's place names (decision 159).
     public let placeNames: PlaceNames?
     public let railways: RealRailways?
@@ -2197,7 +2208,8 @@ public struct RealWorldData: Sendable {
 
     public init(
         population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, heights: HeightGrid? = nil, coverage: CoverageGrid? = nil,
-        placeNames: PlaceNames? = nil, realBuses: RealBusLibrary? = nil, railways: RealRailways?, issues: [RealDataLoadIssue]
+        placeNames: PlaceNames? = nil, realBuses: RealBusLibrary? = nil, coaches: CoachNetwork? = nil, railways: RealRailways?,
+        issues: [RealDataLoadIssue]
     ) {
         self.population = population
         self.places = places
@@ -2206,6 +2218,7 @@ public struct RealWorldData: Sendable {
         self.coverage = coverage
         self.placeNames = placeNames
         self.realBuses = realBuses
+        self.coaches = coaches
         self.railways = railways
         self.issues = issues
     }
@@ -2244,9 +2257,10 @@ public struct RealWorldData: Sendable {
         placeNames?.landmarks = grid("taiwan_station_landmarks", StationLandmarks.init(data:))
         let railways = RealRailways.load(file: file)
         let realBuses = grid("real_buses_index") { try RealBusLibrary(index: $0, file: file) }
+        let coaches = grid("coach_network", CoachNetwork.init(data:))
         return RealWorldData(
             population: population, places: places, water: water, heights: heights, coverage: coverage, placeNames: placeNames,
-            realBuses: realBuses, railways: railways.railways,
+            realBuses: realBuses, coaches: coaches, railways: railways.railways,
             issues: issues + railways.issues
         )
     }
