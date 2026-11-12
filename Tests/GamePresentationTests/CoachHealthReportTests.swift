@@ -121,58 +121,65 @@ final class CoachHealthReportTests: XCTestCase {
             var with = world
             with.setCoachStops(CoachCatalog.stops(of: network, in: frame, bounds: world.bounds))
             let stations = with.stations.filter { !$0.isDepot }
-            let rivals = with.coachRivals()
 
-            // The day's demand, pair by pair, as the world stands.
-            struct Pair {
-                let from: String, to: String
-                let kept: Int64, taken: Int64, fare: Int64, minutes: Int64
-                let rival: CoachLink
-                var share: Int64 { taken * 1_000 / max(1, kept + taken) }
-            }
-            var pairs: [Pair] = []
-            var trips: Int64 = 0, taken: Int64 = 0, fares: Int64 = 0, faresTaken: Int64 = 0
-            for station in stations {
-                for detail in with.dailyDemandDetails(from: station.id) {
-                    let fast = detail.route?.legs.contains { with.isHighSpeedLine($0.line) } ?? false
-                    let fare = with.tripFare(from: station.id, to: detail.destination, highSpeed: fast)?.amount ?? 0
-                    trips += detail.trips
-                    taken += detail.byCoach
-                    fares += detail.trips * fare
-                    faresTaken += detail.byCoach * fare
-                    if let rival = rivals[station.id]?[detail.destination] {
-                        pairs.append(Pair(from: station.name, to: with.station(id: detail.destination)?.name ?? "", kept: detail.trips,
-                                          taken: detail.byCoach, fare: fare, minutes: detail.route?.totalMinutes ?? 0, rival: rival))
+            // The day's demand, pair by pair, as `with` stands: read at noon
+            // of the first day played (a line just laid has no train out
+            // yet, and so no way to ride), or at once with no day played.
+            func table(_ with: GameWorld) {
+                let rivals = with.coachRivals()
+                struct Pair {
+                    let from: String, to: String
+                    let kept: Int64, taken: Int64, fare: Int64, minutes: Int64
+                    let rival: CoachLink
+                    var share: Int64 { taken * 1_000 / max(1, kept + taken) }
+                }
+                var pairs: [Pair] = []
+                var trips: Int64 = 0, taken: Int64 = 0, fares: Int64 = 0, faresTaken: Int64 = 0
+                for station in stations {
+                    for detail in with.dailyDemandDetails(from: station.id) {
+                        let fast = detail.route?.legs.contains { with.isHighSpeedLine($0.line) } ?? false
+                        let fare = with.tripFare(from: station.id, to: detail.destination, highSpeed: fast)?.amount ?? 0
+                        trips += detail.trips
+                        taken += detail.byCoach
+                        fares += detail.trips * fare
+                        faresTaken += detail.byCoach * fare
+                        if let rival = rivals[station.id]?[detail.destination] {
+                            pairs.append(Pair(from: station.name, to: with.station(id: detail.destination)?.name ?? "", kept: detail.trips,
+                                              taken: detail.byCoach, fare: fare, minutes: detail.route?.totalMinutes ?? 0, rival: rival))
+                        }
                     }
                 }
-            }
-            let losing = pairs.filter { $0.taken > 0 }
-            let served = with.coachDays().filter { $0.station != nil }
-            let brought = served.map(\.riders).reduce(0, +)
-            out.append("### \(scenario.name): \(with.lines.count) lines, \(stations.count) stations, \(with.trains.count) trains\n")
-            out.append("Coach stops \(with.coachStops.count), with a station \(served.count) ("
-                + served.prefix(40).map { "\($0.stop.name) → \($0.station.flatMap { with.station(id: $0)?.name } ?? "")" }.joined(separator: "; ")
-                + "); pairs with a coach \(with.coachPairCount()), of them losing trips \(losing.count); the coaches bring \(brought) riders a day.\n")
-            out.append("| A day's demand | Trips | Fares (each pair at its fare) |\n| --- | --: | --: |")
-            out.append("| Without coaches | \(trips + taken) | \(Money(fares + faresTaken).moneyText) |")
-            out.append("| The coaches take | \(taken) (\(share(taken, of: trips + taken))) | "
-                + "\(Money(faresTaken).moneyText) (\(share(faresTaken, of: fares + faresTaken))) |")
-            out.append("| The coaches bring (riders, both ways) | \(brought) | |\n")
-            if !pairs.isEmpty {
-                out.append("| From | To | Rail: minutes / fare | Coach: minutes / a day / fare | Trips without | The coach takes | Share |")
-                out.append("| --- | --- | --: | --: | --: | --: | --: |")
-                for pair in pairs.sorted(by: { $0.taken != $1.taken ? $0.taken > $1.taken : $0.kept > $1.kept }).prefix(25) {
-                    out.append("| \(pair.from) | \(pair.to) | \(pair.minutes) / \(pair.fare / 100) | \(pair.rival.minutes) / \(pair.rival.dailyCoaches) / \(pair.rival.fare) | "
-                        + "\(pair.kept + pair.taken) | \(pair.taken) | \(share(pair.taken, of: pair.kept + pair.taken)) |")
+                let losing = pairs.filter { $0.taken > 0 }
+                let served = with.coachDays().filter { $0.station != nil }
+                let brought = served.map(\.riders).reduce(0, +)
+                out.append("### \(scenario.name): \(with.lines.count) lines, \(stations.count) stations, \(with.trains.count) trains\n")
+                out.append("Coach stops \(with.coachStops.count), with a station \(served.count) ("
+                    + served.prefix(40).map { "\($0.stop.name) → \($0.station.flatMap { with.station(id: $0)?.name } ?? "")" }.joined(separator: "; ")
+                    + "); pairs with a coach \(with.coachPairCount()), of them losing trips \(losing.count); the coaches bring \(brought) riders a day.\n")
+                out.append("| A day's demand | Trips | Fares (each pair at its fare) |\n| --- | --: | --: |")
+                out.append("| Without coaches | \(trips + taken) | \(Money(fares + faresTaken).moneyText) |")
+                out.append("| The coaches take | \(taken) (\(share(taken, of: trips + taken))) | "
+                    + "\(Money(faresTaken).moneyText) (\(share(faresTaken, of: fares + faresTaken))) |")
+                out.append("| The coaches bring (riders, both ways) | \(brought) | |\n")
+                if !pairs.isEmpty {
+                    out.append("| From | To | Rail: minutes / fare | Coach: minutes / a day / fare | Trips without | The coach takes | Share |")
+                    out.append("| --- | --- | --: | --: | --: | --: | --: |")
+                    for pair in pairs.sorted(by: { $0.taken != $1.taken ? $0.taken > $1.taken : $0.kept > $1.kept }).prefix(25) {
+                        out.append("| \(pair.from) | \(pair.to) | \(pair.minutes) / \(pair.fare / 100) | \(pair.rival.minutes) / \(pair.rival.dailyCoaches) / \(pair.rival.fare) | "
+                            + "\(pair.kept + pair.taken) | \(pair.taken) | \(share(pair.taken, of: pair.kept + pair.taken)) |")
+                    }
+                    let busy = losing.filter { $0.kept + $0.taken >= 100 }.max { $0.share < $1.share }
+                    let most = losing.max { $0.share < $1.share }
+                    out.append("\nThe most taken of a pair: \(most.map { "\($0.from) → \($0.to) \(Double($0.share) / 10)% of \($0.kept + $0.taken)" } ?? "none"); "
+                        + "of a pair with 100 trips a day or more: \(busy.map { "\($0.from) → \($0.to) \(Double($0.share) / 10)% of \($0.kept + $0.taken)" } ?? "none").\n")
                 }
-                let busy = losing.filter { $0.kept + $0.taken >= 100 }.max { $0.share < $1.share }
-                let most = losing.max { $0.share < $1.share }
-                out.append("\nThe most taken of a pair: \(most.map { "\($0.from) → \($0.to) \(Double($0.share) / 10)% of \($0.kept + $0.taken)" } ?? "none"); "
-                    + "of a pair with 100 trips a day or more: \(busy.map { "\($0.from) → \($0.to) \(Double($0.share) / 10)% of \($0.kept + $0.taken)" } ?? "none").\n")
+                note(out.joined(separator: "\n"))
             }
-            note(out.joined(separator: "\n"))
 
-            guard days > 0 else { continue }
+            guard days > 0 else {
+                table(with)
+                continue
+            }
             // Each line's profit of a day: its fares less its costs.
             func profit(_ tally: LineTally) -> Int64 {
                 (tally.fareRevenue - tally.operatingCost - tally.maintenanceCost - tally.energyCost - tally.staffCost).amount
@@ -194,7 +201,9 @@ final class CoachHealthReportTests: XCTestCase {
                     var day = Day()
                     for minute in 0..<1_440 {
                         try world.advance(ticks: 1)
-                        if minute == 720 { day.robbed = world.stations.map { world.tripsTakenByCoaches(from: $0.id) }.reduce(0, +) }
+                        guard minute == 720 else { continue }
+                        day.robbed = world.stations.map { world.tripsTakenByCoaches(from: $0.id) }.reduce(0, +)
+                        if coaches, played[true] == nil { table(world) }
                     }
                     let account = world.accounts.days.last
                     let lost = world.stations.map { world.passengerLedger(of: $0.id) }.map { $0.overflowed + $0.abandoned }.reduce(0, +)
