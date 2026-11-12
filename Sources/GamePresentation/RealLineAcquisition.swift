@@ -1102,9 +1102,15 @@ extension RealLineLaying {
         var draft = world.pricingCopy()
         let step = 32 * RealLineAcquisition.metre, side = 16 * RealLineAcquisition.metre
         let depotWays = depotSites.map { WorldPath(worldPoints($0)) }
+        // DEMO-KRTC (2026-11-12): and under the way's very end. The last
+        // step stopped up to 32 m short of it, so where a block of ground
+        // began in between (which depends on where the world was picked),
+        // the end's ground was not read and counted as sea level: the
+        // Taoyuan Airport MRT, ending 133 m up at Laojie River, was then
+        // refused as too steep in a world picked at 25.02, 121.30.
         let samples = ([path] + depotWays).flatMap { way in
-            (0...Int(way.length / step)).flatMap { index -> [PlanPoint] in
-                let point = way.point(at: Double(index) * step)
+            ((0...Int(way.length / step)).map { Double($0) * step } + [way.length]).flatMap { distance -> [PlanPoint] in
+                let point = way.point(at: distance)
                 return [(-side, -side), (-side, side), (side, -side), (side, side)].map { dx, dy in WorldVector(x: point.x + dx, y: point.y + dy).plan }
             }
         }
