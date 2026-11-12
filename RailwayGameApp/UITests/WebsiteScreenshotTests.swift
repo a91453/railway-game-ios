@@ -1404,7 +1404,11 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.drive.brake"].becomesHittable(within: 10), "The handle shows")
             let bar = app.descendants(matching: .any)["map3D.drive.stopBar"].firstMatch
             XCTAssertTrue(bar.appears(within: 10), "The stopping bar shows near the stop")
-            XCTAssertFalse((bar.value as? String ?? "").isEmpty, "It says where the train is")
+            // The identifier is also on the mark the frame checks read,
+            // which has no value: ask for the one that has.
+            let spoken = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@ AND value != nil AND value != ''", "map3D.drive.stopBar")).firstMatch
+            XCTAssertTrue(spoken.appears(within: 5), "It says where the train is")
             XCTAssertFalse(app.descendants(matching: .any)["map3D.drive.stopAhead"].firstMatch.exists, "The bar is in the line's place")
             settle(seconds: 8)
             keep("drive-stop-\(state)", app)
