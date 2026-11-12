@@ -30,6 +30,86 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 127 (and 124 to 126, which went out without an entry).
+        Entry(
+            id: "2026-11-12-127",
+            items: [
+                Line(
+                    english: "On the 3D map, airports have runways, aprons and terminals; aircraft park at the stands and take off and land with the day's flights, and the runway lights come on at night.",
+                    chinese: "3D 地圖看得到機場：跑道、停機坪、航廈，飛機停在機位上，也照當天航班起降，晚上跑道有燈。"
+                ),
+                Line(
+                    english: "Real-world maps have 13 airports. Build a station where trains call within 800 m of a terminal and its passengers ride your trains.",
+                    chinese: "真實地圖共有 13 座機場。在航廈 800 公尺內蓋一座有列車停靠的車站，旅客就搭你的車。"
+                ),
+                Line(
+                    english: "Tap an airport on the map to see today's flights, domestic and international passengers, and where the flights go.",
+                    chinese: "點地圖上的機場，看今天的航班、國內線與國際線旅客，還有飛往哪裡各幾班。"
+                ),
+                Line(
+                    english: "The collection has an Aircraft page: four aircraft and two airports to look at in 3D, and the airports of your map.",
+                    chinese: "圖鑑多了「飛機」頁：四種飛機和兩座機場可以近看 3D，還有這張地圖的機場。"
+                ),
+                Line(
+                    english: "Drive a train yourself: follow one on the 3D map, tap Drive and bring it to a stop at the next station. A good stop on time earns a bonus.",
+                    chinese: "手動駕駛：在 3D 地圖跟著一列車按「駕駛」，開到下一站停好；停得準又準點有獎金。"
+                ),
+                Line(
+                    english: "A new building, the Railway Museum: its red-brick hall shows the trains your company has owned, and you can walk through the exhibits.",
+                    chinese: "新建物「鐵道博物館」：紅磚館舍展示公司擁有過的車，可以進館一件一件看。"
+                ),
+                Line(
+                    english: "A station's platforms can be made longer without removing them first, and so can a track added with Platform Track.",
+                    chinese: "車站的月台可以直接加長，不用先拆；用「月台軌道」加的那一股也可以。"
+                ),
+                Line(
+                    english: "Before you buy trains, you are told about how much they will earn a day.",
+                    chinese: "買車時先告訴你這些車大約一天賺多少。"
+                ),
+                Line(
+                    english: "A building's card shows what you paid and what it is worth now.",
+                    chinese: "建物卡看得到當初花多少、現在值多少。"
+                ),
+                Line(
+                    english: "Cities have a size title and a type, at the bottom of Goals, and you are told when a city moves up.",
+                    chinese: "城市有規模稱號與類型，在「目標」最下面；城市升級時會告訴你。"
+                ),
+                Line(
+                    english: "The 3D map shows underground lines: trains in tunnels with their headlights on the walls.",
+                    chinese: "3D 地圖看得到地下：隧道裡的列車，車頭燈照在牆上。"
+                ),
+                Line(
+                    english: "Buttons and panels have sounds, and reaching a goal plays a short tune.",
+                    chinese: "按鈕與面板有聲音，達成目標時有一段短音樂。"
+                ),
+                Line(
+                    english: "The app icon and the map's floating buttons have the new glass look.",
+                    chinese: "App 圖示與地圖上的浮動按鈕換成新的玻璃樣式。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "The 3D map runs more smoothly in rain.",
+                    chinese: "3D 地圖下雨時比較順。"
+                ),
+                Line(
+                    english: "Selling a building and rebuilding it every year no longer makes money.",
+                    chinese: "每年把建物賣掉再重蓋，不再穩賺。"
+                ),
+                Line(
+                    english: "Attractions you can reach by building a station are no longer folded away as outside the map.",
+                    chinese: "自己蓋車站到得了的景點，不再收進地圖外。"
+                ),
+                Line(
+                    english: "On the Neiwan Line, the stationmaster's advice now matches the goals.",
+                    chinese: "內灣線站長的建議和目標一致了。"
+                ),
+                Line(
+                    english: "In the museum, a train type bought today is listed as not yet on show instead of not yet owned.",
+                    chinese: "博物館裡今天剛買的車種寫「還沒展出」，不再寫「還沒擁有」。"
+                ),
+            ]
+        ),
         // 123.
         Entry(
             id: "2026-11-09-123",
