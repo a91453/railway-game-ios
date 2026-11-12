@@ -215,6 +215,11 @@ final class BalanceReportTests: XCTestCase {
     /// one that kept. `BALANCE_REPORT` is the days after day 30.
     func testSellingAStoreEveryYearAgainstKeepingIt() throws {
         let days = try requestedDays()
+        // HEALTH-126: `BALANCE_SELL_KIND=hotel` (or `amusementPark`) asks
+        // the same of another business; a department store without it.
+        let kind = try ProcessInfo.processInfo.environment["BALANCE_SELL_KIND"].map {
+            try XCTUnwrap(PlacedBuildingKind(rawValue: $0), "BALANCE_SELL_KIND is a PlacedBuildingKind")
+        } ?? .departmentStore
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
         var base = try newGameLine(through: [towns[0], towns[1]])
         let tile = Int64(1_024)
@@ -228,12 +233,12 @@ final class BalanceReportTests: XCTestCase {
         }
         func build(in world: inout GameWorld) throws -> (id: PlacedBuildingID, cost: Money) {
             for site in sites {
-                if let placed = try? world.placeBuilding(.departmentStore, at: site) { return (placed.id, placed.cost) }
+                if let placed = try? world.placeBuilding(kind, at: site) { return (placed.id, placed.cost) }
             }
-            throw HeadlessGameError("no free site for a department store")
+            throw HeadlessGameError("no free site for a \(kind)")
         }
         var lines = [
-            "### Selling a department store every 360 days and building another, against keeping one (multiple \(SubsidiaryRules.saleProfitMultiple))",
+            "### Selling a \(kind == .departmentStore ? "department store" : kind.rawValue) every 360 days and building another, against keeping one (multiple \(SubsidiaryRules.saleProfitMultiple))",
             "",
             "| Day | No store: balance | Kept: balance | Kept: added | Kept: would sell for | Kept: 12-month profit | Sold yearly: balance | Sold yearly: added | Added and store sold, sold yearly ÷ kept |",
             "| --: | --: | --: | --: | --: | --: | --: | --: | --: |",

@@ -27,6 +27,8 @@ extension Map3DScene.Builder {
         case temple
         /// 431: stations, car parks.
         case transport
+        /// Decision 699: an airport's passenger terminal, by its stands.
+        case terminal
 
         init(usage: Int) {
             switch usage {
@@ -188,6 +190,13 @@ extension Map3DScene.Builder {
         case .transport:
             wall = Self.pick(Map3DPalette.concreteWalls, seed)
             upperPaint = Self.concrete.on(.formConcrete)
+        case .terminal:
+            // Decision 698's terminal: white walls of glass under a
+            // blue-grey roof, which stands off the pale ground.
+            wall = Airfield.terminalWall
+            roof = Airfield.terminalRoof
+            roofPaint = Self.metal
+            upperPaint = Map3DPaint.bays(.officeGlass, bay: 4, floors: storeys)
         }
         // A temple of a single hall under its hipped roof, the walls lower.
         let hipped = kind == .temple && polygons.count == 1 && area < 900 && box.width > 4
@@ -248,6 +257,9 @@ extension Map3DScene.Builder {
                 let lifted = polygon.map { $0.map { Map3DPoint($0.x, ground + eaves, $0.z) } }
                 let triangles = Earcut.triangulate(lifted.map { $0.map { (x: Double($0.x), y: Double($0.z)) } })
                 mesh.addFlat(lifted.flatMap { $0 }, triangles: triangles, color: roof, paint: roofPaint)
+                // Decision 699: a terminal's white roof edge, and on a
+                // plain hall or pier its skylight and ribs.
+                if kind == .terminal, !far { Self.addTerminalRoof(to: &mesh, outline: lifted[0], box: box, plain: polygon.count == 1) }
                 if canopy {
                     // Its underside, looking down, and a pillar every 24 m
                     // under it.

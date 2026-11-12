@@ -175,7 +175,7 @@ public enum Map3DAirportStudies {
 
 private func positiveRemainder(_ a: Int, _ n: Int) -> Int { ((a % n) + n) % n }
 
-private extension Map3DStudyMesh {
+extension Map3DStudyMesh {
     /// A light fitting and the pavement it lights. `inward` moves the pool
     /// onto the pavement when the fitting stands at its edge. The far model
     /// is seen small: its lamps are what is left of a runway at night.

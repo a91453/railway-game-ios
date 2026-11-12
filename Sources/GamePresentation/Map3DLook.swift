@@ -38,7 +38,9 @@ public enum Map3DLook {
             0x3B7DD8, 0x285491, 0x2C5DA1, 0x326BB8, 0x3774C8, // rooftop water tanks
         ].map(Map3DColor.rgb)
         // Decision 446: the scooters parked in the arcades, vehicles too.
-        return Set(palette + played).union(Map3DScooter.parked).union(functional)
+        // Decision 699: the airfields' pavement and paint, which a paler
+        // grey would lose on the pale ground.
+        return Set(palette + played).union(Map3DScooter.parked).union(functional).union(Map3DScene.Builder.Airfield.kept)
     }()
 
     /// Decision 451: the colours that tell the player something, which a

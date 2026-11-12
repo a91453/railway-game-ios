@@ -543,6 +543,197 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 699: the airports' marks on the 2D map, and the section
+    /// 「機場」 of the panel of the station that serves one (decision 695
+    /// took no picture of it). For the screenshot review of the pull
+    /// request that put the airports on the maps.
+    func testAirportMarksAndStationPanel() {
+        let app = launch(extra: ["-screenshot-scene", "airport"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The terminal is 375 m north of its station: a step or two out,
+        // on a phone on its side.
+        let mark = app.descendants(matching: .any)["map.airport.1"].firstMatch
+        let zoomOut = app.buttons["縮小"]
+        for _ in 0..<3 where !mark.appears(within: 5) {
+            if zoomOut.appears(within: 5), zoomOut.becomesHittable(within: 3) { zoomOut.tap() }
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(mark.appears(within: 10), "The airport is marked")
+        settle()
+        keep("airport-marks-2d", app)
+        // A tap on the mark opens the sights at the airports: the one a
+        // station serves, then the one none does.
+        XCTAssertTrue(mark.becomesHittable(within: 10), "The mark takes a tap")
+        mark.tap()
+        let row = app.descendants(matching: .any)["tourism.airport.1"].firstMatch
+        XCTAssertTrue(row.appears(within: 10), "The mark opens the airports")
+        settle(seconds: 2)
+        keep("airport-sights-from-mark", app)
+        // The next row, by a short drag: a swipe goes past it.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        settle(seconds: 1)
+        keep("airport-sights-second", app)
+        let done = app.buttons["tourism.done"]
+        XCTAssertTrue(done.appears(within: 5))
+        done.tap()
+        XCTAssertTrue(done.disappears(within: 10), "The sights close")
+        // A hold on the airport's station (the last) opens its panel: the
+        // tag's tap opens only the details card.
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        settle(seconds: 2)
+        let places = ((stations.value as? String) ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+            let xy = pair.split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+        }
+        guard let point = places.last else { return XCTFail("The scene has stations") }
+        var opened = false
+        for _ in 0..<3 where !opened {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            opened = app.buttons["station.jump"].firstMatch.appears(within: 6)
+        }
+        // Its riders' group, where the airports are, then down to them.
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "The hold opens the station's panel")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        let section = app.descendants(matching: .any)["station.airport.1"].firstMatch
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list, drags: 14), "The station's panel has its airport")
+        settle()
+        keep("airport-station-panel", app)
+    }
+
+    /// Decision 699: what the airports cost a frame: Taoyuan from the
+    /// game's usual height and from higher, with the frame rate's details
+    /// open, with the airfields and (`-map3D.noAirfields`) without, paused
+    /// and then running. For the numbers in the pull request.
+    func testAirportsFrameCost() {
+        executionTimeAllowance = 1_500
+        for (shot, view) in [("game", "800,0,40"), ("high", "2600,0,25")] {
+            for (name, extra) in [("with", [String]()), ("without", ["-map3D.noAirfields"])] {
+                let app = launch(extra: ["-screenshot-scene", "airportTaoyuan", "-screenshot-3d-view", view, "-screenshot-3d-at", "25.0790,121.2360",
+                                         "-map3D.quality", "high"] + extra)
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 15)
+                let stats = app.descendants(matching: .any)["map3D.stats"].firstMatch
+                XCTAssertTrue(stats.appears(within: 10))
+                stats.tap()
+                settle(seconds: 6)
+                keep("airport-cost-\(shot)-\(name)", app)
+                // And with the game running (the scene's speed), the
+                // aircraft moving.
+                let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+                if play.becomesHittable(within: 5) {
+                    play.tap()
+                    settle(seconds: 8)
+                    keep("airport-cost-\(shot)-\(name)-running", app)
+                }
+                app.terminate()
+            }
+        }
+    }
+
+    /// Decision 699: a landing at Songshan seen moving: the game let run
+    /// at ten times from 7 seconds before it touches down, a picture
+    /// every few seconds while it lands, slows, leaves the runway and
+    /// taxis to its stand. To look at the motion, which a paused picture
+    /// does not show.
+    func testAirportLandingMoves() {
+        executionTimeAllowance = 600
+        let app = launch(extra: ["-screenshot-scene", "airportSongshanLanding", "-screenshot-3d-view", "1500,0,35", "-screenshot-3d-at",
+                                 "25.0690,121.5470", "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        settle(seconds: 12)
+        keep("airport-landing-moves-00", app)
+        let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+        XCTAssertTrue(play.becomesHittable(within: 10), "The 3D map has the game's pause")
+        play.tap()
+        for (index, wait) in [1.0, 2, 3, 4, 5, 6, 8, 10].enumerated() {
+            settle(seconds: wait)
+            keep(String(format: "airport-landing-moves-%02d", index + 1), app)
+        }
+    }
+
+    /// Decision 699: each airport of the catalogue on the 3D map of an
+    /// empty real-world game round it, by day and after dark, from the
+    /// game's usual height and from higher: its terminal, runway, apron
+    /// and tower, the aircraft at its stands and those landing and
+    /// leaving. `AIRPORT_SHOTS` (the test runner's environment) names the
+    /// scenes to take, by default all of them. For the screenshot review
+    /// of the pull request that put the airports on the 3D map.
+    func testAirportsIn3D() {
+        executionTimeAllowance = 3_000
+        let shots = ProcessInfo.processInfo.environment["AIRPORT_SHOTS"]?.split(separator: ",").map(String.init) ?? []
+        let asked = shots.isEmpty ? nil : shots
+        let views = ProcessInfo.processInfo.environment["AIRPORT_VIEWS"]?.split(separator: ",").map(String.init) ?? []
+        let only = views.isEmpty ? nil : views
+        let scenes = ["airportTaoyuan", "airportSongshan", "airportTaichung", "airportKaohsiung"]
+        // "game1": Taoyuan's other terminal, from the game's usual height.
+        let cameras = [("game", "800,0,40"), ("game1", "800,0,40"), ("high", "2600,0,25"), ("far", "9000,0,5")]
+        // The game's usual height looks at the stands by the terminal;
+        // the others at the airfield's middle (the scene's place).
+        let stands = ["airportTaoyuan": "25.0790,121.2360", "airportSongshan": "25.0656,121.5512", "airportTaichung": "24.2546,120.6008",
+                      "airportKaohsiung": "22.5722,120.3440"]
+        let firstTerminal = "25.0822,121.2392"
+        // A landing a few seconds before it touches down on Songshan's
+        // runway 10, from beside it and from the game's usual height.
+        if asked?.contains("airportSongshanLanding") ?? true {
+            for (shot, view) in [("side", "300,20,60"), ("game", "800,0,40")] {
+                let app = launch(extra: ["-screenshot-scene", "airportSongshanLanding", "-screenshot-3d-view", view, "-screenshot-3d-at",
+                                         "25.0701,121.5386", "-map3D.quality", "high"])
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 12)
+                keep("airportSongshanLanding-3d-\(shot)", app)
+                app.terminate()
+            }
+        }
+        for scene in scenes.flatMap({ [$0, $0 + "Night"] }) where asked?.contains(scene) ?? true {
+            for (shot, view) in cameras where only?.contains(shot) ?? (shot.hasPrefix("game") || !scene.hasSuffix("Night")) {
+                guard shot != "game1" || scene.hasPrefix("airportTaoyuan") else { continue }
+                let at = shot == "game1" ? ["-screenshot-3d-at", firstTerminal]
+                    : shot == "game" ? stands[scene.replacingOccurrences(of: "Night", with: "")].map { ["-screenshot-3d-at", $0] } ?? [] : []
+                let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"] + at)
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                let open3D = app.buttons["map.open3D"]
+                XCTAssertTrue(open3D.appears(within: 10))
+                XCTAssertTrue(open3D.becomesHittable(within: 10))
+                open3D.tap()
+                XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+                XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+                settle(seconds: 12)
+                keep("\(scene)-3d-\(shot)", app)
+                app.terminate()
+            }
+        }
+    }
+
     /// Decision 684: the railway museum: the building tool's list with its
     /// card chosen, then its row in the sights panel, in Chinese and in
     /// English. For the screenshot review of the pull request that added

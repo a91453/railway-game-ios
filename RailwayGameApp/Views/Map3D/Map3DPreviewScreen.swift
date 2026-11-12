@@ -47,6 +47,10 @@ struct Map3DPreviewScreen: View {
     /// or its pencil (`true`) opened on the 2D map where this one looks.
     /// `nil` from the settings, which have no 2D map below: no taps there.
     var openStation: ((Map3DHandoff.Plan, _ rename: Bool) -> Void)? = nil
+    /// Decision 699: an airport's mark tapped: the sights' panel, whose
+    /// first section is the airports', opened on the 2D map where this
+    /// one looks. `nil` shows the marks and takes no taps.
+    var openAirports: ((Map3DHandoff.Plan) -> Void)? = nil
     /// Decision 414: the game screen while the idle mode runs, whose
     /// director picks the view the train is followed from; the controls
     /// are put away and a tap ends the mode (`endAmbient`).
@@ -73,6 +77,7 @@ struct Map3DPreviewScreen: View {
     @State private var trainLabels = Map3DTrainLabelState()
     /// Decision 517 續: the station tapped and where its tag stands.
     @State private var stationTag = Map3DStationTagState()
+    @State private var airportMarks = Map3DAirportMarkState()
     /// Decision 403 (續二): the photo of the 3D map just taken, to share.
     @State private var photo = Map3DPhotoState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -105,13 +110,17 @@ struct Map3DPreviewScreen: View {
                       start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: followed(ambient: ambient),
                       departure: departure, world: session.world, modelsReady: modelsReady,
-                      stationTag: stationTag, showsUnderground: showsUnderground,
+                      stationTag: stationTag, airportMarks: airportMarks, showsUnderground: showsUnderground,
                       onTap: openStation == nil || ambient != nil ? nil : { @MainActor camera, point in tapped(camera, at: point) },
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
+            if ambient == nil, !Self.screenshotClean {
+                Map3DAirportMarksView(state: airportMarks, open: openAirports.map { open in { leave { plan in open(plan) } } })
+                    .ignoresSafeArea()
+            }
             if let openStation, ambient == nil {
                 Map3DStationTagView(state: stationTag, session: session) { rename in
                     leave { plan in openStation(plan, rename) }
@@ -828,6 +837,8 @@ final class Map3DSceneCache {
         let footprints = world.geoAnchor == nil ? nil : BaseMapFiles.footprints
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
+        // Decision 699: and its airports' airfields.
+        let airfields = BaseMapFiles.airfields
         let facades = key.facades
         let task = Task.detached(priority: .userInitiated) {
             let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
@@ -862,7 +873,7 @@ final class Map3DSceneCache {
                                           heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
-                                          noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) },
+                                          noBuild: BaseMapFiles.noBuildLand(noBuild, airfields: airfields),
                                           facades: facades)
             let read = clock.now
             let scene = source.scene(focus: centre)
@@ -1128,6 +1139,13 @@ final class Map3DTrainFeed {
     /// again when they or the scene change.
     private var museum: Map3DRailwayMuseum.Laid?
     private var museumKey: (exhibits: [TrainType], x: Double, y: Double)?
+    /// Decision 699: the airfields laid in the scene for their aircraft,
+    /// laid again when the scene or the world's airports change, and the
+    /// day's flights, counted again each game day.
+    private var aircraft: Map3DAircraft.Laid?
+    private var aircraftKey: (x: Double, y: Double, airports: Int)?
+    private var airTraffic: Map3DAircraft.Traffic?
+    private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 672: the train the camera follows, whose lamps light its
@@ -1283,6 +1301,19 @@ final class Map3DTrainFeed {
             }
             museum?.add(to: &frame, pack: models, eye: eye, reach: reach)
         }
+        // Decision 699: and the aircraft at the airports' stands, landing
+        // and leaving, on the same clock; none flies with Reduce Motion.
+        if let models, let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields, let second = cableSecond(at: now) {
+            if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
+                aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
+                aircraftKey = (scene.originX, scene.originY, world.airports.count)
+                airTraffic = nil
+            }
+            let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
+            if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
+            aircraft?.add(to: &frame, pack: models, second: second, traffic: airTraffic, eye: eye, reach: reach.farModel,
+                          still: UIAccessibility.isReduceMotionEnabled)
+        }
         return frame
     }
 
@@ -1437,6 +1468,8 @@ private struct Map3DView: UIViewRepresentable {
     let modelsReady: Bool
     /// Decision 517 續: placed under its station each frame.
     let stationTag: Map3DStationTagState
+    /// Decision 699: placed over their airports each frame.
+    let airportMarks: Map3DAirportMarkState
     /// Decision 672: the tunnels and their trains seen through the ground.
     let showsUnderground: Bool
     /// Decision 517 續: a tap on the map, with the camera then and where,
@@ -1595,10 +1628,16 @@ private struct Map3DView: UIViewRepresentable {
         }
         context.coordinator.streamer.start(built, kept: kept)
         showTrains(in: scene, on: view, context: context)
-        let feed = feed, labels = trainLabels, tag = stationTag
+        let feed = feed, labels = trainLabels, tag = stationTag, marks = airportMarks
+        marks.set(world.airports.map { airport in
+            let flat = scene.point(worldX: Double(airport.point.x), worldY: Double(airport.point.y), height: 0)
+            return (airport.id, airport.title(in: DisplayLanguage.app),
+                    Map3DPoint(flat.x, scene.drawnGround.height(x: flat.x, z: flat.z, world: world) + Map3DAirportMarkState.height, flat.z))
+        })
         view.trainHeads = { heads, camera in
             labels.show(feed.labels(heads: heads, camera: camera))
             tag.place(seenBy: camera)
+            marks.place(seenBy: camera)
         }
         view.streetLife = { camera, lights, budget in feed.streetLife(in: scene, camera: camera, lights: lights, budget: budget) }
         view.busPose = { id in feed.busPose(id, in: scene) }
@@ -2036,6 +2075,98 @@ final class Map3DStationTagState {
 
     @ObservationIgnored private var pending: CGPoint?
     @ObservationIgnored private var isPlacing = false
+}
+
+/// Decision 699: the airports' marks on the 3D map: where each stands over
+/// its terminal, placed by the Metal view each frame as the camera moves,
+/// only when one moves a whole point.
+@MainActor
+@Observable
+final class Map3DAirportMarkState {
+    struct Mark: Equatable, Identifiable {
+        let id: Int
+        let name: String
+        let point: CGPoint
+        /// Whether the camera is near enough for its name.
+        let named: Bool
+    }
+
+    /// How high over the terminal's ground a mark points, metres.
+    static let height: Float = 45
+    /// Within this of the eye a mark carries its airport's name, metres.
+    static let namedWithin: Float = 6_000
+
+    private(set) var marks: [Mark] = []
+    @ObservationIgnored private var anchors: [(id: Int, name: String, at: Map3DPoint)] = []
+    @ObservationIgnored private var pending: [Mark] = []
+    @ObservationIgnored private var isPlacing = false
+
+    func set(_ anchors: [(id: Int, name: String, at: Map3DPoint)]) {
+        self.anchors = anchors
+    }
+
+    /// Called from the Metal view's frame; the move is taken after it, as
+    /// the station tag's is (``Map3DStationTagState/place(seenBy:)``).
+    func place(seenBy camera: Map3DCamera) {
+        let eye = camera.eye
+        pending = anchors.compactMap { anchor in
+            guard let at = camera.screenPoint(of: anchor.at), at.x > 0, at.y > 60, at.x < camera.viewport.width, at.y < camera.viewport.height
+            else { return nil }
+            return Mark(id: anchor.id, name: anchor.name, point: CGPoint(x: CGFloat(at.x.rounded()), y: CGFloat(at.y.rounded())),
+                        named: (anchor.at - eye).length < Self.namedWithin)
+        }
+        guard pending != marks, !isPlacing else { return }
+        isPlacing = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            isPlacing = false
+            if pending != marks { marks = pending }
+        }
+    }
+}
+
+/// Decision 699: an aircraft in a capsule over each airport, with its name
+/// from near. A tap opens the airports' flights and passengers (the
+/// sights' panel) on the 2D map.
+private struct Map3DAirportMarksView: View {
+    let state: Map3DAirportMarkState
+    let open: (() -> Void)?
+
+    var body: some View {
+        Map3DTrainLabelsLayout {
+            ForEach(state.marks) { mark in
+                Button {
+                    open?()
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "airplane")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.accent)
+                            .accessibilityHidden(true)
+                        if mark.named {
+                            Text(verbatim: mark.name)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Theme.textPrimary)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                    .frame(minHeight: 22)
+                    .background(Theme.panel, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Theme.accent, lineWidth: 1.5))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(open != nil)
+                .accessibilityLabel(Text(verbatim: mark.name))
+                .accessibilityHint(Text(verbatim: DisplayLanguage.app.text("Opens the airports' flights and passengers.", "打開機場的航班與旅客。")))
+                .accessibilityIdentifier("map3D.airport.\(mark.id)")
+                .layoutValue(key: Map3DTrainLabelFoot.self, value: mark.point)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
 }
 
 /// Decision 517 續: the 2D map's station tag (decision 119,

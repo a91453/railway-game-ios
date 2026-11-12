@@ -77,6 +77,17 @@ final class AirCollectionTests: XCTestCase {
         // Taoyuan's two terminals read as one airport in a card's list.
         let wide = AirCollection.aircraft(in: .traditionalChinese)[3].lines[2]
         XCTAssertEqual(wide, "看得到的機場：桃園機場、臺北松山機場、高雄國際機場")
+        // A long list names its first four airports and counts the rest.
+        for language in Self.languages {
+            for (kind, entry) in zip(AirCollection.kinds, AirCollection.aircraft(in: language)) {
+                let all = Set(AirCollection.places(of: kind).map { AirCollection.shortName($0, in: language) }).count
+                let named = entry.lines[2].components(separatedBy: language.text(", ", "、")).count
+                XCTAssertEqual(named, all > 5 ? 4 : all, entry.id)
+                if all > 5 {
+                    XCTAssertTrue(entry.lines[2].hasSuffix(language.text(" and \(all - 4) more", "等 \(all) 座")), entry.lines[2])
+                }
+            }
+        }
         XCTAssertTrue(AirCollection.aircraft(in: .english)[0].lines[2].hasPrefix("Seen at Kaohsiung International Airport"))
     }
 

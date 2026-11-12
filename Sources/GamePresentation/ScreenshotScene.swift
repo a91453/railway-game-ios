@@ -258,6 +258,18 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// request that added airports.
     case airport
 
+    /// Decision 699: an empty real-world map round each of the catalogue's
+    /// airports, with its airports, at 09:30 and at 19:30: the terminals,
+    /// runways, aprons and aircraft on the 3D map. For the screenshot
+    /// review of the pull request that put them there.
+    case airportTaoyuan, airportTaoyuanNight
+    case airportSongshan, airportSongshanNight
+    case airportTaichung, airportTaichungNight
+    case airportKaohsiung, airportKaohsiungNight
+    /// Decision 699: the same map round Songshan a few seconds before the
+    /// first landing after 09:30 touches down.
+    case airportSongshanLanding
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -313,6 +325,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .exteriorWushulin, .exteriorWushulinNight: (23.32866, 120.37378)
         case .exteriorXihu, .exteriorXihuNight: (23.95205, 120.481765)
         case .exteriorQiaotou, .exteriorQiaotouNight: (22.75303, 120.31468)
+        // Decision 699: the middle of each airfield.
+        case .airportTaoyuan, .airportTaoyuanNight: (25.0777, 121.2328)
+        case .airportSongshan, .airportSongshanNight, .airportSongshanLanding: (25.0694, 121.5525)
+        case .airportTaichung, .airportTaichungNight: (24.2590, 120.6120)
+        case .airportKaohsiung, .airportKaohsiungNight: (22.5771, 120.3500)
         default: nil
         }
     }
@@ -369,7 +386,52 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .sightsOffMap: Self.sightsOffMapWorld()
         case .museum: Self.museumWorld(in: language)
         case .airport: Self.airportWorld(in: language)
+        case .airportTaoyuan, .airportSongshan, .airportTaichung, .airportKaohsiung: Self.realAirportWorld(at: self, ticks: 57, in: language)
+        case .airportTaoyuanNight, .airportSongshanNight, .airportTaichungNight, .airportKaohsiungNight:
+            Self.realAirportWorld(at: self, ticks: 117, in: language)
+        case .airportSongshanLanding: Self.landingWorld(at: self, in: language)
         }
+    }
+
+    /// Decision 699: ``realAirportWorld(at:ticks:in:)`` at 09:30, run on to
+    /// 7 seconds before its first airport's next landing touches down
+    /// (``Map3DAircraft/Laid/flights(of:day:hour:traffic:)``'s times: an
+    /// hour's landings spread evenly over it).
+    private static func landingWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+        var world = realAirportWorld(at: scene, ticks: 57, in: language)
+        let traffic = Map3DAircraft.Traffic(world: world)
+        // The airport nearest the map's middle, which the scene is round.
+        let middle = (x: world.bounds.width / 2, y: world.bounds.height / 2)
+        func away(_ airport: Airport) -> Int64 { abs(airport.point.x - middle.x) + abs(airport.point.y - middle.y) }
+        guard let nearest = world.airports.indices.min(by: { away(world.airports[$0]) < away(world.airports[$1]) }) else { return world }
+        let landings = traffic.landings[nearest]
+        let now = world.clock.now.seconds, day = traffic.day * GameTime.secondsPerDay
+        var next: Int64?
+        for hour in 9..<24 where next == nil && landings[hour] > 0 {
+            for index in 0..<landings[hour] {
+                let time = day + Int64(hour) * 3_600 + Int64((Double(index) + 0.5) * 3_600 / Double(landings[hour]))
+                if time - 7 > now {
+                    next = time - 7
+                    break
+                }
+            }
+        }
+        guard let next else { return world }
+        // A minute a tick, then a second a tick.
+        world.setSpeed(.normal)
+        try? world.advance(ticks: Int((next - now) / 60))
+        world.setSpeed(.x10)
+        try? world.advance(ticks: Int(next - world.clock.now.seconds))
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 699: the empty real-world map round `scene`'s airfield
+    /// (``realLineWorld(at:side:ticks:in:water:)``) with its map's airports.
+    private static func realAirportWorld(at scene: ScreenshotScene, ticks: Int, in language: DisplayLanguage) -> GameWorld {
+        var world = realLineWorld(at: scene, ticks: ticks, in: language)
+        if let frame = RealWorldFrame(world: world) { world.setAirports(AirportCatalog.airports(in: frame, bounds: world.bounds)) }
+        return world
     }
 
     /// Decision 695: two stations and a line, a town by the first and an

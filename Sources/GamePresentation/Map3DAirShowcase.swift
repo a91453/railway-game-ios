@@ -203,7 +203,7 @@ public enum Map3DAirShowcase {
         let c = Map3DStudyColor.self
         let kinds = Map3DAircraftStudies.Kind.allCases, offsets = rowOffsets(), pad = apron()
         stage.add { m in
-            m.pavement(pad.x0, pad.x1, pad.y0, pad.y1, c.deck, joints: far ? nil : 12)
+            m.stagePavement(pad.x0, pad.x1, pad.y0, pad.y1, c.deck, joints: far ? nil : 12)
             for (kind, y) in zip(kinds, offsets) {
                 // The stand's lead-in line and the bar its nose wheel stops at.
                 m.box((pad.x0 + 6) / 2, y, 0.09, 6 - pad.x0, 0.30, 0.015, c.warm)
@@ -225,7 +225,7 @@ public enum Map3DAirShowcase {
         stage.place(Map3DAirportStudies.model(.cityTerminal, far: far))
         let stands = cityStands
         stage.add { m in
-            m.pavement(14, 118, -110, 130, c.deck, joints: far ? nil : 12)
+            m.stagePavement(14, 118, -110, 130, c.deck, joints: far ? nil : 12)
             for y: Float in [-22, 100] {
                 m.box(143, y, 0, 20, 12, 0.08, c.taxi)
                 m.box(143, y, 0.09, 20, 0.36, 0.015, c.warm)
@@ -258,7 +258,7 @@ public enum Map3DAirShowcase {
         let c = Map3DStudyColor.self
         stage.place(Map3DAirportStudies.model(.islandTerminal, far: far))
         stage.add { m in
-            m.pavement(6, 50, -28, 28, c.deck, joints: far ? nil : 10)
+            m.stagePavement(6, 50, -28, 28, c.deck, joints: far ? nil : 10)
             m.box(26, -2, 0.09, 0.30, 30, 0.015, c.warm)
             for y: Float in [-22, 22] {
                 m.mast(8, y, 10)
@@ -278,7 +278,7 @@ public enum Map3DAirShowcase {
 
 private extension Map3DStudyMesh {
     /// A sealed plate with its slab joints, as the studies' own.
-    mutating func pavement(_ x0: Float, _ x1: Float, _ y0: Float, _ y1: Float, _ color: UInt32, joints: Float?) {
+    mutating func stagePavement(_ x0: Float, _ x1: Float, _ y0: Float, _ y1: Float, _ color: UInt32, joints: Float?) {
         let h: Float = 0.08
         box((x0 + x1) / 2, (y0 + y1) / 2, 0, x1 - x0, y1 - y0, h, color)
         guard let joints else { return }

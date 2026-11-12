@@ -184,6 +184,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 585 PR-3 (FERRY3): the two ferries and the pier, near
         // and far, after the cable car and before the route bus.
         groups.append { Map3DFerry.drawn }
+        // Decision 699: the four aircraft, near and far, after the ferries
+        // and before the route bus.
+        groups.append { Map3DAircraft.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

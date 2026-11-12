@@ -88,6 +88,9 @@ public enum AirCollection {
         }
     }
 
+    /// How many airports a card names before it counts the rest.
+    static let listedAirports = 4
+
     /// A list of names as a sentence reads them.
     static func listed(_ names: [String], in language: DisplayLanguage) -> String {
         names.joined(separator: language.text(", ", "、"))
@@ -123,7 +126,12 @@ public enum AirCollection {
                               "長 \(size.length.metresText) 公尺 · 翼展 \(size.wingspan.metresText) 公尺"),
             ]
             if !seen.isEmpty {
-                lines.append(language.text("Seen at ", "看得到的機場：") + listed(seen, in: language))
+                // A card's line stays short: the first airports, then how
+                // many there are in all.
+                let shown = seen.count > listedAirports + 1 ? Array(seen.prefix(listedAirports)) : seen
+                let rest = seen.count - shown.count
+                let more = rest == 0 ? "" : language.text(" and \(rest) more", "等 \(seen.count) 座")
+                lines.append(language.text("Seen at ", "看得到的機場：") + listed(shown, in: language) + more)
             }
             return Entry(id: kind.rawValue, title: name(kind, in: language), lines: lines)
         }

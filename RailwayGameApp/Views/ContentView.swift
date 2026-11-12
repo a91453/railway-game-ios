@@ -240,6 +240,11 @@ struct ContentView: View {
                                        }
                                        back(to: plan)
                                    },
+                                   openAirports: session.world.tourism == nil ? nil : { plan in
+                                       // Decision 699: an airport's mark tapped on the 3D map.
+                                       screen.panel = .tourism
+                                       back(to: plan)
+                                   },
                                    ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
