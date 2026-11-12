@@ -15,6 +15,13 @@
 - **UI 測試啟動時**（`-ui-testing`）這個提示預設當作看過，和進路、待避線的一次性卡片一樣；要看它的測試加 `-show-height-hint`。
 - **截圖**：`WebsiteScreenshotTests.testTrackHeightHint`（提示在、按 ✕ 後不在；中英各一）。
 
+## 加的範圍（規劃 11-12，#1579 留言 6835894923）
+
+- **站長建議泡泡**：點了會帶玩家去某處的建議（分區工具、路線、地圖上的位置或車站），泡泡尾端多一個「›」；只會收起泡泡的建議沒有。VoiceOver：泡泡本來就藏著（站長按鈕會唸它的字），所以在站長按鈕上加一個動作（「到這裡劃分區」「打開這條路線」「在地圖上看」）。去哪裡的判斷從畫面搬到 `StationMasterAdvice.destination`（`StationMasterAdvice.swift`），測試在 `StationMasterAdviceTests`。點泡泡的行為不變。教學沒有教這件事（查過 `Tutorial.swift`、`Lessons.swift`）。
+- **列車運行圖**：預設只看兩小時（`TrainDiagramViewport.openingSpan`），所以圖例下面加一行「兩指縮放；拖曳看其他時段。」（`TrainDiagramViewport.gestureHint`）。一直顯示，沒有條件。
+- **說明頁再加四條**：`dragTrack`（鋪軌用拖的、拖到邊緣地圖自己捲）、`miniMap`（小地圖點或拖）、`follow3DZoom`（3D 跟車時兩指拉近拉遠）、`collectionCamera`（「圖鑑」裡一指轉、兩指捏合縮放、兩指拖平移；設定裡現在叫「圖鑑」，不是「車庫」）。
+- 截圖測試：`testTrainDiagramGestureHint`、`testStationMasterBubbleMark`（後者用 `freight` 場景，站長說哪一句看場景，不一定是有「›」的那種）。
+
 ## 沒做的與理由
 
 - **教學（`Tutorial.swift` 的 `track.draw`）沒有加一句。** 那一步的卡片只有一句「讓軌道穿過城鎮，至少幾公尺」，第一段在平地上、用不到高度；多一句會讓新手在第一步就多一件要懂的事。提示在教學中也不出現，教學後第一次自己鋪軌時才出現。

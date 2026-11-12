@@ -1213,6 +1213,47 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// HEIGHT-HINT: the line under the train diagram's legend that says
+    /// two fingers zoom and a drag moves it. For the screenshot review of
+    /// the pull request that added it.
+    func testTrainDiagramGestureHint() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let lines = app.buttons["entry.lines"]
+        XCTAssertTrue(lines.becomesHittable(within: 20))
+        lines.tap()
+        let diagram = app.buttons["line.trainDiagram"]
+        if !diagram.appears(within: 5) {
+            let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'line.row.'")).firstMatch
+            XCTAssertTrue(row.appears(within: 10), "A line is listed")
+            row.tap()
+        }
+        for _ in 0..<6 where !(diagram.exists && diagram.isHittable) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(diagram.becomesHittable(within: 10), "The line's page has its diagram button")
+        diagram.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["trainDiagram.gestureHint"].firstMatch.appears(within: 30), "The diagram says how to move it")
+        settle(seconds: 3)
+        keep("train-diagram-gesture-hint", app)
+    }
+
+    /// HEIGHT-HINT: the station master's bubble, with a mark at its end
+    /// when a tap on it takes the player somewhere. For the screenshot
+    /// review of the pull request that added the mark.
+    func testStationMasterBubbleMark() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let master = app.descendants(matching: .any)["stationMaster"].firstMatch
+        XCTAssertTrue(master.becomesHittable(within: 20))
+        master.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
+        settle(seconds: 1)
+        keep("station-master-bubble", app)
+    }
+
     /// HEIGHT-HINT: the one-time line under the construction HUD about its
     /// height cell (``HeightSlideHint``), on the stretch of
     /// ``testTrackHeightFixes``; then its ✕ tapped, and the line gone. In
