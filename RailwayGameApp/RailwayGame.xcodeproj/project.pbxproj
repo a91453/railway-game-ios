@@ -226,6 +226,7 @@
 		C318C4DBF7381ACEFA41A082 /* DemoRealLinesButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */; };
 		C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
+		C6F7187FCF517F6610CC95B9 /* Map3DStopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */; };
 		C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */; };
 		C91B7D7962C9EF890E327E3C /* AmbientModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE545BF14678185EA76EACC5 /* AmbientModeView.swift */; };
 		CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB483D5847D06BCBC26230C /* HelpView.swift */; };
@@ -386,6 +387,7 @@
 		4C1017DDE782DF1CF07D561E /* rail_structures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = rail_structures.json; sourceTree = "<group>"; };
 		4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTimeBenchView.swift; sourceTree = "<group>"; };
+		4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DStopBar.swift; sourceTree = "<group>"; };
 		50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightSkipUITests.swift; sourceTree = "<group>"; };
 		52449D8DCD618CC726CACDDE /* chime-tourist.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-tourist.wav"; sourceTree = "<group>"; };
 		5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationOperationsView.swift; sourceTree = "<group>"; };
@@ -624,6 +626,7 @@
 				ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */,
 				A32E5B7462B864BC37E88A37 /* Map3DPreviewScreen.swift */,
 				B9632F6F7D420675666B2F9E /* Map3DShaders.metal */,
+				4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */,
 				0CB59798A068C5D184EA4D58 /* TrainShowcaseScreen.swift */,
 			);
 			path = Map3D;
@@ -1315,6 +1318,7 @@
 				6A899B2715257CD7BAC63CCF /* Map3DMetalView.swift in Sources */,
 				4CF789B41082623D62B5AB27 /* Map3DPreviewScreen.swift in Sources */,
 				CE4E2C27EEA4AEF2AEAB2DE0 /* Map3DShaders.metal in Sources */,
+				C6F7187FCF517F6610CC95B9 /* Map3DStopBar.swift in Sources */,
 				376974C84B7F85117BB54C8D /* MapAlertBubbles.swift in Sources */,
 				4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */,
 				164F3A88D054D2F1AE5298C5 /* MapAttractionMarks.swift in Sources */,

@@ -97,6 +97,9 @@ struct Map3DPreviewScreen: View {
     @AppStorage(MapAmbienceSettings.undergroundKey) private var showsUnderground = false
     /// Decision 333: from where the camera follows a train, kept.
     @AppStorage("map3DFollowView") private var followView: Map3DFollow.View = .back
+    /// Decision 710: whether a run driven by hand that has just stopped is
+    /// being looked at from beside the train (``ManualDrive/StopLook``).
+    @State private var looksAtStop = false
 
     var body: some View {
         let language = DisplayLanguage.app
@@ -256,7 +259,7 @@ struct Map3DPreviewScreen: View {
                 if driving != nil {
                     // Decision 686: the handle; decision 704: a lever
                     // with the speed, at the trailing thumb.
-                    Map3DDrivePanel(session: session)
+                    Map3DDrivePanel(session: session, view: followView)
                         .padding(.bottom, 8)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else if let driver {
@@ -375,6 +378,14 @@ struct Map3DPreviewScreen: View {
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
+        // Decision 710: a run that stops is looked at from beside for a
+        // while, then the camera goes back by itself.
+        .task(id: session.manualDrivePhase) {
+            looksAtStop = session.manualDrivePhase == .over
+            guard looksAtStop else { return }
+            try? await Task.sleep(for: .seconds(ManualDrive.StopLook.seconds))
+            if !Task.isCancelled { looksAtStop = false }
+        }
         // Decision 360: following a train here runs at 10× at most, and
         // closing gives the 2D map its speed back.
         .onAppear {
@@ -450,7 +461,11 @@ struct Map3DPreviewScreen: View {
     /// FOLLOWBUS) a bus; a bus has no platform, so its station view is from
     /// behind.
     private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
-        let view = ambient?.view3D ?? followView
+        var view = ambient?.view3D ?? followView
+        // Decision 710: a run that has just stopped, from beside the train.
+        if ambient == nil, looksAtStop, session.manualDrivePhase == .over {
+            view = ManualDrive.StopLook.view(chosen: view, result: session.manualDriveReading?.result, looking: true, reduceMotion: reduceMotion)
+        }
         // Decision 606 (IDLEREAL): the idle mode's real train.
         if let real = ambient?.realTrain { return Map3DFollow(realTrain: real, view: view) }
         if let train = session.followedTrain { return Map3DFollow(train: train.id, view: view) }
@@ -1224,7 +1239,7 @@ final class Map3DTrainFeed {
     private var aircraftTold: (flight: Map3DAircraft.FlightID, state: Map3DAircraft.State?)?
     /// Decision 686: steps the run the player drives by hand to the
     /// frame's time and says where its train is drawn; `nil` for none.
-    var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double)?)?
+    var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double, stop: Double)?)?
     /// Decision 437: told the evening garbage truck's tune as heard from
     /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
     /// acts only on a change), `nil` when there is none near.
@@ -1325,12 +1340,15 @@ final class Map3DTrainFeed {
         // Decision 686: the train driven by hand where the player has
         // driven it, at its track's heights there.
         var motion = motion, heights = heights
-        if let driven = manualDrive?(now) {
+        let driven = manualDrive?(now)
+        if let driven {
             motion = motion.driving(on: driven.track, metres: driven.metres)
             heights = heights.driving(on: driven.track, metres: driven.metres, length: driven.length)
         }
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
                                       ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain)
+        // Decision 710: and the mark at its stopping point.
+        if let driven { driven.track.addStopMark(to: &frame, at: driven.stop, in: scene) }
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
@@ -2540,6 +2558,10 @@ private struct Map3DFollowBar: View {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-near") { session.nearStopForScreenshot() }
+                // Decision 710: standing short of the mark, on it, past it.
+                if let metres = ["short": 12, "target": 0.2, "past": -3][UserDefaults.standard.string(forKey: "screenshot-drive-stand") ?? ""] {
+                    session.nearStopForScreenshot(standing: metres)
+                }
                 #endif
             } label: {
                 Text(verbatim: ManualDrive.startText(in: session.language))
@@ -3140,12 +3162,27 @@ private struct Map3DDriveHeading: View {
                 .frame(minWidth: 260, maxWidth: 400)
                 .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .hudFrameMark("map3D.drive.card")
-                if let text = reading.stopAheadText(in: language) {
+                if let bar = reading.stopBar {
+                    // Decision 710: over the last 200 m, the stopping bar
+                    // in the line's place.
+                    Map3DStopBar(bar: bar, language: language)
+                        .transition(.opacity)
+                } else if let text = reading.stopAheadText(in: language) {
                     stopAhead(text)
                         .transition(.opacity)
                 }
             }
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopAhead)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopBar == nil)
+            // Decision 710: coming onto the target is felt, and running
+            // past it; the stop itself is the result's (decision 686).
+            .sensoryFeedback(trigger: reading.stopBar?.state) { old, new in
+                switch ManualDrive.StopBar.feel(from: old, to: new) {
+                case .onTarget: .impact(weight: .light)
+                case .past: .warning
+                case nil: nil
+                }
+            }
         }
     }
 
@@ -3293,6 +3330,9 @@ private struct Map3DDriveHeading: View {
 /// and the eye already are; the rest is ``Map3DDriveHeading``, at the top.
 private struct Map3DDrivePanel: View {
     let session: GameSession
+    /// Decision 710: where the player follows the train from, which the
+    /// result card's button goes back to.
+    let view: Map3DFollow.View
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The drag on now: where it began and the notch the handle stood on
@@ -3540,7 +3580,7 @@ private struct Map3DDrivePanel: View {
             Button {
                 session.endManualDrive()
             } label: {
-                Text(verbatim: ManualDrive.doneText(in: language))
+                Text(verbatim: ManualDrive.StopLook.backText(chosen: view, in: language))
                     .font(.subheadline.weight(.bold))
                     .fixedSize()
                     .padding(.horizontal, 12)
