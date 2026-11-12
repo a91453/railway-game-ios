@@ -188,9 +188,11 @@ extension Map3DAircraft.Laid {
     /// finger at (`x`, `y`) in `camera`'s view, within `reach` points (a
     /// near one's body is wider than that: within its length on the
     /// screen too), at `second`; only those drawn (``Map3DAircraft/farReach``
-    /// of the eye).
+    /// of the eye). With `tight` only within `reach` of its middle: review
+    /// L19, P3-16, a tap on a station beside a taxiing aircraft selects
+    /// the station (``GameSession/stationUnderMap3D(at:reach:)``).
     public func followable(atX x: Float, y: Float, camera: Map3DCamera, second: Double, traffic: Map3DAircraft.Traffic?, still: Bool = false,
-                           within reach: Float) -> Map3DAircraft.Followed? {
+                           within reach: Float, tight: Bool = false) -> Map3DAircraft.Followed? {
         guard !still, traffic != nil else { return nil }
         var best: (away: Float, drawn: Map3DAircraft.Drawn)?
         let eye = camera.eye
@@ -198,7 +200,7 @@ extension Map3DAircraft.Laid {
             let pose = Map3DAircraft.pose(of: drawn)
             guard (pose.rail - eye).length < Map3DAircraft.farReach, let screen = camera.screenPoint(of: pose.rail) else { continue }
             var wide = reach
-            if let nose = camera.screenPoint(of: pose.nose) {
+            if !tight, let nose = camera.screenPoint(of: pose.nose) {
                 wide = max(reach, ((nose.x - screen.x) * (nose.x - screen.x) + (nose.y - screen.y) * (nose.y - screen.y)).squareRoot())
             }
             let away = ((screen.x - x) * (screen.x - x) + (screen.y - y) * (screen.y - y)).squareRoot()
@@ -233,15 +235,11 @@ public struct AircraftFollowFacts: Equatable, Sendable {
 }
 
 extension Map3DAircraft.Kind {
-    /// The type's name on the follow bar: its size, no maker's or
-    /// airline's name.
+    /// The type's name on the follow bar: the collection's name for it
+    /// (review L19, P3-9: one name for an aircraft everywhere), no
+    /// maker's or airline's name.
     public func text(in language: DisplayLanguage) -> String {
-        switch self {
-        case .commuter19: language.text("19-seat propeller plane", "十九座螺旋槳機")
-        case .regional70: language.text("70-seat propeller plane", "七十座螺旋槳機")
-        case .narrowJet: language.text("Narrow-body jet", "窄體客機")
-        case .wideJet: language.text("Wide-body jet", "廣體客機")
-        }
+        AirCollection.name(self, in: language)
     }
 }
 
@@ -255,7 +253,7 @@ extension Map3DAircraft.Phase {
         case .pushBack: language.text("Pushing back from its stand", "從機位後推")
         case .taxiOut: language.text("Taxiing to the runway", "滑行到跑道")
         case .lineUp: language.text("Waiting to take off", "在跑道頭等待起飛")
-        case .takeOffRoll: language.text("Taking off", "起飛滾行")
+        case .takeOffRoll: language.text("Taking off", "起飛中")
         case .climb: language.text("Climbing away", "爬升離場")
         }
     }

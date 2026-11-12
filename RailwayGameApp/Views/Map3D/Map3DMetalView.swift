@@ -1770,6 +1770,9 @@ final class Map3DMetalView: MTKView {
     /// Decision 617: whether this frame draws glows: they are drawn, and
     /// the city's lights are on.
     private var glowsNow: Bool { drawsGlows && glowDrawing != nil && Map3DGlow.shows(lights: shown.lights) }
+    /// Review L19, P3-3: whether this frame's lamps would be drawn, for
+    /// the feed that places the aircraft's.
+    var lampsLit: Bool { glowsNow }
 
     private func uniformValues(_ matrix: Map3DMatrix, seconds: Double, sun: Map3DSunShadow.Region?) -> [Float] {
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }

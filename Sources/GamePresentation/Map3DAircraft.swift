@@ -757,11 +757,14 @@ public enum Map3DAircraft {
         /// What a frame reads again and again, kept: each hour's flights
         /// laid (``Planned``), and each day's aircraft parked all day.
         final class Kept: @unchecked Sendable {
+            /// Review L19, P3-4: an hour's flights are laid once, with
+            /// the numbers of the day that first asked for them, and stay
+            /// as laid while they are seen: the hours either side of
+            /// midnight are not laid again with the new day's numbers
+            /// (their aircraft would jump).
             struct Hour: Hashable {
                 let field: Int
                 let hours: Int64
-                let traffic: Int64
-                let northEast: Bool
             }
 
             struct Day: Hashable {
@@ -795,17 +798,34 @@ public enum Map3DAircraft {
                 lock.lock()
                 defer { lock.unlock() }
                 if let known = hours[key] { return known }
-                if hours.count > 200 { hours.removeAll() }
+                // Review L19, P3-7: only the hours no longer seen go, not
+                // those drawn now (laying them all again in one frame).
+                if hours.count > Self.mostHours {
+                    hours = hours.filter { abs($0.key.hours - key.hours) <= Self.hoursKept }
+                }
                 let made = make()
                 hours[key] = made
                 return made
+            }
+
+            /// How many hours' flights are kept before the old ones go,
+            /// and how far from the hour asked for one is kept: the hours
+            /// drawn are within two of now, so within four of each other.
+            static let mostHours = 200
+            static let hoursKept: Int64 = 4
+
+            /// How many hours' flights are kept now.
+            var hoursCount: Int {
+                lock.lock()
+                defer { lock.unlock() }
+                return hours.count
             }
 
             func parked(_ key: Day, _ make: () -> [Drawn]) -> [Drawn] {
                 lock.lock()
                 defer { lock.unlock() }
                 if let known = days[key] { return known }
-                if days.count > 60 { days.removeAll() }
+                if days.count > 60 { days = days.filter { $0.key.day == key.day } }
                 let made = make()
                 days[key] = made
                 return made
@@ -824,7 +844,6 @@ public enum Map3DAircraft {
         private func worked(second: Double, traffic: Traffic?, still: Bool) -> [Drawn] {
             let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
             let hour = Int((second - Double(day * GameTime.secondsPerDay)) / 3_600)
-            let northEast = Self.landsNorthEast(day: day)
             var drawn: [Drawn] = []
             for (number, field) in fields.enumerated() {
                 let flies = traffic != nil && !field.airports.isEmpty
@@ -846,11 +865,12 @@ public enum Map3DAircraft {
                 }
                 guard let traffic, flies else { continue }
                 // The flights whose runway time is within an hour and a
-                // half: the hours next to midnight take today's numbers.
+                // half: the hours next to midnight take the numbers of the
+                // day that first drew them, and keep them.
                 for offset in -2...2 {
                     let at = hour + offset
                     let flightDay = at < 0 ? day - 1 : (at > 23 ? day + 1 : day), flightHour = (at + 24) % 24
-                    let plans = plans(of: number, day: flightDay, hour: flightHour, traffic: traffic, northEast: northEast)
+                    let plans = plans(of: number, day: flightDay, hour: flightHour, traffic: traffic)
                     for plan in plans where abs(plan.flight.time - second) < 5_400 {
                         if let pose = Self.pose(plan, second: second), !still || !pose.flying { drawn.append(pose) }
                     }
@@ -860,13 +880,19 @@ public enum Map3DAircraft {
         }
 
         /// The flights of field `number` whose runway time falls in hour
-        /// `hour` of day `day`, laid; kept.
-        private func plans(of number: Int, day: Int64, hour: Int, traffic: Traffic, northEast: Bool) -> [Planned] {
+        /// `hour` of day `day`, laid; kept. They land the way their own
+        /// day's season has it, and an hour laid before is not laid again
+        /// with another day's `traffic` (review L19, P3-4).
+        private func plans(of number: Int, day: Int64, hour: Int, traffic: Traffic) -> [Planned] {
             let field = fields[number]
-            return kept.plans(.init(field: number, hours: day &* 24 &+ Int64(hour), traffic: traffic.day, northEast: northEast)) {
-                Self.flights(of: field, day: day, hour: hour, traffic: traffic).compactMap { Self.plan($0, on: field, northEast: northEast) }
+            return kept.plans(.init(field: number, hours: day &* 24 &+ Int64(hour))) {
+                let northEast = Self.landsNorthEast(day: day)
+                return Self.flights(of: field, day: day, hour: hour, traffic: traffic).compactMap { Self.plan($0, on: field, northEast: northEast) }
             }
         }
+
+        /// How many hours' flights are kept now (a test's reading).
+        var keptHours: Int { kept.hoursCount }
 
         /// Decision 702: flight `id`'s aircraft at game second `second`,
         /// as ``aircraft(second:traffic:still:)`` draws it; `nil` before
@@ -874,10 +900,8 @@ public enum Map3DAircraft {
         /// `still`.
         public func aircraft(of id: FlightID, second: Double, traffic: Traffic?, still: Bool = false) -> Drawn? {
             guard !still, let traffic, let number = fields.firstIndex(where: { $0.seed == id.field }) else { return nil }
-            let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
             let flightDay = GameDate.floorDivide(id.hours, 24)
-            let plans = plans(of: number, day: flightDay, hour: Int(id.hours - flightDay * 24), traffic: traffic,
-                              northEast: Self.landsNorthEast(day: day))
+            let plans = plans(of: number, day: flightDay, hour: Int(id.hours - flightDay * 24), traffic: traffic)
             guard let plan = plans.first(where: { $0.flight.id == id }), abs(plan.flight.time - second) < 5_400 else { return nil }
             return Self.pose(plan, second: second)
         }
@@ -896,9 +920,10 @@ public enum Map3DAircraft {
         /// is drawn whole whatever the others; and each moving aircraft
         /// within the glows' reach has its lamps (``Map3DAircraft/lamps(of:blink:)``,
         /// ``Map3DTrains/Frame/lamps``), flashing by `blink` (seconds of a
-        /// clock that runs with the player's, not the game's).
+        /// clock that runs with the player's, not the game's); none with
+        /// `lit` false (by day, when no glow is drawn).
         public func add(to frame: inout Map3DTrains.Frame, pack: Map3DModelPack, second: Double, traffic: Traffic?, eye: Map3DPoint,
-                        reach: Float = 1, still: Bool = false, following: FlightID? = nil, blink: Double? = nil) {
+                        reach: Float = 1, still: Bool = false, following: FlightID? = nil, blink: Double? = nil, lit: Bool = true) {
             guard !fields.isEmpty else { return }
             var models: [Kind: (near: Int, far: Int)] = [:]
             for kind in Kind.allCases {
@@ -926,7 +951,7 @@ public enum Map3DAircraft {
                 guard let pair = models[aircraft.kind] else { continue }
                 let followed = following != nil && aircraft.flight == following
                 let near = followed || distance < Map3DAircraft.nearReach * reach && whole < Map3DAircraft.mostNear
-                if aircraft.flying, distance < Map3DGlow.reach { frame.lamps += Map3DAircraft.lamps(of: aircraft, blink: blink) }
+                if lit, aircraft.flying, distance < Map3DGlow.reach { frame.lamps += Map3DAircraft.lamps(of: aircraft, blink: blink) }
                 if near {
                     whole += 1
                 } else {

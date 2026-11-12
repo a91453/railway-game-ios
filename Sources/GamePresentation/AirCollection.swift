@@ -143,8 +143,8 @@ public enum AirCollection {
             (.cityAirport, Entry(id: "cityAirport", title: language.text("City airport", "城市機場"), lines: [
                 language.text("A terminal with four boarding bridges, a control tower and a hangar",
                               "有四座空橋的航廈、塔台與機棚"),
-                language.text("Two narrow-body jets at the bridges, a 70-seat turboprop on a remote stand",
-                              "兩架窄體噴射客機靠空橋，一架七十座螺旋槳客機停在遠端機位"),
+                language.text("Two narrow-body jets at the bridges, a 70-seat twin turboprop on a remote stand",
+                              "兩架窄體噴射客機靠空橋，一架七十座雙渦輪螺旋槳停在遠端機位"),
             ])),
             (.islandAirport, Entry(id: "islandAirport", title: language.text("Island airport", "離島機場"), lines: [
                 language.text("A small terminal with its tower on the roof, beside a short runway",
@@ -170,6 +170,13 @@ public enum AirCollection {
             if !seen.isEmpty { lines.append(language.text("Seen here: ", "看得到：") + listed(seen, in: language)) }
             return Entry(id: "airport.\(day.airport.id)", title: day.airport.title(in: language), lines: lines)
         }
+    }
+
+    /// Review L19, P3-13: the day of `world`'s airports, worked out off
+    /// the caller's actor: with an airport joined to a station it lays
+    /// the passengers' routes, too long for the main actor on a big map.
+    public static func airportDays(of world: GameWorld) async -> [AirportDay] {
+        await Task.detached(priority: .userInitiated) { world.airportDays() }.value
     }
 
     /// The header over ``mapAirports(_:in:)``.

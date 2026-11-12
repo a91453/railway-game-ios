@@ -60,6 +60,15 @@ public enum Map3DTap {
 }
 
 extension GameSession {
+    /// Review L19, P3-16: the station a tap on the 3D map that landed on
+    /// `hit` would select (``tapMap3D(at:reach:)``), without selecting
+    /// it: a station under the finger comes before the long body of an
+    /// aircraft taxiing beside it.
+    public func stationUnderMap3D(at hit: Map3DPick.Hit, reach: Int64) -> StationID? {
+        guard tool == .select, tutorial == nil, world.bounds.contains(hit.plan) else { return nil }
+        return (world.station(near: hit.plan, within: reach / 2) ?? world.station(near: hit.plan, within: reach))?.id
+    }
+
     /// A tap on the 3D map that landed on `hit`, reaching `reach` world
     /// units (``Map3DTap/reach(at:camera:)``): selects the station there,
     /// as ``holdMap(at:reach:)`` finds one, and returns it; elsewhere lets

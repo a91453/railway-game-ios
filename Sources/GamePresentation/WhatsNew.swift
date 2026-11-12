@@ -40,7 +40,7 @@ public enum WhatsNew {
                 ),
                 Line(
                     english: "Real-world maps have 12 airports. Build a station where trains call within 800 m of a terminal and its passengers ride your trains.",
-                    chinese: "真實地圖共有 12 座機場。在航廈 800 公尺內蓋一座有列車停靠的車站，旅客就搭你的車。"
+                    chinese: "實景地圖共有 12 座機場。在航廈 800 公尺內蓋一座有列車停靠的車站，旅客就搭你的車。"
                 ),
                 Line(
                     english: "Tap an airport on the map to see today's flights, domestic and international passengers, and where the flights go.",
@@ -535,7 +535,7 @@ public enum WhatsNew {
             id: "2026-11-05-114-1",
             items: [
                 Line(
-                    english: "The Taoyuan Airport MRT joins the real maps: you can buy it and run its timetable.",
+                    english: "The Taoyuan Airport MRT joins the real-world maps: you can buy it and run its timetable.",
                     chinese: "實景地圖有了桃園機場捷運，可以買下來、照時刻表營運。"
                 ),
                 Line(
@@ -663,7 +663,7 @@ public enum WhatsNew {
                     chinese: "買下文湖線等捷運、輕軌後，列車改走自己方向那條軌道，靠右行駛。"
                 ),
                 Line(
-                    english: "Taiwan's named festivals are on the real maps: Dajia Mazu, the Pingxi lanterns, New Year's Eve at Taipei 101 and the Mid-Autumn Festival bring extra riders to nearby stations. Mazu, the lanterns and Mid-Autumn follow the lunar calendar.",
+                    english: "Taiwan's named festivals are on the real-world maps: Dajia Mazu, the Pingxi lanterns, New Year's Eve at Taipei 101 and the Mid-Autumn Festival bring extra riders to nearby stations. Mazu, the lanterns and Mid-Autumn follow the lunar calendar.",
                     chinese: "實景地圖有了台灣節慶：大甲媽祖、平溪天燈、101 跨年、中秋讓附近車站多出乘客；媽祖、天燈、中秋依農曆。"
                 ),
                 Line(
@@ -728,8 +728,8 @@ public enum WhatsNew {
                     chinese: "跟隨柴油車時聽得到引擎聲：停站時怠轉，起步時加速變大聲，滑行時回到怠轉。"
                 ),
                 Line(
-                    english: "The Wenhu Line can be bought on the real maps of Taipei, New Taipei and Taoyuan, with the Muzha depot by the zoo.",
-                    chinese: "台北、新北、桃園的真實地圖可以收購捷運文湖線，連同動物園旁的木柵機廠。"
+                    english: "The Wenhu Line can be bought on the real-world maps of Taipei, New Taipei and Taoyuan, with the Muzha depot by the zoo.",
+                    chinese: "台北、新北、桃園的實景地圖可以收購捷運文湖線，連同動物園旁的木柵機廠。"
                 ),
                 Line(
                     english: "On the 3D map, Wenhu Line trains are the real VAL256 and Type 370 cars.",
@@ -886,7 +886,7 @@ public enum WhatsNew {
                     chinese: "最近 7 天裡有 4 天客滿的車站才能擴建，車站卡會寫目前幾天。"
                 ),
                 Line(
-                    english: "Taiwan Railway trains on the real map run to the real train-by-train timetable.",
+                    english: "Taiwan Railway trains on the real-world map run to the real train-by-train timetable.",
                     chinese: "實景地圖的台鐵列車，照真實的逐班時刻表行駛。"
                 ),
                 Line(
@@ -1028,8 +1028,8 @@ public enum WhatsNew {
                     chinese: "同一局存檔只佔一列，列內留最近 3 版，也可以多選刪除。"
                 ),
                 Line(
-                    english: "The DR3100 diesel express runs four times a day on the real map.",
-                    chinese: "真實地圖每天多跑四班 DR3100 柴聯自強號。"
+                    english: "The DR3100 diesel express runs four times a day on the real-world map.",
+                    chinese: "實景地圖每天多跑四班 DR3100 柴聯自強號。"
                 ),
                 Line(
                     english: "Dragging a zone greys out the squares no station reaches, and the Zoning tool opens on the use the city needs most.",
@@ -1258,8 +1258,8 @@ public enum WhatsNew {
                     chinese: "財務面板用兩張甜甜圈圖，看錢從哪裡來、花到哪裡去。"
                 ),
                 Line(
-                    english: "Bubbles, fares, prices and place names on the map no longer cover each other, and the whole of Taiwan comes first when you pick a real map.",
-                    chinese: "地圖上的泡泡、票價、價錢和地名不再互相蓋住；選真實地圖時，「整個臺灣」排在第一個。"
+                    english: "Bubbles, fares, prices and place names on the map no longer cover each other, and the whole of Taiwan comes first when you pick a real-world map.",
+                    chinese: "地圖上的泡泡、票價、價錢和地名不再互相蓋住；選實景地圖時，「整個臺灣」排在第一個。"
                 ),
                 Line(
                     english: "Buying the Sanying line builds the real Sanxia depot with it, so its trains rest there overnight and start on time in the morning.",

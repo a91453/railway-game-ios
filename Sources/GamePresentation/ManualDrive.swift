@@ -518,6 +518,25 @@ extension ManualDrive {
             return Notch(step: start.step - Int(max(-100, min(100, steps))))
         }
 
+        /// Review L19, P3-15: the drag on the handle now: where the finger
+        /// came down and the notch the handle stood on then. A drag the
+        /// system cancels never says it ended, so the next one is told
+        /// apart by where it began, and starts from the notch the handle
+        /// stands on then, not from the one kept.
+        public struct Drag: Equatable, Sendable {
+            public let x: Double
+            public let y: Double
+            public let notch: Notch
+
+            /// The drag that began at (`x`, `y`): `held` when that is the
+            /// one it kept, otherwise a new one from `notch`, where the
+            /// handle stands now.
+            public static func began(atX x: Double, y: Double, on notch: Notch, held: Drag?) -> Drag {
+                if let held, held.x == x, held.y == y { return held }
+                return Drag(x: x, y: y, notch: notch)
+            }
+        }
+
         /// How a move of the handle is felt.
         public enum Detent: Hashable, Sendable {
             /// One notch among the power or the brake ones.

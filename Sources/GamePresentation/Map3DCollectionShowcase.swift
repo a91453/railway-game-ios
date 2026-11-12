@@ -22,6 +22,21 @@ public enum Map3DCollectionShowcase {
 
         public var id: String { rawValue }
 
+        /// Review L19, P3-14: a stage to open: the page and, on the
+        /// aircraft page, which aircraft it opens on. One value, so the
+        /// cover that opens it cannot read an aircraft tapped before.
+        public struct Shown: Identifiable, Hashable, Sendable {
+            public let exhibit: Exhibit
+            public let focus: Int
+
+            public init(_ exhibit: Exhibit, focus: Int = 0) {
+                self.exhibit = exhibit
+                self.focus = focus
+            }
+
+            public var id: String { "\(exhibit.rawValue).\(focus)" }
+        }
+
         /// The photo sheet's title: "Ferries" / "渡輪", "Cable Cars" / "纜車".
         public func title(in language: DisplayLanguage) -> String {
             switch self {
