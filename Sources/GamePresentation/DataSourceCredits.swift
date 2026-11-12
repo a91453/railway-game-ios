@@ -541,7 +541,7 @@ public enum DataSourceCredits {
                         title: language.text("Airport passengers, flights and destinations", "機場旅客、航班架次與航點"),
                         detail: language.text(
                             "How many passengers and flights each of Taiwan's airports has in a year, and where they fly: on a real-world map, they set each airport's flights, its domestic and international passengers, and how many of them ride your trains.",
-                            "臺灣各機場一年的旅客、航班架次與飛往哪裡：在實景地圖上，決定每座機場的航班數、國內與國際旅客，以及有多少旅客搭你的車。"
+                            "台灣各機場一年的旅客、航班架次與飛往哪裡：在實景地圖上，決定每座機場的航班數、國內與國際旅客，以及有多少旅客搭你的車。"
                         ),
                         notice: language.text(
                             "Source: Civil Aviation Administration, Ministry of Transportation and Communications, Civil Aviation Statistics annual report 2025 and its timetable of scheduled domestic flights. Terminal positions: OpenStreetMap contributors.",

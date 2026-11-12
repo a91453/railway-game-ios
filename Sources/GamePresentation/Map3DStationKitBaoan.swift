@@ -31,7 +31,7 @@ extension StationKitBuilder {
         }
         for s: Float in [-1,1] { box(frontWall+front-0.25,y,z+s*(length/2+end-0.25),0.2,0.2,skirtLow+0.02,wall) }
         // The name signs standing on the veranda's edge.
-        nameBoards("〇保安車站",x:backWall-back+0.05,y:y+skirtLow,z:z,facing:-1,size:1.15,pitch:1.55,board:Self.white,ink:Map3DPalette.canopy)
+        nameBoards("〇"+Self.boardName(real:"保安",game:gameName),x:backWall-back+0.05,y:y+skirtLow,z:z,facing:-1,size:1.15,pitch:1.55,board:Self.white,ink:Map3DPalette.canopy)
         // Windows: the front's either side of the porch, the ends', the platform side's.
         for dz in [porchZ+3.4,porchZ+5.9,porchZ+8.4,porchZ-3.4,porchZ-5.4] where abs(dz-z)<length/2-1 {
             gridWindow(frontWall,y+1.0,dz,toward:Map3DPoint(1,0,0),width:2.0,height:1.7)
@@ -144,7 +144,7 @@ extension StationKitBuilder {
         }
         box(out+0.02,y+eave-0.16,z,0.1,width,0.16,Self.white)
         box(out+0.08,y+eave-0.85,z,0.1,width-0.9,0.6,Self.timber)
-        nameBoards("保安車站",x:out+0.19,y:y+eave-0.82,z:z,facing:1,size:0.54,pitch:0.64,board:Self.timber,ink:Map3DPalette.templeRoof)
+        nameBoards(Self.boardName(real:"保安",game:gameName),x:out+0.19,y:y+eave-0.82,z:z,facing:1,size:0.54,pitch:0.64,board:Self.timber,ink:Map3DPalette.templeRoof)
         box(middle,y+eave+rise-0.08,z,reach+1.0,0.3,0.2,Map3DPalette.plant)
     }
 

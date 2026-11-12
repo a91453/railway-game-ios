@@ -404,6 +404,8 @@ extension Map3DScene.Builder {
     private mutating func addHouse(_ station: Map3DStationKit.Station, id: StationID, platforms: [LaidPlatform],
                                    middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) -> Set<Map3DScene.ChunkKey> {
         var kit = StationKitBuilder()
+        // Review L19, P3-17: its name boards say the game's station's name.
+        kit.gameName = world.station(id: id)?.name
         kit.house(station, expansion: world.station(id: id)?.expansion)
         guard let bounds = kit.mesh.bounds else { return [] }
         let depth = bounds.max.x - bounds.min.x, wide = bounds.max.z - bounds.min.z

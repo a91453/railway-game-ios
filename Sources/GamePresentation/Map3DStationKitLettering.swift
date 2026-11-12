@@ -22,6 +22,21 @@ extension StationKitBuilder {
               (0.08,0.32,0.08,0.68),(0.08,0.68,0.3,0.9),(0.5,0.72,0.5,0.28),(0.32,0.5,0.68,0.5)],
     ]
 
+    /// Review L19, P3-17: what the boards of a real station's building
+    /// say of the game's station built as it: `real` ("集集") and "車站"
+    /// while the game's station has that name, or a name the strokes
+    /// cannot write (the English game's "Jiji"); a station the player
+    /// named otherwise has its own name when every character of it has
+    /// strokes, and only "車站" when not, never the real station's name.
+    static func boardName(real: String,game: String?) -> String {
+        guard let game else { return real+"車站" }
+        var name=game.trimmingCharacters(in:.whitespaces)
+        for ending in ["車站","站"] where name.count>ending.count && name.hasSuffix(ending) { name.removeLast(ending.count);break }
+        // Not Chinese: the building keeps the name it is known by.
+        if name==real || !name.unicodeScalars.contains(where:{ (0x3400...0x9FFF).contains($0.value) }) { return real+"車站" }
+        return name.count<=2 && name.allSatisfy({ nameStrokes[$0] != nil }) ? name+"車站" : "車站"
+    }
+
     /// `text` on boards `size` square standing across the building's front
     /// (their faces at `x`, facing +x when `facing` is 1, −x when −1),
     /// their middles `pitch` apart about `z`, each one's foot at `y` plus

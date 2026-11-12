@@ -135,8 +135,9 @@ struct TourismPanel: View {
                         }
                     }
                 }
+                // Review L19, P3-13: the airports' day, not on the main actor.
+                .task { airportDays = await AirCollection.airportDays(of: world) }
                 .task {
-                    airportDays = world.airportDays()
                     guard let target = SightFocus.row(for: focus, in: rows) else { return }
                     if offMap.contains(where: { $0.id == target }) { showsOffMap = true }
                     marked = target

@@ -56,7 +56,13 @@ public enum Map3DAircraftStudies {
         }
     }
 
-    static func shape(_ kind: Kind) -> Shape {
+    /// Review L19, P3-3: each type's shape, made once (the lamps and the
+    /// camera's seat read it every frame).
+    private static let shapes: [Kind: Shape] = Dictionary(uniqueKeysWithValues: Kind.allCases.map { ($0, made($0)) })
+
+    static func shape(_ kind: Kind) -> Shape { shapes[kind] ?? made(kind) }
+
+    private static func made(_ kind: Kind) -> Shape {
         switch kind {
         case .commuter19:
             Shape(halfWidth: 0.80, halfHeight: 0.95, centre: 1.57, exponent: 3.6,

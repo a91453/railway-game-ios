@@ -75,10 +75,10 @@ struct SettingsView: View {
     /// trains page).
     @State private var collectionPage = FerryCollection.Page.trains
     /// Decision 632: the ferries' or cable cars' stage, when open.
-    @State private var shownExhibit: Map3DCollectionShowcase.Exhibit?
-    /// Decision 701: which aircraft the aircraft stage opens on, and the
-    /// day of this game's airports (empty without a game or airports).
-    @State private var shownAircraft = 0
+    /// Decision 701: with the aircraft the aircraft stage opens on.
+    @State private var shownExhibit: Map3DCollectionShowcase.Exhibit.Shown?
+    /// Decision 701: the day of this game's airports (empty without a
+    /// game or airports).
     @State private var airportDays: [AirportDay] = []
 
     var body: some View {
@@ -114,8 +114,8 @@ struct SettingsView: View {
             .fullScreenCover(isPresented: $showsTrainShowcase) {
                 TrainShowcaseScreen(close: { showsTrainShowcase = false })
             }
-            .fullScreenCover(item: $shownExhibit) { exhibit in
-                TrainShowcaseScreen(exhibit: exhibit, focus: shownAircraft, close: { shownExhibit = nil })
+            .fullScreenCover(item: $shownExhibit) { shown in
+                TrainShowcaseScreen(exhibit: shown.exhibit, focus: shown.focus, close: { shownExhibit = nil })
             }
             .sheet(isPresented: $showsHelp) {
                 HelpView(language: .app, launcher: launcher)
@@ -512,8 +512,7 @@ struct SettingsView: View {
                 // Each aircraft's card opens the stage on that aircraft.
                 ForEach(Array(AirCollection.aircraft(in: language).enumerated()), id: \.element.id) { index, entry in
                     Button {
-                        shownAircraft = index
-                        shownExhibit = .aircraft
+                        shownExhibit = .init(.aircraft, focus: index)
                     } label: {
                         HStack(spacing: 12) {
                             collectionEntry(entry, identifier: "settings.aircraft.\(entry.id)")
@@ -575,7 +574,8 @@ struct SettingsView: View {
         } header: {
             Text(verbatim: language.text("Airports", "機場"))
                 .task {
-                    if let session { airportDays = session.world.airportDays() }
+                    // Review L19, P3-13: not on the main actor.
+                    if let session { airportDays = await AirCollection.airportDays(of: session.world) }
                 }
         } footer: {
             Text(verbatim: AirCollection.note(in: language))
@@ -585,8 +585,7 @@ struct SettingsView: View {
     /// Decision 632: the button that opens a page's 3D stage.
     private func exhibitButton(_ exhibit: Map3DCollectionShowcase.Exhibit, _ language: DisplayLanguage) -> some View {
         Button {
-            shownAircraft = 0
-            shownExhibit = exhibit
+            shownExhibit = .init(exhibit)
         } label: {
             Label {
                 Text(verbatim: exhibit.openTitle(in: language))

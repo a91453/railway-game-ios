@@ -345,7 +345,7 @@ final class FollowAircraftTests: XCTestCase {
         XCTAssertTrue(session.isFollowingVehicle)
         XCTAssertEqual(session.followedAircraftID, id)
         let bar = try XCTUnwrap(session.aircraftFollowBar)
-        XCTAssertEqual(bar.name, "窄體客機")
+        XCTAssertEqual(bar.name, "窄體噴射客機")
         XCTAssertEqual(bar.directionText, "降落臺北松山機場")
         XCTAssertEqual(bar.stopText, "進場中")
         // What it does next; another flight's news is not this one's.
