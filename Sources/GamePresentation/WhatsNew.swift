@@ -30,6 +30,46 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 128.
+        Entry(
+            id: "2026-11-13-128",
+            items: [
+                Line(
+                    english: "Intercity coaches now run on real-world maps, on their real timetables. Between two stations with a direct coach, some passengers take the coach instead; where a coach stop is beside your station, people getting off change to your trains.",
+                    chinese: "實景地圖上，真實的長途客運照班次自己跑：有直達客運的兩站，部分旅客改搭客運；客運站旁有你的車站，下車的人轉搭你的車。"
+                ),
+                Line(
+                    english: "A station that serves a coach stop has an Intercity Coaches section: today's coaches and passengers, and how many changed to or from your trains.",
+                    chinese: "服務到客運站的車站，面板多了「長途客運」一節：今天的班次、旅客，以及有多少人和你的列車轉乘。"
+                ),
+                Line(
+                    english: "Jiji and Bao'an station buildings show your station's own name on the board.",
+                    chinese: "集集、保安站房的站名牌會寫你那一站的名字。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "A high-speed line laid with Lay the real lines here now runs high-speed trains at high-speed line speeds; metro, light rail and the Alishan line run their own trains too. Lines laid earlier change when laid again.",
+                    chinese: "用「鋪好這一帶的真實路線」鋪的高鐵現在是高鐵車與高鐵的速度；捷運、輕軌、林鐵也是自己的車。舊的線要重鋪才換。"
+                ),
+                Line(
+                    english: "Aircraft no longer jump to new places at midnight.",
+                    chinese: "午夜時飛機不再突然換位置。"
+                ),
+                Line(
+                    english: "The collection's Aircraft page and the Attractions panel open faster, and tapping an aircraft opens that one.",
+                    chinese: "圖鑑飛機頁與觀光景點面板開得比較快；點哪一架飛機就開哪一架。"
+                ),
+                Line(
+                    english: "The driving lever no longer jumps after a drag is interrupted.",
+                    chinese: "駕駛拉桿拖到一半被打斷後不會亂跳。"
+                ),
+                Line(
+                    english: "Tapping a station with an aircraft taxiing nearby selects the station.",
+                    chinese: "車站旁有飛機滑行時，點車站就是選車站。"
+                ),
+            ]
+        ),
         // 127 (and 124 to 126, which went out without an entry).
         Entry(
             id: "2026-11-12-127",
