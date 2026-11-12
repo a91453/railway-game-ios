@@ -19,8 +19,8 @@ train could beat (130 km/h over the stretch). Only trains bound for a place
 both stations list are paired: a terminus does not list its arrivals. The
 line's figure is the median over every such sample, the two directions
 together. It is from one station's time to the next's, so it holds the
-stop. A stretch no sample settles, or whose median is no train's speed
-(under 20 km/h or over 130), gets its length at the line's median speed
+stop. A stretch fewer than five samples settle, or whose median is no
+train's speed (under 20 km/h or over 130), gets its length at the line's median speed
 (every line's, when the line has none), and `runSamples` says 0 for it.
 
 A line's headway is the median gap between two trains bound for its end
@@ -145,7 +145,7 @@ def main(extract, stations_csv, folder, out):
         # length at the line's median speed.
         length = lambda i: abs(stations[i + 1]["d"] - stations[i]["d"]) * 1000
         for i, r in enumerate(runs):
-            if r and not 20 / 3.6 <= length(i) / statistics.median(r) <= 130 / 3.6:
+            if r and (len(r) < 5 or not 20 / 3.6 <= length(i) / statistics.median(r) <= 130 / 3.6):
                 runs[i] = []
         speeds = [length(i) / statistics.median(r) for i, r in enumerate(runs) if r]
         every_speed.extend(speeds)

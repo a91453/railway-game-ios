@@ -4558,13 +4558,5 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **時刻是估計的**（港鐵沒有公開時刻表）：班距與行車時間取樣自「下一班列車」開放資料，末班車 00:30 是估計。要更準，照 README 多取幾天的樣本重跑。
 - **GameCore 裡只對台灣成立的假設**沒有動，清單在研究文件 §5.3。
 
-**還沒做完（HK-MAP 第 2 次壓縮後停下，2026-11-11 23:30 UTC；#2068 仍是草稿）**：
-
-- 包裡的 `hkmtr_times.json`、`metro_runs.json` 與 `tools/hk-map/service.json` 是**暫定的**：只用了香港深夜的 3 輪取樣（`next_train_service.py --provisional`），班距與行車時間不準。`HongKongRailwaysTests.testTheNetworkIsConnected` 因此是紅的（機場快綫有一段行車時間落在 45–1500 秒之外）；其餘 10 個測試過。
-- 收尾的步驟（取樣檔只在 HK-MAP 的容器裡，容器收走就要重取；要含香港早尖峰 23:30–01:30 UTC 與之後的離峰）：
-  1. `python3 -I tools/hk-map/sample_next_train.py <港鐵 CSV> <樣本資料夾> 22 300`（每輪 5 分鐘，一次約 110 分鐘；CSV 是 `opendata.mtr.com.hk/data/mtr_lines_and_stations.csv`）。
-  2. `python3 -I tools/hk-map/next_train_service.py <香港 pbf> <港鐵 CSV> <樣本資料夾> tools/hk-map/service.json`（不加 `--provisional`），對一下行車時間：機場快綫香港–機場約 24 分、東涌綫約 28 分、東鐵綫約 44 分、屯馬綫約 73 分。
-  3. `python3 -I tools/hk-map/build_hk_mtr.py <香港 pbf> <港鐵 CSV> tools/hk-map/service.json RailwayGameApp/Resources/MapPacks/hongkong`，再 `python3 -I tools/hk-map/extract_hk_runs.py RailwayGameApp/Resources/MapPacks/hongkong`。班距 2 分鐘的綫可能排不出運用（兩端沒有機廠）；排不出的綫寫進決策 697，測試只要求 `hkmtr:AEL` 有運用。
-  4. 包現在 1.89 MB；重做後估 4–5 MB，**超過 2 MB 先在 #1579 說大小再提交**。改研究文件 §9 的大小表，拿掉文件與 PR 說明裡的「暫定」。
-  5. `swift build --build-tests -Xswiftc -warnings-as-errors`、`swift test --skip-build --filter HongKongRailwaysTests`，推上去；CI 綠了在 #1579 留言並告訴遊戲規劃「#2068 可合併、head <SHA>」。
-- #2068 在 `edeed7c` 的 CI 紅有一部分是 GitHub artifact 服務當時故障（`GetSignedArtifactURL` 回 HTML），不是程式；下一次推送會重跑。iOS 建置與專案檔漂移檢查因此還沒有結果。
+- **尖峰班距密的 6 條綫還買不到**（荃灣、港島、觀塘、將軍澳、屯馬、東鐵）：沒有車廠，車組排不出來，`metro_runs.json` 裡沒有它們（決策 697 下一步第 6 點）。買得到的是機場快綫、東涌綫、南港島綫、迪士尼綫與兩條支綫。
+- **取樣只有一個早上**（2026-11-12 香港時間 03:30–09:40，76 輪；原始回應沒有進 repo）：離峰班距主要來自清晨，晚尖峰與假日沒有取。照 README 取一整天再重跑會更準。

@@ -163,7 +163,9 @@ final class HongKongRailwaysTests: XCTestCase {
                 last = distance
             }
             XCTAssertEqual(line.segmentRunSec?.count, line.stations.count - 1, line.id)
-            XCTAssertTrue(line.segmentRunSec?.allSatisfy { ($0 ?? 0) >= 45 && ($0 ?? 0) <= 1_500 } ?? false, line.id)
+            // Running seconds, the stop taken off: the feed gives whole minutes, so a short hop
+            // (Central to Admiralty, Airport to AsiaWorld-Expo) is a minute less its stop.
+            XCTAssertTrue(line.segmentRunSec?.allSatisfy { ($0 ?? 0) >= 20 && ($0 ?? 0) <= 1_500 } ?? false, line.id)
         }
         var reached: Set<String> = ["機場"]
         var grew = true
