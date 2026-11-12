@@ -598,7 +598,9 @@ extension GameSession {
         // Decision 400: the light rails; one sharing its first stations
         // with a line bought, from where they part, or not at all where its
         // trips from there do not fit.
-        for rail in RealBranchLine.urbanLines {
+        // Decision 697: and an open overseas city's, which have runs only
+        // when its files are read.
+        for rail in RealBranchLine.urbanLines + RealBranchLine.overseasLines {
             let id = "\(RealBranchLine.dataSystem(of: rail.system)):\(rail.network)"
             let after = rail.shares.flatMap { world.acquisition(of: $0) == nil ? nil : $0 }
             guard let runs = RealBranchLine.metroRuns(of: id, after: after, in: railways) else {
