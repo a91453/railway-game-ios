@@ -21,12 +21,17 @@ final class Map3DAirfieldsTests: XCTestCase {
     // MARK: - The file
 
     /// Every terminal of the game's catalogue stands by an airfield of the
-    /// file with a runway a jet can use, parking positions and aprons.
+    /// file with a runway; all but the small fields (decision 700's
+    /// island strips and Chiayi, whose OSM mapping has no aprons or
+    /// taxiways) have a runway a jet can use, parking positions and aprons.
     func testTheCataloguesAirportsHaveTheirAirfields() throws {
         let fields = try Self.airfields.get().fields
+        let smallFields: Set<String> = ["cmj", "kyd", "gni", "cyi"]
         for place in AirportCatalog.places {
             let terminal = RealAirfields.Point(latitude: place.latitude, longitude: place.longitude)
             let field = try XCTUnwrap(fields.first { metres($0.at, terminal) < 4_000 }, place.key)
+            XCTAssertFalse(field.runways.isEmpty, place.key)
+            if smallFields.contains(place.key) { continue }
             let longest = field.runways.map { metres($0.line[0], $0.line[$0.line.count - 1]) }.max() ?? 0
             XCTAssertGreaterThan(longest, 2_400, place.key)
             XCTAssertGreaterThanOrEqual(field.stands.count, 6, place.key)

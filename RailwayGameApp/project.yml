@@ -47,9 +47,16 @@ targets:
         excludes:
           - "BaseMap"
           - "BaseMap/**"
+          - "MapPacks"
+          - "MapPacks/**"
       # Decision 151: the base map's tiles and glyphs, copied as one folder
       # (BaseMapFiles finds them by path; the fonts' ranges share names).
       - path: Resources/BaseMap
+        type: folder
+      # Decision 697: the overseas cities' map packs, each one folder whose
+      # files have the names Taiwan's have, so copied as a folder
+      # (MapPack.bundled finds a city's by path).
+      - path: Resources/MapPacks
         type: folder
     dependencies:
       - package: RailwayGame

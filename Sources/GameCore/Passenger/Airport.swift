@@ -9,11 +9,21 @@
 // trains like every other passenger. The better the railway serves the
 // airport, the more flights it draws. The tourists of the sights set out
 // from an airport's station too (`touristSources`).
+//
+// Decision 700: an airport lists where its flights go, at home or abroad,
+// with each destination's passengers and flights of a year. They split a
+// day's passengers into domestic and international ones, say how many
+// flights leave for each place today, and set the hours its riders travel
+// in: a domestic passenger reaches the airport an hour before the flight
+// and leaves it within the hour of landing, an international one two
+// hours before and an hour after.
 
 /// The numbers of decision 695.
 public enum AirportRules {
     /// The most airports a world holds.
     public static let maximumAirports = 16
+    /// The most destinations an airport lists (decision 700).
+    public static let maximumDestinations = 24
     /// The game's rail riders for every thousand air passengers, each way,
     /// before the stations within reach cap them: Taoyuan's two Airport
     /// MRT stations and Songshan Airport station count some 23,000 and
@@ -56,17 +66,49 @@ public enum AirportRules {
     }
 
     /// The weights of the riders from the airport by hour: an hour after
-    /// each hour's flights land, through immigration and baggage.
-    static func landedShape(first: Int, last: Int) -> [Int64] {
+    /// each hour's flights land, through immigration and baggage; those
+    /// off a domestic flight (decision 700) within the hour it lands.
+    static func landedShape(first: Int, last: Int, domestic: Bool = false) -> [Int64] {
         let flights = flightsByHour(1_000, first: first, last: last)
-        return (0..<24).map { flights[($0 + 23) % 24] }
+        return domestic ? flights : (0..<24).map { flights[($0 + 23) % 24] }
     }
 
     /// The weights of the riders to the airport by hour: two hours before
-    /// each hour's flights leave.
-    static func leavingShape(first: Int, last: Int) -> [Int64] {
+    /// each hour's flights leave; for a domestic flight (decision 700),
+    /// whose counter closes half an hour before it leaves, one hour.
+    static func leavingShape(first: Int, last: Int, domestic: Bool = false) -> [Int64] {
         let flights = flightsByHour(1_000, first: first, last: last)
-        return (0..<24).map { flights[($0 + 2) % 24] }
+        return (0..<24).map { flights[($0 + (domestic ? 1 : 2)) % 24] }
+    }
+}
+
+/// A place an airport's flights go to (decision 700).
+public struct AirDestination: Hashable, Sendable {
+    /// Its name; empty for the rest of the airport's destinations of its
+    /// kind taken together.
+    public let name: String
+    public let englishName: String
+    /// Whether the flights stay in the country.
+    public let isDomestic: Bool
+    /// The passengers and the flights between the airport and it in a
+    /// year, both ways together.
+    public let yearlyPassengers: Int64
+    public let yearlyFlights: Int64
+
+    public init(name: String, englishName: String, isDomestic: Bool, yearlyPassengers: Int64, yearlyFlights: Int64) {
+        self.name = name
+        self.englishName = englishName
+        self.isDomestic = isDomestic
+        self.yearlyPassengers = yearlyPassengers
+        self.yearlyFlights = yearlyFlights
+    }
+
+    /// Whether it stands for the rest of its kind.
+    public var isRest: Bool { name.isEmpty }
+
+    var isValid: Bool {
+        (1...GameWorld.maximumAccrued).contains(yearlyPassengers) && (0...GameWorld.maximumAccrued).contains(yearlyFlights)
+            && name.isEmpty == englishName.isEmpty
     }
 }
 
@@ -87,6 +129,10 @@ public struct Airport: Hashable, Sendable {
     /// the last not included (0 and 24 for an airport with no curfew).
     public let firstHour: Int
     public let lastHour: Int
+    /// Where its flights go (decision 700), in the map's order; empty when
+    /// the map does not say, and then every passenger keeps the
+    /// international hours.
+    public let destinations: [AirDestination]
     /// The flights, the air passengers and the riders on the company's
     /// trains (both ways together) of the day that last ended.
     public internal(set) var yesterdayFlights: Int64
@@ -94,7 +140,7 @@ public struct Airport: Hashable, Sendable {
     public internal(set) var yesterdayRiders: Int64
 
     public init(id: Int, name: String, englishName: String, point: PlanPoint, dailyPassengers: Int64, dailyFlights: Int64,
-                firstHour: Int = 0, lastHour: Int = 24) {
+                firstHour: Int = 0, lastHour: Int = 24, destinations: [AirDestination] = []) {
         self.id = id
         self.name = name
         self.englishName = englishName
@@ -103,10 +149,27 @@ public struct Airport: Hashable, Sendable {
         self.dailyFlights = dailyFlights
         self.firstHour = firstHour
         self.lastHour = lastHour
+        self.destinations = destinations
         yesterdayFlights = 0
         yesterdayPassengers = 0
         yesterdayRiders = 0
     }
+
+    /// The domestic passengers among a thousand of the airport's, as its
+    /// destinations' years say (decision 700); 0 with no destinations.
+    public var domesticShare: Int64 {
+        let all = destinations.reduce(Int64(0)) { $0 + $1.yearlyPassengers }
+        guard all > 0 else { return 0 }
+        return destinations.reduce(Int64(0)) { $0 + ($1.isDomestic ? $1.yearlyPassengers : 0) } * 1_000 / all
+    }
+}
+
+/// The flights that leave an airport for one of its destinations in a day,
+/// and the passengers between them both ways (decision 700).
+public struct AirportDeparture: Hashable, Sendable {
+    public let destination: AirDestination
+    public let flights: Int64
+    public let passengers: Int64
 }
 
 /// An airport's day (``GameWorld/airportDays()``).
@@ -131,17 +194,28 @@ public struct AirportDay: Hashable, Sendable {
     /// The day's landings and take-offs in each hour, hour 0 first.
     public let landings: [Int64]
     public let takeOffs: [Int64]
+    /// The domestic passengers among ``passengers`` (decision 700); 0 at
+    /// an airport that lists no destinations.
+    public let domesticPassengers: Int64
+    /// The day's take-offs and passengers by destination, in the airport's
+    /// order; empty at an airport that lists none.
+    public let departures: [AirportDeparture]
 
     public var riders: Int64 { ridersFrom + ridersTo }
+    public var internationalPassengers: Int64 { passengers - domesticPassengers }
 }
 
 extension GameWorld {
     // MARK: - Command
 
     /// Sets the airports of the map (decision 695), numbered from 1 in the
-    /// order given, with no day counted yet. Free. Those outside the map,
-    /// those with no passengers or flights and those past
-    /// ``AirportRules/maximumAirports`` are left out.
+    /// order given. Free. Those outside the map, those with no passengers
+    /// or flights and those past ``AirportRules/maximumAirports`` are left
+    /// out, as are the destinations past
+    /// ``AirportRules/maximumDestinations`` and those with no passengers.
+    /// An airport the map already had, by its name and terminal, keeps the
+    /// counts of the day that last ended (decision 700); any other starts
+    /// with no day counted.
     public mutating func setAirports(_ list: [Airport]) {
         var kept: [Airport] = []
         for airport in list where kept.count < AirportRules.maximumAirports {
@@ -150,9 +224,16 @@ extension GameWorld {
                   airport.dailyPassengers <= Self.maximumAccrued, airport.dailyFlights <= Self.maximumAccrued,
                   airport.firstHour >= 0, airport.firstHour < airport.lastHour, airport.lastHour <= 24
             else { continue }
-            kept.append(Airport(id: kept.count + 1, name: airport.name, englishName: airport.englishName, point: airport.point,
-                                dailyPassengers: airport.dailyPassengers, dailyFlights: airport.dailyFlights,
-                                firstHour: airport.firstHour, lastHour: airport.lastHour))
+            var next = Airport(id: kept.count + 1, name: airport.name, englishName: airport.englishName, point: airport.point,
+                               dailyPassengers: airport.dailyPassengers, dailyFlights: airport.dailyFlights,
+                               firstHour: airport.firstHour, lastHour: airport.lastHour,
+                               destinations: Array(airport.destinations.filter(\.isValid).prefix(AirportRules.maximumDestinations)))
+            if let old = airports.first(where: { $0.name == airport.name && $0.point == airport.point }) {
+                next.yesterdayFlights = old.yesterdayFlights
+                next.yesterdayPassengers = old.yesterdayPassengers
+                next.yesterdayRiders = old.yesterdayRiders
+            }
+            kept.append(next)
         }
         guard kept != airports else { return }
         airports = kept
@@ -221,8 +302,15 @@ extension GameWorld {
         let passengers = airport.dailyPassengers * factor / 1_000 * (1_000 + bonus) / 1_000
         let landings = AirportRules.flightsByHour((flights + 1) / 2, first: airport.firstHour, last: airport.lastHour)
         let takeOffs = AirportRules.flightsByHour(flights / 2, first: airport.firstHour, last: airport.lastHour)
+        // Decision 700: the day by destination.
+        let leaving = Self.apportion(flights / 2, by: airport.destinations.map(\.yearlyFlights))
+        let carried = Self.apportion(passengers, by: airport.destinations.map(\.yearlyPassengers))
+        let departures = closed ? [] : airport.destinations.indices.map {
+            AirportDeparture(destination: airport.destinations[$0], flights: leaving[$0], passengers: carried[$0])
+        }
         let result = AirportDay(airport: airport, station: station, isClosed: closed, flights: flights, passengers: passengers,
-                                ridersFrom: ridersFrom, ridersTo: ridersTo, ridersAtMost: wanting, landings: landings, takeOffs: takeOffs)
+                                ridersFrom: ridersFrom, ridersTo: ridersTo, ridersAtMost: wanting, landings: landings, takeOffs: takeOffs,
+                                domesticPassengers: passengers * airport.domesticShare / 1_000, departures: departures)
         return (result, from, to)
     }
 
@@ -238,11 +326,21 @@ extension GameWorld {
             guard let station = counted.day.station else { return counted.day }
             let landed = AirportRules.landedShape(first: airport.firstHour, last: airport.lastHour)
             let leaving = AirportRules.leavingShape(first: airport.firstHour, last: airport.lastHour)
+            // Decision 700: the domestic riders keep their own hours.
+            let share = airport.domesticShare
+            let landedHome = share > 0 ? AirportRules.landedShape(first: airport.firstHour, last: airport.lastHour, domestic: true) : []
+            let leavingHome = share > 0 ? AirportRules.leavingShape(first: airport.firstHour, last: airport.lastHour, domestic: true) : []
+            func hours(_ riders: Int64, abroad: [Int64], home: [Int64]) -> [Int64] {
+                let domestic = riders * share / 1_000
+                let far = Self.apportion(riders - domestic, by: abroad)
+                guard domestic > 0 else { return far }
+                return zip(far, Self.apportion(domestic, by: home)).map { $0 + $1 }
+            }
             for entry in counted.from {
-                flows.add(hours: Self.apportion(entry.riders, by: landed), from: station, to: entry.station)
+                flows.add(hours: hours(entry.riders, abroad: landed, home: landedHome), from: station, to: entry.station)
             }
             for entry in counted.to {
-                flows.add(hours: Self.apportion(entry.riders, by: leaving), from: entry.station, to: station)
+                flows.add(hours: hours(entry.riders, abroad: leaving, home: leavingHome), from: entry.station, to: station)
             }
             return counted.day
         }
@@ -297,6 +395,9 @@ extension GameWorld {
                   (0...Self.maximumAccrued).contains(airport.yesterdayFlights), (0...Self.maximumAccrued).contains(airport.yesterdayPassengers),
                   (0...Self.maximumAccrued).contains(airport.yesterdayRiders)
             else { return "An airport's passengers, flights, hours or counts are out of range." }
+            guard airport.destinations.count <= AirportRules.maximumDestinations, airport.destinations.allSatisfy(\.isValid) else {
+                return "An airport's destinations are too many or out of range."
+            }
         }
         return nil
     }
@@ -307,7 +408,7 @@ extension GameWorld {
 extension Airport: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, englishName, x, y, dailyPassengers, dailyFlights, firstHour, lastHour
-        case yesterdayFlights, yesterdayPassengers, yesterdayRiders
+        case yesterdayFlights, yesterdayPassengers, yesterdayRiders, destinations
     }
 
     public init(from decoder: any Decoder) throws {
@@ -320,6 +421,7 @@ extension Airport: Codable {
         dailyFlights = try container.decode(Int64.self, forKey: .dailyFlights)
         firstHour = try container.decodeIfPresent(Int.self, forKey: .firstHour) ?? 0
         lastHour = try container.decodeIfPresent(Int.self, forKey: .lastHour) ?? 24
+        destinations = try container.decodeIfPresent([AirDestination].self, forKey: .destinations) ?? []
         yesterdayFlights = try container.decodeIfPresent(Int64.self, forKey: .yesterdayFlights) ?? 0
         yesterdayPassengers = try container.decodeIfPresent(Int64.self, forKey: .yesterdayPassengers) ?? 0
         yesterdayRiders = try container.decodeIfPresent(Int64.self, forKey: .yesterdayRiders) ?? 0
@@ -339,5 +441,30 @@ extension Airport: Codable {
         if yesterdayFlights != 0 { try container.encode(yesterdayFlights, forKey: .yesterdayFlights) }
         if yesterdayPassengers != 0 { try container.encode(yesterdayPassengers, forKey: .yesterdayPassengers) }
         if yesterdayRiders != 0 { try container.encode(yesterdayRiders, forKey: .yesterdayRiders) }
+        if !destinations.isEmpty { try container.encode(destinations, forKey: .destinations) }
+    }
+}
+
+extension AirDestination: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case name, englishName, domestic, passengers, flights
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
+        englishName = try container.decodeIfPresent(String.self, forKey: .englishName) ?? ""
+        isDomestic = try container.decodeIfPresent(Bool.self, forKey: .domestic) ?? false
+        yearlyPassengers = try container.decode(Int64.self, forKey: .passengers)
+        yearlyFlights = try container.decodeIfPresent(Int64.self, forKey: .flights) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if !name.isEmpty { try container.encode(name, forKey: .name) }
+        if !englishName.isEmpty { try container.encode(englishName, forKey: .englishName) }
+        if isDomestic { try container.encode(true, forKey: .domestic) }
+        try container.encode(yearlyPassengers, forKey: .passengers)
+        if yearlyFlights != 0 { try container.encode(yearlyFlights, forKey: .flights) }
     }
 }

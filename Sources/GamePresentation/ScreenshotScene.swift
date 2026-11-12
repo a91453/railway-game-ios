@@ -454,9 +454,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
                                          point: PlanPoint(x: 12_000, y: 30_000), kind: .town, baseStars: 300)])
             world.setAirports([
                 Airport(id: 1, name: "臺北松山機場", englishName: "Taipei Songshan Airport", point: PlanPoint(x: 31_000, y: 26_768),
-                        dailyPassengers: 15_409, dailyFlights: 142, firstHour: 6, lastHour: 23),
+                        dailyPassengers: 15_409, dailyFlights: 142, firstHour: 6, lastHour: 23,
+                        destinations: AirportCatalog.places.first { $0.key == "tsa" }.map(AirportCatalog.destinations) ?? []),
                 Airport(id: 2, name: "臺中國際機場", englishName: "Taichung International Airport", point: PlanPoint(x: 100_000, y: 10_000),
-                        dailyPassengers: 7_556, dailyFlights: 74, firstHour: 7, lastHour: 23),
+                        dailyPassengers: 7_556, dailyFlights: 74, firstHour: 7, lastHour: 23,
+                        destinations: AirportCatalog.places.first { $0.key == "rmq" }.map(AirportCatalog.destinations) ?? []),
             ])
             world.setSpeed(.fast)
             try world.advance(ticks: Int(freightRunSeconds / 600))
