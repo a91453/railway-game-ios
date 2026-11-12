@@ -247,7 +247,8 @@ final class DepotReturnReportTests: XCTestCase {
     /// HEALTH-126: `DEPOT_RETURN_PEOPLED=1` measures the Wenhu line or the
     /// Taoyuan Airport MRT in the game `AirportReportTests` plays instead:
     /// the map's people, places and airports, so the trains carry riders
-    /// (the game ``bought(_:rules:side:)`` opens has no one to ride them);
+    /// (the game ``bought(_:rules:side:)`` opens has next to no one to ride
+    /// them: the Wenhu line took NT$24,945 in fares a day in it);
     /// `DEPOT_RETURN_NO_AIRPORTS=1` takes the airports out of it.
     static func peopled(_ id: String) throws -> GameWorld? {
         let environment = ProcessInfo.processInfo.environment
