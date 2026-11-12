@@ -46,6 +46,10 @@ final class CoachHealthReportTests: XCTestCase {
         Scenario(name: "east", pick: (23.992700, 121.601200), box: (22.30, 120.85, 24.40, 121.75), systems: ["tra_sched"]),
         // The whole island with the Taiwan Railway alone.
         Scenario(name: "tra", pick: (25.047882, 121.517219), box: taiwan, systems: ["tra_sched"]),
+        // The whole island with the Taiwan Railway and the High Speed Rail,
+        // both laid as the demo mode lays them (its High Speed Rail sets
+        // seat 960 since #2094).
+        Scenario(name: "taiwan", pick: (25.047882, 121.517219), box: taiwan, systems: ["tra_sched", "thsr_sched"]),
         // A metropolis with its metro alone.
         Scenario(name: "metro-taipei", pick: (25.047882, 121.517219), box: (24.90, 121.30, 25.22, 121.70)),
         Scenario(name: "metro-taichung", pick: (24.137066, 120.686867), box: (23.95, 120.45, 24.35, 120.85), systems: ["tmrt"]),
@@ -185,7 +189,7 @@ final class CoachHealthReportTests: XCTestCase {
                 (tally.fareRevenue - tally.operatingCost - tally.maintenanceCost - tally.energyCost - tally.staffCost).amount
             }
             struct Day {
-                var trips: Int64 = 0, fares: Int64 = 0, profit: Int64 = 0, lost: Int64 = 0, riders: Int64 = 0, robbed: Int64 = 0
+                var trips: Int64 = 0, fares: Int64 = 0, profit: Int64 = 0, lost: Int64 = 0, riders: Int64 = 0, robbed: Int64 = 0, peak: Int64 = 0
                 var lines: [LineID: Int64] = [:]
             }
             var played: [Bool: [Day]] = [:]
@@ -211,6 +215,7 @@ final class CoachHealthReportTests: XCTestCase {
                     day.fares = account?.fareRevenue.amount ?? 0
                     day.profit = account.map(airportReportProfit) ?? 0
                     day.lost = lost - before
+                    day.peak = world.lines.compactMap { world.lineYesterday($0.id)?.peakLoad }.max() ?? 0
                     day.riders = world.coachStops.map(\.yesterdayRiders).reduce(0, +)
                     for line in world.lines { day.lines[line.id] = world.lineYesterday(line.id).map(profit) ?? 0 }
                     before = lost
@@ -219,9 +224,9 @@ final class CoachHealthReportTests: XCTestCase {
                         + "\(Int(Date().timeIntervalSince(began))) s")
                 }
             }
-            out.append("| Day | Trips: without / with | Fares: without / with | Operating profit: without / with | Station full or gave up: without / with "
+            out.append("| Day | Trips: without / with | Fares: without / with | Operating profit: without / with | Fullest train: without / with | Station full or gave up: without / with "
                 + "| Riders the coaches bring | Trips the coaches take (read at noon) | Lines in profit without and at a loss with |")
-            out.append("| --: | --: | --: | --: | --: | --: | --: | --- |")
+            out.append("| --: | --: | --: | --: | --: | --: | --: | --: | --- |")
             for index in 0..<Int(days) {
                 guard let off = played[false]?[index], let on = played[true]?[index] else { continue }
                 let turned = with.lines.filter { (off.lines[$0.id] ?? 0) >= 0 && (on.lines[$0.id] ?? 0) < 0 }
@@ -229,7 +234,7 @@ final class CoachHealthReportTests: XCTestCase {
                 let worst = with.lines.map { (line: $0, change: (on.lines[$0.id] ?? 0) - (off.lines[$0.id] ?? 0)) }.min { $0.change < $1.change }
                 out.append("| \(index + 1) | \(off.trips) / \(on.trips) (\(percent(on.trips - off.trips, of: off.trips))) | "
                     + "\(Money(off.fares).moneyText) / \(Money(on.fares).moneyText) (\(percent(on.fares - off.fares, of: off.fares))) | "
-                    + "\(Money(off.profit).moneyText) / \(Money(on.profit).moneyText) | \(off.lost) / \(on.lost) | \(on.riders) | \(on.robbed) | "
+                    + "\(Money(off.profit).moneyText) / \(Money(on.profit).moneyText) | \(off.peak / 10)% / \(on.peak / 10)% | \(off.lost) / \(on.lost) | \(on.riders) | \(on.robbed) | "
                     + "\(turned.isEmpty ? "none" : turned.joined(separator: "; ")); of \(with.lines.count) lines, in profit without \(off.lines.values.count { $0 >= 0 }), "
                     + "with \(on.lines.values.count { $0 >= 0 }); the line whose profit falls most: "
                     + "\(worst.map { "\($0.line.name) \(Money($0.change).moneyText)" } ?? "none") |")
