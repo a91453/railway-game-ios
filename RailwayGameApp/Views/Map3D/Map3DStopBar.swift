@@ -63,7 +63,10 @@ struct Map3DStopBar: View {
         return GeometryReader { @Sendable proxy in
             Map3DStopBarTrack(size: proxy.size, marker: marker, trackHeight: trackHeight, markerHeight: markerHeight)
         }
-        .frame(minWidth: 90, minHeight: markerHeight)
+        // A GeometryReader takes all the height it is offered: the bar is
+        // as tall as its marker, no taller.
+        .frame(minWidth: 90)
+        .frame(height: markerHeight)
     }
 }
 
