@@ -53,6 +53,10 @@ public enum WhatsNew {
                     chinese: "用「鋪好這一帶的真實路線」鋪的高鐵現在是高鐵車與高鐵的速度；捷運、輕軌、林鐵也是自己的車。舊的線要重鋪才換。"
                 ),
                 Line(
+                    english: "The Airport MRT can be bought wherever your map starts, and Kaohsiung's metro runs trains when laid with Lay the real lines here.",
+                    chinese: "機場捷運不論開局選哪裡都買得成；用「鋪好這一帶的真實路線」鋪的高雄捷運有車在跑了。"
+                ),
+                Line(
                     english: "Aircraft no longer jump to new places at midnight.",
                     chinese: "午夜時飛機不再突然換位置。"
                 ),
