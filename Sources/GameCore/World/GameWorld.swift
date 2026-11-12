@@ -3576,7 +3576,7 @@ public struct GameWorld: Equatable, Sendable {
             // Decision 248: how far the trains of real runs may go on in
             // the rest of the minute.
             assessSpacing(from: start, memo: &memo.directions)
-            if let event = nextServiceEvent(after: start, known: &memo.directions.trafficParts.trainLines) {
+            if let event = nextServiceEvent(after: start, known: &memo.directions.paths.trainLines) {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
             }
@@ -4598,7 +4598,7 @@ public struct GameWorld: Equatable, Sendable {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
-                  let line = assignedLineIndex(of: id, known: &memo.directions.trafficParts.trainLines), lines[line].hasRuns,
+                  let line = assignedLineIndex(of: id, known: &memo.directions.paths.trainLines), lines[line].hasRuns,
                   let due = dueRun(of: trains[index], on: lines[line]),
                   case .travellingToStop(let stop, let cycle)? = request.candidate.execution
             else { continue }
@@ -4804,7 +4804,7 @@ public struct GameWorld: Equatable, Sendable {
             times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy, crowd: crowd))
             changed = true
         }
-        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times, known: &memo.directions.trafficParts.trainLines), now >= start {
+        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times, known: &memo.directions.paths.trainLines), now >= start {
             times.closing = now
             changed = true
         }
@@ -5084,7 +5084,7 @@ public struct GameWorld: Equatable, Sendable {
     /// paths it searches for are kept in `memo`.
     func preferredLeaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving? {
         guard let next = train.call(after: stop, cycle: cycle),
-              let preference = routePreference(for: train, from: stop, to: next.stop) else { return nil }
+              let preference = routePreference(for: train, from: stop, to: next.stop, known: &memo.trainLines) else { return nil }
         return leaving(train, stop: stop, cycle: cycle) { start, _ in
             var preferred = preferredPath(from: start, preference: preference, length: train.length, memo: &memo)
             // Decision 228: with traffic control off, a train of real runs

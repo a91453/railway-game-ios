@@ -21,6 +21,11 @@ final class TrainLineIndexTests: XCTestCase {
                                world.closingStart(of: train, stop: stop, cycle: cycle, times: times), "\(step), train \(id)", file: file, line: line)
             }
             XCTAssertEqual(world.hasRoutePreferences(train, known: &known), world.hasRoutePreferences(train), "\(step), train \(id)", file: file, line: line)
+            for stop in train.timetable.indices {
+                let next = (stop + 1) % train.timetable.count
+                XCTAssertEqual(world.routePreference(for: train, from: stop, to: next, known: &known), world.routePreference(for: train, from: stop, to: next),
+                               "\(step), train \(id), stop \(stop)", file: file, line: line)
+            }
         }
     }
 
@@ -129,10 +134,10 @@ final class TrainLineIndexTests: XCTestCase {
         try world.unassignTrain(express)
         // What a command changes the parts are not kept through; the index
         // is, and answers for the lines as they now are.
-        var afterCommand = GameWorld.TrafficParts()
-        afterCommand.trainLines = parts.trainLines
-        parts = afterCommand
-        paths = GameWorld.PathMemo()
+        var afterCommand = GameWorld.PathMemo()
+        afterCommand.trainLines = paths.trainLines
+        parts = GameWorld.TrafficParts()
+        paths = afterCommand
         for step in 0..<200 {
             try world.advance(ticks: 10)
             compare("after, step \(step)")

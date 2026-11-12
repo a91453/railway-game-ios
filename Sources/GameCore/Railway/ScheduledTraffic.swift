@@ -135,8 +135,6 @@ extension GameWorld {
         }
         /// Each service's ``trafficNominalDirections(_:)``, by what it reads.
         var nominal: [Nominal: Set<TrackTraversal>] = [:]
-        /// Decision 703: the line of each train (see ``TrainLineIndex``).
-        var trainLines = TrainLineIndex()
         /// Decision 637: a point of a service and a berth of its station,
         /// and at the first point, for a train standing at that berth, the
         /// edges its body trails over.
@@ -307,7 +305,7 @@ extension GameWorld {
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;
         // each accepted overtake rebuilds that train's meets immediately.
         for _ in 0..<8 {
-            if !planTrafficOvertakes(&plan, lines: &parts.trainLines) { break }
+            if !planTrafficOvertakes(&plan, lines: &paths.trainLines) { break }
         }
         // Decision 366: trips of lines that run at a headway.
         // Decision 637: left out only by the report that times it.
@@ -352,7 +350,7 @@ extension GameWorld {
                 if train.timetable[stop - 1].reverses { placement = turnedRound(placement) }
                 let target = train.timetable[stop].station
                 // plannedPath(for:from:departing:to:), with the searches kept.
-                let preferred = routePreference(for: train, from: stop - 1, to: stop).flatMap {
+                let preferred = routePreference(for: train, from: stop - 1, to: stop, known: &paths.trainLines).flatMap {
                     preferredPath(from: placement.position, preference: $0, length: train.length, memo: &paths)
                 }
                 guard let path = preferred ?? self.path(from: placement.position, toStation: target, length: train.length, memo: &paths) else { valid = false; break }

@@ -249,13 +249,27 @@ extension GameWorld {
     /// Match the whole currently running order before using a line's plan:
     /// editing its stops does not attach new legs to an old timetable.
     func routePreference(for train: Train, from: Int, to: Int) -> LineRoutePreference? {
+        guard let id = assignedLine(of: train.id), let line = line(id: id) else { return nil }
+        return routePreference(for: train, on: line, from: from, to: to)
+    }
+
+    /// ``routePreference(for:from:to:)``, the train's line looked up in
+    /// `known` (decision 703).
+    func routePreference(for train: Train, from: Int, to: Int, known: inout TrainLineIndex) -> LineRoutePreference? {
+        guard let index = assignedLineIndex(of: train.id, known: &known) else { return nil }
+        return routePreference(for: train, on: lines[index], from: from, to: to)
+    }
+
+    /// The route `line`, the line `train` is assigned to, names for the
+    /// leg of its timetable.
+    func routePreference(for train: Train, on line: ServiceLine, from: Int, to: Int) -> LineRoutePreference? {
         // Decision 133: a run's calls are the line's stops one way, each
         // once, so its legs are the line's.
-        if let id = assignedLine(of: train.id), let line = line(id: id), line.hasRuns {
+        if line.hasRuns {
             guard let order = runOrder(of: train, on: line), order.indices.contains(from), order.indices.contains(to) else { return nil }
             return line.routePreferences.first { $0.from == order[from] && $0.to == order[to] }
         }
-        guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty,
+        guard let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty,
               let order = routeOrder(of: train, on: line, stream: stream), order.indices.contains(from), order.indices.contains(to) else { return nil }
         return line.routes(ofService: stream.service).first { $0.from == order[from] && $0.to == order[to] }
     }

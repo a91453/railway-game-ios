@@ -57,6 +57,6 @@ extension GameWorld {
 
     /// The line train `id` is assigned to, from what `memo` knows.
     func assignedLine(of id: TrainID, memo: inout DirectionMemo) -> ServiceLine? {
-        assignedLineIndex(of: id, known: &memo.trafficParts.trainLines).map { lines[$0] }
+        assignedLineIndex(of: id, known: &memo.paths.trainLines).map { lines[$0] }
     }
 }
