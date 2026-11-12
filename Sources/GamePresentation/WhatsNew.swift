@@ -39,12 +39,16 @@ public enum WhatsNew {
                     chinese: "3D 地圖看得到機場：跑道、停機坪、航廈，飛機停在機位上，也照當天航班起降，晚上跑道有燈。"
                 ),
                 Line(
-                    english: "Real-world maps have 13 airports. Build a station where trains call within 800 m of a terminal and its passengers ride your trains.",
-                    chinese: "真實地圖共有 13 座機場。在航廈 800 公尺內蓋一座有列車停靠的車站，旅客就搭你的車。"
+                    english: "Real-world maps have 12 airports. Build a station where trains call within 800 m of a terminal and its passengers ride your trains.",
+                    chinese: "真實地圖共有 12 座機場。在航廈 800 公尺內蓋一座有列車停靠的車站，旅客就搭你的車。"
                 ),
                 Line(
                     english: "Tap an airport on the map to see today's flights, domestic and international passengers, and where the flights go.",
                     chinese: "點地圖上的機場，看今天的航班、國內線與國際線旅客，還有飛往哪裡各幾班。"
+                ),
+                Line(
+                    english: "Tap an aircraft that is moving on the 3D map to follow it: from behind, from the side or from a cabin window. At night its lights are on.",
+                    chinese: "在 3D 地圖點一架在動的飛機就能跟著看：後方、旁邊、機艙窗；晚上機身有燈。"
                 ),
                 Line(
                     english: "The collection has an Aircraft page: four aircraft and two airports to look at in 3D, and the airports of your map.",
@@ -53,6 +57,14 @@ public enum WhatsNew {
                 Line(
                     english: "Drive a train yourself: follow one on the 3D map, tap Drive and bring it to a stop at the next station. A good stop on time earns a bonus.",
                     chinese: "手動駕駛：在 3D 地圖跟著一列車按「駕駛」，開到下一站停好；停得準又準點有獎金。"
+                ),
+                Line(
+                    english: "While you drive, the next station is in a bar at the top and the speed and the lever are at the edge, so the track ahead stays clear.",
+                    chinese: "駕駛時下一站在上方一條，速度與拉桿在邊上，前方的軌道不再被擋住。"
+                ),
+                Line(
+                    english: "Jiji and Bao'an stations have their real wooden station buildings on the 3D map.",
+                    chinese: "集集、保安車站在 3D 地圖換成真的木造站房。"
                 ),
                 Line(
                     english: "A new building, the Railway Museum: its red-brick hall shows the trains your company has owned, and you can walk through the exhibits.",
@@ -88,6 +100,10 @@ public enum WhatsNew {
                 ),
             ],
             fixes: [
+                Line(
+                    english: "A large network with many trains runs more smoothly.",
+                    chinese: "路網大、列車多的時候比較順。"
+                ),
                 Line(
                     english: "The 3D map runs more smoothly in rain.",
                     chinese: "3D 地圖下雨時比較順。"

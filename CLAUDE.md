@@ -435,6 +435,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   decision's next step, with a line there pointing to it) in its last pull
   request. A handoff only in a `send_message`, a pull request's description
   or a registry comment is lost to the next session.
+  An implementation session writes its handoff as a file of its own,
+  `docs/handoff/<TASK>.md` (`docs/handoff/README.md`, 2026-11-12), and does
+  not edit `docs/HANDOFF.md`, whose first lines every parallel pull request
+  changed and so conflicted on; only the game-planning session edits
+  `docs/HANDOFF.md`. Read both before starting.
 - Compactions are counted in the work registry, not in the conversation
   (owner, 2026-10-24: a summary does not say how many came before). Each
   time a session sees that its conversation was summarized, its first act

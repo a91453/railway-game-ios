@@ -592,6 +592,18 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**第 62 任的現況（2026-11-12 07:45 UTC＝台灣 15:45，session_01YGNNupmJExcmCK1xgu6s5A，第 2 層，壓縮 2 次；第 3 次後換手）**
+- 照 #1579 與 PR 寫的；和下面「05:10 UTC」那段不同時以這段為準。作者交代照舊。
+- **交接改成一件一個檔**：實作 session 寫 `docs/handoff/<派工單名>.md`，不再改這份檔的開頭（`docs/handoff/README.md`；今天 #2083、#2087 各撞兩次）。派工時寫進派工單。
+- **05:10 之後合的**：#2081（這版新增 127）、#2082 COACH-1 資料（決策 706）、#2084 手動駕駛手感（704，Mac）、#2085 跟著飛機看（702，Mac）、#2086 TICK-L0（703；100 列車每 tick 575 → 約 28 ms，雲端合成地圖，作者的大存檔 UNVERIFIED）、#2083 集集保安站房（705）。這些 session 都封存了。
+- **開著的**：#2087 ISLAND-LOWRISE（707，圖看過、作者說合，等 CI）；#2088 長途客運規則（706 §2，存檔 91，CI 綠但**不合**：全臺地圖沒量，COACH-MEASURE session_01YGNNuqPCjmHySQjU6Wq42Q 接手量，護欄是鐵路票收掉 5% 或主要站對被搶 25%）；#2089 REVIEW-L19（P1 0、P2 4、P3 17）。
+- **REVIEW-L19 要處理的**：P2-1 這個 PR 補了（跟著飛機、集集保安、新駕駛畫面；機場是 12 座不是 13）；P2-2 駕駛把手在 iPhone 橫拿時上方一段落在煞車那一半（`Map3DPreviewScreen.swift:3346`），交給 Mac 的 DRIVE-VIEWBAR；另兩條（機場在主執行緒的兩處）併進 FPS-DEVICE 量。
+- **作者定的優先（07:10）**：(1) TICK-L0 用真的大存檔驗證、(2) FPS-DEVICE 實機量（FPS、每 tick 時間、記憶體、draw call），兩項同一次做，作者晚上下班把 iPhone 接上 Mac；(3) 量完才決定 TICK-L1、L2。夜景亮燈隨時刻變（做法在 #1579 6817184741）與站內樓層剖面只留規劃、不派。對照 dohoon84/bumpinto-world 的研究結論在 #1579 6817184741：授權禁商用，只看點子，不為它開工作。
+- **待查 HSR-TYPE**（#1579 6817547569）：買下高鐵區間後列車的車種可能是空的，3D 不會畫成高鐵車；Mac 看一張圖確認後才派修。
+- **Mac 的順序**：DRIVE-VIEWBAR（含 P2-2）→ WEB-127（6816440624）→ 晚上 FPS-DEVICE（6816196229＋6817271597）→ COACH-3D（要 #2088 先合）→ FACADE-669 → GLASS-POLISH、CAB-RAIN。
+- **127**：main 要等 #2087 與這個 PR 合了，再開完整 `ci.yml` 與 full lane；3400fa5 的 full lane 43164222232 結果見 #1579。**發版只等作者說發。**
+- **號碼**：決策下一個空號 709（708 口頭留給 COACH-3D；NIGHT-HOURS 佔過 709 又釋出）；存檔 main 90、91 給 #2088、下一個 92；golden schema 76。
+
 **第 62 任的現況（2026-11-12 05:10 UTC＝台灣 13:10，session_01YGNNupmJExcmCK1xgu6s5A，第 2 層，壓縮 1 次；第 3 次後換手）**
 - 照 #1579 與 PR 寫的；和下面「03:50 UTC」那段不同時以這段為準。作者交代照舊。
 - **03:50 之後合的**：#2076 AIRPORT-2（決策 699，Mac）、#2078 HEALTH-126（文件）、#2079（規劃改用 fable，作者按）、#2080 TICK-SCALE（報告與平常不跑的基準，作者按；§4.65）、#2074 COLLECTION-AIR（決策 701；規劃看過截圖）。雲端的 AIRPORT-DOMESTIC、HK-MAP、HEALTH-126、TICK-SCALE、COLLECTION-AIR 都已封存。main `c7ce403`。
