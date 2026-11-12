@@ -581,6 +581,27 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**第 61 任交第 62 任（2026-11-12 約 02:00 UTC＝台灣 10:00，session_01YGNNup5PejVbKYpnZigyeN，第 1 層，壓縮 3 次照規則換手）**
+- 照 #1579、開著的 PR 與各 session 的狀態寫的；和下面「22:15 UTC」那段不同時以這段為準。第 62 任開工：在 #1579 登記，把 §1 表格的遊戲規劃改成自己。
+- **作者的交代（都還有效）**：跟作者講話用簡短白話的中文、不講技術細節；作者每傳一則訊息先讀 #1579 的新留言；**不按 Mac 的信任卡**（不呼叫 `confirm_repository_trust`）；「綠了就合」（Mac 的 PR 也是，合了在 #1579 註明），合之前先想衝突排順序；每件派工寫雲端或 Mac 本機與一句理由，實作 session 用 `claude-fable-5-2`；**發版只在作者說發的時候**（125、126 都是作者自己按，規劃沒按）；作者問規劃的判斷時給自己的判斷，不要附和；拿不定的事（「都行 看你」「不知道」）規劃照五個角度決定、記在 #1579；截圖規矩照下面 14:15 那段；作者說「很多沒封存」，停手的雲端 session 做完就封存（Mac 的作者自己封存）。
+- **0.6.0 (126) 已發**（作者 11-12 約 01:00 UTC 自己按）：TestFlight run 43125081721，commit `164bfc38`，上傳、處理、What to Test 都過。同一個 commit 的完整 `ci.yml` 43123240731 綠；full lane（iOS App Build 43123257974）build、second、lessons、map 綠，**iPad 教學那一組 01:40 UTC 還在跑，第 62 任看結果、告訴作者、補記 #1579**。作者已發 Threads（125＋126 合一篇；機場只寫「正在做」，香港不預告）。提醒過作者回答出口合規。
+- **22:15 之後合的**：#2070（HANDOFF、What to Test 126）、#2073 REVIEW-L18（文件）。main 現在 `9c1c80b`。
+- **今晚那一版要進的（作者要機場當下一篇 Threads 的主角）**：
+  - **#2076 AIRPORT-2**（Mac 本機，作者開的對話「派工 AIRPORT-2 Mac 本機」session_01YGNNun1dsXPvXX3hovsPva，`claude/airport-2`，決策 699，不動 GameCore）：跑道、停機坪、停著與起降的飛機、地圖上的機場標記；航廈改用真實建物輪廓畫成決策 698 的樣子（理由在決策 699 第 9 節，規劃還沒回應，看總覽圖時一起判）；資料一次做了全台 19 座有代碼的機場。第一輪 `Map3DModelPackLockTests` 會紅是預期的（雜湊等 Linux 的值）。**第三級：作者或規劃看過總覽圖才合**。派工在 #1579 留言 6810179905。
+  - **#2075 AIRPORT-DOMESTIC** session_01YGNNum6bVuiLWMDmMYynQ9（雲端，`claude/airport-domestic-700`，決策 700，動 GameCore，存檔 90 不動，壓縮 1 次、只顧到 CI 綠）：航點（國內、國際含香港）、八座新機場、面板多一行，併了 REVIEW-L18 的 L18-1、L18-2、L18-4、L18-5(6)。綠了、它留「可合併、head」就合。
+  - **#2074 COLLECTION-AIR** session_01YGNNum56iA31T4mcCruB46（雲端，`claude/collection-air-701`，決策 701，不動 GameCore）：圖鑑加飛機頁與這張地圖的機場清單。**第三級：規劃看過截圖才合**。
+  - 合的順序：#2075（GameCore）先，#2074、#2076 再合；三個都碰機場，後合的可能要併 main。合完把 `.github/testflight-whats-new.md` 改成下一版（航廈與飛機進地圖、國內線與航點、圖鑑飛機頁、館藏頁用詞），再開完整 `ci.yml` 與 full lane；發版等作者說發。
+- **其他開著的**：
+  - **#2068 HK-MAP 第 2 段** session_01YGNNupiPcuij4C6SpjsRmf（雲端，決策 697，壓縮 2 次）：02:00 UTC 取樣夠後只做 §4.64 的 5 步收尾，包 4–5 MB 可以；期限 11-12 12:00 UTC；綠了可合（開關關著）。做不完開新 session 照 §4.64 接。
+  - **HEALTH-126** session_01YGNNupDKe7MF9yeJjv7RYj（雲端，`claude/health-126`，只加文件 `docs/research/HEALTH_126_2026-11-12.md`）：重量對 125、機場對機捷、駕駛獎金能不能刷、飯店遊樂園賣了再蓋、L18-3、CI 分片時間與卡住的 run。PR 綠了就合，結論白話告訴作者。
+- **給 Mac 本機的清單**：AIRPORT-2（進行中）→ **FOLLOW-AIR**（飛機的跟隨視角：後方、旁邊、機艙窗，和列車、渡輪、纜車同一套；#1579 留言 6810446728；AIRPORT-2 順手做了就併）→ GLASS-POLISH → MANUAL-DRIVE 手感 → FACADE-669 → CAB-RAIN → FPS-DEVICE。博物館下一輪：屋頂從上面看一片灰、磚色偏淡、窗沒深度。
+- **還沒派**：開航解鎖＋台灣↔香港航班（等 #2068，連同香港大範圍地圖）；ASSET-PACK（Mac，Background Assets，香港第一包，等 #2068）；金門、馬祖地圖包；長途客運；玩家自己蓋機場、機場巴士；機捷 ①②③ 與 HEALTH-125 §6 第 2–4 項；REVIEW-L18 其餘 P3；慶祝彩帶（等作者）。
+- **下一篇 Threads**：機場當主角。等航廈與飛機進地圖、國內線、圖鑑飛機頁都進測試版、規劃自己看過，再給作者草稿與要拍的圖；寫法照 [`research/THREADS_WRITING.md`](research/THREADS_WRITING.md)，作者的用詞：「開火車」不寫「開車」。
+- **號碼**：決策 699（AIRPORT-2）、700、701 已用，697 HK-MAP；**下一個決策 702**（FOLLOW-AIR 開工時登記）。存檔 main **90**，**下一個 91**；golden schema 76。
+- **審查點數**（L19，從 #2073 之後合的算起）：0。
+- **已封存**（11-12 01:40 UTC）：REVIEW-L18、AIRPORT-1、FIX-L17-P3、DRIVE-2、SUBSIDIARY-1、LOOP-EXTEND、FIX-L17、HEALTH-125、REVIEW-L17、PLATFORM-EXTEND、TYMC-YIELD。
+- main 上 `cee18c5c` 的 push run 43085790940 還卡在排隊（GitHub 11-11 的中斷），不用管、不要取消。
+
 **第 61 任的現況（2026-11-11 22:15 UTC＝台灣 11-12 06:15，session_01YGNNup5PejVbKYpnZigyeN，第 1 層，壓縮 2 次；第 3 次後換手）**
 - 照 #1579 與 PR 寫的；和下面「14:15 UTC」那段不同時以這段為準。作者交代照舊，再加：**截圖**（下面那段的「截圖」一條）；拿不定的事（「都行 看你」）規劃照五個角度決定、記在 #1579。
 - **14:15 之後合的**：#2060（HANDOFF）、#2061 DRIVE-HUD（決策 690，Mac）、#2062 LOOP-EXTEND（決策 691）、#2063（Stack frames 裝不到工具不再紅）、#2064 FIX-L17-P3、#2066 HK-MAP 第 1 段（研究文件）、#2071 AIRCRAFT-LOOK（決策 698，Mac）、#2065 DRIVE-2（決策 693，**存檔 89**）、#2069 SUBSIDIARY-1（決策 692）、#2067 MUSEUM-2（決策 696，Mac；作者看過總覽圖說可以合；下一輪要改的：屋頂從上面看是一片灰、磚色偏淡、窗沒有深度）、#2072 AIRPORT-1（決策 695，**存檔 90**；規劃看過「機場」節的截圖；沒拍到的是還沒有車站的機場那一列與車站面板的機場節，留給實機看）。這些 session 都可以封存。
