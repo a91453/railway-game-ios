@@ -188,6 +188,20 @@ extension GameSession {
         publishManualDrive()
     }
 
+    /// Decision 704: for the screenshot review only: the run being driven
+    /// is 160 m short of its stopping point at 45 km/h under a limit of
+    /// 60, the brake on, so the "stop ahead" line and the limit's sign can
+    /// be looked at without driving a whole run.
+    public func nearStopForScreenshot() {
+        guard var run = manualDriveRun, let driving = run.driving else { return }
+        var drive = ManualDrive(train: driving.drive.train,
+                                course: .init(stop: 160, limits: [.init(start: 0, end: 400, speed: 60 / 3.6)], scheduled: 60), speed: 45 / 3.6)
+        drive.set(ManualDrive.Notch(step: -3))
+        run.driving = (driving.track, drive, driving.length)
+        manualDriveRun = run
+        publishManualDrive()
+    }
+
     /// The speed and the drive the followed train is heard with while it is
     /// driven by hand.
     var manualDriveSound: (kmh: Double, drive: GameWorld.TrainDrive?)? {

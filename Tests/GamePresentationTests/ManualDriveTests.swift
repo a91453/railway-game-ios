@@ -255,4 +255,71 @@ final class ManualDriveTests: XCTestCase {
         XCTAssertEqual(drive.reading.latenessText(in: .english), "8 s late")
         XCTAssertEqual(ManualDrive.Reading.waiting.lateness, 0)
     }
+
+    /// Decision 704: "stop ahead" shows only once the brake is due: within
+    /// one and a half times the timetable's braking distance from this
+    /// speed, or the last 200 m; never at a stand, past the point or once
+    /// the run is over.
+    func testStopAheadShowsOnlyOnceTheBrakeIsDue() {
+        let speed = train.topSpeed, braking = speed * speed / (2 * train.braking)
+        precondition(braking * ManualDrive.stopAheadShare > ManualDrive.stopAheadMetres)
+        var drive = ManualDrive(train: train, course: .init(stop: braking * 1.5 + 50, scheduled: 100), speed: speed)
+        XCTAssertFalse(drive.reading.stopAhead)
+        XCTAssertNil(drive.reading.stopAheadText(in: .traditionalChinese), "nothing on the way there")
+        drive = ManualDrive(train: train, course: .init(stop: braking * 1.5 - 1, scheduled: 100), speed: speed)
+        XCTAssertTrue(drive.reading.stopAhead)
+        drive = ManualDrive(train: train, course: .init(stop: 160, scheduled: 100), speed: 2)
+        XCTAssertEqual(drive.reading.stopAheadText(in: .traditionalChinese), "前方停車 160 m")
+        XCTAssertEqual(drive.reading.stopAheadText(in: .english), "Stop ahead 160 m")
+        XCTAssertEqual(drive.reading.label(in: .traditionalChinese), "7 km/h，空檔，前方停車 160 m，準點")
+        drive = ManualDrive(train: train, course: .init(stop: 201, scheduled: 100), speed: 2)
+        XCTAssertFalse(drive.reading.stopAhead, "slow and still far")
+        drive = ManualDrive(train: train, course: .init(stop: 161, scheduled: 100))
+        XCTAssertFalse(drive.reading.stopAhead, "standing")
+        drive = ManualDrive(train: train, course: .init(stop: -3, scheduled: 100), speed: 2)
+        XCTAssertFalse(drive.reading.stopAhead, "past the point")
+        XCTAssertFalse(ManualDrive.Reading.waiting.stopAhead)
+    }
+
+    /// Decision 704: the lever. A notch a step from full power at the top
+    /// to the emergency brake at the bottom; a drag moves the handle from
+    /// where it stood to the nearest notch and no further than the ends.
+    func testTheLeverStandsOnANotchAndADragEndsOnTheNearestOne() {
+        typealias Lever = ManualDrive.Lever
+        typealias Notch = ManualDrive.Notch
+        XCTAssertEqual(Lever.fraction(of: .fullPower), 0)
+        XCTAssertEqual(Lever.fraction(of: .emergency), 1)
+        XCTAssertEqual(Lever.fraction(of: .neutral), 5.0 / 13, accuracy: 1e-12)
+        let step = 1.0 / 13
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: 0), .neutral)
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: step * 0.49), .neutral, "less than half a notch: it stays")
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: step * 0.51), Notch(step: -1))
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: -step * 3), Notch(step: 3), "up is power")
+        XCTAssertEqual(Lever.notch(from: Notch(step: 2), dragged: step * 6.2), Notch(step: -4))
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: step * 7), .fullBrake)
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: step * 8), .emergency, "one notch past the last brake")
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: 40), .emergency)
+        XCTAssertEqual(Lever.notch(from: .neutral, dragged: -40), .fullPower)
+        XCTAssertEqual(Lever.notch(from: Notch(step: -2), dragged: .nan), Notch(step: -2))
+        for notch in Notch.all {
+            XCTAssertEqual(Lever.notch(from: .fullPower, dragged: Lever.fraction(of: notch)), notch)
+        }
+    }
+
+    /// Decision 704: each notch is felt; reaching or crossing neutral and
+    /// the emergency brake are felt harder; no move, nothing.
+    func testNeutralAndTheEmergencyBrakeAreFeltHarderThanAStep() {
+        typealias Lever = ManualDrive.Lever
+        typealias Notch = ManualDrive.Notch
+        XCTAssertNil(Lever.detent(from: .neutral, to: .neutral))
+        XCTAssertEqual(Lever.detent(from: Notch(step: 2), to: Notch(step: 3)), .step)
+        XCTAssertEqual(Lever.detent(from: Notch(step: -3), to: Notch(step: -6)), .step)
+        XCTAssertEqual(Lever.detent(from: .neutral, to: Notch(step: 1)), .step, "leaving neutral is a step")
+        XCTAssertEqual(Lever.detent(from: .neutral, to: Notch(step: -1)), .step)
+        XCTAssertEqual(Lever.detent(from: Notch(step: 1), to: .neutral), .heavy)
+        XCTAssertEqual(Lever.detent(from: Notch(step: -1), to: .neutral), .heavy)
+        XCTAssertEqual(Lever.detent(from: Notch(step: 2), to: Notch(step: -2)), .heavy, "a drag across neutral")
+        XCTAssertEqual(Lever.detent(from: .fullBrake, to: .emergency), .heavy)
+        XCTAssertEqual(Lever.detent(from: .emergency, to: .fullBrake), .step)
+    }
 }

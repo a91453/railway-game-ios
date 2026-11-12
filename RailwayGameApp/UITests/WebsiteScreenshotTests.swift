@@ -1252,6 +1252,25 @@ final class WebsiteScreenshotTests: XCTestCase {
             for _ in 0..<7 { brake.tap() }
             settle(seconds: 2)
             keep("drive-brake", app)
+            // Decision 704: the lever is dragged too: up from the brake
+            // to power, and it stays where it is let go.
+            let notch = app.descendants(matching: .any)["map3D.drive.notch"].firstMatch
+            XCTAssertTrue(notch.appears(within: 5), "The notch the handle stands on is written beside it")
+            let braking = notch.label
+            let grip = brake.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+            grip.press(forDuration: 0.2, thenDragTo: grip.withOffset(CGVector(dx: 0, dy: -90)))
+            settle(seconds: 2)
+            let dragged = notch.label
+            XCTAssertNotEqual(dragged, braking, "Dragging the lever moves the handle")
+            settle(seconds: 1)
+            XCTAssertEqual(notch.label, dragged, "Let go, the handle stays on its notch")
+            keep("drive-dragged", app)
+            let emergency = app.buttons["map3D.drive.emergency"]
+            XCTAssertTrue(emergency.becomesHittable(within: 5), "The emergency brake has its own key")
+            emergency.tap()
+            settle(seconds: 1)
+            XCTAssertNotEqual(notch.label, dragged, "The emergency brake is on")
+            keep("drive-emergency", app)
             app.buttons["map3D.drive.end"].tap()
             XCTAssertTrue(start.appears(within: 5), "Giving the handle back brings the start button back")
         }
@@ -1264,6 +1283,17 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.buttons["map3D.drive.done"].becomesHittable(within: 10), "The run's result shows")
             settle(seconds: 3)
             keep("drive-result", app)
+        }
+        // Decision 704: near the stop, the one line that says so.
+        do {
+            let app = open3DFollowing(extra: ["-screenshot-drive-near"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.brake"].becomesHittable(within: 10), "The handle shows")
+            settle(seconds: 3)
+            keep("drive-near", app)
         }
     }
 
