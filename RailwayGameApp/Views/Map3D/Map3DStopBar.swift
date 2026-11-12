@@ -9,7 +9,6 @@ import SwiftUI
 struct Map3DStopBar: View {
     let bar: ManualDrive.StopBar
     let language: DisplayLanguage
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The track's and the marker's sizes, with the type.
     @ScaledMetric(relativeTo: .caption) private var trackHeight: CGFloat = 6
     @ScaledMetric(relativeTo: .caption) private var markerHeight: CGFloat = 18
@@ -58,33 +57,47 @@ struct Map3DStopBar: View {
         }
     }
 
-    /// The bar itself: plain short of the target, the target a taller
-    /// solid block, the stretch past it in the error colour, and the
-    /// marker over where the head is.
+    /// The bar itself, at the width it is given.
     private var track: some View {
-        GeometryReader { proxy in
-            let width = proxy.size.width, target = ManualDrive.StopBar.target
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Theme.chip)
-                    .frame(width: width, height: trackHeight)
-                Capsule()
-                    .fill(Theme.error)
-                    .opacity(0.45)
-                    .frame(width: width * CGFloat(1 - target.upperBound), height: trackHeight)
-                    .offset(x: width * CGFloat(target.upperBound))
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(Theme.success)
-                    .frame(width: width * CGFloat(target.upperBound - target.lowerBound), height: trackHeight * 2)
-                    .offset(x: width * CGFloat(target.lowerBound))
-                Capsule()
-                    .fill(Theme.textPrimary)
-                    .frame(width: 4, height: markerHeight)
-                    .offset(x: width * CGFloat(bar.marker) - 2)
-                    .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: bar.marker)
-            }
-            .frame(width: width, height: proxy.size.height, alignment: .leading)
+        let marker = bar.marker, trackHeight = self.trackHeight, markerHeight = self.markerHeight
+        return GeometryReader { @Sendable proxy in
+            Map3DStopBarTrack(size: proxy.size, marker: marker, trackHeight: trackHeight, markerHeight: markerHeight)
         }
         .frame(minWidth: 90, minHeight: markerHeight)
+    }
+}
+
+/// ``Map3DStopBar``'s track drawn at the size it was given: plain short of
+/// the target, the target a taller solid block, the stretch past it in the
+/// error colour, and the marker over where the head is.
+private struct Map3DStopBarTrack: View {
+    let size: CGSize
+    let marker: Double
+    let trackHeight: CGFloat
+    let markerHeight: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let width = size.width, target = ManualDrive.StopBar.target
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(Theme.chip)
+                .frame(width: width, height: trackHeight)
+            Capsule()
+                .fill(Theme.error)
+                .opacity(0.45)
+                .frame(width: width * CGFloat(1 - target.upperBound), height: trackHeight)
+                .offset(x: width * CGFloat(target.upperBound))
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(Theme.success)
+                .frame(width: width * CGFloat(target.upperBound - target.lowerBound), height: trackHeight * 2)
+                .offset(x: width * CGFloat(target.lowerBound))
+            Capsule()
+                .fill(Theme.textPrimary)
+                .frame(width: 4, height: markerHeight)
+                .offset(x: width * CGFloat(marker) - 2)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: marker)
+        }
+        .frame(width: width, height: size.height, alignment: .leading)
     }
 }
