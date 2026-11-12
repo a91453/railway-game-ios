@@ -21,7 +21,8 @@ final class RealWorldDataLoadTests: XCTestCase {
     }
 
     /// The app's files from the repository, where the app bundles them
-    /// flat: `Resources/RealWorld/`, `Resources/RealBuses/` and
+    /// flat: `Resources/RealWorld/`, `Resources/RealBuses/`,
+    /// `Resources/RealCoaches/` and
     /// `Resources/RealRailways/`.
     nonisolated static func file(_ name: String, _ ext: String) throws -> Data {
         let realWorld = BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealWorld/\(name).\(ext)")
@@ -31,6 +32,10 @@ final class RealWorldDataLoadTests: XCTestCase {
         let realBuses = BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealBuses/\(name).\(ext)")
         if FileManager.default.fileExists(atPath: realBuses.path) {
             return try Data(contentsOf: realBuses)
+        }
+        let realCoaches = BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealCoaches/\(name).\(ext)")
+        if FileManager.default.fileExists(atPath: realCoaches.path) {
+            return try Data(contentsOf: realCoaches)
         }
         return try BundledRealData.file(name, ext)
     }

@@ -1095,7 +1095,7 @@ extension GameWorld {
     /// Since decision 533 with the riders of the company's schools and
     /// hospitals too (``passengerExtraFlows(onDay:reaches:)``).
     func currentTouristFlows() -> TouristFlows {
-        guard tourism != nil || !civicRiderBuildings.isEmpty || !airports.isEmpty else { return TouristFlows() }
+        guard tourism != nil || !civicRiderBuildings.isEmpty || !airports.isEmpty || !coachStops.isEmpty else { return TouristFlows() }
         let world = self
         let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
         return world.passengerExtraFlows(onDay: dayIndex(of: clock.now)) { world.reaches(from: $0, to: $1, graph: graph) }
@@ -1108,6 +1108,7 @@ extension GameWorld {
         var flows = tourism == nil ? TouristFlows() : touristFlows(onDay: day, reaches: reaches).flows
         addCivicFlows(onDay: day, to: &flows, reaches: reaches)
         addAirportFlows(onDay: day, to: &flows, reaches: reaches)
+        addCoachFlows(onDay: day, to: &flows, reaches: reaches)
         return flows
     }
 

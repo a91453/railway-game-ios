@@ -3817,6 +3817,16 @@ public final class GameSession {
         logging(action) { $0 = read }
     }
 
+    /// Gives the world the coach stops of its map (decision 706), when the
+    /// app has read them only after the game began
+    /// (``CoachCatalog/withCoachStops(_:network:)``). Not an edit: nothing
+    /// to undo.
+    public func giveCoachStops(of network: CoachNetwork) {
+        let given = CoachCatalog.withCoachStops(world, network: network)
+        guard given.coachStops != world.coachStops else { return }
+        logging(.unrecorded("giveCoachStops")) { $0 = given }
+    }
+
     @discardableResult
     public func performEdit<Result, Failure: Error>(
         _ command: (inout GameWorld) throws(Failure) -> Result, caller: String = #function

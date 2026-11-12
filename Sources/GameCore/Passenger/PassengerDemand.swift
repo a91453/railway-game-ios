@@ -32,7 +32,7 @@ extension GameWorld {
     var demandDay: Int64? {
         // Decision 533: a school's students come on school days only.
         weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil
-            || placedBuildings.contains(where: \.kind.bringsRiders) || !airports.isEmpty ? dayIndex(of: clock.now) : nil
+            || placedBuildings.contains(where: \.kind.bringsRiders) || !airports.isEmpty || !coachStops.isEmpty ? dayIndex(of: clock.now) : nil
     }
 
     /// Whether today's demand follows the weekend's hours: on a weekend,
@@ -452,6 +452,8 @@ extension GameWorld {
         /// The ordinary trips that took a scooter or a car instead
         /// (decision 332).
         let switched: Int64
+        /// The trips that rode a coach instead (decision 706).
+        let byCoach: Int64
         /// The fastest route, in a network game.
         let route: PassengerRoute?
     }
@@ -493,6 +495,7 @@ extension GameWorld {
         }
         let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
         let typhoons = typhoonMultipliers()
+        let rivals = network ? coachRivals() : [:]
         return zip(reached, shares).map { reached, trips in
             // ``keptTrips(_:from:to:typhoons:)``, the fare's step apart.
             let left = distancedTrips(Self.typhoonTrips(trips, from: origin, to: reached.destination, multipliers: typhoons),
@@ -500,6 +503,7 @@ extension GameWorld {
             var trips = faredTrips(left, from: origin, to: reached.destination)
             let tooExpensive = left - trips
             var switched: Int64 = 0
+            var byCoach: Int64 = 0
             // Decision 168: the pair's intercity trips, kept by the minutes
             // of the way as its others are.
             var between = network ? destinations[reached.destination].map {
@@ -512,10 +516,18 @@ extension GameWorld {
                 trips = modeShiftKept(decayed, from: origin, to: reached.destination, minutes: minutes)
                 switched = decayed - trips
                 between = PassengerCrowding.decayed(between, minutes: minutes)
+                // Decision 706: then some ride a direct coach instead.
+                if let rival = rivals[origin]?[reached.destination] {
+                    let before = trips + between
+                    let fast = route.map(ridesHighSpeed) ?? false
+                    trips = coachKept(trips, from: origin, to: reached.destination, minutes: minutes, highSpeed: fast, rival: rival)
+                    between = coachKept(between, from: origin, to: reached.destination, minutes: minutes, highSpeed: fast, rival: rival)
+                    byCoach = before - trips - between
+                }
             }
             let extra = tourists[reached.destination]?.total ?? 0
             return DemandDetail(destination: reached.destination, trips: trips + between + extra, trip: reached.trip,
-                                tooExpensive: tooExpensive, switched: switched, route: route)
+                                tooExpensive: tooExpensive, switched: switched, byCoach: byCoach, route: route)
         }
     }
 
@@ -634,6 +646,8 @@ extension GameWorld {
         /// The airports' stations (decision 695): a station that starts or
         /// stops serving a terminal changes the air passengers' trips.
         var airports: [StationID?] = []
+        /// The coach stops' stations (decision 706), likewise.
+        var coaches: [StationID?] = []
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -823,6 +837,7 @@ extension GameWorld {
             return !found.isEmpty
         }
         let drawingStations = Set(drawing.map(\.station))
+        let rivals = coachRivals()
         struct Draft {
             let origin: StationID
             let record: Int
@@ -868,9 +883,16 @@ extension GameWorld {
                 let intercity = intercityTrips(from: record.station, origin, to: destination.station, destination.demand!, typhoons: typhoons)
                 // Decision 332: then some of the ordinary trips take a
                 // scooter or a car instead.
-                let ordinary = modeShiftKept(PassengerCrowding.decayed(fared, minutes: minutes),
+                var ordinary = modeShiftKept(PassengerCrowding.decayed(fared, minutes: minutes),
                                              from: record.station, to: destination.station, minutes: minutes)
-                let trips = ordinary + PassengerCrowding.decayed(intercity, minutes: minutes)
+                var between = PassengerCrowding.decayed(intercity, minutes: minutes)
+                // Decision 706: then some ride a direct coach instead.
+                if let rival = rivals[record.station]?[destination.station] {
+                    let fast = options.min { $0.route.totalMinutes < $1.route.totalMinutes }.map { ridesHighSpeed($0.route) } ?? false
+                    ordinary = coachKept(ordinary, from: record.station, to: destination.station, minutes: minutes, highSpeed: fast, rival: rival)
+                    between = coachKept(between, from: record.station, to: destination.station, minutes: minutes, highSpeed: fast, rival: rival)
+                }
+                let trips = ordinary + between
                 let extra = tourists.trips(from: record.station, to: destination.station)
                 guard trips + extra > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,
@@ -920,7 +942,7 @@ extension GameWorld {
         let temples = companySights().map(\.sight)
         let civic = civicRiderBuildings
         if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples
-            || passengerPlan.civic != civic || passengerPlan.airports != airportStations {
+            || passengerPlan.civic != civic || passengerPlan.airports != airportStations || passengerPlan.coaches != coachStations {
             passengerPlan = PassengerPlanCache()
         }
         if passengerPlan.plan == nil {
@@ -930,6 +952,7 @@ extension GameWorld {
             passengerPlan.temples = temples
             passengerPlan.civic = civic
             passengerPlan.airports = airportStations
+            passengerPlan.coaches = coachStations
             passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }

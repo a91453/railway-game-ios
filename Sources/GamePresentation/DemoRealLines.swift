@@ -250,8 +250,17 @@ extension GameSession {
     /// the first by their key (the fixed frame time test's).
     @discardableResult
     public func layDemoRealLines(in view: WorldRegion, routes most: Int = .max) async -> DemoRealLines.Outcome? {
+        await layDemoRealLines(in: view, routes: most, anyWidth: false, only: nil)
+    }
+
+    /// As ``layDemoRealLines(in:routes:)``; the balance reports lay a whole
+    /// map's lines of some systems at once (decision 706's `CoachReportTests`):
+    /// `anyWidth` for a view of any width, `only` the routes to lay.
+    func layDemoRealLines(
+        in view: WorldRegion, routes most: Int, anyWidth: Bool, only: (@Sendable (DemoRealLines.Route) -> Bool)?
+    ) async -> DemoRealLines.Outcome? {
         guard canLayDemoRealLines, demoRealLinesProgress == nil, let railways, let frame = RealWorldFrame(world: world) else { return nil }
-        guard view.maxX - view.minX <= DemoRealLines.widestView, view.maxY - view.minY <= DemoRealLines.widestView else {
+        guard anyWidth || (view.maxX - view.minX <= DemoRealLines.widestView && view.maxY - view.minY <= DemoRealLines.widestView) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Zoom in closer: the real lines are laid for a view up to 40 km across.",
                 "請再放大一點：一次只鋪畫面 40 公里以內的真實路線。"
@@ -262,7 +271,8 @@ extension GameSession {
         demoRealLinesProgress = DemoRealLines.Progress(done: 0, total: 0)
         defer { demoRealLinesProgress = nil }
         let planned = await Task.detached(priority: .userInitiated) {
-            DemoRealLines.plan(railways: railways, frame: frame, bounds: bounds, view: view, carLength: carLength)
+            let plan = DemoRealLines.plan(railways: railways, frame: frame, bounds: bounds, view: view, carLength: carLength)
+            return only.map { DemoRealLines(routes: plan.routes.filter($0)) } ?? plan
         }.value.first(most)
         let total = planned.routes.reduce(0) { $0 + $1.stops.count }
         guard total > 0 else {
