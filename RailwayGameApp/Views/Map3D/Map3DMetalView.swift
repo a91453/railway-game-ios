@@ -130,6 +130,9 @@ final class Map3DMetalView: MTKView {
     /// Decision 585 PR-4 (FERRYFOLLOW): the same for the ferry boat
     /// followed. Not seen through: it sails on open water.
     var ferryPose: (@MainActor (FerryBoatID) -> Map3DFollow.Pose?)?
+    /// Decision 702 (FOLLOW-AIR): the same for the aircraft followed;
+    /// `nil` once it can no longer be followed, and the camera stays.
+    var aircraftPose: (@MainActor (Map3DAircraft.FlightID) -> Map3DFollow.Pose?)?
     /// Decision 606 (IDLEREAL): where a real timetable's train is.
     var realTrainPose: (@MainActor (RealTrainID) -> Map3DFollow.Pose?)?
     /// Decision 259: the people and vehicles for this frame, seen with the
@@ -1031,6 +1034,9 @@ final class Map3DMetalView: MTKView {
         case .realTrain(let real):
             guard let found = realTrainPose?(real) else { return }
             pose = found
+        case .aircraft(let flight):
+            guard let found = aircraftPose?(flight) else { return }
+            pose = found
         case .train(let train):
             guard let head = heads.first(where: { $0.train == train }) else { return }
             pose = head.pose
@@ -1290,8 +1296,9 @@ final class Map3DMetalView: MTKView {
         let shadowMesh = frame.flatMap { $0.shadows.isEmpty ? nil : $0.shadows }
         // Decision 617: the glows round the trains' lamps, placed this frame.
         let glows = glowsNow
+        // Decision 702: and the aircraft's lamps.
         let trainGlowFloats = glows && models != nil && frame != nil
-            ? Map3DGlow.trainSpots(of: frame!, pack: models!.pack).flatMap(\.floats) : []
+            ? (Map3DGlow.trainSpots(of: frame!, pack: models!.pack) + frame!.lamps).flatMap(\.floats) : []
         // Decision 672: seeing underground, over the map only; the cars in
         // the tunnels this frame.
         let drawsXRay = xrayDrawing != nil && Map3DXRay.draws(switchOn: xray != nil, following: following != nil)

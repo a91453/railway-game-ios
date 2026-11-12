@@ -103,7 +103,7 @@ extension GameSession {
 
     /// Whether the camera follows a train or a bus now.
     public var isFollowingVehicle: Bool { followedTrainID != nil || followedBusID != nil || followedCabinID != nil
-        || followedFerryBoatID != nil }
+        || followedFerryBoatID != nil || followedAircraftID != nil }
 
     /// Starts following bus `id` if it is out; never changes the world.
     public func followBus(_ id: BusID) {
@@ -111,6 +111,7 @@ extension GameSession {
         followedTrainID = nil
         followedCabinID = nil
         followedFerryBoatID = nil
+        followedAircraftID = nil
         followedBusID = id
         updateFollowSounds()
     }

@@ -281,6 +281,10 @@ struct Map3DPreviewScreen: View {
                     // Decision 585 PR-4 (FERRYFOLLOW).
                     Map3DFerryFollowBar(facts: ferry, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                } else if let aircraft = session.aircraftFollowBar {
+                    // Decision 702 (FOLLOW-AIR).
+                    Map3DAircraftFollowBar(facts: aircraft, session: session, view: $followView, takePhoto: takePhoto)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else if !Self.screenshotClean {
                     Text(verbatim: handedOver == nil
                          ? language.text("Pinch closer to tilt the map, and push two fingers up to tilt it more. Drag to move, two fingers to turn.",
@@ -300,6 +304,7 @@ struct Map3DPreviewScreen: View {
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.busFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.cabinFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.ferryFollowBar != nil)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.aircraftFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driving)
             .ambientHidden(ambient != nil)
@@ -358,6 +363,9 @@ struct Map3DPreviewScreen: View {
         // this map cannot find (in a tunnel, past the scene) for a while
         // is passed over.
         .task(id: ambientScreen?.ambient?.realTrain) { await watchRealTrain() }
+        #if DEBUG
+        .task { await followAircraftForScreenshot() }
+        #endif
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
@@ -370,6 +378,9 @@ struct Map3DPreviewScreen: View {
             feed.garbageTruckSound = { [weak audio] sound in audio?.setGarbageTruck(sound) }
             let session = session
             feed.manualDrive = { [weak session] now in session?.stepManualDrive(at: now) }
+            // Decision 702: what the aircraft followed is doing, and when
+            // it can no longer be followed.
+            feed.aircraftChanged = { [weak session] state, flight in session?.noteFollowedAircraft(state, of: flight) }
         }
         .onDisappear {
             session.endManualDrive()
@@ -391,7 +402,7 @@ struct Map3DPreviewScreen: View {
     private func takePhoto() {
         guard let view = cameraLink.view else { return }
         let title = session.followedTrain.map(\.name) ?? session.busFollowBar?.routeName ?? session.cabinFollowBar?.name
-            ?? session.ferryFollowBar?.name
+            ?? session.ferryFollowBar?.name ?? session.aircraftFollowBar?.name
             ?? DisplayLanguage.app.text("3D Map", "3D 地圖")
         let photo = photo
         // A real-world map's data, written on the photo as the postcard
@@ -442,6 +453,10 @@ struct Map3DPreviewScreen: View {
         if let cabin = session.followedCabinID, session.cabinFollowBar != nil { return Map3DFollow(cabin: cabin, view: view) }
         // Decision 585 PR-4 (FERRYFOLLOW): a boat, from its bridge, its window, above or beside.
         if let boat = session.followedFerryBoatID, session.ferryFollowBar != nil { return Map3DFollow(ferry: boat, view: view) }
+        // Decision 702 (FOLLOW-AIR): an aircraft, from behind, beside or its cabin's window.
+        if let flight = session.followedAircraftID, let bar = session.aircraftFollowBar {
+            return Map3DFollow(aircraft: flight, view: view, length: Map3DAircraftStudies.dimensions(bar.state.kind).length)
+        }
         return nil
     }
 
@@ -468,6 +483,12 @@ struct Map3DPreviewScreen: View {
             session.followFerryBoat(boat)
             return
         }
+        // Decision 702 (FOLLOW-AIR): and an aircraft landing, leaving or taxiing.
+        if session.tool == .select, session.tutorial == nil,
+           let aircraft = feed.aircraft(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene) {
+            session.followAircraft(aircraft.state)
+            return
+        }
         guard let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
         else { return }
         let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
@@ -475,6 +496,23 @@ struct Map3DPreviewScreen: View {
         let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
         stationTag.show(id, at: anchor, seenBy: camera)
     }
+
+    #if DEBUG
+    /// Decision 702: the Debug app's `-screenshot-3d-follow-aircraft`
+    /// follows the aircraft landing, leaving or taxiing nearest the
+    /// middle of the view, once there is one (a finger cannot be put on
+    /// a moving aircraft by a test).
+    private func followAircraftForScreenshot() async {
+        guard ProcessInfo.processInfo.arguments.contains("-screenshot-3d-follow-aircraft") else { return }
+        while !Task.isCancelled, !session.isFollowingAircraft {
+            if let scene, let target = cameraLink.camera?.target, let found = feed.aircraft(nearest: target, in: scene) {
+                session.followAircraft(found.state)
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+    }
+    #endif
 
     /// Decision 606: tells the idle mode when the built map first shows
     /// its real train on built ground, and passes it on when it has not
@@ -1169,6 +1207,12 @@ final class Map3DTrainFeed {
     /// Decision 585 PR-4 (FERRYFOLLOW): the boat the camera follows, always
     /// drawn whole, its way the ferries' ahead.
     var followedFerry: FerryBoatID?
+    /// Decision 702 (FOLLOW-AIR): the flight whose aircraft the camera
+    /// follows, always drawn whole; and who is told what it is doing each
+    /// time that changes, `nil` once it can no longer be followed.
+    var followedAircraft: Map3DAircraft.FlightID?
+    var aircraftChanged: (@MainActor (Map3DAircraft.State?, Map3DAircraft.FlightID) -> Void)?
+    private var aircraftTold: (flight: Map3DAircraft.FlightID, state: Map3DAircraft.State?)?
     /// Decision 686: steps the run the player drives by hand to the
     /// frame's time and says where its train is drawn; `nil` for none.
     var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double)?)?
@@ -1312,18 +1356,65 @@ final class Map3DTrainFeed {
         }
         // Decision 699: and the aircraft at the airports' stands, landing
         // and leaving, on the same clock; none flies with Reduce Motion.
-        if let models, let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields, let second = cableSecond(at: now) {
-            if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
-                aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
-                aircraftKey = (scene.originX, scene.originY, world.airports.count)
-                airTraffic = nil
-            }
-            let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
-            if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
-            aircraft?.add(to: &frame, pack: models, second: second, traffic: airTraffic, eye: eye, reach: reach.farModel,
-                          still: UIAccessibility.isReduceMotionEnabled)
+        // Decision 702: the one the camera follows drawn whole, and the
+        // moving ones' lamps, which flash by the player's clock.
+        if let models, let second = cableSecond(at: now), let laid = laidAircraft(in: scene, second: second) {
+            let still = UIAccessibility.isReduceMotionEnabled
+            laid.aircraft.add(to: &frame, pack: models, second: second, traffic: laid.traffic, eye: eye, reach: reach.farModel,
+                              still: still, following: followedAircraft, blink: still ? nil : now)
         }
         return frame
+    }
+
+    /// Decision 699: the airfields laid in `scene`, laid again when the
+    /// scene or the world's airports change, and the flights of the day
+    /// of game second `second`; `nil` off a real-world map.
+    private func laidAircraft(in scene: Map3DScene, second: Double) -> (aircraft: Map3DAircraft.Laid, traffic: Map3DAircraft.Traffic?)? {
+        guard let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields else { return nil }
+        if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
+            aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
+            aircraftKey = (scene.originX, scene.originY, world.airports.count)
+            airTraffic = nil
+        }
+        let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
+        if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
+        return aircraft.map { ($0, airTraffic) }
+    }
+
+    /// Decision 702 (FOLLOW-AIR): the aircraft of flight `id` now, while
+    /// the camera can follow it.
+    private func aircraftFollowed(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
+        return laid.aircraft.followed(id, second: second, traffic: laid.traffic, still: UIAccessibility.isReduceMotionEnabled)
+    }
+
+    /// Decision 702: where the aircraft of flight `id` is now, as the
+    /// follow camera reads it; `nil` once it can no longer be followed
+    /// (the camera stays where it is). ``aircraftChanged`` is told what
+    /// it is doing when that changes, after this frame.
+    func aircraftPose(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DFollow.Pose? {
+        let found = aircraftFollowed(id, in: scene)
+        if aircraftTold?.flight != id || aircraftTold?.state != found?.state {
+            aircraftTold = (id, found?.state)
+            let state = found?.state, tell = aircraftChanged
+            Task { @MainActor in tell?(state, id) }
+        }
+        return found.map { Map3DAircraft.pose(of: $0.drawn) }
+    }
+
+    /// Decision 702: the aircraft landing, leaving or taxiing drawn under
+    /// the finger at (`x`, `y`), if any.
+    func aircraft(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
+        return laid.aircraft.followable(atX: x, y: y, camera: camera, second: second, traffic: laid.traffic,
+                                        still: UIAccessibility.isReduceMotionEnabled, within: Map3DBuses.tapReach)
+    }
+
+    /// Decision 702: the aircraft that can be followed nearest `point`,
+    /// for the Debug app's `-screenshot-3d-follow-aircraft`.
+    func aircraft(nearest point: Map3DPoint, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
+        return laid.aircraft.followable(nearest: point, second: second, traffic: laid.traffic)
     }
 
     /// Decision 606 (IDLEREAL): where real train `id` is now, as the
@@ -1562,13 +1653,16 @@ private struct Map3DView: UIViewRepresentable {
             // `follow?.bus`, `.cabin`, ...: those crashed Xcode 26.6's
             // Release optimizer (CopyPropagation). Do not change it back.
             var followedTrain: TrainID?, followedBus: BusID?, followedCabin: CabinID?, followedFerry: FerryBoatID?
+            var followedAircraft: Map3DAircraft.FlightID?
             switch follow?.subject {
             case .train(let id)?: followedTrain = id
             case .bus(let id)?: followedBus = id
             case .cabin(let id)?: followedCabin = id
             case .ferry(let id)?: followedFerry = id
+            case .aircraft(let id)?: followedAircraft = id
             case .realTrain?, nil: break
             }
+            feed.followedAircraft = followedAircraft
             feed.followedBus = followedBus
             feed.followedCabin = followedCabin
             // Decision 672: the lamps of the train followed light its
@@ -1652,6 +1746,7 @@ private struct Map3DView: UIViewRepresentable {
         view.busPose = { id in feed.busPose(id, in: scene) }
         view.cabinPose = { id in feed.cabinPose(id, in: scene) }
         view.ferryPose = { id in feed.ferryPose(id, in: scene) }
+        view.aircraftPose = { id in feed.aircraftPose(id, in: scene) }
         view.realTrainPose = { id in feed.realTrainPose(id, in: scene) }
         // Decision 583: the strip built ahead lies the way the followed
         // cabin runs; decision 585 PR-4: or boat.
@@ -1666,6 +1761,8 @@ private struct Map3DView: UIViewRepresentable {
             case .ferry(let id)?: found = feed.ferryPose(id, in: scene)
             // Decision 606: or real train.
             case .realTrain(let id)?: found = feed.realTrainPose(id, in: scene)
+            // Decision 702: or aircraft.
+            case .aircraft(let id)?: found = feed.aircraftPose(id, in: scene)
             case .train?, .bus?, nil: found = nil
             }
             guard let pose = found else { return nil }
@@ -2319,6 +2416,8 @@ private struct Map3DFollowChoice: View {
     var unavailable: String?
     /// Decision 585 PR-4 (FERRYFOLLOW): a boat's names (駕駛台, 船艙窗).
     var ferry = false
+    /// Decision 702 (FOLLOW-AIR): an aircraft's names (機艙窗).
+    var aircraft = false
 
     var body: some View {
         let blocked = unavailable != nil && selection != option
@@ -2329,7 +2428,7 @@ private struct Map3DFollowChoice: View {
             UITestTrace.action("map3D.follow.\(option.rawValue) (was \(selection.rawValue))")
             selection = option
         } label: {
-            Text(verbatim: ferry ? option.ferryText(in: language) : option.text(in: language))
+            Text(verbatim: aircraft ? option.aircraftText(in: language) : ferry ? option.ferryText(in: language) : option.text(in: language))
                 .font(.caption.weight(.bold))
                 .fixedSize()
                 .padding(.horizontal, 8)
@@ -2342,7 +2441,8 @@ private struct Map3DFollowChoice: View {
         .buttonStyle(.plain)
         .disabled(blocked)
         .opacity(blocked ? 0.4 : 1)
-        .accessibilityHint(Text(verbatim: unavailable ?? (ferry ? option.ferryHint(in: language) : option.hint(in: language))))
+        .accessibilityHint(Text(verbatim: unavailable ?? (aircraft ? option.aircraftHint(in: language)
+                                                          : ferry ? option.ferryHint(in: language) : option.hint(in: language))))
         .accessibilityAddTraits(selection == option ? .isSelected : [])
         .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
     }
@@ -2737,6 +2837,98 @@ private struct Map3DFerryFollowBar: View {
         let language = session.language
         return ForEach(Map3DFollow.ferryViews, id: \.self) { @Sendable option in
             Map3DFollowChoice(option: option, selection: selection, language: language, ferry: true)
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button(action: takePhoto) {
+            round("camera.fill")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Take Photo", "拍照")))
+        .accessibilityHint(Text(verbatim: session.language.text("Saves the 3D view as a picture to share.", "把現在的 3D 畫面存成照片，可以分享。")))
+        .accessibilityIdentifier("map3D.follow.photo")
+        Button {
+            session.stopFollowingTrain()
+        } label: {
+            round("xmark").foregroundStyle(Theme.onError).background(Theme.error, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Stop following", "取消跟隨")))
+        .accessibilityIdentifier("map3D.follow.stop")
+    }
+
+    private func round(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.caption.weight(.heavy))
+            .frame(width: 26, height: 26)
+            .background(Theme.chip, in: Circle())
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+    }
+}
+
+/// Decision 702 (FOLLOW-AIR): the bar while the 3D map follows an
+/// aircraft, as the ferry boat's: its type, the airport it lands at or
+/// leaves, what it is doing, and its three views (behind, beside, window).
+private struct Map3DAircraftFollowBar: View {
+    let facts: AircraftFollowFacts
+    let session: GameSession
+    @Binding var view: Map3DFollow.View
+    let takePhoto: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) {
+                title
+                choices
+                actions
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 9) {
+                    title
+                    Spacer(minLength: 0)
+                    actions
+                }
+                HStack(spacing: 9) { choices }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 2)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .hudFrameMark("map3D.aircraftFollowBar")
+        .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+    }
+
+    private var title: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "airplane")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: [facts.name, facts.directionText].joined(separator: " · "))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: facts.stopText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var choices: some View {
+        let shown = $view
+        let selection = Binding(get: { Map3DFollow.aircraftView(shown.wrappedValue) }, set: { shown.wrappedValue = $0 })
+        let language = session.language
+        return ForEach(Map3DFollow.aircraftViews, id: \.self) { @Sendable option in
+            Map3DFollowChoice(option: option, selection: selection, language: language, aircraft: true)
         }
     }
 
