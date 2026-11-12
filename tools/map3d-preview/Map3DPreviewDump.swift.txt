@@ -53,6 +53,28 @@ final class Map3DPreviewDump: XCTestCase {
                                  water: try WaterGrid(data: resource("RealWorld/taiwan_water.json")))
             world = taiwan
             focus = airport
+        // Decision 707: a new game round MAP3D_AT (`latitude:longitude`),
+        // its land by MAP3D_LAND: `towns` (none read: a blank map's towns,
+        // as the airports' screenshot scenes were, twice the usual a
+        // side), `empty` (as those scenes are now) or the real land, as
+        // the app's new game.
+        case "island":
+            let at = ProcessInfo.processInfo.environment["MAP3D_AT"]!.split(separator: ":").map { Double(String($0))! }
+            let anchor = GeoAnchor(latitudeDegrees: at[0], longitudeDegrees: at[1])!
+            switch ProcessInfo.processInfo.environment["MAP3D_LAND"] {
+            case "towns":
+                world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21))
+            case "empty":
+                world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), land: [])
+            default:
+                let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
+                let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
+                world = GameWorld.newGame(
+                    anchor: anchor,
+                    land: LandImport.cells(population: try XCTUnwrap(HighSpeedDemoTests.population), places: HighSpeedDemoTests.places, water: water,
+                                           frame: frame, bounds: GameWorld.newGameBounds),
+                    water: water.cells(frame: frame, bounds: GameWorld.newGameBounds))
+            }
         case "realdemo":
             let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
             let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
@@ -77,8 +99,10 @@ final class Map3DPreviewDump: XCTestCase {
             ? try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped)) : nil
         // MAP3D_NOBUILD=1: the land with no town on it and the airports'
         // buildings (decision 385), as the app passes them.
-        let noBuild = ProcessInfo.processInfo.environment["MAP3D_NOBUILD"] == "1"
+        var noBuild = ProcessInfo.processInfo.environment["MAP3D_NOBUILD"] == "1"
             ? try RealNoBuildLand(data: resource("RealWorld/taiwan_no_build.json")) : nil
+        // Decision 699: the airfields, as the app hands them.
+        noBuild?.airfields = try RealAirfields(data: resource("BaseMap/taiwan_airfields.json"))
         let scene = Map3DScene(world: world, focus: focus, baseMap: tiles, cityTiles: cityTiles, footprints: footprints, heights: heights,
                                railways: railways, noBuild: noBuild)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }

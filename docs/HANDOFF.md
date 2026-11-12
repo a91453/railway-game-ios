@@ -1,3 +1,8 @@
+> REVIEW-L19（session_01YGNNump8pMQNDxATBbFcLg，`claude/review-l19`，只審不改，2026-11-12）：`164bfc3..be82f50`（#2068、#2074–#2076、#2081–#2087）的審查在 [REVIEW_L19](research/REVIEW_L19_2026-11-12.md)：P1 0、P2 4、P3 18，都還沒修。發版前建議先處理的兩條：127 的「這版新增」與 What to Test 少跟著飛機、集集保安、新把手三項且有一行過期（P2-1）；駕駛把手在 B7 點把手上方會進緊急煞車扣 10 分（P2-2，和 DRIVE-VIEWBAR 同一個檔）。#2086 的索引沒有發現問題；#2087 補審只有一條 P3。
+>
+> 離島不長高樓（派工單 ISLAND-LOWRISE，session_01YGNNum16MSwWNJ4o3hX6fk，`claude/island-lowrise`，[決策 707](decisions/707.md)，不動 GameCore、存檔、golden、fixture，2026-11-12）：FOLLOW-AIR 看到的十幾層大樓是機場截圖場景沒讀土地、長出空白地圖的城鎮（玩家的遊戲裡島上全是 D1）；玩家的遊戲裡有的是路邊補的 5–6 層公寓。改了三件：遊戲補的路邊房子不高過附近（z16 圖塊九宮格）最高的真實建物（`Map3DLowRise`，附近有 6 層以上或足跡不到 8 棟就不管）、跑道／滑行道／停機坪旁不補房子（`AirfieldClear`）、機場截圖場景不建虛構城鎮。本島七個市中心不變（有測試），但臺東、恆春這種最高 4–5 層的市鎮會跟著降。**還留下的**：重拍 `testSmallAirportsIn3D` 看綠島（#2085 已合）；其他 `realLineWorld` 截圖場景仍有虛構城鎮；Metal 與實機沒看過（只有 WebGL 預覽）。
+
+> 集集、保安車站照真的站房進 3D 地圖（派工單 STATION-LOOK-2，session_01YGNNuocU9QsumFuwQubiWv，`claude/station-look-2`，[決策 705](decisions/705.md)，不動 GameCore、存檔、golden、fixture，2026-11-12）：決策 685 考題裡的集集、保安試做版接進遊戲，各自一個站型（`jiji`、`baoan`，目錄只改這兩列）；再看四輪，站名牌從色塊改成筆畫拼的字，屋面加瓦壟線，集集的紅燈籠掛到簷口外緣。總覽圖 `docs/art/station-look-2026-11-12/overview.jpg`，含照片的並排圖在私有素材庫同名資料夾。**還留下的**：第三級，規劃看過總覽圖才合；800 m 正上方仍認不出是哪一站（README「還有哪裡不好」十點）；擴建後的側翼與雨庇把小木造站夾住、蓋住（所有站共用的畫法，沒動）；日南、談文、大山、新埔要不要共用追分的 `coastTimber` 沒做（Commons 限流，沒拿到可比的照片，做法寫在決策 705 最後）；`WhatsNew.swift` 與 What to Test 沒改，由規劃補一行。Metal 與實機 UNVERIFIED。
 > 跟著飛機看（派工單 FOLLOW-AIR，Mac 本機，`claude/follow-air`，[決策 702](decisions/702.md)，GameCore、存檔、golden、fixtures 不動，2026-11-12）：3D 地圖點一架在動的飛機就跟上去，後方、旁邊、機艙窗三個視角，沿用列車、渡輪那套鏡頭（飛機只交一個 `Pose`）；停進機位、離地 3.6 km、那一班結束、出地圖或打開「減少動態效果」時自動放開，鏡頭留在原地。在動的飛機夜裡有燈（航行燈、紅色防撞燈、白色閃燈、落地燈）。順手看了七美、蘭嶼、綠島、嘉義：修了飛機沉到跑道底下、蘭嶼出現七十座機、蘭嶼與綠島的班機進不了機位三件。**還留下的**（決策 702「已知限制」「下一步」）：七美沒有機位、嘉義的機位在軍用區、離島上有高樓（綠島一棟在跑道旁）、跑道上掉頭是折線、客艙窗夜裡不亮、放空模式不會挑飛機；只在模擬器看過，實機幀數與夜間光暈留給 FPS-DEVICE。模擬器拍夜間的燈要加 `-screenshot-device-tier 1`。
 
 > 長途客運第一步的資料（派工單 COACH-1，session_01YGNNuozmbRVMiB9A32gfU7，`claude/coach-data`，[決策 706](decisions/706.md)，不動 GameCore、存檔、golden、fixture，2026-11-12）：TDX 公路客運的城際路線（國道客運全收、跨縣市且到過 30 km 的公路客運）打包成 `Resources/RealCoaches/real_coaches.json`（715 個方向，3.75 MB），工具在 `tools/real-coaches/`，載入是 `RealCoaches`。**還沒有規則讀它**。**還留下的**：PR-2（`claude/coach-rule`，動 GameCore、存檔 91）：真實客運自動跑、搶城際旅客、下車的人轉搭玩家的車、車站面板一節、economy-balance 量測；設計與進度見 §4.66。3D 的客運站與車、玩家自己經營客運是之後的事（決策 706「下一步」）。
@@ -4652,6 +4657,14 @@ Mac 試玩的 D5（從全台進 3D 開在山上）、B5（3D 沒時鐘）、D6�
 - **照順序可以派的三件**（研究 §3.1、§6.4、§6.6）：L0 查表不要線性（先做 `planTrafficOvertakes` 裡每一對服務都重問的 `hasRoutePreferences`）、L1 軌道佔用索引增量更新與蓋軌道的格子索引、L2 交會計畫以連通塊為單位。每一件的驗收都是三套 fixture 不動且全過；L2 之後的要決策號。
 - **還沒量的**（§2.6）：Mac（Release）與實機的同一份基準、Apple 平台的 JSON 編解碼、`-c release` 與 Linux debug `-O` 的差別。
 - **雲端**：不建議把 tick 搬上去；可選的雲端工作排在本地優化之後，而且先做 §6.4 階段 6 那個不建立任何資源的實驗。這次沒有註冊或建立任何雲端資源。
+
+### 4.67 列車的路線用查的（決策 703，TICK-L0 session_01YGNNunMtn9WFV5v3P2Xscx，`claude/tick-l0`，2026-11-12）
+
+§4.65 的 L0 做完了，做了什麼、前後數字、怎麼驗的在 [決策 703](decisions/703.md)。`GameCore` 只是少算：存檔、golden、三套 fixture 不動。行車控制開、100 列車的 600× 每 tick 中位數 575.5 → 約 28 ms（雲端 Linux，合成地圖，不代表 iPhone）；行車控制關、1,000 列車 267.6 → 106.6 ms。留給之後的：
+
+- **作者的存檔沒有重播**（UNVERIFIED，存檔不在 repo）：有存檔的 session 用 `PERF_SAVE=<存檔> swift test --skip-build --filter SaveTickCostReportTests` 前後各跑一次。預期差別很小，那份存檔的熱點在等路。
+- **L1、L2 還沒做**，現在更明顯：第 1、2 點之後的取樣，`trafficPlan` 整份重算佔 14／25、`trackHolders` 佔 8／25；100 列車的 p95 還在 200 ms 上下。
+- **還是線性找的幾處**列在決策 703「下一步」（`RailwayNetwork.platforms(of:)`、上下車的 `assignedLine(of:)`、`readyTrain` 的 `trains.firstIndex`、`recordTrafficVisits`）。新寫的熱路徑要找列車的路線時，用 `assignedLine(of:memo:)`（`TrainLineIndex.swift`），不要再寫 `lines.first(where: { assignedLine(of: id) == $0.id })`；要找列車在 `trains` 的位置用 `trainPosition(of:)`。
 
 ### 4.66 長途客運第一步（決策 706，COACH-1 session_01YGNNuozmbRVMiB9A32gfU7，2026-11-12）
 

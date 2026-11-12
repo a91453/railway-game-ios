@@ -568,6 +568,8 @@ public struct Map3DScene: Sendable {
         var footprints: Map3DFootprints?
         if let frame, let tiles = footprintTiles {
             footprints = Map3DFootprints(tiles: tiles, frame: frame, region: builder.region)
+            // Decision 707: the game's own houses no taller than these.
+            builder.lowRise = Map3DLowRise(tiles: tiles, frame: frame)
         }
         let beforeFootprints = standing
         if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
@@ -864,6 +866,11 @@ extension Map3DScene {
         var streetFrontage = false
         var frontage = Frontage()
         var noBuild = NoBuild()
+        /// Decision 707: the airfields' runway strips, taxiways and aprons.
+        var airfieldClear = AirfieldClear()
+        /// Decision 707: the tallest real building round each place, which
+        /// the game's own houses do not pass; `nil` without footprints.
+        var lowRise: Map3DLowRise?
         /// The corners of each station building's ground, and the
         /// shop streets still to lay beside them.
         var houseFootprints: [[Map3DPoint]] = []

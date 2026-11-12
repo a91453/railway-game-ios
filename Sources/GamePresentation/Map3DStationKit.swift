@@ -7,7 +7,7 @@ public enum Map3DStationKit {
         case taipei, taichung, kaohsiung, hsinchu, tainan, chiayi, keelung
         case nangang, banqiao, hualien, taitung, zuoying
         case hsrTaichung, hsrTaoyuan, hsrHsinchu, hsrTainan
-        case timber, heritage, coastTimber, formosa, centralPark
+        case timber, heritage, coastTimber, baoan, jiji, formosa, centralPark
         case regional, halt, elevated, underground, lightRail, highSpeed
     }
     public struct Station: Sendable {

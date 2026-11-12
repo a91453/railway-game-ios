@@ -3483,7 +3483,7 @@ public struct GameWorld: Equatable, Sendable {
         // When `release` was worked out: midnight's growth reads the plan
         // of the day that ended.
         var releasedFrom = clock.now
-        var passengerLevels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
+        var passengerLevels = serviceLevels(at: clock.now)
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
             let start = clock.now
@@ -3495,7 +3495,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             if start.isWholeMinute {
                 if passengerRoutingMode == .network {
-                    let levels = lines.map { serviceLevel(of: $0.id, at: start) }
+                    let levels = serviceLevels(at: start)
                     if levels != passengerLevels {
                         if let release { keepRemainders(of: release) }
                         endedPlan = passengerPlan
@@ -3576,7 +3576,7 @@ public struct GameWorld: Equatable, Sendable {
             // Decision 248: how far the trains of real runs may go on in
             // the rest of the minute.
             assessSpacing(from: start, memo: &memo.directions)
-            if let event = nextServiceEvent(after: start) {
+            if let event = nextServiceEvent(after: start, known: &memo.directions.paths.trainLines) {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
             }
@@ -3649,7 +3649,7 @@ public struct GameWorld: Equatable, Sendable {
                 // train. It must still wake when passenger service opens.
                 let passengerWake: Int64?
                 if passengerRoutingMode == .network {
-                    let levels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
+                    let levels = serviceLevels(at: clock.now)
                     passengerWake = levels != passengerLevels ? 0 : lines.compactMap {
                         $0.nextChange(after: clock.now, in: serviceDay)
                     }.min().map { Self.minutes(from: clock.now, until: $0) }
@@ -4389,7 +4389,7 @@ public struct GameWorld: Equatable, Sendable {
             trains[index] = aside
             // A train of a line with runs stands aside at its own station
             // (decision 212), where its next run finds it.
-            trains[index].isStandingAside = lines.first(where: { assignedLine(of: aside.id) == $0.id })?.hasRuns != true
+            trains[index].isStandingAside = assignedLine(of: aside.id, memo: &memo.directions)?.hasRuns != true
             return aside.id
         }
         // Decision 255: with no passing place and no spare to move, a
@@ -4469,7 +4469,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func standingAsideServiceTakingAFreeBerth(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
-                  isAtPassingPlace(trains[index]), lines.first(where: { assignedLine(of: id) == $0.id })?.hasRuns == true,
+                  isAtPassingPlace(trains[index]), assignedLine(of: id, memo: &memo.directions)?.hasRuns == true,
                   case .travellingToStop(let stop, let cycle)? = request.candidate.execution,
                   let way = counterflowRoute(of: request.candidate, to: request.candidate.timetable[stop].station,
                                              avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
@@ -4498,7 +4498,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func serviceStandingAsideAnyWay(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
-                  trains[index].execution != nil, lines.first(where: { assignedLine(of: id) == $0.id })?.hasRuns == true,
+                  trains[index].execution != nil, assignedLine(of: id, memo: &memo.directions)?.hasRuns == true,
                   let passing = passingPlace(for: request.candidate, in: stuck, anyWay: true, memo: &memo.directions)
             else { continue }
             var aside = request.candidate
@@ -4542,7 +4542,7 @@ public struct GameWorld: Equatable, Sendable {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
-                  let line = lines.first(where: { assignedLine(of: id) == $0.id }), line.hasRuns, !line.depots.isEmpty,
+                  let line = assignedLine(of: id, memo: &memo.directions), line.hasRuns, !line.depots.isEmpty,
                   !isInDepot(trains[index], of: line)
             else { continue }
             let standing = Set(stationsStoppedAt(by: id))
@@ -4598,7 +4598,7 @@ public struct GameWorld: Equatable, Sendable {
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
-                  let line = lines.firstIndex(where: { assignedLine(of: id) == $0.id }), lines[line].hasRuns,
+                  let line = assignedLineIndex(of: id, known: &memo.directions.paths.trainLines), lines[line].hasRuns,
                   let due = dueRun(of: trains[index], on: lines[line]),
                   case .travellingToStop(let stop, let cycle)? = request.candidate.execution
             else { continue }
@@ -4804,7 +4804,7 @@ public struct GameWorld: Equatable, Sendable {
             times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy, crowd: crowd))
             changed = true
         }
-        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {
+        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times, known: &memo.directions.paths.trainLines), now >= start {
             times.closing = now
             changed = true
         }
@@ -4871,9 +4871,21 @@ public struct GameWorld: Equatable, Sendable {
     /// no terminal: it dwells at the first stop of its lap as at any other,
     /// unless it turns round there (the reference's ring dwell).
     func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes) -> GameTime? {
+        guard times.exchangeEnd != nil else { return nil }
+        return closingStart(of: train, stop: stop, cycle: cycle, times: times, onRing: lines.contains { $0.isRing && $0.trains.contains(train.id) })
+    }
+
+    /// ``closingStart(of:stop:cycle:times:)``, whether the train is a
+    /// ring's looked up in `known` (decision 703), not searched for in
+    /// every line for every train that stands at a stop.
+    func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes, known: inout TrainLineIndex) -> GameTime? {
+        guard times.exchangeEnd != nil else { return nil }
+        return closingStart(of: train, stop: stop, cycle: cycle, times: times, onRing: known.isOnRing(train.id, in: lines))
+    }
+
+    private func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes, onRing: Bool) -> GameTime? {
         guard let exchangeEnd = times.exchangeEnd else { return nil }
         let entry = train.timetable[stop]
-        let onRing = lines.contains { $0.isRing && $0.trains.contains(train.id) }
         let isTerminal = entry.reverses || (!onRing && (stop == 0 || stop == train.timetable.count - 1))
         let leastDwell = Self.saturating(times.arrival, plus: ServiceDwell.minimumDwell(isTerminal: isTerminal) - ServiceDwell.doorClosing)
         // Scheduled times are never negative, so this cannot overflow.
@@ -5072,7 +5084,7 @@ public struct GameWorld: Equatable, Sendable {
     /// paths it searches for are kept in `memo`.
     func preferredLeaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving? {
         guard let next = train.call(after: stop, cycle: cycle),
-              let preference = routePreference(for: train, from: stop, to: next.stop) else { return nil }
+              let preference = routePreference(for: train, from: stop, to: next.stop, known: &memo.trainLines) else { return nil }
         return leaving(train, stop: stop, cycle: cycle) { start, _ in
             var preferred = preferredPath(from: start, preference: preference, length: train.length, memo: &memo)
             // Decision 228: with traffic control off, a train of real runs
@@ -5248,6 +5260,13 @@ public struct GameWorld: Equatable, Sendable {
     /// train that cannot move yet. Boarding at whole minutes needs no
     /// event: every whole minute ends a step anyway.
     func nextServiceEvent(after now: GameTime) -> GameTime? {
+        var known = TrainLineIndex()
+        return nextServiceEvent(after: now, known: &known)
+    }
+
+    /// ``nextServiceEvent(after:)``, the rings' trains looked up in `known`
+    /// (decision 703).
+    func nextServiceEvent(after now: GameTime, known: inout TrainLineIndex) -> GameTime? {
         var soonest: GameTime?
         for train in trains {
             guard let execution = train.execution, let times = train.times else { continue }
@@ -5256,7 +5275,7 @@ public struct GameWorld: Equatable, Sendable {
                 if times.exchangeEnd == nil {
                     event = Self.saturating(times.arrival, plus: ServiceDwell.doorOpening)
                 } else if times.closing == nil {
-                    event = closingStart(of: train, stop: stop, cycle: cycle, times: times)
+                    event = closingStart(of: train, stop: stop, cycle: cycle, times: times, known: &known)
                 } else {
                     event = departureDue(of: train)
                 }
