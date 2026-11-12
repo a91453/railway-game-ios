@@ -500,7 +500,9 @@ extension StationKitBuilder {
         box(out-0.3,eaves-0.4,z,0.22,half*2,0.22,Self.cream)
         // Its ridge tiles, and the four boards with the station's name.
         box((wall+out)/2,top-0.02,z,reach+0.1,0.3,0.12,Map3DPalette.portal)
-        nameBoards("集集車站",x:out+0.3,y:eaves,z:z,facing:1,size:1.12,pitch:1.24,lifts:[-0.45,0.2,0.2,-0.45],board:Self.white,ink:Self.ink)
+        // Four boards step up to the gable's middle; a shorter name's stand level.
+        let name=Self.boardName(real:"集集",game:gameName)
+        nameBoards(name,x:out+0.3,y:eaves,z:z,facing:1,size:1.12,pitch:1.24,lifts:name.count==4 ? [-0.45,0.2,0.2,-0.45] : name.count==3 ? [-0.1,0.2,-0.1] : [0.2,0.2],board:Self.white,ink:Self.ink)
         // The English name board, hung under the tie beam.
         box(out-0.3,eaves-0.95,z,0.08,2.4,0.55,Self.white)
         box(out-0.25,eaves-0.72,z,0.04,1.5,0.07,Map3DPalette.stone)

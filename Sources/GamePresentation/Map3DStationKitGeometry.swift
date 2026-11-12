@@ -4,6 +4,10 @@ import Foundation
 // x front / y left / z up conversion once at the API boundary.
 struct StationKitBuilder {
     var mesh=Map3DMesh()
+    /// Review L19, P3-17: the name of the game's station the building is
+    /// built for, for its name boards (``boardName(real:game:)``); `nil`
+    /// for the kit's own models, which carry the real station's name.
+    var gameName: String?
     static let forward=Map3DPoint(1,0,0)
     static let glass=Map3DPalette.glazing
     static let steel=Map3DPalette.tankStand

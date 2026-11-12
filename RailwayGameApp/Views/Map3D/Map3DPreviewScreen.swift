@@ -489,14 +489,17 @@ struct Map3DPreviewScreen: View {
             session.followFerryBoat(boat)
             return
         }
-        // Decision 702 (FOLLOW-AIR): and an aircraft landing, leaving or taxiing.
+        let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
+        // Decision 702 (FOLLOW-AIR): and an aircraft landing, leaving or
+        // taxiing. Review L19, P3-16: with a station under the finger only
+        // an aircraft whose middle is, not one whose long body reaches it.
+        let overStation = hit.flatMap { session.stationUnderMap3D(at: $0, reach: Map3DTap.reach(at: $0.point, camera: camera)) } != nil
         if session.tool == .select, session.tutorial == nil,
-           let aircraft = feed.aircraft(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene) {
+           let aircraft = feed.aircraft(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene, tight: overStation) {
             session.followAircraft(aircraft.state)
             return
         }
-        guard let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
-        else { return }
+        guard let hit else { return }
         let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
         let space = Map3DPick.Space(scene: scene)
         let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
@@ -1316,7 +1319,7 @@ final class Map3DTrainFeed {
     /// The trains seen from `eye`, `ringed` with its ring (decision 334),
     /// their far models and boxes from `reach` (decision 417).
     func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, target: Map3DPoint? = nil, ringed: TrainID?,
-               reach: Map3DModelReach) -> Map3DTrains.Frame {
+               reach: Map3DModelReach, lit: Bool = true) -> Map3DTrains.Frame {
         let now = Date().timeIntervalSinceReferenceDate
         let progress = motion.isMoving ? motion.progress(at: now) : 1
         // Decision 686: the train driven by hand where the player has
@@ -1363,11 +1366,12 @@ final class Map3DTrainFeed {
         // Decision 699: and the aircraft at the airports' stands, landing
         // and leaving, on the same clock; none flies with Reduce Motion.
         // Decision 702: the one the camera follows drawn whole, and the
-        // moving ones' lamps, which flash by the player's clock.
+        // moving ones' lamps, which flash by the player's clock (review
+        // L19, P3-3: none worked out by day, when no glow is drawn).
         if let models, let second = cableSecond(at: now), let laid = laidAircraft(in: scene, second: second) {
             let still = UIAccessibility.isReduceMotionEnabled
             laid.aircraft.add(to: &frame, pack: models, second: second, traffic: laid.traffic, eye: eye, reach: reach.farModel,
-                              still: still, following: followedAircraft, blink: still ? nil : now)
+                              still: still, following: followedAircraft, blink: still ? nil : now, lit: lit)
         }
         return frame
     }
@@ -1410,10 +1414,10 @@ final class Map3DTrainFeed {
 
     /// Decision 702: the aircraft landing, leaving or taxiing drawn under
     /// the finger at (`x`, `y`), if any.
-    func aircraft(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+    func aircraft(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene, tight: Bool = false) -> Map3DAircraft.Followed? {
         guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
         return laid.aircraft.followable(atX: x, y: y, camera: camera, second: second, traffic: laid.traffic,
-                                        still: UIAccessibility.isReduceMotionEnabled, within: Map3DBuses.tapReach)
+                                        still: UIAccessibility.isReduceMotionEnabled, within: Map3DBuses.tapReach, tight: tight)
     }
 
     /// Decision 702: the aircraft that can be followed nearest `point`,
@@ -1840,7 +1844,7 @@ private struct Map3DView: UIViewRepresentable {
             return pack
         } : nil
         view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, target: view?.camera.target, ringed: view?.ringed,
-                                                                 reach: reach) }
+                                                                 reach: reach, lit: view?.lampsLit ?? true) }
     }
 
     @MainActor
@@ -3291,8 +3295,9 @@ private struct Map3DDrivePanel: View {
     let session: GameSession
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The notch the handle stood on when the drag on now began.
-    @State private var dragStart: ManualDrive.Notch?
+    /// The drag on now: where it began and the notch the handle stood on
+    /// then (review L19, P3-15: a cancelled drag's is not carried on).
+    @State private var dragStart: ManualDrive.Lever.Drag?
 
     var body: some View {
         let language = session.language
@@ -3466,9 +3471,10 @@ private struct Map3DDrivePanel: View {
             DragGesture(minimumDistance: 6)
                 .onChanged { drag in
                     guard !waits else { return }
-                    let start = dragStart ?? reading.notch
-                    dragStart = start
-                    let notch = ManualDrive.Lever.notch(from: start, dragged: Double(drag.translation.height / (pitch * steps)))
+                    let start = ManualDrive.Lever.Drag.began(atX: Double(drag.startLocation.x), y: Double(drag.startLocation.y),
+                                                             on: reading.notch, held: dragStart)
+                    if dragStart != start { dragStart = start }
+                    let notch = ManualDrive.Lever.notch(from: start.notch, dragged: Double(drag.translation.height / (pitch * steps)))
                     if notch != reading.notch { session.setManualDriveNotch(notch) }
                 }
                 .onEnded { _ in dragStart = nil }
