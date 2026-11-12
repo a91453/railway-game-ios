@@ -76,6 +76,10 @@ struct SettingsView: View {
     @State private var collectionPage = FerryCollection.Page.trains
     /// Decision 632: the ferries' or cable cars' stage, when open.
     @State private var shownExhibit: Map3DCollectionShowcase.Exhibit?
+    /// Decision 701: which aircraft the aircraft stage opens on, and the
+    /// day of this game's airports (empty without a game or airports).
+    @State private var shownAircraft = 0
+    @State private var airportDays: [AirportDay] = []
 
     var body: some View {
         NavigationStack {
@@ -111,7 +115,7 @@ struct SettingsView: View {
                 TrainShowcaseScreen(close: { showsTrainShowcase = false })
             }
             .fullScreenCover(item: $shownExhibit) { exhibit in
-                TrainShowcaseScreen(exhibit: exhibit, close: { shownExhibit = nil })
+                TrainShowcaseScreen(exhibit: exhibit, focus: shownAircraft, close: { shownExhibit = nil })
             }
             .sheet(isPresented: $showsHelp) {
                 HelpView(language: .app, launcher: launcher)
@@ -468,9 +472,10 @@ struct SettingsView: View {
     /// Decision 492: the garage, decision 434's train showcase open to
     /// every player, from the start screen and from a game alike; decision
     /// 585 makes it the collection, with a page for the ferries.
+    @ViewBuilder
     private var garageSection: some View {
         let language = DisplayLanguage.app
-        return Section {
+        Section {
             Picker(selection: $collectionPage) {
                 ForEach(FerryCollection.Page.allCases, id: \.self) { page in
                     Text(verbatim: page.title(in: language)).tag(page)
@@ -502,6 +507,26 @@ struct SettingsView: View {
                 ForEach(FerryCollection.cableways(in: language)) { entry in
                     collectionEntry(entry, identifier: "settings.cableway.\(entry.id)")
                 }
+            case .aircraft:
+                exhibitButton(.aircraft, language)
+                // Each aircraft's card opens the stage on that aircraft.
+                ForEach(Array(AirCollection.aircraft(in: language).enumerated()), id: \.element.id) { index, entry in
+                    Button {
+                        shownAircraft = index
+                        shownExhibit = .aircraft
+                    } label: {
+                        HStack(spacing: 12) {
+                            collectionEntry(entry, identifier: "settings.aircraft.\(entry.id)")
+                            Spacer(minLength: 0)
+                            Image(systemName: "rotate.3d")
+                                .foregroundStyle(Theme.accent)
+                                .accessibilityHidden(true)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text(verbatim: language.text("Opens it in 3D.", "打開 3D 近看。")))
+                }
             }
         } header: {
             Text(verbatim: FerryCollection.name(in: language))
@@ -516,13 +541,51 @@ struct SettingsView: View {
                 Text(verbatim: FerryCollection.note(in: language))
             case .cableways:
                 Text(verbatim: FerryCollection.cablewayNote(in: language))
+            case .aircraft:
+                Text(verbatim: language.text(
+                    "Tap an aircraft to see it up close: turn it round, change the time of day and take photos.",
+                    "點一架飛機就能近看：轉著看、換時段、拍照。"
+                ))
             }
+        }
+        if collectionPage == .aircraft {
+            airportsSection(language)
+        }
+    }
+
+    /// Decision 701: under the aircraft page, the two airports the stage
+    /// shows and, in a game whose map has airports, each with its day.
+    private func airportsSection(_ language: DisplayLanguage) -> some View {
+        Section {
+            ForEach(AirCollection.scenes(in: language), id: \.entry.id) { scene in
+                exhibitButton(scene.exhibit, language)
+                collectionEntry(scene.entry, identifier: "settings.airport.\(scene.entry.id)")
+            }
+            let listed = AirCollection.mapAirports(airportDays, in: language)
+            if !listed.isEmpty {
+                Text(verbatim: AirCollection.mapAirportsTitle(in: language))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("settings.mapAirports")
+                ForEach(listed) { entry in
+                    collectionEntry(entry, identifier: "settings.\(entry.id)")
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("Airports", "機場"))
+                .task {
+                    if let session { airportDays = session.world.airportDays() }
+                }
+        } footer: {
+            Text(verbatim: AirCollection.note(in: language))
         }
     }
 
     /// Decision 632: the button that opens a page's 3D stage.
     private func exhibitButton(_ exhibit: Map3DCollectionShowcase.Exhibit, _ language: DisplayLanguage) -> some View {
         Button {
+            shownAircraft = 0
             shownExhibit = exhibit
         } label: {
             Label {
