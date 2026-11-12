@@ -591,6 +591,7 @@
 - **給 Mac 本機的清單**（#1579 留言 6806283146）：MUSEUM-2、AIRCRAFT-LOOK 已交 → GLASS-POLISH → MANUAL-DRIVE 手感 → FACADE-669 → CAB-RAIN → FPS-DEVICE。
 - **號碼**：決策到 698 已用或預留（694 釋出沒用），**下一個決策 699**；存檔 main **90**（88 跳過），**下一個 91**；golden schema 76。
 - **審查點數**（L18）：#2058 2、#2061 1、#2062 2、#2064 1、#2071 1、#2065 2、#2069 2、#2067 1、#2072 2，共 14。
+- **REVIEW-L18 審完**（#2058–#2072，基準 164bfc3）：P1 0、P2 2（L18-1 館藏頁把今天買的車種列在「還沒擁有」；L18-2 機場存檔的測試用 `currentVersion` 拼檔名，下一次升存檔會紅）、P3 17，[`archive/PR2058_2072_REVIEW_HANDOFF.md`](archive/PR2058_2072_REVIEW_HANDOFF.md)。兩個 P2 還沒派；L18-3（機場的觀光來源權重）交 HEALTH-126 量。L19 從 164bfc3 之後起。
 - **GitHub Actions 11-11 約 20:18–21:10 UTC 部分中斷**：那段時間建立的 run 會一直停在排隊而且取消不了，要推一筆新的 commit 才會重開。main 上 `cee18c5c` 的 push run 43085790940 也卡著，沒取消。
 - **下次發版前**：`.github/testflight-whats-new.md` 已寫成 0.6.0 (126)（駕駛獎金、駕駛畫面、月台軌道加長、子公司買價、博物館館舍與館內、機場）。發版只等作者說發；要 main HEAD 的完整 `ci.yml` 與 full lane 都綠。提醒作者回答 App Store Connect 的出口合規。
 
