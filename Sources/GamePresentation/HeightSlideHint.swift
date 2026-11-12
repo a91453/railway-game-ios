@@ -13,10 +13,12 @@ public enum HeightSlideHint {
 
     /// Whether the line shows: not yet done with, the HUD has a height
     /// cell that slides (`card` with a label; a stretch between two
-    /// existing ends has none), and no tutorial runs, whose own card says
-    /// what to do next.
+    /// existing ends has none), no tutorial runs, whose own card says what
+    /// to do next, and the build card offers no bridge or tunnel: that
+    /// card says how to get through, and on a phone held sideways it lies
+    /// over where the line would be.
     public static func shows(seen: Bool, card: NetworkHeightCard?, tutorialRuns: Bool) -> Bool {
-        guard !seen, !tutorialRuns, let card, !card.label.isEmpty else { return false }
+        guard !seen, !tutorialRuns, let card, !card.label.isEmpty, card.fixes.isEmpty else { return false }
         return card.canRaise || card.canLower
     }
 

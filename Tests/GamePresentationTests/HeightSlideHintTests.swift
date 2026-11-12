@@ -6,9 +6,9 @@ import XCTest
 /// (``HeightSlideHint``): when it shows and when it is done with.
 @MainActor
 final class HeightSlideHintTests: XCTestCase {
-    private func card(label: String = "End 6 m above the ground", up: Int = 10, down: Int = 10) -> NetworkHeightCard {
+    private func card(label: String = "End 6 m above the ground", up: Int = 10, down: Int = 10, fixes: [NetworkHeightFix] = []) -> NetworkHeightCard {
         NetworkHeightCard(
-            adjusts: .end, label: label, canRaise: up > 0, canLower: down > 0, fixes: [], note: nil,
+            adjusts: .end, label: label, canRaise: up > 0, canLower: down > 0, fixes: fixes, note: nil,
             aboveGround: 0, stepsUp: up, stepsDown: down
         )
     }
@@ -22,6 +22,12 @@ final class HeightSlideHintTests: XCTestCase {
         XCTAssertFalse(HeightSlideHint.shows(seen: false, card: nil, tutorialRuns: false), "no height card: a finger still draws, or a traced line")
         XCTAssertFalse(HeightSlideHint.shows(seen: false, card: card(label: ""), tutorialRuns: false), "both ends on track: the plain figure")
         XCTAssertFalse(HeightSlideHint.shows(seen: false, card: card(up: 0, down: 0), tutorialRuns: false), "nowhere to go")
+    }
+
+    func testItWaitsWhileTheBuildCardOffersABridge() {
+        let bridge = NetworkHeightFix(ends: .end, change: 4, raises: NetworkRaises(end: 4), structure: .elevated, kind: .bridge, cost: Money(3_361))
+        XCTAssertFalse(HeightSlideHint.shows(seen: false, card: card(fixes: [bridge]), tutorialRuns: false), "the card says how to get through")
+        XCTAssertTrue(HeightSlideHint.shows(seen: false, card: card(), tutorialRuns: false), "and shows once the stretch gets through")
     }
 
     func testItNeverComesBackOnceDoneWith() {

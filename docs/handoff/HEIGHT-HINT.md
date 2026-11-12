@@ -6,14 +6,14 @@
 
 ## 改了什麼
 
-- **一次性的小提示**：預覽列有可以滑的高度格時，預覽列正下方多一條膠囊「按住上面的高度上下滑，可以把這一端架高或挖到地下。」，右邊一顆 ✕。玩家調過一次高度（滑、− ＋、VoiceOver 調整都算）或按 ✕ 之後不再出現；記在裝置（`@AppStorage`，鍵 `hints.trackHeightSlide.seen`），不進存檔。教學進行中不出現。
+- **一次性的小提示**：預覽列有可以滑的高度格時，預覽列正下方多一條膠囊「按住上面的高度上下滑，可以把這一端架高或挖到地下。」，右邊一顆 ✕。玩家調過一次高度（滑、− ＋、VoiceOver 調整都算）或按 ✕ 之後不再出現；記在裝置（`@AppStorage`，鍵 `hints.trackHeightSlide.seen`），不進存檔。教學進行中不出現；建造卡片正在給「用橋／走隧道」時也不出現（手機橫拿時那張卡片會蓋在提示的位置上，第一次截圖 run 43319669394 看到的；卡片自己已經說了怎麼過），選了橋或隧道、或這一段本來就過得去時才出現。
   - 判斷在 `Sources/GamePresentation/HeightSlideHint.swift`，測試 `Tests/GamePresentationTests/HeightSlideHintTests.swift`。
   - 畫面在 `RailwayGameApp/Views/MapConstructionHUD.swift`（`heightHint`）；`MapView.swift` 只多傳一個 `tutorialRuns`。
   - 只有 ✕ 接觸控（44 點），其餘讓觸控穿到地圖，和預覽列一樣。它在最上面那一欄裡，欄變深，地圖上的 ✓ 泡泡本來就會避開那一欄（`topColumnDepth`）。
   - 動態：出現與消失用 `pop`，下面的版面讓位用 `change`；減少動態時只淡入淡出、版面直接到位。沒有新的秒數。
 - **說明頁**：「建設」那一節第二條「怎麼把軌道架高或放到地下？」（`HelpGuide.swift` 的 `trackHeight`），兩種語言。
 - **UI 測試啟動時**（`-ui-testing`）這個提示預設當作看過，和進路、待避線的一次性卡片一樣；要看它的測試加 `-show-height-hint`。
-- **截圖**：`WebsiteScreenshotTests.testTrackHeightHint`（提示在、按 ✕ 後不在；中英各一）。
+- **截圖**：`WebsiteScreenshotTests.testTrackHeightHint`（卡片給橋時提示不在、選了橋後提示在、按 ✕ 後不在；中英各一）。
 
 ## 加的範圍（規劃 11-12，#1579 留言 6835894923）
 
