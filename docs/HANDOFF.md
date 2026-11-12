@@ -589,6 +589,21 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**第 62 任的現況（2026-11-12 05:10 UTC＝台灣 13:10，session_01YGNNupmJExcmCK1xgu6s5A，第 2 層，壓縮 1 次；第 3 次後換手）**
+- 照 #1579 與 PR 寫的；和下面「03:50 UTC」那段不同時以這段為準。作者交代照舊。
+- **03:50 之後合的**：#2076 AIRPORT-2（決策 699，Mac）、#2078 HEALTH-126（文件）、#2079（規劃改用 fable，作者按）、#2080 TICK-SCALE（報告與平常不跑的基準，作者按；§4.65）、#2074 COLLECTION-AIR（決策 701；規劃看過截圖）。雲端的 AIRPORT-DOMESTIC、HK-MAP、HEALTH-126、TICK-SCALE、COLLECTION-AIR 都已封存。main `c7ce403`。
+- **規劃合不了自己的 PR**：這個對話的安全檢查會擋（「Merge Without Review」），擋過 #2077、#2079、#2080；別的 session 的 PR 在作者說「綠了就合」後合得了。規劃自己的文件 PR 請作者按合併，不要繞。
+- **「這版新增」卡漏了三版**（作者 11-12 問「為什麼 126 沒有這版新增小卡」）：124、125、126 發版前只改了 `.github/testflight-whats-new.md`，沒改 `WhatsNew.entries`，卡片停在 123，更新上來的人看不到卡。這次補一則 `2026-11-12-127`，把 124–126 的新增一起寫進去。**以後每次改 What to Test 就同一個 PR 改 `WhatsNew.entries`**（下面「發版」一節本來就這樣寫）。
+- **下一版（127）**：What to Test 與卡片都寫好了（機場進 3D 地圖、國內線與航點、13 座機場、圖鑑飛機頁、館藏頁用詞）。這個 PR 合了之後，在 main HEAD 開完整 `ci.yml` 與 full lane；**發版只等作者說發**。還沒人看過的：七美、蘭嶼、綠島、嘉義在 3D 地圖的樣子（交給 FOLLOW-AIR）；有機場之後實機的幀數（FPS-DEVICE，等作者把 iPhone 接上 Mac）；`TrainShowcaseUITests.testAnAircraftCardOpensItsStage` 只在 full lane 跑。
+- **開著的**：
+  - **TICK-L0** session_01YGNNunMtn9WFV5v3P2Xscx（雲端，`claude/tick-l0`，決策 703，GameCore 完整 tier，不改行為）：TICK-SCALE 報告 3.1 的 L0。驗收：`TICK_SCALE_REPORT` 100 列車每 tick 中位數降到 618 ms 的 1／4 以下，三套 fixture 逐位元不動。綠了就合（被擋就請作者按），結果白話告訴作者，封存。作者對研究的要求還有效：不把整個 tick 搬上雲端、不建付費雲端資源、基準測試和正式功能隔離、不大規模重構。
+  - **FOLLOW-AIR**（Mac 本機，作者開的對話「派工 FOLLOW-AIR Mac 本機」session_01YGNNuoRa4zPtQLsJchx1T6，`claude/follow-air`，決策 702，#1579 留言 6814038041）：飛機的跟隨視角（後方、旁邊、機艙窗）、夜間機身燈、看四座小機場。第三級：作者或規劃看過圖才合。
+- **給 Mac 本機的清單**（FOLLOW-AIR 之後）：**MANUAL-DRIVE 手感**（開工時拿決策 704；#1579 留言 6814246657 與更正 6814291282：作者說駕駛畫面的速度與加減速那張卡擋住視線，資訊縮成底部或角落一條，加減速改成右緣一支直的把手、每一段有觸覺，點把手上下仍是一段一段；紫色路線帶不動；作者的手機連不到 Mac，先在模擬器做，手感與觸覺 UNVERIFIED 到 TestFlight）→ GLASS-POLISH → FACADE-669（連同博物館與航廈的下一輪）→ CAB-RAIN → FPS-DEVICE。
+- **還沒派**：TICK L1、L2（等 L0）與基準在 Mac／實機重量一次；HEALTH-126 報告第 8 節的下一步；其餘和下面 03:50、02:00 兩段的「還沒派」一樣（開航解鎖＋台灣↔香港航班與 ASSET-PACK 現在 #2068 已合、可以派）。
+- **作者可以封存的 Mac 對話**（已告訴作者）：「派工 AIRPORT-2 Mac 本機」、「Aircraft-look 工作清單補充」、「Railway game iOS tutorial capsule」。
+- **號碼**：決策 702 FOLLOW-AIR、703 TICK-L0，**下一個決策 704**（口頭留給 MANUAL-DRIVE 手感，開工時登記）；存檔 main 90，下一個 91；golden schema 76。
+- **審查點數**（L19，從 #2073 之後合的算起）：#2075 2、#2068 1、#2076 1、#2074 1，共 5（文件的 #2077–#2080 不算）。
+
 **第 62 任的現況（2026-11-12 03:50 UTC＝台灣 11:50，session_01YGNNupmJExcmCK1xgu6s5A，第 2 層，壓縮 0 次）**
 - 作者 11-12：「以後遊戲規劃都用fable」→ 規劃代開下一任用 `claude-fable-5-2`（§1.1「換手」、CLAUDE.md 跟著改）。作者 11-12 再說一次「綠了就合」。
 - **這一任合的**：#2075 AIRPORT-DOMESTIC（決策 700）、#2068 HK-MAP 第 2 段（決策 697，開關關著）；兩個 session 已封存。126 的 full lane iPad 教學綠（五組全綠）。
