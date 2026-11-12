@@ -625,6 +625,7 @@
 - **其他開著的**：
   - **#2068 HK-MAP 第 2 段** session_01YGNNupiPcuij4C6SpjsRmf（雲端，決策 697，壓縮 2 次）：02:00 UTC 取樣夠後只做 §4.64 的 5 步收尾，包 4–5 MB 可以；期限 11-12 12:00 UTC；綠了可合（開關關著）。做不完開新 session 照 §4.64 接。
   - **HEALTH-126** session_01YGNNupDKe7MF9yeJjv7RYj（雲端，`claude/health-126`，只加文件 `docs/research/HEALTH_126_2026-11-12.md`）：重量對 125、機場對機捷、駕駛獎金能不能刷、飯店遊樂園賣了再蓋、L18-3、CI 分片時間與卡住的 run。PR 綠了就合，結論白話告訴作者。
+- **MANUAL-DRIVE 手感**（Mac 本機，`claude/manual-drive-704`，決策 704，2026-11-12）：駕駛卡改成上方一條（下一站、距離、準點）＋右緣一塊（速度與一支拉桿；拖、點上下各一格、EB 鍵、每格觸覺、「前方停車」一行）。第三級，規劃或作者看過 `docs/art/manual-drive-2026-11-12/` 才合。**留下的**：駕駛中視角列還橫在底部中間（FOLLOW-AIR 合了之後另派）；手感與觸覺等 TestFlight 實機；高鐵高架與隧道的截圖沒拍。細節在決策 704「還沒做、下一步」。
 - **給 Mac 本機的清單**：AIRPORT-2（進行中）→ **FOLLOW-AIR**（飛機的跟隨視角：後方、旁邊、機艙窗，和列車、渡輪、纜車同一套；#1579 留言 6810446728；AIRPORT-2 順手做了就併）→ GLASS-POLISH → MANUAL-DRIVE 手感 → FACADE-669 → CAB-RAIN → FPS-DEVICE。博物館下一輪：屋頂從上面看一片灰、磚色偏淡、窗沒深度。
 - **還沒派**：開航解鎖＋台灣↔香港航班（等 #2068，連同香港大範圍地圖）；ASSET-PACK（Mac，Background Assets，香港第一包，等 #2068）；金門、馬祖地圖包；長途客運；玩家自己蓋機場、機場巴士；機捷 ①②③ 與 HEALTH-125 §6 第 2–4 項；REVIEW-L18 其餘 P3；慶祝彩帶（等作者）。
 - **下一篇 Threads**：機場當主角。等航廈與飛機進地圖、國內線、圖鑑飛機頁都進測試版、規劃自己看過，再給作者草稿與要拍的圖；寫法照 [`research/THREADS_WRITING.md`](research/THREADS_WRITING.md)，作者的用詞：「開火車」不寫「開車」。
