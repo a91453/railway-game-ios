@@ -17,6 +17,8 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         case realWorldGameInTaiwan
         case realWorldGameAbroad
         case wholeTaiwan
+        /// A city's own map outside Taiwan (decision 712): Hong Kong's.
+        case overseasMap
         case challenge(Challenge)
         case weeklyChallenge
         case demo
@@ -28,7 +30,7 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         case lesson(Lesson)
 
         static var all: [Start] {
-            [.newGame, .realWorldGameInTaiwan, .realWorldGameAbroad, .wholeTaiwan]
+            [.newGame, .realWorldGameInTaiwan, .realWorldGameAbroad, .wholeTaiwan, .overseasMap]
                 + (Challenge.sandbox + Challenge.history).map(Start.challenge)
                 + [.weeklyChallenge, .demo, .realWorldDemo, .highSpeedDemo, .traDemo, .frameTimeBench, .tutorial]
                 + Lesson.all.map(Start.lesson)
@@ -40,6 +42,7 @@ final class Map3DOpenEveryStartTests: XCTestCase {
             case .newGame, .realWorldGameInTaiwan: "startNewGame"
             case .realWorldGameAbroad: "openRealWorldGame"
             case .wholeTaiwan: "startWholeTaiwan"
+            case .overseasMap: "startOverseasMap"
             case .challenge: "startChallenge"
             case .weeklyChallenge: "startWeeklyChallenge"
             case .demo: "openDemo"
@@ -97,13 +100,22 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Map3DOpenEveryStartTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        await launcher.loadRealWorldData { Self.data }.value
+        if case .overseasMap = start {
+            // No city is open yet (`OverseasMaps.open`), so its ground is
+            // read here as the launcher will read it.
+            await launcher.loadRealWorldData {
+                RealWorldData.load(overseas: [.hongKong], pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
+            }.value
+        } else {
+            await launcher.loadRealWorldData { Self.data }.value
+        }
         let railways = try XCTUnwrap(launcher.railways, "the real railways")
         switch start {
         case .newGame: launcher.startNewGame()
         case .realWorldGameInTaiwan: launcher.startNewGame(at: Self.taipei)
         case .realWorldGameAbroad: await launcher.openRealWorldGame(at: Self.tokyo)?.value
         case .wholeTaiwan: launcher.startWholeTaiwan()
+        case .overseasMap: XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
         case .challenge(let challenge): await launcher.startChallenge(challenge)?.value
         case .weeklyChallenge: launcher.startWeeklyChallenge(at: Date(timeIntervalSince1970: 1_792_000_000))
         case .demo: launcher.openDemo()
