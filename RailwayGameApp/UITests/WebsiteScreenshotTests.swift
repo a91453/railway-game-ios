@@ -3492,6 +3492,9 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// airports. For the screenshot review of the pull request that added
     /// the page.
     func testCollectionAircraftAndAirportsIn3D() {
+        // Three stages by day and night and four launches: more than the
+        // ten minutes a test gets unasked.
+        executionTimeAllowance = 1_500
         defer { XCUIDevice.shared.appearance = .dark }
         func openPage(_ app: XCUIApplication, _ page: String) {
             let garage = app.buttons["settings.trainGarage"]

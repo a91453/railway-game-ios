@@ -310,7 +310,10 @@ public enum Map3DCollectionShowcase {
             let across = turned ? layout.high.x - layout.low.x : layout.high.z - layout.low.z
             camera.heading = layout.overheadHeading
             camera.pitch = 20 * .pi / 180
-            let fit = max(along / 2 * 1.15 / halfWide, (across / 2 + 6) * 1.3 / ((1 - coveredBelow) * halfTall))
+            // Decision 701: an airport is its own ground, so it needs no
+            // margin of stage round it.
+            let margin: (Float, Float) = layout.exhibit.isAir ? (2, 1.08) : (6, 1.3)
+            let fit = max(along / 2 * 1.15 / halfWide, (across / 2 + margin.0) * margin.1 / ((1 - coveredBelow) * halfTall))
             camera.distance = min(max(fit, 30), Map3DShowcase.farthest)
             camera.target = Map3DPoint((layout.low.x + layout.high.x) / 2, 0, (layout.low.z + layout.high.z) / 2)
                 - up * (coveredBelow * camera.distance * halfTall)

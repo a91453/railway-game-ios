@@ -22,6 +22,11 @@ public enum Map3DAirShowcase {
 
     /// The ground round the aprons: the studies' grass.
     static let groundColour = Map3DStudyColor.grass
+
+    /// The pool of light under a parked aircraft at night: a lit apron's
+    /// grey, not the studies' near white, which hid the aircraft from
+    /// above (decision 701's second round of screenshots).
+    static let pool = Map3DColor.rgb(0x7C8086)
     /// The clear apron between two aircraft's wing tips.
     public static let wingGap: Float = 8
     /// How far a boarding bridge's cab stands off the door it serves.
@@ -209,7 +214,7 @@ public enum Map3DAirShowcase {
                 // The stand's lead-in line and the bar its nose wheel stops at.
                 m.box((pad.x0 + 6) / 2, y, 0.09, 6 - pad.x0, 0.30, 0.015, c.warm)
                 m.box(-Map3DAircraftStudies.shape(kind).noseGear.s, y, 0.09, 0.4, 3, 0.015, c.warm)
-                if !far { m.disc(-length / 2, y, 0.082, max(7, length * 0.26), c.litDeck, glow: true, sides: 14) }
+                if !far { m.disc(-length / 2, y, 0.082, max(7, length * 0.26), pool, glow: true, sides: 14) }
             }
             // A floodlight mast at the apron's edge behind each gap.
             for (a, b) in zip(offsets, offsets.dropFirst()) {
@@ -234,7 +239,7 @@ public enum Map3DAirShowcase {
             }
             for y: Float in [-88, -44, 0, 44, 88] {
                 m.mast(17, y, 18)
-                if !far { m.disc(28, y, 0.082, 9, c.litDeck, glow: true, sides: 14) }
+                if !far { m.disc(28, y, 0.082, 9, pool, glow: true, sides: 14) }
             }
             m.box(116, 10, 0.09, 0.3, 236, 0.015, c.red)
             for stand in stands {
@@ -265,7 +270,7 @@ public enum Map3DAirShowcase {
             m.box(26, -2, 0.09, 0.30, 30, 0.015, c.warm)
             for y: Float in [-22, 22] {
                 m.mast(8, y, 10)
-                if !far { m.disc(16, y < 0 ? -18 : 18, 0.082, 9, c.litDeck, glow: true, sides: 14) }
+                if !far { m.disc(16, y < 0 ? -18 : 18, 0.082, 9, pool, glow: true, sides: 14) }
             }
         }
         stage.place(Map3DAirportStudies.model(.taxiway, far: far), x: 65)
