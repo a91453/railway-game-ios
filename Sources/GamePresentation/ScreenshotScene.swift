@@ -429,7 +429,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Decision 699: the empty real-world map round `scene`'s airfield
     /// (``realLineWorld(at:side:ticks:in:water:)``) with its map's airports.
     private static func realAirportWorld(at scene: ScreenshotScene, ticks: Int, in language: DisplayLanguage) -> GameWorld {
-        var world = realLineWorld(at: scene, ticks: ticks, in: language)
+        // Decision 707: with no towns of the game's own founded on it (the
+        // scene reads no real land, and a blank map's towers stood on
+        // Qimei, Lanyu and Green Island, one by the runway).
+        var world = realLineWorld(at: scene, ticks: ticks, in: language, towns: false)
         if let frame = RealWorldFrame(world: world) { world.setAirports(AirportCatalog.airports(in: frame, bounds: world.bounds)) }
         return world
     }
@@ -694,11 +697,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
     /// with money enough for it; bought once the app's real data is read.
     private static func realLineWorld(at scene: ScreenshotScene, side: Int64 = 1 << 21, ticks: Int = 33, in language: DisplayLanguage,
-                                      water grid: WaterGrid? = nil) -> GameWorld {
+                                      water grid: WaterGrid? = nil, towns: Bool = true) -> GameWorld {
         guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
               let bounds = try? WorldBounds(width: side, height: side) else { return DemoWorld.make(in: language) }
         let water = grid?.cells(frame: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds) ?? []
-        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000), water: water)
+        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000), land: towns ? nil : [], water: water)
         try? world.mapGround()
         // On to 05:30 while the map is empty, ten minutes a tick: the Debug
         // app then runs only the morning itself after it buys the line.
