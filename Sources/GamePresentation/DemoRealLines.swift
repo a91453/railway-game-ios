@@ -41,6 +41,8 @@ public struct DemoRealLines: Sendable {
         let stops: [Stop]
         /// Cars of its trains; its platforms take a car more.
         let cars: Int
+        /// The type of its trains (``DemoRealLines/trainType(ofLine:system:)``).
+        let type: TrainType?
     }
 
     let routes: [Route]
@@ -93,6 +95,37 @@ public struct DemoRealLines: Sendable {
         }
     }
 
+    /// The type of the trains of the line `key` of `system`, as the real
+    /// line's are: High Speed Rail sets on the High Speed Rail (which makes
+    /// the line a high-speed one, decision 168), the forest railway's train
+    /// on the Alishan Forest Railway, the people mover on the Wenhu Line,
+    /// the heavy metro on Taipei's and Kaohsiung's other metro lines, the
+    /// medium one on the Circular Line, the Taoyuan Airport MRT, the
+    /// Sanying Line and Taichung's, the light metro on the light rails (as
+    /// ``RealBranchLine/trainType`` has the lines on sale). `nil`, the
+    /// game's first car, on the TRA, which has no commuter type of its
+    /// own, and on a system this does not name.
+    static func trainType(ofLine key: String, system: String) -> TrainType? {
+        switch system {
+        case "thsr_sched": .highSpeed
+        case "afr_sched": .alishan
+        case "mrt": key == "mrt|BR" ? .apm : key == "mrt|Y" ? .b : .a
+        case "krtc": key == "krtc|C" ? .c : .a
+        case "tymc", "sanying", "tmrt": .b
+        case "ntdlrt", "ntalrt": .c
+        default: nil
+        }
+    }
+
+    /// How long the platforms of a line of `cars`-car trains of `type`
+    /// are: a car more than the train, `carLength` each, and no less than
+    /// the train's own cars take where a world has real car lengths
+    /// (`real`, decision 227): a High Speed Rail car is 25 m, and twelve
+    /// of them do not stand at thirteen standard cars' 260 m.
+    static func platformLength(cars: Int, of type: TrainType?, carLength: Int64, real: Bool) -> Int64 {
+        max(Int64(cars + 1) * carLength, Int64(cars) * Train.carPitch(of: type, real: real))
+    }
+
     /// Whether a system's track is double: all but the Alishan Forest
     /// Railway's; the TRA's as the real line is where the data says
     /// (``GameSession/realDoubleTrack(along:)``).
@@ -126,7 +159,9 @@ public struct DemoRealLines: Sendable {
     /// `frame` projects them: for each line its pieces joined end to end,
     /// its stations along them in order, each with a platform of its
     /// trains' cars and one more, `carLength` long each.
-    static func plan(railways: RealRailways, frame: RealWorldFrame, bounds: WorldBounds, view: WorldRegion, carLength: Int64) -> DemoRealLines {
+    static func plan(
+        railways: RealRailways, frame: RealWorldFrame, bounds: WorldBounds, view: WorldRegion, carLength: Int64, real: Bool = false
+    ) -> DemoRealLines {
         let map = WorldRegion(bounds: bounds)
         func world(_ coordinate: RealRailways.Coordinate) -> WorldVector {
             WorldVector(frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude))
@@ -144,7 +179,8 @@ public struct DemoRealLines: Sendable {
             let points = stops.map { (chinese: $0.chinese, point: world($0.coordinate)) }
             guard points.contains(where: { inside($0.point, view) && inside($0.point, map) }) else { continue }
             let cars = cars(ofSystem: first.system.id)
-            let length = Double(Int64(cars + 1) * carLength)
+            let type = trainType(ofLine: key, system: first.system.id)
+            let length = Double(platformLength(cars: cars, of: type, carLength: carLength, real: real))
             for chain in Self.chains(lines.map { $0.points.map(world) }) {
                 let path = WorldPath(chain)
                 guard path.points.count > 1 else { continue }
@@ -175,7 +211,7 @@ public struct DemoRealLines: Sendable {
                     if run.count >= 2 {
                         routes.append(Route(
                             lineKey: key, system: first.system, name: first.name, color: first.palette.color,
-                            path: path, stops: run, cars: cars
+                            path: path, stops: run, cars: cars, type: type
                         ))
                     }
                     run = []
@@ -267,11 +303,11 @@ extension GameSession {
             ))
             return nil
         }
-        let bounds = world.bounds, carLength = world.platformCarLength
+        let bounds = world.bounds, carLength = world.platformCarLength, real = world.realCarLengths
         demoRealLinesProgress = DemoRealLines.Progress(done: 0, total: 0)
         defer { demoRealLinesProgress = nil }
         let planned = await Task.detached(priority: .userInitiated) {
-            let plan = DemoRealLines.plan(railways: railways, frame: frame, bounds: bounds, view: view, carLength: carLength)
+            let plan = DemoRealLines.plan(railways: railways, frame: frame, bounds: bounds, view: view, carLength: carLength, real: real)
             return only.map { DemoRealLines(routes: plan.routes.filter($0)) } ?? plan
         }.value.first(most)
         let total = planned.routes.reduce(0) { $0 + $1.stops.count }
@@ -596,7 +632,10 @@ extension GameSession {
         if let rgb = LineColor(rgb: Int(color.red) << 16 | Int(color.green) << 8 | Int(color.blue)) {
             _ = try? performCommand(.edit(.setLineColor(line.id, rgb)))
         }
-        _ = try? performCommand(.edit(.staffLine(line.id, headway: headway, type: nil, cars: route.cars, language: language)))
+        // Its own system's trains, where the game offers them here (not
+        // in an era with types of its own): else the game's first car.
+        let type = route.type.flatMap { world.offeredTrainTypes.contains($0) ? $0 : nil }
+        _ = try? performCommand(.edit(.staffLine(line.id, headway: headway, type: type, cars: route.cars, language: language)))
         return true
     }
 }
