@@ -396,9 +396,13 @@ extension GameWorld {
     /// ``serviceDirections(of:memo:)``, worked out.
     private func workedOutServiceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
         guard let execution = train.execution, var start = train.placement else { return [] }
+        // Decision 703: the train's line looked up once.
+        let line = assignedLine(of: train.id, memo: &memo)
+        let routes = line.map { line in
+            hasRoutePreferences(train, on: line) ? train.timetable.indices.map { routePreference(for: train, on: line, from: $0, to: ($0 + 1) % train.timetable.count) } : []
+        } ?? []
         let plan = DirectionMemo.Plan(calls: train.timetable.map { DirectionMemo.Call(station: $0.station, reverses: $0.reverses) },
-                                      length: train.length, repeats: train.timetablePeriod != nil,
-                                      routes: hasRoutePreferences(train) ? train.timetable.indices.map { routePreference(for: train, from: $0, to: ($0 + 1) % train.timetable.count) } : [])
+                                      length: train.length, repeats: train.timetablePeriod != nil, routes: routes)
         var directions: Set<TrackTraversal> = []
         let stop: Int
         switch execution {

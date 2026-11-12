@@ -115,7 +115,7 @@ extension GameWorld {
             if let preferred = preferredGoingOn(train), case .granted = reserving(preferred, memo: &memo) { return preferred }
             return goingOn(train)
         case nil:
-            guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }) else { return nil }
+            guard let line = assignedLine(of: train.id, memo: &memo) else { return nil }
             // Decision 133: a train a due run would send out.
             if line.hasRuns { return dueRunDeparture(of: train, on: line) }
             guard let stream = line.dispatchStream(of: train.id) else { return nil }
@@ -145,7 +145,7 @@ extension GameWorld {
         case .travellingToStop?:
             return preferredGoingOn(train)
         case nil:
-            guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), line.hasRuns else { return nil }
+            guard let line = assignedLine(of: train.id, memo: &memo), line.hasRuns else { return nil }
             return dueRunPreferredDeparture(of: train, on: line)
         }
     }
@@ -177,7 +177,7 @@ extension GameWorld {
     /// single track in deadlock, 16 trains, the search took 320 ms).
     func isSpare(_ train: Train, memo: inout DispatchMemo) -> Bool {
         guard train.execution == nil, train.movement.rate > 0, standingPoint(of: train) != nil,
-              let line = lines.first(where: { assignedLine(of: train.id) == $0.id })
+              let line = assignedLine(of: train.id, memo: &memo.directions)
         else { return false }
         if line.hasRuns {
             return blockSections && dueRunDeparture(of: train, on: line) == nil
@@ -193,8 +193,8 @@ extension GameWorld {
     /// sends its trains out by runs, each berth of the stations it stands
     /// at, where its next run starts (decision 212): the nearest berth of
     /// those is where it stands.
-    private func standingAsideTargets(for spare: Train) -> [(station: StationID, berth: Berth?)] {
-        guard lines.first(where: { assignedLine(of: spare.id) == $0.id })?.hasRuns == true else { return stations.map { ($0.id, nil) } }
+    private func standingAsideTargets(for spare: Train, memo: inout DirectionMemo) -> [(station: StationID, berth: Berth?)] {
+        guard assignedLine(of: spare.id, memo: &memo)?.hasRuns == true else { return stations.map { ($0.id, nil) } }
         let here = Set(stationsStoppedAt(by: spare.id))
         return stations.filter { here.contains($0.id) }.flatMap { station in
             berths(of: station.id, length: spare.length).map { (station.id, Optional($0)) }
@@ -254,7 +254,7 @@ extension GameWorld {
             // Decision 570: a line's train a run would send out waits only
             // once the run is due to leave, as a service does (see
             // ``departureDue(of:)``), not while it may be sent out early.
-            if train.execution == nil, let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), line.hasRuns,
+            if train.execution == nil, let line = assignedLine(of: train.id, memo: &memo), line.hasRuns,
                !dueRunHasStarted(of: train, on: line) { continue }
             if let request = waitingRoute(of: train, memo: &memo) {
                 waiting[train.id] = request
@@ -400,7 +400,7 @@ extension GameWorld {
         guard isTrafficControlEnabled, !stuck.isEmpty else { return nil }
         var dispatch = DispatchMemo()
         for spare in trains where isSpare(spare, memo: &dispatch) {
-            if let aside = standingAside(spare, at: standingAsideTargets(for: spare), in: stuck, memo: &memo) { return aside.train }
+            if let aside = standingAside(spare, at: standingAsideTargets(for: spare, memo: &memo), in: stuck, memo: &memo) { return aside.train }
         }
         return nil
     }
@@ -439,7 +439,7 @@ extension GameWorld {
     private func routeWaiting(memo: inout DirectionMemo) -> [TrainID: (candidate: Train, departs: Bool)] {
         var waiting: [TrainID: (candidate: Train, departs: Bool)] = [:]
         for train in trains {
-            if train.execution == nil, let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), line.hasRuns,
+            if train.execution == nil, let line = assignedLine(of: train.id, memo: &memo), line.hasRuns,
                !dueRunHasStarted(of: train, on: line) { continue }
             if let request = waitingRoute(of: train, memo: &memo) { waiting[train.id] = request }
         }

@@ -410,13 +410,28 @@ extension GameWorld {
     }
 
     /// The trains of `line`'s `stream` that run a service, but those
-    /// running empty to the depot. One pass over the trains, not a lookup
-    /// of each: it is asked every minute for every stream.
+    /// running empty to the depot. It is asked every minute for every
+    /// stream, so each of the stream's trains is found where it is (see
+    /// ``trainPosition(of:)``, decision 703) rather than every train of
+    /// the world looked at for every stream.
     func runningTrains(of line: ServiceLine, _ stream: DispatchStream) -> Int {
-        let ids = Set(line.trains(of: stream))
-        return trains.count { train in
-            ids.contains(train.id) && train.execution != nil && !isPullingIn(train, of: line)
+        Set(line.trains(of: stream)).count { id in
+            guard let index = trainPosition(of: id) else { return false }
+            return trains[index].execution != nil && !isPullingIn(trains[index], of: line)
         }
+    }
+
+    /// Where train `id` is in ``trains``, or `nil` if there is none: the
+    /// trains are kept in ascending ID order, so it is found by halving,
+    /// and searched for from the start were it not found so.
+    func trainPosition(of id: TrainID) -> Int? {
+        var low = 0, high = trains.count
+        while low < high {
+            let middle = (low + high) / 2
+            if trains[middle].id < id { low = middle + 1 } else { high = middle }
+        }
+        if low < trains.count, trains[low].id == id { return low }
+        return trains.firstIndex { $0.id == id }
     }
 
     // MARK: - Out of the depot

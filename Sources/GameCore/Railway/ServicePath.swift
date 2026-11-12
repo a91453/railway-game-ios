@@ -149,6 +149,9 @@ extension GameWorld {
         /// Decision 597: by edge, the track a platform on it lies on
         /// (``GameWorld/platformTrack(of:)``), which reads only the network.
         var platformTracks: [TrackEdgeID: Set<TrackEdgeID>] = [:]
+        /// Decision 703: the line of each train (see ``TrainLineIndex``),
+        /// for the lines it was last asked about.
+        var trainLines = TrainLineIndex()
     }
 
     /// ``path(from:toStation:length:)``, kept in `memo`.

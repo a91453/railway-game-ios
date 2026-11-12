@@ -1,14 +1,33 @@
 import Foundation
-import GamePresentation
+import GameCore
+@testable import GamePresentation
 
 // tools/model-look: writes station-kit models as native .m3dmodel files for
 // shoot.mjs. Usage: export-station OUTPUT_DIRECTORY STATION_ID...
 // (ids as in Map3DStationKitCatalog.swift, e.g. station-tra_sched-3acfda8b).
+// `house:ID` writes what the map draws instead (decision 321's `house`: the
+// building and its forecourt, without the kit's platforms and track), as
+// ID-house.m3dmodel; `concourse:ID` and `hall:ID` the same with the expanded
+// station's wings (decision 506), which are sized from the model's bounds.
 guard CommandLine.arguments.count>2 else { fatalError("usage: export-station OUTPUT_DIRECTORY STATION_ID...") }
 let directory=URL(fileURLWithPath:CommandLine.arguments[1],isDirectory:true)
 try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
-for id in CommandLine.arguments.dropFirst(2) {
-    guard let model=Map3DStationKit.model(id:id) else { fatalError("No station-kit model named "+id) }
+func house(_ id: String,_ expansion: StationExpansion?) -> Map3DModelPack.Model? {
+    guard let station=Map3DStationKit.station(id:id) else { return nil }
+    var builder=StationKitBuilder();builder.house(station,expansion:expansion)
+    return Map3DModelPack.Model.flat(named:id,from:builder.mesh)
+}
+for argument in CommandLine.arguments.dropFirst(2) {
+    let parts=argument.split(separator:":",maxSplits:1).map(String.init),kind=parts.count>1 ? parts[0] : "",name=parts.last!
+    let id=kind.isEmpty ? name : name+"-"+kind
+    let made: Map3DModelPack.Model?=switch kind {
+    case "": Map3DStationKit.model(id:name)
+    case "house": house(name,nil)
+    case "concourse": house(name,.concourse)
+    case "hall": house(name,.hall)
+    default: nil
+    }
+    guard let model=made else { fatalError("No station-kit model named "+argument) }
     guard model.triangleCount>0,model.triangleCount<=Map3DModelFile.maximumTriangles else { fatalError("Triangle budget: "+id) }
     let text=try JSONSerialization.data(withJSONObject:["extras":["assetId":id,"coordinateSystem":"metres; x front, y left, z up"]],options:[.sortedKeys])
     var data=Data("M3DM".utf8)

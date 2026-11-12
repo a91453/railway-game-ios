@@ -210,8 +210,21 @@ extension GameWorld {
     /// ``serviceDay`` at that minute of the day, if the line's window is
     /// open then. `nil` when the line is closed, or does not exist.
     public func serviceLevel(of id: LineID, at time: GameTime) -> ServiceLevel? {
-        guard let line = line(id: id), line.window.contains(minuteOfDay: time.minuteOfDay) else { return nil }
+        guard let line = line(id: id) else { return nil }
+        return serviceLevel(of: line, at: time)
+    }
+
+    /// ``serviceLevel(of:at:)`` of `line`, one of the world's lines, read
+    /// from the line itself (decision 703): no two lines have the same ID,
+    /// so the line found by its ID is the line.
+    func serviceLevel(of line: ServiceLine, at time: GameTime) -> ServiceLevel? {
+        guard line.window.contains(minuteOfDay: time.minuteOfDay) else { return nil }
         return serviceDay.level(atMinuteOfDay: time.minuteOfDay)
+    }
+
+    /// The service level of each line at `time`, in the lines' order.
+    func serviceLevels(at time: GameTime) -> [ServiceLevel?] {
+        lines.map { serviceLevel(of: $0, at: time) }
     }
 
     /// The round trip of line `id`'s own service, or of its pattern at
