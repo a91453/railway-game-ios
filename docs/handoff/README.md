@@ -2,7 +2,7 @@
 
 `docs/HANDOFF.md` 開頭原本每個 PR 加一行，同時開著的 PR 全部改同一行，先合一個、其餘就衝突，各自要再併一次 main、再跑一次 CI（2026-11-12 一天三次：#2083 兩次、#2087 兩次）。決策 329 把決策改成一個檔一個決策之後沒再撞過，這裡照做。
 
-- **實作 session 不再改 `docs/HANDOFF.md`。** 做完、做到一半、交給別人時，寫 `docs/handoff/<派工單名>.md`（例如 `ISLAND-LOWRISE.md`；名字照 #1579 的登記，大寫與連字號）。
+- **實作 session 不再改 `docs/HANDOFF.md`。** 做完、做到一半、交給別人時，寫 `docs/handoff/<派工單名>.md`（例如 `ISLAND-LOWRISE.md`；名字照 #2118 的登記，大寫與連字號）。
 - 檔裡寫以前那一行會寫的東西：派工單、session、分支、決策、存檔與 golden 動不動、做了什麼、**還留下什麼**、UNVERIFIED 的項目。長的細節照舊寫在決策的「下一步」，這裡指過去。
 - 同一件工作換 session 接手，接著寫同一個檔。
 - **只有遊戲規劃改 `docs/HANDOFF.md`**：§2.0 的現況，以及整理時把 `docs/handoff/` 裡已經沒有待辦的檔收進 `docs/HANDOFF.md` §4 或刪掉。
