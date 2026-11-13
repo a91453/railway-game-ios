@@ -438,6 +438,11 @@ extension GameError {
                 "A train's route runs over that track. Wait for it to pass.",
                 "有列車的路線要經過這段軌道，請等它通過。"
             )
+        case .trackClosed:
+            language.text(
+                "That track is closed. Open it first.",
+                "這段軌道已封閉，請先開放。"
+            )
         case .trainsShareTrack:
             language.text(
                 "Two trains need the same track, so traffic control can't be turned on. Move one of them first.",
@@ -466,6 +471,11 @@ extension GameError {
             )
         case .loanNeedsManagement:
             language.text("Only a managed company can borrow.", "只有經營模式的公司可以貸款。")
+        case .invalidTermLoan:
+            language.text(
+                "The bank cannot make this term loan: check the amount, the term and how much it still lends.",
+                "銀行無法承作這筆定期貸款：請確認金額、年期與目前還能借的額度。"
+            )
         case .stationDemandFromLand:
             language.text(
                 "A managed company's ridership comes from the land round its stations.",

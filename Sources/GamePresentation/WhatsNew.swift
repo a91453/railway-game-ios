@@ -30,14 +30,21 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
-        // 129.
+        // 130.
         Entry(
-            id: "2026-11-13-129",
+            id: "2026-11-14-130",
             items: [
                 Line(
                     english: "Hong Kong is a new map, opened by flying there: on a map of Taiwan, carry 500 passengers in one day to or from an airport that flies to Hong Kong. Then choose Hong Kong under Real-world map and buy the MTR’s lines.",
                     chinese: "新地圖「香港」：在台灣讓一座飛香港的機場一天有 500 人搭你的列車就開航，之後在實景地圖選「香港」，可收購港鐵路線。"
                 ),
+            ],
+            fixes: []
+        ),
+        // 129.
+        Entry(
+            id: "2026-11-13-129",
+            items: [
                 Line(
                     english: "On real-world maps, the 3D map now shows intercity coaches driving their routes on their timetables, and a coach station at each coach stop.",
                     chinese: "實景地圖的 3D 地圖上，看得到長途客運照班次沿路線行駛，客運站的位置也有一座客運站。"
@@ -51,6 +58,18 @@ public enum WhatsNew {
                 Line(
                     english: "After a run driven by hand stops, the look from the side stands nearer the train.",
                     chinese: "手動駕駛停穩後從旁邊看成績時，鏡頭離列車近一些。"
+                ),
+                Line(
+                    english: "Opening the 3D map no longer freezes for a moment on a big network.",
+                    chinese: "路網大的存檔，開 3D 地圖時不再卡住一下。"
+                ),
+                Line(
+                    english: "Zoomed all the way out, the 3D map fills in everything you can see instead of leaving bare ground, and the view stops at the map's edge.",
+                    chinese: "3D 地圖拉到最遠時，看得到的地方都會補上地面與道路，不再留一大片空地；鏡頭也不會拖出地圖外。"
+                ),
+                Line(
+                    english: "The 3D map runs smoother zoomed far out: distant small streets and buildings are left out, main roads, rivers and railways stay.",
+                    chinese: "3D 地圖拉遠時比較順：很遠的小路與小建築不畫，幹道、河流、鐵路照舊。"
                 ),
             ]
         ),

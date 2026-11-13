@@ -688,8 +688,32 @@ extension GameWorld {
         private var first: Int?
         private var more: [Int] = []
 
-        mutating func append(_ place: Int) {
-            if first == nil { first = place } else { more.append(place) }
+        var isEmpty: Bool { first == nil }
+
+        /// Adds `place`, keeping the places in order: after any it has
+        /// that are the same.
+        mutating func insert(_ place: Int) {
+            guard let first else {
+                first = place
+                return
+            }
+            if place < first {
+                more.insert(first, at: 0)
+                self.first = place
+                return
+            }
+            var index = more.count
+            while index > 0, more[index - 1] > place { index -= 1 }
+            more.insert(place, at: index)
+        }
+
+        /// Takes `place` out, however often it has it.
+        mutating func remove(_ place: Int) {
+            more.removeAll { $0 == place }
+            if first == place {
+                first = more.first
+                if !more.isEmpty { more.removeFirst() }
+            }
         }
 
         struct Iterator: IteratorProtocol {
@@ -716,30 +740,151 @@ extension GameWorld {
     struct TrackHolders {
         /// The trains' IDs, in the world's order.
         let ids: [TrainID]
-        let held: [TrainID: HeldTrack]
-        let claims: [TrainID: Claim]
+        fileprivate(set) var held: [TrainID: HeldTrack]
+        fileprivate(set) var claims: [TrainID: Claim]
         /// By a train's place in ``ids``: what it holds, and, when it is
         /// placed, the spans of that which foul others.
-        fileprivate let tracks: [HeldTrack?]
-        fileprivate let fouling: [[TrackSpan]]
+        fileprivate var tracks: [HeldTrack?]
+        fileprivate var fouling: [[TrackSpan]]
         /// The placed trains holding each resource of their bodies, and
         /// each node, and each resource of a reservation out of order, by
         /// place, in order (perhaps twice).
-        fileprivate let owners: [TrackResource: Places]
+        fileprivate var owners: [TrackResource: Places]
         /// The placed trains whose reservation, in order, holds spans of
         /// each edge, by place, in order.
-        fileprivate let runs: [TrackEdgeID: [Int]]
+        fileprivate var runs: [TrackEdgeID: [Int]]
         /// The spans of each edge that foul spans of others, in order.
         fileprivate let foulingByEdge: [TrackEdgeID: [TrackSpan]]
         /// The spans of each edge the placed trains stand on, with their
         /// places.
-        fileprivate let bodies: [TrackEdgeID: [(place: Int, span: TrackSpan)]]
+        fileprivate var bodies: [TrackEdgeID: [(place: Int, span: TrackSpan)]]
         /// The places of placed trains whose reservation is out of order.
-        fileprivate let unordered: [Int]
+        fileprivate var unordered: [Int]
         /// By a following train: the trains its claim does not bind (see
         /// ``binds(_:_:)``), because they hold or foul the track a train
         /// it follows needs.
         fileprivate var released: [TrainID: Set<TrainID>] = [:]
+
+        /// TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): the train at
+        /// `place` now holds `track` (`placed`: whether it is on the track
+        /// at all), the other trains what they
+        /// did. Only what that train held and holds is touched, and every
+        /// list stays as working all of it out again would leave it. The
+        /// claims are not: see ``GameWorld/settleClaims(_:covers:)``.
+        fileprivate mutating func replace(_ place: Int, with track: HeldTrack, placed: Bool, in network: RailwayNetwork) {
+            if let old = tracks[place] { remove(old, at: place) }
+            held[ids[place]] = track
+            tracks[place] = placed ? track : nil
+            fouling[place] = placed ? add(track, at: place, in: network) : []
+        }
+
+        /// Adds what the placed train at `place` holds, `track`, after what
+        /// the trains before it hold and before what the trains after it
+        /// do, and returns the spans of it that foul others.
+        fileprivate mutating func add(_ track: HeldTrack, at place: Int, in network: RailwayNetwork) -> [TrackSpan] {
+            for resource in track.body {
+                owners[resource, default: Places()].insert(place)
+                if case .span(let span) = resource {
+                    var index = bodies[span.edge]?.count ?? 0
+                    while index > 0, bodies[span.edge]![index - 1].place > place { index -= 1 }
+                    bodies[span.edge, default: []].insert((place, span), at: index)
+                }
+            }
+            var foulingHeld = track.body.compactMap { resource -> TrackSpan? in
+                guard case .span(let span) = resource, network.foulingSpans[span] != nil else { return nil }
+                return span
+            }
+            if track.reserved.isOrdered {
+                for resource in track.reservation[..<track.reserved.nodeCount] {
+                    owners[resource, default: Places()].insert(place)
+                }
+                for edge in track.reserved.runs.edges {
+                    Self.insert(place, into: &runs[edge, default: []])
+                    for span in foulingByEdge[edge] ?? [] where track.reserved.contains(.span(span)) {
+                        foulingHeld.append(span)
+                    }
+                }
+            } else {
+                Self.insert(place, into: &unordered)
+                for resource in Set(track.reservation) {
+                    owners[resource, default: Places()].insert(place)
+                    if case .span(let span) = resource, network.foulingSpans[span] != nil { foulingHeld.append(span) }
+                }
+            }
+            return foulingHeld
+        }
+
+        /// Takes out what the train at `place` held, `track` (see
+        /// ``add(_:at:in:)``).
+        private mutating func remove(_ track: HeldTrack, at place: Int) {
+            func disown(_ resource: TrackResource) {
+                guard let index = owners.index(forKey: resource) else { return }
+                owners.values[index].remove(place)
+                if owners.values[index].isEmpty { owners.remove(at: index) }
+            }
+            for resource in track.body {
+                disown(resource)
+                if case .span(let span) = resource, let index = bodies.index(forKey: span.edge) {
+                    bodies.values[index].removeAll { $0.place == place }
+                    if bodies.values[index].isEmpty { bodies.remove(at: index) }
+                }
+            }
+            if track.reserved.isOrdered {
+                for resource in track.reservation[..<track.reserved.nodeCount] {
+                    disown(resource)
+                }
+                for edge in track.reserved.runs.edges {
+                    guard let index = runs.index(forKey: edge) else { continue }
+                    runs.values[index].removeAll { $0 == place }
+                    if runs.values[index].isEmpty { runs.remove(at: index) }
+                }
+            } else {
+                unordered.removeAll { $0 == place }
+                for resource in track.reservation {
+                    disown(resource)
+                }
+            }
+        }
+
+        /// Adds `place` to `places`, kept in order, after any that are the
+        /// same.
+        private static func insert(_ place: Int, into places: inout [Int]) {
+            var index = places.count
+            while index > 0, places[index - 1] > place { index -= 1 }
+            places.insert(place, at: index)
+        }
+
+        /// Whether these are the holders `other` is, to check
+        /// ``replace(_:with:placed:in:)`` against working them all out
+        /// (tests only): the same lists in the same order, but for the
+        /// order a set gave the track of one train.
+        fileprivate func matches(_ other: TrackHolders) -> Bool {
+            func same(_ a: HeldTrack?, _ b: HeldTrack?) -> Bool {
+                guard let a, let b else { return a == nil && b == nil }
+                return a.body == b.body && a.reservation == b.reservation
+            }
+            func same(_ a: TrackCover, _ b: TrackCover) -> Bool {
+                a.matches(b)
+            }
+            guard ids == other.ids, unordered == other.unordered, runs == other.runs, released == other.released,
+                  held.count == other.held.count, held.allSatisfy({ same($0.value, other.held[$0.key]) }),
+                  zip(tracks, other.tracks).allSatisfy({ same($0, $1) }),
+                  zip(fouling, other.fouling).allSatisfy({ $0.sorted() == $1.sorted() }),
+                  owners.count == other.owners.count,
+                  owners.allSatisfy({ entry in other.owners[entry.key].map { Array($0) == Array(entry.value) } ?? false }),
+                  bodies.count == other.bodies.count, claims.count == other.claims.count
+            else { return false }
+            for (edge, standing) in bodies {
+                guard let others = other.bodies[edge], standing.count == others.count else { return false }
+                let order: ((place: Int, span: TrackSpan), (place: Int, span: TrackSpan)) -> Bool = { ($0.place, $0.span) < ($1.place, $1.span) }
+                guard zip(standing.sorted(by: order), others.sorted(by: order)).allSatisfy({ $0.place == $1.place && $0.span == $1.span }),
+                      standing.map(\.place) == others.map(\.place)
+                else { return false }
+            }
+            return claims.allSatisfy { id, claim in
+                other.claims[id].map { $0.train == claim.train && $0.foulingWaiting == claim.foulingWaiting && same($0.cover, claim.cover) } ?? false
+            }
+        }
 
         /// Whether the train at `place` is placed, is not `id` and, given
         /// `among`, is one of those.
@@ -967,18 +1112,46 @@ extension GameWorld {
     }
 
     /// The world's track holders (see ``trackHolders()``), kept in `memo`
-    /// for as long as the trains stay as they are: worked out again once
-    /// any train is not the same. Within one memo the network and traffic
-    /// control do not change (a memo lives for one ``advance(ticks:)`` or
-    /// one question), and a train's holding depends on nothing else. The
-    /// last two sets of trains asked about are kept: a passing place is
-    /// tried in a world with one train moved (see ``replacing(_:)``),
-    /// between questions of the world itself.
+    /// for as long as the trains stay as they are. Within one memo the
+    /// network and traffic control do not change (a memo lives for one
+    /// ``advance(ticks:)`` or one question), and a train's holding depends
+    /// on nothing else. When a few trains are not the same, the last
+    /// holders are changed for those trains alone (see
+    /// ``trackHolders(changedAt:memo:)``); when many are, they are worked
+    /// out again from every train, and the last two sets of trains asked
+    /// about are kept.
     func trackHolders(memo: inout DirectionMemo) -> TrackHolders {
-        if let index = memo.holders.firstIndex(where: { $0.trains == trains }) {
-            if index != 0 { memo.holders.insert(memo.holders.remove(at: index), at: 0) }
+        // TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): when a few
+        // trains are not as the last holders had them (one set off, one
+        // was given more of its route), only what
+        // those hold is worked out again.
+        if !memo.holders.isEmpty, memo.holders[0].trains.count == trains.count {
+            let limit = max(1, trains.count / 4)
+            var changed: [Int] = []
+            for place in trains.indices where memo.holders[0].trains[place] != trains[place] {
+                changed.append(place)
+                if changed.count > limit { break }
+            }
+            if changed.isEmpty { return memo.holders[0].holders }
+            if changed.count <= limit, changed.allSatisfy({ memo.holders[0].trains[$0].id == trains[$0].id }) {
+                return trackHolders(changedAt: changed, memo: &memo)
+            }
+        }
+        if let index = memo.holders.indices.dropFirst().first(where: { memo.holders[$0].trains == trains }) {
+            memo.holders.insert(memo.holders.remove(at: index), at: 0)
             return memo.holders[0].holders
         }
+        let worked = workedOutHolders(memo: &memo)
+        memo.holders.insert((trains, worked.covers, worked.holders), at: 0)
+        if memo.holders.count > 2 { memo.holders.removeLast() }
+        Self.holderAudit?.rebuilds += 1
+        return worked.holders
+    }
+
+    /// The world's track holders worked out from every train, each train's
+    /// part kept in `memo` by the train as it is, with the route envelope
+    /// of every train that follows another, by place.
+    private func workedOutHolders(memo: inout DirectionMemo) -> (covers: [TrackCover?], holders: TrackHolders) {
         var authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?] = []
         var tracks: [HeldTrack] = []
         var covers: [TrackCover?] = []
@@ -992,11 +1165,45 @@ extension GameWorld {
             covers.append(blockSections ? nil : authority.map { followingCover(of: train, $0.envelopes, memo: &memo) })
         }
         if memo.foulingByEdge == nil { memo.foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge() }
-        let holders = trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!)
-        memo.holders.insert((trains, holders), at: 0)
-        if memo.holders.count > 2 { memo.holders.removeLast() }
-        return holders
+        return (covers, trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!))
     }
+
+    /// ``trackHolders(memo:)`` from the last holders in `memo`, whose
+    /// trains are the world's but for those at `changed` (TICK-L1,
+    /// `docs/research/TICK_L1_2026-11-13.md`):
+    /// what those held is taken out and what they hold now put in, and the
+    /// claims, which depend on every train, worked out again. The last
+    /// holders are changed in place and not kept as they were: what is
+    /// kept changes no answer, only how long one takes.
+    private func trackHolders(changedAt changed: [Int], memo: inout DirectionMemo) -> TrackHolders {
+        var entry = memo.holders.removeFirst()
+        for place in changed {
+            let train = trains[place]
+            let authority = authority(of: train, memo: &memo)
+            let track = heldTrack(train, memo: &memo)
+            entry.covers[place] = blockSections ? nil : authority.map { followingCover(of: train, $0.envelopes, memo: &memo) }
+            entry.holders.replace(place, with: track, placed: train.position != nil, in: network)
+            entry.trains[place] = train
+        }
+        if !blockSections { settleClaims(&entry.holders, covers: entry.covers) }
+        memo.holders.insert(entry, at: 0)
+        if let audit = Self.holderAudit {
+            audit.updates += 1
+            precondition(entry.holders.matches(workedOutHolders(memo: &memo).holders), "the holders changed in place are not the holders worked out again")
+        }
+        return entry.holders
+    }
+
+    /// Tests only (TICK-L1, `docs/research/TICK_L1_2026-11-13.md`): counts
+    /// how ``trackHolders(memo:)`` came
+    /// by its answers, and has every answer changed in place checked
+    /// against the holders worked out from every train. `nil` in the game.
+    final class HolderAudit: @unchecked Sendable {
+        var updates = 0
+        var rebuilds = 0
+    }
+
+    @TaskLocal static var holderAudit: HolderAudit?
 
     /// The spans of each edge that foul spans of others (see
     /// ``RailwayNetwork/foulingSpans``), in order.
@@ -1022,62 +1229,43 @@ extension GameWorld {
     /// ``foulingSpansByEdge()``.
     private func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?], tracks heldTracks: [HeldTrack],
                               covers: [TrackCover?], foulingByEdge: [TrackEdgeID: [TrackSpan]]) -> TrackHolders {
-        var held: [TrainID: HeldTrack] = [:]
-        var tracks: [HeldTrack?] = []
-        var fouling: [[TrackSpan]] = []
-        var owners: [TrackResource: Places] = [:]
-        var runs: [TrackEdgeID: [Int]] = [:]
-        var bodies: [TrackEdgeID: [(place: Int, span: TrackSpan)]] = [:]
-        var unordered: [Int] = []
         // Room for every body's track at once: growing them was much of
         // the time.
         let standing = heldTracks.reduce(0) { $0 + $1.body.count }
-        owners.reserveCapacity(standing)
-        bodies.reserveCapacity(standing)
+        var holders = TrackHolders(
+            ids: trains.map(\.id), held: [:], claims: [:], tracks: [], fouling: [], owners: [:], runs: [:], foulingByEdge: foulingByEdge,
+            bodies: [:], unordered: []
+        )
+        holders.held.reserveCapacity(trains.count)
+        holders.tracks.reserveCapacity(trains.count)
+        holders.fouling.reserveCapacity(trains.count)
+        holders.owners.reserveCapacity(standing)
+        holders.bodies.reserveCapacity(standing)
         for (place, train) in trains.enumerated() {
             let track = heldTracks[place]
-            held[train.id] = track
+            holders.held[train.id] = track
             guard train.position != nil else {
-                tracks.append(nil)
-                fouling.append([])
+                holders.tracks.append(nil)
+                holders.fouling.append([])
                 continue
             }
-            tracks.append(track)
-            for resource in track.body {
-                owners[resource, default: Places()].append(place)
-                if case .span(let span) = resource { bodies[span.edge, default: []].append((place, span)) }
-            }
-            var foulingHeld = track.body.compactMap { resource -> TrackSpan? in
-                guard case .span(let span) = resource, network.foulingSpans[span] != nil else { return nil }
-                return span
-            }
-            if track.reserved.isOrdered {
-                for resource in track.reservation[..<track.reserved.nodeCount] {
-                    owners[resource, default: Places()].append(place)
-                }
-                for edge in track.reserved.runs.edges {
-                    runs[edge, default: []].append(place)
-                    for span in foulingByEdge[edge] ?? [] where track.reserved.contains(.span(span)) {
-                        foulingHeld.append(span)
-                    }
-                }
-            } else {
-                unordered.append(place)
-                for resource in Set(track.reservation) {
-                    owners[resource, default: Places()].append(place)
-                    if case .span(let span) = resource, network.foulingSpans[span] != nil { foulingHeld.append(span) }
-                }
-            }
-            fouling.append(foulingHeld)
+            holders.tracks.append(track)
+            holders.fouling.append(holders.add(track, at: place, in: network))
         }
-        var holders = TrackHolders(
-            ids: trains.map(\.id), held: held, claims: [:], tracks: tracks, fouling: fouling, owners: owners, runs: runs, foulingByEdge: foulingByEdge,
-            bodies: bodies, unordered: unordered
-        )
-        var claims: [TrainID: Claim] = [:]
         // With block sections (decision 212) a following train holds only
         // what it has taken, and waits for nothing more.
-        for (train, route) in zip(trains, covers) where !blockSections {
+        if !blockSections { settleClaims(&holders, covers: covers) }
+        return holders
+    }
+
+    /// Works out the claims of `holders` again, and whom each does not
+    /// bind, from what the trains hold in it and the route envelope of
+    /// every train that follows another, `covers`, by place.
+    private func settleClaims(_ holders: inout TrackHolders, covers: [TrackCover?]) {
+        holders.claims = [:]
+        holders.released = [:]
+        var claims: [TrainID: Claim] = [:]
+        for (train, route) in zip(trains, covers) {
             // A following train's route envelope (see ``routeEnvelope(of:)``)
             // is the base and the track of every stretch; it waits for
             // the track of its route no other placed train holds.
@@ -1085,17 +1273,14 @@ extension GameWorld {
             var claim = Claim(train: train.id, cover: route)
             if !network.foulingSpans.isEmpty {
                 for edge in claim.cover.edges {
-                    for span in foulingByEdge[edge] ?? [] where holders.waits(claim, for: .span(span)) {
+                    for span in holders.foulingByEdge[edge] ?? [] where holders.waits(claim, for: .span(span)) {
                         claim.foulingWaiting.append(span)
                     }
                 }
             }
             claims[train.id] = claim
         }
-        holders = TrackHolders(
-            ids: holders.ids, held: held, claims: claims, tracks: tracks, fouling: fouling, owners: owners, runs: runs, foulingByEdge: foulingByEdge,
-            bodies: bodies, unordered: unordered
-        )
+        holders.claims = claims
         var released: [TrainID: Set<TrainID>] = [:]
         for (place, train) in trains.enumerated() {
             guard let claim = claims[train.id] else { continue }
@@ -1108,7 +1293,6 @@ extension GameWorld {
             }
         }
         holders.released = released
-        return holders
     }
 
     /// ``holder(of:except:)`` of the track `cover` covers (see
@@ -1712,6 +1896,15 @@ extension GameWorld {
         /// The edges it lies on, in order.
         var edges: [TrackEdgeID] {
             parts.edges
+        }
+
+        /// Whether it covers what `other` does, kept the same way.
+        fileprivate func matches(_ other: TrackCover) -> Bool {
+            nodes == other.nodes && edges == other.edges && edges.allSatisfy { edge in
+                let (a, b) = (parts[edge]!, other.parts[edge]!)
+                return a.length == b.length && a.spans == b.spans && a.windows.count == b.windows.count
+                    && zip(a.windows, b.windows).allSatisfy { $0.low == $1.low && $0.high == $1.high }
+            }
         }
 
         /// Whether a span shares a point with a stretch from `low` to

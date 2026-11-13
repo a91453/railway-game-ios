@@ -393,6 +393,11 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// ``loanStep``s up to ``maximumLoan``; interest is paid every midnight
     /// while the company is managed.
     public internal(set) var loan: Money = .zero
+    /// The term loans not yet paid (decision 715), in the order signed: at
+    /// most ``termLoanSlots``.
+    public internal(set) var termLoans: [TermLoan] = []
+    /// The ID the next term loan gets.
+    public internal(set) var nextTermLoanID: Int64 = 1
     /// What the company bought and still has, at what it paid, in the order
     /// bought (Phase 7a).
     public internal(set) var assets: [AssetRecord] = []
@@ -440,7 +445,7 @@ public struct CompanyAccounts: Hashable, Sendable {
     var isPristine: Bool {
         mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && dayPass == nil && pending == .empty && openedAt == nil
             && entries.isEmpty && days.isEmpty && loan == .zero && assets.isEmpty && capitalDays.isEmpty && years.isEmpty
-            && highSpeedFares.isEmpty
+            && highSpeedFares.isEmpty && termLoans.isEmpty && nextTermLoanID == 1
     }
 
     /// The rules trips pay by.
@@ -674,6 +679,7 @@ extension LedgerEntry: Codable {
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
         case mode, fareRules, fareBaseline, dayPass, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours, highSpeedFares
+        case termLoans, nextTermLoanID
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -706,6 +712,10 @@ extension CompanyAccounts: Codable {
         guard HighSpeedFare.isTable(highSpeedFares) else {
             throw DecodingError.dataCorruptedError(forKey: .highSpeedFares, in: container, debugDescription: "High-speed fares are once a pair of two stations, in pair order, from 0.01 to the highest fare.")
         }
+        // Decision 715 (save version 93). That the loans are well formed
+        // is checked by the ``GameWorld`` decoder.
+        termLoans = try container.decodeIfPresent([TermLoan].self, forKey: .termLoans) ?? []
+        nextTermLoanID = try container.decodeIfPresent(Int64.self, forKey: .nextTermLoanID) ?? 1
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -743,6 +753,12 @@ extension CompanyAccounts: Codable {
         }
         if !highSpeedFares.isEmpty {
             try container.encode(highSpeedFares, forKey: .highSpeedFares)
+        }
+        if !termLoans.isEmpty {
+            try container.encode(termLoans, forKey: .termLoans)
+        }
+        if nextTermLoanID != 1 {
+            try container.encode(nextTermLoanID, forKey: .nextTermLoanID)
         }
     }
 }

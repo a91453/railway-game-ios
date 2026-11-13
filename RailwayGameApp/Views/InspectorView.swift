@@ -744,6 +744,36 @@ private struct TrackUpgradeControls: View {
                     session.beginTrackUpgrade(.scissors)
                 }
             }
+            // Decision 716: closed to trains, being closed, or open again.
+            if session.canCloseSelectedTrack {
+                let closure = session.selectedTrackClosure
+                if closure != .open {
+                    Label {
+                        Text(verbatim: closure == .closed
+                            ? language.text("Closed to trains", "已封閉，列車不能通過")
+                            : language.text("Closing once trains have passed", "列車通過後封閉"))
+                    } icon: {
+                        Image(systemName: closure == .closed ? "nosign" : "hourglass").accessibilityHidden(true)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier(closure == .closed ? "inspector.track.closedNote" : "inspector.track.closingNote")
+                }
+                switch closure {
+                case .open:
+                    upgradeButton(language.text("Close track", "封閉軌道"), systemImage: "nosign", id: "inspector.track.close") {
+                        session.toggleSelectedTrackClosure()
+                    }
+                case .closing:
+                    upgradeButton(language.text("Cancel closing", "取消封閉"), systemImage: "arrow.uturn.backward.circle", id: "inspector.track.cancelClosing") {
+                        session.toggleSelectedTrackClosure()
+                    }
+                case .closed:
+                    upgradeButton(language.text("Open track", "開放軌道"), systemImage: "checkmark.circle", id: "inspector.track.open") {
+                        session.toggleSelectedTrackClosure()
+                    }
+                }
+            }
         }
     }
 

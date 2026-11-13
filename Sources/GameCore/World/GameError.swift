@@ -170,6 +170,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// stop runs over the track a command would split or remove
     /// (decision 186).
     case trackReserved(TrainID)
+    /// The edge is closed to trains (decision 716,
+    /// ``GameWorld/closeTrack(_:)-(TrackEdgeID)``): a train cannot be placed on it or
+    /// given a path along it until it is opened. The lowest numbered such
+    /// edge.
+    case trackClosed(TrackEdgeID)
     /// Traffic control cannot be turned on while these two trains need the
     /// same track (Stage T): the first train, in ID order, whose track meets
     /// an earlier train's, and the earliest train it meets.
@@ -190,6 +195,11 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLoanAmount
     /// Loans are a managed company's (decision 67): free play has none.
     case loanNeedsManagement
+    /// A term loan (decision 715) that is not a whole number of
+    /// ``CompanyAccounts/loanStep``s above 0, for a term the bank does not
+    /// offer, beyond what it lends now (``TermLoanCredit``), or one that
+    /// does not exist.
+    case invalidTermLoan
     /// Land with a cell outside the world, listed twice, with a negative
     /// count, more than ``Land/maximumPerCell`` residents or jobs, or no one
     /// living or working there (Phase 6a).
