@@ -124,7 +124,9 @@ final class Map3DSurfaceTests: XCTestCase {
             .allSatisfy { $0.surface == nil })
         // Decision 268: or glowing at night, as a temple's lanterns.
         // Decision 370: or a road, lit by its street lights.
-        XCTAssertTrue(vertices.allSatisfy { $0.layer == Map3DVertex.plain || $0.layer == Map3DVertex.road || $0.glows || $0.surface != nil })
+        // Decision 721: or the line's own after dark (a platform's edge).
+        XCTAssertTrue(vertices.allSatisfy { $0.layer == Map3DVertex.plain || $0.layer == Map3DVertex.road || $0.layer == Map3DVertex.nightLit || $0.glows
+            || $0.surface != nil })
         // Decision 242: homes faced with tiles and grit, offices and
         // schools with concrete and tiles; only on walls a surface tints.
         let faced = Set(vertices.compactMap(\.detail))
