@@ -3234,6 +3234,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// airport) and the 3D map there. Started from the picker's row in
     /// the demo mode, which has the city open.
     func testHongKongMap() {
+        executionTimeAllowance = 1_500
         let app = launch(extra: ["-demoMode.on", "YES", "-map3D.quality", "saving"])
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
@@ -3242,6 +3243,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         newGame.tap()
         tapButton("newGame.realWorld", in: app, timeout: 60)
         XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+        let read = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: app.buttons["realWorld.wholeTaiwan"])
+        XCTAssertEqual(XCTWaiter.wait(for: [read], timeout: 180), .completed, "The app's data is read")
         let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
         for _ in 0..<12 where !(row.exists && row.frame.maxY <= app.frame.maxY - 12) {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
