@@ -25,6 +25,9 @@ vec2 ripple(vec2 p, float t, float footprint){ vec2 bent = p + 2.0 * vec2(sin(p.
   slope += w.xy * (w.w * w.z * cos(dot(w.xy, bent) * w.z + rippleRuns[i].x * t + rippleRuns[i].y) * kept); } return slope * 0.045; }
 // Decision 370: map3dGridLine, and the street lights on the roads and the lit windows' yellow.
 float gridLine(float t, float step){ float x = t / step; float w = fwidth(x); float d = abs(fract(x - 0.5) - 0.5); return 1.0 - smoothstep(0.0, max(w * 1.2, 1e-4), d - w * 0.15); }
+// Decision 721: nightDim, trackLit, stockLit, roadPool, roadPoolCell, nightWindowsMore, nightBays and map3dRoadPool. A train's plain faces come as layer -20 (the app's Map3DInstance.lit).
+const float NIGHT_DIM = 0.42; const float TRACK_LIT = 0.30; const float STOCK_LIT = 0.30; const vec3 ROAD_POOL = vec3(0.08, 1.6, 28.0); const float ROAD_POOL_CELL = 24.0; const vec2 NIGHT_WINDOWS_MORE = vec2(1.7, 1.35); const float NIGHT_BAYS = 0.42; const vec2 NIGHT_FALL = vec2(0.45, 0.60);
+float roadPool(vec2 at){ vec2 g = at / ROAD_POOL_CELL, cell = floor(g); float best = 0.0; for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) { vec2 c = cell + vec2(float(i), float(j)); float d = length(g - (c + vec2(hash12(c + 3.1), hash12(c + 7.7)))) * ROAD_POOL_CELL; best = max(best, exp(-d * d / ROAD_POOL.z)); } return ROAD_POOL.x + ROAD_POOL.y * best; }
 const float ROAD_LAMP = 0.5; const vec2 ROAD_LAMP_SKY = vec2(0.50, 0.70); const vec3 WINDOW_WARM = vec3(1.0, 0.784, 0.420);
 const int FAR_WINDOWS = 1;
 const int WALL_NOT_GRASS = 1; // Decision 645 (D8): 0 lets steep grass take the walls' lines and foot as before. // Decision 645 (D6): 0 draws the bays as before, for a comparison picture.
@@ -34,10 +37,10 @@ float sunSeenAt(vec3 world, vec3 n){ if (sunShadow.x <= 0.0 || dot(n, sunDirecti
  if (edge >= 1.0 || at.z <= 0.0 || at.z >= 1.0) return 1.0; vec2 uv = at.xy * 0.5 + 0.5; float t = sunShadow.y, d = at.z - sunShadow.w;
  float seen = texture(sunMap, vec3(uv + vec2(-t,-t), d)) + texture(sunMap, vec3(uv + vec2(t,-t), d)) + texture(sunMap, vec3(uv + vec2(-t,t), d)) + texture(sunMap, vec3(uv + vec2(t,t), d));
  return mix(1.0, seen * 0.25, sunShadow.x * (1.0 - smoothstep(0.85, 1.0, edge))); }
-void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0.0); float lights = shade.y;
+void main(){ float kept = ((vLayer < -12.5 && vLayer > -15.5) || (vLayer < -19.5 && vLayer > -20.5)) ? 1.0 : 0.0; float stock = kept; vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0.0); float lights = shade.y;
  if (vLayer < -1.5 && vLayer > -2.5) glow = base * 1.3 * lights;
- vec3 streetLight = vec3(1.0, 0.90, 0.74) * ROAD_LAMP * lights * (1.0 - smoothstep(ROAD_LAMP_SKY.x, ROAD_LAMP_SKY.y, dot(ambientSky.rgb, vec3(0.2126, 0.7152, 0.0722))));
- if (vLayer < -10.5 && vLayer > -11.5) glow += base * streetLight;
+ vec3 streetLight = vec3(1.0, 0.84, 0.60) * ROAD_LAMP * lights * (1.0 - smoothstep(ROAD_LAMP_SKY.x, ROAD_LAMP_SKY.y, dot(ambientSky.rgb, vec3(0.2126, 0.7152, 0.0722))));
+ if (vLayer < -10.5 && vLayer > -11.5) glow += base * streetLight * roadPool(vWorld.xz);
  vec4 mirrored = vec4(0.0); bool mirrors = mirror.x > 0.0; vec3 toEye = normalize(eye.xyz - vWorld); float sunSeen = sunSeenAt(vWorld, n);
  if (mirrors && vLayer < -2.5 && vLayer > -3.5) { vec2 sl = ripple(vWorld.xz, mirror.y, length(fwidth(vWorld.xz))); n = normalize(vec3(-sl.x, 1.0, -sl.y)); sunSeen = sunSeenAt(vWorld, n);
   vec3 r = reflect(-toEye, n); float fr = 0.05 + 0.95 * pow(1.0 - max(dot(toEye, n), 0.0), 4.0);
@@ -48,7 +51,7 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
  else if (vLayer < -8.5 && vLayer > -10.5) { float v = abs(n.y) > 0.7 ? 0.0 : gridLine(vUV.y, 5.0) * 0.12 + gridLine(vUV.x, 1.6) * 0.045; base *= (1.0 - v) * 1.2; }
  if (((vLayer < -4.5 && vLayer > -5.5) || (vLayer < -8.5 && vLayer > -9.5)) && lights > 0.0 && abs(n.y) < 0.7) { vec2 bay = vLayer < -8.5 ? vec2(3.2, 5.0) : vec2(3.0, 4.2);
   vec2 face = vec2(floor(vPlane / 4.0), dot(round(n * 4.0), vec3(1.0, 17.0, 289.0))); vec2 room = floor(vUV / bay) + fract(face * vec2(0.1373, 0.2719)) * 512.0;
-  glow += WINDOW_WARM * mix(0.55, 1.1, hash12(room + 1.3)) * step(0.66, hash12(room + 23.0)) * lights; }
+  glow += WINDOW_WARM * mix(0.55, 1.1, hash12(room + 1.3)) * step(1.0 - NIGHT_BAYS, hash12(room + 23.0)) * lights * NIGHT_WINDOWS_MORE.y; }
  if (vLayer < -9.5 && vLayer > -10.5 && lights > 0.0 && abs(n.y) < 0.7) glow += WINDOW_WARM * (0.10 + 0.55 * smoothstep(-12.0, 0.0, vUV.y)) * lights;
  if (vLayer < -11.5 && vLayer > -12.5) glow += WINDOW_WARM * 0.75 * lights;
  if (textured==1 && vLayer >= 0.0) { int packed = int(vLayer + 0.5); vec4 t = texture(surfaces, vec3(vUV, float(packed % 64)));
@@ -60,8 +63,8 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
    tinted *= mix(1.0, texture(surfaces, vec3(at / metres, float(layer))).r * 2.0, near * contrast); }
   if (wall) tinted *= 1.0 - 0.13 * max(gridLine(vUV.x, 1.0) * 0.7, gridLine(vUV.y, 1.0));
   if (wall && abs(n.y) < 0.6) tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, vUV.y * 3.2));
-  base = tinted;
-  if (packed == 22 || packed == 23) { base = mix(t.rgb, vColor, t.a); glow += base * streetLight; }
+  base = tinted; if (packed == 2) { kept = 1.0; glow += base * TRACK_LIT * smoothstep(NIGHT_FALL.x, NIGHT_FALL.y, lights); }
+  if (packed == 22 || packed == 23) { base = mix(t.rgb, vColor, t.a); glow += base * streetLight * roadPool(vWorld.xz); }
   int surface = packed % 64; vec4 row = nightWindows[min(surface / 2, 11)]; vec2 rule = (surface % 2 == 0) ? row.xy : row.zw;
   float bright = dot(t.rgb, vec3(0.2126, 0.7152, 0.0722));
   float mirrorGlass = mirrors ? (1.0 - t.a) * step(bright, 0.45) * pane.x : 0.0;
@@ -70,10 +73,10 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
    vec2 face = vec2(floor(vPlane / 4.0), dot(round(n * 4.0), vec3(1.0, 17.0, 289.0)));
    vec2 room = floor(vUV) + fract(face * vec2(0.1373, 0.2719)) * 512.0; float on = 0.0;
    if (lights > 0.0 && rule.x > 0.0) { float glass = (1.0 - t.a) * step(bright, rule.y);
-    float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
+    float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0)) * NIGHT_WINDOWS_MORE.x;
     on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0)) * glass;
     float average = clamp(rule.x * busy, 0.0, 0.95) * (1.0 - t.a) * 1.4;
-    glow += WINDOW_WARM * mix(mix(0.55, 1.1, hash12(room + 1.3)) * on, average, distant) * lights; }
+    glow += WINDOW_WARM * mix(mix(0.55, 1.1, hash12(room + 1.3)) * on, average, distant) * lights * NIGHT_WINDOWS_MORE.y; }
    if (mirrorGlass > 0.0) {
     vec3 along = normalize(cross(vec3(0.0, 1.0, 0.0), n) + vec3(1e-4, 0.0, 0.0));
     vec3 tilted = normalize(n + (along * (hash12(room + 15.7) - 0.5) + vec3(0.0, hash12(room + 19.3) - 0.5, 0.0)) * 0.035);
@@ -92,7 +95,7 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
  // Decision 370: the model look's soft light (map3dLit's soft).
  float sun = max(dot(n, sunDirection.xyz), 0.0) * (1.0 - (1.0 - sunSeen) * 0.55);
  vec3 light = vec3(0.85 - 0.05 * shade.y + 0.02 * max(n.y, 0.0) + 0.15 * sun) * mix(vec3(0.94, 0.96, 1.0), vec3(1.0, 0.99, 0.97), sun);
- light *= (ambientSky.rgb + sunColor.rgb * 0.5) / vec3(0.925, 0.871, 0.806);
+ light *= (ambientSky.rgb + sunColor.rgb * 0.5) / vec3(0.925, 0.871, 0.806); light *= mix(1.0, mix(NIGHT_DIM, 1.0, kept), smoothstep(NIGHT_FALL.x, NIGHT_FALL.y, shade.y)); glow += base * STOCK_LIT * stock * smoothstep(NIGHT_FALL.x, NIGHT_FALL.y, lights);
  vec3 lit = mix(base * light, mirrored.rgb, mirrored.a);
  float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(min(mix(lit, fogColor.rgb, f) + glow * (1.0 - f * 0.7), 1.0), 1.0); }`;
 // Decision 352: map3dSignVertex and map3dSignFragment, the same algebra.

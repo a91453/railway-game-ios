@@ -298,7 +298,9 @@ extension Map3DScene.Builder {
             if !look.ballasted {
                 target = .near
                 mesh(at: line[line.count / 2]) { mesh in
+                    let start = mesh.vertices.count
                     mesh.addRibbon(along: line, width: 2.6, lift: -0.2, depth: 0.15, top: Map3DPalette.ballast, side: Map3DPalette.ballast)
+                    mesh.makeNightLit(from: start) // Decision 721: as the ballast is.
                 }
             }
             // The parapets, or a truss's members, close up.

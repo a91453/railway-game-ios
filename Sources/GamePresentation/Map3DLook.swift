@@ -40,7 +40,8 @@ public enum Map3DLook {
         // Decision 446: the scooters parked in the arcades, vehicles too.
         // Decision 699: the airfields' pavement and paint, which a paler
         // grey would lose on the pale ground.
-        return Set(palette + played).union(Map3DScooter.parked).union(functional).union(Map3DScene.Builder.Airfield.kept)
+        // Decision 720: the ground under the city's lots and where they meet, and the city's roofs.
+        return Set(palette + played + [Map3DPalette.cityRoof]).union(Map3DPalette.groundMixes).union(Map3DScooter.parked).union(functional).union(Map3DScene.Builder.Airfield.kept)
     }()
 
     /// Decision 451: the colours that tell the player something, which a
@@ -58,6 +59,7 @@ public enum Map3DLook {
         0xFFE3B0: 0xFFC86B, // a street light's head: the icon's yellow (its pool on the ground stays warm white)
         0x5FAD48: 0x8DC27A, // the street trees' first green, as the parks' crowns
         0xC64C36: 0xC4826C, // the red roof ridges, softer
+        0xC4C8D6: 0xBABDC8, // decision 720: the city's flat roofs (Map3DPalette.roof), a step deeper than their pale #D9DBE2
         0x8B3526: 0x9E5F4C, // their eaves
         0xC65A4E: 0xC98A78,
     ].reduce(into: [:]) { $0[Map3DColor.rgb($1.key)] = Map3DColor.rgb($1.value) }

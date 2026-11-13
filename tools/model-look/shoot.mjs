@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // tools/model-look: the look sheet of one native model (.m3dmodel), 800 px
 // wide JPEG: the model at the game's camera angles and on-screen sizes,
-// enlarged, and beside real photos; with --before, the earlier model in the
-// same shots. .claude/skills/model-look/SKILL.md says how to read it.
+// enlarged, on the map's ground among the city's plain blocks, and beside
+// real photos; with --before, the earlier model in the same shots. .claude/skills/model-look/SKILL.md says how to read it.
 //
 //   node tools/model-look/shoot.mjs --model new.m3dmodel [--before old.m3dmodel]
 //     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--labels 改前,改後] [--title text] [--max-triangles n] --out sheet.jpg
@@ -42,6 +42,11 @@ try{
   const {NativeRenderer}=await import('/renderer.js'),renderer=new NativeRenderer(document.getElementById('canvas'));if(most)renderer.maximumTriangles=most;
   const models={};for(const name of hasBefore?['before','after']:['after'])models[name]=await(await fetch('/'+name+'.m3dmodel')).arrayBuffer();
   const rad=d=>d*Math.PI/180;
+  // What the 3D map draws round a model, as Map3DLook leaves them (decisions 370 and 451):
+  // Map3DPalette.ground (#ECEEF6 once this renderer's light is on it), a tertiary road and its kerb, and a city block's wall (tileWhite)
+  // and roof as tools/map3d-preview draws them by day (a wall with its windows L* 61, a roof
+  // L* 86: docs/art/map3d-liveliness-2026-11-13). Change them here when the map's look changes.
+  const rgb=hex=>(0xFF000000|(hex&255)<<16|hex&0xFF00|hex>>>16)>>>0,MAP={ground:rgb(0xE4E3DF),road:rgb(0xA09FAA),kerb:rgb(0xF7F7F4),wall:rgb(0xA3A7B0),roof:rgb(0xBABDC8)};
   // From the model towards the camera: `tilt` from straight down, as the game's camera counts it.
   const towards=(heading,tilt)=>[Math.sin(rad(tilt))*Math.cos(rad(heading)),Math.sin(rad(tilt))*Math.sin(rad(heading)),Math.cos(rad(tilt))];
   // One picture; `pointsPerMetre` gives it its size on an iPhone at that zoom, else it fills `width`.
@@ -68,7 +73,33 @@ try{
   add('h2','二、遊戲鏡頭角度放大（傾 40°；站前斜看、月台側斜看）');
   for(const heading of [35,215]){row=add('div');row.className='row';
    for(const name of names){const cell=add('div','',row);cell.className='cell';const w=names.length>1?380:560;const image=shot(name,heading,40,w,Math.round(w*0.62));image.className='big';cell.append(image);add('p',label[name]+(heading===35?'｜站前':'｜月台側'),cell);}}
-  if(photos.length)add('h2','三、和真實照片並排（同方向；照片只供比對形狀與顏色）');
+  // The model where the map draws it: on the game's ground, a road in front and three
+  // of the city's plain blocks round it (MAP, above), in colour and in grey.
+  function placed(buffer){
+   const d=new DataView(buffer),count=d.getUint32(8,true),start=16+Math.ceil(d.getUint32(12,true)/4)*4,triangles=[];
+   const quad=(a,b,c,e,colour)=>triangles.push([a,b,c,colour],[a,c,e,colour]);
+   const box=(x0,y0,x1,y1,z0,z1,wall,roof)=>{const p=(x,y,z)=>[x,y,z];
+    quad(p(x0,y0,z1),p(x1,y0,z1),p(x1,y1,z1),p(x0,y1,z1),roof);quad(p(x1,y0,z0),p(x1,y1,z0),p(x1,y1,z1),p(x1,y0,z1),wall);quad(p(x0,y1,z0),p(x0,y0,z0),p(x0,y0,z1),p(x0,y1,z1),wall);
+    quad(p(x1,y1,z0),p(x0,y1,z0),p(x0,y1,z1),p(x1,y1,z1),wall);quad(p(x0,y0,z0),p(x1,y0,z0),p(x1,y0,z1),p(x0,y0,z1),wall);};
+   renderer.load(buffer);const c=focus?focus.slice(0,3):renderer.centre,e=focus?focus.slice(3):renderer.extent,z=renderer.bounds.low[2],reach=Math.max(e[0],e[1])+46;
+   quad([c[0]-reach*3,c[1]-reach*3,z-0.06],[c[0]+reach*3,c[1]-reach*3,z-0.06],[c[0]+reach*3,c[1]+reach*3,z-0.06],[c[0]-reach*3,c[1]+reach*3,z-0.06],MAP.ground);
+   const front=c[0]+e[0]+5;box(front,c[1]-reach*3,front+1.6,c[1]+reach*3,z-0.05,z+0.12,MAP.kerb,MAP.kerb);box(front+1.6,c[1]-reach*3,front+11.6,c[1]+reach*3,z-0.05,z+0.02,MAP.road,MAP.road);
+   box(c[0]-e[0]-22,c[1]+e[1]*0.1,c[0]-e[0]-6,c[1]+e[1]*0.1+22,z,z+21,MAP.wall,MAP.roof);
+   box(c[0]-e[0]*0.4,c[1]+e[1]+6,c[0]-e[0]*0.4+14,c[1]+e[1]+20,z,z+10.5,MAP.wall,MAP.roof);
+   box(c[0]-e[0]*0.2-6,c[1]-e[1]-22,c[0]-e[0]*0.2+12,c[1]-e[1]-6,z,z+14,MAP.wall,MAP.roof);
+   const out=new ArrayBuffer(start+(count+triangles.length)*52),bytes=new Uint8Array(out),view=new DataView(out);bytes.set(new Uint8Array(buffer));view.setUint32(8,count+triangles.length,true);
+   triangles.forEach((t,i)=>{const at=start+(count+i)*52;view.setUint32(at,0,true);for(let j=0;j<3;j++){const k=at+4+j*16;t[j].forEach((x,n)=>view.setFloat32(k+n*4,x,true));view.setUint32(k+12,t[3],true);}});
+   return {buffer:out,centre:[c[0],c[1],z+Math.max(e[2],10)],extent:[e[0]+24,e[1]+24,Math.max(e[2],10)]};
+  }
+  function onMap(name,width,height,grey){
+   const scene=placed(models[name]),before=renderer.maximumTriangles;renderer.maximumTriangles=Math.max(before||15000,15000)+64;renderer.load(scene.buffer);renderer.maximumTriangles=before;
+   renderer.centre=scene.centre;renderer.extent=scene.extent;renderer.render('',{width:width*2,height:height*2,vector:towards(35,40)});
+   const image=new Image();image.src=renderer.png();image.style.width=width+'px';image.className='big';if(grey)image.style.filter='grayscale(1)';return image;
+  }
+  add('h2','三、放在地圖上的樣子（遊戲的地面色、三棟城市建築的通用方塊、一條路；右邊是灰階）');
+  for(const name of names){row=add('div');row.className='row';
+   for(const grey of [false,true]){const cell=add('div','',row);cell.className='cell';cell.append(onMap(name,380,236,grey));add('p',label[name]+(grey?'｜灰階：屋頂、牆、地面還分得開嗎':'｜和背景分得開嗎'),cell);}}
+  if(photos.length)add('h2','四、和真實照片並排（同方向；照片只供比對形狀與顏色）');
   for(const photo of photos){row=add('div');row.className='row';
    const cell=add('div','',row);cell.className='cell photo';const image=add('img','',cell);image.src=photo.src;add('p',photo.caption,cell);
    for(const name of names){const c=add('div','',row);c.className='cell';const w=names.length>1?250:380;const m=shot(name,photo.heading,90-photo.elevation,w,Math.round(w*0.7));m.className='big';c.append(m);add('p',label[name],c);}}

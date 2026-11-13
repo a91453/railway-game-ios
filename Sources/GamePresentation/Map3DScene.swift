@@ -492,7 +492,11 @@ public struct Map3DScene: Sendable {
         // first, as its trenches are cut out of the ground and what lies
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
-        builder.addGround(water: real == nil)
+        // Decision 238: the city twice, in full and simplified for afar.
+        let city = skyline ?? CitySkyline(world: world)
+        // Decision 720: the ground under the city's lots in their colours,
+        // plain where the player's track runs.
+        builder.addGround(water: real == nil, lots: city, clearOf: builder.trackCells(snapshot))
         builder.mark("ground")
         drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
@@ -519,8 +523,6 @@ public struct Map3DScene: Sendable {
         // Decision 407: the viaducts, each pair of tracks on its piers.
         builder.addViaducts()
         builder.mark("viaducts")
-        // Decision 238: the city twice, in full and simplified for afar.
-        let city = skyline ?? CitySkyline(world: world)
         // Decision 370: Taipei 101 and Taipei Main Station, clear of the
         // track; on ground no real building, temple, scene or city lot
         // takes.
@@ -655,6 +657,59 @@ public enum Map3DPalette {
     /// #ECEEF6; the water, parks, farms and plazas the reference's
     /// `mapbox-palette.js` watercolor and atlas colours.
     public static let ground = Map3DColor.rgb(0xECEEF6)
+    /// Decision 720: the ground under the city's lots. Low houses stand
+    /// on a pale green (their yards and fields), denser blocks and every
+    /// shop, office and works on a warm pale paving; the rest, and where
+    /// the player's track runs, stays ``ground``. Both stay within a few
+    /// L* of the ground, so the track and the trains stand off them as
+    /// they do off it (the decision's table).
+    public static let yard = Map3DColor.rgb(0xDEEACF)
+    public static let paved = Map3DColor.rgb(0xE4E3DF)
+    /// Decision 720: the city's flat roofs a step deeper than the pale
+    /// version ``Map3DLook`` gave them (#D9DBE2), which ran into the ground.
+    public static let cityRoof = Map3DColor.rgb(0xBABDC8)
+
+    /// Decision 720: what a 64 m square of ground is drawn as.
+    public enum GroundKind: CaseIterable, Sendable {
+        case plain, yard, paved
+
+        /// A lot's ground: none for open ground, which draws its own park
+        /// or field.
+        init?(_ lot: CitySkyline.Lot) {
+            guard !lot.isOpenGround else { return nil }
+            self = lot.use == .residential && lot.density <= 2 ? .yard : .paved
+        }
+
+        var colour: UInt32 {
+            switch self {
+            case .plain: Map3DPalette.ground
+            case .yard: Map3DPalette.yard
+            case .paved: Map3DPalette.paved
+            }
+        }
+    }
+
+    /// Decision 720: a corner's colour where four squares of `kinds` meet:
+    /// their colours' mean, one of ``groundMixes``.
+    public static func ground(mixing kinds: [GroundKind]) -> UInt32 {
+        guard !kinds.isEmpty else { return ground }
+        var sum: (UInt32, UInt32, UInt32) = (0, 0, 0)
+        for kind in kinds {
+            let c = kind.colour
+            sum = (sum.0 + (c & 0xFF), sum.1 + ((c >> 8) & 0xFF), sum.2 + ((c >> 16) & 0xFF))
+        }
+        let n = UInt32(kinds.count), half = n / 2
+        return ((sum.0 + half) / n) | ((sum.1 + half) / n) << 8 | ((sum.2 + half) / n) << 16 | 0xFF00_0000
+    }
+
+    /// Every colour ``ground(mixing:)`` gives four squares, which
+    /// ``Map3DLook`` leaves as they are.
+    public static let groundMixes: Set<UInt32> = {
+        var mixes = Set<UInt32>()
+        let all = GroundKind.allCases
+        for a in all { for b in all { for c in all { for d in all { mixes.insert(ground(mixing: [a, b, c, d])) } } } }
+        return mixes
+    }()
     public static let water = Map3DColor.rgb(0x86D3E3)
     /// Decision 272: the parks' green and the trees' livelier, nearer the
     /// owner's sunny target picture; the ground and roads as decision 241.
@@ -1326,11 +1381,30 @@ extension Map3DScene {
         /// The ground: a grid of 64 m squares at the map's heights, the
         /// water on it unless `water` is false (the base map's water lies
         /// on it instead, decision 234).
-        mutating func addGround(water drawsWater: Bool = true) {
+        ///
+        /// Decision 720: a square under one of `lots` in its ground's
+        /// colour (``Map3DPalette/GroundKind``), run into its neighbours'
+        /// at the corners they share; plain where it is `clearOf`.
+        mutating func addGround(water drawsWater: Bool = true, lots: CitySkyline? = nil, clearOf track: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
             let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
             let firstRow = Int((region.minY / cell).rounded(.down)), lastRow = Int((region.maxY / cell).rounded(.up)) - 1
             guard firstColumn <= lastColumn, firstRow <= lastRow else { return }
+            var kinds: [ChunkKey: Map3DPalette.GroundKind] = [:]
+            if let lots {
+                let around = WorldRegion(minX: region.minX - cell, minY: region.minY - cell, maxX: region.maxX + cell, maxY: region.maxY + cell)
+                for lot in lots.lots(in: around) {
+                    let key = ChunkKey(column: lot.column, row: lot.row)
+                    if let kind = Map3DPalette.GroundKind(lot), !track.contains(key) { kinds[key] = kind }
+                }
+            }
+            // A corner's colour: its four squares' run together.
+            func tint(_ row: Int, _ column: Int) -> UInt32 {
+                guard !kinds.isEmpty else { return Map3DPalette.ground }
+                return Map3DPalette.ground(mixing: [(row - 1, column - 1), (row - 1, column), (row, column - 1), (row, column)].map {
+                    kinds[ChunkKey(column: $0.1, row: $0.0)] ?? .plain
+                })
+            }
             func corner(_ row: Int, _ column: Int) -> Map3DPoint {
                 let x = Double(column) * cell, y = Double(row) * cell
                 return Map3DPoint(Float((x - originX) / Self.metre), groundCorner(row: row, column: column), Float((y - originY) / Self.metre))
@@ -1342,6 +1416,7 @@ extension Map3DScene {
                     let lift = Map3DPoint(0, water ? 0.05 : 0, 0)
                     let middle = (a + c) * 0.5
                     let colour = water ? Map3DPalette.water : Map3DPalette.ground
+                    let tints = water ? [] : [tint(row, column), tint(row + 1, column), tint(row + 1, column + 1), tint(row, column + 1)]
                     // Decision 375: less the trenches, each triangle's
                     // pieces at its own heights, lit as the whole square.
                     let flat = { (p: Map3DPoint) in Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z)) }
@@ -1351,7 +1426,9 @@ extension Map3DScene {
                             // Decision 241: the ground plain, as the 2D map's land.
                             let start = $0.vertices.count
                             $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: colour)
-                            if water { $0.makeWater(from: start) }
+                            if water { $0.makeWater(from: start) } else if $0.vertices.count == start + 4 {
+                                $0.recolour(from: start) { index, _ in tints[index] }
+                            }
                         }
                         continue
                     }
@@ -1368,13 +1445,37 @@ extension Map3DScene {
                     mesh(at: middle) {
                         let start = $0.vertices.count
                         for piece in pieces { $0.addFan(piece, normal: normal, color: colour) }
-                        if water { $0.makeWater(from: start) }
+                        if water { $0.makeWater(from: start) } else if tints.contains(where: { $0 != colour }) {
+                            // A cut square's pieces: each vertex its nearest corner's colour.
+                            let corners = [a, b, c, d]
+                            $0.recolour(from: start) { _, at in
+                                tints[corners.indices.min { (corners[$0] - at).length < (corners[$1] - at).length } ?? 0]
+                            }
+                        }
                     }
                 }
             }
         }
 
         // MARK: Track
+
+        /// Decision 720: the 64 m cells the player's track runs through
+        /// (``addTrack(_:)``'s, known before the ground is laid), whose
+        /// ground stays plain so the track stands off it as before.
+        func trackCells(_ snapshot: RailwaySnapshot) -> Set<ChunkKey> {
+            var cells = Set<ChunkKey>()
+            let cell = Double(Land.cellLength), region = region
+            for alignment in snapshot.edges {
+                for span in alignment.edge.sectionSpans where span.end > span.start {
+                    for coordinate in sample(alignment.geometry, from: span.start, to: span.end) {
+                        let x = Double(coordinate.x), y = Double(coordinate.y)
+                        guard x >= region.minX - cell, x <= region.maxX + cell, y >= region.minY - cell, y <= region.maxY + cell else { continue }
+                        cells.insert(ChunkKey(column: Int((x / cell).rounded(.down)), row: Int((y / cell).rounded(.down))))
+                    }
+                }
+            }
+            return cells
+        }
 
         /// The track: its bed or viaduct, piers and rails, edge by edge and
         /// stretch by stretch of what carries it. Returns the 64 m cells
@@ -1677,13 +1778,34 @@ extension Map3DScene {
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
+                    // Decision 721: its edge line lit after dark.
+                    let start = mesh.vertices.count
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (edge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
+                    mesh.makeNightLit(from: start)
                 }
+                addPlatformLight(line, offset: offset)
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
                                                   structure: platform.structure))
+            }
+        }
+
+        /// Decision 721: a platform's lamps on the ground round it after
+        /// dark, a pool every ``Map3DNight/platformPool``'s `every` metres
+        /// along it (drawn with the street lights' pools).
+        mutating func addPlatformLight(_ line: [Map3DPoint], offset: Float) {
+            guard let path = Map3DStreetLife.Path(line) else { return }
+            let pool = Map3DNight.platformPool
+            let count = max(1, Int((path.length / pool.every).rounded()))
+            for index in 0..<count {
+                let at = path.at(path.length * (Float(index) + 0.5) / Float(count))
+                let middle = at.point + at.right * offset
+                let centre = onGround([middle])[0], ring = onGround(Map3DProp.poolRing.map { middle + $0 * pool.radius })
+                shadow(at: key(of: middle), size: 4 * pool.radius) {
+                    $0.addPool(centre: centre, ring: ring, colour: Map3DProp.lampLight, strength: pool.strength)
+                }
             }
         }
 
