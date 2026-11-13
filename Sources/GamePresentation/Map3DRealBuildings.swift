@@ -50,6 +50,8 @@ extension Map3DScene.Builder {
     mutating func addRealBuildings(_ areas: [CityTileArea], frame: RealWorldFrame, clearOf cleared: Set<Map3DScene.ChunkKey>)
         -> Set<Map3DScene.ChunkKey> {
         var standing = Set<Map3DScene.ChunkKey>()
+        var cover = RealCover()
+        defer { tileCover = cover }
         let cell = Double(Land.cellLength)
         for area in areas {
             // The tiles' own projection (`geo.js`, `makeProjection`): metres
@@ -87,18 +89,14 @@ extension Map3DScene.Builder {
                 guard contains(x: middle.x, y: middle.y) else { continue }
                 let cells = Set(points.map { Map3DScene.ChunkKey(column: Int(($0.x / cell).rounded(.down)), row: Int(($0.y / cell).rounded(.down))) })
                 guard cleared.isDisjoint(with: cells) else { continue }
-                // The cells under its whole outline, not only its corners.
-                let low = (x: points.map(\.x).min() ?? 0, y: points.map(\.y).min() ?? 0)
-                let high = (x: points.map(\.x).max() ?? 0, y: points.map(\.y).max() ?? 0)
-                for row in Int((low.y / cell).rounded(.down))...Int((high.y / cell).rounded(.down)) {
-                    for column in Int((low.x / cell).rounded(.down))...Int((high.x / cell).rounded(.down)) {
-                        standing.insert(Map3DScene.ChunkKey(column: column, row: row))
-                    }
-                }
                 let rings = polygons.map { $0.map { ring in ring.map { point(x: $0.x, y: $0.y, height: 0) } } }
                 // Cleared for a building of the player's: its cells still
                 // keep no city lot.
-                guard !rings.contains(where: { onPlacedGround($0.first ?? []) }) else { continue }
+                let drawn = !rings.contains(where: { onPlacedGround($0.first ?? []) })
+                // The cells under its whole outline, not only its corners;
+                // decision 723: and how much of each it covers.
+                for polygon in polygons { standing.formUnion(count(polygon, drawn: drawn, into: &cover)) }
+                guard drawn else { continue }
                 let ground = self.ground(x: middle.x, y: middle.y)
                 addRealBuilding(rings, ground: ground, height: max(3, building.height), storeys: max(1, building.storeys),
                                 kind: RealKind(usage: building.usage))

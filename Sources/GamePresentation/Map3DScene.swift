@@ -578,26 +578,35 @@ public struct Map3DScene: Sendable {
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
         var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations.union(landmarkCells)) } ?? [])
+        // Decision 723: the cells of what is no building of the tiles' or
+        // the footprints': the landmarks', then the temples', the kits'.
+        var scenes = landmarkCells
         builder.mark("real buildings (city tiles)")
         // Decision 385: the airports' own buildings; decision 389: only
         // with no footprints, which have them.
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         // Decision 331: the real temples, on no station or real building.
         if let temples, let frame = RealWorldFrame(world: world) {
-            standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
+            let cells = builder.addTemples(temples, frame: frame, clearOf: stations.union(standing))
+            standing.formUnion(cells)
+            scenes.formUnion(cells)
             builder.target = .near
         }
         // Decision 331: the commercial kit's scenes before the big
         // stations, on no real building or temple.
         builder.mark("temples")
-        standing.formUnion(builder.addStationCommerce(clearOf: standing))
+        let commerce = builder.addStationCommerce(clearOf: standing)
+        standing.formUnion(commerce)
+        scenes.formUnion(commerce)
         builder.mark("station commerce")
         builder.target = .near
         // Decision 331: the park kit's scenes in the real parks, on no
         // station, real building, temple or commercial scene; no city lot
         // on them.
         if let real {
-            standing.formUnion(builder.addParks(real, clearOf: stations.union(standing)))
+            let parks = builder.addParks(real, clearOf: stations.union(standing))
+            standing.formUnion(parks)
+            scenes.formUnion(parks)
             builder.target = .near
         }
         builder.mark("parks")
@@ -612,8 +621,11 @@ public struct Map3DScene: Sendable {
         let beforeFootprints = standing
         if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
         builder.mark("real buildings (footprints)")
+        // Decision 723: the cells the real buildings cover little of,
+        // which the houses along the roads are laid on, between them.
+        let thinlyBuilt = builder.thinlyBuilt(but: scenes.union(taken.whole).union(turntable))
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
-                        besideRoads: taken.byRoads)
+                        besideRoads: taken.byRoads, thinlyBuilt: thinlyBuilt)
         builder.mark("the game's own city")
         builder.target = .far
         // Decision 455: the city's boxes as instances: the lots', the real
@@ -628,7 +640,7 @@ public struct Map3DScene: Sendable {
         builder.mark("real buildings (footprints)")
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
-                        besideRoads: taken.byRoads)
+                        besideRoads: taken.byRoads, thinlyBuilt: thinlyBuilt)
         builder.mark("the game's own city")
         builder.sizesFar = false
         builder.instancingBoxes = false
@@ -1027,6 +1039,11 @@ extension Map3DScene {
         /// Decision 707: the tallest real building round each place, which
         /// the game's own houses do not pass; `nil` without footprints.
         var lowRise: Map3DLowRise?
+        /// Decision 723: the city tiles' buildings and the footprints
+        /// drawn, and how much of each cell they cover: where that is
+        /// little, the game's houses stand between them.
+        var tileCover = RealCover()
+        var footprintCover = RealCover()
         /// The corners of each station building's ground, and the
         /// shop streets still to lay beside them.
         var houseFootprints: [[Map3DPoint]] = []
@@ -1867,19 +1884,22 @@ extension Map3DScene {
         static let frontedUses: Set<LandUse> = [.residential, .commercial, .office, .civic, .leisure]
 
         mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = [],
-                              besideRoads: Set<ChunkKey> = []) {
+                              besideRoads: Set<ChunkKey> = [], thinlyBuilt: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
             let pieces = roadPieces(near: besideRoads)
             // Decision 385: on a real-world map, the houses along its roads,
             // laid in the first pass and drawn again in the second.
             if streetFrontage, frontage.pieces.isEmpty { prepareFrontage() }
-            let blocked = streetFrontage ? cleared.union(taken) : []
+            // Decision 723: but on the cells of `thinlyBuilt`, whose
+            // footprints each house keeps off by itself.
+            let blocked = streetFrontage ? cleared.union(taken.subtracting(thinlyBuilt)) : []
             for lot in skyline.lots(in: region) {
                 var x = (Double(lot.column) + 0.5) * cell, y = (Double(lot.row) + 0.5) * cell
                 // Decision 234: no lot where the real map has water or a
                 // park.
                 let key = ChunkKey(column: lot.column, row: lot.row)
-                guard contains(x: x, y: y), !taken.contains(key) else { continue }
+                let thin = streetFrontage && thinlyBuilt.contains(key)
+                guard contains(x: x, y: y), !taken.contains(key) || thin else { continue }
                 // Decision 385: low homes and shops along the real roads,
                 // house by house clear of the no-build land; no other lot
                 // whose middle is on it. Decision 516: the low offices,
@@ -1891,6 +1911,8 @@ extension Map3DScene {
                                 blocked: blocked)
                     continue
                 }
+                // Decision 723: nothing else of the game's among footprints.
+                if thin { continue }
                 if onNoBuildLand(point(x: x, y: y, height: 0)) { continue }
                 var side = Float(Double(lot.side) / Self.metre)
                 // Decision 345: where its roads reach, a building in the
