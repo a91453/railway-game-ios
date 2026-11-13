@@ -405,6 +405,12 @@ public struct Map3DMesh: Sendable {
 
     /// Decision 370: each vertex changed in place by `change`, the
     /// triangles as they are (``Map3DLook``).
+    /// Decision 720: the vertices from `start` on each in the colour
+    /// `colour` gives its place among them and its position.
+    mutating func recolour(from start: Int, _ colour: (Int, Map3DPoint) -> UInt32) {
+        for index in start..<vertices.count { vertices[index].color = colour(index - start, vertices[index].position) }
+    }
+
     mutating func restyleVertices(_ change: (inout Map3DVertex) -> Void) {
         for index in vertices.indices { change(&vertices[index]) }
     }
