@@ -3176,6 +3176,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// when the flights open. (`-open-overseas` read the cities while
     /// ``OverseasMaps/open`` was empty; Hong Kong is in it now.)
     func testAirRouteUnlock() {
+        // Six launches, the first some 100 seconds on CI.
+        executionTimeAllowance = 1_500
         func picker(_ name: String, extra: [String], english: Bool) {
             let app = launch(extra: ["-open-overseas"] + extra, english: english)
             defer { app.terminate() }
@@ -3185,6 +3187,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             newGame.tap()
             tapButton("newGame.realWorld", in: app, timeout: 60)
             XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+            // The whole of Taiwan's row is enabled once the app's data is
+            // read, and Hong Kong's row is listed from then.
+            let read = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: app.buttons["realWorld.wholeTaiwan"])
+            XCTAssertEqual(XCTWaiter.wait(for: [read], timeout: 180), .completed, "The app's data is read")
             // The list makes a row only near the screen, and the whole of
             // Taiwan's row ends under its foot: the list is dragged up a
             // little at a time until Hong Kong's row is whole on screen
