@@ -250,6 +250,10 @@ final class TermLoanTests: XCTestCase {
         try refused { $0["borrowedDay"] = 1 }
         try refused { $0["id"] = 2 }
         try refused({ _ in }, ["nextTermLoanID": 1])
+        // Review L20, P3-2 and P3-3: values a signing or a quote would
+        // overflow on.
+        try refused { $0["borrowedDay"] = Int64.min }
+        try refused({ _ in }, ["nextTermLoanID": Int64.max])
         accounts["termLoans"] = [loan, loan]
         object["accounts"] = accounts
         XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: try JSONSerialization.data(withJSONObject: object)))

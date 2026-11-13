@@ -150,4 +150,12 @@ final class RealRailwayOperationsTests: XCTestCase {
         XCTAssertEqual(ops.orderedSystems.map(\.id), ["tra", "afr", "trtc", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"])
         XCTAssertEqual(ops.allLines.first?.id, "縱貫線北段")
     }
+
+    /// Review L19, P3-17 (c): every system that can be read has its place
+    /// in the order, Hong Kong's MTR after Taiwan's.
+    func testEverySystemHasItsPlaceInTheOrder() {
+        XCTAssertEqual(Set(RealRailwayOperations.systemOrder), Set(RealRailwayOperations.siteSystems.keys))
+        XCTAssertEqual(RealRailwayOperations.systemOrder.count, RealRailwayOperations.siteSystems.count)
+        XCTAssertEqual(RealRailwayOperations.systemOrder.last, "hkmtr")
+    }
 }
