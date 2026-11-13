@@ -256,6 +256,10 @@ public struct Map3DFollow: Hashable, Sendable {
     /// How far the camera stands, as a share of ``distance(viewportHeight:)``:
     /// a pinch while following moves it in or out.
     public var scale: Float = 1
+    /// Decision 710: the distance of this one look from beside, in
+    /// ``scale``'s place while it lasts (the pinch's distance is kept for
+    /// after); `nil` for the view's own.
+    public var lookScale: Float?
 
     public init(train: TrainID, view: View = .back) {
         subject = .train(train)
@@ -563,7 +567,7 @@ public struct Map3DFollow: Hashable, Sendable {
             let forward = Map3DPoint(sinf(turned), 0, -cosf(turned)), left = Map3DPoint(forward.z, 0, -forward.x)
             var target = (head.middle ?? head.rail) + Map3DPoint(0, head.bodyHeight / 2, 0)
             if let ground = head.ground { target.y = max(target.y, ground) }
-            let k = Self.sideScale(length: head.length, viewport: camera.viewport) * scale
+            let k = Self.sideScale(length: head.length, viewport: camera.viewport) * (lookScale ?? scale)
             let eye = target + left * (Self.sideAcross * k) - forward * (Self.sideBack * k) + Map3DPoint(0, Self.sideUp * k, 0)
             return Self.camera(at: eye, looking: target, lens: Self.watchLens, from: camera)
         }
