@@ -100,6 +100,41 @@ final class CityTitleTests: XCTestCase {
         XCTAssertEqual(largest.detail(in: .traditionalChinese), "居民 10,000,000 人。已經是最大的規模。")
     }
 
+    // MARK: - The sights' visitors (decision 683, later)
+
+    func testATownWhoseSightsDrawManyVisitorsIsATouristTown() throws {
+        // 40 visitors a day for every thousand residents.
+        XCTAssertEqual(CityTitle.touristVisitorsPerThousand, 40)
+        let offices: [Kind: Int64] = [.business: 10_000]
+        XCTAssertEqual(CityTitle.kind(residents: 20_000, jobs: offices), .business)
+        XCTAssertEqual(CityTitle.kind(residents: 20_000, jobs: offices, visitorsPerDay: 799), .business)
+        XCTAssertEqual(CityTitle.kind(residents: 20_000, jobs: offices, visitorsPerDay: 800), .tourist)
+        // Before the few jobs that make a city residential.
+        XCTAssertEqual(CityTitle.kind(residents: 30_000, jobs: [.industrial: 100]), .residential)
+        XCTAssertEqual(CityTitle.kind(residents: 30_000, jobs: [.industrial: 100], visitorsPerDay: 1_200), .tourist)
+        // Still none for a city too small, or with no jobs.
+        XCTAssertNil(CityTitle.kind(residents: 4_999, jobs: offices, visitorsPerDay: 4_000))
+        XCTAssertNil(CityTitle.kind(residents: 30_000, jobs: [:], visitorsPerDay: 4_000))
+
+        let town = try XCTUnwrap(CityTitle(cells: cells(residents: 30_000, jobs: 20_000, use: .office), visitorsPerDay: 1_200))
+        XCTAssertEqual(town.kind, .tourist)
+        XCTAssertEqual(town.headline(in: .english), "Town · mostly tourism")
+        XCTAssertEqual(town.headline(in: .traditionalChinese), "城鎮 · 以觀光為主")
+    }
+
+    func testTheVisitorsADayAreTheYearsAverage() {
+        XCTAssertEqual(CityTitle.visitorsPerDay(thisYear: 0, lastYear: 0, daysThisYear: 0), 0)
+        XCTAssertEqual(CityTitle.visitorsPerDay(thisYear: 6_000, lastYear: 0, daysThisYear: 3), 2_000)
+        XCTAssertEqual(CityTitle.visitorsPerDay(thisYear: 30_000, lastYear: 999_999, daysThisYear: 30), 1_000, "a month in: this year alone")
+        XCTAssertEqual(CityTitle.visitorsPerDay(thisYear: 1_000, lastYear: 360_000, daysThisYear: 1), 1_000, "a year's first day: last year's too")
+        XCTAssertEqual(CityTitle.visitorsPerDay(thisYear: 0, lastYear: 3_600, daysThisYear: 0), 10)
+        XCTAssertEqual(CityTitle.visitorsPerDay(thisYear: 720_000, lastYear: 0, daysThisYear: 500), 2_000, "never more than a year's days")
+    }
+
+    func testANewGamesSightsHaveNoVisitorsYet() {
+        XCTAssertEqual(CityTitle.sightVisitorsPerDay(of: .newGame(eventSeed: 1)), 0)
+    }
+
     func testEveryNameIsInBothLanguages() {
         for language in [DisplayLanguage.english, .traditionalChinese] {
             XCTAssertEqual(Set(Rank.allCases.map { $0.name(in: language) }).count, Rank.allCases.count)

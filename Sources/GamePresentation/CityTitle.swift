@@ -132,6 +132,20 @@ public struct CityTitle: Hashable, Sendable {
     /// How far above its usual share of the jobs, in thousandths of them,
     /// a sector must stand for the city to be named after it.
     public static let leadingMargin: Int64 = 80
+    /// A city whose sights the railway brings at least this many visitors
+    /// a day for every thousand residents is a tourist city, whatever its
+    /// jobs (decision 683, later). Taiwan's major sights drew 549 million
+    /// visits in 2024 (Tourism Administration, data.gov.tw 8116,
+    /// docs/research/OFFICIAL_STATS_2026-11-13.md §3), some 64 a day for
+    /// every thousand of its 23.4 million people; a fifth of a sight's
+    /// tourists are the railway's to fetch (``Tourism/captureRate``), 13.
+    /// Three times that stands out (gap: the game's number): a town of
+    /// 20,000 with a well served four-star sight, not a large city.
+    public static let touristVisitorsPerThousand: Int64 = 40
+    /// Fewer days than this counted in the year so far, and last year's
+    /// visitors are averaged in too: a year's first days are too few to
+    /// go by.
+    static let freshYearDays: Int64 = 30
 
     /// Everyone living on the map's land.
     public let residents: Int64
@@ -144,11 +158,15 @@ public struct CityTitle: Hashable, Sendable {
 
     /// The title of the city on `world`'s land, or `nil` with no one on it.
     public init?(world: GameWorld) {
-        self.init(cells: world.land.cells, countsAlongTheLines: world.landBlocks != nil)
+        self.init(
+            cells: world.land.cells, countsAlongTheLines: world.landBlocks != nil,
+            visitorsPerDay: Self.sightVisitorsPerDay(of: world)
+        )
     }
 
-    /// The title of a city of `cells`, or `nil` with no one living in them.
-    public init?(cells: some Sequence<LandCell>, countsAlongTheLines: Bool = false) {
+    /// The title of a city of `cells` whose sights the railway brings
+    /// `visitorsPerDay` a day, or `nil` with no one living in them.
+    public init?(cells: some Sequence<LandCell>, countsAlongTheLines: Bool = false, visitorsPerDay: Int64 = 0) {
         var residents: Int64 = 0
         // By use, not by sector's name: a map has tens of thousands of
         // cells, and this is read while a panel is open.
@@ -168,16 +186,21 @@ public struct CityTitle: Hashable, Sendable {
         guard residents > 0 else { return nil }
         self.residents = residents
         rank = Rank(residents: residents)
-        kind = Self.kind(residents: residents, jobs: jobs)
+        kind = Self.kind(residents: residents, jobs: jobs, visitorsPerDay: visitorsPerDay)
         self.countsAlongTheLines = countsAlongTheLines
     }
 
-    /// The kind of a city of `residents` with `jobs` in each sector.
-    static func kind(residents: Int64, jobs: [Kind: Int64]) -> Kind? {
+    /// The kind of a city of `residents` with `jobs` in each sector,
+    /// whose sights the railway brings `visitorsPerDay` a day.
+    static func kind(residents: Int64, jobs: [Kind: Int64], visitorsPerDay: Int64 = 0) -> Kind? {
         let total = jobs.values.reduce(0, +)
         guard residents >= kindMinimumResidents, total > 0 else { return nil }
         // Counts are far below 2⁵³ (``Land/maximumPerCell`` a cell), so
         // the products below do not overflow.
+        // Decision 683, later: the sights' visitors before the jobs. The
+        // jobs of the land's leisure cells hardly ever make a tourist
+        // city; the people the railway brings to its sights do.
+        if visitorsPerDay > 0, visitorsPerDay * 1_000 >= residents * touristVisitorsPerThousand { return .tourist }
         if total * 1_000 < residents * residentialJobsPerThousand { return .residential }
         var best: (kind: Kind, margin: Int64)?
         for sector in Kind.sectors {
@@ -185,6 +208,34 @@ public struct CityTitle: Hashable, Sendable {
             if margin >= leadingMargin, margin > (best?.margin ?? Int64.min) { best = (sector, margin) }
         }
         return best?.kind ?? .mixed
+    }
+
+    /// The visitors a day the railway brings to the sights on `world`'s
+    /// map (decision 683, later): its sights' average day this year
+    /// (``visitorsPerDay(thisYear:lastYear:daysThisYear:)``), and the
+    /// tourists of the company's own temples, night markets and museums
+    /// the day before, which keep no year's count.
+    static func sightVisitorsPerDay(of world: GameWorld) -> Int64 {
+        var visitors: Int64 = 0
+        if let tourism = world.tourism {
+            let today = world.clock.now.seconds / GameTime.secondsPerDay
+            visitors = visitorsPerDay(
+                thisYear: tourism.attractions.reduce(0) { $0 + $1.thisYear },
+                lastYear: tourism.attractions.reduce(0) { $0 + $1.lastYear },
+                daysThisYear: today - tourism.year * FinancePeriod.year.days
+            )
+        }
+        return visitors + world.placedBuildings.reduce(0) { $0 + ($1.kind.isSight ? $1.visitors : 0) }
+    }
+
+    /// The average day of `thisYear`'s visitors over the `daysThisYear`
+    /// counted so far, with `lastYear`'s whole year in too while fewer than
+    /// ``freshYearDays`` are; 0 with none counted.
+    static func visitorsPerDay(thisYear: Int64, lastYear: Int64, daysThisYear: Int64) -> Int64 {
+        let year = FinancePeriod.year.days
+        let days = max(0, min(daysThisYear, year))
+        if days >= freshYearDays || lastYear <= 0 { return days > 0 ? thisYear / days : 0 }
+        return (thisYear + lastYear) / (days + year)
     }
 
     // MARK: - Words
@@ -224,8 +275,8 @@ public struct CityTitle: Hashable, Sendable {
     /// What the size and the kind go by, under the panel's row.
     public static func helpText(in language: DisplayLanguage) -> String {
         language.text(
-            "More residents make a larger city. Its kind is the work it has more of than most cities.",
-            "居民越多，城市的規模越大。類型看城裡哪一種工作比一般城市多。"
+            "More residents make a larger city. Its kind is the work it has more of than most cities, or tourism when your trains bring many visitors to its sights.",
+            "居民越多，城市的規模越大。類型看城裡哪一種工作比一般城市多；列車載很多遊客來看景點，就是以觀光為主。"
         )
     }
 
