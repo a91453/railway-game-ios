@@ -8,14 +8,23 @@ import SwiftUI
 /// and the last), the balance sheet, the closed years (Phase 7a, decision
 /// 85) and the last rows of the ledger.
 ///
+/// Decision 717: over the whole screen, as the train roster is, in pages
+/// (``EconomyPage``: the overview, the loans, the fares, the reports), each
+/// in two columns where the window is wide enough and one where it is
+/// narrow or the text large (``EconomyLayout``). Every size has the same
+/// sections.
+///
 /// Everything shown is read from `session.world` when the view is drawn,
 /// and every control calls a `GameSession` method that applies one
 /// `GameWorld` command.
 struct EconomyPanel: View {
     let session: GameSession
-    /// Closes it (decision 106: shown beside the map, not presented, so
-    /// the environment's dismiss would do nothing).
+    /// Closes it: the screen's panel is what presents it.
     @Environment(GameScreenState.self) private var screen
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The page picked; shown while the world still has it
+    /// (``EconomyLayout/showing(_:)``).
+    @State private var page: EconomyPage
     @State private var period: FinancePeriod = .day
     @State private var statement: Statement = .income
     @State private var trendRange: FinanceTrendRange = .thirtyDays
@@ -29,60 +38,100 @@ struct EconomyPanel: View {
     /// player moves it (decision 324).
     @State private var dayPassPrice: Int64?
     @State private var confirmsFreePlay = false
-    /// Whether the reports under the "Today" card, the loan and the fares
-    /// show: `nil` until the player chooses, when a game of simple rules
-    /// shows only those.
-    @State private var showsReports: Bool?
+    /// Decision 715: the term loans, over the whole screen.
+    @State private var showsTermLoans = false
+    /// Decision 717: the fleet overview and the last month's report over
+    /// this screen, which is there again when they close.
+    @State private var showsFleet = false
+    @State private var showsMonthReport = false
+    /// The window's width, measured; `nil` until it is.
+    @State private var width: CGFloat?
+
+    /// - Parameter opening: The page it opens at (decision 336: the
+    ///   insolvency bubble opens the loans).
+    init(session: GameSession, opening: EconomyPage = .overview) {
+        self.session = session
+        _page = State(initialValue: opening)
+    }
 
     var body: some View {
+        let language = session.language
+        let layout = EconomyLayout(world: session.world)
+        let shown = layout.showing(page)
+        let columns = layout.columns(of: shown)
         NavigationStack {
-            Form {
-                // Today's money in three lines first.
-                let today = session.world.todayAccount()
-                if let today {
-                    todaySection(today)
-                }
-                if session.world.scenario != nil {
-                    goalsSection
-                }
-                // Decision 336: the loan and the fares under "Today", never
-                // folded away, so the insolvency bubble lands on Borrow.
-                // Decision 200: with unlimited funds there is nothing to
-                // borrow for, and no cash to sheet.
-                if !session.world.economy.unlimitedFunds {
-                    loanSection
-                }
-                faresSection
-                dayPassSection
-                punctualitySection
-                fleetSection
-                if today == nil || showsAllReports {
-                    trendSection
-                    balanceSection
-                    lastHourSection
-                    reportSection
-                    if !session.world.economy.unlimitedFunds {
-                        balanceSheetSection
+            // CRASHSWEEP-3: the width comes from `onGeometryChange`, whose
+            // measuring closure is sendable, not from a GeometryReader.
+            Group {
+                if let width, layout.isSplit(shown, width: width, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
+                    HStack(spacing: 0) {
+                        Form {
+                            sections(columns.leading)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("economy.leading")
+                        Form {
+                            sections(columns.trailing)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("economy.trailing")
                     }
-                    closedYearsSection
-                    ledgerSection
-                }
-                if today != nil {
-                    reportsToggleSection
+                } else if width != nil {
+                    Form {
+                        sections(columns.all)
+                    }
+                    .hardTopScrollEdge()
+                    .accessibilityIdentifier("economy.leading")
+                } else {
+                    // Not measured yet: nothing for a frame, rather than
+                    // one column that turns into two.
+                    Color(uiColor: .systemGroupedBackground)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .navigationTitle("Economy")
-            .hardTopScrollEdge()
             .navigationBarTitleDisplayMode(.inline)
+            // Two lists side by side: the bar's own scroll edge follows
+            // only one of them, and the other's rows showed blurred through
+            // the bar. A bar of the lists' own background hides both.
+            .toolbarBackground(Color(uiColor: .systemGroupedBackground), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker(selection: Binding(get: { shown }, set: { page = $0 })) {
+                        ForEach(layout.pages, id: \.self) { page in
+                            Text(verbatim: page.title(in: language)).tag(page)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Page", "分頁"))
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 440)
+                    .accessibilityIdentifier("economy.pages")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         screen.panel = nil
                     }
+                    .accessibilityIdentifier("economy.done")
                 }
             }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
+            }
+            .fullScreenCover(isPresented: $showsTermLoans) {
+                TermLoanScreen(session: session)
+                    .coversTheMap(session)
+            }
+            .sheet(isPresented: $showsFleet) {
+                FleetOverviewSheet(session: session)
+                    .coversTheMap(session)
+            }
+            .sheet(isPresented: $showsMonthReport, onDismiss: session.dismissMonthEnd) {
+                MonthlyReportSheet(session: session)
+                    .gameSheetDetents()
+                    .coversTheMap(session)
             }
         }
     }
@@ -91,11 +140,36 @@ struct EconomyPanel: View {
         session.world.accounts
     }
 
-    /// Decision 258's simple rules show only the "Today" card, the loan
-    /// and the fares at first (decision 336); realistic games show every
-    /// report, as before.
-    private var showsAllReports: Bool {
-        showsReports ?? (NewGameRules(of: session.world) == .realistic)
+    /// A column's sections, in order.
+    private func sections(_ list: [EconomySection]) -> some View {
+        ForEach(list, id: \.self) { section in
+            self.section(section)
+        }
+    }
+
+    @ViewBuilder
+    private func section(_ section: EconomySection) -> some View {
+        switch section {
+        case .balance: balanceSection
+        case .today:
+            if let today = session.world.todayAccount() {
+                todaySection(today)
+            }
+        case .goals: goalsSection
+        case .trend: trendSection
+        case .punctuality: punctualitySection
+        case .shortcuts: fleetSection
+        case .mode: modeSection
+        case .loan: loanSection
+        case .termLoans: termLoanSection
+        case .fares: faresSection
+        case .dayPass: dayPassSection
+        case .report: reportSection
+        case .lastHour: lastHourSection
+        case .balanceSheet: balanceSheetSection
+        case .closedYears: closedYearsSection
+        case .ledger: ledgerSection
+        }
     }
 
     // MARK: - Sections
@@ -144,7 +218,7 @@ struct EconomyPanel: View {
     private var fleetSection: some View {
         Section {
             Button {
-                screen.panel = .fleet
+                showsFleet = true
             } label: {
                 Label {
                     Text(verbatim: session.language.text("Fleet Overview…", "車隊總覽…"))
@@ -157,7 +231,7 @@ struct EconomyPanel: View {
             // otherwise only opened once, as the month closed.
             if let report = session.lastMonthReport {
                 Button {
-                    screen.panel = .monthEnd
+                    showsMonthReport = true
                 } label: {
                     Label {
                         Text(verbatim: session.language.text(
@@ -169,20 +243,6 @@ struct EconomyPanel: View {
                 }
                 .accessibilityIdentifier("economy.monthlyReport")
             }
-        }
-    }
-
-    /// Shows or hides the reports under the "Today" card.
-    private var reportsToggleSection: some View {
-        Section {
-            Button {
-                showsReports = !showsAllReports
-            } label: {
-                Text(verbatim: showsAllReports
-                     ? session.language.text("Hide the other reports and settings", "收起其他報表與設定")
-                     : session.language.text("More reports and settings", "更多報表與設定"))
-            }
-            .accessibilityIdentifier("economy.reports")
         }
     }
 
@@ -260,8 +320,6 @@ struct EconomyPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.currencyNote")
             }
-
-            LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Decision 160: the tiles of the map owned, and what the next
             // costs and needs.
             if let map = session.mapExpansionText {
@@ -271,6 +329,22 @@ struct EconomyPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.mapExpansion")
             }
+            // Decision 162, later: the fuel price while a spell lasts, not
+            // only the station master's first day.
+            if let fuel = session.world.fuelText(in: session.language) {
+                Text(verbatim: fuel)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("economy.fuel")
+            }
+        }
+    }
+
+    /// Free play or management, and the one-way switch to free play.
+    private var modeSection: some View {
+        Section {
+            LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Decision 200: what unlimited funds mean.
             if session.world.economy.unlimitedFunds {
                 Text(verbatim: session.language.text(
@@ -280,15 +354,6 @@ struct EconomyPanel: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityIdentifier("economy.unlimitedFunds")
-            }
-            // Decision 162, later: the fuel price while a spell lasts, not
-            // only the station master's first day.
-            if let fuel = session.world.fuelText(in: session.language) {
-                Text(verbatim: fuel)
-                    .font(.footnote)
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("economy.fuel")
             }
             // Free play cannot become managed again (decision 46), so the
             // switch goes one way, after a confirmation. Decision 86,
@@ -378,6 +443,45 @@ struct EconomyPanel: View {
             Text(verbatim: session.language.text("Loan", "貸款"))
         } footer: {
             Text(verbatim: CompanyAccounts.loanTermsText(in: session.language))
+        }
+    }
+
+    /// Decision 715: how many term loans there are and what they come to,
+    /// how much more the bank lends, and the button that opens the
+    /// contracts and the form that signs one (``TermLoanScreen``).
+    private var termLoanSection: some View {
+        let language = session.language
+        let board = session.world.termLoanBoard()
+        return Section {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: board.summaryText(in: language))
+                if let next = board.nextDueText(in: language) {
+                    Text(verbatim: next)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .monospacedDigit()
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("economy.termLoans")
+            Text(verbatim: board.creditText(in: language))
+                .font(.subheadline)
+                .monospacedDigit()
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("economy.termLoans.credit")
+            // Free play with none signed has nothing to open.
+            if board.blocked != .freePlay || !board.contracts.isEmpty {
+                Button {
+                    showsTermLoans = true
+                } label: {
+                    Text(verbatim: language.text("Contracts and Borrowing…", "合約與借入…"))
+                }
+                .accessibilityIdentifier("economy.termLoans.open")
+            }
+        } header: {
+            Text(verbatim: language.text("Term loans", "定期貸款"))
         }
     }
 
@@ -688,5 +792,272 @@ struct EconomyPanel: View {
                 .accessibilityElement(children: .combine)
             }
         }
+    }
+}
+
+/// Decision 715: the term loans, over the whole screen as the train
+/// roster is (the owner, 2026-11-13: the panel beside the map on a phone
+/// shows some 230 points, three rows of a form). The form signs one: an
+/// amount in steps of ``CompanyAccounts/loanStep`` up to the most the bank
+/// lends, a term of 1 to 10 years, the bank's quote for the two, and a
+/// question before it is signed. Beside it, or under it where the screen
+/// is narrow or the text large, every contract, the soonest due first,
+/// with what paying it back today costs and a question before that too.
+///
+/// Everything shown is read from `session.world` when the view is drawn
+/// (``TermLoanBoard``, GameCore's own quotes), and both buttons call a
+/// `GameSession` method that applies one `GameWorld` command.
+private struct TermLoanScreen: View {
+    let session: GameSession
+    /// The amount on the stepper; `nil` until the player moves it.
+    @State private var principalChoice: Money?
+    @State private var years: Int64 = 1
+    @State private var confirmsSigning = false
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The least width that holds the form and the contracts side by side.
+    private static let twoColumns: CGFloat = 640
+
+    /// The screen's width, once measured.
+    @State private var width: CGFloat?
+
+    var body: some View {
+        let language = session.language
+        let board = session.world.termLoanBoard()
+        NavigationStack {
+            // The width comes from `onGeometryChange`, not a GeometryReader
+            // (CRASHSWEEP-2), as the train roster's table: nothing before
+            // the first measure but the background.
+            Group {
+                if let width, width >= Self.twoColumns, !dynamicTypeSize.isAccessibilitySize {
+                    HStack(spacing: 0) {
+                        Form {
+                            borrowSection(board)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("termLoan.form")
+                        Form {
+                            contractsSection(board)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("termLoan.contracts")
+                    }
+                } else if width != nil {
+                    Form {
+                        borrowSection(board)
+                        contractsSection(board)
+                    }
+                    .hardTopScrollEdge()
+                    .accessibilityIdentifier("termLoan.form")
+                } else {
+                    Color(uiColor: .systemGroupedBackground)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .navigationTitle(Text(verbatim: language.text("Term Loans", "定期貸款")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(verbatim: language.text("Done", "完成"))
+                    }
+                    .accessibilityIdentifier("termLoan.done")
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                StatusBanner(session: session, announces: false)
+            }
+        }
+    }
+
+    /// Every contract, the soonest due first.
+    private func contractsSection(_ board: TermLoanBoard) -> some View {
+        let language = session.language
+        return Section {
+            if board.contracts.isEmpty {
+                Text(verbatim: language.text("No term loans yet.", "還沒有定期貸款。"))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(board.contracts) { contract in
+                TermLoanRow(contract: contract, language: language) {
+                    session.repayTermLoanEarly(contract.id)
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("Contracts", "合約"))
+        } footer: {
+            if !board.contracts.isEmpty {
+                Text(verbatim: board.summaryText(in: language))
+                    .monospacedDigit()
+            }
+        }
+    }
+
+    /// The form, or why the bank signs nothing now.
+    @ViewBuilder
+    private func borrowSection(_ board: TermLoanBoard) -> some View {
+        let language = session.language
+        Section {
+            Text(verbatim: board.creditText(in: language))
+                .monospacedDigit()
+                .foregroundStyle(board.blocked == nil ? Theme.textPrimary : Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("termLoan.credit")
+            if let principal = board.principal(for: principalChoice), let choices = board.principalChoices {
+                let step = CompanyAccounts.loanStep.amount
+                let amount = Binding(get: { principal.amount }, set: { principalChoice = Money($0) })
+                Stepper(value: amount, in: choices, step: Int64.Stride(step)) {
+                    Text(verbatim: language.text("Amount \(principal.moneyText)", "金額 \(principal.moneyText)"))
+                        .monospacedDigit()
+                }
+                .accessibilityIdentifier("termLoan.amount")
+                // The stepper goes a step at a time; the slider crosses a
+                // large credit in one drag.
+                if choices.upperBound >= 4 * step {
+                    Slider(
+                        value: Binding(get: { Double(principal.amount / step) }, set: { principalChoice = Money(Int64($0) * step) }),
+                        in: 1...Double(choices.upperBound / step), step: 1
+                    ) {
+                        Text(verbatim: language.text("Amount", "金額"))
+                    }
+                    .accessibilityValue(Text(verbatim: principal.moneyText))
+                    .accessibilityIdentifier("termLoan.amountSlider")
+                }
+                Stepper(value: $years, in: TermLoanBoard.yearChoices) {
+                    Text(verbatim: language.text(
+                        "Term \(TermLoanBoard.yearsText(years, in: language))", "年期 \(TermLoanBoard.yearsText(years, in: language))"
+                    ))
+                    .monospacedDigit()
+                }
+                .accessibilityIdentifier("termLoan.years")
+                if let quote = try? session.world.termLoanQuote(principal: principal, years: years) {
+                    let rows = quote.rows(in: language)
+                    ForEach(rows, id: \.title) { row in
+                        LabeledContent {
+                            Text(verbatim: row.value)
+                                .foregroundStyle(Theme.textPrimary)
+                        } label: {
+                            Text(verbatim: row.title)
+                        }
+                        .font(row.title == rows.last?.title ? .body.bold() : .body)
+                        .monospacedDigit()
+                    }
+                    Button {
+                        confirmsSigning = true
+                    } label: {
+                        Text(verbatim: language.text("Borrow \(principal.moneyText)…", "借入 \(principal.moneyText)…"))
+                    }
+                    .accessibilityIdentifier("termLoan.sign")
+                    .confirmationDialog(
+                        Text(verbatim: language.text(
+                            "Sign a term loan for \(TermLoanBoard.yearsText(years, in: language))?",
+                            "簽 \(TermLoanBoard.yearsText(years, in: language))的定期貸款？"
+                        )),
+                        isPresented: $confirmsSigning, titleVisibility: .visible
+                    ) {
+                        Button {
+                            session.takeTermLoan(principal: principal, years: years)
+                            principalChoice = nil
+                        } label: {
+                            Text(verbatim: language.text("Sign and Borrow \(principal.moneyText)", "簽約，借入 \(principal.moneyText)"))
+                        }
+                        .accessibilityIdentifier("termLoan.sign.confirm")
+                    } message: {
+                        Text(verbatim: quote.confirmText(in: language))
+                    }
+                } else {
+                    Text(verbatim: GameError.invalidTermLoan.playerMessage(in: language))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("Borrow", "借入"))
+        } footer: {
+            Text(verbatim: TermLoanBoard.termsText(in: language))
+        }
+    }
+}
+
+/// One term loan in ``TermLoanScreen``: what was borrowed and what is paid
+/// when it falls due, its term, rate and due day, and the button that asks
+/// to pay it back today, with what that costs and what the sum is made
+/// of. The button is off, with the
+/// reason above it, when the cash in hand does not pay it.
+private struct TermLoanRow: View {
+    let contract: TermLoanBoard.Contract
+    let language: DisplayLanguage
+    /// Pays it back; called once the player has said yes.
+    let repay: () -> Void
+    @State private var confirms = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    principal
+                    Spacer(minLength: 12)
+                    due
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    principal
+                    due
+                }
+            }
+            Text(verbatim: contract.loan.termsText(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            Text(verbatim: contract.repaymentText(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            if let shortfall = contract.shortfallText(in: language) {
+                Label {
+                    Text(verbatim: shortfall)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.warning)
+                .accessibilityIdentifier("termLoan.shortfall.\(contract.id)")
+            }
+            Button {
+                confirms = true
+            } label: {
+                // 44 points to touch, not the text's 20.
+                Text(verbatim: contract.repayText(in: language))
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.borderless)
+            .disabled(!contract.canRepay)
+            .accessibilityIdentifier("termLoan.repay.\(contract.id)")
+            // On the button, so the question points at the loan it is about.
+            .confirmationDialog(
+                Text(verbatim: language.text("Repay this term loan today?", "今天提前還這筆定期貸款？")),
+                isPresented: $confirms, titleVisibility: .visible
+            ) {
+                Button(action: repay) {
+                    Text(verbatim: language.text("Pay \(contract.repayment.total.moneyText)", "付 \(contract.repayment.total.moneyText)"))
+                }
+            } message: {
+                Text(verbatim: contract.repaymentText(in: language))
+            }
+        }
+        .monospacedDigit()
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var principal: some View {
+        Text(verbatim: contract.loan.principal.moneyText)
+            .font(.body.bold())
+    }
+
+    private var due: some View {
+        Text(verbatim: contract.loan.dueTotalText(in: language))
+            .font(.subheadline)
     }
 }

@@ -195,6 +195,10 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLoanAmount
     /// Loans are a managed company's (decision 67): free play has none.
     case loanNeedsManagement
+    /// With unlimited funds (decision 200) nothing moves the balance, so
+    /// nothing is borrowed or repaid until they are turned off (decision
+    /// 715, section 8).
+    case loanNeedsLimitedFunds
     /// A term loan (decision 715) that is not a whole number of
     /// ``CompanyAccounts/loanStep``s above 0, for a term the bank does not
     /// offer, beyond what it lends now (``TermLoanCredit``), or one that

@@ -10,7 +10,7 @@ import XCTest
 final class Map3DPreviewDump: XCTestCase {
     func testDump() throws {
         guard let out = ProcessInfo.processInfo.environment["MAP3D_DUMP"] else { throw XCTSkip("no MAP3D_DUMP") }
-        let world: GameWorld
+        var world: GameWorld
         var focus: (x: Double, y: Double)?
         // The base maps of the cities outside Taiwan (decision 712), and
         // their buildings.
@@ -113,6 +113,16 @@ final class Map3DPreviewDump: XCTestCase {
         default:
             world = DemoWorld.make(in: .english)
         }
+        // MAP3D_LINE=x:z;x:z;...: the player's line through these points of
+        // the scene (metres), a station with its platform at each, laid
+        // on whichever world was asked for.
+        if let line = ProcessInfo.processInfo.environment["MAP3D_LINE"] {
+            let empty = Map3DScene(world: world, focus: focus), metre = Double(WorldCoordinate.unitsPerMetre)
+            world = try newGameLine(through: line.split(separator: ";").map { part in
+                let at = part.split(separator: ":").map { Double(String($0))! }
+                return PlanPoint(x: Int64(empty.originX + at[0] * metre), y: Int64(empty.originY + at[1] * metre))
+            }, in: world)
+        }
         let tiles = ProcessInfo.processInfo.environment["MAP3D_BASEMAP"] == "1"
             ? try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped), cities: cities) : nil
         let cityTiles = ProcessInfo.processInfo.environment["MAP3D_CITY"] == "1"
@@ -163,7 +173,7 @@ final class Map3DPreviewDump: XCTestCase {
                 let c = v.color, share = Float(c >> 24) / 255
                 func mix(_ own: UInt32, _ tint: Float) -> Float { tint + (Float(own) / 255 - tint) * share }
                 floats += [p.x, p.y, p.z, n.x, n.y, n.z, mix(c & 0xFF, prop.stripe.0), mix((c >> 8) & 0xFF, prop.stripe.1),
-                           mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : -1]
+                           mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : prop.lit > 0 ? -20 : -1] // Decision 721: -20, a train's plain face for the page
             }
             indices += (0..<UInt32(model.vertices.count)).map { $0 + first }
         }
@@ -255,6 +265,21 @@ final class Map3DPreviewDump: XCTestCase {
                     if pack.isTurned(forType: key, carIndex: car, count: 3) { swap(&a, &b) }
                     expand(Map3DTrains.instance(of: pack.models[model], index: model, from: b, to: a, stripe: Map3DColor.rgb(0x2F6DB5)))
                 }
+            }
+        }
+        // MAP3D_TRAIN=x:z:x:z[:height]: three cars of the commuter train
+        // standing on a track, its head at the first point and running
+        // back toward the second (the scene's metres; the rails' height
+        // unless given).
+        if let at = ProcessInfo.processInfo.environment["MAP3D_TRAIN"].map({ $0.split(separator: ":").map { Float(String($0))! } }) {
+            let pack = Map3DModelPack.standard
+            let head = Map3DPoint(at[0], at.count > 4 ? at[4] : 0.2, at[1])
+            let back = ((Map3DPoint(at[2], head.y, at[3]) - head).normalized) ?? Map3DPoint(1, 0, 0)
+            for car in 0..<3 {
+                guard let model = pack.modelIndex(forType: "", carIndex: car, count: 3) else { continue }
+                var a = head + back * (Float(car) * 20.5), b = head + back * (Float(car) * 20.5 + 20)
+                if pack.isTurned(forType: "", carIndex: car, count: 3) { swap(&a, &b) }
+                expand(Map3DTrains.instance(of: pack.models[model], index: model, from: b, to: a, stripe: Map3DColor.rgb(0x2F6DB5)))
             }
         }
         var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []

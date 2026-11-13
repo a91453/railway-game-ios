@@ -227,14 +227,34 @@ final class ReservationShortcutTests: XCTestCase {
         return compared
     }
 
+    /// Decision 718: on the long-leg ring a service now gives its turn to
+    /// one that has waited longer the other way, and its trains follow
+    /// others only once. So the states where trains follow come from a
+    /// single track between two fans of berths too
+    /// (``FairSingleTrackTests/stream(east:west:)``): three trains due
+    /// one after another before the train at the other end, the third
+    /// following the first, a state every ten seconds for twenty minutes.
+    private func followingStates() throws -> [GameWorld] {
+        var world = try FairSingleTrackTests.stream(east: [60, 61, 62], west: 63)
+        world.setSpeed(.x1)
+        var states: [GameWorld] = []
+        for _ in 0..<120 {
+            try world.advance(ticks: 100)
+            states.append(world)
+        }
+        return states
+    }
+
     func testTheLongLegReplayAnswersAsTheLongWay() throws {
-        let states = try longLegStates()
-        var memo = GameWorld.DirectionMemo()
         var compared = 0, following = 0, waiting = 0
+        // A memo to each network (decision 718: the second is the single
+        // track between two fans, see ``followingStates()``).
+        for (name, states) in [("long leg", try longLegStates()), ("fan", try followingStates())] {
+        var memo = GameWorld.DirectionMemo()
         // Every third state (the long way takes long on long legs), and
         // every one where a train follows another.
         for (index, world) in states.enumerated() where index % 3 == 0 || world.trains.contains(where: world.isFollowing) {
-            compared += compare(world, memo: &memo, edges: false, paths: index % 12 == 0, "long leg \(index)")
+            compared += compare(world, memo: &memo, edges: false, paths: index % 12 == 0, "\(name) \(index)")
             following += world.trains.count { world.isFollowing($0) }
             waiting += world.trains.count { world.longClaim(of: $0)?.waiting.isEmpty == false }
             // A world with one train moved, asked with the same memo in
@@ -245,6 +265,7 @@ final class ReservationShortcutTests: XCTestCase {
                 compare(world.replacing(moved), memo: &memo, edges: false, paths: false, "long leg \(index), one train moved")
                 compare(world, memo: &memo, edges: false, paths: false, "long leg \(index), again")
             }
+        }
         }
         XCTAssertGreaterThan(compared, 500)
         XCTAssertGreaterThan(following, 2, "trains follow others")
@@ -278,7 +299,10 @@ final class ReservationShortcutTests: XCTestCase {
     /// off for every other station.
     func testDeparturesBesideFollowingTrainsAnswerAsTheLongWay() throws {
         var compared = 0, joining = 0
-        for world in try longLegStates() where world.trains.contains(where: world.isFollowing) {
+        // Decision 718: the fan's berths are dead ends, left backward.
+        let sequences: [(states: [GameWorld], direction: TrackEdgeDirection)] = [(try longLegStates(), .forward), (try followingStates(), .backward)]
+        for (states, direction) in sequences {
+        for world in states where world.trains.contains(where: world.isFollowing) {
             for platform in world.network.platforms {
                 var placed = world
                 let id: TrainID
@@ -286,9 +310,10 @@ final class ReservationShortcutTests: XCTestCase {
                     id = try placed.purchaseTrain(named: "C").id
                     try placed.setTrainCars(id, to: 4)
                     guard let length = placed.trackEdge(platform.edge)?.length else { continue }
-                    let position = TrainPosition.onEdge(TrackTraversal(edge: platform.edge, direction: .forward), offset: platform.end)
+                    let offset = direction == .forward ? platform.end : length - platform.start
+                    let position = TrainPosition.onEdge(TrackTraversal(edge: platform.edge, direction: direction), offset: offset)
                     try placed.placeTrain(id, at: position)
-                    try placed.setTrainContinuation(id, along: [], stoppingAt: platform.end < length ? platform.end : nil)
+                    try placed.setTrainContinuation(id, along: [], stoppingAt: offset < length ? offset : nil)
                 } catch {
                     continue
                 }
@@ -313,6 +338,7 @@ final class ReservationShortcutTests: XCTestCase {
                     compared += 1
                 }
             }
+        }
         }
         XCTAssertGreaterThan(compared, 20)
         XCTAssertGreaterThan(joining, 0, "a way joins the track a following train waits for")

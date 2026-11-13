@@ -11,6 +11,9 @@ struct Map3DStopBar: View {
     /// The stopping assist holds the brake: said in the state's place
     /// while the train is still short of the point.
     var assisting = false
+    /// The assist is on and the train too fast for it to take the brake
+    /// (REVIEW-L20 P2-6): said in the state's place, as a warning.
+    var tooFastForAssist = false
     let language: DisplayLanguage
     /// The track's and the marker's sizes, with the type.
     @ScaledMetric(relativeTo: .caption) private var trackHeight: CGFloat = 6
@@ -19,12 +22,12 @@ struct Map3DStopBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Label {
-                Text(verbatim: showsAssist ? ManualDrive.StopAssist.activeText(in: language) : ManualDrive.StopBar.text(of: bar.state, in: language))
+                Text(verbatim: label)
             } icon: {
-                Image(systemName: showsAssist ? "scope" : symbol)
+                Image(systemName: showsAssist ? "scope" : showsTooFast ? "exclamationmark.triangle.fill" : symbol)
             }
             .font(.caption.weight(.heavy))
-            .foregroundStyle(showsAssist ? Theme.textPrimary : ink)
+            .foregroundStyle(showsAssist ? Theme.textPrimary : showsTooFast ? Theme.warning : ink)
             .fixedSize()
             track
             Text(verbatim: bar.text(in: language))
@@ -38,12 +41,19 @@ struct Map3DStopBar: View {
         .glassBackground(in: Capsule())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: ManualDrive.StopBar.title(in: language)))
-        .accessibilityValue(Text(verbatim: bar.value(in: language, assisting: assisting)))
+        .accessibilityValue(Text(verbatim: bar.value(in: language, assisting: assisting, tooFastForAssist: tooFastForAssist)))
         .accessibilityIdentifier("map3D.drive.stopBar")
         .hudFrameMark("map3D.drive.stopBar")
     }
 
     private var showsAssist: Bool { assisting && bar.state == .short }
+    private var showsTooFast: Bool { tooFastForAssist && !assisting && bar.state == .short }
+
+    private var label: String {
+        if showsAssist { return ManualDrive.StopAssist.activeText(in: language) }
+        if showsTooFast { return ManualDrive.StopAssist.tooFastText(in: language) }
+        return ManualDrive.StopBar.text(of: bar.state, in: language)
+    }
 
     /// The state is said with a sign and a word, not by colour alone.
     private var symbol: String {

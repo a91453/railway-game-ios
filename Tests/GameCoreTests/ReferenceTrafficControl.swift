@@ -521,6 +521,10 @@ extension ReferenceWorld {
         } else if let service = train.service {
             // Stage W2b: due once its doors have closed.
             guard service.waiting, let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }
+            // Decision 718: the track lets it go and it gives its turn.
+            if let free = firstLeaving(train, withTrafficControl: true, takingTurns: false), let first = turnOwed(by: free, from: train) {
+                return (TrainID(rawValue: first), nil)
+            }
             leaving = firstLeaving(train)
         } else {
             guard let (l, k) = lineService(of: id.rawValue), let trip = readyTrip(of: train, line: l, service: k) else { return nil }
@@ -540,8 +544,9 @@ extension ReferenceWorld {
     /// world: without traffic control by default for the planned route,
     /// or with it for dispatch readiness and waiting queries (V1). Returns
     /// the train as it would leave, or `nil` if it cannot.
-    func firstLeaving(_ train: Train, withTrafficControl: Bool = false) -> Train? {
+    func firstLeaving(_ train: Train, withTrafficControl: Bool = false, takingTurns: Bool = true) -> Train? {
         var trial = self
+        trial.takesTurns = takingTurns
         trial.trafficControl = withTrafficControl && trafficControl
         guard let i = trial.trains.firstIndex(where: { $0.id == train.id }) else { return nil }
         trial.trains[i] = train

@@ -188,6 +188,26 @@ public enum Map3DFarDetail {
         if mesh.boxes.isEmpty { steps.boxes = Steps() }
         return steps
     }
+
+    /// `other` added to `mesh`, whose indices ``order(_:parts:from:)`` put
+    /// in order (`steps`), as always drawn: its indices after those every
+    /// level draws, and every level drawing them too. A station's studied
+    /// building (decision 625) is added after the city's look, in its own
+    /// colours; added at the end, only level 0 drew it (REVIEW-L20 P2-1).
+    /// With no `steps` every level draws all, and it is added at the end.
+    static func appendAlwaysDrawn(_ other: Map3DMesh, to mesh: inout Map3DMesh, steps: inout Steps) {
+        let before = mesh.indices.count
+        mesh.append(other)
+        let added = mesh.indices.count - before
+        guard !steps.isEmpty, added > 0 else { return }
+        let always = min(steps.counts[Self.always], before)
+        var ordered = Array(mesh.indices[..<always])
+        ordered.reserveCapacity(mesh.indices.count)
+        ordered += mesh.indices[before...]
+        ordered += mesh.indices[always..<before]
+        mesh.reorder(indices: ordered, boxes: mesh.boxes)
+        steps.counts = steps.counts.map { $0 + added }
+    }
 }
 
 extension Map3DScene.Chunk {

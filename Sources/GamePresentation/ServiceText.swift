@@ -397,6 +397,11 @@ extension GameWorld {
         if deadlockedTrains().contains(id) {
             return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
         }
+        // Decision 718: its track is free, and a train that has waited
+        // longer at the other end goes first.
+        if trainGoingFirst(before: id) == holder {
+            return language.text("Letting \(name) go first", "讓 \(name) 先走")
+        }
         let text: String
         if let place = passingPlace(of: id) {
             let station = station(id: place)?.name ?? "#\(place.rawValue)"

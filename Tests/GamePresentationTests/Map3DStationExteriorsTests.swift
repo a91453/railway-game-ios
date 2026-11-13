@@ -403,6 +403,37 @@ final class Map3DStationExteriorsTests: XCTestCase {
         return hits
     }
 
+    /// REVIEW-L20 P2-1: a studied station among buildings the far view
+    /// thins (decision 709) is drawn whole at every level. It is added to
+    /// its chunk's far mesh after the buildings were put in the order of
+    /// their size; before, any level past 0 (from some 2.3 km out) drew
+    /// none of it.
+    func testDrawnFromTheFarthestAmongThinnedBuildings() async throws {
+        let (_, built) = try await Self.built(round: .taichungHSR)
+        var builder = built.builder
+        let exterior = try XCTUnwrap(builder.stationExteriors.first { $0.station == .batch1(.taichungHSR) })
+        let key = builder.key(of: exterior.origin)
+        // A small building beside it, as the base map's footprints are
+        // kept: a part of the far mesh, of a class the far view leaves out.
+        var house = Map3DMesh()
+        let o = exterior.origin
+        house.addQuad(Map3DPoint(o.x + 200, o.y + 6, o.z), Map3DPoint(o.x + 200, o.y + 6, o.z + 8), Map3DPoint(o.x + 208, o.y + 6, o.z + 8),
+                      Map3DPoint(o.x + 208, o.y + 6, o.z), color: 0xFF80_8080)
+        let first = builder.farMeshes[key]?.indices.count ?? 0
+        builder.farMeshes[key, default: Map3DMesh()].append(house)
+        builder.farParts[key, default: []].append(Map3DFarDetail.Part(first: first, count: house.indices.count, rank: Map3DFarDetail.rank(size: 8)))
+        let chunk = try XCTUnwrap(builder.chunks().first { $0.column == key.column && $0.row == key.row })
+        XCTAssertLessThan(chunk.farIndexCount(at: Map3DFarDetail.always), chunk.far.indices.count, "the house is left out from afar")
+        // The station's vertices are the far mesh's last.
+        let own = UInt32(chunk.far.vertices.count - exterior.far.vertices.count)
+        XCTAssertGreaterThan(exterior.far.indices.count, 0)
+        for level in 0..<Map3DFarDetail.ranks {
+            let drawn = chunk.far.indices.prefix(chunk.farIndexCount(at: level)).filter { $0 >= own }.count
+            XCTAssertEqual(drawn, exterior.far.indices.count, "level \(level)")
+        }
+        XCTAssertEqual(chunk.farLevels[Map3DFarDetail.always].far, chunk.farIndexCount(at: Map3DFarDetail.always))
+    }
+
     /// Where a study stands, it is the one building: the station kit
     /// builds none of its own on it, and a real building's footprint
     /// there is not drawn.
@@ -445,7 +476,9 @@ final class Map3DStationExteriorsTests: XCTestCase {
         // The same, the study's origin outside where studies are drawn.
         let east = WorldRegion(minX: region.maxX, minY: region.minY, maxX: region.maxX + 1, maxY: region.maxY)
         let without = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways, studies: east)
-        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } }
+        // Decision 722: the kit's building is in the look already, apart
+        // from the chunk's near mesh.
+        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.houseTriangleCount }
         XCTAssertGreaterThan(triangles(without.builder), triangles(plain.builder), "the station's own building or entrances")
         XCTAssertTrue(without.stations.isSuperset(of: plain.stations))
     }

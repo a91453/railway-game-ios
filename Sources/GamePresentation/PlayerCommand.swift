@@ -884,6 +884,7 @@ extension PlayerCommand {
             case .upgradeStationCommerce: language.text("upgrade the station's shops", "升級車站商店")
             case .expandStation: language.text("expand the station", "擴建車站")
             case .repayLoan: language.text("repay the loan", "還款")
+            case .repayTermLoanEarly: language.text("repay this term loan", "還這筆定期貸款")
             default: nil
             }
         }

@@ -324,7 +324,10 @@ struct MapAlertBubbles: View {
         case .materialsShort where alert.station != nil:
             screen.stationFocus = StationPanelGroup.answering(alert.kind)
             screen.panel = .station
-        case .insolvency: screen.panel = .economy
+        // Decision 717: at the loans, where Borrow is (decision 336).
+        case .insolvency:
+            screen.economyFocus = .loans
+            screen.panel = .economy
         default: break
         }
     }

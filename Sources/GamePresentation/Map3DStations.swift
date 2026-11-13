@@ -101,6 +101,12 @@ extension Map3DStationKit {
         world.stations.reduce(0) { $0 + ($1.expansion?.rawValue ?? 0) }
     }
 
+    /// Decision 722: how far the look takes a station's building from its
+    /// recipe's colours: the closest detail's strength (decision 451),
+    /// not the city's, under which a green or a blue roof was within 10
+    /// to 16 L* of the forecourt it stands on.
+    static let houseLook = Map3DLook.close
+
     /// The far box's walls and roof for a building of `profile`.
     static func farColours(_ profile: Profile) -> (wall: UInt32, roof: UInt32) {
         switch profile {
@@ -296,6 +302,15 @@ extension Map3DScene.Builder {
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
             stationSystems[id] = station.system
             found.append((id, station, open, longest, middle))
+            // Decision 721: the station's own light on the ground round it
+            // after dark, wide and soft, so its building stands against it.
+            if contains(x: world.x, y: world.y) {
+                let pool = Map3DNight.stationPool
+                let centre = self.onGround([middle.point])[0], ring = self.onGround(Map3DProp.poolRing.map { middle.point + $0 * pool.radius })
+                shadow(at: key(of: middle.point), size: 4 * pool.radius) {
+                    $0.addPool(centre: centre, ring: ring, colour: Map3DProp.lampLight, strength: pool.strength)
+                }
+            }
         }
         // Decision 625: each station's middle from all its platforms, not
         // only those in the scene, so every block of chunks agrees.
@@ -416,15 +431,25 @@ extension Map3DScene.Builder {
         moved.append(kit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
         let foot = Map3DPoint(back.x, drawnGround(x: back.x, z: back.z), back.z)
         let centre = foot + forward * (depth / 2)
+        // Decision 722: the building nearer its own colours than the
+        // city round it (``Map3DStationKit/houseLook``), so in the look
+        // here and added after the chunk's, as the exterior studies are.
+        var near = Map3DMesh(), far = Map3DMesh()
+        near.append(moved, at: foot, forward: forward)
+        let colours = Map3DStationKit.farColours(station.profile)
+        far.addBox(base: centre, forward: forward, length: depth, width: wide, height: max(bounds.max.y * 0.8, 1),
+                   top: colours.roof, side: colours.wall)
+        Map3DLook.restyle(&near, keeping: keptColours, strength: Map3DStationKit.houseLook)
+        Map3DLook.restyle(&far, keeping: keptColours, strength: Map3DStationKit.houseLook)
+        let key = key(of: centre)
+        if !isCoarse(key) {
+            ownColourNear[key, default: Map3DMesh()].append(near)
+            houseTriangleCount += near.triangleCount
+        }
+        ownColourFar[key, default: Map3DMesh()].append(far)
         target = .near
-        mesh(at: centre) { $0.append(moved, at: foot, forward: forward) }
         addShadow(centre: centre, forward: forward, length: depth, width: wide, spread: 3, darkness: 0.3)
         target = .far
-        let colours = Map3DStationKit.farColours(station.profile)
-        mesh(at: centre) { mesh in
-            mesh.addBox(base: centre, forward: forward, length: depth, width: wide, height: max(bounds.max.y * 0.8, 1),
-                        top: colours.roof, side: colours.wall)
-        }
         // The cells under its footprint.
         let right = forward.cross(.up)
         let corners = [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)].map { centre + forward * (Float($0.0) * depth) + right * (Float($0.1) * wide) }

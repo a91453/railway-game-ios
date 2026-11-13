@@ -22,6 +22,10 @@ extension PlayerCommand {
         case setDayPass(Money?)
         case borrow(Money)
         case repayLoan(Money)
+        /// A term loan signed for a number of years (decision 715).
+        case takeTermLoan(Money, years: Int64)
+        /// A term loan, by its ID, paid back before it falls due.
+        case repayTermLoanEarly(Int64)
         case setServiceDay(ServiceDay)
 
         // MARK: Trains
@@ -284,6 +288,8 @@ extension GameSession {
         case .setDayPass(let price): try world.setDayPass(price)
         case .borrow(let amount): try world.borrow(amount)
         case .repayLoan(let amount): try world.repayLoan(amount)
+        case .takeTermLoan(let principal, let years): try world.takeTermLoan(principal: principal, years: years)
+        case .repayTermLoanEarly(let id): try world.repayTermLoanEarly(id)
         case .setServiceDay(let day): try world.setServiceDay(day)
 
         case .purchaseTrain(let name): outcome.train = try world.purchaseTrain(named: name)

@@ -269,7 +269,7 @@
     - (2) 平常每個規劃的文件 PR 都順手更新 §2.0，交接時只補最後一段。
     - (3) **交接照 GitHub 重建，不靠摘要**：寫交接前重讀 #1579 上一任接手之後的留言、開著的 PR、自己開的 session 清單（`list_sessions`），從這些寫「派出去的」「還開著的」「號碼」。第 3 圈的摘要已疊三代，原話與細節最容易掉。
     - (4) 壓縮後發現記錯事、重做已做的事，就提早換。
-    - (5) **代開下一任的固定檢查**：`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`、`model: "claude-fable-5-2"`（作者 2026-11-12 改，見下面「換手」）；新任開工先在 #1579 留言，確認寫得進 GitHub。第 46 任代開第 47 任時漏了 `source_url`，新任開工寫不進 GitHub，要作者再說一次才放行（§1.1「代開時一定指定 repo」）。
+    - (5) **代開下一任的固定檢查**：`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`、`model: "claude-opus-5-5"`、`effort: "high"`（作者 2026-11-13 改，見下面「換手」）；新任開工先在 #1579 留言，確認寫得進 GitHub。第 46 任代開第 47 任時漏了 `source_url`，新任開工寫不進 GitHub，要作者再說一次才放行（§1.1「代開時一定指定 repo」）。
     - 五方（權重照 NEXT_PRIORITIES §19；選項：A 維持「第 2 次後約 30 萬」、B 第 2 次壓縮後立刻、C 第 3 次壓縮後立刻＋條件）：
       | 選項 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |
       | --- | --: | --: | --: | --: | --: | --: |
@@ -412,7 +412,7 @@
   - **只重排還沒開始的事**（作者：「可是叫他停不就白做了等他先做完一個段落吧」）：已經在做的 session 不叫停，讓它做到能停的地方（commit、push、開 PR）再換順序；做完的東西開 PR 留著，不要丟。
 - **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
   - **2026-10-27 改了**（作者：「遊戲規劃也可以自己開 到鄰近第7.8次的時候需要我自己開再說」「遊戲規劃的模型永遠都選opus 5.5高」）：
-    - 規劃可以自己用 `create_session` 開下一任。**模型：2026-11-12 起 `claude-fable-5-2`**（作者：「以後遊戲規劃都用fable」，取代 10-27 的「永遠都選opus 5.5高」）。
+    - 規劃可以自己用 `create_session` 開下一任。**模型：2026-11-13 起 `claude-opus-5-5`、強度「高」（`effort: "high"`）**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」「連遊戲規劃也只用opus 高」；11-12 到 11-13 之間用過 `claude-fable-5-2`）。
     - 開之前用 `get_session`（不帶 id）看自己的 `lineage.depth`（上限 8）。下一任會到第 7 層時，改請作者在 claude.ai 開。
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
     - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
@@ -432,7 +432,8 @@
     - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
     - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
     - 派工單和 #1041 的登記寫上用了哪個模型。
-    - **2026-11-11 起，Fable 5.2 開放期間以它為主**（作者：「Fable 模型只有最近5.2開放的時候能依難易度選擇」「之後新模型在看當下的決定」「但因為有重置券所以盡量用fable 5.2為主／等用完之後再改其他沒寫」）。下面是第 60 任的理解，不是作者原話：
+    - **2026-11-13 起不再用 Fable**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」）：新開的 session 回到上面的 Opus／Sonnet 照難易度選；已在跑的 fable session 跑完（作者：「沒關係 還在跑的繼續」），不重開。下面這段是用完之前的規矩，留作紀錄。
+    - **2026-11-11 到 11-13，Fable 5.2 開放期間以它為主**（作者：「Fable 模型只有最近5.2開放的時候能依難易度選擇」「之後新模型在看當下的決定」「但因為有重置券所以盡量用fable 5.2為主／等用完之後再改其他沒寫」）。下面是第 60 任的理解，不是作者原話：
       - 現在：實作 session 盡量用 `claude-fable-5-2`（作者有額度重置券）。
       - 額度用完之後：回到上面的 Opus／Sonnet 照難易度選。什麼時候算用完，由作者說，或 `get_session` 的 `rate_limit_info` 顯示用完。
       - 之後出了新模型：不自動套用這條，到時候問作者。
@@ -598,6 +599,38 @@
 ## 2. 正在做的線（2026-10-20）
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
+
+**第 64 任換手給第 65 任的現況（2026-11-13 15:10 UTC＝台灣 23:10，第 64 任壓縮 3 次後換手）**
+- 照 #2118（兩頁，最新在 `?per_page=100&page=2`）、開著的 PR 與各 session 寫的；和下面各段不同時以這段為準。
+- **0.6.0 (129) 已發**：main `3be3508`，TestFlight run 43406045987 成功，完整 `ci.yml` 43406085807 綠，完整 lane 43406269578 全綠（含 iPad）。作者自己按的；出口合規要他在 App Store Connect 答。**下一版 130 要開香港**（#2115）。
+- **作者 11-13 的新交代**（都還有效）：
+  - 「還有誰綠了就合 不要都不合」「記得要合併 每次都要我提醒」：每次巡查掃**全部**開著的 PR，綠了（第三級的看過圖）就自己轉 ready、合併，不等 session 留「可合併」。
+  - 做完並合併的 session **馬上封存**（規劃不能刪除）。
+  - 模型：新開的 session 只用 `claude-opus-5-5`（要判斷的）或 `claude-sonnet-5-5`（範圍清楚的小事）；規劃用 opus、effort high；還在跑的舊 session 跑完，不重開（已寫進 CLAUDE.md 與第 1 節，#2140）。
+  - 觀光資料只用官方來源（stat.taiwan.net.tw、data.gov.tw 8116），不用新聞。
+  - meshoptimizer 已在用（決策 467，只在轉檔工具），不是新依賴。
+- **國土測繪中心三維建物：付費申請，不是開放資料**（`docs/research/TW_3D_MODELS_2026-11-13.md` 開頭的再更正）。等級一加值型每公頃 8 元（臺北市 30,320 元，表上 15 縣市約 81 萬元）；做進遊戲要加值型、要申請書與同意書、要標示來源並回報。**要不要買是作者的決定**，他決定前不接、NLSC-HEIGHTS 不重開（已封存，決策 725 已釋出）。下面 3556 行附近與決策 389 的「作者還在考慮」就是這件事。
+- **進行中的 session**（都是 auto）：
+  - 雲端 AIR-UNLOCK-4 session_01YGNNum1wxGSp5Gc2z6SXn4：**#2115**（`claude/air-unlock-3`，決策 712，draft，壓縮 1 次）。CI 綠，但截圖 run 43432099998 紅（`testAirRouteUnlock`「Hong Kong's row shows once its map is read」、`testHongKongMap`「The line is bought and a train followed at Kowloon」）。第三級：規劃看過香港白天 3D（有建物）、對稱解鎖的截圖才合。它合了才能派 HK-GROUND。
+  - 雲端 TOURISM-OFFICIAL-1 session_01YGNNumFoPi4DvrdpL8A11f：**#2145**（決策 724，draft，壓縮 1 次，只做完這張）。CI 綠，截圖 run 43441160905 紅（`testSightVisitors`「A card has the official count」）。景點卡多一列，規劃看過截圖再合。
+  - 雲端 HEALTH-129 session_01YGNNunKg5XyXbWAUuiyptu：**#2129** draft，等兩個長量測，報告還沒寫。
+  - 雲端 TPE-TEMPLES session_01YGNNumJnDtTzthjs8U2Kur：`claude/tpe-temples`，還沒開 PR；臺北市宗教建築模型庫先做 8–10 座，第三級，要看總覽圖（`.claude/skills/model-look/SKILL.md`）。它要領下一個決策號（725 已釋出，可再用；以 #2118 最新登記為準）。
+  - 作者自己在 Mac 開的 session（MAP-LIVELY 壓縮 2 次、FAIR-SINGLE 已收）可能再開 PR；一樣綠了就合。
+- **第 64 任合併的**（都在 main）：#2130 REVIEW-L20、#2135 DATA-OFFICIAL、#2128 CIOPT-8（決策 719）、#2136／#2137 REVIEW-L20-FIX、#2140、#2139 HK-3DVIS、#2132（含 #2133）經濟全螢幕與定期貸款畫面（決策 717、715 §7）、#2141 DATA-PRIORITY、#2127 MAP-LIVELY（決策 720、721）、#2134 ROOF-CONTRAST（決策 722）、#2138 KS-EMPTY-BLOCKS、#2144 TW-3DMODEL、#2143 SPARSE-FRONTAGE（決策 723）。作者的 Mac session 合了 #2142 FAIR-SINGLE（決策 718，replay 重錄有理由）。
+- **main 的 CI**：push `ci.yml` 在 `a555703` 綠（43444586189）；`092f295`（43444695307）與 `f3e5b1b`（43445216581）換手時還在跑，**第 65 任先看這兩個的結果**。這份交接的文件 PR 另算。
+- **實機還沒看過的**（下一版發版時請作者看）：夜晚變暗後的樣子、kit 車站屋頂顏色、高雄站周邊、稀疏街廓補房子後的幀時間、REVIEW-L20-FIX 三項（遠處車站、外圈閃爍、「太快，先煞車」提示）、定期貸款與經濟全螢幕。
+- **130 發版前規劃要做**：`WhatsNew` 130 與 `.github/testflight-whats-new.md` 要寫封閉軌道（#2125、#2126）、定期貸款、經濟全螢幕、香港；修 128 那段講站名牌的字（REVIEW-L20 的 P2-4、P2-7）；把 129 記進 `docs/research/PLAYER_FEEDBACK.md`。REVIEW-L20 的 P2-2 要實機。
+- **等空位再派**（opus，除非很小）：
+  1. HK-GROUND，再 HK-BUILDINGS-GOV（`docs/research/DATA_PRIORITY_2026-11-13.md` §6 的任務單；等 #2115 合，一次一張，第三級）。
+  2. 香港地標約 10 座（`docs/research/HK_3D_VISUALISATION_MAP_2026-11-13.md`，用不帶貼圖的外形；Mac）。
+  3. ROAD-LAYER（作者點名：3D 道路層疊的破綻、高速公路要平順；先量 Copernicus DEM 在市區把建物算進去的影響；一半雲端高度剖面、一半 Mac 層疊）。
+  4. TICK 第二個 PR（`inferTrafficMeets` 的索引，`docs/research/TICK_L1_2026-11-13.md` 第 6 節）。
+  5. 觀光第 2 步、機場逐月運量、「玩家經營航班」（排在玩家經營客運之後）、REAL-STATIONS-3D、金門與馬祖的圖包、BUILD3D-2。
+  6. 130 發完後固定三件（PR 審查 REVIEW-L21，從 `d64cc2e` 之後算點數；CI 優化；健檢）。
+- **不派**：NIGHT-HOURS、車站樓層剖面；不讀不抄 dohoon84/bumpinto-world 與 Peakline 自己的程式與衍生資料庫；M3DM 三角形上限 15,000 不調高。
+- **號碼**：決策用到 724（725 已釋出），存檔 main 95（fixture 97 個），golden schema 76。`doc_numbers.py --check` 在這個 PR 之後是 0。
+- **排程**：第 64 任留下的 `send_later`（trig_01UswazSKp1SNACP9ZbHDVNp 等）只會叫醒第 64 任，不會到第 65 任；第 65 任自己排巡查。
+- **第 65 任是第 5 層**（`lineage.depth`）；下一任會是第 6 層，還能由規劃開；再下一任（第 7 層）要作者在 claude.ai 開。
 
 **第 64 任的現況之二（2026-11-13 06:00 UTC＝台灣 14:00，壓縮 1 次）**
 - 照 #1579、#2118 與 PR 寫的；和下面各段不同時以這段為準。
@@ -3552,7 +3585,7 @@
    - 樓層 0 的不會出現：工具給每棟都填了。
    - 高雄車站的大屋頂（Overture，665 × 334 m、10 個天窗洞）照決策 239 畫成柱子撐的薄棚，斜看像一張有圓洞的平面（遊戲規劃 2026-10-23 的美術意見）。main 上讀城市圖塊時也是這樣。要更像新高雄車站的屋頂（圓錐採光口、起伏）是決策 239 的後續。
 5. **樓高來源還沒做的**：
-   - 國土測繪中心的授權：作者還在考慮，要問的事在報告 §8.5。格式已留位置，接上只要改工具的順序重跑。
+   - 國土測繪中心的授權：付費申請（加值型），要不要買作者還沒決定（2026-11-13，`docs/research/TW_3D_MODELS_2026-11-13.md` 開頭）；要問的事在報告 §8.5。格式已留位置，接上只要改工具的順序重跑。
    - 內政部 20 m DSM 減 DTM，能不能抓出 40 m 以上的高樓：TGOS 對這個環境 403，從 GitHub Actions 下載要另寫 workflow。報告 §12.4。
    - 其他直轄市的建物圖：報告 §8.3。
 6. Overture 每月出新版；換版本時重跑 `extract`、`storeys` 與 `build`，在 PR 寫新舊棟數與大小。

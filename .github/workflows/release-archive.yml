@@ -38,6 +38,18 @@ name: Release Archive (unsigned)
 # mostly by files that build the same in Debug and Release (the audio, the
 # iCloud folder, the Debug-only UI test worlds, which are all inside #if
 # DEBUG). The entry point is where the Debug-only launch arguments are.
+#
+# Decision 719 (2026-11-13, docs/research/CI_MEASURE_2026-11-13.md): the
+# whole run is one step, the archive, and most of that step is one silent
+# compile: GamePresentation (some 180,000 lines) optimised as a whole
+# module, 12.6 minutes on a fast runner and 23 on a slow one, where the
+# job was cancelled at its 30 minutes (6 of the 12 pull request runs of
+# 2026-11-13). The limit is 45 minutes, as testflight.yml's archive job
+# has: a slow runner needs 32. Compiling file by file on a pull request
+# was tried and does nothing: Xcode compiles a package's modules whole in
+# Release whatever SWIFT_COMPILATION_MODE or
+# SWIFT_WHOLE_MODULE_OPTIMIZATION the command line gives (runs
+# 43412867472 and 43415884921), so the command line is as it was.
 
 on:
   workflow_dispatch:
@@ -76,7 +88,7 @@ jobs:
   archive:
     name: Release archive (generic iOS device, unsigned)
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 

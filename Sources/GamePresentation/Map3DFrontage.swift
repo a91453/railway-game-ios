@@ -386,12 +386,23 @@ extension Map3DScene.Builder {
 
     /// Decision 385: whether `house` stands in the scene, on no cell of
     /// `blocked`, clear of the roads (pieces `near`) and their pavements,
-    /// off the no-build land and clear of the houses laid before.
+    /// off the no-build land and clear of the houses laid before; decision
+    /// 723: and of the real buildings (``RealCover``).
     func fits(_ house: StreetHouse, near: [Int], blocked: Set<Map3DScene.ChunkKey>) -> Bool {
         let corners = house.corners
         for spot in corners + [house.middle] {
             guard contains(x: originX + Double(spot.x) * Self.metre, y: originY + Double(spot.z) * Self.metre),
                   !blocked.contains(chunk(of: spot)), !onNoBuildLand(spot) else { return false }
+        }
+        if !footprintCover.outlines.isEmpty || !tileCover.outlines.isEmpty {
+            // Every cell its box touches: at most four.
+            let low = chunk(of: Map3DPoint(corners.map(\.x).min() ?? 0, 0, corners.map(\.z).min() ?? 0))
+            let high = chunk(of: Map3DPoint(corners.map(\.x).max() ?? 0, 0, corners.map(\.z).max() ?? 0))
+            var cells = Set<Map3DScene.ChunkKey>()
+            for row in low.row...high.row {
+                for column in low.column...high.column { cells.insert(Map3DScene.ChunkKey(column: column, row: row)) }
+            }
+            guard !footprintCover.reaches(house, cells: cells), !tileCover.reaches(house, cells: cells) else { return false }
         }
         guard !onPlacedGround(corners) else { return false }
         let radius = (house.width * house.width + house.depth * house.depth).squareRoot() / 2

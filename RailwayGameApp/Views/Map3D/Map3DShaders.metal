@@ -54,6 +54,9 @@ struct Map3DVertexOut {
     // The face's plane (its distance along its normal), the same over the
     // face, to tell one face's windows from another's.
     float plane [[flat]];
+    // Decision 721: 1 for a train (Map3DInstance.lit), which the night
+    // does not dim; 0 for anything else.
+    float lit [[flat]];
 };
 
 // Opt-in native glass only. Existing trainGlass/steel retain their old pass.
@@ -70,6 +73,7 @@ vertex Map3DVertexOut map3dVertex(Map3DVertexIn in [[stage_in]], constant Map3DU
     out.surfaceAt = in.texture.xy;
     out.layer = in.texture.z;
     out.plane = dot(in.position, normalize(in.normal));
+    out.lit = 0.0;
     return out;
 }
 
@@ -105,6 +109,7 @@ vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     out.surfaceAt = (transparent || painted) ? in.texture.xy : material ? float2(in.texture.x, 0.0) : float2(0.0);
     out.layer = (glowing || material || transparent || painted) ? layer : -1.0;
     out.plane = 0.0;
+    out.lit = car.stripe.a - 1.0;
     return out;
 }
 
@@ -196,13 +201,32 @@ float map3dSunSeen(float3 world, float3 normal, constant Map3DUniforms &uniforms
     return mix(1.0, seen, strength * (1.0 - smoothstep(0.85, 1.0, edge)));
 }
 
+// Decision 721: the night. As the city's lights come on (shade.y) the
+// model look's light falls to nightDim of itself, so the lit windows and
+// the street lights' pools are what shows; the ballast of a track bed and
+// the trains keep their light and are lit a little more (trackLit,
+// stockLit of their colour), so the player's line is the lightest thing
+// on the dark ground. Map3DNight in GamePresentation holds the same
+// numbers; tools/map3d-preview draws the same.
+constant float nightDim = 0.42;
+constant float trackLit = 0.30;
+constant float stockLit = 0.30;
+// The dimming and the track's and trains' light come in together and
+// fast, between these two shares of the city's lights (some eight minutes
+// of dusk): the track turns from darker than the ground to lighter than
+// it, and for the moment between the two it is neither.
+constant float2 nightFall = {0.45, 0.60};
+float map3dNightFall(float lights) { return smoothstep(nightFall.x, nightFall.y, lights); }
+
 // Decision 357: `sunSeen` the share of the sun that reaches it.
 // Decision 370: `soft`, the model look's light (the city, its trains and
 // vehicles): mostly sky, a little sun, its shadows at 55 %, following the
 // time of day (1 at 14:00, darker and warmer at dusk and night); the signs
 // keep the sun and sky as they were.
+// Decision 721: `kept`, the share of it the night does not dim (the
+// player's track bed, a train).
 float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3 world, float sunSeen, constant Map3DUniforms &uniforms,
-                bool soft = false) {
+                bool soft = false, float kept = 1.0) {
     float3 light;
     if (soft) {
         float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * (1.0 - (1.0 - sunSeen) * 0.55);
@@ -211,6 +235,7 @@ float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3
         float sky = 0.85 - 0.05 * uniforms.shade.y;
         light = float3(sky + 0.02 * max(normal.y, 0.0) + 0.15 * sun) * mix(float3(0.94, 0.96, 1.0), float3(1.0, 0.99, 0.97), sun);
         light *= (uniforms.ambientSky.rgb + uniforms.sunColor.rgb * 0.5) / float3(0.925, 0.871, 0.806);
+        light *= mix(1.0, mix(nightDim, 1.0, kept), map3dNightFall(uniforms.shade.y));
     } else {
         float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * sunSeen;
         float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
@@ -282,6 +307,17 @@ static float map3dGridLine(float t, float step) {
 // below roadLampSky.y to full below roadLampSky.x; and the lit windows in
 // the icon's warm yellow #FFC86B.
 constant float roadLamp = 0.5;
+// Decision 721: the street lights light the road in pools, not evenly: a
+// pool somewhere in every 24 m square of the scene, roadPool.x of the
+// light between them and roadPool.y more at a pool's middle, falling off
+// as exp(-d² / roadPool.z) of the metres from it.
+constant float3 roadPool = {0.08, 1.6, 28.0};
+constant float roadPoolCell = 24.0;
+// Decision 721: more rooms lit after dark, and brighter: the share of lit
+// windows times nightWindowsMore.x, their light times nightWindowsMore.y;
+// the landmarks' bays lit where their hash passes nightBays.
+constant float2 nightWindowsMore = {1.7, 1.35};
+constant float nightBays = 0.42;
 constant float2 roadLampSky = {0.50, 0.70};
 constant float3 windowWarm = {1.0, 0.784, 0.420};
 // Decision 645 (D6): from where a pixel spans this much of a bay (fwidth)
@@ -293,6 +329,21 @@ constant float3 windowWarm = {1.0, 0.784, 0.420};
 // `far = smoothstep(0.25, 0.7, max(fwidth(cell)))`, the grid's mean.
 constant float3 nightWindowsFar = {0.25, 0.7, 1.4};
 
+// Decision 721: how much of the street lights' light reaches `at` on a
+// road: the nearest pools of the nine squares round it.
+float map3dRoadPool(float2 at) {
+    float2 g = at / roadPoolCell, cell = floor(g);
+    float best = 0.0;
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            float2 c = cell + float2(float(i), float(j));
+            float d = length(g - (c + float2(hash12(c + 3.1), hash12(c + 7.7)))) * roadPoolCell;
+            best = max(best, exp(-d * d / roadPool.z));
+        }
+    }
+    return roadPool.x + roadPool.y * best;
+}
+
 float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces, depth2d<float> sunShadow) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
@@ -303,10 +354,15 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         glow = base * 1.3 * lights;
     }
     float sky = dot(uniforms.ambientSky.rgb, float3(0.2126, 0.7152, 0.0722));
-    float3 streetLight = float3(1.0, 0.90, 0.74) * roadLamp * lights * (1.0 - smoothstep(roadLampSky.x, roadLampSky.y, sky));
+    float3 streetLight = float3(1.0, 0.84, 0.60) * roadLamp * lights * (1.0 - smoothstep(roadLampSky.x, roadLampSky.y, sky));
     if (in.layer < -10.5 && in.layer > -11.5) {
-        glow += base * streetLight;
+        glow += base * streetLight * map3dRoadPool(in.world.xz);
     }
+    // Decision 721: what the night leaves lit: a train, and the line's
+    // own plain faces (Map3DVertex.nightLit: a slab track's bed, a
+    // platform's edge).
+    float kept = in.lit;
+    if (in.layer < -19.5 && in.layer > -20.5) { kept = 1.0; glow += base * trackLit * map3dNightFall(lights); }
     // Decision 356: what the glass or water mirrors, and its share.
     float4 mirrored = float4(0.0);
     float3 normal = normalize(in.normal);
@@ -371,7 +427,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         float2 bay = in.layer < -8.5 ? float2(3.2, 5.0) : float2(3.0, 4.2);
         float2 face = float2(floor(in.plane / 4.0), dot(round(normal * 4.0), float3(1.0, 17.0, 289.0)));
         float2 room = floor(in.surfaceAt / bay) + fract(face * float2(0.1373, 0.2719)) * 512.0;
-        glow += windowWarm * mix(0.55, 1.1, hash12(room + 1.3)) * step(0.66, hash12(room + 23.0)) * lights;
+        glow += windowWarm * mix(0.55, 1.1, hash12(room + 1.3)) * step(1.0 - nightBays, hash12(room + 23.0)) * lights * nightWindowsMore.y;
     }
     // Taipei 101 (Map3DVertex.towerGlass): an even faint glow, each
     // section's top floors brighter, v being the metres below its top;
@@ -422,13 +478,15 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         }
         if (wall && abs(normal.y) < 0.6) { tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, in.surfaceAt.y * 3.2)); }
         base = tinted;
+        // Decision 721: the ballast (Map3DSurface.ballast, layer 2).
+        if (packed == 2u) { kept = 1.0; glow += base * trackLit * map3dNightFall(lights); }
         // The road's paint (crosswalk 22, laneArrows 23): its own white on
         // the road's colour, lit by the street lights as the road is; the
         // model look's faint detail left the paint grey and the marks
         // darker than the road around them.
         if (packed == 22u || packed == 23u) {
             base = mix(texel.rgb, in.color, texel.a);
-            glow += base * streetLight;
+            glow += base * streetLight * map3dRoadPool(in.world.xz);
         }
         // A lit window: its glass (untinted and dark enough, or a shop's
         // whole front) where the hash of its bay, floor and face says so.
@@ -446,7 +504,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             float on = 0.0;
             if (lights > 0.0 && rule.x > 0.0) {
                 float glass = (1.0 - texel.a) * step(bright, rule.y);
-                float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
+                float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0)) * nightWindowsMore.x;
                 float roomLit = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0));
                 on = roomLit * glass;
                 // Decision 645 (D6): a bay under about two pixels (far
@@ -455,7 +513,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
                 // brightness (wall and glass averaged, over rule.y) left
                 // no window lit from a few kilometres.
                 float average = clamp(rule.x * busy, 0.0, 0.95) * (1.0 - texel.a) * nightWindowsFar.z;
-                glow += windowWarm * mix(mix(0.55, 1.1, hash12(room + 1.3)) * on, average, distant) * lights;
+                glow += windowWarm * mix(mix(0.55, 1.1, hash12(room + 1.3)) * on, average, distant) * lights * nightWindowsMore.y;
                 // Decision 617: a lit room's light on the wall round its
                 // window, strongest at the room's middle (Map3DGlow.windowGlow
                 // in shade.z; 0 when glows are off).
@@ -492,7 +550,8 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             }
         }
     }
-    return map3dLit(base, glow, mirrored, normal, in.world, sunSeen, uniforms, true);
+    glow += base * stockLit * in.lit * map3dNightFall(lights);
+    return map3dLit(base, glow, mirrored, normal, in.world, sunSeen, uniforms, true, kept);
 }
 
 // Decision 653: `model` is the texture of the model drawn (a white texel
@@ -648,6 +707,7 @@ vertex Map3DVertexOut map3dBoxVertex(uint index [[vertex_id]], uint instance [[i
     out.surfaceAt = place;
     out.layer = float(box.layers[face]);
     out.plane = dot(world, normal);
+    out.lit = 0.0;
     return out;
 }
 

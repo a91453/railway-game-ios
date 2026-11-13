@@ -180,11 +180,15 @@ extension Map3DScene.Builder {
     /// scene, but those reaching cells in `cleared` (the track's and the
     /// stations') or with their middles on cells in `taken` (the real
     /// buildings, temples and kits' scenes before them). Returns the 64 m
-    /// cells under them, which keep no city lot.
+    /// cells under them, which keep no city lot (decision 723: but the
+    /// houses along the roads of those they cover little of,
+    /// ``thinlyBuilt(but:)``).
     @discardableResult
     mutating func addFootprints(_ footprints: Map3DFootprints, clearOf cleared: Set<Map3DScene.ChunkKey>,
                                 takenBy taken: Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
         var standing = Set<Map3DScene.ChunkKey>()
+        // Decision 723: how much of each cell the footprints drawn cover.
+        var cover = RealCover()
         let cell = Double(Land.cellLength)
         func key(_ x: Double, _ y: Double) -> Map3DScene.ChunkKey {
             Map3DScene.ChunkKey(column: Int((x / cell).rounded(.down)), row: Int((y / cell).rounded(.down)))
@@ -211,23 +215,19 @@ extension Map3DScene.Builder {
             let middle = (x: outline.reduce(0) { $0 + $1.x } / Double(outline.count), y: outline.reduce(0) { $0 + $1.y } / Double(outline.count))
             guard contains(x: middle.x, y: middle.y), !taken.contains(key(middle.x, middle.y)) else { continue }
             guard !outline.contains(where: { cleared.contains(key($0.x, $0.y)) }) else { continue }
-            let low = (x: outline.map(\.x).min() ?? 0, y: outline.map(\.y).min() ?? 0)
-            let high = (x: outline.map(\.x).max() ?? 0, y: outline.map(\.y).max() ?? 0)
-            for row in key(low.x, low.y).row...key(high.x, high.y).row {
-                for column in key(low.x, low.y).column...key(high.x, high.y).column {
-                    standing.insert(Map3DScene.ChunkKey(column: column, row: row))
-                }
-            }
             let rings = building.rings.map { $0.map { point(x: $0.x, y: $0.y, height: 0) } }
             // Cleared for a building of the player's: its cells still keep
             // no city lot.
-            guard !onPlacedGround(rings[0]) else { continue }
+            let drawn = !onPlacedGround(rings[0])
+            standing.formUnion(count(building.rings, drawn: drawn, into: &cover))
+            guard drawn else { continue }
             var storeys = building.drawnStoreys, kind = building.kind
             // Decision 699: an airport's terminal, at least four storeys.
             if isTerminal(rings[0]) { (storeys, kind) = (max(storeys, 4), .terminal) }
             addRealBuilding([rings], ground: ground(x: middle.x, y: middle.y), height: Float(storeys) * Self.storeyHeight,
                             storeys: storeys, kind: kind)
         }
+        footprintCover = cover
         return standing
     }
 

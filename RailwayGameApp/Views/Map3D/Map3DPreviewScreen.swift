@@ -3255,7 +3255,7 @@ private struct Map3DDriveHeading: View {
                 if let bar = reading.stopBar {
                     // Decision 710: over the last 200 m, the stopping bar
                     // in the line's place.
-                    Map3DStopBar(bar: bar, assisting: reading.isAssisting, language: language)
+                    Map3DStopBar(bar: bar, assisting: reading.isAssisting, tooFastForAssist: reading.isTooFastForAssist, language: language)
                         .transition(.opacity)
                 } else if let text = reading.stopAheadText(in: language) {
                     stopAhead(text)

@@ -21,7 +21,7 @@ swift build --build-tests
 MAP3D_DUMP=/tmp/towns MAP3D_WORLD=towns \
   MAP3D_VIEWS="near:2000:-2420:320:30;far:0:0:2600:0" \
   swift test --skip-build --filter Map3DPreviewDump
-tools/map3d-preview/render.sh /tmp/towns /tmp/towns near,far
+tools/map3d-preview/render.sh /tmp/towns /tmp/towns near,far   # macOS 內建的 realpath 沒有 -m：先 brew install coreutils，或直接照 render.sh 的內容呼叫 render.cjs
 rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 ```
 
@@ -31,6 +31,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | --- | --- |
 | `MAP3D_DUMP` | 輸出檔的前綴（必填） |
 | `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`、`douliu`（三個車站的實景新局；`douliu` 是決策 389 加的）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385）、`island`（任一點的新局，見 `MAP3D_AT`；決策 707）、`hongkong`（香港地圖的新局，看 `MAP3D_AT`，不設就是中環；`MAP3D_BASEMAP=1` 連地圖包的底圖一起讀，`MAP3D_FOOTPRINTS=1` 連地圖包的建物一起讀，`MAP3D_BUY=hkmtr:AEL,hkmtr:SIL` 先買下這幾條綫；決策 712） |
+| （注意） | `taipei`、`kaohsiung`、`taichung`、`douliu` 的土地不是真實的：`GameWorld.newGame(anchor:)` 不給土地，用空白地圖的種子城鎮（底圖、足跡、地標仍是真的）。要看 App 新局在那裡的樣子，用 `MAP3D_WORLD=island MAP3D_AT=緯度:經度`（決策 431 的「後來」） |
 | `MAP3D_AT`、`MAP3D_LAND` | 和 `MAP3D_WORLD=island` 一起用（決策 707）：`MAP3D_AT=緯度:經度` 是新局的中心；`MAP3D_LAND=towns` 不讀真實土地（空白地圖的城鎮，機場截圖場景改之前的樣子，邊長兩倍）、`empty` 沒有土地（那些場景現在的樣子）、不設就是 App 新局讀的真實人口與分區 |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
 | `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）與機場場面（`taiwan_airfields.json`，決策 699）；不設就是改之前的畫法 |
@@ -47,6 +48,8 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_WEATHER` | `rain`、`thunderstorm`、`typhoon`：那種天氣的光線與霧（決策 277），和第 36,000 秒的雨絲（決策 320）。雨絲照手機畫：圖當成 533 × 300 點、每點 3 像素；預設是晴天 |
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238）；`near`：近版但不含最近一層（決策 267 的騎樓、遮雨棚、晾衣）；預設是最近的完整版（連街道設施一起，決策 244：每個實例展開成網格） |
 | `MAP3D_TRAINS` | `x:z`：在這一點的灰色地面上排出每一套列車（決策 318），一列一套：頭車、中間車、最後一節，最上面一列是一般通勤車；和 `MAP3D_CROP` 一起用 |
+| `MAP3D_LINE` | `x:z;x:z;...`：在選好的世界上鋪一條玩家的路線，經過這些點（場景的公尺），每一點一個車站與月台；鋪了之後場景的原點會移到路線的範圍中間，鏡頭照輸出的 `.json` 裡 `stations` 的座標對 |
+| `MAP3D_TRAIN` | `x:z:x:z[:高度]`：一列三節的通勤車停在軌道上，車頭在第一點、往第二點排；高度預設 0.2，玩家的軌道（道床 0.5 m）給 0.7。列車的面輸出成層 -20，預覽頁照決策 721 夜裡不把它變暗 |
 | `MAP3D_MIRROR` | `0`：玻璃與水面不反光（決策 356，同省電畫質），當作「之前」的圖；預設照 `Map3DReflection` 畫天空的 Fresnel、太陽高光、夜裡玻璃裡的城市燈光、水面波紋（波紋停在第 0 秒） |
 | `MAP3D_SUN` | `0`：沒有太陽陰影貼圖（決策 357，同省電畫質；決策 232 的團狀影子照原本的深淺），當作「之前」的圖；預設照 `Map3DSunShadow` 的「自動」畫質畫（2048 見方，`index.html` 先從太陽畫一次深度）。預覽裡的招牌沒有接太陽陰影（App 有） |
 | `MAP3D_SIGNS` | `0`：不輸出招牌（決策 352），當作「之前」的圖；看板的外框還在，因為它是網格。預設輸出 `<前綴>.signs`（每塊 16 個 float），`render.sh` 一起畫，時鐘照 `MAP3D_MINUTE`，LED 螢幕停在第一張圖 |
