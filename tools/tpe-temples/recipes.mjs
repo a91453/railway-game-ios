@@ -14,7 +14,7 @@
 // deep enough to stand off the map's near-white ground (decision 722's
 // ΔL* 12); the pale ones are decision 457's landmark colours.
 export const colours = {
-  roof: { default: 0xC0805F, brown: 0xA0705E, slate: 0x8F969E, green: 0x7E9E8A },
+  roof: { default: 0xC0805F, slate: 0x8F969E, green: 0x7E9E8A },
   ridge: { default: 0xD9B76C, green: 0x6F9A86, red: 0xB8553A },
   wall: { default: 0xF0E8DD, brick: 0xDDA996, redwood: 0x9A4A3C, darkwood: 0x6E4A40, stone: 0xB9B4AA },
   stone: { default: 0xD9D2C6, grey: 0x9C9A92 },
