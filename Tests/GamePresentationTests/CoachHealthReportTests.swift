@@ -220,8 +220,11 @@ final class CoachHealthReportTests: XCTestCase {
                     for line in world.lines { day.lines[line.id] = world.lineYesterday(line.id).map(profit) ?? 0 }
                     before = lost
                     played[coaches, default: []].append(day)
+                    // HEALTH-129: decision 712's count beside it, the day's
+                    // riders of each airport that flies to Hong Kong.
+                    let flown = world.airports.filter { $0.flies(to: .hongKong) }.map { "\($0.englishName) \($0.yesterdayRiders)" }.joined(separator: "; ")
                     note("\(scenario.name), \(coaches ? "with" : "without"), day \(played[coaches]!.count): trips \(day.trips), fares \(Money(day.fares).moneyText), "
-                        + "\(Int(Date().timeIntervalSince(began))) s")
+                        + "airports that fly to Hong Kong: \(flown.isEmpty ? "none" : flown), \(Int(Date().timeIntervalSince(began))) s")
                 }
             }
             out.append("| Day | Trips: without / with | Fares: without / with | Operating profit: without / with | Fullest train: without / with | Station full or gave up: without / with "
