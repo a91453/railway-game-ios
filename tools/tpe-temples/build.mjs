@@ -25,6 +25,7 @@ import { triangleColour } from './textures.mjs';
 import { writeM3dmodel } from './m3dmodel.mjs';
 import { recipes, colours, soften } from './recipes.mjs';
 import { dedupe, orientOutward } from './orient.mjs';
+import { windConsistently } from './wind.mjs';
 import { MeshoptSimplifier } from '../glb-to-m3dmodel/node_modules/meshoptimizer/index.js';
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -239,6 +240,8 @@ async function build(folder, output, recipe) {
   triangles.forEach((t, i) => { t.cls = classify(t, i); });
   const classed = triangles.filter(t => t.cls !== null);
   const { triangles: made, error } = await simplify(classed, recipe);
+  // Neighbours wound alike, each piece facing the sky (wind.mjs).
+  windConsistently(made);
   // Decision 720's pale map (方案 C): every colour taken part of the way
   // toward its paving, the openings half as far.
   const pale = (v, share) => {

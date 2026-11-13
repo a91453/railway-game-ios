@@ -40,3 +40,8 @@
 - 原因在 `tools/tpe-temples/orient.mjs`：每一面各自用射線猜朝向，沒有和共邊的鄰面對齊。
 - 修法：先依共用邊把相連的面繞向傳成一致（每個相連塊做一次廣度優先），再對整塊用射線多數決或有號體積（要 ≥ 0）決定整塊朝外還是朝內；兩面都要畫的薄片（剪影裝飾）照測試的規則可以留正反兩面。重跑 `fetch.sh` 與 `build.mjs`，這個測試和 `Map3DTaipeiTemplesTests` 要過。
 - 資料來源測試（`RealRailwaysTests.testEverySourceIsCredited`）已在 `d9a67d5` 修好。
+- **繞向已修（接手 session，2026-11-13）**：新增 `tools/tpe-temples/wind.mjs`，簡化之後依共用邊把相連塊的繞向對齊，整塊再以「上面沒有東西擋的面要朝上」決定朝外（沒有這種面才照面積多數決）；十座都對齊得起來，沒有需要畫正反兩面的面。`build.mjs` 最後一步跑它；因為雲端與作者 Mac 的 VM 都下載不到 KMZ（`canet.civil.taipei` 被代理擋，403），這次是用 `tools/tpe-temples/rewind.mjs` 直接改已進 repo 的十個檔（同一步、會重複執行不變）。十檔「和鄰面繞向相反」的邊都歸零；朝天卻朝下的面積從最多 15 m² 降到 2 m² 以下。
+
+### 還沒做（接手 session 交出時）
+
+- **顏色**：作者不滿意的「斑駁、灰」仍在，建議做法照上面「按部位整塊上色」。這要重跑 `build.mjs`，需要 KMZ：雲端下載不到，要在作者 Mac 本機（不是 VM）跑 `fetch.sh`。

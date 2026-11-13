@@ -25,6 +25,8 @@ holds the points.
 | `collada.mjs` | Reads `doc.kml`'s model point and heading, and the SketchUp COLLADA 1.4 (units, Z up, nodes, instanced nodes, triangles and polylists). |
 | `textures.mjs` | The colour and coverage under each face (JPEG, PNG, TGA), used only to sort faces and drop clear cut-outs. |
 | `orient.mjs` | Drops each face's exported back, then turns every face to its more open side (rays), since the game lights a face by its winding. |
+| `wind.mjs` | After simplifying: winds faces alike across every edge two of them share, each connected piece then turned so its faces open to the sky face up (else by its faces' own majority); a piece that cannot be wound alike all round draws the face from both sides. `Map3DBundledModelFilesTests` checks the result. |
+| `rewind.mjs` | Runs `wind.mjs` on bundled `.m3dmodel` files in place (how the files built before it were fixed without the KMZ). |
 | `recipes.mjs` | Each temple's files, dropped materials, kept area and triangle target; the game's colours for the parts. |
 | `build.mjs` | Sorts faces into roof, ridge, wall, column, opening, soffit, paving; simplifies with meshoptimizer; writes the models. |
 | `sheet.mjs` | A grid of all models at the game's angle (the PR's overview); the per-model look is `tools/model-look/shoot.mjs`. |
