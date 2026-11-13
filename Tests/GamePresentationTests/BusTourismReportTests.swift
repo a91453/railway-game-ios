@@ -114,7 +114,7 @@ final class BusTourismReportTests: XCTestCase {
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
         var opened = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(200_000_000_000), land: [])
         opened.setLandOnDemand()
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let session = GameSession(world: opened, language: .traditionalChinese)
         session.railways = railways
         session.population = data.population

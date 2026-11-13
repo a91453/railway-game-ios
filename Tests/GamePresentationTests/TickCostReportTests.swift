@@ -83,7 +83,7 @@ final class TickCostReportTests: XCTestCase {
         }
         let clock = ContinuousClock()
         var data: RealWorldData?
-        let read = clock.measure { data = RealWorldData.load(file: RealWorldDataLoadTests.file) }
+        let read = clock.measure { data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file) }
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         let loaded = try XCTUnwrap(data)

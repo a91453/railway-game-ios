@@ -354,7 +354,7 @@ final class RealRailwaysTests: XCTestCase {
     func testEverySourceIsCredited() throws {
         for language in DisplayLanguage.allCases {
             let sections = DataSourceCredits.sections(in: language)
-            XCTAssertEqual(sections.map(\.id), ["railways", "railwayData", "population", "map", "map3D", "cityView", "sounds"])
+            XCTAssertEqual(sections.map(\.id), ["railways", "railwayData", "population", "map", "map3D", "cityView", "sounds", "hongKongRailways"])
             let credits = sections.flatMap(\.credits)
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
@@ -363,6 +363,8 @@ final class RealRailwaysTests: XCTestCase {
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "meshy", "kenney", "taipeiGarbageTrucks",
                 "proceduralTokyo", "polyHaven", "runningSound", "dieselSound", "motorSound", "weatherSound",
+                // Decision 712: Hong Kong's, open since its third pull request.
+                "hongKongMTR", "hongKongMap", "hongKongBuildings", "hongKongPeople", "hongKongAirport",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

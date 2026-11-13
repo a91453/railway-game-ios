@@ -20,7 +20,7 @@ final class BuildingDragCostReportTests: XCTestCase {
             throw XCTSkip("set BUILDING_DRAG_REPORT=<lines> to time a building dragged over a map of that many 11-station lines")
         }
         let lines = try XCTUnwrap(Int(value).flatMap { (1...16).contains($0) ? $0 : nil }, "BUILDING_DRAG_REPORT is 1 to 16 lines")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var world = try MapFrameCostReportTests.miaoli(lines: lines, data: data)
         world.setEconomyMode(.management)
         let session = GameSession(world: world)

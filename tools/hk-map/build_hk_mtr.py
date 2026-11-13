@@ -307,6 +307,10 @@ OSM, MTR, OURS, WORLDPOP = "OpenStreetMap", "MTR open data", "this project", "Wo
 # world over this box (`MapPack.extent`), not over a 16 km square.
 EXTENT = {"north": 22.5584, "south": 22.1500, "west": 113.8333, "east": 114.4417}
 SOURCES = {
+    "buildings.pmtiles": {"outlines, uses, storeys where tagged (build_hk_buildings.py)": OSM,
+                          "storeys where untagged (from the tagged ones and the people round them)": OURS},
+    "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_hk_basemap.py)": OSM,
+                        "the mainland's shore closed past the extract": OURS},
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
     "track_lines.geojson": {"geometry": OSM, "color": OSM, "id (MTR's line code)": MTR, "name": OURS},
     "track_stations.geojson": {"geometry": OSM, "name (checked against MTR's list)": OSM, "name of 茘景 and 茘枝角 (MTR's form of 荔)": MTR, "color": OSM,

@@ -34,7 +34,7 @@ final class TouristSourcesReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (1...720).contains($0) ? $0 : nil }, "TOURIST_REPORT is 1 to 720 days")
         let only = ProcessInfo.processInfo.environment["TOURIST_ONLY"]
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var rows = [
             "| Line | Map | Way | Sights day 1 | Tourists by day 30 | Tourists by day \(days) | Op. profit a day, 1–30 | Op. profit a day, 1–\(days) | Op. profit a day, last 30 | Trips day 30 / \(days) | Cash change by day \(days) |",
             "| --- | --- | --- | --- | --: | --: | --: | --: | --: | --- | --: |",

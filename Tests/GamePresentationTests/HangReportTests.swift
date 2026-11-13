@@ -90,7 +90,7 @@ final class HangReportTests: XCTestCase {
     /// it out off the main actor holds the main actor for.
     func testWhatARealLineOfferTakes() throws {
         _ = try days()
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let clock = ContinuousClock()
         var rows = ["| Opening | Line | Offer ms | Tap on the main actor ms |", "| --- | --- | ---: | ---: |"]
         for city in AcquisitionReportTests.cities {

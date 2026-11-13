@@ -10,7 +10,7 @@ import XCTest
 @MainActor
 final class AirportLineWholeIslandTests: XCTestCase {
     func testItIsOnSaleInAWorldPickedBesideIt() throws {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.02, longitudeDegrees: 121.30))
         // The player's world, its tiles bought, and the demo's.
         for demo in [false, true] {

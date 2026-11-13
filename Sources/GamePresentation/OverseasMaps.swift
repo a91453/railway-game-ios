@@ -7,9 +7,8 @@ import GameCore
 // city's lines are one self-contained folder, its map pack
 // (`Resources/MapPacks/hongkong`, made by `tools/hk-map/`), in the formats
 // and under the file names of Taiwan's, and read only for a city that is
-// open. None is yet: the rule
-// that opens one (the flights) is not written, so ``OverseasMaps/open`` is
-// empty and the game reads, lists and sells exactly what it did.
+// open (``OverseasMaps/open``; Hong Kong since decision 712's third pull
+// request). The flights that let a player onto its map are ``AirRoutes``.
 
 /// A city outside Taiwan whose real railways the app bundles.
 public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
@@ -56,6 +55,23 @@ public struct MapPack: Sendable {
     /// The contents of the pack's file `name.ext`.
     public func file(_ name: String, _ ext: String) throws -> Data {
         try Data(contentsOf: root.appendingPathComponent("\(name).\(ext)"))
+    }
+
+    /// Decision 712: the pack's base map (`basemap.pmtiles`: OpenStreetMap
+    /// in the layers of Taiwan's, `tools/hk-map/build_hk_basemap.py`), or
+    /// `nil` for a pack without one.
+    public var baseMapFile: URL? {
+        let file = root.appendingPathComponent("basemap.pmtiles")
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
+    }
+
+    /// Decision 712: the pack's buildings (`buildings.pmtiles`:
+    /// OpenStreetMap's, in the format of Taiwan's footprint tiles,
+    /// `tools/hk-map/build_hk_buildings.py`), or `nil` for a pack without
+    /// them: its 3D map then has only the towns the game grows.
+    public var buildingsFile: URL? {
+        let file = root.appendingPathComponent("buildings.pmtiles")
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
     /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
@@ -107,6 +123,11 @@ extension MapPack {
             let halfHeight = corners.map { abs($0.y - frame.middleY) }.max() ?? 0
             return try? WorldBounds(width: Int64((2 * halfWidth).rounded(.up)), height: Int64((2 * halfHeight).rounded(.up)))
         }
+
+        /// Whether the place lies in the box.
+        public func holds(latitude: Double, longitude: Double) -> Bool {
+            south <= latitude && latitude <= north && west <= longitude && longitude <= east
+        }
     }
 
     /// The pack's `extent`.
@@ -129,6 +150,9 @@ public struct OverseasGround: Sendable {
     /// The city's people, or `nil` for a pack without them: its stations
     /// then get the standard ridership, and no town grows round them.
     public let population: PopulationGrid?
+    /// The pack's base map, its file mapped, or `nil` for a pack without
+    /// one: its 3D map then has bare ground, and its land no real roads.
+    public let baseMap: Data?
 
     /// The ground `pack` says `city` has. Throws for a pack whose
     /// `pack.json` cannot be read or has no extent that fits a world; a
@@ -142,6 +166,7 @@ public struct OverseasGround: Sendable {
         self.anchor = anchor
         self.bounds = bounds
         population = (try? pack.file("population", "json")).flatMap { try? PopulationGrid(data: $0) }
+        baseMap = pack.baseMapFile.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
     }
 
     /// Whether `world` is this city's map: laid over its extent.
@@ -162,10 +187,11 @@ extension GameWorld {
 }
 
 public enum OverseasMaps {
-    /// The cities whose railways the game reads and sells. Empty until the
-    /// flights that open one are in the game (decision 697's next step):
-    /// with it empty no player can reach an overseas line.
-    public static let open: Set<OverseasMap> = []
+    /// The cities whose railways and ground the app reads. A player still
+    /// reaches a city's map only once an airport's flights opened it
+    /// (decision 712, ``AirRoutes``); a city not listed here is not read,
+    /// offered or credited at all.
+    public static let open: Set<OverseasMap> = [.hongKong]
 }
 
 extension RealRailways.System {

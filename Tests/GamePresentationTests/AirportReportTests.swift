@@ -23,7 +23,7 @@ final class AirportReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (1...60).contains($0) ? $0 : nil }, "AIRPORT_REPORT is 1 to 60 days")
         let only = ProcessInfo.processInfo.environment["AIRPORT_ONLY"]
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         // HEALTH-126: and how full the trains ran: the fullest a train left
         // a stop (of its rated capacity), the times a train left people
         // behind for want of room, those who found a station full or gave
@@ -79,7 +79,7 @@ final class AirportReportTests: XCTestCase {
     /// Decision 712: what a line to an airport that flies to Hong Kong
     /// carries of its passengers in a day (``Airport/yesterdayRiders``),
     /// beside the 500 that open Hong Kong's map
-    /// (``OverseasMap/ridersToOpen``): the Taoyuan Airport MRT bought, and
+    /// (``AirRoute/standardRiders``): the Taoyuan Airport MRT bought, and
     /// lines of the player's own of two to six stations from Kaohsiung's
     /// and Taichung's terminals into their cities, three trains each.
     ///
@@ -89,7 +89,7 @@ final class AirportReportTests: XCTestCase {
             throw XCTSkip("set AIR_ROUTE_REPORT=<days> to print what a line to an airport carries")
         }
         let days = try XCTUnwrap(Int(value).flatMap { (1...30).contains($0) ? $0 : nil }, "AIR_ROUTE_REPORT is 1 to 30 days")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var rows = ["| Line | Stations | Day | Riders of the airports that fly to Hong Kong (yesterday) | Trips | Fares |", "| --- | --: | --: | --- | --: | --: |"]
         func play(_ name: String, stations: Int, _ start: GameWorld) throws {
             var world = start
@@ -146,7 +146,7 @@ final class AirportReportTests: XCTestCase {
                 own.append("| \(line.name) | \(count) | \(day.ridersFrom + day.ridersTo) | \(2 * day.ridersAtMost) |")
             }
         }
-        print("### What a line to an airport carries (\(days) days; \(OverseasMap.hongKong.ridersToOpen) open Hong Kong)\n\n" + rows.joined(separator: "\n")
+        print("### What a line to an airport carries (\(days) days; \(AirRoute.standardRiders) open Hong Kong)\n\n" + rows.joined(separator: "\n")
             + "\n\n" + own.joined(separator: "\n"))
     }
 

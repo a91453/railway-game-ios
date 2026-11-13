@@ -24,7 +24,7 @@ final class FastForwardReadsReportTests: XCTestCase {
             throw XCTSkip("set FAST_FORWARD_READS=<ticks> to time what the screen reads after each tick")
         }
         let ticks = try XCTUnwrap(Int(value).flatMap { (1...10_000).contains($0) ? $0 : nil }, "FAST_FORWARD_READS is 1 to 10,000 ticks")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let world = try HighSpeedDemo.make(
             in: .traditionalChinese, railways: railways, population: data.population, places: data.places, water: data.water, coverage: data.coverage

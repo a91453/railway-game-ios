@@ -43,7 +43,7 @@ final class RealWorldDataLoadTests: XCTestCase {
     private static let taipei = GeoAnchor(latitudeDegrees: 25.047882, longitudeDegrees: 121.517219)
 
     func testTheBundledDataLoadsWithoutIssues() throws {
-        let data = RealWorldData.load(file: Self.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: Self.file)
         XCTAssertEqual(data.issues, [])
         XCTAssertNotNil(data.population)
         XCTAssertNotNil(data.places)
@@ -58,7 +58,7 @@ final class RealWorldDataLoadTests: XCTestCase {
     /// A grid that cannot be read is listed and left out, keeping the
     /// rest; the railways' optional files still fail on their own (#171).
     func testAFileThatCannotBeReadIsListedAndTheRestLoads() throws {
-        let data = RealWorldData.load { name, ext in
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack) { name, ext in
             switch name {
             case "taiwan_population": throw RealRailways.ResourceError.missing("\(name).\(ext)")
             case "tra_overtake_tracks": return Data("not json".utf8)
@@ -71,7 +71,7 @@ final class RealWorldDataLoadTests: XCTestCase {
         XCTAssertNotNil(data.railways?.stationData)
         XCTAssertNil(data.railways?.stationData?.overtakeTracks)
 
-        let broken = RealWorldData.load { name, ext in
+        let broken = RealWorldData.load(pack: HongKongRailwaysTests.pack) { name, ext in
             name == "track_lines" ? Data("[]".utf8) : try Self.file(name, ext)
         }
         XCTAssertNil(broken.railways, "no map files, no railways")
@@ -84,7 +84,7 @@ final class RealWorldDataLoadTests: XCTestCase {
     func testTheDataArrivesAllAtOnceAfterTheLaunch() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         XCTAssertFalse(launcher.isLoadingRealWorldData, "not asked for yet")
-        let load = launcher.loadRealWorldData { RealWorldData.load(file: Self.file) }
+        let load = launcher.loadRealWorldData { RealWorldData.load(pack: HongKongRailwaysTests.pack, file: Self.file) }
         // The read is off the main actor and comes back to it, which this
         // test holds until it awaits: nothing has arrived yet.
         XCTAssertTrue(launcher.isLoadingRealWorldData)
@@ -118,7 +118,7 @@ final class RealWorldDataLoadTests: XCTestCase {
     /// the real-world demo can open.
     func testARealWorldGameAfterTheLoadHasItsPeople() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        await launcher.loadRealWorldData { RealWorldData.load(file: Self.file) }.value
+        await launcher.loadRealWorldData { RealWorldData.load(pack: HongKongRailwaysTests.pack, file: Self.file) }.value
         let anchor = try XCTUnwrap(Self.kinmen)
         launcher.startNewGame(at: anchor)
         let population = try XCTUnwrap(launcher.population)
@@ -144,7 +144,7 @@ final class RealWorldDataLoadTests: XCTestCase {
     /// and the milestone for the next tile follows the people.
     func testAPlaceOfTaiwanAfterTheLoadIsBoughtTileByTile() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        await launcher.loadRealWorldData { RealWorldData.load(file: Self.file) }.value
+        await launcher.loadRealWorldData { RealWorldData.load(pack: HongKongRailwaysTests.pack, file: Self.file) }.value
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 23.9926399, longitudeDegrees: 121.6009524), "Hualien")
         launcher.startNewGame(at: anchor)
         let layout = try XCTUnwrap(RealWorldExpansion(around: anchor))

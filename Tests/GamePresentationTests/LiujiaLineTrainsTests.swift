@@ -11,7 +11,7 @@ import XCTest
 /// waited for that train. Now nobody sets out for it before it runs.
 @MainActor
 final class LiujiaLineTrainsTests: XCTestCase {
-    static let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+    static let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
 
     /// A new game of the app's real-world map at Zhuzhong, bought tile by
     /// tile and with the app's realistic rules, as the launcher begins

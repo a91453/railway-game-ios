@@ -25,7 +25,7 @@ final class EditStallReportTests: XCTestCase {
         let session = GameSession(world: saved.world)
         // The real-world data the app's session has (`GameLauncher`'s
         // `begin`), as the player's game on the real map has it.
-        let real = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let real = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         session.population = real.population
         session.places = real.places
         session.water = real.water

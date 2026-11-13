@@ -10,7 +10,7 @@ final class Map3DRealTrainsTests: XCTestCase {
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("RailwayGameApp/Resources")
 
-    static let railways: RealRailways? = RealRailways.load { name, ext in
+    static let railways: RealRailways? = RealRailways.load(pack: HongKongRailwaysTests.pack) { name, ext in
         try Data(contentsOf: resources.appendingPathComponent("RealRailways/\(name).\(ext)"))
     }.railways
 

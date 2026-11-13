@@ -18,7 +18,7 @@ final class ActionCostReportTests: XCTestCase {
             throw XCTSkip("set ACTION_COST_REPORT=<days> to time the speed, the building tools and buying a tile")
         }
         let days = try XCTUnwrap(Int(value).flatMap { (0...1_000).contains($0) ? $0 : nil }, "ACTION_COST_REPORT is 0 to 1,000 days")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var world = try Self.miaoli(lines: 4, data: data)
         world.setSpeed(.fast)
         for _ in 0..<days { try world.advance(ticks: 144) }
@@ -208,7 +208,7 @@ final class ActionCostReportTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["ACTION_COST_PROFILE"] != nil else {
             throw XCTSkip("set ACTION_COST_PROFILE=1 to run fifty edits under a profiler")
         }
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let world = try Self.miaoli(lines: 4, data: data)
         let session = GameSession(world: world)
         session.population = data.population

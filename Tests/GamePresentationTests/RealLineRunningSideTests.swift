@@ -186,7 +186,7 @@ final class RealLineRunningSideTests: XCTestCase {
             try check(World(world: session.world, line: nil), id, right: right, hours: 3, seen: seen)
         }
         if let only = ProcessInfo.processInfo.environment["RUNNING_SIDE_ONLY"], only != "openings" { return }
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         // The screenshot scene buys it and follows a train near its middle;
         // decision 603: the Xiaobitan Branch Line's scene, its one train.
         for (shown, real) in [(ScreenshotScene.wenhu, "trtc:BR"), (.xiaobitan, "trtc:G_XBT")] {

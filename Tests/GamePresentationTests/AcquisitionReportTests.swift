@@ -48,7 +48,7 @@ final class AcquisitionReportTests: XCTestCase {
 
     func testBuyingALineAgainstBuildingIt() throws {
         let days = try requestedDays()
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var rows = [
             "| Line | Riders a day (real) | Building | Trains | Riders' value | Price | ÷ $3M start | ÷ own build | Trips day 1 bought / own | Operating profit a day, days \(min(days, 30))–\(days) | Payback | Cash change by day \(min(days, 360)): bought / own |",
             "| --- | --: | --: | --: | --: | --: | --: | --: | --- | --: | --: | --- |",
@@ -122,7 +122,7 @@ final class AcquisitionReportTests: XCTestCase {
     func testWhatEachCityOpeningCanBuy() throws {
         guard wanted("cities") else { throw XCTSkip("ACQUIRE_ONLY names another") }
         _ = try requestedDays()
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let reach = GameWorld.startingBalance + CompanyAccounts.maximumLoan
         var rows = [
             "| Opening | Line | Tier | Riders a day (paid for) | Land | Building | Trains | Riders' value | Price | Within cash and loan (\(reach.moneyText)) |",

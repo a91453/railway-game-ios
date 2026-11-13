@@ -93,7 +93,7 @@ final class JijiReportTests: XCTestCase {
     }
 
     private func report(_ line: BranchLineChallenge, survey: Survey) throws {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways), population = try XCTUnwrap(data.population)
         let plays = Play.allCases.filter { play in ProcessInfo.processInfo.environment["JIJI_PLAY"].map { $0 == "\(play)" } ?? true }
         let challenge = line.challenge

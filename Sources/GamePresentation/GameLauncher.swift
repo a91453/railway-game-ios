@@ -201,6 +201,14 @@ public final class GameLauncher {
         isFirstLaunch = read == nil
         preferences = read ?? LauncherPreferences()
         refresh()
+        // Decision 712, continued: a player from before the maps were
+        // chosen began in Taiwan; a new one chooses a first map.
+        if preferences.airMapsChosen != true {
+            let before = preferences.airRoutesOpened ?? []
+            preferences.airRoutesOpened = preferences.hasLaunched && !before.contains(AirMap.taiwan.id) ? [AirMap.taiwan.id] + before : before
+            preferences.airMapsChosen = true
+            savePreferences()
+        }
         if !preferences.hasLaunched {
             preferences.hasLaunched = true
             // Decision 415: nothing is new on the first launch.
@@ -493,6 +501,7 @@ public final class GameLauncher {
     /// the new game turns on and the seed; and on a real-world map, the
     /// ground (decision 198).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
+        if let anchor, RealWorldExpansion(around: anchor) != nil, !takeMap(AirMap.taiwan.id) { return }
         begin(Self.newWorld(at: anchor, options: newGameOptions, data: newWorldData, demo: isDemoMode), keepingAutosave: true)
     }
 
@@ -582,6 +591,8 @@ public final class GameLauncher {
     @discardableResult
     public func openRealWorldGame(at anchor: GeoAnchor) -> Task<Void, Never>? {
         guard realWorldLoading == nil, !isOpeningADemo else { return nil }
+        // Decision 712, continued: a place in Taiwan is on Taiwan's map.
+        if RealWorldExpansion(around: anchor) != nil, !takeMap(AirMap.taiwan.id) { return nil }
         let (options, data, demo) = (newGameOptions, newWorldData, isDemoMode)
         let counts = !demo && data.population != nil && RealWorldExpansion(around: anchor) != nil
         let grounds = data.heights != nil && options.ground == .real
@@ -717,6 +728,7 @@ public final class GameLauncher {
     /// Starts a new game on the whole of Taiwan (decision 88), its land
     /// read in round each station as it is built.
     public func startWholeTaiwan() {
+        guard takeMap(AirMap.taiwan.id) else { return }
         let options = newGameOptions
         var world = GameWorld.newWholeTaiwanGame(balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
@@ -735,10 +747,7 @@ public final class GameLauncher {
             return false
         }
         // Decision 712: the city's flights open its map.
-        guard airRoutes.opened.contains(city) else {
-            message = StatusMessage(kind: .failure, text: city.howToOpen(in: language))
-            return false
-        }
+        guard takeMap(city.rawValue) else { return false }
         let options = newGameOptions
         var world = GameWorld.newOverseasGame(ground, balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
@@ -872,11 +881,28 @@ public final class GameLauncher {
 
     /// Remembers on the device that the flights to `cities` are open
     /// (decision 712).
-    func rememberAirRoutes(_ cities: [OverseasMap]) {
+    func rememberAirRoutes(_ maps: [String]) {
         var opened = preferences.airRoutesOpened ?? []
-        for city in cities where !opened.contains(city.rawValue) { opened.append(city.rawValue) }
+        for map in maps where !opened.contains(map) { opened.append(map) }
         guard opened != preferences.airRoutesOpened ?? [] else { return }
         preferences.airRoutesOpened = opened
+        savePreferences()
+    }
+
+    /// Decision 712 (continued): the maps open to the player and the best
+    /// days as a screenshot asks for them ("taiwan,hongKong=320": Taiwan
+    /// open, 320 the best day towards Hong Kong), on this launch only:
+    /// nothing is written to the device.
+    public func setAirMapsForScreenshot(_ asked: String) {
+        let parts = asked.split(separator: ",").map { $0.split(separator: "=").map(String.init) }
+        preferences.airRoutesOpened = parts.filter { $0.count == 1 }.map { $0[0] }
+        preferences.airRouteBest = Dictionary(parts.compactMap { part in part.count == 2 ? Int64(part[1]).map { (part[0], $0) } : nil }) { $1 }
+    }
+
+    /// Remembers the most passengers in a day towards each closed map.
+    func rememberAirRouteBest(_ best: [String: Int64]) {
+        guard best != preferences.airRouteBest ?? [:] else { return }
+        preferences.airRouteBest = best
         savePreferences()
     }
 

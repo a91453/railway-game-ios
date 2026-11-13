@@ -16,7 +16,7 @@ enum BundledRealData {
         try Data(contentsOf: directory.appendingPathComponent("\(name).\(ext)"))
     }
 
-    static let loaded: RealRailways.Loaded = RealRailways.load { name, ext in try file(name, ext) }
+    static let loaded: RealRailways.Loaded = RealRailways.load(pack: HongKongRailwaysTests.pack) { name, ext in try file(name, ext) }
 
     static func railways() throws -> RealRailways {
         try XCTUnwrap(loaded.railways)
@@ -43,7 +43,7 @@ final class RealRailwayGameplayTests: XCTestCase {
         let railways = try BundledRealData.railways()
         XCTAssertNotNil(railways.stationData?.overtakeTracks)
         XCTAssertNotNil(railways.transfers)
-        XCTAssertEqual(railways.operations?.systems.count, 10, "TRA, THSR, AFR and the seven metro and light rail systems")
+        XCTAssertEqual(railways.operations?.systems.count, 11, "TRA, THSR, AFR, the seven metro and light rail systems, and Hong Kong's MTR (decision 712)")
         XCTAssertEqual(railways.operations?.timetableIssues, [])
     }
 
@@ -51,7 +51,7 @@ final class RealRailwayGameplayTests: XCTestCase {
     /// listed as an issue and left out, and the rest of the TRA and Taipei
     /// Metro station data still loads.
     func testABrokenOvertakeFileKeepsTheStationData() throws {
-        let loaded = RealRailways.load { name, ext in
+        let loaded = RealRailways.load(pack: HongKongRailwaysTests.pack) { name, ext in
             name == "tra_overtake_tracks" ? Data("not json".utf8) : try BundledRealData.file(name, ext)
         }
         XCTAssertEqual(loaded.issues.map(\.file), ["tra_overtake_tracks.json"])

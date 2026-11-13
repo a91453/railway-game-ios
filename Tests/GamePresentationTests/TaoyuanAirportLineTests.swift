@@ -300,7 +300,7 @@ final class TaoyuanAirportLineTests: XCTestCase {
     /// A new game on the real opening `name`, with the land, water and
     /// heights it reads, as ``WenhuLineTests`` opens Taipei.
     static func opening(_ name: String) throws -> GameSession {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == name })
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
         let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(

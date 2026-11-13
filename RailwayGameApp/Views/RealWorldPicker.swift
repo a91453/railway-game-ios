@@ -26,27 +26,31 @@ import SwiftUI
 /// "Use my location" moves the square to where the device is, from one fix
 /// asked for while the app is in use (decision 335): the fix only moves the
 /// map, and is neither kept nor sent anywhere.
-/// Decision 712: a city outside Taiwan in the map picker. Open, it starts
-/// a game on the city's map; closed, it says what opens it and starts
-/// nothing.
-private struct OverseasMapRow: View {
-    let city: OverseasMap
-    let isOpen: Bool
-    let language: DisplayLanguage
+/// Decision 712: a whole map in the map picker, Taiwan's or a city's
+/// outside it. Open, it starts a game on the map; closed, it says what
+/// opens it and starts nothing.
+private struct WholeMapRow: View {
+    let id: String
+    let name: String
+    let symbol: String
+    let summary: String
+    /// What opens it, or `nil` when it is open.
+    let howToOpen: String?
     let start: () -> Void
 
     var body: some View {
+        let isOpen = howToOpen == nil
         Button(action: start) {
             HStack(spacing: 10) {
-                Image(systemName: isOpen ? "airplane" : "lock.fill")
+                Image(systemName: isOpen ? symbol : "lock.fill")
                     .font(.subheadline)
                     .foregroundStyle(isOpen ? Theme.primary : Theme.textSecondary)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: city.name(in: language))
+                    Text(verbatim: name)
                         .font(.body)
                         .foregroundStyle(Theme.textPrimary)
-                    Text(verbatim: isOpen ? city.mapSummary(in: language) : city.howToOpen(in: language))
+                    Text(verbatim: howToOpen ?? summary)
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -57,7 +61,7 @@ private struct OverseasMapRow: View {
         .allowsHitTesting(isOpen)
         .accessibilityAddTraits(isOpen ? [] : .isStaticText)
         .accessibilityRemoveTraits(isOpen ? [] : .isButton)
-        .accessibilityIdentifier("realWorld.overseas.\(city.rawValue)")
+        .accessibilityIdentifier(id)
     }
 }
 
@@ -478,33 +482,29 @@ struct RealWorldPicker: View {
             // one end of it to the other. Decision 477: first of the
             // places, not after Taiwan's 22, where it was found last.
             Section {
-                Button {
+                let routes = launcher.airRoutes
+                let language = launcher.language
+                WholeMapRow(
+                    id: "realWorld.wholeTaiwan", name: language.text("The whole of Taiwan", "全台灣"), symbol: "map.fill",
+                    summary: language.text(
+                        "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
+                        "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
+                    ),
+                    howToOpen: routes.canStart(AirMap.taiwan.id) ? nil : routes.howToOpen(AirMap.taiwan.id, in: language)
+                ) {
                     dismiss()
                     launcher.startWholeTaiwan()
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "map.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.primary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: launcher.language.text("The whole of Taiwan", "全台灣"))
-                                .font(.body)
-                                .foregroundStyle(Theme.textPrimary)
-                            Text(verbatim: launcher.language.text(
-                                "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
-                                "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
-                            ))
-                            .font(.footnote)
-                            .foregroundStyle(Theme.textSecondary)
-                        }
-                    }
                 }
                 .disabled(launcher.population == nil)
-                .accessibilityIdentifier("realWorld.wholeTaiwan")
                 // Decision 712: the cities outside Taiwan the app has the
-                // whole map of, each opened by an airport's flights.
-                ForEach(OverseasMap.allCases.filter(launcher.airRoutes.offered.contains), id: \.self) { city in
-                    OverseasMapRow(city: city, isOpen: launcher.airRoutes.opened.contains(city), language: launcher.language) {
+                // whole map of. The player's first map is open; flights
+                // from a map already open open each of the others.
+                ForEach(OverseasMap.allCases.filter { routes.offers($0.rawValue) }, id: \.self) { city in
+                    WholeMapRow(
+                        id: "realWorld.overseas.\(city.rawValue)", name: city.name(in: language), symbol: "airplane",
+                        summary: city.mapSummary(in: language),
+                        howToOpen: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language)
+                    ) {
                         if launcher.startOverseasMap(city) { dismiss() }
                     }
                 }
@@ -624,6 +624,13 @@ struct RealWorldPicker: View {
 
     private func start() {
         guard let anchor else { return }
+        // Decision 712, continued: a place in Taiwan while Taiwan's map is
+        // closed starts nothing; the launcher says what opens it.
+        if RealWorldExpansion(around: anchor) != nil, !launcher.airRoutes.canStart(AirMap.taiwan.id) {
+            dismiss()
+            launcher.openRealWorldGame(at: anchor)
+            return
+        }
         recentStarts = RecentStartPlaces(stored: recentStarts).adding(anchor).stored
         dismiss()
         launcher.openRealWorldGame(at: anchor)

@@ -31,7 +31,7 @@ final class CoachCatalogTests: XCTestCase {
                 XCTAssertGreaterThan(hub.coordinate.distance(to: network.hubs[link.to].coordinate), 9_990, hub.name)
             }
         }
-        XCTAssertEqual(RealWorldData.load(file: RealWorldDataLoadTests.file).coaches, network)
+        XCTAssertEqual(RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file).coaches, network)
     }
 
     func testARealMapGetsTheStopsInsideIt() throws {

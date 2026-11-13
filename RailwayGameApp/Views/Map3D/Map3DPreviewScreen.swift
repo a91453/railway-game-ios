@@ -907,6 +907,8 @@ final class Map3DSceneCache {
         // Decision 234: on a real-world map, the base map's roads, rivers
         // and cover, read from the file the 2D map draws.
         let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
+        // Decision 712: and the base maps of the cities outside Taiwan.
+        let cityTiles = world.geoAnchor == nil ? [] : BaseMapFiles.cityTiles.map(\.tiles)
         // Decision 239: and the real buildings round Kaohsiung and
         // Taichung Stations.
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
@@ -914,6 +916,8 @@ final class Map3DSceneCache {
         let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
         // Decision 389: and Taiwan's buildings.
         let footprints = world.geoAnchor == nil ? nil : BaseMapFiles.footprints
+        // Decision 712: and those of the cities outside Taiwan.
+        let cityFootprints = world.geoAnchor == nil ? [] : BaseMapFiles.cityFootprints
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
         // Decision 699: and its airports' airfields.
@@ -944,11 +948,17 @@ final class Map3DSceneCache {
             }
             let clock = ContinuousClock()
             let started = clock.now
-            let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
+            let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap {
+                try? BaseMapTiles(data: $0, cities: cityTiles.compactMap { try? Data(contentsOf: $0, options: .alwaysMapped) })
+            }
             let source = Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
                                           cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
                                           footprints: footprints.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
-                                              .flatMap { try? FootprintTiles(data: $0) },
+                                              .flatMap {
+                                                  try? FootprintTiles(data: $0, cities: cityFootprints.compactMap {
+                                                      try? Data(contentsOf: $0, options: .alwaysMapped)
+                                                  })
+                                              },
                                           heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },

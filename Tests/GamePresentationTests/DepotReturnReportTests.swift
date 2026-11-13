@@ -254,7 +254,7 @@ final class DepotReturnReportTests: XCTestCase {
         let environment = ProcessInfo.processInfo.environment
         guard environment["DEPOT_RETURN_PEOPLED"] != nil else { return nil }
         var world = try AirportReportTests.bought(
-            id, data: RealWorldData.load(file: RealWorldDataLoadTests.file), rules: environment["DEPOT_RETURN_SIMPLE"] != nil ? .simple : .realistic
+            id, data: RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file), rules: environment["DEPOT_RETURN_SIMPLE"] != nil ? .simple : .realistic
         )
         if environment["DEPOT_RETURN_NO_AIRPORTS"] != nil { world.setAirports([]) }
         return world

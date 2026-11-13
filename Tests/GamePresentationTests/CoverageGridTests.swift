@@ -63,7 +63,7 @@ final class CoverageGridTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("CoverageGridTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        await launcher.loadRealWorldData { RealWorldData.load(file: RealWorldDataLoadTests.file) }.value
+        await launcher.loadRealWorldData { RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file) }.value
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5172))
         let land = try XCTUnwrap(launcher.land(at: anchor))
         XCTAssertTrue(land.allSatisfy { $0.coverage != nil })
