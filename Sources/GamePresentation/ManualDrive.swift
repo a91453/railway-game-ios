@@ -422,11 +422,16 @@ extension ManualDrive {
         public let stopAhead: Bool
         /// Decision 710: the stopping assist holds the brake.
         public let isAssisting: Bool
+        /// REVIEW-L20 P2-6: the stopping assist is on and the train, in
+        /// the stopping bar's reach, is too fast for it to take the brake
+        /// (``ManualDrive/isTooFastForAssist``).
+        public let isTooFastForAssist: Bool
         public let result: Result?
 
         /// Before the train has left its stop.
         public static let waiting = Reading(phase: .waiting, notch: .neutral, speed: 0, limit: nil, isOverspeed: false,
-                                            remainingTenths: nil, lateness: 0, stopAhead: false, isAssisting: false, result: nil)
+                                            remainingTenths: nil, lateness: 0, stopAhead: false, isAssisting: false, isTooFastForAssist: false,
+                                            result: nil)
 
         /// Decision 704: "Stop ahead 161 m", only while ``stopAhead``.
         public func stopAheadText(in language: DisplayLanguage) -> String? {
@@ -489,6 +494,7 @@ extension ManualDrive {
             lateness: max(0, Int((elapsed - course.scheduled).rounded(.down))),
             stopAhead: isStopAhead,
             isAssisting: isAssisting,
+            isTooFastForAssist: isTooFastForAssist,
             result: result
         )
     }

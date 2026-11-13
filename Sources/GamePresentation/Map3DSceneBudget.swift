@@ -56,16 +56,38 @@ public enum Map3DSceneBudget {
     /// far view has no holes, and past this they are not drawn.
     public static let ceiling = 2
 
+    /// The budget a chunk is held to for what it was drawn with last
+    /// frame: an eighth over (REVIEW-L20 P2-3).
+    public static func kept(_ budget: Int) -> Int {
+        budget + budget / 8
+    }
+
     /// The share of each chunk of `costs`, the nearest first, within
-    /// `budget` triangles.
-    public static func shares(of costs: [Cost], within budget: Int) -> [Share] {
+    /// `budget` triangles. `were` is what each was given last frame (`nil`
+    /// for one not in view then; none, for every chunk new): a chunk keeps
+    /// a share it had, or a better one, while the frame is within
+    /// ``kept(_:)`` the budget, and is given a better one than it had only
+    /// within the budget itself. Without that a view a little over the
+    /// budget (decision 709's far view of Taipei is 990,000 triangles of
+    /// the lowest 1,000,000 before anything is built) took the city off
+    /// whichever chunk was farthest that frame, another one as the camera
+    /// panned.
+    public static func shares(of costs: [Cost], within budget: Int, were: [Share?] = []) -> [Share] {
         var spent = 0
-        return costs.map { cost in
-            let share: Share = if spent + cost.whole <= budget {
+        return costs.indices.map { index in
+            let cost = costs[index], was: Share? = index < were.count ? were[index] : nil
+            // The most the frame may have drawn for this chunk to be given
+            // `share`.
+            func room(_ share: Share) -> Int {
+                let most = share == .ground ? budget * ceiling : budget
+                guard let was, was <= share else { return most }
+                return kept(most)
+            }
+            let share: Share = if spent + cost.whole <= room(.whole) {
                 .whole
-            } else if spent + cost.simplified <= budget {
+            } else if spent + cost.simplified <= room(.simplified) {
                 .simplified
-            } else if spent + cost.ground <= budget * ceiling {
+            } else if spent + cost.ground <= room(.ground) {
                 .ground
             } else {
                 .nothing

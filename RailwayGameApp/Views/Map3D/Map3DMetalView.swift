@@ -303,6 +303,10 @@ final class Map3DMetalView: MTKView {
         /// Decision 711: how much of it this frame draws within the still
         /// scene's budget (``Map3DSceneBudget``).
         var share = Map3DSceneBudget.Share.whole
+        /// What the budget gave it in the last frame that had it in view,
+        /// `nil` when that frame did not: the budget keeps a chunk at what
+        /// it drew a little past itself (REVIEW-L20 P2-3).
+        var shareWas: Map3DSceneBudget.Share?
         /// Decision 711: its buffers' bytes (the street fronts' apart).
         var bytes = 0
 
@@ -1273,8 +1277,11 @@ final class Map3DMetalView: MTKView {
         let uniforms = uniformValues(matrix, seconds: start, sun: sunRegion.drawn)
         var visible: [Chunk] = []
         var visibleAt: [Int] = []
+        var visibleWas: [Map3DSceneBudget.Share?] = []
         var facadeUploads = 0
         for index in chunks.indices {
+            let shareWas = chunks[index].shareWas
+            chunks[index].shareWas = nil
             chunks[index].share = .whole
             // Decision 238: in full near the camera, whether in view or not,
             // so the margin holds.
@@ -1312,6 +1319,7 @@ final class Map3DMetalView: MTKView {
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
                 visibleAt.append(index)
+                visibleWas.append(shareWas)
             }
         }
         // Decision 711: the still scene within its budget, shared out from
@@ -1323,7 +1331,9 @@ final class Map3DMetalView: MTKView {
                                                              to: camera.target))
         }.sorted { $0.distance < $1.distance }
         let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack, level: self.farLevel) },
-                                             within: Map3DSceneBudget.triangles(tier: level?.tier))
+                                             within: Map3DSceneBudget.triangles(tier: level?.tier),
+                                             were: nearestFirst.map { visibleWas[$0.place] })
+        for (entry, share) in zip(nearestFirst, shares) { chunks[visibleAt[entry.place]].shareWas = share }
         for (entry, share) in zip(nearestFirst, shares) where share != .whole {
             visible[entry.place].share = share
             visible[entry.place].detailed = false

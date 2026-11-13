@@ -100,9 +100,14 @@ extension ManualDrive {
 
         /// What VoiceOver reads for the bar: "Short, 38 m to go", "On the
         /// stopping point", "Past, 1.3 m past the stopping point".
-        public func value(in language: DisplayLanguage, assisting: Bool = false) -> String {
+        public func value(in language: DisplayLanguage, assisting: Bool = false, tooFastForAssist: Bool = false) -> String {
             let value = value(of: state, in: language)
-            return assisting ? value + language.text(", stopping assist braking", "，輔助停車煞車中") : value
+            if assisting { return value + language.text(", stopping assist braking", "，輔助停車煞車中") }
+            // REVIEW-L20 P2-6: why the assist has not come.
+            if tooFastForAssist, state == .short {
+                return value + language.text(", too fast for the stopping assist: brake harder", "，太快，輔助停車接不了手：請加重煞車")
+            }
+            return value
         }
 
         private func value(of state: State, in language: DisplayLanguage) -> String {
@@ -265,6 +270,12 @@ extension ManualDrive {
             language.text("Assist", "輔助中")
         }
 
+        /// In the stopping bar's label while the train is too fast for it
+        /// to take the brake (REVIEW-L20 P2-6): what to do.
+        public static func tooFastText(in language: DisplayLanguage) -> String {
+            language.text("Too fast: brake", "太快，先煞車")
+        }
+
         /// On the result card of a run it helped.
         public static func usedText(in language: DisplayLanguage) -> String {
             language.text("Stopping assist helped", "用了輔助停車")
@@ -290,6 +301,19 @@ extension ManualDrive {
         guard remaining > 0, remaining <= StopBar.showMetres, needed >= train.braking * StopAssist.takesShare,
               needed <= train.braking * StopAssist.takesAtMostShare else { return nil }
         return -needed
+    }
+
+    /// REVIEW-L20 P2-6: the assist is on and has not the brake, and the
+    /// train, in the stopping bar's reach and short of the point, is too
+    /// fast for it to take it (``StopAssist/takesAtMostShare``): the bar
+    /// says so, where before the player waited for an assist that did not
+    /// come and ran past. Not on the emergency brake, where the player
+    /// already does all there is.
+    var isTooFastForAssist: Bool {
+        guard assists, !isAssisting, !isOver, !notch.isEmergency, speed > 0, train.braking > 0,
+              remaining > 0, remaining <= StopBar.showMetres else { return false }
+        let room = remaining - speed * StopAssist.leadSeconds
+        return room <= 0 || speed * speed / (2 * room) > train.braking * StopAssist.takesAtMostShare
     }
 }
 

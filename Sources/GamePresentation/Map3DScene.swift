@@ -1209,7 +1209,7 @@ extension Map3DScene {
                 var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh(), standIn = standInMeshes[key] ?? Map3DMesh()
                 // Decision 709: the simplified city and the shadows, the
                 // largest first.
-                let farSteps = Map3DFarDetail.order(&far, parts: farParts[key] ?? [])
+                var farSteps = Map3DFarDetail.order(&far, parts: farParts[key] ?? [])
                 var farBoxes = far.boxes
                 far.boxes = []
                 far.collectsBoxes = false
@@ -1225,7 +1225,9 @@ extension Map3DScene {
                 Map3DLook.restyle(&facade, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
                 if let own = ownColourNear[key] { mesh.append(own) }
-                if let own = ownColourFar[key] { far.append(own) }
+                // Always drawn, whatever the far view leaves out of the
+                // city round it (REVIEW-L20 P2-1).
+                if let own = ownColourFar[key] { Map3DFarDetail.appendAlwaysDrawn(own, to: &far, steps: &farSteps.indices) }
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }

@@ -112,6 +112,45 @@ final class Map3DSceneBudgetTests: XCTestCase {
         XCTAssertEqual(shares, [.whole, .simplified, .whole])
     }
 
+    /// REVIEW-L20 P2-3: a view a little over the budget (Taipei from the
+    /// farthest is 990,000 of the lowest 1,000,000 with nothing built,
+    /// decision 709) keeps the city it drew last frame. Before, whichever
+    /// chunk was farthest that frame lost its city, so the outer chunks
+    /// went between city and ground as the camera panned.
+    func testAChunkKeepsItsCityWhileTheViewIsALittleOver() {
+        // Eleven far chunks of 100: 1,100 against 1,000.
+        let costs = Array(repeating: cost(100, 100, 10), count: 11)
+        // Coming into view over the budget, the farthest is ground alone.
+        let first = Map3DSceneBudget.shares(of: costs, within: 1_000, were: Array(repeating: nil, count: 11))
+        XCTAssertEqual(first, Array(repeating: .whole, count: 10) + [.ground])
+        XCTAssertEqual(first, Map3DSceneBudget.shares(of: costs, within: 1_000), "with no last frame, as before")
+        // The camera pans: the chunk that was farthest is now nearest, and
+        // another is farthest. It keeps its city, and the first stays
+        // ground until there is room: neither changes.
+        let panned = Map3DSceneBudget.shares(of: costs, within: 1_000, were: [.ground] + Array(repeating: .whole, count: 10))
+        XCTAssertEqual(panned, [.whole] + Array(repeating: .whole, count: 10), "the nearest fits; none drawn last frame gives way")
+        // And back: all eleven were drawn with their city, and stay.
+        XCTAssertEqual(Map3DSceneBudget.shares(of: costs, within: 1_000, were: panned.map { $0 }), Array(repeating: .whole, count: 11))
+        // Only so far over: an eighth.
+        XCTAssertEqual(Map3DSceneBudget.kept(1_000), 1_125)
+        let many = Array(repeating: cost(100, 100, 10), count: 13)
+        let held = Map3DSceneBudget.shares(of: many, within: 1_000, were: Array(repeating: .whole, count: 13))
+        XCTAssertEqual(held, Array(repeating: .whole, count: 11) + [.ground, .ground])
+        // A chunk simplified last frame is not drawn in full on the margin,
+        // and one that was ground alone gets its city back only within the
+        // budget itself.
+        let near = [cost(900, 100, 10), cost(200, 150, 10), cost(120, 20, 10)]
+        XCTAssertEqual(Map3DSceneBudget.shares(of: near, within: 1_000, were: [.whole, .simplified, .ground]), [.whole, .simplified, .ground])
+        XCTAssertEqual(Map3DSceneBudget.shares(of: near, within: 1_000, were: [.whole, .whole, .whole]), [.whole, .whole, .simplified])
+        // Nor does the ground come and go at twice the budget.
+        let grounds = Array(repeating: cost(5_000, 5_000, 500), count: 5)
+        XCTAssertEqual(Map3DSceneBudget.shares(of: grounds, within: 1_000, were: Array(repeating: nil, count: 5)), [.ground, .ground, .ground, .ground, .nothing])
+        XCTAssertEqual(Map3DSceneBudget.shares(of: grounds, within: 1_000, were: [.ground, .ground, .ground, .nothing, .ground]),
+                       [.ground, .ground, .ground, .ground, .nothing])
+        XCTAssertEqual(Map3DSceneBudget.shares(of: Array(grounds.prefix(4)) + [cost(5_000, 5_000, 250)], within: 1_000, were: Array(repeating: .ground, count: 5)),
+                       Array(repeating: .ground, count: 5))
+    }
+
     /// The budget follows the load ladder's tier down, and the buffers'
     /// the device's memory.
     func testTheBudgetsStepDownWithTheTier() {
