@@ -1315,7 +1315,73 @@ extension RealWorldDemo.TrackPlan {
             }
             let c1 = WorldVector(nodes[index].point) + nodes[index].direction * handle
             let c2 = WorldVector(nodes[index + 1].point) - nodes[index + 1].direction * handle
+            // A long edge across a bend both ways (the South Island Line's
+            // 3 km tunnel from Admiralty to Ocean Park, one edge as no node
+            // may stand that deep): the same handles at both ends bring it
+            // within 4 m of the other in the middle. Each end's handle is
+            // then fitted to keep it the offset off the other's edge.
+            if following, offsets[index] == offsets[index + 1], indices[index + 1] == indices[index] + 1,
+               case .cubic(let m1, let m2) = plan.curves[indices[index]] {
+                let main = (WorldVector(plan.nodes[indices[index]].point), WorldVector(m1), WorldVector(m2), WorldVector(plan.nodes[indices[index + 1]].point))
+                let fitted = Self.fittedHandles(
+                    beside: main, from: WorldVector(nodes[index].point), nodes[index].direction, to: WorldVector(nodes[index + 1].point), nodes[index + 1].direction,
+                    offset: abs(offsets[index]), handle: handle
+                )
+                let c1 = WorldVector(nodes[index].point) + nodes[index].direction * fitted.0
+                let c2 = WorldVector(nodes[index + 1].point) - nodes[index + 1].direction * fitted.1
+                return .cubic(c1.plan, c2.plan)
+            }
             return .cubic(c1.plan, c2.plan)
         }
+    }
+}
+
+extension RealWorldDemo.TrackPlan {
+    /// How far the cubic `curve` strays from running `offset` off `main`,
+    /// sampled at sixteenths, against `main` cut in 128.
+    static func strayFromOffset(
+        _ curve: (WorldVector, WorldVector, WorldVector, WorldVector), main: [WorldVector], offset: Double
+    ) -> Double {
+        var farthest = 0.0
+        for step in 1..<16 {
+            let point = RealWorldDemo.TrackPlan.point(on: curve, at: Double(step) / 16)
+            var nearest = Double.infinity
+            for (p, q) in zip(main, main.dropFirst()) { nearest = min(nearest, point.distance(toSegment: p, q)) }
+            farthest = max(farthest, abs(nearest - offset))
+        }
+        return farthest
+    }
+
+    static func point(on curve: (WorldVector, WorldVector, WorldVector, WorldVector), at t: Double) -> WorldVector {
+        let u = 1 - t
+        return curve.0 * (u * u * u) + curve.1 * (3 * u * u * t) + curve.2 * (3 * u * t * t) + curve.3 * (t * t * t)
+    }
+
+    /// The handles, from `start` and to `end`, of a cubic `offset` beside
+    /// the cubic `main`: `handle` at both ends where that keeps within half
+    /// a metre of it, as before; otherwise the pair, each within 5 % of
+    /// `handle`, that strays least (decision 726: a deep tunnel's one edge).
+    static func fittedHandles(
+        beside main: (WorldVector, WorldVector, WorldVector, WorldVector), from start: WorldVector, _ startWay: WorldVector,
+        to end: WorldVector, _ endWay: WorldVector, offset: Double, handle: Double
+    ) -> (Double, Double) {
+        let samples = (0...128).map { point(on: main, at: Double($0) / 128) }
+        func stray(_ h1: Double, _ h2: Double) -> Double {
+            strayFromOffset((start, start + startWay * h1, end - endWay * h2, end), main: samples, offset: offset)
+        }
+        var best = (h1: handle, h2: handle, stray: stray(handle, handle))
+        guard best.stray > 0.5 * RealWorldDemo.metre else { return (handle, handle) }
+        var centre = (handle, handle)
+        for step in [0.005, 0.0005] {
+            for i in -10...10 {
+                for j in -10...10 {
+                    let h1 = centre.0 + handle * step * Double(i), h2 = centre.1 + handle * step * Double(j)
+                    let s = stray(h1, h2)
+                    if s < best.stray { best = (h1, h2, s) }
+                }
+            }
+            centre = (best.h1, best.h2)
+        }
+        return (best.h1, best.h2)
     }
 }
