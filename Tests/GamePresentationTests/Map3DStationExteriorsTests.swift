@@ -445,7 +445,9 @@ final class Map3DStationExteriorsTests: XCTestCase {
         // The same, the study's origin outside where studies are drawn.
         let east = WorldRegion(minX: region.maxX, minY: region.minY, maxX: region.maxX + 1, maxY: region.maxY)
         let without = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways, studies: east)
-        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } }
+        // Decision 722: the kit's building is in the look already, apart
+        // from the chunk's near mesh.
+        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.houseTriangleCount }
         XCTAssertGreaterThan(triangles(without.builder), triangles(plain.builder), "the station's own building or entrances")
         XCTAssertTrue(without.stations.isSuperset(of: plain.stations))
     }

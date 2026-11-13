@@ -21,3 +21,11 @@
 - 沒有在實機或 `tools/map3d-preview` 看；圖是 `shoot.mjs` 的畫法。
 - 選項 C 的數字是用鋪面一種顏色估的，C 還沒有實作。
 - Linux 的 CI 沒有在本機跑；本機（macOS，Swift 6.4.2）跑過 `Map3DRoofContrastTests`。
+
+## 後來：決策 722（2026-11-13）
+
+作者看過預覽後說「用 close」。`Map3DStations.addHouse` 把套件站房刷 `Map3DStationKit.houseLook`（= `Map3DLook.close`），放進 `ownColourNear`／`ownColourFar`；分支也併進了決策 720。已知清單 59 → 44。報告 §5.2、§5.3，決策在 `docs/decisions/722.md`。
+
+- VERIFIED（本機）：`swift build --build-tests -Xswiftc -warnings-as-errors`；`Map3DRoofContrastTests`、`Map3DStationsTests`、`Map3DStationExteriorsTests`、`Map3DStationExteriorBatch2MapTests`、`Map3DLookTests`、`Map3DSceneMemoryTests`、`Map3DFootprintsTests` 與車站相關的十幾個場景測試；`tools/map3d-preview` 重新輸出的場景裡屋頂是 `close` 的顏色。
+- UNVERIFIED：其餘 GamePresentation 測試（留給 CI）；實機 Metal；夜晚、雨天；拉遠後遠景方塊的樣子。
+- 還沒做：灰鐵皮 26 站與白色大屋頂 18 站（配方的顏色）；報告 §1–§4 的表是改之前的數字。

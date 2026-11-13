@@ -26,17 +26,18 @@ final class Map3DRoofContrastTests: XCTestCase {
     /// (`docs/art/roof-ground-contrast-2026-11-13/README.md`).
     static let least = 12.0
 
-    /// The models that fail today (2026-11-13: 59 of 141), by the family's
+    /// The models that fail today (2026-11-13, after decisions 720 and
+    /// 722: 44 of 141; 59 before them), by the family's
     /// name and the model's; the table is in
     /// `docs/art/roof-ground-contrast-2026-11-13/README.md`.
     /// This round only lists them: none is to be recoloured to pass, and
     /// the threshold is not to be loosened for them. A model fixed later
     /// comes off the list (the test says so when one passes).
     static let known: Set<String> = [
-        "station-kit/banqiao", "station-kit/halt-v1", "station-kit/halt-v3", "station-kit/highSpeed-v1",
+        "station-kit/banqiao", "station-kit/halt-v3", "station-kit/highSpeed-v1",
         "station-kit/highSpeed-v3", "station-kit/highSpeed-v6", "station-kit/hsrHsinchu-v3", "station-kit/hsrTaichung-v0",
         "station-kit/hsrTainan-v4", "station-kit/hsrTaoyuan-v3", "station-kit/hualien", "station-kit/keelung",
-        "station-kit/nangang", "station-kit/regional-v1-t1", "station-kit/regional-v1-t2", "station-kit/regional-v1-t3",
+        "station-kit/nangang",
         "station-kit/regional-v3-t1", "station-kit/regional-v3-t2", "station-kit/regional-v3-t3", "station-kit/taitung",
         "station-kit/zuoying-v1", "station-kit/zuoying-v4",
         "station-study/b2-tainan", "station-study/hsr-hsinchu", "station-study/hsr-taichung", "station-study/hsr-tainan",
@@ -45,11 +46,8 @@ final class Map3DRoofContrastTests: XCTestCase {
         "landmark/chiangKaiShekMemorialHall", "landmark/greatHarborBridge", "landmark/gushanFerryTerminal", "landmark/kaohsiung85SkyTower",
         "landmark/kaohsiungMainStation", "landmark/kaohsiungMusicCenter", "landmark/nationalConcertHall", "landmark/nationalTheater",
         "landmark/shinKongLifeTower", "landmark/sunYatSenMemorialHall", "landmark/taipei101",
-        "commercial-kit/commercial-cinema", "commercial-kit/commercial-departmentStore", "commercial-kit/commercial-gasStation", "commercial-kit/commercial-metroEntrance",
-        "commercial-kit/commercial-supermarket", "commercial-kit/commercial-warehouseStore",
+        "commercial-kit/commercial-gasStation", "commercial-kit/commercial-metroEntrance",
         "civic-kit/civic-clinic", "civic-kit/civic-dayCareCenter", "civic-kit/civic-library", "civic-kit/civic-postOffice",
-        "residential-kit/residential-arcadeTownhouse", "residential-kit/residential-cornerHouse", "residential-kit/residential-duplexHouse", "residential-kit/residential-narrowTownhouse",
-        "residential-kit/residential-oldNarrowTownhouse", "residential-kit/residential-roofTerraceHouse", "residential-kit/residential-walkupApartment",
     ]
 
     func testNoRoofIsLostOnTheGroundRoundIt() throws {
@@ -138,8 +136,8 @@ final class Map3DRoofContrastTests: XCTestCase {
     /// Every building the check reads, each with the colours the map
     /// draws it in:
     /// - the station kit's buildings (`house`), one of each profile, roof
-    ///   variant and tier: in the chunk's near mesh, so in the look's
-    ///   `city` strength;
+    ///   variant and tier: in the look's `close` strength (decision 722,
+    ///   ``Map3DStationKit/houseLook``);
     /// - the real stations' exterior studies (decision 625): their own
     ///   colours, added after the look;
     /// - the landmarks (decisions 370 and 457): their own colours, kept;
@@ -150,9 +148,9 @@ final class Map3DRoofContrastTests: XCTestCase {
     ///   estate kit, whose roofs take the player's colour when placed.
     static func subjects() -> [RoofContrast.Subject] {
         var all: [RoofContrast.Subject] = []
-        let city: @Sendable (UInt32) -> UInt32 = { Map3DLook.colour($0) }
         let close: @Sendable (UInt32) -> UInt32 = { Map3DLook.colour($0, strength: Map3DLook.close) }
         let own: @Sendable (UInt32) -> UInt32 = { $0 }
+        let house: @Sendable (UInt32) -> UInt32 = { Map3DLook.colour($0, strength: Map3DStationKit.houseLook) }
         // Station kit: the building depends on the profile, the seed's
         // variant and, for the regional ones, the tier.
         var houses: [String: (station: Map3DStationKit.Station, count: Int)] = [:], order: [String] = []
@@ -166,8 +164,8 @@ final class Map3DRoofContrastTests: XCTestCase {
             let (station, count) = houses[key]!
             var builder = StationKitBuilder()
             builder.house(station)
-            all.append(.init(family: "station-kit", name: key, mesh: builder.mesh, look: city, lookName: "city", count: count,
-                             farRoof: Map3DLook.colour(Map3DStationKit.farColours(station.profile).roof), note: "例：" + station.name, shoots: true))
+            all.append(.init(family: "station-kit", name: key, mesh: builder.mesh, look: house, lookName: "close", count: count,
+                             farRoof: house(Map3DStationKit.farColours(station.profile).roof), note: "例：" + station.name, shoots: true))
         }
         for study in Map3DExteriorStudy.allCases {
             // Its outlines' edges in the ground's colour stay the ground's.

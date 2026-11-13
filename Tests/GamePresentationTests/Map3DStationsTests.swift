@@ -26,7 +26,8 @@ final class Map3DStationsTests: XCTestCase {
 
     /// The far box's walls stand on the ground; the canopy is far above.
     private func house(_ builder: Map3DScene.Builder) -> [Map3DVertex] {
-        builder.farMeshes.values.flatMap(\.vertices).filter { $0.y < 0.5 }
+        // Decision 722: in the look already, added after the chunk's.
+        builder.ownColourFar.values.flatMap(\.vertices).filter { $0.y < 0.5 }
     }
 
     func testAStationsBuildingStandsBesideItsPlatformAwayFromOtherTrack() {
@@ -39,7 +40,8 @@ final class Map3DStationsTests: XCTestCase {
         XCTAssertEqual(walls.map(\.z).min() ?? 0, 6.1, accuracy: 0.01)
         XCTAssertFalse(cells.isEmpty, "the building's cells become a plaza")
         // Close up the kit's building there too, with its shadow.
-        let near = b.nearMeshes.values.flatMap(\.vertices).filter { $0.color != Map3DPalette.canopy && $0.y < 1 }
+        let near = b.ownColourNear.values.flatMap(\.vertices).filter { $0.color != Map3DPalette.canopy && $0.y < 1 }
+        XCTAssertFalse(near.isEmpty)
         XCTAssertGreaterThanOrEqual(near.map(\.z).min() ?? 0, 6.1 - 0.01)
         XCTAssertFalse(b.shadows.isEmpty)
     }
