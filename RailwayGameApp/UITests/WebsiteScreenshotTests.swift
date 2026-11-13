@@ -3185,15 +3185,18 @@ final class WebsiteScreenshotTests: XCTestCase {
             newGame.tap()
             tapButton("newGame.realWorld", in: app, timeout: 60)
             XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+            // The list makes a row only near the screen, and the whole of
+            // Taiwan's row ends under its foot: the list is dragged up a
+            // little at a time until Hong Kong's row is whole on screen
+            // (it is there once its map is read).
             let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
-            XCTAssertTrue(row.appears(within: 90), "Hong Kong's row shows once its map is read")
-            // The row whole on screen: the list dragged up a little when
-            // its foot is under the screen's.
-            if row.frame.maxY > app.frame.maxY - 12 {
+            for _ in 0..<12 where !(row.exists && row.frame.maxY <= app.frame.maxY - 12) {
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
-                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.4)),
+                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.45)),
                            withVelocity: .slow, thenHoldForDuration: 0.3)
+                settle(seconds: 1)
             }
+            XCTAssertTrue(row.exists, "Hong Kong's row shows once its map is read")
             settle()
             keep(name, app)
         }
