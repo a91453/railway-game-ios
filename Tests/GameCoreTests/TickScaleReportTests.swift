@@ -13,7 +13,9 @@ import XCTest
 /// - `TICK_SCALE_LAYOUT`: `meet` (the default: two trains a module, on two
 ///   lines that run against each other over a single track with a passing
 ///   loop, under traffic control) or `solo` (one train a module, nothing to
-///   meet).
+///   meet), or `ring` (one line with every train: a ring of as many
+///   stations as trains on two tracks, half the trains each way round,
+///   each following the train ahead; docs/research/TICK_L1_2026-11-13.md).
 /// - `TICK_SCALE_BLOCKS=1`: block sections on.
 /// - `TICK_SCALE_CONTROL=0`: traffic control off (trains run through each
 ///   other, as they do in a game without it): what the step costs without
@@ -33,7 +35,7 @@ import XCTest
 /// stations and lines: the modules share nothing but the world, so what
 /// grows with their number is what the step does over the whole world.
 final class TickScaleReportTests: XCTestCase {
-    enum Layout: String { case meet, solo }
+    enum Layout: String { case meet, solo, ring }
 
     struct GaveUp: Error { let reason: String }
 
@@ -53,6 +55,7 @@ final class TickScaleReportTests: XCTestCase {
     /// `trains` trains on modules of `layout`, or the reason the world
     /// could not be built within `budget` seconds.
     static func world(trains: Int, layout: Layout, blocks: Bool, control: Bool = true, budget: Double) throws -> GameWorld {
+        if layout == .ring { return try ring(trains: trains, blocks: blocks, control: control, budget: budget) }
         let perModule = layout == .meet ? 2 : 1
         let modules = (trains + perModule - 1) / perModule
         let columns = max(1, Int(Double(modules).squareRoot() / 1.7))
@@ -99,6 +102,85 @@ final class TickScaleReportTests: XCTestCase {
                 placed += 1
             }
         }
+        if control { try world.setTrafficControl(true) }
+        if blocks { world.setBlockSections(true) }
+        return world
+    }
+
+    /// One line with every train: a ring of `trains` stations (made even,
+    /// six at least) on two tracks that never meet, an outer one the
+    /// trains run clockwise and an inner one they run the other way, each
+    /// a rectangle with half the stations along the top and half along the
+    /// bottom, a platform of every station on each. Half the trains start
+    /// on each track, at every other station, so each has one train ahead
+    /// of it a station or two away: what the step costs when the trains
+    /// follow each other along one line, as on a real main line.
+    static func ring(trains: Int, blocks: Bool, control: Bool, budget: Double) throws -> GameWorld {
+        let side = max(3, (trains + 1) / 2)
+        let pitch: Int64 = 12_288, gap: Int64 = 2_048, depth: Int64 = 16_384
+        var world = try GameWorld(
+            bounds: WorldBounds(width: pitch * Int64(side + 3), height: depth + 4 * 4_096),
+            economy: GameEconomy(balance: 1_000_000_000_000_000, costs: SingleTrackMeet.costs), clock: GameClock(speed: .normal)
+        )
+        let clock = ContinuousClock()
+        let started = clock.now
+        func check(_ what: String) throws {
+            if ms(clock.now - started) > budget * 1_000 { throw GaveUp(reason: "building stopped at \(what) after \(Int(budget)) s") }
+        }
+        // A track: its corners `inset` in from the outer one's, the edges
+        // built clockwise. The edges along the top and the bottom, the
+        // first and the last of each without a platform.
+        func track(inset: Int64) throws -> (top: [TrackEdgeID], bottom: [TrackEdgeID]) {
+            let left = pitch / 2 + inset, right = pitch / 2 + pitch * Int64(side + 2) - inset
+            let top = 4_096 + inset, bottom = 4_096 + depth - inset
+            var points: [WorldCoordinate] = []
+            for column in 0...(side + 2) {
+                points.append(WorldCoordinate(x: column == 0 ? left : column == side + 2 ? right : pitch / 2 + pitch * Int64(column), y: top))
+            }
+            points += points.reversed().map { WorldCoordinate(x: $0.x, y: bottom) }
+            var nodes: [TrackNodeID] = []
+            for (index, point) in points.enumerated() {
+                if index % 64 == 0 { try check("the track") }
+                nodes.append(try world.buildTrackNode(at: point))
+            }
+            var edges: [TrackEdgeID] = []
+            for index in nodes.indices {
+                if index % 64 == 0 { try check("the track") }
+                edges.append(try world.buildTrackEdge(from: nodes[index], to: nodes[(index + 1) % nodes.count]))
+            }
+            return (Array(edges[0..<(side + 2)]), Array(edges[(side + 3)..<(2 * side + 5)]))
+        }
+        let outer = try track(inset: 0), inner = try track(inset: gap)
+        var stops: [StationID] = []
+        // Clockwise: along the top from the left, then along the bottom
+        // from the right.
+        for index in 0..<(2 * side) {
+            if index % 64 == 0 { try check("the stations") }
+            let onTop = index < side, column = onTop ? index + 1 : index - side + 1
+            let x = onTop ? pitch / 2 + pitch * Int64(column) + pitch / 2 : pitch / 2 + pitch * Int64(side + 2 - column) - pitch / 2
+            let station = try world.buildStation(named: "R\(index)", at: PlanPoint(x: x, y: onTop ? 4_096 + 2 * gap : 4_096 + depth - 2 * gap)).id
+            try world.addTrackPlatform(station, on: (onTop ? outer.top : outer.bottom)[column], from: 4_096, to: 6_144)
+            try world.addTrackPlatform(station, on: (onTop ? inner.top : inner.bottom)[column], from: 4_096, to: 6_144)
+            stops.append(station)
+        }
+        let line = try world.createLine(named: "Ring", stops: stops).id
+        try world.setLineRing(line, to: true)
+        // A ring's trains run in pairs (decision 49): the first, the third
+        // and so on the way the stops are listed, on the outer track.
+        let pairs = max(1, trains / 2)
+        for index in 0..<(2 * pairs) {
+            if index % 64 == 0 { try check("the trains") }
+            let clockwise = index % 2 == 0
+            let stop = (index / 2) * (2 * side) / pairs
+            let onTop = stop < side, column = onTop ? stop + 1 : stop - side + 1
+            let edge = clockwise ? (onTop ? outer.top : outer.bottom)[column] : (onTop ? inner.top : inner.bottom)[column]
+            let train = try SingleTrackMeet.stand(
+                &world, edge: TrackTraversal(edge: edge, direction: clockwise ? .forward : .backward), offset: clockwise ? 6_144 : pitch - 4_096
+            )
+            try world.assignTrain(train, to: line)
+        }
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 2 * pairs, offPeak: 2 * pairs, low: 2 * pairs))
         if control { try world.setTrafficControl(true) }
         if blocks { world.setBlockSections(true) }
         return world
