@@ -74,6 +74,15 @@ public struct MapPack: Sendable {
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
+    /// Decision 726: the pack's hill shading for its 2D map
+    /// (`terrain.pmtiles`: its heights as Terrarium tiles, as Taiwan's
+    /// `taiwan_terrain.pmtiles`, `tools/hk-map/build_hk_ground_grids.py`),
+    /// or `nil` for a pack without it: its map is then not shaded.
+    public var terrainFile: URL? {
+        let file = root.appendingPathComponent("terrain.pmtiles")
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
+    }
+
     /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
     public static func bundled(_ city: OverseasMap) -> MapPack? {
         Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }
@@ -153,10 +162,20 @@ public struct OverseasGround: Sendable {
     /// The pack's base map, its file mapped, or `nil` for a pack without
     /// one: its 3D map then has bare ground, and its land no real roads.
     public let baseMap: Data?
+    /// Decision 726: the city's water, the sea, rivers and lakes, and its
+    /// steep slopes (`water.json`, in the form of Taiwan's
+    /// `taiwan_water.json`), or `nil` for a pack without it, or one out of
+    /// shape: its sea is then land to the rules.
+    public let water: WaterGrid?
+    /// Decision 726: the city's ground heights (`heights.dat`, in the form
+    /// of Taiwan's `taiwan_heights.dat`), or `nil` for a pack without
+    /// them, or out of shape: its map is then flat.
+    public let heights: HeightGrid?
 
     /// The ground `pack` says `city` has. Throws for a pack whose
     /// `pack.json` cannot be read or has no extent that fits a world; a
-    /// pack with no `population.json`, or one out of shape, has no people.
+    /// pack with no `population.json`, or one out of shape, has no people;
+    /// likewise its water and heights (decision 726).
     public init(city: OverseasMap, pack: MapPack) throws {
         let extent = try pack.extent()
         guard let anchor = extent.anchor, let bounds = extent.bounds else {
@@ -167,6 +186,8 @@ public struct OverseasGround: Sendable {
         self.bounds = bounds
         population = (try? pack.file("population", "json")).flatMap { try? PopulationGrid(data: $0) }
         baseMap = pack.baseMapFile.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
+        water = (try? pack.file("water", "json")).flatMap { try? WaterGrid(data: $0) }
+        heights = (try? pack.file("heights", "dat")).flatMap { try? HeightGrid(data: $0) }
     }
 
     /// Whether `world` is this city's map: laid over its extent.

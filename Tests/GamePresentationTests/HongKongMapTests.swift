@@ -20,9 +20,15 @@ final class HongKongMapTests: XCTestCase {
         let ground = try Self.ground()
         var world = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000))
         if demo { world.setUnlimitedFunds(true) }
+        // Decision 726: on the city's ground, with its sea, as the launcher
+        // starts it.
+        XCTAssertNotNil(ground.heights)
+        try world.mapGround()
         let session = GameSession(world: world, language: .traditionalChinese)
         session.railways = try HongKongRailwaysTests.railways()
         session.population = ground.population
+        session.water = ground.water
+        session.heights = ground.heights
         session.news.isDemo = demo
         return session
     }
@@ -96,6 +102,22 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertTrue(ground.holds(session.world))
         XCTAssertNotNil(session.world.landBlocks, "its land is read in as it is needed")
         XCTAssertEqual(session.population?.total, ground.population?.total)
+        // Decision 726: and its own ground and water, Taiwan's elsewhere.
+        let taiMoShan = (latitude: 22.41056, longitude: 114.12444)
+        XCTAssertGreaterThan(try XCTUnwrap(session.heights).height(latitude: taiMoShan.latitude, longitude: taiMoShan.longitude), 900)
+        XCTAssertEqual(try XCTUnwrap(session.water).isWater(latitude: 22.2880, longitude: 114.1720), true, "Victoria Harbour")
+        let frame = try XCTUnwrap(RealWorldFrame(world: session.world))
+        let peak = frame.worldPosition(latitude: taiMoShan.latitude, longitude: taiMoShan.longitude)
+        XCTAssertFalse(
+            session.world.missingGroundBlocks(under: [PlanPoint(x: Int64(peak.x.rounded()), y: Int64(peak.y.rounded()))]).isEmpty,
+            "the map has ground, read as track comes to it"
+        )
+        let taiwan = GameWorld.newWholeTaiwanGame()
+        XCTAssertEqual(launcher.water(for: taiwan)?.isWater(latitude: 22.2880, longitude: 114.1720), launcher.water?.isWater(latitude: 22.2880, longitude: 114.1720))
+        XCTAssertEqual(
+            launcher.heights(for: taiwan)?.height(latitude: 23.47, longitude: 120.957), launcher.heights?.height(latitude: 23.47, longitude: 120.957),
+            "Yushan, from Taiwan's file"
+        )
         XCTAssertEqual(launcher.population(for: GameWorld.newWholeTaiwanGame())?.total, launcher.population?.total)
         XCTAssertNotEqual(launcher.population?.total, ground.population?.total)
     }

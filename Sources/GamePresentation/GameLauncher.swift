@@ -55,6 +55,25 @@ public final class GameLauncher {
         return population
     }
 
+    /// The water on `world`'s map: a city's own on its map (decision 726;
+    /// none for a pack without it), Taiwan's on any other.
+    func water(for world: GameWorld) -> WaterGrid? {
+        Self.water(for: world, grounds: overseasGrounds, taiwan: water)
+    }
+
+    nonisolated static func water(for world: GameWorld, grounds: [OverseasGround], taiwan: WaterGrid?) -> WaterGrid? {
+        if let ground = grounds.first(where: { $0.holds(world) }) { return ground.water }
+        return taiwan
+    }
+
+    /// The ground heights of `world`'s map: a city's own on its map
+    /// (decision 726; none, a flat map, for a pack without them),
+    /// Taiwan's on any other.
+    func heights(for world: GameWorld) -> HeightGrid? {
+        if let ground = overseasGrounds.first(where: { $0.holds(world) }) { return ground.heights }
+        return heights
+    }
+
     /// What there is around places on real-world maps in Taiwan, handed to
     /// every game it starts (``GameSession/places``).
     public var places: PlaceGrid?
@@ -752,7 +771,8 @@ public final class GameLauncher {
         var world = GameWorld.newOverseasGame(ground, balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
         if isDemoMode { world.setUnlimitedFunds(true) }
-        return begin(world, keepingAutosave: true)
+        // Decision 726: on the city's own ground, when its pack has heights.
+        return begin(Self.grounded(world, options.ground, heights: ground.heights), keepingAutosave: true)
     }
 
     /// `world`, a new real-world game, with ground (decision 124) when the
@@ -1606,9 +1626,13 @@ public final class GameLauncher {
             // meanwhile.
             let world = (try? result.get()).flatMap(world)
             let (population, places, water, coverage, baseMap) = (population, places, water, coverage, baseMap)
+            let grounds = overseasGrounds
             guard let roads = await run.step({ meter in
                 world.flatMap {
-                    GameSession.roadsReadAhead(of: $0, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap, meter: meter)
+                    GameSession.roadsReadAhead(
+                        of: $0, population: population, places: places, water: Self.water(for: $0, grounds: grounds, taiwan: water),
+                        coverage: coverage, baseMap: baseMap, meter: meter
+                    )
                 }
             }) else { return }
             isLoadingSave = false
@@ -1797,8 +1821,8 @@ public final class GameLauncher {
         let started = GameSession(world: world, language: language)
         started.population = self.population(for: world)
         started.places = places
-        started.water = water
-        started.heights = heights
+        started.water = self.water(for: world)
+        started.heights = self.heights(for: world)
         started.coverage = coverage
         started.baseMap = baseMap
         started.realBuses = realBuses
@@ -1879,7 +1903,8 @@ public final class GameLauncher {
             let roads = await Task.detached(priority: .userInitiated) {
                 world.flatMap {
                     GameSession.roadsReadAhead(
-                        of: $0, population: data.population, places: data.places, water: data.water, coverage: data.coverage, baseMap: data.baseMap
+                        of: $0, population: data.population, places: data.places,
+                        water: Self.water(for: $0, grounds: data.overseas, taiwan: data.water), coverage: data.coverage, baseMap: data.baseMap
                     )
                 }
             }.value
@@ -1908,8 +1933,8 @@ public final class GameLauncher {
             if let coachNetwork { session.giveCoachStops(of: coachNetwork) }
             session.population = self.population(for: session.world)
             session.places = places
-            session.water = water
-            session.heights = heights
+            session.water = self.water(for: session.world)
+            session.heights = self.heights(for: session.world)
             session.coverage = coverage
             session.baseMap = baseMap
             session.realBuses = realBuses
