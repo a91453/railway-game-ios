@@ -68,6 +68,14 @@ LINES = [
 ]
 TURNAROUND = 180
 DAY = 86400
+# Decision 712 (Hong Kong's Tung Chung Line): whether a positioning run
+# from a station between the ends, where the train stood overnight on a
+# running track, sets off a turnaround before the day's first train the
+# same way calls there, not only in time for the run it is for. Left to
+# stand, the trains at Kowloon and Sunny Bay (wanted at 07:44 and 07:40)
+# held every train behind them from 06:20, and 22 of the day's 282 runs
+# found no train. Off for Taiwan's lines, whose files stay as they are.
+OUT_BEFORE_FIRST = False
 
 
 def weekday(date):
@@ -159,6 +167,8 @@ def rescue(found, day, start):
         idle = collections.defaultdict(list)
         _, stuck = play(found + added, day, start, idle)
         if stuck is None:
+            if OUT_BEFORE_FIRST:
+                out_before_first(found, added, day)
             return added, None
         origin, leaves = stuck["calls"][0][0], stuck["calls"][0][2]
         best = None
@@ -180,6 +190,30 @@ def rescue(found, day, start):
         moved = stretch(found, best[1], origin, best[2])
         added.append({"train": "回送", "type": "回送", "calls": moved, "days": [day], "positioning": True})
     return None, stuck
+
+
+def out_before_first(found, added, day):
+    """`OUT_BEFORE_FIRST`: each of `added`, the day's positioning runs, that
+    leaves a station between the ends sets off a turnaround before the
+    first train the same way comes in there, another of them included
+    (the one from Tsing Yi comes up behind the one at Sunny Bay), so they
+    are gone over until none moves."""
+    between = {c[0] for r in found for c in r["calls"][1:-1]}
+    moved = True
+    while moved:
+        moved = False
+        for run in added:
+            donor, origin = run["calls"][0][0], run["calls"][-1][0]
+            if donor not in between:
+                continue
+            behind = []
+            for other in day_of(found + added, day):
+                names = [c[0] for c in other["calls"]]
+                if other is not run and donor in names[1:] and origin in names and names.index(donor) < names.index(origin):
+                    behind.append(other["calls"][names.index(donor)][1])
+            if behind and run["calls"][0][2] > min(behind) - TURNAROUND:
+                run["calls"] = stretch(found, donor, origin, min(behind) - TURNAROUND)
+                moved = True
 
 
 def tracks(found, day, start):

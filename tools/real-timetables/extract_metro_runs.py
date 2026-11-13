@@ -412,8 +412,14 @@ def depot_tracks(tool, found, start, stops, depots):
     return {s: max(1, most[s]) for s in stops}
 
 
+# Decision 712: `extract_branch_runs.OUT_BEFORE_FIRST`, set by
+# `tools/hk-map/extract_hk_runs.py` for the MTR's lines.
+OUT_BEFORE_FIRST = False
+
+
 def main(folder, out):
     tool = branch_tool()
+    tool.OUT_BEFORE_FIRST = OUT_BEFORE_FIRST
     result = {
         "source": "The light rails' station timetables, Ministry of Transportation and Communications TDX "
                   "(fetched 2026-07-16), via the app's <system>_times.json",
