@@ -43,7 +43,7 @@ name: Release Archive (unsigned)
 # whole run is one step, the archive, and most of that step is one silent
 # compile: GamePresentation (some 180,000 lines) optimised as a whole
 # module, 12.6 minutes on a fast runner and 23.1 on a slow one, where the
-# job was then cancelled at its 30 minutes (5 of the 12 pull request runs
+# job was then cancelled at its 30 minutes (6 of the 12 pull request runs
 # of 2026-11-13). So a pull request's run compiles file by file
 # (SWIFT_COMPILATION_MODE=singlefile, still Release and still optimised),
 # which uses every core of the runner; what a pull request's run is for
