@@ -133,4 +133,47 @@ extension Map3DScene.Builder {
         }
         return cells
     }
+
+    /// The 64 m cells `mesh` (in the scene) stands over, or comes within
+    /// `margin` metres of across the ground: each triangle against each
+    /// cell its corners span. Where ``cells(under:)`` takes the whole
+    /// rectangle round a shape, this leaves the ground between a long
+    /// canopy's arms to the city.
+    func cells(under mesh: Map3DMesh, margin: Float) -> Set<Map3DScene.ChunkKey> {
+        let side = Float(Double(Land.cellLength) / Self.metre)
+        var cells = Set<Map3DScene.ChunkKey>()
+        for first in stride(from: 0, to: mesh.indices.count - 2, by: 3) {
+            let corners = (0..<3).map { mesh.vertices[Int(mesh.indices[first + $0])] }.map { (x: $0.x, z: $0.z) }
+            let low = chunk(of: Map3DPoint(corners.map(\.x).min()! - margin, 0, corners.map(\.z).min()! - margin))
+            let high = chunk(of: Map3DPoint(corners.map(\.x).max()! + margin, 0, corners.map(\.z).max()! + margin))
+            for row in low.row...high.row {
+                for column in low.column...high.column {
+                    let key = Map3DScene.ChunkKey(column: column, row: row)
+                    guard !cells.contains(key) else { continue }
+                    // The cell's square in the scene, `margin` wider.
+                    let west = Float((Double(column) * Double(Land.cellLength) - originX) / Self.metre) - margin
+                    let north = Float((Double(row) * Double(Land.cellLength) - originY) / Self.metre) - margin
+                    if Self.triangle(corners, reaches: (west, north, west + side + 2 * margin, north + side + 2 * margin)) { cells.insert(key) }
+                }
+            }
+        }
+        return cells
+    }
+
+    /// Whether the triangle `corners` (across the ground) and the square
+    /// `box` overlap: no side of either parts them (the triangle's own
+    /// span along x and z is the caller's).
+    static func triangle(_ corners: [(x: Float, z: Float)], reaches box: (minX: Float, minZ: Float, maxX: Float, maxZ: Float)) -> Bool {
+        guard corners.map(\.x).max()! >= box.minX, corners.map(\.x).min()! <= box.maxX,
+              corners.map(\.z).max()! >= box.minZ, corners.map(\.z).min()! <= box.maxZ else { return false }
+        let square = [(box.minX, box.minZ), (box.maxX, box.minZ), (box.maxX, box.maxZ), (box.minX, box.maxZ)]
+        for index in 0..<3 {
+            let a = corners[index], b = corners[(index + 1) % 3]
+            // Across the edge: the triangle's span and the square's.
+            let normal = (x: b.z - a.z, z: a.x - b.x)
+            let own = corners.map { $0.x * normal.x + $0.z * normal.z }, other = square.map { $0.0 * normal.x + $0.1 * normal.z }
+            if own.max()! < other.min()! || other.max()! < own.min()! { return false }
+        }
+        return true
+    }
 }

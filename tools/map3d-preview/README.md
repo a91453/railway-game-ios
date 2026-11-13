@@ -21,7 +21,7 @@ swift build --build-tests
 MAP3D_DUMP=/tmp/towns MAP3D_WORLD=towns \
   MAP3D_VIEWS="near:2000:-2420:320:30;far:0:0:2600:0" \
   swift test --skip-build --filter Map3DPreviewDump
-tools/map3d-preview/render.sh /tmp/towns /tmp/towns near,far
+tools/map3d-preview/render.sh /tmp/towns /tmp/towns near,far   # macOS 內建的 realpath 沒有 -m：先 brew install coreutils，或直接照 render.sh 的內容呼叫 render.cjs
 rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 ```
 
@@ -31,6 +31,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | --- | --- |
 | `MAP3D_DUMP` | 輸出檔的前綴（必填） |
 | `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`、`douliu`（三個車站的實景新局；`douliu` 是決策 389 加的）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385）、`island`（任一點的新局，見 `MAP3D_AT`；決策 707） |
+| （注意） | `taipei`、`kaohsiung`、`taichung`、`douliu` 的土地不是真實的：`GameWorld.newGame(anchor:)` 不給土地，用空白地圖的種子城鎮（底圖、足跡、地標仍是真的）。要看 App 新局在那裡的樣子，用 `MAP3D_WORLD=island MAP3D_AT=緯度:經度`（決策 431 的「後來」） |
 | `MAP3D_AT`、`MAP3D_LAND` | 和 `MAP3D_WORLD=island` 一起用（決策 707）：`MAP3D_AT=緯度:經度` 是新局的中心；`MAP3D_LAND=towns` 不讀真實土地（空白地圖的城鎮，機場截圖場景改之前的樣子，邊長兩倍）、`empty` 沒有土地（那些場景現在的樣子）、不設就是 App 新局讀的真實人口與分區 |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
 | `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）與機場場面（`taiwan_airfields.json`，決策 699）；不設就是改之前的畫法 |

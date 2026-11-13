@@ -365,6 +365,51 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [station])
     }
 
+    /// Kaohsiung Main Station clears the ground under its canopy, halls and
+    /// towers, not the whole rectangle round its arms (672 m by 340 m,
+    /// 66 cells, which left the blocks between the arms with no building,
+    /// real or the game's own).
+    func testKaohsiungMainStationLeavesTheBlocksBetweenItsArms() throws {
+        let station = Map3DTaipeiLandmark.kaohsiungMainStation
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: station.latitude, longitudeDegrees: station.longitude)!)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        var builder = builder(world)
+        let cleared = try XCTUnwrap(builder.addTaipeiLandmarks(frame: frame)[station])
+        let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
+        let whole = builder.cells(under: LandmarkMesh.corners(station.clearing, origin: middle, rotation: station.rotation))
+        XCTAssertTrue(cleared.isSubset(of: whole))
+        XCTAssertLessThan(cleared.count * 3, whole.count * 2, "\(cleared.count) of \(whole.count) cells")
+        // Nothing of the model stands on ground left to the city.
+        let model = station.model(full: true).placed(origin: middle, ground: 0, rotation: station.rotation)
+        XCTAssertTrue(model.vertices.allSatisfy { cleared.contains(builder.chunk(of: Map3DPoint($0.x, 0, $0.z))) })
+        // Under the east arm, cleared; the block north of it, the city's.
+        XCTAssertTrue(cleared.contains(builder.chunk(of: middle + Map3DPoint(250, 0, 10))))
+        XCTAssertFalse(cleared.contains(builder.chunk(of: middle + Map3DPoint(250, 0, -150))))
+        XCTAssertFalse(cleared.contains(builder.chunk(of: middle + Map3DPoint(-250, 0, 150))))
+        // The others keep their whole clearing: Taipei Main Station's.
+        let taipei = GameWorld.newGame(anchor: anchor)
+        let taipeiFrame = try XCTUnwrap(RealWorldFrame(world: taipei))
+        var other = self.builder(taipei)
+        let place = taipeiFrame.worldPosition(latitude: Map3DTaipeiLandmark.taipeiMainStation.latitude,
+                                              longitude: Map3DTaipeiLandmark.taipeiMainStation.longitude)
+        let corners = LandmarkMesh.corners(Map3DTaipeiLandmark.taipeiMainStation.clearing, origin: other.point(x: place.x, y: place.y, height: 0),
+                                           rotation: Map3DTaipeiLandmark.taipeiMainStation.rotation)
+        XCTAssertEqual(other.addTaipeiLandmarks(frame: taipeiFrame)[.taipeiMainStation], other.cells(under: corners))
+    }
+
+    /// A triangle and a square across the ground: apart only when a side
+    /// of either parts them.
+    func testATriangleReachesASquare() {
+        typealias B = Map3DScene.Builder
+        let box: (minX: Float, minZ: Float, maxX: Float, maxZ: Float) = (0, 0, 64, 64)
+        XCTAssertTrue(B.triangle([(10, 10), (20, 10), (10, 20)], reaches: box))                // inside it
+        XCTAssertTrue(B.triangle([(-100, -100), (300, -100), (-100, 300)], reaches: box))      // round it
+        XCTAssertTrue(B.triangle([(-10, 32), (32, -10), (-10, -10)], reaches: box))            // across a corner
+        XCTAssertFalse(B.triangle([(70, 0), (90, 0), (70, 20)], reaches: box))                 // beside it
+        // Its span reaches the square's corner, its long side does not.
+        XCTAssertFalse(B.triangle([(-40, 60), (60, -40), (-40, -40)], reaches: (40, 40, 64, 64)))
+    }
+
     /// Decision 548: Kaohsiung 85 Sky Tower's podium (OSM way 34170948),
     /// twin wings flanking the central portal opening (ways 344740871 &
     /// 344740872), bridging central tower (way 344740874), pyramidal crown
