@@ -115,7 +115,10 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         case .realWorldGameInTaiwan: launcher.startNewGame(at: Self.taipei)
         case .realWorldGameAbroad: await launcher.openRealWorldGame(at: Self.tokyo)?.value
         case .wholeTaiwan: launcher.startWholeTaiwan()
-        case .overseasMap: XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
+        case .overseasMap:
+            // Decision 712, later: its flights opened first.
+            launcher.rememberAirRoutes([.hongKong])
+            XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
         case .challenge(let challenge): await launcher.startChallenge(challenge)?.value
         case .weeklyChallenge: launcher.startWeeklyChallenge(at: Date(timeIntervalSince1970: 1_792_000_000))
         case .demo: launcher.openDemo()

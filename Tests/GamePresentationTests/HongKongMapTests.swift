@@ -88,6 +88,9 @@ final class HongKongMapTests: XCTestCase {
             RealWorldData.load(overseas: [.hongKong], pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         }.value
         let ground = try XCTUnwrap(launcher.overseasGrounds.first)
+        // Decision 712, later: its flights open it (`AirRoutesTests`).
+        XCTAssertFalse(launcher.startOverseasMap(.hongKong))
+        launcher.rememberAirRoutes([.hongKong])
         XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
         let session = try XCTUnwrap(launcher.session)
         XCTAssertTrue(ground.holds(session.world))
@@ -176,6 +179,20 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertFalse(RealBranchLine.urbanLines.contains { rail in
             RealBranchLine(network: rail.network, english: rail.english, chinese: rail.chinese, stops: [], system: rail.system).standsOnItsOwnPoints
         })
+    }
+
+    /// Decision 712, later: the Airport Express's station at the airport
+    /// is the airport's station, so its passengers ride the line.
+    func testTheAirportExpressServesTheAirport() throws {
+        let session = try hongKong()
+        XCTAssertNil(session.world.airportDays().first?.station)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "hkmtr:AEL" })
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let day = try XCTUnwrap(session.world.airportDays().first)
+        XCTAssertEqual(day.airport.name, "香港國際機場")
+        let station = try XCTUnwrap(session.world.station(id: try XCTUnwrap(day.station)))
+        XCTAssertEqual(station.name, "機場")
+        XCTAssertGreaterThan(day.ridersAtMost, 0)
     }
 
     /// The Airport Express and the Tung Chung Line are drawn along one

@@ -3188,6 +3188,107 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-picker", app)
     }
 
+    /// Decision 712: Hong Kong's row in the map picker, closed (what opens
+    /// it) and open (in the demo mode, which has every city open); the
+    /// airport's row that says how far yesterday was; and the status line
+    /// when the flights open. The cities are read by `-open-overseas`
+    /// while ``OverseasMaps/open`` is still empty.
+    func testAirRouteUnlock() {
+        // Six launches, the first some 100 seconds on CI.
+        executionTimeAllowance = 1_500
+        func picker(_ name: String, extra: [String], english: Bool) {
+            let app = launch(extra: ["-open-overseas"] + extra, english: english)
+            defer { app.terminate() }
+            let newGame = app.buttons["start.newGame"]
+            XCTAssertTrue(newGame.appears(within: 10))
+            app.bringStartButtonIntoView(newGame)
+            newGame.tap()
+            tapButton("newGame.realWorld", in: app, timeout: 60)
+            XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+            // The whole of Taiwan's row is enabled once the app's data is
+            // read, and Hong Kong's row is listed from then.
+            let read = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: app.buttons["realWorld.wholeTaiwan"])
+            XCTAssertEqual(XCTWaiter.wait(for: [read], timeout: 180), .completed, "The app's data is read")
+            // The list makes a row only near the screen, and the whole of
+            // Taiwan's row ends under its foot: the list is dragged up a
+            // little at a time until Hong Kong's row is whole on screen
+            // (it is there once its map is read).
+            let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
+            for _ in 0..<12 where !(row.exists && row.frame.maxY <= app.frame.maxY - 12) {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.45)),
+                           withVelocity: .slow, thenHoldForDuration: 0.3)
+                settle(seconds: 1)
+            }
+            XCTAssertTrue(row.exists, "Hong Kong's row shows once its map is read")
+            settle()
+            keep(name, app)
+        }
+        for english in [false, true] {
+            let suffix = english ? "-english" : ""
+            picker("air-route-picker-closed\(suffix)", extra: [], english: english)
+            // In a game: the status line as the flights open, then the
+            // airports' rows, Taichung's saying its flights are open.
+            let app = launch(extra: ["-open-overseas", "-screenshot-scene", "airport", "-screenshot-air-routes", "opened"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 1)
+            keep("air-route-opened-notice\(suffix)", app)
+            openAirports(in: app, english: english)
+            keep("air-route-airport-open\(suffix)", app)
+            app.terminate()
+        }
+        picker("air-route-picker-open", extra: ["-demoMode.on", "YES"], english: false)
+        // An airport's row before its flights open: yesterday of 500.
+        let app = launch(extra: ["-open-overseas", "-screenshot-scene", "airport", "-screenshot-air-routes", "offered"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        openAirports(in: app)
+        keep("air-route-airport-progress", app)
+    }
+
+    /// Opens the sights from the menu and drags the list up, a little at a
+    /// time, until the first airport's row that names Hong Kong (the
+    /// scene's Taichung) is whole on screen. `swipeUp()` went past the
+    /// airports to the first sight (run 43369272845), so the picture is
+    /// refused unless that row is on screen.
+    private func openAirports(in app: XCUIApplication, english: Bool = false) {
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        if !app.buttons["menu.tourism"].appears(within: 5) {
+            app.buttons["menu.more"].tap()
+        }
+        app.buttons["menu.tourism"].tap()
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+        XCTAssertTrue(app.descendants(matching: .any)["tourism.airport.1"].firstMatch.appears(within: 10), "The airports are listed")
+        // The row says Hong Kong once the app's data is read and the scene
+        // is told of the flights.
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'tourism.airport.' AND label CONTAINS %@", english ? "Hong Kong" : "香港"))
+            .firstMatch
+        // The sheet's title bar covers the list's first 36 points on a
+        // phone on its side (run 43376989911: the row was whole at 45).
+        let top = app.frame.minY + 36
+        func whole() -> Bool {
+            row.exists && row.frame.minY >= top && row.frame.maxY <= app.frame.maxY - 12
+        }
+        for step in 0..<60 where !whole() {
+            // Nothing to drag towards until the row is there.
+            if !row.exists, step < 30 {
+                settle(seconds: 6)
+                continue
+            }
+            if row.exists, row.frame.minY < top + 20 { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(whole(), "The airport's row that names Hong Kong is whole on screen")
+        settle(seconds: 1)
+    }
+
     /// Decision 468, later: a trace along the Liujia Line on Hsinchu's
     /// real-world map says the line can be bought as it is, for how much,
     /// and its button opens the purchase card. The trace is drawn by the
