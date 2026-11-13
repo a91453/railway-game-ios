@@ -1094,7 +1094,11 @@ final class Map3DChunkStreamer {
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
         guard var window, let source else { return }
-        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance)
+        // Decision 714: what the camera sees is built too, while the
+        // scene's buffers are within what this device holds.
+        let room = (view?.heldBytes ?? 0) <= Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier)
+        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance,
+                                        seeing: camera, room: room)
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
@@ -1117,7 +1121,9 @@ final class Map3DChunkStreamer {
     /// at than it sees (its distance), the scene's own too.
     func shed() {
         guard var window, let view else { return }
-        let drop = window.shed(farFrom: view.camera.target, radius: view.camera.distance)
+        // Decision 714: as far as the window builds for the camera, so
+        // what is let go is not built again at once.
+        let drop = window.shed(farFrom: view.camera.target, radius: Map3DStreaming.sight(of: view.camera))
         self.window = window
         if !drop.isEmpty { view.remove(drop) }
     }
@@ -1787,6 +1793,8 @@ private struct Map3DView: UIViewRepresentable {
             Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
         }
         context.coordinator.streamer.start(built, kept: kept, inPart: inPart)
+        // Decision 714: the camera's target stays over the map.
+        view.ground = Map3DStreaming(scene: scene, map: WorldRegion(bounds: world.bounds)).ground
         showTrains(in: scene, on: view, context: context)
         let feed = feed, labels = trainLabels, tag = stationTag, marks = airportMarks
         marks.set(world.airports.map { airport in

@@ -171,6 +171,54 @@ public struct Map3DStreaming: Sendable {
         return square.maxX > map.minX && square.minX < map.maxX && square.maxY > map.minY && square.minY < map.maxY
     }
 
+    // MARK: - What the camera sees (decision 714)
+
+    /// Decision 714 (MAP3D-FAR): how far from its target `camera`'s view
+    /// is built and kept, in metres, seen from above: a little past its
+    /// distance, which holds the corners of a phone held sideways looking
+    /// straight down (1.07 times). Leaning, the view runs on to the
+    /// horizon; no further than this is built for it.
+    public static func sight(of camera: Map3DCamera) -> Float { camera.distance * 1.1 }
+
+    /// Decision 714: how far above and below the camera's target the
+    /// ground of a chunk not built yet is taken to lie, in metres.
+    static let relief: Float = 600
+
+    /// Decision 714: the chunks on the map whose ground `camera` sees
+    /// within ``sight(of:)`` of its target, the nearest first; with
+    /// `slack`, those it would see were their squares that much wider
+    /// each way (metres). None while the view sees no further than the
+    /// window keeps round its target anyway (``around``).
+    public func seen(by camera: Map3DCamera, slack: Float = 0) -> [Key] {
+        let reach = Self.sight(of: camera)
+        guard reach > Self.around else { return [] }
+        let target = camera.target, matrix = camera.viewProjection, side = Map3DScene.chunkSize
+        let low = key(of: Map3DPoint(target.x - reach - slack, 0, target.z - reach - slack))
+        let high = key(of: Map3DPoint(target.x + reach + slack, 0, target.z + reach + slack))
+        var keys: [(key: Key, distance: Float)] = []
+        for row in low.row...high.row {
+            for column in low.column...high.column {
+                let key = Key(column: column, row: row)
+                let distance = Self.distance(of: key, to: target)
+                guard distance <= reach + slack, isOnMap(key) else { continue }
+                let x = Float(column) * side, z = Float(row) * side
+                if Map3DCamera.sees(minimum: Map3DPoint(x - slack, target.y - Self.relief, z - slack),
+                                    maximum: Map3DPoint(x + side + slack, target.y + Self.relief, z + side + slack), through: matrix) {
+                    keys.append((key, distance))
+                }
+            }
+        }
+        return keys.sorted { ($0.distance, $0.key) < ($1.distance, $1.key) }.map(\.key)
+    }
+
+    /// Decision 714: the map from above in the scene's metres (x east, z
+    /// south of its origin): where the camera's target may be
+    /// (``Map3DCamera/held(over:)``).
+    public var ground: (x: ClosedRange<Float>, z: ClosedRange<Float>) {
+        (Float((map.minX - originX) / Self.metre)...Float((map.maxX - originX) / Self.metre),
+         Float((map.minY - originY) / Self.metre)...Float((map.maxY - originY) / Self.metre))
+    }
+
     // MARK: - Planning
 
     /// How soon chunk `key` is wanted with the camera's target at `target`
@@ -333,15 +381,28 @@ public struct Map3DStreaming: Sendable {
         /// Decision 711: `sight` is how far from the target the camera
         /// sees, in metres (its distance): the scene's chunks let go
         /// (``gone``) within it are built again, after everything else.
+        ///
+        /// Decision 714 (MAP3D-FAR): with `camera`, the chunks it sees
+        /// (``Map3DStreaming/seen(by:slack:)``) are built too, the nearest
+        /// first, once nothing the target's own plan wants is missing, and
+        /// kept while it sees them (a little past, ``Map3DStreaming/slack``):
+        /// pulled out, the view sees several times further than
+        /// ``Map3DStreaming/around``, and showed the scene it opened on as
+        /// a strip of ground in the middle of nothing. Without `room` (the
+        /// scene's buffers are over what the device holds, decision 711)
+        /// none of them is built, and those standing are kept.
         public mutating func step(target: Map3DPoint, at seconds: Double, stops: [Map3DPoint] = [],
-                                  ahead: SIMD2<Float>? = nil, sight: Float = 0) -> (drop: [Key], build: [Key]) {
+                                  ahead: SIMD2<Float>? = nil, sight: Float = 0,
+                                  seeing camera: Map3DCamera? = nil, room: Bool = true) -> (drop: [Key], build: [Key]) {
             motion.update(target: target, at: seconds)
             if let planned, seconds - planned < Map3DStreaming.interval { return ([], []) }
             planned = seconds
             let velocity = Self.velocity(motion: motion.velocity, ahead: ahead)
             guard (velocity.x * velocity.x + velocity.y * velocity.y).squareRoot() <= Map3DStreaming.fastest else { return ([], []) }
             let plan = grid.plan(target: target, velocity: velocity, built: built, building: Set(building), keeping: stops)
-            let drop = plan.drop.filter { !scene.contains($0) }
+            // Decision 714: what the camera sees is kept.
+            let inSight = camera.map { Set(grid.seen(by: $0, slack: Map3DStreaming.slack)) } ?? []
+            let drop = plan.drop.filter { !scene.contains($0) && !inSight.contains($0) }
             built.subtract(drop)
             stale.subtract(drop)
             coarse.subtract(drop)
@@ -358,6 +419,10 @@ public struct Map3DStreaming: Sendable {
                 let missing = stopKeys.filter { !building.contains($0.key) && (!built.contains($0.key) || coarse.contains($0.key)) }
                 block = Map3DStreaming.block(of: missing.map(\.key))
                 if let first = block.first, let stop = missing.first(where: { $0.key == first })?.stop { around = stop }
+            }
+            if block.isEmpty, room, let camera {
+                // Decision 714: what the camera sees and is not there.
+                block = Map3DStreaming.block(of: grid.seen(by: camera).filter { !built.contains($0) })
             }
             if block.isEmpty {
                 // Decision 368: nothing missing: the coarse chunks near the
