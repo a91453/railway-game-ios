@@ -4855,9 +4855,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The lists run under the screen's edges, where a drag does not
         // scroll them: drag down the rows' own left padding, clear of the
         // steppers and the slider.
-        func column(_ list: XCUIElement) -> CGFloat {
-            (app.staticTexts["termLoan.credit"].firstMatch.frame.minX - form.frame.minX) + list.frame.minX + 6
-        }
+        // (Measured now: in one list the row it is measured from scrolls
+        // away.)
+        let inset = app.staticTexts["termLoan.credit"].firstMatch.frame.minX - form.frame.minX + 6
+        func column(_ list: XCUIElement) -> CGFloat { list.frame.minX + inset }
         settle(seconds: 1)
         keep("term-loans-open-\(suffix)", app)
         // The contracts: the largest cannot be paid back today (signing
@@ -4870,7 +4871,23 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("term-loans-short-\(suffix)", app)
         // A term of two years, then the bank's quote for it.
         let years = app.steppers["termLoan.years"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(years, in: form, below: top, at: column(form), clearOf: .button), "The term's stepper")
+        // In one list the form is far above the contracts and its rows are
+        // not made while off the screen: back up to it. At the largest
+        // text sizes the stepper in view takes the tap below, yet does not
+        // answer as hittable, so its place is what is asked.
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func inView(_ element: XCUIElement) -> Bool {
+            element.exists && element.frame.minY >= top + 8 && element.frame.maxY <= form.frame.maxY - 8
+        }
+        for _ in 0..<60 where !inView(years) {
+            let area = form.frame, x = column(form)
+            let up = years.exists && years.frame.maxY > area.maxY - 8
+            origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * (up ? 0.75 : 0.45)))
+                .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * (up ? 0.55 : 0.65))),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(inView(years), "The term's stepper")
         years.buttons.element(boundBy: 1).tap()
         let sign = app.buttons["termLoan.sign"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(sign, in: form, below: top, at: column(form), clearOf: .button), "The button that asks to sign")
