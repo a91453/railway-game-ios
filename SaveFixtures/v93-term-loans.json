@@ -1,0 +1,113 @@
+{
+  "saveVersion" : 93,
+  "world" : {
+    "accounts" : {
+      "capitalDays" : [
+        {
+          "borrowed" : 300000000,
+          "day" : 0
+        },
+        {
+          "borrowed" : 90000000,
+          "day" : 360
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "nextTermLoanID" : 3,
+      "openedAt" : 31104000,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      },
+      "termLoans" : [
+        {
+          "borrowedDay" : 0,
+          "id" : 1,
+          "interest" : 30600000,
+          "principal" : 300000000,
+          "rate" : 510,
+          "years" : 2
+        },
+        {
+          "borrowedDay" : 360,
+          "id" : 2,
+          "interest" : 56700000,
+          "principal" : 90000000,
+          "rate" : 630,
+          "years" : 10
+        }
+      ],
+      "years" : [
+        {
+          "closing" : {
+            "cash" : 2300000000,
+            "loan" : 0,
+            "rollingStock" : {
+              "cost" : 0,
+              "depreciation" : 0
+            },
+            "stations" : {
+              "cost" : 0,
+              "depreciation" : 0
+            },
+            "termLoans" : 300000000,
+            "track" : {
+              "cost" : 0,
+              "depreciation" : 0
+            }
+          },
+          "income" : {
+            "capitalSpending" : 0,
+            "depreciationCost" : 0,
+            "energyCost" : 0,
+            "fareRevenue" : 0,
+            "index" : 0,
+            "interestCost" : 0,
+            "loanBorrowed" : 300000000,
+            "loanRepaid" : 0,
+            "maintenanceCost" : 0,
+            "operatingCost" : 0,
+            "staffCost" : 0,
+            "writeOffCost" : 0
+          },
+          "year" : 0
+        }
+      ]
+    },
+    "bounds" : {
+      "height" : 4096,
+      "width" : 8192
+    },
+    "clock" : {
+      "now" : 31104060,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 2390000000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "nextStationID" : 1,
+    "nextTrainID" : 1,
+    "stations" : [
+
+    ],
+    "trains" : [
+
+    ]
+  }
+}

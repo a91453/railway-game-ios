@@ -1343,6 +1343,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidLoanAmount)
         case "loanNeedsManagement":
             self = .rejected(.loanNeedsManagement)
+        case "invalidTermLoan":
+            self = .rejected(.invalidTermLoan)
         case "invalidLand":
             self = .rejected(.invalidLand)
         case "stationDemandFromLand":
@@ -1594,6 +1596,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidLoanAmount", forKey: .result)
         case .rejected(.loanNeedsManagement):
             try container.encode("loanNeedsManagement", forKey: .result)
+        case .rejected(.invalidTermLoan):
+            try container.encode("invalidTermLoan", forKey: .result)
         case .rejected(.invalidLand):
             try container.encode("invalidLand", forKey: .result)
         case .rejected(.stationDemandFromLand):

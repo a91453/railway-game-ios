@@ -190,6 +190,11 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLoanAmount
     /// Loans are a managed company's (decision 67): free play has none.
     case loanNeedsManagement
+    /// A term loan (decision 715) that is not a whole number of
+    /// ``CompanyAccounts/loanStep``s above 0, for a term the bank does not
+    /// offer, beyond what it lends now (``TermLoanCredit``), or one that
+    /// does not exist.
+    case invalidTermLoan
     /// Land with a cell outside the world, listed twice, with a negative
     /// count, more than ``Land/maximumPerCell`` residents or jobs, or no one
     /// living or working there (Phase 6a).
