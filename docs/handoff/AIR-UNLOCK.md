@@ -49,6 +49,14 @@ AIR-UNLOCK-2（session_01YGNNupFY6Z2K8uhkAqFeJF，`claude/air-unlock-2`，2026-1
 - 沒拍的：小 iPhone、iPad、淺色、最大字級。
 - 私庫官網 `credits.html`：`a91453/railway-reference-private` #136（draft），發版後由作者合；沒在瀏覽器看過。
 
+### AIR-UNLOCK-3 接手後（2026-11-13，session_01YGNNuo2hA5L2KmEkZy3WWj）
+
+- **工作登記 #1579 滿 2,500 則，GitHub 不再收留言**（403）；這個 session 的登記與回報都貼不上去，也無法 `send_message` 給規劃（不同頻道）。回報寫在兩張 PR 的留言裡。要規劃開「工作登記（四）」。
+- #2111：機場那一列沒拍到是 `row.swipeUp()` 一下滑過頭（機場那一段跑到畫面上方，停在第一個景點「老街」）。`openAirports(in:english:)` 改成一小步一小步拖到「寫著香港的那一列機場」整列在畫面內，不在就讓測試紅。重拍的 run 與結果見 #2111 的留言。
+- #2115：3D 是空的原因與修法在決策 712「續三」：3D 的地面全讀底圖圖磚，App 只有台灣的；地圖包現在自帶 `basemap.pmtiles`（`tools/hk-map/build_hk_basemap.py`），3D 的地面、土地的真實道路與 2D 地圖都讀它。Linux 的 `HongKongBaseMapTests` 與 WebGL 預覽（`docs/art/hong-kong-3d-ground-2026-11-13/overview.png`）看過；模擬器的截圖見 #2115 的留言。
+- `testHongKongMap` 現在先按示範模式的「鋪好這一帶的真實路線」再開 3D，拍遠、中、近三張。
+- 還沒有的（決策 712「續三」列了）：香港的建物足跡、高度、規則用的水域、地名網格。官網 `credits.html`（私庫 #136）要加「香港的地圖」一筆（`hongKongMap`）。
+
 ### 香港地圖本身還有的毛病（重現方法都是 `swift test --skip-build --filter HongKongMapTests`）
 
 - **機場快綫與東涌綫只能買一條**（共用 28 km 的軌道）；已擁有一條時另一條馬上拒絕並說明。真正的做法在決策 712。
