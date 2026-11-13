@@ -267,7 +267,11 @@ public struct Map3DStreaming: Sendable {
         public let grid: Map3DStreaming
         /// The scene's own whole chunks: never let go, so the view it
         /// opened on (the whole scene, from far out) stays.
-        public let scene: Set<Key>
+        public private(set) var scene: Set<Key>
+        /// Decision 711: the scene's chunks let go when memory ran short
+        /// (``shed(farFrom:radius:)``): built again, and the scene's
+        /// again, when the camera sees that far.
+        public private(set) var gone: Set<Key> = []
         /// The chunks built whole, in the scene or since.
         public private(set) var built: Set<Key>
         /// Of them, those kept from before the scene was built anew,
@@ -325,8 +329,12 @@ public struct Map3DStreaming: Sendable {
         /// not the way the target moved: a cabin's rope ahead is built
         /// while the window view looks out at the side, while it crawls
         /// through a station and while the game stands still.
+        ///
+        /// Decision 711: `sight` is how far from the target the camera
+        /// sees, in metres (its distance): the scene's chunks let go
+        /// (``gone``) within it are built again, after everything else.
         public mutating func step(target: Map3DPoint, at seconds: Double, stops: [Map3DPoint] = [],
-                                  ahead: SIMD2<Float>? = nil) -> (drop: [Key], build: [Key]) {
+                                  ahead: SIMD2<Float>? = nil, sight: Float = 0) -> (drop: [Key], build: [Key]) {
             motion.update(target: target, at: seconds)
             if let planned, seconds - planned < Map3DStreaming.interval { return ([], []) }
             planned = seconds
@@ -369,9 +377,41 @@ public struct Map3DStreaming: Sendable {
                     .filter { Map3DStreaming.distance(of: $0, to: target) > Map3DScene.detailRadius + Map3DStreaming.slack }
                 block = Map3DStreaming.block(of: nearest(far))
             }
+            if block.isEmpty, !gone.isEmpty {
+                // Decision 711: the scene's chunks let go, where the camera
+                // now sees.
+                block = Map3DStreaming.block(of: nearest(gone.filter { !built.contains($0) && Map3DStreaming.distance(of: $0, to: target) <= sight }))
+            }
             building = block
             if !block.isEmpty { buildingAround = around }
             return (drop, block)
+        }
+
+        /// Decision 711 (MAP3D-CAP): memory runs short, or the scene's
+        /// buffers are over their budget: every chunk built farther than
+        /// `radius` metres from `target` (no nearer than
+        /// ``Map3DStreaming/around``, which the plan keeps) is let go, the
+        /// scene's own too, the farthest first. They are built again only
+        /// if the camera's target comes near them.
+        public mutating func shed(farFrom target: Map3DPoint, radius: Float) -> [Key] {
+            let reach = max(radius, Map3DStreaming.around)
+            let far = built.subtracting(building).map { (key: $0, distance: Map3DStreaming.distance(of: $0, to: target)) }
+                .filter { $0.distance > reach }.sorted { ($0.distance, $0.key) > ($1.distance, $1.key) }.map(\.key)
+            letGo(far)
+            return far
+        }
+
+        /// Decision 711: `keys` are no longer held (let go by
+        /// ``shed(farFrom:radius:)`` of the window before this one, of a
+        /// scene built again only in part): not built, nor the scene's
+        /// until built again (``gone``).
+        public mutating func letGo(_ keys: some Sequence<Key>) {
+            let left = Set(keys).subtracting(building)
+            gone.formUnion(left.intersection(scene))
+            built.subtract(left)
+            stale.subtract(left)
+            coarse.subtract(left)
+            scene.subtract(left)
         }
 
         /// Decision 583: the velocity the plan reads: `ahead`'s way, as fast
@@ -405,6 +445,9 @@ public struct Map3DStreaming: Sendable {
             building = []
             built.formUnion(keys)
             stale.subtract(keys)
+            // Decision 711: the scene's chunks let go are the scene's again.
+            scene.formUnion(gone.intersection(keys))
+            gone.subtract(keys)
             for key in keys {
                 if Map3DStreaming.distance(of: key, to: buildingAround) > Map3DScene.detailRadius { coarse.insert(key) } else { coarse.remove(key) }
             }
