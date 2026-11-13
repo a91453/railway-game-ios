@@ -170,7 +170,11 @@ func runCampaign(
             // TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): every campaign
             // also checks the track holders
             // changed in place against the holders worked out again.
-            try GameWorld.$holderAudit.withValue(GameWorld.HolderAudit()) { try body(&testCase) }
+            // TICK-2 (`docs/research/TICK_2_2026-11-13.md`): and every
+            // lookup of the meets' index against a scan of every point.
+            try GameWorld.$holderAudit.withValue(GameWorld.HolderAudit()) {
+                try GameWorld.$trafficMeetAudit.withValue(GameWorld.TrafficMeetAudit()) { try body(&testCase) }
+            }
             ran += 1
             if log.failures > failuresBefore {
                 log.failingCases += 1

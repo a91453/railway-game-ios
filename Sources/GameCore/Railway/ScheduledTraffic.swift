@@ -433,6 +433,9 @@ extension GameWorld {
     /// anchor (趕它開) makes the other train wait for our actual arrival;
     /// it cannot make a service leave before its timetable (decision 20).
     func inferTrafficMeets(_ plan: inout TrafficPlan, only id: TrainID? = nil) {
+        // Anchoring moves the times, never the stations or calls, so the
+        // index holds for the whole pass.
+        let meets = TrafficMeetIndex(plan)
         for index in plan.services.indices where id == nil || plan.services[index].train.id == id {
             // sections[tracks === 1], derived from the graph: asked only of
             // a point another service calls at, and once, since it walks the
@@ -444,11 +447,13 @@ extension GameWorld {
                 var candidates: [(point: Int, peer: Int, peerPoint: Int, time: Int64, shift: Int64, clearance: Int64)] = []
                 for j in 0..<(x.points.count - 1) {
                     let p = x.points[j], next = x.points[j + 1]
-                    for peer in plan.services.indices where peer != index {
+                    // TICK-2: only the points calling at this station that
+                    // came from our next one, in service and point order.
+                    for found in meets.arriving(plan, at: p.station, from: next.station) where found.service != index {
+                        let peer = found.service, k = found.point
                         let y = plan.services[peer]
-                        for k in 1..<y.points.count {
-                            let q = y.points[k], previous = y.points[k - 1]
-                            guard q.station == p.station, previous.station == next.station, q.calls else { continue }
+                        do {
+                            let q = y.points[k]
                             let dwell = q.departure - q.arrival
                             let terminal = k == 0 || k == y.points.count - 1
                             guard terminal || dwell >= 30 else { continue }
@@ -491,21 +496,109 @@ extension GameWorld {
         inferTrafficDepartureMeets(&plan, only: id)
     }
 
+    /// TICK-2 (`docs/research/TICK_2_2026-11-13.md`): the points of a
+    /// plan's services that call, by their station and the station of the
+    /// point before (``arriving(_:at:from:)``) or after
+    /// (``leaving(_:at:toward:)``) them, each list in service then point
+    /// order, the order the meets once scanned every point of every other
+    /// service in. Only stations and calls are read, which anchoring never
+    /// moves, so one index holds for a whole pass. Derived, never saved.
+    struct TrafficMeetIndex {
+        struct Key: Hashable {
+            var station: StationID
+            var neighbour: StationID
+        }
+        struct Found: Hashable {
+            var service: Int
+            var point: Int
+        }
+        /// Points 1 onward that call, by (station, previous point's station).
+        private var arrivals: [Key: [Found]] = [:]
+        /// Points 1 to the last but one that call, by (station, next
+        /// point's station).
+        private var departures: [Key: [Found]] = [:]
+
+        init(_ plan: TrafficPlan) {
+            for (service, s) in plan.services.enumerated() where s.points.count >= 2 {
+                for k in 1..<s.points.count where s.points[k].calls {
+                    arrivals[Key(station: s.points[k].station, neighbour: s.points[k - 1].station), default: []]
+                        .append(Found(service: service, point: k))
+                    if k < s.points.count - 1 {
+                        departures[Key(station: s.points[k].station, neighbour: s.points[k + 1].station), default: []]
+                            .append(Found(service: service, point: k))
+                    }
+                }
+            }
+        }
+
+        /// The points calling at `station` whose previous point is at
+        /// `from`: those ``GameWorld/inferTrafficMeets(_:only:)`` meets.
+        func arriving(_ plan: TrafficPlan, at station: StationID, from: StationID) -> [Found] {
+            let found = arrivals[Key(station: station, neighbour: from)] ?? []
+            if let audit = GameWorld.trafficMeetAudit {
+                audit.lookups += 1
+                var scanned: [Found] = []
+                for (service, y) in plan.services.enumerated() where y.points.count >= 2 {
+                    for k in 1..<y.points.count where y.points[k].station == station && y.points[k - 1].station == from && y.points[k].calls {
+                        scanned.append(Found(service: service, point: k))
+                    }
+                }
+                precondition(found == scanned, "the indexed arriving points are not the points the scan finds")
+            }
+            return found
+        }
+
+        /// The points calling at `station`, neither a service's first nor
+        /// its last, whose next point is at `toward`: those
+        /// ``GameWorld/inferTrafficDepartureMeets(_:only:)`` binds.
+        func leaving(_ plan: TrafficPlan, at station: StationID, toward: StationID) -> [Found] {
+            let found = departures[Key(station: station, neighbour: toward)] ?? []
+            if let audit = GameWorld.trafficMeetAudit {
+                audit.lookups += 1
+                var scanned: [Found] = []
+                for (service, y) in plan.services.enumerated() where y.points.count >= 3 {
+                    for k in 1..<(y.points.count - 1) where y.points[k].station == station && y.points[k + 1].station == toward && y.points[k].calls {
+                        scanned.append(Found(service: service, point: k))
+                    }
+                }
+                precondition(found == scanned, "the indexed leaving points are not the points the scan finds")
+            }
+            return found
+        }
+    }
+
+    /// Tests only (TICK-2, `docs/research/TICK_2_2026-11-13.md`): counts
+    /// the lookups of ``TrafficMeetIndex`` and has every one checked
+    /// against a scan of every point of every service. `nil` in the game.
+    final class TrafficMeetAudit: @unchecked Sendable {
+        var lookups = 0
+    }
+
+    @TaskLocal static var trafficMeetAudit: TrafficMeetAudit?
+
     /// inferMeetRun's hiMeet / 交會(趕它開) constraint. The sampling
     /// reference advances the passing train's profile; an authoritative
     /// game cannot promise an early arrival. Bind the opposing departure
     /// to that train's actual passage instead (decision 59).
     func inferTrafficDepartureMeets(_ plan: inout TrafficPlan, only id: TrainID?) {
+        let meets = TrafficMeetIndex(plan)
         for x in plan.services where id == nil || x.train.id == id {
             for j in 1..<x.points.count where !x.points[j].calls {
                 let p = x.points[j], previous = x.points[j - 1]
-                for y in plan.services.indices where plan.services[y].train.id != x.train.id {
-                    let peer = plan.services[y]
+                // TICK-2: only the points calling at this station that go on
+                // to our previous one, in service and point order. A peer is
+                // read once for each point of ours, before any of its points
+                // is anchored, as the scan read it.
+                var peer = x, loaded = -1
+                for found in meets.leaving(plan, at: p.station, toward: previous.station)
+                where plan.services[found.service].train.id != x.train.id {
+                    let y = found.service, k = found.point
+                    if y != loaded { peer = plan.services[y]; loaded = y }
                     guard peer.train.execution != nil else { continue }
-                    for k in 1..<(peer.points.count - 1) {
-                        let q = peer.points[k], next = peer.points[k + 1]
+                    do {
+                        let q = peer.points[k]
                         let dwell = q.departure - q.arrival
-                        guard q.calls, q.station == p.station, next.station == previous.station, dwell >= 30,
+                        guard dwell >= 30,
                               trafficHasSiding(at: q, train: peer.train, known: &plan.hasSiding),
                               min(Self.trafficDifference(p.arrival, q.arrival), Self.trafficDifference(p.arrival, q.departure)) <= 1800 else { continue }
                         let margin = min(30, dwell / 3)
