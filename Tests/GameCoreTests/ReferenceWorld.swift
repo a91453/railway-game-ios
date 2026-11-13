@@ -140,6 +140,8 @@ struct ReferenceWorld: Equatable {
     var nextNetworkEdge = 1
     /// Decision 32: traffic control.
     var trafficControl = false
+    /// Decision 718: off only in a copy asked what the track alone allows.
+    var takesTurns = true
     /// Decision 34: the stations' demand, queues and counts.
     var passengers = ReferencePassengers()
     /// Decision 36: the company's accounts.

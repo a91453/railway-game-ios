@@ -12,6 +12,7 @@
 - `RouteReservation.swift`：`reservingDeparture` 包一層（原內容改名 `takingDeparture`）；`awaitedRoute` 讓人的列車回報等的是先走的那一班。
 - `GameWorld.swift`：`departService` 的計畫進路與偏好進路補問一次；`secondsUntilARouteFrees` 同步。
 - `Deadlock.swift`：`waitingRoute` 只問軌道（不然計畫交會與輪流互相遞迴）。
+- `Tests/GameCoreTests/ReferenceFairSingleTrack.swift`（新）、`ReferenceNetworkService.swift`、`ReferenceTrafficControl.swift`、`ReferenceWorld.swift`：測試的參考模型照決策的文字另寫一份規則；`TrafficControlPropertyTests` 逐步對照 GameCore 與它（沒補之前在 seed 0x5EEDA004 case 12 不一致）。
 - `Tests/GameCoreTests/ReservationShortcutTests.swift`：語料加上新場景的跟車狀態（replay 在新規則下幾乎沒有跟車了；決策 718 第 7 節）。
 - `Sources/GamePresentation/ServiceText.swift`：`routeWaitText` 多一句「讓 ○○ 先走／Letting ○○ go first」。沒有新畫面。
 - `Tests/GameCoreTests/FairSingleTrackTests.swift`：測試場景 `SingleTrackFan`（一段單線、兩端各幾股、每股自己一個站）與 7 個測試。
