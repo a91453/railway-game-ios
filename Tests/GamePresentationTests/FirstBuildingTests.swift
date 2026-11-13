@@ -26,9 +26,11 @@ final class FirstBuildingTests: XCTestCase {
             XCTAssertEqual(preview.cost, Money(940_492_800))
             XCTAssertEqual(session.world.economy.balance, Money(900_000_000))
             let cheaper = try XCTUnwrap(preview.cheaperSite, "\(language): no cheaper site is named")
-            XCTAssertEqual(cheaper.cost, Money(10_118_400))
+            // Decision 727: 2,304,000 more than before (256 m² × 9,000 a
+            // m²), its land raised to the mean of the town's cells round it.
+            XCTAssertEqual(cheaper.cost, Money(12_422_400))
             XCTAssertEqual(cheaper.centre, PlanPoint(x: middle.x - 3 * Land.cellLength, y: middle.y - 3 * Land.cellLength))
-            let cost = Money(940_492_800).moneyText, cash = Money(900_000_000).moneyText, cheap = Money(10_118_400).moneyText
+            let cost = Money(940_492_800).moneyText, cash = Money(900_000_000).moneyText, cheap = Money(12_422_400).moneyText
             XCTAssertEqual(session.buildingPreviewText, language.text(
                 "Not enough cash to put up this building: it costs \(cost) and you have \(cash). About 270 m north-west it costs \(cheap).",
                 "餘額不足，無法蓋這棟建物：需要 \(cost)，目前只有 \(cash)。往西北約 270 公尺只要 \(cheap)。"
@@ -40,7 +42,7 @@ final class FirstBuildingTests: XCTestCase {
             XCTAssertEqual(session.buildingPreview?.cost, cheaper.cost)
             XCTAssertTrue(session.confirmBuilding())
             XCTAssertEqual(session.world.placedBuildings.count, 1)
-            XCTAssertEqual(session.world.economy.balance, Money(900_000_000 - 10_118_400))
+            XCTAssertEqual(session.world.economy.balance, Money(900_000_000 - 12_422_400))
         }
     }
 
