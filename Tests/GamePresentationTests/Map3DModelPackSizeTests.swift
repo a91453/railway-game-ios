@@ -65,9 +65,12 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Lake cabins, near and far, in the cable car's (8 models, 101,424
         // vertices more, 4.1 MB a copy). Decision 699: the four aircraft,
         // near and far, and the four airfield vehicles, after the ferries
-        // (12 models, 54,240 vertices more, 2.2 MB a copy).
-        XCTAssertEqual(pack.models.count, 866)
-        XCTAssertEqual(vertices, 6_486_522)
+        // (12 models, 54,240 vertices more, 2.2 MB a copy). Decision 708:
+        // the coaches' seven liveries, near and far, and the coach stop,
+        // near and far, after the aircraft (16 models, 97,050 vertices
+        // more, 3.9 MB a copy).
+        XCTAssertEqual(pack.models.count, 882)
+        XCTAssertEqual(vertices, 6_583_572)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
