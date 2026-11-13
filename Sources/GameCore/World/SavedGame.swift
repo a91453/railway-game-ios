@@ -484,9 +484,16 @@
 ///     is newer than it instead. A save of any earlier version needs no
 ///     step: it has no coach stops (the app gives a real-world map its
 ///     own when it opens the save).
+/// 92. The stopping assist (decision 710): the record of the runs driven
+///     by hand can hold `"assisted"`, how many of its arrivals the
+///     stopping assist helped with, and its `"best"` is of the others
+///     only. A build that reads only an earlier version would drop the
+///     count and take the next assisted run for the best, so it says the
+///     save is newer than it instead. A save of any earlier version needs
+///     no step: no run of its record was assisted.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 91
+    public static let currentVersion = 92
 
     public let world: GameWorld
 
@@ -714,6 +721,9 @@ extension SavedGame: Codable {
         // none (decision 695): nothing to turn.
         // Version 90 or earlier to 91: a world without `"coachStops"` has
         // none (decision 706): nothing to turn.
+        // Version 91 or earlier to 92: a record of the runs driven by hand
+        // without `"assisted"` has none the stopping assist helped with
+        // (decision 710): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

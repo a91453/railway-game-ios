@@ -100,7 +100,12 @@ extension ManualDrive {
 
         /// What VoiceOver reads for the bar: "Short, 38 m to go", "On the
         /// stopping point", "Past, 1.3 m past the stopping point".
-        public func value(in language: DisplayLanguage) -> String {
+        public func value(in language: DisplayLanguage, assisting: Bool = false) -> String {
+            let value = value(of: state, in: language)
+            return assisting ? value + language.text(", stopping assist braking", "，輔助停車煞車中") : value
+        }
+
+        private func value(of state: State, in language: DisplayLanguage) -> String {
             switch state {
             case .short:
                 return language.text("Short, \(text(in: language)) to go", "未到位，還差 \(text(in: language))")
@@ -139,6 +144,10 @@ extension ManualDrive {
     public enum StopLook {
         /// How long the look from beside lasts unless the player ends it.
         public static let seconds = 8.0
+        /// How near the look stands, as a share of the view from beside's
+        /// own distance (``Map3DFollow/lookScale``): the train some six
+        /// tenths of the screen's width, clear of the result card.
+        public static let scale: Float = 0.45
 
         /// Whether a run that ended with `result` is looked at from
         /// beside: one that stopped at its stop, and not with Reduce
@@ -152,6 +161,11 @@ extension ManualDrive {
         /// (`looking`: since it stopped, until ``seconds`` have passed).
         public static func view(chosen: Map3DFollow.View, result: Result?, looking: Bool, reduceMotion: Bool) -> Map3DFollow.View {
             looking && turns(for: result, reduceMotion: reduceMotion) ? .side : chosen
+        }
+
+        /// The look's own distance while it lasts; `nil` otherwise.
+        public static func scale(result: Result?, looking: Bool, reduceMotion: Bool) -> Float? {
+            looking && turns(for: result, reduceMotion: reduceMotion) ? scale : nil
         }
 
         /// The result card's button: "Back to the cab" while a player who
@@ -200,6 +214,82 @@ extension ManualDrive {
                         height: barHeight, top: Map3DPalette.platformEdge, side: Map3DPalette.platformEdge, shaded: false)
             mesh.makeGlowing(from: lit)
         }
+    }
+}
+
+// MARK: - The stopping assist
+
+extension ManualDrive {
+    /// Decision 710: the stopping assist. On, it takes the brake over the
+    /// last stretch and stops the head on the stopping point, once the
+    /// player has brought the train down to a speed it can stop from: the
+    /// player still does the running and the slowing, the assist the last
+    /// metres. A run it helped is told so (``Result/assisted``).
+    public enum StopAssist {
+        /// Where the player's choice is kept (the app's preferences, not
+        /// the save): on unless the player turned it off.
+        public static let key = "manualDriveStopAssist"
+        public static let isOnByDefault = true
+
+        /// The assist takes the brake within the stopping bar's reach
+        /// (``StopBar/showMetres``), once stopping on the point asks for
+        /// at least this share of the timetable's braking (brake step 3
+        /// of 5: before that the player's own handle is enough, and a
+        /// train crawling from far off is left to crawl)...
+        public static let takesShare = 0.6
+        /// ...and for no more than the timetable's braking itself (step
+        /// 5): a train too fast for that is the player's to slow first.
+        public static let takesAtMostShare = 1.0
+        /// Holding the brake, it goes as hard as the hardest service
+        /// brake (step 7) when the point is nearer than it thought, and
+        /// lets the train roll while less than this share would do, so it
+        /// does not creep to a stand short of the point.
+        public static var mostShare: Double { Double(Notch.brakeSteps) / Double(ManualDrive.timetableBrakeStep) }
+        public static let rollsShare = 0.3
+        /// The brake comes on at ``ManualDrive/jerk``, so the assist aims
+        /// this many seconds of running short of the point.
+        public static let leadSeconds = 0.25
+
+        public static func title(in language: DisplayLanguage) -> String {
+            language.text("Stopping assist", "輔助停車")
+        }
+
+        /// Under the switch, and what VoiceOver adds to it.
+        public static func hint(in language: DisplayLanguage) -> String {
+            language.text("Stops you on the mark. At most half the bonus.",
+                          "最後幾公尺幫你停準；用了輔助，獎金最多一半。")
+        }
+
+        /// Beside the stopping bar while it holds the brake.
+        public static func activeText(in language: DisplayLanguage) -> String {
+            language.text("Assist", "輔助中")
+        }
+
+        /// On the result card of a run it helped.
+        public static func usedText(in language: DisplayLanguage) -> String {
+            language.text("Stopping assist helped", "用了輔助停車")
+        }
+    }
+
+    /// What the stopping assist asks for now, m/s² (negative: braking),
+    /// or `nil` while the handle is the player's: off, the power on or the
+    /// emergency brake, standing, past the point, farther than the
+    /// stopping bar reaches, too fast for the timetable's braking to stop
+    /// on the point, or (until it has taken the brake) still slow enough
+    /// that less than ``StopAssist/takesShare`` of the timetable's braking
+    /// would do.
+    func assistAsked() -> Double? {
+        guard assists, !isOver, notch.step <= 0, !notch.isEmergency, speed > 0, train.braking > 0 else { return nil }
+        let most = train.braking * StopAssist.mostShare
+        let room = remaining - speed * StopAssist.leadSeconds
+        let needed = room > 0 ? speed * speed / (2 * room) : most
+        // Once it has the brake it keeps it to the stand: as hard as the
+        // service brake goes if the point is nearer than it thought, and
+        // rolling while the train is ahead of what stopping there asks.
+        if isAssisting { return needed >= train.braking * StopAssist.rollsShare ? -min(needed, most) : -train.rolling }
+        guard remaining > 0, remaining <= StopBar.showMetres, needed >= train.braking * StopAssist.takesShare,
+              needed <= train.braking * StopAssist.takesAtMostShare else { return nil }
+        return -needed
     }
 }
 

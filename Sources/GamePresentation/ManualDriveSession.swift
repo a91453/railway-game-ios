@@ -11,6 +11,8 @@ struct ManualDriveRun: Sendable {
     var stepped: Double?
     /// Decision 693: whether the run, ended, has been told to the world.
     var settled = false
+    /// Decision 710: whether the stopping assist is on for it.
+    var assists = false
 }
 
 extension ManualDrive {
@@ -63,7 +65,7 @@ extension ManualDriveRun {
 
     /// The track and the run for `train` taken over now in `world`, or
     /// `nil` while it stands at a stop or is too near its next one.
-    static func takeOver(_ id: TrainID, in world: GameWorld) -> (track: ManualDriveTrack, drive: ManualDrive, length: Double)? {
+    static func takeOver(_ id: TrainID, in world: GameWorld, assists: Bool = false) -> (track: ManualDriveTrack, drive: ManualDrive, length: Double)? {
         guard let train = world.train(id: id), let found = world.manualDriveTakeOver(of: id) else { return nil }
         let units = WorldCoordinate.unitsPerMetre
         let remaining = found.run.length - found.covered
@@ -74,7 +76,8 @@ extension ManualDriveRun {
                                      speed: Double(limit.speed) / 3.6)
         }
         let course = ManualDrive.Course(stop: track.stopMetres, limits: limits, scheduled: Double(found.run.seconds - found.elapsed))
-        let drive = ManualDrive(train: ManualDrive.Train(train.performance), course: course, speed: world.trainSpeedKMH(of: id) / 3.6)
+        let drive = ManualDrive(train: ManualDrive.Train(train.performance), course: course, speed: world.trainSpeedKMH(of: id) / 3.6,
+                                assists: assists)
         return (track, drive, Double(train.length))
     }
 }
@@ -92,13 +95,15 @@ extension GameSession {
     /// (review L17-5: asked of the paused clock's speed, which is none, a
     /// game paused at 10× was left to resume at 10×). Until the handle is
     /// given back the speed goes no higher (``speedCap``).
-    /// Nothing for a train without a timetable.
-    public func startManualDrive() {
+    /// Nothing for a train without a timetable. Decision 710: with
+    /// `assist`, the stopping assist is on for the run
+    /// (``ManualDrive/StopAssist``).
+    public func startManualDrive(assist: Bool = false) {
         guard let id = followedTrainID, world.canManualDrive(id) else { return }
         if world.clock.runningSpeed.tenthsPerTick > Map3DFollowSpeed.driving.tenthsPerTick {
             setRunningSpeed(Map3DFollowSpeed.driving)
         }
-        manualDriveRun = ManualDriveRun(train: id)
+        manualDriveRun = ManualDriveRun(train: id, assists: assist)
         manualDriveReading = .waiting
         manualDrivePhase = .waiting
         manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: id, in: language))
@@ -125,6 +130,15 @@ extension GameSession {
         setManualDriveNotch(up ? notch.raised : notch.lowered)
     }
 
+    /// Decision 710: turns the stopping assist on or off for the run
+    /// being driven (and the one waited for).
+    public func setManualDriveAssist(_ on: Bool) {
+        guard manualDriveRun != nil else { return }
+        manualDriveRun?.assists = on
+        manualDriveRun?.driving?.drive.setAssist(on)
+        publishManualDrive()
+    }
+
     public func setManualDriveNotch(_ notch: ManualDrive.Notch) {
         guard manualDriveRun?.driving != nil else { return }
         manualDriveRun?.driving?.drive.set(notch)
@@ -147,7 +161,7 @@ extension GameSession {
         let passed = time.flatMap { now in run.stepped.map { min(max(now - $0, 0), 0.25) } } ?? 0
         if let time { run.stepped = time }
         if run.driving == nil {
-            run.driving = ManualDriveRun.takeOver(run.train, in: world)
+            run.driving = ManualDriveRun.takeOver(run.train, in: world, assists: run.assists)
             if run.driving != nil {
                 manualDriveHeading = ManualDrive.Heading(world.map3DDriverHUD(of: run.train, in: language), after: manualDriveHeading)
             }
@@ -179,13 +193,22 @@ extension GameSession {
     /// ends as one stopped just short of the mark, a few seconds late, so
     /// its result can be looked at without driving a whole run. Decision
     /// 710: at the run's own stopping point, so the train is looked at
-    /// where it would stand.
-    public func finishManualDriveForScreenshot() {
+    /// where it would stand; with `assisted`, the stopping assist brings
+    /// it to the stand, from the handle in neutral.
+    public func finishManualDriveForScreenshot(assisted: Bool = false) {
         guard var run = manualDriveRun, let driving = run.driving else { return }
         let stop = driving.drive.course.stop
-        var drive = ManualDrive(train: driving.drive.train, course: .init(stop: stop, scheduled: -4), speed: 0.3, distance: stop - 0.8)
-        drive.set(ManualDrive.Notch(step: -ManualDrive.timetableBrakeStep))
-        drive.advance(seconds: 5)
+        var drive: ManualDrive
+        if assisted {
+            let train = driving.drive.train
+            drive = ManualDrive(train: train, course: .init(stop: stop, scheduled: 2), speed: (2 * 20 * 0.8 * train.braking).squareRoot(), distance: stop - 20)
+            drive.setAssist(true)
+            for _ in 0..<12 where !drive.isOver { drive.advance(seconds: 5) }
+        } else {
+            drive = ManualDrive(train: driving.drive.train, course: .init(stop: stop, scheduled: -4), speed: 0.3, distance: stop - 0.8)
+            drive.set(ManualDrive.Notch(step: -ManualDrive.timetableBrakeStep))
+            drive.advance(seconds: 5)
+        }
         run.driving = (driving.track, drive, driving.length)
         manualDriveRun = run
         settleManualDrive()
@@ -198,11 +221,20 @@ extension GameSession {
     /// be looked at without driving a whole run. Decision 710: with
     /// `standing`, the train stands that many metres short of its own
     /// stopping point instead (negative: past it), the handle in neutral,
-    /// so the stopping bar's three states can be looked at.
-    public func nearStopForScreenshot(standing: Double? = nil) {
+    /// so the stopping bar's three states can be looked at; with
+    /// `assisting`, it runs that many metres short of it instead, at a
+    /// speed the stopping assist takes the brake at, and the assist has it.
+    public func nearStopForScreenshot(standing: Double? = nil, assisting: Double? = nil) {
         guard var run = manualDriveRun, let driving = run.driving else { return }
         var drive: ManualDrive
-        if let standing {
+        if let assisting {
+            let stop = driving.drive.course.stop, train = driving.drive.train
+            // Stopping there asks for some eight tenths of the timetable's braking.
+            let speed = (2 * assisting * 0.8 * train.braking).squareRoot() - 0.8 * train.braking * ManualDrive.StopAssist.leadSeconds
+            drive = ManualDrive(train: train, course: .init(stop: stop, scheduled: 60), speed: speed, distance: stop - assisting)
+            drive.setAssist(true)
+            drive.advance(seconds: 0.02)
+        } else if let standing {
             let stop = driving.drive.course.stop
             drive = ManualDrive(train: driving.drive.train, course: .init(stop: stop, scheduled: 60), speed: 0, distance: stop - standing)
         } else {

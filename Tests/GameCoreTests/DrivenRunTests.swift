@@ -197,6 +197,96 @@ final class DrivenRunTests: XCTestCase {
         XCTAssertEqual(world.driving?.runs, 2)
     }
 
+    // MARK: - The stopping assist (decision 710)
+
+    func testAnAssistedRunIsPaidAsOneOfNoMoreThanSeventyFiveMarks() {
+        // Up to 75 marks the assist changes nothing; above, the run is
+        // paid as one of 75: half of what full marks earn.
+        XCTAssertEqual(DrivenRun.assistedBonusMarks, 75)
+        XCTAssertEqual(DrivenRun.bonus(marks: 100, riders: 300, assisted: true), Money(1_000_00))
+        XCTAssertEqual(DrivenRun.bonus(marks: 100, riders: 0, assisted: true), Money(250_00))
+        XCTAssertEqual(DrivenRun.bonus(marks: 76, riders: 300, assisted: true), Money(1_000_00))
+        XCTAssertEqual(DrivenRun.bonus(marks: 75, riders: 300, assisted: true), DrivenRun.bonus(marks: 75, riders: 300))
+        XCTAssertEqual(DrivenRun.bonus(marks: 60, riders: 300, assisted: true), Money(400_00))
+        XCTAssertEqual(DrivenRun.bonus(marks: 50, riders: 300, assisted: true), .zero)
+        for marks in 0...100 {
+            for riders in [0, 1, 123, 2_000] as [Int64] {
+                XCTAssertLessThanOrEqual(DrivenRun.bonus(marks: marks, riders: riders, assisted: true), DrivenRun.bonus(marks: marks, riders: riders))
+            }
+        }
+    }
+
+    func testAnAssistedRunIsSettledForLessAndIsNeverTheBest() throws {
+        var (world, train) = try world()
+        try world.advance(ticks: 30)
+        var unaided = world
+        let riders = world.riderCount(of: train)
+        let aided = DrivenRun(train: train, outcome: .stopped, offset: 0, lateness: 0, overspeed: 0, usedEmergency: false, assisted: true)
+        XCTAssertTrue(aided.assisted)
+        XCTAssertFalse(run(train).assisted)
+        let settled = try world.settleDrivenRun(aided)
+        let full = try unaided.settleDrivenRun(run(train))
+        // The marks are the run's own.
+        XCTAssertEqual(settled.marks, full.marks)
+        XCTAssertEqual(settled.marks.total, 100)
+        XCTAssertEqual(settled.bonus, DrivenRun.bonus(marks: 75, riders: riders))
+        XCTAssertEqual(full.bonus, DrivenRun.bonus(marks: 100, riders: riders))
+        XCTAssertLessThan(settled.bonus, full.bonus)
+        XCTAssertTrue(settled.isCapped)
+        XCTAssertFalse(full.isCapped)
+        XCTAssertFalse(settled.isBest)
+        XCTAssertTrue(full.isBest)
+        XCTAssertEqual(world.accounts.entries.last?.amount, settled.bonus)
+        XCTAssertEqual(world.driving, DrivingRecord(runs: 1, arrivals: 1, best: 0, earned: settled.bonus, last: world.clock.now.seconds, assisted: 1))
+        XCTAssertEqual(unaided.driving, DrivingRecord(runs: 1, arrivals: 1, best: 100, earned: full.bonus, last: world.clock.now.seconds))
+        // The first run stopped unaided is the best, whatever its marks;
+        // an assisted one of more marks after it is not.
+        while world.clock.now.seconds - (world.driving?.last ?? 0) < DrivenRun.shortestSeconds { try world.advance(ticks: 1) }
+        let first = try world.settleDrivenRun(run(train, lateness: 60_000))
+        XCTAssertEqual(first.marks.total, 70)
+        XCTAssertTrue(first.isBest)
+        XCTAssertFalse(first.isCapped)
+        while world.clock.now.seconds - (world.driving?.last ?? 0) < DrivenRun.shortestSeconds { try world.advance(ticks: 1) }
+        let again = try world.settleDrivenRun(aided)
+        XCTAssertFalse(again.isBest)
+        XCTAssertEqual(again.record.best, 70)
+        XCTAssertEqual(again.record.assisted, 2)
+        XCTAssertEqual(again.record.arrivals, 3)
+        // An assisted run of 75 marks or fewer is paid as any other; one
+        // that did not stop is not counted as helped.
+        while world.clock.now.seconds - (world.driving?.last ?? 0) < DrivenRun.shortestSeconds { try world.advance(ticks: 1) }
+        let late = try world.settleDrivenRun(
+            DrivenRun(train: train, outcome: .stopped, offset: 0, lateness: 60_000, overspeed: 0, usedEmergency: false, assisted: true))
+        XCTAssertEqual(late.bonus, DrivenRun.bonus(marks: 70, riders: world.riderCount(of: train)))
+        XCTAssertFalse(late.isCapped)
+        while world.clock.now.seconds - (world.driving?.last ?? 0) < DrivenRun.shortestSeconds { try world.advance(ticks: 1) }
+        let passed = try world.settleDrivenRun(
+            DrivenRun(train: train, outcome: .passed, offset: 60 * metre, lateness: 0, overspeed: 0, usedEmergency: false, assisted: true))
+        XCTAssertEqual(passed.record.assisted, 3)
+        XCTAssertEqual(passed.record.runs, 5)
+        // Without accounts nothing is kept from the run.
+        var (free, other) = try self.world(managed: false)
+        try free.advance(ticks: 30)
+        XCTAssertFalse(try free.settleDrivenRun(
+            DrivenRun(train: other, outcome: .stopped, offset: 0, lateness: 0, overspeed: 0, usedEmergency: false, assisted: true)).isCapped)
+        // The world is still one a save holds.
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
+    func testAssistedIsWrittenOnlyWhenSet() throws {
+        let train = TrainID(rawValue: 7)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let plain = String(decoding: try encoder.encode(run(train, lateness: 14_000)), as: UTF8.self)
+        XCTAssertEqual(plain, #"{"lateness":14000,"offset":0,"outcome":"stopped","overspeed":0,"train":7,"usedEmergency":false}"#)
+        XCTAssertEqual(try JSONDecoder().decode(DrivenRun.self, from: Data(plain.utf8)), run(train, lateness: 14_000))
+        let aided = DrivenRun(train: train, outcome: .stopped, offset: 0, lateness: 14_000, overspeed: 0, usedEmergency: false, assisted: true)
+        let text = String(decoding: try encoder.encode(aided), as: UTF8.self)
+        XCTAssertEqual(text, #"{"assisted":true,"lateness":14000,"offset":0,"outcome":"stopped","overspeed":0,"train":7,"usedEmergency":false}"#)
+        XCTAssertEqual(try JSONDecoder().decode(DrivenRun.self, from: Data(text.utf8)), aided)
+        XCTAssertNotEqual(aided, run(train, lateness: 14_000))
+    }
+
     // MARK: - The save
 
     func testARecordNoSettlementLeavesIsRefused() throws {
@@ -212,6 +302,16 @@ final class DrivenRunTests: XCTestCase {
             broken[key] = value
             object["driving"] = broken
             XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object)), key)
+        }
+        // Decision 710: assisted arrivals are of the arrivals, and a
+        // record of none but assisted ones has no best.
+        for (assisted, best, sound) in [(1, 0, true), (1, 100, false), (2, 0, false), (-1, 0, false), (0, 100, true)] as [(Int64, Int64, Bool)] {
+            var changed = record
+            changed["assisted"] = assisted
+            changed["best"] = best
+            object["driving"] = changed
+            let read = Result { try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object)) }
+            XCTAssertEqual((try? read.get()) != nil, sound, "assisted \(assisted), best \(best)")
         }
         record["best"] = 100
         object["driving"] = record
@@ -236,7 +336,7 @@ final class DrivenRunTests: XCTestCase {
         let url = SavedGameTests.fixtures.appendingPathComponent("v89-driven-run.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["DRIVEN_RUN_SAVE_NEW"] != nil {
+        if ProcessInfo.processInfo.environment["DRIVEN_RUN_SAVE_NEW"] != nil, SavedGame.currentVersion == 89 {
             try encoder.encode(SavedGame(world: world)).write(to: url)
         }
         let data = try Data(contentsOf: url)
@@ -250,6 +350,48 @@ final class DrivenRunTests: XCTestCase {
         XCTAssertEqual(record.earned, first.bonus)
         XCTAssertGreaterThan(record.earned, .zero)
         XCTAssertEqual(loaded.accounts.entries.filter { $0.kind == .drivenRun }.map(\.amount), [first.bonus])
+        XCTAssertEqual(loaded, world)
+        // It runs on as the game it was saved from.
+        try loaded.advance(ticks: 1_440)
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(loaded.economy.balance, world.economy.balance)
+        XCTAssertEqual(loaded.driving, world.driving)
+    }
+
+    /// `v92-assisted-run.json`: this file's world a day in, three runs
+    /// driven by hand settled: one of 85 marks unaided, one of full marks
+    /// the stopping assist helped with (paid as one of 75), one past the
+    /// stop. Written once by the version 92 build
+    /// (`DRIVEN_RUN_SAVE_NEW=1`).
+    func testVersionNinetyTwoKeepsTheAssistedRuns() throws {
+        var (world, train) = try world()
+        try world.advance(ticks: 500)
+        let first = try world.settleDrivenRun(run(train, lateness: 32_500))
+        try world.advance(ticks: 10)
+        let aided = try world.settleDrivenRun(
+            DrivenRun(train: train, outcome: .stopped, offset: 0, lateness: 0, overspeed: 0, usedEmergency: false, assisted: true))
+        try world.advance(ticks: 10)
+        try world.settleDrivenRun(run(train, .passed, offset: 60 * metre))
+        try world.advance(ticks: 2)
+
+        let url = SavedGameTests.fixtures.appendingPathComponent("v92-assisted-run.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["DRIVEN_RUN_SAVE_NEW"] != nil, SavedGame.currentVersion == 92 {
+            try encoder.encode(SavedGame(world: world)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 92)
+        XCTAssertEqual(((object["world"] as? [String: Any])?["driving"] as? [String: Any])?["assisted"] as? Int, 1)
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        let record = try XCTUnwrap(loaded.driving)
+        XCTAssertEqual(record.runs, 3)
+        XCTAssertEqual(record.arrivals, 2)
+        XCTAssertEqual(record.assisted, 1)
+        XCTAssertEqual(record.best, 85)
+        XCTAssertEqual(record.earned, first.bonus + aided.bonus)
+        XCTAssertEqual(loaded.accounts.entries.filter { $0.kind == .drivenRun }.map(\.amount), [first.bonus, aided.bonus])
         XCTAssertEqual(loaded, world)
         // It runs on as the game it was saved from.
         try loaded.advance(ticks: 1_440)

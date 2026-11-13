@@ -149,6 +149,8 @@ public struct ManualDrive: Equatable, Sendable {
         public let lateness: Double
         public let overspeedSeconds: Double
         public let usedEmergency: Bool
+        /// Decision 710: whether the stopping assist took the brake.
+        public let assisted: Bool
         /// Out of ``ManualDrive/positionMarks``, ``ManualDrive/timeMarks``
         /// and ``ManualDrive/handlingMarks``; all 0 unless it stopped.
         public let position: Int
@@ -165,11 +167,13 @@ public struct ManualDrive: Equatable, Sendable {
         /// figures in whole world units and milliseconds, which the marks
         /// here are worked out from too, so the world gives it the same.
         public func run(of train: TrainID) -> DrivenRun {
-            Self.run(of: train, outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency)
+            Self.run(of: train, outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency,
+                     assisted: assisted)
         }
 
         private static func run(
-            of train: TrainID, outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool
+            of train: TrainID, outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool,
+            assisted: Bool = false
         ) -> DrivenRun {
             func whole(_ value: Double) -> Int64 {
                 Int64(min(max(value.rounded(), -Double(DrivenRun.longest)), Double(DrivenRun.longest)))
@@ -181,13 +185,13 @@ public struct ManualDrive: Equatable, Sendable {
             }
             return DrivenRun(
                 train: train, outcome: kind, offset: whole(offset * Double(WorldCoordinate.unitsPerMetre)), lateness: whole(lateness * 1_000),
-                overspeed: max(0, whole(overspeedSeconds * 1_000)), usedEmergency: usedEmergency
+                overspeed: max(0, whole(overspeedSeconds * 1_000)), usedEmergency: usedEmergency, assisted: assisted
             )
         }
 
         /// A run that ended so, marked by the world's rules
         /// (``DrivenRun/marks``).
-        init(outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool) {
+        init(outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool, assisted: Bool = false) {
             let marks = Self.run(
                 of: TrainID(rawValue: 1), outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds,
                 usedEmergency: usedEmergency
@@ -197,6 +201,7 @@ public struct ManualDrive: Equatable, Sendable {
             self.lateness = lateness
             self.overspeedSeconds = overspeedSeconds
             self.usedEmergency = usedEmergency
+            self.assisted = assisted
             position = marks.position
             time = marks.time
             handling = marks.handling
@@ -265,9 +270,16 @@ public struct ManualDrive: Equatable, Sendable {
     public private(set) var overspeedSeconds = 0.0
     public private(set) var usedEmergency = false
     public private(set) var result: Result?
+    /// Decision 710: whether the stopping assist is on for the run
+    /// (``StopAssist``), whether it holds the brake now, and whether it
+    /// has at any time.
+    public private(set) var assists = false
+    public private(set) var isAssisting = false
+    public private(set) var assisted = false
 
-    public init(train: Train, course: Course, speed: Double = 0) {
+    public init(train: Train, course: Course, speed: Double = 0, assists: Bool = false) {
         self.init(train: train, course: course, speed: speed, distance: 0)
+        self.assists = assists
     }
 
     /// A run already `distance` metres on its way: for the screenshot
@@ -288,6 +300,13 @@ public struct ManualDrive: Equatable, Sendable {
     public mutating func set(_ notch: Notch) {
         guard !isOver else { return }
         self.notch = notch
+    }
+
+    /// Decision 710: turns the stopping assist (``StopAssist``) on or off
+    /// for the rest of the run; what it has done already stays told.
+    public mutating func setAssist(_ on: Bool) {
+        guard !isOver else { return }
+        assists = on
     }
 
     /// The limit over the head at `distance`, m/s: the lowest that covers
@@ -329,7 +348,7 @@ public struct ManualDrive: Equatable, Sendable {
     var drive: GameWorld.TrainDrive? {
         guard speed > 0 else { return nil }
         if notch.step > 0 { return applied > 0 ? .powering : .holding }
-        return notch.step < 0 ? .braking : .coasting
+        return notch.step < 0 || isAssisting ? .braking : .coasting
     }
 
     /// Runs on for `seconds`.
@@ -343,7 +362,10 @@ public struct ManualDrive: Equatable, Sendable {
     }
 
     private mutating func step(_ dt: Double) {
-        let asked = asked(at: speed)
+        let assist = assistAsked()
+        isAssisting = assist != nil
+        if isAssisting { assisted = true }
+        let asked = assist ?? asked(at: speed)
         let reach = (notch.isEmergency ? Self.emergencyJerk : Self.jerk) * dt
         applied += min(max(asked - applied, -reach), reach)
         // Brakes hold a train at a stand: it never runs back.
@@ -355,7 +377,7 @@ public struct ManualDrive: Equatable, Sendable {
         if notch.isEmergency, speed > 0 { usedEmergency = true }
         if distance > course.stop + Self.overrunMetres {
             finish(.passed)
-        } else if speed == 0, notch.step < 0, distance > 0, distance >= course.stop - Self.stopWindowMetres {
+        } else if speed == 0, notch.step < 0 || isAssisting, distance > 0, distance >= course.stop - Self.stopWindowMetres {
             finish(.stopped)
         } else if elapsed > course.scheduled + Self.lateSeconds {
             finish(.timedOut)
@@ -364,7 +386,7 @@ public struct ManualDrive: Equatable, Sendable {
 
     private mutating func finish(_ outcome: Outcome) {
         result = Result(outcome: outcome, offset: distance - course.stop, lateness: elapsed - course.scheduled,
-                        overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency)
+                        overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency, assisted: assisted)
     }
 }
 
@@ -398,11 +420,13 @@ extension ManualDrive {
         /// Decision 704: the stopping point is near enough that the brake
         /// is due (``ManualDrive/isStopAhead``): the panel's one line.
         public let stopAhead: Bool
+        /// Decision 710: the stopping assist holds the brake.
+        public let isAssisting: Bool
         public let result: Result?
 
         /// Before the train has left its stop.
         public static let waiting = Reading(phase: .waiting, notch: .neutral, speed: 0, limit: nil, isOverspeed: false,
-                                            remainingTenths: nil, lateness: 0, stopAhead: false, result: nil)
+                                            remainingTenths: nil, lateness: 0, stopAhead: false, isAssisting: false, result: nil)
 
         /// Decision 704: "Stop ahead 161 m", only while ``stopAhead``.
         public func stopAheadText(in language: DisplayLanguage) -> String? {
@@ -464,6 +488,7 @@ extension ManualDrive {
             remainingTenths: abs(tenths) < 100 ? tenths : Int(remaining.rounded()) * 10,
             lateness: max(0, Int((elapsed - course.scheduled).rounded(.down))),
             stopAhead: isStopAhead,
+            isAssisting: isAssisting,
             result: result
         )
     }
@@ -497,6 +522,7 @@ extension ManualDrive.Result {
                 lines.append(language.text("Over the limit for \(max(seconds, 1)) s", "超速 \(max(seconds, 1)) 秒"))
             }
             if usedEmergency { lines.append(language.text("Used the emergency brake", "用了緊急煞車")) }
+            if assisted { lines.append(ManualDrive.StopAssist.usedText(in: language)) }
             return .init(title: language.text("Arrived", "到站"), lines: lines, total: total, grade: grade.rawValue)
         }
     }
@@ -621,12 +647,15 @@ extension ManualDrive {
     /// was and the best so far. Nothing for a run that did not stop.
     static func settlementText(_ settled: DrivenRunSettlement, stopped: Bool, in language: DisplayLanguage) -> String? {
         guard stopped else { return nil }
-        let best = settled.isBest && settled.record.arrivals > 1 ? language.text(" · new best", " · 新紀錄") : ""
+        // Decision 710: the best is of the runs stopped unaided, and a
+        // run the assist kept from more says so.
+        let unaided = settled.record.arrivals - settled.record.assisted
+        let best = settled.isBest && unaided > 1 ? language.text(" · new best", " · 新紀錄") : ""
         if settled.bonus > .zero {
             let riders = settled.riders.groupedText
             return language.text(
                 "Earned the company \(settled.bonus.moneyText) · \(riders) aboard", "替公司多賺 \(settled.bonus.moneyText) · 車上 \(riders) 人"
-            ) + best
+            ) + best + (settled.isCapped ? language.text(" · more without the assist", " · 不用輔助賺更多") : "")
         }
         if settled.keepsAccounts {
             return language.text(
@@ -634,6 +663,7 @@ extension ManualDrive {
             )
         }
         let runs = settled.record.runs.groupedText
+        guard unaided > 0 else { return language.text("Run \(runs) by hand", "手動駕駛第 \(runs) 趟") }
         return language.text("Run \(runs) by hand · best \(settled.record.best) points", "手動駕駛第 \(runs) 趟 · 最佳 \(settled.record.best) 分")
     }
 
