@@ -269,7 +269,7 @@
     - (2) 平常每個規劃的文件 PR 都順手更新 §2.0，交接時只補最後一段。
     - (3) **交接照 GitHub 重建，不靠摘要**：寫交接前重讀 #1579 上一任接手之後的留言、開著的 PR、自己開的 session 清單（`list_sessions`），從這些寫「派出去的」「還開著的」「號碼」。第 3 圈的摘要已疊三代，原話與細節最容易掉。
     - (4) 壓縮後發現記錯事、重做已做的事，就提早換。
-    - (5) **代開下一任的固定檢查**：`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`、`model: "claude-fable-5-2"`（作者 2026-11-12 改，見下面「換手」）；新任開工先在 #1579 留言，確認寫得進 GitHub。第 46 任代開第 47 任時漏了 `source_url`，新任開工寫不進 GitHub，要作者再說一次才放行（§1.1「代開時一定指定 repo」）。
+    - (5) **代開下一任的固定檢查**：`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`、`model: "claude-opus-5-5"`、`effort: "high"`（作者 2026-11-13 改，見下面「換手」）；新任開工先在 #1579 留言，確認寫得進 GitHub。第 46 任代開第 47 任時漏了 `source_url`，新任開工寫不進 GitHub，要作者再說一次才放行（§1.1「代開時一定指定 repo」）。
     - 五方（權重照 NEXT_PRIORITIES §19；選項：A 維持「第 2 次後約 30 萬」、B 第 2 次壓縮後立刻、C 第 3 次壓縮後立刻＋條件）：
       | 選項 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |
       | --- | --: | --: | --: | --: | --: | --: |
@@ -412,7 +412,7 @@
   - **只重排還沒開始的事**（作者：「可是叫他停不就白做了等他先做完一個段落吧」）：已經在做的 session 不叫停，讓它做到能停的地方（commit、push、開 PR）再換順序；做完的東西開 PR 留著，不要丟。
 - **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
   - **2026-10-27 改了**（作者：「遊戲規劃也可以自己開 到鄰近第7.8次的時候需要我自己開再說」「遊戲規劃的模型永遠都選opus 5.5高」）：
-    - 規劃可以自己用 `create_session` 開下一任。**模型：2026-11-12 起 `claude-fable-5-2`**（作者：「以後遊戲規劃都用fable」，取代 10-27 的「永遠都選opus 5.5高」）。
+    - 規劃可以自己用 `create_session` 開下一任。**模型：2026-11-13 起 `claude-opus-5-5`、強度「高」（`effort: "high"`）**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」「連遊戲規劃也只用opus 高」；11-12 到 11-13 之間用過 `claude-fable-5-2`）。
     - 開之前用 `get_session`（不帶 id）看自己的 `lineage.depth`（上限 8）。下一任會到第 7 層時，改請作者在 claude.ai 開。
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
     - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
@@ -432,7 +432,8 @@
     - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
     - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
     - 派工單和 #1041 的登記寫上用了哪個模型。
-    - **2026-11-11 起，Fable 5.2 開放期間以它為主**（作者：「Fable 模型只有最近5.2開放的時候能依難易度選擇」「之後新模型在看當下的決定」「但因為有重置券所以盡量用fable 5.2為主／等用完之後再改其他沒寫」）。下面是第 60 任的理解，不是作者原話：
+    - **2026-11-13 起不再用 Fable**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」）：新開的 session 回到上面的 Opus／Sonnet 照難易度選；已在跑的 fable session 跑完（作者：「沒關係 還在跑的繼續」），不重開。下面這段是用完之前的規矩，留作紀錄。
+    - **2026-11-11 到 11-13，Fable 5.2 開放期間以它為主**（作者：「Fable 模型只有最近5.2開放的時候能依難易度選擇」「之後新模型在看當下的決定」「但因為有重置券所以盡量用fable 5.2為主／等用完之後再改其他沒寫」）。下面是第 60 任的理解，不是作者原話：
       - 現在：實作 session 盡量用 `claude-fable-5-2`（作者有額度重置券）。
       - 額度用完之後：回到上面的 Opus／Sonnet 照難易度選。什麼時候算用完，由作者說，或 `get_session` 的 `rate_limit_info` 顯示用完。
       - 之後出了新模型：不自動套用這條，到時候問作者。
