@@ -97,6 +97,9 @@ struct Map3DPreviewScreen: View {
     @AppStorage(MapAmbienceSettings.undergroundKey) private var showsUnderground = false
     /// Decision 333: from where the camera follows a train, kept.
     @AppStorage("map3DFollowView") private var followView: Map3DFollow.View = .back
+    /// Decision 710: whether a run driven by hand that has just stopped is
+    /// being looked at from beside the train (``ManualDrive/StopLook``).
+    @State private var looksAtStop = false
 
     var body: some View {
         let language = DisplayLanguage.app
@@ -256,7 +259,7 @@ struct Map3DPreviewScreen: View {
                 if driving != nil {
                     // Decision 686: the handle; decision 704: a lever
                     // with the speed, at the trailing thumb.
-                    Map3DDrivePanel(session: session)
+                    Map3DDrivePanel(session: session, view: followView, looksAtStop: looksAtStop)
                         .padding(.bottom, 8)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else if let driver {
@@ -375,6 +378,14 @@ struct Map3DPreviewScreen: View {
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
+        // Decision 710: a run that stops is looked at from beside for a
+        // while, then the camera goes back by itself.
+        .task(id: session.manualDrivePhase) {
+            looksAtStop = session.manualDrivePhase == .over
+            guard looksAtStop else { return }
+            try? await Task.sleep(for: .seconds(ManualDrive.StopLook.seconds))
+            if !Task.isCancelled { looksAtStop = false }
+        }
         // Decision 360: following a train here runs at 10× at most, and
         // closing gives the 2D map its speed back.
         .onAppear {
@@ -450,7 +461,11 @@ struct Map3DPreviewScreen: View {
     /// FOLLOWBUS) a bus; a bus has no platform, so its station view is from
     /// behind.
     private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
-        let view = ambient?.view3D ?? followView
+        var view = ambient?.view3D ?? followView
+        // Decision 710: a run that has just stopped, from beside the train.
+        if ambient == nil, looksAtStop, session.manualDrivePhase == .over {
+            view = ManualDrive.StopLook.view(chosen: view, result: session.manualDriveReading?.result, looking: true, reduceMotion: reduceMotion)
+        }
         // Decision 606 (IDLEREAL): the idle mode's real train.
         if let real = ambient?.realTrain { return Map3DFollow(realTrain: real, view: view) }
         if let train = session.followedTrain { return Map3DFollow(train: train.id, view: view) }
@@ -1043,15 +1058,24 @@ final class Map3DChunkStreamer {
         return window.built.subtracting(window.grid.keys(within: scene.region))
     }
 
-    /// `built` is shown, with the view keeping `kept` from before.
-    func start(_ built: Map3DBuiltScene?, kept: Set<Map3DStreaming.Key>) {
+    /// `built` is shown, with the view keeping `kept` from before; `inPart`
+    /// when only some of its chunks were handed to the view (decision 517
+    /// 續, PR 3b), which then still lacks those let go.
+    func start(_ built: Map3DBuiltScene?, kept: Set<Map3DStreaming.Key>, inPart: Bool = false) {
         generation += 1
+        // Decision 711: the scene's chunks let go (``shed()``), which the
+        // view still lacks.
+        let gone = inPart ? window?.gone ?? [] : []
         guard let built, Map3DStreaming.streams(built.source.world) else {
             window = nil
             source = nil
             return
         }
         window = Map3DStreaming.Window(scene: built.scene, map: WorldRegion(bounds: built.source.world.bounds), generation: generation, kept: kept)
+        if !gone.isEmpty {
+            window?.letGo(gone)
+            view?.remove(Array(gone))
+        }
         source = built.source
         trackCover = built.scene.trackCover
     }
@@ -1070,7 +1094,7 @@ final class Map3DChunkStreamer {
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
         guard var window, let source else { return }
-        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?())
+        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance)
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
@@ -1084,6 +1108,18 @@ final class Map3DChunkStreamer {
     private func finished(_ chunks: [Map3DScene.Chunk], keys: [Map3DStreaming.Key], generation: Int) {
         guard window?.finished(keys, generation: generation) == true else { return }
         view?.place(chunks, at: keys)
+        // Decision 711: the scene's buffers within what this device holds.
+        if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed() }
+    }
+
+    /// Decision 711: memory runs short, or the buffers are over their
+    /// budget: lets go of the chunks farther from what the camera looks
+    /// at than it sees (its distance), the scene's own too.
+    func shed() {
+        guard var window, let view else { return }
+        let drop = window.shed(farFrom: view.camera.target, radius: view.camera.distance)
+        self.window = window
+        if !drop.isEmpty { view.remove(drop) }
     }
 }
 
@@ -1224,7 +1260,7 @@ final class Map3DTrainFeed {
     private var aircraftTold: (flight: Map3DAircraft.FlightID, state: Map3DAircraft.State?)?
     /// Decision 686: steps the run the player drives by hand to the
     /// frame's time and says where its train is drawn; `nil` for none.
-    var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double)?)?
+    var manualDrive: (@MainActor (Double) -> (track: ManualDriveTrack, metres: Double, length: Double, stop: Double)?)?
     /// Decision 437: told the evening garbage truck's tune as heard from
     /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
     /// acts only on a change), `nil` when there is none near.
@@ -1325,12 +1361,15 @@ final class Map3DTrainFeed {
         // Decision 686: the train driven by hand where the player has
         // driven it, at its track's heights there.
         var motion = motion, heights = heights
-        if let driven = manualDrive?(now) {
+        let driven = manualDrive?(now)
+        if let driven {
             motion = motion.driving(on: driven.track, metres: driven.metres)
             heights = heights.driving(on: driven.track, metres: driven.metres, length: driven.length)
         }
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
                                       ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain)
+        // Decision 710: and the mark at its stopping point.
+        if let driven { driven.track.addStopMark(to: &frame, at: driven.stop, in: scene) }
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
@@ -1622,6 +1661,7 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 358: the chunks ahead of the camera, built as it moves.
         context.coordinator.streamer.view = view
         view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }
+        view.onMemoryShort = { [weak coordinator = context.coordinator] in coordinator?.streamer.shed() }
         view.lookoutBuilt = { [weak coordinator = context.coordinator] eye in coordinator?.streamer.isBuilt(round: eye) ?? true }
         view.trainGroundBuilt = { [weak coordinator = context.coordinator] rail in coordinator?.streamer.isBuiltInFull(round: rail) ?? true }
         view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
@@ -1725,11 +1765,13 @@ private struct Map3DView: UIViewRepresentable {
         // round the same place does not hold, kept until built again.
         let kept = context.coordinator.streamer.kept(for: scene)
         let showing = ContinuousClock.now
+        var inPart = false
         if !first, let rebuilt = built?.rebuilt, context.coordinator.shownBuild == rebuilt.from {
             // Decision 517 續 (PR 3b): built again from the scene shown,
             // only where the track changed: only those chunks handed over,
             // the rest drawn on as they are.
             view.replace(rebuilt.keys, from: scene)
+            inPart = true
         } else {
             view.show(scene, keeping: kept)
         }
@@ -1739,7 +1781,7 @@ private struct Map3DView: UIViewRepresentable {
             let took = ContinuousClock.now - showing
             Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
         }
-        context.coordinator.streamer.start(built, kept: kept)
+        context.coordinator.streamer.start(built, kept: kept, inPart: inPart)
         showTrains(in: scene, on: view, context: context)
         let feed = feed, labels = trainLabels, tag = stationTag, marks = airportMarks
         marks.set(world.airports.map { airport in
@@ -2540,6 +2582,10 @@ private struct Map3DFollowBar: View {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-near") { session.nearStopForScreenshot() }
+                // Decision 710: standing short of the mark, on it, past it.
+                if let metres = ["short": 12, "target": 0.2, "past": -3][UserDefaults.standard.string(forKey: "screenshot-drive-stand") ?? ""] {
+                    session.nearStopForScreenshot(standing: metres)
+                }
                 #endif
             } label: {
                 Text(verbatim: ManualDrive.startText(in: session.language))
@@ -3140,12 +3186,27 @@ private struct Map3DDriveHeading: View {
                 .frame(minWidth: 260, maxWidth: 400)
                 .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .hudFrameMark("map3D.drive.card")
-                if let text = reading.stopAheadText(in: language) {
+                if let bar = reading.stopBar {
+                    // Decision 710: over the last 200 m, the stopping bar
+                    // in the line's place.
+                    Map3DStopBar(bar: bar, language: language)
+                        .transition(.opacity)
+                } else if let text = reading.stopAheadText(in: language) {
                     stopAhead(text)
                         .transition(.opacity)
                 }
             }
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopAhead)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: reading.stopBar == nil)
+            // Decision 710: coming onto the target is felt, and running
+            // past it; the stop itself is the result's (decision 686).
+            .sensoryFeedback(trigger: reading.stopBar?.state) { old, new in
+                switch ManualDrive.StopBar.feel(from: old, to: new) {
+                case .onTarget: .impact(weight: .light)
+                case .past: .warning
+                case nil: nil
+                }
+            }
         }
     }
 
@@ -3293,6 +3354,11 @@ private struct Map3DDriveHeading: View {
 /// and the eye already are; the rest is ``Map3DDriveHeading``, at the top.
 private struct Map3DDrivePanel: View {
     let session: GameSession
+    /// Decision 710: where the player follows the train from, which the
+    /// result card's button goes back to.
+    let view: Map3DFollow.View
+    /// Whether the stopped train is being looked at from beside.
+    let looksAtStop: Bool
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The drag on now: where it began and the notch the handle stood on
@@ -3540,7 +3606,7 @@ private struct Map3DDrivePanel: View {
             Button {
                 session.endManualDrive()
             } label: {
-                Text(verbatim: ManualDrive.doneText(in: language))
+                Text(verbatim: ManualDrive.StopLook.backText(chosen: view, looking: looksAtStop && ManualDrive.StopLook.turns(for: session.manualDriveReading?.result, reduceMotion: reduceMotion), in: language))
                     .font(.subheadline.weight(.bold))
                     .fixedSize()
                     .padding(.horizontal, 12)

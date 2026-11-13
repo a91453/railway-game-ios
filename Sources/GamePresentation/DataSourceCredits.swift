@@ -200,6 +200,24 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // Decision 712: the people of Hong Kong's map
+                    // (`MapPacks/hongkong/population.json`).
+                    DataSourceCredit(
+                        id: "hongKongPeople",
+                        title: language.text("Hong Kong’s people", "香港的人口"),
+                        detail: language.text(
+                            "On Hong Kong’s map, how many people live round each station, which sets how many ride from it and where the city’s buildings stand.",
+                            "香港地圖上每座車站周圍住了多少人，決定有多少人從那裡搭車，以及城市的建物蓋在哪裡。"
+                        ),
+                        notice: language.text(
+                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre of Hong Kong, 2025 (R2025A), under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). Each cell is rounded to whole people.",
+                            "WorldPop（www.worldpop.org），英國南安普敦大學：香港 2025 年每平方公里人口估計（R2025A），依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）。每格四捨五入到整數人。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
                 ]
             )
         }

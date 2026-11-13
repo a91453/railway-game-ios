@@ -46,21 +46,44 @@ extension GameSession {
     /// it, when that track is joined to it by no track at all; `nil`
     /// otherwise, when the track beside is not the same edge along the
     /// whole stretch, or has a platform there already.
-    func besidePlatformStretch(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64)) -> (edge: TrackEdgeID, start: Int64, end: Int64)? {
+    ///
+    /// `joined` (DEMO-KRTC, 2026-11-12) also gives the stretch where a
+    /// switch near by joins the two tracks: the demo's real lines, whose
+    /// runs end in a crossover beyond the last platform, so a train coming
+    /// back on the second track had no platform to call at there.
+    func besidePlatformStretch(
+        of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), joined: Bool = false
+    ) -> (edge: TrackEdgeID, start: Int64, end: Int64)? {
         guard let geometry = world.trackGeometry(of: stretch.edge) else { return nil }
         // Decision 571: a platform reaching the end of its edge is looked
         // beside just inside it; the end itself is no place on the edge
         // (``GameWorld/nearestPoint(onEdge:to:)``), and the track beside
         // was then looked for at the edge's middle, giving the platform
         // beside it the stretch from there.
-        let ends = [max(stretch.start, 1), min(stretch.end, geometry.length - 1)].map { geometry.location(at: $0).position.plan }
-        guard let first = trackBeside(stretch.edge, near: ends[0])?.beside,
-              let last = trackBeside(stretch.edge, near: ends[1])?.beside,
-              first.edge == last.edge,
+        //
+        // DEMO-KRTC (2026-11-12): the track beside is found a little way
+        // inside each end, not a unit inside. A second track's joints
+        // stand a few units along from the first's (each rounded to whole
+        // units on its own curve), so a unit inside the end of an edge the
+        // nearest track beside was as often the next edge's first unit,
+        // and a platform the whole of its edge got none beside it: half
+        // the stations of the demo's real Kaohsiung lines, whose trains
+        // then had no way along the line. Where the platform ends is then
+        // measured on that edge.
+        let inset = min(DoubleTrack.besideInset, max(1, (stretch.end - stretch.start) / 4))
+        let inside = [max(stretch.start + inset, 1), min(stretch.end - inset, geometry.length - 1)].map { geometry.location(at: $0).position.plan }
+        guard let first = trackBeside(stretch.edge, near: inside[0])?.beside,
+              let last = trackBeside(stretch.edge, near: inside[1])?.beside,
+              first.edge == last.edge, let beside = world.trackGeometry(of: first.edge),
               // Decision 571: joined by a switch near by, not any far away.
-              !world.tracksMeet([stretch.edge], [first.edge]) || !turnoutNear(stretch, within: DoubleTrack.stationThroat)
+              joined || !world.tracksMeet([stretch.edge], [first.edge]) || !turnoutNear(stretch, within: DoubleTrack.stationThroat)
         else { return nil }
-        let start = min(first.distance, last.distance), end = max(first.distance, last.distance)
+        // Each end of the platform on the track beside: as far past where
+        // it was found as the platform goes on, no further than the edge.
+        let before = max(stretch.start + inset, 1) - stretch.start, after = stretch.end - min(stretch.end - inset, geometry.length - 1)
+        let forward = last.distance >= first.distance
+        let start = max(0, min(first.distance, last.distance) - (forward ? before : after))
+        let end = min(beside.length, max(first.distance, last.distance) + (forward ? after : before))
         // A platform there already: GameCore would not overlap it.
         guard end > start, !world.network.platforms(on: first.edge).contains(where: { $0.start < end && start < $0.end }) else { return nil }
         return (first.edge, start, end)
@@ -69,8 +92,8 @@ extension GameSession {
     /// The platform beside the one on `stretch` (``besidePlatformStretch(of:)``),
     /// levelled first where it is on a grade (decision 190); `nil` where
     /// there is none to add, or it cannot be levelled.
-    func besidePlatform(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64)) -> PlayerCommand.BesidePlatform? {
-        guard let other = besidePlatformStretch(of: stretch) else { return nil }
+    func besidePlatform(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), joined: Bool = false) -> PlayerCommand.BesidePlatform? {
+        guard let other = besidePlatformStretch(of: stretch, joined: joined) else { return nil }
         var levelling: PlatformLevelling?
         if platformGrade(of: other) != nil {
             guard case .success(let found) = platformLevelling(of: other.edge, from: other.start, to: other.end, in: world) else { return nil }

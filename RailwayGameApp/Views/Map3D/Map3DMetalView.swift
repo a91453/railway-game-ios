@@ -226,6 +226,11 @@ final class Map3DMetalView: MTKView {
     var onStats: (@MainActor (Stats) -> Void)?
     /// Decision 358: the camera each frame, once it has moved, and when.
     var onCamera: (@MainActor (Map3DCamera, CFTimeInterval) -> Void)?
+    /// Decision 711: memory runs short (the system's warning, or little
+    /// left to the app): the chunks out of the camera's reach are let go.
+    var onMemoryShort: (@MainActor () -> Void)?
+    /// Decision 711: the bytes of the chunks' buffers held.
+    var heldBytes: Int { chunks.reduce(0) { $0 + $1.bytes } }
     /// Decision 578: whether the chunks round the platform the station view
     /// stands on are built; until they are, the camera stays above and
     /// behind the train, and flies to the platform once they are.
@@ -291,6 +296,24 @@ final class Map3DMetalView: MTKView {
         let facadeMesh: Map3DMesh
         var facade: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         var frontsUp = false
+        /// Decision 711: how much of it this frame draws within the still
+        /// scene's budget (``Map3DSceneBudget``).
+        var share = Map3DSceneBudget.Share.whole
+        /// Decision 711: its buffers' bytes (the street fronts' apart).
+        var bytes = 0
+
+        /// Decision 711: its triangles as the camera asks, simplified and
+        /// as its ground alone.
+        func cost(pack: Map3DModelPack?) -> Map3DSceneBudget.Cost {
+            let ground = baseIndexCount / 3, shadow = (shadows?.indexCount ?? 0) / 3
+            let simplified = ground + (far?.indexCount ?? 0) / 3 + (farBoxes?.triangles ?? 0) + shadow
+            guard detailed else { return Map3DSceneBudget.Cost(whole: simplified, simplified: simplified, ground: ground) }
+            var whole = indexCount / 3 + (standIn?.indexCount ?? 0) / 3 + shadow + 2 * (signs?.count ?? 0)
+            if let pack, let props {
+                for run in props.runs where run.model < pack.models.count { whole += pack.models[run.model].triangleCount * run.count }
+            }
+            return Map3DSceneBudget.Cost(whole: whole, simplified: simplified, ground: ground)
+        }
     }
 
     private let queue: MTLCommandQueue
@@ -684,7 +707,7 @@ final class Map3DMetalView: MTKView {
             guard let base = bytes.baseAddress else { return }
             encoder.setVertexBytes(base, length: bytes.count, index: 1)
         }
-        let seen = chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: matrix) }
+        let seen = chunks.filter { $0.share != .nothing && Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: matrix) }
         // Decision 709: from afar, what is too small to see casts nothing.
         let level = farLevel
         for chunk in seen {
@@ -703,7 +726,7 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += standIn.indexCount / 3
             }
-            if !chunk.detailed, let far = chunk.far, afar.far > 0 {
+            if !chunk.detailed, chunk.share < .ground, let far = chunk.far, afar.far > 0 {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: afar.far, indexType: .uint32, indexBuffer: far.indices, indexBufferOffset: 0)
                 drawCalls += 1
@@ -712,7 +735,7 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 455: the simplified city's boxes, a draw a chunk.
         encoder.setRenderPipelineState(sunDrawing.boxes)
-        for chunk in seen where !chunk.detailed {
+        for chunk in seen where !chunk.detailed && chunk.share < .ground {
             let afar = chunk.farLevels[level]
             guard let boxes = chunk.farBoxes, afar.boxes > 0 else { continue }
             encoder.setVertexBuffer(boxes.instances, offset: 0, index: 2)
@@ -757,6 +780,8 @@ final class Map3DMetalView: MTKView {
         // the largest frame drawn; the next frames make them again at
         // what they need (a frame in flight keeps those it reads).
         frameBuffers.release()
+        // Decision 711: and the chunks out of the camera's reach.
+        onMemoryShort?()
     }
 
     /// Decision 610: lets go of every chunk's street fronts' buffers, or
@@ -1152,9 +1177,13 @@ final class Map3DMetalView: MTKView {
             props = (instances, sorted.runs, sorted.shapes)
         }
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
-        return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
+        var made = Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
                      far: far, farBoxes: farBoxes, farLevels: chunk.farLevels, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
                      column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse, facadeMesh: chunk.facade)
+        let buffers: [MTLBuffer?] = [vertices, indices, far?.vertices, far?.indices, farBoxes?.instances, close?.vertices, close?.indices,
+                                     standIn?.vertices, standIn?.indices, shadows?.vertices, shadows?.indices, props?.instances, signs?.instances]
+        made.bytes = buffers.reduce(0) { $0 + ($1?.length ?? 0) }
+        return made
     }
 
     /// Decision 259: the most figures and vehicles a frame draws (the
@@ -1231,8 +1260,10 @@ final class Map3DMetalView: MTKView {
         let sunRegion: (drawn: Map3DSunShadow.Region?, redraw: Map3DSunShadow.Region?) = below ? (nil, nil) : wantedSunRegion(at: start)
         let uniforms = uniformValues(matrix, seconds: start, sun: sunRegion.drawn)
         var visible: [Chunk] = []
+        var visibleAt: [Int] = []
         var facadeUploads = 0
         for index in chunks.indices {
+            chunks[index].share = .whole
             // Decision 238: in full near the camera, whether in view or not,
             // so the margin holds.
             chunks[index].detailed = !chunks[index].coarse
@@ -1268,8 +1299,28 @@ final class Map3DMetalView: MTKView {
             }
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
+                visibleAt.append(index)
             }
         }
+        // Decision 711: the still scene within its budget, shared out from
+        // the chunk nearest what the camera looks at: past it, a chunk is
+        // drawn simplified, then as its ground alone, then not at all. The
+        // sun's map draws them the same.
+        let nearestFirst = visible.indices.map { place in
+            (place: place, distance: Map3DStreaming.distance(of: Map3DStreaming.Key(column: visible[place].column, row: visible[place].row),
+                                                             to: camera.target))
+        }.sorted { $0.distance < $1.distance }
+        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack) },
+                                             within: Map3DSceneBudget.triangles(tier: level?.tier))
+        for (entry, share) in zip(nearestFirst, shares) where share != .whole {
+            visible[entry.place].share = share
+            visible[entry.place].detailed = false
+            visible[entry.place].closeUp = false
+            visible[entry.place].frontsUp = false
+            chunks[visibleAt[entry.place]].share = share
+            chunks[visibleAt[entry.place]].detailed = false
+        }
+        if shares.contains(.nothing) { visible.removeAll { $0.share == .nothing } }
         trainHeads?(frame?.heads ?? [], camera)
         // Decision 342: the cars the city in front of is seen through.
         // Supplement: and the cabin followed, as one point.
@@ -1447,14 +1498,14 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += standIn.indexCount / 3
             }
-            if !detailed, let far = chunk.far, afar.far > 0 {
+            if !detailed, chunk.share < .ground, let far = chunk.far, afar.far > 0 {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: afar.far, indexType: .uint32,
                                               indexBuffer: far.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += afar.far / 3
             }
-            if !detailed, let boxes = chunk.farBoxes, afar.boxes > 0 { farBoxes.append((boxes.instances, afar.boxes, afar.boxTriangles, seen)) }
+            if !detailed, chunk.share < .ground, let boxes = chunk.farBoxes, afar.boxes > 0 { farBoxes.append((boxes.instances, afar.boxes, afar.boxTriangles, seen)) }
             if seen { encoder.setRenderPipelineState(pipeline) }
         }
         // Decision 455: the simplified city's boxes, a draw a chunk, the
@@ -1576,7 +1627,7 @@ final class Map3DMetalView: MTKView {
         // decision 394: under the ground, only the trains'.
         encoder.setRenderPipelineState(shadowPipeline)
         encoder.setDepthStencilState(shadowDepthState)
-        for chunk in visible where !below {
+        for chunk in visible where !below && chunk.share < .ground {
             guard let shadows = chunk.shadows else { continue }
             // Decision 709: from afar, only the shadows of what is drawn.
             let count = chunk.detailed ? shadows.indexCount : chunk.farLevels[farLevel].shadows
@@ -1884,6 +1935,7 @@ final class Map3DMetalView: MTKView {
         if memoryWatch.record(available: UInt64(os_proc_available_memory())) {
             load.relieve()
             rememberRung()
+            onMemoryShort?()
         }
         // Low Power Mode and the heat change while the map is open.
         applyQuality()

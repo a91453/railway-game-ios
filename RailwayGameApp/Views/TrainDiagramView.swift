@@ -161,10 +161,20 @@ struct TrainDiagramView: View {
     }
 
     private var legend: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 14) { legendItems }
-            VStack(alignment: .leading, spacing: 4) { legendItems }
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) { legendItems }
+                VStack(alignment: .leading, spacing: 4) { legendItems }
+            }
+            // The diagram opens two hours across: how to see the rest.
+            Label {
+                Text(verbatim: TrainDiagramViewport.gestureHint(in: language))
+            } icon: {
+                Image(systemName: "hand.draw")
+            }
+            .accessibilityIdentifier("trainDiagram.gestureHint")
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .font(.caption)
         .foregroundStyle(Theme.textSecondary)
         .padding(.horizontal, 16)

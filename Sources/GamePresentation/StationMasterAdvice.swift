@@ -150,6 +150,53 @@ public enum StationMasterAdvice: Hashable, Sendable {
         return nil
     }
 
+    /// The station the advice is about, or `nil`: a tap on the bubble
+    /// takes the map there (decision 175, later).
+    public var station: StationID? {
+        switch self {
+        case .stationFull(let station, _), .stationCrowded(let station, _),
+             .underserved(let station, _, _), .townGrew(let station, _, _),
+             .materialsShort(let station, _), .modeShift(let station),
+             .zoneNearStation(let station, _, _):
+            station
+        default:
+            nil
+        }
+    }
+
+    /// Where a tap on the bubble takes the player (HEIGHT-HINT, 2026-11:
+    /// the bubble shows a mark only when it takes them somewhere).
+    public enum Destination: Hashable, Sendable {
+        /// Decision 509: the zoning tool at the station.
+        case zoning(StationID)
+        /// Decision 194, later: the line in the line panel.
+        case line(LineID)
+        /// Decision 177: the place on the map.
+        case place(PlanPoint)
+        /// Decision 175, later: the station on the map, selected while
+        /// selecting.
+        case station(StationID)
+
+        /// What going there is called, for VoiceOver's action.
+        public func actionName(in language: DisplayLanguage) -> String {
+            switch self {
+            case .zoning: language.text("Open zoning here", "到這裡劃分區")
+            case .line: language.text("Open this line", "打開這條路線")
+            case .place, .station: language.text("Show on the map", "在地圖上看")
+            }
+        }
+    }
+
+    /// Where a tap on the bubble goes, or `nil` when it only puts the
+    /// bubble away.
+    public var destination: Destination? {
+        if case .zoneNearStation(let station, _, _) = self { return .zoning(station) }
+        if let line { return .line(line) }
+        if let cameraTarget { return .place(cameraTarget) }
+        if let station { return .station(station) }
+        return nil
+    }
+
     /// The most stations a railway has to count as a first line (decision
     /// 177).
     public static let shortLineStations = 3

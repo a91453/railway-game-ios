@@ -1213,6 +1213,83 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// HEIGHT-HINT: the line under the train diagram's legend that says
+    /// two fingers zoom and a drag moves it. For the screenshot review of
+    /// the pull request that added it.
+    func testTrainDiagramGestureHint() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        let diagram = app.buttons["line.trainDiagram"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(diagram, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's page has its diagram button")
+        diagram.waitUntilSettled()
+        diagram.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["trainDiagram.gestureHint"].firstMatch.appears(within: 30), "The diagram says how to move it")
+        settle(seconds: 3)
+        keep("train-diagram-gesture-hint", app)
+    }
+
+    /// HEIGHT-HINT: the station master's bubble, with a mark at its end
+    /// when a tap on it takes the player somewhere. For the screenshot
+    /// review of the pull request that added the mark.
+    func testStationMasterBubbleMark() {
+        // It speaks as the scene opens, and a tap while it speaks puts
+        // the bubble away: it is left to speak, for a minute.
+        let app = launch(extra: ["-screenshot-scene", "freight", "-speaking-ms", "60000"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        if !app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10) {
+            let master = app.descendants(matching: .any)["stationMaster"].firstMatch
+            XCTAssertTrue(master.becomesHittable(within: 20))
+            master.tap()
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
+        settle(seconds: 1)
+        keep("station-master-bubble", app)
+    }
+
+    /// HEIGHT-HINT: the one-time line under the construction HUD about its
+    /// height cell (``HeightSlideHint``), on the stretch of
+    /// ``testTrackHeightFixes`` once its bridge is taken (the card that
+    /// offers one lies over the place); then its ✕ tapped, and the line gone. In
+    /// Chinese and in English. For the screenshot review of the pull
+    /// request that added it.
+    func testTrackHeightHint() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackHeight", "-show-height-hint"], english: english)
+            let suffix = english ? "-en" : ""
+            let fixUp = app.buttons["map.build.fixUp"]
+            XCTAssertTrue(fixUp.appears(within: 180), "The stretch is previewed")
+            settle(seconds: 2)
+            keep("track-height-hint-waits\(suffix)", app)
+            fixUp.tap()
+            XCTAssertTrue(fixUp.disappears(within: 20), "Built as offered")
+            let dismiss = app.buttons["map.constructionHUD.heightHint.dismiss"]
+            XCTAssertTrue(dismiss.becomesHittable(within: 20), "The line about the height cell shows")
+            settle(seconds: 2)
+            keep("track-height-hint\(suffix)", app)
+            dismiss.tap()
+            XCTAssertTrue(dismiss.disappears(within: 10), "Put away, it is gone")
+            settle(seconds: 1)
+            keep("track-height-hint-closed\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's
@@ -1366,30 +1443,79 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// The 3D map following the far-stops scene's train from its cab, for
+    /// the looks at driving it by hand.
+    private func open3DInCab(extra: [String] = []) -> XCUIApplication {
+        let app = launch(extra: ["-screenshot-scene", "farStops", "-screenshot-follow-train", "-map3D.quality", "high"] + extra)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle(seconds: 5)
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        let cab = app.buttons["map3D.follow.cab"]
+        XCTAssertTrue(cab.becomesHittable(within: 10))
+        cab.tap()
+        if !cab.isSelectedWithin(5) {
+            XCTAssertTrue(cab.becomesHittable(within: 10))
+            cab.tap()
+        }
+        XCTAssertTrue(cab.isSelectedWithin(5), "The cab view is chosen")
+        return app
+    }
+
+    /// Decision 710: stopping a train driven by hand: the bar over the
+    /// last 200 m with the train standing short of its stopping point, on
+    /// it and past it (the mark beside the track there), then a run that
+    /// stopped looked at from beside the train with its marks, and the
+    /// camera back in the cab by itself.
+    func testManualDriveStop() {
+        for state in ["short", "target", "past"] {
+            let app = open3DInCab(extra: ["-screenshot-drive-stand", state])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.brake"].becomesHittable(within: 10), "The handle shows")
+            let bar = app.descendants(matching: .any)["map3D.drive.stopBar"].firstMatch
+            XCTAssertTrue(bar.appears(within: 10), "The stopping bar shows near the stop")
+            // The identifier is also on the mark the frame checks read,
+            // which has no value: ask for the one that has.
+            let spoken = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@ AND value != nil AND value != ''", "map3D.drive.stopBar")).firstMatch
+            XCTAssertTrue(spoken.appears(within: 5), "It says where the train is")
+            XCTAssertFalse(app.descendants(matching: .any)["map3D.drive.stopAhead"].firstMatch.exists, "The bar is in the line's place")
+            settle(seconds: 8)
+            keep("drive-stop-\(state)", app)
+        }
+        do {
+            let app = open3DInCab(extra: ["-screenshot-drive-result"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            let done = app.buttons["map3D.drive.done"]
+            XCTAssertTrue(done.becomesHittable(within: 10), "The run's result shows")
+            XCTAssertFalse(app.descendants(matching: .any)["map3D.drive.stopBar"].firstMatch.exists, "The bar is gone once the train stands")
+            // The camera's flight to beside the train.
+            settle(seconds: 4)
+            keep("drive-stop-look", app)
+            // And back by itself.
+            settle(seconds: 8)
+            XCTAssertTrue(done.isHittable, "The marks stay until the player lets go")
+            keep("drive-stop-back", app)
+            done.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.start"].appears(within: 5), "The handle is given back")
+        }
+    }
+
     /// Decision 686: driving the followed train by hand from its cab: the
     /// start button on the follow bar, the handle and the run's figures
     /// (the game paused, so they stand still), and a run's result.
     func testManualDrive() {
-        func open3DFollowing(extra: [String] = []) -> XCUIApplication {
-            let app = launch(extra: ["-screenshot-scene", "farStops", "-screenshot-follow-train", "-map3D.quality", "high"] + extra)
-            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
-            settle(seconds: 5)
-            let open3D = app.buttons["map.open3D"]
-            XCTAssertTrue(open3D.appears(within: 10))
-            XCTAssertTrue(open3D.becomesHittable(within: 10))
-            open3D.tap()
-            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
-            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
-            let cab = app.buttons["map3D.follow.cab"]
-            XCTAssertTrue(cab.becomesHittable(within: 10))
-            cab.tap()
-            if !cab.isSelectedWithin(5) {
-                XCTAssertTrue(cab.becomesHittable(within: 10))
-                cab.tap()
-            }
-            XCTAssertTrue(cab.isSelectedWithin(5), "The cab view is chosen")
-            return app
-        }
+        func open3DFollowing(extra: [String] = []) -> XCUIApplication { open3DInCab(extra: extra) }
         do {
             let app = open3DFollowing()
             defer { app.terminate() }

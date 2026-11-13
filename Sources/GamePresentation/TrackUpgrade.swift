@@ -62,6 +62,10 @@ extension DoubleTrack {
     /// 3 m to 6 m (``RailwayNetwork/trackSpacing`` is 4 m, the tool lays 5 m).
     static let besideProbe: Int64 = 288
     static let besideReach: Int64 = 96
+    /// How far inside each end of a platform the track beside it is looked
+    /// for (``GameSession/besidePlatformStretch(of:)``): a quarter of a
+    /// metre, well past the few units two tracks' joints stand apart.
+    static let besideInset: Int64 = WorldCoordinate.unitsPerMetre / 4
     /// How long an X crossover the track card builds is along the track:
     /// as a single crossover's reach, 50 m.
     static let scissorsLength: Int64 = crossoverReach
