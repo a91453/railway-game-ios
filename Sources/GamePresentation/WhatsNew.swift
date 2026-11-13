@@ -38,8 +38,57 @@ public enum WhatsNew {
                     english: "Hong Kong is a new map, with its buildings in 3D and the MTR’s lines to buy. Start on Taiwan or on Hong Kong; the other opens once an airport that flies there has 500 passengers on your trains in one day.",
                     chinese: "新地圖「香港」，3D 有建物、可收購港鐵。台灣、香港選一張開始；飛另一邊的機場一天有 500 人搭你的列車，另一張就開。"
                 ),
+                Line(
+                    english: "Tap a stretch of track with the select tool to close it: trains take another way or wait. If a train is on it, it closes once the train has passed; you can cancel that, or open the track again.",
+                    chinese: "選取工具點一段軌道可以封閉：列車改走別條路或等候；上面有車就等它通過再封，可取消，也能再開放。"
+                ),
+                Line(
+                    english: "In management mode you can take term loans of 1 to 10 years: the rate is fixed when you sign, and you pay it all back when due, or early.",
+                    chinese: "經營模式可以借定期貸款：1 到 10 年，利率簽約時固定，到期一次還本付息，也能提前還。"
+                ),
+                Line(
+                    english: "The economy view fills the screen, in four pages: Overview, Loans, Fares and Reports.",
+                    chinese: "經濟明細改成全螢幕，分總覽、借款、票價、報表四頁。"
+                ),
+                Line(
+                    english: "A sight's card shows about how many visitors it has in a year, from the Tourism Administration's figures.",
+                    chinese: "景點卡片寫著這個景點一年約有多少遊客（交通部觀光署的統計）。"
+                ),
+                Line(
+                    english: "At night on the 3D map the city goes dark: windows, street lights, stations and your tracks and trains are lit.",
+                    chinese: "3D 地圖的夜晚：城市暗下來，亮著的是窗戶、路燈、車站，以及你的軌道與列車。"
+                ),
+                Line(
+                    english: "By day the 3D map's roofs are a shade darker and blocks are tinted by what they are used for; station buildings stand out more.",
+                    chinese: "3D 地圖白天的屋頂深一些，街廓的地面依用途帶點顏色；站房在地圖上比較清楚。"
+                ),
+                Line(
+                    english: "On real-world maps, blocks with few real buildings get houses along their streets, and the blocks beside Kaohsiung Station are no longer empty.",
+                    chinese: "實景地圖上真實建物稀疏的街廓，沿街補上房子；高雄車站旁的街廓不再是空地。"
+                ),
+                Line(
+                    english: "When trains wait at both ends of a single track, the one that waited first goes first, and the other says which train it is letting go first.",
+                    chinese: "單線兩端都有列車在等時，先等的先走；讓路的列車會寫「讓某某先走」。"
+                ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Driving by hand, when you come in too fast for the stopping assist, the stopping bar says so: brake first.",
+                    chinese: "手動駕駛進站太快、輔助停車接不了手時，停車條會寫「太快，先煞車」。"
+                ),
+                Line(
+                    english: "With unlimited funds on, loans are paused: you cannot borrow or pay back until you turn it off.",
+                    chinese: "資金無限開著時貸款暫停，不能借也不能還，關掉後照常。"
+                ),
+                Line(
+                    english: "Zoomed far out on the 3D map, station buildings no longer disappear, and the outer city no longer comes and goes as you pan.",
+                    chinese: "3D 地圖拉遠時，車站的站房不再消失；平移時外圈的城市不會一下有一下沒有。"
+                ),
+                Line(
+                    english: "High speeds run smoother on a network with many trains.",
+                    chinese: "列車多的路網，高倍速時比較順。"
+                ),
+            ]
         ),
         // 129.
         Entry(
@@ -86,8 +135,8 @@ public enum WhatsNew {
                     chinese: "服務到客運站的車站，面板多了「長途客運」一節：今天的班次、旅客，以及有多少人和你的列車轉乘。"
                 ),
                 Line(
-                    english: "Jiji and Bao'an station buildings show your station's own name on the board.",
-                    chinese: "集集、保安站房的站名牌會寫你那一站的名字。"
+                    english: "Jiji and Bao'an station buildings: a station you renamed no longer shows the real station's name on its board.",
+                    chinese: "集集、保安站房：你改過名字的車站，站名牌不再寫真實的站名。"
                 ),
                 Line(
                     english: "Driving by hand: over the last 200 m a stopping bar shows how far the stopping point is and whether you passed it, a marker stands beside the track, and once stopped you see the train from the side with your result.",
