@@ -206,7 +206,8 @@ extension FinanceSummary {
 extension BalanceSheet {
     /// The balance sheet, with `previous` (the last year's closing) beside
     /// it if given: cash and each class of fixed assets at book value, the
-    /// loan, and the equity left, with the totals of both sides.
+    /// loan, the term loans' principal once there has been some (decision
+    /// 715), and the equity left, with the totals of both sides.
     public func rows(previous: BalanceSheet?, in language: DisplayLanguage) -> [StatementRow] {
         func row(_ title: String, _ value: (BalanceSheet) -> Money, _ style: StatementRow.Style = .item) -> StatementRow {
             StatementRow(title: title, current: value(self), previous: previous.map(value), style: style)
@@ -224,8 +225,11 @@ extension BalanceSheet {
             row(language.text("Total assets", "資產總計"), \.totalAssets, .subtotal),
             .section(language.text("Liabilities and equity", "負債與權益")),
             row(language.text("Loan", "銀行借款"), \.loan),
+        ] + (termLoans != .zero || previous.map { $0.termLoans != .zero } ?? false
+            ? [row(language.text("Term loans", "定期貸款"), \.termLoans)] : []
+        ) + [
             row(language.text("Equity", "權益"), \.equity),
-            row(language.text("Total liabilities and equity", "負債與權益總計")) { $0.loan + $0.equity }.with(style: .total),
+            row(language.text("Total liabilities and equity", "負債與權益總計")) { $0.loan + $0.termLoans + $0.equity }.with(style: .total),
         ]
     }
 

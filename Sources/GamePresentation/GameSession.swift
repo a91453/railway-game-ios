@@ -2068,6 +2068,16 @@ public final class GameSession {
             ))
             return
         }
+        // Decision 715: nor with a term loan, which falls due only at a
+        // managed company's midnight.
+        guard world.accounts.termLoans.isEmpty else {
+            let owed = world.accounts.termLoansOutstanding.moneyText
+            message = StatusMessage(kind: .failure, text: language.text(
+                "The company still has term loans, \(owed) with their interest. Free play never pays them, so repay them before switching.",
+                "公司還有定期貸款，連利息共 \(owed)。自由模式不會到期付款，請先提前還清再切換。"
+            ))
+            return
+        }
         _ = try? performCommand(.edit(.setEconomyMode(mode)))
         message = StatusMessage(kind: .success, text: language.text(
             "Free play: no fares or running costs, building costs nothing, and you set each station's ridership.",
@@ -2881,6 +2891,32 @@ public final class GameSession {
     public func repayLoanStep() {
         perform(.repayLoan(CompanyAccounts.loanStep)) { _, _, _ in
             language.text("Repaid \(CompanyAccounts.loanStep.moneyText).", "償還 \(CompanyAccounts.loanStep.moneyText)。")
+        }
+    }
+
+    /// Signs a term loan through `GameWorld.takeTermLoan(principal:years:)`
+    /// (decision 715), after the panel showed its quote.
+    public func takeTermLoan(principal: Money, years: Int64) {
+        perform(.takeTermLoan(principal, years: years)) { _, _, after in
+            guard let loan = after.accounts.termLoans.last else { return "" }
+            let term = TermLoanBoard.yearsText(years, in: language), date = GameDate(day: loan.dueDay).text(in: language)
+            return language.text(
+                "Signed a term loan of \(principal.moneyText) for \(term). \(loan.total.moneyText) is due on \(date).",
+                "簽了 \(term)的定期貸款 \(principal.moneyText)，\(date)到期付 \(loan.total.moneyText)。"
+            )
+        }
+    }
+
+    /// Pays term loan `id` back today through
+    /// `GameWorld.repayTermLoanEarly(_:)` (decision 715), after the panel
+    /// showed what it costs.
+    public func repayTermLoanEarly(_ id: Int64) {
+        perform(.repayTermLoanEarly(id)) { _, before, _ in
+            guard let quote = try? before.termLoanRepaymentQuote(id) else { return "" }
+            return language.text(
+                "Repaid the term loan of \(quote.loan.principal.moneyText): \(quote.total.moneyText) in all.",
+                "還清定期貸款 \(quote.loan.principal.moneyText)，共付 \(quote.total.moneyText)。"
+            )
         }
     }
 
