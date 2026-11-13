@@ -246,6 +246,54 @@ final class ManualDriveStopTests: XCTestCase {
         XCTAssertNil(powered.assistAsked(), "nor over the emergency brake")
     }
 
+    /// REVIEW-L20 P2-6: with the assist on, a train inside the bar's reach
+    /// and too fast for it to take the brake is told so, in the bar's
+    /// label; before, nothing said why the assist did not come.
+    func testTooFastForTheAssistIsSaid() throws {
+        // 100 m to go at 47 km/h asks for 0.87 m/s² against the
+        // timetable's 0.8: the assist does not take it.
+        var fast = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 13, distance: 500)
+        XCTAssertFalse(fast.reading.isTooFastForAssist, "the assist is off: nothing to say")
+        fast.setAssist(true)
+        XCTAssertNil(fast.assistAsked())
+        XCTAssertTrue(fast.reading.isTooFastForAssist)
+        let bar = try XCTUnwrap(fast.reading.stopBar)
+        XCTAssertEqual(ManualDrive.StopAssist.tooFastText(in: .english), "Too fast: brake")
+        XCTAssertEqual(ManualDrive.StopAssist.tooFastText(in: .traditionalChinese), "太快，先煞車")
+        XCTAssertEqual(bar.value(in: .english, tooFastForAssist: true),
+                       "Short, 100 m to go, too fast for the stopping assist: brake harder")
+        XCTAssertEqual(bar.value(in: .traditionalChinese, tooFastForAssist: true), "未到位，還差 100 m，太快，輔助停車接不了手：請加重煞車")
+        XCTAssertEqual(bar.value(in: .english), "Short, 100 m to go")
+        // With the power still on too: it is as much too fast.
+        fast.set(ManualDrive.Notch(step: 1))
+        XCTAssertTrue(fast.reading.isTooFastForAssist)
+        // On the emergency brake the player is doing all there is.
+        fast.set(.emergency)
+        XCTAssertFalse(fast.reading.isTooFastForAssist)
+        // The player brakes: once the train is slow enough the assist
+        // takes the brake, and the label is the assist's.
+        fast.set(ManualDrive.Notch(step: -ManualDrive.Notch.brakeSteps))
+        var said = 0
+        while !fast.isAssisting, !fast.isOver {
+            if fast.reading.isTooFastForAssist { said += 1 }
+            fast.advance(seconds: 1.0 / 60)
+        }
+        XCTAssertGreaterThan(said, 0)
+        XCTAssertTrue(fast.isAssisting, "taken once slow enough")
+        XCTAssertFalse(fast.reading.isTooFastForAssist)
+        // Not said where the assist would not take the brake anyway: far
+        // off, crawling, standing, or over.
+        var far = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 30, assists: true)
+        far.advance(seconds: 1)
+        XCTAssertFalse(far.reading.isTooFastForAssist, "outside the bar's reach")
+        var crawling = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 2, distance: 450)
+        crawling.setAssist(true)
+        XCTAssertFalse(crawling.reading.isTooFastForAssist)
+        XCTAssertFalse(ManualDrive.Reading.waiting.isTooFastForAssist)
+        while !fast.isOver { fast.advance(seconds: 1.0 / 60) }
+        XCTAssertFalse(fast.reading.isTooFastForAssist)
+    }
+
     func testARunTheAssistHelpedSaysSoAndTheBarShowsItHolding() throws {
         var drive = ManualDrive(train: train, course: .init(stop: 600, scheduled: 60), speed: 10, distance: 500)
         drive.setAssist(true)

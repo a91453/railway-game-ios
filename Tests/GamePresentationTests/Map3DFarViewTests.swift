@@ -246,6 +246,41 @@ final class Map3DFarViewTests: XCTestCase {
         XCTAssertEqual(tail.count(at: 2, of: 18), 12)
     }
 
+    /// REVIEW-L20 P2-1: what is added to a mesh after its parts were put
+    /// in order (a station's studied building, decision 625) is drawn at
+    /// every level, with what is always drawn.
+    func testWhatIsAddedAfterTheOrderIsAlwaysDrawn() {
+        var mesh = Map3DMesh()
+        func quad(_ x: Float, in mesh: inout Map3DMesh) {
+            mesh.addQuad(Map3DPoint(x, 0, 0), Map3DPoint(x, 0, 1), Map3DPoint(x + 1, 0, 1), Map3DPoint(x + 1, 0, 0), color: 0xFF00_0000)
+        }
+        for x in 0..<3 { quad(Float(x), in: &mesh) }
+        // Quad 0 is in no part; 1 is small, 2 middling.
+        var steps = Map3DFarDetail.order(&mesh, parts: [Map3DFarDetail.Part(first: 6, count: 6, rank: 2), Map3DFarDetail.Part(first: 12, count: 6, rank: 5)]).indices
+        XCTAssertEqual(steps.count(at: Map3DFarDetail.always, of: 18), 6)
+        var station = Map3DMesh()
+        quad(10, in: &station)
+        let ordered = mesh.indices
+        Map3DFarDetail.appendAlwaysDrawn(station, to: &mesh, steps: &steps)
+        XCTAssertEqual(mesh.vertices.count, 16)
+        // After what was always drawn, before the largest part.
+        XCTAssertEqual(Array(mesh.indices[0..<6]), Array(ordered[0..<6]))
+        XCTAssertEqual(Array(mesh.indices[6..<12]), station.indices.map { $0 + 12 })
+        XCTAssertEqual(Array(mesh.indices[12..<24]), Array(ordered[6..<18]))
+        XCTAssertEqual(steps.count(at: 0, of: 24), 24)
+        XCTAssertEqual(steps.count(at: 2, of: 24), 24)
+        XCTAssertEqual(steps.count(at: 3, of: 24), 18)
+        XCTAssertEqual(steps.count(at: 6, of: 24), 12)
+        XCTAssertEqual(steps.count(at: Map3DFarDetail.always, of: 24), 12)
+        // A mesh with no parts draws all of it at every level, as before.
+        var plain = Map3DMesh(), none = Map3DFarDetail.Steps()
+        quad(0, in: &plain)
+        Map3DFarDetail.appendAlwaysDrawn(station, to: &plain, steps: &none)
+        XCTAssertTrue(none.isEmpty)
+        XCTAssertEqual(plain.indices, [0, 1, 2, 0, 2, 3].map { UInt32($0) } + station.indices.map { $0 + 4 })
+        XCTAssertEqual(none.count(at: Map3DFarDetail.always, of: 12), 12)
+    }
+
     func testTheFarthestViewsLayers() throws {
         guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
         let source = try Source()
