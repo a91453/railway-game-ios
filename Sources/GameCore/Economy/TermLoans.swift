@@ -142,12 +142,15 @@ extension GameWorld {
     /// What a term loan of `principal` for `years` would be if signed now.
     ///
     /// - Throws, checked in this order: ``GameError/loanNeedsManagement``,
-    ///   or ``GameError/invalidTermLoan`` for an amount that is not whole
+    ///   ``GameError/loanNeedsLimitedFunds`` with unlimited funds (the
+    ///   debt would be booked and no money come in; section 8), or
+    ///   ``GameError/invalidTermLoan`` for an amount that is not whole
     ///   ``CompanyAccounts/loanStep``s above 0, a term the bank does not
     ///   offer, no slot free, or more than
     ///   ``TermLoanCredit/maximumPrincipal``.
     public func termLoanQuote(principal: Money, years: Int64) throws(GameError) -> TermLoanQuote {
         guard accounts.mode == .management else { throw .loanNeedsManagement }
+        guard !economy.unlimitedFunds else { throw .loanNeedsLimitedFunds }
         guard principal > .zero, principal.amount % CompanyAccounts.loanStep.amount == 0,
               let rate = CompanyAccounts.termLoanRate(years: years),
               principal <= termLoanCredit().maximumPrincipal,
@@ -206,11 +209,13 @@ extension GameWorld {
     /// repaying the loan of decision 67 is.
     ///
     /// - Throws, checked in this order: ``GameError/invalidTermLoan`` if
-    ///   there is no such loan, or
+    ///   there is no such loan, ``GameError/loanNeedsLimitedFunds`` with
+    ///   unlimited funds (the loan would go and no money leave), or
     ///   ``GameError/insufficientFunds(required:available:)`` when the
     ///   balance is less than the principal and the interest charged.
     public mutating func repayTermLoanEarly(_ id: Int64) throws(GameError) {
         let quote = try termLoanRepaymentQuote(id)
+        guard !economy.unlimitedFunds else { throw .loanNeedsLimitedFunds }
         guard economy.balance >= quote.total else {
             throw .insufficientFunds(required: quote.total, available: economy.balance)
         }
@@ -223,8 +228,12 @@ extension GameWorld {
 
     /// Pays every term loan due by the day after `day`, which just ended:
     /// its principal and its whole interest, which may take the balance
-    /// below zero as the day's other costs may.
+    /// below zero as the day's other costs may. With unlimited funds
+    /// nothing would leave the balance, so no loan falls due: one past its
+    /// day is paid at the first midnight after they are turned off, as one
+    /// that fell due in free play is (section 8).
     mutating func settleTermLoans(day: Int64, time: GameTime) {
+        guard !economy.unlimitedFunds else { return }
         let due = accounts.termLoans.filter { $0.dueDay <= day + 1 }
         guard !due.isEmpty else { return }
         accounts.termLoans.removeAll { $0.dueDay <= day + 1 }
