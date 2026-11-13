@@ -4404,6 +4404,70 @@
     "airfield-fuelTruck-single" : {
       "hash" : "74e6fd2e7d8afc0",
       "triangles" : 252
+    },
+    "life-coachBus-blue-white-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-blue-white-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "life-coachBus-forest-white-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-forest-white-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "life-coachBus-gold-navy-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-gold-navy-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "life-coachBus-sea-green-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-sea-green-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "life-coachBus-sky-slate-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-sky-slate-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "life-coachBus-slate-cream-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-slate-cream-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "life-coachBus-warm-red-near" : {
+      "hash" : "pending-linux",
+      "triangles" : 2884
+    },
+    "life-coachBus-warm-red-far" : {
+      "hash" : "pending-linux",
+      "triangles" : 1586
+    },
+    "coach-stop-roadside-near" : {
+      "hash" : "335d1773945b5bf1",
+      "triangles" : 696
+    },
+    "coach-stop-roadside-far" : {
+      "hash" : "e9a55d5131e8cb05",
+      "triangles" : 364
     }
   }
 }

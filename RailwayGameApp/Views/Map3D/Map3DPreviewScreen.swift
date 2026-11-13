@@ -1239,6 +1239,12 @@ final class Map3DTrainFeed {
     private var aircraftSerial = 0
     private var airTraffic: Map3DAircraft.Traffic?
     private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
+    /// Decision 708: the real coaches and the coach stops laid in the
+    /// scene (off the main actor), from the routes' file, read once off
+    /// the main actor the first time a map with coach stops is drawn.
+    private let coaches = Map3DCoaches.Layer()
+    private static var coachRoutes: RealCoaches?
+    private static var coachRoutesAsked = false
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 672: the train the camera follows, whose lamps light its
@@ -1413,7 +1419,28 @@ final class Map3DTrainFeed {
             laid.aircraft.add(to: &frame, pack: models, second: second, traffic: laid.traffic, eye: eye, reach: reach.farModel,
                               still: still, following: followedAircraft, blink: still ? nil : now, lit: lit)
         }
+        // Decision 708: and the real coaches on the roads and the coach
+        // stops, on the same clock.
+        if let models, let world = busWorld, !world.coachStops.isEmpty, let second = cableSecond(at: now),
+           let routes = Self.readCoachRoutes(), let laid = coaches.coaches(world: world, in: scene, routes: routes) {
+            laid.add(to: &frame, pack: models, second: second, eye: eye, reach: reach.farModel)
+        }
         return frame
+    }
+
+    /// Decision 708: the real coach routes, `nil` until they are read
+    /// (once, off the main actor) and when the file cannot be read.
+    private static func readCoachRoutes() -> RealCoaches? {
+        if let coachRoutes { return coachRoutes }
+        guard !coachRoutesAsked else { return nil }
+        coachRoutesAsked = true
+        Task.detached(priority: .utility) {
+            let name = RealCoaches.file as NSString
+            guard let url = Bundle.main.url(forResource: name.deletingPathExtension, withExtension: name.pathExtension),
+                  let data = try? Data(contentsOf: url), let read = try? RealCoaches(data: data) else { return }
+            await MainActor.run { coachRoutes = read }
+        }
+        return nil
     }
 
     /// Decision 699: the airfields laid in `scene`, laid again when the
