@@ -219,6 +219,31 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // Decision 726: the ground of Hong Kong's map
+                    // (`MapPacks/hongkong/heights.dat`, `water.json`'s
+                    // steep slopes, `terrain.pmtiles`).
+                    DataSourceCredit(
+                        id: "hongKongTerrain",
+                        title: language.text("Hong Kong’s terrain", "香港的地形"),
+                        detail: language.text(
+                            "Hong Kong’s hills and sea: how high the ground is where track is laid, and the hill shading of the map.",
+                            "香港的山與海：軌道鋪設處地面多高，以及地圖上山的陰影。"
+                        ),
+                        notice: language.text(
+                            "Digital Terrain Model, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal (Common Spatial Data Infrastructure), used under the CSDI Portal Terms and Conditions of Use; the Government and the Lands Department keep their intellectual property rights in the data.",
+                            "數碼地形模型，香港特別行政區政府地政總署，經空間數據共享平台（CSDI）提供，依空間數據共享平台的使用條款使用；資料的智慧財產權屬香港特別行政區政府與地政總署。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(
+                                title: language.text("Digital Terrain Model", "數碼地形模型"),
+                                url: "https://portal.csdi.gov.hk/geoportal/?datasetId=landsd_rcd_1638158088368_93806"
+                            ),
+                            DataSourceCredit.Link(
+                                title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
+                                url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
+                            ),
+                        ]
+                    ),
                     // Decision 712: the buildings of Hong Kong's map
                     // (`MapPacks/hongkong/buildings.pmtiles`).
                     DataSourceCredit(

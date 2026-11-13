@@ -301,6 +301,8 @@ def write(folder, name, value):
 # parts that are MTR's can be told from OpenStreetMap's and taken out
 # without making the rest again.
 OSM, MTR, OURS, WORLDPOP = "OpenStreetMap", "MTR open data", "this project", "WorldPop"
+# Decision 726: the ground's heights.
+LANDSD = "Lands Department DTM"
 # Decision 712: how far Hong Kong's map reaches, in degrees: the box of
 # WorldPop's grid of Hong Kong (`build_hk_ground.py`), which holds all its
 # land and every line here, some 62 km by 45 km. The game lays the city's
@@ -312,6 +314,12 @@ SOURCES = {
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_hk_basemap.py)": OSM,
                         "the mainland's shore closed past the extract": OURS},
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
+    # Decision 726 (build_hk_ground_grids.py).
+    "heights.dat": {"heights (the mean of the model's 5 m samples in each 1.875 arc-second cell)": LANDSD,
+                    "where the sea and the shore are": OSM, "water's surface and the sea at 0": OURS},
+    "water.json": {"water (coastline, bodies of water)": OSM, "the mainland's shore closed past the extract": OURS,
+                   "steep (slopes over 30 %)": LANDSD},
+    "terrain.pmtiles": {"heights (heights.dat, Terrarium-encoded)": LANDSD},
     "track_lines.geojson": {"geometry": OSM, "color": OSM, "id (MTR's line code)": MTR, "name": OURS},
     "track_stations.geojson": {"geometry": OSM, "name (checked against MTR's list)": OSM, "name of 茘景 and 茘枝角 (MTR's form of 荔)": MTR, "color": OSM,
                                "code (MTR's station code)": MTR},
@@ -336,6 +344,9 @@ def write_manifest(folder):
     }
     if "population.json" in files:
         licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
+    if "heights.dat" in files:
+        licences[LANDSD] = ("Digital Terrain Model, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal; "
+                            "CSDI Portal Terms and Conditions of Use")
     write(folder, "pack.json", {
         "id": "hongkong", "system": SYSTEM, "decision": 697,
         "english": "Hong Kong", "chinese": "香港",

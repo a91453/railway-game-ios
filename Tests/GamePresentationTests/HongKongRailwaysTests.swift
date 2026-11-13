@@ -120,7 +120,7 @@ final class HongKongRailwaysTests: XCTestCase {
             let size = try XCTUnwrap(try FileManager.default.attributesOfItem(atPath: pack.root.appendingPathComponent(name).path)[.size] as? Int)
             XCTAssertEqual(size, file.bytes, name)
             XCTAssertFalse(file.sources.isEmpty, name)
-            XCTAssertTrue(file.sources.values.allSatisfy { ["OpenStreetMap", "MTR open data", "this project", "WorldPop"].contains($0) }, name)
+            XCTAssertTrue(file.sources.values.allSatisfy { ["OpenStreetMap", "MTR open data", "this project", "WorldPop", "Lands Department DTM"].contains($0) }, name)
         }
         let taiwan = try FileManager.default.contentsOfDirectory(atPath: BundledRealData.directory.path)
         XCTAssertFalse(taiwan.contains { $0.hasPrefix("hk") })

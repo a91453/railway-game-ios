@@ -119,7 +119,8 @@ def terrarium_png(heights):
     return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', header) + chunk(b'IDAT', zlib.compress(rows.tobytes(), 9)) + chunk(b'IEND', b'')
 
 
-def main(heights_path, out):
+def main(heights_path, out, name='Taiwan terrain',
+         attribution='Copernicus DEM © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018'):
     north, west, cell, grid = read_heights(heights_path)
     rows, columns = grid.shape
     land = grid > 0
@@ -154,11 +155,11 @@ def main(heights_path, out):
                 count += 1
         print(f'zoom {z}: {count} tiles', flush=True)
     metadata = {
-        'name': 'Taiwan terrain',
+        'name': name,
         'format': 'png',
         'encoding': 'terrarium',
         'tileSize': SIZE,
-        'attribution': 'Copernicus DEM © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018',
+        'attribution': attribution,
         'description': f'The game\'s ground heights ({os.path.basename(heights_path)}, decision 124), Terrarium-encoded',
     }
     entries, contents = write_pmtiles(out, tiles, metadata, (west, south, east, north), ((west + east) / 2, (north + south) / 2, 7),
