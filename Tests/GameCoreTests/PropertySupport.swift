@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import XCTest
 
 // Deterministic property testing: seeded generators, independent reference
@@ -167,7 +167,9 @@ func runCampaign(
             if let replay, replay.count == 3, Int(replay[2]) != index { continue }
             var testCase = PropertyCase(suite: suite, seed: seed, index: index, log: log)
             let failuresBefore = log.failures
-            try body(&testCase)
+            // TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): every campaign also checks the track holders
+            // changed in place against the holders worked out again.
+            try GameWorld.$holderAudit.withValue(GameWorld.HolderAudit()) { try body(&testCase) }
             ran += 1
             if log.failures > failuresBefore {
                 log.failingCases += 1

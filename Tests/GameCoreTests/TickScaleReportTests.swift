@@ -30,8 +30,8 @@ import XCTest
 ///   apart, so a long one wants more).
 /// - `TICK_SCALE_BUDGET`: the seconds a size may spend building and
 ///   warming before it is given up as "did not finish" (default 900).
-/// - `TICK_SCALE_HOLD=<seconds>`: sleeps so long after the warm-up of each
-///   size and prints the process ID, for a sampler to attach.
+/// - `TICK_SCALE_HOLD=<seconds>`: keeps stepping so long after the warm-up
+///   of each size and prints the process ID, for a sampler to attach.
 ///
 /// The world is `SingleTrackMeet`'s W–M–E (512 m of single track, a loop
 /// at M) laid out again and again on a grid, each module its own track,
@@ -241,14 +241,6 @@ final class TickScaleReportTests: XCTestCase {
                     if Self.ms(clock.now - warming) > budget * 1_000 {
                         throw GaveUp(reason: "warm-up stopped at tick \(tick + 1) of \(warm) after \(Int(budget)) s (that tick \(Int(spent)) ms)")
                     }
-                }
-                if environment["TICK_SCALE_DEBUG"] != nil {
-                    for train in worlds[0].trains {
-                        var edge = -1, off: Int64 = 0
-                        if case .onEdge(let t, let o)? = train.position, case .edge(let e) = t.edge { edge = e; off = o }
-                        note("DEBUG-t1 \(train.id.rawValue) edge \(edge) off \(off) exec \(train.execution.map { "\($0)" } ?? "-") res \(train.reservation.count) follow \(worlds[0].isFollowing(train)) stops \(train.timetable.count)")
-                    }
-                    note("DEBUG-t1 deadlocked \(worlds[0].deadlockedTrains()) clock \(worlds[0].clock.now.seconds)")
                 }
                 if hold > 0 {
                     note("\(count): pid \(ProcessInfo.processInfo.processIdentifier), running for \(hold) s")
