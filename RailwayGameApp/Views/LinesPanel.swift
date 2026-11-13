@@ -2277,6 +2277,12 @@ struct LinesPanel: View {
             // Decision 264: under simple rules, one more train in one tap,
             // with the passing loop it needs.
             if session.runsLinesForThePlayer {
+                // Decision 682, later: what the one train it buys would do
+                // to the line's day, as the headway button below says it.
+                let estimate = memo.addTrainEstimate(line.id, of: session)
+                if let estimate {
+                    purchaseEstimate(estimate, identifier: "line.addTrain.estimate")
+                }
                 Button {
                     session.addTrainToSelectedLine()
                 } label: {
@@ -2293,6 +2299,9 @@ struct LinesPanel: View {
                 // Decision 376: lesson 3's guide.
                 .tutorialPanelTarget(.addTrain)
                 .id(TutorialTarget.addTrain)
+                if let estimate {
+                    purchaseEstimateDetail(estimate, identifier: "line.addTrain.estimate.detail")
+                }
             }
             if let shortfall {
                 Label {

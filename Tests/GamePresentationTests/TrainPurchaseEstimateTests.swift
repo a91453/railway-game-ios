@@ -317,6 +317,42 @@ final class TrainPurchaseEstimateTests: XCTestCase {
         XCTAssertEqual(read(), first)
     }
 
+    /// Decision 682, later: "Add a Train" (decision 264) says the same
+    /// estimate, of the one train it buys: the type, cars and price the
+    /// button then buys, the round trip shared between the trains.
+    func testAddATrainHasTheEstimateOfTheTrainItBuys() throws {
+        let session = GameSession(world: try played(try lineBetweenTwoTowns(), days: 1))
+        session.selectLine(Self.line)
+        let world = session.world
+        let purchase = try XCTUnwrap(session.addedTrainPurchase(for: Self.line))
+        XCTAssertEqual(purchase.price, world.purchaseCost(of: purchase.type, cars: purchase.cars))
+        let memo = LinePanelMemo()
+        let estimate = try XCTUnwrap(memo.addTrainEstimate(Self.line, of: session))
+        XCTAssertEqual(estimate, world.trainPurchaseEstimate(
+            Self.line, buying: 1, type: purchase.type, cars: purchase.cars, headway: ServiceLine.minimumHeadwayMinutes, price: purchase.price
+        ))
+        XCTAssertEqual(estimate.demand, .planned)
+        XCTAssertEqual(estimate.price, purchase.price)
+        XCTAssertGreaterThan(estimate.addedCost.amount, 0)
+        XCTAssertEqual(memo.addTrainEstimate(Self.line, of: session), estimate)
+
+        // The button buys that train.
+        let before = Set(world.trains.map(\.id))
+        session.addTrainToSelectedLine()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let line = try XCTUnwrap(session.world.line(id: Self.line))
+        let bought = try XCTUnwrap(line.trains.first { !before.contains($0) }.flatMap { session.world.train(id: $0) })
+        XCTAssertEqual(bought.type, purchase.type)
+        XCTAssertEqual(bought.cars, purchase.cars)
+    }
+
+    /// No line, no estimate over "Add a Train".
+    func testAddATrainOnNoSuchLineHasNoEstimate() throws {
+        let session = GameSession(world: try played(try lineBetweenTwoTowns(), days: 1))
+        XCTAssertNil(session.addedTrainPurchase(for: LineID(rawValue: 99)))
+        XCTAssertNil(LinePanelMemo().addTrainEstimate(LineID(rawValue: 99), of: session))
+    }
+
     /// Review L17-2: read before the first tick, there is no passenger
     /// plan and the fares are not said. The tick that makes the plan is no
     /// command, and the panel kept "once the clock has run" for the rest
