@@ -54,7 +54,7 @@ final class LiuMingchuanReportTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["LIU_REPORT"] != nil else {
             throw XCTSkip("set LIU_REPORT=1 to print the Liu Mingchuan challenge report")
         }
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways), population = try XCTUnwrap(data.population)
         let plays = Play.allCases.filter { play in ProcessInfo.processInfo.environment["LIU_PLAY"].map { $0 == "\(play)" } ?? true }
         let challenge = Challenge.liuMingchuan

@@ -90,7 +90,7 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         XCTAssertEqual(listed.subtracting(called), [], "a start the launcher no longer has")
     }
 
-    nonisolated static let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+    nonisolated static let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
 
     static let taipei = GeoAnchor(latitudeDegrees: 25.047882, longitudeDegrees: 121.517219)!
     static let tokyo = GeoAnchor(latitudeDegrees: 35.681236, longitudeDegrees: 139.767125)!

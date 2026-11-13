@@ -33,7 +33,7 @@ final class DrivenRunBonusReportTests: XCTestCase {
         }
         // The game `AirportReportTests` plays: the map's people, places
         // and airports, so the trains carry whom a player's would.
-        var world = try AirportReportTests.bought(network, data: RealWorldData.load(file: RealWorldDataLoadTests.file))
+        var world = try AirportReportTests.bought(network, data: RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file))
         XCTAssertEqual(world.accounts.mode, .management)
         world.setSpeed(.normal)
         // To the next midnight, a day to fill the trains, and the tick

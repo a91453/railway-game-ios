@@ -30,6 +30,14 @@ AIR-UNLOCK-2（session_01YGNNupFY6Z2K8uhkAqFeJF，`claude/air-unlock-2`，2026-1
 
 `OverseasMaps.open` 加 `.hongKong`（`testNoGroundIsReadWhileNoCityIsOpen` 要跟著改）、網站 `credits.html`（`docs/HANDOFF.md` §4.64；`DataSourceCredits` 的香港兩筆已在）、What's New、`tools/hk-map/README.md` 第 5 行「遊戲還不讀這一包」。
 
+**已做**（`claude/air-unlock-3`，疊在 PR 2 上；決策 712「續二」）：開關打開、機場的資料來源一筆、官網 `credits.html`（私庫 #136，draft，作者合，等發版後）、`WhatsNew` 129 一行與 What to Test、`tools/hk-map/README.md`；測試的載入改成讀和 App 一樣的資料（台灣加香港）。香港地圖的 2D、3D 截圖：`WebsiteScreenshotTests/testHongKongMap`（示範模式從選地圖那一列進去）。
+
+沒做完、接手的人要知道的：
+
+- 荃灣綫示範鋪線少中環、金鐘：沒查到原因（不用 GameCore）。
+- 自己鋪的機場線一天載多少人沒有量到（報告裡用指令鋪的線沒有軌道、列車不跑）；500 人只在「買機場捷運」這條路上量過。
+- 要 GameCore 的兩項（東涌綫尖峰末班、香港的假日與幣值）列在決策 712「續二」，給規劃排。
+
 ### 香港地圖本身還有的毛病（重現方法都是 `swift test --skip-build --filter HongKongMapTests`）
 
 - **機場快綫與東涌綫只能買一條**（共用 28 km 的軌道）；已擁有一條時另一條馬上拒絕並說明。真正的做法在決策 712。

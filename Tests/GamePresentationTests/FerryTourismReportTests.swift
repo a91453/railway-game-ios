@@ -112,7 +112,7 @@ final class FerryTourismReportTests: XCTestCase {
         var opened = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(200_000_000_000), land: [])
         opened.setLandOnDemand()
         try build(&opened)
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let session = GameSession(world: opened, language: .traditionalChinese)
         session.railways = try BundledRealData.railways()
         session.population = data.population

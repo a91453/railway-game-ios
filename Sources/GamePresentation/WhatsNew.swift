@@ -30,6 +30,17 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 129.
+        Entry(
+            id: "2026-11-13-129",
+            items: [
+                Line(
+                    english: "Hong Kong is a new map, opened by flying there: on a map of Taiwan, carry 500 passengers in one day to or from an airport that flies to Hong Kong. Then choose Hong Kong under Real-world map and buy the MTR’s lines.",
+                    chinese: "新地圖「香港」：在台灣讓一座飛香港的機場一天有 500 人搭你的列車就開航，之後在實景地圖選「香港」，可收購港鐵路線。"
+                ),
+            ],
+            fixes: []
+        ),
         // 128.
         Entry(
             id: "2026-11-13-128",

@@ -32,7 +32,7 @@ final class LineHeightReportTests: XCTestCase {
         guard environment["LINE_HEIGHT_REPORT"] != nil else {
             throw XCTSkip("Set LINE_HEIGHT_REPORT=1 to measure the real lines' heights.")
         }
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let structures = try XCTUnwrap(railways.structures)
         let tracks = try XCTUnwrap(railways.tracks)

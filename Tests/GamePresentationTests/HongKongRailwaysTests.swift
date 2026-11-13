@@ -17,6 +17,16 @@ final class HongKongRailwaysTests: XCTestCase {
         MapPack(root: BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder))
     }
 
+    /// Taiwan's railways alone, as the game read them before Hong Kong
+    /// was open (and reads them where no city is).
+    nonisolated static let closed: RealRailways.Loaded = RealRailways.load(overseas: []) { name, ext in
+        try BundledRealData.file(name, ext)
+    }
+
+    static func taiwanOnly() throws -> RealRailways {
+        try XCTUnwrap(closed.railways)
+    }
+
     static func railways() throws -> RealRailways {
         try XCTUnwrap(open.railways)
     }
@@ -37,18 +47,21 @@ final class HongKongRailwaysTests: XCTestCase {
 
     // MARK: - The switch
 
-    /// No overseas city is open: the game reads what it did, no player can
-    /// reach a Hong Kong line, and the credits list Taiwan's sources only.
-    func testNoOverseasMapIsOpenYet() throws {
-        XCTAssertEqual(OverseasMaps.open, [])
-        let railways = try BundledRealData.railways()
+    /// With no overseas city read the game reads what it did, no player
+    /// can reach a Hong Kong line, and the credits list Taiwan's sources
+    /// only. Hong Kong is read since decision 712's third pull request, and
+    /// credited.
+    func testNoOverseasMapIsReadUnlessOpen() throws {
+        XCTAssertEqual(OverseasMaps.open, [.hongKong])
+        let railways = try Self.taiwanOnly()
         XCTAssertFalse(railways.lines.contains { $0.system.id == "hkmtr" })
         XCTAssertFalse(railways.stations.contains { $0.system.id == "hkmtr" })
         XCTAssertNil(railways.operations?.system(id: "hkmtr"))
         XCTAssertFalse(railways.metroRuns.keys.contains { $0.hasPrefix("hkmtr:") })
         XCTAssertFalse(RealRailways.System.all.contains { $0.id == "hkmtr" })
         for language in [DisplayLanguage.english, .traditionalChinese] {
-            XCTAssertEqual(DataSourceCredits.sections(in: language), DataSourceCredits.taiwanSections(in: language))
+            XCTAssertEqual(DataSourceCredits.sections(in: language, overseas: []), DataSourceCredits.taiwanSections(in: language))
+            XCTAssertEqual(DataSourceCredits.sections(in: language).count, DataSourceCredits.taiwanSections(in: language).count + 1)
         }
     }
 
@@ -56,7 +69,7 @@ final class HongKongRailwaysTests: XCTestCase {
     /// places of the lists, and nothing fails to read.
     func testOpeningHongKongLeavesTaiwanAsItIs() throws {
         XCTAssertEqual(Self.open.issues, [])
-        let closed = try BundledRealData.railways()
+        let closed = try Self.taiwanOnly()
         let open = try Self.railways()
         XCTAssertEqual(open.lines.prefix(closed.lines.count).map(\.lineKey), closed.lines.map(\.lineKey))
         XCTAssertEqual(open.lines.prefix(closed.lines.count).map(\.points), closed.lines.map(\.points))
@@ -78,7 +91,7 @@ final class HongKongRailwaysTests: XCTestCase {
                 try BundledRealData.file(name, ext)
             }
             let railways = try XCTUnwrap(loaded.railways)
-            XCTAssertEqual(railways.lines.map(\.lineKey), try BundledRealData.railways().lines.map(\.lineKey))
+            XCTAssertEqual(railways.lines.map(\.lineKey), try Self.taiwanOnly().lines.map(\.lineKey))
             XCTAssertFalse(loaded.issues.isEmpty)
         }
     }
@@ -228,7 +241,7 @@ final class HongKongRailwaysTests: XCTestCase {
         let anchor = try XCTUnwrap(GeoAnchor(latitude: 223_200_000, longitude: 1_141_200_000))
         let world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 23, height: 1 << 23), balance: Money(100_000_000_000), rules: .realistic)
         let closed = GameSession(world: world, language: .traditionalChinese)
-        closed.railways = try BundledRealData.railways()
+        closed.railways = try Self.taiwanOnly()
         XCTAssertEqual(closed.buyableRealLines.map(\.id), [])
         let session = GameSession(world: world, language: .traditionalChinese)
         let railways = try Self.railways()

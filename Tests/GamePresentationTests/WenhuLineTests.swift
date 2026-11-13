@@ -245,7 +245,7 @@ final class WenhuLineTests: XCTestCase {
     /// hill, so the offer said track could not cross the water there. The
     /// tests' maps round the line read no water.
     func testItIsOfferedOnTheTaipeiOpening() throws {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == "Taipei" })
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
         let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
@@ -272,7 +272,7 @@ final class WenhuLineTests: XCTestCase {
     /// offer said it would cross another track (a player's report on
     /// 109.1); it is now laid clear over it.
     func testItIsOfferedOverTheHighSpeedDemosNangangDepot() throws {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let world = try HighSpeedDemo.make(
             in: .english, railways: XCTUnwrap(data.railways), population: data.population, places: data.places, water: data.water,
             coverage: data.coverage, heights: data.heights

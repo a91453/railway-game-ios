@@ -7,9 +7,8 @@ import GameCore
 // city's lines are one self-contained folder, its map pack
 // (`Resources/MapPacks/hongkong`, made by `tools/hk-map/`), in the formats
 // and under the file names of Taiwan's, and read only for a city that is
-// open. None is yet: the rule
-// that opens one (the flights) is not written, so ``OverseasMaps/open`` is
-// empty and the game reads, lists and sells exactly what it did.
+// open (``OverseasMaps/open``; Hong Kong since decision 712's third pull
+// request). The flights that let a player onto its map are ``AirRoutes``.
 
 /// A city outside Taiwan whose real railways the app bundles.
 public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
@@ -162,10 +161,11 @@ extension GameWorld {
 }
 
 public enum OverseasMaps {
-    /// The cities whose railways the game reads and sells. Empty until the
-    /// flights that open one are in the game (decision 697's next step):
-    /// with it empty no player can reach an overseas line.
-    public static let open: Set<OverseasMap> = []
+    /// The cities whose railways and ground the app reads. A player still
+    /// reaches a city's map only once an airport's flights opened it
+    /// (decision 712, ``AirRoutes``); a city not listed here is not read,
+    /// offered or credited at all.
+    public static let open: Set<OverseasMap> = [.hongKong]
 }
 
 extension RealRailways.System {

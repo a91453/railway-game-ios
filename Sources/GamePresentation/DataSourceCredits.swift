@@ -218,6 +218,23 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
                         ]
                     ),
+                    // Decision 712: Hong Kong International Airport on
+                    // Hong Kong's map (`AirportCatalog.overseasPlaces`).
+                    DataSourceCredit(
+                        id: "hongKongAirport",
+                        title: language.text("Hong Kong International Airport", "香港國際機場"),
+                        detail: language.text(
+                            "On Hong Kong’s map, how many passengers and flights the airport has in a day, and its flights to Taiwan.",
+                            "香港地圖上機場一天有多少旅客與航班，以及飛台灣的航線。"
+                        ),
+                        notice: language.text(
+                            "Passengers and flights of 2025: Airport Authority Hong Kong’s traffic figures. Flights to Taiwan: Civil Aviation Administration, Ministry of Transportation and Communications (Taiwan), Civil Aviation Statistics annual report 2025. Position: OpenStreetMap contributors. The game is not affiliated with Airport Authority Hong Kong.",
+                            "2025 年的旅客與航班：香港機場管理局公布的航空交通量。飛台灣的航線：交通部民用航空局《民航統計年報》2025 年。位置：OpenStreetMap 貢獻者。本遊戲與香港機場管理局沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                        ]
+                    ),
                 ]
             )
         }

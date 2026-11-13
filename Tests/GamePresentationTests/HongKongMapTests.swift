@@ -68,11 +68,13 @@ final class HongKongMapTests: XCTestCase {
 
     // MARK: - The switch
 
-    /// With no city open the real-world data holds no ground, and reads
-    /// what it did.
-    func testNoGroundIsReadWhileNoCityIsOpen() {
-        XCTAssertEqual(OverseasMaps.open, [])
-        XCTAssertTrue(RealWorldData.load(file: RealWorldDataLoadTests.file).overseas.isEmpty)
+    /// Hong Kong is open (decision 712's third pull request), so the app's
+    /// real-world data holds its ground; with no city asked for it holds
+    /// none, and reads what it did.
+    func testTheGroundIsReadOnlyOfAnOpenCity() {
+        XCTAssertEqual(OverseasMaps.open, [.hongKong])
+        XCTAssertEqual(RealWorldData.load(overseas: OverseasMaps.open, pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file).overseas.map(\.city), [OverseasMap.hongKong])
+        XCTAssertTrue(RealWorldData.load(overseas: [], file: RealWorldDataLoadTests.file).overseas.isEmpty)
     }
 
     /// The launcher starts a game on the city's map once its ground is

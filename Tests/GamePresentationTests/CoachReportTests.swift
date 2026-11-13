@@ -22,7 +22,7 @@ final class CoachReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (1...60).contains($0) ? $0 : nil }, "COACH_REPORT is 1 to 60 days")
         let only = ProcessInfo.processInfo.environment["COACH_ONLY"]
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let network = try XCTUnwrap(data.coaches)
         var rows = ["| Line | Coaches | Day | Trips | Fares | Operating profit | Fullest train | Station full or gave up | Coach stops: on the map / with a station | Coach passengers at those | Riders on the trains | Pairs with a coach | Trips a day the coaches take |",
                     "| --- | --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |"]
@@ -82,7 +82,7 @@ final class CoachReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (0...10).contains($0) ? $0 : nil }, "COACH_TAIWAN is 0 to 10 days")
         let only = ProcessInfo.processInfo.environment["COACH_TAIWAN_ONLY"]
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let network = try XCTUnwrap(data.coaches)
         func note(_ text: String) { FileHandle.standardError.write(Data("\(text)\n".utf8)) }

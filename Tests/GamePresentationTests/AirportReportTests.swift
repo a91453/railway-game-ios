@@ -23,7 +23,7 @@ final class AirportReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (1...60).contains($0) ? $0 : nil }, "AIRPORT_REPORT is 1 to 60 days")
         let only = ProcessInfo.processInfo.environment["AIRPORT_ONLY"]
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         // HEALTH-126: and how full the trains ran: the fullest a train left
         // a stop (of its rated capacity), the times a train left people
         // behind for want of room, those who found a station full or gave
@@ -89,7 +89,7 @@ final class AirportReportTests: XCTestCase {
             throw XCTSkip("set AIR_ROUTE_REPORT=<days> to print what a line to an airport carries")
         }
         let days = try XCTUnwrap(Int(value).flatMap { (1...30).contains($0) ? $0 : nil }, "AIR_ROUTE_REPORT is 1 to 30 days")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var rows = ["| Line | Stations | Day | Riders of the airports that fly to Hong Kong (yesterday) | Trips | Fares |", "| --- | --: | --: | --- | --: | --: |"]
         func play(_ name: String, stations: Int, _ start: GameWorld) throws {
             var world = start

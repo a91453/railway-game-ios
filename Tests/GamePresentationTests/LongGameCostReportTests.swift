@@ -23,7 +23,7 @@ final class LongGameCostReportTests: XCTestCase {
             throw XCTSkip("set LONG_GAME_REPORT=<days> to time a long real-world game")
         }
         let days = try XCTUnwrap(Int(value).flatMap { (1...1_000).contains($0) ? $0 : nil }, "LONG_GAME_REPORT is 1 to 1,000 days")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let environment = ProcessInfo.processInfo.environment
         var world = try environment["LONG_GAME_LOAD"].map { try SaveLibrary.decode(Data(contentsOf: URL(fileURLWithPath: $0))) } ?? Self.miaoli(data: data)
         world.setSpeed(.fast)

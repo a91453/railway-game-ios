@@ -3173,8 +3173,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Decision 712: Hong Kong's row in the map picker, closed (what opens
     /// it) and open (in the demo mode, which has every city open); the
     /// airport's row that says how far yesterday was; and the status line
-    /// when the flights open. The cities are read by `-open-overseas`
-    /// while ``OverseasMaps/open`` is still empty.
+    /// when the flights open. (`-open-overseas` read the cities while
+    /// ``OverseasMaps/open`` was empty; Hong Kong is in it now.)
     func testAirRouteUnlock() {
         func picker(_ name: String, extra: [String], english: Bool) {
             let app = launch(extra: ["-open-overseas"] + extra, english: english)
@@ -3221,6 +3221,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle()
         openAirports(in: app)
         keep("air-route-airport-progress", app)
+    }
+
+    /// Decision 712's third pull request: Hong Kong's own map, which
+    /// nobody had seen in the app: the 2D map where a new game opens (the
+    /// airport) and the 3D map there. Started from the picker's row in
+    /// the demo mode, which has the city open.
+    func testHongKongMap() {
+        let app = launch(extra: ["-demoMode.on", "YES", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+        let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
+        for _ in 0..<12 where !(row.exists && row.frame.maxY <= app.frame.maxY - 12) {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.45)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(row.exists, "Hong Kong's row shows once its map is read")
+        row.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "Hong Kong's map opens")
+        settle(seconds: 5)
+        keep("hong-kong-map-2d", app)
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        waitForPicture(timeout: 120)
+        settle()
+        keep("hong-kong-map-3d", app)
     }
 
     /// Opens the sights from the menu and drags the list up to the second

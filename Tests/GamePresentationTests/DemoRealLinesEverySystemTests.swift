@@ -29,7 +29,7 @@ final class DemoRealLinesEverySystemTests: XCTestCase {
         return session
     }
 
-    private static let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+    private static let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
 
     /// The view holding `stations` of `system` and 2 km round them.
     private func view(round stations: [String], of system: String, in world: GameWorld) throws -> WorldRegion {
@@ -64,10 +64,12 @@ final class DemoRealLinesEverySystemTests: XCTestCase {
             if keys[system] == nil { keys[system] = key }
         }
         XCTAssertEqual(
-            Set(keys.keys), ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"],
+            Set(keys.keys), ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "hkmtr"],
             "every system of the bundled railways"
         )
-        for (system, key) in keys.sorted(by: { $0.key < $1.key }) {
+        // Hong Kong's MTR is not on Taiwan's map: its lines are laid on its
+        // own (`HongKongMapTests`).
+        for (system, key) in keys.sorted(by: { $0.key < $1.key }) where system != OverseasMap.hongKong.system {
             let session = try taiwan()
             let stations = try XCTUnwrap(railways.stops[key]).prefix(4).map(\.chinese)
             let view = try view(round: Array(stations), of: system, in: session.world)
