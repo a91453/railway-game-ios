@@ -694,6 +694,8 @@ public struct GameWorld: Equatable, Sendable {
             guard let index = after.platforms.firstIndex(of: platform) else { continue }
             after.removePlatform(at: index)
         }
+        // Decision 716: the parts of a closed edge stay closed.
+        let closed = after.isClosed(id)
         after.removeEdge(id)
         let (_, nodeNext) = try Self.allocateID(from: after.nextNodeNumber)
         let node = after.addNode(at: middle, next: nodeNext)
@@ -709,6 +711,10 @@ public struct GameWorld: Equatable, Sendable {
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
                                    sections: secondSections, mountain: edge.mountain, geometry: secondGeometry, next: secondNext)
+        if closed {
+            after.setClosed(first, true)
+            after.setClosed(second, true)
+        }
         // Spacing along the ways of the network with both parts: alone,
         // neither reaches the junction where the edge parted from track
         // beside it.
@@ -1368,6 +1374,8 @@ public struct GameWorld: Equatable, Sendable {
             let sections = try sections(of: geometry, structure: old.structure)
             if let other = plan.network.firstConflict(from: old.from, to: old.to, curve: curve, geometry: geometry) { throw .trackConflict(other) }
             plan.network.restoreEdge(old, curve: curve, sections: sections, geometry: geometry)
+            // Decision 716: closed as it was.
+            if network.isClosed(old.id) { plan.network.setClosed(old.id, true) }
             geometries[old.id] = (geometry, sections)
         }
         for id in ids {
@@ -2416,14 +2424,29 @@ public struct GameWorld: Equatable, Sendable {
         try admit(train, at: index)
     }
 
+    /// Closes edge `id`, which exists, to trains, or opens it (decision
+    /// 716; ``closeTrack(_:)`` and ``openTrack(_:)`` check the rest), and
+    /// starts again what is kept between steps from the routes the network
+    /// gives.
+    mutating func setTrackClosed(_ id: TrackEdgeID, _ closed: Bool) {
+        network.setClosed(id, closed)
+        passengerPlan = PassengerPlanCache()
+        passengerRouteMemo = PassengerRouteMemo()
+        routeMemo = RouteMemo()
+    }
+
     /// Puts `candidate`, train `index` with a new place or path, into the
     /// world: under traffic control (Stage T) with the reservation of its
     /// route, in place of its old one, only if no other train holds track
     /// it needs (see ``reserving(_:)``); otherwise nothing changes.
     ///
-    /// - Throws: ``GameError/trackReserved(_:)`` naming the lowest numbered
+    /// - Throws: ``GameError/trackClosed(_:)`` naming the lowest numbered
+    ///   edge closed to trains (decision 716) that it would stand on or
+    ///   its path runs along, with or without traffic control; then
+    ///   ``GameError/trackReserved(_:)`` naming the lowest numbered
     ///   train holding such track.
     private mutating func admit(_ candidate: Train, at index: Int) throws(GameError) {
+        if let closed = closedTrack(under: candidate) { throw .trackClosed(closed) }
         switch reserving(candidate) {
         case .granted(let train): trains[index] = train
         case .held(let holder): throw .trackReserved(holder)

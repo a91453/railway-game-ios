@@ -321,3 +321,10 @@ its map's airports when it opens the save).
   best), one past the stop
   (`DrivenRunTests.testVersionNinetyTwoKeepsTheAssistedRuns`, written with
   `DRIVEN_RUN_SAVE_NEW=1` by the build that first made it; decision 710).
+- `v94-closed-track.json`: a single track with a passing loop at its middle
+  station, the main track through that station closed by hand, a minute
+  after an eastbound and a westbound service set off under traffic control
+  (the eastbound one bound for the loop); the network's `"closedEdges"`
+  (`TrackClosureTests.testVersionNinetyFourKeepsTheClosedTrack`, written
+  with `CLOSE_TRACK_SAVE_NEW=1` by the build that first made it; decision
+  716).

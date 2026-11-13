@@ -491,9 +491,15 @@
 ///     count and take the next assisted run for the best, so it says the
 ///     save is newer than it instead. A save of any earlier version needs
 ///     no step: no run of its record was assisted.
+/// 94. Closing track by hand (decision 716): a world's network can hold
+///     `"closedEdges"`, the edges closed to trains. A build that reads
+///     only an earlier version would drop them and run its trains along
+///     track the player closed, so it says the save is newer than it
+///     instead. A save of any earlier version needs no step: none of its
+///     track is closed. (Version 93 is decision 715's.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 92
+    public static let currentVersion = 94
 
     public let world: GameWorld
 
@@ -724,6 +730,8 @@ extension SavedGame: Codable {
         // Version 91 or earlier to 92: a record of the runs driven by hand
         // without `"assisted"` has none the stopping assist helped with
         // (decision 710): nothing to turn.
+        // Version 93 or earlier to 94: a network without `"closedEdges"`
+        // has no track closed (decision 716): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

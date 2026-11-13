@@ -171,6 +171,12 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// either edge removes the pair, a new edge that joins them within the
     /// reach removes it too, and no new edge may come too close to either.
     public private(set) var spacingExemptions: [TrackEdgePair]
+    /// The edges closed to trains (decision 716), in ascending ID order:
+    /// no route is found along one and no train is placed or sent onto
+    /// one, until it is opened again. Empty in a new network. Removing an
+    /// edge opens it. Changed by ``GameWorld/closeTrack(_:)`` and
+    /// ``GameWorld/openTrack(_:)`` only.
+    public private(set) var closedEdges: [TrackEdgeID] = []
     /// For every span that fouls spans of other edges, those spans (Stage
     /// F2b, ARCHITECTURE decision 53): spans of two edges at one level less
     /// than ``trackSpacing`` apart in plan at points more than
@@ -435,6 +441,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         let edge = edges.remove(at: index)
         recutSpans(of: id)
         spacingExemptions.removeAll { $0.contains(id) }
+        closedEdges.removeAll { $0 == id }
         for node in [edge.from, edge.to] {
             guard let nodeIndex = nodeIndex(node) else { continue }
             nodes[nodeIndex].ends.removeAll { $0.edge == id }
@@ -442,6 +449,21 @@ public struct RailwayNetwork: Hashable, Sendable {
         }
         if updatingFouling {
             foulingSpans = foulingAfterChange(to: changed)
+        }
+    }
+
+    /// Whether edge `id` is closed to trains (decision 716).
+    public func isClosed(_ id: TrackEdgeID) -> Bool {
+        !closedEdges.isEmpty && closedEdges.contains(id)
+    }
+
+    /// Closes edge `id`, which exists, to trains, or opens it again
+    /// (decision 716).
+    mutating func setClosed(_ id: TrackEdgeID, _ closed: Bool) {
+        precondition(edge(id) != nil, "setClosed(_:_:) needs an edge of the network")
+        closedEdges.removeAll { $0 == id }
+        if closed {
+            closedEdges.insert(id, at: closedEdges.firstIndex { $0 > id } ?? closedEdges.count)
         }
     }
 
@@ -514,7 +536,7 @@ public struct RailwayNetwork: Hashable, Sendable {
 
 extension RailwayNetwork: Codable {
     private enum CodingKeys: String, CodingKey {
-        case nodes, edges, nextNodeID, nextEdgeID, platforms, spacingExemptions
+        case nodes, edges, nextNodeID, nextEdgeID, platforms, spacingExemptions, closedEdges
     }
 
     private enum NodeKeys: String, CodingKey {
@@ -543,7 +565,10 @@ extension RailwayNetwork: Codable {
     /// when there are any: `{"station", "edge", "start", "end"}` in order
     /// along the track, on edges of the network. Since Stage F2 also
     /// `"spacingExemptions"`, when there are any: pairs of edge numbers
-    /// `[a, b]` with `a < b`, in order, on edges of the network. The world's
+    /// `[a, b]` with `a < b`, in order, on edges of the network. Since
+    /// decision 716 also `"closedEdges"`, when there are any: the numbers
+    /// of the edges closed to trains, ascending, each an edge of the
+    /// network. The world's
     /// rules (the map, heights, grades, structures, clearance, spacing, and
     /// platforms that fit their edges and stations that exist) are checked by
     /// the ``GameWorld`` decoder.
@@ -630,6 +655,13 @@ extension RailwayNetwork: Codable {
             }
             spacingExemptions.append(next)
         }
+        for number in container.contains(.closedEdges) ? try container.decode([Int].self, forKey: .closedEdges) : [] {
+            let id = TrackEdgeID.edge(number)
+            guard edge(id) != nil, closedEdges.last.map({ $0 < id }) ?? true else {
+                throw corrupt("Closed edges must be edges of the network, in order, each once.")
+            }
+            closedEdges.append(id)
+        }
         foulingSpans = workOutFouling()
     }
 
@@ -670,6 +702,9 @@ extension RailwayNetwork: Codable {
         }
         if !spacingExemptions.isEmpty {
             try container.encode(spacingExemptions.map { [$0.first.networkNumber, $0.second.networkNumber] }, forKey: .spacingExemptions)
+        }
+        if !closedEdges.isEmpty {
+            try container.encode(closedEdges.map(\.networkNumber), forKey: .closedEdges)
         }
     }
 }
