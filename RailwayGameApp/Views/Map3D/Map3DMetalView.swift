@@ -244,6 +244,10 @@ final class Map3DMetalView: MTKView {
     var trainGroundBuilt: (@MainActor (Map3DPoint) -> Bool)?
     private var lookoutWasBuilt = true
 
+    /// Decision 709: the level the chunks drawn from afar were last drawn
+    /// at (``Map3DFarDetail/level(distance:was:)``).
+    private var farLevel = 0
+
     private struct Chunk {
         let vertices: MTLBuffer
         let indices: MTLBuffer
@@ -255,6 +259,9 @@ final class Map3DMetalView: MTKView {
         /// Decision 455: the simplified city's boxes, an instance each of
         /// the one box (``Map3DBoxInstance``), and the triangles they make.
         let farBoxes: (instances: MTLBuffer, count: Int, triangles: Int)?
+        /// Decision 709: what it draws from afar at each level, the first
+        /// so many of its base indices, far indices, boxes and shadows.
+        let farLevels: [Map3DFarDetail.Counts]
         /// Whether it was drawn in full last frame (decision 238's margin).
         var detailed = false
         /// Decision 267: its closest detail, and whether it was drawn last
@@ -300,10 +307,13 @@ final class Map3DMetalView: MTKView {
         var bytes = 0
 
         /// Decision 711: its triangles as the camera asks, simplified and
-        /// as its ground alone.
-        func cost(pack: Map3DModelPack?) -> Map3DSceneBudget.Cost {
-            let ground = baseIndexCount / 3, shadow = (shadows?.indexCount ?? 0) / 3
-            let simplified = ground + (far?.indexCount ?? 0) / 3 + (farBoxes?.triangles ?? 0) + shadow
+        /// as its ground alone. Decision 709: simplified, what the far
+        /// `level` draws of it this frame, not all it holds.
+        func cost(pack: Map3DModelPack?, level: Int) -> Map3DSceneBudget.Cost {
+            let afar = farLevels[level], shadow = (shadows?.indexCount ?? 0) / 3
+            let ground = afar.base / 3
+            let simplified = ground + (far == nil ? 0 : afar.far / 3) + (farBoxes == nil ? 0 : afar.boxTriangles)
+                + (shadows == nil ? 0 : afar.shadows / 3)
             guard detailed else { return Map3DSceneBudget.Cost(whole: simplified, simplified: simplified, ground: ground) }
             var whole = indexCount / 3 + (standIn?.indexCount ?? 0) / 3 + shadow + 2 * (signs?.count ?? 0)
             if let pack, let props {
@@ -705,8 +715,11 @@ final class Map3DMetalView: MTKView {
             encoder.setVertexBytes(base, length: bytes.count, index: 1)
         }
         let seen = chunks.filter { $0.share != .nothing && Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: matrix) }
+        // Decision 709: from afar, what is too small to see casts nothing.
+        let level = farLevel
         for chunk in seen {
-            let count = chunk.detailed ? chunk.indexCount : chunk.baseIndexCount
+            let afar = chunk.farLevels[level]
+            let count = chunk.detailed ? chunk.indexCount : afar.base
             if count > 0 {
                 encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32, indexBuffer: chunk.indices, indexBufferOffset: 0)
@@ -720,22 +733,23 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += standIn.indexCount / 3
             }
-            if !chunk.detailed, chunk.share < .ground, let far = chunk.far {
+            if !chunk.detailed, chunk.share < .ground, let far = chunk.far, afar.far > 0 {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
-                encoder.drawIndexedPrimitives(type: .triangle, indexCount: far.indexCount, indexType: .uint32, indexBuffer: far.indices, indexBufferOffset: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: afar.far, indexType: .uint32, indexBuffer: far.indices, indexBufferOffset: 0)
                 drawCalls += 1
-                triangles += far.indexCount / 3
+                triangles += afar.far / 3
             }
         }
         // Decision 455: the simplified city's boxes, a draw a chunk.
         encoder.setRenderPipelineState(sunDrawing.boxes)
         for chunk in seen where !chunk.detailed && chunk.share < .ground {
-            guard let boxes = chunk.farBoxes else { continue }
+            let afar = chunk.farLevels[level]
+            guard let boxes = chunk.farBoxes, afar.boxes > 0 else { continue }
             encoder.setVertexBuffer(boxes.instances, offset: 0, index: 2)
             encoder.drawIndexedPrimitives(type: .triangle, indexCount: Map3DBoxInstance.indices.count, indexType: .uint16, indexBuffer: boxIndices,
-                                          indexBufferOffset: 0, instanceCount: boxes.count)
+                                          indexBufferOffset: 0, instanceCount: afar.boxes)
             drawCalls += 1
-            triangles += boxes.triangles
+            triangles += afar.boxTriangles
         }
         if let models {
             encoder.setRenderPipelineState(sunDrawing.instanced)
@@ -1176,7 +1190,7 @@ final class Map3DMetalView: MTKView {
         }
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         var made = Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                     far: far, farBoxes: farBoxes, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
+                     far: far, farBoxes: farBoxes, farLevels: chunk.farLevels, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
                      column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse, facadeMesh: chunk.facade)
         let buffers: [MTLBuffer?] = [vertices, indices, far?.vertices, far?.indices, farBoxes?.instances, close?.vertices, close?.indices,
                                      standIn?.vertices, standIn?.indices, shadows?.vertices, shadows?.indices, props?.instances, signs?.instances]
@@ -1250,6 +1264,8 @@ final class Map3DMetalView: MTKView {
                            camera: camera, openings: openings)
         let below = underground.isUnderground
         let camera = camera
+        // Decision 709: the far level of this frame, held at a step.
+        farLevel = Map3DFarDetail.level(distance: camera.distance, was: farLevel)
         let matrix = camera.viewProjection
         // Decision 357: the sun's shadow map, drawn again when it is out
         // of date (before the frame's own pass, in the same command buffer).
@@ -1306,7 +1322,7 @@ final class Map3DMetalView: MTKView {
             (place: place, distance: Map3DStreaming.distance(of: Map3DStreaming.Key(column: visible[place].column, row: visible[place].row),
                                                              to: camera.target))
         }.sorted { $0.distance < $1.distance }
-        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack) },
+        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack, level: self.farLevel) },
                                              within: Map3DSceneBudget.triangles(tier: level?.tier))
         for (entry, share) in zip(nearestFirst, shares) where share != .whole {
             visible[entry.place].share = share
@@ -1438,14 +1454,19 @@ final class Map3DMetalView: MTKView {
             }
         }
         var farBoxes: [(instances: MTLBuffer, count: Int, triangles: Int, seen: Bool)] = []
+        // Decision 709: the farther the camera, the larger the smallest
+        // thing a chunk drawn from afar draws (nothing left out up to
+        // where chunks are drawn in full).
+        let farLevel = farLevel
         for chunk in visible {
+            let afar = chunk.farLevels[farLevel]
             // Decision 238: the city in full near the camera; afar, the
             // ground and track, then the city simplified.
             let detailed = chunk.detailed
             // Decision 342: a chunk a cone crosses draws its city apart,
             // seen through in front of the trains.
             let seen = seeThrough.cuts(column: chunk.column, row: chunk.row, tops: chunk.cityTops)
-            let count = detailed && !seen && !below ? chunk.indexCount : chunk.baseIndexCount
+            let count = detailed ? (!seen && !below ? chunk.indexCount : chunk.baseIndexCount) : afar.base
             if count > 0 {
                 encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32,
@@ -1489,14 +1510,14 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += standIn.indexCount / 3
             }
-            if !detailed, chunk.share < .ground, let far = chunk.far {
+            if !detailed, chunk.share < .ground, let far = chunk.far, afar.far > 0 {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
-                encoder.drawIndexedPrimitives(type: .triangle, indexCount: far.indexCount, indexType: .uint32,
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: afar.far, indexType: .uint32,
                                               indexBuffer: far.indices, indexBufferOffset: 0)
                 drawCalls += 1
-                triangles += far.indexCount / 3
+                triangles += afar.far / 3
             }
-            if !detailed, chunk.share < .ground, let boxes = chunk.farBoxes { farBoxes.append((boxes.instances, boxes.count, boxes.triangles, seen)) }
+            if !detailed, chunk.share < .ground, let boxes = chunk.farBoxes, afar.boxes > 0 { farBoxes.append((boxes.instances, afar.boxes, afar.boxTriangles, seen)) }
             if seen { encoder.setRenderPipelineState(pipeline) }
         }
         // Decision 455: the simplified city's boxes, a draw a chunk, the
@@ -1620,11 +1641,14 @@ final class Map3DMetalView: MTKView {
         encoder.setDepthStencilState(shadowDepthState)
         for chunk in visible where !below && chunk.share < .ground {
             guard let shadows = chunk.shadows else { continue }
+            // Decision 709: from afar, only the shadows of what is drawn.
+            let count = chunk.detailed ? shadows.indexCount : chunk.farLevels[farLevel].shadows
+            guard count > 0 else { continue }
             encoder.setVertexBuffer(shadows.vertices, offset: 0, index: 0)
-            encoder.drawIndexedPrimitives(type: .triangle, indexCount: shadows.indexCount, indexType: .uint32,
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32,
                                           indexBuffer: shadows.indices, indexBufferOffset: 0)
             drawCalls += 1
-            triangles += shadows.indexCount / 3
+            triangles += count / 3
         }
         if let shadows = trainShadows {
             encoder.setVertexBuffer(shadows.vertices, offset: 0, index: 0)

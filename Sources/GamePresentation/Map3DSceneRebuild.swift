@@ -154,6 +154,7 @@ extension Map3DScene {
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
         seededStreets = old.seededStreets
         levelCrossings = old.levelCrossings
+        layers = old.layers
 
         let map = WorldRegion(bounds: world.bounds)
         let grid = Map3DStreaming(originX: originX, originY: originY, map: map)

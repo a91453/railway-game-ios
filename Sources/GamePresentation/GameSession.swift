@@ -1138,6 +1138,11 @@ public final class GameSession {
     /// station panel. The record is the launcher's file; this is its
     /// copy for the game, never saved.
     public internal(set) var collectedStamps: [String: Date] = [:]
+    /// Decision 712: the cities outside Taiwan the app offers and those
+    /// whose flights are open, from the launcher (``GameLauncher/airRoutes``):
+    /// what the airports' rows say of them. Empty in a game with no
+    /// launcher, whose airports then say nothing of flights to open.
+    public var airRoutes = AirRoutes()
     /// Decision 276: the fullest each running trip's train has been, read
     /// after every step for the stamps. Never saved.
     @ObservationIgnored var tripLoads = TripLoads()
