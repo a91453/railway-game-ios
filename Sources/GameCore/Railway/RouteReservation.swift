@@ -765,8 +765,9 @@ extension GameWorld {
         /// it follows needs.
         fileprivate var released: [TrainID: Set<TrainID>] = [:]
 
-        /// TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): the train at `place` now holds `track` (`placed`:
-        /// whether it is on the track at all), the other trains what they
+        /// TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): the train at
+        /// `place` now holds `track` (`placed`: whether it is on the track
+        /// at all), the other trains what they
         /// did. Only what that train held and holds is touched, and every
         /// list stays as working all of it out again would leave it. The
         /// claims are not: see ``GameWorld/settleClaims(_:covers:)``.
@@ -1111,16 +1112,18 @@ extension GameWorld {
     }
 
     /// The world's track holders (see ``trackHolders()``), kept in `memo`
-    /// for as long as the trains stay as they are: worked out again once
-    /// any train is not the same. Within one memo the network and traffic
-    /// control do not change (a memo lives for one ``advance(ticks:)`` or
-    /// one question), and a train's holding depends on nothing else. The
-    /// last two sets of trains asked about are kept: a passing place is
-    /// tried in a world with one train moved (see ``replacing(_:)``),
-    /// between questions of the world itself.
+    /// for as long as the trains stay as they are. Within one memo the
+    /// network and traffic control do not change (a memo lives for one
+    /// ``advance(ticks:)`` or one question), and a train's holding depends
+    /// on nothing else. When a few trains are not the same, the last
+    /// holders are changed for those trains alone (see
+    /// ``trackHolders(changedAt:memo:)``); when many are, they are worked
+    /// out again from every train, and the last two sets of trains asked
+    /// about are kept.
     func trackHolders(memo: inout DirectionMemo) -> TrackHolders {
-        // TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): when a few trains are not as the last holders had
-        // them (one set off, one was given more of its route), only what
+        // TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): when a few
+        // trains are not as the last holders had them (one set off, one
+        // was given more of its route), only what
         // those hold is worked out again.
         if !memo.holders.isEmpty, memo.holders[0].trains.count == trains.count {
             let limit = max(1, trains.count / 4)
@@ -1166,7 +1169,8 @@ extension GameWorld {
     }
 
     /// ``trackHolders(memo:)`` from the last holders in `memo`, whose
-    /// trains are the world's but for those at `changed` (TICK-L1, `docs/research/TICK_L1_2026-11-13.md`):
+    /// trains are the world's but for those at `changed` (TICK-L1,
+    /// `docs/research/TICK_L1_2026-11-13.md`):
     /// what those held is taken out and what they hold now put in, and the
     /// claims, which depend on every train, worked out again. The last
     /// holders are changed in place and not kept as they were: what is
@@ -1190,7 +1194,8 @@ extension GameWorld {
         return entry.holders
     }
 
-    /// Tests only (TICK-L1, `docs/research/TICK_L1_2026-11-13.md`): counts how ``trackHolders(memo:)`` came
+    /// Tests only (TICK-L1, `docs/research/TICK_L1_2026-11-13.md`): counts
+    /// how ``trackHolders(memo:)`` came
     /// by its answers, and has every answer changed in place checked
     /// against the holders worked out from every train. `nil` in the game.
     final class HolderAudit: @unchecked Sendable {

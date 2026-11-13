@@ -2,7 +2,8 @@ import Foundation
 import XCTest
 @testable import GameCore
 
-/// TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): the track the trains hold is no longer worked out from
+/// TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): the track the trains
+/// hold is no longer worked out from
 /// every train each time one of them changes; what the changed trains held
 /// is taken out and what they hold now put in. Here every such answer is
 /// checked against the holders worked out from every train (the game never
