@@ -1932,9 +1932,18 @@ extension Map3DScene {
                     continue
                 }
                 if cleared.contains(ChunkKey(column: lot.column, row: lot.row)) {
-                    // A plaza where the track passes.
+                    // On a real-world map, nothing: the base map's ground,
+                    // roads and cover are there, and a 62 m square of
+                    // paving over them read as a bare khaki patch (four
+                    // round Hong Kong's Kowloon Station), over a cutting
+                    // with the platforms' canopies poking through it.
+                    if streetFrontage { continue }
+                    // A plaza where the track passes, none of it over a
+                    // trench (decision 375).
                     let square = groundSquare(round: base, half: Float(cell / Self.metre / 2) - 1, lift: 0.03)
-                    mesh(at: base) { $0.addFlat(square, triangles: Self.squareTriangles, color: Map3DPalette.plaza, paint: Self.paving) }
+                    let (points, triangles) = outsideTrenches(square, triangles: Self.squareTriangles, lift: 0.03)
+                    guard !triangles.isEmpty else { continue }
+                    mesh(at: base) { $0.addFlat(points, triangles: triangles, color: Map3DPalette.plaza, paint: Self.paving) }
                     continue
                 }
                 switch lot.use {

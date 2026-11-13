@@ -217,7 +217,7 @@ struct Map3DBaseMap: Sendable {
                     guard isDrawn else { continue }
                     let bounds = Bounds(minX: max(westX, low.x), minZ: max(northZ, low.z), maxX: min(westX + span, high.x), maxZ: min(northZ + span, high.z))
                     guard bounds.minX < bounds.maxX, bounds.minZ < bounds.maxZ else { continue }
-                    add(layer, bounds: bounds, scene: scene)
+                    add(layer, bounds: bounds, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), scene: scene)
                     if layer.name == "transportation" {
                         addTunnelEnds(layer, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), bounds: bounds,
                                       scene: scene)
@@ -251,13 +251,17 @@ struct Map3DBaseMap: Sendable {
         }
     }
 
-    private mutating func add(_ layer: VectorTile.Layer, bounds: Bounds, scene: (VectorTile.Point) -> Point) {
+    private mutating func add(_ layer: VectorTile.Layer, bounds: Bounds, tile: Bounds, scene: (VectorTile.Point) -> Point) {
         for feature in layer.features {
             switch (layer.name, feature.kind) {
             case ("water", .polygon), ("landcover", .polygon), ("park", .polygon):
                 guard let cover = Self.cover(layer: layer.name, class: feature.string("class")) else { continue }
+                let lake = layer.name == "water" && feature.string("class") == "lake"
                 for polygon in feature.polygons {
-                    areas.append(Area(cover: cover, rings: polygon.map { $0.map(scene) }, bounds: bounds))
+                    let rings = polygon.map { $0.map(scene) }
+                    // No fountain, pool or pond too small to read as one.
+                    if lake, Self.isSpeck(rings, in: tile) { continue }
+                    areas.append(Area(cover: cover, rings: rings, bounds: bounds))
                 }
             case ("transportation", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
@@ -320,6 +324,32 @@ struct Map3DBaseMap: Sendable {
             }
         }
         return open
+    }
+
+    /// The least area, square metres, of a lake (the tiles' `water` of
+    /// class `lake`: OpenStreetMap's `natural=water` and reservoirs) the
+    /// 3D map draws. The smaller ones are mostly fountains, ornamental
+    /// pools and ponds on podium roofs and in courtyards: at the 3D map's
+    /// scale they showed as loose blue triangles on the ground, on the
+    /// stations' plazas and under buildings.
+    static let smallestLake: Double = 500
+
+    /// Whether `rings` (an outer ring and its holes, scene metres) is a
+    /// lake under ``smallestLake`` that lies wholly inside `tile`, its own
+    /// tile's square. A lake cut at a tile's edge reaches past it (into
+    /// the tile's buffer) and is kept, so a big lake loses no piece at a
+    /// tile's edge.
+    static func isSpeck(_ rings: [[Point]], in tile: Bounds) -> Bool {
+        guard let outer = rings.first, outer.count >= 3 else { return true }
+        let margin = 0.5
+        guard outer.allSatisfy({ $0.x > tile.minX + margin && $0.x < tile.maxX - margin && $0.z > tile.minZ + margin && $0.z < tile.maxZ - margin })
+        else { return false }
+        func area(_ ring: [Point]) -> Double {
+            var sum = 0.0
+            for (a, b) in zip(ring, ring.dropFirst() + ring.prefix(1)) { sum += a.x * b.z - b.x * a.z }
+            return abs(sum) / 2
+        }
+        return area(outer) - rings.dropFirst().reduce(0) { $0 + area($1) } < smallestLake
     }
 
     static func cover(layer: String, class name: String?) -> Cover? {
