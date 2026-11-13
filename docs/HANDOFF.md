@@ -598,6 +598,27 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**第 63 任交第 64 任（2026-11-13 00:40 UTC＝台灣 08:40，session_01YGNNuq9euTFvwq3qUD8j27，第 3 層，壓縮 3 次照規則換手；第 64 任是第 4 層）**
+- 照 #1579、開著的 PR 與各 session 的狀態寫的；和下面各段不同時以這段為準。第 64 任開工：在 #1579 登記，把 §1 表格的遊戲規劃改成自己。
+- **作者的交代（都還有效）**：跟作者講話用簡短白話的中文、不講技術細節；作者每傳一則訊息先讀 #1579 的新留言；**不按 Mac 的信任卡**（不呼叫 `confirm_repository_trust`），Mac 的對話由作者貼規劃給的文字開；**「綠了你自己合併」**（11-12；`merge`、完整 40 碼 `expectedHeadSha`、先 `draft:false`，合了記 #1579；規劃自己的文件 PR 也自己合）；每件派工寫雲端或 Mac 本機與一句理由，實作 session 用 `claude-fable-5-2`，交接寫 `docs/handoff/<單名>.md`；雲端同時最多 3–4 個、GameCore 的 PR 同時最多 2 個在跑 CI；做完的雲端 session 封存；NIGHT-HOURS 與站內樓層剖面只留規劃、不派；不讀不抄 dohoon84/bumpinto-world 的原始碼。
+- **發版的規矩**：**作者自己按 TestFlight，規劃不跑 `testflight.yml`**（除非他明說「你幫我發」）。他按了之後：規劃在 main 開完整 `ci.yml`；等 TestFlight 那一趟已經在 macOS runner 上跑了，才開 `ios-full-lane.yml`；回報結果，提醒他回答出口合規。
+- **128（作者要台灣 11-13 中午前發＝04:00 UTC）**：
+  - 已在 main `45383d9`：#2088 長途客運規則、#2093、#2094、#2099 DEMO-KRTC（機捷買得成、高雄捷運有車）、#2096、#2100、#2103 HEIGHT-HINT（決策 714 釋出，沒用號）、#2102 DRIVE-STOP PR 1（決策 710：進站停車條）、#2106、**#2105 MAP3D-CAP（決策 711，3D 場景上限；實機 iPhone 17 Pro 存檔 B 開 3D 892 萬 → 306 萬三角形、3,327 → 1,993 MB、記憶體警告 0 次；判斷在 #1579 6840047218）**。
+  - **還差一個：#2108**（規劃的，`claude/whatsnew-128d`，head `aa43e63e8295af85cf07e1b604c1e1d495e496d3`：這版新增與 What to Test 補 3D 場景上限那一行）。它的 Xcode build 是 #2102＋#2103＋#2105 第一次一起被 Xcode 編。**它綠 → 合 → 等新的 main HEAD 的 push CI 綠 → 告訴作者「128 可以按了」，並把那個 commit 記在 #1579。** 紅了就查、修，告訴作者先別按。04:00 UTC 還沒好，就從已經綠的 commit 發。發版前不再合任何會動到 App 的 PR。
+  - main `d275a52` 上手動的 `ios-build.yml` 43335621063（只跑 `SettingsUITests/testTheCityPreviewLoadsItsPageAndCloses`）寫這段時還在跑；#2108 的 Xcode build 綠了它就不必等。
+  - 知道而接受、寫進「請幫忙看」的：記憶體警告時卸區塊那條路實機沒被觸發（UNVERIFIED）；最遠視野快速連拖會看到空底色約 10 秒（沒和 main 對照）。
+  - Threads 草稿（機場當主角）已交作者，涵蓋到 `cfc051d`；之後進的停車條、高度提示、3D 變輕還沒寫進去，作者要新版再補。
+- **128 之後馬上做的**：
+  - **#2104 AIR-UNLOCK PR 1**（決策 712，香港地圖照包的大小＋人口，CI 綠，head `c244026…`，開關關著）：128 發了就合，封存 session_01YGNNuo5GgdCSuPmFia67cc，再派 **AIR-UNLOCK-2**（雲端）：PR 2 解鎖規則（規劃定的 A：機場昨天 ≥ 500 人搭你的車；記在 `LauncherPreferences`；選地圖多一列；解鎖提示；香港機場），PR 3 打開 `.hongKong`、資料出處、這版新增。人口用 WorldPop 香港 2025（CC BY 4.0）。新畫面是第三級。細節在 `docs/handoff/AIR-UNLOCK.md`（在 #2104 裡）與 #1579。
+  - **DRIVE-STOP-2**（雲端，動 GameCore，**存檔 92 留給它**）：輔助停車，從 `claude/drive-stop-assist`（`ad1d3b5`）接；`DrivenRun.assisted` 選填、獎金有上限、用 economy-balance 量；外加「停穩後的側面鏡頭拉近，列車約佔畫面寬 60%」（`Map3DFollow`＋`Map3DMetalView.swift` 一行）。見 `docs/handoff/DRIVE-STOP.md`。
+  - **#2098 PERF-FAR**（決策 709，session_01YGNNuqUr4anqf9nvXJXV38，雲端，草稿、CI 綠）：和 #2105 改同一批檔，要先併 main、再在實機重量（#2105 之後最遠視野已經少很多，先看它還值不值得）才談合。
+- **Mac 本機**：**PERF-OPEN3D**（對話 session_01YGNNumqFJGcsEgAjaP7pPX，`claude/perf-open3d`，決策 713，壓縮 1 次）開了草稿 **#2107**：開 3D 那一格的一秒幾乎全是機場重鋪，搬到背景後模擬器 1,075 → 12 ms；**實機還沒量**，量到 ≤ 100 ms、CI 綠才合（不進 128）。它的 A、C 段（跟飛機、手動駕駛、600× 的頓、tick 數字）還沒做；順便請它在實機對照 main 看快速連拖的空底色。之後的順序：COACH-3D（決策 708，還沒開工）→ WEB-127 → FACADE-669、GLASS-POLISH、CAB-RAIN。Mac 上「MAP3D 硬上限驗證」的對話已結束；分支 `claude/map3d-cap-device-shots`（#2105 的實機圖）可以刪。
+- **還沒派**：REAL-STATIONS-3D（沒買的真實車站也畫成場景；作者問過集集站為什麼 3D 找不到，現在要先買下集集線，決策 321、402）；TICK-L1、L2（等 PERF-OPEN3D 的 tick 數字）；金門、馬祖地圖包（等 AIR-UNLOCK 的做法定了）；玩家自己經營客運；HEALTH 巡檢（所有買得到的路線、從多個開局位置；KRTC 那類）；BUILD3D-2；決策 696 的文字更正；REVIEW-L19 剩下的 P3；128 之後看各項檢查花多久、哪幾項常排隊；香港收購剩的（機場快綫與東涌綫共用軌道、東涌綫 4／282 班沒開，動 GameCore）。
+- **規劃這一任定的（都記在 #1579）**：「3D 畫質：關」不拿掉（QUALITY-OFF 結案不做）；AIR-UNLOCK 四題；DRIVE-STOP PR 2 可以動 GameCore；HEIGHT-HINT 範圍加大（站長泡泡的記號、運行圖提示、說明條目）。
+- **雲端 session**：開著的只有 AIR-UNLOCK（等 #2104 合）與 PERF-FAR；DRIVE-STOP、HEIGHT-HINT、QUALITY-OFF、ANKENG-BUY、DEMO-KRTC 等都封存了。
+- **號碼**：決策 708 COACH-3D、709 PERF-FAR、710 DRIVE-STOP、711 MAP3D-CAP、712 AIR-UNLOCK、713 PERF-OPEN3D，**下一個 714**；存檔 main 91、92 留給 DRIVE-STOP-2、**下一個 93**；golden schema 76。
+- **審查點數**（L20）：#2087 1、#2091 1、#2088 2、#2093 1、#2094 1、#2099 1、#2103 1、#2102 1、#2105 2（文件與只改說明的不算）；到了該派 REVIEW-L20 的時候。
+
 **第 63 任的現況（2026-11-12 12:00 UTC＝台灣 20:00，session_01YGNNuq9euTFvwq3qUD8j27，第 3 層，壓縮 1 次；第 3 次後換手，下一任第 4 層）**
 - 照 #1579 與 PR 寫的；和下面「第 62 任交第 63 任」不同時以這段為準。作者交代照舊，再加 §1.2 的兩條（作者先按發版、規劃才開 full lane；規劃自己的文件 PR 可以自己合）。
 - **0.6.0 (127) 已發**（作者 10:23 UTC 自己按）：TestFlight run 43199890141 成功，commit `11886cb`（#2090 合併的那個）。完整 `ci.yml` 43199976727 綠；full lane（iOS App Build 43200623442）build、second、lessons 綠，map 與 iPad 教學寫這段時還在跑，結果見 #1579。提醒過作者回答出口合規。
