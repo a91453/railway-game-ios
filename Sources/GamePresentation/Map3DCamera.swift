@@ -298,6 +298,17 @@ public struct Map3DCamera: Hashable, Sendable {
         return camera
     }
 
+    /// Decision 714 (MAP3D-FAR): the camera with its target over
+    /// `ground` (scene x and z, ``Map3DStreaming/ground``), moved to its
+    /// nearest edge when a drag took it past: off the map there is
+    /// nothing to build, so nothing to see.
+    public func held(over ground: (x: ClosedRange<Float>, z: ClosedRange<Float>)) -> Map3DCamera {
+        var camera = self
+        camera.target.x = min(max(target.x, ground.x.lowerBound), ground.x.upperBound)
+        camera.target.z = min(max(target.z, ground.z.lowerBound), ground.z.upperBound)
+        return camera
+    }
+
     /// The camera `factor` times closer (more than 1 comes in).
     public func zoomed(by factor: Float) -> Map3DCamera {
         guard factor > 0, factor.isFinite else { return self }
