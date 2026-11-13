@@ -1612,6 +1612,13 @@ struct StationPanel: View {
                                 .monospacedDigit()
                                 .foregroundStyle(Theme.textSecondary)
                         }
+                        // Decision 712: how far its flights are from
+                        // opening a city's map.
+                        if let route = day.airRouteText(in: session.language, routes: session.airRoutes) {
+                            Text(verbatim: route)
+                                .font(.footnote)
+                                .monospacedDigit()
+                        }
                     }
                 } icon: {
                     Image(systemName: "airplane")

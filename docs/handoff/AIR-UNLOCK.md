@@ -6,16 +6,25 @@
 
 細節在 `docs/decisions/712.md`。地圖包多了 `extent`（62.6 × 45.5 km）與 `population.json`（WorldPop 香港 2025，739.7 萬人）；`OverseasGround`、`GameWorld.newOverseasGame`、`GameLauncher.startOverseasMap` 開香港的世界，土地隨車站讀入。`OverseasMaps.open` 仍是空的，App 沒有任何不同。地圖不用切塊（量測在決策裡）。
 
+## 做完的：PR 2，開航規則與畫面（開關仍關）
+
+AIR-UNLOCK-2（session_01YGNNupFY6Z2K8uhkAqFeJF，`claude/air-unlock-2`，2026-11-13；遊戲規劃第 64 任派，#1579 留言 6841699809）。細節在 `docs/decisions/712.md`「續：第二個 PR」。不動 GameCore、存檔、golden、三套 fixture。
+
+- 規則在 `Sources/GamePresentation/AirRoutes.swift`；記在 `LauncherPreferences.airRoutesOpened`；`GameLauncher.checkAirRoutes(of:)` 在午夜、開局／讀檔、資料讀完時查。
+- 選地圖多一列、機場那一列多一行、開航的狀態列與新聞；香港國際機場在 `AirportCatalog.overseasPlaces`。
+- 下面「PR 2」的 1–6 都做了。第 6 點（量 500 人）的數字在決策裡。
+- 截圖：`WebsiteScreenshotTests.testAirRouteUnlock`，用 Debug 啟動參數 `-open-overseas`（開關關著也讀香港）與 `-screenshot-air-routes offered|opened`。
+
 ## 還留下的
 
-### PR 2：開航規則與畫面（規劃 2026-11-12 回覆定案，四題都照設計 #1579 留言 6835572366）
+### PR 2：開航規則與畫面（**已做**，見上；原本的清單留著對照）
 
 1. 條件：飛香港的機場（桃園一、二航廈、臺中、高雄、花蓮）`yesterdayRiders` ≥ 500，午夜結算後開航；在 GamePresentation 讀，不動 GameCore。示範模式直接開放。
 2. 記在 `LauncherPreferences`（例如 `airRoutesOpened`）；`GameSession` 每天結算後與讀檔時檢查，成立就記下並在那一局提示（狀態訊息＋新聞）。重裝會掉，規劃接受。
 3. 選地圖畫面（`RailwayGameApp/Views/RealWorldPicker.swift`，「全台灣」那一列約 445–470 行）下面加一列大地圖「香港」：鎖著時寫怎麼開航，開了就 `launcher.startOverseasMap(.hongKong)`。現有 16 km 的「香港」地點照舊不鎖。**第三級截圖**：這一列與開航提示，規劃看過才合。先讀 ui-review、motion 兩個 skill。
 4. 台灣機場面板多一行「昨天 N／500 人」（只有有香港航點的機場）。
 5. 香港國際機場進 `AirportCatalog`（`withAirports` 現在只認台灣的 `tourism` 世界，香港的世界要另開一條路），航點臺北桃園、高雄、臺中、花蓮用決策 700 的民航局年報數字；機場全年旅客與架次要查香港機管局／民航處的公開統計，查不到標 UNVERIFIED。
-6. 500 人還沒量（economy-balance：NOT ASSESSED）：用 `AirportReportTests` 量機場捷運、高雄紅線與一條自己鋪的小線，數字寫回決策 712。
+6. 500 人還沒量（economy-balance：NOT ASSESSED）：用 `AirportReportTests` 量機場捷運、高雄紅線與一條自己鋪的小線，數字寫回決策 712。（量了機場捷運：每航廈一天約 1 萬人，HEALTHY；高雄紅線不在收購清單上，量不了；自己鋪的線報告裡列車不跑，NOT ASSESSED。見決策 712「500 人量到的」。）
 
 ### PR 3：打開
 
