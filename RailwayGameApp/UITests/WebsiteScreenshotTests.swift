@@ -3320,19 +3320,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         let row = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'tourism.airport.' AND label CONTAINS %@", english ? "Hong Kong" : "香港"))
             .firstMatch
-        let top = app.frame.minY + 64
+        // The sheet's title bar covers the list's first 36 points on a
+        // phone on its side (run 43376989911: the row was whole at 45).
+        let top = app.frame.minY + 36
         func whole() -> Bool {
             row.exists && row.frame.minY >= top && row.frame.maxY <= app.frame.maxY - 12
         }
-        for step in 0..<40 where !whole() {
+        for step in 0..<60 where !whole() {
             // Nothing to drag towards until the row is there.
             if !row.exists, step < 30 {
                 settle(seconds: 6)
                 continue
             }
-            if row.exists, row.frame.minY < top + 40 { break }
+            if row.exists, row.frame.minY < top + 20 { break }
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
-                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5)),
+                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)),
                        withVelocity: .slow, thenHoldForDuration: 0.3)
             settle(seconds: 1)
         }
