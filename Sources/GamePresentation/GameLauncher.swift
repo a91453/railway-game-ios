@@ -730,6 +730,11 @@ public final class GameLauncher {
             message = StatusMessage(kind: .failure, text: language.text("The real-world data is not ready yet.", "實景資料還沒準備好。"))
             return false
         }
+        // Decision 712: the city's flights open its map.
+        guard airRoutes.opened.contains(city) else {
+            message = StatusMessage(kind: .failure, text: city.howToOpen(in: language))
+            return false
+        }
         let options = newGameOptions
         var world = GameWorld.newOverseasGame(ground, balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
@@ -859,6 +864,16 @@ public final class GameLauncher {
         let new = stationStamps.collect(found, at: date)
         session.collectedStamps = stationStamps.dates
         session.noteStationStamps(new, at: found)
+    }
+
+    /// Remembers on the device that the flights to `cities` are open
+    /// (decision 712).
+    func rememberAirRoutes(_ cities: [OverseasMap]) {
+        var opened = preferences.airRoutesOpened ?? []
+        for city in cities where !opened.contains(city.rawValue) { opened.append(city.rawValue) }
+        guard opened != preferences.airRoutesOpened ?? [] else { return }
+        preferences.airRoutesOpened = opened
+        savePreferences()
     }
 
     /// What a world may unlock: everything, but for the Pingxi challenge,
@@ -1789,7 +1804,12 @@ public final class GameLauncher {
             // An achievement, the rarer, has the status line last.
             self.checkStationStamps(of: started)
             self.checkAchievements(of: started)
+            // Decision 712: the flights yesterday's riders opened.
+            self.checkAirRoutes(of: started)
         }
+        // And those a save read back had opened already: the device
+        // forgets them when the app is installed again.
+        checkAirRoutes(of: started)
         session = started
         gameRow = row
         gamesBegun += 1
@@ -1866,6 +1886,8 @@ public final class GameLauncher {
             // app had no population, as when a game begins (``begin``);
             // its roads read already.
             session.readLandRoundStations(roads: roads)
+            // Decision 712: the cities read just now, and their flights.
+            checkAirRoutes(of: session)
         }
         isLoadingRealWorldData = false
     }

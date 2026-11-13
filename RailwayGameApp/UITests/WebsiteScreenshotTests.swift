@@ -3170,6 +3170,74 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-picker", app)
     }
 
+    /// Decision 712: Hong Kong's row in the map picker, closed (what opens
+    /// it) and open (in the demo mode, which has every city open); the
+    /// airport's row that says how far yesterday was; and the status line
+    /// when the flights open. The cities are read by `-open-overseas`
+    /// while ``OverseasMaps/open`` is still empty.
+    func testAirRouteUnlock() {
+        func picker(_ name: String, extra: [String], english: Bool) {
+            let app = launch(extra: ["-open-overseas"] + extra, english: english)
+            defer { app.terminate() }
+            let newGame = app.buttons["start.newGame"]
+            XCTAssertTrue(newGame.appears(within: 10))
+            app.bringStartButtonIntoView(newGame)
+            newGame.tap()
+            tapButton("newGame.realWorld", in: app, timeout: 60)
+            XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+            let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
+            XCTAssertTrue(row.appears(within: 90), "Hong Kong's row shows once its map is read")
+            // The row whole on screen: the list dragged up a little when
+            // its foot is under the screen's.
+            if row.frame.maxY > app.frame.maxY - 12 {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.4)),
+                           withVelocity: .slow, thenHoldForDuration: 0.3)
+            }
+            settle()
+            keep(name, app)
+        }
+        for english in [false, true] {
+            let suffix = english ? "-english" : ""
+            picker("air-route-picker-closed\(suffix)", extra: [], english: english)
+            // In a game: the status line as the flights open, then the
+            // airports' rows, Taichung's saying its flights are open.
+            let app = launch(extra: ["-open-overseas", "-screenshot-scene", "airport", "-screenshot-air-routes", "opened"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 1)
+            keep("air-route-opened-notice\(suffix)", app)
+            openAirports(in: app)
+            keep("air-route-airport-open\(suffix)", app)
+            app.terminate()
+        }
+        picker("air-route-picker-open", extra: ["-demoMode.on", "YES"], english: false)
+        // An airport's row before its flights open: yesterday of 500.
+        let app = launch(extra: ["-open-overseas", "-screenshot-scene", "airport", "-screenshot-air-routes", "offered"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        openAirports(in: app)
+        keep("air-route-airport-progress", app)
+    }
+
+    /// Opens the sights from the menu and drags the list up to the second
+    /// airport's row (the scene's Taichung, which flies to Hong Kong).
+    private func openAirports(in app: XCUIApplication) {
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        if !app.buttons["menu.tourism"].appears(within: 5) {
+            app.buttons["menu.more"].tap()
+        }
+        app.buttons["menu.tourism"].tap()
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+        let row = app.descendants(matching: .any)["tourism.airport.1"].firstMatch
+        XCTAssertTrue(row.appears(within: 10), "The airports are listed")
+        settle(seconds: 2)
+        row.swipeUp()
+        settle(seconds: 1)
+    }
+
     /// Decision 468, later: a trace along the Liujia Line on Hsinchu's
     /// real-world map says the line can be bought as it is, for how much,
     /// and its button opens the purchase card. The trace is drawn by the
