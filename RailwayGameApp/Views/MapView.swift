@@ -1420,11 +1420,19 @@ struct MapView: View {
             if mode?.usesHour != true { stopPopTravelPlay() }
         }
         .onChange(of: session.world.network, initial: true) { _, network in
-            // Edges are immutable and IDs are never reused. Keep their
-            // sampled geometry across ticks, pans and zooms; discard removals.
+            // Edges are immutable: keep their sampled geometry across
+            // ticks, pans and zooms; discard removals. A world never reuses
+            // an ID, but Undo puts an earlier world back and the next edge
+            // built takes the ID of the one taken back, so a drawing is
+            // kept only while it is still that edge's.
+            let world = session.world
             var next: [TrackEdgeID: MapEdgeDrawing] = [:]
             for edge in network.edges {
-                next[edge.id] = edges[edge.id] ?? MapEdgeDrawing(edge: edge, world: session.world)
+                if let kept = edges[edge.id], kept.draws(edge, in: world) {
+                    next[edge.id] = kept
+                } else {
+                    next[edge.id] = MapEdgeDrawing(edge: edge, world: world)
+                }
             }
             edges = next
         }

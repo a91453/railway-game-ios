@@ -327,4 +327,37 @@ final class UndoSessionTests: XCTestCase {
         XCTAssertEqual(loaded.undoCount, 0, "a loaded save")
         XCTAssertFalse(loaded.canUndo)
     }
+
+    /// 0.6.0 (128) crashed drawing a platform on the flat map: Undo puts
+    /// an earlier world back, so the next edge built takes the ID of the
+    /// one taken back, and the map still held that ID's old centre line,
+    /// shorter than the platform reached. A drawing is kept only while
+    /// `follows(_:in:)` says it is still that edge's.
+    func testAnEdgeBuiltAfterUndoTakesTheIDButNotTheKeptGeometry() throws {
+        let session = GameSession(world: try makeWorld(balance: 1_000_000))
+        func build(to end: PlanPoint) throws -> (TrackEdge, TrackGeometry) {
+            let id = try session.performEdit { world throws(GameError) in
+                let from = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
+                let to = try world.buildTrackNode(at: WorldCoordinate(x: end.x, y: end.y))
+                return try world.buildTrackEdge(from: from, to: to)
+            }
+            return (try XCTUnwrap(session.world.network.edge(id)), try XCTUnwrap(session.world.trackGeometry(of: id)))
+        }
+        let (short, kept) = try build(to: PlanPoint(x: 3_072, y: 1_024))
+        XCTAssertTrue(kept.follows(short, in: session.world))
+
+        session.undo()
+        let (long, sampled) = try build(to: PlanPoint(x: 6_144, y: 1_024))
+        XCTAssertEqual(long.id, short.id, "the ID Undo gave back")
+        XCTAssertLessThan(kept.length, long.length, "a platform at the far end is beyond the kept line")
+        XCTAssertFalse(kept.follows(long, in: session.world))
+        XCTAssertTrue(sampled.follows(long, in: session.world))
+
+        // As long as the first, but going another way.
+        session.undo()
+        let (turned, _) = try build(to: PlanPoint(x: 1_024, y: 3_072))
+        XCTAssertEqual(turned.id, short.id)
+        XCTAssertEqual(turned.length, short.length)
+        XCTAssertFalse(kept.follows(turned, in: session.world))
+    }
 }
