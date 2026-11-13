@@ -202,7 +202,9 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
         }
         let east = WorldRegion(minX: plain.region.maxX, minY: plain.region.minY, maxX: plain.region.maxX + 1, maxY: plain.region.maxY)
         let without = try Self.built(round: .keelung, in: session, studies: east)
-        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } }
+        // Decision 722: the kit's building is in the look already, apart
+        // from the chunk's near mesh.
+        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.houseTriangleCount }
         XCTAssertGreaterThan(triangles(without.builder), triangles(plain.builder), "Keelung's own building")
         XCTAssertGreaterThan(without.builder.houseFootprints.count, plain.builder.houseFootprints.count - exterior.outlines.count)
     }

@@ -5,7 +5,7 @@
 // real photos; with --before, the earlier model in the same shots. .claude/skills/model-look/SKILL.md says how to read it.
 //
 //   node tools/model-look/shoot.mjs --model new.m3dmodel [--before old.m3dmodel]
-//     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--labels 改前,改後] [--title text] [--max-triangles n] --out sheet.jpg
+//     [--photo 'file.jpg|caption|heading|elevation']... [--focus cx,cy,cz,ex,ey,ez] [--labels 改前,改後] [--title text] [--max-triangles n] [--only map] [--ground RRGGBB] --out sheet.jpg
 //
 // heading: degrees round the model from its front (native +x), towards its
 // left (+y); elevation: degrees above the ground. --focus: the box (centre
@@ -14,6 +14,8 @@
 // --max-triangles: for a scene of several models (a museum with its exhibits),
 // more than the 15,000 one native model may have. The drawing is
 // tools/station-kit/renderer.js (orthographic, the game's flat model light).
+// --only map: the on-the-map pictures alone (an inventory of many models); --ground: another
+// ground colour for them than the game's (a palette being tried).
 // Playwright: `playwright` on NODE_PATH, or PLAYWRIGHT_MODULE=<its folder>;
 // CHROMIUM_PATH names a browser other than Playwright's own.
 import {createServer} from 'node:http';
@@ -38,7 +40,7 @@ try{
  const page=await browser.newPage({viewport:{width:800,height:600},deviceScaleFactor:1});
  page.on('pageerror',e=>{throw e;});
  await page.goto('http://127.0.0.1:'+server.address().port+'/');
- await page.evaluate(async({title,photos,hasBefore,focus,labels,most})=>{
+ await page.evaluate(async({title,photos,hasBefore,focus,labels,most,only,ground})=>{
   const {NativeRenderer}=await import('/renderer.js'),renderer=new NativeRenderer(document.getElementById('canvas'));if(most)renderer.maximumTriangles=most;
   const models={};for(const name of hasBefore?['before','after']:['after'])models[name]=await(await fetch('/'+name+'.m3dmodel')).arrayBuffer();
   const rad=d=>d*Math.PI/180;
@@ -46,7 +48,7 @@ try{
   // Map3DPalette.ground (#ECEEF6 once this renderer's light is on it), a tertiary road and its kerb, and a city block's wall (tileWhite)
   // and roof as tools/map3d-preview draws them by day (a wall with its windows L* 61, a roof
   // L* 86: docs/art/map3d-liveliness-2026-11-13). Change them here when the map's look changes.
-  const rgb=hex=>(0xFF000000|(hex&255)<<16|hex&0xFF00|hex>>>16)>>>0,MAP={ground:rgb(0xE4E3DF),road:rgb(0xA09FAA),kerb:rgb(0xF7F7F4),wall:rgb(0xA3A7B0),roof:rgb(0xBABDC8)};
+  const rgb=hex=>(0xFF000000|(hex&255)<<16|hex&0xFF00|hex>>>16)>>>0,MAP={ground:rgb(0xE4E3DF),road:rgb(0xA09FAA),kerb:rgb(0xF7F7F4),wall:rgb(0xA3A7B0),roof:rgb(0xBABDC8)};if(ground)MAP.ground=rgb(parseInt(ground,16));
   // From the model towards the camera: `tilt` from straight down, as the game's camera counts it.
   const towards=(heading,tilt)=>[Math.sin(rad(tilt))*Math.cos(rad(heading)),Math.sin(rad(tilt))*Math.sin(rad(heading)),Math.cos(rad(tilt))];
   // One picture; `pointsPerMetre` gives it its size on an iPhone at that zoom, else it fills `width`.
@@ -66,13 +68,13 @@ try{
   const style=document.createElement('style');style.textContent='body{margin:0;background:#fff;font:13px system-ui,"PingFang TC";color:#262c57}#sheet{width:776px;padding:12px}h1{font-size:17px;margin:0 0 6px}h2{font-size:14px;margin:12px 0 4px}.row{display:flex;gap:8px;align-items:flex-end}.cell{flex:1;min-width:0;text-align:center}.ground{background:#eceef6;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px;overflow:hidden;margin-bottom:6px}.ground img{max-width:none;flex:none}.big{background:#eceef6;border-radius:6px}.cell img{max-width:100%}.photo img{width:100%;border-radius:6px}p{margin:2px 0;font-size:12px}';document.head.append(style);
   const add=(tag,text,parent=sheet)=>{const e=document.createElement(tag);if(text)e.textContent=text;parent.append(e);return e;};
   add('h1',title);
-  add('h2','一、遊戲裡的大小（iPhone 直放，1 格 = 1 點；鏡頭 400／600／800 m）');
   let row;
+  if(!only){add('h2','一、遊戲裡的大小（iPhone 直放，1 格 = 1 點；鏡頭 400／600／800 m）');
   for(const name of names){const ground=add('div');ground.className='ground';add('p',label[name],ground).style.width='40px';
    for(const z of zooms)ground.append(shot(name,35,z.tilt,300,300,z.points));}
   add('h2','二、遊戲鏡頭角度放大（傾 40°；站前斜看、月台側斜看）');
   for(const heading of [35,215]){row=add('div');row.className='row';
-   for(const name of names){const cell=add('div','',row);cell.className='cell';const w=names.length>1?380:560;const image=shot(name,heading,40,w,Math.round(w*0.62));image.className='big';cell.append(image);add('p',label[name]+(heading===35?'｜站前':'｜月台側'),cell);}}
+   for(const name of names){const cell=add('div','',row);cell.className='cell';const w=names.length>1?380:560;const image=shot(name,heading,40,w,Math.round(w*0.62));image.className='big';cell.append(image);add('p',label[name]+(heading===35?'｜站前':'｜月台側'),cell);}}}
   // The model where the map draws it: on the game's ground, a road in front and three
   // of the city's plain blocks round it (MAP, above), in colour and in grey.
   function placed(buffer){
@@ -96,7 +98,7 @@ try{
    renderer.centre=scene.centre;renderer.extent=scene.extent;renderer.render('',{width:width*2,height:height*2,vector:towards(35,40)});
    const image=new Image();image.src=renderer.png();image.style.width=width+'px';image.className='big';if(grey)image.style.filter='grayscale(1)';return image;
   }
-  add('h2','三、放在地圖上的樣子（遊戲的地面色、三棟城市建築的通用方塊、一條路；右邊是灰階）');
+  add('h2',(only?'':'三、')+'放在地圖上的樣子（遊戲的地面色、三棟城市建築的通用方塊、一條路；右邊是灰階）'+(ground?'｜地面 #'+ground:''));
   for(const name of names){row=add('div');row.className='row';
    for(const grey of [false,true]){const cell=add('div','',row);cell.className='cell';cell.append(onMap(name,380,236,grey));add('p',label[name]+(grey?'｜灰階：屋頂、牆、地面還分得開嗎':'｜和背景分得開嗎'),cell);}}
   if(photos.length)add('h2','四、和真實照片並排（同方向；照片只供比對形狀與顏色）');
@@ -104,7 +106,7 @@ try{
    const cell=add('div','',row);cell.className='cell photo';const image=add('img','',cell);image.src=photo.src;add('p',photo.caption,cell);
    for(const name of names){const c=add('div','',row);c.className='cell';const w=names.length>1?250:380;const m=shot(name,photo.heading,90-photo.elevation,w,Math.round(w*0.7));m.className='big';c.append(m);add('p',label[name],c);}}
   await Promise.all([...document.images].map(i=>i.decode()));
- },{title:option.title||'model look',photos,hasBefore:!!option.before,focus:option.focus?option.focus.split(',').map(Number):null,labels:option.labels?option.labels.split(','):null,most:+option['max-triangles']||0});
+ },{title:option.title||'model look',photos,hasBefore:!!option.before,focus:option.focus?option.focus.split(',').map(Number):null,labels:option.labels?option.labels.split(','):null,most:+option['max-triangles']||0,only:option.only==='map',ground:option.ground||''});
  writeFileSync(resolve(option.out),await (await page.$('#sheet')).screenshot({type:'jpeg',quality:86}));
  console.log('Wrote '+option.out+' (800 px wide)');
 }finally{await browser.close();server.close();}

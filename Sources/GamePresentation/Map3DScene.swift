@@ -1068,6 +1068,9 @@ extension Map3DScene {
         /// elsewhere only in a build that holds them.
         var ownColourNear: [ChunkKey: Map3DMesh] = [:]
         var ownColourFar: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 722: the triangles of the station kit's buildings among
+        /// ``ownColourNear``'s, which hold the studies' too.
+        var houseTriangleCount = 0
         /// Whether what is being built is the simplified city.
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
