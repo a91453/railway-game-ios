@@ -47,8 +47,11 @@ mkdir -p /tmp/hk/pop
 curl -L -o /tmp/hk/pop/hkg.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif
 python3 -I tools/hk-map/build_hk_ground.py /tmp/hk/pop/hkg.tif RailwayGameApp/Resources/MapPacks/hongkong
 
+# 6. 香港的底圖（決策 712 續三），並更新 pack.json。
+python3 -I tools/hk-map/build_hk_basemap.py /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong/basemap.pmtiles
+
 swift build --build-tests -Xswiftc -warnings-as-errors
-swift test --skip-build --filter "HongKongRailwaysTests|HongKongMapTests"
+swift test --skip-build --filter "HongKongRailwaysTests|HongKongMapTests|HongKongBaseMapTests"
 ```
 
 取樣的原始回應（幾十 MB）不進 repo；進 repo 的是算出來的 `service.json`。
@@ -60,6 +63,7 @@ swift test --skip-build --filter "HongKongRailwaysTests|HongKongMapTests"
 - **`sample_next_train.py`**：把每條綫每一站的「下一班列車」問一輪，原樣存成一輪一個 JSON。
 - **`next_train_service.py`**：同一班車在相鄰兩站的預計到站時間相減，是那一段的行車加停站時間；取每一段所有樣本的中位數。只配開往兩站都列得出的目的地的車（終點站不列到站的車）；只收「A 站看得到的每一班車在 B 站都對得上」的差（15 秒內、至少兩班），幾個都對得上時取配到最多班的、再取最短而列車跑得到的（130 km/h）：開放資料只給整分鐘，班距平均時晚一個班距的差也對得上。班距是同一站開往終點的相鄰兩班的間隔，尖峰（07:30–09:30、17:30–19:30）與其餘時段各取中位數。頭班車取樣本裡 04:00 之後最早的一班；末班車樣本沒有涵蓋，寫 00:30（估計，檔案裡註明）。哪一段可用的樣本不到 5 個、或中位數不是列車的速度（低於 20 km/h 或高於 130），用這條綫的中位速度（整條綫都沒有時用全部綫的）除距離補，並在 `service.json` 寫 `runSamples: 0`。
 - **`build_hk_ground.py`**（決策 712）：把 WorldPop 的香港人口格網寫成 `population.json`，格式和台灣的 `taiwan_population.json` 一樣（`PopulationGrid` 讀），合計 7,396,724 人、277 段、12 KB；檢查每一格有人的地方都在地圖範圍內。地圖範圍是 `build_hk_mtr.py` 的 `EXTENT`（WorldPop 香港格網的外框，北 22.5584、南 22.15、西 113.8333、東 114.4417，約 62.6 × 45.5 公里），寫進 `pack.json` 的 `extent`；遊戲照它開香港的世界（`MapPack.extent()`、`OverseasGround`），不再是 16 公里見方。
+- **`build_hk_basemap.py`**（決策 712 續三）：用台灣底圖的工具（`tools/basemap/build_basemap.py`，同樣的圖層與 zoom）把整包檔切成 `basemap.pmtiles`，2D 與 3D 地圖、土地的真實道路都讀它。香港的新界與九龍連著大陸，整包檔把大陸的海岸切斷：開口的海岸線頭尾相接、從北邊繞回去閉合，大陸那一側算陸地（檔頭有說明）。2026-11-13 下載的整包檔（SHA-256 `20b9e1fc…1e3310`，OSM 資料到 2026-11-11）：152,099 筆圖形，海岸線 911 圈（其中 2 條開口的線接成 1 圈）；45,296 塊圖磚、786 種不同的內容，7,072,817 位元組，約 30 秒；同一份輸入每次建出來逐位元相同。這一份整包檔比建港鐵那幾個檔時（`hk_sources.json`）新，那幾個檔沒有重建。
 - **`extract_hk_runs.py`**：用 `tools/real-timetables/extract_metro_runs.py` 同一套排法（一列車到終點後折返接下一班，夜裡停在哪就從哪出車），把 `hkmtr_times.json` 排成 `metro_runs.json`，並更新 `pack.json`。終點站停不下那麼多車的綫會被留在外面並列出來：那條綫就還不能買。
 
 ## 哪些來自哪一邊

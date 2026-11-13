@@ -11,6 +11,8 @@ final class Map3DPreviewDump: XCTestCase {
         guard let out = ProcessInfo.processInfo.environment["MAP3D_DUMP"] else { throw XCTSkip("no MAP3D_DUMP") }
         let world: GameWorld
         var focus: (x: Double, y: Double)?
+        // The base maps of the cities outside Taiwan (decision 712).
+        var cities: [Data] = []
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("RailwayGameApp/Resources/")
         func resource(_ path: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent(path)) }
@@ -75,6 +77,15 @@ final class Map3DPreviewDump: XCTestCase {
                                            frame: frame, bounds: GameWorld.newGameBounds),
                     water: water.cells(frame: frame, bounds: GameWorld.newGameBounds))
             }
+        // Decision 712: a new game on Hong Kong's map, looking at MAP3D_AT
+        // (`latitude:longitude`; Central without it). MAP3D_BASEMAP=1
+        // reads the pack's base map with Taiwan's, as the app does.
+        case "hongkong":
+            let ground = try OverseasGround(city: .hongKong, pack: MapPack(root: root.appendingPathComponent("MapPacks/hongkong")))
+            world = GameWorld.newOverseasGame(ground)
+            let at = (ProcessInfo.processInfo.environment["MAP3D_AT"] ?? "22.2819:114.1582").split(separator: ":").map { Double(String($0))! }
+            focus = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: at[0], longitude: at[1])
+            cities = ground.baseMap.map { [$0] } ?? []
         case "realdemo":
             let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
             let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
@@ -85,7 +96,7 @@ final class Map3DPreviewDump: XCTestCase {
             world = DemoWorld.make(in: .english)
         }
         let tiles = ProcessInfo.processInfo.environment["MAP3D_BASEMAP"] == "1"
-            ? try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)) : nil
+            ? try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped), cities: cities) : nil
         let cityTiles = ProcessInfo.processInfo.environment["MAP3D_CITY"] == "1"
             ? try ["kaohsiung", "taichung"].map { area in
                 try CityTileArea(manifest: resource("BaseMap/city/\(area)/manifest.json")) { try? resource("BaseMap/city/\(area)/\($0)") }

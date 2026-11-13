@@ -3257,6 +3257,20 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "Hong Kong's map opens")
         settle(seconds: 5)
         keep("hong-kong-map-2d", app)
+        // The demo mode's button lays the real lines in view (all of them,
+        // the map opening whole), so the 3D map has track and stations:
+        // a new game has none of its own.
+        let lay = app.buttons["map.demoRealLines"]
+        if lay.appears(within: 10), lay.becomesHittable(within: 10) {
+            lay.tap()
+            settle(seconds: 3)
+            let laid = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: lay)
+            XCTAssertEqual(XCTWaiter.wait(for: [laid], timeout: 420), .completed, "The real lines are laid")
+            settle(seconds: 3)
+            keep("hong-kong-map-2d-lines", app)
+        } else {
+            XCTFail("The demo mode's button to lay the real lines shows")
+        }
         let open3D = app.buttons["map.open3D"]
         XCTAssertTrue(open3D.appears(within: 10))
         XCTAssertTrue(open3D.becomesHittable(within: 10))
@@ -3265,7 +3279,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
         waitForPicture(timeout: 120)
         settle()
+        // As it opens, from far: the land, the sea and the main roads.
         keep("hong-kong-map-3d", app)
+        // Closer, twice: the map's middle is Kwai Chung, the Tsuen Wan
+        // Line a kilometre to its west.
+        for name in ["hong-kong-map-3d-nearer", "hong-kong-map-3d-near"] {
+            for _ in 0..<2 { app.pinch(withScale: 3, velocity: 2) }
+            settle(seconds: 10)
+            keep(name, app)
+        }
     }
 
     /// Opens the sights from the menu and drags the list up to the second

@@ -1005,7 +1005,9 @@ def glyph_ranges(features):
 
 # --- main ------------------------------------------------------------------
 
-def main(extract, out):
+def main(extract, out, name='Taiwan base map', center=(121.0, 23.7, 7), coastline=coastline):
+    """`name`, `center` and `coastline` are Taiwan's unless another map's
+    tool gives its own (tools/hk-map/build_hk_basemap.py)."""
     started = time.time()
     features, newest = read(extract)
     print(f'read {len(features)} features in {time.time() - started:.0f} s', flush=True)
@@ -1036,7 +1038,7 @@ def main(extract, out):
     stamps = sorted(s for s in (newest, coast_stamp) if s)
     lon_lat = (bounds[0], bounds[1], bounds[2], bounds[3])
     metadata = {
-        'name': 'Taiwan base map',
+        'name': name,
         'format': 'pbf',
         'attribution': '© OpenMapTiles © OpenStreetMap contributors',
         'description': f'OpenStreetMap contributors (ODbL 1.0), from the extract {os.path.basename(extract)}, data to {stamps[-1]}; '
@@ -1053,7 +1055,7 @@ def main(extract, out):
             {'id': 'place', 'fields': {'class': 'String', 'name': 'String'}, 'minzoom': 4, 'maxzoom': MAX_ZOOM},
         ],
     }
-    entries, contents = write_pmtiles(out, [(tid, data) for tid, data in tiles], metadata, lon_lat, (121.0, 23.7, 7))
+    entries, contents = write_pmtiles(out, [(tid, data) for tid, data in tiles], metadata, lon_lat, center)
     print(f'{out}: {len(tiles)} tiles, {entries} directory entries, {contents} distinct tiles, '
           f'{os.path.getsize(out)} bytes; OSM data to {stamps[-1]}; {time.time() - started:.0f} s')
     print('glyph ranges the names need from the style (not drawn on the device): '

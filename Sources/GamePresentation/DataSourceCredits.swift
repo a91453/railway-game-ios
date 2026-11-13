@@ -200,6 +200,23 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // Decision 712: the base map of Hong Kong's map
+                    // (`MapPacks/hongkong/basemap.pmtiles`).
+                    DataSourceCredit(
+                        id: "hongKongMap",
+                        title: language.text("Hong Kong’s map", "香港的地圖"),
+                        detail: language.text(
+                            "On Hong Kong’s map, the land and the sea, roads, parks, woods and place names, on the flat map and the 3D map.",
+                            "香港地圖上的陸地與海、道路、公園、樹林與地名，平面地圖與 3D 地圖都用。"
+                        ),
+                        notice: language.text(
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the tiles and the tool that makes them come with the app. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0).",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；圖磚與產生它的工具隨 App 提供。圖層照 OpenMapTiles 的格式（CC BY 4.0）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
                     // Decision 712: the people of Hong Kong's map
                     // (`MapPacks/hongkong/population.json`).
                     DataSourceCredit(

@@ -57,6 +57,14 @@ public struct MapPack: Sendable {
         try Data(contentsOf: root.appendingPathComponent("\(name).\(ext)"))
     }
 
+    /// Decision 712: the pack's base map (`basemap.pmtiles`: OpenStreetMap
+    /// in the layers of Taiwan's, `tools/hk-map/build_hk_basemap.py`), or
+    /// `nil` for a pack without one.
+    public var baseMapFile: URL? {
+        let file = root.appendingPathComponent("basemap.pmtiles")
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
+    }
+
     /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
     public static func bundled(_ city: OverseasMap) -> MapPack? {
         Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }
@@ -106,6 +114,11 @@ extension MapPack {
             let halfHeight = corners.map { abs($0.y - frame.middleY) }.max() ?? 0
             return try? WorldBounds(width: Int64((2 * halfWidth).rounded(.up)), height: Int64((2 * halfHeight).rounded(.up)))
         }
+
+        /// Whether the place lies in the box.
+        public func holds(latitude: Double, longitude: Double) -> Bool {
+            south <= latitude && latitude <= north && west <= longitude && longitude <= east
+        }
     }
 
     /// The pack's `extent`.
@@ -128,6 +141,9 @@ public struct OverseasGround: Sendable {
     /// The city's people, or `nil` for a pack without them: its stations
     /// then get the standard ridership, and no town grows round them.
     public let population: PopulationGrid?
+    /// The pack's base map, its file mapped, or `nil` for a pack without
+    /// one: its 3D map then has bare ground, and its land no real roads.
+    public let baseMap: Data?
 
     /// The ground `pack` says `city` has. Throws for a pack whose
     /// `pack.json` cannot be read or has no extent that fits a world; a
@@ -141,6 +157,7 @@ public struct OverseasGround: Sendable {
         self.anchor = anchor
         self.bounds = bounds
         population = (try? pack.file("population", "json")).flatMap { try? PopulationGrid(data: $0) }
+        baseMap = pack.baseMapFile.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
     }
 
     /// Whether `world` is this city's map: laid over its extent.

@@ -596,7 +596,7 @@ public final class BusRoads: @unchecked Sendable {
     private func roads(of tile: Tile) -> [BusRoadNetwork.Road] {
         if let known = read[tile] { return known }
         var roads: [BusRoadNetwork.Road] = []
-        if let bytes = try? tiles.archive.tile(zoom: BaseMapTiles.zoom, x: tile.column, y: tile.row),
+        if let bytes = try? tiles.tile(zoom: BaseMapTiles.zoom, x: tile.column, y: tile.row),
            let decoded = try? VectorTile(bytes, layers: ["transportation"]), let layer = decoded.layers["transportation"] {
             roads = BusRoadNetwork.roads(in: layer, column: tile.column, row: tile.row, projection: projection)
         }
@@ -614,7 +614,7 @@ public final class BusRoads: @unchecked Sendable {
         let tile = Tile(column: column, row: row)
         if let known = named[tile] { return known }
         var roads: [NamedRoad] = []
-        if let bytes = try? tiles.archive.tile(zoom: BaseMapTiles.zoom, x: column, y: row),
+        if let bytes = try? tiles.tile(zoom: BaseMapTiles.zoom, x: column, y: row),
            let decoded = try? VectorTile(bytes, layers: ["transportation_name"]), let layer = decoded.layers["transportation_name"] {
             roads = BusRoadNames.roads(in: layer, column: column, row: row, projection: projection)
         }
