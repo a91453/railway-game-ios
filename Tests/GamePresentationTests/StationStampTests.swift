@@ -277,6 +277,13 @@ final class StationStampTests: XCTestCase {
         XCTAssertEqual(counties["猴硐"], "新北市")
         XCTAssertEqual(counties["左營"], "高雄市")
         XCTAssertGreaterThan(counties.count, StationStamps.total(in: railways) * 95 / 100, "Nearly every real place lies in a county")
+        // Decision 712: Hong Kong's stations are a group of their own,
+        // after Taiwan's counties, under the city's name.
+        XCTAssertEqual(counties["迪士尼"], "香港")
+        let empty = StationStampCounties.groups(of: [], counties: counties)
+        XCTAssertEqual(empty.last?.county, "香港")
+        XCTAssertEqual(empty.last?.name(in: .english), "Hong Kong")
+        XCTAssertGreaterThan(empty.last?.total ?? 0, 80)
 
         let day = Date(timeIntervalSince1970: 1_792_603_800)
         let stamps = [
