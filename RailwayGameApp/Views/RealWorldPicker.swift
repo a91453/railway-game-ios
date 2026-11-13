@@ -26,6 +26,41 @@ import SwiftUI
 /// "Use my location" moves the square to where the device is, from one fix
 /// asked for while the app is in use (decision 335): the fix only moves the
 /// map, and is neither kept nor sent anywhere.
+/// Decision 712: a city outside Taiwan in the map picker. Open, it starts
+/// a game on the city's map; closed, it says what opens it and starts
+/// nothing.
+private struct OverseasMapRow: View {
+    let city: OverseasMap
+    let isOpen: Bool
+    let language: DisplayLanguage
+    let start: () -> Void
+
+    var body: some View {
+        Button(action: start) {
+            HStack(spacing: 10) {
+                Image(systemName: isOpen ? "airplane" : "lock.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(isOpen ? Theme.primary : Theme.textSecondary)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: city.name(in: language))
+                        .font(.body)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: isOpen ? city.mapSummary(in: language) : city.howToOpen(in: language))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+        }
+        // Closed, the row is read and looks as it does open, but for the
+        // lock: dimming it would dim the one sentence the player needs.
+        .allowsHitTesting(isOpen)
+        .accessibilityAddTraits(isOpen ? [] : .isStaticText)
+        .accessibilityRemoveTraits(isOpen ? [] : .isButton)
+        .accessibilityIdentifier("realWorld.overseas.\(city.rawValue)")
+    }
+}
+
 struct RealWorldPicker: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
@@ -466,6 +501,13 @@ struct RealWorldPicker: View {
                 }
                 .disabled(launcher.population == nil)
                 .accessibilityIdentifier("realWorld.wholeTaiwan")
+                // Decision 712: the cities outside Taiwan the app has the
+                // whole map of, each opened by an airport's flights.
+                ForEach(OverseasMap.allCases.filter(launcher.airRoutes.offered.contains), id: \.self) { city in
+                    OverseasMapRow(city: city, isOpen: launcher.airRoutes.opened.contains(city), language: launcher.language) {
+                        if launcher.startOverseasMap(city) { dismiss() }
+                    }
+                }
             }
             // Decision 262: by country where a country has many places, by
             // region for the rest; Taiwan's open, the others closed.

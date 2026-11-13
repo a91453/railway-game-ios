@@ -244,6 +244,21 @@ struct RailwayGameApp: App {
                     launcher.session?.holdScreenshotZoningDrag()
                 }
             }
+            // Decision 712: the scene's airports told that Hong Kong is
+            // offered ("offered") or that its flights have just opened
+            // ("opened"), once the app's real data is read (which tells
+            // the game what the device remembers), for their screenshots.
+            if let routes = DebugLaunch.value(of: "-screenshot-air-routes") {
+                Task {
+                    await opening.value
+                    for _ in 0..<240 where launcher.isLoadingRealWorldData {
+                        try? await Task.sleep(for: .milliseconds(500))
+                    }
+                    guard let session = launcher.session else { return }
+                    session.airRoutes = AirRoutes(offered: [.hongKong], opened: routes == "opened" ? [.hongKong] : [])
+                    if routes == "opened" { session.noteAirRoutesOpened([.hongKong]) }
+                }
+            }
             // Decision 535 (continued, KLRT): a real line's purchase card
             // opened, once the app's real data is read, for its screenshot.
             if let real = DebugLaunch.value(of: "-screenshot-offer-real") {
@@ -431,7 +446,14 @@ struct RailwayGameApp: App {
     /// without the places grid they all serve homes, and without the map
     /// files there are no real railways.
     private nonisolated static func bundledRealWorldData() -> RealWorldData {
-        var data = RealWorldData.load { name, ext in
+        // Decision 712: a Debug build launched with -open-overseas reads the
+        // cities outside Taiwan whatever ``OverseasMaps/open`` holds, for
+        // the screenshots of their maps before they are opened.
+        var overseas = OverseasMaps.open
+        #if DEBUG
+        if DebugLaunch.isSet("-open-overseas") { overseas = Set(OverseasMap.allCases) }
+        #endif
+        var data = RealWorldData.load(overseas: overseas) { name, ext in
             guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
                 throw RealRailways.ResourceError.missing("\(name).\(ext)")
             }
