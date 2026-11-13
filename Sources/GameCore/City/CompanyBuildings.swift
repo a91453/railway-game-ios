@@ -108,7 +108,8 @@ extension GameWorld {
         guard accounts.mode == .management else {
             return PlacedBuildingQuote(building: .zero, land: .zero, cleared: cleared.map(\.position))
         }
-        let value = landValue(row: Land.cellIndex(centre.y), column: Land.cellIndex(centre.x))?.value ?? 0
+        // Decision 727: the land round it counts as well.
+        let value = companyLandValue(of: candidate)?.value ?? 0
         let buyOut = areaBuyOut
             ? cityShares(coveredBy: candidate).reduce(.zero) { $0 + buyOutPrice(of: $1.cell, covered: $1.area) }
             : cleared.reduce(.zero) { $0 + buyOutPrice(of: $1) }
@@ -324,11 +325,12 @@ extension GameWorld {
         cleared.reduce(.zero) { $0 + demolitionCost(of: $1) }
     }
 
-    /// The land value of the cell under `building`'s centre, and the
+    /// The land value of the cell under `building`'s centre, with the
+    /// land round it (``companyLandValue(of:)``, decision 727), and the
     /// station service there (the land value's `S`: its service premium ÷
     /// ``LandValueRules/servicePremium``).
     func landTerms(of building: PlacedBuilding) -> (value: Int64, service: Int64) {
-        let value = landValue(row: Land.cellIndex(building.centre.y), column: Land.cellIndex(building.centre.x))
+        let value = companyLandValue(of: building)
         return (value?.value ?? 0, (value?.servicePremium ?? 0) / LandValueRules.servicePremium)
     }
 

@@ -292,6 +292,53 @@ extension GameWorld {
         )
     }
 
+    // MARK: - Decision 727: what the company's building's land is worth
+
+    /// What the land under `building`'s centre is worth to the company
+    /// (decision 727, the subsidiary design's step 2): the cell's
+    /// ``landValue(row:column:)`` with its base raised to the floor of the
+    /// mean base of the eight cells round it, when that is more. A cell
+    /// round it with a city building counts that building's base; one
+    /// without counts as vacant land (``LandValueRules/vacantBase``); one
+    /// the company's buildings (`building` among them) claim, and one
+    /// outside the world, does not count. So a building put up on empty
+    /// land is worth what it was, and one whose neighbours have grown is
+    /// worth up to what their land is, never more. `nil` outside the world.
+    public func companyLandValue(of building: PlacedBuilding) -> LandValue? {
+        let row = Land.cellIndex(building.centre.y), column = Land.cellIndex(building.centre.x)
+        guard let value = landValue(row: row, column: column) else { return nil }
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
+        var sum: Int64 = 0, count: Int64 = 0
+        for r in (row - 1)...(row + 1) {
+            for c in (column - 1)...(column + 1) where (r, c) != (row, column) {
+                guard (0..<rows).contains(r), (0..<columns).contains(c),
+                      !claimsForItsLand(building, row: r, column: c), !isClaimedByPlacedBuilding(row: r, column: c) else { continue }
+                if let city = buildings.building(row: r, column: c) {
+                    sum += LandValueRules.base(of: city.use) * LandValueRules.densityFactor(city.density) / 1_000
+                } else {
+                    sum += LandValueRules.vacantBase * LandValueRules.vacantDensityFactor / 1_000
+                }
+                count += 1
+            }
+        }
+        guard count > 0, sum / count > value.base else { return value }
+        let base = sum / count
+        return LandValue(
+            value: LandValueRules.value(base: base, service: value.servicePremium, access: value.accessPremium, park: value.parkPremium,
+                                        company: value.companyPremium, water: value.waterPremium, civic: value.civicPremium),
+            base: base, servicePremium: value.servicePremium, accessPremium: value.accessPremium, station: value.station,
+            parkPremium: value.parkPremium, companyPremium: value.companyPremium, waterPremium: value.waterPremium, civicPremium: value.civicPremium
+        )
+    }
+
+    /// Whether `building`, placed or not, claims the cell at `row`,
+    /// `column` as ``isClaimedByPlacedBuilding(row:column:side:)`` asks of
+    /// the placed ones.
+    private func claimsForItsLand(_ building: PlacedBuilding, row: Int, column: Int) -> Bool {
+        if areaBuyOut { return Self.area(of: building, onRow: row, column: column) == Land.cellArea }
+        return Self.claims(building, row: row, column: column, side: cityBuildingSide(row: row, column: column))
+    }
+
     /// The centres of the company's schools and of its hospitals
     /// (decision 361's sequel).
     func landValueCivics() -> (schools: [PlanPoint], hospitals: [PlanPoint]) {
