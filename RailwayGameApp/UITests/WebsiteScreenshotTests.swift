@@ -2329,12 +2329,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("economy-reports", app)
         let list: XCUIElement? = app.economyList()
         let column = app.economyDragColumn(app.economyList())
-        let income = app.descendants(matching: .any)["economy.composition.income"].firstMatch
+        // The rings' own elements are charts, with frames taller than the
+        // list (`FinanceCompositionUITests`): the line under each ring
+        // says where it is.
+        let income = app.staticTexts["economy.composition.income.detail"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The income donut comes into reach")
         settle()
         keep("finance-composition-day-income", app)
 
-        let costs = app.descendants(matching: .any)["economy.composition.costs"].firstMatch
+        let costs = app.staticTexts["economy.composition.costs.detail"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The cost donut comes into reach")
         settle()
         keep("finance-composition-day-costs", app)

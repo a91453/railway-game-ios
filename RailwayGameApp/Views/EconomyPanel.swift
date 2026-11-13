@@ -82,6 +82,11 @@ struct EconomyPanel: View {
             }
             .navigationTitle("Economy")
             .navigationBarTitleDisplayMode(.inline)
+            // Two lists side by side: the bar's own scroll edge follows
+            // only one of them, and the other's rows showed blurred through
+            // the bar. A bar of the lists' own background hides both.
+            .toolbarBackground(Color(uiColor: .systemGroupedBackground), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Picker(selection: Binding(get: { shown }, set: { page = $0 })) {

@@ -37,11 +37,15 @@ final class FinanceCompositionUITests: XCTestCase {
         let list = app.economyList()
         let column = app.economyDragColumn(list)
 
-        let income = list.descendants(matching: .any)["economy.composition.income"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The income donut comes into reach")
+        // The ring's own element is a chart, whose frame is taller than
+        // the ring it draws (294 by 374 points for a ring of 104) and than
+        // the list on a phone on its side: the line under the ring says
+        // where it is.
+        let detail = app.staticTexts["economy.composition.income.detail"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(detail, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The income donut comes into reach")
+        XCTAssertTrue(list.descendants(matching: .any)["economy.composition.income"].firstMatch.exists, "The income donut shows")
         XCTAssertTrue(list.descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
 
-        let detail = app.staticTexts["economy.composition.income.detail"]
         XCTAssertTrue(detail.label.hasPrefix("Income NT$"), "Before a tap the ring's total is summed up: \(detail.label)")
         let fares = app.buttons["economy.composition.income.fares"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The fares row comes into reach")
