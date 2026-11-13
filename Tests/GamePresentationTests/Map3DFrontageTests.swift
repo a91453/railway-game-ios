@@ -132,6 +132,93 @@ final class Map3DFrontageTests: XCTestCase {
         XCTAssertTrue(fast.builder.layFrontage(fast.cell, density: 2, shops: false, blocked: []).houses.isEmpty)
     }
 
+    // MARK: - Decision 723: between the footprints of a thinly built cell
+
+    /// A real building `wide` by `deep` metres, its middle at scene point
+    /// `middle`, of a scene whose origin is the world's.
+    private func footprint(round middle: Map3DPoint, wide: Float, deep: Float) -> Map3DFootprints.Building {
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        func at(_ dx: Float, _ dz: Float) -> (x: Double, y: Double) { (Double(middle.x + dx) * m, Double(middle.z + dz) * m) }
+        return Map3DFootprints.Building(storeys: 3, storeysFrom: .guess, use: 11, rings: [[
+            at(-wide / 2, -deep / 2), at(-wide / 2, deep / 2), at(wide / 2, deep / 2), at(wide / 2, -deep / 2),
+        ]])
+    }
+
+    /// The houses the city lays on the fixture's cell, a lot of low homes,
+    /// round `buildings`, as the scene lays them: the footprints, then the
+    /// city on what they leave. With `thin`, decision 723's rule; without,
+    /// decision 389's (a cell with a footprint keeps none).
+    private func cityHouses(round buildings: [Map3DFootprints.Building], thin: Bool = true)
+        -> (houses: [Map3DScene.Builder.StreetHouse], builder: Map3DScene.Builder) {
+        var (builder, cell, _, _) = builder(roads: roads)
+        let city = CitySkyline(lots: [.init(row: cell.row, column: cell.column, use: .residential, density: 1)], time: GameWorld.newGame().clock.now)
+        let footprints = Map3DFootprints(buildings: buildings)
+        var laid: [[Map3DScene.Builder.StreetHouse]] = []
+        // Near, then afar, as the scene builds them.
+        for target in [Map3DScene.Builder.Target.near, .far] {
+            builder.target = target
+            let standing = builder.addFootprints(footprints, clearOf: [], takenBy: [])
+            builder.addCity(city, clearOf: [], takenBy: standing, thinlyBuilt: thin ? builder.thinlyBuilt(but: []) : [])
+            laid.append(builder.frontage.laid[cell]?.houses.map(\.house) ?? [])
+        }
+        XCTAssertEqual(laid[0].map(\.middle), laid[1].map(\.middle))
+        return (laid[0], builder)
+    }
+
+    func testHousesStandBetweenTheFootprintsOfAThinlyBuiltCell() throws {
+        let bare = cityHouses(round: []).houses
+        XCTAssertGreaterThan(bare.count, 8)
+        // One small real building where a house of the game's would stand:
+        // 64 m² of the cell's 4,096.
+        let (_, cell, west, north) = builder(roads: roads)
+        let centre = Map3DPoint(west + 32, 0, north + 32)
+        let spot = try XCTUnwrap(bare.map(\.middle).min { ($0 - centre).length < ($1 - centre).length })
+        XCTAssertLessThan((spot - centre).length, 24)
+        let real = footprint(round: spot, wide: 8, deep: 8)
+        let (houses, builder) = cityHouses(round: [real])
+        XCTAssertEqual(builder.thinlyBuilt(but: []), [cell])
+        XCTAssertTrue(builder.thinlyBuilt(but: [cell]).isEmpty)
+        XCTAssertEqual(try XCTUnwrap(builder.footprintCover.share[cell]), 64.0 / 4096, accuracy: 1e-6)
+        // The rest of the cell's streets keep their houses, none of them
+        // within a metre of the real one.
+        XCTAssertGreaterThan(houses.count, bare.count / 2)
+        XCTAssertLessThan(houses.count, bare.count)
+        let corners = [(-4, -4), (-4, 4), (4, 4), (4, -4)].map { spot + Map3DPoint(Float($0.0), 0, Float($0.1)) }
+        for (index, house) in houses.enumerated() {
+            XCTAssertFalse(house.corners.contains { abs($0.x - spot.x) < 4 && abs($0.z - spot.z) < 4 }, "\(index)")
+            for (a, b) in zip(corners, corners.dropFirst() + corners.prefix(1)) {
+                XCTAssertGreaterThanOrEqual(house.distance(from: a, to: b), Map3DScene.Builder.RealCover.margin, "\(index)")
+            }
+        }
+        // Both passes drew them.
+        XCTAssertFalse(builder.nearMeshes.isEmpty)
+        XCTAssertFalse(builder.farMeshes.isEmpty)
+        // Decision 389's rule kept the whole cell bare.
+        XCTAssertTrue(cityHouses(round: [real], thin: false).houses.isEmpty)
+    }
+
+    func testACellMostlyUnderFootprintsKeepsNoHouseOfTheGames() {
+        // 36 × 36 m of real building: 32% of the cell.
+        let (_, cell, west, north) = builder(roads: roads)
+        let (houses, builder) = cityHouses(round: [footprint(round: Map3DPoint(west + 32, 0, north + 30), wide: 36, deep: 36)])
+        XCTAssertTrue(builder.thinlyBuilt(but: []).isEmpty)
+        XCTAssertGreaterThan(builder.footprintCover.share[cell] ?? 0, Map3DScene.Builder.RealCover.thinShare)
+        XCTAssertTrue(houses.isEmpty)
+    }
+
+    func testAFootprintsAreaOnACell() {
+        let square: [(x: Double, y: Double)] = [(0, 0), (0, 10), (10, 10), (10, 0)]
+        XCTAssertEqual(Map3DFootprints.area(of: square, minX: -5, minY: -5, maxX: 20, maxY: 20), 100, accuracy: 1e-9)
+        XCTAssertEqual(Map3DFootprints.area(of: square, minX: 4, minY: -5, maxX: 20, maxY: 5), 30, accuracy: 1e-9)
+        XCTAssertEqual(Map3DFootprints.area(of: square, minX: 10, minY: 0, maxX: 20, maxY: 10), 0, accuracy: 1e-9)
+        // An L, wound the other way: its 75 of the square, 50 of the
+        // strip under its foot.
+        let bend: [(x: Double, y: Double)] = [(0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10)]
+        XCTAssertEqual(Map3DFootprints.area(of: bend, minX: -1, minY: -1, maxX: 11, maxY: 11), 75, accuracy: 1e-9)
+        XCTAssertEqual(Map3DFootprints.area(of: bend, minX: -1, minY: -1, maxX: 11, maxY: 5), 50, accuracy: 1e-9)
+        XCTAssertEqual(Map3DFootprints.area(of: bend, minX: 6, minY: 6, maxX: 11, maxY: 11), 0, accuracy: 1e-9)
+    }
+
     func testNoHouseOnNoBuildLandNorOnABlockedCell() {
         var (builder, cell, west, north) = builder(roads: roads)
         // The cell's west half no-build land.
