@@ -44,6 +44,8 @@ struct EconomyPanel: View {
     /// this screen, which is there again when they close.
     @State private var showsFleet = false
     @State private var showsMonthReport = false
+    /// The window's width, measured; `nil` until it is.
+    @State private var width: CGFloat?
 
     /// - Parameter opening: The page it opens at (decision 336: the
     ///   insolvency bubble opens the loans).
@@ -58,8 +60,10 @@ struct EconomyPanel: View {
         let shown = layout.showing(page)
         let columns = layout.columns(of: shown)
         NavigationStack {
-            GeometryReader { proxy in
-                if layout.isSplit(shown, width: proxy.size.width, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
+            // CRASHSWEEP-3: the width comes from `onGeometryChange`, whose
+            // measuring closure is sendable, not from a GeometryReader.
+            Group {
+                if let width, layout.isSplit(shown, width: width, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
                     HStack(spacing: 0) {
                         Form {
                             sections(columns.leading)
@@ -72,14 +76,20 @@ struct EconomyPanel: View {
                         .hardTopScrollEdge()
                         .accessibilityIdentifier("economy.trailing")
                     }
-                } else {
+                } else if width != nil {
                     Form {
                         sections(columns.all)
                     }
                     .hardTopScrollEdge()
                     .accessibilityIdentifier("economy.leading")
+                } else {
+                    // Not measured yet: nothing for a frame, rather than
+                    // one column that turns into two.
+                    Color(uiColor: .systemGroupedBackground)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .navigationTitle("Economy")
             .navigationBarTitleDisplayMode(.inline)
             // Two lists side by side: the bar's own scroll edge follows
