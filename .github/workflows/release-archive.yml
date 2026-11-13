@@ -42,16 +42,14 @@ name: Release Archive (unsigned)
 # Decision 719 (2026-11-13, docs/research/CI_MEASURE_2026-11-13.md): the
 # whole run is one step, the archive, and most of that step is one silent
 # compile: GamePresentation (some 180,000 lines) optimised as a whole
-# module, 12.6 minutes on a fast runner and 23.1 on a slow one, where the
-# job was then cancelled at its 30 minutes (6 of the 12 pull request runs
-# of 2026-11-13). So a pull request's run compiles file by file
-# (SWIFT_COMPILATION_MODE=singlefile, still Release and still optimised),
-# which uses every core of the runner; what a pull request's run is for
-# (Release compiles without the Debug-only code, and the archived app has
-# its icon, both languages and its privacy manifest) does not depend on
-# how the modules are compiled. The nightly run and a manual one still
-# build as a distribution build does, whole modules, and the job's limit is
-# 45 minutes, as testflight.yml's archive job has, for a slow runner.
+# module, 12.6 minutes on a fast runner and 23 on a slow one, where the
+# job was cancelled at its 30 minutes (6 of the 12 pull request runs of
+# 2026-11-13). The limit is 45 minutes, as testflight.yml's archive job
+# has: a slow runner needs 32. Compiling file by file on a pull request
+# was tried and does nothing: Xcode compiles a package's modules whole in
+# Release whatever SWIFT_COMPILATION_MODE or
+# SWIFT_WHOLE_MODULE_OPTIMIZATION the command line gives (runs
+# 43412867472 and 43415884921), so the command line is as it was.
 
 on:
   workflow_dispatch:
@@ -117,13 +115,7 @@ jobs:
           fi
 
       - name: Archive (Release, generic iOS device, unsigned)
-        env:
-          # Decision 719: file by file on a pull request, as the
-          # configuration says (whole modules) at night and by hand.
-          FILE_BY_FILE: ${{ github.event_name == 'pull_request' }}
         run: |
-          mode=()
-          if [[ "$FILE_BY_FILE" == true ]]; then mode=(SWIFT_COMPILATION_MODE=singlefile SWIFT_WHOLE_MODULE_OPTIMIZATION=NO); fi
           xcodebuild archive \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -132,7 +124,7 @@ jobs:
             -archivePath "$ARCHIVE_PATH" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
-            CODE_SIGNING_ALLOWED=NO "${mode[@]}"
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Inspect the archived app
         run: |

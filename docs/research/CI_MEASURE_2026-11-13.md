@@ -39,7 +39,7 @@
 - 慢的那台每一步都慢 1.5–1.8 倍（和 11-11 量到的 runner 三群一致），GamePresentation 那一步 23.1 分，後面還要約 4 分，所以一定超過 30。
 - 同一天 PR 的 iOS gate 在 03:38–03:48 開始的三次 run，Debug 建置也從平常的 12–14 分變成 20–25 分（§5）：是同一批慢機器，不是 release archive 自己的問題。
 
-結論：不是排隊、不是套件、不是快取能解的（任何一個檔改了，整個模組都要重編）。改法在決策 719：PR 的 run 逐檔編譯，夜間與手動維持整模組，上限 45 分。
+結論：不是排隊、不是套件、不是快取能解的（任何一個檔改了，整個模組都要重編）。決策 719：上限 30 → 45 分。也試了讓 PR 的 run 逐檔編譯（命令列給 `SWIFT_COMPILATION_MODE=singlefile`，再加 `SWIFT_WHOLE_MODULE_OPTIMIZATION=NO`），兩次都只改到 App 自己的 target，套件的兩個模組照樣整個編，時間沒變，所以拿掉了；數字在決策 719 的「驗證」。
 
 ## 3. 完整的 `ci.yml`（超過門檻，改了）
 
@@ -166,9 +166,10 @@ full lane（`main` 上的 `ios-build.yml`）：
 - GamePresentation tier 的 `selected-N` 快慢差 1.9–3.2 倍。
 - PR 的 iOS gate UI 步驟 6.3–6.6 分。
 - 截圖 run 與 iOS run 共用建置。
+- release archive 本身沒有變快：GamePresentation 整模組編譯 12.6–23 分。要快得把它拆成幾個模組。
 
 ## 9. 門檻
 
 沿用 11-11 §7，加一條：
 
-- **release archive**：PR 的 run 超過 30 分，或夜間的 run 超過 40 分（上限 45），就再看 GamePresentation 那一步。
+- **release archive**：任何一次超過 40 分（上限 45），就要讓 GamePresentation 那一步變短，不是再放寬上限。

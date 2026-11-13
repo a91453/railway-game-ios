@@ -235,9 +235,7 @@ needs OSM data reads the same extract.
   leaving two for pull requests' iOS checks),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
   and on PRs that change project settings, the app's entry point, the asset
-  catalog, the String Catalog or the localized Info.plist strings; a pull
-  request's run compiles file by file, the others whole modules as a
-  distribution build does, decision 719), `testflight.yml`
+  catalog, the String Catalog or the localized Info.plist strings), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
   only, secrets in the `testflight` environment), `testflight-checks.yml`
   (tests of the release scripts with fake values and a macOS dry run; no
