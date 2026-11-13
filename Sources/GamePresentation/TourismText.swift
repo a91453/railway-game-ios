@@ -104,6 +104,9 @@ public struct AttractionRow: Identifiable, Hashable, Sendable {
     /// "Shows 3 types of train: …"; `nil` for any other sight. A museum
     /// has no souvenir shop to build, and counts only today and yesterday.
     public var exhibitsText: String? = nil
+    /// "About 2.9 million visitors a year (2024, Tourism Administration)"
+    /// for a sight with an official count (decision 724), else `nil`.
+    public var officialVisitorsText: String? = nil
 
     /// "About 8 km off your map", for a sight off it; `nil` on it.
     public func offMapText(in language: DisplayLanguage) -> String? {
@@ -146,8 +149,9 @@ extension GameWorld {
         tourism != nil
     }
 
-    /// The sights for the tourism panel, the best rated first.
-    public func attractionRows(in language: DisplayLanguage) -> [AttractionRow] {
+    /// The sights for the tourism panel, the best rated first; with
+    /// `visitors`, each with its official count of a year (decision 724).
+    public func attractionRows(in language: DisplayLanguage, visitors: SightVisitors? = nil) -> [AttractionRow] {
         guard let tourism else { return [] }
         let day = clock.now.seconds / GameTime.secondsPerDay
         // One network for every sight, not one each (CRASH-SIGHTS).
@@ -179,7 +183,8 @@ extension GameWorld {
                 yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point,
                 offMapMetres: AttractionRow.foldedOffMapMetres(
                     distance: metresOffOwnedGround(sight.point), hasStation: serving != nil, souvenir: sight.souvenir
-                )
+                ),
+                officialVisitorsText: visitors?.text(of: sight, in: language)
             )
         }
         // Decision 684: the company's railway museum among the sights.

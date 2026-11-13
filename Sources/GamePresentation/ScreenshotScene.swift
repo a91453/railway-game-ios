@@ -258,6 +258,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// added the museum.
     case museum
 
+    /// Decision 724: Taipei with three of the catalog's sights, two with
+    /// the Tourism Administration's count of a year (Taipei 101, the
+    /// Chiang Kai-shek Memorial Hall) and one without (Ximending): the
+    /// line on their cards in the sights panel.
+    case sightVisitors
+
     /// Decision 695: a small company whose second station stands by an
     /// airport's terminal, a day after its first flights: the airports'
     /// section of the sights panel. For the screenshot review of the pull
@@ -403,6 +409,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .trackHeight: Self.trackHeightWorld()
         case .sightsOffMap: Self.sightsOffMapWorld()
         case .museum: Self.museumWorld(in: language)
+        case .sightVisitors: Self.sightVisitorsWorld(in: language)
         case .airport: Self.airportWorld(in: language)
         case .airportTaoyuan, .airportSongshan, .airportTaichung, .airportKaohsiung: Self.realAirportWorld(at: self, ticks: 57, in: language)
         case .airportTaoyuanNight, .airportSongshanNight, .airportTaichungNight, .airportKaohsiungNight:
@@ -504,6 +511,14 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let kept = Set(rows.filter { $0.offMapMetres == nil }.prefix(2).map(\.id))
             .union(rows.filter { $0.offMapMetres != nil }.prefix(3).map(\.id))
         world.setTourism(world.tourism?.attractions.filter { kept.contains($0.id) })
+        return world
+    }
+
+    /// Decision 724: the Taipei 101 scene with only three of the catalog's
+    /// sights.
+    static func sightVisitorsWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = taipeiWorld(at: (25.033946307135494, 121.56455513294843), in: language)
+        world.setTourism(RealWorldFrame(world: world).map { AttractionCatalog.attractions(in: $0, bounds: world.bounds, only: ["t001", "t002", "t005"]) })
         return world
     }
 
@@ -770,6 +785,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Taiwan's water (decision 585).
     public var needsWater: Bool {
         self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore || self == .wenhu
+    }
+
+    /// Whether the scene waits for the app's real-world data before it
+    /// begins: the water's (``needsWater``), or the sights' official
+    /// visitors that ``sightVisitors`` shows (decision 724).
+    public var needsRealWorldData: Bool {
+        needsWater || self == .sightVisitors
     }
 
     /// The point on Kaohsiung harbour's north side ``cijinShore`` reads

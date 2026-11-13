@@ -93,6 +93,8 @@ public enum DataSourceCredits {
     static let cc0URL = "https://creativecommons.org/publicdomain/zero/1.0/"
     static let wikidataURL = "https://www.wikidata.org"
     static let worldUrbanizationProspectsURL = "https://population.un.org/wup/"
+    /// Decision 724: the Tourism Administration's visitors by scenic spot.
+    static let sightVisitorsURL = "https://data.gov.tw/dataset/8116"
     static let ccByIGOURL = "https://creativecommons.org/licenses/by/3.0/igo/"
     static let ccBy3URL = "https://creativecommons.org/licenses/by/3.0/"
     /// Decision 343: the recordings the running sounds are made to, on
@@ -547,6 +549,25 @@ public enum DataSourceCredits {
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Dataset (data.gov.tw)", "資料集（政府資料開放平臺）"), url: travelSurveyURL),
+                            openGovernmentLicense(in: language),
+                        ]
+                    ),
+                    // Decision 724: each sight's visitors in a year, by the
+                    // Tourism Administration's count, shown on its card in
+                    // the sights panel (`tools/tourism-spots/`).
+                    DataSourceCredit(
+                        id: "sightVisitors",
+                        title: language.text("Visitors by sight", "景點遊客人次"),
+                        detail: language.text(
+                            "How many visitors each of Taiwan's main sights has in a year, shown on its card in the sights panel.",
+                            "台灣各主要景點一年有多少遊客，寫在景點清單裡那個景點的卡片上。"
+                        ),
+                        notice: language.text(
+                            "Source: Tourism Administration, Ministry of Transportation and Communications, monthly visitors to the principal scenic spots in Taiwan, 2024. Used under the Open Government Data License, version 1.0. Which sight matches which official spot is this game's own work.",
+                            "資料來源：交通部觀光署「歷年國內主要觀光遊憩據點遊客人數月別統計」，2024 年。依「政府資料開放授權條款第 1 版」使用。景點與官方據點的對應由本遊戲整理。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Dataset (data.gov.tw)", "資料集（政府資料開放平臺）"), url: sightVisitorsURL),
                             openGovernmentLicense(in: language),
                         ]
                     ),

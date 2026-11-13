@@ -100,7 +100,7 @@ extension GameSession {
         if let memo = sightRowsMemo, memo.day == day, memo.commandRevision == commandRevision, memo.language == language, memo.canAffordShop == canAffordShop {
             return memo.rows
         }
-        let rows = world.attractionRows(in: language)
+        let rows = world.attractionRows(in: language, visitors: sightVisitors)
         sightRowsMemo = SightRowsMemo(day: day, commandRevision: commandRevision, language: language, canAffordShop: canAffordShop, rows: rows)
         sightRowsWorkedOut += 1
         return rows
