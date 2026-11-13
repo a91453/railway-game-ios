@@ -52,6 +52,9 @@ struct Map3DFootprints: Sendable {
         case permits
         /// The national 3D buildings (NLSC), kept for later.
         case nlsc
+        /// Decision 729: the Lands Department's measured heights (Hong
+        /// Kong's map).
+        case landsd
     }
 
     struct Building: Sendable {
