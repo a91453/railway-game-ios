@@ -4,7 +4,7 @@ import GameCore
 import XCTest
 
 /// Decision 716, continued: the select tool's track card closes the picked
-/// track from switch to switch, all of it or none, and opens it again, as
+/// track from switch to switch, all of it together, and opens it again, as
 /// one command the log keeps and undo takes back.
 @MainActor
 final class TrackClosureCardTests: XCTestCase {
@@ -56,30 +56,62 @@ final class TrackClosureCardTests: XCTestCase {
         XCTAssertEqual(session.world.closedTrack, [])
     }
 
-    func testATrainOnAnyPieceRefusesTheWholeRun() throws {
+    // Decision 716, continued: before, a train on any piece refused the
+    // whole run; now the whole run is being closed until it has left.
+    func testATrainOnAnyPieceKeepsTheWholeRunClosingUntilItLeaves() throws {
         let session = try session()
-        _ = try session.performEdit { world throws(GameError) in
+        let train = try session.performEdit { world throws(GameError) in
             let id = try world.purchaseTrain(named: "T").id
             try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(2), direction: .forward), offset: 2_048))
             return id
         }
         pick(2_048, in: session)
         XCTAssertEqual(session.selectedTrackEdge, .edge(1))
+        XCTAssertEqual(session.selectedTrackClosure, .open)
         let before = session.world
         session.toggleSelectedTrackClosure()
-        XCTAssertEqual(session.message?.kind, .failure, session.message?.text ?? "")
-        // The session names the train in the way, as for any track a train keeps.
-        XCTAssertTrue(session.message?.text.contains("T is standing here") ?? false, session.message?.text ?? "")
-        XCTAssertEqual(session.world, before, "edge 1 is not closed alone")
-        let last = try XCTUnwrap(session.commandLog.entries.last)
-        XCTAssertEqual(last.action, .command(.edit(.closeTrack(edges: [1, 2]))))
-        XCTAssertTrue(last.refused)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.message?.text, "Closing once trains have passed. No new trains are sent this way.")
+        XCTAssertEqual(session.world.closingTrack, [.edge(1), .edge(2)], "edge 1 is not closed alone, ahead of the train")
+        XCTAssertEqual(session.world.closedTrack, [])
+        XCTAssertEqual(session.selectedTrackClosure, .closing)
+        XCTAssertFalse(session.isSelectedTrackClosed)
+        XCTAssertEqual(session.commandLog.entries.last?.action, .command(.edit(.closeTrack(edges: [1, 2]))))
+        XCTAssertEqual(session.commandLog.entries.last?.refused, false)
 
-        // A branch the train is not on closes.
-        pick(11_264, in: session)
-        XCTAssertEqual(session.selectedTrackEdge, .edge(3))
+        // The card calls it off: open as it was.
         session.toggleSelectedTrackClosure()
-        XCTAssertEqual(session.world.closedTrack, [.edge(3)])
+        XCTAssertEqual(session.message?.text, "Closing called off. The track stays open.")
+        XCTAssertEqual(session.world, before)
+        XCTAssertEqual(session.selectedTrackClosure, .open)
+        XCTAssertEqual(session.commandLog.entries.last?.action, .command(.edit(.openTrack(edges: [1, 2]))))
+
+        // Closing again, and the train sent out onto a branch: once it has
+        // left, the run is closed and the card says so.
+        session.toggleSelectedTrackClosure()
+        XCTAssertEqual(session.selectedTrackClosure, .closing)
+        _ = try session.performEdit { world throws(GameError) in
+            try world.setTrainMovementRate(train, to: 1_024)
+            try world.setTrainContinuation(train, along: [TrackTraversal(edge: .edge(3), direction: .forward)], stoppingAt: 5_120)
+        }
+        _ = try session.performEdit { world throws(GameError) in
+            world.setSpeed(.normal)
+            try world.advance(ticks: 10)
+        }
+        XCTAssertEqual(session.world.closedTrack, [.edge(1), .edge(2)])
+        XCTAssertEqual(session.world.closingTrack, [])
+        XCTAssertEqual(session.selectedTrackClosure, .closed)
+        XCTAssertTrue(session.isSelectedTrackClosed)
+
+        // A branch no train is on closes at once.
+        pick(11_264, 5_120, in: session)
+        if session.selectedTrackEdge == .edge(4) {
+            session.toggleSelectedTrackClosure()
+            XCTAssertEqual(session.message?.text, "Track closed. Trains go another way or wait.")
+            XCTAssertEqual(session.world.closedTrack, [.edge(1), .edge(2), .edge(4)])
+        } else {
+            XCTFail("the lower branch was not picked: \(String(describing: session.selectedTrackEdge))")
+        }
     }
 
     func testTheCommandsKeepTheirFormThroughTheLog() throws {

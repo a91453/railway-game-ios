@@ -24,9 +24,11 @@ extension GameWorld {
         guard isOnTrack(start), network.node(node) != nil else { return nil }
         switch start {
         case .onEdge(let traversal, _):
+            let leaving = network.isClosing(traversal.edge)
             return TrainRoute.shortest(from: traversal, isDestination: { network.edge($0.edge)?.end(of: $0.direction) == node }) { arrival in
-                // Decision 716: never onto track closed to trains.
-                transitions(after: arrival).filter { !network.isClosed($0.edge) }.map { ($0, network.edge($0.edge)!.length) }
+                // Decision 716: never onto track closed to trains, or
+                // being closed unless the route starts on such track.
+                transitions(after: arrival).filter { !network.isClosed($0.edge) && (leaving || !network.isClosing($0.edge)) }.map { ($0, network.edge($0.edge)!.length) }
             }
         }
     }
