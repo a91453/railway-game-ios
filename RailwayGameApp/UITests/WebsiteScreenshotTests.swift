@@ -3257,9 +3257,18 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "Hong Kong's map opens")
         settle(seconds: 5)
         keep("hong-kong-map-2d", app)
-        // The demo mode's button lays the real lines in view (all of them,
-        // the map opening whole), so the 3D map has track and stations:
-        // a new game has none of its own.
+        // The demo mode's button lays the real lines in view, so the 3D
+        // map has track and stations: a new game has none of its own. It
+        // lays a view up to 40 km across and the map opens whole, some
+        // 100 km across the screen (run 43384020296 was told to zoom in),
+        // so twice nearer first: 25 km round Kwai Chung.
+        let zoomIn = app.buttons["放大"]
+        XCTAssertTrue(zoomIn.appears(within: 10), "The map's zoom button shows")
+        for _ in 0..<2 {
+            XCTAssertTrue(zoomIn.becomesHittable(within: 5))
+            zoomIn.tap()
+            settle(seconds: 2)
+        }
         let lay = app.buttons["map.demoRealLines"]
         if lay.appears(within: 10), lay.becomesHittable(within: 10) {
             lay.tap()
@@ -3281,10 +3290,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle()
         // As it opens, from far: the land, the sea and the main roads.
         keep("hong-kong-map-3d", app)
-        // Closer, twice: the map's middle is Kwai Chung, the Tsuen Wan
-        // Line a kilometre to its west.
+        // Closer, twice, a little each time (nine times nearer was one
+        // field of grass, run 43384020296): the map's middle is Kwai
+        // Chung, the Tsuen Wan Line a kilometre to its west.
         for name in ["hong-kong-map-3d-nearer", "hong-kong-map-3d-near"] {
-            for _ in 0..<2 { app.pinch(withScale: 3, velocity: 2) }
+            app.pinch(withScale: 1.8, velocity: 1)
             settle(seconds: 10)
             keep(name, app)
         }
