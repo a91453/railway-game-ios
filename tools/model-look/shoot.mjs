@@ -48,7 +48,7 @@ try{
   // Map3DPalette.ground (#ECEEF6 once this renderer's light is on it), a tertiary road and its kerb, and a city block's wall (tileWhite)
   // and roof as tools/map3d-preview draws them by day (a wall with its windows L* 61, a roof
   // L* 86: docs/art/map3d-liveliness-2026-11-13). Change them here when the map's look changes.
-  const rgb=hex=>(0xFF000000|(hex&255)<<16|hex&0xFF00|hex>>>16)>>>0,MAP={ground:rgb(0xF7F9FF),road:rgb(0xA09FAA),kerb:rgb(0xF7F7F4),wall:rgb(0xA3A7B0),roof:rgb(0xE0E2E8)};if(ground)MAP.ground=rgb(parseInt(ground,16));
+  const rgb=hex=>(0xFF000000|(hex&255)<<16|hex&0xFF00|hex>>>16)>>>0,MAP={ground:rgb(0xE4E3DF),road:rgb(0xA09FAA),kerb:rgb(0xF7F7F4),wall:rgb(0xA3A7B0),roof:rgb(0xBABDC8)};if(ground)MAP.ground=rgb(parseInt(ground,16));
   // From the model towards the camera: `tilt` from straight down, as the game's camera counts it.
   const towards=(heading,tilt)=>[Math.sin(rad(tilt))*Math.cos(rad(heading)),Math.sin(rad(tilt))*Math.sin(rad(heading)),Math.cos(rad(tilt))];
   // One picture; `pointsPerMetre` gives it its size on an iPhone at that zoom, else it fills `width`.
