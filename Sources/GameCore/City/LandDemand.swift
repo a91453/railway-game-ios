@@ -589,7 +589,8 @@ extension GameWorld {
             weights.append(squared < front ? LandDemand.stationFrontGrowth : 1)
         }
         let addedResidents = homeGrowth(residents, of: indices, by: weights)
-        let addedJobs = Self.apportion(jobs, by: indices.indices.map { land.cells[indices[$0]].jobs * weights[$0] })
+        // Decision 728: steered by the uses of the company's buildings.
+        let addedJobs = jobGrowth(jobs, of: Array(indices.indices), in: indices, by: weights)
         for (offset, index) in indices.enumerated() {
             let cell = land.cells[index]
             // Decision 98: nothing grows on land zoned no development; its
@@ -769,7 +770,7 @@ extension GameWorld {
         var addedJobs = [Int64](repeating: 0, count: indices.count)
         for kind in [CityDemand.Kind.shops, .work, nil] {
             let members = indices.indices.filter { CityDemand.Kind(of: land.cells[indices[$0]].use) == kind }
-            let shares = Self.apportion(jobs[kind] ?? 0, by: members.map { land.cells[indices[$0]].jobs * weights[$0] })
+            let shares = jobGrowth(jobs[kind] ?? 0, of: members, in: indices, by: weights)
             for (member, added) in zip(members, shares) {
                 addedJobs[member] = added
             }
@@ -797,21 +798,62 @@ extension GameWorld {
         let plain = indices.indices.map { land.cells[indices[$0]].residents * weights[$0] }
         let civic = civicGrowthWeights(weights, of: indices)
         guard civic != weights else { return Self.apportion(residents, by: plain) }
-        let base = Self.apportion(residents, by: plain)
-        var added = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * civic[$0] })
         let room = indices.map { index in
             let cell = land.cells[index]
             return allowsGrowth(row: cell.row, column: cell.column) ? max(0, growthLimits(of: cell).residents - cell.residents) : 0
         }
+        return Self.steeredShares(residents, plain: plain, steered: indices.indices.map { land.cells[indices[$0]].residents * civic[$0] }, room: room)
+    }
+
+    /// The new `jobs` of a growing station shared among the cells
+    /// `members` (offsets into `indices` and `weights`, as
+    /// ``homeGrowth(_:of:by:)``'s) by their jobs times their weights
+    /// (decision 728): each times `10 +` the tenths the uses of the
+    /// company's buildings round it lift its use when it has room to grow,
+    /// and what a lifted cell takes beyond its room and its plain share
+    /// goes to the cells with room left, as the homes'. The plain share
+    /// when the company's buildings lift none of them.
+    func jobGrowth(_ jobs: Int64, of members: [Int], in indices: [Int], by weights: [Int64]) -> [Int64] {
+        let plain = members.map { land.cells[indices[$0]].jobs * weights[$0] }
+        let byUse = companyCentresByUse()
+        guard !byUse.isEmpty else { return Self.apportion(jobs, by: plain) }
+        var lifted = false
+        var steered: [Int64] = []
+        steered.reserveCapacity(members.count)
+        for (offset, member) in members.enumerated() {
+            let cell = land.cells[indices[member]]
+            guard allowsGrowth(row: cell.row, column: cell.column), cell.jobs < growthLimits(of: cell).jobs else {
+                steered.append(plain[offset] * 10)
+                continue
+            }
+            let lift = Self.industryTenths(at: cell.middle, of: cell.use, byUse).lift
+            if lift > 0 { lifted = true }
+            steered.append(plain[offset] * (10 + lift))
+        }
+        guard lifted else { return Self.apportion(jobs, by: plain) }
+        let room = members.map { member in
+            let cell = land.cells[indices[member]]
+            return allowsGrowth(row: cell.row, column: cell.column) ? max(0, growthLimits(of: cell).jobs - cell.jobs) : 0
+        }
+        return Self.steeredShares(jobs, plain: plain, steered: steered, room: room)
+    }
+
+    /// `amount` shared by `steered`, what a share takes beyond both its
+    /// `room` and its share by `plain` then going to the shares with room
+    /// left, by `plain` (decision 361's sequel; decision 728 for jobs), so
+    /// that steering never loses more to the rooms than the plain share.
+    static func steeredShares(_ amount: Int64, plain: [Int64], steered: [Int64], room: [Int64]) -> [Int64] {
+        let base = Self.apportion(amount, by: plain)
+        var added = Self.apportion(amount, by: steered)
         var spare: Int64 = 0
-        for offset in indices.indices where added[offset] > max(room[offset], base[offset]) {
+        for offset in plain.indices where added[offset] > max(room[offset], base[offset]) {
             spare += added[offset] - max(room[offset], base[offset])
             added[offset] = max(room[offset], base[offset])
         }
         // Each round either places all of `spare` or fills at least one
         // more cell to its room, so it ends within one round a cell.
         while spare > 0 {
-            let open = indices.indices.map { added[$0] < room[$0] ? plain[$0] : 0 }
+            let open = plain.indices.map { added[$0] < room[$0] ? plain[$0] : 0 }
             guard open.contains(where: { $0 > 0 }) else { break }
             let shares = Self.apportion(spare, by: open)
             spare = 0
@@ -835,12 +877,15 @@ extension GameWorld {
     /// share it could not take is not made larger and lost.
     func civicGrowthWeights(_ weights: [Int64], of indices: [Int]) -> [Int64] {
         let civics = landValueCivics()
-        guard !civics.schools.isEmpty || !civics.hospitals.isEmpty else { return weights }
+        // Decision 728: and the uses of the company's buildings round it.
+        let byUse = companyCentresByUse()
+        guard !civics.schools.isEmpty || !civics.hospitals.isEmpty || !byUse.isEmpty else { return weights }
         return zip(indices, weights).map { index, weight in
             let cell = land.cells[index]
             guard allowsGrowth(row: cell.row, column: cell.column), cell.residents < growthLimits(of: cell).residents else { return weight * 10 }
             let near = Self.isNearCivics(cell.middle, civics)
-            return weight * (10 + (near.school ? LandDemand.schoolGrowthTenths : 0) + (near.hospital ? LandDemand.hospitalGrowthTenths : 0))
+            let lift = Self.industryTenths(at: cell.middle, of: cell.use, byUse).lift
+            return weight * (10 + (near.school ? LandDemand.schoolGrowthTenths : 0) + (near.hospital ? LandDemand.hospitalGrowthTenths : 0) + lift)
         }
     }
 

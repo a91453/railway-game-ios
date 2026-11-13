@@ -30,6 +30,10 @@
 //   within 400 m of the centre of one of the company's buildings, else 0
 //   (the company's buildings leading development; only zoned cells, so
 //   a world without zones is worth what it was);
+//   Since decision 728, the more of C and 300 × the tenths the uses of the
+//   company's buildings within 400 m lift the cell's use
+//   (``LandValueRules/industryTenths(from:to:)``, at most 14), on any cell
+//   with a use, less a factory's drop by homes;
 // - W, decision 111: 600 for a cell whose middle lies within 160 m of a
 //   cell of water's (water included), else 0: the sea view and the river
 //   bank (a world without water is worth what it was);
@@ -60,7 +64,10 @@ public struct LandValue: Hashable, Sendable {
     /// ``LandValueRules/parkPremium`` near a park, else 0 (decision 91).
     public let parkPremium: Int64
     /// ``LandValueRules/companyPremium`` for a zoned cell near the
-    /// company's buildings, else 0 (decision 98).
+    /// company's buildings, else 0 (decision 98); since decision 728 the
+    /// more of that and what the uses of the company's buildings round it
+    /// lift its use (``LandValueRules/industryTenths(from:to:)``), less
+    /// what they drop it (a factory by homes, so it can be below 0).
     public let companyPremium: Int64
     /// ``LandValueRules/waterPremium`` by the water, else 0 (decision 111).
     public let waterPremium: Int64
@@ -140,6 +147,44 @@ public enum LandValueRules {
     public static let schoolPremium: Int64 = 2_700
     public static let hospitalPremium: Int64 = 1_500
     public static let civicReach: Int64 = 25_600
+    /// Decision 728 (the subsidiary design's step 3): how much one of the
+    /// company's buildings of use `source` within ``companyReach`` of its
+    /// centre lifts the city's land of use `target`, in tenths: 9 strong,
+    /// 5 middling, 3 weak, -9 for a factory by homes, else 0. A use counts
+    /// once however many of it stand near. Culture by homes stays the
+    /// schools' and hospitals' own (``schoolPremium``, decision 361's
+    /// sequel); parks are decision 91's and 361's.
+    public static func industryTenths(from source: LandUse, to target: LandUse) -> Int64 {
+        switch (source, target) {
+        case (.residential, .commercial): 9
+        case (.residential, .office), (.residential, .leisure): 3
+        case (.residential, .civic): 5
+        case (.commercial, .residential): 9
+        case (.commercial, .office): 5
+        case (.commercial, .leisure): 3
+        case (.office, .residential): 5
+        case (.office, .commercial): 9
+        case (.office, .civic): 3
+        case (.industrial, .residential): -9
+        case (.industrial, .commercial): 3
+        case (.industrial, .office): 5
+        case (.agricultural, .commercial): 3
+        case (.agricultural, .industrial), (.agricultural, .leisure): 5
+        case (.leisure, .residential): 3
+        case (.leisure, .commercial): 9
+        case (.leisure, .civic): 5
+        case (.civic, .commercial): 3
+        case (.civic, .leisure): 5
+        default: 0
+        }
+    }
+    /// Cents a m² for each tenth of ``industryTenths(from:to:)``: 300, so
+    /// strong is a school's 2,700, middling a hospital's 1,500.
+    public static let industryPremiumPerTenth: Int64 = 300
+    /// The most the uses round a cell lift it, in tenths: 14, a school's
+    /// and a hospital's together.
+    public static let industryMostTenths: Int64 = 14
+
     /// The least and the most a cell is worth, in cents a m².
     public static let minimum: Int64 = 1_500
     public static let maximum: Int64 = 150_000
@@ -230,20 +275,58 @@ extension GameWorld {
     }
 
     /// The centres of the company's buildings (decision 98), none in a
-    /// world without zones, which nothing near them makes worth more.
-    private func landValueCompanies() -> [PlanPoint] {
-        zones.isEmpty ? [] : placedBuildings.map(\.centre)
+    /// world without zones, which nothing near them makes worth more; and
+    /// (decision 728) the centres of those of each use but parks, by use.
+    private func landValueCompanies() -> (zoned: [PlanPoint], byUse: [LandUse: [PlanPoint]]) {
+        (zones.isEmpty ? [] : placedBuildings.map(\.centre), companyCentresByUse())
+    }
+
+    /// The centres of the company's buildings by their use, parks left out
+    /// (decision 728).
+    func companyCentresByUse(excluding excluded: PlacedBuildingID? = nil) -> [LandUse: [PlanPoint]] {
+        var byUse: [LandUse: [PlanPoint]] = [:]
+        for building in placedBuildings where building.kind.use != .park && building.id != excluded {
+            byUse[building.kind.use, default: []].append(building.centre)
+        }
+        return byUse
+    }
+
+    /// The tenths the company's buildings `byUse` lift land of use `target`
+    /// whose middle is `point` (decision 728): each use within
+    /// ``LandValueRules/companyReach`` once, by
+    /// ``LandValueRules/industryTenths(from:to:)``; the lifts added up to
+    /// ``LandValueRules/industryMostTenths``, and the drops.
+    static func industryTenths(at point: PlanPoint, of target: LandUse, _ byUse: [LandUse: [PlanPoint]]) -> (lift: Int64, drop: Int64) {
+        guard !byUse.isEmpty else { return (0, 0) }
+        let reach = LandValueRules.companyReach * LandValueRules.companyReach
+        var lift: Int64 = 0, drop: Int64 = 0
+        // In LandUse's order, so the sum never depends on a dictionary's.
+        for source in LandUse.allCases {
+            let tenths = LandValueRules.industryTenths(from: source, to: target)
+            guard tenths != 0, let centres = byUse[source] else { continue }
+            let near = centres.contains { centre in
+                let dx = point.x - centre.x, dy = point.y - centre.y
+                return dx * dx + dy * dy < reach
+            }
+            guard near else { continue }
+            if tenths > 0 { lift += tenths } else { drop += tenths }
+        }
+        return (min(lift, LandValueRules.industryMostTenths), drop)
     }
 
     private func landValue(
         row: Int, column: Int, near stations: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)], parks: [Int: [PlanPoint]],
-        companies: [PlanPoint], civics: (schools: [PlanPoint], hospitals: [PlanPoint])
+        companies: (zoned: [PlanPoint], byUse: [LandUse: [PlanPoint]]), civics: (schools: [PlanPoint], hospitals: [PlanPoint])
     ) -> LandValue {
         let base: Int64
+        // Decision 728: the use the uses round it lift, none for empty land.
+        var use: LandUse?
         if let building = buildings.building(row: row, column: column) {
             base = LandValueRules.base(of: building.use) * LandValueRules.densityFactor(building.density) / 1_000
+            use = building.use
         } else if let cell = land.cell(row: row, column: column) {
             base = LandValueRules.base(of: cell.use) * LandValueRules.vacantDensityFactor / 1_000
+            use = cell.use
         } else {
             base = LandValueRules.vacantBase * LandValueRules.vacantDensityFactor / 1_000
         }
@@ -276,11 +359,15 @@ extension GameWorld {
         let park = nearPark ? LandValueRules.parkPremium : 0
         // Decision 98: a zoned cell near the company's buildings.
         let companyReach = LandValueRules.companyReach * LandValueRules.companyReach
-        let nearCompany = !companies.isEmpty && zones.zone(row: row, column: column)?.use != nil && companies.contains { centre in
+        let nearCompany = !companies.zoned.isEmpty && zones.zone(row: row, column: column)?.use != nil && companies.zoned.contains { centre in
             let dx = x - centre.x, dy = y - centre.y
             return dx * dx + dy * dy < companyReach
         }
-        let company = nearCompany ? LandValueRules.companyPremium : 0
+        // Decision 728: the uses round it, the more of the two, and the
+        // drops on top.
+        let industry = use.map { Self.industryTenths(at: PlanPoint(x: x, y: y), of: $0, companies.byUse) } ?? (lift: 0, drop: 0)
+        let company = max(nearCompany ? LandValueRules.companyPremium : 0, industry.lift * LandValueRules.industryPremiumPerTenth)
+            + industry.drop * LandValueRules.industryPremiumPerTenth
         // Decision 111: by the water.
         let water = terrain.isNearWater(row: row, column: column) ? LandValueRules.waterPremium : 0
         // Decision 361's sequel: near the company's schools and hospitals.
@@ -306,7 +393,10 @@ extension GameWorld {
     /// worth up to what their land is, never more. `nil` outside the world.
     public func companyLandValue(of building: PlacedBuilding) -> LandValue? {
         let row = Land.cellIndex(building.centre.y), column = Land.cellIndex(building.centre.x)
-        guard let value = landValue(row: row, column: column) else { return nil }
+        guard (0..<Land.rows(in: bounds)).contains(row), (0..<Land.columns(in: bounds)).contains(column) else { return nil }
+        // Decision 728: a building does not lift its own land.
+        let companies = (zoned: landValueCompanies().zoned, byUse: companyCentresByUse(excluding: building.id))
+        let value = landValue(row: row, column: column, near: landValueStations(), parks: landValueParks(), companies: companies, civics: landValueCivics())
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         var sum: Int64 = 0, count: Int64 = 0
         for r in (row - 1)...(row + 1) {
