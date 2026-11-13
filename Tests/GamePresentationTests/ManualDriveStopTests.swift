@@ -112,6 +112,13 @@ final class ManualDriveStopTests: XCTestCase {
         XCTAssertEqual(Look.view(chosen: .back, result: result(.timedOut), looking: true, reduceMotion: false), .back)
         XCTAssertEqual(Look.view(chosen: .aboveBack, result: nil, looking: true, reduceMotion: false), .aboveBack, "not while driving")
         XCTAssertTrue((5...12).contains(Look.seconds), "long enough to read the card, not a wait")
+        // The look stands nearer than the view from beside, and only it.
+        XCTAssertEqual(Look.scale(result: result(.stopped), looking: true, reduceMotion: false), Look.scale)
+        XCTAssertNil(Look.scale(result: result(.stopped), looking: false, reduceMotion: false))
+        XCTAssertNil(Look.scale(result: result(.stopped), looking: true, reduceMotion: true))
+        XCTAssertNil(Look.scale(result: result(.passed), looking: true, reduceMotion: false))
+        XCTAssertTrue(Map3DFollow.scales.contains(Look.scale))
+        XCTAssertLessThan(Look.scale, 1)
         XCTAssertEqual(Look.backText(chosen: .cab, looking: true, in: .traditionalChinese), "回駕駛室")
         XCTAssertEqual(Look.backText(chosen: .cab, looking: true, in: .english), "Back to the cab")
         XCTAssertEqual(Look.backText(chosen: .cab, looking: false, in: .traditionalChinese), "好", "already back in the cab")
@@ -119,6 +126,31 @@ final class ManualDriveStopTests: XCTestCase {
         for looking in [true, false] {
             XCTAssertEqual(Look.backText(chosen: .back, looking: looking, in: .traditionalChinese), ManualDrive.doneText(in: .traditionalChinese))
         }
+    }
+
+    /// The look's distance takes the pinch's place for the view from
+    /// beside while it lasts, and leaves the pinch's as it was.
+    func testTheLookFromBesideStandsAtItsOwnDistance() {
+        let pose = Map3DFollow.Pose(forward: Map3DPoint(0, 0, -1), nose: Map3DPoint(0, 0, -40), rail: Map3DPoint(0, 0, -40), middle: Map3DPoint(0, 0, 0), length: 80)
+        var camera = Map3DCamera(target: Map3DPoint(0, 0, 0), distance: 100, heading: 0)
+        camera.viewport = (2_622, 1_206)
+        var follow = Map3DFollow(train: TrainID(rawValue: 1), view: .side)
+        follow.scale = 2
+        let middle = Map3DPoint(0, Map3DTrains.carHeight / 2, 0)
+        let pinched = (follow.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true).eye - middle).length
+        follow.lookScale = ManualDrive.StopLook.scale
+        let look = (follow.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true).eye - middle).length
+        XCTAssertEqual(look / pinched, ManualDrive.StopLook.scale / 2, accuracy: 0.001)
+        XCTAssertEqual(follow.scale, 2, "the pinch's distance is kept for after")
+        // The train's length seen across the eye's distance through the
+        // lens, on an iPhone on its side: some six tenths of the width.
+        let across = Map3DFollow.sideAcross / Map3DFollow.sideAway
+        let share = 40 * across / look / (tanf(Map3DFollow.watchLens / 2) * camera.viewport.width / camera.viewport.height)
+        XCTAssertTrue((0.55...0.7).contains(share), "\(share)")
+        follow.view = .back
+        XCTAssertEqual(follow.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true).distance,
+                       { follow.lookScale = nil; return follow.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true).distance }(),
+                       "the other views do not use it")
     }
 
     func testTheMarkIsAPostLeftOfTheTrackAndABarBetweenTheRails() {
@@ -146,5 +178,98 @@ final class ManualDriveStopTests: XCTestCase {
         var none = Map3DMesh()
         Mark.add(to: &none, at: rail, forward: Map3DPoint(0, 1, 0))
         XCTAssertTrue(none.vertices.isEmpty, "no way on the plan, no mark")
+    }
+
+    // MARK: The stopping assist
+
+    /// A run 600 m long, entered at `kmh`, the handle put on `notch` and
+    /// left there: where it ended.
+    private func assistedRun(from kmh: Double, notch: ManualDrive.Notch, train: ManualDrive.Train? = nil, assists: Bool = true) -> ManualDrive {
+        var drive = ManualDrive(train: train ?? self.train, course: .init(stop: 600, scheduled: 600), speed: kmh / 3.6, assists: assists)
+        drive.set(notch)
+        var frames = 0
+        while !drive.isOver, frames < 60 * 600 {
+            drive.advance(seconds: 1.0 / 60)
+            frames += 1
+        }
+        return drive
+    }
+
+    func testTheAssistStopsATrainSlowedInTimeOnThePoint() throws {
+        var worst = 0.0, helped = 0
+        for train in [self.train, ManualDrive.Train(.highSpeed)] {
+            for kmh in stride(from: 20.0, through: 110, by: 15) {
+                for step in [0, -1, -2, -3, -4] {
+                    // Coasting or braking lightly from 600 m: by 200 m the
+                    // train is at a speed the service brake stops from.
+                    let drive = assistedRun(from: min(kmh, train.topSpeed * 3.6), notch: ManualDrive.Notch(step: step), train: train)
+                    guard let result = drive.result, result.assisted else { continue }
+                    worst = max(worst, abs(result.offset))
+                    helped += 1
+                    guard result.outcome != .stopped || abs(result.offset) > ManualDrive.exactMetres else { continue }
+                    XCTFail("\(kmh) km/h, step \(step): \(result.outcome), \(result.offset) m")
+                }
+            }
+        }
+        XCTAssertGreaterThan(helped, 5, "worst \(worst) m")
+        // And it does take the brake in the plain case.
+        let drive = assistedRun(from: 60, notch: .neutral)
+        XCTAssertEqual(drive.result?.assisted, true)
+        XCTAssertEqual(drive.result?.outcome, .stopped, "the assist holds the train at the stand: no brake step of the player's needed")
+    }
+
+    func testTheAssistLeavesTheHandleToThePlayerUntilTheBrakeIsDueAndWhenThePowerIsOn() {
+        // Off: a train left coasting runs past.
+        XCTAssertEqual(assistedRun(from: 60, notch: .neutral, assists: false).result?.outcome, .passed)
+        XCTAssertEqual(assistedRun(from: 60, notch: .neutral, assists: false).result?.assisted, false)
+        // Far from the stop it does nothing, whatever the speed.
+        var far = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 20, assists: true)
+        far.advance(seconds: 2)
+        XCTAssertFalse(far.isAssisting)
+        XCTAssertNil(far.assistAsked())
+        // Crawling from far off inside the bar's reach: not yet.
+        let crawl = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 2, distance: 450)
+        var crawling = crawl
+        crawling.setAssist(true)
+        XCTAssertNil(crawling.assistAsked(), "150 m at 7 km/h asks for almost no brake")
+        // Too fast for the timetable's braking: the player's to slow first.
+        var fast = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 13, distance: 500)
+        fast.setAssist(true)
+        XCTAssertNil(fast.assistAsked())
+        // With the power on it never takes over.
+        var powered = ManualDrive(train: train, course: .init(stop: 600, scheduled: 600), speed: 10, distance: 500)
+        powered.setAssist(true)
+        XCTAssertNotNil(powered.assistAsked())
+        powered.set(ManualDrive.Notch(step: 1))
+        XCTAssertNil(powered.assistAsked())
+        powered.set(.emergency)
+        XCTAssertNil(powered.assistAsked(), "nor over the emergency brake")
+    }
+
+    func testARunTheAssistHelpedSaysSoAndTheBarShowsItHolding() throws {
+        var drive = ManualDrive(train: train, course: .init(stop: 600, scheduled: 60), speed: 10, distance: 500)
+        drive.setAssist(true)
+        XCTAssertFalse(drive.reading.isAssisting)
+        drive.advance(seconds: 1)
+        XCTAssertTrue(drive.reading.isAssisting)
+        XCTAssertTrue(drive.assisted)
+        // Taking the power back ends its hold, not what it did.
+        drive.set(ManualDrive.Notch(step: 1))
+        drive.advance(seconds: 0.1)
+        XCTAssertFalse(drive.reading.isAssisting)
+        XCTAssertTrue(drive.assisted)
+        drive.set(.neutral)
+        while !drive.isOver { drive.advance(seconds: 1.0 / 60) }
+        let result = try XCTUnwrap(drive.result)
+        XCTAssertTrue(result.assisted)
+        XCTAssertTrue(result.text(in: .traditionalChinese).lines.contains("用了輔助停車"))
+        XCTAssertTrue(result.text(in: .english).lines.contains("Stopping assist helped"))
+        let own = assistedRun(from: 60, notch: .neutral, assists: false)
+        XCTAssertFalse(try XCTUnwrap(own.result).text(in: .traditionalChinese).lines.contains("用了輔助停車"))
+        XCTAssertEqual(ManualDrive.StopAssist.title(in: .traditionalChinese), "輔助停車")
+        let bar = try XCTUnwrap(ManualDrive.StopBar(phase: .driving, remainingTenths: 400))
+        XCTAssertEqual(bar.value(in: .traditionalChinese, assisting: true), "未到位，還差 40 m，輔助停車煞車中")
+        XCTAssertEqual(bar.value(in: .english, assisting: true), "Short, 40 m to go, stopping assist braking")
+        XCTAssertTrue(ManualDrive.StopAssist.isOnByDefault)
     }
 }

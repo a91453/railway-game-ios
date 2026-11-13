@@ -314,3 +314,10 @@ its map's airports when it opens the save).
   minutes after the first midnight, with the day's coach passengers and
   riders counted (`CoachTests.testTheSaveKeepsTheCoachStops`, written with
   `COACH_SAVE_NEW=1` by the build that first made it).
+- `v92-assisted-run.json`: two stations four kilometres apart, a line and
+  its train, in a managed company; three runs driven by hand settled: one
+  of 85 marks unaided, one of full marks the stopping assist helped with
+  (paid as one of 75 marks, counted in the record's `"assisted"`, not its
+  best), one past the stop
+  (`DrivenRunTests.testVersionNinetyTwoKeepsTheAssistedRuns`, written with
+  `DRIVEN_RUN_SAVE_NEW=1` by the build that first made it; decision 710).

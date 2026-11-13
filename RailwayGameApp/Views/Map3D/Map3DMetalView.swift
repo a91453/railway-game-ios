@@ -979,7 +979,7 @@ final class Map3DMetalView: MTKView {
             flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
             return
         }
-        if current.view == follow.view {
+        if current.view == follow.view, current.lookScale == follow.lookScale {
             // Decision 403 (續): from the station, flying on to the next
             // stop's platform; staying on the one it left until it is
             // well past, and on one the train is still running to while
@@ -992,6 +992,7 @@ final class Map3DMetalView: MTKView {
         }
         following?.view = follow.view
         following?.lookout = follow.lookout
+        following?.lookScale = follow.lookScale
         flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
     }
 

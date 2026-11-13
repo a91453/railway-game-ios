@@ -4,7 +4,8 @@
 
 1. 在 Xcode 建置，裝到自己的 iPhone；
 2. 讓雲端 Claude Code session 透過 Remote Control 借用 Mac 的 repo 資料夾，跑 `xcodebuild`、Simulator 的 UI 測試與官網截圖，少排 GitHub 的 macOS runner（只有 5 台）；
-3. 用 Instruments 在實機量 fps 與記憶體。
+3. 用 Instruments 在實機量 fps 與記憶體；
+4. 把 iOS App 直接開在這台 Mac 上（第 8 節），改完程式不經 Simulator 與 iPhone 就看得到。
 
 標示 **UNVERIFIED** 的步驟寫文件時沒有機器可試（寫文件的 session 在 Linux），第一次照做時請對照畫面，不一致就改這份文件。
 
@@ -258,3 +259,39 @@ App 的設定裡可以開 3D 地圖預覽（`Map3DPreviewScreen`），有除錯�
 - **決策 421**：卡頓實機量測（畫面節奏紀錄跟問題回報走）。
 
 Simulator 的 fps 不代表實機：Simulator 在 Mac 的 GPU 上跑，Metal 的行為與 iPhone 不同，所以這一節一定要用實機。
+
+## 8. 直接在 Mac 上開 iOS App（Designed for iPad）
+
+Apple silicon 的 Mac 能直接跑 iPad 版的 App，不用改 `project.yml`，也不用另做 Mac 版。2026-11-13 在這台 Mac 上實際做過：Debug 建置成功，開起來是 iPad 的版面，平面地圖（資金與時鐘列、工具列、路網面板、圖例）與 3D 地圖都畫得出來。
+
+一行做完建置、包裝、開啟（已開著的那一份會先關掉）：
+
+```sh
+tools/mac-run/run_on_mac.sh            # Debug
+tools/mac-run/run_on_mac.sh Release
+```
+
+腳本做的三件事，手動也可以照做：
+
+1. 用 `platform=macOS,variant=Designed for iPad` 這個目的地建置，簽章與第 4.2 節相同：`DEVELOPMENT_TEAM` 從命令列給，不寫進任何檔案。腳本讀環境變數 `TEAM_ID`；沒有設就從鑰匙圈的 Apple Development 憑證讀。產物放在 `~/Library/Developer/RailwayGameDerived-mac`，與第 4、5 節的資料夾分開。
+2. 建出來的 `Debug-iphoneos/RailwayGame.app` 是 iOS 的 bundle，直接 `open` 會說「incorrect executable format」。要包一層：外層 `RailwayGame.app` 裡放 `Wrapper/RailwayGame.app`（複製一份），再加一個符號連結 `WrappedBundle` 指向 `Wrapper/RailwayGame.app`，也就是 Mac App Store 安裝 iPad App 時的形狀。
+3. `open` 外層那個 bundle。
+
+**第一次要登記這台 Mac。** 開發用的描述檔只包含帳號裡登記過的裝置；Mac 沒登記時建置會停在簽章：「Device … isn't registered in your developer account」。登記會改動開發者帳號的裝置清單，是作者的決定；作者同意後跑一次：
+
+```sh
+REGISTER_DEVICE=1 tools/mac-run/run_on_mac.sh
+```
+
+作者的 MacBook Pro 已在 2026-11-13 登記，之後不用再帶。
+
+適合拿來做的事：改遊戲規則的呈現、面板內容、3D 場景後很快看一眼。重新建置、關掉舊的、再開起來，在沒有改程式時約 4 秒；有改程式時，時間幾乎都是編譯，和 Simulator 一樣。
+
+這樣跑**看不到**的，仍要在 Simulator 或 iPhone 上確認：
+
+- iPhone 的版面：Mac 上是 iPad 的版面。
+- 觸控手勢：兩指拉近、旋轉在 Mac 上是觸控板或滑鼠。
+- 效能：Mac 的顯示晶片比 iPhone 強得多，這裡的 fps 與記憶體不能當成手機上的數字（量測照第 7 節）。
+- UI 測試與官網截圖：照第 5 節在 Simulator 跑。
+
+**UNVERIFIED**（2026-11-13 沒有檢查）：只用滑鼠能不能做完所有操作；Game Center；iCloud 存檔，以及它和 iPhone 是不是同一份（是的話，兩邊同時開著可能互相蓋掉存檔，不用時把 Mac 上的關掉）；聲音；Release 建置。
