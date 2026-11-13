@@ -256,8 +256,8 @@ extension ManualDrive {
 
         /// Under the switch, and what VoiceOver adds to it.
         public static func hint(in language: DisplayLanguage) -> String {
-            language.text("Brakes the last metres onto the stopping point once you have slowed down. A run it helps earns at most half the bonus.",
-                          "你先把速度降下來，最後幾公尺幫你停在停車目標上。用了輔助的一趟，獎金最多一半。")
+            language.text("Stops you on the mark. At most half the bonus.",
+                          "最後幾公尺幫你停準；用了輔助，獎金最多一半。")
         }
 
         /// Beside the stopping bar while it holds the brake.
