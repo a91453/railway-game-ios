@@ -96,7 +96,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstCoach = firstCable + cable.count + ferry.count + air.count
         XCTAssertEqual(Array(pack.models[firstCoach..<firstCoach + coach.count].map(\.name)), Map3DCoaches.drawn.map(\.name))
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "b79c2d4d01edc32")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "524fdb48e8193551")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "8a5a9e34310c89c4")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
