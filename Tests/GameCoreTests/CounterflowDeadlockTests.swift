@@ -122,6 +122,21 @@ final class CounterflowDeadlockTests: XCTestCase {
         XCTAssertTrue(usedA, "X went along A")
     }
 
+    /// Decision 571, continued again: X takes the free berth as it is due
+    /// to leave, at minute 1, not once Y is due too (minute 3) and the
+    /// dispatcher has found the two deadlocked: no tick shows a deadlock.
+    func testTheFreeBerthIsTakenAtTheDepartureWithNoDeadlockShown() throws {
+        var scene = try makeScene()
+        var usedABeforeYWasDue = false
+        for _ in 0..<40 {
+            try scene.world.advance(ticks: 1)
+            XCTAssertEqual(scene.world.deadlockedTrains(), [], "at \(scene.world.clock.now)")
+            if scene.world.clock.now < GameTime(minutes: 3),
+               scene.world.train(id: scene.x)?.movement.edges.contains(scene.aMain) == true { usedABeforeYWasDue = true }
+        }
+        XCTAssertTrue(usedABeforeYWasDue, "X left along A as soon as it was due")
+    }
+
     /// A free berth is taken only within ``GameWorld/detourAllowance`` of
     /// the train's route: W2 and E1 moved farther than that leave the two
     /// waiting (as before), and well within it, they go.
