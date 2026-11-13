@@ -93,7 +93,10 @@ extension GameWorld {
             else { return nil }
             return (train, false)
         }
-        guard let candidate = departureRequest(of: train, memo: &memo), case .held = reservingDeparture(candidate, memo: &memo) else { return nil }
+        // Decision 718: kept by track only (``takingDeparture(_:memo:)``).
+        // A train giving its turn to one that has waited longer waits for
+        // no route; and whose turn it is asks this of the other trains.
+        guard let candidate = departureRequest(of: train, memo: &memo), case .held = takingDeparture(candidate, memo: &memo) else { return nil }
         return (candidate, true)
     }
 

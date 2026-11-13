@@ -156,6 +156,12 @@ extension GameWorld {
             return holder(of: needs, except: id, memo: &memo).map { ($0, needs) }
         }
         guard let departing = departureRequest(of: train, memo: &memo) else { return nil }
+        // Decision 718: the track lets it go, and it gives its turn to a
+        // service that has waited longer. As a scheduled wait, it is kept
+        // for a train, not for track.
+        if case .granted(let granted) = takingDeparture(departing, memo: &memo), let first = turnOwed(by: granted, memo: &memo) {
+            return (first, nil)
+        }
         if case .granted(let granted) = reservingDeparture(departing, memo: &memo), !isFollowing(granted, memo: &memo) { return nil }
         let needs = routeEnvelope(of: departing).resources
         return holder(of: needs, except: id, memo: &memo).map { ($0, needs) }
@@ -319,6 +325,16 @@ extension GameWorld {
     }
 
     func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
+        let taken = takingDeparture(candidate, memo: &memo)
+        // Decision 718: not ahead of a service that has waited longer for
+        // the same track the other way.
+        if case .granted(let granted) = taken, let first = turnOwed(by: granted, memo: &memo) { return .held(by: first) }
+        return taken
+    }
+
+    /// ``reservingDeparture(_:memo:)`` before the trains take turns
+    /// (decision 718): whether the track lets `candidate` go.
+    func takingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
         let planned = reserving(candidate, following: true, memo: &memo)
         guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution
