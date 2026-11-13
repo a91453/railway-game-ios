@@ -1509,8 +1509,13 @@ final class WebsiteScreenshotTests: XCTestCase {
             done.tap()
             XCTAssertTrue(app.buttons["map3D.drive.start"].appears(within: 5), "The handle is given back")
         }
-        // The stopping assist: holding the brake 40 m short, its switch in
-        // the view menu, and the result of a run it helped.
+    }
+
+    /// Decision 710: the stopping assist: holding the brake 40 m short,
+    /// its switch in the view menu, and the result of a run it helped. A
+    /// test of its own: with the five launches above it ran past the
+    /// eight minutes a test is allowed (run 43358097691).
+    func testManualDriveStopAssist() {
         do {
             let app = open3DInCab(extra: ["-screenshot-drive-assist"])
             defer { app.terminate() }

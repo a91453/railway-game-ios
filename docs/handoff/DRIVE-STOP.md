@@ -21,7 +21,7 @@
   - 看成績的鏡頭拉近（PR 1 欠的）：`Map3DFollow.lookScale`、`ManualDrive.StopLook.scale`（0.45）；`Map3DMetalView.follow` 換視角時一起帶過去，玩家捏合的距離不變。
   - 輔助接手那一刻一下軟的觸覺（`.impact(flexibility: .soft)`）。
   - `WhatsNew` 129 的第一筆。
-- 第三級截圖：`website-screenshots.yml`，`tests: testManualDriveStop`：`drive-stop-look`、`drive-stop-back`（鏡頭拉近）、`drive-stop-assist`（輔助中）、`drive-stop-assist-menu`（選單裡的開關）、`drive-stop-assisted-result`（用了輔助的成績卡）。**規劃看過圖才合。**
+- 第三級截圖：`website-screenshots.yml`，`tests: testManualDriveStop testManualDriveStopAssist`：`drive-stop-look`、`drive-stop-back`（鏡頭拉近）、`drive-stop-assist`（輔助中）、`drive-stop-assist-menu`（選單裡的開關）、`drive-stop-assisted-result`（用了輔助的成績卡）。**規劃看過圖才合。**
 - 沒做的：
   - 帶 `assisted` 的 ReplayFixture：`ReplayFixtures/` 的指令是 GameCore 測試自己的 `ReplayCommand`，裡面沒有結算手動駕駛的指令（決策 693 也沒加），要加得先擴那一套；改由 `ManualDriveSessionTests.testAnAssistedRunIsSettledAsAssistedAndTheCardSaysSo` 用指令紀錄重播（`CommandLogReplay`）驗。
   - `.github/testflight-whats-new.md` 的 129：照決策 415 由規劃在發版前寫。

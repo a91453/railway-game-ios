@@ -3264,6 +3264,15 @@ private struct Map3DDriveHeading: View {
                 }
                 .accessibilityIdentifier("map3D.drive.photo")
             }
+            // Decision 710: the stopping assist, on or off; above the views,
+            // which a phone held sideways scrolls.
+            Section {
+                Toggle(isOn: $assist) {
+                    Text(verbatim: ManualDrive.StopAssist.title(in: language))
+                    Text(verbatim: ManualDrive.StopAssist.hint(in: language))
+                }
+                .accessibilityIdentifier("map3D.drive.assist")
+            }
             ForEach(Map3DFollow.View.allCases, id: \.self) { option in
                 Button {
                     UITestTrace.action("map3D.drive.view.\(option.rawValue) (was \(view.rawValue))")
@@ -3281,14 +3290,6 @@ private struct Map3DDriveHeading: View {
                 }
                 .disabled(option == .station && !stationOffered && view != option)
                 .accessibilityIdentifier("map3D.drive.view.\(option.rawValue)")
-            }
-            // Decision 710: the stopping assist, on or off.
-            Section {
-                Toggle(isOn: $assist) {
-                    Text(verbatim: ManualDrive.StopAssist.title(in: language))
-                    Text(verbatim: ManualDrive.StopAssist.hint(in: language))
-                }
-                .accessibilityIdentifier("map3D.drive.assist")
             }
         } label: {
             Image(systemName: "eye.fill")
