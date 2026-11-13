@@ -75,13 +75,20 @@ final class BalanceReportTests: XCTestCase {
         print("\n" + PlayReport.table([PlayReport(label: "Two lines", player: player)], title: "A year with every switch on"))
     }
 
-    /// The first line with the company's buildings (decision 130): once the
-    /// line has paid for itself, on day 30, two office blocks by its middle
-    /// station: A beside it, buying out the city's D4 buildings in its
-    /// way, and B on the empty land at the town's edge 768 m north, inside
-    /// the station's 800 m. Then the day's balance, what they earn, how full
-    /// they are and what selling each would bring, and at the end both are
-    /// sold. Measures what a sale does to the cash against keeping them.
+    /// The first line with the company's buildings (decision 130): on day
+    /// 30, two office blocks by its middle station: A beside it, buying out
+    /// the city's D4 buildings in its way, and B on the empty land at the
+    /// town's edge 768 m north, inside the station's 800 m. Then the day's
+    /// balance, what they earn, how full they are and what selling each
+    /// would bring, and at the end both are sold. Measures what a sale does
+    /// to the cash against keeping them.
+    ///
+    /// The first line no longer pays for itself (its stations are 176 m
+    /// apart; HEALTH-125 §5.4), so on day 30 it has some NT$2.9 million
+    /// and A alone costs some NT$20 million: the cash is topped up by
+    /// NT$30 million that day, as the other reports on the first line do,
+    /// so the measure is of the trade alone. Before, the report stopped at
+    /// `insufficientFunds` on day 30.
     func testAFirstLineWithBuildingsToSell() throws {
         let days = try requestedDays()
         var world = try firstLine()
@@ -90,7 +97,7 @@ final class BalanceReportTests: XCTestCase {
         let sites = [PlanPoint(x: middle.x, y: middle.y + 3 * tile), PlanPoint(x: middle.x, y: middle.y - 48 * tile)]
         var bought: [PlacedBuildingID] = []
         var lines = [
-            "### A first line with two office blocks bought on day 30: A buying out, B on empty land",
+            "### A first line with two office blocks bought on day 30 (cash topped up): A buying out, B on empty land",
             "",
             "| Day | Balance | Property a day | A full | A price | A book | B full | B price | B book | Balance if sold |",
             "| --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
@@ -99,6 +106,8 @@ final class BalanceReportTests: XCTestCase {
         for day in 1...days {
             try world.advance(ticks: 1_440)
             if day == 30 {
+                world.economy.earn(Money(3_000_000_000))
+                lines.append("| \(day) | topped up by \(dollars(3_000_000_000)) | | | | | | | | |")
                 for site in sites {
                     let quote = try XCTUnwrap(world.placedBuildingQuote(.office, at: site))
                     bought.append(try world.placeBuilding(.office, at: site).id)
