@@ -818,6 +818,9 @@ selected_pattern() {
 # 5 s or more with no weight in the full runs 43345319124, 43395636723 and
 # 43406085807 take the slowest of their times (28 classes, from
 # HongKongMapTests 184 down); TrainNightLightsReadBackTests 10 -> 18.
+# Map3DStationExteriorsTests 231 -> 94: it took 74 and 94 s in those runs
+# (decision 679 made its track faster), and at 231 it stood alone against
+# rest's other heavy classes, 433 s in one part and 609 in the other.
 CLASS_WEIGHTS="HongKongMapTests:184 Map3DFarViewTests:135
   DemoRealLinesEverySystemTests:78 WenhuUndergroundTests:52
   AirportLineWholeIslandTests:38 HongKongRailwaysTests:38
@@ -828,7 +831,7 @@ CLASS_WEIGHTS="HongKongMapTests:184 Map3DFarViewTests:135
   Map3DStationExteriorBatch2MapTests:9 Map3DAircraftLayerTests:7
   Map3DAirfieldsTests:7 Map3DLowRiseTests:7 Map3DRoadTunnelTests:7
   Map3DFarSightTests:6 NewTrainArrivalTests:6
-  Map3DStationExteriorsTests:231 Map3DSceneMemoryTests:221
+  Map3DStationExteriorsTests:94 Map3DSceneMemoryTests:221
   Map3DModelPackLockTests:152 KaohsiungLightRailDayTests:187
   WenhuLineTests:139 SaveMutationSecondHalfTests:107
   RealLineRebuildTests:106 RealLineListingTests:100

@@ -161,7 +161,7 @@ full lane（`main` 上的 `ios-build.yml`）：
 
 ## 8. 沒有做、留給之後的
 
-- `HongKongMapTests` 184 s 超過 150 s 的線：這一輪只把它移到最輕的 campaign 並給權重，沒有讓它變快。110 s 是買下東涌綫後跑 51 小時那一個測試。
+- `HongKongMapTests` 184 s 超過 150 s 的線：這一輪只把它移到最輕的 campaign 並給權重，沒有讓它變快。110 s 是買下東涌綫後跑 51 小時那一個測試。本機用 gdb 取樣 16 次：全部在 `GameWorld.advance`，9 次在 `secondsUntilARouteFrees`（發車時算要等多久才有路），6 次在 `cover(of:)`。時間在 GameCore 的行車管制，不在測試的寫法；要快得改 GameCore，這張單不動 GameCore。
 - `Stack frames over 32 KB (reminder)` 每個 run 13–20 分。
 - GamePresentation tier 的 `selected-N` 快慢差 1.9–3.2 倍。
 - PR 的 iOS gate UI 步驟 6.3–6.6 分。
