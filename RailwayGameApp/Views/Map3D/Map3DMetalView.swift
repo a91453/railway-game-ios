@@ -307,10 +307,13 @@ final class Map3DMetalView: MTKView {
         var bytes = 0
 
         /// Decision 711: its triangles as the camera asks, simplified and
-        /// as its ground alone.
-        func cost(pack: Map3DModelPack?) -> Map3DSceneBudget.Cost {
-            let ground = baseIndexCount / 3, shadow = (shadows?.indexCount ?? 0) / 3
-            let simplified = ground + (far?.indexCount ?? 0) / 3 + (farBoxes?.triangles ?? 0) + shadow
+        /// as its ground alone. Decision 709: simplified, what the far
+        /// `level` draws of it this frame, not all it holds.
+        func cost(pack: Map3DModelPack?, level: Int) -> Map3DSceneBudget.Cost {
+            let afar = farLevels[level], shadow = (shadows?.indexCount ?? 0) / 3
+            let ground = afar.base / 3
+            let simplified = ground + (far == nil ? 0 : afar.far / 3) + (farBoxes == nil ? 0 : afar.boxTriangles)
+                + (shadows == nil ? 0 : afar.shadows / 3)
             guard detailed else { return Map3DSceneBudget.Cost(whole: simplified, simplified: simplified, ground: ground) }
             var whole = indexCount / 3 + (standIn?.indexCount ?? 0) / 3 + shadow + 2 * (signs?.count ?? 0)
             if let pack, let props {
@@ -1318,7 +1321,7 @@ final class Map3DMetalView: MTKView {
             (place: place, distance: Map3DStreaming.distance(of: Map3DStreaming.Key(column: visible[place].column, row: visible[place].row),
                                                              to: camera.target))
         }.sorted { $0.distance < $1.distance }
-        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack) },
+        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack, level: farLevel) },
                                              within: Map3DSceneBudget.triangles(tier: level?.tier))
         for (entry, share) in zip(nearestFirst, shares) where share != .whole {
             visible[entry.place].share = share
