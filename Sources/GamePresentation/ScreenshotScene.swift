@@ -35,6 +35,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the pull request that added it.
     case punctuality
 
+    /// Decision 715's screen: the demo map as a managed company with three
+    /// term loans, signed on its first day and three days on, and trains
+    /// bought until the cash in hand no longer pays the largest back. For
+    /// the screenshot review of the pull request that added the screen.
+    case termLoans
+
     /// Decision 533: the demo map with a school and a hospital of the
     /// company's beside its first station, run on to half past seven on
     /// the second morning, a school day, when the students are on their
@@ -357,6 +363,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .depots: Self.depotsWorld(in: language)
         case .zoning: Self.zoningWorld(in: language)
         case .punctuality: Self.punctualityWorld(in: language)
+        case .termLoans: Self.termLoansWorld(in: language)
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
@@ -1014,6 +1021,34 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             try world.advance(ticks: Int(punctualityRunSeconds / 600))
         } catch {
             preconditionFailure("The punctuality screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Term loans
+
+    private static func termLoansWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setEconomyMode(.management)
+        world.setUnlimitedFunds(false)
+        do throws(GameError) {
+            let step = CompanyAccounts.loanStep
+            try world.takeTermLoan(principal: Money(step.amount * 2), years: 2)
+            try world.takeTermLoan(principal: step, years: 1)
+            // .fast is ten minutes a tick: three days.
+            world.setSpeed(.fast)
+            try world.advance(ticks: 3 * 144)
+            let most = world.termLoanCredit().maximumPrincipal
+            // Half of what the bank still lends, so the form has some left.
+            let large = try world.takeTermLoan(principal: Money(most.amount / step.amount / 2 * step.amount), years: 10)
+            // Trains bought with it, until it cannot be paid back today.
+            for number in 1...200 where world.economy.balance >= (try world.termLoanRepaymentQuote(large.id)).total {
+                try world.purchaseTrain(named: language.text("Spare \(number)", "備用 \(number)"))
+            }
+        } catch {
+            preconditionFailure("The term loans screenshot scene no longer builds: \(error)")
         }
         world.setSpeed(.normal)
         world.setSpeed(.paused)

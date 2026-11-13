@@ -105,7 +105,8 @@ final class CommandEditTests: XCTestCase {
         let edits: [PlayerCommand.Edit] = [
             .setTrafficControl(true), .setDisruptions(Disruptions(level: DisruptionLevel.allCases[0], country: "TW", seed: 7)),
             .setDisruptions(nil), .setPassengerRoutingMode(.network), .setEconomyMode(.free), .setFareRules(.flat(Money(300))),
-            .setDayPass(Money(1_500)), .setDayPass(nil), .borrow(Money(1_000)), .repayLoan(Money(1_000)), .setServiceDay(try makeWorld().serviceDay),
+            .setDayPass(Money(1_500)), .setDayPass(nil), .borrow(Money(1_000)), .repayLoan(Money(1_000)),
+            .takeTermLoan(Money(30_000_000), years: 2), .repayTermLoanEarly(1), .setServiceDay(try makeWorld().serviceDay),
             .purchaseTrain(name: "列車 1"), .sellTrain(train), .setTrainCars(train, cars: 3), .setTrainType(train, .highSpeed),
             .setTrainType(train, nil), .setTrainRate(train, rate: 40), .resumeTrain(train),
             .sendTrain(train, along: [PlayerCommand.Edit.Step(TrackTraversal(edge: .edge(2), direction: .backward))], stoppingAt: 512),
@@ -174,6 +175,8 @@ final class CommandEditTests: XCTestCase {
             (.removeStation(stops[3]), { world in try world.removeStation(stops[3]) }),
             (.borrow(CompanyAccounts.loanStep), { world in try world.borrow(CompanyAccounts.loanStep) }),
             (.repayLoan(CompanyAccounts.loanStep), { world in try world.repayLoan(CompanyAccounts.loanStep) }),
+            (.takeTermLoan(CompanyAccounts.loanStep, years: 2), { world in try world.takeTermLoan(principal: CompanyAccounts.loanStep, years: 2) }),
+            (.repayTermLoanEarly(1), { world in try world.repayTermLoanEarly(1) }),
         ]
         for (edit, closure) in cases {
             let session = GameSession(world: world)

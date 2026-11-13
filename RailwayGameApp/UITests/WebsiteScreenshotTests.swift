@@ -4684,6 +4684,106 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["start.brand"].firstMatch.appears(within: 30), "The start screen")
     }
 
+    /// Decision 715's screen, in both languages: the economy panel's term
+    /// loans, the form with the bank's quote, the question before signing,
+    /// the contracts (one the cash cannot pay back, its button off), the
+    /// question before paying one back early, and the balance sheet's row.
+    /// For the screenshot review of the pull request that added the screen.
+    func testTermLoans() {
+        termLoanShots(english: false)
+        termLoanShots(english: true)
+    }
+
+    private func termLoanShots(english: Bool) {
+        let suffix = english ? "en" : "zh"
+        let app = launch(extra: ["-screenshot-scene", "termLoans"], english: english)
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+        settle()
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars[english ? "Economy" : "經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        func list() -> XCUIElement? {
+            app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        }
+        let open = app.buttons["economy.termLoans.open"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: list(), below: bar.frame.maxY, clearOf: .button), "The term loans are in the panel")
+        settle()
+        keep("term-loans-panel-\(suffix)", app)
+        open.tap()
+
+        let title = app.navigationBars[english ? "Term Loans" : "定期貸款"].firstMatch
+        XCTAssertTrue(title.appears(within: 10), "The term loans open")
+        title.waitUntilSettled()
+        // A term of two years, then the bank's quote for it.
+        let years = app.steppers["termLoan.years"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(years, in: list(), below: title.frame.maxY, clearOf: .button), "The term's stepper")
+        years.buttons.element(boundBy: 1).tap()
+        settle(seconds: 1)
+        keep("term-loans-form-\(suffix)", app)
+        let sign = app.buttons["termLoan.sign"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(sign, in: list(), below: title.frame.maxY, clearOf: .button), "The button that asks to sign")
+        settle(seconds: 1)
+        keep("term-loans-quote-\(suffix)", app)
+        sign.tap()
+        let signing = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", english ? "Sign and Borrow" : "簽約，借入")).firstMatch
+        XCTAssertTrue(signing.appears(within: 10), "The question before signing")
+        settle(seconds: 1)
+        keep("term-loans-sign-confirm-\(suffix)", app)
+        signing.tap()
+        settle()
+        keep("term-loans-signed-\(suffix)", app)
+
+        // The contracts: the largest cannot be paid back today.
+        let short = app.descendants(matching: .any)["termLoan.shortfall.3"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(short, in: list(), below: title.frame.maxY, clearOf: .button), "Why the largest cannot be repaid")
+        settle(seconds: 1)
+        keep("term-loans-contracts-\(suffix)", app)
+        let locked = app.buttons["termLoan.repay.3"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(locked, in: list(), below: title.frame.maxY, clearOf: .button), "The largest loan's button")
+        XCTAssertFalse(locked.isEnabled, "The cash does not pay the largest back")
+        settle(seconds: 1)
+        keep("term-loans-short-\(suffix)", app)
+        // The loan signed a moment ago is the last due, at the bottom.
+        let repay = app.buttons["termLoan.repay.4"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(repay, in: list(), below: title.frame.maxY, clearOf: .button), "The loan just signed")
+        XCTAssertTrue(repay.isEnabled)
+        repay.tap()
+        let paying = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", english ? "Pay " : "付 ")).firstMatch
+        XCTAssertTrue(paying.appears(within: 10), "The question before repaying")
+        settle(seconds: 1)
+        keep("term-loans-repay-confirm-\(suffix)", app)
+        paying.tap()
+        XCTAssertTrue(repay.disappears(within: 10), "The loan is repaid")
+        settle()
+        keep("term-loans-repaid-\(suffix)", app)
+
+        // Back in the panel, the balance sheet has their row.
+        title.buttons.firstMatch.tap()
+        XCTAssertTrue(bar.appears(within: 10))
+        bar.waitUntilSettled()
+        let sheet = app.descendants(matching: .any)["economy.balanceSheet"].firstMatch
+        let reports = app.buttons["economy.reports"].firstMatch
+        for _ in 0..<40 where !sheet.exists && !reports.exists {
+            list()?.swipeUp(velocity: .slow)
+        }
+        if !sheet.exists, app.dragUntilWhollyOnScreen(reports, in: list(), below: bar.frame.maxY, clearOf: .button),
+           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
+            reports.tap()
+        }
+        for _ in 0..<40 where !sheet.exists {
+            list()?.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(sheet.exists, "The balance sheet is in the panel")
+        list()?.swipeUp(velocity: .slow)
+        settle()
+        keep("term-loans-balance-sheet-\(suffix)", app)
+    }
+
     private func launch(extra: [String] = [], english: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
