@@ -124,8 +124,9 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(try grown(with: .school), [290, 200])
         // Near a hospital 1.5 times: 1,500 to 1,000, so 174 and 116.
         XCTAssertEqual(try grown(with: .hospital), [274, 216])
-        // A night market draws no homes.
-        XCTAssertEqual(try grown(with: .nightMarket), [245, 245])
+        // Decision 728: a night market is commerce, which lifts the homes
+        // round it strongly, 9 tenths, as a school does.
+        XCTAssertEqual(try grown(with: .nightMarket), [290, 200])
     }
 
     /// A home near a school that is already full takes no larger share
