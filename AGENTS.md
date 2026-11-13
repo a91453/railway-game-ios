@@ -113,7 +113,7 @@ author's time spent coordinating):
 How they work together:
 
 - One writer per set of files at a time. Several agents may analyse or
-  review the same work, but only the one that claimed the files in the work registry (#1579)
+  review the same work, but only the one that claimed the files in the work registry (#2118)
   changes them, on its own branch (and its own working directory when
   agents share a computer).
 - One priority list (`docs/research/NEXT_PRIORITIES_2026-10-12.md`) and one
@@ -140,7 +140,7 @@ outlines, and who changes which file while they are built in parallel:
 [`docs/UI_INTERFACES.md`](docs/UI_INTERFACES.md).
 
 Before starting a task, every agent claims it in the work registry, issue
-#1579 (#1041 before 2026-10-30, #231 before 2026-10-22), as `CLAUDE.md` (Workflow) describes: what it does, which files, and
+#2118 (#1579 before 2026-11-13, #1041 before 2026-10-30, #231 before 2026-10-22), as `CLAUDE.md` (Workflow) describes: what it does, which files, and
 the save version, decision number and golden schema it reserves. An agent
 that does not bump the golden schema or add decisions still claims its task
 and files there.

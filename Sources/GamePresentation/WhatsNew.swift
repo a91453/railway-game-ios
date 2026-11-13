@@ -38,6 +38,10 @@ public enum WhatsNew {
                     english: "Hong Kong is a new map, opened by flying there: on a map of Taiwan, carry 500 passengers in one day to or from an airport that flies to Hong Kong. Then choose Hong Kong under Real-world map and buy the MTR’s lines.",
                     chinese: "新地圖「香港」：在台灣讓一座飛香港的機場一天有 500 人搭你的列車就開航，之後在實景地圖選「香港」，可收購港鐵路線。"
                 ),
+                Line(
+                    english: "On real-world maps, the 3D map now shows intercity coaches driving their routes on their timetables, and a coach station at each coach stop.",
+                    chinese: "實景地圖的 3D 地圖上，看得到長途客運照班次沿路線行駛，客運站的位置也有一座客運站。"
+                ),
             ],
             fixes: []
         ),

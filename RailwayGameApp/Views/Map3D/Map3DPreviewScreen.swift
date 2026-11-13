@@ -1098,7 +1098,11 @@ final class Map3DChunkStreamer {
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
         guard var window, let source else { return }
-        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance)
+        // Decision 714: what the camera sees is built too, while the
+        // scene's buffers are within what this device holds.
+        let room = (view?.heldBytes ?? 0) <= Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier)
+        let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance,
+                                        seeing: camera, room: room)
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
@@ -1121,7 +1125,9 @@ final class Map3DChunkStreamer {
     /// at than it sees (its distance), the scene's own too.
     func shed() {
         guard var window, let view else { return }
-        let drop = window.shed(farFrom: view.camera.target, radius: view.camera.distance)
+        // Decision 714: as far as the window builds for the camera, so
+        // what is let go is not built again at once.
+        let drop = window.shed(farFrom: view.camera.target, radius: Map3DStreaming.sight(of: view.camera))
         self.window = window
         if !drop.isEmpty { view.remove(drop) }
     }
@@ -1238,10 +1244,17 @@ final class Map3DTrainFeed {
     /// Decision 699: the airfields laid in the scene for their aircraft,
     /// laid again when the scene or the world's airports change, and the
     /// day's flights, counted again each game day.
-    private var aircraft: Map3DAircraft.Laid?
-    private var aircraftKey: (x: Double, y: Double, airports: Int)?
+    /// Decision 713: laid off the main actor, none drawn until they are.
+    private let aircraft = Map3DAircraft.Layer()
+    private var aircraftSerial = 0
     private var airTraffic: Map3DAircraft.Traffic?
     private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
+    /// Decision 708: the real coaches and the coach stops laid in the
+    /// scene (off the main actor), from the routes' file, read once off
+    /// the main actor the first time a map with coach stops is drawn.
+    private let coaches = Map3DCoaches.Layer()
+    private static var coachRoutes: RealCoaches?
+    private static var coachRoutesAsked = false
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 672: the train the camera follows, whose lamps light its
@@ -1416,7 +1429,28 @@ final class Map3DTrainFeed {
             laid.aircraft.add(to: &frame, pack: models, second: second, traffic: laid.traffic, eye: eye, reach: reach.farModel,
                               still: still, following: followedAircraft, blink: still ? nil : now, lit: lit)
         }
+        // Decision 708: and the real coaches on the roads and the coach
+        // stops, on the same clock.
+        if let models, let world = busWorld, !world.coachStops.isEmpty, let second = cableSecond(at: now),
+           let routes = Self.readCoachRoutes(), let laid = coaches.coaches(world: world, in: scene, routes: routes) {
+            laid.add(to: &frame, pack: models, second: second, eye: eye, reach: reach.farModel)
+        }
         return frame
+    }
+
+    /// Decision 708: the real coach routes, `nil` until they are read
+    /// (once, off the main actor) and when the file cannot be read.
+    private static func readCoachRoutes() -> RealCoaches? {
+        if let coachRoutes { return coachRoutes }
+        guard !coachRoutesAsked else { return nil }
+        coachRoutesAsked = true
+        Task.detached(priority: .utility) {
+            let name = RealCoaches.file as NSString
+            guard let url = Bundle.main.url(forResource: name.deletingPathExtension, withExtension: name.pathExtension),
+                  let data = try? Data(contentsOf: url), let read = try? RealCoaches(data: data) else { return }
+            await MainActor.run { coachRoutes = read }
+        }
+        return nil
     }
 
     /// Decision 699: the airfields laid in `scene`, laid again when the
@@ -1424,14 +1458,14 @@ final class Map3DTrainFeed {
     /// of game second `second`; `nil` off a real-world map.
     private func laidAircraft(in scene: Map3DScene, second: Double) -> (aircraft: Map3DAircraft.Laid, traffic: Map3DAircraft.Traffic?)? {
         guard let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields else { return nil }
-        if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
-            aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
-            aircraftKey = (scene.originX, scene.originY, world.airports.count)
+        guard let laid = aircraft.aircraft(world: world, in: scene, airfields: airfields) else { return nil }
+        if aircraftSerial != aircraft.laidSerial {
+            aircraftSerial = aircraft.laidSerial
             airTraffic = nil
         }
         let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
         if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
-        return aircraft.map { ($0, airTraffic) }
+        return (laid, airTraffic)
     }
 
     /// Decision 702 (FOLLOW-AIR): the aircraft of flight `id` now, while
@@ -1447,6 +1481,10 @@ final class Map3DTrainFeed {
     /// it is doing when that changes, after this frame.
     func aircraftPose(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DFollow.Pose? {
         let found = aircraftFollowed(id, in: scene)
+        // Decision 713: while the airfields are laid again (the scene was
+        // built anew round another place), it is not gone: the camera
+        // waits where it is.
+        if found == nil, aircraft.isLaying { return nil }
         if aircraftTold?.flight != id || aircraftTold?.state != found?.state {
             aircraftTold = (id, found?.state)
             let state = found?.state, tell = aircraftChanged
@@ -1786,6 +1824,8 @@ private struct Map3DView: UIViewRepresentable {
             Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
         }
         context.coordinator.streamer.start(built, kept: kept, inPart: inPart)
+        // Decision 714: the camera's target stays over the map.
+        view.ground = Map3DStreaming(scene: scene, map: WorldRegion(bounds: world.bounds)).ground
         showTrains(in: scene, on: view, context: context)
         let feed = feed, labels = trainLabels, tag = stationTag, marks = airportMarks
         marks.set(world.airports.map { airport in
