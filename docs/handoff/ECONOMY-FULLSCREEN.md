@@ -21,3 +21,7 @@
 ## 驗證
 
 見 PR 說明的「驗證」一節（本機跑過的與沒跑的分開列）。
+
+截圖總覽：`docs/research/economy-fullscreen-2026-11-13/overview.jpg`（本機 iPhone 18 Pro 模擬器、iOS 27.2；其餘單張沒有上傳，重拍用 `WebsiteScreenshotTests/testTermLoans`、`testFinanceComposition`、`testCompanyWeeklyPunctuality`）。
+
+已知的小問題：圓環圖（`FinanceRing` 的 `Chart`）的無障礙框比畫出來的環大（104 點的環回報 294×374），UI 測試改成對準環下面那行摘要（`….detail`）；畫面本身沒有改。
