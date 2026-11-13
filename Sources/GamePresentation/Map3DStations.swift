@@ -296,6 +296,15 @@ extension Map3DScene.Builder {
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
             stationSystems[id] = station.system
             found.append((id, station, open, longest, middle))
+            // Decision 721: the station's own light on the ground round it
+            // after dark, wide and soft, so its building stands against it.
+            if contains(x: world.x, y: world.y) {
+                let pool = Map3DNight.stationPool
+                let centre = self.onGround([middle.point])[0], ring = self.onGround(Map3DProp.poolRing.map { middle.point + $0 * pool.radius })
+                shadow(at: key(of: middle.point), size: 4 * pool.radius) {
+                    $0.addPool(centre: centre, ring: ring, colour: Map3DProp.lampLight, strength: pool.strength)
+                }
+            }
         }
         // Decision 625: each station's middle from all its platforms, not
         // only those in the scene, so every block of chunks agrees.

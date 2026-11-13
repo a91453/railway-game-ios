@@ -32,6 +32,12 @@ public enum Map3DNight {
     /// track's and trains' light come in: fast, as the track turns from
     /// darker than the ground to lighter and is neither in between.
     public static let fall: (from: Float, to: Float) = (0.45, 0.60)
+    /// A platform's lamps on the ground round it: a pool of this radius
+    /// and strength (as a street light's, ``Map3DScene``'s lamp pools)
+    /// every so many metres along it.
+    public static let platformPool: (radius: Float, strength: Float, every: Float) = (16, 0.6, 18)
+    /// And one wide pool round the station's middle.
+    public static let stationPool: (radius: Float, strength: Float) = (48, 0.45)
     /// The ballast's layer, which the shader tells the track bed by.
     public static let trackSurface = Map3DSurface.ballast
 }

@@ -358,8 +358,11 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     if (in.layer < -10.5 && in.layer > -11.5) {
         glow += base * streetLight * map3dRoadPool(in.world.xz);
     }
-    // Decision 721: what the night leaves lit.
+    // Decision 721: what the night leaves lit: a train, and the line's
+    // own plain faces (Map3DVertex.nightLit: a slab track's bed, a
+    // platform's edge).
     float kept = in.lit;
+    if (in.layer < -19.5 && in.layer > -20.5) { kept = 1.0; glow += base * trackLit * map3dNightFall(lights); }
     // Decision 356: what the glass or water mirrors, and its share.
     float4 mirrored = float4(0.0);
     float3 normal = normalize(in.normal);

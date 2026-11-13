@@ -84,6 +84,23 @@ final class Map3DNightTests: XCTestCase {
         XCTAssertEqual(other.floats[19], 1)
     }
 
+    /// A station on the ground: its platform's edge line is lit after dark
+    /// (``Map3DVertex/nightLit``) and lamps' pools lie round the platform.
+    func testAPlatformIsLitAfterDark() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        let scene = Map3DScene(world: try newGameLine(through: [towns[0], towns[1]]))
+        let lit = scene.chunks.flatMap { $0.mesh.vertices }.filter { $0.layer == Map3DVertex.nightLit }
+        XCTAssertTrue(lit.contains { $0.color == Map3DPalette.platformEdge }, "no platform edge lit")
+        // A pool's middle carries its strength in its alpha.
+        let strength = UInt32((Map3DNight.platformPool.strength * 255).rounded())
+        let pools = scene.chunks.flatMap { $0.shadows.vertices }.filter { $0.color == (Map3DProp.lampLight & 0x00FF_FFFF) | strength << 24 }
+        XCTAssertGreaterThanOrEqual(pools.count, 2, "no lamps' pools round the platforms")
+        // The shader tells the layer.
+        let metal = try String(contentsOf: Self.root.appendingPathComponent("RailwayGameApp/Views/Map3D/Map3DShaders.metal"), encoding: .utf8)
+        XCTAssertEqual(Map3DVertex.nightLit, -20)
+        XCTAssertTrue(metal.contains("if (in.layer < -19.5 && in.layer > -20.5) { kept = 1.0;"))
+    }
+
     /// A road between two pools keeps a little light and a pool's middle
     /// has the most, as the shader's `map3dRoadPool` gives them.
     func testARoadIsLitInPools() {

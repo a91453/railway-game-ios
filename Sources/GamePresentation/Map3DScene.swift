@@ -1776,13 +1776,34 @@ extension Map3DScene {
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
+                    // Decision 721: its edge line lit after dark.
+                    let start = mesh.vertices.count
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (edge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
+                    mesh.makeNightLit(from: start)
                 }
+                addPlatformLight(line, offset: offset)
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
                                                   structure: platform.structure))
+            }
+        }
+
+        /// Decision 721: a platform's lamps on the ground round it after
+        /// dark, a pool every ``Map3DNight/platformPool``'s `every` metres
+        /// along it (drawn with the street lights' pools).
+        mutating func addPlatformLight(_ line: [Map3DPoint], offset: Float) {
+            guard let path = Map3DStreetLife.Path(line) else { return }
+            let pool = Map3DNight.platformPool
+            let count = max(1, Int((path.length / pool.every).rounded()))
+            for index in 0..<count {
+                let at = path.at(path.length * (Float(index) + 0.5) / Float(count))
+                let middle = at.point + at.right * offset
+                let centre = onGround([middle])[0], ring = onGround(Map3DProp.poolRing.map { middle + $0 * pool.radius })
+                shadow(at: key(of: middle), size: 4 * pool.radius) {
+                    $0.addPool(centre: centre, ring: ring, colour: Map3DProp.lampLight, strength: pool.strength)
+                }
             }
         }
 

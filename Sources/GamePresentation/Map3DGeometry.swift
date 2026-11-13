@@ -81,6 +81,10 @@ public struct Map3DVertex: Hashable, Sendable {
     /// Decision 653: ``modelTexture``, and lit from within at night as
     /// ``glowing`` is.
     public static let modelTextureLit: Float = -19
+    /// Decision 721: no texture, and the player's line after dark: the
+    /// night does not dim it and it is lit a little more (``Map3DNight``).
+    /// A slab track's bed, a platform's edge line.
+    public static let nightLit: Float = -20
     /// Decision 653: whether the vertex is painted by its model's texture.
     public var isModelTextured: Bool { layer < -17.5 && layer > -19.5 }
 
@@ -670,6 +674,12 @@ public struct Map3DMesh: Sendable {
 
     /// Decision 356: the vertices added since `start` water
     /// (``Map3DVertex/water``), keeping their colour.
+    /// Decision 721: the vertices added since `start` lit after dark
+    /// (``Map3DVertex/nightLit``), keeping their colour.
+    public mutating func makeNightLit(from start: Int) {
+        for index in start..<vertices.count { vertices[index].layer = Map3DVertex.nightLit }
+    }
+
     public mutating func makeWater(from start: Int) {
         for index in start..<vertices.count { vertices[index].layer = Map3DVertex.water }
     }
