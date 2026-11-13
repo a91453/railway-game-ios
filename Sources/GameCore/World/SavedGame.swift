@@ -484,9 +484,15 @@
 ///     is newer than it instead. A save of any earlier version needs no
 ///     step: it has no coach stops (the app gives a real-world map its
 ///     own when it opens the save).
+/// 93. Term loans (decision 715): a company's accounts can have their
+///     `"termLoans"` and `"nextTermLoanID"`, and a closed year's balance
+///     sheet its `"termLoans"`. A build that reads only an earlier version
+///     would drop them, and the money borrowed would be owed to no one, so
+///     it says the save is newer than it instead. A save of any earlier
+///     version needs no step: it has no term loans.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 91
+    public static let currentVersion = 93
 
     public let world: GameWorld
 
