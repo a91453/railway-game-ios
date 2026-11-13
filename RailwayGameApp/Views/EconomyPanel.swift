@@ -33,6 +33,8 @@ struct EconomyPanel: View {
     /// show: `nil` until the player chooses, when a game of simple rules
     /// shows only those.
     @State private var showsReports: Bool?
+    /// Decision 715: the term loans, over the whole screen.
+    @State private var showsTermLoans = false
 
     var body: some View {
         NavigationStack {
@@ -87,6 +89,10 @@ struct EconomyPanel: View {
             }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
+            }
+            .fullScreenCover(isPresented: $showsTermLoans) {
+                TermLoanScreen(session: session)
+                    .coversTheMap(session)
             }
         }
     }
@@ -386,8 +392,8 @@ struct EconomyPanel: View {
     }
 
     /// Decision 715: how many term loans there are and what they come to,
-    /// how much more the bank lends, and the way to the contracts and the
-    /// form that signs one (``TermLoanScreen``).
+    /// how much more the bank lends, and the button that opens the
+    /// contracts and the form that signs one (``TermLoanScreen``).
     private var termLoanSection: some View {
         let language = session.language
         let board = session.world.termLoanBoard()
@@ -412,10 +418,10 @@ struct EconomyPanel: View {
                 .accessibilityIdentifier("economy.termLoans.credit")
             // Free play with none signed has nothing to open.
             if board.blocked != .freePlay || !board.contracts.isEmpty {
-                NavigationLink {
-                    TermLoanScreen(session: session)
+                Button {
+                    showsTermLoans = true
                 } label: {
-                    Text(verbatim: language.text("Contracts and Borrowing", "合約與借入"))
+                    Text(verbatim: language.text("Contracts and Borrowing…", "合約與借入…"))
                 }
                 .accessibilityIdentifier("economy.termLoans.open")
             }
@@ -734,12 +740,14 @@ struct EconomyPanel: View {
     }
 }
 
-/// Decision 715: the term loans, pushed from the economy panel. The form
-/// on top signs one: an amount in steps of ``CompanyAccounts/loanStep`` up
-/// to the most the bank lends, a term of 1 to 10 years, the bank's quote
-/// for the two, and a question before it is signed. Under it every
-/// contract, the soonest due first, with what paying it back today costs
-/// and a question before that too.
+/// Decision 715: the term loans, over the whole screen as the train
+/// roster is (the owner, 2026-11-13: the panel beside the map on a phone
+/// shows some 230 points, three rows of a form). The form signs one: an
+/// amount in steps of ``CompanyAccounts/loanStep`` up to the most the bank
+/// lends, a term of 1 to 10 years, the bank's quote for the two, and a
+/// question before it is signed. Beside it, or under it where the screen
+/// is narrow or the text large, every contract, the soonest due first,
+/// with what paying it back today costs and a question before that too.
 ///
 /// Everything shown is read from `session.world` when the view is drawn
 /// (``TermLoanBoard``, GameCore's own quotes), and both buttons call a
@@ -750,48 +758,77 @@ private struct TermLoanScreen: View {
     @State private var principalChoice: Money?
     @State private var years: Int64 = 1
     @State private var confirmsSigning = false
-    /// The contract the player asked to pay back, while the question shows.
-    @State private var repaying: TermLoanBoard.Contract?
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The least width that holds the form and the contracts side by side.
+    private static let twoColumns: CGFloat = 640
 
     var body: some View {
         let language = session.language
         let board = session.world.termLoanBoard()
-        Form {
-            borrowSection(board)
-            Section {
-                if board.contracts.isEmpty {
-                    Text(verbatim: language.text("No term loans yet.", "還沒有定期貸款。"))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                ForEach(board.contracts) { contract in
-                    TermLoanRow(contract: contract, language: language) {
-                        repaying = contract
+        NavigationStack {
+            GeometryReader { proxy in
+                if proxy.size.width >= Self.twoColumns, !dynamicTypeSize.isAccessibilitySize {
+                    HStack(spacing: 0) {
+                        Form {
+                            borrowSection(board)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("termLoan.form")
+                        Form {
+                            contractsSection(board)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("termLoan.contracts")
                     }
+                } else {
+                    Form {
+                        borrowSection(board)
+                        contractsSection(board)
+                    }
+                    .hardTopScrollEdge()
+                    .accessibilityIdentifier("termLoan.form")
                 }
-            } header: {
-                Text(verbatim: language.text("Contracts", "合約"))
-            } footer: {
-                if !board.contracts.isEmpty {
-                    Text(verbatim: board.summaryText(in: language))
-                        .monospacedDigit()
+            }
+            .navigationTitle(Text(verbatim: language.text("Term Loans", "定期貸款")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(verbatim: language.text("Done", "完成"))
+                    }
+                    .accessibilityIdentifier("termLoan.done")
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                StatusBanner(session: session, announces: false)
             }
         }
-        .navigationTitle(Text(verbatim: language.text("Term Loans", "定期貸款")))
-        .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            Text(verbatim: language.text("Repay this term loan today?", "今天提前還這筆定期貸款？")),
-            isPresented: Binding(get: { repaying != nil }, set: { if !$0 { repaying = nil } }),
-            titleVisibility: .visible, presenting: repaying
-        ) { contract in
-            Button {
-                session.repayTermLoanEarly(contract.id)
-            } label: {
-                Text(verbatim: language.text("Pay \(contract.repayment.total.moneyText)", "付 \(contract.repayment.total.moneyText)"))
+    }
+
+    /// Every contract, the soonest due first.
+    private func contractsSection(_ board: TermLoanBoard) -> some View {
+        let language = session.language
+        return Section {
+            if board.contracts.isEmpty {
+                Text(verbatim: language.text("No term loans yet.", "還沒有定期貸款。"))
+                    .foregroundStyle(Theme.textSecondary)
             }
-            .accessibilityIdentifier("termLoan.repay.confirm")
-        } message: { contract in
-            Text(verbatim: contract.repaymentText(in: language))
+            ForEach(board.contracts) { contract in
+                TermLoanRow(contract: contract, language: language) {
+                    session.repayTermLoanEarly(contract.id)
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("Contracts", "合約"))
+        } footer: {
+            if !board.contracts.isEmpty {
+                Text(verbatim: board.summaryText(in: language))
+                    .monospacedDigit()
+            }
         }
     }
 
@@ -882,13 +919,16 @@ private struct TermLoanScreen: View {
 }
 
 /// One term loan in ``TermLoanScreen``: what was borrowed and what is paid
-/// when it falls due, its term, rate and due day, what paying it back
-/// today costs, and the button that asks to. The button is off, with the
+/// when it falls due, its term, rate and due day, and the button that asks
+/// to pay it back today, with what that costs and what the sum is made
+/// of. The button is off, with the
 /// reason above it, when the cash in hand does not pay it.
 private struct TermLoanRow: View {
     let contract: TermLoanBoard.Contract
     let language: DisplayLanguage
+    /// Pays it back; called once the player has said yes.
     let repay: () -> Void
+    @State private var confirms = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -919,13 +959,28 @@ private struct TermLoanRow: View {
                 .foregroundStyle(Theme.warning)
                 .accessibilityIdentifier("termLoan.shortfall.\(contract.id)")
             }
-            Button(action: repay) {
-                Text(verbatim: language.text("Repay Early…", "提前還款…"))
+            Button {
+                confirms = true
+            } label: {
+                // 44 points to touch, not the text's 20.
+                Text(verbatim: contract.repayText(in: language))
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(.rect)
             }
             .buttonStyle(.borderless)
             .disabled(!contract.canRepay)
-            .frame(minHeight: 44)
             .accessibilityIdentifier("termLoan.repay.\(contract.id)")
+            // On the button, so the question points at the loan it is about.
+            .confirmationDialog(
+                Text(verbatim: language.text("Repay this term loan today?", "今天提前還這筆定期貸款？")),
+                isPresented: $confirms, titleVisibility: .visible
+            ) {
+                Button(action: repay) {
+                    Text(verbatim: language.text("Pay \(contract.repayment.total.moneyText)", "付 \(contract.repayment.total.moneyText)"))
+                }
+            } message: {
+                Text(verbatim: contract.repaymentText(in: language))
+            }
         }
         .monospacedDigit()
         .fixedSize(horizontal: false, vertical: true)

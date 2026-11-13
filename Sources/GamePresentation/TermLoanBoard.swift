@@ -206,6 +206,12 @@ extension TermLoanBoard.Contract {
         )
     }
 
+    /// The button that asks to pay it back today: "Repay Today for
+    /// $3,122,400…".
+    public func repayText(in language: DisplayLanguage) -> String {
+        language.text("Repay Today for \(repayment.total.moneyText)…", "今天提前還 \(repayment.total.moneyText)…")
+    }
+
     /// Why it cannot be paid back today, or `nil` when it can.
     public func shortfallText(in language: DisplayLanguage) -> String? {
         guard !canRepay else { return nil }

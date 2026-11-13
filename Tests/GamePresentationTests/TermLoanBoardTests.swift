@@ -128,6 +128,8 @@ final class TermLoanBoardTests: XCTestCase {
             contract.repaymentText(in: .traditionalChinese),
             "今天提前還：已過 0 天的利息 \(Money(0).moneyText)，違約金 \(Money(6_120_000).moneyText)，連本金共付 \(Money(306_120_000).moneyText)。"
         )
+        XCTAssertEqual(contract.repayText(in: .english), "Repay Today for \(Money(306_120_000).moneyText)…")
+        XCTAssertEqual(contract.repayText(in: .traditionalChinese), "今天提前還 \(Money(306_120_000).moneyText)…")
         // A week on, NT$2,975 and NT$60,605 are charged as NT$63,500.
         try world.advance(ticks: 7 * 1_440)
         contract = try XCTUnwrap(world.termLoanBoard().contracts.first)

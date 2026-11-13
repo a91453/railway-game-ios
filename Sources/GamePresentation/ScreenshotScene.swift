@@ -1041,8 +1041,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             world.setSpeed(.fast)
             try world.advance(ticks: 3 * 144)
             let most = world.termLoanCredit().maximumPrincipal
-            // Half of what the bank still lends, so the form has some left.
-            let large = try world.takeTermLoan(principal: Money(most.amount / step.amount / 2 * step.amount), years: 10)
+            // A third of what the bank still lends, so the form has some left.
+            let large = try world.takeTermLoan(principal: Money(most.amount / step.amount / 3 * step.amount), years: 5)
             // Trains bought with it, until it cannot be paid back today.
             for number in 1...200 where world.economy.balance >= (try world.termLoanRepaymentQuote(large.id)).total {
                 try world.purchaseTrain(named: language.text("Spare \(number)", "備用 \(number)"))

@@ -4742,26 +4742,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        func list() -> XCUIElement? {
+        func panelList() -> XCUIElement? {
             app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         }
         let open = app.buttons["economy.termLoans.open"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: list(), below: bar.frame.maxY, clearOf: .button), "The term loans are in the panel")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: panelList(), below: bar.frame.maxY, clearOf: .button), "The term loans are in the panel")
         settle()
         keep("term-loans-panel-\(suffix)", app)
         open.tap()
 
-        let title = app.navigationBars[english ? "Term Loans" : "定期貸款"].firstMatch
-        XCTAssertTrue(title.appears(within: 10), "The term loans open")
-        title.waitUntilSettled()
+        // Over the whole screen: the form on the left, the contracts on
+        // the right.
+        let done = app.buttons["termLoan.done"].firstMatch
+        XCTAssertTrue(done.appears(within: 10), "The term loans open")
+        done.waitUntilSettled()
+        let top = done.frame.maxY
+        // Side by side on a phone on its side; one list where they are not.
+        let form = app.collectionViews["termLoan.form"].firstMatch
+        func contracts() -> XCUIElement {
+            let own = app.collectionViews["termLoan.contracts"].firstMatch
+            return own.exists ? own : form
+        }
+        XCTAssertTrue(form.appears(within: 10), "The form")
+        // The lists run under the screen's edges, where a drag does not
+        // scroll them: drag down the rows' own left padding, clear of the
+        // steppers and the slider.
+        func column(_ list: XCUIElement) -> CGFloat {
+            (app.staticTexts["termLoan.credit"].firstMatch.frame.minX - form.frame.minX) + list.frame.minX + 6
+        }
+        settle(seconds: 1)
+        keep("term-loans-open-\(suffix)", app)
+        // The contracts: the largest cannot be paid back today (signing
+        // another below brings the cash that could).
+        let locked = app.buttons["termLoan.repay.3"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(locked, in: contracts(), below: top, drags: 80, at: column(contracts()), clearOf: .button), "The largest loan's button")
+        XCTAssertFalse(locked.isEnabled, "The cash does not pay the largest back")
+        XCTAssertTrue(app.descendants(matching: .any)["termLoan.shortfall.3"].firstMatch.exists, "Why the largest cannot be repaid")
+        settle(seconds: 1)
+        keep("term-loans-short-\(suffix)", app)
         // A term of two years, then the bank's quote for it.
         let years = app.steppers["termLoan.years"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(years, in: list(), below: title.frame.maxY, clearOf: .button), "The term's stepper")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(years, in: form, below: top, at: column(form), clearOf: .button), "The term's stepper")
         years.buttons.element(boundBy: 1).tap()
-        settle(seconds: 1)
-        keep("term-loans-form-\(suffix)", app)
         let sign = app.buttons["termLoan.sign"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(sign, in: list(), below: title.frame.maxY, clearOf: .button), "The button that asks to sign")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(sign, in: form, below: top, at: column(form), clearOf: .button), "The button that asks to sign")
         settle(seconds: 1)
         keep("term-loans-quote-\(suffix)", app)
         sign.tap()
@@ -4773,19 +4797,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle()
         keep("term-loans-signed-\(suffix)", app)
 
-        // The contracts: the largest cannot be paid back today.
-        let short = app.descendants(matching: .any)["termLoan.shortfall.3"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(short, in: list(), below: title.frame.maxY, clearOf: .button), "Why the largest cannot be repaid")
-        settle(seconds: 1)
-        keep("term-loans-contracts-\(suffix)", app)
-        let locked = app.buttons["termLoan.repay.3"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(locked, in: list(), below: title.frame.maxY, clearOf: .button), "The largest loan's button")
-        XCTAssertFalse(locked.isEnabled, "The cash does not pay the largest back")
-        settle(seconds: 1)
-        keep("term-loans-short-\(suffix)", app)
-        // The loan signed a moment ago is the last due, at the bottom.
-        let repay = app.buttons["termLoan.repay.4"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(repay, in: list(), below: title.frame.maxY, clearOf: .button), "The loan just signed")
+        // The first loan of the scene, due in two years.
+        let repay = app.buttons["termLoan.repay.1"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(repay, in: contracts(), below: top, drags: 80, at: column(contracts()), clearOf: .button), "The first loan")
         XCTAssertTrue(repay.isEnabled)
         repay.tap()
         let paying = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", english ? "Pay " : "付 ")).firstMatch
@@ -4798,23 +4812,26 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("term-loans-repaid-\(suffix)", app)
 
         // Back in the panel, the balance sheet has their row.
-        title.buttons.firstMatch.tap()
+        done.tap()
         XCTAssertTrue(bar.appears(within: 10))
         bar.waitUntilSettled()
         let sheet = app.descendants(matching: .any)["economy.balanceSheet"].firstMatch
         let reports = app.buttons["economy.reports"].firstMatch
         for _ in 0..<40 where !sheet.exists && !reports.exists {
-            list()?.swipeUp(velocity: .slow)
+            panelList()?.swipeUp(velocity: .slow)
         }
-        if !sheet.exists, app.dragUntilWhollyOnScreen(reports, in: list(), below: bar.frame.maxY, clearOf: .button),
+        if !sheet.exists, app.dragUntilWhollyOnScreen(reports, in: panelList(), below: bar.frame.maxY, clearOf: .button),
            reports.label == (english ? "More reports and settings" : "更多報表與設定") {
             reports.tap()
         }
         for _ in 0..<40 where !sheet.exists {
-            list()?.swipeUp(velocity: .slow)
+            panelList()?.swipeUp(velocity: .slow)
         }
         XCTAssertTrue(sheet.exists, "The balance sheet is in the panel")
-        list()?.swipeUp(velocity: .slow)
+        // The sheet is taller than the panel: its last rows, the loans and
+        // the equity.
+        let equity = app.staticTexts.matching(NSPredicate(format: "label == %@", english ? "Equity" : "權益")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(equity, in: panelList(), below: bar.frame.maxY, clearOf: .button), "The sheet's last rows")
         settle()
         keep("term-loans-balance-sheet-\(suffix)", app)
     }
