@@ -34,7 +34,7 @@ final class WenhuUndergroundTests: XCTestCase {
     /// water sampled from another origin, where the first fix still left
     /// Songshan Airport in a cutting and 80 m open on the river's bank.
     static func laid(centred: Bool = false) throws -> Laid {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let world: GameWorld
         if centred {

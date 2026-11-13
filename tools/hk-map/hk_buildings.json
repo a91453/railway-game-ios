@@ -1,0 +1,32 @@
+{
+ "extract": {
+  "file": "hong_kong.pbf",
+  "sha256": "20b9e1fc0028ef00401d482821e58ddbf2fc6939af66d301920dfdb3d51e3310",
+  "from": "https://osmtoday.com/asia/china/hong_kong.pbf",
+  "licence": "ODbL 1.0, \u00a9 OpenStreetMap contributors",
+  "newestBuildingEdit": "2026-11-11T18:09:47Z"
+ },
+ "buildings": 117245,
+ "read": 117274,
+ "tiles": 2203,
+ "storeysFrom": {
+  "tags": 58140,
+  "guess": 59134
+ },
+ "storeys": {
+  "median": 3,
+  "tallest": 118,
+  "share10": 0.1608,
+  "share20": 0.0773,
+  "share40": 0.0124
+ },
+ "flats": {
+  "buildings": 61655,
+  "median": 5,
+  "share10": 0.2918,
+  "share20": 0.1442
+ },
+ "rawBytes": 2883511,
+ "archiveBytes": 2262114,
+ "sha256": "184266027fc9a3f5645518ed9216edbf87b65bc9a9cc34890c7e8b1d157759c6"
+}

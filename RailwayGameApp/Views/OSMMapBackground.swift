@@ -66,8 +66,13 @@ struct OSMMapBackground: UIViewRepresentable {
             yield: yield
         )
         let taiwan = BaseMapStyle.drawsTaiwan(anchor: realWorld.anchor, water: water) && BaseMapFiles.tiles != nil
+        // Decision 712: a city's map draws its pack's tiles.
+        let city = taiwan ? nil : BaseMapFiles.cityTiles.first {
+            $0.extent.holds(latitude: realWorld.anchor.latitudeDegrees, longitude: realWorld.anchor.longitudeDegrees)
+        }
         map.show(
-            style: BaseMapFiles.styleAddress(taiwan: taiwan, dark: dark) ?? OpenStreetMapBase.styleURL(dark: dark),
+            style: BaseMapFiles.styleAddress(taiwan: taiwan, city: city.map { ($0.city.rawValue, $0.tiles) }, dark: dark)
+                ?? OpenStreetMapBase.styleURL(dark: dark),
             language: language,
             railways: railways,
             look: look,
@@ -629,6 +634,21 @@ enum BaseMapFiles {
     /// Taiwan's tiles, `nil` if the app has none.
     static let tiles = file("taiwan.pmtiles")
 
+    /// Decision 712: the base maps of the open cities outside Taiwan, each
+    /// with the box its map covers; a city whose pack has none is left out.
+    static let cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL)] = OverseasMap.allCases.compactMap { city in
+        guard OverseasMaps.open.contains(city), let pack = MapPack.bundled(city), let tiles = pack.baseMapFile,
+              let extent = try? pack.extent()
+        else { return nil }
+        return (city, extent, tiles)
+    }
+
+    /// Decision 712: the buildings of the open cities outside Taiwan,
+    /// for the 3D map; a city whose pack has none is left out.
+    static let cityFootprints: [URL] = OverseasMap.allCases.compactMap { city in
+        OverseasMaps.open.contains(city) ? MapPack.bundled(city)?.buildingsFile : nil
+    }
+
     /// Taiwan's ground heights for the hill shading, `nil` if the app has
     /// none.
     static let terrain = file("taiwan_terrain.pmtiles")
@@ -693,10 +713,16 @@ enum BaseMapFiles {
     /// The address of the style file for Taiwan's tiles or OpenFreeMap's,
     /// light or dark, writing it the first time; `nil` if it cannot be
     /// written.
-    static func styleAddress(taiwan: Bool, dark: Bool) -> String? {
-        let name = "BaseMapStyle-\(taiwan ? "taiwan" : "world")-\(dark ? "dark" : "light").json"
+    static func styleAddress(taiwan: Bool, city: (name: String, tiles: URL)? = nil, dark: Bool) -> String? {
+        let name = "BaseMapStyle-\(taiwan ? "taiwan" : city?.name ?? "world")-\(dark ? "dark" : "light").json"
         if let address = written[name] { return address }
-        let source: BaseMapStyle.Tiles = if taiwan, let tiles { .bundled(pmtiles: tiles.absoluteString) } else { .openFreeMap }
+        let source: BaseMapStyle.Tiles = if taiwan, let tiles {
+            .bundled(pmtiles: tiles.absoluteString)
+        } else if let city {
+            .bundled(pmtiles: city.tiles.absoluteString)
+        } else {
+            .openFreeMap
+        }
         guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
               let data = try? BaseMapStyle.json(tiles: source, dark: dark, glyphs: glyphs, terrain: taiwan ? terrain?.absoluteString : nil)
         else { return nil }

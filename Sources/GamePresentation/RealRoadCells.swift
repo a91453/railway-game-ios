@@ -100,7 +100,7 @@ enum RealRoadCells {
                 guard !meter.isCancelled else { return cells }
                 meter.share = Double(index) / Double(sorted.count)
             }
-            guard let bytes = try? tiles.archive.tile(zoom: BaseMapTiles.zoom, x: tile.column, y: tile.row),
+            guard let bytes = try? tiles.tile(zoom: BaseMapTiles.zoom, x: tile.column, y: tile.row),
                   let decoded = try? VectorTile(bytes, layers: ["transportation"]),
                   let layer = decoded.layers["transportation"]
             else { continue }

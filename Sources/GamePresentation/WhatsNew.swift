@@ -35,6 +35,10 @@ public enum WhatsNew {
             id: "2026-11-14-130",
             items: [
                 Line(
+                    english: "Hong Kong is a new map, with its buildings in 3D and the MTR’s lines to buy. Start on Taiwan or on Hong Kong; the other opens once an airport that flies there has 500 passengers on your trains in one day.",
+                    chinese: "新地圖「香港」，3D 有建物、可收購港鐵。台灣、香港選一張開始；飛另一邊的機場一天有 500 人搭你的列車，另一張就開。"
+                ),
+                Line(
                     english: "Tap a stretch of track with the select tool to close it: trains take another way or wait. If a train is on it, it closes once the train has passed; you can cancel that, or open the track again.",
                     chinese: "選取工具點一段軌道可以封閉：列車改走別條路或等候；上面有車就等它通過再封，可取消，也能再開放。"
                 ),

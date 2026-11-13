@@ -23,7 +23,7 @@ final class MapFrameCostReportTests: XCTestCase {
             throw XCTSkip("set MAP_FRAME_REPORT=<days> to count the flat map's redraws on a 44-station map")
         }
         let days = try XCTUnwrap(Int(value).flatMap { (1...365).contains($0) ? $0 : nil }, "MAP_FRAME_REPORT is 1 to 365 days")
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         var world = try Self.miaoli(lines: 4, data: data)
         world.setSpeed(.fast)
         for _ in 0..<days { try world.advance(ticks: 144) }
@@ -150,7 +150,7 @@ final class MapFrameCostReportTests: XCTestCase {
     /// The High Speed Rail demo as the app opens it, with the real-world
     /// data the map reads.
     static func highSpeedSession() throws -> GameSession {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let world = try HighSpeedDemo.make(
             in: .traditionalChinese, railways: railways, population: data.population, places: data.places, water: data.water, coverage: data.coverage

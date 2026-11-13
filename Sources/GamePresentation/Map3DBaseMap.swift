@@ -5,10 +5,27 @@ import GameCore
 /// map (decision 234): the 2D map's MapLibre draws the same file.
 public struct BaseMapTiles: Sendable {
     let archive: PMTilesArchive
+    /// Decision 712: the base maps of the cities outside Taiwan
+    /// (`MapPacks/<city>/basemap.pmtiles`, the same layers), read where
+    /// Taiwan's file has no tile.
+    let cities: [PMTilesArchive]
 
-    /// The base map in `data`, the file's bytes (best mapped, not read).
-    public init(data: Data) throws {
+    /// The base map in `data`, the file's bytes (best mapped, not read),
+    /// with those of `cities`; a city's file that cannot be read is left
+    /// out.
+    public init(data: Data, cities: [Data] = []) throws {
         archive = try PMTilesArchive(data: data)
+        self.cities = cities.compactMap { try? PMTilesArchive(data: $0) }
+    }
+
+    /// The tile's bytes: Taiwan's, else the first city's that has it; `nil`
+    /// where no file has the tile.
+    func tile(zoom: Int, x: Int, y: Int) throws(PMTilesArchive.Failure) -> [UInt8]? {
+        if let bytes = try archive.tile(zoom: zoom, x: x, y: y) { return bytes }
+        for city in cities {
+            if let bytes = try city.tile(zoom: zoom, x: x, y: y) { return bytes }
+        }
+        return nil
     }
 
     /// The zoom the 3D map reads: the base map's most detailed, the only
@@ -182,7 +199,7 @@ struct Map3DBaseMap: Sendable {
                 // Decision 391: the tiles round the region only for their
                 // bridges.
                 let isDrawn = drawn.columns.contains(column) && drawn.rows.contains(row)
-                guard let bytes = try? tiles.archive.tile(zoom: zoom, x: column, y: row),
+                guard let bytes = try? tiles.tile(zoom: zoom, x: column, y: row),
                       let decoded = try? VectorTile(bytes, layers: isDrawn ? ["water", "landcover", "park", "waterway", "transportation"] : ["transportation"])
                 else { continue }
                 for layer in decoded.layers.values {

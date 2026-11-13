@@ -71,7 +71,7 @@ final class CoachHealthReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (0...5).contains($0) ? $0 : nil }, "COACH_HEALTH is 0 to 5 days")
         let only = ProcessInfo.processInfo.environment["COACH_HEALTH_ONLY"]
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let network = try XCTUnwrap(data.coaches)
         func note(_ text: String) { FileHandle.standardError.write(Data("\(text)\n".utf8)) }

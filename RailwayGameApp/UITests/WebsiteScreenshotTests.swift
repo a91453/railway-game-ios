@@ -3213,35 +3213,33 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-picker", app)
     }
 
-    /// Decision 712: Hong Kong's row in the map picker, closed (what opens
-    /// it) and open (in the demo mode, which has every city open); the
-    /// airport's row that says how far yesterday was; and the status line
-    /// when the flights open. The cities are read by `-open-overseas`
-    /// while ``OverseasMaps/open`` is still empty.
+    /// Decision 712: the whole maps' rows in the map picker: a player who
+    /// began in Taiwan (Hong Kong closed, with what opens it and the best
+    /// day so far), one who began in Hong Kong (Taiwan closed, the same
+    /// way round), in both languages, and every map open (the demo mode);
+    /// the airport's row that says how far yesterday was; and the status
+    /// line when the flights open.
     func testAirRouteUnlock() {
-        // Six launches, the first some 100 seconds on CI.
-        executionTimeAllowance = 1_500
+        // Nine launches, the first some 100 seconds on CI.
+        executionTimeAllowance = 1_800
         func picker(_ name: String, extra: [String], english: Bool) {
-            let app = launch(extra: ["-open-overseas"] + extra, english: english)
+            let app = launch(extra: extra, english: english)
             defer { app.terminate() }
             let newGame = app.buttons["start.newGame"]
             XCTAssertTrue(newGame.appears(within: 10))
             app.bringStartButtonIntoView(newGame)
             newGame.tap()
             tapButton("newGame.realWorld", in: app, timeout: 60)
-            XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
-            // The whole of Taiwan's row is enabled once the app's data is
-            // read, and Hong Kong's row is listed from then.
-            let read = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: app.buttons["realWorld.wholeTaiwan"])
-            XCTAssertEqual(XCTWaiter.wait(for: [read], timeout: 180), .completed, "The app's data is read")
-            // The list makes a row only near the screen, and the whole of
+            XCTAssertTrue(app.descendants(matching: .any)["realWorld.wholeTaiwan"].firstMatch.appears(within: 15), "The places show")
+            // Hong Kong's row is listed once the app's data is read. The
+            // list makes a row only near the screen, and the whole of
             // Taiwan's row ends under its foot: the list is dragged up a
-            // little at a time until Hong Kong's row is whole on screen
-            // (it is there once its map is read).
+            // little at a time until Hong Kong's row is whole on screen.
             let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
+            XCTAssertTrue(row.appears(within: 180), "Hong Kong's row shows once its map is read")
             for _ in 0..<12 where !(row.exists && row.frame.maxY <= app.frame.maxY - 12) {
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
-                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.45)),
+                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)),
                            withVelocity: .slow, thenHoldForDuration: 0.3)
                 settle(seconds: 1)
             }
@@ -3251,10 +3249,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         for english in [false, true] {
             let suffix = english ? "-english" : ""
-            picker("air-route-picker-closed\(suffix)", extra: [], english: english)
+            picker("air-route-picker-from-taiwan\(suffix)", extra: ["-screenshot-air-maps", "taiwan,hongKong=320"], english: english)
+            picker("air-route-picker-from-hong-kong\(suffix)", extra: ["-screenshot-air-maps", "hongKong,taiwan=180"], english: english)
             // In a game: the status line as the flights open, then the
             // airports' rows, Taichung's saying its flights are open.
-            let app = launch(extra: ["-open-overseas", "-screenshot-scene", "airport", "-screenshot-air-routes", "opened"], english: english)
+            let app = launch(extra: ["-screenshot-scene", "airport", "-screenshot-air-routes", "opened"], english: english)
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             settle(seconds: 1)
             keep("air-route-opened-notice\(suffix)", app)
@@ -3264,12 +3263,64 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         picker("air-route-picker-open", extra: ["-demoMode.on", "YES"], english: false)
         // An airport's row before its flights open: yesterday of 500.
-        let app = launch(extra: ["-open-overseas", "-screenshot-scene", "airport", "-screenshot-air-routes", "offered"])
+        let app = launch(extra: ["-screenshot-scene", "airport", "-screenshot-air-routes", "offered"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         settle()
         openAirports(in: app)
         keep("air-route-airport-progress", app)
+    }
+
+    /// Decision 712 (continued): Hong Kong's own map by day, with its
+    /// buildings. The Airport Express bought and run on to the morning,
+    /// a train followed as it stands at Kowloon Station: the 2D map
+    /// there, then the 3D map near (the station, its platforms and the
+    /// train among West Kowloon's towers) and from far (the harbour,
+    /// Kowloon and Central).
+    func testHongKongMap() {
+        // The buying and the morning take most of it (the workflow allows
+        // up to 30 minutes a test).
+        executionTimeAllowance = 1_700
+        let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
+        // The Debug app on a Simulator buys the line and runs the morning
+        // for minutes, its main thread busy for a minute at a time,
+        // longer than a UI query waits: nothing is asked of it for six
+        // minutes first (as `testWenhuRunsOnTheRight`).
+        Thread.sleep(forTimeInterval: 360)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 1_000), "The line is bought and a train followed at Kowloon")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<5 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 4)
+        keep("hong-kong-map-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        // As it opens: beside the train at the station.
+        keep("hong-kong-map-3d-near", app)
+        // Then twice farther, the station's district and the harbour.
+        for name in ["hong-kong-map-3d-mid", "hong-kong-map-3d-far"] {
+            app.pinch(withScale: 0.4, velocity: -1)
+            settle(seconds: 10)
+            keep(name, app)
+        }
     }
 
     /// Opens the sights from the menu and drags the list up, a little at a

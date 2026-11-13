@@ -424,7 +424,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// three tiles; a game starts with one, so neither could be bought, nor
     /// the Pingxi Line from its junction: "this land is not yours yet".
     func testALineReachingPastTheLandOwnedBuysTheTilesUnderIt() throws {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
             let junction = try BundledRealData.station(try XCTUnwrap(data.railways?.branchRuns[network]?.stops.first), in: "tra_sched").coordinate
             let session = try tiledGame(at: junction.latitude, junction.longitude, data: data)

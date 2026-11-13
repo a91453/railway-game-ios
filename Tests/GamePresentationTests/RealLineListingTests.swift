@@ -8,7 +8,7 @@ import XCTest
 @MainActor
 final class RealLineListingTests: XCTestCase {
     private func game(at latitude: Double, _ longitude: Double) throws -> GameSession {
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude))
         let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
             population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights

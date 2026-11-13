@@ -389,6 +389,8 @@ public enum StationStampCounties {
 
         public func name(in language: DisplayLanguage) -> String {
             guard !county.isEmpty else { return language.text("Elsewhere", "其他") }
+            // Decision 712: a city outside Taiwan is a group of its own.
+            if let city = OverseasMap.allCases.first(where: { $0.name(in: .traditionalChinese) == county }) { return city.name(in: language) }
             let english = StationStampCounties.names.first { $0.chinese == county }?.english ?? county
             return language.text(english, county)
         }
@@ -407,7 +409,13 @@ public enum StationStampCounties {
         for station in railways.stations {
             let key = RealRailways.stationKey(station.chinese)
             guard seen.insert(key).inserted else { continue }
-            if let county = places.county(containing: station.coordinate) { found[key] = county }
+            // Decision 712: a station of a city outside Taiwan is in that
+            // city's group, after Taiwan's counties.
+            if let city = OverseasMap.allCases.first(where: { $0.system == station.system.id }) {
+                found[key] = city.name(in: .traditionalChinese)
+            } else if let county = places.county(containing: station.coordinate) {
+                found[key] = county
+            }
         }
         return found
     }

@@ -68,11 +68,13 @@ final class HongKongMapTests: XCTestCase {
 
     // MARK: - The switch
 
-    /// With no city open the real-world data holds no ground, and reads
-    /// what it did.
-    func testNoGroundIsReadWhileNoCityIsOpen() {
-        XCTAssertEqual(OverseasMaps.open, [])
-        XCTAssertTrue(RealWorldData.load(file: RealWorldDataLoadTests.file).overseas.isEmpty)
+    /// Hong Kong is open (decision 712's third pull request), so the app's
+    /// real-world data holds its ground; with no city asked for it holds
+    /// none, and reads what it did.
+    func testTheGroundIsReadOnlyOfAnOpenCity() {
+        XCTAssertEqual(OverseasMaps.open, [.hongKong])
+        XCTAssertEqual(RealWorldData.load(overseas: OverseasMaps.open, pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file).overseas.map(\.city), [OverseasMap.hongKong])
+        XCTAssertTrue(RealWorldData.load(overseas: [], file: RealWorldDataLoadTests.file).overseas.isEmpty)
     }
 
     /// The launcher starts a game on the city's map once its ground is
@@ -88,9 +90,7 @@ final class HongKongMapTests: XCTestCase {
             RealWorldData.load(overseas: [.hongKong], pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         }.value
         let ground = try XCTUnwrap(launcher.overseasGrounds.first)
-        // Decision 712, later: its flights open it (`AirRoutesTests`).
-        XCTAssertFalse(launcher.startOverseasMap(.hongKong))
-        launcher.rememberAirRoutes([.hongKong])
+        // Decision 712, continued: a first map, so open (`AirRoutesTests`).
         XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
         let session = try XCTUnwrap(launcher.session)
         XCTAssertTrue(ground.holds(session.world))
@@ -193,6 +193,25 @@ final class HongKongMapTests: XCTestCase {
         let station = try XCTUnwrap(session.world.station(id: try XCTUnwrap(day.station)))
         XCTAssertEqual(station.name, "機場")
         XCTAssertGreaterThan(day.ridersAtMost, 0)
+    }
+
+    /// Decision 712 (continued): for the screenshots by day, the Airport
+    /// Express bought and run on to the morning, a train is found standing
+    /// at Kowloon Station (the stop nearest the place asked for) and
+    /// followed, the game paused in daylight.
+    func testATrainIsFollowedAtKowloonForTheScreenshot() async throws {
+        let session = try hongKong()
+        XCTAssertTrue(session.buyForScreenshot("hkmtr:AEL"), session.message?.text ?? "")
+        await session.runForScreenshot(until: 7 * 3_600 + 40 * 60)
+        let found = await session.followAtStopForScreenshot(on: "hkmtr:AEL", near: (22.3049, 114.1615))
+        XCTAssertTrue(found)
+        let train = try XCTUnwrap(session.followedTrainID)
+        let at = try XCTUnwrap(session.world.train(id: train)?.position.flatMap { session.world.location(of: $0) }?.position.plan)
+        let kowloon = try XCTUnwrap(session.world.stations.first { $0.name == "九龍" })
+        XCTAssertLessThanOrEqual(max(abs(at.x - kowloon.location.x), abs(at.y - kowloon.location.y)), 120 * WorldCoordinate.unitsPerMetre)
+        let clock = session.world.clock.now.seconds % GameTime.secondsPerDay
+        XCTAssertTrue((7 * 3_600 + 40 * 60..<10 * 3_600).contains(clock), "\(clock)")
+        XCTAssertEqual(session.world.clock.speed, .paused)
     }
 
     /// The Airport Express and the Tung Chung Line are drawn along one

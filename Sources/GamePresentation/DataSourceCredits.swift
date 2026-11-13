@@ -202,6 +202,40 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // Decision 712: the base map of Hong Kong's map
+                    // (`MapPacks/hongkong/basemap.pmtiles`).
+                    DataSourceCredit(
+                        id: "hongKongMap",
+                        title: language.text("Hong Kong’s map", "香港的地圖"),
+                        detail: language.text(
+                            "On Hong Kong’s map, the land and the sea, roads, parks, woods and place names, on the flat map and the 3D map.",
+                            "香港地圖上的陸地與海、道路、公園、樹林與地名，平面地圖與 3D 地圖都用。"
+                        ),
+                        notice: language.text(
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the tiles and the tool that makes them come with the app. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0).",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；圖磚與產生它的工具隨 App 提供。圖層照 OpenMapTiles 的格式（CC BY 4.0）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
+                    // Decision 712: the buildings of Hong Kong's map
+                    // (`MapPacks/hongkong/buildings.pmtiles`).
+                    DataSourceCredit(
+                        id: "hongKongBuildings",
+                        title: language.text("Hong Kong’s buildings", "香港的建物"),
+                        detail: language.text(
+                            "On Hong Kong’s 3D map, where each building stands, its outline and how tall it is.",
+                            "香港的 3D 地圖上每棟建物的位置、外形與高度。"
+                        ),
+                        notice: language.text(
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the file made from it and the tool that makes it come with the app. Where a building has no storeys recorded, the game estimates them from the recorded buildings like it and from WorldPop’s population (CC BY 4.0).",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；由它做成的檔與產生它的工具隨 App 提供。沒有記載樓層的建物，由遊戲依同類有記載的建物與 WorldPop 的人口（CC BY 4.0）估計。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
                     // Decision 712: the people of Hong Kong's map
                     // (`MapPacks/hongkong/population.json`).
                     DataSourceCredit(
@@ -218,6 +252,23 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 712: Hong Kong International Airport on
+                    // Hong Kong's map (`AirportCatalog.overseasPlaces`).
+                    DataSourceCredit(
+                        id: "hongKongAirport",
+                        title: language.text("Hong Kong International Airport", "香港國際機場"),
+                        detail: language.text(
+                            "On Hong Kong’s map, how many passengers and flights the airport has in a day, and its flights to Taiwan.",
+                            "香港地圖上機場一天有多少旅客與航班，以及飛台灣的航線。"
+                        ),
+                        notice: language.text(
+                            "Passengers and flights of 2025: Airport Authority Hong Kong’s traffic figures. Flights to Taiwan: Civil Aviation Administration, Ministry of Transportation and Communications (Taiwan), Civil Aviation Statistics annual report 2025. Position: OpenStreetMap contributors. The game is not affiliated with Airport Authority Hong Kong.",
+                            "2025 年的旅客與航班：香港機場管理局公布的航空交通量。飛台灣的航線：交通部民用航空局《民航統計年報》2025 年。位置：OpenStreetMap 貢獻者。本遊戲與香港機場管理局沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
                         ]
                     ),
                 ]

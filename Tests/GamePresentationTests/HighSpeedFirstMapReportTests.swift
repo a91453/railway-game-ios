@@ -21,7 +21,7 @@ final class HighSpeedFirstMapReportTests: XCTestCase {
             throw XCTSkip("set HSR_FIRST_MAP_REPORT=1 to time what opening the High Speed Rail demo does on the main actor")
         }
         let clock = ContinuousClock()
-        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let railways = try XCTUnwrap(data.railways)
         let baseMap = try BaseMapTiles(
             data: Data(contentsOf: Map3DRealTrainsTests.resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)
