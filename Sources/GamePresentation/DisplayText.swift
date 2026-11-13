@@ -438,6 +438,11 @@ extension GameError {
                 "A train's route runs over that track. Wait for it to pass.",
                 "有列車的路線要經過這段軌道，請等它通過。"
             )
+        case .trackClosed:
+            language.text(
+                "That track is closed. Open it first.",
+                "這段軌道已封閉，請先開放。"
+            )
         case .trainsShareTrack:
             language.text(
                 "Two trains need the same track, so traffic control can't be turned on. Move one of them first.",

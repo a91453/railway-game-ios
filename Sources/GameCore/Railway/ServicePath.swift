@@ -113,7 +113,8 @@ extension GameWorld {
     /// `nil` when `start` is not on this world's track, when the station
     /// does not exist or has no platform that the train fits, or when none
     /// can be reached
-    /// without turning straight back. Pure: reads only topology, edge
+    /// without turning straight back or running along track closed to
+    /// trains (decision 716, ``closeTrack(_:)``). Pure: reads only topology, edge
     /// lengths and platforms, and explores only track no further than the
     /// nearest berth.
     public func path(from start: TrainPosition, toStation id: StationID, length: Int64 = 0) -> TrainPath? {
@@ -255,6 +256,8 @@ extension GameWorld {
             let edgeLength = network.edge(traversal.edge)!.length
             func allowed(to end: Int64) -> Bool {
                 if end > from, forbidden.contains(traversal) || forbids?(traversal) == true || yard.contains(traversal.edge) { return false }
+                // Decision 716: nor any way along track closed to trains.
+                if end > from, network.isClosed(traversal.edge) { return false }
                 guard let clear else { return true }
                 return clear(TrackStretch(traversal: traversal, from: from, to: end))
             }
