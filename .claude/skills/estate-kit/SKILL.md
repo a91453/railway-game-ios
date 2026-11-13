@@ -5,7 +5,7 @@ description: Generate player-owned amusement, hotel, residential and commercial 
 
 # 自有建築與遊樂設施
 
-先讀 `CLAUDE.md`、`docs/HANDOFF.md`、art-style、station-kit，以及工作登記 #1579（#1041、#231 已達留言上限）。登記自己的新增範圍，不改 GameCore、存檔、Golden、地圖接入或其他代理檔案。
+先讀 `CLAUDE.md`、`docs/HANDOFF.md`、art-style、station-kit，以及工作登記 #2118（#1579、#1041、#231 已達留言上限）。登記自己的新增範圍，不改 GameCore、存檔、Golden、地圖接入或其他代理檔案。
 
 **看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
 
@@ -37,4 +37,4 @@ tools/estate-kit/rebuild.sh /path/to/railway-reference-private/Railway/game-art-
 
 新批次 provenance.json 保留逐件來源路徑、SHA、目錄尺寸與重組方式；REFERENCE_ASSET_LICENSE.txt 保留實際授權，不宣稱原資產開源。來源先查 MODEL_CATALOG 與 ASSET_LICENSE，再讀實際 factory，wrapper 另追實作；未找到輪式遊樂設施配方的缺口明列為原創。不公開原 factory、模型、貼圖或品牌，不傳到外部生成服務。
 
-公開只放新配方／工具／測試／skill／文件、一張 overview 及小型驗證 JSON。私有放全部模型、圖、viewer、來源對照、ZIP。兩庫 draft PR 互連，Agent: Codex trailer，更新 #1579；不推 main、不合併、不啟用 auto-merge。後續要加素材以新批次為主，不悄悄改變已匯出 manifest 的既有 ID。
+公開只放新配方／工具／測試／skill／文件、一張 overview 及小型驗證 JSON。私有放全部模型、圖、viewer、來源對照、ZIP。兩庫 draft PR 互連，Agent: Codex trailer，更新 #2118；不推 main、不合併、不啟用 auto-merge。後續要加素材以新批次為主，不悄悄改變已匯出 manifest 的既有 ID。

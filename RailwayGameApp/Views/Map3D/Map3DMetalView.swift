@@ -67,6 +67,10 @@ final class Map3DMetalView: MTKView {
     /// Decision 333: the train the camera follows, from behind
     /// (``Map3DFollow``); set with ``follow(_:reduceMotion:)``.
     private(set) var following: Map3DFollow?
+    /// Decision 714 (MAP3D-FAR): the map from above (scene x and z), which
+    /// a drag cannot take the camera's target off; `nil` before a scene
+    /// is shown.
+    var ground: (x: ClosedRange<Float>, z: ClosedRange<Float>)?
     /// Decision 333: the camera flying to the follow view (`to` is `nil`)
     /// or to a still view (`to`), a frame at a time.
     private var flying: (flight: Map3DFlight, to: Map3DCamera?)?
@@ -1048,7 +1052,11 @@ final class Map3DMetalView: MTKView {
             }
             return
         }
-        guard var following else { return }
+        guard var following else {
+            // Decision 714: free, the target stays over the map.
+            if flying == nil, let ground { camera = camera.held(over: ground) }
+            return
+        }
         let pose: Map3DFollow.Pose
         followedSeeThrough = nil
         // One switch over a local copy of the subject, and no closure that

@@ -5,7 +5,7 @@ description: 生成海岸、漁港與露營休憩原生 3D 素材、安裝接點
 
 # 海岸、漁港與露營素材
 
-先讀 CLAUDE.md、AGENTS.md、HANDOFF、art-style、station-kit、civic-kit 與工作登記 #1579（#1041、#231 為已滿的舊登記）。查最新 main 與全部 Kit 目錄去重，不能只依交接提示的既有批次。
+先讀 CLAUDE.md、AGENTS.md、HANDOFF、art-style、station-kit、civic-kit 與工作登記 #2118（#1579、#1041、#231 為已滿的舊登記）。查最新 main 與全部 Kit 目錄去重，不能只依交接提示的既有批次。
 
 **看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
 

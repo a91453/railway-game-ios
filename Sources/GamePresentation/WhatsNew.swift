@@ -30,6 +30,17 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 129.
+        Entry(
+            id: "2026-11-13-129",
+            items: [
+                Line(
+                    english: "On real-world maps, the 3D map now shows intercity coaches driving their routes on their timetables, and a coach station at each coach stop.",
+                    chinese: "實景地圖的 3D 地圖上，看得到長途客運照班次沿路線行駛，客運站的位置也有一座客運站。"
+                ),
+            ],
+            fixes: []
+        ),
         // 128.
         Entry(
             id: "2026-11-13-128",
