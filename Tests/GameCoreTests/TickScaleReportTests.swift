@@ -13,8 +13,8 @@ import XCTest
 /// - `TICK_SCALE_LAYOUT`: `meet` (the default: two trains a module, on two
 ///   lines that run against each other over a single track with a passing
 ///   loop, under traffic control) or `solo` (one train a module, nothing to
-///   meet), or `ring` (one line with every train: a ring of as many
-///   stations as trains on two tracks, half the trains each way round,
+///   meet), or `ring` (one line with every train: a ring of a few more
+///   stations than trains on two tracks, half the trains each way round,
 ///   each following the train ahead; docs/research/TICK_L1_2026-11-13.md).
 /// - `TICK_SCALE_BLOCKS=1`: block sections on.
 /// - `TICK_SCALE_CONTROL=0`: traffic control off (trains run through each
@@ -25,6 +25,9 @@ import XCTest
 ///   would cost if it took each part of the map that shares no track on
 ///   its own. The times are the sums over the worlds.
 /// - `TICK_SCALE_TICKS`: the ticks timed at each speed (default 60).
+/// - `TICK_SCALE_WARM`: the ticks of 600× played before any is timed
+///   (default 60, a game hour; a ring sends its trains out a headway
+///   apart, so a long one wants more).
 /// - `TICK_SCALE_BUDGET`: the seconds a size may spend building and
 ///   warming before it is given up as "did not finish" (default 900).
 /// - `TICK_SCALE_HOLD=<seconds>`: sleeps so long after the warm-up of each
@@ -107,8 +110,8 @@ final class TickScaleReportTests: XCTestCase {
         return world
     }
 
-    /// One line with every train: a ring of `trains` stations (made even,
-    /// six at least) on two tracks that never meet, an outer one the
+    /// One line with every train: a ring of six stations more than trains
+    /// (made even) on two tracks that never meet, an outer one the
     /// trains run clockwise and an inner one they run the other way, each
     /// a rectangle with half the stations along the top and half along the
     /// bottom, a platform of every station on each. Half the trains start
@@ -116,10 +119,12 @@ final class TickScaleReportTests: XCTestCase {
     /// of it a station or two away: what the step costs when the trains
     /// follow each other along one line, as on a real main line.
     static func ring(trains: Int, blocks: Bool, control: Bool, budget: Double) throws -> GameWorld {
-        let side = max(3, (trains + 1) / 2)
+        // Six stations more than trains: a ring runs fewer trains than it
+        // has stations, and one left standing at a platform stops the rest.
+        let side = (trains + 1) / 2 + 3
         let pitch: Int64 = 12_288, gap: Int64 = 2_048, depth: Int64 = 16_384
         var world = try GameWorld(
-            bounds: WorldBounds(width: pitch * Int64(side + 3), height: depth + 4 * 4_096),
+            bounds: WorldBounds(width: pitch * Int64(side + 2) + 2 * depth, height: depth + 4 * 4_096),
             economy: GameEconomy(balance: 1_000_000_000_000_000, costs: SingleTrackMeet.costs), clock: GameClock(speed: .normal)
         )
         let clock = ContinuousClock()
@@ -127,15 +132,16 @@ final class TickScaleReportTests: XCTestCase {
         func check(_ what: String) throws {
             if ms(clock.now - started) > budget * 1_000 { throw GaveUp(reason: "building stopped at \(what) after \(Int(budget)) s") }
         }
-        // A track: its corners `inset` in from the outer one's, the edges
-        // built clockwise. The edges along the top and the bottom, the
-        // first and the last of each without a platform.
+        // A track: its ends `inset` in from the outer one's, the edges
+        // built clockwise, each end a curve that leaves the top and comes
+        // to the bottom along them. The edges along the top and the
+        // bottom, the first and the last of each without a platform.
         func track(inset: Int64) throws -> (top: [TrackEdgeID], bottom: [TrackEdgeID]) {
-            let left = pitch / 2 + inset, right = pitch / 2 + pitch * Int64(side + 2) - inset
+            let left = depth + inset, right = depth + pitch * Int64(side + 2) - inset
             let top = 4_096 + inset, bottom = 4_096 + depth - inset
             var points: [WorldCoordinate] = []
             for column in 0...(side + 2) {
-                points.append(WorldCoordinate(x: column == 0 ? left : column == side + 2 ? right : pitch / 2 + pitch * Int64(column), y: top))
+                points.append(WorldCoordinate(x: column == 0 ? left : column == side + 2 ? right : depth + pitch * Int64(column), y: top))
             }
             points += points.reversed().map { WorldCoordinate(x: $0.x, y: bottom) }
             var nodes: [TrackNodeID] = []
@@ -146,7 +152,10 @@ final class TickScaleReportTests: XCTestCase {
             var edges: [TrackEdgeID] = []
             for index in nodes.indices {
                 if index % 64 == 0 { try check("the track") }
-                edges.append(try world.buildTrackEdge(from: nodes[index], to: nodes[(index + 1) % nodes.count]))
+                let bulge = (bottom - top) * 2 / 3
+                let curve: TrackCurve = index == side + 2 ? .cubic(.init(x: right + bulge, y: top), .init(x: right + bulge, y: bottom))
+                    : index == nodes.count - 1 ? .cubic(.init(x: left - bulge, y: bottom), .init(x: left - bulge, y: top)) : .straight
+                edges.append(try world.buildTrackEdge(from: nodes[index], to: nodes[(index + 1) % nodes.count], curve: curve))
             }
             return (Array(edges[0..<(side + 2)]), Array(edges[(side + 3)..<(2 * side + 5)]))
         }
@@ -157,7 +166,7 @@ final class TickScaleReportTests: XCTestCase {
         for index in 0..<(2 * side) {
             if index % 64 == 0 { try check("the stations") }
             let onTop = index < side, column = onTop ? index + 1 : index - side + 1
-            let x = onTop ? pitch / 2 + pitch * Int64(column) + pitch / 2 : pitch / 2 + pitch * Int64(side + 2 - column) - pitch / 2
+            let x = onTop ? depth + pitch * Int64(column) + pitch / 2 : depth + pitch * Int64(side + 2 - column) - pitch / 2
             let station = try world.buildStation(named: "R\(index)", at: PlanPoint(x: x, y: onTop ? 4_096 + 2 * gap : 4_096 + depth - 2 * gap)).id
             try world.addTrackPlatform(station, on: (onTop ? outer.top : outer.bottom)[column], from: 4_096, to: 6_144)
             try world.addTrackPlatform(station, on: (onTop ? inner.top : inner.bottom)[column], from: 4_096, to: 6_144)
@@ -181,6 +190,8 @@ final class TickScaleReportTests: XCTestCase {
         }
         try world.setLineServiceWindow(line, to: .allDay)
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 2 * pairs, offPeak: 2 * pairs, low: 2 * pairs))
+        // Decision 172: a ring's train goes out from the stop it stands at.
+        world.setFlexDispatch(true)
         if control { try world.setTrafficControl(true) }
         if blocks { world.setBlockSections(true) }
         return world
@@ -197,6 +208,7 @@ final class TickScaleReportTests: XCTestCase {
         let split = Int(environment["TICK_SCALE_SPLIT"] ?? "")
         let ticks = Int(environment["TICK_SCALE_TICKS"] ?? "") ?? 60
         let budget = Double(environment["TICK_SCALE_BUDGET"] ?? "") ?? 900
+        let warm = Int(environment["TICK_SCALE_WARM"] ?? "") ?? 60
         let hold = Int(environment["TICK_SCALE_HOLD"] ?? "") ?? 0
         let clock = ContinuousClock()
         var rows = [
@@ -223,12 +235,20 @@ final class TickScaleReportTests: XCTestCase {
                 // A game hour at 600× warms what a running game keeps; the
                 // first ticks are the dearest, so each is watched.
                 let warming = clock.now
-                for tick in 0..<60 {
+                for tick in 0..<warm {
                     let spent = try step()
                     if tick < 3 || spent > 5_000 { note("\(count): warm-up tick \(tick) took \(Int(spent)) ms") }
                     if Self.ms(clock.now - warming) > budget * 1_000 {
-                        throw GaveUp(reason: "warm-up stopped at tick \(tick + 1) of 60 after \(Int(budget)) s (that tick \(Int(spent)) ms)")
+                        throw GaveUp(reason: "warm-up stopped at tick \(tick + 1) of \(warm) after \(Int(budget)) s (that tick \(Int(spent)) ms)")
                     }
+                }
+                if environment["TICK_SCALE_DEBUG"] != nil {
+                    for train in worlds[0].trains {
+                        var edge = -1, off: Int64 = 0
+                        if case .onEdge(let t, let o)? = train.position, case .edge(let e) = t.edge { edge = e; off = o }
+                        note("DEBUG-t1 \(train.id.rawValue) edge \(edge) off \(off) exec \(train.execution.map { "\($0)" } ?? "-") res \(train.reservation.count) follow \(worlds[0].isFollowing(train)) stops \(train.timetable.count)")
+                    }
+                    note("DEBUG-t1 deadlocked \(worlds[0].deadlockedTrains()) clock \(worlds[0].clock.now.seconds)")
                 }
                 if hold > 0 {
                     note("\(count): pid \(ProcessInfo.processInfo.processIdentifier), running for \(hold) s")
