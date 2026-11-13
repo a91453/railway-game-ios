@@ -102,16 +102,26 @@ final class AirportReportTests: XCTestCase {
                 FileHandle.standardError.write(Data("\(rows.last!)\n".utf8))
             }
         }
-        let bought = try Self.bought("tymc:A", data: data)
-        try play("Taoyuan Airport MRT (bought)", stations: bought.stations.count, bought)
+        // `AIR_ROUTE_ONLY=own` leaves the bought line out (a quarter of an
+        // hour in a debug build).
+        if ProcessInfo.processInfo.environment["AIR_ROUTE_ONLY"] != "own" {
+            let bought = try Self.bought("tymc:A", data: data)
+            try play("Taoyuan Airport MRT (bought)", stations: bought.stations.count, bought)
+        }
+        // A line of one's own is not played (its track would have to be
+        // laid by hand): the riders its airport's day gives it are read
+        // instead (``AirportDay/ridersFrom`` and ``AirportDay/ridersTo``,
+        // which the residents its stations reach cap), beside the most
+        // the airport's passengers would give any line.
+        var own = ["| Line | Stations | Riders today, both ways | The most the airport gives, both ways |", "| --- | --: | --: | --: |"]
         // The terminal first, then stops into the city: Kaohsiung's along
         // Zhongshan Road (where the Red Line's R4 to R8 are), Taichung's
         // by Daya and Shuinan to Taichung Station.
-        let own: [(name: String, stops: [(Double, Double)])] = [
+        let lines: [(name: String, stops: [(Double, Double)])] = [
             ("Own line from Kaohsiung Airport", [(22.5702, 120.3421), (22.5805, 120.3287), (22.5886, 120.3215), (22.5969, 120.3152), (22.6064, 120.3083), (22.6138, 120.3046)]),
             ("Own line from Taichung Airport", [(24.2539, 120.5996), (24.2290, 120.6480), (24.1890, 120.6540), (24.1716, 120.6845), (24.1500, 120.6850), (24.1368, 120.6850)]),
         ]
-        for line in own {
+        for line in lines {
             for count in [2, 3, 4, 6] {
                 let stops = Array(line.stops.prefix(count))
                 let latitude = stops.map(\.0).reduce(0, +) / Double(count), longitude = stops.map(\.1).reduce(0, +) / Double(count)
@@ -131,11 +141,13 @@ final class AirportReportTests: XCTestCase {
                 session.places = data.places
                 session.water = data.water
                 session.readLandRoundStations()
-                XCTAssertNotNil(session.world.airportDays().first { $0.airport.flies(to: .hongKong) }?.station, "\(line.name): the terminal's station serves it")
-                try play(line.name, stations: count, session.world)
+                let day = try XCTUnwrap(session.world.airportDays().first { $0.airport.flies(to: .hongKong) })
+                XCTAssertNotNil(day.station, "\(line.name): the terminal's station serves it")
+                own.append("| \(line.name) | \(count) | \(day.ridersFrom + day.ridersTo) | \(2 * day.ridersAtMost) |")
             }
         }
-        print("### What a line to an airport carries (\(days) days; \(OverseasMap.hongKong.ridersToOpen) open Hong Kong)\n\n" + rows.joined(separator: "\n"))
+        print("### What a line to an airport carries (\(days) days; \(OverseasMap.hongKong.ridersToOpen) open Hong Kong)\n\n" + rows.joined(separator: "\n")
+            + "\n\n" + own.joined(separator: "\n"))
     }
 
     /// A real-world game round `network` with the line bought, as

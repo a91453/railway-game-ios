@@ -24,7 +24,7 @@ AIR-UNLOCK-2（session_01YGNNupFY6Z2K8uhkAqFeJF，`claude/air-unlock-2`，2026-1
 3. 選地圖畫面（`RailwayGameApp/Views/RealWorldPicker.swift`，「全台灣」那一列約 445–470 行）下面加一列大地圖「香港」：鎖著時寫怎麼開航，開了就 `launcher.startOverseasMap(.hongKong)`。現有 16 km 的「香港」地點照舊不鎖。**第三級截圖**：這一列與開航提示，規劃看過才合。先讀 ui-review、motion 兩個 skill。
 4. 台灣機場面板多一行「昨天 N／500 人」（只有有香港航點的機場）。
 5. 香港國際機場進 `AirportCatalog`（`withAirports` 現在只認台灣的 `tourism` 世界，香港的世界要另開一條路），航點臺北桃園、高雄、臺中、花蓮用決策 700 的民航局年報數字；機場全年旅客與架次要查香港機管局／民航處的公開統計，查不到標 UNVERIFIED。
-6. 500 人還沒量（economy-balance：NOT ASSESSED）：用 `AirportReportTests` 量機場捷運、高雄紅線與一條自己鋪的小線，數字寫回決策 712。
+6. 500 人還沒量（economy-balance：NOT ASSESSED）：用 `AirportReportTests` 量機場捷運、高雄紅線與一條自己鋪的小線，數字寫回決策 712。（量了機場捷運：每航廈一天約 1 萬人，HEALTHY；高雄紅線不在收購清單上，量不了；自己鋪的線報告裡列車不跑，NOT ASSESSED。見決策 712「500 人量到的」。）
 
 ### PR 3：打開
 
