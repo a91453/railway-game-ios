@@ -27,3 +27,5 @@
 ## 沒做的
 
 報告 §7：分期貸款的壞情況（借滿再花光、挑戰裡到期）、停車輔助的實機、iOS 的更新率與記憶體、自己鋪線到機場的實際人次。
+
+CI 的時間、full lane、堆疊框後來補量在報告 §10（從 GitHub Actions 的紀錄讀）：都綠、都沒超時，不開優化 PR。要盯的三件：完整 `ci.yml` 的 rest-2 從 12 分變 17.5 分（多的是 `HongKongMapTests` 184 秒；夜間 run 再超過 15 分就把它點名到 campaigns-8 或 9）；full lane 從 1:45 變 2:19；App 的 `Map3DView.updateUIView` 堆疊框一次長了 30 KB（68.1 → 98.6 KB）。iOS 的更新率、記憶體與實機仍然只能在作者的 Mac 接實機用 Instruments 量，或看 TestFlight 版的 Xcode Organizer。
