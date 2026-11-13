@@ -1,10 +1,14 @@
 // Decision 725: SketchUp's faces are wound either way (a face's back is
-// often the one outside), and the game lights a face by its winding. Each
-// face here is turned to whichever of its two sides sees more of the open
-// air: rays from just off each side, in a fixed set of directions at or
-// above the horizon (below it is ground), counted when they leave the
-// model without meeting another face. Two faces over the same three corners
-// (a face and its back, both exported) keep only the first.
+// often the one outside), and the game lights a face by its winding, so a
+// face wound against its neighbours shows dark or not at all. Faces are
+// first wound alike across every edge exactly two of them share, one
+// connected piece at a time (breadth first); then each piece as a whole is
+// turned to whichever side sees more of the open air: rays from just off
+// each face's two sides, in a fixed set of directions at or above the
+// horizon (below it is ground), counted when they leave the model without
+// meeting another face, summed over the piece by area. Two faces over the
+// same three corners (a face and its back, both exported) keep only the
+// first.
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (u, v) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
@@ -86,23 +90,77 @@ function escapes(g, triangles, o, d, self) {
   }
 }
 
-// Turns each face (in place) to face its more open side. Returns how many
-// were turned.
-export function orientOutward(triangles) {
-  const g = grid(triangles, 1.5);
-  let turned = 0;
-  triangles.forEach((t, i) => {
-    const [a, b, c] = t.points, n = cross(sub(b, a), sub(c, a)), length = Math.hypot(...n);
-    if (length === 0) return;
-    const unit = n.map(v => v / length), mid = [0, 1, 2].map(k => (a[k] + b[k] + c[k]) / 3);
-    let front = 0, back = 0;
-    for (const d of rays) {
-      const side = dot(d, unit);
-      if (Math.abs(side) < 0.05) continue;
-      const o = mid.map((v, k) => v + Math.sign(side) * unit[k] * 0.03);
-      if (escapes(g, triangles, o, d, i)) { if (side > 0) front += Math.abs(side); else back += Math.abs(side); }
+// How much more open air a face's front sees than its back (rays, by area).
+function openness(g, triangles, i) {
+  const [a, b, c] = triangles[i].points, n = cross(sub(b, a), sub(c, a)), length = Math.hypot(...n);
+  if (length === 0) return 0;
+  const unit = n.map(v => v / length), mid = [0, 1, 2].map(k => (a[k] + b[k] + c[k]) / 3);
+  let score = 0;
+  for (const d of rays) {
+    const side = dot(d, unit);
+    if (Math.abs(side) < 0.05) continue;
+    const o = mid.map((v, k) => v + Math.sign(side) * unit[k] * 0.03);
+    if (escapes(g, triangles, o, d, i)) score += side;
+  }
+  return score * length / 2;
+}
+
+const flip = t => { [t.points[1], t.points[2]] = [t.points[2], t.points[1]]; };
+
+// Winds the faces (in place) alike across every edge exactly two of them
+// share (`cornerKey` names a corner: faces meet where their keys do), then
+// turns each connected piece to its more open side. Returns how many faces
+// were turned, how many pieces there are, and the shared edges still wound
+// alike (a piece that cannot be wound one way, after simplification).
+export function orientConsistent(triangles, cornerKey) {
+  const corners = triangles.map(t => t.points.map(cornerKey)), edges = new Map();
+  corners.forEach((c, f) => {
+    if (new Set(c).size < 3) return;
+    for (let k = 0; k < 3; k++) {
+      const from = c[k], to = c[(k + 1) % 3], key = from < to ? `${from}|${to}` : `${to}|${from}`;
+      if (!edges.has(key)) edges.set(key, []);
+      edges.get(key).push({ f, from });
     }
-    if (back > front) { [t.points[1], t.points[2]] = [t.points[2], t.points[1]]; turned++; }
   });
-  return turned;
+  const next = triangles.map(() => []);
+  for (const list of edges.values()) {
+    if (list.length !== 2 || list[0].f === list[1].f) continue;
+    const same = list[0].from === list[1].from;
+    next[list[0].f].push([list[1].f, same]);
+    next[list[1].f].push([list[0].f, same]);
+  }
+  const turn = new Int8Array(triangles.length).fill(-1), piece = new Int32Array(triangles.length).fill(-1);
+  let pieces = 0;
+  for (let s = 0; s < triangles.length; s++) {
+    if (turn[s] >= 0) continue;
+    turn[s] = 0; piece[s] = pieces;
+    const queue = [s];
+    for (let q = 0; q < queue.length; q++) {
+      const f = queue[q];
+      for (const [g, same] of next[f]) {
+        if (turn[g] >= 0) continue;
+        turn[g] = turn[f] ^ (same ? 1 : 0); piece[g] = pieces;
+        queue.push(g);
+      }
+    }
+    pieces++;
+  }
+  triangles.forEach((t, f) => { if (turn[f]) flip(t); });
+  const g = grid(triangles, 1.5), score = new Float64Array(pieces);
+  triangles.forEach((t, f) => { score[piece[f]] += openness(g, triangles, f); });
+  let turned = 0;
+  triangles.forEach((t, f) => {
+    const out = score[piece[f]] < 0;
+    if (out) flip(t);
+    if (out !== (turn[f] === 1)) turned++;
+  });
+  // A shared edge both faces still walk the same way.
+  let alike = 0;
+  for (const list of edges.values()) {
+    if (list.length !== 2 || list[0].f === list[1].f) continue;
+    const [x, y] = [list[0].from, corners[list[0].f][(corners[list[0].f].indexOf(list[0].from) + 1) % 3]];
+    const walks = f => { const c = triangles[f].points.map(cornerKey); return [0, 1, 2].some(k => c[k] === x && c[(k + 1) % 3] === y); };
+    if (walks(list[0].f) === walks(list[1].f)) alike++;
+  }
+  return { turned, pieces, alike };
 }

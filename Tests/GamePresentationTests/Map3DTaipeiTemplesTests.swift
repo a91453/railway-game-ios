@@ -17,10 +17,11 @@ final class Map3DTaipeiTemplesTests: XCTestCase {
     static let models = Map3DTaipeiTemple.models(files: files)
 
     /// The colours `tools/tpe-temples/recipes.mjs` paints the parts in,
-    /// after taking them toward decision 720's paving (`soften`).
-    static let palette: Set<UInt32> = Set([0xCDA38C, 0xADB1B5, 0xA2B6A8, 0xDDC694, 0x98B4A5, 0xC78774, 0xECE6DE, 0xDFBDB0, 0xB48075,
-                                           0x978078, 0xC8C4BD, 0xDDD8CF, 0xB5B4AD, 0xD7A9A0, 0xBD7E74, 0xC8AA9C, 0x9F8A82, 0x837671,
-                                           0x5C5855, 0xE1DCD1, 0xC7C4BE].map(Map3DColor.rgb))
+    /// lightened toward decision 720's paving with their colour kept
+    /// (`soften`; `palette()` in build.mjs prints them).
+    static let palette: Set<UInt32> = Set([0x595453, 0x827470, 0x8EB6A3, 0x9AB8A5, 0x9E7A70, 0xA5867C, 0xAAB0B8, 0xC67868, 0xC8C4BD,
+                                           0xC9C4BB, 0xD2A695, 0xD37566, 0xD98E79, 0xDB9E7F, 0xDE7F63, 0xE3DCCF, 0xE5C581, 0xE6A499,
+                                           0xEDE6DC].map(Map3DColor.rgb))
 
     /// Each file reads, within the budget, untextured, credited to the
     /// dataset, a temple's size, its ground at 0 and in the game's colours.

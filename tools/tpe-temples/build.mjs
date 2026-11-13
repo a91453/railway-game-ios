@@ -20,11 +20,12 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readCollada, readKml } from './collada.mjs';
 import { triangleColour } from './textures.mjs';
 import { writeM3dmodel } from './m3dmodel.mjs';
 import { recipes, colours, soften } from './recipes.mjs';
-import { dedupe, orientOutward } from './orient.mjs';
+import { dedupe, orientConsistent } from './orient.mjs';
 import { windConsistently } from './wind.mjs';
 import { MeshoptSimplifier } from '../glb-to-m3dmodel/node_modules/meshoptimizer/index.js';
 
@@ -58,13 +59,13 @@ function offset(from, to) {
 // face is the eaves' underside; an upward face below the eaves is paving.
 // Of the rest (walls), a strongly red one is a column and one much darker
 // than this temple's own walls is an opening (a door, a window).
-export function classifier(triangles, recipe) {
+export function classifier(triangles, recipe, rgbOf = i => triangles[i].rgb) {
   const cell = 1, top = new Map(), key = (x, y) => `${x},${y}`;
-  const facts = triangles.map(t => {
+  const facts = triangles.map((t, i) => {
     const n = normalOf(t.points), length = Math.hypot(...n);
     if (length === 0) return null;
     const z = centre(t.points)[2];
-    return { nz: n[2] / length, z, low: Math.min(...t.points.map(p => p[2])), hsl: hsl(t.rgb) };
+    return { nz: n[2] / length, z, low: Math.min(...t.points.map(p => p[2])), hsl: hsl(rgbOf(i)) };
   });
   // The highest roof over each metre of ground.
   triangles.forEach((t, i) => {
@@ -105,7 +106,7 @@ export function classifier(triangles, recipe) {
     if (f.z > recipe.eave && onRidge) return 'ridge';
     if (isRed(f.hsl)) return 'column';
     if (f.hsl[2] < dark) return 'opening';
-    return recipe.stoneWalls && f.hsl[1] < 0.12 ? 'stone' : 'wall';
+    return 'wall';
   };
 }
 
@@ -119,15 +120,131 @@ const lab = rgb => {
   return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
 };
 const hex = v => [v >> 16 & 255, v >> 8 & 255, v & 255];
-export function paint(cls, photo, recipe) {
+const fromLab = ([L, a, b]) => {
+  const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200;
+  const g = t => t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27);
+  const x = g(fx) * 0.95047, y = g(fy), z = g(fz) * 1.08883;
+  const lin = [3.2406 * x - 1.5372 * y - 0.4986 * z, -0.9689 * x + 1.8758 * y + 0.0415 * z, 0.0557 * x - 0.2040 * y + 1.0570 * z];
+  const [r, gr, bl] = lin.map(v => Math.round(255 * Math.min(1, Math.max(0, v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055))));
+  return r << 16 | gr << 8 | bl;
+};
+export function paint(cls, target, recipe) {
   if (recipe.tint?.[cls]) return colours[cls][recipe.tint[cls]];
-  const target = lab(photo);
   let best, distance = Infinity;
   for (const value of Object.values(colours[cls])) {
     const d = lab(hex(value)).reduce((s, v, k) => s + (v - target[k]) ** 2, 0);
     if (d < distance) { distance = d; best = value; }
   }
   return best;
+}
+
+// Decision 720's pale map (方案 C), lightened but not greyed: the colour's
+// lightness (L*) taken `share` of the way toward the paving's, its colour
+// (a*, b*) kept at 90%.
+export function pale(value, share) {
+  const [L, a, b] = lab(hex(value)), [G] = lab(hex(soften.toward));
+  return fromLab([L + (G - L) * share, a * soften.chroma, b * soften.chroma]);
+}
+export const shareOf = cls => (cls === 'opening' ? soften.share / 2 : soften.share);
+
+// Every colour a temple can be drawn in (Map3DTaipeiTemplesTests.palette).
+export const palette = () => [...new Set(Object.entries(colours).flatMap(([cls, shades]) => Object.values(shades).map(v => pale(v, shareOf(cls)))))].sort((x, y) => x - y);
+
+// Whether any of `triangles` lies above (or, `down`, below) a point (a
+// vertical ray), through a grid of their footprints, 2 m.
+function coverTest(triangles, cell = 2) {
+  const cells = new Map(), key = (x, y) => `${x},${y}`;
+  triangles.forEach((t, i) => {
+    const xs = t.points.map(p => p[0]), ys = t.points.map(p => p[1]);
+    for (let x = Math.floor(Math.min(...xs) / cell); x <= Math.floor(Math.max(...xs) / cell); x++)
+      for (let y = Math.floor(Math.min(...ys) / cell); y <= Math.floor(Math.max(...ys) / cell); y++) {
+        if (!cells.has(key(x, y))) cells.set(key(x, y), []);
+        cells.get(key(x, y)).push(i);
+      }
+  });
+  const side = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  return (o, down = false) => (cells.get(key(Math.floor(o[0] / cell), Math.floor(o[1] / cell))) ?? []).some(i => {
+    const [a, b, c] = triangles[i].points, whole = side(a, b, c);
+    if (Math.abs(whole) < 1e-9) return false;
+    const u = side(b, c, o) / whole, v = side(c, a, o) / whole, w = 1 - u - v;
+    const z = u * a[2] + v * b[2] + w * c[2];
+    return u >= 0 && v >= 0 && w >= 0 && (down ? z < o[2] - 0.05 : z > o[2] + 0.05);
+  });
+}
+
+// Groups of faces (union–find).
+function groups(count) {
+  const up = Int32Array.from({ length: count }, (_, i) => i);
+  const find = i => { while (up[i] !== i) { up[i] = up[up[i]]; i = up[i]; } return i; };
+  return { find, join: (i, j) => { i = find(i); j = find(j); if (i !== j) up[Math.max(i, j)] = Math.min(i, j); } };
+}
+
+// The faces that share each edge, corners within a centimetre one.
+const cornerKey = p => p.map(v => Math.round(v * 100)).join(',');
+function sharedEdges(triangles) {
+  const edges = new Map();
+  triangles.forEach((t, f) => {
+    const c = t.points.map(cornerKey);
+    for (let k = 0; k < 3; k++) {
+      const x = c[k], y = c[(k + 1) % 3];
+      if (x === y) continue;
+      const key = x < y ? `${x}|${y}` : `${y}|${x}`;
+      if (!edges.has(key)) edges.set(key, { faces: [], length: Math.hypot(...sub(t.points[k], t.points[(k + 1) % 3])) });
+      edges.get(key).faces.push(f);
+    }
+  });
+  return [...edges.values()].filter(e => e.faces.length > 1);
+}
+
+// A face's flat piece: the faces it shares edges with in the same material
+// and the same plane (normals within about 8°), as SketchUp drew it before
+// the export cut it into triangles. Its colour is the piece's mean (by
+// area), so one face of a wall is never a column and the next a wall.
+function flatPieceColours(triangles, edges) {
+  const unit = triangles.map(t => { const n = normalOf(t.points), l = Math.hypot(...n) || 1; return n.map(v => v / l); });
+  const g = groups(triangles.length);
+  for (const { faces } of edges) for (const f of faces) for (const h of faces) {
+    if (f < h && triangles[f].material === triangles[h].material && Math.abs(unit[f].reduce((s, v, k) => s + v * unit[h][k], 0)) > 0.99) g.join(f, h);
+  }
+  const sums = new Map();
+  triangles.forEach((t, f) => {
+    const a = areaOf(t.points), s = sums.get(g.find(f)) ?? [0, 0, 0, 0];
+    sums.set(g.find(f), [s[0] + t.rgb[0] * a, s[1] + t.rgb[1] * a, s[2] + t.rgb[2] * a, s[3] + a]);
+  });
+  return f => { const s = sums.get(g.find(f)); return s[3] > 0 ? s.slice(0, 3).map(v => v / s[3]) : triangles[f].rgb; };
+}
+
+// One colour a block: the faces of one part that share edges (for walls,
+// columns and openings also one material, the modeller's own division of
+// a front) take the game colour nearest the mean of the photo under the
+// whole block (L*a*b*, by area), lightened for decision 720's map (pale).
+// A block under `small` m² other than a door or window takes the colour of
+// the bigger block it shares the most edge with, whatever its part, so a
+// stray sliver never stands out of its roof or wall.
+const upright = new Set(['wall', 'column', 'opening']);
+function blockColours(triangles, edges, recipe, small = 2) {
+  const g = groups(triangles.length);
+  for (const { faces } of edges) for (const f of faces) for (const h of faces) {
+    const a = triangles[f], b = triangles[h];
+    if (f < h && a.cls === b.cls && (!upright.has(a.cls) || a.material === b.material)) g.join(f, h);
+  }
+  const blocks = new Map();
+  triangles.forEach((t, f) => {
+    const a = areaOf(t.points), key = g.find(f), b = blocks.get(key) ?? { cls: t.cls, area: 0, lab: [0, 0, 0], borders: new Map() };
+    b.area += a; lab(t.rgb).forEach((v, k) => { b.lab[k] += v * a; });
+    blocks.set(key, b);
+  });
+  for (const b of blocks.values()) b.rgb = pale(paint(b.cls, b.lab.map(v => v / (b.area || 1)), recipe), shareOf(b.cls));
+  for (const { faces, length } of edges) for (const f of faces) for (const h of faces) {
+    const x = g.find(f), y = g.find(h);
+    if (x !== y) blocks.get(x).borders.set(y, (blocks.get(x).borders.get(y) ?? 0) + length);
+  }
+  for (const b of blocks.values()) {
+    if (b.area >= small || b.cls === 'opening') continue;
+    const bigger = [...b.borders].filter(([y]) => blocks.get(y).area >= small).sort((x, y) => y[1] - x[1] || x[0] - y[0]);
+    if (bigger.length) b.rgb = blocks.get(bigger[0][0]).rgb;
+  }
+  return f => blocks.get(g.find(f)).rgb;
 }
 
 function read(folder, recipe) {
@@ -155,76 +272,35 @@ function read(folder, recipe) {
       const mid = centre(points);
       if (recipe.keep && !recipe.keep.some(([x0, y0, x1, y1]) => mid[0] >= x0 && mid[0] <= x1 && mid[1] >= y0 && mid[1] <= y1)) continue;
       if (recipe.dropBelow !== undefined && Math.max(...points.map(p => p[2])) < recipe.dropBelow) continue;
-      triangles.push({ points, rgb: rgba.slice(0, 3), cutout: rgba[3] < 0.5, file });
+      triangles.push({ points, rgb: rgba.slice(0, 3), cutout: rgba[3] < 0.5, file, material: `${file}/${t.material.name}` });
     }
   }
   return { origin, triangles, sources };
 }
 
-// A grid of points over the source faces, for the face under a point.
-function nearestFace(triangles, step) {
-  const cells = new Map(), key = (x, y, z) => `${x},${y},${z}`, samples = [];
-  triangles.forEach((t, i) => {
-    const rows = Math.min(40, Math.max(1, Math.ceil(Math.sqrt(areaOf(t.points) * 8) / step)));
-    for (let a = 0; a < rows; a++) for (let b = 0; b < rows - a; b++) {
-      const w = [(3 * a + 1) / (3 * rows), (3 * b + 1) / (3 * rows)];
-      w.push(1 - w[0] - w[1]);
-      const at = [0, 1, 2].map(k => w[0] * t.points[0][k] + w[1] * t.points[1][k] + w[2] * t.points[2][k]);
-      const k = key(...at.map(v => Math.floor(v / step)));
-      if (!cells.has(k)) cells.set(k, []);
-      cells.get(k).push(samples.length);
-      samples.push({ at, i });
-    }
-  });
-  return point => {
-    const home = point.map(v => Math.floor(v / step));
-    for (let r = 1; r < 64; r++) {
-      let best = -1, distance = Infinity;
-      for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
-        for (const s of cells.get(key(home[0] + dx, home[1] + dy, home[2] + dz)) ?? []) {
-          const m = samples[s].at, d = (m[0] - point[0]) ** 2 + (m[1] - point[1]) ** 2 + (m[2] - point[2]) ** 2;
-          if (d < distance || (d === distance && samples[s].i < best)) { distance = d; best = samples[s].i; }
-        }
-      }
-      if (best >= 0 && Math.sqrt(distance) <= r * step) return best;
-    }
-    throw new Error('no face near');
-  };
-}
-
+// Simplifies with meshoptimizer. A corner on the border of two colours is
+// written once for each, at the same place, so the simplifier keeps the
+// border as a seam (it moves along it, never across), and every new face
+// is still one block's colour.
 async function simplify(triangles, recipe) {
   await MeshoptSimplifier.ready;
-  const index = new Map(), positions = [], corners = new Uint32Array(triangles.length * 3);
+  const place = new Map(), index = new Map(), positions = [], kinds = [], corners = new Uint32Array(triangles.length * 3);
   triangles.forEach((t, i) => t.points.forEach((p, k) => {
-    // Corners within a centimetre are one.
-    const key = p.map(v => Math.round(v * 100)).join(',');
+    const where = cornerKey(p);
+    if (!place.has(where)) place.set(where, p);
+    const key = `${where}/${t.rgb}`;
     let at = index.get(key);
-    if (at === undefined) { at = positions.length / 3; index.set(key, at); positions.push(...p); }
+    if (at === undefined) { at = positions.length / 3; index.set(key, at); positions.push(...place.get(where)); kinds.push(t); }
     corners[i * 3 + k] = at;
   }));
   const points = new Float32Array(positions);
-  const order = Object.keys(colours);
   const [kept, error] = MeshoptSimplifier.simplify(corners, points, 3, Math.min(recipe.triangles * 3, corners.length), recipe.maxError, ['ErrorAbsolute']);
-  const nearest = nearestFace(triangles, 0.5), out = [];
+  const out = [];
   for (let i = 0; i < kept.length; i += 3) {
     const p = [0, 1, 2].map(k => [0, 1, 2].map(a => points[kept[i + k] * 3 + a]));
     if (areaOf(p) < 1e-6) continue;
-    const votes = new Map(), facing = normalOf(p), photo = new Map();
-    let along = 0;
-    for (let a = 0; a < 6; a++) for (let b = 0; b < 6 - a; b++) {
-      const w = [(a + 1) / 9, (b + 1) / 9, (7 - a - b) / 9];
-      const at = [0, 1, 2].map(k => w[0] * p[0][k] + w[1] * p[1][k] + w[2] * p[2][k]);
-      const under = triangles[nearest(at)], n = normalOf(under.points);
-      votes.set(under.cls, (votes.get(under.cls) ?? 0) + 1);
-      const sum = photo.get(under.cls) ?? [0, 0, 0];
-      photo.set(under.cls, sum.map((v, k) => v + under.rgb[k]));
-      along += Math.sign(n[0] * facing[0] + n[1] * facing[1] + n[2] * facing[2]);
-    }
-    const cls = [...votes].sort((x, y) => y[1] - x[1] || order.indexOf(x[0]) - order.indexOf(y[0]))[0][0];
-    // Wound as the source faces under it face (orientOutward).
-    if (along < 0) [p[1], p[2]] = [p[2], p[1]];
-    const sum = photo.get(cls), n = votes.get(cls);
-    out.push({ points: p, cls, photo: sum.map(v => v / n) });
+    const kind = kinds[kept[i]];
+    out.push({ points: p, cls: kind.cls, rgb: kind.rgb });
   }
   return { triangles: out, error };
 }
@@ -232,23 +308,41 @@ async function simplify(triangles, recipe) {
 async function build(folder, output, recipe) {
   const { origin, triangles: read_, sources } = read(folder, recipe);
   const triangles = dedupe(read_);
-  const turned = orientOutward(triangles);
+  const source = orientConsistent(triangles, cornerKey);
   // The ground the temple stands on (its lowest solid face) at z 0.
   const ground = recipe.groundZ ?? Math.min(...triangles.filter(t => !t.cutout).flatMap(t => t.points.map(p => p[2])));
   for (const t of triangles) t.points = t.points.map(([x, y, z]) => [x, y, z - ground]);
-  const classify = classifier(triangles, recipe);
+  const edges = sharedEdges(triangles);
+  const classify = classifier(triangles, recipe, flatPieceColours(triangles, edges));
   triangles.forEach((t, i) => { t.cls = classify(t, i); });
+  // Upright faces above the eaves with nothing over them are part of the
+  // roof, not wall (a wall always stands under its roof): in a material
+  // most of whose area facing up or sideways is roof, the upturned tips of
+  // the eaves; in a small material (under 40 m², a cut-out's), or no more
+  // than 2.5 m tall and standing on a roof, its ornaments (the
+  // swallow-tail ends, a dragon's silhouette, a name board).
+  const roofShare = new Map();
+  for (const t of triangles) {
+    if (t.cls === null) continue;
+    const [roof, all, every] = roofShare.get(t.material) ?? [0, 0, 0], a = areaOf(t.points), facing = t.cls !== 'soffit';
+    roofShare.set(t.material, [roof + (t.cls === 'roof' ? a : 0), all + (facing ? a : 0), every + a]);
+  }
+  const roofs = coverTest(triangles.filter(t => t.cls === 'roof' || t.cls === 'ridge'));
+  for (const t of triangles) {
+    const zs = t.points.map(p => p[2]), mid = centre(t.points), tall = Math.max(...zs) - Math.min(...zs);
+    if (!upright.has(t.cls) || Math.min(...zs) < recipe.eave || roofs(mid)) continue;
+    const [roof, all, every] = roofShare.get(t.material);
+    if (roof > all / 2) { if (tall <= 2.5) t.cls = 'roof'; }
+    else if (every < 40 || (tall <= 2.5 && roofs([mid[0], mid[1], Math.min(...zs) + 0.1], true))) t.cls = 'ridge';
+  }
   const classed = triangles.filter(t => t.cls !== null);
+  const colourOf = blockColours(classed, sharedEdges(classed), recipe);
+  classed.forEach((t, i) => { t.rgb = colourOf(i); });
   const { triangles: made, error } = await simplify(classed, recipe);
-  // Neighbours wound alike, each piece facing the sky (wind.mjs).
-  windConsistently(made);
-  // Decision 720's pale map (方案 C): every colour taken part of the way
-  // toward its paving, the openings half as far.
-  const pale = (v, share) => {
-    const m = hex(v).map((x, i) => Math.round(x * (1 - share) + hex(soften.toward)[i] * share));
-    return m[0] << 16 | m[1] << 8 | m[2];
-  };
-  for (const t of made) t.rgb = pale(paint(t.cls, t.photo, recipe), t.cls === 'opening' ? soften.share / 2 : soften.share);
+  // The simplifier keeps each face's winding, but can still fold a
+  // piece over itself: wound alike again on its output, corner by exact
+  // corner as the game reads them (wind.mjs).
+  const after = windConsistently(made);
   const xs = made.flatMap(t => t.points.map(p => p[0])), ys = made.flatMap(t => t.points.map(p => p[1])), zs = made.flatMap(t => t.points.map(p => p[2]));
   const bounds = { west: Math.min(...xs), east: Math.max(...xs), south: Math.min(...ys), north: Math.max(...ys), top: Math.max(...zs) };
   const record = {
@@ -264,15 +358,20 @@ async function build(folder, output, recipe) {
   writeFileSync(join(output, `${recipe.id}.m3dmodel`), writeM3dmodel(made, record));
   const counts = {};
   for (const t of made) counts[t.cls] = (counts[t.cls] ?? 0) + 1;
-  process.stdout.write(`${recipe.id}: ${triangles.length} -> ${made.length} triangles, error ${error.toFixed(3)} m, ${turned} turned, `
+  process.stdout.write(`${recipe.id}: ${triangles.length} -> ${made.length} triangles, error ${error.toFixed(3)} m, `
+    + `source ${source.pieces} pieces ${source.turned} turned ${source.alike} alike, output ${after.pieces} pieces ${after.flipped} turned ${after.twins} twins, `
     + `${(bounds.east - bounds.west).toFixed(1)} x ${(bounds.north - bounds.south).toFixed(1)} x ${bounds.top.toFixed(1)} m, ${JSON.stringify(counts)}\n`);
   return { id: recipe.id, latitude: origin.latitude, longitude: origin.longitude, triangles: made.length, error_m: Number(error.toFixed(3)),
     bounds: Object.fromEntries(Object.entries(bounds).map(([k, v]) => [k, Number(v.toFixed(2))])) };
 }
 
-const [folder, output, ...only] = process.argv.slice(2);
-if (!folder || !output) throw new Error('usage: node tools/tpe-temples/build.mjs <unzipped KMZ folder> <output folder> [id...]');
-mkdirSync(output, { recursive: true });
-const placed = [];
-for (const recipe of recipes) if (!only.length || only.includes(recipe.id)) placed.push(await build(folder, output, recipe));
-writeFileSync(join(output, 'placements.json'), JSON.stringify(placed, null, 1) + '\n');
+// Run as a script (the functions above can also be imported).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const [folder, output, ...only] = process.argv.slice(2);
+  if (!folder || !output) throw new Error('usage: node tools/tpe-temples/build.mjs <unzipped KMZ folder> <output folder> [id...]');
+  mkdirSync(output, { recursive: true });
+  const placed = [];
+  for (const recipe of recipes) if (!only.length || only.includes(recipe.id)) placed.push(await build(folder, output, recipe));
+  writeFileSync(join(output, 'placements.json'), JSON.stringify(placed, null, 1) + '\n');
+  process.stdout.write(`palette: ${palette().map(v => '0x' + v.toString(16).toUpperCase().padStart(6, '0')).join(', ')}\n`);
+}

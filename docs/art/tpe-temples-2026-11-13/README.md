@@ -6,7 +6,7 @@
 - 鏡頭 600 m 時從正上方看，放在地圖的地面上；
 - 真實照片。
 
-這些圖用 `tools/tpe-temples/sheet.mjs` 拍，用的是 `tools/station-kit/renderer.js`，不是 Metal。每座的 model-look 各輪在 PR 2146。
+第十一輪（TPE-TEMPLES-2：一塊一色、只提亮、繞向對齊）。這些圖用 `tools/tpe-temples/sheet.mjs` 拍，用的是 `tools/station-kit/renderer.js`，不是 Metal。每座的 model-look 各輪在 PR 2146。
 
 照片（只供比對，不進遊戲），取自 Wikimedia Commons：
 - 龍山寺：File:2008-03-08 Bangka Lungshan Temple 01.jpg（CC BY 2.0）。

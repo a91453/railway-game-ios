@@ -1,8 +1,9 @@
-// Decision 725: after simplifying, each face is still wound by its own
-// guess (orientOutward's rays, through the source faces under it), so two
-// neighbours could disagree and the map, which lights a face by its winding,
-// showed one of them dark (the "broken" patches; Map3DBundledModelFilesTests
-// counted 21 to 700 such edges per temple). Here the faces are wound alike
+// Decision 725: after simplifying. orient.mjs winds the source faces alike
+// before, and the simplifier keeps each face's winding, but it can still
+// fold a piece over itself, and the map, which lights a face by its
+// winding, shows a face wound against its neighbour dark (the "broken"
+// patches; Map3DBundledModelFilesTests counted 21 to 700 such edges per
+// temple when each face was wound by its own guess). Here the faces are wound alike
 // across every edge exactly two of them share (a walk through each connected
 // piece), and each piece then faces the sky where nothing stands above it:
 // its faces that see straight up (no face above their middle) are turned up
