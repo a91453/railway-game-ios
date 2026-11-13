@@ -1,43 +1,44 @@
 // Decision 725: each temple's recipe, and the game's colours for the parts.
 // `files`: the KMZ (unzipped folders) of one temple, the first giving its
-// point. `eave`: metres above the model's own zero under which an upward
-// face is paving, not roof. `dark`: lightness under which a wall face is an
-// opening. `dropMaterials`: the source's ground and terrain, by material.
+// point. `eave`: metres above the ground under which an upward face is
+// paving, not roof. `dark`: the most lightness a wall face may have and be
+// an opening (default 0.3; never more than 45% of the temple's own walls). `dropMaterials`: the source's ground and terrain, by material.
 // `keep`: rectangles (west, south, east, north metres from the point) the
 // temple's faces are kept within. `triangles`, `maxError`: the simplifier's
 // target and its error limit (metres). `tint`: which shade of a part.
 
-// Light to dark within a temple: paving and walls, roof, column, opening.
-// The roof tiles are the temples' own families (terracotta, brown glaze,
-// slate), deep enough to stand off the map's near-white ground (decision
-// 722's ΔL* 12); walls, columns and stone take decision 457's pale
-// landmark colours.
+// Each part has a few game colours; a face takes the one nearest the
+// colour of the photo under it (or the recipe's `tint`), so a temple's red
+// wooden front, grey stone base and green-glazed ridge stay as they are,
+// in the game's colours. The roof tiles (terracotta, brown, slate) are
+// deep enough to stand off the map's near-white ground (decision 722's
+// ΔL* 12); the pale ones are decision 457's landmark colours.
 export const colours = {
   roof: { default: 0xC0805F, brown: 0xA0705E, slate: 0x8F969E, green: 0x7E9E8A },
-  ridge: { default: 0xD9B76C },
-  wall: { default: 0xF0E8DD, brick: 0xDDA996 },
-  stone: { default: 0xD9D2C6 },
-  column: { default: 0xD08A7E },
-  soffit: { default: 0xB98B78 },
-  opening: { default: 0x6E5F5A },
-  paving: { default: 0xE0D8CA },
+  ridge: { default: 0xD9B76C, green: 0x6F9A86, red: 0xB8553A },
+  wall: { default: 0xF0E8DD, brick: 0xDDA996, redwood: 0x9A4A3C, darkwood: 0x6E4A40, stone: 0xB9B4AA },
+  stone: { default: 0xD9D2C6, grey: 0x9C9A92 },
+  column: { default: 0xD08A7E, deep: 0xA8473A },
+  soffit: { default: 0xB98B78, dark: 0x7A5A50 },
+  opening: { default: 0x6E5F5A, dark: 0x3F3A38 },
+  paving: { default: 0xE0D8CA, grey: 0xB8B4AC },
 };
 
 export const recipes = [
-  { id: 'tpe-temple-longshan', files: ['108003', '108003A'], eave: 4, dark: 0.16, dropMaterials: { 108003: ['material_15'] },
-    triangles: 6000, maxError: 0.3, tint: { roof: 'brown' } },
-  { id: 'tpe-temple-xingtian', files: ['104001'], eave: 4, dark: 0.16, dropMaterials: { 104001: ['material_121'] },
+  { id: 'tpe-temple-longshan', files: ['108003', '108003A'], eave: 4, dropMaterials: { 108003: ['material_15'] },
+    triangles: 6000, maxError: 0.3 },
+  { id: 'tpe-temple-xingtian', files: ['104001'], eave: 4, dropMaterials: { 104001: ['material_121'] },
     triangles: 5000, maxError: 0.3 },
-  { id: 'tpe-temple-zhinan', files: ['116001'], eave: 4, dark: 0.16, dropMaterials: { 116001: ['material_11'] },
-    triangles: 5000, maxError: 0.3, tint: { roof: 'brown' } },
-  { id: 'tpe-temple-provincial-city-god', files: ['100001'], eave: 4, dark: 0.16, triangles: 3000, maxError: 0.2 },
-  { id: 'tpe-temple-xiahai-city-god', files: ['103002'], eave: 4, dark: 0.16, triangles: 3000, maxError: 0.2 },
-  { id: 'tpe-temple-tianhou', files: ['108001'], eave: 4, dark: 0.16, dropMaterials: { 108001: ['material_18'] },
+  { id: 'tpe-temple-zhinan', files: ['116001'], eave: 4, dropMaterials: { 116001: ['material_11'] },
+    triangles: 5000, maxError: 0.3 },
+  { id: 'tpe-temple-provincial-city-god', files: ['100001'], eave: 4, triangles: 3000, maxError: 0.2 },
+  { id: 'tpe-temple-xiahai-city-god', files: ['103002'], eave: 4, dropMaterials: { 103002: ['material_3'] }, triangles: 3000, maxError: 0.2 },
+  { id: 'tpe-temple-tianhou', files: ['108001'], eave: 4, dropMaterials: { 108001: ['material_18'] },
     triangles: 3000, maxError: 0.2 },
-  { id: 'tpe-temple-qingshui', files: ['108004'], eave: 4, dark: 0.16, triangles: 3000, maxError: 0.2 },
-  { id: 'tpe-church-jinan', files: ['100005'], eave: 6, dark: 0.16, stoneWalls: true, triangles: 5000, maxError: 0.3,
+  { id: 'tpe-temple-qingshui', files: ['108004'], eave: 4, keep: [[-10, -30, 50, 25]], triangles: 3000, maxError: 0.2 },
+  { id: 'tpe-church-jinan', files: ['100005'], eave: 6, stoneWalls: true, triangles: 5000, maxError: 0.3,
     tint: { roof: 'slate', wall: 'brick' } },
-  { id: 'tpe-temple-cixian', files: ['111001_01'], eave: 4, dark: 0.16, triangles: 4000, maxError: 0.3 },
-  { id: 'tpe-temple-huiji', files: ['111003', '111003_archway'], eave: 4, dark: 0.16, dropMaterials: { 111003: ['material_0'] },
+  { id: 'tpe-temple-cixian', files: ['111001_01'], eave: 4, triangles: 4000, maxError: 0.3 },
+  { id: 'tpe-temple-huiji', files: ['111003'], eave: 4, dropMaterials: { 111003: ['material_0'] },
     triangles: 5000, maxError: 0.3 },
 ];

@@ -3,9 +3,9 @@
 // Department of Civil Affairs' "臺北市宗教建築 3D 模型庫" (data.gov.tw 121136,
 // Open Government Data License v1.0). Reads each temple's KMZ (unzipped:
 // `doc.kml` and the SketchUp COLLADA), drops the ground, the terrain and the
-// cut-out trees, sorts every face into a part of the building (roof tile,
-// ridge, wall, column, opening, paving) from its slope, height and the
-// colour of the photo under it, simplifies with meshoptimizer (pinned in
+// nearly clear cut-outs, sorts every face into a part of the building (roof tile,
+// ridge, wall, column, opening, paving) from its slope and height (and,
+// for columns and openings, the colour of the photo under it), simplifies with meshoptimizer (pinned in
 // tools/glb-to-m3dmodel), lets each new face take the part most of its
 // points lie on, and writes it in the game's colours as a `.m3dmodel`. No
 // photo, texture or texture colour is kept.
@@ -50,23 +50,83 @@ function offset(from, to) {
     (to.latitude - from.latitude) * metresPerDegree];
 }
 
-// The part of the building a source face is, before simplification.
-export function classify(t, recipe) {
-  const n = normalOf(t.points), length = Math.hypot(...n);
-  if (length === 0) return null;
-  const nz = n[2] / length, z = centre(t.points)[2];
-  const [h, s, l] = hsl(t.rgb);
-  const red = (h < 22 || h > 340) && s > 0.32 && l > 0.18 && l < 0.7;
-  if (nz > 0.3 && z > recipe.eave) {
-    // Cut porcelain and painted ridges: bright or strongly coloured.
-    if ((s > 0.45 && l > 0.35) || l > 0.72) return 'ridge';
-    return 'roof';
+// The part of the building a source face is, before simplification, from
+// its shape first: an upward face above the eaves is roof, and the narrow
+// band along the top of each roof (within 0.4 m of the highest roof within
+// 2 m) is its ridge, with the cut-out ornaments that stand on it; a downward
+// face is the eaves' underside; an upward face below the eaves is paving.
+// Of the rest (walls), a strongly red one is a column and one much darker
+// than this temple's own walls is an opening (a door, a window).
+export function classifier(triangles, recipe) {
+  const cell = 1, top = new Map(), key = (x, y) => `${x},${y}`;
+  const facts = triangles.map(t => {
+    const n = normalOf(t.points), length = Math.hypot(...n);
+    if (length === 0) return null;
+    const z = centre(t.points)[2];
+    return { nz: n[2] / length, z, low: Math.min(...t.points.map(p => p[2])), hsl: hsl(t.rgb) };
+  });
+  // The highest roof over each metre of ground.
+  triangles.forEach((t, i) => {
+    const f = facts[i];
+    if (!f || f.nz <= 0.3 || f.z <= recipe.eave) return;
+    const xs = t.points.map(p => Math.floor(p[0] / cell)), ys = t.points.map(p => Math.floor(p[1] / cell));
+    const high = Math.max(...t.points.map(p => p[2]));
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x++) for (let y = Math.min(...ys); y <= Math.max(...ys); y++) {
+      top.set(key(x, y), Math.max(top.get(key(x, y)) ?? -Infinity, high));
+    }
+  });
+  const roofTop = point => {
+    const x0 = Math.floor(point[0] / cell), y0 = Math.floor(point[1] / cell);
+    let best = -Infinity;
+    for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) best = Math.max(best, top.get(key(x0 + dx, y0 + dy)) ?? -Infinity);
+    return best;
+  };
+  const isRed = ([h, s, l]) => (h < 22 || h > 340) && s > 0.32 && l > 0.18 && l < 0.7;
+  // This temple's wall lightness: the area-weighted median of its upright faces.
+  const walls = triangles.map((t, i) => [facts[i], areaOf(t.points)])
+    .filter(([f]) => f && Math.abs(f.nz) <= 0.3 && !isRed(f.hsl)).map(([f, a]) => [f.hsl[2], a]).sort((a, b) => a[0] - b[0]);
+  const total = walls.reduce((s, [, a]) => s + a, 0);
+  let median = 0.5;
+  for (let sum = 0, i = 0; i < walls.length; i++) { sum += walls[i][1]; if (sum >= total / 2) { median = walls[i][0]; break; } }
+  const dark = Math.min(recipe.dark ?? 0.3, median * 0.45);
+  return (t, i) => {
+    const f = facts[i];
+    if (!f) return null;
+    const mid = centre(t.points), above = roofTop(mid);
+    // A ridge is narrow: a face more than 2.5 m across is a roof's slope
+    // or a flat roof, however near the top it lies.
+    const across = Math.max(...[0, 1, 2].map(k => Math.hypot(t.points[k][0] - t.points[(k + 1) % 3][0], t.points[k][1] - t.points[(k + 1) % 3][1])));
+    const onRidge = above > recipe.eave && across <= 2.5 && f.low >= above - 1.2 && f.z >= above - 0.4 - (f.nz > 0.3 ? 0 : 0.6);
+    if (t.cutout) return f.z > recipe.eave && onRidge ? 'ridge' : null;
+    if (f.nz > 0.3 && f.z > recipe.eave) return onRidge ? 'ridge' : 'roof';
+    if (f.nz > 0.7) return 'paving';
+    if (f.nz < -0.3) return 'soffit';
+    if (f.z > recipe.eave && onRidge) return 'ridge';
+    if (isRed(f.hsl)) return 'column';
+    if (f.hsl[2] < dark) return 'opening';
+    return recipe.stoneWalls && f.hsl[1] < 0.12 ? 'stone' : 'wall';
+  };
+}
+
+// The game colour of a part nearest a photo's colour (CIE L*a*b*), or the
+// recipe's tint for that part.
+const lab = rgb => {
+  const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  const [r, g, b] = rgb.map(lin);
+  const f = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
+  const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047), y = f(0.2126 * r + 0.7152 * g + 0.0722 * b), z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+};
+const hex = v => [v >> 16 & 255, v >> 8 & 255, v & 255];
+export function paint(cls, photo, recipe) {
+  if (recipe.tint?.[cls]) return colours[cls][recipe.tint[cls]];
+  const target = lab(photo);
+  let best, distance = Infinity;
+  for (const value of Object.values(colours[cls])) {
+    const d = lab(hex(value)).reduce((s, v, k) => s + (v - target[k]) ** 2, 0);
+    if (d < distance) { distance = d; best = value; }
   }
-  if (nz > 0.7) return 'paving';
-  if (nz < -0.3) return 'soffit';
-  if (red) return 'column';
-  if (l < recipe.dark) return 'opening';
-  return recipe.stoneWalls && s < 0.12 ? 'stone' : 'wall';
+  return best;
 }
 
 function read(folder, recipe) {
@@ -85,14 +145,16 @@ function read(folder, recipe) {
     for (const t of model.triangles) {
       if (drop.has(t.material.name)) continue;
       const rgba = triangleColour(t);
-      // Cut-out trees, shrubs and lattices: mostly clear in their texture.
-      if (rgba[3] < 0.5) continue;
+      // A face mostly clear in its texture is a cut-out: a ridge's dragons
+      // and flowers, a lattice, a tree. Nearly clear ones go; the others are
+      // kept only on a ridge (classifier).
+      if (rgba[3] < 0.25) continue;
       const points = t.points.map(([x, y, z]) => [x * cos - y * sin + east, x * sin + y * cos + north, z]);
       if (areaOf(points) < 1e-6) continue;
       const mid = centre(points);
       if (recipe.keep && !recipe.keep.some(([x0, y0, x1, y1]) => mid[0] >= x0 && mid[0] <= x1 && mid[1] >= y0 && mid[1] <= y1)) continue;
       if (recipe.dropBelow !== undefined && Math.max(...points.map(p => p[2])) < recipe.dropBelow) continue;
-      triangles.push({ points, rgb: rgba.slice(0, 3), file });
+      triangles.push({ points, rgb: rgba.slice(0, 3), cutout: rgba[3] < 0.5, file });
     }
   }
   return { origin, triangles, sources };
@@ -146,19 +208,22 @@ async function simplify(triangles, recipe) {
   for (let i = 0; i < kept.length; i += 3) {
     const p = [0, 1, 2].map(k => [0, 1, 2].map(a => points[kept[i + k] * 3 + a]));
     if (areaOf(p) < 1e-6) continue;
-    const votes = new Map(), facing = normalOf(p);
+    const votes = new Map(), facing = normalOf(p), photo = new Map();
     let along = 0;
     for (let a = 0; a < 6; a++) for (let b = 0; b < 6 - a; b++) {
       const w = [(a + 1) / 9, (b + 1) / 9, (7 - a - b) / 9];
       const at = [0, 1, 2].map(k => w[0] * p[0][k] + w[1] * p[1][k] + w[2] * p[2][k]);
       const under = triangles[nearest(at)], n = normalOf(under.points);
       votes.set(under.cls, (votes.get(under.cls) ?? 0) + 1);
+      const sum = photo.get(under.cls) ?? [0, 0, 0];
+      photo.set(under.cls, sum.map((v, k) => v + under.rgb[k]));
       along += Math.sign(n[0] * facing[0] + n[1] * facing[1] + n[2] * facing[2]);
     }
     const cls = [...votes].sort((x, y) => y[1] - x[1] || order.indexOf(x[0]) - order.indexOf(y[0]))[0][0];
     // Wound as the source faces under it face (orientOutward).
     if (along < 0) [p[1], p[2]] = [p[2], p[1]];
-    out.push({ points: p, cls });
+    const sum = photo.get(cls), n = votes.get(cls);
+    out.push({ points: p, cls, photo: sum.map(v => v / n) });
   }
   return { triangles: out, error };
 }
@@ -167,14 +232,14 @@ async function build(folder, output, recipe) {
   const { origin, triangles: read_, sources } = read(folder, recipe);
   const triangles = dedupe(read_);
   const turned = orientOutward(triangles);
-  for (const t of triangles) t.cls = classify(t, recipe);
+  // The ground the temple stands on (its lowest solid face) at z 0.
+  const ground = recipe.groundZ ?? Math.min(...triangles.filter(t => !t.cutout).flatMap(t => t.points.map(p => p[2])));
+  for (const t of triangles) t.points = t.points.map(([x, y, z]) => [x, y, z - ground]);
+  const classify = classifier(triangles, recipe);
+  triangles.forEach((t, i) => { t.cls = classify(t, i); });
   const classed = triangles.filter(t => t.cls !== null);
-  // The ground the temple stands on (its lowest kept face) at z 0.
-  const ground = recipe.groundZ ?? Math.min(...classed.flatMap(t => t.points.map(p => p[2])));
-  for (const t of classed) t.points = t.points.map(([x, y, z]) => [x, y, z - ground]);
   const { triangles: made, error } = await simplify(classed, recipe);
-  const tint = c => colours[c][recipe.tint?.[c] ?? 'default'] ?? colours[c].default;
-  for (const t of made) t.rgb = tint(t.cls);
+  for (const t of made) t.rgb = paint(t.cls, t.photo, recipe);
   const xs = made.flatMap(t => t.points.map(p => p[0])), ys = made.flatMap(t => t.points.map(p => p[1])), zs = made.flatMap(t => t.points.map(p => p[2]));
   const bounds = { west: Math.min(...xs), east: Math.max(...xs), south: Math.min(...ys), north: Math.max(...ys), top: Math.max(...zs) };
   const record = {

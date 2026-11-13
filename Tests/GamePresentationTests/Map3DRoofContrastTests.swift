@@ -175,6 +175,12 @@ final class Map3DRoofContrastTests: XCTestCase {
             let mesh = landmark.model(full: true).placed(origin: .zero, ground: 0, rotation: 0)
             all.append(.init(family: "landmark", name: "\(landmark)", mesh: mesh, look: own, lookName: "own", shoots: true))
         }
+        // Decision 725: Taipei's temples in their own shape, drawn in their
+        // own colours (kept from the look, as the landmarks are).
+        for (temple, model) in Map3DTaipeiTemplesTests.models.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+            let mesh = Map3DTaipeiTemple.placed(model, origin: .zero, ground: 0, roofOnly: false)
+            all.append(.init(family: "taipei-temple", name: temple.rawValue, mesh: mesh, look: own, lookName: "own", shoots: true))
+        }
         for (size, name) in [(RealTemples.Size.large, "large"), (.temple, "temple"), (.small, "small")] {
             guard let temple = Map3DScene.Builder.templeModels[size] else { continue }
             all.append(.init(family: "temple", name: name, mesh: temple.mesh, look: close, lookName: "close",

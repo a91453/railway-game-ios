@@ -951,7 +951,7 @@ final class Map3DSceneCache {
                                               .flatMap { try? FootprintTiles(data: $0) },
                                           heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
-                                          temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
+                                          temples: BaseMapFiles.temples(temples),
                                           noBuild: BaseMapFiles.noBuildLand(noBuild, airfields: airfields),
                                           facades: facades)
             let read = clock.now
