@@ -62,14 +62,48 @@ public struct DrivenRun: Hashable, Sendable, Codable {
     /// Milliseconds spent over the speed limit.
     public let overspeed: Int64
     public let usedEmergency: Bool
+    /// Decision 710: whether the stopping assist held the brake at any
+    /// time of the run. Such a run is marked as any other, paid as one of
+    /// no more than ``assistedBonusMarks`` and never the best on record.
+    /// Written only when `true`.
+    public let assisted: Bool
 
-    public init(train: TrainID, outcome: Outcome, offset: Int64, lateness: Int64, overspeed: Int64, usedEmergency: Bool) {
+    public init(
+        train: TrainID, outcome: Outcome, offset: Int64, lateness: Int64, overspeed: Int64, usedEmergency: Bool, assisted: Bool = false
+    ) {
         self.train = train
         self.outcome = outcome
         self.offset = offset
         self.lateness = lateness
         self.overspeed = overspeed
         self.usedEmergency = usedEmergency
+        self.assisted = assisted
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case train, outcome, offset, lateness, overspeed, usedEmergency, assisted
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        train = try container.decode(TrainID.self, forKey: .train)
+        outcome = try container.decode(Outcome.self, forKey: .outcome)
+        offset = try container.decode(Int64.self, forKey: .offset)
+        lateness = try container.decode(Int64.self, forKey: .lateness)
+        overspeed = try container.decode(Int64.self, forKey: .overspeed)
+        usedEmergency = try container.decode(Bool.self, forKey: .usedEmergency)
+        assisted = try container.decodeIfPresent(Bool.self, forKey: .assisted) ?? false
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(train, forKey: .train)
+        try container.encode(outcome, forKey: .outcome)
+        try container.encode(offset, forKey: .offset)
+        try container.encode(lateness, forKey: .lateness)
+        try container.encode(overspeed, forKey: .overspeed)
+        try container.encode(usedEmergency, forKey: .usedEmergency)
+        if assisted { try container.encode(assisted, forKey: .assisted) }
     }
 
     // MARK: The rules' figures (decision 686's, in whole units)
@@ -136,6 +170,42 @@ public struct DrivingRecord: Hashable, Sendable, Codable {
     public internal(set) var earned: Money
     /// The game second the last was settled at.
     public internal(set) var last: Int64
+    /// Decision 710: those of ``arrivals`` the stopping assist helped
+    /// with. Written only when there are any (since save version 92).
+    public internal(set) var assisted: Int64 = 0
+
+    init(runs: Int64, arrivals: Int64, best: Int, earned: Money, last: Int64, assisted: Int64 = 0) {
+        self.runs = runs
+        self.arrivals = arrivals
+        self.best = best
+        self.earned = earned
+        self.last = last
+        self.assisted = assisted
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case runs, arrivals, best, earned, last, assisted
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        runs = try container.decode(Int64.self, forKey: .runs)
+        arrivals = try container.decode(Int64.self, forKey: .arrivals)
+        best = try container.decode(Int.self, forKey: .best)
+        earned = try container.decode(Money.self, forKey: .earned)
+        last = try container.decode(Int64.self, forKey: .last)
+        assisted = try container.decodeIfPresent(Int64.self, forKey: .assisted) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(runs, forKey: .runs)
+        try container.encode(arrivals, forKey: .arrivals)
+        try container.encode(best, forKey: .best)
+        try container.encode(earned, forKey: .earned)
+        try container.encode(last, forKey: .last)
+        if assisted > 0 { try container.encode(assisted, forKey: .assisted) }
+    }
 }
 
 /// What settling a run driven by hand came to.
@@ -150,8 +220,13 @@ public struct DrivenRunSettlement: Hashable, Sendable {
     /// Whether the company keeps accounts (a managed one), so a good run
     /// is paid for.
     public let keepsAccounts: Bool
-    /// Whether it is the most marks of any run so far.
+    /// Whether it is the most marks of any run so far; never for a run
+    /// the stopping assist helped with (decision 710).
     public let isBest: Bool
+    /// Decision 710: whether the stopping assist kept the run from more:
+    /// it was paid as one of ``DrivenRun/assistedBonusMarks``, less than
+    /// its marks earn unassisted.
+    public let isCapped: Bool
     /// The record with this run in it.
     public let record: DrivingRecord
 }
@@ -169,9 +244,15 @@ extension DrivenRun {
     /// stop is shorter.
     public static let shortestSeconds: Int64 = 20
 
+    /// Decision 710: a run the stopping assist helped with is paid as one
+    /// of no more than this many marks: half of what full marks earn.
+    public static let assistedBonusMarks = 75
+
     /// What a run of `marks` with `riders` on the train earns, in whole
-    /// dollars rounded down.
-    public static func bonus(marks: Int, riders: Int64) -> Money {
+    /// dollars rounded down; `assisted`, as a run of no more than
+    /// ``assistedBonusMarks``.
+    public static func bonus(marks: Int, riders: Int64, assisted: Bool = false) -> Money {
+        let marks = assisted ? min(marks, assistedBonusMarks) : marks
         guard marks > bonusFloor else { return .zero }
         let full = bonusBase + bonusPerRider * max(0, riders)
         return Money(full * Int64(min(marks, 100) - bonusFloor) / Int64(100 - bonusFloor) / 100 * 100)
@@ -205,28 +286,34 @@ extension GameWorld {
         let marks = run.marks
         let riders = riderCount(of: run.train)
         let keepsAccounts = accounts.mode == .management
-        let bonus = keepsAccounts ? DrivenRun.bonus(marks: marks.total, riders: riders) : .zero
+        let bonus = keepsAccounts ? DrivenRun.bonus(marks: marks.total, riders: riders, assisted: run.assisted) : .zero
         if bonus > .zero {
             write(LedgerEntry(
                 kind: .drivenRun, time: clock.now, amount: bonus, breakdown: [LedgerLine(item: .drivingBonus, amount: bonus)]
             ), day: dayIndex(of: clock.now))
         }
         var record = driving ?? DrivingRecord(runs: 0, arrivals: 0, best: 0, earned: .zero, last: now)
-        let isBest = run.outcome == .stopped && (record.arrivals == 0 || marks.total > record.best)
+        // Decision 710: the best on record is of the runs stopped unaided.
+        let unaided = run.outcome == .stopped && !run.assisted
+        let isBest = unaided && (record.arrivals == record.assisted || marks.total > record.best)
         record.runs += 1
         if run.outcome == .stopped { record.arrivals += 1 }
-        record.best = max(record.best, marks.total)
+        if run.outcome == .stopped, run.assisted { record.assisted += 1 }
+        if unaided { record.best = max(record.best, marks.total) }
         record.earned = record.earned + bonus
         record.last = now
         driving = record
-        return DrivenRunSettlement(marks: marks, riders: riders, bonus: bonus, keepsAccounts: keepsAccounts, isBest: isBest, record: record)
+        return DrivenRunSettlement(
+            marks: marks, riders: riders, bonus: bonus, keepsAccounts: keepsAccounts, isBest: isBest,
+            isCapped: keepsAccounts && run.assisted && marks.total > DrivenRun.assistedBonusMarks, record: record
+        )
     }
 
     /// Whether ``driving`` is a record settlements leave.
     func drivingProblem() -> String? {
         guard let driving else { return nil }
         guard driving.runs >= 1, (0...driving.runs).contains(driving.arrivals), (0...100).contains(driving.best),
-              driving.arrivals > 0 || driving.best == 0, driving.earned >= .zero, driving.last <= clock.now.seconds
+              (0...driving.arrivals).contains(driving.assisted), driving.arrivals > driving.assisted || driving.best == 0, driving.earned >= .zero, driving.last <= clock.now.seconds
         else { return "The record of the runs driven by hand is not one settlements leave." }
         return nil
     }

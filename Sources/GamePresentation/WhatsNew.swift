@@ -38,8 +38,17 @@ public enum WhatsNew {
                     english: "On real-world maps, the 3D map now shows intercity coaches driving their routes on their timetables, and a coach station at each coach stop.",
                     chinese: "實景地圖的 3D 地圖上，看得到長途客運照班次沿路線行駛，客運站的位置也有一座客運站。"
                 ),
+                Line(
+                    english: "Driving by hand has a stopping assist: slow down first and it brakes the last metres onto the stopping point. A run it helps earns at most half the bonus; turn it off in the view menu.",
+                    chinese: "手動駕駛多了輔助停車：先把速度降下來，最後幾公尺幫你停準。用了輔助獎金最多一半，可在視角選單關掉。"
+                ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "After a run driven by hand stops, the look from the side stands nearer the train.",
+                    chinese: "手動駕駛停穩後從旁邊看成績時，鏡頭離列車近一些。"
+                ),
+            ]
         ),
         // 128.
         Entry(
