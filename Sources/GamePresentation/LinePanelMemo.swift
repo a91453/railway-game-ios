@@ -57,6 +57,7 @@ public final class LinePanelMemo {
     private var headwayChanges: [Int64: LineHeadwayChange?] = [:]
     private var shortfall: LineTrainShortfall??
     private var runningHeadway: Int64??
+    private var addedTrain: (type: TrainType?, cars: Int, price: Money)??
 
     /// The lines list's train texts, kept for a command and the language
     /// whichever line is selected.
@@ -90,6 +91,7 @@ public final class LinePanelMemo {
         headwayChanges = [:]
         shortfall = nil
         runningHeadway = nil
+        addedTrain = nil
         journey = nil
         purchaseEstimates = [:]
     }
@@ -208,6 +210,25 @@ public final class LinePanelMemo {
         }
         purchaseEstimates[purchase] = (hour, planned, estimate)
         return estimate
+    }
+
+    /// Decision 682, later: ``purchaseEstimate(_:buying:type:cars:headway:price:of:)``
+    /// of the one train "Add a Train" buys (decision 264,
+    /// ``GameSession/addedTrainPurchase(for:)``), the line's round trip
+    /// then shared between its trains as the button sets it.
+    public func addTrainEstimate(_ id: LineID, of session: GameSession) -> TrainPurchaseEstimate? {
+        keep(id, of: session)
+        let train: (type: TrainType?, cars: Int, price: Money)?
+        if let kept = addedTrain {
+            train = kept
+        } else {
+            train = session.addedTrainPurchase(for: id)
+            addedTrain = .some(train)
+        }
+        guard let train else { return nil }
+        return purchaseEstimate(
+            id, buying: 1, type: train.type, cars: train.cars, headway: ServiceLine.minimumHeadwayMinutes, price: train.price, of: session
+        )
     }
 
     /// ``GameWorld/lineTrainShortfall(_:)``.

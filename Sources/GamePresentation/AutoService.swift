@@ -528,12 +528,31 @@ extension GameSession {
     /// needs, or `nil` for a ring or a line whose journey cannot be driven.
     public func autoServicePlan(addingTrainTo id: LineID) -> AutoService? {
         guard let line = world.line(id: id), !line.isRing, world.lineJourney(id) != nil else { return nil }
-        let cars = line.trains.first.flatMap { world.train(id: $0)?.cars } ?? Self.autoServiceCars(for: id, in: world)
+        let cars = addedTrainCars(for: line)
         return AutoService(
             newLine: nil, line: id,
             loops: passingLoopsNeeded(for: id, trains: line.assignedTrains.count + 1, limit: max(1, line.assignedTrains.count), in: world), trains: 1, cars: cars,
             language: language
         )
+    }
+
+    /// The cars of the train "Add a Train" buys for `line`: its first
+    /// train's, or as many as its shortest platform holds.
+    private func addedTrainCars(for line: ServiceLine) -> Int {
+        line.trains.first.flatMap { world.train(id: $0)?.cars } ?? Self.autoServiceCars(for: line.id, in: world)
+    }
+
+    /// Decision 682, later: the train "Add a Train" would buy for line `id`
+    /// (``addTrainToSelectedLine()``), its type, cars and price, as
+    /// ``apply(_:to:)`` buys it, for the estimate over the button; `nil`
+    /// for a ring or a line whose journey cannot be driven. The passing
+    /// loop it may build first is not in the price, as the headway
+    /// button's estimate prices only its trains.
+    public func addedTrainPurchase(for id: LineID) -> (type: TrainType?, cars: Int, price: Money)? {
+        guard let line = world.line(id: id), !line.isRing,
+              let plan = world.lineStaffingPlan(id, headway: ServiceLine.minimumHeadwayMinutes) else { return nil }
+        let cars = addedTrainCars(for: line)
+        return (plan.type, cars, world.purchaseCost(of: plan.type, cars: cars))
     }
 
     /// Puts one more train on the selected line in one tap (decision 264):
