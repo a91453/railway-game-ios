@@ -52,12 +52,15 @@ final class UnlimitedFundsTests: XCTestCase {
     }
 
     /// What is settled is recorded as ever but leaves the balance alone:
-    /// a loan's interest at midnight (the app offers no loan with
-    /// unlimited funds; borrowed here, it brings nothing in either).
+    /// the interest at midnight of a loan borrowed before they were turned
+    /// on (with them on nothing is borrowed: decision 715, section 8,
+    /// `LoanUnlimitedFundsTests`).
     func testSettlementsAreRecordedButNotPaid() throws {
-        var world = try world(balance: 7)
+        var world = try world(balance: 7, unlimited: false)
         try world.borrow(CompanyAccounts.loanStep)
-        XCTAssertEqual(world.economy.balance, 7, "nothing brought in")
+        try world.economy.spend(CompanyAccounts.loanStep)
+        world.setUnlimitedFunds(true)
+        XCTAssertEqual(world.economy.balance, 7)
         world.setSpeed(.normal)
         try world.advance(ticks: 1_441)
         XCTAssertTrue(world.accounts.entries.contains { $0.kind == .dailyInterest && $0.amount < .zero }, "interest recorded")

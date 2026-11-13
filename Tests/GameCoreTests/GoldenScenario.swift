@@ -1327,6 +1327,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidPlatform)
         case "trackReserved":
             self = try .rejected(.trackReserved(container.decodeTrain(forKey: .train)))
+        case "trackClosed":
+            self = try .rejected(.trackClosed(.edge(container.decode(Int.self, forKey: .edge))))
         case "trainsShareTrack":
             let ids = try container.decode([Int].self, forKey: .trains)
             guard ids.count == 2 else {
@@ -1343,6 +1345,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidLoanAmount)
         case "loanNeedsManagement":
             self = .rejected(.loanNeedsManagement)
+        case "loanNeedsLimitedFunds":
+            self = .rejected(.loanNeedsLimitedFunds)
         case "invalidTermLoan":
             self = .rejected(.invalidTermLoan)
         case "invalidLand":
@@ -1583,6 +1587,9 @@ extension StepOutcome: Codable {
         case .rejected(.trackReserved(let id)):
             try container.encode("trackReserved", forKey: .result)
             try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trackClosed(let edge)):
+            try container.encode("trackClosed", forKey: .result)
+            try encodeEdge(edge)
         case .rejected(.trainsShareTrack(let first, let second)):
             try container.encode("trainsShareTrack", forKey: .result)
             try container.encode([first.rawValue, second.rawValue], forKey: .trains)
@@ -1596,6 +1603,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidLoanAmount", forKey: .result)
         case .rejected(.loanNeedsManagement):
             try container.encode("loanNeedsManagement", forKey: .result)
+        case .rejected(.loanNeedsLimitedFunds):
+            try container.encode("loanNeedsLimitedFunds", forKey: .result)
         case .rejected(.invalidTermLoan):
             try container.encode("invalidTermLoan", forKey: .result)
         case .rejected(.invalidLand):

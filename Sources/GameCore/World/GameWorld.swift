@@ -694,6 +694,9 @@ public struct GameWorld: Equatable, Sendable {
             guard let index = after.platforms.firstIndex(of: platform) else { continue }
             after.removePlatform(at: index)
         }
+        // Decision 716: the parts of a closed edge stay closed, those of
+        // one being closed stay so.
+        let closure = after.closure(of: id)
         after.removeEdge(id)
         let (_, nodeNext) = try Self.allocateID(from: after.nextNodeNumber)
         let node = after.addNode(at: middle, next: nodeNext)
@@ -709,6 +712,10 @@ public struct GameWorld: Equatable, Sendable {
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
                                    sections: secondSections, mountain: edge.mountain, geometry: secondGeometry, next: secondNext)
+        if closure != .open {
+            after.setClosure(first, closure)
+            after.setClosure(second, closure)
+        }
         // Spacing along the ways of the network with both parts: alone,
         // neither reaches the junction where the edge parted from track
         // beside it.
@@ -1368,6 +1375,8 @@ public struct GameWorld: Equatable, Sendable {
             let sections = try sections(of: geometry, structure: old.structure)
             if let other = plan.network.firstConflict(from: old.from, to: old.to, curve: curve, geometry: geometry) { throw .trackConflict(other) }
             plan.network.restoreEdge(old, curve: curve, sections: sections, geometry: geometry)
+            // Decision 716: closed, or being closed, as it was.
+            if network.closure(of: old.id) != .open { plan.network.setClosure(old.id, network.closure(of: old.id)) }
             geometries[old.id] = (geometry, sections)
         }
         for id in ids {
@@ -2416,14 +2425,30 @@ public struct GameWorld: Equatable, Sendable {
         try admit(train, at: index)
     }
 
+    /// Makes edge `id`, which exists, open to trains, closing or closed
+    /// (decision 716; ``closeTrack(_:)-(TrackEdgeID)`` and ``openTrack(_:)``
+    /// check the rest), and starts again what is kept between steps from
+    /// the routes the network gives.
+    mutating func setTrackClosure(_ id: TrackEdgeID, _ closure: RailwayNetwork.Closure) {
+        network.setClosure(id, closure)
+        passengerPlan = PassengerPlanCache()
+        passengerRouteMemo = PassengerRouteMemo()
+        routeMemo = RouteMemo()
+    }
+
     /// Puts `candidate`, train `index` with a new place or path, into the
     /// world: under traffic control (Stage T) with the reservation of its
     /// route, in place of its old one, only if no other train holds track
     /// it needs (see ``reserving(_:)``); otherwise nothing changes.
     ///
-    /// - Throws: ``GameError/trackReserved(_:)`` naming the lowest numbered
+    /// - Throws: ``GameError/trackClosed(_:)`` naming the lowest numbered
+    ///   edge closed to trains (decision 716) that it would stand on or
+    ///   its path runs along, or being closed unless the train already
+    ///   stands on such track, with or without traffic control; then
+    ///   ``GameError/trackReserved(_:)`` naming the lowest numbered
     ///   train holding such track.
     private mutating func admit(_ candidate: Train, at index: Int) throws(GameError) {
+        if let closed = closedTrack(under: candidate, now: trains[index]) { throw .trackClosed(closed) }
         switch reserving(candidate) {
         case .granted(let train): trains[index] = train
         case .held(let holder): throw .trackReserved(holder)
@@ -3490,6 +3515,19 @@ public struct GameWorld: Equatable, Sendable {
         var passengerLevels = serviceLevels(at: clock.now)
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
+            // Decision 716, continued: track being closed that the trains
+            // have left is closed, before anything is decided. From here
+            // the step is as a new call would find it: what was kept for
+            // the network as it was is worked out again.
+            if !network.closingEdges.isEmpty, closeTrackTrainsHaveLeft() {
+                if let release { keepRemainders(of: release) }
+                unroutable = []
+                memo = DispatchMemo()
+                endedPlan = passengerPlan
+                release = passengerRelease()
+                releasedFrom = clock.now
+                passengerLevels = serviceLevels(at: clock.now)
+            }
             let start = clock.now
             var changed = false
             // Stage U2: trains following others take what has freed ahead of
@@ -3715,6 +3753,11 @@ public struct GameWorld: Equatable, Sendable {
         }
         if let serviceKey, RouteMemo.ServiceKey(self) == serviceKey {
             routeMemo.keep(memo, for: serviceKey)
+        }
+        // Decision 716, continued: and as the call ends, so that a batch
+        // and its steps leave the same track closed.
+        if steps.seconds > 0, !network.closingEdges.isEmpty {
+            closeTrackTrainsHaveLeft()
         }
     }
 
