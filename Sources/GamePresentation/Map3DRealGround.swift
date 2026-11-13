@@ -77,14 +77,20 @@ extension Map3DScene.Builder {
                 addArea(area, taking: &taken.whole)
             }
         }
+        mark("land cover and water")
         for waterway in map.waterways {
             addStrip(waterway.points, bounds: waterway.bounds, width: waterway.kind.width,
                      lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, water: true, taking: &taken.whole)
         }
+        mark("land cover and water")
         addRoads(map.roads, taking: &taken.byRoads)
+        // Decision 709: what carries the bridges, under their decks.
+        sizing = Map3DFarDetail.bridgeStructure
         addRoadBridges(map.roads)
+        sizing = nil
         // Decision 611: where the roads go into a hill.
         addRoadTunnels(map.tunnelEnds, areas: map.areas)
+        mark("road bridges and tunnels")
         taken.byRoads.subtract(taken.whole)
         return taken
     }
@@ -193,12 +199,16 @@ extension Map3DScene.Builder {
         }
         // Decision 241: the sidewalks first, a strip wider than the road
         // under it, so both edges show and they close at the junctions.
+        sizing = Map3DFarDetail.sidewalks
         for road in roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {
             addStrip(road.points, bounds: road.bounds, width: road.kind.width(ramp: false) + 2 * Self.sidewalk(of: road.kind),
                      lift: Self.sidewalkLift, color: Map3DPalette.sidewalk, paint: Self.paving, raised: true, onDeck: road.bridgeLevel > 0,
                      taking: &taken)
         }
+        mark("sidewalks")
         for kind in Map3DBaseMap.RoadKind.allCases {
+            let size = Map3DFarDetail.size(of: kind)
+            sizing = size.isFinite ? size : nil
             for road in roads where road.kind == kind {
                 addStrip(road.points, bounds: road.bounds, width: kind.width(ramp: road.isRamp), lift: Self.lift(of: kind),
                          color: Map3DPalette.road(kind), paint: nil, raised: true, onDeck: road.bridgeLevel > 0, taking: &taken)
@@ -208,18 +218,25 @@ extension Map3DScene.Builder {
         // stopping at their crossings.
         // Decision 429: the junctions where they are in the world, for
         // their signals' offsets.
+        mark("roads")
         let markings = Map3DRoadMarkings(roads, origin: Map3DBaseMap.Point(x: originX / Double(WorldCoordinate.unitsPerMetre),
                                                                            z: originY / Double(WorldCoordinate.unitsPerMetre)))
         var lines = Set<Map3DScene.ChunkKey>()
+        sizing = Map3DFarDetail.centreLines
         for (number, road) in roads.enumerated() where Self.hasCentreLine(road) {
             for piece in markings.centreLines(of: road, number: number) {
                 addStrip(piece, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
                          raised: true, onDeck: road.bridgeLevel > 0, taking: &lines)
             }
         }
+        mark("centre lines")
+        sizing = Map3DFarDetail.roadMarkings
         addRoadMarkings(markings)
+        sizing = nil
+        mark("road markings")
         addStreetProps(roads)
         addStreetStops(roads, markings: markings)
+        mark("street furniture")
         // Decision 259: their traffic and their pavements' people.
         // Decision 596: waiting at their signals.
         for road in roads where road.points.count >= 2 { addStreetLife(road, markings: markings) }
@@ -619,8 +636,11 @@ extension Map3DScene.Builder {
         guard let left = Map3DPoint(t[4], 0, t[6]).normalized else { return }
         let under = foot + left * Map3DProp.lampReach
         let ring = Map3DProp.poolRing.map { under + $0 * Self.lampPoolRadius }
-        shadows[key(of: foot), default: Map3DMesh()].addPool(centre: onGround([under])[0], ring: onGround(ring), colour: Map3DProp.lampLight,
-                                                              strength: Self.lampPoolStrength)
+        // Decision 709: a pool as wide as its light reaches.
+        let centre = onGround([under])[0], onGroundRing = onGround(ring)
+        shadow(at: key(of: foot), size: 4 * Self.lampPoolRadius) {
+            $0.addPool(centre: centre, ring: onGroundRing, colour: Map3DProp.lampLight, strength: Self.lampPoolStrength)
+        }
     }
 
     /// How far a street light's pool reaches, in metres, and how strong it
