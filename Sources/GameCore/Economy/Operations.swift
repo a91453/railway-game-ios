@@ -142,9 +142,12 @@ extension GameWorld {
     /// in all.
     ///
     /// - Throws, checked in this order: ``GameError/loanNeedsManagement``,
+    ///   ``GameError/loanNeedsLimitedFunds`` with unlimited funds (the
+    ///   loan would go up and no money come in; decision 715, section 8),
     ///   or ``GameError/invalidLoanAmount``.
     public mutating func borrow(_ amount: Money) throws(GameError) {
         guard accounts.mode == .management else { throw .loanNeedsManagement }
+        guard !economy.unlimitedFunds else { throw .loanNeedsLimitedFunds }
         guard Self.isLoanStep(amount), amount <= CompanyAccounts.maximumLoan - accounts.loan,
               economy.balance.amount <= Self.maximumBalance - amount.amount else { throw .invalidLoanAmount }
         accounts.loan = accounts.loan + amount
@@ -157,11 +160,14 @@ extension GameWorld {
     /// free play too, so a company that stopped being managed can still
     /// clear its debt.
     ///
-    /// - Throws, checked in this order: ``GameError/invalidLoanAmount``, or
-    ///   ``GameError/insufficientFunds(required:available:)`` when the
+    /// - Throws, checked in this order: ``GameError/invalidLoanAmount``,
+    ///   ``GameError/loanNeedsLimitedFunds`` with unlimited funds (the
+    ///   loan would go down and no money leave; decision 715, section 8),
+    ///   or ``GameError/insufficientFunds(required:available:)`` when the
     ///   balance is less than `amount`.
     public mutating func repayLoan(_ amount: Money) throws(GameError) {
         guard Self.isLoanStep(amount), amount <= accounts.loan else { throw .invalidLoanAmount }
+        guard !economy.unlimitedFunds else { throw .loanNeedsLimitedFunds }
         try economy.spend(amount)
         accounts.loan = accounts.loan - amount
         bookLoan(repaid: amount)
