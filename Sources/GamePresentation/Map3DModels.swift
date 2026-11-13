@@ -960,10 +960,13 @@ public struct Map3DInstance: Sendable {
     /// for the renderer to draw its light; 0 for any other. Not read by
     /// the shader.
     public var group = 0
+    /// Decision 721: 1 for a train's car, which the night does not dim
+    /// (``Map3DNight``); 0 for anything else.
+    public var lit: Float = 0
 
-    /// The 20 floats the shader reads.
+    /// The 20 floats the shader reads: the last 1, plus ``lit``.
     public var floats: [Float] {
-        transform + [stripe.0, stripe.1, stripe.2, 1]
+        transform + [stripe.0, stripe.1, stripe.2, 1 + lit]
     }
 
     /// The box in scene space round its model of `pack` as placed, or

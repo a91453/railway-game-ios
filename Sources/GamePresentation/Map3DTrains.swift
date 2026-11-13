@@ -373,7 +373,10 @@ public enum Map3DTrains {
             origin.x, origin.y, origin.z, 1,
         ]
         func channel(_ shift: UInt32) -> Float { Float((stripe >> shift) & 0xFF) / 255 }
-        return Map3DInstance(model: index, transform: transform, stripe: (channel(0), channel(8), channel(16)))
+        // Decision 721: a train keeps its light after dark.
+        var car = Map3DInstance(model: index, transform: transform, stripe: (channel(0), channel(8), channel(16)))
+        car.lit = 1
+        return car
     }
 
     /// A train's body colour and the band's, if any.

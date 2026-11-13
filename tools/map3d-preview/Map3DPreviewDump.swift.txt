@@ -143,7 +143,7 @@ final class Map3DPreviewDump: XCTestCase {
                 let c = v.color, share = Float(c >> 24) / 255
                 func mix(_ own: UInt32, _ tint: Float) -> Float { tint + (Float(own) / 255 - tint) * share }
                 floats += [p.x, p.y, p.z, n.x, n.y, n.z, mix(c & 0xFF, prop.stripe.0), mix((c >> 8) & 0xFF, prop.stripe.1),
-                           mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : -1]
+                           mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : prop.lit > 0 ? -20 : -1] // Decision 721: -20, a train's plain face for the page
             }
             indices += (0..<UInt32(model.vertices.count)).map { $0 + first }
         }
