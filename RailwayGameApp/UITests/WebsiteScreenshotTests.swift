@@ -3215,7 +3215,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             settle(seconds: 1)
             keep("air-route-opened-notice\(suffix)", app)
-            openAirports(in: app)
+            openAirports(in: app, english: english)
             keep("air-route-airport-open\(suffix)", app)
             app.terminate()
         }
@@ -3229,9 +3229,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("air-route-airport-progress", app)
     }
 
-    /// Opens the sights from the menu and drags the list up to the second
-    /// airport's row (the scene's Taichung, which flies to Hong Kong).
-    private func openAirports(in app: XCUIApplication) {
+    /// Opens the sights from the menu and drags the list up, a little at a
+    /// time, until the first airport's row that names Hong Kong (the
+    /// scene's Taichung) is whole on screen. `swipeUp()` went past the
+    /// airports to the first sight (run 43369272845), so the picture is
+    /// refused unless that row is on screen.
+    private func openAirports(in app: XCUIApplication, english: Bool = false) {
         let menu = app.buttons["hud.menu"]
         menu.waitUntilSettled()
         menu.tap()
@@ -3240,10 +3243,29 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         app.buttons["menu.tourism"].tap()
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
-        let row = app.descendants(matching: .any)["tourism.airport.1"].firstMatch
-        XCTAssertTrue(row.appears(within: 10), "The airports are listed")
-        settle(seconds: 2)
-        row.swipeUp()
+        XCTAssertTrue(app.descendants(matching: .any)["tourism.airport.1"].firstMatch.appears(within: 10), "The airports are listed")
+        // The row says Hong Kong once the app's data is read and the scene
+        // is told of the flights.
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'tourism.airport.' AND label CONTAINS %@", english ? "Hong Kong" : "香港"))
+            .firstMatch
+        let top = app.frame.minY + 64
+        func whole() -> Bool {
+            row.exists && row.frame.minY >= top && row.frame.maxY <= app.frame.maxY - 12
+        }
+        for step in 0..<40 where !whole() {
+            // Nothing to drag towards until the row is there.
+            if !row.exists, step < 30 {
+                settle(seconds: 6)
+                continue
+            }
+            if row.exists, row.frame.minY < top + 40 { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+                .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(whole(), "The airport's row that names Hong Kong is whole on screen")
         settle(seconds: 1)
     }
 
