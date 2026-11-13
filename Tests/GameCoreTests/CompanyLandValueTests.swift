@@ -98,4 +98,60 @@ final class CompanyLandValueTests: XCTestCase {
         XCTAssertTrue(world.isClaimedByPlacedBuilding(row: 7, column: 6))
         XCTAssertLessThanOrEqual(after.base, before.base)
     }
+
+    // MARK: - Decision 728: the uses of the company's buildings lift the city's land round them
+
+    func testTheTableLiftsByUseAndAFactoryDropsHomes() {
+        XCTAssertEqual(LandValueRules.industryTenths(from: .commercial, to: .residential), 9)
+        XCTAssertEqual(LandValueRules.industryTenths(from: .office, to: .residential), 5)
+        XCTAssertEqual(LandValueRules.industryTenths(from: .residential, to: .office), 3)
+        XCTAssertEqual(LandValueRules.industryTenths(from: .industrial, to: .residential), -9)
+        XCTAssertEqual(LandValueRules.industryTenths(from: .civic, to: .residential), 0, "schools' and hospitals' own premium")
+        XCTAssertEqual(LandValueRules.industryTenths(from: .commercial, to: .commercial), 0, "a use does not lift its own")
+        XCTAssertEqual(LandValueRules.industryTenths(from: .park, to: .residential), 0, "parks are decision 91's")
+        let centre = PlanPoint(x: 0, y: 0)
+        // Strong 9 + middling 5 + weak 3 is 17, at most 14; the drop on top.
+        let tenths = GameWorld.industryTenths(at: centre, of: .residential, [.commercial: [centre], .office: [centre], .leisure: [centre], .industrial: [centre]])
+        XCTAssertEqual(tenths.lift, 14)
+        XCTAssertEqual(tenths.drop, -9)
+        // Two of a use count once; one 400 m away or more, not at all.
+        XCTAssertEqual(GameWorld.industryTenths(at: centre, of: .residential, [.commercial: [centre, centre]]).lift, 9)
+        XCTAssertEqual(GameWorld.industryTenths(at: centre, of: .residential, [.commercial: [PlanPoint(x: 25_600, y: 0)]]).lift, 0)
+        XCTAssertEqual(GameWorld.industryTenths(at: centre, of: .residential, [.commercial: [PlanPoint(x: 25_599, y: 0)]]).lift, 9)
+    }
+
+    func testAHouseLiftsTheOfficesRoundItAndAShopLiftsThemMore() throws {
+        var world = try world(offices: true)
+        let before = try XCTUnwrap(world.landValue(row: 6, column: 5))
+        XCTAssertEqual(before.companyPremium, 0)
+        _ = try world.placeBuilding(.house, at: Self.housePoint)
+        let afterHouse = try XCTUnwrap(world.landValue(row: 6, column: 5))
+        XCTAssertEqual(afterHouse.companyPremium, 900, "homes lift offices weakly: 3 tenths × 300")
+        XCTAssertEqual(afterHouse.value - before.value, 900)
+        _ = try world.placeBuilding(.shop, at: PlanPoint(x: 24_000, y: 38_000))
+        XCTAssertEqual(world.landValue(row: 6, column: 5)?.companyPremium, 2_400, "and shops middling: 3 + 5 tenths")
+        // Empty land has no use to lift.
+        XCTAssertEqual(world.landValue(row: 20, column: 20)?.companyPremium, 0)
+    }
+
+    func testWhatAShopIsBoughtAtIsWhatItsLandIsWorthOnceItStands() throws {
+        var world = try world(offices: true)
+        let quoted = try XCTUnwrap(world.placedBuildingQuote(.shop, at: Self.housePoint))
+        let shop = try world.placeBuilding(.shop, at: Self.housePoint)
+        // Its own use is left out of its land (decision 728), so standing
+        // there adds nothing to what it is worth.
+        XCTAssertEqual(world.saleQuote(of: shop.id)?.landRight, quoted.land)
+        XCTAssertEqual(world.companyLandValue(of: shop)?.companyPremium, 0)
+    }
+
+    func testJobsGoMoreToLiftedCellsAndNoneAreLost() {
+        // Two cells of 100 jobs, plain weights equal; the second lifted 9
+        // tenths. 190 to share: by 10 and 19 tenths, 66 and 124, and the
+        // second has room for only 100, so 24 go back to the first.
+        let shares = GameWorld.steeredShares(190, plain: [100, 100], steered: [1_000, 1_900], room: [500, 100])
+        XCTAssertEqual(shares, [90, 100])
+        XCTAssertEqual(shares.reduce(0, +), 190)
+        // Unlifted, the plain share.
+        XCTAssertEqual(GameWorld.steeredShares(190, plain: [100, 100], steered: [1_000, 1_000], room: [500, 500]), [95, 95])
+    }
 }
