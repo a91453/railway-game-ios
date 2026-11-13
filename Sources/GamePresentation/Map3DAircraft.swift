@@ -285,11 +285,14 @@ public enum Map3DAircraft {
             let corner = scene.point(worldX: 0, worldY: 0, height: 0)
             let far = scene.point(worldX: Double(world.bounds.width), worldY: Double(world.bounds.height), height: 0)
             edges = (min(corner.x, far.x)...max(corner.x, far.x), min(corner.z, far.z)...max(corner.z, far.z))
-            func place(_ point: RealAirfields.Point) -> Map3DPoint? {
+            /// `point` in the scene at height 0; `nil` off the map.
+            func level(_ point: RealAirfields.Point) -> Map3DPoint? {
                 let at = frame.worldPosition(latitude: point.latitude, longitude: point.longitude)
                 guard at.x >= 0, at.y >= 0, at.x < Double(world.bounds.width), at.y < Double(world.bounds.height) else { return nil }
-                let flat = scene.point(worldX: at.x, worldY: at.y, height: 0)
-                return Map3DPoint(flat.x, scene.drawnGround.height(x: flat.x, z: flat.z, world: world), flat.z)
+                return scene.point(worldX: at.x, worldY: at.y, height: 0)
+            }
+            func place(_ point: RealAirfields.Point) -> Map3DPoint? {
+                level(point).map { Map3DPoint($0.x, scene.drawnGround.height(x: $0.x, z: $0.z, world: world), $0.z) }
             }
             var made: [Field] = []
             for (number, field) in airfields.fields.enumerated() {
@@ -308,6 +311,12 @@ public enum Map3DAircraft {
                 guard !runways.isEmpty else { continue }
                 runways.sort { $0.length > $1.length }
                 let noses = field.stands.map { place($0.nose) }
+                // Decision 713: the jet bridges' ends placed once a field,
+                // and level (only how far they are from a stand is asked):
+                // placed again for every stand, each with the ground's
+                // height under it, they were most of the frame the 3D map
+                // opened on (Taoyuan: 40 bridges for each of its stands).
+                let bridgeEnds = field.bridges.compactMap { level($0.to) }
                 var stands: [Stand] = []
                 for (index, stand) in field.stands.enumerated() {
                     guard let nose = noses[index] else { continue }
@@ -319,9 +328,7 @@ public enum Map3DAircraft {
                         // Nose in, away from the nearest runway.
                         forward = Self.away(from: runways, at: nose)
                     }
-                    let bridged = field.bridges.contains { bridge in
-                        place(bridge.to).map { Map3DPoint($0.x - nose.x, 0, $0.z - nose.z).length < 35 } ?? false
-                    }
+                    let bridged = bridgeEnds.contains { Map3DPoint($0.x - nose.x, 0, $0.z - nose.z).length < 35 }
                     stands.append(Stand(nose: nose, forward: forward, room: 0, bridged: bridged))
                 }
                 // The game's airports within 4 km of the airfield's middle.

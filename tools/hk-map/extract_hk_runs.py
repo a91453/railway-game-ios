@@ -28,6 +28,9 @@ def main(folder):
         network = json.load(f)
     tool.LINES = [(SYSTEM, line["id"], None, None) for line in network["lines"]]
     tool.METROS = {SYSTEM}
+    # Decision 712: a train standing overnight at a station between the
+    # ends leaves before the morning's first train the same way reaches it.
+    tool.OUT_BEFORE_FIRST = True
     out = os.path.join(folder, "metro_runs.json")
     tool.main(folder, out)
     with open(out, encoding="utf-8") as f:

@@ -12,7 +12,9 @@
 | `mtr_lines_and_stations.csv` | 港鐵開放資料「港鐵路綫及車站」，`https://opendata.mtr.com.hk/data/mtr_lines_and_stations.csv` | 「資料一線通」使用條款及條件；知識產權屬香港鐵路有限公司 |
 | 下一班列車 | 港鐵開放資料「下一班列車」，`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=<綫>&sta=<站>` | 同上 |
 
-三個來源這個環境都連得到，不用改網路設定。OSM 用整包加 pyosmium（`pip install osmium`，BSD 2-Clause，決策 93），不問 Overpass。
+| `hkg_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop，香港 2025，constrained，30 角秒（約 1 公里）一格，R2025A v1（和台灣的 `taiwan_population.json` 同一個系列），`https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif`（12 KB） | CC BY 4.0，WorldPop |
+
+四個來源這個環境都連得到，不用改網路設定。OSM 用整包加 pyosmium（`pip install osmium`，BSD 2-Clause，決策 93），不問 Overpass。
 
 每次建出來讀了什麼（檔案的 SHA-256、取樣的時段、每條綫用的 OSM 路線關係與公里數）寫在 `hk_sources.json`。
 
@@ -39,8 +41,14 @@ python3 -I tools/hk-map/build_hk_mtr.py /tmp/hk/osm/hong_kong.pbf \
 # 4. 把每條綫一天的車排成車組的班次（買下之後照這個跑）。
 python3 -I tools/hk-map/extract_hk_runs.py RailwayGameApp/Resources/MapPacks/hongkong
 
+# 5. 香港的人口（決策 712），並把地圖的範圍寫進 pack.json。
+pip install tifffile imagecodecs numpy
+mkdir -p /tmp/hk/pop
+curl -L -o /tmp/hk/pop/hkg.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif
+python3 -I tools/hk-map/build_hk_ground.py /tmp/hk/pop/hkg.tif RailwayGameApp/Resources/MapPacks/hongkong
+
 swift build --build-tests -Xswiftc -warnings-as-errors
-swift test --skip-build --filter HongKongRailwaysTests
+swift test --skip-build --filter "HongKongRailwaysTests|HongKongMapTests"
 ```
 
 取樣的原始回應（幾十 MB）不進 repo；進 repo 的是算出來的 `service.json`。
@@ -51,6 +59,7 @@ swift test --skip-build --filter HongKongRailwaysTests
   寫出 `hkmtr.json`（營運資料）、`hkmtr_times.json`（時刻）、`track_lines.geojson`、`track_stations.geojson`、`station_names.json`、`rail_structures.json`、`pack.json`。
 - **`sample_next_train.py`**：把每條綫每一站的「下一班列車」問一輪，原樣存成一輪一個 JSON。
 - **`next_train_service.py`**：同一班車在相鄰兩站的預計到站時間相減，是那一段的行車加停站時間；取每一段所有樣本的中位數。只配開往兩站都列得出的目的地的車（終點站不列到站的車）；只收「A 站看得到的每一班車在 B 站都對得上」的差（15 秒內、至少兩班），幾個都對得上時取配到最多班的、再取最短而列車跑得到的（130 km/h）：開放資料只給整分鐘，班距平均時晚一個班距的差也對得上。班距是同一站開往終點的相鄰兩班的間隔，尖峰（07:30–09:30、17:30–19:30）與其餘時段各取中位數。頭班車取樣本裡 04:00 之後最早的一班；末班車樣本沒有涵蓋，寫 00:30（估計，檔案裡註明）。哪一段可用的樣本不到 5 個、或中位數不是列車的速度（低於 20 km/h 或高於 130），用這條綫的中位速度（整條綫都沒有時用全部綫的）除距離補，並在 `service.json` 寫 `runSamples: 0`。
+- **`build_hk_ground.py`**（決策 712）：把 WorldPop 的香港人口格網寫成 `population.json`，格式和台灣的 `taiwan_population.json` 一樣（`PopulationGrid` 讀），合計 7,396,724 人、277 段、12 KB；檢查每一格有人的地方都在地圖範圍內。地圖範圍是 `build_hk_mtr.py` 的 `EXTENT`（WorldPop 香港格網的外框，北 22.5584、南 22.15、西 113.8333、東 114.4417，約 62.6 × 45.5 公里），寫進 `pack.json` 的 `extent`；遊戲照它開香港的世界（`MapPack.extent()`、`OverseasGround`），不再是 16 公里見方。
 - **`extract_hk_runs.py`**：用 `tools/real-timetables/extract_metro_runs.py` 同一套排法（一列車到終點後折返接下一班，夜裡停在哪就從哪出車），把 `hkmtr_times.json` 排成 `metro_runs.json`，並更新 `pack.json`。終點站停不下那麼多車的綫會被留在外面並列出來：那條綫就還不能買。
 
 ## 哪些來自哪一邊

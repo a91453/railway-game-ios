@@ -300,8 +300,14 @@ def write(folder, name, value):
 # Where each part of each file of the pack comes from (`pack.json`), so the
 # parts that are MTR's can be told from OpenStreetMap's and taken out
 # without making the rest again.
-OSM, MTR, OURS = "OpenStreetMap", "MTR open data", "this project"
+OSM, MTR, OURS, WORLDPOP = "OpenStreetMap", "MTR open data", "this project", "WorldPop"
+# Decision 712: how far Hong Kong's map reaches, in degrees: the box of
+# WorldPop's grid of Hong Kong (`build_hk_ground.py`), which holds all its
+# land and every line here, some 62 km by 45 km. The game lays the city's
+# world over this box (`MapPack.extent`), not over a 16 km square.
+EXTENT = {"north": 22.5584, "south": 22.1500, "west": 113.8333, "east": 114.4417}
 SOURCES = {
+    "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
     "track_lines.geojson": {"geometry": OSM, "color": OSM, "id (MTR's line code)": MTR, "name": OURS},
     "track_stations.geojson": {"geometry": OSM, "name (checked against MTR's list)": OSM, "name of 茘景 and 茘枝角 (MTR's form of 荔)": MTR, "color": OSM,
                                "code (MTR's station code)": MTR},
@@ -320,16 +326,20 @@ def write_manifest(folder):
     where its parts come from."""
     files = {name: {"bytes": os.path.getsize(os.path.join(folder, name)), "sources": SOURCES[name]}
              for name in sorted(SOURCES) if os.path.exists(os.path.join(folder, name))}
+    licences = {
+        OSM: "© OpenStreetMap contributors, ODbL 1.0",
+        MTR: "MTR Corporation Limited, DATA.GOV.HK Terms and Conditions of Use",
+    }
+    if "population.json" in files:
+        licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
     write(folder, "pack.json", {
         "id": "hongkong", "system": SYSTEM, "decision": 697,
         "english": "Hong Kong", "chinese": "香港",
         "_readme": "Hong Kong's map pack: MTR's ten heavy-rail lines in the formats and under the file names of "
                    "Taiwan's real railways, read from this folder alone. Made by tools/hk-map (README.md there).",
         "bytes": sum(f["bytes"] for f in files.values()),
-        "licences": {
-            OSM: "© OpenStreetMap contributors, ODbL 1.0",
-            MTR: "MTR Corporation Limited, DATA.GOV.HK Terms and Conditions of Use",
-        },
+        "extent": EXTENT,
+        "licences": licences,
         "files": files,
     })
 

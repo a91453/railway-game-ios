@@ -182,7 +182,9 @@ public struct DemoRealLines: Sendable {
             let type = trainType(ofLine: key, system: first.system.id)
             let length = Double(platformLength(cars: cars, of: type, carLength: carLength, real: real))
             for chain in Self.chains(lines.map { $0.points.map(world) }) {
-                let path = WorldPath(chain)
+                // Decision 712: an overseas line's drawing ends at its end
+                // stations, so it goes straight on past them.
+                let path = WorldPath(OverseasMap.allCases.contains { $0.system == first.system.id } ? runningOn(chain, by: length / 2 + runOn) : chain)
                 guard path.points.count > 1 else { continue }
                 // Its stations on this piece, in order along it, each with
                 // room for its platform and the track between.
@@ -219,6 +221,19 @@ public struct DemoRealLines: Sendable {
             }
         }
         return DemoRealLines(routes: routes)
+    }
+
+    /// `chain` going straight on by `distance` past each end, as it leaves
+    /// it (decision 712): the MTR's lines are drawn from end station to end
+    /// station, with no track beyond for the end platform to stand whole on
+    /// and the crossover past it (``runOn``), and the demo left every end
+    /// station out and laid no line of two stations.
+    static func runningOn(_ chain: [WorldVector], by distance: Double) -> [WorldVector] {
+        func beyond(_ points: [WorldVector]) -> WorldVector? {
+            guard let end = points.last, let before = points.last(where: { ($0 - end).length >= metre }) else { return nil }
+            return end + (end - before) * (distance / (end - before).length)
+        }
+        return [beyond(chain.reversed())].compactMap { $0 } + chain + [beyond(chain)].compactMap { $0 }
     }
 
     /// The pieces of a line joined end to end where one ends within
