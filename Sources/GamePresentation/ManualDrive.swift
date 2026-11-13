@@ -167,11 +167,13 @@ public struct ManualDrive: Equatable, Sendable {
         /// figures in whole world units and milliseconds, which the marks
         /// here are worked out from too, so the world gives it the same.
         public func run(of train: TrainID) -> DrivenRun {
-            Self.run(of: train, outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency)
+            Self.run(of: train, outcome: outcome, offset: offset, lateness: lateness, overspeedSeconds: overspeedSeconds, usedEmergency: usedEmergency,
+                     assisted: assisted)
         }
 
         private static func run(
-            of train: TrainID, outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool
+            of train: TrainID, outcome: Outcome, offset: Double, lateness: Double, overspeedSeconds: Double, usedEmergency: Bool,
+            assisted: Bool = false
         ) -> DrivenRun {
             func whole(_ value: Double) -> Int64 {
                 Int64(min(max(value.rounded(), -Double(DrivenRun.longest)), Double(DrivenRun.longest)))
@@ -183,7 +185,7 @@ public struct ManualDrive: Equatable, Sendable {
             }
             return DrivenRun(
                 train: train, outcome: kind, offset: whole(offset * Double(WorldCoordinate.unitsPerMetre)), lateness: whole(lateness * 1_000),
-                overspeed: max(0, whole(overspeedSeconds * 1_000)), usedEmergency: usedEmergency
+                overspeed: max(0, whole(overspeedSeconds * 1_000)), usedEmergency: usedEmergency, assisted: assisted
             )
         }
 
@@ -645,12 +647,15 @@ extension ManualDrive {
     /// was and the best so far. Nothing for a run that did not stop.
     static func settlementText(_ settled: DrivenRunSettlement, stopped: Bool, in language: DisplayLanguage) -> String? {
         guard stopped else { return nil }
-        let best = settled.isBest && settled.record.arrivals > 1 ? language.text(" · new best", " · 新紀錄") : ""
+        // Decision 710: the best is of the runs stopped unaided, and a
+        // run the assist kept from more says so.
+        let unaided = settled.record.arrivals - settled.record.assisted
+        let best = settled.isBest && unaided > 1 ? language.text(" · new best", " · 新紀錄") : ""
         if settled.bonus > .zero {
             let riders = settled.riders.groupedText
             return language.text(
                 "Earned the company \(settled.bonus.moneyText) · \(riders) aboard", "替公司多賺 \(settled.bonus.moneyText) · 車上 \(riders) 人"
-            ) + best
+            ) + best + (settled.isCapped ? language.text(" · more without the assist", " · 不用輔助賺更多") : "")
         }
         if settled.keepsAccounts {
             return language.text(
@@ -658,6 +663,7 @@ extension ManualDrive {
             )
         }
         let runs = settled.record.runs.groupedText
+        guard unaided > 0 else { return language.text("Run \(runs) by hand", "手動駕駛第 \(runs) 趟") }
         return language.text("Run \(runs) by hand · best \(settled.record.best) points", "手動駕駛第 \(runs) 趟 · 最佳 \(settled.record.best) 分")
     }
 

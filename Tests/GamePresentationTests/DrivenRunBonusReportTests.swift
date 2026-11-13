@@ -24,7 +24,10 @@ import XCTest
 ///   ``GameWorld/manualDriveTakeOver(of:)`` and
 ///   ``ManualDriveRun/shortestMetres`` allow), driven to its stop on
 ///   time, and settled with full marks for those on the train then;
-/// - the same player at 85 marks.
+/// - the same player at 85 marks;
+/// - the same player with the stopping assist (decision 710) at full
+///   marks, at 85 and at 75: paid as runs of no more than
+///   ``DrivenRun/assistedBonusMarks``.
 @MainActor
 final class DrivenRunBonusReportTests: XCTestCase {
     func testWhatADayOfRunsDrivenByHandEarns() throws {
@@ -45,6 +48,7 @@ final class DrivenRunBonusReportTests: XCTestCase {
         let counted = world.dayIndex(of: world.clock.now)
         var everyTick = (runs: 0, earned: Int64(0), refused: 0)
         var player = (runs: 0, full: Int64(0), good: Int64(0), riders: Int64(0), seconds: Int64(0))
+        var assisted = (full: Int64(0), good: Int64(0), fair: Int64(0), most: Int64(0), mostUnaided: Int64(0))
         // The run the player drives: its train and when it reaches its stop.
         var driving: (train: TrainID, until: Int64)?
         for _ in 0..<1_440 {
@@ -58,6 +62,11 @@ final class DrivenRunBonusReportTests: XCTestCase {
                 player.riders += riders
                 player.full += DrivenRun.bonus(marks: 100, riders: riders).amount
                 player.good += DrivenRun.bonus(marks: 85, riders: riders).amount
+                assisted.full += DrivenRun.bonus(marks: 100, riders: riders, assisted: true).amount
+                assisted.good += DrivenRun.bonus(marks: 85, riders: riders, assisted: true).amount
+                assisted.fair += DrivenRun.bonus(marks: 75, riders: riders, assisted: true).amount
+                assisted.most = max(assisted.most, DrivenRun.bonus(marks: 100, riders: riders, assisted: true).amount)
+                assisted.mostUnaided = max(assisted.mostUnaided, DrivenRun.bonus(marks: 100, riders: riders).amount)
                 driving = nil
             }
             if driving == nil {
@@ -105,6 +114,11 @@ final class DrivenRunBonusReportTests: XCTestCase {
             "| A player who never stops, full marks | \(player.runs) | \(dollars(player.full)) | \(share(player.full)) | "
                 + "\(dollars(player.full / Int64(max(1, player.runs)))) | \(player.riders / Int64(max(1, player.runs))) |",
             "| The same at 85 marks | \(player.runs) | \(dollars(player.good)) | \(share(player.good)) | \(dollars(player.good / Int64(max(1, player.runs)))) | |",
+            "| With the stopping assist, full marks | \(player.runs) | \(dollars(assisted.full)) | \(share(assisted.full)) | \(dollars(assisted.full / Int64(max(1, player.runs)))) | |",
+            "| With the stopping assist, 85 marks | \(player.runs) | \(dollars(assisted.good)) | \(share(assisted.good)) | \(dollars(assisted.good / Int64(max(1, player.runs)))) | |",
+            "| With the stopping assist, 75 marks (as without it) | \(player.runs) | \(dollars(assisted.fair)) | \(share(assisted.fair)) | \(dollars(assisted.fair / Int64(max(1, player.runs)))) | |",
+            "",
+            "The best-paid run of the day: \(dollars(assisted.mostUnaided)) unaided, \(dollars(assisted.most)) with the stopping assist.",
             "",
             "The player drove \(player.seconds / 60) of the day's 1440 minutes (the rest: no run to take over).",
         ].joined(separator: "\n"))

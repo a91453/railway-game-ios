@@ -197,6 +197,50 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertNil(try CommandLogReplay(report).stopped?.reason, "the settlement replays")
     }
 
+    /// Decision 710: a run the stopping assist brought to its stand is
+    /// told to the world as assisted: paid as one of no more than 75
+    /// marks, counted as helped and not the best, and the card says more
+    /// is earned without; the logged game replays to the same world.
+    func testAnAssistedRunIsSettledAsAssistedAndTheCardSaysSo() throws {
+        let (session, train) = try makeSession(managed: true)
+        session.startManualDrive(assist: true)
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDrivePhase == .driving })
+        session.nearStopForScreenshot(assisting: 40)
+        XCTAssertEqual(session.manualDriveReading?.isAssisting, true, "the look at the assist holding the brake")
+        XCTAssertEqual(session.manualDriveReading?.stopBar?.state, .short)
+        XCTAssertEqual(session.manualDriveReading?.phase, .driving)
+        session.finishManualDriveForScreenshot(assisted: true)
+        let result = try XCTUnwrap(session.manualDriveReading?.result)
+        XCTAssertEqual(result.outcome, .stopped)
+        XCTAssertTrue(result.assisted)
+        XCTAssertLessThanOrEqual(abs(result.offset), 0.5, "on the target")
+        XCTAssertGreaterThanOrEqual(result.total, 95)
+        XCTAssertTrue(result.run(of: train).assisted)
+        let settled = try XCTUnwrap(session.manualDriveSettlement)
+        XCTAssertEqual(settled.marks.total, result.total, "the marks are the run's own")
+        XCTAssertEqual(settled.bonus, DrivenRun.bonus(marks: DrivenRun.assistedBonusMarks, riders: session.world.riderCount(of: train)))
+        XCTAssertGreaterThan(settled.bonus, .zero)
+        XCTAssertTrue(settled.isCapped)
+        XCTAssertFalse(settled.isBest)
+        XCTAssertEqual(session.world.driving?.assisted, 1)
+        XCTAssertEqual(session.world.driving?.best, 0)
+        let logged = session.commandLog.entries.filter {
+            if case .command(.edit(.settleDrivenRun(let run))) = $0.action { return run.assisted && !$0.refused }
+            return false
+        }
+        XCTAssertEqual(logged.count, 1)
+        let zh = result.text(in: .traditionalChinese, settled: settled).lines
+        XCTAssertTrue(zh.contains("用了輔助停車"), "\(zh)")
+        XCTAssertTrue(zh.last?.hasSuffix(" · 不用輔助賺更多") == true, "\(zh)")
+        XCTAssertFalse(zh.last?.contains("新紀錄") == true)
+        XCTAssertTrue(result.text(in: .english, settled: settled).lines.last?.hasSuffix(" · more without the assist") == true)
+        let report = try JSONDecoder().decode(
+            CommandLogReport.self, from: session.commandLogReport(version: "0.6.0", build: "129", data: [:]).encoded()
+        )
+        XCTAssertNil(try CommandLogReplay(report).stopped?.reason, "the settlement replays")
+    }
+
     /// Decision 690: the driving card names the way and, once the run is
     /// taken over, the stop driven to; it keeps that stop while the
     /// world's train runs on, stands there and turns back.

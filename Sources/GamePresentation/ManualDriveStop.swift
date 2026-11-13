@@ -144,6 +144,10 @@ extension ManualDrive {
     public enum StopLook {
         /// How long the look from beside lasts unless the player ends it.
         public static let seconds = 8.0
+        /// How near the look stands, as a share of the view from beside's
+        /// own distance (``Map3DFollow/lookScale``): the train some six
+        /// tenths of the screen's width, clear of the result card.
+        public static let scale: Float = 0.45
 
         /// Whether a run that ended with `result` is looked at from
         /// beside: one that stopped at its stop, and not with Reduce
@@ -157,6 +161,11 @@ extension ManualDrive {
         /// (`looking`: since it stopped, until ``seconds`` have passed).
         public static func view(chosen: Map3DFollow.View, result: Result?, looking: Bool, reduceMotion: Bool) -> Map3DFollow.View {
             looking && turns(for: result, reduceMotion: reduceMotion) ? .side : chosen
+        }
+
+        /// The look's own distance while it lasts; `nil` otherwise.
+        public static func scale(result: Result?, looking: Bool, reduceMotion: Bool) -> Float? {
+            looking && turns(for: result, reduceMotion: reduceMotion) ? scale : nil
         }
 
         /// The result card's button: "Back to the cab" while a player who
@@ -247,8 +256,8 @@ extension ManualDrive {
 
         /// Under the switch, and what VoiceOver adds to it.
         public static func hint(in language: DisplayLanguage) -> String {
-            language.text("Brakes the last metres onto the stopping point once you have slowed down. A run it helps earns less.",
-                          "你先把速度降下來，最後幾公尺幫你停在停車目標上。用了輔助的一趟賺得比較少。")
+            language.text("Brakes the last metres onto the stopping point once you have slowed down. A run it helps earns at most half the bonus.",
+                          "你先把速度降下來，最後幾公尺幫你停在停車目標上。用了輔助的一趟，獎金最多一半。")
         }
 
         /// Beside the stopping bar while it holds the brake.

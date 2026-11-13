@@ -462,13 +462,21 @@ struct Map3DPreviewScreen: View {
     /// behind.
     private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
         var view = ambient?.view3D ?? followView
-        // Decision 710: a run that has just stopped, from beside the train.
+        // Decision 710: a run that has just stopped, from beside the train
+        // and nearer than the view from beside stands.
+        var lookScale: Float?
         if ambient == nil, looksAtStop, session.manualDrivePhase == .over {
-            view = ManualDrive.StopLook.view(chosen: view, result: session.manualDriveReading?.result, looking: true, reduceMotion: reduceMotion)
+            let result = session.manualDriveReading?.result
+            view = ManualDrive.StopLook.view(chosen: view, result: result, looking: true, reduceMotion: reduceMotion)
+            lookScale = ManualDrive.StopLook.scale(result: result, looking: true, reduceMotion: reduceMotion)
         }
         // Decision 606 (IDLEREAL): the idle mode's real train.
         if let real = ambient?.realTrain { return Map3DFollow(realTrain: real, view: view) }
-        if let train = session.followedTrain { return Map3DFollow(train: train.id, view: view) }
+        if let train = session.followedTrain {
+            var follow = Map3DFollow(train: train.id, view: view)
+            follow.lookScale = lookScale
+            return follow
+        }
         if let bus = session.followedBusID, session.busFollowBar != nil { return Map3DFollow(bus: bus, view: view == .station ? .back : view) }
         // Decision 583 (CABLEFOLLOW): a cabin, from its window, above or beside.
         if let cabin = session.followedCabinID, session.cabinFollowBar != nil { return Map3DFollow(cabin: cabin, view: view) }
@@ -2584,11 +2592,14 @@ private struct Map3DFollowBar: View {
                 // The screenshot review's look at a run's result.
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result") { session.finishManualDriveForScreenshot() }
+                if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-result-assisted") { session.finishManualDriveForScreenshot(assisted: true) }
                 if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-near") { session.nearStopForScreenshot() }
                 // Decision 710: standing short of the mark, on it, past it.
                 if let metres = ["short": 12, "target": 0.2, "past": -3][UserDefaults.standard.string(forKey: "screenshot-drive-stand") ?? ""] {
                     session.nearStopForScreenshot(standing: metres)
                 }
+                // Decision 710: 40 m short, the stopping assist holding the brake.
+                if ProcessInfo.processInfo.arguments.contains("-screenshot-drive-assist") { session.nearStopForScreenshot(assisting: 40) }
                 #endif
             } label: {
                 Text(verbatim: ManualDrive.startText(in: session.language))
@@ -3213,6 +3224,9 @@ private struct Map3DDriveHeading: View {
                 case nil: nil
                 }
             }
+            // The stopping assist taking the brake is felt once, softly:
+            // the handle is no longer the player's alone.
+            .sensoryFeedback(.impact(flexibility: .soft), trigger: reading.isAssisting) { was, now in !was && now }
         }
     }
 

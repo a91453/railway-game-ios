@@ -193,13 +193,22 @@ extension GameSession {
     /// ends as one stopped just short of the mark, a few seconds late, so
     /// its result can be looked at without driving a whole run. Decision
     /// 710: at the run's own stopping point, so the train is looked at
-    /// where it would stand.
-    public func finishManualDriveForScreenshot() {
+    /// where it would stand; with `assisted`, the stopping assist brings
+    /// it to the stand, from the handle in neutral.
+    public func finishManualDriveForScreenshot(assisted: Bool = false) {
         guard var run = manualDriveRun, let driving = run.driving else { return }
         let stop = driving.drive.course.stop
-        var drive = ManualDrive(train: driving.drive.train, course: .init(stop: stop, scheduled: -4), speed: 0.3, distance: stop - 0.8)
-        drive.set(ManualDrive.Notch(step: -ManualDrive.timetableBrakeStep))
-        drive.advance(seconds: 5)
+        var drive: ManualDrive
+        if assisted {
+            let train = driving.drive.train
+            drive = ManualDrive(train: train, course: .init(stop: stop, scheduled: 2), speed: (2 * 20 * 0.8 * train.braking).squareRoot(), distance: stop - 20)
+            drive.setAssist(true)
+            for _ in 0..<12 where !drive.isOver { drive.advance(seconds: 5) }
+        } else {
+            drive = ManualDrive(train: driving.drive.train, course: .init(stop: stop, scheduled: -4), speed: 0.3, distance: stop - 0.8)
+            drive.set(ManualDrive.Notch(step: -ManualDrive.timetableBrakeStep))
+            drive.advance(seconds: 5)
+        }
         run.driving = (driving.track, drive, driving.length)
         manualDriveRun = run
         settleManualDrive()
@@ -212,11 +221,20 @@ extension GameSession {
     /// be looked at without driving a whole run. Decision 710: with
     /// `standing`, the train stands that many metres short of its own
     /// stopping point instead (negative: past it), the handle in neutral,
-    /// so the stopping bar's three states can be looked at.
-    public func nearStopForScreenshot(standing: Double? = nil) {
+    /// so the stopping bar's three states can be looked at; with
+    /// `assisting`, it runs that many metres short of it instead, at a
+    /// speed the stopping assist takes the brake at, and the assist has it.
+    public func nearStopForScreenshot(standing: Double? = nil, assisting: Double? = nil) {
         guard var run = manualDriveRun, let driving = run.driving else { return }
         var drive: ManualDrive
-        if let standing {
+        if let assisting {
+            let stop = driving.drive.course.stop, train = driving.drive.train
+            // Stopping there asks for some eight tenths of the timetable's braking.
+            let speed = (2 * assisting * 0.8 * train.braking).squareRoot() - 0.8 * train.braking * ManualDrive.StopAssist.leadSeconds
+            drive = ManualDrive(train: train, course: .init(stop: stop, scheduled: 60), speed: speed, distance: stop - assisting)
+            drive.setAssist(true)
+            drive.advance(seconds: 0.02)
+        } else if let standing {
             let stop = driving.drive.course.stop
             drive = ManualDrive(train: driving.drive.train, course: .init(stop: stop, scheduled: 60), speed: 0, distance: stop - standing)
         } else {

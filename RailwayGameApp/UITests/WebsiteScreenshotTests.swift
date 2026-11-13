@@ -1509,6 +1509,36 @@ final class WebsiteScreenshotTests: XCTestCase {
             done.tap()
             XCTAssertTrue(app.buttons["map3D.drive.start"].appears(within: 5), "The handle is given back")
         }
+        // The stopping assist: holding the brake 40 m short, its switch in
+        // the view menu, and the result of a run it helped.
+        do {
+            let app = open3DInCab(extra: ["-screenshot-drive-assist"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            let spoken = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@ AND value != nil AND value != ''", "map3D.drive.stopBar")).firstMatch
+            XCTAssertTrue(spoken.appears(within: 10), "The stopping bar shows while the assist brakes")
+            settle(seconds: 8)
+            keep("drive-stop-assist", app)
+            let views = app.buttons["map3D.drive.view"]
+            XCTAssertTrue(views.becomesHittable(within: 5))
+            views.tap()
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.drive.assist"].firstMatch.appears(within: 5), "The assist's switch is in the view menu")
+            settle(seconds: 1)
+            keep("drive-stop-assist-menu", app)
+        }
+        do {
+            let app = open3DInCab(extra: ["-screenshot-drive-result-assisted"])
+            defer { app.terminate() }
+            let start = app.buttons["map3D.drive.start"]
+            XCTAssertTrue(start.becomesHittable(within: 10))
+            start.tap()
+            XCTAssertTrue(app.buttons["map3D.drive.done"].becomesHittable(within: 10), "The run's result shows")
+            settle(seconds: 4)
+            keep("drive-stop-assisted-result", app)
+        }
     }
 
     /// Decision 686: driving the followed train by hand from its cab: the
