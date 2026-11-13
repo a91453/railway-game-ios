@@ -10,6 +10,15 @@
 - 第三級截圖：`website-screenshots.yml`，`tests: testManualDriveStop`。**規劃看過圖才合。**
 - UNVERIFIED：實機觸覺、iPad、淺色、大字級、VoiceOver 實際念法；「旁邊」視角固定在列車左側，島式月台時月台在車的另一側。
 
+### PR 1 還欠的一件：看成績的鏡頭拉近（規劃第 63 任，2026-11-12 看圖後）
+
+停穩後從旁邊看成績那一下，列車大約佔畫面寬的六成（現在約三成半），成績卡不要蓋到車；**只改這個鏡頭的距離，不動既有的「旁邊」跟隨視角**。DRIVE-STOP 沒做（已壓縮 1 次；要動別的 session 正在改的 `Map3DMetalView.swift`）。
+
+- 距離是 `Map3DFollow.scale`（`Map3DFollow.swift`，`.side` 的鏡頭位置乘上它；範圍 `Map3DFollow.scales` 0.4…4）。照現在的圖估，`scale` 約 0.55–0.6 會到六成。
+- 卡住的地方：`Map3DMetalView.follow(_:reduceMotion:)` 在同一班車換視角時只換 `view` 與 `lookout`，**保留畫面自己的 `scale`**（玩家捏合的距離），所以從 `Map3DPreviewScreen.followed(ambient:)` 傳進去的 `scale` 沒有用。
+- 建議：`ManualDrive.StopLook` 加一個 `scale` 常數（GamePresentation，可測）；`Map3DFollow` 加一個可省略的「這次看的距離」（例如 `lookScale: Float?`，不為 nil 時 `.side` 的 `k` 用它、不用 `scale`），`follow(_:reduceMotion:)` 換視角時把它一起帶過去。這樣玩家捏合的距離不會被蓋掉，8 秒後回去還是原來的。`Map3DMetalView.swift` 只多一行；動之前在 #1579 看 PERF-FAR（#2098）合了沒。
+- 驗收：`website-screenshots.yml`，`tests: testManualDriveStop`，看 `drive-stop-look`（列車約六成寬、卡不蓋車）與 `drive-stop-back`（按鈕寫「好」）。
+
 ## PR 2（輔助停車）：`claude/drive-stop-assist`，顯示層寫好，獎金上限等規劃
 
 DRIVE-STOP 已壓縮 1 次（#1579 留言 6836133336），不再接新工作；這一段是交接。

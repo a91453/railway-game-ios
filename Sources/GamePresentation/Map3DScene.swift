@@ -588,6 +588,7 @@ public struct Map3DScene: Sendable {
         builder.instancingBoxes = false
         builder.target = .base
         builder.addPlacedBuildings()
+
         chunks = builder.chunks()
         streetLife = builder.streetLife
         levelCrossings = builder.crossings
@@ -1294,7 +1295,50 @@ extension Map3DScene {
                 next += step
             }
             distances.append(end)
-            return distances.map { geometry.location(at: $0).position }
+            return Self.thinned(distances.map { geometry.location(at: $0).position })
+        }
+
+        /// MAP3D-CAP: how far, in metres, the drawn track may stand from
+        /// the track's own line where its points are thinned
+        /// (``thinned(_:)``): under half a rail's width.
+        static let trackTolerance: Double = 0.03
+
+        /// MAP3D-CAP: `line` without the points a straight piece no longer
+        /// than ``trackStep`` passes within ``trackTolerance`` of. A bought
+        /// real line's geometry has a point every 0.65 m or so; drawn at
+        /// each (a bore, a bed and two rails a point), the 212 km of
+        /// tunnel in a 150-train game's 12 km scene were 11.5 million
+        /// triangles. A line with no points closer than ``trackStep`` is
+        /// unchanged.
+        static func thinned(_ line: [WorldCoordinate]) -> [WorldCoordinate] {
+            guard line.count > 2 else { return line }
+            let longest = trackStep * metre, tolerance = trackTolerance * metre
+            func vector(_ a: WorldCoordinate, _ b: WorldCoordinate) -> (x: Double, y: Double, z: Double) {
+                (Double(b.x - a.x), Double(b.y - a.y), Double(b.z - a.z))
+            }
+            var kept = [line[0]]
+            var anchor = 0
+            for index in 1..<(line.count - 1) {
+                // Whether the piece from the last point kept to the next
+                // point passes this one and those left out since.
+                let chord = vector(line[anchor], line[index + 1])
+                let length = (chord.x * chord.x + chord.y * chord.y + chord.z * chord.z).squareRoot()
+                var passes = length > 0 && length <= longest
+                var between = anchor + 1
+                while passes, between <= index {
+                    let to = vector(line[anchor], line[between])
+                    let along = (to.x * chord.x + to.y * chord.y + to.z * chord.z) / length
+                    let off = to.x * to.x + to.y * to.y + to.z * to.z - along * along
+                    if along < 0 || along > length || off > tolerance * tolerance { passes = false }
+                    between += 1
+                }
+                if !passes {
+                    kept.append(line[index])
+                    anchor = index
+                }
+            }
+            kept.append(line[line.count - 1])
+            return kept
         }
 
         /// `line` in pieces of at most 256 m, each sharing its first point

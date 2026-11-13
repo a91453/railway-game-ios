@@ -46,11 +46,27 @@ public enum WhatsNew {
                     english: "Jiji and Bao'an station buildings show your station's own name on the board.",
                     chinese: "集集、保安站房的站名牌會寫你那一站的名字。"
                 ),
+                Line(
+                    english: "Driving by hand: over the last 200 m a stopping bar shows how far the stopping point is and whether you passed it, a marker stands beside the track, and once stopped you see the train from the side with your result.",
+                    chinese: "手動駕駛進站最後 200 公尺有停車條，看離停車點多遠、有沒有過頭；軌道旁有停車標，停穩後從旁邊看成績。"
+                ),
+                Line(
+                    english: "Laying track now tells you once that holding the height figure and sliding raises or lowers that end. The station master's advice shows when a tap takes you there, and the train diagram says how to zoom.",
+                    chinese: "鋪軌時會提示一次：按住高度那一格上下滑可架高或挖低。站長的建議能點的有記號；運行圖寫了怎麼縮放。"
+                ),
             ],
             fixes: [
                 Line(
+                    english: "The 3D map draws far less on a large network with many bought real lines: it uses about a third less memory and runs smoother.",
+                    chinese: "路網大、買了很多真實路線時，3D 地圖畫的東西少很多：記憶體少用約三分之一，也比較順。"
+                ),
+                Line(
                     english: "A high-speed line laid with Lay the real lines here now runs high-speed trains at high-speed line speeds; metro, light rail and the Alishan line run their own trains too. Lines laid earlier change when laid again.",
                     chinese: "用「鋪好這一帶的真實路線」鋪的高鐵現在是高鐵車與高鐵的速度；捷運、輕軌、林鐵也是自己的車。舊的線要重鋪才換。"
+                ),
+                Line(
+                    english: "The Airport MRT can be bought wherever your map starts, and Kaohsiung's metro runs trains when laid with Lay the real lines here.",
+                    chinese: "機場捷運不論開局選哪裡都買得成；用「鋪好這一帶的真實路線」鋪的高雄捷運有車在跑了。"
                 ),
                 Line(
                     english: "Aircraft no longer jump to new places at midnight.",

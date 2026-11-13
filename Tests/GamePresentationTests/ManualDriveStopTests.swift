@@ -112,9 +112,13 @@ final class ManualDriveStopTests: XCTestCase {
         XCTAssertEqual(Look.view(chosen: .back, result: result(.timedOut), looking: true, reduceMotion: false), .back)
         XCTAssertEqual(Look.view(chosen: .aboveBack, result: nil, looking: true, reduceMotion: false), .aboveBack, "not while driving")
         XCTAssertTrue((5...12).contains(Look.seconds), "long enough to read the card, not a wait")
-        XCTAssertEqual(Look.backText(chosen: .cab, in: .traditionalChinese), "回駕駛室")
-        XCTAssertEqual(Look.backText(chosen: .cab, in: .english), "Back to the cab")
-        XCTAssertEqual(Look.backText(chosen: .back, in: .traditionalChinese), ManualDrive.doneText(in: .traditionalChinese))
+        XCTAssertEqual(Look.backText(chosen: .cab, looking: true, in: .traditionalChinese), "回駕駛室")
+        XCTAssertEqual(Look.backText(chosen: .cab, looking: true, in: .english), "Back to the cab")
+        XCTAssertEqual(Look.backText(chosen: .cab, looking: false, in: .traditionalChinese), "好", "already back in the cab")
+        XCTAssertEqual(Look.backText(chosen: .cab, looking: false, in: .english), "OK")
+        for looking in [true, false] {
+            XCTAssertEqual(Look.backText(chosen: .back, looking: looking, in: .traditionalChinese), ManualDrive.doneText(in: .traditionalChinese))
+        }
     }
 
     func testTheMarkIsAPostLeftOfTheTrackAndABarBetweenTheRails() {

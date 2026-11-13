@@ -49,6 +49,13 @@ struct RailwayGameApp: App {
             // later), which comes up when a line's train first waits on
             // single track.
             UserDefaults.standard.set(true, forKey: PassingLoopHint.seenKey)
+            // And the one-time line under the construction HUD about its
+            // height cell (``HeightSlideHint``): it makes the top column
+            // deeper under every stretch a test previews. A test of the
+            // line itself asks for it with -show-height-hint.
+            if !DebugLaunch.isSet("-show-height-hint") {
+                UserDefaults.standard.set(true, forKey: HeightSlideHint.seenKey)
+            }
             // Decision 311: the building layer starts put away, as a player
             // who hid it would have it: shown as soon as building began,
             // its legend took the corner where tests tap the map and the

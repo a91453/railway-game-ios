@@ -91,6 +91,24 @@ public enum HelpGuide {
             keywords: "create line track station 第一條 建立 開始 新手"
         ),
         HelpEntry(
+            "trackHeight", .building,
+            question: ("How do I raise track onto a viaduct or take it underground?", "怎麼把軌道架高或放到地下？"),
+            answer: (
+                "While you lay track, the bar at the top of the map shows how high the new end stands above the ground. Hold that figure and slide up or down to change it a metre at a time, or tap it for − and +. Raise an end to cross a river or another line, or to join an elevated line; lower it to join one underground. When a stretch is refused because of what lies in its way, its card offers a height that gets through.",
+                "鋪軌時，地圖上方那一列會顯示新的一端離地多高。按住那個高度上下滑，每次調 1 公尺；點一下會出現 − 和 +。要過河、跨過別的路線或接上高架，就把這一端架高；要接地下的路線，就往下調。這一段因為被擋住而鋪不了時，卡片會提供一個過得去的高度。"
+            ),
+            keywords: "height raise lower viaduct bridge tunnel underground elevated river cross slide 高度 架高 高架 橋 隧道 地下 過河 跨越 上下滑 離地"
+        ),
+        HelpEntry(
+            "dragTrack", .building,
+            question: ("Can I draw track with a drag?", "鋪軌可以用拖的嗎？"),
+            answer: (
+                "Yes. With Network chosen, put a finger on the start you picked or on existing track and drag: the stretch follows your finger, and near the edge of the screen the map scrolls by itself. Lift the finger, then tap ✓ to build. A drag that starts anywhere else moves the map.",
+                "可以。選好「路網」後，手指按在已選的起點或現有的軌道上拖出去，軌道會跟著手指走；拖到畫面邊緣，地圖會自己捲過去。放開後按 ✓ 才會蓋。從別的地方開始拖，是移動地圖。"
+            ),
+            keywords: "drag draw finger edge scroll track 拖 拖曳 手指 邊緣 捲動 鋪軌"
+        ),
+        HelpEntry(
             "addStation", .building,
             question: ("How do I add a station?", "如何增設車站？"),
             answer: (
@@ -323,6 +341,33 @@ public enum HelpGuide {
                 "新遊戲以真實時間的 600 倍進行：畫面上的 1 秒是遊戲裡的 10 分鐘，所以時速 300 公里的高鐵，畫面上每秒跑過 50 公里。地圖和軌道的比例是真實的。想看列車用真實的速度跑，點列車並跟隨它，再點地圖上方跟隨列的「1×」（真實時間）或「10×」；頂端的狀態列會顯示列車的時速。也可以從暫停鈕旁的速度選單選任何速度。停止跟隨後，遊戲會維持你選的速度。如果狀態列顯示「跟不上」，表示裝置跑不動這個速度，請改選慢一點的速度。"
             ),
             keywords: "speed fast slow real time 1x 10x 600x follow km/h falling behind 速度 太快 真實時間 倍速 跟隨 時速 跟不上"
+        ),
+        HelpEntry(
+            "miniMap", .running,
+            question: ("How do I get across a big map quickly?", "地圖很大，怎麼快速移到別處？"),
+            answer: (
+                "Touch the small map, or drag a finger across it: the main map goes where your finger is. The box on it is what the screen shows now.",
+                "點小地圖，或在上面拖：主地圖會跟著移到手指的位置。小地圖上的方框是畫面現在看到的範圍。"
+            ),
+            keywords: "mini map overview small jump move navigate 小地圖 移動 跳到 快速 範圍"
+        ),
+        HelpEntry(
+            "follow3DZoom", .running,
+            question: ("How do I look closer while following in 3D?", "3D 跟著車的時候，怎麼拉近拉遠？"),
+            answer: (
+                "Pinch with two fingers: the camera comes closer or stands farther back, and keeps following.",
+                "用兩指捏合或張開：鏡頭會靠近或退遠，照樣跟著走。"
+            ),
+            keywords: "3D follow pinch zoom camera closer farther 跟隨 跟車 縮放 拉近 拉遠 鏡頭"
+        ),
+        HelpEntry(
+            "collectionCamera", .running,
+            question: ("How do I look round a train in the Collection?", "在「圖鑑」裡怎麼轉著看列車？"),
+            answer: (
+                "Open Collection in Settings and pick a train. One finger turns the camera round it, a pinch comes closer or moves back, and two fingers move the camera sideways.",
+                "在「設定」打開「圖鑑」，選一列車。一指拖曳是繞著它轉，兩指捏合或張開是拉近拉遠，兩指一起拖是平移鏡頭。"
+            ),
+            keywords: "collection garage showcase rotate turn pan zoom camera 圖鑑 車庫 展示 旋轉 轉動 平移 縮放"
         ),
         HelpEntry(
             "express", .running,

@@ -15,14 +15,89 @@ struct MapConstructionHUD: View {
     var heights: NetworkHeightCard?
     /// Raises the end by whole metres once the finger lets go.
     var onRaise: (Int) -> Void = { _ in }
+    /// Whether a tutorial runs: the line about the height cell
+    /// (``HeightSlideHint``) keeps out of its way.
+    var tutorialRuns = false
 
     /// The metres the finger has slid while held, not yet applied, and
     /// whether it holds the cell: gesture state, so a cancelled hold
     /// (which never ends) goes back to nothing (review L14-2).
     @GestureState private var hold = TrackHeightDrag.Hold.idle
     @State private var showsStepper = false
+    /// The line about the height cell is done with (``HeightSlideHint``):
+    /// kept on the device, not in the save.
+    @AppStorage(HeightSlideHint.seenKey) private var heightHintSeen = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var showsHeightHint: Bool {
+        HeightSlideHint.shows(seen: heightHintSeen, card: heights, tutorialRuns: tutorialRuns)
+    }
 
     var body: some View {
+        VStack(spacing: 6) {
+            panel
+            if showsHeightHint {
+                heightHint
+                    // Decision 253: a small thing under the cell it is about.
+                    .transition(.pop(anchor: .top, reduceMotion: reduceMotion))
+            }
+        }
+        // The column under the HUD gives way (``MotionRule/change``).
+        .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: showsHeightHint)
+    }
+
+    /// Raises the end, and with a real change the player has used the
+    /// cell: the line about it never comes again.
+    private func raise(_ steps: Int) {
+        onRaise(steps)
+        if HeightSlideHint.isUse(raisingBy: steps) { heightHintSeen = true }
+    }
+
+    /// The one-time line under the HUD (``HeightSlideHint``): the cell's
+    /// own arrows, what holding and sliding it does, and a ✕. Only the ✕
+    /// takes touches; the rest lets them through to the map, as the HUD.
+    private var heightHint: some View {
+        HStack(spacing: 6) {
+            VStack(spacing: 0) {
+                Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold))
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(Theme.primary)
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+            Text(verbatim: HeightSlideHint.text(in: language))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("map.constructionHUD.heightHint")
+            Button {
+                heightHintSeen = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 24, height: 24)))
+            .accessibilityLabel(Text(verbatim: HeightSlideHint.dismissLabel(in: language)))
+            .accessibilityIdentifier("map.constructionHUD.heightHint.dismiss")
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .padding(.vertical, 4)
+        .background {
+            Color.clear
+                .glassBackground(in: Capsule())
+                .allowsHitTesting(false)
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private var panel: some View {
         VStack(spacing: 6) {
             // Decision 469 (UI review 2-22): one line where it fits, the
             // figures one under another where it does not (a small phone
@@ -133,7 +208,7 @@ struct MapConstructionHUD: View {
             .onEnded { value in
                 guard case .second(true, let drag) = value else { return }
                 let steps = TrackHeightDrag.stepsApplied(endingAt: drag.map { Double($0.translation.height) }, card: card)
-                if steps != 0 { onRaise(steps) }
+                if steps != 0 { raise(steps) }
             }
         return HStack(spacing: 6) {
             if showsStepper {
@@ -167,8 +242,8 @@ struct MapConstructionHUD: View {
         .accessibilityHint(text("Hold and slide up or down, or swipe up or down to adjust by 1 m.", "按住上下滑動，或用上下滑調整，每次 1 公尺。"))
         .accessibilityAdjustableAction { direction in
             switch direction {
-            case .increment: if card.canRaise { onRaise(1) }
-            case .decrement: if card.canLower { onRaise(-1) }
+            case .increment: if card.canRaise { raise(1) }
+            case .decrement: if card.canLower { raise(-1) }
             @unknown default: break
             }
         }
@@ -177,7 +252,7 @@ struct MapConstructionHUD: View {
 
     private func stepButton(systemName: String, enabled: Bool, steps: Int, label: String, identifier: String) -> some View {
         Button {
-            onRaise(steps)
+            raise(steps)
         } label: {
             Image(systemName: systemName)
                 .font(.body.weight(.bold))
