@@ -133,6 +133,15 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .smallSouthGate: (7.3, 6.8)
         }
     }
+    /// Whether it clears only the cells its model stands over or comes
+    /// within ``shapeMargin`` of, not the whole of ``clearing``: Kaohsiung
+    /// Main Station, whose canopy's arms reach 336 m east and west of a
+    /// middle some 200 m across, with the city's blocks between them (the
+    /// whole rectangle, 672 m by 340 m, left those blocks bare).
+    var clearsOnlyUnderItself: Bool { self == .kaohsiungMainStation }
+    /// How near its model (metres) a cell is cleared with it.
+    static let shapeMargin: Float = 6
+
     var body: (x: Float, y: Float) {
         switch self {
         case .taipei101: (65.4, 69.2)
@@ -2838,9 +2847,11 @@ extension Map3DScene.Builder {
             let clearing = LandmarkMesh.corners(landmark.clearing, origin: centre, rotation: landmark.rotation)
             let ground = body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
             let saved = target
+            var shape = Map3DMesh()
             for (level, full) in [(Target.near, true), (.far, false)] {
                 target = level
                 let mesh = landmark.model(full: full).placed(origin: centre, ground: ground, rotation: landmark.rotation)
+                if full { shape = mesh }
                 keptColours.formUnion(mesh.vertices.map(\.color))
                 self.mesh(at: centre) { $0.append(mesh) }
                 // Decision 581, later: the roundhouse's parked locomotives.
@@ -2851,7 +2862,10 @@ extension Map3DScene.Builder {
                 }
             }
             target = saved
-            built[landmark] = cells(under: clearing)
+            // Kaohsiung's canopy: only the ground under it and beside it,
+            // so the blocks between its arms keep their buildings.
+            built[landmark] = landmark.clearsOnlyUnderItself
+                ? cells(under: clearing).intersection(cells(under: shape, margin: Map3DTaipeiLandmark.shapeMargin)) : cells(under: clearing)
         }
         return built
     }
