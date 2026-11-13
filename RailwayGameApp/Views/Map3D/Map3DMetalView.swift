@@ -1321,7 +1321,7 @@ final class Map3DMetalView: MTKView {
             (place: place, distance: Map3DStreaming.distance(of: Map3DStreaming.Key(column: visible[place].column, row: visible[place].row),
                                                              to: camera.target))
         }.sorted { $0.distance < $1.distance }
-        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack, level: farLevel) },
+        let shares = Map3DSceneBudget.shares(of: nearestFirst.map { visible[$0.place].cost(pack: models?.pack, level: self.farLevel) },
                                              within: Map3DSceneBudget.triangles(tier: level?.tier))
         for (entry, share) in zip(nearestFirst, shares) where share != .whole {
             visible[entry.place].share = share
