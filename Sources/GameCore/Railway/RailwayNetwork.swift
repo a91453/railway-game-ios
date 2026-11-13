@@ -174,9 +174,17 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// The edges closed to trains (decision 716), in ascending ID order:
     /// no route is found along one and no train is placed or sent onto
     /// one, until it is opened again. Empty in a new network. Removing an
-    /// edge opens it. Changed by ``GameWorld/closeTrack(_:)`` and
+    /// edge opens it. Changed by ``GameWorld/closeTrack(_:)-(TrackEdgeID)`` and
     /// ``GameWorld/openTrack(_:)`` only.
     public private(set) var closedEdges: [TrackEdgeID] = []
+    /// The edges being closed (decision 716, continued), in ascending ID
+    /// order, none of them in ``closedEdges``: no new route is found along
+    /// one, the trains already on it or on their way along it run on, and
+    /// once none uses it any more it is closed. Empty in a new network.
+    /// Removing an edge takes it out. Changed by
+    /// ``GameWorld/closeTrack(_:)-(TrackEdgeID)``, ``GameWorld/openTrack(_:)``
+    /// and a step of the world only.
+    public private(set) var closingEdges: [TrackEdgeID] = []
     /// For every span that fouls spans of other edges, those spans (Stage
     /// F2b, ARCHITECTURE decision 53): spans of two edges at one level less
     /// than ``trackSpacing`` apart in plan at points more than
@@ -442,6 +450,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         recutSpans(of: id)
         spacingExemptions.removeAll { $0.contains(id) }
         closedEdges.removeAll { $0 == id }
+        closingEdges.removeAll { $0 == id }
         for node in [edge.from, edge.to] {
             guard let nodeIndex = nodeIndex(node) else { continue }
             nodes[nodeIndex].ends.removeAll { $0.edge == id }
@@ -457,14 +466,33 @@ public struct RailwayNetwork: Hashable, Sendable {
         !closedEdges.isEmpty && closedEdges.contains(id)
     }
 
-    /// Closes edge `id`, which exists, to trains, or opens it again
+    /// Whether edge `id` is being closed (decision 716, continued): no new
+    /// route runs along it, and it is closed once no train uses it.
+    public func isClosing(_ id: TrackEdgeID) -> Bool {
+        !closingEdges.isEmpty && closingEdges.contains(id)
+    }
+
+    /// What edge `id` is to trains (decision 716).
+    enum Closure {
+        case open, closing, closed
+    }
+
+    /// Makes edge `id`, which exists, open to trains, closing or closed
     /// (decision 716).
-    mutating func setClosed(_ id: TrackEdgeID, _ closed: Bool) {
-        precondition(edge(id) != nil, "setClosed(_:_:) needs an edge of the network")
+    mutating func setClosure(_ id: TrackEdgeID, _ closure: Closure) {
+        precondition(edge(id) != nil, "setClosure(_:_:) needs an edge of the network")
         closedEdges.removeAll { $0 == id }
-        if closed {
-            closedEdges.insert(id, at: closedEdges.firstIndex { $0 > id } ?? closedEdges.count)
+        closingEdges.removeAll { $0 == id }
+        switch closure {
+        case .open: break
+        case .closing: closingEdges.insert(id, at: closingEdges.firstIndex { $0 > id } ?? closingEdges.count)
+        case .closed: closedEdges.insert(id, at: closedEdges.firstIndex { $0 > id } ?? closedEdges.count)
         }
+    }
+
+    /// What edge `id` is to trains (decision 716).
+    func closure(of id: TrackEdgeID) -> Closure {
+        isClosed(id) ? .closed : isClosing(id) ? .closing : .open
     }
 
     /// Decision 691: node `id`, at which no edge ends for the moment, stands
@@ -536,7 +564,7 @@ public struct RailwayNetwork: Hashable, Sendable {
 
 extension RailwayNetwork: Codable {
     private enum CodingKeys: String, CodingKey {
-        case nodes, edges, nextNodeID, nextEdgeID, platforms, spacingExemptions, closedEdges
+        case nodes, edges, nextNodeID, nextEdgeID, platforms, spacingExemptions, closedEdges, closingEdges
     }
 
     private enum NodeKeys: String, CodingKey {
@@ -568,7 +596,8 @@ extension RailwayNetwork: Codable {
     /// `[a, b]` with `a < b`, in order, on edges of the network. Since
     /// decision 716 also `"closedEdges"`, when there are any: the numbers
     /// of the edges closed to trains, ascending, each an edge of the
-    /// network. The world's
+    /// network; and `"closingEdges"`, when there are any: the numbers of
+    /// the edges being closed, likewise, none of them closed. The world's
     /// rules (the map, heights, grades, structures, clearance, spacing, and
     /// platforms that fit their edges and stations that exist) are checked by
     /// the ``GameWorld`` decoder.
@@ -662,6 +691,13 @@ extension RailwayNetwork: Codable {
             }
             closedEdges.append(id)
         }
+        for number in container.contains(.closingEdges) ? try container.decode([Int].self, forKey: .closingEdges) : [] {
+            let id = TrackEdgeID.edge(number)
+            guard edge(id) != nil, closingEdges.last.map({ $0 < id }) ?? true, !closedEdges.contains(id) else {
+                throw corrupt("Edges being closed must be edges of the network that are not closed, in order, each once.")
+            }
+            closingEdges.append(id)
+        }
         foulingSpans = workOutFouling()
     }
 
@@ -705,6 +741,9 @@ extension RailwayNetwork: Codable {
         }
         if !closedEdges.isEmpty {
             try container.encode(closedEdges.map(\.networkNumber), forKey: .closedEdges)
+        }
+        if !closingEdges.isEmpty {
+            try container.encode(closingEdges.map(\.networkNumber), forKey: .closingEdges)
         }
     }
 }

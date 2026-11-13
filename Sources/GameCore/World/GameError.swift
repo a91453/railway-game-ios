@@ -171,7 +171,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// (decision 186).
     case trackReserved(TrainID)
     /// The edge is closed to trains (decision 716,
-    /// ``GameWorld/closeTrack(_:)``): a train cannot be placed on it or
+    /// ``GameWorld/closeTrack(_:)-(TrackEdgeID)``): a train cannot be placed on it or
     /// given a path along it until it is opened. The lowest numbered such
     /// edge.
     case trackClosed(TrackEdgeID)

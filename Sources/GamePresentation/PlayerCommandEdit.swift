@@ -190,8 +190,8 @@ extension PlayerCommand {
         case removeFerryRoute(FerryRouteID)
 
         // MARK: Closing track by hand (decision 716)
-        /// The pieces of track with these numbers closed to trains, all or
-        /// none.
+        /// The pieces of track with these numbers closed to trains
+        /// together: at once, or once the trains using them have left.
         case closeTrack(edges: [Int])
         /// The pieces of track with these numbers open to trains again.
         case openTrack(edges: [Int])
@@ -391,7 +391,7 @@ extension GameSession {
         case .removeRoads(let cells): try world.removeRoads(cells.map(\.cell))
         case .createCableway(let stops, let legMetres, let meetsNear): try world.createCableway(stops: stops, legMetres: legMetres, meetsNear: meetsNear)
         case .removeCableway(let id): try world.removeCableway(id)
-        case .closeTrack(let edges): for edge in edges { try world.closeTrack(.edge(edge)) }
+        case .closeTrack(let edges): try world.closeTrack(edges.map { TrackEdgeID.edge($0) })
         case .openTrack(let edges): for edge in edges { try world.openTrack(.edge(edge)) }
         case .createFerryRoute(let piers, let legMetres, let service, let boats):
             try world.createFerryRoute(piers: piers.map(\.cell), legMetres: legMetres, service: service, boats: boats)

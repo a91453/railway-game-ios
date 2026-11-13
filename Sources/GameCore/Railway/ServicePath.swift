@@ -114,7 +114,8 @@ extension GameWorld {
     /// does not exist or has no platform that the train fits, or when none
     /// can be reached
     /// without turning straight back or running along track closed to
-    /// trains (decision 716, ``closeTrack(_:)``). Pure: reads only topology, edge
+    /// trains, or being closed unless `start` is on such track (decision
+    /// 716, ``closeTrack(_:)-(TrackEdgeID)``). Pure: reads only topology, edge
     /// lengths and platforms, and explores only track no further than the
     /// nearest berth.
     public func path(from start: TrainPosition, toStation id: StationID, length: Int64 = 0) -> TrainPath? {
@@ -244,6 +245,9 @@ extension GameWorld {
         // sidings, but for those of the depot the train starts in
         // (`topology.js`'s `shortestPath` with `allowYard=false`).
         let yard = station(id: id)?.isDepot == true ? [] : sidings(except: start.edge)
+        // Decision 716, continued: a train on track being closed runs out
+        // of it; no other finds a way along it.
+        let leaving = network.isClosing(start.edge)
         let route = TrainRoute.shortest(from: BerthSearch.start, isDestination: { place in
             if case .berth = place { true } else { false }
         }) { place -> [(BerthSearch, Int64)] in
@@ -256,8 +260,9 @@ extension GameWorld {
             let edgeLength = network.edge(traversal.edge)!.length
             func allowed(to end: Int64) -> Bool {
                 if end > from, forbidden.contains(traversal) || forbids?(traversal) == true || yard.contains(traversal.edge) { return false }
-                // Decision 716: nor any way along track closed to trains.
-                if end > from, network.isClosed(traversal.edge) { return false }
+                // Decision 716: nor any way along track closed to trains,
+                // or being closed unless the train starts on such track.
+                if end > from, network.isClosed(traversal.edge) || !leaving && network.isClosing(traversal.edge) { return false }
                 guard let clear else { return true }
                 return clear(TrackStretch(traversal: traversal, from: from, to: end))
             }

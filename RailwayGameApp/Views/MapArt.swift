@@ -160,6 +160,9 @@ enum MapArt {
         } else {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
         }
+        // Decision 716: closed track and track being closed, over the lines'
+        // colours, which cover the track on a line.
+        drawTrackClosures(world, projection: projection, cached: edges, in: context)
         // Decision 438: the player's own roads and the road drawn, under
         // the bus routes that run on them (docs/MAP_LAYERS.md, 24.7).
         if let roads {
@@ -660,7 +663,6 @@ enum MapArt {
                 drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, halo: halo, in: context)
             }
         }
-        if !halo { drawClosedTrack(edges.filter { world.network.isClosed($0.edge.id) }, tolerance: tolerance, projection: projection, in: context) }
         guard detail == .full else { return }
         let radius = max(1.5, referenceSize * 0.08)
         for node in world.network.nodes where region.contains(node.position) {
@@ -672,31 +674,57 @@ enum MapArt {
         }
     }
 
+    /// Decision 716: the marks of track being closed and of closed track,
+    /// drawn after the lines so their colours do not hide them.
+    private static func drawTrackClosures(_ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+        let ids = world.network.closingEdges + world.network.closedEdges
+        guard !ids.isEmpty else { return }
+        let region = drawingRegion(projection)
+        let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
+        func drawings(_ ids: [TrackEdgeID]) -> [MapEdgeDrawing] {
+            ids.compactMap { id -> MapEdgeDrawing? in
+                guard let edge = world.trackEdge(id), let drawing = cached[id] ?? MapEdgeDrawing(edge: edge, world: world) else { return nil }
+                return region.intersects(drawing.bounds) ? drawing : nil
+            }
+        }
+        drawClosedTrack(drawings(world.network.closingEdges), closing: true, tolerance: tolerance, projection: projection, in: context)
+        drawClosedTrack(drawings(world.network.closedEdges), closing: false, tolerance: tolerance, projection: projection, in: context)
+    }
+
     /// Decision 716: track closed to trains, at every zoom: red dashes on
     /// a pale band over the track, and, where the piece is long enough on
     /// screen, a crossed disc at its middle, so it reads without colour.
-    private static func drawClosedTrack(_ edges: [MapEdgeDrawing], tolerance: Double, projection: some MapProjection, in context: GraphicsContext) {
+    /// Track being closed (`closing`, trains still run out along it): amber
+    /// dots on the band, and one stroke of the cross on the disc.
+    private static func drawClosedTrack(_ edges: [MapEdgeDrawing], closing: Bool, tolerance: Double, projection: some MapProjection, in context: GraphicsContext) {
         guard !edges.isEmpty else { return }
         let width = max(2.5, projection.referenceSize * 0.3)
+        let colour = closing ? Palette.metroAmber : Palette.metroRed
+        // Dots: dashes of no length with round ends.
+        let marks = closing
+            ? StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round, dash: [0.01, width * 2.4])
+            : StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [width * 2.2, width * 1.6])
         for drawing in edges {
             // Dashed: drawn whole, as a tunnel is, so the dashes stay put.
             let line = wholePolyline(drawing.points(from: 0, to: drawing.geometry.length, tolerance: tolerance), projection: projection)
             context.stroke(line, with: .color(Palette.markerFill), style: StrokeStyle(lineWidth: width + 2.5, lineCap: .butt, lineJoin: .round))
-            context.stroke(line, with: .color(Palette.metroRed), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [width * 2.2, width * 1.6]))
+            context.stroke(line, with: .color(colour), style: marks)
         }
         for drawing in edges where Double(drawing.geometry.length) * projection.pointsPerUnit >= 44 {
             let center = projection.screenPoint(of: drawing.geometry.location(at: drawing.geometry.length / 2).position)
             let radius = max(6, width * 1.8)
             let plate = disc(at: center, radius: radius)
             context.fill(plate, with: .color(Palette.markerFill))
-            context.stroke(plate, with: .color(Palette.metroRed), lineWidth: 1.6)
+            context.stroke(plate, with: .color(colour), lineWidth: 1.6)
             var cross = Path()
             let arm = radius * 0.45
             cross.move(to: CGPoint(x: center.x - arm, y: center.y - arm))
             cross.addLine(to: CGPoint(x: center.x + arm, y: center.y + arm))
-            cross.move(to: CGPoint(x: center.x + arm, y: center.y - arm))
-            cross.addLine(to: CGPoint(x: center.x - arm, y: center.y + arm))
-            context.stroke(cross, with: .color(Palette.metroRed), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+            if !closing {
+                cross.move(to: CGPoint(x: center.x + arm, y: center.y - arm))
+                cross.addLine(to: CGPoint(x: center.x - arm, y: center.y + arm))
+            }
+            context.stroke(cross, with: .color(colour), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
         }
     }
 
