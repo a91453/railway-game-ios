@@ -57,6 +57,10 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
+                    english: "The 3D map draws far less on a large network with many bought real lines: it uses about a third less memory and runs smoother.",
+                    chinese: "路網大、買了很多真實路線時，3D 地圖畫的東西少很多：記憶體少用約三分之一，也比較順。"
+                ),
+                Line(
                     english: "A high-speed line laid with Lay the real lines here now runs high-speed trains at high-speed line speeds; metro, light rail and the Alishan line run their own trains too. Lines laid earlier change when laid again.",
                     chinese: "用「鋪好這一帶的真實路線」鋪的高鐵現在是高鐵車與高鐵的速度；捷運、輕軌、林鐵也是自己的車。舊的線要重鋪才換。"
                 ),
