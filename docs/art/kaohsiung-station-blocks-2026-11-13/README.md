@@ -14,3 +14,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 ```
 
 「改之前」是同一個分支把 `Map3DTaipeiLandmark.clearsOnlyUnderItself` 暫時改成 `false` 輸出的。
+
+`mac-app-after.jpg`：改之後的 Debug App 在這台 Mac 上（Designed for iPad，Metal）的同一個地方：
+`-screenshot-scene exteriorZuoying -screenshot-3d-view 600,0,40 -screenshot-3d-at 22.6394,120.3024 -map3D.quality high -screenshot-3d-clean`。
+手臂之間與環道外的街廓有建物。改之前的 App 沒有另外建置來拍。
