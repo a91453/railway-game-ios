@@ -491,12 +491,18 @@
 ///     count and take the next assisted run for the best, so it says the
 ///     save is newer than it instead. A save of any earlier version needs
 ///     no step: no run of its record was assisted.
+/// 93. Term loans (decision 715): a company's accounts can have their
+///     `"termLoans"` and `"nextTermLoanID"`, and a closed year's balance
+///     sheet its `"termLoans"`. A build that reads only an earlier version
+///     would drop them, and the money borrowed would be owed to no one, so
+///     it says the save is newer than it instead. A save of any earlier
+///     version needs no step: it has no term loans.
 /// 94. Closing track by hand (decision 716): a world's network can hold
 ///     `"closedEdges"`, the edges closed to trains. A build that reads
 ///     only an earlier version would drop them and run its trains along
 ///     track the player closed, so it says the save is newer than it
 ///     instead. A save of any earlier version needs no step: none of its
-///     track is closed. (Version 93 is decision 715's.)
+///     track is closed.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
     public static let currentVersion = 94

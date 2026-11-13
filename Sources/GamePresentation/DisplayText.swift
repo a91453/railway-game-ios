@@ -471,6 +471,11 @@ extension GameError {
             )
         case .loanNeedsManagement:
             language.text("Only a managed company can borrow.", "只有經營模式的公司可以貸款。")
+        case .invalidTermLoan:
+            language.text(
+                "The bank cannot make this term loan: check the amount, the term and how much it still lends.",
+                "銀行無法承作這筆定期貸款：請確認金額、年期與目前還能借的額度。"
+            )
         case .stationDemandFromLand:
             language.text(
                 "A managed company's ridership comes from the land round its stations.",

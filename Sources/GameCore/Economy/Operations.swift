@@ -430,6 +430,8 @@ extension GameWorld {
                 breakdown: [LedgerLine(item: .loanInterest, amount: .zero - interest)]
             ), day: day)
         }
+        // Decision 715: the term loans that fall due as the next day begins.
+        settleTermLoans(day: day, time: time)
         let trainStaff = Self.roundedDollars(1_440 * assets.trainWeight, over: 1_000)
         settleLineDay(day: day, assets: assets, routeEnergy: routeEnergy, trainEnergy: trainEnergy, trainStaff: trainStaff)
         // Decision 223: the trip log keeps the day that ended and the new
@@ -596,6 +598,7 @@ extension GameWorld {
               accounts.loan.amount % CompanyAccounts.loanStep.amount == 0 else {
             return "The loan must be whole loan steps, up to the most the bank lends."
         }
+        if let problem = termLoansProblem() { return problem }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {
             guard opened <= clock.now else { return "The accounts cannot open after now." }
