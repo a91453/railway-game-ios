@@ -58,9 +58,6 @@ struct Map3DPreviewScreen: View {
     var endAmbient: (() -> Void)? = nil
     @State private var built: Map3DBuiltScene?
     private var scene: Map3DScene? { built?.scene }
-    /// Decision 713: ``built``'s chunks as buffers, made off the main
-    /// thread; the view takes them when it shows the scene.
-    @State private var uploaded: Map3DMetalView.Uploaded?
     @State private var sceneVersion = 0
     /// K1-1, K2-4: whether ``Map3DTrainModels`` has made them, off the main
     /// thread; decision 546: the scene is shown before they are.
@@ -107,7 +104,7 @@ struct Map3DPreviewScreen: View {
         let driving = session.manualDrivePhase
         let ambient = ambientScreen?.ambient
         ZStack {
-            Map3DView(built: built, uploaded: uploaded, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
+            Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), rain: Map3DRain(MapWeather(world: session.world)),
                       feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
@@ -327,15 +324,6 @@ struct Map3DPreviewScreen: View {
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
             guard !Task.isCancelled else { return }
-            // Decision 713: its chunks' buffers made before it is shown,
-            // off the main thread (a scene built again only in part hands
-            // over those chunks alone, made as before).
-            var uploaded: Map3DMetalView.Uploaded?
-            if built.rebuilt == nil {
-                uploaded = await Task.detached(priority: .userInitiated) { Map3DMetalView.upload(built.scene.chunks) }.value
-                guard !Task.isCancelled else { return }
-            }
-            self.uploaded = uploaded
             self.built = built
             sceneVersion &+= 1
         }
@@ -1089,15 +1077,12 @@ final class Map3DChunkStreamer {
         let grid = window.grid, generation = window.generation, trackCover = trackCover, detail = window.buildingAround
         Task.detached(priority: .utility) { [weak self] in
             let chunks = source.chunks(build, of: grid, trackCover: trackCover, detail: detail)
-            // Decision 713: and their buffers, here rather than in the frame.
-            let uploaded = Map3DMetalView.upload(chunks)
-            await self?.finished(chunks, uploaded: uploaded, keys: build, generation: generation)
+            await self?.finished(chunks, keys: build, generation: generation)
         }
     }
 
-    private func finished(_ chunks: [Map3DScene.Chunk], uploaded: Map3DMetalView.Uploaded?, keys: [Map3DStreaming.Key], generation: Int) {
+    private func finished(_ chunks: [Map3DScene.Chunk], keys: [Map3DStreaming.Key], generation: Int) {
         guard window?.finished(keys, generation: generation) == true else { return }
-        view?.arriving = uploaded
         view?.place(chunks, at: keys)
     }
 }
@@ -1561,8 +1546,6 @@ private struct Map3DClock: View {
 private struct Map3DView: UIViewRepresentable {
     /// Decision 358: the scene, and what it was built from.
     let built: Map3DBuiltScene?
-    /// Decision 713: its chunks' buffers, made ahead.
-    let uploaded: Map3DMetalView.Uploaded?
     var scene: Map3DScene? { built?.scene }
     let sceneVersion: Int
     let lighting: Map3DLighting
@@ -1741,8 +1724,6 @@ private struct Map3DView: UIViewRepresentable {
             if let scene, context.coordinator.shownVersion != nil { showTrains(in: scene, on: view, context: context) }
         }
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
-        // Decision 713: the scene's buffers made ahead, for the view to take.
-        view.arriving = uploaded
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
         // Decision 358: the chunks built ahead that the scene built anew
