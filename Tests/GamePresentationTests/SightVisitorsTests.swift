@@ -147,3 +147,13 @@ final class SightVisitorsSceneTests: XCTestCase {
         XCTAssertEqual(rows.filter { $0.officialVisitorsText != nil }.count, 2)
     }
 }
+
+/// Decision 724: the scene waits for the real-world data, whose sights'
+/// visitors its cards show.
+final class SightVisitorsSceneWaitTests: XCTestCase {
+    func testTheSceneWaitsForTheRealWorldData() {
+        XCTAssertTrue(ScreenshotScene.sightVisitors.needsRealWorldData)
+        XCTAssertTrue(ScreenshotScene.wenhu.needsRealWorldData)
+        XCTAssertFalse(ScreenshotScene.sightVisitors.needsWater)
+    }
+}

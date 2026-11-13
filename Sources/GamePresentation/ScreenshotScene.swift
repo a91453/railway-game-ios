@@ -787,6 +787,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore || self == .wenhu
     }
 
+    /// Whether the scene waits for the app's real-world data before it
+    /// begins: the water's (``needsWater``), or the sights' official
+    /// visitors that ``sightVisitors`` shows (decision 724).
+    public var needsRealWorldData: Bool {
+        needsWater || self == .sightVisitors
+    }
+
     /// The point on Kaohsiung harbour's north side ``cijinShore`` reads
     /// the land round: 2.5 km north of Cijin's ferry station.
     static let cijinShoreRead = (latitude: 22.635, longitude: 120.280)

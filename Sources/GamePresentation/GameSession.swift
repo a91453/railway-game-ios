@@ -970,8 +970,9 @@ public final class GameSession {
     /// The sights' visitors of a year by the official count, for their
     /// cards in the sights panel (decision 724). Handed to each session by
     /// the launcher with the place names; never saved, and the rules do not
-    /// read it.
-    @ObservationIgnored public var sightVisitors: SightVisitors? {
+    /// read it. Observed, so an open sights panel shows the line once the
+    /// data arrives after the game began.
+    public var sightVisitors: SightVisitors? {
         didSet { sightRowsMemo = nil }
     }
 
