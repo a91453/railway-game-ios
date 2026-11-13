@@ -38,6 +38,20 @@ name: Release Archive (unsigned)
 # mostly by files that build the same in Debug and Release (the audio, the
 # iCloud folder, the Debug-only UI test worlds, which are all inside #if
 # DEBUG). The entry point is where the Debug-only launch arguments are.
+#
+# Decision 719 (2026-11-13, docs/research/CI_MEASURE_2026-11-13.md): the
+# whole run is one step, the archive, and most of that step is one silent
+# compile: GamePresentation (some 180,000 lines) optimised as a whole
+# module, 12.6 minutes on a fast runner and 23.1 on a slow one, where the
+# job was then cancelled at its 30 minutes (5 of the 12 pull request runs
+# of 2026-11-13). So a pull request's run compiles file by file
+# (SWIFT_COMPILATION_MODE=singlefile, still Release and still optimised),
+# which uses every core of the runner; what a pull request's run is for
+# (Release compiles without the Debug-only code, and the archived app has
+# its icon, both languages and its privacy manifest) does not depend on
+# how the modules are compiled. The nightly run and a manual one still
+# build as a distribution build does, whole modules, and the job's limit is
+# 45 minutes, as testflight.yml's archive job has, for a slow runner.
 
 on:
   workflow_dispatch:
@@ -76,7 +90,7 @@ jobs:
   archive:
     name: Release archive (generic iOS device, unsigned)
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -103,7 +117,13 @@ jobs:
           fi
 
       - name: Archive (Release, generic iOS device, unsigned)
+        env:
+          # Decision 719: file by file on a pull request, as the
+          # configuration says (whole modules) at night and by hand.
+          FILE_BY_FILE: ${{ github.event_name == 'pull_request' }}
         run: |
+          mode=()
+          if [[ "$FILE_BY_FILE" == true ]]; then mode=(SWIFT_COMPILATION_MODE=singlefile); fi
           xcodebuild archive \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -112,7 +132,7 @@ jobs:
             -archivePath "$ARCHIVE_PATH" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO "${mode[@]}"
 
       - name: Inspect the archived app
         run: |
