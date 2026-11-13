@@ -160,6 +160,9 @@ enum MapArt {
         } else {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
         }
+        // Decision 716: closed track and track being closed, over the lines'
+        // colours, which cover the track on a line.
+        drawTrackClosures(world, projection: projection, cached: edges, in: context)
         // Decision 438: the player's own roads and the road drawn, under
         // the bus routes that run on them (docs/MAP_LAYERS.md, 24.7).
         if let roads {
@@ -660,10 +663,6 @@ enum MapArt {
                 drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, halo: halo, in: context)
             }
         }
-        if !halo {
-            drawClosedTrack(edges.filter { world.network.isClosing($0.edge.id) }, closing: true, tolerance: tolerance, projection: projection, in: context)
-            drawClosedTrack(edges.filter { world.network.isClosed($0.edge.id) }, closing: false, tolerance: tolerance, projection: projection, in: context)
-        }
         guard detail == .full else { return }
         let radius = max(1.5, referenceSize * 0.08)
         for node in world.network.nodes where region.contains(node.position) {
@@ -673,6 +672,23 @@ enum MapArt {
                 context.stroke(disc(at: projection.screenPoint(of: node.position), radius: radius * 2.5), with: .color(Palette.ink), lineWidth: max(1, radius * 0.6))
             }
         }
+    }
+
+    /// Decision 716: the marks of track being closed and of closed track,
+    /// drawn after the lines so their colours do not hide them.
+    private static func drawTrackClosures(_ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+        let ids = world.network.closingEdges + world.network.closedEdges
+        guard !ids.isEmpty else { return }
+        let region = drawingRegion(projection)
+        let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
+        func drawings(_ ids: [TrackEdgeID]) -> [MapEdgeDrawing] {
+            ids.compactMap { id -> MapEdgeDrawing? in
+                guard let edge = world.trackEdge(id), let drawing = cached[id] ?? MapEdgeDrawing(edge: edge, world: world) else { return nil }
+                return region.intersects(drawing.bounds) ? drawing : nil
+            }
+        }
+        drawClosedTrack(drawings(world.network.closingEdges), closing: true, tolerance: tolerance, projection: projection, in: context)
+        drawClosedTrack(drawings(world.network.closedEdges), closing: false, tolerance: tolerance, projection: projection, in: context)
     }
 
     /// Decision 716: track closed to trains, at every zoom: red dashes on
