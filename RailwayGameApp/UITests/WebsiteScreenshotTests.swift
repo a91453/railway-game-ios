@@ -1047,9 +1047,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         economy.waitUntilSettled()
         economy.tap()
         let fares = app.staticTexts["economy.highSpeedFares"]
-        let list = app.collectionViews.firstMatch
-        XCTAssertTrue(list.appears(within: 10), "The economy panel opens")
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list), "What high-speed trips pay comes into reach")
+        // Decision 717: the fares are a page of their own.
+        XCTAssertTrue(app.showEconomyPage("票價"), "The economy panel opens, and its fares")
+        let list = app.economyList()
+        XCTAssertTrue(list.appears(within: 10))
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, at: app.economyDragColumn(list), clearOf: .button), "What high-speed trips pay comes into reach")
         settle(seconds: 1)
         keep("hsr-demo-fares", app)
     }
@@ -2320,28 +2322,25 @@ final class WebsiteScreenshotTests: XCTestCase {
         let bar = app.navigationBars["經濟明細"].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        // The freight scene's simple rules fold the reports under the last
-        // row: open them there and drag back up to the donut, rather than
-        // look for it down the folded list first (`revealFinanceComposition`
-        // spent some 220 of the test's 480 seconds so, run 41032530255).
+        // Decision 717: the statement and its donuts are the reports
+        // page's leading column.
+        XCTAssertTrue(app.showEconomyPage("報表"), "The reports page")
+        settle(seconds: 1)
+        keep("economy-reports", app)
+        let list: XCUIElement? = app.economyList()
+        let column = app.economyDragColumn(app.economyList())
         let income = app.descendants(matching: .any)["economy.composition.income"].firstMatch
-        let reports = app.buttons["economy.reports"]
-        if !income.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), reports.label == "更多報表與設定" {
-            reports.tap()
-        }
-        dragBack(to: income, in: list, below: bar.frame.maxY, in: app)
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY), "The income donut comes into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The income donut comes into reach")
         settle()
         keep("finance-composition-day-income", app)
 
         let costs = app.descendants(matching: .any)["economy.composition.costs"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY), "The cost donut comes into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The cost donut comes into reach")
         settle()
         keep("finance-composition-day-costs", app)
 
         let fares = app.buttons["economy.composition.income.fares"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY), "The fares row comes into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The fares row comes into reach")
         fares.tap()
         settle(seconds: 1)
         keep("finance-composition-picked", app)
@@ -2350,10 +2349,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The picker is above the statement, scrolled away by now, and a
         // row the form has let go is otherwise looked for further down.
         let week = app.buttons["週"].firstMatch
-        dragBack(to: week, in: list, below: bar.frame.maxY, in: app)
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(week, in: list, below: bar.frame.maxY), "The period picker comes into reach")
+        dragBack(to: week, in: list, below: bar.frame.maxY, at: column, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(week, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The period picker comes into reach")
         week.tap()
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY), "The week's cost donut comes into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The week's cost donut comes into reach")
         settle()
         keep("finance-composition-week-costs", app)
     }
@@ -2374,13 +2373,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         let bar = app.navigationBars["經濟明細"].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        let reports = app.buttons["economy.reports"]
+        // Decision 717: the mode ends the overview's leading column.
+        let list = app.economyList()
         let free = app.buttons["切換到自由模式"].firstMatch
-        if !free.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), reports.label == "更多報表與設定" {
-            reports.tap()
-        }
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(free, in: list, below: bar.frame.maxY), "The free play switch comes into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(free, in: list, below: bar.frame.maxY, at: app.economyDragColumn(list), clearOf: .button),
+                      "The free play switch comes into reach")
         free.tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "蓋東西、買車都不用錢")).firstMatch.appears(within: 10), "The confirmation says building costs nothing")
         settle(seconds: 1)
@@ -2447,27 +2444,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        // Once the first hour has closed, the balance is among the reports
-        // folded under today's figures; before it, every report shows and
-        // there is no toggle. Go down the list until one or the other
-        // comes, open the reports if folded, then go on to the balance.
+        // Decision 717: the balance opens the overview.
         let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
-        let reports = app.buttons["economy.reports"].firstMatch
-        // The panel beside the map is short and its rows are mostly fare
-        // controls: swipe the list (a press and drag there changed the
-        // fare, run 41236322793), and drag only clear of buttons.
-        for _ in 0..<30 where !balance.exists && !reports.exists {
-            list?.swipeUp(velocity: .slow)
-        }
-        if !balance.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY, clearOf: .button),
-           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
-            reports.tap()
-        }
-        // The reports open below the fleet, above the toggle: the balance
-        // follows the trends, further down.
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY, clearOf: .button),
-                      "The balance is in the panel")
+        XCTAssertTrue(balance.appears(within: 10), "The balance is in the panel")
+        XCTAssertTrue(balance.isHittable, "The balance shows without scrolling")
         settle()
         keep("currency-economy-\(suffix)", app)
         app.terminate()
@@ -3698,14 +3678,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        // Decision 717: under the trends, in the overview's trailing column.
+        let list = app.economyList(trailing: true)
         let weekly = app.descendants(matching: .any)["economy.weeklyPunctuality"].firstMatch
-        // Swipe, not drag: the rows above it are mostly fare controls
-        // (`currencyShots`).
-        for _ in 0..<30 where !weekly.exists {
-            list?.swipeUp(velocity: .slow)
-        }
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: list, below: bar.frame.maxY, clearOf: .button),
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: list, below: bar.frame.maxY, at: app.economyDragColumn(list), clearOf: .button),
                       "The company's week of punctuality shows")
         weekly.waitUntilSettled()
         settle(seconds: 1)
@@ -4369,12 +4345,12 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// economy's donut or on a line's row, and moved neither list in 12
     /// swipes (run 41026860196); held drags down the leading margin below
     /// `top`, as `dragUntilWhollyOnScreen` makes, do.
-    private func dragBack(to element: XCUIElement, in list: XCUIElement?, below top: CGFloat, in app: XCUIApplication) {
+    private func dragBack(to element: XCUIElement, in list: XCUIElement?, below top: CGFloat, at column: CGFloat? = nil, in app: XCUIApplication) {
         guard let list, list.exists else { return }
         let area = list.frame
         let rows = CGRect(x: area.minX, y: max(area.minY, top) + 8, width: area.width, height: area.maxY - 16 - max(area.minY, top))
         guard rows.height > 40 else { return }
-        let x = (area.minX + 8 - app.frame.minX) / app.frame.width
+        let x = ((column ?? area.minX + 8) - app.frame.minX) / app.frame.width
         func point(_ y: CGFloat) -> XCUICoordinate {
             app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: (rows.minY + rows.height * y - app.frame.minY) / app.frame.height))
         }
@@ -4742,11 +4718,19 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        func panelList() -> XCUIElement? {
-            app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        settle(seconds: 1)
+        keep("economy-overview-\(suffix)", app)
+        // Decision 717: the loans are a page, the term loans its trailing
+        // column.
+        XCTAssertTrue(app.showEconomyPage(english ? "Loans" : "借款"), "The loans page")
+        func panelList() -> XCUIElement {
+            app.economyList(trailing: true)
+        }
+        func panelColumn() -> CGFloat {
+            app.economyDragColumn(panelList())
         }
         let open = app.buttons["economy.termLoans.open"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: panelList(), below: bar.frame.maxY, clearOf: .button), "The term loans are in the panel")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: panelList(), below: bar.frame.maxY, at: panelColumn(), clearOf: .button), "The term loans are in the panel")
         settle()
         keep("term-loans-panel-\(suffix)", app)
         open.tap()
@@ -4815,23 +4799,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         done.tap()
         XCTAssertTrue(bar.appears(within: 10))
         bar.waitUntilSettled()
+        XCTAssertTrue(app.showEconomyPage(english ? "Fares" : "票價"), "The fares page")
+        settle(seconds: 1)
+        keep("economy-fares-\(suffix)", app)
+        XCTAssertTrue(app.showEconomyPage(english ? "Reports" : "報表"), "The reports page")
+        settle(seconds: 1)
+        keep("economy-reports-\(suffix)", app)
         let sheet = app.descendants(matching: .any)["economy.balanceSheet"].firstMatch
-        let reports = app.buttons["economy.reports"].firstMatch
-        for _ in 0..<40 where !sheet.exists && !reports.exists {
-            panelList()?.swipeUp(velocity: .slow)
-        }
-        if !sheet.exists, app.dragUntilWhollyOnScreen(reports, in: panelList(), below: bar.frame.maxY, clearOf: .button),
-           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
-            reports.tap()
-        }
         for _ in 0..<40 where !sheet.exists {
-            panelList()?.swipeUp(velocity: .slow)
+            panelList().swipeUp(velocity: .slow)
         }
         XCTAssertTrue(sheet.exists, "The balance sheet is in the panel")
         // The sheet is taller than the panel: its last rows, the loans and
         // the equity.
         let equity = app.staticTexts.matching(NSPredicate(format: "label == %@", english ? "Equity" : "權益")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(equity, in: panelList(), below: bar.frame.maxY, clearOf: .button), "The sheet's last rows")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(equity, in: panelList(), below: bar.frame.maxY, at: panelColumn(), clearOf: .button), "The sheet's last rows")
         settle()
         keep("term-loans-balance-sheet-\(suffix)", app)
     }

@@ -8,14 +8,23 @@ import SwiftUI
 /// and the last), the balance sheet, the closed years (Phase 7a, decision
 /// 85) and the last rows of the ledger.
 ///
+/// Decision 717: over the whole screen, as the train roster is, in pages
+/// (``EconomyPage``: the overview, the loans, the fares, the reports), each
+/// in two columns where the window is wide enough and one where it is
+/// narrow or the text large (``EconomyLayout``). Every size has the same
+/// sections.
+///
 /// Everything shown is read from `session.world` when the view is drawn,
 /// and every control calls a `GameSession` method that applies one
 /// `GameWorld` command.
 struct EconomyPanel: View {
     let session: GameSession
-    /// Closes it (decision 106: shown beside the map, not presented, so
-    /// the environment's dismiss would do nothing).
+    /// Closes it: the screen's panel is what presents it.
     @Environment(GameScreenState.self) private var screen
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The page picked; shown while the world still has it
+    /// (``EconomyLayout/showing(_:)``).
+    @State private var page: EconomyPage
     @State private var period: FinancePeriod = .day
     @State private var statement: Statement = .income
     @State private var trendRange: FinanceTrendRange = .thirtyDays
@@ -29,62 +38,68 @@ struct EconomyPanel: View {
     /// player moves it (decision 324).
     @State private var dayPassPrice: Int64?
     @State private var confirmsFreePlay = false
-    /// Whether the reports under the "Today" card, the loan and the fares
-    /// show: `nil` until the player chooses, when a game of simple rules
-    /// shows only those.
-    @State private var showsReports: Bool?
     /// Decision 715: the term loans, over the whole screen.
     @State private var showsTermLoans = false
+    /// Decision 717: the fleet overview and the last month's report over
+    /// this screen, which is there again when they close.
+    @State private var showsFleet = false
+    @State private var showsMonthReport = false
+
+    /// - Parameter opening: The page it opens at (decision 336: the
+    ///   insolvency bubble opens the loans).
+    init(session: GameSession, opening: EconomyPage = .overview) {
+        self.session = session
+        _page = State(initialValue: opening)
+    }
 
     var body: some View {
+        let language = session.language
+        let layout = EconomyLayout(world: session.world)
+        let shown = layout.showing(page)
+        let columns = layout.columns(of: shown)
         NavigationStack {
-            Form {
-                // Today's money in three lines first.
-                let today = session.world.todayAccount()
-                if let today {
-                    todaySection(today)
-                }
-                if session.world.scenario != nil {
-                    goalsSection
-                }
-                // Decision 336: the loan and the fares under "Today", never
-                // folded away, so the insolvency bubble lands on Borrow.
-                // Decision 200: with unlimited funds there is nothing to
-                // borrow for, and no cash to sheet.
-                if !session.world.economy.unlimitedFunds {
-                    loanSection
-                }
-                // Decision 715: the term loans beside it.
-                if session.world.showsTermLoans {
-                    termLoanSection
-                }
-                faresSection
-                dayPassSection
-                punctualitySection
-                fleetSection
-                if today == nil || showsAllReports {
-                    trendSection
-                    balanceSection
-                    lastHourSection
-                    reportSection
-                    if !session.world.economy.unlimitedFunds {
-                        balanceSheetSection
+            GeometryReader { proxy in
+                if layout.isSplit(shown, width: proxy.size.width, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
+                    HStack(spacing: 0) {
+                        Form {
+                            sections(columns.leading)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("economy.leading")
+                        Form {
+                            sections(columns.trailing)
+                        }
+                        .hardTopScrollEdge()
+                        .accessibilityIdentifier("economy.trailing")
                     }
-                    closedYearsSection
-                    ledgerSection
-                }
-                if today != nil {
-                    reportsToggleSection
+                } else {
+                    Form {
+                        sections(columns.all)
+                    }
+                    .hardTopScrollEdge()
+                    .accessibilityIdentifier("economy.leading")
                 }
             }
             .navigationTitle("Economy")
-            .hardTopScrollEdge()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker(selection: Binding(get: { shown }, set: { page = $0 })) {
+                        ForEach(layout.pages, id: \.self) { page in
+                            Text(verbatim: page.title(in: language)).tag(page)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Page", "分頁"))
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 440)
+                    .accessibilityIdentifier("economy.pages")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         screen.panel = nil
                     }
+                    .accessibilityIdentifier("economy.done")
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -94,6 +109,15 @@ struct EconomyPanel: View {
                 TermLoanScreen(session: session)
                     .coversTheMap(session)
             }
+            .sheet(isPresented: $showsFleet) {
+                FleetOverviewSheet(session: session)
+                    .coversTheMap(session)
+            }
+            .sheet(isPresented: $showsMonthReport, onDismiss: session.dismissMonthEnd) {
+                MonthlyReportSheet(session: session)
+                    .gameSheetDetents()
+                    .coversTheMap(session)
+            }
         }
     }
 
@@ -101,11 +125,36 @@ struct EconomyPanel: View {
         session.world.accounts
     }
 
-    /// Decision 258's simple rules show only the "Today" card, the loan
-    /// and the fares at first (decision 336); realistic games show every
-    /// report, as before.
-    private var showsAllReports: Bool {
-        showsReports ?? (NewGameRules(of: session.world) == .realistic)
+    /// A column's sections, in order.
+    private func sections(_ list: [EconomySection]) -> some View {
+        ForEach(list, id: \.self) { section in
+            self.section(section)
+        }
+    }
+
+    @ViewBuilder
+    private func section(_ section: EconomySection) -> some View {
+        switch section {
+        case .balance: balanceSection
+        case .today:
+            if let today = session.world.todayAccount() {
+                todaySection(today)
+            }
+        case .goals: goalsSection
+        case .trend: trendSection
+        case .punctuality: punctualitySection
+        case .shortcuts: fleetSection
+        case .mode: modeSection
+        case .loan: loanSection
+        case .termLoans: termLoanSection
+        case .fares: faresSection
+        case .dayPass: dayPassSection
+        case .report: reportSection
+        case .lastHour: lastHourSection
+        case .balanceSheet: balanceSheetSection
+        case .closedYears: closedYearsSection
+        case .ledger: ledgerSection
+        }
     }
 
     // MARK: - Sections
@@ -154,7 +203,7 @@ struct EconomyPanel: View {
     private var fleetSection: some View {
         Section {
             Button {
-                screen.panel = .fleet
+                showsFleet = true
             } label: {
                 Label {
                     Text(verbatim: session.language.text("Fleet Overview…", "車隊總覽…"))
@@ -167,7 +216,7 @@ struct EconomyPanel: View {
             // otherwise only opened once, as the month closed.
             if let report = session.lastMonthReport {
                 Button {
-                    screen.panel = .monthEnd
+                    showsMonthReport = true
                 } label: {
                     Label {
                         Text(verbatim: session.language.text(
@@ -179,20 +228,6 @@ struct EconomyPanel: View {
                 }
                 .accessibilityIdentifier("economy.monthlyReport")
             }
-        }
-    }
-
-    /// Shows or hides the reports under the "Today" card.
-    private var reportsToggleSection: some View {
-        Section {
-            Button {
-                showsReports = !showsAllReports
-            } label: {
-                Text(verbatim: showsAllReports
-                     ? session.language.text("Hide the other reports and settings", "收起其他報表與設定")
-                     : session.language.text("More reports and settings", "更多報表與設定"))
-            }
-            .accessibilityIdentifier("economy.reports")
         }
     }
 
@@ -270,8 +305,6 @@ struct EconomyPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.currencyNote")
             }
-
-            LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Decision 160: the tiles of the map owned, and what the next
             // costs and needs.
             if let map = session.mapExpansionText {
@@ -281,6 +314,22 @@ struct EconomyPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.mapExpansion")
             }
+            // Decision 162, later: the fuel price while a spell lasts, not
+            // only the station master's first day.
+            if let fuel = session.world.fuelText(in: session.language) {
+                Text(verbatim: fuel)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("economy.fuel")
+            }
+        }
+    }
+
+    /// Free play or management, and the one-way switch to free play.
+    private var modeSection: some View {
+        Section {
+            LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Decision 200: what unlimited funds mean.
             if session.world.economy.unlimitedFunds {
                 Text(verbatim: session.language.text(
@@ -290,15 +339,6 @@ struct EconomyPanel: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityIdentifier("economy.unlimitedFunds")
-            }
-            // Decision 162, later: the fuel price while a spell lasts, not
-            // only the station master's first day.
-            if let fuel = session.world.fuelText(in: session.language) {
-                Text(verbatim: fuel)
-                    .font(.footnote)
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("economy.fuel")
             }
             // Free play cannot become managed again (decision 46), so the
             // switch goes one way, after a confirmation. Decision 86,

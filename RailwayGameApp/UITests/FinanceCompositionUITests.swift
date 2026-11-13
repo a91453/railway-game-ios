@@ -31,16 +31,20 @@ final class FinanceCompositionUITests: XCTestCase {
         }
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
-        // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        // Decision 717: the statement and its donuts are the reports
+        // page's leading column.
+        XCTAssertTrue(app.showEconomyPage("Reports"), "The reports page")
+        let list = app.economyList()
+        let column = app.economyDragColumn(list)
 
-        XCTAssertTrue(app.revealFinanceComposition(in: list, below: bar.frame.maxY), "The income donut comes into reach")
-        XCTAssertTrue((list ?? app).descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
+        let income = list.descendants(matching: .any)["economy.composition.income"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The income donut comes into reach")
+        XCTAssertTrue(list.descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
 
         let detail = app.staticTexts["economy.composition.income.detail"]
         XCTAssertTrue(detail.label.hasPrefix("Income NT$"), "Before a tap the ring's total is summed up: \(detail.label)")
         let fares = app.buttons["economy.composition.income.fares"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY), "The fares row comes into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY, at: column, clearOf: .button), "The fares row comes into reach")
         XCTAssertTrue(fares.becomesHittable(within: 5))
         fares.tap()
         XCTAssertTrue(detail.label.hasPrefix("Fares · NT$"), "The tapped slice is spelled out: \(detail.label)")
@@ -50,31 +54,29 @@ final class FinanceCompositionUITests: XCTestCase {
 }
 
 extension XCUIApplication {
-    /// Brings the economy panel's income donut (decision 480) wholly into
-    /// `list`, below `below`; whether it came. A game of simple rules keeps
-    /// the reports folded away under a toggle at the list's foot, and the
-    /// reports open above it, so the toggle goes first and the list then
-    /// goes back up to the donut, as `WebsiteScreenshotTests` does.
-    ///
-    /// Looking down the folded list for the donut first cost 25 drags, each
-    /// followed by a query of every element in the app: the test took
-    /// 210–312 s in each full lane from deef5e3 to 5121f61, and in 0c6e5ce's
-    /// (103.1, run 41287836096) one such query stalled 60 s, the time
-    /// XCTest gives a query on the app's main thread, and XCTest's own code
-    /// in the app then aborted it ("Illegal fault request … snapshot has no
-    /// data source"). So the queries look in `list`, not the whole app.
-    func revealFinanceComposition(in list: XCUIElement?, below: CGFloat) -> Bool {
-        let scope = list ?? self
-        let income = scope.descendants(matching: .any)["economy.composition.income"].firstMatch
-        if !income.exists {
-            let reports = scope.buttons["economy.reports"]
-            if dragUntilWhollyOnScreen(reports, in: list, below: below), reports.label == "More reports and settings" {
-                reports.tap()
-            }
-            for _ in 0..<12 where !income.exists {
-                scope.swipeDown(velocity: .fast)
-            }
-        }
-        return dragUntilWhollyOnScreen(income, in: list, below: below)
+    /// Decision 717: picks a page of the company's figures, which cover
+    /// the whole screen, by its name on the control in their bar; whether
+    /// it was there to pick.
+    func showEconomyPage(_ title: String) -> Bool {
+        let pages = segmentedControls["economy.pages"].firstMatch
+        guard pages.appears(within: 10) else { return false }
+        let page = pages.buttons[title].firstMatch
+        guard page.appears(within: 5) else { return false }
+        page.tap()
+        return true
+    }
+
+    /// A column of the page shown: the leading one (the only one where
+    /// the window is narrow or the text large), or the trailing one.
+    func economyList(trailing: Bool = false) -> XCUIElement {
+        let own = collectionViews[trailing ? "economy.trailing" : "economy.leading"].firstMatch
+        return trailing && !own.exists ? collectionViews["economy.leading"].firstMatch : own
+    }
+
+    /// Where drags run down `list`: its rows' own leading edge. The lists
+    /// run under the screen's edges, where a drag does not scroll them.
+    func economyDragColumn(_ list: XCUIElement) -> CGFloat {
+        let cell = list.cells.firstMatch
+        return (cell.exists ? cell.frame.minX : list.frame.minX + 60) + 6
     }
 }

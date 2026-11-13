@@ -205,6 +205,12 @@ struct ContentView: View {
                 panelSheet(panel)
                     .coversTheMap(session)
             }
+            // Decision 717: the company's figures over the whole screen.
+            .fullScreenCover(item: coveringPanel) { _ in
+                EconomyPanel(session: session, opening: EconomyLayout(world: session.world).opening(at: screen.economyFocus))
+                    .environment(screen)
+                    .coversTheMap(session)
+            }
             .fullScreenCover(isPresented: $screen.showsTrainGarage) {
                 TrainShowcaseScreen(close: { screen.showsTrainGarage = false })
                     .coversTheMap(session)
@@ -356,6 +362,7 @@ struct ContentView: View {
                 if old == .yearEnd { session.dismissYearEnd() }
                 if old == .goals { session.dismissScenarioEnd() }
                 if old == .monthEnd { session.dismissMonthEnd() }
+                if old == .economy { screen.economyFocus = nil }
                 guard new == nil, pendingReport != nil else { return }
                 // After the closing sheet has gone.
                 Task { @MainActor in
@@ -373,7 +380,8 @@ struct ContentView: View {
                 case .lines:
                     if screen.panel != .lines { screen.panel = .lines }
                 case .closed:
-                    if screen.panel?.isBesideMap == true { screen.panel = nil }
+                    // Decision 717: and the one over the whole screen.
+                    if screen.panel?.isBesideMap == true || screen.panel?.coversWholeScreen == true { screen.panel = nil }
                 case nil:
                     break
                 }
@@ -430,29 +438,42 @@ struct ContentView: View {
     }
 
     /// The open panel when it is one presented as a sheet; the panels
-    /// beside the map are not (``GameScreenState/Panel/isBesideMap``).
-    /// Turning to one of those drops the sheet without closing the panel.
+    /// beside the map are not (``GameScreenState/Panel/isBesideMap``), nor
+    /// the one over the whole screen (``coveringPanel``). Turning to one
+    /// of those drops the sheet without closing the panel.
     private var presentedPanel: Binding<GameScreenState.Panel?> {
         Binding {
-            screen.panel.flatMap { $0.isBesideMap ? nil : $0 }
+            screen.panel.flatMap { $0.isSheet ? $0 : nil }
         } set: { panel in
-            if panel != nil || screen.panel?.isBesideMap != true {
+            if panel != nil || screen.panel?.isSheet == true {
                 screen.panel = panel
             }
         }
     }
 
-    /// The panels beside the map (decision 106): the lines, a station and
-    /// the company's figures. A phone on its side shows every sheet over
-    /// the whole screen, so these, which the map is used with (picking a
-    /// line's stations, choosing another station), slide in at the
-    /// trailing side instead, and the map stays in sight and in reach.
+    /// The open panel when it covers the whole screen (decision 717,
+    /// ``GameScreenState/Panel/coversWholeScreen``).
+    private var coveringPanel: Binding<GameScreenState.Panel?> {
+        Binding {
+            screen.panel.flatMap { $0.coversWholeScreen ? $0 : nil }
+        } set: { panel in
+            if panel != nil || screen.panel?.coversWholeScreen == true {
+                screen.panel = panel
+            }
+        }
+    }
+
+    /// The panels beside the map (decision 106): the lines and a station.
+    /// A phone on its side shows every sheet over the whole screen, so
+    /// these, which the map is used with (picking a line's stations,
+    /// choosing another station), slide in at the trailing side instead,
+    /// and the map stays in sight and in reach. Decision 717: the
+    /// company's figures, which the map is not used with, cover it.
     @ViewBuilder
     private func sidePanel(_ panel: GameScreenState.Panel) -> some View {
         switch panel {
         case .lines: LinesPanel(session: session)
         case .station: StationPanel(session: session)
-        case .economy: EconomyPanel(session: session)
         default: EmptyView()
         }
     }
@@ -461,7 +482,8 @@ struct ContentView: View {
     private func panelSheet(_ panel: GameScreenState.Panel) -> some View {
         switch panel {
         case .lines, .station, .economy:
-            // Shown beside the map instead (``sidePanel(_:)``).
+            // Shown beside the map instead (``sidePanel(_:)``), or over the
+            // whole screen (decision 717).
             EmptyView()
         case .timetable:
             // Its line button opens the lines panel through the screen.
@@ -1536,13 +1558,24 @@ final class GameScreenState {
         /// 106, ``ContentView``): the panels the map is used with.
         var isBesideMap: Bool {
             switch self {
-            case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .museum, .news, .monthEnd, .help, .postcard, .achievements, .networkFlow: false
+            case .lines, .station: true
+            case .economy, .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .museum, .news, .monthEnd, .help, .postcard, .achievements, .networkFlow: false
             }
         }
+
+        /// Decision 717: shown over the whole screen, map and all: the
+        /// company's figures, which the map is not used with.
+        var coversWholeScreen: Bool { self == .economy }
+
+        /// Presented as a sheet: every other panel.
+        var isSheet: Bool { !isBesideMap && !coversWholeScreen }
     }
 
     var panel: Panel?
+    /// Decision 717: the page the company's figures open at (the
+    /// insolvency bubble's, decision 336); `nil` opens the overview.
+    /// Cleared as they close.
+    var economyFocus: EconomyPage?
     /// Decision 250 (a player's report): the sight whose mark or bubble on
     /// the map opened the sights panel, which scrolls to it; `nil` from the
     /// menu.
