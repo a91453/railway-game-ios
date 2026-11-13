@@ -523,15 +523,18 @@ final class WebsiteScreenshotTests: XCTestCase {
             let app = launch(extra: ["-screenshot-scene", "sightVisitors"], english: english)
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
             settle()
-            let menu = app.buttons["hud.menu"]
-            menu.waitUntilSettled()
-            menu.tap()
-            if !app.buttons["menu.tourism"].appears(within: 5) {
-                app.buttons["menu.more"].tap()
-            }
-            app.buttons["menu.tourism"].tap()
-            XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+            openSights(in: app)
+            // The panel lists the airports first and makes a card only
+            // near the screen: the list is dragged up until a card with
+            // the count is whole on screen (#2118, the Mac's run of
+            // 2026-11-13).
             let line = app.descendants(matching: .any)["tourism.officialVisitors"].firstMatch
+            for _ in 0..<40 where !(line.exists && line.frame.maxY <= app.frame.maxY - 12) {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5)),
+                           withVelocity: .slow, thenHoldForDuration: 0.3)
+                settle(seconds: 1)
+            }
             XCTAssertTrue(line.appears(within: 30), "A card has the official count")
             settle(seconds: 2)
             keep("sight-visitors\(suffix)", app)
@@ -3235,15 +3238,19 @@ final class WebsiteScreenshotTests: XCTestCase {
             // list makes a row only near the screen, and the whole of
             // Taiwan's row ends under its foot: the list is dragged up a
             // little at a time until Hong Kong's row is whole on screen.
+            // In English the whole of Taiwan's row runs past the screen's
+            // foot, so Hong Kong's row is not made until the list is
+            // dragged: dragged first, waited for after (#2118, the Mac's
+            // run of 2026-11-13). Up to 180 seconds for the data, as before.
             let row = app.descendants(matching: .any)["realWorld.overseas.hongKong"].firstMatch
-            XCTAssertTrue(row.appears(within: 180), "Hong Kong's row shows once its map is read")
-            for _ in 0..<12 where !(row.exists && row.frame.maxY <= app.frame.maxY - 12) {
+            func whole() -> Bool { row.exists && row.frame.maxY <= app.frame.maxY - 12 }
+            for _ in 0..<45 where !whole() {
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
                     .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)),
                            withVelocity: .slow, thenHoldForDuration: 0.3)
-                settle(seconds: 1)
+                settle(seconds: row.exists ? 1 : 3)
             }
-            XCTAssertTrue(row.exists, "Hong Kong's row shows once its map is read")
+            XCTAssertTrue(row.appears(within: 10), "Hong Kong's row shows once its map is read")
             settle()
             keep(name, app)
         }
@@ -3289,7 +3296,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         // longer than a UI query waits: nothing is asked of it for six
         // minutes first (as `testWenhuRunsOnTheRight`).
         Thread.sleep(forTimeInterval: 360)
-        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 1_000), "The line is bought and a train followed at Kowloon")
+        // The follow bar's button, not the card's `train.stock`: the MTR's
+        // trains have no set of their own (decision 697), so a bought
+        // line's card names no stock (`RealLineStock.setKey(ofRealLine:)`).
+        XCTAssertTrue(app.descendants(matching: .any)["train.unfollow"].firstMatch.appears(within: 1_000), "The line is bought and a train followed at Kowloon")
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
@@ -3323,20 +3333,36 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Opens the sights panel: by the status bar's own button where the
+    /// game shows it, else from the game menu. On iOS 27.2 the menu's
+    /// "More" has its label but not its identifier (#2118, the Mac's run
+    /// of 2026-11-13), so it is found by either.
+    private func openSights(in app: XCUIApplication) {
+        let shortcut = app.buttons["hud.sights"]
+        if shortcut.appears(within: 5), shortcut.becomesHittable(within: 5) {
+            shortcut.tap()
+        } else {
+            let menu = app.buttons["hud.menu"]
+            menu.waitUntilSettled()
+            menu.tap()
+            if !app.buttons["menu.tourism"].appears(within: 5) {
+                let more = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "identifier == 'menu.more' OR label == 'More' OR label == '更多'")).firstMatch
+                XCTAssertTrue(more.appears(within: 5), "The menu's More shows")
+                more.tap()
+            }
+            app.buttons["menu.tourism"].tap()
+        }
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+    }
+
     /// Opens the sights from the menu and drags the list up, a little at a
     /// time, until the first airport's row that names Hong Kong (the
     /// scene's Taichung) is whole on screen. `swipeUp()` went past the
     /// airports to the first sight (run 43369272845), so the picture is
     /// refused unless that row is on screen.
     private func openAirports(in app: XCUIApplication, english: Bool = false) {
-        let menu = app.buttons["hud.menu"]
-        menu.waitUntilSettled()
-        menu.tap()
-        if !app.buttons["menu.tourism"].appears(within: 5) {
-            app.buttons["menu.more"].tap()
-        }
-        app.buttons["menu.tourism"].tap()
-        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+        openSights(in: app)
         XCTAssertTrue(app.descendants(matching: .any)["tourism.airport.1"].firstMatch.appears(within: 10), "The airports are listed")
         // The row says Hong Kong once the app's data is read and the scene
         // is told of the flights.
