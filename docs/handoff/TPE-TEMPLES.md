@@ -33,3 +33,10 @@
     3. SketchUp 的面朝向是用射線猜的，猜錯的面打光變暗，看起來像破洞。
   - 下一步建議：**按部位整塊上色**，不要一面一面挑。先把同一部位、相連的面合成一塊（共用邊），一塊取一個顏色（照片平均或配方固定色）；再看要不要淡化。淡化改成「只提亮、保留彩度」：Lab 的 L* 往鋪面色的 L* 移 35%，a*、b* 乘 0.9（試作在本 session 的暫存區，未進 repository；寫法：`pale = (v, s) => { const [L,a,b] = lab(v), G = lab(0xE4E3DF)[0]; return fromLab([L + (G - L) * s, a * 0.9, b * 0.9]); }`）。
   - 改完照 model-look 再拍三輪給作者看；`Map3DTaipeiTemplesTests.palette` 要跟著換成新的色。
+
+### CI 抓到的破圖原因（head `709b464`，`Map3DBundledModelFilesTests.testEveryBundledModelIsDrawnTheRightWayOut`）
+
+- 十個 `tpe-*.m3dmodel` 都有「和鄰面繞向相反」的三角形：行天宮 700、龍山寺 594、惠濟宮 422、指南宮 335、濟南教會 313、慈諴宮 163、霞海 105、省城隍 68、清水巖 25、天后宮 21。這就是作者說的破圖：遊戲依繞向打光、剔背面，翻錯的面會變暗或消失。
+- 原因在 `tools/tpe-temples/orient.mjs`：每一面各自用射線猜朝向，沒有和共邊的鄰面對齊。
+- 修法：先依共用邊把相連的面繞向傳成一致（每個相連塊做一次廣度優先），再對整塊用射線多數決或有號體積（要 ≥ 0）決定整塊朝外還是朝內；兩面都要畫的薄片（剪影裝飾）照測試的規則可以留正反兩面。重跑 `fetch.sh` 與 `build.mjs`，這個測試和 `Map3DTaipeiTemplesTests` 要過。
+- 資料來源測試（`RealRailwaysTests.testEverySourceIsCredited`）已在 `d9a67d5` 修好。
