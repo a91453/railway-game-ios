@@ -468,7 +468,11 @@ extension GameWorld {
     /// minute. Not inlined: off the stack of every departure that runs.
     @inline(never)
     func takingFreeBerthPastStandingTrain(_ candidate: Train, stop: Int, cycle: Int64, memo: inout DirectionMemo) -> Train? {
-        guard case .travellingToStop = candidate.execution else { return nil }
+        // A service leaving a stop: one standing aside at a passing place
+        // (Stage V2) is left to the dispatcher, as before.
+        guard case .travellingToStop = candidate.execution,
+              case .waitingAtStop? = train(id: candidate.id)?.execution
+        else { return nil }
         let call = candidate.timetable[stop].station
         let holders = trackHolders(memo: &memo)
         guard let id = holder(of: envelopeCover(of: candidate), except: candidate.id, holders: holders),
