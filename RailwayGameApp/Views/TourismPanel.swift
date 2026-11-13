@@ -88,6 +88,13 @@ struct TourismPanel: View {
                                     .font(.footnote)
                                     .foregroundStyle(Theme.textSecondary)
                             }
+                            if let visitors = row.officialVisitorsText {
+                                // Decision 724: the official count of a year.
+                                Text(verbatim: visitors)
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .accessibilityIdentifier("tourism.officialVisitors")
+                            }
                             if let exhibits = row.exhibitsText {
                                 // Decision 684: the company's railway museum
                                 // has its exhibits, not a souvenir shop.

@@ -359,7 +359,7 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
                 "tdx", "realBuses", "realCoaches", "traOpenData", "nlsc", "openStreetMap",
-                "worldPop", "ridership", "travelSurvey", "airports", "overtureBuildings",
+                "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "meshy", "kenney", "taipeiGarbageTrucks",
                 "proceduralTokyo", "polyHaven", "runningSound", "dieselSound", "motorSound", "weatherSound",
@@ -392,7 +392,7 @@ final class RealRailwaysTests: XCTestCase {
                 XCTAssertTrue(credit.notice.contains("2026"), id)
                 XCTAssertTrue(credit.notice.contains(language.text("Open Government Data License, version 1.0", "政府資料開放授權條款（Open Government Data License）第 1 版")), id)
             }
-            for id in ["ridership", "travelSurvey", "temples"] {
+            for id in ["ridership", "travelSurvey", "sightVisitors", "temples"] {
                 XCTAssertTrue(credits.first { $0.id == id }?.links.contains { $0.url == "https://data.gov.tw/license" } == true, id)
             }
             // Each railway system in the game is named on the page with

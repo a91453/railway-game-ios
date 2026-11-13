@@ -87,6 +87,10 @@ public final class GameLauncher {
     /// (``GameSession/placeNames``).
     public var placeNames: PlaceNames?
 
+    /// The sights' visitors of a year by the official count (decision
+    /// 724), handed to every game it starts (``GameSession/sightVisitors``).
+    public var sightVisitors: SightVisitors?
+
     /// Taiwan's real railways (stations and lines) for real-world maps, handed
     /// to every game it starts (``GameSession/railways``).
     public var railways: RealRailways?
@@ -1772,6 +1776,7 @@ public final class GameLauncher {
         started.baseMap = baseMap
         started.realBuses = realBuses
         started.placeNames = placeNames
+        started.sightVisitors = sightVisitors
         started.railways = railways
         started.collectedStamps = stationStamps.dates
         // Decision 88: land not read round a station built while the app
@@ -1867,6 +1872,7 @@ public final class GameLauncher {
         baseMap = data.baseMap
         realBuses = data.realBuses
         placeNames = data.placeNames
+        sightVisitors = data.sightVisitors
         railways = data.railways
         coachNetwork = data.coaches
         realWorldIssues = data.issues
@@ -1881,6 +1887,7 @@ public final class GameLauncher {
             session.baseMap = baseMap
             session.realBuses = realBuses
             session.placeNames = placeNames
+            session.sightVisitors = sightVisitors
             session.railways = railways
             // Decision 88: land not read round a station built while the
             // app had no population, as when a game begins (``begin``);
@@ -2255,6 +2262,8 @@ public struct RealWorldData: Sendable {
     public let railways: RealRailways?
     /// The ground of each open city outside Taiwan (decision 712).
     public var overseas: [OverseasGround] = []
+    /// The sights' visitors of a year by the official count (decision 724).
+    public var sightVisitors: SightVisitors?
     /// The files that could not be read, and why: the grids' and the
     /// railways' (``RealRailways/Loaded/issues``).
     public let issues: [RealDataLoadIssue]
@@ -2280,7 +2289,8 @@ public struct RealWorldData: Sendable {
     /// `taiwan_water.json`, `taiwan_heights.dat`, `taiwan_coverage.dat`
     /// (decision 147), `taiwan_place_names.json` (decision 159),
     /// `taiwan_station_landmarks.json` (decision 569),
-    /// `taiwan_no_build.json` (decision 385 (續)), the real bus stops' index
+    /// `taiwan_no_build.json` (decision 385 (續)), `taiwan_sight_visitors.json`
+    /// (decision 724), the real bus stops' index
     /// `real_buses_index.json` (decision 424, C2; its city files are read
     /// later, when the bus tool asks) and the
     /// railways' files
@@ -2329,12 +2339,14 @@ public struct RealWorldData: Sendable {
         }
         let realBuses = grid("real_buses_index") { try RealBusLibrary(index: $0, file: file) }
         let coaches = grid("coach_network", CoachNetwork.init(data:))
+        let sightVisitors = grid("taiwan_sight_visitors", SightVisitors.init(data:))
         var data = RealWorldData(
             population: population, places: places, water: water, heights: heights, coverage: coverage, placeNames: placeNames,
             realBuses: realBuses, coaches: coaches, railways: railways.railways,
             issues: issues + railways.issues
         )
         data.overseas = grounds
+        data.sightVisitors = sightVisitors
         return data
     }
 }

@@ -967,6 +967,14 @@ public final class GameSession {
         didSet { suggestStationNameAtTheMiddle() }
     }
 
+    /// The sights' visitors of a year by the official count, for their
+    /// cards in the sights panel (decision 724). Handed to each session by
+    /// the launcher with the place names; never saved, and the rules do not
+    /// read it.
+    @ObservationIgnored public var sightVisitors: SightVisitors? {
+        didSet { sightRowsMemo = nil }
+    }
+
     private func suggestStationNameAtTheMiddle() {
         let middle = RealWorldFrame(world: world).map { PlanPoint(x: Int64($0.middleX), y: Int64($0.middleY)) }
         suggestStationName(at: middle)

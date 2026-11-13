@@ -514,6 +514,31 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("sights-off-the-map-open", app)
     }
 
+    /// Decision 724: the sights panel's cards with the line of the Tourism
+    /// Administration's count of a year, in both languages. For the
+    /// screenshot review of the pull request that added it.
+    func testSightVisitors() {
+        for english in [false, true] {
+            let suffix = english ? "-english" : ""
+            let app = launch(extra: ["-screenshot-scene", "sightVisitors"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle()
+            let menu = app.buttons["hud.menu"]
+            menu.waitUntilSettled()
+            menu.tap()
+            if !app.buttons["menu.tourism"].appears(within: 5) {
+                app.buttons["menu.more"].tap()
+            }
+            app.buttons["menu.tourism"].tap()
+            XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights open")
+            let line = app.descendants(matching: .any)["tourism.officialVisitors"].firstMatch
+            XCTAssertTrue(line.appears(within: 30), "A card has the official count")
+            settle(seconds: 2)
+            keep("sight-visitors\(suffix)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 695: the airports' section of the sights panel, in both
     /// languages: an airport a station serves and one none does.
     func testAirports() {
