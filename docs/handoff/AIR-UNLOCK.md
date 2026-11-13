@@ -38,6 +38,17 @@ AIR-UNLOCK-2（session_01YGNNupFY6Z2K8uhkAqFeJF，`claude/air-unlock-2`，2026-1
 - 自己鋪的機場線一天載多少人沒有量到（報告裡用指令鋪的線沒有軌道、列車不跑）；500 人只在「買機場捷運」這條路上量過。
 - 要 GameCore 的兩項（東涌綫尖峰末班、香港的假日與幣值）列在決策 712「續二」，給規劃排。
 
+### 停手時的狀態（2026-11-13，AIR-UNLOCK-2 第 2 次壓縮後交接）
+
+- PR 2 = #2111（`claude/air-unlock-2`，head `d1aeb3cb157db94895634a14fcc3a34f6b956be7`）與 PR 3 = #2115（`claude/air-unlock-3`，疊在 #2111 上）都是 draft，CI 全綠（Swift gate、Xcode build、release archive）。**都還沒轉 ready**，因為截圖驗收沒過（下面兩項）。
+- 截圖：`website-screenshots.yml` run 43369272845（分支 `claude/air-unlock-3`，`testAirRouteUnlock testHongKongMap`），artifact `website-screenshots`。看過的結果：
+  - 過：`air-route-picker-closed`（香港一列，鎖頭與怎麼開航）、`air-route-picker-open`（飛機圖示與地圖說明）、`air-route-opened-notice`（狀態列「台灣↔香港開航了…」）、`hong-kong-map-2d`（港鐵各綫暗色、機場圖示、資料來源一行）。
+  - **沒拍到**：`air-route-airport-open`、`air-route-airport-progress` 兩張都停在「觀光景點」清單最上面的「老街」，機場那一列在畫面外。`openAirports(in:)` 的 `row.swipeUp()` 沒有把清單捲上來（測試照樣過）。要改成像選地圖那樣一步步拖到 `tourism.airport.1` 整列在畫面內再拍。機場列上的進度句子（`AirportDay.airRouteText`）因此還沒有人在畫面上看過，只有 Linux 測試。
+  - **不能交**：`hong-kong-map-3d` 整張是灰的，只有按鈕和操作提示，25 fps，沒有地面、軌道、車站。原因沒查。可能的方向：香港沒有水域／高度／建物資料時 3D 場景的地面沒畫；或鏡頭開在地圖外；遊戲時間 22:25 是夜間。這是打開香港（PR 3）前要修的，照 model-look／ui-review 要看圖。
+- 所以建議：#2111（開關關著）在機場列截圖補上後可以先合；#2115 等 3D 地圖畫得出東西再合。兩張 PR 的說明都寫了這個狀態。
+- 沒拍的：小 iPhone、iPad、淺色、最大字級。
+- 私庫官網 `credits.html`：`a91453/railway-reference-private` #136（draft），發版後由作者合；沒在瀏覽器看過。
+
 ### 香港地圖本身還有的毛病（重現方法都是 `swift test --skip-build --filter HongKongMapTests`）
 
 - **機場快綫與東涌綫只能買一條**（共用 28 km 的軌道）；已擁有一條時另一條馬上拒絕並說明。真正的做法在決策 712。
