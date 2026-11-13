@@ -79,7 +79,7 @@ final class AirportReportTests: XCTestCase {
     /// Decision 712: what a line to an airport that flies to Hong Kong
     /// carries of its passengers in a day (``Airport/yesterdayRiders``),
     /// beside the 500 that open Hong Kong's map
-    /// (``OverseasMap/ridersToOpen``): the Taoyuan Airport MRT bought, and
+    /// (``AirRoute/standardRiders``): the Taoyuan Airport MRT bought, and
     /// lines of the player's own of two to six stations from Kaohsiung's
     /// and Taichung's terminals into their cities, three trains each.
     ///
@@ -146,7 +146,7 @@ final class AirportReportTests: XCTestCase {
                 own.append("| \(line.name) | \(count) | \(day.ridersFrom + day.ridersTo) | \(2 * day.ridersAtMost) |")
             }
         }
-        print("### What a line to an airport carries (\(days) days; \(OverseasMap.hongKong.ridersToOpen) open Hong Kong)\n\n" + rows.joined(separator: "\n")
+        print("### What a line to an airport carries (\(days) days; \(AirRoute.standardRiders) open Hong Kong)\n\n" + rows.joined(separator: "\n")
             + "\n\n" + own.joined(separator: "\n"))
     }
 

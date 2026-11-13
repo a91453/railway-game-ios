@@ -1297,6 +1297,48 @@ extension GameSession {
         return true
     }
 
+    /// Decision 712 (continued): the game run on, a second a tick, until a
+    /// train of the bought real line `id` stands within 120 m of the
+    /// line's stop nearest `place` (degrees), at most two hours; that
+    /// train then picked and followed, the game paused. For the
+    /// screenshots of Hong Kong's map with a train at a station. `false`
+    /// when none came.
+    public func followAtStopForScreenshot(on id: String, near place: (latitude: Double, longitude: Double)) async -> Bool {
+        guard let frame = RealWorldFrame(world: world), let line = world.acquisition(of: id)?.line.flatMap({ world.line(id: $0) }) else { return false }
+        let at = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
+        let stops = line.stops.compactMap { world.station(id: $0)?.location }
+        func away(_ point: PlanPoint) -> Double {
+            let (dx, dy) = (Double(point.x) - at.x, Double(point.y) - at.y)
+            return (dx * dx + dy * dy).squareRoot()
+        }
+        guard let stop = stops.min(by: { away($0) < away($1) }) else { return false }
+        let (start, trains, reach) = (world, line.assignedTrains, 120 * WorldCoordinate.unitsPerMetre)
+        let near: @Sendable (PlanPoint) -> Bool = { abs($0.x - stop.x) <= reach && abs($0.y - stop.y) <= reach }
+        let found = await Task.detached(priority: .userInitiated) { () -> (GameWorld, TrainID?) in
+            var world = start
+            world.setSpeed(.normal)
+            for _ in 0..<7_200 {
+                do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+                for train in trains {
+                    guard let position = world.train(id: train)?.position, let plan = world.location(of: position)?.position.plan,
+                          near(plan) else { continue }
+                    world.setSpeed(.paused)
+                    return (world, train)
+                }
+            }
+            world.setSpeed(.paused)
+            return (world, nil)
+        }.value
+        _ = perform { (world: inout GameWorld) throws(GameError) in
+            world = found.0
+            return ""
+        }
+        guard let train = found.1 else { return false }
+        selectTrain(train)
+        if followedTrainID != train { toggleFollowTrain(train) }
+        return true
+    }
+
     /// Decision 564: the train of real line `id` bought nearest its middle
     /// station, for the screenshot to follow along its double track.
     public func screenshotTrainMidway(on id: String) -> TrainID? {

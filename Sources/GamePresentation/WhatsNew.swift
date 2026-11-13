@@ -35,8 +35,8 @@ public enum WhatsNew {
             id: "2026-11-14-130",
             items: [
                 Line(
-                    english: "Hong Kong is a new map, opened by flying there: on a map of Taiwan, carry 500 passengers in one day to or from an airport that flies to Hong Kong. Then choose Hong Kong under Real-world map and buy the MTR’s lines.",
-                    chinese: "新地圖「香港」：在台灣讓一座飛香港的機場一天有 500 人搭你的列車就開航，之後在實景地圖選「香港」，可收購港鐵路線。"
+                    english: "Hong Kong is a new map, with its buildings in 3D and the MTR’s lines to buy. Start on Taiwan or on Hong Kong; the other opens once an airport that flies there has 500 passengers on your trains in one day.",
+                    chinese: "新地圖「香港」，3D 有建物、可收購港鐵。台灣、香港選一張開始；飛另一邊的機場一天有 500 人搭你的列車，另一張就開。"
                 ),
             ],
             fixes: []

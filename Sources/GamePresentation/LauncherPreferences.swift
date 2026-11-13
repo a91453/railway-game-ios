@@ -27,10 +27,18 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// Decision 508: what the player answered when the station master
     /// offered the tutorial before a first line; `nil` until then.
     public var firstLineGuide: FirstLineGuide.Choice?
-    /// Decision 712: the cities outside Taiwan whose flights the player
-    /// has opened (``OverseasMap/rawValue``), in the order they opened;
-    /// `nil` in preferences written before, and until the first.
+    /// Decision 712: the maps open to the player (``AirMap/id``), in the
+    /// order they opened: the first real map chosen, then those flights
+    /// opened. Empty until a first is chosen; `nil` in preferences written
+    /// before, whose players began in Taiwan.
     public var airRoutesOpened: [String]?
+    /// Decision 712, continued: the most passengers in a day so far
+    /// towards opening each closed map, by its id; `nil` before.
+    public var airRouteBest: [String: Int64]?
+    /// Decision 712, continued: `true` once ``airRoutesOpened`` counts
+    /// Taiwan as a map like the others; `nil` in preferences written
+    /// before, which the launcher then brings up to date once.
+    public var airMapsChosen: Bool?
 
     public init() {}
 

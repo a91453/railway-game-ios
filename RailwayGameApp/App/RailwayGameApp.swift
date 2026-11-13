@@ -235,6 +235,31 @@ struct RailwayGameApp: App {
                 }
             }
         }
+        // Decision 712 (continued): the maps open to the player, for the
+        // screenshots of the map picker's open and closed rows.
+        if let asked = DebugLaunch.value(of: "-screenshot-air-maps") { launcher.setAirMapsForScreenshot(asked) }
+        // Decision 712 (continued): Hong Kong's map with a real line
+        // bought ("hkmtr:AEL,22.3049,114.1615": the line, and the place
+        // whose nearest stop a train is followed at), run on to the
+        // morning, for its screenshots by day. In the demo mode, which
+        // has the map open and the money to buy the line.
+        if let asked = DebugLaunch.value(of: "-screenshot-hong-kong") {
+            let parts = asked.split(separator: ",").map(String.init)
+            Task {
+                for _ in 0..<480 where launcher.overseasGrounds.isEmpty {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                launcher.isDemoMode = true
+                guard parts.count == 3, let latitude = Double(parts[1]), let longitude = Double(parts[2]),
+                      launcher.startOverseasMap(.hongKong), let session = launcher.session else { return }
+                for _ in 0..<240 {
+                    if session.buyForScreenshot(parts[0]) { break }
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                await session.runForScreenshot(until: 7 * 3_600 + 40 * 60)
+                _ = await session.followAtStopForScreenshot(on: parts[0], near: (latitude, longitude))
+            }
+        }
         if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
             let opening = launcher.openScreenshotScene(scene)
             // Decision 522: the zoning drag held down, its far cells grey.
@@ -255,8 +280,8 @@ struct RailwayGameApp: App {
                         try? await Task.sleep(for: .milliseconds(500))
                     }
                     guard let session = launcher.session else { return }
-                    session.airRoutes = AirRoutes(offered: [.hongKong], opened: routes == "opened" ? [.hongKong] : [])
-                    if routes == "opened" { session.noteAirRoutesOpened([.hongKong]) }
+                    session.airRoutes = AirRoutes(cities: [.hongKong], opened: routes == "opened" ? ["taiwan", "hongKong"] : ["taiwan"])
+                    if routes == "opened" { session.noteAirRoutesOpened([AirMap(.hongKong)]) }
                 }
             }
             // Decision 535 (continued, KLRT): a real line's purchase card

@@ -63,6 +63,22 @@ AIR-UNLOCK-2（session_01YGNNupFY6Z2K8uhkAqFeJF，`claude/air-unlock-2`，2026-1
 - **Release archive 常跑到 30 分鐘上限被取消**（`release-archive.yml` 的 `timeout-minutes: 30`；今天成功時 19–28 分鐘，#2111、#2115 各兩次被取消，早上 run 645–647 也是）。不是必要檢查；要不要放寬請規劃決定，這個 session 沒有動 workflow。
 - 剩下的：#2115 等規劃看截圖（第 3 級）才轉 ready。
 
+### AIR-UNLOCK-4（2026-11-13，session_01YGNNum1wxGSp5Gc2z6SXn4；第 1 次壓縮後做完手上這張）
+
+做了（決策 712「續四」，同一個分支 `claude/air-unlock-3`、PR #2115）：
+
+- 香港的建物：`buildings.pmtiles`（117,245 棟，2.26 MB），3D 地圖讀得到。
+- 開航改成照航線、兩邊對稱：新玩家選第一張地圖（香港可以），另一張靠飛過去的機場一天 500 人打開；舊玩家視為從台灣開始。清單每一列寫開或鎖、從哪裡、目前最多的一天。
+- `testHongKongMap` 改成白天、跟著停在九龍站的機場快綫列車；`testAirRouteUnlock` 多了兩個方向的清單。
+- 新消息與 TestFlight 說明的香港那一條放在 130。
+
+接手的人先看：
+
+- 截圖 run 與規劃的驗收結果在 #2118 與 PR #2115 的留言；沒過的畫面從那裡接。
+- 沒做、留給下一輪：香港的地形與水域網格；香港國際機場的跑道與航廈模型；國際金融中心一帶因為車站與軌道清建物而空著（`clearOf` 的現有規則）；機場快綫在香港站一帶畫成地面的綠帶；港鐵共用軌道與東涌綫少發班次（GameCore）；六條密集的綫沒有班次；玩家買飛機。
+- 網站資料來源頁（私有倉庫的 credits）要補「香港的建物」。
+- 重做建物：`tools/hk-map/README.md` 第 7 步。
+
 ### 香港地圖本身還有的毛病（重現方法都是 `swift test --skip-build --filter HongKongMapTests`）
 
 - **機場快綫與東涌綫只能買一條**（共用 28 km 的軌道）；已擁有一條時另一條馬上拒絕並說明。真正的做法在決策 712。

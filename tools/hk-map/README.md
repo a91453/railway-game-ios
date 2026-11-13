@@ -52,11 +52,17 @@ python3 -I tools/hk-map/build_hk_basemap.py /tmp/hk/osm/hong_kong.pbf RailwayGam
 
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter "HongKongRailwaysTests|HongKongMapTests|HongKongBaseMapTests"
+
+# 7. 香港的建物（決策 712 續四），並更新 pack.json。
+#    osmtoday 的 asia/china/hong_kong.pbf（約 44 MB），pip install osmium。
+python3 -I tools/hk-map/build_hk_buildings.py hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong
 ```
 
 取樣的原始回應（幾十 MB）不進 repo；進 repo 的是算出來的 `service.json`。
 
 ## 每支工具做什麼
+
+- `build_hk_buildings.py`：OpenStreetMap 的建物輪廓與樓層寫成 `buildings.pmtiles`（台灣 `footprints/2` 的格式）；沒標樓層的照香港有標建物的分布估。統計寫在 `hk_buildings.json`。
 
 - **`build_hk_mtr.py`**：每條綫在 OSM 找一條路線關係（`route=subway|train`），它停的站要和港鐵 CSV 的站序（上行方向 `UT`；落馬洲與康城兩條支綫各自成一條，從上水、將軍澳起）一站一站相同；沿它的軌道從第一站走到最後一站，得到綫形、站位、每站的里程、橋與隧道。中英文站名取 OSM 的，逐站和 CSV 核對，對不上就停，不猜；只有「茘景」「茘枝角」照港鐵的寫法（`MTR_SPELLING`）。車站代號取 CSV。路綫色是 OSM 關係的 `colour`，和港鐵的標準色相同。時刻由 `service.json` 的班距與行車時間排出一整天雙向的車（`estimated: true`）：不是港鐵公布的時刻表（港鐵沒有公開）。
   寫出 `hkmtr.json`（營運資料）、`hkmtr_times.json`（時刻）、`track_lines.geojson`、`track_stations.geojson`、`station_names.json`、`rail_structures.json`、`pack.json`。
