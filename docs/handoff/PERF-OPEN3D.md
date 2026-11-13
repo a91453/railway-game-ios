@@ -1,7 +1,7 @@
 # PERF-OPEN3D
 
-- 派工單：PERF-OPEN3D（遊戲規劃第 63 任派；作者 2026-11-13 貼給 Mac 本機 session）。分支 `claude/perf-open3d`，PR #2107（draft）。
-- session：Mac 本機（接實機 iPhone 17 Pro）。2026-11-13 壓縮過 1 次：不接新工作，再壓縮一次就停。
+- 派工單：PERF-OPEN3D（遊戲規劃第 63 任派；作者 2026-11-13 貼給 Mac 本機 session）。分支 `claude/perf-open3d`，PR #2107。
+- session：Mac 本機（接實機 iPhone 17 Pro）。2026-11-13 壓縮過 2 次：這個 session 到此為止，只做完 #2107 自己的收尾。
 - 決策 [713](../decisions/713.md)。存檔版本、golden、fixture、GameCore：都不動。
 
 ## 做了什麼
@@ -36,5 +36,5 @@
 - A 段與 C 段的一切（見上）。
 - 本機只跑了快的檢查（`swift build --build-tests -Xswiftc -warnings-as-errors`、`Map3DAircraftLayerTests`、`Map3DAirfieldsTests`、`FollowAircraftTests`、`ReviewL19FixTests`，實機 Release 與模擬器 Debug 建置）；其餘交 CI。
 - `Map3DAircraftLayingReportTests` 沒跑過（要 Release 的測試建置）。
-- 跟著飛機時開 3D 不會被踢出跟隨：只讀過程式，沒有在畫面上試。
+- 跟著飛機：在模擬器上試過（這個分支的 Debug 版、「整個臺灣」存檔、桃園機場）。暫停時開 3D，飛機在背景鋪完後出現、跟隨列出現、沒有被踢出；按繼續後時間往前走，跟隨仍在。**沒試到的**：跟隨途中機場重鋪（場景原點或機場數變了）的情形，只讀過程式；跟隨只能在 3D 裡點飛機開始、關 3D 就放開，所以「已經在跟、再開 3D」從畫面上走不到。另有一次不暫停、600× 開 3D，15 秒後畫面有飛機但沒有跟隨列（那時遊戲已過約 3.5 小時，可能那班飛機已結束），沒有查出原因。
 - 實機的數字都是遙控測試下、手機 thermal serious 時量的；沒有手動、放涼的數字。
