@@ -764,12 +764,18 @@ private struct TermLoanScreen: View {
     /// The least width that holds the form and the contracts side by side.
     private static let twoColumns: CGFloat = 640
 
+    /// The screen's width, once measured.
+    @State private var width: CGFloat?
+
     var body: some View {
         let language = session.language
         let board = session.world.termLoanBoard()
         NavigationStack {
-            GeometryReader { proxy in
-                if proxy.size.width >= Self.twoColumns, !dynamicTypeSize.isAccessibilitySize {
+            // The width comes from `onGeometryChange`, not a GeometryReader
+            // (CRASHSWEEP-2), as the train roster's table: nothing before
+            // the first measure but the background.
+            Group {
+                if let width, width >= Self.twoColumns, !dynamicTypeSize.isAccessibilitySize {
                     HStack(spacing: 0) {
                         Form {
                             borrowSection(board)
@@ -782,15 +788,19 @@ private struct TermLoanScreen: View {
                         .hardTopScrollEdge()
                         .accessibilityIdentifier("termLoan.contracts")
                     }
-                } else {
+                } else if width != nil {
                     Form {
                         borrowSection(board)
                         contractsSection(board)
                     }
                     .hardTopScrollEdge()
                     .accessibilityIdentifier("termLoan.form")
+                } else {
+                    Color(uiColor: .systemGroupedBackground)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .navigationTitle(Text(verbatim: language.text("Term Loans", "定期貸款")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
