@@ -29,9 +29,13 @@ public enum Map3DFarDetail {
     /// chunk drawn in full is beside one thinned.
     public static let from: Float = 2_000
     /// Metres of the smallest thing drawn for each metre the camera is
-    /// past ``from``: 34 m at ``Map3DCamera/farthest`` (12 km), where a
-    /// point of an iPhone's screen is 19 m of ground.
-    public static let slope: Float = 0.0034
+    /// past ``from``: 32 m at ``Map3DCamera/farthest`` (12 km), where a
+    /// point of an iPhone's screen is 19 m of ground. At 0.0034 the
+    /// farthest view drew things from 45 m and a town's streets (the
+    /// tertiary roads count as 40 m) were gone with its houses; at this
+    /// the streets stay (measured on an iPhone, decision 709's later
+    /// part).
+    public static let slope: Float = 0.0032
 
     /// The most triangles the still scene's chunks are drawn with from
     /// ``from`` out, whatever the map and however much of it is built: as

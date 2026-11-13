@@ -190,7 +190,8 @@ final class Map3DFarViewTests: XCTestCase {
         XCTAssertEqual(Map3DFarDetail.level(distance: step / 1.04, was: 10), 9)
         XCTAssertEqual(Map3DFarDetail.level(distance: Map3DCamera.detailDistance * 1.14, was: 6), 0, "nothing left out where chunks are drawn in full")
         XCTAssertEqual(Map3DFarDetail.level(distance: Map3DCamera.farthest, was: 0), last)
-        XCTAssertEqual(last, 11, "from the farthest, things from 45 m")
+        XCTAssertEqual(last, 10, "from the farthest, things from 32 m")
+        XCTAssertGreaterThanOrEqual(Map3DFarDetail.rank(size: Map3DFarDetail.size(of: .tertiary)), last, "a town's streets are drawn from the farthest")
         XCTAssertLessThan(last, Map3DFarDetail.always)
         // The main roads are always drawn; the lesser ones go in their order.
         XCTAssertEqual(Map3DFarDetail.rank(size: Map3DFarDetail.size(of: .primary)), Map3DFarDetail.always)
