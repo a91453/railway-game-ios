@@ -150,7 +150,8 @@ final class DoubleTrackDeadlockTests: XCTestCase {
     /// under simple rules with traffic control (a new game's) the two
     /// trains each waited all day for the berth the other stood on (1,065
     /// minutes). Now the dispatcher sends one to the free berth along the
-    /// other main track, and no deadlock lasts past the minute it looks.
+    /// other main track. Continued again: the train takes it as it is due
+    /// to leave, so no minute shows a deadlock (each trip showed one).
     func testTwoTrainsOnTracksTappedAtEitherEndRunAllDay() throws {
         var world = GameWorld.newGame(rules: .simple)
         world.setSpeed(.normal)
@@ -179,7 +180,7 @@ final class DoubleTrackDeadlockTests: XCTestCase {
         for _ in 0..<2 where (session.world.line(id: line)?.trains.count ?? 0) < 2 { session.addTrainToSelectedLine() }
         XCTAssertEqual(session.world.line(id: line)?.trains.count, 2)
         let day = try longestDeadlock(session.world)
-        XCTAssertLessThanOrEqual(day.longest, 1, "\(day)")
+        XCTAssertEqual(day.longest, 0, "\(day)")
         for legs in day.legs { XCTAssertGreaterThan(legs, 100, "\(day)") }
     }
 
@@ -187,7 +188,8 @@ final class DoubleTrackDeadlockTests: XCTestCase {
     /// the line runs one train (its round trip is its headway); trains
     /// bought and set at either end by hand are its spares, standing on a
     /// berth. The train it runs waited all day for the berth a spare stood
-    /// on (1,074 minutes, no leg run). Now it takes the free one.
+    /// on (1,074 minutes, no leg run). Now it takes the free one, as it is
+    /// due to leave (continued again), so no minute shows a deadlock.
     func testTheRunningTrainPassesSparesSetAtEitherEnd() throws {
         for count in [2, 3] {
             let (session, line) = try playerLine(rules: .simple)
@@ -203,7 +205,7 @@ final class DoubleTrackDeadlockTests: XCTestCase {
             session.selectLine(line)
             for level in ServiceLevel.allCases { session.setSelectedLineTrains(count, at: level) }
             let day = try longestDeadlock(session.world)
-            XCTAssertLessThanOrEqual(day.longest, 1, "\(count) trains: \(day)")
+            XCTAssertEqual(day.longest, 0, "\(count) trains: \(day)")
             XCTAssertGreaterThan(day.legs.max() ?? 0, 200, "\(count) trains: \(day)")
         }
     }

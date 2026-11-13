@@ -344,6 +344,12 @@ extension GameWorld {
            case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
             return .granted(granted)
         }
+        // Decision 571, continued again: without block sections, a free
+        // berth against the planned way at once where the train in the
+        // way would otherwise only be moved by the dispatcher's next look.
+        if !blockSections, let granted = takingFreeBerthPastStandingTrain(candidate, stop: stop, cycle: cycle, memo: &memo) {
+            return .granted(granted)
+        }
         // With block sections (decision 212): when trains standing (those
         // it may never follow) keep it from its route, the shortest route to
         // a berth of the station that only they block, followed behind the
@@ -443,6 +449,47 @@ extension GameWorld {
               overflow || free.distance <= limit
         else { return nil }
         return free
+    }
+
+    /// Decision 571, continued again: `candidate`, a service due to leave
+    /// a station for stop `stop` (of cycle `cycle`), whose default route
+    /// is held first by a train standing at a berth of that stop's
+    /// station that will not clear it for `candidate`, granted the
+    /// shortest way to a free berth there against the planned way (see
+    /// ``counterflowRoute(of:to:avoiding:)``), taken whole; or `nil`.
+    /// The train in the way is either a service waiting there bound for
+    /// the station `candidate` stands at, whose own way out is held by
+    /// `candidate` (the two would only wait for each other), or a train
+    /// with no service of a line without runs, a spare (decision 58),
+    /// which nothing else moves. Decision 571's dispatcher sent such a
+    /// train the same way, but only at its next look, once a minute: on a
+    /// double track whose crossovers let each way into one berth at each
+    /// end, every trip showed the two trains deadlocked for up to a
+    /// minute. Not inlined: off the stack of every departure that runs.
+    @inline(never)
+    func takingFreeBerthPastStandingTrain(_ candidate: Train, stop: Int, cycle: Int64, memo: inout DirectionMemo) -> Train? {
+        guard case .travellingToStop = candidate.execution else { return nil }
+        let call = candidate.timetable[stop].station
+        let holders = trackHolders(memo: &memo)
+        guard let id = holder(of: envelopeCover(of: candidate), except: candidate.id, holders: holders),
+              let other = train(id: id), isStopped(other, at: call)
+        else { return nil }
+        switch other.execution {
+        case nil:
+            guard assignedLine(of: id, memo: &memo)?.hasRuns != true else { return nil }
+        case .waitingAtStop(let otherStop, let otherCycle)?:
+            let here = stationsStoppedAt(by: candidate.id)
+            guard other.timetable.count > 1, here.contains(other.timetable[(otherStop + 1) % other.timetable.count].station),
+                  case .setsOff(let leaving, _) = leaving(other, stop: otherStop, cycle: otherCycle, memo: &memo.paths),
+                  holder(of: envelopeCover(of: leaving), except: id, holders: holders) == candidate.id
+            else { return nil }
+        default:
+            return nil
+        }
+        guard let way = counterflowRoute(of: candidate, to: call, avoiding: blockedTrack(except: candidate.id, holders: holders)),
+              case .granted(let granted) = reserving(rerouted(candidate, along: way, stop: stop, cycle: cycle), memo: &memo)
+        else { return nil }
+        return granted
     }
 
     /// The lowest numbered train other than `id` that holds any of
