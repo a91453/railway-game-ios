@@ -243,6 +243,54 @@ final class ManualDriveSessionTests: XCTestCase {
         XCTAssertEqual(motion.driving(on: taken.track, metres: 500).runs.count, motion.runs.count)
     }
 
+    /// Decision 710: the mark stands on the track where the head stops,
+    /// and the frame's step says how far into the run that is.
+    func testTheStoppingPointsMarkStandsOnTheTrackWhereTheHeadStops() throws {
+        let (session, train) = try makeSession(limits: false)
+        session.startManualDrive()
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDriveReading?.phase == .driving })
+        let taken = try XCTUnwrap(session.manualDriveRun?.driving)
+        let shown = try XCTUnwrap(session.stepManualDrive(at: time))
+        XCTAssertEqual(shown.stop, taken.drive.course.stop)
+        XCTAssertEqual(shown.stop, taken.track.stopMetres)
+        // Where the train's head is drawn when it stands on the point.
+        let stop = try XCTUnwrap(taken.track.place(metres: shown.stop))
+        let motion = TrainMotion(world: session.world, time: time)
+        let run = try XCTUnwrap(motion.driving(on: taken.track, metres: shown.stop).runs.first { $0.train == train })
+        let head = try XCTUnwrap(run.head(at: 1))
+        XCTAssertEqual(Double(stop.coordinate.x), head.point.x, accuracy: 1)
+        XCTAssertEqual(Double(stop.coordinate.y), head.point.y, accuracy: 1)
+        XCTAssertEqual(stop.direction.x, head.heading.x, accuracy: 1e-6)
+        XCTAssertEqual(stop.direction.y, head.heading.y, accuracy: 1e-6)
+        let start = try XCTUnwrap(taken.track.place(metres: 0))
+        XCTAssertNotEqual(start.coordinate, stop.coordinate)
+    }
+
+    /// Decision 710: the screenshot review's looks at the stopping bar:
+    /// the train standing short of its own stopping point, on it, past it.
+    func testTheScreenshotReviewStandsTheTrainNearItsOwnStoppingPoint() throws {
+        let (session, _) = try makeSession(limits: false)
+        session.startManualDrive()
+        var time = 0.0
+        XCTAssertTrue(run(session, from: &time) { session.manualDriveReading?.phase == .driving })
+        let stop = try XCTUnwrap(session.manualDriveRun?.driving).drive.course.stop
+        for (metres, state) in [(12.0, ManualDrive.StopBar.State.short), (0.2, .onTarget), (-3, .past)] {
+            session.nearStopForScreenshot(standing: metres)
+            XCTAssertEqual(session.manualDriveReading?.stopBar?.state, state)
+            time += 1
+            let shown = try XCTUnwrap(session.stepManualDrive(at: time))
+            XCTAssertEqual(shown.metres, stop - metres, accuracy: 1e-6, "it stands there")
+            XCTAssertEqual(shown.stop, stop, "the mark where it was")
+            XCTAssertEqual(session.manualDriveReading?.phase, .driving, "and the run goes on")
+        }
+        session.finishManualDriveForScreenshot()
+        let shown = try XCTUnwrap(session.stepManualDrive(at: time + 1))
+        XCTAssertEqual(shown.metres, stop, accuracy: 1, "the result is looked at where the train would stand")
+        XCTAssertEqual(session.manualDriveReading?.result?.outcome, .stopped)
+        XCTAssertNil(session.manualDriveReading?.stopBar)
+    }
+
     func testStartingSlowsTheGameToOneTimesAndLettingGoOfTheTrainEndsTheRun() throws {
         let (session, _) = try makeSession()
         session.setSpeed(.x10)

@@ -267,9 +267,16 @@ public struct ManualDrive: Equatable, Sendable {
     public private(set) var result: Result?
 
     public init(train: Train, course: Course, speed: Double = 0) {
+        self.init(train: train, course: course, speed: speed, distance: 0)
+    }
+
+    /// A run already `distance` metres on its way: for the screenshot
+    /// review's looks at a run near its stop.
+    init(train: Train, course: Course, speed: Double, distance: Double) {
         self.train = train
         self.course = course
         self.speed = min(max(speed, 0), train.topSpeed)
+        self.distance = distance
     }
 
     public var isOver: Bool { result != nil }

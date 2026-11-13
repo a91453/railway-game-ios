@@ -107,7 +107,7 @@ public struct ManualDriveTrack: Sendable {
     }
 
     /// The track `distance` along it, with its height there.
-    private func coordinate(at distance: Double) -> WorldCoordinate {
+    func coordinate(at distance: Double) -> WorldCoordinate {
         guard coordinates.count > 1 else { return coordinates[0] }
         let index = segment(at: distance)
         let a = coordinates[index], b = coordinates[index + 1]
