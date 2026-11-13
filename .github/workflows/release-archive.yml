@@ -123,7 +123,7 @@ jobs:
           FILE_BY_FILE: ${{ github.event_name == 'pull_request' }}
         run: |
           mode=()
-          if [[ "$FILE_BY_FILE" == true ]]; then mode=(SWIFT_COMPILATION_MODE=singlefile); fi
+          if [[ "$FILE_BY_FILE" == true ]]; then mode=(SWIFT_COMPILATION_MODE=singlefile SWIFT_WHOLE_MODULE_OPTIMIZATION=NO); fi
           xcodebuild archive \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
