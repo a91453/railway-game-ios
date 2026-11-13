@@ -643,6 +643,12 @@ enum BaseMapFiles {
         return (city, extent, tiles)
     }
 
+    /// Decision 712: the buildings of the open cities outside Taiwan,
+    /// for the 3D map; a city whose pack has none is left out.
+    static let cityFootprints: [URL] = OverseasMap.allCases.compactMap { city in
+        OverseasMaps.open.contains(city) ? MapPack.bundled(city)?.buildingsFile : nil
+    }
+
     /// Taiwan's ground heights for the hill shading, `nil` if the app has
     /// none.
     static let terrain = file("taiwan_terrain.pmtiles")

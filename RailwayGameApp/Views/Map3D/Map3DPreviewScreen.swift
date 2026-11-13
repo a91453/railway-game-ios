@@ -916,6 +916,8 @@ final class Map3DSceneCache {
         let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
         // Decision 389: and Taiwan's buildings.
         let footprints = world.geoAnchor == nil ? nil : BaseMapFiles.footprints
+        // Decision 712: and those of the cities outside Taiwan.
+        let cityFootprints = world.geoAnchor == nil ? [] : BaseMapFiles.cityFootprints
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
         // Decision 699: and its airports' airfields.
@@ -952,7 +954,11 @@ final class Map3DSceneCache {
             let source = Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
                                           cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
                                           footprints: footprints.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
-                                              .flatMap { try? FootprintTiles(data: $0) },
+                                              .flatMap {
+                                                  try? FootprintTiles(data: $0, cities: cityFootprints.compactMap {
+                                                      try? Data(contentsOf: $0, options: .alwaysMapped)
+                                                  })
+                                              },
                                           heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },

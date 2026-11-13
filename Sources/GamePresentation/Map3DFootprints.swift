@@ -10,10 +10,25 @@ import GameCore
 /// one z16 tile per 553–568 m square of Taiwan, Penghu, Kinmen and Matsu.
 public struct FootprintTiles: Sendable {
     let archive: PMTilesArchive
+    /// Decision 712: the buildings of the cities outside Taiwan (their
+    /// map packs' `buildings.pmtiles`), each asked where the one before
+    /// has no tile.
+    let cities: [PMTilesArchive]
 
-    /// The footprints in `data`, the file's bytes (best mapped, not read).
-    public init(data: Data) throws {
+    /// The footprints in `data`, the file's bytes (best mapped, not read),
+    /// with those of `cities`; a city's file that cannot be read is left
+    /// out.
+    public init(data: Data, cities: [Data] = []) throws {
         archive = try PMTilesArchive(data: data)
+        self.cities = cities.compactMap { try? PMTilesArchive(data: $0) }
+    }
+
+    /// The tile's bytes: Taiwan's, or the first city's that has it.
+    func tile(x: Int, y: Int) -> [UInt8]? {
+        for archive in [archive] + cities {
+            if let bytes = try? archive.tile(zoom: Self.zoom, x: x, y: y) { return bytes }
+        }
+        return nil
     }
 
     static let zoom = 16
@@ -80,7 +95,7 @@ struct Map3DFootprints: Sendable {
         var buildings: [Building] = []
         for row in rows {
             for column in columns {
-                guard let bytes = try? tiles.archive.tile(zoom: zoom, x: column, y: row),
+                guard let bytes = tiles.tile(x: column, y: row),
                       let decoded = try? Self.decode(bytes) else { continue }
                 let scale = tilePoints / extent / pointsPerMetre * metre
                 let west = frame.middleX + (Double(column) * tilePoints - anchorX) / pointsPerMetre * metre

@@ -6,13 +6,16 @@ import XCTest
 // tools/map3d-preview: copy into Tests/GamePresentationTests/ to use, and
 // delete it again before committing (it writes files and is not a test).
 // Writes a map's 3D scene for the WebGL preview (README.md beside it).
+@MainActor
 final class Map3DPreviewDump: XCTestCase {
     func testDump() throws {
         guard let out = ProcessInfo.processInfo.environment["MAP3D_DUMP"] else { throw XCTSkip("no MAP3D_DUMP") }
         let world: GameWorld
         var focus: (x: Double, y: Double)?
-        // The base maps of the cities outside Taiwan (decision 712).
+        // The base maps of the cities outside Taiwan (decision 712), and
+        // their buildings.
         var cities: [Data] = []
+        var cityFootprints: [Data] = []
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("RailwayGameApp/Resources/")
         func resource(_ path: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent(path)) }
@@ -82,7 +85,22 @@ final class Map3DPreviewDump: XCTestCase {
         // reads the pack's base map with Taiwan's, as the app does.
         case "hongkong":
             let ground = try OverseasGround(city: .hongKong, pack: MapPack(root: root.appendingPathComponent("MapPacks/hongkong")))
-            world = GameWorld.newOverseasGame(ground)
+            // MAP3D_BUY=hkmtr:AEL,hkmtr:SIL: the lines bought first, for
+            // their track, stations and trains.
+            if let buy = ProcessInfo.processInfo.environment["MAP3D_BUY"] {
+                let session = GameSession(world: GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000)), language: .traditionalChinese)
+                session.railways = try HongKongRailwaysTests.railways()
+                session.population = ground.population
+                for id in buy.split(separator: ",") {
+                    let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, String(id))
+                    XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+                }
+                world = session.world
+            } else {
+                world = GameWorld.newOverseasGame(ground)
+            }
+            cityFootprints = try [MapPack(root: root.appendingPathComponent("MapPacks/hongkong")).buildingsFile].compactMap { $0 }
+                .map { try Data(contentsOf: $0, options: .alwaysMapped) }
             let at = (ProcessInfo.processInfo.environment["MAP3D_AT"] ?? "22.2819:114.1582").split(separator: ":").map { Double(String($0))! }
             focus = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: at[0], longitude: at[1])
             cities = ground.baseMap.map { [$0] } ?? []
@@ -107,7 +125,8 @@ final class Map3DPreviewDump: XCTestCase {
             ? try HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
         // MAP3D_FOOTPRINTS=1: the app's real footprints (decision 389).
         let footprints = ProcessInfo.processInfo.environment["MAP3D_FOOTPRINTS"] == "1"
-            ? try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped)) : nil
+            ? try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped),
+                                 cities: cityFootprints) : nil
         // MAP3D_NOBUILD=1: the land with no town on it and the airports'
         // buildings (decision 385), as the app passes them.
         var noBuild = ProcessInfo.processInfo.environment["MAP3D_NOBUILD"] == "1"

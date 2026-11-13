@@ -217,6 +217,23 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // Decision 712: the buildings of Hong Kong's map
+                    // (`MapPacks/hongkong/buildings.pmtiles`).
+                    DataSourceCredit(
+                        id: "hongKongBuildings",
+                        title: language.text("Hong Kong’s buildings", "香港的建物"),
+                        detail: language.text(
+                            "On Hong Kong’s 3D map, where each building stands, its outline and how tall it is.",
+                            "香港的 3D 地圖上每棟建物的位置、外形與高度。"
+                        ),
+                        notice: language.text(
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the file made from it and the tool that makes it come with the app. Where a building has no storeys recorded, the game estimates them from the recorded buildings like it and from WorldPop’s population (CC BY 4.0).",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；由它做成的檔與產生它的工具隨 App 提供。沒有記載樓層的建物，由遊戲依同類有記載的建物與 WorldPop 的人口（CC BY 4.0）估計。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
                     // Decision 712: the people of Hong Kong's map
                     // (`MapPacks/hongkong/population.json`).
                     DataSourceCredit(

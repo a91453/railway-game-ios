@@ -364,7 +364,7 @@ final class RealRailwaysTests: XCTestCase {
                 "map3DGround", "temples", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "meshy", "kenney", "taipeiGarbageTrucks",
                 "proceduralTokyo", "polyHaven", "runningSound", "dieselSound", "motorSound", "weatherSound",
                 // Decision 712: Hong Kong's, open since its third pull request.
-                "hongKongMTR", "hongKongMap", "hongKongPeople", "hongKongAirport",
+                "hongKongMTR", "hongKongMap", "hongKongBuildings", "hongKongPeople", "hongKongAirport",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

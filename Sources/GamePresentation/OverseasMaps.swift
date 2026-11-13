@@ -65,6 +65,15 @@ public struct MapPack: Sendable {
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
+    /// Decision 712: the pack's buildings (`buildings.pmtiles`:
+    /// OpenStreetMap's, in the format of Taiwan's footprint tiles,
+    /// `tools/hk-map/build_hk_buildings.py`), or `nil` for a pack without
+    /// them: its 3D map then has only the towns the game grows.
+    public var buildingsFile: URL? {
+        let file = root.appendingPathComponent("buildings.pmtiles")
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
+    }
+
     /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
     public static func bundled(_ city: OverseasMap) -> MapPack? {
         Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }
