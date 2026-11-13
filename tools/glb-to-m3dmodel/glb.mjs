@@ -89,7 +89,7 @@ export function imageBytes(gltf, index) {
 
 const MAX_PNG_PIXELS = 4096 * 4096;
 
-function decodePng(bytes) {
+export function decodePng(bytes) {
   if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw new Error('PNG: bad signature');
   let at = 8, width, height, depth, color, interlace;
   const chunks = [];
@@ -105,14 +105,16 @@ function decodePng(bytes) {
     at += length + 12;
   }
   const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[color];
-  if (!width || !height || !channels || depth !== 8 || interlace !== 0) {
-    throw new Error('PNG: only non-interlaced 8-bit gray, RGB, and RGBA images are supported');
+  if (!width || !height || !channels || (depth !== 8 && depth !== 16) || interlace !== 0) {
+    throw new Error('PNG: only non-interlaced 8- and 16-bit gray, RGB, and RGBA images are supported');
   }
+  // A 16-bit sample keeps its high byte (decision 725: SketchUp's textures).
+  const sampleBytes = depth / 8, pixelBytes = channels * sampleBytes;
   // A texture as large as a generator makes (4096 × 4096) and no more;
   // the image data is inflated only as far as the header says it is, so a
   // small file cannot unpack to gigabytes before its length is checked.
   if (width * height > MAX_PNG_PIXELS) throw new Error(`PNG: ${width} × ${height} is larger than 4096 × 4096`);
-  const rowSize = width * channels, size = height * (rowSize + 1);
+  const rowSize = width * pixelBytes, size = height * (rowSize + 1);
   let raw;
   try {
     raw = inflateSync(Buffer.concat(chunks), { maxOutputLength: size });
@@ -125,9 +127,9 @@ function decodePng(bytes) {
   for (let y = 0; y < height; y++) {
     const filter = raw[y * (rowSize + 1)];
     for (let x = 0; x < rowSize; x++) {
-      const a = x >= channels ? pixels[y * rowSize + x - channels] : 0;
+      const a = x >= pixelBytes ? pixels[y * rowSize + x - pixelBytes] : 0;
       const b = y ? pixels[(y - 1) * rowSize + x] : 0;
-      const c = x >= channels && y ? pixels[(y - 1) * rowSize + x - channels] : 0;
+      const c = x >= pixelBytes && y ? pixels[(y - 1) * rowSize + x - pixelBytes] : 0;
       let predictor;
       if (filter === 0) predictor = 0;
       else if (filter === 1) predictor = a;
@@ -143,10 +145,10 @@ function decodePng(bytes) {
   return { width, height, sample(x, y) {
     x = Math.max(0, Math.min(width - 1, Math.floor(x)));
     y = Math.max(0, Math.min(height - 1, Math.floor(y)));
-    const i = (y * width + x) * channels;
-    if (color === 0) return [pixels[i], pixels[i], pixels[i], 255];
-    if (color === 4) return [pixels[i], pixels[i], pixels[i], pixels[i + 1]];
-    return [pixels[i], pixels[i + 1], pixels[i + 2], color === 6 ? pixels[i + 3] : 255];
+    const i = (y * width + x) * pixelBytes, s = k => pixels[i + k * sampleBytes];
+    if (color === 0) return [s(0), s(0), s(0), 255];
+    if (color === 4) return [s(0), s(0), s(0), s(1)];
+    return [s(0), s(1), s(2), color === 6 ? s(3) : 255];
   } };
 }
 
