@@ -357,6 +357,32 @@ public struct Map3DMesh: Sendable {
     public var triangleCount: Int { indices.count / 3 }
     public var isEmpty: Bool { indices.isEmpty }
 
+    /// Decision 709: how far the vertices from `fromVertex` on and the
+    /// boxes from `fromBox` on reach, in metres: the longest of their
+    /// box's three sides; 0 with none.
+    func extent(fromVertex: Int, fromBox: Int) -> Float {
+        var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
+        for vertex in vertices[fromVertex...] {
+            low = Map3DPoint(min(low.x, vertex.x), min(low.y, vertex.y), min(low.z, vertex.z))
+            high = Map3DPoint(max(high.x, vertex.x), max(high.y, vertex.y), max(high.z, vertex.z))
+        }
+        for box in boxes[fromBox...] {
+            let bounds = box.bounds
+            low = Map3DPoint(min(low.x, bounds.min.x), min(low.y, bounds.min.y), min(low.z, bounds.min.z))
+            high = Map3DPoint(max(high.x, bounds.max.x), max(high.y, bounds.max.y), max(high.z, bounds.max.z))
+        }
+        guard low.x <= high.x else { return 0 }
+        return max(high.x - low.x, high.y - low.y, high.z - low.z)
+    }
+
+    /// Decision 709: the same triangles and boxes in another order
+    /// (``Map3DFarDetail/order(_:parts:from:)``).
+    mutating func reorder(indices ordered: [UInt32], boxes orderedBoxes: [Map3DBoxInstance]) {
+        precondition(ordered.count == indices.count && orderedBoxes.count == boxes.count)
+        indices = ordered
+        boxes = orderedBoxes
+    }
+
     /// The smallest box holding every vertex, or `nil` when empty.
     public var bounds: (min: Map3DPoint, max: Map3DPoint)? {
         guard let first = vertices.first else { return nil }

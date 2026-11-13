@@ -399,6 +399,11 @@ extension Map3DScene.Builder {
     /// ``Map3DViaduct/neighbourReach`` across and half a span along) as
     /// one pier under their middle; each as its kind of viaduct stands.
     mutating func addPiers(_ requests: [Map3DViaducts.Pier]) {
+        // Decision 709: under their decks seen from above, so left out
+        // from afar (the decks and the track on them never are).
+        let outer = sizing
+        if target == .base { sizing = Map3DFarDetail.bridgeStructure }
+        defer { sizing = outer }
         var cells: [Map3DScene.ChunkKey: [Int]] = [:]
         for (index, request) in requests.enumerated() { cells[Map3DViaducts.cell(request.top), default: []].append(index) }
         var used = [Bool](repeating: false, count: requests.count)

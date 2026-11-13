@@ -185,6 +185,13 @@ struct TourismPanel: View {
                         .monospacedDigit()
                         .foregroundStyle(Theme.textSecondary)
                 }
+                // Decision 712: how far its flights are from opening a
+                // city's map.
+                if let route = day.airRouteText(in: language, routes: session.airRoutes) {
+                    Text(verbatim: route)
+                        .font(.footnote)
+                        .monospacedDigit()
+                }
                 if let station = day.station, let name = session.world.station(id: station)?.name {
                     Text(verbatim: language.text("Station: \(name)", "車站：\(name)"))
                         .font(.footnote)

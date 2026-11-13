@@ -153,8 +153,9 @@ public struct AssetClassBalance: Hashable, Codable, Sendable {
 
 /// The company's balance sheet (the reference's `balanceSheet`, with the
 /// asset valuation it leaves at 0 filled in from the asset records): its
-/// cash, its fixed assets at book value, its loan and what is left, its
-/// equity. `totalAssets == loan + equity` always.
+/// cash, its fixed assets at book value, its loan, the principal of its term
+/// loans (decision 715) and what is left, its equity.
+/// `totalAssets == loan + termLoans + equity` always.
 public struct BalanceSheet: Hashable, Sendable {
     /// The balance, which may be below zero.
     public let cash: Money
@@ -166,10 +167,12 @@ public struct BalanceSheet: Hashable, Sendable {
     /// The tiles of the map bought (decision 160).
     public let land: AssetClassBalance
     public let loan: Money
+    /// The principal of the term loans not yet paid (decision 715).
+    public let termLoans: Money
 
     public init(
         cash: Money, track: AssetClassBalance, stations: AssetClassBalance, rollingStock: AssetClassBalance,
-        buildings: AssetClassBalance = .zero, land: AssetClassBalance = .zero, loan: Money
+        buildings: AssetClassBalance = .zero, land: AssetClassBalance = .zero, loan: Money, termLoans: Money = .zero
     ) {
         self.cash = cash
         self.track = track
@@ -178,6 +181,7 @@ public struct BalanceSheet: Hashable, Sendable {
         self.buildings = buildings
         self.land = land
         self.loan = loan
+        self.termLoans = termLoans
     }
 
     public subscript(assetClass: AssetClass) -> AssetClassBalance {
@@ -201,7 +205,7 @@ public struct BalanceSheet: Hashable, Sendable {
 
     /// What the company is worth: its assets less what it owes.
     public var equity: Money {
-        totalAssets - loan
+        totalAssets - loan - termLoans
     }
 }
 
@@ -309,7 +313,7 @@ extension GameWorld {
         BalanceSheet(
             cash: economy.balance, track: accounts.assetBalance(.track), stations: accounts.assetBalance(.stations),
             rollingStock: accounts.assetBalance(.rollingStock), buildings: accounts.assetBalance(.buildings), land: accounts.assetBalance(.land),
-            loan: accounts.loan
+            loan: accounts.loan, termLoans: accounts.termLoansPrincipal
         )
     }
 
@@ -573,6 +577,7 @@ extension GameWorld {
             && classes.allSatisfy { (0...CompanyAccounts.maximumAssetCost).contains($0.cost.amount) && (.zero...$0.cost).contains($0.depreciation) }
             && (-maximumBalance...maximumBalance).contains(closing.cash.amount)
             && (.zero...CompanyAccounts.maximumLoan).contains(closing.loan)
+            && (0...maximumAccrued).contains(closing.termLoans.amount)
     }
 }
 
@@ -580,7 +585,7 @@ extension GameWorld {
 
 extension BalanceSheet: Codable {
     private enum CodingKeys: String, CodingKey {
-        case cash, track, stations, rollingStock, buildings, land, loan
+        case cash, track, stations, rollingStock, buildings, land, loan, termLoans
     }
 
     /// Decodes a closing balance sheet; one without the company's
@@ -595,6 +600,8 @@ extension BalanceSheet: Codable {
         buildings = try container.decodeIfPresent(AssetClassBalance.self, forKey: .buildings) ?? .zero
         land = try container.decodeIfPresent(AssetClassBalance.self, forKey: .land) ?? .zero
         loan = try container.decode(Money.self, forKey: .loan)
+        // Decision 715 (save version 93).
+        termLoans = try container.decodeIfPresent(Money.self, forKey: .termLoans) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -610,6 +617,9 @@ extension BalanceSheet: Codable {
             try container.encode(land, forKey: .land)
         }
         try container.encode(loan, forKey: .loan)
+        if termLoans != .zero {
+            try container.encode(termLoans, forKey: .termLoans)
+        }
     }
 }
 

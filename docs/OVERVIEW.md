@@ -114,7 +114,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是有深度的鐵路與城
 | `docs/UI_THEME.md` | 色票、按鈕、玩家看的文字、地區外觀、地圖顏色、圖示 | 現行 |
 | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` | 發佈手冊 | 現行 |
 | `docs/XCODE_CLOUD_ONBOARDING.md` | Xcode Cloud（暫緩） | 擱置；技術前提已變（有 MapLibre、MapKit 與網路） |
-| `docs/MAC_LOCAL_SETUP.md` | 作者的 Mac：Xcode 與 XcodeGen 版本、裝到 iPhone、本機 UI 測試與截圖、Remote Control、Instruments | 現行（2026-11-04） |
+| `docs/MAC_LOCAL_SETUP.md` | 作者的 Mac：Xcode 與 XcodeGen 版本、裝到 iPhone、本機 UI 測試與截圖、Remote Control、Instruments、直接在 Mac 上開 iOS App | 現行（2026-11-13） |
 | `docs/RAILWAY_REFERENCE_MAPPING.md` | 參考庫逐函式對照 | 到決策 153 左右最完整，之後的對照寫在各決策與 PR 裡 |
 
 **研究（`docs/research/`）**

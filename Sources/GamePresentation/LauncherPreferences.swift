@@ -27,6 +27,10 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// Decision 508: what the player answered when the station master
     /// offered the tutorial before a first line; `nil` until then.
     public var firstLineGuide: FirstLineGuide.Choice?
+    /// Decision 712: the cities outside Taiwan whose flights the player
+    /// has opened (``OverseasMap/rawValue``), in the order they opened;
+    /// `nil` in preferences written before, and until the first.
+    public var airRoutesOpened: [String]?
 
     public init() {}
 

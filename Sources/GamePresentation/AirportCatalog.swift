@@ -57,6 +57,9 @@ public enum AirportCatalog {
         /// part describe, when the place is one terminal of several; 0
         /// when they are its own.
         var routesOf: Int64 = 0
+        /// Whether the place is outside Taiwan: its flights to Taiwan's
+        /// airports are then international, not domestic.
+        var isAbroad = false
     }
 
     /// The year the figures are of.
@@ -73,7 +76,7 @@ public enum AirportCatalog {
         "osa": ("大阪", "Osaka", false), "icn": ("首爾仁川", "Seoul Incheon", false), "gmp": ("首爾金浦", "Seoul Gimpo", false),
         "bkk": ("曼谷", "Bangkok", false), "sin": ("新加坡", "Singapore", false), "mnl": ("馬尼拉", "Manila", false),
         "oka": ("沖繩", "Okinawa", false), "mfm": ("澳門", "Macau", false), "sgn": ("胡志明市", "Ho Chi Minh City", false),
-        "sha": ("上海虹橋", "Shanghai Hongqiao", false),
+        "sha": ("上海虹橋", "Shanghai Hongqiao", false), "tpe": ("臺北桃園", "Taipei Taoyuan", true),
     ]
 
     /// Taoyuan's main destinations (table 50-1; Bangkok is its two
@@ -148,6 +151,22 @@ public enum AirportCatalog {
               routes: [Route("ttt", 22_015, 1_636)]),
     ]
 
+    // Decision 712: the airports of the cities outside Taiwan
+    // (``OverseasMap``), which only their own maps hold. Hong Kong
+    // International Airport: 61.0 million passengers and 394,730 aircraft
+    // movements in 2025 (Airport Authority Hong Kong, press release of
+    // January 2026), open all day; its place is its station on the Airport
+    // Express, inside the terminal's transport centre (OpenStreetMap, ODbL
+    // 1.0, the map pack's own point). Its flights to Taiwan are the same
+    // figures as Taiwan's airports' flights to it above (the Civil
+    // Aviation Administration's tables 50-1 to 50-6), so both ends agree.
+    static let overseasPlaces: [Place] = [
+        Place(key: "hkg", chinese: "香港國際機場", english: "Hong Kong International Airport",
+              latitude: 22.315901, longitude: 113.936517, yearlyPassengers: 61_000_000, yearlyFlights: 394_730, firstHour: 0, lastHour: 24,
+              routes: [Route("tpe", 4_905_000, 27_044), Route("khh", 1_253_468, 7_512), Route("rmq", 438_977, 2_416), Route("hun", 35_466, 418)],
+              isAbroad: true),
+    ]
+
     /// Where `place`'s flights go: its main destinations in its order,
     /// then the rest of its domestic and of its international ones, so
     /// they add up to its year.
@@ -161,9 +180,10 @@ public enum AirportCatalog {
         for route in place.routes {
             guard let names = destinations[route.to] else { continue }
             let passengers = own(route.passengers), flights = own(route.flights)
-            list.append(AirDestination(name: names.chinese, englishName: names.english, isDomestic: names.domestic,
+            let domestic = names.domestic && !place.isAbroad
+            list.append(AirDestination(name: names.chinese, englishName: names.english, isDomestic: domestic,
                                        yearlyPassengers: passengers, yearlyFlights: flights))
-            if names.domestic {
+            if domestic {
                 named.home = (named.home.passengers + passengers, named.home.flights + flights)
             } else {
                 named.abroad = (named.abroad.passengers + passengers, named.abroad.flights + flights)
@@ -186,7 +206,7 @@ public enum AirportCatalog {
     /// as `frame` says, in the catalogue's order.
     public static func airports(in frame: RealWorldFrame, bounds: WorldBounds) -> [Airport] {
         var list: [Airport] = []
-        for place in places {
+        for place in places + overseasPlaces {
             let position = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
             guard position.x >= 0, position.y >= 0, position.x < Double(bounds.width), position.y < Double(bounds.height) else { continue }
             list.append(Airport(
@@ -208,7 +228,7 @@ public enum AirportCatalog {
     /// returned as it is.
     public static func withAirports(_ world: GameWorld) -> GameWorld {
         guard world.tourism != nil, world.scenario == nil, let frame = RealWorldFrame(world: world) else { return world }
-        let names = Set(places.map(\.chinese))
+        let names = Set((places + overseasPlaces).map(\.chinese))
         guard world.airports.allSatisfy({ names.contains($0.name) }) else { return world }
         var world = world
         world.setAirports(airports(in: frame, bounds: world.bounds))
