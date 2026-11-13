@@ -24,6 +24,12 @@ export const colours = {
   paving: { default: 0xE0D8CA, grey: 0xB8B4AC },
 };
 
+// Then every colour is taken `share` of the way toward `toward`, the
+// paving of decision 720's map (its option C, pale and low in saturation),
+// so the temples sit in the map's look instead of standing out of it; an
+// opening goes half as far, to stay a dark hole.
+export const soften = { toward: 0xE4E3DF, share: 0.35 };
+
 export const recipes = [
   { id: 'tpe-temple-longshan', files: ['108003', '108003A'], eave: 4, dropMaterials: { 108003: ['material_15'] },
     triangles: 6000, maxError: 0.3 },

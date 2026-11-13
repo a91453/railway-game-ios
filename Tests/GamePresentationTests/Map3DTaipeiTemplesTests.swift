@@ -16,10 +16,11 @@ final class Map3DTaipeiTemplesTests: XCTestCase {
 
     static let models = Map3DTaipeiTemple.models(files: files)
 
-    /// The colours `tools/tpe-temples/recipes.mjs` paints the parts in.
-    static let palette: Set<UInt32> = Set([0xC0805F, 0xA0705E, 0x8F969E, 0x7E9E8A, 0xD9B76C, 0x6F9A86, 0xB8553A, 0xF0E8DD, 0xDDA996, 0x9A4A3C,
-                                           0x6E4A40, 0xB9B4AA, 0xD9D2C6, 0x9C9A92, 0xD08A7E, 0xA8473A, 0xB98B78, 0x7A5A50, 0x6E5F5A, 0x3F3A38,
-                                           0xE0D8CA, 0xB8B4AC].map(Map3DColor.rgb))
+    /// The colours `tools/tpe-temples/recipes.mjs` paints the parts in,
+    /// after taking them toward decision 720's paving (`soften`).
+    static let palette: Set<UInt32> = Set([0xCDA38C, 0xADB1B5, 0xA2B6A8, 0xDDC694, 0x98B4A5, 0xC78774, 0xECE6DE, 0xDFBDB0, 0xB48075,
+                                           0x978078, 0xC8C4BD, 0xDDD8CF, 0xB5B4AD, 0xD7A9A0, 0xBD7E74, 0xC8AA9C, 0x9F8A82, 0x837671,
+                                           0x5C5855, 0xE1DCD1, 0xC7C4BE].map(Map3DColor.rgb))
 
     /// Each file reads, within the budget, untextured, credited to the
     /// dataset, a temple's size, its ground at 0 and in the game's colours.
@@ -79,7 +80,7 @@ final class Map3DTaipeiTemplesTests: XCTestCase {
         let near = builder.nearMeshes.values.reduce(0) { $0 + $1.indices.count / 3 }
         XCTAssertGreaterThanOrEqual(near, try XCTUnwrap(Self.models[.longshan]).triangleCount)
         XCTAssertGreaterThan(builder.farMeshes.values.reduce(0) { $0 + $1.indices.count / 3 }, 0)
-        XCTAssertTrue(builder.keptColours.contains(Map3DColor.rgb(0xC0805F)))
+        XCTAssertTrue(Set(try XCTUnwrap(Self.models[.longshan]).vertices.map(\.color)).isSubset(of: builder.keptColours))
         XCTAssertTrue(builder.addTemples(temples, frame: frame, clearOf: cleared).isEmpty)
         // Without the models, nothing.
         var plain = Map3DScene.Builder(originX: originX, originY: originY, region: region, world: world, heights: nil)

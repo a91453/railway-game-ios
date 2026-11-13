@@ -23,7 +23,7 @@ import { join } from 'node:path';
 import { readCollada, readKml } from './collada.mjs';
 import { triangleColour } from './textures.mjs';
 import { writeM3dmodel } from './m3dmodel.mjs';
-import { recipes, colours } from './recipes.mjs';
+import { recipes, colours, soften } from './recipes.mjs';
 import { dedupe, orientOutward } from './orient.mjs';
 import { MeshoptSimplifier } from '../glb-to-m3dmodel/node_modules/meshoptimizer/index.js';
 
@@ -239,7 +239,13 @@ async function build(folder, output, recipe) {
   triangles.forEach((t, i) => { t.cls = classify(t, i); });
   const classed = triangles.filter(t => t.cls !== null);
   const { triangles: made, error } = await simplify(classed, recipe);
-  for (const t of made) t.rgb = paint(t.cls, t.photo, recipe);
+  // Decision 720's pale map (方案 C): every colour taken part of the way
+  // toward its paving, the openings half as far.
+  const pale = (v, share) => {
+    const m = hex(v).map((x, i) => Math.round(x * (1 - share) + hex(soften.toward)[i] * share));
+    return m[0] << 16 | m[1] << 8 | m[2];
+  };
+  for (const t of made) t.rgb = pale(paint(t.cls, t.photo, recipe), t.cls === 'opening' ? soften.share / 2 : soften.share);
   const xs = made.flatMap(t => t.points.map(p => p[0])), ys = made.flatMap(t => t.points.map(p => p[1])), zs = made.flatMap(t => t.points.map(p => p[2]));
   const bounds = { west: Math.min(...xs), east: Math.max(...xs), south: Math.min(...ys), north: Math.max(...ys), top: Math.max(...zs) };
   const record = {
