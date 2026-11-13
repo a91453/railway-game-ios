@@ -139,8 +139,9 @@ public struct RealRailwayOperations: Sendable {
         "hkmtr": "hkmtr",
     ]
 
-    /// The order systems are searched in: the site's (`SYS_DEFS`).
-    public static let systemOrder = ["tra", "thsr", "afr", "trtc", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"]
+    /// The order systems are searched in: the site's (`SYS_DEFS`), then
+    /// Hong Kong's MTR (decision 697; review L19, P3-17 (c)).
+    public static let systemOrder = ["tra", "thsr", "afr", "trtc", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "hkmtr"]
 
     public let systems: [String: RealOperationSystem]
     /// The files that could not be read, and why.

@@ -1252,6 +1252,10 @@ final class Map3DTrainFeed {
     private let aircraft = Map3DAircraft.Layer()
     private var aircraftSerial = 0
     private var airTraffic: Map3DAircraft.Traffic?
+    /// Review L19, P2-3: the day whose flights are being counted off the
+    /// main actor (counting them builds the passenger graph), and which
+    /// airfields they are for; the last day's are drawn until they are in.
+    private var airTrafficAsked: (day: Int64, serial: Int)?
     private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
     /// Decision 708: the real coaches and the coach stops laid in the
     /// scene (off the main actor), from the routes' file, read once off
@@ -1466,10 +1470,25 @@ final class Map3DTrainFeed {
         if aircraftSerial != aircraft.laidSerial {
             aircraftSerial = aircraft.laidSerial
             airTraffic = nil
+            airTrafficAsked = nil
         }
         let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
-        if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
+        if airTraffic?.day != day, airTrafficAsked?.day != day, !world.airports.isEmpty {
+            let serial = aircraftSerial
+            airTrafficAsked = (day, serial)
+            Task.detached(priority: .userInitiated) { [weak self] in
+                let traffic = Map3DAircraft.Traffic(world: world)
+                await self?.counted(traffic, day: day, serial: serial)
+            }
+        }
         return (laid, airTraffic)
+    }
+
+    /// The flights counted off the main actor, kept unless the day or the
+    /// airfields changed meanwhile.
+    private func counted(_ traffic: Map3DAircraft.Traffic, day: Int64, serial: Int) {
+        guard let asked = airTrafficAsked, asked.day == day, asked.serial == serial else { return }
+        airTraffic = traffic
     }
 
     /// Decision 702 (FOLLOW-AIR): the aircraft of flight `id` now, while

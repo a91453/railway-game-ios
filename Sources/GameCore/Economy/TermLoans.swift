@@ -266,7 +266,9 @@ extension GameWorld {
     func termLoansProblem() -> String? {
         let loans = accounts.termLoans
         guard loans.count <= CompanyAccounts.termLoanSlots else { return "There are more term loans than the bank holds at once." }
-        guard accounts.nextTermLoanID >= 1, zip(loans, loans.dropFirst()).allSatisfy({ $0.id < $1.id }),
+        // Review L20, P3-3: an ID is handed out at each signing, so one a
+        // signing could not add 1 to is not a save of this game.
+        guard accounts.nextTermLoanID >= 1, accounts.nextTermLoanID < Int64.max, zip(loans, loans.dropFirst()).allSatisfy({ $0.id < $1.id }),
               loans.allSatisfy({ (1..<accounts.nextTermLoanID).contains($0.id) })
         else { return "Term loans are listed once each, in the order signed, with IDs already handed out." }
         let today = dayIndex(of: clock.now)
@@ -275,7 +277,9 @@ extension GameWorld {
                   loan.principal.amount % CompanyAccounts.loanStep.amount == 0,
                   let rate = CompanyAccounts.termLoanRate(years: loan.years), loan.rate == rate,
                   loan.interest == CompanyAccounts.termLoanInterest(principal: loan.principal, rate: rate, years: loan.years),
-                  loan.borrowedDay <= today
+                  // Review L20, P3-2: and not so long ago that the days
+                  // since overflow.
+                  loan.borrowedDay <= today, !today.subtractingReportingOverflow(loan.borrowedDay).overflow
             else { return "A term loan must be whole loan steps for 1 to 10 years, at its term's rate and interest, signed no later than today." }
         }
         guard accounts.termLoansOutstanding.amount <= Self.maximumAccrued else { return "The term loans are out of range." }
