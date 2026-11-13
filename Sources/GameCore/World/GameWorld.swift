@@ -4992,19 +4992,21 @@ public struct GameWorld: Equatable, Sendable {
         // tried first and held end a step when one frees, as the default
         // one does (decision 55).
         var granted: Train?
+        // Decision 718: the candidate it was granted as.
+        var asked: Train?
         var whole: [Train] = []
         // With block sections (decision 212) it may follow the trains ahead
         // on them too.
         var scheduledFollowing: Train?
         if case .setsOff = departure,
            case .setsOff(let scheduled, _)? = scheduledLeaving(waiting, stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else {
+            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { (granted, asked) = (train, scheduled) } else {
                 whole.append(scheduled)
                 scheduledFollowing = scheduled
             }
         }
         if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(waiting, stop: stop, cycle: cycle, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
+            if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { (granted, asked) = (train, preferred) } else { whole.append(preferred) }
         }
         // Decision 526: before the default way, the scheduled one followed
         // behind the trains ahead on it, as the default may be: a train
@@ -5012,10 +5014,16 @@ public struct GameWorld: Equatable, Sendable {
         // the plan leaves it, not the one keeping left takes.
         if granted == nil, let scheduled = scheduledFollowing, !blockSections, scheduled.movement.edges != moved.movement.edges,
            case .granted(let train) = reserving(scheduled, following: true, memo: &memo.directions) {
-            granted = train
+            (granted, asked) = (train, scheduled)
         }
         let train: Train
         if let granted {
+            // Decision 718: not ahead of a service that has waited longer
+            // for the same track the other way.
+            if turnOwed(by: granted, memo: &memo.directions) != nil {
+                held.append(HeldRoute(candidate: moved, whole: whole + [asked ?? moved]))
+                return false
+            }
             train = granted
         } else {
             switch reservingDeparture(moved, memo: &memo.directions) {
@@ -5781,7 +5789,9 @@ public struct GameWorld: Equatable, Sendable {
             }
             return held.contains { route in
                 for train in route.whole {
-                    if case .granted = moved.reserving(train, following: blockSections, memo: &memo.directions) { return true }
+                    // Decision 718: and it is its turn.
+                    if case .granted(let granted) = moved.reserving(train, following: blockSections, memo: &memo.directions),
+                       moved.turnOwed(by: granted, memo: &memo.directions) == nil { return true }
                 }
                 if case .granted = moved.reservingDeparture(route.candidate, memo: &memo.directions) { return true }
                 return false

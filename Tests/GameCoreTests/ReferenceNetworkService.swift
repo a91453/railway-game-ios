@@ -230,7 +230,10 @@ extension ReferenceWorld {
             off.service?.run = selectedRun
         }
         off.trafficVisits = scheduledDepartureHistory(trains[i])
-        _ = admit(off, at: i, following: true)
+        guard case .success(let granted) = admitted(off, following: true) else { return false }
+        // Decision 718: not ahead of a service that has waited longer.
+        if takesTurns, turnOwed(by: granted, from: trains[i]) != nil { return false }
+        trains[i] = granted
         return false
     }
 
