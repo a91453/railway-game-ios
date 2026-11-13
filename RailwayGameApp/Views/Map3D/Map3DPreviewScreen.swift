@@ -1234,8 +1234,9 @@ final class Map3DTrainFeed {
     /// Decision 699: the airfields laid in the scene for their aircraft,
     /// laid again when the scene or the world's airports change, and the
     /// day's flights, counted again each game day.
-    private var aircraft: Map3DAircraft.Laid?
-    private var aircraftKey: (x: Double, y: Double, airports: Int)?
+    /// Decision 713: laid off the main actor, none drawn until they are.
+    private let aircraft = Map3DAircraft.Layer()
+    private var aircraftSerial = 0
     private var airTraffic: Map3DAircraft.Traffic?
     private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
@@ -1420,14 +1421,14 @@ final class Map3DTrainFeed {
     /// of game second `second`; `nil` off a real-world map.
     private func laidAircraft(in scene: Map3DScene, second: Double) -> (aircraft: Map3DAircraft.Laid, traffic: Map3DAircraft.Traffic?)? {
         guard let world = busWorld, world.geoAnchor != nil, let airfields = Self.airfields else { return nil }
-        if aircraftKey?.x != scene.originX || aircraftKey?.y != scene.originY || aircraftKey?.airports != world.airports.count {
-            aircraft = Map3DAircraft.Laid(world: world, scene: scene, airfields: airfields)
-            aircraftKey = (scene.originX, scene.originY, world.airports.count)
+        guard let laid = aircraft.aircraft(world: world, in: scene, airfields: airfields) else { return nil }
+        if aircraftSerial != aircraft.laidSerial {
+            aircraftSerial = aircraft.laidSerial
             airTraffic = nil
         }
         let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
         if airTraffic?.day != day, !world.airports.isEmpty { airTraffic = Map3DAircraft.Traffic(world: world) }
-        return aircraft.map { ($0, airTraffic) }
+        return (laid, airTraffic)
     }
 
     /// Decision 702 (FOLLOW-AIR): the aircraft of flight `id` now, while
@@ -1443,6 +1444,10 @@ final class Map3DTrainFeed {
     /// it is doing when that changes, after this frame.
     func aircraftPose(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DFollow.Pose? {
         let found = aircraftFollowed(id, in: scene)
+        // Decision 713: while the airfields are laid again (the scene was
+        // built anew round another place), it is not gone: the camera
+        // waits where it is.
+        if found == nil, aircraft.isLaying { return nil }
         if aircraftTold?.flight != id || aircraftTold?.state != found?.state {
             aircraftTold = (id, found?.state)
             let state = found?.state, tell = aircraftChanged
