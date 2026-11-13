@@ -92,3 +92,16 @@ extension TrackGeometry {
         return result
     }
 }
+
+extension TrackGeometry {
+    /// Whether this is still the centre line of `edge` in `world`: as
+    /// long as the edge, with its profile, from where its `from` node
+    /// stands to where its `to` node stands. A map keeps sampled geometry
+    /// by edge ID, and an ID names another edge after Undo puts an
+    /// earlier world back and something else is built.
+    public func follows(_ edge: TrackEdge, in world: GameWorld) -> Bool {
+        length == edge.length && profile == edge.profile
+            && points.first == world.network.node(edge.from)?.position
+            && points.last == world.network.node(edge.to)?.position
+    }
+}

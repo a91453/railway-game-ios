@@ -26,11 +26,37 @@ struct MapEdgeDrawing: Equatable, Sendable {
             : []
     }
 
+    /// Whether it is the drawing of `edge` as the world has it now. Undo
+    /// puts an earlier world back, and the next track built is given the
+    /// number of the one taken back, so an ID alone does not say so.
+    func draws(_ edge: TrackEdge) -> Bool {
+        self.edge == edge
+    }
+
+    /// ``draws(_:)``, and its ends stand where `world` has that edge's
+    /// nodes: for the cache, which outlives the world it was sampled from.
+    func draws(_ edge: TrackEdge, in world: GameWorld) -> Bool {
+        draws(edge) && geometry.follows(edge, in: world)
+    }
+
     /// Its centre line from `start` to `end` as drawn at `tolerance`
     /// (``PolylineDetail/tolerance(pointsPerUnit:)``): decision 377, the
     /// points a quarter of a point of the screen would not show left out.
     func points(from start: Int64, to end: Int64, tolerance: Double) -> [WorldCoordinate] {
         geometry.points(from: start, to: end, detail: detail, tolerance: tolerance)
+    }
+}
+
+extension [TrackEdgeID: MapEdgeDrawing] {
+    /// The cached drawing of `edge`, unless it is of another track that
+    /// had its ID (``MapEdgeDrawing/draws(_:)``).
+    func drawing(of edge: TrackEdge) -> MapEdgeDrawing? {
+        self[edge.id].flatMap { $0.draws(edge) ? $0 : nil }
+    }
+
+    /// The drawing of edge `id` of `world`: the cached one, or sampled now.
+    func drawing(of id: TrackEdgeID, in world: GameWorld) -> MapEdgeDrawing? {
+        world.network.edge(id).flatMap { drawing(of: $0) ?? MapEdgeDrawing(edge: $0, world: world) }
     }
 }
 
@@ -629,7 +655,7 @@ enum MapArt {
         let detail = projection.detail
         let edges = world.network.edges.compactMap { edge -> MapEdgeDrawing? in
             // A command can reach Canvas before onChange refreshes the cache.
-            let drawing = cached[edge.id] ?? MapEdgeDrawing(edge: edge, world: world)
+            let drawing = cached.drawing(of: edge) ?? MapEdgeDrawing(edge: edge, world: world)
             return drawing.flatMap { region.intersects($0.bounds) ? $0 : nil }
         }.sorted {
             ($0.geometry.startHeight + $0.geometry.endHeight, $0.edge.id)
@@ -638,8 +664,11 @@ enum MapArt {
         if detail == .full {
             let geometries = Dictionary(uniqueKeysWithValues: edges.map { ($0.edge.id, $0.geometry) })
             for platform in world.network.platforms {
-                guard let points = geometries[platform.edge]?.points(from: platform.start, to: platform.end),
-                      let bounds = WorldRegion(enclosing: points), region.intersects(bounds) else { continue }
+                // A platform never reaches past its edge; a drawing that
+                // is shorter is not that edge's, so nothing is drawn.
+                guard let geometry = geometries[platform.edge], platform.end <= geometry.length else { continue }
+                let points = geometry.points(from: platform.start, to: platform.end)
+                guard let bounds = WorldRegion(enclosing: points), region.intersects(bounds) else { continue }
                 context.stroke(polyline(points, projection: projection), with: .color(Palette.station.opacity(0.85)), style: StrokeStyle(lineWidth: max(3, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
         }
@@ -683,7 +712,7 @@ enum MapArt {
         let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
         func drawings(_ ids: [TrackEdgeID]) -> [MapEdgeDrawing] {
             ids.compactMap { id -> MapEdgeDrawing? in
-                guard let edge = world.trackEdge(id), let drawing = cached[id] ?? MapEdgeDrawing(edge: edge, world: world) else { return nil }
+                guard let drawing = cached.drawing(of: id, in: world) else { return nil }
                 return region.intersects(drawing.bounds) ? drawing : nil
             }
         }
@@ -968,7 +997,7 @@ enum MapArt {
         // Decision 377: each stretch with the points this zoom shows.
         let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
         for stretch in lines.stretches {
-            guard let drawing = drawings[stretch.edge] ?? cached[stretch.edge] ?? world.network.edge(stretch.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
+            guard let drawing = drawings[stretch.edge] ?? cached.drawing(of: stretch.edge, in: world) else { continue }
             drawings[stretch.edge] = drawing
             guard region.intersects(drawing.bounds) else { continue }
             let end = min(stretch.end, drawing.geometry.length)
@@ -1046,7 +1075,7 @@ enum MapArt {
         _ preview: RoutePreview, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing]
     ) -> [(edge: TrackEdgeID, points: [ScreenPoint])] {
         preview.pieces.compactMap { piece in
-            guard let drawing = cached[piece.edge] ?? world.network.edge(piece.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { return nil }
+            guard let drawing = cached.drawing(of: piece.edge, in: world) else { return nil }
             let end = min(piece.end, drawing.geometry.length)
             guard piece.start < end else { return nil }
             let points = drawing.geometry.points(from: piece.start, to: end).map { projection.screenPoint(of: $0) }
@@ -1128,7 +1157,7 @@ enum MapArt {
                 if box.intersects(view) { obstacles.append(box) }
             }
             for edge in world.network.edges {
-                guard let drawing = cached[edge.id] ?? MapEdgeDrawing(edge: edge, world: world), region.intersects(drawing.bounds) else { continue }
+                guard let drawing = cached.drawing(of: edge) ?? MapEdgeDrawing(edge: edge, world: world), region.intersects(drawing.bounds) else { continue }
                 tracks.append((edge, drawing.geometry.points.map { projection.screenPoint(of: $0) }))
             }
             for point in Placement.crossings(of: tracks.map(\.points), in: view) {
@@ -1216,7 +1245,7 @@ enum MapArt {
             let width = projection.detail == .full ? stroke.width : max(1.5, stroke.width * 0.6)
             let color = Color(stroke.color)
             for piece in stroke.pieces {
-                guard let drawing = drawings[piece.edge] ?? cached[piece.edge] ?? world.network.edge(piece.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
+                guard let drawing = drawings[piece.edge] ?? cached.drawing(of: piece.edge, in: world) else { continue }
                 drawings[piece.edge] = drawing
                 guard region.intersects(drawing.bounds) else { continue }
                 let end = min(piece.end, drawing.geometry.length)
