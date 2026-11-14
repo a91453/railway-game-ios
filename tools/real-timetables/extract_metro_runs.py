@@ -501,6 +501,15 @@ def main(folder, out):
         if not single and sum(line["overnight"].values()) > 1 and all(line["tracks"][end] == 1 for end in ends):
             for end in ends:
                 line["tracks"][end] = 2
+        # The same for a shuttle of two stops whose ends stand as many
+        # trains overnight as they have tracks (Hong Kong's East Rail Line
+        # to Lok Ma Chau, two trains at each end of two tracks each): the
+        # first trains leaving the two ends at once each wait for a
+        # platform at the other end, which the other end's trains fill.
+        # Each end has one track more (Chien, 2026-11-14: 列車停在上水不動).
+        elif not single and len(stops) == 2 and all(0 < line["tracks"][end] <= line["overnight"].get(end, 0) < END_TRACKS for end in ends):
+            for end in ends:
+                line["tracks"][end] = line["overnight"][end] + 1
         # Decision 605: the stations each run passes, by its train.
         for run in line["runs"]:
             names_passed = [c[0] for c in run["calls"] if c[0] in passed.get(run["train"], ())] if not run.get("positioning") else []
