@@ -67,6 +67,43 @@ final class PlatformTrackSessionTests: XCTestCase {
         XCTAssertEqual(session.world.network.node(edge.from)?.position.y, 8_192 + 704, "11 m south")
     }
 
+    /// Decision 752: a level platform edge between two gentle grades (the
+    /// track a trace lays on either side of a station): the turnouts stand
+    /// on the grades, as GameCore splits them up to 25‰; steeper, no room.
+    @MainActor
+    func testTheTurnoutsStandOnAGentleGradeButNotASteepOne() throws {
+        func world(rise: Int64) throws -> (GameWorld, TrackPlatform) {
+            var world = try makeWorld(width: 32_768, height: 16_384, balance: 100_000_000, speed: .paused)
+            let height: Int64 = 1_280
+            let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192, z: height - rise))
+            let a = try world.buildTrackNode(at: WorldCoordinate(x: 12_288, y: 8_192, z: height))
+            let b = try world.buildTrackNode(at: WorldCoordinate(x: 18_432, y: 8_192, z: height))
+            let east = try world.buildTrackNode(at: WorldCoordinate(x: 29_696, y: 8_192, z: height - rise))
+            try world.buildTrackEdge(from: west, to: a, structure: .elevated)
+            let middle = try world.buildTrackEdge(from: a, to: b, structure: .elevated)
+            try world.buildTrackEdge(from: b, to: east, structure: .elevated)
+            let station = try world.buildStation(named: "Middle", at: PlanPoint(x: 15_360, y: 8_704)).id
+            try world.addTrackPlatform(station, on: middle, from: 0, to: 6_144)
+            return (world, try XCTUnwrap(world.trackPlatforms(of: station).first))
+        }
+        // 11,264 units long: 225 units' rise is 20‰, 450 is 40‰.
+        let (gentle, platform) = try world(rise: 225)
+        let session = GameSession(world: gentle)
+        for layout in PlatformTrackLayout.allCases {
+            XCTAssertNil(session.platformTrackPreview(beside: platform, layout: layout, side: .left).problem, "\(layout)")
+        }
+        session.addPlatformTrack(beside: platform, layout: .island, side: .left)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.trackPlatforms(of: platform.station).count, 2)
+
+        let (steep, steepPlatform) = try world(rise: 450)
+        let refused = GameSession(world: steep)
+        XCTAssertEqual(
+            refused.platformTrackPreview(beside: steepPlatform, layout: .side, side: .left).problem,
+            PlatformTrackProblem.noRoom.text(in: .english)
+        )
+    }
+
     /// No room for the turnouts, or a refusal from GameCore: nothing
     /// changes.
     @MainActor

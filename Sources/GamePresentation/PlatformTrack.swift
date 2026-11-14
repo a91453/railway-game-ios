@@ -141,18 +141,24 @@ extension GameSession {
     /// along it (`forward`) or back: through each node where the line runs
     /// straight on (one way on), to a place on an edge, or to a node when
     /// the place is nearer it than a split may be. `nil` where the line
-    /// ends, branches or climbs first, or ends within a split's least piece
-    /// of the place (decision 507). The new track leaves the turnout back
+    /// ends, branches or climbs more steeply than a turnout may stand on
+    /// first (decision 752), the place is on a vertical curve, or the line
+    /// ends within a split's least piece of the place (decision 507). The new track leaves the turnout back
     /// toward the platform.
     func platformTrackTurnout(from edge: TrackEdgeID, at offset: Int64, forward: Bool, reach: Int64, in world: GameWorld) -> PlatformTrackTurnout? {
         var edge = edge, offset = offset, forward = forward, left = reach
         let spacing = NetworkBuilding.minimumSpacing
         for _ in 0..<64 {
+            // Decision 752: on a gentle grade too, as GameCore splits one
+            // (decision 233: at most 25‰, on its steady grade); only level
+            // track was taken, and a station on a traced line, whose track
+            // climbs and falls on either side, had no room for turnouts.
             guard let current = world.network.edge(edge), let geometry = world.trackGeometry(of: edge),
-                  geometry.startHeight == geometry.endHeight, current.profile == .uniform else { return nil }
+                  geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade) else { return nil }
             let room = forward ? current.length - offset : offset
             if left <= room {
                 let distance = forward ? offset + left : offset - left
+                guard distance >= current.profile.startTransition, distance <= current.length - current.profile.endTransition else { return nil }
                 let location = geometry.location(at: distance)
                 let back = forward ? location.direction.reversed : location.direction
                 // At a node, the way along the edge toward the platform:
