@@ -134,7 +134,13 @@ public enum TRADemo {
         keepLeft: true,
         // Decision 279: up on the viaducts south of Yilan and through
         // Dongshan, as the real line is.
-        followsRealStructures: true
+        followsRealStructures: true,
+        // Decision 741: island platforms as the TRA's station plans have
+        // them: Jiaoxi, Yilan, Erjie, Zhongli and Luodong (Luodong's plan
+        // does not show its outer tracks; its two platforms are islands),
+        // one at Toucheng and one at Su'aoxin.
+        islandPlatforms: [2, 4, 5, 6, 7],
+        endIslands: (north: 1, south: 1)
     )
 
     /// The demo: a new whole-Taiwan game with the Yilan Line built,

@@ -112,17 +112,18 @@ public enum HighSpeedDemo {
     static let islandGap = Double(PlatformTrackLayout.island.spacing) - trackOffset
 
     /// Decision 741: how far out from the down track an end's `k`th track
-    /// (from 1) on a side stands. The tracks pair round island platforms,
-    /// as the real ends' do (`tools/hsr-platforms/hsr_platforms.json`:
-    /// Nangang's three islands among six tracks, Zuoying's three at some
-    /// 22, 7 and 11 m out): on the east (the down track's left) the down
-    /// track and the first track share one, then the second and third;
-    /// on the west the first and second, then the third and fourth. The
-    /// two tracks of a pair stand ``islandGap`` further apart, the pairs
-    /// ``trackOffset`` apart.
-    static func endTrackOffset(_ k: Int, east: Bool) -> Double {
+    /// (from 1) on a side stands, its tracks paired round `islands` island
+    /// platforms as the real end's (the railways' own station plans:
+    /// Nangang's and Zuoying's three, Toucheng's and Su'aoxin's one). The
+    /// pairs in turn: the down track and the first on the east (its left),
+    /// the first and second on the west, the second and third on the east,
+    /// the third and fourth on the west, and so on. The two tracks of a
+    /// pair stand ``islandGap`` further apart; the rest ``trackOffset``.
+    static func endTrackOffset(_ k: Int, east: Bool, islands: Int) -> Double {
         (1...max(k, 1)).reduce(0.0) { out, j in
-            out + trackOffset + ((j % 2 == 1) == east ? islandGap : 0)
+            // The pair whose second track `j` is, and its turn.
+            let turn: Int? = east ? (j % 2 == 1 ? j - 1 : nil) : (j % 2 == 0 ? j - 1 : nil)
+            return out + trackOffset + (turn.map { $0 < islands } == true ? islandGap : 0)
         }
     }
     /// How long the up track's ramps from the down track are, and the
@@ -200,7 +201,12 @@ public enum HighSpeedDemo {
         heightFit: heightFit,
         depotLeads: true,
         // Decision 325: its trips pay the real fares.
-        fares: HighSpeedFares.standard
+        fares: HighSpeedFares.standard,
+        // Decision 741: island platforms as the High Speed Rail's station
+        // plans have them: Taipei, Banqiao and Taichung between the ends,
+        // three at Nangang and at Zuoying.
+        islandPlatforms: [1, 2, 6],
+        endIslands: (north: 3, south: 3)
     )
 
     /// The world's frame: Taiwan's, as the whole-Taiwan game lays it.
@@ -776,10 +782,10 @@ public enum HighSpeedDemo {
                 beside: plan, at: [index(junctions.north)] + inner + [index(junctions.south)], offsets: [0] + inner.map { _ in offset } + [0]
             )
             // Decision 741: at a station whose real platforms are islands
-            // (``RealLineDemoSpec/islandStations``) each loop stands an
+            // (``RealLineDemoSpec/islandPlatforms``) each loop stands an
             // island's width out from its main track, the island between
             // them; a second loop the usual spacing beyond it.
-            func island(_ station: Int) -> Double { spec.islandStations.contains(station) ? HighSpeedDemo.islandGap : 0 }
+            func island(_ station: Int) -> Double { spec.islandPlatforms.contains(station) ? HighSpeedDemo.islandGap : 0 }
             loops = Dictionary(uniqueKeysWithValues: between.map { station in
                 let at = loopNodes(platforms[station]).map(index), out = offset + island(station)
                 return (station, (
@@ -797,12 +803,12 @@ public enum HighSpeedDemo {
             })
             // Decision 228: the ends' tracks, the `k`th on a side `k`
             // tracks' widths out (east is the down track's left: negative).
-            func ends(_ zone: ClosedRange<Double>, sides: (east: Int, west: Int), through: Bool) -> [RealWorldDemo.TrackPlan] {
+            func ends(_ zone: ClosedRange<Double>, sides: (east: Int, west: Int), islands: Int, through: Bool) -> [RealWorldDemo.TrackPlan] {
                 [(sides.east, -1.0), (sides.west, 1.0)].flatMap { count, side -> [RealWorldDemo.TrackPlan] in
                     guard count > 0 else { return [] }
                     return (1...count).map { k in
                         // Decision 741: paired round island platforms.
-                        let out = side * HighSpeedDemo.endTrackOffset(k, east: side < 0), away = Double(k) * ramp
+                        let out = side * HighSpeedDemo.endTrackOffset(k, east: side < 0, islands: islands), away = Double(k) * ramp
                         let distances = [zone.lowerBound - margin - away, zone.lowerBound - margin, zone.upperBound + margin] + (through ? [zone.upperBound + margin + away] : [])
                         let offsets = [0, out, out] + (through ? [0] : [])
                         guard spec.rampsFollowTrack else { return RealWorldDemo.TrackPlan(beside: plan, at: distances.map(index), offsets: offsets) }
@@ -822,7 +828,10 @@ public enum HighSpeedDemo {
                     }
                 }
             }
-            endTracks = (north: ends(platforms[0], sides: sides.north, through: true), south: ends(platforms[last], sides: sides.south, through: false))
+            endTracks = (
+                north: ends(platforms[0], sides: sides.north, islands: spec.endIslands.north, through: true),
+                south: ends(platforms[last], sides: sides.south, islands: spec.endIslands.south, through: false)
+            )
             turnbackReach = Dictionary(uniqueKeysWithValues: turnbacks.map { station in
                 let nodes = crossoverNodes(station).flatMap { $0 } + [outerEnds(station).north, outerEnds(station).south]
                 return (station, nodes.min()!...nodes.max()!)
