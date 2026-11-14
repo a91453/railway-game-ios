@@ -60,6 +60,12 @@ public struct AirMap: Hashable, Sendable, Identifiable {
         language.text(english, chinese)
     }
 
+    /// The name of the map's row in the map picker: Taiwan's is "the whole
+    /// of Taiwan", a city's its name.
+    public func rowName(in language: DisplayLanguage) -> String {
+        id == AirMap.taiwan.id ? language.text("The whole of Taiwan", "全台灣") : name(in: language)
+    }
+
     /// Taiwan: its airports are the ones the catalog's tables call
     /// domestic.
     public static let taiwan = AirMap(
@@ -206,7 +212,10 @@ extension AirportDay {
             guard let map = routes.map(route.to), airport.flies(to: map) else { return nil }
             let name = map.name(in: language)
             if routes.opened.contains(map.id) {
-                return language.text("\(name) flights are open: you can start a game on the \(name) map.", "\(name)航線已開航，可以到\(name)的地圖經營。")
+                return language.text(
+                    "\(name) flights are open. On the start screen, tap New Game, then Real-World Map: \(map.rowName(in: language)) is at the top of the list.",
+                    "\(name)航線已開航。回開始畫面按「新遊戲」→「實景地圖」，清單最上面就有「\(map.rowName(in: language))」。"
+                )
             }
             return language.text(
                 "\(name) flights: \(airport.yesterdayRiders.groupedText) of \(route.riders.groupedText) rode your trains yesterday. Reach \(route.riders.groupedText) in a day to open the \(name) map.",
@@ -238,8 +247,8 @@ extension GameSession {
     static func airRouteOpenedText(_ map: AirMap, from here: AirMap, in language: DisplayLanguage) -> String {
         let name = map.name(in: language)
         return language.text(
-            "Flights between \(here.name(in: language)) and \(name) are open. Start a new game on a real-world map to choose \(name).",
-            "\(here.name(in: language))↔\(name)開航了。開新遊戲時，在實景地圖可以選「\(name)」。"
+            "Flights between \(here.name(in: language)) and \(name) are open. On the start screen, tap New Game, then Real-World Map: \(map.rowName(in: language)) is at the top of the list.",
+            "\(here.name(in: language))↔\(name)開航了。回開始畫面按「新遊戲」→「實景地圖」，清單最上面就有「\(map.rowName(in: language))」。"
         )
     }
 }
