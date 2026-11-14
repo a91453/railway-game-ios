@@ -2174,11 +2174,15 @@ public final class GameLauncher {
     /// P2-2): the game stops at once and the world is copied then; the
     /// autosave is encoded and written, and the list of saves read, on the
     /// saves' queue, after any save or iCloud round queued before it (on a
-    /// large map a save is a few MB). The start screen comes once it is
-    /// written; if it fails, the game stays and goes on, with the failure
-    /// on its status line, and the player is asked whether to leave
-    /// without saving (``unsavedLeaving``). Nothing, and `nil`, while one
-    /// is under way.
+    /// large map a save is a few MB). PERF-DEVICE 4: the start screen comes
+    /// at once, not when the autosave is written (on the author's largest
+    /// save, 30 MB, three to four seconds on a phone); a game opened then
+    /// is read after it, on the same queue. If it fails, the game comes
+    /// back and goes on, with the failure on its status line, and the
+    /// player is asked whether to try again, leave without saving or keep
+    /// playing (``unsavedLeaving``); a game opened meanwhile has the
+    /// failure on its status line instead. Nothing, and `nil`, while one
+    /// is under way (``isReturningToStart``).
     @discardableResult
     public func returnToStartInBackground(at date: Date = Date()) -> Task<Void, Never>? {
         guard !isReturningToStart else { return nil }
@@ -2203,23 +2207,55 @@ public final class GameLauncher {
             })
             report.finish()
         }
+        leaveGame()
         return Task {
             for await result in written {
                 isReturningToStart = false
-                guard self.session === session else { continue }
                 switch result {
                 case .success(let list):
-                    leaveGame()
                     if listRead == read { entries = list }
                     afterLeaving()
                 case .failure(let error):
                     let reason = error.playerMessage(in: language)
+                    guard self.session == nil else {
+                        // A game opened meanwhile: the one left is lost.
+                        self.session?.message = StatusMessage(kind: .failure, text: Self.leftUnsaved(reason, in: language))
+                        continue
+                    }
+                    comeBack(to: session, row: row)
                     session.message = StatusMessage(kind: .failure, text: reason)
-                    if isActive { session.startGameLoop() }
                     unsavedLeaving = UnsavedLeaving(reason: reason)
                 }
             }
         }
+    }
+
+    /// PERF-DEVICE 4: the status line of a game opened while the autosave
+    /// of the one left failed.
+    static func leftUnsaved(_ reason: String, in language: DisplayLanguage) -> String {
+        language.text(
+            "The game you left could not be saved: \(reason)",
+            "剛才離開的遊戲沒有存成功：\(reason)"
+        )
+    }
+
+    /// PERF-DEVICE 4: back to `left`, the game Back to Start left before
+    /// its autosave failed, as it was, the start screen showing nothing
+    /// else meanwhile.
+    private func comeBack(to left: GameSession, row: String?) {
+        session = left
+        gameRow = row
+        gameIsOpen.value = true
+        startLessonClock()
+        playSound?(.transition)
+        if isActive { left.startGameLoop() }
+    }
+
+    /// Answers ``unsavedLeaving`` by trying Back to Start again.
+    public func tryLeavingAgain() {
+        guard unsavedLeaving != nil else { return }
+        unsavedLeaving = nil
+        returnToStartInBackground()
     }
 
     /// What going back to the start screen does once the game is saved.

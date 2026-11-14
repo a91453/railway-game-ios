@@ -19,9 +19,9 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
 
     private let date = Date(timeIntervalSince1970: 1_790_942_400)
 
-    /// The tap leaves the game as it is until the autosave is written: the
-    /// world of the moment of the tap is saved, then the start screen comes
-    /// with the list read again. A second tap meanwhile does nothing.
+    /// PERF-DEVICE 4: the tap leaves for the start screen at once; the
+    /// world of the moment of the tap is saved, and then the list is read
+    /// again. A second tap meanwhile does nothing.
     @MainActor
     func testTheStartScreenComesOnceTheAutosaveIsWritten() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
@@ -30,8 +30,9 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
         let world = session.worldToSave
 
         let leaving = try XCTUnwrap(launcher.returnToStartInBackground(at: date))
-        XCTAssertNotNil(launcher.session, "not saved on the main thread")
-        XCTAssertTrue(launcher.isReturningToStart)
+        XCTAssertNil(launcher.session, "the start screen comes at once")
+        XCTAssertFalse(session.isGameLoopRunning)
+        XCTAssertTrue(launcher.isReturningToStart, "still saving")
         XCTAssertNil(launcher.returnToStartInBackground(at: date), "a second tap waits for the first")
 
         await leaving.value
@@ -42,8 +43,8 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
         XCTAssertEqual(saved, world)
     }
 
-    /// A save that cannot be written keeps the game, with why on its
-    /// status line, as ``GameLauncher/returnToStart()`` does.
+    /// A save that cannot be written brings the game back, with why on
+    /// its status line, as ``GameLauncher/returnToStart()`` keeps it.
     @MainActor
     func testAFailedAutosaveKeepsTheGame() async throws {
         try Data("x".utf8).write(to: directory)
@@ -52,7 +53,7 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
         let session = try XCTUnwrap(launcher.session)
 
         await launcher.returnToStartInBackground(at: date)?.value
-        XCTAssertTrue(launcher.session === session, "the game stays")
+        XCTAssertTrue(launcher.session === session, "the game comes back")
         XCTAssertFalse(launcher.isReturningToStart)
         XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: SaveError.fileSystem.playerMessage(in: .english)))
     }
@@ -129,5 +130,29 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
         await stale.value
         XCTAssertEqual(launcher.entries, latest, "the older read dropped")
         XCTAssertEqual(latest.count, afterReturn.count + 2)
+    }
+
+    /// PERF-DEVICE 4: Try Again on the question leaves once more, and
+    /// saves once the folder can be written.
+    @MainActor
+    func testTryingAgainLeavesOnceTheSaveIsWritten() async throws {
+        try Data("x".utf8).write(to: directory)
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.openDemo()
+        let session = try XCTUnwrap(launcher.session)
+        let world = session.worldToSave
+        await launcher.returnToStartInBackground(at: date)?.value
+        XCTAssertNotNil(launcher.unsavedLeaving)
+
+        try FileManager.default.removeItem(at: directory)
+        launcher.tryLeavingAgain()
+        XCTAssertNil(launcher.unsavedLeaving)
+        XCTAssertNil(launcher.session, "left at once again")
+        XCTAssertTrue(launcher.isReturningToStart)
+        while launcher.isReturningToStart { await Task.yield() }
+        XCTAssertNil(launcher.session)
+        XCTAssertNil(launcher.unsavedLeaving)
+        let saved = try SaveLibrary.decode(Data(contentsOf: directory.appendingPathComponent("autosave.json")))
+        XCTAssertEqual(saved, world)
     }
 }
