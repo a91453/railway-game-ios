@@ -102,7 +102,7 @@ extension ReferenceWorld {
         if service.stop > 0, let r = routePreference(candidate, from: service.stop - 1, to: service.stop),
            let path = preferenceRoute(from: start.position!, r, length: Self.length(candidate)),
            case .success = admitted(routed(start, path)) { return true }
-        guard let path = chosenRoute(from: start, to: candidate.timetable[service.stop].station) else { return false }
+        guard let path = chosenRoute(from: start, to: candidate.timetable[service.stop].station, next: departedFor(candidate, from: start)) else { return false }
         if case .success = admitted(routed(start, path), following: true) { return true }
         return false
     }
@@ -157,10 +157,29 @@ extension ReferenceWorld {
         if service.stop > 0, let r = routePreference(candidate, from: service.stop - 1, to: service.stop),
            let path = preferenceRoute(from: start.position!, r, length: Self.length(candidate)),
            !foul(needs(routed(start, path)).resources, blocked) { return true }
-        guard let path = defaultRoute(from: start, to: target),
+        guard let path = plannedRoute(of: candidate, from: start, to: target),
               let other = alternative(from: start, to: target, default: path, avoiding: blocked)
         else { return false }
         return !foul(needs(routed(start, other)).resources, blocked)
+    }
+
+    /// The default way of `candidate`, setting off from `start` (itself,
+    /// standing) to station `target`, its call: decision 735's way one
+    /// call further when that is the way it set off on, as the world reads
+    /// the candidate's own path; otherwise the default way.
+    mutating func plannedRoute(of candidate: Train, from start: Train, to target: StationID) -> TrainPath? {
+        if let next = departedFor(candidate, from: start) { return departureRoute(from: start, to: target, next: next) }
+        return defaultRoute(from: start, to: target)
+    }
+
+    /// The call `candidate` travels to, when it set off from `start` on
+    /// decision 735's default way of a departure; otherwise `nil`.
+    mutating func departedFor(_ candidate: Train, from start: Train) -> (stop: Int, cycle: Int64)? {
+        guard let service = candidate.service else { return nil }
+        let next = (stop: service.stop, cycle: service.cycle)
+        guard let looked = departureRoute(from: start, to: candidate.timetable[service.stop].station, next: next) else { return nil }
+        let way = routed(start, looked)
+        return way.edges == candidate.edges && way.end == candidate.end ? next : nil
     }
 
     /// A later fix to decision 58: whether `train` is its line's spare: no
@@ -208,7 +227,7 @@ extension ReferenceWorld {
         guard let service = candidate.service, !service.waiting else { return nil }
         let initial = standing(candidate)
         let call = candidate.timetable[service.stop].station
-        guard let planned = defaultRoute(from: initial, to: call) else { return nil }
+        guard let planned = plannedRoute(of: candidate, from: initial, to: call) else { return nil }
         let forbidden = contraryRuns(for: routed(initial, planned))
         let blocked = blocked(for: candidate.id)
         let canReverse = trafficControl && !stationsBesideWholeTrain(TrainID(rawValue: candidate.id)).isEmpty

@@ -89,6 +89,13 @@ public struct RealAirfields: Sendable {
         self.fields = fields
     }
 
+    /// Decision 733: these airfields and `other`'s, as one: Taiwan's and a
+    /// city's outside it (Hong Kong's, in its map pack), each in its own
+    /// place on the Earth.
+    public func adding(_ other: RealAirfields) -> RealAirfields {
+        RealAirfields(fields: fields + other.fields)
+    }
+
     private struct File: Decodable {
         struct Line: Decodable {
             let ref: String?

@@ -66,6 +66,18 @@ public struct RealNoBuildLand: Sendable {
         self.index = index
     }
 
+    /// Decision 733: this land and `other`'s, as one: Taiwan's and a
+    /// city's outside it (Hong Kong's, in its map pack), each in its own
+    /// place on the Earth; its airfields too.
+    public func adding(_ other: RealNoBuildLand) -> RealNoBuildLand {
+        var land = RealNoBuildLand(areas: areas + other.areas, buildings: buildings + other.buildings)
+        switch (airfields, other.airfields) {
+        case let (mine?, theirs?): land.airfields = mine.adding(theirs)
+        case let (mine, theirs): land.airfields = mine ?? theirs
+        }
+        return land
+    }
+
     private static func square(_ degrees: Double) -> Int {
         Int((degrees / bucket).rounded(.down))
     }

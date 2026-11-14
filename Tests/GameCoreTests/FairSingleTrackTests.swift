@@ -237,4 +237,82 @@ final class FairSingleTrackTests: XCTestCase {
         XCTAssertEqual(minutes, batch)
         XCTAssertEqual(tenths, batch)
     }
+
+    /// Decision 738: two trains at the west end bound for the same east
+    /// platform, b[0], both kept by train 1 coming the other way to a[3].
+    /// Train 3 at a[1] came to wait first (due at 60), train 2 at a[0]
+    /// later (due at 120). Train 1 clears a[0]'s turnout before a[1]'s, so
+    /// train 2's way is free first: without realistic operation it goes
+    /// then; with it, it waits for train 3, which is kept only by train 1
+    /// on its way.
+    static func platformQueue(realistic: Bool, secondTo: Int = 0) throws -> GameWorld {
+        var (world, a, b) = try SingleTrackFan.world(berths: 4)
+        _ = try SingleTrackFan.train(&world, at: b[1], to: a[3], departure: 30)
+        _ = try SingleTrackFan.train(&world, at: a[0], to: b[secondTo], departure: 120)
+        _ = try SingleTrackFan.train(&world, at: a[1], to: b[0], departure: 60)
+        world.setRealisticOperation(realistic)
+        try world.setTrafficControl(true)
+        return world
+    }
+
+    func testUnderRealisticOperationThePlatformGoesToTheTrainThatWaitedLonger() throws {
+        var world = try Self.platformQueue(realistic: true)
+        var queued = false
+        var left: [TrainID: Int64] = [:]
+        world.setSpeed(.x1)
+        while world.clock.now.seconds < 1_800 {
+            if let turn = world.trainGoingFirstToPlatform(before: Self.id(2)) {
+                XCTAssertEqual(turn.train, Self.id(3))
+                XCTAssertEqual(world.trainHoldingRoute(of: Self.id(2)), Self.id(3))
+                XCTAssertEqual(world.trainGoingFirst(before: Self.id(2)), Self.id(3), "the same train")
+                XCTAssertFalse(world.deadlockedTrains().contains(Self.id(2)))
+                queued = true
+            }
+            try world.advance(ticks: 1)
+            for train in world.trains where left[train.id] == nil {
+                if case .waitingAtStop(0, _)? = train.execution { continue }
+                left[train.id] = world.clock.now.seconds
+            }
+        }
+        XCTAssertTrue(queued, "train 2 queued behind train 3 for the platform")
+        let first = try XCTUnwrap(left[Self.id(3)], "\(left)")
+        XCTAssertLessThan(first, left[Self.id(2)] ?? .max, "\(left)")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    func testWithoutRealisticOperationTheFirstFreeStillGoes() throws {
+        var world = try Self.platformQueue(realistic: false)
+        let left = try SingleTrackFan.departures(&world, seconds: 1_800)
+        let first = try XCTUnwrap(left[Self.id(2)], "\(left)")
+        XCTAssertLessThan(first, left[Self.id(3)] ?? .max, "\(left)")
+        XCTAssertNil(world.trainGoingFirstToPlatform(before: Self.id(3)))
+    }
+
+    /// Decision 738: a train bound for another platform gives no turn:
+    /// with train 2 bound for b[2], it goes as soon as its way is free,
+    /// before train 3.
+    func testATrainBoundForAnotherPlatformIsNotHeld() throws {
+        var world = try Self.platformQueue(realistic: true, secondTo: 2)
+        let left = try SingleTrackFan.departures(&world, seconds: 1_800)
+        let first = try XCTUnwrap(left[Self.id(2)], "\(left)")
+        XCTAssertLessThan(first, left[Self.id(3)] ?? .max, "\(left)")
+    }
+
+    /// Decision 738: one long advance ends where tenths of a second do, and
+    /// a save goes on the same, while trains queue for a platform.
+    func testPlatformTurnsAgreeInBatchesStepsAndASave() throws {
+        var batch = try Self.platformQueue(realistic: true)
+        var tenths = batch
+        try batch.advance(ticks: 30)
+        tenths.setSpeed(.x1)
+        for _ in 0..<1_500 { try tenths.advance(ticks: 1) }
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: tenths))).world
+        for _ in 0..<1_650 {
+            try tenths.advance(ticks: 10)
+            try loaded.advance(ticks: 10)
+        }
+        XCTAssertEqual(loaded, tenths)
+        tenths.setSpeed(.normal)
+        XCTAssertEqual(tenths, batch)
+    }
 }

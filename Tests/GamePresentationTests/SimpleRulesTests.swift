@@ -95,6 +95,8 @@ final class SimpleRulesTests: XCTestCase {
         XCTAssertEqual(NewGameRules(of: try XCTUnwrap(launcher.session?.world)), .simple)
         // Decision 731: passengers wait as long as it takes.
         XCTAssertFalse(try XCTUnwrap(launcher.session?.world).passengerPatience)
+        // Decision 734: each day pays its own tax.
+        XCTAssertFalse(try XCTUnwrap(launcher.session?.world).annualTaxes)
 
         launcher.returnToStart()
         options.rules = .realistic
@@ -104,6 +106,7 @@ final class SimpleRulesTests: XCTestCase {
         XCTAssertEqual(NewGameRules(of: realistic), .realistic)
         XCTAssertNotNil(realistic.disruptions?.seed)
         XCTAssertTrue(realistic.passengerPatience)
+        XCTAssertTrue(realistic.annualTaxes)
     }
 
     /// A simple game is saved and loaded back with its rules: they are the

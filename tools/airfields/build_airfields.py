@@ -25,11 +25,16 @@ here, never in the app; the geometry is the standard library's.
 """
 
 import json
+import os
 import math
 import sys
 
 # Widths when OpenStreetMap gives none, metres.
 RUNWAY_WIDTH = 45
+# A way tagged `runway=displaced_threshold` longer than this, metres, is a
+# whole runway mistagged (Hong Kong's 07C/25C in 2026: 3,800 m), not the
+# stretch before a displaced threshold, and is kept (decision 733).
+LONGEST_THRESHOLD = 1_000
 TAXIWAY_WIDTH = 23
 TAXILANE_WIDTH = 15
 # A control tower's height when it has none, metres.
@@ -49,6 +54,17 @@ MOST_MADE = 8
 # runway's end or a taxiway may cross the fence OpenStreetMap drew).
 SLACK = 0.002
 
+
+
+# Decision 733: the osmtoday.com extracts read, by file name, for the
+# file's `source` (Taiwan's, and Hong Kong's for its map pack).
+EXTRACTS = {'taiwan.pbf': 'asia/taiwan.pbf', 'hong_kong.pbf': 'asia/china/hong_kong.pbf'}
+
+
+def extract_name(pbf):
+    """The osmtoday.com path of the extract at `pbf`."""
+    name = os.path.basename(pbf)
+    return EXTRACTS.get(name, name)
 
 def metres(a, b):
     """The distance between two (lat, lon) points, m."""
@@ -299,7 +315,10 @@ def main(source, out):
         if index is None:
             continue
         if kind == 'runway':
-            if tags.get('surface') in ('grass', 'dirt', 'unpaved') or tags.get('runway') == 'displaced_threshold':
+            if tags.get('surface') in ('grass', 'dirt', 'unpaved'):
+                continue
+            if tags.get('runway') == 'displaced_threshold' \
+                    and sum(metres(a, b) for a, b in zip(points, points[1:])) <= LONGEST_THRESHOLD:
                 continue
             made[index]['runways'].append((tags.get('ref', ''), round(number(tags.get('width'), RUNWAY_WIDTH)), points))
         elif kind in ('taxiway', 'taxilane', 'stopway'):
@@ -374,7 +393,7 @@ def main(source, out):
                          'at': [round(sum(p[0] for p in ring) / len(ring) * 1e6), round(sum(p[1] for p in ring) / len(ring) * 1e6)], **parts})
     airports.sort(key=lambda item: item['iata'])
     document = {
-        'source': 'OpenStreetMap contributors (ODbL 1.0), osmtoday.com asia/taiwan.pbf',
+        'source': 'OpenStreetMap contributors (ODbL 1.0), osmtoday.com ' + extract_name(source),
         'newest': newest,
         'airports': airports,
     }

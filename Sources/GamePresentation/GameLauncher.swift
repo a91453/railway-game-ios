@@ -2371,6 +2371,13 @@ public struct RealWorldData: Sendable {
         var places = grid("taiwan_places", PlaceGrid.init(data:))
         // Decision 385 (續): the land no one lives on goes with the places.
         places?.noBuild = grid("taiwan_no_build", RealNoBuildLand.init(data:))
+        // Decision 733: and the open cities' own, so no one lives on Hong
+        // Kong's airport either.
+        for city in OverseasMap.allCases where overseas.contains(city) {
+            guard let land = pack(city)?.noBuildLand(airfields: false) else { continue }
+            let taiwan = places?.noBuild
+            places?.noBuild = taiwan.map { $0.adding(land) } ?? land
+        }
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
         let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))

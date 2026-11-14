@@ -516,9 +516,33 @@
 ///     longer add up without those who gave up, so it says the save is
 ///     newer than it instead. A save of any earlier version needs no step:
 ///     its passengers wait as long as it takes, and nobody gave up.
+/// 98. Demand events with hours (decision 730): an event can have its
+///     `"opens"` and `"closes"`, the minutes of the day it is held, and
+///     its crowd comes before it opens and leaves after it closes. A
+///     build that reads only an earlier version would drop them and
+///     spread the crowd over the whole day again, so it says the save is
+///     newer than it instead. A save of any earlier version needs no step:
+///     its events run all day, as every event did.
+/// 99. The annual taxes (decision 734): a world can have `"annualTaxes"`,
+///     its accounts the `"incomeTaxPayable"` owed, a closed year its
+///     `"incomeTaxAssessed"` and a balance sheet its `"taxPayable"`, and
+///     its ledger may hold rows of the kind `"annualIncomeTax"`. A build
+///     that reads only an earlier version would drop the rule and the tax
+///     owed, and would refuse the row and the whole save with it, so it
+///     says the save is newer than it instead. A save of any earlier
+///     version needs no step: each of its days pays its own tax, and
+///     nothing is owed.
+/// 100. The house and land taxes (decision 736): accounts can owe
+///     `"houseTaxPayable"` and `"landTaxPayable"`, and the ledger may hold
+///     rows of the kinds `"annualHouseTax"`, `"annualLandTax"` and
+///     `"dailyStationUpkeep"` with the items `"houseTax"` and
+///     `"stationUpkeep"`. A build that reads only an earlier version would
+///     drop the taxes owed and refuse the rows and the whole save with
+///     them, so it says the save is newer than it instead. A save of any
+///     earlier version needs no step: it owes no house or land tax.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 97
+    public static let currentVersion = 100
 
     public let world: GameWorld
 
@@ -757,6 +781,14 @@ extension SavedGame: Codable {
         // `"passengerPatience"` has its passengers wait as long as it
         // takes, and a station without `"gaveUp"` had nobody give up
         // (decision 731): nothing to turn.
+        // Version 97 or earlier to 98: a demand event without `"opens"` and
+        // `"closes"` runs all day (decision 730): nothing to turn.
+        // Version 98 or earlier to 99: a world without `"annualTaxes"`
+        // pays each day's tax, and accounts without `"incomeTaxPayable"`
+        // owe nothing (decision 734): nothing to turn.
+        // Version 99 or earlier to 100: accounts without
+        // `"houseTaxPayable"` and `"landTaxPayable"` owe no house or land
+        // tax (decision 736): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
