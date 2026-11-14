@@ -397,6 +397,12 @@ extension GameWorld {
         if deadlockedTrains().contains(id) {
             return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
         }
+        // Decision 738: the platform it is bound for is free, and a train
+        // that has waited longer for it goes first.
+        if let platform = trainGoingFirstToPlatform(before: id), platform.train == holder {
+            let station = station(id: platform.station)?.name ?? "#\(platform.station.rawValue)"
+            return language.text("Queued behind \(name) for a platform at \(station)", "排在 \(name) 後面等 \(station) 的月台")
+        }
         // Decision 718: its track is free, and a train that has waited
         // longer at the other end goes first.
         if trainGoingFirst(before: id) == holder {

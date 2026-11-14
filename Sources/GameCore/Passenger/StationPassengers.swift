@@ -77,7 +77,7 @@ public struct DemandRemainder: Hashable, Sendable {
 
 /// Where every passenger released at a station has gone: the audit of
 /// passenger conservation. `released` always equals `waiting + riding +
-/// arrived + overflowed + abandoned`.
+/// arrived + overflowed + abandoned + gaveUp`.
 public struct PassengerLedger: Hashable, Sendable {
     /// Every passenger ever released at the station.
     public let released: Int64
@@ -98,10 +98,14 @@ public struct PassengerLedger: Hashable, Sendable {
     /// refusals, not of passengers: one passenger may be refused by several
     /// trains, so it is not part of the conservation.
     public let refused: Int64
+    /// Those who waited longer than their patience and left (decision
+    /// 731, ``GameWorld/passengerPatience``), at their original station or
+    /// at one where they changed trains.
+    public let gaveUp: Int64
 
     public init(
         released: Int64, waiting: Int64, riding: Int64 = 0, arrived: Int64 = 0,
-        overflowed: Int64, abandoned: Int64, refused: Int64 = 0
+        overflowed: Int64, abandoned: Int64, refused: Int64 = 0, gaveUp: Int64 = 0
     ) {
         self.released = released
         self.waiting = waiting
@@ -110,6 +114,7 @@ public struct PassengerLedger: Hashable, Sendable {
         self.overflowed = overflowed
         self.abandoned = abandoned
         self.refused = refused
+        self.gaveUp = gaveUp
     }
 
     public static let empty = PassengerLedger(released: 0, waiting: 0, overflowed: 0, abandoned: 0)
@@ -133,6 +138,9 @@ public struct StationPassengers: Hashable, Sendable {
     /// Refusals at this station (G1b, see ``PassengerLedger/refused``), up
     /// to ``maximumReleased``.
     public internal(set) var refused: Int64
+    /// Passengers from this station who waited longer than their patience
+    /// and left (decision 731, ``PassengerLedger/gaveUp``).
+    public internal(set) var gaveUp: Int64
     /// The remainders of the trips from this station, by ascending
     /// destination.
     public internal(set) var remainders: [DemandRemainder]
@@ -178,6 +186,7 @@ public struct StationPassengers: Hashable, Sendable {
         self.abandoned = 0
         self.arrived = 0
         self.refused = 0
+        self.gaveUp = 0
         self.remainders = []
         self.lastFullDay = nil
         self.fullDays = 0
@@ -215,7 +224,7 @@ public struct StationPassengers: Hashable, Sendable {
     func ledger(waiting: Int64, riding: Int64) -> PassengerLedger {
         PassengerLedger(
             released: released, waiting: waiting, riding: riding, arrived: arrived,
-            overflowed: overflowed, abandoned: abandoned, refused: refused
+            overflowed: overflowed, abandoned: abandoned, refused: refused, gaveUp: gaveUp
         )
     }
 
@@ -450,7 +459,7 @@ extension DemandRemainder: Codable {
 
 extension StationPassengers: Codable {
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders, lastFullDay, fullDays
+        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, gaveUp, remainders, lastFullDay, fullDays
     }
 
     /// Decodes a station's passengers. A station without demand has no
@@ -475,6 +484,8 @@ extension StationPassengers: Codable {
         let abandoned = try container.decode(Int64.self, forKey: .abandoned)
         let arrived = container.contains(.arrived) ? try container.decode(Int64.self, forKey: .arrived) : 0
         let refused = container.contains(.refused) ? try container.decode(Int64.self, forKey: .refused) : 0
+        // Decision 731: a save before version 97 has nobody who gave up.
+        let gaveUp = try container.decodeIfPresent(Int64.self, forKey: .gaveUp) ?? 0
         let remainders = try container.decode([DemandRemainder].self, forKey: .remainders)
         let lastFullDay = try container.decodeIfPresent(Int64.self, forKey: .lastFullDay)
         // A save before decision 534 knows only its last full day.
@@ -505,7 +516,7 @@ extension StationPassengers: Codable {
         }).count == waiting.count else {
             throw corrupt(.waiting, "a waiting journey must not be repeated.")
         }
-        guard released >= 0, overflowed >= 0, abandoned >= 0, arrived >= 0, refused >= 0 else {
+        guard released >= 0, overflowed >= 0, abandoned >= 0, arrived >= 0, refused >= 0, gaveUp >= 0 else {
             throw corrupt(.released, "counts cannot be negative.")
         }
         guard released <= Self.maximumReleased else { throw corrupt(.released, "more passengers released than a station can count.") }
@@ -515,8 +526,9 @@ extension StationPassengers: Codable {
             partial + ((group.journey?.origin ?? station) == station ? group.count : 0)
         }
         guard overflowed <= released, abandoned <= released - overflowed,
-              arrived <= released - overflowed - abandoned,
-              waitingFromHere <= released - overflowed - abandoned - arrived
+              gaveUp <= released - overflowed - abandoned,
+              arrived <= released - overflowed - abandoned - gaveUp,
+              waitingFromHere <= released - overflowed - abandoned - gaveUp - arrived
         else {
             throw corrupt(.released, "more passengers are accounted for than were released.")
         }
@@ -545,6 +557,7 @@ extension StationPassengers: Codable {
         self.abandoned = abandoned
         self.arrived = arrived
         self.refused = refused
+        self.gaveUp = gaveUp
         self.remainders = remainders
         self.lastFullDay = lastFullDay
         self.fullDays = fullDays
@@ -565,6 +578,9 @@ extension StationPassengers: Codable {
         }
         if refused != 0 {
             try container.encode(refused, forKey: .refused)
+        }
+        if gaveUp != 0 {
+            try container.encode(gaveUp, forKey: .gaveUp)
         }
         try container.encode(remainders, forKey: .remainders)
         try container.encodeIfPresent(lastFullDay, forKey: .lastFullDay)

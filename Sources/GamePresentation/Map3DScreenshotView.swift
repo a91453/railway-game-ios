@@ -39,7 +39,7 @@ public struct Map3DScreenshotView: Equatable, Sendable {
     /// metres, so a screenshot of a city's streets looks at a junction
     /// rather than at the roof a guessed place falls on; over `place`
     /// itself when none is that near.
-    /// Decision 738: `alongTheRoad`, looking down the stop line's road the
+    /// Decision 743: `alongTheRoad`, looking down the stop line's road the
     /// way its traffic goes (``heading`` then ignored), where the
     /// towers on either side leave the street in sight.
     public func camera(signalNear place: (latitude: Double, longitude: Double), within: Float = 600, alongTheRoad: Bool = false,

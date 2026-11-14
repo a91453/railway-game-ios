@@ -1,0 +1,118 @@
+{
+  "saveVersion" : 99,
+  "world" : {
+    "accounts" : {
+      "days" : [
+        {
+          "day" : 359,
+          "energyCost" : 0,
+          "fareRevenue" : 90000000,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : 90000000,
+          "breakdown" : [
+            {
+              "amount" : 90000000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : 0,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : 0,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 31017660
+        }
+      ],
+      "incomeTaxPayable" : 18000000,
+      "mode" : "management",
+      "openedAt" : 31104000,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      },
+      "years" : [
+        {
+          "closing" : {
+            "cash" : 91000000,
+            "loan" : 0,
+            "rollingStock" : {
+              "cost" : 0,
+              "depreciation" : 0
+            },
+            "stations" : {
+              "cost" : 0,
+              "depreciation" : 0
+            },
+            "taxPayable" : 18000000,
+            "track" : {
+              "cost" : 0,
+              "depreciation" : 0
+            }
+          },
+          "income" : {
+            "capitalSpending" : 0,
+            "depreciationCost" : 0,
+            "energyCost" : 0,
+            "fareRevenue" : 90000000,
+            "index" : 0,
+            "interestCost" : 0,
+            "loanBorrowed" : 0,
+            "loanRepaid" : 0,
+            "maintenanceCost" : 0,
+            "operatingCost" : 0,
+            "staffCost" : 0,
+            "writeOffCost" : 0
+          },
+          "incomeTaxAssessed" : 18000000,
+          "year" : 0
+        }
+      ]
+    },
+    "annualTaxes" : true,
+    "bounds" : {
+      "height" : 4096,
+      "width" : 8192
+    },
+    "clock" : {
+      "now" : 31104060,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 91000000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "nextStationID" : 1,
+    "nextTrainID" : 1,
+    "stations" : [
+
+    ],
+    "trains" : [
+
+    ]
+  }
+}

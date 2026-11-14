@@ -63,11 +63,11 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// Whether its signals show red and amber together before green.
     public var hasRedAmber: Bool { self == .hongKong }
 
-    /// Decision 738: whether its garbage trucks come round in the evening
+    /// Decision 743: whether its garbage trucks come round in the evening
     /// playing music (decision 437): Taiwan's.
     public var hasEveningGarbageTrucks: Bool { self == .taiwan }
 
-    /// Decision 738: whether its bus stops have Taiwan's red and green
+    /// Decision 743: whether its bus stops have Taiwan's red and green
     /// post boxes beside them (decision 467): Taiwan's.
     var hasTaiwanPostBoxes: Bool { self == .taiwan }
 }

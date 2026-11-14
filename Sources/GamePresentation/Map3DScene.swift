@@ -1410,6 +1410,7 @@ extension Map3DScene {
         /// Decision 720: a square under one of `lots` in its ground's
         /// colour (``Map3DPalette/GroundKind``), run into its neighbours'
         /// at the corners they share; plain where it is `clearOf`.
+        /// Decision 733: plain on the no-build land too.
         mutating func addGround(water drawsWater: Bool = true, lots: CitySkyline? = nil, clearOf track: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
             let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
@@ -1420,7 +1421,13 @@ extension Map3DScene {
                 let around = WorldRegion(minX: region.minX - cell, minY: region.minY - cell, maxX: region.maxX + cell, maxY: region.maxY + cell)
                 for lot in lots.lots(in: around) {
                     let key = ChunkKey(column: lot.column, row: lot.row)
-                    if let kind = Map3DPalette.GroundKind(lot), !track.contains(key) { kinds[key] = kind }
+                    guard let kind = Map3DPalette.GroundKind(lot), !track.contains(key) else { continue }
+                    // Decision 733: none on the no-build land, where no
+                    // lot's building stands either (``addCity``): the
+                    // people an older Hong Kong game put on its airport.
+                    guard !onNoBuildLand(point(x: (Double(lot.column) + 0.5) * cell, y: (Double(lot.row) + 0.5) * cell, height: 0))
+                    else { continue }
+                    kinds[key] = kind
                 }
             }
             // A corner's colour: its four squares' run together.

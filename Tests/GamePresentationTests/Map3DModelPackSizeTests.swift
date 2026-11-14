@@ -70,7 +70,7 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // near and far, after the aircraft (16 models, 97,050 vertices
         // more, 3.9 MB a copy). Decision 732: Hong Kong's four signals,
         // after the coaches (4 models, 960 vertices more, 38 KB a copy).
-        // Decision 738: Hong Kong's double-decker, minibus and taxi
+        // Decision 743: Hong Kong's double-decker, minibus and taxi
         // stand-ins, after its signals (3 models, 1,200 vertices more).
         XCTAssertEqual(pack.models.count, 889)
         XCTAssertEqual(vertices, 6_585_732)

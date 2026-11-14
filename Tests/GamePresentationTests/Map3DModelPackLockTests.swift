@@ -88,7 +88,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         // coaches, before the route bus; left out with them (the whole
         // pack's names and hashes and the windows' indices move by 4, the
         // rest as before).
-        // Decision 738: Hong Kong's vehicles after its signals.
+        // Decision 743: Hong Kong's vehicles after its signals.
         let hongKong = Map3DHongKongSignal.drawn.map(\.name) + Map3DHongKongVehicles.models.map(\.modelName)
         let hk = Set(hongKong)
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!

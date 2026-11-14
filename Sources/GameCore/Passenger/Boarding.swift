@@ -567,7 +567,7 @@ extension GameWorld {
             }
         }
         for record in passengers {
-            let unaccounted = record.released - record.arrived - record.overflowed - record.abandoned
+            let unaccounted = record.released - record.arrived - record.overflowed - record.abandoned - record.gaveUp
             if unaccounted != (waiting[record.station] ?? 0) + (riding[record.station] ?? 0) {
                 return "Station \(record.station.rawValue)'s passengers do not add up to those it released."
             }

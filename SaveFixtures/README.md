@@ -334,3 +334,31 @@ its map's airports when it opens the save).
   (`TrackClosureTests.testVersionNinetyFiveKeepsTheTrackBeingClosed`,
   written with `CLOSE_TRACK_SAVE_NEW=1` by the build that first made it;
   decision 716, continued).
+- `v97-passenger-patience.json`: two stations 128 m apart on a line with
+  no train, the first sending its trips to the second, passengers'
+  patience on, saved at 01:00: those released in the first 20 minutes
+  have given up (each station's `"gaveUp"`), the rest still wait
+  (`PassengerPatienceTests.testTheVersion97SaveLoadsAndRunsOn`, written
+  with `PATIENCE_SAVE_NEW=1` by the build that first made it; decision
+  731).
+- `v98-demand-hours.json`: six stations on one line a minute in, demand
+  events on, a crowd surge at the third station from 19:00 to 22:00 today
+  and tomorrow and an exhibition at the fifth all day: the event's
+  `"opens"` and `"closes"`
+  (`DemandEventTests.testVersionNinetyEightKeepsTheEventsHours`, written with
+  `DEMAND_HOURS_SAVE_NEW=1` by the build that first made it; decision 730).
+- `v99-annual-taxes.json`: an empty managed world with the annual taxes
+  on, a minute into its second year: the first year earned NT$900,000 on
+  its last day and was charged NT$180,000 of income tax as it closed, owed
+  (the accounts' `"incomeTaxPayable"`, the closed year's
+  `"incomeTaxAssessed"` and its closing sheet's `"taxPayable"`) until the
+  end of the fifth month
+  (`AnnualTaxesTests.testTheVersion99SaveOwesItsTax`, written with
+  `ANNUAL_TAXES_SAVE_NEW=1` by the build that first made it; decision 734).
+- `v100-house-tax.json`: a managed world with the annual taxes on, one
+  track edge and a station with a 100 m platform, a minute into its second
+  year: the first year's close charged the station's house tax, owed
+  (the accounts' `"houseTaxPayable"`) until the end of the fifth month, and
+  each day paid the platform's upkeep (rows of `"dailyStationUpkeep"`)
+  (`AnnualPropertyTaxesTests.testTheVersion100SaveOwesItsHouseTax`, printed
+  by CI from the same world, decision 736).

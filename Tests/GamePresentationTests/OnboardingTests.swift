@@ -238,9 +238,15 @@ final class OnboardingTests: XCTestCase {
         let before = world
         options.apply(to: &world)
         // Decision 332: riders switch to scooters and cars by the
-        // realistic rule; nothing else changes.
+        // realistic rule; decision 731: passengers who wait too long
+        // leave; nothing else changes.
         XCTAssertEqual(world.modeShift, ModeShift.realistic())
+        XCTAssertTrue(world.passengerPatience)
+        // Decision 734: and the income tax is settled once a year.
+        XCTAssertTrue(world.annualTaxes)
         try? world.setModeShift(nil)
+        world.setPassengerPatience(false)
+        world.setAnnualTaxes(false)
         XCTAssertEqual(world, before)
     }
 

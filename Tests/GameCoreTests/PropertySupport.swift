@@ -388,8 +388,8 @@ enum WorldInvariants {
             // Decision 35: and those riding or arrived.
             let riding = world.riders.flatMap(\.groups).filter { $0.origin == record.station }.reduce(Int64(0)) { $0 + $1.count }
             if ledger.riding != riding { problems.append("station \(id) counts \(ledger.riding) riding of \(riding)") }
-            if ledger.released != waiting + riding + ledger.arrived + ledger.overflowed + ledger.abandoned
-                || ledger.overflowed < 0 || ledger.abandoned < 0 || ledger.arrived < 0 || ledger.refused < 0 {
+            if ledger.released != waiting + riding + ledger.arrived + ledger.overflowed + ledger.abandoned + ledger.gaveUp
+                || ledger.overflowed < 0 || ledger.abandoned < 0 || ledger.arrived < 0 || ledger.refused < 0 || ledger.gaveUp < 0 {
                 problems.append("station \(id) does not account for its passengers: \(ledger)")
             }
             if held > StationPassengers.capacity { problems.append("station \(id) holds \(held) waiting") }
@@ -501,6 +501,10 @@ enum WorldInvariants {
             case .dailyCableways: [.cablewayFares, .cablewayRunning]
             case .dailyFerries: [.ferryFares, .ferryRunning]
             case .drivenRun: [.drivingBonus]
+            case .annualIncomeTax: [.incomeTax]
+            case .annualHouseTax: [.houseTax]
+            case .annualLandTax: [.propertyTax]
+            case .dailyStationUpkeep: [.stationUpkeep]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {

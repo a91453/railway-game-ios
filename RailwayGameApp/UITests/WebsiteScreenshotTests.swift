@@ -3345,7 +3345,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// tier is given (as `testStreetStopDay`).
     func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30500,114.17166", view: "130,35,0") }
     func testHongKongStreetsWestKowloon() { shootHongKongStreets("west-kowloon", at: "22.30400,114.16500", view: "90,35,40") }
-    /// Decision 738: down Nathan Road at Jordan, where its double-deckers,
+    /// Decision 743: down Nathan Road at Jordan, where its double-deckers,
     /// minibuses and taxis go by, three times some seconds apart.
     func testHongKongStreetsNathanRoad() {
         shootHongKongStreets("nathan-road", at: "22.30490,114.17170", view: "70,0,55", along: true)

@@ -71,6 +71,11 @@ curl -L -o /tmp/hk/hk_dtm.zip https://static.csdi.gov.hk/csdi-webpage/download/c
 (cd /tmp/hk && unzip -o hk_dtm.zip)    # "Digital Terrain Model.tif"，解開 498 MB
 python3 -I tools/hk-map/build_hk_ground_grids.py "/tmp/hk/Digital Terrain Model.tif" /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong
 swift test --skip-build --filter "HongKongGroundTests|HongKongMapTests|HongKongRailwaysTests"
+
+# 9. 香港機場的場面與不蓋區（決策 733）：airfields.json、no_build.json（台灣那兩支工具），並更新 pack.json。
+python3 -I tools/airfields/build_airfields.py /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong/airfields.json
+python3 -I tools/no-build-land/build_no_build.py /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong/no_build.json
+swift test --skip-build --filter "HongKongAirportTests|HongKongRailwaysTests"
 ```
 
 取樣的原始回應（幾十 MB）不進 repo；進 repo 的是算出來的 `service.json`。

@@ -706,9 +706,10 @@ struct EconomyPanel: View {
         } header: {
             Text("Report")
         } footer: {
-            // Decision 131: only a managed company's midnights charge the tax.
+            // Decision 131: only a managed company's midnights charge the
+            // tax; decision 734: or its years, with the annual taxes.
             if session.world.accounts.mode == .management {
-                Text(verbatim: CompanyAccounts.taxTermsText(in: session.language))
+                Text(verbatim: session.world.taxTermsText(in: session.language))
             }
         }
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-// Decision 738: Hong Kong's street traffic on its map. Taiwan's streets
+// Decision 743: Hong Kong's street traffic on its map. Taiwan's streets
 // are scooters, cars and single-deck buses; Hong Kong's buses are
 // double-deckers, its minibuses (小巴) are cream with a red or green roof,
 // and a large part of its traffic is taxis, red in the urban area, green
@@ -11,7 +11,7 @@ import Foundation
 // (`tools/hk-vehicles/`), which the app bundles; where a file cannot be
 // read, a box-built one of the same size stands in (``Map3DStreetModel``).
 
-/// Decision 738: Hong Kong's double-decker, minibus and taxi.
+/// Decision 743: Hong Kong's double-decker, minibus and taxi.
 public enum Map3DHongKongVehicles {
     /// The three, in the model pack's order (after Hong Kong's signals,
     /// before the route bus).

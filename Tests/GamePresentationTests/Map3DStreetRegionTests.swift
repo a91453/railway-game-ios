@@ -177,7 +177,7 @@ final class Map3DStreetRegionTests: XCTestCase {
         XCTAssertNotNil(Signal.face(.main, group: 0, clock: clock(5, region: .taiwan), time: 5.2, pace: pace, reduceMotion: false).count)
     }
 
-    /// Decision 738: the camera down a road looks the way its traffic goes.
+    /// Decision 743: the camera down a road looks the way its traffic goes.
     func testTheScreenshotDownARoadLooksAlongIt() {
         for along in [Map3DPoint(1, 0, 0), Map3DPoint(0, 0, -1), Map3DPoint(-0.6, 0, 0.8)] {
             let camera = Map3DCamera(heading: Map3DScreenshotView.heading(along: along))

@@ -154,8 +154,9 @@ public struct AssetClassBalance: Hashable, Codable, Sendable {
 /// The company's balance sheet (the reference's `balanceSheet`, with the
 /// asset valuation it leaves at 0 filled in from the asset records): its
 /// cash, its fixed assets at book value, its loan, the principal of its term
-/// loans (decision 715) and what is left, its equity.
-/// `totalAssets == loan + termLoans + equity` always.
+/// loans (decision 715), the income tax charged and not yet paid (decision
+/// 734) and what is left, its equity.
+/// `totalAssets == loan + termLoans + taxPayable + equity` always.
 public struct BalanceSheet: Hashable, Sendable {
     /// The balance, which may be below zero.
     public let cash: Money
@@ -169,10 +170,14 @@ public struct BalanceSheet: Hashable, Sendable {
     public let loan: Money
     /// The principal of the term loans not yet paid (decision 715).
     public let termLoans: Money
+    /// The income tax charged and not yet paid (decision 734): zero
+    /// without the annual taxes.
+    public let taxPayable: Money
 
     public init(
         cash: Money, track: AssetClassBalance, stations: AssetClassBalance, rollingStock: AssetClassBalance,
-        buildings: AssetClassBalance = .zero, land: AssetClassBalance = .zero, loan: Money, termLoans: Money = .zero
+        buildings: AssetClassBalance = .zero, land: AssetClassBalance = .zero, loan: Money, termLoans: Money = .zero,
+        taxPayable: Money = .zero
     ) {
         self.cash = cash
         self.track = track
@@ -182,6 +187,7 @@ public struct BalanceSheet: Hashable, Sendable {
         self.land = land
         self.loan = loan
         self.termLoans = termLoans
+        self.taxPayable = taxPayable
     }
 
     public subscript(assetClass: AssetClass) -> AssetClassBalance {
@@ -205,7 +211,7 @@ public struct BalanceSheet: Hashable, Sendable {
 
     /// What the company is worth: its assets less what it owes.
     public var equity: Money {
-        totalAssets - loan - termLoans
+        totalAssets - loan - termLoans - taxPayable
     }
 }
 
@@ -217,11 +223,24 @@ public struct AnnualStatement: Hashable, Codable, Sendable {
     public let year: Int64
     public let income: FinanceSummary
     public let closing: BalanceSheet
+    /// Decision 734: the income tax the year was charged as it closed, with
+    /// the annual taxes on (zero when it made too little); `nil` without
+    /// them, when each day paid its own (decision 131).
+    public let incomeTaxAssessed: Money?
 
-    public init(year: Int64, income: FinanceSummary, closing: BalanceSheet) {
+    public init(year: Int64, income: FinanceSummary, closing: BalanceSheet, incomeTaxAssessed: Money? = nil) {
         self.year = year
         self.income = income
         self.closing = closing
+        self.incomeTaxAssessed = incomeTaxAssessed
+    }
+
+    /// Decision 734: what the year made after its own income tax. With the
+    /// annual taxes the tax the year paid in cash was the year before's,
+    /// so it is the profit before tax less the tax the year was charged;
+    /// without, the net profit.
+    public var afterTaxProfit: Money {
+        incomeTaxAssessed.map { income.profitBeforeTax - $0 } ?? income.netProfit
     }
 }
 
@@ -294,6 +313,13 @@ extension CompanyAccounts {
     }
 
     /// The asset records' totals by class.
+    /// Decision 734: the closed years' profits after tax, added up to and
+    /// with year `year` (the game pays no dividends, so all of it is kept):
+    /// of the years kept, at most ``keptYears``.
+    public func retainedEarnings(through year: Int64) -> Money {
+        years.filter { $0.year <= year }.reduce(Money.zero) { $0 + $1.afterTaxProfit }
+    }
+
     func assetBalance(_ assetClass: AssetClass) -> AssetClassBalance {
         var cost = Money.zero
         var depreciation = Money.zero
@@ -313,7 +339,7 @@ extension GameWorld {
         BalanceSheet(
             cash: economy.balance, track: accounts.assetBalance(.track), stations: accounts.assetBalance(.stations),
             rollingStock: accounts.assetBalance(.rollingStock), buildings: accounts.assetBalance(.buildings), land: accounts.assetBalance(.land),
-            loan: accounts.loan, termLoans: accounts.termLoansPrincipal
+            loan: accounts.loan, termLoans: accounts.termLoansPrincipal, taxPayable: accounts.incomeTaxPayable + accounts.houseTaxPayable + accounts.landTaxPayable
         )
     }
 
@@ -467,11 +493,27 @@ extension GameWorld {
     /// Closes the year that ended with day `day`, when it was a year's last:
     /// its income statement and the balance sheet now, keeping the latest
     /// ``CompanyAccounts/keptYears``.
+    ///
+    /// Decision 734: with the annual taxes, the year's profit before tax is
+    /// charged its income tax first, owed until the end of the next year's
+    /// fifth month, so the year's closing balance sheet owes it.
     mutating func closeYear(endingWith day: Int64) {
         let year = FinancePeriod.year.days
         guard CompanyAccounts.floorDivide(day + 1, year) * year == day + 1 else { return }
+        let income = accounts.report(.year, day: day).current
+        var assessed: Money?
+        if annualTaxes {
+            let tax = Self.annualIncomeTax(on: income.profitBeforeTax)
+            accounts.incomeTaxPayable = min(accounts.incomeTaxPayable + tax, Money(Self.maximumAccrued))
+            assessed = tax
+            // Decision 736: and the house and land taxes on what the
+            // company holds at the year's end.
+            let limit = Money(Self.maximumAccrued)
+            accounts.houseTaxPayable = min(accounts.houseTaxPayable + Self.annualHouseTax(on: houseTaxBase()), limit)
+            accounts.landTaxPayable = min(accounts.landTaxPayable + Self.annualLandTax(on: landTaxBase()), limit)
+        }
         let statement = AnnualStatement(
-            year: CompanyAccounts.floorDivide(day, year), income: accounts.report(.year, day: day).current, closing: balanceSheet()
+            year: CompanyAccounts.floorDivide(day, year), income: income, closing: balanceSheet(), incomeTaxAssessed: assessed
         )
         accounts.years.append(statement)
         if accounts.years.count > CompanyAccounts.keptYears {
@@ -578,6 +620,8 @@ extension GameWorld {
             && (-maximumBalance...maximumBalance).contains(closing.cash.amount)
             && (.zero...CompanyAccounts.maximumLoan).contains(closing.loan)
             && (0...maximumAccrued).contains(closing.termLoans.amount)
+            && (0...maximumAccrued).contains(closing.taxPayable.amount)
+            && (statement.incomeTaxAssessed.map { (0...maximumAccrued).contains($0.amount) } ?? true)
     }
 }
 
@@ -585,7 +629,7 @@ extension GameWorld {
 
 extension BalanceSheet: Codable {
     private enum CodingKeys: String, CodingKey {
-        case cash, track, stations, rollingStock, buildings, land, loan, termLoans
+        case cash, track, stations, rollingStock, buildings, land, loan, termLoans, taxPayable
     }
 
     /// Decodes a closing balance sheet; one without the company's
@@ -602,6 +646,8 @@ extension BalanceSheet: Codable {
         loan = try container.decode(Money.self, forKey: .loan)
         // Decision 715 (save version 93).
         termLoans = try container.decodeIfPresent(Money.self, forKey: .termLoans) ?? .zero
+        // Decision 734 (save version 99).
+        taxPayable = try container.decodeIfPresent(Money.self, forKey: .taxPayable) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -619,6 +665,9 @@ extension BalanceSheet: Codable {
         try container.encode(loan, forKey: .loan)
         if termLoans != .zero {
             try container.encode(termLoans, forKey: .termLoans)
+        }
+        if taxPayable != .zero {
+            try container.encode(taxPayable, forKey: .taxPayable)
         }
     }
 }

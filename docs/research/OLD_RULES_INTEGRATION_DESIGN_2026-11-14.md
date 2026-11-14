@@ -21,6 +21,8 @@
 
 ## 1. PATIENCE：乘客等太久就離開
 
+**2026-11-14 實作**：PAT-1 是決策 [731](../decisions/731.md)。和下面不一樣的兩處：長途的距離改成 20 km（`fullDistance` 只有 2 km），離開排在整分鐘的上下車之前（批次與逐分才一樣）。
+
 ### 1.1 舊版
 
 `Demand.swift` 的 `PassengerDemand`：每站一個先進先出的佇列，每批記下進站的時刻（`since`）。每個 tick 先跑 `expire`：`since + maxWaitSeconds <= t` 的那批離開，加進 `abandoned`。`maxWaitSeconds` 由場景的 `max_wait_minutes` 給，沒給就是 30 分。上車時順便記平均等候與最長等候。

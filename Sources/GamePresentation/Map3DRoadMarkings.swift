@@ -780,7 +780,7 @@ extension Map3DScene.Builder {
                     // back of the pavement, clear of the shelter's sign
                     // (2.75 m along it) on the other side from the vending
                     // machine.
-                    // Decision 738: not in Hong Kong.
+                    // Decision 743: not in Hong Kong.
                     if streetLife.region.hasTaiwanPostBoxes, map3DRandom(seed.0, seed.1, salt: 358) < Self.postBoxShare,
                        let model = Self.sceneryModels[.postBoxes] {
                         place(model, at: out(width / 2 + pavement - 0.4, ahead: sheltered ? -3.6 : -3), forward: forward, clearing: 1.2,

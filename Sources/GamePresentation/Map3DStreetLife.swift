@@ -60,7 +60,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case electricScooter
     /// The step-through with a delivery box, and its rider.
     case deliveryScooter
-    /// Decision 738: Hong Kong's three-axle double-decker
+    /// Decision 743: Hong Kong's three-axle double-decker
     /// (``Map3DHongKongVehicles``), in the instance's colour.
     case doubleDecker
     /// Hong Kong's minibus (小巴), cream, its roof the instance's red or
@@ -78,7 +78,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
         self == .bus || self == .shuttleBus || self == .lowFloorBus || self == .coachBus || self == .midiBus || self == .doubleDecker
     }
 
-    /// Decision 738: the buses of Taiwan's streets (every bus but Hong
+    /// Decision 743: the buses of Taiwan's streets (every bus but Hong
     /// Kong's double-decker).
     static var taiwanBuses: [Map3DStreetModel] { allCases.filter { $0.isBus && $0 != .doubleDecker } }
 
@@ -145,7 +145,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
         case .car, .van, .taxi:
             // `traffic.js`'s sedan and van: length, width, the belt and the
             // roof, the glasshouse from z0 to z1 of the length. Decision
-            // 738: Hong Kong's taxi the sedan with a silver roof and its
+            // 743: Hong Kong's taxi the sedan with a silver roof and its
             // sign.
             let spec: (length: Float, width: Float, belt: Float, roof: Float, z0: Float, z1: Float, rake: Float) =
                 self == .van ? (4.6, 1.8, 1.04, 1.9, 0.08, 0.86, 0.45) : (4.4, 1.76, 0.92, 1.46, 0.2, 0.72, 0.7)
@@ -186,7 +186,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             box(-1.6, 3.2, 0, 3.4, 1.7, 0.22, Self.steel)
             Map3DCityBus.addLamps(to: &mesh)
         case .doubleDecker:
-            // Decision 738: a 12.1 × 2.5 × 4.4 m three-axle double-decker:
+            // Decision 743: a 12.1 × 2.5 × 4.4 m three-axle double-decker:
             // the body in the instance's colour, two window bands and the
             // windscreens, the lamps.
             for x: Float in [-3.2, -4.6, 4.2] {
@@ -199,7 +199,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             box(6.03, 3.0, 0, 0.06, 2.3, 0.95, Self.glass)
             Map3DCityBus.addLamps(to: &mesh)
         case .minibus:
-            // Decision 738: a 7 × 2.1 × 2.75 m minibus: the cream body, the
+            // Decision 743: a 7 × 2.1 × 2.75 m minibus: the cream body, the
             // roof in the instance's red or green, the windows, the lamps.
             for x: Float in [-2.2, 2.3] {
                 for z: Float in [-1, 1] { box(x, 0, z * 0.9, 0.8, 0.26, 0.8, Self.tyre) }
@@ -824,7 +824,7 @@ public struct Map3DStreetLife: Sendable {
     /// Place `index` of `count` on `lane` going `direction`, its places
     /// `spacing` apart: a bus where `buses` allow one, a scooter beside a
     /// lone one where `besides` allow it.
-    /// Decision 738: in Hong Kong (`region`), its double-deckers (one bus
+    /// Decision 743: in Hong Kong (`region`), its double-deckers (one bus
     /// in seven single-deck), taxis, minibuses and few motorcycles, none
     /// riding beside another.
     static func vehicle(_ index: Int, of count: Int, lane: Lane, direction: Float, spacing: Float, buses: Bool, besides: Bool,

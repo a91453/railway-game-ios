@@ -154,8 +154,10 @@ extension Map3DScene.Builder {
             let west = gridCell(Double(ring.map(\.x).min() ?? 0), origin: originX), east = gridCell(Double(ring.map(\.x).max() ?? 0), origin: originX)
             let north = gridCell(Double(ring.map(\.z).min() ?? 0), origin: originY), south = gridCell(Double(ring.map(\.z).max() ?? 0), origin: originY)
             let cell = Double(Land.cellLength)
-            let columns = (max(west, Int((region.minX / cell).rounded(.down))), min(east, Int((region.maxX / cell).rounded(.down))))
-            let rows = (max(north, Int((region.minY / cell).rounded(.down))), min(south, Int((region.maxY / cell).rounded(.down))))
+            // Decision 733: a cell more each way, which the ground's
+            // corners at the region's edge mix in (``addGround``).
+            let columns = (max(west, Int((region.minX / cell).rounded(.down)) - 1), min(east, Int((region.maxX / cell).rounded(.down)) + 1))
+            let rows = (max(north, Int((region.minY / cell).rounded(.down)) - 1), min(south, Int((region.maxY / cell).rounded(.down)) + 1))
             guard columns.0 <= columns.1, rows.0 <= rows.1 else { continue }
             for row in rows.0...rows.1 {
                 for column in columns.0...columns.1 {
