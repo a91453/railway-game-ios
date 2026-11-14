@@ -174,6 +174,15 @@ final class AnnualTaxesTests: XCTestCase {
         if ProcessInfo.processInfo.environment["ANNUAL_TAXES_SAVE_NEW"] != nil, SavedGame.currentVersion == 99 {
             try encoder.encode(SavedGame(world: world)).write(to: url)
         }
+        // TEMPORARY (removed once the fixture is committed): no Swift in the
+        // session that wrote this, so CI prints the fixture to copy.
+        if !FileManager.default.fileExists(atPath: url.path) {
+            print("V99-FIXTURE-BEGIN")
+            print(String(decoding: try encoder.encode(SavedGame(world: world)), as: UTF8.self))
+            print("V99-FIXTURE-END")
+            XCTFail("v99-annual-taxes.json is not committed yet")
+            return
+        }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 99)
