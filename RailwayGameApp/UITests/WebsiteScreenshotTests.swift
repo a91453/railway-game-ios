@@ -1313,14 +1313,21 @@ final class WebsiteScreenshotTests: XCTestCase {
             master.tap()
         }
         XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
+        let leaving = english ? "crowds leave around" : "散場人潮約"
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", leaving)).firstMatch.appears(within: 10),
+                      "It reminds of the crowd surge")
         settle(seconds: 1)
         keep(name, app)
         // The news writes what the station master says as the game runs:
-        // a step or two of it, then the news.
+        // a step or two of it, paused again (a running clock keeps the
+        // bell from settling), then the news.
         let resume = app.buttons[english ? "Resume" : "繼續"].firstMatch
         if resume.appears(within: 5) {
             resume.tap()
             settle(seconds: 3)
+            let pause = app.buttons[english ? "Pause" : "暫停"].firstMatch
+            if pause.appears(within: 5) { pause.tap() }
+            settle(seconds: 1)
         }
         let bell = app.buttons["hud.news"]
         guard bell.appears(within: 10) else { return }
