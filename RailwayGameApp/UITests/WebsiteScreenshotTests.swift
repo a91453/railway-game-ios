@@ -1062,6 +1062,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// GLASS-POLISH (museum-title): the building tool's cards with the
+    /// museum's chosen, upright and on its side, in both languages, to see
+    /// that the long English names ("Railway museum") are not cut short.
+    func testBuildingCardNames() {
+        defer { XCUIDevice.shared.orientation = .landscapeLeft }
+        for english in [false, true] {
+            for upright in [false, true] {
+                let app = launch(extra: ["-screenshot-scene", "museum"], english: english)
+                if upright { XCUIDevice.shared.orientation = .portrait }
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                settle()
+                app.buttons["dock.build"].tap()
+                app.buttons["tool.building"].waitUntilSettled()
+                app.buttons["tool.building"].tap()
+                let first = app.buttons["building.kind.house"]
+                XCTAssertTrue(first.appears(within: 10), "The building tool opens")
+                first.waitUntilSettled()
+                let card = app.buttons["building.kind.railwayMuseum"]
+                let row = first.frame
+                let origin = app.coordinate(withNormalizedOffset: .zero)
+                for _ in 0..<20 where !(card.exists && card.isHittable && card.frame.maxY <= row.maxY + row.height * 0.6) {
+                    origin.withOffset(CGVector(dx: row.midX, dy: row.maxY - 12))
+                        .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: row.midX, dy: row.minY - 30)),
+                               withVelocity: .slow, thenHoldForDuration: 0.3)
+                    settle(seconds: 0.5)
+                }
+                XCTAssertTrue(card.exists && card.isHittable, "The museum's card comes into reach")
+                card.tap()
+                settle(seconds: 2)
+                keep("building-cards\(english ? "-english" : "")\(upright ? "-portrait" : "")", app)
+                app.terminate()
+                XCUIDevice.shared.orientation = .landscapeLeft
+            }
+        }
+    }
+
     /// Decision 663 (the Mac playtest's D9): the High Speed Rail demo's
     /// fares, the distance steps with what high-speed trips pay instead.
     func testHighSpeedDemoFares() {
