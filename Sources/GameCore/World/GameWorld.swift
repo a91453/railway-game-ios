@@ -5231,6 +5231,19 @@ public struct GameWorld: Equatable, Sendable {
                let nearest = path(from: start, toStation: preference.platform.station, length: train.length, memo: &memo) {
                 preferred = joiningPreferredPath(from: start, preference: preference, length: train.length, along: nearest)
             }
+            // Decision 755 (REVIEW-L21 P3-1): with traffic control off, a
+            // leg's list goes on to its next platform the train reaches and
+            // fits when its first does not, as under traffic control
+            // (decision 740); only when none does is the leg's way automatic.
+            if preferred == nil, !isTrafficControlEnabled, let list = preference.platformList {
+                for platform in list.dropFirst() {
+                    let leg = LineRoutePreference(from: preference.from, to: preference.to, platform: platform)
+                    if let path = preferredPath(from: start, preference: leg, length: train.length, memo: &memo) {
+                        preferred = path
+                        break
+                    }
+                }
+            }
             guard let preferred else { return nil }
             // Decision 228: with traffic control off, its way to a free
             // platform when another train is due on the one it names.

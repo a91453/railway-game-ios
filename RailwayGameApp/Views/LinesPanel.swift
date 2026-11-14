@@ -1970,7 +1970,9 @@ struct LinesPanel: View {
             let leg = "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))"
             let previewing = session.isPreviewingRoute(from: pair.0, to: pair.1, pattern: pattern)
             let previewText = previewing ? preview?.text(in: session.language) : nil
-            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg, previewing, previewText)) {
+            // Decision 755: the leg's platforms in order, once it names one.
+            let platforms = selected == nil ? nil : session.platformListLeg(from: pair.0, to: pair.1, pattern: pattern)
+            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg, previewing, previewText, platforms)) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Menu {
@@ -2026,6 +2028,9 @@ struct LinesPanel: View {
                             .foregroundStyle(Theme.textSecondary)
                             .accessibilityIdentifier("line.route.preview.text")
                     }
+                    if let platforms {
+                        platformListRows(platforms, from: pair.0, to: pair.1, pattern: pattern)
+                    }
                 }
             }
             .onAppear {
@@ -2034,6 +2039,98 @@ struct LinesPanel: View {
                 if !routeHintSeen { session.routeMenusDidAppear() }
             }
         }
+    }
+
+    /// Decision 755 (PLATFORM-BOOK PB-3): a leg's platforms in the order
+    /// its trains try them, each but the first with buttons to move it up,
+    /// down or off the list; a menu adding another of the station's
+    /// platforms; and what keeps the list from working.
+    private func platformListRows(_ leg: PlatformListLeg, from: Int, to: Int, pattern: Int?) -> some View {
+        let language = session.language
+        let id = "\(pattern ?? -1).\(from).\(to)"
+        return VStack(alignment: .leading, spacing: 2) {
+            ForEach(leg.entries.indices, id: \.self) { index in
+                let entry = leg.entries[index]
+                HStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(verbatim: "\(index + 1). \(entry.text)")
+                            .font(.caption)
+                        if let problem = entry.problem {
+                            Text(verbatim: problem)
+                                .font(.caption2)
+                                .foregroundStyle(Theme.warning)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("line.platforms.entry.\(id).\(index)")
+                    if index >= 1 {
+                        platformButton("chevron.up", label: language.text("Move up", "往前移"), disabled: index == 1) {
+                            session.moveSelectedLinePlatform(at: index, by: -1, from: from, to: to, pattern: pattern)
+                        }
+                        platformButton("chevron.down", label: language.text("Move down", "往後移"), disabled: index == leg.entries.count - 1) {
+                            session.moveSelectedLinePlatform(at: index, by: 1, from: from, to: to, pattern: pattern)
+                        }
+                        platformButton("minus.circle", label: language.text("Remove from the list", "從清單移除"), disabled: false) {
+                            session.removeSelectedLinePlatform(at: index, from: from, to: to, pattern: pattern)
+                        }
+                        .accessibilityIdentifier("line.platforms.remove.\(id).\(index)")
+                    }
+                }
+            }
+            if leg.isList {
+                Text(verbatim: language.text(
+                    "Trains stop only at these, taking the first free one in order; when all are taken they wait.",
+                    "列車只停這幾座，依序找空的停；都滿了就等。"
+                ))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+            }
+            if !leg.choices.isEmpty {
+                Menu {
+                    ForEach(leg.choices.indices, id: \.self) { choice in
+                        Button {
+                            session.addSelectedLinePlatform(leg.choices[choice], from: from, to: to, pattern: pattern)
+                        } label: {
+                            Text(verbatim: leg.choiceTexts[choice])
+                        }
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Add a platform to try next", "加入備用月台"))
+                    } icon: {
+                        Image(systemName: "plus.circle")
+                    }
+                    .font(.caption)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier("line.platforms.add.\(id)")
+            }
+            if let warning = leg.warning {
+                Label {
+                    Text(verbatim: warning)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle")
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.warning)
+                .accessibilityIdentifier("line.platforms.warning.\(id)")
+            }
+        }
+        .padding(.leading, 8)
+    }
+
+    /// One of a platform row's small buttons, a finger's width.
+    private func platformButton(_ symbol: String, label: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .disabled(disabled)
+        .accessibilityLabel(Text(verbatim: label))
     }
 
     /// The trains a service is set to run at one level, with a stepper to

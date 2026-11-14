@@ -283,6 +283,13 @@ struct TrainControls: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.warning)
             }
+            // Decision 755: stopping, this once, outside its leg's list.
+            if let off = session.world.offListPlatformText(of: train.id, in: language) {
+                Label(off, systemImage: "arrow.triangle.branch")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.warning)
+                    .accessibilityIdentifier("train.offListPlatform")
+            }
             // TestFlight 60.1: a line set to run fewer trains than it has
             // leaves this one waiting; one tap runs them all.
             if case .serviceFull? = session.world.lineDispatchHold(of: train.id),
