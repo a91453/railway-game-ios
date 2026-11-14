@@ -240,10 +240,13 @@ public enum SaveSync {
     /// `move` is told a row of the player's saves whose game on the device
     /// was moved to a row of its own after a conflict (decision 502, after
     /// the second review, ``Outcome/movedRows``).
+    /// `yielding` is asked before each save is compared: `true` ends the
+    /// round there, incomplete, for a save waiting to be written.
     public static func run(
         local: any SaveSyncFolder, cloud: any SaveSyncFolder, state: inout State,
         mode: Mode = .full, language: DisplayLanguage, now: Date, isGameOpen: () -> Bool = { false },
-        keeping keep: (String) throws -> Void = { _ in }, moving move: (_ from: String, _ to: String) throws -> Void = { _, _ in }
+        keeping keep: (String) throws -> Void = { _ in }, moving move: (_ from: String, _ to: String) throws -> Void = { _, _ in },
+        yielding: () -> Bool = { false }
     ) -> Outcome {
         var outcome = Outcome()
         guard let localFiles = try? local.files().filter({ downloadingName($0.key) == nil }),
@@ -316,6 +319,15 @@ public enum SaveSync {
         // before it goes to iCloud.
         let stems = Set(localSaves.keys).union(cloudSaves.keys).union(state.synced.keys)
         for stem in stems.sorted(by: { (SaveLibrary.isAutosave($0 + ".json") ? 1 : 0, $0) < (SaveLibrary.isAutosave($1 + ".json") ? 1 : 0, $1) }) {
+            // PERF-DEVICE 1: a save is waiting behind the round (Back to
+            // Start's autosave): the saves not yet compared are left for
+            // the next round, as a save on its way from iCloud is. Each of
+            // a 30 MB game's saves is read whole on both sides, so a whole
+            // round held the start screen for about a minute.
+            if yielding() {
+                outcome.isIncomplete = true
+                break
+            }
             let base = state.synced[stem]
             // A save on its way from iCloud waits for the next round.
             let members = [stem + ".json", stem + SaveLibrary.newsSuffix, stem + SaveLibrary.nameSuffix]

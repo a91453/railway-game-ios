@@ -105,6 +105,31 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertEqual(copies(idle), SaveSync.Outcome())
     }
 
+    /// PERF-DEVICE 1: a save waiting behind the round (Back to Start's
+    /// autosave) ends it before the next save it would compare; the saves
+    /// left are the next round's, as if the round had not reached them.
+    func testARoundEndsEarlyForAWaitingSave() throws {
+        let phone = device("phone")
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        try phone.library.save(world(cash: 30), as: .manual, at: date(10), named: "Taipei loop")
+        var asked = 0
+        let early = SaveSync.run(
+            local: phone.folder, cloud: DirectorySaveFolder(directory: cloudDirectory), state: &phone.state,
+            language: .english, now: date(20), yielding: {
+                asked += 1
+                return asked > 1
+            }
+        )
+        XCTAssertTrue(early.isIncomplete)
+        XCTAssertEqual(early.uploaded, ["save-2026-10-02 120010"], "the player's save first, the autosave left")
+        XCTAssertEqual(cloudFiles(), ["save-2026-10-02 120010.json", "save-2026-10-02 120010.name"])
+
+        let rest = sync(phone, at: 30)
+        XCTAssertFalse(rest.isIncomplete)
+        XCTAssertEqual(rest.uploaded, ["autosave"])
+        XCTAssertEqual(copies(sync(phone, at: 40)), SaveSync.Outcome(), "nothing left")
+    }
+
     func testASaveChangedOnBothDevicesIsKeptTwice() throws {
         let phone = device("phone"), pad = device("pad")
         try phone.library.save(world(cash: 60), as: .autosave, at: date(0))

@@ -351,7 +351,13 @@ public final class GameLauncher {
     public func refresh() {
         let library = library
         listRead &+= 1
-        entries = saveQueue.sync { library.entries() }
+        // PERF-DEVICE 1: nor does the main thread wait out an iCloud round.
+        savesWaiting.queued()
+        let savesWaiting = savesWaiting
+        entries = saveQueue.sync {
+            savesWaiting.began()
+            return library.entries()
+        }
     }
 
     /// Counts the reads of the list of saves, so a read in the background
@@ -416,6 +422,9 @@ public final class GameLauncher {
     /// Whether a game is open, for a round on the saves' queue: a game
     /// started while a start screen's round runs is not written under.
     @ObservationIgnored private let gameIsOpen = GameOpenFlag()
+    /// PERF-DEVICE 1: saves queued behind an iCloud round, which then
+    /// ends early (``SaveSync/run(local:cloud:state:mode:language:now:isGameOpen:keeping:moving:yielding:)``).
+    @ObservationIgnored private let savesWaiting = SavesWaiting()
 
     /// Keeps the saves and the copy in iCloud in step (decision 397), after
     /// the saves queued before, off the main thread. On the start screen
@@ -426,7 +435,7 @@ public final class GameLauncher {
     @discardableResult
     public func syncSaves(at date: Date = Date()) -> Task<Void, Never>? {
         guard let folder = cloudSaveFolder else { return nil }
-        let (library, language, gameIsOpen) = (library, language, gameIsOpen)
+        let (library, language, gameIsOpen, savesWaiting) = (library, language, gameIsOpen, savesWaiting)
         let mode: SaveSync.Mode = session == nil ? .full : .keepingDevice
         let (done, report) = AsyncStream.makeStream(of: SaveSync.Outcome?.self)
         let begun = gamesBegun
@@ -436,7 +445,10 @@ public final class GameLauncher {
             cloudSaves = .syncing
         }
         saveQueue.async {
-            report.yield(Self.syncRound(library: library, cloud: folder(), mode: mode, language: language, at: date, isGameOpen: gameIsOpen))
+            report.yield(Self.syncRound(
+                library: library, cloud: folder(), mode: mode, language: language, at: date, isGameOpen: gameIsOpen,
+                savesWaiting: savesWaiting
+            ))
             report.finish()
         }
         return Task {
@@ -459,7 +471,7 @@ public final class GameLauncher {
     /// beside the saves; `nil` without `cloud`.
     private nonisolated static func syncRound(
         library: SaveLibrary, cloud: (any SaveSyncFolder)?, mode: SaveSync.Mode, language: DisplayLanguage, at date: Date,
-        isGameOpen: GameOpenFlag
+        isGameOpen: GameOpenFlag, savesWaiting: SavesWaiting
     ) -> SaveSync.Outcome? {
         guard let cloud else { return nil }
         let stateFile = library.directory.appendingPathComponent(SaveSync.stateFileName)
@@ -467,7 +479,7 @@ public final class GameLauncher {
         var outcome = SaveSync.run(
             local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, mode: mode, language: language, now: date,
             isGameOpen: { isGameOpen.value }, keeping: { try library.keepBeforeReplacing($0) },
-            moving: { try library.moveRow(from: $0, to: $1) }
+            moving: { try library.moveRow(from: $0, to: $1) }, yielding: { savesWaiting.any }
         )
         // A state left as it was is safe: what the round did left both
         // sides the same, and the next round sees them so.
@@ -1611,7 +1623,7 @@ public final class GameLauncher {
             self.show(run)
             self.showsSaveLoading = true
         }
-        let (saveQueue, gameIsOpen) = (saveQueue, gameIsOpen)
+        let (saveQueue, gameIsOpen, savesWaiting) = (saveQueue, gameIsOpen, savesWaiting)
         return Task {
             // However it ends, the save is no longer being loaded: begun,
             // failed or stopped.
@@ -1619,7 +1631,12 @@ public final class GameLauncher {
             // A save being written or read is not stopped part way: once
             // stopped, what it read is thrown away.
             let result = await withCheckedContinuation { (done: CheckedContinuation<Result<Read, SaveError>, Never>) in
-                saveQueue.async { done.resume(returning: Result { () throws(SaveError) in try read() }) }
+                // PERF-DEVICE 1: Continue does not wait out an iCloud round.
+                savesWaiting.queued()
+                saveQueue.async {
+                    savesWaiting.began()
+                    done.resume(returning: Result { () throws(SaveError) in try read() })
+                }
             }
             guard run.finishedElsewhere() else { return }
             // The data as it is once the save is read: it may have arrived
@@ -2078,7 +2095,10 @@ public final class GameLauncher {
         // Decision 502: an autosave names the game's row.
         let row = kind == .manual ? row : gameRow
         let (written, report) = AsyncStream.makeStream(of: Result<SaveLibrary.Entry, SaveError>.self)
+        let savesWaiting = savesWaiting
+        savesWaiting.queued()
         saveQueue.async {
+            savesWaiting.began()
             report.yield(Result { () throws(SaveError) in
                 inTurn
                     ? try library.saveAutosaveSlot(world, news: news, at: date, row: row).entry
@@ -2097,7 +2117,13 @@ public final class GameLauncher {
     /// saves queued before it are written.
     @discardableResult
     private func afterSaves<T>(_ work: () throws(SaveError) -> T) throws(SaveError) -> T {
-        try saveQueue.sync { Result(catching: work) }.get()
+        // PERF-DEVICE 1: the main thread waits here, so an iCloud round
+        // ahead of it ends at its next save.
+        savesWaiting.queued()
+        return try saveQueue.sync {
+            savesWaiting.began()
+            return Result(catching: work)
+        }.get()
     }
 
     /// Autosaves and goes back to the start screen. If the autosave fails
@@ -2164,7 +2190,10 @@ public final class GameLauncher {
         listRead &+= 1
         let read = listRead
         let (written, report) = AsyncStream.makeStream(of: Result<[SaveLibrary.Entry], SaveError>.self)
+        let savesWaiting = savesWaiting
+        savesWaiting.queued()
         saveQueue.async {
+            savesWaiting.began()
             report.yield(Result { () throws(SaveError) in
                 _ = try library.save(world, news: news, as: .autosave, at: date, row: row)
                 return library.entries()
@@ -2414,6 +2443,26 @@ public struct RealWorldData: Sendable {
 /// A save being loaded counts as open (decision 502, after the third
 /// review): a round then does not move its game to a row of its own while
 /// it is read, as it would begin from the row it was read from.
+/// PERF-DEVICE 1: how many saves are queued on the saves' queue and not
+/// yet begun. An iCloud round on that queue asks it before each save it
+/// compares, and ends early while one waits.
+final class SavesWaiting: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    var any: Bool { lock.withLock { count > 0 } }
+
+    /// A save was queued.
+    func queued() {
+        lock.withLock { count += 1 }
+    }
+
+    /// A queued save began to be written.
+    func began() {
+        lock.withLock { count -= 1 }
+    }
+}
+
 final class GameOpenFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var isOpen = false
