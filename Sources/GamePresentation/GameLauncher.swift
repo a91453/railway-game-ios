@@ -2375,7 +2375,8 @@ public struct RealWorldData: Sendable {
         // Kong's airport either.
         for city in OverseasMap.allCases where overseas.contains(city) {
             guard let land = pack(city)?.noBuildLand(airfields: false) else { continue }
-            places?.noBuild = places?.noBuild.map { $0.adding(land) } ?? land
+            let taiwan = places?.noBuild
+            places?.noBuild = taiwan.map { $0.adding(land) } ?? land
         }
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
