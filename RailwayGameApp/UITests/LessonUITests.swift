@@ -222,7 +222,15 @@ final class LessonUITests: XCTestCase {
         defer { app?.terminate() }
         passFirstLesson()
         let before = stationPoints().count
-        tap(app.buttons["lessonResult.keepPlaying"])
+        let keepPlaying = app.buttons["lessonResult.keepPlaying"]
+        tap(keepPlaying)
+        // The touch on Keep Playing can be lost on a slow runner, and the
+        // card stays (main 4a70659's full lane, run 43527587987: the title
+        // still there 10 s after the tap). Touch it once more only while
+        // it is still there.
+        if !element("lessonResult.title").disappears(within: 10), keepPlaying.exists {
+            tap(keepPlaying)
+        }
         XCTAssertTrue(element("lessonResult.title").disappears(within: 10))
         // Keep Playing runs the clock the goal met paused, at the speed it
         // ran at (decision 266, later; PR #785): Pause shows with no tap.
@@ -596,6 +604,18 @@ final class LessonUITests: XCTestCase {
         }
         tapMap(project(junction, from: known))
         tapMap(project(end, from: known))
+        // Either touch on the map can be lost on a slow runner, and no
+        // track is proposed (release 130's full lane, main 19aa342, run
+        // 43539871635: no confirm in 10 s after both taps). Which one was
+        // lost is not known, so forget the draft (another mode and back,
+        // `setNetworkMode`) and tap both ends again.
+        if !app.buttons["map.build.confirm"].appears(within: 10) {
+            openControls()
+            tap(mode("Station"))
+            tap(mode("Lay"))
+            tapMap(project(junction, from: known))
+            tapMap(project(end, from: known))
+        }
         tap(app.buttons["map.build.confirm"])
         XCTAssertTrue(app.buttons["map.build.confirm"].disappears(within: 5))
 
