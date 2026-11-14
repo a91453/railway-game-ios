@@ -211,6 +211,18 @@ public struct Map3DStreaming: Sendable {
         return keys.sorted { ($0.distance, $0.key) < ($1.distance, $1.key) }.map(\.key)
     }
 
+    /// MEM3D (decision 749 續): whether `camera` sees any of `key`'s
+    /// ground, however far from its target (``seen(by:slack:)`` stops at
+    /// ``sight(of:)``): a leaning view's corners run past it, onto the
+    /// scene's own chunks, which are let go last.
+    public func isSeen(_ key: Key, by camera: Map3DCamera, slack: Float = 0) -> Bool {
+        let side = Map3DScene.chunkSize, target = camera.target
+        let x = Float(key.column) * side, z = Float(key.row) * side
+        return Map3DCamera.sees(minimum: Map3DPoint(x - slack, target.y - Self.relief, z - slack),
+                                maximum: Map3DPoint(x + side + slack, target.y + Self.relief, z + side + slack),
+                                through: camera.viewProjection)
+    }
+
     /// Decision 714: the map from above in the scene's metres (x east, z
     /// south of its origin): where the camera's target may be
     /// (``Map3DCamera/held(over:)``).
@@ -259,7 +271,7 @@ public struct Map3DStreaming: Sendable {
         wantedWithin(slack: 0, target: target, velocity: velocity).sorted { ($0.soon, $0.key) < ($1.soon, $1.key) }.map(\.key)
     }
 
-    private func wantedWithin(slack: Float, target: Map3DPoint, velocity: SIMD2<Float>) -> [(key: Key, soon: Float)] {
+    func wantedWithin(slack: Float, target: Map3DPoint, velocity: SIMD2<Float>) -> [(key: Key, soon: Float)] {
         let reach = max(Self.around, Self.ahead + Self.aheadWidth) + slack
         let low = key(of: Map3DPoint(target.x - reach, 0, target.z - reach))
         let high = key(of: Map3DPoint(target.x + reach, 0, target.z + reach))
@@ -445,7 +457,15 @@ public struct Map3DStreaming: Sendable {
             if block.isEmpty, !gone.isEmpty {
                 // Decision 711: the scene's chunks let go, where the camera
                 // now sees.
-                block = Map3DStreaming.block(of: nearest(gone.filter { !built.contains($0) && Map3DStreaming.distance(of: $0, to: target) <= sight }))
+                // MEM3D (decision 749 續): with `camera`, only those it
+                // sees (or round the target), so what ``shed(farFrom:radius:seeing:)``
+                // let go off the screen is not built again at once.
+                block = Map3DStreaming.block(of: nearest(gone.filter { key in
+                    let distance = Map3DStreaming.distance(of: key, to: target)
+                    guard !built.contains(key), distance <= sight else { return false }
+                    guard let camera else { return true }
+                    return distance <= Map3DStreaming.around || grid.isSeen(key, by: camera, slack: Map3DStreaming.slack)
+                }))
             }
             building = block
             if !block.isEmpty { buildingAround = around }
@@ -458,10 +478,26 @@ public struct Map3DStreaming: Sendable {
         /// ``Map3DStreaming/around``, which the plan keeps) is let go, the
         /// scene's own too, the farthest first. They are built again only
         /// if the camera's target comes near them.
-        public mutating func shed(farFrom target: Map3DPoint, radius: Float) -> [Key] {
+        ///
+        /// MEM3D (decision 749 續): with `camera` (the scene's buffers over
+        /// their budget, not memory short), the chunks it does not see
+        /// are let go instead, however near (but no nearer than
+        /// ``Map3DStreaming/around``, nor in the strip ahead the plan
+        /// keeps), and those it sees are kept however far: pulled out
+        /// over the heaviest save, the 600 MB budget let go of the scene's
+        /// chunks at the screen's edge and left them empty.
+        public mutating func shed(farFrom target: Map3DPoint, radius: Float, seeing camera: Map3DCamera? = nil) -> [Key] {
             let reach = max(radius, Map3DStreaming.around)
-            let far = built.subtracting(building).map { (key: $0, distance: Map3DStreaming.distance(of: $0, to: target)) }
-                .filter { $0.distance > reach }.sorted { ($0.distance, $0.key) > ($1.distance, $1.key) }.map(\.key)
+            var candidates = built.subtracting(building).map { (key: $0, distance: Map3DStreaming.distance(of: $0, to: target)) }
+            if let camera {
+                let velocity = Self.velocity(motion: motion.velocity, ahead: nil)
+                let kept = Set(grid.wantedWithin(slack: Map3DStreaming.slack, target: target, velocity: velocity).map(\.key))
+                candidates = candidates.filter { $0.distance > Map3DStreaming.around && !kept.contains($0.key)
+                    && !grid.isSeen($0.key, by: camera, slack: Map3DStreaming.slack) }
+            } else {
+                candidates = candidates.filter { $0.distance > reach }
+            }
+            let far = candidates.sorted { ($0.distance, $0.key) > ($1.distance, $1.key) }.map(\.key)
             letGo(far)
             return far
         }
