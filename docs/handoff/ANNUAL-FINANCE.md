@@ -49,3 +49,16 @@
 - 做了：寫實規則繳稅前 30 天的站長提醒與消息（現金夠／不夠）、損益表「其中營業稅」一行（票收 × 5 ÷ 105，只顯示）、簡單規則稅名「所得稅（每日結算）」。
 - 還留下：AF-3b 年終考核卡、新聞、兩個成就（設計頁 §3.7；新卡片，第三級截圖，遊戲規劃看過才合）；設計頁 §5 的平衡量測。
 - UNVERIFIED：模擬器與實機都沒看過新的提醒、消息與那一行。
+
+## 下一張：AF-3b 年終考核卡（作者 11-14 說今天先收工，沒有開工）
+
+- 設計頁 §3.7。新卡片，第三級：`website-screenshots.yml` 拍截圖，遊戲規劃看過才合。GameCore 應該不必動。
+- 已查過可以用的資料（都在 GamePresentation 算）：
+  - 淨利、營收：`accounts.years` 最後兩筆 `AnnualStatement`（`income`、`afterTaxProfit`）。
+  - 運量：`accounts.days`（留 720 天，正好兩年）的 `fareTrips` 加總，比去年。更早的年度沒有資料，那一格不評。
+  - 負債比：`closing` 的 `loan + termLoans + taxPayable` ÷ `totalAssets`。
+  - 準點：`lineDays(_:)` 只留 30 天（`LineAccounts.keptDays`），`trips`／`lateTrips` 只有寫實運轉才有；只能評「年底最後 30 天」，或不評。
+  - 開關開時多一行「明年要繳的稅」：`incomeTaxPayable + houseTaxPayable`（5 月底）、`landTaxPayable`（11 月底）。
+- 放的地方：`RailwayGameApp/Views/YearEndReport.swift` 的 `YearEndReport` 最上面多一段（年度結算時 `YearEndSheet` 會開）；消息紀錄的年度結算那一筆在 `SecretaryRoom.observeNews` 加上等第。
+- 兩個成就（`Achievements.swift`）：「年終考核全 A」「連三年淨利成長」。`GameCenterMapping.points` 現在 810，要加分數；`docs/GAME_CENTER_SETUP.md` 要列新 ID，App Store Connect 那邊是作者的步驟。
+- 門檻（A／B／C）實作時照設計頁 §5 定，寫進新的決策。
