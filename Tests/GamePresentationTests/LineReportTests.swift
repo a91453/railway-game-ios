@@ -28,6 +28,36 @@ final class LineReportTests: XCTestCase {
         return world
     }
 
+    /// Decision 731 (PAT-2): the line page's row of those who waited too
+    /// long and left at its stops, shown only with patience on (or once
+    /// someone has left); no train runs, so Alpha's first riders leave at
+    /// minute 40.
+    func testGaveUpRowSumsTheLinesStops() throws {
+        var world = try managedWorld()
+        try world.setStationDemand(Self.alpha, to: StationDemand(kind: .residential, dailyTrips: 100_000))
+        try world.setStationDemand(Self.beta, to: StationDemand(kind: .office, dailyTrips: 100_000))
+        try world.advance(ticks: 60)
+        XCTAssertNil(world.lineGaveUp(Self.short), "patience off: no row")
+        XCTAssertNil(world.lineGaveUpRow(Self.short, in: .english))
+
+        world.setPassengerPatience(true)
+        XCTAssertEqual(world.lineGaveUp(Self.short), 0, "patience on: the row shows, at nought")
+        try world.advance(ticks: 60)
+        let alpha = world.passengerLedger(of: Self.alpha).gaveUp
+        let beta = world.passengerLedger(of: Self.beta).gaveUp
+        let gamma = world.passengerLedger(of: Self.gamma).gaveUp
+        XCTAssertGreaterThan(alpha + beta, 0)
+        XCTAssertEqual(world.lineGaveUp(Self.short), alpha + beta)
+        XCTAssertEqual(world.lineGaveUp(Self.long), alpha + beta + gamma)
+        let row = try XCTUnwrap(world.lineGaveUpRow(Self.short, in: .traditionalChinese))
+        XCTAssertEqual(row.title, "各站等太久離開")
+        XCTAssertEqual(row.count, alpha + beta)
+
+        // Off again, those who left still show.
+        world.setPassengerPatience(false)
+        XCTAssertEqual(world.lineGaveUp(Self.short), alpha + beta)
+    }
+
     func testWithoutTheAccountsThereIsNoReport() throws {
         var world = try managedWorld(accounts: false)
         try world.advance(ticks: 3 * 1_440)
