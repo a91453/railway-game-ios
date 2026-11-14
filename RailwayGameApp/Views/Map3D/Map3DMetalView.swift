@@ -61,6 +61,11 @@ final class Map3DMetalView: MTKView {
         var drawnHour: Float = 12
         var drawnNight: Float = 0
         var drawnLights: Float = 0
+        /// Decision 750: the model buffers put on the GPU so far
+        /// (``Map3DModelBuffers/bytes``), MB, and how many models of all.
+        var modelMegabytes: Double = 0
+        var modelsMade: Int = 0
+        var models: Int = 0
     }
 
     var camera = Map3DCamera()
@@ -191,7 +196,7 @@ final class Map3DMetalView: MTKView {
     /// decision 608: the pack without its vertices, which are only in the
     /// buffers (``Map3DUploadedModels``, shared by every 3D view).
     /// Decision 653: and each model's own texture (``Map3DUploadedModels/textures``).
-    private var models: (pack: Map3DModelPack, buffers: [MTLBuffer], textures: [MTLTexture?])?
+    private var models: (pack: Map3DModelPack, buffers: Map3DModelBuffers, textures: [MTLTexture?])?
     /// Decision 653: one white texel, `map3dFragment`'s model texture for
     /// every draw but a model with its own.
     private var noModelTexture: MTLTexture?
@@ -763,7 +768,8 @@ final class Map3DMetalView: MTKView {
                 // Decision 445: the pedestrian signals, small and close up,
                 // cast none.
                 for run in props.shapes where run.model < models.buffers.count && !leftOut.contains(run.model) && walkModels?.places(run.model) != true {
-                    encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
+                    guard let vertices = models.buffers[run.model] else { continue }
+                    encoder.setVertexBuffer(vertices, offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertexCount,
                                            instanceCount: run.count)
@@ -1119,7 +1125,7 @@ final class Map3DMetalView: MTKView {
     /// models; decision 608: their buffers made once, off the main thread,
     /// and shared, so this only takes them.
     func useModels(_ uploaded: Map3DUploadedModels) {
-        guard let device, uploaded.buffers.allSatisfy({ $0.device === device }) else { return }
+        guard let device, uploaded.buffers.device === device else { return }
         let pack = uploaded.pack
         models = (pack, uploaded.buffers, uploaded.textures)
         glowSpots = uploaded.glowBuffer.map { (table: uploaded.glows, buffer: $0) }
@@ -1562,8 +1568,8 @@ final class Map3DMetalView: MTKView {
                     var last = first
                     while last + 1 < sorted.count, sorted[last + 1].model == model { last += 1 }
                     let count = last - first + 1
-                    if model < models.buffers.count {
-                        encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
+                    if model < models.buffers.count, let vertices = models.buffers[model] {
+                        encoder.setVertexBuffer(vertices, offset: 0, index: 0)
                         encoder.setFragmentTexture(models.textures[model] ?? noModelTexture, index: 2)
                         encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
                         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertexCount,
@@ -1604,7 +1610,8 @@ final class Map3DMetalView: MTKView {
                     } else {
                         drawn = signalModels?.model(run.model, group: run.group, clock: signalClock) ?? run.model
                     }
-                    encoder.setVertexBuffer(models.buffers[drawn], offset: 0, index: 0)
+                    guard drawn < models.buffers.count, let vertices = models.buffers[drawn] else { continue }
+                    encoder.setVertexBuffer(vertices, offset: 0, index: 0)
                     encoder.setFragmentTexture(models.textures[drawn] ?? noModelTexture, index: 2)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertexCount,
@@ -1942,7 +1949,10 @@ final class Map3DMetalView: MTKView {
             aim: preferredFramesPerSecond,
             drawnHour: shown.hour,
             drawnNight: shown.night,
-            drawnLights: shown.lights
+            drawnLights: shown.lights,
+            modelMegabytes: Double(models?.buffers.bytes ?? 0) / 1_048_576,
+            modelsMade: models?.buffers.made ?? 0,
+            models: models?.buffers.count ?? 0
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.

@@ -155,4 +155,56 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
         let saved = try SaveLibrary.decode(Data(contentsOf: directory.appendingPathComponent("autosave.json")))
         XCTAssertEqual(saved, world)
     }
+    /// P2-1 (REVIEW-L21): a game opened while the autosave of the one
+    /// left cannot be written does not open; the game left comes back,
+    /// with the question, rather than being thrown away.
+    @MainActor
+    func testAGameOpenedWhileAFailingAutosaveIsWrittenKeepsTheGameLeft() async throws {
+        try Data("x".utf8).write(to: directory)
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.openDemo()
+        let left = try XCTUnwrap(launcher.session)
+
+        let leaving = try XCTUnwrap(launcher.returnToStartInBackground(at: date))
+        XCTAssertNil(launcher.session)
+        launcher.openDemo()
+        XCTAssertTrue(launcher.session === left, "the game left comes back, not a new one")
+        XCTAssertFalse(launcher.isReturningToStart)
+        XCTAssertEqual(launcher.unsavedLeaving?.reason, SaveError.fileSystem.playerMessage(in: .english))
+        XCTAssertEqual(left.message, StatusMessage(kind: .failure, text: SaveError.fileSystem.playerMessage(in: .english)))
+
+        await leaving.value
+        XCTAssertTrue(launcher.session === left, "the write's own report changes nothing more")
+        XCTAssertNotNil(launcher.unsavedLeaving)
+
+        launcher.leaveWithoutSaving()
+        launcher.openDemo()
+        XCTAssertNotNil(launcher.session)
+        XCTAssertFalse(launcher.session === left, "a new game once the player chose to leave")
+    }
+
+    /// P2-1: a game opened while the autosave is written opens once it is
+    /// written, not under the saving cover, and its Back to Start works.
+    @MainActor
+    func testAGameOpenedWhileTheAutosaveIsWrittenOpensUncovered() async throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.openDemo()
+        let left = try XCTUnwrap(launcher.session)
+        let world = left.worldToSave
+
+        let leaving = try XCTUnwrap(launcher.returnToStartInBackground(at: date))
+        launcher.openDemo()
+        let opened = try XCTUnwrap(launcher.session)
+        XCTAssertFalse(opened === left)
+        XCTAssertFalse(launcher.isReturningToStart, "no saving cover over the game opened")
+        XCTAssertNil(launcher.unsavedLeaving)
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        let kept = files.filter { $0.pathExtension == "json" && $0.lastPathComponent != "autosave.json" }
+            .compactMap { try? SaveLibrary.decode(Data(contentsOf: $0)) }
+        XCTAssertTrue(kept.contains(world), "the game left written, and set aside for the new one")
+
+        await leaving.value
+        XCTAssertTrue(launcher.session === opened)
+        XCTAssertNotNil(launcher.returnToStartInBackground(at: date), "Back to Start answers")
+    }
 }
