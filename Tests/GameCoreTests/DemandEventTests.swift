@@ -216,12 +216,12 @@ final class DemandEventTests: XCTestCase {
         XCTAssertNil(world.demandEvents)
     }
 
-    /// `v96-demand-hours.json`: the six stations a minute in, a crowd
+    /// `v98-demand-hours.json`: the six stations a minute in, a crowd
     /// surge at S2 from 19:00 to 22:00 today and tomorrow and an
     /// exhibition at S4 all day: the event's `"opens"` and `"closes"`.
-    /// Written once by the version 96 build (`DEMAND_HOURS_SAVE_NEW=1`);
+    /// Written once by the version 98 build (`DEMAND_HOURS_SAVE_NEW=1`);
     /// an event of an earlier save has neither and runs all day.
-    func testVersionNinetySixKeepsTheEventsHours() throws {
+    func testVersionNinetyEightKeepsTheEventsHours() throws {
         var world = try world()
         world.demandEvents!.events = [
             DemandEvent(kind: .crowdSurge, station: ids[2], announced: 0, start: 0, end: 2, boost: 700, opens: 1_140, closes: 1_320),
@@ -229,15 +229,15 @@ final class DemandEventTests: XCTestCase {
         ]
         try world.advance(ticks: 1)
 
-        let url = SavedGameTests.fixtures.appendingPathComponent("v96-demand-hours.json")
+        let url = SavedGameTests.fixtures.appendingPathComponent("v98-demand-hours.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["DEMAND_HOURS_SAVE_NEW"] != nil, SavedGame.currentVersion == 96 {
+        if ProcessInfo.processInfo.environment["DEMAND_HOURS_SAVE_NEW"] != nil, SavedGame.currentVersion == 98 {
             try encoder.encode(SavedGame(world: world)).write(to: url)
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 96)
+        XCTAssertEqual(object["saveVersion"] as? Int, 98)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded.demandEvents?.events.map(\.opens), [1_140, nil])
         XCTAssertEqual(loaded.demandEvents?.events.map(\.closes), [1_320, nil])
@@ -247,7 +247,7 @@ final class DemandEventTests: XCTestCase {
         try world.advance(ticks: 1_440)
         XCTAssertEqual(loaded, world)
 
-        // An event without hours, as every save before 96 wrote it, runs
+        // An event without hours, as every save before 98 wrote it, runs
         // all day, and is written without them.
         let plain = try JSONEncoder().encode(DemandEvent(kind: .crowdSurge, station: ids[2], announced: 0, start: 0, end: 1, boost: 700))
         XCTAssertFalse(String(decoding: plain, as: UTF8.self).contains("opens"))

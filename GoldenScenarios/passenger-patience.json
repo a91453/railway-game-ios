@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 77,
+  "description": "Passengers who wait too long leave (ARCHITECTURE decision 731). station-demand.json's Home (1) and Office (2), 4,096 units (64 m) apart, on line 1 Main (Home, Office) with no train, one trip a day each way; passengers' patience is turned on. As in station-demand.json, Home's one passenger for Office is released at 08:59 (minute 539) and waits for line 1 outbound. The trip is an ordinary one (not beyond the map, no high-speed line, 64 m < 20 km), so the passenger waits 40 minutes: at each whole minute t, before the minute's release, a group leaves once t - since >= 40. At 09:38 (578) it has waited 39 minutes and is still there; at 09:39 (579) it has waited 40 and leaves, counted at Home as gaveUp 1 (not abandoned), so released 1 = waiting 0 + gaveUp 1. Office's passenger is not released before 18:00, so nobody waits there. Balance 6,000 - two stations of 3,000 = 0. Every value is worked out by hand from the rule; the difference model does not hold the rule, so this fixture runs on GameCore only.",
+  "initialState": {
+    "worldWidth": 12288,
+    "worldHeight": 3072,
+    "balance": 6000,
+    "costs": {
+      "track": 300,
+      "station": 3000,
+      "train": 15000
+    },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Home",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Office",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Main",
+        "stops": [
+          1,
+          2
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 1,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 1
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 2,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setPassengerPatience",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 540
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "waitingPassengers",
+        "station": 1
+      },
+      "expect": {
+        "groups": [
+          {
+            "line": 1,
+            "direction": "outbound",
+            "destination": 2,
+            "since": 539,
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "passengerLedger",
+        "station": 1
+      },
+      "expect": {
+        "ledger": {
+          "released": 1,
+          "waiting": 1,
+          "riding": 0,
+          "arrived": 0,
+          "overflowed": 0,
+          "abandoned": 0,
+          "refused": 0
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 39
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "waitingPassengers",
+        "station": 1
+      },
+      "expect": {
+        "groups": [
+          {
+            "line": 1,
+            "direction": "outbound",
+            "destination": 2,
+            "since": 539,
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "passengerLedger",
+        "station": 1
+      },
+      "expect": {
+        "ledger": {
+          "released": 1,
+          "waiting": 1,
+          "riding": 0,
+          "arrived": 0,
+          "overflowed": 0,
+          "abandoned": 0,
+          "refused": 0
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "waitingPassengers",
+        "station": 1
+      },
+      "expect": {
+        "groups": []
+      }
+    },
+    {
+      "observe": {
+        "type": "passengerLedger",
+        "station": 1
+      },
+      "expect": {
+        "ledger": {
+          "released": 1,
+          "waiting": 0,
+          "riding": 0,
+          "arrived": 0,
+          "overflowed": 0,
+          "abandoned": 0,
+          "refused": 0,
+          "gaveUp": 1
+        }
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 580,
+    "speed": "normal",
+    "balance": 0,
+    "stations": [
+      {
+        "id": 1,
+        "name": "Home",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      {
+        "id": 2,
+        "name": "Office",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      }
+    ],
+    "trains": [],
+    "lines": [
+      {
+        "id": 1,
+        "name": "Main",
+        "stops": [
+          1,
+          2
+        ],
+        "window": {
+          "type": "hours",
+          "open": 360,
+          "close": 1440
+        },
+        "trainsInService": {
+          "peak": 0,
+          "offPeak": 0,
+          "low": 0
+        },
+        "targetHeadways": {
+          "peak": null,
+          "offPeak": null,
+          "low": null
+        },
+        "trains": [],
+        "lastDispatch": null,
+        "patterns": []
+      }
+    ],
+    "serviceDay": [
+      {
+        "start": 0,
+        "level": "low"
+      },
+      {
+        "start": 420,
+        "level": "peak"
+      },
+      {
+        "start": 600,
+        "level": "offPeak"
+      },
+      {
+        "start": 960,
+        "level": "peak"
+      },
+      {
+        "start": 1200,
+        "level": "offPeak"
+      },
+      {
+        "start": 1260,
+        "level": "low"
+      }
+    ],
+    "network": {
+      "nodes": [],
+      "edges": [],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [
+      {
+        "station": 1,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 1
+        },
+        "waiting": [],
+        "released": 1,
+        "arrived": 0,
+        "overflowed": 0,
+        "abandoned": 0,
+        "refused": 0,
+        "gaveUp": 1
+      },
+      {
+        "station": 2,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1
+        },
+        "waiting": [],
+        "released": 0,
+        "arrived": 0,
+        "overflowed": 0,
+        "abandoned": 0,
+        "refused": 0
+      }
+    ],
+    "riders": [],
+    "accounts": {
+      "mode": "free",
+      "fareRules": null,
+      "openedAt": null,
+      "pending": {
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "departures": 0,
+        "trainDistance": 0,
+        "passengers": 0,
+        "seats": 0
+      },
+      "ledger": [],
+      "days": []
+    },
+    "passengerPatience": true
+  }
+}

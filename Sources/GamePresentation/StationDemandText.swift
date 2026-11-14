@@ -433,18 +433,23 @@ extension GameWorld {
 
     /// Station `id`'s passenger ledger (``passengerLedger(of:)``) as rows:
     /// released, and where they are now (waiting, riding, arrived, left a
-    /// full station, gave up), then the times trains left them behind.
+    /// full station, gave up, and with passengers' patience on (decision
+    /// 731) waited too long), then the times trains left them behind.
     public func passengerLedgerRows(of id: StationID, in language: DisplayLanguage) -> [LedgerCount] {
         let ledger = passengerLedger(of: id)
-        return [
+        var rows = [
             LedgerCount(title: language.text("Released", "釋出"), count: ledger.released),
             LedgerCount(title: language.text("Waiting", "候車"), count: ledger.waiting),
             LedgerCount(title: language.text("Riding", "車上"), count: ledger.riding),
             LedgerCount(title: language.text("Arrived", "已抵達"), count: ledger.arrived),
             LedgerCount(title: language.text("Left a full station", "車站客滿離開"), count: ledger.overflowed),
             LedgerCount(title: language.text("Gave up", "放棄搭乘"), count: ledger.abandoned),
-            LedgerCount(title: language.text("Left behind (times)", "未能上車（次）"), count: ledger.refused),
         ]
+        if passengerPatience || ledger.gaveUp > 0 {
+            rows.append(LedgerCount(title: language.text("Waited too long and left", "等太久離開"), count: ledger.gaveUp))
+        }
+        rows.append(LedgerCount(title: language.text("Left behind (times)", "未能上車（次）"), count: ledger.refused))
+        return rows
     }
 
     /// The lines calling at station `id`, by ID.

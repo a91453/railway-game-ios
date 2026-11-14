@@ -1036,3 +1036,10 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 最終狀態：餘額 3,000,000 − 軌道 108,000（36 段 1,024，每段 3,000；外圈的彎 4,090 算 4 段）− 六站 900,000 − 兩列車 1,200,000 = 792,000；`runDays` [0, 0, 0]。
 - 每個時刻都是手算的（派出是第一站開車前 5 分，第一站的停留不到 36 秒時才會晚開）；最終狀態取 GameCore 的，上面逐項核對過。環線班次的其他情形（機廠出庫停在班次方向的月台、接縫換車、兩天不卡）由 `RingRunsTests` 驗。差分模型不跑時刻表，所以這份 fixture 只在 GameCore 上跑。
 - 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 731：乘客等太久就離開（schema 77）
+
+- 新指令 `{"type": "setPassengerPatience", "enabled": true}`；車站的乘客帳（`passengerLedger` 的觀察與最終狀態的 `passengers`）多一個 `"gaveUp"`，世界摘要多一個 `"passengerPatience"`。沒有人等太久離開、規則關著時都不寫，所以既有 golden 一個字節都不變。
+- `passenger-patience.json`（新）：`station-demand.json` 的 Home（1）與 Office（2），兩站相距 4,096 單位（64 m），線 1 Main（Home、Office）沒有車，每天各一趟；打開乘客的耐心。Home 往 Office 的那一位照 `station-demand.json` 在 08:59（第 539 分）放出。這是一般行程（不出地圖、沒有高鐵、不到 20 km），等 40 分：09:38（578）等了 39 分還在；09:39（579）等滿 40 分，在那一分放出乘客之前離開，算在 Home 的 `gaveUp` 1（不是 `abandoned`），released 1 = waiting 0 + gaveUp 1。Office 那一位 18 點才放出。餘額 6,000 − 兩站各 3,000 = 0。
+- 每個值都是照規則手算的。差分模型沒有這條規則，所以這份 fixture 只在 GameCore 上跑。
+- 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

@@ -334,9 +334,16 @@ its map's airports when it opens the save).
   (`TrackClosureTests.testVersionNinetyFiveKeepsTheTrackBeingClosed`,
   written with `CLOSE_TRACK_SAVE_NEW=1` by the build that first made it;
   decision 716, continued).
-- `v96-demand-hours.json`: six stations on one line a minute in, demand
+- `v97-passenger-patience.json`: two stations 128 m apart on a line with
+  no train, the first sending its trips to the second, passengers'
+  patience on, saved at 01:00: those released in the first 20 minutes
+  have given up (each station's `"gaveUp"`), the rest still wait
+  (`PassengerPatienceTests.testTheVersion97SaveLoadsAndRunsOn`, written
+  with `PATIENCE_SAVE_NEW=1` by the build that first made it; decision
+  731).
+- `v98-demand-hours.json`: six stations on one line a minute in, demand
   events on, a crowd surge at the third station from 19:00 to 22:00 today
   and tomorrow and an exhibition at the fifth all day: the event's
   `"opens"` and `"closes"`
-  (`DemandEventTests.testVersionNinetySixKeepsTheEventsHours`, written with
+  (`DemandEventTests.testVersionNinetyEightKeepsTheEventsHours`, written with
   `DEMAND_HOURS_SAVE_NEW=1` by the build that first made it; decision 730).
