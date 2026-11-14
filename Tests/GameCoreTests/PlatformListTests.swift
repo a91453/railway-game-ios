@@ -136,7 +136,6 @@ final class PlatformListTests: XCTestCase {
     func testTheVersion101SaveKeepsItsPlatformList() throws {
         let world = try Self.savedWorld()
         let url = SavedGameTests.fixtures.appendingPathComponent("v101-platform-list.json")
-        try XCTSkipUnless(FileManager.default.fileExists(atPath: url.path), "printed by ZZPlatformListFixturePrintTests until committed")
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 101)
@@ -150,21 +149,3 @@ final class PlatformListTests: XCTestCase {
     }
 }
 
-/// Temporary: prints the version 101 save while it is not committed.
-final class ZZPlatformListFixturePrintTests: XCTestCase {
-    func testPrintTheVersion101Save() throws {
-        let world = try PlatformListTests.savedWorld()
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let text = Array(String(decoding: try encoder.encode(SavedGame(world: world)), as: UTF8.self))
-        print("V101-FIXTURE-BEGIN \(text.count)")
-        var start = 0
-        while start < text.count {
-            let end = min(start + 1_000, text.count)
-            print("V101|" + String(text[start..<end]) + "|")
-            start = end
-        }
-        print("V101-FIXTURE-END")
-        XCTFail("print only: the v101 save is not committed yet")
-    }
-}
