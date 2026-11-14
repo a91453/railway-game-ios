@@ -531,7 +531,7 @@ extension TrackClosureTests {
         XCTAssertEqual(world.closingTrack, [.edge(1), Self.main])
         let data = try encoder.encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 95)
+        XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
         let network = try XCTUnwrap((object["world"] as? [String: Any])?["network"] as? [String: Any])
         XCTAssertEqual(network["closingEdges"] as? [Int], [1, 2])
         XCTAssertEqual(network["closedEdges"] as? [Int], [5])
