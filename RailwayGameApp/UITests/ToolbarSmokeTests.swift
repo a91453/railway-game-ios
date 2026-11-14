@@ -713,10 +713,23 @@ extension XCUIApplication {
             (from, to) = (from + shift, to + shift)
         }
         let origin = coordinate(withNormalizedOffset: .zero)
-        let x = x - frame.minX
+        let x = clearOfScreenEdges(x) - frame.minX
         let start = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * from))
         let end = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * to))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+    }
+
+    /// `x` moved at least 44 pt in from either side of the screen. A drag
+    /// begun nearer the edge never scrolls a list there: the edge's own
+    /// gesture (a pushed page's swipe back) takes it. Decisions 745 and
+    /// 746 put a line's page and the station panel over the whole screen,
+    /// their lists' leading edge the screen's, and every drag at the list's
+    /// edge plus 8 left it where it was (TestFlight 131's full lane, main
+    /// 4cff950, run 43599067177; on the Simulator a drag at x 8 or 24 did
+    /// not move the line's page, one at 44 did). Beside a panel at the
+    /// trailing side the x is unchanged.
+    func clearOfScreenEdges(_ x: CGFloat) -> CGFloat {
+        min(max(x, frame.minX + 44), frame.maxX - 44)
     }
 
     /// Scrolls the start screen's buttons until `button` can be tapped. A
@@ -813,6 +826,22 @@ extension XCUIApplication {
         let pinned = otherElements["lines.controls.pinned"].firstMatch
         guard pinned.exists, pinned.frame.midX >= bar.frame.minX, pinned.frame.midX <= bar.frame.maxX else { return bar.frame.maxY }
         return max(bar.frame.maxY, pinned.frame.maxY)
+    }
+
+    /// Decision 746: the station panel's list, once it has come and
+    /// stopped, or nil when none comes within `timeout`. The panel covers
+    /// the whole screen (beside the map only in the tutorial), so it is
+    /// found by its rows, whose identifiers begin "station.", not by
+    /// lying right of the screen's middle as when it stood beside the map
+    /// (TestFlight 131's full lane, run 43599067177). It is held by its
+    /// place among the lists: a query by its rows finds nothing once they
+    /// scroll away.
+    func stationPanelList(within timeout: TimeInterval = 5) -> XCUIElement? {
+        let panel = collectionViews.containing(NSPredicate(format: "identifier BEGINSWITH %@", "station.")).firstMatch
+        guard panel.appears(within: timeout) else { return nil }
+        panel.waitUntilStill()
+        let place = panel.frame
+        return collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame == place }
     }
 
     /// Decision 481: opens a line's own page from the lines panel's list
@@ -1094,19 +1123,27 @@ final class ShellLayoutUITests: XCTestCase {
         // each train is found by its time and its minutes, which keep theirs
         // (the fifth run's hierarchy: rows read "station.board").
         let time = app.staticTexts.matching(identifier: "station.board.row.time").firstMatch
-        // The panel's list, beside the map on the trailing side, once it has
-        // slid in (the first run looked at once and found none). With the
-        // clock running, a hold was once taken for a tap: it picked the
-        // station and showed its tag, and no panel came (run 38848806364).
-        // So it holds again, up to three times (the clock is paused now).
+        // The panel's list once it has come (the first run looked at once
+        // and found none). With the clock running, a hold was once taken
+        // for a tap: it picked the station and showed its tag, and no panel
+        // came (run 38848806364). So it holds again, up to three times (the
+        // clock is paused now). Decision 746: the panel covers the whole
+        // screen, no longer beside the map on the trailing side, so its
+        // list is the one holding the station's first section, not one
+        // right of the screen's middle (TestFlight 131's full lane, run
+        // 43599067177: none there after three holds).
         var list: XCUIElement?
+        let panel = app.collectionViews.containing(.any, identifier: "station.operations").firstMatch
         for _ in 0..<3 where list == nil {
             map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 1.2)
-            let opened = Date().addingTimeInterval(5)
-            repeat {
-                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
-                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
-            } while list == nil && Date() < opened
+            if panel.appears(within: 5) {
+                panel.waitUntilStill()
+                // Held by its place among the lists: the query by the first
+                // section finds nothing once the list scrolls it away (as
+                // LessonUITests' `revealPastMenus` found).
+                let place = panel.frame
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.frame == place }
+            }
         }
         func attach(_ name: String) {
             let hierarchy = XCTAttachment(string: app.debugDescription)
@@ -1126,7 +1163,7 @@ final class ShellLayoutUITests: XCTestCase {
         // brings the head up to the panel's top, the trains under it.
         if let list, boardShown, board.frame.minY > list.frame.minY + 80 {
             let origin = app.coordinate(withNormalizedOffset: .zero)
-            let x = list.frame.minX + 8 - app.frame.minX
+            let x = app.clearOfScreenEdges(list.frame.minX + 8) - app.frame.minX
             let from = origin.withOffset(CGVector(dx: x, dy: board.frame.minY - app.frame.minY))
             let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
