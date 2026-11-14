@@ -59,6 +59,30 @@ struct Map3DLevelledGround {
     /// water, past the kept ones.
     let raw: (Int, Int) -> Float
     let water: (Int, Int) -> Bool
+    /// The corners worked out, shared by the scene's copies of this
+    /// ground: ``Map3DScene/Builder/ground(x:y:)`` reads them far past the
+    /// kept ones (a real line's whole window).
+    let memo = Memo()
+
+    final class Memo: @unchecked Sendable {
+        private let lock = NSLock()
+        private var corners: [Map3DScene.ChunkKey: Float] = [:]
+        private var raws: [Map3DScene.ChunkKey: Float] = [:]
+
+        func raw(_ key: Map3DScene.ChunkKey, read: () -> Float) -> Float {
+            if let known = lock.withLock({ raws[key] }) { return known }
+            let found = read()
+            lock.withLock { raws[key] = found }
+            return found
+        }
+
+        func corner(_ key: Map3DScene.ChunkKey, workOut: () -> Float) -> Float {
+            if let known = lock.withLock({ corners[key] }) { return known }
+            let found = workOut()
+            lock.withLock { corners[key] = found }
+            return found
+        }
+    }
 
     /// Reads the world's corners over rows `rowRange` and columns
     /// `columnRange` and ``radius`` round them.
@@ -89,7 +113,9 @@ struct Map3DLevelledGround {
 
     func rawCorner(_ row: Int, _ column: Int) -> Float {
         let r = row - firstRow, c = column - firstColumn
-        guard r >= 0, c >= 0, r < rows, c < columns else { return raw(row, column) }
+        guard r >= 0, c >= 0, r < rows, c < columns else {
+            return memo.raw(Map3DScene.ChunkKey(column: column, row: row)) { raw(row, column) }
+        }
         return heights[r * columns + c]
     }
 
@@ -110,11 +136,18 @@ struct Map3DLevelledGround {
         return isWet(row, column)
     }
 
-    /// The drawn height of corner (`row`, `column`), whose world height is
-    /// `own`: `own` where it is held, else the mean of the dry corners
-    /// round it, at most ``reach`` from `own`.
+    /// The drawn height of corner (`row`, `column`): `own` (the world's
+    /// there, as the caller reads it) where it is held, else the mean of
+    /// the dry corners round it, at most ``reach`` from the world's.
     func corner(row: Int, column: Int, own: Float) -> Float {
         guard !holds(row: row, column: column) else { return own }
+        // Of the world's corner as every region reads it (decision 406),
+        // so the value kept is the same whoever asks first.
+        return memo.corner(Map3DScene.ChunkKey(column: column, row: row)) { levelled(row: row, column: column) }
+    }
+
+    func levelled(row: Int, column: Int) -> Float {
+        let own = rawCorner(row, column)
         let r = Self.radius
         var sum = 0.0, weight = 0.0
         for dr in -r...r {
