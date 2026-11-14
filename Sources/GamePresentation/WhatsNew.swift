@@ -112,6 +112,10 @@ public enum WhatsNew {
                     english: "The 3D map no longer stalls for a moment at midnight, when the day's flights change.",
                     chinese: "3D 地圖過午夜換日時，不再因為換當天航班卡一下。"
                 ),
+                Line(
+                    english: "On real-world maps, the 3D map no longer shows sandy squares beside stations or scattered blue specks on the ground.",
+                    chinese: "實景地圖的 3D 地圖上，車站旁不再有土黃色方塊，地上也沒有零星的藍色碎塊。"
+                ),
             ]
         ),
         // 129.
