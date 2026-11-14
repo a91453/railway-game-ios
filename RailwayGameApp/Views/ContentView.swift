@@ -219,6 +219,13 @@ struct ContentView: View {
                     .environment(screen)
                     .coversTheMap(session)
             }
+            // Decision 746: the station panel too; the details card,
+            // where a station is chosen on the map, stays beside it.
+            .fullScreenCover(isPresented: stationPanelCovers) {
+                StationPanel(session: session)
+                    .environment(screen)
+                    .coversTheMap(session)
+            }
             .fullScreenCover(isPresented: $screen.showsTrainGarage) {
                 TrainShowcaseScreen(close: { screen.showsTrainGarage = false })
                     .coversTheMap(session)
@@ -483,6 +490,26 @@ struct ContentView: View {
         }
     }
 
+    /// Decision 746: whether the station panel shows over the whole
+    /// screen (``GameSession/stationPanelCoversScreen``).
+    private var stationPanelCovers: Binding<Bool> {
+        Binding {
+            screen.panel == .station && session.stationPanelCoversScreen
+        } set: { shown in
+            if !shown, screen.panel == .station { screen.panel = nil }
+        }
+    }
+
+    /// Decisions 745 and 746: whether `panel`, one beside the map, covers
+    /// the screen instead just now.
+    private func covers(_ panel: GameScreenState.Panel) -> Bool {
+        switch panel {
+        case .lines: session.linePageCoversScreen
+        case .station: session.stationPanelCoversScreen
+        default: false
+        }
+    }
+
     /// The panels beside the map (decision 106): the lines and a station.
     /// A phone on its side shows every sheet over the whole screen, so
     /// these, which the map is used with (picking a line's stations,
@@ -571,7 +598,7 @@ struct ContentView: View {
             let compactHeight = verticalSizeClass == .compact
             let cardWidth: CGFloat = SidePanelWidth.card(screenWidth: proxy.size.width, compactHeight: compactHeight)
             // Decision 745: a line's own page covers the screen instead.
-            let sidePanel = screen.panel.flatMap { $0.isBesideMap && !($0 == .lines && session.linePageCoversScreen) ? $0 : nil }
+            let sidePanel = screen.panel.flatMap { $0.isBesideMap && !covers($0) ? $0 : nil }
             let sideWidth: CGFloat = SidePanelWidth.panel(screenWidth: proxy.size.width, compactHeight: compactHeight)
             // The details card gives way to a panel beside the map.
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
