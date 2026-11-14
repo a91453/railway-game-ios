@@ -189,6 +189,21 @@ final class AchievementsTests: XCTestCase {
         XCTAssertTrue(launcher.achievements.unlocked.keys.contains("firstFare"), "paying its way")
     }
 
+    /// 2026-11-14: a game on the whole of Taiwan, all open from the start,
+    /// unlocks nothing, as the map picker says; and its list says why.
+    @MainActor
+    func testTheWholeOfTaiwanUnlocksNothing() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let world = GameWorld.newWholeTaiwanGame()
+        XCTAssertTrue(world.isWholeTaiwan)
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        XCTAssertFalse(try newGameLine(through: [towns[0], towns[1]]).isWholeTaiwan)
+        launcher.checkAchievements(of: GameSession(world: world, language: .english))
+        XCTAssertEqual(launcher.achievements.count, 0, "the whole of Taiwan")
+        XCTAssertEqual(GameMenuLayout.achievementsNote(unlimitedFunds: false, wholeTaiwan: true, in: .traditionalChinese), "全台灣地圖不計成就。")
+        XCTAssertNil(GameMenuLayout.achievementsNote(unlimitedFunds: false, in: .traditionalChinese))
+    }
+
     /// Decision 181, later: the Pingxi challenge starts on running lines, so
     /// only its own marks can unlock there; the tutorial unlocks nothing; and
     /// the end of the typhoon season needs a railway.
