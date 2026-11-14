@@ -1047,13 +1047,19 @@ struct LinesPanel: View {
                 if showsFilter || showsSort || !showsField {
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 12) {
-                            inlineControls(showsField: showsField)
+                            inlineControls(showsField: showsField, iconOnly: false)
+                        }
+                        // A player's report (2026-11-14): on a phone held
+                        // sideways the filter's and the sort's words were
+                        // cut to "…" and "建…"; their icons alone there.
+                        HStack(spacing: 12) {
+                            inlineControls(showsField: showsField, iconOnly: true)
                         }
                         // Large text: the sort under the rest.
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 12) {
                                 inlineSearchButton(showsField: showsField)
-                                if showsFilter { lineFilterMenu }
+                                if showsFilter { lineFilterMenu(iconOnly: false) }
                             }
                             if showsSort { lineSortMenu(short: true) }
                         }
@@ -1065,11 +1071,13 @@ struct LinesPanel: View {
     }
 
     @ViewBuilder
-    private func inlineControls(showsField: Bool) -> some View {
+    private func inlineControls(showsField: Bool, iconOnly: Bool) -> some View {
         inlineSearchButton(showsField: showsField)
-        if showsFilter { lineFilterMenu }
+        // At their whole width, so a row their words do not fit is
+        // passed over for the icons' (not cut to "…").
+        if showsFilter { lineFilterMenu(iconOnly: iconOnly).fixedSize() }
         Spacer(minLength: 0)
-        if showsSort { lineSortMenu(short: true) }
+        if showsSort { lineSortMenu(short: true, iconOnly: iconOnly).fixedSize() }
     }
 
     @ViewBuilder
@@ -1094,7 +1102,8 @@ struct LinesPanel: View {
 
     /// Decision 486: the filter as a menu, its choice on its label (filled
     /// once it hides some lines).
-    private var lineFilterMenu: some View {
+    /// `iconOnly`: its icon alone, where its words would be cut short.
+    private func lineFilterMenu(iconOnly: Bool) -> some View {
         let language = session.language
         let filter = session.world.lineFilters.contains(lineFilter) ? lineFilter : .all
         return Menu {
@@ -1113,7 +1122,8 @@ struct LinesPanel: View {
             } icon: {
                 Image(systemName: filter == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
             }
-            .frame(minHeight: 44)
+            .labelStyle(IconOrTitleAndIcon(iconOnly: iconOnly))
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(Text(verbatim: LinesListControls.filterLabel(filter, in: language)))
@@ -1160,10 +1170,10 @@ struct LinesPanel: View {
     }
 
     /// The sort's menu; `short`: its label only the order (decision 486).
-    private func lineSortMenu(short: Bool) -> some View {
+    private func lineSortMenu(short: Bool, iconOnly: Bool = false) -> some View {
         let language = session.language
         // Decision 184, later: a menu the ticks leave alone.
-        return TickStable(StableKey(lineSort, language, short)) {
+        return TickStable(StableKey(lineSort, language, short, iconOnly)) {
             Menu {
                 Button {
                     lineSort = nil
@@ -1204,7 +1214,8 @@ struct LinesPanel: View {
                 } icon: {
                     Image(systemName: "arrow.up.arrow.down")
                 }
-                .frame(minHeight: short ? 44 : nil)
+                .labelStyle(IconOrTitleAndIcon(iconOnly: iconOnly))
+                .frame(minWidth: short ? 44 : nil, minHeight: short ? 44 : nil)
                 .contentShape(Rectangle())
             }
             .accessibilityLabel(Text(verbatim: LinesListControls.sortLabel(lineSort, in: language)))
@@ -3518,5 +3529,22 @@ private struct LineFilterSegment: View {
 
     var body: some View {
         Text(verbatim: filter.displayName(in: language)).tag(filter)
+    }
+}
+
+/// A label's icon alone, or its title and icon (the lines list's filter
+/// and sort on a narrow row; a player's report, 2026-11-14).
+private struct IconOrTitleAndIcon: LabelStyle {
+    let iconOnly: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if iconOnly {
+            configuration.icon
+        } else {
+            HStack(spacing: 6) {
+                configuration.icon
+                configuration.title
+            }
+        }
     }
 }
