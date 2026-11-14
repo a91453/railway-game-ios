@@ -6,9 +6,10 @@ import XCTest
 /// Decision 712: Hong Kong's 3D map had no buildings (screenshot run
 /// 43388165195): the 3D map raises them from the footprint tiles, and
 /// Taiwan's file has none of Hong Kong. The pack has its own
-/// (`MapPacks/hongkong/buildings.pmtiles`, OpenStreetMap's, made by
+/// (`MapPacks/hongkong/buildings.pmtiles`, made by
 /// `tools/hk-map/build_hk_buildings.py` in the format of Taiwan's), read
-/// where Taiwan's has no tile.
+/// where Taiwan's has no tile. Decision 729: its outlines and heights are
+/// the Lands Department's, its uses OpenStreetMap's.
 final class HongKongBuildingsTests: XCTestCase {
     static let taiwan = Map3DRealTrainsTests.resources.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles")
 
@@ -40,31 +41,50 @@ final class HongKongBuildingsTests: XCTestCase {
         XCTAssertTrue(try Self.buildings(taiwan, latitude: 22.2819, longitude: 114.1582, reach: 800).isEmpty)
     }
 
-    /// Central is towers: over a thousand buildings within 800 m, a
-    /// quarter of them fifteen storeys and more (the median is 7: the
-    /// old tenements of Sheung Wan and the Mid-Levels are counted too), and Two International Finance Centre (88
-    /// storeys, OpenStreetMap's tag says 90) among them.
+    /// Central is towers: over two thousand buildings within 800 m, a
+    /// quarter of them fourteen storeys and more (the median is 7: the
+    /// old tenements of Sheung Wan and the Mid-Levels, and the covered
+    /// walkways and kiosks, are counted too), Two International Finance
+    /// Centre (412 m, drawn 126 storeys of 3.2 m) the tallest, and the
+    /// heights of 95 % and more measured (decision 729).
     func testCentralIsTowers() throws {
         let found = try Self.buildings(Self.tiles(), latitude: 22.2819, longitude: 114.1582, reach: 800)
-        XCTAssertGreaterThan(found.count, 1_000)
+        XCTAssertGreaterThan(found.count, 2_000)
         let storeys = found.map(\.drawnStoreys).sorted()
-        XCTAssertGreaterThanOrEqual(storeys[storeys.count * 3 / 4], 15, "the upper quartile of \(storeys.count), the median \(storeys[storeys.count / 2])")
-        XCTAssertTrue(found.contains { $0.storeys >= 85 && $0.storeysFrom == .tags }, "the tallest is \(storeys.last ?? 0)")
+        XCTAssertGreaterThanOrEqual(storeys[storeys.count * 3 / 4], 14, "the upper quartile of \(storeys.count), the median \(storeys[storeys.count / 2])")
+        XCTAssertTrue(found.contains { $0.storeys == 126 && $0.storeysFrom == .landsd }, "the tallest is \(storeys.last ?? 0)")
+        XCTAssertEqual(storeys.last, 126)
+        let measured = found.filter { $0.storeysFrom == .landsd }.count
+        XCTAssertGreaterThanOrEqual(Double(measured) / Double(found.count), 0.95, "\(measured) of \(found.count) measured")
         XCTAssertTrue(found.allSatisfy { $0.storeys >= 1 }, "every building has its storeys")
     }
 
+    /// The towers of 150 m and more (47 storeys of 3.2 m) round Central and
+    /// Kowloon Station, as many as the Lands Department's heights give
+    /// (`hk_buildings.json`'s run of the tool; OpenStreetMap's tags had
+    /// 11 round Central).
+    func testTheTallTowersAreThere() throws {
+        let central = try Self.buildings(Self.tiles(), latitude: 22.2819, longitude: 114.1582, reach: 600)
+        XCTAssertEqual(central.filter { $0.storeys >= 47 }.count, 26)
+        let kowloon = try Self.buildings(Self.tiles(), latitude: 22.3034, longitude: 114.1602, reach: 600)
+        XCTAssertEqual(kowloon.filter { $0.storeys >= 47 }.count, 16)
+    }
+
     /// Kowloon Station's tower, the International Commerce Centre, is the
-    /// city's tallest; a slip in a tag (123 levels on an 18 m building)
-    /// does not make a taller one anywhere near.
+    /// city's tallest: 490 m above Principal Datum on its podium's ground
+    /// 29.4 m lower than its own base, 485 m drawn as 152 storeys (it is
+    /// 484 m); a slip in an OpenStreetMap tag (123 levels on an 18 m
+    /// building) does not make a taller one anywhere near.
     func testTheTallestIsAtKowloonStation() throws {
         let found = try Self.buildings(Self.tiles(), latitude: 22.3034, longitude: 114.1602, reach: 400)
-        XCTAssertEqual(found.map(\.storeys).max(), 118)
+        XCTAssertEqual(found.map(\.storeys).max(), 152)
+        XCTAssertTrue(found.contains { $0.storeys == 152 && $0.storeysFrom == .landsd })
         let slip = try Self.buildings(Self.tiles(), latitude: 22.3311, longitude: 114.1535, reach: 150)
         XCTAssertLessThan(slip.map(\.storeys).max() ?? 0, 60)
     }
 
-    /// A New Territories village is houses of three storeys, guessed where
-    /// nobody tagged them: no tower is made up among them.
+    /// A New Territories village is houses of three storeys: no tower
+    /// among them.
     func testAVillageIsLow() throws {
         // Kam Tin's villages, west of Kam Sheung Road Station.
         let found = try Self.buildings(Self.tiles(), latitude: 22.4420, longitude: 114.0600, reach: 500)
@@ -107,6 +127,6 @@ final class HongKongBuildingsTests: XCTestCase {
         let entry = try XCTUnwrap(files["buildings.pmtiles"] as? [String: Any])
         let size = try XCTUnwrap(pack.buildingsFile.map { try Data(contentsOf: $0).count })
         XCTAssertEqual(entry["bytes"] as? Int, size)
-        XCTAssertLessThan(size, 4_000_000)
+        XCTAssertLessThan(size, 6_000_000)
     }
 }

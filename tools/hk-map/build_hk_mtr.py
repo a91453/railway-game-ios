@@ -303,14 +303,17 @@ def write(folder, name, value):
 OSM, MTR, OURS, WORLDPOP = "OpenStreetMap", "MTR open data", "this project", "WorldPop"
 # Decision 726: the ground's heights.
 LANDSD = "Lands Department DTM"
+# Decision 729: the Lands Department's buildings (outlines and heights).
+LANDSD_BUILDINGS = "Lands Department Building"
 # Decision 712: how far Hong Kong's map reaches, in degrees: the box of
 # WorldPop's grid of Hong Kong (`build_hk_ground.py`), which holds all its
 # land and every line here, some 62 km by 45 km. The game lays the city's
 # world over this box (`MapPack.extent`), not over a 16 km square.
 EXTENT = {"north": 22.5584, "south": 22.1500, "west": 113.8333, "east": 114.4417}
 SOURCES = {
-    "buildings.pmtiles": {"outlines, uses, storeys where tagged (build_hk_buildings.py)": OSM,
-                          "storeys where untagged (from the tagged ones and the people round them)": OURS},
+    "buildings.pmtiles": {"outlines and heights (build_hk_buildings.py)": LANDSD_BUILDINGS,
+                          "uses, storeys of the few unmeasured towers where tagged": OSM,
+                          "storeys where not measured (from the measured ones and the people round them)": OURS},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_hk_basemap.py)": OSM,
                         "the mainland's shore closed past the extract": OURS},
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
@@ -347,6 +350,9 @@ def write_manifest(folder):
     if "heights.dat" in files:
         licences[LANDSD] = ("Digital Terrain Model, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal; "
                             "CSDI Portal Terms and Conditions of Use")
+    if "buildings.pmtiles" in files:
+        licences[LANDSD_BUILDINGS] = ("Building, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal; "
+                                      "CSDI Portal Terms and Conditions of Use")
     write(folder, "pack.json", {
         "id": "hongkong", "system": SYSTEM, "decision": 697,
         "english": "Hong Kong", "chinese": "香港",

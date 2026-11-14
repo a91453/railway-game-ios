@@ -1,35 +1,50 @@
 #!/usr/bin/env python3
 """Hong Kong's buildings, as footprint tiles in its map pack
-(`MapPacks/hongkong/buildings.pmtiles`, decision 712).
+(`MapPacks/hongkong/buildings.pmtiles`, decisions 712 and 729).
 
-    python3 -I tools/hk-map/build_hk_buildings.py hong_kong.pbf \\
-        RailwayGameApp/Resources/MapPacks/hongkong
+    python3 -I tools/hk-map/build_hk_buildings.py \\
+        Building_Outline_Public_<version>_Building_converted.geojson \\
+        hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong
 
 The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/2`:
 one gzipped z16 tile of outlines, storeys and uses, in a PMTiles archive),
 written by that tool's own encoder, so the 3D map's one reader
-(`Map3DFootprints.swift`) reads both. Taiwan's come from Overture; Hong
-Kong's are read straight from OpenStreetMap, osmtoday.com's
-`asia/china/hong_kong.pbf` with pyosmium, every `building` whose middle is
-in the pack's extent.
+(`Map3DFootprints.swift`) reads both.
+
+Decision 729: the outlines and heights are the Lands Department's
+(`Building` of its Building and Occupation Permit data, the GeoJSON in
+WGS84 on the CSDI Portal): every Tower and Podium, and the Temporary and
+Open-sided structures of 30 m² and more. OpenStreetMap
+(osmtoday.com's `asia/china/hong_kong.pbf`, read with pyosmium) gives only
+what each building is used for, which the Lands Department's data does not
+say.
 
 Storeys, in this order:
 
-1. `building:levels` (origin `tags`).
-2. `height` in metres, at the game's 3.2 m a storey (origin `tags`).
-3. A guess (origin `guess`), as Taiwan's `heights` step makes it but from
-   Hong Kong's own tagged buildings: the buildings that have storeys are
-   grouped by what they are (GROUPS), the people living round them (the
-   pack's `population.json`, WorldPop) and their footprint; a building
-   without storeys takes one between its group's lower quartile and its
-   median, picked by a hash of where it stands, so it never changes (the
-   tagged half leans to the towers, so the upper half is not drawn from).
-   Half of Hong Kong's buildings are tagged, and its blocks of flats are
-   20 to 40 storeys, so the guesses are tall where the city is.
+1. The Lands Department's heights (origin `landsd`): `TopHeight` less the
+   base, at the game's 3.2 m a storey. The base is the building's own
+   `BaseHeight`, or the Podium's under it where that is lower: a tower's
+   `BaseHeight` is the podium's roof (the International Commerce Centre's
+   is 29.4 m above Principal Datum), and the 3D map raises every outline
+   from the ground. `Storeys` is only compared with, never used (it is
+   given for a sixth of them).
+2. A Temporary or Open-sided structure with no heights: one storey
+   (origin `guess`).
+3. A Tower or Podium with no heights: OpenStreetMap's storeys where an
+   OpenStreetMap building is matched (origin `tags`), else a guess as
+   Taiwan's `heights` step makes it but from the measured buildings
+   (origin `guess`): grouped by what they are (GROUPS), the people living
+   round them (the pack's `population.json`, WorldPop) and their footprint,
+   between the group's lower and upper quartiles, picked by a hash of
+   where it stands.
 
-Left out: roofs and canopies (`building=roof`), bridges, ruins, building
-sites, and anything underground. `building:part` is not read: an outline
-carries its tallest part's storeys.
+A building's use is that of the OpenStreetMap building it is matched to:
+the largest one whose middle is inside it with a use, else the one its
+middle is inside. Unmatched, it has none (the 3D map draws it by storeys).
+
+LANDMARKS lists the Lands Department buildings (`BuildingCSUID`) that a
+landmark model draws instead (`docs/research/HK_3D_VISUALISATION_MAP_2026-11-13.md`);
+they are left out. It is empty until the landmarks are made.
 
 Also writes `tools/hk-map/hk_buildings.json` (what was read and made) and
 the pack's `pack.json`.
@@ -55,6 +70,19 @@ from build_basemap import tile_id, write_pmtiles  # noqa: E402
 # Metres a tile's outlines are simplified to, Taiwan's.
 TOLERANCE = 0.5
 LEFT_OUT = {'no', 'roof', 'bridge', 'ruins', 'construction', 'collapsed', 'proposed'}
+# Decision 729: the Lands Department's kinds of building block. Temporary
+# and Open-sided structures (sheds, covered walkways, bus shelters) are
+# kept only from this size (m²), so the 3D map is not strewn with huts.
+KEPT_ALWAYS = {'Tower', 'Podium'}
+KEPT_FROM = {'Temporary Structure': 30.0, 'Open-sided Structure': 30.0}
+# The Lands Department buildings a landmark model draws (BuildingCSUID);
+# none yet.
+LANDMARKS = []
+# Where storeys come from: the tool's list, and the Lands Department's
+# heights after it (`Map3DFootprints.StoreysFrom.landsd`).
+STOREYS_FROM = tiles.STOREYS_FROM + ['landsd']
+# Degrees a cell of the grid the OpenStreetMap buildings are found by.
+CELL = 0.002
 
 # OpenStreetMap's `building` to the tiles' use (the tool's `USES`,
 # Overture's subtypes). A church is civic, not religious: the 3D map draws
@@ -171,43 +199,175 @@ def quartiles(values):
     return {'known': len(values), 'p25': q(0.25), 'median': q(0.5), 'p75': q(0.75)}
 
 
-def main(extract, folder):
+def inside(point, ring):
+    """Whether (lon, lat) `point` is inside `ring` (even-odd)."""
+    x, y = point
+    hit = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        xi, yi = ring[i]
+        xj, yj = ring[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+            hit = not hit
+        j = i
+    return hit
+
+
+def within(point, rings):
+    return inside(point, rings[0]) and not any(inside(point, hole) for hole in rings[1:])
+
+
+def middle_of(ring):
+    return (sum(lon for lon, _ in ring) / len(ring), sum(lat for _, lat in ring) / len(ring))
+
+
+def cell_of(point):
+    return (int(math.floor(point[0] / CELL)), int(math.floor(point[1] / CELL)))
+
+
+def cells_over(ring):
+    west, east = min(p[0] for p in ring), max(p[0] for p in ring)
+    south, north = min(p[1] for p in ring), max(p[1] for p in ring)
+    (x0, y0), (x1, y1) = cell_of((west, south)), cell_of((east, north))
+    return [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]
+
+
+def read_landsd(path, extent):
+    """The Lands Department's buildings in `extent`: dicts of id, block,
+    base, top, storeys (the field, for comparing), name, rings, middle,
+    area, sorted by id; and what was left out, by why."""
+    with open(path, encoding='utf-8') as file:
+        data = json.load(file)
+    found, left = [], {}
+    for feature in data['features']:
+        properties, geometry = feature['properties'], feature['geometry']
+        block = properties.get('BuildingBlockType')
+        if properties.get('Status') != 'Active':
+            left['inactive'] = left.get('inactive', 0) + 1
+            continue
+        polygons = geometry['coordinates'] if geometry['type'] == 'MultiPolygon' else [geometry['coordinates']]
+        for part, polygon in enumerate(polygons):
+            rings = [[(lon, lat) for lon, lat, *_ in ring] for ring in polygon]
+            rings = [ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring for ring in rings]
+            if len(rings[0]) < 3:
+                left['degenerate'] = left.get('degenerate', 0) + 1
+                continue
+            size = metres_area(rings[0]) - sum(metres_area(hole) for hole in rings[1:] if len(hole) >= 3)
+            if block not in KEPT_ALWAYS and size < KEPT_FROM.get(block, float('inf')):
+                key = 'small ' + str(block)
+                left[key] = left.get(key, 0) + 1
+                continue
+            middle = middle_of(rings[0])
+            if not (extent['west'] <= middle[0] <= extent['east'] and extent['south'] <= middle[1] <= extent['north']):
+                left['outside'] = left.get('outside', 0) + 1
+                continue
+            uid = properties.get('BuildingCSUID') or str(properties['OBJECTID'])
+            if uid in LANDMARKS:
+                left['landmark'] = left.get('landmark', 0) + 1
+                continue
+            found.append({'id': f"{uid}/{part}", 'block': block, 'base': properties.get('BaseHeight'),
+                          'top': properties.get('TopHeight'), 'storeys': properties.get('Storeys'),
+                          'name': properties.get('BuildingNameEN'), 'nameTC': properties.get('BuildingNameTC'),
+                          'rings': rings, 'middle': middle, 'area': size})
+    found.sort(key=lambda building: building['id'])
+    return found, dict(sorted(left.items()))
+
+
+def lowest_bases(buildings):
+    """Each building's base: its own, or a Podium's it stands on where
+    that is lower (a tower's `BaseHeight` is the podium's roof)."""
+    podiums = {}
+    for index, building in enumerate(buildings):
+        if building['block'] == 'Podium' and building['base'] is not None:
+            for cell in cells_over(building['rings'][0]):
+                podiums.setdefault(cell, []).append(index)
+    bases = []
+    for building in buildings:
+        base = building['base']
+        if base is not None and building['block'] != 'Podium':
+            for index in podiums.get(cell_of(building['middle']), []):
+                podium = buildings[index]
+                if podium['base'] < base and within(building['middle'], podium['rings']):
+                    base = podium['base']
+        bases.append(base)
+    return bases
+
+
+def matched_osm(buildings, osm):
+    """For each Lands Department building, the OpenStreetMap building
+    matched to it (an index into `osm`) or None: the largest one with a
+    use whose middle is inside it, else the one its middle is inside."""
+    grid = {}
+    for index, (_, kind, levels, height, rings, middle) in enumerate(osm):
+        grid.setdefault(cell_of(middle), []).append(index)
+    sizes = [metres_area(rings[0]) for _, _, _, _, rings, _ in osm]
+    # The OpenStreetMap outlines by the cells they reach, for the second test.
+    over = {}
+    for index, (_, _, _, _, rings, _) in enumerate(osm):
+        for cell in cells_over(rings[0]):
+            over.setdefault(cell, []).append(index)
+    out = []
+    for building in buildings:
+        inner = [index for cell in cells_over(building['rings'][0]) for index in grid.get(cell, [])
+                 if within(osm[index][5], building['rings'])]
+        with_use = [index for index in inner if USE_OF.get(osm[index][1])]
+        pick = max(with_use, key=lambda index: sizes[index]) if with_use else None
+        if pick is None:
+            around = [index for index in over.get(cell_of(building['middle']), []) if within(building['middle'], osm[index][4])]
+            pick = (min(around, key=lambda index: sizes[index]) if around else
+                    max(inner, key=lambda index: sizes[index]) if inner else None)
+        out.append(pick)
+    return out
+
+
+def main(landsd_path, extract, folder):
     extent = build_hk_mtr.EXTENT
     density = tiles.density_lookup(os.path.join(folder, 'population.json'))
-    buildings, newest = read(extract, extent)
+    buildings, left = read_landsd(landsd_path, extent)
+    osm, newest = read(extract, extent)
+    matches = matched_osm(buildings, osm)
+    bases = lowest_bases(buildings)
 
-    # Each building's use, group, bands and tagged storeys.
-    facts, known = {}, {}
-    for name, kind, levels, height, rings, middle in buildings:
+    # Each building's use, group, bands and measured storeys.
+    facts, known = [], {}
+    for building, match, base in zip(buildings, matches, bases):
+        kind = osm[match][1] if match is not None else None
         use = USE_OF.get(kind)
-        size = metres_area(rings[0])
-        key = (group_of(kind, use), tiles.band(density(*middle), tiles.DENSITY_BANDS), tiles.band(size, tiles.AREA_BANDS))
-        # Storeys under 2 m each are a slip of the hand (123 levels on an
-        # 18 m building): the height is believed.
-        if levels and height and levels * 2 > height:
-            levels = None
-        tagged = tiles.storeys_of(round(levels) if levels and levels >= 1 else None, height)
-        facts[name] = (use, key, size, tagged)
-        if tagged:
-            known.setdefault(key, []).append(tagged)
-    # The tagged buildings are the ones somebody looked up at: the towers
-    # more than the sheds. So a guess is drawn from the lower half, the
-    # lower quartile to the median, not Taiwan's quartile to quartile.
+        key = (group_of(kind, use), tiles.band(density(*building['middle']), tiles.DENSITY_BANDS),
+               tiles.band(building['area'], tiles.AREA_BANDS))
+        measured = None
+        if building['top'] is not None and base is not None and building['top'] > base:
+            measured = tiles.storeys_of(None, building['top'] - base)
+        facts.append((use, key, measured))
+        if measured and building['block'] in KEPT_ALWAYS:
+            known.setdefault(key, []).append(measured)
     table = {key: quartiles(values) for key, values in known.items()}
-    for entry in table.values():
-        entry['p75'] = entry['median']
 
-    storeys, rows = {}, {}
-    for name, kind, levels, height, rings, middle in buildings:
-        use, key, size, tagged = facts[name]
+    storeys, rows, origins = {}, {}, {}
+    for building, match, (use, key, measured) in zip(buildings, matches, facts):
+        name, middle = building['id'], building['middle']
         wx, wy = tiles.tile_of(*middle)
-        if tagged:
-            storeys[name] = (tagged, tiles.STOREYS_FROM.index('tags'))
+        if measured:
+            count, origin = measured, 'landsd'
+        elif building['block'] not in KEPT_ALWAYS:
+            count, origin = 1, 'guess'
         else:
-            guess = tiles.proposed_storeys(table, key[0], tiles.DENSITY_BANDS[key[1]], size,
-                                           int(wx * tiles.EXTENT), int(wy * tiles.EXTENT))
-            storeys[name] = (max(1, min(255, guess)), tiles.STOREYS_FROM.index('guess'))
-        rows.setdefault((int(wx), int(wy)), []).append((name, None, None, use, tiles.OSM, None, middle[0], middle[1], wkb(rings)))
+            levels, height = (osm[match][2], osm[match][3]) if match is not None else (None, None)
+            if levels and height and levels * 2 > height:
+                levels = None
+            tagged = tiles.storeys_of(round(levels) if levels and levels >= 1 else None, height)
+            if tagged:
+                count, origin = tagged, 'tags'
+            else:
+                count = tiles.proposed_storeys(table, key[0], tiles.DENSITY_BANDS[key[1]], building['area'],
+                                               int(wx * tiles.EXTENT), int(wy * tiles.EXTENT))
+                origin = 'guess'
+        storeys[name] = (max(1, min(255, count)), STOREYS_FROM.index(origin))
+        origins[origin] = origins.get(origin, 0) + 1
+        # Not OpenStreetMap's (the tiles' dataset bit): the outline is the
+        # Lands Department's.
+        rows.setdefault((int(wx), int(wy)), []).append((name, None, None, use, 'LandsD', None, middle[0], middle[1],
+                                                        wkb(building['rings'])))
 
     entries, total, raw_bytes = [], 0, 0
     for key in sorted(rows):
@@ -218,9 +378,10 @@ def main(extract, folder):
         raw_bytes += len(raw)
         entries.append((tile_id(tiles.ZOOM, key[0], key[1]), gzip.compress(raw, 9, mtime=0)))
     metadata = {'name': 'Hong Kong building footprints', 'format': f'footprints/{tiles.VERSION}', 'zoom': tiles.ZOOM,
-                'extent': tiles.EXTENT, 'tolerance': TOLERANCE, 'uses': tiles.USES, 'storeysFrom': tiles.STOREYS_FROM,
-                'attribution': '© OpenStreetMap contributors (ODbL 1.0). Storeys where untagged: this project, '
-                               'from the tagged buildings and WorldPop (CC BY 4.0)',
+                'extent': tiles.EXTENT, 'tolerance': TOLERANCE, 'uses': tiles.USES, 'storeysFrom': STOREYS_FROM,
+                'attribution': 'Outlines and heights: Building, Lands Department, Government of the Hong Kong SAR, via the '
+                               'CSDI Portal. Uses: © OpenStreetMap contributors (ODbL 1.0). Storeys where not measured: '
+                               'this project, from the measured buildings and WorldPop (CC BY 4.0)',
                 'newestEdit': newest}
     out = os.path.join(folder, 'buildings.pmtiles')
     write_pmtiles(out, entries, metadata, (extent['west'], extent['south'], extent['east'], extent['north']),
@@ -230,29 +391,50 @@ def main(extract, folder):
     def share(values, least):
         return round(sum(v >= least for v in values) / max(1, len(values)), 4)
     counts = [count for count, _ in storeys.values()]
-    homes = [storeys[name][0] for name, kind, *_ in buildings if facts[name][1][0] == 'homes']
+    lasting = [building for building in buildings if building['block'] in KEPT_ALWAYS]
+    heights = sorted(((building['top'] - base, building) for building, base in zip(buildings, bases)
+                      if building['top'] is not None and base is not None), key=lambda pair: -pair[0])
+    tallest = heights[0][1] if heights else None
+    # `Storeys` beside the measured storeys, where both are given.
+    pairs = [(building['storeys'], fact[2]) for building, fact in zip(buildings, facts) if building['storeys'] and fact[2]]
+    off = sorted(abs(given - measured) / given for given, measured in pairs)
     whole = open(out, 'rb').read()
     report = {
+        'landsd': {'file': os.path.basename(landsd_path), 'sha256': hashlib.sha256(open(landsd_path, 'rb').read()).hexdigest(),
+                   'dataset': 'landsd_rcd_1637211194312_35158',
+                   'licence': 'CSDI Portal Terms and Conditions of Use; Lands Department, Government of the Hong Kong SAR',
+                   'leftOut': left},
         'extract': {'file': os.path.basename(extract), 'sha256': hashlib.sha256(open(extract, 'rb').read()).hexdigest(),
                     'from': 'https://osmtoday.com/asia/china/hong_kong.pbf', 'licence': 'ODbL 1.0, © OpenStreetMap contributors',
-                    'newestBuildingEdit': newest},
-        'buildings': total, 'read': len(buildings), 'tiles': len(entries),
-        'storeysFrom': {'tags': sum(origin == 1 for _, origin in storeys.values()),
-                        'guess': sum(origin == 0 for _, origin in storeys.values())},
+                    'newestBuildingEdit': newest, 'buildingsRead': len(osm)},
+        'buildings': total, 'read': len(buildings),
+        'blocks': {block: sum(b['block'] == block for b in buildings) for block in sorted({b['block'] for b in buildings})},
+        'tiles': len(entries),
+        'storeysFrom': dict(sorted(origins.items())),
+        'measuredShareOfTowersAndPodiums': round(sum(fact[2] is not None for b, fact in zip(buildings, facts)
+                                                    if b['block'] in KEPT_ALWAYS) / max(1, len(lasting)), 4),
+        'onPodium': sum(base is not None and building['base'] is not None and base < building['base']
+                        for building, base in zip(buildings, bases)),
+        'withUse': sum(fact[0] is not None for fact in facts),
+        'over100m': sum(h >= 100 for h, _ in heights), 'over150m': sum(h >= 150 for h, _ in heights),
+        'over200m': sum(h >= 200 for h, _ in heights),
+        'tallest': {'metres': round(heights[0][0], 1), 'name': tallest['name'], 'nameTC': tallest['nameTC'],
+                    'id': tallest['id'], 'top': tallest['top'], 'base': tallest['base']} if tallest else None,
+        'storeysFieldCompared': {'buildings': len(pairs), 'medianRelativeDifference': off[len(off) // 2] if off else None,
+                                 'within20Percent': round(sum(o <= 0.2 for o in off) / max(1, len(off)), 4)},
         'storeys': {'median': sorted(counts)[len(counts) // 2], 'tallest': max(counts),
                     'share10': share(counts, 10), 'share20': share(counts, 20), 'share40': share(counts, 40)},
-        'flats': {'buildings': len(homes), 'median': sorted(homes)[len(homes) // 2], 'share10': share(homes, 10),
-                  'share20': share(homes, 20)},
+        'landmarks': LANDMARKS,
         'rawBytes': raw_bytes, 'archiveBytes': len(whole), 'sha256': hashlib.sha256(whole).hexdigest(),
     }
     with open(os.path.join(HERE, 'hk_buildings.json'), 'w') as file:
-        json.dump(report, file, indent=1)
+        json.dump(report, file, indent=1, ensure_ascii=False)
         file.write('\n')
-    print(json.dumps(report, indent=1))
+    print(json.dumps(report, indent=1, ensure_ascii=False))
     build_hk_mtr.write_manifest(folder)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         sys.exit(__doc__)
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3])

@@ -12,7 +12,9 @@
 | `mtr_lines_and_stations.csv` | 港鐵開放資料「港鐵路綫及車站」，`https://opendata.mtr.com.hk/data/mtr_lines_and_stations.csv` | 「資料一線通」使用條款及條件；知識產權屬香港鐵路有限公司 |
 | 下一班列車 | 港鐵開放資料「下一班列車」，`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=<綫>&sta=<站>` | 同上 |
 
-| `hkg_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop，香港 2025，constrained，30 角秒（約 1 公里）一格，R2025A v1（和台灣的 `taiwan_population.json` 同一個系列），`https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif`（12 KB） | CC BY 4.0，WorldPop || `Digital Terrain Model.tif` | 地政總署數碼地形模型（5 m，HK1980 方格網 EPSG:2326），經空間數據共享平台（CSDI）提供，資料集 `landsd_rcd_1638158088368_93806`；下載的 zip `https://static.csdi.gov.hk/csdi-webpage/download/common/e9a836d098a3a9ccf55a7f61f69a93e71923c722fb94ddf7b36be83a67b99140`（24,206,651 B，SHA-256 `6dbcdfb5…1af`，2026-11-13 下載；網址是內容雜湊，資料更新後要從 metadata 重新取） | CSDI 使用條款及免責聲明；知識產權屬香港特別行政區政府與地政總署（決策 726） |
+| `hkg_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop，香港 2025，constrained，30 角秒（約 1 公里）一格，R2025A v1（和台灣的 `taiwan_population.json` 同一個系列），`https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif`（12 KB） | CC BY 4.0，WorldPop |
+| `Building_Outline_Public_v20261020_Building_converted.geojson` | 地政總署 Building（建物外形、`BaseHeight`／`TopHeight`），經 CSDI 提供，資料集 `landsd_rcd_1637211194312_35158`；下載的 zip `https://static.csdi.gov.hk/csdi-webpage/download/common/c0623f7db229af2dfb5bdfe62a8fdbc9d094d459b50baa200da4ddbe4e6b5c62`（73,920,546 B，SHA-256 `7f47f7cc…9f44`，資料版本 v20261020，2026-11-13 下載；網址是內容雜湊，資料更新後要從 metadata 重新取） | CSDI 使用條款及免責聲明；知識產權屬香港特別行政區政府與地政總署（決策 729） |
+| `Digital Terrain Model.tif` | 地政總署數碼地形模型（5 m，HK1980 方格網 EPSG:2326），經空間數據共享平台（CSDI）提供，資料集 `landsd_rcd_1638158088368_93806`；下載的 zip `https://static.csdi.gov.hk/csdi-webpage/download/common/e9a836d098a3a9ccf55a7f61f69a93e71923c722fb94ddf7b36be83a67b99140`（24,206,651 B，SHA-256 `6dbcdfb5…1af`，2026-11-13 下載；網址是內容雜湊，資料更新後要從 metadata 重新取） | CSDI 使用條款及免責聲明；知識產權屬香港特別行政區政府與地政總署（決策 726） |
 
 四個來源這個環境都連得到，不用改網路設定（地形的 DTM 與 2026-11-13 的整包例外，見第 8 步）。OSM 用整包加 pyosmium（`pip install osmium`，BSD 2-Clause，決策 93），不問 Overpass。
 
@@ -53,9 +55,14 @@ python3 -I tools/hk-map/build_hk_basemap.py /tmp/hk/osm/hong_kong.pbf RailwayGam
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter "HongKongRailwaysTests|HongKongMapTests|HongKongBaseMapTests"
 
-# 7. 香港的建物（決策 712 續四），並更新 pack.json。
-#    osmtoday 的 asia/china/hong_kong.pbf（約 44 MB），pip install osmium。
-python3 -I tools/hk-map/build_hk_buildings.py hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong
+# 7. 香港的建物（決策 712 續四、決策 729），並更新 pack.json。
+#    外形與高度：地政總署 Building 的 GeoJSON zip（約 74 MB，解開約 550 MB，只用 *_Building_converted.geojson）；
+#    用途：osmtoday 的 asia/china/hong_kong.pbf（約 44 MB），pip install osmium。
+#    雲端容器連 static.csdi.gov.hk 會 403，在作者的 Mac 上下載。
+curl -L -o /tmp/hk/hk_buildings.zip https://static.csdi.gov.hk/csdi-webpage/download/common/c0623f7db229af2dfb5bdfe62a8fdbc9d094d459b50baa200da4ddbe4e6b5c62
+unzip -d /tmp/hk/buildings /tmp/hk/hk_buildings.zip
+python3 -I tools/hk-map/build_hk_buildings.py /tmp/hk/buildings/Building_Outline_Public_*_Building_converted.geojson \
+  /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong
 
 # 8. 香港的地形與水域（決策 726）：heights.dat、water.json、terrain.pmtiles，並更新 pack.json 與 hk_sources.json。
 #    2026-11-13 雲端連 static.csdi.gov.hk 與 osmtoday.com 都 403，這兩個檔是在作者的 Mac 下載的。
@@ -70,7 +77,7 @@ swift test --skip-build --filter "HongKongGroundTests|HongKongMapTests|HongKongR
 
 ## 每支工具做什麼
 
-- `build_hk_buildings.py`：OpenStreetMap 的建物輪廓與樓層寫成 `buildings.pmtiles`（台灣 `footprints/2` 的格式）；沒標樓層的照香港有標建物的分布估。統計寫在 `hk_buildings.json`。
+- `build_hk_buildings.py`（決策 729）：地政總署 Building 的建物外形與高度寫成 `buildings.pmtiles`（台灣 `footprints/2` 的格式）：Tower、Podium 全收，臨時與開放式構築物只收 30 m² 以上；樓層是 `TopHeight` 減底（自己的 `BaseHeight`，站在平台上的大樓取平台的底）÷ 3.2 m，`Storeys` 欄只拿來核對。用途取同一位置的 OpenStreetMap 建物；沒有高度的照有實測的建物分布估（構築物一層）。`LANDMARKS` 是之後由地標模型畫、這裡不畫的建物清單（現在是空的）。統計寫在 `hk_buildings.json`。
 
 - **`build_hk_mtr.py`**：每條綫在 OSM 找一條路線關係（`route=subway|train`），它停的站要和港鐵 CSV 的站序（上行方向 `UT`；落馬洲與康城兩條支綫各自成一條，從上水、將軍澳起）一站一站相同；沿它的軌道從第一站走到最後一站，得到綫形、站位、每站的里程、橋與隧道。中英文站名取 OSM 的，逐站和 CSV 核對，對不上就停，不猜；只有「茘景」「茘枝角」照港鐵的寫法（`MTR_SPELLING`）。車站代號取 CSV。路綫色是 OSM 關係的 `colour`，和港鐵的標準色相同。時刻由 `service.json` 的班距與行車時間排出一整天雙向的車（`estimated: true`）：不是港鐵公布的時刻表（港鐵沒有公開）。
   寫出 `hkmtr.json`（營運資料）、`hkmtr_times.json`（時刻）、`track_lines.geojson`、`track_stations.geojson`、`station_names.json`、`rail_structures.json`、`pack.json`。

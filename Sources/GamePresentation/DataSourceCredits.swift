@@ -244,8 +244,10 @@ public enum DataSourceCredits {
                             ),
                         ]
                     ),
-                    // Decision 712: the buildings of Hong Kong's map
-                    // (`MapPacks/hongkong/buildings.pmtiles`).
+                    // Decisions 712 and 729: the buildings of Hong Kong's
+                    // map (`MapPacks/hongkong/buildings.pmtiles`): the
+                    // Lands Department's outlines and heights,
+                    // OpenStreetMap's uses.
                     DataSourceCredit(
                         id: "hongKongBuildings",
                         title: language.text("Hong Kong’s buildings", "香港的建物"),
@@ -254,10 +256,18 @@ public enum DataSourceCredits {
                             "香港的 3D 地圖上每棟建物的位置、外形與高度。"
                         ),
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the file made from it and the tool that makes it come with the app. Where a building has no storeys recorded, the game estimates them from the recorded buildings like it and from WorldPop’s population (CC BY 4.0).",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；由它做成的檔與產生它的工具隨 App 提供。沒有記載樓層的建物，由遊戲依同類有記載的建物與 WorldPop 的人口（CC BY 4.0）估計。"
+                            "Outlines and heights: Building data, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal (Common Spatial Data Infrastructure), used under the CSDI Portal Terms and Conditions of Use; the Government and the Lands Department keep their intellectual property rights in the data. What each building is used for: © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the file made from them and the tool that makes it come with the app. Where a building’s height is not recorded, the game estimates it from the recorded buildings like it and from WorldPop’s population (CC BY 4.0).",
+                            "外形與高度：建築物資料，香港特別行政區政府地政總署，經空間數據共享平台（CSDI）提供，依空間數據共享平台的使用條款使用；資料的智慧財產權屬香港特別行政區政府與地政總署。建物的用途：© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；由它們做成的檔與產生它的工具隨 App 提供。沒有記載高度的建物，由遊戲依同類有記載的建物與 WorldPop 的人口（CC BY 4.0）估計。"
                         ),
                         links: [
+                            DataSourceCredit.Link(
+                                title: language.text("Building data", "建築物資料"),
+                                url: "https://portal.csdi.gov.hk/geoportal/?datasetId=landsd_rcd_1637211194312_35158"
+                            ),
+                            DataSourceCredit.Link(
+                                title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
+                                url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
+                            ),
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
