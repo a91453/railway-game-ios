@@ -203,10 +203,14 @@ public enum HighSpeedDemo {
         // Decision 325: its trips pay the real fares.
         fares: HighSpeedFares.standard,
         // Decision 741: island platforms as the High Speed Rail's station
-        // plans have them: Taipei, Banqiao and Taichung between the ends,
-        // three at Nangang and at Zuoying.
-        islandPlatforms: [1, 2, 6],
-        endIslands: (north: 3, south: 3)
+        // plans have them: Taipei and Banqiao between the ends, three at
+        // Zuoying. Not yet Taichung (its exterior study, cut clear of
+        // loops 6 m further out, passes the triangles a landmark may have)
+        // nor Nangang (its paired tracks hold a set late out of it, and
+        // the late set then stands on Taoyuan's through track: decision
+        // 518's loop rule; docs/handoff/ISLAND-PLATFORM.md).
+        islandPlatforms: [1, 2],
+        endIslands: (north: 0, south: 3)
     )
 
     /// The world's frame: Taiwan's, as the whole-Taiwan game lays it.

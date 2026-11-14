@@ -715,11 +715,16 @@ extension Map3DScene.Builder {
             }
         }
         // A platform either side of its track, as wide as any is laid
-        // (``addPlatforms(_:)``).
+        // (``addPlatforms(_:)``): a side platform's width, or (decision
+        // 741) an island's half, to its middle between two tracks
+        // ``PlatformTrackLayout/island`` apart, the two tracks' room
+        // meeting over it.
+        let island = Float(PlatformTrackLayout.island.spacing) / Float(WorldCoordinate.unitsPerMetre) / 2
+        let platformHalf = max(Self.highSpeedPlatformEdge + Self.platformWidth, island) + 0.5
         for platform in snapshot.platforms where platform.structure != .tunnel && platform.points.count > 1 {
             let line = platform.points.map { point($0) + Self.lifted }
             for run in runs(line) {
-                room.add(line: run, half: Self.highSpeedPlatformEdge + Self.platformWidth + 0.5, above: Map3DTrainRoom.platformAbove, ground: ground)
+                room.add(line: run, half: platformHalf, above: Map3DTrainRoom.platformAbove, ground: ground)
             }
         }
         return room
