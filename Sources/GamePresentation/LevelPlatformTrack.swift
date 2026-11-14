@@ -499,9 +499,11 @@ extension PlatformLevellingPreview {
     /// The short line over the map's ✓ where the stretch cannot be
     /// levelled, what to do; `nil` where it can (decision 747: levelling
     /// is done without a word, its price in the ✓'s, and the grade is
-    /// never said).
+    /// never said). Decision 752: a game rule's refusal says itself, not
+    /// only "see the Network panel", which a player held sideways had to
+    /// open to learn why.
     public func caption(in language: DisplayLanguage) -> String? {
         guard cost == nil else { return nil }
-        return short ?? language.text("No platform here: see the Network panel", "這裡蓋不了：見「路網」面板")
+        return short ?? problem ?? language.text("No platform here: see the Network panel", "這裡蓋不了：見「路網」面板")
     }
 }
