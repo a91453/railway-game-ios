@@ -5112,46 +5112,96 @@ public struct GameWorld: Equatable, Sendable {
     /// ``leaving(_:stop:cycle:)``, with the path kept in `memo`.
     func leaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving {
         leaving(train, stop: stop, cycle: cycle) { start, call in
-            // Decision 221: into a depot, a free siding first.
-            if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
-                return (path, nil)
-            }
-            // Decision 535: out of a depot to a stop of a ring with runs, a
-            // berth facing the way of the run it is for; under traffic
-            // control a free one of those first (decision 290).
-            if let facing = ringPullOutBerths(of: train, leaving: stop, to: call) {
-                let free = pullOutBerths(of: train, leaving: stop, to: call).map { $0.intersection(facing) } ?? []
-                for eligible in [free, facing] where !eligible.isEmpty {
-                    if let path = path(from: start, toStation: call, length: train.length, eligible: eligible, keepingLeft: true, memo: &memo) {
-                        return (path, nil)
-                    }
+            defaultPath(for: train, leaving: stop, cycle: cycle, from: start, to: call, lookingOn: true, memo: &memo)
+        } ?? .noRoute
+    }
+
+    /// The way ``leaving(_:stop:cycle:memo:)`` takes `train` from `start`
+    /// to `call`, the station of the call after stop `stop` (of cycle
+    /// `cycle`), or `nil` when there is none. `lookingOn` is decision
+    /// 735's look one call further (see ``wayOn(from:for:after:cycle:memo:)``);
+    /// that look asks this again without it, and then only whether there is
+    /// a way at all, so it never looks further than one call.
+    private func defaultPath(for train: Train, leaving stop: Int, cycle: Int64, from start: TrainPosition, to call: StationID,
+                             lookingOn: Bool, memo: inout PathMemo) -> (path: TrainPath, seconds: Int64?)? {
+        // Decision 221: into a depot, a free siding first.
+        if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
+            return (path, nil)
+        }
+        // Decision 535: out of a depot to a stop of a ring with runs, a
+        // berth facing the way of the run it is for; under traffic
+        // control a free one of those first (decision 290).
+        if let facing = ringPullOutBerths(of: train, leaving: stop, to: call) {
+            let free = pullOutBerths(of: train, leaving: stop, to: call).map { $0.intersection(facing) } ?? []
+            for eligible in [free, facing] where !eligible.isEmpty {
+                if let path = path(from: start, toStation: call, length: train.length, eligible: eligible, keepingLeft: true, memo: &memo) {
+                    return (path, nil)
                 }
             }
-            // Decision 290: out of a depot under traffic control, a free
-            // berth of the stop.
-            if let free = pullOutBerths(of: train, leaving: stop, to: call),
-               let path = path(from: start, toStation: call, length: train.length, eligible: free, keepingLeft: true, memo: &memo) {
-                return (path, nil)
+        }
+        // Decision 290: out of a depot under traffic control, a free
+        // berth of the stop.
+        if let free = pullOutBerths(of: train, leaving: stop, to: call),
+           let path = path(from: start, toStation: call, length: train.length, eligible: free, keepingLeft: true, memo: &memo) {
+            return (path, nil)
+        }
+        guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+        // Decision 735: asked only whether there is a way, there is.
+        guard lookingOn else { return (nearest, nil) }
+        // Decision 735: not into a berth with no way on from it to the
+        // call after (the Western Trunk Line train that went into the
+        // Yilan Line's track at Badu and stood there for 37 hours), when
+        // another berth of the call has one.
+        if let next = train.call(after: stop, cycle: cycle), train.call(after: next.stop, cycle: next.cycle) != nil,
+           nearest.distance > 0, case .onEdge(let first, _) = start,
+           let stopsAt = berth(endingAt: nearest, from: first),
+           !wayOn(from: stopsAt, for: train, after: next.stop, cycle: next.cycle, memo: &memo) {
+            let leading = berths(of: call, length: train.length).filter { wayOn(from: $0, for: train, after: next.stop, cycle: next.cycle, memo: &memo) }
+            if !leading.isEmpty, let kept = path(from: start, toStation: call, length: train.length, eligible: Set(leading), keepingLeft: true, memo: &memo) {
+                nearest = kept
             }
-            guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
-            // Decision 547: out of a depot with traffic control off, off the
-            // track where other trains stand, as decision 228 has it in.
-            var standing: Set<TrackEdgeID> = []
-            if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { (nearest, standing) = kept }
-            // Decision 527: an empty run keeps off track its line takes
-            // only the other way; decision 547 (L6-4): and, out of a
-            // depot, still off the track where other trains stand.
-            let against = lineAgainst(for: train, memo: &memo)
-            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against, avoiding: standing) { nearest = kept }
-            // Decision 228: with traffic control off, a free platform first;
-            // decision 527: not one only that track reaches.
-            if let next = train.call(after: stop, cycle: cycle),
-               let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo),
-               !(against.map { against in free.traversals.contains(where: against.contains) && !nearest.traversals.contains(where: against.contains) } ?? false) {
-                return (free, nil)
-            }
-            return (nearest, nil)
-        } ?? .noRoute
+        }
+        // Decision 547: out of a depot with traffic control off, off the
+        // track where other trains stand, as decision 228 has it in.
+        var standing: Set<TrackEdgeID> = []
+        if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { (nearest, standing) = kept }
+        // Decision 527: an empty run keeps off track its line takes
+        // only the other way; decision 547 (L6-4): and, out of a
+        // depot, still off the track where other trains stand.
+        let against = lineAgainst(for: train, memo: &memo)
+        if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against, avoiding: standing) { nearest = kept }
+        // Decision 228: with traffic control off, a free platform first;
+        // decision 527: not one only that track reaches.
+        if let next = train.call(after: stop, cycle: cycle),
+           let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo),
+           !(against.map { against in free.traversals.contains(where: against.contains) && !nearest.traversals.contains(where: against.contains) } ?? false) {
+            return (free, nil)
+        }
+        return (nearest, nil)
+    }
+
+    /// Decision 735: the berth `path`, starting along `first`, ends at;
+    /// `nil` when its edge is not on the network.
+    private func berth(endingAt path: TrainPath, from first: TrackTraversal) -> Berth? {
+        let last = path.traversals.last ?? first
+        guard let edge = network.edge(last.edge) else { return nil }
+        return Berth(traversal: last, offset: path.end ?? edge.length)
+    }
+
+    /// Decision 735: whether `train`, stopped at `berth` for its call
+    /// `stop` (of cycle `cycle`), would have a way on from there to the
+    /// call after: the way ``leaving(_:stop:cycle:memo:)`` looks for,
+    /// turned round first where the timetable turns it round there, but
+    /// no further than that call.
+    private func wayOn(from berth: Berth, for train: Train, after stop: Int, cycle: Int64, memo: inout PathMemo) -> Bool {
+        guard let next = train.call(after: stop, cycle: cycle) else { return true }
+        var standing = train
+        stand(&standing, at: TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: train.length))
+        standing.execution = .waitingAtStop(stop, cycle: cycle)
+        guard let placement = standing.placement else { return true }
+        let start = standing.timetable[stop].reverses ? turnedRound(placement) : placement
+        return defaultPath(for: standing, leaving: stop, cycle: cycle, from: start.position, to: standing.timetable[next.stop].station,
+                           lookingOn: false, memo: &memo) != nil
     }
 
     /// Decision 61: a physical preference is taken only as a whole. The

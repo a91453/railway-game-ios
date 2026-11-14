@@ -393,7 +393,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   line of reason per angle in the PR (and in the decision when there is
   one; "railway fan: none" or "music: none" when it has nothing to do with
   them), keep the other options' previews in the PR so the owner can look
-  later, and go ahead. Previews and generated art the game does not load
+  later, and go ahead. Every new or pending item (a feature, a fix, a
+  leftover in a handoff, a next step in a decision) is scored the same
+  way before anyone works on it or dispatches it: each angle 1–5 with the
+  weights of `docs/research/NEXT_PRIORITIES_2026-10-12.md` §19 (player 30,
+  developer 25, art 15, railway fan 15, music 15), and the weighted score
+  puts it in the priority list; bugs go before features. Do not ask the
+  owner whether to do it (owner, 2026-11-14: 「看你先評分在排優先級」
+  「之後都是這樣寫進去md或交接手冊」). Previews and generated art the game does not load
   (more than about 2 MB in one pull request) go to
   a91453/railway-assets-private, `game-art-previews/docs/art/`
   (owner, 2026-10-21; moved from `a91453/railway-reference-private`,

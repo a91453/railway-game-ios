@@ -461,6 +461,9 @@ extension GameWorld {
                 breakdown: [LedgerLine(item: .depotUpkeep, amount: .zero - depotFee)]
             ), day: day)
         }
+        // Decision 736: with the annual taxes, the stations' upkeep by
+        // the length of their platforms.
+        settleStationUpkeep(day: day, time: time)
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
         settleTourism(day: day, time: time)
@@ -487,7 +490,7 @@ extension GameWorld {
                 ), day: day)
             }
         }
-        payIncomeTaxDue(day: day, time: time)
+        payTaxesDue(day: day, time: time)
         closeYear(endingWith: day)
         // Decision 86: the goals are judged once the day is settled.
         judgeScenario(endingWith: day)
@@ -609,7 +612,9 @@ extension GameWorld {
             return "The loan must be whole loan steps, up to the most the bank lends."
         }
         if let problem = termLoansProblem() { return problem }
-        guard (0...Self.maximumAccrued).contains(accounts.incomeTaxPayable.amount) else { return "The income tax owed is out of range." }
+        guard [accounts.incomeTaxPayable, accounts.houseTaxPayable, accounts.landTaxPayable].allSatisfy({ (0...Self.maximumAccrued).contains($0.amount) }) else {
+            return "The taxes owed are out of range."
+        }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {
             guard opened <= clock.now else { return "The accounts cannot open after now." }
@@ -668,6 +673,9 @@ extension GameWorld {
         case .dailyFerries: [.ferryFares, .ferryRunning]
         case .drivenRun: [.drivingBonus]
         case .annualIncomeTax: [.incomeTax]
+        case .annualHouseTax: [.houseTax]
+        case .annualLandTax: [.propertyTax]
+        case .dailyStationUpkeep: [.stationUpkeep]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy || $0.item == .dayPassSales || $0.item == .busFares || $0.item == .cablewayFares || $0.item == .ferryFares || $0.item == .drivingBonus ? $0.amount >= .zero : $0.amount <= .zero }),
