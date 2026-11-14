@@ -88,7 +88,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         // coaches, before the route bus; left out with them (the whole
         // pack's names and hashes and the windows' indices move by 4, the
         // rest as before).
-        let hk = Set(Map3DHongKongSignal.drawn.map(\.name))
+        // Decision 738: Hong Kong's vehicles after its signals.
+        let hongKong = Map3DHongKongSignal.drawn.map(\.name) + Map3DHongKongVehicles.models.map(\.modelName)
+        let hk = Set(hongKong)
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name) }
         XCTAssertEqual(Self.digest(before.map(\.name)), "27484d82f073fb79")
@@ -101,7 +103,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstCoach = firstCable + cable.count + ferry.count + air.count
         XCTAssertEqual(Array(pack.models[firstCoach..<firstCoach + coach.count].map(\.name)), Map3DCoaches.drawn.map(\.name))
         let firstHK = firstCoach + coach.count
-        XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), Map3DHongKongSignal.drawn.map(\.name))
+        XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "c33a95bfe45acce0")
         XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "46ae231a92e959f2")
         func lamps(movingBack moved: Int) -> [String] {

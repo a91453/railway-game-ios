@@ -1,0 +1,28 @@
+{
+  "input": "../../../railway-reference-private/Railway/street_scene_reference_clean/source/models/street-agents.glb",
+  "modelId": "hk-double-decker",
+  "nodes": [
+    "bus__bus_body",
+    "bus__bus_rear",
+    "bus__bus_skirt",
+    "bus__chrome",
+    "bus__glass_dark",
+    "bus__headlamp.002",
+    "bus__led_panel",
+    "bus__shade",
+    "bus__taillamp",
+    "bus__tire.006",
+    "bus__trim",
+    "bus__wheel"
+  ],
+  "front": "+z",
+  "units": "meters",
+  "recolorLightPaint": true,
+  "source": {
+    "kind": "non-ai",
+    "reference": "private:a91453/railway-reference-private/Railway/street_scene_reference_clean/source/models/street-agents.glb",
+    "revision": "cbc8b1a39edc6ef3d751f0b2f7f5a89646c85c77",
+    "license": "owner-supplied reference, authorized for project use (CLAUDE.md)",
+    "attribution": "Street Scene reference (Causeway Bay), owner's reference repository"
+  }
+}

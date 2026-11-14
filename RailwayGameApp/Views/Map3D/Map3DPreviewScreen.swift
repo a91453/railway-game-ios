@@ -1713,12 +1713,16 @@ private struct Map3DView: UIViewRepresentable {
     // Decision 608: made once, by ``Map3DTrainModels``, which keeps
     // them on the GPU (``Map3DUploadedModels``), not held here.
     nonisolated static func makeModels() -> Map3DModelPack? {
-        Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
+        let pack = Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
         Map3DCityBus.pack(file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension)),
         files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) }),
         files: Dictionary(uniqueKeysWithValues: Map3DSceneryProp.allCases.compactMap { prop in
             Bundle.main.url(forResource: prop.fileName, withExtension: Map3DSceneryProp.fileExtension).map { (prop, $0) }
         }))
+        // Decision 738: Hong Kong's double-decker, minibus and taxi.
+        return Map3DHongKongVehicles.pack(pack, files: Map3DHongKongVehicles.fileNames.compactMapValues {
+            Bundle.main.url(forResource: $0, withExtension: Map3DHongKongVehicles.fileExtension)
+        })
     }
 
     func makeUIView(context: Context) -> UIView {
