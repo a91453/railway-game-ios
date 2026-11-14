@@ -193,7 +193,7 @@ permissions:
 # lessons had (5.9-8.7) go back to the build job. Expected sums, at most:
 # build about 52, second 51, lessons 54, map 46 of 75.
 #
-# 2026-11-14 (CI-SPEED, decision 752): the full lane took 2h04 on 19aa342
+# 2026-11-14 (CI-SPEED, decision 754): the full lane took 2h04 on 19aa342
 # (43539871635) and on 4cff950 (43599067177) because its jobs ran in
 # a chain: map waited for second or lessons (about 53 minutes), the iPad
 # job for map (about 44 more), then 30 of its own, while the build job's
@@ -356,7 +356,7 @@ jobs:
     # the job was cut at 95 in the export (main 68a4cfc, run 41432636112).
     # Decision 638 replaced the export with a sync of the build's own
     # strings (seconds, not 14 to 18 minutes). 145 since its UI step got
-    # 120 (decision 752).
+    # 120 (decision 754).
     timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 145 }}
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
@@ -635,7 +635,7 @@ jobs:
         # alone, run 38720199489), 5 minutes short of the 60: 75 leaves a
         # slow runner room and still stops a hang. 90 since it took 74 of
         # its 75 on 2026-11-02 (main 68a4cfc, run 41432636112). 120 since
-        # MapInteractionTests came back from the map job (decision 752):
+        # MapInteractionTests came back from the map job (decision 754):
         # about 55 minutes of tests, a slow runner's 1.8 times some 100.
         timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 120 }}
         env:
@@ -851,7 +851,7 @@ jobs:
 
   # The full lane's other iPhone jobs: second (settings, HUD, the real
   # world) and lessons. The build job runs the remaining classes,
-  # MapInteractionTests among them again (decision 752). None runs for a
+  # MapInteractionTests among them again (decision 754). None runs for a
   # pull request or only_testing by hand. Two at a time (decision 604):
   # with the build job, three macOS runners, as decision 582 keeps the
   # full lane to.
@@ -1029,7 +1029,7 @@ jobs:
     # A skipped job passes a required check, so a pull request that leaves the
     # tutorial's own files alone is not held up by it.
     # In the full lane it waits for the two iPhone UI jobs (decisions 604
-    # and 752), so the full lane holds three macOS runners, not four or
+    # and 754), so the full lane holds three macOS runners, not four or
     # five (decision 582): the build job and the iPad job once second and
     # lessons end; red or green, they do not hold it back. A pull request and a run of only some tests skip
     # those jobs, and the iPad job starts as soon as changes is done.

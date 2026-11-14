@@ -1,6 +1,6 @@
 # CI-SPEED 交接（2026-11-14）
 
-工作串「縮短 CI 和 full lane 時間」，分支 `claude/project-thread-giil3t`，決策 752。
+工作串「縮短 CI 和 full lane 時間」，分支 `claude/project-thread-giil3t`，決策 754。
 
 ## 做完的
 
@@ -13,7 +13,7 @@
 2. **不穩的測試**
    - `TutorialUITests.startFirstLesson`：開始畫面的「入門」點了沒反應（#2199 iPad 第一次紅）時再點一次，和 `TutorialJourneyUITests` 同一做法。
    - `TrainTripLogTests.testCreditingATripDoesNotWalkTheLog`：原本和只有幾筆的紀錄比，二分搜尋的步數就讓長的慢 5–15 倍（門檻 5 倍，CI 三次紅兩次）。改成 2,000 筆對 20,000 筆，各量三次取最快；本機 Linux 比值 1.1 倍，門檻 4 倍，一筆一筆走會是 10 倍。
-3. **full lane 不再排成一串**（決策 752）：map 併回 build job，iPad 在 second、lessons 跑完就開始。預估 124 → 約 90 分；合併後第一次 full lane 要量實際時間，寫回決策 752。
+3. **full lane 不再排成一串**（決策 754）：map 併回 build job，iPad 在 second、lessons 跑完就開始。預估 124 → 約 90 分；合併後第一次 full lane 要量實際時間，寫回決策 754。
 
 ## 留下的
 

@@ -1548,7 +1548,7 @@ final class MapInteractionTests: XCTestCase {
     /// Decision 269: the map tilts as it comes closer. Decision 313: a
     /// pinch on past the 2D map's closest zoom, let go, hands it over to
     /// the 3D map; a pinch out, let go, hands it back. In the full lane's build job (decision
-    /// 752), not the pull request gate.
+    /// 754), not the pull request gate.
     func testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack() {
         continueAfterFailure = false
         let app = XCUIApplication()

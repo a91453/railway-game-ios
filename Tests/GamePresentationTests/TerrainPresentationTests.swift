@@ -344,9 +344,10 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(tool.networkPlatformLevelling?.problem, reason)
         tool.addNetworkPlatform()
         XCTAssertEqual(tool.message?.kind, .failure)
-        // Decision 510: the reason in the panel, the banner short.
+        // Decision 510: the reason in the panel; decision 752: and in
+        // the banner.
         XCTAssertTrue(tool.networkDraftText().contains(reason), tool.networkDraftText())
-        XCTAssertFalse(tool.message?.text.contains(reason) == true, tool.message?.text ?? "")
+        XCTAssertEqual(tool.message?.text, "No platform built: " + reason)
         XCTAssertEqual(tool.world, world)
     }
 
@@ -552,14 +553,12 @@ final class TerrainPresentationTests: XCTestCase {
         let reason = GameError.trackEdgeInUse(edge).playerMessage(in: .english)
         XCTAssertEqual(levelling.problem, reason)
         placed.addNetworkPlatform()
-        // Decision 510: the banner short, why and what to do in the panel.
-        XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
-            No platform built: the Network panel says what to do.
-            """))
+        // Decision 752: the banner says why, as the panel does.
+        XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: "No platform built: " + reason))
         // Decision 747: what to do, without the grade.
         XCTAssertTrue(placed.networkDraftText().hasSuffix(" · \(reason)"), placed.networkDraftText())
         XCTAssertFalse(placed.networkDraftText().contains("‰"), placed.networkDraftText())
-        XCTAssertEqual(levelling.caption(in: .english), "No platform here: see the Network panel")
+        XCTAssertEqual(levelling.caption(in: .english), reason)
         XCTAssertEqual(placed.world, world)
     }
 

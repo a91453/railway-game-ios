@@ -219,7 +219,7 @@ final class TrainTripLogTests: XCTestCase {
     /// the log (copy on write), once, so it is made before the clock
     /// starts; and enough credits are timed to last tens of milliseconds
     /// with GameCore optimized, so the 10 ms allowance does not decide the
-    /// comparison. Decision 752: compared with a short log of a few trips,
+    /// comparison. Decision 754: compared with a short log of a few trips,
     /// the search's own steps made the long one 5 to 15 times as slow
     /// (rest-2, red in run 43573602825 at 14.6 times, and twice in three
     /// runs on #2190), so the two logs are both long now, and each is

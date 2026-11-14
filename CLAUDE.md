@@ -222,7 +222,7 @@ needs OSM data reads the same extract.
   and the iPad tutorial tests only when it touches the tutorial's own files;
   the full lane runs every UI test, its iPhone tests split over three jobs
   (`FULL_LANE_SECOND_JOB` and `FULL_LANE_LESSONS_JOB` name two jobs'
-  classes, run at once, decisions 604 and 752; the build job runs the
+  classes, run at once, decisions 604 and 754; the build job runs the
   rest, MapInteractionTests among them), and the iPad
   tutorial tests (the
   missing-button proof nightly and on request) on `main` once a night

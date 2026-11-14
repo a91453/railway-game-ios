@@ -5114,6 +5114,40 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// the contracts (one the cash cannot pay back, its button off), the
     /// question before paying one back early, and the balance sheet's row.
     /// For the screenshot review of the pull request that added the screen.
+    /// Decision 751: the year-end report's appraisal, opened from the
+    /// economy panel's closed years two years into the demo map. For the
+    /// screenshot review of the pull request that added it.
+    func testYearEndAppraisal() {
+        // Chinese only: in English the reports page's trailing column
+        // did not bring the closed years into reach (run 43615468013).
+        yearEndShots(english: false)
+    }
+
+    private func yearEndShots(english: Bool) {
+        let suffix = english ? "en" : "zh"
+        let app = launch(extra: ["-screenshot-scene", "yearEnd"], english: english)
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+        settle()
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars[english ? "Economy" : "經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        XCTAssertTrue(app.showEconomyPage(english ? "Reports" : "報表"), "The reports page")
+        let list = app.economyList(trailing: true)
+        let year = app.buttons["economy.closedYear.1"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(year, in: list, below: bar.frame.maxY, at: app.economyDragColumn(list), clearOf: .button), "The second year's closing comes into reach")
+        year.tap()
+        // The appraisal is the report's first section; the headline below
+        // it may be past the fold, where the form has not made it yet.
+        XCTAssertTrue(app.descendants(matching: .any)["yearEnd.appraisal.row"].firstMatch.appears(within: 10), "The report opens on its appraisal")
+        settle(seconds: 1)
+        keep("year-end-appraisal-\(suffix)", app)
+    }
+
     func testTermLoans() {
         termLoanShots(english: false)
         termLoanShots(english: true)

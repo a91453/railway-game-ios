@@ -155,10 +155,13 @@ extension GameSession {
         // The year's close.
         if let year = world.accounts.years.last, year.year != closedBefore {
             let profit = year.income.netProfit
+            // Decision 751: with the year-end appraisal's grades.
+            let previous = world.accounts.years.last { $0.year == year.year - 1 }
+            let grades = YearEndAppraisal(statement: year, previous: previous, world: world).gradesText
             news.add(day: today, .yearEnd) { language in
                 language.text(
-                    "Year \(year.year + 1) closed: net profit \(profit.moneyText)",
-                    "第 \(year.year + 1) 年結算：淨利 \(profit.moneyText)"
+                    "Year \(year.year + 1) closed: net profit \(profit.moneyText); appraisal \(grades)",
+                    "第 \(year.year + 1) 年結算：淨利 \(profit.moneyText)；年終考核 \(grades)"
                 )
             }
         }

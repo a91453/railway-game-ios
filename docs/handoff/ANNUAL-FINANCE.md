@@ -62,3 +62,12 @@
 - 放的地方：`RailwayGameApp/Views/YearEndReport.swift` 的 `YearEndReport` 最上面多一段（年度結算時 `YearEndSheet` 會開）；消息紀錄的年度結算那一筆在 `SecretaryRoom.observeNews` 加上等第。
 - 兩個成就（`Achievements.swift`）：「年終考核全 A」「連三年淨利成長」。`GameCenterMapping.points` 現在 810，要加分數；`docs/GAME_CENTER_SETUP.md` 要列新 ID，App Store Connect 那邊是作者的步驟。
 - 門檻（A／B／C）實作時照設計頁 §5 定，寫進新的決策。
+
+## AF-3b 實作（2026-11-14 晚）
+
+- session：雲端 thread session「完成年終考核卡和兩個成就」，分支 `claude/project-thread-6mqbv8`；遊戲規劃第 65 任派工。
+- 決策 [751](../decisions/751.md)；存檔、golden、GameCore 都不動。
+- 做了：`YearEndAppraisal`（五項 A／B／C 與明年要繳的稅）、年度報表最上面的考核一段、消息紀錄的等第、成就「年終考核全 A」「連三年淨利成長」（Game Center 850 點，兩張徽章）。
+- 作者要做的：App Store Connect 再跑一次「Game Center setup」加這兩個成就。
+- 還留下：設計頁 §5 的平衡量測（稅制開與關），以及量過後調考核門檻（決策 751「門檻怎麼定的」）；結算音效沒加。
+- UNVERIFIED：模擬器與實機都沒看過考核一段與兩個徽章；門檻沒量。

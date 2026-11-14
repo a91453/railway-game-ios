@@ -17,9 +17,9 @@ final class AchievementsTests: XCTestCase {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    func testThereAre39WithUniqueIDsAndBothLanguages() {
-        XCTAssertEqual(Achievement.all.count, 39)
-        XCTAssertEqual(Set(Achievement.all.map(\.id)).count, 39)
+    func testThereAre41WithUniqueIDsAndBothLanguages() {
+        XCTAssertEqual(Achievement.all.count, 41)
+        XCTAssertEqual(Set(Achievement.all.map(\.id)).count, 41)
         XCTAssertEqual(Achievement.all.filter(\.needsTourism).count, 4)
         XCTAssertEqual(Achievement.all.filter(\.needsRollingStockEconomics).count, 3)
         for achievement in Achievement.all {

@@ -273,25 +273,27 @@ extension RealBranchLine {
         ("hkmtr", "DRL", "Disneyland Resort Line", "迪士尼綫", nil, .metro, false),
     ]
 
-    /// Decision 712: the lines of the cities outside Taiwan drawn along one
-    /// another's track for much of their way, by line id: the Airport
-    /// Express and the Tung Chung Line, the same drawing or within 8 m of
-    /// it for most of the 28 km from Hong Kong to the airport island. A
-    /// line bought is laid on track of its own, 4 m and more from any
-    /// other, so whichever of the two came second was refused for its
-    /// track, after a minute's trying to lift it clear. A company that
-    /// owns one is told it cannot buy the other, at once.
-    static let overseasLinesOnOneTrack: [Set<String>] = [["hkmtr:AEL", "hkmtr:TCL"]]
+    /// Decision 753: the lines of the cities outside Taiwan drawn along
+    /// another's track, by line id, and the line whose drawing each keeps
+    /// to one side of, at least `offset` metres off it (positive on its
+    /// right going up the line, as a loop's offset), wherever the two lie
+    /// within ``RealLineLaying/laneReach`` of each other: the Airport
+    /// Express on the right of the Tung Chung Line from Hong Kong to the
+    /// airport island (the same drawing or within 8 m of it for most of
+    /// the 28 km, crossing it before Tsing Yi and at Tung Chung), the
+    /// Disneyland Resort Line on its left at Sunny Bay, the side it comes
+    /// in from. The Tung Chung Line stays on its drawing. Each is laid so
+    /// whichever is bought first: decision 712 refused the second of the
+    /// Airport Express and the Tung Chung Line, and both after the
+    /// Disneyland Resort Line, which lay on their track at Sunny Bay.
+    static let overseasLanes: [String: (beside: String, offset: Double)] = [
+        "hkmtr:AEL": ("hkmtr:TCL", -25),
+        "hkmtr:DRL": ("hkmtr:TCL", -45),
+    ]
 
-    /// The names of the line whose track this one is drawn along
-    /// (``overseasLinesOnOneTrack``) that `owned` says the company has, or
-    /// `nil`.
-    func lineOnItsTrack(owned: (String) -> Bool) -> (english: String, chinese: String)? {
-        for lines in Self.overseasLinesOnOneTrack where lines.contains(id) {
-            for other in lines.sorted() where other != id && owned(other) {
-                if let found = Self.overseasLines.first(where: { "\($0.system):\($0.network)" == other }) { return (found.english, found.chinese) }
-            }
-        }
-        return nil
+    /// Whether it is laid in a lane beside another's drawing, or another
+    /// is laid beside its own (``overseasLanes``).
+    var sharesALane: Bool {
+        Self.overseasLanes[id] != nil || Self.overseasLanes.values.contains { $0.beside == id }
     }
 }
