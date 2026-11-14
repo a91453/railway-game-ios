@@ -70,6 +70,15 @@ extension GameWorld {
         world.setLandOnDemand()
         return world
     }
+
+    /// Whether the world is a game on the whole of Taiwan (laid over
+    /// ``WholeTaiwan/bounds`` round ``WholeTaiwan/anchor``). Since
+    /// 2026-11-14 it counts no achievements, as the map picker has said
+    /// since decision 88's later note: all of it is open from the start,
+    /// which a map bought tile by tile is not.
+    public var isWholeTaiwan: Bool {
+        geoAnchor == WholeTaiwan.anchor && bounds == WholeTaiwan.bounds
+    }
 }
 
 extension GameSession {

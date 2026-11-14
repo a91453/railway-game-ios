@@ -173,7 +173,7 @@ struct AchievementsSheet: View {
         NavigationStack {
             AchievementsView(
                 language: session.language, records: records, facts: facts,
-                note: GameMenuLayout.achievementsNote(unlimitedFunds: session.world.economy.unlimitedFunds, in: session.language),
+                note: GameMenuLayout.achievementsNote(unlimitedFunds: session.world.economy.unlimitedFunds, wholeTaiwan: session.world.isWholeTaiwan, in: session.language),
                 stamps: stamps, railways: session.railways, placeNames: session.placeNames
             )
                 .toolbar {

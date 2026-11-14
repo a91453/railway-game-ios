@@ -136,10 +136,12 @@ public struct GameMenuLayout: Equatable, Sendable {
     }
 
     /// Decision 200: why a game with unlimited funds counts no
-    /// achievements, at the top of their list; `nil` otherwise.
-    public static func achievementsNote(unlimitedFunds: Bool, in language: DisplayLanguage) -> String? {
-        guard unlimitedFunds else { return nil }
-        return language.text("Not counted with unlimited funds.", "資金無限的局不計成就。")
+    /// achievements, at the top of their list; and since 2026-11-14 a game
+    /// on the whole of Taiwan; `nil` otherwise.
+    public static func achievementsNote(unlimitedFunds: Bool, wholeTaiwan: Bool = false, in language: DisplayLanguage) -> String? {
+        if unlimitedFunds { return language.text("Not counted with unlimited funds.", "資金無限的局不計成就。") }
+        if wholeTaiwan { return language.text("Not counted on the whole of Taiwan.", "全台灣地圖不計成就。") }
+        return nil
     }
 }
 
