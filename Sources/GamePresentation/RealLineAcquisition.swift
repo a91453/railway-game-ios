@@ -126,6 +126,31 @@ public struct RealBranchLine: Hashable, Sendable {
         system == "tymc" && network == "A" ? ["長庚醫院站"] : []
     }
 
+    /// Decision 748: its stations (by their names in the timetable) whose
+    /// real platform is one island between the line's two ways, laid with
+    /// those two tracks ``RealLineAcquisition/islandSpacing`` apart so the
+    /// 3D map draws the island between them (decision 741's 11 m). Between
+    /// the ends the second track moves out round the station; at an end
+    /// the first loop on the right stands that far out. The MTR's lines on
+    /// sale, from MTR Corporation's station layout plans, checked against
+    /// Wikipedia's platform tables and OpenStreetMap: not the cross-platform
+    /// interchanges, where each island has one track of each of two lines
+    /// (Lai King, Nam Cheong, Sunny Bay), nor the Airport Express, whose
+    /// two ways stand on platforms of their own. Taiwan's lines as they were.
+    var islandStations: [String] { Self.islandStations(system: system, network: network) }
+
+    /// ``islandStations`` of the line `network` of `system`.
+    static func islandStations(system: String, network: String) -> [String] {
+        guard system == "hkmtr" else { return [] }
+        return switch network {
+        case "TCL": ["香港", "九龍", "東涌"]
+        case "SIL": ["金鐘", "利東", "黃竹坑", "海怡半島"]
+        case "EAL_LMC": ["落馬洲"]
+        case "TKL_LHP": ["將軍澳", "康城"]
+        default: []
+        }
+    }
+
     /// Decision 652: the stations between its ends (by their names in the
     /// timetable) whose turn-back crossover on the next stop's side is
     /// laid the other way round, facing the trains coming in: a train in
@@ -441,6 +466,19 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// after it is laid where they part: clear of its double track, with
     /// the end's loops two deep (12 m) and the 4 m between tracks.
     static let besideOffset = 30 * metre
+    /// Decision 748: how far apart the two tracks either side of an island
+    /// platform (``RealBranchLine/islandStations``) stand: decision 741's
+    /// 11 m (``PlatformTrackLayout/island``), room for the 3D map to draw
+    /// the island between two trains.
+    static let islandSpacing = Double(PlatformTrackLayout.island.spacing)
+    /// Decision 748: how far an island end's other loops stand from its
+    /// first track, on the side away from the island: beyond the 15 m
+    /// within which the 3D map pairs a platform with the nearest track
+    /// across from it, so the first track's platform pairs with the
+    /// island's other track (a loop 6 m away would be the nearer partner,
+    /// too near for an island, and leave the island half drawn); the
+    /// loops beyond it 6 m apart as an end's are.
+    static let besideIslandOffset = 16 * metre
 
     /// Decision 462: how far over the ground a station on a viaduct stands
     /// at least: as high as a station on the ground beside it may, and
@@ -1226,11 +1264,18 @@ extension RealLineLaying {
             // Decision 605: an overtaking station's second loop is on the
             // left of the second track.
             let offset = layout.loopOffset
-            let sides = overtakes
+            // Decision 748: an island end's first loop on the right the
+            // island's width out, the others 5 m from the track inside them.
+            let island = !between && line.isUrban && line.islandStations.contains(name)
+            let close = RealLineAcquisition.besideIslandOffset
+            let islandSides: [(Double, Int, Bool)] = [(RealLineAcquisition.islandSpacing, 1, false)]
+                + (2...layout.endLevels + 2).map { level in (-(close + Double(level - 2) * offset), level, false) }
+            let endSides: [(Double, Int, Bool)] = (1...layout.endLevels).flatMap { level -> [(Double, Int, Bool)] in
+                [(Double(level) * offset, level, false), (-Double(level) * offset, level, false)]
+            }
+            let sides: [(Double, Int, Bool)] = overtakes
                 ? [(offset, 1, false), (-offset, 1, true)]
-                : between
-                ? [(offset, 1, false)]
-                : (1...layout.endLevels).flatMap { level in [(Double(level) * offset, level, false), (-Double(level) * offset, level, false)] }
+                : between ? [(offset, 1, false)] : island ? islandSides : endSides
             guard loops <= sides.count else {
                 return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
             }
@@ -1316,6 +1361,25 @@ extension RealLineLaying {
         // track's ramps.
         var depotsAt: [(site: RealLineDepotSite, points: [WorldVector], j: Double)] = []
         var taken: [ClosedRange<Double>] = []
+        // Decision 748: round each island station between the ends, the
+        // second track moved out to the island's width along the station's
+        // stretch, over a ramp either side clear of the other stations and
+        // of the second track's own ramps; where one does not fit, the
+        // station keeps its two side platforms.
+        var islands: [(a: Double, low: Double, high: Double, b: Double)] = []
+        if let second {
+            for stop in Set(line.islandStations.compactMap { runs.stops.firstIndex(of: $0) }).sorted()
+            where stop > 0 && stop < runs.stops.count - 1 {
+                let span = spans[stop]
+                let reach = (span.lowerBound - ramp - gap)...(span.upperBound + ramp + gap)
+                guard reach.lowerBound > second.a + ramp + gap, reach.upperBound < second.b - ramp - gap,
+                      !spans.enumerated().contains(where: { $0.offset != stop && $0.element.overlaps(reach) }),
+                      !taken.contains(where: { $0.overlaps(reach) }) else { continue }
+                forced += [span.lowerBound - ramp, span.upperBound + ramp]
+                islands.append((span.lowerBound - ramp, span.lowerBound, span.upperBound, span.upperBound + ramp))
+                taken.append(reach)
+            }
+        }
         if depot, let second {
             for site in midDepotSites {
                 let points = worldPoints(site)
@@ -1417,8 +1481,20 @@ extension RealLineLaying {
             }
             let beside = [a] + Array(inner...outer) + [b]
             besideNodes = beside
+            // Decision 748: out to the island's width round an island
+            // station, eased over its ramps as the second leads are.
+            func out(_ distance: Double) -> Double {
+                for island in islands where distance > island.a && distance < island.b {
+                    let t = min(1, max(0, min(distance - island.a, island.b - distance) / (island.low - island.a)))
+                    return (RealLineAcquisition.islandSpacing - HighSpeedDemo.trackOffset) * t * t * (3 - 2 * t)
+                }
+                return 0
+            }
             plans.append((
-                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: beside.map { $0 == a || $0 == b ? 0 : -HighSpeedDemo.trackOffset }, following: true),
+                RealWorldDemo.TrackPlan(
+                    beside: main, at: beside,
+                    offsets: beside.map { $0 == a || $0 == b ? 0 : -HighSpeedDemo.trackOffset - out(main.distances[$0]) }, following: true
+                ),
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
             ))
             platformsAt += zones.indices.dropFirst().dropLast().map { ($0, plans.count - 1, zones[$0]) }
