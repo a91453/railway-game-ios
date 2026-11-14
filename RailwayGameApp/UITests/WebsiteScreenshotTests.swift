@@ -4449,11 +4449,15 @@ final class WebsiteScreenshotTests: XCTestCase {
                 }
             }
         }
-        let done = bar.buttons["完成"]
+        // Decision 745: the line's page covers the whole screen under a bar
+        // named for the line, not 路線; Done on whichever bar is up closes
+        // the panel, or the page stays over the build dock.
+        let done = app.navigationBars.firstMatch.buttons["完成"]
         if done.exists, done.isHittable {
             done.tap()
             settle()
         }
+        XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "The line's page stayed")
 
         // The fleet, as the freight test opens it.
         app.buttons["dock.build"].tap()
