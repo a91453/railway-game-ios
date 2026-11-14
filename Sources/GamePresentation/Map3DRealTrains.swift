@@ -134,6 +134,22 @@ public struct Map3DRealTrains: Sendable {
     /// the other (``Map3DScene/Builder/bedTop``). The real line's other
     /// track, 4 m or more beside, is.
     static let overlap: Float = Map3DScene.Builder.bedTop
+    /// Decision 742: how far beside the player's track a real track that
+    /// runs the same way (within ``alongCosine``) is not laid, nor a car
+    /// drawn on it, metres: the player's track, however it was laid (by
+    /// hand, traced along the real line, or with a real station bought),
+    /// stands for the real line's whole corridor there, as a bought line
+    /// does (``playerClearance``). A real line's tracks lie up to 16 m
+    /// from its centre line (the bought station's track) at most of the
+    /// TRA's stations.
+    static let corridor: Float = playerClearance
+    /// Decision 742: and beside the player's platforms, where a real
+    /// station's tracks spread wider: 32 m, all of the real tracks round
+    /// 174 of the 182 TRA stations measured.
+    static let stationCorridor: Float = 32
+    /// Decision 742: how nearly the same way a real track runs as the
+    /// player's to be beside it rather than crossing it: within 30°.
+    static let alongCosine: Float = 0.866
     /// Decision 402: how far from a line's shape its real tracks are
     /// looked for, metres, at most how far apart the tracks of one line
     /// are (a line beside it, farther, is another), and how nearly along
@@ -328,6 +344,7 @@ public struct Map3DRealTrains: Sendable {
         formations = traffic.lines.map { Self.formation(system: $0.system, line: $0.line) }
         stripes = traffic.lines.map { Map3DColor.rgb(UInt32($0.color.red) << 16 | UInt32($0.color.green) << 8 | UInt32($0.color.blue)) }
         let player = PlayerTrack(snapshot.edges.map { $0.geometry.points.map(builder.point) })
+        let platforms = PlayerTrack(snapshot.platforms.map { $0.points.map(builder.point) })
         func site(_ system: String) -> String { RealRailwayOperations.siteSystems[system] ?? system }
         guard let railTracks else {
             legs = traffic.lines.map { _ in [:] }
@@ -347,7 +364,7 @@ public struct Map3DRealTrains: Sendable {
             boughtTrack[site(line.system), default: PlayerTrack([])].add(points)
         }
         let laid = builder.realTracks(railTracks, systems: Set(traffic.lines.map { site($0.system) }), frame: frame, clearOf: player,
-                                      bought: boughtTrack)
+                                      platforms: platforms, bought: boughtTrack)
         let dispatch = railTracks.dispatch
         let legs = traffic.lines.map { line in
             dispatch.flatMap { dispatch in operations.map { Self.legs(of: line, traffic: traffic, dispatch: dispatch, operations: $0) } } ?? [:]
@@ -505,6 +522,29 @@ public struct Map3DRealTrains: Sendable {
                         let t = squared > 0 ? max(0, min(1, ((p.x - a.x) * ax + (p.z - a.z) * az) / squared)) : 0
                         let dx = a.x + ax * t - p.x, dz = a.z + az * t - p.z
                         if dx * dx + dz * dz < reach * reach { return true }
+                    }
+                }
+            }
+            return false
+        }
+
+        /// Whether scene point `p`, on a track running `dx`, `dz` (seen
+        /// from above, either way), lies within `reach` of a piece of the
+        /// track that runs nearly the same way (within ``alongCosine``):
+        /// beside it along the same corridor, not crossing it.
+        func runsAlong(_ p: Map3DPoint, dx: Float, dz: Float, within reach: Float) -> Bool {
+            let way = (dx * dx + dz * dz).squareRoot()
+            guard way > 0 else { return false }
+            let column = Self.index(p.x), row = Self.index(p.z)
+            for c in column - 1...column + 1 {
+                for r in row - 1...row + 1 {
+                    for (a, b) in segments[Self.key(c, r)] ?? [] {
+                        let ax = b.x - a.x, az = b.z - a.z
+                        let squared = ax * ax + az * az
+                        guard squared > 0, abs(ax * dx + az * dz) >= Map3DRealTrains.alongCosine * squared.squareRoot() * way else { continue }
+                        let t = max(0, min(1, ((p.x - a.x) * ax + (p.z - a.z) * az) / squared))
+                        let ex = a.x + ax * t - p.x, ez = a.z + az * t - p.z
+                        if ex * ex + ez * ez < reach * reach { return true }
                     }
                 }
             }
@@ -900,12 +940,16 @@ extension Map3DScene.Builder {
     /// ground, nothing in its tunnels; laid in windows of
     /// ``Map3DRealTrains/window`` km of its own length, the same whatever
     /// the region (decision 358). Not where it lies within
-    /// ``Map3DRealTrains/overlap`` of `player`'s track, nor within
+    /// ``Map3DRealTrains/overlap`` of `player`'s track, nor (decision 742)
+    /// where it runs along it within ``Map3DRealTrains/corridor``, or along
+    /// a platform of the player's (`platforms`) within
+    /// ``Map3DRealTrains/stationCorridor``, nor within
     /// ``Map3DRealTrains/playerClearance`` of a line of its system the
     /// player bought (`bought`). Returns where they are laid, for the
     /// trains.
     mutating func realTracks(_ tracks: RealRailTracks, systems: Set<String>, frame: RealWorldFrame,
                              clearOf player: Map3DRealTrains.PlayerTrack,
+                             platforms: Map3DRealTrains.PlayerTrack = .init([]),
                              bought: [String: Map3DRealTrains.PlayerTrack] = [:]) -> Map3DRealTrains.Laid {
         var laid = Map3DRealTrains.Laid()
         let margin = Map3DRealTrains.margin * Self.metre
@@ -990,7 +1034,12 @@ extension Map3DScene.Builder {
                         : height > Map3DRealTrains.embankmentHeight ? .embankment : .surface
                     // Decision 407: a railway's bridge over a river, its truss.
                     if viaduct == .railway, kinds[index] == .viaduct || kinds[index] == .embankment, isOverWater(rail) { kinds[index] = .bridge }
+                    // Decision 742: the way the real track runs here.
+                    let before = samples[max(index - 1, 0)], after = samples[min(index + 1, samples.count - 1)]
+                    let dx = Float((after.x - before.x) / Self.metre), dz = Float((after.y - before.y) / Self.metre)
                     shown[index] = !inTunnel && !player.isNear(rail, within: Map3DRealTrains.overlap)
+                        && !player.runsAlong(rail, dx: dx, dz: dz, within: Map3DRealTrains.corridor)
+                        && !platforms.runsAlong(rail, dx: dx, dz: dz, within: Map3DRealTrains.stationCorridor)
                         && !(siteBought?.isNear(rail, within: Map3DRealTrains.playerClearance) ?? false)
                 }
                 for index in range.dropFirst() {

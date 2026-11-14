@@ -540,9 +540,15 @@
 ///     drop the taxes owed and refuse the rows and the whole save with
 ///     them, so it says the save is newer than it instead. A save of any
 ///     earlier version needs no step: it owes no house or land tax.
+/// 101. A leg's list of platforms (decision 740): a line's route
+///     preference can have `"alternates"`, the platforms of its station to
+///     try after its `"platform"`. A build that reads only an earlier
+///     version would drop the list and send the leg's trains to any
+///     platform, so it says the save is newer than it instead. A save of
+///     any earlier version needs no step: each leg names one platform.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 100
+    public static let currentVersion = 101
 
     public let world: GameWorld
 
@@ -789,6 +795,8 @@ extension SavedGame: Codable {
         // Version 99 or earlier to 100: accounts without
         // `"houseTaxPayable"` and `"landTaxPayable"` owe no house or land
         // tax (decision 736): nothing to turn.
+        // Version 100 or earlier to 101: a route preference without
+        // `"alternates"` names one platform (decision 740): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

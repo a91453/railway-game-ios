@@ -160,42 +160,63 @@ final class Map3DRealTracksTests: XCTestCase {
         XCTAssertFalse(frame.boxes.vertices.isEmpty)
     }
 
-    /// Only the real track the player's lies on is left out: the other of
-    /// a double line, 4.2 m beside, is laid, and a train shows on it.
-    func testOnlyTheTrackUnderThePlayersIsLeftOut() throws {
+    /// Decision 742 (amending 402): the player's track stands for the real
+    /// line's whole corridor. The real line's other track, 4.2 m beside,
+    /// is left out too, and no train shows on it; a real track 20 m
+    /// beside is laid, unless it runs beside one of the player's
+    /// platforms (32 m); a real track crossing the player's is laid but
+    /// where it lies on it.
+    func testThePlayersTrackClearsTheRealLinesCorridor() throws {
         let latitude = 25.0478, longitude = 121.5170
         let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude)))
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let origin = frame.worldPosition(latitude: latitude, longitude: longitude)
-        var builder = Map3DScene.Builder(originX: origin.x, originY: origin.y,
-                                         region: WorldRegion(minX: origin.x - 2_000 * metre, minY: origin.y - 2_000 * metre,
-                                                             maxX: origin.x + 2_000 * metre, maxY: origin.y + 2_000 * metre),
-                                         world: world)
-        // Two tracks 400 m long east to west, 4.2 m apart (38 millionths
-        // of a degree of latitude), on the ground.
+        func builder() -> Map3DScene.Builder {
+            Map3DScene.Builder(originX: origin.x, originY: origin.y,
+                               region: WorldRegion(minX: origin.x - 2_000 * metre, minY: origin.y - 2_000 * metre,
+                                                   maxX: origin.x + 2_000 * metre, maxY: origin.y + 2_000 * metre),
+                               world: world)
+        }
+        // Tracks 400 m long east to west: the player's, one 4.2 m beside
+        // (38 millionths of a degree of latitude), one 20 m beside (181),
+        // and one north to south across them; on the ground.
         let (lon, lat) = (Int(longitude * 1e6) - 2_000, Int(latitude * 1e6))
         let json = #"{"systems":["tra_sched"],"ways":[{"system":0,"kind":"s","points":[\#(lon),\#(lat),0,4000,0,0]},"#
-            + #"{"system":0,"kind":"s","points":[\#(lon),\#(lat - 38),0,4000,0,0]}]}"#
+            + #"{"system":0,"kind":"s","points":[\#(lon),\#(lat - 38),0,4000,0,0]},"#
+            + #"{"system":0,"kind":"s","points":[\#(lon),\#(lat - 181),0,4000,0,0]},"#
+            + #"{"system":0,"kind":"s","points":[\#(lon + 2_000),\#(lat + 1_800),0,0,-3600,0]}]}"#
         let tracks = try RealRailTracks(data: Data(json.utf8))
-        // The player's track on the first.
+        var plain = builder()
         let first = tracks.tracks[0].points.map { coordinate in
             let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
-            return builder.point(x: at.x, y: at.y, height: 0)
+            return plain.point(x: at.x, y: at.y, height: 0)
         }
-        let laid = builder.realTracks(tracks, systems: ["tra_sched"], frame: frame, clearOf: Map3DRealTrains.PlayerTrack([first]))
+        let laid = plain.realTracks(tracks, systems: ["tra_sched"], frame: frame, clearOf: Map3DRealTrains.PlayerTrack([first]))
         let segments = try XCTUnwrap(laid.segments["tra_sched"]).values.flatMap { $0 }
-        XCTAssertTrue(segments.filter { $0.track == 0 }.allSatisfy { !$0.shown }, "under the player's")
-        XCTAssertFalse(segments.filter { $0.track == 1 }.isEmpty)
-        XCTAssertTrue(segments.filter { $0.track == 1 }.allSatisfy(\.shown), "beside it")
-        XCTAssertFalse(builder.meshes.isEmpty)
-        // A train going east (along +x) keeps left: on the first track,
-        // north of the second (the scene's z is south).
+        func of(_ track: Int) -> [Map3DRealTrains.Laid.Segment] { segments.filter { $0.track == track } }
+        XCTAssertTrue(of(0).allSatisfy { !$0.shown }, "under the player's")
+        XCTAssertFalse(of(1).isEmpty)
+        XCTAssertTrue(of(1).allSatisfy { !$0.shown }, "the real line's other track, beside it")
+        XCTAssertTrue(of(2).allSatisfy(\.shown), "20 m beside")
+        // Across: laid but where it lies on the player's (its samples are
+        // 8 m apart, so one may not fall within 3.4 m of it).
+        XCTAssertFalse(of(3).isEmpty)
+        XCTAssertTrue(of(3).filter { abs($0.a.z) > 10 && abs($0.b.z) > 10 }.allSatisfy(\.shown), "across, away from it")
+        XCTAssertFalse(plain.meshes.isEmpty)
+        // No real train shows on either track of the player's corridor.
         let middle = Map3DPoint(0, 0, 2)
         let lanes = try XCTUnwrap(laid.lanes(at: middle, along: Map3DPoint(1, 0, 0), system: "tra_sched"))
-        XCTAssertLessThan(lanes[0].point.z, lanes[1].point.z, "east on the north track")
-        XCTAssertFalse(lanes[0].shown, "the player's")
-        XCTAssertTrue(lanes[1].shown)
+        XCTAssertFalse(lanes[0].shown)
+        XCTAssertFalse(lanes[1].shown)
+
+        // Beside a platform of the player's, the track 20 m away is left
+        // out too.
+        var station = builder()
+        let platformed = station.realTracks(tracks, systems: ["tra_sched"], frame: frame, clearOf: Map3DRealTrains.PlayerTrack([first]),
+                                            platforms: Map3DRealTrains.PlayerTrack([first]))
+        let wide = try XCTUnwrap(platformed.segments["tra_sched"]).values.flatMap { $0 }
+        XCTAssertTrue(wide.filter { $0.track == 2 }.allSatisfy { !$0.shown }, "20 m beside the player's platform")
     }
 
     /// A builder round Taipei Main Station, 2 km either way, and its frame.
