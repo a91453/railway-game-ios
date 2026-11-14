@@ -213,39 +213,52 @@ final class TrainTripLogTests: XCTestCase {
 
     /// Riders credited to a train's running trip find it without walking
     /// the log: on a log of 20,000 trips of other trains, crediting takes
-    /// about as long as on a short one (the log is ordered by train).
-    /// Decision 545 (L5-1): the first credit copies the log (copy on
-    /// write), once, so it is made before the clock starts; and enough
-    /// credits are timed to last tens of milliseconds with GameCore
-    /// optimized, so the 10 ms allowance does not decide the comparison.
+    /// about as long as on one of 2,000 (the log is ordered by train and
+    /// searched by halves, about 15 steps against 11; walking it would be
+    /// ten times as long). Decision 545 (L5-1): the first credit copies
+    /// the log (copy on write), once, so it is made before the clock
+    /// starts; and enough credits are timed to last tens of milliseconds
+    /// with GameCore optimized, so the 10 ms allowance does not decide the
+    /// comparison. Decision 752: compared with a short log of a few trips,
+    /// the search's own steps made the long one 5 to 15 times as slow
+    /// (rest-2, red in run 43573602825 at 14.6 times, and twice in three
+    /// runs on #2190), so the two logs are both long now, and each is
+    /// timed three times, the fastest kept.
     func testCreditingATripDoesNotWalkTheLog() throws {
         var world = try build()
         let one = TrainID(rawValue: 1)
         while world.trips(of: one).last?.isRunning != true {
             try world.advance(ticks: 1)
         }
-        var padded = world
         let template = try XCTUnwrap(world.trips(of: one).last)
-        for train in 1_000..<21_000 {
-            var trip = TrainTrip(
-                train: TrainID(rawValue: train), line: template.line, from: template.from, to: template.to,
-                scheduledDeparture: template.scheduledDeparture, scheduledArrival: template.scheduledArrival,
-                isDeadhead: false, calls: template.calls
-            )
-            trip.arrival = template.calls[0].arrival
-            padded.tripLog.append(trip)
+        func padded(with count: Int) -> GameWorld {
+            var padded = world
+            for train in 1_000..<(1_000 + count) {
+                var trip = TrainTrip(
+                    train: TrainID(rawValue: train), line: template.line, from: template.from, to: template.to,
+                    scheduledDeparture: template.scheduledDeparture, scheduledArrival: template.scheduledArrival,
+                    isDeadhead: false, calls: template.calls
+                )
+                trip.arrival = template.calls[0].arrival
+                padded.tripLog.append(trip)
+            }
+            return padded
         }
         func seconds(_ world: GameWorld) -> Double {
-            var world = world
-            world.creditTrip(of: one, fare: Money(100), boarded: 1)
-            let start = Date()
-            for _ in 0..<400_000 {
+            var fastest = Double.infinity
+            for _ in 0..<3 {
+                var world = world
                 world.creditTrip(of: one, fare: Money(100), boarded: 1)
+                let start = Date()
+                for _ in 0..<400_000 {
+                    world.creditTrip(of: one, fare: Money(100), boarded: 1)
+                }
+                fastest = min(fastest, Date().timeIntervalSince(start))
             }
-            return Date().timeIntervalSince(start)
+            return fastest
         }
-        let short = seconds(world), long = seconds(padded)
-        XCTAssertLessThan(long, short * 5 + 0.01, "short \(short) s, long \(long) s")
+        let short = seconds(padded(with: 2_000)), long = seconds(padded(with: 20_000))
+        XCTAssertLessThan(long, short * 4 + 0.01, "2,000 others \(short) s, 20,000 others \(long) s")
     }
 
     /// A log that breaks its rules is refused: out of order, two trips of
