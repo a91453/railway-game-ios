@@ -2751,7 +2751,7 @@
   | --- | --- | --- |
   | #1219（session_016rkfLSmFLTJKBXhegJeXfx） | iCloud 存檔看得到有沒有同步：狀態列、每份存檔標示、「立即同步」（決策 397 續 2） | 獨立審查（#1219 留言 6392984109）沒有擋合併的問題。但這個 PR 就是要顯示有沒有同步，所以已請原 session 先修兩條「建議修」：(1) 讀不到上傳狀態時 `?? true` 會把還沒上傳的顯示成「已同步」，改成 `?? false`；(2) 另一台較新版本的存檔還沒搬進來時，不要說「等待上傳」，分成自己一種狀態。「可不修」記進 397 的「下一步」。修好、綠了、留「可合併」就照 §1.2 合、封存，再告訴作者用 `docs/ICLOUD_SAVE_SETUP.md` 第 5 步在兩台裝置上試。作者說「改善這裡就好了」：只改顯示，**不改同步什麼時候跑**；PR 提的 NSMetadataQuery 改法是給作者選的後續，不先做 |
   | #1220（10i-2 公車接駁，存檔 73） | 公車接駁進 GameCore | draft。獨立審查（session_01TYmxCHzCq3RuUbc9CoETBL，#1220 留言 6392952447）有 **1 條擋合併**：公車路線很長時（例如兩段各 200 km、一天一班），`feederMinutes` 超過 1440，`BusRoute.isValid` 卻要 ≤ 1440。結果指令照樣成功、存檔也寫得出去，但讀檔被拒，玩家等於掉存檔。修法：`refreshBusFeeders` 把分鐘夾到一天（或放寬 `isValid`），補一個最長路線存了再讀的測試。建議一起修：`nextBusRouteID` 要照其他計數器走 `allocateID`／`idsExhausted`，並檢查 ≥ 1。新任派一個 session 修這兩項，綠了再合。平衡 CONCERNS：實景地圖一條公車線讓車站旅次多 19–51%（目標 5–25%），空白地圖只多 0.04%、公車一天虧約 $5,880。綠且審查沒有阻擋就 ready、合併，再派公車平衡調整；**調好之前提醒作者先別發版**。10j-2 和它都改 LineAcquisition／acquisitions，等它合併才派；10d（存檔 74）也在它之後 |
-  | #1217（session_01Bbe7HnLfcUGdoE2VRgZgoU，決策 408） | 高鐵 700T 與 N700S-G 各跑一半、E200 換新車頭 | PR 寫著「先別合併」：等作者看過 N700S-G 預覽說好。作者選的是「作者自己的模型減到每節約 5k 三角形＋遊戲配色」；**作者的原始 GLB 和私人庫的完整 N700S-G 網格不能進公開 repo，任何 branch 都不行**。重做步驟與照片檢查點在這個 PR 的 HANDOFF §7.3（合併後才在 main） |
+  | #1217（session_01Bbe7HnLfcUGdoE2VRgZgoU，決策 408） | 高鐵 700T 與 N700S-G 各跑一半、E200 換新車頭 | PR 寫著「先別合併」：等作者看過 N700S-G 預覽說好。作者選的是「作者自己的模型減到每節約 5k 三角形＋遊戲配色」；**作者自己的原始 GLB 與完整 N700S-G 網格留在作者的私人素材庫（railway-assets-private），公開 repo 只放減面後的遊戲版**。重做步驟與照片檢查點在這個 PR 的 HANDOFF §7.3（合併後才在 main） |
   | #1218（session_01RarzebNWdkEundHGJDzTBf，決策 409） | 10k 分享路網：自己的檔案類型、明信片預覽、開新局或只看 | 碰檔案類型與匯入（存檔讀取），合併前開獨立審查 |
   | session_01NLyU4ovZGrFRoFpC1iA1Fx | 決策 401「下一步」(b) 的示範鋪軌 bug：平行鏈失敗時默默退成單線、`traceMinimumRadius` 40 m 弄斷文湖線與環狀輕軌、停站段跳過中間的軌道 | 還沒開 PR；「可合併」且綠就合 |
 - **#1217 合併後派決策 410**（作者 10-25：「等等我看過後 你照 700T 與n700sg升級現有的列車建模 要結合兩者有點 然後現有建模只取好的部分 太差都可以刪除」）：照 700T 與 N700S-G 的做法升級現有的程序列車模型，取兩者的長處；現有模型只留好的部分，太差的可以刪掉重做，但每種營運中的車種都要有模型。`refresh-*` 的 checksum 不變；中間車 ≤ 2k、車頭 ≤ 4k 三角形；每一項附前後對照。
@@ -3059,7 +3059,7 @@
 **素材放哪裡（2026-10-28，派工單 AZ，作者：「建好了 railway-assets-private」）**：私庫 `a91453/railway-reference-private` 約 3.6 GB（GitHub 建議 1 GB 以下），作者另開了私有的 `a91453/railway-assets-private` 放大的二進位素材。
 - 放新庫：遊戲不讀的預覽圖與完整素材包（原 `Railway/game-art-previews/`，路徑改成新庫的 `game-art-previews/docs/art/`）、Meshy 批次（`meshy-batch-2026-10/`）、產出的模型包。搬完後作者點頭刪了舊庫的那些檔案（私庫 #113，留下 `Railway/ASSETS_MOVED_2026-10-28.md` 寫新位置），舊文件寫的 `Railway/game-art-previews/...` 要改到新庫的同名路徑讀；新的一律放新庫。
 - 留舊庫：參考網站原始碼與資料快照（CLAUDE.md 列的那些）。
-- 新庫規則：每個外部素材資料夾附自己的授權與來源檔；Quaternius、Polyfork 的檔案不得公開轉載；Meshy 照它的條款；單檔不超過 100 MB；沒有授權檔。細節見新庫的 README。
+- 新庫規則：庫裡的素材是作者自己的作品（作者舊版的內容與為這個遊戲做的東西），每個資料夾附來源檔（怎麼做的、日期、版本）；之後若從外部下載檔案，才另附它自己的授權；Meshy 照它的條款；單檔不超過 100 MB；沒有授權檔。細節見新庫的 README。
 - 新庫的防護（新庫 #7、#9）：`AGENTS.md` 的 8 條規則（Codex 與 Claude 都讀）、`tools/asset_guard.py` 與 `.github/workflows/asset-guard.yml`（PR 時檢查單檔大小、`history/`、整包 ZIP、被取代輪次留下的模型；只用標準函式庫、不 checkout，一次約 1 分鐘的私庫 Actions 額度）。新庫 #8、#10 刪了 `history/` 與重複的 ZIP（含 TEMU1000、TEMU2000 的 `asset-package.zip`）；內容還在 git 歷史裡，歷史先不清（作者 10-28）。
 - 發佈板（Releases）的 vehicle-source-pack-2nd、vehicle-source-pack-3rd、Tai 不動（作者：「發佈板那邊的都不動」）；Release 檔不算進 repository 大小。
 - 不改寫歷史、不 force-push：刪檔不會縮小舊庫在 GitHub 上的大小，只讓 session 的淺層 clone 變小。
