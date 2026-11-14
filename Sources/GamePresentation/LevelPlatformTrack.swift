@@ -494,12 +494,11 @@ extension PlatformLevellingPreview {
         )
     }
 
-    /// The short line over the map's ✓: "Levels 64 m · 7‰".
-    public func caption(in language: DisplayLanguage) -> String {
-        let length = NetworkBuilding.lengthText(length, in: language)
-        guard cost != nil else {
-            return language.text("Climbs \(grade)‰: cannot be levelled", "坡度 \(grade)‰：無法整平")
-        }
-        return language.text("Climbs \(grade)‰: levels \(length)", "坡度 \(grade)‰：整平 \(length)")
+    /// The short line over the map's ✓ where the stretch cannot be
+    /// levelled; `nil` where it can (decision 745: levelling is done
+    /// without a word, its price in the ✓'s).
+    public func caption(in language: DisplayLanguage) -> String? {
+        guard cost == nil else { return nil }
+        return language.text("Climbs \(grade)‰: cannot be levelled", "坡度 \(grade)‰：無法整平")
     }
 }

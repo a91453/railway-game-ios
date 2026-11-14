@@ -155,8 +155,8 @@ final class TerrainPresentationTests: XCTestCase {
 
     /// The ends' ground 3.75 m apart, more than the 2 m the track may stand
     /// off it level: the stretch climbs as before (11.25 m to 15 m, 720 to
-    /// 960), eased at both ends. Decision 190: the platform tool says the
-    /// grade and that ✓ levels it; ✓ lays the edge again as three, the
+    /// 960), eased at both ends. Decision 190: ✓ levels it (decision 745:
+    /// without a word of the grade); ✓ lays the edge again as three, the
     /// middle one level under the platform, for the new edges' price, and
     /// one undo takes it all back.
     func testAPlatformOnAGradeLevelsItsStretch() throws {
@@ -164,7 +164,7 @@ final class TerrainPresentationTests: XCTestCase {
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertEqual([preview.startHeight, preview.endHeight], [720, 960])
         XCTAssertEqual(preview.profile, TrackProfile(startTransition: 4_096, endTransition: 4_096))
-        XCTAssertTrue(preview.text(in: .english).hasSuffix(" · on a grade: a platform here is levelled first"), preview.text(in: .english))
+        XCTAssertFalse(preview.text(in: .english).contains("grade"), preview.text(in: .english))
         session.buildNetworkTrack()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         let built = session.world
@@ -179,16 +179,13 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(levelling.length, stretch.end - stretch.start)
         let cost = try XCTUnwrap(levelling.cost)
         let metres = NetworkBuilding.lengthText(levelling.length, in: .english)
-        XCTAssertTrue(
-            session.networkDraftText().hasSuffix(" · climbs 20‰: ✓ levels these \(metres) (relaying the track \(cost.moneyText))"),
-            session.networkDraftText()
-        )
+        XCTAssertEqual(session.networkDraftText(), "\(metres) platform here", "decision 745: the grade is not said")
+        XCTAssertNil(levelling.caption(in: .english))
         let height = try XCTUnwrap(built.trackGeometry(of: stretch.edge)?.height(at: (stretch.start + stretch.end) / 2))
 
         session.addNetworkPlatform()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
-        XCTAssertTrue(session.message?.text.contains(" Levelled \(metres) of track for it, for \(cost.moneyText).") == true,
-                      session.message?.text ?? "")
+        XCTAssertFalse(session.message?.text.contains("Levelled") == true, session.message?.text ?? "")
         let world = session.world
         XCTAssertNil(world.network.edge(stretch.edge), "the old edge is gone")
         XCTAssertEqual(world.network.edges.count, 3)
@@ -408,8 +405,9 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(tool.world, built, "one undo takes it all back")
     }
 
-    /// The same, in Chinese.
-    func testThePlatformToolSaysItLevelsInChinese() throws {
+    /// The same, in Chinese: the station tool says nothing of the grade
+    /// it levels (decision 745).
+    func testThePlatformToolLevelsWithoutAWordInChinese() throws {
         let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
         session.buildNetworkTrack()
         let chinese = GameSession(world: session.world, language: .traditionalChinese)
@@ -417,16 +415,14 @@ final class TerrainPresentationTests: XCTestCase {
         chinese.setNetworkMode(.platform)
         chinese.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
         let levelling = try XCTUnwrap(chinese.networkPlatformLevelling)
-        let cost = try XCTUnwrap(levelling.cost)
+        XCTAssertNotNil(levelling.cost)
         let metres = NetworkBuilding.lengthText(levelling.length, in: .traditionalChinese)
-        XCTAssertTrue(
-            chinese.networkDraftText().hasSuffix(" · 坡度 20‰：按 ✓ 會把這 \(metres)整平（重鋪這段軌道 \(cost.moneyText)）"),
-            chinese.networkDraftText()
-        )
-        XCTAssertEqual(levelling.caption(in: .traditionalChinese), "坡度 20‰：整平 \(metres)")
+        XCTAssertEqual(chinese.networkDraftText(), "在這裡設 \(metres) 的月台")
+        XCTAssertNil(levelling.caption(in: .traditionalChinese))
         chinese.addNetworkPlatform()
         XCTAssertEqual(chinese.message?.kind, .success, chinese.message?.text ?? "")
-        XCTAssertTrue(chinese.message?.text.contains("已為月台整平 \(metres) 軌道，花費 \(cost.moneyText)。") == true, chinese.message?.text ?? "")
+        XCTAssertFalse(chinese.message?.text.contains("坡度") == true, chinese.message?.text ?? "")
+        XCTAssertFalse(chinese.message?.text.contains("整平") == true, chinese.message?.text ?? "")
     }
 
     /// A curve on the grade is cut by de Casteljau's rule: three curves

@@ -754,18 +754,18 @@ extension GameSession {
         let alsoBeside = addition.beside == nil || layout.isLaidByLayout
             ? "" : besidePlatformText() + stationCrossoverText(addition.crossovers.count, built: true)
         /// What the tool says it did.
-        func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), levelled: String, in world: GameWorld) -> String {
+        func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
             let laid = layout.isLaidByLayout ? stationLayoutText(layout) : ""
             return chosen == nil
                 ? language.text(
                     "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
-                ) + laid + levelled + alsoBeside + openingReach(of: station, in: world)
+                ) + laid + alsoBeside + openingReach(of: station, in: world)
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
-                ) + laid + levelled + alsoBeside
+                ) + laid + alsoBeside
         }
         // Decision 193: a command the log keeps, levelling and all.
         // Decision 507: with the tracks the layout lays round it, as one.
@@ -784,15 +784,9 @@ extension GameSession {
         do throws(GameError) {
             let outcome = try performCommand(command)
             let done = outcome.stretch ?? stretch
-            var levelled = ""
-            if let cost = outcome.levellingCost {
-                let length = NetworkBuilding.lengthText(done.end - done.start, in: language)
-                levelled = language.text(
-                    " Levelled \(length) of track for it, for \(cost.moneyText).",
-                    "已為月台整平 \(length) 軌道，花費 \(cost.moneyText)。"
-                )
-            }
-            message = StatusMessage(kind: .success, text: outcome.station.map { text($0, on: done, levelled: levelled, in: world) } ?? "")
+            // Decision 742: levelling is not reported (decision 190 said
+            // how much was levelled, for what); the ✓ showed the whole price.
+            message = StatusMessage(kind: .success, text: outcome.station.map { text($0, on: done, in: world) } ?? "")
             endFollowIfGone()
             added = true
             if chosen == nil { built = outcome.station?.id }
@@ -1248,13 +1242,13 @@ extension GameSession {
                 ? language.text("\(length) platform here", "在這裡設 \(length) 的月台")
                 : language.text("\(length) platform here, on both tracks", "在這裡設 \(length) 的月台（兩條軌道）")
                     + stationCrossoverText(networkPlatformCrossoverCount, built: false)
-            // Decision 164: a grade says so before the tap on ✓; decision
-            // 190: and that ✓ levels it, for what.
-            guard let levelling = networkPlatformLevelling else { return place }
-            // Decision 510: where it cannot be levelled, what to do instead,
-            // here only (the banner says only that it cannot).
-            let instead = levelling.problem == nil ? "" : " " + platformShortStretchText
-            return place + " · " + levelling.text(in: language) + instead
+            // Decision 742: a stretch that can be levelled is levelled
+            // without a word (decision 190), its price in the ✓'s; only
+            // where it cannot be is the grade said, with what to do
+            // instead (decision 510: here only, the banner says only that
+            // it cannot).
+            guard let levelling = networkPlatformLevelling, levelling.problem != nil else { return place }
+            return place + " · " + levelling.text(in: language) + " " + platformShortStretchText
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
@@ -1329,14 +1323,6 @@ extension NetworkPreview {
         }
         if let cost {
             parts.append(cost.moneyText)
-        }
-        // Decision 190: a grade takes no platform as it is; the platform
-        // tool levels it.
-        if startHeight != endHeight {
-            parts.append(language.text(
-                "on a grade: a platform here is levelled first",
-                "有坡度：在這裡設月台時會先整平"
-            ))
         }
         return parts.joined(separator: " · ")
     }
