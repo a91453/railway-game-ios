@@ -115,22 +115,40 @@ final class Map3DOverheadLineTests: XCTestCase {
         XCTAssertTrue(wires(three.closeMeshes).contains { abs($0.z) < 0.5 }, "it still has its wires")
     }
 
-    func testAMastStandsClearOfAPlatformOrOnItsMiddleWhenItMust() {
+    func testAMastStandsClearOfAPlatformOrAtItsBackWhenItMust() {
         var clear = builder(platforms: [3.2])
         clear.addOverheadLine()
         XCTAssertTrue(mastTops(clear.closeMeshes).allSatisfy { $0.z < 0 }, "on the side with no platform")
-        // Another track on that side: on the platform's middle, standing
-        // on it.
+        // Another track on that side: on the platform, at its back
+        // (Chien 2026-11-14: in its middle it stood in the passengers'
+        // way), standing on it.
         var boxed = builder(tracks: [0, -4.5], platforms: [3.2])
         boxed.addOverheadLine()
         let onPlatform = mastTops(boxed.closeMeshes).filter { $0.z > 0 }
         XCTAssertFalse(onPlatform.isEmpty)
-        XCTAssertTrue(onPlatform.allSatisfy { abs($0.z - 3.2) < 0.01 })
+        XCTAssertTrue(onPlatform.allSatisfy { abs($0.z - (3.2 + 1.6 - Builder.mastFenceInset)) < 0.01 })
         // The footings' tops (their sides are shaded), a quarter of a metre
         // above the platform.
         let footings = boxed.closeMeshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.concrete && $0.z > 2 }
         XCTAssertFalse(footings.isEmpty)
         XCTAssertTrue(footings.allSatisfy { abs($0.y - (Map3DScene.railLift + Builder.platformHeight + 0.25)) < 0.01 })
+    }
+
+    /// Decision 741: an island's two tracks (11 m apart, other track
+    /// outside both) share one mast on its middle line, not one each in
+    /// its halves.
+    func testAnIslandsTwoTracksShareOneMastOnItsMiddle() {
+        var island = builder(tracks: [-4.5, 0, 11, 15.5])
+        let half: Float = 5.5 - 1.6
+        island.laidPlatforms = [
+            Builder.LaidPlatform(station: StationID(rawValue: 1), line: line(0), offset: 1.6 + half / 2, width: half, structure: .surface, island: true),
+            Builder.LaidPlatform(station: StationID(rawValue: 1), line: line(11), offset: -(1.6 + half / 2), width: half, structure: .surface, island: true),
+        ]
+        island.addOverheadLine()
+        let onIsland = mastTops(island.closeMeshes).filter { $0.z > 1 && $0.z < 10 }
+        XCTAssertFalse(onIsland.isEmpty)
+        XCTAssertTrue(onIsland.allSatisfy { abs($0.z - 5.5) < 0.01 }, "on the island's middle line")
+        XCTAssertEqual(onIsland.count, Builder.wireSupports(Map3DStreetLife.Path(line(0))!).count, "one mast for both tracks")
     }
 
     /// Decision 395: in a tunnel, no mast; the wires hang from brackets

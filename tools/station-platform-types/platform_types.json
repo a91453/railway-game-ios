@@ -1,0 +1,5564 @@
+{
+ "source": "© OpenStreetMap contributors, ODbL 1.0 (osmtoday.com asia/taiwan.pbf)",
+ "stations": [
+  {
+   "system": "tra_sched",
+   "station": "基隆",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525611054,
+     "name": "第二月台",
+     "side": -4.9,
+     "kind": "island"
+    },
+    {
+     "way": 525611064,
+     "name": "第一月台",
+     "side": 8.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "三坑",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525611052,
+     "name": "第一月台",
+     "side": -4.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "八堵",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525611049,
+     "name": "第三月台",
+     "side": -16.2,
+     "kind": "island"
+    },
+    {
+     "way": 525611046,
+     "name": "第二月台",
+     "side": 1.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "七堵",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 13,
+   "islands": 4,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525611031,
+     "name": "第一月台",
+     "side": -9.0,
+     "kind": "island"
+    },
+    {
+     "way": 525611033,
+     "name": "第二月台",
+     "side": 6.0,
+     "kind": "island"
+    },
+    {
+     "way": 525611036,
+     "name": "第三月台",
+     "side": 20.2,
+     "kind": "island"
+    },
+    {
+     "way": 525611039,
+     "name": "第四月台",
+     "side": 33.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "百福",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 525611021,
+     "name": "第二月台",
+     "side": 3.6,
+     "kind": "island"
+    },
+    {
+     "way": 525611018,
+     "name": "第一月台",
+     "side": 15.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "五堵",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 525611015,
+     "name": "第二月台",
+     "side": -15.3,
+     "kind": "island"
+    },
+    {
+     "way": 525611013,
+     "name": "第一月台",
+     "side": -1.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "汐止",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 525150499,
+     "name": "第二月台",
+     "side": -25.6,
+     "kind": "island"
+    },
+    {
+     "way": 525150498,
+     "name": "第一月台",
+     "side": -15.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "汐科",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 3,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 194492531,
+     "name": "第一月台",
+     "side": -8.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南港",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 6,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 706686411,
+     "name": null,
+     "side": -44.2,
+     "kind": "side"
+    },
+    {
+     "way": 706686410,
+     "name": null,
+     "side": -25.0,
+     "kind": "island"
+    },
+    {
+     "way": 710690883,
+     "name": null,
+     "side": -7.0,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "松山",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 574543353,
+     "name": "1月台",
+     "side": -9.7,
+     "kind": "island"
+    },
+    {
+     "way": 574543351,
+     "name": "2月台",
+     "side": 7.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "臺北",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 741259905,
+     "name": null,
+     "side": -21.7,
+     "kind": "side"
+    },
+    {
+     "way": 584167413,
+     "name": "3月台 (臺鐵)",
+     "side": -9.7,
+     "kind": "island"
+    },
+    {
+     "way": 584167415,
+     "name": "4月台 (臺鐵)",
+     "side": 5.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "萬華",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 978708478,
+     "name": null,
+     "side": -3.0,
+     "kind": "island"
+    },
+    {
+     "way": 978708479,
+     "name": null,
+     "side": 12.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "板橋",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 2,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 1168339046,
+     "name": null,
+     "side": -13.2,
+     "kind": "island"
+    },
+    {
+     "way": 1168339045,
+     "name": null,
+     "side": 14.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "浮洲",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525149328,
+     "name": null,
+     "side": -5.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "樹林",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 235771914,
+     "name": "第三月台",
+     "side": -28.7,
+     "kind": "side"
+    },
+    {
+     "way": 235771913,
+     "name": "第二月台",
+     "side": -7.6,
+     "kind": "island"
+    },
+    {
+     "way": 235771912,
+     "name": "第一月台",
+     "side": 7.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南樹林",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 13,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 573397165,
+     "name": "員工專用月台",
+     "side": -62.1,
+     "kind": "island"
+    },
+    {
+     "way": 600024066,
+     "name": "南樹林火車站",
+     "side": -5.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "山佳",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 235968759,
+     "name": "第一月台",
+     "side": -9.8,
+     "kind": "side"
+    },
+    {
+     "way": 235968760,
+     "name": "第二月台",
+     "side": 1.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鶯歌",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 8,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 1339023902,
+     "name": null,
+     "side": -12.8,
+     "kind": "side"
+    },
+    {
+     "way": 300628436,
+     "name": "第一月台",
+     "side": -4.0,
+     "kind": "island"
+    },
+    {
+     "way": 300628437,
+     "name": "第二月台",
+     "side": 7.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鳳鳴",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1318465793,
+     "name": "北上月台",
+     "side": -9.5,
+     "kind": "side"
+    },
+    {
+     "way": 1318465792,
+     "name": "南下月台",
+     "side": 2.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "桃園",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 3,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 525149326,
+     "name": "第二月台",
+     "side": -5.4,
+     "kind": "side"
+    },
+    {
+     "way": 525149325,
+     "name": "第一月台",
+     "side": 8.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "內壢",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 525149323,
+     "name": "第三月台",
+     "side": -6.2,
+     "kind": "island"
+    },
+    {
+     "way": 525149322,
+     "name": "第二月台",
+     "side": 2.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "中壢",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 463253862,
+     "name": "第二月台",
+     "side": -8.3,
+     "kind": "island"
+    },
+    {
+     "way": 525149319,
+     "name": "第一月台",
+     "side": 4.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "平鎮",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1564588090,
+     "name": null,
+     "side": 5.4,
+     "kind": "side"
+    },
+    {
+     "way": 1564588091,
+     "name": null,
+     "side": 16.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "埔心",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525130710,
+     "name": "第二月台",
+     "side": -7.6,
+     "kind": "island"
+    },
+    {
+     "way": 525130711,
+     "name": "第一月台",
+     "side": 4.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "楊梅",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525130707,
+     "name": "第一月台",
+     "side": -2.7,
+     "kind": "island"
+    },
+    {
+     "way": 525130706,
+     "name": "第二月台",
+     "side": 8.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "富岡",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525130704,
+     "name": "第一月台",
+     "side": -7.1,
+     "kind": "island"
+    },
+    {
+     "way": 525130705,
+     "name": "第二月台",
+     "side": 3.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新富",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 327754346,
+     "name": null,
+     "side": -8.7,
+     "kind": "side"
+    },
+    {
+     "way": 327754345,
+     "name": null,
+     "side": 2.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "北湖",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 327754347,
+     "name": "第二月台",
+     "side": -8.7,
+     "kind": "island"
+    },
+    {
+     "way": 327754348,
+     "name": null,
+     "side": 4.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "湖口",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 327755053,
+     "name": "第二月台",
+     "side": -7.9,
+     "kind": "island"
+    },
+    {
+     "way": 327755058,
+     "name": "第一月台",
+     "side": 5.0,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新豐",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 321444835,
+     "name": "第一月台",
+     "side": -6.0,
+     "kind": "island"
+    },
+    {
+     "way": 321444834,
+     "name": "第二月台",
+     "side": 4.6,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "竹北",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 6,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 321443898,
+     "name": "第二月台",
+     "side": -7.7,
+     "kind": "island"
+    },
+    {
+     "way": 321443899,
+     "name": "第一月台",
+     "side": 3.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "北新竹",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 13,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 229997898,
+     "name": "第二月台",
+     "side": -21.1,
+     "kind": "island"
+    },
+    {
+     "way": 229997896,
+     "name": "第一月台",
+     "side": -8.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新竹",
+   "line": "縱貫線北段",
+   "type": "mixed",
+   "tracks": 7,
+   "islands": 1,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 323929015,
+     "name": "第一月台",
+     "side": -15.7,
+     "kind": "side"
+    },
+    {
+     "way": 230154949,
+     "name": "第二月台",
+     "side": 5.1,
+     "kind": "side"
+    },
+    {
+     "way": 230154950,
+     "name": "第三月台",
+     "side": 19.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "三姓橋",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 428129074,
+     "name": "第二月台",
+     "side": -8.8,
+     "kind": "side"
+    },
+    {
+     "way": 428129075,
+     "name": "第一月台",
+     "side": 4.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "香山",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 327756357,
+     "name": "第一月台",
+     "side": -8.0,
+     "kind": "island"
+    },
+    {
+     "way": 327756356,
+     "name": "第二月台",
+     "side": 3.6,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "崎頂",
+   "line": "縱貫線北段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 401195705,
+     "name": "第一月台",
+     "side": -13.9,
+     "kind": "side"
+    },
+    {
+     "way": 401195706,
+     "name": "第二月台",
+     "side": 2.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "竹南",
+   "line": "縱貫線北段",
+   "type": "island",
+   "tracks": 13,
+   "islands": 3,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 198600400,
+     "name": "第一月台",
+     "side": -16.9,
+     "kind": "island"
+    },
+    {
+     "way": 705413428,
+     "name": "第二月台",
+     "side": -3.4,
+     "kind": "island"
+    },
+    {
+     "way": 198599708,
+     "name": "第三月台",
+     "side": 9.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "造橋",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 205724733,
+     "name": "第1月台",
+     "side": -4.3,
+     "kind": "side"
+    },
+    {
+     "way": 205724732,
+     "name": "第2月台",
+     "side": 6.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "豐富",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 442392277,
+     "name": "第2月台",
+     "side": -5.4,
+     "kind": "side"
+    },
+    {
+     "way": 442392275,
+     "name": "第1月台",
+     "side": 6.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "苗栗",
+   "line": "山線",
+   "type": "mixed",
+   "tracks": 9,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 523680773,
+     "name": "第一月台",
+     "side": -8.8,
+     "kind": "side"
+    },
+    {
+     "way": 523680777,
+     "name": "第二月台",
+     "side": 9.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南勢",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 523680748,
+     "name": "第1月台",
+     "side": -2.8,
+     "kind": "side"
+    },
+    {
+     "way": 523680747,
+     "name": "第2月台",
+     "side": 9.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "銅鑼",
+   "line": "山線",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 523680743,
+     "name": "第二月台",
+     "side": -8.6,
+     "kind": "island"
+    },
+    {
+     "way": 523680745,
+     "name": "第一月台",
+     "side": 7.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "三義",
+   "line": "山線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 275433850,
+     "name": "第一月台",
+     "side": -8.6,
+     "kind": "island"
+    },
+    {
+     "way": 275433849,
+     "name": "第二月台",
+     "side": 3.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "泰安",
+   "line": "山線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 363409924,
+     "name": null,
+     "side": -5.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "后里",
+   "line": "山線",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 522890635,
+     "name": "第一月台",
+     "side": -8.6,
+     "kind": "island"
+    },
+    {
+     "way": 522890636,
+     "name": "第二月台",
+     "side": 4.4,
+     "kind": "island"
+    },
+    {
+     "way": 1228832642,
+     "name": null,
+     "side": 15.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "豐原",
+   "line": "山線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 442202086,
+     "name": "第二月台",
+     "side": -7.8,
+     "kind": "island"
+    },
+    {
+     "way": 442202087,
+     "name": "第一月台",
+     "side": 4.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "栗林",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1132696971,
+     "name": "第一月台",
+     "side": -3.7,
+     "kind": "side"
+    },
+    {
+     "way": 1132696972,
+     "name": "第二月台",
+     "side": 9.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "潭子",
+   "line": "山線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 442213940,
+     "name": "第一月台",
+     "side": -4.5,
+     "kind": "island"
+    },
+    {
+     "way": 442213938,
+     "name": "第二月台",
+     "side": 9.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "頭家厝",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1132697721,
+     "name": "第一月台",
+     "side": -2.8,
+     "kind": "side"
+    },
+    {
+     "way": 1132697720,
+     "name": "第二月台",
+     "side": 9.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "松竹",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 685613827,
+     "name": "第一月台",
+     "side": -3.8,
+     "kind": "side"
+    },
+    {
+     "way": 685613826,
+     "name": "第二月台",
+     "side": 12.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "太原",
+   "line": "山線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 442217778,
+     "name": "第一月台",
+     "side": -6.2,
+     "kind": "island"
+    },
+    {
+     "way": 442217777,
+     "name": "第二月台",
+     "side": 8.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "精武",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1168339017,
+     "name": null,
+     "side": -4.8,
+     "kind": "side"
+    },
+    {
+     "way": 1168339016,
+     "name": null,
+     "side": 9.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "臺中",
+   "line": "山線",
+   "type": "mixed",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 376398589,
+     "name": null,
+     "side": -29.2,
+     "kind": "side"
+    },
+    {
+     "way": 859127858,
+     "name": "3",
+     "side": -26.1,
+     "kind": "side"
+    },
+    {
+     "way": 859125004,
+     "name": "2A.2B",
+     "side": -10.7,
+     "kind": "island"
+    },
+    {
+     "way": 859125005,
+     "name": "1A.1B",
+     "side": 3.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "五權",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1168339018,
+     "name": null,
+     "side": -12.3,
+     "kind": "side"
+    },
+    {
+     "way": 1168339019,
+     "name": null,
+     "side": 5.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大慶",
+   "line": "山線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1168339020,
+     "name": null,
+     "side": -10.5,
+     "kind": "side"
+    },
+    {
+     "way": 1168339021,
+     "name": null,
+     "side": 4.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "烏日",
+   "line": "山線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 522823779,
+     "name": "烏日",
+     "side": 4.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新烏日",
+   "line": "山線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 522823776,
+     "name": "第一月台",
+     "side": -7.0,
+     "kind": "island"
+    },
+    {
+     "way": 522823777,
+     "name": "第二月台",
+     "side": 12.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "成功",
+   "line": "山線",
+   "type": "island",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 337350434,
+     "name": "第一月台",
+     "side": 3.8,
+     "kind": "island"
+    },
+    {
+     "way": 337350433,
+     "name": "第二月台",
+     "side": 16.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "彰化",
+   "line": "山線",
+   "type": "mixed",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 522823774,
+     "name": "第一月台",
+     "side": -4.0,
+     "kind": "side"
+    },
+    {
+     "way": 522823772,
+     "name": "第二月台",
+     "side": 4.2,
+     "kind": "island"
+    },
+    {
+     "way": 522823771,
+     "name": "第三月台",
+     "side": 16.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "談文",
+   "line": "海線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 198610185,
+     "name": "第1月台",
+     "side": 6.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大山",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 198612004,
+     "name": "第1月台",
+     "side": -4.1,
+     "kind": "side"
+    },
+    {
+     "way": 401195749,
+     "name": "第2月台",
+     "side": 6.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "後龍",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 401195745,
+     "name": "第1月台",
+     "side": -4.6,
+     "kind": "side"
+    },
+    {
+     "way": 401195747,
+     "name": "第2月台",
+     "side": 11.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "龍港",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 401195727,
+     "name": "第1月台",
+     "side": -7.4,
+     "kind": "side"
+    },
+    {
+     "way": 401195728,
+     "name": "第2月台",
+     "side": 8.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "白沙屯",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 275618221,
+     "name": "第1月台",
+     "side": -5.1,
+     "kind": "side"
+    },
+    {
+     "way": 275618222,
+     "name": "第2月台",
+     "side": 9.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新埔",
+   "line": "海線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 401195750,
+     "name": "第1月台",
+     "side": -7.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "通霄",
+   "line": "海線",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 583088484,
+     "name": "第2月台",
+     "side": -19.9,
+     "kind": "side"
+    },
+    {
+     "way": 583088485,
+     "name": "第1月台",
+     "side": -6.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "苑裡",
+   "line": "海線",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 211886418,
+     "name": "第2月台",
+     "side": -9.3,
+     "kind": "side"
+    },
+    {
+     "way": 211886417,
+     "name": "第1月台",
+     "side": 5.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "日南",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978188397,
+     "name": "第二月台",
+     "side": -7.5,
+     "kind": "side"
+    },
+    {
+     "way": 978188398,
+     "name": "第一月台",
+     "side": 5.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大甲",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 211870589,
+     "name": "第二月台",
+     "side": -2.7,
+     "kind": "side"
+    },
+    {
+     "way": 211870584,
+     "name": "第一月台",
+     "side": 10.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "臺中港",
+   "line": "海線",
+   "type": "mixed",
+   "tracks": 7,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 333749428,
+     "name": null,
+     "side": -10.0,
+     "kind": "island"
+    },
+    {
+     "way": 333749429,
+     "name": null,
+     "side": 3.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "清水",
+   "line": "海線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 334451766,
+     "name": null,
+     "side": -3.8,
+     "kind": "side"
+    },
+    {
+     "way": 334451765,
+     "name": null,
+     "side": 7.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "沙鹿",
+   "line": "海線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 338122991,
+     "name": null,
+     "side": -4.1,
+     "kind": "island"
+    },
+    {
+     "way": 338122989,
+     "name": null,
+     "side": 10.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "龍井",
+   "line": "海線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 338019669,
+     "name": null,
+     "side": -5.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大肚",
+   "line": "海線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 337598092,
+     "name": null,
+     "side": -7.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "追分",
+   "line": "海線",
+   "type": "island",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 337350411,
+     "name": null,
+     "side": -4.2,
+     "kind": "island"
+    },
+    {
+     "way": 337350410,
+     "name": null,
+     "side": 12.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "花壇",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 522823759,
+     "name": "第一月台",
+     "side": 4.9,
+     "kind": "island"
+    },
+    {
+     "way": 522823758,
+     "name": "第二月台",
+     "side": 17.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大村",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 522116132,
+     "name": "第一月台",
+     "side": -5.5,
+     "kind": "side"
+    },
+    {
+     "way": 522116133,
+     "name": "第二月台",
+     "side": 8.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "員林",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 310770437,
+     "name": "第一月台",
+     "side": -5.2,
+     "kind": "island"
+    },
+    {
+     "way": 310770436,
+     "name": "第二月台",
+     "side": 9.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "永靖",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 522116131,
+     "name": "第二月台",
+     "side": -3.8,
+     "kind": "side"
+    },
+    {
+     "way": 522116130,
+     "name": "第一月台",
+     "side": 8.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "社頭",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 5,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 522116128,
+     "name": "第一月台",
+     "side": -3.6,
+     "kind": "side"
+    },
+    {
+     "way": 522116129,
+     "name": "第二月台",
+     "side": 7.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "田中",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 522116123,
+     "name": "第二月台",
+     "side": -5.2,
+     "kind": "side"
+    },
+    {
+     "way": 522116124,
+     "name": "第一月台",
+     "side": 7.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "二水",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 522070607,
+     "name": "第一月台",
+     "side": -7.6,
+     "kind": "side"
+    },
+    {
+     "way": 522070606,
+     "name": "第二月台",
+     "side": 8.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "林內",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 8,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 522070599,
+     "name": null,
+     "side": -6.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "石榴",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518822231,
+     "name": null,
+     "side": -7.3,
+     "kind": "side"
+    },
+    {
+     "way": 518822232,
+     "name": null,
+     "side": 4.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "斗六",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 518822227,
+     "name": "第一月台",
+     "side": -4.4,
+     "kind": "island"
+    },
+    {
+     "way": 518822228,
+     "name": "第二月台",
+     "side": 9.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "斗南",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 518822225,
+     "name": "第一月台",
+     "side": -11.9,
+     "kind": "island"
+    },
+    {
+     "way": 518822224,
+     "name": "第二月台",
+     "side": 2.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "石龜",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518822222,
+     "name": "第二月台",
+     "side": -8.6,
+     "kind": "side"
+    },
+    {
+     "way": 518822223,
+     "name": "第一月台",
+     "side": 2.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大林",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518370761,
+     "name": "第一月台",
+     "side": -18.5,
+     "kind": "side"
+    },
+    {
+     "way": 518370762,
+     "name": "第二月台",
+     "side": -2.8,
+     "kind": "island"
+    },
+    {
+     "way": 518370763,
+     "name": "第三月台",
+     "side": 9.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "民雄",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 518370757,
+     "name": "第一月台",
+     "side": -7.6,
+     "kind": "island"
+    },
+    {
+     "way": 518370758,
+     "name": "第二月台",
+     "side": 5.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "嘉北",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518370756,
+     "name": "第二月台",
+     "side": -8.3,
+     "kind": "side"
+    },
+    {
+     "way": 518370755,
+     "name": "第一月台",
+     "side": 2.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "嘉義",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 8,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 286891400,
+     "name": null,
+     "side": -10.9,
+     "kind": "island"
+    },
+    {
+     "way": 286891395,
+     "name": null,
+     "side": 6.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "水上",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518370752,
+     "name": null,
+     "side": -8.8,
+     "kind": "side"
+    },
+    {
+     "way": 518370753,
+     "name": null,
+     "side": 3.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南靖",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 518370750,
+     "name": "第一月台",
+     "side": -5.8,
+     "kind": "island"
+    },
+    {
+     "way": 518370751,
+     "name": "第二月台",
+     "side": 6.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "後壁",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 198116476,
+     "name": "第二月台",
+     "side": -7.5,
+     "kind": "island"
+    },
+    {
+     "way": 198116477,
+     "name": "第一月台",
+     "side": 2.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新營",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 10,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 193833898,
+     "name": "第一月台",
+     "side": -6.0,
+     "kind": "island"
+    },
+    {
+     "way": 193833899,
+     "name": "第二月台",
+     "side": 8.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "柳營",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 150332895,
+     "name": "第一月台",
+     "side": -6.7,
+     "kind": "side"
+    },
+    {
+     "way": 1290647048,
+     "name": "第二月台",
+     "side": 2.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "林鳳營",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 418999480,
+     "name": "第一月台",
+     "side": -10.4,
+     "kind": "side"
+    },
+    {
+     "way": 418999481,
+     "name": "第二月台",
+     "side": 4.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "隆田",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 139077448,
+     "name": "第二月台",
+     "side": -16.6,
+     "kind": "side"
+    },
+    {
+     "way": 736724328,
+     "name": "第一月台",
+     "side": -4.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "拔林",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518251123,
+     "name": null,
+     "side": -6.0,
+     "kind": "side"
+    },
+    {
+     "way": 518251122,
+     "name": null,
+     "side": 8.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "善化",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 6,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 140042314,
+     "name": "第二月台",
+     "side": -18.4,
+     "kind": "island"
+    },
+    {
+     "way": 140042326,
+     "name": "第一月台",
+     "side": -4.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南科",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 518025930,
+     "name": "第一月台",
+     "side": -7.4,
+     "kind": "side"
+    },
+    {
+     "way": 518025929,
+     "name": "第二月台",
+     "side": 2.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新市",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 149720658,
+     "name": "第一月台",
+     "side": -5.5,
+     "kind": "side"
+    },
+    {
+     "way": 926399173,
+     "name": null,
+     "side": 9.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "永康",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 161507831,
+     "name": "第一月台",
+     "side": -7.5,
+     "kind": "side"
+    },
+    {
+     "way": 161507830,
+     "name": "第二月台",
+     "side": 5.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大橋",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 161585360,
+     "name": "第一月台",
+     "side": -8.2,
+     "kind": "side"
+    },
+    {
+     "way": 161585363,
+     "name": "第二月台",
+     "side": 4.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "臺南",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 1568933254,
+     "name": "1月台",
+     "side": -8.7,
+     "kind": "island"
+    },
+    {
+     "way": 1568933255,
+     "name": "2月台",
+     "side": 6.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "保安",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 303493718,
+     "name": "第三月台",
+     "side": -18.0,
+     "kind": "side"
+    },
+    {
+     "way": 197614809,
+     "name": "第二月台",
+     "side": -4.6,
+     "kind": "island"
+    },
+    {
+     "way": 517965891,
+     "name": "第一月台",
+     "side": 8.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "仁德",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 259864433,
+     "name": "仁德車站第一月臺",
+     "side": -7.2,
+     "kind": "side"
+    },
+    {
+     "way": 259864434,
+     "name": "仁德車站第二月臺",
+     "side": 6.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "中洲",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 6,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 187635703,
+     "name": "第一月台",
+     "side": -8.5,
+     "kind": "island"
+    },
+    {
+     "way": 187635704,
+     "name": "第二月台",
+     "side": 4.3,
+     "kind": "island"
+    },
+    {
+     "way": 365090878,
+     "name": "第三月台",
+     "side": 17.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大湖",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 517643009,
+     "name": "第一月台",
+     "side": -3.2,
+     "kind": "side"
+    },
+    {
+     "way": 213099734,
+     "name": "第二月台",
+     "side": 10.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "路竹",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 621174734,
+     "name": "第一月台",
+     "side": -4.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "岡山",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 10,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 293949044,
+     "name": "第二月台",
+     "side": -9.3,
+     "kind": "island"
+    },
+    {
+     "way": 293949045,
+     "name": "第一月台",
+     "side": 5.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "橋頭",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 517911111,
+     "name": "第二月台",
+     "side": -9.6,
+     "kind": "island"
+    },
+    {
+     "way": 517641168,
+     "name": "第一月台",
+     "side": 2.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "楠梓",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 323965661,
+     "name": "第一月台",
+     "side": -23.5,
+     "kind": "side"
+    },
+    {
+     "way": 323965660,
+     "name": "第二月台",
+     "side": -5.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新左營",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 5,
+   "islands": 3,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 501199068,
+     "name": "第三月台",
+     "side": -12.1,
+     "kind": "island"
+    },
+    {
+     "way": 501199069,
+     "name": "第二月台",
+     "side": 2.5,
+     "kind": "island"
+    },
+    {
+     "way": 572375276,
+     "name": "第一月台",
+     "side": 14.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "左營(舊城)",
+   "line": "縱貫線南段",
+   "type": "unknown",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "tra_sched",
+   "station": "內惟",
+   "line": "縱貫線南段",
+   "type": "unknown",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "tra_sched",
+   "station": "美術館",
+   "line": "縱貫線南段",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 1316259244,
+     "name": null,
+     "side": -8.5,
+     "kind": "island"
+    },
+    {
+     "way": 1316259245,
+     "name": null,
+     "side": 5.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鼓山",
+   "line": "縱貫線南段",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1316259114,
+     "name": null,
+     "side": -14.4,
+     "kind": "side"
+    },
+    {
+     "way": 1316259115,
+     "name": null,
+     "side": 2.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "三塊厝",
+   "line": "縱貫線南段",
+   "type": "unknown",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "tra_sched",
+   "station": "高雄",
+   "line": "縱貫線南段",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 619245787,
+     "name": null,
+     "side": -10.2,
+     "kind": "island"
+    },
+    {
+     "way": 633617150,
+     "name": null,
+     "side": 6.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "民族",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1316259112,
+     "name": null,
+     "side": -11.9,
+     "kind": "side"
+    },
+    {
+     "way": 1316259113,
+     "name": null,
+     "side": 5.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "科工館",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1316259110,
+     "name": null,
+     "side": -13.2,
+     "kind": "side"
+    },
+    {
+     "way": 1316259111,
+     "name": null,
+     "side": 4.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "正義",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1316259108,
+     "name": null,
+     "side": -10.3,
+     "kind": "side"
+    },
+    {
+     "way": 1316259109,
+     "name": null,
+     "side": 7.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鳳山",
+   "line": "屏東線",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 633617152,
+     "name": null,
+     "side": -14.9,
+     "kind": "side"
+    },
+    {
+     "way": 633617151,
+     "name": null,
+     "side": 7.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "後庄",
+   "line": "屏東線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 517911113,
+     "name": "第二月台",
+     "side": -5.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "九曲堂",
+   "line": "屏東線",
+   "type": "island",
+   "tracks": 8,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 517911115,
+     "name": "第二月台",
+     "side": -10.7,
+     "kind": "island"
+    },
+    {
+     "way": 517911114,
+     "name": "第一月台",
+     "side": 5.0,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "六塊厝",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 517911117,
+     "name": null,
+     "side": -9.1,
+     "kind": "side"
+    },
+    {
+     "way": 517911116,
+     "name": null,
+     "side": 4.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "屏東",
+   "line": "屏東線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 530530110,
+     "name": "第二月台",
+     "side": -12.0,
+     "kind": "island"
+    },
+    {
+     "way": 530530111,
+     "name": "第一月台",
+     "side": 3.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "歸來",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 530530113,
+     "name": "第二月台",
+     "side": -7.5,
+     "kind": "side"
+    },
+    {
+     "way": 530530112,
+     "name": "第一月台",
+     "side": 2.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "麟洛",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 530530115,
+     "name": "第二月台",
+     "side": -9.7,
+     "kind": "side"
+    },
+    {
+     "way": 530530114,
+     "name": "第一月台",
+     "side": 2.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "西勢",
+   "line": "屏東線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 530530116,
+     "name": "第一月台",
+     "side": -9.7,
+     "kind": "island"
+    },
+    {
+     "way": 530530117,
+     "name": "第二月台",
+     "side": 6.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "竹田",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 530530121,
+     "name": "第二月台",
+     "side": -8.4,
+     "kind": "side"
+    },
+    {
+     "way": 530530120,
+     "name": "第一月台",
+     "side": 4.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "潮州",
+   "line": "屏東線",
+   "type": "island",
+   "tracks": 6,
+   "islands": 3,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 795865249,
+     "name": null,
+     "side": -28.8,
+     "kind": "island"
+    },
+    {
+     "way": 520359973,
+     "name": null,
+     "side": -12.7,
+     "kind": "island"
+    },
+    {
+     "way": 520359970,
+     "name": null,
+     "side": 4.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "崁頂",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 530977645,
+     "name": null,
+     "side": -7.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南州",
+   "line": "屏東線",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 1436786010,
+     "name": "第一月台",
+     "side": -5.5,
+     "kind": "island"
+    },
+    {
+     "way": 1436786011,
+     "name": "第二月台",
+     "side": 11.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鎮安",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 797862668,
+     "name": null,
+     "side": -2.2,
+     "kind": "side"
+    },
+    {
+     "way": 530977654,
+     "name": null,
+     "side": 11.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "林邊",
+   "line": "屏東線",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 530977656,
+     "name": "第一月台",
+     "side": -4.5,
+     "kind": "island"
+    },
+    {
+     "way": 530977655,
+     "name": "第二月台",
+     "side": 10.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "佳冬",
+   "line": "屏東線",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 800278931,
+     "name": null,
+     "side": -4.5,
+     "kind": "side"
+    },
+    {
+     "way": 530977657,
+     "name": null,
+     "side": 8.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "東海",
+   "line": "屏東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 530977659,
+     "name": null,
+     "side": 2.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "枋寮",
+   "line": "屏東線",
+   "type": "mixed",
+   "tracks": 6,
+   "islands": 1,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 530977660,
+     "name": "第一月台",
+     "side": -2.7,
+     "kind": "side"
+    },
+    {
+     "way": 530977661,
+     "name": "第二月台",
+     "side": 10.8,
+     "kind": "island"
+    },
+    {
+     "way": 798047352,
+     "name": "第三月台",
+     "side": 33.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "加祿",
+   "line": "南迴線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 564743109,
+     "name": "第二月台",
+     "side": -5.6,
+     "kind": "island"
+    },
+    {
+     "way": 564743107,
+     "name": "第一月台",
+     "side": 7.6,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "內獅",
+   "line": "南迴線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 765730292,
+     "name": null,
+     "side": 12.0,
+     "kind": "side"
+    },
+    {
+     "way": 765730293,
+     "name": null,
+     "side": 23.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "枋山",
+   "line": "南迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 980070766,
+     "name": "第二月台",
+     "side": -4.3,
+     "kind": "side"
+    },
+    {
+     "way": 980070765,
+     "name": "第一月台",
+     "side": 7.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "枋野",
+   "line": "南迴線",
+   "type": "unknown",
+   "tracks": 3,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "tra_sched",
+   "station": "大武",
+   "line": "南迴線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 575070560,
+     "name": "第二月台",
+     "side": -8.1,
+     "kind": "side"
+    },
+    {
+     "way": 575070559,
+     "name": "第一月台",
+     "side": 5.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "瀧溪",
+   "line": "南迴線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 765720752,
+     "name": null,
+     "side": -3.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "金崙",
+   "line": "南迴線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 179353857,
+     "name": "第一月台",
+     "side": -4.7,
+     "kind": "side"
+    },
+    {
+     "way": 179353858,
+     "name": "第二月台",
+     "side": 8.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "太麻里",
+   "line": "南迴線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 547476108,
+     "name": null,
+     "side": -3.4,
+     "kind": "island"
+    },
+    {
+     "way": 547476109,
+     "name": null,
+     "side": 9.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "知本",
+   "line": "南迴線",
+   "type": "island",
+   "tracks": 7,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 603517522,
+     "name": null,
+     "side": 7.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "康樂",
+   "line": "南迴線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 188078516,
+     "name": null,
+     "side": 4.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "臺東",
+   "line": "南迴線",
+   "type": "island",
+   "tracks": 15,
+   "islands": 3,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 598402037,
+     "name": "第一月台",
+     "side": -23.9,
+     "kind": "island"
+    },
+    {
+     "way": 598402038,
+     "name": "第二月台",
+     "side": -7.4,
+     "kind": "island"
+    },
+    {
+     "way": 598402039,
+     "name": "第三月台",
+     "side": 11.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "山里",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 979926561,
+     "name": "第一月台",
+     "side": -6.8,
+     "kind": "side"
+    },
+    {
+     "way": 979926560,
+     "name": "第二月台",
+     "side": 3.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鹿野",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 893102358,
+     "name": null,
+     "side": -7.2,
+     "kind": "side"
+    },
+    {
+     "way": 893102357,
+     "name": null,
+     "side": 10.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "瑞源",
+   "line": "臺東線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 345646566,
+     "name": null,
+     "side": 2.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "瑞和",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 345570050,
+     "name": null,
+     "side": -2.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "關山",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 5,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 345536933,
+     "name": null,
+     "side": -4.2,
+     "kind": "island"
+    },
+    {
+     "way": 345536937,
+     "name": null,
+     "side": 5.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "海端",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 344755500,
+     "name": null,
+     "side": 2.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "池上",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 299297062,
+     "name": null,
+     "side": 4.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "富里",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 979828383,
+     "name": "第二月台",
+     "side": -3.4,
+     "kind": "side"
+    },
+    {
+     "way": 979828384,
+     "name": "第一月台",
+     "side": 7.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "東竹",
+   "line": "臺東線",
+   "type": "island",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 979685035,
+     "name": null,
+     "side": -2.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "東里",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 544336960,
+     "name": "第二月台",
+     "side": -6.4,
+     "kind": "side"
+    },
+    {
+     "way": 544336961,
+     "name": "第一月台",
+     "side": 6.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "玉里",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 646361641,
+     "name": "2月台",
+     "side": 5.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "三民",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 979563684,
+     "name": "第二月台",
+     "side": -4.1,
+     "kind": "side"
+    },
+    {
+     "way": 979563685,
+     "name": "第一月台",
+     "side": 8.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "瑞穗",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 979553761,
+     "name": "第一月台",
+     "side": -7.1,
+     "kind": "side"
+    },
+    {
+     "way": 979553760,
+     "name": "第二月台",
+     "side": 5.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "富源",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 979523721,
+     "name": "第一月台",
+     "side": -7.7,
+     "kind": "side"
+    },
+    {
+     "way": 979523722,
+     "name": "第二月台",
+     "side": 4.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大富",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 979521831,
+     "name": null,
+     "side": 4.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "光復",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 979517541,
+     "name": "第二月台",
+     "side": -4.0,
+     "kind": "island"
+    },
+    {
+     "way": 979517540,
+     "name": "第一月台",
+     "side": 7.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "萬榮",
+   "line": "臺東線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 684291150,
+     "name": null,
+     "side": 6.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "鳳林",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 979467389,
+     "name": "第二月台",
+     "side": -7.5,
+     "kind": "side"
+    },
+    {
+     "way": 979467388,
+     "name": "第一月台",
+     "side": 4.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南平",
+   "line": "臺東線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 979464538,
+     "name": null,
+     "side": -4.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "林榮新光",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 1316259106,
+     "name": null,
+     "side": -5.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "豐田",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 979462578,
+     "name": "第二月台",
+     "side": -8.1,
+     "kind": "side"
+    },
+    {
+     "way": 979462577,
+     "name": "第一月台",
+     "side": 4.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "壽豐",
+   "line": "臺東線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 646848426,
+     "name": "1月台",
+     "side": -9.4,
+     "kind": "island"
+    },
+    {
+     "way": 646848427,
+     "name": "2月台",
+     "side": 5.0,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "平和",
+   "line": "臺東線",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 646856956,
+     "name": null,
+     "side": -4.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "志學",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 645982231,
+     "name": null,
+     "side": -13.2,
+     "kind": "side"
+    },
+    {
+     "way": 544681996,
+     "name": "1月台",
+     "side": -5.0,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "吉安",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 979393620,
+     "name": "第一月台",
+     "side": -8.7,
+     "kind": "side"
+    },
+    {
+     "way": 979393621,
+     "name": "第二月台",
+     "side": 4.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "花蓮",
+   "line": "臺東線",
+   "type": "mixed",
+   "tracks": 17,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 554768915,
+     "name": "第一月台",
+     "side": -33.3,
+     "kind": "side"
+    },
+    {
+     "way": 554768917,
+     "name": "第二月台",
+     "side": -5.5,
+     "kind": "island"
+    },
+    {
+     "way": 554768916,
+     "name": "第三月台",
+     "side": 11.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "北埔",
+   "line": "北迴線",
+   "type": "island",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 978907329,
+     "name": null,
+     "side": -6.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "景美",
+   "line": "北迴線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 978905323,
+     "name": null,
+     "side": -6.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新城 (太魯閣)",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978894789,
+     "name": "第三月台",
+     "side": -4.1,
+     "kind": "side"
+    },
+    {
+     "way": 978894790,
+     "name": "第二月台",
+     "side": 8.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "崇德",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978892578,
+     "name": "第二月台",
+     "side": -10.9,
+     "kind": "side"
+    },
+    {
+     "way": 978892577,
+     "name": "第一月台",
+     "side": 3.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "和仁",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 14,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 598634605,
+     "name": null,
+     "side": 2.0,
+     "kind": "side"
+    },
+    {
+     "way": 598634604,
+     "name": null,
+     "side": 16.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "和平",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978745876,
+     "name": "第一月台",
+     "side": -3.0,
+     "kind": "side"
+    },
+    {
+     "way": 978745877,
+     "name": "第二月台",
+     "side": 8.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "漢本",
+   "line": "北迴線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 667350353,
+     "name": null,
+     "side": -4.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "武塔",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 203316064,
+     "name": null,
+     "side": -4.5,
+     "kind": "side"
+    },
+    {
+     "way": 203316069,
+     "name": null,
+     "side": 6.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "南澳",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978712988,
+     "name": "第一月台",
+     "side": -4.5,
+     "kind": "side"
+    },
+    {
+     "way": 978712987,
+     "name": "第二月台",
+     "side": 8.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "東澳",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978696827,
+     "name": "第二月台",
+     "side": -8.2,
+     "kind": "side"
+    },
+    {
+     "way": 978696828,
+     "name": "第一月台",
+     "side": 7.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "永樂",
+   "line": "北迴線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978665256,
+     "name": "第一月台",
+     "side": -4.9,
+     "kind": "side"
+    },
+    {
+     "way": 978665255,
+     "name": "第二月台",
+     "side": 9.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "蘇澳新",
+   "line": "北迴線",
+   "type": "island",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 978602989,
+     "name": "第一月台",
+     "side": -4.2,
+     "kind": "island"
+    },
+    {
+     "way": 978602990,
+     "name": "第二月台",
+     "side": 7.8,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "蘇澳",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 1,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 978507305,
+     "name": null,
+     "side": 2.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新馬",
+   "line": "宜蘭線",
+   "type": "unknown",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "tra_sched",
+   "station": "冬山",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1316259104,
+     "name": null,
+     "side": -4.2,
+     "kind": "side"
+    },
+    {
+     "way": 1316259105,
+     "name": null,
+     "side": 12.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "羅東",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978611220,
+     "name": "第一月台",
+     "side": -2.9,
+     "kind": "side"
+    },
+    {
+     "way": 978611221,
+     "name": "第二月台",
+     "side": 9.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "中里",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 978499686,
+     "name": null,
+     "side": 2.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "二結",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 8,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 953044217,
+     "name": "二結站月台",
+     "side": -3.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "宜蘭",
+   "line": "宜蘭線",
+   "type": "mixed",
+   "tracks": 10,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 256120201,
+     "name": "第一月台",
+     "side": -7.4,
+     "kind": "side"
+    },
+    {
+     "way": 256120205,
+     "name": "第二月台",
+     "side": 5.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "四城",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 785635130,
+     "name": null,
+     "side": -1.9,
+     "kind": "side"
+    },
+    {
+     "way": 785635131,
+     "name": null,
+     "side": 9.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "礁溪",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 782181765,
+     "name": null,
+     "side": -5.1,
+     "kind": "island"
+    },
+    {
+     "way": 456154615,
+     "name": null,
+     "side": 4.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "頂埔",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 210400480,
+     "name": "第二月台",
+     "side": -4.3,
+     "kind": "side"
+    },
+    {
+     "way": 210400484,
+     "name": "第一月台",
+     "side": 7.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "頭城",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 978474193,
+     "name": "第二月台",
+     "side": -3.0,
+     "kind": "side"
+    },
+    {
+     "way": 978474192,
+     "name": "第一月台",
+     "side": 12.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "外澳",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 978457340,
+     "name": null,
+     "side": 5.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "龜山",
+   "line": "宜蘭線",
+   "type": "unknown",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "tra_sched",
+   "station": "大溪",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1389244330,
+     "name": "第二月台",
+     "side": -4.0,
+     "kind": "side"
+    },
+    {
+     "way": 1389244329,
+     "name": "第一月台",
+     "side": 7.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大里",
+   "line": "宜蘭線",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 1357802791,
+     "name": null,
+     "side": 6.6,
+     "kind": "island"
+    },
+    {
+     "way": 1357802792,
+     "name": null,
+     "side": 14.8,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "石城",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 209985903,
+     "name": null,
+     "side": 3.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "福隆",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 5,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 685612004,
+     "name": "福隆車站第二月台",
+     "side": -7.1,
+     "kind": "island"
+    },
+    {
+     "way": 737357851,
+     "name": "福隆車站第一月台",
+     "side": 5.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "貢寮",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 288880188,
+     "name": null,
+     "side": 11.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "雙溪",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 746406925,
+     "name": null,
+     "side": 3.8,
+     "kind": "island"
+    },
+    {
+     "way": 746406924,
+     "name": null,
+     "side": 15.6,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "牡丹",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 551555460,
+     "name": null,
+     "side": -3.2,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "三貂嶺",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 975993292,
+     "name": "第二月台",
+     "side": -6.4,
+     "kind": "side"
+    },
+    {
+     "way": 975993293,
+     "name": "第一月台",
+     "side": 5.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "猴硐",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 9,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 272728717,
+     "name": "第二月台",
+     "side": -10.0,
+     "kind": "island"
+    },
+    {
+     "way": 272728716,
+     "name": "第一月台",
+     "side": 3.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "瑞芳",
+   "line": "宜蘭線",
+   "type": "mixed",
+   "tracks": 7,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 198248283,
+     "name": "第一月台",
+     "side": -7.4,
+     "kind": "island"
+    },
+    {
+     "way": 196829052,
+     "name": "第二月台",
+     "side": 6.8,
+     "kind": "island"
+    },
+    {
+     "way": 198253026,
+     "name": "第三月台",
+     "side": 20.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "四腳亭",
+   "line": "宜蘭線",
+   "type": "island",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 276431838,
+     "name": null,
+     "side": -7.1,
+     "kind": "island"
+    },
+    {
+     "way": 276431839,
+     "name": null,
+     "side": 4.1,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "暖暖",
+   "line": "宜蘭線",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 198404910,
+     "name": null,
+     "side": -6.2,
+     "kind": "side"
+    },
+    {
+     "way": 198404908,
+     "name": null,
+     "side": 3.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "千甲",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 327757933,
+     "name": "第二月台",
+     "side": -7.6,
+     "kind": "side"
+    },
+    {
+     "way": 327757932,
+     "name": "第一月台",
+     "side": 3.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "新莊",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 327757943,
+     "name": "第二月台",
+     "side": -10.0,
+     "kind": "side"
+    },
+    {
+     "way": 327757944,
+     "name": "第一月台",
+     "side": 5.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "竹中",
+   "line": "NEIWAN",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 524147896,
+     "name": "第二月台",
+     "side": -18.8,
+     "kind": "side"
+    },
+    {
+     "way": 524147895,
+     "name": "第一月台",
+     "side": -5.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "上員",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 330333241,
+     "name": null,
+     "side": 4.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "榮華",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 330333242,
+     "name": null,
+     "side": 3.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "竹東",
+   "line": "NEIWAN",
+   "type": "island",
+   "tracks": 4,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 320794724,
+     "name": "第二月台",
+     "side": -8.9,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "橫山",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 330333244,
+     "name": null,
+     "side": 5.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "九讚頭",
+   "line": "NEIWAN",
+   "type": "island",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 330333245,
+     "name": null,
+     "side": 4.3,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "合興",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 330333246,
+     "name": null,
+     "side": -3.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "富貴",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 330333247,
+     "name": null,
+     "side": 13.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "內灣",
+   "line": "NEIWAN",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 531230568,
+     "name": null,
+     "side": -6.6,
+     "kind": "side"
+    },
+    {
+     "way": 330333248,
+     "name": null,
+     "side": 4.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "六家",
+   "line": "LIUJIA",
+   "type": "island",
+   "tracks": 0,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 326344933,
+     "name": "第一月台",
+     "side": 3.6,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "大華",
+   "line": "PINGXI",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 976007543,
+     "name": null,
+     "side": -0.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "十分",
+   "line": "PINGXI",
+   "type": "mixed",
+   "tracks": 3,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 279952094,
+     "name": "第二月台",
+     "side": -4.5,
+     "kind": "island"
+    },
+    {
+     "way": 976011884,
+     "name": "第一月台",
+     "side": 1.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "望古",
+   "line": "PINGXI",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 976069684,
+     "name": null,
+     "side": -0.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "嶺腳",
+   "line": "PINGXI",
+   "type": "side",
+   "tracks": 0,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 508549592,
+     "name": null,
+     "side": -12.7,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "平溪",
+   "line": "PINGXI",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 976074137,
+     "name": "第一月台",
+     "side": -3.0,
+     "kind": "side"
+    },
+    {
+     "way": 976074138,
+     "name": "第二月台",
+     "side": 2.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "菁桐",
+   "line": "PINGXI",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 281242246,
+     "name": null,
+     "side": -4.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "海科館",
+   "line": "SHENAO",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 1368390659,
+     "name": "1",
+     "side": -3.8,
+     "kind": "side"
+    },
+    {
+     "way": 538336160,
+     "name": null,
+     "side": 4.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "八斗子",
+   "line": "SHENAO",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 1368390659,
+     "name": "1",
+     "side": 4.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "源泉",
+   "line": "JIJI",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 977027097,
+     "name": null,
+     "side": -2.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "濁水",
+   "line": "JIJI",
+   "type": "island",
+   "tracks": 1,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 525580830,
+     "name": null,
+     "side": -3.5,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "龍泉",
+   "line": "JIJI",
+   "type": "side",
+   "tracks": 1,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 977027096,
+     "name": null,
+     "side": -6.6,
+     "kind": "side"
+    },
+    {
+     "way": 977027095,
+     "name": null,
+     "side": 4.1,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "集集",
+   "line": "JIJI",
+   "type": "island",
+   "tracks": 1,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 197021858,
+     "name": null,
+     "side": -3.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "水里",
+   "line": "JIJI",
+   "type": "island",
+   "tracks": 1,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 977027094,
+     "name": null,
+     "side": 4.7,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "車埕",
+   "line": "JIJI",
+   "type": "mixed",
+   "tracks": 2,
+   "islands": 1,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 323236427,
+     "name": null,
+     "side": 3.4,
+     "kind": "island"
+    },
+    {
+     "way": 1559038154,
+     "name": null,
+     "side": 11.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "長榮大學",
+   "line": "SHALUN",
+   "type": "side",
+   "tracks": 2,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 316034165,
+     "name": "第二月台",
+     "side": -7.7,
+     "kind": "side"
+    },
+    {
+     "way": 316034166,
+     "name": "第一月台",
+     "side": 5.6,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "tra_sched",
+   "station": "沙崙",
+   "line": "SHALUN",
+   "type": "island",
+   "tracks": 0,
+   "islands": 1,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 316034167,
+     "name": null,
+     "side": -3.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "南港",
+   "line": "THSR",
+   "type": "island",
+   "tracks": 6,
+   "islands": 3,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 706686411,
+     "name": null,
+     "side": -24.5,
+     "kind": "island"
+    },
+    {
+     "way": 706686410,
+     "name": null,
+     "side": -4.4,
+     "kind": "island"
+    },
+    {
+     "way": 710690883,
+     "name": null,
+     "side": 13.6,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "台北",
+   "line": "THSR",
+   "type": "mixed",
+   "tracks": 4,
+   "islands": 2,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 584167409,
+     "name": "1月台 (高鐵)",
+     "side": -10.6,
+     "kind": "island"
+    },
+    {
+     "way": 584167411,
+     "name": "2月台 (高鐵)",
+     "side": 3.9,
+     "kind": "island"
+    },
+    {
+     "way": 741259905,
+     "name": null,
+     "side": 16.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "板橋",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 1,
+   "platforms": [
+    {
+     "way": 706686408,
+     "name": null,
+     "side": -13.4,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "桃園",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 591532544,
+     "name": "北上月台",
+     "side": -18.3,
+     "kind": "side"
+    },
+    {
+     "way": 591532543,
+     "name": "南下月台",
+     "side": 13.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "新竹",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 327760132,
+     "name": "2月台（北上月台）",
+     "side": -18.0,
+     "kind": "side"
+    },
+    {
+     "way": 327760134,
+     "name": "1月台（南下月台）",
+     "side": 10.9,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "苗栗",
+   "line": "THSR",
+   "type": "unknown",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 0,
+   "platforms": []
+  },
+  {
+   "system": "thsr_sched",
+   "station": "台中",
+   "line": "THSR",
+   "type": "island",
+   "tracks": 6,
+   "islands": 2,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 619247350,
+     "name": "2月台",
+     "side": -18.6,
+     "kind": "island"
+    },
+    {
+     "way": 619247349,
+     "name": "1月台",
+     "side": 12.4,
+     "kind": "island"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "彰化",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 608034392,
+     "name": "二月台",
+     "side": -17.0,
+     "kind": "side"
+    },
+    {
+     "way": 608034393,
+     "name": "一月台",
+     "side": 13.5,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "雲林",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 607932982,
+     "name": null,
+     "side": -14.7,
+     "kind": "side"
+    },
+    {
+     "way": 607932985,
+     "name": null,
+     "side": 10.3,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "嘉義",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 566725621,
+     "name": null,
+     "side": -18.7,
+     "kind": "side"
+    },
+    {
+     "way": 566725623,
+     "name": null,
+     "side": 13.0,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "台南",
+   "line": "THSR",
+   "type": "side",
+   "tracks": 4,
+   "islands": 0,
+   "sides": 2,
+   "platforms": [
+    {
+     "way": 266850909,
+     "name": null,
+     "side": -17.0,
+     "kind": "side"
+    },
+    {
+     "way": 706622432,
+     "name": null,
+     "side": 14.2,
+     "kind": "side"
+    }
+   ]
+  },
+  {
+   "system": "thsr_sched",
+   "station": "左營",
+   "line": "THSR",
+   "type": "island",
+   "tracks": 8,
+   "islands": 4,
+   "sides": 0,
+   "platforms": [
+    {
+     "way": 501199067,
+     "name": "第三月台",
+     "side": -22.3,
+     "kind": "island"
+    },
+    {
+     "way": 501199070,
+     "name": "第二月台",
+     "side": -6.6,
+     "kind": "island"
+    },
+    {
+     "way": 501199071,
+     "name": "第一月台",
+     "side": 10.8,
+     "kind": "island"
+    },
+    {
+     "way": 1316259246,
+     "name": null,
+     "side": 13.9,
+     "kind": "island"
+    }
+   ]
+  }
+ ]
+}
