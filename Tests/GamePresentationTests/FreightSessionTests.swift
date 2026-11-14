@@ -78,7 +78,7 @@ final class FreightSessionTests: XCTestCase {
         let without = try summary(freight: 0).incomeStatementRows(previous: nil, in: .english).map(\.title)
         XCTAssertFalse(without.contains("Freight"))
         let rows = try summary(freight: 400).incomeStatementRows(previous: nil, in: .english)
-        XCTAssertEqual(Array(rows.map(\.title).prefix(2)), ["Fares", "Freight"])
+        XCTAssertEqual(Array(rows.map(\.title).prefix(3)), ["Fares", "Of which business tax", "Freight"])
         XCTAssertEqual(rows.first { $0.title == "Operating profit" }?.current, Money(1_300))
         XCTAssertTrue(CompanyAccounts.incomeItems.contains(.freightRevenue))
     }

@@ -266,6 +266,9 @@ extension StationMasterAdvice {
         case .newCityRequests(let month, _, _, _): (.goal, "requests:\(month)", nil)
         // Decision 332: said once.
         case .modeShift(let station): (.advice, "modeShift", .station(station.rawValue))
+        // Decision 739: once for each payment, whether the cash covers it
+        // or not.
+        case .taxDue(let year, let month, _, _, _): (.deadline, "tax:\(year):\(month)", nil)
         }
     }
 }

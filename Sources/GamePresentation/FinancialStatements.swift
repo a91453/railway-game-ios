@@ -19,6 +19,9 @@ public struct StatementRow: Hashable, Sendable {
         case subtotal
         /// The statement's bottom line (`is-total`).
         case total
+        /// A part of the line above it, shown under it and not added up
+        /// (decision 739: the business tax in the fares).
+        case note
     }
 
     public let title: String
@@ -64,6 +67,21 @@ extension AssetClass {
 }
 
 extension FinanceSummary {
+    /// The business tax the fares `fares` include (decision 739; 加值型及非
+    /// 加值型營業稅法 §10: 5 %): five 105ths of them, whole dollars rounded
+    /// down; nothing on nothing.
+    public static func businessTax(in fares: Money) -> Money {
+        guard fares > .zero else { return .zero }
+        return Money(fares.amount / 100 * businessTaxPercent / (100 + businessTaxPercent) * 100)
+    }
+
+    /// The business tax the fares are taken to include, in per cent.
+    public static let businessTaxPercent: Int64 = 5
+
+    private func hasFares(previous: FinanceSummary?) -> Bool {
+        fareRevenue > .zero || (previous?.fareRevenue ?? .zero) > .zero
+    }
+
     /// The income statement (the reference's `incomeStatement`), with
     /// `previous` beside it if given: fares, the running costs, the
     /// operating profit, then interest, depreciation and assets written off
@@ -93,9 +111,14 @@ extension FinanceSummary {
             row(language.text("Profit before tax", "稅前淨利"), \.profitBeforeTax, .subtotal),
             row(LedgerItem.incomeTax.displayName(in: language)) { out($0.taxCost) },
         ] : []
+        // Decision 739 (design §3.8): the fares include the 5 % business
+        // tax; the part that is tax, shown only, where there were fares.
+        let businessTax = hasFares(previous: previous) ? [
+            row(language.text("Of which business tax", "其中營業稅"), { Self.businessTax(in: $0.fareRevenue) }, .note),
+        ] : []
         return [
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
-        ] + freight + [
+        ] + businessTax + freight + [
             row(LedgerItem.operatingCost.displayName(in: language)) { out($0.operatingCost) },
             row(LedgerItem.maintenanceCost.displayName(in: language)) { out($0.maintenanceCost) },
             row(language.text("Energy", "能源費用")) { out($0.energyCost) },

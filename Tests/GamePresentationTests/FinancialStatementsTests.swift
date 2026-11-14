@@ -95,11 +95,14 @@ final class FinancialStatementsTests: XCTestCase {
         let report = world.financeReport(.day)
         let income = report.previous.incomeStatementRows(previous: report.current, in: .english)
         XCTAssertEqual(income.map(\.title), [
-            "Fares", "Operating", "Maintenance", "Energy", "Staff", "Operating profit", "Loan interest", "Depreciation",
+            "Fares", "Of which business tax", "Operating", "Maintenance", "Energy", "Staff", "Operating profit", "Loan interest", "Depreciation",
             "Assets written off", "Profit before tax", "Income tax", "Net profit",
         ])
-        XCTAssertEqual(income[9], StatementRow(title: "Profit before tax", current: Money(74_995_570), previous: .zero, style: .subtotal))
-        XCTAssertEqual(income[10].current, Money(-22_497_800))
+        // Decision 739: five 105ths of the NT$750,000 of fares, NT$35,714,
+        // shown and not added up.
+        XCTAssertEqual(income[1], StatementRow(title: "Of which business tax", current: Money(3_571_400), previous: .zero, style: .note))
+        XCTAssertEqual(income[10], StatementRow(title: "Profit before tax", current: Money(74_995_570), previous: .zero, style: .subtotal))
+        XCTAssertEqual(income[11].current, Money(-22_497_800))
         XCTAssertEqual(income.last?.current, Money(74_995_570 - 22_497_800))
         let items = income.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(items.reduce(Money.zero, +), income.last?.current)
@@ -112,12 +115,13 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(cash[4].current, Money(-22_497_800))
         let flows = cash.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(flows.reduce(Money.zero, +), cash.last?.current)
-        XCTAssertEqual(LedgerEntry.Kind.dailyTax.displayName(in: .traditionalChinese), "營利事業所得稅（日結）")
+        // Decision 739: the simple rules' tax says it is the daily one.
+        XCTAssertEqual(LedgerEntry.Kind.dailyTax.displayName(in: .traditionalChinese), "所得稅（每日結算）")
         XCTAssertEqual(LedgerItem.incomeTax.displayName(in: .english), "Income tax")
         XCTAssertEqual(
-            CompanyAccounts.taxTermsText(in: .english), "Income tax: 50% of each day's profit before tax beyond \(Money(30_000_000).moneyText), paid at midnight"
+            CompanyAccounts.taxTermsText(in: .english), "Income tax (daily): 50% of each day's profit beyond \(Money(30_000_000).moneyText), paid at midnight"
         )
-        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "營利事業所得稅：每天的稅前淨利超過 \(Money(30_000_000).moneyText) 的部分課 50%，午夜支付")
+        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "所得稅（每日結算）：每天獲利超過 \(Money(30_000_000).moneyText) 的部分繳 50%，午夜支付")
     }
 
     func testAClosedYearHasItsTitleAndHeadline() throws {
