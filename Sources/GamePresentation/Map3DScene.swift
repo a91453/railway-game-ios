@@ -1893,7 +1893,7 @@ extension Map3DScene {
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
-                                                  structure: platform.structure))
+                                                  structure: platform.structure, island: partner != nil))
             }
         }
 

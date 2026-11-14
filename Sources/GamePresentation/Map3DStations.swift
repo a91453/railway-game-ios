@@ -262,6 +262,8 @@ extension Map3DScene.Builder {
         let offset: Float
         let width: Float
         let structure: TrackStructure
+        /// Half of an island, the other half laid from the track across.
+        var island = false
     }
 
     /// Every station in the scene from the station kit: the canopies over
