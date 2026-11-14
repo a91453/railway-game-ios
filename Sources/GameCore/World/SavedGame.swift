@@ -532,9 +532,17 @@
 ///     says the save is newer than it instead. A save of any earlier
 ///     version needs no step: each of its days pays its own tax, and
 ///     nothing is owed.
+/// 100. The house and land taxes (decision 736): accounts can owe
+///     `"houseTaxPayable"` and `"landTaxPayable"`, and the ledger may hold
+///     rows of the kinds `"annualHouseTax"`, `"annualLandTax"` and
+///     `"dailyStationUpkeep"` with the items `"houseTax"` and
+///     `"stationUpkeep"`. A build that reads only an earlier version would
+///     drop the taxes owed and refuse the rows and the whole save with
+///     them, so it says the save is newer than it instead. A save of any
+///     earlier version needs no step: it owes no house or land tax.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 99
+    public static let currentVersion = 100
 
     public let world: GameWorld
 
@@ -778,6 +786,9 @@ extension SavedGame: Codable {
         // Version 98 or earlier to 99: a world without `"annualTaxes"`
         // pays each day's tax, and accounts without `"incomeTaxPayable"`
         // owe nothing (decision 734): nothing to turn.
+        // Version 99 or earlier to 100: accounts without
+        // `"houseTaxPayable"` and `"landTaxPayable"` owe no house or land
+        // tax (decision 736): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

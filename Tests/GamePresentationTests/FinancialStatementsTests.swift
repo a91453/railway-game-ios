@@ -236,14 +236,17 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(
             world.taxTermsText(in: .traditionalChinese),
             "營利事業所得稅：每年結算一次，全年稅前淨利 \(Money(12_000_000).moneyText) 以下免稅，超過的課 20%，隔年 5 月底繳。今年到目前預估 \(Money(18_000_000).moneyText)"
+                + "。房屋稅：車站與建物價值的 3%，5 月底繳；地價稅：買下土地的 1%，11 月底繳。照現在算：\(Money.zero.moneyText)、\(Money.zero.moneyText)"
         )
         try world.advance(ticks: 1_440)
         XCTAssertEqual(
             world.taxTermsText(in: .english),
-            "Income tax: 20% of the year's profit before tax, none up to \(Money(12_000_000).moneyText), worked out as the year closes and paid at the end of month 5 of the next. This year so far: \(Money.zero.moneyText). Due at the end of month 5: \(Money(18_000_000).moneyText)"
+            "Income tax: 20% of the year's profit before tax, none up to \(Money(12_000_000).moneyText), worked out as the year closes and paid at the end of month 5 of the next. This year so far: \(Money.zero.moneyText)"
+                + ". House tax: 3% of the stations and buildings, paid at the end of month 5; land tax: 1% of the land bought, paid at the end of month 11. As things stand: \(Money.zero.moneyText) and \(Money.zero.moneyText)"
+                + ". Due at the end of month 5: \(Money(18_000_000).moneyText)"
         )
         let rows = world.balanceSheet().rows(previous: world.lastClosedYear?.closing, in: .traditionalChinese)
-        let owed = try XCTUnwrap(rows.first { $0.title == "應付所得稅" })
+        let owed = try XCTUnwrap(rows.first { $0.title == "應付稅款" })
         XCTAssertEqual(owed.current, Money(18_000_000))
         XCTAssertEqual(owed.previous, Money(18_000_000))
         XCTAssertEqual(rows.last?.current, world.balanceSheet().totalAssets)
