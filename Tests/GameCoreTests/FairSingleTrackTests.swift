@@ -237,4 +237,74 @@ final class FairSingleTrackTests: XCTestCase {
         XCTAssertEqual(minutes, batch)
         XCTAssertEqual(tenths, batch)
     }
+
+    /// Decision 738: two trains at the west end bound for the same east
+    /// platform, b[0], both kept by train 1 on the single track westbound.
+    /// Train 3 came to wait first (due at 60), train 2 later (due at 120);
+    /// when train 1 clears, train 2, the lower numbered, is the first to
+    /// try. Without realistic operation it goes first; with it, train 3 does.
+    static func platformQueue(realistic: Bool) throws -> GameWorld {
+        var (world, a, b) = try SingleTrackFan.world(berths: 4)
+        _ = try SingleTrackFan.train(&world, at: b[1], to: a[3], departure: 30)
+        _ = try SingleTrackFan.train(&world, at: a[1], to: b[0], departure: 120)
+        _ = try SingleTrackFan.train(&world, at: a[0], to: b[0], departure: 60)
+        world.setRealisticOperation(realistic)
+        try world.setTrafficControl(true)
+        return world
+    }
+
+    func testUnderRealisticOperationThePlatformGoesToTheTrainThatWaitedLonger() throws {
+        var world = try Self.platformQueue(realistic: true)
+        let left = try SingleTrackFan.departures(&world, seconds: 1_800)
+        let first = try XCTUnwrap(left[Self.id(3)], "\(left)")
+        XCTAssertNotNil(left[Self.id(1)])
+        XCTAssertLessThan(first, left[Self.id(2)] ?? .max, "\(left)")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    func testWithoutRealisticOperationTheLowerNumberedStillTriesFirst() throws {
+        var world = try Self.platformQueue(realistic: false)
+        let left = try SingleTrackFan.departures(&world, seconds: 1_800)
+        let first = try XCTUnwrap(left[Self.id(2)], "\(left)")
+        XCTAssertLessThanOrEqual(first, left[Self.id(3)] ?? .max, "\(left)")
+    }
+
+    /// Decision 738: a train bound for another platform gives no turn: with
+    /// train 2 bound for b[2] instead, it leaves as it does without
+    /// realistic operation.
+    func testATrainBoundForAnotherPlatformIsNotHeld() throws {
+        func world(realistic: Bool) throws -> GameWorld {
+            var (world, a, b) = try SingleTrackFan.world(berths: 4)
+            _ = try SingleTrackFan.train(&world, at: b[1], to: a[3], departure: 30)
+            _ = try SingleTrackFan.train(&world, at: a[1], to: b[2], departure: 120)
+            _ = try SingleTrackFan.train(&world, at: a[0], to: b[0], departure: 60)
+            world.setRealisticOperation(realistic)
+            try world.setTrafficControl(true)
+            return world
+        }
+        var on = try world(realistic: true)
+        var off = try world(realistic: false)
+        let expected = try SingleTrackFan.departures(&off, seconds: 1_800)
+        let left = try SingleTrackFan.departures(&on, seconds: 1_800)
+        XCTAssertNotNil(expected[Self.id(2)])
+        XCTAssertEqual(left[Self.id(2)], expected[Self.id(2)])
+    }
+
+    /// Decision 738: one long advance ends where tenths of a second do, and
+    /// a save goes on the same, while trains queue for a platform.
+    func testPlatformTurnsAgreeInBatchesStepsAndASave() throws {
+        var batch = try Self.platformQueue(realistic: true)
+        var tenths = batch
+        try batch.advance(ticks: 30)
+        tenths.setSpeed(.x1)
+        for _ in 0..<1_500 { try tenths.advance(ticks: 1) }
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: tenths))).world
+        for _ in 0..<1_650 {
+            try tenths.advance(ticks: 10)
+            try loaded.advance(ticks: 10)
+        }
+        XCTAssertEqual(loaded, tenths)
+        tenths.setSpeed(.normal)
+        XCTAssertEqual(tenths, batch)
+    }
 }
