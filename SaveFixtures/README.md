@@ -355,3 +355,10 @@ its map's airports when it opens the save).
   end of the fifth month
   (`AnnualTaxesTests.testTheVersion99SaveOwesItsTax`, written with
   `ANNUAL_TAXES_SAVE_NEW=1` by the build that first made it; decision 734).
+- `v100-house-tax.json`: a managed world with the annual taxes on, one
+  track edge and a station with a 100 m platform, a minute into its second
+  year: the first year's close charged the station's house tax, owed
+  (the accounts' `"houseTaxPayable"`) until the end of the fifth month, and
+  each day paid the platform's upkeep (rows of `"dailyStationUpkeep"`)
+  (`AnnualPropertyTaxesTests.testTheVersion100SaveOwesItsHouseTax`, printed
+  by CI from the same world, decision 736).

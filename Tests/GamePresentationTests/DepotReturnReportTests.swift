@@ -22,7 +22,9 @@ import XCTest
 /// `jiji`, `neiwan`, `shenao`, `liujia`, `shalun`, `demo`, `realworld`;
 /// HEALTH-112 `maokong`; HEALTH-114 `ferry-tamsui`, `ferry-gushan`; HEALTH-119 `klrt`),
 /// the second day's late trips, and where and when the most trains stood
-/// deadlocked; a line without runs or depots reports only those.
+/// deadlocked; a line without runs or depots reports only those. Decision
+/// 735: and the most trains stranded at once (``GameWorld/strandedTrains()``),
+/// standing half an hour past their departure with no way asked for.
 @MainActor
 final class DepotReturnReportTests: XCTestCase {
     private func wanted(_ name: String) throws {
@@ -306,6 +308,13 @@ final class DepotReturnReportTests: XCTestCase {
         // train deadlocked, to tell one cleared at once from one that stays.
         var deadlockedSamples = 0
         var lastStuck: [TrainID] = []
+        // Decision 735: the trains standing with no way asked for
+        // (``GameWorld/strandedTrains()``), which no deadlock names: the
+        // most at once, where first, and the samples with any.
+        var stranded = 0
+        var strandedWhere = ""
+        var strandedSamples = 0
+        var lastStranded: [TrainID] = []
         var dumpedStuck = false
         let timetabled = world.lines.filter(\.hasRuns)
         let lines = timetabled.filter { !$0.depots.isEmpty }
@@ -373,6 +382,24 @@ final class DepotReturnReportTests: XCTestCase {
                 FileHandle.standardError.write(Data(text.utf8))
             }
             lastStuck = stuck
+            let standingStranded = world.strandedTrains()
+            if !standingStranded.isEmpty { strandedSamples += 1 }
+            if standingStranded.count > stranded || (environment["DEPOT_RETURN_EPISODES"] != nil && standingStranded != lastStranded) {
+                let places = standingStranded.compactMap { id -> String? in
+                    guard let train = world.train(id: id) else { return nil }
+                    let at = world.stationsStoppedAt(by: id).compactMap { world.station(id: $0)?.name }.joined(separator: "/")
+                    return "\(train.name) at \(at.isEmpty ? "line" : at)"
+                }
+                if standingStranded.count > stranded {
+                    stranded = standingStranded.count
+                    strandedWhere = "\(clock(world.clock.now.seconds)): \(places.joined(separator: "; "))"
+                }
+                // `DEPOT_RETURN_EPISODES=1`: each as it begins and ends.
+                if environment["DEPOT_RETURN_EPISODES"] != nil, standingStranded != lastStranded {
+                    FileHandle.standardError.write(Data("DEPOT_RETURN \(label) stranded \(clock(world.clock.now.seconds)): \(places.isEmpty ? "cleared" : places.joined(separator: "; "))\n".utf8))
+                }
+            }
+            lastStranded = standingStranded
             // TYMC-A12A13: `DEPOT_RETURN_WATCH=<from>-<to>` (clock seconds):
             // each train at a station whose name has `DEPOT_RETURN_WATCH_AT`
             // in it, what it does, where it stands and whom it waits for.
@@ -503,16 +530,20 @@ final class DepotReturnReportTests: XCTestCase {
         }
         summary += "; most standing at the ends: \(most); most deadlocked \(deadlocked)"
         if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
+        summary += "; most stranded \(stranded)"
+        if stranded > 0 { summary += " (first \(strandedWhere); stranded in \(strandedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
         FileHandle.standardError.write(Data(summary.utf8))
         // `DEPOT_RETURN_STRICT=1`: fails on a run not sent out, a late trip or a deadlock,
         // so a finding is a command that turns red (diagnosing-bugs).
         if environment["DEPOT_RETURN_STRICT"] != nil, until != nil {
             XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")
+            XCTAssertEqual(stranded, 0, "\(label): trains stranded, first \(strandedWhere)")
         } else if environment["DEPOT_RETURN_STRICT"] != nil {
             XCTAssertEqual(missed, 0, "\(label): runs not sent out")
             XCTAssertEqual(late, 0, "\(label): trips more than five minutes late")
             XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")
+            XCTAssertEqual(stranded, 0, "\(label): trains stranded, first \(strandedWhere)")
         }
         return world
     }

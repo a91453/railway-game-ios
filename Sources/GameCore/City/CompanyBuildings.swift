@@ -349,10 +349,11 @@ extension GameWorld {
     /// The day's upkeep of `building`, ``PlacedBuildingRules/upkeepBasisPoints``
     /// of its building cost rounded up, and the tax on its land,
     /// ``PlacedBuildingRules/taxBasisPoints`` of what the land's use cost,
-    /// rounded half up.
+    /// rounded half up; none with the annual taxes (decision 736), which
+    /// tax the land once a year instead.
     public func dailyUpkeep(of building: PlacedBuilding) -> (upkeep: Money, tax: Money) {
         let upkeep = (building.buildingCost.amount * PlacedBuildingRules.upkeepBasisPoints + 9_999) / 10_000
-        let tax = (building.landCost.amount * PlacedBuildingRules.taxBasisPoints + 5_000) / 10_000
+        let tax = annualTaxes ? 0 : (building.landCost.amount * PlacedBuildingRules.taxBasisPoints + 5_000) / 10_000
         return (Money(upkeep), Money(tax))
     }
 
