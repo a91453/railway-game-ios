@@ -208,6 +208,25 @@ final class Map3DFarSightTests: XCTestCase {
         XCTAssertEqual(window.shed(farFrom: camera.target, radius: Map3DStreaming.sight(of: camera)), [])
     }
 
+    /// MEM3D (decision 749 續): over the budget, what the camera does not
+    /// see is let go and what it sees stays, however far: the screen's
+    /// edge keeps its chunks, and the view builds none of those let go
+    /// again while it looks the same way.
+    func testSheddingForTheBudgetKeepsWhatTheCameraSees() {
+        let grid = streaming()
+        var window = window(grid)
+        let camera = farthest(over: Map3DPoint(8_000, 0, 0))
+        settle(&window, camera: camera)
+        let onScreen = window.built.filter { grid.isSeen($0, by: camera, slack: Map3DStreaming.slack) }
+        let shed = window.shed(farFrom: camera.target, radius: Map3DStreaming.sight(of: camera), seeing: camera)
+        XCTAssertFalse(shed.isEmpty, "the scene's chunks off the screen are let go")
+        XCTAssertTrue(shed.allSatisfy { !grid.isSeen($0, by: camera, slack: Map3DStreaming.slack) })
+        XCTAssertTrue(shed.allSatisfy { Map3DStreaming.distance(of: $0, to: camera.target) > Map3DStreaming.around })
+        XCTAssertTrue(window.built.isSuperset(of: onScreen), "nothing on the screen goes")
+        XCTAssertEqual(settle(&window, camera: camera, from: 1_000).blocks, 0, "nothing let go is built again")
+        XCTAssertEqual(window.shed(farFrom: camera.target, radius: Map3DStreaming.sight(of: camera), seeing: camera), [])
+    }
+
     // MARK: - The camera stays over the map
 
     /// A drag cannot take the camera's target off the map: three fast

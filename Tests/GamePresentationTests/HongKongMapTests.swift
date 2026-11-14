@@ -197,6 +197,53 @@ final class HongKongMapTests: XCTestCase {
         })
     }
 
+    /// Decision 748: at the South Island Line's stations whose real
+    /// platform is one island (MTR's station plans), the two tracks either
+    /// side of it stand the island's 11 m apart, so the 3D map draws the
+    /// island between them; at Ocean Park, two side platforms, 5 m as
+    /// before. At the two ends the first loop on the right is the island's
+    /// other track; the other loops stand 16 m and more the other way, so
+    /// no track nearer either island track is paired with it instead.
+    func testTheSouthIslandLinesIslandsStandWideApart() throws {
+        let session = try hongKong()
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "hkmtr:SIL" })
+        XCTAssertEqual(line.islandStations, ["金鐘", "利東", "黃竹坑", "海怡半島"])
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let snapshot = session.world.railwaySnapshot()
+        /// How far apart the station's platform tracks stand: from the
+        /// middle of each to the nearest point of each other's track.
+        func spacings(_ name: String) throws -> [(i: Int, j: Int, apart: Double)] {
+            let station = try XCTUnwrap(session.world.stations.first { $0.name == name && !$0.isDepot }, name)
+            let lines = snapshot.platforms.filter { $0.platform.station == station.id && $0.points.count > 1 }
+                .map { $0.points.map { WorldVector($0.plan) } }
+            func away(_ point: WorldVector, _ line: [WorldVector]) -> Double {
+                zip(line, line.dropFirst()).map { a, b in
+                    let along = b - a, length = along.length
+                    let t = length > 0 ? min(1, max(0, (point - a).dot(along) / (length * length))) : 0
+                    return (point - (a + along * t)).length
+                }.min() ?? .infinity
+            }
+            return lines.indices.flatMap { i in
+                lines.indices.filter { $0 > i }.map { (i, $0, away(lines[i][lines[i].count / 2], lines[$0]) / metre) }
+            }
+        }
+        for name in ["金鐘", "利東", "黃竹坑", "海怡半島"] {
+            let pairs = try spacings(name)
+            // The island's two tracks, wide enough apart for it (on a
+            // curve the purchase's tracks stray a metre or two from their
+            // offsets), and no other track nearer either of them to be
+            // paired with it instead.
+            let island = try XCTUnwrap(pairs.first { $0.apart > 10.4 && $0.apart < 15 }, "\(name): \(pairs)")
+            let nearer = pairs.filter { pair in
+                pair.apart < island.apart && [pair.i, pair.j].contains { [island.i, island.j].contains($0) }
+            }
+            XCTAssertTrue(nearer.isEmpty, "\(name): \(pairs)")
+        }
+        let ocean = try spacings("海洋公園")
+        XCTAssertEqual(ocean.count, 1)
+        XCTAssertEqual(try XCTUnwrap(ocean.first).apart, 5, accuracy: 0.6)
+    }
+
     /// Decision 712, later: the Airport Express's station at the airport
     /// is the airport's station, so its passengers ride the line.
     func testTheAirportExpressServesTheAirport() throws {

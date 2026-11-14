@@ -698,11 +698,12 @@ final class Map3DTrainModels {
         if !uploading {
             uploading = true
             // The task holds the vertices' last reference, so they are
-            // let go of there, not on the main thread.
-            let pack = self.pack
+            // let go of there, not on the main thread; MEM3D: one model at
+            // a time, as each is on the GPU (``Map3DUploadedModels/make(from:)``).
+            let pack = Map3DUploadedModels.Handed(self.pack)
             self.pack = nil
             Task.detached(priority: priority) {
-                let uploaded = pack.flatMap(Map3DUploadedModels.make(from:))
+                let uploaded = Map3DUploadedModels.make(from: pack)
                 await Map3DTrainModels.shared.finishedUpload(uploaded)
             }
         }
@@ -760,19 +761,31 @@ final class Map3DUploadedModels: @unchecked Sendable {
         self.glowBuffer = glowBuffer
     }
 
-    /// Puts the vertices of `full` (``Map3DView/makeModels()``) in
-    /// buffers on the system's Metal device (the one every 3D view draws
-    /// with), then lets go of them on the CPU: this pack's, once its
-    /// caller lets go of it, and ``Map3DModelPack/standard``'s, which it
-    /// was made from. Slow: never on the main thread.
-    static func make(from full: Map3DModelPack) -> Map3DUploadedModels? {
-        guard let device = MTLCreateSystemDefaultDevice() else { return nil }
-        let buffers = full.models.compactMap { model in
-            model.vertices.withUnsafeBytes { bytes in
-                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
-            }
+    /// MEM3D (2026-11-14): the pack handed to ``make(from:)``, which takes
+    /// it out, so the caller's task holds no reference to its vertices.
+    final class Handed: @unchecked Sendable {
+        private var pack: Map3DModelPack?
+        init(_ pack: Map3DModelPack?) { self.pack = pack }
+        func take() -> Map3DModelPack? {
+            defer { pack = nil }
+            return pack
         }
-        guard buffers.count == full.models.count else { return nil }
+    }
+
+    /// Puts the vertices of `handed`'s pack (``Map3DView/makeModels()``)
+    /// in buffers on the system's Metal device (the one every 3D view draws
+    /// with), letting go of them on the CPU as it goes: ``Map3DModelPack/standard``'s,
+    /// which it was made from, first, then each model's once its buffer
+    /// is made (MEM3D: the whole pack, some 290 MB on the heaviest save's
+    /// iPhone, was held on the CPU and the GPU at once while the 3D map
+    /// opened). Slow: never on the main thread.
+    static func make(from handed: Handed) -> Map3DUploadedModels? {
+        guard var full = handed.take() else { return nil }
+        // `full` holds the vertices now; the standard pack's copy of them
+        // goes, so each model's are let go of with `full`'s.
+        Map3DModelPack.letGoOfStandardVertices()
+        guard let device = MTLCreateSystemDefaultDevice() else { return nil }
+        // What is read from the vertices, before they go.
         let loader = MTKTextureLoader(device: device)
         let textures = full.models.map { model in model.texture.flatMap { texture(of: model.name, $0, loader: loader) } }
         let glass = Map3DTransparentGlass.Cache(models: full.models)
@@ -780,10 +793,17 @@ final class Map3DUploadedModels: @unchecked Sendable {
         let glowBuffer = glows.floats.withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
-        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, textures: textures, glass: glass, glows: glows,
-                                           glowBuffer: glowBuffer)
-        Map3DModelPack.letGoOfStandardVertices()
-        return uploaded
+        var buffers: [MTLBuffer] = []
+        buffers.reserveCapacity(full.models.count)
+        for index in full.models.indices {
+            guard let buffer = full.models[index].vertices.withUnsafeBytes({ bytes in
+                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+            }) else { return nil }
+            buffers.append(buffer)
+            full.letGoOfVertices(at: index)
+        }
+        return Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, textures: textures, glass: glass, glows: glows,
+                                   glowBuffer: glowBuffer)
     }
 
     /// Decision 653: `texture` on the GPU, its texels as stored (not sRGB:
@@ -1068,6 +1088,9 @@ final class Map3DChunkStreamer {
     private var source: Map3DChunkSource?
     private var trackCover = Map3DTrackCover()
     private var generation = 0
+    /// MEM3D (decision 749 續): when the chunks off the screen were last
+    /// let go for the budget, so it is tried at most four times a second.
+    private var shedAt: CFTimeInterval = -.infinity
 
     /// The chunks built since that `scene` (built anew round the same
     /// place) does not hold whole: kept until built again.
@@ -1111,10 +1134,17 @@ final class Map3DChunkStreamer {
 
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
+        let budget = Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier)
+        // MEM3D (decision 749 續): over the budget, what the camera has
+        // turned from goes, so what it now sees can be built.
+        if (view?.heldBytes ?? 0) > budget, time - shedAt >= Map3DStreaming.interval {
+            shedAt = time
+            shed(overBudget: true)
+        }
         guard var window, let source else { return }
         // Decision 714: what the camera sees is built too, while the
         // scene's buffers are within what this device holds.
-        let room = (view?.heldBytes ?? 0) <= Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier)
+        let room = (view?.heldBytes ?? 0) <= budget
         let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance,
                                         seeing: camera, room: room)
         self.window = window
@@ -1131,17 +1161,21 @@ final class Map3DChunkStreamer {
         guard window?.finished(keys, generation: generation) == true else { return }
         view?.place(chunks, at: keys)
         // Decision 711: the scene's buffers within what this device holds.
-        if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed() }
+        if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed(overBudget: true) }
     }
 
     /// Decision 711: memory runs short, or the buffers are over their
     /// budget: lets go of the chunks farther from what the camera looks
     /// at than it sees (its distance), the scene's own too.
-    func shed() {
+    /// MEM3D (decision 749 續): over the budget (`overBudget`), the chunks
+    /// off the screen go and those on it stay, so a view pulled out has
+    /// no empty edge; memory short, as far as the camera sees.
+    func shed(overBudget: Bool = false) {
         guard var window, let view else { return }
         // Decision 714: as far as the window builds for the camera, so
         // what is let go is not built again at once.
-        let drop = window.shed(farFrom: view.camera.target, radius: Map3DStreaming.sight(of: view.camera))
+        let drop = window.shed(farFrom: view.camera.target, radius: Map3DStreaming.sight(of: view.camera),
+                               seeing: overBudget ? view.camera : nil)
         self.window = window
         if !drop.isEmpty { view.remove(drop) }
     }
