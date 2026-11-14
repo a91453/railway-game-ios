@@ -99,6 +99,12 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     case ferryRunning
     /// What a run the player drove well earned (decision 693; native), in.
     case drivingBonus
+    /// The house tax on the company's stations and buildings, out, paid a
+    /// year after it was charged (decision 736; native).
+    case houseTax
+    /// The stations' upkeep by the length of their platforms, out
+    /// (decision 736; native), with the annual taxes.
+    case stationUpkeep
 }
 
 /// One line of a ledger row's breakdown.
@@ -184,6 +190,14 @@ public struct LedgerEntry: Hashable, Sendable {
         /// The income tax of the year before, paid at the end of the
         /// year's fifth month (decision 734).
         case annualIncomeTax
+        /// The house tax of the year before, paid with the income tax
+        /// (decision 736).
+        case annualHouseTax
+        /// The land tax of the year before, paid at the end of the year's
+        /// eleventh month (decision 736).
+        case annualLandTax
+        /// A day's upkeep of the stations' platforms (decision 736).
+        case dailyStationUpkeep
     }
 
     public let kind: Kind
@@ -246,12 +260,12 @@ public struct DayAccount: Hashable, Sendable {
             switch line.item {
             case .fareRevenue: fareRevenue = fareRevenue + line.amount
             case .operatingCost: operatingCost = operatingCost + cost
-            case .maintenanceCost, .depotUpkeep: maintenanceCost = maintenanceCost + cost
+            case .maintenanceCost, .depotUpkeep, .stationUpkeep: maintenanceCost = maintenanceCost + cost
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
             case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales, .busFares, .cablewayFares, .ferryFares, .drivingBonus: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost, .dayPassFares, .busRunning, .cablewayRunning, .ferryRunning: propertyCost = propertyCost + cost
+            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .houseTax, .propertyDemolition, .subsidiaryCost, .dayPassFares, .busRunning, .cablewayRunning, .ferryRunning: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }
@@ -423,6 +437,12 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// annual taxes on and that is not paid yet, due at the end of the
     /// next year's fifth month (``incomeTaxDueDay``). Zero without them.
     public internal(set) var incomeTaxPayable: Money = .zero
+    /// Decision 736: the house tax and the land tax the closed years were
+    /// charged with the annual taxes on and that are not paid yet, due at
+    /// the end of the next year's fifth (``incomeTaxDueDay``) and eleventh
+    /// month (``landTaxDueDay``). Zero without them.
+    public internal(set) var houseTaxPayable: Money = .zero
+    public internal(set) var landTaxPayable: Money = .zero
 
     /// Loans are taken and repaid NT$300,000 at a time (decision 499:
     /// $100,000 times 3).
@@ -453,6 +473,7 @@ public struct CompanyAccounts: Hashable, Sendable {
         mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && dayPass == nil && pending == .empty && openedAt == nil
             && entries.isEmpty && days.isEmpty && loan == .zero && assets.isEmpty && capitalDays.isEmpty && years.isEmpty
             && highSpeedFares.isEmpty && termLoans.isEmpty && nextTermLoanID == 1 && incomeTaxPayable == .zero
+            && houseTaxPayable == .zero && landTaxPayable == .zero
     }
 
     /// The rules trips pay by.
@@ -686,7 +707,7 @@ extension LedgerEntry: Codable {
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
         case mode, fareRules, fareBaseline, dayPass, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours, highSpeedFares
-        case termLoans, nextTermLoanID, incomeTaxPayable
+        case termLoans, nextTermLoanID, incomeTaxPayable, houseTaxPayable, landTaxPayable
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -726,6 +747,9 @@ extension CompanyAccounts: Codable {
         // Decision 734 (save version 99). That it is within bounds is
         // checked by the ``GameWorld`` decoder.
         incomeTaxPayable = try container.decodeIfPresent(Money.self, forKey: .incomeTaxPayable) ?? .zero
+        // Decision 736 (save version 100).
+        houseTaxPayable = try container.decodeIfPresent(Money.self, forKey: .houseTaxPayable) ?? .zero
+        landTaxPayable = try container.decodeIfPresent(Money.self, forKey: .landTaxPayable) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -772,6 +796,12 @@ extension CompanyAccounts: Codable {
         }
         if incomeTaxPayable != .zero {
             try container.encode(incomeTaxPayable, forKey: .incomeTaxPayable)
+        }
+        if houseTaxPayable != .zero {
+            try container.encode(houseTaxPayable, forKey: .houseTaxPayable)
+        }
+        if landTaxPayable != .zero {
+            try container.encode(landTaxPayable, forKey: .landTaxPayable)
         }
     }
 }
