@@ -269,7 +269,6 @@ struct YearEndAppraisalSection: View {
         } footer: {
             Text(verbatim: YearEndAppraisal.footnote(in: language))
         }
-        .accessibilityIdentifier("yearEnd.appraisal")
     }
 }
 

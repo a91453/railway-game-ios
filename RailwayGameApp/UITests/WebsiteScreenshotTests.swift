@@ -5135,7 +5135,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         let year = app.buttons["economy.closedYear.1"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(year, in: list, below: bar.frame.maxY, at: app.economyDragColumn(list), clearOf: .button), "The second year's closing comes into reach")
         year.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["yearEnd.appraisal.row"].firstMatch.appears(within: 10), "The report opens on its appraisal")
+        XCTAssertTrue(app.descendants(matching: .any)["yearEnd.headline"].firstMatch.appears(within: 10), "The year's report opens")
+        XCTAssertTrue(app.descendants(matching: .any)["yearEnd.appraisal.row"].firstMatch.appears(within: 5), "The report opens on its appraisal")
         settle(seconds: 1)
         keep("year-end-appraisal-\(suffix)", app)
     }
