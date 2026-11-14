@@ -1090,10 +1090,31 @@ private struct BuildingKindButton: View {
                     .scaledToFit()
                     .frame(width: cardArtSize, height: cardArtSize)
                     .accessibilityHidden(true)
-                Text(kind.title(in: session.language))
-                    .font(.subheadline.weight(isActive ? .bold : .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                // GLASS-POLISH: a long English name ("Railway museum")
+                // was cut to "Railway m…" in bold, and shrunk where it
+                // fitted; one line at full size, else two, broken between
+                // words. A Chinese name, with no space to break at, keeps
+                // its one line, as before.
+                let title = kind.title(in: session.language)
+                let font = Font.subheadline.weight(isActive ? .bold : .medium)
+                if title.contains(" ") {
+                    ViewThatFits(in: .horizontal) {
+                        Text(title)
+                            .font(font)
+                            .lineLimit(1)
+                        Text(title)
+                            .font(font)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .minimumScaleFactor(0.85)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Text(title)
+                        .font(font)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
                 // Decision 103: what each costs before its land.
                 if let cost = session.buildingStartingCost(kind) {
                     Text(verbatim: cost.moneyText)

@@ -307,6 +307,34 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertGreaterThan(played.accounts.days.last?.fareRevenue ?? .zero, .zero, "people rode")
     }
 
+    /// The two shuttles of two trains, the Disneyland Resort Line and the
+    /// LOHAS Park line, each bought alone and run through the morning: no
+    /// train deadlocks. With one track at each end, the two trains leaving
+    /// the ends at once each waited for the other's platform (Chien,
+    /// 2026-11-14: 「迪士尼綫會死結」, at 6:16 and 6:21 of the first day);
+    /// each end has a second track (`tools/real-timetables/extract_metro_runs.py`).
+    func testTheShuttlesDoNotDeadlock() throws {
+        for id in ["hkmtr:DRL", "hkmtr:TKL_LHP"] {
+            let session = try hongKong()
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
+            XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), "\(id): \(session.message?.text ?? "")")
+            let bought = try XCTUnwrap(session.world.acquisition(of: id))
+            let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)))
+            for end in [ran.stops.first, ran.stops.last] {
+                XCTAssertEqual(session.world.network.platforms(of: try XCTUnwrap(end)).count, 2, id)
+            }
+            var played = session.world
+            for _ in 0..<(9 * 60) {
+                try played.advance(ticks: 1)
+                XCTAssertEqual(played.deadlockedTrains(), [], "\(id) at \(played.clock.now.seconds % GameTime.secondsPerDay)")
+                if !played.deadlockedTrains().isEmpty { break }
+            }
+            let after = try XCTUnwrap(played.line(id: ran.id))
+            let departures = zip(after.runs, after.runDays).filter { $0.1 != nil }.count
+            XCTAssertGreaterThan(departures, 10, id)
+        }
+    }
+
     /// The demo mode's real lines, laid over the whole map at once: all
     /// twelve of the MTR, every one with trains standing on its track
     /// (#2099's two faults: a station with a platform on one track only,

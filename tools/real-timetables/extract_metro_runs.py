@@ -491,6 +491,16 @@ def main(folder, out):
         if problem:
             print(f"{label}: left out: {problem}")
             continue
+        # A shuttle of two or more trains between two ends of one track
+        # each (Hong Kong's Disneyland Resort and LOHAS Park lines): a
+        # train leaving one end takes its way up to the other end's
+        # platform, where the other train stands until it leaves for the
+        # first end's, so the two wait for each other for ever. Each end
+        # has a second track, as the real termini do.
+        ends = (stops[0], stops[-1])
+        if not single and sum(line["overnight"].values()) > 1 and all(line["tracks"][end] == 1 for end in ends):
+            for end in ends:
+                line["tracks"][end] = 2
         # Decision 605: the stations each run passes, by its train.
         for run in line["runs"]:
             names_passed = [c[0] for c in run["calls"] if c[0] in passed.get(run["train"], ())] if not run.get("positioning") else []
