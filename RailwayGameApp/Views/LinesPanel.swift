@@ -1547,6 +1547,14 @@ struct LinesPanel: View {
         if let report = session.world.lineReport(line.id), !line.isFreight {
             Section {
                 LineOperatingCharts(report: report, language: session.language)
+                // Decision 731 (PAT-2): with passengers' patience on, how
+                // many at its stops waited too long and left.
+                if let row = session.world.lineGaveUpRow(line.id, in: session.language) {
+                    LabeledContent(row.title, value: row.countText)
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("line.gaveUp")
+                }
                 if let diagnosis = lossMemo.diagnosis(line.id, of: session) {
                     // Decision 194, later: a fix beside each reason.
                     let fixes = lossMemo.fixes(line.id, of: session)
