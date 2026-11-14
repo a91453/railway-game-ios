@@ -1331,7 +1331,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         let bell = app.buttons["hud.news"]
         guard bell.appears(within: 10) else { return }
-        bell.waitUntilSettled()
+        // With news unread the bell rings and never settles: tapped as it is.
         bell.tap()
         let done = app.buttons["news.done"]
         XCTAssertTrue(done.appears(within: 10), "The news opens")
