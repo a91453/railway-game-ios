@@ -215,7 +215,7 @@ extension ReferenceWorld {
         if scheduled == nil, let preference = routePreference(trains[i], from: service.stop, to: next.stop),
            let way = preferenceRoute(from: start.position!, preference, length: Self.length(start)),
            case .success = admitted(routed(start, way)) { preferred = way }
-        guard let path = scheduled?.path ?? preferred ?? chosenRoute(from: start, to: target) else { return false }
+        guard let path = scheduled?.path ?? preferred ?? chosenRoute(from: start, to: target, next: next) else { return false }
         departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }
@@ -254,6 +254,48 @@ extension ReferenceWorld {
         return found
     }
 
+    /// Decision 735: the default way of a departure from `start`
+    /// (standing, turned already where its stop says) to station `target`,
+    /// the station of call `next`: the default way, unless its berth leaves
+    /// no default way on to the call after `next` and some berth of
+    /// `target` does; then the shortest way to those berths, when there is
+    /// one. Looked at one call further only.
+    mutating func departureRoute(from start: Train, to target: StationID, next: (stop: Int, cycle: Int64)) -> TrainPath? {
+        guard let path = defaultRoute(from: start, to: target) else { return nil }
+        guard path.distance > 0, let after = call(of: start, after: next), case .onEdge(let traversal, _)? = start.position,
+              let last = path.traversals.last.flatMap({ Run($0) }) ?? Run(traversal) else { return path }
+        let length = Self.length(start)
+        guard !hasWayOn(start, at: last, path.end ?? networkEdges[last.edge]!.length, stop: next.stop, to: after) else { return path }
+        var leading: [Run: [Int64]] = [:]
+        for (run, offsets) in berthsForStation(target, length: length) {
+            let kept = offsets.filter { hasWayOn(start, at: run, $0, stop: next.stop, to: after) }
+            if !kept.isEmpty { leading[run] = kept }
+        }
+        guard !leading.isEmpty, let kept = networkPathToStation(from: start.position!, station: target, length: length, eligible: leading) else { return path }
+        return kept
+    }
+
+    /// The call `train`'s service makes after `call`: the next stop, or
+    /// stop 0 of the next cycle of a repeating timetable that fits; `nil`
+    /// after the last.
+    func call(of train: Train, after call: (stop: Int, cycle: Int64)) -> (stop: Int, cycle: Int64)? {
+        if call.stop + 1 < train.timetable.count { return (call.stop + 1, call.cycle) }
+        guard train.period != nil, Self.fits(train, cycle: call.cycle + 1) else { return nil }
+        return (0, call.cycle + 1)
+    }
+
+    /// Decision 735: whether `train`, standing at `offset` along `run` for
+    /// its stop `stop`, has a default way on to call `after` (turned first
+    /// where that stop says).
+    mutating func hasWayOn(_ train: Train, at run: Run, _ offset: Int64, stop: Int, to after: (stop: Int, cycle: Int64)) -> Bool {
+        var there = train
+        there.position = .onEdge(run.traversal, offset: offset)
+        there.trailEdges = []
+        there = standing(there)
+        let start = train.timetable[stop].reverses ? turnedOnNetwork(there) : there
+        return defaultRoute(from: start, to: train.timetable[after.stop].station) != nil
+    }
+
     /// Decision 57: the route a departure from `start` (standing, turned
     /// already where its stop says) to station `target` takes: the default
     /// way when traffic control lets it take it whole or follow on it;
@@ -261,8 +303,8 @@ extension ReferenceWorld {
     /// `alternative(from:to:default:avoiding:)`) if it can take that whole;
     /// otherwise the default way, which it then cannot take. `nil` with no
     /// way at all.
-    mutating func chosenRoute(from start: Train, to target: StationID) -> TrainPath? {
-        guard let path = defaultRoute(from: start, to: target) else { return nil }
+    mutating func chosenRoute(from start: Train, to target: StationID, next: (stop: Int, cycle: Int64)) -> TrainPath? {
+        guard let path = departureRoute(from: start, to: target, next: next) else { return nil }
         guard trafficControl, case .failure = admitted(routed(start, path), following: true) else { return path }
         if let other = alternative(from: start, to: target, default: path, avoiding: blocked(for: start.id)),
            case .success = admitted(routed(start, other)) {
