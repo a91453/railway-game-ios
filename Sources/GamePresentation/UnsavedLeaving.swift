@@ -26,6 +26,11 @@ public struct UnsavedLeaving: Equatable, Sendable {
         language.text("Leave Without Saving", "不存檔離開")
     }
 
+    /// PERF-DEVICE 4: Back to Start once more.
+    public static func retryButton(in language: DisplayLanguage) -> String {
+        language.text("Try Again", "再試一次")
+    }
+
     public static func stayButton(in language: DisplayLanguage) -> String {
         language.text("Keep Playing", "繼續玩")
     }
