@@ -111,9 +111,11 @@ private struct StatementStackedRows: View {
             GridRow {
                 stackedTitle(row.title)
                     .padding(.top, 4)
+                    .padding(.leading, row.style == .note ? 12 : 0)
+                    .foregroundStyle(row.style == .note ? Theme.textSecondary : Theme.textPrimary)
                     .gridCellColumns(amountColumns + 1)
             }
-            .fontWeight(row.style == .item ? .regular : .semibold)
+            .fontWeight(row.style == .item || row.style == .note ? .regular : .semibold)
             GridRow {
                 Spacer(minLength: 0)
                 StatementAmount(money: row.current, style: row.style, short: short, language: language)
@@ -121,7 +123,7 @@ private struct StatementStackedRows: View {
                     StatementAmount(money: row.previous, style: row.style, short: short, language: language)
                 }
             }
-            .fontWeight(row.style == .item ? .regular : .semibold)
+            .fontWeight(row.style == .item || row.style == .note ? .regular : .semibold)
         }
     }
 
@@ -156,13 +158,15 @@ private struct StatementBesideRow: View {
             GridRow {
                 Text(verbatim: row.title)
                     .lineLimit(1)
+                    .padding(.leading, row.style == .note ? 12 : 0)
+                    .foregroundStyle(row.style == .note ? Theme.textSecondary : Theme.textPrimary)
                     .gridColumnAlignment(.leading)
                 StatementAmount(money: row.current, style: row.style, short: false, language: language)
                 if hasPrevious {
                     StatementAmount(money: row.previous, style: row.style, short: false, language: language)
                 }
             }
-            .fontWeight(row.style == .item ? .regular : .semibold)
+            .fontWeight(row.style == .item || row.style == .note ? .regular : .semibold)
         }
     }
 }

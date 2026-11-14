@@ -147,6 +147,8 @@ extension Map3DScene {
         // initializer does before it lays the city.
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         builder.detail = detail
+        // Decision 737: levelled as the whole scene was.
+        builder.levelGround(under: snapshot)
         let cover = Map3DTrackCover(snapshot, builder: &builder)
         builder.trackCover = cover
         trackCover = cover

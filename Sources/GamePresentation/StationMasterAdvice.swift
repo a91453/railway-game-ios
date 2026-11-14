@@ -78,6 +78,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case festivalComing(days: Int64, stations: [String], percent: Int64)
     /// Decision 576: a named festival at a place on the map.
     case namedFestivalComing(festival: FestivalKind, days: Int64, stations: [String], percent: Int64)
+    /// DEMAND-HOURS DH-2: a crowd surge with hours (decision 730) at
+    /// `station` starts in `days` days (0 on a day it runs), `opens` to
+    /// `closes` (minutes of the day), raising its demand by `percent`; its
+    /// crowd leaves around `closes`.
+    case crowdSurgeComing(station: StationID, name: String, days: Int64, percent: Int64, opens: Int64, closes: Int64)
     /// Decision 162: a typhoon comes in `days` days (0 while it blows),
     /// over `stations` of the network's stations, taking `percent` off their
     /// demand.
@@ -100,6 +105,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// car instead, most of them from `station`; said once
     /// (``ModeShiftHint``).
     case modeShift(station: StationID)
+    /// Decision 739 (AF-3): with the annual taxes, `amount` of tax falls
+    /// due at the end of month `month` of year `year` (from 1), in `days`
+    /// days (1 to ``taxReminderDays``); `enough` when the cash covers it.
+    case taxDue(year: Int64, month: Int64, days: Int64, amount: Money, enough: Bool)
 
     /// Decision 177: where the nearest town no station serves lies, from the
     /// railway's nearest station (``UnservedCluster``).
@@ -157,7 +166,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .stationFull(let station, _), .stationCrowded(let station, _),
              .underserved(let station, _, _), .townGrew(let station, _, _),
              .materialsShort(let station, _), .modeShift(let station),
-             .zoneNearStation(let station, _, _):
+             .zoneNearStation(let station, _, _), .crowdSurgeComing(let station, _, _, _, _, _):
             station
         default:
             nil
@@ -248,6 +257,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = typhoon
             return
         }
+        // Decision 739: tax soon due that the cash does not cover.
+        if let tax = Self.taxDue(in: world), case .taxDue(_, _, _, _, false) = tax {
+            self = tax
+            return
+        }
         let alerts = world.mapAlerts()
         let name = { (id: StationID) in world.station(id: id)?.name ?? "" }
         if let full = alerts.first(where: { if case .full = $0.kind { true } else { false } }), let station = full.station {
@@ -291,6 +305,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = .createLine
         } else if let welcome = Self.welcome(in: world), (world.scenarioDay() ?? .max) <= Self.welcomeDays {
             self = welcome
+        } else if let tax = Self.taxDue(in: world) {
+            self = tax
         } else if let requests = Self.newCityRequests(in: world) {
             self = requests
         } else if let tourists = Self.touristsComing(in: world) {
@@ -299,6 +315,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = holiday
         } else if let festival = Self.festival(in: world) {
             self = festival
+        } else if let surge = Self.crowdSurge(in: world) {
+            self = surge
         } else if let growth = Self.growth(in: world) {
             self = growth
         } else if let sight = Self.sightUnreachable(in: world) {
@@ -331,6 +349,38 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 world.train(id: id).map { $0.type == .steam && $0.cars < shortSteamCars } ?? false
             }
             if short { return .shortSteamTrains(line: line.id, name: line.name) }
+        }
+        return nil
+    }
+
+    /// The days before a tax falls due that the station master says so
+    /// (decision 739; design §3.2: a month).
+    public static let taxReminderDays: Int64 = 30
+
+    /// Decision 739: with the annual taxes, the next tax owed that falls
+    /// due within ``taxReminderDays`` days: the income and house taxes at
+    /// the end of the fifth month, the land tax at the end of the
+    /// eleventh. Nothing owed, nothing said.
+    public static func taxDue(in world: GameWorld) -> StationMasterAdvice? {
+        guard world.annualTaxes, world.accounts.mode == .management else { return nil }
+        let length = FinancePeriod.year.days
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        let year = today / length
+        let dayOfYear = today % length
+        let accounts = world.accounts
+        let dues: [(day: Int64, amount: Money)] = [
+            (CompanyAccounts.incomeTaxDueDay, accounts.incomeTaxPayable + accounts.houseTaxPayable),
+            (CompanyAccounts.landTaxDueDay, accounts.landTaxPayable),
+        ]
+        for due in dues where due.amount > .zero {
+            // Paid as the due day's midnight ends it: on the due day itself
+            // that is tonight, 1 day.
+            let days = due.day - dayOfYear + 1
+            guard (1...taxReminderDays).contains(days) else { continue }
+            return .taxDue(
+                year: year + 1, month: due.day / 30 + 1, days: days, amount: due.amount,
+                enough: world.economy.balance >= due.amount
+            )
         }
         return nil
     }
@@ -448,6 +498,24 @@ public enum StationMasterAdvice: Hashable, Sendable {
             return .namedFestivalComing(festival: named, days: first.start - today, stations: names, percent: first.boost / 10)
         }
         return .festivalComing(days: first.start - today, stations: names, percent: first.boost / 10)
+    }
+
+    /// DEMAND-HOURS DH-2: the first crowd surge with hours announced and
+    /// not over, the soonest first (on the same day, the station first by
+    /// ID), so the player knows when its crowd leaves.
+    static func crowdSurge(in world: GameWorld) -> StationMasterAdvice? {
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        let surges = (world.demandEvents?.events ?? []).filter {
+            $0.kind == .crowdSurge && $0.opens != nil && $0.closes != nil && $0.announced <= today && today < $0.end
+                && world.station(id: $0.station) != nil
+        }
+        guard let first = surges.min(by: { ($0.start, $0.station.rawValue) < ($1.start, $1.station.rawValue) }),
+              let opens = first.opens, let closes = first.closes, let station = world.station(id: first.station)
+        else { return nil }
+        return .crowdSurgeComing(
+            station: first.station, name: station.name, days: max(0, first.start - today),
+            percent: (first.boost + 5) / 10, opens: opens, closes: closes
+        )
     }
 
     /// Decision 174: a holiday that starts today or in the next three
@@ -730,6 +798,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "\(festival.title(in: language)) starts in \(days) day\(days == 1 ? "" : "s"): \(percent)% more passengers at \(stations.joined(separator: " and ")).\(festival.hoursText(in: language)) Add trains before it.",
                 "\(days) 天後是\(festival.title(in: language))，\(stations.joined(separator: "、"))的旅客會多 \(percent)%。\(festival.hoursText(in: language))先加開列車吧。"
             )
+        case .crowdSurgeComing(_, let name, let days, let percent, let opens, let closes):
+            Self.crowdSurgeText(name: name, days: days, percent: percent, opens: opens, closes: closes, in: language)
         case .holidayOver(let kind, let riders, let percent):
             percent >= 0
                 ? language.text(
@@ -780,6 +850,16 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "Some riders find a scooter quicker. More trains will win them back.",
                 "有些客人覺得騎車比較快。加開班次就能把他們拉回來。"
             )
+        case .taxDue(_, let month, let days, let amount, let enough):
+            enough
+                ? language.text(
+                    "\(amount.moneyText) of tax is due at the end of month \(month), in \(days) day\(days == 1 ? "" : "s"). We have the cash; keep it until then.",
+                    "\(month) 月底要繳稅 \(amount.moneyText)（還有 \(days) 天）。現金夠，先留著別花掉。"
+                )
+                : language.text(
+                    "\(amount.moneyText) of tax is due at the end of month \(month), in \(days) day\(days == 1 ? "" : "s"), and we haven't the cash. Build less until then, or borrow.",
+                    "\(month) 月底要繳稅 \(amount.moneyText)（還有 \(days) 天），現金不夠。這段時間少蓋一點，或先向銀行借款。"
+                )
         case .fuelSpell(let percent, let days):
             percent >= 0
                 ? language.text(
@@ -793,14 +873,32 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
     }
 
+    /// DEMAND-HOURS DH-2: a crowd surge's reminder, with its hours and when
+    /// its crowd leaves, as the station panel's line says them.
+    static func crowdSurgeText(name: String, days: Int64, percent: Int64, opens: Int64, closes: Int64, in language: DisplayLanguage) -> String {
+        let title = DemandEventKind.crowdSurge.title(in: language)
+        let hours = "\(clockText(minuteOfDay: Int(opens)))–\(clockText(minuteOfDay: Int(closes)))"
+        let leave = clockText(minuteOfDay: Int(closes))
+        return days > 0
+            ? language.text(
+                "\(title) at \(name) in \(days) day\(days == 1 ? "" : "s"), \(hours): \(percent)% more passengers, crowds leave around \(leave). Add trains before it.",
+                "\(days) 天後\(name)有\(title) \(hours)，旅客會多 \(percent)%，散場人潮約 \(leave)。先加開列車吧。"
+            )
+            : language.text(
+                "\(title) at \(name) today, \(hours): crowds leave around \(leave). Run more trains then.",
+                "今天\(name)有\(title) \(hours)，散場人潮約 \(leave)，那時多開幾班吧。"
+            )
+    }
+
     /// Whether it is a worry (shown with a warning look) rather than a
     /// next step.
     public var isWorry: Bool {
         switch self {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .noPlaceToPass, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
+        case .taxDue(_, _, _, _, let enough): !enough
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .zoneNearStation, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .namedFestivalComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
+             .goalMet, .scenarioCompleted, .festivalComing, .namedFestivalComing, .crowdSurgeComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
         }
     }
 

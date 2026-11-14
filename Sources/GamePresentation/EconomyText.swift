@@ -212,7 +212,7 @@ extension LedgerEntry.Kind {
         case .dailyInterest: language.text("Loan interest (daily)", "貸款利息（日結）")
         case .dailyProperty: language.text("Buildings (daily)", "建物收支（日結）")
         case .buildingDemolition: language.text("Building demolished", "拆除建物")
-        case .dailyTax: language.text("Income tax (daily)", "營利事業所得稅（日結）")
+        case .dailyTax: language.text("Income tax (daily)", "所得稅（每日結算）")
         case .hourlyFreight: language.text("Freight (hourly)", "貨運收入（小時）")
         case .dailySubsidiary: language.text("Subsidiaries (daily)", "子公司營業（日結）")
         case .dailyTourism: language.text("Souvenir shops (daily)", "名產店收支（日結）")
@@ -544,12 +544,13 @@ extension CompanyAccounts {
         )
     }
 
-    /// The tax (decision 131): "Income tax: 50% of each day's profit
-    /// before tax beyond $ 100,000, paid at midnight".
+    /// The tax (decision 131; named as decision 739 has it): "Income tax
+    /// (daily): 50% of each day's profit beyond $ 300,000, paid at
+    /// midnight".
     public static func taxTermsText(in language: DisplayLanguage) -> String {
         language.text(
-            "Income tax: \(taxPercent)% of each day's profit before tax beyond \(taxFreeProfit.moneyText), paid at midnight",
-            "營利事業所得稅：每天的稅前淨利超過 \(taxFreeProfit.moneyText) 的部分課 \(taxPercent)%，午夜支付"
+            "Income tax (daily): \(taxPercent)% of each day's profit beyond \(taxFreeProfit.moneyText), paid at midnight",
+            "所得稅（每日結算）：每天獲利超過 \(taxFreeProfit.moneyText) 的部分繳 \(taxPercent)%，午夜支付"
         )
     }
 }
