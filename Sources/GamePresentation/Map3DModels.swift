@@ -96,6 +96,14 @@ public struct Map3DModelPack: Sendable {
         return pack
     }
 
+    /// MEM3D (2026-11-14): lets go of the vertices of the model at `index`
+    /// alone (``Model/withoutVertices``), as soon as they are on the GPU,
+    /// so the pack's some 290 MB are not held on the CPU and the GPU at
+    /// once while the 3D map opens.
+    public mutating func letGoOfVertices(at index: Int) {
+        models[index] = models[index].withoutVertices
+    }
+
     /// ``standard``, made once the first time it is asked for (as the
     /// `static let` it was), which the app can let go of the vertices of.
     private final class StandardPack: @unchecked Sendable {

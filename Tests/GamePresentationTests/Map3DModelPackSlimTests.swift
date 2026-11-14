@@ -42,6 +42,28 @@ final class Map3DModelPackSlimTests: XCTestCase {
         }
     }
 
+    /// MEM3D: letting go of one model's vertices at a time, as the app
+    /// uploads them, ends in the same pack as letting go of all at once,
+    /// and leaves the other models' vertices as they were meanwhile.
+    func testLettingGoOneModelAtATimeEndsAsTheSlimPack() {
+        let full = Map3DModelPack.standard
+        var pack = full
+        pack.letGoOfVertices(at: 1)
+        XCTAssertTrue(pack.models[1].vertices.isEmpty)
+        XCTAssertEqual(pack.models[1].vertexCount, full.models[1].vertices.count)
+        XCTAssertEqual(pack.models[0].vertices, full.models[0].vertices)
+        XCTAssertEqual(pack.models[2].vertices, full.models[2].vertices)
+        for index in pack.models.indices { pack.letGoOfVertices(at: index) }
+        let slim = full.withoutVertices()
+        for (kept, model) in zip(pack.models, slim.models) {
+            XCTAssertEqual(kept.name, model.name)
+            XCTAssertTrue(kept.vertices.isEmpty, model.name)
+            XCTAssertEqual(kept.vertexCount, model.vertexCount, model.name)
+            XCTAssertEqual(kept.minimum, model.minimum, model.name)
+            XCTAssertEqual(kept.maximum, model.maximum, model.name)
+        }
+    }
+
     /// What the renderer looks up by name and lays out by length answers
     /// the same without the vertices.
     func testLookupsAndLayoutsAnswerAsBefore() {

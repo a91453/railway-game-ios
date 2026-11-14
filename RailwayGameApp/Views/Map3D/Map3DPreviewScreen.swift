@@ -698,11 +698,12 @@ final class Map3DTrainModels {
         if !uploading {
             uploading = true
             // The task holds the vertices' last reference, so they are
-            // let go of there, not on the main thread.
-            let pack = self.pack
+            // let go of there, not on the main thread; MEM3D: one model at
+            // a time, as each is on the GPU (``Map3DUploadedModels/make(from:)``).
+            let pack = Map3DUploadedModels.Handed(self.pack)
             self.pack = nil
             Task.detached(priority: priority) {
-                let uploaded = pack.flatMap(Map3DUploadedModels.make(from:))
+                let uploaded = Map3DUploadedModels.make(from: pack)
                 await Map3DTrainModels.shared.finishedUpload(uploaded)
             }
         }
@@ -760,19 +761,31 @@ final class Map3DUploadedModels: @unchecked Sendable {
         self.glowBuffer = glowBuffer
     }
 
-    /// Puts the vertices of `full` (``Map3DView/makeModels()``) in
-    /// buffers on the system's Metal device (the one every 3D view draws
-    /// with), then lets go of them on the CPU: this pack's, once its
-    /// caller lets go of it, and ``Map3DModelPack/standard``'s, which it
-    /// was made from. Slow: never on the main thread.
-    static func make(from full: Map3DModelPack) -> Map3DUploadedModels? {
-        guard let device = MTLCreateSystemDefaultDevice() else { return nil }
-        let buffers = full.models.compactMap { model in
-            model.vertices.withUnsafeBytes { bytes in
-                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
-            }
+    /// MEM3D (2026-11-14): the pack handed to ``make(from:)``, which takes
+    /// it out, so the caller's task holds no reference to its vertices.
+    final class Handed: @unchecked Sendable {
+        private var pack: Map3DModelPack?
+        init(_ pack: Map3DModelPack?) { self.pack = pack }
+        func take() -> Map3DModelPack? {
+            defer { pack = nil }
+            return pack
         }
-        guard buffers.count == full.models.count else { return nil }
+    }
+
+    /// Puts the vertices of `handed`'s pack (``Map3DView/makeModels()``)
+    /// in buffers on the system's Metal device (the one every 3D view draws
+    /// with), letting go of them on the CPU as it goes: ``Map3DModelPack/standard``'s,
+    /// which it was made from, first, then each model's once its buffer
+    /// is made (MEM3D: the whole pack, some 290 MB on the heaviest save's
+    /// iPhone, was held on the CPU and the GPU at once while the 3D map
+    /// opened). Slow: never on the main thread.
+    static func make(from handed: Handed) -> Map3DUploadedModels? {
+        guard var full = handed.take() else { return nil }
+        // `full` holds the vertices now; the standard pack's copy of them
+        // goes, so each model's are let go of with `full`'s.
+        Map3DModelPack.letGoOfStandardVertices()
+        guard let device = MTLCreateSystemDefaultDevice() else { return nil }
+        // What is read from the vertices, before they go.
         let loader = MTKTextureLoader(device: device)
         let textures = full.models.map { model in model.texture.flatMap { texture(of: model.name, $0, loader: loader) } }
         let glass = Map3DTransparentGlass.Cache(models: full.models)
@@ -780,10 +793,17 @@ final class Map3DUploadedModels: @unchecked Sendable {
         let glowBuffer = glows.floats.withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
-        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, textures: textures, glass: glass, glows: glows,
-                                           glowBuffer: glowBuffer)
-        Map3DModelPack.letGoOfStandardVertices()
-        return uploaded
+        var buffers: [MTLBuffer] = []
+        buffers.reserveCapacity(full.models.count)
+        for index in full.models.indices {
+            guard let buffer = full.models[index].vertices.withUnsafeBytes({ bytes in
+                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+            }) else { return nil }
+            buffers.append(buffer)
+            full.letGoOfVertices(at: index)
+        }
+        return Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, textures: textures, glass: glass, glows: glows,
+                                   glowBuffer: glowBuffer)
     }
 
     /// Decision 653: `texture` on the GPU, its texels as stored (not sRGB:
