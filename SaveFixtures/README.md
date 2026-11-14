@@ -368,3 +368,11 @@ its map's airports when it opens the save).
   platform at M and a train with no service on the loop, a minute on
   (`PlatformListTests.testTheVersion101SaveKeepsItsPlatformList`, printed
   by CI from the same world, decision 740).
+- `v102-switch-interlocking.json`: the single track of
+  `SwitchInterlockingTests` (W, M, E with a loop at M) under traffic
+  control with switch interlocking on, 45 seconds in: the train has set
+  off from W for M's main and stands there while the west switch, lying
+  for the loop (`"switchLies"`), is thrown
+  (`SwitchInterlockingTests.testTheVersion102SaveKeepsTheSwitches`,
+  written with `SWITCH_SAVE_NEW=1` by the build that first made it;
+  decision 756).

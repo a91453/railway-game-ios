@@ -167,9 +167,20 @@ extension ServiceTimes {
     }
 
     /// The latest time stored, which the clock cannot be before; the end of
-    /// an exchange still under way may be, and so may the end of a run.
+    /// an exchange still under way may be, and so may the end of a run. A
+    /// run's start may be too, by as long as its switches take to throw
+    /// (decision 756): see ``latest(throwing:)``.
     var latest: GameTime {
-        [arrival, closing, departure, run?.start].compactMap { $0 }.max()!
+        latest(throwing: 0)
+    }
+
+    /// ``latest``, with a run's start counted `seconds` earlier: a train
+    /// waiting for its switches (decision 756) set off that much before.
+    func latest(throwing seconds: Int64) -> GameTime {
+        [arrival, closing, departure, run.map { run in
+            let (earlier, overflow) = run.start.seconds.subtractingReportingOverflow(seconds)
+            return overflow ? run.start : GameTime(seconds: earlier)
+        }].compactMap { $0 }.max()!
     }
 }
 

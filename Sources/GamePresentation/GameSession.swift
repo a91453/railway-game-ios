@@ -1962,6 +1962,21 @@ public final class GameSession {
         }
     }
 
+    /// Turns switch interlocking on or off through
+    /// `GameWorld.setSwitchInterlocking(_:)` (decision 756). With it and
+    /// traffic control on, a train whose route needs a switch thrown the
+    /// other way waits for it before it moves.
+    public func setSwitchInterlocking(_ enabled: Bool) {
+        perform(.setSwitchInterlocking(enabled)) { _, _, _ in
+            enabled
+                ? language.text(
+                    "Switches now take time to throw. A train waits for them before it moves.",
+                    "道岔扳轉現在要時間。列車會等道岔扳好才開動。"
+                )
+                : language.text("Switches no longer take time to throw.", "道岔扳轉不再需要時間。")
+        }
+    }
+
     // MARK: - Disruptions
 
     /// Whether this game's holidays and events stay as they are because it

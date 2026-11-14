@@ -14,6 +14,8 @@ extension PlayerCommand {
     public enum Edit: Hashable, Sendable, Codable {
         // MARK: The company
         case setTrafficControl(Bool)
+        /// Switches take time to throw (decision 756).
+        case setSwitchInterlocking(Bool)
         case setDisruptions(Disruptions?)
         case setPassengerRoutingMode(PassengerRoutingMode)
         case setEconomyMode(EconomyMode)
@@ -276,6 +278,7 @@ extension GameSession {
         var outcome = PlayerCommand.Outcome()
         switch edit {
         case .setTrafficControl(let enabled): try world.setTrafficControl(enabled)
+        case .setSwitchInterlocking(let enabled): world.setSwitchInterlocking(enabled)
         case .setDisruptions(let disruptions): world.setDisruptions(disruptions)
         case .setPassengerRoutingMode(let mode): world.setPassengerRoutingMode(mode)
         case .setEconomyMode(let mode):

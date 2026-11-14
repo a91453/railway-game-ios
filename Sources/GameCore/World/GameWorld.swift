@@ -132,6 +132,16 @@ public struct GameWorld: Equatable, Sendable {
     /// world and in saves from before it; the app's new games turn it on.
     /// Set by ``setKeepLeft(_:)`` only.
     public internal(set) var keepLeft: Bool = false
+    /// Whether switches take time to throw (decision 756): with traffic
+    /// control on, a switch lies the way the last train went through it,
+    /// and a service whose route needs one the other way waits
+    /// ``switchThrowSeconds`` before it moves. Off in a new world and in
+    /// saves from before it. Set by ``setSwitchInterlocking(_:)`` only.
+    public internal(set) var switchInterlocking: Bool = false
+    /// How each switch a train has gone through lies (decision 756), by
+    /// node: empty unless ``switchInterlocking`` is on. A switch whose
+    /// track was taken up may stay in it; it is never asked of again.
+    public internal(set) var switchLies: [TrackNodeID: SwitchLie] = [:]
     /// Whether the lines plan their timetables realistically (decision
     /// 207): each leg at the performance's usual rates with a recovery
     /// margin a late train can make up, a line's dwell by its kind, and
@@ -3645,7 +3655,7 @@ public struct GameWorld: Equatable, Sendable {
             // for its route, which then tries again, or (Stage U2) for a
             // train following them to take more of its route. `moves` keeps
             // the trains as each span tried leaves them, for the move below.
-            var moves: [Int64: (trains: [Train], spacing: [TrainID: SpacingAllowance], moved: Bool)] = [:]
+            var moves: [Int64: (trains: [Train], spacing: [TrainID: SpacingAllowance], lies: [TrackNodeID: SwitchLie], moved: Bool)] = [:]
             if span > 1, !held.isEmpty || trains.contains(where: { isFollowing($0, memo: &memo.directions) }),
                let freed = secondsUntilARouteFrees(held, from: start, within: span, moves: &moves, memo: &memo) {
                 span = freed
@@ -3678,6 +3688,7 @@ public struct GameWorld: Equatable, Sendable {
             if let move = moves[span] {
                 trains = move.trains
                 spacingAllowances = move.spacing
+                switchLies = move.lies
                 if move.moved {
                     changed = true
                 }
@@ -4394,6 +4405,8 @@ public struct GameWorld: Equatable, Sendable {
         var departed = train
         departed.trafficVisits = trains[index].trafficVisits
         trains[index] = departed
+        // Decision 756: not before the switches of its route lie its way.
+        if let thrown = runAfterThrowingSwitches(of: trains[index]) { trains[index].times?.run = thrown }
         // Decision 223: the trip log notes the departure, and the call it
         // makes at once when it was already at the next one's station.
         if let left {
@@ -5575,6 +5588,8 @@ public struct GameWorld: Equatable, Sendable {
                     after: traversal.edge, trail: before.trailEdges,
                     entered: movement.edges[movement.cursor..<travel.cursor], offset: reached, length: before.length
                 )
+                // Decision 756: the switches it went through lie its way.
+                if switchInterlocking { noteSwitches(from: traversal, entering: movement.edges[movement.cursor..<travel.cursor]) }
             }
             trains[index].position = travel.position
             if travel.cursor == movement.edges.count {
@@ -5874,13 +5889,13 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
     private func secondsUntilARouteFrees(
-        _ held: [HeldRoute], from start: GameTime, within span: Int64, moves: inout [Int64: (trains: [Train], spacing: [TrainID: SpacingAllowance], moved: Bool)],
+        _ held: [HeldRoute], from start: GameTime, within span: Int64, moves: inout [Int64: (trains: [Train], spacing: [TrainID: SpacingAllowance], lies: [TrackNodeID: SwitchLie], moved: Bool)],
         memo: inout DispatchMemo
     ) -> Int64? {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             let any = moved.moveTrains(from: start, for: seconds, memo: &memo.directions)
-            moves[seconds] = (moved.trains, moved.spacingAllowances, any)
+            moves[seconds] = (moved.trains, moved.spacingAllowances, moved.switchLies, any)
             // The cheaper question first: either answer frees.
             if moved.canExtendAnyAuthority(memo: &memo.directions) {
                 return true
@@ -6086,7 +6101,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, driving
     }
 
@@ -6203,6 +6218,16 @@ extension GameWorld: Codable {
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
+        switchInterlocking = try container.decodeIfPresent(Bool.self, forKey: .switchInterlocking) ?? false
+        if let saved = try container.decodeIfPresent([SavedSwitchLie].self, forKey: .switchLies) {
+            guard switchInterlocking, let lies = Self.switchLies(of: saved) else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .switchLies, in: container,
+                    debugDescription: "Switch lies are kept only with switch interlocking on, ordered by node, one each, with two ascending edges."
+                )
+            }
+            switchLies = lies
+        }
         realisticOperation = container.contains(.realisticOperation) ? try container.decode(Bool.self, forKey: .realisticOperation) : false
         blockSections = container.contains(.blockSections) ? try container.decode(Bool.self, forKey: .blockSections) : false
         curveSpeedLimits = container.contains(.curveSpeedLimits) ? try container.decode(Bool.self, forKey: .curveSpeedLimits) : false
@@ -6391,6 +6416,12 @@ extension GameWorld: Codable {
         }
         if keepLeft {
             try container.encode(true, forKey: .keepLeft)
+        }
+        if switchInterlocking {
+            try container.encode(true, forKey: .switchInterlocking)
+        }
+        if !switchLies.isEmpty {
+            try container.encode(savedSwitchLies, forKey: .switchLies)
         }
         if realisticOperation {
             try container.encode(true, forKey: .realisticOperation)
@@ -6732,8 +6763,11 @@ extension GameWorld: Codable {
             // Stage W2b: what a service did happened no later than now: it
             // arrived, its doors opened if its exchange has started, they
             // started closing, and it left the call before.
+            // Decision 756: a run may start as long after as its switches
+            // take to throw, also once the interlocking or traffic control
+            // was turned off while they were thrown.
             if let times = train.times,
-               times.latest > clock.now || (times.exchangeEnd != nil && Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) > clock.now) {
+               times.latest(throwing: Self.switchThrowSeconds) > clock.now || (times.exchangeEnd != nil && Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) > clock.now) {
                 return "Train \(train.id.rawValue)'s service times are after the clock."
             }
         }
