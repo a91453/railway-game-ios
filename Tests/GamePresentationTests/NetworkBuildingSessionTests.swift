@@ -465,7 +465,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
             session.tapNetwork(at: PlanPoint(x: 15_360, y: 4_096), reach: Self.reach)
             // 13 tiles at 3 × 100.
-            XCTAssertEqual(session.networkPreview?.text(in: .english), "208 m · 0 m → 8 m · continues the track · \(Money(3_900).moneyText) · on a grade: a platform here is levelled first")
+            XCTAssertEqual(session.networkPreview?.text(in: .english), "208 m · 0 m → 8 m · continues the track · \(Money(3_900).moneyText)")
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, expected)

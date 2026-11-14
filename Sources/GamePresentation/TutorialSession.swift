@@ -714,7 +714,7 @@ extension GameSession {
             }
             // Decision 190: ✓ levels a grade, unless it cannot.
             if let levelling = networkPlatformLevelling, let problem = levelling.problem {
-                return TutorialHint(platformGradeText(levelling.grade, problem: problem), isProblem: true)
+                return TutorialHint(problem, isProblem: true)
             }
             if !world.land.isEmpty, let catchment = platformSiteCatchment, catchment.residents + catchment.jobs == 0 {
                 return TutorialHint(language.text(

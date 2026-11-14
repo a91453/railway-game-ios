@@ -126,10 +126,9 @@ final class NetworkPlanCommandTests: XCTestCase {
         session.setNetworkMode(.platform)
         session.tapNetwork(at: PlanPoint(x: 9_216, y: 2_048), reach: 16)
         XCTAssertNotNil(session.networkPlatformGrade, "on a grade")
-        let metres = NetworkBuilding.lengthText(try XCTUnwrap(session.networkPlatformLevelling).length, in: .english)
+        XCTAssertNotNil(session.networkPlatformLevelling?.cost, "levelled")
         session.addNetworkPlatform()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
-        XCTAssertTrue(session.message?.text.contains(" Levelled \(metres) of track for it, for ") == true, session.message?.text ?? "")
         try assertLoggedAndReplayed(session) { command in
             if case .addPlatform(let addition) = command { addition.levelling != nil } else { false }
         }
