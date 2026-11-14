@@ -136,10 +136,10 @@ public enum TRADemo {
         // Dongshan, as the real line is.
         followsRealStructures: true,
         // Decision 741: island platforms as the TRA's station plans have
-        // them: Jiaoxi, Yilan, Erjie, Zhongli and Luodong (Luodong's plan
-        // does not show its outer tracks; its two platforms are islands),
-        // one at Toucheng and one at Su'aoxin.
-        islandPlatforms: [2, 4, 5, 6, 7],
+        // them: Jiaoxi, Yilan, Erjie and Zhongli, one at Toucheng and one
+        // at Su'aoxin. Luodong's and Sicheng's plans do not show their
+        // tracks and OpenStreetMap has side platforms there: as they were.
+        islandPlatforms: [2, 4, 5, 6],
         endIslands: (north: 1, south: 1)
     )
 
