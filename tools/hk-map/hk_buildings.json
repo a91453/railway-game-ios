@@ -1,32 +1,65 @@
 {
+ "landsd": {
+  "file": "Building_Outline_Public_v20261020_Building_converted.geojson",
+  "sha256": "e1c3b29b6ff85fd807d3d533f6f505f69f27e9db56372818395f12e115d023f3",
+  "dataset": "landsd_rcd_1637211194312_35158",
+  "licence": "CSDI Portal Terms and Conditions of Use; Lands Department, Government of the Hong Kong SAR",
+  "leftOut": {
+   "outside": 98,
+   "small Open-sided Structure": 17476,
+   "small Temporary Structure": 27511
+  }
+ },
  "extract": {
   "file": "hong_kong.pbf",
-  "sha256": "20b9e1fc0028ef00401d482821e58ddbf2fc6939af66d301920dfdb3d51e3310",
+  "sha256": "f24a6808b50516bc14cbd62b94d6aa06a63a39ff9674d0af271f1f4cfe260dcc",
   "from": "https://osmtoday.com/asia/china/hong_kong.pbf",
-  "licence": "ODbL 1.0, \u00a9 OpenStreetMap contributors",
-  "newestBuildingEdit": "2026-11-11T18:09:47Z"
+  "licence": "ODbL 1.0, © OpenStreetMap contributors",
+  "newestBuildingEdit": "2026-11-12T02:37:40Z",
+  "buildingsRead": 117274
  },
- "buildings": 117245,
- "read": 117274,
- "tiles": 2203,
+ "buildings": 297019,
+ "read": 297149,
+ "blocks": {
+  "Open-sided Structure": 27224,
+  "Podium": 9050,
+  "Temporary Structure": 47482,
+  "Tower": 213393
+ },
+ "tiles": 2589,
  "storeysFrom": {
-  "tags": 58140,
-  "guess": 59134
+  "guess": 65139,
+  "landsd": 232009,
+  "tags": 1
+ },
+ "measuredShareOfTowersAndPodiums": 1.0,
+ "onPodium": 15747,
+ "withUse": 91423,
+ "over100m": 3525,
+ "over150m": 577,
+ "over200m": 96,
+ "tallest": {
+  "metres": 485.3,
+  "name": "International Commerce Centre",
+  "nameTC": "環球貿易廣場",
+  "id": "3455218259T20050429/0",
+  "top": 490,
+  "base": 29.4
+ },
+ "storeysFieldCompared": {
+  "buildings": 60229,
+  "medianRelativeDifference": 0.12195121951219512,
+  "within20Percent": 0.6324
  },
  "storeys": {
-  "median": 3,
-  "tallest": 118,
-  "share10": 0.1608,
-  "share20": 0.0773,
-  "share40": 0.0124
+  "median": 2,
+  "tallest": 152,
+  "share10": 0.0641,
+  "share20": 0.0324,
+  "share40": 0.0041
  },
- "flats": {
-  "buildings": 61655,
-  "median": 5,
-  "share10": 0.2918,
-  "share20": 0.1442
- },
- "rawBytes": 2883511,
- "archiveBytes": 2262114,
- "sha256": "184266027fc9a3f5645518ed9216edbf87b65bc9a9cc34890c7e8b1d157759c6"
+ "landmarks": [],
+ "rawBytes": 6293800,
+ "archiveBytes": 5126408,
+ "sha256": "ccc4df0d0e1a9c17b575a79cf6f6154bd051d6d770a07744c2a4705d939d57c4"
 }
