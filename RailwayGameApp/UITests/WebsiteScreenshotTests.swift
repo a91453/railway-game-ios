@@ -3455,6 +3455,41 @@ final class WebsiteScreenshotTests: XCTestCase {
         shootHongKongStreets("nathan-road", at: "22.30490,114.17170", view: "70,0,55", along: true)
     }
 
+    /// Decision 748: the South Island Line bought, a train followed as it
+    /// stands at Lei Tung (an island between the ends) and at Admiralty
+    /// (its island end), the 3D map near the platforms and once farther.
+    /// The same test on `main` before the change shows the side platforms.
+    func testHongKongIslandLeiTung() { shootHongKongIsland("lei-tung", at: "22.241871,114.156105") }
+    func testHongKongIslandAdmiralty() { shootHongKongIsland("admiralty", at: "22.27836,114.166098") }
+
+    private func shootHongKongIsland(_ place: String, at: String) {
+        executionTimeAllowance = 1_700
+        let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:SIL,\(at)", "-map3D.quality", "high", "-screenshot-device-tier", "1"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
+        // The main thread is busy buying and running the morning (as
+        // `testHongKongMap`).
+        Thread.sleep(forTimeInterval: 360)
+        XCTAssertTrue(app.descendants(matching: .any)["train.unfollow"].firstMatch.appears(within: 1_000), "The line is bought and a train followed")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        waitForPicture(timeout: 150)
+        settle(seconds: 8)
+        keep("hong-kong-island-\(place)", app)
+        app.pinch(withScale: 0.5, velocity: -1)
+        settle(seconds: 10)
+        keep("hong-kong-island-\(place)-mid", app)
+    }
+
     private func shootHongKongStreets(_ place: String, at: String, view: String, along: Bool = false) {
         executionTimeAllowance = 1_700
         let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "high",
