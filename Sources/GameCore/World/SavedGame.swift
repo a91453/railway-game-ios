@@ -523,9 +523,18 @@
 ///     spread the crowd over the whole day again, so it says the save is
 ///     newer than it instead. A save of any earlier version needs no step:
 ///     its events run all day, as every event did.
+/// 99. The annual taxes (decision 734): a world can have `"annualTaxes"`,
+///     its accounts the `"incomeTaxPayable"` owed, a closed year its
+///     `"incomeTaxAssessed"` and a balance sheet its `"taxPayable"`, and
+///     its ledger may hold rows of the kind `"annualIncomeTax"`. A build
+///     that reads only an earlier version would drop the rule and the tax
+///     owed, and would refuse the row and the whole save with it, so it
+///     says the save is newer than it instead. A save of any earlier
+///     version needs no step: each of its days pays its own tax, and
+///     nothing is owed.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 98
+    public static let currentVersion = 99
 
     public let world: GameWorld
 
@@ -766,6 +775,9 @@ extension SavedGame: Codable {
         // (decision 731): nothing to turn.
         // Version 97 or earlier to 98: a demand event without `"opens"` and
         // `"closes"` runs all day (decision 730): nothing to turn.
+        // Version 98 or earlier to 99: a world without `"annualTaxes"`
+        // pays each day's tax, and accounts without `"incomeTaxPayable"`
+        // owe nothing (decision 734): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

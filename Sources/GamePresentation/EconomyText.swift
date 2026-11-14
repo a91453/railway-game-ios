@@ -224,6 +224,7 @@ extension LedgerEntry.Kind {
         case .dailyCableways: language.text("Cableways (daily)", "纜車（日結）")
         case .dailyFerries: language.text("Ferries (daily)", "渡輪（日結）")
         case .drivenRun: language.text("Run driven by hand", "手動駕駛的一趟")
+        case .annualIncomeTax: language.text("Income tax (annual)", "營利事業所得稅（年度）")
         }
     }
 }
@@ -545,6 +546,31 @@ extension CompanyAccounts {
             "Income tax: \(taxPercent)% of each day's profit before tax beyond \(taxFreeProfit.moneyText), paid at midnight",
             "營利事業所得稅：每天的稅前淨利超過 \(taxFreeProfit.moneyText) 的部分課 \(taxPercent)%，午夜支付"
         )
+    }
+}
+
+extension GameWorld {
+    /// The income tax this world pays, for the report's footer: each
+    /// day's (decision 131, ``CompanyAccounts/taxTermsText(in:)``), or
+    /// with the annual taxes (decision 734) the year's, with what this
+    /// year owes so far and what is still to pay.
+    public func taxTermsText(in language: DisplayLanguage) -> String {
+        guard annualTaxes else { return CompanyAccounts.taxTermsText(in: language) }
+        let percent = CompanyAccounts.annualIncomeTaxPercent
+        let free = CompanyAccounts.annualIncomeTaxThreshold.moneyText
+        let month = CompanyAccounts.incomeTaxDueDay / 30 + 1
+        var text = language.text(
+            "Income tax: \(percent)% of the year's profit before tax, none up to \(free), worked out as the year closes and paid at the end of month \(month) of the next. This year so far: \(estimatedIncomeTax().moneyText)",
+            "營利事業所得稅：每年結算一次，全年稅前淨利 \(free) 以下免稅，超過的課 \(percent)%，隔年 \(month) 月底繳。今年到目前預估 \(estimatedIncomeTax().moneyText)"
+        )
+        let owed = accounts.incomeTaxPayable
+        if owed > .zero {
+            text += language.text(
+                ". Due at the end of month \(month): \(owed.moneyText)",
+                "；\(month) 月底要繳 \(owed.moneyText)"
+            )
+        }
+        return text
     }
 }
 

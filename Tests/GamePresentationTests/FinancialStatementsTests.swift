@@ -213,4 +213,43 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(StatementRow.amountText(nil, short: false, in: .english), "—")
         XCTAssertEqual(StatementRow.amountText(nil, short: true, in: .english), "—")
     }
+    /// Decision 734: with the annual taxes the footer says how the year's
+    /// tax is worked out, what this year owes so far and what is due, and
+    /// the balance sheet lists the tax owed.
+    func testTheAnnualTaxesAreExplainedAndOwed() throws {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: Self.costs),
+            clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        world.setAnnualTaxes(true)
+        try world.advance(ticks: 359 * 1_440 + 1)
+        let fares = Money(90_000_000)
+        world.write(LedgerEntry(
+            kind: .hourlyNet, time: world.clock.now, amount: fares,
+            breakdown: [
+                LedgerLine(item: .fareRevenue, amount: fares), LedgerLine(item: .operatingCost, amount: .zero),
+                LedgerLine(item: .maintenanceCost, amount: .zero),
+            ],
+            crowding: CrowdingMetrics(crowdedStations: 0, fullTrains: 0, maxWaiting: 0, maxLoad: 0)
+        ), day: world.dayIndex(of: world.clock.now))
+        XCTAssertEqual(
+            world.taxTermsText(in: .traditionalChinese),
+            "營利事業所得稅：每年結算一次，全年稅前淨利 \(Money(12_000_000).moneyText) 以下免稅，超過的課 20%，隔年 5 月底繳。今年到目前預估 \(Money(18_000_000).moneyText)"
+        )
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(
+            world.taxTermsText(in: .english),
+            "Income tax: 20% of the year's profit before tax, none up to \(Money(12_000_000).moneyText), worked out as the year closes and paid at the end of month 5 of the next. This year so far: \(Money.zero.moneyText). Due at the end of month 5: \(Money(18_000_000).moneyText)"
+        )
+        let rows = world.balanceSheet().rows(previous: world.lastClosedYear?.closing, in: .traditionalChinese)
+        let owed = try XCTUnwrap(rows.first { $0.title == "應付所得稅" })
+        XCTAssertEqual(owed.current, Money(18_000_000))
+        XCTAssertEqual(owed.previous, Money(18_000_000))
+        XCTAssertEqual(rows.last?.current, world.balanceSheet().totalAssets)
+        XCTAssertEqual(LedgerEntry.Kind.annualIncomeTax.displayName(in: .traditionalChinese), "營利事業所得稅（年度）")
+        // Without them, the daily terms as before.
+        world.setAnnualTaxes(false)
+        XCTAssertEqual(world.taxTermsText(in: .english), CompanyAccounts.taxTermsText(in: .english))
+    }
 }

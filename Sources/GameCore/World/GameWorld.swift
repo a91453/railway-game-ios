@@ -62,6 +62,13 @@ public struct GameWorld: Equatable, Sendable {
     /// before it; the player's new games with realistic rules turn it on.
     /// Set by ``setPassengerPatience(_:)`` only.
     public internal(set) var passengerPatience: Bool = false
+    /// Whether the company's income tax is settled once a year (decision
+    /// 734): the year's profit before tax is taxed as the year closes and
+    /// paid at the end of the next year's fifth month, instead of each
+    /// day's (decision 131). Off in a new world and in saves from before
+    /// it; the player's new games with realistic rules turn it on. Set by
+    /// ``setAnnualTaxes(_:)`` only.
+    public internal(set) var annualTaxes: Bool = false
     /// Whether and how riders take a scooter or a car instead when the
     /// train is slower door to door (decision 332), or `nil` for none. Off
     /// in a new world and in saves from before it; the player's new games
@@ -5998,7 +6005,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, driving
     }
@@ -6076,6 +6083,7 @@ extension GameWorld: Codable {
         weeklyDemand = container.contains(.weeklyDemand) ? try container.decode(Bool.self, forKey: .weeklyDemand) : false
         tidalDemand = try container.decodeIfPresent(Bool.self, forKey: .tidalDemand) ?? false
         passengerPatience = try container.decodeIfPresent(Bool.self, forKey: .passengerPatience) ?? false
+        annualTaxes = try container.decodeIfPresent(Bool.self, forKey: .annualTaxes) ?? false
         modeShift = try container.decodeIfPresent(ModeShift.self, forKey: .modeShift)
         demandEvents = container.contains(.demandEvents) ? try container.decode(DemandEventSchedule.self, forKey: .demandEvents) : nil
         disruptions = try container.decodeIfPresent(Disruptions.self, forKey: .disruptions)
@@ -6266,6 +6274,9 @@ extension GameWorld: Codable {
         }
         if passengerPatience {
             try container.encode(true, forKey: .passengerPatience)
+        }
+        if annualTaxes {
+            try container.encode(true, forKey: .annualTaxes)
         }
         try container.encodeIfPresent(modeShift, forKey: .modeShift)
         try container.encodeIfPresent(demandEvents, forKey: .demandEvents)
