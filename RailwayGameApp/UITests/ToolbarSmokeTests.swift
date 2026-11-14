@@ -828,6 +828,22 @@ extension XCUIApplication {
         return max(bar.frame.maxY, pinned.frame.maxY)
     }
 
+    /// Decision 746: the station panel's list, once it has come and
+    /// stopped, or nil when none comes within `timeout`. The panel covers
+    /// the whole screen (beside the map only in the tutorial), so it is
+    /// found by its rows, whose identifiers begin "station.", not by
+    /// lying right of the screen's middle as when it stood beside the map
+    /// (TestFlight 131's full lane, run 43599067177). It is held by its
+    /// place among the lists: a query by its rows finds nothing once they
+    /// scroll away.
+    func stationPanelList(within timeout: TimeInterval = 5) -> XCUIElement? {
+        let panel = collectionViews.containing(NSPredicate(format: "identifier BEGINSWITH %@", "station.")).firstMatch
+        guard panel.appears(within: timeout) else { return nil }
+        panel.waitUntilStill()
+        let place = panel.frame
+        return collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame == place }
+    }
+
     /// Decision 481: opens a line's own page from the lines panel's list
     /// (line `id`'s row, or the first row) and returns the page's list once
     /// it has come to rest. The panel must be open on its list.
