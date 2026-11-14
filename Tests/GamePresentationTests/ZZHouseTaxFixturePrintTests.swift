@@ -21,12 +21,17 @@ final class ZZHouseTaxFixturePrintTests: XCTestCase {
         let station = try world.buildStation(named: "A", at: PlanPoint(x: 5_120, y: 2_048)).id
         try world.addTrackPlatform(station, on: .edge(1), from: 1_024, to: 1_024 + 100 * WorldCoordinate.unitsPerMetre)
         try world.advance(ticks: 360 * 1_440 + 1)
+        // Compact, in pieces of 1,000 characters, so the whole save fits in
+        // the last lines of the job's log.
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let text = String(decoding: try encoder.encode(SavedGame(world: world)), as: UTF8.self)
-        print("V100-FIXTURE-BEGIN")
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            print("V100|" + line)
+        encoder.outputFormatting = [.sortedKeys]
+        let text = Array(String(decoding: try encoder.encode(SavedGame(world: world)), as: UTF8.self))
+        print("V100-FIXTURE-BEGIN \(text.count)")
+        var start = 0
+        while start < text.count {
+            let end = min(start + 1_000, text.count)
+            print("V100|" + String(text[start..<end]) + "|")
+            start = end
         }
         print("V100-FIXTURE-END")
         XCTFail("print only: the v100 save is not committed yet")
