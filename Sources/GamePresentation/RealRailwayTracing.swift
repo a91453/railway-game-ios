@@ -504,9 +504,12 @@ extension GameSession {
         // Decision 513: the player's trace level at the real line's
         // stations, as the demo's platforms are; a station on a real
         // viaduct or in a real tunnel stands on it or in it, as above.
-        let levelSpans = !platforms.isEmpty ? spans : tracedStationSpans(along: path, system: system).filter { span in
-            !carried.contains { $0.isLong && $0.range.overlaps(span) }
-        }
+        // Decision 752: one on a long real viaduct or in a long real
+        // tunnel is laid level too, at a height the structure allows
+        // (``tracedStationLevel``): left out, the track over it climbed and
+        // fell with the ground in short edges, and no platform could be
+        // put there (Qiyan on the Tamsui Line).
+        let levelSpans = !platforms.isEmpty ? spans : tracedStationSpans(along: path, system: system)
         // Decision 515: a real mountain line climbs as steeply as mountain
         // track may.
         let lineSystem = system ?? realRailwayTraces.flatMap { traces in
@@ -531,8 +534,13 @@ extension GameSession {
         // would have along it.
         if !levelSpans.isEmpty {
             let flat = levelSpans.map { span in
-                let heights = stride(from: span.lowerBound, through: span.upperBound, by: TrackRise.spacing).map { rise.height(at: $0) } + [rise.height(at: span.upperBound)]
-                return TrackRise.Level(span, from: heights.min() ?? 0, to: heights.max() ?? 0)
+                let along = Array(stride(from: span.lowerBound, through: span.upperBound, by: TrackRise.spacing)) + [span.upperBound]
+                let heights = along.map { rise.height(at: $0) }
+                let level = TrackRise.Level(span, from: heights.min() ?? 0, to: heights.max() ?? 0)
+                guard platforms.isEmpty, let structure = carried.first(where: { $0.isLong && $0.range.overlaps(span) }) else { return level }
+                return Self.tracedStationLevel(
+                    level, on: structure, ground: along.filter { structure.range.contains($0) }.map { ground(path.point(at: $0)) }
+                )
             }
             if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: grade, carried: carried) {
                 rise = levelled
@@ -659,6 +667,28 @@ extension GameSession {
     /// round its real 40 m curves, and 40 m stopped every trace of it
     /// within a station or two.
     static let urbanTraceMinimumRadius = 20 * RealRailwayTraces.metre
+
+    /// Decision 752: the level a traced station's stretch is laid at
+    /// where it stands on a long real viaduct or in a long real tunnel,
+    /// `level` (between the heights the track would have along it) moved
+    /// to keep the whole stretch as high over `ground` (the ground along
+    /// the structure's part of it) as ``TrackRise/carriedHeight`` asks of
+    /// a viaduct, or as deep under it as ``TrackRise/carriedDepth`` asks
+    /// of a tunnel. A level the structure's bounds clash with lets them go
+    /// (``TrackRise``), and the station came down to the ground.
+    static func tracedStationLevel(_ level: TrackRise.Level, on structure: TrackRise.Carried, ground: [Double]) -> TrackRise.Level {
+        guard let highest = ground.max(), let lowest = ground.min() else { return level }
+        switch structure.kind {
+        case .bridge:
+            let floor = highest + TrackRise.carriedHeight
+            return TrackRise.Level(level.range, from: max(level.low, floor), to: max(level.high, floor))
+        case .tunnel:
+            let ceiling = lowest - TrackRise.carriedDepth
+            var under = TrackRise.Level(level.range, from: min(level.low, ceiling), to: min(level.high, ceiling))
+            under.staysUnder = true
+            return under
+        }
+    }
 
     /// The tightest curve a traced edge of `system`'s line may have.
     static func traceMinimumRadius(ofSystem system: String?) -> Double {
