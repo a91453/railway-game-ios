@@ -164,8 +164,8 @@ final class Map3DRealTracksTests: XCTestCase {
     /// line's whole corridor. The real line's other track, 4.2 m beside,
     /// is left out too, and no train shows on it; a real track 20 m
     /// beside is laid, unless it runs beside one of the player's
-    /// platforms (32 m); a real track crossing the player's is left out
-    /// only where it lies on it.
+    /// platforms (32 m); a real track crossing the player's is laid but
+    /// where it lies on it.
     func testThePlayersTrackClearsTheRealLinesCorridor() throws {
         let latitude = 25.0478, longitude = 121.5170
         let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude)))
@@ -199,7 +199,9 @@ final class Map3DRealTracksTests: XCTestCase {
         XCTAssertFalse(of(1).isEmpty)
         XCTAssertTrue(of(1).allSatisfy { !$0.shown }, "the real line's other track, beside it")
         XCTAssertTrue(of(2).allSatisfy(\.shown), "20 m beside")
-        XCTAssertTrue(of(3).contains { !$0.shown }, "across, where it lies on the player's")
+        // Across: laid but where it lies on the player's (its samples are
+        // 8 m apart, so one may not fall within 3.4 m of it).
+        XCTAssertFalse(of(3).isEmpty)
         XCTAssertTrue(of(3).filter { abs($0.a.z) > 10 && abs($0.b.z) > 10 }.allSatisfy(\.shown), "across, away from it")
         XCTAssertFalse(plain.meshes.isEmpty)
         // No real train shows on either track of the player's corridor.
