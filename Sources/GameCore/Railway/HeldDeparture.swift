@@ -52,6 +52,34 @@ extension GameWorld {
         return held
     }
 
+    /// Decision 735: the trains standing at a stop half an hour or more
+    /// after the departure their timetable gives, doors closed, that ask
+    /// for no way on at all (``departureRequest(of:memo:)`` has none) and
+    /// wait for no train by the traffic plan: no route held by another
+    /// train keeps them there, so ``deadlockedTrains()`` never names them,
+    /// yet they never leave by themselves (the Western Trunk Line train at
+    /// Badu, 37 hours). By ascending ID. What the reports count; the map's
+    /// bubble for such a train is ``heldDeparture(of:)``'s. Derived on
+    /// every call, never saved.
+    public func strandedTrains() -> [TrainID] {
+        var memo = questionMemo()
+        return trains.filter { isStrandedLong($0, memo: &memo) }.map(\.id).sorted()
+    }
+
+    /// How long after its timetabled departure a train standing with no
+    /// way asked for counts in ``strandedTrains()``: half an hour, longer
+    /// than any wait for a meeting or a late train it waits for.
+    public static let strandedAfter: Int64 = 1_800
+
+    /// See ``strandedTrains()``.
+    func isStrandedLong(_ train: Train, memo: inout DirectionMemo) -> Bool {
+        guard case .waitingAtStop(let stop, let cycle)? = train.execution, train.position != nil,
+              clock.now >= Self.saturating(train.scheduledDeparture(of: stop, cycle: cycle), plus: Self.strandedAfter),
+              let due = departureDue(of: train), due <= clock.now,
+              currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo) == nil else { return false }
+        return departureRequest(of: train, memo: &memo) == nil
+    }
+
     /// The station of the next call `train` is due to leave for and has no
     /// way to (see ``isStranded(_:memo:)``), or `nil`.
     private func stranding(_ train: Train, memo: inout DirectionMemo) -> StationID? {
