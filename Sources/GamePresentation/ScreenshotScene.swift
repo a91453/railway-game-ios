@@ -59,6 +59,15 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the mark, not the website.
     case expansion
 
+    /// DEMAND-HOURS DH-2: the demo map with its demand events drawn from
+    /// ``crowdSurgeSeed``, whose first draw, at the third midnight, is a
+    /// crowd surge 19:00–21:00 two days on: run on to 08:00 of that day,
+    /// the station master's reminder of it and the news's card. For the
+    /// screenshot review of the pull request that added them.
+    case crowdSurge
+    /// The same, run on to 17:00 of the surge's day: the day's reminder.
+    case crowdSurgeToday
+
     /// Decision 536: the demo map with its first line bought as the
     /// Neiwan Line and its second as the Danhai light rail's Green
     /// Mountain Line (recorded as bought, as the app records a real line
@@ -372,6 +381,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .termLoans: Self.termLoansWorld(in: language)
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
+        case .crowdSurge: Self.crowdSurgeWorld(in: language, until: 3 * GameTime.secondsPerDay + 8 * 3_600)
+        case .crowdSurgeToday: Self.crowdSurgeWorld(in: language, until: 5 * GameTime.secondsPerDay + 17 * 3_600)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101, .taichungViaduct, .interchange, .changhuaRoundhouse: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .hsuehshanTunnel, .suhuaTunnel, .suhuaGallery: Self.groundWorld(at: self, in: language)
@@ -1043,6 +1054,30 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             try world.advance(ticks: Int(punctualityRunSeconds / 600))
         } catch {
             preconditionFailure("The punctuality screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Crowd surge
+
+    /// The demand events' seed whose first draw (on the third day, as
+    /// `first` rolls) is a crowd surge that starts two days later, from
+    /// 19:00 to 21:00.
+    static let crowdSurgeSeed: UInt32 = 152
+
+    /// The demo map with ``crowdSurgeSeed``'s events, run on to `seconds`
+    /// into the game.
+    static func crowdSurgeWorld(in language: DisplayLanguage, until seconds: Int64) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setDemandEvents(seed: crowdSurgeSeed)
+        do throws(GameError) {
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int((seconds - world.clock.now.seconds) / 600))
+        } catch {
+            preconditionFailure("The crowd surge screenshot scene no longer builds: \(error)")
         }
         world.setSpeed(.normal)
         world.setSpeed(.paused)

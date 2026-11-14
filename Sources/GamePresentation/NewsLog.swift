@@ -259,6 +259,9 @@ extension StationMasterAdvice {
         case .shortSteamTrains(let line, _): (.advice, "steam:\(line.rawValue)", .line(line.rawValue))
         case .festivalComing: (.holiday, "festival", nil)
         case .namedFestivalComing(let festival, _, _, _): (.holiday, "festival:\(festival.rawValue)", nil)
+        // DH-2: once when announced, once more on its first day.
+        case .crowdSurgeComing(let station, _, let days, _, _, _):
+            (.holiday, "crowdSurge:\(station.rawValue):\(days == 0 ? "today" : "soon")", .station(station.rawValue))
         // Decision 174: the sights.
         case .sightUnreachable(let id, _, _, _, _, _): (.advice, "sight:\(id.rawValue)", nil)
         case .touristsComing(let kind, _, _): (.holiday, "tourists:\(kind.rawValue)", nil)
