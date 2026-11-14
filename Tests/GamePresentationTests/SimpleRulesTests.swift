@@ -93,6 +93,8 @@ final class SimpleRulesTests: XCTestCase {
         launcher.newGameOptions = options
         launcher.startNewGame()
         XCTAssertEqual(NewGameRules(of: try XCTUnwrap(launcher.session?.world)), .simple)
+        // Decision 731: passengers wait as long as it takes.
+        XCTAssertFalse(try XCTUnwrap(launcher.session?.world).passengerPatience)
 
         launcher.returnToStart()
         options.rules = .realistic
@@ -101,6 +103,7 @@ final class SimpleRulesTests: XCTestCase {
         let realistic = try XCTUnwrap(launcher.session?.world)
         XCTAssertEqual(NewGameRules(of: realistic), .realistic)
         XCTAssertNotNil(realistic.disruptions?.seed)
+        XCTAssertTrue(realistic.passengerPatience)
     }
 
     /// A simple game is saved and loaded back with its rules: they are the

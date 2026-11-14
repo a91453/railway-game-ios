@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 76
+    static let schemaVersion = 77
 
     var description: String
     var initialState: InitialState
@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.buildStationCommerce, _), .command(.upgradeStationCommerce, _), .command(.demolishStationCommerce, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _), .command(.setRollingStockEconomics, _), .command(.sellTrain, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setPassengerPatience, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.buildStationCommerce, _), .command(.upgradeStationCommerce, _), .command(.demolishStationCommerce, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _), .command(.setRollingStockEconomics, _), .command(.sellTrain, _),
                  .command(.setCityRequests, _), .command(.acceptRequest, _), .command(.declineRequest, _), .observe(.cityRequests, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
@@ -584,6 +584,8 @@ enum ScenarioCommand: Equatable {
     case setLineFreight(LineID, Bool)
     /// Schema 66 (decision 169): door crowding.
     case setDoorCrowding(Bool)
+    /// Schema 77 (decision 731): passengers who wait too long leave.
+    case setPassengerPatience(Bool)
     /// Schema 67 (decision 172): flexible dispatch.
     case setFlexDispatch(Bool)
     /// Schema 70 (decision 179): the line accounts.
@@ -750,6 +752,8 @@ enum ScenarioCommand: Equatable {
                 try world.setLineFreight(line, to: freight)
             case .setDoorCrowding(let enabled):
                 world.setDoorCrowding(enabled)
+            case .setPassengerPatience(let enabled):
+                world.setPassengerPatience(enabled)
             case .setFlexDispatch(let enabled):
                 world.setFlexDispatch(enabled)
             case .setLineAccounts(let enabled):
@@ -886,6 +890,9 @@ extension ScenarioCommand: Decodable {
         // Schema 66: door crowding (decision 169).
         case "setDoorCrowding":
             self = try .setDoorCrowding(container.decode(Bool.self, forKey: .enabled))
+        // Schema 77: passengers who wait too long leave (decision 731).
+        case "setPassengerPatience":
+            self = try .setPassengerPatience(container.decode(Bool.self, forKey: .enabled))
         // Schema 69: tourism (decision 174).
         case "setTourism":
             self = try .setTourism(container.decode([WorldSummary.AttractionSeed].self, forKey: .attractions))
@@ -2646,6 +2653,9 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while a crowd at the doors slows the passengers going through
     /// them (schema 66, decision 169); left out otherwise.
     var doorCrowding: Bool?
+    /// `true` while passengers who wait too long leave (schema 77,
+    /// decision 731); left out otherwise.
+    var passengerPatience: Bool?
     /// `true` while lines send trains out from either end (schema 67,
     /// decision 172); left out otherwise.
     var flexDispatch: Bool?
@@ -2973,6 +2983,7 @@ struct WorldSummary: Codable, Equatable {
         landDemand = world.landDemand ? true : nil
         distanceDemand = world.distanceDemand ? true : nil
         doorCrowding = world.doorCrowding ? true : nil
+        passengerPatience = world.passengerPatience ? true : nil
         flexDispatch = world.flexDispatch ? true : nil
         lineAccounts = world.lineAccounts == nil ? nil : true
         tourism = world.tourism.map { $0.attractions.map(AttractionSummary.init) }
@@ -3343,6 +3354,9 @@ struct LedgerSummary: Codable, Equatable {
     var overflowed: Int64
     var abandoned: Int64
     var refused: Int64
+    /// Those who waited too long and left (schema 77, decision 731); left
+    /// out when none did.
+    var gaveUp: Int64?
 
     init(_ ledger: PassengerLedger) {
         released = ledger.released
@@ -3352,6 +3366,7 @@ struct LedgerSummary: Codable, Equatable {
         overflowed = ledger.overflowed
         abandoned = ledger.abandoned
         refused = ledger.refused
+        gaveUp = ledger.gaveUp == 0 ? nil : ledger.gaveUp
     }
 }
 
@@ -3408,7 +3423,8 @@ struct RiderSummary: Codable, Equatable {
 /// A station's passengers in the final state: `{"station", "demand",
 /// "waiting", "released", "arrived", "overflowed", "abandoned",
 /// "refused"}` (`arrived` and `refused` since schema 21), every field
-/// required; `demand` is `null` for a station without demand.
+/// required; `demand` is `null` for a station without demand. `gaveUp`
+/// (schema 77, decision 731) is left out when nobody waited too long.
 struct PassengerSummary: Codable, Equatable {
     var station: Int
     var demand: DemandSummary?
@@ -3418,10 +3434,11 @@ struct PassengerSummary: Codable, Equatable {
     var overflowed: Int64
     var abandoned: Int64
     var refused: Int64
+    var gaveUp: Int64?
 
     init(
         station: Int, demand: DemandSummary?, waiting: [WaitingGroupSummary], released: Int64, arrived: Int64,
-        overflowed: Int64, abandoned: Int64, refused: Int64
+        overflowed: Int64, abandoned: Int64, refused: Int64, gaveUp: Int64? = nil
     ) {
         self.station = station
         self.demand = demand
@@ -3431,17 +3448,19 @@ struct PassengerSummary: Codable, Equatable {
         self.overflowed = overflowed
         self.abandoned = abandoned
         self.refused = refused
+        self.gaveUp = gaveUp
     }
 
     init(_ record: StationPassengers) {
         self.init(
             station: record.station.rawValue, demand: record.demand.map(DemandSummary.init), waiting: record.waiting.map(WaitingGroupSummary.init),
-            released: record.released, arrived: record.arrived, overflowed: record.overflowed, abandoned: record.abandoned, refused: record.refused
+            released: record.released, arrived: record.arrived, overflowed: record.overflowed, abandoned: record.abandoned, refused: record.refused,
+            gaveUp: record.gaveUp == 0 ? nil : record.gaveUp
         )
     }
 
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, arrived, overflowed, abandoned, refused
+        case station, demand, waiting, released, arrived, overflowed, abandoned, refused, gaveUp
     }
 
     init(from decoder: any Decoder) throws {
@@ -3457,6 +3476,7 @@ struct PassengerSummary: Codable, Equatable {
         overflowed = try container.decode(Int64.self, forKey: .overflowed)
         abandoned = try container.decode(Int64.self, forKey: .abandoned)
         refused = try container.decode(Int64.self, forKey: .refused)
+        gaveUp = try container.decodeIfPresent(Int64.self, forKey: .gaveUp)
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -3473,6 +3493,7 @@ struct PassengerSummary: Codable, Equatable {
         try container.encode(overflowed, forKey: .overflowed)
         try container.encode(abandoned, forKey: .abandoned)
         try container.encode(refused, forKey: .refused)
+        try container.encodeIfPresent(gaveUp, forKey: .gaveUp)
     }
 }
 
