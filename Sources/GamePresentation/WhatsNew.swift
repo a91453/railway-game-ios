@@ -81,8 +81,8 @@ public enum WhatsNew {
                     chinese: "收購車站後，真實的軌道和列車整條讓開，不再疊成兩套。"
                 ),
                 Line(
-                    english: "Hong Kong's Disneyland Resort Line and the Tseung Kwan O Line to LOHAS Park no longer jam.",
-                    chinese: "香港迪士尼綫與將軍澳綫（康城）不再卡死。"
+                    english: "Hong Kong's Disneyland Resort Line, the Tseung Kwan O Line to LOHAS Park and the East Rail Line's Lok Ma Chau branch no longer jam.",
+                    chinese: "香港迪士尼綫、將軍澳綫（康城）與東鐵綫落馬洲支線不再卡死。"
                 ),
                 Line(
                     english: "Trains no longer stop for good at a platform they cannot leave, and a stopped train says why.",
