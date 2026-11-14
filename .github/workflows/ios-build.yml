@@ -194,7 +194,7 @@ permissions:
 # build about 52, second 51, lessons 54, map 46 of 75.
 #
 # 2026-11-14 (CI-SPEED, decision 752): the full lane took 2h04 on 19aa342
-# (43539871635) and 2h45 on 4cff950 (43599067177) because its jobs ran in
+# (43539871635) and on 4cff950 (43599067177) because its jobs ran in
 # a chain: map waited for second or lessons (about 53 minutes), the iPad
 # job for map (about 44 more), then 30 of its own, while the build job's
 # runner sat idle from about 54 minutes on. So map's classes
