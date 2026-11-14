@@ -1390,6 +1390,18 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// offers one lies over the place); then its ✕ tapped, and the line gone. In
     /// Chinese and in English. For the screenshot review of the pull
     /// request that added it.
+    /// Decision 744 (a player's report, 2026-11-14): a place on a slanting
+    /// stretch picked for a station; the map's ✓ pill stands clear of the
+    /// place and the line. For the pull request's screenshot review.
+    func testStationSite() {
+        let app = launch(extra: ["-screenshot-scene", "stationSite"])
+        defer { app.terminate() }
+        let confirm = app.buttons["map.build.confirm"]
+        XCTAssertTrue(confirm.appears(within: 180), "The place is picked")
+        settle(seconds: 4)
+        keep("station-site", app)
+    }
+
     func testTrackHeightHint() {
         for english in [false, true] {
             let app = launch(extra: ["-screenshot-scene", "trackHeight", "-show-height-hint"], english: english)

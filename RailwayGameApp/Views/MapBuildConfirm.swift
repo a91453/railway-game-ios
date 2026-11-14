@@ -54,7 +54,8 @@ struct MapBuildConfirm: View {
                     // The tutorial's folded card keeps clear of it all,
                     // not only its ✓ (Mac playtest 2026-11-08, A2).
                     .tutorialTarget(.mapConfirmCard)
-                    .offset(placement(below: camera.screenPoint(of: build.anchor), clearance: build.clearance))
+                    .offset(placement(below: camera.screenPoint(of: build.anchor), clearance: build.clearance,
+                                       keepingOff: siteObstacles(build)))
                     .transition(.pop(reduceMotion: reduceMotion))
             }
         }
@@ -325,7 +326,19 @@ struct MapBuildConfirm: View {
     /// Where the pill goes: under `point`, past what is shown there by
     /// `clearance`, or over it when there is no room below; kept clear of
     /// the controls along the map's edges.
-    private func placement(below point: ScreenPoint, clearance: Double) -> CGSize {
+    /// Decision 744: while a station's place is chosen, the place and the
+    /// track around it, which the pill keeps off so the line stays in
+    /// sight (a player's report, 2026-11-14).
+    private func siteObstacles(_ build: BuildConfirmation) -> [ScreenFrame] {
+        guard build.kind == .platform, camera.pointsPerUnit > 0 else { return [] }
+        let anchor = camera.screenPoint(of: build.anchor)
+        let reach = Double(max(pillSize.width, pillSize.height)) + 2 * BuildConfirmLayout.margin
+        let lines = session.trackLines(near: build.anchor, within: reach / camera.pointsPerUnit)
+            .map { $0.map { camera.screenPoint(of: $0) } }
+        return BuildConfirmLayout.siteObstacles(lines, around: anchor, reach: reach)
+    }
+
+    private func placement(below point: ScreenPoint, clearance: Double, keepingOff site: [ScreenFrame] = []) -> CGSize {
         let margin = BuildConfirmLayout.margin
         let width = Double(pillSize.width), height = Double(pillSize.height)
         let minX = Double(insets.leading) + margin
@@ -346,7 +359,7 @@ struct MapBuildConfirm: View {
         let highest = top <= bottom - height ? top : max(0, min(Double(mapTop) + margin, bottom - height))
         y = min(max(y, highest), max(highest, bottom - height))
         let placed = BuildConfirmLayout.keepingOff(
-            avoiding.map { ScreenFrame($0) }, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest,
+            avoiding.map { ScreenFrame($0) } + site, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest,
             lowest: max(highest, bottom - height)
         )
         return CGSize(width: placed.x, height: placed.y)
