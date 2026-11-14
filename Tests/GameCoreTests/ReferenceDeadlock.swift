@@ -102,7 +102,7 @@ extension ReferenceWorld {
         if service.stop > 0, let r = routePreference(candidate, from: service.stop - 1, to: service.stop),
            let path = preferenceRoute(from: start.position!, r, length: Self.length(candidate)),
            case .success = admitted(routed(start, path)) { return true }
-        guard let path = chosenRoute(from: start, to: candidate.timetable[service.stop].station) else { return false }
+        guard let path = chosenRoute(from: start, to: candidate.timetable[service.stop].station, next: departedFor(candidate, from: start)) else { return false }
         if case .success = admitted(routed(start, path), following: true) { return true }
         return false
     }
@@ -168,11 +168,18 @@ extension ReferenceWorld {
     /// call further when that is the way it set off on, as the world reads
     /// the candidate's own path; otherwise the default way.
     mutating func plannedRoute(of candidate: Train, from start: Train, to target: StationID) -> TrainPath? {
-        if let service = candidate.service, let looked = departureRoute(from: start, to: target, next: (service.stop, service.cycle)) {
-            let way = routed(start, looked)
-            if way.edges == candidate.edges, way.end == candidate.end { return looked }
-        }
+        if let next = departedFor(candidate, from: start) { return departureRoute(from: start, to: target, next: next) }
         return defaultRoute(from: start, to: target)
+    }
+
+    /// The call `candidate` travels to, when it set off from `start` on
+    /// decision 735's default way of a departure; otherwise `nil`.
+    mutating func departedFor(_ candidate: Train, from start: Train) -> (stop: Int, cycle: Int64)? {
+        guard let service = candidate.service else { return nil }
+        let next = (stop: service.stop, cycle: service.cycle)
+        guard let looked = departureRoute(from: start, to: candidate.timetable[service.stop].station, next: next) else { return nil }
+        let way = routed(start, looked)
+        return way.edges == candidate.edges && way.end == candidate.end ? next : nil
     }
 
     /// A later fix to decision 58: whether `train` is its line's spare: no

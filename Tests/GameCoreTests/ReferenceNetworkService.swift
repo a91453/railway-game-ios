@@ -303,8 +303,13 @@ extension ReferenceWorld {
     /// `alternative(from:to:default:avoiding:)`) if it can take that whole;
     /// otherwise the default way, which it then cannot take. `nil` with no
     /// way at all.
-    mutating func chosenRoute(from start: Train, to target: StationID, next: (stop: Int, cycle: Int64)) -> TrainPath? {
-        guard let path = departureRoute(from: start, to: target, next: next) else { return nil }
+    /// Decision 735: a departure for call `next` looks one call further
+    /// (see `departureRoute(from:to:next:)`); without `next` (a train
+    /// going on from a passing place) the default way.
+    mutating func chosenRoute(from start: Train, to target: StationID, next: (stop: Int, cycle: Int64)? = nil) -> TrainPath? {
+        let found: TrainPath?
+        if let next { found = departureRoute(from: start, to: target, next: next) } else { found = defaultRoute(from: start, to: target) }
+        guard let path = found else { return nil }
         guard trafficControl, case .failure = admitted(routed(start, path), following: true) else { return path }
         if let other = alternative(from: start, to: target, default: path, avoiding: blocked(for: start.id)),
            case .success = admitted(routed(start, other)) {
