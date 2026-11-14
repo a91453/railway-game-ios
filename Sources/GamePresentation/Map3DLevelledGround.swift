@@ -18,7 +18,9 @@ import GameCore
 // world's: a plane is left as it is, so a hillside keeps its slope, and a
 // ridge or a valley floor moves at most that far. The corners the world's
 // own ground must stay under are not moved: those of a cell the player's
-// track runs through (its heights are the world's, decision 124), of a
+// track runs through and the cells next to them (its heights are the
+// world's, decision 124, and a station's canopy shadows and banks reach
+// out flat from it), of a
 // water cell (its surface is level, decision 132), and those near the
 // world's edge, where the mean would lean.
 //
@@ -126,12 +128,18 @@ struct Map3DLevelledGround {
     }
 
     /// Whether corner (`row`, `column`) stays the world's: a cell round it
-    /// is held track, it is water, or it is near the world's edge.
+    /// is held track or next to it, it is water, or it is near the
+    /// world's edge.
     func holds(row: Int, column: Int) -> Bool {
         let r = Self.radius
         guard row >= r, column >= r, row <= lastRow - r, column <= lastColumn - r else { return true }
-        for (dr, dc) in [(-1, -1), (-1, 0), (0, -1), (0, 0)] where held.contains(Map3DScene.ChunkKey(column: column + dc, row: row + dr)) {
-            return true
+        // The track's cells and one round them: what stands beside the
+        // track (a station's canopy shadows, its banks) is laid flat out
+        // from the track's height.
+        for dr in -2...1 {
+            for dc in -2...1 where held.contains(Map3DScene.ChunkKey(column: column + dc, row: row + dr)) {
+                return true
+            }
         }
         return isWet(row, column)
     }

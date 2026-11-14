@@ -55,11 +55,11 @@ final class Map3DLevelledGroundTests: XCTestCase {
     func testHeldCornersStayTheWorlds() {
         let bumps: (Int, Int) -> Float = { row, column in (row + column) % 2 == 0 ? 11 : 9 }
         let ground = levelled(bumps, held: [Key(column: 20, row: 20)], wet: { row, column in row == 15 && column == 15 })
-        // The held cell's four corners.
-        for (row, column) in [(20, 20), (20, 21), (21, 20), (21, 21)] {
+        // The held cell's corners and those of the cells next to it.
+        for (row, column) in [(20, 20), (20, 21), (21, 20), (21, 21), (19, 19), (22, 22)] {
             XCTAssertEqual(ground.corner(row: row, column: column, own: bumps(row, column)), bumps(row, column))
         }
-        XCTAssertNotEqual(ground.corner(row: 22, column: 22, own: bumps(22, 22)), bumps(22, 22))
+        XCTAssertNotEqual(ground.corner(row: 23, column: 23, own: bumps(23, 23)), bumps(23, 23))
         XCTAssertEqual(ground.corner(row: 15, column: 15, own: 11), 11)
         // Within the reach of the edge.
         XCTAssertEqual(ground.corner(row: 2, column: 20, own: 11), 11)
