@@ -254,6 +254,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the pull request that added them.
     case trackHeight
 
+    /// Decision 744: the demo with a place on a slanting stretch of its
+    /// track picked for a station: the map's ✓ pill beside it, kept off
+    /// the place and the line. For the screenshot review of the pull
+    /// request that moved it.
+    case stationSite
+
     /// Decision 663 (the Mac playtest's A12): a blank map bought tile by
     /// tile, its middle tile owned, with the sights drawn in every tile:
     /// the sights panel's own sights, then those off the map folded away.
@@ -418,6 +424,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         case .cijinShore: Self.cijinShoreWorld(water: water)
         case .trackHeight: Self.trackHeightWorld()
+        case .stationSite: Self.pausedDemo(in: language)
         case .sightsOffMap: Self.sightsOffMapWorld()
         case .museum: Self.museumWorld(in: language)
         case .sightVisitors: Self.sightVisitorsWorld(in: language)
@@ -602,6 +609,22 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             }
             return
         }
+        if self == .stationSite {
+            // Decision 744: the middle of the demo's longest slanting
+            // stretch, picked with the network tool's station mode.
+            guard let site = Self.stationSitePoint(in: session.world) else { return }
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: site, reach: 64)
+            session.lookAt(site)
+            Task { @MainActor in
+                for _ in 0..<30 {
+                    try? await Task.sleep(for: .seconds(1))
+                    session.lookAt(site)
+                }
+            }
+            return
+        }
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
@@ -645,6 +668,21 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Line 2's north end: the demo's highest track end furthest north.
     static func depotOfferEnd(in world: GameWorld) -> WorldCoordinate? {
         world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 }.min { $0.position.y < $1.position.y }?.position
+    }
+
+    /// ``stationSite``'s place: the middle of the longest edge that runs
+    /// as much across as down (a line drawn slanting on the screen, as in
+    /// the player's report), or of the longest edge when none does.
+    static func stationSitePoint(in world: GameWorld) -> PlanPoint? {
+        let edges = world.network.edges.compactMap { edge -> (length: Int64, slants: Bool, middle: PlanPoint)? in
+            guard let geometry = world.trackGeometry(of: edge.id),
+                  let first = geometry.points.first, let last = geometry.points.last else { return nil }
+            let dx = abs(last.x - first.x), dy = abs(last.y - first.y)
+            let slants = dx > 0 && dy > 0 && min(dx, dy) * 3 >= max(dx, dy)
+            return (geometry.length, slants, geometry.location(at: geometry.length / 2).position.plan)
+        }
+        let slanting = edges.filter(\.slants)
+        return (slanting.isEmpty ? edges : slanting).max { $0.length < $1.length }?.middle
     }
 
     /// ``trackHeight``'s ends, 896 m apart either side of its river, and
