@@ -192,10 +192,22 @@ permissions:
 # moves from the build job to second, and the four StartSaveFlowSmokeTests
 # lessons had (5.9-8.7) go back to the build job. Expected sums, at most:
 # build about 52, second 51, lessons 54, map 46 of 75.
+#
+# 2026-11-14 (CI-SPEED, decision 752): the full lane took 2h04 on 19aa342
+# (43539871635) and 2h45 on 4cff950 (43599067177) because its jobs ran in
+# a chain: map waited for second or lessons (about 53 minutes), the iPad
+# job for map (about 44 more), then 30 of its own, while the build job's
+# runner sat idle from about 54 minutes on. So map's classes
+# (MapInteractionTests, 22.6-24.1 minutes of tests on 19aa342 and 4cff950)
+# go back to the build job, the matrix is second and lessons, both at
+# once, and the iPad job starts when they end. Still three macOS runners
+# at most (the build job and two partitions, then the build job and the
+# iPad job), the same tests, and one build, boot and warm-up fewer (some
+# 18 runner-minutes). Expected: build job about 55 minutes of UI tests
+# (31 + 24), the lane about 1h30.
 env:
   FULL_LANE_SECOND_JOB: "SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests RealWorldMapUITests StartSaveFlowSmokeTests/testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns StartSaveFlowSmokeTests/testAnUnreadableSaveCanBeDeleted StartSaveFlowSmokeTests/testLanguageOpensTheGamesLanguageMenu"
   FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests"
-  FULL_LANE_MAP_JOB: "MapInteractionTests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: nightly or by hand) has its own group
@@ -343,8 +355,9 @@ jobs:
     # to boot, the warm-up 5, the UI step 74 and the string export 10, and
     # the job was cut at 95 in the export (main 68a4cfc, run 41432636112).
     # Decision 638 replaced the export with a sync of the build's own
-    # strings (seconds, not 14 to 18 minutes).
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 115 }}
+    # strings (seconds, not 14 to 18 minutes). 145 since its UI step got
+    # 120 (decision 752).
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 145 }}
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
       # base, and the archivable-products check below compares the two.
@@ -621,8 +634,10 @@ jobs:
         # (9a88ef0, 237f194 44m51s, 6e86506, 2ec70b2: 53 minutes of tests
         # alone, run 38720199489), 5 minutes short of the 60: 75 leaves a
         # slow runner room and still stops a hang. 90 since it took 74 of
-        # its 75 on 2026-11-02 (main 68a4cfc, run 41432636112).
-        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 90 }}
+        # its 75 on 2026-11-02 (main 68a4cfc, run 41432636112). 120 since
+        # MapInteractionTests came back from the map job (decision 752):
+        # about 55 minutes of tests, a slow runner's 1.8 times some 100.
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 120 }}
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
         run: |
@@ -643,7 +658,7 @@ jobs:
               -only-testing:RailwayGameUITests/TutorialUITests/testTheLineStepLeavesTheLinesPanelUsable
             )
           else
-            lane="full ($GITHUB_EVENT_NAME): all the UI tests but the other iPhone jobs' ($FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB $FULL_LANE_MAP_JOB)"
+            lane="full ($GITHUB_EVENT_NAME): all the UI tests but the other iPhone jobs' ($FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB)"
             # Decision 165: the website's screenshots are taken by
             # website-screenshots.yml alone; they test nothing.
             only=(-skip-testing:RailwayGameUITests/WebsiteScreenshotTests)
@@ -656,7 +671,7 @@ jobs:
             # by hand (only_testing) to compare two commits.
             only+=(-skip-testing:RailwayGameUITests/MapFrameCostUITests)
             # These classes run in the other iPhone jobs.
-            for class in $FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB $FULL_LANE_MAP_JOB; do
+            for class in $FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB; do
               only+=("-skip-testing:RailwayGameUITests/$class")
             done
           fi
@@ -835,10 +850,11 @@ jobs:
           retention-days: 7
 
   # The full lane's other iPhone jobs: second (settings, HUD, the real
-  # world), lessons, and map (MapInteractionTests). The build job runs the
-  # remaining classes. None runs for a pull request or only_testing by hand.
-  # Two at a time (decision 604): with the build job, three macOS runners,
-  # as decision 582 keeps the full lane to.
+  # world) and lessons. The build job runs the remaining classes,
+  # MapInteractionTests among them again (decision 752). None runs for a
+  # pull request or only_testing by hand. Two at a time (decision 604):
+  # with the build job, three macOS runners, as decision 582 keeps the
+  # full lane to.
   ui-full-lane:
     name: Xcode UI tests, ${{ matrix.partition }} (iOS Simulator)
     needs: changes
@@ -847,7 +863,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        partition: [second, lessons, map]
+        partition: [second, lessons]
     runs-on: macos-26
     env:
       PARTITION: ${{ matrix.partition }}
@@ -957,7 +973,6 @@ jobs:
           case "$PARTITION" in
             second) classes="$FULL_LANE_SECOND_JOB" ;;
             lessons) classes="$FULL_LANE_LESSONS_JOB" ;;
-            map) classes="$FULL_LANE_MAP_JOB" ;;
             *) echo "::error::Unknown UI test partition: $PARTITION"; exit 1 ;;
           esac
           only=()
@@ -1013,10 +1028,10 @@ jobs:
     name: iPad tutorial tests (iOS Simulator)
     # A skipped job passes a required check, so a pull request that leaves the
     # tutorial's own files alone is not held up by it.
-    # In the full lane it waits for the three iPhone UI jobs (two at a time,
-    # decision 604), so the full lane holds three macOS runners, not four or
-    # five (decision 582); red or green, they
-    # do not hold it back. A pull request and a run of only some tests skip
+    # In the full lane it waits for the two iPhone UI jobs (decisions 604
+    # and 752), so the full lane holds three macOS runners, not four or
+    # five (decision 582): the build job and the iPad job once second and
+    # lessons end; red or green, they do not hold it back. A pull request and a run of only some tests skip
     # those jobs, and the iPad job starts as soon as changes is done.
     needs: [changes, ui-full-lane]
     if: ${{ !cancelled() && needs.changes.outputs.ipad == 'true' && needs.changes.outputs.passed != 'true' }}
