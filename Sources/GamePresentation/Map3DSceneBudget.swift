@@ -106,11 +106,17 @@ public enum Map3DSceneBudget {
     /// device of memory `tier`: over it, the chunks out of the camera's
     /// reach are let go (``Map3DStreaming/Window/shed(farFrom:radius:)``).
     /// A real city's scene is some 370–520 MB (decision 455).
+    /// MEM3D (2026-11-14): 500 and 600 MB, from 700 and 1,000: the
+    /// heaviest save's views over Taipei held 330–460 MB, but pulled out
+    /// the view kept building what it saw, past 500 MB a minute later and
+    /// on to the 1,000 that, with the 2D game's 1.2 GB, the train models
+    /// and the scene's own copy, took the iPhone 17 Pro to 2.7 GB and
+    /// its memory warnings.
     public static func bytes(memory tier: DeviceMemoryTier) -> Int {
         switch tier {
         case .tight: 400 << 20
-        case .roomy: 700 << 20
-        case .ample: 1_000 << 20
+        case .roomy: 500 << 20
+        case .ample: 600 << 20
         }
     }
 }
