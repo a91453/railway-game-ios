@@ -178,7 +178,7 @@ final class AirRoutesTests: XCTestCase {
         )
         XCTAssertEqual(
             kaohsiung.airRouteText(in: .traditionalChinese, routes: AirRoutes(cities: [.hongKong], opened: [taiwan, hongKong])),
-            "香港航線已開航，可以到香港的地圖經營。"
+            "香港航線已開航。回開始畫面按「新遊戲」→「實景地圖」，清單最上面就有「香港」。"
         )
         XCTAssertNil(songshan.airRouteText(in: .traditionalChinese, routes: fromTaiwan))
         XCTAssertNil(kaohsiung.airRouteText(in: .traditionalChinese, routes: AirRoutes()))
@@ -220,7 +220,7 @@ final class AirRoutesTests: XCTestCase {
         XCTAssertEqual(launcher.preferences.airRoutesOpened, ["taiwan", "hongKong"])
         XCTAssertEqual(session.airRoutes.opened, [taiwan, hongKong])
         XCTAssertEqual(session.message?.kind, .success)
-        XCTAssertEqual(session.message?.text, "台灣↔香港開航了。開新遊戲時，在實景地圖可以選「香港」。")
+        XCTAssertEqual(session.message?.text, "台灣↔香港開航了。回開始畫面按「新遊戲」→「實景地圖」，清單最上面就有「香港」。")
         XCTAssertEqual(session.news.items.filter { $0.category == .achievement }.count, 1)
         // The next midnight says nothing more.
         session.message = nil
@@ -278,7 +278,7 @@ final class AirRoutesTests: XCTestCase {
         let session = GameSession(world: world, language: .traditionalChinese)
         again.checkAirRoutes(of: session)
         XCTAssertEqual(again.preferences.airRoutesOpened, ["hongKong", "taiwan"])
-        XCTAssertEqual(session.message?.text, "香港↔台灣開航了。開新遊戲時，在實景地圖可以選「台灣」。")
+        XCTAssertEqual(session.message?.text, "香港↔台灣開航了。回開始畫面按「新遊戲」→「實景地圖」，清單最上面就有「全台灣」。")
         again.startWholeTaiwan()
         XCTAssertEqual(again.session?.airRoutes.here, taiwan)
     }
