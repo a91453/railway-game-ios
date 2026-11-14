@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 /// Worlds set up for the game website's screenshots (decision 165), opened
@@ -40,6 +41,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// bought until the cash in hand no longer pays the largest back. For
     /// the screenshot review of the pull request that added the screen.
     case termLoans
+
+    /// Decision 751's card: the demo map as a managed company under the
+    /// annual taxes two years in, its two closed years and their riders
+    /// written into the save (a year cannot be played through in a
+    /// screenshot run), so the year-end report opens on its appraisal.
+    /// For the screenshot review of the pull request that added it.
+    case yearEnd
 
     /// Decision 533: the demo map with a school and a hospital of the
     /// company's beside its first station, run on to half past seven on
@@ -385,6 +393,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .zoning: Self.zoningWorld(in: language)
         case .punctuality: Self.punctualityWorld(in: language)
         case .termLoans: Self.termLoansWorld(in: language)
+        case .yearEnd: Self.yearEndWorld(in: language)
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .crowdSurge: Self.crowdSurgeWorld(in: language, until: 3 * GameTime.secondsPerDay + 8 * 3_600)
@@ -1148,6 +1157,75 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
+    }
+
+    // MARK: - Year end (decision 751)
+
+    /// The demo map two years on, its years and their days written into
+    /// the save: year 1 earned NT$9.6 million on NT$8 million the year
+    /// before, its riders up a fifth, its loan a tenth of its assets, and
+    /// it owes the annual taxes of decision 734 and 736.
+    static func yearEndWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setEconomyMode(.management)
+        world.setUnlimitedFunds(false)
+        let length = FinancePeriod.year.days
+        // FinanceSummary has no public initializer: an empty one, its
+        // figures written in below.
+        let empty = world.accounts.report(.year, day: 0).current
+        func statement(year: Int64, cash: Int64, loan: Int64) -> AnnualStatement {
+            let zero = AssetClassBalance.zero
+            return AnnualStatement(
+                year: year, income: empty,
+                closing: BalanceSheet(cash: Money(cash), track: zero, stations: zero, rollingStock: zero, loan: Money(loan)),
+                incomeTaxAssessed: Money(cash / 20)
+            )
+        }
+        let years = [statement(year: 0, cash: 900_000_000, loan: 100_000_000),
+                     statement(year: 1, cash: 1_500_000_000, loan: 150_000_000)]
+        let fares: [Int64] = [800_000_000, 960_000_000]
+        do {
+            let encoder = JSONEncoder()
+            guard var object = try JSONSerialization.jsonObject(with: try encoder.encode(world)) as? [String: Any],
+                  var accounts = object["accounts"] as? [String: Any],
+                  var clock = object["clock"] as? [String: Any],
+                  var yearObjects = try JSONSerialization.jsonObject(with: try encoder.encode(years)) as? [[String: Any]]
+            else { preconditionFailure("The year-end screenshot scene no longer builds: the save's shape changed.") }
+            let today = 2 * length
+            let dayObjects = try (0..<CompanyAccounts.keptDays).map { index -> Any in
+                let day = today - Int64(CompanyAccounts.keptDays) + 1 + Int64(index)
+                guard var entry = try JSONSerialization.jsonObject(with: try encoder.encode(DayAccount(day: day))) as? [String: Any] else {
+                    preconditionFailure("The year-end screenshot scene no longer builds: a day's shape changed.")
+                }
+                entry["fareTrips"] = day / length == 1 ? 6_000 + day % 7 * 100 : 5_000 + day % 7 * 100
+                return entry
+            }
+            for index in yearObjects.indices {
+                guard var income = yearObjects[index]["income"] as? [String: Any] else {
+                    preconditionFailure("The year-end screenshot scene no longer builds: a year's shape changed.")
+                }
+                let fare = fares[index]
+                income["index"] = index
+                income["fareRevenue"] = fare
+                income["operatingCost"] = fare * 3 / 10
+                income["maintenanceCost"] = fare / 10
+                income["energyCost"] = fare / 20
+                income["staffCost"] = fare / 10
+                yearObjects[index]["income"] = income
+            }
+            accounts["years"] = yearObjects
+            accounts["days"] = dayObjects
+            accounts["incomeTaxPayable"] = try JSONSerialization.jsonObject(with: try encoder.encode(Money(25_000_000)), options: .fragmentsAllowed)
+            accounts["houseTaxPayable"] = try JSONSerialization.jsonObject(with: try encoder.encode(Money(3_000_000)), options: .fragmentsAllowed)
+            accounts["landTaxPayable"] = try JSONSerialization.jsonObject(with: try encoder.encode(Money(1_200_000)), options: .fragmentsAllowed)
+            object["accounts"] = accounts
+            object["annualTaxes"] = true
+            clock["now"] = try JSONSerialization.jsonObject(with: try encoder.encode(GameTime(seconds: today * GameTime.secondsPerDay + 8 * 3_600)), options: .fragmentsAllowed)
+            object["clock"] = clock
+            return try JSONDecoder().decode(GameWorld.self, from: try JSONSerialization.data(withJSONObject: object))
+        } catch {
+            preconditionFailure("The year-end screenshot scene no longer builds: \(error)")
+        }
     }
 
     // MARK: - Depots

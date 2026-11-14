@@ -120,4 +120,16 @@ final class YearEndAppraisalTests: XCTestCase {
         facts.yearEndAllA = true
         XCTAssertTrue(allA.isMet(by: facts))
     }
+
+    /// The screenshot scene of the card opens two years in, on an
+    /// appraisal with every count but punctuality graded, and taxes owed.
+    func testTheScreenshotSceneOpensOnAnAppraisal() throws {
+        let world = ScreenshotScene.yearEnd.make(in: .traditionalChinese)
+        let appraisal = try XCTUnwrap(YearEndAppraisal(latestOf: world))
+        XCTAssertEqual(appraisal.year, 1)
+        XCTAssertEqual(appraisal.grades.count, 4)
+        XCTAssertEqual(appraisal.rows[2].grade, .a, "riders up a fifth")
+        XCTAssertEqual(appraisal.taxesDue.map(\.month), [5, 11])
+        XCTAssertTrue(AchievementFacts(world: world).yearEndAllA == appraisal.isAllA)
+    }
 }

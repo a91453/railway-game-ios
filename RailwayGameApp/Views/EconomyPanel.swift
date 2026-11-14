@@ -762,6 +762,7 @@ struct EconomyPanel: View {
                     .font(.footnote)
                     .monospacedDigit()
                 }
+                .accessibilityIdentifier("economy.closedYear.\(year.year)")
             }
         } header: {
             Text(verbatim: session.language.text("Year-end closings", "年度決算"))
