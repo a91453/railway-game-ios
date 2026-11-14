@@ -78,19 +78,31 @@ enum PlatformLevellingProblem: Error {
     /// piece of another's end, too near to cut between.
     case tooNearAPlatform
 
+    /// The pill's word over the map's ✓ (decision 745): what to do, in a
+    /// few words.
+    func short(in language: DisplayLanguage) -> String {
+        switch self {
+        case .missing: language.text("Tap the track again", "請重新點選軌道")
+        case .wholeEdge: language.text("Track too short: lay it longer", "軌道太短：請鋪長一點")
+        case .cannotCut: language.text("Curve too sharp: lay it longer", "彎道太急：請鋪長一點")
+        case .platformInTheWay: language.text("A platform is here: tap beside it", "已有月台：請點旁邊")
+        case .tooNearAPlatform: language.text("Too near a platform: tap farther", "離月台太近：請點遠一點")
+        }
+    }
+
     func text(in language: DisplayLanguage) -> String {
         switch self {
         case .missing:
             language.text("That track is gone. Tap the track again.", "那段軌道已經不在了。請重新點選軌道。")
         case .wholeEdge:
             language.text(
-                "This track is too short to level a platform's length of it: lay a longer stretch, or lay this one level.",
-                "這段軌道太短，無法把月台那一段整平：請鋪長一點的軌道，或把這段鋪成水平。"
+                "This track is too short for a platform: lay it longer, then put the station on it.",
+                "這段軌道太短，放不下月台：請把這段軌道鋪長一點再設站。"
             )
         case .cannotCut:
             language.text(
-                "This curve cannot be cut there to level the platform's stretch: try a straighter place.",
-                "這段彎道無法在那裡切開整平：請換一個比較直的地方。"
+                "This curve is too short or too sharp for a platform: lay it longer and gentler, or tap a straighter place.",
+                "這段彎道太短或太急，放不下月台：請把彎道鋪長、鋪緩一點，或點比較直的地方。"
             )
         case .platformInTheWay:
             language.text(
@@ -423,7 +435,10 @@ extension GameSession {
         let preview: PlatformLevellingPreview
         switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: draft) {
         case .failure(let problem):
-            preview = PlatformLevellingPreview(grade: grade, length: stretch.end - stretch.start, cost: nil, problem: problem.text(in: language))
+            preview = PlatformLevellingPreview(
+                grade: grade, length: stretch.end - stretch.start, cost: nil, problem: problem.text(in: language),
+                short: problem.short(in: language)
+            )
         case .success(let levelling):
             // Decision 245: what it costs even where the cash would not
             // pay for it; ✓'s price says so with the station's.
@@ -458,6 +473,9 @@ public struct PlatformLevellingPreview: Hashable, Sendable {
     public let length: Int64
     public let cost: Money?
     public let problem: String?
+    /// The pill's few words for ``problem`` where it is one of the tool's
+    /// own (decision 745); `nil` for a game rule's refusal.
+    var short: String? = nil
     /// What clearing a new station's place on the level stretch costs,
     /// once levelled (decision 245, ``GameSession/networkPlatformCost``).
     var stationClearing: Money? = nil
@@ -478,27 +496,12 @@ struct PlatformLevellingMemo {
 }
 
 extension PlatformLevellingPreview {
-    /// "climbs 7‰: ✓ levels these 64 m (relaying the track $ 1,200)", or
-    /// why it cannot.
-    public func text(in language: DisplayLanguage) -> String {
-        let length = NetworkBuilding.lengthText(length, in: language)
-        if let cost {
-            return language.text(
-                "climbs \(grade)‰: ✓ levels these \(length) (relaying the track \(cost.moneyText))",
-                "坡度 \(grade)‰：按 ✓ 會把這 \(length)整平（重鋪這段軌道 \(cost.moneyText)）"
-            )
-        }
-        return language.text(
-            "climbs \(grade)‰ and cannot be levelled: \(problem ?? "")",
-            "坡度 \(grade)‰，無法整平：\(problem ?? "")"
-        )
-    }
-
     /// The short line over the map's ✓ where the stretch cannot be
-    /// levelled; `nil` where it can (decision 745: levelling is done
-    /// without a word, its price in the ✓'s).
+    /// levelled, what to do; `nil` where it can (decision 745: levelling
+    /// is done without a word, its price in the ✓'s, and the grade is
+    /// never said).
     public func caption(in language: DisplayLanguage) -> String? {
         guard cost == nil else { return nil }
-        return language.text("Climbs \(grade)‰: cannot be levelled", "坡度 \(grade)‰：無法整平")
+        return short ?? language.text("No platform here: see the Network panel", "這裡蓋不了：見「路網」面板")
     }
 }

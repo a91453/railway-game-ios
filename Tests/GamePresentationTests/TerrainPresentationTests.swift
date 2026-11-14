@@ -425,6 +425,25 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertFalse(chinese.message?.text.contains("整平") == true, chinese.message?.text ?? "")
     }
 
+    /// Decision 745 (the author, 2026-11-14: tell the player to lay it
+    /// longer, plainly): track on a grade no longer than its platform
+    /// cannot be levelled, and the tool says so in one sentence, without
+    /// the grade, and the pill says what to do.
+    func testTrackTooShortToLevelSaysLayItLonger() throws {
+        let session = preview(try world(columns: [10, 13]), from: 1_024, to: 5_120)
+        session.buildNetworkTrack()
+        let chinese = GameSession(world: session.world, language: .traditionalChinese)
+        chinese.selectTool(.network)
+        chinese.setNetworkMode(.platform)
+        chinese.tapNetwork(at: PlanPoint(x: 3_072, y: Self.row), reach: 16)
+        let levelling = try XCTUnwrap(chinese.networkPlatformLevelling)
+        XCTAssertNil(levelling.cost)
+        XCTAssertEqual(levelling.problem, "這段軌道太短，放不下月台：請把這段軌道鋪長一點再設站。")
+        XCTAssertEqual(levelling.caption(in: .traditionalChinese), "軌道太短：請鋪長一點")
+        XCTAssertTrue(chinese.networkDraftText().hasSuffix(" · 這段軌道太短，放不下月台：請把這段軌道鋪長一點再設站。"), chinese.networkDraftText())
+        XCTAssertFalse(chinese.networkDraftText().contains("‰"), chinese.networkDraftText())
+    }
+
     /// A curve on the grade is cut by de Casteljau's rule: three curves
     /// along the old one, joined end to end, the middle one level.
     func testAPlatformOnACurvedGradeLevelsAlongTheCurve() throws {
@@ -537,10 +556,10 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
             No platform built: the Network panel says what to do.
             """))
-        XCTAssertTrue(placed.networkDraftText().hasSuffix("""
-            climbs 20‰ and cannot be levelled: \(reason) Or lay a short stretch \
-            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
-            """), placed.networkDraftText())
+        // Decision 745: what to do, without the grade.
+        XCTAssertTrue(placed.networkDraftText().hasSuffix(" · \(reason)"), placed.networkDraftText())
+        XCTAssertFalse(placed.networkDraftText().contains("‰"), placed.networkDraftText())
+        XCTAssertEqual(levelling.caption(in: .english), "No platform here: see the Network panel")
         XCTAssertEqual(placed.world, world)
     }
 

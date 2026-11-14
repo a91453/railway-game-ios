@@ -585,24 +585,6 @@ extension GameSession {
         return beside
     }
 
-    /// Why the stretch on track that climbs `grade` per mille cannot be
-    /// levelled for a platform (decision 190), `problem` being the reason,
-    /// and what to do instead (decision 164).
-    func platformGradeText(_ grade: Int64, problem: String) -> String {
-        language.text(
-            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) \(platformShortStretchText)",
-            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)\(platformShortStretchText)"
-        )
-    }
-
-    /// What to do where a platform's stretch cannot be levelled (decision
-    /// 164).
-    var platformShortStretchText: String {
-        language.text(
-            "Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
-            "或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
-        )
-    }
 
     /// Decision 510 (the author's iPhone held sideways: the long refusal
     /// stood in the middle of the map under the ✓ pill and over the
@@ -784,7 +766,7 @@ extension GameSession {
         do throws(GameError) {
             let outcome = try performCommand(command)
             let done = outcome.stretch ?? stretch
-            // Decision 742: levelling is not reported (decision 190 said
+            // Decision 745: levelling is not reported (decision 190 said
             // how much was levelled, for what); the ✓ showed the whole price.
             message = StatusMessage(kind: .success, text: outcome.station.map { text($0, on: done, in: world) } ?? "")
             endFollowIfGone()
@@ -1242,13 +1224,13 @@ extension GameSession {
                 ? language.text("\(length) platform here", "在這裡設 \(length) 的月台")
                 : language.text("\(length) platform here, on both tracks", "在這裡設 \(length) 的月台（兩條軌道）")
                     + stationCrossoverText(networkPlatformCrossoverCount, built: false)
-            // Decision 742: a stretch that can be levelled is levelled
-            // without a word (decision 190), its price in the ✓'s; only
-            // where it cannot be is the grade said, with what to do
-            // instead (decision 510: here only, the banner says only that
-            // it cannot).
-            guard let levelling = networkPlatformLevelling, levelling.problem != nil else { return place }
-            return place + " · " + levelling.text(in: language) + " " + platformShortStretchText
+            // Decision 745: a stretch that can be levelled is levelled
+            // without a word (decision 190), its price in the ✓'s; where
+            // it cannot be, what to do, in one sentence and never the
+            // grade (decision 510: here only, the banner says only that it
+            // cannot).
+            guard let problem = networkPlatformLevelling?.problem else { return place }
+            return place + " · " + problem
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
