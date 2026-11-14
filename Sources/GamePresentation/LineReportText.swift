@@ -160,6 +160,28 @@ extension GameWorld {
         return LineReport(line: id, name: line.name, today: current, yesterday: days.first { $0.day == today - 1 }, days: days)
     }
 
+    /// Decision 731 (PAT-2): how many who set out from line `id`'s stops
+    /// waited too long and left, summed over its stations' ledgers since
+    /// the start (``StationPassengers/gaveUp``, the station panel's row of
+    /// the same name); `nil` for a freight line or no such line, and while
+    /// passengers' patience is off and nobody has left. A station several
+    /// lines call at counts on each of them: the ledger keeps the station,
+    /// not the line.
+    public func lineGaveUp(_ id: LineID) -> Int64? {
+        guard let line = line(id: id), !line.isFreight else { return nil }
+        let stops = Set(line.stops)
+        let count = passengers.reduce(Int64(0)) { stops.contains($1.station) ? $0 + $1.gaveUp : $0 }
+        guard passengerPatience || count > 0 else { return nil }
+        return count
+    }
+
+    /// The line page's row for ``lineGaveUp(_:)``.
+    public func lineGaveUpRow(_ id: LineID, in language: DisplayLanguage) -> LedgerCount? {
+        lineGaveUp(id).map {
+            LedgerCount(title: language.text("Waited too long and left, at its stops", "各站等太久離開"), count: $0)
+        }
+    }
+
     /// Every line's report, in `order`; empty without line accounts.
     public func lineReports(sortedBy order: LineReportSort = .name) -> [LineReport] {
         let reports = lines.compactMap { lineReport($0.id) }

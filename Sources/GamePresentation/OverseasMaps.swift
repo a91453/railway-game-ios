@@ -273,7 +273,7 @@ extension RealBranchLine {
         ("hkmtr", "DRL", "Disneyland Resort Line", "迪士尼綫", nil, .metro, false),
     ]
 
-    /// Decision 752: the lines of the cities outside Taiwan drawn along
+    /// Decision 753: the lines of the cities outside Taiwan drawn along
     /// another's track, by line id, and the line whose drawing each keeps
     /// to one side of, at least `offset` metres off it (positive on its
     /// right going up the line, as a loop's offset), wherever the two lie

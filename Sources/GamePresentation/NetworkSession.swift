@@ -593,9 +593,12 @@ extension GameSession {
     /// levelled, short and without "cannot be levelled", which the ✓ pill
     /// and the panel already say; why and what to do are in the panel
     /// (``networkDraftText()``).
-    var platformGradeRefusalText: String {
-        language.text("No platform built: the Network panel says what to do.",
-                      "月台沒有蓋：做法見「路網」面板。")
+    ///
+    /// Decision 752: with the reason after it, `reason`, the same words
+    /// the panel and the ✓ pill give: the banner alone left the author
+    /// not knowing why Qiyan could not be built.
+    func platformGradeRefusalText(_ reason: String) -> String {
+        language.text("No platform built: ", "月台沒有蓋：") + reason
     }
 
     /// The ridership a managed company gives a new station at `point`: on
@@ -677,9 +680,9 @@ extension GameSession {
         if grade != nil {
             switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: world) {
             case .success(let found): levelling = found
-            case .failure:
-                // Decision 510: short; the panel says why and what to do.
-                return .failure(PlatformRefusal(text: platformGradeRefusalText))
+            case .failure(let problem):
+                // Decision 510: short; decision 752: with why.
+                return .failure(PlatformRefusal(text: platformGradeRefusalText(problem.text(in: language))))
             }
         }
         var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -782,7 +785,7 @@ extension GameSession {
                 // Decision 510: short; the panel's preview, built on a copy
                 // the same way, says why and what to do.
                 do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
-                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText)
+                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText(error.playerMessage(in: language)))
                 }
             }
             added = false

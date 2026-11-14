@@ -623,6 +623,8 @@ struct Map3DPreviewScreen: View {
                     // what is under the ground.
                     if stats.underground { Text(verbatim: "underground") }
                     // Decision 645 (D6): the light the last frame drew.
+                    // Decision 750: the models on the GPU so far.
+                    Text(verbatim: String(format: "models %d/%d · %.0f MB", stats.modelsMade, stats.models, stats.modelMegabytes))
                     Text(verbatim: String(format: "light %02d:%02d · night %.2f · lights %.2f", Int(stats.drawnHour) % 24,
                                           Int(stats.drawnHour * 60) % 60, stats.drawnNight, stats.drawnLights))
                 }
@@ -738,9 +740,11 @@ final class Map3DTrainModels {
 /// (names, vertex counts, bounds, lamps, destination signs) and the glass
 /// the transparent-glass pass sorts each frame, taken before the
 /// vertices are let go of.
+/// Decision 750: each model's buffer made the first time it is drawn
+/// (``Map3DModelBuffers``), so only the models a game draws are on the GPU.
 final class Map3DUploadedModels: @unchecked Sendable {
     let pack: Map3DModelPack
-    let buffers: [MTLBuffer]
+    let buffers: Map3DModelBuffers
     let glass: Map3DTransparentGlass.Cache
     /// Decision 617: every model's glow spots, and a buffer of them
     /// (`nil` when no model glows).
@@ -751,7 +755,7 @@ final class Map3DUploadedModels: @unchecked Sendable {
     /// then shows its vertices' colours).
     let textures: [MTLTexture?]
 
-    private init(pack: Map3DModelPack, buffers: [MTLBuffer], textures: [MTLTexture?], glass: Map3DTransparentGlass.Cache,
+    private init(pack: Map3DModelPack, buffers: Map3DModelBuffers, textures: [MTLTexture?], glass: Map3DTransparentGlass.Cache,
                  glows: Map3DGlow.Table, glowBuffer: MTLBuffer?) {
         self.pack = pack
         self.buffers = buffers
@@ -772,13 +776,14 @@ final class Map3DUploadedModels: @unchecked Sendable {
         }
     }
 
-    /// Puts the vertices of `handed`'s pack (``Map3DView/makeModels()``)
-    /// in buffers on the system's Metal device (the one every 3D view draws
-    /// with), letting go of them on the CPU as it goes: ``Map3DModelPack/standard``'s,
-    /// which it was made from, first, then each model's once its buffer
-    /// is made (MEM3D: the whole pack, some 290 MB on the heaviest save's
-    /// iPhone, was held on the CPU and the GPU at once while the 3D map
-    /// opened). Slow: never on the main thread.
+    /// Readies the vertices of `handed`'s pack (``Map3DView/makeModels()``)
+    /// for the system's Metal device (the one every 3D view draws with),
+    /// letting go of them on the CPU: ``Map3DModelPack/standard``'s, which
+    /// it was made from, first. Decision 750: written to a mapped file
+    /// (``Map3DModelVertexFile``), each model put on the GPU the first
+    /// time it is drawn; where the file cannot be written, every model on
+    /// the GPU now, one at a time, as MEM3D did. Slow: never on the main
+    /// thread.
     static func make(from handed: Handed) -> Map3DUploadedModels? {
         guard var full = handed.take() else { return nil }
         // `full` holds the vertices now; the standard pack's copy of them
@@ -793,14 +798,20 @@ final class Map3DUploadedModels: @unchecked Sendable {
         let glowBuffer = glows.floats.withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
-        var buffers: [MTLBuffer] = []
-        buffers.reserveCapacity(full.models.count)
-        for index in full.models.indices {
-            guard let buffer = full.models[index].vertices.withUnsafeBytes({ bytes in
-                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
-            }) else { return nil }
-            buffers.append(buffer)
-            full.letGoOfVertices(at: index)
+        let buffers: Map3DModelBuffers
+        if let file = Map3DModelVertexFile.write(full, in: FileManager.default.temporaryDirectory) {
+            buffers = Map3DModelBuffers(device: device, file: file)
+        } else {
+            var made: [MTLBuffer] = []
+            made.reserveCapacity(full.models.count)
+            for index in full.models.indices {
+                guard let buffer = full.models[index].vertices.withUnsafeBytes({ bytes in
+                    bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+                }) else { return nil }
+                made.append(buffer)
+                full.letGoOfVertices(at: index)
+            }
+            buffers = Map3DModelBuffers(device: device, all: made)
         }
         return Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, textures: textures, glass: glass, glows: glows,
                                    glowBuffer: glowBuffer)
@@ -824,6 +835,67 @@ final class Map3DUploadedModels: @unchecked Sendable {
                 .error("model \(name, privacy: .public): texture not loaded: \(error, privacy: .public)")
             return nil
         }
+    }
+}
+
+/// Decision 750: the models' vertex buffers, each made the first time it
+/// is asked for, from the mapped file (``Map3DModelVertexFile``): a game
+/// draws a few train sets of the hundreds in the pack, so the rest never
+/// reach the GPU. Made where it is drawn, in the frame that first draws
+/// it (a few MB, read from the file), so no car is ever left out of a
+/// frame for want of its buffer. Kept for the app's life, as the whole
+/// pack was (decision 608).
+final class Map3DModelBuffers: @unchecked Sendable {
+    let device: MTLDevice
+    private let file: Map3DModelVertexFile?
+    private let lock = NSLock()
+    private var buffers: [MTLBuffer?]
+    private var bytesMade = 0
+
+    init(device: MTLDevice, file: Map3DModelVertexFile) {
+        self.device = device
+        self.file = file
+        buffers = Array(repeating: nil, count: file.count)
+    }
+
+    /// Every model's buffer made already (no file to make them from).
+    init(device: MTLDevice, all: [MTLBuffer]) {
+        self.device = device
+        file = nil
+        buffers = all
+        bytesMade = all.reduce(0) { $0 + $1.length }
+    }
+
+    /// How many models it can give a buffer of.
+    var count: Int { buffers.count }
+
+    /// How many of them have their buffer made.
+    var made: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return buffers.reduce(0) { $0 + ($1 == nil ? 0 : 1) }
+    }
+
+    /// Bytes of the buffers made so far.
+    var bytes: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return bytesMade
+    }
+
+    /// Model `index`'s buffer, made now if it is not yet; `nil` when it
+    /// cannot be (out of memory), and it is asked again next time.
+    subscript(index: Int) -> MTLBuffer? {
+        lock.lock()
+        defer { lock.unlock() }
+        if let buffer = buffers[index] { return buffer }
+        guard let file else { return nil }
+        let buffer = file.withBytes(of: index) { bytes in
+            bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+        }
+        buffers[index] = buffer
+        bytesMade += buffer?.length ?? 0
+        return buffer
     }
 }
 

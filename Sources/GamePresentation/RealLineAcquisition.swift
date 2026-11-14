@@ -960,7 +960,7 @@ extension RealLineLaying {
         return without.offer.acquisition == nil ? laid : without
     }
 
-    /// Decision 752: how near the drawing of the line it keeps beside
+    /// Decision 753: how near the drawing of the line it keeps beside
     /// (``RealBranchLine/overseasLanes``) a line's way is moved to its
     /// side; from there to twice as far, less and less.
     static let laneReach = 40 * RealLineAcquisition.metre
@@ -990,7 +990,7 @@ extension RealLineLaying {
         )
     }
 
-    /// Decision 752: `laid`, the way of `line`, kept to its side of the
+    /// Decision 753: `laid`, the way of `line`, kept to its side of the
     /// drawing of the line it is laid beside (``RealBranchLine/overseasLanes``)
     /// at least the lane's offset off it, where the two lie within
     /// ``laneReach``, and less and less out to twice that; unchanged for
@@ -1256,7 +1256,7 @@ extension RealLineLaying {
         try? draft.readGround(under: samples + yardSamples, from: heights)
         let mapped = draft.ground.isMapped
         let planning = draft
-        // Decision 752: under an overseas line, the ground and water under
+        // Decision 753: under an overseas line, the ground and water under
         // its second track too, a track's offset to either side, the
         // higher ground and any water (the Tung Chung Line's second track
         // west of Sunny Bay crossed a cell of water its first did not, once
@@ -1796,7 +1796,7 @@ extension RealLineLaying {
                     tiles = order
                     continue
                 }
-                // Decision 752: for the lines laid in a lane beside
+                // Decision 753: for the lines laid in a lane beside
                 // another's drawing, track too close is met as track
                 // crossed, where their drawings cross (the Airport Express
                 // over the Tung Chung Line at Tung Chung).

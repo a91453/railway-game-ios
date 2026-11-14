@@ -440,6 +440,61 @@ final class RealRailwayTracingTests: XCTestCase {
         }
     }
 
+    /// Decision 752 (the author, TestFlight 131): the Tamsui Line traced
+    /// from Beitou to Shipai crosses Qiyan on its real viaduct; the track
+    /// there is one level edge, still on the viaduct, so a station is put
+    /// there at the first tap, not refused as "too short" on the short
+    /// sloping edges the ground made of it.
+    func testAStationOnARealViaductMidTraceCanBeBuilt() throws {
+        let railways = try BundledRealData.railways()
+        let beitou = try BundledRealData.station("北投", in: "mrt"), shipai = try BundledRealData.station("石牌", in: "mrt")
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(beitou.anchor))
+        try world.mapGround()
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.heights = try XCTUnwrap(Self.heights)
+        session.railways = railways
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.networkBuildsDouble = false
+        session.tapNetwork(at: try BundledRealData.point(beitou.coordinate, in: world), reach: reach)
+        session.tapNetwork(at: try BundledRealData.point(shipai.coordinate, in: world), reach: reach)
+        XCTAssertNil(try XCTUnwrap(session.networkPreview).problem)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+
+        let qiyan = try BundledRealData.point(BundledRealData.station("奇岩", in: "mrt").coordinate, in: session.world)
+        session.setNetworkMode(.platform)
+        session.platformCars = 6
+        session.tapNetwork(at: qiyan, reach: reach * 4)
+        let stretch = try XCTUnwrap(session.networkPlatformStretch)
+        XCTAssertNil(session.networkPlatformGrade, "level at the real station")
+        let edge = try XCTUnwrap(session.world.network.edge(stretch.edge))
+        XCTAssertEqual(Set(edge.sectionSpans.map(\.kind)), [.viaduct], "still on the real viaduct")
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.stations.count, 1)
+
+        // Decision 752: the longest platform at Qipan, the next station,
+        // and a platform track beside it either way, island or side: the
+        // level stretch leaves room past its ends for the turnouts.
+        let qipan = try BundledRealData.point(BundledRealData.station("唭哩岸", in: "mrt").coordinate, in: session.world)
+        session.platformCars = Train.maximumCars
+        session.stationName = "唭哩岸"
+        session.platformStationID = nil
+        session.tapNetwork(at: qipan, reach: reach * 4)
+        XCTAssertNil(session.networkPlatformGrade)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let station = try XCTUnwrap(session.world.stations.first { $0.name == "唭哩岸" })
+        let platform = try XCTUnwrap(session.world.trackPlatforms(of: station.id).first)
+        for layout in PlatformTrackLayout.allCases {
+            for side in PlatformTrackSide.allCases {
+                XCTAssertNil(session.platformTrackPreview(beside: platform, layout: layout, side: side).problem, "\(layout) \(side)")
+            }
+        }
+    }
+
     /// Only on request (`METRO_STATION_REPORT=1`, some minutes): every
     /// metro and light rail line traced a station at a time, how many of
     /// its stations on a real viaduct or in a real tunnel the trace leaves

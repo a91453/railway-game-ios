@@ -155,7 +155,7 @@ final class HongKongMapTests: XCTestCase {
 
     /// Each line on sale is bought, one after another on the same map:
     /// each has its trains, and the land round its stations is read in
-    /// with Hong Kong's people. None is refused (decision 752: the Tung
+    /// with Hong Kong's people. None is refused (decision 753: the Tung
     /// Chung Line, drawn along the Airport Express's track, was).
     func testEveryLineOnSaleIsBought() throws {
         let session = try hongKong()
@@ -277,7 +277,7 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertEqual(session.world.clock.speed, .paused)
     }
 
-    /// Decision 752 (2026-11-14: 「新版不能同時蓋迪士尼線跟機場快線」「記得
+    /// Decision 753 (2026-11-14: 「新版不能同時蓋迪士尼線跟機場快線」「記得
     /// 東涌也是他們重複線路」): the Airport Express, the Tung Chung Line and
     /// the Disneyland Resort Line, drawn along one track round Sunny Bay
     /// and from Hong Kong to the airport island, are each bought after the

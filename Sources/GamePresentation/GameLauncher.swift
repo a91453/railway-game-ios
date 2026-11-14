@@ -1814,6 +1814,14 @@ public final class GameLauncher {
         _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil,
         row: String? = nil, autosavingAt date: Date? = nil
     ) -> Bool {
+        // Decision 497 P2-1 (REVIEW-L21): a game opened while Back to Start
+        // is still writing the autosave of the one left waits for it; if
+        // it failed, the game left comes back with the question instead,
+        // rather than being thrown away.
+        if leaving != nil {
+            try? afterSaves { () throws(SaveError) in }
+            guard settleLeaving() else { return false }
+        }
         // Decision 706: a free game on a real-world map gets its map's
         // coach stops, once the app has read them.
         let world = Self.withFreePlayFunds(coachNetwork.map { CoachCatalog.withCoachStops(world, network: $0) } ?? world)
@@ -2176,13 +2184,14 @@ public final class GameLauncher {
     /// saves' queue, after any save or iCloud round queued before it (on a
     /// large map a save is a few MB). PERF-DEVICE 4: the start screen comes
     /// at once, not when the autosave is written (on the author's largest
-    /// save, 30 MB, three to four seconds on a phone); a game opened then
-    /// is read after it, on the same queue. If it fails, the game comes
-    /// back and goes on, with the failure on its status line, and the
-    /// player is asked whether to try again, leave without saving or keep
-    /// playing (``unsavedLeaving``); a game opened meanwhile has the
-    /// failure on its status line instead. Nothing, and `nil`, while one
-    /// is under way (``isReturningToStart``).
+    /// save, 30 MB, three to four seconds on a phone). If it fails, the
+    /// game comes back and goes on, with the failure on its status line,
+    /// and the player is asked whether to try again, leave without saving
+    /// or keep playing (``unsavedLeaving``). A game opened meanwhile waits
+    /// for the write first (P2-1, REVIEW-L21), so the game left is never
+    /// thrown away unasked and the game opened is never covered by the
+    /// saving cover. Nothing, and `nil`, while one is under way
+    /// (``isReturningToStart``).
     @discardableResult
     public func returnToStartInBackground(at date: Date = Date()) -> Task<Void, Never>? {
         guard !isReturningToStart else { return nil }
@@ -2193,50 +2202,60 @@ public final class GameLauncher {
         isReturningToStart = true
         session.stopGameLoop()
         recordChallengeResult(at: date)
-        let (library, world, news, language, row) = (library, session.worldToSave, session.news, language, gameRow)
+        let (library, world, news, row) = (library, session.worldToSave, session.news, gameRow)
         listRead &+= 1
-        let read = listRead
-        let (written, report) = AsyncStream.makeStream(of: Result<[SaveLibrary.Entry], SaveError>.self)
+        let outcome = LeavingWrite()
+        leaving = Leaving(game: session, row: row, read: listRead, outcome: outcome)
+        let (written, report) = AsyncStream.makeStream(of: Void.self)
         let savesWaiting = savesWaiting
         savesWaiting.queued()
         saveQueue.async {
             savesWaiting.began()
-            report.yield(Result { () throws(SaveError) in
+            outcome.result = Result { () throws(SaveError) in
                 _ = try library.save(world, news: news, as: .autosave, at: date, row: row)
                 return library.entries()
-            })
+            }
+            report.yield()
             report.finish()
         }
         leaveGame()
         return Task {
-            for await result in written {
-                isReturningToStart = false
-                switch result {
-                case .success(let list):
-                    if listRead == read { entries = list }
-                    afterLeaving()
-                case .failure(let error):
-                    let reason = error.playerMessage(in: language)
-                    guard self.session == nil else {
-                        // A game opened meanwhile: the one left is lost.
-                        self.session?.message = StatusMessage(kind: .failure, text: Self.leftUnsaved(reason, in: language))
-                        continue
-                    }
-                    comeBack(to: session, row: row)
-                    session.message = StatusMessage(kind: .failure, text: reason)
-                    unsavedLeaving = UnsavedLeaving(reason: reason)
-                }
-            }
+            for await _ in written { settleLeaving() }
         }
     }
 
-    /// PERF-DEVICE 4: the status line of a game opened while the autosave
-    /// of the one left failed.
-    static func leftUnsaved(_ reason: String, in language: DisplayLanguage) -> String {
-        language.text(
-            "The game you left could not be saved: \(reason)",
-            "剛才離開的遊戲沒有存成功：\(reason)"
-        )
+    /// P2-1 (REVIEW-L21): the game Back to Start left while its autosave
+    /// is written (``returnToStartInBackground(at:)``).
+    private struct Leaving {
+        let game: GameSession
+        let row: String?
+        let read: Int
+        let outcome: LeavingWrite
+    }
+
+    @ObservationIgnored private var leaving: Leaving?
+
+    /// Ends ``leaving`` once its autosave is written, whichever comes
+    /// first: the write's own report, or a game opened meanwhile
+    /// (``begin(_:keepingAutosave:news:isDemo:roads:row:autosavingAt:)``).
+    /// `false` when it failed and the game left came back.
+    @discardableResult
+    private func settleLeaving() -> Bool {
+        guard let left = leaving, let result = left.outcome.result else { return true }
+        leaving = nil
+        isReturningToStart = false
+        switch result {
+        case .success(let list):
+            if listRead == left.read { entries = list }
+            afterLeaving()
+            return true
+        case .failure(let error):
+            let reason = error.playerMessage(in: language)
+            comeBack(to: left.game, row: left.row)
+            left.game.message = StatusMessage(kind: .failure, text: reason)
+            unsavedLeaving = UnsavedLeaving(reason: reason)
+            return false
+        }
     }
 
     /// PERF-DEVICE 4: back to `left`, the game Back to Start left before
@@ -2485,6 +2504,18 @@ public struct RealWorldData: Sendable {
 /// PERF-DEVICE 1: how many saves are queued on the saves' queue and not
 /// yet begun. An iCloud round on that queue asks it before each save it
 /// compares, and ends early while one waits.
+/// P2-1 (REVIEW-L21): what Back to Start's autosave came to, set on the
+/// saves' queue and read on the main thread.
+final class LeavingWrite: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Result<[SaveLibrary.Entry], SaveError>?
+
+    var result: Result<[SaveLibrary.Entry], SaveError>? {
+        get { lock.withLock { value } }
+        set { lock.withLock { value = newValue } }
+    }
+}
+
 final class SavesWaiting: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
