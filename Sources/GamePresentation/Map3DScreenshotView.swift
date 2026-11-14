@@ -34,6 +34,55 @@ public struct Map3DScreenshotView: Equatable, Sendable {
         return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
     }
 
+    /// Decision 732: the camera over the signalled stop line nearest
+    /// `place` (the app's `-screenshot-3d-signal`), within `within`
+    /// metres, so a screenshot of a city's streets looks at a junction
+    /// rather than at the roof a guessed place falls on; over `place`
+    /// itself when none is that near.
+    /// Decision 743: `alongTheRoad`, looking down the stop line's road the
+    /// way its traffic goes (``heading`` then ignored), where the
+    /// towers on either side leave the street in sight.
+    public func camera(signalNear place: (latitude: Double, longitude: Double), within: Float = 600, alongTheRoad: Bool = false,
+                       in scene: Map3DScene, of world: GameWorld, viewport: (width: Float, height: Float)) -> Map3DCamera? {
+        guard let over = camera(at: place, in: scene, of: world, viewport: viewport) else { return nil }
+        guard let found = Self.signalStopPlace(near: over.target, in: scene.streetLife, within: within) else { return over }
+        let stop = found.point
+        let target = Map3DPoint(stop.x, scene.drawnGround.height(x: stop.x, z: stop.z, world: world), stop.z)
+        let turned = alongTheRoad ? Self.heading(along: found.along) : heading
+        let camera = Map3DCamera(target: target, distance: distance, heading: turned, viewport: viewport)
+        guard tilt > camera.tilt else { return camera }
+        return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
+    }
+
+    /// The point of the signalled stop line of `life`'s lanes nearest
+    /// `point` across the ground, if one is within `within` metres.
+    static func signalStop(near point: Map3DPoint, in life: Map3DStreetLife, within: Float) -> Map3DPoint? {
+        signalStopPlace(near: point, in: life, within: within)?.point
+    }
+
+    /// ``signalStop(near:in:within:)`` with its lane's way there.
+    static func signalStopPlace(near point: Map3DPoint, in life: Map3DStreetLife,
+                                within: Float) -> (point: Map3DPoint, along: Map3DPoint)? {
+        var best: (point: Map3DPoint, along: Map3DPoint, away: Float)?
+        for lane in life.lanes {
+            for stop in lane.stops {
+                let place = lane.path.at(stop.at)
+                let at = place.point
+                let dx = at.x - point.x, dz = at.z - point.z
+                let away = (dx * dx + dz * dz).squareRoot()
+                if away <= within, away < best?.away ?? .infinity { best = (at, place.along, away) }
+            }
+        }
+        guard let best else { return nil }
+        return (best.point, best.along)
+    }
+
+    /// The camera's heading looking `along` the ground (the camera's
+    /// forward is (sin h, 0, −cos h)).
+    static func heading(along: Map3DPoint) -> Float {
+        atan2f(along.x, -along.z)
+    }
+
     /// Decision 575 續 (CABLEMAP): the camera over the ground under the
     /// first cable car's span `leg`, `permille` along it (the app's
     /// `-screenshot-3d-cableway` "leg,permille"), so a screenshot looks at

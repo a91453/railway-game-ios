@@ -67,7 +67,7 @@ final class Map3DCoachBusTests: XCTestCase {
         } }
     }
     func testFiveBusTypesKeepTheTrafficPopulationAndSafeLengthSpacing() throws {
-        let types=Map3DStreetModel.allCases.filter(\.isBus)
+        let types=Map3DStreetModel.taiwanBuses
         let ids=try types.map { try XCTUnwrap(Map3DStreetLife.models[$0]) }
         XCTAssertEqual(Set(ids).count,5)
         let coachID=try XCTUnwrap(Map3DStreetLife.models[.coachBus])

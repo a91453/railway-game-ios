@@ -60,12 +60,27 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case electricScooter
     /// The step-through with a delivery box, and its rider.
     case deliveryScooter
+    /// Decision 743: Hong Kong's three-axle double-decker
+    /// (``Map3DHongKongVehicles``), in the instance's colour.
+    case doubleDecker
+    /// Hong Kong's minibus (小巴), cream, its roof the instance's red or
+    /// green.
+    case minibus
+    /// Hong Kong's taxi, the instance's red, green or blue, its roof
+    /// silver with a lit sign.
+    case taxi
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
 
     /// Any of the full-size buses or the high-roof shuttle.
-    public var isBus: Bool { self == .bus || self == .shuttleBus || self == .lowFloorBus || self == .coachBus || self == .midiBus }
+    public var isBus: Bool {
+        self == .bus || self == .shuttleBus || self == .lowFloorBus || self == .coachBus || self == .midiBus || self == .doubleDecker
+    }
+
+    /// Decision 743: the buses of Taiwan's streets (every bus but Hong
+    /// Kong's double-decker).
+    static var taiwanBuses: [Map3DStreetModel] { allCases.filter { $0.isBus && $0 != .doubleDecker } }
 
     /// Whether it is a figure on foot.
     public var isPerson: Bool { self == .walking || self == .standing }
@@ -127,11 +142,13 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             if self == .scooterPair {
                 Self.addRider(to: &mesh, at: -0.62, shirt: Self.pillionShirt, helmet: Self.helmets[0], reach: false)
             }
-        case .car, .van:
+        case .car, .van, .taxi:
             // `traffic.js`'s sedan and van: length, width, the belt and the
-            // roof, the glasshouse from z0 to z1 of the length.
+            // roof, the glasshouse from z0 to z1 of the length. Decision
+            // 743: Hong Kong's taxi the sedan with a silver roof and its
+            // sign.
             let spec: (length: Float, width: Float, belt: Float, roof: Float, z0: Float, z1: Float, rake: Float) =
-                self == .car ? (4.4, 1.76, 0.92, 1.46, 0.2, 0.72, 0.7) : (4.6, 1.8, 1.04, 1.9, 0.08, 0.86, 0.45)
+                self == .van ? (4.6, 1.8, 1.04, 1.9, 0.08, 0.86, 0.45) : (4.4, 1.76, 0.92, 1.46, 0.2, 0.72, 0.7)
             let rear = -spec.length / 2, front = spec.length / 2
             for x in [rear + 0.85, front - 0.85] {
                 for z: Float in [-1, 1] { box(x, 0, z * (spec.width / 2 - 0.12), 0.62, 0.22, 0.62, Self.tyre) }
@@ -148,7 +165,8 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             for (from, to) in [(1, 0), (2, 1), (3, 2), (0, 3)] {
                 mesh.addFacet([bottom[from], bottom[to], top[to], top[from]], color: Self.glass)
             }
-            mesh.addFacet([top[0], top[3], top[2], top[1]], color: tinted)
+            mesh.addFacet([top[0], top[3], top[2], top[1]], color: self == .taxi ? Map3DHongKongVehicles.roofSilver : tinted)
+            if self == .taxi { Map3DHongKongVehicles.addRoofSign(to: &mesh, height: spec.roof) }
             glowing {
                 for z: Float in [-1, 1] { box(front - 0.02, spec.belt - 0.3, z * (spec.width / 2 - 0.26), 0.06, 0.36, 0.15, Self.headlamp) }
             }
@@ -167,6 +185,35 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             box(5.98, 0.85, 0, 0.06, 2.3, 1.95, Self.glass)
             box(-1.6, 3.2, 0, 3.4, 1.7, 0.22, Self.steel)
             Map3DCityBus.addLamps(to: &mesh)
+        case .doubleDecker:
+            // Decision 743: a 12.1 × 2.5 × 4.4 m three-axle double-decker:
+            // the body in the instance's colour, two window bands and the
+            // windscreens, the lamps.
+            for x: Float in [-3.2, -4.6, 4.2] {
+                for z: Float in [-1, 1] { box(x, 0, z * 1.1, 1.0, 0.3, 1.0, Self.tyre) }
+            }
+            box(0, 0.3, 0, 12.1, 2.5, 4.1, tinted)
+            box(-0.2, 1.3, 0, 11.0, 2.54, 1.0, Self.glass)
+            box(0, 3.0, 0, 11.6, 2.54, 0.95, Self.glass)
+            box(6.03, 0.85, 0, 0.06, 2.3, 1.6, Self.glass)
+            box(6.03, 3.0, 0, 0.06, 2.3, 0.95, Self.glass)
+            Map3DCityBus.addLamps(to: &mesh)
+        case .minibus:
+            // Decision 743: a 7 × 2.1 × 2.75 m minibus: the cream body, the
+            // roof in the instance's red or green, the windows, the lamps.
+            for x: Float in [-2.2, 2.3] {
+                for z: Float in [-1, 1] { box(x, 0, z * 0.9, 0.8, 0.26, 0.8, Self.tyre) }
+            }
+            box(0, 0.3, 0, 7, 2.1, 2.1, Map3DHongKongVehicles.cream)
+            box(0, 2.4, 0, 7, 2.1, 0.35, tinted)
+            box(-0.2, 1.3, 0, 6.2, 2.14, 0.8, Self.glass)
+            box(3.48, 1.0, 0, 0.06, 1.9, 1.1, Self.glass)
+            glowing {
+                for z: Float in [-1, 1] { box(3.5, 0.6, z * 0.75, 0.06, 0.3, 0.16, Self.headlamp) }
+            }
+            glowing {
+                for z: Float in [-1, 1] { box(-3.5, 0.6, z * 0.75, 0.06, 0.3, 0.16, Self.tailLamp) }
+            }
         case .garbageTruck, .recyclingTruck:
             // A 6.5 × 2.3 m truck: the cab at the front, behind it the
             // yellow compactor or the green flatbed and its low rails.
@@ -404,6 +451,9 @@ public struct Map3DStreetLife: Sendable {
 
     public internal(set) var lanes: [Lane] = []
     public internal(set) var spots: [Spot] = []
+    /// Decision 732: whose streets they are: Hong Kong's traffic keeps
+    /// to the left.
+    public internal(set) var region: Map3DStreetRegion = .taiwan
 
     public init() {}
 
@@ -645,7 +695,9 @@ public struct Map3DStreetLife: Sendable {
         let length = lane.path.length
         guard let (count, spacing, besides) = Self.places(on: lane) else { return }
         // Kept to the right (Taiwan): a car in the middle of its half, a
-        // scooter nearer the kerb where there is room.
+        // scooter nearer the kerb where there is room. Decision 732: to
+        // the left in Hong Kong.
+        let keep = region.trafficSide
         let carSide: Float = lane.twoWay ? max(lane.half * 0.5, 1.2) : 0
         let scooterSide = carSide + max(min(1.1, lane.half - carSide - 0.5), 0)
         let besideSide = scooterSide - Self.beside.across
@@ -654,7 +706,7 @@ public struct Map3DStreetLife: Sendable {
         func draw(_ vehicle: Vehicle, along: Float, direction: Float) {
             let place = lane.path.at(along)
             let side = vehicle.model.isScooter ? scooterSide : carSide
-            let foot = place.point + place.right * (side * direction)
+            let foot = place.point + place.right * (side * direction * keep)
             // Coming out of and going into the road's ends.
             // Use the chosen bus body length, rather than the car fade distance.
             let ends = min(max(min(along, length - along) / (vehicle.model.isBus ? 2 * vehicle.model.half : 4), 0), 1)
@@ -665,7 +717,7 @@ public struct Map3DStreetLife: Sendable {
             let behind = along - Self.beside.behind * direction
             guard behind > 0, behind < length else { return }
             let next = lane.path.at(behind)
-            add(beside.model, at: next.point + next.right * (besideSide * direction), forward: next.along * direction,
+            add(beside.model, at: next.point + next.right * (besideSide * direction * keep), forward: next.along * direction,
                 tint: beside.tint, ends: min(max(min(behind, length - behind) / 4, 0), 1), to: &frame, target: target, reach: reach, eye: eye,
                 clearOf: buses)
         }
@@ -675,7 +727,8 @@ public struct Map3DStreetLife: Sendable {
                 var shownBuses = frame.buses
                 for slot in 0..<schedule.count where frame.vehicles < budget {
                     guard let travelled = schedule.position(slot, at: second) else { continue }
-                    var vehicle = Self.vehicle(slot, of: schedule.count, lane: lane, direction: direction, spacing: spacing, buses: true, besides: besides)
+                    var vehicle = Self.vehicle(slot, of: schedule.count, lane: lane, direction: direction, spacing: spacing, buses: true, besides: besides,
+                                                 region: region)
                     if vehicle.model.isBus {
                         // Past the budget's buses, a car in its place.
                         if shownBuses >= mostBuses { vehicle = Vehicle(model: .car, tint: vehicle.tint, beside: nil, jitter: vehicle.jitter) }
@@ -686,7 +739,8 @@ public struct Map3DStreetLife: Sendable {
                 continue
             }
             for index in 0..<count where frame.vehicles < budget {
-                let vehicle = Self.vehicle(index, of: count, lane: lane, direction: direction, spacing: spacing, buses: frame.buses < mostBuses, besides: besides)
+                let vehicle = Self.vehicle(index, of: count, lane: lane, direction: direction, spacing: spacing, buses: frame.buses < mostBuses,
+                                           besides: besides, region: region)
                 let start = (Float(index) + 0.4 * vehicle.jitter) * spacing
                 let travelled = (Double(start) + Double(lane.speed) * (signals ?? time)).truncatingRemainder(dividingBy: Double(length))
                 draw(vehicle, along: direction > 0 ? Float(travelled) : length - Float(travelled), direction: direction)
@@ -736,7 +790,7 @@ public struct Map3DStreetLife: Sendable {
         }
     }
 
-    static func schedules(of lane: Lane) -> [Map3DStreetStops.Schedule] {
+    static func schedules(of lane: Lane, region: Map3DStreetRegion = .taiwan) -> [Map3DStreetStops.Schedule] {
         guard let (_, spacing, besides) = places(on: lane) else { return [] }
         let length = lane.path.length
         var schedules: [Map3DStreetStops.Schedule] = []
@@ -748,7 +802,9 @@ public struct Map3DStreetLife: Sendable {
             let way = Map3DStreetStops.Lane(stops: stops, speed: lane.speed, length: length)
             let headway = max(Double(spacing / lane.speed), Map3DStreetStops.headway(speed: lane.speed))
             let slots = max(1, Int((way.lap / headway).rounded()))
-            let vehicles = (0..<slots).map { vehicle($0, of: slots, lane: lane, direction: direction, spacing: spacing, buses: true, besides: besides) }
+            let vehicles = (0..<slots).map {
+                vehicle($0, of: slots, lane: lane, direction: direction, spacing: spacing, buses: true, besides: besides, region: region)
+            }
             let entries = vehicles.indices.map { -(Double($0) + 0.4 * Double(vehicles[$0].jitter)) * way.lap / Double(slots) }
             let halves = vehicles.map { ($0.model.half, $0.model.half + ($0.beside == nil ? 0 : Self.beside.behind)) }
             schedules.append(Map3DStreetStops.Schedule(direction: direction, way: way, entries: entries, halves: halves))
@@ -768,13 +824,28 @@ public struct Map3DStreetLife: Sendable {
     /// Place `index` of `count` on `lane` going `direction`, its places
     /// `spacing` apart: a bus where `buses` allow one, a scooter beside a
     /// lone one where `besides` allow it.
-    static func vehicle(_ index: Int, of count: Int, lane: Lane, direction: Float, spacing: Float, buses: Bool, besides: Bool) -> Vehicle {
+    /// Decision 743: in Hong Kong (`region`), its double-deckers (one bus
+    /// in seven single-deck), taxis, minibuses and few motorcycles, none
+    /// riding beside another.
+    static func vehicle(_ index: Int, of count: Int, lane: Lane, direction: Float, spacing: Float, buses: Bool, besides: Bool,
+                        region: Map3DStreetRegion = .taiwan) -> Vehicle {
         let draw = { (index: Int, salt: Int32) in map3DRandom(lane.seed.0 &+ Int32(index), lane.seed.1 &+ Int32(direction), salt: salt) }
         let r = { (salt: Int32) in draw(index, salt) }
         let kind = r(2)
         var model: Map3DStreetModel
-        if lane.buses, spacing >= Self.busSpacing, buses, r(5) < Self.busShare,
-           count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare {
+        let bus = lane.buses && spacing >= Self.busSpacing && buses && r(5) < Self.busShare
+            && (count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare)
+        if region == .hongKong {
+            model = bus ? (r(6) < 0.86 ? .doubleDecker : .midiBus) : Map3DHongKongVehicles.streetModel(kind, scooters: lane.scooters)
+            if let paint = Map3DHongKongVehicles.paint(model, pick: r(3)) {
+                return Vehicle(model: model, tint: paint, beside: nil, jitter: r(1))
+            }
+            // Private cars without Taiwan's taxi yellow (the last).
+            let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Array(Self.carPaints.dropLast())
+            if model.isScooter { model = .stepScooter }
+            return Vehicle(model: model, tint: paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)], beside: nil, jitter: r(1))
+        }
+        if bus {
             let variant = r(6)
             model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
         } else if lane.scooters {
@@ -866,6 +937,7 @@ extension Map3DStreetModel {
         case .car: 2.2
         case .van: 2.3
         case .garbageTruck, .recyclingTruck: Map3DGarbageTruck.size.length / 2
+        case .doubleDecker, .minibus, .taxi: Map3DHongKongVehicles.size(self).length / 2
         case .walking, .standing: 0.2
         default: 0.9
         }
@@ -972,7 +1044,7 @@ extension Map3DScene.Builder {
                 lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)
                 if let markings {
                     lane.stops = Self.laneStops(path, stops: markings.stops)
-                    lane.schedules = Map3DStreetLife.schedules(of: lane)
+                    lane.schedules = Map3DStreetLife.schedules(of: lane, region: streetLife.region)
                 }
                 streetLife.lanes.append(lane)
             }

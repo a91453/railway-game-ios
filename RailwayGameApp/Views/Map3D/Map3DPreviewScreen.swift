@@ -1714,12 +1714,16 @@ private struct Map3DView: UIViewRepresentable {
     // Decision 608: made once, by ``Map3DTrainModels``, which keeps
     // them on the GPU (``Map3DUploadedModels``), not held here.
     nonisolated static func makeModels() -> Map3DModelPack? {
-        Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
+        let pack = Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
         Map3DCityBus.pack(file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension)),
         files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) }),
         files: Dictionary(uniqueKeysWithValues: Map3DSceneryProp.allCases.compactMap { prop in
             Bundle.main.url(forResource: prop.fileName, withExtension: Map3DSceneryProp.fileExtension).map { (prop, $0) }
         }))
+        // Decision 743: Hong Kong's double-decker, minibus and taxi.
+        return Map3DHongKongVehicles.pack(pack, files: Map3DHongKongVehicles.fileNames.compactMapValues {
+            Bundle.main.url(forResource: $0, withExtension: Map3DHongKongVehicles.fileExtension)
+        })
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -1767,7 +1771,8 @@ private struct Map3DView: UIViewRepresentable {
         view.quality = quality
         view.reduceMotion = context.environment.accessibilityReduceMotion
         // Decision 429: the junctions' signals change with the game clock.
-        view.signalClock = Map3DSignalTiming.Clock(world.clock)
+        // Decision 732: Hong Kong's signals on its map.
+        view.signalClock = Map3DSignalTiming.Clock(world.clock, region: Map3DStreetRegion(world: world))
         context.coordinator.farOut = farOut
         context.coordinator.onTap = onTap
         defer {
@@ -1940,6 +1945,11 @@ private struct Map3DView: UIViewRepresentable {
         if arguments.contains("-screenshot-3d-ferry") { return asked.camera(ferryIn: scene, of: world, viewport: viewport) }
         // Decision 696: over the company's railway museum.
         if arguments.contains("-screenshot-3d-museum") { return asked.camera(museumIn: scene, of: world, viewport: viewport) }
+        // Decision 732: over the signalled junction nearest a place.
+        if let at = value("-screenshot-3d-signal")?.split(separator: ",").compactMap({ Double($0) }), at.count == 2 {
+            return asked.camera(signalNear: (latitude: at[0], longitude: at[1]), alongTheRoad: arguments.contains("-screenshot-3d-along"),
+                                in: scene, of: world, viewport: viewport)
+        }
         // Decision 602: over a place of the scene's map ("latitude,longitude").
         if let at = value("-screenshot-3d-at")?.split(separator: ",").compactMap({ Double($0) }), at.count == 2 {
             return asked.camera(at: (latitude: at[0], longitude: at[1]), in: scene, of: world, viewport: viewport)

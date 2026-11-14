@@ -28,12 +28,14 @@ final class Map3DModelTests: XCTestCase {
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
+        // Decision 732: Hong Kong's traffic signals.
+        let hongKongSignals: Int = Map3DHongKongSignal.drawn.count
         // Decision 449: and after them, the running cars' windows. Decision
         // 575: the cable car; decision 585, PR-3: the ferries and their pier;
         // decision 699: the aircraft and the airfields' vehicles; decision
         // 708: the coaches and the coach stop.
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest
-                       + Map3DCableCar.drawn.count + Map3DFerry.drawn.count + Map3DAircraft.drawn.count + Map3DCoaches.drawn.count)
+                       + Map3DCableCar.drawn.count + Map3DFerry.drawn.count + Map3DAircraft.drawn.count + Map3DCoaches.drawn.count + hongKongSignals)
         // One term per line, typed: as a single sum of 30 terms the type
         // checker took 213 s on it (decision 563).
         let studyModels: [Int] = [
