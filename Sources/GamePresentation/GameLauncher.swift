@@ -887,7 +887,10 @@ public final class GameLauncher {
     /// and says so in the game.
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
         // Decision 266: nor do the lessons count.
-        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds else { return }
+        // 2026-11-14: nor the whole of Taiwan, open from the start, as
+        // the map picker says (fair to the maps bought tile by tile).
+        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds,
+              !session.world.isWholeTaiwan else { return }
         let facts = AchievementFacts(world: session.world)
         let scope = Self.achievementScope(of: session.world)
         let unlocked = achievements.unlock(meeting: facts, at: date, only: scope)

@@ -405,6 +405,41 @@ struct RealWorldPicker: View {
                     }
                 }
             }
+            // Decision 88: one map of the whole of Taiwan, for lines from
+            // one end of it to the other. Decision 477: first of the
+            // places, not after Taiwan's 22, where it was found last.
+            // And first of the list while nothing is typed, above the
+            // recent places and the square's hint: a city's map that
+            // flights opened sat under the half-screen list's foot, where
+            // a player told to choose it did not find it (2026-11-14).
+            Section {
+                let routes = launcher.airRoutes
+                let language = launcher.language
+                WholeMapRow(
+                    id: "realWorld.wholeTaiwan", name: language.text("The whole of Taiwan", "全台灣"), symbol: "map.fill",
+                    summary: language.text(
+                        "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
+                        "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
+                    ),
+                    howToOpen: routes.canStart(AirMap.taiwan.id) ? nil : routes.howToOpen(AirMap.taiwan.id, in: language)
+                ) {
+                    dismiss()
+                    launcher.startWholeTaiwan()
+                }
+                .disabled(launcher.population == nil)
+                // Decision 712: the cities outside Taiwan the app has the
+                // whole map of. The player's first map is open; flights
+                // from a map already open open each of the others.
+                ForEach(OverseasMap.allCases.filter { routes.offers($0.rawValue) }, id: \.self) { city in
+                    WholeMapRow(
+                        id: "realWorld.overseas.\(city.rawValue)", name: city.name(in: language), symbol: "airplane",
+                        summary: city.mapSummary(in: language),
+                        howToOpen: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language)
+                    ) {
+                        if launcher.startOverseasMap(city) { dismiss() }
+                    }
+                }
+            }
             // Decision 312: where games were started before, ahead of the
             // search; only while nothing is typed.
             let recent = RecentStartPlaces(stored: recentStarts).places
@@ -477,37 +512,6 @@ struct RealWorldPicker: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
-            }
-            // Decision 88: one map of the whole of Taiwan, for lines from
-            // one end of it to the other. Decision 477: first of the
-            // places, not after Taiwan's 22, where it was found last.
-            Section {
-                let routes = launcher.airRoutes
-                let language = launcher.language
-                WholeMapRow(
-                    id: "realWorld.wholeTaiwan", name: language.text("The whole of Taiwan", "全台灣"), symbol: "map.fill",
-                    summary: language.text(
-                        "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
-                        "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
-                    ),
-                    howToOpen: routes.canStart(AirMap.taiwan.id) ? nil : routes.howToOpen(AirMap.taiwan.id, in: language)
-                ) {
-                    dismiss()
-                    launcher.startWholeTaiwan()
-                }
-                .disabled(launcher.population == nil)
-                // Decision 712: the cities outside Taiwan the app has the
-                // whole map of. The player's first map is open; flights
-                // from a map already open open each of the others.
-                ForEach(OverseasMap.allCases.filter { routes.offers($0.rawValue) }, id: \.self) { city in
-                    WholeMapRow(
-                        id: "realWorld.overseas.\(city.rawValue)", name: city.name(in: language), symbol: "airplane",
-                        summary: city.mapSummary(in: language),
-                        howToOpen: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language)
-                    ) {
-                        if launcher.startOverseasMap(city) { dismiss() }
-                    }
-                }
             }
             // Decision 262: by country where a country has many places, by
             // region for the rest; Taiwan's open, the others closed.

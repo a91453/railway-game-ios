@@ -20,6 +20,15 @@ public struct PassengerRoutesToWorkOut: Equatable, Sendable {
     let time: GameTime
     /// The stations to work the routes out from, by ascending station.
     public let origins: [StationID]
+    /// PERF-DEVICE 2: the route graph of `time`, built once when the work
+    /// was found and shared by every part of it. Each of the tasks it is
+    /// split among built its own: on a 30 MB game (176 stations, 18 lines)
+    /// some nine tenths of the work was building the same graph again.
+    let graph: PassengerRouteGraph
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.time == rhs.time && lhs.origins == rhs.origins
+    }
 }
 
 extension GameWorld {
@@ -58,17 +67,18 @@ extension GameWorld {
             var memo = passengerRouteMemo
             memo.use(graph)
             let origins = passengerRouteOrigins().filter { !memo.hasChoices(from: $0) }
-            if !origins.isEmpty { return PassengerRoutesToWorkOut(time: time, origins: origins) }
+            if !origins.isEmpty { return PassengerRoutesToWorkOut(time: time, origins: origins, graph: graph) }
         }
         return nil
     }
 
     /// The routes from each of `work`'s origins in `origins` (all of them
     /// when `nil`) to every station with passengers, on the route graph of
-    /// `work`'s time, as a plan would ask them. Changes nothing, so several
+    /// `work`'s time (the one `work` was found on: of this world), as a
+    /// plan would ask them. Changes nothing, so several
     /// can be worked out at once.
     public func workingOutPassengerRoutes(_ work: PassengerRoutesToWorkOut, origins: [StationID]? = nil) -> PassengerRouteCache {
-        let graph = PassengerRouteGraph(world: self, at: work.time)
+        let graph = work.graph
         var memo = PassengerRouteMemo()
         memo.use(graph)
         var searches = PassengerRouteSearches(graph: graph)
