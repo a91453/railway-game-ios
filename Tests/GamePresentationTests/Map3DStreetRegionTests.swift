@@ -59,13 +59,11 @@ final class Map3DStreetRegionTests: XCTestCase {
             let half = abs(signal.along.x) > 0.9 ? 5.5 : 4.0
             XCTAssertLessThan(Map3DRoadMarkings.dot(right, signal.foot), -half, "at the kerb on the left of the way in")
         }
-        // Each of Hong Kong's marks is Taiwan's mirrored across its road:
-        // the same stop lines and signals, the other side.
-        for (a, b) in zip(taiwan.signals, hongKong.signals) {
-            XCTAssertEqual(a.road, b.road)
-            XCTAssertEqual(a.group, b.group)
-            XCTAssertEqual(Map3DRoadMarkings.distance(a.foot, Point(x: 0, z: 0)), Map3DRoadMarkings.distance(b.foot, Point(x: 0, z: 0)), accuracy: 1e-9)
-        }
+        // The same signals as Taiwan's, facing the same roads in the same
+        // groups (nearer the junction: no scooter box before the stop
+        // line).
+        XCTAssertEqual(taiwan.signals.map(\.road), hongKong.signals.map(\.road))
+        XCTAssertEqual(taiwan.signals.map(\.group), hongKong.signals.map(\.group))
         // The trunk's two lanes each way: the inner one through and right
         // (the turn arrow mirrored), nearer the middle.
         let arrows = hongKong.marks.filter { if case .arrow = $0.kind { return true } else { return false } }
@@ -150,7 +148,9 @@ final class Map3DStreetRegionTests: XCTestCase {
         let shapes = [green, red, amber, redAmber].map { pack.models[$0] }
         XCTAssertEqual(Set(shapes.map(\.vertices.count)).count, 1)
         XCTAssertEqual(Set(shapes.map { $0.vertices.map(\.x) }).count, 1)
-        XCTAssertEqual(shapes.map(\.maximum.y).max()!, Map3DHongKongSignal.postHeight, accuracy: 0.01)
+        // Standing on the ground (the pack's +z up), as tall as its post.
+        XCTAssertEqual(shapes[0].minimum.z, 0, accuracy: 0.01)
+        XCTAssertEqual(shapes[0].maximum.z, Map3DHongKongSignal.postHeight, accuracy: 0.01)
     }
 
     func testHongKongsGreenManStandsStillWithNoCountdown() {
