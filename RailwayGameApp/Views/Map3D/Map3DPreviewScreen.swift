@@ -1088,6 +1088,9 @@ final class Map3DChunkStreamer {
     private var source: Map3DChunkSource?
     private var trackCover = Map3DTrackCover()
     private var generation = 0
+    /// MEM3D (decision 749 續): when the chunks off the screen were last
+    /// let go for the budget, so it is tried at most four times a second.
+    private var shedAt: CFTimeInterval = -.infinity
 
     /// The chunks built since that `scene` (built anew round the same
     /// place) does not hold whole: kept until built again.
@@ -1131,10 +1134,17 @@ final class Map3DChunkStreamer {
 
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
+        let budget = Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier)
+        // MEM3D (decision 749 續): over the budget, what the camera has
+        // turned from goes, so what it now sees can be built.
+        if (view?.heldBytes ?? 0) > budget, time - shedAt >= Map3DStreaming.interval {
+            shedAt = time
+            shed(overBudget: true)
+        }
         guard var window, let source else { return }
         // Decision 714: what the camera sees is built too, while the
         // scene's buffers are within what this device holds.
-        let room = (view?.heldBytes ?? 0) <= Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier)
+        let room = (view?.heldBytes ?? 0) <= budget
         let (drop, build) = window.step(target: camera.target, at: time, stops: stops, ahead: ahead?(), sight: camera.distance,
                                         seeing: camera, room: room)
         self.window = window
@@ -1151,17 +1161,21 @@ final class Map3DChunkStreamer {
         guard window?.finished(keys, generation: generation) == true else { return }
         view?.place(chunks, at: keys)
         // Decision 711: the scene's buffers within what this device holds.
-        if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed() }
+        if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed(overBudget: true) }
     }
 
     /// Decision 711: memory runs short, or the buffers are over their
     /// budget: lets go of the chunks farther from what the camera looks
     /// at than it sees (its distance), the scene's own too.
-    func shed() {
+    /// MEM3D (decision 749 續): over the budget (`overBudget`), the chunks
+    /// off the screen go and those on it stay, so a view pulled out has
+    /// no empty edge; memory short, as far as the camera sees.
+    func shed(overBudget: Bool = false) {
         guard var window, let view else { return }
         // Decision 714: as far as the window builds for the camera, so
         // what is let go is not built again at once.
-        let drop = window.shed(farFrom: view.camera.target, radius: Map3DStreaming.sight(of: view.camera))
+        let drop = window.shed(farFrom: view.camera.target, radius: Map3DStreaming.sight(of: view.camera),
+                               seeing: overBudget ? view.camera : nil)
         self.window = window
         if !drop.isEmpty { view.remove(drop) }
     }

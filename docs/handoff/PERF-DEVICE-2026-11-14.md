@@ -75,3 +75,4 @@ VERIFIED／UNVERIFIED：
 - VERIFIED（作者的 Mac）：`swift build --build-tests -Xswiftc -warnings-as-errors`；`Map3DModelPackSlimTests`、`Map3DSceneBudgetTests`；app 的 Debug 模擬器建置（`xcodebuild build-for-testing`）；模擬器改前改後量測與截圖（決策 749 第 3 節）。
 - **UNVERIFIED：iPhone 實機的 3D 記憶體與警告次數，改前改後都沒量到**（作者那時要用手機，量測停下；手機上留的是 main 的 Debug 版 0.6.0（130），存檔沒動，最重那局在存檔列表的 `save-2026-11-14 111613`）。要量：同一局、台北車站 1,500 m、拉遠等 2 分鐘，讀 frame-times.json 的 `memoryPeak`、`memoryWarnings`。
 - UNVERIFIED：`.roomy` 的 500 MB 沒有 6 GB 裝置量過；其餘測試交給 CI。
+- 續（決策 749 §8）：拉到最遠外圈缺塊已補，超過上限時改卸畫面外的區塊。
