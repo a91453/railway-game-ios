@@ -155,7 +155,7 @@ final class TerrainPresentationTests: XCTestCase {
 
     /// The ends' ground 3.75 m apart, more than the 2 m the track may stand
     /// off it level: the stretch climbs as before (11.25 m to 15 m, 720 to
-    /// 960), eased at both ends. Decision 190: ✓ levels it (decision 745:
+    /// 960), eased at both ends. Decision 190: ✓ levels it (decision 747:
     /// without a word of the grade); ✓ lays the edge again as three, the
     /// middle one level under the platform, for the new edges' price, and
     /// one undo takes it all back.
@@ -179,7 +179,7 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(levelling.length, stretch.end - stretch.start)
         let cost = try XCTUnwrap(levelling.cost)
         let metres = NetworkBuilding.lengthText(levelling.length, in: .english)
-        XCTAssertEqual(session.networkDraftText(), "\(metres) platform here", "decision 745: the grade is not said")
+        XCTAssertEqual(session.networkDraftText(), "\(metres) platform here", "decision 747: the grade is not said")
         XCTAssertNil(levelling.caption(in: .english))
         let height = try XCTUnwrap(built.trackGeometry(of: stretch.edge)?.height(at: (stretch.start + stretch.end) / 2))
 
@@ -406,7 +406,7 @@ final class TerrainPresentationTests: XCTestCase {
     }
 
     /// The same, in Chinese: the station tool says nothing of the grade
-    /// it levels (decision 745).
+    /// it levels (decision 747).
     func testThePlatformToolLevelsWithoutAWordInChinese() throws {
         let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
         session.buildNetworkTrack()
@@ -425,7 +425,7 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertFalse(chinese.message?.text.contains("整平") == true, chinese.message?.text ?? "")
     }
 
-    /// Decision 745 (the author, 2026-11-14: tell the player to lay it
+    /// Decision 747 (the author, 2026-11-14: tell the player to lay it
     /// longer, plainly): track on a grade no longer than its platform
     /// cannot be levelled, and the tool says so in one sentence, without
     /// the grade, and the pill says what to do.
@@ -556,7 +556,7 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
             No platform built: the Network panel says what to do.
             """))
-        // Decision 745: what to do, without the grade.
+        // Decision 747: what to do, without the grade.
         XCTAssertTrue(placed.networkDraftText().hasSuffix(" · \(reason)"), placed.networkDraftText())
         XCTAssertFalse(placed.networkDraftText().contains("‰"), placed.networkDraftText())
         XCTAssertEqual(levelling.caption(in: .english), "No platform here: see the Network panel")

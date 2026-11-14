@@ -766,7 +766,7 @@ extension GameSession {
         do throws(GameError) {
             let outcome = try performCommand(command)
             let done = outcome.stretch ?? stretch
-            // Decision 745: levelling is not reported (decision 190 said
+            // Decision 747: levelling is not reported (decision 190 said
             // how much was levelled, for what); the ✓ showed the whole price.
             message = StatusMessage(kind: .success, text: outcome.station.map { text($0, on: done, in: world) } ?? "")
             endFollowIfGone()
@@ -1224,7 +1224,7 @@ extension GameSession {
                 ? language.text("\(length) platform here", "在這裡設 \(length) 的月台")
                 : language.text("\(length) platform here, on both tracks", "在這裡設 \(length) 的月台（兩條軌道）")
                     + stationCrossoverText(networkPlatformCrossoverCount, built: false)
-            // Decision 745: a stretch that can be levelled is levelled
+            // Decision 747: a stretch that can be levelled is levelled
             // without a word (decision 190), its price in the ✓'s; where
             // it cannot be, what to do, in one sentence and never the
             // grade (decision 510: here only, the banner says only that it

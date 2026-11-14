@@ -50,6 +50,26 @@ final class StationSitingTests: XCTestCase {
         XCTAssertNil(session.platformSitePlanPoint, "only while choosing where a platform goes")
     }
 
+    /// Decision 744: the track near the place picked, which the map's
+    /// pill keeps off; none from far away.
+    func testTheTrackNearTheSiteIsFound() throws {
+        let session = try makeSession()
+        let near = session.trackLines(near: PlanPoint(x: 16_384, y: 8_192), within: 512)
+        XCTAssertEqual(near.count, 1)
+        XCTAssertEqual(near.first?.first, PlanPoint(x: 1_024, y: 8_192))
+        XCTAssertEqual(near.first?.last, PlanPoint(x: 31_744, y: 8_192))
+        XCTAssertTrue(session.trackLines(near: PlanPoint(x: 16_384, y: 15_000), within: 512).isEmpty)
+    }
+
+    /// Decision 744: the screenshot scene picks a place on the demo's
+    /// track for a station, so the pill shows beside it.
+    func testTheStationSiteSceneHasAPlacePicked() {
+        let session = GameSession(world: ScreenshotScene.stationSite.make(in: .traditionalChinese), language: .traditionalChinese)
+        ScreenshotScene.stationSite.prepare(session)
+        XCTAssertNotNil(session.platformSitePlanPoint)
+        XCTAssertNotNil(session.platformSiteCatchment)
+    }
+
     /// Decision 128: a new station says, as it opens, who it reaches, or
     /// that no one lives or works near it yet; without land it says
     /// neither.

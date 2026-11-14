@@ -34,16 +34,10 @@ struct MapConstructionHUD: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
-            panel
-            if showsHeightHint {
-                heightHint
-                    // Decision 253: a small thing under the cell it is about.
-                    .transition(.pop(anchor: .top, reduceMotion: reduceMotion))
-            }
-        }
-        // The column under the HUD gives way (``MotionRule/change``).
-        .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: showsHeightHint)
+        panel
+            // The panel gives way to the line about the height cell
+            // (``MotionRule/change``).
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: showsHeightHint)
     }
 
     /// Raises the end, and with a real change the player has used the
@@ -53,9 +47,12 @@ struct MapConstructionHUD: View {
         if HeightSlideHint.isUse(raisingBy: steps) { heightHintSeen = true }
     }
 
-    /// The one-time line under the HUD (``HeightSlideHint``): the cell's
-    /// own arrows, what holding and sliding it does, and a ✕. Only the ✕
-    /// takes touches; the rest lets them through to the map, as the HUD.
+    /// The one-time line about the height cell (``HeightSlideHint``): the
+    /// cell's own arrows, what holding and sliding it does, and a ✕. Only
+    /// the ✕ takes touches; the rest lets them through to the map, as the
+    /// HUD. Decision 744: a row of the HUD, not a second card under it (a
+    /// player's report, 2026-11-14: too much floats over the map while
+    /// building).
     private var heightHint: some View {
         HStack(spacing: 6) {
             VStack(spacing: 0) {
@@ -82,19 +79,6 @@ struct MapConstructionHUD: View {
             .accessibilityLabel(Text(verbatim: HeightSlideHint.dismissLabel(in: language)))
             .accessibilityIdentifier("map.constructionHUD.heightHint.dismiss")
         }
-        .padding(.leading, 12)
-        .padding(.trailing, 6)
-        .padding(.vertical, 4)
-        .background {
-            Color.clear
-                .glassBackground(in: Capsule())
-                .allowsHitTesting(false)
-        }
-        .overlay {
-            Capsule()
-                .strokeBorder(Theme.panelBorder, lineWidth: 1)
-                .allowsHitTesting(false)
-        }
     }
 
     private var panel: some View {
@@ -103,23 +87,18 @@ struct MapConstructionHUD: View {
             // figures one under another where it does not (a small phone
             // at the largest text).
             ViewThatFits(in: .horizontal) {
+                // Decision 744: no price here; the map's ✓ beside the
+                // stretch says it, and it stood twice (a player's report,
+                // 2026-11-14).
                 HStack(spacing: 12) {
                     lengthFigure
                     Divider()
                         .frame(height: 14)
                     heightFigure
-                    if let cost = preview.cost {
-                        Divider()
-                            .frame(height: 14)
-                        costFigure(cost)
-                    }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     lengthFigure
                     heightFigure
-                    if let cost = preview.cost {
-                        costFigure(cost)
-                    }
                 }
             }
 
@@ -140,6 +119,9 @@ struct MapConstructionHUD: View {
                 .allowsHitTesting(false)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
+            } else if showsHeightHint {
+                heightHint
+                    .transition(.opacity)
             } else if preview.joinsStart || preview.joinsEnd {
                 HStack(spacing: 4) {
                     Image(systemName: "link")
@@ -281,28 +263,6 @@ struct MapConstructionHUD: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(heightAccessibilityLabel)
-    }
-
-    private func costFigure(_ cost: Money) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "banknote")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Theme.success)
-            // Decision 523, continued: in 萬 or 億 in Chinese.
-            Text(verbatim: cost.compactText(in: language))
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-            // Decision 523: a rough US dollar figure, English only.
-            if let reference = cost.usDollarReferenceText(in: language) {
-                Text(verbatim: reference)
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
-                    .monospacedDigit()
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.compactText(in: language))"))
     }
 
     /// `english` or `chinese` for the session's language. GamePresentation's

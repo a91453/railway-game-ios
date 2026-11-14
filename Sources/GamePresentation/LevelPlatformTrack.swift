@@ -78,7 +78,7 @@ enum PlatformLevellingProblem: Error {
     /// piece of another's end, too near to cut between.
     case tooNearAPlatform
 
-    /// The pill's word over the map's ✓ (decision 745): what to do, in a
+    /// The pill's word over the map's ✓ (decision 747): what to do, in a
     /// few words.
     func short(in language: DisplayLanguage) -> String {
         switch self {
@@ -474,7 +474,7 @@ public struct PlatformLevellingPreview: Hashable, Sendable {
     public let cost: Money?
     public let problem: String?
     /// The pill's few words for ``problem`` where it is one of the tool's
-    /// own (decision 745); `nil` for a game rule's refusal.
+    /// own (decision 747); `nil` for a game rule's refusal.
     var short: String? = nil
     /// What clearing a new station's place on the level stretch costs,
     /// once levelled (decision 245, ``GameSession/networkPlatformCost``).
@@ -497,7 +497,7 @@ struct PlatformLevellingMemo {
 
 extension PlatformLevellingPreview {
     /// The short line over the map's ✓ where the stretch cannot be
-    /// levelled, what to do; `nil` where it can (decision 745: levelling
+    /// levelled, what to do; `nil` where it can (decision 747: levelling
     /// is done without a word, its price in the ✓'s, and the grade is
     /// never said).
     public func caption(in language: DisplayLanguage) -> String? {

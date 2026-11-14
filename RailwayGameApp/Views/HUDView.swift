@@ -123,6 +123,12 @@ struct HUDView: View {
                 Text(verbatim: UnsavedLeaving.leaveButton(in: session.language))
             }
             .accessibilityIdentifier("menu.leaveWithoutSaving")
+            Button {
+                launcher.tryLeavingAgain()
+            } label: {
+                Text(verbatim: UnsavedLeaving.retryButton(in: session.language))
+            }
+            .accessibilityIdentifier("menu.tryLeavingAgain")
             Button(role: .cancel) {
                 launcher.keepPlayingUnsaved()
             } label: {
