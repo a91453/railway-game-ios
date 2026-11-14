@@ -482,3 +482,20 @@ public enum StandingStill: Hashable, Sendable {
         }
     }
 }
+
+extension GameWorld {
+    /// Decision 755 (PLATFORM-BOOK PB-3): "Every platform on the list at M
+    /// was taken: stopping at the platform on track #5" while train `id`
+    /// is bound for or stands at a platform outside its leg's list, as the
+    /// dispatcher lets it once to undo a deadlock the list kept it in (see
+    /// ``GameCore/GameWorld/offListPlatform(of:)``); `nil` otherwise.
+    public func offListPlatformText(of id: TrainID, in language: DisplayLanguage) -> String? {
+        guard let off = offListPlatform(of: id) else { return nil }
+        let name = stationName(off.station)
+        let track = RoutePreview.label(of: off.platform.edge)
+        return language.text(
+            "Every platform on the list at \(name) was taken: stopping at the platform on track \(track)",
+            "\(name) 清單的月台都滿了，改停軌段 \(track) 的月台"
+        )
+    }
+}

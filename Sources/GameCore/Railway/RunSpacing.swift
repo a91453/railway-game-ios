@@ -500,10 +500,14 @@ extension GameWorld {
     /// Decision 518: the edges of station `id`'s platforms that the lines
     /// of real runs name for their calls there (``ServiceLine/routePreferences``):
     /// the loops beside a through track, where a train that stops stands.
+    /// Decision 755 (REVIEW-L21 P3-2): every platform of a leg's list
+    /// (decision 740), not only its first.
     func callingPlatforms(of id: StationID) -> Set<TrackEdgeID> {
         var edges: Set<TrackEdgeID> = []
         for line in lines where !line.runs.isEmpty {
-            for preference in line.routePreferences where preference.platform.station == id { edges.insert(preference.platform.edge) }
+            for preference in line.routePreferences where preference.platform.station == id {
+                for platform in preference.platformList ?? [preference.platform] { edges.insert(platform.edge) }
+            }
         }
         return edges
     }

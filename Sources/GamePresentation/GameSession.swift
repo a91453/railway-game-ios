@@ -3299,8 +3299,10 @@ public final class GameSession {
     public func setSelectedLineRoute(from: Int, to: Int, preference: LineRoutePreference?, pattern: Int? = nil) {
         guard let line = requireSelectedLine() else { return }
         var routes = pattern.flatMap { line.patterns.indices.contains($0) ? line.patterns[$0].routePreferences : nil } ?? line.routePreferences
+        let old = routes.first { $0.from == from && $0.to == to }
         routes.removeAll { $0.from == from && $0.to == to }
-        if let preference { routes.append(preference) }
+        // Decision 755: a new first platform keeps the leg's list behind it.
+        if let preference { routes.append(PlatformListEdit.keepingList(of: old, in: preference)) }
         let chosen = routes
         let done = perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
             language.text("Updated the tracks the line takes between these stops.", "已更新路線在這兩站之間走的軌段。")
