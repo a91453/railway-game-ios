@@ -83,6 +83,24 @@ public struct MapPack: Sendable {
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
+    /// Decision 733: the pack's land no town is built on and no one lives
+    /// on, its airports' buildings among it (`no_build.json`, in the form
+    /// of Taiwan's `taiwan_no_build.json`), with its airports' runways,
+    /// taxiways, aprons and stands (`airfields.json`, as Taiwan's
+    /// `taiwan_airfields.json`) when `airfields` is true and it has them;
+    /// `nil` for a pack without the land, or with it out of shape.
+    public func noBuildLand(airfields: Bool = true) -> RealNoBuildLand? {
+        guard var land = (try? file("no_build", "json")).flatMap({ try? RealNoBuildLand(data: $0) }) else { return nil }
+        if airfields { land.airfields = self.airfields() }
+        return land
+    }
+
+    /// Decision 733: the pack's airfields (`airfields.json`), `nil` for a
+    /// pack without them, or with them out of shape.
+    public func airfields() -> RealAirfields? {
+        (try? file("airfields", "json")).flatMap { try? RealAirfields(data: $0) }
+    }
+
     /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
     public static func bundled(_ city: OverseasMap) -> MapPack? {
         Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }

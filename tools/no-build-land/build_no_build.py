@@ -22,6 +22,7 @@ only here, never in the app; the geometry is the standard library's.
 """
 
 import json
+import os
 import math
 import sys
 
@@ -44,6 +45,17 @@ HEIGHTS = {'hangar': 14, 'terminal': 16, 'transportation': 16, 'control_tower': 
 DEFAULT_HEIGHT = 7
 SMALLEST_BUILDING = 150
 
+
+
+# Decision 733: the osmtoday.com extracts read, by file name, for the
+# file's `source` (Taiwan's, and Hong Kong's for its map pack).
+EXTRACTS = {'taiwan.pbf': 'asia/taiwan.pbf', 'hong_kong.pbf': 'asia/china/hong_kong.pbf'}
+
+
+def extract_name(pbf):
+    """The osmtoday.com path of the extract at `pbf`."""
+    name = os.path.basename(pbf)
+    return EXTRACTS.get(name, name)
 
 def kind_of(tags):
     for number, (_, tag_set) in enumerate(KINDS):
@@ -187,7 +199,7 @@ def main(source, out):
     areas.sort()
     kept.sort()
     document = {
-        'source': 'OpenStreetMap contributors (ODbL 1.0), osmtoday.com asia/taiwan.pbf',
+        'source': 'OpenStreetMap contributors (ODbL 1.0), osmtoday.com ' + extract_name(source),
         'newest': newest,
         'kinds': [name for name, _ in KINDS],
         'counts': dict(zip([name for name, _ in KINDS], counts)),

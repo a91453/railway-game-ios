@@ -699,10 +699,28 @@ enum BaseMapFiles {
         return temples
     }
 
+    /// Decision 733: with the open cities' own (Hong Kong's airport, from
+    /// its map pack), their airfields only when Taiwan's are read.
     nonisolated static func noBuildLand(_ noBuild: URL?, airfields: URL?) -> RealNoBuildLand? {
         guard var land = noBuild.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealNoBuildLand(data: $0) }) else { return nil }
         land.airfields = airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
+        for pack in cityPacks {
+            if let city = pack.noBuildLand(airfields: airfields != nil) { land = land.adding(city) }
+        }
         return land
+    }
+
+    /// Decision 733: the airfields in `file`, Taiwan's, with the open
+    /// cities' own (Hong Kong's, from its map pack); `nil` without
+    /// Taiwan's (the Debug app's `-map3D.noAirfields`).
+    nonisolated static func readAirfields(_ file: URL?) -> RealAirfields? {
+        guard let taiwan = file.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealAirfields(data: $0) }) else { return nil }
+        return cityPacks.compactMap { $0.airfields() }.reduce(taiwan) { $0.adding($1) }
+    }
+
+    /// Decision 733: the open cities' map packs.
+    nonisolated static let cityPacks: [MapPack] = OverseasMap.allCases.compactMap { city in
+        OverseasMaps.open.contains(city) ? MapPack.bundled(city) : nil
     }
 
     private static func file(_ name: String) -> URL? {
