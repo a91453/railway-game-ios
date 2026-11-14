@@ -858,11 +858,12 @@ final class TrainServiceTests: XCTestCase {
             ("leaving before arriving", 1, ["arrival": 10, "departure": 9]),
             ("leaving after the clock", 1, ["arrival": 0, "departure": 61]),
             // Stage W2c: a run only while travelling, set off no earlier
-            // than the train left and no later than the clock, with a curve.
+            // than the train left and no later than the clock, with a curve;
+            // decision 756: or than the switches take to throw after it.
             ("a run while waiting", 0, ["arrival": 0, "exchangeEnd": 8, "run": run]),
             ("a null run", 1, ["arrival": 0, "departure": 42, "run": NSNull()]),
             ("a run before leaving", 1, ["arrival": 0, "departure": 43, "run": run]),
-            ("a run after the clock", 1, ["arrival": 0, "departure": 42, "run": ["start": 61, "length": 2048, "seconds": 180]]),
+            ("a run after the clock", 1, ["arrival": 0, "departure": 42, "run": ["start": 65, "length": 2048, "seconds": 180]]),
             ("a run of no length", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 0, "seconds": 180]]),
             ("a run of no time", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 2048, "seconds": 0]]),
             ("a run too long", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 2048, "seconds": 4_294_968]]),
