@@ -76,6 +76,11 @@ extension Map3DScene.Builder {
     static let mastSpacing: Float = 40
     static let mastOffset: Float = 2.45
     static let mastTop: Float = 6.4
+    /// A mast on a side platform stands this far in from its back; one
+    /// within ``sharedMast`` of another (an island's two tracks) is that
+    /// one, with a second arm.
+    static let mastFenceInset: Float = 0.4
+    static let sharedMast: Float = 2.5
     static let armHeight: Float = 5.95
     static let contactHeight: Float = 5.2
     static let messengerHeight: Float = 5.9
@@ -221,6 +226,7 @@ extension Map3DScene.Builder {
             }
         }
         var masts: [Cell: [Map3DPoint]] = [:]
+        var mastBases: [Cell: [Map3DPoint]] = [:]
         // Decision 395: each line's contact wire's ends, and whether it is
         // in a tunnel.
         var wireEnds: [Cell: [(point: Map3DPoint, inTunnel: Bool)]] = [:]
@@ -281,7 +287,10 @@ extension Map3DScene.Builder {
                 masts[cell(p), default: []].append(p)
                 var offset = Self.mastOffset, foot: Float
                 if let standing = platform(at: p, side: side) {
-                    offset = abs(standing.offset)
+                    // At its back, out of the passengers' way: an island's
+                    // middle, where the mast of the track across stands
+                    // too, or a side platform's fence.
+                    offset = abs(standing.offset) + standing.width / 2 - (standing.island ? 0 : Self.mastFenceInset)
                     foot = p.y + Self.platformHeight
                 } else if line.kind == .viaduct || line.kind == .bridge {
                     foot = p.y - Self.bedDrop
@@ -289,7 +298,10 @@ extension Map3DScene.Builder {
                     let at = p + right * (side * offset)
                     foot = min(drawnGround(x: at.x, z: at.z), p.y - Self.bedDrop)
                 }
-                addMast(at: p, along: along, right: right * side, offset: offset, foot: foot, contact: contact)
+                let base = p + right * (side * offset)
+                let shared = mastBases[cell(base), default: []].contains { level($0 - base).length < Self.sharedMast }
+                if !shared { mastBases[cell(base), default: []].append(base) }
+                addMast(at: p, along: along, right: right * side, offset: offset, foot: foot, contact: contact, pole: !shared)
             }
             // Each span in the chunk at its middle: a chunk's box holding a
             // whole line's wires would be seen, and drawn close up, from
@@ -323,15 +335,19 @@ extension Map3DScene.Builder {
     /// One mast `offset` to `out` of the track's middle `p`, standing at
     /// height `foot` on a concrete footing, its arm reaching back over the
     /// track to the wire's `contact` point.
-    mutating func addMast(at p: Map3DPoint, along: Map3DPoint, right out: Map3DPoint, offset: Float, foot: Float, contact: Map3DPoint) {
+    mutating func addMast(at p: Map3DPoint, along: Map3DPoint, right out: Map3DPoint, offset: Float, foot: Float, contact: Map3DPoint,
+                          pole: Bool = true) {
         let base = Map3DPoint(p.x, foot, p.z) + out * offset
         let top = p.y + Self.mastTop
         mesh(at: base) { mesh in
             // On the ground, not into it: a chunk reaching below its ground
             // would be drawn from farther off.
-            mesh.addBox(base: base, forward: along, length: 0.6, width: 0.6, height: 0.25,
-                        top: Map3DPalette.concrete, side: Map3DPalette.concrete)
-            mesh.addBox(base: base, forward: along, length: 0.22, width: 0.22, height: top - foot, top: Map3DPalette.mastSteel, side: Map3DPalette.mastSteel)
+            if pole {
+                mesh.addBox(base: base, forward: along, length: 0.6, width: 0.6, height: 0.25,
+                            top: Map3DPalette.concrete, side: Map3DPalette.concrete)
+                mesh.addBox(base: base, forward: along, length: 0.22, width: 0.22, height: top - foot,
+                            top: Map3DPalette.mastSteel, side: Map3DPalette.mastSteel)
+            }
             // The arm, from the mast to a little past the wire.
             let armFrom = Map3DPoint(base.x, p.y + Self.armHeight, base.z), armTo = Map3DPoint(contact.x, p.y + Self.armHeight, contact.z) - out * 0.3
             mesh.addWire(from: armFrom, to: armTo, thickness: 0.11, color: Map3DPalette.mastSteel)

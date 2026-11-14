@@ -91,6 +91,14 @@ struct RealLineDemoSpec: Sendable {
     /// index, north to south: the real fare table's; `nil` pays by the
     /// kilometre (decision 168).
     var fares: [[Money]]? = nil
+    /// Decision 741: the stations between the ends whose real platforms
+    /// are islands (the railways' own station plans), by index: their
+    /// loops stand an island's width from their main tracks. Not
+    /// ``islandStations``, which says where the expresses call.
+    var islandPlatforms: Set<Int> = []
+    /// Decision 741: how many island platforms each end's tracks pair
+    /// round (``HighSpeedDemo/endTrackOffset(_:east:islands:)``).
+    var endIslands: (north: Int, south: Int) = (0, 0)
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }
