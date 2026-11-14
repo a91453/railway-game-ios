@@ -141,7 +141,7 @@ public struct RealBranchLine: Hashable, Sendable {
 
     /// ``islandStations`` of the line `network` of `system`.
     static func islandStations(system: String, network: String) -> [String] {
-        guard system == "hkmtr", system != "hkmtr" else { return [] } // TEMPORARY: before-screenshots, reverted next commit
+        guard system == "hkmtr" else { return [] }
         return switch network {
         case "TCL": ["香港", "九龍", "東涌"]
         case "SIL": ["金鐘", "利東", "黃竹坑", "海怡半島"]
