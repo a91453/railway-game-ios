@@ -177,6 +177,19 @@ final class Map3DStreetRegionTests: XCTestCase {
         XCTAssertNotNil(Signal.face(.main, group: 0, clock: clock(5, region: .taiwan), time: 5.2, pace: pace, reduceMotion: false).count)
     }
 
+    func testTheScreenshotLooksAtTheNearestSignalledStopLine() throws {
+        let path = try XCTUnwrap(Map3DStreetLife.Path([Map3DPoint(0, 0, 0), Map3DPoint(400, 0, 0)]))
+        var lane = Map3DStreetLife.Lane(path: path, half: 4, twoWay: true, speed: 11, perHundred: 6, scooters: true, seed: (1, 2))
+        lane.stops = [Map3DStreetLife.Stop(at: 100, direction: 1, road: .main, group: 0),
+                      Map3DStreetLife.Stop(at: 300, direction: 1, road: .main, group: 1)]
+        var life = Map3DStreetLife()
+        life.lanes = [lane]
+        let near = try XCTUnwrap(Map3DScreenshotView.signalStop(near: Map3DPoint(280, 0, 50), in: life, within: 600))
+        XCTAssertEqual(near.x, 300, accuracy: 0.01)
+        XCTAssertEqual(near.z, 0, accuracy: 0.01)
+        XCTAssertNil(Map3DScreenshotView.signalStop(near: Map3DPoint(280, 0, 900), in: life, within: 600))
+    }
+
     func testHongKongsTrafficKeepsLeft() {
         XCTAssertEqual(Map3DStreetRegion.taiwan.trafficSide, 1)
         XCTAssertEqual(Map3DStreetRegion.hongKong.trafficSide, -1)

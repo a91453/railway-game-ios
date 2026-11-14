@@ -1940,6 +1940,10 @@ private struct Map3DView: UIViewRepresentable {
         if arguments.contains("-screenshot-3d-ferry") { return asked.camera(ferryIn: scene, of: world, viewport: viewport) }
         // Decision 696: over the company's railway museum.
         if arguments.contains("-screenshot-3d-museum") { return asked.camera(museumIn: scene, of: world, viewport: viewport) }
+        // Decision 732: over the signalled junction nearest a place.
+        if let at = value("-screenshot-3d-signal")?.split(separator: ",").compactMap({ Double($0) }), at.count == 2 {
+            return asked.camera(signalNear: (latitude: at[0], longitude: at[1]), in: scene, of: world, viewport: viewport)
+        }
         // Decision 602: over a place of the scene's map ("latitude,longitude").
         if let at = value("-screenshot-3d-at")?.split(separator: ",").compactMap({ Double($0) }), at.count == 2 {
             return asked.camera(at: (latitude: at[0], longitude: at[1]), in: scene, of: world, viewport: viewport)

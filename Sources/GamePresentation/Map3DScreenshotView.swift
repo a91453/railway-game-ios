@@ -34,6 +34,36 @@ public struct Map3DScreenshotView: Equatable, Sendable {
         return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
     }
 
+    /// Decision 732: the camera over the signalled stop line nearest
+    /// `place` (the app's `-screenshot-3d-signal`), within `within`
+    /// metres, so a screenshot of a city's streets looks at a junction
+    /// rather than at the roof a guessed place falls on; over `place`
+    /// itself when none is that near.
+    public func camera(signalNear place: (latitude: Double, longitude: Double), within: Float = 600, in scene: Map3DScene,
+                       of world: GameWorld, viewport: (width: Float, height: Float)) -> Map3DCamera? {
+        guard let over = camera(at: place, in: scene, of: world, viewport: viewport) else { return nil }
+        guard let stop = Self.signalStop(near: over.target, in: scene.streetLife, within: within) else { return over }
+        let target = Map3DPoint(stop.x, scene.drawnGround.height(x: stop.x, z: stop.z, world: world), stop.z)
+        let camera = Map3DCamera(target: target, distance: distance, heading: heading, viewport: viewport)
+        guard tilt > camera.tilt else { return camera }
+        return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
+    }
+
+    /// The point of the signalled stop line of `life`'s lanes nearest
+    /// `point` across the ground, if one is within `within` metres.
+    static func signalStop(near point: Map3DPoint, in life: Map3DStreetLife, within: Float) -> Map3DPoint? {
+        var best: (point: Map3DPoint, away: Float)?
+        for lane in life.lanes {
+            for stop in lane.stops {
+                let at = lane.path.at(stop.at).point
+                let dx = at.x - point.x, dz = at.z - point.z
+                let away = (dx * dx + dz * dz).squareRoot()
+                if away <= within, away < best?.away ?? .infinity { best = (at, away) }
+            }
+        }
+        return best?.point
+    }
+
     /// Decision 575 續 (CABLEMAP): the camera over the ground under the
     /// first cable car's span `leg`, `permille` along it (the app's
     /// `-screenshot-3d-cableway` "leg,permille"), so a screenshot looks at

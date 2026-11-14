@@ -3338,7 +3338,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Street in Mong Kok), with the traffic on the left, the signals at
     /// the left-hand kerb and the yellow kerb lines. As `testHongKongMap`,
     /// the Airport Express bought and run on to the morning; the followed
-    /// train let go so the camera stays over the junction. The
+    /// train let go so the camera stays over the junction (the signalled
+    /// stop line nearest the place, so not on a roof). The
     /// Simulator's GPU has no tier and draws nothing on the streets, so a
     /// tier is given (as `testStreetStopDay`).
     func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30500,114.17166") }
@@ -3347,7 +3348,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     private func shootHongKongStreets(_ place: String, at: String) {
         executionTimeAllowance = 1_700
         let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "high",
-                                 "-screenshot-3d-view", "130,35,40", "-screenshot-3d-at", at, "-screenshot-device-tier", "1"])
+                                 "-screenshot-3d-view", "110,35,45", "-screenshot-3d-signal", at, "-screenshot-device-tier", "1"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
         // The main thread is busy buying and running the morning (as
