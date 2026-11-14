@@ -177,6 +177,15 @@ final class Map3DStreetRegionTests: XCTestCase {
         XCTAssertNotNil(Signal.face(.main, group: 0, clock: clock(5, region: .taiwan), time: 5.2, pace: pace, reduceMotion: false).count)
     }
 
+    /// Decision 738: the camera down a road looks the way its traffic goes.
+    func testTheScreenshotDownARoadLooksAlongIt() {
+        for along in [Map3DPoint(1, 0, 0), Map3DPoint(0, 0, -1), Map3DPoint(-0.6, 0, 0.8)] {
+            let camera = Map3DCamera(heading: Map3DScreenshotView.heading(along: along))
+            XCTAssertEqual(camera.forward.x, along.x, accuracy: 1e-5)
+            XCTAssertEqual(camera.forward.z, along.z, accuracy: 1e-5)
+        }
+    }
+
     func testTheScreenshotLooksAtTheNearestSignalledStopLine() throws {
         let path = try XCTUnwrap(Map3DStreetLife.Path([Map3DPoint(0, 0, 0), Map3DPoint(400, 0, 0)]))
         var lane = Map3DStreetLife.Lane(path: path, half: 4, twoWay: true, speed: 11, perHundred: 6, scooters: true, seed: (1, 2))

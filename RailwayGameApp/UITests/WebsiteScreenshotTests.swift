@@ -3345,11 +3345,17 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// tier is given (as `testStreetStopDay`).
     func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30500,114.17166", view: "130,35,0") }
     func testHongKongStreetsWestKowloon() { shootHongKongStreets("west-kowloon", at: "22.30400,114.16500", view: "90,35,40") }
+    /// Decision 738: down Nathan Road at Jordan, where its double-deckers,
+    /// minibuses and taxis go by, three times some seconds apart.
+    func testHongKongStreetsNathanRoad() {
+        shootHongKongStreets("nathan-road", at: "22.30490,114.17170", view: "70,0,55", along: true)
+    }
 
-    private func shootHongKongStreets(_ place: String, at: String, view: String) {
+    private func shootHongKongStreets(_ place: String, at: String, view: String, along: Bool = false) {
         executionTimeAllowance = 1_700
         let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "high",
-                                 "-screenshot-3d-view", view, "-screenshot-3d-signal", at, "-screenshot-device-tier", "1"])
+                                 "-screenshot-3d-view", view, "-screenshot-3d-signal", at, "-screenshot-device-tier", "1"]
+                         + (along ? ["-screenshot-3d-along"] : []))
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
         // The main thread is busy buying and running the morning (as
@@ -3372,6 +3378,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         waitForPicture(timeout: 150)
         settle(seconds: 12)
         keep("hong-kong-streets-\(place)", app)
+        if along {
+            // The traffic going by: two more, some seconds apart.
+            for shot in 2...3 {
+                settle(seconds: 7)
+                keep("hong-kong-streets-\(place)-\(shot)", app)
+            }
+            return
+        }
         // Then closer, the signals and the cars at the stop line.
         app.pinch(withScale: 2.2, velocity: 1)
         settle(seconds: 10)
