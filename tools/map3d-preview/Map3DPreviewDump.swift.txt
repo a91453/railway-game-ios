@@ -21,7 +21,12 @@ final class Map3DPreviewDump: XCTestCase {
         func resource(_ path: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent(path)) }
         // Decision 326: the real railways, as the app hands a real-world
         // map's scene them (no overhead line along the lines without one).
-        let railways = try RealRailways(
+        // Decision 742: MAP3D_REAL=1 (or MAP3D_BUY_STATION): all of the
+        // app's real railways, with the real tracks and timetables, so the
+        // scene lays the real lines' tracks and trains (decisions 402, 600).
+        let fullRailways = ProcessInfo.processInfo.environment["MAP3D_REAL"] == "1"
+            || ProcessInfo.processInfo.environment["MAP3D_BUY_STATION"] != nil
+        let railways = fullRailways ? try BundledRealData.railways() : try RealRailways(
             lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
             names: resource("RealRailways/station_names.json"),
             pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")))
@@ -112,6 +117,20 @@ final class Map3DPreviewDump: XCTestCase {
                                        steep: water.steepCells(frame: frame, bounds: GameWorld.newGameBounds), heights: heights)
         default:
             world = DemoWorld.make(in: .english)
+        }
+        // Decision 742: MAP3D_BUY_STATION=名稱 (with MAP3D_WORLD=island and
+        // MAP3D_AT at it): the TRA's real station of that name bought
+        // (decision 400 A.8), as its pin's card buys it.
+        if let name = ProcessInfo.processInfo.environment["MAP3D_BUY_STATION"] {
+            let session = GameSession(world: world, language: .traditionalChinese)
+            session.railways = railways
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            let real = try BundledRealData.station(name, in: "tra_sched")
+            let pin = try XCTUnwrap(session.nearestRealStation(to: try BundledRealData.point(real.coordinate, in: session.world)))
+            let offer = session.realStationOffer(for: pin)
+            XCTAssertTrue(session.buyRealStation(offer), offer.problem ?? session.message?.text ?? "")
+            world = session.world
         }
         // MAP3D_LINE=x:z;x:z;...: the player's line through these points of
         // the scene (metres), a station with its platform at each, laid
