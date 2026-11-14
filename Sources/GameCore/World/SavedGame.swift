@@ -509,9 +509,16 @@
 ///     and go on sending trains along track the player is closing, so it
 ///     says the save is newer than it instead. A save of any earlier
 ///     version needs no step: none of its track is being closed.
+/// 96. Demand events with hours (decision 730): an event can have its
+///     `"opens"` and `"closes"`, the minutes of the day it is held, and
+///     its crowd comes before it opens and leaves after it closes. A
+///     build that reads only an earlier version would drop them and
+///     spread the crowd over the whole day again, so it says the save is
+///     newer than it instead. A save of any earlier version needs no step:
+///     its events run all day, as every event did.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 95
+    public static let currentVersion = 96
 
     public let world: GameWorld
 
@@ -746,6 +753,8 @@ extension SavedGame: Codable {
         // has no track closed (decision 716): nothing to turn.
         // Version 94 to 95: a network without `"closingEdges"` has no
         // track being closed (decision 716, continued): nothing to turn.
+        // Version 95 to 96: a demand event without `"opens"` and
+        // `"closes"` runs all day (decision 730): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

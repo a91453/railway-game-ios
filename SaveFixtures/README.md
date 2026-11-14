@@ -334,3 +334,9 @@ its map's airports when it opens the save).
   (`TrackClosureTests.testVersionNinetyFiveKeepsTheTrackBeingClosed`,
   written with `CLOSE_TRACK_SAVE_NEW=1` by the build that first made it;
   decision 716, continued).
+- `v96-demand-hours.json`: six stations on one line a minute in, demand
+  events on, a crowd surge at the third station from 19:00 to 22:00 today
+  and tomorrow and an exhibition at the fifth all day: the event's
+  `"opens"` and `"closes"`
+  (`DemandEventTests.testVersionNinetySixKeepsTheEventsHours`, written with
+  `DEMAND_HOURS_SAVE_NEW=1` by the build that first made it; decision 730).

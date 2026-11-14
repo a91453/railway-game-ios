@@ -643,24 +643,33 @@ extension GameWorld {
     /// The demand events announced or running at station `id`, in the
     /// reference's words ("{wait} days until start, lasts {days} days"):
     /// "Exhibition: +35% demand, starts in 2 days, lasts 5 days", or
-    /// "Crowd surge: +80% demand, 1 more day".
+    /// "Crowd surge: +80% demand, 1 more day"; one with hours (decision
+    /// 730) says them and when its crowd leaves: "Crowd surge 19:00–22:00:
+    /// +80% demand, starts in 2 days, lasts 1 day, crowds leave around
+    /// 22:00".
     public func demandEventTexts(at id: StationID, in language: DisplayLanguage) -> [String] {
         let today = clock.now.seconds / GameTime.secondsPerDay
         return (demandEvents?.events ?? []).filter { $0.station == id && today < $0.end }.map { event in
             let percent = (event.boost + 5) / 10
-            let title = event.festival?.title(in: language) ?? event.kind.title(in: language)
+            var title = event.festival?.title(in: language) ?? event.kind.title(in: language)
+            var leaving = ("", "")
+            if let opens = event.opens, let closes = event.closes {
+                title += " \(clockText(minuteOfDay: Int(opens)))–\(clockText(minuteOfDay: Int(closes)))"
+                let wave = clockText(minuteOfDay: Int(closes))
+                leaving = (", crowds leave around \(wave)", "，散場人潮約 \(wave)")
+            }
             if event.start > today {
                 let wait = event.start - today
                 let days = event.end - event.start
                 return language.text(
-                    "\(title): +\(percent)% demand, starts in \(wait) day\(wait == 1 ? "" : "s"), lasts \(days) day\(days == 1 ? "" : "s")",
-                    "\(title)：需求 +\(percent)%，\(wait) 天後開始，持續 \(days) 天"
+                    "\(title): +\(percent)% demand, starts in \(wait) day\(wait == 1 ? "" : "s"), lasts \(days) day\(days == 1 ? "" : "s")\(leaving.0)",
+                    "\(title)：需求 +\(percent)%，\(wait) 天後開始，持續 \(days) 天\(leaving.1)"
                 )
             }
             let left = event.end - today
             return language.text(
-                "\(title): +\(percent)% demand, \(left) more day\(left == 1 ? "" : "s")",
-                "\(title)：需求 +\(percent)%，還有 \(left) 天"
+                "\(title): +\(percent)% demand, \(left) more day\(left == 1 ? "" : "s")\(leaving.0)",
+                "\(title)：需求 +\(percent)%，還有 \(left) 天\(leaving.1)"
             )
         }
     }
