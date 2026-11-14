@@ -29,6 +29,10 @@ public struct RealTemples: Sendable {
     }
 
     public let temples: [Temple]
+    /// Decision 725: Taipei's temples drawn in their own shape
+    /// (`Resources/Models/tpe-*.m3dmodel`), attached by the app; on their
+    /// ground no kit temple stands.
+    public var landmarks: [Map3DTaipeiTemple: Map3DModelPack.Model] = [:]
 
     public init(temples: [Temple]) {
         self.temples = temples

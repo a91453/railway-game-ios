@@ -689,6 +689,16 @@ enum BaseMapFiles {
 
     /// The no-build land with its airports' airfields, read from the
     /// app's files; `nil` on a map not of the real world.
+    /// Decision 331: Taiwan's temples, with decision 725's Taipei temples
+    /// in their own shape from the bundled models.
+    nonisolated static func temples(_ file: URL?) -> RealTemples? {
+        guard var temples = file.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealTemples(data: $0) }) else { return nil }
+        temples.landmarks = Map3DTaipeiTemple.models(files: Dictionary(uniqueKeysWithValues: Map3DTaipeiTemple.allCases.compactMap { temple in
+            Bundle.main.url(forResource: temple.fileName, withExtension: Map3DTaipeiTemple.fileExtension).map { (temple, $0) }
+        }))
+        return temples
+    }
+
     nonisolated static func noBuildLand(_ noBuild: URL?, airfields: URL?) -> RealNoBuildLand? {
         guard var land = noBuild.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealNoBuildLand(data: $0) }) else { return nil }
         land.airfields = airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }

@@ -530,8 +530,11 @@ public struct Map3DScene: Sendable {
         // Decision 625: the real stations' exterior studies, as landmarks,
         // cut clear of the track.
         let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
+        // Decision 725: Taipei's temples in their own shape, as landmarks.
+        let taipeiTemples = temples.flatMap { temples in RealWorldFrame(world: world).map { builder.addTaipeiTemples(temples, frame: $0) } } ?? []
         let landmarkCells = landmarks.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) }
             .union(exteriors.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) })
+            .union(taipeiTemples)
         // Decision 441: the Changhua Roundhouse's turntable; no street
         // furniture or city lot on it, but the real buildings round it stay.
         let turntable = RealWorldFrame(world: world).map { builder.addRoundhouseTurntable(frame: $0) } ?? []

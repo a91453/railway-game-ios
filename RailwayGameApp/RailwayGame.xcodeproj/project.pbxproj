@@ -16,6 +16,7 @@
 		09D332A24DB65CBE7CF3B474 /* ntalrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 33A7DE737060DCAE06730A85 /* ntalrt_ridership.json */; };
 		0A5ADA4A4A122D62A792377E /* rail_tracks.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E7435AD3984A55E9A5FF4F7 /* rail_tracks.json */; };
 		0A6DFB7DC5EF1467874F231E /* tra_platforms.json in Resources */ = {isa = PBXBuildFile; fileRef = 007476F85C3E1C799257C7B6 /* tra_platforms.json */; };
+		0C16C552AFB7839ADA1E300A /* tpe-temple-xingtian.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = EAFC35DA6CCA86527B6803D7 /* tpe-temple-xingtian.m3dmodel */; };
 		0C4D5EB738F2C3417F27F0B5 /* FrameTimeRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57581E664B4829622BF2AB95 /* FrameTimeRecorder.swift */; };
 		0CAEF26EBDE94052FA874ABE /* tra.json in Resources */ = {isa = PBXBuildFile; fileRef = FAA79D875396E732FE48A605 /* tra.json */; };
 		0DA96DCC43DC6808B4767945 /* run-motor-power-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = B94D537EFD16B15799F225AC /* run-motor-power-30.caf */; };
@@ -41,6 +42,7 @@
 		20778028B235A16BDD963DCE /* run-motor-brake-45.caf in Resources */ = {isa = PBXBuildFile; fileRef = BBFF707BB9379ADCD2D345D3 /* run-motor-brake-45.caf */; };
 		20FE3BBEDED4CCA7EE59B14A /* FrameTimeBenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */; };
 		21720CA3F8090EB484A82AC2 /* OneShotLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D5BF8179644D02716F92269 /* OneShotLocation.swift */; };
+		21E1FDB9A53EE88EE0304C8F /* tpe-temple-cixian.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 25999FFFC56D8D000B642C6F /* tpe-temple-cixian.m3dmodel */; };
 		2232B3B82542EDB28DE20D32 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 30D78FBA510CB46263A33F36 /* GameCore */; };
 		225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222E67E267AF07C25D4745C9 /* DataSourcesView.swift */; };
 		22A6A67D10DB076CEC70BBF7 /* run-motor-brake-04.caf in Resources */ = {isa = PBXBuildFile; fileRef = B60F9657A6CF6528E8028E38 /* run-motor-brake-04.caf */; };
@@ -63,6 +65,7 @@
 		2EAE2F5727457C096F6FB7CD /* ntalrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */; };
 		304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */; };
 		31395CFF6BB9BC1ACA1A8A4B /* CityView3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */; };
+		31626FC97F8A6F7478148B33 /* tpe-temple-xiahai-city-god.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = D8281E5A3E536515E578D731 /* tpe-temple-xiahai-city-god.m3dmodel */; };
 		32C1BFF8BFF1C89EF38AAD5C /* real_buses_YunlinCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 80E477650F0DF736E2D8D772 /* real_buses_YunlinCounty.json */; };
 		3395CE97AE293EF2E54A794A /* SharedNetworkUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F94328E36B3DAA88E657B8A /* SharedNetworkUITests.swift */; };
 		35826BBECC95EAD855F7BA84 /* real_buses_KinmenCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = D3F1D7EBF3CF732D32142732 /* real_buses_KinmenCounty.json */; };
@@ -99,6 +102,7 @@
 		56401A53DAC1CA098177160A /* BaseMapProjectionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */; };
 		5644406356216F19F80AB16F /* taiwan_sight_visitors.json in Resources */ = {isa = PBXBuildFile; fileRef = 29F78307DC6EE99597B85320 /* taiwan_sight_visitors.json */; };
 		5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = F655E31850005DBAC32D5142 /* OSMMapBackground.swift */; };
+		56D2E59265A1A07AA9258976 /* tpe-church-jinan.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 07C5CB91C882A2326C189C9F /* tpe-church-jinan.m3dmodel */; };
 		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		585C09A427696BD99073713D /* refused.wav in Resources */ = {isa = PBXBuildFile; fileRef = E4631B47557CC9944903820E /* refused.wav */; };
 		5E0B13EE6BA50532BF4C2DE9 /* real_buses_Taichung.json in Resources */ = {isa = PBXBuildFile; fileRef = 7F78F65A247A49BAD8BBD3C6 /* real_buses_Taichung.json */; };
@@ -168,6 +172,7 @@
 		8FBF6253CD6BFB1226209F25 /* TodaySettlementsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */; };
 		901FBCAF3CF18040ABB7DCA1 /* MapLockMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362FE08DC4352F1A844AF86D /* MapLockMarks.swift */; };
 		90D833E8F70651BA68429E5D /* run-electric.caf in Resources */ = {isa = PBXBuildFile; fileRef = A0AD6227FA521E0662955DEC /* run-electric.caf */; };
+		91041868D52D54D5FC9E952C /* tpe-temple-tianhou.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 4C9276C63851EF52D3D6D16E /* tpe-temple-tianhou.m3dmodel */; };
 		9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */; };
 		92F90DD1D5DAE3F80BACEB39 /* MapMarkTapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */; };
 		9318EBDD8C16334A8B3ECF84 /* new-train.wav in Resources */ = {isa = PBXBuildFile; fileRef = B658BFC2CA2CFA2AF98A57BF /* new-train.wav */; };
@@ -184,6 +189,7 @@
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
 		9C967885AEABC53789FB4165 /* RouteStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649A13DFCE7328AD6D549B82 /* RouteStrip.swift */; };
 		9CC22169A02628E88713776A /* tra_station_info.json in Resources */ = {isa = PBXBuildFile; fileRef = 150E696C9936773A65399191 /* tra_station_info.json */; };
+		9DF5A3499D9FA60473A454CD /* tpe-temple-zhinan.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = C251D4CCDA182936D3B548DB /* tpe-temple-zhinan.m3dmodel */; };
 		9EA1EEFC5B90497C518B4A03 /* SharedNetworkViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DEE960E35A07A7E3B307632 /* SharedNetworkViews.swift */; };
 		9F2A0CB036624C7848B09486 /* kenney-pine.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 4353DE6A285346A08373E79A /* kenney-pine.m3dmodel */; };
 		A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */; };
@@ -212,7 +218,9 @@
 		B377F84188B72AB8572160ED /* run-motor-power-04.caf in Resources */ = {isa = PBXBuildFile; fileRef = A718C2A85A5CD79308AD3851 /* run-motor-power-04.caf */; };
 		B3A042E18BED57FDA9488905 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8018E9BA28EB5C1FC2CBAC /* GamePresentation */; };
 		B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = F7E81C097849391C73D31AF5 /* krtc.json */; };
+		B64229B56F6FB339CFE61EDE /* tpe-temple-provincial-city-god.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = DC700FAEE8DD7A0F3A300E07 /* tpe-temple-provincial-city-god.m3dmodel */; };
 		B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */; };
+		B747C3D9E81E551D3D226C17 /* tpe-temple-qingshui.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = F06FB0357460E315E086AB5E /* tpe-temple-qingshui.m3dmodel */; };
 		B7D75586702143678A6E56E2 /* city-bus.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 1CAB3E0CCFE9D4ED77A05057 /* city-bus.m3dmodel */; };
 		B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */; };
 		BA06C7F655DD32316C62FB3B /* run-motor-power-09.caf in Resources */ = {isa = PBXBuildFile; fileRef = DF4ECEF39653EB84A83986DA /* run-motor-power-09.caf */; };
@@ -245,6 +253,7 @@
 		D1316291CDB0608CC58044F9 /* run-motor-brake-06.caf in Resources */ = {isa = PBXBuildFile; fileRef = 19CAEB9422AA0A6E9579487E /* run-motor-brake-06.caf */; };
 		D16311050B604A50B31629E3 /* kenney-ui-confirm.wav in Resources */ = {isa = PBXBuildFile; fileRef = D2D657C1161282C2624EADB0 /* kenney-ui-confirm.wav */; };
 		D1C3F36C8C5DBFCA1036E603 /* LineDraftSummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E654E2EC7E901F3CBD452FFE /* LineDraftSummaryRow.swift */; };
+		D36216B53CEC72D6F784386A /* tpe-temple-huiji.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 42160E499C1AD4A505ACB027 /* tpe-temple-huiji.m3dmodel */; };
 		D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */ = {isa = PBXBuildFile; fileRef = AD6E3ED548E183F6E79E0111 /* rail-joint.wav */; };
 		D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */ = {isa = PBXBuildFile; fileRef = 31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */; };
 		D4861912DD9779D9E4B843F5 /* meshy-post-boxes.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 8B993B082EC252253EFE5F5A /* meshy-post-boxes.m3dmodel */; };
@@ -283,6 +292,7 @@
 		F247F91E86B7304979506B50 /* kenney-ui-toggle.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9D09463AE35CC137B450932F /* kenney-ui-toggle.wav */; };
 		F46D9B04101FA9F89A33CB08 /* station-chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4966256D18F5622FE1A080BB /* station-chime.wav */; };
 		F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */; };
+		F5CBC90A1720CA0C211907E6 /* tpe-temple-longshan.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = E151948FD36304E43DED0587 /* tpe-temple-longshan.m3dmodel */; };
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
 		F720FC931D713539D1AF8CCC /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 10BAAEA97DA689ABA4004F2A /* tmrt.json */; };
 		F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3934A6F628AA98414B2B952D /* Theme.swift */; };
@@ -309,6 +319,7 @@
 		01BEE1289DAE317B9E7290A0 /* TrainShowcaseUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainShowcaseUITests.swift; sourceTree = "<group>"; };
 		05F7A5F3105B96C3E70DF1AA /* tmrt_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_ridership.json; sourceTree = "<group>"; };
 		063363CE5B18CB830ECCADA0 /* real_buses_PenghuCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_PenghuCounty.json; sourceTree = "<group>"; };
+		07C5CB91C882A2326C189C9F /* tpe-church-jinan.m3dmodel */ = {isa = PBXFileReference; path = "tpe-church-jinan.m3dmodel"; sourceTree = "<group>"; };
 		080B5EA4C72E50F138757E75 /* NetworkControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkControls.swift; sourceTree = "<group>"; };
 		091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineDraftSummaryUITests.swift; sourceTree = "<group>"; };
 		0A8A6A623CDA7792FB18C0A2 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
@@ -344,6 +355,7 @@
 		222E67E267AF07C25D4745C9 /* DataSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourcesView.swift; sourceTree = "<group>"; };
 		22B3E573D7A6A1CB02F279FF /* NextStepChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChip.swift; sourceTree = "<group>"; };
 		24B425FF34AEB844CE2FA815 /* StationMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationMasterView.swift; sourceTree = "<group>"; };
+		25999FFFC56D8D000B642C6F /* tpe-temple-cixian.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-cixian.m3dmodel"; sourceTree = "<group>"; };
 		284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */ = {isa = PBXFileReference; path = "rain-typhoon.caf"; sourceTree = "<group>"; };
 		29F78307DC6EE99597B85320 /* taiwan_sight_visitors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_sight_visitors.json; sourceTree = "<group>"; };
 		2A779D8969EEF8D75DD97FF5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
@@ -376,6 +388,7 @@
 		411F6A0DAE0C614613B6B4CE /* thsr_track.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = thsr_track.json; sourceTree = "<group>"; };
 		41251B12461A0FD34DFCB786 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverageShortcutUITests.swift; sourceTree = "<group>"; };
+		42160E499C1AD4A505ACB027 /* tpe-temple-huiji.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-huiji.m3dmodel"; sourceTree = "<group>"; };
 		4353DE6A285346A08373E79A /* kenney-pine.m3dmodel */ = {isa = PBXFileReference; path = "kenney-pine.m3dmodel"; sourceTree = "<group>"; };
 		45DEF39159CB4B2FE6C85BE4 /* run-motor-power-14.caf */ = {isa = PBXFileReference; path = "run-motor-power-14.caf"; sourceTree = "<group>"; };
 		464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldMapUITests.swift; sourceTree = "<group>"; };
@@ -387,6 +400,7 @@
 		4A3F11B85E0A47AF52471E65 /* LoadChartUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadChartUITests.swift; sourceTree = "<group>"; };
 		4B68167398B13543EA8C564A /* RealWorldPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldPicker.swift; sourceTree = "<group>"; };
 		4C1017DDE782DF1CF07D561E /* rail_structures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = rail_structures.json; sourceTree = "<group>"; };
+		4C9276C63851EF52D3D6D16E /* tpe-temple-tianhou.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-tianhou.m3dmodel"; sourceTree = "<group>"; };
 		4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTimeBenchView.swift; sourceTree = "<group>"; };
 		4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DStopBar.swift; sourceTree = "<group>"; };
@@ -523,6 +537,7 @@
 		C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonUITests.swift; sourceTree = "<group>"; };
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
 		C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_pingxi_runs.json; sourceTree = "<group>"; };
+		C251D4CCDA182936D3B548DB /* tpe-temple-zhinan.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-zhinan.m3dmodel"; sourceTree = "<group>"; };
 		C32DC68DE89FFF96A515EA04 /* chime-metro.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro.wav"; sourceTree = "<group>"; };
 		C36D0C1A032EC0C7CA409E23 /* kenney-bushes.m3dmodel */ = {isa = PBXFileReference; path = "kenney-bushes.m3dmodel"; sourceTree = "<group>"; };
 		C467DEF8CB249B8BDA4705A9 /* kenney-pine-tall.m3dmodel */ = {isa = PBXFileReference; path = "kenney-pine-tall.m3dmodel"; sourceTree = "<group>"; };
@@ -547,13 +562,16 @@
 		D676D8B2F681ED388F065F97 /* run-motor-power-20.caf */ = {isa = PBXFileReference; path = "run-motor-power-20.caf"; sourceTree = "<group>"; };
 		D6F8BD91F256D7FE026E0B78 /* meshy-bus-stop-pole.m3dmodel */ = {isa = PBXFileReference; path = "meshy-bus-stop-pole.m3dmodel"; sourceTree = "<group>"; };
 		D70569DF2A7B974DC2964234 /* real_buses_Keelung.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_Keelung.json; sourceTree = "<group>"; };
+		D8281E5A3E536515E578D731 /* tpe-temple-xiahai-city-god.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-xiahai-city-god.m3dmodel"; sourceTree = "<group>"; };
 		D8A3D706AFEA85A7941D8933 /* track_lines.geojson */ = {isa = PBXFileReference; path = track_lines.geojson; sourceTree = "<group>"; };
 		DA79BA929F6262FB0DD353E2 /* BaseMap */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BaseMap; path = Resources/BaseMap; sourceTree = SOURCE_ROOT; };
 		DBFC7FA3ED09CBDFFAD8866F /* run-highspeed.caf */ = {isa = PBXFileReference; path = "run-highspeed.caf"; sourceTree = "<group>"; };
+		DC700FAEE8DD7A0F3A300E07 /* tpe-temple-provincial-city-god.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-provincial-city-god.m3dmodel"; sourceTree = "<group>"; };
 		DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsLogView.swift; sourceTree = "<group>"; };
 		DF4ECEF39653EB84A83986DA /* run-motor-power-09.caf */ = {isa = PBXFileReference; path = "run-motor-power-09.caf"; sourceTree = "<group>"; };
 		DF53C2E1CD8814F61A774072 /* garbage-truck.caf */ = {isa = PBXFileReference; path = "garbage-truck.caf"; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
+		E151948FD36304E43DED0587 /* tpe-temple-longshan.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-longshan.m3dmodel"; sourceTree = "<group>"; };
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
 		E28390FC7EE0974B5F944298 /* kenney-ui-cancel.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "kenney-ui-cancel.wav"; sourceTree = "<group>"; };
 		E4631B47557CC9944903820E /* refused.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = refused.wav; sourceTree = "<group>"; };
@@ -563,6 +581,7 @@
 		E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySettlementsSection.swift; sourceTree = "<group>"; };
 		E9A5BD1F73E69B878537F5E6 /* DeviceDiagnosticsRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDiagnosticsRecorder.swift; sourceTree = "<group>"; };
 		EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsPanel.swift; sourceTree = "<group>"; };
+		EAFC35DA6CCA86527B6803D7 /* tpe-temple-xingtian.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-xingtian.m3dmodel"; sourceTree = "<group>"; };
 		EBF0302CFB4B03FD458EE71B /* run-motor-brake-09.caf */ = {isa = PBXFileReference; path = "run-motor-brake-09.caf"; sourceTree = "<group>"; };
 		EBFE12DC5EE8EA16F13F9F9A /* kenney-ui-open.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "kenney-ui-open.wav"; sourceTree = "<group>"; };
 		EC04F05461D58759373672F0 /* rain-steady.caf */ = {isa = PBXFileReference; path = "rain-steady.caf"; sourceTree = "<group>"; };
@@ -570,6 +589,7 @@
 		EE37EC86D4CCF3E12B118693 /* tra_branch_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_branch_runs.json; sourceTree = "<group>"; };
 		EE545BF14678185EA76EACC5 /* AmbientModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientModeView.swift; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
+		F06FB0357460E315E086AB5E /* tpe-temple-qingshui.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-qingshui.m3dmodel"; sourceTree = "<group>"; };
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
 		F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSans-OFL.txt"; sourceTree = "<group>"; };
 		F124C2763D812BDC46B49132 /* NetworkFlowSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkFlowSheet.swift; sourceTree = "<group>"; };
@@ -882,6 +902,16 @@
 				D6F8BD91F256D7FE026E0B78 /* meshy-bus-stop-pole.m3dmodel */,
 				8B993B082EC252253EFE5F5A /* meshy-post-boxes.m3dmodel */,
 				9BA4B300768652735C9F8702 /* recycling-truck.m3dmodel */,
+				07C5CB91C882A2326C189C9F /* tpe-church-jinan.m3dmodel */,
+				25999FFFC56D8D000B642C6F /* tpe-temple-cixian.m3dmodel */,
+				42160E499C1AD4A505ACB027 /* tpe-temple-huiji.m3dmodel */,
+				E151948FD36304E43DED0587 /* tpe-temple-longshan.m3dmodel */,
+				DC700FAEE8DD7A0F3A300E07 /* tpe-temple-provincial-city-god.m3dmodel */,
+				F06FB0357460E315E086AB5E /* tpe-temple-qingshui.m3dmodel */,
+				4C9276C63851EF52D3D6D16E /* tpe-temple-tianhou.m3dmodel */,
+				D8281E5A3E536515E578D731 /* tpe-temple-xiahai-city-god.m3dmodel */,
+				EAFC35DA6CCA86527B6803D7 /* tpe-temple-xingtian.m3dmodel */,
+				C251D4CCDA182936D3B548DB /* tpe-temple-zhinan.m3dmodel */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1255,6 +1285,16 @@
 				F720FC931D713539D1AF8CCC /* tmrt.json in Resources */,
 				481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */,
 				BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */,
+				56D2E59265A1A07AA9258976 /* tpe-church-jinan.m3dmodel in Resources */,
+				21E1FDB9A53EE88EE0304C8F /* tpe-temple-cixian.m3dmodel in Resources */,
+				D36216B53CEC72D6F784386A /* tpe-temple-huiji.m3dmodel in Resources */,
+				F5CBC90A1720CA0C211907E6 /* tpe-temple-longshan.m3dmodel in Resources */,
+				B64229B56F6FB339CFE61EDE /* tpe-temple-provincial-city-god.m3dmodel in Resources */,
+				B747C3D9E81E551D3D226C17 /* tpe-temple-qingshui.m3dmodel in Resources */,
+				91041868D52D54D5FC9E952C /* tpe-temple-tianhou.m3dmodel in Resources */,
+				31626FC97F8A6F7478148B33 /* tpe-temple-xiahai-city-god.m3dmodel in Resources */,
+				0C16C552AFB7839ADA1E300A /* tpe-temple-xingtian.m3dmodel in Resources */,
+				9DF5A3499D9FA60473A454CD /* tpe-temple-zhinan.m3dmodel in Resources */,
 				FC241AD56D15C8B70E94CAD5 /* tra-schedule.json in Resources */,
 				6469EAB1A8C4CFA2DD9C80F2 /* tra-yilan-schedule.json in Resources */,
 				0CAEF26EBDE94052FA874ABE /* tra.json in Resources */,

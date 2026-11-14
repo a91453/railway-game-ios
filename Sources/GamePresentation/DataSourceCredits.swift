@@ -876,6 +876,25 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "ODbL", url: odblURL),
                         ]
                     ),
+                    // Decision 725: the shape of ten Taipei temples, from
+                    // the city's religious buildings' 3D models.
+                    DataSourceCredit(
+                        id: "taipeiTempleModels",
+                        title: language.text("Taipei temple models", "臺北廟宇模型"),
+                        detail: language.text(
+                            "The shape of Longshan Temple, Xingtian Temple, Zhinan Temple, six more of Taipei’s temples and a church in 3D maps, painted in the game’s colours.",
+                            "3D 地圖上龍山寺、行天宮、指南宮等十座臺北廟宇與教堂的外形，塗上遊戲的顏色。"
+                        ),
+                        notice: language.text(
+                            "Department of Civil Affairs, Taipei City Government: Taipei religious buildings 3D models, used under the Open Government Data License, version 1.0.",
+                            "臺北市政府民政局「臺北市宗教建築 3D 模型庫」，依政府資料開放授權條款第 1 版使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Taipei religious buildings 3D models", "臺北市宗教建築 3D 模型庫"),
+                                                  url: "https://data.gov.tw/dataset/121136"),
+                            openGovernmentLicense(in: language),
+                        ]
+                    ),
                     // Decision 389: the storeys of the footprints' buildings
                     // in the 3D map, from two city maps and GHSL's heights.
                     DataSourceCredit(
