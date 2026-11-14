@@ -339,7 +339,7 @@ extension GameWorld {
         BalanceSheet(
             cash: economy.balance, track: accounts.assetBalance(.track), stations: accounts.assetBalance(.stations),
             rollingStock: accounts.assetBalance(.rollingStock), buildings: accounts.assetBalance(.buildings), land: accounts.assetBalance(.land),
-            loan: accounts.loan, termLoans: accounts.termLoansPrincipal, taxPayable: accounts.incomeTaxPayable
+            loan: accounts.loan, termLoans: accounts.termLoansPrincipal, taxPayable: accounts.incomeTaxPayable + accounts.houseTaxPayable + accounts.landTaxPayable
         )
     }
 
@@ -506,6 +506,11 @@ extension GameWorld {
             let tax = Self.annualIncomeTax(on: income.profitBeforeTax)
             accounts.incomeTaxPayable = min(accounts.incomeTaxPayable + tax, Money(Self.maximumAccrued))
             assessed = tax
+            // Decision 736: and the house and land taxes on what the
+            // company holds at the year's end.
+            let limit = Money(Self.maximumAccrued)
+            accounts.houseTaxPayable = min(accounts.houseTaxPayable + Self.annualHouseTax(on: houseTaxBase()), limit)
+            accounts.landTaxPayable = min(accounts.landTaxPayable + Self.annualLandTax(on: landTaxBase()), limit)
         }
         let statement = AnnualStatement(
             year: CompanyAccounts.floorDivide(day, year), income: income, closing: balanceSheet(), incomeTaxAssessed: assessed

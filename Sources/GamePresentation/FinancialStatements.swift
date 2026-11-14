@@ -228,8 +228,8 @@ extension BalanceSheet {
         ] + (termLoans != .zero || previous.map { $0.termLoans != .zero } ?? false
             ? [row(language.text("Term loans", "定期貸款"), \.termLoans)] : []
         ) + (taxPayable != .zero || previous.map { $0.taxPayable != .zero } ?? false
-            // Decision 734: the income tax charged and not yet paid.
-            ? [row(language.text("Income tax payable", "應付所得稅"), \.taxPayable)] : []
+            // Decisions 734 and 736: the taxes charged and not yet paid.
+            ? [row(language.text("Taxes payable", "應付稅款"), \.taxPayable)] : []
         ) + [
             row(language.text("Equity", "權益"), \.equity),
             row(language.text("Total liabilities and equity", "負債與權益總計")) { $0.loan + $0.termLoans + $0.taxPayable + $0.equity }.with(style: .total),

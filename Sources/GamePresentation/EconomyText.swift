@@ -225,6 +225,9 @@ extension LedgerEntry.Kind {
         case .dailyFerries: language.text("Ferries (daily)", "渡輪（日結）")
         case .drivenRun: language.text("Run driven by hand", "手動駕駛的一趟")
         case .annualIncomeTax: language.text("Income tax (annual)", "營利事業所得稅（年度）")
+        case .annualHouseTax: language.text("House tax (annual)", "房屋稅（年度）")
+        case .annualLandTax: language.text("Land tax (annual)", "地價稅（年度）")
+        case .dailyStationUpkeep: language.text("Platform upkeep (daily)", "月台維持費（日結）")
         }
     }
 }
@@ -265,6 +268,8 @@ extension LedgerItem {
         case .ferryFares: language.text("Ferry fares", "渡輪票收")
         case .ferryRunning: language.text("Ferry running costs", "渡輪營運成本")
         case .drivingBonus: language.text("Well-driven runs", "手動駕駛的好評")
+        case .houseTax: language.text("House tax", "房屋稅")
+        case .stationUpkeep: language.text("Platform upkeep", "月台維持費")
         }
     }
 }
@@ -559,15 +564,31 @@ extension GameWorld {
         let percent = CompanyAccounts.annualIncomeTaxPercent
         let free = CompanyAccounts.annualIncomeTaxThreshold.moneyText
         let month = CompanyAccounts.incomeTaxDueDay / 30 + 1
+        let house = CompanyAccounts.houseTaxPercent
+        let land = CompanyAccounts.landTaxPercent
+        let landMonth = CompanyAccounts.landTaxDueDay / 30 + 1
+        let estimate = estimatedPropertyTaxes()
         var text = language.text(
             "Income tax: \(percent)% of the year's profit before tax, none up to \(free), worked out as the year closes and paid at the end of month \(month) of the next. This year so far: \(estimatedIncomeTax().moneyText)",
             "營利事業所得稅：每年結算一次，全年稅前淨利 \(free) 以下免稅，超過的課 \(percent)%，隔年 \(month) 月底繳。今年到目前預估 \(estimatedIncomeTax().moneyText)"
         )
-        let owed = accounts.incomeTaxPayable
+        // Decision 736: the house and land taxes on what is held at the
+        // year's end.
+        text += language.text(
+            ". House tax: \(house)% of the stations and buildings, paid at the end of month \(month); land tax: \(land)% of the land bought, paid at the end of month \(landMonth). As things stand: \(estimate.house.moneyText) and \(estimate.land.moneyText)",
+            "。房屋稅：車站與建物價值的 \(house)%，\(month) 月底繳；地價稅：買下土地的 \(land)%，\(landMonth) 月底繳。照現在算：\(estimate.house.moneyText)、\(estimate.land.moneyText)"
+        )
+        let owed = accounts.incomeTaxPayable + accounts.houseTaxPayable
         if owed > .zero {
             text += language.text(
                 ". Due at the end of month \(month): \(owed.moneyText)",
                 "；\(month) 月底要繳 \(owed.moneyText)"
+            )
+        }
+        if accounts.landTaxPayable > .zero {
+            text += language.text(
+                ". Due at the end of month \(landMonth): \(accounts.landTaxPayable.moneyText)",
+                "；\(landMonth) 月底要繳 \(accounts.landTaxPayable.moneyText)"
             )
         }
         return text
