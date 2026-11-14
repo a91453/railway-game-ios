@@ -78,6 +78,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case festivalComing(days: Int64, stations: [String], percent: Int64)
     /// Decision 576: a named festival at a place on the map.
     case namedFestivalComing(festival: FestivalKind, days: Int64, stations: [String], percent: Int64)
+    /// DEMAND-HOURS DH-2: a crowd surge with hours (decision 730) at
+    /// `station` starts in `days` days (0 on a day it runs), `opens` to
+    /// `closes` (minutes of the day), raising its demand by `percent`; its
+    /// crowd leaves around `closes`.
+    case crowdSurgeComing(station: StationID, name: String, days: Int64, percent: Int64, opens: Int64, closes: Int64)
     /// Decision 162: a typhoon comes in `days` days (0 while it blows),
     /// over `stations` of the network's stations, taking `percent` off their
     /// demand.
@@ -157,7 +162,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .stationFull(let station, _), .stationCrowded(let station, _),
              .underserved(let station, _, _), .townGrew(let station, _, _),
              .materialsShort(let station, _), .modeShift(let station),
-             .zoneNearStation(let station, _, _):
+             .zoneNearStation(let station, _, _), .crowdSurgeComing(let station, _, _, _, _, _):
             station
         default:
             nil
@@ -299,6 +304,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = holiday
         } else if let festival = Self.festival(in: world) {
             self = festival
+        } else if let surge = Self.crowdSurge(in: world) {
+            self = surge
         } else if let growth = Self.growth(in: world) {
             self = growth
         } else if let sight = Self.sightUnreachable(in: world) {
@@ -448,6 +455,24 @@ public enum StationMasterAdvice: Hashable, Sendable {
             return .namedFestivalComing(festival: named, days: first.start - today, stations: names, percent: first.boost / 10)
         }
         return .festivalComing(days: first.start - today, stations: names, percent: first.boost / 10)
+    }
+
+    /// DEMAND-HOURS DH-2: the first crowd surge with hours announced and
+    /// not over, the soonest first (on the same day, the station first by
+    /// ID), so the player knows when its crowd leaves.
+    static func crowdSurge(in world: GameWorld) -> StationMasterAdvice? {
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        let surges = (world.demandEvents?.events ?? []).filter {
+            $0.kind == .crowdSurge && $0.opens != nil && $0.closes != nil && $0.announced <= today && today < $0.end
+                && world.station(id: $0.station) != nil
+        }
+        guard let first = surges.min(by: { ($0.start, $0.station.rawValue) < ($1.start, $1.station.rawValue) }),
+              let opens = first.opens, let closes = first.closes, let station = world.station(id: first.station)
+        else { return nil }
+        return .crowdSurgeComing(
+            station: first.station, name: station.name, days: max(0, first.start - today),
+            percent: (first.boost + 5) / 10, opens: opens, closes: closes
+        )
     }
 
     /// Decision 174: a holiday that starts today or in the next three
@@ -730,6 +755,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "\(festival.title(in: language)) starts in \(days) day\(days == 1 ? "" : "s"): \(percent)% more passengers at \(stations.joined(separator: " and ")).\(festival.hoursText(in: language)) Add trains before it.",
                 "\(days) 天後是\(festival.title(in: language))，\(stations.joined(separator: "、"))的旅客會多 \(percent)%。\(festival.hoursText(in: language))先加開列車吧。"
             )
+        case .crowdSurgeComing(_, let name, let days, let percent, let opens, let closes):
+            Self.crowdSurgeText(name: name, days: days, percent: percent, opens: opens, closes: closes, in: language)
         case .holidayOver(let kind, let riders, let percent):
             percent >= 0
                 ? language.text(
@@ -793,6 +820,23 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
     }
 
+    /// DEMAND-HOURS DH-2: a crowd surge's reminder, with its hours and when
+    /// its crowd leaves, as the station panel's line says them.
+    static func crowdSurgeText(name: String, days: Int64, percent: Int64, opens: Int64, closes: Int64, in language: DisplayLanguage) -> String {
+        let title = DemandEventKind.crowdSurge.title(in: language)
+        let hours = "\(clockText(minuteOfDay: Int(opens)))–\(clockText(minuteOfDay: Int(closes)))"
+        let leave = clockText(minuteOfDay: Int(closes))
+        return days > 0
+            ? language.text(
+                "\(title) at \(name) in \(days) day\(days == 1 ? "" : "s"), \(hours): \(percent)% more passengers, crowds leave around \(leave). Add trains before it.",
+                "\(days) 天後\(name)有\(title) \(hours)，旅客會多 \(percent)%，散場人潮約 \(leave)。先加開列車吧。"
+            )
+            : language.text(
+                "\(title) at \(name) today, \(hours): crowds leave around \(leave). Run more trains then.",
+                "今天\(name)有\(title) \(hours)，散場人潮約 \(leave)，那時多開幾班吧。"
+            )
+    }
+
     /// Whether it is a worry (shown with a warning look) rather than a
     /// next step.
     public var isWorry: Bool {
@@ -800,7 +844,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .noPlaceToPass, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .zoneNearStation, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .namedFestivalComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
+             .goalMet, .scenarioCompleted, .festivalComing, .namedFestivalComing, .crowdSurgeComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
         }
     }
 

@@ -1292,6 +1292,47 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-master-bubble", app)
     }
 
+    /// DEMAND-HOURS DH-2: the station master's reminder of a crowd surge
+    /// two days ahead, with its hours and when its crowd leaves, and the
+    /// news's card of it; then the reminder on the surge's day, and the
+    /// first in English. For the screenshot review of the pull request
+    /// that added them.
+    func testCrowdSurgeReminder() {
+        crowdSurgeShots("crowdSurge", name: "crowd-surge-coming", english: false)
+        crowdSurgeShots("crowdSurgeToday", name: "crowd-surge-today", english: false)
+        crowdSurgeShots("crowdSurge", name: "crowd-surge-coming-en", english: true)
+    }
+
+    private func crowdSurgeShots(_ scene: String, name: String, english: Bool) {
+        let app = launch(extra: ["-screenshot-scene", scene, "-speaking-ms", "60000"], english: english)
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+        if !app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10) {
+            let master = app.descendants(matching: .any)["stationMaster"].firstMatch
+            XCTAssertTrue(master.becomesHittable(within: 20))
+            master.tap()
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
+        settle(seconds: 1)
+        keep(name, app)
+        // The news writes what the station master says as the game runs:
+        // a step or two of it, then the news.
+        let resume = app.buttons[english ? "Resume" : "繼續"].firstMatch
+        if resume.appears(within: 5) {
+            resume.tap()
+            settle(seconds: 3)
+        }
+        let bell = app.buttons["hud.news"]
+        guard bell.appears(within: 10) else { return }
+        bell.waitUntilSettled()
+        bell.tap()
+        let done = app.buttons["news.done"]
+        XCTAssertTrue(done.appears(within: 10), "The news opens")
+        done.waitUntilSettled()
+        settle(seconds: 1)
+        keep("\(name)-news", app)
+    }
+
     /// HEIGHT-HINT: the one-time line under the construction HUD about its
     /// height cell (``HeightSlideHint``), on the stretch of
     /// ``testTrackHeightFixes`` once its bridge is taken (the card that
