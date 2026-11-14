@@ -74,7 +74,7 @@ final class HongKongAirportTests: XCTestCase {
     }
 
     /// The real-world data reads Hong Kong's no-build land with Taiwan's,
-    /// so a Hong Kong game's land puts no one on the airport.
+    /// so a Hong Kong game's land puts fewer on the airport.
     func testTheDataReadsTheAirportsLand() throws {
         let data = RealWorldData.load(overseas: [.hongKong], pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let land = try XCTUnwrap(data.places?.noBuild)
@@ -84,17 +84,22 @@ final class HongKongAirportTests: XCTestCase {
         XCTAssertNil(taiwan.places?.noBuild?.kind(atLatitude: Self.terminal.latitude, longitude: Self.terminal.longitude), "no city asked for")
     }
 
-    /// No one lives on the airport: WorldPop's people there move to the
-    /// rest of their cells, as Taiwan's do (decision 385 (續)).
-    func testNoOneLivesOnTheAirport() throws {
-        let (world, open, closed, frame) = try land()
-        _ = world
-        func onAirport(_ cell: LandCell) throws -> Bool {
+    /// Fewer live on the airport: WorldPop's people on its cells that
+    /// reach off it move to the rest of their cells, as Taiwan's do
+    /// (decision 385 (續)); a WorldPop cell wholly on it keeps its own
+    /// (that rule: where no one may live, all may), which the 3D map draws
+    /// no town on (decision 733). Everyone is kept.
+    func testFewerLiveOnTheAirport() throws {
+        let (_, open, closed, frame) = try land()
+        let noBuild = try XCTUnwrap(Self.pack().noBuildLand(airfields: false))
+        func onAirport(_ cell: LandCell) -> Bool {
             let place = frame.coordinate(worldX: Double(cell.middle.x), worldY: Double(cell.middle.y))
-            return try XCTUnwrap(Self.pack().noBuildLand(airfields: false)).kind(atLatitude: place.latitude, longitude: place.longitude) == .airport
+            return noBuild.kind(atLatitude: place.latitude, longitude: place.longitude) == .airport
         }
-        XCTAssertGreaterThan(try open.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }, 1_000, "WorldPop puts people on the airport")
-        XCTAssertEqual(try closed.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }, 0)
+        let before = open.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }
+        let after = closed.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }
+        XCTAssertGreaterThan(before, 1_000, "WorldPop puts people on the airport")
+        XCTAssertLessThan(after, before)
         XCTAssertEqual(closed.reduce(Int64(0)) { $0 + $1.residents }, open.reduce(Int64(0)) { $0 + $1.residents }, "everyone is kept")
     }
 
