@@ -50,9 +50,9 @@ public enum Map3DHongKongVehicles {
     /// `model` from `file`: fitted to its ``size(_:)``, its middle at the
     /// origin and its wheels on the ground, named as `model`. The
     /// double-decker's and the taxi's white paint is the instance's
-    /// colour (as the converter marks it); the minibus's white roof is
-    /// (its red or green), its cream body its own (the converter leaves
-    /// its colours as they are); the taxi's roof stays
+    /// colour (as the converter marks it); the minibus's roof is (its red
+    /// or green), its cream body its own (the converter leaves its
+    /// colours as they are); the taxi's roof stays
     /// silver, with its roof sign.
     public static func model(_ model: Map3DStreetModel, from file: Map3DModelFile) -> Map3DModelPack.Model {
         let source = file.model
@@ -66,9 +66,10 @@ public enum Map3DHongKongVehicles {
             let point = Map3DPoint(p.x * scale.x, p.y * scale.y, p.z * scale.z)
             var colour = vertex.color
             switch model {
-            // The minibus's roof, white in the reference (which paints it
-            // as it runs), and nothing else of it white above its windows.
-            case .minibus where colour & 0x00FF_FFFF == 0x00FF_FFFF && point.z > size.height - 0.5: colour &= 0x00FF_FFFF
+            // The minibus's roof: the cap above its windows, in the body's
+            // cream in the file (the reference paints it as it runs); the
+            // body's cream below reaches no higher than its windows.
+            case .minibus where colour | 0xFF00_0000 == fileCream && point.z > size.height - 0.4: colour &= 0x00FF_FFFF
             case .taxi where colour >> 24 == 0 && normal.z > 0.8 && point.z > size.height - 0.2: colour = roofSilver
             default: break
             }
@@ -111,6 +112,8 @@ public enum Map3DHongKongVehicles {
     static let roofSilver = Map3DColor.rgb(0xC9CDD2)
     static let roofSign = Map3DColor.rgb(0xF4F1E6)
     static let cream = Map3DColor.rgb(0xEFE3C2)
+    /// The cream of the reference minibus's body and roof, as its file has it.
+    static let fileCream = Map3DColor.rgb(0xF0D696)
 
     /// Hong Kong's vehicle `kind` (a draw from 0 to 1) on a lane where
     /// motorcycles may ride: few motorcycles; taxis a quarter of the
