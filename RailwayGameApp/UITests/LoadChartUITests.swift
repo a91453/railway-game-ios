@@ -24,7 +24,13 @@ final class LoadChartUITests: XCTestCase {
         // A passenger line picked: its riders between stops, below its
         // operations.
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A passenger line's row comes into view")
+        // Below the bar and whatever is pinned under it: the list runs on
+        // under the bar, and a row "wholly on screen" there took the touch
+        // on the bar, and no page opened (TestFlight 131's full lane, run
+        // 43599067177: line 1's report at y 81 to 108, under 路線's bar at 94
+        // to 148).
+        bar.waitUntilSettled()
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list, below: app.linesListTop(under: bar)), "A passenger line's row comes into view")
         report.tap()
         // Decision 481: on the line's own page.
         let linePage = app.collectionViews["line.detail"].firstMatch

@@ -220,10 +220,10 @@ needs OSM data reads the same extract.
   workflows' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's own files;
-  the full lane runs every UI test, its iPhone tests split over four jobs
-  (`FULL_LANE_SECOND_JOB`, `FULL_LANE_LESSONS_JOB` and `FULL_LANE_MAP_JOB`
-  name three jobs' classes, run two at a time, decision 604; the build job
-  runs the rest), and the iPad
+  the full lane runs every UI test, its iPhone tests split over three jobs
+  (`FULL_LANE_SECOND_JOB` and `FULL_LANE_LESSONS_JOB` name two jobs'
+  classes, run at once, decisions 604 and 754; the build job runs the
+  rest, MapInteractionTests among them), and the iPad
   tutorial tests (the
   missing-button proof nightly and on request) on `main` once a night
   (`ios-full-lane.yml`, 02:17 Taiwan time, unless `main`'s newest commit

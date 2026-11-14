@@ -359,8 +359,18 @@ final class TutorialUITests: XCTestCase {
         if let label {
             XCTAssertTrue(lessons.label.contains(label), "Lessons reads \(lessons.label)", file: file, line: line)
         }
+        lessons.waitUntilSettled()
         lessons.tap()
         let first = app.buttons["lesson.1.start"]
+        // A touch on Lessons just after launch can go by with no picker
+        // opening: on the iPad (#2199's run 43588692569, its first attempt)
+        // the touch was sent at 33.2 s and the start screen stayed for
+        // 10 s; the re-run passed. As `TutorialJourneyUITests` does, touch
+        // it once more, settled, when the picker has not opened.
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
         XCTAssertTrue(first.appears(within: 10), "No lesson 1 in the list", file: file, line: line)
         XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start cannot be tapped", file: file, line: line)
         first.tap()

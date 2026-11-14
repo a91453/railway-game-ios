@@ -633,7 +633,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         riders.tap()
         settle()
         let section = app.descendants(matching: .any)["station.airport.1"].firstMatch
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        // Decision 746: the panel covers the whole screen (`stationPanelList`).
+        let list = app.stationPanelList()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list, drags: 14), "The station's panel has its airport")
         settle()
         keep("airport-station-panel", app)
@@ -2226,7 +2227,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle()
         // The panel's own list, so the row comes clear of the panel's
         // bottom edge, not only of the screen's.
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        // Decision 746: the panel covers the whole screen (`stationPanelList`).
+        let list = app.stationPanelList()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(materials, in: list), "The materials row with its next step comes into view")
         settle()
         keep("materials-next-step", app)
@@ -2268,7 +2270,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         riders.tap()
         settle()
         let section = app.descendants(matching: .any)["station.expansion.current"].firstMatch
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        // Decision 746: the panel covers the whole screen (`stationPanelList`).
+        let list = app.stationPanelList()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list), "The station size section comes into view")
         settle()
         keep("station-expansion", app)
@@ -2367,11 +2370,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         var list: XCUIElement?
         for _ in 0..<3 where list == nil {
             map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
-            let opened = Date().addingTimeInterval(5)
-            repeat {
-                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
-                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
-            } while list == nil && Date() < opened
+            // Decision 746: the panel covers the whole screen (`stationPanelList`).
+            list = app.stationPanelList(within: 5)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
         let jump = app.buttons["station.jump"].firstMatch
@@ -2420,11 +2420,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         var list: XCUIElement?
         for _ in 0..<3 where list == nil {
             map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
-            let opened = Date().addingTimeInterval(5)
-            repeat {
-                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
-                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
-            } while list == nil && Date() < opened
+            // Decision 746: the panel covers the whole screen (`stationPanelList`).
+            list = app.stationPanelList(within: 5)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
         let jump = app.buttons["station.jump"].firstMatch
@@ -3650,7 +3647,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let ankeng = app.buttons["line.acquire.K"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(ankeng, in: list), "The Ankeng LRT is for sale")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(ankeng, in: list, below: app.linesListTop(under: bar)), "The Ankeng LRT is for sale")
         settle(seconds: 1)
         keep("ankeng-for-sale", app)
         ankeng.tap()
@@ -3876,7 +3873,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         tapButton("station.jump.area", in: app)
         settle()
         let next = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "臺鐵 下一班")).firstMatch
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        // Decision 746: the panel covers the whole screen (`stationPanelList`).
+        let list = app.stationPanelList()
         let shown = app.dragUntilWhollyOnScreen(next, in: list)
         settle()
         keep("real-station-next-trains", app)
@@ -3965,7 +3963,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A line's report comes into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list, below: app.linesListTop(under: bar)), "A line's report comes into view")
         settle(seconds: 2)
         keep("line-report", app)
 
@@ -4229,7 +4227,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A passenger line's row comes into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list, below: app.linesListTop(under: bar)), "A passenger line's row comes into view")
         report.tap()
         // Decision 481: the charts are on the line's own page.
         let linePage = app.collectionViews["line.detail"].firstMatch
@@ -4358,7 +4356,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         tapButton("station.jump", in: app)
         tapButton("station.jump.riders", in: app)
         settle()
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        // Decision 746: the panel covers the whole screen (`stationPanelList`).
+        let list = app.stationPanelList()
         let entries = app.descendants(matching: .any)["station.flow.entries"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(entries, in: list), "The trips by hour come into view")
         settle()
@@ -4378,7 +4377,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let linesList = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: linesList), "A line's row comes into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: linesList, below: app.linesListTop(under: bar)), "A line's row comes into view")
         settle()
         keep("chart-line-rows", app)
 
@@ -4431,7 +4430,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
-        if app.dragUntilWhollyOnScreen(report, in: list) {
+        if app.dragUntilWhollyOnScreen(report, in: list, below: app.linesListTop(under: bar)) {
             // Decision 481: a row opens the line's own page.
             report.tap()
             let page = app.collectionViews["line.detail"]
@@ -4450,11 +4449,15 @@ final class WebsiteScreenshotTests: XCTestCase {
                 }
             }
         }
-        let done = bar.buttons["完成"]
+        // Decision 745: the line's page covers the whole screen under a bar
+        // named for the line, not 路線; Done on whichever bar is up closes
+        // the panel, or the page stays over the build dock.
+        let done = app.navigationBars.firstMatch.buttons["完成"]
         if done.exists, done.isHittable {
             done.tap()
             settle()
         }
+        XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "The line's page stayed")
 
         // The fleet, as the freight test opens it.
         app.buttons["dock.build"].tap()
@@ -4759,7 +4762,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         let area = list.frame
         let rows = CGRect(x: area.minX, y: max(area.minY, top) + 8, width: area.width, height: area.maxY - 16 - max(area.minY, top))
         guard rows.height > 40 else { return }
-        let x = ((column ?? area.minX + 8) - app.frame.minX) / app.frame.width
+        // Clear of the screen's edges, where a list over the whole screen
+        // begins (`clearOfScreenEdges`, decisions 745 and 746).
+        let x = ((column ?? app.clearOfScreenEdges(area.minX + 8)) - app.frame.minX) / app.frame.width
         func point(_ y: CGFloat) -> XCUICoordinate {
             app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: (rows.minY + rows.height * y - app.frame.minY) / app.frame.height))
         }
