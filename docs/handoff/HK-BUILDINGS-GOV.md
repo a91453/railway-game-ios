@@ -7,9 +7,12 @@
 ## UNVERIFIED
 
 - 雲端沒有 Swift；Mac 上跑過 `HongKongBuildingsTests` 以外的相關測試（綠），`HongKongBuildingsTests` 改數字之後的那一次交給 CI。
-- 實機（iPhone）沒有看過；截圖只在 Mac 的模擬器。
+- 實機（iPhone）沒有看過；截圖只在 Mac 的模擬器（railway-assets-private #107）。
 
 ## 留下的
+
+- 環球貿易廣場、國際金融中心二期蓋在車站正上方，買下機場快綫後被 `clearOf` 清掉（推測，決策 729 §5）：要地標模型或新決策。
+- 青馬大橋畫成一般多墩高架、橋面上下起伏，沒有塔與纜（換之前就這樣，SHOTS-2173 的 5d）。
 
 - 地標模型（HK-3DVIS 的四步）：做好時把那幾棟的 `BuildingCSUID` 加進工具的 `LANDMARKS`，重跑第 7 步。
 - 卡其色方塊與藍色碎片（另一個工作串在修）。
