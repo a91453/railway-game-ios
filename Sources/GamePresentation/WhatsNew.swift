@@ -70,6 +70,22 @@ public enum WhatsNew {
                     english: "When trains wait at both ends of a single track, the one that waited first goes first, and the other says which train it is letting go first.",
                     chinese: "單線兩端都有列車在等時，先等的先走；讓路的列車會寫「讓某某先走」。"
                 ),
+                Line(
+                    english: "Hong Kong's map has its hills and sea: the 2D map shades the hills, and on the 3D map the ground rises and falls as it really does.",
+                    chinese: "香港地圖有了山和海：2D 地圖看得到山影，3D 地圖的地面照真實的高低起伏。"
+                ),
+                Line(
+                    english: "Your company's land now rises with the city round it, and what you build lifts the land nearby: shops lift homes, offices lift shops.",
+                    chinese: "公司建物的地會跟著周圍漲；你蓋的東西也帶動附近地價，例如商店讓住宅漲、辦公讓商店漲。"
+                ),
+                Line(
+                    english: "Adding a train to a line also shows about what that train would make a day.",
+                    chinese: "加開一列車時，也看得到這列車大約一天賺多少。"
+                ),
+                Line(
+                    english: "A city whose sights your railway brings many visitors to can be titled mostly tourism.",
+                    chinese: "鐵道載很多遊客去景點的城市，稱號會是「以觀光為主」。"
+                ),
             ],
             fixes: [
                 Line(
@@ -87,6 +103,14 @@ public enum WhatsNew {
                 Line(
                     english: "High speeds run smoother on a network with many trains.",
                     chinese: "列車多的路網，高倍速時比較順。"
+                ),
+                Line(
+                    english: "On double track, a train takes a free platform as it leaves, and no longer flashes deadlocked on every run.",
+                    chinese: "複線上的列車發車時就換到空的月台，不再每趟閃一下「互相卡住」。"
+                ),
+                Line(
+                    english: "The 3D map no longer stalls for a moment at midnight, when the day's flights change.",
+                    chinese: "3D 地圖過午夜換日時，不再因為換當天航班卡一下。"
                 ),
             ]
         ),
