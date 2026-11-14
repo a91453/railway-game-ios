@@ -811,6 +811,46 @@
           "description": "Spend $5,000,000 on trains"
         }
       ]
+    },
+    {
+      "vendorIdentifier": "achievement.yearEndAllA",
+      "referenceName": "Straight A's",
+      "points": 20,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.yearEndAllA.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "年終考核全 A",
+          "description": "年終考核每一項都是 A"
+        },
+        {
+          "locale": "en-US",
+          "name": "Straight A's",
+          "description": "A on every count of a year-end appraisal"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.profitGrowth3",
+      "referenceName": "Three Good Years",
+      "points": 20,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.profitGrowth3.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "連三年淨利成長",
+          "description": "連續三年淨利成長"
+        },
+        {
+          "locale": "en-US",
+          "name": "Three Good Years",
+          "description": "Net profit up three years in a row"
+        }
+      ]
     }
   ]
 }

@@ -77,6 +77,12 @@ public struct AchievementFacts: Hashable, Sendable {
     /// Decision 509: the cells the player zoned for a use that a city
     /// building of that use stands on.
     public var zonedCellsBuilt = 0
+    /// Decision 751: the newest closed year, while it is still last
+    /// year, graded A on every count (``YearEndAppraisal/isAllA``).
+    public var yearEndAllA = false
+    /// Decision 751: the closed years in a row, up to the newest, whose
+    /// net profit after tax grew on the year before.
+    public var profitGrowthYears = 0
 
     public init(figures: CompanyFigures = CompanyFigures()) {
         self.figures = figures
@@ -145,6 +151,15 @@ public struct AchievementFacts: Hashable, Sendable {
         zonedCellsBuilt = world.zones.cells.count { cell in
             guard let use = cell.zone.use else { return false }
             return world.zonedUseBuilt(row: cell.row, column: cell.column) == use
+        }
+        let years = world.accounts.years
+        if let last = years.last, last.year == today / FinancePeriod.year.days - 1,
+           let appraisal = YearEndAppraisal(latestOf: world) {
+            yearEndAllA = appraisal.isAllA
+        }
+        for (later, earlier) in zip(years.reversed(), years.reversed().dropFirst()) {
+            guard later.year == earlier.year + 1, later.afterTaxProfit > earlier.afterTaxProfit else { break }
+            profitGrowthYears += 1
         }
         if let state = world.scenario, case .completed(_, let rating)? = state.outcome {
             completedScenario = state.scenario.id
@@ -265,7 +280,7 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         return (facts.hasTourism || !needsTourism) && (facts.hasRollingStockEconomics || !needsRollingStockEconomics)
     }
 
-    /// The 39 achievements, in the order the list shows them.
+    /// The 41 achievements, in the order the list shows them.
     public static let all: [Achievement] = [
         // The reference's `first`, `rider5`, `rider15`: rides followed,
         // here riders in a day.
@@ -399,6 +414,13 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         count("fleetInvestment", need: fleetInvestment.amount,
               ("Rolling Stock Investor", "Spend \(fleetInvestment.wholeText) on trains", "What the fleet cost, conversions included; selling a train takes it off."),
               ("車隊投資", "車隊的購置成本達 \(fleetInvestment.wholeText)", "列車與車廂的購置與改裝成本；賣掉的列車不算。")) { $0.rollingStockCost.amount },
+        // Decision 751: the year-end appraisal.
+        flag("yearEndAllA",
+             ("Straight A's", "A on every count of a year-end appraisal", "Grow revenue and riders by a tenth on the year before, make a profit and keep debt under 30% of assets."),
+             ("年終考核全 A", "年終考核每一項都是 A", "營收與運量比前一年多一成以上、有賺錢、負債不到資產的三成。")) { $0.yearEndAllA },
+        count("profitGrowth3", need: 3,
+              ("Three Good Years", "Net profit up three years in a row", "Each closed year's profit after tax above the year before's."),
+              ("連三年淨利成長", "連續三年淨利成長", "每一年結算的稅後淨利都比前一年多。")) { Int64($0.profitGrowthYears) },
     ]
 
     public static func named(_ id: String) -> Achievement? {

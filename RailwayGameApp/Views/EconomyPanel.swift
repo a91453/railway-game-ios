@@ -747,8 +747,10 @@ struct EconomyPanel: View {
             }
             ForEach(years.reversed(), id: \.year) { year in
                 NavigationLink {
-                    YearEndReport(statement: year, previous: years.last { $0.year == year.year - 1 }, language: session.language,
-                                  unlimitedFunds: session.world.economy.unlimitedFunds)
+                    let previous = years.last { $0.year == year.year - 1 }
+                    YearEndReport(statement: year, previous: previous, language: session.language,
+                                  unlimitedFunds: session.world.economy.unlimitedFunds,
+                                  appraisal: YearEndAppraisal(statement: year, previous: previous, world: session.world))
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: year.titleText(in: session.language))
@@ -760,6 +762,7 @@ struct EconomyPanel: View {
                     .font(.footnote)
                     .monospacedDigit()
                 }
+                .accessibilityIdentifier("economy.closedYear.\(year.year)")
             }
         } header: {
             Text(verbatim: session.language.text("Year-end closings", "年度決算"))

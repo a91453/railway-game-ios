@@ -1,7 +1,7 @@
 # Game Center 設定步驟（給作者）
 
 > 讀者：作者。照著按就能完成；不需要密碼以外的任何資料交給 session，session 也不會問。
-> 背景：決策 396（`docs/decisions/396.md`）。遊戲把每週挑戰的完成天數送上 Game Center 的每週排行榜，39 個成就同步成 Game Center 的成就。
+> 背景：決策 396（`docs/decisions/396.md`）。遊戲把每週挑戰的完成天數送上 Game Center 的每週排行榜，41 個成就同步成 Game Center 的成就。
 
 ## 順序（重要）
 
@@ -26,9 +26,9 @@
 2. 上方分頁選 **Features（功能）**（有的帳號叫 **Services（服務）**），左邊選 **Game Center**。
 3. 第一次會問要不要用 Game Center：選 **Enable for Single Game（只用在這個遊戲）**。
 
-## 第 3、4 步：用 GitHub 一次建好排行榜和 39 個成就
+## 第 3、4 步：用 GitHub 一次建好排行榜和 41 個成就
 
-不用一個一個在 App Store Connect 填。GitHub 上的「Game Center setup」會用發 TestFlight 那把 App Store Connect API key，照下面的表建好每週排行榜（含兩種語言）和 39 個成就（含兩種語言與圖）。
+不用一個一個在 App Store Connect 填。GitHub 上的「Game Center setup」會用發 TestFlight 那把 App Store Connect API key，照下面的表建好每週排行榜（含兩種語言）和 41 個成就（含兩種語言與圖）。
 
 ### 先確認 key 的權限（只要看一次）
 
@@ -113,7 +113,7 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 
 **之後挑戰的目標改了**（程式裡的 `ChallengeRecords.rulesVersion` 換版本）：要另建一個新的排行榜（ID 例如 `weekly.days.v3`）。session 會在那個 PR 把它加進 `game-center.json`，作者再跑一次這個 workflow。舊的不用刪。
 
-**39 個成就**：每一個都是 **Hidden** No（遊戲裡的成就清單本來就全部看得到）、**Achievable More Than Once** No；點數共 810 點，Game Center 上限 1,000，留給之後的成就。兩種語言的 **Pre-earned Description** 與 **Earned Description** 都是表裡的說明，**Image** 是 `docs/game-center/achievements/<ID>.png`。
+**41 個成就**：每一個都是 **Hidden** No（遊戲裡的成就清單本來就全部看得到）、**Achievable More Than Once** No；點數共 850 點，Game Center 上限 1,000，留給之後的成就。兩種語言的 **Pre-earned Description** 與 **Earned Description** 都是表裡的說明，**Image** 是 `docs/game-center/achievements/<ID>.png`。
 
 <!-- achievements: generated from docs/game-center/game-center.json by tools/game-center-setup/game_center_setup.py --write-doc; do not edit by hand -->
 | # | ID | 點數 | 隱藏 | 中文名稱 | 中文說明 | 英文名稱 | 英文說明 |
@@ -157,6 +157,8 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 | 37 | `achievement.mixedFleet` | 10 | 否 | 車種齊全 | 車隊有三種以上車種 | Mixed Fleet | Trains of three types |
 | 38 | `achievement.longTrain` | 10 | 否 | 長編組 | 一列 10 節以上的列車 | Long Train | A train of 10 cars or more |
 | 39 | `achievement.fleetInvestment` | 10 | 否 | 車隊投資 | 車隊的購置成本達 $5,000,000 | Rolling Stock Investor | Spend $5,000,000 on trains |
+| 40 | `achievement.yearEndAllA` | 20 | 否 | 年終考核全 A | 年終考核每一項都是 A | Straight A's | A on every count of a year-end appraisal |
+| 41 | `achievement.profitGrowth3` | 20 | 否 | 連三年淨利成長 | 連續三年淨利成長 | Three Good Years | Net profit up three years in a row |
 <!-- end achievements -->
 
 ## 第 5 步：送審的版本加上 Game Center
@@ -165,7 +167,7 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 
 1. App Store Connect → 「Along the Line」→ **App Store** 分頁 → 要送審的版本。
 2. 往下捲到 **Game Center**，打勾。
-3. 按 **＋** 把 `weekly.days.v2` 和 39 個成就都加進去，**Done**，再 **Save**。
+3. 按 **＋** 把 `weekly.days.v2` 和 41 個成就都加進去，**Done**，再 **Save**。
 
 ## 隱私標示
 
