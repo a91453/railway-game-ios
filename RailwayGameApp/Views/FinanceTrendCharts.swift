@@ -208,6 +208,12 @@ struct LineOperatingCharts: View {
     let report: LineReport
     let language: DisplayLanguage
     @State private var selected: Int64?
+    /// How wide the charts' row is, for side by side or one under
+    /// another (decision 745).
+    @State private var width: CGFloat = 0
+    /// Three charts side by side from this width on, each some 210
+    /// points: a line's page over a phone held sideways.
+    private static let sideBySideWidth: CGFloat = 660
     /// Not a literal: a literal here would be a string to translate.
     private static let dayAxis = "Day"
     private static let seatsAxis = "Seats"
@@ -221,20 +227,24 @@ struct LineOperatingCharts: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityIdentifier("line.operations.summary")
             if !report.days.isEmpty {
-                Text(verbatim: report.ridersChart(in: language).title)
-                    .font(.caption.weight(.semibold))
-                    .accessibilityAddTraits(.isHeader)
-                ridersChart
-                Text(verbatim: report.profitChart(in: language).title)
-                    .font(.caption.weight(.semibold))
-                    .accessibilityAddTraits(.isHeader)
-                profitChart
-                Text(verbatim: report.peakLoadChart(in: language).title)
-                    .font(.caption.weight(.semibold))
-                    .accessibilityAddTraits(.isHeader)
-                peakLoadChart
+                // Decision 745: on a line's page over the whole screen the
+                // three charts stand side by side, not one under another
+                // (a player's report, 2026-11-14: the page took long
+                // scrolling).
+                if width >= Self.sideBySideWidth {
+                    HStack(alignment: .top, spacing: 16) {
+                        titled(report.ridersChart(in: language).title) { ridersChart }
+                        titled(report.profitChart(in: language).title) { profitChart }
+                        titled(report.peakLoadChart(in: language).title) { peakLoadChart }
+                    }
+                } else {
+                    titled(report.ridersChart(in: language).title) { ridersChart }
+                    titled(report.profitChart(in: language).title) { profitChart }
+                    titled(report.peakLoadChart(in: language).title) { peakLoadChart }
+                }
             }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("line.operations")
     }
@@ -242,6 +252,17 @@ struct LineOperatingCharts: View {
     private var selectedDay: LineOperatingDay? {
         guard let selected else { return nil }
         return report.days.first { $0.day == selected }
+    }
+
+    /// A chart under its title.
+    private func titled(_ title: String, @ViewBuilder chart: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(verbatim: title)
+                .font(.caption.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            chart()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func dollars(_ money: Money) -> Double {

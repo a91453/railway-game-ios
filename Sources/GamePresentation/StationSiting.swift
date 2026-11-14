@@ -100,3 +100,36 @@ extension GameSession {
         )
     }
 }
+
+extension GameSession {
+    /// The built track's centre lines, each edge's sampled points, of the
+    /// edges that come within `radius` world units of `point`: what the
+    /// map's ✓ pill keeps off while a station's place is chosen (decision
+    /// 744), so the player still sees the line the station goes on. An
+    /// edge whose ends are too far for any of its points to be near is
+    /// skipped, as ``Map3DHandoff`` skips it.
+    public func trackLines(near point: PlanPoint, within radius: Double) -> [[PlanPoint]] {
+        var ends: [TrackNodeID: (x: Double, y: Double)] = [:]
+        for node in world.network.nodes {
+            ends[node.id] = (Double(node.position.x), Double(node.position.y))
+        }
+        func distance(to end: TrackNodeID) -> Double? {
+            ends[end].map { end in
+                let dx = end.x - Double(point.x), dy = end.y - Double(point.y)
+                return (dx * dx + dy * dy).squareRoot()
+            }
+        }
+        var lines: [[PlanPoint]] = []
+        for edge in world.network.edges {
+            // A point along the edge is at least (|QA| + |QB| − length) / 2
+            // from the point Q asked of.
+            if let a = distance(to: edge.from), let b = distance(to: edge.to),
+               (a + b - Double(edge.length)) / 2 > radius {
+                continue
+            }
+            guard let geometry = world.trackGeometry(of: edge.id) else { continue }
+            lines.append(geometry.points.map { PlanPoint(x: $0.x, y: $0.y) })
+        }
+        return lines
+    }
+}

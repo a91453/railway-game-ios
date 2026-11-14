@@ -313,15 +313,18 @@ final class HongKongMapTests: XCTestCase {
     /// the ends at once each waited for the other's platform (Chien,
     /// 2026-11-14: 「迪士尼綫會死結」, at 6:16 and 6:21 of the first day);
     /// each end has a second track (`tools/real-timetables/extract_metro_runs.py`).
+    /// The East Rail Line's branch to Lok Ma Chau stood two trains at each
+    /// end of two tracks, and its first two trains stopped the same way at
+    /// Sheung Shui (Chien, 2026-11-14); each of its ends has a third track.
     func testTheShuttlesDoNotDeadlock() throws {
-        for id in ["hkmtr:DRL", "hkmtr:TKL_LHP"] {
+        for (id, tracks) in [("hkmtr:DRL", 2), ("hkmtr:TKL_LHP", 2), ("hkmtr:EAL_LMC", 3)] {
             let session = try hongKong()
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
             XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), "\(id): \(session.message?.text ?? "")")
             let bought = try XCTUnwrap(session.world.acquisition(of: id))
             let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)))
             for end in [ran.stops.first, ran.stops.last] {
-                XCTAssertEqual(session.world.network.platforms(of: try XCTUnwrap(end)).count, 2, id)
+                XCTAssertEqual(session.world.network.platforms(of: try XCTUnwrap(end)).count, tracks, id)
             }
             var played = session.world
             for _ in 0..<(9 * 60) {

@@ -42,6 +42,28 @@ extension GameSession {
         return world.line(id: id)
     }
 
+    /// Decision 745 (the owner, 2026-11-14: 「收購或創建的路線詳情 全螢幕，
+    /// 然後需配合地圖的 在側邊」): whether a line's own page covers the
+    /// whole screen, as the company's figures do (decision 717), rather
+    /// than standing beside the map. It does while a line is opened
+    /// (``openedLine``); the list, a new line picked on the map and the
+    /// tutorial, whose card points at the map, stay beside it. Reads
+    /// none of the world, so the screen's frame can ask it every tick
+    /// (decision 367); an opened line the world loses is closed by
+    /// ``openedLineID``'s own check.
+    public var linePageCoversScreen: Bool {
+        openedLineID != nil && !isPickingLineStops && lineDraft.isEmpty && tutorial == nil
+    }
+
+    /// Decision 746 (the owner, 2026-11-14, as decision 745): whether the
+    /// station panel covers the whole screen rather than standing beside
+    /// the map. It does but in the tutorial, whose card and steps point at
+    /// the panel and the map together; choosing a station on the map is
+    /// the details card's, which stays beside it.
+    public var stationPanelCoversScreen: Bool {
+        tutorial == nil
+    }
+
     /// Selects line `id` and opens its own page in the lines panel: a row
     /// of the list, the map, a station's chips, a report. Never changes the
     /// world; an ID the world does not have is ignored.

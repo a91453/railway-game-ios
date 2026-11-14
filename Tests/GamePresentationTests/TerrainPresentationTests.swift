@@ -155,8 +155,8 @@ final class TerrainPresentationTests: XCTestCase {
 
     /// The ends' ground 3.75 m apart, more than the 2 m the track may stand
     /// off it level: the stretch climbs as before (11.25 m to 15 m, 720 to
-    /// 960), eased at both ends. Decision 190: the platform tool says the
-    /// grade and that ✓ levels it; ✓ lays the edge again as three, the
+    /// 960), eased at both ends. Decision 190: ✓ levels it (decision 747:
+    /// without a word of the grade); ✓ lays the edge again as three, the
     /// middle one level under the platform, for the new edges' price, and
     /// one undo takes it all back.
     func testAPlatformOnAGradeLevelsItsStretch() throws {
@@ -164,7 +164,7 @@ final class TerrainPresentationTests: XCTestCase {
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertEqual([preview.startHeight, preview.endHeight], [720, 960])
         XCTAssertEqual(preview.profile, TrackProfile(startTransition: 4_096, endTransition: 4_096))
-        XCTAssertTrue(preview.text(in: .english).hasSuffix(" · on a grade: a platform here is levelled first"), preview.text(in: .english))
+        XCTAssertFalse(preview.text(in: .english).contains("grade"), preview.text(in: .english))
         session.buildNetworkTrack()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         let built = session.world
@@ -179,16 +179,13 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(levelling.length, stretch.end - stretch.start)
         let cost = try XCTUnwrap(levelling.cost)
         let metres = NetworkBuilding.lengthText(levelling.length, in: .english)
-        XCTAssertTrue(
-            session.networkDraftText().hasSuffix(" · climbs 20‰: ✓ levels these \(metres) (relaying the track \(cost.moneyText))"),
-            session.networkDraftText()
-        )
+        XCTAssertEqual(session.networkDraftText(), "\(metres) platform here", "decision 747: the grade is not said")
+        XCTAssertNil(levelling.caption(in: .english))
         let height = try XCTUnwrap(built.trackGeometry(of: stretch.edge)?.height(at: (stretch.start + stretch.end) / 2))
 
         session.addNetworkPlatform()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
-        XCTAssertTrue(session.message?.text.contains(" Levelled \(metres) of track for it, for \(cost.moneyText).") == true,
-                      session.message?.text ?? "")
+        XCTAssertFalse(session.message?.text.contains("Levelled") == true, session.message?.text ?? "")
         let world = session.world
         XCTAssertNil(world.network.edge(stretch.edge), "the old edge is gone")
         XCTAssertEqual(world.network.edges.count, 3)
@@ -408,8 +405,9 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(tool.world, built, "one undo takes it all back")
     }
 
-    /// The same, in Chinese.
-    func testThePlatformToolSaysItLevelsInChinese() throws {
+    /// The same, in Chinese: the station tool says nothing of the grade
+    /// it levels (decision 747).
+    func testThePlatformToolLevelsWithoutAWordInChinese() throws {
         let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
         session.buildNetworkTrack()
         let chinese = GameSession(world: session.world, language: .traditionalChinese)
@@ -417,16 +415,33 @@ final class TerrainPresentationTests: XCTestCase {
         chinese.setNetworkMode(.platform)
         chinese.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
         let levelling = try XCTUnwrap(chinese.networkPlatformLevelling)
-        let cost = try XCTUnwrap(levelling.cost)
+        XCTAssertNotNil(levelling.cost)
         let metres = NetworkBuilding.lengthText(levelling.length, in: .traditionalChinese)
-        XCTAssertTrue(
-            chinese.networkDraftText().hasSuffix(" · 坡度 20‰：按 ✓ 會把這 \(metres)整平（重鋪這段軌道 \(cost.moneyText)）"),
-            chinese.networkDraftText()
-        )
-        XCTAssertEqual(levelling.caption(in: .traditionalChinese), "坡度 20‰：整平 \(metres)")
+        XCTAssertEqual(chinese.networkDraftText(), "在這裡設 \(metres) 的月台")
+        XCTAssertNil(levelling.caption(in: .traditionalChinese))
         chinese.addNetworkPlatform()
         XCTAssertEqual(chinese.message?.kind, .success, chinese.message?.text ?? "")
-        XCTAssertTrue(chinese.message?.text.contains("已為月台整平 \(metres) 軌道，花費 \(cost.moneyText)。") == true, chinese.message?.text ?? "")
+        XCTAssertFalse(chinese.message?.text.contains("坡度") == true, chinese.message?.text ?? "")
+        XCTAssertFalse(chinese.message?.text.contains("整平") == true, chinese.message?.text ?? "")
+    }
+
+    /// Decision 747 (the author, 2026-11-14: tell the player to lay it
+    /// longer, plainly): track on a grade no longer than its platform
+    /// cannot be levelled, and the tool says so in one sentence, without
+    /// the grade, and the pill says what to do.
+    func testTrackTooShortToLevelSaysLayItLonger() throws {
+        let session = preview(try world(columns: [10, 13]), from: 1_024, to: 5_120)
+        session.buildNetworkTrack()
+        let chinese = GameSession(world: session.world, language: .traditionalChinese)
+        chinese.selectTool(.network)
+        chinese.setNetworkMode(.platform)
+        chinese.tapNetwork(at: PlanPoint(x: 3_072, y: Self.row), reach: 16)
+        let levelling = try XCTUnwrap(chinese.networkPlatformLevelling)
+        XCTAssertNil(levelling.cost)
+        XCTAssertEqual(levelling.problem, "這段軌道太短，放不下月台：請把這段軌道鋪長一點再設站。")
+        XCTAssertEqual(levelling.caption(in: .traditionalChinese), "軌道太短：請鋪長一點")
+        XCTAssertTrue(chinese.networkDraftText().hasSuffix(" · 這段軌道太短，放不下月台：請把這段軌道鋪長一點再設站。"), chinese.networkDraftText())
+        XCTAssertFalse(chinese.networkDraftText().contains("‰"), chinese.networkDraftText())
     }
 
     /// A curve on the grade is cut by de Casteljau's rule: three curves
@@ -541,10 +556,10 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
             No platform built: the Network panel says what to do.
             """))
-        XCTAssertTrue(placed.networkDraftText().hasSuffix("""
-            climbs 20‰ and cannot be levelled: \(reason) Or lay a short stretch \
-            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
-            """), placed.networkDraftText())
+        // Decision 747: what to do, without the grade.
+        XCTAssertTrue(placed.networkDraftText().hasSuffix(" · \(reason)"), placed.networkDraftText())
+        XCTAssertFalse(placed.networkDraftText().contains("‰"), placed.networkDraftText())
+        XCTAssertEqual(levelling.caption(in: .english), "No platform here: see the Network panel")
         XCTAssertEqual(placed.world, world)
     }
 

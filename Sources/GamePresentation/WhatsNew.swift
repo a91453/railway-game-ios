@@ -30,6 +30,86 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 131.
+        Entry(
+            id: "2026-11-14-131",
+            items: [
+                Line(
+                    english: "In a new game on realistic rules, passengers who wait too long leave; the station panel shows how many did.",
+                    chinese: "寫實規則的新遊戲：乘客等太久會離開，車站面板寫著有多少人等太久走了。"
+                ),
+                Line(
+                    english: "In a new game on realistic rules, taxes are settled once a year as in Taiwan, with a reminder a month before they are due.",
+                    chinese: "寫實規則的新遊戲：稅照台灣的方式一年結算，繳稅前一個月站長會提醒。"
+                ),
+                Line(
+                    english: "In a new game on realistic rules, when two trains want the same platform, the one that waited first goes in first.",
+                    chinese: "寫實規則的新遊戲：兩列車要進同一座月台時，先等的先進。"
+                ),
+                Line(
+                    english: "Crowds for concerts and games come before the start and after the end, and the news says when the event ends.",
+                    chinese: "演唱會、球賽的人潮集中在開場前與散場後；消息卡寫著散場時間。"
+                ),
+                Line(
+                    english: "A line's page and a station's page fill the screen; the list of lines stays beside the map.",
+                    chinese: "路線詳情與車站詳情改成全螢幕；路線清單照舊在地圖旁。"
+                ),
+                Line(
+                    english: "On the Hong Kong map, traffic keeps left, with Hong Kong's lights, double-decker buses, minibuses and taxis.",
+                    chinese: "香港地圖的街上車靠左，有香港的紅綠燈、雙層巴士、小巴與計程車。"
+                ),
+                Line(
+                    english: "Hong Kong International Airport is on the 3D map, and Hong Kong's buildings have their surveyed shapes and heights.",
+                    chinese: "香港國際機場上了 3D 地圖；香港的建物改用政府測量的外形與高度。"
+                ),
+                Line(
+                    english: "Ten of Taipei's temples, Lungshan Temple and Hsing Tian Kong among them, stand on the 3D map in their real shapes.",
+                    chinese: "臺北十座寺廟（艋舺龍山寺、行天宮等）照真實外形出現在 3D 地圖。"
+                ),
+                Line(
+                    english: "Stations that have island platforms in real life have them on the demo lines too.",
+                    chinese: "示範路線上真實是島式月台的站，現在有島式月台。"
+                ),
+                Line(
+                    english: "On the 3D map the real ground is smoothed first, so roads no longer rise and fall square by square.",
+                    chinese: "3D 地圖的實景地面先整平，道路不再一格一格起伏。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "After you buy a station, the real tracks and trains along that line make way, instead of doubling yours.",
+                    chinese: "收購車站後，真實的軌道和列車整條讓開，不再疊成兩套。"
+                ),
+                Line(
+                    english: "Hong Kong's Disneyland Resort Line, the Tseung Kwan O Line to LOHAS Park and the East Rail Line's Lok Ma Chau branch no longer jam.",
+                    chinese: "香港迪士尼綫、將軍澳綫（康城）與東鐵綫落馬洲支線不再卡死。"
+                ),
+                Line(
+                    english: "Trains no longer stop for good at a platform they cannot leave, and a stopped train says why.",
+                    chinese: "列車不再開進走不下去的月台後一直停著；停住的列車寫得出原因。"
+                ),
+                Line(
+                    english: "Placing a station levels the ground without a word when it can; when it cannot, it says what to do.",
+                    chinese: "設站時能整平就直接整平，不再說坡度；整平不了只說一句該怎麼做。"
+                ),
+                Line(
+                    english: "When you place a station the confirm box keeps clear of the line, and the build card no longer shows the price twice.",
+                    chinese: "設站時確認框讓開路線；鋪軌的施工卡不再重複金額。"
+                ),
+                Line(
+                    english: "When the list of lines is narrow, its filter and sort show as icons instead of cut-off words.",
+                    chinese: "路線清單的工具列放不下字時，篩選與排序改成圖示。"
+                ),
+                Line(
+                    english: "Long names on the build cards are no longer cut off in English.",
+                    chinese: "英文的建造卡片，長名稱不再被截斷。"
+                ),
+                Line(
+                    english: "Saving, loading and going back to the main screen are quicker, and large networks run smoother.",
+                    chinese: "存檔、讀檔、回主畫面比較快；大路網跑起來比較順。"
+                ),
+            ]
+        ),
         // 130.
         Entry(
             id: "2026-11-14-130",

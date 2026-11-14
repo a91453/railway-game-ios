@@ -89,3 +89,49 @@ extension BuildConfirmLayout {
             && y < frame.y + frame.height + gap && y + height > frame.y - gap
     }
 }
+
+extension BuildConfirmLayout {
+    /// How far each side of a track's centre line the pill keeps off,
+    /// in points: the line drawn and a little beside it.
+    public static let trackHalfWidth = 6.0
+    /// The place picked, as a square this many points a side: kept in
+    /// sight under the pill (decision 744).
+    public static let siteSize = 24.0
+
+    /// Decision 744 (a player's report, 2026-11-14: choosing where a
+    /// station goes, the pill with who lives around it and ✓ stood right
+    /// over the line, so where the station would go could not be seen):
+    /// the place picked and the track around it, `lines` in the screen's
+    /// points, as small boxes ``keepingOff(_:x:y:width:height:minX:maxX:highest:lowest:)``
+    /// keeps the pill off. Each line is cut into pieces at most `piece`
+    /// points long; the `limit` pieces nearest `anchor` within `reach` are
+    /// kept, so the search stays quick on a dense network.
+    public static func siteObstacles(
+        _ lines: [[ScreenPoint]], around anchor: ScreenPoint, reach: Double,
+        piece: Double = 48, limit: Int = 16
+    ) -> [ScreenFrame] {
+        var pieces: [(distance: Double, frame: ScreenFrame)] = []
+        for line in lines {
+            for (a, b) in zip(line, line.dropFirst()) {
+                let dx = b.x - a.x, dy = b.y - a.y
+                let length = (dx * dx + dy * dy).squareRoot()
+                let count = max(1, Int((length / piece).rounded(.up)))
+                for index in 0..<count {
+                    let t0 = Double(index) / Double(count), t1 = Double(index + 1) / Double(count)
+                    let x0 = a.x + dx * t0, y0 = a.y + dy * t0
+                    let x1 = a.x + dx * t1, y1 = a.y + dy * t1
+                    let mx = (x0 + x1) / 2 - anchor.x, my = (y0 + y1) / 2 - anchor.y
+                    let distance = (mx * mx + my * my).squareRoot()
+                    guard distance <= reach else { continue }
+                    pieces.append((distance, ScreenFrame(
+                        x: min(x0, x1) - trackHalfWidth, y: min(y0, y1) - trackHalfWidth,
+                        width: abs(x1 - x0) + 2 * trackHalfWidth, height: abs(y1 - y0) + 2 * trackHalfWidth
+                    )))
+                }
+            }
+        }
+        let site = ScreenFrame(x: anchor.x - siteSize / 2, y: anchor.y - siteSize / 2, width: siteSize, height: siteSize)
+        let nearest = pieces.sorted { $0.distance < $1.distance }.prefix(max(0, limit)).map(\.frame)
+        return [site] + nearest
+    }
+}

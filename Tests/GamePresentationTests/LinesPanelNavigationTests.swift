@@ -33,6 +33,29 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertNil(session.openedLine)
     }
 
+    /// Decision 745: a line's own page covers the whole screen; the list
+    /// and a new line picked on the map stay beside the map.
+    func testOnlyALinesOwnPageCoversTheScreen() throws {
+        let session = try session()
+        XCTAssertFalse(session.linePageCoversScreen, "the list")
+        session.openLine(Self.second)
+        XCTAssertTrue(session.linePageCoversScreen)
+        session.startPickingLineStops(announces: false)
+        XCTAssertFalse(session.linePageCoversScreen, "stations picked on the map")
+        session.closeLineDetails()
+        XCTAssertFalse(session.linePageCoversScreen)
+    }
+
+    /// Decision 746: the station panel covers the screen but in the
+    /// tutorial.
+    func testTheStationPanelCoversTheScreenButInTheTutorial() throws {
+        let session = try session()
+        XCTAssertTrue(session.stationPanelCoversScreen)
+        session.startTutorial()
+        XCTAssertNotNil(session.tutorial)
+        XCTAssertFalse(session.stationPanelCoversScreen)
+    }
+
     func testOpeningALineSelectsItAndBackKeepsItSelected() throws {
         let session = try session()
         session.openLine(Self.second)
