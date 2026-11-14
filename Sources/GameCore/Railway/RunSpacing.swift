@@ -380,7 +380,7 @@ extension GameWorld {
     /// along its track towards `train` (``trainLeavingTowards(_:along:memo:)``),
     /// and no platform is gone to that one is coming out of. `nil` when
     /// `path` may stay as it is, or no better platform is reached that way.
-    func freePlatformPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, next: (stop: Int, cycle: Int64), memo: inout PathMemo) -> TrainPath? {
+    func freePlatformPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, next: (stop: Int, cycle: Int64), among allowed: Set<TrackEdgeID>? = nil, memo: inout PathMemo) -> TrainPath? {
         guard case .onEdge(let first, let offset) = start,
               var waits = platformWaits(id, for: train, over: platformTimes(of: train, stop: next.stop, cycle: next.cycle)) else { return nil }
         let target = (path.traversals.last ?? first).edge
@@ -409,7 +409,8 @@ extension GameWorld {
             guard path.distance - reached >= Self.platformApproach else { break }
             cut = (index, traversal, reached)
         }
-        let all = berths(of: id, length: train.length)
+        // Decision 740: of a leg's list of platforms, when it names one.
+        let all = berths(of: id, length: train.length).filter { allowed?.contains($0.traversal.edge) != false }
         guard goesOn else { return freePlatformPath(path, from: start, toStation: id, for: train, among: all, waits: waits, below: own, cut: cut, memo: &memo) }
         // Decision 518: the through track is the platform the shortest way
         // from there reaches (the straight way through the station). A

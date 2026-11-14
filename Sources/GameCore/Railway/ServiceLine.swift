@@ -507,7 +507,7 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
             routes.compactMap { route in
                 guard index.indices.contains(route.from), index.indices.contains(route.to),
                       let from = index[route.from], let to = index[route.to] else { return nil }
-                return LineRoutePreference(from: from, to: to, tracks: route.tracks, platform: route.platform)
+                return route.between(from, to)
             }
         }
         var line = self

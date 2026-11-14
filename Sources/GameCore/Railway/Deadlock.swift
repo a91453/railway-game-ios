@@ -227,6 +227,10 @@ extension GameWorld {
     private func couldGo(_ request: (candidate: Train, departs: Bool), preferred: Train?, among ids: Set<TrainID>, memo: inout DirectionMemo) -> Bool {
         let candidate = request.candidate
         let blocked = blockedTrack(except: candidate.id, among: ids, holders: trackHolders(memo: &memo))
+        // Decision 740: a leg with a list of platforms only to one of them.
+        if request.departs, let listed = listedDepartures(of: candidate, memo: &memo.paths) {
+            return listed.contains { !blocked.blocks(envelopeCover(of: $0), in: network) }
+        }
         if !blocked.blocks(envelopeCover(of: candidate), in: network) { return true }
         if let preferred, !blocked.blocks(envelopeCover(of: preferred), in: network) { return true }
         guard request.departs, case .travellingToStop(let stop, _)? = candidate.execution,

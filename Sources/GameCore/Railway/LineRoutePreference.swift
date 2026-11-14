@@ -11,21 +11,58 @@ public struct LineRoutePreference: Hashable, Sendable, Codable {
     public let to: Int
     public let tracks: [TrackTraversal]
     public let platform: TrackPlatform
+    /// PLATFORM-BOOK PB-2 (decision 740): the platforms of the same station
+    /// to try after `platform`, in order, at most ``maximumAlternates``,
+    /// each once and none of them `platform`. With any, the leg's trains
+    /// stop only at `platform` or one of these (see
+    /// ``platformList``); with none, as before, at any.
+    public let alternates: [TrackPlatform]
 
-    public init(from: Int, to: Int, tracks: [TrackTraversal] = [], platform: TrackPlatform) {
+    /// Decision 740: how many platforms a leg's list may name after its
+    /// first: four in all.
+    public static let maximumAlternates = 3
+
+    public init(from: Int, to: Int, tracks: [TrackTraversal] = [], platform: TrackPlatform, alternates: [TrackPlatform] = []) {
         self.from = from
         self.to = to
         self.tracks = tracks
         self.platform = platform
+        self.alternates = alternates
+    }
+
+    /// Decision 740: `platform` and then `alternates`, when there are
+    /// alternates; `nil` for a preference of one platform.
+    public var platformList: [TrackPlatform]? {
+        alternates.isEmpty ? nil : [platform] + alternates
+    }
+
+    /// Decision 740: whether `alternates` are a list `platform`'s leg may
+    /// have: at most ``maximumAlternates``, at `platform`'s station, each
+    /// once, none of them `platform`.
+    var hasValidAlternates: Bool {
+        alternates.count <= Self.maximumAlternates
+            && alternates.allSatisfy { $0.station == platform.station && $0 != platform && $0.start >= 0 && $0.end > $0.start && ($0.edge.networkNumber ?? 0) >= 1 }
+            && Set(alternates).count == alternates.count
     }
 
     /// Decision 687: the same leg and walk, to `platform` (the one it
     /// named, lengthened).
     func onPlatform(_ platform: TrackPlatform) -> LineRoutePreference {
-        LineRoutePreference(from: from, to: to, tracks: tracks, platform: platform)
+        LineRoutePreference(from: from, to: to, tracks: tracks, platform: platform, alternates: alternates)
     }
 
-    private enum CodingKeys: String, CodingKey { case from, to, tracks, platform }
+    /// Decision 740: the same, with `old` replaced by `new` wherever it
+    /// names it, first or after (a platform lengthened, decision 687).
+    func replacing(_ old: TrackPlatform, with new: TrackPlatform) -> LineRoutePreference {
+        LineRoutePreference(from: from, to: to, tracks: tracks, platform: platform == old ? new : platform, alternates: alternates.map { $0 == old ? new : $0 })
+    }
+
+    /// The same platforms and walk for the leg from `from` to `to`.
+    func between(_ from: Int, _ to: Int) -> LineRoutePreference {
+        LineRoutePreference(from: from, to: to, tracks: tracks, platform: platform, alternates: alternates)
+    }
+
+    private enum CodingKeys: String, CodingKey { case from, to, tracks, platform, alternates }
     private struct Track: Codable {
         let edge: Int
         let forward: Bool
@@ -39,10 +76,14 @@ public struct LineRoutePreference: Hashable, Sendable, Codable {
         }
         self.init(from: try c.decode(Int.self, forKey: .from), to: try c.decode(Int.self, forKey: .to),
                   tracks: tracks.map { TrackTraversal(edge: .edge($0.edge), direction: $0.forward ? .forward : .backward) },
-                  platform: try c.decode(TrackPlatform.self, forKey: .platform))
+                  platform: try c.decode(TrackPlatform.self, forKey: .platform),
+                  alternates: c.contains(.alternates) ? try c.decode([TrackPlatform].self, forKey: .alternates) : [])
         guard from >= 0, to >= 0, from != to, platform.start >= 0, platform.end > platform.start,
               self.tracks.isEmpty || self.tracks.last?.edge == platform.edge else {
             throw DecodingError.dataCorruptedError(forKey: .platform, in: c, debugDescription: "A preference needs distinct nonnegative calls and a platform on its last track.")
+        }
+        guard hasValidAlternates else {
+            throw DecodingError.dataCorruptedError(forKey: .alternates, in: c, debugDescription: "A preference's other platforms are at most three of its platform's station, each once.")
         }
     }
 
@@ -52,6 +93,7 @@ public struct LineRoutePreference: Hashable, Sendable, Codable {
         try c.encode(to, forKey: .to)
         try c.encode(tracks.map { Track(edge: $0.edge.networkNumber!, forward: $0.direction == .forward) }, forKey: .tracks)
         try c.encode(platform, forKey: .platform)
+        if !alternates.isEmpty { try c.encode(alternates, forKey: .alternates) }
     }
 }
 
@@ -125,7 +167,7 @@ extension ServiceLine {
         return routes.compactMap { route in
             guard moved.indices.contains(route.from), moved.indices.contains(route.to),
                   let from = moved[route.from], let to = moved[route.to] else { return nil }
-            let kept = LineRoutePreference(from: from, to: to, tracks: route.tracks, platform: route.platform)
+            let kept = route.between(from, to)
             return isValidRoute(kept, order: order) ? kept : nil
         }
     }
@@ -143,6 +185,7 @@ extension ServiceLine {
             && route.tracks.allSatisfy({ ($0.edge.networkNumber ?? 0) >= 1 })
             && route.platform.start >= 0 && route.platform.end > route.platform.start
             && (route.tracks.isEmpty || route.tracks.last?.edge == route.platform.edge)
+            && route.hasValidAlternates
             && zip(order, order.dropFirst()).contains(where: { ($0 == route.from && $1 == route.to) || (isRing && $1 == route.from && $0 == route.to) })
     }
 }

@@ -820,7 +820,7 @@ public struct GameWorld: Equatable, Sendable {
         if let line = lines.first(where: { line in
             (0..<line.serviceCount).contains { service in
                 line.routes(ofService: service).contains { route in
-                    route.platform.edge == id || route.tracks.contains { $0.edge == id }
+                    route.platform.edge == id || route.tracks.contains { $0.edge == id } || route.alternates.contains { $0.edge == id }
                 }
             }
         }) {
@@ -1030,10 +1030,10 @@ public struct GameWorld: Equatable, Sendable {
 
         network.replacePlatform(at: index, with: longer)
         for line in lines.indices {
-            lines[line].routePreferences = lines[line].routePreferences.map { $0.platform == old ? $0.onPlatform(longer) : $0 }
+            lines[line].routePreferences = lines[line].routePreferences.map { $0.replacing(old, with: longer) }
             for pattern in lines[line].patterns.indices {
                 lines[line].patterns[pattern].routePreferences = lines[line].patterns[pattern].routePreferences.map {
-                    $0.platform == old ? $0.onPlatform(longer) : $0
+                    $0.replacing(old, with: longer)
                 }
             }
         }
@@ -1599,10 +1599,10 @@ public struct GameWorld: Equatable, Sendable {
         network = plan.network
         for (old, new) in plan.replaced {
             for line in lines.indices {
-                lines[line].routePreferences = lines[line].routePreferences.map { $0.platform == old ? $0.onPlatform(new) : $0 }
+                lines[line].routePreferences = lines[line].routePreferences.map { $0.replacing(old, with: new) }
                 for pattern in lines[line].patterns.indices {
                     lines[line].patterns[pattern].routePreferences = lines[line].patterns[pattern].routePreferences.map {
-                        $0.platform == old ? $0.onPlatform(new) : $0
+                        $0.replacing(old, with: new)
                     }
                 }
             }
@@ -2775,7 +2775,7 @@ public struct GameWorld: Equatable, Sendable {
         var line = lines[index]
         let last = line.stops.count - 1
         func reversed(_ routes: [LineRoutePreference]) -> [LineRoutePreference] {
-            routes.map { LineRoutePreference(from: last - $0.from, to: last - $0.to, tracks: $0.tracks, platform: $0.platform) }
+            routes.map { $0.between(last - $0.from, last - $0.to) }
         }
         line.stops.reverse()
         line.routePreferences = reversed(line.routePreferences)
@@ -4425,6 +4425,20 @@ public struct GameWorld: Equatable, Sendable {
         }
         guard serviceDue || anyTrainMayBeSentOut(memo: &memo) else { return nil }
         let stuck = deadlock(memo: &memo.directions)
+        // Decision 740: a service whose leg's list of platforms keeps it in
+        // the deadlock stops, this once, at any platform it can take.
+        for id in stuck.keys.sorted() {
+            guard let request = stuck[id], request.departs,
+                  listedDepartures(of: request.candidate, memo: &memo.directions.paths) != nil,
+                  let index = trains.firstIndex(where: { $0.id == id }),
+                  case .waitingAtStop(let stop, _)? = trains[index].execution,
+                  case .granted(let granted) = takingAnyDeparture(request.candidate, memo: &memo.directions),
+                  turnOwed(by: granted, memo: &memo.directions) == nil
+            else { continue }
+            setOff(index, as: granted)
+            serve(departureOf: id, from: stop, distance: routeLength(of: granted))
+            return id
+        }
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution != nil,
@@ -5220,7 +5234,10 @@ public struct GameWorld: Equatable, Sendable {
             guard let preferred else { return nil }
             // Decision 228: with traffic control off, its way to a free
             // platform when another train is due on the one it names.
-            return (freePlatformPath(preferred, from: start, toStation: preference.platform.station, for: train, next: next, memo: &memo) ?? preferred, nil)
+            // Decision 740: only to another platform of the leg's list,
+            // when it names one.
+            let listed = preference.platformList.map { Set($0.map(\.edge)) }
+            return (freePlatformPath(preferred, from: start, toStation: preference.platform.station, for: train, next: next, among: listed, memo: &memo) ?? preferred, nil)
         }
     }
 

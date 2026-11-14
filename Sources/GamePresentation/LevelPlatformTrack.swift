@@ -397,7 +397,7 @@ extension GameSession {
         }
         // A walk that no longer ends on its platform: left as it was.
         guard route.tracks.isEmpty || tracks.last?.edge == platform.edge else { return route }
-        return LineRoutePreference(from: route.from, to: route.to, tracks: tracks, platform: platform)
+        return LineRoutePreference(from: route.from, to: route.to, tracks: tracks, platform: platform, alternates: route.alternates)
     }
 
     /// Where ``addNetworkPlatform()`` puts a new station on the stretch
