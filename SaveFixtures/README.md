@@ -362,3 +362,9 @@ its map's airports when it opens the save).
   each day paid the platform's upkeep (rows of `"dailyStationUpkeep"`)
   (`AnnualPropertyTaxesTests.testTheVersion100SaveOwesItsHouseTax`, printed
   by CI from the same world, decision 736).
+- `v101-platform-list.json`: the line of `LineRoutePreferenceTests` under
+  traffic control, its leg to M naming the loop's platform and then M's
+  far platform on the main (a route preference's `"alternates"`), a third
+  platform at M and a train with no service on the loop, a minute on
+  (`PlatformListTests.testTheVersion101SaveKeepsItsPlatformList`, printed
+  by CI from the same world, decision 740).

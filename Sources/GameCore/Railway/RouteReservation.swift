@@ -164,7 +164,13 @@ extension GameWorld {
         }
         if case .granted(let granted) = reservingDeparture(departing, memo: &memo), !isFollowing(granted, memo: &memo) { return nil }
         let needs = routeEnvelope(of: departing).resources
-        return holder(of: needs, except: id, memo: &memo).map { ($0, needs) }
+        if let holder = holder(of: needs, except: id, memo: &memo) { return (holder, needs) }
+        // Decision 740: its default way is free, but the platforms of its
+        // list are taken: it waits for the train on the first.
+        if listedDepartures(of: departing, memo: &memo.paths) != nil, case .held(let first) = reservingDeparture(departing, memo: &memo) {
+            return (first, nil)
+        }
+        return nil
     }
 
     // MARK: - What a train needs
@@ -334,7 +340,29 @@ extension GameWorld {
 
     /// ``reservingDeparture(_:memo:)`` before the trains take turns
     /// (decision 718): whether the track lets `candidate` go.
+    ///
+    /// Decision 740: a leg with a list of platforms goes to the first of
+    /// them it can take whole or, following the trains ahead, in part, and
+    /// otherwise waits for the first (see ``takingAnyDeparture(_:memo:)``
+    /// for the way without the list).
     func takingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
+        if let listed = listedDepartures(of: candidate, memo: &memo.paths) {
+            var first: Reserving?
+            for departure in listed {
+                let taken = reserving(departure, following: true, memo: &memo)
+                if case .granted = taken { return taken }
+                if first == nil { first = taken }
+            }
+            return first!
+        }
+        return takingAnyDeparture(candidate, memo: &memo)
+    }
+
+    /// ``takingDeparture(_:memo:)`` to any platform of the station, as a
+    /// leg without a list of platforms goes (decision 740): the default
+    /// way whole or following, another platform's whole (decision 57), or
+    /// past a standing train (decisions 571, 212).
+    func takingAnyDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
         let planned = reserving(candidate, following: true, memo: &memo)
         guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution
