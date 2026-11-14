@@ -3334,19 +3334,20 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// Decision 732: Hong Kong's streets close up on its 3D map: two
-    /// signalled junctions (Nathan Road at Jordan Road, and Canton Road at
-    /// Austin Road by Kowloon Station), with the traffic on the left, the
-    /// signals at the left-hand kerb and the yellow kerb lines. As
-    /// `testHongKongMap`, the Airport Express bought and run on to the
-    /// morning; the followed train let go so the camera stays over the
-    /// junction.
-    func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30497,114.17163") }
-    func testHongKongStreetsCantonAustin() { shootHongKongStreets("canton-austin", at: "22.30395,114.16795") }
+    /// signalled junctions on Nathan Road (at Jordan Road, and at Argyle
+    /// Street in Mong Kok), with the traffic on the left, the signals at
+    /// the left-hand kerb and the yellow kerb lines. As `testHongKongMap`,
+    /// the Airport Express bought and run on to the morning; the followed
+    /// train let go so the camera stays over the junction. The
+    /// Simulator's GPU has no tier and draws nothing on the streets, so a
+    /// tier is given (as `testStreetStopDay`).
+    func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30500,114.17166") }
+    func testHongKongStreetsMongKok() { shootHongKongStreets("mong-kok", at: "22.31905,114.16935") }
 
     private func shootHongKongStreets(_ place: String, at: String) {
         executionTimeAllowance = 1_700
         let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "high",
-                                 "-screenshot-3d-view", "70,35,62", "-screenshot-3d-at", at])
+                                 "-screenshot-3d-view", "130,35,40", "-screenshot-3d-at", at, "-screenshot-device-tier", "1"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
         // The main thread is busy buying and running the morning (as
@@ -3368,11 +3369,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
         waitForPicture(timeout: 150)
         settle(seconds: 12)
-        keep("hong-kong-streets-\(place)-low", app)
-        // Then farther, the whole junction.
-        app.pinch(withScale: 0.5, velocity: -1)
+        keep("hong-kong-streets-\(place)", app)
+        // Then closer, the signals and the cars at the stop line.
+        app.pinch(withScale: 2.2, velocity: 1)
         settle(seconds: 10)
-        keep("hong-kong-streets-\(place)-high", app)
+        keep("hong-kong-streets-\(place)-close", app)
     }
 
     /// Opens the sights panel: by the status bar's own button where the
