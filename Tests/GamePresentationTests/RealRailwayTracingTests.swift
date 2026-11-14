@@ -474,6 +474,25 @@ final class RealRailwayTracingTests: XCTestCase {
         session.addNetworkPlatform()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertEqual(session.world.stations.count, 1)
+
+        // Decision 752: the longest platform at Qipan, the next station,
+        // and a platform track beside it either way, island or side: the
+        // level stretch leaves room past its ends for the turnouts.
+        let qipan = try BundledRealData.point(BundledRealData.station("唭哩岸", in: "mrt").coordinate, in: session.world)
+        session.platformCars = Train.maximumCars
+        session.stationName = "唭哩岸"
+        session.platformStationID = nil
+        session.tapNetwork(at: qipan, reach: reach * 4)
+        XCTAssertNil(session.networkPlatformGrade)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let station = try XCTUnwrap(session.world.stations.first { $0.name == "唭哩岸" })
+        let platform = try XCTUnwrap(session.world.trackPlatforms(of: station.id).first)
+        for layout in PlatformTrackLayout.allCases {
+            for side in PlatformTrackSide.allCases {
+                XCTAssertNil(session.platformTrackPreview(beside: platform, layout: layout, side: side).problem, "\(layout) \(side)")
+            }
+        }
     }
 
     /// Only on request (`METRO_STATION_REPORT=1`, some minutes): every

@@ -378,17 +378,25 @@ extension GameSession {
         guard let railways, let frame = RealWorldFrame(world: world), let first = path.points.first,
               let system = system ?? realRailwayTraces.flatMap({ traces in traces.snap(first, within: reach).map { traces.lines[$0.place.line].system } })
         else { return [] }
-        let length = Double(Int64(Train.maximumCars) * world.platformCarLength)
+        let platform = Double(Int64(Train.maximumCars) * world.platformCarLength)
+        // Decision 752: and room past each end of the longest platform for
+        // an island platform track's turnouts (``PlatformTrackLayout/reach``),
+        // so a platform track can be added there however long the platform;
+        // without it where two stations stand too near for both.
+        let turnouts = Double(2 * PlatformTrackLayout.island.reach)
         let margin = Double(NetworkBuilding.minimumSpacing)
         var spans: [ClosedRange<Double>] = []
         for station in railways.stations where station.system.id == system {
             let near = path.nearest(WorldVector(frame.worldPosition(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude)))
             guard near.away <= DemoRealLines.stationReach else { continue }
-            var low = max(0, near.along - length / 2), high = min(path.length, near.along + length / 2)
-            if low < margin { low = 0 }
-            if path.length - high < margin { high = path.length }
-            guard high - low >= margin, !spans.contains(where: { $0.overlaps(low...high) }) else { continue }
-            spans.append(low...high)
+            for length in [platform + turnouts, platform] {
+                var low = max(0, near.along - length / 2), high = min(path.length, near.along + length / 2)
+                if low < margin { low = 0 }
+                if path.length - high < margin { high = path.length }
+                guard high - low >= margin, !spans.contains(where: { $0.overlaps(low...high) }) else { continue }
+                spans.append(low...high)
+                break
+            }
         }
         return spans.sorted { $0.lowerBound < $1.lowerBound }
     }
