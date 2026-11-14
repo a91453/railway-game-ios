@@ -555,6 +555,7 @@ extension GameWorld {
         let standsThere = standing.contains(target) && trains.contains(where: { other in
             guard other.id != train.id else { return false }
             if case .travellingToStop? = other.execution { return false }
+            guard bodyMayTouch([target], of: other) else { return false }
             return bodyStretches(of: other).contains { $0.traversal.edge == target }
         })
         guard standsThere || !moving.isDisjoint(with: platformTrack(of: target, memo: &memo)) else { return nil }
@@ -664,8 +665,9 @@ extension GameWorld {
         guard let last = way.last else { return nil }
         let track = platformTrack(of: last.edge, memo: &memo)
         let into = Set(way.filter { track.contains($0.edge) })
+        let intoEdges = Set(into.map(\.edge))
         for other in trains where other.id != train.id {
-            guard case .travellingToStop? = other.execution else { continue }
+            guard case .travellingToStop? = other.execution, bodyMayTouch(intoEdges, of: other) else { continue }
             if bodyStretches(of: other).contains(where: { into.contains($0.traversal.reversed) }) { return other.id }
         }
         return nil

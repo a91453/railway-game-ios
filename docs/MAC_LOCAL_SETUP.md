@@ -7,6 +7,8 @@
 3. 用 Instruments 在實機量 fps 與記憶體；
 4. 把 iOS App 直接開在這台 Mac 上（第 8 節），改完程式不經 Simulator 與 iPhone 就看得到。
 
+哪個改動該用哪一種測法（命令列、Simulator、實機、Mac 上跑），以及模擬器資料何時清：[`TESTING_SOP.md`](TESTING_SOP.md)。
+
 標示 **UNVERIFIED** 的步驟寫文件時沒有機器可試（寫文件的 session 在 Linux），第一次照做時請對照畫面，不一致就改這份文件。
 
 ## 1. 工具版本要與 CI 一致

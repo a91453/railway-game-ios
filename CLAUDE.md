@@ -376,6 +376,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   slides in, turns or is uncovered exists before it comes to rest, so ask
   `becomesHittable(within:)` (or `waitUntilSettled`), not `isHittable`,
   right after it appears.
+- Which kind of test a change needs (command line, iOS Simulator, the
+  iPhone itself, the app on the Mac) and when to clean the Mac's Simulator
+  data: `docs/TESTING_SOP.md` (owner, 2026-11-14).
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.

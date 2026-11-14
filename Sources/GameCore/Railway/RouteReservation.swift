@@ -1544,6 +1544,15 @@ extension GameWorld {
         }
     }
 
+    /// Whether ``bodyStretches(of:)`` of `train` can have a stretch on
+    /// any of `edges`: its stretches lie only on its head's edge and its
+    /// trail edges. A check that works nothing out, before the stretches
+    /// are (PERF-DEVICE 3: asked of every train for every travelling one).
+    func bodyMayTouch(_ edges: Set<TrackEdgeID>, of train: Train) -> Bool {
+        guard case .onEdge(let traversal, _)? = train.position else { return false }
+        return edges.contains(traversal.edge) || train.trailEdges.contains { edges.contains($0) }
+    }
+
     /// The stretches a train covers from its head back to its tail: the
     /// head's edge, then its body's, nearest first. Empty for an unplaced
     /// train.
