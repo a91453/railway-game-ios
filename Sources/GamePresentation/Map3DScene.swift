@@ -474,7 +474,11 @@ public struct Map3DScene: Sendable {
         builder.detail = detail
         builder.studyRegion = studies
         builder.buildsFacades = facades
+        // Decision 732: Hong Kong's streets on its map.
+        builder.streetLife.region = Map3DStreetRegion(world: world)
         let snapshot = snapshot ?? world.railwaySnapshot()
+        // Decision 737: the ground levelled before anything is laid on it.
+        builder.levelGround(under: snapshot)
         // Decision 234: on a real-world map, the base map's water, cover
         // and roads; the ground's own water then gives way to its finer
         // shores.
@@ -1096,6 +1100,9 @@ extension Map3DScene {
         /// The ground's heights at the 64 m grid's corners, in metres, by
         /// row and column, as ``addGround()`` lays them.
         var corners: [ChunkKey: Float] = [:]
+        /// Decision 737: the levelled ground of a real-world map, once
+        /// ``levelGround(under:)`` has worked it out; the world's own before.
+        var levelling: Map3DLevelledGround?
         /// Decision 359 (續): the whole network's track, for the tunnels
         /// beside a tunnel (``addBore(_:into:)``).
         var trackCover = Map3DTrackCover()
@@ -1181,11 +1188,79 @@ extension Map3DScene {
         /// read and those not meet without a cliff; 0 m without the file.
         /// Past the world's edge, the ground at the edge.
         func ground(x: Double, y: Double) -> Float {
+            // Decision 737: on a real-world map, between the levelled
+            // corners, as GameCore's ground lies between its own.
+            guard let levelling else { return worldGround(x: x, y: y) }
+            let bounds = world.bounds, cell = Double(Land.cellLength)
+            let px = min(max(x, 0), Double(bounds.width - 1)), py = min(max(y, 0), Double(bounds.height - 1))
+            let column = Int((px / cell).rounded(.down)), row = Int((py / cell).rounded(.down))
+            let fx = Float(px / cell - Double(column)), fy = Float(py / cell - Double(row))
+            func at(_ row: Int, _ column: Int) -> Float {
+                levelling.corner(row: row, column: column, own: worldGround(x: Double(column) * cell, y: Double(row) * cell))
+            }
+            let top = at(row, column) * (1 - fx) + at(row, column + 1) * fx
+            let bottom = at(row + 1, column) * (1 - fx) + at(row + 1, column + 1) * fx
+            return top * (1 - fy) + bottom * fy
+        }
+
+        /// The world's own ground at world point (`x`, `y`), in metres, as
+        /// ``ground(x:y:)`` was before decision 737 levelled it.
+        func worldGround(x: Double, y: Double) -> Float {
             let bounds = world.bounds
             let plan = PlanPoint(x: min(max(Int64(x.rounded()), 0), bounds.width - 1),
                                  y: min(max(Int64(y.rounded()), 0), bounds.height - 1))
             if let height = world.groundHeight(at: plan) { return Float(Double(height) / Self.metre) }
             return fileGround?.height(x: Double(plan.x), y: Double(plan.y)) ?? 0
+        }
+
+        /// The world's own ground at the 64 m grid's corner (`row`,
+        /// `column`), in metres, as any region round it reads it
+        /// (decision 406): past this region's edge, the heights file's
+        /// corner there, not the edge's.
+        func steadyCorner(row: Int, column: Int) -> Float {
+            Self.steadyCorner(row: row, column: column, world: world, file: fileGround)
+        }
+
+        static func steadyCorner(row: Int, column: Int, world: GameWorld, file fileGround: FileGround?) -> Float {
+            let cell = Double(Land.cellLength), bounds = world.bounds
+            let plan = PlanPoint(x: min(max(Int64((Double(column) * cell).rounded()), 0), bounds.width - 1),
+                                 y: min(max(Int64((Double(row) * cell).rounded()), 0), bounds.height - 1))
+            if let height = world.groundHeight(at: plan) { return Float(Double(height) / Self.metre) }
+            return fileGround?.corner(row: Int((Double(plan.y) / cell).rounded(.down)), column: Int((Double(plan.x) / cell).rounded(.down))) ?? 0
+        }
+
+        /// Decision 737: levels the drawn ground of a real-world map
+        /// (``Map3DLevelledGround``), the corners of `snapshot`'s track
+        /// kept as the world's; called before anything reads the ground.
+        mutating func levelGround(under snapshot: RailwaySnapshot) {
+            guard RealWorldFrame(world: world) != nil else { return }
+            let cell = Double(Land.cellLength), bounds = world.bounds
+            // The whole network's cells, so regions built apart hold the
+            // same corners.
+            var held = Set<ChunkKey>()
+            for alignment in snapshot.edges {
+                for span in alignment.edge.sectionSpans where span.end > span.start {
+                    for coordinate in sample(alignment.geometry, from: span.start, to: span.end) {
+                        held.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
+                    }
+                }
+            }
+            // The region's corners and two cells round them, which the
+            // strips reaching past its edge read.
+            let firstColumn = Int((region.minX / cell).rounded(.down)) - 2, lastColumn = Int((region.maxX / cell).rounded(.up)) + 2
+            let firstRow = Int((region.minY / cell).rounded(.down)) - 2, lastRow = Int((region.maxY / cell).rounded(.up)) + 2
+            guard firstColumn <= lastColumn, firstRow <= lastRow else { return }
+            let world = world, file = fileGround
+            corners = [:]
+            levelling = Map3DLevelledGround(
+                held: held, rows: firstRow...lastRow, columns: firstColumn...lastColumn,
+                lastRow: Int((Double(bounds.height) / cell).rounded(.down)), lastColumn: Int((Double(bounds.width) / cell).rounded(.down)),
+                raw: { Self.steadyCorner(row: $0, column: $1, world: world, file: file) },
+                water: { row, column in
+                    world.isWater(row: row - 1, column: column - 1) || world.isWater(row: row - 1, column: column)
+                        || world.isWater(row: row, column: column - 1) || world.isWater(row: row, column: column)
+                }
+            )
         }
 
         /// Decision 406: the drawn ground (``drawnGround(x:z:)``) at scene
@@ -1196,12 +1271,10 @@ extension Map3DScene {
             let worldX = originX + Double(x) * Self.metre, worldY = originY + Double(z) * Self.metre
             let column = Int((worldX / cell).rounded(.down)), row = Int((worldY / cell).rounded(.down))
             let fx = Float(worldX / cell - Double(column)), fy = Float(worldY / cell - Double(row))
-            let bounds = world.bounds
             func corner(_ row: Int, _ column: Int) -> Float {
-                let plan = PlanPoint(x: min(max(Int64((Double(column) * cell).rounded()), 0), bounds.width - 1),
-                                     y: min(max(Int64((Double(row) * cell).rounded()), 0), bounds.height - 1))
-                if let height = world.groundHeight(at: plan) { return Float(Double(height) / Self.metre) }
-                return fileGround?.corner(row: Int((Double(plan.y) / cell).rounded(.down)), column: Int((Double(plan.x) / cell).rounded(.down))) ?? 0
+                let own = steadyCorner(row: row, column: column)
+                // Decision 737: levelled as every region levels it.
+                return levelling?.corner(row: row, column: column, own: own) ?? own
             }
             let a = corner(row, column), b = corner(row + 1, column), c = corner(row + 1, column + 1), d = corner(row, column + 1)
             return fy >= fx ? a + fx * (c - b) + fy * (b - a) : a + fx * (d - a) + fy * (c - d)
@@ -1359,7 +1432,9 @@ extension Map3DScene {
             let key = ChunkKey(column: column, row: row)
             if let known = corners[key] { return known }
             let cell = Double(Land.cellLength)
-            let height = ground(x: Double(column) * cell, y: Double(row) * cell)
+            let own = worldGround(x: Double(column) * cell, y: Double(row) * cell)
+            // Decision 737: the levelled ground on a real-world map.
+            let height = levelling?.corner(row: row, column: column, own: own) ?? own
             corners[key] = height
             return height
         }

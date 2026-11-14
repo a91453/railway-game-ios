@@ -159,7 +159,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 445: and the pedestrian signals' faces and countdowns.
         groups.append { Map3DPedestrianSignal.models() }
         // Decision 259: and the people, scooters and cars.
-        groups.append { Map3DStreetModel.allCases.map { $0.model() } }
+        // Decision 743: Hong Kong's vehicles not among them (after Hong
+        // Kong's signals, below).
+        groups.append { Map3DStreetModel.allCases.filter { !Map3DHongKongVehicles.models.contains($0) }.map { $0.model() } }
         // Decision 318: and the sets that had none.
         groups += Map3DTrainSet.all.map { set in { set.models() } }
         // Independent second steam asset (decision 399: the steam train's
@@ -190,6 +192,12 @@ public struct Map3DModelPack: Sendable {
         // Decision 708: the coaches' liveries, near and far, and the coach
         // stop, after the aircraft and before the route bus.
         groups.append { Map3DCoaches.drawn }
+        // Decision 732: Hong Kong's traffic signals, after the coaches
+        // and before the route bus.
+        groups.append { Map3DHongKongSignal.drawn }
+        // Decision 743: Hong Kong's double-decker, minibus and taxi, after
+        // its signals and before the route bus.
+        groups.append { Map3DHongKongVehicles.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

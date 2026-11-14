@@ -343,7 +343,9 @@ extension Map3DGarbageTruck {
     /// truck only while the streets keep room for it.
     public static func frame(in life: Map3DStreetLife, camera: Map3DCamera, clock: RealTrainClock?, glides: Bool, now: Double,
                              still: Bool, budget: Map3DMotionBudget) -> Frame {
-        guard let clock, let tier = budget.tier, tier.streetDetail != .off else { return Frame() }
+        // Decision 743: Taiwan's evening rounds alone; Hong Kong's rubbish
+        // is collected from refuse points, not by trucks that play music.
+        guard life.region.hasEveningGarbageTrucks, let clock, let tier = budget.tier, tier.streetDetail != .off else { return Frame() }
         return frame(lanes: life.lanes, target: camera.target, distance: camera.distance, day: clock.day,
                      second: clock.second(at: now, glides: glides), time: now.truncatingRemainder(dividingBy: 86_400), still: still,
                      follows: follows(budget.limits(), of: tier.streetLimits))

@@ -284,10 +284,11 @@ public struct Map3DBuses: Sendable {
         // One that cannot be laid is the way out, its stops with it.
         let laidBack = back.flatMap { back in ground(back.reversed, station: station, in: scene, roads: roads, snaps: snaps).map { (back, $0) } }
         let home = laidBack?.1 ?? way
-        // As the cars keep to the right of the roads they share.
+        // As the cars keep to the right of the roads they share (decision
+        // 732: to the left in Hong Kong).
         let halves = way.halves + (laidBack == nil ? [] : home.halves)
         let half = halves.isEmpty ? 3 : halves.sorted()[halves.count / 2]
-        let side = max(half * 0.5, 1.2)
+        let side = max(half * 0.5, 1.2) * scene.streetLife.region.trafficSide
         guard let out = Map3DStreetLife.Path(way.points)?.shifted(side), let backPath = Map3DStreetLife.Path(home.points.reversed())?.shifted(side)
         else { return nil }
         let length = way.length, backLength = home.length

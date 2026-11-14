@@ -1,0 +1,26 @@
+{
+  "input": "../../../railway-reference-private/Railway/street_scene_reference_clean/source/models/street-agents.glb",
+  "modelId": "hk-minibus",
+  "nodes": [
+    "minibus__chrome",
+    "minibus__glass",
+    "minibus__headlamp",
+    "minibus__minibus_body",
+    "minibus__minibus_roof",
+    "minibus__shade",
+    "minibus__taillamp",
+    "minibus__tire.004",
+    "minibus__trim",
+    "minibus__wheel"
+  ],
+  "front": "+z",
+  "units": "meters",
+  "recolorLightPaint": false,
+  "source": {
+    "kind": "non-ai",
+    "reference": "private:a91453/railway-reference-private/Railway/street_scene_reference_clean/source/models/street-agents.glb",
+    "revision": "cbc8b1a39edc6ef3d751f0b2f7f5a89646c85c77",
+    "license": "owner-supplied reference, authorized for project use (CLAUDE.md)",
+    "attribution": "Street Scene reference (Causeway Bay), owner's reference repository"
+  }
+}

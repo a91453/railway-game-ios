@@ -57,7 +57,7 @@ final class Map3DLowFloorBusTests: XCTestCase {
         }
     }
     func testAllBusTypesCoexistAndKeepTheSameTrafficPopulation() throws {
-        let types=Map3DStreetModel.allCases.filter(\.isBus)
+        let types=Map3DStreetModel.taiwanBuses
         let ids=try types.map { try XCTUnwrap(Map3DStreetLife.models[$0]) }
         XCTAssertEqual(Set(ids).count,types.count)
         XCTAssertEqual(Map3DModelPack.standard.models[ids[2]].vertices,Map3DLowFloorBus.model().vertices)
@@ -70,7 +70,7 @@ final class Map3DLowFloorBusTests: XCTestCase {
             let a=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
             for i in ids.indices { counts[i]+=a.instances.filter { $0.model==ids[i] }.count }
             total+=a.vehicles
-            let allBusIDs=Set(Map3DStreetModel.allCases.filter(\.isBus).compactMap { Map3DStreetLife.models[$0] })
+            let allBusIDs=Set(Map3DStreetModel.taiwanBuses.compactMap { Map3DStreetLife.models[$0] })
             XCTAssertEqual(a.buses,a.instances.filter { allBusIDs.contains($0.model) }.count)
             life.lanes=[.init(path:path,half:6,twoWay:true,speed:11,perHundred:5,scooters:true,seed:roadSeed)]
             let b=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())

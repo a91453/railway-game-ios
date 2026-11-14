@@ -93,11 +93,11 @@ final class Map3DMidiBusTests: XCTestCase {
         XCTAssertEqual(standard.models[id].vertices,Map3DMidiBus.model().vertices)
         let url=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("RailwayGameApp/Resources/Models/city-bus.m3dmodel")
         let fitted=Map3DCityBus.pack(file:url)
-        for type in Map3DStreetModel.allCases.filter(\.isBus) where type != .bus {
+        for type in Map3DStreetModel.taiwanBuses where type != .bus {
             let index=try XCTUnwrap(Map3DStreetLife.models[type])
             XCTAssertEqual(fitted.models[index].vertices,standard.models[index].vertices)
         }
-        XCTAssertEqual(Map3DStreetModel.allCases.filter(\.isBus).count,5)
+        XCTAssertEqual(Map3DStreetModel.taiwanBuses.count,5)
         XCTAssertGreaterThan(Map3DStreetLife.busSpacing,Map3DMidiBus.length+3)
     }
     private func ray(from origin: Map3DPoint,direction: Map3DPoint,vertices: [Map3DVertex],skipGlass: Bool = false) -> Float {

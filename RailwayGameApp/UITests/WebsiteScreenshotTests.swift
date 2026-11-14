@@ -1062,6 +1062,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// GLASS-POLISH (museum-title): the building tool's cards with the
+    /// museum's chosen, upright and on its side, in both languages, to see
+    /// that the long English names ("Railway museum") are not cut short.
+    func testBuildingCardNames() {
+        defer { XCUIDevice.shared.orientation = .landscapeLeft }
+        for english in [false, true] {
+            for upright in [false, true] {
+                // Upright from before the launch: turned after it, the phone
+                // kept its side.
+                continueAfterFailure = false
+                XCUIDevice.shared.orientation = upright ? .portrait : .landscapeLeft
+                let app = XCUIApplication()
+                app.launchArguments = ["-ui-testing", "-screenshot-scene", "museum"]
+                    + (english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"])
+                app.launch()
+                XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+                settle()
+                app.buttons["dock.build"].tap()
+                app.buttons["tool.building"].waitUntilSettled()
+                app.buttons["tool.building"].tap()
+                let first = app.buttons["building.kind.house"]
+                XCTAssertTrue(first.appears(within: 10), "The building tool opens")
+                first.waitUntilStill()
+                let card = app.buttons["building.kind.railwayMuseum"]
+                let row = first.frame
+                let origin = app.coordinate(withNormalizedOffset: .zero)
+                // The cards on this Simulator answer isHittable false even in
+                // sight: drag until the museum's row is where the first was.
+                for _ in 0..<20 where !(card.exists && card.frame.minY <= row.minY + 4) {
+                    origin.withOffset(CGVector(dx: row.midX, dy: row.maxY - 12))
+                        .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: row.midX, dy: row.minY - 30)),
+                               withVelocity: .slow, thenHoldForDuration: 0.3)
+                    settle(seconds: 0.5)
+                }
+                XCTAssertTrue(card.exists, "The museum's card comes into reach")
+                origin.withOffset(CGVector(dx: card.frame.midX, dy: card.frame.midY)).tap()
+                settle(seconds: 2)
+                keep("building-cards\(english ? "-english" : "")\(upright ? "-portrait" : "")", app)
+                app.terminate()
+                XCUIDevice.shared.orientation = .landscapeLeft
+            }
+        }
+    }
+
     /// Decision 663 (the Mac playtest's D9): the High Speed Rail demo's
     /// fares, the distance steps with what high-speed trips pay instead.
     func testHighSpeedDemoFares() {
@@ -1290,6 +1334,54 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
         settle(seconds: 1)
         keep("station-master-bubble", app)
+    }
+
+    /// DEMAND-HOURS DH-2: the station master's reminder of a crowd surge
+    /// two days ahead, with its hours and when its crowd leaves, and the
+    /// news's card of it; then the reminder on the surge's day, and the
+    /// first in English. For the screenshot review of the pull request
+    /// that added them.
+    func testCrowdSurgeReminder() {
+        crowdSurgeShots("crowdSurge", name: "crowd-surge-coming", english: false)
+        crowdSurgeShots("crowdSurgeToday", name: "crowd-surge-today", english: false)
+        crowdSurgeShots("crowdSurge", name: "crowd-surge-coming-en", english: true)
+    }
+
+    private func crowdSurgeShots(_ scene: String, name: String, english: Bool) {
+        let app = launch(extra: ["-screenshot-scene", scene, "-speaking-ms", "60000"], english: english)
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+        if !app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10) {
+            let master = app.descendants(matching: .any)["stationMaster"].firstMatch
+            XCTAssertTrue(master.becomesHittable(within: 20))
+            master.tap()
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "It speaks")
+        let leaving = english ? "crowds leave around" : "散場人潮約"
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", leaving)).firstMatch.appears(within: 10),
+                      "It reminds of the crowd surge")
+        settle(seconds: 1)
+        keep(name, app)
+        // The news writes what the station master says as the game runs:
+        // a step or two of it, paused again (a running clock keeps the
+        // bell from settling), then the news.
+        let resume = app.buttons[english ? "Resume" : "繼續"].firstMatch
+        if resume.appears(within: 5) {
+            resume.tap()
+            settle(seconds: 3)
+            let pause = app.buttons[english ? "Pause" : "暫停"].firstMatch
+            if pause.appears(within: 5) { pause.tap() }
+            settle(seconds: 1)
+        }
+        let bell = app.buttons["hud.news"]
+        guard bell.appears(within: 10) else { return }
+        // With news unread the bell rings and never settles: tapped as it is.
+        bell.tap()
+        let done = app.buttons["news.done"]
+        XCTAssertTrue(done.appears(within: 10), "The news opens")
+        done.waitUntilSettled()
+        settle(seconds: 1)
+        keep("\(name)-news", app)
     }
 
     /// HEIGHT-HINT: the one-time line under the construction HUD about its
@@ -3331,6 +3423,65 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle(seconds: 10)
             keep(name, app)
         }
+    }
+
+    /// Decision 732: Hong Kong's streets close up on its 3D map: two
+    /// signalled junctions, on Nathan Road at Jordan Road (from overhead:
+    /// its towers hide the street from any lean) and in West Kowloon by
+    /// Kowloon Station (wider roads, leaned), with the traffic on the
+    /// left, the signals at the left-hand kerb and the yellow kerb lines. As `testHongKongMap`,
+    /// the Airport Express bought and run on to the morning; the followed
+    /// train let go so the camera stays over the junction (the signalled
+    /// stop line nearest the place, so not on a roof). The
+    /// Simulator's GPU has no tier and draws nothing on the streets, so a
+    /// tier is given (as `testStreetStopDay`).
+    func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30500,114.17166", view: "130,35,0") }
+    func testHongKongStreetsWestKowloon() { shootHongKongStreets("west-kowloon", at: "22.30400,114.16500", view: "90,35,40") }
+    /// Decision 743: down Nathan Road at Jordan, where its double-deckers,
+    /// minibuses and taxis go by, three times some seconds apart.
+    func testHongKongStreetsNathanRoad() {
+        shootHongKongStreets("nathan-road", at: "22.30490,114.17170", view: "70,0,55", along: true)
+    }
+
+    private func shootHongKongStreets(_ place: String, at: String, view: String, along: Bool = false) {
+        executionTimeAllowance = 1_700
+        let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "high",
+                                 "-screenshot-3d-view", view, "-screenshot-3d-signal", at, "-screenshot-device-tier", "1"]
+                         + (along ? ["-screenshot-3d-along"] : []))
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
+        // The main thread is busy buying and running the morning (as
+        // `testHongKongMap`).
+        Thread.sleep(forTimeInterval: 360)
+        let unfollow = app.descendants(matching: .any)["train.unfollow"].firstMatch
+        XCTAssertTrue(unfollow.appears(within: 1_000), "The line is bought and a train followed")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+        if unfollow.becomesHittable(within: 10) { unfollow.tap() }
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        waitForPicture(timeout: 150)
+        settle(seconds: 12)
+        keep("hong-kong-streets-\(place)", app)
+        if along {
+            // The traffic going by: two more, some seconds apart.
+            for shot in 2...3 {
+                settle(seconds: 7)
+                keep("hong-kong-streets-\(place)-\(shot)", app)
+            }
+            return
+        }
+        // Then closer, the signals and the cars at the stop line.
+        app.pinch(withScale: 2.2, velocity: 1)
+        settle(seconds: 10)
+        keep("hong-kong-streets-\(place)-close", app)
     }
 
     /// Opens the sights panel: by the status bar's own button where the
