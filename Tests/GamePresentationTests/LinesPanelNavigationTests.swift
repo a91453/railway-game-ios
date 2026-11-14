@@ -46,6 +46,16 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertFalse(session.linePageCoversScreen)
     }
 
+    /// Decision 746: the station panel covers the screen but in the
+    /// tutorial.
+    func testTheStationPanelCoversTheScreenButInTheTutorial() throws {
+        let session = try session()
+        XCTAssertTrue(session.stationPanelCoversScreen)
+        session.startTutorial()
+        XCTAssertNotNil(session.tutorial)
+        XCTAssertFalse(session.stationPanelCoversScreen)
+    }
+
     func testOpeningALineSelectsItAndBackKeepsItSelected() throws {
         let session = try session()
         session.openLine(Self.second)
