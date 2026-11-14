@@ -183,9 +183,14 @@ struct YearEndReport: View {
     /// Decision 200: the company has unlimited funds, so there is no cash
     /// in hand to show.
     var unlimitedFunds = false
+    /// Decision 751: the year's grades, shown above its statements.
+    var appraisal: YearEndAppraisal?
 
     var body: some View {
         Form {
+            if let appraisal {
+                YearEndAppraisalSection(appraisal: appraisal, language: language)
+            }
             Section {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(verbatim: statement.headlineText(in: language))
@@ -226,6 +231,71 @@ struct YearEndReport: View {
     }
 }
 
+/// Decision 751: the year-end appraisal, five counts graded A, B or C,
+/// with the taxes the year left owing under the annual taxes.
+struct YearEndAppraisalSection: View {
+    let appraisal: YearEndAppraisal
+    let language: DisplayLanguage
+
+    var body: some View {
+        Section {
+            ForEach(appraisal.rows, id: \.item) { row in
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    AppraisalGradeMark(grade: row.grade)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: row.item.title(in: language))
+                            .fontWeight(.semibold)
+                        Text(verbatim: row.detail(in: language))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("yearEnd.appraisal.row")
+            }
+            ForEach(appraisal.taxesDue, id: \.dueDay) { due in
+                Label {
+                    Text(verbatim: appraisal.taxDueText(due, in: language))
+                        .monospacedDigit()
+                } icon: {
+                    Image(systemName: "calendar.badge.clock")
+                        .foregroundStyle(Theme.warning)
+                }
+                .font(.footnote)
+            }
+        } header: {
+            Text(verbatim: appraisal.titleText(in: language))
+        } footer: {
+            Text(verbatim: YearEndAppraisal.footnote(in: language))
+        }
+        .accessibilityIdentifier("yearEnd.appraisal")
+    }
+}
+
+/// A grade's letter in a tinted square: the letter says it, the colour
+/// only helps (A green, B amber, C red); "—" when not graded.
+private struct AppraisalGradeMark: View {
+    let grade: AppraisalGrade?
+
+    var body: some View {
+        Text(verbatim: grade?.letter ?? "—")
+            .font(.headline.weight(.bold))
+            .foregroundStyle(color)
+            .frame(minWidth: 32, minHeight: 32)
+            .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var color: Color {
+        switch grade {
+        case .a?: Theme.success
+        case .b?: Theme.warning
+        case .c?: Theme.error
+        case nil: Theme.textSecondary
+        }
+    }
+}
+
 /// The year-end report on its own, as the sheet that opens when a year
 /// closes while playing.
 struct YearEndSheet: View {
@@ -237,8 +307,10 @@ struct YearEndSheet: View {
             Group {
                 if let statement = session.yearEndStatement {
                     let years = session.world.accounts.years
-                    YearEndReport(statement: statement, previous: years.last { $0.year == statement.year - 1 }, language: session.language,
-                                  unlimitedFunds: session.world.economy.unlimitedFunds)
+                    let previous = years.last { $0.year == statement.year - 1 }
+                    YearEndReport(statement: statement, previous: previous, language: session.language,
+                                  unlimitedFunds: session.world.economy.unlimitedFunds,
+                                  appraisal: YearEndAppraisal(statement: statement, previous: previous, world: session.world))
                 } else {
                     Text(verbatim: session.language.text("No year has closed yet.", "還沒有完成的年度決算。"))
                         .foregroundStyle(Theme.textSecondary)
