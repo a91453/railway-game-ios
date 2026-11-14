@@ -538,8 +538,8 @@ public enum NewGameRules: String, CaseIterable, Codable, Sendable {
             )
         case .realistic:
             language.text(
-                "Block signals, curve speed limits, punctuality, crowded doors, train prices, building materials and weather all count.",
-                "閉塞號誌、彎道限速、準點率、車門擁擠、車價、建材與天氣都會影響營運。"
+                "Block signals, curve speed limits, punctuality, crowded doors, train prices, building materials and weather all count, and passengers who wait too long leave.",
+                "閉塞號誌、彎道限速、準點率、車門擁擠、車價、建材與天氣都會影響營運，乘客等太久會離開。"
             )
         }
     }
@@ -710,6 +710,9 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         // Decision 332: riders take a scooter or a car instead of a slow
         // train, gently with simple rules.
         try? world.setModeShift(rules == .simple ? .simple : ModeShift.realistic(cap: modeShiftCap))
+        // Decision 731: passengers who wait too long leave, by the
+        // realistic rules only.
+        world.setPassengerPatience(rules == .realistic)
         rules.apply(to: &world)
     }
 

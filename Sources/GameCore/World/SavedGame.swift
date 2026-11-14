@@ -509,9 +509,16 @@
 ///     and go on sending trains along track the player is closing, so it
 ///     says the save is newer than it instead. A save of any earlier
 ///     version needs no step: none of its track is being closed.
+/// 97. Passengers who wait too long leave (decision 731): a world can have
+///     `"passengerPatience"`, and a station's passengers `"gaveUp"`, those
+///     who left for it. A build that reads only an earlier version would
+///     drop the rule, and would refuse a station whose passengers no
+///     longer add up without those who gave up, so it says the save is
+///     newer than it instead. A save of any earlier version needs no step:
+///     its passengers wait as long as it takes, and nobody gave up.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 95
+    public static let currentVersion = 97
 
     public let world: GameWorld
 
@@ -746,6 +753,10 @@ extension SavedGame: Codable {
         // has no track closed (decision 716): nothing to turn.
         // Version 94 to 95: a network without `"closingEdges"` has no
         // track being closed (decision 716, continued): nothing to turn.
+        // Version 95 or earlier to 97: a world without
+        // `"passengerPatience"` has its passengers wait as long as it
+        // takes, and a station without `"gaveUp"` had nobody give up
+        // (decision 731): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

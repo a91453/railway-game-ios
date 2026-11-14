@@ -56,6 +56,12 @@ public struct GameWorld: Equatable, Sendable {
     /// saves from before it; the app's new games turn it on. Set by
     /// ``setTidalDemand(_:)`` only.
     public internal(set) var tidalDemand: Bool = false
+    /// Whether passengers who wait too long leave (decision 731): one
+    /// still waiting ``PassengerPatience/minutes(longTrip:)`` after they
+    /// could first board gives up. Off in a new world and in saves from
+    /// before it; the player's new games with realistic rules turn it on.
+    /// Set by ``setPassengerPatience(_:)`` only.
+    public internal(set) var passengerPatience: Bool = false
     /// Whether and how riders take a scooter or a car instead when the
     /// train is slower door to door (decision 332), or `nil` for none. Off
     /// in a new world and in saves from before it; the player's new games
@@ -3575,6 +3581,7 @@ public struct GameWorld: Equatable, Sendable {
                 tickFreight(at: start)
                 settleAccounts(at: start, memo: &memo)
                 sendWaitingPassengersHome(at: start)
+                sendImpatientPassengersAway(at: start)
                 if release != nil {
                     releasePassengers(at: start, &release!)
                 }
@@ -3725,6 +3732,7 @@ public struct GameWorld: Equatable, Sendable {
                         tickFreight(at: time)
                         settleAccounts(at: time, memo: &memo)
                         sendWaitingPassengersHome(at: time)
+                        sendImpatientPassengersAway(at: time)
                         if release != nil {
                             releasePassengers(at: time, &release!)
                         }
@@ -3733,7 +3741,10 @@ public struct GameWorld: Equatable, Sendable {
                     // Decision 504: those still waiting go home at 04:00
                     // in the minutes skipped too.
                     for step in 0..<idle {
-                        sendWaitingPassengersHome(at: GameTime(seconds: clock.now.seconds + step * minute))
+                        let time = GameTime(seconds: clock.now.seconds + step * minute)
+                        sendWaitingPassengersHome(at: time)
+                        // Decision 731: and those who wait too long give up.
+                        sendImpatientPassengersAway(at: time)
                     }
                 }
                 clock.advance(basicSteps: idle * minute)
@@ -5987,7 +5998,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, driving
     }
@@ -6064,6 +6075,7 @@ extension GameWorld: Codable {
             ? try container.decode(PassengerRoutingMode.self, forKey: .passengerRoutingMode) : .direct
         weeklyDemand = container.contains(.weeklyDemand) ? try container.decode(Bool.self, forKey: .weeklyDemand) : false
         tidalDemand = try container.decodeIfPresent(Bool.self, forKey: .tidalDemand) ?? false
+        passengerPatience = try container.decodeIfPresent(Bool.self, forKey: .passengerPatience) ?? false
         modeShift = try container.decodeIfPresent(ModeShift.self, forKey: .modeShift)
         demandEvents = container.contains(.demandEvents) ? try container.decode(DemandEventSchedule.self, forKey: .demandEvents) : nil
         disruptions = try container.decodeIfPresent(Disruptions.self, forKey: .disruptions)
@@ -6251,6 +6263,9 @@ extension GameWorld: Codable {
         }
         if tidalDemand {
             try container.encode(tidalDemand, forKey: .tidalDemand)
+        }
+        if passengerPatience {
+            try container.encode(true, forKey: .passengerPatience)
         }
         try container.encodeIfPresent(modeShift, forKey: .modeShift)
         try container.encodeIfPresent(demandEvents, forKey: .demandEvents)
