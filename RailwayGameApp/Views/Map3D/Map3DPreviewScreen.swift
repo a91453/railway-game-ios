@@ -1266,7 +1266,8 @@ final class Map3DTrainFeed {
     /// main actor (counting them builds the passenger graph), and which
     /// airfields they are for; the last day's are drawn until they are in.
     private var airTrafficAsked: (day: Int64, serial: Int)?
-    private static let airfields = BaseMapFiles.airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
+    /// Decision 733: with the open cities' own.
+    private static let airfields = BaseMapFiles.readAirfields(BaseMapFiles.airfields)
     /// Decision 708: the real coaches and the coach stops laid in the
     /// scene (off the main actor), from the routes' file, read once off
     /// the main actor the first time a map with coach stops is drawn.
