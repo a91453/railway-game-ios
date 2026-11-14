@@ -133,7 +133,7 @@ final class LineDraftSummaryUITests: XCTestCase {
             let area = list.frame
             let top = max(area.minY, bar.exists ? bar.frame.maxY : area.minY) + 12
             let start = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: area.minX + 8 - app.frame.minX, dy: top - app.frame.minY))
+                .withOffset(CGVector(dx: app.clearOfScreenEdges(area.minX + 8) - app.frame.minX, dy: top - app.frame.minY))
             start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: (area.maxY - top) * 0.6)), withVelocity: .slow, thenHoldForDuration: 0.3)
         }
         // Wholly on screen and under the bar: a row whose middle was in

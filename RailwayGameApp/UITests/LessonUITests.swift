@@ -353,7 +353,9 @@ final class LessonUITests: XCTestCase {
         }
         func drag(from: CGFloat, to: CGFloat) {
             let origin = app.coordinate(withNormalizedOffset: .zero)
-            let x = area.minX + area.width * 0.02 - app.frame.minX
+            // Clear of the screen's edge, where decision 746's panel over
+            // the whole screen begins (`clearOfScreenEdges`).
+            let x = app.clearOfScreenEdges(area.minX + area.width * 0.02) - app.frame.minX
             origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * from - app.frame.minY))
                 .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * to - app.frame.minY)),
                        withVelocity: .slow, thenHoldForDuration: 0.3)
@@ -655,7 +657,14 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(create.isEnabled)
         tap(create)
         app.openNewLineFromItsCard()
-        if app.navigationBars["Lines"].exists { tap(app.navigationBars["Lines"].buttons["Done"]) }
+        // Decision 745: Open Line opens the new line's own page over the
+        // whole screen, its bar named for the line, not "Lines"; it covered
+        // the speed button (TestFlight 131's full lane, run 43599067177).
+        // Done on whichever bar is up closes the panel.
+        if app.collectionViews["line.detail"].exists || app.navigationBars["Lines"].exists {
+            tap(app.navigationBars.firstMatch.buttons["Done"])
+            XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "The line's page stayed")
+        }
         app.chooseSpeed("6000 times real time, fast forward")
         if app.buttons["Resume"].exists { tap(app.buttons["Resume"]) }
 
