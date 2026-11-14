@@ -99,6 +99,26 @@ final class HongKongDeadlockProbeTests: XCTestCase {
         try run(session, label: "TKL", minutes: 2 * 24 * 60)
     }
 
+    func testProbeLokMaChauAlone() throws {
+        let session = try hongKong()
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "hkmtr:EAL_LMC" })
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        describe(session, label: "LMC")
+        try run(session, label: "LMC", minutes: 2 * 24 * 60)
+    }
+
+    func testProbeAllButTungChung() throws {
+        let session = try hongKong()
+        for id in ["hkmtr:AEL", "hkmtr:DRL", "hkmtr:EAL_LMC", "hkmtr:SIL", "hkmtr:TKL_LHP"] {
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
+            let offer = session.realLineOffer(for: line)
+            print("PROBE[all] offer \(id) problem=\(offer.problem ?? "nil")")
+            XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        }
+        describe(session, label: "all")
+        try run(session, label: "all", minutes: 2 * 24 * 60)
+    }
+
     func testProbeDemo() async throws {
         let session = try hongKong(demo: true)
         let view = WorldRegion(bounds: session.world.bounds)
