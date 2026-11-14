@@ -234,8 +234,9 @@ extension GameWorld {
         // Decision 174: the tourists keep their own hours.
         let tourists = currentTouristFlows()
         let extra = tourists.trips(from: origin, to: destination)
-        guard extra > 0 else { return Self.hourly(trips, from: from, to: to, weekend: isDemandWeekend, tidal: tidalDemand) }
-        let ordinary = Self.hourly(max(0, trips - extra), from: from, to: to, weekend: isDemandWeekend, tidal: tidalDemand)
+        let timed = timedDemandEvents(onDay: dayIndex(of: clock.now))
+        guard extra > 0 else { return eventHourly(trips, from: origin, from, to: destination, to, weekend: isDemandWeekend, timed: timed) }
+        let ordinary = eventHourly(max(0, trips - extra), from: origin, from, to: destination, to, weekend: isDemandWeekend, timed: timed)
         return zip(ordinary, tourists.hourly(from: origin, to: destination)).map { $0 + $1 }
     }
 
@@ -569,6 +570,55 @@ extension GameWorld {
         return apportion(trips, by: weights)
     }
 
+    /// `trips` a day from station `origin`, with demand `from`, to station
+    /// `destination`, with demand `to`, shared among the 24 hours as
+    /// ``hourly(_:from:to:weekend:tidal:)`` shares them, but for an event
+    /// with hours at either end (decision 730, `timed` from
+    /// ``timedDemandEvents(onDay:)``): the travellers the event brings
+    /// (the trips beyond those its boost multiplied, rounded half up) set
+    /// out in one wave instead, from it about half an hour after it closes
+    /// and to it about half an hour before it opens. The hours add up to
+    /// `trips` all the same.
+    func eventHourly(_ trips: Int64, from origin: StationID, _ from: StationDemand, to destination: StationID, _ to: StationDemand,
+                     weekend: Bool, timed: [StationID: DemandEvent]) -> [Int64] {
+        var rest = trips
+        var waves: [(trips: Int64, minute: Int64)] = []
+        if let event = timed[origin], let closes = event.closes {
+            let wave = Self.eventShare(of: rest, boost: event.boost)
+            waves.append((wave, closes + 30))
+            rest -= wave
+        }
+        if let event = timed[destination], let opens = event.opens {
+            let wave = Self.eventShare(of: rest, boost: event.boost)
+            waves.append((wave, opens - 30))
+            rest -= wave
+        }
+        var hours = Self.hourly(rest, from: from, to: to, weekend: weekend, tidal: tidalDemand)
+        // An hour's trips are released most at its start, or with tidal
+        // demand at its middle (see ``releasePassengers(at:_:)``): a wave
+        // on the hour goes into one hour, one on the half hour half into
+        // each of the two around it.
+        let offset: Int64 = tidalDemand ? 30 : 0
+        for wave in waves where wave.trips > 0 {
+            let centre = wave.minute - offset
+            let hour = Int(centre / 60)
+            if centre % 60 == 0 {
+                hours[hour] += wave.trips
+            } else {
+                hours[hour] += wave.trips - wave.trips / 2
+                hours[hour + 1] += wave.trips / 2
+            }
+        }
+        return hours
+    }
+
+    /// The part of `trips` an event of `boost` thousandths brings: `trips`
+    /// less `trips / (1 + boost)`, rounded half up.
+    static func eventShare(of trips: Int64, boost: Int64) -> Int64 {
+        let multiplier = 1_000 + boost
+        return trips - (trips * 1_000 + multiplier / 2) / multiplier
+    }
+
     /// `total` shared in proportion to `weights` (all non-negative) by the
     /// largest-remainder method: each share is the whole part of its
     /// quota, and the units left over go one each to the largest
@@ -780,6 +830,8 @@ extension GameWorld {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
         let pull = pulls(of: drawing)
         let typhoons = typhoonMultipliers()
+        // Decision 730: the events with hours today.
+        let timed = timedDemandEvents(onDay: dayIndex(of: clock.now))
         // Decision 174: the tourists' pairs, added to the ordinary ones.
         // Decision 533: and the riders of the company's schools and hospitals.
         let tourists = passengerExtraFlows(onDay: dayIndex(of: clock.now)) { trip(from: $0, to: $1) != nil }
@@ -801,7 +853,7 @@ extension GameWorld {
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
                     destination: destination.station, trip: trip, choices: []))
-                var hours = Self.hourly(trips, from: origin, to: destination.demand!, weekend: weekend, tidal: tidalDemand)
+                var hours = eventHourly(trips, from: record.station, origin, to: destination.station, destination.demand!, weekend: weekend, timed: timed)
                 if extra > 0 { hours = zip(hours, tourists.hourly(from: record.station, to: destination.station)).map { $0 + $1 } }
                 hourly += hours
             }
@@ -825,6 +877,8 @@ extension GameWorld {
         }
         let pull = pulls(of: drawing)
         let typhoons = typhoonMultipliers()
+        // Decision 730: the events with hours today.
+        let timed = timedDemandEvents(onDay: dayIndex(of: clock.now))
         let graph = PassengerRouteGraph(world: self)
         memo.use(graph)
         var searches = PassengerRouteSearches(graph: graph)
@@ -919,7 +973,8 @@ extension GameWorld {
             flows.append(PassengerPlan.Flow(origin: draft.origin, record: draft.record,
                 destination: draft.destination.station,
                 trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
-            var hours = Self.hourly(draft.ordinary, from: draft.demand, to: draft.destination.demand!, weekend: weekend, tidal: tidalDemand)
+            var hours = eventHourly(draft.ordinary, from: draft.origin, draft.demand, to: draft.destination.station, draft.destination.demand!,
+                                    weekend: weekend, timed: timed)
             if draft.trips > draft.ordinary {
                 hours = zip(hours, tourists.hourly(from: draft.origin, to: draft.destination.station)).map { $0 + $1 }
             }
