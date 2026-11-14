@@ -242,8 +242,11 @@ final class OnboardingTests: XCTestCase {
         // leave; nothing else changes.
         XCTAssertEqual(world.modeShift, ModeShift.realistic())
         XCTAssertTrue(world.passengerPatience)
+        // Decision 734: and the income tax is settled once a year.
+        XCTAssertTrue(world.annualTaxes)
         try? world.setModeShift(nil)
         world.setPassengerPatience(false)
+        world.setAnnualTaxes(false)
         XCTAssertEqual(world, before)
     }
 

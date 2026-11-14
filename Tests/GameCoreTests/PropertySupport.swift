@@ -501,6 +501,7 @@ enum WorldInvariants {
             case .dailyCableways: [.cablewayFares, .cablewayRunning]
             case .dailyFerries: [.ferryFares, .ferryRunning]
             case .drivenRun: [.drivingBonus]
+            case .annualIncomeTax: [.incomeTax]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {

@@ -181,6 +181,9 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailyFerries
         /// A run the player drove by hand, settled (decision 693).
         case drivenRun
+        /// The income tax of the year before, paid at the end of the
+        /// year's fifth month (decision 734).
+        case annualIncomeTax
     }
 
     public let kind: Kind
@@ -416,6 +419,10 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// one), by ascending pair; a pair not in it pays by the kilometre
     /// (decision 168). Empty until set.
     public internal(set) var highSpeedFares: [HighSpeedFare] = []
+    /// Decision 734: the income tax the closed years were charged with the
+    /// annual taxes on and that is not paid yet, due at the end of the
+    /// next year's fifth month (``incomeTaxDueDay``). Zero without them.
+    public internal(set) var incomeTaxPayable: Money = .zero
 
     /// Loans are taken and repaid NT$300,000 at a time (decision 499:
     /// $100,000 times 3).
@@ -445,7 +452,7 @@ public struct CompanyAccounts: Hashable, Sendable {
     var isPristine: Bool {
         mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && dayPass == nil && pending == .empty && openedAt == nil
             && entries.isEmpty && days.isEmpty && loan == .zero && assets.isEmpty && capitalDays.isEmpty && years.isEmpty
-            && highSpeedFares.isEmpty && termLoans.isEmpty && nextTermLoanID == 1
+            && highSpeedFares.isEmpty && termLoans.isEmpty && nextTermLoanID == 1 && incomeTaxPayable == .zero
     }
 
     /// The rules trips pay by.
@@ -679,7 +686,7 @@ extension LedgerEntry: Codable {
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
         case mode, fareRules, fareBaseline, dayPass, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours, highSpeedFares
-        case termLoans, nextTermLoanID
+        case termLoans, nextTermLoanID, incomeTaxPayable
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -716,6 +723,9 @@ extension CompanyAccounts: Codable {
         // is checked by the ``GameWorld`` decoder.
         termLoans = try container.decodeIfPresent([TermLoan].self, forKey: .termLoans) ?? []
         nextTermLoanID = try container.decodeIfPresent(Int64.self, forKey: .nextTermLoanID) ?? 1
+        // Decision 734 (save version 99). That it is within bounds is
+        // checked by the ``GameWorld`` decoder.
+        incomeTaxPayable = try container.decodeIfPresent(Money.self, forKey: .incomeTaxPayable) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -759,6 +769,9 @@ extension CompanyAccounts: Codable {
         }
         if nextTermLoanID != 1 {
             try container.encode(nextTermLoanID, forKey: .nextTermLoanID)
+        }
+        if incomeTaxPayable != .zero {
+            try container.encode(incomeTaxPayable, forKey: .incomeTaxPayable)
         }
     }
 }

@@ -347,3 +347,11 @@ its map's airports when it opens the save).
   `"opens"` and `"closes"`
   (`DemandEventTests.testVersionNinetyEightKeepsTheEventsHours`, written with
   `DEMAND_HOURS_SAVE_NEW=1` by the build that first made it; decision 730).
+- `v99-annual-taxes.json`: an empty managed world with the annual taxes
+  on, a minute into its second year: the first year earned NT$900,000 on
+  its last day and was charged NT$180,000 of income tax as it closed, owed
+  (the accounts' `"incomeTaxPayable"`, the closed year's
+  `"incomeTaxAssessed"` and its closing sheet's `"taxPayable"`) until the
+  end of the fifth month
+  (`AnnualTaxesTests.testTheVersion99SaveOwesItsTax`, written with
+  `ANNUAL_TAXES_SAVE_NEW=1` by the build that first made it; decision 734).

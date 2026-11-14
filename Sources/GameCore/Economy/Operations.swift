@@ -474,16 +474,20 @@ extension GameWorld {
         // day's tax: a subsidy is taxable profit.
         judgeCityRequests(endingWith: day, time: time)
         // Phase 7a: the assets are written down for the day, then the day's
-        // profit is taxed (decision 131), then a year's last day closes the
-        // year.
+        // profit is taxed (decision 131) or, with the annual taxes, the
+        // year before's tax paid when due (decision 734), then a year's
+        // last day closes the year.
         depreciateAssets(day: day)
-        let tax = Self.dailyTax(on: accounts.report(.day, day: day).current.profitBeforeTax)
-        if tax > .zero {
-            write(LedgerEntry(
-                kind: .dailyTax, time: time, amount: .zero - tax,
-                breakdown: [LedgerLine(item: .incomeTax, amount: .zero - tax)]
-            ), day: day)
+        if !annualTaxes {
+            let tax = Self.dailyTax(on: accounts.report(.day, day: day).current.profitBeforeTax)
+            if tax > .zero {
+                write(LedgerEntry(
+                    kind: .dailyTax, time: time, amount: .zero - tax,
+                    breakdown: [LedgerLine(item: .incomeTax, amount: .zero - tax)]
+                ), day: day)
+            }
         }
+        payIncomeTaxDue(day: day, time: time)
         closeYear(endingWith: day)
         // Decision 86: the goals are judged once the day is settled.
         judgeScenario(endingWith: day)
@@ -605,6 +609,7 @@ extension GameWorld {
             return "The loan must be whole loan steps, up to the most the bank lends."
         }
         if let problem = termLoansProblem() { return problem }
+        guard (0...Self.maximumAccrued).contains(accounts.incomeTaxPayable.amount) else { return "The income tax owed is out of range." }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {
             guard opened <= clock.now else { return "The accounts cannot open after now." }
@@ -662,6 +667,7 @@ extension GameWorld {
         case .dailyCableways: [.cablewayFares, .cablewayRunning]
         case .dailyFerries: [.ferryFares, .ferryRunning]
         case .drivenRun: [.drivingBonus]
+        case .annualIncomeTax: [.incomeTax]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy || $0.item == .dayPassSales || $0.item == .busFares || $0.item == .cablewayFares || $0.item == .ferryFares || $0.item == .drivingBonus ? $0.amount >= .zero : $0.amount <= .zero }),
