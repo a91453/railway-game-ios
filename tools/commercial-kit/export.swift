@@ -87,7 +87,7 @@ let manifest: [String: Any] = [
     "gltf_coordinates": "metres; +x front, +y up, -z left",
     "directions": ["top", "bottom", "left", "right", "front", "back", "isometric"],
     "models": records,
-    "notes": "Static commercial game models, recomposed from private reference factories and original geometry; illustrative retail buildings, night market stalls, street furniture and feeder transit bus."
+    "notes": "Static models of commercial buildings for the game, recomposed from the owner's own reference factories and original geometry; illustrative retail buildings, night market stalls, street furniture and feeder transit bus."
 ]
 
 try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
