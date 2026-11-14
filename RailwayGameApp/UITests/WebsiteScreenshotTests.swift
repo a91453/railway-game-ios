@@ -1069,8 +1069,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         defer { XCUIDevice.shared.orientation = .landscapeLeft }
         for english in [false, true] {
             for upright in [false, true] {
-                let app = launch(extra: ["-screenshot-scene", "museum"], english: english)
-                if upright { XCUIDevice.shared.orientation = .portrait }
+                // Upright from before the launch: turned after it, the phone
+                // kept its side.
+                continueAfterFailure = false
+                XCUIDevice.shared.orientation = upright ? .portrait : .landscapeLeft
+                let app = XCUIApplication()
+                app.launchArguments = ["-ui-testing", "-screenshot-scene", "museum"]
+                    + (english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"])
+                app.launch()
                 XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
                 settle()
                 app.buttons["dock.build"].tap()
@@ -1078,18 +1084,20 @@ final class WebsiteScreenshotTests: XCTestCase {
                 app.buttons["tool.building"].tap()
                 let first = app.buttons["building.kind.house"]
                 XCTAssertTrue(first.appears(within: 10), "The building tool opens")
-                first.waitUntilSettled()
+                first.waitUntilStill()
                 let card = app.buttons["building.kind.railwayMuseum"]
                 let row = first.frame
                 let origin = app.coordinate(withNormalizedOffset: .zero)
-                for _ in 0..<20 where !(card.exists && card.isHittable && card.frame.maxY <= row.maxY + row.height * 0.6) {
+                // The cards on this Simulator answer isHittable false even in
+                // sight: drag until the museum's row is where the first was.
+                for _ in 0..<20 where !(card.exists && card.frame.minY <= row.minY + 4) {
                     origin.withOffset(CGVector(dx: row.midX, dy: row.maxY - 12))
                         .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: row.midX, dy: row.minY - 30)),
                                withVelocity: .slow, thenHoldForDuration: 0.3)
                     settle(seconds: 0.5)
                 }
-                XCTAssertTrue(card.exists && card.isHittable, "The museum's card comes into reach")
-                card.tap()
+                XCTAssertTrue(card.exists, "The museum's card comes into reach")
+                origin.withOffset(CGVector(dx: card.frame.midX, dy: card.frame.midY)).tap()
                 settle(seconds: 2)
                 keep("building-cards\(english ? "-english" : "")\(upright ? "-portrait" : "")", app)
                 app.terminate()
