@@ -103,7 +103,7 @@ final class CommandEditTests: XCTestCase {
         let demand = StationDemand(kind: .office, dailyTrips: 900)
         let stop = ScheduledStop(station: station, arrival: GameTime(seconds: 60), departure: GameTime(seconds: 120))
         let edits: [PlayerCommand.Edit] = [
-            .setTrafficControl(true), .setDisruptions(Disruptions(level: DisruptionLevel.allCases[0], country: "TW", seed: 7)),
+            .setTrafficControl(true), .setSwitchInterlocking(true), .setDisruptions(Disruptions(level: DisruptionLevel.allCases[0], country: "TW", seed: 7)),
             .setDisruptions(nil), .setPassengerRoutingMode(.network), .setEconomyMode(.free), .setFareRules(.flat(Money(300))),
             .setDayPass(Money(1_500)), .setDayPass(nil), .borrow(Money(1_000)), .repayLoan(Money(1_000)),
             .takeTermLoan(Money(30_000_000), years: 2), .repayTermLoanEarly(1), .setServiceDay(try makeWorld().serviceDay),

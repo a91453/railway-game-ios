@@ -546,9 +546,16 @@
 ///     version would drop the list and send the leg's trains to any
 ///     platform, so it says the save is newer than it instead. A save of
 ///     any earlier version needs no step: each leg names one platform.
+/// 102. Switch interlocking (decision 756): a world can have
+///     `"switchInterlocking"`, whether switches take time to throw under
+///     traffic control, and `"switchLies"`, the way each switch lies. A
+///     build that reads only an earlier version would drop them and let
+///     every train through every switch at once, so it says the save is
+///     newer than it instead. A save of any earlier version needs no
+///     step: its switches take no time.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 101
+    public static let currentVersion = 102
 
     public let world: GameWorld
 
@@ -797,6 +804,9 @@ extension SavedGame: Codable {
         // tax (decision 736): nothing to turn.
         // Version 100 or earlier to 101: a route preference without
         // `"alternates"` names one platform (decision 740): nothing to turn.
+        // Version 101 or earlier to 102: a world without
+        // `"switchInterlocking"` has switches that take no time to throw
+        // (decision 756): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

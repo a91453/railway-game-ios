@@ -5,7 +5,7 @@ import XCTest
 /// card read of a leg's list, and the two gaps of decision 740 the review
 /// of 2026-11-14 found (REVIEW-L21 P3-1, P3-2). The world of
 /// ``PlatformListTests``.
-final class PlatformListEditTests: XCTestCase {
+final class PlatformListRulesTests: XCTestCase {
     /// P3-1: with traffic control off, a list whose first platform the
     /// train cannot stop at (too short for it) goes on to the next, as
     /// under traffic control; it used to go to any platform.
