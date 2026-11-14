@@ -219,13 +219,18 @@ extension Map3DScene.Builder {
         // Decision 429: the junctions where they are in the world, for
         // their signals' offsets.
         mark("roads")
+        // Decision 732: whose roads they are, Hong Kong's on its map.
+        let streets = Map3DStreetRegion(world: world)
         let markings = Map3DRoadMarkings(roads, origin: Map3DBaseMap.Point(x: originX / Double(WorldCoordinate.unitsPerMetre),
-                                                                           z: originY / Double(WorldCoordinate.unitsPerMetre)))
+                                                                           z: originY / Double(WorldCoordinate.unitsPerMetre)),
+                                         region: streets)
         var lines = Set<Map3DScene.ChunkKey>()
         sizing = Map3DFarDetail.centreLines
+        // Decision 732: Hong Kong's centre lines white.
+        let centreLine = streets.hasYellowCentreLines ? Map3DPalette.centreLine : Self.paint
         for (number, road) in roads.enumerated() where Self.hasCentreLine(road) {
             for piece in markings.centreLines(of: road, number: number) {
-                addStrip(piece, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
+                addStrip(piece, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: centreLine, paint: nil,
                          raised: true, onDeck: road.bridgeLevel > 0, taking: &lines)
             }
         }

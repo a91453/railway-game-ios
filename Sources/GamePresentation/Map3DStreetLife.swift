@@ -404,6 +404,9 @@ public struct Map3DStreetLife: Sendable {
 
     public internal(set) var lanes: [Lane] = []
     public internal(set) var spots: [Spot] = []
+    /// Decision 732: whose streets they are: Hong Kong's traffic keeps
+    /// to the left.
+    public internal(set) var region: Map3DStreetRegion = .taiwan
 
     public init() {}
 
@@ -645,7 +648,9 @@ public struct Map3DStreetLife: Sendable {
         let length = lane.path.length
         guard let (count, spacing, besides) = Self.places(on: lane) else { return }
         // Kept to the right (Taiwan): a car in the middle of its half, a
-        // scooter nearer the kerb where there is room.
+        // scooter nearer the kerb where there is room. Decision 732: to
+        // the left in Hong Kong.
+        let keep = region.trafficSide
         let carSide: Float = lane.twoWay ? max(lane.half * 0.5, 1.2) : 0
         let scooterSide = carSide + max(min(1.1, lane.half - carSide - 0.5), 0)
         let besideSide = scooterSide - Self.beside.across
@@ -654,7 +659,7 @@ public struct Map3DStreetLife: Sendable {
         func draw(_ vehicle: Vehicle, along: Float, direction: Float) {
             let place = lane.path.at(along)
             let side = vehicle.model.isScooter ? scooterSide : carSide
-            let foot = place.point + place.right * (side * direction)
+            let foot = place.point + place.right * (side * direction * keep)
             // Coming out of and going into the road's ends.
             // Use the chosen bus body length, rather than the car fade distance.
             let ends = min(max(min(along, length - along) / (vehicle.model.isBus ? 2 * vehicle.model.half : 4), 0), 1)
@@ -665,7 +670,7 @@ public struct Map3DStreetLife: Sendable {
             let behind = along - Self.beside.behind * direction
             guard behind > 0, behind < length else { return }
             let next = lane.path.at(behind)
-            add(beside.model, at: next.point + next.right * (besideSide * direction), forward: next.along * direction,
+            add(beside.model, at: next.point + next.right * (besideSide * direction * keep), forward: next.along * direction,
                 tint: beside.tint, ends: min(max(min(behind, length - behind) / 4, 0), 1), to: &frame, target: target, reach: reach, eye: eye,
                 clearOf: buses)
         }

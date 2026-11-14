@@ -474,6 +474,8 @@ public struct Map3DScene: Sendable {
         builder.detail = detail
         builder.studyRegion = studies
         builder.buildsFacades = facades
+        // Decision 732: Hong Kong's streets on its map.
+        builder.streetLife.region = Map3DStreetRegion(world: world)
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 234: on a real-world map, the base map's water, cover
         // and roads; the ground's own water then gives way to its finer

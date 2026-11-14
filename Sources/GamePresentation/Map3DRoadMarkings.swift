@@ -37,7 +37,9 @@ struct Map3DRoadMarkings {
         case crosswalk
         case stopLine
         /// Lane arrows: through, or through and left.
-        case arrow(left: Bool)
+        /// Decision 732: `mirrored`, left for right (Hong Kong's inner
+        /// lane, through and right).
+        case arrow(left: Bool, mirrored: Bool = false)
         /// Decision 447: a line of a scooter box (機車停等區) before the
         /// stop line, or of a two-stage turn box (機車待轉區) in the
         /// junction's corner.
@@ -171,6 +173,10 @@ struct Map3DRoadMarkings {
         let group: Int
     }
 
+    /// Decision 732: whose roads they are: which side the traffic keeps
+    /// to, and whether there are scooter boxes, red kerbs and painted
+    /// walkways (``Map3DStreetRegion``).
+    var region: Map3DStreetRegion = .taiwan
     var marks: [Mark] = []
     var signals: [Signal] = []
     var walks: [Walk] = []
@@ -222,7 +228,11 @@ struct Map3DRoadMarkings {
     /// The marks of `roads`, their points in metres from `origin` (metres
     /// east and south of the world's origin: where the scene is, so a
     /// junction's signals keep their offset whatever scene draws them).
-    init(_ roads: [Map3DBaseMap.Road], origin: Map3DBaseMap.Point = Map3DBaseMap.Point(x: 0, z: 0)) {
+    /// Decision 732: in `region` (traffic on the left in Hong Kong, the
+    /// stop lines, arrows and signals on that side; no scooter boxes, red
+    /// kerbs or painted walkways there).
+    init(_ roads: [Map3DBaseMap.Road], origin: Map3DBaseMap.Point = Map3DBaseMap.Point(x: 0, z: 0), region: Map3DStreetRegion = .taiwan) {
+        self.region = region
         // Every point of a marked road, by its half metre (as
         // Builder.junctions(of:) keys them).
         let at = Self.points(of: roads) { Map3DScene.Builder.hasCentreLine($0) }
@@ -282,7 +292,7 @@ struct Map3DRoadMarkings {
         for (number, road) in roads.enumerated() where Self.kerbed(road) {
             addKerbs(road, number: number, lengths: lengths(number))
         }
-        for (number, road) in roads.enumerated() where Self.walkway(road) == .painted && road.points.count >= 2 {
+        for (number, road) in roads.enumerated() where region.hasPaintedWalkways && Self.walkway(road) == .painted && road.points.count >= 2 {
             addWalkway(road, number: number, lengths: lengths(number))
         }
     }
@@ -388,7 +398,8 @@ struct Map3DRoadMarkings {
     private mutating func addKerbs(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double]) {
         let cut = (kerbCuts[number] ?? []) + (cuts[number] ?? [])
         let red = cut.map { ($0.lowerBound - Self.redNearJunction)...($0.upperBound + Self.redNearJunction) }
-        let allRed = road.kind == .trunk || road.kind == .primary
+        // Decision 732: Hong Kong's kerbs, yellow all along.
+        let allRed = region.hasRedKerbs && (road.kind == .trunk || road.kind == .primary)
         let offset = Double(road.kind.width(ramp: false)) / 2 - Self.kerbInset
         for (index, (a, b)) in zip(road.points, road.points.dropFirst()).enumerated() {
             let length = Self.distance(a, b), start = sums[index]
@@ -405,7 +416,7 @@ struct Map3DRoadMarkings {
                 let middle = start + (from + to) / 2
                 let centre = Map3DBaseMap.Point(x: a.x + way.x * (from + to) / 2, z: a.z + way.z * (from + to) / 2)
                 guard !cut.contains(where: { $0.contains(middle) }), Self.inside(centre, road.bounds) else { continue }
-                let isRed = allRed || red.contains { $0.contains(middle) }
+                let isRed = allRed || (region.hasRedKerbs && red.contains { $0.contains(middle) })
                 for side in [1.0, -1.0] {
                     marks.append(Mark(kind: .kerb(red: isRed), centre: Map3DBaseMap.Point(x: centre.x + right.x * side * offset, z: centre.z + right.z * side * offset),
                                       along: way, length: to - from, width: Self.kerbWidth,
@@ -439,7 +450,8 @@ struct Map3DRoadMarkings {
             let crosswalk = clear + Self.kerbGap + Self.crosswalkDepth / 2
             // Decision 447: on a wide arm the scooters wait in their box
             // ahead of the cars' stop line.
-            let boxed = arm.half >= Self.scooterBoxHalf
+            // Decision 732: none in Hong Kong.
+            let boxed = region.hasScooterBoxes && arm.half >= Self.scooterBoxHalf
             let front = crosswalk + Self.crosswalkDepth / 2 + Self.stopGap
             let stop = front + (boxed ? Self.scooterBoxDepth : 0) + Self.stopDepth / 2
             let arrow = stop + Self.stopDepth / 2 + Self.arrowGap + Self.arrowLength / 2
@@ -452,9 +464,12 @@ struct Map3DRoadMarkings {
             guard length >= stop + Self.stopDepth + 8, let zebra = arm.place(crosswalk), let line = arm.place(stop) else { continue }
             let half = arm.half
             // The traffic coming in goes back along the arm; its right
-            // (Taiwan keeps right) is the right of that.
+            // (Taiwan keeps right) is the right of that. Decision 732:
+            // in Hong Kong, which keeps left, its left: `right` is the
+            // side the incoming traffic keeps to.
             func toward(_ out: Map3DBaseMap.Point) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: -out.x, z: -out.z) }
-            func right(_ way: Map3DBaseMap.Point) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: -way.z, z: way.x) }
+            let keep = Double(region.trafficSide)
+            func right(_ way: Map3DBaseMap.Point) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: -way.z * keep, z: way.x * keep) }
             func moved(_ p: Map3DBaseMap.Point, _ way: Map3DBaseMap.Point, _ by: Double) -> Map3DBaseMap.Point {
                 Map3DBaseMap.Point(x: p.x + way.x * by, z: p.z + way.z * by)
             }
@@ -495,10 +510,11 @@ struct Map3DRoadMarkings {
             if length >= arrow + Self.arrowLength / 2 + 3, let place = arm.place(arrow) {
                 let way = toward(place.out)
                 // Two lanes each way on a road this wide, the inner one
-                // through and left.
+                // through and left (decision 732: through and right in
+                // Hong Kong).
                 let lanes = half >= 5 ? 2 : 1, lane = half / Double(lanes)
                 for index in 0..<lanes {
-                    marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0), centre: moved(place.point, right(way), (Double(index) + 0.5) * lane),
+                    marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0, mirrored: region.keepsLeft), centre: moved(place.point, right(way), (Double(index) + 0.5) * lane),
                                       along: way, length: Self.arrowLength, width: Self.arrowWidth, onDeck: arm.onDeck))
                 }
             }
@@ -594,9 +610,11 @@ extension Map3DScene.Builder {
                 addMark(mark, colour: red ? Self.kerbRed : Map3DPalette.centreLine, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
             case .walkway(let line):
                 addMark(mark, colour: line ? Self.paint : Self.walkwayGreen, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
-            case .arrow(let left):
+            case .arrow(let left, let mirrored):
+                // Decision 732: mirrored, the layer read right to left.
+                let u = left ? (0.5, 1.0) : (0, 0.5)
                 addMark(mark, colour: Map3DPalette.road(.primary), layer: Float(Map3DSurface.laneArrows.rawValue),
-                        u: left ? (0.5, 1) : (0, 0.5), v: (0, 1))
+                        u: mirrored ? (u.1, u.0) : u, v: (0, 1))
             }
         }
     }
@@ -702,7 +720,9 @@ extension Map3DScene.Builder {
     /// (``Map3DSignalTiming/Models``).
     mutating func addStreetStops(_ roads: [Map3DBaseMap.Road], markings: Map3DRoadMarkings) {
         for signal in markings.signals {
-            guard let model = Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
+            // Decision 732: Hong Kong's own on its map.
+            let hongKong = markings.region == .hongKong ? Self.hongKongSignals[signal.road] : nil
+            guard let model = hongKong ?? Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
             place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), group: signal.group)
         }
         // Decision 445: each pedestrian signal its face and its countdown's
@@ -776,6 +796,13 @@ extension Map3DScene.Builder {
             }
         }
     }
+
+    /// Decision 732: Hong Kong's traffic signals' models in
+    /// ``Map3DModelPack/standard``, by the road they face (each placed as
+    /// it shows while the lights do not change).
+    static let hongKongSignals: [Map3DSignalTiming.Road: Int] = Dictionary(uniqueKeysWithValues: [Map3DSignalTiming.Road.main, .cross].compactMap { road in
+        Map3DModelPack.standard.index(of: Map3DHongKongSignal.placedName(road)).map { (road, $0) }
+    })
 
     /// Decision 445: the pedestrian signals' models in ``Map3DModelPack/standard``.
     static let walkModels = Map3DPedestrianSignal.Models(pack: .standard)

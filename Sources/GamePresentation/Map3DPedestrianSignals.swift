@@ -135,12 +135,24 @@ public enum Map3DPedestrianSignal {
     /// first frame and the green does not flash; the countdown still shows.
     public static func face(_ road: Road, group: Int, clock: Map3DSignalTiming.Clock?, time: Double, pace: Pace,
                             reduceMotion: Bool) -> Face {
-        guard let clock, clock.changes else { return Face(figure: road == .main ? .walk(0) : .stop, count: nil) }
+        guard let clock, clock.changes else { return Face(figure: road == .main ? .walk(still(clock?.region ?? .taiwan)) : .stop, count: nil) }
         guard let left = left(road, at: clock.second + Map3DSignalTiming.offset(group)) else { return Face(figure: .stop, count: nil) }
-        guard !reduceMotion, !clock.paused else { return Face(figure: .walk(0), count: left) }
+        // Decision 732: Hong Kong's green man stands in one stride and
+        // flashes before red, with no countdown.
+        let animated = clock.region.animatesPedestrianSignals
+        let count = animated ? left : nil
+        guard !reduceMotion, !clock.paused else { return Face(figure: .walk(still(clock.region)), count: count) }
         let fraction = time - time.rounded(.down)
-        if left <= flashing, fraction >= 0.5 { return Face(figure: .dark, count: left) }
-        return Face(figure: .walk(pace.frame(road, group: group)), count: left)
+        if left <= flashing, fraction >= 0.5 { return Face(figure: .dark, count: count) }
+        return Face(figure: .walk(animated ? pace.frame(road, group: group) : still(clock.region)), count: count)
+    }
+
+    /// Decision 732: the frame a green man that does not walk is shown
+    /// at: Taiwan's first (as it stands paused); Hong Kong's figure, which
+    /// never walks, in its widest stride (the frame a quarter of the way
+    /// through the step, its legs and arms swung furthest apart).
+    static func still(_ region: Map3DStreetRegion) -> Int {
+        region.animatesPedestrianSignals ? 0 : frames / 4 + (frames % 4 == 0 ? 0 : 1)
     }
 
     /// The group a pedestrian signal's instances carry

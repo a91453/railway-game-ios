@@ -24,6 +24,10 @@ public enum Map3DSignalTiming {
         case red = 0
         case amber = 1
         case green = 2
+        /// Decision 732: red and amber lit together, which Hong Kong's
+        /// signals show just before green (the Road Users' Code, chapter
+        /// 8: "you may get ready to move ... when the green light shows").
+        case redAmber = 3
     }
 
     /// A cycle's length in game seconds, and where in it the lights change
@@ -55,6 +59,24 @@ public enum Map3DSignalTiming {
     /// The same at a junction of offset `group`.
     public static func light(_ road: Road, group: Int, at second: Int64) -> Light {
         light(road, at: second + offset(group))
+    }
+
+    /// Decision 732: how many seconds before its green a Hong Kong signal
+    /// shows red and amber together.
+    static let redAmberSeconds: Int64 = 2
+
+    /// Decision 732: what `road`'s signals show `second` game seconds into
+    /// the clock in `region`: Taiwan's lights (``light(_:at:)``); in Hong
+    /// Kong, red and amber together for the last ``redAmberSeconds`` of a
+    /// red before its green, while the other road's lights are red too (so
+    /// never beside the other road's amber).
+    public static func light(_ road: Road, at second: Int64, region: Map3DStreetRegion) -> Light {
+        let shown = light(road, at: second)
+        guard region.hasRedAmber, shown == .red else { return shown }
+        let other: Road = road == .main ? .cross : .main
+        guard light(other, at: second) == .red,
+              (1...redAmberSeconds).contains(where: { light(road, at: second + $0) == .green }) else { return shown }
+        return .redAmber
     }
 
     /// How far into its cycle a junction of `group` is, in game seconds:
@@ -95,16 +117,20 @@ public enum Map3DSignalTiming {
         /// Decision 445: whether the clock is paused (the little green man
         /// stands still).
         public let paused: Bool
+        /// Decision 732: whose signals they are (Hong Kong's show red and
+        /// amber before green, and its pedestrian signals stand still).
+        public let region: Map3DStreetRegion
 
-        public init(_ clock: GameClock) {
+        public init(_ clock: GameClock, region: Map3DStreetRegion = .taiwan) {
             second = clock.now.seconds
             changes = Map3DSignalTiming.changes(at: clock.runningSpeed)
             paused = clock.isPaused
+            self.region = region
         }
 
         /// What `road`'s signals at a junction of `group` show.
         public func light(_ road: Road, group: Int) -> Light {
-            changes ? Map3DSignalTiming.light(road, group: group, at: second) : Map3DSignalTiming.steady(road)
+            changes ? Map3DSignalTiming.light(road, at: second + Map3DSignalTiming.offset(group), region: region) : Map3DSignalTiming.steady(road)
         }
     }
 
@@ -117,11 +143,25 @@ public enum Map3DSignalTiming {
         let red: Int
         let amber: Int
         let green: Int
+        /// Decision 732: Hong Kong's signals (``Map3DHongKongSignal``),
+        /// placed with their green (the main road's) or red (the
+        /// crossing road's); `nil` in a pack without them.
+        let hongKong: (red: Int, redAmber: Int, amber: Int, green: Int)?
 
         public init?(pack: Map3DModelPack) {
             guard let red = pack.index(of: Map3DProp.signalStop.modelName), let amber = pack.index(of: Map3DProp.signalAmber.modelName),
                   let green = pack.index(of: Map3DProp.signalGo.modelName) else { return nil }
             (self.red, self.amber, self.green) = (red, amber, green)
+            let hk = Light.allCases.map { pack.index(of: Map3DHongKongSignal.modelName($0)) }
+            if let r = hk[Light.red.rawValue], let a = hk[Light.amber.rawValue], let g = hk[Light.green.rawValue], let ra = hk[Light.redAmber.rawValue] {
+                hongKong = (r, ra, a, g)
+            } else {
+                hongKong = nil
+            }
+        }
+
+        public static func == (a: Models, b: Models) -> Bool {
+            (a.red, a.amber, a.green) == (b.red, b.amber, b.green) && a.hongKong.map { [$0.red, $0.redAmber, $0.amber, $0.green] } == b.hongKong.map { [$0.red, $0.redAmber, $0.amber, $0.green] }
         }
 
         /// The model to draw the instances of `model` of `group` with at
@@ -129,13 +169,25 @@ public enum Map3DSignalTiming {
         /// one), any other model itself.
         public func model(_ model: Int, group: Int, clock: Clock?) -> Int {
             let road: Road
-            switch model {
-            case green: road = .main
-            case red: road = .cross
-            default: return model
+            let hk = hongKong.map { model == $0.green || model == $0.red } ?? false
+            if model == green || (hk && model == hongKong?.green) {
+                road = .main
+            } else if model == red || hk {
+                road = .cross
+            } else {
+                return model
             }
-            switch clock?.light(road, group: group) ?? Map3DSignalTiming.steady(road) {
-            case .red: return red
+            let light = clock?.light(road, group: group) ?? Map3DSignalTiming.steady(road)
+            if hk, let models = hongKong {
+                switch light {
+                case .red: return models.red
+                case .redAmber: return models.redAmber
+                case .amber: return models.amber
+                case .green: return models.green
+                }
+            }
+            switch light {
+            case .red, .redAmber: return red
             case .amber: return amber
             case .green: return green
             }

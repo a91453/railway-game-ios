@@ -1766,7 +1766,8 @@ private struct Map3DView: UIViewRepresentable {
         view.quality = quality
         view.reduceMotion = context.environment.accessibilityReduceMotion
         // Decision 429: the junctions' signals change with the game clock.
-        view.signalClock = Map3DSignalTiming.Clock(world.clock)
+        // Decision 732: Hong Kong's signals on its map.
+        view.signalClock = Map3DSignalTiming.Clock(world.clock, region: Map3DStreetRegion(world: world))
         context.coordinator.farOut = farOut
         context.coordinator.onTap = onTap
         defer {

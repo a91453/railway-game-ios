@@ -190,6 +190,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 708: the coaches' liveries, near and far, and the coach
         // stop, after the aircraft and before the route bus.
         groups.append { Map3DCoaches.drawn }
+        // Decision 732: Hong Kong's traffic signals, after the coaches
+        // and before the route bus.
+        groups.append { Map3DHongKongSignal.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
