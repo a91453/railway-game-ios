@@ -922,6 +922,61 @@ extension RealLineLaying {
         return without.offer.acquisition == nil ? laid : without
     }
 
+    /// Decision 752: how near the drawing of the line it keeps beside
+    /// (``RealBranchLine/overseasLanes``) a line's way is moved to its
+    /// side; from there to twice as far, less and less.
+    static let laneReach = 40 * RealLineAcquisition.metre
+
+    /// The way of the line `id` as its purchase follows the real line,
+    /// from its first stop to its last, run on straight past each, or
+    /// `nil`.
+    private func drawnWay(of id: String, frame: RealWorldFrame, railways: RealRailways, traces: RealRailwayTraces) -> WorldPath? {
+        guard let rail = RealBranchLine.overseasLines.first(where: { "\($0.system):\($0.network)" == id }),
+              let runs = RealBranchLine.metroRuns(of: id, after: nil, in: railways) else { return nil }
+        let ownStops = railways.stops["\(rail.system)|\(rail.network)"] ?? []
+        let points = runs.stops.compactMap { name in
+            ownStops.first { $0.chinese == name }.map { WorldVector(frame.worldPosition(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)) }
+                ?? realPoint(of: name, system: rail.system, railways: railways, frame: frame)
+        }
+        let reach = RealLineAcquisition.stationReach
+        guard points.count == runs.stops.count, let firstPoint = points.first, let lastPoint = points.last,
+              let first = traces.snap(firstPoint, within: reach, system: rail.system),
+              let last = traces.snap(lastPoint, within: reach, group: traces.groups[first.place.line]),
+              let way = traces.path(from: first.place, to: last.place) else { return nil }
+        let traced = WorldPath(way).smoothed()
+        guard traced.length > 2 * RealLineAcquisition.runOn else { return nil }
+        let start = traced.point(at: 0), end = traced.point(at: traced.length)
+        return WorldPath(
+            [start + traced.tangent(at: 0).reversed * RealLineAcquisition.runOn] + traced.points
+                + [end + traced.tangent(at: traced.length) * RealLineAcquisition.runOn]
+        )
+    }
+
+    /// Decision 752: `laid`, the way of `line`, kept to its side of the
+    /// drawing of the line it is laid beside (``RealBranchLine/overseasLanes``)
+    /// at least the lane's offset off it, where the two lie within
+    /// ``laneReach``, and less and less out to twice that; unchanged for
+    /// any other line.
+    private func inLane(
+        _ laid: WorldPath, of line: RealBranchLine, frame: RealWorldFrame, railways: RealRailways, traces: RealRailwayTraces
+    ) -> WorldPath {
+        guard let lane = RealBranchLine.overseasLanes[line.id],
+              let other = drawnWay(of: lane.beside, frame: frame, railways: railways, traces: traces) else { return laid }
+        let offset = lane.offset * RealLineAcquisition.metre, reach = Self.laneReach
+        let spacing = 5 * RealLineAcquisition.metre, count = max(2, Int((laid.length / spacing).rounded()))
+        let moved = (0...count).map { laid.point(at: laid.length * Double($0) / Double(count)) }.map { point -> WorldVector in
+            let near = other.nearest(point)
+            guard near.away < 2 * reach else { return point }
+            let on = other.point(at: near.along), normal = other.tangent(at: near.along).normal
+            let side = (point - on).dot(normal)
+            let short = offset > 0 ? max(0, offset - side) : min(0, offset - side)
+            guard short != 0 else { return point }
+            let t = min(max((near.away - reach) / reach, 0), 1), share = 1 - t * t * (3 - 2 * t)
+            return point + normal * (short * share)
+        }
+        return WorldPath(moved).smoothed()
+    }
+
     /// Which of a line's stations stand raised (decision 462).
     enum StationRaising {
         /// None, as before decision 462 (the layout old saves hold).
@@ -960,14 +1015,6 @@ extension RealLineLaying {
         }
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
-        }
-        // Decision 712: not a line drawn along the track of one the company
-        // has.
-        if let other = line.lineOnItsTrack(owned: { world.acquisition(of: $0) != nil }) {
-            return refused(
-                "This line runs along the tracks of the \(other.english), which you own. Only one of the two can be bought on this map.",
-                "這條線和你已經擁有的\(other.chinese)走同一段軌道，這張地圖上只能收購其中一條。"
-            )
         }
         // Decision 712: an overseas line's stations where its own line has
         // them, not where the first line of the station does.
@@ -1117,7 +1164,7 @@ extension RealLineLaying {
             })
             return parts > 0 ? moved.smoothed() : moved
         }
-        let path = line.after == nil ? laid : beside(laid, to: points[parts])
+        let path = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
         let along = points.map { path.nearest($0) }
         guard along.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(along, along.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
             return refused("The real line's stations are not along its track here.", "真實車站不在這段鐵路上。")
@@ -1171,13 +1218,28 @@ extension RealLineLaying {
         try? draft.readGround(under: samples + yardSamples, from: heights)
         let mapped = draft.ground.isMapped
         let planning = draft
-        func ground(_ point: WorldVector) -> Double {
-            Double(planning.groundHeight(at: point.plan) ?? 0)
+        // Decision 752: under an overseas line, the ground and water under
+        // its second track too, a track's offset to either side, the
+        // higher ground and any water (the Tung Chung Line's second track
+        // west of Sunny Bay crossed a cell of water its first did not, once
+        // the Disneyland Resort Line's land was read in, and stood too low
+        // over it).
+        let besideTrack = line.standsOnItsOwnPoints ? HighSpeedDemo.trackOffset : nil
+        func around(_ point: WorldVector) -> [WorldVector] {
+            guard let besideTrack else { return [point] }
+            return [point] + [(besideTrack, 0.0), (-besideTrack, 0), (0, besideTrack), (0, -besideTrack)].map { dx, dy in
+                WorldVector(x: point.x + dx, y: point.y + dy)
+            }
         }
-        func water(_ point: WorldVector) -> Bool {
-            guard mapped else { return false }
+        func ground(_ point: WorldVector) -> Double {
+            around(point).map { Double(planning.groundHeight(at: $0.plan) ?? 0) }.max() ?? 0
+        }
+        func wet(_ point: WorldVector) -> Bool {
             let plan = point.plan
             return planning.terrain.isWater(row: Int(plan.y / Land.cellLength), column: Int(plan.x / Land.cellLength))
+        }
+        func water(_ point: WorldVector) -> Bool {
+            mapped && around(point).contains(where: wet)
         }
 
         // Each station level, its loops' stretch with it. On a double track
@@ -1658,7 +1720,15 @@ extension RealLineLaying {
                     tiles = order
                     continue
                 }
-                let crosses = if case .trackConflict = error { true } else { false }
+                // Decision 752: for the lines laid in a lane beside
+                // another's drawing, track too close is met as track
+                // crossed, where their drawings cross (the Airport Express
+                // over the Tung Chung Line at Tung Chung).
+                let crosses = switch error {
+                case .trackConflict: true
+                case .trackTooClose: line.sharesALane
+                default: false
+                }
                 return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
             }
         }

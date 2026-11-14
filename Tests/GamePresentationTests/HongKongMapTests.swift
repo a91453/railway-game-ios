@@ -155,19 +155,13 @@ final class HongKongMapTests: XCTestCase {
 
     /// Each line on sale is bought, one after another on the same map:
     /// each has its trains, and the land round its stations is read in
-    /// with Hong Kong's people. None is refused but the Tung Chung Line,
-    /// drawn along the track of the Airport Express bought before it
-    /// (``RealBranchLine/overseasLinesOnOneTrack``): it is told so and
-    /// stays on sale.
+    /// with Hong Kong's people. None is refused (decision 752: the Tung
+    /// Chung Line, drawn along the Airport Express's track, was).
     func testEveryLineOnSaleIsBought() throws {
         let session = try hongKong()
         for id in session.buyableRealLines.map(\.id).sorted() {
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, id)
             let offer = session.realLineOffer(for: line)
-            if id == "hkmtr:TCL" {
-                XCTAssertEqual(offer.problem, "這條線和你已經擁有的機場快綫走同一段軌道，這張地圖上只能收購其中一條。")
-                continue
-            }
             XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
             XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
             let bought = try XCTUnwrap(session.world.acquisition(of: id), id)
@@ -175,7 +169,7 @@ final class HongKongMapTests: XCTestCase {
             XCTAssertFalse(ran.assignedTrains.isEmpty, id)
         }
         XCTAssertGreaterThan(session.world.land.cells.reduce(0) { $0 + $1.residents }, 100_000)
-        XCTAssertEqual(session.buyableRealLines.map(\.id), ["hkmtr:TCL"])
+        XCTAssertEqual(session.buyableRealLines.map(\.id), [])
     }
 
     /// The South Island Line is bought on its own, with every train of
@@ -236,25 +230,34 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertEqual(session.world.clock.speed, .paused)
     }
 
-    /// The Airport Express and the Tung Chung Line are drawn along one
-    /// track: whichever the company owns, the other is refused with that
-    /// reason, before any of it is laid (it used to be laid four times
-    /// over, for a minute, and refused for its track).
-    func testALineAlongAnOwnedLinesTrackIsRefusedAtOnce() throws {
-        for (first, second, reason) in [
-            ("hkmtr:AEL", "hkmtr:TCL", "這條線和你已經擁有的機場快綫走同一段軌道，這張地圖上只能收購其中一條。"),
-            ("hkmtr:TCL", "hkmtr:AEL", "這條線和你已經擁有的東涌綫走同一段軌道，這張地圖上只能收購其中一條。"),
-        ] {
+    /// Decision 752 (2026-11-14: 「新版不能同時蓋迪士尼線跟機場快線」「記得
+    /// 東涌也是他們重複線路」): the Airport Express, the Tung Chung Line and
+    /// the Disneyland Resort Line, drawn along one track round Sunny Bay
+    /// and from Hong Kong to the airport island, are each bought after the
+    /// other two, in every order, and every one of them has its trains.
+    /// The Tung Chung Line was refused after the Airport Express and the
+    /// other way round (decision 712), and both after the Disneyland
+    /// Resort Line, laid on their track at Sunny Bay.
+    func testTheThreeLinesOnOneTrackAreBoughtInEveryOrder() throws {
+        let ids = ["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]
+        let orders = ids.flatMap { a in ids.filter { $0 != a }.flatMap { b in ids.filter { $0 != a && $0 != b }.map { [a, b, $0] } } }
+        XCTAssertEqual(orders.count, 6)
+        for order in orders {
             let session = try hongKong()
-            let owned = try XCTUnwrap(session.buyableRealLines.first { $0.id == first })
-            XCTAssertNil(owned.lineOnItsTrack { session.world.acquisition(of: $0) != nil })
-            XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: owned)), session.message?.text ?? "")
-            let other = try XCTUnwrap(session.buyableRealLines.first { $0.id == second })
-            let offer = session.realLineOffer(for: other)
-            XCTAssertEqual(offer.problem, reason)
-            XCTAssertNil(offer.acquisition)
+            for id in order {
+                let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(order) \(id)")
+                let offer = session.realLineOffer(for: line)
+                XCTAssertNil(offer.problem, "\(order) \(id): \(offer.problem ?? "")")
+                guard session.acquireRealLine(offer), let bought = session.world.acquisition(of: id) else {
+                    XCTFail("\(order) \(id): \(session.message?.text ?? "")")
+                    break
+                }
+                let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)), "\(order) \(id)")
+                XCTAssertFalse(ran.assignedTrains.isEmpty, "\(order) \(id)")
+            }
         }
-        XCTAssertTrue(RealBranchLine.overseasLinesOnOneTrack.allSatisfy { $0.allSatisfy { $0.hasPrefix("hkmtr:") } })
+        XCTAssertNil(RealBranchLine.overseasLanes["hkmtr:TCL"])
+        XCTAssertTrue(RealBranchLine.overseasLanes.keys.allSatisfy { $0.hasPrefix("hkmtr:") })
     }
 
     /// No train of a line's day stands overnight between its ends in the
