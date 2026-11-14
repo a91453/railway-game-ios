@@ -3333,6 +3333,48 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 732: Hong Kong's streets close up on its 3D map: two
+    /// signalled junctions (Nathan Road at Jordan Road, and Canton Road at
+    /// Austin Road by Kowloon Station), with the traffic on the left, the
+    /// signals at the left-hand kerb and the yellow kerb lines. As
+    /// `testHongKongMap`, the Airport Express bought and run on to the
+    /// morning; the followed train let go so the camera stays over the
+    /// junction.
+    func testHongKongStreetsJordan() { shootHongKongStreets("jordan", at: "22.30497,114.17163") }
+    func testHongKongStreetsCantonAustin() { shootHongKongStreets("canton-austin", at: "22.30395,114.16795") }
+
+    private func shootHongKongStreets(_ place: String, at: String) {
+        executionTimeAllowance = 1_700
+        let app = launch(extra: ["-screenshot-hong-kong", "hkmtr:AEL,22.3049,114.1615", "-map3D.quality", "high",
+                                 "-screenshot-3d-view", "70,35,62", "-screenshot-3d-at", at])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 300), "Hong Kong's map opens")
+        // The main thread is busy buying and running the morning (as
+        // `testHongKongMap`).
+        Thread.sleep(forTimeInterval: 360)
+        let unfollow = app.descendants(matching: .any)["train.unfollow"].firstMatch
+        XCTAssertTrue(unfollow.appears(within: 1_000), "The line is bought and a train followed")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+        }
+        if unfollow.becomesHittable(within: 10) { unfollow.tap() }
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        waitForPicture(timeout: 150)
+        settle(seconds: 12)
+        keep("hong-kong-streets-\(place)-low", app)
+        // Then farther, the whole junction.
+        app.pinch(withScale: 0.5, velocity: -1)
+        settle(seconds: 10)
+        keep("hong-kong-streets-\(place)-high", app)
+    }
+
     /// Opens the sights panel: by the status bar's own button where the
     /// game shows it, else from the game menu. On iOS 27.2 the menu's
     /// "More" has its label but not its identifier (#2118, the Mac's run
