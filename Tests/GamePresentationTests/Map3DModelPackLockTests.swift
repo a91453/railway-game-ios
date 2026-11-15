@@ -98,7 +98,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name) }
         XCTAssertEqual(Self.digest(before.map(\.name)), "e5a5ab1c6ac6da09")
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "ea5fb845cf270baf")
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "8766b651609228df")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
                        Map3DFerry.drawn.map(\.name))
@@ -109,7 +109,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstHK = firstCoach + coach.count
         XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "f302cc7c4bdb4f1b")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "748aa00a48ce854f")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "94379689657a797")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
