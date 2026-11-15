@@ -7,5 +7,6 @@
 extension Map3DTrainRegistry {
     static let trains: [Map3DTrainRegistration] = [
         Map3DMTRAirportLine.registration,
+        Map3DMTRUrbanLine.registration,
     ]
 }
