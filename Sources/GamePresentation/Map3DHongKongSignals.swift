@@ -46,7 +46,7 @@ public enum Map3DHongKongSignal {
     /// origin.
     static func model(_ light: Map3DSignalTiming.Light) -> Map3DModelPack.Model {
         var mesh = Map3DMesh()
-        let steel = Map3DColor.rgb(0x8A9099), dark = Map3DProp.signalHousing, toward = Map3DPoint(-1, 0, 0)
+        let steel = Map3DPalette.steel, dark = Map3DProp.signalHousing, toward = Map3DPoint(-1, 0, 0)
         // A square post: boxes only, no sine, so the model is the same to
         // the bit on Linux and on a Mac (`hashes.lock.json`).
         mesh.addBox(base: .zero, forward: toward, length: 0.13, width: 0.13, height: postHeight, top: steel, side: steel)

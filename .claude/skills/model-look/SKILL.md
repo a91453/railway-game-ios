@@ -96,6 +96,13 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 圖集裡畫了自己顏色的幾格（窗、鐵捲門、店面）：從決策 370 起 shader 只取圖集的亮度當淡紋與夜窗判斷，面一律畫頂點的色票色（`Map3DShaders.metal` 的 `base = in.color`），所以畫面上已經是色票色，不用平塗、更不要改成切面。改那幾格的顏色只會動到夜窗的亮度門檻。
 
+**取色與分色**（作者 2026-11-15：「我怕他製作模型還在簡單幾色而已」）：
+
+- 每個材質先從遊戲已有的色取：`Map3DPalette`（建築、大型廠房用多色組 `cityOfficeWalls`、`cityConcreteWalls`、`cityRoofs`、`hallWalls`、`hallRoofs`，一組裡挑一格，不是整組只用第一格）與舊材質對照表 `tools/texture-palette/t003/building-map.csv`（舊材質最常見、2026-11-15 加進遊戲的 `steel` 鋼、`dark` 深色／窗、`redBrick` 紅磚、`timber` 木頭、`terrazzo` 洗石子）。派工單的材質表寫出是哪一格（`references/studio-brief.md` §1 第 7 條）；遊戲沒有的色標「新提」並寫原因。
+- 照部位分色：牆、窗、窗框、樓層線、屋頂、設備、底座各自是面、各一個色。只有兩三個大色塊的模型，在遊戲大小看起來就是盒子（第 2 節），不算交件。
+- 列車、公車的塗裝照真車照片取色（遊戲沒有的塗裝色可以新提）；車底、轉向架、車頂設備優先用 `Map3DPalette.steel` 與 `dark`。
+- 2026-11-15 檢視當天的模型時的結果與待辦：`docs/research/MODEL_PALETTE_REVIEW_2026-11-15.md`。
+
 **舊版模型**（作者自己的 SwiftRailMac，貼圖內嵌在 GLB 裡）：
 
 - 建築：沿用作者的白模，丟掉貼圖與 UV，依部位上色票（本機工作室 b001 的 B 版，`tools/restyle-b001/recolor.py`）。舊材質圖只拿來取色，歸到最接近的色票色（本機工作室 t003 第 2 輪的分類，對到遊戲位置的表在 `tools/texture-palette/t003/`）；沒有接近的色，在 PR 提出要加的色票，不要直接用原色。

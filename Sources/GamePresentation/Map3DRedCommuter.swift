@@ -23,7 +23,7 @@ public enum Map3DRedCommuter {
     /// marks and the glass (which lights at night and catches the sky,
     /// ``Map3DTrainLights``, ``Map3DTrainMaterial``).
     static let meshPalette: [UInt32] = [
-        Map3DColor.rgb(0x8A9099), Map3DColor.rgb(0xC9CECC), Map3DColor.rgb(0x2B2F36), Map3DColor.rgb(0xE9EBE5),
+        Map3DPalette.steel, Map3DColor.rgb(0xC9CECC), Map3DPalette.dark, Map3DColor.rgb(0xE9EBE5),
         Map3DPalette.trainRed, Map3DPalette.canopy, Map3DTrainStyle.glass,
     ]
 

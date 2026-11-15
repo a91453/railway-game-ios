@@ -52,9 +52,16 @@ IN_GAME = {
     "混凝土": "Map3DPalette.concrete",
     "藍色重點": "Map3DPalette.canopy",
     "月台": "Map3DPalette.platform",
+    # 2026-11-15 加進遊戲（原本是 t001 有、遊戲沒有的 b001 擴充試色與規格色）。
+    "鋼": "Map3DPalette.steel",
+    "深色／窗": "Map3DPalette.dark",
+    "紅磚": "Map3DPalette.redBrick",
+    "木頭": "Map3DPalette.timber",
+    "洗石子": "Map3DPalette.terrazzo",
 }
-# t001 色票裡有、遊戲裡還沒有的（b001 擴充試色與規格色）：要用就先在 PR 提出加進 Map3DPalette。
-NOT_IN_GAME = {"紅磚", "洗石子", "木頭", "鋼", "深色／窗"}
+# t001 色票裡有、遊戲裡還沒有的：要用就先在 PR 提出加進 Map3DPalette。2026-11-15 起沒有了
+# （五色都加進遊戲），留著給之後 t001 再加的色。
+NOT_IN_GAME: set[str] = set()
 
 BUILDING = ["整面建築立面", "清水模／水泥", "石材／洗石子／磁磚", "瓦／屋面", "磚", "金屬／鐵皮", "木頭", "玻璃／窗"]
 # 作者 2026-11-15（經協調者）：這幾類整類人工看，不猜。

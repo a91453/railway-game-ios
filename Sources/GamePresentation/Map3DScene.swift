@@ -759,6 +759,19 @@ public enum Map3DPalette {
     /// and a shade lighter, which under the map's light read as brown.
     public static let trainRed = Map3DColor.rgb(0x8C1C1C)
     public static let roof = Map3DColor.rgb(0xC4C8D6)
+    /// The five colours of the local studio's t001 palette that the owner's
+    /// old textures use and the lists here did not have
+    /// (`tools/texture-palette/t003/`, sorted from the old textures on
+    /// 2026-11-15): steel (bare steelwork, piers, underframes; 271 of the
+    /// old building textures), dark (dark windows and glass, coal, signal
+    /// housings; 24), a red brick paler than the old plants' ``brick``
+    /// (32), timber (25) and terrazzo, Taiwan's washed granite plaster
+    /// (11). Named so a model and a studio brief can use them by name.
+    public static let steel = Map3DColor.rgb(0x8A9099)
+    public static let dark = Map3DColor.rgb(0x2B2F36)
+    public static let redBrick = Map3DColor.rgb(0xB07A62)
+    public static let timber = Map3DColor.rgb(0x9A7657)
+    public static let terrazzo = Map3DColor.rgb(0xE3DCCB)
     public static let arcade = Map3DColor.rgb(0x6F6A64)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
