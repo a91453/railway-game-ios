@@ -112,6 +112,11 @@ final class RealWorldMapTests: XCTestCase {
         // A blank map's towns have roads, a real-world map none yet (decision 400).
         XCTAssertNotNil(plain.roads)
         plain.roads = nil
+        // The city's first request is a sight's (decision 772: Taipei 101
+        // is a landmark, its January the winter holidays', so its target
+        // is its own, not the blank map's drawn sight's).
+        XCTAssertEqual(real.cityRequests?.offers.first?.kind, .tourism)
+        blank.cityRequests = plain.cityRequests
         XCTAssertEqual(blank, plain)
         XCTAssertNil(GameWorld.newGame().geoAnchor)
     }

@@ -561,9 +561,15 @@
 ///     rows and the whole save with them, so it says the save is newer
 ///     than it instead. A save of any earlier version needs no step: the
 ///     company has no air route.
+/// 106. Landmarks, museums and temples (decision 772): a sight's
+///     `"kind"` can be `"landmark"`, `"museum"` or `"temple"`. A build
+///     that reads only an earlier version would refuse the kind and the
+///     whole save with it, so it says the save is newer than it instead.
+///     A save of an earlier version has them as towns: the step turns
+///     those it knows by English name (``Tourism/sightKindsByName``).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 103
+    public static let currentVersion = 106
 
     public let world: GameWorld
 
@@ -824,6 +830,9 @@ extension SavedGame: Codable {
         }
         if version == 72 { world.seedBoughtTilesRoads() }
         if version < 76 { world.convertHighSpeedFaresToNewTaiwanDollars() }
+        // Version 105 or earlier to 106: the towns that are landmarks,
+        // museums or temples take their kind (decision 772).
+        if version < 106 { world.reclassifySightKinds() }
         self.world = world
     }
 
