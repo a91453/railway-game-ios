@@ -44,6 +44,7 @@ extension AttractionKind {
         case .mountain: language.text("Mountain", "山岳")
         case .hotSpring: language.text("Hot spring", "溫泉")
         case .town: language.text("Old town", "城鎮文化")
+        case .nightMarket: language.text("Night market", "夜市")
         }
     }
 }

@@ -29,12 +29,18 @@ public struct AttractionID: RawRepresentable, Hashable, Comparable, Codable, Sen
     }
 }
 
-/// What kind of place an attraction is, which sets its season.
+/// What kind of place an attraction is, which sets its season, and for a
+/// night market its hours.
 public enum AttractionKind: String, CaseIterable, Codable, Sendable {
     case coast
     case mountain
     case hotSpring
     case town
+    /// A night market (decision 769): its tourists come in the evening and
+    /// go home late (``Tourism/nightMarketArrivals``), not in the day as a
+    /// sight's do. Last, so that a blank map's draw of the first four kinds
+    /// is unchanged.
+    case nightMarket
 }
 
 /// A place tourists go to.
@@ -43,7 +49,7 @@ public struct Attraction: Hashable, Sendable {
     public let name: String
     public let englishName: String
     public let point: PlanPoint
-    public let kind: AttractionKind
+    public internal(set) var kind: AttractionKind
     /// The rating before any shop, in hundredths of a star, 100 to 500.
     public let baseStars: Int
     /// The souvenir shop's level, 0 to ``Tourism/maximumSouvenirLevel``.
@@ -211,6 +217,25 @@ public struct Tourism: Hashable, Sendable {
     public static let maximumAttractions = 256
     static let potential: [Int64] = [300, 800, 2_000, 4_500, 9_000]
 
+    // Decision 769, this project's (the reference has no night market's
+    // hours): `0.02 + g(h; 19, 1.6)` arriving and `0.02 + g(h; 21.5, 1.4)`
+    // leaving, with `g(h; μ, σ) = exp(−½((h − μ)/σ)²)`, each normalised so
+    // that the day's mean is 1, in thousandths. A Taiwanese night market
+    // fills from about 17:00, is busiest from 19:00 to 21:00 and empties
+    // towards midnight; nine in ten of its tourists ride between 17:00 and
+    // midnight. These are the hours themselves, not times the day's
+    // ``StationDemand/dayShape``, whose 23:00 is the night's.
+    /// How strongly a night market's tourists arrive in each hour.
+    public static let nightMarketArrivals: [Int64] = [
+        107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107,
+        107, 112, 148, 342, 1030, 2559, 4512, 5462, 4512, 2559, 1030, 342,
+    ]
+    /// How strongly a night market's tourists leave in each hour.
+    public static let nightMarketDepartures: [Int64] = [
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 129, 131, 165, 411, 1433, 3747, 6155, 6155, 3747,
+    ]
+
     public init(attractions: [Attraction] = [], year: Int64 = 0, nextID: Int = 1) {
         self.attractions = attractions
         self.year = year
@@ -250,7 +275,7 @@ public struct Tourism: Hashable, Sendable {
         case .hotSpring:
             if month >= 11 || month <= 2 { return 1_400 }
             if (6...8).contains(month) { return 700 }
-        case .town:
+        case .town, .nightMarket:
             break
         }
         return 1_000
@@ -443,8 +468,10 @@ extension GameWorld {
             let drawn = Int(draw.roll("\(spot.key)name.\(spot.index)", in: 0...Int64(names.count - 1)))
             let name = (0..<names.count).lazy.map { names[(drawn + $0) % names.count] }.first { !used.contains($0.chinese) } ?? names[drawn]
             used.insert(name.chinese)
+            // Decision 769: the town named a night market is one.
+            let named = name.english == Self.blankNightMarketName ? AttractionKind.nightMarket : kind
             list.append(Attraction(id: AttractionID(rawValue: number + 1), name: name.chinese, englishName: name.english, point: spot.point,
-                                   kind: kind, baseStars: Int(draw.roll("\(spot.key)stars.\(spot.index)", in: 2...4)) * 100))
+                                   kind: named, baseStars: Int(draw.roll("\(spot.key)stars.\(spot.index)", in: 2...4)) * 100))
         }
         setTourism(list)
     }
@@ -452,6 +479,10 @@ extension GameWorld {
     private func cellCentre(row: Int, column: Int) -> PlanPoint {
         PlanPoint(x: Int64(column) * Land.cellLength + Land.cellLength / 2, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
     }
+
+    /// The English name of the blank map's town that is a night market
+    /// (decision 769).
+    static let blankNightMarketName = "Night Market"
 
     /// A blank map's names of each kind (decision 250: sixteen of each, so
     /// a map of many tiles repeats few; the first three are decision 174's).
@@ -786,10 +817,26 @@ extension GameWorld {
             case .railwayMuseum: ("鐵道博物館", "Railway museum", Tourism.museumStars(exhibits: building.exhibits.count))
             default: ("夜市", "Night market", Tourism.nightMarketStars)
             }
+            // Decision 769: a night market keeps a night market's hours.
             let sight = Attraction(id: Self.companySightID(of: building.id), name: name, englishName: englishName,
-                                   point: building.centre, kind: .town, baseStars: stars)
+                                   point: building.centre, kind: building.kind == .nightMarket ? .nightMarket : .town, baseStars: stars)
             return (building.id, sight, Int64(max(1, sharing)))
         }
+    }
+
+    /// Decision 769, a save from before it: the sights it holds as towns
+    /// that are night markets become ``AttractionKind/nightMarket``. A
+    /// save names its sights but keeps no key to the catalog they came
+    /// from, so a night market is told by its English name: each of the
+    /// catalog's (the app's `AttractionCatalog`) and the blank map's ends in
+    /// "Night Market", and no other sight's does.
+    mutating func reclassifyNightMarkets() {
+        guard var tourism else { return }
+        for index in tourism.attractions.indices
+        where tourism.attractions[index].kind == .town && tourism.attractions[index].englishName.hasSuffix("Night Market") {
+            tourism.attractions[index].kind = .nightMarket
+        }
+        self.tourism = tourism
     }
 
     /// The world's railway museum (decision 684), or `nil`.
@@ -1044,10 +1091,18 @@ extension GameWorld {
             guard !sources.isEmpty else { continue }
             let shares = Self.apportion(expected, by: sources.map(\.weight))
             var tourists: [(source: StationID, count: Int64, back: Bool)] = []
+            // Decision 769: a night market's tourists ride in its evening.
+            let night = attraction.kind == .nightMarket
             for (source, share) in zip(sources, shares) where share > 0 {
-                flows.add(outbound: share, back: 0, from: source.station, to: station)
+                if night {
+                    flows.add(hours: Self.apportion(share, by: Tourism.nightMarketArrivals), from: source.station, to: station)
+                } else {
+                    flows.add(outbound: share, back: 0, from: source.station, to: station)
+                }
                 let back = reaches(station, source.station)
-                if back {
+                if back, night {
+                    flows.add(hours: Self.apportion(share, by: Tourism.nightMarketDepartures), from: station, to: source.station)
+                } else if back {
                     flows.add(outbound: 0, back: share, from: station, to: source.station)
                 }
                 tourists.append((source.station, share, back))
