@@ -2365,6 +2365,28 @@
    "lon": 121.4348,
    "source": "way/99806368",
    "matched": "渡船頭街 渡船頭街 Duchuantou Street  八里渡船頭老街"
+  },
+  {
+   "id": "t191",
+   "name": "龍鳳漁港",
+   "englishName": "Longfeng Fishing Port",
+   "kind": "harbour",
+   "stars": 200,
+   "lat": 24.69996,
+   "lon": 120.85677,
+   "source": "area/130226257",
+   "matched": "龍鳳漁港"
+  },
+  {
+   "id": "t192",
+   "name": "布袋漁港",
+   "englishName": "Budai Fishing Port",
+   "kind": "harbour",
+   "stars": 250,
+   "lat": 23.37931,
+   "lon": 120.15568,
+   "source": "area/223251796",
+   "matched": "布袋漁港魚產品直銷中心"
   }
  ]
 }
