@@ -13,7 +13,7 @@
 //  - a model's hash differs from the lock, unless it is named in --allow
 //    (a deliberate model change the PR must justify), or a locked model is gone.
 // Sets listed under "grandfathered" in budgets.json keep their old results.
-import {readFileSync, writeFileSync, existsSync} from 'node:fs';
+import {readFileSync, writeFileSync, existsSync, readdirSync} from 'node:fs';
 import {resolve, dirname} from 'node:path';
 const argv = process.argv.slice(2);
 const flag = (name, fallback) => { const at = argv.indexOf(name); return at >= 0 ? argv[at + 1] : fallback; };
@@ -66,6 +66,10 @@ for (const set of manifest.sets) {
 let hashed = 0;
 if (existsSync(lockPath)) {
   const lock = JSON.parse(readFileSync(lockPath)).models;
+  // Decision 782: and each registered train's own lock file, locks/<id>.json
+  // beside the lock.
+  const locks = resolve(dirname(lockPath), 'locks');
+  if (existsSync(locks)) for (const name of readdirSync(locks).filter(n => n.endsWith('.json')).sort()) Object.assign(lock, JSON.parse(readFileSync(resolve(locks, name))).models);
   for (const m of manifest.models) {
     // A formation is a scene assembled from already locked units, not a
     // ModelPack entry. It has no pack FNV and must not be added to the lock.

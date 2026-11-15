@@ -27,11 +27,46 @@ final class Map3DModelPackLockTests: XCTestCase {
         return String(h, radix: 16)
     }
 
+    static let toolDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().appendingPathComponent("tools/train-models")
+
+    static func lockFile(_ url: URL) throws -> [String: Any] {
+        try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any], url.lastPathComponent)
+    }
+
+    /// Decision 782: a registered train's lock file,
+    /// `tools/train-models/locks/<id>.json`.
+    static func lockFile(of train: Map3DTrainRegistration) throws -> [String: Any] {
+        try lockFile(toolDirectory.appendingPathComponent("locks/\(train.id).json"))
+    }
+
+    /// Decision 782: the models' hashes in `hashes.lock.json` and in every
+    /// registered train's own lock file, none in two.
+    static func lockedModels() throws -> [String: [String: Any]] {
+        var locked = try XCTUnwrap(lockFile(toolDirectory.appendingPathComponent("hashes.lock.json"))["models"] as? [String: [String: Any]])
+        for train in Map3DTrainRegistry.trains {
+            let own = try XCTUnwrap(lockFile(of: train)["models"] as? [String: [String: Any]], train.id)
+            XCTAssertTrue(Set(own.keys).isDisjoint(with: locked.keys), "\(train.id): its models locked twice")
+            locked.merge(own) { first, _ in first }
+        }
+        return locked
+    }
+
+    /// Decision 782: the lamps and windows of the pack's running cars whose
+    /// model `include` takes, each by its model's name and its windows'
+    /// (positions move whenever any model is added before them).
+    static func lamps(_ pack: Map3DModelPack, of include: (String) -> Bool) -> [String] {
+        pack.lights.keys.sorted().compactMap { index -> String? in
+            guard include(pack.models[index].name) else { return nil }
+            let car = pack.lights[index]!
+            let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
+            let model = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
+            return "\(pack.models[index].name) \(car.windows.map { pack.models[$0].name } ?? "-") \(hash(model))"
+        }
+    }
+
     func testEveryModelIsAsLocked() throws {
-        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("tools/train-models/hashes.lock.json")
-        let lock = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
-        let locked = try XCTUnwrap(lock["models"] as? [String: [String: Any]])
+        let locked = try Self.lockedModels()
         let models = Map3DModelPack.standard.models + Map3DModelPack.studies.models
         // Decision 467's two stand-ins came after the lock was last
         // written and were never added to it (the app draws their files);
@@ -62,8 +97,28 @@ final class Map3DModelPackLockTests: XCTestCase {
     /// Taoyuan Airport MRT's 1000 and 2000 sets after those (18 cars, 18
     /// lamp sets, no sign). The models before them are as they were
     /// (`hashes.lock.json`).
+    ///
+    /// Decision 782: the registered trains' models (``Map3DTrainRegistry``)
+    /// are left out of every digest here, and the indices are counted as
+    /// if they were not in the pack, so a new train changes none of these
+    /// values; each train's own models and lamps are pinned by its lock
+    /// file (`testEveryRegisteredTrainIsAsLocked`).
     func testTheOrderAndTheLampsAreAsBefore() {
-        let pack = Map3DModelPack.standard
+        let full = Map3DModelPack.standard
+        let registered = full.models.indices.filter { Map3DTrainRegistry.registration(ofModel: full.models[$0].name) != nil }
+        /// A model's index with the registered trains' models before it
+        /// left out.
+        func coreIndex(_ index: Int) -> Int { index - registered.prefix { $0 < index }.count }
+        let isRegistered = Set(registered)
+        let models = full.models.indices.filter { !isRegistered.contains($0) }.map { full.models[$0] }
+        var lights: [Int: Map3DTrainLights.Car] = [:]
+        for (index, car) in full.lights where !isRegistered.contains(index) {
+            var car = car
+            car.windows = car.windows.map(coreIndex)
+            lights[coreIndex(index)] = car
+        }
+        let pack = (models: models, lights: lights,
+                    headSigns: Dictionary(uniqueKeysWithValues: full.headSigns.map { (coreIndex($0.key), $0.value) }))
         // Decision 575 續 (CABLEMAP): the cable car's 13 models just
         // before the route bus, and the windows' models after (which each move 13 on);
         // with them left out and the windows moved back, all as before.
@@ -99,13 +154,10 @@ final class Map3DModelPackLockTests: XCTestCase {
         // its three cars and their windows before the cable car (every
         // model after them, the windows' indices and the signs move by
         // six, so the digests are made again; 3 lamp sets more).
-        // Decision 780: Hong Kong's airport railway's two sets, near and
-        // far, the last sets (31 models, 16 lamp sets more; the models
-        // after them move again).
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name) }
-        XCTAssertEqual(Self.digest(before.map(\.name)), "c79b023ea7e39bc4")
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "c6cd27c2f16754d5")
+        XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "c06a3eccf6b072ce")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
                        Map3DFerry.drawn.map(\.name))
@@ -115,8 +167,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstCoach..<firstCoach + coach.count].map(\.name)), Map3DCoaches.drawn.map(\.name))
         let firstHK = firstCoach + coach.count
         XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "155a9111a834bf4a")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "6e99a1e36ddf7bd")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1cd5d06005403762")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "8fd666128abd53f6")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -127,10 +179,26 @@ final class Map3DModelPackLockTests: XCTestCase {
             }
         }
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
-        XCTAssertEqual(lamps(movingBack: 0).count, 389)
-        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count)), "d8a56a804109efcf")
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "ed3a10a015e866b0")
+        XCTAssertEqual(lamps(movingBack: 0).count, 373)
+        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count)), "c4be699800cad960")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "549c84c692f706e6")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")
+    }
+
+    /// Decision 782: each registered train's models are exactly those its
+    /// lock file names (the hashes themselves, `testEveryModelIsAsLocked`),
+    /// and its cars' lamps and windows are as the file pins them.
+    func testEveryRegisteredTrainIsAsLocked() throws {
+        let pack = Map3DModelPack.standard
+        for train in Map3DTrainRegistry.trains {
+            let lock = try Self.lockFile(of: train)
+            let locked = try XCTUnwrap(lock["models"] as? [String: [String: Any]], train.id)
+            XCTAssertEqual(Set(pack.models.map(\.name).filter(train.owns)), Set(locked.keys), "\(train.id): its models")
+            let lamps = Self.lamps(pack, of: train.owns)
+            // With what it is now, for the lock file.
+            XCTAssertEqual(lock["lampCount"] as? Int, lamps.count, "\(train.id): lampCount \(lamps.count)")
+            XCTAssertEqual(lock["lamps"] as? String, Self.digest(lamps), "\(train.id): lamps \(Self.digest(lamps))")
+        }
     }
 
     /// What making the pack costs, step by step: the recipes, the glass

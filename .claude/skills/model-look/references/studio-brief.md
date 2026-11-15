@@ -45,8 +45,11 @@
 
 1. `tools/train-models/glb_to_swift.py`（用法在它開頭）：材質名照 `--materials` 的順序變成色票索引，
    glTF 軸轉成遊戲軸，寫出 `Sources/GamePresentation/Map3D<名字>Mesh.swift`。
-2. 照決策 780 的 PR（#2268）抄：模型的 enum（`meshPalette` 與 `--materials` 同順序）、新色票、
-   `Map3DTrainSets`（set、遠景 set、`all`、`nearOnly`）、`Map3DShowcase`、`tools/train-models/hashes.lock.json`、
-   模型包大小與雜湊測試、這款車自己的測試、決策、`docs/art/<資料夾>/`（總覽圖不含照片）。
-3. 這幾個檔每款車都會改：**兩款車同時接一定衝突，一次接一款**。
+2. 照決策 782 的註冊表接（`rolling-stock` skill §2.1）：模型的 enum（`meshPalette` 與 `--materials` 同順序）、
+   這款車自己的色票（`extension Map3DPalette`）、set 與遠景 set（`extension Map3DTrainSet`）、
+   `static let registration = Map3DTrainRegistration(...)`（列車展示的列、三角形與長度範圍）都寫在車自己的
+   `Map3D<名字>.swift`；`Map3DTrainRegistryList.swift` 最後加一行；雜湊鎖寫在 `tools/train-models/locks/<id>.json`；
+   這款車自己的測試、決策、`docs/art/<資料夾>/`（總覽圖不含照片）。範例是 `Map3DMTRAirportLine.swift`。
+3. `Map3DScene.swift`、`Map3DTrainSets.swift`、`Map3DShowcase.swift`、`hashes.lock.json` 與模型包大小、雜湊測試都**不用改**，
+   所以兩款車可以同時接，不會衝突（清單那一行由 `.gitattributes` 的 `merge=union` 自動合併）。
 4. 工作室做、審查已通過的模型不用拍 CI 截圖（ui-review §3），CI 綠就合。

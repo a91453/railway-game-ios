@@ -338,14 +338,10 @@ public struct Map3DTrainSet: Sendable {
             // commuter EMU of no type four cars or longer; last, so no set's
             // models before it move.
             redCommuter(),
-            // Decision 780: Hong Kong's airport railway, the Airport
-            // Express and the Tung Chung line, near and from 500 m out
-            // their light cars; last, so no set's models before them move.
-            mtrAirportExpress(),
-            mtrAirportExpress(far: true),
-            mtrTungChung(),
-            mtrTungChung(far: true),
-        ]
+            // Decision 782: then the registered trains' sets
+            // (``Map3DTrainRegistry``), each in its own files; a new train
+            // joins there, not here.
+        ] + Map3DTrainRegistry.sets
     }()
 
     static let byKey: [String: Map3DTrainSet] = Dictionary(uniqueKeysWithValues: all.map { ($0.key, $0) })
@@ -388,11 +384,11 @@ public struct Map3DTrainSet: Sendable {
     /// Kaohsiung and Taichung Green line's (their far sets).
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
-    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
+    /// Decision 782: and the registered trains' sets with a far set.
+    static let nearOnly: Set<String> = Set(Map3DTrainRegistry.sets.filter { $0.far != nil }.map(\.key)).union(["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
-                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key,
-                                Map3DMTRAirportLine.expressKey, Map3DMTRAirportLine.tungChungKey]
+                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -1309,41 +1305,6 @@ public struct Map3DTrainSet: Sendable {
             }
             return Cars(head: lit(cab, front: true), middle: middle, tail: lit(cab.turned, front: false), single: nil)
         }
-    }
-
-    /// Decision 780: the local studio's cars of Hong Kong's airport
-    /// railway (``Map3DMTRAirportLine``), each its own length, laid from
-    /// the front as the real eight cars run: the Airport Express's E F G H
-    /// F G J K, its baggage car K turned round at the back, the pantograph
-    /// on the fourth car (H); the Tung Chung line's V W X Y W X Z V, the
-    /// cab car turned round at the back, the pantograph on Y. The ends'
-    /// lamp lenses lit. Before the pack has its models, the generic metro
-    /// car (``fallback``).
-    static func mtrAirportLine(_ key: String, far: Bool, head: Map3DMTRAirportLine.Unit, tail: Map3DMTRAirportLine.Unit,
-                               car: Map3DMTRAirportLine.Unit, pantograph: Map3DMTRAirportLine.Unit) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .middle, .pantograph, .middle, .middle, .middle],
-                      cycleFromFront: true, ownLengths: true, far: far ? nil : key + "Far", fallback: "metroGeneric") {
-            func model(_ unit: Map3DMTRAirportLine.Unit) -> Map3DModelPack.Model {
-                // A unit that fails to decode draws as a plain metro car
-                // of its length rather than nothing.
-                Map3DMTRAirportLine.model(unit, far: far)
-                    ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: unit.cab).model(named: unit.rawValue)
-            }
-            return Cars(head: litLenses(model(head), front: true), middle: model(car), tail: litLenses(model(tail).turned, front: false),
-                        single: nil, pantograph: model(pantograph))
-        }
-    }
-
-    /// Decision 780: the Airport Express's eight cars.
-    static func mtrAirportExpress(far: Bool = false) -> Map3DTrainSet {
-        mtrAirportLine(Map3DMTRAirportLine.expressKey, far: far, head: .expressCab, tail: .expressBaggage,
-                       car: .expressCar, pantograph: .expressPantograph)
-    }
-
-    /// Decision 780: the Tung Chung line's eight cars.
-    static func mtrTungChung(far: Bool = false) -> Map3DTrainSet {
-        mtrAirportLine(Map3DMTRAirportLine.tungChungKey, far: far, head: .localCab, tail: .localCab,
-                       car: .localCar, pantograph: .localPantograph)
     }
 
     /// Decision 331, fourth: #988's three units, the leading one's cab at

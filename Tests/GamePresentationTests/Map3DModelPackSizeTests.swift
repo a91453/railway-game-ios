@@ -9,8 +9,11 @@ import XCTest
 /// static study the game does not draw goes in ``Map3DModelPack/studies``.
 final class Map3DModelPackSizeTests: XCTestCase {
     func testTheStandardPacksSizeIsPinned() {
-        let pack = Map3DModelPack.standard
-        let vertices = pack.models.reduce(0) { $0 + $1.vertices.count }
+        // Decision 782: the registered trains (``Map3DTrainRegistry``) left
+        // out; each one's models and triangles are pinned in its own lock
+        // file, and its pull request says how much it adds.
+        let models = Map3DModelPack.standard.models.filter { Map3DTrainRegistry.registration(ofModel: $0.name) == nil }
+        let vertices = models.reduce(0) { $0 + $1.vertices.count }
         // K1-1 (2026-10-28): 618 models and 4,200,744 vertices before the
         // 89 studies (1,073,040 vertices) moved out. Decision 458 added the
         // six scenery stand-ins (954 vertices; the app swaps in their
@@ -76,12 +79,9 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // (1 model, 474 vertices more). The owner's old red commuter car
         // (Map3DRedCommuter), last of the sets: its cab, middle and tail
         // cars and their window models (6 models, 14,226 vertices more,
-        // 569 KB a copy). Decision 780: Hong Kong's airport railway, the
-        // Airport Express and the Tung Chung line, near and far, last of
-        // the sets: their cab, middle, pantograph and tail cars and their
-        // window models (31 models, 122,256 vertices more, 4.9 MB a copy).
-        XCTAssertEqual(pack.models.count, 927)
-        XCTAssertEqual(vertices, 6_722_688)
+        // 569 KB a copy).
+        XCTAssertEqual(models.count, 896)
+        XCTAssertEqual(vertices, 6_600_432)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

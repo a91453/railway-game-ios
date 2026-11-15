@@ -14,8 +14,6 @@ final class Map3DTrainSetTests: XCTestCase {
     /// Decision 558: the Wenhu line's two fleets, near and far.
     static let wenhu: Set = ["wenhuVAL256", "wenhuVAL256Far", "wenhu370", "wenhu370Far"]
     static let taoyuanAirport: Set = ["taoyuanAirport1000", "taoyuanAirport1000Far", "taoyuanAirport2000", "taoyuanAirport2000Far"]
-    /// Decision 780: Hong Kong's airport railway, near and far.
-    static let mtrAirportLine: Set = ["mtrAirportExpress", "mtrAirportExpressFar", "mtrTungChung", "mtrTungChungFar"]
     private var pack: Map3DModelPack { .standard }
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
@@ -36,8 +34,10 @@ final class Map3DTrainSetTests: XCTestCase {
             for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName, set.middleBackName, set.pantographBackName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
+                // Decision 782: a registered train's, its own.
+                let registered = Map3DTrainRegistry.registration(ofSet: set.key)
                 // Decision 331: a tram car is two of its sections.
-                let triangles = set.key == "greenTram" ? 2_500...3_200
+                let triangles = registered?.triangles ?? (set.key == "greenTram" ? 2_500...3_200
                     // Decision 430: #1306's standard coach as measured, 6,476
                     // triangles near and 4,008 far; the last coach 24 more,
                     // for its two lamps.
@@ -96,10 +96,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 561: #1700's Airport MRT cars, 13,752 a cab
                     // (the DMB 10,572) and 9,764 to 9,944 the others near,
                     // 4,564 to 6,820 far.
-                    : Self.taoyuanAirport.contains(set.key) ? 4_500...13_800
-                    // Decision 780: the local studio's airport railway cars,
-                    // 3,070 to 4,838 near and 846 to 1,013 far.
-                    : Self.mtrAirportLine.contains(set.key) ? 800...4_900 : 100...4_100
+                    : Self.taoyuanAirport.contains(set.key) ? 4_500...13_800 : 100...4_100)
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -111,7 +108,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 // and its far set's 25 and 25.3 m,
                 // Decision 422: the 700T's far set as long as its near one.
                 let alishan = ["ALISHAN", "ALISHANFar"].contains(set.key)
-                let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
+                let length: ClosedRange<Float> = registered?.length ?? (["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
                     // 610's 16.7 and 17.6 m.
@@ -132,9 +129,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
                     : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3
                     // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.
-                    : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1)
-                    // Decision 780: the airport railway's cab cars 24.6 m.
-                    : Self.mtrAirportLine.contains(set.key) ? 22.4...24.7 : 17...22.5
+                    : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1) : 17...22.5)
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
                 // Decision 531: the 762 mm gauge's cars 2.2 to 2.3 m wide, the
                 // coaches' grab bars 2.32 m.

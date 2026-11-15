@@ -11,7 +11,8 @@ import GameCore
 //
 // Without `--ids` the models are the pack's trains (`set-*` and `style-*`).
 // `--lock FILE` writes the hash of EVERY model in the pack to FILE (the
-// baseline `check.mjs` compares against) and nothing else.
+// baseline `check.mjs` compares against) and nothing else; decision 782: a
+// registered train's (Map3DTrainRegistry) to `locks/<id>.json` beside it.
 // `--night-lights` (decision 449) writes each running car as the game draws
 // it at night: its windows' model lit in the saloon's colour, and a head
 // car's (`-head`, `-cab`, `-single`) headlamps lit at its front, a tail
@@ -53,11 +54,40 @@ func json(_ object: Any) throws -> Data {
     try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
 }
 
+/// Decision 782: the digest the lock files' `lamps` are
+/// (Map3DModelPackLockTests `digest`).
+func digest(_ words: [String]) -> String {
+    var h: UInt64 = 0xcbf29ce484222325
+    for byte in words.joined(separator: "\n").utf8 { h = (h ^ UInt64(byte)) &* 0x100000001b3 }
+    return String(h, radix: 16)
+}
+
 if let lock = option("--lock") {
+    // Decision 782: a registered train's models go in its own file,
+    // `locks/<id>.json` beside FILE, with its cars' lamps and windows
+    // (Map3DModelPackLockTests `lamps`); FILE keeps every other model.
     var entries: [String: Any] = [:]
-    for model in pack.models + studies.models { entries[model.name] = ["triangles": model.triangleCount, "hash": hash(model)] }
+    var own: [String: [String: Any]] = [:]
+    for model in pack.models + studies.models {
+        let entry: [String: Any] = ["triangles": model.triangleCount, "hash": hash(model)]
+        if let train = Map3DTrainRegistry.registration(ofModel: model.name) { own[train.id, default: [:]][model.name] = entry } else { entries[model.name] = entry }
+    }
     try json(["comment": "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.", "models": entries]).write(to: URL(fileURLWithPath: lock))
     print("locked \(entries.count) models in \(lock)")
+    let locks = URL(fileURLWithPath: lock).deletingLastPathComponent().appendingPathComponent("locks", isDirectory: true)
+    try FileManager.default.createDirectory(at: locks, withIntermediateDirectories: true)
+    for train in Map3DTrainRegistry.trains {
+        let lamps = pack.lights.keys.sorted().compactMap { index -> String? in
+            guard train.owns(pack.models[index].name), let car = pack.lights[index] else { return nil }
+            let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
+            let model = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
+            return "\(pack.models[index].name) \(car.windows.map { pack.models[$0].name } ?? "-") \(hash(model))"
+        }
+        let file = locks.appendingPathComponent("\(train.id).json")
+        try json(["comment": "Decision 782: the models of the registered train \(train.id): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+                  "lampCount": lamps.count, "lamps": digest(lamps), "models": own[train.id] ?? [:]]).write(to: file)
+        print("locked \(own[train.id]?.count ?? 0) models of \(train.id) in \(file.path)")
+    }
     exit(0)
 }
 
