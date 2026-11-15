@@ -28,7 +28,8 @@ enum MapPackDownloader {
     static func start() {
         guard isAvailable else { return }
         Task.detached(priority: .utility) {
-            for city in OverseasMap.allCases {
+            // Decision 789: only the open cities have asset packs.
+            for city in OverseasMap.allCases where OverseasMaps.open.contains(city) {
                 await fetch(city)
             }
         }

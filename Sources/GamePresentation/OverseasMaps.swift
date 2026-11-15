@@ -14,12 +14,17 @@ import GameCore
 public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     /// Hong Kong: the MTR's ten heavy-rail lines.
     case hongKong
+    /// Decision 789: Rovaniemi in Finnish Lapland, from Muurola to
+    /// Kemijärvi: VR's Kemijärvi line and the main line's end on the map,
+    /// with Fintraffic's real timetables. Not open yet.
+    case rovaniemi
 
     /// The system its lines are (``RealRailways/System/id``, and the key of
     /// its `<key>.json` and `<key>_times.json`).
     public var system: String {
         switch self {
         case .hongKong: "hkmtr"
+        case .rovaniemi: "vr"
         }
     }
 
@@ -27,6 +32,7 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     public var packFolder: String {
         switch self {
         case .hongKong: "hongkong"
+        case .rovaniemi: "rovaniemi"
         }
     }
 
@@ -35,6 +41,9 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     public var arrival: RealRailways.Coordinate {
         switch self {
         case .hongKong: RealRailways.Coordinate(latitude: 22.315901, longitude: 113.936517)
+        // Rovaniemi's station, where the Kemijärvi line and the main line
+        // meet (the airport has no railway).
+        case .rovaniemi: RealRailways.Coordinate(latitude: 66.498045, longitude: 25.705274)
         }
     }
 }
@@ -248,6 +257,12 @@ extension RealRailways.System {
             "hkmtr|TKL": RealRailways.RGB(0x7D499D), "hkmtr|TKL_LHP": RealRailways.RGB(0x7D499D),
             "hkmtr|SIL": RealRailways.RGB(0xB6BD00), "hkmtr|DRL": RealRailways.RGB(0xF173AC),
         ]),
+        // Decision 789: the colours are this project's
+        // (`tools/rovaniemi-map/build_rovaniemi_rail.py`), OpenStreetMap's
+        // relation having none.
+        .rovaniemi: RealRailways.System(id: "vr", english: "VR", chinese: "芬蘭國鐵", lineColors: [
+            "vr|KJA": RealRailways.RGB(0x3FA535), "vr|MUL": RealRailways.RGB(0x1E6B3A),
+        ]),
     ]
 }
 
@@ -271,6 +286,10 @@ extension RealBranchLine {
         ("hkmtr", "TKL_LHP", "Tseung Kwan O Line (LOHAS Park)", "將軍澳綫（康城）", nil, .metro, true),
         ("hkmtr", "SIL", "South Island Line", "南港島綫", nil, .metro, false),
         ("hkmtr", "DRL", "Disneyland Resort Line", "迪士尼綫", nil, .metro, false),
+        // Decision 789: Rovaniemi's two lines, bought as a TRA branch line
+        // is (a few long trains a day, not a metro's many short ones).
+        ("vr", "KJA", "Kemijärvi Line", "凱米耶爾維線", nil, .branch, false),
+        ("vr", "MUL", "Rovaniemi–Muurola", "羅瓦涅米—穆羅拉", nil, .branch, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along
