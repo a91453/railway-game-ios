@@ -91,6 +91,7 @@ enum MapArt {
         roads: RoadMapOverlay? = nil,
         cableways: CablewayMapOverlay? = nil,
         ferries: FerryMapOverlay? = nil,
+        airRoutes: AirRouteMapOverlay? = nil,
         drawsLabels: Bool = true,
         part: MapPart = .all,
         in context: GraphicsContext
@@ -98,7 +99,7 @@ enum MapArt {
         if part != .trafficAndStations {
             drawRailway(world, network: overlay, expansion: expansion, expansionClear: expansionClear, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
-                        journeyProgress: journeyProgress, buses: buses, roads: roads, cableways: cableways, ferries: ferries, latitude: latitude, in: context)
+                        journeyProgress: journeyProgress, buses: buses, roads: roads, cableways: cableways, ferries: ferries, airRoutes: airRoutes, latitude: latitude, in: context)
         }
         if part != .railway {
             drawTrafficAndStations(
@@ -142,6 +143,7 @@ enum MapArt {
         roads: RoadMapOverlay?,
         cableways: CablewayMapOverlay?,
         ferries: FerryMapOverlay?,
+        airRoutes: AirRouteMapOverlay?,
         latitude: Double,
         in context: GraphicsContext
     ) {
@@ -209,6 +211,10 @@ enum MapArt {
         // the transfers (docs/MAP_LAYERS.md, 24.10).
         if let ferries {
             drawFerries(ferries, projection: projection, in: context)
+        }
+        // Decision 759: the air routes, over everything on the ground.
+        if let airRoutes {
+            drawAirRoutes(airRoutes, projection: projection, in: context)
         }
         drawTransfers(lines, projection: projection, in: context)
         // Decision 220: the held station's busiest trips (docs/MAP_LAYERS.md, 25.5).
@@ -1366,6 +1372,49 @@ enum MapArt {
         }
         for route in ferries.routes { draw(route, opacity: route.sails ? 1 : 0.45) }
         if let draft = ferries.draft { draw(draft, opacity: ferries.draftIsBuildable ? 1 : 0.7) }
+    }
+
+    /// Decision 759: each air route as a long-dashed line in the ferry's
+    /// blue over a pale casing, straight between the airports, or from
+    /// the airport to the map's edge toward a place outside the map, where
+    /// an arrow points on and the place is named. A route grounded on its
+    /// last day is faint.
+    private static func drawAirRoutes(_ routes: AirRouteMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let view = context.clipBoundingRect
+        let width = max(1.5, lineWidth(projection) * 0.45)
+        for route in routes.routes {
+            let opacity = route.flies ? 1.0 : 0.45
+            let from = cgPoint(projection.screenPoint(of: route.from)), to = cgPoint(projection.screenPoint(of: route.to))
+            var way = Path()
+            way.move(to: from)
+            way.addLine(to: to)
+            guard way.boundingRect.insetBy(dx: -40, dy: -40).intersects(view) else { continue }
+            context.stroke(way, with: .color(Palette.followCase.opacity(0.9 * opacity)),
+                           style: StrokeStyle(lineWidth: width + 3, lineCap: .round))
+            context.stroke(way, with: .color(Palette.ferry.opacity(opacity)), style: StrokeStyle(
+                lineWidth: width, lineCap: .round, dash: [max(8, width * 6), max(4, width * 3)]
+            ))
+            guard let label = route.edgeLabel else { continue }
+            let dx = to.x - from.x, dy = to.y - from.y, length = max(1, (dx * dx + dy * dy).squareRoot())
+            let (ux, uy) = (dx / length, dy / length)
+            let size = max(8, width * 4)
+            var arrow = Path()
+            arrow.move(to: to)
+            arrow.addLine(to: CGPoint(x: to.x - ux * size - uy * size * 0.6, y: to.y - uy * size + ux * size * 0.6))
+            arrow.addLine(to: CGPoint(x: to.x - ux * size + uy * size * 0.6, y: to.y - uy * size - ux * size * 0.6))
+            arrow.closeSubpath()
+            context.fill(arrow, with: .color(Palette.ferry.opacity(opacity)))
+            let text = context.resolve(Text(verbatim: label).font(.caption.weight(.semibold)).foregroundStyle(Palette.ink.opacity(opacity)))
+            let measured = text.measure(in: CGSize(width: 240, height: 40))
+            // Back from the edge, inside the map, so the name is seen.
+            var centre = CGPoint(x: to.x - ux * (size + measured.width / 2 + 4), y: to.y - uy * (size + measured.height / 2 + 4))
+            centre.x = min(max(centre.x, view.minX + measured.width / 2 + 4), view.maxX - measured.width / 2 - 4)
+            centre.y = min(max(centre.y, view.minY + measured.height / 2 + 4), view.maxY - measured.height / 2 - 4)
+            let plate = CGRect(x: centre.x - measured.width / 2 - 4, y: centre.y - measured.height / 2 - 2,
+                               width: measured.width + 8, height: measured.height + 4)
+            context.fill(Path(roundedRect: plate, cornerRadius: 4), with: .color(Palette.markerFill.opacity(0.9 * opacity)))
+            context.draw(text, at: centre)
+        }
     }
 
     /// Each transfer group as a white link with a navy edge through its

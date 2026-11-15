@@ -384,6 +384,7 @@ struct MapView: View {
             let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
             let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay, busOverlay = session.busMapOverlay
             let roadOverlay = session.roadMapOverlay, cablewayOverlay = session.cablewayMapOverlay, ferryOverlay = session.ferryMapOverlay
+            let airRouteOverlay = session.airRouteMapOverlay
             let expansionOverlay = session.mapExpansionOverlay, routePreview = session.routePreview
             let lineCodes = LineBadge.codes(for: session.world.lines)
 
@@ -459,6 +460,7 @@ struct MapView: View {
                             roads: roadOverlay,
                             cableways: cablewayOverlay,
                             ferries: ferryOverlay,
+                            airRoutes: airRouteOverlay,
                             drawsLabels: false,
                             part: part
                         )
@@ -2338,6 +2340,8 @@ private struct MapCanvas: View, Equatable {
     var cableways: CablewayMapOverlay?
     /// Decision 585: the company's ferry routes and the one being drawn.
     var ferries: FerryMapOverlay?
+    /// Decision 759: the company's air routes.
+    var airRoutes: AirRouteMapOverlay?
     /// Whether the stations' names and waiting counts, the network tool's
     /// preview and the tracks' numbers are drawn here; the map draws them
     /// over the trains instead, in ``MapLabelCanvas``.
@@ -2367,7 +2371,7 @@ private struct MapCanvas: View, Equatable {
             if lhs.flowVersion != rhs.flowVersion { return .flow }
             if lhs.lineCodes != rhs.lineCodes { return .lineCodes }
             if lhs.journey != rhs.journey || lhs.journeyProgress != rhs.journeyProgress { return .journey }
-            if lhs.buses != rhs.buses || lhs.roads != rhs.roads || lhs.cableways != rhs.cableways || lhs.ferries != rhs.ferries { return .buses }
+            if lhs.buses != rhs.buses || lhs.roads != rhs.roads || lhs.cableways != rhs.cableways || lhs.ferries != rhs.ferries || lhs.airRoutes != rhs.airRoutes { return .buses }
             return nil
         }
         if lhs.part == .railway, rhs.part == .railway, lhs.drawsLabels == rhs.drawsLabels {
@@ -2409,7 +2413,7 @@ private struct MapCanvas: View, Equatable {
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, expansionClear = expansionClear, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
-        let buses = buses, roads = roads, cableways = cableways, ferries = ferries
+        let buses = buses, roads = roads, cableways = cableways, ferries = ferries, airRoutes = airRoutes
         return Canvas { context, size in
             // Decision 328: timed for the frame readout; decision 377, each
             // canvas on a line of its own (the loupe's with the railway).
@@ -2442,6 +2446,7 @@ private struct MapCanvas: View, Equatable {
                     roads: roads,
                     cableways: cableways,
                     ferries: ferries,
+                    airRoutes: airRoutes,
                     drawsLabels: drawsLabels,
                     part: part,
                     in: context
