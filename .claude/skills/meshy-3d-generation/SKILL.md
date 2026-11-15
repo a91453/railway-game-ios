@@ -71,4 +71,8 @@ unchanged. In this repository:
 - Do not squeeze the polygon count at generation time (smart topology with a 300–600 face target gave wedge wheels,
   spikes and smeared detail, and 8 models had to be redone). Generate in standard mode (`meshy-7.1`, 30 credits,
   texture 2K, no PBR) and reduce later; `remesh` (5 credits) keeps the texture. The lessons, prices, size budgets and
-  prompt notes are in `Railway/meshy-batch-2026-10/LESSONS_AND_HANDOFF.md` in `a91453/railway-reference-private`.
+  prompt notes are in `meshy-batch-2026-10/LESSONS_AND_HANDOFF.md` in `a91453/railway-assets-private` (moved there
+  from `a91453/railway-reference-private` on 2026-10-28).
+- On the owner's Mac the Meshy and Blender MCP servers are installed. When to use Meshy at all, and the Meshy →
+  background Blender chain (voxel remesh before decimating, one palette colour per face), are in
+  `.claude/skills/model-look/references/meshy-blender.md` (2026-11-15).
