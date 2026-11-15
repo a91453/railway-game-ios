@@ -1,0 +1,71 @@
+{
+  "comment" : "Decision 782: the models of the registered train mtrUrbanLine (Map3DMTRUrbanLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 8,
+  "lamps" : "233b5bf2dd033ba8",
+  "models" : {
+    "light-set-mtrUrbanLine-car" : {
+      "hash" : "b96937c1eb2451ad",
+      "triangles" : 468
+    },
+    "light-set-mtrUrbanLine-head" : {
+      "hash" : "14903e01ae63175",
+      "triangles" : 464
+    },
+    "light-set-mtrUrbanLine-panto" : {
+      "hash" : "28dbaf5d95c5fa19",
+      "triangles" : 408
+    },
+    "light-set-mtrUrbanLine-tail" : {
+      "hash" : "709adfa4b5ca8f75",
+      "triangles" : 464
+    },
+    "light-set-mtrUrbanLineFar-car" : {
+      "hash" : "49b8958066040969",
+      "triangles" : 172
+    },
+    "light-set-mtrUrbanLineFar-head" : {
+      "hash" : "b7f752b6166c6d51",
+      "triangles" : 168
+    },
+    "light-set-mtrUrbanLineFar-panto" : {
+      "hash" : "df03c70386b4df45",
+      "triangles" : 152
+    },
+    "light-set-mtrUrbanLineFar-tail" : {
+      "hash" : "719809288da61a51",
+      "triangles" : 168
+    },
+    "set-mtrUrbanLine-car" : {
+      "hash" : "475c0a1731cc498b",
+      "triangles" : 4418
+    },
+    "set-mtrUrbanLine-head" : {
+      "hash" : "d4b51a4184e820b2",
+      "triangles" : 5915
+    },
+    "set-mtrUrbanLine-panto" : {
+      "hash" : "bb573bfea1de4ef0",
+      "triangles" : 4562
+    },
+    "set-mtrUrbanLine-tail" : {
+      "hash" : "39c4922ddea71892",
+      "triangles" : 5915
+    },
+    "set-mtrUrbanLineFar-car" : {
+      "hash" : "75067d5024af16ce",
+      "triangles" : 1578
+    },
+    "set-mtrUrbanLineFar-head" : {
+      "hash" : "9033c9599b425a7f",
+      "triangles" : 2157
+    },
+    "set-mtrUrbanLineFar-panto" : {
+      "hash" : "ca13a395fd3fac22",
+      "triangles" : 1674
+    },
+    "set-mtrUrbanLineFar-tail" : {
+      "hash" : "85784326a1bfc7d",
+      "triangles" : 2157
+    }
+  }
+}
