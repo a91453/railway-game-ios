@@ -2497,13 +2497,6 @@ public struct RealWorldData: Sendable {
     }
 }
 
-/// Whether a game is open, read on the saves' queue (decision 397).
-/// A save being loaded counts as open (decision 502, after the third
-/// review): a round then does not move its game to a row of its own while
-/// it is read, as it would begin from the row it was read from.
-/// PERF-DEVICE 1: how many saves are queued on the saves' queue and not
-/// yet begun. An iCloud round on that queue asks it before each save it
-/// compares, and ends early while one waits.
 /// P2-1 (REVIEW-L21): what Back to Start's autosave came to, set on the
 /// saves' queue and read on the main thread.
 final class LeavingWrite: @unchecked Sendable {
@@ -2516,6 +2509,9 @@ final class LeavingWrite: @unchecked Sendable {
     }
 }
 
+/// PERF-DEVICE 1: how many saves are queued on the saves' queue and not
+/// yet begun. An iCloud round on that queue asks it before each save it
+/// compares, and ends early while one waits.
 final class SavesWaiting: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
@@ -2533,6 +2529,10 @@ final class SavesWaiting: @unchecked Sendable {
     }
 }
 
+/// Whether a game is open, read on the saves' queue (decision 397).
+/// A save being loaded counts as open (decision 502, after the third
+/// review): a round then does not move its game to a row of its own while
+/// it is read, as it would begin from the row it was read from.
 final class GameOpenFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var isOpen = false
