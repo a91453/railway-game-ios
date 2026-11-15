@@ -3151,17 +3151,9 @@ private struct Map3DFlightWindow: View {
             LinearGradient(colors: window.night ? [Theme.flightSkyNightTop, Theme.flightSkyNightHorizon] : [Theme.flightSkyDayTop, Theme.flightSkyDayHorizon],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
-            GeometryReader { size in
-                // The clouds below and ahead, fixed: nothing moves by
-                // itself (motion §3).
-                ForEach(Self.clouds.indices, id: \.self) { index in
-                    let cloud = Self.clouds[index]
-                    Ellipse()
-                        .fill(Theme.flightCloud.opacity(window.night ? 0.18 : cloud.opacity))
-                        .frame(width: size.size.width * cloud.width, height: size.size.width * cloud.width * 0.22)
-                        .blur(radius: 6)
-                        .position(x: size.size.width * cloud.x, y: size.size.height * cloud.y)
-                }
+            let night = window.night
+            GeometryReader { @Sendable size in
+                Map3DFlightClouds(size: size.size, night: night)
             }
             .ignoresSafeArea()
             .accessibilityHidden(true)
@@ -3229,6 +3221,28 @@ private struct Map3DFlightWindow: View {
         }
         .padding(14)
         .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+}
+
+/// Decision 771: the flight window's clouds below and ahead, fixed:
+/// nothing moves by itself (motion §3).
+private struct Map3DFlightClouds: View {
+    let size: CGSize
+    let night: Bool
+
+    var body: some View {
+        ZStack {
+            ForEach(Self.clouds.indices, id: \.self) { @Sendable index in
+                let cloud = Self.clouds[index]
+                Ellipse()
+                    .fill(Theme.flightCloud.opacity(night ? 0.18 : cloud.opacity))
+                    .frame(width: size.width * cloud.width, height: size.width * cloud.width * 0.22)
+                    .blur(radius: 6)
+                    .position(x: size.width * cloud.x, y: size.height * cloud.y)
+            }
+        }
+        .frame(width: size.width, height: size.height)
     }
 
     /// Where each cloud is (shares of the screen), how wide, how thick.
