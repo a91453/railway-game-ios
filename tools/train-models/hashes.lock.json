@@ -37,6 +37,14 @@
       "hash" : "d25dcdcebe924a1e",
       "triangles" : 120
     },
+    "life-commuterStanding" : {
+      "hash" : "568d1de67f2d518d",
+      "triangles" : 293
+    },
+    "life-commuterWalking" : {
+      "hash" : "6cd6d9ab85799843",
+      "triangles" : 294
+    },
     "hk-signal-amber" : {
       "hash" : "53b50320a69bc411",
       "triangles" : 80
