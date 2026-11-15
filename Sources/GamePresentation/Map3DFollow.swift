@@ -626,6 +626,54 @@ public struct Map3DFollow: Hashable, Sendable {
         let wanted = Self.heading(of: head.forward)
         let share = turnsAtOnce ? 1 : Self.headingShare(elapsed: elapsed)
         next.heading = Map3DCamera.turnFromNorth(camera.heading + Map3DCamera.turnFromNorth(wanted - camera.heading) * share)
+        switch subject {
+        case .train, .realTrain: return Self.lookingAhead(next)
+        default: return next
+        }
+    }
+
+    /// Decision 778: a followed train's view from behind (and above
+    /// behind) through ``followLens``, narrower than the map's own, from
+    /// the same distance: the sides show less and the train a little
+    /// larger.
+    public static let followLens: Float = 30 * .pi / 180
+
+    /// Decision 778: the train's front sits this share of the way from the
+    /// middle of the view down to its bottom edge (the lower third line),
+    /// so the view shows more of the line ahead.
+    public static let aheadShare: Float = 1 / 3
+
+    /// Decision 778: the nearest level the look ahead turns up to: the
+    /// view from behind's own tilt (85°). Past it the view would show sky
+    /// rather than more of the line, so there the eye rises instead.
+    public static let mostAheadTilt: Float = 85 * .pi / 180
+
+    /// Decision 778: `behind`, the camera looking at the train's front
+    /// (its target) from its distance, its tilt and its eased heading,
+    /// turned to look further ahead through ``followLens``: the front at
+    /// ``aheadShare`` under the middle of the view, seen from the same
+    /// distance as before. The look turns up by that angle, no nearer
+    /// level than ``mostAheadTilt``; where that holds it back (from
+    /// behind, low), the eye rises round the front instead, so the front
+    /// still sits there and the line ahead spreads over more of the view.
+    /// The distance is kept, so the camera draws and costs as before.
+    /// Everything follows the camera's eased heading, so a curve turns the
+    /// view as slowly as before.
+    static func lookingAhead(_ behind: Map3DCamera) -> Map3DCamera {
+        var next = behind
+        next.lens = followLens
+        let below = atanf(tanf(followLens / 2) * aheadShare)
+        let tilt = min(behind.tilt + below, max(behind.tilt, mostAheadTilt))
+        // The front is `below` under the look, from the same distance.
+        let dip = .pi / 2 - tilt + below
+        let front = behind.target, way = behind.forward
+        let height = behind.distance * sinf(dip)
+        let eye = front - way * (behind.distance * cosf(dip)) + Map3DPoint(0, height, 0)
+        // The target down the look as far from the eye as the front, so
+        // the camera's distance (what it draws in full, its depth, the
+        // sun's shadows) stays what it was: a little over the line.
+        next.pitch = tilt
+        next.target = eye + way * (behind.distance * sinf(tilt)) - Map3DPoint(0, behind.distance * cosf(tilt), 0)
         return next
     }
 }
