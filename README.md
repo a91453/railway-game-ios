@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="RailwayGameApp/Resources/Assets.xcassets/BrandMark.imageset/brand-mark-light.png" alt="" width="160">
-</p>
-
 # railway game ios
 
 一款 iPhone / iPad 的鐵路與城市經營模擬遊戲。玩家鋪設鐵路、設立車站、規劃路線與班次，城市會沿著交通建設逐步成長：「鐵路是原因，城市是結果。」

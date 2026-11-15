@@ -102,6 +102,13 @@ struct LinesPanel: View {
     @State private var showsDiagram = false
     /// Decision 512: whether the selected line's train roster is open.
     @State private var showsRoster = false
+    /// Decision 779: the page of a line's page shown, kept while the arrows
+    /// go to the line before or after; the overview again once the list
+    /// is back.
+    @State private var linePage: LineDetailPage = .overview
+    /// Decision 779: the line page's width, measured; `nil` until it is.
+    @State private var linePageWidth: CGFloat?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// Decision 196, later: the player's choice for the "Advanced" switch,
     /// or `nil` for the device's default (folded on a phone).
     @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
@@ -150,6 +157,7 @@ struct LinesPanel: View {
                         // Decision 101: a line without trains offers them next.
                         if let line = session.selectedLine {
                             trainsSection(line)
+                            lineFeedbackSections(line)
                         }
                         // Decision 336: with no line made too.
                         buyableLinesSection
@@ -283,6 +291,7 @@ struct LinesPanel: View {
         // Decision 481: a line opened anywhere (a row, the map, a report)
         // shows on its own page; Back to the list closes it.
         .onChange(of: session.openedLine?.id) { _, opened in
+            if opened == nil { linePage = .overview }
             let wanted = LinesPanelPage.path(path, opened: opened != nil)
             guard wanted != path else { return }
             // Reduce Motion: the page is there at once, with no slide
@@ -497,41 +506,49 @@ struct LinesPanel: View {
 
     /// The opened line's own page: what its row in the list leaves out,
     /// the lines before and after it, then its trains, depots, stops,
-    /// settings, operations and services, in the order the one form had
-    /// them (decision 196).
+    /// settings, operations and services (decision 196). Decision 779:
+    /// over the whole screen in pages, as the company's figures
+    /// (decision 717), two columns side by side where the screen is wide.
     @ViewBuilder
     private var lineDetailPage: some View {
         if let line = session.openedLine {
-            Form {
-                lineSummarySection(line)
-                // Mac playtest C2: what the rest reads is worked out off
-                // the main actor the first time the page shows.
-                if preparedPage == line.id || memo.hasPrepared(line.id) {
-                    trainsSection(line)
-                    realRebuildSection(line)
-                    depotSection(line)
-                    stopsSection(line)
-                    lineSection(line)
-                    operatingSection(line)
-                    loadSection(line)
-                    servicesSections(line)
-                } else {
-                    Section {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .accessibilityIdentifier("line.detail.preparing")
+            let layout = lineDetailLayout(line)
+            let shown = layout.showing(linePage)
+            let columns = layout.columns(of: shown)
+            // Mac playtest C2: what the rest reads is worked out off the
+            // main actor the first time the page shows.
+            let prepared = preparedPage == line.id || memo.hasPrepared(line.id)
+            Group {
+                if let width = linePageWidth, layout.isSplit(shown, width: width, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
+                    HStack(spacing: 0) {
+                        lineDetailForm(columns.leading, of: line, prepared: prepared)
+                            .accessibilityIdentifier("line.detail")
+                        lineDetailForm(columns.trailing, of: line, prepared: prepared)
+                            .accessibilityIdentifier("line.detail.trailing")
                     }
+                } else if linePageWidth != nil {
+                    lineDetailForm(columns.all, of: line, prepared: prepared)
+                        .accessibilityIdentifier("line.detail")
+                } else {
+                    // Not measured yet: nothing for a frame, rather than
+                    // one column that turns into two.
+                    Color(uiColor: .systemGroupedBackground)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { linePageWidth = $0 }
             .task(id: line.id) {
                 await memo.prepare(line.id, headway: staffHeadway, of: session)
                 preparedPage = line.id
             }
-            // Another line (the arrows, the map) starts at the top.
-            .id(line.id)
-            .accessibilityIdentifier("line.detail")
-            .hardTopScrollEdge()
+            .safeAreaInset(edge: .top, spacing: 0) {
+                lineDetailBar(line, layout: layout, shown: shown)
+            }
             .panelTitle(line.name)
+            // Two lists side by side: a bar of the lists' own background
+            // hides both under it (as the company's figures).
+            .toolbarBackground(Color(uiColor: .systemGroupedBackground), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { doneItem }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
@@ -540,14 +557,133 @@ struct LinesPanel: View {
         }
     }
 
+    /// Decision 779: what of the opened line decides its page's pages.
+    private func lineDetailLayout(_ line: ServiceLine) -> LineDetailLayout {
+        let depotRow = session.selectedLineDepotRow
+        let showsDepots = depotRow.map {
+            !$0.chosen.isEmpty || !$0.choices.isEmpty || showsAdvanced || !session.missingRealDepots(of: line.id).isEmpty
+        } ?? false
+        let showsTrains = !line.isRing
+            && (line.trains.isEmpty || session.allows(UnlockableTool.addTrain)
+                || (session.allows(UnlockableTool.passingLoop) && session.selectedLinePassingShortfall != nil))
+        let hasServices = !memo.serviceSummaries(line.id, of: session).isEmpty
+            || (!line.isRing && session.allows(UnlockableTool.lineDetails))
+        return LineDetailLayout(LineDetailLayout.Facts(
+            isFreight: line.isFreight,
+            hasReport: session.world.lineReport(line.id) != nil,
+            showsTrains: showsTrains,
+            showsDepots: showsDepots,
+            rebuildsAsReal: session.rebuildsAsReal(line.id),
+            hasServices: hasServices
+        ))
+    }
+
+    /// One column of a line's page: its sections, in order. Another line
+    /// (the arrows, the map) starts at the top.
+    private func lineDetailForm(_ sections: [LineDetailSection], of line: ServiceLine, prepared: Bool) -> some View {
+        Form {
+            ForEach(sections, id: \.self) { section in
+                if section == .summary || prepared {
+                    lineDetailSection(section, of: line)
+                } else if section == sections.first {
+                    Section {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .accessibilityIdentifier("line.detail.preparing")
+                    }
+                }
+            }
+        }
+        .id(line.id)
+        .hardTopScrollEdge()
+    }
+
+    @ViewBuilder
+    private func lineDetailSection(_ section: LineDetailSection, of line: ServiceLine) -> some View {
+        switch section {
+        case .summary: lineSummarySection(line)
+        case .feedback: lineFeedbackSections(line)
+        case .operations: operatingSection(line)
+        case .load: loadSection(line)
+        case .trains: trainsSection(line)
+        case .depots: depotSection(line)
+        case .stops: stopsSection(line)
+        case .services: servicesSections(line)
+        case .settings: lineSection(line)
+        case .realRebuild: realRebuildSection(line)
+        }
+    }
+
+    /// Decision 779: over a line's page, on every page of it, the lines
+    /// before and after it and the control that picks the page.
+    private func lineDetailBar(_ line: ServiceLine, layout: LineDetailLayout, shown: LineDetailPage) -> some View {
+        let language = session.language
+        let all = sortedLines.map(\.id)
+        let listed = shownLines.map(\.id)
+        let neighbours = LineNeighbours.around(line.id, shown: listed, all: all)
+        let position = LineNeighbours.positionText(line.id, shown: listed, all: all, in: language)
+        let hasNeighbours = neighbours.previous != nil || neighbours.next != nil
+        let picker = Picker(selection: Binding(get: { shown }, set: { linePage = $0 })) {
+            ForEach(layout.pages, id: \.self) { page in
+                Text(verbatim: page.title(in: language)).tag(page)
+            }
+        } label: {
+            Text(verbatim: language.text("Page", "分頁"))
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 440)
+        .accessibilityIdentifier("line.pages")
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                if hasNeighbours {
+                    neighbourButton(neighbours.previous, title: LineNeighbours.previousTitle(in: language),
+                                    symbol: "chevron.up", identifier: "line.previous")
+                        .fixedSize()
+                }
+                Spacer(minLength: 0)
+                picker
+                Spacer(minLength: 0)
+                if hasNeighbours {
+                    if let position {
+                        Text(verbatim: position)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize()
+                    }
+                    neighbourButton(neighbours.next, title: LineNeighbours.nextTitle(in: language),
+                                    symbol: "chevron.down", identifier: "line.next")
+                        .fixedSize()
+                }
+            }
+            // A narrow page: the arrows alone, named for VoiceOver.
+            HStack(spacing: 8) {
+                if hasNeighbours {
+                    neighbourButton(neighbours.previous, title: LineNeighbours.previousTitle(in: language),
+                                    symbol: "chevron.up", identifier: "line.previous")
+                        .labelStyle(.iconOnly)
+                }
+                picker
+                if hasNeighbours {
+                    neighbourButton(neighbours.next, title: LineNeighbours.nextTitle(in: language),
+                                    symbol: "chevron.down", identifier: "line.next")
+                        .labelStyle(.iconOnly)
+                        .accessibilityValue(Text(verbatim: position ?? ""))
+                }
+            }
+        }
+        // Two buttons and a picker in one row: each answers its own touch.
+        .buttonStyle(.borderless)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color(uiColor: .systemGroupedBackground))
+    }
+
     /// The top of a line's page: its stops in full, whether it runs now,
-    /// yesterday's figures with its trend, and the lines before and after
-    /// it in the list.
+    /// yesterday's figures with its trend. Decision 779: the lines before
+    /// and after it are over the page (``lineDetailBar``), on every page.
     private func lineSummarySection(_ line: ServiceLine) -> some View {
         let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
-        let all = sortedLines.map(\.id)
-        let shown = shownLines.map(\.id)
-        let neighbours = LineNeighbours.around(line.id, shown: shown, all: all)
         return Section {
             Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                 .font(.footnote)
@@ -559,23 +695,6 @@ struct LinesPanel: View {
                     .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
                     .accessibilityIdentifier("line.summary.report")
                 LineTrendStrip(report: report, language: session.language)
-            }
-            if neighbours.previous != nil || neighbours.next != nil {
-                HStack {
-                    neighbourButton(neighbours.previous, title: LineNeighbours.previousTitle(in: session.language),
-                                    symbol: "chevron.up", identifier: "line.previous")
-                    Spacer(minLength: 8)
-                    if let position = LineNeighbours.positionText(line.id, shown: shown, all: all, in: session.language) {
-                        Text(verbatim: position)
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    Spacer(minLength: 8)
-                    neighbourButton(neighbours.next, title: LineNeighbours.nextTitle(in: session.language),
-                                    symbol: "chevron.down", identifier: "line.next")
-                }
-                // Two buttons in one row: each answers its own touch.
-                .buttonStyle(.borderless)
             }
         }
     }
@@ -2276,10 +2395,15 @@ struct LinesPanel: View {
                 // with until more trains are taught.
                 headwaySection(line)
             }
-            // Decision 274: how well its trains fit, and who waits at its ends.
-            if let feedback = session.world.lineFeedback(line.id) {
-                feedbackSection(feedback)
-            }
+        }
+    }
+
+    /// Decision 274: how well its trains fit, and who waits at its ends;
+    /// decision 332: who drives instead. Decision 779: on the overview.
+    @ViewBuilder
+    private func lineFeedbackSections(_ line: ServiceLine) -> some View {
+        if !line.isRing, let feedback = session.world.lineFeedback(line.id) {
+            feedbackSection(feedback)
         }
         modeShiftSection(line)
     }
