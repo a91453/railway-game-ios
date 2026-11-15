@@ -324,8 +324,16 @@ struct Map3DPreviewScreen: View {
             // Decision 771 (AIR-A4): a company route's aircraft followed to
             // its cruise's start goes on here, over the 3D map.
             if let window = session.airFlightWindow, ambient == nil {
-                Map3DFlightWindow(window: window, session: session)
-                    .transition(.opacity)
+                Map3DFlightWindow(window: window, session: session) {
+                    // The camera back over the airport the flight left.
+                    session.closeAirFlightWindow()
+                    guard let scene, let view = cameraLink.view else { return }
+                    let world = session.world, leg = window.leg
+                    view.fly(reduceMotion: reduceMotion) { camera in
+                        AirFlightWindow.cameraBack(over: leg, in: world, scene: scene, from: camera)
+                    }
+                }
+                .transition(.opacity)
             }
         }
         .animation((session.airFlightWindow == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
@@ -3144,6 +3152,7 @@ private struct Map3DFerryFollowBar: View {
 private struct Map3DFlightWindow: View {
     let window: AirFlightWindow
     let session: GameSession
+    let back: () -> Void
 
     var body: some View {
         let language = session.language
@@ -3182,9 +3191,7 @@ private struct Map3DFlightWindow: View {
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                 Spacer(minLength: 8)
-                Button {
-                    session.closeAirFlightWindow()
-                } label: {
+                Button(action: back) {
                     Text(verbatim: language.text("Back to the map", "回到地圖"))
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 12)
@@ -3193,7 +3200,7 @@ private struct Map3DFlightWindow: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint(Text(verbatim: language.text("Closes the flight and shows the 3D map where you left it.", "關掉航班畫面，回到剛才的 3D 地圖。")))
+                .accessibilityHint(Text(verbatim: language.text("Closes the flight and shows the airport it left on the 3D map.", "關掉航班畫面，回到 3D 地圖上它起飛的機場。")))
                 .accessibilityIdentifier("map3D.flightWindow.close")
             }
             HStack(spacing: 8) {

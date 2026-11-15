@@ -95,6 +95,25 @@ extension AirFlightWindow {
                                       landing: true)
     }
 
+    /// Decision 771: where the camera goes back to when the window is
+    /// closed: over the airport the leg left (its place in the map), the
+    /// map's own view, from `camera` (left up at the cruise's start, it
+    /// would show nothing but haze); `nil` for an airport no longer there.
+    public static func cameraBack(over leg: Map3DAircraft.Leg, in world: GameWorld, scene: Map3DScene, from camera: Map3DCamera) -> Map3DCamera? {
+        guard world.airports.indices.contains(leg.airport) else { return nil }
+        let point = world.airports[leg.airport].point
+        let level = scene.point(worldX: Double(point.x), worldY: Double(point.y), height: 0)
+        var goal = camera
+        goal.target = Map3DPoint(level.x, scene.drawnGround.height(x: level.x, z: level.z, world: world), level.z)
+        goal.pitch = nil
+        goal.lens = nil
+        goal.distance = backDistance
+        return goal
+    }
+
+    /// How far the camera stands from the airport it goes back to, metres.
+    public static let backDistance: Float = 1_400
+
     /// The game second leg `leg` touches down at its far end.
     static func touchdown(of leg: Map3DAircraft.Leg, in world: GameWorld) -> Double? {
         world.airRoute(id: leg.route).map { Double((leg.departure + $0.flightMinutes - Map3DAircraft.taxiMinutes) * 60) }
