@@ -1,0 +1,15 @@
+{
+  "input": "source/b001-b.glb",
+  "modelId": "coal-bunker",
+  "nodes": ["CoalBunker_VariantB"],
+  "front": "+z",
+  "units": "meters",
+  "recolorLightPaint": false,
+  "source": {
+    "kind": "non-ai",
+    "reference": "the game author's own elevated coal bunker (building #001 of the author's earlier version), recoloured in the author's local studio (trial b001, variant B)",
+    "revision": "tools/coal-bunker/source/b001-b.glb",
+    "license": "the game author's own work, used in the game and its public repository with the author's permission",
+    "attribution": "the game's author"
+  }
+}
