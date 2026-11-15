@@ -33,6 +33,11 @@
 // around half an hour before it opens, and those leaving it around half
 // an hour after it closes. The day's trips are the same as before; only
 // their hours move. Exhibitions and festivals keep running all day.
+//
+// Decision 768 (EVENT-VENUES): on a map with real venues
+// (`EventVenues.swift`), a crowd surge is held at the station nearest a
+// stadium or arena a line reaches, and an exhibition at an exhibition
+// hall's, the venue drawn by its seats; the event names its venue.
 
 /// What brings the crowd.
 public enum DemandEventKind: String, CaseIterable, Codable, Sendable {
@@ -64,6 +69,10 @@ public struct DemandEvent: Hashable, Codable, Sendable {
     /// runs all day (every event of a save before version 96).
     public let opens: Int64?
     public let closes: Int64?
+    /// Decision 768: the key of the venue it is held at, for one drawn at
+    /// a real venue on the map; `nil` for the others (and every event of
+    /// a save before version 104).
+    public let venue: String?
 
     /// The earliest an event with hours opens and the latest it closes, so
     /// that its crowd's hour before and hour after stay inside the day.
@@ -72,8 +81,9 @@ public struct DemandEvent: Hashable, Codable, Sendable {
 
     public init(
         kind: DemandEventKind, station: StationID, announced: Int64, start: Int64, end: Int64, boost: Int64, festival: FestivalKind? = nil,
-        opens: Int64? = nil, closes: Int64? = nil
+        opens: Int64? = nil, closes: Int64? = nil, venue: String? = nil
     ) {
+        self.venue = venue
         self.festival = festival
         self.opens = opens
         self.closes = closes
@@ -93,6 +103,7 @@ public struct DemandEvent: Hashable, Codable, Sendable {
     var isValid: Bool {
         // Checked without overflow: a save's days may be anything.
         guard announced <= start, start < end, (1...2_000).contains(boost) else { return false }
+        if let venue, venue.isEmpty || venue.utf8.count > 64 { return false }
         switch (opens, closes) {
         case (nil, nil): break
         case let (opens?, closes?):
@@ -118,6 +129,9 @@ public struct DemandEventSchedule: Hashable, Sendable {
 
     /// The places the named festivals are held at (decision 576).
     public internal(set) var sites: [FestivalSite] = []
+
+    /// Decision 768: the venues events are held at.
+    public internal(set) var venues: [EventVenue] = []
 
     /// The most draws a save counts: more than one a day could make in any
     /// game, so counting them never overflows.
@@ -149,7 +163,7 @@ public struct DemandEventSchedule: Hashable, Sendable {
 
 extension DemandEventSchedule: Codable {
     private enum CodingKeys: String, CodingKey {
-        case seed, events, nextDraw, draws, sites
+        case seed, events, nextDraw, draws, sites, venues
     }
 
     /// A save before version 84 has no `"sites"`.
@@ -160,6 +174,8 @@ extension DemandEventSchedule: Codable {
         nextDraw = try container.decode(Int64.self, forKey: .nextDraw)
         draws = try container.decode(Int64.self, forKey: .draws)
         sites = try container.decodeIfPresent([FestivalSite].self, forKey: .sites) ?? []
+        // A save before version 104 has no `"venues"`.
+        venues = try container.decodeIfPresent([EventVenue].self, forKey: .venues) ?? []
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -170,6 +186,9 @@ extension DemandEventSchedule: Codable {
         try container.encode(draws, forKey: .draws)
         if !sites.isEmpty {
             try container.encode(sites, forKey: .sites)
+        }
+        if !venues.isEmpty {
+            try container.encode(venues, forKey: .venues)
         }
     }
 }
@@ -209,9 +228,10 @@ extension GameWorld {
             return
         }
         guard demandEvents?.seed != seed else { return }
-        let sites = demandEvents?.sites ?? []
+        let sites = demandEvents?.sites ?? [], venues = demandEvents?.venues ?? []
         demandEvents = DemandEventSchedule(seed: seed, from: dayIndex(of: clock.now))
         demandEvents?.sites = sites
+        demandEvents?.venues = venues
         passengerPlan = PassengerPlanCache()
     }
 
@@ -303,6 +323,10 @@ extension GameWorld {
             return (record.station, trips)
         }
         guard !flows.isEmpty else { return nil }
+        let kind: DemandEventKind = schedule.roll("event.\(draw).kind", in: 0...1) == 0 ? .exhibition : .crowdSurge
+        // Decision 768: held at a real venue of its kind a line reaches,
+        // drawn by its seats; by the stations' traffic without one.
+        let held = drawEventVenue(schedule, kind: kind, draw: draw)
         let ranked = flows.sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
         let busiest = ranked[(ranked.count + 4) / 5 - 1].1
         let weights = flows.map { $0.1 * ($0.1 >= busiest ? 10 : 1) }
@@ -315,21 +339,21 @@ extension GameWorld {
             }
             pick -= weight
         }
-        let kind: DemandEventKind = schedule.roll("event.\(draw).kind", in: 0...1) == 0 ? .exhibition : .crowdSurge
+        if let held { station = held.station }
         let start = day + schedule.roll("event.\(draw).wait", in: 2...5)
         let days = kind == .exhibition ? schedule.roll("event.\(draw).days", in: 3...7) : schedule.roll("event.\(draw).days", in: 1...2)
         let boost = kind == .exhibition
             ? schedule.roll("event.\(draw).boost", in: 200...500)
             : schedule.roll("event.\(draw).boost", in: 500...1_000)
         guard kind == .crowdSurge else {
-            return DemandEvent(kind: kind, station: station, announced: day, start: start, end: start + days, boost: boost)
+            return DemandEvent(kind: kind, station: station, announced: day, start: start, end: start + days, boost: boost, venue: held?.venue.id)
         }
         // Decision 730: a concert or a match in the evening, opening at
         // 17:00 to 19:00 and lasting 2 to 3½ hours, on the half hour.
         let opens = 1_020 + 30 * schedule.roll("event.\(draw).opens", in: 0...4)
         let closes = opens + 120 + 30 * schedule.roll("event.\(draw).hours", in: 0...3)
         return DemandEvent(kind: kind, station: station, announced: day, start: start, end: start + days, boost: boost,
-                           opens: opens, closes: closes)
+                           opens: opens, closes: closes, venue: held?.venue.id)
     }
 
     // MARK: - Validation
@@ -345,6 +369,10 @@ extension GameWorld {
         guard schedule.sites.count <= DemandEventSchedule.maximumSites, Set(schedule.sites.map(\.kind)).count == schedule.sites.count,
               schedule.sites.allSatisfy({ (0..<bounds.width).contains($0.point.x) && (0..<bounds.height).contains($0.point.y) })
         else { return "A festival place is out of range." }
+        // Decision 768: as ``setEventVenues(_:)`` keeps them.
+        guard schedule.venues.count <= EventVenue.maximumCount, Set(schedule.venues.map(\.id)).count == schedule.venues.count,
+              schedule.venues.allSatisfy({ $0.isValid && (0..<bounds.width).contains($0.point.x) && (0..<bounds.height).contains($0.point.y) })
+        else { return "An event venue is out of range." }
         for event in schedule.events {
             guard event.isValid, station(id: event.station) != nil, event.announced <= day, day <= event.end else {
                 return "A demand event is not one the game could have drawn."

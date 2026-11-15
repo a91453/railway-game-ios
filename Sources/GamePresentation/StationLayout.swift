@@ -372,7 +372,7 @@ extension GameSession {
     }
 
     /// The middle of `stretch` in `world`.
-    private func middle(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), in world: GameWorld) -> PlanPoint {
+    func middle(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), in world: GameWorld) -> PlanPoint {
         world.trackGeometry(of: stretch.edge).map { $0.location(at: (stretch.start + stretch.end) / 2).position.plan } ?? PlanPoint(x: 0, y: 0)
     }
 
@@ -387,7 +387,7 @@ extension GameSession {
 
     /// The side of `platform`'s track facing away from `other`'s track,
     /// at the platform's middle.
-    private func side(of platform: TrackPlatform, awayFrom other: TrackPlatform, in world: GameWorld) -> PlatformTrackSide? {
+    func side(of platform: TrackPlatform, awayFrom other: TrackPlatform, in world: GameWorld) -> PlatformTrackSide? {
         guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
         let here = geometry.location(at: (platform.start + platform.end) / 2)
         let there = middle(of: (other.edge, other.start, other.end), in: world)
@@ -400,7 +400,7 @@ extension GameSession {
     /// The edges of the track from the node at `start` to the node at
     /// `end` by way of the edge through `point`, through nodes the line
     /// runs straight on through; `nil` where it does not get there.
-    private func stretchBetween(_ start: PlanPoint, _ end: PlanPoint, through point: PlanPoint, in world: GameWorld) -> [TrackEdgeID]? {
+    func stretchBetween(_ start: PlanPoint, _ end: PlanPoint, through point: PlanPoint, in world: GameWorld) -> [TrackEdgeID]? {
         guard let found = world.trackEdgePoint(near: point, within: WorldCoordinate.unitsPerMetre),
               let first = world.network.edge(found.edge) else { return nil }
         var edges = [first.id]

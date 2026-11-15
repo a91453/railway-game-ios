@@ -124,7 +124,7 @@ final class AirRoutesTests: XCTestCase {
         routes.best = ["tokyo": 320]
         XCTAssertEqual(
             routes.howToOpen("tokyo", in: .traditionalChinese),
-            "還沒開航。在台灣的地圖上，讓一座飛東京的機場一天有 800 人搭你的列車，就會開航。目前最多的一天：320／800 人。"
+            "還沒開航。在台灣的地圖上，收購一條飛東京的航線，或讓一座飛東京的機場一天有 800 人搭你的列車，就會開航。目前最多的一天：320／800 人。"
         )
         // Hong Kong has no route to Tokyo: a game there opens only Taiwan.
         routes.opened = [hongKong]
@@ -134,7 +134,7 @@ final class AirRoutesTests: XCTestCase {
         routes.opened = [taiwan]
         routes.here = taiwan
         let songshan = try XCTUnwrap(try taiwanWorld("Taipei Songshan Airport", riders: 40).airportDays().first { $0.airport.englishName == "Taipei Songshan Airport" })
-        XCTAssertEqual(songshan.airRouteText(in: .traditionalChinese, routes: routes), "東京航線：昨天 40／800 人搭你的列車，一天滿 800 人就開航，可以到東京經營。")
+        XCTAssertEqual(songshan.airRouteText(in: .traditionalChinese, routes: routes), "東京航線：昨天 40／800 人搭你的列車，一天滿 800 人或收購一條飛東京的航線就開航，可以到東京經營。")
     }
 
     // MARK: - The picker's row
@@ -144,17 +144,17 @@ final class AirRoutesTests: XCTestCase {
     func testAClosedMapsRowSaysWhatOpensIt() {
         XCTAssertEqual(
             fromTaiwan.howToOpen(hongKong, in: .traditionalChinese),
-            "還沒開航。在台灣的地圖上，讓一座飛香港的機場一天有 500 人搭你的列車，就會開航。"
+            "還沒開航。在台灣的地圖上，收購一條飛香港的航線，或讓一座飛香港的機場一天有 500 人搭你的列車，就會開航。"
         )
         XCTAssertEqual(
             fromHongKong.howToOpen(taiwan, in: .traditionalChinese),
-            "還沒開航。在香港的地圖上，讓一座飛台灣的機場一天有 500 人搭你的列車，就會開航。"
+            "還沒開航。在香港的地圖上，收購一條飛台灣的航線，或讓一座飛台灣的機場一天有 500 人搭你的列車，就會開航。"
         )
         var some = fromHongKong
         some.best = [taiwan: 1_234]
         XCTAssertEqual(
             some.howToOpen(taiwan, in: .english),
-            "Not open yet. On a map of Hong Kong, carry 500 passengers in one day to or from an airport that flies to Taiwan, and its flights open this map. Best day so far: 1,234 of 500."
+            "Not open yet. On a map of Hong Kong, buy an air route to Taiwan, or carry 500 passengers in one day to or from an airport that flies there, and its flights open this map. Best day so far: 1,234 of 500."
         )
     }
 
@@ -170,11 +170,11 @@ final class AirRoutesTests: XCTestCase {
         let songshan = try XCTUnwrap(days.first { $0.airport.englishName == "Taipei Songshan Airport" })
         XCTAssertEqual(
             kaohsiung.airRouteText(in: .traditionalChinese, routes: fromTaiwan),
-            "香港航線：昨天 320／500 人搭你的列車，一天滿 500 人就開航，可以到香港經營。"
+            "香港航線：昨天 320／500 人搭你的列車，一天滿 500 人或收購一條飛香港的航線就開航，可以到香港經營。"
         )
         XCTAssertEqual(
             kaohsiung.airRouteText(in: .english, routes: fromTaiwan),
-            "Hong Kong flights: 320 of 500 rode your trains yesterday. Reach 500 in a day to open the Hong Kong map."
+            "Hong Kong flights: 320 of 500 rode your trains yesterday. Reach 500 in a day, or buy an air route to Hong Kong, to open the Hong Kong map."
         )
         XCTAssertEqual(
             kaohsiung.airRouteText(in: .traditionalChinese, routes: AirRoutes(cities: [.hongKong], opened: [taiwan, hongKong])),
@@ -184,7 +184,93 @@ final class AirRoutesTests: XCTestCase {
         XCTAssertNil(kaohsiung.airRouteText(in: .traditionalChinese, routes: AirRoutes()))
         // Hong Kong's airport, in a game there.
         let airport = try XCTUnwrap(try hongKongWorld(riders: 77).airportDays().first)
-        XCTAssertEqual(airport.airRouteText(in: .traditionalChinese, routes: fromHongKong), "台灣航線：昨天 77／500 人搭你的列車，一天滿 500 人就開航，可以到台灣經營。")
+        XCTAssertEqual(airport.airRouteText(in: .traditionalChinese, routes: fromHongKong), "台灣航線：昨天 77／500 人搭你的列車，一天滿 500 人或收購一條飛台灣的航線就開航，可以到台灣經營。")
+    }
+
+    // MARK: - Decision 763: buying a route
+
+    /// A managed whole of Taiwan with money enough for any air route.
+    private func managedTaiwan() -> GameWorld {
+        var world = GameWorld.newGame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: Money(10_000_000_000_000), land: [], rules: .simple)
+        world.setEconomyMode(.management)
+        return world
+    }
+
+    private func buy(_ airport: String, to destination: String, in world: inout GameWorld) throws {
+        let listing = try XCTUnwrap(AirRouteMarket.listings(in: world).first { $0.airportName == airport && $0.destination.name == destination }, "\(airport) → \(destination)")
+        try world.buyAirRoute(from: listing.airport, to: listing.destination.name, farAirport: listing.farAirport, metres: listing.metres, size: .narrowBody, frequency: .real)
+    }
+
+    /// Owning any air route to Hong Kong opens it with no riders at all;
+    /// a route to anywhere else does not. Selling it before the check
+    /// leaves nothing to open by.
+    func testAnAirRouteToTheCityOpensIt() throws {
+        var world = managedTaiwan()
+        XCTAssertEqual(fromTaiwan.earned(in: world), [])
+        try buy("臺北松山機場", to: "澎湖", in: &world)
+        try buy("桃園機場第一航廈", to: "東京成田", in: &world)
+        XCTAssertEqual(fromTaiwan.earned(in: world), [], "Penghu and Tokyo are no Hong Kong")
+        for airport in ["桃園機場第一航廈", "高雄國際機場", "臺中國際機場"] {
+            var one = world
+            try buy(airport, to: "香港", in: &one)
+            XCTAssertEqual(one.airports.map(\.yesterdayRiders).max(), 0)
+            XCTAssertEqual(fromTaiwan.earned(in: one), [AirMap(.hongKong)], airport)
+            XCTAssertEqual(AirRoutes(cities: [.hongKong], opened: [taiwan, hongKong]).earned(in: one), [], "open already")
+            let id = try XCTUnwrap(one.airRoutes.last?.id)
+            try one.sellAirRoute(id)
+            XCTAssertEqual(fromTaiwan.earned(in: one), [])
+        }
+    }
+
+    /// The other way: Hong Kong's airport's route to a Taiwan airport opens
+    /// Taiwan for a player who began in Hong Kong.
+    func testAnAirRouteFromHongKongOpensTaiwan() throws {
+        var world = try hongKongWorld(riders: 0)
+        world.setEconomyMode(.management)
+        world.economy.earn(Money(10_000_000_000_000))
+        let listings = AirRouteMarket.listings(in: world)
+        let toTaoyuan = try XCTUnwrap(listings.first { $0.destination.name == "臺北桃園" }, listings.map(\.destination.name).joined(separator: "、"))
+        XCTAssertEqual(fromHongKong.earned(in: world), [])
+        try world.buyAirRoute(from: toTaoyuan.airport, to: toTaoyuan.destination.name, farAirport: toTaoyuan.farAirport, metres: toTaoyuan.metres,
+                              size: .narrowBody, frequency: .real)
+        XCTAssertEqual(fromHongKong.earned(in: world), [.taiwan])
+    }
+
+    /// The offer says what buying the route opens, while the map is
+    /// closed and only for its airports.
+    func testTheOfferSaysItOpensTheCity() {
+        XCTAssertEqual(fromTaiwan.opensByBuying("香港", in: .traditionalChinese), "收購這條航線也會開航香港：之後開新遊戲可以選香港的地圖。")
+        XCTAssertEqual(fromTaiwan.opensByBuying("香港", in: .english), "Buying this route also opens the Hong Kong map: you can start a new game there.")
+        XCTAssertNil(fromTaiwan.opensByBuying("澎湖", in: .traditionalChinese))
+        XCTAssertNil(fromTaiwan.opensByBuying("東京成田", in: .traditionalChinese))
+        XCTAssertNil(AirRoutes(cities: [.hongKong], opened: [taiwan, hongKong]).opensByBuying("香港", in: .traditionalChinese), "open already")
+        XCTAssertNil(AirRoutes().opensByBuying("香港", in: .traditionalChinese), "no city offered")
+        XCTAssertEqual(fromHongKong.opensByBuying("高雄", in: .traditionalChinese), "收購這條航線也會開航台灣：之後開新遊戲可以選台灣的地圖。")
+    }
+
+    /// The launcher opens the city the moment the player buys the route,
+    /// not at midnight: it says so and the device remembers.
+    func testBuyingTheRouteOpensTheCityAtOnce() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var before = LauncherPreferences()
+        before.hasLaunched = true
+        before.write(to: directory.appendingPathComponent(GameLauncher.preferencesFileName))
+        let launcher = await launcher(in: directory)
+        let session = GameSession(world: managedTaiwan(), language: .traditionalChinese)
+        launcher.checkAirRoutes(of: session)
+        XCTAssertEqual(launcher.preferences.airRoutesOpened, ["taiwan"])
+        let listing = try XCTUnwrap(session.airRouteListings.first { $0.airportName == "高雄國際機場" && $0.destination.name == "香港" })
+        XCTAssertEqual(session.airRouteOpensMapText(listing), "收購這條航線也會開航香港：之後開新遊戲可以選香港的地圖。")
+        let time = session.world.clock.now
+        XCTAssertTrue(session.buyAirRoute(listing, size: .narrowBody, frequency: .real), session.message?.text ?? "")
+        XCTAssertEqual(session.world.clock.now, time)
+        XCTAssertEqual(launcher.preferences.airRoutesOpened, ["taiwan", "hongKong"])
+        XCTAssertEqual(session.airRoutes.opened, [taiwan, hongKong])
+        XCTAssertEqual(session.message?.text, "台灣↔香港開航了。回開始畫面按「新遊戲」→「實景地圖」，清單最上面就有「香港」。")
+        XCTAssertEqual(session.news.items.filter { $0.category == .achievement }.count, 1)
+        XCTAssertNil(session.airRouteOpensMapText(listing))
+        XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
     }
 
     // MARK: - The launcher
@@ -267,7 +353,7 @@ final class AirRoutesTests: XCTestCase {
         XCTAssertEqual(again.airRoutes.opened, [hongKong])
         again.startWholeTaiwan()
         XCTAssertNil(again.session)
-        XCTAssertEqual(again.message?.text, "還沒開航。在香港的地圖上，讓一座飛台灣的機場一天有 500 人搭你的列車，就會開航。")
+        XCTAssertEqual(again.message?.text, "還沒開航。在香港的地圖上，收購一條飛台灣的航線，或讓一座飛台灣的機場一天有 500 人搭你的列車，就會開航。")
         again.startNewGame(at: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
         XCTAssertNil(again.session)
         XCTAssertNil(again.openRealWorldGame(at: try XCTUnwrap(GeoAnchor(latitudeDegrees: 22.6273, longitudeDegrees: 120.3014))))
