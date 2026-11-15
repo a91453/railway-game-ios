@@ -389,3 +389,8 @@ its map's airports when it opens the save).
   (`EventVenueTests.testVersionOneHundredFourKeepsTheVenues`, written
   with `EVENT_VENUES_SAVE_NEW=1` by the build that first made it;
   decision 768).
+- `v105-night-market-hours.json`: `NightMarketHoursTests`' Home and Foot
+  a minute in, with a night market by Foot (`"kind": "nightMarket"`)
+  (`NightMarketHoursTests.testVersionOneHundredFiveKeepsTheNightMarket`,
+  written with `NIGHT_MARKET_SAVE_NEW=1` by the build that first made
+  it; decision 769).
