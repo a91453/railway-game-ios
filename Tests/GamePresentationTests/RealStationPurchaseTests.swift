@@ -51,7 +51,9 @@ final class RealStationPurchaseTests: XCTestCase {
         // no value for a line's running.
         let station = Money(60_000_000)
         XCTAssertGreaterThan(price, station)
-        XCTAssertLessThan(price, station + Money(Int64(offer.metres) * 60_000))
+        // 猴硐's platform is an island (decision 760): two tracks.
+        XCTAssertEqual(offer.platforms, .island)
+        XCTAssertLessThan(price, station + Money(2 * Int64(offer.metres) * 60_000))
         print("猴硐: \(offer.metres) m, \(price.moneyText)")
 
         let before = session.world
@@ -63,7 +65,7 @@ final class RealStationPurchaseTests: XCTestCase {
         XCTAssertEqual(session.world.stations.count, 1)
         let built = try XCTUnwrap(session.world.stations.first)
         XCTAssertEqual(built.name, "猴硐")
-        XCTAssertEqual(session.world.network.platforms(of: built.id).count, 1)
+        XCTAssertEqual(session.world.network.platforms(of: built.id).count, 2, "a platform on each track")
         XCTAssertFalse(session.realStations(named: built.name, at: built.location).isEmpty, "recognised as the real one")
         XCTAssertFalse(session.realStationSuggestions.contains { $0.id == pin.id }, "built: no pin")
         XCTAssertTrue(session.world.acquisitions.isEmpty, "nothing records it was bought")
@@ -107,6 +109,51 @@ final class RealStationPurchaseTests: XCTestCase {
                 XCTAssertLessThan(abs(stretch.from.z - ground), 10 * WorldCoordinate.unitsPerMetre, "\(name): on the ground")
             }
         }
+    }
+
+    /// How far apart the station's two platform tracks stand, in metres,
+    /// at the platforms' middles.
+    private func spacing(of station: StationID, in world: GameWorld) throws -> Double {
+        let edges = world.network.platforms(of: station).map(\.edge)
+        XCTAssertEqual(edges.count, 2)
+        let points = try edges.map { edge -> WorldVector in
+            let geometry = try XCTUnwrap(world.trackGeometry(of: edge))
+            return WorldVector(geometry.location(at: geometry.length / 2).position.plan)
+        }
+        return (points[0] - points[1]).length / Double(WorldCoordinate.unitsPerMetre)
+    }
+
+    /// Decision 760: an island station bought gets two tracks 11 m apart,
+    /// a station with a side platform on each of two tracks two tracks
+    /// 5 m apart, one with one side platform one track.
+    func testTheTracksStandAsTheRealPlatformsDo() throws {
+        for (name, kind, metres) in [("猴硐", RealStationPlatformKind.island, 11.0), ("暖暖", .sides, 5.0), ("貢寮", .single, 0)] {
+            let (session, pin) = try game(round: name)
+            let offer = session.realStationOffer(for: pin)
+            let purchase = try XCTUnwrap(offer.purchase, "\(name): \(offer.problem ?? "")")
+            XCTAssertEqual(offer.platforms, kind, name)
+            XCTAssertEqual(purchase.secondStretches.isEmpty, kind == .single, name)
+            XCTAssertTrue(session.buyRealStation(offer), "\(name): \(session.message?.text ?? "")")
+            let built = try XCTUnwrap(session.world.stations.first)
+            guard kind != .single else {
+                XCTAssertEqual(session.world.network.platforms(of: built.id).count, 1, name)
+                continue
+            }
+            XCTAssertEqual(try spacing(of: built.id, in: session.world), metres, accuracy: 1, name)
+            let card = offer.summaryText(in: .traditionalChinese)
+            XCTAssertTrue(card.contains(kind == .island ? "島式" : "兩側"), card)
+            guard case .command(let command)? = session.commandLog.entries.last?.action else { return XCTFail("logged") }
+            XCTAssertEqual(try JSONDecoder().decode(PlayerCommand.self, from: JSONEncoder().encode(command)), command, name)
+        }
+    }
+
+    /// Every station the platform table names is one the real railways
+    /// have, so none is missed for a spelling.
+    func testThePlatformTableNamesRealStations() throws {
+        let ids = Set(try BundledRealData.railways().stations.map(\.id))
+        let missing = RealStationPlatformTypes.island.union(RealStationPlatformTypes.side).subtracting(ids)
+        XCTAssertTrue(missing.isEmpty, "\(missing.sorted())")
+        XCTAssertTrue(RealStationPlatformTypes.island.isDisjoint(with: RealStationPlatformTypes.side))
     }
 
     func testWhatIsInTheWayIsSaidAndNothingIsBought() throws {

@@ -158,6 +158,15 @@ extension GameSession {
                 }
             }
         }
+        return try putBack(lifted, in: &world)
+    }
+
+    /// Puts each of `lifted` (taken off its line and the track) back
+    /// where its line's trips start, or at its far end, or at a platform
+    /// beside either (``placeBeside(_:of:journeys:in:)``), on its line
+    /// again (decision 264). Returns the names of the trains moved; throws
+    /// ``GameError/trackReserved(_:)`` for a train that cannot go back.
+    func putBack(_ lifted: [(train: TrainID, line: LineID, pattern: Int?)], in world: inout GameWorld) throws(GameError) -> [String] {
         var moved: [String] = []
         for (train, line, pattern) in lifted {
             guard let journey = world.lineJourney(line) else { throw .trackReserved(train) }

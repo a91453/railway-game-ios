@@ -199,6 +199,9 @@ public final class GameSession {
     /// Decision 572: the crossovers the station panel offers, kept for the
     /// station and command (``stationCrossoverOffer(for:)``).
     @ObservationIgnored var stationCrossoverOfferMemo: StationCrossoverOfferMemo?
+    /// Decision 761: the island rebuild the station panel offers, kept for
+    /// the station and command (``stationIslandOffer(for:)``).
+    @ObservationIgnored var stationIslandOfferMemo: StationIslandOfferMemo?
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?

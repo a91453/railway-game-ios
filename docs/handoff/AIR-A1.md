@@ -8,6 +8,6 @@
   - **A2**（App）：收購清單多「航線」一頁，用 `airRouteOffer` 顯示價錢（飛機＋旅客）；航線卡（班數三格、飛機大小，接 `setAirRouteFrequency`、`setAirRouteSize`、`sellAirRoute`）；2D 地圖畫航線。App 要給海外航點的距離（`metres`，例如桃園—香港約 810 km，用兩地經緯度的大圓距離算），地圖裡兩座機場給 `farAirport`。航點名要和 `AirportCatalog` 給機場的 `AirDestination.name` 一樣（例「香港」「澎湖」）。
   - **A3**：收購任一條台灣↔香港的航線就打開香港地圖（決策 712 多一個條件）。
   - **A4**（3D）：`Map3DAircraft` 讀 `airRouteDepartureMinutes` 讓玩家的班照時刻起降。
-  - 平衡量測（決策 758「平衡」一節，NOT ASSESSED）：A2 之後量回本天數再調數值。
+  - ~~平衡量測~~：做完，決策 762（AIR-BALANCE）。
   - 小缺口：沒有列車在跑的世界一次跳過好幾個小時，只有機場（沒有航線）時午夜的機場計數會被跳過（決策 695 原本就這樣，這張沒改；有航線時已補喚醒）。
 - UNVERIFIED：沒有畫面，模擬器、實機都沒跑過；Linux 本機跑了 `swift build --build-tests -Xswiftc -warnings-as-errors` 與 `AirRouteTests`、`SavedGameTests`、`AirportTests`、`FerryTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`EconomyAccountsTests`、`DisplayTextTests`（全過）；其餘交給 CI。

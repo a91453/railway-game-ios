@@ -16,6 +16,12 @@ python3 -I tools/station-platform-types/build_platform_types.py taiwan.pbf Railw
 
 （`python3 -I` 不讀使用者 site-packages，osmium 要裝在 venv 裡，用 venv 的 python 執行。）
 
+收購真實車站用的型式表（決策 760）從這份產生，改了 `platform_types.json` 或工具裡的官方修正後重跑：
+
+```bash
+python3 -I tools/station-platform-types/make_swift_table.py tools/station-platform-types/platform_types.json Sources/GamePresentation/RealStationPlatformTypes.swift
+```
+
 ## 注意
 
 - `tracks` 股數含站場側線，不能當旅客股道數。
