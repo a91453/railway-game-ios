@@ -70,7 +70,39 @@ final class Map3DFootprintsTests: XCTestCase {
         XCTAssertEqual(kind(use: 4, storeys: 5), .civic)
         XCTAssertEqual(kind(use: 10, storeys: 1), .temple)
         XCTAssertEqual(kind(use: 13, storeys: 2), .transport)
+        // Decision 765: a stadium or sports hall, and a substation, are
+        // halls with no windows; an entertainment tower stays an office.
+        XCTAssertEqual(kind(use: 5, storeys: 3), .hall)
+        XCTAssertEqual(kind(use: 5, storeys: 12), .office)
+        XCTAssertEqual(kind(use: 12, storeys: 1), .hall)
         XCTAssertEqual(Map3DFootprints.Building(storeys: 0, storeysFrom: .guess, use: 0, rings: []).drawnStoreys, 2)
+    }
+
+    /// Decision 765: which buildings are drawn with no windows, and which
+    /// walls are left plain.
+    func testWhereNoWindowsAreDrawn() {
+        typealias B = Map3DScene.Builder
+        // A hut is a sheet-steel shed; a house is still a house.
+        XCTAssertEqual(B.drawnKind(.house, area: 12, width: 3, storeys: 1), .industry)
+        XCTAssertEqual(B.drawnKind(.civic, area: 15, width: 3, storeys: 1), .industry)
+        XCTAssertEqual(B.drawnKind(.house, area: 60, width: 6, storeys: 2), .house)
+        XCTAssertEqual(B.drawnKind(.temple, area: 12, width: 3, storeys: 1), .temple)
+        // A great low hall of no known use; a long row of shophouses
+        // (30 m deep) and a tall block are not.
+        XCTAssertEqual(B.drawnKind(.flats, area: 6_000, width: 60, storeys: 3), .hall)
+        XCTAssertEqual(B.drawnKind(.shophouse, area: 3_000, width: 30, storeys: 4), .shophouse)
+        XCTAssertEqual(B.drawnKind(.flats, area: 6_000, width: 60, storeys: 12), .flats)
+        XCTAssertEqual(B.drawnKind(.office, area: 6_000, width: 60, storeys: 3), .office)
+        // Half a bay of the paint, at least 2 m.
+        XCTAssertEqual(B.plainBelow(.bays(.homeWindows, bay: 6, floors: 2)), 3)
+        XCTAssertEqual(B.plainBelow(.bays(.flatWindows, bay: 3.2, floors: 2)), 2)
+        XCTAssertEqual(B.plainBelow(nil), 2)
+        // A piece of a circle turns a little at both ends; a wall between
+        // two corners, or along a straight wall, does not.
+        func at(_ degrees: Float) -> Map3DPoint { Map3DPoint(40 * cos(degrees * .pi / 180), 0, 40 * sin(degrees * .pi / 180)) }
+        XCTAssertTrue(B.isCurvePiece(at(0), at(10), at(20), at(30)))
+        XCTAssertFalse(B.isCurvePiece(Map3DPoint(0, 0, -5), .zero, Map3DPoint(6, 0, 0), Map3DPoint(6, 0, 5)))
+        XCTAssertFalse(B.isCurvePiece(Map3DPoint(-5, 0, 0), .zero, Map3DPoint(6, 0, 0), Map3DPoint(12, 0, 0)))
     }
 
     func testFootprintsKeepOffTheTrackAndWhatStandsBeforeThem() {

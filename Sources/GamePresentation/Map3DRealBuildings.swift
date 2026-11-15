@@ -9,7 +9,7 @@ import GameCore
 extension Map3DScene.Builder {
     /// What a real building is drawn as, by its usage code
     /// (`Web/CityView/tools/pipeline/taiwan.mjs`, `usageOf`).
-    enum RealKind: Equatable {
+    enum RealKind: Hashable {
         /// 413: a 透天厝 street's shophouse, shops under homes.
         case shophouse
         /// Decision 389: a home of a few storeys, homes to the ground (a
@@ -29,6 +29,10 @@ extension Map3DScene.Builder {
         case transport
         /// Decision 699: an airport's passenger terminal, by its stands.
         case terminal
+        /// Decision 765: a hall a street sees no windows on: a stadium, a
+        /// sports hall or grandstand, a substation, or a great low hall of
+        /// no known use (a market's, a works' or a mall's).
+        case hall
 
         init(usage: Int) {
             switch usage {
@@ -129,7 +133,7 @@ extension Map3DScene.Builder {
 
     /// One real building: `polygons` (scene points, each polygon its
     /// outline then its holes) raised `height` metres from `ground`.
-    mutating func addRealBuilding(_ polygons: [[[Map3DPoint]]], ground: Float, height: Float, storeys: Int, kind: RealKind) {
+    mutating func addRealBuilding(_ polygons: [[[Map3DPoint]]], ground: Float, height: Float, storeys: Int, kind given: RealKind) {
         guard let outline = polygons.first?.first, outline.count >= 3 else { return }
         // Seeded from where it stands on the map, not in the scene: the
         // scene's origin moves as track is laid, and the building must not.
@@ -140,6 +144,11 @@ extension Map3DScene.Builder {
         let box = Self.orientedBox(outline)
         let centre = Map3DPoint(box.centre.x, ground, box.centre.z)
         let area = polygons.reduce(Float(0)) { $0 + abs(Self.signedArea($1.first ?? [])) }
+        // Decision 765: a hut drawn as a shed, a great low hall as a hall.
+        let kind = Self.drawnKind(given, area: area, width: box.width, storeys: storeys)
+        // Decision 765: windows a floor high, not stretched up a hall
+        // whose storeys are fewer than its height holds.
+        func floors(_ high: Float, _ storeys: Int) -> Int { max(storeys, Int(high / Self.tallestStorey)) }
 
         // Walls, roof and how the faces are painted, by use (decision 235's
         // colours; decision 231's faces).
@@ -153,24 +162,26 @@ extension Map3DScene.Builder {
             wall = Self.pickWall(seed)
             groundFloor = min(3.8, height / 2)
             groundPaint = .bays(r(1) < 0.75 ? Self.pick(Map3DSurface.shops, r(2)) : .shutter, bay: 5.4, floors: 1)
-            upperPaint = (storeys <= 5 ? Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: upperFloors)
-                : Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: upperFloors)).on(homeFacing)
+            let upper = floors(height - groundFloor, upperFloors)
+            upperPaint = (storeys <= 5 ? Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: upper)
+                : Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: upper)).on(homeFacing)
         case .house:
             wall = Self.pickWall(seed)
-            upperPaint = Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: storeys).on(homeFacing)
+            upperPaint = Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: floors(height, storeys)).on(homeFacing)
         case .flats:
             wall = Self.pickWall(seed)
             if r(1) < 0.5 {
                 groundFloor = min(4.2, height / 3)
                 groundPaint = .bays(Self.pick(Map3DSurface.shops, r(2)), bay: 5.4, floors: 1)
             }
-            upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: groundFloor > 0 ? upperFloors : storeys).on(homeFacing)
+            upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2,
+                                         floors: floors(height - groundFloor, groundFloor > 0 ? upperFloors : storeys)).on(homeFacing)
         case .office:
             let concrete = r(6) < 0.4
             wall = concrete ? Self.pick(Map3DPalette.concreteWalls, seed) : Self.pick(Map3DPalette.officeWalls, seed)
             groundFloor = min(4.6, height / 3)
             groundPaint = .bays(r(1) < 0.5 ? .officeGlass : Self.pick(Map3DSurface.shops, r(2)), bay: r(1) < 0.5 ? 3 : 5.4, floors: 1)
-            upperPaint = Map3DPaint.bays(.officeGlass, bay: 3, floors: upperFloors).on(concrete ? .formConcrete : nil)
+            upperPaint = Map3DPaint.bays(.officeGlass, bay: 3, floors: floors(height - groundFloor, upperFloors)).on(concrete ? .formConcrete : nil)
         case .industry:
             wall = Self.pick(Map3DPalette.shedWalls, seed)
             roof = Self.pick(Map3DPalette.tinRoofs, r(4))
@@ -179,7 +190,7 @@ extension Map3DScene.Builder {
         case .civic:
             let concrete = r(6) < 0.5
             wall = concrete ? Self.pick(Map3DPalette.concreteWalls, seed) : Map3DPalette.schoolWalls
-            upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: storeys).on(concrete ? .formConcrete : .brickTile)
+            upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: floors(height, storeys)).on(concrete ? .formConcrete : .brickTile)
         case .temple:
             wall = Map3DPalette.templeWall
             roof = Map3DPalette.templeRoof
@@ -195,6 +206,13 @@ extension Map3DScene.Builder {
             roof = Airfield.terminalRoof
             roofPaint = Self.metal
             upperPaint = Map3DPaint.bays(.officeGlass, bay: 4, floors: storeys)
+        case .hall:
+            // Decision 765: concrete walls a street sees no windows in,
+            // under a sheet-steel roof.
+            wall = Self.pick(Map3DPalette.concreteWalls, seed)
+            roof = Self.pick(Map3DPalette.tinRoofs, r(4))
+            roofPaint = Self.metal
+            upperPaint = Self.concrete.on(.formConcrete)
         }
         // A temple of a single hall under its hipped roof, the walls lower.
         let hipped = kind == .temple && polygons.count == 1 && area < 900 && box.width > 4
@@ -219,16 +237,17 @@ extension Map3DScene.Builder {
             if rectangle {
                 // Its front faces along, as wide as the box; its flanks as
                 // long. A face under 2 m is left plain, as a wall is.
-                let front = box.width < 2, flank = box.length < 2
+                // Decision 765: nor one narrower than half a bay of it.
+                func plain(_ side: Float, _ paint: Map3DPaint?) -> Map3DPaint? { side < Self.plainBelow(paint) ? nil : paint }
                 var bottom = Map3DPoint(box.centre.x, ground, box.centre.z), upper = height
                 if groundFloor > 0 {
                     mesh.addBox(base: bottom, forward: box.along, length: box.length, width: box.width, height: groundFloor, top: roof, side: wall,
-                                frontPaint: front ? nil : groundPaint, flankPaint: flank ? nil : groundPaint, capped: false, shaded: false)
+                                frontPaint: plain(box.width, groundPaint), flankPaint: plain(box.length, groundPaint), capped: false, shaded: false)
                     bottom.y += groundFloor
                     upper -= groundFloor
                 }
                 mesh.addBox(base: bottom, forward: box.along, length: box.length, width: box.width, height: upper, top: roof, side: wall,
-                            topPaint: roofPaint, frontPaint: front ? nil : upperPaint, flankPaint: flank ? nil : upperPaint, shaded: false)
+                            topPaint: roofPaint, frontPaint: plain(box.width, upperPaint), flankPaint: plain(box.length, upperPaint), shaded: false)
             }
             for polygon in polygons where !rectangle {
                 for (index, ring) in polygon.enumerated() where ring.count >= 3 {
@@ -239,15 +258,22 @@ extension Map3DScene.Builder {
                         let b = ring[(at + 1) % ring.count]
                         let low = Map3DPoint(0, ground + wallBottom, 0)
                         let bottom = (a: Map3DPoint(a.x, 0, a.z) + low, b: Map3DPoint(b.x, 0, b.z) + low)
-                        let narrow = (b - a).length < 2
+                        // Decision 765: a wall narrower than half a bay of
+                        // its paint, or a piece of a curved wall, is left
+                        // plain, not given a window squeezed into it.
+                        let length = (b - a).length
+                        let curve = Self.isCurvePiece(ring[(at + ring.count - 1) % ring.count], a, b, ring[(at + 2) % ring.count])
+                        func plain(_ paint: Map3DPaint?) -> Map3DPaint? {
+                            length < Self.plainBelow(paint) || (curve && length < Self.longestCurvePiece) ? nil : paint
+                        }
                         if groundFloor > 0 {
                             let up = Map3DPoint(0, groundFloor, 0)
-                            mesh.addQuad(bottom.b, bottom.a, bottom.a + up, bottom.b + up, color: wall, paint: narrow ? nil : groundPaint)
+                            mesh.addQuad(bottom.b, bottom.a, bottom.a + up, bottom.b + up, color: wall, paint: plain(groundPaint))
                             let top = Map3DPoint(0, eaves, 0)
-                            mesh.addQuad(bottom.b + up, bottom.a + up, bottom.a + top, bottom.b + top, color: wall, paint: narrow ? nil : upperPaint)
+                            mesh.addQuad(bottom.b + up, bottom.a + up, bottom.a + top, bottom.b + top, color: wall, paint: plain(upperPaint))
                         } else {
                             let top = Map3DPoint(0, eaves - wallBottom, 0)
-                            mesh.addQuad(bottom.b, bottom.a, bottom.a + top, bottom.b + top, color: wall, paint: narrow ? nil : upperPaint)
+                            mesh.addQuad(bottom.b, bottom.a, bottom.a + top, bottom.b + top, color: wall, paint: plain(upperPaint))
                         }
                     }
                 }
@@ -339,6 +365,54 @@ extension Map3DScene.Builder {
         // one (none under a canopy, whose box is mostly open ground).
         guard !canopy else { return }
         addShadow(centre: centre, forward: box.along, length: box.length, width: box.width, spread: min(6, 2 + height * 0.08), darkness: 0.32)
+    }
+
+    /// Decision 765: what a building of `kind` (by its use) is drawn as,
+    /// by its `area` (m²), its oriented box's `width` (m) and `storeys`:
+    /// a hut of a house's, a shop's or an office's use under
+    /// ``largestHut`` as a sheet-steel shed (鐵皮屋), its walls plain; a
+    /// home or shop of five storeys or fewer over ``smallestHall`` and
+    /// ``narrowestHall`` both ways as a ``RealKind/hall``: no row of
+    /// houses is that deep, so it is a market, a works or a mall.
+    static func drawnKind(_ kind: RealKind, area: Float, width: Float, storeys: Int) -> RealKind {
+        let homes: Set<RealKind> = [.house, .shophouse, .flats]
+        if homes.union([.office, .civic]).contains(kind), area < largestHut, storeys <= 2 { return .industry }
+        if homes.contains(kind), storeys <= 5, area >= smallestHall, width >= narrowestHall { return .hall }
+        return kind
+    }
+
+    /// Decision 765: the largest hut drawn as a shed, m² (some 4 × 5 m).
+    static let largestHut: Float = 20
+    /// Decision 765: the smallest great hall, m², and its least width, m:
+    /// two rows of shophouses back to back are some 30–36 m deep.
+    static let smallestHall: Float = 2_500
+    static let narrowestHall: Float = 45
+    /// Decision 765: the tallest a floor of windows is drawn, m.
+    static let tallestStorey: Float = 4.2
+    /// Decision 765: the longest wall a curve is cut into that is left
+    /// plain, m, and the most it turns at either end, degrees.
+    static let longestCurvePiece: Float = 8
+    static let curveTurn: Float = 25
+
+    /// Decision 765: the narrowest wall that takes `paint`: half a bay of
+    /// it, at least 2 m (a narrower one is left plain).
+    static func plainBelow(_ paint: Map3DPaint?) -> Float {
+        if case let .bays(bay, _)? = paint?.fit { return max(2, bay / 2) }
+        return 2
+    }
+
+    /// Decision 765: whether the wall from `a` to `b`, between the walls
+    /// from `before` and to `after`, is a piece of a curve: it turns no
+    /// more than ``curveTurn`` at both its ends.
+    static func isCurvePiece(_ before: Map3DPoint, _ a: Map3DPoint, _ b: Map3DPoint, _ after: Map3DPoint) -> Bool {
+        func turn(_ p: Map3DPoint, _ q: Map3DPoint, _ s: Map3DPoint) -> Float {
+            guard let one = Map3DPoint(q.x - p.x, 0, q.z - p.z).normalized, let two = Map3DPoint(s.x - q.x, 0, s.z - q.z).normalized
+            else { return 180 }
+            return acos(max(-1, min(1, one.dot(two)))) * 180 / .pi
+        }
+        let limit = curveTurn
+        let first = turn(before, a, b), second = turn(a, b, after)
+        return first > 0.5 && second > 0.5 && first <= limit && second <= limit
     }
 
     /// Whether `point` lies inside `polygon`'s outline and in none of its
