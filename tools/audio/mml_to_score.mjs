@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Converts an MML draft into a score of 《沿線》 (decision 219, research
+// Converts an MML draft into a score of railway game ios (decision 219, research
 // note docs/research/RAILWAY_SOUND_2026-10-14.md §2.14).
 //
 //     node tools/audio/mml_to_score.mjs tools/audio/mml/chime-tourist.mml

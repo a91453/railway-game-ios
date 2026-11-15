@@ -1,4 +1,4 @@
-# Procedural Tokyo in Along the Line
+# Procedural Tokyo in railway game ios
 
 This folder is [jeantimex/tokyo](https://github.com/jeantimex/tokyo) at commit
 `17c8bbe5a6c57c75fe504a58ac3fb16004a27573` (MIT, Copyright (c) 2026 Yong Su; `LICENSE`), copied whole
@@ -6,7 +6,7 @@ for the app's 3D city preview (ARCHITECTURE decision 152). Its own README is `UP
 The built page goes onto the game's website, `/city/` (decision 163; `tools/procedural-city/build_city_view.sh`),
 and the app opens it there.
 
-Every change is marked `Along the Line` in the code:
+Every change is marked `railway game ios` in the code:
 
 | File | Change |
 | --- | --- |
@@ -22,7 +22,7 @@ Every change is marked `Along the Line` in the code:
 | `public/models/trains/` (new) | The Meshy train models and their `index.json` (file, the axis the cab faces) |
 | `src/world/atmosphere.js` | The environment map is baked 10 m above the ground: from 0 m, at Kaohsiung's latitude, the sky gives NaNs and the city goes black |
 | `public/boot.js` (new) | The scripts `index.html` had inline (the city's name on the loading screen, Kaohsiung when no area or an unknown one is asked for, the website link's and the technical-preview note's language, and neither in the game, `?app=1`; the idle callbacks' deadline), so that the website's Content-Security-Policy can forbid inline scripts |
-| `index.html` | The title is the game's (沿線｜3D 城市試作; boot.js gives the English), not Procedural Tokyo. The settings panel (lil-gui's variables) and the info panel in the game's look; `viewport-fit=cover`, so the panel and the switch keep clear of the notch. The loading screen is the game's: its logo (`public/assets/ui/brand-mark.png`, the app's `BrandMark`), 沿線 / Along the Line and the website's colours, and the area's Chinese name; the game's website (官網, bottom right, opened by the app in Safari) where the GitHub link was; the credits at the bottom in the middle, on the same light band as the real-world maps', between the switch and the website link and clear of the notch; on a narrow screen the credits take the bottom row and the switch and the link sit above them (main.js draws the switch's picture where the switch is); above the credits, in their look, a note that the page is a technical preview and that the game's 3D is gaining these effects step by step (技術試作, planning decision of 2026-10-22, `docs/HANDOFF.md` §3), on a narrow screen between the switch and the link |
+| `index.html` | The title is the game's (鐵道遊戲｜3D 城市試作; boot.js gives the English), not Procedural Tokyo. The settings panel (lil-gui's variables) and the info panel in the game's look; `viewport-fit=cover`, so the panel and the switch keep clear of the notch. The loading screen is the game's: its logo (`public/assets/ui/brand-mark.png`, the app's `BrandMark`), 沿線 / railway game ios and the website's colours, and the area's Chinese name; the game's website (官網, bottom right, opened by the app in Safari) where the GitHub link was; the credits at the bottom in the middle, on the same light band as the real-world maps', between the switch and the website link and clear of the notch; on a narrow screen the credits take the bottom row and the switch and the link sit above them (main.js draws the switch's picture where the switch is); above the credits, in their look, a note that the page is a technical preview and that the game's 3D is gaining these effects step by step (技術試作, planning decision of 2026-10-22, `docs/HANDOFF.md` §3), on a narrow screen between the switch and the link |
 
 The raw data (`data/raw/`), the compiled tiles (`public/tiles/`), the textures (`public/textures/`) and
 `node_modules/` are not committed (`.gitignore`); `tools/procedural-city/README.md` has the commands.

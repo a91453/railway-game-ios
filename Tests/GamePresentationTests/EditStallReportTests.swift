@@ -12,7 +12,7 @@ import XCTest
 ///
 ///     EDIT_STALL_SAVE=<save> swift test -c release -Xswiftc -enable-testing --filter EditStallReportTests
 ///
-/// `EDIT_STALL_SAVE` is a `.alongtheline` file or a `SavedGame`.
+/// `EDIT_STALL_SAVE` is a shared save file or a `SavedGame`.
 @MainActor
 final class EditStallReportTests: XCTestCase {
     func testWhatTheMainActorWorksOutAfterAnEdit() async throws {

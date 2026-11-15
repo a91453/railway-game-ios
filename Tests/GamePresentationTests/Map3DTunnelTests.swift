@@ -91,7 +91,12 @@ final class Map3DTunnelTests: XCTestCase {
                     XCTAssertEqual(camera.eye.y, head.nose.y + Map3DFollow.cabEyeHeight, accuracy: 0.05, "at \(scale): the cab's eye in the tunnel")
                 } else {
                     XCTAssertGreaterThan(camera.eye.y, ground + 0.5, "\(view) at \(scale): the eye in the ground")
-                    XCTAssertEqual(camera.target.y, ground, accuracy: 0.01, "\(view) looks at the ground over the train")
+                    // Decision 778: the ground over the train's front on
+                    // the lower third line, the look past it.
+                    var over = head.rail
+                    over.y = ground
+                    XCTAssertEqual(camera.viewProjection.project(over)?.y ?? 0, -Map3DFollow.aheadShare, accuracy: 0.001,
+                                   "\(view) looks past the ground over the train")
                 }
             }
         }
@@ -106,7 +111,8 @@ final class Map3DTunnelTests: XCTestCase {
         XCTAssertFalse(scene.trackCover.isInTunnel(head.nose))
         XCTAssertFalse(head.inTunnel)
         let camera = Map3DFollow(train: train).camera(following: head, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
-        XCTAssertEqual(camera.target, head.rail)
+        // Decision 778: the rails' front on the lower third line.
+        XCTAssertEqual(camera.viewProjection.project(head.rail)?.y ?? 0, -Map3DFollow.aheadShare, accuracy: 0.001)
     }
 
     /// Only the tunnel's track is in it: not the surface track past the

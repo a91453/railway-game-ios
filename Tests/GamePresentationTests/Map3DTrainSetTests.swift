@@ -34,8 +34,10 @@ final class Map3DTrainSetTests: XCTestCase {
             for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName, set.middleBackName, set.pantographBackName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
+                // Decision 782: a registered train's, its own.
+                let registered = Map3DTrainRegistry.registration(ofSet: set.key)
                 // Decision 331: a tram car is two of its sections.
-                let triangles = set.key == "greenTram" ? 2_500...3_200
+                let triangles = registered?.triangles ?? (set.key == "greenTram" ? 2_500...3_200
                     // Decision 430: #1306's standard coach as measured, 6,476
                     // triangles near and 4,008 far; the last coach 24 more,
                     // for its two lamps.
@@ -94,7 +96,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 561: #1700's Airport MRT cars, 13,752 a cab
                     // (the DMB 10,572) and 9,764 to 9,944 the others near,
                     // 4,564 to 6,820 far.
-                    : Self.taoyuanAirport.contains(set.key) ? 4_500...13_800 : 100...4_100
+                    : Self.taoyuanAirport.contains(set.key) ? 4_500...13_800 : 100...4_100)
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -106,7 +108,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 // and its far set's 25 and 25.3 m,
                 // Decision 422: the 700T's far set as long as its near one.
                 let alishan = ["ALISHAN", "ALISHANFar"].contains(set.key)
-                let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
+                let length: ClosedRange<Float> = registered?.length ?? (["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
                     // 610's 16.7 and 17.6 m.
@@ -127,7 +129,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
                     : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3
                     // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.
-                    : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1) : 17...22.5
+                    : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1) : 17...22.5)
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
                 // Decision 531: the 762 mm gauge's cars 2.2 to 2.3 m wide, the
                 // coaches' grab bars 2.32 m.
@@ -284,9 +286,9 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("", 2), ["set-greenCommuter-head", "set-greenCommuter-tail"])
         XCTAssertEqual(names("", 1), ["commuter-cab"])
         // Decision 331, fourth: three cars of it are the three-car urban
-        // EMU; four or more stay the commuter.
+        // EMU; four or more the owner's old red commuter car.
         XCTAssertEqual(names("", 3), ["set-threeCarUrban-head", "set-threeCarUrban-car", "set-threeCarUrban-tail"])
-        XCTAssertEqual(names("", 4), ["commuter-cab", "commuter-car", "commuter-car", "commuter-cab turned"])
+        XCTAssertEqual(names("", 4), ["set-redCommuter-head", "set-redCommuter-car", "set-redCommuter-car", "set-redCommuter-tail"])
         XCTAssertEqual(names("EMU100", 2), ["commuter-cab", "commuter-cab turned"])
         // As #900 has them (the author, 2026-10-21): the 700T with its two
         // pantograph cars, the EMU3000, every metro size a C381 (decision
@@ -345,7 +347,7 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(tail.triangleCount, Map3DGreenCommuter.model(.trailing).triangleCount + 24)
         XCTAssertEqual(head.length, Map3DGreenCommuter.model(.leading).length, accuracy: 0.05)
         XCTAssertFalse(pack.isTurned(forType: "", carIndex: 1, count: 2))
-        XCTAssertTrue(pack.isTurned(forType: "", carIndex: 3, count: 4), "four cars: the commuter's cab turned")
+        XCTAssertFalse(pack.isTurned(forType: "", carIndex: 3, count: 4), "four cars: the red commuter's own tail car")
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenCommuter"), Map3DTrains.modelReach)
         XCTAssertTrue((2_000...6_000).contains(head.triangleCount), "\(head.triangleCount) triangles")
     }

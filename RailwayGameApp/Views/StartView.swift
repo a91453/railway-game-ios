@@ -332,11 +332,14 @@ struct StartView: View {
                 .frame(width: 88, height: 88)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .accessibilityHidden(true)
-            Text("Along the Line")
+            Text(verbatim: GameBrand.current.name(in: .app))
                 .font(.system(.largeTitle, design: .rounded).weight(.heavy))
                 .foregroundStyle(Theme.textPrimary)
                 .accessibilityIdentifier("start.brand")
-            Text("Along the Line is a railway and city-building simulation where the railway shapes the growth of the city.")
+            Text(verbatim: DisplayLanguage.app.text(
+                "\(GameBrand.current.english) is a railway and city-building simulation where the railway shapes the growth of the city.",
+                "《\(GameBrand.current.chinese)》是一款鐵路與城市發展模擬遊戲。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。"
+            ))
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -742,7 +745,7 @@ struct SaveListView: View {
                     savesList(saves, isEmpty: isEmpty)
                 }
             }
-            .fileImporter(isPresented: $importsSave, allowedContentTypes: [.alongTheLineSave, .json]) { result in
+            .fileImporter(isPresented: $importsSave, allowedContentTypes: [.gameSave, .json]) { result in
                 launcher.importSave {
                     let url = try result.get()
                     // A file from Files is outside the app's container.
@@ -1263,7 +1266,7 @@ private struct ExportedListSave: Transferable {
     static var transferRepresentation: some TransferRepresentation {
         // Review I: the game's own type, as the game menu's export
         // (decision 409).
-        FileRepresentation(exportedContentType: .alongTheLineSave) { save in
+        FileRepresentation(exportedContentType: .gameSave) { save in
             SentTransferredFile(try save.library.exportFile(of: save.entry))
         }
     }

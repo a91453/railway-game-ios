@@ -192,6 +192,9 @@ public final class GameLauncher {
     /// The station stamps collected (decision 348), kept beside the
     /// achievements in a file that is not a save.
     public private(set) var stationStamps: StationStampRecords
+    /// The winter event's badges (decision 788), kept beside the
+    /// achievements in a file that is not a save.
+    public private(set) var winterEvent: WinterEventRecords
 
     /// Whether the demo mode is on (decision 351): set by the app from its
     /// hidden switch, only in a test build (``DemoMode``). While on, every
@@ -216,6 +219,7 @@ public final class GameLauncher {
         records = ChallengeRecords(file: library.directory.appendingPathComponent("challenge-records.data"))
         achievements = AchievementRecords(file: library.directory.appendingPathComponent(AchievementRecords.fileName))
         stationStamps = StationStampRecords(file: library.directory.appendingPathComponent(StationStampRecords.fileName))
+        winterEvent = WinterEventRecords(file: library.directory.appendingPathComponent(WinterEventRecords.fileName))
         let read = LauncherPreferences.read(from: library.directory.appendingPathComponent(Self.preferencesFileName))
         isFirstLaunch = read == nil
         preferences = read ?? LauncherPreferences()
@@ -897,6 +901,19 @@ public final class GameLauncher {
         session.noteAchievements(unlocked)
         // Decision 396: the progress too, so Game Center shows how far.
         reportToGameCenter?(GameCenterReport(achievements: achievements, facts: facts, scope: scope, challenges: records, at: date))
+    }
+
+    /// Earns the winter event's badge of this week (decision 788) when
+    /// `session`'s network meets its mission, by the device's date. As the
+    /// achievements, the demos, the tutorial and the lessons earn none:
+    /// their networks are not the player's. A game with unlimited funds
+    /// earns them: a badge is a keepsake, not a feat.
+    func checkWinterEvent(of session: GameSession, at date: Date = Date(), calendar: Calendar = WinterEvent.calendar()) {
+        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil,
+              WinterEvent.mission(at: date, calendar: calendar) != nil else { return }
+        let facts = WinterMissionFacts(world: session.world)
+        guard let mission = winterEvent.earn(meeting: facts, at: date, calendar: calendar) else { return }
+        session.noteWinterBadge(mission)
     }
 
     /// Stamps the real stations `session`'s trains served yesterday
@@ -1887,6 +1904,8 @@ public final class GameLauncher {
             guard let self, let started else { return }
             // An achievement, the rarer, has the status line last.
             self.checkStationStamps(of: started)
+            // Decision 788: the winter event's badge of the week.
+            self.checkWinterEvent(of: started)
             self.checkAchievements(of: started)
             // Decision 712: the flights yesterday's riders opened.
             self.checkAirRoutes(of: started)
@@ -2497,13 +2516,6 @@ public struct RealWorldData: Sendable {
     }
 }
 
-/// Whether a game is open, read on the saves' queue (decision 397).
-/// A save being loaded counts as open (decision 502, after the third
-/// review): a round then does not move its game to a row of its own while
-/// it is read, as it would begin from the row it was read from.
-/// PERF-DEVICE 1: how many saves are queued on the saves' queue and not
-/// yet begun. An iCloud round on that queue asks it before each save it
-/// compares, and ends early while one waits.
 /// P2-1 (REVIEW-L21): what Back to Start's autosave came to, set on the
 /// saves' queue and read on the main thread.
 final class LeavingWrite: @unchecked Sendable {
@@ -2516,6 +2528,9 @@ final class LeavingWrite: @unchecked Sendable {
     }
 }
 
+/// PERF-DEVICE 1: how many saves are queued on the saves' queue and not
+/// yet begun. An iCloud round on that queue asks it before each save it
+/// compares, and ends early while one waits.
 final class SavesWaiting: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
@@ -2533,6 +2548,10 @@ final class SavesWaiting: @unchecked Sendable {
     }
 }
 
+/// Whether a game is open, read on the saves' queue (decision 397).
+/// A save being loaded counts as open (decision 502, after the third
+/// review): a round then does not move its game to a row of its own while
+/// it is read, as it would begin from the row it was read from.
 final class GameOpenFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var isOpen = false

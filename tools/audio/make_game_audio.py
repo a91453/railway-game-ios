@@ -11,7 +11,7 @@ followed train's horn (decision 403) and the evening garbage truck's tune
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
-Decision 219: the station chimes are played from scores of 《沿線》
+Decision 219: the station chimes are played from scores of railway game ios
 (`scores/*.score.json`, checked by `score.py`): the local chime (the
 station chime above), the metro interchange chime and the tourist chime,
 each also as its motif, the first notes alone, for high speed. Decision

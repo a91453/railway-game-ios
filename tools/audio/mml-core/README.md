@@ -1,6 +1,6 @@
 # mml-core：MML Studio 的 JS 核心（複製）
 
-`core.js` 是 `a91453/mml-tools` 的 `dist/core.js`，原樣複製，一個位元組都沒改（ARCHITECTURE 決策 219）。`mml_to_score.mjs` 用它把 MML 原稿讀成音符事件，再轉成《沿線》樂譜；整個 repo 只有這一份 MML 解析器，Python 和 App 都不解析 MML。
+`core.js` 是 `a91453/mml-tools` 的 `dist/core.js`，原樣複製，一個位元組都沒改（ARCHITECTURE 決策 219）。`mml_to_score.mjs` 用它把 MML 原稿讀成音符事件，再轉成railway game ios 樂譜；整個 repo 只有這一份 MML 解析器，Python 和 App 都不解析 MML。
 
 | 項目 | 值 |
 | --- | --- |

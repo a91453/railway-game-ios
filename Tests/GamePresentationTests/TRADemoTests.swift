@@ -332,6 +332,15 @@ final class TRADemoTests: XCTestCase {
 
     // MARK: - The map (decision 249)
 
+    /// Decision 770: the demo's island stations are islands already, so
+    /// the island list offers none of them (see the high-speed demo's).
+    @MainActor
+    func testNoStationIsOfferedAnIslandRebuild() throws {
+        let world = try Self.built.get().world
+        let session = GameSession(world: world, language: .traditionalChinese)
+        XCTAssertEqual(session.islandRebuildList(isRealIsland: { _ in true }).map(\.name), [])
+    }
+
     /// The owner, 2026-10-16, of the TRA demo's double track near the
     /// Lanyang Bridge: "明明是雙線，但快車跟慢車一起顯示好擠，也看不出來是
     /// 單線或雙線". Away from the stations, each track's lines are drawn off

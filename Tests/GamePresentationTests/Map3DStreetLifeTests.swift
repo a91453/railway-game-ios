@@ -39,6 +39,55 @@ final class Map3DStreetLifeTests: XCTestCase {
         XCTAssertFalse(try model(.standing).vertices.contains { $0.layer == Map3DVertex.glowing })
     }
 
+    /// Decision 787: the close-up commuter, standing and mid-stride, 1.67
+    /// to 1.68 m tall with its backpack, its shirt the instance's colour.
+    func testTheCommuterIsItsRealSizeAndWearsTheInstancesShirt() throws {
+        for (kind, height, length) in [(Map3DStreetModel.commuterStanding, Float(1.68), Float(0.48)), (.commuterWalking, 1.67, 0.83)] {
+            let shape = try model(kind)
+            XCTAssertEqual(shape.minimum.z, 0, accuracy: 0.01, "\(kind) stands on the ground")
+            XCTAssertEqual(shape.maximum.z, height, accuracy: 0.02, "\(kind)")
+            XCTAssertEqual(shape.length, length, accuracy: 0.03, "\(kind)")
+            XCTAssertEqual(shape.triangleCount, 288, "\(kind)")
+            XCTAssertTrue(shape.vertices.contains { $0.color >> 24 == 0 }, "\(kind): the shirt")
+            XCTAssertTrue(shape.vertices.contains { $0.color == Map3DStreetModel.skin }, "\(kind): the face and arms")
+            XCTAssertFalse(shape.vertices.contains { $0.layer == Map3DVertex.glowing }, "\(kind)")
+            // Facing +x: the backpack (dark) behind the middle.
+            let dark = shape.vertices.filter { $0.color == Map3DStreetModel.tyre && $0.z > 0.9 }
+            XCTAssertLessThan(dark.map(\.x).reduce(0, +) / Float(dark.count), -0.1, "\(kind): the backpack on its back")
+        }
+        XCTAssertGreaterThan(try model(.commuterWalking).length, try model(.commuterStanding).length + 0.1)
+        XCTAssertEqual(Map3DStreetModel.standing.closeUp, .commuterStanding)
+        XCTAssertEqual(Map3DStreetModel.walking.closeUp, .commuterWalking)
+        XCTAssertEqual(Map3DStreetModel.car.closeUp, .car)
+    }
+
+    /// Decision 787: the commuter near the eye, at most a quarter of the
+    /// people; the block figure far.
+    func testTheCommuterIsDrawnCloseUpAndTheBlockFar() throws {
+        let world = try lineBetweenTwoTowns()
+        let life = Map3DScene(world: world).streetLife
+        let (id, middle) = try station(in: life)
+        var busy = Map3DStreetLife.Activity()
+        busy.platform[id] = Map3DStreetLife.platformCrowd(waiting: 600, platforms: 1)
+        busy.front[id] = Map3DStreetLife.frontCrowd(trips: 20_000)
+        let commuters = Set(Map3DCommuterFigure.models.compactMap { Map3DStreetLife.models[$0] })
+        XCTAssertEqual(commuters.count, 2)
+        let near = life.frame(target: middle, distance: 40, time: 0, detail: .full, activity: busy)
+        XCTAssertGreaterThan(near.closeUps, 0)
+        XCTAssertEqual(near.instances.filter { commuters.contains($0.model) }.count, near.closeUps)
+        XCTAssertLessThanOrEqual(near.closeUps, Map3DCommuterFigure.mostCloseUp(of: Map3DStreetDetail.full.people))
+        let far = life.frame(target: middle, distance: 400, time: 0, detail: .full, activity: busy)
+        XCTAssertGreaterThan(far.people, 0)
+        XCTAssertEqual(far.closeUps, 0, "farther than the commuter's reach")
+        XCTAssertFalse(far.instances.contains { commuters.contains($0.model) })
+        // On a device stepped down to few people, fewer close up.
+        let few = life.frame(target: middle, distance: 40, time: 0, detail: .full, activity: busy,
+                             limits: Map3DStreetLimits(people: 8, vehicles: 0, buses: 0))
+        XCTAssertLessThanOrEqual(few.closeUps, 2)
+        XCTAssertEqual(Map3DCommuterFigure.mostCloseUp(of: 8), 2)
+        XCTAssertEqual(Map3DCommuterFigure.mostCloseUp(of: 1_400), 150)
+    }
+
     func testABusierStationShowsMorePeopleButNeverTooMany() {
         XCTAssertEqual(Map3DStreetLife.platformCrowd(waiting: 0, platforms: 2), 0)
         XCTAssertEqual(Map3DStreetLife.frontCrowd(trips: 0), 2, "a few outside any station")

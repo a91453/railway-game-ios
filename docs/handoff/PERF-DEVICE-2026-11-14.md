@@ -68,7 +68,7 @@
 - 最大的來源（模擬器 `heap -s`，同一局）：模型包 287 MB、區塊緩衝 360–450 MB（近景）到上限、場景 CPU 網格 276 MB、世界本身（`WorldCoordinate` 80 MB、`LandCell` 67 MB 等）。
 - 量法（這次用的）：暫時的 XCUITest 遙控（`ZZRemoteControlTests`，沒進 repo，`launch`／`tapid`／`drag`／`pinch`／`shot`／`dump`），App 用 `-screenshot-3d-view 1500,0,45 -screenshot-3d-at 25.0478,121.5170`（Debug）開在台北車站上空；模擬器上每 5 秒 `footprint -p`，`heap -s`、`vmmap` 看分項。手機上 `xctrace record --template 'Game Memory' --all-processes` 兩次都失敗（Recording failed with errors）。
 - 手機備份：`~/RailwayGameDeviceBackups/2026-11-14-before-mem3d/full/`（整個 App 資料容器，288 檔、174 MB，作者的 Mac）。
-- 截圖：`/Users/chienlinyeh/Developer/mem3d-shots/`（before／after 的 2d、3d、far）。
+- 截圖：`mem3d-shots/`（before／after 的 2d、3d、far）。
 
 VERIFIED／UNVERIFIED：
 

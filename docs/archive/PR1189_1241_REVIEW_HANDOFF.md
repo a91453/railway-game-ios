@@ -70,10 +70,10 @@ GameCore（各 2 點）：
 
 ### I2（#1218）存檔列表的匯出還是 JSON，P3，已修
 
-- **路徑**：開始畫面 → 存檔列表 → 某份存檔的「匯出」→ AirDrop 或 LINE。`SaveLibrary.exportFile(of:)` 寫的是 `.alongtheline`，`ExportedListSave` 卻宣告 `exportedContentType: .json`（`StartView.swift:1088`）；決策 409 第 1 點說三個匯出都用遊戲自己的類型，遊戲選單的 `ExportedSave` 已經是 `.alongTheLineSave`。
+- **路徑**：開始畫面 → 存檔列表 → 某份存檔的「匯出」→ AirDrop 或 LINE。`SaveLibrary.exportFile(of:)` 寫的是 `.<saveExtension>`，`ExportedListSave` 卻宣告 `exportedContentType: .json`（`StartView.swift:1088`）；決策 409 第 1 點說三個匯出都用遊戲自己的類型，遊戲選單的 `ExportedSave` 已經是 `.gameSave`。
 - **玩家看到**：接收的裝置拿到的是 JSON，要不要提供「用遊戲打開」看系統怎麼認副檔名，要實機確認。
 - **回歸測試**：無（App 的 `Transferable`，Linux 測不到）。**UNVERIFIED LOCALLY**，`ios-build.yml` 會編譯。
-- **修法**：改成 `.alongTheLineSave`。
+- **修法**：改成 `.gameSave`。
 
 ### I3（#1216）路線改成高鐵後，高架要等一週才換樣子，P3，已修
 

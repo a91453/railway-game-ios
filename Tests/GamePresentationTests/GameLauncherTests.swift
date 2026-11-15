@@ -90,7 +90,7 @@ final class GameLauncherTests: XCTestCase {
 
             await launcher.importSave(Data("not a save".utf8))?.value
             XCTAssertNil(launcher.session)
-            XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: "這個檔案不是《沿線》的存檔。"))
+            XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: "這個檔案不是《鐵道遊戲》的存檔。"))
             await launcher.importSave(reading: { throw CocoaError(.fileReadNoPermission) })?.value
             XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: "無法讀寫存檔，請再試一次。"))
 

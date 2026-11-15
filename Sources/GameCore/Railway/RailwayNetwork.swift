@@ -347,6 +347,45 @@ public struct RailwayNetwork: Hashable, Sendable {
         edgeIndex(id).map { edges[$0] }
     }
 
+    // The edge's facts the route searches ask at every step, read in place:
+    // ``edge(_:)`` and ``node(_:)`` return copies, and a copy retains (and
+    // then releases) the arrays the edge or node holds. The answers are
+    // those of the copies.
+
+    /// Edge `id`'s length, as ``edge(_:)``'s, or `nil`.
+    func length(ofEdge id: TrackEdgeID) -> Int64? {
+        guard let index = edgeIndex(id) else { return nil }
+        return edges[index].length
+    }
+
+    /// Edge `id`'s end nodes and length, as ``edge(_:)``'s, or `nil`.
+    func ends(ofEdge id: TrackEdgeID) -> (from: TrackNodeID, to: TrackNodeID, length: Int64)? {
+        guard let index = edgeIndex(id) else { return nil }
+        return (edges[index].from, edges[index].to, edges[index].length)
+    }
+
+    /// The node `traversal` ends at, as its edge's
+    /// ``TrackEdge/end(of:)``, or `nil` when the edge does not exist.
+    func endNode(of traversal: TrackTraversal) -> TrackNodeID? {
+        guard let index = edgeIndex(traversal.edge) else { return nil }
+        return edges[index].end(of: traversal.direction)
+    }
+
+    /// The traversal of edge `id` leaving node `node`, as its
+    /// ``TrackEdge/traversal(leaving:)``, or `nil`.
+    func traversal(ofEdge id: TrackEdgeID, leaving node: TrackNodeID) -> TrackTraversal? {
+        guard let index = edgeIndex(id) else { return nil }
+        return edges[index].traversal(leaving: node)
+    }
+
+    /// The edges a train arriving at node `node` along edge `edge` may
+    /// leave by (``TrackNodeEnd/exits``), or `nil` when the node does not
+    /// exist or the edge does not end there.
+    func exits(at node: TrackNodeID, arrivingBy edge: TrackEdgeID) -> [TrackEdgeID]? {
+        guard let index = nodeIndex(node) else { return nil }
+        return nodes[index].end(of: edge)?.exits
+    }
+
     /// The index of node `id`, or `nil`.
     func nodeIndex(_ id: TrackNodeID) -> Int? {
         id.networkNumber.flatMap { number in Self.index(of: number, count: nodes.count) { nodes[$0].id.networkNumber ?? 0 } }

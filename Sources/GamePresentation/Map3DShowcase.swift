@@ -157,7 +157,11 @@ public enum Map3DShowcase {
         Entry("ALISHAN", "Alishan Forest Railway mountain train", "阿里山林鐵登山列車", .other, cars: 6, most: 8, gauge: 0.762),
         Entry("threeCarUrban", "Three-car urban EMU", "三節都市電聯車", .other, cars: 3, fixed: true),
         Entry("greenCommuter", "Two-car green EMU", "兩節綠色電聯車", .other, cars: 2, fixed: true),
-    ]
+        // The owner's old red commuter car (Map3DRedCommuter).
+        Entry("redCommuter", "Red commuter EMU", "紅色通勤電聯車", .other, cars: 4, most: 10),
+        // Decision 782: then the registered trains' own rows
+        // (``Map3DTrainRegistration/showcase``).
+    ] + Map3DTrainRegistry.trains.flatMap(\.showcase)
 
     /// The entry of `key`.
     public static func entry(_ key: String) -> Entry? {
@@ -490,6 +494,6 @@ extension Map3DShowcase {
     /// The name in a photo's corner: the game's own, as the postcard's
     /// wordmark (decision 215); the showcase has no map data to credit.
     public static func photoCredit(in language: DisplayLanguage) -> String {
-        language.text("Along the Line", "沿線")
+        GameBrand.current.name(in: language)
     }
 }

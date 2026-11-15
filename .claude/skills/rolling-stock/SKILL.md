@@ -16,6 +16,7 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 | 從參考圖做一款新車的整個流程（比例、輪廓、曲面、門窗、配色、自檢、交接） | `docs/art/native-vehicle-modeling/README.md`（車輛建模手冊，#1224）、`PROMPT.md`、`REVIEW_CHECKLIST.md`；三個實例 `CASE_STUDY_700T.md`、`CASE_STUDY_EMU3000.md`、`CASE_STUDY_E500.md` |
 | 畫風 | `.claude/skills/art-style/SKILL.md`（霧面平塗、薄邊、一個三角形一個顏色） |
 | 量與拍 | `tools/train-models/README.md`（本 skill 第 6 節） |
+| 作者自製模型（有貼圖）轉進遊戲 | 本 skill 第 8 節、`tools/texture-palette/README.md` |
 | 預算與遠景的規則 | 決策 408（遠景一節換一節）、417（共用預算、精細車規則）、420（簡化器、遠景版）、422、432（遠景版的測試） |
 | 要接的人手 | `docs/HANDOFF.md`、#2118 工作登記（別人正在動的車與檔案） |
 
@@ -23,10 +24,25 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
 
 ## 2. 配方放哪
 
-- **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。App 第一次開 3D 前把它整包建好、CPU 與 GPU 各留一份，所以**遊戲不畫的靜態展示模型**（單元、整列、角色，沒有 set 接它們）放 `Map3DModelPack.studies`，只給工具與 `hashes.lock.json` 讀（審查 K1-1）。`standard` 的模型數與總頂點數由 `Map3DModelPackSizeTests` 釘住：加進 `standard` 的車要改那兩個數，並在 PR 寫多了多少。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
+- **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。App 第一次開 3D 前把它整包建好、CPU 與 GPU 各留一份，所以**遊戲不畫的靜態展示模型**（單元、整列、角色，沒有 set 接它們）放 `Map3DModelPack.studies`，只給工具與 `hashes.lock.json` 讀（審查 K1-1）。`standard` 的模型數與總頂點數由 `Map3DModelPackSizeTests` 釘住（決策 782 起不算註冊車，見 §2.1）：手寫進 `standard` 的車要改那兩個數，並在 PR 寫多了多少；註冊車只在 PR 寫。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
 - **程式放樣的車**：`Map3DTrainShell`（`Map3DTrainStyle` 的 cab／car／panto）。每款專用車有自己的配方檔：`Map3DEMU800`、`Map3DEMU900`、`Map3DEMU500`、`Map3DEMU3000`、`Map3DTEMU1000`／`2000`、`Map3DC341`、`Map3DE500`、`Map3DN700SG`、`Map3DTrainShapeRefresh`（700T、E200）…
 - **編組**：`Map3DTrainSet`（`Map3DTrainSets.swift`）。一個 set 有 key、近景的 head／middle／tail／panto／centre／single、`far`（遠景 set 的 key）、`ownLengths`、`cycle`（中間車的循環）。模型名字照 `set-<key>-<單元>`，遠景 `set-<key>Far-<單元>`。`Map3DTrainSet.byKey` 是全部。
 - **接進營運**：`Map3DModelPack.modelIndex(forType:carIndex:count:)`、`layout(forType:count:)`；`Map3DTrains` 擺實例。只加模型、沒接 set，合併後不會在遊戲裡出現。
+
+### 2.1 新車一律用註冊表（決策 782）
+
+以前每款車都要改 `Map3DScene.swift`（色票）、`Map3DTrainSets.swift`（`all`、`nearOnly`）、`Map3DShowcase.swift`、`hashes.lock.json`、`Map3DModelPackSizeTests`、`Map3DModelPackLockTests`、`Map3DTrainSetTests`，兩款同時做一定衝突。現在**新車只新增自己的檔**，兩款可以同時做：
+
+1. `Sources/GamePresentation/Map3D<車>.swift`（照 `Map3DMTRAirportLine.swift`）：`Unit`、`meshPalette`（與 `glb_to_swift.py --materials` 同順序）、`model(_:far:)`；同一個檔裡寫
+   - `extension Map3DPalette { public static let … }`：這款車自己的色票（不要加進 `Map3DScene.swift`）；
+   - `extension Map3DTrainSet { static func …(far:) }`：它的 set；
+   - `static let registration = Map3DTrainRegistration(id: "<車>", sets: [近, 遠, …], showcase: [Map3DShowcase.Entry(…)], triangles: …, length: …)`：set 依「近、遠」排；有遠景 set 的自動算進 `nearOnly`；`showcase` 是列車展示的列；`triangles`／`length` 是 `Map3DTrainSetTests` 對它每節車的範圍（寬、高、燈照共通規則）。
+2. `Sources/GamePresentation/Map3DTrainRegistryList.swift` 最後加**一行** `Map3D<車>.registration,`。這個檔設了 `merge=union`（`.gitattributes`），兩個分支各加一行時 git 會兩行都留，不會衝突；`Map3DTrainRegistryTests` 會擋忘了加或加了兩次。
+3. `tools/train-models/locks/<id>.json`：`run.sh OUT --lock tools/train-models/hashes.lock.json` 會把註冊車的模型雜湊、燈組數（`lampCount`）與燈的摘要（`lamps`）寫進這個檔，`hashes.lock.json` 一行都不會變。在 Mac 上算的雜湊與 `lamps` 可能和 Linux 差最後一位，照 CI 失敗訊息填（`Map3DModelPackLockTests.testEveryModelIsAsLocked`／`testEveryRegisteredTrainIsAsLocked` 會印出正確值）。
+4. `Tests/GamePresentationTests/Map3D<車>Tests.swift`：只寫這款車特有的事（編組順序、行李車沒窗…）。
+5. `docs/decisions/<N>.md`、`docs/art/<資料夾>/`。
+
+`Map3DModelPackSizeTests`、`Map3DModelPackLockTests` 的數字與摘要只算手寫的車，加註冊車**不用改**；註冊的 set 一律接在 `Map3DTrainSet.all` 最後（手寫的之後），所以前面的模型都不會移位。要接到真實路線（`Map3DRealTrains`、`set(forKey:count:locked:)`、`byType`）時才會改到共用的表，那是一格一格的改，和別款車通常不在同一行。
 
 ## 3. 近景與遠景
 
@@ -74,7 +90,7 @@ node tools/train-models/render.mjs OUT --time both        # 七向圖，日與�
 node tools/train-models/viewer.mjs OUT/index.html OUT     # 離線預覽頁；兩個資料夾就並排
 ```
 
-**一款新車的順序**：①照建模手冊做配方；②`run.sh --ids <新模型>`；③`render.mjs` 看七向（先看黑色剪影、白模，再看上色）；④`check.mjs --new-set <key>`（預算、遠景版、雜湊）；⑤把新模型加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），**只應該多出新模型的行**，別的行變了就是動到別款；⑥跑 `swift build --build-tests -Xswiftc -warnings-as-errors` 與該車的測試；⑦給作者看。不要再開新的 `tools/<車>/` 資料夾；舊資料夾沒有的專用驗收（GLB 打包、逐車的門窗／正面稽核）才放進車自己的目錄，並在 `tools/train-models/README.md` 的對照表加一行。
+**一款新車的順序**：①照建模手冊做配方；②`run.sh --ids <新模型>`；③`render.mjs` 看七向（先看黑色剪影、白模，再看上色）；④`check.mjs --new-set <key>`（預算、遠景版、雜湊）；⑤把新模型加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），註冊車（§2.1）只應該多出 `locks/<id>.json`，`hashes.lock.json` 一行都不該變，變了就是動到別款；⑥跑 `swift build --build-tests -Xswiftc -warnings-as-errors` 與該車的測試；⑦給作者看。不要再開新的 `tools/<車>/` 資料夾；舊資料夾沒有的專用驗收（GLB 打包、逐車的門窗／正面稽核）才放進車自己的目錄，並在 `tools/train-models/README.md` 的對照表加一行。
 
 **改前／改後**（改了既有車的外觀，例如夜間亮燈、遮蔽烘焙、玻璃反光）：在 main 的 worktree 匯出到 `before`（`--tag before`）、在分支匯出到 `after`，各自 `render.mjs`，`viewer.mjs 頁 before after`。路線圖第 1–3 項的 PR 用同一個工具，`renderer.js` 的 `features` 旗標就是為它們留的。
 
@@ -106,7 +122,24 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 5. **預算**：近景約 4,000–8,000 個三角形，遠景不到一半，同框、顏色是近景的子集。
 6. **六格總覽先給作者看**：front、left、top、back、isometric、far left，作者說可以才收尾與合併。
 
-## 8. 這份是怎麼來的
+## 8. 作者自製模型轉進遊戲
+
+作者自己做的列車模型（舊版遊戲的、帶貼圖的）是作者的作品，可以進遊戲；但遊戲不用貼圖，所以照這個順序轉。第一台是 e752e7a2（#2249，`Map3DRedCommuter`），照它做：
+
+1. **原檔不進公開 repo**：GLB、貼圖留在作者的電腦或 `a91453/railway-assets-private`；公開的只有工具、文件與轉好的 Swift 網格。文件裡不寫作者電腦上的路徑。
+2. **切面**：`tools/texture-palette/`（README 有指令）。`flatten.py` 把貼圖平塗成色票色塊，`cut_faces.py` 沿色塊邊界把三角形切開（窗、門、帶各自成面），窗標 `glass`。不要把整台車塗成幾個大色塊，窗會不見。不要批次轉，一台一台做（作者 2026-11-15）。
+3. **顏色**：只用色票色。色票沒有的顏色（例如車身紅）加進 `Map3DPalette`（決策 782 起寫在車自己的檔裡的 `extension Map3DPalette`），命名寫用途；原色在遊戲光下看起來不對就調（#711604 偏咖啡 → `trainRed` #8C1C1C）。**glTF 的 `COLOR_0` 與 base color factor 是線性值**：`tools/texture-palette/to_swift.py` 會轉回 sRGB；用 `tools/glb-to-m3dmodel/convert.mjs` 時要加 `--linear-colors yes`（不加是專案自己 GLB writer 的舊讀法，全部當 sRGB，紅帶會變成接近黑紅）。
+4. **進 Swift**：網格以 base64 內嵌（`to_swift.py`，同 N700S-G 的做法），顏色存色票索引、由 Swift 端給色；玻璃用 `Map3DTrainStyle.glass`，夜裡窗才會亮、白天才會反光。glTF 是 +y 上，要轉成遊戲軸（+x 車頭、+y 左、+z 上、車廂中心 x 0、最低點 z 0），轉換必須是旋轉（行列式 +1），不然整台翻面。
+5. **編組**：只有一端駕駛室的車，尾車用頭車轉 180°（`turned`）；中間車沒有就用後半節加鏡像（鏡像要反轉繞序）。頭尾車**要在配方裡加亮燈**（`cabLamps`，放在車頭畫好的燈塊上），`Map3DTrainSetTests` 會檢查。
+6. **接營運**：照 §2.1 用註冊表（set、列車展示、`nearOnly` 都在車自己的檔裡）；選哪些車畫成它寫在 `set(forKey:count:locked:)` 或 `byType`，別動到其他車型。
+7. **預算**：一節幾千個三角形以下就照一般車的距離畫、不必另做遠景版（417 規則 1 是給精細車的）；超過就照第 3 節做遠景版。
+8. **雜湊**：註冊車的雜湊與燈寫在 `tools/train-models/locks/<id>.json`（§2.1 第 3 點），`hashes.lock.json` 與 `Map3DModelPackLockTests` 的摘要都不動。Mac 量的值和 Linux 差最後一位時，推上去後照 CI 失敗訊息填（`gh api --allow-escape-sequences repos/a91453/railway-game-ios/actions/jobs/<id>/logs`）。
+9. **路線顏色**：作者的塗裝畫成實色，車身就不顯示路線顏色（alpha 0 才會）。要不要讓某條帶吃線色，做之前先決定並寫進 PR。
+10. **看圖**：`render.mjs` 七向圖之外，在模擬器拍一張遊戲畫面（Debug 的 `-screenshot-scene` 加 `-screenshot-follow-train`，再按 3D），和新做的車並排。已知缺點寫進 PR（e752e7a2：車底只是一塊深色，沒有轉向架與車輪，下一台要補）。
+
+在 Mac 上跑工具：`tools/train-models/run.sh` 已支援 Swift 6.4.2 的模組位置；`render.mjs` 要 `CHROMIUM_PATH=<Playwright 的 Chrome for Testing 執行檔>` 與 `NODE_GLOBAL=<有 playwright 的 node_modules/>`。
+
+## 9. 這份是怎麼來的
 
 2026-10-11 原本寫給網頁版（Meshy 生成、Blender 烘焙、`trains.js`）。之後遊戲改成原生 Metal，列車變成 Swift 配方，每款車各開一個 `tools/` 資料夾，工具重複；2026-10-27 作者同意統一（派工單 AC）：共用工具 `tools/train-models/`，這份改寫成原生做法，網頁版降成附錄（原文保留，只把標題降一級）。
 

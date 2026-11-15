@@ -93,23 +93,53 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
         let shed = built(withDepot), house = built(plain)
         XCTAssertEqual(shed.houseFootprints.count, 2)
         XCTAssertEqual(house.houseFootprints.count, 2)
-        // The depot's: 36 m along the sidings (east–west), 16 m across.
+        // Decision 785: the depot yard kit's shed, as many 12 m bays along
+        // the sidings (east–west) as fit them, two tracks wide.
         let corners = try XCTUnwrap(shed.houseFootprints.last)
         let along = corners[0] - corners[3], across = corners[1] - corners[0]
-        XCTAssertEqual(along.length, Map3DDepotFacilities.shedLength, accuracy: 0.01)
-        XCTAssertEqual(across.length, Map3DDepotFacilities.shedWidth, accuracy: 0.01)
+        let sidings = try XCTUnwrap(withDepot.railwaySnapshot().platforms.filter { $0.platform.station == depot.id }
+            .compactMap { Map3DStreetLife.Path($0.points.map { shed.point($0) })?.length }.max())
+        let bays = Map3DDepotYardKit.bays(forSiding: sidings)
+        XCTAssertGreaterThanOrEqual(bays, 3)
+        XCTAssertEqual(along.length, Float(bays) * 12, accuracy: 0.01)
+        XCTAssertLessThanOrEqual(along.length, sidings + 0.01)
+        XCTAssertEqual(across.length, Map3DDepotYardKit.part(.shedHead, system: .taiwanRail, tracks: 2).width, accuracy: 0.01)
         // Its bays (the footprint's front) to the west, towards the line.
         XCTAssertLessThan(try XCTUnwrap(along.normalized).x, -0.99)
         // No track within it.
         let middle = corners.reduce(Map3DPoint.zero) { $0 + $1 } * 0.25
         let inside = shed.trackLines.flatMap(\.points).filter { p in
             let d = p - middle
-            return abs(d.dot(along.normalized!)) < 17 && abs(d.dot(across.normalized!)) < 7
+            return abs(d.dot(along.normalized!)) < along.length / 2 - 1 && abs(d.dot(across.normalized!)) < across.length / 2 - 1
         }
         XCTAssertTrue(inside.isEmpty, "\(inside.prefix(3))")
         XCTAssertNotEqual(house.houseFootprints.last, corners)
         // Close up, only West's platform things at the depot's world.
         XCTAssertLessThan(triangles(shed.closeMeshes), triangles(house.closeMeshes))
+    }
+
+    /// Decision 785: the shed's system is tall enough for every train its
+    /// lines keep there; its bays fit the sidings, 3 to 27.
+    func testTheShedFitsItsTrainsAndSidings() {
+        XCTAssertEqual(Map3DDepotFacilities.system(for: []), .taiwanRail)
+        XCTAssertEqual(Map3DDepotFacilities.system(for: [.apm, .apm]), .wenhu)
+        XCTAssertEqual(Map3DDepotFacilities.system(for: [.apm, .c]), .lightRail)
+        XCTAssertEqual(Map3DDepotFacilities.system(for: [.a, .apm]), .metro)
+        XCTAssertEqual(Map3DDepotFacilities.system(for: [.a, .c]), .lightRail)
+        XCTAssertEqual(Map3DDepotFacilities.system(for: [.a, TrainType(rawValue: "HSR")]), .taiwanRail)
+        XCTAssertEqual(Map3DDepotFacilities.system(for: [nil]), .taiwanRail)
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: 10), 3)
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: 150), 12)
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: 2_000), Map3DDepotYardKit.maxBays)
+        // The longest shed stays within an app model's 15,000 triangles.
+        for system in Map3DDepotYardKit.System.allCases {
+            let near = Map3DDepotYardKit.shedMesh(system: system, tracks: 4, bays: Map3DDepotYardKit.maxBays)
+            XCTAssertLessThan(triangles(near), 15_000, system.rawValue)
+            let bounds = near.bounds!
+            XCTAssertEqual(bounds.max.x - bounds.min.x, Float(Map3DDepotYardKit.maxBays) * 12 + 0.7, accuracy: 0.05)
+            XCTAssertEqual(bounds.min.y, 0, accuracy: 0.001)
+            XCTAssertEqual(triangles(Map3DDepotYardKit.shedFarMesh(system: system, tracks: 4, bays: 5)), 10)
+        }
     }
 
     /// A new game round the Changhua Roundhouse has its turntable where
@@ -156,7 +186,8 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
 
     /// The triangles each adds: printed for the decision.
     func testTheTriangleReport() {
-        print("depot shed near \(triangles(Map3DDepotFacilities.shed)), far \(triangles(Map3DDepotFacilities.shedFar));",
+        let kit = Map3DDepotYardKit.System.allCases.map { "\($0.rawValue) \(triangles(Map3DDepotYardKit.shedMesh(system: $0, tracks: 2, bays: 3)))–\(triangles(Map3DDepotYardKit.shedMesh(system: $0, tracks: 4, bays: Map3DDepotYardKit.maxBays)))" }
+        print("depot yard shed near \(kit.joined(separator: ", "));",
               "turntable near \(triangles(Map3DDepotFacilities.turntable)), far \(triangles(Map3DDepotFacilities.turntableFar))")
     }
 }

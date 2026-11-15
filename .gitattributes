@@ -1,0 +1,3 @@
+# Decision 782: one registered train a line; two branches that each add
+# one keep both lines (Map3DTrainRegistryTests checks the result).
+Sources/GamePresentation/Map3DTrainRegistryList.swift merge=union

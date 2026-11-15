@@ -173,17 +173,39 @@ extension GameSession {
     /// The station's pairs of platforms on two tracks 5 m apart, each with
     /// none other within an island's spacing (one in an island already),
     /// as (kept, moved): the later one moved first, then the other.
+    ///
+    /// How far another platform stands is measured across
+    /// the platform's track, not from middle to middle. A station whose
+    /// platforms are staggered along the line (decision 197: the
+    /// high-speed demo's Banqiao, 10 m and more apart) has its islands'
+    /// middles some 15 m apart though their tracks are 11 m apart, and was
+    /// offered a rebuild it already had.
     func sidePlatformPairs(of id: StationID, in world: GameWorld) -> [(kept: TrackPlatform, moved: TrackPlatform)] {
         let platforms = world.trackPlatforms(of: id)
         let middles = platforms.map { middle(of: ($0.edge, $0.start, $0.end), in: world) }
-        let island = PlatformTrackLayout.island.spacing
-        let near = DoubleTrack.spacing + WorldCoordinate.unitsPerMetre
+        let ways: [PlanVector?] = platforms.map { platform in
+            guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
+            let at = min(max(0, (platform.start + platform.end) / 2), geometry.length)
+            return geometry.location(at: at).direction
+        }
+        let island = Double(PlatformTrackLayout.island.spacing)
+        let near = Double(DoubleTrack.spacing + WorldCoordinate.unitsPerMetre)
+        let reach = island + 4 * Double(WorldCoordinate.unitsPerMetre)
         func inIsland(_ index: Int) -> Bool {
             middles.indices.contains { other in
-                guard other != index else { return false }
-                let distance = Self.squaredDistance(middles[index], middles[other])
-                return distance > near * near && distance < (island + 4 * WorldCoordinate.unitsPerMetre) * (island + 4 * WorldCoordinate.unitsPerMetre)
-                    && platforms[other].edge != platforms[index].edge
+                guard other != index, platforms[other].edge != platforms[index].edge else { return false }
+                let dx = Double(middles[other].x - middles[index].x), dy = Double(middles[other].y - middles[index].y)
+                guard let way = ways[index] else {
+                    let distance = (dx * dx + dy * dy).squareRoot()
+                    return distance > near && distance < reach
+                }
+                let length = (Double(way.dx) * Double(way.dx) + Double(way.dy) * Double(way.dy)).squareRoot()
+                guard length > 0 else { return false }
+                // Across the track, and alongside the platform.
+                let across = abs(Double(way.dx) * dy - Double(way.dy) * dx) / length
+                let along = abs(Double(way.dx) * dx + Double(way.dy) * dy) / length
+                let half = Double(max(platforms[index].end - platforms[index].start, platforms[other].end - platforms[other].start)) / 2
+                return across > near && across < reach && along < half
             }
         }
         var pairs: [(kept: TrackPlatform, moved: TrackPlatform)] = []

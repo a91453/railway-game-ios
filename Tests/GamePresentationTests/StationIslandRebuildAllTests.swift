@@ -48,9 +48,26 @@ final class StationIslandRebuildAllTests: XCTestCase {
             let offer = try XCTUnwrap(session.stationIslandOffer(for: candidate.id))
             XCTAssertEqual(candidate.cost, offer.cost, "the list prices each as its panel does")
         }
+        XCTAssertTrue(session.opensIslandRebuildListByItself(isRealIsland: realIslands))
         // On a map that is not real, no station is a real one.
         XCTAssertTrue(session.islandRebuildList.isEmpty)
         XCTAssertFalse(session.hasRealIslandsToRebuild)
+        XCTAssertFalse(session.opensIslandRebuildListByItself)
+    }
+
+    /// REVIEW-L22: the real-world demo lays 瑞芳, 猴硐 and 十分 on side
+    /// platforms with no room past them for turnouts. The list shows them,
+    /// each saying why it cannot be rebuilt, but the card does not open by
+    /// itself over the demo with nothing to tick (it covered the toolbar a
+    /// full lane UI test went on to tap).
+    func testTheRealWorldDemosListDoesNotOpenByItself() throws {
+        let railways = try BundledRealData.railways()
+        let session = GameSession(world: RealWorldDemo.make(in: .traditionalChinese, railways: railways), language: .traditionalChinese)
+        session.railways = railways
+        XCTAssertTrue(session.hasRealIslandsToRebuild)
+        XCTAssertFalse(session.islandRebuildList.isEmpty)
+        XCTAssertTrue(session.islandRebuildList.allSatisfy { $0.cost == nil && $0.problem != nil })
+        XCTAssertFalse(session.opensIslandRebuildListByItself)
     }
 
     func testRebuildingTheTickedOnes() throws {

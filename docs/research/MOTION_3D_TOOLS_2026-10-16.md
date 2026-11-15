@@ -1,4 +1,4 @@
-# 動態設計與 3D 工具：作者再列的 45 個專案能幫《沿線》什麼
+# 動態設計與 3D 工具：作者再列的 45 個專案能幫《railway game ios》什麼
 
 日期：2026-10-16。基準：`railway-game-ios` main `878adaf`；官網原始碼：`a91453/railway-reference-private` `1d2c668` 的 `Website/`。
 讀者：作者，以及之後做官網影片、教學動畫、3D 地圖素材、3D 城市網頁的 session。
@@ -15,10 +15,10 @@
 
 ## 0. 一頁摘要
 
-先講《沿線》是什麼，才知道什麼裝得上：
+先講《railway game ios》是什麼，才知道什麼裝得上：
 
 - App 是 Swift：決定論的 GameCore、SwiftUI 介面，3D 地圖是自己寫的 Metal（決策 229–244）。所有幾何都在 Swift 裡用程式產生：頂點色、一個材質、扁平的微縮模型感。列車也是程式建模（決策 230）。
-- 官網 `www.alongthelinegame.com` 是純 HTML／CSS／JS，沒有 React，CSP 是 `script-src 'self'`，所以不能從 CDN 載腳本。
+- 官網 `<website>` 是純 HTML／CSS／JS，沒有 React，CSP 是 `script-src 'self'`，所以不能從 CDN 載腳本。
 - 官網的 `/city/` 是 three.js 0.186 寫的 3D 城市（`Web/CityView/`），列車模型用 Meshy 生成（決策 161）。
 - **官網已經有自己的影片產生器**：`Website/tools/trailer/render.js`（57 行）用 Playwright 一格一格截 `trailer.html`，再交給 ffmpeg，做出首頁 37.5 秒的介紹影片；聲音由 `mix_audio.py` 用遊戲自己的音檔混出來（決策 219）。
 - App 全球上架（含歐盟、英國、南韓），素材與輸出的授權都要能全球商用。
@@ -113,7 +113,7 @@
 
 - **為什麼**：清單上的影片工具裡它最合這個遊戲：
   - 一張 canvas、固定種子，每一格都可以重做（和 GameCore 的決定論是同一個想法）；
-  - 它的「做一種新畫風」流程（`new-style.md`、`tools/compare.mjs`）可以做出《沿線》的畫風：平塗、粗的藏青外框、圓角、不用漸層與陰影。它的等角畫風（2:1 投影、圓角板塊、沒有陰影）已經接近微縮模型感；
+  - 它的「做一種新畫風」流程（`new-style.md`、`tools/compare.mjs`）可以做出《railway game ios》的畫風：平塗、粗的藏青外框、圓角、不用漸層與陰影。它的等角畫風（2:1 投影、圓角板塊、沒有陰影）已經接近微縮模型感；
   - 音樂用程式合成（`kit/score-head.js`），和決策 219 的方向一致；
   - 只要 Node、Playwright Chromium、ffmpeg，容器裡都有，不用 npm 套件（推論，沒有執行）。
 - **做法**：不把整個外掛搬進來。先拿它的「故事 → 分鏡 → 做 → 檢查」流程與新畫風的方法，改寫成官網 `Website/tools/trailer/` 旁邊的一個 skill，算繪仍用現有的 `render.js`。聲音照舊用遊戲自己的音檔（`mix_audio.py`）。

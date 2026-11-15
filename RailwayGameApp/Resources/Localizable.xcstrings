@@ -22,18 +22,6 @@
       }
     },
 
-    "Along the Line" : {
-      "comment" : "Official player-facing brand name.",
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沿線"
-          }
-        }
-      }
-    },
-
     "Net profit" : {
       "localizations" : {
         "zh-Hant" : {
@@ -521,16 +509,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "鋪設軌道 · %@"
-          }
-        }
-      }
-    },
-    "Along the Line is a railway and city-building simulation where the railway shapes the growth of the city." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "《沿線》是一款鐵路與城市發展模擬遊戲。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。"
           }
         }
       }
@@ -1511,16 +1489,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "利潤"
-          }
-        }
-      }
-    },
-    "Along the Line save" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沿線存檔"
           }
         }
       }
@@ -3101,6 +3069,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "晝夜變化：入夜後地圖變暗，車站、列車與窗戶亮起燈光。天氣效果：下雨或雷雨的日子地圖上會下雨、閃電，颱風經過的車站會標上颱風符號。真實列車：在實景地圖上，真實路線的列車照時刻表淡淡地跑；它們不載你的乘客，也不擋你的車。幀數：平面地圖顯示畫面有多順；點數字可看時間花在哪裡。"
+          }
+        }
+      }
+    },
+    "Festive Decorations" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "節慶裝飾"
           }
         }
       }

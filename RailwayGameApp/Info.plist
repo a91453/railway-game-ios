@@ -8,6 +8,9 @@
   with this file. The type's name is localized in
   Resources/*.lproj/InfoPlist.strings. Keep the identifier and the extension
   in step with SharedNetwork.typeIdentifier and SharedNetwork.fileExtension.
+  The type's name and extension here are the neutral brand's (GameBrand);
+  tools/brand/apply_brand.py puts the released game's in before a release
+  build, and GameBrandTests checks that the committed ones stay neutral.
 -->
 <plist version="1.0">
 <dict>
@@ -24,7 +27,7 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeName</key>
-			<string>Along the Line Save</string>
+			<string>Railway Game Save</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
@@ -41,7 +44,7 @@
 			<key>UTTypeIdentifier</key>
 			<string>io.github.a91453.RailwayGame.save</string>
 			<key>UTTypeDescription</key>
-			<string>Along the Line Save</string>
+			<string>Railway Game Save</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.json</string>
@@ -51,7 +54,7 @@
 			<dict>
 				<key>public.filename-extension</key>
 				<array>
-					<string>alongtheline</string>
+					<string>railwaygame</string>
 				</array>
 			</dict>
 		</dict>

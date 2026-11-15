@@ -334,7 +334,14 @@ public struct Map3DTrainSet: Sendable {
             taoyuanAirport1000(far: true),
             taoyuanAirport2000(),
             taoyuanAirport2000(far: true),
-        ]
+            // The owner's old commuter car e752e7a2 (Map3DRedCommuter): a
+            // commuter EMU of no type four cars or longer; last, so no set's
+            // models before it move.
+            redCommuter(),
+            // Decision 782: then the registered trains' sets
+            // (``Map3DTrainRegistry``), each in its own files; a new train
+            // joins there, not here.
+        ] + Map3DTrainRegistry.sets
     }()
 
     static let byKey: [String: Map3DTrainSet] = Dictionary(uniqueKeysWithValues: all.map { ($0.key, $0) })
@@ -377,10 +384,11 @@ public struct Map3DTrainSet: Sendable {
     /// Kaohsiung and Taichung Green line's (their far sets).
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
-    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
+    /// Decision 782: and the registered trains' sets with a far set.
+    static let nearOnly: Set<String> = Set(Map3DTrainRegistry.sets.filter { $0.far != nil }.map(\.key)).union(["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
-                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key]
+                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -501,7 +509,8 @@ public struct Map3DTrainSet: Sendable {
     /// train's key is always the express's), and one or two cars are a
     /// DR1000 railcar, more a DR3100 set; decision 331, later: a two-car
     /// commuter EMU of no type is the green two-car EMU, a three-car one
-    /// the three-car urban EMU. Decision 338: a set in `locked` (the train
+    /// the three-car urban EMU; four or more cars the owner's old red
+    /// commuter car (``Map3DRedCommuter``). Decision 338: a set in `locked` (the train
     /// pack's, until it is unlocked) is drawn as it was before it; later, a
     /// two- or three-car light metro is an articulated LRT
     /// (``articulatedByCount``); decision 399: a type in ``packByType``
@@ -514,6 +523,8 @@ public struct Map3DTrainSet: Sendable {
             set = byKey["greenCommuter"]
         } else if key == "", count == 3 {
             set = byKey["threeCarUrban"]
+        } else if key == "", count >= 4 {
+            set = byKey[Map3DRedCommuter.key]
         } else if named(key)?.key == "greenTram", let articulated = articulatedByCount[count] {
             set = byKey[articulated]
         } else if let packed = packByType[key] {
@@ -1267,6 +1278,32 @@ public struct Map3DTrainSet: Sendable {
             }
             let leading = unit(.leading, lamps: 9.69, colour: Map3DTrainStyle.headlamp)
             return Cars(head: leading, middle: leading, tail: unit(.trailing, lamps: -9.69, colour: Map3DPalette.lantern), single: nil)
+        }
+    }
+
+    /// The owner's old commuter car (``Map3DRedCommuter``): its cab car at
+    /// the front, turned round at the back, its middle car between, the
+    /// lamps lit over the cab's painted lamp blocks. Should its mesh not
+    /// decode, the commuter style's cars.
+    static func redCommuter() -> Map3DTrainSet {
+        Map3DTrainSet(key: Map3DRedCommuter.key) {
+            guard let cab = Map3DRedCommuter.cab(), let middle = Map3DRedCommuter.middle() else {
+                let style = Map3DTrainStyle.all[0]
+                let head = Map3DTrainShell(style: style, cab: true).model(named: Map3DRedCommuter.key)
+                return Cars(head: head, middle: Map3DTrainShell(style: style, cab: false).model(named: Map3DRedCommuter.key),
+                            tail: head.turned, single: nil)
+            }
+            // Over the two lamp blocks painted on the cab's face (1.1 to
+            // 1.25 m up, 0.6 to 1.0 m either side), lit: white at the head,
+            // red at the tail.
+            func lit(_ car: Map3DModelPack.Model, front: Bool) -> Map3DModelPack.Model {
+                var builder = StationKitBuilder()
+                builder.add(car, at: .zero)
+                builder.cabLamps(atX: front ? 9.885 : -9.885, colour: front ? Map3DTrainStyle.headlamp : Map3DPalette.lantern,
+                                 height: 1.105, across: 0.8, width: 0.37, tall: 0.14)
+                return .flat(named: Map3DRedCommuter.key, from: builder.mesh)
+            }
+            return Cars(head: lit(cab, front: true), middle: middle, tail: lit(cab.turned, front: false), single: nil)
         }
     }
 

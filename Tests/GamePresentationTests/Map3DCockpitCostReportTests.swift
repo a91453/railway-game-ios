@@ -5,7 +5,7 @@ import XCTest
 
 /// PERF_3D_COCKPIT (2026-10-30), on request: what the 3D map's screen
 /// asks of the main actor at every tick while it follows a train from the
-/// cab, on a save the owner sent (`COCKPIT_SAVE=<.alongtheline>`, with the
+/// cab, on a save the owner sent (`COCKPIT_SAVE=<a shared save file>`, with the
 /// real-world data its command log names: `COCKPIT_LOG=<command-log.json>`;
 /// the train whose name holds `COCKPIT_TRAIN`, the first moving one by
 /// default; `COCKPIT_TICKS`, 300 by default). Each part is what

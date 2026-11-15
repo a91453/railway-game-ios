@@ -264,7 +264,7 @@
         "Sources/GamePresentation/CityViewServing.swift",
         "Sources/GamePresentation/DataSourceCredits.swift",
         "Tests/GamePresentationTests/CityViewServingTests.swift",
-        "Web/CityView/ALONG_THE_LINE.md",
+        "Web/CityView/GAME_ADAPTATION.md",
         "Web/CityView/public/models/trains/index.json",
         "Web/CityView/src/main.js",
         "Web/CityView/src/world/rails.js",

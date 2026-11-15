@@ -70,7 +70,13 @@ public enum DataSourceCredits {
     static let proceduralTokyoURL = "https://github.com/jeantimex/tokyo"
     /// The notices of the 3D city view's page and the libraries it bundles
     /// (decision 152), next to the page on the game's website (decision 163).
-    static let cityViewNoticesURL = "https://www.alongthelinegame.com/city/NOTICES.txt"
+    /// Decision 503: whom the ODbL notices offer the derived files from,
+    /// the brand's mailbox (``GameBrand/contactEmail``) or the developer.
+    static var mailbox: (english: String, chinese: String) {
+        GameBrand.current.contactEmail.map { ($0, " \($0) ") } ?? ("the developer", "開發者")
+    }
+
+    static var cityViewNoticesURL: String? { CityViewPage.root().map { $0 + "NOTICES.txt" } }
     static let polyHavenURL = "https://polyhaven.com"
     static let meshyURL = "https://www.meshy.ai"
     static let kenneyNatureKitURL = "https://kenney.nl/assets/nature-kit"
@@ -440,8 +446,8 @@ public enum DataSourceCredits {
                         id: "operators",
                         title: language.text("Names and operators", "名稱與營運機構"),
                         detail: language.text(
-                            "The English line and station names are compiled by Along the Line.",
-                            "英文的路線名與站名由《沿線》整理。"
+                            "The English line and station names are compiled by \(GameBrand.current.english).",
+                            "英文的路線名與站名由《\(GameBrand.current.chinese)》整理。"
                         ),
                         notice: language.text(
                             "The game is not affiliated with any of the operators above.",
@@ -563,8 +569,8 @@ public enum DataSourceCredits {
                         // under the same licence: they ship in the app and
                         // the mailbox below is the written offer (decision 503).
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The data files the game derives from it come with the app, and a complete machine-readable copy under the same licence is available by writing to hello@alongthelinegame.com.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲據此整理的資料檔隨 App 提供，也可來信 hello@alongthelinegame.com 索取以相同授權提供的完整機器可讀檔案。"
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The data files the game derives from it come with the app, and a complete machine-readable copy under the same licence is available by writing to \(mailbox.english).",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲據此整理的資料檔隨 App 提供，也可來信\(mailbox.chinese)索取以相同授權提供的完整機器可讀檔案。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
@@ -691,8 +697,8 @@ public enum DataSourceCredits {
                             "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。台灣、澎湖、金門、馬祖實景 3D 地圖上的建物，以及 3D 城市預覽裡高雄車站、台中車站周圍的建物，也是它的。"
                         ),
                         notice: language.text(
-                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them come with the app, and a complete machine-readable copy under the same licence is available by writing to hello@alongthelinegame.com.",
-                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊隨 App 提供，也可來信 hello@alongthelinegame.com 索取以相同授權提供的完整機器可讀檔案。"
+                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them come with the app, and a complete machine-readable copy under the same licence is available by writing to \(mailbox.english).",
+                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊隨 App 提供，也可來信\(mailbox.chinese)索取以相同授權提供的完整機器可讀檔案。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
@@ -731,8 +737,8 @@ public enum DataSourceCredits {
                             "台灣實景地圖的 OSM 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名。3D 地圖把其中的海、河川、森林、公園與道路鋪在地面上。"
                         ),
                         notice: language.text(
-                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them come with the app, and a complete machine-readable copy under the same licence is available by writing to hello@alongthelinegame.com. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Labels in Noto Sans, © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
-                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具隨 App 提供，也可來信 hello@alongthelinegame.com 索取以相同授權提供的完整機器可讀檔案。圖層照 OpenMapTiles 的格式（CC BY 4.0）。文字用 Noto Sans，© The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them come with the app, and a complete machine-readable copy under the same licence is available by writing to \(mailbox.english). The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Labels in Noto Sans, © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具隨 App 提供，也可來信\(mailbox.chinese)索取以相同授權提供的完整機器可讀檔案。圖層照 OpenMapTiles 的格式（CC BY 4.0）。文字用 Noto Sans，© The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
@@ -994,13 +1000,15 @@ public enum DataSourceCredits {
                     // theirs (Meshy's terms §3.2); told as generated, as
                     // tools/meshy/README.md asks. Decision 467: and the post
                     // boxes and stop poles (Map3DSceneryProp), said to be
-                    // generated as Meshy's terms §2.4 ask.
+                    // generated as Meshy's terms §2.4 ask. Decision 787: and
+                    // the people seen close up (Map3DCommuterFigure), told as
+                    // AI-generated.
                     DataSourceCredit(
                         id: "meshy",
                         title: "Meshy",
                         detail: language.text(
-                            "The city buses on the 3D map’s streets: a model generated with Meshy’s AI from a description and a photograph. The evening garbage truck and recycling truck, and the post boxes and bus stop signs on the pavements: models generated by AI from a description, simplified and in the game’s colours.",
-                            "3D 地圖街上的公車：用 Meshy 的 AI 依描述與照片生成的模型。傍晚的垃圾車與資源回收車，以及人行道上的郵筒與公車站牌：用 AI 依描述生成的模型，經過簡化並換成遊戲的配色。"
+                            "The city buses on the 3D map’s streets: a model generated with Meshy’s AI from a description and a photograph. The evening garbage truck and recycling truck, and the post boxes and bus stop signs on the pavements: models generated by AI from a description, simplified and in the game’s colours. The people on the platforms, streets and bus stops, seen close up: an AI-generated model, simplified and in the game’s colours.",
+                            "3D 地圖街上的公車：用 Meshy 的 AI 依描述與照片生成的模型。傍晚的垃圾車與資源回收車，以及人行道上的郵筒與公車站牌：用 AI 依描述生成的模型，經過簡化並換成遊戲的配色。近看時月台、街上與公車站的行人：AI 生成的模型，經過簡化並換成遊戲的配色。"
                         ),
                         notice: language.text(
                             "Generated with Meshy (meshy.ai). The reference photograph: Capital Bus 735-FW, by 玄史生, under CC0 1.0, on Wikimedia Commons.",
@@ -1070,8 +1078,7 @@ public enum DataSourceCredits {
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Procedural Tokyo", url: proceduralTokyoURL),
-                            DataSourceCredit.Link(title: language.text("Licences", "授權條款"), url: cityViewNoticesURL),
-                        ]
+                        ] + (cityViewNoticesURL.map { [DataSourceCredit.Link(title: language.text("Licences", "授權條款"), url: $0)] } ?? [])
                     ),
                     DataSourceCredit(
                         id: "polyHaven",

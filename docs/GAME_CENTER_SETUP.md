@@ -22,7 +22,7 @@
 
 ## 第 2 步：App Store Connect 打開 Game Center
 
-1. 打開 <https://appstoreconnect.apple.com>，**我的 App** → 「Along the Line」。
+1. 打開 <https://appstoreconnect.apple.com>，**我的 App** → 「railway game ios」。
 2. 上方分頁選 **Features（功能）**（有的帳號叫 **Services（服務）**），左邊選 **Game Center**。
 3. 第一次會問要不要用 Game Center：選 **Enable for Single Game（只用在這個遊戲）**。
 
@@ -165,7 +165,7 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 
 只有送 App Store 審查時要做；內部 TestFlight 不用（TestFlight 的測試者在排行榜和成就還沒上線前就能用）。
 
-1. App Store Connect → 「Along the Line」→ **App Store** 分頁 → 要送審的版本。
+1. App Store Connect → 「railway game ios」→ **App Store** 分頁 → 要送審的版本。
 2. 往下捲到 **Game Center**，打勾。
 3. 按 **＋** 把 `weekly.days.v2` 和 41 個成就都加進去，**Done**，再 **Save**。
 
