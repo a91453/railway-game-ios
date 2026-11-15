@@ -126,18 +126,23 @@ public enum Map3DAircraft {
         /// By airport (``GameWorld/airports``' order), hour 0 first.
         public let landings: [[Int]]
         public let takeOffs: [[Int]]
+        /// Decision 771: the company's air routes, whose flights land and
+        /// leave at their own minutes, out of those counts.
+        public let routes: [Route]
 
         public init(world: GameWorld) {
             day = GameDate.floorDivide(world.clock.now.seconds, GameTime.secondsPerDay)
             let days = world.airportDays()
             landings = days.map { $0.landings.map(Int.init) }
             takeOffs = days.map { $0.takeOffs.map(Int.init) }
+            routes = Self.routes(of: world, days: days)
         }
 
-        public init(day: Int64, landings: [[Int]], takeOffs: [[Int]]) {
+        public init(day: Int64, landings: [[Int]], takeOffs: [[Int]], routes: [Route] = []) {
             self.day = day
             self.landings = landings
             self.takeOffs = takeOffs
+            self.routes = routes
         }
     }
 
@@ -168,17 +173,32 @@ public enum Map3DAircraft {
     /// in (hours since the game began), whether it lands, and its number
     /// among that hour's landings or take-offs. Nothing is kept of it:
     /// the same numbers give the same flight again.
+    ///
+    /// Decision 771: a company route's flight is its leg and whether it
+    /// lands, whatever field and hour it falls in (its `field`, `hours`
+    /// and `index` are 0): the session can name the landing of a flight
+    /// it followed away (``init(leg:landing:)``).
     public struct FlightID: Hashable, Sendable {
         public let field: Int32
         public let hours: Int64
         public let landing: Bool
         public let index: Int
+        public let leg: Leg?
 
         public init(field: Int32, hours: Int64, landing: Bool, index: Int) {
             self.field = field
             self.hours = hours
             self.landing = landing
             self.index = index
+            leg = nil
+        }
+
+        public init(leg: Leg, landing: Bool) {
+            field = 0
+            hours = 0
+            self.landing = landing
+            index = 0
+            self.leg = leg
         }
     }
 
@@ -268,6 +288,9 @@ public enum Map3DAircraft {
         /// from, z to): past them there is no ground to follow an aircraft
         /// over. `nil`: no edges.
         var edges: (x: ClosedRange<Float>, z: ClosedRange<Float>)?
+        /// Decision 771: the world point at the scene's origin, in world
+        /// units (``Map3DScene/originX``), for where the routes fly.
+        var sceneOrigin: (x: Double, y: Double) = (0, 0)
         private let kept = Kept()
         public var isEmpty: Bool { fields.isEmpty }
 
@@ -282,6 +305,7 @@ public enum Map3DAircraft {
                 fields = []
                 return
             }
+            sceneOrigin = (scene.originX, scene.originY)
             let corner = scene.point(worldX: 0, worldY: 0, height: 0)
             let far = scene.point(worldX: Double(world.bounds.width), worldY: Double(world.bounds.height), height: 0)
             edges = (min(corner.x, far.x)...max(corner.x, far.x), min(corner.z, far.z)...max(corner.z, far.z))
@@ -434,6 +458,9 @@ public enum Map3DAircraft {
             let livery: Int
             var stand: Int?
             var id = FlightID(field: 0, hours: 0, landing: false, index: 0)
+            /// Decision 771: a company route's take-off: where (level, in
+            /// the scene) it turns towards once climbing.
+            var target: Map3DPoint?
         }
 
         /// The flights of `field` whose runway time falls in hour `hour`
@@ -442,14 +469,29 @@ public enum Map3DAircraft {
         /// seconds of one on the same runway. Each takes the next stand of
         /// the field's rotation, so none is given twice within an hour or
         /// two, and is of a type that fits it.
-        static func flights(of field: Field, day: Int64, hour: Int, traffic: Traffic) -> [Flight] {
+        ///
+        /// Decision 771: the company's routes' flights of the hour land and
+        /// leave at their own times, of their own type and in the
+        /// company's livery, and as many fewer of the airport's own
+        /// (they were among them); a route's take-off turns towards where
+        /// it flies, in a scene whose world origin is `origin`.
+        static func flights(of field: Field, day: Int64, hour: Int, traffic: Traffic, origin: (x: Double, y: Double) = (0, 0)) -> [Flight] {
             var landings = 0, takeOffs = 0
             for airport in field.airports where traffic.landings.indices.contains(airport) && traffic.landings[airport].indices.contains(hour) {
                 landings += traffic.landings[airport][hour]
                 takeOffs += traffic.takeOffs[airport][hour]
             }
-            guard landings + takeOffs > 0 else { return [] }
             let start = Double(day * GameTime.secondsPerDay) + Double(hour) * 3_600
+            var legs: [(route: Route, leg: Leg, landing: Bool, time: Double)] = []
+            for route in traffic.routes {
+                for airport in field.airports {
+                    legs += route.legs(at: airport, from: start, to: start + 3_600).map { (route, $0.leg, $0.landing, $0.time) }
+                }
+            }
+            let routeLandings = legs.filter(\.landing).count, routeTakeOffs = legs.count - routeLandings
+            landings = max(0, landings - routeLandings)
+            takeOffs = max(0, takeOffs - routeTakeOffs)
+            guard landings + takeOffs + legs.count > 0 else { return [] }
             let hours = day &* 24 &+ Int64(hour)
             let salt = Int32(truncatingIfNeeded: hours)
             // Two runways side by side share the flights.
@@ -467,22 +509,50 @@ public enum Map3DAircraft {
             }
             func flight(_ index: Int, landing: Bool, time: Double, runway: Int) -> Flight {
                 let r = { (n: Int32) in map3DRandom(field.seed, salt, salt: Int32(index) &* 8 &+ (landing ? 0 : 4) &+ n) }
-                let stand = stand(index * 2 + (landing ? 0 : 1))
+                // Decision 771: after the routes' flights, which take the
+                // first stands.
+                let stand = stand((index + (landing ? routeLandings : routeTakeOffs)) * 2 + (landing ? 0 : 1))
                 return Flight(time: time, landing: landing, runway: runway,
                               kind: kind(field, share: r(0), runway: field.runways[runway].length, room: stand.map { field.stands[$0].room } ?? .infinity),
                               livery: Int(r(1) * Float(Map3DAircraft.liveries.count)) % Map3DAircraft.liveries.count, stand: stand,
                               id: FlightID(field: field.seed, hours: hours, landing: landing, index: index))
             }
+            /// A route's flight: its type, the largest that fits under it
+            /// that the runway takes, and a stand only one it fits at.
+            func routeFlight(_ route: Route, leg: Leg, landing: Bool, time: Double, runway: Int, slot: Int) -> Flight {
+                var kind = route.kind
+                let smaller: [Kind: Kind] = [.wideJet: .narrowJet, .narrowJet: .regional70, .regional70: .commuter19]
+                while let next = smaller[kind], Map3DAircraft.figures(kind).runway > field.runways[runway].length { kind = next }
+                let given = stand(slot).flatMap { field.stands[$0].room >= Map3DAircraftStudies.dimensions(kind).wingspan ? $0 : nil }
+                return Flight(time: time, landing: landing, runway: runway, kind: kind, livery: Map3DAircraft.companyLivery, stand: given,
+                              id: FlightID(leg: leg, landing: landing))
+            }
             var flights: [Flight] = []
             for index in 0..<landings {
                 flights.append(flight(index, landing: true, time: start + (Double(index) + 0.5) * 3_600 / Double(landings), runway: index % pair))
             }
+            // Decision 771: the routes' landings, at the first stands.
+            var landed = 0, left = 0
+            for found in legs where found.landing {
+                flights.append(routeFlight(found.route, leg: found.leg, landing: true, time: found.time, runway: (landings + landed) % pair, slot: landed * 2))
+                landed += 1
+            }
             let touchdowns = flights
+            func clear(_ time: Double, _ runway: Int) -> Double {
+                var time = time
+                while touchdowns.contains(where: { $0.runway == runway && abs($0.time - time) < 75 }) { time += 80 }
+                return time
+            }
             for index in 0..<takeOffs {
                 let runway = (index + 1) % pair
-                var time = start + (Double(index) + 0.25) * 3_600 / Double(takeOffs)
-                while touchdowns.contains(where: { $0.runway == runway && abs($0.time - time) < 75 }) { time += 80 }
-                flights.append(flight(index, landing: false, time: time, runway: runway))
+                flights.append(flight(index, landing: false, time: clear(start + (Double(index) + 0.25) * 3_600 / Double(takeOffs), runway), runway: runway))
+            }
+            for found in legs where !found.landing {
+                let runway = (takeOffs + left + 1) % pair
+                var made = routeFlight(found.route, leg: found.leg, landing: false, time: clear(found.time, runway), runway: runway, slot: left * 2 + 1)
+                made.target = target(of: found.route, leg: found.leg, origin: origin)
+                flights.append(made)
+                left += 1
             }
             return flights
         }
@@ -709,8 +779,19 @@ public enum Map3DAircraft {
                     return doing(.takeOffRoll, plan.onRunway(plan.start + Map3DAircraft.thrust * t * t / 2, pitch: t > plan.roll - 3 ? 0.07 * (t - (plan.roll - 3)) : 0))
                 }
                 let up = (t - plan.roll) * (liftOff + 8)
-                guard up < Map3DAircraft.seenFrom else { return nil }
-                return doing(.climb, plan.onRunway(plan.start + Map3DAircraft.thrust * plan.roll * plan.roll / 2 + up, height: up * Map3DAircraft.climb, pitch: 0.21))
+                let lifted = plan.start + Map3DAircraft.thrust * plan.roll * plan.roll / 2
+                guard flight.id.leg != nil else {
+                    guard up < Map3DAircraft.seenFrom else { return nil }
+                    return doing(.climb, plan.onRunway(lifted + up, height: up * Map3DAircraft.climb, pitch: 0.21))
+                }
+                // Decision 771: a route's aircraft climbs on to its
+                // cruise's start, turning towards where it flies.
+                guard up * Map3DAircraft.climb < Map3DAircraft.cruiseHeight else { return nil }
+                let off = plan.onRunway(lifted).ground
+                let toward = flight.target.flatMap { Map3DPoint($0.x - off.x, 0, $0.z - off.z).normalized }
+                let at = Self.climbed(up, from: off, forward: plan.forward, toward: toward)
+                return doing(.climb, Drawn(ground: at.ground, height: Float(up * Map3DAircraft.climb), forward: at.forward, pitch: 0.21,
+                                           kind: flight.kind, livery: flight.livery, flying: true, flight: flight.id))
             }
             // It waits lined up for 25 seconds.
             if t > -25 { return doing(.lineUp, plan.onRunway(plan.start)) }
@@ -772,6 +853,9 @@ public enum Map3DAircraft {
             struct Hour: Hashable {
                 let field: Int
                 let hours: Int64
+                /// Decision 771: the company's routes (``Traffic/routesKey``):
+                /// an hour is laid again when they change.
+                var routes = 0
             }
 
             struct Day: Hashable {
@@ -845,7 +929,9 @@ public enum Map3DAircraft {
         /// Motion) none moves: the flights' aircraft stand at their stands
         /// for their time there, and that is all.
         public func aircraft(second: Double, traffic: Traffic?, still: Bool = false) -> [Drawn] {
-            kept.moment(second: second, traffic: traffic?.day, still: still) { worked(second: second, traffic: traffic, still: still) }
+            kept.moment(second: second, traffic: traffic.map { $0.day &* 7_919 &+ Int64($0.routesKey) }, still: still) {
+                worked(second: second, traffic: traffic, still: still)
+            }
         }
 
         private func worked(second: Double, traffic: Traffic?, still: Bool) -> [Drawn] {
@@ -892,9 +978,10 @@ public enum Map3DAircraft {
         /// with another day's `traffic` (review L19, P3-4).
         private func plans(of number: Int, day: Int64, hour: Int, traffic: Traffic) -> [Planned] {
             let field = fields[number]
-            return kept.plans(.init(field: number, hours: day &* 24 &+ Int64(hour))) {
+            return kept.plans(.init(field: number, hours: day &* 24 &+ Int64(hour), routes: traffic.routesKey)) {
                 let northEast = Self.landsNorthEast(day: day)
-                return Self.flights(of: field, day: day, hour: hour, traffic: traffic).compactMap { Self.plan($0, on: field, northEast: northEast) }
+                return Self.flights(of: field, day: day, hour: hour, traffic: traffic, origin: sceneOrigin)
+                    .compactMap { Self.plan($0, on: field, northEast: northEast) }
             }
         }
 
@@ -906,7 +993,25 @@ public enum Map3DAircraft {
         /// it is seen, after it has gone, with no traffic and with
         /// `still`.
         public func aircraft(of id: FlightID, second: Double, traffic: Traffic?, still: Bool = false) -> Drawn? {
-            guard !still, let traffic, let number = fields.firstIndex(where: { $0.seed == id.field }) else { return nil }
+            guard !still, let traffic else { return nil }
+            if let leg = id.leg {
+                // Decision 771: a route's flight, in the hour its runway
+                // time falls in (or the next: a take-off waits for a
+                // landing on its runway).
+                guard let route = traffic.route(leg.route), let number = fields.firstIndex(where: { $0.airports.contains(leg.airport) }) else {
+                    return nil
+                }
+                let hours = Int64((route.runwaySecond(of: leg, landing: id.landing) / 3_600).rounded(.down))
+                for at in [hours, hours + 1] {
+                    let flightDay = GameDate.floorDivide(at, 24)
+                    let plans = plans(of: number, day: flightDay, hour: Int(at - flightDay * 24), traffic: traffic)
+                    if let plan = plans.first(where: { $0.flight.id == id }) {
+                        return abs(plan.flight.time - second) < 5_400 ? Self.pose(plan, second: second) : nil
+                    }
+                }
+                return nil
+            }
+            guard let number = fields.firstIndex(where: { $0.seed == id.field }) else { return nil }
             let flightDay = GameDate.floorDivide(id.hours, 24)
             let plans = plans(of: number, day: flightDay, hour: Int(id.hours - flightDay * 24), traffic: traffic)
             guard let plan = plans.first(where: { $0.flight.id == id }), abs(plan.flight.time - second) < 5_400 else { return nil }
@@ -916,7 +1021,8 @@ public enum Map3DAircraft {
         /// Decision 702: the game's airport (its place in
         /// ``GameWorld/airports``) flight `id` lands at or leaves.
         public func airport(of id: FlightID) -> Int? {
-            fields.first { $0.seed == id.field }?.airports.first
+            if let leg = id.leg { return leg.airport }
+            return fields.first { $0.seed == id.field }?.airports.first
         }
 
         /// The aircraft added to `frame`, seen from `eye`, with `pack`'s

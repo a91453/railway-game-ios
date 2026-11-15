@@ -321,7 +321,15 @@ struct Map3DPreviewScreen: View {
             if ambient != nil, let ambientScreen, let endAmbient {
                 AmbientCurtain(screen: ambientScreen, language: language, end: endAmbient)
             }
+            // Decision 771 (AIR-A4): a company route's aircraft followed to
+            // its cruise's start goes on here, over the 3D map.
+            if let window = session.airFlightWindow, ambient == nil {
+                Map3DFlightWindow(window: window, session: session)
+                    .transition(.opacity)
+            }
         }
+        .animation((session.airFlightWindow == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
+                   value: session.airFlightWindow != nil)
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
             // A newer world or the heights file started another build: a
@@ -534,10 +542,12 @@ struct Map3DPreviewScreen: View {
     /// follows the aircraft landing, leaving or taxiing nearest the
     /// middle of the view, once there is one (a finger cannot be put on
     /// a moving aircraft by a test).
+    /// Decision 771: `-screenshot-3d-follow-air-route`, a company route's.
     private func followAircraftForScreenshot() async {
-        guard ProcessInfo.processInfo.arguments.contains("-screenshot-3d-follow-aircraft") else { return }
+        let route = ProcessInfo.processInfo.arguments.contains("-screenshot-3d-follow-air-route")
+        guard route || ProcessInfo.processInfo.arguments.contains("-screenshot-3d-follow-aircraft") else { return }
         while !Task.isCancelled, !session.isFollowingAircraft {
-            if let scene, let target = cameraLink.camera?.target, let found = feed.aircraft(nearest: target, in: scene) {
+            if let scene, let target = cameraLink.camera?.target, let found = feed.aircraft(nearest: target, in: scene, route: route) {
                 session.followAircraft(found.state)
                 return
             }
@@ -1371,7 +1381,7 @@ final class Map3DTrainFeed {
     /// Review L19, P2-3: the day whose flights are being counted off the
     /// main actor (counting them builds the passenger graph), and which
     /// airfields they are for; the last day's are drawn until they are in.
-    private var airTrafficAsked: (day: Int64, serial: Int)?
+    private var airTrafficAsked: (day: Int64, serial: Int, routes: Int)?
     /// Decision 733: with the open cities' own.
     private static let airfields = BaseMapFiles.readAirfields(BaseMapFiles.airfields)
     /// Decision 708: the real coaches and the coach stops laid in the
@@ -1590,9 +1600,11 @@ final class Map3DTrainFeed {
             airTrafficAsked = nil
         }
         let day = Int64((second / Double(GameTime.secondsPerDay)).rounded(.down))
-        if airTraffic?.day != day, airTrafficAsked?.day != day, !world.airports.isEmpty {
+        // Decision 771: counted again when the company's air routes change.
+        let routes = Map3DAircraft.Traffic.routesAsked(by: world)
+        if airTrafficAsked?.day != day || airTrafficAsked?.routes != routes, !world.airports.isEmpty {
             let serial = aircraftSerial
-            airTrafficAsked = (day, serial)
+            airTrafficAsked = (day, serial, routes)
             Task.detached(priority: .userInitiated) { [weak self] in
                 let traffic = Map3DAircraft.Traffic(world: world)
                 await self?.counted(traffic, day: day, serial: serial)
@@ -1643,9 +1655,9 @@ final class Map3DTrainFeed {
 
     /// Decision 702: the aircraft that can be followed nearest `point`,
     /// for the Debug app's `-screenshot-3d-follow-aircraft`.
-    func aircraft(nearest point: Map3DPoint, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+    func aircraft(nearest point: Map3DPoint, in scene: Map3DScene, route: Bool = false) -> Map3DAircraft.Followed? {
         guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
-        return laid.aircraft.followable(nearest: point, second: second, traffic: laid.traffic)
+        return laid.aircraft.followable(nearest: point, second: second, traffic: laid.traffic, route: route)
     }
 
     /// Decision 606 (IDLEREAL): where real train `id` is now, as the
@@ -3123,6 +3135,106 @@ private struct Map3DFerryFollowBar: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
     }
+}
+
+/// Decision 771 (AIR-A4): the flight window, over the whole 3D map: the
+/// sky (by night after dark), a few clouds, the aircraft, and a card with
+/// the route, how far along it is and when it lands, and the way back to
+/// the map.
+private struct Map3DFlightWindow: View {
+    let window: AirFlightWindow
+    let session: GameSession
+
+    var body: some View {
+        let language = session.language
+        ZStack {
+            LinearGradient(colors: window.night ? [Theme.flightSkyNightTop, Theme.flightSkyNightHorizon] : [Theme.flightSkyDayTop, Theme.flightSkyDayHorizon],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            GeometryReader { size in
+                // The clouds below and ahead, fixed: nothing moves by
+                // itself (motion §3).
+                ForEach(Self.clouds.indices, id: \.self) { index in
+                    let cloud = Self.clouds[index]
+                    Ellipse()
+                        .fill(Theme.flightCloud.opacity(window.night ? 0.18 : cloud.opacity))
+                        .frame(width: size.size.width * cloud.width, height: size.size.width * cloud.width * 0.22)
+                        .blur(radius: 6)
+                        .position(x: size.size.width * cloud.x, y: size.size.height * cloud.y)
+                }
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Image(systemName: "airplane")
+                    .font(.system(size: 72, weight: .regular))
+                    .foregroundStyle(Theme.flightCloud)
+                    .shadow(color: .black.opacity(0.25), radius: 8, y: 6)
+                    .accessibilityHidden(true)
+                Spacer(minLength: 0)
+                card(language)
+                    .frame(maxWidth: 520)
+            }
+            .padding(CGFloat(HUDMargins.edge))
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("map3D.flightWindow")
+    }
+
+    private func card(_ language: DisplayLanguage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(verbatim: window.title)
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Button {
+                    session.closeAirFlightWindow()
+                } label: {
+                    Text(verbatim: language.text("Back to the map", "回到地圖"))
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
+                        .background(Theme.chip, in: Capsule())
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text(verbatim: language.text("Closes the flight and shows the 3D map where you left it.", "關掉航班畫面，回到剛才的 3D 地圖。")))
+                .accessibilityIdentifier("map3D.flightWindow.close")
+            }
+            HStack(spacing: 8) {
+                Text(verbatim: window.fromText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                ProgressView(value: window.progress)
+                    .tint(Theme.primary)
+                    .accessibilityLabel(Text(verbatim: language.text("Flight", "航程")))
+                    .accessibilityValue(Text(verbatim: window.remainingText))
+                Text(verbatim: window.toText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+            Text(verbatim: [window.remainingText, window.arrivalText].joined(separator: " · "))
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+            if let note = window.noteText {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(14)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Where each cloud is (shares of the screen), how wide, how thick.
+    private static let clouds: [(x: CGFloat, y: CGFloat, width: CGFloat, opacity: Double)] = [
+        (0.18, 0.72, 0.42, 0.75), (0.7, 0.8, 0.55, 0.8), (0.45, 0.9, 0.7, 0.85), (0.85, 0.62, 0.3, 0.6), (0.1, 0.55, 0.22, 0.5),
+    ]
 }
 
 /// Decision 702 (FOLLOW-AIR): the bar while the 3D map follows an

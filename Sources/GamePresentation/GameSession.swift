@@ -492,6 +492,9 @@ public final class GameSession {
         }
     }
     public internal(set) var aircraftFollowBar: AircraftFollowFacts?
+    /// Decision 771 (AIR-A4): the flight window of a company route's
+    /// aircraft followed to its cruise's start; see `AirFlightWindow.swift`.
+    public internal(set) var airFlightWindow: AirFlightWindow?
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -1495,6 +1498,7 @@ public final class GameSession {
         followedCabinID = nil
         followedFerryBoatID = nil
         followedAircraftID = nil
+        airFlightWindow = nil
         updateFollowSounds()
     }
 
@@ -1555,6 +1559,7 @@ public final class GameSession {
         keepFollowingCabin()
         keepFollowingFerry()
         keepFollowingAircraft()
+        keepAirFlightWindow()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1676,6 +1681,7 @@ public final class GameSession {
         if !open, followedFerryBoatID != nil { followedFerryBoatID = nil }
         // Decision 702: nor aircraft.
         if !open, followedAircraftID != nil { followedAircraftID = nil }
+        if !open, airFlightWindow != nil { airFlightWindow = nil }
         updateMap3DSpeedCap()
         // MAP3D-BOUNCE: the speed hint waits while the 3D map is open.
         syncSpeedLagHint()
