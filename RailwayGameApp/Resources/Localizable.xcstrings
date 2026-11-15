@@ -3072,6 +3072,16 @@
           }
         }
       }
+    },
+    "Festive Decorations" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "節慶裝飾"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
