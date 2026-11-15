@@ -45,9 +45,9 @@ final class HarbourSightsTests: XCTestCase {
 
     // MARK: - Seasons and weather
 
-    func testTheSeasonIsMilderThanABeachs() {
+    func testTheSeasonIsTheOfficialCountsNearlyFlat() {
         XCTAssertEqual((1...12).map { Tourism.seasonFactor(.harbour, month: $0) },
-                       [800, 800, 1_000, 1_000, 1_000, 1_200, 1_200, 1_200, 1_000, 1_000, 1_000, 800])
+                       [900, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 900])
         XCTAssertEqual(Tourism.seasonFactor(.coast, month: 7), 1_500)
         XCTAssertEqual(Tourism.seasonFactor(.coast, month: 1), 500)
     }
@@ -84,11 +84,11 @@ final class HarbourSightsTests: XCTestCase {
 
     func testAHarboursTouristsComeAtLunchAndLeaveAfterSunset() throws {
         let harbour = try world(.harbour), coast = try world(.coast)
-        // Day 0, a Monday in January: 2,000 × 0.6 × 0.8 × 0.2 = 192; a beach's 0.5 is 120.
-        XCTAssertEqual(harbour.dailyDemand(from: home, to: foot), 192)
+        // Day 0, a Monday in January: 2,000 × 0.6 × 0.9 × 0.2 = 216; a beach's 0.5 is 120.
+        XCTAssertEqual(harbour.dailyDemand(from: home, to: foot), 216)
         XCTAssertEqual(coast.dailyDemand(from: home, to: foot), 120)
-        XCTAssertEqual(harbour.hourlyDemand(from: home, to: foot), GameWorld.apportion(192, by: Tourism.harbourArrivals))
-        XCTAssertEqual(harbour.hourlyDemand(from: foot, to: home), GameWorld.apportion(192, by: Tourism.harbourDepartures))
+        XCTAssertEqual(harbour.hourlyDemand(from: home, to: foot), GameWorld.apportion(216, by: Tourism.harbourArrivals))
+        XCTAssertEqual(harbour.hourlyDemand(from: foot, to: home), GameWorld.apportion(216, by: Tourism.harbourDepartures))
         XCTAssertGreaterThan(harbour.hourlyDemand(from: foot, to: home)[19], coast.hourlyDemand(from: foot, to: home)[19])
     }
 

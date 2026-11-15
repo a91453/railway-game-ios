@@ -286,6 +286,10 @@ MORE_SPOTS = [
     # round the Bali ferry pier on the Left Bank; no station within 800 m
     # (MRT Tamsui is across the river), so its visitors come by ferry.
     ("t190", "八里渡船頭老街", "Bali Old Street", "town", 250, ["渡船頭街", "渡船頭公園"], (25.1590, 121.4350)),
+    # Decision 774: the fishing ports on the Tourism Administration's list
+    # (data.gov.tw 8116) the game had not yet.
+    ("t191", "龍鳳漁港", "Longfeng Fishing Port", "harbour", 200, ["龍鳳漁港", "龍鳳", "Longfeng"], (24.7020, 120.8610)),
+    ("t192", "布袋漁港", "Budai Fishing Port", "harbour", 250, ["布袋漁港", "布袋觀光漁市", "布袋商港", "Budai"], (23.3780, 120.1440)),
 ]
 
 
