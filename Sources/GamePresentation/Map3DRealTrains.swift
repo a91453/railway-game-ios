@@ -164,8 +164,9 @@ public struct Map3DRealTrains: Sendable {
     /// Decision 402: the systems whose trains keep to the right, the
     /// metros and light rails (each of the site's `metro-network.json`
     /// routes runs on the right of its other way's); the TRA's, the High
-    /// Speed Rail's and the forest railway's keep to the left.
-    static let rightHand: Set<String> = ["mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"]
+    /// Speed Rail's and the forest railway's keep to the left. Decision
+    /// 789: Finland's VR keeps to the right on its double track too.
+    static let rightHand: Set<String> = ["mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "vr"]
     /// How far under the ground the track is in a tunnel, and over it on a
     /// viaduct, metres.
     static let tunnelDepth: Float = 3

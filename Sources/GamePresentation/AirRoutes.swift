@@ -18,6 +18,7 @@ extension OverseasMap {
     public func name(in language: DisplayLanguage) -> String {
         switch self {
         case .hongKong: language.text("Hong Kong", "香港")
+        case .rovaniemi: language.text("Rovaniemi", "羅瓦涅米")
         }
     }
 
@@ -26,6 +27,7 @@ extension OverseasMap {
     var destinationName: String {
         switch self {
         case .hongKong: "香港"
+        case .rovaniemi: "羅瓦涅米"
         }
     }
 }
@@ -37,6 +39,10 @@ extension OverseasMap {
         case .hongKong: language.text(
             "The whole of Hong Kong, about 63 by 45 km, all open from the start. You can buy the MTR's lines.",
             "整個香港，約 63 × 45 公里，一開始全部開放，可以收購港鐵的路線。"
+        )
+        case .rovaniemi: language.text(
+            "Rovaniemi in Finnish Lapland and the country round it to Kemijärvi, about 107 by 55 km, all open from the start. You can buy the line to Kemijärvi.",
+            "芬蘭拉普蘭的羅瓦涅米，一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維的路線。"
         )
         }
     }
