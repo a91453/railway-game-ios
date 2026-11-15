@@ -79,6 +79,8 @@ final class LessonUITests: XCTestCase {
         dismissGuide()
         pause()
         openLineCard()
+        // Decision 776: the headway and its trains are on the Trains page.
+        app.showLinePage("Trains", "列車")
         let add = app.buttons["line.addTrain"]
         reveal(add)
         XCTAssertEqual(add.label, "Add a Train")

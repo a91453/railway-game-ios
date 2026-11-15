@@ -88,10 +88,13 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(app.buttons["lines.network"].appears(within: 10))
         XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
         app.openLinePage()
+        app.showLinePage("Stops", "停靠站", trailing: true)
         XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
         app.closeLinePage()
         setAdvanced(true, in: app)
         app.openLinePage()
+        // Decision 776: the stopping patterns are on the Stops page.
+        app.showLinePage("Stops", "停靠站", trailing: true)
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
         recordRouteUI("before opening route menu", in: app)
@@ -272,7 +275,8 @@ final class LineRoutePreferenceUITests: XCTestCase {
     private func bringIntoView(_ row: XCUIElement, in app: XCUIApplication) {
         // Decision 481: a line's page has its own list, under a bar named
         // for the line.
-        let page = app.collectionViews["line.detail"].firstMatch
+        // Decision 776: the column of its page the route is in.
+        let page = app.linePageList(trailing: true)
         let bar = page.exists ? app.navigationBars.firstMatch : app.navigationBars["Lines"].firstMatch
         let list = page.exists ? page : bar.exists
             ? app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
@@ -883,6 +887,32 @@ extension XCUIApplication {
                       "The line's page stayed waiting", file: file, line: line)
         page.waitUntilStill()
         return page
+    }
+
+    /// Decision 776: picks a page of a line's own page by its name on the
+    /// control over it, in either language, and returns the list the page's
+    /// sections are in: the trailing column's when `trailing` and the page
+    /// stands in two, else the leading (or only) one.
+    @discardableResult
+    func showLinePage(_ english: String, _ chinese: String, trailing: Bool = false,
+                      file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let pages = segmentedControls["line.pages"].firstMatch
+        XCTAssertTrue(pages.appears(within: 10), "The line's page has no pages", file: file, line: line)
+        let page = pages.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", english, chinese)).firstMatch
+        XCTAssertTrue(page.becomesHittable(within: 10), "No page \(english) on the line's page", file: file, line: line)
+        if !page.isSelected { page.tap() }
+        _ = descendants(matching: .any)["line.detail.preparing"].firstMatch.disappears(within: 10)
+        let list = linePageList(trailing: trailing)
+        list.waitUntilStill()
+        return list
+    }
+
+    /// Decision 776: a column of the line's page shown, the leading one
+    /// (the only one where the window is narrow or the text large), or the
+    /// trailing one.
+    func linePageList(trailing: Bool = false) -> XCUIElement {
+        let own = collectionViews["line.detail.trailing"].firstMatch
+        return trailing && own.exists ? own : collectionViews["line.detail"].firstMatch
     }
 
     /// Decision 481: back from a line's page to the lines panel's list.
