@@ -7,8 +7,11 @@ import XCTest
 final class HarbourCatalogTests: XCTestCase {
     func testTheCatalogsHarboursAreThoseAnOldSaveIsToldBy() {
         let catalog = Set(AttractionCatalog.spots.filter { $0.kind == .harbour }.map(\.englishName))
-        XCTAssertEqual(catalog, Tourism.harbourNames.subtracting([GameWorld.blankHarbourName]))
-        XCTAssertEqual(catalog.count, 10)
+        // Decision 774's two came after: no older save has them.
+        let added: Set = ["Longfeng Fishing Port", "Budai Fishing Port"]
+        XCTAssertEqual(catalog.subtracting(added), Tourism.harbourNames.subtracting([GameWorld.blankHarbourName]))
+        XCTAssertTrue(catalog.isSuperset(of: added))
+        XCTAssertEqual(catalog.count, 12)
     }
 
     func testTheFamousOnesHaveTheirKinds() {
@@ -16,6 +19,8 @@ final class HarbourCatalogTests: XCTestCase {
         XCTAssertEqual(kinds["淡水漁人碼頭"], .harbour)
         XCTAssertEqual(kinds["南方澳"], .harbour)
         XCTAssertEqual(kinds["正濱漁港"], .harbour)
+        XCTAssertEqual(kinds["龍鳳漁港"], .harbour)
+        XCTAssertEqual(kinds["布袋漁港"], .harbour)
         XCTAssertEqual(kinds["旗津"], .coast, "an island beach stays a coast")
         XCTAssertEqual(kinds["駁二藝術特區"], .town, "an art district on the pier stays a town")
     }

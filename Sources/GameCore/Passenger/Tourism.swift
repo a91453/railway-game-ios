@@ -453,10 +453,12 @@ public struct Tourism: Hashable, Sendable {
         case .museum:
             if month == 7 || month == 8 { return 1_200 }
         case .harbour:
-            // Decision 773: a seafood lunch is had all year, the summer
-            // busier and the winter's wind quieter, less than a beach.
-            if (6...8).contains(month) { return 1_200 }
-            if month == 12 || month <= 2 { return 800 }
+            // Decision 774, by the Tourism Administration's monthly counts
+            // of the island's fishing ports (2023 and 2024, a day's mean of
+            // each month): a seafood lunch is had all year; only December
+            // and January, the northeast monsoon's, are a tenth quieter.
+            // The Spring Festival's peak is the holiday's own factor.
+            if month == 12 || month == 1 { return 900 }
         case .temple:
             // Decision 772: Mazu's pilgrimages of the third lunar month.
             if month == 4 { return 1_300 }
