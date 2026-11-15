@@ -2442,7 +2442,7 @@ public struct RealWorldData: Sendable {
     /// pack (`pack`), with its railways (decision 697).
     public static func load(
         overseas: Set<OverseasMap> = OverseasMaps.open,
-        pack: (OverseasMap) -> MapPack? = MapPack.bundled,
+        pack: (OverseasMap) -> MapPack? = MapPack.current,
         file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data
     ) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []

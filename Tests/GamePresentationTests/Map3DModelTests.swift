@@ -185,9 +185,11 @@ final class Map3DModelTests: XCTestCase {
         let near = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: pack, eye: first + Map3DPoint(0, 100, 0))
         XCTAssertEqual(near.instances.count, cars, "a four-car train within reach")
         XCTAssertTrue(near.boxes.isEmpty)
-        let headModel = try XCTUnwrap(pack.models(forType: "")).head
-        XCTAssertEqual(near.instances.first?.model, headModel)
-        XCTAssertEqual(near.instances.last?.model, headModel, "the last car is a cab car turned round")
+        // A commuter of no type four cars long is the owner's old red car
+        // (Map3DRedCommuter): its cab car in front, the same car turned
+        // round at the back.
+        XCTAssertEqual(near.instances.first?.model, pack.index(of: "set-redCommuter-head"))
+        XCTAssertEqual(near.instances.last?.model, pack.index(of: "set-redCommuter-tail"), "the last car is a cab car turned round")
         let far = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: pack, eye: first + Map3DPoint(0, 5_000, 0))
         XCTAssertTrue(far.instances.isEmpty)
         XCTAssertEqual(far.boxes.triangleCount, all.boxes.triangleCount)
