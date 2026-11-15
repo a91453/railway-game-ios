@@ -253,6 +253,9 @@ public enum AttractionCatalog {
         Spot("t189", "雲中街生活聚落", "Yunzhong Street Settlement", .town, 200, 23.70835, 120.53995),
         // Decision 589: the Bali end of the Tamsui–Bali ferry.
         Spot("t190", "八里渡船頭老街", "Bali Old Street", .town, 250, 25.15853, 121.4348),
+        // Decision 774: fishing ports on the Tourism Administration's list.
+        Spot("t191", "龍鳳漁港", "Longfeng Fishing Port", .harbour, 200, 24.69996, 120.85677),
+        Spot("t192", "布袋漁港", "Budai Fishing Port", .harbour, 250, 23.37931, 120.15568),
     ]
 
     /// The spots that lie inside a world of `bounds` laid over the Earth as
