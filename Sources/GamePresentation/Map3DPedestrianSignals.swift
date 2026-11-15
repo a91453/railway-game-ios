@@ -195,8 +195,8 @@ public enum Map3DPedestrianSignal {
     /// the housing's and the pole's.
     static let red = Map3DProp.signalLights[0]
     static let green = Map3DProp.signalLights[2]
-    static let housing = Map3DColor.rgb(0x2B2F36)
-    static let steel = Map3DColor.rgb(0x8A9099)
+    static let housing = Map3DPalette.dark
+    static let steel = Map3DPalette.steel
 
     /// Where the face is: a lens's side (30 cm), the two lenses' middles
     /// (the red over the green), how far the face stands out from the pole

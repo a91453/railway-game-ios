@@ -17,10 +17,14 @@ import GameCore
 public enum Map3DDepotFacilities {
     /// The pack's colours not in ``Map3DPalette``: its steel, dark and
     /// glass, and its wall (one of the concrete walls).
-    static let steel = Map3DColor.rgb(0x8A9099)
-    static let dark = Map3DColor.rgb(0x2B2F36)
+    static let steel = Map3DPalette.steel
+    static let dark = Map3DPalette.dark
     static let glass = Map3DColor.rgb(0x26313D)
     static let wall = Map3DColor.rgb(0xC9CCD5)
+    /// The shed's and the parking canopy's sheet-steel roof: the big
+    /// halls' silver-grey sheet steel (``Map3DPalette/hallRoofs``), not
+    /// the city's pale flat roof, which from above ran into the ground.
+    static let roof = Map3DPalette.hallRoofs[2]
 
     /// The shed's size: 36 m long (its open bays at +x), 16 m wide, its
     /// walls 6.4 m and its ridge 9 m high (`build_shed`).
@@ -52,7 +56,7 @@ public enum Map3DDepotFacilities {
         for side: Float in [-1, 1] {
             kit.slab(centre: Map3DPoint(0, (shedWall + shedRidge) / 2, side * half / 2),
                      up: Map3DPoint(0, rise / slope, -side * half / slope), length: shedLength + 0.7, wide: slope, thickness: 0.22,
-                     color: Map3DPalette.roof)
+                     color: roof)
         }
         for z in shedTracks {
             kit.box(0, 0.2, z, shedLength - 1, 1.9, 0.14, dark)
@@ -73,7 +77,7 @@ public enum Map3DDepotFacilities {
     public static let shedFar: Map3DMesh = {
         var mesh = Map3DMesh()
         mesh.addBox(base: .zero, forward: Map3DPoint(1, 0, 0), length: shedLength, width: shedWidth, height: (shedWall + shedRidge) / 2,
-                    top: Map3DPalette.roof, side: wall)
+                    top: roof, side: wall)
         return mesh
     }()
 

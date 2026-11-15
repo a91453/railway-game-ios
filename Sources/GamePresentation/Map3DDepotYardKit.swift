@@ -104,7 +104,7 @@ public enum Map3DDepotYardKit {
                 let rise: Float = 2.6, slope = hypotf(w / 2, rise)
                 b.slab(centre: Map3DPoint(0, h + rise / 2, side * w / 4),
                        up: Map3DPoint(0, rise / slope, -side * w / 2 / slope),
-                       length: part.length + 0.7, wide: slope, thickness: 0.22, color: Map3DPalette.roof)
+                       length: part.length + 0.7, wide: slope, thickness: 0.22, color: Map3DDepotFacilities.roof)
                 for x: Float in [-3.5, 3.5] { b.box(x, 3.425, side * (w / 2 - 0.02), 2.2, 0.05, 1.25, Map3DDepotFacilities.glass) }
             }
             if part.kind == .shedTail { b.box(-part.length / 2 + 0.18, 0, 0, 0.36, w, h, Map3DDepotFacilities.wall) }
@@ -119,7 +119,7 @@ public enum Map3DDepotYardKit {
             b.box(0, h + 2.64, 0, part.length - 1, 0.28, 0.24, Map3DDepotFacilities.steel)
         case .parkingCanopy:
             for x: Float in [-5.7, 5.7] { for z: Float in [-w / 2 + 0.2, w / 2 - 0.2] { b.box(x, 0, z, 0.25, 0.25, h, Map3DDepotFacilities.steel) } }
-            b.box(0, h, 0, 12.4, w + 0.7, 0.24, Map3DPalette.roof)
+            b.box(0, h, 0, 12.4, w + 0.7, 0.24, Map3DDepotFacilities.roof)
             for c in part.trackCentres { guideway(&b, system: part.system, x: 0, z: c, length: 11.8) }
         case .washFrame:
             for z: Float in [-3, 3] { b.box(0, 0, z, 1.4, 0.45, h, Map3DDepotFacilities.steel) }
@@ -260,7 +260,7 @@ extension Map3DDepotYardKit {
         let shed = part(.shedHead, system: system, tracks: tracks)
         var mesh = Map3DMesh()
         mesh.addBox(base: .zero, forward: Map3DPoint(1, 0, 0), length: Float(max(3, bays)) * 12, width: shed.width,
-                    height: system.clearHeight + 0.45 + 0.625 + 1.5, top: Map3DPalette.roof, side: Map3DDepotFacilities.wall)
+                    height: system.clearHeight + 0.45 + 0.625 + 1.5, top: Map3DDepotFacilities.roof, side: Map3DDepotFacilities.wall)
         return mesh
     }
 }
