@@ -1,71 +1,71 @@
 {
   "comment" : "Decision 782: the models of the registered train mtrUrbanLine (Map3DMTRUrbanLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 8,
-  "lamps" : "233b5bf2dd033ba8",
+  "lamps" : "1266182caf88d1ec",
   "models" : {
     "light-set-mtrUrbanLine-car" : {
-      "hash" : "b96937c1eb2451ad",
-      "triangles" : 468
+      "hash" : "f31d02336dc9445d",
+      "triangles" : 1076
     },
     "light-set-mtrUrbanLine-head" : {
-      "hash" : "14903e01ae63175",
-      "triangles" : 464
+      "hash" : "bec7b25b740d7879",
+      "triangles" : 1100
     },
     "light-set-mtrUrbanLine-panto" : {
-      "hash" : "28dbaf5d95c5fa19",
-      "triangles" : 408
+      "hash" : "66d8b4468238137d",
+      "triangles" : 956
     },
     "light-set-mtrUrbanLine-tail" : {
-      "hash" : "709adfa4b5ca8f75",
-      "triangles" : 464
+      "hash" : "e81b80337bbb2379",
+      "triangles" : 1100
     },
     "light-set-mtrUrbanLineFar-car" : {
-      "hash" : "49b8958066040969",
-      "triangles" : 172
+      "hash" : "b4171f5867084e31",
+      "triangles" : 316
     },
     "light-set-mtrUrbanLineFar-head" : {
-      "hash" : "b7f752b6166c6d51",
-      "triangles" : 168
+      "hash" : "1149966018bfba35",
+      "triangles" : 320
     },
     "light-set-mtrUrbanLineFar-panto" : {
-      "hash" : "df03c70386b4df45",
-      "triangles" : 152
+      "hash" : "e15f53ebe7b77e65",
+      "triangles" : 296
     },
     "light-set-mtrUrbanLineFar-tail" : {
-      "hash" : "719809288da61a51",
-      "triangles" : 168
+      "hash" : "723275882ee32535",
+      "triangles" : 320
     },
     "set-mtrUrbanLine-car" : {
-      "hash" : "475c0a1731cc498b",
-      "triangles" : 4418
+      "hash" : "43c5e2a8a5bda6a9",
+      "triangles" : 7082
     },
     "set-mtrUrbanLine-head" : {
-      "hash" : "d4b51a4184e820b2",
-      "triangles" : 5915
+      "hash" : "c29363d962364004",
+      "triangles" : 8915
     },
     "set-mtrUrbanLine-panto" : {
-      "hash" : "bb573bfea1de4ef0",
-      "triangles" : 4562
+      "hash" : "593aaa76e591ae7a",
+      "triangles" : 7226
     },
     "set-mtrUrbanLine-tail" : {
-      "hash" : "39c4922ddea71892",
-      "triangles" : 5915
+      "hash" : "8e6ca0d0835142e",
+      "triangles" : 8915
     },
     "set-mtrUrbanLineFar-car" : {
-      "hash" : "75067d5024af16ce",
-      "triangles" : 1578
+      "hash" : "8adf77b9a078d108",
+      "triangles" : 2338
     },
     "set-mtrUrbanLineFar-head" : {
-      "hash" : "9033c9599b425a7f",
-      "triangles" : 2157
+      "hash" : "b184837814141403",
+      "triangles" : 3125
     },
     "set-mtrUrbanLineFar-panto" : {
-      "hash" : "ca13a395fd3fac22",
-      "triangles" : 1674
+      "hash" : "f305c672cbf540f8",
+      "triangles" : 2434
     },
     "set-mtrUrbanLineFar-tail" : {
-      "hash" : "85784326a1bfc7d",
-      "triangles" : 2157
+      "hash" : "7114965071599f07",
+      "triangles" : 3125
     }
   }
 }

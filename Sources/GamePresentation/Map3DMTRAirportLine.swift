@@ -6,7 +6,7 @@ import Foundation
 /// the others 22.5 m, 3.096 m wide, 3.7 m tall), one palette colour a
 /// triangle, the windows, doors and bands faces of their own
 /// (`a91453/railway-assets-private`,
-/// `game-art-previews/docs/art/mtr-airport-line-2026-11/revision-4`), and
+/// `game-art-previews/docs/art/mtr-airport-line-2026-11/revision-5`), and
 /// written here by `tools/train-models/glb_to_swift.py` (``encoded``).
 ///
 /// Two liveries on one shell: the Airport Express (royal blue, a teal
@@ -40,12 +40,13 @@ public enum Map3DMTRAirportLine {
     /// The colours of the mesh's palette indices, in the order
     /// `glb_to_swift.py --materials` gave them: the studio's material
     /// names aelBlue, teal, pearl, silver, cream, mtrRed, roof, mask, glass,
-    /// headlamp, taillamp, steel, hardware, dark. The glass and lamp lenses
+    /// headlamp, taillamp, steel, hardware, dark; the roof, light grey as in
+    /// the photographs, is the silver (studio revision 5). The glass and lamp lenses
     /// are the colours the game lights at night and the glass catches the
     /// sky in (``Map3DTrainLights``, ``Map3DTrainMaterial``).
     static let meshPalette: [UInt32] = [
         Map3DPalette.mtrAirportBlue, Map3DPalette.mtrTeal, Map3DPalette.mtrPearl, Map3DPalette.mtrSilver,
-        Map3DPalette.mtrCream, Map3DPalette.mtrRed, Map3DPalette.mtrRoof, Map3DColor.rgb(0x1D2125),
+        Map3DPalette.mtrCream, Map3DPalette.mtrRed, Map3DPalette.mtrSilver, Map3DColor.rgb(0x1D2125),
         Map3DTrainStyle.glass, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DColor.rgb(0x7A858E),
         Map3DColor.rgb(0x4B535C), Map3DColor.rgb(0x30363D),
     ]
@@ -63,7 +64,7 @@ public enum Map3DMTRAirportLine {
 /// (``Map3DMTRAirportLine``), from photographs: the Airport Express's
 /// royal blue, teal stripe and pearl lower body; the Tung Chung line's
 /// silver-grey, cream lower body and red line, the red lamp band both
-/// share; their dark roofs. Decision 782: kept with the train.
+/// share. The roofs take the silver (studio revision 5). Decision 782: kept with the train.
 extension Map3DPalette {
     public static let mtrAirportBlue = Map3DColor.rgb(0x2457C0)
     public static let mtrTeal = Map3DColor.rgb(0x1C9C93)
@@ -71,13 +72,12 @@ extension Map3DPalette {
     public static let mtrSilver = Map3DColor.rgb(0xA5AAAF)
     public static let mtrCream = Map3DColor.rgb(0xE2DAC4)
     public static let mtrRed = Map3DColor.rgb(0xC1272F)
-    public static let mtrRoof = Map3DColor.rgb(0x4C5359)
 }
 
 extension Map3DMTRAirportLine {
     /// Decision 782: the two lines' sets, near and far, their showcase
-    /// rows (eight cars each) and their cars' triangles (3,070 to 4,838
-    /// near and 846 to 1,013 far) and lengths (the cab cars 24.6 m).
+    /// rows (eight cars each) and their cars' triangles (4,446 to 7,701
+    /// near and 1,019 to 1,794 far) and lengths (the cab cars 24.6 m).
     static let registration = Map3DTrainRegistration(
         id: "mtrAirportLine",
         sets: [Map3DTrainSet.mtrAirportExpress(), .mtrAirportExpress(far: true), .mtrTungChung(), .mtrTungChung(far: true)],
@@ -85,7 +85,7 @@ extension Map3DMTRAirportLine {
             Map3DShowcase.Entry(expressKey, "Hong Kong Airport Express train", "香港機場快綫列車", .metro, cars: 8, fixed: true),
             Map3DShowcase.Entry(tungChungKey, "Hong Kong Tung Chung line train", "香港東涌綫列車", .metro, cars: 8, fixed: true),
         ],
-        triangles: 800...4_900, length: 22.4...24.7)
+        triangles: 1_000...8_000, length: 22.4...24.7)
 }
 
 extension Map3DTrainSet {
