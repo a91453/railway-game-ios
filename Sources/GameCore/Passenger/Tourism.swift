@@ -29,12 +29,29 @@ public struct AttractionID: RawRepresentable, Hashable, Comparable, Codable, Sen
     }
 }
 
-/// What kind of place an attraction is, which sets its season.
+/// What kind of place an attraction is, which sets its season, and for a
+/// night market its hours.
 public enum AttractionKind: String, CaseIterable, Codable, Sendable {
     case coast
     case mountain
     case hotSpring
     case town
+    /// A night market (decision 769): its tourists come in the evening and
+    /// go home late (``Tourism/nightMarketArrivals``), not in the day as a
+    /// sight's do. Last, so that a blank map's draw of the first four kinds
+    /// is unchanged.
+    case nightMarket
+    /// A landmark (decision 772): a tower, a memorial hall, a fort, a
+    /// bridge. Open all day and into the evening for the night view
+    /// (``Tourism/landmarkArrivals``), busiest in the school holidays.
+    case landmark
+    /// A museum (decision 772): closed on Mondays that are not a holiday,
+    /// not put off by rain, open in the day (``Tourism/museumArrivals``).
+    case museum
+    /// A temple (decision 772): pilgrims from early morning and again at
+    /// dusk (``Tourism/templeArrivals``), the first and fifteenth of a
+    /// month and the Spring Festival busiest, Mazu's month in spring.
+    case temple
 }
 
 /// A place tourists go to.
@@ -43,7 +60,7 @@ public struct Attraction: Hashable, Sendable {
     public let name: String
     public let englishName: String
     public let point: PlanPoint
-    public let kind: AttractionKind
+    public internal(set) var kind: AttractionKind
     /// The rating before any shop, in hundredths of a star, 100 to 500.
     public let baseStars: Int
     /// The souvenir shop's level, 0 to ``Tourism/maximumSouvenirLevel``.
@@ -211,6 +228,137 @@ public struct Tourism: Hashable, Sendable {
     public static let maximumAttractions = 256
     static let potential: [Int64] = [300, 800, 2_000, 4_500, 9_000]
 
+    // Decision 769, this project's (the reference has no night market's
+    // hours): `0.02 + g(h; 19, 1.6)` arriving and `0.02 + g(h; 21.5, 1.4)`
+    // leaving, with `g(h; μ, σ) = exp(−½((h − μ)/σ)²)`, each normalised so
+    // that the day's mean is 1, in thousandths. A Taiwanese night market
+    // fills from about 17:00, is busiest from 19:00 to 21:00 and empties
+    // towards midnight; nine in ten of its tourists ride between 17:00 and
+    // midnight. These are the hours themselves, not times the day's
+    // ``StationDemand/dayShape``, whose 23:00 is the night's.
+    /// How strongly a night market's tourists arrive in each hour.
+    public static let nightMarketArrivals: [Int64] = [
+        107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107,
+        107, 112, 148, 342, 1030, 2559, 4512, 5462, 4512, 2559, 1030, 342,
+    ]
+    /// How strongly a night market's tourists leave in each hour.
+    public static let nightMarketDepartures: [Int64] = [
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 129, 131, 165, 411, 1433, 3747, 6155, 6155, 3747,
+    ]
+
+    // Decision 772, this project's (the reference has no hours of a
+    // museum, a temple or a landmark), the same way as decision 769's:
+    // each `f(h)` normalised so that the day's mean is 1, in thousandths,
+    // the hours themselves rather than times ``StationDemand/dayShape``.
+    // A museum `0.01 + g(h; 11, 1.8)` arriving and `0.01 + g(h; 15.5,
+    // 1.3)` leaving (open about 9:00 to 17:00); a temple `0.02 + 0.6 g(h;
+    // 8, 1.5) + 0.4 g(h; 18.5, 1.5)` arriving and the same an hour and a
+    // half later leaving (morning incense and the evening's); a landmark
+    // `0.02 + g(h; 14, 3.5)` arriving and `0.02 + g(h; 17.5, 3)` leaving
+    // (from the morning to the night view).
+    public static let museumArrivals: [Int64] = [
+        51, 51, 51, 51, 53, 70, 157, 478, 1310, 2775, 4379, 5101,
+        4379, 2775, 1310, 478, 157, 70, 53, 51, 51, 51, 51, 51,
+    ]
+    public static let museumDepartures: [Int64] = [
+        69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 86,
+        252, 1148, 3594, 6439, 6439, 3594, 1148, 252, 86, 69, 69, 69,
+    ]
+    public static let templeArrivals: [Int64] = [
+        113, 113, 114, 126, 210, 573, 1510, 2833, 3510, 2833, 1510, 573,
+        210, 129, 140, 262, 678, 1487, 2255, 2255, 1487, 678, 262, 138,
+    ]
+    public static let templeDepartures: [Int64] = [
+        114, 114, 114, 114, 118, 151, 337, 963, 2180, 3336, 3336, 2180,
+        963, 338, 152, 126, 179, 421, 1047, 1932, 2385, 1932, 1047, 421,
+    ]
+    public static let landmarkArrivals: [Int64] = [
+        53, 55, 59, 71, 96, 147, 243, 404, 651, 990, 1406, 1854,
+        2262, 2550, 2654, 2550, 2262, 1854, 1406, 990, 651, 404, 243, 147,
+    ]
+    public static let landmarkDepartures: [Int64] = [
+        61, 61, 61, 61, 61, 62, 63, 68, 82, 117, 196, 354,
+        632, 1056, 1613, 2227, 2765, 3083, 3083, 2765, 2227, 1613, 1056, 632,
+    ]
+
+    /// The hours `kind`'s tourists arrive and leave in (decisions 769 and
+    /// 772), or `nil` for a sight's by the scenic curve times the day's.
+    public static func hours(of kind: AttractionKind) -> (arrivals: [Int64], departures: [Int64])? {
+        switch kind {
+        case .nightMarket: (nightMarketArrivals, nightMarketDepartures)
+        case .museum: (museumArrivals, museumDepartures)
+        case .temple: (templeArrivals, templeDepartures)
+        case .landmark: (landmarkArrivals, landmarkDepartures)
+        case .coast, .mountain, .hotSpring, .town: nil
+        }
+    }
+
+    /// What a temple's day is worth beside ``dayFactor(weekday:holiday:)``
+    /// (decision 772), in thousandths: the first and fifteenth of a month
+    /// half as much again, the Spring Festival a quarter more.
+    public static let templeNewMoonFactor: Int64 = 1_500
+    public static let templeSpringFestivalFactor: Int64 = 1_250
+    /// A museum's weather when it is not clear (decision 772), in
+    /// thousandths: people go in out of the rain, where other sights lose
+    /// three in ten.
+    public static let museumRainFactor: Int64 = 1_100
+
+    /// The day's factor of a sight of `kind` (decision 772): that of
+    /// ``dayFactor(weekday:holiday:)``, none for a museum on a Monday
+    /// that is not a holiday, and a temple's more on the first and
+    /// fifteenth of the month (`dayOfMonth`, 1 to 30) and in the Spring
+    /// Festival.
+    public static func dayFactor(_ kind: AttractionKind, weekday: Int, holiday: HolidayKind?, dayOfMonth: Int) -> Int64 {
+        let base = dayFactor(weekday: weekday, holiday: holiday != nil)
+        switch kind {
+        case .museum:
+            return weekday == 1 && holiday == nil ? 0 : base
+        case .temple:
+            var factor = base
+            if dayOfMonth == 1 || dayOfMonth == 15 { factor = factor * templeNewMoonFactor / 1_000 }
+            if holiday == .springFestival { factor = factor * templeSpringFestivalFactor / 1_000 }
+            return factor
+        case .coast, .mountain, .hotSpring, .town, .nightMarket, .landmark:
+            return base
+        }
+    }
+
+    /// The sights a save from before decision 772 holds as towns that are
+    /// landmarks, museums or temples, by English name: the app's catalog's
+    /// (`AttractionCatalog`, which `SightKindsCatalogTests` checks against
+    /// this) and the blank map's (``GameWorld/blankSightKinds``).
+    public static let sightKindsByName: [String: AttractionKind] = {
+        let landmarks = [
+            "85 Sky Tower", "Anping Old Fort", "Baguashan Buddha", "Changhua Roundhouse", "Chiang Kai-shek Memorial Hall",
+            "Chihkan Tower", "Cihu", "Danjiang Bridge", "Fort San Domingo", "Hengchun Old Town", "Luce Memorial Chapel",
+            "National Taichung Theater", "Old Iron Bridge of Dashu", "Sun Yat-sen Memorial Hall", "Taipei 101",
+            "Taoyuan Martyrs' Shrine", "Taozhu Yinyuan", "Wanjin Basilica", "Weiwuying", "Xiluo Bridge",
+        ]
+        let museums = [
+            "921 Earthquake Museum", "Chimei Museum", "Juming Museum", "Lanyang Museum", "Miaoli Railway Museum",
+            "National Museum of Taiwan History", "National Palace Museum", "Shanshang Water Museum",
+            "Southern Branch of the Palace Museum", "Yuanli Rush Weaving Museum",
+        ]
+        let temples = [
+            "Beigang Chaotian Temple", "Chung Tai Chan Monastery", "Dajia Jenn Lann Temple", "Donglong Temple", "Fo Guang Shan",
+            "Hsinchu City God Temple", "Lungshan Temple", "Madou Daitian Temple", "Nankunshen Daitian Temple", "Qingxiu Temple",
+            "Tainan Confucius Temple", "Xingang Fengtian Temple", "Zhulinshan Guanyin Temple",
+        ]
+        var kinds = GameWorld.blankSightKinds
+        for name in landmarks { kinds[name] = .landmark }
+        for name in museums { kinds[name] = .museum }
+        for name in temples { kinds[name] = .temple }
+        return kinds
+    }()
+
+    /// The weather's factor of a sight of `kind` (decision 772), in
+    /// thousandths.
+    public static func weatherFactor(_ kind: AttractionKind, clear: Bool) -> Int64 {
+        if clear { return 1_000 }
+        return kind == .museum ? museumRainFactor : 700
+    }
+
     public init(attractions: [Attraction] = [], year: Int64 = 0, nextID: Int = 1) {
         self.attractions = attractions
         self.year = year
@@ -250,7 +398,16 @@ public struct Tourism: Hashable, Sendable {
         case .hotSpring:
             if month >= 11 || month <= 2 { return 1_400 }
             if (6...8).contains(month) { return 700 }
-        case .town:
+        case .landmark:
+            // Decision 772: the summer and winter school holidays.
+            if month == 7 || month == 8 { return 1_200 }
+            if month == 1 || month == 2 { return 1_100 }
+        case .museum:
+            if month == 7 || month == 8 { return 1_200 }
+        case .temple:
+            // Decision 772: Mazu's pilgrimages of the third lunar month.
+            if month == 4 { return 1_300 }
+        case .town, .nightMarket:
             break
         }
         return 1_000
@@ -443,8 +600,11 @@ extension GameWorld {
             let drawn = Int(draw.roll("\(spot.key)name.\(spot.index)", in: 0...Int64(names.count - 1)))
             let name = (0..<names.count).lazy.map { names[(drawn + $0) % names.count] }.first { !used.contains($0.chinese) } ?? names[drawn]
             used.insert(name.chinese)
+            // Decision 769: the town named a night market is one; decision
+            // 772: those named a temple, a museum or a landmark too.
+            let named = name.english == Self.blankNightMarketName ? AttractionKind.nightMarket : Self.blankSightKinds[name.english] ?? kind
             list.append(Attraction(id: AttractionID(rawValue: number + 1), name: name.chinese, englishName: name.english, point: spot.point,
-                                   kind: kind, baseStars: Int(draw.roll("\(spot.key)stars.\(spot.index)", in: 2...4)) * 100))
+                                   kind: named, baseStars: Int(draw.roll("\(spot.key)stars.\(spot.index)", in: 2...4)) * 100))
         }
         setTourism(list)
     }
@@ -452,6 +612,16 @@ extension GameWorld {
     private func cellCentre(row: Int, column: Int) -> PlanPoint {
         PlanPoint(x: Int64(column) * Land.cellLength + Land.cellLength / 2, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
     }
+
+    /// The English name of the blank map's town that is a night market
+    /// (decision 769).
+    static let blankNightMarketName = "Night Market"
+
+    /// The blank map's towns that are a temple, a museum or a landmark
+    /// (decision 772), by English name.
+    static let blankSightKinds: [String: AttractionKind] = [
+        "Mazu Temple": .temple, "Confucius Temple": .temple, "Museum": .museum, "Old Town Gate": .landmark,
+    ]
 
     /// A blank map's names of each kind (decision 250: sixteen of each, so
     /// a map of many tiles repeats few; the first three are decision 174's).
@@ -786,10 +956,43 @@ extension GameWorld {
             case .railwayMuseum: ("鐵道博物館", "Railway museum", Tourism.museumStars(exhibits: building.exhibits.count))
             default: ("夜市", "Night market", Tourism.nightMarketStars)
             }
+            // Decision 769: a night market keeps a night market's hours.
+            // Decision 772 leaves the company's temple and museum towns:
+            // they are its own buildings, of their own rules (decisions 361
+            // and 684), not the island's famous ones.
             let sight = Attraction(id: Self.companySightID(of: building.id), name: name, englishName: englishName,
-                                   point: building.centre, kind: .town, baseStars: stars)
+                                   point: building.centre, kind: building.kind == .nightMarket ? .nightMarket : .town, baseStars: stars)
             return (building.id, sight, Int64(max(1, sharing)))
         }
+    }
+
+    /// Decision 769, a save from before it: the sights it holds as towns
+    /// that are night markets become ``AttractionKind/nightMarket``. A
+    /// save names its sights but keeps no key to the catalog they came
+    /// from, so a night market is told by its English name: each of the
+    /// catalog's (the app's `AttractionCatalog`) and the blank map's ends in
+    /// "Night Market", and no other sight's does.
+    mutating func reclassifyNightMarkets() {
+        guard var tourism else { return }
+        for index in tourism.attractions.indices
+        where tourism.attractions[index].kind == .town && tourism.attractions[index].englishName.hasSuffix("Night Market") {
+            tourism.attractions[index].kind = .nightMarket
+        }
+        self.tourism = tourism
+    }
+
+    /// Decision 772, a save from before it: the sights it holds as towns
+    /// that are landmarks, museums or temples take their kind, told by
+    /// English name as decision 769's night markets are
+    /// (``Tourism/sightKindsByName``).
+    mutating func reclassifySightKinds() {
+        guard var tourism else { return }
+        for index in tourism.attractions.indices where tourism.attractions[index].kind == .town {
+            if let kind = Tourism.sightKindsByName[tourism.attractions[index].englishName] {
+                tourism.attractions[index].kind = kind
+            }
+        }
+        self.tourism = tourism
     }
 
     /// The world's railway museum (decision 684), or `nil`.
@@ -879,8 +1082,10 @@ extension GameWorld {
         let year = FinancePeriod.year.days
         let dayOfYear = day - CompanyAccounts.floorDivide(day, year) * year
         let month = Int(dayOfYear / 30) + 1
-        let dayFactor = Tourism.dayFactor(weekday: StationDemand.weekday(ofDay: day), holiday: holiday(onDay: day) != nil)
-        let weather: Int64 = self.weather(onDay: day) == .clear ? 1_000 : 700
+        // Decision 772: by the sight's kind.
+        let dayFactor = Tourism.dayFactor(attraction.kind, weekday: StationDemand.weekday(ofDay: day), holiday: holiday(onDay: day)?.holiday.kind,
+                                          dayOfMonth: Int(dayOfYear % 30) + 1)
+        let weather = Tourism.weatherFactor(attraction.kind, clear: self.weather(onDay: day) == .clear)
         return Tourism.tourists(stars: stars(of: attraction), day: dayFactor,
                                 season: Tourism.seasonFactor(attraction.kind, month: month), weather: weather)
     }
@@ -1044,10 +1249,19 @@ extension GameWorld {
             guard !sources.isEmpty else { continue }
             let shares = Self.apportion(expected, by: sources.map(\.weight))
             var tourists: [(source: StationID, count: Int64, back: Bool)] = []
+            // Decision 769: a night market's tourists ride in its evening;
+            // decision 772: a museum's, a temple's and a landmark's in theirs.
+            let hours = Tourism.hours(of: attraction.kind)
             for (source, share) in zip(sources, shares) where share > 0 {
-                flows.add(outbound: share, back: 0, from: source.station, to: station)
+                if let hours {
+                    flows.add(hours: Self.apportion(share, by: hours.arrivals), from: source.station, to: station)
+                } else {
+                    flows.add(outbound: share, back: 0, from: source.station, to: station)
+                }
                 let back = reaches(station, source.station)
-                if back {
+                if back, let hours {
+                    flows.add(hours: Self.apportion(share, by: hours.departures), from: station, to: source.station)
+                } else if back {
                     flows.add(outbound: 0, back: share, from: station, to: source.station)
                 }
                 tourists.append((source.station, share, back))

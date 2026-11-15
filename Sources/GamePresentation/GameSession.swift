@@ -202,6 +202,15 @@ public final class GameSession {
     /// Decision 761: the island rebuild the station panel offers, kept for
     /// the station and command (``stationIslandOffer(for:)``).
     @ObservationIgnored var stationIslandOfferMemo: StationIslandOfferMemo?
+    /// Decision 770: the stations the island list offers, kept for the
+    /// command they were worked out at (``islandRebuildList``).
+    @ObservationIgnored var islandRebuildListMemo: (revision: Int, list: [IslandRebuildCandidate])?
+    /// Decision 770: whether a station of the world is a real island station
+    /// that still stands on two side platforms, kept for the command
+    /// (``hasRealIslandsToRebuild``).
+    @ObservationIgnored var realIslandsToRebuildMemo: (revision: Int, ids: [StationID])?
+    /// Decision 770: the island list's card, while it is open.
+    public var showsIslandRebuildList = false
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
@@ -492,6 +501,9 @@ public final class GameSession {
         }
     }
     public internal(set) var aircraftFollowBar: AircraftFollowFacts?
+    /// Decision 771 (AIR-A4): the flight window of a company route's
+    /// aircraft followed to its cruise's start; see `AirFlightWindow.swift`.
+    public internal(set) var airFlightWindow: AirFlightWindow?
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -1495,6 +1507,7 @@ public final class GameSession {
         followedCabinID = nil
         followedFerryBoatID = nil
         followedAircraftID = nil
+        airFlightWindow = nil
         updateFollowSounds()
     }
 
@@ -1555,6 +1568,7 @@ public final class GameSession {
         keepFollowingCabin()
         keepFollowingFerry()
         keepFollowingAircraft()
+        keepAirFlightWindow()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1676,6 +1690,7 @@ public final class GameSession {
         if !open, followedFerryBoatID != nil { followedFerryBoatID = nil }
         // Decision 702: nor aircraft.
         if !open, followedAircraftID != nil { followedAircraftID = nil }
+        if !open, airFlightWindow != nil { airFlightWindow = nil }
         updateMap3DSpeedCap()
         // MAP3D-BOUNCE: the speed hint waits while the 3D map is open.
         syncSpeedLagHint()

@@ -238,6 +238,7 @@
 		C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		C6F7187FCF517F6610CC95B9 /* Map3DStopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */; };
+		C7357775B464EFCFE9EB0F82 /* coal-bunker.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = C8CC2531C8A5E0E7C5A53C87 /* coal-bunker.m3dmodel */; };
 		C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */; };
 		C91B7D7962C9EF890E327E3C /* AmbientModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE545BF14678185EA76EACC5 /* AmbientModeView.swift */; };
 		CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB483D5847D06BCBC26230C /* HelpView.swift */; };
@@ -551,6 +552,7 @@
 		C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSmokeTests.swift; sourceTree = "<group>"; };
 		C639F6C2DB822D36E3F0AB8A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		C672FB058D7EDDE7177AF07E /* MapCoverageButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapCoverageButton.swift; sourceTree = "<group>"; };
+		C8CC2531C8A5E0E7C5A53C87 /* coal-bunker.m3dmodel */ = {isa = PBXFileReference; path = "coal-bunker.m3dmodel"; sourceTree = "<group>"; };
 		C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionStyle.swift; sourceTree = "<group>"; };
 		CB6CFDE772AE458BC8B1AD89 /* build-done.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "build-done.wav"; sourceTree = "<group>"; };
 		CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopulationLegendView.swift; sourceTree = "<group>"; };
@@ -898,6 +900,7 @@
 			isa = PBXGroup;
 			children = (
 				1CAB3E0CCFE9D4ED77A05057 /* city-bus.m3dmodel */,
+				C8CC2531C8A5E0E7C5A53C87 /* coal-bunker.m3dmodel */,
 				3D0BB76CFCE33B148C01AADC /* garbage-truck.m3dmodel */,
 				B2569C176B215F8F92510A45 /* hk-double-decker.m3dmodel */,
 				64216AD6EE4B4C8F1D51D07F /* hk-minibus.m3dmodel */,
@@ -1182,6 +1185,7 @@
 				CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */,
 				B7D75586702143678A6E56E2 /* city-bus.m3dmodel in Resources */,
 				87A7B5C3940191B63231B2F7 /* coach_network.json in Resources */,
+				C7357775B464EFCFE9EB0F82 /* coal-bunker.m3dmodel in Resources */,
 				CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */,
 				2517C778FB306F8732C9F41B /* garbage-truck.caf in Resources */,
 				BDB3AC8DDFE7405D16CEC00F /* garbage-truck.m3dmodel in Resources */,

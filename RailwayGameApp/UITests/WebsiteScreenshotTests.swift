@@ -787,6 +787,63 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 771 (AIR-A4): a company route's aircraft. Songshan's route
+    /// to Penghu bought, its jet lined up 20 seconds before its roll: the
+    /// camera follows it as it takes off, climbs and turns towards
+    /// Penghu, up to its cruise's start, where the flight window opens;
+    /// then the window's button back to the map. Before it, the same
+    /// moment with no route bought: the airport's own take-off nearest,
+    /// let go 3.6 km out as before. `AIR_ROUTE_SHOTS` names the parts
+    /// ("before", "after"), by default both.
+    func testAirRouteFlight() {
+        executionTimeAllowance = 1_800
+        let shots = ProcessInfo.processInfo.environment["AIR_ROUTE_SHOTS"]?.split(separator: ",").map(String.init) ?? []
+        func asked(_ part: String) -> Bool { shots.isEmpty || shots.contains(part) }
+        for (part, scene, follow) in [("before", "airRouteSongshanNone", "-screenshot-3d-follow-aircraft"),
+                                      ("after", "airRouteSongshan", "-screenshot-3d-follow-air-route")] where asked(part) {
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", "600,0,45", "-screenshot-3d-at", "25.0701,121.5386",
+                                     "-map3D.quality", "high", "-screenshot-device-tier", "1", "-map3DFollowView", "side", follow])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            let bar = app.descendants(matching: .any)["map3D.aircraftFollowBar"].firstMatch
+            XCTAssertTrue(bar.appears(within: 60), "An aircraft is followed")
+            settle(seconds: 10)
+            keep("air-route-\(part)-01", app)
+            let play = app.descendants(matching: .any)["map3D.speed"].buttons.element(boundBy: 0)
+            XCTAssertTrue(play.becomesHittable(within: 10), "The 3D map has the game's pause")
+            play.tap()
+            let window = app.descendants(matching: .any)["map3D.flightWindow"].firstMatch
+            for (index, wait) in [3.0, 4, 5, 6, 8, 10, 12].enumerated() where bar.exists {
+                settle(seconds: wait)
+                keep(String(format: "air-route-\(part)-%02d", index + 2), app)
+            }
+            if part == "after" {
+                XCTAssertTrue(window.appears(within: 240), "The flight window opens at the cruise")
+                settle(seconds: 4)
+                keep("air-route-after-window", app)
+                settle(seconds: 20)
+                keep("air-route-after-window-later", app)
+                let back = app.buttons["map3D.flightWindow.close"]
+                XCTAssertTrue(back.becomesHittable(within: 10))
+                back.tap()
+                XCTAssertTrue(window.disappears(within: 10), "The window closes")
+                settle(seconds: 4)
+                keep("air-route-after-back", app)
+            } else {
+                XCTAssertTrue(bar.disappears(within: 240), "The aircraft is let go")
+                settle(seconds: 3)
+                keep("air-route-before-let-go", app)
+                XCTAssertFalse(window.exists, "No window for an airport's own flight")
+            }
+            app.terminate()
+        }
+    }
+
     /// Decision 702: the four small airports decision 700 added, which
     /// nobody had looked at on the 3D map: Qimei, Lanyu, Green Island and
     /// Chiayi. Each from above its airfield a few seconds before a
@@ -2094,6 +2151,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// fronts out.
     func testRealStreetFronts() { shootLean("streetFronts", "70,240,55", "street-fronts", extra: ["-screenshot-device-tier", "1"]) }
     func testRealStreetFrontsAbove() { shootLean("streetFronts", "140,60,35", "street-fronts-above", extra: ["-screenshot-device-tier", "1"]) }
+
+    /// Decision 765: halls drawn with no windows (Taipei Arena and the
+    /// Taipei Stadium, Kaohsiung's National Stadium), and a street of
+    /// homes, near and from higher up.
+    func testWindowsArena() { shootLean("windowsArena", "450,200,50", "windows-arena", extra: ["-screenshot-device-tier", "1"]) }
+    func testWindowsArenaAbove() { shootLean("windowsArena", "900,200,30", "windows-arena-above", extra: ["-screenshot-device-tier", "1"]) }
+    func testWindowsKaohsiung() { shootLean("windowsKaohsiung", "500,200,50", "windows-kaohsiung", extra: ["-screenshot-device-tier", "1"]) }
+    func testWindowsStreet() { shootLean("streetFronts", "250,200,55", "windows-street", extra: ["-screenshot-device-tier", "1"]) }
 
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.

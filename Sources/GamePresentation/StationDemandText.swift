@@ -657,6 +657,10 @@ extension GameWorld {
         return (demandEvents?.events ?? []).filter { $0.station == id && today < $0.end }.map { event in
             let percent = (event.boost + 5) / 10
             var title = event.festival?.title(in: language) ?? event.kind.title(in: language)
+            // Decision 768: where it is held.
+            if let venue = event.venue.flatMap(EventVenueCatalog.venue) {
+                title = language.text("\(title) at \(venue.englishName)", "\(venue.name) \(title)")
+            }
             var leaving = ("", "")
             if let opens = event.opens, let closes = event.closes {
                 title += " \(clockText(minuteOfDay: Int(opens)))–\(clockText(minuteOfDay: Int(closes)))"

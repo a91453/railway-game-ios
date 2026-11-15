@@ -93,6 +93,10 @@ extension Map3DScene.Builder {
         }
         let kind = Int(r(1) * 4)
         let far = isFar
+        // Decision 767: an old brick plant whose yard holds the coal bunker
+        // has it where the office would stand, near and far alike (the
+        // bunker itself is drawn close up only).
+        let bunker = kind == 3 && Self.coalBunkerFits(room: lot - hallWidth - 2, lot: lot)
         mesh(at: base) { mesh in
             switch kind {
             case 0:
@@ -147,7 +151,7 @@ extension Map3DScene.Builder {
             // An office at the front: two storeys, flat, the blue trim of
             // the compact factory office under its parapet.
             let office = base + forward * (lot / 2 - 5) - across * (lot / 2 - 7) * (r(7) < 0.5 ? -1 : 1)
-            if kind != 2 {
+            if kind != 2 && !bunker {
                 let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 2)
                 mesh.addBox(base: office, forward: forward, length: 8, width: 11, height: 6.4, top: Map3DPalette.roof, side: Map3DPalette.tileWhite,
                             topPaint: Self.roofing, frontPaint: windows, flankPaint: windows)
@@ -161,6 +165,9 @@ extension Map3DScene.Builder {
         if kind < 2 {
             // Decision 458: tanks in the yard beside the shed.
             addYardTanks(base: base, forward: forward, free: across * (r(7) < 0.5 ? 1 : -1), room: lot - hallWidth - 2, lot: lot, share: r(20))
+        } else if bunker {
+            // Decision 767: the old brick plant's coal bunker.
+            addYardCoalBunker(base: base, forward: forward, free: across * (r(7) < 0.5 ? 1 : -1), room: lot - hallWidth - 2, lot: lot)
         }
         for (centre, length, width) in shadows {
             addShadow(centre: centre, forward: forward, length: length, width: width, spread: 3, darkness: 0.3)

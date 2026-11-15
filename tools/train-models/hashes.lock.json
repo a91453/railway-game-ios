@@ -2101,6 +2101,10 @@
       "hash" : "358666eecf84c0f3",
       "triangles" : 60
     },
+    "scenery-coalBunker" : {
+      "hash" : "e8ca818a8b6da6dd",
+      "triangles" : 158
+    },
     "scenery-pine" : {
       "hash" : "6dceff20a8a24fa4",
       "triangles" : 52

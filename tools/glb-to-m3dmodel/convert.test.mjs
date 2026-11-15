@@ -147,3 +147,30 @@ test('a PNG is inflated no further than its header says', () => {
   assert.throws(() => image(wrapped(png(65_536, 65_536, Buffer.alloc(1))), 0), /larger than 4096/);
   assert.deepEqual(image(wrapped(png(1, 1, Buffer.from([0, 10, 20, 30, 40]))), 0).sample(0, 0), [10, 20, 30, 40]);
 });
+
+test('a flat model with at most eight colors keeps each color exactly', () => {
+  // Map3DPalette's steel #8A9099 and canopy blue #2F6DB5 are both "cool":
+  // the median cut used to put them in one box and bake one grey-blue.
+  const hexes = [...Array(6).fill(0x8A9099), 0x2F6DB5, 0xC4C8D6, 0xC9CCD5, 0x2B2F36, 0xCFCBC2];
+  const positions = new Float32Array(hexes.flatMap((_, i) => [i * 2, 0, 0, i * 2 + 1, 0, 0, i * 2, 1, 0]));
+  const bin = Buffer.from(positions.buffer);
+  const json = {
+    asset: { version: '2.0', generator: 'flat fixture', extras: { aiGenerated: true } },
+    scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+    meshes: [{ primitives: hexes.map((_, i) => ({ attributes: { POSITION: i }, material: i })) }],
+    materials: hexes.map(hex => ({ pbrMetallicRoughness: { baseColorFactor: [hex >> 16, (hex >> 8) & 255, hex & 255].map(n => n / 255).concat(1) } })),
+    buffers: [{ byteLength: bin.length }], bufferViews: [{ buffer: 0, byteLength: bin.length }],
+    accessors: hexes.map((_, i) => ({ bufferView: 0, byteOffset: i * 36, componentType: 5126, count: 3, type: 'VEC3',
+      min: [i * 2, 0, 0], max: [i * 2 + 1, 1, 0] })),
+  };
+  let text = Buffer.from(JSON.stringify(json));
+  text = Buffer.concat([text, Buffer.alloc((4 - text.length % 4) % 4, 0x20)]);
+  const chunk = (type, data) => Buffer.concat([Buffer.from(new Uint32Array([data.length, type]).buffer), data]);
+  const body = Buffer.concat([chunk(0x4e4f534a, text), chunk(0x004e4942, bin)]);
+  const glb = Buffer.concat([Buffer.from(new Uint32Array([0x46546c67, 2, 12 + body.length]).buffer), body]);
+  const { output, colors } = convert(glb, { modelId: 'flat', front: '+x', units: 'meters', recolorLightPaint: false });
+  assert.equal(colors, 6);
+  const start = header(output).triangles;
+  const got = hexes.map((_, i) => output.readUInt32LE(start + i * 52 + 4 + 12));
+  assert.deepEqual(got, hexes.map(hex => ((hex >> 16) | (hex & 0xff00) | ((hex & 255) << 16) | (255 << 24)) >>> 0));
+});
