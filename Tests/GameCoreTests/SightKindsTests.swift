@@ -41,7 +41,7 @@ final class SightKindsTests: XCTestCase {
     }
 
     func testTheNewKindsAreLastSoABlankMapDrawsTheSameKinds() {
-        XCTAssertEqual(AttractionKind.allCases, [.coast, .mountain, .hotSpring, .town, .nightMarket, .landmark, .museum, .temple])
+        XCTAssertEqual(Array(AttractionKind.allCases.prefix(8)), [.coast, .mountain, .hotSpring, .town, .nightMarket, .landmark, .museum, .temple])
         for (name, _) in GameWorld.blankSightKinds {
             XCTAssertTrue(GameWorld.attractionNames[.town]!.contains { $0.english == name }, name)
         }
@@ -166,7 +166,7 @@ final class SightKindsTests: XCTestCase {
                                      point: PlanPoint(x: 6_632, y: 1_536), kind: .town, baseStars: 350)])
         let data = try JSONEncoder().encode(SavedGame(world: world))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 106)
+        XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
         let current = try JSONDecoder().decode(SavedGame.self, from: data)
         XCTAssertEqual(current.world.tourism?.attractions.first?.kind, .town, "a town written by this build stays one")
         object["saveVersion"] = 105

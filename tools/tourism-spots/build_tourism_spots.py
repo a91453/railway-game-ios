@@ -24,7 +24,7 @@ landmark 303, an original future landmark".
 Decision 250 adds `MORE_SPOTS`, looked for nearer (see there);
 `coverage.py` counts how many a 16 km map gets.
 
-Stars are in hundredths (100 to 500). Kinds: coast, mountain, hotSpring, town, nightMarket (decision 769), landmark, museum, temple (decision 772).
+Stars are in hundredths (100 to 500). Kinds: coast, mountain, hotSpring, town, nightMarket (decision 769), landmark, museum, temple (decision 772), harbour (decision 773).
 """
 import json
 import math
@@ -92,7 +92,7 @@ MORE_SPOTS = [
     ("t014", "竹子湖", "Zhuzihu", "mountain", 250, ["竹子湖", "Zhuzihu"], (25.1650, 121.5380)),
     # New Taipei
     ("t015", "淡水老街", "Tamsui Old Street", "town", 350, ["淡水老街", "淡水", "Tamsui Old Street"], (25.1696, 121.4398)),
-    ("t016", "淡水漁人碼頭", "Tamsui Fisherman's Wharf", "coast", 300, ["漁人碼頭", "Fisherman"], (25.1830, 121.4111)),
+    ("t016", "淡水漁人碼頭", "Tamsui Fisherman's Wharf", "harbour", 300, ["漁人碼頭", "Fisherman"], (25.1830, 121.4111)),
     ("t017", "紅毛城", "Fort San Domingo", "landmark", 300, ["紅毛城", "Fort San Domingo"], (25.1754, 121.4329)),
     ("t018", "猴硐貓村", "Houtong Cat Village", "town", 250, ["猴硐", "Houtong"], (25.0868, 121.8273)),
     ("t019", "三峽老街", "Sanxia Old Street", "town", 300, ["三峽老街", "三峽", "Sanxia"], (24.9346, 121.3690)),
@@ -110,7 +110,7 @@ MORE_SPOTS = [
     # Keelung
     ("t031", "基隆廟口夜市", "Keelung Miaokou Night Market", "nightMarket", 300, ["廟口", "奠濟宮", "Miaokou"], (25.1283, 121.7434)),
     ("t032", "和平島", "Heping Island", "coast", 300, ["和平島", "Heping Island"], (25.1600, 121.7630)),
-    ("t033", "正濱漁港", "Zhengbin Fishing Port", "coast", 250, ["正濱", "Zhengbin"], (25.1510, 121.7730)),
+    ("t033", "正濱漁港", "Zhengbin Fishing Port", "harbour", 250, ["正濱", "Zhengbin"], (25.1510, 121.7730)),
     ("t034", "八斗子潮境", "Badouzi", "coast", 250, ["八斗子", "潮境", "Badouzi"], (25.1440, 121.8020)),
     # Taoyuan
     ("t035", "大溪老街", "Daxi Old Street", "town", 300, ["大溪老街", "和平老街", "大溪", "Daxi"], (24.8830, 121.2870)),
@@ -119,12 +119,12 @@ MORE_SPOTS = [
     ("t038", "小人國", "Window on China", "town", 250, ["小人國", "Window on China"], (24.8460, 121.2120)),
     ("t039", "拉拉山", "Lalashan", "mountain", 300, ["拉拉山", "Lalashan"], (24.7080, 121.4300)),
     ("t040", "角板山", "Jiaobanshan", "mountain", 250, ["角板山", "Jiaobanshan"], (24.8170, 121.3500)),
-    ("t041", "永安漁港", "Yong'an Fishing Port", "coast", 200, ["永安漁港", "Yong'an"], (24.9890, 121.0130)),
+    ("t041", "永安漁港", "Yong'an Fishing Port", "harbour", 200, ["永安漁港", "Yong'an"], (24.9890, 121.0130)),
     ("t042", "桃園忠烈祠", "Taoyuan Martyrs' Shrine", "landmark", 200, ["忠烈祠", "Martyrs"], (25.0010, 121.3050)),
     # Hsinchu
     ("t043", "六福村", "Leofoo Village", "town", 300, ["六福村", "Leofoo"], (24.8000, 121.1740)),
     ("t044", "新竹城隍廟", "Hsinchu City God Temple", "temple", 300, ["城隍廟", "City God"], (24.8040, 120.9655)),
-    ("t045", "南寮漁港", "Nanliao Fishing Port", "coast", 250, ["南寮", "Nanliao"], (24.8480, 120.9260)),
+    ("t045", "南寮漁港", "Nanliao Fishing Port", "harbour", 250, ["南寮", "Nanliao"], (24.8480, 120.9260)),
     ("t046", "香山濕地", "Xiangshan Wetland", "coast", 250, ["香山濕地", "香山", "Xiangshan"], (24.7800, 120.9100)),
     ("t047", "內灣老街", "Neiwan Old Street", "town", 300, ["內灣", "Neiwan"], (24.7050, 121.1830)),
     ("t048", "北埔老街", "Beipu Old Street", "town", 250, ["北埔", "Beipu"], (24.6990, 121.0570)),
@@ -144,7 +144,7 @@ MORE_SPOTS = [
     ("t060", "宮原眼科", "Miyahara", "town", 250, ["宮原眼科", "Miyahara"], (24.1380, 120.6840)),
     ("t061", "路思義教堂", "Luce Memorial Chapel", "landmark", 250, ["路思義", "Luce"], (24.1790, 120.6000)),
     ("t062", "大甲鎮瀾宮", "Dajia Jenn Lann Temple", "temple", 300, ["鎮瀾宮", "Jenn Lann", "Zhenlan"], (24.3460, 120.6230)),
-    ("t063", "梧棲漁港", "Wuqi Fishing Port", "coast", 250, ["梧棲漁港", "梧棲", "Wuqi"], (24.2930, 120.5160)),
+    ("t063", "梧棲漁港", "Wuqi Fishing Port", "harbour", 250, ["梧棲漁港", "梧棲", "Wuqi"], (24.2930, 120.5160)),
     ("t064", "谷關溫泉", "Guguan Hot Springs", "hotSpring", 300, ["谷關", "Guguan"], (24.2040, 121.0080)),
     ("t065", "武陵農場", "Wuling Farm", "mountain", 300, ["武陵", "Wuling"], (24.3540, 121.3110)),
     ("t066", "新社花海", "Xinshe", "mountain", 250, ["新社", "Xinshe"], (24.1640, 120.8110)),
@@ -155,7 +155,7 @@ MORE_SPOTS = [
     ("t070", "八卦山大佛", "Baguashan Buddha", "landmark", 300, ["八卦山", "大佛", "Bagua"], (24.0810, 120.5490)),
     ("t071", "彰化扇形車庫", "Changhua Roundhouse", "landmark", 300, ["扇形車庫", "Roundhouse"], (24.0850, 120.5370)),
     ("t072", "田尾公路花園", "Tianwei Highway Garden", "town", 250, ["公路花園", "Tianwei Highway Garden"], (23.9050, 120.5310)),
-    ("t073", "王功漁港", "Wanggong Fishing Port", "coast", 250, ["王功", "Wanggong"], (23.9660, 120.3240)),
+    ("t073", "王功漁港", "Wanggong Fishing Port", "harbour", 250, ["王功", "Wanggong"], (23.9660, 120.3240)),
     # Nantou
     ("t074", "集集車站", "Jiji Station", "town", 300, ["集集", "Jiji"], (23.8270, 120.7850)),
     ("t075", "溪頭", "Xitou", "mountain", 300, ["溪頭", "Xitou"], (23.6740, 120.7970)),
@@ -175,7 +175,7 @@ MORE_SPOTS = [
     ("t087", "檜意森活村", "Hinoki Village", "town", 250, ["檜意", "Hinoki"], (23.4860, 120.4530)),
     ("t088", "奮起湖", "Fenqihu", "mountain", 300, ["奮起湖", "Fenqihu"], (23.5050, 120.6950)),
     ("t089", "故宮南院", "Southern Branch of the Palace Museum", "museum", 300, ["故宮南院", "南部院區", "Southern Branch"], (23.4720, 120.2870)),
-    ("t090", "東石漁人碼頭", "Dongshi Fisherman's Wharf", "coast", 250, ["東石", "Dongshi"], (23.4580, 120.1450)),
+    ("t090", "東石漁人碼頭", "Dongshi Fisherman's Wharf", "harbour", 250, ["東石", "Dongshi"], (23.4580, 120.1450)),
     ("t091", "新港奉天宮", "Xingang Fengtian Temple", "temple", 250, ["奉天宮", "Fengtian"], (23.5560, 120.3470)),
     # Tainan
     ("t092", "赤崁樓", "Chihkan Tower", "landmark", 350, ["赤崁樓", "Chihkan"], (22.9975, 120.2025)),
@@ -218,7 +218,7 @@ MORE_SPOTS = [
     ("t126", "國立傳統藝術中心", "National Center for Traditional Arts", "town", 300, ["傳統藝術", "傳藝", "Traditional Arts"], (24.6850, 121.8240)),
     ("t127", "羅東夜市", "Luodong Night Market", "nightMarket", 300, ["羅東夜市", "羅東", "Luodong"], (24.6780, 121.7700)),
     ("t128", "蘇澳冷泉", "Su'ao Cold Spring", "hotSpring", 300, ["冷泉", "Cold Spring"], (24.5960, 121.8520)),
-    ("t129", "南方澳", "Nanfang'ao", "coast", 250, ["南方澳", "Nanfang"], (24.5850, 121.8670)),
+    ("t129", "南方澳", "Nanfang'ao", "harbour", 250, ["南方澳", "Nanfang"], (24.5850, 121.8670)),
     ("t130", "太平山", "Taipingshan", "mountain", 350, ["太平山", "Taipingshan"], (24.5000, 121.5330)),
     ("t131", "外澳海灘", "Waiao Beach", "coast", 250, ["外澳沙灘", "外澳海", "Waiao Beach"], (24.8720, 121.8410)),
     ("t132", "蘭陽博物館", "Lanyang Museum", "museum", 250, ["蘭陽博物館", "Lanyang Museum"], (24.8680, 121.8320)),
@@ -242,7 +242,7 @@ MORE_SPOTS = [
     ("t147", "新莊廟街", "Xinzhuang Temple Street", "town", 200, ["新莊廟街", "新莊老街", "Xinzhuang"], (25.0368, 121.4497)),
     ("t148", "林口竹林山觀音寺", "Zhulinshan Guanyin Temple", "temple", 200, ["竹林山", "Zhulinshan"], (25.0645, 121.3780)),
     ("t149", "埔心牧場", "Puxin Ranch", "town", 250, ["埔心牧場", "Puxin Ranch"], (24.9200, 121.1810)),
-    ("t150", "竹圍漁港", "Zhuwei Fishing Port", "coast", 250, ["竹圍漁港", "Zhuwei"], (25.1170, 121.2420)),
+    ("t150", "竹圍漁港", "Zhuwei Fishing Port", "harbour", 250, ["竹圍漁港", "Zhuwei"], (25.1170, 121.2420)),
     ("t151", "承天禪寺", "Chengtian Temple", "mountain", 200, ["承天禪寺", "Chengtian Temple"], (24.9750, 121.4290)),
     ("t152", "新瓦屋客家文化保存區", "Xinwawu Hakka Village", "town", 200, ["新瓦屋", "Xinwawu"], (24.8180, 121.0250)),
     ("t153", "東港東隆宮", "Donglong Temple", "temple", 300, ["東隆宮", "Donglong"], (22.4659, 120.4510)),
@@ -269,7 +269,7 @@ MORE_SPOTS = [
     ("t174", "湖口老街", "Hukou Old Street", "town", 250, ["湖口老街", "Hukou Old Street"], (24.8860, 121.0420)),
     ("t175", "南鯤鯓代天府", "Nankunshen Daitian Temple", "temple", 300, ["南鯤鯓", "Nankunshen"], (23.2830, 120.1440)),
     ("t176", "阿公店水庫", "Agongdian Reservoir", "mountain", 200, ["阿公店", "Agongdian"], (22.8040, 120.3550)),
-    ("t177", "蚵仔寮漁港", "Keziliao Fishing Port", "coast", 200, ["蚵仔寮", "Keziliao"], (22.7270, 120.2480)),
+    ("t177", "蚵仔寮漁港", "Keziliao Fishing Port", "harbour", 200, ["蚵仔寮", "Keziliao"], (22.7270, 120.2480)),
     ("t178", "菁寮老街", "Jingliao Old Street", "town", 200, ["菁寮老街", "Jingliao Old Street"], (23.3550, 120.3570)),
     ("t179", "山上花園水道博物館", "Shanshang Water Museum", "museum", 200, ["水道博物館", "Water Museum"], (23.0960, 120.3540)),
     ("t180", "尖山埤", "Jianshanpi", "mountain", 200, ["尖山埤", "Jianshanpi"], (23.2880, 120.3920)),

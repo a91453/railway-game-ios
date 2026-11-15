@@ -52,6 +52,12 @@ public enum AttractionKind: String, CaseIterable, Codable, Sendable {
     /// dusk (``Tourism/templeArrivals``), the first and fifteenth of a
     /// month and the Spring Festival busiest, Mazu's month in spring.
     case temple
+    /// A harbour (decision 773): a fishing port or a fisherman's wharf.
+    /// Its tourists come for a seafood lunch and again for the sunset
+    /// (``Tourism/harbourArrivals``), less held by the season than a
+    /// beach's, and stay home in the rain and the storms more than other
+    /// sights' do.
+    case harbour
 }
 
 /// A place tourists go to.
@@ -282,14 +288,29 @@ public struct Tourism: Hashable, Sendable {
         632, 1056, 1613, 2227, 2765, 3083, 3083, 2765, 2227, 1613, 1056, 632,
     ]
 
-    /// The hours `kind`'s tourists arrive and leave in (decisions 769 and
-    /// 772), or `nil` for a sight's by the scenic curve times the day's.
+    // Decision 773, this project's (the reference has no harbour's hours),
+    // the same way as decision 772's: a harbour `0.02 + 0.5 g(h; 11.5,
+    // 1.5) + 0.5 g(h; 16.5, 1.5)` arriving (the seafood lunch, the sunset)
+    // and `0.02 + 0.5 g(h; 13.5, 1.5) + 0.5 g(h; 19, 1.5)` leaving (after
+    // lunch, after the sunset's dinner).
+    public static let harbourArrivals: [Int64] = [
+        113, 113, 113, 113, 113, 113, 117, 145, 299, 819, 1830, 2794,
+        2822, 2016, 1525, 2016, 2822, 2794, 1830, 819, 299, 145, 117, 113,
+    ]
+    public static let harbourDepartures: [Int64] = [
+        113, 113, 113, 113, 113, 113, 113, 114, 117, 145, 299, 819,
+        1831, 2793, 2803, 1912, 1203, 1464, 2412, 2948, 2381, 1277, 496, 194,
+    ]
+
+    /// The hours `kind`'s tourists arrive and leave in (decisions 769, 772
+    /// and 773), or `nil` for a sight's by the scenic curve times the day's.
     public static func hours(of kind: AttractionKind) -> (arrivals: [Int64], departures: [Int64])? {
         switch kind {
         case .nightMarket: (nightMarketArrivals, nightMarketDepartures)
         case .museum: (museumArrivals, museumDepartures)
         case .temple: (templeArrivals, templeDepartures)
         case .landmark: (landmarkArrivals, landmarkDepartures)
+        case .harbour: (harbourArrivals, harbourDepartures)
         case .coast, .mountain, .hotSpring, .town: nil
         }
     }
@@ -319,7 +340,7 @@ public struct Tourism: Hashable, Sendable {
             if dayOfMonth == 1 || dayOfMonth == 15 { factor = factor * templeNewMoonFactor / 1_000 }
             if holiday == .springFestival { factor = factor * templeSpringFestivalFactor / 1_000 }
             return factor
-        case .coast, .mountain, .hotSpring, .town, .nightMarket, .landmark:
+        case .coast, .mountain, .hotSpring, .town, .nightMarket, .landmark, .harbour:
             return base
         }
     }
@@ -352,12 +373,39 @@ public struct Tourism: Hashable, Sendable {
         return kinds
     }()
 
+    /// A harbour's weather (decision 773), in thousandths: rain keeps
+    /// more away than from other sights (the wharf is all outdoors), and
+    /// a thunderstorm most (the harbour cruises and the boats stay in).
+    public static let harbourRainFactor: Int64 = 600
+    public static let harbourThunderstormFactor: Int64 = 300
+
     /// The weather's factor of a sight of `kind` (decision 772), in
     /// thousandths.
     public static func weatherFactor(_ kind: AttractionKind, clear: Bool) -> Int64 {
-        if clear { return 1_000 }
-        return kind == .museum ? museumRainFactor : 700
+        weatherFactor(kind, weather: clear ? .clear : .rain)
     }
+
+    /// The weather's factor of a sight of `kind` (decisions 772 and 773),
+    /// in thousandths: a museum's more out of the rain, a harbour's less.
+    public static func weatherFactor(_ kind: AttractionKind, weather: Weather) -> Int64 {
+        switch (weather, kind) {
+        case (.clear, _): 1_000
+        case (_, .museum): museumRainFactor
+        case (.rain, .harbour): harbourRainFactor
+        case (.thunderstorm, .harbour): harbourThunderstormFactor
+        default: 700
+        }
+    }
+
+    /// The sights a save from before decision 773 holds as coasts that are
+    /// harbours, by English name: the app's catalog's (`AttractionCatalog`,
+    /// which `HarbourCatalogTests` checks against this) and the blank map's
+    /// (``GameWorld/blankHarbourName``).
+    public static let harbourNames: Set<String> = [
+        "Dongshi Fisherman's Wharf", "Keziliao Fishing Port", "Nanfang'ao", "Nanliao Fishing Port", "Tamsui Fisherman's Wharf",
+        "Wanggong Fishing Port", "Wuqi Fishing Port", "Yong'an Fishing Port", "Zhengbin Fishing Port", "Zhuwei Fishing Port",
+        GameWorld.blankHarbourName,
+    ]
 
     public init(attractions: [Attraction] = [], year: Int64 = 0, nextID: Int = 1) {
         self.attractions = attractions
@@ -404,6 +452,11 @@ public struct Tourism: Hashable, Sendable {
             if month == 1 || month == 2 { return 1_100 }
         case .museum:
             if month == 7 || month == 8 { return 1_200 }
+        case .harbour:
+            // Decision 773: a seafood lunch is had all year, the summer
+            // busier and the winter's wind quieter, less than a beach.
+            if (6...8).contains(month) { return 1_200 }
+            if month == 12 || month <= 2 { return 800 }
         case .temple:
             // Decision 772: Mazu's pilgrimages of the third lunar month.
             if month == 4 { return 1_300 }
@@ -602,7 +655,9 @@ extension GameWorld {
             used.insert(name.chinese)
             // Decision 769: the town named a night market is one; decision
             // 772: those named a temple, a museum or a landmark too.
-            let named = name.english == Self.blankNightMarketName ? AttractionKind.nightMarket : Self.blankSightKinds[name.english] ?? kind
+            // Decision 773: the coast named a harbour is one.
+            let named = name.english == Self.blankNightMarketName ? AttractionKind.nightMarket
+                : name.english == Self.blankHarbourName ? .harbour : Self.blankSightKinds[name.english] ?? kind
             list.append(Attraction(id: AttractionID(rawValue: number + 1), name: name.chinese, englishName: name.english, point: spot.point,
                                    kind: named, baseStars: Int(draw.roll("\(spot.key)stars.\(spot.index)", in: 2...4)) * 100))
         }
@@ -616,6 +671,9 @@ extension GameWorld {
     /// The English name of the blank map's town that is a night market
     /// (decision 769).
     static let blankNightMarketName = "Night Market"
+
+    /// The blank map's coast that is a harbour (decision 773).
+    static let blankHarbourName = "Fishing Harbour"
 
     /// The blank map's towns that are a temple, a museum or a landmark
     /// (decision 772), by English name.
@@ -995,6 +1053,18 @@ extension GameWorld {
         self.tourism = tourism
     }
 
+    /// Decision 773, a save from before it: the sights it holds as coasts
+    /// that are harbours take their kind, told by English name
+    /// (``Tourism/harbourNames``).
+    mutating func reclassifyHarbours() {
+        guard var tourism else { return }
+        for index in tourism.attractions.indices
+        where tourism.attractions[index].kind == .coast && Tourism.harbourNames.contains(tourism.attractions[index].englishName) {
+            tourism.attractions[index].kind = .harbour
+        }
+        self.tourism = tourism
+    }
+
     /// The world's railway museum (decision 684), or `nil`.
     public var railwayMuseum: PlacedBuilding? {
         placedBuildings.first { $0.kind == .railwayMuseum }
@@ -1085,7 +1155,8 @@ extension GameWorld {
         // Decision 772: by the sight's kind.
         let dayFactor = Tourism.dayFactor(attraction.kind, weekday: StationDemand.weekday(ofDay: day), holiday: holiday(onDay: day)?.holiday.kind,
                                           dayOfMonth: Int(dayOfYear % 30) + 1)
-        let weather = Tourism.weatherFactor(attraction.kind, clear: self.weather(onDay: day) == .clear)
+        // Decision 773: a harbour's by the kind of weather.
+        let weather = Tourism.weatherFactor(attraction.kind, weather: self.weather(onDay: day))
         return Tourism.tourists(stars: stars(of: attraction), day: dayFactor,
                                 season: Tourism.seasonFactor(attraction.kind, month: month), weather: weather)
     }
