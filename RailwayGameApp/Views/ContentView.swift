@@ -1757,19 +1757,19 @@ enum SecretarySettings {
 
 /// Decision 770: the card listing the real island stations still on two
 /// side platforms (``IslandRebuildListCard``), opened by itself the first
-/// time a game has them, once the real railways are in, over the map only
-/// and not in a lesson; seen once, kept on the device. The station panel
-/// opens it again.
+/// time a game has one it can rebuild now (REVIEW-L22), once the real
+/// railways are in, over the map only and not in a lesson; seen once, kept
+/// on the device. The station panel opens it again.
 private struct IslandRebuildListPrompt: ViewModifier {
     let session: GameSession
     let screen: GameScreenState
-    @AppStorage("islandRebuildList.seen") private var seen = false
+    @AppStorage(GameSession.islandRebuildListSeenKey) private var seen = false
 
     func body(content: Content) -> some View {
         content
             .task(id: seen ? nil : session.canTraceRealRailway) {
                 guard !seen, session.canTraceRealRailway, session.tutorial == nil, screen.panel == nil,
-                      session.hasRealIslandsToRebuild else { return }
+                      session.opensIslandRebuildListByItself else { return }
                 seen = true
                 session.openIslandRebuildList()
             }
