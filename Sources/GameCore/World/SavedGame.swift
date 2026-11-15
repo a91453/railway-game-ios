@@ -561,9 +561,16 @@
 ///     rows and the whole save with them, so it says the save is newer
 ///     than it instead. A save of any earlier version needs no step: the
 ///     company has no air route.
+/// 104. Event venues (decision 768): the demand events can have
+///     `"venues"`, the real stadiums, arenas and exhibition halls events
+///     are held at, and an event can name its `"venue"`. A build that
+///     reads only an earlier version would drop them and hold concerts
+///     and exhibitions at any busy station again, so it says the save is
+///     newer than it instead. A save of any earlier version needs no step:
+///     it has no venue, and its events are drawn by traffic as before.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 103
+    public static let currentVersion = 104
 
     public let world: GameWorld
 
@@ -817,6 +824,9 @@ extension SavedGame: Codable {
         // (decision 756): nothing to turn.
         // Version 102 or earlier to 103: a world without `"airRoutes"` has
         // bought no air route (decision 758): nothing to turn.
+        // Version 103 or earlier to 104: demand events without `"venues"`
+        // have none, and an event without `"venue"` is held at no venue
+        // (decision 768): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
