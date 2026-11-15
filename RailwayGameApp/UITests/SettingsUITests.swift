@@ -280,7 +280,15 @@ final class SettingsUITests: XCTestCase {
         // looked for). Touched where it is, not by `isHittable`: XCTest
         // never found Menu hittable again in 10 to 15 s although it showed
         // (FLANE5's runs 41371388190 and 41376494125, screen recording).
-        menuSpot.tap()
+        // A tap 0.1 s after the curtain went opened nothing (133's full
+        // lane, run 43721351302: `menu.ambient` never came in 15 s), as if
+        // the controls were still coming back: touch the place again, up to
+        // three times, until the menu shows.
+        let ambient = app.buttons.matching(identifier: "menu.ambient").firstMatch
+        for _ in 0..<3 {
+            menuSpot.tap()
+            if ambient.appears(within: 5) { break }
+        }
         tapHittable("menu.ambient", in: app)
         XCTAssertTrue(curtain.appears(within: 10), "The controls are back")
     }
