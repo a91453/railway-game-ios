@@ -46,7 +46,9 @@ public enum Map3DRedCommuter {
     /// vertex x, y, z in millimetres (Int16); the triangle count (UInt16),
     /// each triangle's three vertex indices (UInt16) and palette index
     /// (UInt8). A triangle with no area is left out.
-    static func decodedMesh(_ bytes: [UInt8], named name: String) -> Map3DModelPack.Model? {
+    /// Decision 780: `palette`, the colours of the indices (the local
+    /// studio's cars, ``Map3DMTRAirportLine``, have their own).
+    static func decodedMesh(_ bytes: [UInt8], named name: String, palette: [UInt32] = meshPalette) -> Map3DModelPack.Model? {
         var at = 0
         func u16() -> Int? {
             guard at + 2 <= bytes.count else { return nil }
@@ -69,11 +71,11 @@ public enum Map3DRedCommuter {
             guard let a = u16(), let b = u16(), let c = u16(), at < bytes.count else { return nil }
             let paint = Int(bytes[at])
             at += 1
-            guard [a, b, c].allSatisfy(points.indices.contains), meshPalette.indices.contains(paint) else { return nil }
+            guard [a, b, c].allSatisfy(points.indices.contains), palette.indices.contains(paint) else { return nil }
             let corners = [points[a], points[b], points[c]]
             guard let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { continue }
             for p in corners {
-                vertices.append(Map3DVertex(p, normal: normal, color: meshPalette[paint], layer: Map3DVertex.plain))
+                vertices.append(Map3DVertex(p, normal: normal, color: palette[paint], layer: Map3DVertex.plain))
                 low = Map3DPoint(min(low.x, p.x), min(low.y, p.y), min(low.z, p.z))
                 high = Map3DPoint(max(high.x, p.x), max(high.y, p.y), max(high.z, p.z))
             }
