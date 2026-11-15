@@ -208,9 +208,10 @@ extension Map3DScene.Builder {
             upperPaint = Map3DPaint.bays(.officeGlass, bay: 4, floors: storeys)
         case .hall:
             // Decision 765: concrete walls a street sees no windows in,
-            // under a sheet-steel roof.
+            // under a pale steel roof (a stadium's or an arena's, not a
+            // shed's coloured tin).
             wall = Self.pick(Map3DPalette.concreteWalls, seed)
-            roof = Self.pick(Map3DPalette.tinRoofs, r(4))
+            roof = Map3DPalette.tankSteel
             roofPaint = Self.metal
             upperPaint = Self.concrete.on(.formConcrete)
         }
