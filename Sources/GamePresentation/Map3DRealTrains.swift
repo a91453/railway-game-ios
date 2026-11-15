@@ -324,8 +324,13 @@ public struct Map3DRealTrains: Sendable {
             // Decision 781: the MTR's lines, which have no set of their own
             // yet, borrow the generic metro car with the line's colour
             // band, as many cars as the line's real trains have
-            // (``hongKongCars``), not three boxes.
-            return Formation(key: "metroGeneric", cars: hongKongCars[id] ?? 8)
+            // (``hongKongCars``), not three boxes; decision 780: but the
+            // Airport Express and the Tung Chung Line their own trains.
+            switch id {
+            case "AEL": return Formation(key: Map3DMTRAirportLine.expressKey, cars: 8)
+            case "TCL": return Formation(key: Map3DMTRAirportLine.tungChungKey, cars: 8)
+            default: return Formation(key: "metroGeneric", cars: hongKongCars[id] ?? 8)
+            }
         default:
             // A system the game has no set for: boxes.
             return Formation(key: "", cars: 3)

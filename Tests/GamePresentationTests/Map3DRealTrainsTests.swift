@@ -86,16 +86,19 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: "metroGeneric", cars: 3))
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "DRL", name: "DRL"), .init(key: "metroGeneric", cars: 4))
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "ISL", name: "ISL"), .init(key: "metroGeneric", cars: 8))
-        XCTAssertNotNil(Map3DModelPack.standard.models(forType: "metroGeneric"))
-        // Every MTR line the game sells is in the table.
+        // Decision 780: the Airport Express and the Tung Chung Line their own.
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "AEL", name: "AEL"), .init(key: Map3DMTRAirportLine.expressKey, cars: 8))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "TCL", name: "TCL"), .init(key: Map3DMTRAirportLine.tungChungKey, cars: 8))
+        // Every MTR line the game sells is in the table, drawn by a set the game has.
         for line in RealBranchLine.overseasLines where line.system == "hkmtr" {
             XCTAssertNotNil(Map3DRealTrains.hongKongCars[line.network], line.network)
-            XCTAssertEqual(RealLineStock.setKey(ofRealLine: "hkmtr:\(line.network)"), "metroGeneric", line.network)
+            let key = try XCTUnwrap(RealLineStock.setKey(ofRealLine: "hkmtr:\(line.network)"), line.network)
+            XCTAssertNotNil(Map3DModelPack.standard.models(forType: key), line.network)
         }
         // And every MTR line of the timetables, when the pack is here.
         for line in Self.railways?.operations?.system(id: "hkmtr")?.lines ?? [] {
             let formation = Map3DRealTrains.formation(system: "hkmtr", line: line)
-            XCTAssertEqual(formation.key, "metroGeneric", line.id)
+            XCTAssertNotNil(Map3DModelPack.standard.models(forType: formation.key), line.id)
             XCTAssertEqual(formation.cars, Map3DRealTrains.hongKongCars[line.id], line.id)
         }
     }
