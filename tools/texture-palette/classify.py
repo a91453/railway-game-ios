@@ -838,7 +838,12 @@ def main() -> None:
     parser.add_argument("--palette", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/ref/palette.json"))
     parser.add_argument("--out", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/r3"))
     parser.add_argument("--limit", type=int, default=0, help="Optional limit for quick testing (0 = all)")
+    parser.add_argument("--override", default="", help="clip_refine.py 輸出的 CSV（檔名,內容類別）：這些檔案改用它的類別，色票照該類別的規則重算")
     args = parser.parse_args()
+    overrides: dict[str, str] = {}
+    if args.override:
+        with open(args.override, encoding="utf-8") as f:
+            overrides = {r["檔名"]: r["內容類別"] for r in csv.DictReader(f)}
 
     t0 = time.time()
     assets_dir = Path(args.assets_dir)
@@ -917,7 +922,7 @@ def main() -> None:
             unreadable.append((fname, str(exc)))
             continue
 
-        cat = res["category"]
+        cat = overrides.get(fname, res["category"])
         cat_counts[cat] += 1
         w, h = res["orig_w"], res["orig_h"]
         clusters = res["clusters"]
