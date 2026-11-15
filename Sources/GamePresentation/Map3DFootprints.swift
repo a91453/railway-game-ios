@@ -169,8 +169,10 @@ extension Map3DFootprints.Building {
     var kind: Map3DScene.Builder.RealKind {
         switch use {
         case 1, 6, 9: .industry                       // agricultural, industrial, outbuilding
-        case 2, 4, 7, 8, 12: .civic                   // civic, education, medical, military, service
-        case 3, 5: drawnStoreys > 5 ? .office : .shophouse  // commercial, entertainment
+        case 2, 4, 7, 8: .civic                       // civic, education, medical, military
+        case 3: drawnStoreys > 5 ? .office : .shophouse  // commercial
+        case 5: drawnStoreys > 6 ? .office : .hall    // entertainment: stadiums, sports halls (decision 765)
+        case 12: .hall                                // service: substations (decision 765)
         case 10: .temple                              // religious
         case 13: .transport                           // transportation
         default: drawnStoreys > 5 ? .flats : .house   // residential, unknown

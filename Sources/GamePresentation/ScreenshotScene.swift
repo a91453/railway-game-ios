@@ -115,6 +115,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// fronts (arcade pillars, grilles, blade signs, rooftop rooms).
     case streetFronts
 
+    /// Decision 765: the same map round Taipei Arena and the Taipei
+    /// Stadium beside it, and round Kaohsiung's National Stadium, for the
+    /// screenshots of halls drawn with no windows.
+    case windowsArena
+    case windowsKaohsiung
+
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
     /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
@@ -325,6 +331,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .changhuaRoundhouse: (24.0858608 - 12 / 110_759, 120.5401168 + 5 / 101_684)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .streetFronts: (25.0185, 121.4536)
+        case .windowsArena: (25.0505, 121.5507)
+        case .windowsKaohsiung: (22.7022, 120.2955)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
@@ -403,7 +411,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .hsuehshanTunnel, .suhuaTunnel, .suhuaGallery: Self.groundWorld(at: self, in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
-        case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .streetFronts, .windowsArena, .windowsKaohsiung: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         // Decision 678: with the water, as a player's map has it (the
         // line is laid under the Keelung River).
         case .wenhu: Self.realLineWorld(at: self, in: language, water: water)
