@@ -14,6 +14,9 @@ public enum LinesPanelPage: Hashable, Sendable {
     case network
     /// The real lines this map sells (decision 315).
     case forSale
+    /// The air routes the company flies and those its airports sell
+    /// (decision 759).
+    case airRoutes
 
     /// The stack the panel shows, from the one it shows now: the line page
     /// alone over the list while a line is opened, and without it once
@@ -174,6 +177,13 @@ extension NetworkSwitches {
     }
 
     /// "Lines for sale (2)": the row that opens the real lines for sale.
+    /// Decision 759: the air routes page's row and title.
+    public static func airRoutesTitle(flown: Int, in language: DisplayLanguage) -> String {
+        flown > 0
+            ? language.text("Air routes (\(flown) flown)", "航線（已收購 \(flown) 條）")
+            : language.text("Air routes for sale", "可收購的航線")
+    }
+
     public static func forSaleTitle(count: Int, in language: DisplayLanguage) -> String {
         count > 0
             ? language.text("Real lines for sale (\(count))", "可收購的真實路線（\(count)）")

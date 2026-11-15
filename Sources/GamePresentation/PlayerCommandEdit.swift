@@ -195,6 +195,14 @@ extension PlayerCommand {
         case setFerryRuns(FerryRouteID, BusService)
         case removeFerryRoute(FerryRouteID)
 
+        // MARK: Air routes (decisions 758, 759)
+        /// A real route an airport flies, bought: to an airport of the map
+        /// (`farAirport`) or a place outside it `metres` away.
+        case buyAirRoute(airport: Int, destination: String, farAirport: Int?, metres: Int64?, size: AircraftSize, frequency: AirRouteFrequency)
+        case setAirRouteFrequency(AirRouteID, AirRouteFrequency)
+        case setAirRouteSize(AirRouteID, AircraftSize)
+        case sellAirRoute(AirRouteID)
+
         // MARK: Closing track by hand (decision 716)
         /// The pieces of track with these numbers closed to trains
         /// together: at once, or once the trains using them have left.
@@ -407,6 +415,11 @@ extension GameSession {
         case .setFerryBoats(let id, let boats): try world.setFerryBoats(id, to: boats)
         case .setFerryRuns(let id, let service): try world.setFerryRuns(id, to: service)
         case .removeFerryRoute(let id): try world.removeFerryRoute(id)
+        case .buyAirRoute(let airport, let destination, let farAirport, let metres, let size, let frequency):
+            try world.buyAirRoute(from: airport, to: destination, farAirport: farAirport, metres: metres, size: size, frequency: frequency)
+        case .setAirRouteFrequency(let id, let frequency): try world.setAirRouteFrequency(id, to: frequency)
+        case .setAirRouteSize(let id, let size): try world.setAirRouteSize(id, to: size)
+        case .sellAirRoute(let id): try world.sellAirRoute(id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 
