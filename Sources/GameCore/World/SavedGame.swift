@@ -574,9 +574,15 @@
 ///     save with it, so it says the save is newer than it instead. A save
 ///     of any earlier version takes a step: its sights held as towns
 ///     whose English name ends in "Night Market" become night markets.
+/// 106. Landmarks, museums and temples (decision 772): a sight's
+///     `"kind"` can be `"landmark"`, `"museum"` or `"temple"`. A build
+///     that reads only an earlier version would refuse the kind and the
+///     whole save with it, so it says the save is newer than it instead.
+///     A save of an earlier version has them as towns: the step turns
+///     those it knows by English name (``Tourism/sightKindsByName``).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 105
+    public static let currentVersion = 106
 
     public let world: GameWorld
 
@@ -844,6 +850,9 @@ extension SavedGame: Codable {
         if version == 72 { world.seedBoughtTilesRoads() }
         if version < 76 { world.convertHighSpeedFaresToNewTaiwanDollars() }
         if version < 105 { world.reclassifyNightMarkets() }
+        // Version 105 or earlier to 106: the towns that are landmarks,
+        // museums or temples take their kind (decision 772).
+        if version < 106 { world.reclassifySightKinds() }
         self.world = world
     }
 

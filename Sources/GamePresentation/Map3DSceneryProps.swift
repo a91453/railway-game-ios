@@ -40,6 +40,9 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
     /// Decision 467: a bus stop's sign on its own pole, where the pavement
     /// has no room for a shelter, its face along the street.
     case busStopPole
+    /// Decision 767: the game author's elevated coal bunker, its brick bin
+    /// on stone piers and its conveyor, in an old brick plant's yard.
+    case coalBunker
 
     /// The conifers, for the woods (``Map3DScene/Builder/addConifers()``).
     public static let conifers: [Map3DSceneryProp] = [.pineTall, .pine, .pineYoung]
@@ -62,6 +65,7 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
         case .tank: "kenney-tank"
         case .postBoxes: "meshy-post-boxes"
         case .busStopPole: "meshy-bus-stop-pole"
+        case .coalBunker: "coal-bunker"
         }
     }
 
@@ -80,6 +84,7 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
         case .tank: (9.76, 4.4, 3.26)
         case .postBoxes: (1.04, 0.43, 1.15)
         case .busStopPole: (0.59, 0.58, 2.8)
+        case .coalBunker: (31.51, 11.0, 8.91)
         }
     }
 
@@ -92,6 +97,14 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
     static let signWhite = Map3DColor.rgb(0xF2F3F1)
     static let signFrame = Map3DColor.rgb(0x3F6FA8)
     static let poleSteel = Map3DColor.rgb(0x9AA0A8)
+    /// Decision 767: the colours `tools/coal-bunker/` writes and the
+    /// stand-in uses: the old plants' brick, granite piers, steel, coal and
+    /// timber.
+    static let bunkerBrick = Map3DPalette.brick
+    static let bunkerStone = Map3DPalette.granite
+    static let bunkerSteel = Map3DColor.rgb(0x8A9099)
+    static let bunkerCoal = Map3DColor.rgb(0x2B2F36)
+    static let bunkerWood = Map3DColor.rgb(0x8E6E52)
 
     /// The colour of the file's leaves, which takes the instance's colour
     /// (alpha 0), so each tree and clump is its own green: the conifers'
@@ -154,6 +167,28 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
                         top: Self.signFrame, side: Self.signFrame)
             mesh.addBox(base: Map3DPoint(0, 0.65, 0), forward: Map3DPoint(1, 0, 0), length: 0.14, width: 0.42, height: size.height - 0.75,
                         top: Self.signFrame, side: Self.signWhite)
+        case .coalBunker:
+            // The file's parts (tools/coal-bunker/): the bin over the
+            // last 25 m on two rows of piers, coal heaped in it, and the
+            // conveyor rising to it from the ground at the other end.
+            let along = Map3DPoint(1, 0, 0), bin: Float = 25.26, binMiddle = size.length / 2 - bin / 2, floor: Float = 5.8
+            for index in 0..<6 {
+                for z: Float in [-4.6, 4.6] {
+                    let x = binMiddle - bin / 2 + 1 + Float(index) * (bin - 2) / 5
+                    mesh.addBox(base: Map3DPoint(x, 0, z), forward: along, length: 0.9, width: 0.9, height: floor,
+                                top: Self.bunkerStone, side: Self.bunkerStone)
+                }
+            }
+            mesh.addBox(base: Map3DPoint(binMiddle, floor, 0), forward: along, length: bin, width: size.width, height: size.height - floor - 0.1,
+                        top: Self.bunkerSteel, side: Self.bunkerBrick)
+            mesh.addBox(base: Map3DPoint(binMiddle + 2, size.height - 0.4, 0), forward: along, length: bin * 0.6, width: size.width * 0.6, height: 0.4,
+                        top: Self.bunkerCoal, side: Self.bunkerCoal)
+            let foot = -size.length / 2, head = binMiddle - bin / 2 + 2, rise: Float = 6.8
+            for (y, colour) in [(Float(0.5), Self.bunkerCoal), (0, Self.bunkerSteel)] {
+                mesh.addQuad(Map3DPoint(foot, y, -1), Map3DPoint(foot, y, 1), Map3DPoint(head, rise + y, 1), Map3DPoint(head, rise + y, -1), color: colour)
+                mesh.addQuad(Map3DPoint(foot, y, 1), Map3DPoint(foot, y, -1), Map3DPoint(head, rise + y, -1), Map3DPoint(head, rise + y, 1), color: colour)
+            }
+            mesh.addBox(base: Map3DPoint(head - 0.5, 0, 0), forward: along, length: 1, width: 2, height: rise, top: Self.bunkerWood, side: Self.bunkerWood)
         }
         return Self.fitted(Map3DModelPack.Model.flat(named: modelName, from: mesh), to: size, named: modelName)
     }
@@ -332,6 +367,84 @@ extension Map3DScene.Builder {
                 guard r(102) < 0.7, isInside(spot, grassCells), !isOverWater(spot),
                       !Self.isNearRoad(x: x, z: z, pieces[key] ?? [], margin: 3) else { continue }
                 addBushClump(at: Map3DPoint(x, drawnGround(x: x, z: z), z), turn: r(103), size: r(104), large: r(105) < 0.4)
+            }
+        }
+    }
+
+    /// Decision 767: whether an old brick plant's yard has room for the
+    /// coal bunker beside the hall: `room` across, and along it the yard
+    /// (`lot` and its metre of margin each end; the bunker takes the
+    /// office's place), so the 34 m and 40 m lots (density 3 and 4).
+    static func coalBunkerFits(room: Float, lot: Float) -> Bool {
+        let size = Map3DSceneryProp.coalBunker.size
+        return room >= size.width && lot + 2 >= size.length + 0.4
+    }
+
+    /// Decision 767: an old brick plant's coal bunker in its yard, along
+    /// `forward` on the side the hall leaves free (`free`), close up only.
+    mutating func addYardCoalBunker(base: Map3DPoint, forward: Map3DPoint, free across: Map3DPoint, room: Float, lot: Float) {
+        guard target == .near, let model = Self.sceneryModels[.coalBunker], Self.coalBunkerFits(room: room, lot: lot) else { return }
+        let size = Map3DSceneryProp.coalBunker.size
+        // At the back of the yard, as the tanks, or in its middle where the
+        // yard is only just long enough.
+        let spot = base - forward * max(lot / 2 - size.length / 2 - 1, 0) + across * (lot / 2 - size.width / 2 - 1)
+        props[key(of: spot), default: []].append(.prop(model, at: spot + Map3DPoint(0, 0.03, 0), forward: forward, scale: 1,
+                                                       tint: Map3DColor.rgb(0xFFFFFF)))
+    }
+
+    /// Decision 767: the share of the factory cells the real buildings
+    /// stand on that get a coal bunker, where one fits.
+    static let realCoalBunkerShare: Float = 0.05
+
+    /// Decision 767: whether industrial cell `cell` is one of the few that
+    /// try for a coal bunker: drawn by its place on the map, and none
+    /// within two cells before it in the map's order, so no two stand side
+    /// by side.
+    static func realCoalBunkerCell(_ cell: Map3DScene.ChunkKey) -> Bool {
+        func drawn(_ column: Int, _ row: Int) -> Bool {
+            map3DRandom(Int32(truncatingIfNeeded: column), Int32(truncatingIfNeeded: row), salt: 767) < realCoalBunkerShare
+        }
+        guard drawn(cell.column, cell.row) else { return false }
+        for row in cell.row - 2...cell.row + 2 {
+            for column in cell.column - 2...cell.column + 2 where (row, column) < (cell.row, cell.column) && drawn(column, row) {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// Decision 767: on a real-world map, where the real buildings stand
+    /// and the game draws no factory of its own, the coal bunker in the
+    /// yard of an industrial cell (`key`), now and then: on the first
+    /// spot of the cell clear of every real building, road, house and
+    /// no-build land, along the map's east or its south. Laid in the near
+    /// pass, so the far pass's houses (laid then too) keep off it.
+    mutating func addRealYardCoalBunker(_ cellKey: Map3DScene.ChunkKey, blocked: Set<Map3DScene.ChunkKey>) {
+        guard target == .near, let model = Self.sceneryModels[.coalBunker], Self.realCoalBunkerCell(cellKey) else { return }
+        let size = Map3DSceneryProp.coalBunker.size
+        let cell = Double(Land.cellLength)
+        let centre = point(x: (Double(cellKey.column) + 0.5) * cell, y: (Double(cellKey.row) + 0.5) * cell, height: 0)
+        var near = Set<Int>()
+        for row in cellKey.row - 1...cellKey.row + 1 {
+            for column in cellKey.column - 1...cellKey.column + 1 {
+                near.formUnion(frontage.byCell[Map3DScene.ChunkKey(column: column, row: row)] ?? [])
+            }
+        }
+        let pieces = near.sorted()
+        let turn = map3DRandom(Int32(truncatingIfNeeded: cellKey.column), Int32(truncatingIfNeeded: cellKey.row), salt: 768) < 0.5
+        for forward in turn ? [Map3DPoint(0, 0, 1), Map3DPoint(1, 0, 0)] : [Map3DPoint(1, 0, 0), Map3DPoint(0, 0, 1)] {
+            let across = Map3DPoint(forward.z, 0, -forward.x)
+            for along: Float in [0, -14, 14] {
+                for aside: Float in [0, -12, 12, -24, 24] {
+                    let middle = centre + forward * along + across * aside
+                    let bunker = StreetHouse(middle: middle, front: across, along: forward, width: size.length, depth: size.width)
+                    guard fits(bunker, near: pieces, blocked: blocked) else { continue }
+                    frontage.houses[chunk(of: middle), default: []].append(bunker)
+                    let foot = Map3DPoint(middle.x, bunker.corners.map { ground(at: $0) }.min() ?? 0, middle.z)
+                    props[key(of: foot), default: []].append(.prop(model, at: foot + Map3DPoint(0, 0.03, 0), forward: forward, scale: 1,
+                                                                   tint: Map3DColor.rgb(0xFFFFFF)))
+                    return
+                }
             }
         }
     }

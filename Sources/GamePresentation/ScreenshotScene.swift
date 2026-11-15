@@ -115,6 +115,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// fronts (arcade pillars, grilles, blade signs, rooftop rooms).
     case streetFronts
 
+    /// Decision 765: the same map round Taipei Arena and the Taipei
+    /// Stadium beside it, and round Kaohsiung's National Stadium, for the
+    /// screenshots of halls drawn with no windows.
+    case windowsArena
+    case windowsKaohsiung
+
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
     /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
@@ -310,6 +316,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Chiayi), a few seconds before each's first landing after 13:30.
     case airportSongshanLandingNight
     case airportQimei, airportLanyu, airportLudao, airportChiayi
+    /// Decision 771 (AIR-A4): the map round Songshan with the company's
+    /// route to Penghu bought (narrow-body jets), 20 seconds before its
+    /// first take-off after 09:30 starts its roll, lined up; and the same
+    /// moment with no route bought, for the airport's own flights as
+    /// before.
+    case airRouteSongshan, airRouteSongshanNone
 
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
@@ -325,6 +337,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .changhuaRoundhouse: (24.0858608 - 12 / 110_759, 120.5401168 + 5 / 101_684)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .streetFronts: (25.0185, 121.4536)
+        case .windowsArena: (25.0505, 121.5507)
+        case .windowsKaohsiung: (22.7022, 120.2955)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
         case .xiaobitan: (24.9734, 121.5368)
@@ -368,7 +382,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .exteriorQiaotou, .exteriorQiaotouNight: (22.75303, 120.31468)
         // Decision 699: the middle of each airfield.
         case .airportTaoyuan, .airportTaoyuanNight: (25.0777, 121.2328)
-        case .airportSongshan, .airportSongshanNight, .airportSongshanLanding, .airportSongshanLandingNight: (25.0694, 121.5525)
+        case .airportSongshan, .airportSongshanNight, .airportSongshanLanding, .airportSongshanLandingNight, .airRouteSongshan, .airRouteSongshanNone:
+            (25.0694, 121.5525)
         case .airportTaichung, .airportTaichungNight: (24.2590, 120.6120)
         case .airportKaohsiung, .airportKaohsiungNight: (22.5771, 120.3500)
         // Decision 702: the airports' places in ``AirportCatalog``.
@@ -403,7 +418,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .hsuehshanTunnel, .suhuaTunnel, .suhuaGallery: Self.groundWorld(at: self, in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
-        case .streetFronts: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .streetFronts, .windowsArena, .windowsKaohsiung: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         // Decision 678: with the water, as a player's map has it (the
         // line is laid under the Keelung River).
         case .wenhu: Self.realLineWorld(at: self, in: language, water: water)
@@ -444,7 +459,35 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .airportSongshanLanding: Self.landingWorld(at: self, ticks: 57, in: language)
         case .airportSongshanLandingNight: Self.landingWorld(at: self, ticks: 117, in: language)
         case .airportQimei, .airportLanyu, .airportLudao, .airportChiayi: Self.landingWorld(at: self, ticks: 81, in: language)
+        case .airRouteSongshan: Self.airRouteWorld(at: self, buys: true, in: language)
+        case .airRouteSongshanNone: Self.airRouteWorld(at: self, buys: false, in: language)
         }
+    }
+
+    /// Decision 771: ``realAirportWorld(at:ticks:in:)`` at 09:30, managed,
+    /// with Songshan's route to Penghu bought (or, without `buys`, not),
+    /// run on to 20 seconds before its first take-off roll after then.
+    static func airRouteWorld(at scene: ScreenshotScene, buys: Bool, in language: DisplayLanguage) -> GameWorld {
+        var world = realAirportWorld(at: scene, ticks: 57, in: language)
+        world.setEconomyMode(.management)
+        var bought = world
+        guard let listing = AirRouteMarket.listings(in: world).first(where: { $0.airportName == "臺北松山機場" && $0.destination.name == "澎湖" }),
+              let route = try? bought.buyAirRoute(from: listing.airport, to: listing.destination.name, farAirport: listing.farAirport,
+                                                  metres: listing.metres, size: .narrowBody)
+        else { return world }
+        if buys { world = bought }
+        let now = world.clock.now.seconds
+        let day = GameDate.floorDivide(now, GameTime.secondsPerDay) * GameTime.secondsPerDay
+        guard let minute = bought.airRouteDepartureMinutes(route.id).first(where: { day + ($0 + Map3DAircraft.taxiMinutes) * 60 - 20 > now + 60 })
+        else { return world }
+        let next = day + (minute + Map3DAircraft.taxiMinutes) * 60 - 20
+        // A minute a tick, then a second a tick (``landingWorld``).
+        world.setSpeed(.normal)
+        try? world.advance(ticks: Int((next - now) / 60))
+        world.setSpeed(.x10)
+        try? world.advance(ticks: Int(next - world.clock.now.seconds))
+        world.setSpeed(.paused)
+        return world
     }
 
     /// Decision 699: ``realAirportWorld(at:ticks:in:)`` at 09:30 (`ticks`

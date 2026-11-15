@@ -72,8 +72,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // after the coaches (4 models, 960 vertices more, 38 KB a copy).
         // Decision 743: Hong Kong's double-decker, minibus and taxi
         // stand-ins, after its signals (3 models, 1,200 vertices more).
-        XCTAssertEqual(pack.models.count, 889)
-        XCTAssertEqual(vertices, 6_585_732)
+        // Decision 767: the coal bunker's stand-in after the scenery props
+        // (1 model, 474 vertices more).
+        XCTAssertEqual(pack.models.count, 890)
+        XCTAssertEqual(vertices, 6_586_206)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
