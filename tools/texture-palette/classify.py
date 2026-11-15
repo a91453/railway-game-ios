@@ -4,7 +4,7 @@
 
 用法：
   uv run --with pillow --with numpy python tools/texture-palette/classify.py \
-    --out ~/AlongTheLine-Studio/reports/t001/r3
+    --out OUT
 
 分類規則說明（r3 準確優先版，依序判定，優先序與程式完全一致）：
 1. 無法讀取 / 全透明 (opaque_pixels == 0) -> 透明裝飾（讀檔失敗另記於 unreadable）。

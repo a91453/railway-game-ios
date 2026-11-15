@@ -13,6 +13,15 @@ The new static bridge uses the tool's own pinned dependencies. App, SwiftPM
 and Xcode do not read or bundle these packages. The original Meshy entry
 below still uses only Node's standard library and keeps #803's output bytes.
 
+Colours: by default every colour is read as sRGB (base colour factors and
+`COLOR_0` included), as the project's own GLB writer
+(`tools/station-kit/package.mjs`) writes them. A GLB that follows glTF's
+spaces (linear factors and `COLOR_0`, sRGB textures), such as one from
+Blender or `tools/texture-palette/cut_faces.py`, needs `--linear-colors yes`
+(`convert(…, { linearColors: true })`), or its colours come out far darker.
+A material or primitive named or marked `glass` is written as a train's
+window glass (M3DM flag bit 1).
+
 ## Static meshopt GLB and `.gltf` + `.bin`
 
 ```sh
