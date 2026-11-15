@@ -358,6 +358,9 @@ jobs:
     # strings (seconds, not 14 to 18 minutes). 145 since its UI step got
     # 120 (decision 754).
     timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 145 }}
+    outputs:
+      cas-prefix: ${{ steps.cas-saved.outputs.prefix }}
+      cas-key: ${{ steps.cas-saved.outputs.key }}
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
       # base, and the archivable-products check below compares the two.
@@ -476,6 +479,25 @@ jobs:
       # for the translation check below; until then that check exported the
       # strings with xcodebuild -exportLocalizations, which compiled the
       # whole app again for the device SDK (14 to 18 minutes on 2026-11-08).
+      # Decision 775: Xcode 26's compilation cache. Each compile is looked up
+      # by the hash of its inputs and arguments (not file times, which every
+      # checkout resets), so what did not change since main's last saved
+      # build is replayed instead of compiled. The cache (CAS) is main's
+      # newest one (the build job saves it on runs that are not pull
+      # requests); a failure to read it builds from nothing.
+      - name: Key of the compilation cache
+        id: cas
+        run: echo "prefix=xcode-cas-v1-$( { xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; } | shasum -a 256 | cut -c1-16)-" >>"$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        id: cas-restore
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
       - name: Build for iOS Simulator
         id: app-build
         run: |
@@ -487,7 +509,38 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
             SWIFT_EMIT_LOC_STRINGS=YES \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_LIMIT_SIZE=3G \
             CODE_SIGN_IDENTITY=-
+
+      # Decision 775: what the compilation cache holds now (and how much of
+      # this build it answered), and, on runs that are not pull requests,
+      # the cache saved for later runs (a pull request's own could only be
+      # read by its later runs). The prune job keeps only the newest entry
+      # per branch. COMPILATION_CACHE_LIMIT_SIZE keeps the CAS under 3 GB.
+      - name: Size of the compilation cache
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          cas="$RUNNER_TEMP/DerivedData/CompilationCache.noindex"
+          echo "Restored from: ${{ steps.cas-restore.outputs.cache-matched-key || 'nothing' }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          du -sh "$cas" 2>/dev/null | sed 's/^/Compilation cache: /' | tee -a "$GITHUB_STEP_SUMMARY" || echo "No compilation cache at $cas"
+
+      - name: Save the compilation cache
+        id: cas-save
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event_name != 'pull_request' && steps.cas-restore.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Name the saved compilation cache
+        id: cas-saved
+        if: ${{ !cancelled() && steps.cas-save.outcome == 'success' }}
+        run: |
+          echo "prefix=${{ steps.cas.outputs.prefix }}" >>"$GITHUB_OUTPUT"
+          echo "key=${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}" >>"$GITHUB_OUTPUT"
 
       # Decision 590: the stack frames of the app's own code, as the build
       # job's summary lists them (MapView's body was on 112.1's crash
@@ -898,8 +951,28 @@ jobs:
               env.write(f"SIMULATOR_UDID={device['udid']}\n")
           PY
 
+      # Decision 775: Xcode 26's compilation cache. Each compile is looked up
+      # by the hash of its inputs and arguments (not file times, which every
+      # checkout resets), so what did not change since main's last saved
+      # build is replayed instead of compiled. The cache (CAS) is main's
+      # newest one (the build job saves it on runs that are not pull
+      # requests); a failure to read it builds from nothing.
+      - name: Key of the compilation cache
+        id: cas
+        run: echo "prefix=xcode-cas-v1-$( { xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; } | shasum -a 256 | cut -c1-16)-" >>"$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        id: cas-restore
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
       # As the build job's step of the same name: for the selected
-      # Simulator, signed ad hoc, before the boot.
+      # Simulator, signed ad hoc, before the boot, with the same
+      # settings, so the build job's compilation cache answers it.
       - name: Build for iOS Simulator
         run: |
           xcodebuild build-for-testing \
@@ -909,6 +982,9 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
+            SWIFT_EMIT_LOC_STRINGS=YES \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_LIMIT_SIZE=3G \
             CODE_SIGN_IDENTITY=-
 
       - name: Boot the selected iPhone Simulator
@@ -1075,6 +1151,25 @@ jobs:
       # step's 30 minutes ran out with the tests passed (run 42417467175)
       # or with one red test to go (42489862739). The iPhone jobs built in
       # 10 to 15 minutes before their boot on the same commits.
+      # Decision 775: Xcode 26's compilation cache. Each compile is looked up
+      # by the hash of its inputs and arguments (not file times, which every
+      # checkout resets), so what did not change since main's last saved
+      # build is replayed instead of compiled. The cache (CAS) is main's
+      # newest one (the build job saves it on runs that are not pull
+      # requests); a failure to read it builds from nothing.
+      - name: Key of the compilation cache
+        id: cas
+        run: echo "prefix=xcode-cas-v1-$( { xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; } | shasum -a 256 | cut -c1-16)-" >>"$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        id: cas-restore
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
       - name: Build for iOS Simulator
         timeout-minutes: 30
         run: |
@@ -1085,6 +1180,9 @@ jobs:
             -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
+            SWIFT_EMIT_LOC_STRINGS=YES \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_LIMIT_SIZE=3G \
             CODE_SIGN_IDENTITY=-
 
       - name: Boot the selected iPad Simulator
@@ -1175,6 +1273,36 @@ jobs:
   # Records that this pull request's change to the app passed: the build
   # passed, and the iPad job passed or was not needed (the key says which).
   # A Linux job of a few seconds, so no macOS runner waits for the upload.
+  # Decision 775: one compilation cache per branch is enough (each holds
+  # the last one's contents and more), and GitHub's 10 GB for the
+  # repository also holds the Swift builds, so the older entries of the
+  # branch are deleted once the build job saved a new one.
+  prune-compilation-cache:
+    name: Keep only the newest compilation cache
+    needs: build
+    if: ${{ !cancelled() && needs.build.outputs.cas-key != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Delete the branch's older compilation caches
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFIX: ${{ needs.build.outputs.cas-prefix }}
+          KEY: ${{ needs.build.outputs.cas-key }}
+        run: |
+          entries="$(gh cache list -R "$GITHUB_REPOSITORY" --key xcode-cas- --ref "$GITHUB_REF" --limit 100 --json id,key,sizeInBytes)"
+          echo "$entries"
+          if ! jq -e --arg key "$KEY" 'any(.[]; .key == $key)' <<<"$entries" >/dev/null; then
+            echo "The new entry $KEY is not listed; nothing deleted."
+            exit 0
+          fi
+          jq -r --arg key "$KEY" '.[] | select(.key != $key) | .id' <<<"$entries" | while read -r id; do
+            gh cache delete -R "$GITHUB_REPOSITORY" "$id"
+          done
+
   remember:
     name: Remember that this change passed
     needs: [changes, build, ipad-tutorial]
