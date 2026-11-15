@@ -135,9 +135,10 @@ final class TourismSessionTests: XCTestCase {
                     XCTAssertGreaterThanOrEqual(dx * dx + dy * dy, 192_000 * 192_000)
                 }
             }
-            // Each kind's sixteen names are all used before one comes again.
-            for kind in AttractionKind.allCases {
-                let names = sights.filter { $0.kind == kind }.map(\.name)
+            // Each kind's sixteen names are all used before one comes again;
+            // the night market is one of the towns' (decision 769).
+            for kind in AttractionKind.allCases where kind != .nightMarket {
+                let names = sights.filter { $0.kind == kind || (kind == .town && $0.kind == .nightMarket) }.map(\.name)
                 XCTAssertEqual(Set(names).count, min(names.count, 16), "seed \(seed), \(kind)")
             }
             // The middle tile first, where the usual map's are.

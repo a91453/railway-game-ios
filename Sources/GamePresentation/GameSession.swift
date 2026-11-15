@@ -202,6 +202,15 @@ public final class GameSession {
     /// Decision 761: the island rebuild the station panel offers, kept for
     /// the station and command (``stationIslandOffer(for:)``).
     @ObservationIgnored var stationIslandOfferMemo: StationIslandOfferMemo?
+    /// Decision 770: the stations the island list offers, kept for the
+    /// command they were worked out at (``islandRebuildList``).
+    @ObservationIgnored var islandRebuildListMemo: (revision: Int, list: [IslandRebuildCandidate])?
+    /// Decision 770: whether a station of the world is a real island station
+    /// that still stands on two side platforms, kept for the command
+    /// (``hasRealIslandsToRebuild``).
+    @ObservationIgnored var realIslandsToRebuildMemo: (revision: Int, ids: [StationID])?
+    /// Decision 770: the island list's card, while it is open.
+    public var showsIslandRebuildList = false
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?

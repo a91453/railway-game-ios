@@ -383,3 +383,14 @@ its map's airports when it opens the save).
   (`"airRoutes"`, `"nextAirRouteID"`, a `"dailyAirRoutes"` ledger row)
   (`AirRouteTests.testTheVersion103SaveKeepsItsAirRoutes`, written with
   `AIR_ROUTE_SAVE_NEW=1` by the build that first made it; decision 758).
+- `v104-event-venues.json`: the six stations of `EventVenueTests` a
+  minute in, with an arena at S1 and an exhibition hall at S4
+  (`"venues"`) and a crowd surge at the arena (`"venue"`)
+  (`EventVenueTests.testVersionOneHundredFourKeepsTheVenues`, written
+  with `EVENT_VENUES_SAVE_NEW=1` by the build that first made it;
+  decision 768).
+- `v105-night-market-hours.json`: `NightMarketHoursTests`' Home and Foot
+  a minute in, with a night market by Foot (`"kind": "nightMarket"`)
+  (`NightMarketHoursTests.testVersionOneHundredFiveKeepsTheNightMarket`,
+  written with `NIGHT_MARKET_SAVE_NEW=1` by the build that first made
+  it; decision 769).

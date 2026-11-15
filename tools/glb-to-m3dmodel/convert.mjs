@@ -65,6 +65,15 @@ export function triangleColor(gltf, material, uvs, vertexColors, images) {
 
 function paletteOf(triangles, recolorLightPaint) {
   const colors = triangles.map(t => t.color);
+  // A flat-colored model with at most eight colors keeps each one exactly:
+  // the median cut below averages whole boxes, which merges two close
+  // palette colors (e.g. Map3DPalette roof and wall) and shifts both.
+  const distinct = [...new Set(colors.map(([r, g, b]) => `${r},${g},${b}`))];
+  if (distinct.length <= 8) {
+    const index = new Map(distinct.map((key, i) => [key, i]));
+    return { packed: distinct.map(key => packColor(key.split(',').map(Number), recolorLightPaint)),
+      assignments: colors.map(([r, g, b]) => index.get(`${r},${g},${b}`)) };
+  }
   // A narrow stripe can cover few triangles. Keep chromatic surfaces in
   // their own box before splitting the dominant neutral body/window colors.
   const cool = [], warm = [], neutral = [];
@@ -102,11 +111,12 @@ function paletteOf(triangles, recolorLightPaint) {
   boxes.forEach((box, paletteIndex) => box.forEach(i => { assignments[i] = paletteIndex; }));
   // White/light neutral paint is recolored by the existing vehicle shader.
   // Keep one alpha per palette entry, so the complete output has <=8 RGBA colors.
-  const packed = palette.map(([r, g, b]) => {
-    const paint = recolorLightPaint && Math.min(r, g, b) >= 180 && Math.max(r, g, b) - Math.min(r, g, b) <= 45;
-    return (r | (g << 8) | (b << 16) | ((paint ? 0 : 255) << 24)) >>> 0;
-  });
-  return { packed, assignments };
+  return { packed: palette.map(color => packColor(color, recolorLightPaint)), assignments };
+}
+
+function packColor([r, g, b], recolorLightPaint) {
+  const paint = recolorLightPaint && Math.min(r, g, b) >= 180 && Math.max(r, g, b) - Math.min(r, g, b) <= 45;
+  return (r | (g << 8) | (b << 16) | ((paint ? 0 : 255) << 24)) >>> 0;
 }
 
 export function provenance(gltf, bytes, modelId, generatedPath, sourceRecord) {
