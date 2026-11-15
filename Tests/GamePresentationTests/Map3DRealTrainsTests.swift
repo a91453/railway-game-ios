@@ -79,6 +79,30 @@ final class Map3DRealTrainsTests: XCTestCase {
         }
     }
 
+    /// Decision 781: the MTR's trains borrow the generic metro car, with
+    /// as many cars as each line's real trains, and are never boxes.
+    func testHongKongLinesBorrowAMetroCar() throws {
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "EAL", name: "EAL"), .init(key: "metroGeneric", cars: 9))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: "metroGeneric", cars: 3))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "DRL", name: "DRL"), .init(key: "metroGeneric", cars: 4))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "ISL", name: "ISL"), .init(key: "metroGeneric", cars: 8))
+        // Decision 780: the Airport Express and the Tung Chung Line their own.
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "AEL", name: "AEL"), .init(key: Map3DMTRAirportLine.expressKey, cars: 8))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "TCL", name: "TCL"), .init(key: Map3DMTRAirportLine.tungChungKey, cars: 8))
+        // Every MTR line the game sells is in the table, drawn by a set the game has.
+        for line in RealBranchLine.overseasLines where line.system == "hkmtr" {
+            XCTAssertNotNil(Map3DRealTrains.hongKongCars[line.network], line.network)
+            let key = try XCTUnwrap(RealLineStock.setKey(ofRealLine: "hkmtr:\(line.network)"), line.network)
+            XCTAssertNotNil(Map3DModelPack.standard.models(forType: key), line.network)
+        }
+        // And every MTR line of the timetables, when the pack is here.
+        for line in Self.railways?.operations?.system(id: "hkmtr")?.lines ?? [] {
+            let formation = Map3DRealTrains.formation(system: "hkmtr", line: line)
+            XCTAssertNotNil(Map3DModelPack.standard.models(forType: formation.key), line.id)
+            XCTAssertEqual(formation.cars, Map3DRealTrains.hongKongCars[line.id], line.id)
+        }
+    }
+
     /// A stretch's rails at a place along the line, but where a car does
     /// not show.
     func testATracksRails() {
