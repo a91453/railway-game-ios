@@ -4,7 +4,8 @@ import GameCore
 // from the decision's words, not from GameCore's code: of the services
 // waiting with their doors closed, one that could go lets the one that has
 // waited longest go first when their ways cross head on and only moving
-// trains (or none) keep that one.
+// trains (or none) keep that one; kept by moving trains, only once it has
+// waited a minute (decision 784).
 
 extension ReferenceWorld {
     /// When a service waiting at a stop came to wait: its doors closed.
@@ -38,12 +39,13 @@ extension ReferenceWorld {
             guard other.id != off.id, let since = cameToWait(other), since <= clockSeconds, (since, other.id) < (mine, off.id) else { return nil }
             return (since, other)
         }.sorted { ($0.since, $0.train.id) < ($1.since, $1.train.id) }
-        for (_, other) in older {
+        for (since, other) in older {
             guard world.waitingScheduled(other, plan: plan) == nil, let leaving = firstLeaving(other) else { continue }
             let wanted = needs(leaving)
             guard wanted.moves, runsFromHead(leaving).contains(where: headOn.contains) else { continue }
             if !world.canSetOff(leaving) {
-                guard holder(of: wanted.resources, except: other.id) != nil,
+                // Decision 784: kept by moving trains, only once it has waited a minute.
+                guard clockSeconds - since >= 60, holder(of: wanted.resources, except: other.id) != nil,
                       !trains.contains(where: { $0.id != other.id && !moving($0) && blocks($0, wanted.resources, for: other.id) })
                 else { continue }
             }
