@@ -30,6 +30,62 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 133.
+        Entry(
+            id: "2026-11-15-133",
+            items: [
+                Line(
+                    english: "Hong Kong's Airport Express and Tung Chung line run their own trains, and four urban lines run the urban line train.",
+                    chinese: "機場快綫、東涌綫換上自己的列車；荃灣、港島、觀塘、將軍澳綫跑市區綫列車。"
+                ),
+                Line(
+                    english: "Commuter trains of four or more cars with no model set are drawn as a red commuter car with doors, windows and lamps.",
+                    chinese: "沒有指定車型的 4 節以上通勤車，3D 地圖畫成有門窗、車燈的紅色通勤車。"
+                ),
+                Line(
+                    english: "A depot's shed is as long as its sidings, with their tracks, and as tall as the trains kept there.",
+                    chinese: "機廠的檢修庫照股道長度與股數蓋，高度配合停在這裡的列車。"
+                ),
+                Line(
+                    english: "Up close, people on platforms, forecourts, streets and bus stops are commuters; further away they stay as before.",
+                    chinese: "近看月台、站前、街上與公車站，行人換成通勤乘客；遠處照舊。"
+                ),
+                Line(
+                    english: "Fishing harbours and wharves are harbours now, busy at lunch and sunset and quieter in the rain, with Longfeng and Budai added.",
+                    chinese: "漁港與漁人碼頭獨立成港口碼頭：中午、傍晚兩波人潮，雨天少更多；多了龍鳳、布袋漁港。"
+                ),
+                Line(
+                    english: "A line's own page has four tabs, Overview, Trains, Stops and Settings, and two columns on a wide screen.",
+                    chinese: "路線詳情分成總覽、列車、停靠站、設定四頁；寬畫面分兩欄。"
+                ),
+                Line(
+                    english: "The train roster has an Arrange page: drag unplanned trains in and see the gaps between two runs.",
+                    chinese: "列車運用表多一頁「編排」：拖入還沒排的列車，兩趟之間畫出空檔。"
+                ),
+                Line(
+                    english: "The follow cameras behind and above a train look further ahead along the line.",
+                    chinese: "跟車的後方、上後方鏡頭視角縮窄，往行駛方向多看一段。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Hong Kong's trains are no longer drawn as three boxes, and have their real number of cars.",
+                    chinese: "港鐵各綫的列車不再畫成三節方塊，節數照真實。"
+                ),
+                Line(
+                    english: "The real-world demo no longer opens with an island rebuild card it cannot carry out.",
+                    chinese: "實景示範一開局不再跳出改不了的島式站改建卡。"
+                ),
+                Line(
+                    english: "The high-speed demo's Banqiao, already an island, is no longer listed for an island rebuild.",
+                    chinese: "高鐵示範的板橋本來就是島式，不再列進改建清單。"
+                ),
+                Line(
+                    english: "Signalling and laying track find their way faster, so big maps such as Hong Kong run more smoothly.",
+                    chinese: "行車控制排路與鋪線變快，香港等大地圖比較不卡。"
+                ),
+            ]
+        ),
         // 132.
         Entry(
             id: "2026-11-15-132",

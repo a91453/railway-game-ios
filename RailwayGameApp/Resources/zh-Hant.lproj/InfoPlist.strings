@@ -1,8 +1,8 @@
 /* Official localized Home Screen display name. */
-"CFBundleDisplayName" = "沿線";
+"CFBundleDisplayName" = "鐵道遊戲";
 /* Decision 335: why the real-world picker's "Use My Location" asks for location. */
 "NSLocationWhenInUseUsageDescription" = "用一次你的位置，把實景地圖的起始方框移到你附近。位置不會傳到任何地方。";
 /* Why a postcard's Save Image may add a picture to Photos. */
 "NSPhotoLibraryAddUsageDescription" = "選「儲存影像」時，把明信片存進照片。";
 /* Decision 409: the name of the game's save type, shown in Files and when a save is shared. */
-"Along the Line Save" = "沿線存檔";
+"Railway Game Save" = "鐵道遊戲存檔";

@@ -16,5 +16,9 @@
 	<array>
 		<string>iCloud.io.github.a91453.RailwayGame</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.io.github.a91453.RailwayGame</string>
+	</array>
 </dict>
 </plist>

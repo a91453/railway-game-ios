@@ -69,6 +69,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The website shows the released game's name (tools/brand/README.md);
+      # with no GAME_BRAND_JSON the screenshots are of the neutral game.
+      - name: Apply the game's brand
+        uses: ./.github/actions/apply-brand
+        with:
+          brand: ${{ secrets.GAME_BRAND_JSON }}
+
       # The website's screenshots are from an iPhone Pro (2622 × 1206 on
       # its side): the first available Pro that is not a Max, else the first
       # iPhone. `device` = iphone-small (100.1, decision 509; the planner's

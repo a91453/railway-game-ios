@@ -1,22 +1,22 @@
-// Along the Line (decision 163): the scripts index.html had inline, in a file of their own, so that the page runs
+// railway game ios (decision 163): the scripts index.html had inline, in a file of their own, so that the page runs
 // under the website's Content-Security-Policy, which forbids inline scripts. Loaded right after the loading screen,
 // before the modules.
 
 // The city's name goes on the loading screen before anything else runs, so it never changes under the eye.
 (function () {
-  // Along the Line: Kaohsiung when no area, or one the website does not have, is asked for (as main.js)
+  // railway game ios: Kaohsiung when no area, or one the website does not have, is asked for (as main.js)
   var id = new URLSearchParams(location.search).get('area'), name = null;
   if (id !== 'kaohsiung' && id !== 'taichung') id = 'kaohsiung';
   try { name = localStorage.getItem('procedural-tokyo:name:' + id); } catch (e) {}
-  // Along the Line: the app's areas by their names, before the page has stored them
+  // railway game ios: the app's areas by their names, before the page has stored them
   name = name || { kaohsiung: '高雄車站', taichung: '臺中車站' }[id];
   document.querySelector('#loader .city').textContent = name || id.charAt(0).toUpperCase() + id.slice(1);
 })();
 
-// Along the Line: the page's title in English when the page is not Chinese (index.html has the Chinese)
-if (!/^zh/i.test(navigator.language)) document.title = 'Along the Line — 3D City Preview';
+// railway game ios: the page's title in English when the page is not Chinese (index.html has the Chinese)
+if (!/^zh/i.test(navigator.language)) document.title = 'Railway Game — 3D City Preview';
 
-// Along the Line: the website link and the technical-preview note in the page's language (in the app, the web
+// railway game ios: the website link and the technical-preview note in the page's language (in the app, the web
 // view's is the app's); neither in the game (?app=1), whose settings have their own link and whose 3D it is
 document.addEventListener('DOMContentLoaded', function () {
   var link = document.getElementById('website'), note = document.getElementById('preview-note');

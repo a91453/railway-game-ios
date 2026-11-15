@@ -249,7 +249,7 @@ final class HongKongRailwaysTests: XCTestCase {
         let withRuns = RealBranchLine.overseasLines.map { "hkmtr:\($0.network)" }.filter { railways.metroRuns[$0] != nil }
         XCTAssertEqual(session.buyableRealLines.map(\.id).sorted(), withRuns.sorted())
         XCTAssertTrue(withRuns.contains("hkmtr:AEL"), "the Airport Express has its day of runs")
-        XCTAssertEqual(Set(RealBranchLine.overseasLines.map(\.network)), Set(Self.lines.map(\.id)))
+        XCTAssertEqual(Set(RealBranchLine.overseasLines.filter { $0.system == "hkmtr" }.map(\.network)), Set(Self.lines.map(\.id)))
         for line in session.buyableRealLines {
             let runs = try XCTUnwrap(railways.metroRuns[line.id])
             XCTAssertEqual(line.stops, runs.stops, line.id)

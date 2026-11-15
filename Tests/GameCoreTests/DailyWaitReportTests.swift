@@ -9,7 +9,7 @@ import XCTest
 ///
 ///     DAILY_WAIT_SAVE=<file> swift test --filter DailyWaitReportTests
 ///
-/// `DAILY_WAIT_SAVE` is a save (`SavedGame`, or a shared `.alongtheline`
+/// `DAILY_WAIT_SAVE` is a save (`SavedGame`, or a shared save
 /// file holding one under `game`); `DAILY_WAIT_DAYS` how many days to run
 /// (default 3). It prints a row every three hours: who waits, the longest
 /// wait, and the running totals of arrivals, abandonments and refusals for

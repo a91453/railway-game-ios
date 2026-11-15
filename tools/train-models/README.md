@@ -26,7 +26,7 @@ python3 tools/train-models/overview.py OUT overview.png --time both model-a mode
 
 預算仍以 `budgets.json` 及當下loader為準：近景一節20,000三角、十二節240,000、遠景120,000，遠景單節少於近景一半且同框。精細新set以 `check.mjs OUT --new-set key` 驗遠景。**M3DM v1的單檔15,000是另一個上限**，本工具的GLB／通用assembly交付會拒收超限獨立單元；不能用場景預算放寬格式。高於單檔上限時先設計合法分件／格式契約，不擴大loader常數。
 
-雜湊鎖包含standard與studies。`--lock`會重寫整份鎖，先輸出到暫存檔再只加入本車項；舊項變動須查明，不能整份覆蓋以消除紅字。刻意改的模型以 `--allow id` 說明，禁止把新車加入grandfathered。
+雜湊鎖包含standard與studies。`--lock`會重寫整份鎖，先輸出到暫存檔再只加入本車項；舊項變動須查明，不能整份覆蓋以消除紅字。刻意改的模型以 `--allow id` 說明，禁止把新車加入grandfathered。決策 782：註冊表裡的車（`Map3DTrainRegistryList.swift`）的雜湊另寫在 `locks/<id>.json`（含燈組數與燈的摘要），`--lock` 一起寫、`check.mjs` 一起讀；加註冊車時 `hashes.lock.json` 不該有任何一行變動。新車的接法見 `.claude/skills/rolling-stock/SKILL.md` §2.1。
 
 ## 通用編組：不再為每台新車加 Swift 分支
 

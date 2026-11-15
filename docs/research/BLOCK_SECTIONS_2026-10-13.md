@@ -1,7 +1,7 @@
 # 區間閉塞：設計（給作者看，同意後才實作）
 
 日期：2026-10-13。基準 `main` a272c69。NEXT_PRIORITIES §0 第 15 項。
-讀者：《沿線》作者，以及合併 session。
+讀者：《railway game ios》作者，以及合併 session。
 
 ## 1. 一句話
 

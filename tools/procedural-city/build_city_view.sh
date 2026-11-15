@@ -33,4 +33,19 @@ done
 node "$root/tools/procedural-city/shrink_textures.mjs" "$web"
 (cd "$web" && ./node_modules/.bin/vite build --config "${VITE_CONFIG:-vite.config.js}" --outDir "$out" --emptyOutDir)
 node "$root/tools/procedural-city/notices.mjs" "$web" "$out/NOTICES.txt"
+# The page's source has the neutral game's name (GameBrand, tools/brand/README.md);
+# the website's page gets the released game's from the private brand file.
+brand="${GAME_BRAND_FILE:-$root/../railway-assets-private/branding/game-brand.json}"
+if [[ -f "$brand" ]]; then
+  python3 -I - "$brand" "$out/index.html" "$out/boot.js" <<'PY'
+import json, sys
+brand = json.load(open(sys.argv[1], encoding="utf-8"))
+for path in sys.argv[2:]:
+    text = open(path, encoding="utf-8").read()
+    text = text.replace("鐵道遊戲", brand["chinese"]).replace("Railway Game", brand["english"])
+    open(path, "w", encoding="utf-8").write(text)
+PY
+else
+  echo "warning: no brand file ($brand): the page has the neutral game's name" >&2
+fi
 du -sh "$out"

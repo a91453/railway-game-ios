@@ -104,7 +104,7 @@ public enum Map3DDepotYardKit {
                 let rise: Float = 2.6, slope = hypotf(w / 2, rise)
                 b.slab(centre: Map3DPoint(0, h + rise / 2, side * w / 4),
                        up: Map3DPoint(0, rise / slope, -side * w / 2 / slope),
-                       length: part.length + 0.7, wide: slope, thickness: 0.22, color: Map3DPalette.roof)
+                       length: part.length + 0.7, wide: slope, thickness: 0.22, color: Map3DDepotFacilities.roof)
                 for x: Float in [-3.5, 3.5] { b.box(x, 3.425, side * (w / 2 - 0.02), 2.2, 0.05, 1.25, Map3DDepotFacilities.glass) }
             }
             if part.kind == .shedTail { b.box(-part.length / 2 + 0.18, 0, 0, 0.36, w, h, Map3DDepotFacilities.wall) }
@@ -119,7 +119,7 @@ public enum Map3DDepotYardKit {
             b.box(0, h + 2.64, 0, part.length - 1, 0.28, 0.24, Map3DDepotFacilities.steel)
         case .parkingCanopy:
             for x: Float in [-5.7, 5.7] { for z: Float in [-w / 2 + 0.2, w / 2 - 0.2] { b.box(x, 0, z, 0.25, 0.25, h, Map3DDepotFacilities.steel) } }
-            b.box(0, h, 0, 12.4, w + 0.7, 0.24, Map3DPalette.roof)
+            b.box(0, h, 0, 12.4, w + 0.7, 0.24, Map3DDepotFacilities.roof)
             for c in part.trackCentres { guideway(&b, system: part.system, x: 0, z: c, length: 11.8) }
         case .washFrame:
             for z: Float in [-3, 3] { b.box(0, 0, z, 1.4, 0.45, h, Map3DDepotFacilities.steel) }
@@ -221,5 +221,46 @@ public enum Map3DDepotYardKit {
             b.box(0, 5.65, 22, length - 4, 0.06, 0.06, Map3DPalette.overheadWire)
         }
         return .flat(named: "depot-yard-scene-\(system.rawValue)", from: b.mesh)
+    }
+}
+
+// MARK: - In the game
+
+extension Map3DDepotYardKit {
+    /// Decision 785: the most 12 m bays a depot's shed is laid with, 324 m
+    /// (head, 25 middles, tail): longer than the game's longest full
+    /// train, the 700T's some 304 m, as the Liujia study's shed.
+    public static let maxBays = 27
+
+    /// Decision 785: how many 12 m bays a shed beside sidings `length`
+    /// metres long has: as many as fit along them, at least three (the
+    /// head, one middle and the tail, 36 m as decision 441's shed) and at
+    /// most ``maxBays``.
+    public static func bays(forSiding length: Float) -> Int {
+        min(maxBays, max(3, Int((length / 12).rounded(.down))))
+    }
+
+    /// Decision 785: the shed of `bays` bays for `system`'s trains on
+    /// `tracks` tracks (2 to 4), as the review scenes lay it: the tail
+    /// closed at −x, the head's open bays at +x, its middle on the ground
+    /// at the origin, in the station kit's axes (x along it, y up).
+    public static func shedMesh(system: System, tracks: Int, bays: Int) -> Map3DMesh {
+        var b = StationKitBuilder()
+        let count = max(3, bays), length = Float(count) * 12
+        for index in 0..<count {
+            let kind: Kind = index == 0 ? .shedTail : index == count - 1 ? .shedHead : .shedMiddle
+            b.add(model(for: part(kind, system: system, tracks: tracks)), at: Map3DPoint(Float(index) * 12 - length / 2 + 6, 0, 0))
+        }
+        return b.mesh
+    }
+
+    /// Decision 785: the shed far off, a box as long and wide, as high as
+    /// the kit's far shed parts, its roof's colour on top.
+    public static func shedFarMesh(system: System, tracks: Int, bays: Int) -> Map3DMesh {
+        let shed = part(.shedHead, system: system, tracks: tracks)
+        var mesh = Map3DMesh()
+        mesh.addBox(base: .zero, forward: Map3DPoint(1, 0, 0), length: Float(max(3, bays)) * 12, width: shed.width,
+                    height: system.clearHeight + 0.45 + 0.625 + 1.5, top: Map3DDepotFacilities.roof, side: Map3DDepotFacilities.wall)
+        return mesh
     }
 }

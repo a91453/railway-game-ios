@@ -1,4 +1,4 @@
-# slop-newyork 的 3D 做法，《沿線》能搬哪些
+# slop-newyork 的 3D 做法，《railway game ios》能搬哪些
 
 2026-10-23。遊戲規劃 session_01H5RHAwnA69n8EfAUSUrH52 派工，研究 session_01JxqePZhgA9tQuajjP9gsPm。
 - 基準：本 repo main `0460ed2`；slop-newyork commit `7fdaf15`（2026-10-23，只有一個 commit）。

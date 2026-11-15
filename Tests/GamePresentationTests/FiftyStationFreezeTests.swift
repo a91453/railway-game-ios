@@ -122,7 +122,7 @@ final class FiftyStationFreezeTests: XCTestCase {
         var world: GameWorld!
         let built = clock.measure {
             if let path = ProcessInfo.processInfo.environment["FREEZE_SAVE"] {
-                // A `.alongtheline` file or a `SavedGame`.
+                // A shared save file or a `SavedGame`.
                 struct SharedFile: Decodable { let game: SavedGame }
                 guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return }
                 world = ((try? JSONDecoder().decode(SharedFile.self, from: data).game) ?? (try? JSONDecoder().decode(SavedGame.self, from: data)))?.world

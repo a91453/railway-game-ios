@@ -102,8 +102,8 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
     /// timber.
     static let bunkerBrick = Map3DPalette.brick
     static let bunkerStone = Map3DPalette.granite
-    static let bunkerSteel = Map3DColor.rgb(0x8A9099)
-    static let bunkerCoal = Map3DColor.rgb(0x2B2F36)
+    static let bunkerSteel = Map3DPalette.steel
+    static let bunkerCoal = Map3DPalette.dark
     static let bunkerWood = Map3DColor.rgb(0x8E6E52)
 
     /// The colour of the file's leaves, which takes the instance's colour

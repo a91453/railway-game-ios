@@ -30,7 +30,7 @@ struct CityView3D: View {
         let language = DisplayLanguage.app
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
-            if let url = URL(string: area.pageAddress) {
+            if let address = area.pageAddress, let url = URL(string: address) {
                 CityWebView(
                     url: url,
                     onLoaded: { host.pageLoaded() },

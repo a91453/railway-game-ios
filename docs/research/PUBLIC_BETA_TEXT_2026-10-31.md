@@ -6,7 +6,7 @@
 
 **中文**
 
-> 「沿線」是一款在台灣真實地圖上蓋鐵路的經營遊戲。地形和車站都照真實的來，部分路線還能看到依真實時刻表行駛的示範列車。
+> 「<遊戲名>」是一款在台灣真實地圖上蓋鐵路的經營遊戲。地形和車站都照真實的來，部分路線還能看到依真實時刻表行駛的示範列車。
 >
 > 從鋪下第一段軌道開始，課程會一關一關帶你上手。熟悉之後，可以挑戰平溪線、劉銘傳鐵路、集集線等歷史關卡，或是幾個一般挑戰。
 >
@@ -16,7 +16,7 @@
 
 **English**
 
-> Along the Line is a railway management game set on a real map of Taiwan, with real terrain, real stations and, on some lines, demo trains that run to real timetables.
+> railway game ios is a railway management game set on a real map of Taiwan, with real terrain, real stations and, on some lines, demo trains that run to real timetables.
 >
 > Step-by-step lessons take you from laying your very first stretch of track. Once you're comfortable, try historical challenges like the Pingxi Line, Liu Mingchuan's Railway and the Jiji Line, or a few general challenges.
 >
@@ -53,7 +53,7 @@
 **中文**
 
 > **方法一：TestFlight 截圖回報**
-> 在遊戲裡看到問題時直接截圖，點螢幕角落的截圖縮圖，再點「分享」，選擇傳送 Beta 版回饋，寫幾句說明後送出。也可以打開 TestFlight App，點「沿線」，選「傳送 Beta 版回饋」。
+> 在遊戲裡看到問題時直接截圖，點螢幕角落的截圖縮圖，再點「分享」，選擇傳送 Beta 版回饋，寫幾句說明後送出。也可以打開 TestFlight App，點「<遊戲名>」，選「傳送 Beta 版回饋」。
 > 如果遊戲閃退，TestFlight 可能會問你要不要分享當機資訊，請按分享，幫助很大。
 >
 > **方法二：遊戲內的「回報問題」**
@@ -68,7 +68,7 @@
 **English**
 
 > **Option 1: TestFlight screenshot feedback**
-> When you spot a problem, take a screenshot, tap the thumbnail in the corner, tap Share, and choose to share beta feedback. Add a short note and send. You can also open the TestFlight app, tap Along the Line, and choose Send Beta Feedback.
+> When you spot a problem, take a screenshot, tap the thumbnail in the corner, tap Share, and choose to share beta feedback. Add a short note and send. You can also open the TestFlight app, tap railway game ios, and choose Send Beta Feedback.
 > If the game crashes, TestFlight may ask whether to share crash details. Please say yes; it really helps.
 >
 > **Option 2: In-game bug report**
@@ -84,7 +84,7 @@
 
 **中文**
 
-> 🚃《沿線｜Along the Line》公開測試開跑！
+> 🚃《<遊戲名>》公開測試開跑！
 >
 > 10/31 起，TestFlight 公開測試連結開放加入。
 >
@@ -98,7 +98,7 @@
 
 **English**
 
-> 🚃 Along the Line is opening a public beta!
+> 🚃 railway game ios is opening a public beta!
 >
 > From Oct 31, anyone with the TestFlight link can join.
 >

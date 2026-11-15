@@ -83,10 +83,15 @@ final class MapPackDownloadsTests: XCTestCase {
     }
 
     /// The asset pack's manifest holds the city's folder at the path the
-    /// app asks for, under the ID the app asks for.
+    /// app asks for, under the ID the app asks for. Decision 789: an open
+    /// city's; a city not open yet (Rovaniemi) has none, so no release
+    /// uploads its pack and no device fetches it before it can be played.
     func testTheAssetPackManifestMatchesWhatTheAppAsksFor() throws {
         let repository = BundledRealData.directory.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        for city in OverseasMap.allCases {
+        for city in OverseasMap.allCases where !OverseasMaps.open.contains(city) {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: repository.appendingPathComponent("RailwayGameApp/AssetPacks/\(city.packFolder).json").path), city.packFolder)
+        }
+        for city in OverseasMap.allCases where OverseasMaps.open.contains(city) {
             let file = repository.appendingPathComponent("RailwayGameApp/AssetPacks/\(city.packFolder).json")
             let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
             XCTAssertEqual(object["assetPackID"] as? String, city.assetPackID)

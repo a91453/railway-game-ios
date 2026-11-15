@@ -49,7 +49,7 @@ SwiftUI 的重畫、Metal 與 GPU 都是 UNVERIFIED，因為 Linux 沒有 SwiftU
 
 ## 1. 怎麼量
 
-- **存檔**：作者的 `87656e99-Along_the_Line_2026-10-30_033425.alongtheline`，存檔版本 75。
+- **存檔**：作者的 `87656e99-Along_the_Line_2026-10-30_033425.<saveExtension>`，存檔版本 75。
   - 實景地圖，第 53 日，67 站、13 條路線、74 列車。
   - 它和指令紀錄 `737d0831-command-log.json` 都只在 session 的暫存資料夾讀，**沒有放進 repo**。
 - **量測程式**：`Tests/GamePresentationTests/Map3DCockpitCostReportTests.swift`。
@@ -66,7 +66,7 @@ SwiftUI 的重畫、Metal 與 GPU 都是 UNVERIFIED，因為 Linux 沒有 SwiftU
 - 命令（release，`-enable-testing`）：
 
 ```sh
-COCKPIT_SAVE=<…>.alongtheline COCKPIT_LOG=<…>-command-log.json COCKPIT_TRAIN="綠山線列車 4" COCKPIT_TICKS=300 \
+COCKPIT_SAVE=<…>.<saveExtension> COCKPIT_LOG=<…>-command-log.json COCKPIT_TRAIN="綠山線列車 4" COCKPIT_TICKS=300 \
   swift test -c release -Xswiftc -enable-testing --skip-build --filter Map3DCockpitCostReportTests
 ```
 

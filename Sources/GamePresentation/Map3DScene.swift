@@ -531,6 +531,8 @@ public struct Map3DScene: Sendable {
         // track; on ground no real building, temple, scene or city lot
         // takes.
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
+        // Decision 791: Hong Kong's landmark towers, clear of the track.
+        if let frame = RealWorldFrame(world: world) { builder.addHongKongLandmarks(frame: frame) }
         // Decision 625: the real stations' exterior studies, as landmarks,
         // cut clear of the track.
         let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
@@ -758,19 +760,20 @@ public enum Map3DPalette {
     /// ``Map3DRedCommuter``): near its flat texture's #711604 but redder
     /// and a shade lighter, which under the map's light read as brown.
     public static let trainRed = Map3DColor.rgb(0x8C1C1C)
-    /// Decision 780: the Hong Kong airport railway's trains
-    /// (``Map3DMTRAirportLine``), from photographs: the Airport Express's
-    /// royal blue, teal stripe and pearl lower body; the Tung Chung line's
-    /// silver-grey, cream lower body and red line, the red lamp band both
-    /// share; their dark roofs.
-    public static let mtrAirportBlue = Map3DColor.rgb(0x2457C0)
-    public static let mtrTeal = Map3DColor.rgb(0x1C9C93)
-    public static let mtrPearl = Map3DColor.rgb(0xDCDDD6)
-    public static let mtrSilver = Map3DColor.rgb(0xA5AAAF)
-    public static let mtrCream = Map3DColor.rgb(0xE2DAC4)
-    public static let mtrRed = Map3DColor.rgb(0xC1272F)
-    public static let mtrRoof = Map3DColor.rgb(0x4C5359)
     public static let roof = Map3DColor.rgb(0xC4C8D6)
+    /// The five colours of the local studio's t001 palette that the owner's
+    /// old textures use and the lists here did not have
+    /// (`tools/texture-palette/t003/`, sorted from the old textures on
+    /// 2026-11-15): steel (bare steelwork, piers, underframes; 271 of the
+    /// old building textures), dark (dark windows and glass, coal, signal
+    /// housings; 24), a red brick paler than the old plants' ``brick``
+    /// (32), timber (25) and terrazzo, Taiwan's washed granite plaster
+    /// (11). Named so a model and a studio brief can use them by name.
+    public static let steel = Map3DColor.rgb(0x8A9099)
+    public static let dark = Map3DColor.rgb(0x2B2F36)
+    public static let redBrick = Map3DColor.rgb(0xB07A62)
+    public static let timber = Map3DColor.rgb(0x9A7657)
+    public static let terrazzo = Map3DColor.rgb(0xE3DCCB)
     public static let arcade = Map3DColor.rgb(0x6F6A64)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
@@ -1123,6 +1126,9 @@ extension Map3DScene {
         /// Decision 370: colours the model look leaves as they are besides
         /// ``Map3DLook``'s own (the lines' bands).
         var keptColours = Set<UInt32>()
+        /// Decision 791: the ground Hong Kong's landmarks stand on, where
+        /// no footprint is drawn.
+        var landmarkPlots: [PlacedSquare] = []
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 455: whether the simplified city's boxes are kept as
         /// instances (the city's lots), not vertices.

@@ -36,7 +36,7 @@ Apple 官方文件查閱日期：**2026-09-28**（來源列在文末）。Apple 
 | --- | --- | --- |
 | Team ID（10 個字元） | developer.apple.com → Account → Membership details | 寫入 `project.yml` 的 `DEVELOPMENT_TEAM`（它會出現在每個簽章過的 App 內，不是秘密） |
 | Bundle ID 是否可用 | Certificates, Identifiers & Profiles → Identifiers | 預設 `io.github.a91453.RailwayGame`，**尚未確認已註冊** |
-| App Store Connect 的 App 名稱 | 建立 app record 時決定 | 正式品牌為 Along the Line／沿線；商店名稱須符合 App Store 的唯一性要求，不影響 Bundle ID |
+| App Store Connect 的 App 名稱 | 建立 app record 時決定 | 正式品牌名稱在私有素材庫（`tools/brand/README.md`）；商店名稱須符合 App Store 的唯一性要求，不影響 Bundle ID |
 
 **絕對不要**把 Apple 帳號密碼、雙重認證碼、`.p12` / `.p8`、憑證、provisioning profile 或 token 貼到 issue、PR、聊天或 repository。Xcode Cloud 使用雲端管理的自動簽章，本專案不需要任何這類檔案。
 
@@ -65,7 +65,7 @@ Apple 官方文件查閱日期：**2026-09-28**（來源列在文末）。Apple 
 
 1. developer.apple.com/account → Membership details → 記下 **Team ID**。
 2. Certificates, Identifiers & Profiles → Identifiers → 「+」→ App IDs → App：
-   - Description：`Along the Line`
+   - Description：`railway game ios`
    - Bundle ID：**Explicit**，`io.github.a91453.RailwayGame`
    - Capabilities：全部不勾（App 目前沒有使用任何需要 entitlement 的功能）
 3. 如果 Bundle ID 已被占用，改用其他值，並在步驟 4 一併修改 `project.yml` 的 `PRODUCT_BUNDLE_IDENTIFIER`（之後 CI 裡寫死的 `io.github.a91453.RailwayGame` 檢查也要同步改）。
@@ -79,7 +79,7 @@ App Store Connect → Apps → 「+」→ New App：
 | 欄位 | 值 |
 | --- | --- |
 | Platforms | iOS |
-| Name | 正式名稱 `Along the Line`；繁體中文與日文為 `沿線`（須符合 App Store 的唯一性要求） |
+| Name | 正式名稱 `railway game ios`；繁體中文與日文為 `沿線`（須符合 App Store 的唯一性要求） |
 | Primary Language | 你的主要語言 |
 | Bundle ID | 選步驟 2 註冊的 `io.github.a91453.RailwayGame` |
 | SKU | 任意唯一字串，例：`railwaygame-ios` |
@@ -151,9 +151,9 @@ XcodeGen 重新產生專案時會保留這個檔案（已在 Linux 上以 XcodeG
 
 1. App Store Connect → TestFlight → 這個 build。若顯示 **Missing Compliance**，按 Manage 回答加密問題（見〈出口合規〉）。回答前 build 不能測試。
 2. TestFlight → Internal Testing → `Internal` → Builds 旁的「+」/ Add Builds → 選這個 build（Xcode Cloud 的 build 要手動加入；若 post-action 已經加入就略過）。
-3. 在 iPhone / iPad 從 App Store 安裝免費的 **TestFlight** App，用同一個 Apple Account 登入，接受邀請，安裝 Along the Line（沿線）。
+3. 在 iPhone / iPad 從 App Store 安裝免費的 **TestFlight** App，用同一個 Apple Account 登入，接受邀請，安裝 railway game ios。
 4. 最小 smoke check：
-   - 主畫面名稱為「Along the Line」（英文）或「沿線」（繁體中文／日文）。Default／Light appearance 使用米白背景的淺色版；Dark appearance 使用深色原稿（iOS／iPadOS 18 以上）。
+   - 主畫面名稱為遊戲名（英文或繁體中文，日文用繁體中文；名稱在私有素材庫，`tools/brand/README.md`）。Default／Light appearance 使用米白背景的淺色版；Dark appearance 使用深色原稿（iOS／iPadOS 18 以上）。
    - 開啟後顯示地圖、現金、`Day 1 · 08:30`，時間會前進；暫停 / 1× / 2× 有反應。
    - 選取一格、鋪一段鐵軌、建一個車站，金額減少；在空格以外鋪軌會顯示錯誤訊息。
    - iPad 直向、橫向都能顯示；切到背景再回來不會閃退。
@@ -223,13 +223,13 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 
 ## 出口合規（Export Compliance）
 
-- 現況（2026-10-23）：程式沒有自己的加密，沒有 CryptoKit / CommonCrypto / Security / Keychain。會連網的是系統與一個第三方套件，都只用作業系統提供的標準 HTTPS（TLS）：MapKit（Apple 地圖的圖磚與地點搜尋）、MapLibre Native 6.31.0（台灣以外的 OpenStreetMap 底圖，從 tiles.openfreemap.org 下載）、WebKit 與 SafariServices（設定裡的「3D 城市」與「官網」，alongthelinegame.com）。沒有 `URLSession` 或其他自己發的請求。`release-archive.yml` 會列出封存後 App 連結的函式庫作為佐證。
+- 現況（2026-10-23）：程式沒有自己的加密，沒有 CryptoKit / CommonCrypto / Security / Keychain。會連網的是系統與一個第三方套件，都只用作業系統提供的標準 HTTPS（TLS）：MapKit（Apple 地圖的圖磚與地點搜尋）、MapLibre Native 6.31.0（台灣以外的 OpenStreetMap 底圖，從 tiles.openfreemap.org 下載）、WebKit 與 SafariServices（設定裡的「3D 城市」與「官網」，<website>）。沒有 `URLSession` 或其他自己發的請求。`release-archive.yml` 會列出封存後 App 連結的函式庫作為佐證。
 - Apple：若 App（含連結的函式庫）不使用加密、或只使用豁免的加密，可在 Info.plist 設定 `ITSAppUsesNonExemptEncryption = NO`；沒有這個鍵時，App Store Connect 每次上傳都會問出口合規問卷。
 - **本 PR 刻意沒有加入這個鍵**：這是由你（開發者）對美國出口法規做的聲明，不應由工具替你假設。第一次上傳時請在 App Store Connect 依實際情況回答問卷；若確認不使用非豁免加密，之後可在 `project.yml` 加上 `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO` 省去每次作答。將來加入帳號、雲端存檔、新的連線或任何自己的加密功能時必須重新評估。（決策 397 的 iCloud 存檔只用系統的 iCloud Drive 同步，App 自己不加密、不發請求，評估結果不變。）
 
 ## 隱私
 
-- App 不蒐集資料、沒有帳號、追蹤、廣告或分析 SDK。會連網的只有：Apple 地圖（MapKit 的圖磚與地點搜尋）、台灣以外的 OpenStreetMap 底圖（MapLibre 從 tiles.openfreemap.org 下載圖磚）、設定裡的「官網」與「3D 城市」（alongthelinegame.com）。「用我的位置」（決策 335）只在按下時要一次「使用 App 期間」的定位，取到約 1 公里，不儲存也不傳送。問題回報、存檔與明信片只經分享選單送到玩家選的地方。Game Center（決策 396）：玩家登入時，每週挑戰的完成天數與當天載客數、成就的進度送到 Apple 的 Game Center；App 不讀玩家的 Game Center 名字或 ID，也不把任何資料傳給開發者或第三方。Apple 的 App 隱私說明寫「Apple 蒐集的資料不由開發者揭露」（https://developer.apple.com/app-store/app-privacy-details/ ，Apple frameworks 那一節），所以隱私標籤維持「不蒐集資料」，privacy manifest 也不用加項目（GameKit 不是 required reason API）；官網的隱私權政策在加 Game Center entitlement 的那個 PR 同一輪補一句。存檔也會放進玩家自己的 iCloud（決策 397，iCloud Drive 的 App 容器；加了 iCloud entitlement 之後才會動）：那是玩家自己的 iCloud 空間，開發者沒有任何方式讀到，照 Apple 對「collect」的定義（傳離裝置而且開發者或第三方能取得）不算蒐集資料，`NSPrivacyCollectedDataTypes` 仍是空的。玩家看的說明是官網的隱私權政策（`a91453/railway-reference-private` 的 `Website/site/privacy.html`），改了這些功能要一起改。
+- App 不蒐集資料、沒有帳號、追蹤、廣告或分析 SDK。會連網的只有：Apple 地圖（MapKit 的圖磚與地點搜尋）、台灣以外的 OpenStreetMap 底圖（MapLibre 從 tiles.openfreemap.org 下載圖磚）、設定裡的「官網」與「3D 城市」（<website>）。「用我的位置」（決策 335）只在按下時要一次「使用 App 期間」的定位，取到約 1 公里，不儲存也不傳送。問題回報、存檔與明信片只經分享選單送到玩家選的地方。Game Center（決策 396）：玩家登入時，每週挑戰的完成天數與當天載客數、成就的進度送到 Apple 的 Game Center；App 不讀玩家的 Game Center 名字或 ID，也不把任何資料傳給開發者或第三方。Apple 的 App 隱私說明寫「Apple 蒐集的資料不由開發者揭露」（https://developer.apple.com/app-store/app-privacy-details/ ，Apple frameworks 那一節），所以隱私標籤維持「不蒐集資料」，privacy manifest 也不用加項目（GameKit 不是 required reason API）；官網的隱私權政策在加 Game Center entitlement 的那個 PR 同一輪補一句。存檔也會放進玩家自己的 iCloud（決策 397，iCloud Drive 的 App 容器；加了 iCloud entitlement 之後才會動）：那是玩家自己的 iCloud 空間，開發者沒有任何方式讀到，照 Apple 對「collect」的定義（傳離裝置而且開發者或第三方能取得）不算蒐集資料，`NSPrivacyCollectedDataTypes` 仍是空的。玩家看的說明是官網的隱私權政策（`a91453/railway-reference-private` 的 `Website/site/privacy.html`），改了這些功能要一起改。
 - Privacy manifest：`RailwayGameApp/Resources/PrivacyInfo.xcprivacy`（2026-10-23 加入；`Resources` 整個資料夾已是 App target 的來源，XcodeGen 把它當資源放進 App）。內容照程式碼實際用到的宣告：
   - `NSPrivacyTracking` 為 false，沒有 tracking domain，`NSPrivacyCollectedDataTypes` 是空的（開發者不收任何資料；問題回報是玩家自己用分享選單寄的）。
   - required reason API 只有 `UserDefaults`（約 27 個檔用 `@AppStorage` / `UserDefaults` 存設定，只有 App 自己讀寫）：`NSPrivacyAccessedAPICategoryUserDefaults`，理由 `CA92.1`。
@@ -281,7 +281,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
   - 未選方案 B（不提交、在 `ci_post_clone.sh` 產生）：Apple 明文表示動態產生或編輯專案的工具可能讓首次設定與之後的建置失敗；首次 onboarding 時借來的 Mac 也得先裝 XcodeGen 產生專案才能開啟，而 Xcode Cloud 端要依賴 clone 後才存在的專案。沒有官方證據證明這條路可靠，所以不採用。
 - **可重現**：同一個 checkout 重新產生、不同路徑或使用者重新產生，輸出完全相同；Xcode Cloud 寫入的 `manifest.json` 與 `Package.resolved` 在重新產生時保留。限制：checkout 資料夾名稱會寫進專案（本地套件的顯示名稱），所以要在名為 `railway-game-ios` 的資料夾（`git clone` 預設）中產生。
 - **漂移檢查**：`ios-build.yml` 以固定版本、checksum 驗證的 XcodeGen 重新產生，任何差異都失敗並附上預期專案的 artifact；另外確認 shared scheme 已提交、`xcodebuild -describeAllArchivableProducts`（Xcode Cloud 用來找產品的指令）列得出 App。
-- **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 Along the Line（繁體中文／日文：沿線）；`MARKETING_VERSION` 0.5.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `-demo-layout` 啟動參數不會編進 Release（示範地圖本身從 Stage C4 起由開始畫面開啟，Release 也有）。
+- **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 railway game ios（繁體中文／日文：沿線）；`MARKETING_VERSION` 0.5.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `-demo-layout` 啟動參數不會編進 Release（示範地圖本身從 Stage C4 起由開始畫面開啟，Release 也有）。
 - **App Icon**：分層的圖示檔 `Resources/AppIcon.icon`（2026-11-11，決策 680；取代原本 `AppIcon.appiconset` 的 Light／Dark 兩張 1024×1024 PNG）。造型與顏色是作者提供的正式定稿，只拆成層；圓角、玻璃邊緣、陰影與透明／染色樣式由系統畫。`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`（XcodeGen 的 iOS App 預設值）。
 - **未簽章 Release Archive**：`release-archive.yml` 以 Release、`generic/platform=iOS`、`-disableAutomaticPackageResolution`、`CODE_SIGNING_ALLOWED=NO` 封存並檢查 Info.plist、圖示、架構與 Release 不含示範配置。它**不能**證明簽章、上傳或 TestFlight；`CODE_SIGNING_ALLOWED=NO` 只用在這個 CI 檢查，不用於任何真正的發佈。
 

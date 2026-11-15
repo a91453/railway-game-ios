@@ -145,20 +145,20 @@ class LocalizationTests(unittest.TestCase):
 
 
 EN_INFOPLIST = """/* Home Screen name. */
-"CFBundleDisplayName" = "Along the Line";
+"CFBundleDisplayName" = "Railway Game";
 // A line comment.
 "NSLocationWhenInUseUsageDescription" = "Your location is used \\"once\\".";
-"Along the Line Save" = "Along the Line Save";
+"Railway Game Save" = "Railway Game Save";
 """
-ZH_INFOPLIST = """"CFBundleDisplayName" = "沿線";
+ZH_INFOPLIST = """"CFBundleDisplayName" = "鐵道遊戲";
 "NSLocationWhenInUseUsageDescription" = "用一次你的位置。";
-"Along the Line Save" = "沿線存檔";
+"Railway Game Save" = "鐵道遊戲存檔";
 """
-INFO = {"CFBundleName": "RailwayGame", "CFBundleDisplayName": "Along the Line",
+INFO = {"CFBundleName": "RailwayGame", "CFBundleDisplayName": "Railway Game",
         "NSLocationWhenInUseUsageDescription": "Your location is used \"once\".",
         "CFBundleIdentifier": "io.github.a91453.RailwayGame",
-        "CFBundleDocumentTypes": [{"CFBundleTypeName": "Along the Line Save"}],
-        "UTExportedTypeDeclarations": [{"UTTypeDescription": "Along the Line Save"}]}
+        "CFBundleDocumentTypes": [{"CFBundleTypeName": "Railway Game Save"}],
+        "UTExportedTypeDeclarations": [{"UTTypeDescription": "Railway Game Save"}]}
 
 
 class SyncedCatalogTests(unittest.TestCase):
@@ -227,11 +227,11 @@ class SyncedCatalogTests(unittest.TestCase):
         self.assertIn("sourceLanguage", "\n".join(self.check()))
 
     def test_infoplist_target_missing_or_blank(self):
-        self.target.write_text('"CFBundleDisplayName" = "沿線";\n'
-                               '"Along the Line Save" = " ";\n', encoding="utf-8")
+        self.target.write_text('"CFBundleDisplayName" = "鐵道遊戲";\n'
+                               '"Railway Game Save" = " ";\n', encoding="utf-8")
         text = "\n".join(self.check())
         self.assertIn("id='NSLocationWhenInUseUsageDescription'", text)
-        self.assertIn("id='Along the Line Save'", text)
+        self.assertIn("id='Railway Game Save'", text)
         self.assertNotIn("CFBundleDisplayName", text)
 
     def test_built_info_plist_string_missing_from_infoplist_strings(self):

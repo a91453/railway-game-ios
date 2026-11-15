@@ -150,7 +150,7 @@ final class CommandLogTickReportTests: XCTestCase {
 
     /// What the screen works out on the main actor once a game hour or a
     /// day at 6000× (派工單 BK, part 2), for the world of a save
-    /// (`COMMAND_LOG_SAVE`, a `.alongtheline` file or a `SavedGame`):
+    /// (`COMMAND_LOG_SAVE`, a shared save file or a `SavedGame`):
     /// the station master's hourly look (its advice, the story, the rank)
     /// and letting go of a world copy many ticks old.
     func testWhatTheScreenWorksOutOnTheHour() throws {

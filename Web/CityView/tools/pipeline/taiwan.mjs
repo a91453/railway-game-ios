@@ -1,4 +1,4 @@
-// Along the Line: what PLATEAU gives a Japanese area, made for a Taiwanese one (ARCHITECTURE decision 152).
+// railway game ios: what PLATEAU gives a Japanese area, made for a Taiwanese one (ARCHITECTURE decision 152).
 // Buildings come from Overture Maps (tools/procedural-city/taiwan_area.py writes overture_buildings.json),
 // road surfaces from the OpenStreetMap centrelines. Everything here is this project's, not Tokyo's.
 import fs from 'node:fs';

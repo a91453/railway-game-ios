@@ -12,7 +12,7 @@ const COLORS = [
   ['#0f6fc6', '#ffffff'], ['#5a5d61', '#ffffff'],
 ];
 const STYLE = { FASCIA: 0, BLADE: 1, TITLE: 2 };
-// (Along the Line: Taiwan's Traditional Chinese fonts first, so a Taiwanese shop name is not drawn in Japanese glyphs)
+// (railway game ios: Taiwan's Traditional Chinese fonts first, so a Taiwanese shop name is not drawn in Japanese glyphs)
 const FONT = '"PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Yu Gothic", "Meiryo", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif';
 const PX = 48;              // texture pixels across a sign's short side
 const ATLAS_W = 2048, ATLAS_MAX_H = 4096;

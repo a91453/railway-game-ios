@@ -2,7 +2,7 @@
 // put back on a road near the focus.
 //
 // Rules of the road, as far as this goes:
-//   - keep left (keep right where roads.json says rightHand: Along the Line's Taiwanese areas); one-way streets one way only; speed from the limit of the road
+//   - keep left (keep right where roads.json says rightHand: railway game ios's Taiwanese areas); one-way streets one way only; speed from the limit of the road
 //   - follow the vehicle ahead with a time gap, including the one just past the next junction
 //   - stop at red and yellow lights (the same cycle as the signal heads in props.js)
 //   - a junction is crossed by one approach at a time (opposing traffic going straight on may cross
@@ -149,7 +149,7 @@ function carMaterial(lit = true) {
 
 // ---------------------------------------------------------------- the graph, as directed lanes
 function buildGraph({ nodes, edges, signals, rightHand }, surface) {
-  const keep = rightHand ? 1 : -1; // Along the Line (decision 152): roads.json says whether traffic keeps right (Taiwan) or left
+  const keep = rightHand ? 1 : -1; // railway game ios (decision 152): roads.json says whether traffic keeps right (Taiwan) or left
   const signalled = new Set(signals), out = nodes.map(() => []), into = nodes.map(() => []), lanes = [];
   for (const e of edges) {
     if (e.highway === 'service' && e.lanes <= 1) continue; // driveways and yards: not through traffic

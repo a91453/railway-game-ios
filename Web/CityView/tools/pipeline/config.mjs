@@ -44,7 +44,7 @@ export const AREAS = {
     backdrop: 30,                  // the summit stands 18 km to the north-east
     view: '0,0,700,305,10',        // the opening view (as ?cam=): over the town towards the mountain
   },
-  // Along the Line (ARCHITECTURE decision 152): a Taiwanese area. No PLATEAU, no GSI: `source: 'taiwan'` reads
+  // railway game ios (ARCHITECTURE decision 152): a Taiwanese area. No PLATEAU, no GSI: `source: 'taiwan'` reads
   // Overture's buildings and the OpenStreetMap extract of Taiwan (tools/procedural-city/taiwan_area.py) and
   // lays the ground flat; `half` (metres) sets a square around the origin instead of a block of JIS meshes.
   kaohsiung: {
@@ -58,7 +58,7 @@ export const AREAS = {
       'Roads, railways, parks and places: © OpenStreetMap contributors (ODbL 1.0)',
     ],
   },
-  // Along the Line (ARCHITECTURE decision 161): Taichung Station, where the TRA runs on a viaduct, so the trains
+  // railway game ios (ARCHITECTURE decision 161): Taichung Station, where the TRA runs on a viaduct, so the trains
   // (and their Meshy models, tools/meshy) can be seen.
   taichung: {
     name: '臺中車站',

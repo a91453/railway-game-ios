@@ -22,6 +22,11 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
+    # The app's version, here so that the map pack downloader extension
+    # (decision 776) carries the same one: App Store Connect refuses an
+    # extension whose version is not the app's.
+    MARKETING_VERSION: "0.6.0"
+    CURRENT_PROJECT_VERSION: "1"
 
 packages:
   # The repository root is the Swift package that provides GameCore.
@@ -65,6 +70,8 @@ targets:
         product: GamePresentation
       - package: MapLibre
         product: MapLibre
+      # Decision 776: fetches the map packs App Store Connect hosts.
+      - target: MapPackDownloader
     # Decision 396: Game Center, for the weekly leaderboard and the
     # achievements. The App ID has Game Center turned on
     # (docs/GAME_CENTER_SETUP.md, steps 1 and 2), so the App Store profile
@@ -79,13 +86,15 @@ targets:
           - iCloud.io.github.a91453.RailwayGame
         com.apple.developer.icloud-services:
           - CloudDocuments
+        # Decision 776: the folder the map pack downloader extension shares
+        # (Info.plist's BAAppGroupID; registered on the App ID).
+        com.apple.security.application-groups:
+          - group.io.github.a91453.RailwayGame
         com.apple.developer.ubiquity-container-identifiers:
           - iCloud.io.github.a91453.RailwayGame
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGame
-        MARKETING_VERSION: "0.6.0"
-        CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         # Automatic signing; Xcode Cloud manages the certificates and
         # profiles, so none are committed. DEVELOPMENT_TEAM, the 10-character
@@ -105,7 +114,11 @@ targets:
         # generated Info.plist. Outside the source folders, so it is not
         # copied into the app as a resource.
         INFOPLIST_FILE: Info.plist
-        INFOPLIST_KEY_CFBundleDisplayName: Along the Line
+        # The neutral brand's name (GameBrand); the localized
+        # Resources/*.lproj/InfoPlist.strings name the app on the Home
+        # Screen, and tools/brand/apply_brand.py puts the released game's
+        # name in them before a release build.
+        INFOPLIST_KEY_CFBundleDisplayName: Railway Game
         # Decision 335: "Use my location" on the real-world picker asks for
         # one fix while the app is in use; the reason is localized in
         # Resources/*.lproj/InfoPlist.strings.
@@ -126,11 +139,38 @@ targets:
           UIInterfaceOrientationLandscapeLeft
           UIInterfaceOrientationLandscapeRight
 
+  # Decision 776: the downloader extension of the map packs that App Store
+  # Connect hosts apart from the app (Background Assets). Its App ID has the
+  # App Group the app has.
+  MapPackDownloader:
+    type: extensionkit-extension
+    platform: iOS
+    sources:
+      - path: MapPackDownloader/Sources
+    entitlements:
+      path: MapPackDownloader/MapPackDownloader.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.io.github.a91453.RailwayGame
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGame.MapPackDownloader
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_FILE: MapPackDownloader/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Railway Game map packs
+
   RailwayGameUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
       - path: UITests
+      # The brand the app was built with (GameBrand), so the tests expect
+      # its name and know whether it has a website.
+      - path: Resources/GameBrand.json
+        buildPhase: resources
     dependencies:
       - target: RailwayGame
       # Fixture coordinates for UI gestures use the existing lesson map;

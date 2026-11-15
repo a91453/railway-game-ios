@@ -26,7 +26,7 @@ final class ToolbarSmokeTests: XCTestCase {
         defer { app.terminate() }
         let brand = app.staticTexts["start.brand"]
         XCTAssertTrue(brand.appears(within: 10))
-        XCTAssertEqual(brand.label, "沿線")
+        XCTAssertEqual(brand.label, BuiltBrand.current.chinese)
         XCTAssertTrue(app.buttons["start.newGame"].exists)
     }
 
@@ -39,7 +39,7 @@ final class ToolbarSmokeTests: XCTestCase {
 
         let brand = app.staticTexts["start.brand"]
         XCTAssertTrue(brand.appears(within: 10))
-        XCTAssertEqual(brand.label, language == "en" ? "Along the Line" : "沿線")
+        XCTAssertEqual(brand.label, language == "en" ? BuiltBrand.current.english : BuiltBrand.current.chinese)
 
         // The app opens on the start screen; start a new game from it.
         let newGame = app.buttons["start.newGame"]

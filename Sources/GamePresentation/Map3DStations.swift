@@ -353,7 +353,7 @@ extension Map3DScene.Builder {
             if self.world.station(id: id)?.isDepot == true {
                 // Decision 441: a depot's maintenance shed, not a station's
                 // building; none by sidings under ground.
-                if !open.isEmpty { cells.formUnion(addDepotShed(platforms: open, path: longest, middle: middle)) }
+                if !open.isEmpty { cells.formUnion(addDepotShed(id, platforms: open, path: longest, middle: middle)) }
             } else if drawnElsewhere.contains(station.profile) {
                 continue
             } else if let study = exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) {
