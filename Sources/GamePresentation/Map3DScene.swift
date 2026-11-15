@@ -758,6 +758,18 @@ public enum Map3DPalette {
     /// ``Map3DRedCommuter``): near its flat texture's #711604 but redder
     /// and a shade lighter, which under the map's light read as brown.
     public static let trainRed = Map3DColor.rgb(0x8C1C1C)
+    /// Decision 780: the Hong Kong airport railway's trains
+    /// (``Map3DMTRAirportLine``), from photographs: the Airport Express's
+    /// royal blue, teal stripe and pearl lower body; the Tung Chung line's
+    /// silver-grey, cream lower body and red line, the red lamp band both
+    /// share; their dark roofs.
+    public static let mtrAirportBlue = Map3DColor.rgb(0x2457C0)
+    public static let mtrTeal = Map3DColor.rgb(0x1C9C93)
+    public static let mtrPearl = Map3DColor.rgb(0xDCDDD6)
+    public static let mtrSilver = Map3DColor.rgb(0xA5AAAF)
+    public static let mtrCream = Map3DColor.rgb(0xE2DAC4)
+    public static let mtrRed = Map3DColor.rgb(0xC1272F)
+    public static let mtrRoof = Map3DColor.rgb(0x4C5359)
     public static let roof = Map3DColor.rgb(0xC4C8D6)
     public static let arcade = Map3DColor.rgb(0x6F6A64)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
