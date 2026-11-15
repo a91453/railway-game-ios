@@ -95,9 +95,13 @@ final class Map3DModelPackLockTests: XCTestCase {
         // props: every model after it, the cars' windows and the head
         // signs move by one, so the digests are made again; the models
         // themselves are as they were (`hashes.lock.json`).
+        // The owner's old red commuter car (Map3DRedCommuter), the last set:
+        // its three cars and their windows before the cable car (every
+        // model after them, the windows' indices and the signs move by
+        // six, so the digests are made again; 3 lamp sets more).
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name) }
-        XCTAssertEqual(Self.digest(before.map(\.name)), "e5a5ab1c6ac6da09")
+        XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "8766b651609228df")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
@@ -108,7 +112,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstCoach..<firstCoach + coach.count].map(\.name)), Map3DCoaches.drawn.map(\.name))
         let firstHK = firstCoach + coach.count
         XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "f302cc7c4bdb4f1b")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1cd5d06005403762")
         XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "94379689657a797")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
@@ -120,7 +124,7 @@ final class Map3DModelPackLockTests: XCTestCase {
             }
         }
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
-        XCTAssertEqual(lamps(movingBack: 0).count, 370)
+        XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count)), "7336d9303927d9bf")
         XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "6d56b33e1d1df0fe")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")

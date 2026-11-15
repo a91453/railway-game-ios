@@ -284,9 +284,9 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("", 2), ["set-greenCommuter-head", "set-greenCommuter-tail"])
         XCTAssertEqual(names("", 1), ["commuter-cab"])
         // Decision 331, fourth: three cars of it are the three-car urban
-        // EMU; four or more stay the commuter.
+        // EMU; four or more the owner's old red commuter car.
         XCTAssertEqual(names("", 3), ["set-threeCarUrban-head", "set-threeCarUrban-car", "set-threeCarUrban-tail"])
-        XCTAssertEqual(names("", 4), ["commuter-cab", "commuter-car", "commuter-car", "commuter-cab turned"])
+        XCTAssertEqual(names("", 4), ["set-redCommuter-head", "set-redCommuter-car", "set-redCommuter-car", "set-redCommuter-tail"])
         XCTAssertEqual(names("EMU100", 2), ["commuter-cab", "commuter-cab turned"])
         // As #900 has them (the author, 2026-10-21): the 700T with its two
         // pantograph cars, the EMU3000, every metro size a C381 (decision
@@ -345,7 +345,7 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(tail.triangleCount, Map3DGreenCommuter.model(.trailing).triangleCount + 24)
         XCTAssertEqual(head.length, Map3DGreenCommuter.model(.leading).length, accuracy: 0.05)
         XCTAssertFalse(pack.isTurned(forType: "", carIndex: 1, count: 2))
-        XCTAssertTrue(pack.isTurned(forType: "", carIndex: 3, count: 4), "four cars: the commuter's cab turned")
+        XCTAssertFalse(pack.isTurned(forType: "", carIndex: 3, count: 4), "four cars: the red commuter's own tail car")
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenCommuter"), Map3DTrains.modelReach)
         XCTAssertTrue((2_000...6_000).contains(head.triangleCount), "\(head.triangleCount) triangles")
     }
