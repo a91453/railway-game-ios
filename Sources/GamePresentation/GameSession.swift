@@ -1028,6 +1028,9 @@ public final class GameSession {
     /// Called after a step that passed midnight (decision 181): the
     /// launcher checks the achievements.
     @ObservationIgnored public var onMidnight: (@MainActor () -> Void)?
+    /// Called after the player bought an air route (decision 763): the
+    /// launcher checks whether it opened a map.
+    @ObservationIgnored public var onAirRouteBought: (@MainActor () -> Void)?
 
     /// The world as it was before each of the latest edits, oldest first,
     /// at most ``undoLimit`` of them (ARCHITECTURE decision 82): what
