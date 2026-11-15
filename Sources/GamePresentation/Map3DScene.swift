@@ -1984,6 +1984,12 @@ extension Map3DScene {
                 // park.
                 let key = ChunkKey(column: lot.column, row: lot.row)
                 let thin = streetFrontage && thinlyBuilt.contains(key)
+                // Decision 767: among the real buildings, no factory of the
+                // game's, but now and then a coal bunker in the yard.
+                if streetFrontage, taken.contains(key), lot.use == .industrial, !lot.isOpenGround, !cleared.contains(key), contains(x: x, y: y) {
+                    addRealYardCoalBunker(key, blocked: cleared)
+                    continue
+                }
                 guard contains(x: x, y: y), !taken.contains(key) || thin else { continue }
                 // Decision 385: low homes and shops along the real roads,
                 // house by house clear of the no-build land; no other lot

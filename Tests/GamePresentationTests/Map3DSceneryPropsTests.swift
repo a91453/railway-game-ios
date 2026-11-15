@@ -55,7 +55,7 @@ final class Map3DSceneryPropsTests: XCTestCase {
         let pack = Map3DSceneryProp.pack(standard, files: Self.files)
         XCTAssertEqual(pack.models.count, standard.models.count)
         let triangles: [Map3DSceneryProp: Int] = [.pineTall: 136, .pine: 88, .pineYoung: 64, .bushes: 120, .bushesLarge: 180, .tank: 332,
-                                                     .postBoxes: 1724, .busStopPole: 300]
+                                                     .postBoxes: 1724, .busStopPole: 300, .coalBunker: 679]
         for prop in Map3DSceneryProp.allCases {
             let index = try XCTUnwrap(standard.index(of: prop.modelName))
             let model = pack.models[index]
@@ -67,7 +67,7 @@ final class Map3DSceneryPropsTests: XCTestCase {
             XCTAssertEqual(model.vertices.map(\.position.z).max() ?? 0, size.height, accuracy: 0.01, prop.rawValue)
             XCTAssertEqual(model.vertices.map(\.position.x).max() ?? 0, size.length / 2, accuracy: 0.01, prop.rawValue)
             let tinted = model.vertices.filter { $0.color >> 24 == 0 }.count
-            if prop == .tank || Map3DSceneryProp.streetFurniture.contains(prop) {
+            if prop == .tank || prop == .coalBunker || Map3DSceneryProp.streetFurniture.contains(prop) {
                 XCTAssertEqual(tinted, 0, prop.rawValue)
             } else {
                 // Leaves, and a trunk or nothing else.
@@ -177,6 +177,65 @@ final class Map3DSceneryPropsTests: XCTestCase {
             }
         }
         XCTAssertGreaterThan(yards, 4)
+    }
+
+    /// Decision 767: an old brick plant's yard with room for it (a 34 m or
+    /// 40 m lot) has the coal bunker beside the hall, within the yard and clear
+    /// of the hall, and no office there, near or far; the other factories
+    /// and small lots none, and the bunker only close up.
+    /// Decision 767: on a real-world map, few industrial cells try for a
+    /// coal bunker, and no two within two cells of each other.
+    func testRealYardCoalBunkersStandApart() {
+        var picked: [Map3DScene.ChunkKey] = []
+        for row in -60..<60 {
+            for column in -60..<60 {
+                let cell = Map3DScene.ChunkKey(column: column, row: row)
+                if Map3DScene.Builder.realCoalBunkerCell(cell) { picked.append(cell) }
+            }
+        }
+        let share = Double(picked.count) / 14_400
+        XCTAssertTrue(share > 0.01 && share < 0.05, "share \(share)")
+        for (index, a) in picked.enumerated() {
+            for b in picked[(index + 1)...] {
+                XCTAssertTrue(abs(a.column - b.column) > 2 || abs(a.row - b.row) > 2, "\(a) and \(b)")
+            }
+        }
+    }
+
+    func testOldBrickPlantsHaveTheCoalBunker() throws {
+        let world = GameWorld.newGame()
+        let bunker = try XCTUnwrap(Map3DScene.Builder.sceneryModels[.coalBunker])
+        var yards = 0
+        for side: Float in [40, 34, 28] {
+            for column in Int32(0)..<48 {
+                var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
+                builder.target = .near
+                builder.addFactory(base: .zero, side: side, seed: (column, 7))
+                let placed = builder.props.values.flatMap { $0 }.filter { $0.model == bunker }
+                guard let one = placed.first else { continue }
+                XCTAssertGreaterThanOrEqual(side, 34, "lot \(column)")
+                XCTAssertEqual(placed.count, 1)
+                XCTAssertEqual(Int(map3DRandom(column, 7, salt: 1) * 4), 3, "lot \(column): only the old brick plants")
+                yards += 1
+                // Within the yard's paving (the lot and a metre round it).
+                let yard = (side - 4) / 2 + 1
+                let box = try XCTUnwrap(one.bounds(in: .standard))
+                XCTAssertTrue(box.min.x >= -yard - 0.01 && box.max.x <= yard + 0.01 && box.min.z >= -yard - 0.01 && box.max.z <= yard + 0.01,
+                              "lot \(column): \(box)")
+                for mesh in [builder.meshes.values.flatMap(\.vertices) + builder.nearMeshes.values.flatMap(\.vertices)] {
+                    XCTAssertFalse(mesh.filter { $0.y > 0.5 }.contains { $0.x > box.min.x + 0.2 && $0.x < box.max.x - 0.2 && $0.z > box.min.z + 0.2 && $0.z < box.max.z - 0.2 },
+                                   "lot \(column): a building stands in the bunker")
+                }
+                var far = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
+                far.target = .far
+                far.addFactory(base: .zero, side: side, seed: (column, 7))
+                XCTAssertTrue(far.props.values.flatMap { $0 }.allSatisfy { $0.model != bunker })
+                XCTAssertFalse(far.meshes.values.flatMap(\.vertices).filter { $0.y > 0.5 }.contains {
+                    $0.x > box.min.x + 0.2 && $0.x < box.max.x - 0.2 && $0.z > box.min.z + 0.2 && $0.z < box.max.z - 0.2
+                }, "lot \(column): the far office stands where the bunker is")
+            }
+        }
+        XCTAssertGreaterThan(yards, 2)
     }
 
     /// The demo's station buildings have bush clumps on their plazas, the
