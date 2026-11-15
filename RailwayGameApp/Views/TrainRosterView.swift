@@ -347,10 +347,8 @@ struct TrainRosterView: View {
             Text(verbatim: language.text("Planned", "預定"))
         }
         HStack(spacing: 4) {
-            Canvas { context, size in
-                Self.drawHatch(in: CGRect(origin: .zero, size: size), context: &context)
-            }
-            .frame(width: 18, height: 12)
+            TrainRosterWaitSwatch()
+                .frame(width: 18, height: 12)
             Text(verbatim: language.text("Waiting", "空檔"))
         }
         HStack(spacing: 4) {
@@ -613,7 +611,7 @@ struct TrainRosterView: View {
     private func draw(_ gap: TrainRoster.Gap, in span: CGRect, context: inout GraphicsContext) {
         let block = span.insetBy(dx: 2, dy: 0)
         guard block.width >= 4 else { return }
-        Self.drawHatch(in: block, context: &context)
+        TrainRosterHatch.draw(in: block, context: &context, colors: TrainRosterHatch.Colors())
         let label = context.resolve(Text(verbatim: gap.text(in: language))
             .font(.caption2.weight(.semibold).monospacedDigit())
             .foregroundStyle(Theme.textPrimary))
@@ -625,23 +623,6 @@ struct TrainRosterView: View {
         context.fill(capsule, with: .color(Theme.panel))
         context.stroke(capsule, with: .color(Theme.panelBorder), lineWidth: 1)
         context.draw(label, at: CGPoint(x: tag.midX, y: tag.midY), anchor: .center)
-    }
-
-    /// Diagonal stripes on the faint chip, in a rounded box: a wait.
-    static func drawHatch(in box: CGRect, context: inout GraphicsContext) {
-        let shape = Path(roundedRect: box, cornerRadius: 4)
-        context.fill(shape, with: .color(Theme.chip))
-        var layer = context
-        layer.clip(to: shape)
-        var stripes = Path()
-        var start = box.minX - box.height
-        while start < box.maxX {
-            stripes.move(to: CGPoint(x: start, y: box.maxY))
-            stripes.addLine(to: CGPoint(x: start + box.height, y: box.minY))
-            start += 6
-        }
-        layer.stroke(stripes, with: .color(Theme.textSecondary.opacity(0.45)), lineWidth: 1.5)
-        context.stroke(shape, with: .color(Theme.panelBorder), lineWidth: 1)
     }
 
     private func draw(_ cell: TrainRoster.Cell, in box: CGRect, compact: Bool, context: inout GraphicsContext) {
@@ -800,7 +781,9 @@ struct TrainRosterView: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 ScrollView(.vertical) {
-                    LazyVStack(spacing: 6) {
+                    // A plain stack: a lazy one builds its cells as it
+                    // lays them out, off the main thread (CRASHSWEEP-2).
+                    VStack(spacing: 6) {
                         ForEach(roster.waiting) { waiting in
                             waitingCard(waiting, rows: rows)
                         }
@@ -1009,5 +992,44 @@ private struct TrainRosterUtilisationBar: View {
             Theme.primary
                 .frame(height: height * utilisation / 100)
         }
+    }
+}
+
+/// The legend's swatch of a wait (decision 777), a view of its own with a
+/// sendable closure: the legend stands in a `ViewThatFits`, measured off
+/// the main thread (CRASH101).
+private struct TrainRosterWaitSwatch: View {
+    var body: some View {
+        let colors = TrainRosterHatch.Colors()
+        Canvas { @Sendable context, size in
+            TrainRosterHatch.draw(in: CGRect(origin: .zero, size: size), context: &context, colors: colors)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// A wait between two trips (decision 777): diagonal stripes on the faint
+/// chip, in a rounded box.
+enum TrainRosterHatch {
+    struct Colors: Sendable {
+        var fill = Theme.chip
+        var stripe = Theme.textSecondary.opacity(0.45)
+        var border = Theme.panelBorder
+    }
+
+    static func draw(in box: CGRect, context: inout GraphicsContext, colors: Colors) {
+        let shape = Path(roundedRect: box, cornerRadius: 4)
+        context.fill(shape, with: .color(colors.fill))
+        var layer = context
+        layer.clip(to: shape)
+        var stripes = Path()
+        var start = box.minX - box.height
+        while start < box.maxX {
+            stripes.move(to: CGPoint(x: start, y: box.maxY))
+            stripes.addLine(to: CGPoint(x: start + box.height, y: box.minY))
+            start += 6
+        }
+        layer.stroke(stripes, with: .color(colors.stripe), lineWidth: 1.5)
+        context.stroke(shape, with: .color(colors.border), lineWidth: 1)
     }
 }
