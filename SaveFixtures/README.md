@@ -394,3 +394,8 @@ its map's airports when it opens the save).
   (`NightMarketHoursTests.testVersionOneHundredFiveKeepsTheNightMarket`,
   written with `NIGHT_MARKET_SAVE_NEW=1` by the build that first made
   it; decision 769).
+- `v107-harbour-sights.json`: `HarbourSightsTests`' Home and Foot a
+  minute in, with a harbour by Foot (`"kind": "harbour"`)
+  (`HarbourSightsTests.testVersionOneHundredSevenKeepsTheHarbour`,
+  written with `HARBOUR_SAVE_NEW=1` by the build that first made it;
+  decision 773).

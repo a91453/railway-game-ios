@@ -157,6 +157,8 @@ public enum Map3DShowcase {
         Entry("ALISHAN", "Alishan Forest Railway mountain train", "阿里山林鐵登山列車", .other, cars: 6, most: 8, gauge: 0.762),
         Entry("threeCarUrban", "Three-car urban EMU", "三節都市電聯車", .other, cars: 3, fixed: true),
         Entry("greenCommuter", "Two-car green EMU", "兩節綠色電聯車", .other, cars: 2, fixed: true),
+        // The owner's old red commuter car (Map3DRedCommuter).
+        Entry("redCommuter", "Red commuter EMU", "紅色通勤電聯車", .other, cars: 4, most: 10),
     ]
 
     /// The entry of `key`.

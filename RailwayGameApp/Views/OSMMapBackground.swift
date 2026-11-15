@@ -640,7 +640,7 @@ enum BaseMapFiles {
     /// with the box its map covers; a city whose pack has none is left out.
     /// Decision 726: and its hill shading, `nil` for a pack without it.
     static let cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)] = OverseasMap.allCases.compactMap { city in
-        guard OverseasMaps.open.contains(city), let pack = MapPack.bundled(city), let tiles = pack.baseMapFile,
+        guard OverseasMaps.open.contains(city), let pack = MapPack.current(city), let tiles = pack.baseMapFile,
               let extent = try? pack.extent()
         else { return nil }
         return (city, extent, tiles, pack.terrainFile)
@@ -649,7 +649,7 @@ enum BaseMapFiles {
     /// Decision 712: the buildings of the open cities outside Taiwan,
     /// for the 3D map; a city whose pack has none is left out.
     static let cityFootprints: [URL] = OverseasMap.allCases.compactMap { city in
-        OverseasMaps.open.contains(city) ? MapPack.bundled(city)?.buildingsFile : nil
+        OverseasMaps.open.contains(city) ? MapPack.current(city)?.buildingsFile : nil
     }
 
     /// Taiwan's ground heights for the hill shading, `nil` if the app has
@@ -720,7 +720,7 @@ enum BaseMapFiles {
 
     /// Decision 733: the open cities' map packs.
     nonisolated static let cityPacks: [MapPack] = OverseasMap.allCases.compactMap { city in
-        OverseasMaps.open.contains(city) ? MapPack.bundled(city) : nil
+        OverseasMaps.open.contains(city) ? MapPack.current(city) : nil
     }
 
     private static func file(_ name: String) -> URL? {

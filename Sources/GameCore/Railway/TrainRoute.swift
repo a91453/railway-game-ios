@@ -25,10 +25,10 @@ extension GameWorld {
         switch start {
         case .onEdge(let traversal, _):
             let leaving = network.isClosing(traversal.edge)
-            return TrainRoute.shortest(from: traversal, isDestination: { network.edge($0.edge)?.end(of: $0.direction) == node }) { arrival in
+            return TrainRoute.shortest(from: traversal, isDestination: { network.endNode(of: $0) == node }) { arrival in
                 // Decision 716: never onto track closed to trains, or
                 // being closed unless the route starts on such track.
-                transitions(after: arrival).filter { !network.isClosed($0.edge) && (leaving || !network.isClosing($0.edge)) }.map { ($0, network.edge($0.edge)!.length) }
+                transitions(after: arrival).filter { !network.isClosed($0.edge) && (leaving || !network.isClosing($0.edge)) }.map { ($0, network.length(ofEdge: $0.edge)!) }
             }
         }
     }
@@ -63,6 +63,14 @@ enum TrainRoute {
     /// sees every step's target before its source. Time O(n log n) and
     /// memory O(n) in the number of those states; nothing is kept between
     /// calls.
+    ///
+    /// Specialized for the two kinds of place it searches: GameCore builds
+    /// file by file, so a call from another file would otherwise run the
+    /// generic code, looking up each type's metadata and hashing through
+    /// its witness table at every step (about a quarter of a day of the
+    /// Tung Chung line's time on Linux). The result is the same either way.
+    @_specialize(where Place == TrackTraversal)
+    @_specialize(where Place == GameWorld.BerthSearch)
     static func shortest<Place: Hashable>(
         from start: Place,
         isDestination: (Place) -> Bool,

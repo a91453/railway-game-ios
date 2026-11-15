@@ -518,6 +518,18 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(counts, [6, 4, 4, 4, 4, 4, 6, 4, 4, 4, 4, 8])
     }
 
+    /// Decision 770: the demo lays its real island stations (Taipei,
+    /// Banqiao, Zuoying) as islands already, so the island list offers
+    /// none of them: Banqiao's staggered platforms (decision 197) stand
+    /// some 15 m apart middle to middle, though 11 m across the track, and
+    /// were offered a rebuild the demo's short loops could not take.
+    @MainActor
+    func testNoStationIsOfferedAnIslandRebuild() throws {
+        let world = try Self.built.get().world
+        let session = GameSession(world: world, language: .traditionalChinese)
+        XCTAssertEqual(session.islandRebuildList(isRealIsland: { _ in true }).map(\.name), [])
+    }
+
     /// Decision 217 (the owner's condition): with the curve limits on, the
     /// sets keep to the real day as well as they do with them off: no set
     /// is ever later (but by the seconds a set held up behind another

@@ -48,6 +48,7 @@ extension AttractionKind {
         case .landmark: language.text("Landmark", "地標")
         case .museum: language.text("Museum", "博物館")
         case .temple: language.text("Temple", "廟宇")
+        case .harbour: language.text("Harbour", "港口碼頭")
         }
     }
 }

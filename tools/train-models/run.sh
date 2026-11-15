@@ -29,11 +29,17 @@ if [ -d "$bin/GamePresentation.build" ]; then
 else
   set -- "$out" "$@"
   # Swift 6.4's integrated build backend uses Objects-normal modules.
-  modules="$(find .build/out/Intermediates.noindex -path '*/GamePresentation-t.build/Objects-normal/*/Modules/GamePresentation.swiftmodule' | head -1)"
-  objects="${modules%/Modules/GamePresentation.swiftmodule}"
-  coremodules="$(find .build/out/Intermediates.noindex -path '*/GameCore-t.build/Objects-normal/*/Modules/GameCore.swiftmodule' | head -1)"
-  coreobjects="${coremodules%/Modules/GameCore.swiftmodule}"
-  swiftc -swift-version 6 -warnings-as-errors -I "$objects/Modules" -I "$coreobjects/Modules" tools/train-models/export.swift "$objects"/*.o "$objects"/Modules/*.o "$coreobjects"/*.o "$coreobjects"/Modules/*.o -o "$work/export"
+  # Its .swiftmodule is in Objects-normal/<arch>/Modules on some
+  # toolchains and straight in Objects-normal/<arch> on others (the Mac's
+  # Swift 6.4.2); the objects are in Objects-normal/<arch> either way.
+  modules="$(find .build/out/Intermediates.noindex -path '*/GamePresentation-t.build/Objects-normal/*/GamePresentation.swiftmodule' | head -1)"
+  objects="${modules%/GamePresentation.swiftmodule}"; objects="${objects%/Modules}"
+  coremodules="$(find .build/out/Intermediates.noindex -path '*/GameCore-t.build/Objects-normal/*/GameCore.swiftmodule' | head -1)"
+  coreobjects="${coremodules%/GameCore.swiftmodule}"; coreobjects="${coreobjects%/Modules}"
+  extra="$(find "$objects/Modules" "$coreobjects/Modules" -name '*.o' 2>/dev/null || true)"
+  # shellcheck disable=SC2086
+  swiftc -swift-version 6 -warnings-as-errors -I "$objects" -I "$objects/Modules" -I "$coreobjects" -I "$coreobjects/Modules" \
+    tools/train-models/export.swift "$objects"/*.o "$coreobjects"/*.o $extra -o "$work/export"
   "$work/export" "$@"
   if [ -n "$assembly_spec" ]; then node tools/train-models/assemble.mjs "$out" "$assembly_spec"; fi
   exit

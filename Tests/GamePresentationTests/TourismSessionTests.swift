@@ -48,7 +48,7 @@ final class TourismSessionTests: XCTestCase {
         for skipped in ["s03", "s05", "s10", "s13", "s14", "s19", "s22", "s24"] {
             XCTAssertFalse(ids.contains(skipped), skipped)
         }
-        XCTAssertEqual(AttractionCatalog.spots.count, 215, "decision 250: 25 and 189 more; decision 589: Bali")
+        XCTAssertEqual(AttractionCatalog.spots.count, 217, "decision 250: 25 and 189 more; decision 589: Bali; decision 774: two fishing ports")
         XCTAssertEqual(Set(AttractionCatalog.spots.map(\.kind)), Set(AttractionKind.allCases), "the hot springs are added")
         XCTAssertTrue(AttractionCatalog.spots.allSatisfy { (100...500).contains($0.stars) && $0.latitude > 21.5 && $0.latitude < 25.5 })
         XCTAssertEqual(ids.count, AttractionCatalog.spots.count, "each once")
@@ -56,7 +56,7 @@ final class TourismSessionTests: XCTestCase {
         // Decision 250: the sights added stay below the alert bubbles'
         // rating, so the map asks for no more lines than before.
         let added = AttractionCatalog.spots.filter { $0.id.hasPrefix("t") }
-        XCTAssertEqual(added.count, 190)
+        XCTAssertEqual(added.count, 192)
         XCTAssertTrue(added.allSatisfy { (200...350).contains($0.stars) && $0.stars < GameWorld.alertedSightStars })
         XCTAssertLessThanOrEqual(AttractionCatalog.spots.count, Tourism.maximumAttractions, "the whole of Taiwan holds them all")
     }
@@ -137,10 +137,13 @@ final class TourismSessionTests: XCTestCase {
             }
             // Each kind's sixteen names are all used before one comes again;
             // the night market is one of the towns' (decision 769).
-            // (and since decision 772 its temples, museum and gate).
+            // (and since decision 772 its temples, museum and gate); the
+            // fishing harbour one of the coasts' (decision 773).
             let towns: Set<AttractionKind> = [.town, .nightMarket, .landmark, .museum, .temple]
             for kind in [AttractionKind.coast, .mountain, .hotSpring, .town] {
-                let names = sights.filter { $0.kind == kind || (kind == .town && towns.contains($0.kind)) }.map(\.name)
+                let names = sights.filter {
+                    $0.kind == kind || (kind == .town && towns.contains($0.kind)) || (kind == .coast && $0.kind == .harbour)
+                }.map(\.name)
                 XCTAssertEqual(Set(names).count, min(names.count, 16), "seed \(seed), \(kind)")
             }
             // The middle tile first, where the usual map's are.

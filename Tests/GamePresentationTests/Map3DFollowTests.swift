@@ -32,24 +32,51 @@ final class Map3DFollowTests: XCTestCase {
         XCTAssertEqual(camera.metresPerPoint, Map3DFollow.metresPerPoint, accuracy: 0.0001, "the ground at the train is the same scale")
     }
 
-    /// The camera looks at the rail under the front, from behind it: the
+    /// The camera looks past the rail under the front, from behind it: the
     /// eye is on the far side of the way the train runs, low behind and
-    /// higher above behind.
+    /// higher above behind, as far from the front as Mini Tokyo 3D's
+    /// view; decision 778: through a narrower lens, the front on the lower
+    /// third line and the look further down the line.
     func testTheCameraStandsBehindTheTrain() {
         let front = head(x: 100, z: -50, heading: .pi / 2)  // running east
         let start = Map3DCamera(target: .zero, distance: 1_000, heading: .pi / 2, viewport: (390, 844))
+        let reach = Map3DFollow.distance(viewportHeight: 844)
         for view in [Map3DFollow.View.back, .aboveBack] {
             let camera = Map3DFollow(train: train, view: view).camera(following: front, from: start, elapsed: 1 / 60)
-            XCTAssertEqual(camera.target, front.rail)
-            XCTAssertEqual(camera.tilt, view.tilt)
+            XCTAssertEqual(camera.lens, Map3DFollow.followLens)
+            XCTAssertGreaterThan(camera.target.x, front.rail.x, "\(view): looking past the front")
+            XCTAssertGreaterThan(camera.target.y, front.rail.y, "\(view): over the line, as far as the front")
+            XCTAssertEqual(camera.target.z, front.rail.z, accuracy: 0.01)
+            XCTAssertEqual(camera.distance, reach, accuracy: 0.05, "\(view): the distance as before")
             XCTAssertLessThan(camera.eye.x, front.rail.x - 10, "\(view): west of a train running east")
             XCTAssertEqual(camera.eye.z, front.rail.z, accuracy: 0.01)
             XCTAssertEqual((camera.eye - camera.target).length, camera.distance, accuracy: 0.01)
+            XCTAssertEqual((camera.eye - front.rail).length, reach, accuracy: 0.05, "\(view): as far from the front as before")
+            // The front on the lower third line, in the middle across.
+            let seen = camera.viewProjection.project(front.rail)
+            XCTAssertEqual(seen?.y ?? 0, -Map3DFollow.aheadShare, accuracy: 0.001, "\(view)")
+            XCTAssertEqual(seen?.x ?? 1, 0, accuracy: 0.001)
         }
         let back = Map3DFollow(train: train, view: .back).camera(following: front, from: start, elapsed: 1 / 60)
         let above = Map3DFollow(train: train, view: .aboveBack).camera(following: front, from: start, elapsed: 1 / 60)
+        // From behind, the look stays 85° (more would be sky) and the eye
+        // rises; above behind, the eye stays and the look turns up.
+        XCTAssertEqual(back.tilt * 180 / .pi, 85, accuracy: 0.001)
+        XCTAssertEqual(above.tilt, Map3DFollow.View.aboveBack.tilt + atanf(tanf(Map3DFollow.followLens / 2) / 3), accuracy: 0.0001)
+        XCTAssertEqual(above.eye.y - front.rail.y, reach * cosf(60 * .pi / 180), accuracy: 0.05)
         XCTAssertLessThan(back.eye.y, above.eye.y)
-        XCTAssertEqual(back.eye.y - front.rail.y, back.distance * cosf(85 * .pi / 180), accuracy: 0.01)
+        XCTAssertGreaterThan(back.eye.y - front.rail.y, reach * cosf(85 * .pi / 180), "higher than Mini Tokyo 3D's back view")
+    }
+
+    /// Decision 778: a bus followed from behind keeps the map's own lens
+    /// and looks at its front, as before.
+    func testABusFromBehindLooksAtItsFront() {
+        let front = head(x: 100, z: -50, heading: .pi / 2)
+        let start = Map3DCamera(target: .zero, distance: 1_000, heading: .pi / 2, viewport: (390, 844))
+        let camera = Map3DFollow(bus: BusID(route: BusRouteID(rawValue: 1), run: 0), view: .back).camera(following: front, from: start, elapsed: 1 / 60)
+        XCTAssertEqual(camera.target, front.rail)
+        XCTAssertNil(camera.lens)
+        XCTAssertEqual(camera.tilt, Map3DFollow.View.back.tilt)
     }
 
     /// The camera turns after the train 2 % of the way a 60th of a second,
@@ -78,8 +105,8 @@ final class Map3DFollowTests: XCTestCase {
         XCTAssertEqual(follow.zoomed(by: 0).scale, 1)
         let front = head(x: 0, z: 0, heading: 0)
         let camera = Map3DCamera(viewport: (390, 844))
-        XCTAssertEqual(follow.zoomed(by: 2).camera(following: front, from: camera, elapsed: 0).distance,
-                       Map3DFollow.distance(viewportHeight: 844) / 2, accuracy: 0.01)
+        let near = follow.zoomed(by: 2).camera(following: front, from: camera, elapsed: 0)
+        XCTAssertEqual((near.eye - front.rail).length, Map3DFollow.distance(viewportHeight: 844) / 2, accuracy: 0.05)
     }
 
     /// The flight runs 1.2 s smooth at both ends from the start to the
@@ -159,9 +186,9 @@ final class Map3DFollowTests: XCTestCase {
         XCTAssertEqual(camera.lens ?? 0, 68 * .pi / 180, accuracy: 0.0001)
         XCTAssertEqual(camera.fieldOfViewTall, Map3DFollow.cabLens)
         XCTAssertEqual(follow.zoomed(by: 2).camera(following: front, from: start, elapsed: 1 / 60), camera, "a pinch does not move it")
-        // Leaving the cab for behind puts the map's own lens back.
+        // Leaving the cab for behind puts the follow lens back (decision 778).
         let behind = Map3DFollow(train: train, view: .back).camera(following: front, from: camera, elapsed: 1 / 60)
-        XCTAssertNil(behind.lens)
+        XCTAssertEqual(behind.lens, Map3DFollow.followLens)
         XCTAssertEqual(Map3DFollow.View.cab.text(in: .traditionalChinese), "駕駛室")
     }
 

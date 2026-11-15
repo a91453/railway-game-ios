@@ -24,10 +24,17 @@ export function area([a, b, c]) {
   return Math.hypot(...cross) / 2;
 }
 
-function textureSample(gltf, material, uv, images) {
+// glTF's own colour spaces (`linear`): base colour factors and COLOR_0 are
+// linear, a base colour texture is sRGB. Without `linear` the converter keeps
+// the project's older reading, every value as sRGB, which the project's own
+// GLB writer (tools/station-kit/package.mjs) writes and expects back.
+const toLinear = c => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const toSrgb = c => { const v = Math.max(0, Math.min(1, c)); return v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055; };
+
+function textureSample(gltf, material, uv, images, linear = false) {
   const pbr = material?.pbrMetallicRoughness ?? {}, factor = pbr.baseColorFactor ?? [1, 1, 1, 1];
   const texture = pbr.baseColorTexture;
-  if (!texture) return factor.map(n => Math.max(0, Math.min(255, Math.round(n * 255))));
+  if (!texture) return linear ? [...factor] : factor.map(n => Math.max(0, Math.min(255, Math.round(n * 255))));
   if (texture.texCoord && texture.texCoord !== 0) throw new Error('GLB: only TEXCOORD_0 is supported');
   const entry = gltf.json.textures?.[texture.index];
   if (!entry) throw new Error('GLB: missing base color texture');
@@ -42,10 +49,11 @@ function textureSample(gltf, material, uv, images) {
   const u = wrap(uv[0], sampler.wrapS), v = wrap(uv[1], sampler.wrapT);
   // glTF UVs address the image from its top-left corner.
   const rgba = bitmap.sample(u * (bitmap.width - 1), v * (bitmap.height - 1));
+  if (linear) return rgba.map((value, i) => (i < 3 ? toLinear(value / 255) : value / 255) * factor[i]);
   return rgba.map((value, i) => Math.max(0, Math.min(255, Math.round(value * factor[i]))));
 }
 
-export function triangleColor(gltf, material, uvs, vertexColors, images) {
+export function triangleColor(gltf, material, uvs, vertexColors, images, linear = false) {
   const result = [0, 0, 0, 0];
   let samples = 0;
   // A regular barycentric grid samples the triangle interior, not just the
@@ -53,13 +61,14 @@ export function triangleColor(gltf, material, uvs, vertexColors, images) {
   for (let i = 0; i < 6; i++) for (let j = 0; j < 6 - i; j++) {
     const weights = [(i + 1) / 9, (j + 1) / 9, (7 - i - j) / 9];
     const uv = [0, 1].map(axis => weights.reduce((sum, weight, k) => sum + weight * uvs[k][axis], 0));
-    const pixel = textureSample(gltf, material, uv, images);
+    const pixel = textureSample(gltf, material, uv, images, linear);
     for (let channel = 0; channel < 4; channel++) {
       const vertex = weights.reduce((sum, weight, k) => sum + weight * (vertexColors?.[k]?.[channel] ?? 1), 0);
       result[channel] += pixel[channel] * vertex;
     }
     samples++;
   }
+  if (linear) return result.map((value, i) => Math.round((i < 3 ? toSrgb(value / samples) : Math.max(0, Math.min(1, value / samples))) * 255));
   return result.map(value => Math.round(value / samples));
 }
 
@@ -136,7 +145,7 @@ export function provenance(gltf, bytes, modelId, generatedPath, sourceRecord) {
 }
 
 export function convert(bytes, { modelId, front, lengthMeters, units, recolorLightPaint = true,
-  sourceRecord, generatedPath = defaultGenerated }) {
+  sourceRecord, generatedPath = defaultGenerated, linearColors = false }) {
   if (!modelId || !front || (units !== 'meters' && (!Number.isFinite(lengthMeters) || lengthMeters <= 0))) {
     throw new Error('modelId, front, and a positive lengthMeters are required');
   }
@@ -157,8 +166,11 @@ export function convert(bytes, { modelId, front, lengthMeters, units, recolorLig
       if (points.some(point => point.some(value => !Number.isFinite(value)))) throw new Error('GLB: nonfinite coordinates');
       if (area(points) < 1e-12) continue;
       const color = triangleColor(gltf, material, ids.map(index => uvs?.[index] ?? [0, 0]),
-        vertexColors && ids.map(index => vertexColors[index]), images);
-      triangles.push({ points, color, glow: /headlight|lamp|emissive|light/i.test(`${name} ${material?.name ?? ''}`) ||
+        vertexColors && ids.map(index => vertexColors[index]), images, linearColors);
+      // A train's window glass (M3DM flag bit 1): a material or primitive
+      // marked `glass` (tools/texture-palette/cut_faces.py marks its windows).
+      const glass = material?.name === 'glass' || material?.extras?.glass === true || primitive.extras?.glass === true;
+      triangles.push({ points, color, glass, glow: /headlight|lamp|emissive|light/i.test(`${name} ${material?.name ?? ''}`) ||
         (material?.emissiveFactor?.some(value => value > 0.2) ?? false) });
     }
   }
@@ -180,7 +192,7 @@ export function convert(bytes, { modelId, front, lengthMeters, units, recolorLig
   source.copy(output, 16);
   triangles.forEach((triangle, i) => {
     const at = 16 + padded + i * 52;
-    output.writeUInt32LE(triangle.glow ? 1 : 0, at);
+    output.writeUInt32LE((triangle.glow ? 1 : 0) | (triangle.glass ? 2 : 0), at);
     triangle.points.forEach((point, corner) => {
       const offset = at + 4 + corner * 16;
       point.forEach((value, axis) => output.writeFloatLE(value, offset + axis * 4));
@@ -189,14 +201,14 @@ export function convert(bytes, { modelId, front, lengthMeters, units, recolorLig
   });
   return { output, triangles: triangles.length, colors: new Set(assignments.map(i => packed[i])).size,
     paintTriangles: assignments.filter(i => (packed[i] >>> 24) === 0).length,
-    glowingTriangles: triangles.filter(t => t.glow).length };
+    glowingTriangles: triangles.filter(t => t.glow).length, glassTriangles: triangles.filter(t => t.glass).length };
 }
 
 function cli() {
   const args = process.argv.slice(2), options = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i];
-    if (!key?.startsWith('--') || !args[i + 1]) throw new Error('Usage: node convert.mjs --input model.glb --output model.m3dmodel --id model-id [--models models.json] [--generated generated.json]');
+    if (!key?.startsWith('--') || !args[i + 1]) throw new Error('Usage: node convert.mjs --input model.glb --output model.m3dmodel --id model-id [--models models.json] [--generated generated.json] [--linear-colors yes]');
     options[key.slice(2)] = args[i + 1];
   }
   if (!options.input || !options.output || !options.id) throw new Error('Input, output, and id are required');
@@ -204,7 +216,8 @@ function cli() {
   const model = models.models?.find(entry => entry.id === options.id);
   if (!model) throw new Error(`Unknown model id: ${options.id}`);
   const result = convert(readFileSync(options.input), { modelId: options.id, front: model.front,
-    lengthMeters: model.length_m, generatedPath: options.generated ?? defaultGenerated });
+    lengthMeters: model.length_m, generatedPath: options.generated ?? defaultGenerated,
+    linearColors: options['linear-colors'] === 'yes' });
   writeFileSync(options.output, result.output);
   process.stdout.write(`${options.id}: ${result.triangles} triangles, ${result.colors} colors, ${result.paintTriangles} paint triangles, ${result.glowingTriangles} glowing triangles -> ${options.output}\n`);
 }
