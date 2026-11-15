@@ -100,8 +100,18 @@ final class RecentRulesBalanceReportTests: XCTestCase {
                 world.tourism = tourism
                 world.passengerPlan = GameWorld.PassengerPlanCache()
             }),
+            ("sight kinds as towns", { world in
+                guard var tourism = world.tourism else { return }
+                for index in tourism.attractions.indices where [.landmark, .museum, .temple].contains(tourism.attractions[index].kind) {
+                    tourism.attractions[index].kind = .town
+                }
+                world.tourism = tourism
+                world.passengerPlan = GameWorld.PassengerPlanCache()
+            }),
         ]
-        for (label, change) in variants {
+        // `RECENT_RULES_VARIANTS=as opened,no venues` plays only those.
+        let chosen = ProcessInfo.processInfo.environment["RECENT_RULES_VARIANTS"].map { Set($0.split(separator: ",").map(String.init)) }
+        for (label, change) in variants where chosen?.contains(label) ?? true {
             var world = opened
             change(&world)
             try world.advance(ticks: 1)
@@ -132,11 +142,11 @@ final class RecentRulesBalanceReportTests: XCTestCase {
             let busiestText = busiest.map { "\(names[$0] ?? "?"): \(world.passengerLedger(of: $0).released)" } ?? "—"
             lines.append("| \(label) | \(dollars(fares)) | \(trips) | \(ledger.gaveUp) / \(ledger.released) | \(events.isEmpty ? "none" : events) | \(busiestText) |")
             hourLines.append("| \(label) | " + hourly.map(String.init).joined(separator: " | ") + " |")
-            if label == "as opened" {
+            do {
                 // Each sight's tourists so far this year, by kind (decision
                 // 772 changes the kinds' seasons and hours).
                 let visited = (world.tourism?.attractions ?? []).filter { $0.thisYear > 0 }.sorted { $0.thisYear > $1.thisYear }
-                sights = visited.map { "| \($0.englishName) | \($0.kind.rawValue) | \($0.thisYear) | \($0.thisYear / Int64(days)) |" }
+                sights += visited.map { "| \(label) | \($0.englishName) | \($0.kind.rawValue) | \($0.thisYear) | \($0.thisYear / Int64(days)) |" }
             }
         }
         print(lines.joined(separator: "\n"))
@@ -144,7 +154,7 @@ final class RecentRulesBalanceReportTests: XCTestCase {
         print("| Variant | " + (0..<24).map { "\($0)" }.joined(separator: " | ") + " |")
         print("| --- |" + String(repeating: " --: |", count: 24))
         print(hourLines.joined(separator: "\n"))
-        print("\nSights' tourists, as opened:\n\n| Sight | Kind | Tourists | A day |\n| --- | --- | --: | --: |")
+        print("\nSights' tourists:\n\n| Variant | Sight | Kind | Tourists | A day |\n| --- | --- | --- | --: | --: |")
         print(sights.joined(separator: "\n"))
     }
 
