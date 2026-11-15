@@ -41,10 +41,8 @@ extension GameWorld {
     /// exist. This is the transitions hook routes and traffic control use:
     /// it reads only topology.
     public func transitions(after traversal: TrackTraversal) -> [TrackTraversal] {
-        guard let edge = network.edge(traversal.edge), let node = network.node(edge.end(of: traversal.direction)),
-              let end = node.end(of: edge.id)
-        else { return [] }
-        return end.exits.compactMap { network.edge($0)?.traversal(leaving: node.id) }
+        guard let node = network.endNode(of: traversal), let exits = network.exits(at: node, arrivingBy: traversal.edge) else { return [] }
+        return exits.compactMap { network.traversal(ofEdge: $0, leaving: node) }
     }
 
     // MARK: - Trains on the network
@@ -54,11 +52,10 @@ extension GameWorld {
     /// `nil` if `next` does not exist or does not join the edge the train
     /// arrives by there. The movement kernel's only view of the network.
     func networkEntry(after arrival: TrackTraversal, into next: TrackEdgeID) -> (traversal: TrackTraversal, length: Int64)? {
-        guard let edge = network.edge(arrival.edge), let node = network.node(edge.end(of: arrival.direction)),
-              node.end(of: arrival.edge)?.exits.contains(next) == true,
-              let entered = network.edge(next), let traversal = entered.traversal(leaving: node.id)
+        guard let node = network.endNode(of: arrival), network.exits(at: node, arrivingBy: arrival.edge)?.contains(next) == true,
+              let traversal = network.traversal(ofEdge: next, leaving: node), let length = network.length(ofEdge: next)
         else { return nil }
-        return (traversal, entered.length)
+        return (traversal, length)
     }
 
     /// The traversals behind a train whose head travels `head`, for its
