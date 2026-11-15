@@ -754,6 +754,10 @@ public enum Map3DPalette {
     public static let platformEdge = Map3DColor.rgb(0xF2C94C)
     /// Taiwanese station signs' blue, on the canopies.
     public static let canopy = Map3DColor.rgb(0x2F6DB5)
+    /// A train's red body (the owner's old car e752e7a2,
+    /// ``Map3DRedCommuter``): near its flat texture's #711604 but redder
+    /// and a shade lighter, which under the map's light read as brown.
+    public static let trainRed = Map3DColor.rgb(0x8C1C1C)
     public static let roof = Map3DColor.rgb(0xC4C8D6)
     public static let arcade = Map3DColor.rgb(0x6F6A64)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
