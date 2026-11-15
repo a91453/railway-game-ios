@@ -213,8 +213,10 @@ extension GameWorld {
     static let standingPenalty: Int64 = 1_000_000 * WorldCoordinate.unitsPerMetre
 
     /// A place in the search for a berth: where the train starts, the start
-    /// of a traversal it has just entered, or a berth.
-    private enum BerthSearch: Hashable {
+    /// of a traversal it has just entered, or a berth. Not private only so
+    /// that ``TrainRoute/shortest(from:isDestination:next:)`` can be
+    /// specialized for it in its own file.
+    enum BerthSearch: Hashable {
         case start
         case entered(TrackTraversal)
         case berth(TrackTraversal, Int64)
@@ -257,7 +259,7 @@ extension GameWorld {
             case .entered(let entered): (traversal, from) = (entered, 0)
             case .berth: return []
             }
-            let edgeLength = network.edge(traversal.edge)!.length
+            let edgeLength = network.length(ofEdge: traversal.edge)!
             func allowed(to end: Int64) -> Bool {
                 if end > from, forbidden.contains(traversal) || forbids?(traversal) == true || yard.contains(traversal.edge) { return false }
                 // Decision 716: nor any way along track closed to trains,

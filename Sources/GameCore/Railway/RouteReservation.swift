@@ -1526,7 +1526,7 @@ extension GameWorld {
         let ahead = pathAhead(of: train)
         switch position {
         case .onEdge(let traversal, let offset):
-            guard let length = network.edge(traversal.edge)?.length else { return ([], false) }
+            guard let length = network.length(ofEdge: traversal.edge) else { return ([], false) }
             // The path's own end holds only when the train can follow the
             // path to its last edge.
             let followed = ahead.count == train.movement.remainingEdges.count
@@ -1537,9 +1537,9 @@ extension GameWorld {
             }
             var stretches = [TrackStretch(traversal: traversal, from: offset, to: length)]
             for next in ahead.dropLast() {
-                stretches.append(TrackStretch(traversal: next, from: 0, to: network.edge(next.edge)!.length))
+                stretches.append(TrackStretch(traversal: next, from: 0, to: network.length(ofEdge: next.edge)!))
             }
-            stretches.append(TrackStretch(traversal: last, from: 0, to: lastStop(network.edge(last.edge)!.length)))
+            stretches.append(TrackStretch(traversal: last, from: 0, to: lastStop(network.length(ofEdge: last.edge)!)))
             return (stretches, true)
         }
     }
@@ -1980,7 +1980,7 @@ extension GameWorld {
     /// The end nodes, length and resource spans of edge `id`, from its
     /// `from` node, or `nil` if it does not exist.
     private func stretchFacts(of id: TrackEdgeID) -> (from: TrackNodeID, to: TrackNodeID, length: Int64, spans: [TrackSpan])? {
-        guard let edge = network.edge(id) else { return nil }
+        guard let edge = network.ends(ofEdge: id) else { return nil }
         return (edge.from, edge.to, edge.length, network.spans(of: id, length: edge.length))
     }
 
@@ -2186,12 +2186,13 @@ extension GameWorld {
     func foulingNodes(covering stretches: [TrackStretch]) -> [TrackResource] {
         var nodes: [TrackResource] = []
         for stretch in stretches {
-            guard let edge = network.edge(stretch.traversal.edge) else { continue }
+            let id = stretch.traversal.edge
+            guard let edge = network.ends(ofEdge: id) else { continue }
             let (low, high) = stretch.traversal.direction == .forward
                 ? (stretch.from, stretch.to)
                 : (edge.length - stretch.to, edge.length - stretch.from)
-            if low < RailwayNetwork.junctionZone, isFoulingEnd(of: edge.id, at: edge.from) { nodes.append(.node(edge.from)) }
-            if edge.length - high < RailwayNetwork.junctionZone, isFoulingEnd(of: edge.id, at: edge.to) { nodes.append(.node(edge.to)) }
+            if low < RailwayNetwork.junctionZone, isFoulingEnd(of: id, at: edge.from) { nodes.append(.node(edge.from)) }
+            if edge.length - high < RailwayNetwork.junctionZone, isFoulingEnd(of: id, at: edge.to) { nodes.append(.node(edge.to)) }
         }
         return nodes
     }
@@ -2218,8 +2219,12 @@ extension GameWorld {
     /// two edges meeting at an angle do. A plain node, a dead end and a
     /// turnout's stem are not.
     func isFoulingEnd(of edge: TrackEdgeID, at node: TrackNodeID) -> Bool {
-        guard let junction = network.node(node), let end = junction.end(of: edge) else { return false }
-        return junction.ends.contains { $0.edge != edge && !end.exits.contains($0.edge) }
+        // Read in place, as ``RailwayNetwork/length(ofEdge:)`` is.
+        guard let index = network.nodeIndex(node) else { return false }
+        let ends = network.nodes[index].ends
+        guard let end = ends.firstIndex(where: { $0.edge == edge }) else { return false }
+        let exits = ends[end].exits
+        return ends.contains { $0.edge != edge && !exits.contains($0.edge) }
     }
 }
 
