@@ -5,10 +5,10 @@
 
 用法：
   uv run --with pillow --with numpy python tools/texture-palette/cut_faces.py \
-    --glb ~/SwiftRailMac/assets/models/item_e752e7a2b53bfd78eef72105.glb \
-    --flat ~/AlongTheLine-Studio/reports/t001/r1/train/e752e7a2-flat.png \
-    --palette ~/AlongTheLine-Studio/reports/t001/ref/palette.json \
-    --out-dir ~/AlongTheLine-Studio/reports/t002/r2 \
+    --glb OLD_ASSETS/models/<舊車>.glb \
+    --flat WORK/<舊車>-flat.png \
+    --palette WORK/palette.json \
+    --out-dir OUT \
     --min-area 22 --rdp-eps 1.8
 """
 

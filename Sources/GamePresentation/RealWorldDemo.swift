@@ -706,12 +706,26 @@ struct WorldPath: Sendable {
     /// The point `distance` along the path, the ends beyond it.
     func point(at distance: Double) -> WorldVector {
         let distance = min(max(distance, 0), length)
-        guard let index = distances.lastIndex(where: { $0 <= distance }), index < points.count - 1 else {
+        guard let index = lastIndex(atMost: distance), index < points.count - 1 else {
             return points[points.count - 1]
         }
         let a = distances[index], b = distances[index + 1]
         let t = b > a ? (distance - a) / (b - a) : 0
         return points[index] + (points[index + 1] - points[index]) * t
+    }
+
+    /// The last index of ``distances`` no further than `distance`, as
+    /// `distances.lastIndex { $0 <= distance }` finds it: the distances
+    /// never decrease, so those indices are the first few and halving finds
+    /// the last of them. Laying a real line asks it for every point of
+    /// every path, where the scan over thousands of points was slow.
+    private func lastIndex(atMost distance: Double) -> Int? {
+        var low = 0, high = distances.count
+        while low < high {
+            let middle = low + (high - low) / 2
+            if distances[middle] <= distance { low = middle + 1 } else { high = middle }
+        }
+        return low > 0 ? low - 1 : nil
     }
 
     /// The way the path runs at `distance`: along its chord 25 m either
@@ -728,16 +742,30 @@ struct WorldPath: Sendable {
 
     /// How far along the path its point nearest `point` lies, and how far
     /// that is from `point`.
+    ///
+    /// The vector arithmetic is written out on the coordinates, the same
+    /// operations in the same order (so the same answer to the bit), over
+    /// the arrays' buffers: laying a real line asks it of paths of
+    /// thousands of points for every point of another, and unoptimized
+    /// builds (the Linux tests) spent half of the longest test here.
     func nearest(_ point: WorldVector) -> (along: Double, away: Double) {
         var best = (along: 0.0, away: Double.infinity)
-        for index in points.indices.dropLast() {
-            let a = points[index], b = points[index + 1]
-            let along = b - a
-            let squared = along.dot(along)
-            let t = squared > 0 ? max(0, min(1, (point - a).dot(along) / squared)) : 0
-            let away = (a + along * t - point).length
-            if away < best.away {
-                best = (distances[index] + t * (distances[index + 1] - distances[index]), away)
+        let px = point.x, py = point.y
+        points.withUnsafeBufferPointer { points in
+            distances.withUnsafeBufferPointer { distances in
+                var index = 0
+                while index + 1 < points.count {
+                    let ax = points[index].x, ay = points[index].y
+                    let alongX = points[index + 1].x - ax, alongY = points[index + 1].y - ay
+                    let squared = alongX * alongX + alongY * alongY
+                    let t = squared > 0 ? max(0, min(1, ((px - ax) * alongX + (py - ay) * alongY) / squared)) : 0
+                    let dx = ax + alongX * t - px, dy = ay + alongY * t - py
+                    let away = (dx * dx + dy * dy).squareRoot()
+                    if away < best.away {
+                        best = (distances[index] + t * (distances[index + 1] - distances[index]), away)
+                    }
+                    index += 1
+                }
             }
         }
         return best

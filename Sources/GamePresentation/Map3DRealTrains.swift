@@ -321,7 +321,7 @@ public struct Map3DRealTrains: Sendable {
             // coaches at their own lengths, about 74 m.
             return Formation(key: "ALISHAN", cars: 6)
         case "hkmtr":
-            // Decision 779: the MTR's lines, which have no set of their own
+            // Decision 781: the MTR's lines, which have no set of their own
             // yet, borrow the generic metro car with the line's colour
             // band, as many cars as the line's real trains have
             // (``hongKongCars``), not three boxes.
@@ -332,7 +332,7 @@ public struct Map3DRealTrains: Sendable {
         }
     }
 
-    /// Decision 779: how many cars a train of each MTR line has, by
+    /// Decision 781: how many cars a train of each MTR line has, by
     /// `hkmtr.json`'s line id: the East Rail Line's (and its Lok Ma Chau
     /// branch's) nine-car R-train, the South Island Line's three-car
     /// S-train, the Disneyland Resort Line's four cars, the other lines'

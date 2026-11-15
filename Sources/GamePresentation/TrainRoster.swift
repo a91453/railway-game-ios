@@ -115,6 +115,16 @@ public struct TrainRoster: Equatable, Sendable {
 
         public var id: TrainID { train }
 
+        /// The waits between its trips (decision 777): each stretch of at
+        /// least ``Gap/shortest`` from one trip's end to the next one's
+        /// start, in the order of its trips.
+        public var gaps: [Gap] {
+            let ordered = cells.sorted { $0.start < $1.start }
+            return zip(ordered, ordered.dropFirst()).compactMap { before, after in
+                after.start - before.end >= Gap.shortest ? Gap(start: before.end, end: after.start) : nil
+            }
+        }
+
         /// Whether its line sends it out trip by trip (a train on a line
         /// today), so it has no planned boxes ahead: the line decides its
         /// trips as it goes.
@@ -138,12 +148,59 @@ public struct TrainRoster: Equatable, Sendable {
         }
     }
 
+    /// The wait of a train between two trips (decision 777), drawn as a
+    /// hatched block with how long it waits.
+    public struct Gap: Hashable, Sendable {
+        /// The shortest wait the roster draws, in seconds: a minute.
+        public static let shortest: Int64 = GameTime.secondsPerMinute
+
+        public let start: Int64
+        public let end: Int64
+
+        /// Whole minutes waited.
+        public var minutes: Int64 { (end - start) / GameTime.secondsPerMinute }
+
+        /// "42 min", "1 h 5 min"; "42 分", "1 小時 5 分".
+        public func text(in language: DisplayLanguage) -> String {
+            let hours = minutes / 60
+            let rest = minutes % 60
+            guard hours > 0 else { return language.text("\(minutes) min", "\(minutes) 分") }
+            guard rest > 0 else { return language.text("\(hours) h", "\(hours) 小時") }
+            return language.text("\(hours) h \(rest) min", "\(hours) 小時 \(rest) 分")
+        }
+    }
+
+    /// A train on no line and running no service of its own: one the
+    /// Arrange page lists beside the rows, to be dragged onto a line's row
+    /// (decision 777).
+    public struct Waiting: Hashable, Sendable, Identifiable {
+        public let train: TrainID
+        public let name: String
+        public let type: TrainType?
+        public let cars: Int
+        /// Whether it stands on the track.
+        public let isPlaced: Bool
+
+        public var id: TrainID { train }
+
+        /// Its second line: "Large metro · 6 cars"; "Not on the track".
+        public func detailText(in language: DisplayLanguage) -> String {
+            guard isPlaced else { return language.text("Not on the track", "還沒放上軌道") }
+            let cars = language.text(cars == 1 ? "1 car" : "\(cars) cars", "\(cars) 節")
+            guard let type else { return cars }
+            return type.title(in: language) + " · " + cars
+        }
+    }
+
     public let day: Day
     /// The first second of the day shown.
     public let dayStart: Int64
     /// Now, in seconds of game time.
     public let now: Int64
     public private(set) var rows: [Row]
+    /// The trains no line or timetable of their own runs, in the world's
+    /// order (decision 777); every line's, whatever ``only(line:)`` shows.
+    public let waiting: [Waiting]
 
     /// The roster with only line `line`'s trains (decision 512: opened
     /// from a line's page), or all of them for `nil`.
@@ -248,6 +305,11 @@ public struct TrainRoster: Equatable, Sendable {
                              revenue: revenue, utilisation: utilisation, cells: cells)))
         }
         self.rows = rows.sorted { ($0.order, $0.index) < ($1.order, $1.index) }.map(\.row)
+        self.waiting = world.trains.compactMap { train in
+            guard world.assignedLine(of: train.id) == nil, train.execution == nil,
+                  world.trips(of: train.id).last?.isRunning != true else { return nil }
+            return Waiting(train: train.id, name: train.name, type: train.type, cars: train.cars, isPlaced: train.position != nil)
+        }
     }
 
     /// The trips a train's own repeating timetable will run after `after`

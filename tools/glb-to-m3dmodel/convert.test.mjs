@@ -174,3 +174,39 @@ test('a flat model with at most eight colors keeps each color exactly', () => {
   const got = hexes.map((_, i) => output.readUInt32LE(start + i * 52 + 4 + 12));
   assert.deepEqual(got, hexes.map(hex => ((hex >> 16) | (hex & 0xff00) | ((hex & 255) << 16) | (255 << 24)) >>> 0));
 });
+
+test('with linearColors, linear factors and COLOR_0 come out as sRGB, and glass is marked', () => {
+  // One triangle a primitive: a red body whose linear factor is #711604's,
+  // and a window whose material is named glass, both with white COLOR_0.
+  const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 3, 0, 0, 2, 1, 0]);
+  const colours = new Float32Array(Array(6).fill([1, 1, 1, 1]).flat());
+  const bin = Buffer.concat([Buffer.from(positions.buffer), Buffer.from(colours.buffer)]);
+  const linear = [0x71, 0x16, 0x04].map(n => { const c = n / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  const json = {
+    asset: { version: '2.0', generator: 'linear fixture', extras: { aiGenerated: true } },
+    scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+    meshes: [{ primitives: [0, 1].map(i => ({ attributes: { POSITION: i, COLOR_0: 2 + i }, material: i })) }],
+    materials: [{ name: 'body', pbrMetallicRoughness: { baseColorFactor: [...linear, 1] } },
+      { name: 'glass', pbrMetallicRoughness: { baseColorFactor: [0.1, 0.1, 0.1, 1] } }],
+    buffers: [{ byteLength: bin.length }], bufferViews: [{ buffer: 0, byteLength: 72 }, { buffer: 0, byteOffset: 72, byteLength: 96 }],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] },
+      { bufferView: 0, byteOffset: 36, componentType: 5126, count: 3, type: 'VEC3', min: [2, 0, 0], max: [3, 1, 0] },
+      { bufferView: 1, componentType: 5126, count: 3, type: 'VEC4' },
+      { bufferView: 1, byteOffset: 48, componentType: 5126, count: 3, type: 'VEC4' },
+    ],
+  };
+  let text = Buffer.from(JSON.stringify(json));
+  text = Buffer.concat([text, Buffer.alloc((4 - text.length % 4) % 4, 0x20)]);
+  const chunk = (type, data) => Buffer.concat([Buffer.from(new Uint32Array([data.length, type]).buffer), data]);
+  const body = Buffer.concat([chunk(0x4e4f534a, text), chunk(0x004e4942, bin)]);
+  const glb = Buffer.concat([Buffer.from(new Uint32Array([0x46546c67, 2, 12 + body.length]).buffer), body]);
+  const { output, glassTriangles } = convert(glb, { modelId: 'linear', front: '+x', units: 'meters', recolorLightPaint: false, linearColors: true });
+  assert.equal(glassTriangles, 1);
+  const start = header(output).triangles;
+  assert.equal(output.readUInt32LE(start + 4 + 12), (0x71 | 0x16 << 8 | 0x04 << 16 | 255 << 24) >>> 0, 'the red as its sRGB #711604');
+  assert.deepEqual([output.readUInt32LE(start), output.readUInt32LE(start + 52)], [0, 2], 'only the window is glass');
+  // The old reading, every value as sRGB, stays the default.
+  const old = convert(glb, { modelId: 'linear', front: '+x', units: 'meters', recolorLightPaint: false }).output;
+  assert.equal(old.readUInt32LE(start + 4 + 12) & 0xff, Math.round(linear[0] * 255));
+});

@@ -16,6 +16,7 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 | 從參考圖做一款新車的整個流程（比例、輪廓、曲面、門窗、配色、自檢、交接） | `docs/art/native-vehicle-modeling/README.md`（車輛建模手冊，#1224）、`PROMPT.md`、`REVIEW_CHECKLIST.md`；三個實例 `CASE_STUDY_700T.md`、`CASE_STUDY_EMU3000.md`、`CASE_STUDY_E500.md` |
 | 畫風 | `.claude/skills/art-style/SKILL.md`（霧面平塗、薄邊、一個三角形一個顏色） |
 | 量與拍 | `tools/train-models/README.md`（本 skill 第 6 節） |
+| 作者自製模型（有貼圖）轉進遊戲 | 本 skill 第 8 節、`tools/texture-palette/README.md` |
 | 預算與遠景的規則 | 決策 408（遠景一節換一節）、417（共用預算、精細車規則）、420（簡化器、遠景版）、422、432（遠景版的測試） |
 | 要接的人手 | `docs/HANDOFF.md`、#2118 工作登記（別人正在動的車與檔案） |
 
@@ -106,7 +107,24 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 5. **預算**：近景約 4,000–8,000 個三角形，遠景不到一半，同框、顏色是近景的子集。
 6. **六格總覽先給作者看**：front、left、top、back、isometric、far left，作者說可以才收尾與合併。
 
-## 8. 這份是怎麼來的
+## 8. 作者自製模型轉進遊戲
+
+作者自己做的列車模型（舊版遊戲的、帶貼圖的）是作者的作品，可以進遊戲；但遊戲不用貼圖，所以照這個順序轉。第一台是 e752e7a2（#2249，`Map3DRedCommuter`），照它做：
+
+1. **原檔不進公開 repo**：GLB、貼圖留在作者的電腦或 `a91453/railway-assets-private`；公開的只有工具、文件與轉好的 Swift 網格。文件裡不寫作者電腦上的路徑。
+2. **切面**：`tools/texture-palette/`（README 有指令）。`flatten.py` 把貼圖平塗成色票色塊，`cut_faces.py` 沿色塊邊界把三角形切開（窗、門、帶各自成面），窗標 `glass`。不要把整台車塗成幾個大色塊，窗會不見。不要批次轉，一台一台做（作者 2026-11-15）。
+3. **顏色**：只用色票色。色票沒有的顏色（例如車身紅）加進 `Map3DPalette`，命名寫用途；原色在遊戲光下看起來不對就調（#711604 偏咖啡 → `trainRed` #8C1C1C）。**glTF 的 `COLOR_0` 與 base color factor 是線性值**：`tools/texture-palette/to_swift.py` 會轉回 sRGB；用 `tools/glb-to-m3dmodel/convert.mjs` 時要加 `--linear-colors yes`（不加是專案自己 GLB writer 的舊讀法，全部當 sRGB，紅帶會變成接近黑紅）。
+4. **進 Swift**：網格以 base64 內嵌（`to_swift.py`，同 N700S-G 的做法），顏色存色票索引、由 Swift 端給色；玻璃用 `Map3DTrainStyle.glass`，夜裡窗才會亮、白天才會反光。glTF 是 +y 上，要轉成遊戲軸（+x 車頭、+y 左、+z 上、車廂中心 x 0、最低點 z 0），轉換必須是旋轉（行列式 +1），不然整台翻面。
+5. **編組**：只有一端駕駛室的車，尾車用頭車轉 180°（`turned`）；中間車沒有就用後半節加鏡像（鏡像要反轉繞序）。頭尾車**要在配方裡加亮燈**（`cabLamps`，放在車頭畫好的燈塊上），`Map3DTrainSetTests` 會檢查。
+6. **接營運**：新 set 接在 `Map3DTrainSet.all` 最後；選哪些車畫成它寫在 `set(forKey:count:locked:)` 或 `byType`，別動到其他車型。同一個 PR 要加 `Map3DShowcase.catalog` 一行（列車展示，`Map3DShowcaseTests` 會擋）。
+7. **預算**：一節幾千個三角形以下就照一般車的距離畫、不必另做遠景版（417 規則 1 是給精細車的）；超過就照第 3 節做遠景版。
+8. **雜湊**：`hashes.lock.json` 只加新模型的行（Mac 量的值通常就對）；`Map3DModelPackLockTests.testTheOrderAndTheLampsAreAsBefore` 含頂點雜湊的 digest 在 Mac 上算不出 Linux 的值，推上去後照 CI 失敗訊息填（`gh api --allow-escape-sequences repos/a91453/railway-game-ios/actions/jobs/<id>/logs`）。名稱 digest 與燈組數可以先在 Mac 填。
+9. **路線顏色**：作者的塗裝畫成實色，車身就不顯示路線顏色（alpha 0 才會）。要不要讓某條帶吃線色，做之前先決定並寫進 PR。
+10. **看圖**：`render.mjs` 七向圖之外，在模擬器拍一張遊戲畫面（Debug 的 `-screenshot-scene` 加 `-screenshot-follow-train`，再按 3D），和新做的車並排。已知缺點寫進 PR（e752e7a2：車底只是一塊深色，沒有轉向架與車輪，下一台要補）。
+
+在 Mac 上跑工具：`tools/train-models/run.sh` 已支援 Swift 6.4.2 的模組位置；`render.mjs` 要 `CHROMIUM_PATH=<Playwright 的 Chrome for Testing 執行檔>` 與 `NODE_GLOBAL=<有 playwright 的 node_modules/>`。
+
+## 9. 這份是怎麼來的
 
 2026-10-11 原本寫給網頁版（Meshy 生成、Blender 烘焙、`trains.js`）。之後遊戲改成原生 Metal，列車變成 Swift 配方，每款車各開一個 `tools/` 資料夾，工具重複；2026-10-27 作者同意統一（派工單 AC）：共用工具 `tools/train-models/`，這份改寫成原生做法，網頁版降成附錄（原文保留，只把標題降一級）。
 

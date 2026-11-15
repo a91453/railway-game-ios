@@ -292,4 +292,43 @@ final class TrainRosterTests: XCTestCase {
                                    revenue: Money(-40_470_000), utilisation: 5, cells: [])
         XCTAssertEqual(loss.revenueTexts(in: .traditionalChinese)[1], "-40.5萬 · 5%")
     }
+
+    /// Decision 777: the wait between two trips, a minute or more, with
+    /// how long it is.
+    func testTheWaitsBetweenTrips() {
+        func cell(_ start: Int64, _ end: Int64) -> TrainRoster.Cell {
+            TrainRoster.Cell(number: 1, from: "A", to: "B", start: start, end: end, fare: .zero, state: .onTime, isEmptyRun: false)
+        }
+        // Out of order on purpose: the waits follow the trips' times.
+        let row = TrainRoster.Row(train: TrainID(rawValue: 1), name: "1", line: nil, lineCode: nil, revenue: .zero, utilisation: 0,
+                                  cells: [cell(10_000, 12_000), cell(0, 3_600), cell(6_120, 9_970)])
+        XCTAssertEqual(row.gaps, [TrainRoster.Gap(start: 3_600, end: 6_120)], "a wait of 30 s is not drawn")
+        XCTAssertEqual(row.gaps.first?.minutes, 42)
+        XCTAssertEqual(row.gaps.first?.text(in: .traditionalChinese), "42 分")
+        XCTAssertEqual(row.gaps.first?.text(in: .english), "42 min")
+        XCTAssertEqual(TrainRoster.Gap(start: 0, end: 3_900).text(in: .traditionalChinese), "1 小時 5 分")
+        XCTAssertEqual(TrainRoster.Gap(start: 0, end: 7_200).text(in: .english), "2 h")
+        // Trips that touch or overlap leave no wait.
+        let tight = TrainRoster.Row(train: TrainID(rawValue: 2), name: "2", line: nil, lineCode: nil, revenue: .zero, utilisation: 0,
+                                    cells: [cell(0, 100), cell(100, 200), cell(150, 300)])
+        XCTAssertTrue(tight.gaps.isEmpty)
+    }
+
+    /// Decision 777: the Arrange page's column lists the trains no line
+    /// and no timetable of their own runs; a line's train is not in it.
+    func testTheTrainsNotOnALineWait() throws {
+        var world = try build()
+        let three = try world.purchaseTrain(named: "Three").id
+        let four = try world.purchaseTrain(named: "Four").id
+        try world.placeTrain(four, at: Self.track.at(5, facingEast: false))
+        try world.advance(ticks: 60)
+        let roster = TrainRoster(world: world)
+        XCTAssertEqual(roster.waiting.map(\.train), [three, four])
+        XCTAssertEqual(roster.waiting.map(\.isPlaced), [false, true])
+        XCTAssertEqual(roster.waiting[0].detailText(in: .traditionalChinese), "還沒放上軌道")
+        let cars = try XCTUnwrap(world.train(id: four)).cars
+        XCTAssertTrue(roster.waiting[1].detailText(in: .traditionalChinese).hasSuffix("\(cars) 節"))
+        XCTAssertEqual(roster.only(line: first).waiting, roster.waiting, "every line's, on a line's roster too")
+        XCTAssertFalse(roster.rows.contains { $0.train == three }, "no row of its own")
+    }
 }

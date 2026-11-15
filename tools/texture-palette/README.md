@@ -1,10 +1,11 @@
 # texture-palette：作者舊版素材的色票轉換
 
-作者舊版遊戲（SwiftRailMac）的貼圖與模型是作者自己的作品。新版不用貼圖（一個三角形一個色票顏色），所以舊素材要轉：
+作者自製的舊版素材（舊版遊戲的貼圖與模型）是作者自己的作品，原檔留在作者的電腦與私有庫，不進這個公開 repo。新版不用貼圖（一個三角形一個色票顏色），所以舊素材要轉：
 
 | 檔案 | 做什麼 |
 | --- | --- |
 | `classify.py` | 舊貼圖分類：內容（磚、屋頂、混凝土、玻璃…）加最近的新色票顏色（工作室 t001、t003） |
+| `building_map.py` | 把 t003 的分類對到遊戲 `Map3DPalette` 的建築色票位置，輸出 `t003/`（見那裡的 README） |
 | `flatten.py` | 把一張貼圖平塗成幾個色票色塊（t001） |
 | `cut_faces.py` | 有貼圖的舊列車：照平塗貼圖的色塊邊界把三角形切開，輸出無貼圖、每三角形一色的 GLB（t002） |
 | `to_swift.py` | 把 `cut_faces.py` 切好的舊車 e752e7a2 寫成遊戲的 `Sources/GamePresentation/Map3DRedCommuterMesh.swift` |
@@ -12,11 +13,12 @@
 ## 舊車 e752e7a2 → 遊戲
 
 ```sh
-# 1. 平塗與切面（Pillow、numpy；路徑是作者 Mac 上的工作室資料夾）
+# 1. 平塗與切面（Pillow、numpy）。OLD_ASSETS：作者的舊版素材資料夾；
+#    WORK：flatten.py 的平塗圖與色票 palette.json 所在；OUT：輸出
 uv run --with pillow --with numpy python tools/texture-palette/cut_faces.py \
-  --glb ~/SwiftRailMac/assets/models/item_e752e7a2b53bfd78eef72105.glb \
-  --flat ~/AlongTheLine-Studio/reports/t001/r1/train/e752e7a2-flat.png \
-  --palette ~/AlongTheLine-Studio/reports/t001/ref/palette.json \
+  --glb OLD_ASSETS/models/<舊車>.glb \
+  --flat WORK/<舊車>-flat.png \
+  --palette WORK/palette.json \
   --out-dir OUT --min-area 22 --rdp-eps 1.8
 # 2. 寫成 Swift（不用第三方模組）
 python3 -I tools/texture-palette/to_swift.py OUT/e752e7a2-cut.glb \
