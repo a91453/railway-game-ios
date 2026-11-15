@@ -178,4 +178,74 @@ final class AirRouteMarketTests: XCTestCase {
         }
         print(rows.joined(separator: "\n"))
     }
+
+    /// Decision 762's targets, flown at the real frequency with the size
+    /// the panel picks: a route of 1,000 passengers a day or more pays
+    /// back in 120 to 240 days; one of 100 to 1,000 with two flights a day
+    /// or more in 150 to 360; a smaller one or one with a single flight
+    /// in 720 at most, or, with fewer than 15 passengers a day, may lose.
+    /// Hualien to Hong Kong is the one outside (778 days): 97 passengers a
+    /// day, of whom its one flight a day each way carries 38.
+    func testEveryRoutePaysBackInItsBand() throws {
+        let world = taiwan()
+        var losing: [String] = []
+        for listing in AirRouteMarket.listings(in: world) {
+            let estimates = AirRouteMarket.estimates(listing, frequency: .real, in: world)
+            let best = try XCTUnwrap(estimates.first { $0.size == AirRouteMarket.suggestedSize(estimates) })
+            let offer = try XCTUnwrap(best.offer)
+            let title = listing.title(in: .traditionalChinese)
+            let daily = offer.dailyPassengers
+            guard let days = best.paybackDays else {
+                XCTAssertLessThan(daily, 15, title)
+                losing.append(title)
+                continue
+            }
+            if daily >= 1_000 {
+                XCTAssertTrue((120...240).contains(days), "\(title): \(days)")
+            } else if daily >= 100, offer.route.realDepartures >= 2 {
+                XCTAssertTrue((150...360).contains(days), "\(title): \(days)")
+            } else if title != "花蓮機場 → 香港" {
+                XCTAssertLessThanOrEqual(days, 720, title)
+            }
+        }
+        XCTAssertEqual(losing.count, 4, "\(losing)")
+    }
+
+    /// Decision 762's check of the average day against the days GameCore
+    /// settles: every route bought with the size the panel picks, flown
+    /// `AIR_ROUTE_REPORT` days (weekdays, holidays, typhoons and the
+    /// railway's riders to the airport as they come), 32 at a time.
+    /// Prints Markdown and asserts nothing:
+    ///
+    ///     AIR_ROUTE_REPORT=28 swift test --skip-build --filter AirRouteMarketTests/testTheSettledDays
+    func testTheSettledDays() throws {
+        guard let text = ProcessInfo.processInfo.environment["AIR_ROUTE_REPORT"], let days = Int(text), days > 0 else {
+            throw XCTSkip("set AIR_ROUTE_REPORT=<days> to fly every route")
+        }
+        let listings = AirRouteMarket.listings(in: taiwan())
+        var rows = ["| Route | Price (NT$) | Average day (NT$) | Payback | Settled days | Settled day (NT$) | Payback |",
+                    "| --- | --: | --: | --: | --: | --: | --: |"]
+        for start in stride(from: 0, to: listings.count, by: AirRoute.maximumRoutes) {
+            var world = taiwan()
+            world.setSpeed(.normal)
+            var bought: [(AirRouteListing, AirRouteEstimate, AirRouteID)] = []
+            for listing in listings[start..<min(listings.count, start + AirRoute.maximumRoutes)] {
+                let estimates = AirRouteMarket.estimates(listing, frequency: .real, in: world)
+                let size = AirRouteMarket.suggestedSize(estimates)
+                let best = try XCTUnwrap(estimates.first { $0.size == size })
+                let route = try world.buyAirRoute(from: listing.airport, to: listing.destination.name, farAirport: listing.farAirport,
+                                                  metres: listing.metres, size: size)
+                bought.append((listing, best, route.id))
+            }
+            try world.advance(ticks: days * 1_440 + 2)
+            for (listing, best, id) in bought {
+                let route = try XCTUnwrap(world.airRoute(id: id))
+                let net = route.days.reduce(Int64(0)) { $0 + $1.fares.amount - $1.running.amount - $1.landingFees.amount } / Int64(max(1, route.days.count))
+                let price = try XCTUnwrap(best.offer).price.amount
+                let settled = net > 0 ? String((price + net - 1) / net) : "—"
+                rows.append("| \(listing.title(in: .traditionalChinese)) | \(price / 100) | \(best.dailyNet.amount / 100) | \(best.paybackDays.map(String.init) ?? "—") | \(route.days.count) | \(net / 100) | \(settled) |")
+            }
+        }
+        print(rows.joined(separator: "\n"))
+    }
 }

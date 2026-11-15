@@ -52,7 +52,9 @@ final class RealStationPurchaseTests: XCTestCase {
         // no value for a line's running.
         let station = Money(60_000_000)
         XCTAssertGreaterThan(price, station)
-        XCTAssertLessThan(price, station + Money(Int64(offer.metres) * 60_000))
+        // 猴硐's platform is an island (decision 760): two tracks.
+        XCTAssertEqual(offer.platforms, .island)
+        XCTAssertLessThan(price, station + Money(2 * Int64(offer.metres) * 60_000))
         print("猴硐: \(offer.metres) m, \(price.moneyText)")
 
         let before = session.world
@@ -64,7 +66,7 @@ final class RealStationPurchaseTests: XCTestCase {
         XCTAssertEqual(session.world.stations.count, 1)
         let built = try XCTUnwrap(session.world.stations.first)
         XCTAssertEqual(built.name, "猴硐")
-        XCTAssertEqual(session.world.network.platforms(of: built.id).count, 1)
+        XCTAssertEqual(session.world.network.platforms(of: built.id).count, 2, "a platform on each track")
         XCTAssertFalse(session.realStations(named: built.name, at: built.location).isEmpty, "recognised as the real one")
         XCTAssertFalse(session.realStationSuggestions.contains { $0.id == pin.id }, "built: no pin")
         XCTAssertTrue(session.world.acquisitions.isEmpty, "nothing records it was bought")
@@ -143,12 +145,66 @@ final class RealStationPurchaseTests: XCTestCase {
         }
     }
 
+    /// How far apart the station's two platform tracks stand, in metres,
+    /// at the platforms' middles.
+    private func spacing(of station: StationID, in world: GameWorld) throws -> Double {
+        // From the first platform's middle across to the second track
+        // (decision 766: a platform is no longer the whole of its edge, and
+        // the two edges are not as long as each other).
+        let platforms = world.network.platforms(of: station)
+        XCTAssertEqual(platforms.count, 2)
+        let geometry = try XCTUnwrap(world.trackGeometry(of: platforms[0].edge))
+        let middle = geometry.location(at: (platforms[0].start + platforms[0].end) / 2).position.plan
+        let across = try XCTUnwrap(world.nearestPoint(onEdge: platforms[1].edge, to: middle))
+        let other = try XCTUnwrap(world.trackGeometry(of: platforms[1].edge)).location(at: across.distance).position.plan
+        let points = [WorldVector(middle), WorldVector(other)]
+        return (points[0] - points[1]).length / Double(WorldCoordinate.unitsPerMetre)
+    }
+
+    /// Decision 760: an island station bought gets two tracks 11 m apart,
+    /// a station with a side platform on each of two tracks two tracks
+    /// 5 m apart, one with one side platform one track.
+    func testTheTracksStandAsTheRealPlatformsDo() throws {
+        for (name, kind, metres) in [("猴硐", RealStationPlatformKind.island, 11.0), ("暖暖", .sides, 5.0), ("貢寮", .single, 0)] {
+            let (session, pin) = try game(round: name)
+            let offer = session.realStationOffer(for: pin)
+            let purchase = try XCTUnwrap(offer.purchase, "\(name): \(offer.problem ?? "")")
+            XCTAssertEqual(offer.platforms, kind, name)
+            XCTAssertEqual(purchase.secondStretches.isEmpty, kind == .single, name)
+            XCTAssertTrue(session.buyRealStation(offer), "\(name): \(session.message?.text ?? "")")
+            let built = try XCTUnwrap(session.world.stations.first)
+            guard kind != .single else {
+                XCTAssertEqual(session.world.network.platforms(of: built.id).count, 1, name)
+                continue
+            }
+            // Decision 766: the level edge each track's platform stands on
+            // is one curve fitted along the real line, longer than the
+            // platform; on 猴硐's tight curve the two fits stand 12.1 m apart
+            // at the platform's middle (the 3D map draws an island between
+            // tracks up to 15 m apart).
+            XCTAssertEqual(try spacing(of: built.id, in: session.world), metres, accuracy: 1.5, name)
+            let card = offer.summaryText(in: .traditionalChinese)
+            XCTAssertTrue(card.contains(kind == .island ? "島式" : "兩側"), card)
+            guard case .command(let command)? = session.commandLog.entries.last?.action else { return XCTFail("logged") }
+            XCTAssertEqual(try JSONDecoder().decode(PlayerCommand.self, from: JSONEncoder().encode(command)), command, name)
+        }
+    }
+
+    /// Every station the platform table names is one the real railways
+    /// have, so none is missed for a spelling.
+    func testThePlatformTableNamesRealStations() throws {
+        let ids = Set(try BundledRealData.railways().stations.map(\.id))
+        let missing = RealStationPlatformTypes.island.union(RealStationPlatformTypes.side).subtracting(ids)
+        XCTAssertTrue(missing.isEmpty, "\(missing.sorted())")
+        XCTAssertTrue(RealStationPlatformTypes.island.isDisjoint(with: RealStationPlatformTypes.side))
+    }
+
     func testWhatIsInTheWayIsSaidAndNothingIsBought() throws {
         let (free, pin) = try game(round: "猴硐")
         let laid = try XCTUnwrap(free.realStationOffer(for: pin).purchase)
         // A track of the player's across the real line at the platform's
         // level stretch, which every layout the offer tries lays (decision
-        // 761: a shorter one is tried where the first is blocked).
+        // 766: a shorter one is tried where the first is blocked).
         let level = laid.stretches[laid.platform]
         let first = WorldCoordinate(x: (level.from.x + level.to.x) / 2, y: (level.from.y + level.to.y) / 2)
         let real = try BundledRealData.station("猴硐", in: "tra_sched")

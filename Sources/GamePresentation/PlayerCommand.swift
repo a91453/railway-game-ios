@@ -96,6 +96,9 @@ public enum PlayerCommand: Hashable, Sendable {
     /// track lacks (``GameSession/missingStationCrossovers(of:in:)``), laid
     /// in turn from its panel.
     case buildStationCrossovers(StationID, [TrackStretch])
+    /// Decision 761: a station's two side platforms rebuilt as an island
+    /// from its panel (``GameSession/stationIslandOffer(for:)``).
+    case rebuildStationAsIsland(StationIslandRebuild)
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -265,6 +268,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buyRealStation: "buyRealStation"
         case .buildStationLayout: "buildStationLayout"
         case .buildStationCrossovers: "buildStationCrossovers"
+        case .rebuildStationAsIsland: "rebuildStationAsIsland"
         }
     }
 }
@@ -396,6 +400,8 @@ extension GameSession {
             guard !crossovers.isEmpty else { throw .invalidTrackGeometry }
             outcome.left = try layLiftingTrains(crossovers, in: &world)
             outcome.number = crossovers.count
+        case .rebuildStationAsIsland(let rebuild):
+            outcome = try build(rebuild, in: &world)
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -500,6 +506,11 @@ extension PlayerCommand: Codable {
         /// whose platform is the whole stretch.
         var platformStart: Int64?
         var platformLength: Int64?
+        /// Decision 760: a real station's second track, each a
+        /// `buildTrack`, and which of its stretches has its platform on;
+        /// absent for one track (and in logs from before it).
+        var secondStretches: [PlayerCommand]?
+        var secondPlatformStretch: Int?
         /// Decision 507: a station layout's name and its steps, an
         /// `addPlatform`, then `addPlatformTrack`s, then `removeTrack`s.
         var layout: String?
@@ -637,13 +648,21 @@ extension PlayerCommand: Codable {
                 guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
                 return stretch
             }
+            let second = try (record.secondStretches ?? []).map { command in
+                guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
+                return stretch
+            }
             guard !stretches.isEmpty, let platform = record.platformStretch, stretches.indices.contains(platform),
                   let name = record.name, let point = try points(record.point).first, let demand = record.demand,
                   let kind = StationDemandKind(rawValue: demand.kind) else {
                 throw invalid("a station bought needs its track, platform, name, point and demand")
             }
+            guard record.secondPlatformStretch.map(second.indices.contains) ?? second.isEmpty else {
+                throw invalid("a station's second track needs its platform")
+            }
             self = .buyRealStation(RealStationPurchase(
-                stretches: stretches, platform: platform, name: name, at: point,
+                stretches: stretches, platform: platform,
+                secondStretches: second, secondPlatform: record.secondPlatformStretch, name: name, at: point,
                 demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland),
                 platformStart: record.platformStart, platformLength: record.platformLength
             ))
@@ -669,6 +688,30 @@ extension PlayerCommand: Codable {
             }
             guard let station = record.station, !crossovers.isEmpty else { throw invalid("a station's crossovers need the station and the crossovers") }
             self = .buildStationCrossovers(StationID(rawValue: station), crossovers)
+        case "rebuildStationAsIsland":
+            // Decision 761: the crossovers taken up, the platform track,
+            // the platform moved, the old stretch taken up; the crossovers
+            // laid again.
+            guard let station = record.station else { throw invalid("a station rebuilt as an island needs its station") }
+            var unjoined: [TrackEdgeID] = [], removed: [TrackEdgeID] = []
+            var track: PlatformTrackPlan?, moved: TrackPlatform?
+            for step in record.steps ?? [] {
+                switch step {
+                case .removeTrack(let edge) where track == nil: unjoined.append(edge)
+                case .addPlatformTrack(let plan) where track == nil: track = plan
+                case .removePlatform(let platform) where track != nil && moved == nil: moved = platform
+                case .removeTrack(let edge) where moved != nil: removed.append(edge)
+                default: throw invalid("a station rebuilt as an island has its crossovers, platform track, platform and track taken up, in order")
+                }
+            }
+            let crossovers = try (record.crossovers ?? []).map { command in
+                guard case .buildTrack(let crossover) = command else { throw invalid("a crossover is a stretch") }
+                return crossover
+            }
+            guard let track, let moved else { throw invalid("a station rebuilt as an island needs its platform track and platform") }
+            self = .rebuildStationAsIsland(StationIslandRebuild(
+                station: StationID(rawValue: station), unjoined: unjoined, moved: moved, track: track, removed: removed, crossovers: crossovers
+            ))
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -789,6 +832,10 @@ extension PlayerCommand: Codable {
             record.platformStretch = purchase.platform
             record.platformStart = purchase.platformStart
             record.platformLength = purchase.platformLength
+            if let second = purchase.secondPlatform {
+                record.secondStretches = purchase.secondStretches.map(PlayerCommand.buildTrack)
+                record.secondPlatformStretch = second
+            }
             record.name = purchase.name
             record.point = [purchase.at.x, purchase.at.y]
             record.demand = Record.Demand(kind: purchase.demand.kind.rawValue, dailyTrips: purchase.demand.dailyTrips, hinterland: purchase.demand.hinterland)
@@ -798,6 +845,11 @@ extension PlayerCommand: Codable {
         case .buildStationCrossovers(let station, let crossovers):
             record.station = station.rawValue
             record.crossovers = crossovers.map(PlayerCommand.buildTrack)
+        case .rebuildStationAsIsland(let rebuild):
+            record.station = rebuild.station.rawValue
+            record.steps = rebuild.unjoined.map(PlayerCommand.removeTrack) + [.addPlatformTrack(rebuild.track), .removePlatform(rebuild.moved)]
+                + rebuild.removed.map(PlayerCommand.removeTrack)
+            record.crossovers = rebuild.crossovers.map(PlayerCommand.buildTrack)
         }
         try record.encode(to: encoder)
     }
@@ -834,6 +886,8 @@ extension PlayerCommand {
             language.text("build this crossover", "建這組渡線")
         case .buildStationCrossovers:
             language.text("add the station's crossovers", "加車站的渡線")
+        case .rebuildStationAsIsland:
+            language.text("make it an island platform", "改成島式月台")
         case .addPlatformTrack:
             language.text("add this platform track", "加這條月台線")
         case .buildStationLayout(let plan):
