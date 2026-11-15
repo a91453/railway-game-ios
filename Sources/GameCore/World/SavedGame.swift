@@ -580,9 +580,14 @@
 ///     whole save with it, so it says the save is newer than it instead.
 ///     A save of an earlier version has them as towns: the step turns
 ///     those it knows by English name (``Tourism/sightKindsByName``).
+/// 107. Harbours (decision 773): a sight's `"kind"` can be `"harbour"`.
+///     A build that reads only an earlier version would refuse the kind
+///     and the whole save with it, so it says the save is newer than it
+///     instead. A save of an earlier version has them as coasts: the step
+///     turns those it knows by English name (``Tourism/harbourNames``).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 106
+    public static let currentVersion = 107
 
     public let world: GameWorld
 
@@ -853,6 +858,9 @@ extension SavedGame: Codable {
         // Version 105 or earlier to 106: the towns that are landmarks,
         // museums or temples take their kind (decision 772).
         if version < 106 { world.reclassifySightKinds() }
+        // Version 106 or earlier to 107: the coasts that are harbours take
+        // their kind (decision 773).
+        if version < 107 { world.reclassifyHarbours() }
         self.world = world
     }
 
