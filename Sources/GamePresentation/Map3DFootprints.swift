@@ -223,7 +223,8 @@ extension Map3DScene.Builder {
             let rings = building.rings.map { $0.map { point(x: $0.x, y: $0.y, height: 0) } }
             // Cleared for a building of the player's: its cells still keep
             // no city lot.
-            let drawn = !onPlacedGround(rings[0])
+            // Decision 791: nor on a landmark's ground (it draws the building).
+            let drawn = !onPlacedGround(rings[0]) && !underLandmark(point(x: middle.x, y: middle.y, height: 0))
             standing.formUnion(count(building.rings, drawn: drawn, into: &cover))
             guard drawn else { continue }
             var storeys = building.drawnStoreys, kind = building.kind

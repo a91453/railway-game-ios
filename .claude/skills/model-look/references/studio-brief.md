@@ -106,6 +106,10 @@
 - **重開審查前先 `studio.py takeover`**：不然新開的審查看到座位還掛著上一個 session，會一開就停在等人接手，
   介面上看起來像沒在跑。
 
-**接回遊戲**：地標不走列車的註冊表，走 `Map3DTaipeiLandmark` 那一套（位置、遠景、清掉底下的一般建物）；香港的
-建物工具 `tools/hk-map/build_hk_buildings.py` 的 `LANDMARKS` 加那幾棟的 `BuildingCSUID`；`DataSourceCredits` 加來源一行。
-（第一次接回時補細節。）
+**接回遊戲**（決策 791）：地標不走列車的註冊表。
+- `tools/hk-landmarks/glb_to_swift.py` 把 GLB 寫成 `Map3DHongKongLandmarkMeshes.swift`：頂點用**公分**（x、y Int16，z UInt16），
+  因為高樓超過列車那套公釐 Int16 的 ±32 m；材質名照工具裡的 `MATERIALS` 順序對色票。
+- `Map3DHongKongLandmark`：每棟一個 case，位置（`base/landmarks.json` 的經緯度）、`baseHeight`（模型腳的高程）。
+- 密集市區**不清 64 m 格子**（會連鄰樓一起清），只不畫中心落在地標本體裡的那棟足跡（`landmarkPlots`）。
+- 審查判「不建議交付」的不進遊戲，照舊由一般建物畫，另派工作室；「交付但列缺點」的照進，缺點寫進決策的下一步。
+- 資料來源寫進已有的那一項（加一句與連結），不另開 id。
