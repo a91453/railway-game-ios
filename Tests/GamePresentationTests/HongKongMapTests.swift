@@ -14,9 +14,15 @@ final class HongKongMapTests: XCTestCase {
         try OverseasGround(city: .hongKong, pack: try XCTUnwrap(HongKongRailwaysTests.pack(.hongKong)))
     }
 
-    /// A game on Hong Kong's map with its railways and its people, as the
-    /// launcher starts it.
     private func hongKong(demo: Bool = false) throws -> GameSession {
+        try Self.hongKong(demo: demo)
+    }
+
+    /// A game on Hong Kong's map with its railways and its people, as the
+    /// launcher starts it (also for `HongKongSharedTrackBuyOrderTests`,
+    /// `HongKongTungChungDayTests` and `HongKongEveryLineTests`, split off
+    /// so the CI shards can deal them apart).
+    static func hongKong(demo: Bool = false) throws -> GameSession {
         let ground = try Self.ground()
         var world = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000))
         if demo { world.setUnlimitedFunds(true) }
@@ -153,25 +159,6 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertNil(session.realLinesForSaleNote)
     }
 
-    /// Each line on sale is bought, one after another on the same map:
-    /// each has its trains, and the land round its stations is read in
-    /// with Hong Kong's people. None is refused (decision 753: the Tung
-    /// Chung Line, drawn along the Airport Express's track, was).
-    func testEveryLineOnSaleIsBought() throws {
-        let session = try hongKong()
-        for id in session.buyableRealLines.map(\.id).sorted() {
-            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, id)
-            let offer = session.realLineOffer(for: line)
-            XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
-            XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
-            let bought = try XCTUnwrap(session.world.acquisition(of: id), id)
-            let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)), id)
-            XCTAssertFalse(ran.assignedTrains.isEmpty, id)
-        }
-        XCTAssertGreaterThan(session.world.land.cells.reduce(0) { $0 + $1.residents }, 100_000)
-        XCTAssertEqual(session.buyableRealLines.map(\.id), [])
-    }
-
     /// The South Island Line is bought on its own, with every train of
     /// its day: its end at Admiralty stands where the line's own point of
     /// the station is, not at the East Rail Line's 33 m away, where its
@@ -277,36 +264,6 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertEqual(session.world.clock.speed, .paused)
     }
 
-    /// Decision 753 (2026-11-14: 「新版不能同時蓋迪士尼線跟機場快線」「記得
-    /// 東涌也是他們重複線路」): the Airport Express, the Tung Chung Line and
-    /// the Disneyland Resort Line, drawn along one track round Sunny Bay
-    /// and from Hong Kong to the airport island, are each bought after the
-    /// other two, in every order, and every one of them has its trains.
-    /// The Tung Chung Line was refused after the Airport Express and the
-    /// other way round (decision 712), and both after the Disneyland
-    /// Resort Line, laid on their track at Sunny Bay.
-    func testTheThreeLinesOnOneTrackAreBoughtInEveryOrder() throws {
-        let ids = ["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]
-        let orders = ids.flatMap { a in ids.filter { $0 != a }.flatMap { b in ids.filter { $0 != a && $0 != b }.map { [a, b, $0] } } }
-        XCTAssertEqual(orders.count, 6)
-        for order in orders {
-            let session = try hongKong()
-            for id in order {
-                let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(order) \(id)")
-                let offer = session.realLineOffer(for: line)
-                XCTAssertNil(offer.problem, "\(order) \(id): \(offer.problem ?? "")")
-                guard session.acquireRealLine(offer), let bought = session.world.acquisition(of: id) else {
-                    XCTFail("\(order) \(id): \(session.message?.text ?? "")")
-                    break
-                }
-                let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)), "\(order) \(id)")
-                XCTAssertFalse(ran.assignedTrains.isEmpty, "\(order) \(id)")
-            }
-        }
-        XCTAssertNil(RealBranchLine.overseasLanes["hkmtr:TCL"])
-        XCTAssertTrue(RealBranchLine.overseasLanes.keys.allSatisfy { $0.hasPrefix("hkmtr:") })
-    }
-
     /// No train of a line's day stands overnight between its ends in the
     /// way of the morning's first trains: the train that leaves such a
     /// station to begin the day is gone three minutes before the first
@@ -330,31 +287,6 @@ final class HongKongMapTests: XCTestCase {
             }
         }
         XCTAssertGreaterThanOrEqual(checked, 4, "the Tung Chung Line's four")
-    }
-
-    /// The Tung Chung Line bought and run for two days on the map: all
-    /// but the last run of each peak was sent out the second day, and
-    /// people rode.
-    func testTheTungChungLineRunsOnTheMap() throws {
-        let session = try hongKong()
-        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "hkmtr:TCL" })
-        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
-        var played = session.world
-        let bought = try XCTUnwrap(played.acquisition(of: "hkmtr:TCL"))
-        for _ in 0..<51 { try played.advance(ticks: 60) }
-        let ran = try XCTUnwrap(played.line(id: try XCTUnwrap(bought.line)))
-        let today = played.clock.now.seconds / GameTime.secondsPerDay
-        let missed = zip(ran.runs, ran.runDays).filter { run, day in
-            run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
-        }
-        // The last run of each six-minute peak, each way, is still dropped
-        // (4 of 282): one train holds the whole stretch from Sunny Bay to
-        // Tung Chung, seven minutes, so the peak falls behind until its
-        // last runs are too late to send. A rule of GameCore, left as it
-        // is (docs/handoff/AIR-UNLOCK.md); before the trains standing
-        // overnight were moved out of the way it was 22.
-        XCTAssertLessThanOrEqual(missed.count, 4, "runs not sent out yesterday: \(missed.count) of \(ran.runs.count)")
-        XCTAssertGreaterThan(played.accounts.days.last?.fareRevenue ?? .zero, .zero, "people rode")
     }
 
     /// The two shuttles of two trains, the Disneyland Resort Line and the
@@ -385,33 +317,6 @@ final class HongKongMapTests: XCTestCase {
             let after = try XCTUnwrap(played.line(id: ran.id))
             let departures = zip(after.runs, after.runDays).filter { $0.1 != nil }.count
             XCTAssertGreaterThan(departures, 10, id)
-        }
-    }
-
-    /// The demo mode's real lines, laid over the whole map at once: all
-    /// twelve of the MTR, every one with trains standing on its track
-    /// (#2099's two faults: a station with a platform on one track only,
-    /// and a terminus the returning train cannot call at).
-    func testTheDemoLaysEveryLineWithTrains() async throws {
-        let session = try hongKong(demo: true)
-        let view = WorldRegion(bounds: session.world.bounds)
-        let outcome = await session.layDemoRealLines(in: view, routes: .max, anyWidth: true) { $0.system.id == "hkmtr" }
-        XCTAssertEqual(outcome?.lines, 12, session.message?.text ?? "")
-        XCTAssertEqual(session.world.lines.count, 12)
-        // Each line's drawing ends at its end stations and is run on
-        // past them (``DemoRealLines/runningOn(_:by:)``): the end stations
-        // have their platforms, and a line of two stations is laid.
-        let laid = Dictionary(session.world.lines.map { line in (line.name, line.stops.compactMap { session.world.station(id: $0)?.name }) }) { first, _ in first }
-        XCTAssertEqual(laid["迪士尼綫 迪士尼–欣澳"], ["迪士尼", "欣澳"])
-        XCTAssertEqual(laid["將軍澳綫 將軍澳–康城"], ["將軍澳", "康城"])
-        XCTAssertEqual(laid["東涌綫 香港–東涌"]?.count, 8)
-        XCTAssertEqual(laid["東鐵綫 金鐘–羅湖"]?.count, 14)
-        XCTAssertLessThanOrEqual(outcome?.missed ?? .max, 1, "the Tsuen Wan Line's start from Central")
-        for line in session.world.lines {
-            XCTAssertFalse(line.assignedTrains.isEmpty, "\(line.name) has no train")
-            for id in line.assignedTrains {
-                XCTAssertNotNil(try XCTUnwrap(session.world.train(id: id)).position, "\(line.name)")
-            }
         }
     }
 }
