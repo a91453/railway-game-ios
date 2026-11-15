@@ -21,6 +21,16 @@
 // gives a station's platforms out in the order they were asked for.
 
 extension GameWorld {
+    /// Decision 784: how long a service must have waited past its doors
+    /// closing before one that could go gives its turn to it while only
+    /// trains on their way keep it from its route. Shorter waits are a
+    /// crossover or a terminal's throat on double track, where the train
+    /// on its way clears in seconds and giving way only cost the train that
+    /// could have gone its time; the waits decision 718 is for, a train
+    /// kept at one end of single track while trains keep coming the other
+    /// way, last minutes. One minute: the dispatcher's look.
+    static let turnOwedToHeldAfter: Int64 = 60
+
     /// Decision 718: the train that goes before train `id`, whose service
     /// is due to leave a stop and could take its route, but gives its turn
     /// to one that has waited longer for the same track the other way (see
@@ -62,7 +72,8 @@ extension GameWorld {
     ///   the same station, and
     /// - could go now, or are kept from their route only by trains that are
     ///   on their way and will clear it: never by a train that stands or
-    ///   waits itself, which may be waiting for this one.
+    ///   waits itself, which may be waiting for this one; kept so only
+    ///   once it has waited ``turnOwedToHeldAfter`` (decision 784).
     ///
     /// `nil` when there is none, with traffic control off, and for any
     /// departure but a service's from a stop it waits at with its doors
@@ -110,6 +121,8 @@ extension GameWorld {
                 continue
             }
             if case .held = takingDeparture(request, memo: &memo) {
+                // Decision 784: only once it has waited a minute.
+                guard clock.now.seconds - otherDue.seconds >= Self.turnOwedToHeldAfter else { continue }
                 // Held by trains on their way only.
                 let holders = trackHolders(memo: &memo)
                 let envelope = envelopeCover(of: request)
