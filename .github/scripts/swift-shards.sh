@@ -697,13 +697,24 @@ set -euo pipefail
 # Map3DFarViewTests to -8 (273), RealLineRebuildTests (105) to -2 (309),
 # RealLineListingTests (99) to -10 (317), DemoRealLinesEverySystemTests
 # to -12 (311). rest keeps some 1,000 s of tests on those runs' times.
+# 2026-11-15 (CI-SPEED-2): HongKongMapTests took 502 s in campaigns-1 of
+# the full tier 43671486441 (that job 12.8 minutes, the other campaigns
+# 3.5-7.5) and 638 s in selected-3 of the pull request tier 43666349107
+# (18.2 minutes, the other parts 6.5-12): one class longer than any
+# shard. Its four slowest tests went to classes of their own, unchanged:
+# HongKongSharedTrackBuyOrderTests (the three lines in every order, 250 s
+# there) to -2, HongKongEveryLineTests (every line bought, the demo's
+# lines, 104 s) to -4 and HongKongTungChungDayTests (111 s) to -5, the
+# three campaigns with the lowest of those runs' times and decision 719's
+# medians (-2 290/309 s, -4 213/367, -5 265/329); HongKongMapTests keeps
+# 13 tests, some 38 s, in -1.
 classes_of() {
   case "$1" in
     campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests HongKongMapTests" ;;
-    campaigns-2) echo "SaveMutationSecondHalfTests Map3DBuildingsTests Map3DSurfaceTests Map3DRealBuildingsTests ScheduledOvertakeTrackMiddlePropertyTests VerticalRailwayPropertyTests OnboardingTests Map3DChuKuangPassengerTests Map3DPPIntegrationTests Map3DStationsTests SingleTrackCapacityPropertyTests PolicyTests PingxiChallengeTests RealLineRebuildTests" ;;
+    campaigns-2) echo "SaveMutationSecondHalfTests Map3DBuildingsTests Map3DSurfaceTests Map3DRealBuildingsTests ScheduledOvertakeTrackMiddlePropertyTests VerticalRailwayPropertyTests OnboardingTests Map3DChuKuangPassengerTests Map3DPPIntegrationTests Map3DStationsTests SingleTrackCapacityPropertyTests PolicyTests PingxiChallengeTests RealLineRebuildTests HongKongSharedTrackBuyOrderTests" ;;
     campaigns-3) echo "DemoRealLinesTrackTests ScheduledTrafficSecondHalfPropertyTests Map3DBoxInstanceTests EconomySecondHalfPropertyTests Map3DPropsTests RealWorldDataLoadTests FlexDispatchPropertyTests Map3DC341Tests LessonGuideTests RealRoadCellsTests RealWorldExpansionTests Map3DTEMU2000Tests CityGrowthTests WenhuLineTests" ;;
-    campaigns-4) echo "NetworkServicePropertyTests TrafficFollowingPropertyTests Map3DRealTracksTests Map3DC341IntegrationTests TRADemoTests Map3DSignTests RealBusesTests NetworkSectionPropertyTests Map3DEMU500Tests RealWorldDemoRoadsTests Map3DRoadBridgeTests CoverageGridTests Map3DLandmarksTests Map3DModelPackLockTests" ;;
-    campaigns-5) echo "GoldenScenarioTests Map3DDetailTests SeededStreetPlanTests DeadlockPropertyTests Map3DBreezyBlueIntegrationTests Map3DTaichungGreenTests Map3DTaipeiLandmarksTests PassengerRouteSearchTests SanyingLineFreezeTests RealLineOfferPreparingTests Map3DEstateKitTests RealLineStockTests KaohsiungLightRailDayTests" ;;
+    campaigns-4) echo "NetworkServicePropertyTests TrafficFollowingPropertyTests Map3DRealTracksTests Map3DC341IntegrationTests TRADemoTests Map3DSignTests RealBusesTests NetworkSectionPropertyTests Map3DEMU500Tests RealWorldDemoRoadsTests Map3DRoadBridgeTests CoverageGridTests Map3DLandmarksTests Map3DModelPackLockTests HongKongEveryLineTests" ;;
+    campaigns-5) echo "GoldenScenarioTests Map3DDetailTests SeededStreetPlanTests DeadlockPropertyTests Map3DBreezyBlueIntegrationTests Map3DTaichungGreenTests Map3DTaipeiLandmarksTests PassengerRouteSearchTests SanyingLineFreezeTests RealLineOfferPreparingTests Map3DEstateKitTests RealLineStockTests KaohsiungLightRailDayTests HongKongTungChungDayTests" ;;
     campaigns-6) echo "RealLineAcquisitionTests Map3DTests DanhaiBlueThenGreenSimpleDayTests Map3DStreetsTests EconomyPropertyTests DanhaiGreenLineDayTests NewGameSavePropertyTests MetroStructuresTests FrameTimeBenchTests Map3DTrainLabelsTests TurnbackTests WeeklyPunctualityTests Map3DLotGroundTests Map3DEMU800Tests Map3DSceneRebuildTests Map3DBusLayerTests" ;;
     campaigns-7) echo "HighSpeedDemoTests Map3DStreetLifeTests Map3DBuildReturnTests HighSpeedDemoBatchTests Map3DTrainSetTests Map3DNextDepartureTests DanhaiDepotTests Map3DC371C381Tests ScreenshotSceneTests DemoRealLinesTests WorldStateMachineTests ReplayFixtureTests Map3DMeshSimplifierTests TraceOverlapTests" ;;
     campaigns-8) echo "LineDispatchPropertyTests BoardingPropertyTests ReservationShortcutTests Map3DFrontageTests Map3DSceneryPropsTests ScheduledOvertakeTrackFinalPropertyTests AnkengLineTests LocalPassTests OccupiedRoutingPropertyTests Map3DEMU900IntegrationTests BusRoadsRealMapTests LineAccountsTests LessonTests LoopLineBoardingTests Map3DFarViewTests" ;;
@@ -821,7 +832,14 @@ selected_pattern() {
 # Map3DStationExteriorsTests 231 -> 94: it took 74 and 94 s in those runs
 # (decision 679 made its track faster), and at 231 it stood alone against
 # rest's other heavy classes, 433 s in one part and 609 in the other.
-CLASS_WEIGHTS="HongKongMapTests:184 Map3DFarViewTests:135
+# 2026-11-15 (CI-SPEED-2): HongKongMapTests (638 s in selected-3 of run
+# 43666349107, 502 in campaigns-1 of 43671486441) split in four; each
+# takes its tests' times in campaigns-1 times 1.27 (638/502), rounded:
+# HongKongSharedTrackBuyOrderTests 320, HongKongTungChungDayTests 140,
+# HongKongEveryLineTests 130, HongKongMapTests 50.
+CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
+  HongKongTungChungDayTests:140 Map3DFarViewTests:135
+  HongKongEveryLineTests:130 HongKongMapTests:50
   DemoRealLinesEverySystemTests:78 WenhuUndergroundTests:52
   AirportLineWholeIslandTests:38 HongKongRailwaysTests:38
   Map3DCablewaysTests:34 Map3DNearestTrackTests:29

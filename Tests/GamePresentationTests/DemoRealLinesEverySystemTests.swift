@@ -68,7 +68,7 @@ final class DemoRealLinesEverySystemTests: XCTestCase {
             "every system of the bundled railways"
         )
         // Hong Kong's MTR is not on Taiwan's map: its lines are laid on its
-        // own (`HongKongMapTests`).
+        // own (`HongKongMapTests`, `HongKongEveryLineTests`).
         for (system, key) in keys.sorted(by: { $0.key < $1.key }) where system != OverseasMap.hongKong.system {
             let session = try taiwan()
             let stations = try XCTUnwrap(railways.stops[key]).prefix(4).map(\.chinese)
