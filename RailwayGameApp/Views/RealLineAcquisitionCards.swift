@@ -320,6 +320,98 @@ struct RealStationOfferCard: View {
     }
 }
 
+// MARK: - Real island stations (decision 770)
+
+/// Decision 770: the stations that are islands in real life but stand on
+/// two side platforms, each ticked with its price, and one button that
+/// rebuilds the ticked ones (decision 761). Opened by itself once, on the
+/// first game that has such stations, and from the station panel.
+struct IslandRebuildListCard: View {
+    let session: GameSession
+    @Environment(\.dismiss) private var dismiss
+    @State private var unticked: Set<StationID> = []
+
+    var body: some View {
+        let language = session.language
+        let list = session.islandRebuildList
+        let ticked = list.filter { $0.problem == nil && !unticked.contains($0.id) }
+        let total = session.islandRebuildTotal(of: Set(ticked.map(\.id)), in: list)
+        NavigationStack {
+            Form {
+                Section {
+                    Text(verbatim: session.islandRebuildListHelp)
+                        .font(.subheadline)
+                }
+                Section {
+                    ForEach(list) { candidate in
+                        Toggle(isOn: Binding(
+                            get: { candidate.problem == nil && !unticked.contains(candidate.id) },
+                            set: { on in
+                                if on { unticked.remove(candidate.id) } else { unticked.insert(candidate.id) }
+                            }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: candidate.name)
+                                Text(verbatim: candidate.problem ?? candidate.cost?.moneyText ?? "")
+                                    .font(.footnote)
+                                    .foregroundStyle(candidate.problem == nil ? Theme.textSecondary : Theme.warning)
+                            }
+                        }
+                        .disabled(candidate.problem != nil)
+                    }
+                } header: {
+                    Text(verbatim: language.text("Stations", "車站"))
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if !ticked.isEmpty, !session.world.economy.canAfford(total) {
+                        Text(verbatim: language.text(
+                            "Not enough cash for all of them: those it cannot pay for are left.",
+                            "現金不夠全部改建：付不起的站會先留著。"
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                    }
+                    Button {
+                        session.rebuildStationsAsIsland(ticked.map(\.id))
+                        dismiss()
+                    } label: {
+                        Label {
+                            Text(verbatim: session.islandRebuildAllButtonText(count: ticked.count, total: total))
+                        } icon: {
+                            Image(systemName: "rectangle.split.3x1")
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(ThemeProminentButtonStyle())
+                    .disabled(ticked.isEmpty)
+                    .accessibilityIdentifier("islandList.rebuild")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Theme.panel)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Theme.panelBorder).frame(height: 1)
+                }
+            }
+            .navigationTitle(Text(verbatim: session.islandRebuildListTitle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(verbatim: language.text("Later", "以後再說"))
+                    }
+                    .accessibilityIdentifier("islandList.later")
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Air routes (decision 759)
 
 /// The lines panel's air routes page (decision 759): the routes the
