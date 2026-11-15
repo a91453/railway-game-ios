@@ -568,9 +568,15 @@
 ///     and exhibitions at any busy station again, so it says the save is
 ///     newer than it instead. A save of any earlier version needs no step:
 ///     it has no venue, and its events are drawn by traffic as before.
+/// 105. Night markets (decision 769): a sight's `"kind"` can be
+///     `"nightMarket"`, whose tourists ride in the evening. A build that
+///     reads only an earlier version would refuse the kind and the whole
+///     save with it, so it says the save is newer than it instead. A save
+///     of any earlier version takes a step: its sights held as towns
+///     whose English name ends in "Night Market" become night markets.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 104
+    public static let currentVersion = 105
 
     public let world: GameWorld
 
@@ -827,6 +833,9 @@ extension SavedGame: Codable {
         // Version 103 or earlier to 104: demand events without `"venues"`
         // have none, and an event without `"venue"` is held at no venue
         // (decision 768): nothing to turn.
+        // Version 104 or earlier to 105: a sight held as a town whose
+        // English name ends in "Night Market" is a night market (decision
+        // 769, ``GameWorld/reclassifyNightMarkets()`` below).
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
@@ -834,6 +843,7 @@ extension SavedGame: Codable {
         }
         if version == 72 { world.seedBoughtTilesRoads() }
         if version < 76 { world.convertHighSpeedFaresToNewTaiwanDollars() }
+        if version < 105 { world.reclassifyNightMarkets() }
         self.world = world
     }
 
