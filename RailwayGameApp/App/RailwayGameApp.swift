@@ -49,6 +49,14 @@ struct RailwayGameApp: App {
             // later), which comes up when a line's train first waits on
             // single track.
             UserDefaults.standard.set(true, forKey: PassingLoopHint.seenKey)
+            // And the card of real island stations (decision 770), which
+            // opened by itself over the real-world demo and covered the
+            // toolbar a test went on to tap (REVIEW-L22: main's full lane,
+            // run 43687762390). A test of the card asks with
+            // -show-island-rebuild-list.
+            if !DebugLaunch.isSet("-show-island-rebuild-list") {
+                UserDefaults.standard.set(true, forKey: GameSession.islandRebuildListSeenKey)
+            }
             // And the one-time line under the construction HUD about its
             // height cell (``HeightSlideHint``): it makes the top column
             // deeper under every stretch a test previews. A test of the
