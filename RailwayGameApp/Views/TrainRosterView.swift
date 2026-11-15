@@ -146,6 +146,9 @@ struct TrainRosterView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            // The owner's report on 133: held sideways, the names were
+            // under the notch.
+            .clearsTheNotch()
             .background(Theme.background)
             .navigationTitle(Text(verbatim: language.text("Train roster", "列車運用表")))
             .navigationBarTitleDisplayMode(.inline)
