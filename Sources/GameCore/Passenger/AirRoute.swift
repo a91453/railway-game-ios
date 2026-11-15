@@ -32,7 +32,7 @@
 // 2,700 s), a seat's fare grows with the distance flown above a floor
 // (`aviation_economy_curves`), and the seats of the three larger sizes are
 // those of its ATR 72-600 (70), A320-200 (186) and A330-300 (440). The
-// money is this project's own: decision 758 lists every value.
+// money is this project's own: decisions 758 and 762 list every value.
 
 /// An air route's number, handed out in order and never used again.
 public struct AirRouteID: RawRepresentable, Hashable, Comparable, Codable, Sendable {
@@ -92,23 +92,25 @@ public enum AircraftSize: String, CaseIterable, Hashable, Codable, Sendable {
     }
 
     /// What one costs a day whether it flies or not: crew, insurance,
-    /// upkeep.
+    /// upkeep (decision 762: the nineteen-seater's NT$10,000).
     public var dailyUpkeep: Money {
         switch self {
-        case .commuter: Money(2_000_000)
+        case .commuter: Money(1_000_000)
         case .regional: Money(6_000_000)
         case .narrowBody: Money(20_000_000)
         case .wideBody: Money(50_000_000)
         }
     }
 
-    /// What it costs for each kilometre it flies: fuel and wear.
+    /// What it costs for each kilometre it flies: fuel and wear. A seat's
+    /// kilometre costs less the bigger the aircraft (decision 762): some
+    /// NT$5.3, NT$5.0, NT$3.2 and NT$2.7.
     public var costPerKilometre: Money {
         switch self {
-        case .commuter: Money(12_000)
+        case .commuter: Money(10_000)
         case .regional: Money(35_000)
-        case .narrowBody: Money(100_000)
-        case .wideBody: Money(200_000)
+        case .narrowBody: Money(60_000)
+        case .wideBody: Money(120_000)
         }
     }
 
@@ -219,9 +221,10 @@ public struct AirRoute: Hashable, Sendable {
     /// Kong's 810 some NT$6,060.
     public static let baseFare = Money(120_000)
     public static let fareCentsPerKilometre: Int64 = 600
-    /// What a passenger a day of the route costs when it is bought:
-    /// NT$100,000.
-    public static let valuePerDailyPassenger = Money(10_000_000)
+    /// What a passenger a day of the route costs when it is bought: this
+    /// many days of the route's fare (decision 762), so a long route's
+    /// passengers cost more than a short one's, as they bring more.
+    public static let valueDaysOfFare: Int64 = 65
     /// The days of takings kept.
     public static let keptDays = 30
 
@@ -371,7 +374,7 @@ extension GameWorld {
     /// real departures each way are the destination's flights of a year
     /// over 730, rounded half up, one at least; the aircraft the fewest
     /// that fly them in the airport's open hours; the passengers' value
-    /// ``AirRoute/valuePerDailyPassenger`` for each of an average day.
+    /// ``AirRoute/valueDaysOfFare`` days of its fare for each of an average day.
     ///
     /// - Throws, checked in this order: ``GameError/idsExhausted``;
     ///   ``GameError/invalidAirRoute`` for an airport the map has not, a
@@ -407,7 +410,7 @@ extension GameWorld {
                 || (farAirport != nil && bought.airport == farAirport && bought.farAirport == airport)
         }) { throw .airRouteAlreadyBought }
         let daily = place.yearlyPassengers / 365
-        let value = Money(daily * AirRoute.valuePerDailyPassenger.amount)
+        let value = Money(daily * AirRoute.valueDaysOfFare * AirRoute.fare(metres: length).amount)
         let route = AirRoute(id: AirRouteID(rawValue: id), airport: airport, destination: destination, farAirport: farAirport,
                              metres: length, realDepartures: real, frequency: frequency, size: size, aircraft: Int(needed),
                              day: dayIndex(of: clock.now), value: value)
