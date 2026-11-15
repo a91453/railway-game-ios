@@ -601,6 +601,13 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**0.6.0 (133) 準備發版（2026-11-15，RELEASE-133 記）**
+- 範圍：132（`3b2a3f5`）之後到近景通勤乘客 #2276 合併為止的 `main`（#2245–#2276）。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-15-133` 與 `research/PLAYER_FEEDBACK.md` 的 133 一節。建置的 commit 與 run 號發版後補。
+- 不收：#2254（分包下載第二段，照計畫 133 發完才合，算 134）、香港地標、冬季活動。
+- 號碼（寫這段時）：main 決策到 786（784 保留給 HEALTH-132-FIX）、存檔 107；#2276 佔決策 787。golden schema 不動。
+- 發版照常：說明合併、#2276 合併後由作者按 `testflight.yml`（`main`、`archive_signing=adhoc`、`testing_scope=external`），full lane 發版後跑，紅了修進 134。
+- **實機還沒看過的**（133 全部）：港鐵三款車與節數、紅色通勤車、近景通勤乘客、機廠檢修庫、港口碼頭人潮、路線詳情四頁、運用表編排頁、跟車鏡頭。
+
 **0.6.0 (132) 發了（2026-11-15 05:24 UTC，發版後例行檢查記）**
 - 從 main **`3b2a3f5`**（#2244 的合併）建置，TestFlight `testflight.yml` run 43680941721（run 132），作者自己按；寫這段時 run 還在跑。`3b2a3f5` 是 `26d397d`（#2243，132 的說明）再加 #2244（只拆 CI 的 `HongKongMapTests`、不改 App），所以 App 內容和 `26d397d` 相同。紀錄在 `research/PLAYER_FEEDBACK.md` 的 132 一節。
 - 範圍：131（`4cff950`）之後的 #2208–#2244，說明見 `.github/testflight-whats-new.md` 與 #2243。作者要在 App Store Connect 重跑 Game Center 設定（年終考核兩個新成就，#2215）與回答出口合規。
