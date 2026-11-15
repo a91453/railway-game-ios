@@ -9,8 +9,8 @@
 
 用法：
   uv run --with pillow --with numpy python tools/texture-palette/flatten.py \
-    --input ~/AlongTheLine-Studio/reports/t001/ref/train-e752e7a2.png \
-    --output ~/AlongTheLine-Studio/reports/t001/r1/train/e752e7a2-flat.png
+    --input OLD_ASSETS/textures/<貼圖>.png \
+    --output WORK/<舊車>-flat.png
 """
 
 from __future__ import annotations
