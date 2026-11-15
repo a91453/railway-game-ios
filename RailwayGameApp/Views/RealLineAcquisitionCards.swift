@@ -547,6 +547,10 @@ struct AirRouteOfferSheet: View {
                         .accessibilityIdentifier("air.offer.buy")
                     } header: {
                         Text(verbatim: language.text("Price", "價錢"))
+                    } footer: {
+                        if let opens = session.airRouteOpensMapText(listing) {
+                            Text(verbatim: opens)
+                        }
                     }
                 }
             }
