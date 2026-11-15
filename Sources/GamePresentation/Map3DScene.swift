@@ -820,6 +820,33 @@ public enum Map3DPalette {
     /// map's ground and roofs (decision 241) rather than a photograph's.
     static let concreteWalls: [UInt32] = [rgb(0xC9CCD5), rgb(0xBFC3CE), rgb(0xD3D4DA)]
 
+    /// Decision 764: the city's own buildings drawn in more colours than
+    /// the kits' (which keep ``officeWalls`` and ``concreteWalls`` as they
+    /// are). The added colours are the local studio's restyle set
+    /// (SwiftRailMac `tools/restyle/own.mjs`, 2026-11-13: walls, flat and
+    /// sloped roofs, accents) and a few seen on Taiwan's streets; the look
+    /// (``Map3DLook``) draws them pale as it does every city colour.
+    ///
+    /// Flat roofs, by weight: the grey concrete of decision 720 (which the
+    /// look keeps as ``cityRoof``), dark grey sheet steel, a warm grey
+    /// waterproofing, the green waterproof paint, a blue sheet-steel room
+    /// over the whole roof and, on low houses only, red tiles.
+    static let cityRoofs: [(color: UInt32, weight: Float, low: Bool)] = [
+        (roof, 4, false), (rgb(0x6C7279), 2, false), (rgb(0x5A4E4A), 1, false),
+        (rgb(0x3C8A5A), 1, false), (rgb(0x2D68AC), 1, false), (rgb(0xB85A42), 1, true),
+    ]
+    /// Offices: ``officeWalls`` and a beige stone, a pale blue grey and a
+    /// dark grey aluminium cladding.
+    static let cityOfficeWalls: [UInt32] = officeWalls + [rgb(0xD9D4C8), rgb(0xDAE2E6), rgb(0x8A949E)]
+    /// Fair-faced concrete: ``concreteWalls`` and a warm grey, a white
+    /// grey and a darker weathered grey.
+    static let cityConcreteWalls: [UInt32] = concreteWalls + [rgb(0xBBB2A9), rgb(0xDADCDD), rgb(0xA9B0B8)]
+    /// Big halls (arenas, gyms, markets, a hall of 3,000 m² or more under
+    /// six storeys): white, warm grey, silver grey or brick walls...
+    static let hallWalls: [UInt32] = [rgb(0xDADCDD), rgb(0xBBB2A9), rgb(0xA9B0B8), rgb(0xB0624A), rgb(0xEBD099)]
+    /// ...under a blue, green, silver or grey sheet-steel roof.
+    static let hallRoofs: [UInt32] = [rgb(0x2D68AC), rgb(0x3C8A5A), rgb(0x8A949E), rgb(0x4F7FB0), roof]
+
     private static func rgb(_ hex: UInt32) -> UInt32 { Map3DColor.rgb(hex) }
 }
 
@@ -2041,7 +2068,7 @@ extension Map3DScene {
                                  commercial: lot.use == .commercial)
                     }
                 case .office:
-                    addBlock(base: base, side: side, density: lot.density, walls: Self.pick(Map3DPalette.officeWalls, seed), facade: .officeGlass, seed: seed)
+                    addBlock(base: base, side: side, density: lot.density, walls: Self.pick(Map3DPalette.cityOfficeWalls, seed), facade: .officeGlass, seed: seed)
                 // Decision 235: factories, schools, clinics, temples and
                 // malls from the asset library's rules.
                 case .industrial:
@@ -2268,6 +2295,8 @@ extension Map3DScene {
         mutating func addBlock(base: Map3DPoint, side: Float, density: Int, walls: UInt32, facade: Map3DSurface, seed: (Int32, Int32),
                                commercial: Bool = false) {
             let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
+            // Decision 764: its roof, and its walls a little lighter or darker.
+            let walls = Self.varied(walls, r(1041)), roof = Self.pickRoof(r(1040), low: false)
             let bay: Float = facade == .officeGlass ? 3 : 3.2
             // Flats' windows with or without blinds, and the podium's shop,
             // picked by where the block stands.
@@ -2283,12 +2312,12 @@ extension Map3DScene {
                 case ...2:
                     let floors = Float(3 + Int(r(1) * 4))
                     mesh.addBox(base: base, length: footprint * 0.8, width: footprint * 0.8, height: 3.8 + 3.2 * (floors - 1),
-                                top: Map3DPalette.roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
+                                top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                 case 3:
                     let floors = Float(7 + Int(r(1) * 10))
                     let turned = r(2) < 0.5
                     mesh.addBox(base: base, forward: turned ? Map3DPoint(1, 0, 0) : Map3DPoint(0, 0, -1),
-                                length: footprint * 0.9, width: footprint * 0.45, height: 4.6 + 3.2 * (floors - 1), top: Map3DPalette.roof, side: walls,
+                                length: footprint * 0.9, width: footprint * 0.45, height: 4.6 + 3.2 * (floors - 1), top: roof, side: walls,
                                 topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                     // Decision 235: a stair house and air conditioners on top;
                     // decision 238: near, a balcony along each long side
@@ -2309,10 +2338,10 @@ extension Map3DScene {
                 default:
                     let floors = Float(18 + Int(r(1) * 23))
                     let podium = facade == .officeGlass ? Map3DPaint.bays(.officeGlass, bay: 3, floors: 2) : Map3DPaint.bays(Self.pick(Map3DSurface.shops, r(4)), bay: 5.4, floors: 2)
-                    mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: Map3DPalette.roof, side: Map3DColor.shaded(walls, 0.9),
+                    mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: roof, side: Map3DColor.shaded(walls, 0.9),
                                 topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
-                                top: Map3DPalette.roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
+                                top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                     if !far {
                         Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 9 + 3.3 * floors, 0), forward: Map3DPoint(0, 0, -1),
                                           length: footprint * 0.55, width: footprint * 0.55, r: r, salt: 30)
@@ -2387,6 +2416,24 @@ extension Map3DScene {
                 roll -= wall.weight
             }
             return walls[0].color
+        }
+
+        /// Decision 764: a city building's flat roof by a share from 0 to
+        /// 1 (``Map3DPalette/cityRoofs``); red tiles only on a `low` one.
+        static func pickRoof(_ share: Float, low: Bool) -> UInt32 {
+            let roofs = Map3DPalette.cityRoofs
+            var roll = min(max(share, 0), 0.999_9) * roofs.reduce(0) { $0 + $1.weight }
+            for roof in roofs {
+                if roll < roof.weight { return roof.low && !low ? Map3DPalette.roof : roof.color }
+                roll -= roof.weight
+            }
+            return Map3DPalette.roof
+        }
+
+        /// Decision 764: `wall` a little darker by a share from 0 to 1 (at
+        /// most 8 %), so two neighbours of one colour still differ.
+        static func varied(_ wall: UInt32, _ share: Float) -> UInt32 {
+            Map3DColor.shaded(wall, 1 - 0.08 * min(max(share, 0), 1))
         }
 
         static func pick(_ colors: [UInt32], _ seed: (Int32, Int32)) -> UInt32 {

@@ -173,4 +173,26 @@ final class SightKindsTests: XCTestCase {
         let old = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: object))
         XCTAssertEqual(old.world.tourism?.attractions.first?.kind, .landmark)
     }
+
+    /// `v106-sight-kinds.json`: Home and Foot a minute in, with a temple by
+    /// Foot. Written once by the version 106 build (`SIGHT_KINDS_SAVE_NEW=1`).
+    func testVersionOneHundredSixKeepsTheTemple() throws {
+        var world = try world(.temple)
+        try world.advance(ticks: 1)
+        let url = SavedGameTests.fixtures.appendingPathComponent("v106-sight-kinds.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["SIGHT_KINDS_SAVE_NEW"] != nil, SavedGame.currentVersion == 106 {
+            try encoder.encode(SavedGame(world: world)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 106)
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded.tourism?.attractions.map(\.kind), [.temple])
+        XCTAssertEqual(loaded, world, "the save is the world this build makes the same way")
+        try loaded.advance(ticks: 1_440)
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(loaded, world)
+    }
 }

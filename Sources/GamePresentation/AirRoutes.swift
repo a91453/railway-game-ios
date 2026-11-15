@@ -8,6 +8,10 @@ import GameCore
 // only reads the world, so GameCore, the saves and the golden scenarios
 // know nothing of it; what has opened is kept on the device
 // (``LauncherPreferences/airRoutesOpened``), as the lessons' stars are.
+//
+// Decision 763: the second way. Owning an air route (GameCore's
+// ``GameWorld/airRoutes``, decision 758) to one of a map's airports opens
+// that map too, the moment it is bought, whatever its riders.
 
 extension OverseasMap {
     /// The city's name.
@@ -174,13 +178,37 @@ public struct AirRoutes: Equatable, Sendable {
         return world.airports.filter { $0.flies(to: to) }.map(\.yesterdayRiders).max() ?? 0
     }
 
+    /// Whether `world` owns an air route (decision 758) to one of the
+    /// airports of `route`'s map (decision 763).
+    func owns(along route: AirRoute, in world: GameWorld) -> Bool {
+        guard let to = map(route.to) else { return false }
+        return world.airRoutes.contains { to.airports.contains($0.destination) }
+    }
+
     /// The maps not yet open whose flights `world`, a game on ``here``,
     /// opens: one of its airports that fly there had the route's riders
-    /// yesterday. In the order of ``maps``.
+    /// yesterday, or it owns an air route there (decision 763). In the
+    /// order of ``maps``.
     public func earned(in world: GameWorld) -> [AirMap] {
         maps.filter { map in
-            !opened.contains(map.id) && routes.contains { $0.from == here && $0.to == map.id && riders(along: $0, in: world) >= $0.riders }
+            !opened.contains(map.id) && routes.contains {
+                $0.from == here && $0.to == map.id && (riders(along: $0, in: world) >= $0.riders || owns(along: $0, in: world))
+            }
         }
+    }
+
+    /// What buying an air route to `destination` (an ``AirDestination/name``)
+    /// opens, for its offer while that map is closed (decision 763): `nil`
+    /// when the destination is no airport of a map the game's own has
+    /// flights to, or that map is open.
+    public func opensByBuying(_ destination: String, in language: DisplayLanguage) -> String? {
+        guard let map = maps.first(where: { $0.airports.contains(destination) }), !opened.contains(map.id),
+              routes.contains(where: { $0.from == here && $0.to == map.id }) else { return nil }
+        let name = map.name(in: language)
+        return language.text(
+            "Buying this route also opens the \(name) map: you can start a new game there.",
+            "收購這條航線也會開航\(name)：之後開新遊戲可以選\(name)的地圖。"
+        )
     }
 
     /// What opens the map `id`, for the map picker's row while it is
@@ -192,8 +220,8 @@ public struct AirRoutes: Equatable, Sendable {
         let from = ways.compactMap { self.map($0.from)?.name(in: language) }
         let riders = (ways.map(\.riders).min() ?? AirRoute.standardRiders).groupedText
         var text = language.text(
-            "Not open yet. On a map of \(from.joined(separator: " or ")), carry \(riders) passengers in one day to or from an airport that flies to \(name), and its flights open this map.",
-            "還沒開航。在\(from.joined(separator: "或"))的地圖上，讓一座飛\(name)的機場一天有 \(riders) 人搭你的列車，就會開航。"
+            "Not open yet. On a map of \(from.joined(separator: " or ")), buy an air route to \(name), or carry \(riders) passengers in one day to or from an airport that flies there, and its flights open this map.",
+            "還沒開航。在\(from.joined(separator: "或"))的地圖上，收購一條飛\(name)的航線，或讓一座飛\(name)的機場一天有 \(riders) 人搭你的列車，就會開航。"
         )
         if let best = best[id], best > 0 {
             text += language.text(" Best day so far: \(best.groupedText) of \(riders).", "目前最多的一天：\(best.groupedText)／\(riders) 人。")
@@ -218,8 +246,8 @@ extension AirportDay {
                 )
             }
             return language.text(
-                "\(name) flights: \(airport.yesterdayRiders.groupedText) of \(route.riders.groupedText) rode your trains yesterday. Reach \(route.riders.groupedText) in a day to open the \(name) map.",
-                "\(name)航線：昨天 \(airport.yesterdayRiders.groupedText)／\(route.riders.groupedText) 人搭你的列車，一天滿 \(route.riders.groupedText) 人就開航，可以到\(name)經營。"
+                "\(name) flights: \(airport.yesterdayRiders.groupedText) of \(route.riders.groupedText) rode your trains yesterday. Reach \(route.riders.groupedText) in a day, or buy an air route to \(name), to open the \(name) map.",
+                "\(name)航線：昨天 \(airport.yesterdayRiders.groupedText)／\(route.riders.groupedText) 人搭你的列車，一天滿 \(route.riders.groupedText) 人或收購一條飛\(name)的航線就開航，可以到\(name)經營。"
             )
         }
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
@@ -285,6 +313,11 @@ extension GameLauncher {
             session.airRoutes = after
         }
         session.airRoutes = routes
+        // Decision 763: an air route bought opens its map at once.
+        session.onAirRouteBought = { [weak self, weak session] in
+            guard let self, let session else { return }
+            self.checkAirRoutes(of: session)
+        }
         guard session.collectsStationStamps, !isDemoMode, !routes.opened.isEmpty else { return }
         var best = preferences.airRouteBest ?? [:]
         for route in routes.routes where route.from == routes.here && !routes.opened.contains(route.to) {

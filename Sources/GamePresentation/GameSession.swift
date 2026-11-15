@@ -199,6 +199,18 @@ public final class GameSession {
     /// Decision 572: the crossovers the station panel offers, kept for the
     /// station and command (``stationCrossoverOffer(for:)``).
     @ObservationIgnored var stationCrossoverOfferMemo: StationCrossoverOfferMemo?
+    /// Decision 761: the island rebuild the station panel offers, kept for
+    /// the station and command (``stationIslandOffer(for:)``).
+    @ObservationIgnored var stationIslandOfferMemo: StationIslandOfferMemo?
+    /// Decision 770: the stations the island list offers, kept for the
+    /// command they were worked out at (``islandRebuildList``).
+    @ObservationIgnored var islandRebuildListMemo: (revision: Int, list: [IslandRebuildCandidate])?
+    /// Decision 770: whether a station of the world is a real island station
+    /// that still stands on two side platforms, kept for the command
+    /// (``hasRealIslandsToRebuild``).
+    @ObservationIgnored var realIslandsToRebuildMemo: (revision: Int, ids: [StationID])?
+    /// Decision 770: the island list's card, while it is open.
+    public var showsIslandRebuildList = false
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
@@ -1025,6 +1037,9 @@ public final class GameSession {
     /// Called after a step that passed midnight (decision 181): the
     /// launcher checks the achievements.
     @ObservationIgnored public var onMidnight: (@MainActor () -> Void)?
+    /// Called after the player bought an air route (decision 763): the
+    /// launcher checks whether it opened a map.
+    @ObservationIgnored public var onAirRouteBought: (@MainActor () -> Void)?
 
     /// The world as it was before each of the latest edits, oldest first,
     /// at most ``undoLimit`` of them (ARCHITECTURE decision 82): what

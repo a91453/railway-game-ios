@@ -50,6 +50,8 @@ struct StationPanel: View {
     @State private var journeyExpanded = false
     @State private var journeyDestination: StationID?
     @State private var journey: JourneyPlan?
+    /// Decision 770: the real island stations' card, opened from here.
+    @State private var showsIslandList = false
     /// The option whose rides are listed (``JourneyPlan/Option/id``).
     @State private var openJourneyOption: String?
     @State private var choosingDestination = false
@@ -890,6 +892,42 @@ struct StationPanel: View {
                 }
                 .disabled(offer.problem != nil)
                 .accessibilityIdentifier("station.crossovers")
+            }
+            // Decision 761: two side platforms rebuilt as an island.
+            if let offer = session.stationIslandOffer(for: station.id) {
+                Button {
+                    session.rebuildStationAsIsland(station.id)
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: session.stationIslandButtonText(offer))
+                            Text(verbatim: offer.problem ?? session.stationIslandHelp)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } icon: {
+                        Image(systemName: "rectangle.split.3x1")
+                    }
+                }
+                .disabled(offer.problem != nil)
+                .accessibilityIdentifier("station.islandRebuild")
+                // Decision 770: every real island station at once.
+                if session.hasRealIslandsToRebuild {
+                    Button {
+                        showsIslandList = true
+                    } label: {
+                        Label {
+                            Text(verbatim: session.islandRebuildListButtonText)
+                        } icon: {
+                            Image(systemName: "list.bullet")
+                        }
+                    }
+                    .accessibilityIdentifier("station.islandList")
+                    .sheet(isPresented: $showsIslandList) {
+                        IslandRebuildListCard(session: session)
+                            .gameSheetDetents()
+                    }
+                }
             }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))

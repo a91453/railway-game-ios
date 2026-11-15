@@ -260,11 +260,20 @@ extension GameSession {
         let edit = PlayerCommand.Edit.buyAirRoute(airport: listing.airport, destination: listing.destination.name, farAirport: listing.farAirport,
                                                   metres: listing.metres, size: size, frequency: frequency)
         let language = language
-        return perform(edit) { _, before, after in
+        let bought = perform(edit) { _, before, after in
             let price = before.economy.balance - after.economy.balance
             return language.text("\(listing.title(in: .english)) now flies, for \(price.moneyText).",
                                  "\(listing.title(in: .traditionalChinese)) 開航了，花費 \(price.moneyText)。")
         } != nil
+        // Decision 763: a route to a closed map's airport opens it.
+        if bought { onAirRouteBought?() }
+        return bought
+    }
+
+    /// What buying `listing` opens besides (decision 763), for its offer:
+    /// the map of a city its destination is, while that map is closed.
+    public func airRouteOpensMapText(_ listing: AirRouteListing) -> String? {
+        airRoutes.opensByBuying(listing.destination.name, in: language)
     }
 
     /// What changing route `id` to `frequency` or to `size` would cost:

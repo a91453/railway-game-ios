@@ -437,10 +437,12 @@ extension Map3DScene.Builder {
         let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
+        // Decision 764: its roof, and its walls a little lighter or darker.
+        let wall = Self.varied(wall, r(1041)), roof = Self.pickRoof(r(1040), low: floors <= 3)
         let windows = flats ? Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: Int(floors))
             : Map3DPaint.bays(r(8) >= 0.55 ? .homeBalcony : .homeWindows, bay: 6, floors: Int(floors))
         mesh.addBox(base: middle, forward: front, length: depth, width: width - 0.1, height: groundFloor + upper * (floors - 1) + 0.7,
-                    top: Map3DPalette.roof, side: wall, topPaint: Self.roofing, frontPaint: windows.on(Self.homeMaterial(r(12))),
+                    top: roof, side: wall, topPaint: Self.roofing, frontPaint: windows.on(Self.homeMaterial(r(12))),
                     flankPaint: Self.plaster)
     }
 
@@ -454,6 +456,8 @@ extension Map3DScene.Builder {
         let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
+        // Decision 764: its roof, and its walls a little lighter or darker.
+        let wall = Self.varied(wall, r(1041)), roof = Self.pickRoof(r(1040), low: floors <= 3)
         let height = groundFloor + upper * (floors - 1)
         let arcade = shops && r(5) < 0.8
         // Decision 231: the ground floor a shop or a
@@ -476,10 +480,10 @@ extension Map3DScene.Builder {
                         frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
         } else {
             mesh.addBox(base: middle, forward: front, length: depth, width: width - 0.1, height: groundFloor,
-                        top: Map3DPalette.roof, side: wall, frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
+                        top: roof, side: wall, frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
         }
         mesh.addBox(base: middle + Map3DPoint(0, groundFloor, 0), forward: front, length: depth, width: width - 0.1,
-                    height: height - groundFloor, top: Map3DPalette.roof, side: wall,
+                    height: height - groundFloor, top: roof, side: wall,
                     topPaint: Self.roofing, frontPaint: upperPaint, flankPaint: Self.plaster.on(facing))
         // Decision 238: near, what stands out of the front
         // and the parapet's rim; afar, only the roof's tank
@@ -489,7 +493,7 @@ extension Map3DScene.Builder {
                                 groundFloor: groundFloor, upper: upper, floors: Int(floors), wall: wall,
                                 balconies: balconies, sign: shops, arcade: arcade, r: r)
             mesh.addBox(base: middle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
-                        height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
+                        height: 0.7, top: roof, side: Map3DColor.shaded(wall, 0.95),
                         topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
         }
         if r(6) < 0.75 {

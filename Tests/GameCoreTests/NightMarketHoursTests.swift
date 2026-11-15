@@ -116,4 +116,41 @@ final class NightMarketHoursTests: XCTestCase {
         world.reclassifyNightMarkets()
         XCTAssertEqual(world.tourism?.attractions.map(\.kind), [.nightMarket, .town, .coast])
     }
+
+    /// `v105-night-market-hours.json`: Home and Foot a minute in, with a
+    /// night market by Foot. Written once by the version 105 build
+    /// (`NIGHT_MARKET_SAVE_NEW=1`).
+    func testVersionOneHundredFiveKeepsTheNightMarket() throws {
+        var world = try world(.nightMarket)
+        try world.advance(ticks: 1)
+        let url = SavedGameTests.fixtures.appendingPathComponent("v105-night-market-hours.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["NIGHT_MARKET_SAVE_NEW"] != nil, SavedGame.currentVersion == 105 {
+            try encoder.encode(SavedGame(world: world)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 105)
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded.tourism?.attractions.map(\.kind), [.nightMarket])
+        XCTAssertEqual(loaded, world, "the save is the world this build makes the same way")
+        try loaded.advance(ticks: 1_440)
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(loaded, world)
+    }
+
+    /// A version 104 save of the same world, its night market a town: read
+    /// by this build, it is a night market again.
+    func testAVersionOneHundredFourSavesNightMarketIsOne() throws {
+        let url = SavedGameTests.fixtures.appendingPathComponent("v105-night-market-hours.json")
+        let text = try String(contentsOf: url, encoding: .utf8)
+            .replacingOccurrences(of: #""saveVersion" : 105"#, with: #""saveVersion" : 104"#)
+            .replacingOccurrences(of: #""kind" : "nightMarket""#, with: #""kind" : "town""#)
+        XCTAssertTrue(text.contains(#""kind" : "town""#))
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: Data(text.utf8)).world
+        XCTAssertEqual(loaded.tourism?.attractions.map(\.kind), [.nightMarket])
+        let kept = try JSONDecoder().decode(SavedGame.self, from: Data(text.replacingOccurrences(of: #""saveVersion" : 104"#, with: #""saveVersion" : 105"#).utf8)).world
+        XCTAssertEqual(kept.tourism?.attractions.map(\.kind), [.town], "a version 105 save says what it is")
+    }
 }
