@@ -529,7 +529,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   screen is screenshotted and reviewed by its own session and merges once
   CI is green; a new screen, panel, chart, icon, illustration, 3D model or
   livery merges only after the game-planning session has seen the
-  screenshots. When unsure, take the higher level.
+  screenshots. When unsure, take the higher level. One try only (owner,
+  2026-11-15): a screenshot run that fails, times out or misses a screen
+  is not re-run or waited for; the pull request merges once CI is green,
+  at every level, and the owner looks at the screens after the release
+  (ui-review §3).
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,

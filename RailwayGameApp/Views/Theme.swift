@@ -80,6 +80,19 @@ enum Theme {
     /// Slot 8 (3.95:1, 3.46:1).
     static let chartRed = dynamic(light: 0xE34948, dark: 0xE66767)
 
+    /// Decision 771: the flight window's sky, top and horizon, by day and
+    /// by night (an illustration's, the same in light and dark mode), and
+    /// its clouds.
+    static let flightSkyDayTop = fixed(0x3E6FB8)
+    static let flightSkyDayHorizon = fixed(0xBFD9F2)
+    static let flightSkyNightTop = fixed(0x0B1430)
+    static let flightSkyNightHorizon = fixed(0x34467A)
+    static let flightCloud = fixed(0xF4F7FC)
+
+    private static func fixed(_ rgb: UInt32) -> Color {
+        Color(uiColor: uiColor(rgb, alpha: 1))
+    }
+
     private static func dynamic(
         light: UInt32,
         dark: UInt32,

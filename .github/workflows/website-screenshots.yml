@@ -19,6 +19,16 @@
 # first). It is one artifact, `promo-material`, with PNGs under
 # <appearance>/, MP4s under video/ and a manifest. Press it on a branch of
 # your own, one run at a time: the macOS runners are shared.
+#
+# One try only (owner, 2026-11-15: 「第一次截不到就取消我自己看」): a
+# website run gets 40 minutes in all (11-12 to 11-13, 13 runs: 24 minutes
+# at the median, 34 at the longest), 6 to boot the Simulator and 20 to take
+# the screenshots (17.9 the longest), each test 5 minutes and at most 10. A
+# test that fails or a step that runs out of time ends the run, with what
+# was taken still uploaded; a failed screenshot step does not turn the run
+# red (it warns, and the summary says what was not taken). Nobody re-runs
+# it or waits for it: the pull request merges on its CI, and the owner
+# looks at the screens after the release (ui-review §3).
 name: Website screenshots
 
 on:
@@ -55,7 +65,7 @@ jobs:
   screenshots:
     name: Screenshots (iOS Simulator)
     runs-on: macos-26
-    timeout-minutes: ${{ inputs.kind == 'promo' && 340 || 60 }}
+    timeout-minutes: ${{ inputs.kind == 'promo' && 340 || 40 }}
     steps:
       - uses: actions/checkout@v7
 
@@ -128,7 +138,7 @@ jobs:
 
       # Dark, with the status bar a clean 9:41 should it show.
       - name: Boot the Simulator in dark mode
-        timeout-minutes: 14
+        timeout-minutes: 6
         run: |
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b
           xcrun simctl ui "$SIMULATOR_UDID" appearance dark
@@ -138,7 +148,9 @@ jobs:
       - name: Take the screenshots
         id: screenshots
         if: inputs.kind != 'promo'
-        timeout-minutes: 45
+        # One try: a failure warns instead of turning the run red.
+        continue-on-error: true
+        timeout-minutes: 20
         env:
           WEBSITE_TESTS: ${{ inputs.tests }}
         run: |
@@ -159,9 +171,19 @@ jobs:
             "${only[@]}" \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 480 \
-            -maximum-test-execution-time-allowance 1800 \
+            -default-test-execution-time-allowance 300 \
+            -maximum-test-execution-time-allowance 600 \
             CODE_SIGN_IDENTITY=-
+
+      - name: Say what was not taken
+        if: always() && inputs.kind != 'promo' && steps.screenshots.outcome == 'failure'
+        run: |
+          echo "::warning::Screenshots: one try only, and it did not get every picture. Not re-run; the owner looks after the release."
+          {
+            echo "### Screenshots: not every picture was taken"
+            echo "One try only (owner, 2026-11-15). Do not re-run; the pull request merges on its CI."
+            echo "The pictures that were taken are in the \`website-screenshots\` artifact, the result bundle in \`website-screenshots-xcresult\`."
+          } >>"$GITHUB_STEP_SUMMARY"
 
       # Each kept attachment as <name>.png, whether or not every test passed.
       - name: Export the screenshots
@@ -217,7 +239,7 @@ jobs:
           retention-days: 14
 
       - name: Upload the result bundle
-        if: failure() && inputs.kind != 'promo'
+        if: always() && inputs.kind != 'promo' && (failure() || steps.screenshots.outcome == 'failure')
         uses: actions/upload-artifact@v7
         with:
           overwrite: true

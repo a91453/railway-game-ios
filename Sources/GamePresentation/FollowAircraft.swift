@@ -54,8 +54,13 @@ extension Map3DAircraft {
     /// flight, moving (landing, on the runway, taxiing, pushed back), and
     /// climbing away no higher than ``followedOut`` out takes it. Not one
     /// standing at its stand.
+    ///
+    /// Decision 771: a company route's aircraft is followed on up to its
+    /// cruise's start (``cruiseHeight``), where the flight window takes
+    /// over.
     public static func canFollow(_ drawn: Drawn) -> Bool {
-        guard drawn.flight != nil, drawn.flying, let phase = drawn.phase else { return false }
+        guard let flight = drawn.flight, drawn.flying, let phase = drawn.phase else { return false }
+        if flight.leg != nil { return phase != .climb || Double(drawn.height) < cruiseHeight }
         return phase != .climb || Double(drawn.height) < followedOut * climb
     }
 
@@ -211,10 +216,12 @@ extension Map3DAircraft.Laid {
     }
 
     /// Decision 702: the aircraft that can be followed nearest `point`
-    /// (level) at `second`, for a screenshot's camera.
-    public func followable(nearest point: Map3DPoint, second: Double, traffic: Map3DAircraft.Traffic?) -> Map3DAircraft.Followed? {
+    /// (level) at `second`, for a screenshot's camera; decision 771: with
+    /// `route`, only a company route's.
+    public func followable(nearest point: Map3DPoint, second: Double, traffic: Map3DAircraft.Traffic?, route: Bool = false) -> Map3DAircraft.Followed? {
         func away(_ drawn: Map3DAircraft.Drawn) -> Float { Map3DPoint(drawn.ground.x - point.x, 0, drawn.ground.z - point.z).length }
-        let found = aircraft(second: second, traffic: traffic).filter { Map3DAircraft.canFollow($0) && isOverMap($0.ground) }
+        let found = aircraft(second: second, traffic: traffic)
+            .filter { Map3DAircraft.canFollow($0) && isOverMap($0.ground) && (!route || $0.flight?.leg != nil) }
             .min { away($0) < away($1) }
         guard let found, let flight = found.flight else { return nil }
         return Map3DAircraft.Followed(flight: flight, drawn: found, airport: airport(of: flight))
@@ -262,6 +269,12 @@ extension Map3DAircraft.Phase {
 extension GameWorld {
     /// The text for the bar of an aircraft followed.
     func aircraftFollowFacts(of state: Map3DAircraft.State, in language: DisplayLanguage) -> AircraftFollowFacts {
+        // Decision 771: a company route's aircraft is named by its route.
+        if let leg = state.flight.leg, let window = AirFlightWindow.make(leg, in: self, language: language) {
+            let direction = language.text("Your route", "公司航線") + " · " + state.kind.text(in: language)
+            return AircraftFollowFacts(state: state, name: window.fromText + " → " + window.toText, directionText: direction,
+                                       stopText: state.phase.text(in: language), runningSpeed: clock.isPaused ? nil : clock.speed)
+        }
         let airport = state.airport.flatMap { airports.indices.contains($0) ? airports[$0].title(in: language) : nil }
         let direction: String
         if let airport {
@@ -304,6 +317,7 @@ extension GameSession {
         followedBusID = nil
         followedCabinID = nil
         followedFerryBoatID = nil
+        airFlightWindow = nil
         followedAircraftID = state.flight
         aircraftFollowBar = world.aircraftFollowFacts(of: state, in: language)
         updateFollowSounds()
@@ -318,6 +332,9 @@ extension GameSession {
     public func noteFollowedAircraft(_ state: Map3DAircraft.State?, of flight: Map3DAircraft.FlightID) {
         guard followedAircraftID == flight else { return }
         guard let state else {
+            // Decision 771: a company route's aircraft climbed away goes
+            // on in the flight window.
+            if let last = aircraftFollowBar?.state { openAirFlightWindow(after: last) }
             followedAircraftID = nil
             updateFollowSounds()
             return
