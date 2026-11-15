@@ -103,7 +103,7 @@ struct TrainRosterView: View {
     private static let axisHeight: CGFloat = 24
     private static let rowGap: CGFloat = 4
     private static let table = "trainRoster.table"
-    private static let pageSpace = "trainRoster.page"
+    nonisolated private static let pageSpace = "trainRoster.page"
 
     private var language: DisplayLanguage { session.language }
     private var compactWidth: Bool { horizontalSizeClass == .compact }
