@@ -891,6 +891,25 @@ struct StationPanel: View {
                 .disabled(offer.problem != nil)
                 .accessibilityIdentifier("station.crossovers")
             }
+            // Decision 761: two side platforms rebuilt as an island.
+            if let offer = session.stationIslandOffer(for: station.id) {
+                Button {
+                    session.rebuildStationAsIsland(station.id)
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: session.stationIslandButtonText(offer))
+                            Text(verbatim: offer.problem ?? session.stationIslandHelp)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } icon: {
+                        Image(systemName: "rectangle.split.3x1")
+                    }
+                }
+                .disabled(offer.problem != nil)
+                .accessibilityIdentifier("station.islandRebuild")
+            }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))
         } footer: {
