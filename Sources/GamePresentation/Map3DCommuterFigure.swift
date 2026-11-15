@@ -3,10 +3,11 @@ import Foundation
 /// Decision 787: the commuter the streets, platforms and bus stops show
 /// close up, in place of decision 259's block figure: a standing commuter
 /// with a backpack, made with Meshy (AI-generated, the owner's plan) and
-/// cut down to 294 triangles in Blender (the assets repository's
+/// cut down in Blender to a closed body of 288 triangles (the assets repository's
 /// `commuter-figure-2026-11/revision-1`), its colours mended and its
 /// walking stride made by `tools/commuter-figure/to_swift.py`
-/// (``encodedStanding``, ``encodedWalking``).
+/// (``encodedStanding``, ``encodedWalking``), and passed by the local
+/// studio's review against photographs (round 2).
 ///
 /// It is drawn within ``detailReach`` of the eye, for at most
 /// ``mostCloseUp(of:)`` of a frame's people, the nearest first; farther
@@ -22,7 +23,7 @@ public enum Map3DCommuterFigure {
     public static let detailReach: Float = 120
 
     /// The most of a frame's `people` drawn as the commuter: a quarter of
-    /// them, at most 150 (about 32,000 triangles more than as many
+    /// them, at most 150 (about 31,000 triangles more than as many
     /// blocks).
     public static func mostCloseUp(of people: Int) -> Int { min(150, people / 4) }
 

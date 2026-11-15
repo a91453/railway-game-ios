@@ -11,7 +11,8 @@ Sources/GamePresentation/Map3DCommuterFigureMesh.swift (decision 787).
 What it does (no third-party modules):
 - reads the GLB's five primitives, one a colour (skin, hair, shirt,
   trousers, shoes_backpack), joins the corners they share and leaves out
-  triangles with no area;
+  triangles with no area, then keeps only the closed body (the largest
+  piece joined by corners: 288 triangles), dropping six loose slivers;
 - turns the figure to face straight ahead (away from its backpack);
 - mends the colours the generated texture gave wrongly: the hair triangle
   over the forehead and the one over the ear become skin, and the dark
@@ -82,6 +83,36 @@ def read(path):
                 faces.append(corner)
                 paints.append(paint)
     return points, faces, paints, hashlib.sha256(data).hexdigest()
+
+
+def body(faces, paints):
+    """Only the largest piece of faces joined by their corners: the six
+    loose slivers beside the hand, the sleeves and over the backpack (the
+    local studio's review, round 1, F1) are left out; the body is closed."""
+    parent = {}
+
+    def root(i):
+        while parent.setdefault(i, i) != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for f in faces:
+        for i in f[1:]:
+            parent[root(i)] = root(f[0])
+    sizes = {}
+    for f in faces:
+        sizes[root(f[0])] = sizes.get(root(f[0]), 0) + 1
+    largest = max(sizes, key=sizes.get)
+    kept = [(f, p) for f, p in zip(faces, paints) if root(f[0]) == largest]
+    return [f for f, _ in kept], [p for _, p in kept]
+
+
+def compacted(points, faces):
+    """The points the faces use, renumbered in order."""
+    used = sorted({i for f in faces for i in f})
+    index = {old: new for new, old in enumerate(used)}
+    return [points[i] for i in used], [[index[i] for i in f] for f in faces]
 
 
 def centre(points, face):
@@ -163,6 +194,10 @@ def main():
     paints = mended(points, faces, paints)
     feet = [p for p in points if p[1] < 0.05]
     origin = mean(feet)
+    # After the turn, the mending and the origin, which the slivers took
+    # part in (as the studio's reviewed GLBs were made).
+    faces, paints = body(faces, paints)
+    points, faces = compacted(points, faces)
     standing = game_axes(points, origin)
     walk = game_axes(walking(points, faces, paints), origin)
     counts = {NAMES[k]: paints.count(k) for k in range(5)}

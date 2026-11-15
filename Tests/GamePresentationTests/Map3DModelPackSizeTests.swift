@@ -80,10 +80,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // (Map3DRedCommuter), last of the sets: its cab, middle and tail
         // cars and their window models (6 models, 14,226 vertices more,
         // 569 KB a copy). Decision 787: the close-up commuter, standing
-        // and mid-stride, after Hong Kong's vehicles (2 models, 1,761
-        // vertices more, 70 KB a copy).
+        // and mid-stride, after Hong Kong's vehicles (2 models, 1,728
+        // vertices more, 69 KB a copy).
         XCTAssertEqual(models.count, 898)
-        XCTAssertEqual(vertices, 6_602_193)
+        XCTAssertEqual(vertices, 6_602_160)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

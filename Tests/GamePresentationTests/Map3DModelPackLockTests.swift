@@ -176,7 +176,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
         XCTAssertEqual(Array(pack.models[firstHK + hk.count..<firstHK + hk.count + figures.count].map(\.name)), commuter)
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1a5ec8b81126c5cf")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "6c961e7ce9c7faed")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "8ae0e810ae2052f5")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!

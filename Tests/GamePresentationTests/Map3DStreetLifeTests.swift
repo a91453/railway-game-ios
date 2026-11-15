@@ -47,7 +47,7 @@ final class Map3DStreetLifeTests: XCTestCase {
             XCTAssertEqual(shape.minimum.z, 0, accuracy: 0.01, "\(kind) stands on the ground")
             XCTAssertEqual(shape.maximum.z, height, accuracy: 0.02, "\(kind)")
             XCTAssertEqual(shape.length, length, accuracy: 0.03, "\(kind)")
-            XCTAssertTrue((290...294).contains(shape.triangleCount), "\(kind): \(shape.triangleCount) triangles")
+            XCTAssertEqual(shape.triangleCount, 288, "\(kind)")
             XCTAssertTrue(shape.vertices.contains { $0.color >> 24 == 0 }, "\(kind): the shirt")
             XCTAssertTrue(shape.vertices.contains { $0.color == Map3DStreetModel.skin }, "\(kind): the face and arms")
             XCTAssertFalse(shape.vertices.contains { $0.layer == Map3DVertex.glowing }, "\(kind)")

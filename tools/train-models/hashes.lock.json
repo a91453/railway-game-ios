@@ -38,12 +38,12 @@
       "triangles" : 120
     },
     "life-commuterStanding" : {
-      "hash" : "568d1de67f2d518d",
-      "triangles" : 293
+      "hash" : "8311a94fb5a3e41a",
+      "triangles" : 288
     },
     "life-commuterWalking" : {
-      "hash" : "6cd6d9ab85799843",
-      "triangles" : 294
+      "hash" : "1ed3dda4b61bee5c",
+      "triangles" : 288
     },
     "hk-signal-amber" : {
       "hash" : "53b50320a69bc411",
