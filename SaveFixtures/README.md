@@ -376,3 +376,10 @@ its map's airports when it opens the save).
   (`SwitchInterlockingTests.testTheVersion102SaveKeepsTheSwitches`,
   written with `SWITCH_SAVE_NEW=1` by the build that first made it;
   decision 756).
+- `v103-air-routes.json`: a managed world with two airports and no
+  railway, a day after buying the first airport's Hong Kong route
+  (narrow-body, the real flights) and its route to the island airport
+  (seventy seats, extra flights), each with its first day's takings
+  (`"airRoutes"`, `"nextAirRouteID"`, a `"dailyAirRoutes"` ledger row)
+  (`AirRouteTests.testTheVersion103SaveKeepsItsAirRoutes`, written with
+  `AIR_ROUTE_SAVE_NEW=1` by the build that first made it; decision 758).

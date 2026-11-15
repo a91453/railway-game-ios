@@ -365,20 +365,25 @@ extension GameWorld {
 
     // MARK: - Midnight
 
-    /// Counts the airports' day that ended. Runs at midnight, on the
+    /// Counts the airports' day that ended, and settles the company's air
+    /// routes on it (decision 758), at `time`. Runs at midnight, on the
     /// network as it ran at noon of that day (decision 551).
-    mutating func closeAirportDay(_ day: Int64) {
-        guard !airports.isEmpty, day >= 0 else { return }
-        let world = self
-        let served = airports.contains { servingStation(at: $0.point) != nil }
-        let graph = served && passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
-        var flows = TouristFlows()
-        let days = world.addAirportFlows(onDay: day, to: &flows) { world.reaches(from: $0, to: $1, graph: graph) }
-        for (index, counted) in days.enumerated() {
-            airports[index].yesterdayFlights = counted.flights
-            airports[index].yesterdayPassengers = counted.passengers
-            airports[index].yesterdayRiders = counted.riders
+    mutating func closeAirportDay(_ day: Int64, at time: GameTime) {
+        guard !airports.isEmpty || !airRoutes.isEmpty, day >= 0 else { return }
+        var days: [AirportDay] = []
+        if !airports.isEmpty {
+            let world = self
+            let served = airports.contains { servingStation(at: $0.point) != nil }
+            let graph = served && passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
+            var flows = TouristFlows()
+            days = world.addAirportFlows(onDay: day, to: &flows) { world.reaches(from: $0, to: $1, graph: graph) }
+            for (index, counted) in days.enumerated() {
+                airports[index].yesterdayFlights = counted.flights
+                airports[index].yesterdayPassengers = counted.passengers
+                airports[index].yesterdayRiders = counted.riders
+            }
         }
+        settleAirRoutes(day: day, airportDays: days, time: time)
     }
 
     // MARK: - Validation

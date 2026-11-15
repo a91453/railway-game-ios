@@ -1,0 +1,191 @@
+{
+  "saveVersion" : 103,
+  "world" : {
+    "accounts" : {
+      "capitalDays" : [
+        {
+          "capitalSpending" : 148580000000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "propertyCost" : 5101050000,
+          "propertyRevenue" : 7016220000,
+          "staffCost" : 0,
+          "taxCost" : 942585000
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : 1915170000,
+          "breakdown" : [
+            {
+              "amount" : 7016220000,
+              "item" : "airFares"
+            },
+            {
+              "amount" : -4993050000,
+              "item" : "airRunning"
+            },
+            {
+              "amount" : -108000000,
+              "item" : "landingFees"
+            }
+          ],
+          "kind" : "dailyAirRoutes",
+          "time" : 86400
+        },
+        {
+          "amount" : -942585000,
+          "breakdown" : [
+            {
+              "amount" : -942585000,
+              "item" : "incomeTax"
+            }
+          ],
+          "kind" : "dailyTax",
+          "time" : 86340
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 86400,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "airRoutes" : [
+      {
+        "aircraft" : 6,
+        "airport" : 1,
+        "day" : 0,
+        "days" : [
+          {
+            "closed" : false,
+            "day" : 0,
+            "fares" : 6762960000,
+            "landingFees" : 90000000,
+            "passengers" : 11160,
+            "running" : 4980000000
+          }
+        ],
+        "destination" : "香港",
+        "frequency" : "real",
+        "id" : 1,
+        "metres" : 810000,
+        "realDepartures" : 30,
+        "size" : "narrowBody",
+        "value" : 82190000000
+      },
+      {
+        "aircraft" : 2,
+        "airport" : 1,
+        "day" : 0,
+        "days" : [
+          {
+            "closed" : false,
+            "day" : 0,
+            "fares" : 253260000,
+            "landingFees" : 18000000,
+            "passengers" : 2100,
+            "running" : 13050000
+          }
+        ],
+        "destination" : "離島",
+        "farAirport" : 2,
+        "frequency" : "extra",
+        "id" : 2,
+        "metres" : 1000,
+        "realDepartures" : 10,
+        "size" : "regional",
+        "value" : 27390000000
+      }
+    ],
+    "airports" : [
+      {
+        "dailyFlights" : 150,
+        "dailyPassengers" : 16000,
+        "destinations" : [
+          {
+            "englishName" : "Hong Kong",
+            "flights" : 21900,
+            "name" : "香港",
+            "passengers" : 3000000
+          },
+          {
+            "domestic" : true,
+            "englishName" : "Island",
+            "flights" : 7300,
+            "name" : "離島",
+            "passengers" : 1000000
+          }
+        ],
+        "englishName" : "Airport",
+        "id" : 1,
+        "name" : "機場",
+        "x" : 31000,
+        "y" : 26768,
+        "yesterdayFlights" : 142,
+        "yesterdayPassengers" : 15200
+      },
+      {
+        "dailyFlights" : 40,
+        "dailyPassengers" : 3000,
+        "destinations" : [
+          {
+            "domestic" : true,
+            "englishName" : "Airport",
+            "flights" : 7300,
+            "name" : "機場",
+            "passengers" : 1000000
+          }
+        ],
+        "englishName" : "Island",
+        "firstHour" : 7,
+        "id" : 2,
+        "lastHour" : 21,
+        "name" : "離島",
+        "x" : 95000,
+        "y" : 26768,
+        "yesterdayFlights" : 38,
+        "yesterdayPassengers" : 2850
+      }
+    ],
+    "bounds" : {
+      "height" : 65536,
+      "width" : 131072
+    },
+    "clock" : {
+      "now" : 86520,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 852392585000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "nextAirRouteID" : 3,
+    "nextStationID" : 1,
+    "nextTrainID" : 1,
+    "stations" : [
+
+    ],
+    "trains" : [
+
+    ]
+  }
+}
