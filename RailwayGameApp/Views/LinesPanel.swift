@@ -153,6 +153,10 @@ struct LinesPanel: View {
                         }
                         // Decision 336: with no line made too.
                         buyableLinesSection
+                        // Decision 759: the air routes, on their own page.
+                        if session.showsAirRoutes {
+                            Section { airRoutesLink }
+                        }
                         networkSection
                         if showsAdvanced {
                             serviceDaySection
@@ -249,6 +253,7 @@ struct LinesPanel: View {
                 case .line: lineDetailPage
                 case .network: networkPage
                 case .forSale: forSalePage
+                case .airRoutes: airRoutesPage
                 }
             }
             .toolbar {
@@ -431,7 +436,33 @@ struct LinesPanel: View {
                 }
                 .accessibilityIdentifier("lines.forSale")
             }
+            airRoutesLink
         }
+    }
+
+    /// Decision 759: the row that opens the air routes page, on a map
+    /// with airports.
+    @ViewBuilder
+    private var airRoutesLink: some View {
+        if session.showsAirRoutes {
+            NavigationLink(value: LinesPanelPage.airRoutes) {
+                Label {
+                    Text(verbatim: NetworkSwitches.airRoutesTitle(flown: session.world.airRoutes.count, in: session.language))
+                } icon: {
+                    Image(systemName: "airplane")
+                }
+            }
+            .accessibilityIdentifier("lines.airRoutes")
+        }
+    }
+
+    private var airRoutesPage: some View {
+        AirRoutesPage(session: session)
+            .panelTitle(session.language.text("Air routes", "航線"))
+            .toolbar { doneItem }
+            .safeAreaInset(edge: .bottom) {
+                StatusBanner(session: session, announces: false)
+            }
     }
 
     // MARK: - Pages over the list (decision 481)
