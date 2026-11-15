@@ -521,3 +521,38 @@ private struct CoversTheMap: ViewModifier {
             }
     }
 }
+
+extension View {
+    /// Keeps the content out of the notch and the Dynamic Island on a
+    /// phone held sideways (owner's report on 133: the train roster's
+    /// Arrange page had its names under the notch). Pads each side by
+    /// what the window's safe area reaches past this view's own edge, so
+    /// a view already laid inside the safe area gets no padding.
+    func clearsTheNotch() -> some View {
+        modifier(NotchClearance())
+    }
+}
+
+/// ``View/clearsTheNotch()``.
+private struct NotchClearance: ViewModifier {
+    @State private var leading: CGFloat = 0
+    @State private var trailing: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.leading, leading)
+            .padding(.trailing, trailing)
+            // The measured frame is the space offered, not the padded
+            // content, so the padding never moves what it is measured from.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                let window = UIApplication.shared.connectedScenes
+                    .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+                    .first
+                guard let window else { return }
+                let insets = window.safeAreaInsets
+                leading = max(0, insets.left - frame.minX)
+                trailing = max(0, insets.right - (window.bounds.width - frame.maxX))
+            }
+    }
+}
