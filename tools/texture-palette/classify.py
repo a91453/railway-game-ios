@@ -394,7 +394,12 @@ def extract_features_and_classify(img_path: Path, size_cat: str) -> dict[str, An
         is_red_sign_strip = (aspect >= 2.5 and c_p90 > 35.0 and edge_strength > 10.0 and a_mean > 8.0)
         is_blue_sign = (b_mean < -25.0 and edge_strength > 15.0)
         is_achromatic_low_glow = (c_p90 < 4.5 and l_mean < 15.0 and glow_ratio < 0.008)
-        if not is_red_sign_strip and not is_blue_sign and not is_achromatic_low_glow and (
+        # t003 r2 審查第 1 項：黑底上幾個亮窗、路燈的夜間圖，被下面的排除條件移進「其他」。
+        # 底色幾乎全黑（L* 0–3）、而且有夠亮的點才算；藍色遮罩圖不算。
+        is_black_bg_lights = (max_dim >= 48 and ((very_dark_ratio >= 0.85 and l_p10 < 1.0 and l_max >= 40.0) or (very_dark_ratio >= 0.75 and l_p10 < 3.0 and l_max >= 30.0 and b_mean > -15.0)))
+        if is_black_bg_lights and not is_red_sign_strip and not is_blue_sign:
+            category = "夜間燈光"
+        elif not is_red_sign_strip and not is_blue_sign and not is_achromatic_low_glow and (
             (dark_bg_ratio >= 0.58 and glow_ratio >= 0.001 and l_mean < 26.0 and (l_p90 - l_p10) > 16.0)
             or (very_dark_ratio >= 0.42 and l_max > 25.0 and l_mean < 28.0 and glow_ratio <= 0.48 and (l_p90 - l_p10) > 16.0)
             or (dark_bg_ratio >= 0.55 and c_p90 > 28.0 and l_mean < 32.0 and glow_ratio >= 0.01)
@@ -833,7 +838,12 @@ def main() -> None:
     parser.add_argument("--palette", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/ref/palette.json"))
     parser.add_argument("--out", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/r3"))
     parser.add_argument("--limit", type=int, default=0, help="Optional limit for quick testing (0 = all)")
+    parser.add_argument("--override", default="", help="clip_refine.py 輸出的 CSV（檔名,內容類別）：這些檔案改用它的類別，色票照該類別的規則重算")
     args = parser.parse_args()
+    overrides: dict[str, str] = {}
+    if args.override:
+        with open(args.override, encoding="utf-8") as f:
+            overrides = {r["檔名"]: r["內容類別"] for r in csv.DictReader(f)}
 
     t0 = time.time()
     assets_dir = Path(args.assets_dir)
@@ -912,7 +922,7 @@ def main() -> None:
             unreadable.append((fname, str(exc)))
             continue
 
-        cat = res["category"]
+        cat = overrides.get(fname, res["category"])
         cat_counts[cat] += 1
         w, h = res["orig_w"], res["orig_h"]
         clusters = res["clusters"]

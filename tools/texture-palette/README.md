@@ -5,6 +5,7 @@
 | 檔案 | 做什麼 |
 | --- | --- |
 | `classify.py` | 舊貼圖分類：內容（磚、屋頂、混凝土、玻璃…）加最近的新色票顏色（工作室 t001、t003） |
+| `building_map.py` | 把 t003 的分類對到遊戲 `Map3DPalette` 的建築色票位置，輸出 `t003/`（見那裡的 README） |
 | `flatten.py` | 把一張貼圖平塗成幾個色票色塊（t001） |
 | `cut_faces.py` | 有貼圖的舊列車：照平塗貼圖的色塊邊界把三角形切開，輸出無貼圖、每三角形一色的 GLB（t002） |
 | `to_swift.py` | 把 `cut_faces.py` 切好的舊車 e752e7a2 寫成遊戲的 `Sources/GamePresentation/Map3DRedCommuterMesh.swift` |
