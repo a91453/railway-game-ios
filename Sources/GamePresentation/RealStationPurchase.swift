@@ -8,7 +8,10 @@ import GameCore
 // platform as long as decision 295 makes it and 150 m on past each end (the
 // room decision 351 leaves for a crossover), with the station named as the
 // real one. All of it on the ground, as the game's stations are (decision
-// 132), and one track, whatever the real line has.
+// 132). Decision 760: a station whose real platforms are an island gets two
+// tracks 11 m apart, the island between; one with a side platform on each
+// of two tracks gets two tracks 5 m apart, a platform on each; the others
+// (one side platform, or no data) one track.
 //
 // The price is what building it costs, worked out by building it on a copy
 // of the world: no value for a line's running, as there is no line, no
@@ -19,20 +22,60 @@ import GameCore
 /// A real station bought, as the command builds it
 /// (``PlayerCommand/buyRealStation(_:)``): the stretches one after another,
 /// the station's platform the whole of the edge of stretch `platform`, and
-/// the new station's name, place and ridership.
+/// the new station's name, place and ridership. Decision 760: a second
+/// track beside the first, its own stretches one after another, with a
+/// platform the whole of the edge of its stretch `secondPlatform`; none
+/// where the station has one track.
 public struct RealStationPurchase: Hashable, Sendable {
     public let stretches: [PlayerCommand.TrackStretch]
     public let platform: Int
+    public let secondStretches: [PlayerCommand.TrackStretch]
+    public let secondPlatform: Int?
     public let name: String
     public let at: PlanPoint
     public let demand: StationDemand
 
-    public init(stretches: [PlayerCommand.TrackStretch], platform: Int, name: String, at: PlanPoint, demand: StationDemand) {
+    public init(
+        stretches: [PlayerCommand.TrackStretch], platform: Int,
+        secondStretches: [PlayerCommand.TrackStretch] = [], secondPlatform: Int? = nil,
+        name: String, at: PlanPoint, demand: StationDemand
+    ) {
         self.stretches = stretches
         self.platform = platform
+        self.secondStretches = secondStretches
+        self.secondPlatform = secondPlatform
         self.name = name
         self.at = at
         self.demand = demand
+    }
+}
+
+/// How the platforms of a real station a purchase lays stand (decision
+/// 760), from ``RealStationPlatformTypes``.
+public enum RealStationPlatformKind: Sendable, Equatable {
+    /// One track and its platform.
+    case single
+    /// Two tracks 11 m apart, an island platform between.
+    case island
+    /// Two tracks 5 m apart, a side platform outside each.
+    case sides
+
+    /// How `station`'s real platforms stand: one track where the data has
+    /// one side platform, none, or not the station.
+    public static func of(_ station: RealRailways.Station) -> RealStationPlatformKind {
+        if RealStationPlatformTypes.island.contains(station.id) { return .island }
+        if RealStationPlatformTypes.side.contains(station.id) { return .sides }
+        return .single
+    }
+
+    /// How far the second track stands from the first: decision 741's
+    /// island, or the demo lines' track spacing.
+    var spacing: Double {
+        switch self {
+        case .single: 0
+        case .island: RealLineAcquisition.islandSpacing
+        case .sides: HighSpeedDemo.trackOffset
+        }
     }
 }
 
@@ -46,6 +89,8 @@ public struct RealStationOffer: Sendable {
     public let purchase: RealStationPurchase?
     /// The track's length in whole metres; 0 where nothing can be built.
     public let metres: Int
+    /// How the platforms stand (decision 760): what the purchase lays.
+    public var platforms: RealStationPlatformKind = .single
     public let price: Money?
     /// Why it cannot be bought, as the player reads it.
     public let problem: String?
@@ -56,10 +101,23 @@ public struct RealStationOffer: Sendable {
         guard purchase != nil else {
             return language.text("\(name) station and a short stretch of track.", "\(name)站和一小段軌道。")
         }
-        return language.text(
-            "\(metres) m of track and a platform, the station named \(name) as the real one, to extend both ways from here.",
-            "一段 \(metres) 公尺的軌道和月台，站名照真實的\(name)，從這一站往兩頭延伸。"
-        )
+        switch platforms {
+        case .single:
+            return language.text(
+                "\(metres) m of track and a platform, the station named \(name) as the real one, to extend both ways from here.",
+                "一段 \(metres) 公尺的軌道和月台，站名照真實的\(name)，從這一站往兩頭延伸。"
+            )
+        case .island:
+            return language.text(
+                "Two tracks of \(metres) m with an island platform between, as the real \(name), to extend both ways from here.",
+                "兩股各 \(metres) 公尺的軌道，中間一座島式月台，照真實的\(name)站，從這一站往兩頭延伸。"
+            )
+        case .sides:
+            return language.text(
+                "Two tracks of \(metres) m with a platform on each side, as the real \(name), to extend both ways from here.",
+                "兩股各 \(metres) 公尺的軌道，兩側各一座月台，照真實的\(name)站，從這一站往兩頭延伸。"
+            )
+        }
     }
 
     /// What the company still lacks to buy it with `balance`, or `nil`
@@ -143,22 +201,59 @@ extension GameSession {
             return refused("The platform does not fit on the real line here.", "這裡的真實鐵路放不下月台。")
         }
         let middle = path.point(at: low + length / 2).plan
-        let purchase = RealStationPurchase(
+        let single = RealStationPurchase(
             stretches: plan.stretches, platform: index, name: name, at: middle, demand: newStationDemand(at: middle)
         )
+        let metres = Int((upper - lower) / RealRailwayTraces.metre)
 
         // GameCore's answer and the price, on a funded copy.
-        var probe = world.pricingCopy()
-        let opening = probe.economy.balance
-        do throws(GameError) {
+        func priced(_ purchase: RealStationPurchase) throws(GameError) -> Money {
+            var probe = world.pricingCopy()
+            let opening = probe.economy.balance
             _ = try build(purchase, in: &probe)
-            return RealStationOffer(
-                suggestion: suggestion, system: system, purchase: purchase,
-                metres: Int((upper - lower) / RealRailwayTraces.metre), price: opening - probe.economy.balance, problem: nil
-            )
+            return opening - probe.economy.balance
+        }
+        // Decision 760: the second track as the real station has it, the
+        // one track where it does not fit.
+        let kind = RealStationPlatformKind.of(real)
+        if kind != .single, let pair = secondTrack(
+            beside: path, from: lower, to: upper, platform: low...(low + length), spacing: kind.spacing, single: single
+        ), let price = try? priced(pair) {
+            var offer = RealStationOffer(suggestion: suggestion, system: system, purchase: pair, metres: metres, price: price, problem: nil)
+            offer.platforms = kind
+            return offer
+        }
+        do throws(GameError) {
+            let price = try priced(single)
+            return RealStationOffer(suggestion: suggestion, system: system, purchase: single, metres: metres, price: price, problem: nil)
         } catch {
             return refused(error.playerMessage(in: .english), error.playerMessage(in: .traditionalChinese))
         }
+    }
+
+    /// `single` with a second track beside its own (decision 760): along
+    /// `path` from `lower` to `upper`, 5 m to its side at the ends, as the
+    /// demo lines' tracks stand, eased out to `spacing` by the platform's
+    /// ends, its own platform beside the first's; `nil` where it cannot be
+    /// laid.
+    func secondTrack(
+        beside path: WorldPath, from lower: Double, to upper: Double, platform: ClosedRange<Double>, spacing: Double,
+        single: RealStationPurchase
+    ) -> RealStationPurchase? {
+        let base = HighSpeedDemo.trackOffset
+        let ramp = max(RealRailwayTraces.metre, min(platform.lowerBound - lower, upper - platform.upperBound))
+        let beside = path.offset(from: lower, to: upper, by: spacing - base, ramp: ramp, from: base)
+        let start = beside.project(path.point(at: platform.lowerBound))
+        let end = beside.project(path.point(at: platform.upperBound))
+        let ends = [beside.point(at: 0).plan, beside.point(at: beside.length).plan]
+        guard ends.allSatisfy(world.bounds.contains), let plan = tracePlan(
+            from: .point(ends[0]), to: .point(ends[1]), along: beside.points,
+            platforms: [(beside.point(at: start), beside.point(at: end))], onGround: true
+        ), !plan.stopped, !plan.stretches.isEmpty, let index = plan.platformStretches.first ?? nil else { return nil }
+        return RealStationPurchase(
+            stretches: single.stretches, platform: single.platform, secondStretches: plan.stretches, secondPlatform: index,
+            name: single.name, at: single.at, demand: single.demand
+        )
     }
 
     /// Opens the card for `suggestion`, laid out and priced now.
@@ -198,21 +293,31 @@ extension GameSession {
     /// Builds `purchase` in `world`: the track, then the station and its
     /// platform; all of it or, throwing, none, the caller's copy dropped.
     func build(_ purchase: RealStationPurchase, in world: inout GameWorld) throws(GameError) -> Station {
-        guard purchase.stretches.indices.contains(purchase.platform) else { throw .invalidTrackGeometry }
-        var previous: TrackNodeID?
-        var edges: [TrackEdgeID] = []
-        for stretch in purchase.stretches {
-            let built = try stretch.starting(at: previous).build(in: &world, heights: heights)
-            edges.append(built.edge)
-            previous = built.to
+        guard purchase.stretches.indices.contains(purchase.platform),
+              purchase.secondPlatform.map(purchase.secondStretches.indices.contains) ?? purchase.secondStretches.isEmpty
+        else { throw .invalidTrackGeometry }
+        func lay(_ stretches: [PlayerCommand.TrackStretch]) throws(GameError) -> [TrackEdgeID] {
+            var previous: TrackNodeID?
+            var edges: [TrackEdgeID] = []
+            for stretch in stretches {
+                let built = try stretch.starting(at: previous).build(in: &world, heights: heights)
+                edges.append(built.edge)
+                previous = built.to
+            }
+            return edges
         }
-        let edge = edges[purchase.platform]
-        guard let length = world.network.edge(edge)?.length else { throw .unknownTrackEdge(edge) }
+        var platforms = [try lay(purchase.stretches)[purchase.platform]]
+        if let second = purchase.secondPlatform {
+            platforms.append(try lay(purchase.secondStretches)[second])
+        }
         let station = try world.buildStation(named: purchase.name, at: purchase.at)
         if world.accounts.mode == .management, !world.landDemand {
             try world.setStationDemand(station.id, to: purchase.demand)
         }
-        try world.addTrackPlatform(station.id, on: edge, from: 0, to: length)
+        for edge in platforms {
+            guard let length = world.network.edge(edge)?.length else { throw .unknownTrackEdge(edge) }
+            try world.addTrackPlatform(station.id, on: edge, from: 0, to: length)
+        }
         Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
         return world.station(id: station.id) ?? station
     }

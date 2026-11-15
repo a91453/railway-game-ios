@@ -7,6 +7,6 @@
 - 還留下：
   - **A3**（另開新串）：收購任一條台灣↔香港航線就打開香港地圖。清單裡的香港航線是 `AirRouteListing.destination.name == "香港"`，已收購的看 `world.airRoutes`。
   - **A4**（3D）：照 `airRouteDepartureMinutes` 起降。
-  - 平衡：決策 759「平衡」一節判 CONCERNS，四條小航線連十九座都虧、主要航線 72–150 天回本；要調數值另開 GameCore 單，先量實際日結。
+  - 平衡：做完，決策 762（AIR-BALANCE）：主要航線 132–229 天回本，只剩四條一天不到 15 人的線虧錢、花蓮—香港 778 天。
   - 決策 758 第 8 點寫「松山—澎湖 140 km」，實際兩座機場在地圖上約 258 km（真實航程也是兩百多公里），那句例子要更正（只是文字）。
 - UNVERIFIED：畫面沒有在模擬器、實機看過；Linux 本機跑了建置與 `AirRouteMarketTests` 等（見 PR），App 的編譯交給 CI 的 Xcode 建置。
