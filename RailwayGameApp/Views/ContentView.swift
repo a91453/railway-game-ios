@@ -557,7 +557,10 @@ struct ContentView: View {
             YearEndSheet(session: session)
                 .gameSheetDetents()
         case .goals:
-            GoalsPanel(session: session, achievements: launcher.achievements, stamps: launcher.stationStamps)
+            GoalsPanel(
+                session: session, achievements: launcher.achievements, stamps: launcher.stationStamps,
+                winterEvent: launcher.winterEvent
+            )
                 .gameSheetDetents()
         case .tourism:
             TourismPanel(session: session, focus: screen.sightFocus)
