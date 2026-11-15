@@ -143,7 +143,7 @@ extension Map3DScene.Builder {
 
         // Walls, roof and how the faces are painted, by use (decision 235's
         // colours; decision 231's faces).
-        var wall: UInt32, roof = Map3DPalette.roof, roofPaint: Map3DPaint? = Self.roofing
+        var wall: UInt32, roof = Self.pickRoof(r(1040), low: storeys <= 3), roofPaint: Map3DPaint? = Self.roofing
         var groundFloor: Float = 0, groundPaint: Map3DPaint?, upperPaint: Map3DPaint?
         let upperFloors = max(1, storeys - 1)
         // Decision 242: the material each kind is faced with.
@@ -167,7 +167,7 @@ extension Map3DScene.Builder {
             upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: groundFloor > 0 ? upperFloors : storeys).on(homeFacing)
         case .office:
             let concrete = r(6) < 0.4
-            wall = concrete ? Self.pick(Map3DPalette.concreteWalls, seed) : Self.pick(Map3DPalette.officeWalls, seed)
+            wall = concrete ? Self.pick(Map3DPalette.cityConcreteWalls, seed) : Self.pick(Map3DPalette.cityOfficeWalls, seed)
             groundFloor = min(4.6, height / 3)
             groundPaint = .bays(r(1) < 0.5 ? .officeGlass : Self.pick(Map3DSurface.shops, r(2)), bay: r(1) < 0.5 ? 3 : 5.4, floors: 1)
             upperPaint = Map3DPaint.bays(.officeGlass, bay: 3, floors: upperFloors).on(concrete ? .formConcrete : nil)
@@ -178,7 +178,7 @@ extension Map3DScene.Builder {
             upperPaint = Self.metal
         case .civic:
             let concrete = r(6) < 0.5
-            wall = concrete ? Self.pick(Map3DPalette.concreteWalls, seed) : Map3DPalette.schoolWalls
+            wall = concrete ? Self.pick(Map3DPalette.cityConcreteWalls, seed) : Map3DPalette.schoolWalls
             upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: storeys).on(concrete ? .formConcrete : .brickTile)
         case .temple:
             wall = Map3DPalette.templeWall
@@ -186,7 +186,7 @@ extension Map3DScene.Builder {
             roofPaint = nil
             upperPaint = Self.plaster.on(.terrazzo)
         case .transport:
-            wall = Self.pick(Map3DPalette.concreteWalls, seed)
+            wall = Self.pick(Map3DPalette.cityConcreteWalls, seed)
             upperPaint = Self.concrete.on(.formConcrete)
         case .terminal:
             // Decision 698's terminal: white walls of glass under a
@@ -196,6 +196,15 @@ extension Map3DScene.Builder {
             roofPaint = Self.metal
             upperPaint = Map3DPaint.bays(.officeGlass, bay: 4, floors: storeys)
         }
+        // Decision 764: a big low hall (an arena, a gym, a market) its own
+        // walls and sheet-steel roof; and every city building's walls a
+        // little lighter or darker by where it stands.
+        if [.shophouse, .office, .civic].contains(kind), area >= 3000, storeys <= 6 {
+            wall = Self.pick(Map3DPalette.hallWalls, seed)
+            roof = Self.pick(Map3DPalette.hallRoofs, r(1042))
+            roofPaint = Self.metal
+        }
+        if kind != .temple, kind != .terminal { wall = Self.varied(wall, r(1041)) }
         // A temple of a single hall under its hipped roof, the walls lower.
         let hipped = kind == .temple && polygons.count == 1 && area < 900 && box.width > 4
         let eaves = hipped ? min(height, max(3.5, height * 0.6)) : height
