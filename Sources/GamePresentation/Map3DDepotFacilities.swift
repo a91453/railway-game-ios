@@ -126,6 +126,24 @@ public enum Map3DDepotFacilities {
     public static let roundhouse = (latitude: 24.0858858, longitude: 120.5400988)
     public static let turntablePlace = (latitude: 24.0858858 - 22.3 / 110_759, longitude: 120.5400988 + 5.3 / 101_684)
 
+    /// Decision 785: which of the depot yard kit's systems a depot's shed
+    /// is built for, from the types of the trains its lines keep there:
+    /// tall enough for every one of them. A railway, high-speed or other
+    /// set (or a train of no type) needs Taiwan Railway's height; a metro
+    /// set the steel-wheel metro's; the light metro (``TrainType/c``, the
+    /// real light rails') the light rail's; the people mover
+    /// (``TrainType/apm``, the Wenhu line's) Wenhu's. A depot no line
+    /// keeps a train at is Taiwan Railway's.
+    public static func system(for types: [TrainType?]) -> Map3DDepotYardKit.System {
+        func need(_ type: TrainType?) -> Map3DDepotYardKit.System {
+            guard let type else { return .taiwanRail }
+            if type == .apm { return .wenhu }
+            if type == .c { return .lightRail }
+            return type.spec.family == .metro ? .metro : .taiwanRail
+        }
+        return types.map(need).max { $0.clearHeight < $1.clearHeight } ?? .taiwanRail
+    }
+
     /// Which way the bays of a depot's shed open, along its platforms'
     /// line (`along`), from the counts of track points beyond each end
     /// of them: towards the end more track runs on from (the yard's
@@ -185,9 +203,17 @@ extension Map3DScene.Builder {
     /// its length along them and its bays open towards the yard's throat.
     /// Close up the pack's shed with its shadow, far off a box. The cells
     /// it stands on.
-    mutating func addDepotShed(platforms: [LaidPlatform], path: Map3DStreetLife.Path,
+    ///
+    /// Decision 785: the shed is the depot yard kit's (``Map3DDepotYardKit``),
+    /// its head, middles and tail laid along the sidings as many 12 m bays
+    /// as fit them, as many tracks as the depot has sidings (2 to 4), as
+    /// tall as its lines' trains need (``Map3DDepotFacilities/system(for:)``).
+    mutating func addDepotShed(_ id: StationID, platforms: [LaidPlatform], path: Map3DStreetLife.Path,
                                middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) -> Set<Map3DScene.ChunkKey> {
-        let depth = Map3DDepotFacilities.shedWidth, wide = Map3DDepotFacilities.shedLength
+        let types = world.lines.filter { $0.depots.contains(id) }.flatMap(\.trains).map { world.train(id: $0)?.type }
+        let system = Map3DDepotFacilities.system(for: types)
+        let tracks = min(4, max(2, platforms.count)), bays = Map3DDepotYardKit.bays(forSiding: path.length)
+        let depth = Map3DDepotYardKit.part(.shedHead, system: system, tracks: tracks).width, wide = Float(bays) * 12
         let (out, back) = besidePlatforms(depth: depth, wide: wide, platforms: platforms, middle: middle)
         // Track points within 60 m beyond each end of the platforms,
         // within 15 m of their line.
@@ -200,18 +226,18 @@ extension Map3DScene.Builder {
                 }.count
             }
         }
-        let bays = middle.along * Map3DDepotFacilities.baysFacing(beyondStart: beyond(-1), beyondEnd: beyond(1))
+        let facing = middle.along * Map3DDepotFacilities.baysFacing(beyondStart: beyond(-1), beyondEnd: beyond(1))
         let centre0 = back + out * (depth / 2)
         let foot = Map3DPoint(centre0.x, drawnGround(x: centre0.x, z: centre0.z), centre0.z)
         let saved = target
         defer { target = saved }
         target = .near
-        mesh(at: foot) { $0.append(Map3DDepotFacilities.shed, at: foot, forward: bays) }
-        addShadow(centre: foot, forward: bays, length: wide, width: depth, spread: 3, darkness: 0.3)
+        mesh(at: foot) { $0.append(Map3DDepotYardKit.shedMesh(system: system, tracks: tracks, bays: bays), at: foot, forward: facing) }
+        addShadow(centre: foot, forward: facing, length: wide, width: depth, spread: 3, darkness: 0.3)
         target = .far
-        mesh(at: foot) { $0.append(Map3DDepotFacilities.shedFar, at: foot, forward: bays) }
+        mesh(at: foot) { $0.append(Map3DDepotYardKit.shedFarMesh(system: system, tracks: tracks, bays: bays), at: foot, forward: facing) }
         // The cells under its footprint.
-        let corners = Map3DMesh.footprint(centre: foot, forward: bays, length: wide, width: depth)
+        let corners = Map3DMesh.footprint(centre: foot, forward: facing, length: wide, width: depth)
         houseFootprints.append(corners)
         return cells(under: corners)
     }

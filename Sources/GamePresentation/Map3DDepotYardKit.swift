@@ -223,3 +223,44 @@ public enum Map3DDepotYardKit {
         return .flat(named: "depot-yard-scene-\(system.rawValue)", from: b.mesh)
     }
 }
+
+// MARK: - In the game
+
+extension Map3DDepotYardKit {
+    /// Decision 785: the most 12 m bays a depot's shed is laid with, 324 m
+    /// (head, 25 middles, tail): longer than the game's longest full
+    /// train, the 700T's some 304 m, as the Liujia study's shed.
+    public static let maxBays = 27
+
+    /// Decision 785: how many 12 m bays a shed beside sidings `length`
+    /// metres long has: as many as fit along them, at least three (the
+    /// head, one middle and the tail, 36 m as decision 441's shed) and at
+    /// most ``maxBays``.
+    public static func bays(forSiding length: Float) -> Int {
+        min(maxBays, max(3, Int((length / 12).rounded(.down))))
+    }
+
+    /// Decision 785: the shed of `bays` bays for `system`'s trains on
+    /// `tracks` tracks (2 to 4), as the review scenes lay it: the tail
+    /// closed at −x, the head's open bays at +x, its middle on the ground
+    /// at the origin, in the station kit's axes (x along it, y up).
+    public static func shedMesh(system: System, tracks: Int, bays: Int) -> Map3DMesh {
+        var b = StationKitBuilder()
+        let count = max(3, bays), length = Float(count) * 12
+        for index in 0..<count {
+            let kind: Kind = index == 0 ? .shedTail : index == count - 1 ? .shedHead : .shedMiddle
+            b.add(model(for: part(kind, system: system, tracks: tracks)), at: Map3DPoint(Float(index) * 12 - length / 2 + 6, 0, 0))
+        }
+        return b.mesh
+    }
+
+    /// Decision 785: the shed far off, a box as long and wide, as high as
+    /// the kit's far shed parts, its roof's colour on top.
+    public static func shedFarMesh(system: System, tracks: Int, bays: Int) -> Map3DMesh {
+        let shed = part(.shedHead, system: system, tracks: tracks)
+        var mesh = Map3DMesh()
+        mesh.addBox(base: .zero, forward: Map3DPoint(1, 0, 0), length: Float(max(3, bays)) * 12, width: shed.width,
+                    height: system.clearHeight + 0.45 + 0.625 + 1.5, top: Map3DPalette.roof, side: Map3DDepotFacilities.wall)
+        return mesh
+    }
+}
