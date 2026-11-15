@@ -661,6 +661,12 @@ extension GameError {
             )
         case .pierNotBesideWater:
             language.text("A pier goes on the shore, right beside the water.", "碼頭要蓋在岸邊，緊鄰水面。")
+        case .unknownAirRoute:
+            language.text("That air route no longer exists.", "這條航線已經不在了。")
+        case .invalidAirRoute:
+            language.text("This route can't be flown from this airport.", "這座機場飛不了這條航線。")
+        case .airRouteAlreadyBought:
+            language.text("You already fly this route, or as many routes as you can.", "這條航線你已經在飛了，或已經到了航線的上限。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:

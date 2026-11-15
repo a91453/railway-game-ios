@@ -553,9 +553,17 @@
 ///     every train through every switch at once, so it says the save is
 ///     newer than it instead. A save of any earlier version needs no
 ///     step: its switches take no time.
+/// 103. Air routes (decision 758): a world can have `"airRoutes"`, the
+///     routes the company bought, and `"nextAirRouteID"`, and its ledger
+///     may hold rows of the kind `"dailyAirRoutes"` with the items
+///     `"airFares"`, `"airRunning"` and `"landingFees"`. A build that
+///     reads only an earlier version would drop the routes and refuse the
+///     rows and the whole save with them, so it says the save is newer
+///     than it instead. A save of any earlier version needs no step: the
+///     company has no air route.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 102
+    public static let currentVersion = 103
 
     public let world: GameWorld
 
@@ -807,6 +815,8 @@ extension SavedGame: Codable {
         // Version 101 or earlier to 102: a world without
         // `"switchInterlocking"` has switches that take no time to throw
         // (decision 756): nothing to turn.
+        // Version 102 or earlier to 103: a world without `"airRoutes"` has
+        // bought no air route (decision 758): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

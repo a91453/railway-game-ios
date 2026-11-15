@@ -413,4 +413,14 @@ public enum GameError: Error, Hashable, Sendable {
     /// A pier on water, or with no water on any of its four sides
     /// (decision 585).
     case pierNotBesideWater(row: Int, column: Int)
+    /// No air route has this number (decision 758).
+    case unknownAirRoute(AirRouteID)
+    /// An air route from an airport the map has not, to a destination it
+    /// does not list, to a far airport the map has not or the same, with
+    /// no length or one out of range, or needing more aircraft than
+    /// ``AirRoute/maximumAircraft`` (decision 758).
+    case invalidAirRoute
+    /// The company already has the air route, or as many as
+    /// ``AirRoute/maximumRoutes`` (decision 758).
+    case airRouteAlreadyBought
 }

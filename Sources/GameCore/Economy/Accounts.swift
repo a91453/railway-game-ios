@@ -97,6 +97,12 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// in, and their boats' running, out, beside the lines' as the buses'.
     case ferryFares
     case ferryRunning
+    /// The company's air routes (decision 758; native): their passengers'
+    /// fares, in, and their aircraft's running and landings, out, beside
+    /// the lines' as the buses'.
+    case airFares
+    case airRunning
+    case landingFees
     /// What a run the player drove well earned (decision 693; native), in.
     case drivingBonus
     /// The house tax on the company's stations and buildings, out, paid a
@@ -185,6 +191,8 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailyCableways
         /// A day's ferries: fares and running (decision 585).
         case dailyFerries
+        /// A day's air routes: fares, running and landings (decision 758).
+        case dailyAirRoutes
         /// A run the player drove by hand, settled (decision 693).
         case drivenRun
         /// The income tax of the year before, paid at the end of the
@@ -264,8 +272,8 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales, .busFares, .cablewayFares, .ferryFares, .drivingBonus: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .houseTax, .propertyDemolition, .subsidiaryCost, .dayPassFares, .busRunning, .cablewayRunning, .ferryRunning: propertyCost = propertyCost + cost
+            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales, .busFares, .cablewayFares, .ferryFares, .airFares, .drivingBonus: propertyRevenue = propertyRevenue + line.amount
+            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .houseTax, .propertyDemolition, .subsidiaryCost, .dayPassFares, .busRunning, .cablewayRunning, .ferryRunning, .airRunning, .landingFees: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }
