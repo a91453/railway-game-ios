@@ -11,6 +11,15 @@
 -->
 <plist version="1.0">
 <dict>
+	<!-- Decision 776: the map packs App Store Connect hosts apart from the
+	     app (Background Assets), fetched by the MapPackDownloader extension
+	     into the App Group both share. -->
+	<key>BAAppGroupID</key>
+	<string>group.io.github.a91453.RailwayGame</string>
+	<key>BAHasManagedAssetPacks</key>
+	<true/>
+	<key>BAUsesAppleHosting</key>
+	<true/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

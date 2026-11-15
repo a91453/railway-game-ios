@@ -216,6 +216,31 @@ jobs:
             echo "https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios"
           } >>"$GITHUB_STEP_SUMMARY"
 
+      # Decision 776: the cities' map packs, uploaded apart from the build as
+      # Apple-hosted asset packs (tools/asset-packs/). The app still carries
+      # them and reads its own when a download is missing, so a failed upload
+      # is a warning, not a failed release. App Store Connect refuses a pack
+      # whose contents it already has; that is a warning too.
+      - name: Upload the map packs (asset packs)
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          packs="$TESTFLIGHT_DIR/asset-packs"
+          if ! tools/asset-packs/package.sh "$packs"; then
+            echo "::warning title=Map packs::Packing the map packs failed; nothing was uploaded."
+            exit 0
+          fi
+          for pack in "$packs"/*.aar; do
+            if API_PRIVATE_KEYS_DIR="$(dirname "$ASC_KEY_PATH")" xcrun altool --upload-asset-pack "$pack" \
+              --apple-id "$ASC_APP_ID" --api-key "$ASC_KEY_ID" --api-issuer "$ASC_ISSUER_ID"; then
+              echo "Uploaded the map pack $(basename "$pack")." >>"$GITHUB_STEP_SUMMARY"
+            else
+              echo "::warning title=Map packs::$(basename "$pack") was not uploaded (see the log above)."
+            fi
+          done
+
       # Runs even when an earlier step failed or the run was cancelled.
       - name: Clean up signing material
         if: always()
