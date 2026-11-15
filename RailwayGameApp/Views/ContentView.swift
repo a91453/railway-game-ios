@@ -429,6 +429,8 @@ struct ContentView: View {
             // and routes.
             .modifier(RouteHintCard(session: session, screen: screen))
             .modifier(PassingLoopCards(session: session, screen: screen))
+            // Decision 770: the real island stations, once.
+            .modifier(IslandRebuildListPrompt(session: session, screen: screen))
     }
 
     /// What a closing left to show: how the scenario ended first, then the
@@ -1751,6 +1753,35 @@ enum SecretarySettings {
     static let monthlyKey = "secretary.monthlyReport"
     /// Decision 305: skip a quiet night without the shortcut; off.
     static let nightSkipKey = "secretary.skipsQuietNights"
+}
+
+/// Decision 770: the card listing the real island stations still on two
+/// side platforms (``IslandRebuildListCard``), opened by itself the first
+/// time a game has them, once the real railways are in, over the map only
+/// and not in a lesson; seen once, kept on the device. The station panel
+/// opens it again.
+private struct IslandRebuildListPrompt: ViewModifier {
+    let session: GameSession
+    let screen: GameScreenState
+    @AppStorage("islandRebuildList.seen") private var seen = false
+
+    func body(content: Content) -> some View {
+        content
+            .task(id: seen ? nil : session.canTraceRealRailway) {
+                guard !seen, session.canTraceRealRailway, session.tutorial == nil, screen.panel == nil,
+                      session.hasRealIslandsToRebuild else { return }
+                seen = true
+                session.openIslandRebuildList()
+            }
+            .sheet(isPresented: Binding(
+                get: { session.showsIslandRebuildList },
+                set: { if !$0 { session.showsIslandRebuildList = false } }
+            )) {
+                IslandRebuildListCard(session: session)
+                    .gameSheetDetents()
+                    .coversTheMap(session)
+            }
+    }
 }
 
 /// The one-time card about track numbers and routes (decision 201, later;

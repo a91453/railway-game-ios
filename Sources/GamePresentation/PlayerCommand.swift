@@ -501,6 +501,11 @@ extension PlayerCommand: Codable {
         /// Decision 400 A.8: which of the chain's stretches a real
         /// station bought has its platform on.
         var platformStretch: Int?
+        /// Decision 766: where on that stretch the platform starts and how
+        /// long it is, in world units; neither for one recorded before,
+        /// whose platform is the whole stretch.
+        var platformStart: Int64?
+        var platformLength: Int64?
         /// Decision 760: a real station's second track, each a
         /// `buildTrack`, and which of its stretches has its platform on;
         /// absent for one track (and in logs from before it).
@@ -658,7 +663,8 @@ extension PlayerCommand: Codable {
             self = .buyRealStation(RealStationPurchase(
                 stretches: stretches, platform: platform,
                 secondStretches: second, secondPlatform: record.secondPlatformStretch, name: name, at: point,
-                demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland)
+                demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland),
+                platformStart: record.platformStart, platformLength: record.platformLength
             ))
         case "buildStationLayout":
             var steps = record.steps ?? []
@@ -824,6 +830,8 @@ extension PlayerCommand: Codable {
         case .buyRealStation(let purchase):
             record.stretches = purchase.stretches.map(PlayerCommand.buildTrack)
             record.platformStretch = purchase.platform
+            record.platformStart = purchase.platformStart
+            record.platformLength = purchase.platformLength
             if let second = purchase.secondPlatform {
                 record.secondStretches = purchase.secondStretches.map(PlayerCommand.buildTrack)
                 record.secondPlatformStretch = second

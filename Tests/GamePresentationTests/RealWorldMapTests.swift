@@ -104,6 +104,9 @@ final class RealWorldMapTests: XCTestCase {
         // And the festivals held at Taiwan's places (decision 576).
         XCTAssertTrue(real.demandEvents?.sites.contains { $0.kind == .newYearsEve } ?? false, "Taipei 101 is on a map round Taipei")
         blank.setFestivalSites([])
+        // And the venues concerts and exhibitions are held at (decision 768).
+        XCTAssertTrue(real.demandEvents?.venues.contains { $0.id == "tw02" } ?? false, "Taipei Arena is on a map round Taipei")
+        blank.setEventVenues([])
         // And the airports of the map (decision 695): Songshan is on this one.
         XCTAssertEqual(real.airports.map(\.name), ["臺北松山機場"])
         blank.setAirports([])
