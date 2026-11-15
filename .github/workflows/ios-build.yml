@@ -1300,7 +1300,7 @@ jobs:
             exit 0
           fi
           jq -r --arg key "$KEY" '.[] | select(.key != $key) | .id' <<<"$entries" | while read -r id; do
-            gh cache delete -R "$GITHUB_REPOSITORY" "$id"
+            gh cache delete -R "$GITHUB_REPOSITORY" "$id" && echo "Deleted cache $id"
           done
 
   remember:
