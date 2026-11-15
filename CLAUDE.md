@@ -533,7 +533,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   2026-11-15): a screenshot run that fails, times out or misses a screen
   is not re-run or waited for; the pull request merges once CI is green,
   at every level, and the owner looks at the screens after the release
-  (ui-review §3).
+  (ui-review §3). A 3D model or livery the local studio built and its
+  reviewer passed against photographs (model-look §1) takes no screenshot
+  run at all and merges once CI is green (owner, 2026-11-15).
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,
