@@ -159,6 +159,9 @@ public enum Map3DShowcase {
         Entry("greenCommuter", "Two-car green EMU", "兩節綠色電聯車", .other, cars: 2, fixed: true),
         // The owner's old red commuter car (Map3DRedCommuter).
         Entry("redCommuter", "Red commuter EMU", "紅色通勤電聯車", .other, cars: 4, most: 10),
+        // Decision 780: Hong Kong's airport railway, eight cars each.
+        Entry(Map3DMTRAirportLine.expressKey, "Hong Kong Airport Express train", "香港機場快綫列車", .metro, cars: 8, fixed: true),
+        Entry(Map3DMTRAirportLine.tungChungKey, "Hong Kong Tung Chung line train", "香港東涌綫列車", .metro, cars: 8, fixed: true),
     ]
 
     /// The entry of `key`.

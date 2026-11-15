@@ -44,9 +44,24 @@ extension GameSession {
         return ids
     }
 
-    /// Whether the island list has a station to offer: the card opens by
-    /// itself the first time it has (decision 770).
+    /// Whether the island list has a station to offer: the station panel's
+    /// way back to the card shows (decision 770).
     public var hasRealIslandsToRebuild: Bool { !realIslandsToRebuild().isEmpty }
+
+    /// Whether the card opens by itself (decision 770, REVIEW-L22): only
+    /// when a station on it can be rebuilt now. A list whose stations all
+    /// say why they cannot (the real-world demo's 瑞芳, 猴硐 and 十分, laid
+    /// with no room for turnouts) gave the player nothing to tick and
+    /// covered the map as the game opened. The station panel still opens it.
+    public var opensIslandRebuildListByItself: Bool { opensIslandRebuildListByItself(isRealIsland: nil) }
+
+    func opensIslandRebuildListByItself(isRealIsland: ((Station) -> Bool)?) -> Bool {
+        islandRebuildList(isRealIsland: isRealIsland).contains { $0.cost != nil }
+    }
+
+    /// The device's record that the card has opened by itself once
+    /// (`@AppStorage`); UI tests start with it set (`RailwayGameApp`).
+    public static let islandRebuildListSeenKey = "islandRebuildList.seen"
 
     /// The island list: each real island station on two side platforms,
     /// priced on its own as its panel prices it (decision 761).
