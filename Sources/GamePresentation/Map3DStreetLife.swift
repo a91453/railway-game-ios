@@ -69,6 +69,11 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     /// Hong Kong's taxi, the instance's red, green or blue, its roof
     /// silver with a lit sign.
     case taxi
+    /// Decision 787: the commuter standing, close up
+    /// (``Map3DCommuterFigure``); farther, ``standing``.
+    case commuterStanding
+    /// The commuter mid-stride; farther, ``walking``.
+    case commuterWalking
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
@@ -83,7 +88,17 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     static var taiwanBuses: [Map3DStreetModel] { allCases.filter { $0.isBus && $0 != .doubleDecker } }
 
     /// Whether it is a figure on foot.
-    public var isPerson: Bool { self == .walking || self == .standing }
+    public var isPerson: Bool { self == .walking || self == .standing || self == .commuterStanding || self == .commuterWalking }
+
+    /// Decision 787: what is drawn of a figure close up: the commuter
+    /// (``Map3DCommuterFigure``); anything else itself.
+    var closeUp: Map3DStreetModel {
+        switch self {
+        case .standing: .commuterStanding
+        case .walking: .commuterWalking
+        default: self
+        }
+    }
 
     /// Its model, in the pack's space (+x the front, +y the left, +z up,
     /// its foot or wheels at the origin). Where the colour's alpha is 0
@@ -102,6 +117,12 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
         }
         let tinted = Map3DColor.rgb(0xFFFFFF) & 0x00FF_FFFF
         switch self {
+        case .commuterStanding, .commuterWalking:
+            // Decision 787: the commuter; the block figure, renamed, where
+            // its mesh does not decode.
+            if let figure = Map3DCommuterFigure.model(self) { return figure }
+            let block = (self == .commuterWalking ? Map3DStreetModel.walking : .standing).model()
+            return Map3DModelPack.Model(name: modelName, vertices: block.vertices, minimum: block.minimum, maximum: block.maximum)
         case .shuttleBus: return Map3DShuttleBus.model()
         case .lowFloorBus: return Map3DLowFloorBus.model()
         case .coachBus: return Map3DCoachBus.model()
@@ -560,6 +581,8 @@ public struct Map3DStreetLife: Sendable {
     public struct Frame: Sendable {
         public var instances: [Map3DInstance] = []
         public var people = 0
+        /// Decision 787: of the people, those drawn as the commuter.
+        public var closeUps = 0
         public var vehicles = 0
         /// Of the vehicles, the buses.
         public var buses = 0
@@ -601,7 +624,8 @@ public struct Map3DStreetLife: Sendable {
             }.sorted { $0.1 < $1.1 }
             for (index, _) in near where frame.people < most.people {
                 addPeople(of: spots[index], to: &frame, target: target, reach: reach, time: clock, still: still, lights: lights,
-                          budget: most.people, activity: activity, signals: signals)
+                          budget: most.people, activity: activity, signals: signals, eye: distance,
+                          closeUps: Map3DCommuterFigure.mostCloseUp(of: most.people))
             }
         }
         if distance <= Self.vehiclesFrom {
@@ -626,7 +650,7 @@ public struct Map3DStreetLife: Sendable {
     }
 
     private func addPeople(of spot: Spot, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, still: Bool, lights: Float,
-                           budget: Int, activity: Activity, signals: Double? = nil) {
+                           budget: Int, activity: Activity, signals: Double? = nil, eye: Float = 0, closeUps: Int = 0) {
         var count: Int
         switch spot.kind {
         case .platform: count = spot.station.flatMap { activity.platform[$0] } ?? 0
@@ -681,9 +705,14 @@ public struct Map3DStreetLife: Sendable {
             let foot = place.point + place.right * across
             let away = Map3DPoint(foot.x - target.x, 0, foot.z - target.z).length
             let size = Self.fade(away, reach: reach)
-            guard size > 0, let index = Self.models[model] else { continue }
+            // Decision 787: the commuter within its reach of the eye, the
+            // nearest first, as many as the frame allows; the block farther.
+            let close = frame.closeUps < closeUps && (eye * eye + away * away).squareRoot() < Map3DCommuterFigure.detailReach
+            let drawn = close ? model.closeUp : model
+            guard size > 0, let index = Self.models[drawn] else { continue }
             frame.instances.append(.prop(index, at: foot, forward: facing, scale: scale * size, tint: tint))
             frame.people += 1
+            if drawn != model { frame.closeUps += 1 }
         }
     }
 
@@ -938,7 +967,7 @@ extension Map3DStreetModel {
         case .van: 2.3
         case .garbageTruck, .recyclingTruck: Map3DGarbageTruck.size.length / 2
         case .doubleDecker, .minibus, .taxi: Map3DHongKongVehicles.size(self).length / 2
-        case .walking, .standing: 0.2
+        case .walking, .standing, .commuterStanding, .commuterWalking: 0.2
         default: 0.9
         }
     }
