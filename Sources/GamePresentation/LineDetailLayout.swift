@@ -1,6 +1,6 @@
 import GameCore
 
-/// Decision 776 (the owner, 2026-11-15: 「路線詳情…要滑太多 應該可以改成跟
+/// Decision 779 (the owner, 2026-11-15: 「路線詳情…要滑太多 應該可以改成跟
 /// 資料類似」): the pages of a line's own page, which covers the whole
 /// screen (decision 745), as the company's figures have theirs (decision
 /// 717). Each answers one question: how the line is doing, what runs on
@@ -19,7 +19,7 @@ public enum LineDetailPage: String, CaseIterable, Hashable, Sendable {
     }
 }
 
-/// One block of a line's page (decision 776), one or more sections of its
+/// One block of a line's page (decision 779), one or more sections of its
 /// list, as the one long form had them (decision 481).
 public enum LineDetailSection: String, CaseIterable, Hashable, Sendable {
     /// Its stops in full, whether it runs now, its figures and trend.
@@ -46,7 +46,7 @@ public enum LineDetailSection: String, CaseIterable, Hashable, Sendable {
     case realRebuild
 }
 
-/// Decision 776: which pages a line's page has, what each holds, and
+/// Decision 779: which pages a line's page has, what each holds, and
 /// whether a page stands in two columns. The same sections as the one
 /// long form; only where they stand changes.
 public struct LineDetailLayout: Equatable, Sendable {

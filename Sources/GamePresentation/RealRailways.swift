@@ -711,7 +711,7 @@ extension RealRailways {
     /// be read is left out and listed, Taiwan's railways as they are.
     public static func load(
         overseas: Set<OverseasMap> = OverseasMaps.open,
-        pack: (OverseasMap) -> MapPack? = MapPack.bundled,
+        pack: (OverseasMap) -> MapPack? = MapPack.current,
         file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data
     ) -> Loaded {
         var issues: [RealDataLoadIssue] = []

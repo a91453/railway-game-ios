@@ -295,7 +295,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(row.appears(within: 10), "The bought line is listed")
             row.tap()
         }
-        // Decision 776: rebuilding as the real line is on the Settings page.
+        // Decision 779: rebuilding as the real line is on the Settings page.
         if !rebuild.exists { app.showLinePage("Settings", "設定", trailing: true) }
         for _ in 0..<6 where !(rebuild.exists && rebuild.isHittable) {
             app.swipeUp()
@@ -1367,7 +1367,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
-        // Decision 776: the diagram's button is with the stops.
+        // Decision 779: the diagram's button is with the stops.
         let page = app.showLinePage("Stops", "停靠站")
         let diagram = app.buttons["line.trainDiagram"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(diagram, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's page has its diagram button")
@@ -3171,7 +3171,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         lines.waitUntilSettled()
         lines.tap()
         app.openLinePage()
-        // Decision 776: the trains are on their own page.
+        // Decision 779: the trains are on their own page.
         let page = app.showLinePage("Trains", "列車")
         let idle = app.buttons["line.staff.idleTrain"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(idle, in: page), "The idle train's row shows")
@@ -3201,7 +3201,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             lines.waitUntilSettled()
             lines.tap()
             app.openLinePage()
-            // Decision 776: the trains are on their own page.
+            // Decision 779: the trains are on their own page.
             var page = app.showLinePage("Trains", "列車")
             // The page's bar lies over the top of its list: a row under it
             // counts as on screen and a tap there lands on the bar (the
@@ -4136,7 +4136,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
-        // Decision 776: the line's operations, in the overview's trailing column.
+        // Decision 779: the line's operations, in the overview's trailing column.
         let page = app.showLinePage("Overview", "總覽", trailing: true)
         let weekly = app.descendants(matching: .any)["line.weeklyPunctuality"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The week's punctuality shows")
@@ -4194,7 +4194,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // roster's row was added below them (compare with `line-page`).
         settle(seconds: 2)
         keep("roster-line-page-trains", app)
-        // Decision 776: the roster's button is with the stops.
+        // Decision 779: the roster's button is with the stops.
         let stops = app.showLinePage("Stops", "停靠站")
         let open = app.buttons["line.trainRoster"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: stops, below: app.navigationBars.firstMatch.frame.maxY), "The roster's button shows")
@@ -4239,7 +4239,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
-        // Decision 776: the trains are on their own page.
+        // Decision 779: the trains are on their own page.
         let page = app.showLinePage("Trains", "列車")
         settle(seconds: 2)
         // A line with trains sends more out under "Now"; the catalog
@@ -4308,7 +4308,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         report.tap()
         // Decision 481: the charts are on the line's own page.
         XCTAssertTrue(app.collectionViews["line.detail"].firstMatch.appears(within: 10), "The line's page opens")
-        // Decision 776: the overview's trailing column.
+        // Decision 779: the overview's trailing column.
         let linePage = app.showLinePage("Overview", "總覽", trailing: true)
         let peak = app.descendants(matching: .any)["line.operations.peakLoad"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(peak, in: linePage), "The fullest train by day comes into view")
@@ -4515,7 +4515,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             _ = page.appears(within: 10)
             settle()
             keep("trains-line-details", app)
-            // Decision 776: the trains are on their own page.
+            // Decision 779: the trains are on their own page.
             if page.exists { app.showLinePage("Trains", "列車") }
             let catalog = app.buttons["line.staff.catalog"]
             if app.dragUntilWhollyOnScreen(catalog, in: page.exists ? page : list) {

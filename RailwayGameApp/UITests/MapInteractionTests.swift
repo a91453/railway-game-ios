@@ -1417,7 +1417,7 @@ final class MapInteractionTests: XCTestCase {
         lists.waitUntilSettled()
         // Decision 481: line 1's own page, with its own list.
         app.openLinePage(1)
-        // Decision 776: the depots are on the Trains page, beside the trains.
+        // Decision 779: the depots are on the Trains page, beside the trains.
         let list = app.showLinePage("Trains", "列車", trailing: true)
         // The list runs on under the bar (#659): a row counts as in reach only below it.
         let bar = app.navigationBars.firstMatch

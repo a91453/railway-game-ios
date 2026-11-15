@@ -102,11 +102,11 @@ struct LinesPanel: View {
     @State private var showsDiagram = false
     /// Decision 512: whether the selected line's train roster is open.
     @State private var showsRoster = false
-    /// Decision 776: the page of a line's page shown, kept while the arrows
+    /// Decision 779: the page of a line's page shown, kept while the arrows
     /// go to the line before or after; the overview again once the list
     /// is back.
     @State private var linePage: LineDetailPage = .overview
-    /// Decision 776: the line page's width, measured; `nil` until it is.
+    /// Decision 779: the line page's width, measured; `nil` until it is.
     @State private var linePageWidth: CGFloat?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// Decision 196, later: the player's choice for the "Advanced" switch,
@@ -506,7 +506,7 @@ struct LinesPanel: View {
 
     /// The opened line's own page: what its row in the list leaves out,
     /// the lines before and after it, then its trains, depots, stops,
-    /// settings, operations and services (decision 196). Decision 776:
+    /// settings, operations and services (decision 196). Decision 779:
     /// over the whole screen in pages, as the company's figures
     /// (decision 717), two columns side by side where the screen is wide.
     @ViewBuilder
@@ -557,7 +557,7 @@ struct LinesPanel: View {
         }
     }
 
-    /// Decision 776: what of the opened line decides its page's pages.
+    /// Decision 779: what of the opened line decides its page's pages.
     private func lineDetailLayout(_ line: ServiceLine) -> LineDetailLayout {
         let depotRow = session.selectedLineDepotRow
         let showsDepots = depotRow.map {
@@ -614,7 +614,7 @@ struct LinesPanel: View {
         }
     }
 
-    /// Decision 776: over a line's page, on every page of it, the lines
+    /// Decision 779: over a line's page, on every page of it, the lines
     /// before and after it and the control that picks the page.
     private func lineDetailBar(_ line: ServiceLine, layout: LineDetailLayout, shown: LineDetailPage) -> some View {
         let language = session.language
@@ -680,7 +680,7 @@ struct LinesPanel: View {
     }
 
     /// The top of a line's page: its stops in full, whether it runs now,
-    /// yesterday's figures with its trend. Decision 776: the lines before
+    /// yesterday's figures with its trend. Decision 779: the lines before
     /// and after it are over the page (``lineDetailBar``), on every page.
     private func lineSummarySection(_ line: ServiceLine) -> some View {
         let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
@@ -2399,7 +2399,7 @@ struct LinesPanel: View {
     }
 
     /// Decision 274: how well its trains fit, and who waits at its ends;
-    /// decision 332: who drives instead. Decision 776: on the overview.
+    /// decision 332: who drives instead. Decision 779: on the overview.
     @ViewBuilder
     private func lineFeedbackSections(_ line: ServiceLine) -> some View {
         if !line.isRing, let feedback = session.world.lineFeedback(line.id) {

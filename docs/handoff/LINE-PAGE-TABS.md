@@ -1,7 +1,7 @@
-# LINE-PAGE-TABS：路線自己的頁分成分頁、兩欄（決策 776）
+# LINE-PAGE-TABS：路線自己的頁分成分頁、兩欄（決策 779）
 
 - 派工：主規劃（作者 2026-11-15 在 132 版 iPad 上回報「路線詳情…要滑太多 應該可以改成跟資料類似」）。登記在 #2118。
-- 分支 `claude/project-thread-et46iu`。決策 776；存檔版本、golden schema、`Sources/GameCore/` 都沒動。
+- 分支 `claude/project-thread-et46iu`。決策 779；存檔版本、golden schema、`Sources/GameCore/` 都沒動。
 
 ## 做了什麼
 

@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 776: the pages of a line's own page, what each holds and when
+/// Decision 779: the pages of a line's own page, what each holds and when
 /// a page stands in two columns.
 final class LineDetailLayoutTests: XCTestCase {
     private func facts(

@@ -93,7 +93,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
         app.closeLinePage()
         setAdvanced(true, in: app)
         app.openLinePage()
-        // Decision 776: the stopping patterns are on the Stops page.
+        // Decision 779: the stopping patterns are on the Stops page.
         app.showLinePage("Stops", "停靠站", trailing: true)
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
@@ -275,7 +275,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
     private func bringIntoView(_ row: XCUIElement, in app: XCUIApplication) {
         // Decision 481: a line's page has its own list, under a bar named
         // for the line.
-        // Decision 776: the column of its page the route is in.
+        // Decision 779: the column of its page the route is in.
         let page = app.linePageList(trailing: true)
         let bar = page.exists ? app.navigationBars.firstMatch : app.navigationBars["Lines"].firstMatch
         let list = page.exists ? page : bar.exists
@@ -889,7 +889,7 @@ extension XCUIApplication {
         return page
     }
 
-    /// Decision 776: picks a page of a line's own page by its name on the
+    /// Decision 779: picks a page of a line's own page by its name on the
     /// control over it, in either language, and returns the list the page's
     /// sections are in: the trailing column's when `trailing` and the page
     /// stands in two, else the leading (or only) one.
@@ -907,7 +907,7 @@ extension XCUIApplication {
         return list
     }
 
-    /// Decision 776: a column of the line's page shown, the leading one
+    /// Decision 779: a column of the line's page shown, the leading one
     /// (the only one where the window is narrow or the text large), or the
     /// trailing one.
     func linePageList(trailing: Bool = false) -> XCUIElement {

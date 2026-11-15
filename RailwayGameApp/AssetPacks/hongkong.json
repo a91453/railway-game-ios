@@ -1,0 +1,12 @@
+{
+  "assetPackID": "mappack-hongkong",
+  "downloadPolicy": {
+    "prefetch": {
+      "installationEventTypes": ["firstInstallation", "subsequentUpdate"]
+    }
+  },
+  "fileSelectors": [
+    { "directory": "MapPacks/hongkong" }
+  ],
+  "platforms": ["iOS"]
+}

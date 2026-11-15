@@ -57,7 +57,7 @@ final class Feature284To286UITests: XCTestCase {
         tap(app.buttons["entry.lines"])
         // Decision 481: the line's trains are on its own page.
         app.openLinePage()
-        // Decision 776: the trains to start with are on the Trains page.
+        // Decision 779: the trains to start with are on the Trains page.
         app.showLinePage("Trains", "列車")
         let catalog = app.buttons["line.staff.catalog"]
         openCatalog(catalog)
