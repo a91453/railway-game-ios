@@ -97,6 +97,9 @@ struct RailwayGameApp: App {
             gameCenter.start(launcher: launcher)
         }
         _gameCenter = State(initialValue: gameCenter)
+        // Decision 776: the map packs downloaded apart from the app, taken
+        // when whole; nothing runs in an app built without asset packs.
+        MapPackDownloader.start()
     }
 
     var body: some Scene {
