@@ -102,7 +102,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name) }
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "8766b651609228df")
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "c06a3eccf6b072ce")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
                        Map3DFerry.drawn.map(\.name))
@@ -113,7 +113,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstHK = firstCoach + coach.count
         XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1cd5d06005403762")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "94379689657a797")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "8fd666128abd53f6")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -125,8 +125,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         }
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
-        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count)), "7336d9303927d9bf")
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "6d56b33e1d1df0fe")
+        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count)), "c4be699800cad960")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "549c84c692f706e6")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")
     }
 
