@@ -601,6 +601,17 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**0.6.0 (132) 發了（2026-11-15 05:24 UTC，發版後例行檢查記）**
+- 從 main **`3b2a3f5`**（#2244 的合併）建置，TestFlight `testflight.yml` run 43680941721（run 132），作者自己按；寫這段時 run 還在跑。`3b2a3f5` 是 `26d397d`（#2243，132 的說明）再加 #2244（只拆 CI 的 `HongKongMapTests`、不改 App），所以 App 內容和 `26d397d` 相同。紀錄在 `research/PLAYER_FEEDBACK.md` 的 132 一節。
+- 範圍：131（`4cff950`）之後的 #2208–#2244，說明見 `.github/testflight-whats-new.md` 與 #2243。作者要在 App Store Connect 重跑 Game Center 設定（年終考核兩個新成就，#2215）與回答出口合規。
+- 這個 commit 的檢查：push `ci.yml` 43680076651（`3b2a3f5`）與 43679517781（`26d397d`）發版時還在跑；完整 `ci.yml` 與 full lane 最近一次綠的是前一晚的 `a9ee7e0`（ci 43643989404、full lane `ios-build.yml` 43647550011）。依規則不等 full lane，今晚的 nightly 會跑到 132 之後的 main，紅了修進 133。
+- 發版後合併：#2237（model-look「貼圖還是色票」）→ `1641dd1`。
+- 開著的：#2245 HARBOUR-SIGHTS（決策 773、存檔 107，動 GameCore，它自己的串在收）。進行中：BALANCE-RECENT（量已合併功能的平衡，`claude/project-thread-oau1hp`）。
+- 號碼：main 決策到 772、存檔 106；#2245 佔決策 773、存檔 107；golden schema 不動。下一個決策 774、存檔 108。
+- **實機還沒看過的**（132 全部）：航線收購、飛機照時刻起降與航班視窗、收購台港航線開香港地圖、活動場館／夜市／地標博物館廟宇的人潮時段、收購站照真實月台型式與一鍵改建島式、收購站月台加長、年終考核卡、窗戶規則、城市色票、儲煤台、3D 記憶體。
+
+**0.6.0 (131) 發了（2026-11-14 13:16 UTC）**：main `4cff950`，TestFlight run 43598932732，完整 `ci.yml` 43595170307 綠；full lane（43599067177）紅，#2219 修好，`a9ee7e0` 的 full lane 綠。細節在 `handoff/RELEASE-131.md`。
+
 **0.6.0 (130) 發了（2026-11-14 01:16 UTC，第 65 任記，RELEASE-130）**
 - 從 main `19aa342`（#2172）建置，TestFlight run 43539542182，作者自己按；出口合規要他在 App Store Connect 答。紀錄在 `research/PLAYER_FEEDBACK.md` 的 130 一節（含實機要看的六項）。
 - 這個 commit：push `ci.yml` 43537990683 綠（tier）；完整 `ci.yml` 43539854168 與 full lane `ios-build.yml` 43539871635 發版後補開，結果看 #2118 的 RELEASE-130 留言。
