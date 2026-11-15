@@ -103,7 +103,7 @@ struct Map3DFootprints: Sendable {
                 let scale = tilePoints / extent / pointsPerMetre * metre
                 let west = frame.middleX + (Double(column) * tilePoints - anchorX) / pointsPerMetre * metre
                 let north = frame.middleY + (Double(row) * tilePoints - anchorY) / pointsPerMetre * metre
-                for building in decoded {
+                for building in Self.withoutDuplicates(decoded) {
                     buildings.append(Building(storeys: building.storeys, storeysFrom: building.storeysFrom, use: building.use,
                                               rings: building.rings.map { $0.map { (west + Double($0.x) * scale, north + Double($0.y) * scale) } }))
                 }
@@ -111,6 +111,69 @@ struct Map3DFootprints: Sendable {
         }
         self.buildings = buildings
     }
+
+    /// The owner's report on 133 (an iPad, a corner tower whose walls
+    /// showed two window grids at once and a shopfront's ghost): a tile's
+    /// buildings without the second of two outlines of the same building.
+    /// OpenStreetMap maps some buildings twice (an outline and a part of
+    /// the same shape, or two ways), and Overture keeps both: 2,328 pairs
+    /// in the app's tiles of 2026-11 overlap by more than half the smaller,
+    /// 194 of them over 100 m² and of much the same size. Drawn twice, each
+    /// with its own storeys and use, their walls lie in one plane and
+    /// flicker between the two. Two outlines are one building when each
+    /// one's box covers at least ``duplicateShare`` of the other's and
+    /// their areas differ by less than ``duplicateSizes``; the one with
+    /// more storeys is kept (the first of equals). A smaller part inside a
+    /// larger building, a tower on its podium, is not of the same size and
+    /// stays.
+    static func withoutDuplicates(_ decoded: [(storeys: Int, storeysFrom: StoreysFrom, use: Int, rings: [[(x: Int, y: Int)]])])
+        -> [(storeys: Int, storeysFrom: StoreysFrom, use: Int, rings: [[(x: Int, y: Int)]])] {
+        guard decoded.count > 1 else { return decoded }
+        struct Box { var minX = Int.max, minY = Int.max, maxX = Int.min, maxY = Int.min, area = 0.0 }
+        let boxes: [Box] = decoded.map { building in
+            var box = Box()
+            guard let outline = building.rings.first, outline.count >= 3 else { return box }
+            var twice = 0
+            for (index, point) in outline.enumerated() {
+                box.minX = min(box.minX, point.x); box.maxX = max(box.maxX, point.x)
+                box.minY = min(box.minY, point.y); box.maxY = max(box.maxY, point.y)
+                let next = outline[(index + 1) % outline.count]
+                twice += point.x * next.y - next.x * point.y
+            }
+            box.area = Double(abs(twice)) / 2
+            return box
+        }
+        func boxArea(_ box: Box) -> Double { Double(box.maxX - box.minX) * Double(box.maxY - box.minY) }
+        // Swept by the boxes' west edges, so only neighbours are compared.
+        let order = decoded.indices.filter { boxes[$0].area > 0 }.sorted { (boxes[$0].minX, $0) < (boxes[$1].minX, $1) }
+        var dropped = Set<Int>()
+        for (place, a) in order.enumerated() where !dropped.contains(a) {
+            for b in order[(place + 1)...] {
+                guard boxes[b].minX <= boxes[a].maxX else { break }
+                guard !dropped.contains(b) else { continue }
+                let (one, other) = (boxes[a], boxes[b])
+                let width = min(one.maxX, other.maxX) - max(one.minX, other.minX)
+                let height = min(one.maxY, other.maxY) - max(one.minY, other.minY)
+                guard width > 0, height > 0 else { continue }
+                let shared = Double(width) * Double(height)
+                guard shared >= duplicateShare * boxArea(one), shared >= duplicateShare * boxArea(other),
+                      max(one.area, other.area) < duplicateSizes * min(one.area, other.area) else { continue }
+                // Keep the taller; of equals, the first in the tile.
+                if decoded[b].storeys > decoded[a].storeys || (decoded[b].storeys == decoded[a].storeys && b < a) {
+                    dropped.insert(a)
+                    break
+                }
+                dropped.insert(b)
+            }
+        }
+        guard !dropped.isEmpty else { return decoded }
+        return decoded.indices.filter { !dropped.contains($0) }.map { decoded[$0] }
+    }
+
+    /// How much of each other's box two outlines of one building share,
+    /// and how much larger the one may be than the other.
+    static let duplicateShare = 0.8
+    static let duplicateSizes = 1.4
 
     /// A tile's buildings, in its own units (`footprints/2`, the tool's
     /// `encode_tile`).

@@ -57,6 +57,28 @@ final class Map3DFootprintsTests: XCTestCase {
         XCTAssertThrowsError(try Map3DFootprints.decode(bytes + [0]))
     }
 
+    /// The owner's report on 133: one building mapped twice is drawn once,
+    /// the taller of the two; a tower on its podium and two neighbours
+    /// stay.
+    func testABuildingMappedTwiceIsDrawnOnce() throws {
+        func box(_ x: Int, _ y: Int, _ w: Int, _ h: Int) -> [[(Int, Int)]] { [[(x, y), (x, y + h), (x + w, y + h), (x + w, y)]] }
+        let bytes = Self.tile([
+            (3 << 8, box(0, 0, 1000, 600)),             // 0: the outline, three storeys
+            (7 << 8, box(10, 5, 990, 600)),             // 1: the same, seven: kept
+            (2 << 8, box(3000, 0, 3000, 3000)),         // 2: a podium
+            (20 << 8, box(4000, 1000, 500, 500)),       // 3: its tower: kept
+            (5 << 8, box(7000, 0, 400, 400)),           // 4: twins of equal storeys: the first
+            (5 << 8, box(7000, 0, 400, 400)),           // 5
+            (4 << 8, box(7400, 0, 400, 400)),           // 6: a neighbour, wall to wall: kept
+        ])
+        let decoded = try Map3DFootprints.decode(bytes)
+        let kept = Map3DFootprints.withoutDuplicates(decoded)
+        XCTAssertEqual(kept.map(\.storeys), [7, 2, 20, 5, 4])
+        XCTAssertEqual(kept.first?.rings.first?.first?.x, 10)
+        // Nothing to drop: as decoded.
+        XCTAssertEqual(Map3DFootprints.withoutDuplicates(Array(decoded[2...3])).map(\.storeys), [2, 20])
+    }
+
     func testWhatABuildingIsDrawnAs() {
         func kind(use: Int, storeys: Int) -> Map3DScene.Builder.RealKind {
             Map3DFootprints.Building(storeys: storeys, storeysFrom: .tags, use: use, rings: []).kind
