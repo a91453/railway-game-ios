@@ -139,6 +139,9 @@ fi
   echo "| Signed with a distribution certificate | $distribution |"
   echo "| App Store provisioning profile for this team and app | $profile_ok |"
   echo "| App structure complete | $(yes_no "$structure_ok") |"
+  # Decision 776: without it the map packs are not downloaded (the app
+  # reads its own), so it is reported, not failed.
+  echo "| Map pack downloader extension | $(yes_no test -d "$app/Extensions/MapPackDownloader.appex") |"
 } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
 if ((failures > 0)); then

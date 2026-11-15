@@ -26,6 +26,7 @@
 		10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */ = {isa = PBXBuildFile; fileRef = 31AA7BB032ACE4E009B42AF1 /* station_names.json */; };
 		10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8372106A7EF953548452B15 /* MapBuildConfirm.swift */; };
 		111E3F4C4C9E95DD457BC300 /* run-diesel.caf in Resources */ = {isa = PBXBuildFile; fileRef = 6797B6F4C19A7D2E502589E5 /* run-diesel.caf */; };
+		121FDC3C6CF3894CE6CEC863 /* MapPackDownloader.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = FE2BA4043F7B5F66BB2F4CE3 /* MapPackDownloader.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		12BB9882A54BD217BECB6F92 /* horn-metro.wav in Resources */ = {isa = PBXBuildFile; fileRef = 15F8BB42601B157F11A9F8ED /* horn-metro.wav */; };
 		1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A68301E79140AEFC540BBA0 /* TrainControls.swift */; };
 		159ECB2AA9E6B580BF425E49 /* PromoMaterialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E70549159C0EC6DAE1303D /* PromoMaterialTests.swift */; };
@@ -107,6 +108,7 @@
 		56D2E59265A1A07AA9258976 /* tpe-church-jinan.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 07C5CB91C882A2326C189C9F /* tpe-church-jinan.m3dmodel */; };
 		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		585C09A427696BD99073713D /* refused.wav in Resources */ = {isa = PBXBuildFile; fileRef = E4631B47557CC9944903820E /* refused.wav */; };
+		5941DFBB2AF0AFD7E71375E4 /* MapPackDownloaderExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29DEC3E6EDA328508E74CE3E /* MapPackDownloaderExtension.swift */; };
 		5E0B13EE6BA50532BF4C2DE9 /* real_buses_Taichung.json in Resources */ = {isa = PBXBuildFile; fileRef = 7F78F65A247A49BAD8BBD3C6 /* real_buses_Taichung.json */; };
 		5E5D2D211BDC490D078CE1DA /* meshy-bus-stop-pole.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = D6F8BD91F256D7FE026E0B78 /* meshy-bus-stop-pole.m3dmodel */; };
 		602D4EB636DD03A550CCD209 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */; };
@@ -319,7 +321,28 @@
 			remoteGlobalIDString = 6B2730D54DA2BD4386F0AEE3;
 			remoteInfo = RailwayGame;
 		};
+		BC48FBDE4CFC6A699C659CD6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 20F26E761254EC6D2A5F8CC9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F50DD4C216E93B7C1A88B5F4;
+			remoteInfo = MapPackDownloader;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		890901FE297FA321BDA11000 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				121FDC3C6CF3894CE6CEC863 /* MapPackDownloader.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		007476F85C3E1C799257C7B6 /* tra_platforms.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_platforms.json; sourceTree = "<group>"; };
@@ -365,6 +388,7 @@
 		24B425FF34AEB844CE2FA815 /* StationMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationMasterView.swift; sourceTree = "<group>"; };
 		25999FFFC56D8D000B642C6F /* tpe-temple-cixian.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-cixian.m3dmodel"; sourceTree = "<group>"; };
 		284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */ = {isa = PBXFileReference; path = "rain-typhoon.caf"; sourceTree = "<group>"; };
+		29DEC3E6EDA328508E74CE3E /* MapPackDownloaderExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapPackDownloaderExtension.swift; sourceTree = "<group>"; };
 		29F78307DC6EE99597B85320 /* taiwan_sight_visitors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_sight_visitors.json; sourceTree = "<group>"; };
 		2A779D8969EEF8D75DD97FF5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebsiteScreenshotTests.swift; sourceTree = "<group>"; };
@@ -617,6 +641,7 @@
 		F9D622682F53E544329A323C /* goal-met.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "goal-met.wav"; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
 		FD4B099119C83D89CC72BC1C /* BuiltBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltBrand.swift; sourceTree = "<group>"; };
+		FE2BA4043F7B5F66BB2F4CE3 /* MapPackDownloader.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = MapPackDownloader.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE945AAFE65EE7E25CA577DC /* ZoomRowUnderPanelUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomRowUnderPanelUITests.swift; sourceTree = "<group>"; };
 		FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostcardView.swift; sourceTree = "<group>"; };
 		FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapQuickLayerStrip.swift; sourceTree = "<group>"; };
@@ -651,6 +676,7 @@
 		04B4E0263838A9F3091ABD24 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				FE2BA4043F7B5F66BB2F4CE3 /* MapPackDownloader.appex */,
 				A7D933E24E26C2077E5BC12A /* RailwayGame.app */,
 				A0888B79097535628EEF865F /* RailwayGameUITests.xctest */,
 			);
@@ -667,6 +693,15 @@
 				0CB59798A068C5D184EA4D58 /* TrainShowcaseScreen.swift */,
 			);
 			path = Map3D;
+			sourceTree = "<group>";
+		};
+		27522D527FFD3D96B46B918E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				29DEC3E6EDA328508E74CE3E /* MapPackDownloaderExtension.swift */,
+			);
+			name = Sources;
+			path = MapPackDownloader/Sources;
 			sourceTree = "<group>";
 		};
 		2F8768290831E1C1F09B9C81 /* RealWorld */ = {
@@ -944,6 +979,7 @@
 				323CCFDFD5FC7E9426C5F161 /* App */,
 				828A069B3EBF9E0D71CBF431 /* Packages */,
 				F93DAEBD83BEBF200EC0536D /* Resources */,
+				27522D527FFD3D96B46B918E /* Sources */,
 				C0B361249E4B7CC041A973C6 /* UITests */,
 				4BC825607E71A86B2AAEA49F /* Views */,
 				04B4E0263838A9F3091ABD24 /* Products */,
@@ -1092,10 +1128,12 @@
 				3D91C31EC1F78548D564B05C /* Sources */,
 				C61135149A74BBA2B4090747 /* Resources */,
 				B071A2BE9B6A4A2054356841 /* Frameworks */,
+				890901FE297FA321BDA11000 /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				30A6D18B8C60FD163ADB610F /* PBXTargetDependency */,
 			);
 			name = RailwayGame;
 			packageProductDependencies = (
@@ -1129,6 +1167,23 @@
 			productReference = A0888B79097535628EEF865F /* RailwayGameUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		F50DD4C216E93B7C1A88B5F4 /* MapPackDownloader */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D66E5CE389642855458610A9 /* Build configuration list for PBXNativeTarget "MapPackDownloader" */;
+			buildPhases = (
+				A07F5F8D89D52B0B16B41D4C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MapPackDownloader;
+			packageProductDependencies = (
+			);
+			productName = MapPackDownloader;
+			productReference = FE2BA4043F7B5F66BB2F4CE3 /* MapPackDownloader.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1143,6 +1198,9 @@
 					};
 					811AFCBC48F13CC6A85F50C4 = {
 						TestTargetID = 6B2730D54DA2BD4386F0AEE3;
+					};
+					F50DD4C216E93B7C1A88B5F4 = {
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -1166,6 +1224,7 @@
 			projectRoot = "";
 			targets = (
 				6B2730D54DA2BD4386F0AEE3 /* RailwayGame */,
+				F50DD4C216E93B7C1A88B5F4 /* MapPackDownloader */,
 				811AFCBC48F13CC6A85F50C4 /* RailwayGameUITests */,
 			);
 		};
@@ -1500,9 +1559,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A07F5F8D89D52B0B16B41D4C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5941DFBB2AF0AFD7E71375E4 /* MapPackDownloaderExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		30A6D18B8C60FD163ADB610F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F50DD4C216E93B7C1A88B5F4 /* MapPackDownloader */;
+			targetProxy = BC48FBDE4CFC6A699C659CD6 /* PBXContainerItemProxy */;
+		};
 		C1CB148EA3F3CC22BB6E0D9D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 6B2730D54DA2BD4386F0AEE3 /* RailwayGame */;
@@ -1541,6 +1613,25 @@
 			};
 			name = Release;
 		};
+		286732C93C2AA0C84A90B46D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MapPackDownloader/MapPackDownloader.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MapPackDownloader/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game map packs";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.a91453.RailwayGame.MapPackDownloader;
+				SDKROOT = iphoneos;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		56720F79A03BC1087880FEC5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1549,7 +1640,6 @@
 				CODE_SIGN_ENTITLEMENTS = App/RailwayGame.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
@@ -1563,7 +1653,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.a91453.RailwayGame;
 				SDKROOT = iphoneos;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -1623,6 +1712,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1641,6 +1731,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.6.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1651,6 +1742,25 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
+		};
+		9C2BDE9AFA12D8CCD4FEB0C6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MapPackDownloader/MapPackDownloader.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MapPackDownloader/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game map packs";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.a91453.RailwayGame.MapPackDownloader;
+				SDKROOT = iphoneos;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
 		};
 		E4FFDE7BFDC7E8349E70DBAC /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1686,6 +1796,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1698,6 +1809,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.6.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1716,7 +1828,6 @@
 				CODE_SIGN_ENTITLEMENTS = App/RailwayGame.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
@@ -1730,7 +1841,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.a91453.RailwayGame;
 				SDKROOT = iphoneos;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -1764,6 +1874,15 @@
 			buildConfigurations = (
 				8830125C4DA391731F463A14 /* Debug */,
 				E4FFDE7BFDC7E8349E70DBAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D66E5CE389642855458610A9 /* Build configuration list for PBXNativeTarget "MapPackDownloader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				286732C93C2AA0C84A90B46D /* Debug */,
+				9C2BDE9AFA12D8CCD4FEB0C6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
