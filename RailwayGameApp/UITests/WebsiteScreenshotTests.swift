@@ -3463,8 +3463,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         // minutes first (as `testWenhuRunsOnTheRight`).
         Thread.sleep(forTimeInterval: 360)
         // The follow bar's button, not the card's `train.stock`: the MTR's
-        // trains have no set of their own (decision 697), so a bought
-        // line's card names no stock (`RealLineStock.setKey(ofRealLine:)`).
+        // trains borrow the generic metro car (decision 779), which has
+        // no name, so a bought line's card names no stock
+        // (`RealLineStock.name(ofSet:in:)`).
         XCTAssertTrue(app.descendants(matching: .any)["train.unfollow"].firstMatch.appears(within: 1_000), "The line is bought and a train followed at Kowloon")
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {

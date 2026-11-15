@@ -79,6 +79,27 @@ final class Map3DRealTrainsTests: XCTestCase {
         }
     }
 
+    /// Decision 779: the MTR's trains borrow the generic metro car, with
+    /// as many cars as each line's real trains, and are never boxes.
+    func testHongKongLinesBorrowAMetroCar() throws {
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "EAL", name: "EAL"), .init(key: "metroGeneric", cars: 9))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: "metroGeneric", cars: 3))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "DRL", name: "DRL"), .init(key: "metroGeneric", cars: 4))
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "ISL", name: "ISL"), .init(key: "metroGeneric", cars: 8))
+        XCTAssertNotNil(Map3DModelPack.standard.models(forType: "metroGeneric"))
+        // Every MTR line the game sells is in the table.
+        for line in RealBranchLine.overseasLines where line.system == "hkmtr" {
+            XCTAssertNotNil(Map3DRealTrains.hongKongCars[line.network], line.network)
+            XCTAssertEqual(RealLineStock.setKey(ofRealLine: "hkmtr:\(line.network)"), "metroGeneric", line.network)
+        }
+        // And every MTR line of the timetables, when the pack is here.
+        for line in Self.railways?.operations?.system(id: "hkmtr")?.lines ?? [] {
+            let formation = Map3DRealTrains.formation(system: "hkmtr", line: line)
+            XCTAssertEqual(formation.key, "metroGeneric", line.id)
+            XCTAssertEqual(formation.cars, Map3DRealTrains.hongKongCars[line.id], line.id)
+        }
+    }
+
     /// A stretch's rails at a place along the line, but where a car does
     /// not show.
     func testATracksRails() {
