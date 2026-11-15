@@ -30,6 +30,38 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 134.
+        Entry(
+            id: "2026-11-16-134",
+            items: [
+                Line(
+                    english: "Hong Kong has eight landmarks in 3D: ICC, Two IFC, Central Plaza, the Bank of China Tower, Cheung Kong Center, The Center, the Clock Tower and the Cultural Centre.",
+                    chinese: "香港 3D 地圖多了八棟地標：環球貿易廣場、國金二期、中環廣場、中銀大廈、長江中心、中環中心、尖沙咀鐘樓、文化中心。"
+                ),
+                Line(
+                    english: "Hong Kong's Airport Express, Tung Chung line and urban line trains have finer doors and windows, a light grey roof and air-conditioning units.",
+                    chinese: "機場快綫、東涌綫、市區綫的列車門窗分得更細，車頂改淺灰，加上冷氣機。"
+                ),
+                Line(
+                    english: "A depot's shed and stabling shelter have a silver-grey metal roof.",
+                    chinese: "機廠的檢修庫與駐車棚換上銀灰色的鐵皮屋頂。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "The Taoyuan Airport MRT and the Wenhu line no longer leave out a few of the day's trains.",
+                    chinese: "機場捷運與文湖線一天裡不再少發幾班車。"
+                ),
+                Line(
+                    english: "With an iPhone held sideways, the roster's Arrange page is no longer hidden under the notch.",
+                    chinese: "iPhone 橫拿時，運用表「編排」頁的車名不再被瀏海擋住。"
+                ),
+                Line(
+                    english: "A building that was drawn twice in the 3D map is drawn once, so its outline no longer doubles.",
+                    chinese: "3D 地圖裡同一棟被畫兩次的建物只畫一次，輪廓不再重疊。"
+                ),
+            ]
+        ),
         // 133.
         Entry(
             id: "2026-11-15-133",
