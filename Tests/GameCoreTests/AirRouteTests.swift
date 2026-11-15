@@ -2,8 +2,8 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 758: air routes the company buys. Every expectation is worked
-/// out by hand from the rules.
+/// Decision 758: air routes the company buys, with decision 762's values.
+/// Every expectation is worked out by hand from the rules.
 final class AirRouteTests: XCTestCase {
     /// Two terminals 1,000 m apart.
     private let terminal = PlanPoint(x: 31_000, y: 26_768)
@@ -44,10 +44,11 @@ final class AirRouteTests: XCTestCase {
         // 30 × 268 = 8,040 minutes of a 1,440-minute day: 6 aircraft.
         XCTAssertEqual(offer.route.aircraft, 6)
         XCTAssertEqual(offer.aircraftPrice, Money(36_000_000_000))
-        // 3,000,000 a year is 8,219 a day, at NT$100,000 each.
+        // 3,000,000 a year is 8,219 a day, each 65 days of the NT$6,060
+        // fare (decision 762): NT$393,900 each.
         XCTAssertEqual(offer.dailyPassengers, 8_219)
-        XCTAssertEqual(offer.value, Money(82_190_000_000))
-        XCTAssertEqual(offer.price, Money(118_190_000_000))
+        XCTAssertEqual(offer.value, Money(323_746_410_000))
+        XCTAssertEqual(offer.price, Money(359_746_410_000))
         // NT$1,200 and 810 km at NT$6.
         XCTAssertEqual(offer.route.fare, Money(606_000))
         XCTAssertEqual(offer.route.dailySeats, 11_160)
@@ -59,7 +60,7 @@ final class AirRouteTests: XCTestCase {
         let route = try world.buyAirRoute(from: 1, to: "香港", metres: abroad, size: .narrowBody)
         XCTAssertEqual(world.airRoutes, [route])
         XCTAssertEqual(world.nextAirRouteID, 2)
-        XCTAssertEqual(world.economy.balance, Money(1_000_000_000_000 - 118_190_000_000))
+        XCTAssertEqual(world.economy.balance, Money(1_000_000_000_000 - 359_746_410_000))
         XCTAssertEqual(world.airRoute(id: route.id), route)
         XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
     }
@@ -170,8 +171,8 @@ final class AirRouteTests: XCTestCase {
         try world.advance(ticks: 1_442)
         let farDay = try XCTUnwrap(world.airRoute(id: far)?.days.last)
         // 11,160 at NT$6,060; 6 aircraft at NT$200,000 and 60 flights of
-        // 810 km at NT$1,000; 60 landings at NT$15,000.
-        XCTAssertEqual(farDay, AirRouteDay(day: 0, passengers: 11_160, fares: Money(6_762_960_000), running: Money(4_980_000_000),
+        // 810 km at NT$600; 60 landings at NT$15,000.
+        XCTAssertEqual(farDay, AirRouteDay(day: 0, passengers: 11_160, fares: Money(6_762_960_000), running: Money(3_036_000_000),
                                            landingFees: Money(90_000_000), closed: false))
         let nearDay = try XCTUnwrap(world.airRoute(id: near)?.days.last)
         // 1,400 at NT$1,206; 2 aircraft at NT$60,000 and 20 flights of a
@@ -181,10 +182,10 @@ final class AirRouteTests: XCTestCase {
         let entry = try XCTUnwrap(world.accounts.entries.last { $0.kind == .dailyAirRoutes })
         XCTAssertEqual(entry.breakdown, [
             LedgerLine(item: .airFares, amount: Money(6_931_800_000)),
-            LedgerLine(item: .airRunning, amount: Money(-4_992_700_000)),
+            LedgerLine(item: .airRunning, amount: Money(-3_048_700_000)),
             LedgerLine(item: .landingFees, amount: Money(-102_000_000)),
         ])
-        XCTAssertEqual(entry.amount, Money(1_837_100_000))
+        XCTAssertEqual(entry.amount, Money(3_781_100_000))
         XCTAssertEqual(world.accounts.report(.day, day: 0).current.propertyRevenue, Money(6_931_800_000))
         XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
     }
@@ -266,11 +267,17 @@ final class AirRouteTests: XCTestCase {
         XCTAssertEqual(loaded.airRoutes.map(\.destination), ["香港", "離島"])
         XCTAssertEqual(loaded.airRoutes.map(\.frequency), [.real, .extra])
         XCTAssertEqual(loaded.airRoutes.map { $0.days.count }, [1, 1])
-        XCTAssertEqual(loaded, world, "the save is the world this build makes the same way")
-        var running = world
+        // What the routes cost and their first day are the save's own,
+        // under the values of the build that wrote it (decision 758):
+        // later builds' values (decision 762) never rewrite them.
+        XCTAssertEqual(loaded.airRoutes.map(\.value), [Money(82_190_000_000), Money(27_390_000_000)])
+        XCTAssertEqual(loaded.airRoutes.map { $0.days[0].running }, [Money(4_980_000_000), Money(13_050_000)])
+        XCTAssertEqual(loaded.airRoutes.map(\.aircraft), world.airRoutes.map(\.aircraft))
+        var again = try JSONDecoder().decode(SavedGame.self, from: data).world
         try loaded.advance(ticks: 1_440)
-        try running.advance(ticks: 1_440)
-        XCTAssertEqual(loaded, running)
-        XCTAssertEqual(running.airRoutes.map { $0.days.count }, [2, 2])
+        try again.advance(ticks: 1_440)
+        XCTAssertEqual(loaded, again, "a loaded save runs on the same way each time")
+        XCTAssertEqual(loaded.airRoutes.map { $0.days.count }, [2, 2])
+        XCTAssertEqual(loaded.airRoutes[0].days[1].running, Money(3_036_000_000), "the next day is this build's")
     }
 }
