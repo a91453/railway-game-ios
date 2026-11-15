@@ -601,11 +601,12 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
-**0.6.0 (133) 準備發版（2026-11-15，RELEASE-133 記）**
-- 範圍：132（`3b2a3f5`）之後到近景通勤乘客 #2276 合併為止的 `main`（#2245–#2276）。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-15-133` 與 `research/PLAYER_FEEDBACK.md` 的 133 一節。建置的 commit 與 run 號發版後補。
+**0.6.0 (133) 發了（2026-11-15 13:49 UTC，RELEASE-133 記）**
+- 從 main **`49fffa3`**（#2278 的合併，前一個是 #2276）建置，TestFlight `testflight.yml` run 43720988195（run 133），作者自己按；寫這段時 run 還在跑。
+- 範圍：132（`3b2a3f5`）之後到近景通勤乘客 #2276 合併為止的 `main`（#2245–#2276）。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-15-133` 與 `research/PLAYER_FEEDBACK.md` 的 133 一節。
 - 不收：#2254（分包下載第二段，照計畫 133 發完才合，算 134）、香港地標、冬季活動。
 - 號碼（寫這段時）：main 決策到 786（784 保留給 HEALTH-132-FIX）、存檔 107；#2276 佔決策 787。golden schema 不動。
-- 發版照常：說明合併、#2276 合併後由作者按 `testflight.yml`（`main`、`archive_signing=adhoc`、`testing_scope=external`），full lane 發版後跑，紅了修進 134。
+- 發版前 `49fffa3` 的 push `ci.yml` 只跑它的 tier；full lane 發版後跑，紅了修進 134。#2254（分包下載第二段）現在可以合（算 134）。
 - **實機還沒看過的**（133 全部）：港鐵三款車與節數、紅色通勤車、近景通勤乘客、機廠檢修庫、港口碼頭人潮、路線詳情四頁、運用表編排頁、跟車鏡頭。
 
 **0.6.0 (132) 發了（2026-11-15 05:24 UTC，發版後例行檢查記）**
