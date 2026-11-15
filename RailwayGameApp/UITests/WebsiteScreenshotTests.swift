@@ -2095,6 +2095,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testRealStreetFronts() { shootLean("streetFronts", "70,240,55", "street-fronts", extra: ["-screenshot-device-tier", "1"]) }
     func testRealStreetFrontsAbove() { shootLean("streetFronts", "140,60,35", "street-fronts-above", extra: ["-screenshot-device-tier", "1"]) }
 
+    /// Decision 765: halls drawn with no windows (Taipei Arena and the
+    /// Taipei Stadium, Kaohsiung's National Stadium), and a street of
+    /// homes, near and from higher up.
+    func testWindowsArena() { shootLean("windowsArena", "450,200,50", "windows-arena", extra: ["-screenshot-device-tier", "1"]) }
+    func testWindowsArenaAbove() { shootLean("windowsArena", "900,200,30", "windows-arena-above", extra: ["-screenshot-device-tier", "1"]) }
+    func testWindowsKaohsiung() { shootLean("windowsKaohsiung", "500,200,50", "windows-kaohsiung", extra: ["-screenshot-device-tier", "1"]) }
+    func testWindowsStreet() { shootLean("streetFronts", "250,200,55", "windows-street", extra: ["-screenshot-device-tier", "1"]) }
+
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.
     func testSunShadowsIn3D() {
