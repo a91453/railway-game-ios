@@ -7,7 +7,7 @@ import Foundation
 /// dimensions (cab cars 24.6 m, the others 22.55 m, about 3.1 m wide,
 /// 3.7 m tall), one palette colour a triangle, the doors, windows and red
 /// lines faces of their own (`a91453/railway-assets-private`,
-/// `game-art-previews/docs/art/mtr-urban-line-2026-11/revision-5`), and
+/// `game-art-previews/docs/art/mtr-urban-line-2026-11/revision-6`), and
 /// written here by `tools/train-models/glb_to_swift.py` (``encoded``).
 ///
 /// A black front edged by a red U that runs on along the eaves of every
@@ -62,7 +62,7 @@ extension Map3DPalette {
 
 extension Map3DMTRUrbanLine {
     /// Decision 782: its set, near and far, its showcase row (eight cars)
-    /// and its cars' triangles (4,418 to 5,915 near and 1,578 to 2,157 far)
+    /// and its cars' triangles (7,082 to 8,915 near and 2,338 to 3,125 far)
     /// and lengths (the cab car 24.6 m).
     static let registration = Map3DTrainRegistration(
         id: "mtrUrbanLine",
@@ -70,7 +70,7 @@ extension Map3DMTRUrbanLine {
         showcase: [
             Map3DShowcase.Entry(key, "Hong Kong urban line train", "香港市區綫列車", .metro, cars: 8, fixed: true),
         ],
-        triangles: 1_500...6_000, length: 22.5...24.7)
+        triangles: 2_000...9_000, length: 22.5...24.7)
 }
 
 extension Map3DTrainSet {
