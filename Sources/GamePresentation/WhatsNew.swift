@@ -30,6 +30,78 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 132.
+        Entry(
+            id: "2026-11-15-132",
+            items: [
+                Line(
+                    english: "You can buy real air routes from the lines panel, choose flights and aircraft, and see them on the map.",
+                    chinese: "路線面板可以收購機場真實的航線，選班數與飛機大小，2D 地圖畫出航線。"
+                ),
+                Line(
+                    english: "Buying an air route to Hong Kong opens the Hong Kong map too.",
+                    chinese: "收購一條飛香港的航線，也會開放香港地圖。"
+                ),
+                Line(
+                    english: "Your routes' aircraft take off and land on their timetable on the 3D map, and you can follow one up to cruise.",
+                    chinese: "買下的航線，飛機在 3D 地圖照時刻起降，可以跟著飛到巡航高度。"
+                ),
+                Line(
+                    english: "Concerts and games are held at stadiums and arenas, exhibitions at exhibition halls.",
+                    chinese: "演唱會、球賽辦在體育場與巨蛋，展覽在展覽館。"
+                ),
+                Line(
+                    english: "Night markets fill in the evening; landmarks, museums and temples each draw visitors at their own times.",
+                    chinese: "夜市傍晚熱鬧；地標、博物館、廟宇各有自己的人潮時段。"
+                ),
+                Line(
+                    english: "Buying a real station lays its real platforms: an island where it has one, two sides where it has two.",
+                    chinese: "收購真實車站時照真實月台型式鋪：島式站中間一座島，岸式站兩側各一座。"
+                ),
+                Line(
+                    english: "A double-track station with two side platforms can be rebuilt as an island, one by one or all at once.",
+                    chinese: "雙線岸式站可以改成島式月台；舊存檔的真實島式站可以一次改建。"
+                ),
+                Line(
+                    english: "After each year's accounts, a year-end appraisal grades five things, with two new achievements.",
+                    chinese: "每年結算後有年終考核，五項各給等第；另有兩個新成就。"
+                ),
+                Line(
+                    english: "A leg of a line can have its own list of platforms, and switches can take time to throw.",
+                    chinese: "路線的一段可以排月台清單；交通控制多「道岔扳轉要時間」。"
+                ),
+                Line(
+                    english: "City buildings have more roof and wall colours, and the industrial yards have a coal bunker.",
+                    chinese: "城市建築多幾種屋頂與牆色；工業區的空地多了儲煤台。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "A bought real station's platforms can be lengthened, and high-speed platforms fit a whole train.",
+                    chinese: "收購的真實車站月台可以加長、加月台軌道；高鐵月台停得下整列車。"
+                ),
+                Line(
+                    english: "Stations on real viaducts, such as Qiyan, can be built when you trace a real line.",
+                    chinese: "沿真實鐵路描線經過高架車站（奇岩等）時，蓋得了站與月台軌道。"
+                ),
+                Line(
+                    english: "Hong Kong's island stations have island platforms, and its airport lines can be bought in any order.",
+                    chinese: "香港真實島式站是島式月台；機場快綫、東涌綫、迪士尼綫任何順序都能收購。"
+                ),
+                Line(
+                    english: "Stadiums, big sheds, huts and round walls no longer get windows they do not have.",
+                    chinese: "體育館、大型廠房、小屋與圓牆不再畫出真實沒有的窗戶。"
+                ),
+                Line(
+                    english: "A failed save when going back to the main screen no longer loses your game.",
+                    chinese: "回主畫面時存檔失敗，不再丟掉原本那一局。"
+                ),
+                Line(
+                    english: "The 3D map uses less memory.",
+                    chinese: "3D 地圖用的記憶體比較少。"
+                ),
+            ]
+        ),
         // 131.
         Entry(
             id: "2026-11-14-131",
