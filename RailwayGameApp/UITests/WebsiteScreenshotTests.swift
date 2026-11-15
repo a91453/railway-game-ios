@@ -4193,7 +4193,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 3)
         keep("roster-line", app)
 
-        app.buttons["trainRoster.arrange"].tap()
+        // Decision 777: Arrange is the roster's second page.
+        let arrange = app.segmentedControls["trainRoster.page"].buttons["編排"]
+        XCTAssertTrue(arrange.appears(within: 5), "The roster's pages show")
+        arrange.tap()
         XCTAssertTrue(app.staticTexts["trainRoster.arrangeHint"].appears(within: 5), "Arrange says how")
         settle(seconds: 2)
         keep("roster-arrange", app)

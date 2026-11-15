@@ -19,6 +19,12 @@ import SwiftUI
 /// that line, and a planned box held and dragged sideways moves its
 /// train's timetable; ``TrainRosterDrag`` says where the finger is and
 /// what letting go does, and letting go sends one command Undo takes back.
+///
+/// Decision 777: looking and arranging are two pages, picked at the top as
+/// the finance screen's are. The Arrange page lists beside the rows the
+/// trains no line runs, each held and dragged onto a line's row to give it
+/// that line; both pages draw the wait between two trips as a hatched
+/// block with how long it is.
 struct TrainRosterView: View {
     let session: GameSession
     /// The line whose trains it shows, or `nil` for all.
@@ -35,12 +41,13 @@ struct TrainRosterView: View {
     @State private var rebuild = 0
     /// Opened from a line's page: whether it shows every line's trains.
     @State private var allLines = false
-    /// Whether the trains can be dragged (decision 512).
-    @State private var arranging = false
+    /// Which page shows: the roster, or arranging it (decision 777).
+    @State private var page: Page = .roster
     /// What the last drop did, said under the header.
     @State private var result: String?
     @GestureState private var lineDrag: LineDrag? = nil
     @GestureState private var shiftDrag: ShiftDrag? = nil
+    @GestureState private var waitingDrag: LineDrag? = nil
     /// The edits made here that Undo can take back (L3-6, #1588's review:
     /// Undo here took back what was built before the roster opened).
     @State private var rosterEdits = 0
@@ -50,6 +57,13 @@ struct TrainRosterView: View {
     /// what lay under the finger).
     @State private var nameTarget: (start: CGPoint, line: LineID?)?
     @State private var heldBox: (start: CGPoint, train: TrainID?)?
+    /// The line under a train dragged from the waiting column, for the
+    /// drag that started at `start`, as `nameTarget` is.
+    @State private var waitingTarget: (start: CGPoint, line: LineID?)?
+    /// Where the table's panel is on the page, and the top of its rows
+    /// (which scroll), for a train dragged in from the waiting column.
+    @State private var tableFrame: CGRect = .zero
+    @State private var rowsTop: CGFloat = 0
     /// The table's size, measured rather than read in a GeometryReader
     /// (CRASHSWEEP-3).
     @State private var tableSize: CGSize = .zero
@@ -62,6 +76,18 @@ struct TrainRosterView: View {
         var row: Int?
         var line: LineID?
         var move: TrainRosterDrag.LineMove?
+    }
+
+    /// The roster's two pages (decision 777).
+    private enum Page: Hashable, CaseIterable {
+        case roster, arrange
+
+        func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .roster: language.text("Roster", "運用表")
+            case .arrange: language.text("Arrange", "編排")
+            }
+        }
     }
 
     /// A planned box being dragged sideways.
@@ -77,9 +103,14 @@ struct TrainRosterView: View {
     private static let axisHeight: CGFloat = 24
     private static let rowGap: CGFloat = 4
     private static let table = "trainRoster.table"
+    private static let pageSpace = "trainRoster.page"
 
     private var language: DisplayLanguage { session.language }
     private var compactWidth: Bool { horizontalSizeClass == .compact }
+    /// Whether the trains can be dragged (decision 512): the Arrange page.
+    private var arranging: Bool { page == .arrange }
+    /// The waiting trains' column on the Arrange page.
+    private var waitingWidth: CGFloat { compactWidth ? 132 : 188 }
     /// Points an hour takes across.
     private var hourWidth: CGFloat { compactWidth ? 90 : 120 }
     /// The names' column; arranging adds the grip before the name, so the
@@ -93,16 +124,23 @@ struct TrainRosterView: View {
                     let roster = built.only(line: allLines ? nil : line)
                     VStack(spacing: 0) {
                         header(roster)
-                        if roster.rows.isEmpty {
-                            Text(verbatim: language.text("No trains ran on this day.", "這一天沒有列車行駛。"))
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.textSecondary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else {
-                            table(roster)
+                        HStack(alignment: .top, spacing: 0) {
+                            if roster.rows.isEmpty {
+                                Text(verbatim: language.text("No trains ran on this day.", "這一天沒有列車行駛。"))
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            } else {
+                                table(roster)
+                            }
+                            if arranging {
+                                waitingColumn(roster)
+                            }
                         }
                         legend
                     }
+                    .coordinateSpace(.named(Self.pageSpace))
+                    .overlay(alignment: .topLeading) { waitingDragMark }
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -112,6 +150,20 @@ struct TrainRosterView: View {
             .navigationTitle(Text(verbatim: language.text("Train roster", "列車運用表")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Decision 777: looking and arranging, as the finance
+                // screen's pages.
+                ToolbarItem(placement: .principal) {
+                    Picker(selection: $page) {
+                        ForEach(Page.allCases, id: \.self) { page in
+                            Text(verbatim: page.title(in: language)).tag(page)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Page", "分頁"))
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 280)
+                    .accessibilityIdentifier("trainRoster.page")
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
                         dismiss()
@@ -138,15 +190,6 @@ struct TrainRosterView: View {
                         .disabled(!session.canUndo || min(rosterEdits, session.undoCount) == 0)
                         .accessibilityIdentifier("trainRoster.undo")
                     }
-                    // Decision 512: moving trains on the roster, today only.
-                    Button {
-                        arranging.toggle()
-                        result = nil
-                        if arranging { day = .today }
-                    } label: {
-                        Text(verbatim: arranging ? language.text("Done", "完成") : language.text("Arrange", "編排"))
-                    }
-                    .accessibilityIdentifier("trainRoster.arrange")
                     Button {
                         scrollToNow += 1
                     } label: {
@@ -162,6 +205,11 @@ struct TrainRosterView: View {
             }
         }
         .onChange(of: day) { roster = nil }
+        // Decision 512: moving trains on the roster, today only.
+        .onChange(of: page) {
+            result = nil
+            if arranging { day = .today }
+        }
         .task(id: RosterKey(day: day, rebuild: rebuild)) {
             while !Task.isCancelled {
                 let world = session.world
@@ -232,14 +280,20 @@ struct TrainRosterView: View {
             } else {
                 note(language.text("Drop \(drag.name) on a row of another line", "把 \(drag.name) 放到別條線的列上"), ok: false)
             }
+        } else if let drag = waitingDrag {
+            if let move = drag.move {
+                note(([move.text(in: language)] + move.notes).joined(separator: "；"), ok: move.drops)
+            } else {
+                note(language.text("Drop \(drag.name) on the row of the line it should run", "把 \(drag.name) 放到要跑的路線那一列"), ok: false)
+            }
         } else if let drag = shiftDrag, let shift = drag.shift {
             let station = session.world.train(id: drag.train)?.timetable.first.map { session.world.station(id: $0.station)?.name ?? "?" } ?? "?"
             note(([shift.text(in: language)] + [shift.clashText(station: station, in: language)].compactMap(\.self)).joined(separator: "；"),
                  ok: shift.drops && shift.clash == nil)
         } else if arranging {
             Text(verbatim: result ?? language.text(
-                "Hold a train's name and drag it onto another line's row to move it there. Hold a planned box and drag it sideways to change its times.",
-                "長按車名，拖到別條線的列上就改派過去。長按預定的格子左右拖，改它的時刻。"
+                "Hold a train's name, or a train on the right, and drag it onto a line's row to have it run there. Hold a planned box and drag it sideways to change its times.",
+                "長按車名或右邊還沒排的列車，拖到路線的列上就派過去。長按預定的格子左右拖，改它的時刻。"
             ))
             .font(.caption)
             .foregroundStyle(Theme.textSecondary)
@@ -293,6 +347,13 @@ struct TrainRosterView: View {
             Text(verbatim: language.text("Planned", "預定"))
         }
         HStack(spacing: 4) {
+            Canvas { context, size in
+                Self.drawHatch(in: CGRect(origin: .zero, size: size), context: &context)
+            }
+            .frame(width: 18, height: 12)
+            Text(verbatim: language.text("Waiting", "空檔"))
+        }
+        HStack(spacing: 4) {
             Rectangle()
                 .fill(Palette.ink)
                 .frame(width: 2, height: 12)
@@ -337,6 +398,7 @@ struct TrainRosterView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onGeometryChange(for: CGSize.self) { $0.size } action: { tableSize = $0 }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.pageSpace)) } action: { tableFrame = $0 }
         .background(Theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.panelBorder))
@@ -380,6 +442,7 @@ struct TrainRosterView: View {
                 }
                 .frame(width: size.width, alignment: .leading)
                 .coordinateSpace(.named(Self.table))
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.pageSpace)).minY } action: { rowsTop = $0 }
                 .overlay(alignment: .topLeading) { lineDragMarks(rowHeight: rowHeight, width: size.width) }
             }
             .onAppear {
@@ -511,10 +574,14 @@ struct TrainRosterView: View {
             context.draw(label, at: CGPoint(x: hourX + 3, y: Self.axisHeight / 2), anchor: .leading)
         }
 
-        // The trips.
+        // The trips, and the waits between them (decision 777).
         for (index, row) in roster.rows.enumerated() {
             let top = Self.axisHeight + rowHeight * CGFloat(index) + Self.rowGap
             let boxHeight = rowHeight - 2 * Self.rowGap
+            for gap in row.gaps {
+                draw(gap, in: CGRect(x: x(gap.start, in: roster), y: top, width: x(gap.end, in: roster) - x(gap.start, in: roster), height: boxHeight),
+                     context: &context)
+            }
             for cell in row.cells {
                 let left = x(cell.start, in: roster)
                 let right = max(left + 4, x(cell.end, in: roster))
@@ -538,6 +605,43 @@ struct TrainRosterView: View {
             context.fill(Path(roundedRect: tagRect, cornerRadius: 4), with: .color(Palette.ink))
             context.draw(tag, at: CGPoint(x: tagRect.midX, y: tagRect.midY), anchor: .center)
         }
+    }
+
+    /// A wait between two trips: a hatched block, a little narrower than
+    /// the wait so the trips beside it stay apart, with how long it is
+    /// where it fits (decision 777).
+    private func draw(_ gap: TrainRoster.Gap, in span: CGRect, context: inout GraphicsContext) {
+        let block = span.insetBy(dx: 2, dy: 0)
+        guard block.width >= 4 else { return }
+        Self.drawHatch(in: block, context: &context)
+        let label = context.resolve(Text(verbatim: gap.text(in: language))
+            .font(.caption2.weight(.semibold).monospacedDigit())
+            .foregroundStyle(Theme.textPrimary))
+        let size = label.measure(in: CGSize(width: block.width, height: block.height))
+        let tag = CGRect(x: block.midX - size.width / 2 - 5, y: block.midY - size.height / 2 - 2,
+                         width: size.width + 10, height: size.height + 4)
+        guard tag.width + 4 <= block.width, tag.height <= block.height else { return }
+        let capsule = Path(roundedRect: tag, cornerRadius: tag.height / 2)
+        context.fill(capsule, with: .color(Theme.panel))
+        context.stroke(capsule, with: .color(Theme.panelBorder), lineWidth: 1)
+        context.draw(label, at: CGPoint(x: tag.midX, y: tag.midY), anchor: .center)
+    }
+
+    /// Diagonal stripes on the faint chip, in a rounded box: a wait.
+    static func drawHatch(in box: CGRect, context: inout GraphicsContext) {
+        let shape = Path(roundedRect: box, cornerRadius: 4)
+        context.fill(shape, with: .color(Theme.chip))
+        var layer = context
+        layer.clip(to: shape)
+        var stripes = Path()
+        var start = box.minX - box.height
+        while start < box.maxX {
+            stripes.move(to: CGPoint(x: start, y: box.maxY))
+            stripes.addLine(to: CGPoint(x: start + box.height, y: box.minY))
+            start += 6
+        }
+        layer.stroke(stripes, with: .color(Theme.textSecondary.opacity(0.45)), lineWidth: 1.5)
+        context.stroke(shape, with: .color(Theme.panelBorder), lineWidth: 1)
     }
 
     private func draw(_ cell: TrainRoster.Cell, in box: CGRect, compact: Bool, context: inout GraphicsContext) {
@@ -645,7 +749,7 @@ struct TrainRosterView: View {
     /// Where the dragged name is, and the row it would land on.
     @ViewBuilder
     private func lineDragMarks(rowHeight: CGFloat, width: CGFloat) -> some View {
-        if let drag = lineDrag {
+        if let drag = lineDrag ?? waitingDrag {
             ZStack(alignment: .topLeading) {
                 if let row = drag.row {
                     let ok = drag.move?.drops == true
@@ -655,20 +759,150 @@ struct TrainRosterView: View {
                         .frame(width: width, height: rowHeight)
                         .offset(y: Self.axisHeight + rowHeight * CGFloat(row))
                 }
-                // The name under the finger, see-through with an ink
-                // outline: the art style has no shadows.
-                Text(verbatim: drag.name)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .padding(.horizontal, 10)
-                    .frame(height: TrainRosterDrag.handleSize)
-                    .background(Theme.panel.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Palette.ink, lineWidth: 2))
-                    .fixedSize()
-                    .position(drag.location)
+                // The name under the finger; one from the waiting column
+                // is drawn over the whole page instead.
+                if lineDrag != nil {
+                    draggedName(drag.name)
+                        .position(drag.location)
+                }
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+        }
+    }
+
+    /// The name under the finger, see-through with an ink outline: the
+    /// art style has no shadows.
+    private func draggedName(_ name: String) -> some View {
+        Text(verbatim: name)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.textPrimary)
+            .padding(.horizontal, 10)
+            .frame(height: TrainRosterDrag.handleSize)
+            .background(Theme.panel.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Palette.ink, lineWidth: 2))
+            .fixedSize()
+    }
+
+    // MARK: Waiting trains (decision 777)
+
+    /// Beside the rows on the Arrange page: the trains no line runs.
+    private func waitingColumn(_ roster: TrainRoster) -> some View {
+        let rows = roster.only(line: allLines ? nil : line).rows
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: language.text("Not on a line · \(roster.waiting.count)", "還沒排的列車 · \(roster.waiting.count)"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+            if roster.waiting.isEmpty {
+                Text(verbatim: language.text("Every train runs on a line or a timetable of its own.", "每列車都排上路線或自己的時刻了。"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 6) {
+                        ForEach(roster.waiting) { waiting in
+                            waitingCard(waiting, rows: rows)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(width: waitingWidth, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.trailing, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("trainRoster.waiting")
+    }
+
+    private func waitingCard(_ waiting: TrainRoster.Waiting, rows: [TrainRoster.Row]) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "line.3.horizontal")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: waiting.name)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: waiting.detailText(in: language))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .frame(minHeight: TrainRosterDrag.handleSize)
+        .background(Theme.chip, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.panelBorder))
+        .opacity(waitingDrag?.train == waiting.train ? 0.4 : 1)
+        .contentShape(Rectangle())
+        .gesture(waitingDragGesture(waiting, rows: rows))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: waiting.name + "，" + waiting.detailText(in: language)))
+        .accessibilityActions {
+            ForEach(session.world.lines, id: \.id) { line in
+                Button(language.text("Run on \(line.name)", "派到\(line.name)")) {
+                    rosterEdit { session.moveTrain(waiting.train, toLine: line.id) }
+                }
+            }
+        }
+        .accessibilityIdentifier("trainRoster.waiting.\(waiting.train.rawValue)")
+    }
+
+    /// A waiting train held, then dragged onto a line's row. The finger is
+    /// followed on the page; the row is found from where the rows have
+    /// scrolled to.
+    private func waitingDragGesture(_ waiting: TrainRoster.Waiting, rows: [TrainRoster.Row]) -> some Gesture {
+        let frame = tableFrame
+        let top = rowsTop
+        let rowHeight = Double(TrainRosterLayout.fullRowHeight)
+        func target(_ point: CGPoint) -> Int? {
+            guard frame.contains(point) else { return nil }
+            return TrainRosterDrag.row(atY: Double(point.y - top), axisHeight: Double(Self.axisHeight), rowHeight: rowHeight, rows: rows.count)
+        }
+        return LongPressGesture(minimumDuration: TrainRosterDrag.holdSeconds)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.pageSpace)))
+            .updating($waitingDrag) { value, state, _ in
+                guard case .second(true, let drag) = value else { return }
+                var moving = state ?? LineDrag(train: waiting.train, name: waiting.name)
+                if let drag {
+                    moving.location = drag.location
+                    let index = target(drag.location)
+                    let line = index.flatMap { rows[$0].line }
+                    if index != moving.row || line != moving.line {
+                        moving.row = index
+                        moving.line = line
+                        moving.move = line.flatMap { session.rosterLineMove(of: waiting.train, to: $0) }
+                    }
+                }
+                state = moving
+            }
+            .onChanged { value in
+                guard case .second(true, let drag?) = value else { return }
+                let line = target(drag.location).flatMap { rows[$0].line }
+                if waitingTarget?.start != drag.startLocation || waitingTarget?.line != line {
+                    waitingTarget = (drag.startLocation, line)
+                }
+            }
+            .onEnded { value in
+                guard case .second(true, let drag?) = value, let held = waitingTarget, held.start == drag.startLocation,
+                      let line = held.line, session.rosterLineMove(of: waiting.train, to: line)?.drops == true else { return }
+                rosterEdit { session.moveTrain(waiting.train, toLine: line) }
+            }
+    }
+
+    /// The waiting train under the finger, over the whole page.
+    @ViewBuilder
+    private var waitingDragMark: some View {
+        if let drag = waitingDrag {
+            draggedName(drag.name)
+                .position(drag.location)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 
