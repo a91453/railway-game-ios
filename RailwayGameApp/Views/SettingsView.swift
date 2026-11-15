@@ -56,6 +56,8 @@ struct SettingsView: View {
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
     @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
     @AppStorage(MapAmbienceSettings.frameRateKey) private var showsFrameRate = false
+    /// Decision 788: the winter event's decorations on the map.
+    @AppStorage(WinterEvent.decorationsKey) private var showsFestiveDecorations = true
     /// Decision 672: the tunnels seen through the ground in the 3D map.
     @AppStorage(MapAmbienceSettings.undergroundKey) private var showsUnderground = false
     /// Decision 216: the lines' colours, on the device.
@@ -267,6 +269,13 @@ struct SettingsView: View {
                 Label("Frame Rate", systemImage: "speedometer")
             }
             .accessibilityIdentifier("settings.frameRate")
+            // Decision 788: only while the winter event is on.
+            if WinterEvent.isOn(at: Date()) {
+                Toggle(isOn: $showsFestiveDecorations) {
+                    Label("Festive Decorations", systemImage: "sparkles")
+                }
+                .accessibilityIdentifier("settings.festiveDecorations")
+            }
         } header: {
             Text("Map")
         } footer: {

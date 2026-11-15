@@ -13,12 +13,14 @@ struct GoalsPanel: View {
     var achievements: AchievementRecords?
     /// The station stamps (decision 353), for the passport's link.
     var stamps: StationStampRecords? = nil
+    /// Decision 788: the winter event's badges, for its card.
+    var winterEvent: WinterEventRecords? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
-                GoalsSections(session: session, achievements: achievements, stamps: stamps)
+                GoalsSections(session: session, achievements: achievements, stamps: stamps, winterEvent: winterEvent)
             }
             .navigationTitle(Text(verbatim: session.world.scenarioTitle(in: session.language) ?? session.language.text("Goals", "目標")))
             .navigationBarTitleDisplayMode(.inline)
@@ -101,10 +103,15 @@ struct GoalsSections: View {
     let session: GameSession
     var achievements: AchievementRecords?
     var stamps: StationStampRecords? = nil
+    var winterEvent: WinterEventRecords? = nil
 
     var body: some View {
         let language = session.language
         let world = session.world
+        // Decision 788: the winter event's card, while it is on.
+        if let winterEvent, WinterEvent.isOn(at: Date()) {
+            WinterEventSection(session: session, records: winterEvent)
+        }
         // A free game's next steps, first.
         if let steps = session.nextSteps {
             NextStepsSection(steps: steps, language: language)
@@ -859,5 +866,131 @@ struct LessonResultCard: View {
                 withAnimation(MotionRule.pop.layout(reduceMotion: reduceMotion)) { lit = star }
             }
         }
+    }
+}
+
+/// Decision 788: the winter event's card, while it is on by the device's
+/// date: this week's mission and whether the network meets it, and the
+/// season's five badges. The badges' drawings are SF Symbols until the
+/// studio's are made. Read when the panel opens and once a game day.
+struct WinterEventSection: View {
+    let session: GameSession
+    let records: WinterEventRecords
+    @State private var facts: WinterMissionFacts?
+
+    private var today: Int64 {
+        session.world.clock.now.seconds / GameTime.secondsPerDay
+    }
+
+    var body: some View {
+        let language = session.language
+        let now = Date()
+        let state = WinterEvent.phase(at: now)
+        let season = state.season
+        Section {
+            if case .week(let week) = state.phase, let mission = WinterMission.of(week: week) {
+                missionRow(mission, week: week, season: season, language: language)
+            } else {
+                Text(verbatim: language.text(
+                    "The event ends on 6 January. Here are the badges you earned.",
+                    "活動 1/6 結束，這是你拿到的徽章。"
+                ))
+                .font(.footnote)
+            }
+            if let season {
+                badgesRow(season: season, language: language)
+                if WinterMission.all.contains(where: { $0.unlocksLivery && records.hasEarned($0, season: season) }) {
+                    Label {
+                        Text(verbatim: language.text("The Christmas livery is yours to keep.", "聖誕塗裝已永久解鎖。"))
+                    } icon: {
+                        Image(systemName: "paintbrush.fill")
+                            .foregroundStyle(Theme.primary)
+                    }
+                    .font(.footnote)
+                }
+                if records.hasAllBadges(season: season) {
+                    Label {
+                        Text(verbatim: language.text(
+                            "All five badges: the winter keepsake card is yours.",
+                            "五枚徽章都到手了，獲得冬季紀念卡。"
+                        ))
+                        .fontWeight(.semibold)
+                    } icon: {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(Theme.primary)
+                    }
+                    .accessibilityIdentifier("goals.winter.keepsake")
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("Winter Event \(WinterEvent.periodText)", "冬季活動 \(WinterEvent.periodText)"))
+        } footer: {
+            Text(verbatim: language.text(
+                "A mission each week: finish it within its week for its badge. Badges stay on this device, in every game.",
+                "每週一個任務，在那一週內完成就拿到徽章。徽章留在這台裝置上，開新遊戲也還在。"
+            ))
+        }
+        .task(id: today) {
+            facts = WinterMissionFacts(world: session.world)
+        }
+    }
+
+    private func missionRow(_ mission: WinterMission, week: Int, season: Int?, language: DisplayLanguage) -> some View {
+        let earned = season.map { records.hasEarned(mission, season: $0) } ?? false
+        let met = facts.map { mission.isMet(by: $0) } ?? false
+        return Label {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: language.text(
+                    "Week \(week) (\(WinterEvent.datesText(ofWeek: week))): \(mission.title(in: language))",
+                    "第 \(week) 週（\(WinterEvent.datesText(ofWeek: week))）：\(mission.title(in: language))"
+                ))
+                .fontWeight(.semibold)
+                Text(verbatim: mission.how(in: language))
+                    .font(.footnote)
+                if earned {
+                    Text(verbatim: language.text("Done: badge earned.", "已完成，拿到徽章。"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.success)
+                } else if let facts, let progress = mission.progress(of: facts) {
+                    Text(verbatim: "\(progress.now.groupedText) / \(progress.need.groupedText)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textSecondary)
+                } else if met {
+                    Text(verbatim: language.text("Met: the badge comes at midnight.", "已達成，午夜就會拿到徽章。"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+        } icon: {
+            Image(systemName: earned ? "checkmark.seal.fill" : mission.placeholderSymbol)
+                .foregroundStyle(earned ? Theme.success : Theme.primary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("goals.winter.mission")
+    }
+
+    private func badgesRow(season: Int, language: DisplayLanguage) -> some View {
+        HStack(spacing: 12) {
+            ForEach(WinterMission.all) { mission in
+                let earned = records.hasEarned(mission, season: season)
+                VStack(spacing: 4) {
+                    Image(systemName: mission.placeholderSymbol)
+                        .font(.title3)
+                        .foregroundStyle(earned ? Theme.primary : Theme.textSecondary.opacity(0.4))
+                    Text(verbatim: mission.badge(in: language))
+                        .font(.caption2)
+                        .foregroundStyle(earned ? Theme.textPrimary : Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text(verbatim: earned
+                    ? language.text("\(mission.badge(in: language)): earned", "\(mission.badge(in: language))：已拿到")
+                    : language.text("\(mission.badge(in: language)): not yet", "\(mission.badge(in: language))：還沒拿到")))
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityIdentifier("goals.winter.badges")
     }
 }
