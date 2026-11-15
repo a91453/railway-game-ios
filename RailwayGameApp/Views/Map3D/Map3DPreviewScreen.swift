@@ -3240,7 +3240,7 @@ private struct Map3DFlightClouds: View {
 
     var body: some View {
         ZStack {
-            ForEach(Self.clouds.indices, id: \.self) { @Sendable index in
+            ForEach(Self.clouds.indices, id: \.self) { index in
                 let cloud = Self.clouds[index]
                 Ellipse()
                     .fill(Theme.flightCloud.opacity(night ? 0.18 : cloud.opacity))
