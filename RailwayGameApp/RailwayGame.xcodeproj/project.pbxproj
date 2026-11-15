@@ -58,6 +58,7 @@
 		2955C8F1CA4B38DCACFCE92A /* chime-metro-motif.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2AE542814E8BBB6793FFBF91 /* chime-metro-motif.wav */; };
 		298500257AB33E58BA58A158 /* HUDAlignmentUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */; };
 		298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */; };
+		2A100A28F0A3CFF43471F564 /* GameBrand.json in Resources */ = {isa = PBXBuildFile; fileRef = B1C8BC012A3844265CA55FCB /* GameBrand.json */; };
 		2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B68167398B13543EA8C564A /* RealWorldPicker.swift */; };
 		2B45A912226EB245FACCA4F3 /* tymc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 360D54F266227011F79894B4 /* tymc_times.json */; };
 		2DBD25522FEB99600E3FC1CC /* real_buses_TaitungCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 4908C3743931AF833974C7B0 /* real_buses_TaitungCounty.json */; };
@@ -127,6 +128,7 @@
 		6C73E74146DEDE67870F022A /* RealLineAcquisitionCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47720F48E44581B39E9D45A6 /* RealLineAcquisitionCards.swift */; };
 		6C858F97E4320832D80DC4C3 /* StationStampPassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A78EE664114638279C7BCC3A /* StationStampPassportView.swift */; };
 		6DB79EAED8748D6DC94EA8CF /* LoadChartViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F43770688B5B4F01435903D /* LoadChartViews.swift */; };
+		6EAB28C8E71089822CDE65C8 /* GameBrand.json in Resources */ = {isa = PBXBuildFile; fileRef = B1C8BC012A3844265CA55FCB /* GameBrand.json */; };
 		6EE798786C1667182889ED25 /* run-motor-brake-14.caf in Resources */ = {isa = PBXBuildFile; fileRef = 47D9571B02FC3425C5DFA231 /* run-motor-brake-14.caf */; };
 		6FDAFF341E0A4ECA23966804 /* GameAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */; };
 		7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC5AEB0936E154EABD2610F /* YearEndReport.swift */; };
@@ -221,6 +223,7 @@
 		B3A042E18BED57FDA9488905 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8018E9BA28EB5C1FC2CBAC /* GamePresentation */; };
 		B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = F7E81C097849391C73D31AF5 /* krtc.json */; };
 		B617FD6EB63C0405CC056E8C /* MapPackDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAFE6C4740826EF37F0FA0C /* MapPackDownloader.swift */; };
+		B61B48EA261F39071F92D740 /* BuiltBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD4B099119C83D89CC72BC1C /* BuiltBrand.swift */; };
 		B64229B56F6FB339CFE61EDE /* tpe-temple-provincial-city-god.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = DC700FAEE8DD7A0F3A300E07 /* tpe-temple-provincial-city-god.m3dmodel */; };
 		B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */; };
 		B747C3D9E81E551D3D226C17 /* tpe-temple-qingshui.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = F06FB0357460E315E086AB5E /* tpe-temple-qingshui.m3dmodel */; };
@@ -517,6 +520,7 @@
 		AD6E3ED548E183F6E79E0111 /* rail-joint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "rail-joint.wav"; sourceTree = "<group>"; };
 		AFA812528CA2F00BD6143418 /* MapStationTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapStationTagView.swift; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
+		B1C8BC012A3844265CA55FCB /* GameBrand.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GameBrand.json; sourceTree = "<group>"; };
 		B2569C176B215F8F92510A45 /* hk-double-decker.m3dmodel */ = {isa = PBXFileReference; path = "hk-double-decker.m3dmodel"; sourceTree = "<group>"; };
 		B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_LienchiangCounty.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
@@ -612,6 +616,7 @@
 		F8349E5027292645A7F577B8 /* real_buses_Kaohsiung.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_Kaohsiung.json; sourceTree = "<group>"; };
 		F9D622682F53E544329A323C /* goal-met.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "goal-met.wav"; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
+		FD4B099119C83D89CC72BC1C /* BuiltBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltBrand.swift; sourceTree = "<group>"; };
 		FE945AAFE65EE7E25CA577DC /* ZoomRowUnderPanelUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomRowUnderPanelUITests.swift; sourceTree = "<group>"; };
 		FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostcardView.swift; sourceTree = "<group>"; };
 		FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapQuickLayerStrip.swift; sourceTree = "<group>"; };
@@ -1002,6 +1007,7 @@
 			isa = PBXGroup;
 			children = (
 				36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */,
+				FD4B099119C83D89CC72BC1C /* BuiltBrand.swift */,
 				41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */,
 				00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */,
 				8E1B6E1724E03C51A9EEB2DD /* FinanceCompositionUITests.swift */,
@@ -1050,6 +1056,7 @@
 			children = (
 				4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */,
 				41251B12461A0FD34DFCB786 /* Assets.xcassets */,
+				B1C8BC012A3844265CA55FCB /* GameBrand.json */,
 				319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */,
 				0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */,
 				B3A6A45B19F662183005E4CB /* Audio */,
@@ -1105,6 +1112,7 @@
 			buildConfigurationList = C8C180C0B5D711599E902A75 /* Build configuration list for PBXNativeTarget "RailwayGameUITests" */;
 			buildPhases = (
 				3E3F43EA7A9B2166962511FF /* Sources */,
+				DB0443F49D21CF7AEEB30979 /* Resources */,
 				7365340496299A860708BA49 /* Frameworks */,
 			);
 			buildRules = (
@@ -1171,6 +1179,7 @@
 				602D4EB636DD03A550CCD209 /* AppIcon.icon in Resources */,
 				E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */,
 				CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */,
+				6EAB28C8E71089822CDE65C8 /* GameBrand.json in Resources */,
 				8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */,
 				D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */,
 				47D1900E3FE4045E389BE121 /* Map3DSigns.png in Resources */,
@@ -1339,6 +1348,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DB0443F49D21CF7AEEB30979 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A100A28F0A3CFF43471F564 /* GameBrand.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1453,6 +1470,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				56401A53DAC1CA098177160A /* BaseMapProjectionUITests.swift in Sources */,
+				B61B48EA261F39071F92D740 /* BuiltBrand.swift in Sources */,
 				866964714A9713149D8697CD /* CoverageShortcutUITests.swift in Sources */,
 				E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */,
 				495E531EE2BE994A5D26A414 /* FinanceCompositionUITests.swift in Sources */,
@@ -1534,7 +1552,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Along the Line";
+				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves your postcard to Photos when you choose Save Image.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -1701,7 +1719,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Along the Line";
+				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves your postcard to Photos when you choose Save Image.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

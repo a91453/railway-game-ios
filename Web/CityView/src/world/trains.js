@@ -17,7 +17,7 @@ const STOCK = [
   { match: '銀座', stripe: '#8a4a1c', body: '#f2b62a', cars: 6, length: 16 },
 ];
 const DEFAULT_STOCK = { stripe: '#7b8794', body: '#c9ccce', cars: 8, length: 20 };
-// Along the Line (ARCHITECTURE decision 161): in a Taiwanese area every heavy-rail line is the TRA's, and its paths
+// railway game ios (ARCHITECTURE decision 161): in a Taiwanese area every heavy-rail line is the TRA's, and its paths
 // take turns between a commuter train and an express. Formations as the reference's rail-3d formations.js
 // (`commuter` 8 x 20 m as EMU700/800, EMU900 sets are 10; `emu3000` 12 cars of 20.3 m with 21.35 m ends).
 // `models` names the Meshy models (tools/meshy) listed in models/trains/index.json; without them the cars
@@ -218,7 +218,7 @@ function carGeometry(length) {
   return g;
 }
 
-// ---- Along the Line (decision 161): high-speed stock. A box cannot carry what makes a Shinkansen one, so these
+// ---- railway game ios (decision 161): high-speed stock. A box cannot carry what makes a Shinkansen one, so these
 // cars are lofted instead: rings of a rounded rectangle swept along the car, the cab car's front rings narrowing
 // and dropping into the N700S "duck bill". Each ring point keeps how high it sits within its own ring, and that
 // is the livery's v, so a band painted straight across the picture follows the nose down and forward the way the
@@ -533,7 +533,7 @@ function pointAt(path, s, out) {
   return out.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
 }
 
-// Along the Line (decision 161): a car model as one geometry and material for an InstancedMesh, in the frame of
+// railway game ios (decision 161): a car model as one geometry and material for an InstancedMesh, in the frame of
 // carGeometry: the cab (`front`, the axis it faces in the model) towards +z and the rail top at y = 0. A Meshy
 // model (tools/meshy) is then fitted to the stock's car length, 2.9 m wide and 3.9 m tall, because nothing about
 // a generated mesh's scale can be relied on; one from tools/trains/build_train.mjs says `fit: false` in the index,
@@ -653,7 +653,7 @@ export class Trains {
     this.ready = this.loadModels(); // (the boxes run until the models arrive)
   }
 
-  // Along the Line (decision 161): swaps what a stock is drawing with for its models: the cab model at both ends
+  // railway game ios (decision 161): swaps what a stock is drawing with for its models: the cab model at both ends
   // (the rear one turned round), the middle model between them. A stock with only one of the two uses it for every
   // car. What it replaces is whatever was running — the boxes, or the shell lofted in code.
   async loadModels() {

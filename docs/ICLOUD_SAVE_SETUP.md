@@ -12,7 +12,7 @@
 1. 開 developer.apple.com → **Account** → **Certificates, Identifiers & Profiles** → 左邊 **Identifiers**。
 2. 右上角篩選選單選 **iCloud Containers**，按 **「+」**。
 3. 選 **iCloud Containers** → **Continue**。
-4. **Description** 填 `Along the Line saves`；**Identifier** 填 `iCloud.io.github.a91453.RailwayGame`（前面的 `iCloud.` 要留著）。→ **Continue** → **Register**。
+4. **Description** 填 `railway game ios saves`；**Identifier** 填 `iCloud.io.github.a91453.RailwayGame`（前面的 `iCloud.` 要留著）。→ **Continue** → **Register**。
 
 ## 2. Apple Developer：App ID 打開 iCloud
 
@@ -35,9 +35,9 @@ iCloud Documents 不需要在 App Store Connect 另外設定。
 
 加了 entitlement 的 build 上 TestFlight 後，請用同一個 Apple 帳號的兩台裝置試：
 
-1. 兩台的「設定 › Apple 帳號 › iCloud」裡 iCloud 雲碟都開著，「使用 iCloud 的 App」裡《沿線》也開著。
+1. 兩台的「設定 › Apple 帳號 › iCloud」裡 iCloud 雲碟都開著，「使用 iCloud 的 App」裡《railway game ios》也開著。
 2. iPhone 玩一下，回主畫面。
-3. iPad 開《沿線》，存檔清單下面要出現「存檔也會放進你的 iCloud……」，按「繼續」接著 iPhone 的進度（iCloud 上傳下載有時要一兩分鐘）。
+3. iPad 開《railway game ios》，存檔清單下面要出現「存檔也會放進你的 iCloud……」，按「繼續」接著 iPhone 的進度（iCloud 上傳下載有時要一兩分鐘）。
 4. 兩台都關網路各玩一下，再打開網路，回開始畫面：要看到「兩份都留著」的訊息，存檔清單裡多一份「另一台裝置的進度」。
 5. 同步狀態（決策 397 續 2）：開始畫面「繼續」下面和存檔清單上面有一行 iCloud 狀態與「立即同步」按鈕；每份存檔下面標「已在 iCloud／等待同步／下載中／只在這台」。
    - iPhone 存一份新存檔後，關掉 Wi‑Fi 與行動網路再回開始畫面：那份要標「等待同步」，狀態列說「等待上傳到 iCloud」；打開網路、按「立即同步」，過一會兒再按一次，要變成「已在 iCloud」與「已同步（…前）」。

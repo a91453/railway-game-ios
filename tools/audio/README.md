@@ -20,7 +20,7 @@ python3 tools/audio/make_game_audio.py --check RailwayGameApp/Resources/Audio
 mml/名稱.mml（MML 原稿，MML Studio 寫的瑪奇六格 MML@…;）＋ mml/名稱.json（每一格的合成器聲音、用途、動機）
         │  node tools/audio/mml_to_score.mjs mml/名稱.mml（mml-core/core.js，MML Studio 的核心）
         ▼
-scores/名稱.score.json（《沿線》樂譜，提交進 repo）
+scores/名稱.score.json（railway game ios 樂譜，提交進 repo）
         │  python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
         ▼
 RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
@@ -30,7 +30,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 - **MML 的音量 V1–V15** 轉成力度 `round(V × 127 ÷ 15)`。
 - **樂譜也可以直接手寫**（`chime-local`、`chime-metro` 就是）：沒有 MML 的樂譜，`source` 寫出處。
 
-## 《沿線》樂譜第 1 版（`*.score.json`）
+## railway game ios 樂譜第 1 版（`*.score.json`）
 
 `score.py` 檢查；之後 GameCore 用 `Codable` 檢查玩家的樂譜（第四階段）時照同一份規則。所有數字都是整數。
 

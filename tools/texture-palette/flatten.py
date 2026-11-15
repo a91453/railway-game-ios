@@ -24,6 +24,7 @@ import numpy as np
 from PIL import Image
 
 from classify import (
+    STUDIO_ROOT,
     ciede2000_batch,
     dominant_lab_clusters,
     hex_to_rgb01,
@@ -167,7 +168,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Flatten train/sign texture to New Style solid palette.")
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--palette", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/ref/palette.json"))
+    parser.add_argument("--palette", default=os.path.join(STUDIO_ROOT, "reports/t001/ref/palette.json"))
     parser.add_argument("--groups", default="train,structure", help="Comma-separated palette groups")
     parser.add_argument("--no-own-band", action="store_true", help="Do not add unmatched dominant band color")
     args = parser.parse_args()

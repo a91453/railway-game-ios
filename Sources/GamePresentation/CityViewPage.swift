@@ -20,27 +20,35 @@ public enum CityViewArea: String, CaseIterable, Identifiable, Sendable {
     /// on an iPhone 17 Pro (a 400 m view, no clouds, no birds, no traffic).
     /// `app=1` tells the page it is in the game, which hides its link to the
     /// website: the settings have their own.
-    public var pageAddress: String {
-        "\(CityViewPage.root)?area=\(rawValue)&radius=400&clouds=0&birds=0&traffic=0&app=1"
+    public var pageAddress: String? {
+        pageAddress(of: .current)
+    }
+
+    /// The page of `brand`'s website, or nil when it has none.
+    public func pageAddress(of brand: GameBrand) -> String? {
+        CityViewPage.root(of: brand).map { "\($0)?area=\(rawValue)&radius=400&clouds=0&birds=0&traffic=0&app=1" }
     }
 }
 
-/// The game's website (decision 163), which the settings open in the app.
+/// The game's website (decision 163), which the settings open in the app;
+/// nil in a build with no website (``GameBrand/website``).
 public enum GameWebsite {
-    public static let home = "https://www.alongthelinegame.com/"
+    public static var home: String? { GameBrand.current.home }
 }
 
 /// Where the city view's page is (decision 163).
 public enum CityViewPage {
     /// The page's folder on the game's website.
-    public static let root = GameWebsite.home + "city/"
+    public static func root(of brand: GameBrand = .current) -> String? {
+        brand.home.map { $0 + "city/" }
+    }
 
     /// Whether the web view opens `url` itself: the city view's own pages,
     /// and pages with no host (`about:blank`). Any other link the page
     /// follows, the website's home page among them, goes to the browser.
-    public static func opensInView(_ url: URL) -> Bool {
+    public static func opensInView(_ url: URL, brand: GameBrand = .current) -> Bool {
         guard let host = url.host else { return true }
-        return url.scheme == "https" && host == "www.alongthelinegame.com"
+        return url.scheme == "https" && brand.website != nil && host == brand.website
             && (url.path == "/city" || url.path.hasPrefix("/city/"))
     }
 }

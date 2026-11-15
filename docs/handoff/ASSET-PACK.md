@@ -10,7 +10,7 @@
 ## 還留下的
 
 1. **作者的 Apple 帳號步驟**（一次一步，作者做完一步再給下一步）：
-   1. 開發者網站 Certificates, Identifiers & Profiles → Identifiers → 右上 + → App Groups → 說明填 Along the Line map packs、ID 填 `group.io.github.a91453.RailwayGame`。
+   1. 開發者網站 Certificates, Identifiers & Profiles → Identifiers → 右上 + → App Groups → 說明填 railway game ios map packs、ID 填 `group.io.github.a91453.RailwayGame`。
    2. 同一頁的 App ID `io.github.a91453.RailwayGame`：勾 App Groups，選上面那個 group，存檔。
    3. （第二段 PR 合併、`testflight.yml` 第一次跑過之後）App Store Connect 該 App → 確認 asset pack `mappack-hongkong` 出現、處理完成；外部測試前和 build 一起送審。
 2. **第二段 PR**（作者做完 1.1、1.2 之後）：`project.yml` 加 extension target `MapPackDownloader`（bundle ID `io.github.a91453.RailwayGame.MapPackDownloader`，`EXExtensionPointIdentifier` `com.apple.background-asset-downloader-extension`，`StoreDownloaderExtension`）、兩邊的 App Group 權限、App 的三個 Info.plist 鍵；重產 Xcode 專案；`testflight.yml` 在 export 前打包、上傳（`altool --upload-asset-pack`）；`testflight-verify-ipa.sh` 檢查 extension 在 IPA 裡。extension 的 App ID 是否能由 `-allowProvisioningUpdates` 自動建、自動掛 App Group，未確認；不行的話作者在開發者網站多建一個 App ID 並勾同一個 group。App 照舊帶香港。

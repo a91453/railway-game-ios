@@ -874,7 +874,7 @@ public struct SaveLibrary: Sendable {
     public static func exportFile(for world: GameWorld, news: NewsLog? = nil, company: String? = nil, at date: Date) throws(SaveError) -> URL {
         let data = try encode(world, news: news, company: company, at: date)
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Exports", isDirectory: true)
-        let url = folder.appendingPathComponent("Along the Line \(stamp(date)).\(SharedNetwork.fileExtension)")
+        let url = folder.appendingPathComponent("\(GameBrand.current.english) \(stamp(date)).\(SharedNetwork.fileExtension)")
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try data.write(to: url, options: .atomic)
@@ -1204,7 +1204,7 @@ public enum SaveError: Error, Hashable, Sendable {
     public func playerMessage(in language: DisplayLanguage) -> String {
         switch self {
         case .notASave:
-            language.text("That file is not an Along the Line save.", "這個檔案不是《沿線》的存檔。")
+            language.text("That file is not a save of \(GameBrand.current.english).", "這個檔案不是《\(GameBrand.current.chinese)》的存檔。")
         case .newerVersion:
             language.text(
                 "That save comes from a newer version of the game. Update the app to load it.",
@@ -1215,7 +1215,7 @@ public enum SaveError: Error, Hashable, Sendable {
         case .fileSystem:
             language.text("The save could not be read or written. Try again.", "無法讀寫存檔，請再試一次。")
         case .tooLarge:
-            language.text("That file is too large to be an Along the Line save.", "這個檔案太大，不是《沿線》的存檔。")
+            language.text("That file is too large to be a save of \(GameBrand.current.english).", "這個檔案太大，不是《\(GameBrand.current.chinese)》的存檔。")
         }
     }
 }

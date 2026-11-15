@@ -17,7 +17,7 @@
 
 補充：`Map3DRealBuildings.swift` 目前把建物分成 shophouse、house、flats、office、industry、civic、temple、transport，不只是舊研究寫的「只依用途換顏色」。這次沒有做互動測試，所以不宣稱實景建物已經和 `GameWorld` 的改建、收購完全一致。
 
-## 2. 針對《沿線》的下一步：不換引擎
+## 2. 針對《railway game ios》的下一步：不換引擎
 
 ### P0：不改功能，先建立可比較的手機基準
 

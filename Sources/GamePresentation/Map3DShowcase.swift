@@ -492,6 +492,6 @@ extension Map3DShowcase {
     /// The name in a photo's corner: the game's own, as the postcard's
     /// wordmark (decision 215); the showcase has no map data to credit.
     public static func photoCredit(in language: DisplayLanguage) -> String {
-        language.text("Along the Line", "沿線")
+        GameBrand.current.name(in: language)
     }
 }

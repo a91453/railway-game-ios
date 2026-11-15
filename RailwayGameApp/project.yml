@@ -105,7 +105,11 @@ targets:
         # generated Info.plist. Outside the source folders, so it is not
         # copied into the app as a resource.
         INFOPLIST_FILE: Info.plist
-        INFOPLIST_KEY_CFBundleDisplayName: Along the Line
+        # The neutral brand's name (GameBrand); the localized
+        # Resources/*.lproj/InfoPlist.strings name the app on the Home
+        # Screen, and tools/brand/apply_brand.py puts the released game's
+        # name in them before a release build.
+        INFOPLIST_KEY_CFBundleDisplayName: Railway Game
         # Decision 335: "Use my location" on the real-world picker asks for
         # one fix while the app is in use; the reason is localized in
         # Resources/*.lproj/InfoPlist.strings.
@@ -131,6 +135,10 @@ targets:
     platform: iOS
     sources:
       - path: UITests
+      # The brand the app was built with (GameBrand), so the tests expect
+      # its name and know whether it has a website.
+      - path: Resources/GameBrand.json
+        buildPhase: resources
     dependencies:
       - target: RailwayGame
       # Fixture coordinates for UI gestures use the existing lesson map;

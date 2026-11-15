@@ -8,8 +8,8 @@ final class ProblemReportTests: XCTestCase {
     func testTheNoteAsksThreeQuestionsAndListsTheDetails() {
         let report = ProblemReport(version: "0.4.0", build: "12", system: "iOS 26.0", device: "iPhone17,1")
         XCTAssertEqual(report.versionText, "0.4.0 (12)")
-        XCTAssertEqual(report.subject(in: .english), "Along the Line 0.4.0 (12): a problem")
-        XCTAssertEqual(report.subject(in: .traditionalChinese), "沿線 0.4.0 (12)：問題回報")
+        XCTAssertEqual(report.subject(in: .english), "Railway Game 0.4.0 (12): a problem")
+        XCTAssertEqual(report.subject(in: .traditionalChinese), "鐵道遊戲 0.4.0 (12)：問題回報")
         XCTAssertEqual(report.text(in: .english), """
             What happened?
 

@@ -42,10 +42,10 @@ const licenceOf = (dir) => {
 const parts = [
   '# 3D city view: notices',
   '',
-  'The 3D city view of Along the Line (ARCHITECTURE decisions 152 and 163) is the web page of Procedural Tokyo',
+  'The 3D city view of the game (ARCHITECTURE decisions 152 and 163) is the web page of Procedural Tokyo',
   'by Yong Su, adapted to Taiwan, with the libraries below bundled into it. Its textures are from Poly Haven',
   '(https://polyhaven.com) under CC0 1.0. The data it shows is credited on the page itself and on the data sources',
-  'page (https://www.alongthelinegame.com/credits): Overture Maps Foundation, OpenStreetMap contributors.',
+  'page of the game\'s website (/credits): Overture Maps Foundation, OpenStreetMap contributors.',
   '',
   '## Procedural Tokyo',
   '',

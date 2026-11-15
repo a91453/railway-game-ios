@@ -79,6 +79,15 @@ jobs:
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: .github/scripts/testflight-preflight.sh
 
+      # The released game's name (tools/brand/README.md): a release without
+      # it would be the neutral game, so a missing or malformed secret fails
+      # here, before a macOS runner starts.
+      - name: Check the game's brand
+        uses: ./.github/actions/apply-brand
+        with:
+          brand: ${{ secrets.GAME_BRAND_JSON }}
+          required: "true"
+
   release:
     name: Archive, sign, export, check and upload
     needs: preflight
@@ -119,6 +128,14 @@ jobs:
         run: .github/scripts/testflight-preflight.sh
 
       # App Store Connect accepts only builds made with Xcode 26 or later.
+      # The released game's name, save extension, website and mailbox into
+      # the working copy the archive is built from (tools/brand/README.md).
+      - name: Apply the game's brand
+        uses: ./.github/actions/apply-brand
+        with:
+          brand: ${{ secrets.GAME_BRAND_JSON }}
+          required: "true"
+
       - name: Toolchain versions
         run: |
           sw_vers

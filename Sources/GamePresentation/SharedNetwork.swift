@@ -14,7 +14,7 @@ import GameCore
 public struct SharedNetwork: Sendable {
     /// The file name extension of the game's own save type. The file is
     /// JSON, as the saves in the folder are.
-    public static let fileExtension = "alongtheline"
+    public static let fileExtension = GameBrand.current.saveExtension
     /// The save type's identifier (the app's Info.plist declares it, with
     /// ``fileExtension``).
     public static let typeIdentifier = "io.github.a91453.RailwayGame.save"

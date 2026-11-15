@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 extension UTType {
     /// The game's own save type, declared in the app's Info.plist; the
     /// file is JSON.
-    static let alongTheLineSave = UTType(exportedAs: SharedNetwork.typeIdentifier, conformingTo: .json)
+    static let gameSave = UTType(exportedAs: SharedNetwork.typeIdentifier, conformingTo: .json)
 }
 
 /// The game as a save file to share (Stage C4, the reference's "导出本地存档"),
@@ -25,7 +25,7 @@ struct ExportedSave: Transferable {
     let launcher: GameLauncher
 
     static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: .alongTheLineSave) { save in
+        FileRepresentation(exportedContentType: .gameSave) { save in
             let (world, news) = await (save.session.worldToSave, save.session.news)
             let own = UserDefaults.standard.string(forKey: PostcardSheet.companyNameKey)
             let company = await save.launcher.companyNameToShare(own: own)

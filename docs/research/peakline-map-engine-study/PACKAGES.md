@@ -2,7 +2,7 @@
 
 查核日：2026-10-19 UTC。名稱137種，版本記錄141筆；同名不同版本分列。原始名稱、版本、授權表達式與來源 URL 保持使用者原文。**所有列目前均未加入 App／Swift 套件**。
 
-每列的「現有」表示《沿線》已經有的對應能力，不表示安裝了該 Rust crate。角色是官方專案的用途分類；runtime、工具、建置、平台欄是可能角色，**無 Peakline 的 lockfile、features、target graph，不能視為其實際依賴邊或啟用證據**。
+每列的「現有」表示《railway game ios》已經有的對應能力，不表示安裝了該 Rust crate。角色是官方專案的用途分類；runtime、工具、建置、平台欄是可能角色，**無 Peakline 的 lockfile、features、target graph，不能視為其實際依賴邊或啟用證據**。
 
 本次 141 個指定版本的官方 registry API 全部 HTTP 200，版本與授權 metadata 均與原文相符；這不等於逐包完成授權稽核，也沒有把相容性或效能當成通過。機器可讀的完整原始回覆欄位與結論見 [packages.json](packages.json)／[packages.csv](packages.csv)。[crate-package-audit.json](crate-package-audit.json) 記錄額外下載的20個來源包與 checksum／授權檔案；未下載者明列待查。
 

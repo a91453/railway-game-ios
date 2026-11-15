@@ -20,7 +20,7 @@ const defaultTurns = (n) => (n === 2 ? [DECAL.THROUGH_LEFT, DECAL.THROUGH_RIGHT]
   : [DECAL.THROUGH_LEFT, ...Array(n - 2).fill(DECAL.THROUGH), DECAL.RIGHT]);
 const SPEED = { 20: DECAL.SPEED_20, 30: DECAL.SPEED_30, 40: DECAL.SPEED_40, 50: DECAL.SPEED_50, 60: DECAL.SPEED_60 };
 
-// rightHand (Along the Line, decision 152): traffic keeps right, as in Taiwan; Tokyo's areas keep left.
+// rightHand (railway game ios, decision 152): traffic keeps right, as in Taiwan; Tokyo's areas keep left.
 export function buildMarkings({ edges, pos, idx, land, inBounds, rightHand = false }) {
   const marks = [], props = [];
   const signalled = new Set(land.signals);

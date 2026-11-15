@@ -57,7 +57,7 @@ public struct ProblemReport: Hashable, Sendable {
 
     /// The subject of the note: the app's name and version.
     public func subject(in language: DisplayLanguage) -> String {
-        language.text("Along the Line \(versionText): a problem", "沿線 \(versionText)：問題回報")
+        language.text("\(GameBrand.current.english) \(versionText): a problem", "\(GameBrand.current.chinese) \(versionText)：問題回報")
     }
 
     /// The note: three questions for the player, then the details.

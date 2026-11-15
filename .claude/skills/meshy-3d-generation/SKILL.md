@@ -53,7 +53,7 @@ must not prevent delivery or be described as inspected. Delivery covers earlier-
 lookup, actual charges, and existing-project integration. Report the result and any concrete
 limitation; a rendered image does not establish topology quality or provide a 3D viewer.
 
-## This repository (added by Along the Line; not part of Meshy's skill)
+## This repository (added by railway game ios; not part of Meshy's skill)
 
 Everything above is Meshy's `skills/meshy-3d-generation` at commit `644fd70` (MIT, `LICENSE` here),
 unchanged. In this repository:

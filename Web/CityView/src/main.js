@@ -27,15 +27,15 @@ installLampLight(); // (before any material is compiled)
 installSkyLight();
 
 const params = new URLSearchParams(location.search);
-// Along the Line: the website has Kaohsiung and Taichung only (tiles/areas.json); with no area, or another, the page
+// railway game ios: the website has Kaohsiung and Taichung only (tiles/areas.json); with no area, or another, the page
 // opens Kaohsiung, not Tokyo (decision 163)
 const AREAS = ['kaohsiung', 'taichung'];
 const AREA = AREAS.includes(params.get('area')) ? params.get('area') : AREAS[0];
 
-// Along the Line: the page speaks the app's language (the web view's is the app's) on its loading screen and credits.
+// railway game ios: the page speaks the app's language (the web view's is the app's) on its loading screen and credits.
 const ZH = /^zh/i.test(navigator.language);
 const STEPS_ZH = { textures: '材質', terrain: '地形', 'railways and roads': '鐵道與道路', 'leaving for the next city': '前往下一個城市', 'city tiles': '城市街區' };
-// Along the Line: the settings panel's words in Chinese ('folder/name' where a name means two things)
+// railway game ios: the settings panel's words in Chinese ('folder/name' where a name means two things)
 const GUI_ZH = {
   city: '城市', Time: '時間', 'live clock': '現在時間', 'auto play': '自動播放', 'speed (min / s)': '速度（分鐘／秒）', time: '時刻',
   'back to the defaults': '恢復預設',
@@ -105,7 +105,7 @@ const clockTime = {
   // the day played through: `speed` minutes of Tokyo's clock go by in every second (1: a day in 24 minutes,
   // 100: in about a quarter of a minute)
   play: params.get('play') != null, speed: Number(params.get('play')) || 10,
-  // Along the Line (decision 152): the area's own clock, hours from UTC (the manifest's utcOffset; Tokyo's 9)
+  // railway game ios (decision 152): the area's own clock, hours from UTC (the manifest's utcOffset; Tokyo's 9)
   utcOffset: 9, zone: 'Tokyo',
   advance(dt) { if (this.play) { this.live = false; this.hour = (this.hour + dt * this.speed / 60) % 24; } },
   // the moment on today's Tokyo date at which its clock shows `hour`
@@ -180,14 +180,14 @@ atmosphere.cloudsOn = params.get('clouds') !== '0';
 let orthoLoaded = false, orthoWanted = true; // (the photo fills in when the tiles arrive; the panel may have switched it off by then)
 if (params.get('ortho') !== '0') loadOrtho(`ortho/${AREA}`, proj, manifest.bounds, renderer).then((ok) => { orthoLoaded = ok; shared.uOrthoOn.value = ok && orthoWanted ? 1 : 0; });
 const railways = await buildRailways(`tiles/${AREA}/${manifest.rails}`, (x, z) => streamer.ground(x, z), streamer.cover,
-  { taiwan: manifest.zone === 'Taiwan' }); // Along the Line: TRA trains (decision 161)
+  { taiwan: manifest.zone === 'Taiwan' }); // railway game ios: TRA trains (decision 161)
 scene.add(railways);
 scene.add(await buildFlyovers(`tiles/${AREA}/${manifest.roads}`, (x, z) => streamer.ground(x, z)));
 if (manifest.structures) scene.add(await buildStructures(`tiles/${AREA}/${manifest.structures}`, (x, z) => streamer.ground(x, z)));
 const traffic = new Traffic(await (await fetch(`tiles/${AREA}/${manifest.roads}`)).json(), streamer.surface);
 if (params.get('cars') != null) traffic.count = Math.min(MAX_CARS, Number(params.get('cars')) || 0);
 if (params.get('traffic') !== '0') scene.add(traffic.group); else traffic.lamps.visible = false;
-// Along the Line: one line, as on the game's real-world maps: the 3D city's author, in the same form as the data's
+// railway game ios: one line, as on the game's real-world maps: the 3D city's author, in the same form as the data's
 // contributors, then the data (decision 152)
 const CREDITS_ZH = {
   'Buildings: Overture Maps Foundation': '建物：Overture Maps Foundation',
@@ -257,14 +257,14 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   gui.close(); // (out of the way until it is asked for)
   gui.add(state, 'city', Object.fromEntries(areas.map((a) => [a.name, a.id]))).onChange((id) => {
     const url = new URL(location.href);
-    // Along the Line: keep the page's other parameters (the app's lighter settings, app=1) and drop only the camera,
+    // railway game ios: keep the page's other parameters (the app's lighter settings, app=1) and drop only the camera,
     // which is the previous city's (the original cleared them all)
     url.searchParams.delete('cam');
     url.searchParams.set('area', id);
     loader.show(areas.find((a) => a.id === id)?.name ?? id, 'leaving for the next city');
     setTimeout(() => { location.href = url.href; }, 60); // (let the screen appear first)
   });
-  const time = gui.addFolder('Time'); // Along the Line: the area's own time (the original's was Tokyo's)
+  const time = gui.addFolder('Time'); // railway game ios: the area's own time (the original's was Tokyo's)
   time.add(clockTime, 'live').name('live clock').listen().onChange((v) => { if (v) clockTime.play = false; });
   time.add(clockTime, 'play').name('auto play').listen();
   time.add(clockTime, 'speed', 1, 100, 1).name('speed (min / s)');
@@ -332,7 +332,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   city.add(shared.uPhotoRange.value, 'x', 0, 1000, 10).name('wall photos from (m)');
   city.add(shared.uPhotoRange.value, 'y', 10, 2000, 10).name('wall photos full at (m)');
   city.add(state, 'photo').name('aerial photo on the ground').listen();
-  city.add(state, 'season', ZH ? { 夏天: 'summer', 秋天: 'autumn', 春天: 'spring' } : ['summer', 'autumn', 'spring']); // Along the Line: in Chinese
+  city.add(state, 'season', ZH ? { 夏天: 'summer', 秋天: 'autumn', 春天: 'spring' } : ['summer', 'autumn', 'spring']); // railway game ios: in Chinese
   withReset(city);
 
   // the abstract model, and the switch in the corner that shows the city it changes to
@@ -379,7 +379,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   quality.add(state, 'info').name('info panel');
   withReset(quality);
   for (const folder of gui.folders) if (folder !== time) folder.close(); // (the list of folders is the panel: one is opened at a time)
-  // Along the Line: the panel in Chinese when the page is (its look is in index.html)
+  // railway game ios: the panel in Chinese when the page is (its look is in index.html)
   if (ZH) {
     // (the controls first: a name that means two things is looked up under its folder's English title)
     for (const c of gui.controllersRecursive()) c.name(GUI_ZH[`${c.parent._title}/${c._name}`] ?? GUI_ZH[c._name] ?? c._name);
@@ -392,7 +392,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   const KEY = 'procedural-tokyo:settings:13'; // (a new number when the defaults change: what was kept before is left behind)
   const explicit = [...params.keys()].some((k) => k !== 'area');
   // (the city is the page's, not a setting; and the abstract model is never kept: the page always opens on the city as it is)
-  // Along the Line: the panel's names are the page's language (GUI_ZH), and what it keeps is named by them
+  // railway game ios: the panel's names are the page's language (GUI_ZH), and what it keeps is named by them
   const named = (en) => (ZH ? GUI_ZH[en] ?? en : en);
   const strip = (saved) => { delete saved.controllers?.[named('city')]; delete saved.folders?.[named('Abstract model')]?.controllers?.[named('abstract model')];
     // (nor is the hour: the page always opens on the area's own time, the live clock running)
@@ -608,7 +608,7 @@ function tick() {
 const PREVIEW_EVERY = 3;                 // live: the other mode is drawn at one frame in so many
 const PREVIEW_REST = 300;                // otherwise: so many milliseconds after the view has stopped moving
 const PREVIEW_BOX = { left: 14, bottom: 14, size: 64, radius: 10 }; // CSS pixels: the inside of the switch (index.html)
-// Along the Line: the switch moves (clear of the notch, above the credits on a phone), so the picture follows it:
+// railway game ios: the switch moves (clear of the notch, above the credits on a phone), so the picture follows it:
 // its inside, from its place on the page, whenever the page changes size
 const placePreview = () => {
   const r = document.getElementById('mode').getBoundingClientRect(), border = 2;

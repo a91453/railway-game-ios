@@ -70,7 +70,7 @@ public struct NetworkPostcard: Hashable, Sendable {
         title = Self.companyName(companyName, in: language)
         let rank = CompanyRank(world: world)
         subtitle = "\(world.clock.now.date.text(in: language)) ・ \(rank.title.title(in: language))"
-        wordmark = language.text("Along the Line", "沿線")
+        wordmark = GameBrand.current.name(in: language)
         figures = Self.figures(lines: world.lines.count, figures: rank.figures, in: language)
         legend = Self.legend(of: world)
         // Decision 215: the postcard draws the game's own map, never Apple's

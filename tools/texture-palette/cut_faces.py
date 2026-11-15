@@ -981,7 +981,7 @@ def write_glb(
         bin_buf.append(0)
 
     gltf = {
-        "asset": {"version": "2.0", "generator": "along-the-line/cut_faces.py"},
+        "asset": {"version": "2.0", "generator": "railway-game-ios/cut_faces.py"},
         "scene": 0,
         "scenes": [{"nodes": [0]}],
         "nodes": [{"name": "train_car", "mesh": 0}],

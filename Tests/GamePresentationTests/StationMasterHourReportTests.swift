@@ -13,7 +13,7 @@ import XCTest
 ///     STATION_MASTER_HOURS=24 swift test -c release -Xswiftc -enable-testing --filter StationMasterHourReportTests
 ///
 /// `STATION_MASTER_HOURS` is the number of game hours; with
-/// `STATION_MASTER_SAVE=<save>` (a `.alongtheline` file or a `SavedGame`)
+/// `STATION_MASTER_SAVE=<save>` (a shared save file or a `SavedGame`)
 /// the save's world, else a synthetic grid of 9 × 9 stations, a line along
 /// every row and column (`STATION_MASTER_GRID` sets the side).
 @MainActor
