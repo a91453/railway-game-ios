@@ -832,7 +832,7 @@ public enum Map3DPalette {
     /// waterproofing, the green waterproof paint, a blue sheet-steel room
     /// over the whole roof and, on low houses only, red tiles.
     static let cityRoofs: [(color: UInt32, weight: Float, low: Bool)] = [
-        (roof, 4, false), (rgb(0x6E747B), 2, false), (rgb(0x5A4E4A), 1, false),
+        (roof, 4, false), (rgb(0x6C7279), 2, false), (rgb(0x5A4E4A), 1, false),
         (rgb(0x3C8A5A), 1, false), (rgb(0x2D68AC), 1, false), (rgb(0xB85A42), 1, true),
     ]
     /// Offices: ``officeWalls`` and a beige stone, a pale blue grey and a
