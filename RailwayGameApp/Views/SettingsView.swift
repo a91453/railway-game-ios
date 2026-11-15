@@ -96,7 +96,9 @@ struct SettingsView: View {
                     map3DSection(session)
                 }
                 garageSection
-                previewSection
+                if GameWebsite.home != nil {
+                    previewSection
+                }
                 if TestBuild.isTest {
                     testSection
                 }
@@ -136,7 +138,7 @@ struct SettingsView: View {
                 Text(verbatim: languageNote ?? "")
             }
             .sheet(isPresented: $showsWebsite) {
-                if let url = URL(string: GameWebsite.home) {
+                if let home = GameWebsite.home, let url = URL(string: home) {
                     SafariView(url: url)
                         .ignoresSafeArea()
                 }
@@ -761,23 +763,24 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.frameTimeBench")
             }
             ProblemReportRows(game: game, session: session, lessons: lessons)
-            Button {
-                showsWebsite = true
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Website", "官網"))
-                } icon: {
-                    Image(systemName: "globe")
+            if GameWebsite.home != nil {
+                Button {
+                    showsWebsite = true
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Website", "官網"))
+                    } icon: {
+                        Image(systemName: "globe")
+                    }
                 }
+                .accessibilityIdentifier("settings.website")
             }
-            .accessibilityIdentifier("settings.website")
         } header: {
             Text(verbatim: language.text("About", "關於"))
         } footer: {
-            Text(verbatim: ProblemReportRows.footer(in: language) + language.text(
-                " Website opens alongthelinegame.com in the game.",
-                "「官網」在遊戲裡打開 alongthelinegame.com。"
-            ))
+            Text(verbatim: ProblemReportRows.footer(in: language) + (GameBrand.current.websiteName.map { site in
+                language.text(" Website opens \(site) in the game.", "「官網」在遊戲裡打開 \(site)。")
+            } ?? ""))
         }
     }
 }

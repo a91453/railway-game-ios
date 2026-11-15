@@ -22,18 +22,6 @@
       }
     },
 
-    "Along the Line" : {
-      "comment" : "Official player-facing brand name.",
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沿線"
-          }
-        }
-      }
-    },
-
     "Net profit" : {
       "localizations" : {
         "zh-Hant" : {
@@ -521,16 +509,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "鋪設軌道 · %@"
-          }
-        }
-      }
-    },
-    "Along the Line is a railway and city-building simulation where the railway shapes the growth of the city." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "《沿線》是一款鐵路與城市發展模擬遊戲。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。"
           }
         }
       }
@@ -1511,16 +1489,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "利潤"
-          }
-        }
-      }
-    },
-    "Along the Line save" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沿線存檔"
           }
         }
       }

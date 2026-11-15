@@ -6,7 +6,7 @@
 
 D01–D21均為香港來源，沒有拿它們補臺灣原地地物。香港實景、虛構生成城市的素材再利用是兩種用途；後者不因地理涵蓋範圍而被一概禁止，但仍需個別版本條款、美術加工與署名。
 
-| ID／原名／提供者 | 原始入口 | 本次查得官方入口 | 型態／地理範圍 | 《沿線》現有能力 | 結論／證據與待查 |
+| ID／原名／提供者 | 原始入口 | 本次查得官方入口 | 型態／地理範圍 | 《railway game ios》現有能力 | 結論／證據與待查 |
 | --- | --- | --- | --- | --- | --- |
 | D01 3D Visualisation Map；Lands Department | https://www.landsd.gov.hk/en/survey-mapping/mapping/3d-mapping.html | [官方資料頁](https://data.gov.hk/en-data/dataset/hk-landsd-openmap-3d-visualisation-map-individualised-models) | 單體貼圖模型／無貼圖模型／航空影像整片 mesh 分型；香港全境 | 已有量體與模型讀取器；缺資料規格正規化 | 有條件；香港實景可補真實外形；生成城市可精選重組，不能提供臺灣原地建物。官方確認 MAX/FBX/GLTF；選2.4 MB圖幅下載403，未取得模型、版本與包內條款；補充#820 cf05be2取得11-NW-10B GLTF0及貼圖Range樣本，三件烘色暴露塗裝誤判；本環境未獨立重現，詳主報告§3 |
 | D02 3D Spatial Data (3D-BIT00)；Lands Department | https://portal.csdi.gov.hk/csdi-webpage/dataset/landsd_rcd_1637306559892_42396 | [官方資料頁](https://portal.csdi.gov.hk/csdi-webpage/dataset/landsd_rcd_1637306559892_42396) | 建物／基礎設施／TIN地形；L1量體、地標L2/L3；香港全境 | 已有輪廓擠出與DEM；不是缺一個引擎 | 香港實景有條件；L1較接近現有路徑，L2/L3精選候選。官方頁確認 L1不貼寫實照片、L2/L3貼圖；未下載批次，費用依CSDI與HKMS路徑分查 |

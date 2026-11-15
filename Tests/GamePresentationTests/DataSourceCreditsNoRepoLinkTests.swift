@@ -27,7 +27,7 @@ final class DataSourceCreditsNoRepoLinkTests: XCTestCase {
     func testDerivedDataOfferNamesTheMailbox() {
         for language in languages {
             let odbl = DataSourceCredits.sections(in: language).flatMap(\.credits)
-                .filter { $0.notice.contains("ODbL") && $0.notice.contains("hello@alongthelinegame.com") }
+                .filter { $0.notice.contains("ODbL") && $0.notice.contains(language.text(DataSourceCredits.mailbox.english, DataSourceCredits.mailbox.chinese)) }
             XCTAssertGreaterThanOrEqual(odbl.count, 3, "OSM, Overture and the base map each offer the files")
         }
     }

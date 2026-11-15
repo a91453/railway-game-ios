@@ -1535,7 +1535,7 @@ V 實際放行 → T、U（保證不互穿）
 | `mml-tools` `dist/core.js` 的 `validateMML`、`parseTrack`、`F` | `tools/audio/mml-core/core.js`（原樣複製）、`tools/audio/mml_to_score.mjs` | 拍數（分數）× 960 = tick，非整數拒絕；V1–V15 → 力度 `round(V × 127 ÷ 15)` |
 | `mml-tools` `writeMidi` 超出 PPQ 就拒絕的做法 | `mml_to_score.mjs` 的 `ticks` | 照搬原則：不四捨五入 |
 
-參考庫沒有的（本專案自己寫的）：依車站自動選鈴聲的規則（`StationChime`）、到站車站的判定、高速時的動機與速度規則（`SoundCue.arrivalCue`）、《沿線》樂譜格式與檢查（`score.py`）、清單（`manifest.json`）、觀光鈴的旋律。
+參考庫沒有的（本專案自己寫的）：依車站自動選鈴聲的規則（`StationChime`）、到站車站的判定、高速時的動機與速度規則（`SoundCue.arrivalCue`）、《railway game ios》樂譜格式與檢查（`score.py`）、清單（`manifest.json`）、觀光鈴的旋律。
 
 
 ## 3D 地圖的貼圖（決策 231）

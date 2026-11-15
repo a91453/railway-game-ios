@@ -1,4 +1,4 @@
-"""The score of 《沿線》, format 1 (decision 219; research note
+"""The score of railway game ios, format 1 (decision 219; research note
 docs/research/RAILWAY_SOUND_2026-10-14.md §2.14 and §3): read and check.
 
 A score is event data, not a notation language: whole ticks, 960 a beat;

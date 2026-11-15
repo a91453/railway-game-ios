@@ -63,8 +63,11 @@ final class SettingsUITests: XCTestCase {
     /// the page): the website answered, whether or not the Simulator's
     /// WebGL then draws the city. A page the web view could not load shows
     /// why (`cityView.error`), and the test reports it.
-    func testTheCityPreviewLoadsItsPageAndCloses() {
+    func testTheCityPreviewLoadsItsPageAndCloses() throws {
         continueAfterFailure = false
+        // A build with no website (the neutral brand, GameBrand) has no
+        // city preview to open.
+        try XCTSkipIf(BuiltBrand.current.website == nil, "This build has no website, so no 3D city preview.")
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()

@@ -60,6 +60,9 @@ from typing import Any
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+# The local studio folder (its reports and references); set STUDIO_ROOT to it.
+STUDIO_ROOT = os.path.expanduser(os.environ.get("STUDIO_ROOT", "~/Studio"))
+
 # ---------------------------------------------------------------------------
 # Color space conversion (sRGB -> CIE Lab D65) & CIEDE2000
 # ---------------------------------------------------------------------------
@@ -835,8 +838,8 @@ BUILDING_CATS = {
 def main() -> None:
     parser = argparse.ArgumentParser(description="Classify legacy textures into New Style palette.")
     parser.add_argument("--assets-dir", default=os.path.expanduser("~/SwiftRailMac/assets"))
-    parser.add_argument("--palette", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/ref/palette.json"))
-    parser.add_argument("--out", default=os.path.expanduser("~/AlongTheLine-Studio/reports/t001/r3"))
+    parser.add_argument("--palette", default=os.path.join(STUDIO_ROOT, "reports/t001/ref/palette.json"))
+    parser.add_argument("--out", default=os.path.join(STUDIO_ROOT, "reports/t001/r3"))
     parser.add_argument("--limit", type=int, default=0, help="Optional limit for quick testing (0 = all)")
     parser.add_argument("--override", default="", help="clip_refine.py 輸出的 CSV（檔名,內容類別）：這些檔案改用它的類別，色票照該類別的規則重算")
     args = parser.parse_args()

@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>沿線｜3D 城市試作</title><!-- Along the Line: the game's, not Tokyo's (boot.js has the English) -->
+    <title>鐵道遊戲｜3D 城市試作</title><!-- railway game ios: the game's, not Tokyo's (boot.js has the English) -->
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1220; }
       canvas { display: block; }
       #hud {
         position: fixed; top: 12px; left: 12px; padding: 10px 12px; max-width: 340px;
-        font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #262c57; /* Along the Line: the game's look */
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #262c57; /* railway game ios: the game's look */
         background: rgba(255, 255, 255, 0.92); border: 1px solid rgba(38, 44, 87, 0.14); border-radius: 12px; pointer-events: none; white-space: pre;
       }
-      /* Along the Line: one credit line at the bottom, in the middle, as on the game's real-world maps: between the
+      /* railway game ios: one credit line at the bottom, in the middle, as on the game's real-world maps: between the
          switch on the left and the website link on the right (each clear of the notch), as wide as its words and
          no wider than the room it has */
       :root {
@@ -32,7 +32,7 @@
         background: rgba(255, 255, 255, 0.7); pointer-events: none;
       }
       #credits:empty { display: none; }
-      /* Along the Line: the page is a technical preview, not the game: said in the credits' look, above them */
+      /* railway game ios: the page is a technical preview, not the game: said in the credits' look, above them */
       #preview-note { max-width: 420px; padding: 2px 6px; }
       #preview-note b { font-weight: 700; color: #262c57; }
       /* (a long line breaks between the sources, each with its dot, and inside one only when it alone is too wide) */
@@ -45,7 +45,7 @@
         /* (the note sits between the switch and the website link, which are on the row above the credits) */
         #preview-note { max-width: calc(100% - 76px - 104px); margin: 0 104px 0 76px; }
       }
-      /* Along the Line: the game's website, where jeantimex's GitHub link was (the app opens it in Safari) */
+      /* railway game ios: the game's website, where jeantimex's GitHub link was (the app opens it in Safari) */
       #website {
         position: fixed; right: var(--edge-right); bottom: var(--controls-bottom);
         display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 16px;
@@ -62,7 +62,7 @@
       #mode.live { background: none !important; }
       #mode:hover { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 3px 12px rgba(0, 0, 0, 0.6); }
       #mode:active { border-color: #d6e4ff; }
-      /* Along the Line: the settings panel (lil-gui) and the info panel in the game's look (docs/UI_THEME.md): a white
+      /* railway game ios: the settings panel (lil-gui) and the info panel in the game's look (docs/UI_THEME.md): a white
          panel, navy text, teal controls, round corners; clear of the notch (viewport-fit=cover) */
       :root .lil-gui {
         --background-color: rgba(255, 255, 255, 0.96); --text-color: #262c57;
@@ -90,7 +90,7 @@
       /* shown while a city loads: at start-up and when another city is chosen */
       #loader {
         position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-        background: #eceef6; color: #262c57; /* Along the Line: the game's logo and its website's colours (decision 152) */
+        background: #eceef6; color: #262c57; /* railway game ios: the game's logo and its website's colours (decision 152) */
         font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; transition: opacity 0.7s ease;
       }
       #loader.done { opacity: 0; pointer-events: none; }
@@ -105,24 +105,24 @@
   </head>
   <body>
     <div id="loader">
-      <!-- Along the Line: the game's logo and name, not Tokyo's (decision 152) -->
+      <!-- railway game ios: the game's logo and name, not Tokyo's (decision 152) -->
       <img class="logo" src="/assets/ui/brand-mark.png" alt="" />
-      <div class="brand">沿線<small>Along the Line</small></div>
+      <div class="brand">鐵道遊戲<small>Railway Game</small></div>
       <div class="city"></div>
       <div class="bar"><div class="fill"></div></div>
       <div class="step"></div>
     </div>
-    <!-- Along the Line: the page's own scripts in a file, not inline, so the website's Content-Security-Policy can
+    <!-- railway game ios: the page's own scripts in a file, not inline, so the website's Content-Security-Policy can
          forbid inline scripts (decision 163): the city's name, the website link's language, the idle callbacks -->
     <script src="/boot.js"></script>
     <!-- the info panel: hidden until asked for (control panel: info panel) -->
     <div id="hud" style="display: none">loading…</div>
     <button id="mode" type="button" aria-label="Switch between the photorealistic city and the abstract model"></button>
-    <a id="website" href="https://www.alongthelinegame.com">
+    <a id="website" href="/">
       <img src="/assets/ui/brand-mark.png" alt="" /><span>Website</span>
     </a>
     <div id="footnotes">
-      <!-- Along the Line: what this page is (boot.js has the Chinese; none in the game, ?app=1) -->
+      <!-- railway game ios: what this page is (boot.js has the Chinese; none in the game, ?app=1) -->
       <div id="preview-note"><b>Tech preview</b> · A technical preview on the web. The game's 3D is gaining these effects step by step.</div>
       <div id="credits"></div>
     </div>

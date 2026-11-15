@@ -429,7 +429,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | 卡的外框（4 點）、地圖框（1.7 點）、站長頭像的框（1.5 點） | `Palette.ink` | — |
 | 公司名稱（30 點）、數字（19 點）、圖例的路線名 | `Theme.textPrimary`（數字在 `chip` 上） | 11.47／9.64；在 `chip` 上 11.89／7.73 |
 | 日期・稱號、數字的名稱、署名 | `Theme.textSecondary`（數字的名稱在 `chip` 上） | 5.16／5.79；在 `chip` 上 5.35／4.64 |
-| 右下角的遊戲名「沿線」 | `Theme.primary` | 4.75／6.03 |
+| 右下角的遊戲名 | `Theme.primary` | 4.75／6.03 |
 | 數字格 | `Theme.chip`（疊在 `panel` 上約 `#F2F2F5`／`#3F4675`） | — |
 | 地面 | `Palette.land`；自己的地圖加上城市（`MapArt.drawBase`） | — |
 | 海（實景地圖） | `Palette.water` | — |

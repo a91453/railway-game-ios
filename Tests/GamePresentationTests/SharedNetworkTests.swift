@@ -100,7 +100,7 @@ final class SharedNetworkTests: XCTestCase {
         XCTAssertThrowsError(try SharedNetwork(data: JSONSerialization.data(withJSONObject: file))) {
             XCTAssertEqual($0 as? SaveError, .damaged)
         }
-        XCTAssertThrowsError(try SharedNetwork(contentsOf: directory.appendingPathComponent("missing.alongtheline"))) {
+        XCTAssertThrowsError(try SharedNetwork(contentsOf: directory.appendingPathComponent("missing.railwaygame"))) {
             XCTAssertEqual($0 as? SaveError, .fileSystem)
         }
     }

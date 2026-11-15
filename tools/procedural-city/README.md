@@ -2,8 +2,8 @@
 
 The app's 3D city preview (ARCHITECTURE decision 152) is the web page of
 [Procedural Tokyo](https://github.com/jeantimex/tokyo) (MIT), copied into `Web/CityView/` and adapted to
-Taiwan (`Web/CityView/ALONG_THE_LINE.md`). Since decision 163 the game's website serves the built page at
-`https://www.alongthelinegame.com/city/` and the app opens it there; the built page lives in the website's
+Taiwan (`Web/CityView/GAME_ADAPTATION.md`). Since decision 163 the game's website serves the built page at
+`/city/` and the app opens it there; the built page lives in the website's
 `site/city/` (the `Website/` folder of the private reference repository), not in this repository. The research that
 led to it: `docs/research/PROCEDURAL_CITY_STUDY.md`.
 
@@ -21,6 +21,9 @@ python3 tools/procedural-city/taiwan_area.py buildings 2026-09-23.1 taichung Web
 python3 tools/procedural-city/taiwan_area.py osm taiwan.pbf taichung Web/CityView/data/raw/taichung
 tools/procedural-city/build_city_view.sh ../railway-reference-private/Website/site/city
 ```
+
+The page's source names the neutral game (`tools/brand/README.md`); the build puts the released game's name into
+the built page from `../railway-assets-private/branding/game-brand.json` (or the file `GAME_BRAND_FILE` names).
 
 Then deploy the website (its README). The app opens the website's page, so a new page reaches players without a
 new build of the app.

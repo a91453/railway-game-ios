@@ -1,4 +1,4 @@
-# 遊戲引擎與 AI 工具：作者列出的 16 個專案能幫《沿線》什麼
+# 遊戲引擎與 AI 工具：作者列出的 16 個專案能幫《railway game ios》什麼
 
 日期：2026-10-15。基準：`railway-game-ios` main `b498425`。
 讀者：作者，以及之後做經濟平衡、無頭模擬、3D 城市、配樂的 session。
@@ -18,7 +18,7 @@
 
 ## 0. 一頁摘要
 
-《沿線》不是用 Unity、Unreal、Godot 做的。它是三塊：
+《railway game ios》不是用 Unity、Unreal、Godot 做的。它是三塊：
 - Swift 的決定論核心 `GameCore`，Linux 上可以測；
 - SwiftUI App；
 - 網站上的 Three.js 3D 城市 `Web/CityView/`。
@@ -42,13 +42,13 @@
 | 13 | [Tencent-Hunyuan/HunyuanVideo-Foley](https://github.com/Tencent-Hunyuan/HunyuanVideo-Foley) | 由影片＋文字生音效 | Tencent Hunyuan Community License | **不能用**：`LICENSE:34` 禁止在歐盟、英國、南韓使用或散布 Output，App 是全球上架 |
 | 14 | [Tencent-Hunyuan/Hunyuan-GameCraft-1.0](https://github.com/Tencent-Hunyuan/Hunyuan-GameCraft-1.0) | 可用鍵盤操控的遊戲影片生成 | 同上的地區限制 | **不能用**：地區限制；還要 24–80 GB 的 GPU |
 | 15 | [SkyworkAI/Matrix-Game](https://github.com/SkyworkAI/Matrix-Game) | 即時「神經算繪」的世界模型（第 4 版把低多邊形畫面畫成寫實影片） | MIT／Apache-2.0 | 只取想法：遊戲邏輯留在引擎、畫面另外算，和 GameCore 是唯一權威同一個分法。要 A100 80 GB，權重只有三個場景 |
-| 16 | [Claude 外掛市集的 Unity 外掛](https://claude.com/marketplace/plugins/unity)（[unity-agent-plugin](https://github.com/Unity-Technologies/unity-agent-plugin)） | Unity 官方的 Claude Code skill 集（UI、2D、內購、在地化、多人……） | Unity Companion License：只限依賴 Unity 的專案 | 不適用：《沿線》不是 Unity 專案，授權不涵蓋；只取想法 |
+| 16 | [Claude 外掛市集的 Unity 外掛](https://claude.com/marketplace/plugins/unity)（[unity-agent-plugin](https://github.com/Unity-Technologies/unity-agent-plugin)） | Unity 官方的 Claude Code skill 集（UI、2D、內購、在地化、多人……） | Unity Companion License：只限依賴 Unity 的專案 | 不適用：《railway game ios》不是 Unity 專案，授權不涵蓋；只取想法 |
 
 **三句話**：
 - 對這個遊戲最直接有用的是 #1：它有一套「量了才說」的平衡流程。這個 repo 本來就有量測工具
   （`BalanceReportTests` 等），缺的是流程，這次補上。
 - 引擎外掛（#2–#6、#8、#10、#16）共同的做法是**讓 AI 能無頭跑遊戲、拿到結構化的結果**。
-  《沿線》的 GameCore 已經能無頭跑，但只能透過報告測試、印 Markdown。做一個「操作＋JSON」的入口
+  《railway game ios》的 GameCore 已經能無頭跑，但只能透過報告測試、印 Markdown。做一個「操作＋JSON」的入口
   是下一個值得做的（第 3.1 節）。
 - 生成模型裡只有 ACE-Step 的授權乾淨；騰訊兩個有地區限制，Ubisoft CHORD 只限研究。
   ACE-Step 要加依賴，也要改決策 219 §2.2（聲音全部自己合成），所以等作者。
@@ -215,7 +215,7 @@ OVERVIEW 由規劃 session 維護，這次只記下差異，不改。
 - 春節 LoRA 是 OpenRAIL-M，不用。
 
 **和現在的衝突**：
-- 決策 219 定的是 MML Studio → 《沿線》樂譜 → 自己的合成器。§2.2 明確不用音色庫，以保留預告片的音色。
+- 決策 219 定的是 MML Studio → 《railway game ios》樂譜 → 自己的合成器。§2.2 明確不用音色庫，以保留預告片的音色。
 - `tools/audio/make_game_audio.py --check` 要求重新產生的檔案逐位元相同。生成的音檔做不到，
   只能把 WAV 當資產提交，`manifest.json` 記 prompt、種子、模型雜湊與 SHA-256。
 - 每段循環要剪成剛好 1,843,200 個取樣（38.4 秒）。

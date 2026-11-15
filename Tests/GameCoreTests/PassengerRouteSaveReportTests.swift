@@ -9,7 +9,7 @@ import XCTest
 ///     PASSENGER_ROUTE_SAVE=<file> swift test --filter PassengerRouteSaveReportTests
 ///
 /// `PASSENGER_ROUTE_SAVE` is a save (`SavedGame`, or a shared
-/// `.alongtheline` file holding one under `game`). `PASSENGER_ROUTE_UNTIL`
+/// shared save file holding one under `game`). `PASSENGER_ROUTE_UNTIL`
 /// is how many game seconds to run (default 120, which crosses 06:00 from
 /// 05:59:57); `PASSENGER_ROUTE_SPEED` the speed (a ``GameSpeed`` raw
 /// value, default `x60`). `PASSENGER_ROUTE_DUMP`, when set, is where the

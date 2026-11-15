@@ -39,7 +39,7 @@ import { readOverture, usageOf, storeysOf, LEVEL, roadOutlines, unionStats } fro
 const TERRAIN_STEP = 5; // metres, matches the GSI 5 m DEM
 
 const area = resolveArea();
-// Along the Line (decision 152): a Taiwanese area has no PLATEAU, GSI or Overpass data (see taiwan.mjs).
+// railway game ios (decision 152): a Taiwanese area has no PLATEAU, GSI or Overpass data (see taiwan.mjs).
 const taiwan = area.source === 'taiwan';
 const proj = makeProjection(...area.origin);
 const t0 = Date.now();
@@ -51,7 +51,7 @@ const bounds = { minX, maxX, minZ, maxZ };
 const inBounds = (x, z) => x >= minX && x <= maxX && z >= minZ && z <= maxZ;
 log(`area ${area.id}: ${(maxX - minX).toFixed(0)} x ${(maxZ - minZ).toFixed(0)} m around [${area.origin}]`);
 
-// Along the Line: level ground at 0 m over the area, in the shape buildHeightGrid returns.
+// railway game ios: level ground at 0 m over the area, in the shape buildHeightGrid returns.
 function flatGrid({ minX, maxX, minZ, maxZ }, step) {
   const w = Math.floor((maxX - minX) / step) + 1, h = Math.floor((maxZ - minZ) / step) + 1;
   return { x0: minX, z0: minZ, step, w, h, data: new Float32Array(w * h), stats: { fallback: 0, holes: 0 } };
@@ -215,7 +215,7 @@ log(`buildings: ${nB} kept from ${bstats.files} files (${bstats.dup} duplicates 
 log(`  LOD2 shells: ${bstats.surfaces} surfaces`);
 log(`  height median ${pct(bstats.heights, 0.5).toFixed(1)} m, p95 ${pct(bstats.heights, 0.95).toFixed(1)} m, max ${pct(bstats.heights, 1).toFixed(1)} m`);
 const absDiff = bstats.baseDiff.map(Math.abs);
-if (absDiff.length) log(`  building base vs DEM: median |d| ${pct(absDiff, 0.5).toFixed(2)} m, p95 ${pct(absDiff, 0.95).toFixed(2)} m`); // (Along the Line: none without PLATEAU solids)
+if (absDiff.length) log(`  building base vs DEM: median |d| ${pct(absDiff, 0.5).toFixed(2)} m, p95 ${pct(absDiff, 0.95).toFixed(2)} m`); // (railway game ios: none without PLATEAU solids)
 log(`  usage codes: ${Object.entries(bstats.usage).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(' ')}`);
 
 const seenRoads = new Set();
@@ -583,7 +583,7 @@ fs.writeFileSync(path.join(area.outDir, 'terrain.bin'), Buffer.from(grid.data.bu
 // junction nodes with traffic signals (indices into roads.json nodes), for the traffic simulation
 const signalIds = new Set(landRaw.signals);
 roadsOut.signals = graph.nodes.map((n, i) => (signalIds.has(n.id) ? i : -1)).filter((i) => i >= 0);
-if (taiwan) roadsOut.rightHand = 1; // (Along the Line: the traffic keeps right; src/world/traffic.js)
+if (taiwan) roadsOut.rightHand = 1; // (railway game ios: the traffic keeps right; src/world/traffic.js)
 fs.writeFileSync(path.join(area.outDir, 'roads.json'), JSON.stringify(roadsOut));
 fs.writeFileSync(path.join(area.outDir, 'rails.json'), JSON.stringify(rails));
 fs.writeFileSync(path.join(area.outDir, 'structures.json'), JSON.stringify(extras.structures));
@@ -608,7 +608,7 @@ const manifest = {
   roads: 'roads.json', rails: 'rails.json', structures: 'structures.json',
   ...(backdrop ? { backdrop } : {}),
   ...(area.view ? { view: area.view } : {}),
-  ...(taiwan ? { utcOffset: 8, zone: 'Taiwan' } : {}), // (Along the Line: Taiwan's clock, UTC + 8 h; src/main.js)
+  ...(taiwan ? { utcOffset: 8, zone: 'Taiwan' } : {}), // (railway game ios: Taiwan's clock, UTC + 8 h; src/main.js)
   // street-level bridge decks: road polygons marked with a deck, and street objects, follow these instead of the terrain (src/shared/decks.js)
   decks,
   tiles: tileList,

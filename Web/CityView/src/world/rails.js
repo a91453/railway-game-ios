@@ -88,7 +88,7 @@ export function sections(pts, ground) {
 
 // ground(x, z): terrain height; cover(x, z): what is overhead for a track passing there — the terrain, or a
 // bridge deck (makeCover in src/shared/decks.js).
-// (Along the Line: trainOptions go to Trains, decision 161)
+// (railway game ios: trainOptions go to Trains, decision 161)
 export async function buildRailways(url, ground, cover = ground, trainOptions = {}) {
   const lines = await (await fetch(url)).json();
   const concrete = [0.64, 0.64, 0.62], steel = [0.33, 0.31, 0.3], white = [1, 1, 1];

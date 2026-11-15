@@ -267,7 +267,7 @@ export class Atmosphere {
   environmentSky() {
     const material = this.skyMaterial = new SkyMaterial({ sun: false, moon: false, ground: true, groundAlbedo: new THREE.Color(0.22, 0.21, 0.19) });
     Object.assign(material, this.textures);
-    // Along the Line (decision 152): the environment map is baked from the world's origin, on the ground at 0 m.
+    // railway game ios (decision 152): the environment map is baked from the world's origin, on the ground at 0 m.
     // At Kaohsiung's latitude (22.6°) a view from exactly there gives the sky NaNs, and the whole city goes black;
     // at Tokyo's it does not. Raised 10 m along the local up (the matrix's second column), it is right everywhere.
     material.worldToECEFMatrix.copy(this.worldToECEF);

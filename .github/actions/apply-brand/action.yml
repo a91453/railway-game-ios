@@ -1,0 +1,36 @@
+name: Apply the game's brand
+description: >-
+  Puts the released game's name, save extension, website and mailbox (the
+  repository secret GAME_BRAND_JSON) into the working copy before Xcode
+  builds it (tools/brand/apply_brand.py), masking each value in the logs.
+  With no secret the build stays the neutral game, unless required.
+inputs:
+  brand:
+    description: The brand JSON (secrets.GAME_BRAND_JSON).
+    required: false
+    default: ""
+  required:
+    description: "'true' fails the job when there is no brand (a release)."
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Apply the brand
+      shell: bash
+      env:
+        BRAND: ${{ inputs.brand }}
+        REQUIRED: ${{ inputs.required }}
+      run: |
+        if [[ -z "$BRAND" ]]; then
+          if [[ "$REQUIRED" == true ]]; then
+            echo "::error::The repository secret GAME_BRAND_JSON is not set: a release needs the game's name (tools/brand/README.md)."
+            exit 1
+          fi
+          echo "No GAME_BRAND_JSON: this build is the neutral game."
+          exit 0
+        fi
+        file="$RUNNER_TEMP/game-brand.json"
+        printf '%s' "$BRAND" >"$file"
+        python3 -I tools/brand/apply_brand.py "$file" --github-mask
+        rm -f "$file"

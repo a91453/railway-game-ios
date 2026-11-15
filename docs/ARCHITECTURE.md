@@ -3343,7 +3343,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 92. 城市建造 P0-A：玩家放置建物
 
-2026-10-08，作者：「《沿線》現在最大的玩法缺口，是玩家能建鐵路，卻不能真正親手建造城市」，要求立刻插入「城市建造 P0」，P0-A 先做直接建築；驗收：開啟空白地圖 → 選擇小住宅 → 點選地面 → 看到房子 → 儲存並重新開啟仍然存在。建物用自由的世界座標擺放，64 m 的土地格只負責統計與規劃。號碼依工作登記 #231：存檔 21（19 是平溪線劇本，20 是八種土地用途）、golden schema 41（40 是八種土地用途）。參考庫沒有玩家放置建物的實作（`Ci/` 的 build mode 是蓋地鐵路線，`Railway/taipei_gta_reference/` 的 `buildMode` 是載入場景），所以是原生（gap → 原生）。
+2026-10-08，作者：「《railway game ios》現在最大的玩法缺口，是玩家能建鐵路，卻不能真正親手建造城市」，要求立刻插入「城市建造 P0」，P0-A 先做直接建築；驗收：開啟空白地圖 → 選擇小住宅 → 點選地面 → 看到房子 → 儲存並重新開啟仍然存在。建物用自由的世界座標擺放，64 m 的土地格只負責統計與規劃。號碼依工作登記 #231：存檔 21（19 是平溪線劇本，20 是八種土地用途）、golden schema 41（40 是八種土地用途）。參考庫沒有玩家放置建物的實作（`Ci/` 的 build mode 是蓋地鐵路線，`Railway/taipei_gta_reference/` 的 `buildMode` 是載入場景），所以是原生（gap → 原生）。
 
 1. **資料**（GameCore，`City/PlacedBuilding.swift`）：`PlacedBuilding { id, kind, centre }`，`PlacedBuildingID` 從 1 依序配發、不重用；`PlacedBuildingKind` 是 `house`（16 m 見方）、`shop`（24 m）、`office`（32 m），用途分別是住宅、商業、辦公。建物是邊與南北、東西平行的正方形，涵蓋 `centre − side/2 ..< centre + side/2`。和城市自己的建物（決策 74，一格一棟、由城市產生與升級）分開存：`GameWorld.placedBuildings`。
 2. **指令** `placeBuilding(_:at:)`：整個正方形要在世界裡（`outOfBounds`），不和其他玩家建物重疊（`buildingOverlaps`，碰到邊不算），軌道中心線要離正方形至少 2 m（`buildingOnTrack`，檢查每條邊的折線與擴大 2 m 的正方形，整數運算），車站的點也要離 2 m（`buildingOnStation`），依這個順序檢查；失敗時世界不變。免費、還沒有人住：費用、拆除、選取與人口和就業是 P0-C。
@@ -4081,7 +4081,7 @@ GameCore、存檔、golden、replay 都不變。
 2026-10-09，作者的評估把「玩家問題回報入口、版本資訊」列為開放測試前必做。之前設定頁只有音樂與音效；App 裡找不到版本，測試者回報時說不出是哪一版。
 
 1. **版本**：設定頁多一段「關於」，第一列是 `CFBundleShortVersionString (CFBundleVersion)`，例如「0.4.0 (12)」，可以選取複製。
-2. **回報問題**：`ShareLink` 分享一則寫好的訊息（`ProblemReport`）：三個問題（發生了什麼事、原本預期、怎麼重現），下面是版本、系統與機型代碼（`utsname.machine`，例如 `iPhone17,1`），從遊戲選單打開時再加一行遊戲的狀態（`GameSession.problemReportGame`：空白或實景、自由或經營、劇本的 id、時間、現金、站數、路線數、列車數、存檔版本）。主旨是「沿線 0.4.0 (12)：問題回報」。
+2. **回報問題**：`ShareLink` 分享一則寫好的訊息（`ProblemReport`）：三個問題（發生了什麼事、原本預期、怎麼重現），下面是版本、系統與機型代碼（`utsname.machine`，例如 `iPhone17,1`），從遊戲選單打開時再加一行遊戲的狀態（`GameSession.problemReportGame`：空白或實景、自由或經營、劇本的 id、時間、現金、站數、路線數、列車數、存檔版本）。主旨是「<遊戲名> 0.4.0 (12)：問題回報」。
 3. **不寫死收件者**：App 不知道也不放任何人的信箱或網址（這個 repository 是公開的，也不放個人資料）；玩家在分享表選郵件、訊息或其他 App，按下傳送前什麼都沒有送出。TestFlight 的測試者也可以照舊用 TestFlight 的截圖回饋，說明寫在這一段的註腳。
 4. **文字不進字串目錄**：新的字用 `DisplayLanguage.app` 選語言、`Text(verbatim:)` 顯示，和其他 GamePresentation 寫的文字一樣，翻譯檢查不需要新的條目。
 
@@ -4759,10 +4759,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 參考檢查：私有參考庫（`581db83`）的 city_world 有台灣風格的地塊生成器、圖塊 LOD 與設施 pool，但都是壓縮過的打包檔，缺 `regionDriver`（研究文件 §4）；這一步照作者的選擇用 Tokyo 可讀的原始碼。外部專案：[jeantimex/tokyo](https://github.com/jeantimex/tokyo)（`17c8bbe`，MIT，Copyright (c) 2026 Yong Su），整個網頁原樣放進 `Web/CityView/`；它打包的程式庫 three.js（MIT）、postprocessing（Zlib）、N8AO（ISC）、takram three-geospatial（MIT）、ez-tree（MIT）、lil-gui（MIT）、earcut（ISC），貼圖是 Poly Haven（CC0）。授權全文隨 App 提供（`Resources/Licenses/CityView-NOTICES.md`，`tools/procedural-city/notices.mjs` 產生）。
 
-1. **照搬**：`Web/CityView/` 是 Tokyo 的原始碼（`src/`、`tools/pipeline/`、`index.html`、`package.json` 與 lock）。改的地方都標了「Along the Line」，清單在 `Web/CityView/ALONG_THE_LINE.md`：
+1. **照搬**：`Web/CityView/` 是 Tokyo 的原始碼（`src/`、`tools/pipeline/`、`index.html`、`package.json` 與 lock）。改的地方都標了「railway game ios」，清單在 `Web/CityView/GAME_ADAPTATION.md`：
    - 編譯工具多一種地點來源 `source: 'taiwan'`（`tools/pipeline/taiwan.mjs`、`config.mjs`、`compile.mjs`）：沒有 PLATEAU、國土地理院的資料，改讀下面的 Overture 與 OSM；地面先是 0 m 的平地。
    - 台灣靠右行駛：`roads.json` 帶 `rightHand`，車流（`traffic.js`）與標線（`markings.mjs`：方向箭頭、停止線在右半邊）照它；不畫日文的「止まれ」。
-   - 店招字型先用繁體中文（PingFang TC）；時鐘用地點的時區（台灣 UTC+8，原本固定 JST）；載入畫面的「東京」改成「沿線」。
+   - 店招字型先用繁體中文（PingFang TC）；時鐘用地點的時區（台灣 UTC+8，原本固定 JST）；載入畫面的「東京」改成遊戲名。
    - 環境貼圖修正：Tokyo 從原點、地面 0 m 的位置烘焙天空的環境貼圖，在高雄的緯度（22.6°）天空會算出 NaN，整個畫面變黑（在東京的緯度不會）。烘焙的位置抬高 10 m（`atmosphere.js` 的 `environmentSky`）。用 headless Chromium 逐一關掉效果、移動原點找到的。
 2. **台灣的資料**（`tools/procedural-city/taiwan_area.py`）：高雄車站周圍 1.5 × 1.5 km。
    - 建物：Overture buildings（release `2026-09-23.1`，DuckDB 讀 S3），足跡與 Overture 知道的樓層、高度、用途。
@@ -5126,7 +5126,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    - 金鑰只讀環境變數 `MESHY_API_KEY`，不寫進任何檔案；這個 repo 是公開的。
    - Meshy 條款：付費方案的使用者擁有輸出（§3.2），輸出裡的 AI 識別資訊不能移除（§2.4），所以 `pack` 原樣保留 GLB 的 `asset` 與 `extras`。
 2. **3D 城市的臺中車站**：`taiwan_area.py` 與 `config.mjs` 多一個地點 `taichung`（臺鐵臺中站 24.1371°N、120.6869°E，1.5 × 1.5 km），資料照決策 152 的流程（Overture `2026-09-23.1`、osmtoday 2026-10-11 的整包檔）：Overture 框內 2,136 棟、區內留下 1,404 棟（1,229 棟依足跡估樓層），14 段高架鐵路（`臺中線`、`臺中線 (山線)` 與沒有名字的站內線），508 塊店招，41 個圖塊 2.1 MB。開場的視角從西邊沿著高架看進車站。`build_city_view.sh` 編譯兩個地點；高雄的圖塊重新編譯後逐位元組相同（只有 manifest 的編譯時間不同，保留原檔）。打包的頁面從 12 MB 變 14 MB。
-3. **列車**（`Web/CityView/src/world/trains.js`，標 Along the Line）：
+3. **列車**（`Web/CityView/src/world/trains.js`，標 railway game ios）：
    - 台灣的地點（manifest 的 `zone`）裡，`railway=rail` 都是臺鐵，各條路徑輪流是區間車（銀色車身、黃色帶）與自強號（白色車身、橘色帶）。Tokyo 的路線表照舊。
    - 有 Meshy 模型時（`models/trains/index.json`），列車改畫模型：頭尾用頭車模型（尾車轉 180°），中間用中間車；只有一個時每節都用它。模型轉成駕駛室朝前、縮放成車長 × 2.9 m × 3.9 m，放在軌面上。
    - 沒有模型時（目前 `index.json` 是 `{}`）照舊畫方塊，塗裝是臺鐵的顏色。
@@ -5220,7 +5220,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 2026-10-11，作者決定（接 #367：載入畫面用遊戲的 logo、署名置中一行、GitHub 連結換成官網）。號碼依工作登記 #231：決策 163；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
 
-1. **頁面在官網**：決策 152 的網頁（`Web/CityView/` 建置的結果）不再打包進 App，改放在官網 `https://www.alongthelinegame.com/city/`。官網的原始碼是私有參考庫的 `Website/`（Cloudflare Pages，作者手動部署），建置結果放在它的 `site/city/`。`tools/procedural-city/build_city_view.sh` 改成輸出到指定的資料夾，授權說明（`notices.mjs`）寫在頁面旁邊的 `NOTICES.txt`。App 少了約 15 MB；頁面更新不必重新送審，但要先部署官網，App 裡才看得到。
+1. **頁面在官網**：決策 152 的網頁（`Web/CityView/` 建置的結果）不再打包進 App，改放在官網 `<website>/city/`。官網的原始碼是私有參考庫的 `Website/`（Cloudflare Pages，作者手動部署），建置結果放在它的 `site/city/`。`tools/procedural-city/build_city_view.sh` 改成輸出到指定的資料夾，授權說明（`notices.mjs`）寫在頁面旁邊的 `NOTICES.txt`。App 少了約 15 MB；頁面更新不必重新送審，但要先部署官網，App 裡才看得到。
 2. **App 開官網的網址**：`CityView3D` 的 WKWebView 直接讀 `CityViewArea.pageAddress`（`…/city/?area=kaohsiung&radius=400&clouds=0&birds=0&traffic=0`，和決策 152 一樣的輕量版）。決策 152 的本機伺服器（`CityViewServer`）與 GamePresentation 的 `CityViewServing` 拿掉，`Resources/CityView/` 與 `project.yml` 的資料夾參照也拿掉。決策 152 補充裡伺服器的連線問題（UI 測試的 `-1005`）、退到背景就關閉，都隨伺服器一起不需要了。
 3. **只留在 `/city/`**：GamePresentation 的 `CityViewPage.opensInView` 決定網頁可以自己開哪些網址：官網 `https` 的 `/city` 與底下的頁面、沒有主機的 `about:blank`。其他 `https` 連結不離開遊戲：在 App 裡用 Safari 的畫面（`SFSafariViewController`）蓋在 3D 城市上開，按「完成」回到 3D 城市（作者要求，不另外開 Safari）。Linux 上有 `opensInView` 的測試。
    - **官網按鈕**：頁面右下的「官網」按鈕只在瀏覽器裡顯示，給從分享連結直接進 `/city/` 的人回首頁。遊戲開的網址帶 `app=1`，頁面看到就拿掉按鈕（作者同意）：玩家已經在遊戲裡，官網改放在設定的「關於」一節（「官網」一行，`GameWebsite.home`，同樣在 App 裡用 Safari 的畫面開）。
@@ -7729,7 +7729,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 開發：各部分上下堆疊，版面是幾個固定的框（`PostcardLayout`），Linux 測得到不重疊；
    - 美術：標題是卡上最大的字，站長的圓章壓在地圖右下角，有人味但不擋路網。
    - 參考庫的島嶼城市「分享圖」也是 1080×1350（4:5）、上圖下字、四格數字，結構相同（下面的對照表）。
-3. **卡上的內容**（`NetworkPostcard`，GamePresentation）：小字「ALONG THE LINE ・ 沿線」；公司名稱（遊戲裡沒有公司名，玩家在這裡寫，存在裝置上，`@AppStorage("postcard.companyName")`；去頭尾空白、換行變空白、最多 16 字，空的時候是「我的鐵道」）；遊戲日期・公司稱號（決策 181）；四格數字：路線數、車站數、路網長度、昨日旅客（`CompanyFigures`，和公司等級同一份）。
+3. **卡上的內容**（`NetworkPostcard`，GamePresentation）：小字的英中遊戲名；公司名稱（遊戲裡沒有公司名，玩家在這裡寫，存在裝置上，`@AppStorage("postcard.companyName")`；去頭尾空白、換行變空白、最多 16 字，空的時候是「我的鐵道」）；遊戲日期・公司稱號（決策 181）；四格數字：路線數、車站數、路網長度、昨日旅客（`CompanyFigures`，和公司等級同一份）。
 4. **地圖**：用地圖本身的畫法（`MapArt.drawBase`、`drawMap`、`drawTrains`：地面、城市的建物、軌道、路線色帶、車站與站名底牌、列車逐節、玩家建物暖黃），不另畫一套。範圍是蓋好的東西（`WorldRegion.built`），至少 256 m 寬，四周留 8%；還沒蓋時是整張地圖。投影 `PostcardProjection` 把範圍塞進卡上的地圖框，最近不超過地圖最近的縮放（`MapScale.largestSize`）。不畫候車人數、擁擠環、服務範圍、等待：明信片是路網的樣子，不是問題清單。時間固定在白天（不加夜色）。
 5. **署名**：明信片不畫 Apple 地圖或 OSM 底圖（兩者是另外的 View，畫不進 `ImageRenderer` 的圖），只畫遊戲自己的地面。所以在實景地圖上只欠鐵道的署名，寫在地圖框下面：`DataSourceCredits.mapCorner(baseMap: false, railways: true)`（「鐵道：© OpenStreetMap · 交通部 TDX」）；自己的地圖不寫。之後若要把底圖畫進去（`MKMapSnapshotter`、MapLibre 的 snapshotter），署名改成 `baseMap: true` 那一行。
 6. **淺色與深色**：同一個版面，顏色全取 `Theme`（卡底 `panel`、字 `textPrimary`／`textSecondary`、小字 `primary`、數字格 `chip`）與 `Palette`（外框與地圖框 `ink`、地圖本身）。預設跟著手機的外觀，可以切換；`ImageRenderer` 照選的外觀畫。
@@ -7751,7 +7751,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **沒有驗證的**：畫面與輸出的圖（SwiftUI、`ImageRenderer`，只在 macOS CI 編譯）；深色版 `ImageRenderer` 是否照選的外觀解析 `Theme`／`Palette` 的動態色、實機上分享到相簿與 LINE。沒有加 UI 測試：選單多一列、面板打開，留給實機看。
 
-**之後的修正：v2 版面（2026-10-14，遊戲規劃 session 定案 C）**。作者在實機看了高鐵示範的明信片，說「版面有點醜」「那個圓形真的不行」。三個方案在 `docs/art/postcard-v2-2026-10-14/`（A 乾淨海報、B 站長帶、C 隨路網取景）；定 C：站長頭像在標題旁，直長的路網旁邊一欄放路線圖例與數字，橫長的路網地圖框從標題下填到數字列上方、兩條以上的路線圖例在地圖下一行（理由在該目錄的 README）。三個方案都改掉這幾點：站長不再是凸出卡片、壓住地圖框的圓章（A 不放，B 放在底部帶子裡，C 放在標題旁）；地圖框照路網的長寬比、四周同樣邊距，實景地圖畫出海；路線簡化成平行細線、站只畫小圓點、不畫列車，站名照第 3 點的底牌避開線；標題只寫一次（拿掉「ALONG THE LINE ・ 沿線」）；數字最多三個，0 的不顯示。存檔、golden、GameCore 都不動。
+**之後的修正：v2 版面（2026-10-14，遊戲規劃 session 定案 C）**。作者在實機看了高鐵示範的明信片，說「版面有點醜」「那個圓形真的不行」。三個方案在 `docs/art/postcard-v2-2026-10-14/`（A 乾淨海報、B 站長帶、C 隨路網取景）；定 C：站長頭像在標題旁，直長的路網旁邊一欄放路線圖例與數字，橫長的路網地圖框從標題下填到數字列上方、兩條以上的路線圖例在地圖下一行（理由在該目錄的 README）。三個方案都改掉這幾點：站長不再是凸出卡片、壓住地圖框的圓章（A 不放，B 放在底部帶子裡，C 放在標題旁）；地圖框照路網的長寬比、四周同樣邊距，實景地圖畫出海；路線簡化成平行細線、站只畫小圓點、不畫列車，站名照第 3 點的底牌避開線；標題只寫一次（拿掉英中遊戲名那一行）；數字最多三個，0 的不顯示。存檔、golden、GameCore 都不動。
 
    **實作**（GamePresentation，Linux 測得到）：
    - `NetworkPostcard`：拿掉小字一行，遊戲名 `wordmark` 只在右下角。數字 `figures(lines:figures:in:)` 照昨日旅客、路網長度、車站、路線的順序，去掉 0 的，最多三個（`figureLimit`）。兩條以上的路線有圖例 `legend`（線號照 `LineBadge.codes(for:)`），放不下時最後一格寫「+N」（`legendEntries(slots:)`）。`shape`：地圖範圍的高比寬多一成以上就是直長，否則橫長。
@@ -7876,12 +7876,12 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - MMLKit 目前只檢查語法，沒有音符事件、播放或 MIDI，這些在 JS 核心 `dist/core.js`；
    - MML Studio 的音檔輸出要用音色庫，作者自己錄的音色庫不在 MIT 授權內。
 
-   所以建置時用 Node 執行 `dist/core.js` 取音符事件，轉成《沿線》樂譜（提交進 repo），再由 `make_game_audio.py` 的合成器產生音檔。Python 不解析 MML，只有一份解析器。
+   所以建置時用 Node 執行 `dist/core.js` 取音符事件，轉成《railway game ios》樂譜（提交進 repo），再由 `make_game_audio.py` 的合成器產生音檔。Python 不解析 MML，只有一份解析器。
 3. **四個階段**：
    - 第一階段（P0＋P1）：產製流程、`tools/audio/manifest.json`（來源、SHA-256、響度、循環接縫），加上三種官方到站鈴，依車站自動套用：觀光（服務範圍有景點）> 都會轉運（2 條以上路線或有高鐵）> 地方小站（現有的鈴）。不動 GameCore。
    - 第二階段：玩家逐站指定鈴聲（GameCore 一個只給畫面讀的欄位，升存檔版本，理由同決策 216）、60 倍速以下的發車旋律、拉近才響、跟隨列車接近大站時配樂淡出、音量分三條。
    - 第三階段（P2）：把現有配樂拆成同長度的分軌，依公司職稱（決策 181）、日夜（決策 182）、天氣與颱風加減，用 `play(atTime:)` 對齊、`setVolume(_:fadeDuration:)` 淡入淡出。
-   - 第四階段（P3）：工作坊。鋼琴捲軸直接編輯《沿線》樂譜，存檔時合成成音檔。之後才是貼上 MML（MMLKit 要先加音符事件）、MIDI 匯入與藍圖分享（P4）。
+   - 第四階段（P3）：工作坊。鋼琴捲軸直接編輯《railway game ios》樂譜，存檔時合成成音檔。之後才是貼上 MML（MMLKit 要先加音符事件）、MIDI 匯入與藍圖分享（P4）。
 4. **速度**：配樂永遠 100 bpm。
    - 600 倍：在看的列車只播那一站旋律的前 2–3 個音（0.8 秒內）。
    - 1200 倍以上：日夜層停在原來的狀態。
@@ -7903,8 +7903,8 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 開發：前三階段只有第二階段動 GameCore，和主線不搶名額；只有一份 MML 解析器。
    - 美術：鈴聲柔和，配合扁平圓角的畫風；鈴響時地圖上那一站擴散一圈，「減少動態效果」打開時不畫；面板按鈕用 SF Symbols。
    - 音樂：鈴聲用 C 大調五聲音階，疊在配樂上和諧；三軌疊起來就是現在的配樂，日夜只換編制、不換曲子。
-7. **《沿線》自己的樂譜格式**（作者 2026-10-14 追問「可以放棄 MML 相容，建立自己的格式嗎」之後定案；研究文件第 2.14 節）：
-   - 遊戲、存檔、合成器與 GameCore 只認《沿線》樂譜（`*.score.json`）：事件式，每拍 960 tick 的整數，每軌一個合成器聲音（`voice`），音有力度，另外記下高速時的動機與循環長度。
+7. **《railway game ios》自己的樂譜格式**（作者 2026-10-14 追問「可以放棄 MML 相容，建立自己的格式嗎」之後定案；研究文件第 2.14 節）：
+   - 遊戲、存檔、合成器與 GameCore 只認《railway game ios》樂譜（`*.score.json`）：事件式，每拍 960 tick 的整數，每軌一個合成器聲音（`voice`），音有力度，另外記下高速時的動機與循環長度。
    - MML 與 MIDI 降成匯入格式。官方素材照舊可以在 MML Studio 寫，轉一次；MML 原稿留著當出處。
    - 轉換時落不到整數 tick 的音一律拒絕，不四捨五入。
    - 四方理由：
@@ -7931,7 +7931,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **之後：第一階段（產製流程與三種到站鈴）**（2026-10-14，「遊戲規劃」session 派工）：號碼依 #231 都不動，寫成這個決策的續篇；GameCore、存檔版本、golden、replay 都不動。
 
-1. **《沿線》樂譜第 1 版**（`tools/audio/scores/*.score.json`，`tools/audio/score.py` 檢查）：研究文件第 2.14 節的欄位，再加兩個：`source`（出處，可省略）、`fadeOut`（結尾線性淡出的 tick，照參考 `chimeBuffer` 的結尾）。`gain` 是 0–100、`pan` 是 −100–100 的整數，整份樂譜沒有小數，之後 GameCore 不用浮點就能檢查。不認得的欄位、超出結尾的音、亂序的音都拒絕；鈴聲另守第 3 節（3 秒、4 軌、MIDI 48–96、C D E G A、動機 2–3 個音且都在前 0.68 秒內開始）。
+1. **《railway game ios》樂譜第 1 版**（`tools/audio/scores/*.score.json`，`tools/audio/score.py` 檢查）：研究文件第 2.14 節的欄位，再加兩個：`source`（出處，可省略）、`fadeOut`（結尾線性淡出的 tick，照參考 `chimeBuffer` 的結尾）。`gain` 是 0–100、`pan` 是 −100–100 的整數，整份樂譜沒有小數，之後 GameCore 不用浮點就能檢查。不認得的欄位、超出結尾的音、亂序的音都拒絕；鈴聲另守第 3 節（3 秒、4 軌、MIDI 48–96、C D E G A、動機 2–3 個音且都在前 0.68 秒內開始）。
 2. **MML 轉樂譜**：`tools/audio/mml_to_score.mjs` 用 Node 執行 `tools/audio/mml-core/core.js`（`a91453/mml-tools` `0a974f6` 的 `dist/core.js`，原樣，MIT 授權與版權聲明在旁邊，SHA-256 記在 `mml-core/README.md` 與清單）。MML 旁邊的 `名稱.json` 寫每一格的合成器聲音、用途與動機。落不到整數 tick 的音、中途換速度、V0 的音都拒絕；V1–V15 轉成力度 `round(V × 127 ÷ 15)`。`--check` 重轉每份 MML，和提交的樂譜逐字比較。
 3. **合成器讀樂譜**：`make_game_audio.py` 從樂譜合成到站鈴與動機檔，並寫出 `tools/audio/manifest.json`（來源與 SHA-256、取樣數、峰值與 RMS、最大相鄰落差、循環接縫或結尾大小，以及 `mml-core` 的 commit）。力度相對於最響的音、乘上軌的 `gain`；鐘與撥弦照舊響到自然的餘音（2.2、0.9 秒），在樂譜結尾截斷。現有的 `station-chime.wav` 改寫成樂譜 `chime-local`，**重新產生後 8 個既有音檔一個位元組都沒變**；`--check` 在暫存資料夾重做一次，逐位元組比較每個音檔與清單。三種鈴的 RMS 差超過 3 dB 時腳本停下（現在 −18.62、−15.68、−18.10 dBFS，差 2.94 dB）。
 4. **三種到站鈴**：地方小站 `station-chime.wav`（沿用）；都會轉運 `chime-metro.wav`（照搬參考 `chimeBuffer` 的 C5–E5–G5–C6、每 0.3 秒一個、1.8 秒、最後 0.06 秒淡出，音色換成我們的 `bell`）；觀光 `chime-tourist.wav`（MML 新寫：撥弦 G5 A5 C6 D6 E6 落在 C6，下面一聲輕的 C5 鐘，2.4 秒）。每種另有 0.8 秒的動機檔（前 2、3、3 個音，最後 0.12 秒淡出）。
@@ -8173,7 +8173,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 ### 223. 航空 UI 借版型：列車卡、即將進站看板、列車運用表
 
-2026-10-14。作者給了自己另外做的航空模擬器 UI 截圖，請遊戲規劃 session 看哪些能融入《沿線》。遊戲規劃 session 定的方向：**只借版型與資訊結構，外觀照《沿線》的畫風重畫**。不借深色玻璃、細線霓虹、寫實機體照片、製造商或航空公司的商標、裝飾用的細直條紋。美術 session 做預覽（`docs/art/airline-ui-borrow-2026-10-14/`，每個版型三種方案，iPhone 橫拿與 iPad 各一張，淺色、深色、灰階）。遊戲規劃 session 看過之後定案（見下）。號碼依工作登記 #231：決策 223；存檔版本、golden schema 不動。
+2026-10-14。作者給了自己另外做的航空模擬器 UI 截圖，請遊戲規劃 session 看哪些能融入《railway game ios》。遊戲規劃 session 定的方向：**只借版型與資訊結構，外觀照《railway game ios》的畫風重畫**。不借深色玻璃、細線霓虹、寫實機體照片、製造商或航空公司的商標、裝飾用的細直條紋。美術 session 做預覽（`docs/art/airline-ui-borrow-2026-10-14/`，每個版型三種方案，iPhone 橫拿與 iPad 各一張，淺色、深色、灰階）。遊戲規劃 session 看過之後定案（見下）。號碼依工作登記 #231：決策 223；存檔版本、golden schema 不動。
 
 1. **列車卡與跟隨列**（`InspectorView`、`FollowBar`）借航班卡。推薦 **A 航班條**：
    - 卡上：起訖站大字；8 點粗的進度條上騎著列車圖示（`MapGlyphTrain`）；條下寫剩餘公里。
@@ -8268,7 +8268,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 - **玩家**：一張卡就看得到「走到哪、還要多久、準不準」，不用讀一段文字。看板保留方向分組，轉乘時找得到自己的車；「前車誤點」說出誤點從哪裡來。運用表讓玩家找出閒著的車和連環誤點的時段，這是排車輛運用的玩法。
 - **開發**：卡與看板都是 GamePresentation 的推導，加 App 的畫法，不動 GameCore 與存檔。運用表若要整天的班次與每趟收入，要動 GameCore（見下）；第一步可以只做畫面的部分。
-- **美術**：版型借航空，畫法全是《沿線》的：
+- **美術**：版型借航空，畫法全是《railway game ios》的：
   - 平塗色塊、藏青外框、暖黃列車圓章；
   - 線號徽章（決策 216）放在每一列最前面；
   - 沒有玻璃、霓虹和照片。
@@ -10468,7 +10468,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 玩家：回答「從哪裡開始、現在要做什麼」，教學學的就是新遊戲玩的；兩位玩家的「太複雜」與第二列車的死結都在這裡。
 - 開發：前五個 PR 不動 GameCore、不升存檔；沿用 `Challenge`、`Scenario`、教學、紀錄與待避線工具。
 - 美術：多一個門面畫面（關卡地圖），其他用現有色票、SF Symbols 與動作規則，不加粒子、煙火。
-- 音樂：目標與過關的短旋律、星星的音，用決策 219 的合成器與《沿線》的樂句。
+- 音樂：目標與過關的短旋律、星星的音，用決策 219 的合成器與《railway game ios》的樂句。
 
 **沒有採用**：B 把教學改成第一關、其他關卡放進挑戰（第 1 關之後容易斷掉）；C 自由模式裡依人次解鎖（沒有短目標，平衡最難，要升存檔）；關掉行車控制（列車疊在一起像 bug）。預覽留在 CORE_LOOP §5.1。
 
@@ -10542,7 +10542,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 減少動態效果時只淡入淡出。
    - 趟次記錄跟著路線帳（`lineAccounts`，App 的新遊戲打開）；沒有路線帳的舊存檔不冒，錢包下的「+$」照舊。
 2. **目標打勾與旋律**（`GoalPulse`、`GoalMetCheck`、`SoundCue.goalMet`）：一步裡達成的挑戰目標（同一個挑戰，`achieved` 從空變成有日子）與城市委託（新的成功結果），在地圖中間冒一張「✓ 目標達成：每日運量」（兩個以上「達成 2 個目標」）：`pop` 進來、`confirm` 跳一下、3 秒後離開；VoiceOver 會念。同時放 `goal-met.wav`。原本的新聞與「已暫停：目標達成」照舊。
-3. **旋律**：`tools/audio/scores/goal-met.score.json`，《沿線》都會轉運鈴的樂句 C5 E5 G5 往上（125 bpm，十六分音符，撥弦），落在 C6 的鐘聲，1.2 秒、最後 0.24 秒淡出；照鈴聲的規則寫（五聲音階、C3–C7、3 秒內），用決策 219 的合成器，峰值同鈴聲。跟「音效」那條音量走（#664 的三條音量），和「蓋好了」一樣輕震一下，2 秒內只響一次。
+3. **旋律**：`tools/audio/scores/goal-met.score.json`，《railway game ios》都會轉運鈴的樂句 C5 E5 G5 往上（125 bpm，十六分音符，撥弦），落在 C6 的鐘聲，1.2 秒、最後 0.24 秒淡出；照鈴聲的規則寫（五聲音階、C3–C7、3 秒內），用決策 219 的合成器，峰值同鈴聲。跟「音效」那條音量走（#664 的三條音量），和「蓋好了」一樣輕震一下，2 秒內只響一次。
 4. **城鎮長大的環**（`TownGrowthPulse`、`TownGrowthRings`）：「長大一級」是每日旅次比成長起點（`TownGrowth.Place.base`）多了四分之一的整數倍（最多 4 倍，12 級；服務最好時約兩週一級）。午夜後升了級的車站上方擴散一圈暖黃、藏青邊的環（`builtRing`），一晚最多 3 站（長最多的先）；減少動態效果時環不擴散，只淡出。沒有聲音（太頻繁）。決策 140 的建物長高照舊。
 
 **四方**：

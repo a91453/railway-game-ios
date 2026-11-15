@@ -21,11 +21,11 @@ final class NetworkPostcardTests: XCTestCase {
 
     func testTheDemoNetworkPostcardSaysWhatTheCompanyHas() {
         let world = DemoWorld.make(in: .traditionalChinese)
-        let postcard = NetworkPostcard(world: world, companyName: "  沿線鐵道 ", in: .traditionalChinese)
+        let postcard = NetworkPostcard(world: world, companyName: "  山線鐵道 ", in: .traditionalChinese)
         let figures = CompanyFigures(world: world)
 
-        XCTAssertEqual(postcard.title, "沿線鐵道")
-        XCTAssertEqual(postcard.wordmark, "沿線")
+        XCTAssertEqual(postcard.title, "山線鐵道")
+        XCTAssertEqual(postcard.wordmark, "鐵道遊戲")
         XCTAssertEqual(
             postcard.subtitle,
             "\(world.clock.now.date.text(in: .traditionalChinese)) ・ \(CompanyRank(world: world).title.title(in: .traditionalChinese))"
