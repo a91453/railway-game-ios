@@ -1847,7 +1847,6 @@ struct LinesPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                 }
             }
-            .buttonStyle(.borderless)
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
