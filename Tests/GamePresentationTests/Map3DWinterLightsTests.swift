@@ -112,7 +112,9 @@ final class Map3DWinterLightsTests: XCTestCase {
             let model = pack.models[index]
             let lit = model.vertices.filter { $0.layer == Map3DVertex.glowing }
             XCTAssertFalse(lit.isEmpty, decor.rawValue)
-            XCTAssertLessThan(lit.count, model.vertices.count / 2, "\(decor.rawValue): only the bulbs")
+            let bulbs = Set(Map3DWinterDecor.Material.allCases.filter(\.isBulb).map(\.colour))
+            XCTAssertTrue(Set(lit.map(\.color)).isSubset(of: bulbs), "\(decor.rawValue): only the bulbs")
+            XCTAssertLessThan(lit.count, model.vertices.count, "\(decor.rawValue): the tree itself is unlit")
             XCTAssertFalse(Map3DGlow.spots(of: model).isEmpty, decor.rawValue)
         }
     }

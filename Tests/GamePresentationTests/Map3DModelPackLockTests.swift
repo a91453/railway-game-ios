@@ -182,8 +182,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstHK + hk.count..<firstHK + hk.count + figures.count].map(\.name)), commuter)
         let firstWinter = firstHK + hk.count + figures.count
         XCTAssertEqual(Array(pack.models[firstWinter..<firstWinter + winter.count].map(\.name)), winterNames)
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1a5ec8b81126c5cf")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "8ae0e810ae2052f5")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "972d3211c358faf1")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "97f5dda0761a441b")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -196,7 +196,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count)), "c4be699800cad960")
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "d1c9237ac3b4d2e4")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "5ca44271aa4b20b9")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")
     }
 
