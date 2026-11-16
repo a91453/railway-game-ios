@@ -167,6 +167,8 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 
 從 `main` **`36b5cb5`**（#2291 的合併）建置，133（`49fffa3`）之後的 #2279–#2291。TestFlight `testflight.yml` run 43782701616（run 134，2026-11-16 00:50 UTC 作者自己按，adhoc、external）：打包、簽章、檢查 IPA、上傳 build、上傳地圖包 `mappack-hongkong.aar`（地圖包版本 1）都綠，0 個警告；App Store Connect 處理與 What to Test 也綠。同一個 commit 的完整 `ci.yml` run 43783061880 綠；full lane run 43783072819 紅 1 支 UI 測試（lessons，觸控掉在列表上方的欄，不是 App 的 bug，POST-134 修測試，見 `research/HEALTH_134_2026-11-16.md` §4）。
 
+**地圖包**（作者 2026-11-16 在 App Store Connect 的 TestFlight → 素材包確認，規劃記在 #2118）：`mappack-hongkong` 版本 1（13.3 MB，iOS）已可供內部測試；外部測試那一筆已送出、正在等待審查；App Store 那一筆是「準備審查」，上架時再送。上傳 log 0 錯誤、0 警告。還沒驗的只剩實機 log 出現 `map pack mappack-hongkong used`，看到之後才派第三段（香港資料移出 App，`docs/handoff/ASSET-PACK.md`）。
+
 **玩家看得到的**：這版新增卡 `2026-11-16-134` 與 `.github/testflight-whats-new.md`（只寫 134）：香港八棟地標（#2280）、港鐵三款列車重修門窗與車頂（#2288）、機廠檢修庫與駐車棚的鐵皮屋頂（#2285）；修好：機場捷運與文湖線少發的班次（#2289，決策 784）、運用表橫拿被瀏海擋住與同一棟建物畫兩次（#2287）、收購平溪線與內灣線直接鋪島式與島式清單認錯站（#2291，決策 792；作者 11-16 問要不要進 134，五方 3.3 的 bug，併入）。
 
 **玩家看不到的**（沒寫進說明）：#2279 冬季活動外框（12/1 才開，第 4 週的塗裝任務要等 WINTER-LIVERY）、#2281 聖誕樹與燈串模型（還沒擺）、#2283 羅瓦涅米地圖包（開關關著）、#2254 分包下載第二段（App 照舊帶香港；這版第一次上傳 `mappack-hongkong`）、#2282、#2284、#2286（文件與 skill）。
