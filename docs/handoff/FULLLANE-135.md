@@ -15,4 +15,6 @@
 
 ## 驗證
 
-- 見 PR：`ios-build.yml` 的 `only_testing: Feature284To286UITests`。
+- VERIFIED（GitHub Actions，macOS，head `ebf615b`）：`ios-build.yml` 用 `only_testing: Feature284To286UITests` 手動跑（run 43947583556），整個 class 5 支全過，雙線月台那支 74.6 秒。拖曳的 x 已經是 60。PR #2320 的 `ci.yml`（43947589272）與 iOS gate（43947589591）也都綠。
+- 這次手動跑，三次長拖就把那一列帶進可見範圍，沒有用到往下的短拖。所以「短拖從動態島開始」這條路徑沒有被再跑一次；修正是依 135 的錄影與座標推出來的。下一次 full lane 若又紅在 `Cannot reveal`，先看錄影裡拖曳的起點。
+- 剩下的：無。second 組的 2 支 `RealWorldMapUITests` 紅由規劃另派。
