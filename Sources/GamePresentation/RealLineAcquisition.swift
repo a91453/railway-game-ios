@@ -1316,6 +1316,9 @@ extension RealLineLaying {
                 .filter { !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - points[index]).length <= RealLineAcquisition.junctionReach }
                 .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
         }
+        // Decision 809: whether one of its stations is the company's
+        // already, which ``StationRaising/viaductsAndShared`` stands up.
+        func sharesAStation() -> Bool { junctionStation != nil || runs.stops.indices.contains { sameName($0) != nil } }
         let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system) ?? []
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
@@ -1812,9 +1815,14 @@ extension RealLineLaying {
                 // another's drawing, track too close is met as track
                 // crossed, where their drawings cross (the Airport Express
                 // over the Tung Chung Line at Tung Chung).
+                // Decision 809: so too for a line outside Taiwan sharing a
+                // station with the company's, whose platform it runs
+                // beside (the Muurola line at Rovaniemi, bought after the
+                // Kemijärvi line, beside its platform; the other way round
+                // the two crossed there and were met so already).
                 let crosses = switch error {
                 case .trackConflict: true
-                case .trackTooClose: line.sharesALane
+                case .trackTooClose: line.sharesALane || (line.standsOnItsOwnPoints && sharesAStation())
                 default: false
                 }
                 return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)

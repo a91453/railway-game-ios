@@ -137,4 +137,35 @@ final class RovaniemiRailwaysTests: XCTestCase {
             XCTAssertGreaterThan(zip(after.runs, after.runDays).filter { $0.1 != nil }.count, 0, id)
         }
     }
+
+    /// Both lines bought on the same map, in either order: the second is
+    /// not refused for running beside the first at Rovaniemi, where the
+    /// two share the station, and both lines then run their trains
+    /// (decision 809).
+    func testBothLinesAreBoughtInOneGame() throws {
+        for order in [["vr:KJA", "vr:MUL"], ["vr:MUL", "vr:KJA"]] {
+            let session = try Self.rovaniemi()
+            for id in order {
+                let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(order): \(id)")
+                let offer = session.realLineOffer(for: line)
+                XCTAssertNil(offer.problem, "\(order): \(id)")
+                XCTAssertTrue(session.acquireRealLine(offer), "\(order): \(id): \(session.message?.text ?? "")")
+            }
+            XCTAssertEqual(session.buyableRealLines.map(\.id), [], "\(order)")
+            var played = session.world
+            var stuck = 0, longest = 0
+            for _ in 0..<(24 * 60) {
+                try played.advance(ticks: 1)
+                stuck = played.deadlockedTrains().isEmpty ? 0 : stuck + 1
+                longest = max(longest, stuck)
+            }
+            XCTAssertLessThanOrEqual(longest, 1, "\(order)")
+            for id in order {
+                let bought = try XCTUnwrap(played.acquisition(of: id), "\(order): \(id)")
+                let ran = try XCTUnwrap(played.line(id: try XCTUnwrap(bought.line)), "\(order): \(id)")
+                XCTAssertFalse(ran.assignedTrains.isEmpty, "\(order): \(id)")
+                XCTAssertGreaterThan(zip(ran.runs, ran.runDays).filter { $0.1 != nil }.count, 0, "\(order): \(id)")
+            }
+        }
+    }
 }
