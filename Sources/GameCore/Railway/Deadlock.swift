@@ -295,6 +295,9 @@ extension GameWorld {
     /// platforms, a passing loop, fewer trains). Derived on every call,
     /// never saved.
     public func deadlockedTrains() -> [TrainID] {
+        // Decision 805: with traffic control off, the trains of real runs
+        // that wait for each other in a ring, and those behind them.
+        guard isTrafficControlEnabled else { return spacingDeadlock().keys.sorted() }
         var memo = questionMemo()
         return deadlock(memo: &memo).keys.sorted()
     }

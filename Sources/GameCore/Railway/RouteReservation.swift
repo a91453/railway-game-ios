@@ -119,7 +119,11 @@ extension GameWorld {
     /// to draw at once. Empty with traffic control off. Derived on every
     /// call, never saved.
     public func routeWaits() -> [RouteWait] {
-        guard isTrafficControlEnabled else { return [] }
+        guard isTrafficControlEnabled else {
+            // Decision 805: the trains standing for good in or behind a
+            // ring, each with the train that holds it.
+            return spacingDeadlock().sorted { $0.key < $1.key }.map { RouteWait(train: $0.key, holder: $0.value, contested: [], isDeadlocked: true) }
+        }
         var memo = questionMemo()
         let deadlocked = Set(deadlock(memo: &memo).keys)
         return trains.sorted { $0.id < $1.id }.compactMap { train in

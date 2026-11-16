@@ -533,6 +533,16 @@ final class DepotReturnReportTests: XCTestCase {
         summary += "; most stranded \(stranded)"
         if stranded > 0 { summary += " (first \(strandedWhere); stranded in \(strandedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
+        // Decision 805: `DEPOT_RETURN_CHECKSUM=1` adds a checksum of the
+        // world as the report ends (FNV-1a of its JSON, keys sorted), to
+        // tell whether a change left a world bit for bit as it was.
+        if environment["DEPOT_RETURN_CHECKSUM"] != nil {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            var checksum: UInt64 = 0xcbf2_9ce4_8422_2325
+            for byte in try encoder.encode(world) { checksum = (checksum ^ UInt64(byte)) &* 0x100_0000_01b3 }
+            summary += "DEPOT_RETURN \(label) checksum \(String(checksum, radix: 16)) at \(clock(world.clock.now.seconds))\n"
+        }
         FileHandle.standardError.write(Data(summary.utf8))
         // `DEPOT_RETURN_STRICT=1`: fails on a run not sent out, a late trip or a deadlock,
         // so a finding is a command that turns red (diagnosing-bugs).

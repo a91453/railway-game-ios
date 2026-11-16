@@ -407,3 +407,10 @@ its map's airports when it opens the save).
   with `DepotReturnReportTests`' `DEPOT_RETURN_SAVE`, HEALTH-134 §3's
   world). The format is version 107's; it is here for the world, not for
   a new field.
+- `v107-terminal-platform-wait.json`: the same line and rules with
+  traffic control left on, at 16:40 of its first day: seven minutes
+  before two trains meet head-on between the airport's two terminals and
+  eight more queue behind them for eleven minutes
+  (`TerminalPlatformWaitTests`; written by the build before decision 805
+  with `DepotReturnReportTests`' `DEPOT_RETURN_SAVE`). The format is
+  version 107's; it is here for the world, not for a new field.
