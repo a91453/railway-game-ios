@@ -71,17 +71,24 @@ public struct NetworkHeightFix: Hashable, Sendable {
     }
 
     /// The button's words where the two full ones do not fit side by side
-    /// (a phone on its side): its arrow says up or down, so "4 m, bridge".
+    /// (a phone on its side): its arrow says up or down, so "End 4 m,
+    /// bridge". Decision 803: which end moves is still said; "4 m, bridge"
+    /// alone did not tell the start from the end.
     public func shortTitle(in language: DisplayLanguage) -> String {
         let metres = NetworkBuilding.lengthText(abs(change), in: language)
+        let which: String = switch ends {
+        case .end: language.text("End", "終點")
+        case .start: language.text("Start", "起點")
+        case .both: language.text("Both ends", "兩端")
+        }
         let what: String? = switch kind {
         case .bridge: language.text("bridge", "用橋")
         case .tunnel: language.text("tunnel", "走隧道")
         case .viaduct: language.text("viaduct", "走高架")
         case .raised, .lowered: nil
         }
-        guard let what else { return metres }
-        return language.text("\(metres), \(what)", "\(metres)，\(what)")
+        guard let what else { return "\(which) \(metres)" }
+        return language.text("\(which) \(metres), \(what)", "\(which) \(metres)，\(what)")
     }
 }
 

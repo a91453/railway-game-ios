@@ -17,6 +17,9 @@ public enum HeightSlideHint {
     /// to do next, and the build card offers no bridge or tunnel: that
     /// card says how to get through, and on a phone held sideways it lies
     /// over where the line would be.
+    /// Decision 803: the app marks it done with as soon as it has left the
+    /// screen once (the stretch built, cleared or drawn again), so it
+    /// shows on the first stretch alone and takes no room after.
     public static func shows(seen: Bool, card: NetworkHeightCard?, tutorialRuns: Bool) -> Bool {
         guard !seen, !tutorialRuns, let card, !card.label.isEmpty, card.fixes.isEmpty else { return false }
         return card.canRaise || card.canLower

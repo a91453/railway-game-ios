@@ -855,6 +855,8 @@ struct MapView: View {
                             }
                             .transition(.scale.combined(with: .opacity))
                         } else if insets.trailing == 0, session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsMapExtras,
+                                  // Decision 803: nor while a building tool is out.
+                                  session.buildModeChrome().showsMiniMap,
                                   miniMap?.isShown(beside: projection.visibleRegion) ?? false {
                             // Decision 568: not while a new line is picked,
                             // where the pill went over it.
@@ -3138,11 +3140,11 @@ private struct MapTopColumnOverlay: ViewModifier {
                             preview: preview, language: session.language, heights: session.networkHeightCard,
                             onRaise: { session.raiseNetworkEnd(by: $0) },
                             tutorialRuns: session.tutorial != nil,
-                            saysProblem: BuildConfirmLayout.hudSaysProblem(
-                                pillSaysProblem: MapBuildConfirm.saysProblem(session, panel: screen.panel)
-                            )
+                            pillSaysProblem: MapBuildConfirm.saysProblem(session, panel: screen.panel)
                         )
-                            .padding(.top, 12)
+                            // Decision 803: a small capsule close under
+                            // the row above, not a panel 12 points down.
+                            .padding(.top, 4)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     } else {
                         TrafficLegend(traffic: traffic, language: session.language)
@@ -3205,7 +3207,10 @@ private struct MapMarkOverlays: ViewModifier {
                 MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
                     top: max(clear.top, topColumnDepth), leading: clear.leading,
                     bottom: clear.bottom, trailing: clear.trailing
-                ), mapTop: clear.top, avoiding: confirmAvoiding)
+                // Decision 803: and off a real-world map's credits, which
+                // its licence keeps in sight: the pill moves off them
+                // rather than being cut round them.
+                ), mapTop: clear.top, avoiding: confirmAvoiding + attribution.holes)
                 // Its flags and ring are where the track and the site
                 // are, which may be by the attribution.
                 .mask { attribution.fill() }
@@ -3224,7 +3229,9 @@ private struct MapMarkOverlays: ViewModifier {
             // Decision 568: not while a new line is picked on the map,
             // where they stood over its pill.
             .overlay(alignment: .topLeading) {
-                if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                // Decision 803: nor while a building tool is out.
+                if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts,
+                   session.buildModeChrome().showsAlerts {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
                                     clearTop: max(clear.top, topColumnDepth))
                         .ambientHidden(screen.ambient != nil)
@@ -3232,7 +3239,9 @@ private struct MapMarkOverlays: ViewModifier {
             }
             // Decision 246: where the city's requests point.
             .overlay(alignment: .topLeading) {
-                if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                // Decision 803: nor while a building tool is out.
+                if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts,
+                   session.buildModeChrome().showsAlerts {
                     MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
             }
@@ -3254,15 +3263,16 @@ private struct MapMarkOverlays: ViewModifier {
             }
             // The fares, and decision 276's trips stamped full where
             // they ended; both off with the quick strip's Fares
-            // (decision 310).
+            // (decision 310), and while a building tool is out (decision
+            // 803).
             .overlay(alignment: .topLeading) {
-                if showsFaresAndStamps {
+                if showsFaresAndStamps, session.buildModeChrome().showsFaresAndStamps {
                     FareFloatMarks(session: session, camera: projection)
                         .mask { attribution.fill().mask { BelowStatusBar(top: clear.top) } }
                 }
             }
             .overlay(alignment: .topLeading) {
-                if showsFaresAndStamps {
+                if showsFaresAndStamps, session.buildModeChrome().showsFaresAndStamps {
                     TripStampMarks(session: session, camera: projection)
                         .mask { attribution.fill().mask { BelowStatusBar(top: clear.top) } }
                 }

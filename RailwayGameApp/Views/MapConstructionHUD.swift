@@ -18,10 +18,11 @@ struct MapConstructionHUD: View {
     /// Whether a tutorial runs: the line about the height cell
     /// (``HeightSlideHint``) keeps out of its way.
     var tutorialRuns = false
-    /// Decision 800: whether this HUD says why the stretch is refused;
-    /// not where the map's ✕ ✓ card says it beside its ✓, which stood
-    /// over the line here on a phone held sideways.
-    var saysProblem = true
+    /// Decision 800: whether the map's ✕ ✓ card says why the stretch is
+    /// refused, beside its ✓. Decision 803: this row never says it in
+    /// words; while the card is away (a finger still draws) a warning
+    /// sign stands for it (``BuildConfirmLayout/hudMark(refused:pillSaysProblem:joins:)``).
+    var pillSaysProblem = false
 
     /// The metres the finger has slid while held, not yet applied, and
     /// whether it holds the cell: gesture state, so a cancelled hold
@@ -54,9 +55,8 @@ struct MapConstructionHUD: View {
     /// The one-time line about the height cell (``HeightSlideHint``): the
     /// cell's own arrows, what holding and sliding it does, and a ✕. Only
     /// the ✕ takes touches; the rest lets them through to the map, as the
-    /// HUD. Decision 744: a row of the HUD, not a second card under it (a
-    /// player's report, 2026-11-14: too much floats over the map while
-    /// building).
+    /// HUD. Decision 803: under the row on the first stretch alone; once
+    /// it has left the screen it is done with, and takes no room again.
     private var heightHint: some View {
         HStack(spacing: 6) {
             VStack(spacing: 0) {
@@ -83,81 +83,90 @@ struct MapConstructionHUD: View {
             .accessibilityLabel(Text(verbatim: HeightSlideHint.dismissLabel(in: language)))
             .accessibilityIdentifier("map.constructionHUD.heightHint.dismiss")
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background { glass(inset: 0) }
+        .onDisappear { heightHintSeen = true }
     }
 
+    /// The glass and its edge behind a row, `inset` points shorter above
+    /// and below than the row's touch area; it lets touches through to
+    /// the map.
+    private func glass(inset: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 17, style: .continuous)
+        return Color.clear
+            .glassBackground(in: shape)
+            .overlay { shape.strokeBorder(Theme.panelBorder, lineWidth: 1) }
+            .padding(.vertical, inset)
+            .allowsHitTesting(false)
+    }
+
+    /// Decision 803 (the owner, 2026-11-16: too cluttered): one small
+    /// capsule, the length and the height, and a mark where the stretch
+    /// joins track or is refused while the ✕ ✓ card is away. Why it is
+    /// refused is the card's to say; the price is on its ✓ (decision 744).
     private var panel: some View {
         VStack(spacing: 6) {
             // Decision 469 (UI review 2-22): one line where it fits, the
             // figures one under another where it does not (a small phone
             // at the largest text).
             ViewThatFits(in: .horizontal) {
-                // Decision 744: no price here; the map's ✓ beside the
-                // stretch says it, and it stood twice (a player's report,
-                // 2026-11-14).
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     lengthFigure
                     Divider()
                         .frame(height: 14)
                     heightFigure
+                    mark
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    lengthFigure
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                // The capsule is drawn 34 points tall; the height cell is
+                // touched over 44. With − and + out it is as tall as they.
+                .background { glass(inset: showsStepper ? 0 : 5) }
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 10) {
+                        lengthFigure
+                        mark
+                    }
                     heightFigure
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background { glass(inset: 0) }
             }
-
-            // Refusal reason (problem) or track continuity status
-            if let problem = preview.problem {
-                if saysProblem { problemRow(problem) }
-            } else if showsHeightHint {
+            if showsHeightHint {
                 heightHint
                     .transition(.opacity)
-            } else if preview.joinsStart || preview.joinsEnd {
-                HStack(spacing: 4) {
-                    Image(systemName: "link")
-                        .font(.caption2)
-                        .foregroundStyle(Theme.textSecondary)
-                    Text(continuityText)
-                        .font(.caption2)
-                        .foregroundStyle(Theme.textSecondary)
-                }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
         .foregroundStyle(Theme.textPrimary)
-        .background {
-            // The panel itself lets touches through to the map.
-            Color.clear
-                .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .allowsHitTesting(false)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Theme.panelBorder, lineWidth: 1)
-                .allowsHitTesting(false)
-        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("map.constructionHUD")
     }
 
-    /// Why the stretch is refused.
-    private func problemRow(_ problem: String) -> some View {
-        HStack(spacing: 6) {
+    /// The row's one mark (``BuildConfirmLayout/HUDMark``).
+    @ViewBuilder private var mark: some View {
+        switch BuildConfirmLayout.hudMark(
+            refused: preview.problem != nil, pillSaysProblem: pillSaysProblem,
+            joins: preview.joinsStart || preview.joinsEnd
+        ) {
+        case .none:
+            EmptyView()
+        case .joins:
+            Image(systemName: "link")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+                .allowsHitTesting(false)
+                .accessibilityLabel(Text(verbatim: continuityText))
+                .accessibilityIdentifier("map.constructionHUD.joins")
+        case .refused:
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Theme.warning)
-            Text(problem)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.warning)
-                .fixedSize(horizontal: false, vertical: true)
+                .allowsHitTesting(false)
+                .accessibilityLabel(Text(verbatim: text("Problem: \(preview.problem ?? "")", "問題：\(preview.problem ?? "")")))
+                .accessibilityIdentifier("map.constructionHUD.problem")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
     }
 
     private var lengthFigure: some View {
@@ -222,7 +231,10 @@ struct MapConstructionHUD: View {
         }
         .padding(.horizontal, 8)
         .frame(minHeight: 44)
-        .background(hold.isHeld ? Theme.primary.opacity(0.18) : Color.clear, in: Capsule())
+        .background {
+            Capsule().fill(hold.isHeld ? Theme.primary.opacity(0.18) : Color.clear)
+                .padding(.vertical, showsStepper ? 0 : 7)
+        }
         .contentShape(Rectangle())
         .onTapGesture { showsStepper.toggle() }
         .gesture(holdAndSlide)

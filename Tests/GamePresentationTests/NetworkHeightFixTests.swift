@@ -51,9 +51,10 @@ final class NetworkHeightFixTests: XCTestCase {
         XCTAssertEqual(down.change, -10 * WorldCoordinate.unitsPerMetre)
         XCTAssertEqual(up.title(in: .english), "Raise both ends 4 m: bridge")
         XCTAssertEqual(down.title(in: .traditionalChinese), "兩端降低 10 公尺，走隧道")
-        // A phone on its side: the short words beside the arrow.
-        XCTAssertEqual(up.shortTitle(in: .english), "4 m, bridge")
-        XCTAssertEqual(down.shortTitle(in: .traditionalChinese), "10 公尺，走隧道")
+        // A phone on its side: the short words beside the arrow, which
+        // still say which end moves (decision 803).
+        XCTAssertEqual(up.shortTitle(in: .english), "Both ends 4 m, bridge")
+        XCTAssertEqual(down.shortTitle(in: .traditionalChinese), "兩端 10 公尺，走隧道")
         for fix in card.fixes {
             let trying = try lakeSession()
             trying.applyNetworkHeightFix(fix)

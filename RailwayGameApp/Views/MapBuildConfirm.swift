@@ -49,19 +49,25 @@ struct MapBuildConfirm: View {
                 if let end = build.flaggedEnd {
                     flag("flag.checkered", at: camera.screenPoint(of: end), tint: Theme.primary)
                 }
-                pill(build)
-                    .onGeometryChange(for: CGSize.self) { $0.size } action: { pillSize = $0 }
-                    // The tutorial's folded card keeps clear of it all,
-                    // not only its ✓ (Mac playtest 2026-11-08, A2).
-                    .tutorialTarget(.mapConfirmCard)
-                    .offset(placement(below: camera.screenPoint(of: build.anchor), clearance: build.clearance,
-                                       keepingOff: siteObstacles(build)))
-                    .transition(.pop(reduceMotion: reduceMotion))
+                // Decision 803: not under the finger that draws the
+                // stretch, which hid it and the stretch's end; it pops up
+                // when the finger lets go. The flags stay.
+                if BuildConfirmLayout.pillShows(fingerDraws: build.fingerDraws) {
+                    pill(build)
+                        .onGeometryChange(for: CGSize.self) { $0.size } action: { pillSize = $0 }
+                        // The tutorial's folded card keeps clear of it all,
+                        // not only its ✓ (Mac playtest 2026-11-08, A2).
+                        .tutorialTarget(.mapConfirmCard)
+                        .offset(placement(below: camera.screenPoint(of: build.anchor), clearance: build.clearance,
+                                           keepingOff: siteObstacles(build)))
+                        .transition(.pop(reduceMotion: reduceMotion))
+                }
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
         // Decision 253: a small thing popping up where the finger is.
         .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: confirmation != nil)
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: session.networkDragFinger != nil)
     }
 
     private var confirmation: BuildConfirmation? {
@@ -148,15 +154,17 @@ struct MapBuildConfirm: View {
     /// What the pill says and its buttons. Decision 800: a stretch's
     /// words stand beside its ✕ ✓ on a short screen (a phone held
     /// sideways), where under one another they left the pill no room
-    /// but over the construction HUD and the stretch.
+    /// but over the construction HUD and the stretch. Decision 803: every
+    /// build's words do (a platform's place, a building, a road, a bus or
+    /// ferry route), but the new line's, whose drawer is beside them.
     private func words(_ build: BuildConfirmation) -> some View {
         let arrangement = BuildConfirmLayout.arrangement(
-            compactHeight: verticalSizeClass == .compact, trackHasWords: build.kind == .track && build.hasWords
+            compactHeight: verticalSizeClass == .compact, hasWords: build.hasWords, ridesWithDrawer: build.kind == .line
         )
         let layout = arrangement == .beside ? AnyLayout(HStackLayout(spacing: 6)) : AnyLayout(VStackLayout(spacing: 4))
         return layout {
             if build.hasWords {
-                said(build)
+                said(build, beside: arrangement == .beside)
             }
             // Decision 646: the height is slid on the construction HUD's
             // cell; the pill keeps only ✕ ✓ and a refusal's fixes.
@@ -167,19 +175,16 @@ struct MapBuildConfirm: View {
 
     /// The pill's words: a caption, why the stretch is refused, and what
     /// its heights can do about it.
-    private func said(_ build: BuildConfirmation) -> some View {
+    private func said(_ build: BuildConfirmation, beside: Bool) -> some View {
         VStack(spacing: 4) {
             if let caption = build.caption {
-                // A long refusal wraps within the map's clear band rather
-                // than running under the card beside it (TestFlight 67.1).
-                Text(verbatim: caption)
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 8)
-                    .accessibilityIdentifier("map.build.catchment")
+                // Beside the buttons it wraps no wider than a refusal
+                // does, so the pill stays off the map's middle.
+                if beside {
+                    WidthLimit(maxWidth: BuildConfirmLayout.wordsWidth) { captionLine(caption, beside: true) }
+                } else {
+                    captionLine(caption, beside: false)
+                }
             }
             if let problem = build.problem {
                 WidthLimit(maxWidth: BuildConfirmLayout.wordsWidth) {
@@ -190,6 +195,19 @@ struct MapBuildConfirm: View {
                 heightNoteAndFixes(heights)
             }
         }
+    }
+
+    /// A long refusal wraps within the map's clear band rather than
+    /// running under the card beside it (TestFlight 67.1).
+    private func captionLine(_ caption: String, beside: Bool) -> some View {
+        Text(verbatim: caption)
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .multilineTextAlignment(beside ? .leading : .center)
+            .foregroundStyle(Theme.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 8)
+            .accessibilityIdentifier("map.build.catchment")
     }
 
     /// Decision 800: why the stretch is refused, beside the ✓ it greys;
@@ -482,6 +500,9 @@ private struct BuildConfirmation {
     var problem: String?
     /// The stretch drawn, which the pill keeps off.
     var stretch: [PlanPoint] = []
+    /// Decision 803: a finger still draws the stretch; the pill waits for
+    /// it to let go.
+    var fingerDraws = false
 
     /// Whether the pill says anything over (or beside) its buttons.
     var hasWords: Bool {
@@ -608,14 +629,18 @@ private struct BuildConfirmation {
             anchor = end
             clearance = 18
             cost = preview.cost
-            canConfirm = preview.problem == nil && preview.cost != nil
+            let canBuild = preview.problem == nil && preview.cost != nil
+            canConfirm = canBuild
             kind = .track
             // Decision 468, later: a trace along a real line for sale says
             // so, and the pill offers its purchase card.
             let sale = session.tracedSaleHint
             let hint = session.networkFollowsTrack && session.networkOffersFreeFirstHint ? preview.freeFirstHint(in: session.language) : nil
-            let lines = [hint, preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
-            caption = lines.isEmpty ? nil : lines.joined(separator: "\n")
+            // Decision 803: a stretch that can be built has ✕ ✓ and its
+            // price alone; the notes are the details card's.
+            caption = BuildConfirmLayout.stretchCaption(
+                canBuild: canBuild, notes: [hint, preview.crossoverNote], offer: [sale?.text, sale?.shortfall]
+            )
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
@@ -624,6 +649,7 @@ private struct BuildConfirmation {
             heights = session.networkHeightCard
             problem = session.networkDragFinger == nil ? preview.problem : nil
             stretch = preview.points.map(\.plan)
+            fingerDraws = session.networkDragFinger != nil
         case .building where session.buildingMode == .sell:
             // Decision 130: the building chosen to sell, and what it brings.
             guard let sale = session.salePreview else { return nil }
