@@ -2,9 +2,14 @@
 // tools/model-look: the Christmas livery options (WINTER-LIVERY-2, decision 806)
 // as export-winter.sh options wrote them, in two kinds of picture:
 //
-//   node tools/model-look/shoot-livery.mjs --dir EXPORTED --out FOLDER [--only game|table]
+//   node tools/model-look/shoot-livery.mjs --dir EXPORTED --out FOLDER [--only game|table|nose]
+//
+// The columns are options.json's `variants`, headed by its `labels` where it
+// has them (pair-livery.sh puts two exports side by side so).
 //
 //   table-day.jpg, table-night.jpg   each train's first two cars enlarged: plain | A1 | A2 | A3 | A2 with A1's ribbon
+//   nose-day.jpg, nose-night.jpg     each train's head car's front up close, at the 250 m camera's
+//     tilt (29°) and from higher (60°): where the wreath lies (WREATH-NOSE)
 //   game-day.jpg, game-night.jpg     the train on a track at the size an iPhone draws it
 //     (1 px = 1 point, Map3DCamera: 35° of view up 844 points), the camera 250 m,
 //     400 m and 700 m away at the tilt it has there (29°, 13°, straight down);
@@ -22,7 +27,7 @@ import {createRequire} from 'node:module';
 
 const here=dirname(fileURLToPath(import.meta.url)),args=process.argv.slice(2),option={};
 for(let i=0;i<args.length;i+=2)option[args[i].replace(/^--/,'')]=args[i+1];
-if(!option.dir||!option.out){console.error('usage: shoot-livery.mjs --dir EXPORTED --out FOLDER [--only game|table]');process.exit(2);}
+if(!option.dir||!option.out){console.error('usage: shoot-livery.mjs --dir EXPORTED --out FOLDER [--only game|table|nose]');process.exit(2);}
 const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE||'playwright');
 const manifest=JSON.parse(readFileSync(resolve(option.dir,'options.json'),'utf8'));
 mkdirSync(resolve(option.out),{recursive:true});
@@ -32,11 +37,11 @@ const server=createServer((req,res)=>{const path=new URL(req.url,'http://x').pat
  try{const data=readFileSync(resolve(option.dir,'.'+path));res.setHeader('Content-Type','application/octet-stream');res.end(data);}catch{res.writeHead(404);res.end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
-const names={plain:'原塗裝',a1:'A1 緞帶',a2:'A2 雪頂',a3:'A3 腰帶＋雪頂',mix:'A2＋頭車緞帶'};
+const names={plain:'原塗裝',a1:'A1 緞帶',a2:'A2 雪頂',a3:'A3 腰帶＋雪頂',mix:'A2＋頭車緞帶',...(manifest.labels||{})};
 try{
- for(const kind of ['table','game'])for(const night of [false,true]){
+ for(const kind of ['table','nose','game'])for(const night of [false,true]){
   if(option.only&&option.only!==kind)continue;
-  const page=await browser.newPage({viewport:{width:kind==='table'?1640:800,height:600},deviceScaleFactor:1});
+  const page=await browser.newPage({viewport:{width:kind==='table'?1640:kind==='nose'?60+manifest.variants.length*244+20:800,height:600},deviceScaleFactor:1});
   page.on('pageerror',e=>{throw e;});
   await page.goto('http://127.0.0.1:'+server.address().port+'/');
   await page.evaluate(async({manifest,names,kind,night})=>{
@@ -65,7 +70,7 @@ try{
    }
    const styled=(element,width)=>{element.style.width=width+'px';element.style.display='block';return element;};
    const sheet=document.getElementById('sheet'),style=document.createElement('style');
-   style.textContent='body{margin:0;background:'+(night?'#10152e':'#fff')+';font:13px system-ui,"PingFang TC","Noto Sans CJK TC";color:'+(night?'#e8eaf6':'#262c57')+'}#sheet{padding:10px;width:'+(kind==='table'?1620:780)+'px}h1{font-size:16px;margin:0 0 4px}h2{font-size:13px;margin:10px 0 4px}p{margin:2px 0;font-size:11px}.row{display:flex;gap:4px;margin-bottom:4px;align-items:center}.cell{background:'+(night?'#10152e':'#eceef6')+';border-radius:5px;overflow:hidden;flex:none}.head{display:flex;gap:4px}.head div{text-align:center;font-weight:600;flex:none}.label{width:56px;flex:none;font-size:11px}';
+   style.textContent='body{margin:0;background:'+(night?'#10152e':'#fff')+';font:13px system-ui,"PingFang TC","Noto Sans CJK TC";color:'+(night?'#e8eaf6':'#262c57')+'}#sheet{padding:10px;width:'+(kind==='table'?1620:kind==='nose'?60+manifest.variants.length*244:780)+'px}h1{font-size:16px;margin:0 0 4px}h2{font-size:13px;margin:10px 0 4px}p{margin:2px 0;font-size:11px}.row{display:flex;gap:4px;margin-bottom:4px;align-items:center}.cell{background:'+(night?'#10152e':'#eceef6')+';border-radius:5px;overflow:hidden;flex:none}.head{display:flex;gap:4px}.head div{text-align:center;font-weight:600;flex:none}.label{width:56px;flex:none;font-size:11px}';
    document.head.append(style);
    const add=(tag,text,parent=sheet)=>{const e=document.createElement(tag);if(text)e.textContent=text;parent.append(e);return e;};
    const header=width=>{const h=add('div');h.className='head';add('div','',h).style.width='56px';for(const v of manifest.variants)add('div',names[v],h).style.width=width+'px';};
@@ -75,6 +80,12 @@ try{
     header(304);
     for(const t of manifest.trains){const row=add('div');row.className='row';add('div',t.label,row).className='label';
      for(const v of manifest.variants){const cell=add('div','',row);cell.className='cell';cell.append(await shot(t.id+'-'+v+'-pair',towards(62,52),304,146,null,5));}}
+   }else if(kind==='nose'){
+    add('h1','頭車車頭近看（'+(night?'夜晚':'白天')+'）：上排傾 29°（250 m 的鏡頭），下排傾 60°｜第 '+manifest.round+' 輪');
+    add('p','離線 WebGL，不是 Metal。只用來找毛病；遊戲大小看 game-*.jpg。');
+    header(240);
+    for(const t of manifest.trains)for(const tilt of [29,60]){const row=add('div');row.className='row';add('div',tilt===29?t.label:'',row).className='label';
+     for(const v of manifest.variants){const cell=add('div','',row);cell.className='cell';cell.append(await shot(t.id+'-'+v+'-pair',towards(32,tilt),240,130,{centre:[-3.5,0,2],metres:9},4));}}
    }else{
     add('h1','聖誕塗裝方案（'+(night?'夜晚':'白天')+'，遊戲實際大小）：1 px = iPhone 的 1 點｜第 '+manifest.round+' 輪');
     add('p','鏡頭照 Map3DCamera：距離 250 m 傾 29°、400 m 傾 13°、700 m 正上方（換成遠景版）。離線 WebGL，不是 Metal。瞇眼看：一秒內分得出是聖誕車嗎？還認得出哪條線嗎？');
