@@ -27,9 +27,12 @@ enum MapPackDownloader {
     /// Starts fetching every city's pack in the background; returns at once.
     static func start() {
         guard isAvailable else { return }
+        // Decision 789: only the open cities have asset packs.
+        let cities = OverseasMap.allCases.filter(OverseasMaps.open.contains)
+        // Decision 776, later: the settings show how each stands.
+        for city in cities { MapPackDownloads.note(city, .downloading) }
         Task.detached(priority: .utility) {
-            // Decision 789: only the open cities have asset packs.
-            for city in OverseasMap.allCases where OverseasMaps.open.contains(city) {
+            for city in cities {
                 await fetch(city)
             }
         }
@@ -42,11 +45,14 @@ enum MapPackDownloader {
             try await manager.ensureLocalAvailability(of: pack)
             let manifest = try manager.url(for: FilePath(city.assetPackManifestPath))
             if let refusal = MapPackDownloads.use(city, root: manifest.deletingLastPathComponent()) {
+                MapPackDownloads.note(city, .refused(refusal))
                 log.notice("map pack \(city.assetPackID, privacy: .public) not used: \(String(describing: refusal), privacy: .public)")
             } else {
+                MapPackDownloads.note(city, .downloaded)
                 log.notice("map pack \(city.assetPackID, privacy: .public) used")
             }
         } catch {
+            MapPackDownloads.note(city, .failed(String(describing: error)))
             log.notice("map pack \(city.assetPackID, privacy: .public) not fetched: \(String(describing: error), privacy: .public)")
         }
     }

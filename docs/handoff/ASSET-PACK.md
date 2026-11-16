@@ -23,6 +23,14 @@ extension、App Group 權限、Info.plist 三個鍵、`testflight.yml` 打包上
 2. 內部 TestFlight 實機：Console（或回報問題的 log）有 `map pack mappack-hongkong used`。
 3. **第三段 PR**（內部 TestFlight 實機 log 看到 `map pack mappack-hongkong used` 之後）：不再把 `Resources/MapPacks` 複製進 App；香港還沒下載完時開航名單顯示「下載中」；`OSMMapBackground.cityTiles`／`cityFootprints`／`cityPacks` 改成下載完再算。
 
+## MAPPACK-STATUS（2026-11-16，雲端 session_01JMHz9ampfMVSjE1GvHhgjU，分支 `claude/mappack-status`）
+
+- 派工：遊戲規劃 11-16。存檔版本、golden schema、GameCore 不動；寫進決策 776「後續」，沒有新決策。
+- 做了：`MapPackStatus` 與 `MapPackDownloads.note`／`status`／`report`（GamePresentation，有 Linux 測試）；`MapPackDownloader` 記狀態；設定「地圖」一節每個開放城市一列（「香港地圖　已下載／下載中／使用內建資料」）；「回報問題」的訊息多一行「地圖包：mappack-hongkong used」（原因只在這裡）。
+- **實機怎麼看（取代上面「還留下的」第 2 點接 Mac 看 log）**：裝了帶這個改動的 TestFlight 版，開設定 →「地圖」一節看「香港地圖」那一列。「已下載」＝下載並用上，可以開第三段；「下載中」一直不變＝還沒下載完或系統還沒排到；「使用內建資料」＝沒用上，按「回報問題」看訊息最後的「地圖包：」那一行是 `bundled`（這個建置沒設好下載）、`not used: …`（下載到但被拒，附原因）還是 `not fetched: …`（沒下載到，附錯誤）。
+- 還留下：第三段（上面第 3 點）照舊；第三段把香港移出 App 之後，「使用內建資料」這個說法要跟著改（那時沒有內建的）。
+- UNVERIFIED：iOS 編譯（看 PR 的 `ios-build.yml`）；實機下載與那一列的顯示。
+
 ## UNVERIFIED
 
 - `MapPackDownloader` 在 iOS 上的編譯（看 PR 的 `ios-build.yml`）。

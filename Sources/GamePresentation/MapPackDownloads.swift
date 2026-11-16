@@ -14,6 +14,7 @@ public enum MapPackDownloads {
     private final class Store: @unchecked Sendable {
         let lock = NSLock()
         var roots: [OverseasMap: URL] = [:]
+        var statuses: [OverseasMap: MapPackStatus] = [:]
     }
 
     private static let store = Store()
@@ -54,6 +55,36 @@ public enum MapPackDownloads {
         store.lock.lock()
         defer { store.lock.unlock() }
         store.roots[city] = nil
+        store.statuses[city] = nil
+    }
+
+    /// Posted (on the thread that changed it) when a city's ``status(_:)``
+    /// changes, for a screen that shows it.
+    public static let statusChanged = Notification.Name("MapPackDownloads.statusChanged")
+
+    /// How the download of `city`'s pack stands in this run of the app;
+    /// ``MapPackStatus/bundled`` until the app says otherwise.
+    public static func status(_ city: OverseasMap) -> MapPackStatus {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        return store.statuses[city] ?? .bundled
+    }
+
+    /// Keeps how the download of `city`'s pack stands, as the app that
+    /// downloads it found it.
+    public static func note(_ city: OverseasMap, _ status: MapPackStatus) {
+        store.lock.lock()
+        let changed = (store.statuses[city] ?? .bundled) != status
+        store.statuses[city] = status
+        store.lock.unlock()
+        if changed { NotificationCenter.default.post(name: statusChanged, object: nil) }
+    }
+
+    /// The downloads of `cities` in one line for a problem report, reasons
+    /// and all ("mappack-hongkong used"); `nil` when there are none.
+    public static func report(of cities: Set<OverseasMap> = OverseasMaps.open) -> String? {
+        let parts = OverseasMap.allCases.filter(cities.contains).map { "\($0.assetPackID) \(status($0).reportText)" }
+        return parts.isEmpty ? nil : parts.joined(separator: "; ")
     }
 
     /// The folder of the downloaded pack of `city` that was taken, if any.
@@ -95,7 +126,51 @@ public enum MapPackDownloads {
     }
 }
 
+/// Decision 776, later: how the download of a city's map pack stands, for
+/// the settings' row and a problem report. The player is told only what
+/// the game reads; why a download was not taken goes in the report.
+public enum MapPackStatus: Equatable, Sendable {
+    /// The app reads the pack it carries: it is not set up to download, or
+    /// has not begun.
+    case bundled
+    /// The download was asked for and has not answered yet.
+    case downloading
+    /// The download was taken; the game reads it.
+    case downloaded
+    /// The download arrived and was not taken; the bundled pack is read.
+    case refused(MapPackDownloads.Refusal)
+    /// The download did not arrive (the error, described); the bundled
+    /// pack is read.
+    case failed(String)
+
+    /// What the settings say of it, after the city's name.
+    public func text(in language: DisplayLanguage) -> String {
+        switch self {
+        case .downloading: language.text("Downloading", "下載中")
+        case .downloaded: language.text("Downloaded", "已下載")
+        case .bundled, .refused, .failed: language.text("Built-in data", "使用內建資料")
+        }
+    }
+
+    /// What a problem report says of it, in the words of the app's log.
+    public var reportText: String {
+        switch self {
+        case .bundled: "bundled"
+        case .downloading: "downloading"
+        case .downloaded: "used"
+        case let .refused(refusal): "not used: \(refusal)"
+        case let .failed(error): "not fetched: \(error.prefix(200))"
+        }
+    }
+}
+
 extension OverseasMap {
+    /// Decision 776, later: the name of the settings' row of the city's
+    /// map pack ("Hong Kong Map").
+    public func mapPackTitle(in language: DisplayLanguage) -> String {
+        language.text("\(name(in: .english)) Map", "\(name(in: .traditionalChinese))地圖")
+    }
+
     /// Decision 776: the ID of the city's asset pack on App Store Connect
     /// (`RailwayGameApp/AssetPacks/<folder>.json`'s `assetPackID`).
     public var assetPackID: String {
