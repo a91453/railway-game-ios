@@ -1,5 +1,11 @@
 # BUILD-MODE-CLEAN-2
 
+## 進度（中斷後只讀這一節與 `git status`、`git log -3`）
+
+- 做到哪：程式、測試、決策 803 第 8 節、這份交接都推了；PR #2309（draft）已開並訂閱，已在 #2118 留言（壓縮第 1 次）。還沒拍截圖。
+- 已驗證：Linux 本機建置（warnings-as-errors）與 151 個相關測試過。App 畫面檔還沒編過（等 PR 的 `ios-build.yml`）。
+- 下一步的第一個指令：查 PR #2309 的 iOS 建置；編得過就開一次 `website-screenshots.yml`（ref `claude/build-mode-clean-2`，`kind=website`、`device=iphone`、`tests=testTrackHeightFixes`，先確認沒有別的截圖在跑，失敗不重跑），截圖轉 JPEG 85 放 `docs/art/build-mode-clean-2-2026-11-16/`，貼進 PR，補本檔「截圖結果」。
+
 派工單 BUILD-MODE-CLEAN-2（session_01JMHz9c3vpC3pdNMzXWMZ1i，`claude/build-mode-clean-2`，2026-11-16；遊戲規劃派，登記在 #2118 留言 6924206474）。決策 803 的補充（`docs/decisions/803.md` 第 8 節），沒有取新號。不動 GameCore、存檔版本（107）、golden、ReplayFixtures、SaveFixtures、`project.yml`、String Catalog。接在 `docs/handoff/BUILD-MODE-CLEAN.md` 之後。
 
 背景：作者看了 #2302 的截圖說「字不會太多嗎」。
