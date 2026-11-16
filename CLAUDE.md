@@ -461,12 +461,13 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   than from the summary, before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
   (`docs/HANDOFF.md` §1). The game-planning session may open the next
-  one itself with `create_session`, model `claude-fable-5-2`, effort `high`
-  (owner, 2026-10-27: 「遊戲規劃也可以自己開」; 2026-11-16: 「這裡目前已經改成max了
-  額度還很充足 可以全部模型都用fable」, which ends the Opus-only rule of
-  2026-11-13; 「直到我說重置券沒有才改回opus」: Fable stays until the owner
-  says the reset coupons are used up, and no session switches back on its
-  own),
+  one itself with `create_session`, model `claude-opus-5-5`, effort `high`
+  (owner, 2026-10-27: 「遊戲規劃也可以自己開」; 2026-11-17: 「我沒有fable
+  重置券了 新對話開始都先用 opus5.5為主 改針對遊戲問題 難易度看要不要改fable
+  因為 max方案fable只能用週額度的50percent」, which ends the all-Fable rule of
+  2026-11-16: a new session is Opus by default, and `claude-fable-5-2` is
+  only for a game problem hard enough to need it; sessions already running
+  finish on the model they have),
   but each session a session opens is one level deeper (`get_session`'s
   `lineage.depth`, limit 8), and at the eighth it can no longer open
   sessions or schedule check-ins: once the next one would be at level 7,
