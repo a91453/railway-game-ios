@@ -8,21 +8,31 @@ import GameCore
 // grey, each standing alone in its yard; blocks of flats in pale plaster
 // or brick under a flat roof with nothing on it.
 
-/// Decision 802: the colours of Finland's buildings.
+/// Decision 802: the colours of Finland's buildings, each written as the
+/// map draws it (``Map3DLook/source(drawing:)``): the city's look draws
+/// every city colour paler, and red ochre drawn paler is pink.
 enum Map3DNordic {
     /// A wooden house's boards: yellow ochre and white the commonest on
     /// the houses rebuilt after 1944, then red ochre and greys, now and
     /// then a pale green or a blue grey.
-    static let houseWalls: [UInt32] = [
-        0xD9A94E, 0xD9A94E, 0xE4C27A, 0xEDEAE0, 0xEDEAE0, 0xA5402F, 0xA5402F, 0x8E3A2C, 0xC9CCCF, 0xB5BABF, 0xB9C4AE, 0x9FB0BD,
-    ].map(Map3DColor.rgb)
+    static let houseWalls: [UInt32] = drawn([
+        0xE2B65E, 0xE2B65E, 0xECD292, 0xF2EFE6, 0xF2EFE6, 0xB5523E, 0xB5523E, 0xA04838, 0xC6CACE, 0xAFB5BB, 0xB5C3A9, 0x9DB0C0,
+    ])
     /// A block of flats: white and grey plaster, pale yellow and red brick.
-    static let blockWalls: [UInt32] = [0xEDEAE0, 0xE2E0D8, 0xD3D5D6, 0xC9CCCF, 0xE2CC96, 0xB0624A, 0xC8B49A].map(Map3DColor.rgb)
-    /// A pitched roof's sheet steel or felt, before the snow on it: dark
-    /// grey, black, brick red and green.
-    static let pitchedRoofs: [UInt32] = [0x4A4E55, 0x4A4E55, 0x2F3237, 0x8E3A2C, 0x7A4A3C, 0x4F6B58].map(Map3DColor.rgb)
-    /// A house's windows' white frames, and its plinth.
-    static let trim = Map3DColor.rgb(0xF4F2EC)
+    static let blockWalls: [UInt32] = drawn([0xF2EFE6, 0xE4E2DA, 0xD3D5D6, 0xC2C6CA, 0xE6D09A, 0xB56A52, 0xCDB89C])
+    /// A pitched roof's sheet steel or felt with snow on it: dark grey,
+    /// black, brick red, brown and green, each some way to white, the
+    /// greys the commonest.
+    static let pitchedRoofs: [UInt32] = drawn([
+        0xA2A8B1, 0xA2A8B1, 0xA2A8B1, 0xA2A8B1, 0xA2A8B1, 0x8C929B, 0x8C929B, 0xBC8478, 0xAE958C, 0x9DB3A3,
+    ])
+    /// A flat roof under snow: between the city's roofs (#BABDC8) and the
+    /// snow on the ground, so it stands off both.
+    static let flatRoof = Map3DLook.source(drawing: Map3DColor.rgb(0xC6CBD8))
+    /// A house's plinth.
+    static let trim = Map3DLook.source(drawing: Map3DColor.rgb(0xDAD8D2))
+
+    private static func drawn(_ colours: [UInt32]) -> [UInt32] { colours.map { Map3DLook.source(drawing: Map3DColor.rgb($0)) } }
 
     /// A storey of a wooden house, metres.
     static let storey: Float = 3
@@ -39,18 +49,20 @@ enum Map3DNordic {
 /// Decision 802: the snow lying on a northern map's roofs.
 extension Map3DSnowGround {
     /// How much of a roof's colour the snow on it hides.
-    static let roofShare: Float = 0.62
+    static let roofShare: Float = 0.45
     /// The snow on a roof: the ground's blue-white, a step deeper than
     /// the open snow so a roof still stands off it.
     static let roofSnow = Map3DColor.rgb(0xE6EAF2)
 
-    /// `roof` under snow: ``roofShare`` of the way to ``roofSnow``.
+    /// `roof` under snow: what the city's look draws it as, ``roofShare``
+    /// of the way to ``roofSnow``, and drawn as that.
     static func roof(_ roof: UInt32) -> UInt32 {
+        let shown = Map3DLook.colour(roof)
         func channel(_ shift: UInt32) -> UInt32 {
-            let from = Float((roof >> shift) & 0xFF), to = Float((roofSnow >> shift) & 0xFF)
+            let from = Float((shown >> shift) & 0xFF), to = Float((roofSnow >> shift) & 0xFF)
             return UInt32((from + (to - from) * roofShare).rounded()) << shift
         }
-        return channel(0) | channel(8) | channel(16) | (roof & 0xFF00_0000)
+        return Map3DLook.source(drawing: channel(0) | channel(8) | channel(16) | (roof & 0xFF00_0000))
     }
 }
 
@@ -74,21 +86,20 @@ extension Map3DScene.Builder {
     /// Taiwanese one is 60 and more), 12 a block.
     static func addNordicHouse(_ mesh: inout Map3DMesh, middle: Map3DPoint, front: Map3DPoint, width: Float, depth: Float, flats: Bool,
                                far: Bool, snow: Bool, tallest: Int?, r: (Int32) -> Float) {
-        func snowed(_ roof: UInt32) -> UInt32 { snow ? Map3DSnowGround.roof(roof) : roof }
         if flats {
             let floors = min(3 + Int(r(2) * 3), max(tallest ?? 5, 2))
             let wall = varied(pick(Map3DNordic.blockWalls, r(1043)), r(1041))
             let windows = Map3DPaint.bays(pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: floors)
             mesh.addBox(base: middle, forward: front, length: depth, width: width - 1.5, height: Float(floors) * Map3DNordic.storey + 0.4,
-                        top: snowed(Map3DPalette.roof), side: wall, topPaint: roofing, frontPaint: windows, flankPaint: windows)
+                        top: snow ? Map3DNordic.flatRoof : Map3DPalette.roof, side: wall, topPaint: roofing, frontPaint: windows, flankPaint: windows)
             return
         }
         let floors = min(r(2) < 0.6 ? 1 : 2, max(tallest ?? 2, 1))
         // Alone in its yard: narrower than its lot, and no deeper than a
         // house is.
-        let wide = min(max(width * 0.72, 6), 12, width - 0.6), deep = min(depth, 7 + r(3) * 2)
+        let wide = min(max(width * 0.72, 6), 12, width - 1.6), deep = min(depth, 7 + r(3) * 2)
         guard wide >= 3 else { return }
-        let wall = varied(pick(Map3DNordic.houseWalls, r(1043)), r(1041)), roof = snowed(pick(Map3DNordic.pitchedRoofs, r(1040)))
+        let wall = varied(pick(Map3DNordic.houseWalls, r(1043)), r(1041)), roof = pick(Map3DNordic.pitchedRoofs, r(1040))
         let across = Map3DPoint(-front.z, 0, front.x)
         let plinth: Float = far ? 0 : 0.4
         if !far {

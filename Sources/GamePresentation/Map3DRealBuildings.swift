@@ -223,16 +223,20 @@ extension Map3DScene.Builder {
         // Decision 802: Finland's houses and blocks: boards or plaster in
         // its own colours, a window to each bay, no shutter below and no
         // tile on the walls.
+        // Whether its roof's colour already has the snow in it.
+        var snowedRoof = false
         if nordic {
             switch kind {
             case .house where storeys <= 2, .shophouse where storeys <= 2:
                 wall = Self.pick(Map3DNordic.houseWalls, r(1043))
                 roof = Self.pick(Map3DNordic.pitchedRoofs, r(1040))
+                snowedRoof = true
                 (groundFloor, groundPaint) = (0, nil)
                 upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: floors(height, storeys))
             case .shophouse, .flats:
                 wall = Self.pick(Map3DNordic.blockWalls, r(1043))
-                roof = Map3DPalette.roof
+                roof = Map3DNordic.flatRoof
+                snowedRoof = true
                 if kind == .shophouse {
                     groundFloor = min(3.8, height / 3)
                     groundPaint = .bays(Self.pick(Map3DSurface.shops, r(2)), bay: 5.4, floors: 1)
@@ -256,6 +260,7 @@ extension Map3DScene.Builder {
             wall = Self.pick(Map3DPalette.hallWalls, seed)
             roof = Self.pick(Map3DPalette.hallRoofs, r(1042))
             roofPaint = Self.metal
+            snowedRoof = false
         }
         if kind != .temple, kind != .terminal { wall = Self.varied(wall, r(1041)) }
         // A temple of a single hall under its hipped roof, the walls lower.
@@ -272,10 +277,15 @@ extension Map3DScene.Builder {
         }
         // Decision 802: a northern map's roofs under snow, and a Finnish
         // house's pitched.
-        if look.snow { roof = Map3DSnowGround.roof(roof) }
+        if look.snow, !snowedRoof { roof = Map3DSnowGround.roof(roof) }
         let pitched = look.buildings.pitchesLowRoofs && !canopy && !hipped
             && Self.isPitched(kind, storeys: storeys, area: area, single: polygons.count == 1 && polygons[0].count == 1, box: box)
-        if pitched { roofPaint = nil }
+        if pitched {
+            roofPaint = nil
+        } else if nordic, snowedRoof {
+            // A low house no pitched roof spans: a flat one.
+            roof = Map3DNordic.flatRoof
+        }
         let far = isFar
         // Decision 455: afar, an outline of four corners each within
         // ``rectangleReach`` of the box round it is drawn as that box (as

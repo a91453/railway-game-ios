@@ -125,6 +125,40 @@ public enum Map3DLook {
         return bytes[0] | bytes[1] << 8 | bytes[2] << 16 | (color & 0xFF00_0000)
     }
 
+    /// Decision 802: the colour the city's look draws as `drawn`
+    /// (``pale(_:strength:)`` at ``city``), so a palette can be written
+    /// as what the map shows: the same hue, the lightness and saturation
+    /// taken back through the look. A colour darker than the look's floor
+    /// comes out as dark as the look draws.
+    static func source(drawing drawn: UInt32) -> UInt32 {
+        let r = Double(drawn & 0xFF) / 255, g = Double((drawn >> 8) & 0xFF) / 255, b = Double((drawn >> 16) & 0xFF) / 255
+        let high = max(r, g, b), low = min(r, g, b), l = (high + low) / 2
+        var h = 0.0, s = 0.0
+        if high != low {
+            let range = high - low
+            s = l <= 0.5 ? range / (high + low) : range / (2 - high - low)
+            let rc = (high - r) / range, gc = (high - g) / range, bc = (high - b) / range
+            h = r == high ? bc - gc : g == high ? 2 + rc - bc : 4 + gc - rc
+            h = (h / 6).truncatingRemainder(dividingBy: 1)
+            if h < 0 { h += 1 }
+        }
+        let lightness = min(max((l - city.floor) / city.share, 0), 1), saturation = min(s / city.saturation, 1)
+        func channel(_ m1: Double, _ m2: Double, _ hue: Double) -> Double {
+            var hue = hue.truncatingRemainder(dividingBy: 1)
+            if hue < 0 { hue += 1 }
+            if hue < 1.0 / 6 { return m1 + (m2 - m1) * hue * 6 }
+            if hue < 0.5 { return m2 }
+            if hue < 2.0 / 3 { return m1 + (m2 - m1) * (2.0 / 3 - hue) * 6 }
+            return m1
+        }
+        let m2 = lightness <= 0.5 ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation
+        let m1 = 2 * lightness - m2
+        let rgb = saturation == 0 ? [lightness, lightness, lightness]
+            : [channel(m1, m2, h + 1.0 / 3), channel(m1, m2, h), channel(m1, m2, h - 1.0 / 3)]
+        let bytes = rgb.map { UInt32((min(max($0, 0), 1) * 255).rounded()) }
+        return bytes[0] | bytes[1] << 8 | bytes[2] << 16 | (drawn & 0xFF00_0000)
+    }
+
     /// The roads' own carriageway colours (``Map3DPalette/road(_:)``).
     static let roads: Set<UInt32> = [
         Map3DPalette.road(.motorway), Map3DPalette.road(.primary), Map3DPalette.road(.tertiary), Map3DPalette.road(.minor),
