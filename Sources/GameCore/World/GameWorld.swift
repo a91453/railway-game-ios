@@ -174,6 +174,11 @@ public struct GameWorld: Equatable, Sendable {
     /// train setting off within one; empty again as it ends, so empty at
     /// every whole minute.
     public internal(set) var spacingAllowances: [TrainID: SpacingAllowance] = [:]
+    /// For tests only (decision 805): the rule before decision 801, a
+    /// train leaving its platform letting a faster train behind it pass
+    /// first even while that one stands held by a third, which stood three
+    /// trains in a ring. Never set by the game, never saved.
+    var passesHeldTrains = false
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.

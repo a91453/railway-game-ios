@@ -43,6 +43,25 @@ struct SavedSpacingAllowance: Codable {
     var allowance: SpacingAllowance { SpacingAllowance(left: left ?? .max, stop: stop, cycle: cycle) }
 }
 
+/// Decision 805: why a train of a line with real runs is held with traffic
+/// control off (``GameWorld/heldUp(_:within:near:)``).
+enum SpacingHold: Hashable, Sendable {
+    /// Behind the tail of a train ahead of it going the same way.
+    case behind
+    /// Leaving its platform, it lets a faster train behind it pass first.
+    case passing
+    /// Short of track a train coming the other way is on already.
+    case oncomingOnTrack
+    /// Short of track a train coming the other way is nearer to; neither
+    /// is on it.
+    case oncomingNearer
+
+    /// Whether it is an order of going only: with it waived the train
+    /// still stops behind every tail and short of every train on its track
+    /// coming towards it.
+    var isOrderOnly: Bool { self == .passing || self == .oncomingNearer }
+}
+
 extension GameWorld {
     /// How far along their ways trains are looked at for one coming the
     /// other way (decision 228): as many edges as that, and on until
@@ -198,10 +217,18 @@ extension GameWorld {
         for train in real {
             if let allowance = spacingAllowances[train.id] { sweeps.append((train, sweep(of: train, left: allowance.left))) }
         }
+        // Decision 805: as a minute begins, of the trains that wait for
+        // each other in a ring one goes first.
+        var waived: [TrainID: TrainID] = [:]
+        if start.isWholeMinute, candidates.count > 1 {
+            waived = releasesFromRings(spacingStands(near: index, ways: &ways), near: index, ways: &ways) { train in
+                self.travelShare(of: train, from: start, memo: &memo)(minuteEnd)
+            }
+        }
         for train in candidates.sorted(by: { $0.id < $1.id }) {
             guard case .travellingToStop(let stop, let cycle)? = train.execution else { continue }
             let reach = travelShare(of: train, from: start, memo: &memo)(minuteEnd)
-            var left = reach > 0 ? heldUp(train, within: reach, near: index, ways: &ways)?.clear ?? .max : .max
+            var left = reach > 0 ? heldUp(train, within: reach, near: index, ways: &ways, waiving: waived[train.id])?.clear ?? .max : .max
             let mine = way(of: train)
             ahead: for traversal in mine.order where !mine.body.contains(traversal) {
                 guard let at = mine.starts[traversal], at < min(reach, left) else { break }
@@ -235,7 +262,7 @@ extension GameWorld {
     }
 
     /// ``clearAhead(of:within:near:)``, and the train it stops short of.
-    func heldUp(_ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]? = nil) -> (clear: Int64, by: TrainID)? {
+    func heldUp(_ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]? = nil) -> (clear: Int64, by: TrainID, why: SpacingHold)? {
         var ways: [TrainID: SpacingWay] = [:]
         return heldUp(train, within: distance, near: index, ways: &ways)
     }
@@ -247,9 +274,15 @@ extension GameWorld {
     /// Decision 801: with `yielding` off, without letting a faster train
     /// behind pass first (``catches(_:at:by:from:)``), as that rule asks of
     /// the train behind whether it stands held itself.
+    ///
+    /// Decision 805: `waiving` is a train whose turn before this one is
+    /// waived (``releasesFromRings(_:reach:near:ways:)``): this one neither
+    /// lets it pass first nor lets it onto shared track first. It still
+    /// stops behind its tail, and short of track it is on already.
     func heldUp(
-        _ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay], yielding: Bool = true
-    ) -> (clear: Int64, by: TrainID)? {
+        _ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay], yielding: Bool = true,
+        waiving: TrainID? = nil
+    ) -> (clear: Int64, by: TrainID, why: SpacingHold)? {
         func way(of train: Train) -> SpacingWay {
             if let known = ways[train.id] { return known }
             let found = self.way(of: train)
@@ -272,7 +305,7 @@ extension GameWorld {
             let platforms = Set(network.platforms(of: train.timetable[previous.stop].station).map(\.edge))
             leaving = mine.body.contains { platforms.contains($0.edge) }
         }
-        var clear: (clear: Int64, by: TrainID)?
+        var clear: (clear: Int64, by: TrainID, why: SpacingHold)?
         let near = index.map { index in Set(mine.edges.flatMap { index[$0] ?? [] }) }
         for other in trains where other.id != train.id && near?.contains(other.id) != false {
             // Only a train on or bound for one of its edges.
@@ -287,7 +320,7 @@ extension GameWorld {
                 guard let start = starts[part.traversal], part.traversal == traversal || !mine.body.contains(part.traversal) else { continue }
                 if part.traversal == traversal, part.to <= offset { continue }
                 let gap = max(0, start + part.from)
-                if gap < distance, gap < clear?.clear ?? .max { clear = (gap, other.id) }
+                if gap < distance, gap < clear?.clear ?? .max { clear = (gap, other.id, .behind) }
             }
             // The rest needs its way where it meets this one's within
             // `distance` (the body and the traversals ahead of it closer
@@ -316,13 +349,14 @@ extension GameWorld {
             // the two to the ladder: each for the next, for good, with every
             // train behind them shut in the depot (the Taoyuan Airport MRT
             // bought before decision 605 sent out 15 of a day's 333 runs).
-            if yielding, leaving, case .travellingToStop? = other.execution, other.movement.rate > 0,
+            if yielding, other.id != waiving, leaving, case .travellingToStop? = other.execution, other.movement.rate > 0,
                !mine.body.contains(where: { theirs.starts[$0] != nil }),
                let joins = mine.order.first(where: { !mine.body.contains($0) && (theirs.starts[$0] ?? -1) > 0 }),
                let near = starts[joins], let far = theirs.starts[joins], near < distance,
                catches(train, at: near, by: other, from: far),
-               !(heldUp(other, within: distance, near: index, ways: &ways, yielding: false).map { $0.clear == 0 && $0.by != train.id } ?? false) {
-                if near < clear?.clear ?? .max { clear = (near, other.id) }
+               passesHeldTrains
+                || !(heldUp(other, within: distance, near: index, ways: &ways, yielding: false).map { $0.clear == 0 && $0.by != train.id } ?? false) {
+                if near < clear?.clear ?? .max { clear = (near, other.id, .passing) }
                 continue
             }
             // Short of the track it shares with a train coming towards it,
@@ -332,7 +366,10 @@ extension GameWorld {
             guard other.execution != nil, let shared = mine.order.first(where: { theirs.starts[$0.reversed] != nil }), !mine.body.contains(shared),
                   let near = starts[shared], near < distance else { continue }
             let meeting = theirs.order.filter { starts[$0.reversed] != nil }
-            if !meeting.contains(where: theirs.body.contains) {
+            let onTrack = meeting.contains(where: theirs.body.contains)
+            if !onTrack {
+                // Decision 805: its turn waived, this one goes first.
+                if other.id == waiving { continue }
                 // Not on it yet: it lets one nearer go first. Decision 283:
                 // on its way too, not only still leaving its platform. A
                 // set let off its platform by another hold went on, and
@@ -341,7 +378,7 @@ extension GameWorld {
                 // demo between Nangang and Taipei).
                 guard let far = meeting.compactMap({ theirs.starts[$0] }).min(), far < near || (far == near && other.id < train.id) else { continue }
             }
-            if near < clear?.clear ?? .max { clear = (near, other.id) }
+            if near < clear?.clear ?? .max { clear = (near, other.id, onTrack ? .oncomingOnTrack : .oncomingNearer) }
         }
         return clear
     }

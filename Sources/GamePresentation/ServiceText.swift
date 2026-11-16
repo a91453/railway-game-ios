@@ -388,6 +388,11 @@ extension GameWorld {
                 ? language.text("Waiting at \(station) to meet \(name)", "在 \(station) 等候 \(name) 交會")
                 : language.text("Standing aside at \(station) for \(name)", "在 \(station) 待避 \(name)")
         }
+        // Decision 805: with traffic control off, standing in or behind
+        // a ring of trains that wait for each other.
+        if !isTrafficControlEnabled, let wait = routeWaits().first(where: { $0.train == id }) {
+            return deadlockText(with: wait.holder, in: language)
+        }
         guard let holder = trainHoldingRoute(of: id) else {
             // Decision 497 (P2-7): held by no train, but by the track or
             // a full depot.
@@ -395,7 +400,7 @@ extension GameWorld {
         }
         let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
         if deadlockedTrains().contains(id) {
-            return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
+            return deadlockText(with: holder, in: language)
         }
         // Decision 738: the platform it is bound for is free, and a train
         // that has waited longer for it goes first.
@@ -421,6 +426,13 @@ extension GameWorld {
         // named with why, so the player knows which train to move.
         guard let still = standingStill(holder) else { return text }
         return language.text("\(text) (\(name): \(still.text(in: language)))", "\(text)（\(name)：\(still.text(in: language))）")
+    }
+
+    /// What a train's card says while it is in a deadlock, waiting for
+    /// train `holder` (``routeWaitText(of:in:)``).
+    func deadlockText(with holder: TrainID, in language: DisplayLanguage) -> String {
+        let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
+        return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
     }
 
     /// What train `id`'s card says when it is held by no train but by

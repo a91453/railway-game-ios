@@ -171,10 +171,11 @@ public struct TrafficOverlay: Hashable, Sendable {
 }
 
 extension GameWorld {
-    /// What the map draws for traffic control (Stage V4e); empty with
-    /// traffic control off. Derived on every call, never saved.
+    /// What the map draws for traffic control (Stage V4e); with traffic
+    /// control off, only the trains that wait for each other in a ring
+    /// and those behind them (decision 805), as deadlocked. Derived on
+    /// every call, never saved.
     public func trafficOverlay() -> TrafficOverlay {
-        guard isTrafficControlEnabled else { return TrafficOverlay() }
         var kinds = ScheduledWaitKinds()
         return trafficOverlay(routeWaits(), kinds: &kinds)
     }
@@ -184,7 +185,8 @@ extension GameWorld {
     /// out and kept there.
     func trafficOverlay(_ routeWaits: [RouteWait], kinds: inout ScheduledWaitKinds) -> TrafficOverlay {
         var overlay = TrafficOverlay()
-        guard isTrafficControlEnabled else { return overlay }
+        // Decision 805: off, the waits are those of a ring.
+        guard isTrafficControlEnabled || !routeWaits.isEmpty else { return overlay }
         // One pass for every wait (see routeWaits()), not three queries a train.
         let waits = Dictionary(uniqueKeysWithValues: routeWaits.map { ($0.train, $0) })
         for train in trains.sorted(by: { $0.id < $1.id }) {
@@ -316,6 +318,9 @@ public struct TrafficReading: Sendable {
     /// The trains ``GameCore/GameWorld/routeWaits()`` names. A train on the
     /// track that is not one of them has no wait to put in words.
     let waiting: Set<TrainID>
+    /// Decision 805: with traffic control off, the train that holds each
+    /// train standing in or behind a ring.
+    let blocked: [TrainID: TrainID]
     /// The words of the waits worked out so far, by train.
     private(set) var texts: [TrainID: String?] = [:]
     /// The kinds of the scheduled waits still going on (decision 210),
@@ -326,7 +331,9 @@ public struct TrafficReading: Sendable {
     /// one, and the kinds of scheduled waits `previous` (the last
     /// reading) already knew.
     public init(world: GameWorld, train: TrainID? = nil, in language: DisplayLanguage, previous: TrafficReading? = nil) {
-        let waits = world.isTrafficControlEnabled ? world.routeWaits() : []
+        // Decision 805: with traffic control off, those of a ring.
+        let waits = world.routeWaits()
+        blocked = world.isTrafficControlEnabled ? [:] : Dictionary(waits.map { ($0.train, $0.holder) }, uniquingKeysWith: { first, _ in first })
         var kinds = previous?.kinds ?? ScheduledWaitKinds()
         overlay = world.trafficOverlay(waits, kinds: &kinds)
         self.kinds = kinds.kept(for: overlay.waits, in: world)
@@ -344,6 +351,11 @@ public struct TrafficReading: Sendable {
         let text: String?
         if world.isTrafficControlEnabled, world.train(id: id)?.position != nil, !waiting.contains(id) {
             text = nil
+        } else if let holder = blocked[id] {
+            text = world.deadlockText(with: holder, in: language)
+        } else if !world.isTrafficControlEnabled {
+            // No ring holds it: what is left is the track or a depot.
+            text = world.heldDeparture(of: id).map { world.heldText($0, in: language) }
         } else {
             text = world.routeWaitText(of: id, in: language)
         }
