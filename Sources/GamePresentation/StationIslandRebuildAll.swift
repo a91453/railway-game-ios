@@ -33,8 +33,16 @@ extension GameSession {
         if isRealIsland == nil, let memo = realIslandsToRebuildMemo, memo.revision == commandRevision { return memo.ids }
         var ids: [StationID] = []
         if allows(UnlockableTool.doubleTrack) {
+            // Decision 792: a station only real lines bought call at is
+            // those lines' station, not another railway's of the same name
+            // beside it (the Circular Light Rail's 臺鐵美術館 is not the
+            // TRA's 美術館 under it, nor the Sanying Line's 鶯歌車站 the
+            // TRA's 鶯歌).
             let real = isRealIsland ?? { [self] station in
-                realStations(named: station.name, at: station.location).contains { RealStationPlatformTypes.island.contains($0.id) }
+                let systems = boughtSystems(at: station.id)
+                return realStations(named: station.name, at: station.location).contains {
+                    RealStationPlatformTypes.island.contains($0.id) && (systems?.contains($0.system.id) ?? true)
+                }
             }
             ids = world.stations.filter { station in
                 real(station) && !sidePlatformPairs(of: station.id, in: world).isEmpty
@@ -42,6 +50,20 @@ extension GameSession {
         }
         if isRealIsland == nil { realIslandsToRebuildMemo = (commandRevision, ids) }
         return ids
+    }
+
+    /// Decision 792: the real railways (``RealRailways/System/id``) whose
+    /// lines bought call at station `id`, when no line of the company's own
+    /// laying does; `nil` for any other station, which may be whichever
+    /// real station its name and place say.
+    func boughtSystems(at id: StationID) -> Set<String>? {
+        var systems: Set<String> = []
+        for line in world.lines where line.stops.contains(id) {
+            guard let bought = world.acquisitions.first(where: { $0.line == line.id }),
+                  let prefix = bought.realLine.split(separator: ":", maxSplits: 1).first.map(String.init) else { return nil }
+            systems.insert(prefix == "tra" ? RealBranchLine.tra : prefix == "trtc" ? "mrt" : prefix)
+        }
+        return systems.isEmpty ? nil : systems
     }
 
     /// Whether the island list has a station to offer: the station panel's

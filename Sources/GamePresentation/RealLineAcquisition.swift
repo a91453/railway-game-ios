@@ -136,10 +136,18 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Wikipedia's platform tables and OpenStreetMap: not the cross-platform
     /// interchanges, where each island has one track of each of two lines
     /// (Lai King, Nam Cheong, Sunny Bay), nor the Airport Express, whose
-    /// two ways stand on platforms of their own. Taiwan's lines as they were.
-    var islandStations: [String] { Self.islandStations(system: system, network: network) }
+    /// two ways stand on platforms of their own.
+    /// Decision 792: a TRA branch line's from decision 760's table
+    /// (``RealStationPlatformTypes``, OSM and the official station plans),
+    /// as a station bought on its own is laid; Taiwan's light rails and
+    /// metros, which the table does not hold, as they were.
+    var islandStations: [String] {
+        system == Self.tra
+            ? stops.filter { RealStationPlatformTypes.island.contains("\(system)|\($0)") }
+            : Self.islandStations(system: system, network: network)
+    }
 
-    /// ``islandStations`` of the line `network` of `system`.
+    /// ``islandStations`` of the light rail or metro `network` of `system`.
     static func islandStations(system: String, network: String) -> [String] {
         guard system == "hkmtr" else { return [] }
         return switch network {
@@ -1328,7 +1336,11 @@ extension RealLineLaying {
             let offset = layout.loopOffset
             // Decision 748: an island end's first loop on the right the
             // island's width out, the others 5 m from the track inside them.
-            let island = !between && line.isUrban && line.islandStations.contains(name)
+            // Decision 792: a TRA branch line's too (a single track's
+            // every station is laid as an end is), where it has two
+            // tracks: one of three and more stays as it was (Zhongzhou and
+            // Shalun, whose third track 16 m out does not fit their curves).
+            let island = !between && line.islandStations.contains(name) && (line.isUrban || loops == 1)
             let close = RealLineAcquisition.besideIslandOffset
             let islandSides: [(Double, Int, Bool)] = [(RealLineAcquisition.islandSpacing, 1, false)]
                 + (2...layout.endLevels + 2).map { level in (-(close + Double(level - 2) * offset), level, false) }
