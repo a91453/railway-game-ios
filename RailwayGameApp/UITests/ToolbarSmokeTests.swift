@@ -723,17 +723,25 @@ extension XCUIApplication {
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
     }
 
-    /// `x` moved at least 44 pt in from either side of the screen. A drag
+    /// `x` moved at least 60 pt in from either side of the screen. A drag
     /// begun nearer the edge never scrolls a list there: the edge's own
     /// gesture (a pushed page's swipe back) takes it. Decisions 745 and
     /// 746 put a line's page and the station panel over the whole screen,
     /// their lists' leading edge the screen's, and every drag at the list's
     /// edge plus 8 left it where it was (TestFlight 131's full lane, main
     /// 4cff950, run 43599067177; on the Simulator a drag at x 8 or 24 did
-    /// not move the line's page, one at 44 did). Beside a panel at the
-    /// trailing side the x is unchanged.
+    /// not move the line's page, one at 44 did). 44 was still too near: a
+    /// phone on its side has its Dynamic Island at that side, about 11 to
+    /// 48 pt in and over the middle third of the height, and a drag begun
+    /// on it goes to the system, not the app. The station panel's short
+    /// drags from 0.45 of its height began at (44, 181), on the island,
+    /// and the list stayed put for 37 drags (TestFlight 135's full lane,
+    /// main 89ed04b, run 43936559208: its screen recording shows the
+    /// platform row just under the panel's title the whole time). 60 is
+    /// clear of the island and still left of the rows' cards (about 78).
+    /// Beside a panel at the trailing side the x is unchanged.
     func clearOfScreenEdges(_ x: CGFloat) -> CGFloat {
-        min(max(x, frame.minX + 44), frame.maxX - 44)
+        min(max(x, frame.minX + 60), frame.maxX - 60)
     }
 
     /// Scrolls the start screen's buttons until `button` can be tapped. A
