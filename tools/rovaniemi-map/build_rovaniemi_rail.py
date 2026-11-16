@@ -325,6 +325,8 @@ SOURCES = {
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_rovaniemi_basemap.py)": OSM,
                         "land as far as the extract reaches (no coast)": OURS},
+    "buildings.pmtiles": {"outlines, uses, tagged storeys (build_rovaniemi_buildings.py)": OSM,
+                          "storeys where not tagged (from the tagged buildings and population.json)": OURS},
     "airfields.json": {"runways, taxiways, aprons, stands, control tower (tools/airfields/build_airfields.py)": OSM},
     "no_build.json": {"the airport, military land, cemeteries, golf courses, railway land and the airport's buildings "
                       "(tools/no-build-land/build_no_build.py)": OSM},
