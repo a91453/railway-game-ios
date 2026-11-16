@@ -601,6 +601,30 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**2026-11-16 遊戲規劃換手（Pro 帳號這一任 session_01JMHz9aiAQ16u6jrjjW2amC 壓縮三次後交出；從 #2118、開著的 PR 與各 session 的狀態寫的）**
+
+- **main**：`bb67641`（#2306）。134（`36b5cb5`）之後合併的：#2290–#2302、#2305、#2306（賽道：聖誕燈與塗裝 788／790／795／804、羅瓦涅米地圖與外觀 799／802、鋪軌卡片 800／803、死結 801／805、設定裡的「香港地圖」下載狀態 #2296）。這些都還沒進 TestFlight，下一版是 135；發版仍是作者決定。
+- **號碼**：決策用到 805；已預留 797（LANDMARK-FLICKER，需要才用）、798（HKCEC-REDO）、806（WINTER-LIVERY-2）、807（START-CRASH，需要才用）；下一個可取 **808**。存檔 107、golden schema 77，都沒有人預留。
+- **模型**：作者 2026-11-16「可以全部模型都用fable」「直到我說重置券沒有才改回opus」，新開的 session 一律 `claude-fable-5-2`（CLAUDE.md 已改；§1.1 寫 Opus 的幾行是 11-13 的舊規定）。
+- **這個帳號的限制**：雲端子 session 不能 `send_message` 給規劃，回報都寫在 #2118；規劃可以傳給它們。`send_later` 的例行檢查常常不觸發，改靠 PR 訂閱事件與直接看 PR／#2118。合併 API 偶爾 502 或「Merge already in progress」，合併後用 `git fetch origin main` 確認真的進了再留言。
+- **還在跑的 session**（都是 Fable；綠了且 ready 就照 §1.2 合併，合併後在 #2118 留言）：
+  - **本地派工 2**（`session_01JMHz9ZC29QYSLdVys52awG`，Mac 橋接環境）：#2303 LANDMARK-FLICKER（香港地標八棟共面閃爍，draft）＋ assets #129（ready）；兩張一起合。之後做 HKCEC-REDO（會展重做，決策 798）。
+  - **START-CRASH**（`session_01JMHz9bdXcTFrrku4stCHuN`，`claude/start-crash`）：#2298 的 iOS 檢查在開始畫面的課程清單 SIGTRAP 一次、重跑就綠、沒有當機報告；查原因。
+  - **BUILD-MODE-CLEAN-2**（`session_01JMHz9c3vpC3pdNMzXWMZ1i`，`claude/build-mode-clean-2`）：作者看 #2302 的截圖說字太多；原因縮成一行、建議按鈕只寫做法與價格、兩顆並排。截圖規劃看過才合。
+  - **WINTER-LIVERY-2**（`session_01JMHz9bvL9kMdQXnJy9h3VW`，`claude/winter-livery-2`，決策 806）：作者說 main 上整車換紅的聖誕塗裝（決策 795）「偏怪」。先出 A1 緞帶／A2 雪頂／A3 兩者合併的對照圖（含遊戲實際大小與鏡頭角度），**作者選定前不改 main 的塗裝規則**；選定後 `send_message` 告訴它才實作。
+- **評過分、還沒派的**（五方加權；bug 先於功能）：
+  1. **死結對策 D**：進共用軌道前先預約到終點月台的安全停車位置（[根因報告](research/DEADLOCK_ROOT_CAUSES_2026-11-16.md)：管制開著的死結全在終點／機場航廈月台；D1／D2 在 [`handoff/DEADLOCK-NET.md`](handoff/DEADLOCK-NET.md)）。動 GameCore、golden 會動，佔一個全套 CI 名額。對策 C（機廠咽喉限流）、E（分開引線）目前沒有對應案例，不派。
+  2. **羅瓦涅米開放前**（目標 11-30，開關 `OverseasMaps.open`）：先買 Kemijärvi 再買 Murola 被拒（平行軌 < 4 m）、備用車擋路（跟對策 D 同一件）、開放開關本身。見 [`handoff/ROVANIEMI-MAP-2.md`](handoff/ROVANIEMI-MAP-2.md)。
+  3. **NATURE-BASE**（2.95）：ESA WorldCover 10 m 2021 v200（CC BY 4.0）當郊外底圖、自動種樹。授權逐一查過，記在 #2118 留言 6910101809、6910145979：芬蘭 Maastotietokanta（CC BY 4.0，2.85）、香港地政總署 iB1000／iB5000（可商用，2.45）、Meta／WRI 樹冠高度（CC BY 4.0，2.00）可用；**臺灣國土利用調查要付費（加值型 600 元／幅），是作者的決定，不派**。
+  4. **REGION-LOOK-HK**（2.85）：香港照決策 802 的地區外觀設定做屋頂、立面、街道。
+  5. 羅瓦涅米外觀的剩餘（[`handoff/REGION-LOOK-ROVANIEMI.md`](handoff/REGION-LOOK-ROVANIEMI.md)：冬天的樹還是綠的、整體偏灰、芬蘭站房與號誌、遠景屋頂）；逐棟新模型（2.75）；芬蘭列車 Sr3／Sr2（交本地五 AI 製片廠）。
+- **等作者的**：
+  - 134 的 `mappack-hongkong` 實機檢查（作者說回家再裝）。作者說「裝好 134 了」時帶他看；135 之後看設定裡「香港地圖 已下載／下載中／使用內建資料」那一列就好。素材包第三階段等這個結果（[`handoff/ASSET-PACK.md`](handoff/ASSET-PACK.md)）。
+  - 聖誕塗裝選哪一個方案（WINTER-LIVERY-2 出圖後）。
+  - 134 的 Threads 貼文草稿還沒寫。
+- **今天封存的 session**：WINTER-LIGHTS、WINTER-LIVERY、POST-134、MAPPACK-STATUS、ROVANIEMI-MAP-2、本地派工（第一個）、BUILD-CARD-PHONE、DAY2-DISPATCH、REGION-LOOK-ROVANIEMI、DEADLOCK-NET、BUILD-MODE-CLEAN、WINTER-LIGHTS-2；交接檔都在 `docs/handoff/`。
+- 這個 PR 順手把 OVERVIEW §2 的存檔版本（103 → 107）與存檔 fixture 個數改成現況。
+
 **0.6.0 (134) 發了（2026-11-16 00:50 UTC；RELEASE-134 記，POST-134 補 run 與 commit；原帳號額度用完，這一任由 Pro 帳號接手，交接在 `a91453/railway-reference-private` 的 `handoff/PRO-HANDOFF-2026-11-15.md`）**
 - 從 main **`36b5cb5`**（#2291 的合併，島式月台，決策 792，併入 134）建置，TestFlight `testflight.yml` run 43782701616（run 134），作者自己按（main、`archive_signing=adhoc`、`testing_scope=external`）。打包、簽章、上傳 build、上傳 `mappack-hongkong.aar`（地圖包版本 1）都綠，0 個警告。同一個 commit 的完整 `ci.yml` 43783061880 綠；full lane 43783072819 紅 1 支 lessons UI 測試（測試的觸控掉了，POST-134 修，`research/HEALTH_134_2026-11-16.md` §4）。
 - 範圍：133（`49fffa3`）之後的 #2279–#2289。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-16-134` 與 `research/PLAYER_FEEDBACK.md` 的 134 一節。
