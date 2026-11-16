@@ -33,4 +33,13 @@
 ## UNVERIFIED
 
 - iPhone、iPad、模擬器上都沒看過；全是 Linux 的測試與報告測試。
-- 沒跑整套測試：本機只跑了決策 801 第 6 節列的與 PR 寫的那些，其餘交 CI。
+- 沒跑整套測試：本機只跑了決策 801 第 6 節列的與 PR 寫的那些，其餘交 CI（`47ba36a0` 的 Swift 全分片與 Xcode 建置都綠）。
+- 機捷舊線不動簡＋控第一天 16:56 那 19 分鐘的互等（10 列，自己解開）沒有在 `main` 上重量對照；管制開著時這張改的程式不執行，所以推定相同。
+
+## 接手的人
+
+- 狀態：PR #2300 的量測、測試、文件都完成，沒有還沒跑的檢查。剩下的只有合併（規劃或作者決定）。
+- 重現出事的那一格（約 45 秒）：
+  `DEPOT_RETURN_REPORT=1 DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_ONLY=tymc-old swift test --skip-build --filter DepotReturnReportTests`
+  （加 `DEPOT_RETURN_FAST=1` 是最高倍速，加 `DEPOT_RETURN_CONTROLLED=1 DEPOT_RETURN_EPISODES=1` 是簡＋控，一格約 10 分鐘。）
+- 同一個 `.build` 不要同時跑兩個 `swift test`：會互等 SwiftPM 的鎖。
