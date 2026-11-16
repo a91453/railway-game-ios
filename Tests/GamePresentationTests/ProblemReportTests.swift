@@ -28,6 +28,11 @@ final class ProblemReportTests: XCTestCase {
         XCTAssertTrue(chinese.hasPrefix("發生了什麼事？"))
         XCTAssertTrue(chinese.hasSuffix("版本：0.4.0 (12)\n系統：iOS 26.0，iPhone17,1"))
         XCTAssertFalse(chinese.contains("遊戲："), "no game from the start screen")
+        // Decision 776, later: the map packs' downloads, when there are any.
+        XCTAssertFalse(chinese.contains("地圖包"))
+        let packs = ProblemReport(version: "1", build: "2", system: "iOS", device: "iPhone", mapPacks: "mappack-hongkong used")
+        XCTAssertTrue(packs.text(in: .english).hasSuffix("\nMap packs: mappack-hongkong used"))
+        XCTAssertTrue(packs.text(in: .traditionalChinese).hasSuffix("\n地圖包：mappack-hongkong used"))
     }
 
     @MainActor
