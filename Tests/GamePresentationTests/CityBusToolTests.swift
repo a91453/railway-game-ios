@@ -174,8 +174,13 @@ final class CityBusToolTests: XCTestCase {
         let session = try session()
         session.setBusMode(.roads)
         XCTAssertEqual(session.busMode, .roads)
+        XCTAssertFalse(session.buildFingerDraws)
         session.dragRoad(from: at(12, 10), to: at(12, 12))
+        // Decision 803, continued: no ✕ ✓ under the finger that draws.
+        XCTAssertEqual(session.tool, .bus)
+        XCTAssertTrue(session.buildFingerDraws)
         session.endRoadDrag(from: at(12, 10), to: at(12, 14))
+        XCTAssertFalse(session.buildFingerDraws, "let go: the pill comes")
         let cells = (10...14).map { CellPosition(row: 12, column: $0) }
         XCTAssertEqual(session.roadDraft.cells, cells)
         let preview = try XCTUnwrap(session.roadPreview)

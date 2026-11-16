@@ -98,6 +98,80 @@ final class BuildConfirmLayoutTests: XCTestCase {
         XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, ridesWithDrawer: true), .stacked)
     }
 
+    // MARK: Decision 803, continued (the owner: "字不會太多嗎")
+
+    /// A refusal with fixes on a phone held sideways: why across the top
+    /// and one row of the fixes and ✕ ✓, its buttons a finger's least, so
+    /// the pill (6 + 22 + 4 + 44 + 6 points) leaves a stretch across the
+    /// middle of some 195 points in sight. Upright and on an iPad it
+    /// stays stacked, its buttons 48 points.
+    func testARefusalWithFixesIsOneStripOnAShortScreen() {
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, hasFixes: true), .strip)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: false, hasWords: true, hasFixes: true), .stacked)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, hasFixes: false), .beside)
+        XCTAssertEqual(BuildConfirmLayout.buttonHeight(.strip), 44)
+        XCTAssertEqual(BuildConfirmLayout.buttonHeight(.stacked), 48)
+        XCTAssertEqual(BuildConfirmLayout.buttonHeight(.beside), 48)
+        let pill = 2 * StationPairDrawerLayout.pillPadding + 22 + 4 + BuildConfirmLayout.buttonHeight(.strip)
+        // Above or below a line across the middle of 195 points, with the
+        // gap `keepingOff` leaves and the line's own width.
+        XCTAssertLessThanOrEqual(pill + BuildConfirmLayout.margin + BuildConfirmLayout.trackHalfWidth, 195 / 2)
+    }
+
+    /// The pill is as wide as its widest child, words no wider than they
+    /// wrap at, all within the map's clear band; every child gets that.
+    func testThePillIsAsWideAsItsWidestChild() {
+        // A one-line reason, the row of fixes and ✕ ✓.
+        XCTAssertEqual(BuildConfirmLayout.columnWidth([(150, 340), (420, nil)], limit: 600), 420)
+        // A long sentence wraps at its cap rather than widening the pill.
+        XCTAssertEqual(BuildConfirmLayout.columnWidth([(900, 340), (120, nil)], limit: 600), 340)
+        XCTAssertEqual(BuildConfirmLayout.columnWidth([(900, .infinity), (120, nil)], limit: 600), 600)
+        XCTAssertEqual(BuildConfirmLayout.columnWidth([(900, 340), (420, nil)], limit: 300), 300)
+        XCTAssertEqual(BuildConfirmLayout.columnWidth([(100, 340)], limit: nil), 100)
+        XCTAssertEqual(BuildConfirmLayout.columnWidth([], limit: 300), 0)
+    }
+
+    /// The two fixes are one width: the wider one's, or half the row they
+    /// are given; one over another only where the row cannot hold both.
+    func testTheFixesAreOneWidth() {
+        var cells = BuildConfirmLayout.equalCells(ideal: [120, 160], available: nil, spacing: 6)
+        XCTAssertEqual(cells.cell, 160)
+        XCTAssertFalse(cells.stacked)
+        cells = BuildConfirmLayout.equalCells(ideal: [120, 160], available: 406, spacing: 6)
+        XCTAssertEqual(cells.cell, 200)
+        XCTAssertFalse(cells.stacked)
+        // Offered what it asked for, a rounding short: still side by side
+        // and no narrower than the words need.
+        cells = BuildConfirmLayout.equalCells(ideal: [120, 160], available: 325.9999, spacing: 6)
+        XCTAssertEqual(cells.cell, 160)
+        XCTAssertFalse(cells.stacked)
+        cells = BuildConfirmLayout.equalCells(ideal: [120, 160], available: 300, spacing: 6)
+        XCTAssertEqual(cells.cell, 300)
+        XCTAssertTrue(cells.stacked)
+        cells = BuildConfirmLayout.equalCells(ideal: [120, 160], available: 100, spacing: 6)
+        XCTAssertEqual(cells.cell, 160)
+        XCTAssertTrue(cells.stacked)
+        cells = BuildConfirmLayout.equalCells(ideal: [160], available: 100, spacing: 6)
+        XCTAssertFalse(cells.stacked, "one fix has nothing to stand over")
+        XCTAssertEqual(BuildConfirmLayout.equalCells(ideal: [], available: 100, spacing: 6).cell, 0)
+    }
+
+    /// The pill waits for the finger whichever build it draws: a stretch
+    /// of track (decision 803), a road, a building moved; and only the
+    /// tool in hand counts.
+    func testThePillWaitsForTheFingerOfTheToolInHand() {
+        func draws(_ tool: ConstructionTool, track: Bool = false, road: Bool = false, building: Bool = false, roads: Bool = true) -> Bool {
+            BuildConfirmLayout.fingerDraws(track: track, road: road, building: building, tool: tool, roadsMode: roads)
+        }
+        XCTAssertTrue(draws(.network, track: true))
+        XCTAssertTrue(draws(.bus, road: true))
+        XCTAssertTrue(draws(.building, building: true))
+        XCTAssertFalse(draws(.bus, road: true, roads: false), "a bus route is tapped, not drawn")
+        XCTAssertFalse(draws(.network, road: true, building: true))
+        XCTAssertFalse(draws(.select, track: true, road: true, building: true))
+        XCTAssertFalse(draws(.train, track: true, road: true, building: true))
+    }
+
     // MARK: Decision 803 (the owner, 2026-11-16: too cluttered)
 
     /// No ✕ ✓ under the finger that draws; they come when it lets go.
@@ -116,18 +190,14 @@ final class BuildConfirmLayoutTests: XCTestCase {
         XCTAssertEqual(BuildConfirmLayout.hudMark(refused: false, pillSaysProblem: false, joins: false), BuildConfirmLayout.HUDMark.none)
     }
 
-    /// A stretch that can be built has ✕ ✓ and its price alone, but for a
-    /// real line for sale along it; refused, its notes come back under
-    /// the reason.
-    func testAStretchThatCanBeBuiltSaysNothing() {
-        let notes: [String?] = ["The first stretch is straight.", nil, "A crossover joins."]
-        XCTAssertNil(BuildConfirmLayout.stretchCaption(canBuild: true, notes: notes, offer: [nil, nil]))
-        XCTAssertEqual(BuildConfirmLayout.stretchCaption(canBuild: true, notes: notes, offer: ["For sale", nil]), "For sale")
-        XCTAssertEqual(
-            BuildConfirmLayout.stretchCaption(canBuild: false, notes: notes, offer: ["For sale", "Short"]),
-            "The first stretch is straight.\nA crossover joins.\nFor sale\nShort"
-        )
-        XCTAssertNil(BuildConfirmLayout.stretchCaption(canBuild: false, notes: [nil, ""], offer: []))
+    /// A stretch's pill has ✕ ✓ and its price alone, but for a real line
+    /// for sale along it; refused too (continued), its notes are the
+    /// details card's.
+    func testAStretchSaysOnlyWhatItOffers() {
+        XCTAssertNil(BuildConfirmLayout.stretchCaption(offer: [nil, nil]))
+        XCTAssertEqual(BuildConfirmLayout.stretchCaption(offer: ["For sale", nil]), "For sale")
+        XCTAssertEqual(BuildConfirmLayout.stretchCaption(offer: ["For sale", "Short"]), "For sale\nShort")
+        XCTAssertNil(BuildConfirmLayout.stretchCaption(offer: [nil, ""]))
     }
 
     /// With a real session: a stretch on open ground can be built, and
@@ -154,10 +224,17 @@ final class BuildConfirmLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(card.fixes.count, 2)
         XCTAssertLessThanOrEqual(card.fixes.filter { $0.change > 0 }.count, 1)
         XCTAssertLessThanOrEqual(card.fixes.filter { $0.change < 0 }.count, 1)
+        // Continued: the pill writes one short line and the button a word
+        // or two; the whole sentence and which end moves are VoiceOver's.
+        let refusal = try XCTUnwrap(session.networkPreview.flatMap(BuildConfirmLayout.refusal(of:)))
+        XCTAssertEqual(refusal.shown, "Over water: bridge or tunnel")
+        XCTAssertEqual(refusal.spoken, session.networkPreview?.problem)
         for fix in card.fixes {
             for language in [DisplayLanguage.english, .traditionalChinese] {
-                let ends = ["End", "Start", "Both ends", "終點", "起點", "兩端"]
-                XCTAssertTrue(ends.contains { fix.shortTitle(in: language).hasPrefix($0) }, fix.shortTitle(in: language))
+                let ends = ["end", "start", "both ends", "終點", "起點", "兩端"]
+                XCTAssertTrue(ends.contains { fix.title(in: language).contains($0) }, fix.title(in: language))
+                XCTAssertFalse(ends.contains { fix.buttonTitle(in: language).contains($0) }, fix.buttonTitle(in: language))
+                XCTAssertFalse(fix.buttonTitle(in: language).contains { $0.isASCII && $0.isNumber }, fix.buttonTitle(in: language))
             }
         }
     }

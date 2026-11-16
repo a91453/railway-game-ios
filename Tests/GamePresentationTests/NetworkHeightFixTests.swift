@@ -51,10 +51,13 @@ final class NetworkHeightFixTests: XCTestCase {
         XCTAssertEqual(down.change, -10 * WorldCoordinate.unitsPerMetre)
         XCTAssertEqual(up.title(in: .english), "Raise both ends 4 m: bridge")
         XCTAssertEqual(down.title(in: .traditionalChinese), "兩端降低 10 公尺，走隧道")
-        // A phone on its side: the short words beside the arrow, which
-        // still say which end moves (decision 803).
-        XCTAssertEqual(up.shortTitle(in: .english), "Both ends 4 m, bridge")
-        XCTAssertEqual(down.shortTitle(in: .traditionalChinese), "兩端 10 公尺，走隧道")
+        // Decision 803, continued: the button says what it does in a word
+        // or two; the flags and the height cell show the rest once applied.
+        XCTAssertEqual(up.buttonTitle(in: .english), "Bridge")
+        XCTAssertEqual(up.buttonTitle(in: .traditionalChinese), "用橋")
+        XCTAssertEqual(down.buttonTitle(in: .english), "Tunnel")
+        XCTAssertEqual(down.buttonTitle(in: .traditionalChinese), "走隧道")
+        XCTAssertEqual(refused.problemBrief, "Over water: bridge or tunnel")
         for fix in card.fixes {
             let trying = try lakeSession()
             trying.applyNetworkHeightFix(fix)
@@ -202,6 +205,7 @@ final class NetworkHeightFixTests: XCTestCase {
         let card = try XCTUnwrap(between.networkHeightCard)
         XCTAssertTrue(card.label.isEmpty, "no +/-")
         XCTAssertTrue(card.note?.hasPrefix("Both ends are on track already") == true)
+        XCTAssertEqual(card.noteBrief, "Both ends join track: heights can't change")
     }
 
     /// The screenshot scene: its stretch across the river is refused and
@@ -214,5 +218,7 @@ final class NetworkHeightFixTests: XCTestCase {
         XCTAssertEqual(card.label, "End on the ground")
         XCTAssertEqual(card.fixes.map(\.kind), [.bridge, .tunnel])
         XCTAssertNil(card.note, "the fixes say what they do")
+        XCTAssertNil(card.noteBrief)
+        XCTAssertEqual(session.networkPreview?.problemBrief, "Over water: bridge or tunnel")
     }
 }

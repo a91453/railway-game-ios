@@ -134,12 +134,14 @@ extension GameSession {
             guard case .track(let start)? = networkStart, case .track(let end)? = networkEnd,
                   let from = world.position(of: .track(start), height: 0), let to = world.position(of: .track(end), height: 0) else { return nil }
             return (NetworkPreview(curve: .straight, profile: .uniform, points: [from, to], length: 0, startHeight: from.z, endHeight: to.z,
-                                   joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)), [])
+                                   joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language),
+                                   problemBrief: problem.brief(in: language)), [])
         case .success(let plan):
             // Decision 245: its whole price, weighed against the cash.
             var draft = world.pricingCopy()
             var cost: Money?
             var problem: String?
+            var brief: String?
             var edges: [TrackEdgeID] = []
             do throws(GameError) {
                 if let built = try build(plan, in: &draft, structure: networkStructure) {
@@ -147,11 +149,14 @@ extension GameSession {
                     let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
                     cost = total
                     problem = shortfallText(total, doing: .buildCrossover(plan, structure: networkStructure))
+                    brief = problem == nil ? nil : GameError.shortOfCashBrief(in: language)
                 } else {
                     problem = ScissorsProblem.tooShallow.text(in: language)
+                    brief = ScissorsProblem.tooShallow.brief(in: language)
                 }
             } catch {
                 problem = error.playerMessage(in: language)
+                brief = error.trackBrief(in: language)
             }
             let geometries = edges.compactMap { draft.trackGeometry(of: $0) }
             // Every half runs from its track to the middle: a diagonal's
@@ -168,7 +173,7 @@ extension GameSession {
             )
             return (NetworkPreview(curve: .straight, profile: .uniform, points: first, length: length, startHeight: plan.middle.z,
                                    endHeight: plan.middle.z, joinsStart: true, joinsEnd: true, cost: cost, problem: problem,
-                                   costParts: parts), second)
+                                   problemBrief: brief, costParts: parts), second)
         }
     }
 

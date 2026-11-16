@@ -250,6 +250,7 @@ extension GameSession {
         var stretches: [PlayerCommand.TrackStretch] = []
         var buildable = 0
         var problem: String?
+        var brief: String?
         var existing: [(after: Int, points: [WorldCoordinate])] = []
         var refusedWay: [WorldCoordinate] = []
         var cursor = (anchor: start, point: WorldVector(from.plan), along: 0.0, fromRun: false)
@@ -274,6 +275,7 @@ extension GameSession {
             if piece.stopped || piece.stretches.isEmpty {
                 refusedWay = piece.refusedWay
                 problem = piece.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")
+                brief = piece.problem == nil ? language.text("Can't trace this stretch", "這段無法描線") : piece.brief
                 return false
             }
             return true
@@ -294,6 +296,7 @@ extension GameSession {
                     "The track already laid here leaves too short a gap to join.",
                     "這裡已經鋪好的軌道之間空隙太短，接不起來。"
                 )
+                brief = language.text("Too short a gap between the tracks here", "這裡兩段軌道間的空隙太短")
                 reached = false
                 break
             }
@@ -310,13 +313,14 @@ extension GameSession {
         }
         if stretches.isEmpty, problem == nil {
             problem = language.text("Track is already laid all along here.", "這段已經有軌道了。")
+            brief = language.text("Track is already here", "這段已經有軌道了")
         }
         guard !stretches.isEmpty else {
-            var refused = TracePlan(stretches: [], buildable: 0, problem: problem)
+            var refused = TracePlan(stretches: [], buildable: 0, problem: problem, brief: brief)
             refused.refusedWay = refusedWay
             return refused
         }
-        var plan = TracePlan(stretches: stretches, buildable: buildable, problem: reached ? nil : problem)
+        var plan = TracePlan(stretches: stretches, buildable: buildable, problem: reached ? nil : problem, brief: reached ? nil : brief)
         plan.existing = existing.filter { $0.after <= buildable }
         plan.existingLength = plan.existing.reduce(0) { total, run in
             total + zip(run.points, run.points.dropFirst()).reduce(0) { $0 + (WorldVector($1.1.plan) - WorldVector($1.0.plan)).length }

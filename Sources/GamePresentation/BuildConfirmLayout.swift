@@ -151,6 +151,10 @@ extension BuildConfirmLayout {
         /// The words beside the buttons: half as tall, for a screen with
         /// little height (a phone held sideways).
         case beside
+        /// Decision 803, continued: a refusal with fixes on a short
+        /// screen. Why across the top, as wide as the pill; under it one
+        /// row of the fixes, each as wide as the other, and ✕ ✓.
+        case strip
     }
 
     /// The pill's arrangement: ``Arrangement/beside`` where the screen is
@@ -160,8 +164,49 @@ extension BuildConfirmLayout {
     /// stretch of track's alone; but the new line's (`ridesWithDrawer`),
     /// which carries its station pair drawer beside its words already
     /// (decision 384).
-    public static func arrangement(compactHeight: Bool, hasWords: Bool, ridesWithDrawer: Bool = false) -> Arrangement {
-        compactHeight && hasWords && !ridesWithDrawer ? .beside : .stacked
+    public static func arrangement(
+        compactHeight: Bool, hasWords: Bool, ridesWithDrawer: Bool = false, hasFixes: Bool = false
+    ) -> Arrangement {
+        guard compactHeight, hasWords, !ridesWithDrawer else { return .stacked }
+        return hasFixes ? .strip : .beside
+    }
+
+    /// How tall the pill's buttons are, in points: 48, and 44 (a finger's
+    /// least) in ``Arrangement/strip``, so the pill with its one line of
+    /// why stands some 82 points tall and finds room above or below a
+    /// stretch drawn across the middle of a phone held sideways (the 195
+    /// points or so between the controls along its top and bottom,
+    /// decision 803's leftover).
+    public static func buttonHeight(_ arrangement: Arrangement) -> Double {
+        arrangement == .strip ? 44 : 48
+    }
+
+    /// Decision 803, continued: how wide the pill's column is. Each child
+    /// has the width it would take on one line (`ideal`), and words that
+    /// may wrap a width they wrap at (`cap`; `nil` for buttons, which do
+    /// not): the widest of them, within `limit`. Every child is then
+    /// given that width, so why a stretch is refused runs as wide as the
+    /// pill and the fixes line up under it.
+    public static func columnWidth(_ children: [(ideal: Double, cap: Double?)], limit: Double?) -> Double {
+        let widest = children.map { child in child.cap.map { min(child.ideal, $0) } ?? child.ideal }.max() ?? 0
+        return min(widest, limit ?? .infinity)
+    }
+
+    /// Decision 803, continued: the fixes as cells of one width (#2302's
+    /// screenshots: the bridge narrower than the tunnel, their edges out
+    /// of line). Side by side where `available` holds them at the widest
+    /// one's width (`nil`: as wide as they like), filling it; else one
+    /// over another, each as wide as `available` or the widest. Half a
+    /// point short still counts as holding them: a row offered the very
+    /// width it asked for may come back a rounding short.
+    public static func equalCells(ideal: [Double], available: Double?, spacing: Double) -> (cell: Double, stacked: Bool) {
+        let widest = ideal.max() ?? 0
+        let count = Double(ideal.count)
+        guard count > 0 else { return (0, false) }
+        guard let available, available.isFinite else { return (widest, false) }
+        let across = (available - spacing * (count - 1)) / count
+        if across >= widest - 0.5 { return (max(across, widest), false) }
+        return (max(widest, available), count > 1)
     }
 
     /// The widest a stretch's refusal wraps at, in points: some three
@@ -174,6 +219,25 @@ extension BuildConfirmLayout {
     /// and the stretch's end; it comes once the finger lets go.
     public static func pillShows(fingerDraws: Bool) -> Bool {
         !fingerDraws
+    }
+
+    /// Decision 803, continued: whether a finger still draws what the
+    /// pill would confirm. A stretch of track was decision 803's; a road
+    /// drawn and a building moved kept the pill under the finger.
+    public static func fingerDraws(track: Bool, road: Bool, building: Bool, tool: ConstructionTool, roadsMode: Bool) -> Bool {
+        switch tool {
+        case .network: track
+        case .bus: roadsMode && road
+        case .building: building
+        case .select, .train: false
+        }
+    }
+
+    /// Why a stretch is refused, as the pill writes it and as VoiceOver
+    /// reads it (decision 803, continued): the one short line where there
+    /// is one, the whole sentence aloud.
+    public static func refusal(of preview: NetworkPreview) -> (shown: String, spoken: String)? {
+        preview.problem.map { (preview.problemBrief ?? $0, $0) }
     }
 
     /// The one small mark the construction HUD's row carries after the
@@ -196,13 +260,12 @@ extension BuildConfirmLayout {
     }
 
     /// What a stretch's pill says over its buttons, a line each, or `nil`
-    /// for nothing. Decision 803: a stretch that can be built says only
-    /// what it offers besides (`offer`: a real line for sale along it);
-    /// its other `notes` (the first stretch is straight, the crossovers a
-    /// double track adds) are the details card's. Refused, it says them
-    /// all under the reason.
-    public static func stretchCaption(canBuild: Bool, notes: [String?], offer: [String?]) -> String? {
-        let lines = ((canBuild ? [] : notes) + offer).compactMap(\.self).filter { !$0.isEmpty }
+    /// for nothing. Decision 803: only what it offers besides (`offer`: a
+    /// real line for sale along it); its notes (the first stretch is
+    /// straight, the crossovers a double track adds) are the details
+    /// card's. Continued: refused too, where they stood under the reason.
+    public static func stretchCaption(offer: [String?]) -> String? {
+        let lines = offer.compactMap(\.self).filter { !$0.isEmpty }
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
@@ -237,5 +300,16 @@ extension BuildConfirmLayout {
         }
         let site = siteObstacles([thinned], around: anchor, reach: reach)
         return [site[0]] + flags.map(flagFrame(at:)) + site.dropFirst()
+    }
+}
+
+extension GameSession {
+    /// Whether a finger still draws what the map's ✕ ✓ pill would confirm
+    /// (``BuildConfirmLayout/fingerDraws(track:road:building:tool:roadsMode:)``).
+    public var buildFingerDraws: Bool {
+        BuildConfirmLayout.fingerDraws(
+            track: networkDragFinger != nil, road: roadDragStart != nil, building: buildingDragSiteBefore != nil,
+            tool: tool, roadsMode: busMode == .roads
+        )
     }
 }

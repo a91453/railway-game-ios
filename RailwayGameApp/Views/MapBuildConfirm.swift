@@ -67,7 +67,7 @@ struct MapBuildConfirm: View {
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
         // Decision 253: a small thing popping up where the finger is.
         .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: confirmation != nil)
-        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: session.networkDragFinger != nil)
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: session.buildFingerDraws)
     }
 
     private var confirmation: BuildConfirmation? {
@@ -157,43 +157,77 @@ struct MapBuildConfirm: View {
     /// but over the construction HUD and the stretch. Decision 803: every
     /// build's words do (a platform's place, a building, a road, a bus or
     /// ferry route), but the new line's, whose drawer is beside them.
+    /// Continued: a refusal with fixes there has why across the top and
+    /// one row of the fixes and ✕ ✓ under it.
+    @ViewBuilder
     private func words(_ build: BuildConfirmation) -> some View {
         let arrangement = BuildConfirmLayout.arrangement(
-            compactHeight: verticalSizeClass == .compact, hasWords: build.hasWords, ridesWithDrawer: build.kind == .line
+            compactHeight: verticalSizeClass == .compact, hasWords: build.hasWords, ridesWithDrawer: build.kind == .line,
+            hasFixes: build.heights?.fixes.isEmpty == false
         )
-        let layout = arrangement == .beside ? AnyLayout(HStackLayout(spacing: 6)) : AnyLayout(VStackLayout(spacing: 4))
-        return layout {
-            if build.hasWords {
-                said(build, beside: arrangement == .beside)
+        let height = CGFloat(BuildConfirmLayout.buttonHeight(arrangement))
+        switch arrangement {
+        case .beside:
+            HStack(spacing: 6) {
+                PillColumn {
+                    said(build, arrangement: arrangement)
+                }
+                buttons(build, height: height)
+                    .fixedSize()
             }
-            // Decision 646: the height is slid on the construction HUD's
-            // cell; the pill keeps only ✕ ✓ and a refusal's fixes.
-            buttons(build)
-                .fixedSize()
+        case .strip:
+            PillColumn {
+                said(build, arrangement: arrangement)
+                HStack(spacing: 6) {
+                    if let heights = build.heights {
+                        EqualCells { fixButtons(heights.fixes, height: height) }
+                    }
+                    buttons(build, height: height)
+                        .fixedSize()
+                }
+            }
+        case .stacked:
+            PillColumn {
+                if build.hasWords {
+                    said(build, arrangement: arrangement)
+                }
+                if let heights = build.heights, !heights.fixes.isEmpty {
+                    EqualCells { fixButtons(heights.fixes, height: height) }
+                }
+                // Decision 646: the height is slid on the construction
+                // HUD's cell; the pill keeps only ✕ ✓ and a refusal's
+                // fixes.
+                buttons(build, height: height)
+                    .fixedSize()
+            }
         }
     }
 
     /// The pill's words: a caption, why the stretch is refused, and what
-    /// its heights can do about it.
-    private func said(_ build: BuildConfirmation, beside: Bool) -> some View {
-        VStack(spacing: 4) {
-            if let caption = build.caption {
-                // Beside the buttons it wraps no wider than a refusal
-                // does, so the pill stays off the map's middle.
-                if beside {
-                    WidthLimit(maxWidth: BuildConfirmLayout.wordsWidth) { captionLine(caption, beside: true) }
-                } else {
-                    captionLine(caption, beside: false)
-                }
-            }
-            if let problem = build.problem {
-                WidthLimit(maxWidth: BuildConfirmLayout.wordsWidth) {
-                    problemLine(problem)
-                }
-            }
-            if let heights = build.heights {
-                heightNoteAndFixes(heights)
-            }
+    /// to do where no fix is offered (decision 629). Each wraps within
+    /// the column (``PillColumn``).
+    @ViewBuilder
+    private func said(_ build: BuildConfirmation, arrangement: BuildConfirmLayout.Arrangement) -> some View {
+        if let caption = build.caption {
+            // Beside the buttons it wraps no wider than a refusal does,
+            // so the pill stays off the map's middle.
+            captionLine(caption, beside: arrangement == .beside)
+                .layoutValue(key: WordsCap.self, value: arrangement == .beside ? BuildConfirmLayout.wordsWidth : Double.infinity)
+        }
+        if let problem = build.problem {
+            problemLine(problem, spoken: build.spokenProblem ?? problem, slim: arrangement == .strip)
+                .layoutValue(key: WordsCap.self, value: BuildConfirmLayout.wordsWidth)
+        }
+        if let heights = build.heights, let note = heights.note {
+            Text(verbatim: heights.noteBrief ?? note)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
+                .accessibilityLabel(Text(verbatim: note))
+                .accessibilityIdentifier("map.build.heightNote")
+                .layoutValue(key: WordsCap.self, value: BuildConfirmLayout.wordsWidth)
         }
     }
 
@@ -212,9 +246,12 @@ struct MapBuildConfirm: View {
 
     /// Decision 800: why the stretch is refused, beside the ✓ it greys;
     /// the construction HUD said it, where the pill then stood over it
-    /// (the owner's report from 0.6.0 (134), a phone held sideways). It
-    /// wraps, every line of it, at any text size.
-    private func problemLine(_ problem: String) -> some View {
+    /// (the owner's report from 0.6.0 (134), a phone held sideways).
+    /// Decision 803, continued: one short line, as wide as the pill
+    /// (#2302's screenshots: narrower than it, at its leading side);
+    /// VoiceOver reads the whole sentence (`spoken`). It still wraps at
+    /// any text size.
+    private func problemLine(_ problem: String, spoken: String, slim: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.caption.weight(.bold))
@@ -225,49 +262,27 @@ struct MapBuildConfirm: View {
         }
         .foregroundStyle(Theme.warning)
         .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.vertical, slim ? 3 : 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: session.language.text("Problem: \(problem)", "問題：\(problem)")))
+        .accessibilityLabel(Text(verbatim: session.language.text("Problem: \(spoken)", "問題：\(spoken)")))
         .accessibilityIdentifier("map.build.problem")
     }
 
-    /// Decision 629: what to do where no fix is offered, and a button
-    /// for each height that gets the stretch built where it was refused,
-    /// side by side where they fit.
+    /// At most one fix up and one down (decision 629), each a cell of
+    /// ``EqualCells``; written out rather than with a `ForEach`
+    /// (CRASH101's row closure).
     @ViewBuilder
-    private func heightNoteAndFixes(_ card: NetworkHeightCard) -> some View {
-        if let note = card.note {
-            Text(verbatim: note)
-                .font(.caption)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 8)
-                .accessibilityIdentifier("map.build.heightNote")
-        }
-        if !card.fixes.isEmpty {
-            // Round 2's screenshots: stacked, the pill was too tall to
-            // stand under the HUD on a phone on its side, and covered the
-            // refusal; the short words keep the two on one row there.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) { fixButtons(card.fixes, short: false) }
-                HStack(spacing: 6) { fixButtons(card.fixes, short: true) }
-                VStack(spacing: 4) { fixButtons(card.fixes, short: false) }
-            }
-        }
+    private func fixButtons(_ fixes: [NetworkHeightFix], height: CGFloat) -> some View {
+        if let up = fixes.first(where: { $0.change > 0 }) { fixButton(up, height: height) }
+        if let down = fixes.first(where: { $0.change < 0 }) { fixButton(down, height: height) }
     }
 
-    /// At most one fix up and one down; written out rather than with a
-    /// `ForEach`, whose row closure a `ViewThatFits` would measure off the
-    /// main thread (CRASH101).
-    @ViewBuilder
-    private func fixButtons(_ fixes: [NetworkHeightFix], short: Bool) -> some View {
-        if let up = fixes.first(where: { $0.change > 0 }) { fixButton(up, short: short) }
-        if let down = fixes.first(where: { $0.change < 0 }) { fixButton(down, short: short) }
-    }
-
-    private func fixButton(_ fix: NetworkHeightFix, short: Bool) -> some View {
+    /// Decision 803, continued: its arrow, what it does in a word or two
+    /// and its price. Which end moves and how far are on the flags and
+    /// the height cell once it is applied; VoiceOver reads them here.
+    private func fixButton(_ fix: NetworkHeightFix, height: CGFloat) -> some View {
         let language = session.language
         return Button {
             session.applyNetworkHeightFix(fix)
@@ -275,26 +290,28 @@ struct MapBuildConfirm: View {
             HStack(spacing: 6) {
                 Image(systemName: fix.change > 0 ? "arrow.up.to.line" : "arrow.down.to.line")
                     .font(.body.weight(.bold))
-                Text(verbatim: short ? fix.shortTitle(in: language) : fix.title(in: language))
+                Text(verbatim: fix.buttonTitle(in: language))
                     .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
                 // Decision 800: no "NT$ 0" where it costs nothing.
                 if let price = BuildConfirmLayout.priceText(of: fix.cost, in: language) {
                     Text(verbatim: price)
                         .font(.subheadline)
                         .monospacedDigit()
+                        .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 6)
-            .frame(minHeight: 40)
+            .padding(.horizontal, 8)
+            // The selectable style's 4 above and below make up `height`.
+            .frame(maxWidth: .infinity, minHeight: height - 8)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-        .fixedSize()
         .accessibilityLabel(Text(verbatim: [fix.title(in: language), BuildConfirmLayout.priceText(of: fix.cost, in: language)]
                 .compactMap(\.self).joined(separator: " ")))
         .accessibilityIdentifier(fix.change > 0 ? "map.build.fixUp" : "map.build.fixDown")
     }
 
-    private func buttons(_ build: BuildConfirmation) -> some View {
+    private func buttons(_ build: BuildConfirmation, height: CGFloat) -> some View {
         HStack(spacing: 6) {
             // Decision 100, later: the new line's last stop taken back
             // (the reference's `undoLastStation`).
@@ -304,7 +321,7 @@ struct MapBuildConfirm: View {
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.body.weight(.bold))
-                        .frame(width: 44, height: 40)
+                        .frame(width: 44, height: height - 8)
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
                 .accessibilityLabel(Text(verbatim: session.language.text("Take Back the Last Stop", "取消上一站")))
@@ -324,7 +341,7 @@ struct MapBuildConfirm: View {
                             .font(.subheadline.weight(.bold))
                     }
                     .padding(.horizontal, 6)
-                    .frame(minHeight: 40)
+                    .frame(minHeight: height - 8)
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
                 .accessibilityIdentifier("map.build.expandMap")
@@ -340,7 +357,7 @@ struct MapBuildConfirm: View {
                             .font(.subheadline.weight(.bold))
                     }
                     .padding(.horizontal, 6)
-                    .frame(minHeight: 40)
+                    .frame(minHeight: height - 8)
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
                 .accessibilityIdentifier("map.build.buyLine")
@@ -350,7 +367,7 @@ struct MapBuildConfirm: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.body.weight(.bold))
-                    .frame(width: 44, height: 40)
+                    .frame(width: 44, height: height - 8)
             }
             .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
             .accessibilityLabel(Text(verbatim: session.language.text("Cancel", "取消")))
@@ -375,10 +392,10 @@ struct MapBuildConfirm: View {
                             .monospacedDigit()
                     }
                 }
-                // As tall as ✕ beside it (40 and the selectable style's 4
+                // As tall as ✕ beside it (the selectable style adds 4
                 // above and below), and never narrower: the main action is
                 // not the smallest.
-                .frame(minWidth: 44, minHeight: 48)
+                .frame(minWidth: 44, minHeight: height)
             }
             .buttonStyle(ThemeProminentButtonStyle(isPurchase: build.kind == .mapTile))
             .disabled(!build.canConfirm)
@@ -464,6 +481,77 @@ private struct WidthLimit: Layout {
     }
 }
 
+/// The width a child of ``PillColumn`` that is words wraps at; `nil` for
+/// buttons, which do not wrap.
+private struct WordsCap: LayoutValueKey {
+    static let defaultValue: Double? = nil
+}
+
+/// Decision 803, continued: the pill's words and buttons one over another,
+/// every one given the width of the widest
+/// (``BuildConfirmLayout/columnWidth(_:limit:)``): why a stretch is refused
+/// runs as wide as the pill, and the fixes fill it under it. A child
+/// narrower than that (✕ ✓) stands in the middle.
+private struct PillColumn: Layout {
+    var spacing: CGFloat = 4
+
+    private func columnWidth(_ proposal: ProposedViewSize, _ subviews: Subviews) -> CGFloat {
+        let limit = proposal.width.flatMap { $0.isFinite ? Double($0) : nil }
+        return CGFloat(BuildConfirmLayout.columnWidth(
+            subviews.map { (ideal: Double($0.sizeThatFits(.unspecified).width), cap: $0[WordsCap.self]) }, limit: limit
+        ))
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard !subviews.isEmpty else { return .zero }
+        let width = columnWidth(proposal, subviews)
+        let heights = subviews.map { $0.sizeThatFits(ProposedViewSize(width: width, height: nil)).height }
+        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(subviews.count - 1))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for subview in subviews {
+            let offered = ProposedViewSize(width: bounds.width, height: nil)
+            let size = subview.sizeThatFits(offered)
+            subview.place(at: CGPoint(x: bounds.midX, y: y), anchor: .top, proposal: offered)
+            y += size.height + spacing
+        }
+    }
+}
+
+/// Decision 803, continued: a refusal's fixes as cells of one width
+/// (``BuildConfirmLayout/equalCells(ideal:available:spacing:)``), side by
+/// side where they fit and one over another where they do not.
+private struct EqualCells: Layout {
+    var spacing: CGFloat = 6
+
+    private func cells(_ width: CGFloat?, _ subviews: Subviews) -> (cell: CGFloat, stacked: Bool, height: CGFloat) {
+        let ideals = subviews.map { $0.sizeThatFits(.unspecified) }
+        let found = BuildConfirmLayout.equalCells(
+            ideal: ideals.map { Double($0.width) }, available: width.map { Double($0) }, spacing: Double(spacing)
+        )
+        return (CGFloat(found.cell), found.stacked, ideals.map(\.height).max() ?? 0)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard !subviews.isEmpty else { return .zero }
+        let plan = cells(proposal.width, subviews)
+        let count = CGFloat(subviews.count), gaps = spacing * (count - 1)
+        return plan.stacked ? CGSize(width: plan.cell, height: plan.height * count + gaps)
+            : CGSize(width: plan.cell * count + gaps, height: plan.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let plan = cells(bounds.width, subviews)
+        var x = bounds.minX, y = bounds.minY
+        for subview in subviews {
+            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(width: plan.cell, height: plan.height))
+            if plan.stacked { y += plan.height + spacing } else { x += plan.cell + spacing }
+        }
+    }
+}
+
 /// The build the pill confirms: the stretch of track previewed, or the
 /// building shown.
 @MainActor
@@ -498,10 +586,13 @@ private struct BuildConfirmation {
     /// it greys; `nil` while a finger still draws it (the pill is under
     /// the finger, and the construction HUD says it).
     var problem: String?
+    /// ``problem`` whole, for VoiceOver: the pill writes one short line
+    /// (decision 803, continued).
+    var spokenProblem: String?
     /// The stretch drawn, which the pill keeps off.
     var stretch: [PlanPoint] = []
     /// Decision 803: a finger still draws the stretch; the pill waits for
-    /// it to let go.
+    /// it to let go. Continued: a road drawn and a building moved too.
     var fingerDraws = false
 
     /// Whether the pill says anything over (or beside) its buttons.
@@ -635,21 +726,22 @@ private struct BuildConfirmation {
             // Decision 468, later: a trace along a real line for sale says
             // so, and the pill offers its purchase card.
             let sale = session.tracedSaleHint
-            let hint = session.networkFollowsTrack && session.networkOffersFreeFirstHint ? preview.freeFirstHint(in: session.language) : nil
-            // Decision 803: a stretch that can be built has ✕ ✓ and its
-            // price alone; the notes are the details card's.
-            caption = BuildConfirmLayout.stretchCaption(
-                canBuild: canBuild, notes: [hint, preview.crossoverNote], offer: [sale?.text, sale?.shortfall]
-            )
+            // Decision 803: a stretch has ✕ ✓ and its price alone; its
+            // notes (the first stretch is straight, a double track's
+            // crossovers) are the details card's.
+            caption = BuildConfirmLayout.stretchCaption(offer: [sale?.text, sale?.shortfall])
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
             expandsMap = session.offersMapExpansion(for: preview.problem)
             buysLine = sale != nil
             heights = session.networkHeightCard
-            problem = session.networkDragFinger == nil ? preview.problem : nil
+            fingerDraws = session.buildFingerDraws
+            if !fingerDraws, let refusal = BuildConfirmLayout.refusal(of: preview) {
+                problem = refusal.shown
+                spokenProblem = refusal.spoken
+            }
             stretch = preview.points.map(\.plan)
-            fingerDraws = session.networkDragFinger != nil
         case .building where session.buildingMode == .sell:
             // Decision 130: the building chosen to sell, and what it brings.
             guard let sale = session.salePreview else { return nil }
@@ -678,6 +770,7 @@ private struct BuildConfirmation {
             cancel = { session.clearBuildingSite() }
             confirm = { _ = session.confirmBuilding() }
             expandsMap = session.offersMapExpansion(for: preview.problem)
+            fingerDraws = session.buildFingerDraws
         case .bus where session.busMode == .ferries:
             // Decision 585: the ferry route drawn, beside its last pier.
             guard let preview = session.ferryPreview, let last = session.ferryDraft.last else { return nil }
@@ -701,6 +794,7 @@ private struct BuildConfirmation {
             clearance = 18
             showsCatchment = false
             cancel = { session.clearRoadDraft() }
+            fingerDraws = session.buildFingerDraws
             if let removal = session.roadRemoval, let first = removal.cells.first {
                 anchor = first.middle
                 cost = nil
