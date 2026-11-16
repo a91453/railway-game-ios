@@ -118,6 +118,27 @@ final class DepotReturnReportTests: XCTestCase {
         try report("tymc-rebuilt", session.world)
     }
 
+    /// HEALTH-135: Rovaniemi's lines (decision 789), each bought on its
+    /// own in a game of that map as the launcher starts it, before the map
+    /// opens. `DEPOT_RETURN_SIMPLE` only turns traffic control off here.
+    func testRovaniemiKemijarvi() throws {
+        try wanted("rovaniemi-kja")
+        try report("rovaniemi-kja", Self.rovaniemiBought("vr:KJA"))
+    }
+
+    func testRovaniemiMuurola() throws {
+        try wanted("rovaniemi-mul")
+        try report("rovaniemi-mul", Self.rovaniemiBought("vr:MUL"))
+    }
+
+    private static func rovaniemiBought(_ id: String) throws -> GameWorld {
+        let session = try RovaniemiRailwaysTests.rovaniemi()
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
+        let offer = session.realLineOffer(for: line)
+        XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
+        return session.world
+    }
+
     /// The old line's first day, to two in the morning of the next.
     private static func taoyuanAirportBoughtBefore(simple: Bool) throws -> (session: GameSession, line: LineID) {
         let (session, id) = try RealLineRebuildTests.boughtAsBefore(rules: simple ? .simple : .realistic)
