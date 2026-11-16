@@ -98,7 +98,8 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 **取色與分色**（作者 2026-11-15：「我怕他製作模型還在簡單幾色而已」）：
 
-- 每個材質先從遊戲已有的色取：`Map3DPalette`（建築、大型廠房用多色組 `cityOfficeWalls`、`cityConcreteWalls`、`cityRoofs`、`hallWalls`、`hallRoofs`，一組裡挑一格，不是整組只用第一格）與舊材質對照表 `tools/texture-palette/t003/building-map.csv`（舊材質最常見、2026-11-15 加進遊戲的 `steel` 鋼、`dark` 深色／窗、`redBrick` 紅磚、`timber` 木頭、`terrazzo` 洗石子）。派工單的材質表寫出是哪一格（`references/studio-brief.md` §1 第 7 條）；遊戲沒有的色標「新提」並寫原因。
+- 每個材質先從遊戲已有的色取：`Map3DPalette`（建築、大型廠房用多色組 `cityOfficeWalls`、`cityConcreteWalls`、`cityRoofs`、`hallWalls`、`hallRoofs`，一組裡挑一格，不是整組只用第一格）與舊材質對照表 `tools/texture-palette/t003/building-map.csv`（舊材質最常見、2026-11-15 加進遊戲的 `steel` 鋼、`dark` 深色／窗、`redBrick` 紅磚、`timber` 木頭、`terrazzo` 洗石子）。派工單的材質表寫出是哪一格（`references/studio-brief.md` §1 第 7 條）；遊戲沒有的色標「新提」並寫原因；舊表上的「新提」先查是不是已經進了 `Map3DPalette`，進了就改寫成格位名（程式裡的註解也改）。
+- 兩個色在遊戲大小分不開時，不為一個模型加新色：用深一格的線（板縫、框）把面分開（滙豐，決策 793）。
 - 照部位分色：牆、窗、窗框、樓層線、屋頂、設備、底座各自是面、各一個色。只有兩三個大色塊的模型，在遊戲大小看起來就是盒子（第 2 節），不算交件。
 - 列車、公車的塗裝照真車照片取色（遊戲沒有的塗裝色可以新提）；車底、轉向架、車頂設備優先用 `Map3DPalette.steel` 與 `dark`。
 - 2026-11-15 檢視當天的模型時的結果與待辦：`docs/research/MODEL_PALETTE_REVIEW_2026-11-15.md`。

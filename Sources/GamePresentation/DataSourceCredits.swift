@@ -353,6 +353,22 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // Decision 799: the pack's buildings.
+                    DataSourceCredit(
+                        id: "rovaniemiBuildings",
+                        title: language.text("Rovaniemi’s buildings", "羅瓦涅米的建物"),
+                        detail: language.text(
+                            "On Rovaniemi’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded.",
+                            "羅瓦涅米地圖上，3D 地圖裡建物的外形與用途，有記錄的還有樓層數。"
+                        ),
+                        notice: language.text(
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are not recorded are this game’s estimate.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有記錄的樓層數是本遊戲的估計。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
                     DataSourceCredit(
                         id: "rovaniemiTerrain",
                         title: language.text("Rovaniemi’s terrain", "羅瓦涅米的地形"),

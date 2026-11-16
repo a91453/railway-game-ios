@@ -235,9 +235,13 @@ extension Map3DDepotYardKit {
     /// Decision 785: how many 12 m bays a shed beside sidings `length`
     /// metres long has: as many as fit along them, at least three (the
     /// head, one middle and the tail, 36 m as decision 441's shed) and at
-    /// most ``maxBays``.
+    /// most ``maxBays``. A length that is not a number counts as no
+    /// length, and one past ``maxBays`` bays is clamped before it is
+    /// counted, so neither traps on its way to an `Int` (REVIEW-L23 P3-3).
     public static func bays(forSiding length: Float) -> Int {
-        min(maxBays, max(3, Int((length / 12).rounded(.down))))
+        guard !length.isNaN else { return 3 }
+        let fit = min(Float(maxBays), max(3, (length / 12).rounded(.down)))
+        return Int(fit)
     }
 
     /// Decision 785: the shed of `bays` bays for `system`'s trains on

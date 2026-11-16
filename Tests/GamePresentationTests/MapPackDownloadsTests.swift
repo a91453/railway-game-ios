@@ -102,4 +102,42 @@ final class MapPackDownloadsTests: XCTestCase {
             XCTAssertEqual(Array(policy.keys), ["prefetch"])
         }
     }
+
+    /// Decision 776, later: the app keeps how each download stands; the
+    /// settings say only what the game reads, a problem report says why.
+    func testTheStatusOfADownloadIsKeptAndToldInTwoWays() {
+        XCTAssertEqual(MapPackDownloads.status(.hongKong), .bundled)
+        XCTAssertEqual(OverseasMap.hongKong.mapPackTitle(in: .english), "Hong Kong Map")
+        XCTAssertEqual(OverseasMap.hongKong.mapPackTitle(in: .traditionalChinese), "香港地圖")
+        XCTAssertEqual(MapPackDownloads.report(of: [.hongKong]), "mappack-hongkong bundled")
+        XCTAssertNil(MapPackDownloads.report(of: []))
+
+        let heard = expectation(forNotification: MapPackDownloads.statusChanged, object: nil)
+        MapPackDownloads.note(.hongKong, .downloading)
+        wait(for: [heard], timeout: 1)
+        XCTAssertEqual(MapPackDownloads.status(.hongKong), .downloading)
+
+        let told: [(MapPackStatus, String, String, String)] = [
+            (.bundled, "Built-in data", "使用內建資料", "bundled"),
+            (.downloading, "Downloading", "下載中", "downloading"),
+            (.downloaded, "Downloaded", "已下載", "used"),
+            (.refused(.incomplete("basemap.pmtiles")), "Built-in data", "使用內建資料", #"not used: incomplete("basemap.pmtiles")"#),
+            (.refused(.differsFromBundled), "Built-in data", "使用內建資料", "not used: differsFromBundled"),
+            (.failed("no network"), "Built-in data", "使用內建資料", "not fetched: no network"),
+        ]
+        for (status, english, chinese, report) in told {
+            MapPackDownloads.note(.hongKong, status)
+            XCTAssertEqual(MapPackDownloads.status(.hongKong), status)
+            XCTAssertEqual(status.text(in: .english), english)
+            XCTAssertEqual(status.text(in: .traditionalChinese), chinese)
+            XCTAssertEqual(MapPackDownloads.report(of: [.hongKong]), "mappack-hongkong \(report)")
+        }
+        // A long error is cut, not carried whole.
+        XCTAssertEqual(MapPackStatus.failed(String(repeating: "x", count: 500)).reportText.count, "not fetched: ".count + 200)
+        // The open cities are what a report lists unasked.
+        XCTAssertEqual(MapPackDownloads.report(), "mappack-hongkong not fetched: no network")
+
+        MapPackDownloads.forget(.hongKong)
+        XCTAssertEqual(MapPackDownloads.status(.hongKong), .bundled)
+    }
 }

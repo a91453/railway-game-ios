@@ -506,7 +506,15 @@ public final class GameLauncher {
         // Decision 502: this device's game moved to a row of its own. Not
         // for a game begun since the round started (the third review's 2):
         // its row is the one it was begun from.
-        if gamesBegun == begun, let row = gameRow, let moved = outcome.movedRows[row] { gameRow = moved }
+        if gamesBegun == begun, let row = gameRow, let moved = outcome.movedRows[row] {
+            gameRow = moved
+            // Decision 795: and its livery with it.
+            if let lines = preferences.christmasLiveries?[row] {
+                preferences.christmasLiveries?[row] = nil
+                preferences.christmasLiveries?[moved] = lines
+                savePreferences()
+            }
+        }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
         if !outcome.downloaded.isEmpty || !outcome.deleted.isEmpty || !outcome.keptBoth.isEmpty {
@@ -909,11 +917,39 @@ public final class GameLauncher {
     /// their networks are not the player's. A game with unlimited funds
     /// earns them: a badge is a keepsake, not a feat.
     func checkWinterEvent(of session: GameSession, at date: Date = Date(), calendar: Calendar = WinterEvent.calendar()) {
+        // Decision 795: whether the livery can be chosen, each midnight.
+        session.christmasLiveryAvailable = winterEvent.liveryIsAvailable(at: date, calendar: calendar)
         guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil,
               WinterEvent.mission(at: date, calendar: calendar) != nil else { return }
-        let facts = WinterMissionFacts(world: session.world)
+        let facts = WinterMissionFacts(world: session.world, liveried: session.christmasLiveryLines)
         guard let mission = winterEvent.earn(meeting: facts, at: date, calendar: calendar) else { return }
         session.noteWinterBadge(mission)
+        session.christmasLiveryAvailable = winterEvent.liveryIsAvailable(at: date, calendar: calendar)
+    }
+
+    /// Decision 795: gives `session` the lines `row` wore the Christmas
+    /// livery on (kept on the device, not in the save), whether it can be
+    /// chosen now, and keeps each change the player makes.
+    func attachChristmasLivery(to session: GameSession, row: String?, at date: Date = Date(),
+                               calendar: Calendar = WinterEvent.calendar()) {
+        session.christmasLiveryAvailable = winterEvent.liveryIsAvailable(at: date, calendar: calendar)
+        session.christmasLiveryChosen = Set((row.flatMap { preferences.christmasLiveries?[$0] } ?? []).map(LineID.init(rawValue:)))
+        session.christmasLiveryChanged = { [weak self, weak session] _ in
+            guard let self, let session, self.session === session else { return }
+            self.keepChristmasLivery()
+        }
+    }
+
+    /// Decision 795: writes the game's livery under its row; a game not
+    /// saved yet keeps it until it has one.
+    func keepChristmasLivery() {
+        guard let session, let row = gameRow else { return }
+        var all = preferences.christmasLiveries ?? [:]
+        let lines = session.christmasLiveryChosen.map(\.rawValue).sorted()
+        all[row] = lines.isEmpty ? nil : lines
+        guard all != preferences.christmasLiveries ?? [:] else { return }
+        preferences.christmasLiveries = all.isEmpty ? nil : all
+        savePreferences()
     }
 
     /// Stamps the real stations `session`'s trains served yesterday
@@ -1915,6 +1951,8 @@ public final class GameLauncher {
         checkAirRoutes(of: started)
         session = started
         gameRow = row
+        // Decision 795: the lines this game's row wore the livery on.
+        attachChristmasLivery(to: started, row: row)
         gamesBegun += 1
         gameIsOpen.value = true
         startLessonClock()
@@ -2022,6 +2060,7 @@ public final class GameLauncher {
         // written meanwhile name it.
         let row = (name == nil ? gameRow : nil) ?? library.newRow(at: date, besides: [gameRow].compactMap { $0 })
         gameRow = row
+        keepChristmasLivery()
         return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name, row: row) { [weak self, weak session] result in
             switch result {
             case .success(let entry):

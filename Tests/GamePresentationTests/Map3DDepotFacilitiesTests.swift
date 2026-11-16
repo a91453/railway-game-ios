@@ -131,6 +131,12 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
         XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: 10), 3)
         XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: 150), 12)
         XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: 2_000), Map3DDepotYardKit.maxBays)
+        // REVIEW-L23 P3-3: a length that is not a number, or too long for
+        // an Int, is counted, not trapped on.
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: .nan), 3)
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: .infinity), Map3DDepotYardKit.maxBays)
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: -.infinity), 3)
+        XCTAssertEqual(Map3DDepotYardKit.bays(forSiding: .greatestFiniteMagnitude), Map3DDepotYardKit.maxBays)
         // The longest shed stays within an app model's 15,000 triangles.
         for system in Map3DDepotYardKit.System.allCases {
             let near = Map3DDepotYardKit.shedMesh(system: system, tracks: 4, bays: Map3DDepotYardKit.maxBays)

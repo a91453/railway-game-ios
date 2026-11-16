@@ -26,6 +26,9 @@ public struct ProblemReport: Hashable, Sendable {
     /// Decision 417: the 3D map's look and the rung it climbed to on this
     /// device (``Map3DLoadGovernor/report(_:)``), or `nil`.
     public let map3D: String?
+    /// Decision 776, later: how the cities' map pack downloads stand
+    /// (``MapPackDownloads/report(of:)``), or `nil`.
+    public let mapPacks: String?
 
     /// Decision 573 (player report 111.1, "it put no address in: where do
     /// I send it?"): where a note goes, for a TestFlight tester. The app
@@ -39,7 +42,8 @@ public struct ProblemReport: Hashable, Sendable {
     }
 
     public init(
-        version: String, build: String, system: String, device: String, game: String? = nil, lessons: String? = nil, map3D: String? = nil
+        version: String, build: String, system: String, device: String, game: String? = nil, lessons: String? = nil, map3D: String? = nil,
+        mapPacks: String? = nil
     ) {
         self.version = version
         self.build = build
@@ -48,6 +52,7 @@ public struct ProblemReport: Hashable, Sendable {
         self.game = game
         self.lessons = lessons
         self.map3D = map3D
+        self.mapPacks = mapPacks
     }
 
     /// "0.4.0 (12)": the version and, in brackets, the build.
@@ -84,6 +89,9 @@ public struct ProblemReport: Hashable, Sendable {
         }
         if let map3D {
             lines.append(language.text("3D map: \(map3D)", "3D 地圖：\(map3D)"))
+        }
+        if let mapPacks {
+            lines.append(language.text("Map packs: \(mapPacks)", "地圖包：\(mapPacks)"))
         }
         return lines.joined(separator: "\n")
     }

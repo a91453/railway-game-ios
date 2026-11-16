@@ -1,0 +1,45 @@
+{
+ "decision": 799,
+ "extract": {
+  "file": "rovaniemi.pbf",
+  "sha256": "f06b22ef834e12d85b88da729e1ec25f85954eb1898578bbc1334ea24762adc3",
+  "from": "https://osmtoday.com/europe/finland.pbf, cut with osmium extract -b 25.15,66.27,27.65,66.83 -s smart",
+  "licence": "ODbL 1.0, © OpenStreetMap contributors",
+  "newestBuildingEdit": "2026-11-14T18:08:04Z",
+  "buildingsRead": 59726
+ },
+ "buildings": 42648,
+ "leftOut": {
+  "small": 17078
+ },
+ "tiles": 7519,
+ "storeysFrom": {
+  "guess": 41532,
+  "tags": 1116
+ },
+ "uses": {
+  "agricultural": 235,
+  "civic": 119,
+  "commercial": 745,
+  "education": 59,
+  "entertainment": 6,
+  "industrial": 239,
+  "medical": 8,
+  "none": 24211,
+  "outbuilding": 2271,
+  "residential": 14693,
+  "service": 49,
+  "transportation": 13
+ },
+ "storeys": {
+  "median": 1,
+  "tallest": 8,
+  "of1": 37754,
+  "of2": 3321,
+  "of3to5": 1553,
+  "of6andMore": 20
+ },
+ "rawBytes": 912575,
+ "archiveBytes": 1007139,
+ "sha256": "0f490140f0b8f1bb85af09e2f6401b08ec22e05479e8cf0ee716312c7e7df42e"
+}

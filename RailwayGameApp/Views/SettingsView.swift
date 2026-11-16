@@ -1,3 +1,4 @@
+import Combine
 import GameCore
 import GamePresentation
 import SwiftUI
@@ -82,6 +83,9 @@ struct SettingsView: View {
     /// Decision 701: the day of this game's airports (empty without a
     /// game or airports).
     @State private var airportDays: [AirportDay] = []
+    /// Decision 776, later: the map packs' downloads as last heard
+    /// (``MapPackDownloads/statusChanged``); read afresh until then.
+    @State private var mapPackStatuses: [OverseasMap: MapPackStatus] = [:]
 
     var body: some View {
         NavigationStack {
@@ -275,6 +279,22 @@ struct SettingsView: View {
                     Label("Festive Decorations", systemImage: "sparkles")
                 }
                 .accessibilityIdentifier("settings.festiveDecorations")
+            }
+            // Decision 776, later: how each open city's map pack stands.
+            ForEach(OverseasMap.allCases.filter(OverseasMaps.open.contains), id: \.self) { city in
+                LabeledContent {
+                    Text(verbatim: (mapPackStatuses[city] ?? MapPackDownloads.status(city)).text(in: DisplayLanguage.app))
+                } label: {
+                    Label {
+                        Text(verbatim: city.mapPackTitle(in: DisplayLanguage.app))
+                    } icon: {
+                        Image(systemName: "map")
+                    }
+                }
+                .accessibilityIdentifier("settings.mapPack.\(city.rawValue)")
+            }
+            .onReceive(NotificationCenter.default.publisher(for: MapPackDownloads.statusChanged).receive(on: DispatchQueue.main)) { _ in
+                for city in OverseasMaps.open { mapPackStatuses[city] = MapPackDownloads.status(city) }
             }
         } header: {
             Text("Map")
@@ -922,7 +942,8 @@ extension ProblemReport {
         let device = UIDevice.current
         return ProblemReport(
             version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: modelIdentifier, game: game,
-            lessons: lessons, map3D: Map3DLoadGovernor.report(UserDefaults.standard.string(forKey: Map3DMetalView.rungKey))
+            lessons: lessons, map3D: Map3DLoadGovernor.report(UserDefaults.standard.string(forKey: Map3DMetalView.rungKey)),
+            mapPacks: MapPackDownloads.report()
         )
     }
 
