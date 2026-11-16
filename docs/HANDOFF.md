@@ -602,7 +602,7 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **0.6.0 (134) 準備好了（2026-11-15 23:30 UTC，RELEASE-134 記；原帳號額度用完，這一任由 Pro 帳號接手，交接在 `a91453/railway-reference-private` 的 `handoff/PRO-HANDOFF-2026-11-15.md`）**
-- 要發的 commit 是 RELEASE-134 那個 PR 合進 main 後的 HEAD；作者 11-15 說「先發 134」。照 §1.2：作者自己按 `testflight.yml`（main、`archive_signing=adhoc`、`testing_scope=external`），不等 full lane。
+- 要發的 commit 是 #2291（島式月台，決策 792，併入 134）合進 main 後的 HEAD；在那之前是 #2290 的合併 `4261af9`。作者 11-15 說「先發 134」。照 §1.2：作者自己按 `testflight.yml`（main、`archive_signing=adhoc`、`testing_scope=external`），不等 full lane。
 - 範圍：133（`49fffa3`）之後的 #2279–#2289。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-16-134` 與 `research/PLAYER_FEEDBACK.md` 的 134 一節。
 - 沒寫進說明（玩家還看不到）：冬季活動外框（#2279，照裝置日期 12/1 才開）、聖誕樹與燈串模型（#2281，還沒擺）、羅瓦涅米地圖包（#2283，開關關著）、分包下載第二段（#2254，App 照舊帶香港）。
 - **134 第一次帶下載器 extension 與上傳香港地圖包**（`docs/handoff/ASSET-PACK.md`）：看 `testflight.yml` 的 export 與「Upload the map packs」有沒有警告；作者在 App Store Connect 確認 `mappack-hongkong` 處理完、和 build 一起送外部審查。

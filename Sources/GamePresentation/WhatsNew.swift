@@ -60,6 +60,10 @@ public enum WhatsNew {
                     english: "A building that was drawn twice in the 3D map is drawn once, so its outline no longer doubles.",
                     chinese: "3D 地圖裡同一棟被畫兩次的建物只畫一次，輪廓不再重疊。"
                 ),
+                Line(
+                    english: "The Pingxi and Neiwan lines are bought with their real island platforms, and the island list no longer names light rail stops.",
+                    chinese: "收購平溪線、內灣線時，十分、竹東等站直接鋪成島式月台；島式站清單不再列出輕軌的站。"
+                ),
             ]
         ),
         // 133.
