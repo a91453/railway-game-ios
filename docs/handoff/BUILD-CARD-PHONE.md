@@ -26,6 +26,11 @@
 
 另外看到的、不是畫面的：`python3 -I tools/golden-checks/doc_numbers.py --check` 在 `main`（`76e4d5d`）就回 1：`docs/OVERVIEW.md` §2 寫存檔版本 103、fixture 104 個，實際是 107 與 108。那是遊戲規劃的檔，這張沒動。
 
+## 截圖與 CI 之後才知道的（2026-11-16）
+
+- 截圖（run 43819759681，iPhone 橫拿，中英各一）：長度｜高度、原因、兩顆建議、✕ ✓ 同時讀得到。**沒解決**：軌道橫貫整個畫面正中時，卡片仍壓在它上面：上下控制項之間約 195 點高，卡片約 175 點，沒有位置可讓。能鋪時卡片只剩 ✕ ✓、不能鋪才展開（規劃已另派 BUILD-MODE-CLEAN，決策 803）才處理得了。五方：玩家 4、開發 3、美術 3、鐵道迷 1、音樂 1，加權 2.70。
+- #2298 的 iOS job 第一次紅、只重跑一次後綠（run 43819747972，同一個 head）：`TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` 中 App 收到 SIGTRAP。App 的觸控紀錄只有「入門」那一下，之後主執行緒停了 13 秒，進第一課的那一下沒收到就結束：當在開始畫面的課程清單，這張的排版程式那時不執行。結果包裡沒有當機報告，**當在哪一行沒有查到**。要查得到，`ios-build.yml` 在 UI 測試失敗時要把 Simulator 的 `~/Library/Logs/DiagnosticReports` 一起上傳。五方：玩家 3（若實機也會當）、開發 4、美術 1、鐵道迷 1、音樂 1，加權 2.35；是 bug，排在功能前面。
+
 ## UNVERIFIED
 
 - 畫面、VoiceOver、放大字級：Linux 看不到。iPhone Pro 橫拿、深色看 PR 裡 `website-screenshots.yml` 的截圖（`testTrackHeightFixes`，只拍一次）；直拿、iPad、小 iPhone、淺色、最大字級、實機都沒看。
