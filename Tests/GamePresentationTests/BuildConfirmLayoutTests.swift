@@ -87,17 +87,79 @@ final class BuildConfirmLayoutTests: XCTestCase {
 
     // MARK: Decision 800 (the owner's report from 0.6.0 (134))
 
-    /// A phone held sideways: a refused stretch's words stand beside its
-    /// ✕ ✓, so the pill is half as tall; upright, on an iPad, and for a
-    /// pill of only ✕ ✓ or another build, as before.
-    func testARefusedStretchStandsBesideItsButtonsOnAShortScreen() {
-        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, trackHasWords: true), .beside)
-        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, trackHasWords: false), .stacked)
-        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: false, trackHasWords: true), .stacked)
-        // The refusal is said once: by the pill beside its ✓, or else by
-        // the HUD along the top.
-        XCTAssertFalse(BuildConfirmLayout.hudSaysProblem(pillSaysProblem: true))
-        XCTAssertTrue(BuildConfirmLayout.hudSaysProblem(pillSaysProblem: false))
+    /// A phone held sideways: a pill's words stand beside its ✕ ✓, so it
+    /// is half as tall; upright, on an iPad, and for a pill of only ✕ ✓,
+    /// as before. Decision 803: every build's pill, but the new line's,
+    /// whose station pair drawer rides beside its words already.
+    func testAPillWithWordsStandsBesideItsButtonsOnAShortScreen() {
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true), .beside)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: false), .stacked)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: false, hasWords: true), .stacked)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, ridesWithDrawer: true), .stacked)
+    }
+
+    // MARK: Decision 803 (the owner, 2026-11-16: too cluttered)
+
+    /// No ✕ ✓ under the finger that draws; they come when it lets go.
+    func testNoPillWhileAFingerDraws() {
+        XCTAssertFalse(BuildConfirmLayout.pillShows(fingerDraws: true))
+        XCTAssertTrue(BuildConfirmLayout.pillShows(fingerDraws: false))
+    }
+
+    /// The HUD's row is the length and the height, and one small mark: a
+    /// refusal the pill says is not said twice; while a finger draws (no
+    /// pill) a warning sign stands for it; a refusal comes before a join.
+    func testTheHUDCarriesOneMark() {
+        XCTAssertEqual(BuildConfirmLayout.hudMark(refused: true, pillSaysProblem: true, joins: true), BuildConfirmLayout.HUDMark.none)
+        XCTAssertEqual(BuildConfirmLayout.hudMark(refused: true, pillSaysProblem: false, joins: true), .refused)
+        XCTAssertEqual(BuildConfirmLayout.hudMark(refused: false, pillSaysProblem: false, joins: true), .joins)
+        XCTAssertEqual(BuildConfirmLayout.hudMark(refused: false, pillSaysProblem: false, joins: false), BuildConfirmLayout.HUDMark.none)
+    }
+
+    /// A stretch that can be built has ✕ ✓ and its price alone, but for a
+    /// real line for sale along it; refused, its notes come back under
+    /// the reason.
+    func testAStretchThatCanBeBuiltSaysNothing() {
+        let notes: [String?] = ["The first stretch is straight.", nil, "A crossover joins."]
+        XCTAssertNil(BuildConfirmLayout.stretchCaption(canBuild: true, notes: notes, offer: [nil, nil]))
+        XCTAssertEqual(BuildConfirmLayout.stretchCaption(canBuild: true, notes: notes, offer: ["For sale", nil]), "For sale")
+        XCTAssertEqual(
+            BuildConfirmLayout.stretchCaption(canBuild: false, notes: notes, offer: ["For sale", "Short"]),
+            "The first stretch is straight.\nA crossover joins.\nFor sale\nShort"
+        )
+        XCTAssertNil(BuildConfirmLayout.stretchCaption(canBuild: false, notes: [nil, ""], offer: []))
+    }
+
+    /// With a real session: a stretch on open ground can be built, and
+    /// its pill has no words; over water it is refused, and the fixes are
+    /// at most one up and one down, each short title naming the end it
+    /// moves.
+    @MainActor
+    func testARefusalOffersAtMostTwoFixesThatNameTheirEnd() throws {
+        var world = GameWorld(
+            bounds: try WorldBounds(width: 262_144, height: 262_144),
+            economy: GameEconomy(balance: Money(100_000_000)),
+            clock: GameClock(speed: .paused)
+        )
+        let side = GroundBlock.side
+        try world.setGround([GroundBlock(block: LandBlock(row: 0, column: 0), heights: Array(repeating: 0, count: side * side))!])
+        try world.setWater([CellPosition(row: 0, column: 2)])
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.networkSnapsToTrack = false
+        session.tapNetwork(at: PlanPoint(x: 1_024, y: 2_048), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 17_408, y: 2_048), reach: 16)
+        let card = try XCTUnwrap(session.networkHeightCard)
+        XCTAssertNotNil(session.networkPreview?.problem)
+        XCTAssertLessThanOrEqual(card.fixes.count, 2)
+        XCTAssertLessThanOrEqual(card.fixes.filter { $0.change > 0 }.count, 1)
+        XCTAssertLessThanOrEqual(card.fixes.filter { $0.change < 0 }.count, 1)
+        for fix in card.fixes {
+            for language in [DisplayLanguage.english, .traditionalChinese] {
+                let ends = ["End", "Start", "Both ends", "終點", "起點", "兩端"]
+                XCTAssertTrue(ends.contains { fix.shortTitle(in: language).hasPrefix($0) }, fix.shortTitle(in: language))
+            }
+        }
     }
 
     /// The report's "NT$ 0" on both fixes: with unlimited funds the fix's

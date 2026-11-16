@@ -862,6 +862,9 @@ struct ContentView: View {
                         ? screen.mapLeadingRowFrame.maxX - proxy.frame(in: .global).minX : 0
                     let beside = max(dockSize.width + (toolsColumn && showsFootRow ? editsWidth - dockSize.width : 0), rowEnd)
                     let isCovered = beside + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
+                    let showsStationMaster = drawing.showsMapExtras && session.buildModeChrome(
+                        guidesFirstLine: FirstLineGuide.hint(in: session, choice: launcher.preferences.firstLineGuide) != nil
+                    ).showsStationMaster
                     if session.tutorial == nil, dockSize != .zero {
                         StationMasterCorner(
                             session: session,
@@ -879,8 +882,12 @@ struct ContentView: View {
                         // Decision 568: out of sight while a new line is
                         // picked (its bubble stood over the pill), kept so
                         // it remembers what it has said.
-                        .opacity(drawing.showsMapExtras ? 1 : 0)
-                        .allowsHitTesting(drawing.showsMapExtras)
+                        // Decision 803: and while a building tool is out
+                        // (on a phone held sideways it stood in the lower
+                        // middle of the map, over the stretch drawn), but
+                        // while it names the first line's steps.
+                        .opacity(showsStationMaster ? 1 : 0)
+                        .allowsHitTesting(showsStationMaster)
                     }
                 }
                 // Decision 224 (3B): the last two stations picked for a new

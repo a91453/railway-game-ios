@@ -154,10 +154,14 @@ extension BuildConfirmLayout {
     }
 
     /// The pill's arrangement: ``Arrangement/beside`` where the screen is
-    /// short (`compactHeight`) and a stretch of track has words to say;
-    /// the other builds, and a pill of only ✕ ✓, stay as they were.
-    public static func arrangement(compactHeight: Bool, trackHasWords: Bool) -> Arrangement {
-        compactHeight && trackHasWords ? .beside : .stacked
+    /// short (`compactHeight`) and the pill has words to say; a pill of
+    /// only ✕ ✓ stays as it is. Decision 803: every build's pill (a
+    /// platform's place, a building, a road, a bus or ferry route), not a
+    /// stretch of track's alone; but the new line's (`ridesWithDrawer`),
+    /// which carries its station pair drawer beside its words already
+    /// (decision 384).
+    public static func arrangement(compactHeight: Bool, hasWords: Bool, ridesWithDrawer: Bool = false) -> Arrangement {
+        compactHeight && hasWords && !ridesWithDrawer ? .beside : .stacked
     }
 
     /// The widest a stretch's refusal wraps at, in points: some three
@@ -165,11 +169,41 @@ extension BuildConfirmLayout {
     /// its buttons need.
     public static let wordsWidth = 340.0
 
-    /// Whether the construction HUD along the top says why the stretch is
-    /// refused: only where the pill, whose ✓ the refusal greys, is not
-    /// there to say it beside that ✓.
-    public static func hudSaysProblem(pillSaysProblem: Bool) -> Bool {
-        !pillSaysProblem
+    /// Decision 803: whether the ✕ ✓ pill is on the map. Not while a
+    /// finger draws the stretch: it stood under the finger, which hid it
+    /// and the stretch's end; it comes once the finger lets go.
+    public static func pillShows(fingerDraws: Bool) -> Bool {
+        !fingerDraws
+    }
+
+    /// The one small mark the construction HUD's row carries after the
+    /// length and the height (decision 803: the row says nothing else).
+    public enum HUDMark: Hashable, Sendable {
+        case none
+        /// The stretch joins track that is there.
+        case joins
+        /// The stretch is refused, and the pill is not there to say why (a
+        /// finger still draws): a warning sign, the words kept for the
+        /// pill.
+        case refused
+    }
+
+    /// The HUD's mark: a refusal the pill says beside its ✓ is not marked
+    /// here too.
+    public static func hudMark(refused: Bool, pillSaysProblem: Bool, joins: Bool) -> HUDMark {
+        if refused { return pillSaysProblem ? .none : .refused }
+        return joins ? .joins : .none
+    }
+
+    /// What a stretch's pill says over its buttons, a line each, or `nil`
+    /// for nothing. Decision 803: a stretch that can be built says only
+    /// what it offers besides (`offer`: a real line for sale along it);
+    /// its other `notes` (the first stretch is straight, the crossovers a
+    /// double track adds) are the details card's. Refused, it says them
+    /// all under the reason.
+    public static func stretchCaption(canBuild: Bool, notes: [String?], offer: [String?]) -> String? {
+        let lines = ((canBuild ? [] : notes) + offer).compactMap(\.self).filter { !$0.isEmpty }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     /// A price as the pill writes it, or `nil` for none: nothing is
