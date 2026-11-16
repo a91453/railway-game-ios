@@ -465,9 +465,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (owner, 2026-10-27: 「遊戲規劃也可以自己開」; 2026-11-17: 「我沒有fable
   重置券了 新對話開始都先用 opus5.5為主 改針對遊戲問題 難易度看要不要改fable
   因為 max方案fable只能用週額度的50percent」, which ends the all-Fable rule of
-  2026-11-16: a new session is Opus by default, and `claude-fable-5-2` is
-  only for a game problem hard enough to need it; sessions already running
-  finish on the model they have),
+  2026-11-16; 2026-11-17, after comparing the published cost-per-task
+  charts: 「好 照這樣寫進交接手冊」: the planner stays on Opus, and of the
+  implementation slots one runs `claude-fable-5-2` on the hardest ticket
+  and the rest run Opus, as `docs/HANDOFF.md` §1.1 「模型與額度」 sets out;
+  sessions already running finish on the model they have),
   but each session a session opens is one level deeper (`get_session`'s
   `lineage.depth`, limit 8), and at the eighth it can no longer open
   sessions or schedule check-ins: once the next one would be at level 7,
