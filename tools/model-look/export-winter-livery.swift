@@ -27,15 +27,11 @@ func write(_ vertices: [Map3DVertex],named name: String) throws {
 }
 let wanted=Set(CommandLine.arguments.dropFirst(2))
 for index in pack.christmas.keys.sorted() {
-    let model=pack.models[index],table=pack.christmas[index]!
-    var area=[Float](repeating:0,count:4)
-    for first in stride(from:0,to:model.vertices.count-2,by:3) {
-        let a=model.vertices[first],b=model.vertices[first+1],c=model.vertices[first+2]
-        area[Int(table[first]&3)]+=((b.position-a.position).cross(c.position-a.position)).length/2
-    }
-    let painted=area[1]+area[2]+area[3]
-    print(String(format:"%@\tbody %.0f%%\tband %.0f%%\tline %.0f%%",model.name,area[1]/painted*100,area[2]/painted*100,area[3]/painted*100))
+    let model=pack.models[index],wear=pack.christmas[index]!
+    let dressed=Map3DChristmasLivery.dressed(model.vertices,minimum:model.minimum,maximum:model.maximum,wear:wear)
+    let snowed=zip(model.vertices,dressed).filter { $0 != $1 }.count/3
+    print("\(model.name)\troof faces under snow \(snowed)\tdecoration triangles \((dressed.count-model.vertices.count)/3)\(wear.far ? "\tfar" : "")")
     guard wanted.contains(model.name) else { continue }
     try write(model.vertices,named:model.name+"-plain")
-    try write(Map3DChristmasLivery.recoloured(model.vertices,table:table),named:model.name+"-christmas")
+    try write(dressed,named:model.name+"-christmas")
 }

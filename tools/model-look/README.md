@@ -13,7 +13,7 @@ node tools/model-look/shoot.mjs --model 新.m3dmodel --before 舊.m3dmodel \
 
 - `export-station.sh` 的站名前加 `house:` 匯出地圖實際畫的那一個（`house(_:)`：站房與站前，沒有套件的月台與軌道；套件的藍色月台雨棚會擋住月台側），檔名是 `<站>-house.m3dmodel`；`concourse:`、`hall:` 是擴建後的樣子（決策 705）。
 - 鐵道博物館（決策 696）用 `tools/model-look/export-museum.sh <輸出資料夾> hall 0 5 12`：`hall` 是館舍單獨，數字是展品件數（含展品的車頭）。含展品是好幾個模型，超過單一模型的 15,000 個三角形，拍的時候加 `--max-triangles 200000`。
-- 冬季活動（決策 804）用 `tools/model-look/export-winter.sh lights <輸出資料夾> [before]`：每種站型的站房（含兩級擴建）連燈串，與地下站、高架站的出入口連燈串（`exit-underground`、`exit-stair`），並印出每段燈串的位置；加 `before` 是決策 794 原本的掛法。`export-winter.sh livery <輸出資料夾> [模型名…]` 印出每節跑的車側面上紅、白、金各占多少，並把點名的車寫成 `<名>-plain` 與 `<名>-christmas` 兩個模型。
+- 冬季活動（決策 804）用 `tools/model-look/export-winter.sh lights <輸出資料夾> [before]`：每種站型的站房（含兩級擴建）連燈串，與地下站、高架站的出入口連燈串（`exit-underground`、`exit-stair`），並印出每段燈串的位置；加 `before` 是決策 794 原本的掛法。`export-winter.sh livery <輸出資料夾> [模型名…]` 印出每節跑的車有多少車頂面蓋雪、裝飾加了多少三角形（決策 806），並把點名的車寫成 `<名>-plain` 與 `<名>-christmas` 兩個模型。
 - 聖誕塗裝的方案圖（決策 806）：`export-winter.sh options <輸出資料夾> [輪次]` 把九款車各四節寫成原塗裝與各方案、白天與夜晚、單獨兩節與放在軌道上的場景；`node tools/model-look/shoot-livery.mjs --dir <那個資料夾> --out <圖的資料夾>` 出放大對照表與遊戲實際大小（1 px = 1 點，鏡頭 250／400／700 m）的圖。只是預覽，遊戲不讀。
 - 畫法是 `tools/station-kit/renderer.js`（正投影、遊戲那種打平的模型光）；不是 Metal，也不是 App 裡的畫面。要看放進地圖的樣子用 `tools/map3d-preview/`。
 - 「放在地圖上的樣子」那一格：模型站在遊戲的地面色上，前面一條路，旁邊三棟城市建築的通用方塊（顏色在腳本的 `MAP`，照 `tools/map3d-preview/` 白天量到的明度），右邊是同一張的灰階。看的是清單第 9 條：和背景分得開嗎。

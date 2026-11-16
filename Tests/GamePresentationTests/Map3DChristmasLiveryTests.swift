@@ -3,12 +3,12 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 795: the Christmas livery on each running car by its parts, the
-/// line page's choice and the fourth week's mission.
+/// Decision 806: the Christmas livery as decoration on each running car
+/// (in place of decision 795's repainting); decision 795: the line page's
+/// choice and the fourth week's mission.
 final class Map3DChristmasLiveryTests: XCTestCase {
     private var directory: URL!
     private let calendar = WinterEvent.calendar(in: TimeZone(identifier: "Asia/Taipei")!)
-    private let livery = Map3DWinterDecor.christmasLivery
 
     override func setUpWithError() throws {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent("Map3DChristmasLiveryTests-\(UUID().uuidString)")
@@ -24,76 +24,168 @@ final class Map3DChristmasLiveryTests: XCTestCase {
     }
 
     private func isShade(_ colour: UInt32, of base: UInt32) -> Bool {
-        (0...63).contains { Map3DColor.shaded(base | 0xFF00_0000, Float($0) / 63) == colour }
+        // The same colour darkened by one factor, each channel within a step.
+        func channels(_ value: UInt32) -> [Float] { [0, 8, 16].map { Float((value >> $0) & 0xFF) } }
+        let have = channels(colour), want = channels(base)
+        guard let most = want.indices.max(by: { want[$0] < want[$1] }), want[most] > 0 else { return false }
+        let factor = have[most] / want[most]
+        return factor <= 1.001 && zip(have, want).allSatisfy { abs($0 - $1 * factor) <= 1.5 }
     }
 
-    /// Every running car of the pack has a table, its body painted red over
-    /// most of its sides; the rest of the pack has none.
-    func testEveryRunningCarHasItsBodyPainted() {
+    private func dressed(_ name: String, in pack: Map3DModelPack) throws -> (model: Map3DModelPack.Model, wear: Map3DChristmasLivery.Wear, all: [Map3DVertex]) {
+        let index = try XCTUnwrap(pack.index(of: name), name)
+        let model = pack.models[index], wear = try XCTUnwrap(pack.christmas[index], name)
+        return (model, wear, Map3DChristmasLivery.dressed(model.vertices, minimum: model.minimum, maximum: model.maximum, wear: wear))
+    }
+
+    /// The nine trains the look was judged on (decision 806), four cars each.
+    private func judged(in pack: Map3DModelPack) -> [String] {
+        var names: Set<String> = []
+        for code in ["highSpeed", "emu500", "emu3000", "puyuma", "wenhu370", "danhaiLRT", "mtrUrbanLine", "pushPull", "ALISHAN"] {
+            for car in pack.layout(forType: code, count: 4) ?? [] { names.insert(pack.models[car.model].name) }
+        }
+        return names.sorted()
+    }
+
+    /// Every running car of the pack wears something, the rest nothing: a
+    /// head or a single car its cab's decoration at the front, a tail at the
+    /// back, a far set's car the far look; its walls' top within the car.
+    func testEveryRunningCarWearsIt() {
         let pack = Map3DModelPack.standard
-        var missing: [String] = []
+        var far = 0
         for (index, model) in pack.models.enumerated() {
             guard Map3DTrainLights.isRunning(model.name) else {
                 XCTAssertNil(pack.christmas[index], model.name)
                 continue
             }
-            guard let table = pack.christmas[index] else { missing.append(model.name); continue }
-            XCTAssertEqual(table.count, model.vertexCount, model.name)
-            XCTAssertTrue(table.contains { $0 & 0b11 == Map3DChristmasLivery.Part.body.rawValue }, model.name)
+            guard let wear = pack.christmas[index] else { XCTFail("\(model.name) wears nothing"); continue }
+            let unit = model.name.split(separator: "-").last.map(String.init) ?? ""
+            XCTAssertEqual(wear.front, ["head", "cab", "single"].contains(unit), model.name)
+            XCTAssertEqual(wear.back, ["tail", "single"].contains(unit), model.name)
+            XCTAssertGreaterThan(wear.top, model.minimum.z + (model.maximum.z - model.minimum.z) * 0.4, model.name)
+            XCTAssertLessThanOrEqual(wear.top, model.maximum.z, model.name)
+            if wear.far { far += 1 }
         }
-        XCTAssertEqual(missing, [], "running cars with nothing to paint")
+        XCTAssertEqual(far, pack.models.filter { model in Map3DChristmasLivery.farPrefixes.contains { model.name.hasPrefix($0) } }.count)
+        XCTAssertGreaterThan(far, 0)
     }
 
-    /// The repainted car: the same triangles where they were; its glass,
-    /// lamps, roof and front as they were; every vertex changed a shade of
-    /// one of the livery's three colours, opaque.
-    func testOnlyTheBodyBandAndLineChange() {
+    /// A dressed car: its own triangles first, where they were; only faces
+    /// that look up, near the walls' top, change, to a shade of the snow;
+    /// no glass, no lamp and no side is touched.
+    func testOnlyTheRoofIsRepainted() throws {
         let pack = Map3DModelPack.standard
-        for (index, table) in pack.christmas {
-            let model = pack.models[index]
-            let painted = Map3DChristmasLivery.recoloured(model.vertices, table: table)
-            XCTAssertEqual(painted.count, model.vertices.count)
-            for (old, new) in zip(model.vertices, painted) {
+        for name in judged(in: pack) + ["commuter-car", "commuter-cab"] {
+            let (model, wear, all) = try dressed(name, in: pack)
+            XCTAssertGreaterThan(all.count, model.vertices.count, name)
+            XCTAssertEqual(all.count % 3, 0, name)
+            var snowed = 0
+            for (old, new) in zip(model.vertices, all) {
                 XCTAssertEqual(old.position, new.position)
                 guard old != new else { continue }
-                XCTAssertFalse(old.glows, model.name)
-                XCTAssertNotEqual(old.layer, Map3DVertex.trainGlass, model.name)
-                XCTAssertGreaterThanOrEqual(abs(old.ny), Map3DChristmasLivery.sideward, "\(model.name): only the sides")
+                snowed += 1
+                XCTAssertFalse(old.glows, name)
+                XCTAssertNotEqual(old.layer, Map3DVertex.trainGlass, name)
+                XCTAssertGreaterThanOrEqual(old.nz, Map3DChristmasLivery.upward, "\(name): only what looks up")
+                XCTAssertGreaterThan(old.z, wear.top - 1.2, name)
                 XCTAssertEqual(new.color >> 24, 0xFF)
-                XCTAssertTrue([livery.body, livery.band, livery.line].contains { isShade(new.color, of: $0) }, model.name)
+                XCTAssertTrue(isShade(new.color, of: Map3DChristmasLivery.snow), name)
+                XCTAssertEqual(new.layer, Map3DVertex.plain, name)
             }
+            // The Alishan cars' red roofs stay red; every other of these has snow.
+            if !name.contains("ALISHAN") { XCTAssertGreaterThan(snowed, 0, "\(name): no snow") }
         }
     }
 
-    /// The parts of the cars the most lines run: the commuter's white body
-    /// red and its line band white; the EMU3000's and the Puyuma's white
-    /// bodies red; doors with the body, never glass.
-    func testTheCommonCarsParts() throws {
+    /// The decoration: every car of the nine trains has bulbs along its
+    /// roof, lit, a red one among the warm; only a cab car has the wreath's
+    /// and the ribbons' triangles; all of it within the car's box and a
+    /// little over it, and within the budget.
+    func testTheDecorationOfTheJudgedTrains() throws {
         let pack = Map3DModelPack.standard
-        for name in ["commuter-car", "commuter-cab"] {
-            let index = try XCTUnwrap(pack.index(of: name), name)
-            let model = pack.models[index]
-            let table = try XCTUnwrap(pack.christmas[index], name)
-            let parts = table.map { Map3DChristmasLivery.Part(rawValue: $0 & 0b11)! }
-            // The line's colour band is white.
-            let striped = model.vertices.indices.filter { model.vertices[$0].color >> 24 != 0xFF && abs(model.vertices[$0].ny) >= 0.6 }
-            XCTAssertFalse(striped.isEmpty, name)
-            XCTAssertTrue(striped.contains { parts[$0] == .band }, name)
-            // The white side is red.
-            let white = model.vertices.indices.filter {
-                Map3DChristmasLivery.isShade(model.vertices[$0].color, of: Map3DTrains.body) && abs(model.vertices[$0].ny) >= 0.6
-                    && model.vertices[$0].z > 1.2 && model.vertices[$0].z < 3
+        for name in judged(in: pack) {
+            let (model, wear, all) = try dressed(name, in: pack)
+            let added = Array(all[model.vertices.count...])
+            let lit = added.filter(\.glows)
+            XCTAssertGreaterThanOrEqual(lit.count / 12, 6, "\(name): bulbs")
+            XCTAssertTrue(lit.contains { $0.color == Map3DChristmasLivery.redBulb }, "\(name): a red bulb")
+            XCTAssertTrue(lit.contains { $0.color == Map3DChristmasLivery.bulb }, "\(name): a warm bulb")
+            XCTAssertLessThanOrEqual(added.count / 3, wear.front || wear.back ? 900 : 420, "\(name): triangles")
+            for v in added {
+                XCTAssertGreaterThanOrEqual(v.x, model.minimum.x - 0.3, name)
+                XCTAssertLessThanOrEqual(v.x, model.maximum.x + 0.3, name)
+                XCTAssertLessThanOrEqual(abs(v.y), max(abs(model.minimum.y), abs(model.maximum.y)) + 0.3, name)
+                XCTAssertLessThanOrEqual(v.z, model.maximum.z + 1.3, name)
             }
-            XCTAssertFalse(white.isEmpty, name)
-            XCTAssertGreaterThan(Double(white.filter { parts[$0] == .body }.count) / Double(white.count), 0.8, name)
+            // Gold is the ribbons' edge: on a cab car only.
+            let golden = added.contains { !$0.glows && isShade($0.color, of: Map3DChristmasLivery.gold) }
+            XCTAssertEqual(golden, wear.front || wear.back, name)
         }
-        // No glass is ever painted, on any car.
-        for (index, table) in pack.christmas {
-            let model = pack.models[index]
-            for at in model.vertices.indices where model.vertices[at].layer == Map3DVertex.trainGlass || model.vertices[at].glows {
-                XCTAssertEqual(table[at], 0, model.name)
-            }
+    }
+
+    /// A long nose (the 700T's, the Puyuma's): the bow and the ribbons'
+    /// crossing lie on the roof at its full height, not on the slope.
+    func testTheRibbonsCrossOnTheRoofBehindALongNose() throws {
+        let pack = Map3DModelPack.standard
+        for name in ["set-highSpeed-head", "set-puyuma-head", "set-emu3000-head", "set-emu500-head"] {
+            let (model, wear, all) = try dressed(name, in: pack)
+            let added = Array(all[model.vertices.count...])
+            // The bow's loops: the decoration's highest unlit points.
+            let peak = try XCTUnwrap(added.filter { !$0.glows }.max { $0.z < $1.z }, name)
+            XCTAssertGreaterThan(peak.z, wear.top, "\(name): the bow is on the roof")
+            // Ribbon over the roof: gold at roof height across the whole width.
+            let over = added.filter { !$0.glows && isShade($0.color, of: Map3DChristmasLivery.gold) && $0.z > wear.top - 0.4 }
+            XCTAssertFalse(over.isEmpty, name)
+            XCTAssertLessThan(over.map(\.y).min() ?? 0, -0.5, name)
+            XCTAssertGreaterThan(over.map(\.y).max() ?? 0, 0.5, name)
+            // Behind the nose: no further forward than the bow by more than the ribbons' lean.
+            XCTAssertLessThan(peak.x, model.maximum.x - 2, name)
         }
+    }
+
+    /// A far car: the snow and a lit line along each edge, a few triangles,
+    /// no bulb of another colour, no ribbon, no glow.
+    func testAFarCarWearsOnlySnowAndALitLine() throws {
+        let pack = Map3DModelPack.standard
+        for name in ["set-highSpeedFar-head", "set-emu500Far-panto", "set-pushPullFar-car"] {
+            let (model, wear, all) = try dressed(name, in: pack)
+            XCTAssertTrue(wear.far, name)
+            let added = Array(all[model.vertices.count...])
+            XCTAssertFalse(added.isEmpty, name)
+            XCTAssertLessThanOrEqual(added.count / 3, 80, name)
+            XCTAssertTrue(added.allSatisfy { $0.glows && $0.color == Map3DChristmasLivery.bulb }, name)
+            XCTAssertTrue(Map3DChristmasLivery.halos(minimum: model.minimum, maximum: model.maximum, wear: wear).isEmpty)
+        }
+    }
+
+    /// The glows: two a car in the livery, over its roof, after the lamps
+    /// and within the frame's most; none at strength 0; steady with Reduce
+    /// Motion, between the low and 1 without.
+    func testTheCarsGlowsAndTheirSlowSwell() throws {
+        let pack = Map3DModelPack.standard
+        var frame = Map3DShowcase.frame(Map3DShowcase.layout(keys: [Map3DShowcase.catalog[0].key]), pack: pack)
+        let lamps = Map3DGlow.trainSpots(of: frame, pack: pack)
+        for at in frame.instances.indices { frame.instances[at].christmas = pack.christmas[frame.instances[at].model] != nil }
+        let near = frame.instances.filter { $0.christmas && pack.christmas[$0.model]?.far == false }.count
+        XCTAssertGreaterThan(near, 0)
+        let festive = Map3DGlow.trainSpots(of: frame, pack: pack, festive: 0.5)
+        XCTAssertEqual(Array(festive.prefix(lamps.count)), lamps)
+        XCTAssertEqual(festive.count, min(Map3DGlow.mostTrainSpots, lamps.count + 2 * near))
+        for spot in festive.dropFirst(lamps.count) { XCTAssertEqual(spot.strength, Map3DChristmasLivery.haloStrength * 0.5, accuracy: 1e-6) }
+        XCTAssertEqual(Map3DGlow.trainSpots(of: frame, pack: pack, festive: 0), lamps)
+        // Every train in the livery at once: still within the most.
+        var all = Map3DShowcase.frame(Map3DShowcase.layout(keys: Map3DShowcase.catalog.map(\.key)), pack: pack)
+        for at in all.instances.indices { all.instances[at].christmas = true }
+        XCTAssertLessThanOrEqual(Map3DGlow.trainSpots(of: all, pack: pack).count, Map3DGlow.mostTrainSpots)
+
+        for second in stride(from: 0.0, to: 10, by: 0.1) {
+            XCTAssertEqual(Map3DChristmasLivery.twinkle(seconds: second, reduceMotion: true), 1)
+            let value = Map3DChristmasLivery.twinkle(seconds: second, reduceMotion: false)
+            XCTAssertGreaterThanOrEqual(value, Map3DChristmasLivery.twinkleLow)
+            XCTAssertLessThanOrEqual(value, 1)
+        }
+        XCTAssertEqual(Map3DChristmasLivery.twinkle(seconds: 0, reduceMotion: false), Map3DChristmasLivery.twinkleLow)
+        XCTAssertEqual(Map3DChristmasLivery.twinkle(seconds: Map3DChristmasLivery.twinklePeriod / 2, reduceMotion: false), 1, accuracy: 1e-5)
     }
 
     /// A car's trains wear it only on a line chosen while it can be chosen.

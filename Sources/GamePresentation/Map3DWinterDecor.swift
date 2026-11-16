@@ -76,21 +76,4 @@ public enum Map3DWinterDecor: String, CaseIterable, Sendable {
         }
         return Map3DModelPack.Model(name: modelName, vertices: vertices, minimum: plain.minimum, maximum: plain.maximum)
     }
-
-    /// The Christmas livery (§2.3): only a car's body, band and line
-    /// change; its roof, front, glass and running gear keep their own.
-    public struct Livery: Equatable, Sendable {
-        /// The body, most of the car.
-        public let body: UInt32
-        /// The white band along the lower side.
-        public let band: UInt32
-        /// The gold line at the band's edge.
-        public let line: UInt32
-    }
-
-    /// The studio's choice (`livery-christmas.json`, #C8282E, #F2F1EC,
-    /// #F2C230) in the game's own colours: the baubles' red, the baubles'
-    /// white and the star's gold, so the trains match the trees.
-    public static let christmasLivery = Livery(
-        body: Material.ornamentRed.colour, band: Material.ornamentWhite.colour, line: Material.starGold.colour)
 }

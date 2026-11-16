@@ -211,7 +211,32 @@ public enum Map3DGlow {
     /// first car's headlamps and last car's tail lamps
     /// (``Map3DTrains/Frame/ends``), placed as ``Map3DTrainLights/add(to:pack:lights:)``
     /// places the lamps; at most ``mostTrainSpots``.
-    public static func trainSpots(of frame: Map3DTrains.Frame, pack: Map3DModelPack) -> [Spot] {
+    ///
+    /// Decision 806: then the two soft glows over each car in the Christmas
+    /// livery (``Map3DChristmasLivery/halos(minimum:maximum:wear:)``), as
+    /// many as still fit, `festive` their strength (0 for none;
+    /// ``Map3DChristmasLivery/twinkle(seconds:reduceMotion:)``).
+    public static func trainSpots(of frame: Map3DTrains.Frame, pack: Map3DModelPack, festive: Float = 1) -> [Spot] {
+        var spots = lampSpots(of: frame, pack: pack)
+        guard festive > 0 else { return spots }
+        for instance in frame.instances where instance.christmas && instance.transform.count == 16 {
+            guard let wear = pack.christmas[instance.model], pack.models.indices.contains(instance.model) else { continue }
+            let model = pack.models[instance.model]
+            let t = instance.transform
+            let x = Map3DPoint(t[0], t[1], t[2]), y = Map3DPoint(t[4], t[5], t[6]), z = Map3DPoint(t[8], t[9], t[10])
+            let origin = Map3DPoint(t[12], t[13], t[14])
+            for var spot in Map3DChristmasLivery.halos(minimum: model.minimum, maximum: model.maximum, wear: wear) {
+                guard spots.count < mostTrainSpots else { return spots }
+                let c = spot.centre
+                spot.centre = origin + x * c.x + y * c.y + z * c.z
+                spot.strength *= festive
+                spots.append(spot)
+            }
+        }
+        return spots
+    }
+
+    private static func lampSpots(of frame: Map3DTrains.Frame, pack: Map3DModelPack) -> [Spot] {
         var spots: [Spot] = []
         for end in frame.ends where frame.instances.indices.contains(end.instance) {
             let instance = frame.instances[end.instance]

@@ -1,26 +1,31 @@
 # WINTER-LIVERY-2 交接（2026-11-16）
 
-session_01JMHz9bvL9kMdQXnJy9h3VW，分支 `claude/winter-livery-2`，決策 806。存檔、golden、GameCore、fixtures、模型包的模型與雜湊：都不動。
+session_01JMHz9bvL9kMdQXnJy9h3VW，分支 `claude/winter-livery-2`，draft PR #2310，決策 806。存檔、golden、GameCore、fixtures、模型包的模型與雜湊：都不動。
 
 ## 進度（中斷後只讀這一節與 `git status`、`git log -3`）
 
-- 做到哪：第一步（只出圖）做完，draft PR #2310，#2118 已回報（推薦「A2＋頭車緞帶」，只能三選一選 A2）。等作者選方案；選定前不改 `Map3DChristmasLivery`。本 session 已壓縮 1 次。不趕 135，12/1 前最後一版帶上即可。
-- 已驗證：`swift build` 過、匯出器與拍圖腳本跑過；#2310 的 `Swift CI (gate)` 綠（沒改套件）。Metal、實機、效能、真正的光暈 UNVERIFIED。
-- 下一步的第一個指令（作者選定後）：讀 `docs/decisions/806.md` §4，再 `swift build --build-tests -Xswiftc -warnings-as-errors`，然後改 `Sources/GamePresentation/Map3DChristmasLivery.swift`。
+- 做到哪：選定的「A2＋頭車緞帶」實作完、測試寫完、文件寫完，已推上分支。這個 session 壓縮第 2 次，照規則停在這裡，不再接工作。
+- 已驗證：雲端 Linux 的建置（含測試、警告當錯誤）與 `Map3DChristmasLiveryTests`、`Map3DGlowTests`、`Map3DWinterDecorTests`。App 的兩處改動、Metal、實機、效能、光暈與慢閃 UNVERIFIED。
+- 下一步的第一個指令：看 #2310 這個 commit 的 `iOS App Build` 與 `Swift CI (gate)`（`pull_request_read` 的 check runs）；紅就照錯誤訊息修，綠就照下面「接手的人」做。
 
 ## 做完的
 
-- 三個方案加一格推薦的圖：`docs/art/winter-livery-2-2026-11-16/`（遊戲實際大小與放大，白天與夜晚），三輪看圖的紀錄在那裡的 README。
-- 預覽匯出器 `tools/model-look/export-winter.sh options <資料夾>` 與拍圖腳本 `tools/model-look/shoot-livery.mjs`（遊戲不讀）。
-- 推薦與五方理由在決策 806 §3；貼在 #2118 等作者選。
+- `Sources/GamePresentation/Map3DChristmasLivery.swift` 重寫：`Wear`、`wear(of:)`、`dressed(...)`（雪頂＋裝飾）、`halos(...)`、`twinkle(...)`。決策 795 的部位表與 `recoloured` 拿掉。
+- `Map3DModels.swift`（`pack.christmas` 改成 `[Int: Wear]`）、`Map3DTrains.swift`（聖誕車保留線色，方塊車車頂換雪色）、`Map3DGlow.swift`（`trainSpots(of:pack:festive:)`）、`Map3DWinterDecor.swift`（拿掉沒人用的 `christmasLivery`）。
+- App：`Map3DPreviewScreen.swift` 的 `christmas(_:wear:model:)`、`Map3DMetalView.swift` 的頂點數與 `festive:`。
+- 測試：`Tests/GamePresentationTests/Map3DChristmasLiveryTests.swift` 改寫。
+- 工具：`export-winter-options.swift` 的 `mix` 用遊戲的程式畫；`export-winter-livery.swift` 改印每款車的數字；`export-winter-preview.swift`（決策 804 的 A／B 對照，靠已拿掉的部位表）刪了。
+- 文件：決策 806 §7、`docs/art/winter-livery-2-2026-11-16/README.md` 第四輪與兩張圖。
 
-## 還沒做的
+## 接手的人
 
-1. **等作者選**（規劃轉告）。選定前 `Map3DChristmasLivery` 與 main 相同。
-2. **實作**：決策 806 §4 列了做法（雪頂用每頂點表、其餘另加實例、光暈上限、閃爍、遠景與方塊車、顏色對到已有的色）。路線頁開關、第 4 週任務、偏好紀錄沿用決策 795，不重做。匯出器裡 `Decoration` 的算法（沿側面找寬度、沿車頂找高度、貼帶子）可以搬進 `Sources/GamePresentation`，搬的時候把每段 0.2 m 改成 1 m、只畫單面。
-3. 實作後要補的測試：每款跑的車的裝飾不浮空（離表面 ≤ 0.1 m）、不超出車的外框太多、三角形數在預算內、雪頂不動玻璃與燈。
+1. 等 #2310 的 CI。`ios-build.yml` 是第一次編那兩個 App 檔；編不過多半是 `Map3DMetalView.swift` 畫車那個迴圈（搜 `Decision 806`）或 `Map3DPreviewScreen.swift` 的 `christmas(_:wear:model:)`。
+2. model-look 要另一個 session 或作者判總覽圖：圖在 `docs/art/winter-livery-2-2026-11-16/chosen-game-*.jpg`。這個 session 只自己看過。阿里山機車的花圈在拍圖之後才修（不超出車頭），沒有重拍：`tools/model-look/export-winter.sh options <資料夾>` 再 `node tools/model-look/shoot-livery.mjs --dir <資料夾> --out <圖的資料夾>`。
+3. 綠了、圖有人判過之後把 PR 轉 ready。不要合併、不要開 auto-merge。
+4. 合併或放棄時在 #2118 留言，釋出決策 806。
 
 ## UNVERIFIED
 
-- Metal、實機、效能、夜裡的光暈與閃爍；圖全部是離線 WebGL。
+- App 的兩處改動能不能編、Metal 畫面、實機、效能、夜裡的光暈與慢閃；圖全部是離線 WebGL。
 - 只看過一張真實照片（Commons 限流）。
+- 第一次畫到某款聖誕車時在主執行緒做那一份緩衝（一節車幾千個頂點加表面查詢）；有沒有可感的卡頓沒量過。

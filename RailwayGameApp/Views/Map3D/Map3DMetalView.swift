@@ -1392,7 +1392,9 @@ final class Map3DMetalView: MTKView {
         let glows = glowsNow
         // Decision 702: and the aircraft's lamps.
         let trainGlowFloats = glows && models != nil && frame != nil
-            ? (Map3DGlow.trainSpots(of: frame!, pack: models!.pack) + frame!.lamps).flatMap(\.floats) : []
+            ? (Map3DGlow.trainSpots(of: frame!, pack: models!.pack,
+                                    festive: Map3DChristmasLivery.twinkle(seconds: CACurrentMediaTime(), reduceMotion: reduceMotion))
+                + frame!.lamps).flatMap(\.floats) : []
         // Decision 672: seeing underground, over the map only; the cars in
         // the tunnels this frame.
         let drawsXRay = xrayDrawing != nil && Map3DXRay.draws(switchOn: xray != nil, following: following != nil)
@@ -1570,15 +1572,19 @@ final class Map3DMetalView: MTKView {
                     var last = first
                     while last + 1 < sorted.count, sorted[last + 1].model == model, sorted[last + 1].christmas == christmas { last += 1 }
                     let count = last - first + 1
-                    if model < models.buffers.count,
-                       let vertices = (christmas ? models.buffers.christmas(model, table: models.pack.christmas[model]) : nil) ?? models.buffers[model] {
+                    if model < models.buffers.count {
+                        // Decision 806: a car in the Christmas livery has its
+                        // decoration after its own triangles, in the same buffer.
+                        let dressed = christmas
+                            ? models.buffers.christmas(model, wear: models.pack.christmas[model], model: models.pack.models[model]) : nil
+                        guard let vertices = dressed ?? models.buffers[model] else { first = last + 1; continue }
+                        let vertexCount = dressed.map { $0.length / MemoryLayout<Map3DVertex>.stride } ?? models.pack.models[model].vertexCount
                         encoder.setVertexBuffer(vertices, offset: 0, index: 0)
                         encoder.setFragmentTexture(models.textures[model] ?? noModelTexture, index: 2)
                         encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
-                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertexCount,
-                                               instanceCount: count)
+                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount, instanceCount: count)
                         drawCalls += 1
-                        triangles += models.pack.models[model].triangleCount * count
+                        triangles += vertexCount / 3 * count
                         glowRun(buffer, offset: first * Self.instanceStride, model: model, count: count)
                     }
                     first = last + 1

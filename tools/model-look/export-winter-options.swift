@@ -8,7 +8,7 @@ import GameCore
 //   A1 ribbon:    the cab cars' waist a wide berry belt with gold lines, a white and gold ribbon crossed over their front third
 //   A2 snow roof: every roof warm white, a string of warm bulbs along both roof edges, a wreath on the front
 //   A3:           A1's belt with A2's roof, bulbs and wreath (no ribbon)
-//   mix:          A2 with A1's ribbon and bow on the cab cars (this session's own, after looking at game size)
+//   mix:          A2 with A1's ribbon and bow on the cab cars: the one chosen, drawn by the game's own Map3DChristmasLivery
 // Each train plain, a1, a2, a3, mix; by day and by night (unlit faces darkened,
 // windows and lamps lit as decision 449 lights them; NAME-night-mask holds
 // only the lamps and bulbs, for the glow shoot-livery.mjs draws round it); as a pair
@@ -237,12 +237,11 @@ func car(_ index: Int,_ variant: Variant,nose: Float,night: Bool,line: UInt32) -
     take(model.vertices)
     // A car whose body is red already wears fir green.
     var red: Float=0,body: Float=0
-    if let table=pack.christmas[index] {
-        for first in stride(from:0,to:model.vertices.count-2,by:3) where table[first]&3==1 {
-            let a=model.vertices[first],size=((model.vertices[first+1].position-a.position).cross(model.vertices[first+2].position-a.position)).length/2
-            let ch=Map3DChristmasLivery.channels(a.color>>24==0xFF ? a.color : line);body+=size
-            if ch[0]>max(ch[1],ch[2])*1.6 { red+=size }
-        }
+    for first in stride(from:0,to:model.vertices.count-2,by:3) where abs(model.vertices[first].ny)>=0.6 {
+        let a=model.vertices[first],size=((model.vertices[first+1].position-a.position).cross(model.vertices[first+2].position-a.position)).length/2
+        guard a.color>>24==0xFF,!Map3DTrainLights.isGlass(a.color) else { continue }
+        let ch=Map3DChristmasLivery.channels(a.color);body+=size
+        if ch[0]>max(ch[1],ch[2])*1.6 { red+=size }
     }
     var decoration=Decoration(tris,low:model.minimum,high:model.maximum,nose:nose,redBody:red>body*0.5)
     if variant != .plain && variant != .a1 { tris=snowed(tris,wall:decoration.wall) }
@@ -261,10 +260,11 @@ func car(_ index: Int,_ variant: Variant,nose: Float,night: Bool,line: UInt32) -
         decoration.addWreath(share:round==1 ? 0.38 : 0.4,lift:round==1 ? 0.5 : 0.62)
         if round>1 { decoration.addFrontBow() }
     case .mix:
-        // Round 3, this session's own: A2 with A1's ribbon and bow on the cab cars in place of the belt nobody sees from above.
-        decoration.addLights(pitch:0.75,radius:0.18,garland:0.36)
-        decoration.addWreath(share:0.4,lift:0.62)
-        decoration.addRibbons(width:1.1,bow:true)
+        // The one chosen (decision 806): the game's own, Map3DChristmasLivery, not this tool's.
+        if let wear=pack.christmas[index] {
+            tris=[]
+            take(Map3DChristmasLivery.dressed(model.vertices,minimum:model.minimum,maximum:model.maximum,wear:wear))
+        }
     }
     tris+=decoration.out
     if night,let lights=pack.lights[index] {
