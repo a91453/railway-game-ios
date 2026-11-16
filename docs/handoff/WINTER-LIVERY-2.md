@@ -2,6 +2,12 @@
 
 session_01JMHz9bvL9kMdQXnJy9h3VW，分支 `claude/winter-livery-2`，決策 806。存檔、golden、GameCore、fixtures、模型包的模型與雜湊：都不動。
 
+## 進度（中斷後只讀這一節與 `git status`、`git log -3`）
+
+- 做到哪：第一步（只出圖）做完，draft PR #2310，#2118 已回報（推薦「A2＋頭車緞帶」，只能三選一選 A2）。等作者選方案；選定前不改 `Map3DChristmasLivery`。本 session 已壓縮 1 次。不趕 135，12/1 前最後一版帶上即可。
+- 已驗證：`swift build` 過、匯出器與拍圖腳本跑過；#2310 的 `Swift CI (gate)` 綠（沒改套件）。Metal、實機、效能、真正的光暈 UNVERIFIED。
+- 下一步的第一個指令（作者選定後）：讀 `docs/decisions/806.md` §4，再 `swift build --build-tests -Xswiftc -warnings-as-errors`，然後改 `Sources/GamePresentation/Map3DChristmasLivery.swift`。
+
 ## 做完的
 
 - 三個方案加一格推薦的圖：`docs/art/winter-livery-2-2026-11-16/`（遊戲實際大小與放大，白天與夜晚），三輪看圖的紀錄在那裡的 README。
