@@ -33,6 +33,9 @@ struct RailwayGameApp: App {
         // leaves the land value layer on, or stops between turning a switch
         // off and on, changed how every later test began. Before anything
         // reads them.
+        if DebugLaunch.isSet("-ui-testing") {
+            TrapTrace.install()
+        }
         if DebugLaunch.isSet("-ui-testing"), let domain = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: domain)
             // The one-time card about track numbers and routes (decision
@@ -743,6 +746,62 @@ final class FrameMeter: NSObject {
     }
 }
 
+/// START-CRASH: under `-ui-testing`, where the app was when a signal ended
+/// it. #2298's iOS run (43819747972) lost the app to SIGTRAP during
+/// `TutorialUITests`, and neither the result bundle nor the Mac had a crash
+/// report to say where. Before the signal's usual end (and its usual crash
+/// report, when one is written), the handler writes the signal's number,
+/// the address it happened at and the thread's return addresses, each with
+/// its image and symbol, to `tmp/ui-test-trap-<pid>.txt` in the app's
+/// container; `ios-build.yml` keeps the file when a UI test fails. It
+/// handles each signal once and returns, so the signal comes again and ends
+/// the app as it would have. Debug only; nothing else runs it.
+enum TrapTrace {
+    /// The file's path as C text and the frames' room, made at launch: the
+    /// handler allocates nothing.
+    nonisolated(unsafe) private static var path: UnsafeMutablePointer<CChar>?
+    nonisolated(unsafe) private static var frames: UnsafeMutablePointer<UnsafeMutableRawPointer?>?
+    private static let room: Int32 = 128
+
+    static func install() {
+        guard path == nil else { return }
+        path = strdup(NSTemporaryDirectory() + "ui-test-trap-\(getpid()).txt")
+        frames = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: Int(room) + 1)
+        // Loads what backtrace needs now, not inside the handler.
+        _ = backtrace(frames, 1)
+        for number in [SIGTRAP, SIGILL, SIGABRT, SIGSEGV, SIGBUS, SIGFPE] {
+            var action = sigaction()
+            action.__sigaction_u.__sa_sigaction = { number, _, context in
+                TrapTrace.record(number, context)
+            }
+            // Once: the signal's usual end is back before the handler runs.
+            action.sa_flags = SA_SIGINFO | SA_RESETHAND
+            sigemptyset(&action.sa_mask)
+            sigaction(number, &action, nil)
+        }
+    }
+
+    private static func record(_ number: Int32, _ context: UnsafeMutableRawPointer?) {
+        guard let path, let frames else { return }
+        let file = open(path, O_WRONLY | O_CREAT | O_APPEND, 0o644)
+        guard file >= 0 else { return }
+        var line: (UInt8, UInt8, UInt8) = (48 + UInt8(truncatingIfNeeded: number / 10), 48 + UInt8(truncatingIfNeeded: number % 10), 10)
+        withUnsafeBytes(of: &line) { _ = write(file, $0.baseAddress, 3) }
+        var first: Int32 = 0
+        #if arch(arm64)
+        // Where it happened: the handler's own stack starts at its caller.
+        if let machine = context?.assumingMemoryBound(to: ucontext_t.self).pointee.uc_mcontext {
+            frames[0] = UnsafeMutableRawPointer(bitPattern: UInt(machine.pointee.__ss.__pc))
+            first = 1
+        }
+        #endif
+        let count = backtrace(frames + Int(first), room)
+        backtrace_symbols_fd(frames, first + count, file)
+        fsync(file)
+        close(file)
+    }
+}
+
 /// MENUSTALL: with `-ui-test-stall-stacks` under `-ui-testing`, what the
 /// main thread is doing while ``FrameMeter`` sees it draw nothing. A
 /// thread of its own looks five times a second; once the main thread has
@@ -751,6 +810,11 @@ final class FrameMeter: NSObject {
 /// lets it go. When frames come again, the trace gets the stall's length,
 /// the functions the looks most often found running, and the call stack
 /// most of the looks shared, each frame with how many looks it was in.
+/// START-CRASH: a stall that has lasted some four seconds is written once
+/// while it lasts ("so far"), from its newest looks: #2298's run stalled
+/// 13 s on the start screen and the app was gone before the report of its
+/// 240 looks was done (a look takes some 30 ms to name), so nothing said
+/// what it was doing.
 /// Debug and the Simulator's arm64 only; nothing else runs it.
 final class StallSampler: @unchecked Sendable {
     static let shared = StallSampler()
@@ -798,6 +862,7 @@ final class StallSampler: @unchecked Sendable {
         let frames = UnsafeMutablePointer<UInt>.allocate(capacity: 128)
         var samples: [[UInt]] = []
         var stallStart: CFTimeInterval = 0
+        var toldSoFar = false
         while true {
             // Twenty looks a second once it stalls, so a stall of one or
             // two seconds still gets a few dozen (IPAD-LAUNCH-STALL).
@@ -810,10 +875,16 @@ final class StallSampler: @unchecked Sendable {
                     let count = Self.sample(target, state: state, frames: frames)
                     if count > 0 { samples.append(Array(UnsafeBufferPointer(start: frames, count: count))) }
                 }
+                if !toldSoFar, samples.count >= 60 {
+                    toldSoFar = true
+                    UITestTrace.stall("so far, and still stalled:")
+                    report(Array(samples.suffix(20)), milliseconds: Int((now - stallStart) * 1_000))
+                }
             } else if stallStart > 0 {
                 report(samples, milliseconds: Int((last - stallStart) * 1_000))
                 samples = []
                 stallStart = 0
+                toldSoFar = false
             }
         }
     }
@@ -838,7 +909,9 @@ final class StallSampler: @unchecked Sendable {
             frames[1] = UInt(state[30]) & mask
             count = 2
             var fp = UInt(state[29])
-            while count < 128, fp >= bottom, fp + 16 <= top, fp & 7 == 0 {
+            // What a look reads is whatever the stopped thread held: no
+            // arithmetic on it may trap (START-CRASH).
+            while count < 128, fp >= bottom, fp <= top - 16, fp & 7 == 0 {
                 let record = UnsafePointer<UInt>(bitPattern: fp)!
                 let next = record[0]
                 let returnAddress = record[1] & mask
@@ -875,7 +948,7 @@ final class StallSampler: @unchecked Sendable {
         let total = samples.count
         // A return address is just after its call: look up the byte
         // before it, so a call at a function's end names that function.
-        let named = samples.map { stack in stack.enumerated().map { index, address in name(index == 0 ? address : address - 1) } }
+        let named = samples.map { stack in stack.enumerated().map { index, address in name(index == 0 || address == 0 ? address : address - 1) } }
         var inclusive: [String: Int] = [:]
         var leaves: [String: Int] = [:]
         for stack in named {

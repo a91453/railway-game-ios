@@ -776,6 +776,50 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # START-CRASH: a UI test that fails because the app died (#2298's run
+      # 43819747972: SIGTRAP during TutorialUITests, and no crash report in
+      # the result bundle, which waits 20 s for one) left nothing that said
+      # where. Kept beside the result bundle, only when the UI tests fail:
+      # the Mac's reports of the app and its test runner
+      # (~/Library/Logs/DiagnosticReports, where a Simulator app's crash is
+      # written), the Simulator's own, and the stack the app writes itself
+      # when a signal ends it under -ui-testing (`TrapTrace` in
+      # RailwayGameApp.swift), for when no report was written at all.
+      - name: Collect the app's crash reports
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        continue-on-error: true
+        env:
+          CRASH_REPORTS: ${{ runner.temp }}/ui-smoke-crash-reports
+          CRASH_SIMULATOR_UDID: ${{ env.SIMULATOR_UDID }}
+        run: |
+          mkdir -p "$CRASH_REPORTS/mac" "$CRASH_REPORTS/simulator" "$CRASH_REPORTS/trap"
+          device="$HOME/Library/Developer/CoreSimulator/Devices/$CRASH_SIMULATOR_UDID/data"
+          # The Mac writes a report some time after the app dies.
+          sleep 20
+          find "$HOME/Library/Logs/DiagnosticReports" -type f -name 'RailwayGame*' \
+            \( -name '*.ips' -o -name '*.crash' -o -name '*.diag' -o -name '*.hang' -o -name '*.spin' \) \
+            -exec cp {} "$CRASH_REPORTS/mac/" \; 2>/dev/null || true
+          for logs in "$device/Library/Logs/CrashReporter" "$device/Library/Logs/DiagnosticReports"; do
+            [[ -d "$logs" ]] || continue
+            find "$logs" -type f -name 'RailwayGame*' -exec cp {} "$CRASH_REPORTS/simulator/" \; || true
+          done
+          find "$device/Containers/Data/Application" -type f -path '*/tmp/ui-test-trap-*.txt' \
+            -exec cp {} "$CRASH_REPORTS/trap/" \; 2>/dev/null || true
+          count="$(find "$CRASH_REPORTS" -type f | wc -l | tr -d ' ')"
+          echo "Crash reports and trap stacks found: $count"
+          find "$CRASH_REPORTS" -type f | sed "s|$CRASH_REPORTS/||"
+          echo "- **Crash reports and trap stacks:** $count (artifact \`ui-smoke-crash-reports\`)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the app's crash reports
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ui-smoke-crash-reports
+          path: ${{ runner.temp }}/ui-smoke-crash-reports
+          if-no-files-found: ignore
+          retention-days: 7
+
       # K4 (#366): a tap the test saw pressed whose action never ran. The
       # app writes each touch it got (where, on which view of which window)
       # and the named buttons' actions to the unified log under -ui-testing
@@ -1081,6 +1125,43 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # The app's crash reports and trap stacks, as for the build job's UI
+      # tests (START-CRASH).
+      - name: Collect the app's crash reports
+        if: always() && (steps.ui-partition.outcome == 'failure' || steps.ui-partition.outcome == 'cancelled')
+        continue-on-error: true
+        env:
+          CRASH_REPORTS: ${{ runner.temp }}/ui-partition-crash-reports
+          CRASH_SIMULATOR_UDID: ${{ env.SIMULATOR_UDID }}
+        run: |
+          mkdir -p "$CRASH_REPORTS/mac" "$CRASH_REPORTS/simulator" "$CRASH_REPORTS/trap"
+          device="$HOME/Library/Developer/CoreSimulator/Devices/$CRASH_SIMULATOR_UDID/data"
+          # The Mac writes a report some time after the app dies.
+          sleep 20
+          find "$HOME/Library/Logs/DiagnosticReports" -type f -name 'RailwayGame*' \
+            \( -name '*.ips' -o -name '*.crash' -o -name '*.diag' -o -name '*.hang' -o -name '*.spin' \) \
+            -exec cp {} "$CRASH_REPORTS/mac/" \; 2>/dev/null || true
+          for logs in "$device/Library/Logs/CrashReporter" "$device/Library/Logs/DiagnosticReports"; do
+            [[ -d "$logs" ]] || continue
+            find "$logs" -type f -name 'RailwayGame*' -exec cp {} "$CRASH_REPORTS/simulator/" \; || true
+          done
+          find "$device/Containers/Data/Application" -type f -path '*/tmp/ui-test-trap-*.txt' \
+            -exec cp {} "$CRASH_REPORTS/trap/" \; 2>/dev/null || true
+          count="$(find "$CRASH_REPORTS" -type f | wc -l | tr -d ' ')"
+          echo "Crash reports and trap stacks found: $count"
+          find "$CRASH_REPORTS" -type f | sed "s|$CRASH_REPORTS/||"
+          echo "- **Crash reports and trap stacks:** $count (artifact \`ui-${{ matrix.partition }}-crash-reports\`)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the app's crash reports
+        if: always() && (steps.ui-partition.outcome == 'failure' || steps.ui-partition.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ui-${{ matrix.partition }}-crash-reports
+          path: ${{ runner.temp }}/ui-partition-crash-reports
+          if-no-files-found: ignore
+          retention-days: 7
+
       # The app's touches and actions, as for the build job's UI tests (K4).
       - name: Save the app's UI test trace
         if: always() && (steps.ui-partition.outcome == 'failure' || steps.ui-partition.outcome == 'cancelled')
@@ -1249,6 +1330,43 @@ jobs:
           name: ipad-tutorial-xcresult
           path: ${{ runner.temp }}/ipad-tutorial.xcresult
           if-no-files-found: error
+          retention-days: 7
+
+      # The app's crash reports and trap stacks, as for the build job's UI
+      # tests (START-CRASH).
+      - name: Collect the app's crash reports
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        continue-on-error: true
+        env:
+          CRASH_REPORTS: ${{ runner.temp }}/ipad-tutorial-crash-reports
+          CRASH_SIMULATOR_UDID: ${{ env.IPAD_SIMULATOR_UDID }}
+        run: |
+          mkdir -p "$CRASH_REPORTS/mac" "$CRASH_REPORTS/simulator" "$CRASH_REPORTS/trap"
+          device="$HOME/Library/Developer/CoreSimulator/Devices/$CRASH_SIMULATOR_UDID/data"
+          # The Mac writes a report some time after the app dies.
+          sleep 20
+          find "$HOME/Library/Logs/DiagnosticReports" -type f -name 'RailwayGame*' \
+            \( -name '*.ips' -o -name '*.crash' -o -name '*.diag' -o -name '*.hang' -o -name '*.spin' \) \
+            -exec cp {} "$CRASH_REPORTS/mac/" \; 2>/dev/null || true
+          for logs in "$device/Library/Logs/CrashReporter" "$device/Library/Logs/DiagnosticReports"; do
+            [[ -d "$logs" ]] || continue
+            find "$logs" -type f -name 'RailwayGame*' -exec cp {} "$CRASH_REPORTS/simulator/" \; || true
+          done
+          find "$device/Containers/Data/Application" -type f -path '*/tmp/ui-test-trap-*.txt' \
+            -exec cp {} "$CRASH_REPORTS/trap/" \; 2>/dev/null || true
+          count="$(find "$CRASH_REPORTS" -type f | wc -l | tr -d ' ')"
+          echo "Crash reports and trap stacks found: $count"
+          find "$CRASH_REPORTS" -type f | sed "s|$CRASH_REPORTS/||"
+          echo "- **Crash reports and trap stacks:** $count (artifact \`ipad-tutorial-crash-reports\`)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the app's crash reports
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ipad-tutorial-crash-reports
+          path: ${{ runner.temp }}/ipad-tutorial-crash-reports
+          if-no-files-found: ignore
           retention-days: 7
 
       # The app's touches and actions, as for the iPhone's UI tests (K4).
