@@ -2,11 +2,13 @@
 # tools/model-look: the winter event's looks as .m3dmodel files for shoot.mjs.
 #   export-winter.sh lights OUTPUT_DIRECTORY [before]
 #     every kind of station building and the kit's exits with the lights hung on them
+#   export-winter.sh options OUTPUT_DIRECTORY [ROUND]
+#     decision 806: nine trains plain and in each decoration option, by day and night, for shoot-livery.mjs
 #   export-winter.sh livery OUTPUT_DIRECTORY [MODEL_NAME...]
-#     prints each running car's painted side by part; writes the named cars plain and in the Christmas livery
+#     prints each running car's snowed roof faces and decoration triangles (decision 806); writes the named cars plain and in the Christmas livery
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-kind="${1:?usage: export-winter.sh lights|livery OUTPUT_DIRECTORY ...}"; out="${2:?usage: export-winter.sh lights|livery OUTPUT_DIRECTORY ...}"; shift 2
+kind="${1:?usage: export-winter.sh lights|livery|options OUTPUT_DIRECTORY ...}"; out="${2:?usage: export-winter.sh lights|livery|options OUTPUT_DIRECTORY ...}"; shift 2
 swift build >&2
 bin="$(swift build --show-bin-path)"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT

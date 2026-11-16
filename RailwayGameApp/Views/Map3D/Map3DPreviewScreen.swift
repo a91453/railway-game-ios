@@ -924,17 +924,20 @@ final class Map3DModelBuffers: @unchecked Sendable {
         return buffer
     }
 
-    /// Decision 795: model `index`'s vertices in the Christmas livery,
-    /// repainted by `table` (``Map3DModelPack/christmas``) from its own
-    /// buffer the first time a car of it is drawn so, then kept; `nil`
-    /// when it cannot be made (the car is then drawn in its own paint).
-    func christmas(_ index: Int, table: [UInt8]?) -> MTLBuffer? {
-        guard let table, let plain = self[index], plain.length == table.count * MemoryLayout<Map3DVertex>.stride else { return nil }
+    /// Decisions 795 and 806: `model`'s vertices in the Christmas livery
+    /// (``Map3DChristmasLivery/dressed(_:minimum:maximum:wear:)``: its roof
+    /// under snow and the decoration's own triangles after its own), made
+    /// from its own buffer the first time a car of it is drawn so, then
+    /// kept; longer than the model's own, so the draw counts its length.
+    /// `nil` when it cannot be made (the car is then drawn in its own paint).
+    func christmas(_ index: Int, wear: Map3DChristmasLivery.Wear?, model: Map3DModelPack.Model) -> MTLBuffer? {
+        let stride = MemoryLayout<Map3DVertex>.stride
+        guard let wear, let plain = self[index], plain.length == model.vertexCount * stride else { return nil }
         lock.lock()
         defer { lock.unlock() }
         if let buffer = liveried[index] { return buffer }
-        let vertices = Array(UnsafeBufferPointer(start: plain.contents().bindMemory(to: Map3DVertex.self, capacity: table.count), count: table.count))
-        let buffer = Map3DChristmasLivery.recoloured(vertices, table: table).withUnsafeBytes { bytes in
+        let vertices = Array(UnsafeBufferPointer(start: plain.contents().bindMemory(to: Map3DVertex.self, capacity: model.vertexCount), count: model.vertexCount))
+        let buffer = Map3DChristmasLivery.dressed(vertices, minimum: model.minimum, maximum: model.maximum, wear: wear).withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
         liveried[index] = buffer

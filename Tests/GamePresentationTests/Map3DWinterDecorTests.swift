@@ -66,15 +66,6 @@ final class Map3DWinterDecorTests: XCTestCase {
         XCTAssertEqual(Set(string.map { [$0.red, $0.green, $0.blue] }).count, 4)
     }
 
-    func testTheLiveryIsRedWhiteAndGoldFromTheTreesColours() {
-        let livery = Map3DWinterDecor.christmasLivery
-        XCTAssertEqual(livery.body, Map3DColor.rgb(0xC1272F))
-        XCTAssertEqual(livery.band, Map3DColor.rgb(0xF2F3EE))
-        XCTAssertEqual(livery.line, Map3DColor.rgb(0xF2C230))
-        // Apart from the Puyuma's white body and red band.
-        XCTAssertNotEqual(livery.body, Map3DColor.rgb(UInt32(TrainLivery.puyuma.body ?? 0)))
-    }
-
     func testEveryColourIsOneTheGameAlreadyHas() {
         // No new palette colour (the studio's are matched to the nearest).
         let colours = Map3DWinterDecor.Material.allCases.map(\.colour)

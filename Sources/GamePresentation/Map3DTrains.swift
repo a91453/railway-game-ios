@@ -206,12 +206,10 @@ public enum Map3DTrains {
             // held steady, so the cars and the cab's view do not shake from
             // one sampled point of the track to the next.
             let steady = run.steadyHead(at: progress, over: Self.steadySpan)
-            // Decision 795: a line in the Christmas livery, its boxes red
-            // with a white band, its models repainted.
+            // Decision 806: a line in the Christmas livery, its boxes'
+            // roofs under snow, its models dressed.
             let liveried = if case .line(let id, _) = run.look { christmas.contains(id) } else { false }
-            let (side, stripe) = liveried
-                ? (Map3DWinterDecor.christmasLivery.body, Map3DWinterDecor.christmasLivery.band)
-                : colours(of: run.look, palette: palette)
+            let (side, stripe) = colours(of: run.look, palette: palette)
             let (trainType, hasModels, layout, cars) = Self.cars(of: run, progress: progress, heights: heights, models: models)
             // Decision 334: the rails under the train, front to back, for
             // its ring.
@@ -301,7 +299,7 @@ public enum Map3DTrains {
                     continue
                 }
                 frame.boxes.addBox(base: base + Map3DPoint(0, 0.3, 0), forward: a - b, length: length, width: carWidth,
-                                   height: carHeight - 0.3, top: roof, side: side)
+                                   height: carHeight - 0.3, top: liveried ? Map3DChristmasLivery.snow : roof, side: side)
                 if let stripe {
                     // The band under the windows, a hand's breadth proud of the
                     // body so it never flickers into it.
