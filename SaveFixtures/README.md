@@ -399,3 +399,11 @@ its map's airports when it opens the save).
   (`HarbourSightsTests.testVersionOneHundredSevenKeepsTheHarbour`,
   written with `HARBOUR_SAVE_NEW=1` by the build that first made it;
   decision 773).
+- `v107-depot-ladder-ring.json`: the Taoyuan Airport MRT bought as it
+  was before decision 605 under the simple rules, traffic control turned
+  off after its first day, at 05:40 of the second day after: six minutes
+  before three empty runs in Luzhu depot waited for each other in a ring
+  (`DepotLadderSpacingTests`; written by the build before decision 801
+  with `DepotReturnReportTests`' `DEPOT_RETURN_SAVE`, HEALTH-134 §3's
+  world). The format is version 107's; it is here for the world, not for
+  a new field.

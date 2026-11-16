@@ -243,8 +243,12 @@ extension GameWorld {
     /// ``heldUp(_:within:near:)`` with the trains' ways (``way(of:)``) kept
     /// in `ways` by train: a way depends on its train alone, so one worked
     /// out stays right until that train moves, and the caller drops it then.
+    ///
+    /// Decision 801: with `yielding` off, without letting a faster train
+    /// behind pass first (``catches(_:at:by:from:)``), as that rule asks of
+    /// the train behind whether it stands held itself.
     func heldUp(
-        _ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay]
+        _ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay], yielding: Bool = true
     ) -> (clear: Int64, by: TrainID)? {
         func way(of train: Train) -> SpacingWay {
             if let known = ways[train.id] { return known }
@@ -304,11 +308,20 @@ extension GameWorld {
             // a train coming up behind it on its way on, but not through the
             // track it stands on, to let it pass first, as a set waits in a
             // station's loop for the faster one.
-            if leaving, case .travellingToStop? = other.execution, other.movement.rate > 0,
+            //
+            // Decision 801: not for one that stands held by a third train
+            // and so is not coming up. Leaving a depot's siding, a train
+            // waited for one behind it on the depot's ladder, which waited
+            // for one coming in, which waited for the first, the nearer of
+            // the two to the ladder: each for the next, for good, with every
+            // train behind them shut in the depot (the Taoyuan Airport MRT
+            // bought before decision 605 sent out 15 of a day's 333 runs).
+            if yielding, leaving, case .travellingToStop? = other.execution, other.movement.rate > 0,
                !mine.body.contains(where: { theirs.starts[$0] != nil }),
                let joins = mine.order.first(where: { !mine.body.contains($0) && (theirs.starts[$0] ?? -1) > 0 }),
                let near = starts[joins], let far = theirs.starts[joins], near < distance,
-               catches(train, at: near, by: other, from: far) {
+               catches(train, at: near, by: other, from: far),
+               !(heldUp(other, within: distance, near: index, ways: &ways, yielding: false).map { $0.clear == 0 && $0.by != train.id } ?? false) {
                 if near < clear?.clear ?? .max { clear = (near, other.id) }
                 continue
             }
