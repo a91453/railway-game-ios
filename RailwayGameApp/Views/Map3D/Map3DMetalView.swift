@@ -1357,7 +1357,9 @@ final class Map3DMetalView: MTKView {
         // car of it an instance.
         var carsSorted: [Map3DInstance] = []
         if let instances = frame?.instances, !instances.isEmpty, models != nil {
-            carsSorted = instances.sorted { $0.model < $1.model }
+            // Decision 795: those in the Christmas livery after the rest of
+            // their model, drawn with its repainted vertices.
+            carsSorted = instances.sorted { $0.model != $1.model ? $0.model < $1.model : !$0.christmas && $1.christmas }
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
@@ -1564,11 +1566,12 @@ final class Map3DMetalView: MTKView {
                 encoder.setRenderPipelineState(instancedPipeline)
                 var first = 0
                 while first < sorted.count {
-                    let model = sorted[first].model
+                    let model = sorted[first].model, christmas = sorted[first].christmas
                     var last = first
-                    while last + 1 < sorted.count, sorted[last + 1].model == model { last += 1 }
+                    while last + 1 < sorted.count, sorted[last + 1].model == model, sorted[last + 1].christmas == christmas { last += 1 }
                     let count = last - first + 1
-                    if model < models.buffers.count, let vertices = models.buffers[model] {
+                    if model < models.buffers.count,
+                       let vertices = (christmas ? models.buffers.christmas(model, table: models.pack.christmas[model]) : nil) ?? models.buffers[model] {
                         encoder.setVertexBuffer(vertices, offset: 0, index: 0)
                         encoder.setFragmentTexture(models.textures[model] ?? noModelTexture, index: 2)
                         encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)

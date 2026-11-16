@@ -931,7 +931,7 @@ struct WinterEventSection: View {
             ))
         }
         .task(id: today) {
-            facts = WinterMissionFacts(world: session.world)
+            facts = WinterMissionFacts(world: session.world, liveried: session.christmasLiveryLines)
         }
     }
 
