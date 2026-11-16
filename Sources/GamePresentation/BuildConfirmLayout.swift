@@ -1,3 +1,5 @@
+import GameCore
+
 // How wide the map's ✕ and ✓ pill may be, and where it goes across the
 // map (decision 107). TestFlight 67.1, a phone held sideways with the track
 // card open: a long refusal stood on one line, and the pill ran from the
@@ -133,5 +135,73 @@ extension BuildConfirmLayout {
         let site = ScreenFrame(x: anchor.x - siteSize / 2, y: anchor.y - siteSize / 2, width: siteSize, height: siteSize)
         let nearest = pieces.sorted { $0.distance < $1.distance }.prefix(max(0, limit)).map(\.frame)
         return [site] + nearest
+    }
+}
+
+// Decision 800 (BUILD-CARD-PHONE, the owner's report from 0.6.0 (134), a
+// phone held sideways): a stretch of track refused, the pill with its two
+// height fixes and ✕ ✓ stood over the construction HUD's line that says
+// why, and over the stretch itself; and both fixes said "NT$ 0".
+extension BuildConfirmLayout {
+    /// How the pill's words (a refusal, a note, the fixes) and its ✕ ✓
+    /// stand.
+    public enum Arrangement: Hashable, Sendable {
+        /// The words over the buttons.
+        case stacked
+        /// The words beside the buttons: half as tall, for a screen with
+        /// little height (a phone held sideways).
+        case beside
+    }
+
+    /// The pill's arrangement: ``Arrangement/beside`` where the screen is
+    /// short (`compactHeight`) and a stretch of track has words to say;
+    /// the other builds, and a pill of only ✕ ✓, stay as they were.
+    public static func arrangement(compactHeight: Bool, trackHasWords: Bool) -> Arrangement {
+        compactHeight && trackHasWords ? .beside : .stacked
+    }
+
+    /// The widest a stretch's refusal wraps at, in points: some three
+    /// lines of the caption, so the pill covers no more of the map than
+    /// its buttons need.
+    public static let wordsWidth = 340.0
+
+    /// Whether the construction HUD along the top says why the stretch is
+    /// refused: only where the pill, whose ✓ the refusal greys, is not
+    /// there to say it beside that ✓.
+    public static func hudSaysProblem(pillSaysProblem: Bool) -> Bool {
+        !pillSaysProblem
+    }
+
+    /// A price as the pill writes it, or `nil` for none: nothing is
+    /// written for a build that costs nothing (with unlimited funds every
+    /// price is NT$ 0; the roads, bus routes and ferries already wrote
+    /// none).
+    public static func priceText(of cost: Money?, in language: DisplayLanguage) -> String? {
+        guard let cost, cost > .zero else { return nil }
+        return cost.compactText(in: language)
+    }
+
+    /// A flag's frame over its `point` (28 points across, standing above
+    /// the point so it stays in sight).
+    public static func flagFrame(at point: ScreenPoint) -> ScreenFrame {
+        ScreenFrame(x: point.x - 14, y: point.y - 36, width: 28, height: 28)
+    }
+
+    /// What the pill keeps off while a stretch of track is drawn: its end
+    /// (`anchor`), the flags at its ends (`flags`, the points they stand
+    /// over) and the pieces of `line`, the stretch in the screen's points,
+    /// nearest the end. A long line (a trace along a real railway) is
+    /// thinned to some `samples` points first.
+    public static func stretchObstacles(
+        _ line: [ScreenPoint], flags: [ScreenPoint], around anchor: ScreenPoint, reach: Double, samples: Int = 128
+    ) -> [ScreenFrame] {
+        var thinned = line
+        if samples > 1, line.count > samples {
+            let step = (line.count + samples - 2) / (samples - 1)
+            thinned = stride(from: 0, to: line.count, by: step).map { line[$0] }
+            if let last = line.last, thinned.last != last { thinned.append(last) }
+        }
+        let site = siteObstacles([thinned], around: anchor, reach: reach)
+        return [site[0]] + flags.map(flagFrame(at:)) + site.dropFirst()
     }
 }

@@ -3137,7 +3137,10 @@ private struct MapTopColumnOverlay: ViewModifier {
                         MapConstructionHUD(
                             preview: preview, language: session.language, heights: session.networkHeightCard,
                             onRaise: { session.raiseNetworkEnd(by: $0) },
-                            tutorialRuns: session.tutorial != nil
+                            tutorialRuns: session.tutorial != nil,
+                            saysProblem: BuildConfirmLayout.hudSaysProblem(
+                                pillSaysProblem: MapBuildConfirm.saysProblem(session, panel: screen.panel)
+                            )
                         )
                             .padding(.top, 12)
                             .transition(.move(edge: .top).combined(with: .opacity))
