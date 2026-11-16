@@ -2,13 +2,9 @@
 
 ## 進度（中斷後只讀這一節與 `git status`、`git log -3`）
 
-- 做到哪：程式、測試、決策 803 第 8 節、這份交接都推了；PR #2309（draft）已開並訂閱，已在 #2118 留言（壓縮第 1 次）。還沒拍截圖。
-- 已驗證：Linux 本機建置（warnings-as-errors）與 151 個相關測試過。App 畫面檔還沒編過（等 PR 的 `ios-build.yml`）。
-- 下一步的第一個指令：查 PR #2309 的 iOS 建置；編得過就開一次 `website-screenshots.yml`（ref `claude/build-mode-clean-2`，`kind=website`、`device=iphone`、`tests=testTrackHeightFixes`，先確認沒有別的截圖在跑，失敗不重跑），截圖轉 JPEG 85 放 `docs/art/build-mode-clean-2-2026-11-16/`，貼進 PR，補本檔「截圖結果」。
-
-派工單 BUILD-MODE-CLEAN-2（session_01JMHz9c3vpC3pdNMzXWMZ1i，`claude/build-mode-clean-2`，2026-11-16；遊戲規劃派，登記在 #2118 留言 6924206474）。決策 803 的補充（`docs/decisions/803.md` 第 8 節），沒有取新號。不動 GameCore、存檔版本（107）、golden、ReplayFixtures、SaveFixtures、`project.yml`、String Catalog。接在 `docs/handoff/BUILD-MODE-CLEAN.md` 之後。
-
-背景：作者看了 #2302 的截圖說「字不會太多嗎」。
+- 做到哪：PR #2309（draft）head `2ef12ce` 的 CI 與 iOS 建置全綠。2026-11-16 18:37 UTC 開了唯一一次 `website-screenshots.yml`（ref `claude/build-mode-clean-2`，`tests=testTrackHeightFixes`），不重跑。
+- 已驗證：Linux 本機建置與 151 個相關測試；CI 的 Swift 與 iOS（含教學 UI 測試的 gate）在 `2ef12ce` 綠。
+- 下一步的第一個指令：看那一次截圖執行的結果（Actions → Website screenshots，分支 `claude/build-mode-clean-2`）；成功就下載 artifact `website-screenshots`，轉 JPEG 85 放 `docs/art/build-mode-clean-2-2026-11-16/`、貼進 PR、補「截圖結果」、轉 ready、#2118 留言；失敗就照 ui-review §3 直接轉 ready 並寫明。
 
 ## 改了什麼（對照表與細節在決策 803 第 8 節）
 
