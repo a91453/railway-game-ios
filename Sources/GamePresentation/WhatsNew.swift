@@ -30,6 +30,50 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 135.
+        Entry(
+            id: "2026-11-17-135",
+            items: [
+                Line(
+                    english: "Laying track shows a cleaner screen: what has nothing to do with the track is put away, and a stretch that cannot be built says why and what would work.",
+                    chinese: "鋪軌時畫面更乾淨：和這段軌道無關的東西先收起，不能鋪時才說原因與建議。"
+                ),
+                Line(
+                    english: "Hong Kong has the HSBC Main Building in 3D.",
+                    chinese: "香港 3D 地圖多了滙豐總行大廈。"
+                ),
+                Line(
+                    english: "Settings, under Map, say whether the Hong Kong map is downloaded, downloading or using the built-in data.",
+                    chinese: "設定的「地圖」多一列，看得到香港地圖是已下載、下載中，還是使用內建資料。"
+                ),
+                Line(
+                    english: "From 1 December to 6 January, stations and their entrances hang Christmas lights, and big stations have a Christmas tree in front.",
+                    chinese: "12 月 1 日到 1 月 6 日，站房與出入口掛上聖誕燈串，大站站前有聖誕樹，晚上會亮。"
+                ),
+                Line(
+                    english: "In those weeks a passenger line's settings can give its trains a Christmas livery.",
+                    chinese: "同一段期間，客運路線的設定可以替列車換上聖誕塗裝。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "With signalling off, trains in a depot no longer wait on one another until most of the next day's trains never leave.",
+                    chinese: "關掉行車管制後，機廠裡的列車不再互相等到第二天大半班次發不出去。"
+                ),
+                Line(
+                    english: "With signalling off, trains that block one another are marked on the map, and one is let through each minute.",
+                    chinese: "行車管制關著時，互相擋住的列車會在地圖上標出來，每分鐘放一列先走。"
+                ),
+                Line(
+                    english: "On an iPhone held sideways, the card no longer covers the reason a stretch of track cannot be built.",
+                    chinese: "iPhone 橫拿鋪軌時，卡片不再蓋住不能鋪的原因。"
+                ),
+                Line(
+                    english: "Eight of Hong Kong's landmarks no longer flicker as the camera moves.",
+                    chinese: "香港八棟地標在鏡頭移動時不再閃爍。"
+                ),
+            ]
+        ),
         // 134.
         Entry(
             id: "2026-11-16-134",
