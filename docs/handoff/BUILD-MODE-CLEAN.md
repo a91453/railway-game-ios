@@ -27,6 +27,24 @@
 | 副站長正在說第一條路線的步驟時（玩家選「我自己來」）建造中仍留在原位，還是會擋到；可以改成泡泡說完就收 | 2 | 3 | 2 | 1 | 1 | 1.95 |
 | 建造時右下的 3D 鈕、左下的圖層鈕都留著；作者看過截圖若還嫌多，在 `BuildModeChrome` 加一個欄位就能收 | 2 | 4 | 2 | 1 | 1 | 2.20 |
 
+## 截圖（一次，run 43862047491，head 9ec16183，iPhone Pro 橫拿、深色）
+
+圖在 `docs/art/build-mode-clean-2026-11-16/`：`track-height-refused.png`（不能鋪）、
+`track-height-refused-en.png`（英文）、`track-height-bridge.png`（能鋪）。看到的：
+
+- 上方只有一個小膠囊（長度｜高度），高度提示沒有再出現；副站長、小地圖都不在畫面上。
+- 能鋪：卡片只有 ✕ 與 ✓ 加價格，在右下、不壓軌道。
+- 不能鋪：原因一段、兩顆建議，短字寫出「兩端」「起點」；中英文都沒有被截斷。
+- 還不好的：這個場景的軌道橫過整個畫面，不能鋪的卡片仍蓋住中間一段虛線
+  （卡片比能鋪時大，躲不開一條橫貫的線）；第一顆建議比第二顆窄，左邊沒對齊。兩件都沒在這次改，
+  下一位可做：建議鈕同寬（`MapBuildConfirm` 的建議欄給同一個寬度）。
+
+## VERIFIED
+
+- Linux：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`BuildConfirmLayoutTests`、
+  `BuildModeChromeTests`、`HeightSlideHintTests`、`NetworkHeightFixTests` 共 33 個過。
+- CI（head 9ec16183，已併 main）：`Swift CI (gate)` 與 `iOS App Build`（Xcode 建置與 PR 的 UI 測試）都綠。
+
 ## UNVERIFIED
 
 - App 的畫面檔（`RailwayGameApp/Views/`）在 Linux 編不了：建置、UI 測試交 CI（`ios-build.yml`）。
