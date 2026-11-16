@@ -1,5 +1,11 @@
 # START-CRASH（開始畫面→入門→第一課時 App 被 SIGTRAP 結束）
 
+## 進度
+
+- 做到哪：PR #2308 開了（draft）；當機報告上傳、`TrapTrace`、`StallSampler`「so far」都在分支上。根因沒找到，另外接著查。
+- 已驗證：Linux 上進第一課十幾毫秒（VERIFIED）；App 改動與工作流程新步驟要看 #2308 的 iOS job。
+- 下一步的第一個指令：看 #2308 的 check runs；綠了轉 ready，在 #2118 回報。
+
 - 派工：遊戲規劃，2026-11-16（bug）。session `session_01JMHz9bdXcTFrrku4stCHuN`，分支 `claude/start-crash`。
 - 決策號沒取（807 沒用）；存檔版本、golden、`SaveFixtures/`、`ReplayFixtures/`、GameCore、GamePresentation 都不動。
 - **根因沒有找到。** 這張交的是：下一次紅的時候拿得到當機位置的三樣東西、兩次紅的實際經過、嫌疑清單。沒有改任何測試，沒有跳過、停用、隔離或加長等待。
