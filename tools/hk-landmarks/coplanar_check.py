@@ -15,6 +15,10 @@ three counts:
   another of a different material) that overlap by more than 1 cm2. Until
   2026-11-16 these were not counted at all.
 
+The boxes are compared with 5 cm to spare: two faces square to an axis and
+a few millimetres apart have boxes that do not touch along that axis (the
+studio's reviewer found Cheung Kong Center's 32 such pairs, 2026-11-16).
+
 A model must bring `overlap` and `flush` to 0. `--cm` first rounds every
 point to the centimetre, as the game stores them (`glb_to_swift.py`): a
 second look only, since rounding tilts faces and pairs come and go. A
@@ -107,7 +111,7 @@ def count(path, centimetres=False):
             y = x + 1
             while y < len(order) and dd[y] - dd[x] < 0.05:
                 i, j = order[x], order[y]
-                if M[i] != M[j] and np.all(lo[i] <= hi[j]) and np.all(lo[j] <= hi[i]):
+                if M[i] != M[j] and np.all(lo[i] <= hi[j] + 0.05) and np.all(lo[j] <= hi[i] + 0.05):
                     apart = dd[y] - dd[x] > 0.0005
                     boxes += apart
                     u = T[i, 1] - T[i, 0]
