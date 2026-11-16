@@ -571,6 +571,7 @@
 - 要協調的對象：改同一個檔案的 session；GameCore 的完整 tier 同時最多 2 個；
 - 驗證方式：本機只跑快速檢查；UI 測試只用 `ios-build.yml` 的 `only_testing`；
 - 決策號：派工單寫好號碼（#231 的登記就是預約），PR 只加 `docs/decisions/<N>.md` 一個檔，不改 ARCHITECTURE 的最後、OVERVIEW 的決策列與 §9（決策 329，2026-10-21 晚）。不用再先在 main 放「### N. （預約）」一節，合併後也不用補 §9 的索引。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行；10-21 改成預約一節也擋不住，相鄰的預約節還是同一處（#934 三次衝突；三天 49 個 merge main 的 run，41 個是這兩份，佔 PR 的 Linux 用量四成，`docs/research/CI_MEASURE_2026-10-21.md`）；
+- 進度檢查點（2026-11-17，作者：「常常在額度滿了後 因為沒有先寫好 恢復後 叫當下那個對話 繼續時 他都要重新讀取內容 感覺會白花到 token」）：派工單寫明交接檔最上面維持「進度」一節，寫法在 [`handoff/README.md`](handoff/README.md)。作者恢復額度後叫一串繼續，貼「讀交接檔的『進度』一節，從下一步接著做」。規劃派新工作前用 `get_session`（不帶 id）看 `rate_limit_info`，是警告狀態時先告訴作者再決定要不要多開；
 - 壓縮：被壓縮後在 #231 留「壓縮第 N 次」；第 1 次後不接新的，第 2 次就做到能停的地方交接（§1 的「壓縮前就換、壓縮幾次一定換」）；
 - 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
 - **CI 由負責的 session 自己盯**（作者 2026-11-04：「盯著 ci 要不要改負責的盯就好了」）：實作 session 推了之後自己看到 head 的 check runs 全部跑完；紅了自己查、自己修，修不了才找遊戲規劃。全綠（含 `Swift CI (gate)`、Xcode build）、第三級截圖也出來了，才用 send_message 傳「#N 綠、head <完整 SHA>」（第三級附截圖）。遊戲規劃不開背景監看，收到這句只用 §1.2 的檢查確認一次那個 SHA 就合（動 GameCore 的另確認 main 的 `ci.yml` 綠）。原因：遊戲規劃的對話最長，每被監看叫醒一次（包括已知的紅）都要重讀整段，多出來的是它的上下文與交接次數；實作 session 本來就要看自己的 CI；
@@ -600,6 +601,16 @@
 ## 2. 正在做的線（2026-10-20）
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
+
+**2026-11-17 現任遊戲規劃 session_01JMHz9Yps9xJyFfDFR4mUed 接手後（上一任開的，第 1 層）**
+
+- 作者在這一串按了信任卡（2026-11-16 17:47 UTC）：規劃傳得到 Mac 的本地派工、也能在 Mac 的環境開 session；代價是雲端子 session 傳不了 `send_message` 給規劃，回報只留 #2118，規劃靠 PR 訂閱事件與巡查看。
+- 已合併（上一任合的）：#2307、#2303 與 assets #129（LANDMARK-FLICKER；決策 797 釋出）。本地派工 2 已被告知接著做 HKCEC-REDO（798）：本地派工是壓縮 2 次才換手。
+- 新派：**DEADLOCK-D1**（session_01JMHz9ZpUcuzkTaikUL6k89，`claude/deadlock-d1`，決策 808，動 GameCore，存檔需要才取 108）；**WHATSNEW-135**（session_01JMHz9YXqygZbM2rrLsDdRt，`claude/whatsnew-135`）。START-CRASH 開了 #2308。
+- **135 的範圍（作者 2026-11-17 同意「照你說的方式」）**：等 BUILD-MODE-CLEAN-2 與 WHATSNEW-135 合併就告訴作者「可以按了（commit X）」；START-CRASH 有結果就帶、沒有不等；DEADLOCK-D1、WINTER-LIVERY-2（聖誕內容 12/1 才看得到，12/1 前最後一版帶上）、HKCEC-REDO、羅瓦涅米開放留給 136。作者先按，規劃再跑完整 `ci.yml` 與 full lane，給健康報告。
+- 號碼：決策下一個可取 809（798、806、807、808 已預留）；存檔 107；golden schema 77。
+- 下一張要派的：羅瓦涅米「同一局先買凱米耶爾維線再買穆羅拉線被拒」（決策 809）；每週額度在警告狀態，135 那兩張合併後再派。
+- 各串的交接檔最上面現在有「進度」一節（§1.3、`handoff/README.md`）。
 
 **2026-11-16 遊戲規劃換手（Pro 帳號這一任 session_01JMHz9aiAQ16u6jrjjW2amC 壓縮三次後交出；從 #2118、開著的 PR 與各 session 的狀態寫的）**
 
