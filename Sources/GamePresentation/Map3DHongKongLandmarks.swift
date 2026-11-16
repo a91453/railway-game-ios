@@ -5,9 +5,10 @@ import GameCore
 // are the Lands Department's surveyed models (3D Visualisation Map,
 // non-textured individualised models), cut down and painted by the local
 // studio in Blender (`a91453/railway-assets-private`,
-// `game-art-previews/docs/art/hk-landmarks-2026-11/revision-8/`);
+// `game-art-previews/docs/art/hk-landmarks-2026-11/revision-9/`);
 // `tools/hk-landmarks/glb_to_swift.py` writes them into
-// `Map3DHongKongLandmarkMeshes.swift`.
+// `Map3DHongKongLandmarkMeshes.swift`. Decision 793 adds the bank
+// headquarters at 1 Queen's Road Central, which the studio made again.
 
 /// Decision 791: the landmarks, each in its own metres (x east, y north,
 /// z up, the middle of its footprint at the origin), stood where it is.
@@ -17,6 +18,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     case centralPlaza = "central-plaza"
     case bankOfChinaTower = "bank-of-china-tower"
     case cheungKongCenter = "cheung-kong-center"
+    case hsbcMainBuilding = "hsbc-main-building"
     case theCenter = "the-center"
     case tsimShaTsuiClockTower = "tsim-sha-tsui-clock-tower"
     case culturalCentre = "cultural-centre"
@@ -30,6 +32,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .centralPlaza: 22.2801147
         case .bankOfChinaTower: 22.2792662
         case .cheungKongCenter: 22.279541
+        case .hsbcMainBuilding: 22.2802842
         case .theCenter: 22.2846127
         case .tsimShaTsuiClockTower: 22.2935845
         case .culturalCentre: 22.2937068
@@ -42,6 +45,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .centralPlaza: 114.1735806
         case .bankOfChinaTower: 114.16157
         case .cheungKongCenter: 114.1605384
+        case .hsbcMainBuilding: 114.1595382
         case .theCenter: 114.1547296
         case .tsimShaTsuiClockTower: 114.1695373
         case .culturalCentre: 114.1702111
@@ -58,6 +62,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .centralPlaza: 4.03
         case .bankOfChinaTower: 7.11
         case .cheungKongCenter: 7.32
+        case .hsbcMainBuilding: 3.96
         case .theCenter: 3.35
         case .tsimShaTsuiClockTower: 4.32
         case .culturalCentre: 3.97
@@ -67,16 +72,16 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     /// The colour of each of the brief's materials, in
     /// `tools/hk-landmarks/glb_to_swift.py`'s `MATERIALS` order: the city's
     /// building colours (`Map3DPalette`, and the old textures' colours in
-    /// `tools/texture-palette/t003/`), with gold and dark glass added.
+    /// `tools/texture-palette/t003/`); only the gold is the landmarks' own.
     static let materialColours: [UInt32] = [
         0x8A949E, // glassBlueGrey: cityOfficeWalls[5]
         0xA9B0B8, // glassSilver: cityConcreteWalls[5]
-        0x2B2F36, // glassDark: t003's dark / window
+        0x2B2F36, // glassDark: Map3DPalette.dark
         0xDAE2E6, // mullionWhite: cityOfficeWalls[4]
-        0x8A9099, // steelGrey: t003's steel
+        0x8A9099, // steelGrey: Map3DPalette.steel
         0xC8A24E, // goldBand: Central Plaza's gold
         0xD9D4C8, // podiumStone: cityOfficeWalls[3]
-        0x6C7279, // roofGrey: cityRoofs' dark grey
+        0x6C7279, // roofGrey: cityRoofs[1]
         0xB0624A, // brickRed: hallWalls[3]
         0xCFCBC2, // graniteLight: Map3DPalette.concrete
         0xD9B9A2, // tilePink: the houses' pink
