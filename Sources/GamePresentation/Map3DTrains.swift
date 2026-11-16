@@ -195,7 +195,7 @@ public enum Map3DTrains {
     public static func frame(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
         models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard, ringed: TrainID? = nil,
-        reach: Map3DModelReach = .standard, buried: Bool = false, headlamp: TrainID? = nil
+        reach: Map3DModelReach = .standard, buried: Bool = false, headlamp: TrainID? = nil, christmas: Set<LineID> = []
     ) -> Frame {
         var frame = Frame()
         for run in motion.runs {
@@ -206,7 +206,12 @@ public enum Map3DTrains {
             // held steady, so the cars and the cab's view do not shake from
             // one sampled point of the track to the next.
             let steady = run.steadyHead(at: progress, over: Self.steadySpan)
-            let (side, stripe) = colours(of: run.look, palette: palette)
+            // Decision 795: a line in the Christmas livery, its boxes red
+            // with a white band, its models repainted.
+            let liveried = if case .line(let id, _) = run.look { christmas.contains(id) } else { false }
+            let (side, stripe) = liveried
+                ? (Map3DWinterDecor.christmasLivery.body, Map3DWinterDecor.christmasLivery.band)
+                : colours(of: run.look, palette: palette)
             let (trainType, hasModels, layout, cars) = Self.cars(of: run, progress: progress, heights: heights, models: models)
             // Decision 334: the rails under the train, front to back, for
             // its ring.
@@ -288,8 +293,10 @@ public enum Map3DTrains {
                     // Decision 449: a set at its own lengths too (the
                     // push-pull set's back power car, its cab to the back).
                     let turned = models.isTurned(forType: trainType, carIndex: index, count: cars.count)
-                    frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
-                                                    stripe: stripe ?? band))
+                    var car = instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
+                                       stripe: stripe ?? band)
+                    car.christmas = liveried && models.christmas[model] != nil
+                    frame.instances.append(car)
                     frame.addEnds(ofCar: index, count: cars.count, turned: turned)
                     continue
                 }

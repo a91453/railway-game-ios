@@ -39,6 +39,10 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// Taiwan as a map like the others; `nil` in preferences written
     /// before, which the launcher then brings up to date once.
     public var airMapsChosen: Bool?
+    /// Decision 795: the lines that wear the Christmas livery, by the row
+    /// of the saves their game is kept in (``GameLauncher/gameRow``); `nil`
+    /// before any. Only how trains look: not in any save.
+    public var christmasLiveries: [String: [Int]]?
 
     public init() {}
 

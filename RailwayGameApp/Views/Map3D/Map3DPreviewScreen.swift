@@ -364,6 +364,11 @@ struct Map3DPreviewScreen: View {
             guard !key.goesOn else { return }
             feed.update(session: session, palette: linePalette)
         }
+        // Decision 795: a line put in the Christmas livery, or out of it,
+        // at once, paused too.
+        .onChange(of: session.christmasLiveryLines) { _, _ in
+            feed.update(session: session, palette: linePalette)
+        }
         .onChange(of: session.realClockKey, initial: true) { _, key in
             // CABVIEW-2 (decision 379 續三): over the game loop's whole
             // step, as the trains do. Decision 661: and taken when a step
@@ -868,6 +873,9 @@ final class Map3DModelBuffers: @unchecked Sendable {
     private let file: Map3DModelVertexFile?
     private let lock = NSLock()
     private var buffers: [MTLBuffer?]
+    /// Decision 795: the models' buffers in the Christmas livery, made as
+    /// they are first drawn.
+    private var liveried: [Int: MTLBuffer] = [:]
     private var bytesMade = 0
 
     init(device: MTLDevice, file: Map3DModelVertexFile) {
@@ -912,6 +920,24 @@ final class Map3DModelBuffers: @unchecked Sendable {
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
         buffers[index] = buffer
+        bytesMade += buffer?.length ?? 0
+        return buffer
+    }
+
+    /// Decision 795: model `index`'s vertices in the Christmas livery,
+    /// repainted by `table` (``Map3DModelPack/christmas``) from its own
+    /// buffer the first time a car of it is drawn so, then kept; `nil`
+    /// when it cannot be made (the car is then drawn in its own paint).
+    func christmas(_ index: Int, table: [UInt8]?) -> MTLBuffer? {
+        guard let table, let plain = self[index], plain.length == table.count * MemoryLayout<Map3DVertex>.stride else { return nil }
+        lock.lock()
+        defer { lock.unlock() }
+        if let buffer = liveried[index] { return buffer }
+        let vertices = Array(UnsafeBufferPointer(start: plain.contents().bindMemory(to: Map3DVertex.self, capacity: table.count), count: table.count))
+        let buffer = Map3DChristmasLivery.recoloured(vertices, table: table).withUnsafeBytes { bytes in
+            bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+        }
+        liveried[index] = buffer
         bytesMade += buffer?.length ?? 0
         return buffer
     }
@@ -1406,6 +1432,8 @@ final class Map3DTrainFeed {
     /// Decision 672: whether the cars in tunnels are kept, to be seen
     /// through the ground (``Map3DTrains/Frame/buried``).
     var buried = false
+    /// Decision 795: the lines whose trains wear the Christmas livery.
+    private var christmas: Set<LineID> = []
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
     /// drawn whole, its way the cable cars' ahead.
     var followedCabin: CabinID?
@@ -1434,6 +1462,7 @@ final class Map3DTrainFeed {
         motion = session.trainMotion(after: motion, at: Date().timeIntervalSinceReferenceDate)
         heights = session.map3DTrainHeights()
         self.palette = palette
+        christmas = session.christmasLiveryLines
         activity = Map3DStreetLife.Activity(world: world)
         labels = Map3DTrainLabels(world: world)
     }
@@ -1527,7 +1556,7 @@ final class Map3DTrainFeed {
             heights = heights.driving(on: driven.track, metres: driven.metres, length: driven.length)
         }
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
-                                      ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain)
+                                      ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain, christmas: christmas)
         // Decision 710: and the mark at its stopping point.
         if let driven { driven.track.addStopMark(to: &frame, at: driven.stop, in: scene) }
         // Decision 339: and the real timetables' trains, on their own track.

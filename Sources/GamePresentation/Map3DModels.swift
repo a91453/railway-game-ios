@@ -72,6 +72,10 @@ public struct Map3DModelPack: Sendable {
     /// Decision 449: each running car's lamps and windows' model, by model
     /// index (``Map3DTrainLights/add(to:pack:lights:)``).
     public private(set) var lights: [Int: Map3DTrainLights.Car] = [:]
+    /// Decision 795: each running car's Christmas livery table, by model
+    /// index (``Map3DChristmasLivery``): a byte a vertex, kept when the
+    /// vertices are let go of, for the app to repaint them from.
+    public private(set) var christmas: [Int: [UInt8]] = [:]
 
     /// Every style's cab car and middle car, made once (on first use).
     /// Decision 608: the app lets go of their vertices once they are on
@@ -325,6 +329,14 @@ public struct Map3DModelPack: Sendable {
             // bake-then-unlight order without registering another running set.
             self.models = lit.models.map { $0.name.hasPrefix("e200mingri-style-") ? Map3DTrainLights.unlit($0) : $0 }
             lights = lit.cars
+            // Decision 795: each running car's parts for the Christmas
+            // livery, from its recipe.
+            let finished = self.models
+            let running = models.indices.filter { Map3DTrainLights.isRunning(models[$0].name) }
+            let tables = Map3DParallel.map(running.count) { at in
+                Map3DChristmasLivery.table(recipe: models[running[at]], baked: finished[running[at]])
+            }
+            for (at, index) in running.enumerated() { christmas[index] = tables[at] }
         } else {
             self.models = models
         }
@@ -987,6 +999,10 @@ public struct Map3DInstance: Sendable {
     /// Decision 721: 1 for a train's car, which the night does not dim
     /// (``Map3DNight``); 0 for anything else.
     public var lit: Float = 0
+    /// Decision 795: a car in the Christmas livery, drawn with its model's
+    /// repainted vertices (``Map3DModelPack/christmas``). Not read by the
+    /// shader.
+    public var christmas = false
 
     /// The 20 floats the shader reads: the last 1, plus ``lit``.
     public var floats: [Float] {

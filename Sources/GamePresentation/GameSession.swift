@@ -1165,6 +1165,17 @@ public final class GameSession {
     /// station panel. The record is the launcher's file; this is its
     /// copy for the game, never saved.
     public internal(set) var collectedStamps: [String: Date] = [:]
+    /// Decision 795: the lines the player put the Christmas livery on, from
+    /// the launcher, which keeps them on the device by the game's row
+    /// (``LauncherPreferences/christmasLiveries``), never in the save.
+    public internal(set) var christmasLiveryChosen: Set<LineID> = []
+    /// Decision 795: whether the livery can be chosen now (the event on,
+    /// or its fourth week's badge earned:
+    /// ``WinterEventRecords/liveryIsAvailable(at:calendar:)``), from the launcher.
+    public internal(set) var christmasLiveryAvailable = false
+    /// Decision 795: told of the lines chosen each time the player changes
+    /// them, for the launcher to keep.
+    @ObservationIgnored var christmasLiveryChanged: ((Set<LineID>) -> Void)?
     /// Decision 712: the cities outside Taiwan the app offers and those
     /// whose flights are open, from the launcher (``GameLauncher/airRoutes``):
     /// what the airports' rows say of them. Empty in a game with no

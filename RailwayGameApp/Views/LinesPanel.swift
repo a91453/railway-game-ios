@@ -1825,6 +1825,29 @@ struct LinesPanel: View {
                 }
             }
             .buttonStyle(.borderless)
+            // Decision 795: the winter event's livery, on this device only.
+            if session.christmasLiveryAvailable, !line.isFreight {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(isOn: Binding(
+                        get: { session.wearsChristmasLivery(line.id) },
+                        set: { session.setChristmasLivery($0, for: line.id) }
+                    )) {
+                        Label {
+                            Text(verbatim: session.language.text("Christmas livery", "聖誕塗裝"))
+                        } icon: {
+                            Image(systemName: "gift.fill")
+                        }
+                    }
+                    .accessibilityIdentifier("line.christmasLivery")
+                    Text(verbatim: session.language.text(
+                        "Paints this line's trains red with a white band and a gold line.",
+                        "這條路線的列車換成紅色車身、白色腰帶與金色細線。"
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .buttonStyle(.borderless)
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
