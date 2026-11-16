@@ -79,14 +79,20 @@ final class BuildingFlowTests: XCTestCase {
         XCTAssertFalse(session.buildingDragMoves(from: PlanPoint(x: 9_000, y: 9_000)), "off it, a drag moves the map")
 
         let grab = PlanPoint(x: 5_100, y: 4_950)
+        XCTAssertFalse(session.buildFingerDraws)
         session.dragBuildingSite(from: grab, to: PlanPoint(x: 6_100, y: 5_950))
         XCTAssertEqual(session.buildingSite, PlanPoint(x: 6_000, y: 6_000), "it moves as far as the finger")
+        // Decision 803, continued: no ✕ ✓ under the finger that moves it.
+        XCTAssertTrue(session.buildFingerDraws)
         session.endBuildingDrag(from: grab, to: PlanPoint(x: 7_100, y: 4_950))
+        XCTAssertFalse(session.buildFingerDraws, "let go: the pill comes")
         XCTAssertEqual(session.buildingSite, PlanPoint(x: 7_000, y: 5_000))
         XCTAssertTrue(session.world.placedBuildings.isEmpty, "moving builds nothing")
 
         session.dragBuildingSite(from: PlanPoint(x: 7_000, y: 5_000), to: PlanPoint(x: 9_000, y: 5_000))
+        XCTAssertTrue(session.buildFingerDraws)
         session.cancelBuildingDrag()
+        XCTAssertFalse(session.buildFingerDraws)
         XCTAssertEqual(session.buildingSite, PlanPoint(x: 7_000, y: 5_000), "a cancelled drag puts it back")
 
         session.selectTool(.select)

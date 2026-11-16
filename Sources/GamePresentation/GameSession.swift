@@ -369,7 +369,9 @@ public final class GameSession {
     public var buildingBuildsOnTap = false
     /// While a finger drags the shown building (decision 103): where the
     /// site was when the drag began, which a cancelled drag puts back.
-    @ObservationIgnored var buildingDragSiteBefore: PlanPoint?
+    /// Observed: the map's ✕ ✓ pill waits for the finger to let go
+    /// (``buildFingerDraws``).
+    var buildingDragSiteBefore: PlanPoint?
 
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.
@@ -715,7 +717,9 @@ public final class GameSession {
     public internal(set) var roadPreview: RoadPreview?
     public internal(set) var roadRemoval: RoadRemoval?
     /// Where the drag drawing a road began (``dragRoad(from:to:)``).
-    @ObservationIgnored var roadDragStart: PlanPoint?
+    /// Observed: the map's ✕ ✓ pill waits for the finger to let go
+    /// (``buildFingerDraws``).
+    var roadDragStart: PlanPoint?
     /// Each bus route's way on the map, kept for the stops and station it
     /// was worked out for.
     @ObservationIgnored var busPathMemo: [BusRouteID: BusPathMemo] = [:]

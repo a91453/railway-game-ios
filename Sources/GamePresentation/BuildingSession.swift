@@ -296,6 +296,7 @@ extension GameSession {
     /// button beside it (ARCHITECTURE decision 107).
     public func clearBuildingSite() {
         buildingSite = nil
+        buildingDragSiteBefore = nil
     }
 
     /// Places a building of ``buildingKind`` centred on `point` with

@@ -305,13 +305,15 @@ extension GameSession {
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
             return (NetworkPreview(
                 curve: .straight, profile: .uniform, points: [from, to], length: Int64((dx * dx + dy * dy).squareRoot().rounded()),
-                startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: stretchProblemText(problem, from: start, to: end)
+                startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil,
+                problem: stretchProblemText(problem, from: start, to: end), problemBrief: problem.brief(in: language)
             ), [])
         }
         var parallel: EdgePlan?
         if networkBuildsDouble { (plan, parallel) = doublePlans(plan, in: draft) }
         let cost: Money?
         let problem: String?
+        let brief: String?
         var refusal: GameError?
         var longSection: TrackLongSection?
         var crossovers: [[WorldCoordinate]] = []
@@ -337,6 +339,7 @@ extension GameSession {
             let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
             cost = total
             problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
+            brief = problem == nil ? nil : GameError.shortOfCashBrief(in: language)
         } catch {
             cost = nil
             refusal = error
@@ -344,13 +347,16 @@ extension GameSession {
                 ? Self.noParallelText(in: language)
                 // Decision 513: which check, where GameCore's error covers several.
                 : error.playerMessage(building: plan.stretch(structure: networkStructure), in: unbuilt, heights: heights, language: language)
+            brief = networkBuildsDouble && parallel == nil
+                ? Self.noParallelBrief(in: language)
+                : error.trackBrief(building: plan.stretch(structure: networkStructure), in: unbuilt, heights: heights, language: language)
         }
         let cleared = problem == nil ? world.placedBuildings(clearedIn: draft) : []
         let besides = parallel.map { $0.geometry?.points ?? [$0.from, $0.to] } ?? []
         return (NetworkPreview(
             curve: plan.curve, profile: plan.profile, points: plan.geometry?.points ?? [plan.from, plan.to],
             length: plan.length, startHeight: plan.from.z, endHeight: plan.to.z,
-            joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: cost, problem: problem,
+            joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: cost, problem: problem, problemBrief: brief,
             cleared: cleared,
             // Decision 124, H3: what it costs, part by part.
             costParts: longSection.map { NetworkCostParts(track: $0.cost, demolition: world.clearingCost(of: cleared)) },

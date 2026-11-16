@@ -70,25 +70,19 @@ public struct NetworkHeightFix: Hashable, Sendable {
         return language.text("\(verb): \(what)", "\(verb)，\(what)")
     }
 
-    /// The button's words where the two full ones do not fit side by side
-    /// (a phone on its side): its arrow says up or down, so "End 4 m,
-    /// bridge". Decision 803: which end moves is still said; "4 m, bridge"
-    /// alone did not tell the start from the end.
-    public func shortTitle(in language: DisplayLanguage) -> String {
-        let metres = NetworkBuilding.lengthText(abs(change), in: language)
-        let which: String = switch ends {
-        case .end: language.text("End", "終點")
-        case .start: language.text("Start", "起點")
-        case .both: language.text("Both ends", "兩端")
+    /// The button's words on the map's pill (decision 803, continued;
+    /// the owner: "字不會太多嗎"): what it does, in a word or two. Its
+    /// arrow says up or down; which end moves and by how far show on the
+    /// flags and the height cell once it is applied, and ``title(in:)``
+    /// says them to VoiceOver.
+    public func buttonTitle(in language: DisplayLanguage) -> String {
+        switch kind {
+        case .bridge: language.text("Bridge", "用橋")
+        case .tunnel: language.text("Tunnel", "走隧道")
+        case .viaduct: language.text("Viaduct", "走高架")
+        case .raised: language.text("Raise", "架高")
+        case .lowered: language.text("Lower", "降低")
         }
-        let what: String? = switch kind {
-        case .bridge: language.text("bridge", "用橋")
-        case .tunnel: language.text("tunnel", "走隧道")
-        case .viaduct: language.text("viaduct", "走高架")
-        case .raised, .lowered: nil
-        }
-        guard let what else { return "\(which) \(metres)" }
-        return language.text("\(which) \(metres), \(what)", "\(which) \(metres)，\(what)")
     }
 }
 
@@ -108,6 +102,8 @@ public struct NetworkHeightCard: Hashable, Sendable {
     /// one is being looked for, what to do instead, or that no end can
     /// move; `nil` otherwise.
     public let note: String?
+    /// ``note`` in the pill's one short line (decision 803, continued).
+    public var noteBrief: String? = nil
     /// Decision 646: how high the moved end stands over the ground now, in
     /// world units (negative underground), and how many 1 m steps it may
     /// still go up and down.
@@ -231,24 +227,19 @@ extension GameSession {
             guard canFix, let start = networkStart, let end = networkEnd, case .node = start, case .node = end else { return nil }
             return NetworkHeightCard(
                 adjusts: .end, label: "", canRaise: false, canLower: false, fixes: [],
-                note: language.text(
-                    "Both ends are on track already, so their height cannot change. Tap a new point on each side and raise the stretch between them.",
-                    "兩端都接在已有的軌道上，高度不能改。請在兩側各點一個新點，再調高中間那一段。"
-                ),
+                note: NetworkHeightCard.Note.endsFixed.text(in: language),
+                noteBrief: NetworkHeightCard.Note.endsFixed.brief(in: language),
                 aboveGround: 0, stepsUp: 0, stepsDown: 0
             )
         }
         let adjusts: NetworkHeightFix.Ends = movable.end ? .end : .start
         let fixes = canFix ? (networkHeightFixes ?? []) : []
-        let note: String? = if !canFix {
+        let note: NetworkHeightCard.Note? = if !canFix {
             nil
         } else if isWaiting(for: .networkHeightFixes) || networkHeightFixes == nil {
-            language.text("Looking for a height that works…", "正在找可以鋪的高度…")
+            .looking
         } else if fixes.isEmpty {
-            language.text(
-                "No height of these ends gets through. Try a shorter stretch, or a point on each side of the water.",
-                "這兩端怎麼調高度都過不去。請把這段鋪短一點，或在水的兩岸各點一個點。"
-            )
+            .noneWorks
         } else {
             // The fixes' own words say what each does.
             nil
@@ -260,7 +251,7 @@ extension GameSession {
         let stepsDown = max(0, Int((networkHeight + raise - limit.lowerBound) / step))
         return NetworkHeightCard(
             adjusts: adjusts, label: networkEndHeightText(adjusts), canRaise: stepsUp > 0,
-            canLower: stepsDown > 0, fixes: fixes, note: note,
+            canLower: stepsDown > 0, fixes: fixes, note: note?.text(in: language), noteBrief: note?.brief(in: language),
             aboveGround: networkEndAboveGround(adjusts) ?? 0, stepsUp: stepsUp, stepsDown: stepsDown
         )
     }

@@ -239,6 +239,8 @@ struct TracePlan {
     /// Why GameCore refuses the edge after ``buildable``, as the player
     /// reads it.
     let problem: String?
+    /// ``problem`` in the pill's one short line (decision 803, continued).
+    var brief: String? = nil
     /// For each platform span asked for, the index of its stretch: one
     /// edge from one end of the span to the other (decision 351); `nil`
     /// where the span is not one edge.
@@ -533,6 +535,7 @@ extension GameSession {
                 "The track cannot climb from one end to the other along this line within the steepest grade, 40‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
+            refused.brief = language.text("Too steep along this line", "沿線太陡，鋪不上去")
             refused.refusedWay = [from] + path.points.dropFirst().dropLast().map {
                 WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: Int64(ground($0).rounded()))
             } + [to]
@@ -614,6 +617,7 @@ extension GameSession {
         var built = 0
         var builtEdges: [TrackEdgeID] = []
         var problem: String?
+        var brief: String?
         var previous: TrackNodeID?
         var refused = false
         let tightest = Self.traceMinimumRadius(ofSystem: lineSystem)
@@ -623,6 +627,7 @@ extension GameSession {
                     "The real line turns too tightly here for the track (a curve of about \(Int((radius / RealRailwayTraces.metre).rounded())) m; the tool lays \(Int(tightest / RealRailwayTraces.metre)) m or more).",
                     "這裡真實鐵路彎得太急（半徑約 \(Int((radius / RealRailwayTraces.metre).rounded())) 公尺，描線最小 \(Int(tightest / RealRailwayTraces.metre)) 公尺），鋪不過去。"
                 )
+                brief = language.text("The real line bends too tightly here", "真實鐵路在這裡彎太急")
                 break
             }
             let next = stretch.starting(at: previous)
@@ -640,11 +645,13 @@ extension GameSession {
                     "That track would be too steep. Mountain track may climb or fall at most 70 in 1000.",
                     "這段軌道太陡了。登山軌道的坡度最多 70‰。"
                 ) : error.playerMessage(building: next, in: planning, heights: heights, language: language)
+                brief = stretch.mountain && error == .trackTooSteep ? GameError.trackTooSteep.trackBrief(in: language)
+                    : error.trackBrief(building: next, in: planning, heights: heights, language: language)
                 refused = true
                 break
             }
         }
-        var found = TracePlan(stretches: stretches, buildable: built, problem: problem)
+        var found = TracePlan(stretches: stretches, buildable: built, problem: problem, brief: brief)
         if !refused {
             found.built = copy
             found.builtEdges = builtEdges
@@ -766,7 +773,11 @@ extension GameSession {
             }
         }
         var shortfall = cost.flatMap { shortfallText($0, doing: command) }
-        if case .failure(let problem)? = double { shortfall = problem.text }
+        var shortfallBrief = shortfall == nil ? nil : GameError.shortOfCashBrief(in: language)
+        if case .failure(let problem)? = double {
+            shortfall = problem.text
+            shortfallBrief = problem.brief
+        }
         let length = built.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve)?.length }.reduce(0, +)
         // Decision 468: the track already laid that it joins, in its place
         // along the way.
@@ -802,6 +813,7 @@ extension GameSession {
             joinsStart: isJoined(start), joinsEnd: !plan.stopped && isJoined(end),
             cost: built.isEmpty ? nil : cost,
             problem: built.isEmpty ? (plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")) : shortfall,
+            problemBrief: built.isEmpty ? (plan.problem == nil ? language.text("Can't trace this stretch", "這段無法描線") : plan.brief) : shortfallBrief,
             cleared: built.isEmpty ? [] : world.placedBuildings(clearedIn: draft)
         )
         preview.traced = built.count
@@ -877,7 +889,7 @@ extension GameSession {
         _ built: [PlayerCommand.TrackStretch], from start: NetworkAnchor, to end: NetworkAnchor, reachesEnd: Bool, traced: TracePlan? = nil
     ) -> Result<DoubleChainPlan, TraceDoubleProblem> {
         guard let parallel = parallelChain(beside: built.map(ChainSegment.init), side: networkDoubleSide, in: world) else {
-            return .failure(TraceDoubleProblem(text: Self.noParallelText(in: language)))
+            return .failure(TraceDoubleProblem(text: Self.noParallelText(in: language), brief: Self.noParallelBrief(in: language)))
         }
         do throws(GameError) {
             return .success(try planDoubleChain(
@@ -886,7 +898,7 @@ extension GameSession {
                 mainBuilt: traced.flatMap { plan in plan.built.map { (world: $0, edges: plan.builtEdges) } }
             ))
         } catch {
-            return .failure(TraceDoubleProblem(text: error.playerMessage(in: language)))
+            return .failure(TraceDoubleProblem(text: error.playerMessage(in: language), brief: error.trackBrief(in: language)))
         }
     }
 
@@ -1023,6 +1035,8 @@ extension NetworkBuilding {
 /// the player reads it.
 struct TraceDoubleProblem: Error {
     let text: String
+    /// ``text`` in the pill's one short line (decision 803, continued).
+    var brief: String? = nil
 }
 
 // MARK: - Single or double, as the real line is

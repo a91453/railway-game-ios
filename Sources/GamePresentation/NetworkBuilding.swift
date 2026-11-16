@@ -89,6 +89,10 @@ public struct NetworkPreview: Hashable, Sendable {
     /// Why GameCore refused it, as the player reads it; `nil` when it
     /// would be built.
     public let problem: String?
+    /// ``problem`` in the one short line the map's ✕ ✓ pill says
+    /// (decision 803, continued): no figures, no conditions; `nil` where
+    /// there is no shorter way to say it, and the pill says it whole.
+    public var problemBrief: String? = nil
     /// The company's buildings it would pull down (decision 95); the cost
     /// includes what demolishing them costs.
     public var cleared: [PlacedBuilding] = []
