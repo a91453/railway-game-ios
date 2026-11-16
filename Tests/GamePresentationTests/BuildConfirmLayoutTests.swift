@@ -1,3 +1,4 @@
+import GameCore
 import GamePresentation
 import XCTest
 
@@ -82,5 +83,97 @@ final class BuildConfirmLayoutTests: XCTestCase {
             XCTAssertLessThanOrEqual(abs(frame.x + frame.width / 2), 200)
         }
         XCTAssertEqual(BuildConfirmLayout.siteObstacles([long], around: ScreenPoint(x: 0, y: 900), reach: 200).count, 1)
+    }
+
+    // MARK: Decision 800 (the owner's report from 0.6.0 (134))
+
+    /// A phone held sideways: a refused stretch's words stand beside its
+    /// ✕ ✓, so the pill is half as tall; upright, on an iPad, and for a
+    /// pill of only ✕ ✓ or another build, as before.
+    func testARefusedStretchStandsBesideItsButtonsOnAShortScreen() {
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, trackHasWords: true), .beside)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, trackHasWords: false), .stacked)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: false, trackHasWords: true), .stacked)
+        // The refusal is said once: by the pill beside its ✓, or else by
+        // the HUD along the top.
+        XCTAssertFalse(BuildConfirmLayout.hudSaysProblem(pillSaysProblem: true))
+        XCTAssertTrue(BuildConfirmLayout.hudSaysProblem(pillSaysProblem: false))
+    }
+
+    /// The report's "NT$ 0" on both fixes: with unlimited funds the fix's
+    /// price is nothing, as what ✓ then charges is, and the pill writes
+    /// no price; with funds that count it writes it.
+    @MainActor
+    func testAFreeFixWritesNoPrice() throws {
+        func fixes(unlimited: Bool) throws -> [NetworkHeightFix] {
+            var world = GameWorld(
+                bounds: try WorldBounds(width: 262_144, height: 262_144),
+                economy: GameEconomy(balance: Money(100_000_000)),
+                clock: GameClock(speed: .paused)
+            )
+            let side = GroundBlock.side
+            try world.setGround([GroundBlock(block: LandBlock(row: 0, column: 0), heights: Array(repeating: 0, count: side * side))!])
+            try world.setWater([CellPosition(row: 0, column: 2)])
+            world.setUnlimitedFunds(unlimited)
+            let session = GameSession(world: world)
+            session.selectTool(.network)
+            session.networkSnapsToTrack = false
+            session.tapNetwork(at: PlanPoint(x: 1_024, y: 2_048), reach: 16)
+            session.tapNetwork(at: PlanPoint(x: 17_408, y: 2_048), reach: 16)
+            return try XCTUnwrap(session.networkHeightCard).fixes
+        }
+        let free = try fixes(unlimited: true)
+        XCTAssertEqual(free.count, 2)
+        for fix in free {
+            XCTAssertEqual(fix.cost, .zero, "nothing is charged with unlimited funds")
+            XCTAssertNil(BuildConfirmLayout.priceText(of: fix.cost, in: .traditionalChinese), "so no price is written")
+        }
+        let paid = try fixes(unlimited: false)
+        XCTAssertEqual(paid.count, 2)
+        for fix in paid {
+            XCTAssertGreaterThan(fix.cost, .zero)
+            XCTAssertEqual(BuildConfirmLayout.priceText(of: fix.cost, in: .english), fix.cost.compactText(in: .english))
+        }
+        XCTAssertNil(BuildConfirmLayout.priceText(of: nil, in: .english))
+    }
+
+    /// The report's screen: an iPhone on its side (874 by 402), a short
+    /// stretch drawn down the middle, its end the lower one. Under the
+    /// end the pill stood over nothing of it, but held up off the dock it
+    /// covered the stretch and its flags; it is moved beside them.
+    func testThePillKeepsOffTheStretchDrawnAndItsFlags() {
+        let start = ScreenPoint(x: 430, y: 150), end = ScreenPoint(x: 450, y: 250)
+        let width = 420.0, height = 110.0
+        let obstacles = BuildConfirmLayout.stretchObstacles(
+            [start, end], flags: [start, end], around: end, reach: 2 * (width + 16)
+        )
+        XCTAssertEqual(obstacles[0], ScreenFrame(x: 438, y: 238, width: 24, height: 24), "the end itself first")
+        XCTAssertEqual(obstacles[1], BuildConfirmLayout.flagFrame(at: start))
+        XCTAssertEqual(obstacles[2], ScreenFrame(x: 436, y: 214, width: 28, height: 28), "the end's flag stands over it")
+        XCTAssertGreaterThan(obstacles.count, 3, "and the stretch's pieces")
+        // The dock leaves the map's lowest 80 points: the pill cannot
+        // stand under the end, and is held up over the stretch.
+        let lowest = 402 - 80 - 8 - height
+        let x = end.x - width / 2, y = min(end.y + 18, lowest)
+        XCTAssertTrue(obstacles.contains { BuildConfirmLayout.overlaps(x: x, y: y, width: width, height: height, $0) })
+        let placed = BuildConfirmLayout.keepingOff(
+            obstacles, x: x, y: y, width: width, height: height, minX: 8, maxX: 874 - 8 - width, highest: 70, lowest: lowest
+        )
+        for frame in obstacles {
+            XCTAssertFalse(
+                BuildConfirmLayout.overlaps(x: placed.x, y: placed.y, width: width, height: height, frame),
+                "clear of \(frame)"
+            )
+        }
+    }
+
+    /// A trace of thousands of points is thinned before it is cut into
+    /// pieces, its end kept.
+    func testALongTraceIsThinned() {
+        let trace = (0..<5_000).map { ScreenPoint(x: Double($0) / 10, y: 100) }
+        let obstacles = BuildConfirmLayout.stretchObstacles(trace, flags: [], around: trace[4_999], reach: 300)
+        XCTAssertEqual(obstacles[0], ScreenFrame(x: 499.9 - 12, y: 88, width: 24, height: 24))
+        XCTAssertLessThanOrEqual(obstacles.count, 17)
+        XCTAssertTrue(obstacles.dropFirst().contains { $0.x + $0.width >= 499.9 }, "the piece that reaches the end")
     }
 }

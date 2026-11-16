@@ -18,6 +18,10 @@ struct MapConstructionHUD: View {
     /// Whether a tutorial runs: the line about the height cell
     /// (``HeightSlideHint``) keeps out of its way.
     var tutorialRuns = false
+    /// Decision 800: whether this HUD says why the stretch is refused;
+    /// not where the map's ✕ ✓ card says it beside its ✓, which stood
+    /// over the line here on a phone held sideways.
+    var saysProblem = true
 
     /// The metres the finger has slid while held, not yet applied, and
     /// whether it holds the cell: gesture state, so a cancelled hold
@@ -104,21 +108,7 @@ struct MapConstructionHUD: View {
 
             // Refusal reason (problem) or track continuity status
             if let problem = preview.problem {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.warning)
-                    Text(problem)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Theme.warning)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .allowsHitTesting(false)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
+                if saysProblem { problemRow(problem) }
             } else if showsHeightHint {
                 heightHint
                     .transition(.opacity)
@@ -149,6 +139,25 @@ struct MapConstructionHUD: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("map.constructionHUD")
+    }
+
+    /// Why the stretch is refused.
+    private func problemRow(_ problem: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.warning)
+            Text(problem)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.warning)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
     }
 
     private var lengthFigure: some View {
