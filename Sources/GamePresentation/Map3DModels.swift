@@ -214,6 +214,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 787: the close-up commuter, standing and mid-stride,
         // after them and before the route bus.
         groups.append { Map3DCommuterFigure.drawn }
+        // Decision 794: the winter event's trees, near and far, and the
+        // lights, after the commuter and before the route bus.
+        groups.append { Map3DWinterLights.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

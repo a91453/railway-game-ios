@@ -463,7 +463,7 @@ extension Map3DScene.Builder {
         houseFootprints.append(corners)
         // Decision 322: the shop street on the plaza they leave.
         shopStreets.append((station, centre, forward, depth, wide, cells))
-        stationFronts.append((centre, forward, depth, wide))
+        stationFronts.append((centre, forward, depth, wide, bounds.max.y, Self.isBig(station) || platforms.count >= Map3DWinterLights.bigPlatforms))
         // Decision 331: a big station's commercial kit, later.
         if Self.isBig(station) { bigStations.append((centre, forward, depth)) }
         return cells

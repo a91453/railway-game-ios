@@ -152,6 +152,11 @@ final class Map3DModelPackLockTests: XCTestCase {
         // the rest as before).
         let commuter = Map3DCommuterFigure.models.map(\.modelName)
         let figures = Set(commuter)
+        // Decision 794: the winter event's five models after the commuter,
+        // before the route bus; left out with them (the whole pack's names
+        // and hashes and the windows' indices move by 5, the rest as before).
+        let winterNames = Map3DWinterLights.drawn.map(\.name)
+        let winter = Set(winterNames)
         // Decision 767: the coal bunker's stand-in after the other scenery
         // props: every model after it, the cars' windows and the head
         // signs move by one, so the digests are made again; the models
@@ -162,7 +167,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         // six, so the digests are made again; 3 lamp sets more).
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name)
-            && !figures.contains($0.name) }
+            && !figures.contains($0.name) && !winter.contains($0.name) }
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "c06a3eccf6b072ce")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
@@ -175,6 +180,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstHK = firstCoach + coach.count
         XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
         XCTAssertEqual(Array(pack.models[firstHK + hk.count..<firstHK + hk.count + figures.count].map(\.name)), commuter)
+        let firstWinter = firstHK + hk.count + figures.count
+        XCTAssertEqual(Array(pack.models[firstWinter..<firstWinter + winter.count].map(\.name)), winterNames)
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "1a5ec8b81126c5cf")
         XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "8ae0e810ae2052f5")
         func lamps(movingBack moved: Int) -> [String] {
@@ -188,7 +195,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         }
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
-        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count)), "c4be699800cad960")
+        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count)), "c4be699800cad960")
         XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "d1c9237ac3b4d2e4")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")
     }

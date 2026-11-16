@@ -141,6 +141,9 @@ public struct Map3DScene: Sendable {
     public let trackCover: Map3DTrackCover
     /// Decision 625: the real stations' exterior studies stood in the scene.
     let stationExteriors: [Map3DStationExterior]
+    /// Decision 794: the winter event's trees and lights, drawn only while
+    /// it shows its decorations (``Map3DWinterLights/add(to:pack:eye:reach:)``).
+    public let winterLights: Map3DWinterLights
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
@@ -560,6 +563,9 @@ public struct Map3DScene: Sendable {
         stationExteriors = builder.stationExteriors
         // Decision 322: the shops, clear of the streets.
         builder.addShopStreets()
+        // Decision 794: where the winter event's trees and lights go.
+        builder.addWinterDecor(frame: RealWorldFrame(world: world))
+        winterLights = Map3DWinterLights(placements: builder.winterDecor)
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
@@ -1072,7 +1078,11 @@ extension Map3DScene {
         var grassCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
         /// Decision 458: each station building's middle, the way its
         /// front faces, its depth and width, for the bushes on its plaza.
-        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float)] = []
+        /// Decision 794: and its top and whether it is a big station's,
+        /// for the winter event's lights and tree.
+        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float, top: Float, big: Bool)] = []
+        /// Decision 794: the winter event's trees and lights laid.
+        var winterDecor: [Map3DWinterLights.Placement] = []
         /// Decision 407: the player's track a high-speed line runs on.
         var highSpeedEdges: Set<TrackEdgeID>?
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]

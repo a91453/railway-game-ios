@@ -164,6 +164,7 @@ extension Map3DScene {
         var built: [Chunk] = []
         var life = Map3DStreetLife()
         var exteriors = old.stationExteriors
+        var winter = old.winterLights.placements.filter { !keys.contains(grid.key(of: $0.point)) }
         var left = keys.sorted()
         while !left.isEmpty {
             let block = Map3DStreaming.block(of: left)
@@ -179,9 +180,12 @@ extension Map3DScene {
             let wanted = Set(block)
             built += part.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
             exteriors = Self.exteriors(exteriors, rebuilt: part.stationExteriors) { wanted.contains(grid.key(of: $0)) }
+            // Decision 794: the trees and lights of the blocks built again.
+            winter += part.winterLights.placements.filter { wanted.contains(grid.key(of: $0.point)) }
             life.spots += part.streetLife.spots.filter { Self.isStations($0) && wanted.contains(grid.key(of: $0.path.points[0])) }
         }
         stationExteriors = exteriors
+        winterLights = Map3DWinterLights(placements: winter)
         chunks = (old.chunks.filter { !keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } + built)
             .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         var streetLife = old.streetLife
