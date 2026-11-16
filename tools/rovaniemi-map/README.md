@@ -44,6 +44,9 @@ for e in 025 026 027; do curl -L -o /tmp/rv/dem/N66_E$e.tif \
   https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N66_00_E${e}_00_DEM/Copernicus_DSM_COG_10_N66_00_E${e}_00_DEM.tif; done
 python3 -I tools/rovaniemi-map/build_rovaniemi_ground_grids.py /tmp/rv/dem /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
 
+# 5b. 建物（決策 799；約 20 秒，先要有第 3 步的人口）。
+python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
+
 # 6. 機場與不蓋區（台灣那兩支工具），最後重寫 pack.json。
 python3 -I tools/airfields/build_airfields.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi/airfields.json
 python3 -I tools/no-build-land/build_no_build.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi/no_build.json

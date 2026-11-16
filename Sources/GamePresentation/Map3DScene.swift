@@ -1174,7 +1174,6 @@ extension Map3DScene {
         static let metre = Double(WorldCoordinate.unitsPerMetre)
 
         // Track (rail-3d `rail-structures.js`, metres).
-        static let gauge: Float = 1.067
         static let railWidth: Float = 0.14
         static let railHeight: Float = 0.2
         static let bedTop: Float = 3.4
@@ -1410,6 +1409,7 @@ extension Map3DScene {
                 drawn.addFacadeParts()
                 return drawn.chunks()
             }
+            let snowy = Map3DSnowGround.covers(world)
             return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(ownColourNear.keys).union(ownColourFar.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
@@ -1434,6 +1434,11 @@ extension Map3DScene {
                 var facade = facadeMeshes[key] ?? Map3DMesh()
                 Map3DLook.restyle(&facade, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
+                // Decision 799: a northern map's ground under snow.
+                if snowy {
+                    Map3DSnowGround.cover(&mesh)
+                    Map3DSnowGround.cover(&far)
+                }
                 if let own = ownColourNear[key] { mesh.append(own) }
                 // Always drawn, whatever the far view leaves out of the
                 // city round it (REVIEW-L20 P2-1).
@@ -1816,7 +1821,8 @@ extension Map3DScene {
                 }
             }
             // The rails, their middles half a rail outside the gauge.
-            let offset = (Self.gauge + Self.railWidth) / 2
+            // Decision 799: at the map's gauge (Finland's 1,524 mm).
+            let offset = (Map3DTrackGauge.metres(world: world) + Self.railWidth) / 2
             let target = self.target
             if railsNear { self.target = .near }
             defer { self.target = target }
