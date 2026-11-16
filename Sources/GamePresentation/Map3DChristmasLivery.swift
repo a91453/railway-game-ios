@@ -39,6 +39,10 @@ public enum Map3DChristmasLivery {
     /// Darker than this (relative luminance) is a window band, a frame or
     /// a skirt, never repainted unless it is the body itself.
     static let dark: Float = 0.2
+    /// The white this many times the red or more: they change places, so
+    /// the car is red at a glance. Well clear of even, so a car's near and
+    /// far models, a little apart in their shares, fall the same side.
+    static let bodyLead: Float = 1.2
 
     /// Each vertex's part in `recipe` (three alike a triangle).
     public static func parts(of recipe: Map3DModelPack.Model) -> [Part] {
@@ -111,17 +115,44 @@ public enum Map3DChristmasLivery {
         // main colour drawn as a band) has that band for its body.
         let stripedBody = bandOrder.first.map { bands[$0].area > (bodyFamily.map { families[$0].area } ?? 0) } ?? false
         let sideArea = families.reduce(0) { $0 + $1.area }
+        // WINTER-LIGHTS-2: the thin lines, to give the largest to the
+        // white when nothing else is.
+        var lines: [(faces: [Face], area: Float, base: UInt32?)] = []
+        var hasBand = false
         for (at, family) in families.enumerated() {
             let faces = family.colours.flatMap { opaque[$0]! }
             let base = family.colours.max { channels($0).reduce(0, +) < channels($1).reduce(0, +) } ?? family.base
             if at == bodyFamily, !stripedBody {
                 mark(faces, .body, base: base)
             } else if Self.luminance(family.base) >= dark {
-                mark(faces, at == bodyFamily || family.area >= bandShare * sideArea ? .band : .line, base: base)
+                let band = at == bodyFamily || family.area >= bandShare * sideArea
+                mark(faces, band ? .band : .line, base: base)
+                if band { hasBand = true } else { lines.append((faces, family.area, base)) }
             }
         }
         for (rank, at) in bandOrder.enumerated() {
             mark(bands[at].faces, rank == 0 ? (stripedBody ? .body : .band) : .line)
+            if rank > 0 { lines.append((bands[at].faces, bands[at].area, nil)) } else if !stripedBody { hasBand = true }
+        }
+        // A car with no white band (the Puyuma, the Taroko, the EMU800,
+        // 900 and 3000's head: a body and thin lines) has its largest
+        // line white, the rest gold.
+        if !hasBand, let widest = lines.indices.max(by: { lines[$0].area != lines[$1].area ? lines[$0].area < lines[$1].area : $0 > $1 }) {
+            mark(lines[widest].faces, .band, base: lines[widest].base)
+        }
+        // WINTER-LIGHTS-2: the red is the most of the side. Where the
+        // white came out clearly the larger (several colours together
+        // against the one largest: the 700T, the push-pull and Alishan
+        // coaches, the Wenhu line's cars), the two change places.
+        var painted: [Part: Float] = [:]
+        for first in stride(from: 0, to: vertices.count - 2, by: 3) where parts[first].part != .keep {
+            let a = vertices[first].position, b = vertices[first + 1].position, c = vertices[first + 2].position
+            painted[parts[first].part, default: 0] += ((b - a).cross(c - a)).length / 2
+        }
+        if painted[.band, default: 0] > bodyLead * painted[.body, default: 0] {
+            for at in parts.indices {
+                if parts[at].part == .body { parts[at].part = .band } else if parts[at].part == .band { parts[at].part = .body }
+            }
         }
         return parts
     }

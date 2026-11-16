@@ -1080,7 +1080,10 @@ extension Map3DScene {
         /// front faces, its depth and width, for the bushes on its plaza.
         /// Decision 794: and its top and whether it is a big station's,
         /// for the winter event's lights and tree.
-        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float, top: Float, big: Bool)] = []
+        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float, top: Float, big: Bool, strings: [Map3DPoint])] = []
+        /// WINTER-LIGHTS-2: the lights on the stations' exits and stair
+        /// entrances: the middle of each length and the way it runs.
+        var exitLights: [(at: Map3DPoint, forward: Map3DPoint)] = []
         /// Decision 794: the winter event's trees and lights laid.
         var winterDecor: [Map3DWinterLights.Placement] = []
         /// Decision 407: the player's track a high-speed line runs on.

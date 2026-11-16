@@ -96,6 +96,34 @@ final class Map3DChristmasLiveryTests: XCTestCase {
         }
     }
 
+    /// WINTER-LIGHTS-2: every running car is a red train at a glance: it
+    /// has a white band, and its white is never clearly more than its red
+    /// (``Map3DChristmasLivery/bodyLead``); the cars whose white came out
+    /// the larger at first (the 700T, the push-pull and Alishan coaches,
+    /// the Wenhu line's 370) have more red than white, near and far.
+    func testEveryCarIsMostlyRedWithAWhiteBand() throws {
+        let pack = Map3DModelPack.standard
+        func areas(_ index: Int) -> [Map3DChristmasLivery.Part: Float] {
+            let model = pack.models[index], table = pack.christmas[index]!
+            var areas: [Map3DChristmasLivery.Part: Float] = [:]
+            for first in stride(from: 0, to: model.vertices.count - 2, by: 3) {
+                let a = model.vertices[first].position, b = model.vertices[first + 1].position, c = model.vertices[first + 2].position
+                areas[Map3DChristmasLivery.Part(rawValue: table[first] & 0b11)!, default: 0] += ((b - a).cross(c - a)).length / 2
+            }
+            return areas
+        }
+        for index in pack.christmas.keys.sorted() {
+            let name = pack.models[index].name, painted = areas(index)
+            XCTAssertGreaterThan(painted[.band, default: 0], 0, "\(name): no white band")
+            XCTAssertLessThanOrEqual(painted[.band, default: 0], Map3DChristmasLivery.bodyLead * painted[.body, default: 0] * 1.001, "\(name): more white than red")
+        }
+        for name in ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeedFar-car", "set-pushPull-car", "set-pushPullFar-car",
+                     "set-ALISHAN-car", "set-wenhu370-car", "set-wenhu370Far-car"] {
+            let painted = areas(try XCTUnwrap(pack.index(of: name), name))
+            XCTAssertGreaterThan(painted[.body, default: 0], painted[.band, default: 0], name)
+        }
+    }
+
     /// A car's trains wear it only on a line chosen while it can be chosen.
     func testTheFrameMarksTheLiveriedLinesCars() throws {
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)

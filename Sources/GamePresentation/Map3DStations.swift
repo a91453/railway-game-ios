@@ -463,7 +463,9 @@ extension Map3DScene.Builder {
         houseFootprints.append(corners)
         // Decision 322: the shop street on the plaza they leave.
         shopStreets.append((station, centre, forward, depth, wide, cells))
-        stationFronts.append((centre, forward, depth, wide, bounds.max.y, Self.isBig(station) || platforms.count >= Map3DWinterLights.bigPlatforms))
+        // WINTER-LIGHTS-2: the lights on the building's own front.
+        let strings = Map3DWinterLights.strings(on: kit.mesh).map { foot + forward * ($0.x + shift.x) + right * ($0.z + shift.z) + Map3DPoint(0, $0.y, 0) }
+        stationFronts.append((centre, forward, depth, wide, bounds.max.y, Self.isBig(station) || platforms.count >= Map3DWinterLights.bigPlatforms, strings))
         // Decision 331: a big station's commercial kit, later.
         if Self.isBig(station) { bigStations.append((centre, forward, depth)) }
         return cells
@@ -585,10 +587,18 @@ extension Map3DScene.Builder {
                 pieces.append((kit.mesh, middle.point, middle.along))
             }
         }
-        for piece in pieces {
+        // 美麗島's glass entrances and 中央公園's roof, the last piece, have none.
+        let lit = station.profile == .formosa || station.profile == .centralPark ? pieces.count - 1 : pieces.count
+        for (number, piece) in pieces.enumerated() {
             let foot = Map3DPoint(piece.at.x, drawnGround(x: piece.at.x, z: piece.at.z), piece.at.z)
             target = .near
             mesh(at: foot) { $0.append(piece.mesh, at: foot, forward: piece.forward) }
+            // WINTER-LIGHTS-2: the lights along an exit's canopy.
+            guard number < lit else { continue }
+            let along = Map3DPoint(piece.forward.x, 0, piece.forward.z).normalized ?? Map3DPoint(1, 0, 0), right = along.cross(.up)
+            for string in Map3DWinterLights.exitStrings {
+                exitLights.append((foot + along * string.x + right * string.z + Map3DPoint(0, string.y, 0), along))
+            }
         }
     }
 }

@@ -65,6 +65,34 @@ final class Map3DStationsTests: XCTestCase {
         XCTAssertGreaterThan(stairs.map(\.z).max() ?? 0, 5)
     }
 
+    /// WINTER-LIGHTS-2: a viaduct station's stair entrances each have the
+    /// winter lights along both long edges of their canopies, at its
+    /// height; a station with a building has them on its building, none
+    /// over the forecourt before it.
+    func testTheWinterLightsHangOnTheEntrancesAndTheBuilding() {
+        var viaduct = builder(.elevated)
+        _ = stations(&viaduct)
+        viaduct.addWinterDecor(frame: nil)
+        let onStairs = viaduct.winterDecor.filter { $0.decor == .lightString }
+        XCTAssertEqual(onStairs.count, 4, "two stair entrances, a length each side")
+        XCTAssertFalse(viaduct.winterDecor.contains { $0.decor != .lightString })
+        for string in onStairs {
+            XCTAssertEqual(string.point.y, 2.8, accuracy: 0.3)
+            // Along the stairs, which run along the viaduct (x).
+            XCTAssertEqual(abs(string.forward.x), 1, accuracy: 0.01)
+        }
+        var ground = builder(tracks: [-5])
+        _ = stations(&ground)
+        ground.addWinterDecor(frame: nil)
+        let front = ground.stationFronts[0], onHouse = ground.winterDecor.filter { $0.decor == .lightString }
+        XCTAssertFalse(onHouse.isEmpty)
+        for string in onHouse {
+            // The forecourt is the last six metres of the bounds.
+            let out = (string.point - front.centre).dot(front.forward)
+            XCTAssertLessThanOrEqual(out, front.depth / 2 - 6 + Map3DWinterLights.stringOut + 0.01)
+        }
+    }
+
     func testTheCanopyStandsOnThePlatformOverItsMiddle() {
         var b = builder(tracks: [-5])
         _ = stations(&b)
