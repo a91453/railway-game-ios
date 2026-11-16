@@ -1,6 +1,6 @@
-# 冬季燈串與聖誕塗裝（WINTER-LIGHTS-2，決策 802）
+# 冬季燈串與聖誕塗裝（WINTER-LIGHTS-2，決策 804）
 
-`overview.jpg`：上半是燈串改前（決策 794，掛在站前廣場上空）與改後（掛在雨遮、屋簷的邊上），以及新加的地下站出入口、高架站樓梯口的燈串；下半是六款原本紅色少的車，原色與聖誕版並排。
+`overview.jpg`：上半是燈串改前（決策 794，掛在站前廣場上空）與改後（掛在雨遮、屋簷的邊上），以及新加的地下站出入口、高架站樓梯口的燈串；下半是六款車原色與「整車紅修比例」的對照方案（方案 B，沒有進這張 PR）。
 
 - 畫法：`tools/station-kit/renderer.js`（WebGL 正投影），不是 Metal，也不是 App 的畫面；燈泡的夜間光暈沒有畫。
 - 重拍：`tools/model-look/export-winter.sh lights <資料夾> [before]`、`tools/model-look/export-winter.sh livery <資料夾> commuter-cab set-pushPull-car set-ALISHAN-car set-puyuma-head set-emu800-head set-emu3000-head`，再用 `tools/model-look/shoot.mjs` 拍（`tools/model-look/README.md`）。
@@ -8,7 +8,7 @@
 
 ## 塗裝方案（給作者選，還沒實作）
 
-`livery-options.jpg`：九款車，左半白天、右半夜晚（夜晚是把不發光的面壓暗的示意，不是遊戲的夜景）。每列三格：原塗裝｜方案 A「裝飾，不重漆」｜方案 B 整車紅（這張 PR 修過比例的現況）。
+`livery-options.jpg`：九款車，左半白天、右半夜晚（夜晚是把不發光的面壓暗的示意，不是遊戲的夜景）。每列三格：原塗裝｜方案 A「裝飾，不重漆」｜方案 B 整車紅（決策 795 再修比例的對照方案，程式在提交 b467f1f，沒有進 PR）。
 
 - 方案 A：車身大面不動；腰線的色帶改深莓紅（原本就是紅車身的改冷杉綠）、細線改金；窗上緣一串暖白小燈（另加的發光小面，不改模型包）；頭車正面一個冬青綠花圈加紅結。
 - 重出：`tools/model-look/export-winter.sh preview <資料夾> commuter-cab set-emu500-head …`（只是預覽用的匯出器，遊戲不讀）。

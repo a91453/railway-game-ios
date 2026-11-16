@@ -4,7 +4,7 @@ import GameCore
 
 // Preview only, for the owner to choose (WINTER-LIGHTS-2): the Christmas
 // livery options on named cars. Usage: export-winter.sh preview OUTPUT_DIRECTORY MODEL_NAME...
-// NAME-plain, NAME-red (the whole-car red of decision 802), NAME-trim (the
+// NAME-plain, NAME-red (the whole-car red of decision 795), NAME-trim (the
 // car's own livery with a berry waist line, a string of lights and a wreath),
 // each also as -night (unlit faces darkened).
 let directory=URL(fileURLWithPath:CommandLine.arguments[1],isDirectory:true)
