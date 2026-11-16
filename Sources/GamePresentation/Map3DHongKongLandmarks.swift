@@ -5,7 +5,7 @@ import GameCore
 // are the Lands Department's surveyed models (3D Visualisation Map,
 // non-textured individualised models), cut down and painted by the local
 // studio in Blender (`a91453/railway-assets-private`,
-// `game-art-previews/docs/art/hk-landmarks-2026-11/revision-9/`);
+// `game-art-previews/docs/art/hk-landmarks-2026-11/revision-10/`);
 // `tools/hk-landmarks/glb_to_swift.py` writes them into
 // `Map3DHongKongLandmarkMeshes.swift`. Decision 793 adds the bank
 // headquarters at 1 Queen's Road Central, which the studio made again.
