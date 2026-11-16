@@ -25,8 +25,11 @@ for name in sys.argv[1:]:
 PY
 
 set +e
-# The build step's settings, SWIFT_EMIT_LOC_STRINGS too (decision 638), so
-# only the edited files compile again.
+# The build step's settings, SWIFT_EMIT_LOC_STRINGS too (decision 638) and
+# the compilation cache (decision 775), so only the edited files compile
+# again. Without the cache's two settings every target was built again,
+# GameCore first, and the step's 10 minutes ran out (main 14bf9e6's
+# nightly full lane, run 43771142652).
 xcodebuild test \
   -project RailwayGameApp/RailwayGame.xcodeproj \
   -scheme RailwayGame \
@@ -38,6 +41,8 @@ xcodebuild test \
   -parallel-testing-enabled NO \
   -disableAutomaticPackageResolution \
   SWIFT_EMIT_LOC_STRINGS=YES \
+  COMPILATION_CACHE_ENABLE_CACHING=YES \
+  COMPILATION_CACHE_LIMIT_SIZE=3G \
   CODE_SIGN_IDENTITY=- 2>&1 | tee "$RUNNER_TEMP/ui-smoke-missing-button.log"
 test_status=${PIPESTATUS[0]}
 set -e

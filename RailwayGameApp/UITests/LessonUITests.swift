@@ -654,6 +654,17 @@ final class LessonUITests: XCTestCase {
         tap(app.buttons["entry.lines"])
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
+        // The touch on the second Add can land on the bar over the list's
+        // top instead of the row (the app's trace: "touch began at
+        // (549, 91) view HostingView", not the row's CellHostingView), and
+        // the draft keeps one stop, so Create Line stays disabled (134's
+        // full lane, main 36b5cb5, run 43783072819). The two stops' summary
+        // shows only once the draft has two; add once more only while it
+        // has not.
+        if !element("line.draft.stops").appears(within: 5) {
+            reveal(app.buttons["Add Selected Station"])
+            tap(app.buttons["Add Selected Station"])
+        }
         let create = app.buttons["line.draft.create"]
         reveal(create)
         XCTAssertTrue(create.isEnabled)

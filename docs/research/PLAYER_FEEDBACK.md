@@ -165,7 +165,9 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 
 ### 0.6.0 (134)，2026-11-16
 
-從 `main` 上 RELEASE-134 那個 PR 的合併建置，133（`49fffa3`）之後的 #2279–#2289。寫這段時還沒發：作者自己按 `testflight.yml`（adhoc、external）；run 號與實際的 commit 發完由下一份紀錄補上。
+從 `main` **`36b5cb5`**（#2291 的合併）建置，133（`49fffa3`）之後的 #2279–#2291。TestFlight `testflight.yml` run 43782701616（run 134，2026-11-16 00:50 UTC 作者自己按，adhoc、external）：打包、簽章、檢查 IPA、上傳 build、上傳地圖包 `mappack-hongkong.aar`（地圖包版本 1）都綠，0 個警告；App Store Connect 處理與 What to Test 也綠。同一個 commit 的完整 `ci.yml` run 43783061880 綠；full lane run 43783072819 紅 1 支 UI 測試（lessons，觸控掉在列表上方的欄，不是 App 的 bug，POST-134 修測試，見 `research/HEALTH_134_2026-11-16.md` §4）。
+
+**地圖包**（作者 2026-11-16 在 App Store Connect 的 TestFlight → 素材包確認，規劃記在 #2118）：`mappack-hongkong` 版本 1（13.3 MB，iOS）已可供內部測試；外部測試那一筆已送出、正在等待審查；App Store 那一筆是「準備審查」，上架時再送。上傳 log 0 錯誤、0 警告。還沒驗的只剩實機 log 出現 `map pack mappack-hongkong used`，看到之後才派第三段（香港資料移出 App，`docs/handoff/ASSET-PACK.md`）。
 
 **玩家看得到的**：這版新增卡 `2026-11-16-134` 與 `.github/testflight-whats-new.md`（只寫 134）：香港八棟地標（#2280）、港鐵三款列車重修門窗與車頂（#2288）、機廠檢修庫與駐車棚的鐵皮屋頂（#2285）；修好：機場捷運與文湖線少發的班次（#2289，決策 784）、運用表橫拿被瀏海擋住與同一棟建物畫兩次（#2287）、收購平溪線與內灣線直接鋪島式與島式清單認錯站（#2291，決策 792；作者 11-16 問要不要進 134，五方 3.3 的 bug，併入）。
 
@@ -176,8 +178,8 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 2. 港鐵三款列車清晨與夜裡的車窗、車頂冷氣機會不會閃。
 3. 機場捷運、文湖線跑一整天的班次與有沒有互相卡住。
 4. iPhone 橫拿的運用表「編排」頁。
-6. 新開局收購平溪線、內灣線後十分、竹東的島式月台（3D 沒在裝置上看過）。
-5. 內部 TestFlight 的 log 有沒有 `map pack mappack-hongkong used`（有了才派分包下載第三段）。
+5. 新開局收購平溪線、內灣線後十分、竹東的島式月台（3D 沒在裝置上看過）。
+6. 內部 TestFlight 的 log 有沒有 `map pack mappack-hongkong used`（有了才派分包下載第三段）。
 
 ### 0.6.0 (133)，2026-11-15
 
