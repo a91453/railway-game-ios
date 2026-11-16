@@ -143,6 +143,65 @@ final class Map3DChristmasLiveryTests: XCTestCase {
         }
     }
 
+    /// WREATH-NOSE: on a long nose (the 700T's, the Puyuma's, the
+    /// EMU3000's, the N700S's) the wreath is smaller and lies on the tip:
+    /// it touches no window glass (no corner of it inside any pane's box,
+    /// with a margin), stays under the windscreen's lowest corner over its
+    /// width, and never reaches out past the car's front or sides.
+    func testALongNosesWreathLeavesTheWindscreenClear() throws {
+        let pack = Map3DModelPack.standard
+        for name in ["set-highSpeed-head", "set-highSpeed-tail", "set-puyuma-head", "set-puyuma-tail",
+                     "set-emu3000-head", "set-emu3000-tail", "set-n700sG-head", "highSpeed-cab"] {
+            let index = try XCTUnwrap(pack.index(of: name), name)
+            let model = pack.models[index], wear = try XCTUnwrap(pack.christmas[index], name)
+            let half = max(abs(model.minimum.y), abs(model.maximum.y))
+            for nose: Float in (wear.front ? [1] : []) + (wear.back ? [-1] : []) {
+                var dresser = Dresser(model.vertices, minimum: model.minimum, maximum: model.maximum, top: wear.top)
+                XCTAssertNotNil(dresser.longNose(nose), "\(name): a long nose")
+                dresser.addWreath(nose: nose)
+                let wreath = dresser.out
+                XCTAssertFalse(wreath.isEmpty, name)
+                let front = nose > 0 ? model.maximum.x : -model.minimum.x
+                let width = wreath.map { abs($0.y) }.max() ?? 0
+                XCTAssertLessThanOrEqual(width, half * Map3DChristmasLivery.wreath * Map3DChristmasLivery.noseWreath + 0.01, "\(name): smaller")
+                for v in wreath { XCTAssertLessThanOrEqual(v.x * nose, front + 1e-4, "\(name): out past its front") }
+                // Every pane of the car, side windows too, by its box.
+                var lowest = Float.infinity
+                for first in stride(from: 0, to: model.vertices.count - 2, by: 3)
+                    where [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(model.vertices[first].layer) {
+                    let pane = model.vertices[first ..< first + 3]
+                    let (xs, ys, zs) = (pane.map(\.x), pane.map(\.y), pane.map(\.z))
+                    let margin: Float = 0.05
+                    for v in wreath {
+                        let inside = v.x >= xs.min()! - margin && v.x <= xs.max()! + margin && v.y >= ys.min()! - margin
+                            && v.y <= ys.max()! + margin && v.z >= zs.min()! - margin && v.z <= zs.max()! + margin
+                        XCTAssertFalse(inside, "\(name): the wreath at \(v.position) touches a pane")
+                        if inside { break }
+                    }
+                    // The windscreen over the wreath's width: glass at the cab's end facing forward, over the floor.
+                    if model.vertices[first].nx * nose > 0, abs(model.vertices[first].ny) < 0.6, ys.min()! <= width, ys.max()! >= -width,
+                       xs.allSatisfy({ $0 * nose > front - model.length * 0.35 }), zs.min()! > model.maximum.z * 0.3 {
+                        lowest = min(lowest, zs.min()!)
+                    }
+                }
+                XCTAssertLessThan(lowest, .infinity, "\(name): a windscreen")
+                XCTAssertLessThanOrEqual(wreath.map(\.z).max() ?? 0, lowest - 0.1, "\(name): under the windscreen")
+            }
+        }
+    }
+
+    /// A flat front keeps decision 806's wreath: no long nose there.
+    func testAFlatFrontKeepsItsWreath() throws {
+        let pack = Map3DModelPack.standard
+        for name in ["commuter-cab", "set-emu500-head", "set-mtrUrbanLine-head", "set-wenhu370-head", "set-danhaiLRT-head",
+                     "set-pushPull-head", "set-ALISHAN-head", "set-emu800-head"] {
+            let index = try XCTUnwrap(pack.index(of: name), name)
+            let model = pack.models[index], wear = try XCTUnwrap(pack.christmas[index], name)
+            let dresser = Dresser(model.vertices, minimum: model.minimum, maximum: model.maximum, top: wear.top)
+            XCTAssertNil(dresser.longNose(1), name)
+        }
+    }
+
     /// A far car: the snow and a lit line along each edge, a few triangles,
     /// no bulb of another colour, no ribbon, no glow.
     func testAFarCarWearsOnlySnowAndALitLine() throws {

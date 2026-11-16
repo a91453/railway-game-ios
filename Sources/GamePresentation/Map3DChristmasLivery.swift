@@ -62,6 +62,18 @@ public enum Map3DChristmasLivery {
     static let ribbonEdge: Float = 0.18
     /// The wreath's width, as a share of the car's.
     static let wreath: Float = 0.42
+    /// WREATH-NOSE: a cab whose windscreen's lower edge lies this far
+    /// behind its front has a long nose (the 700T's, the Puyuma's, the
+    /// EMU3000's): its wreath, this share of the usual size and thicker
+    /// (it is small), lies on the tip, at least ``wreathGap`` under the
+    /// glass and over the tip, and the windscreen stays clear.
+    static let longNose: Float = 1
+    static let noseWreath: Float = 0.7
+    static let wreathGap: Float = 0.12
+    /// The least height of slope between the tip and the glass a nose's wreath needs.
+    static let noseRoom: Float = 0.5
+    /// The front share of a car its cab's glass is looked for in.
+    static let cabShare: Float = 0.35
     /// A far car's lit line's width.
     static let farLine: Float = 0.24
 
@@ -174,6 +186,10 @@ public enum Map3DChristmasLivery {
 /// A car's mesh asked where its surface is, and the decoration laid on it.
 struct Dresser {
     private let corners: [Map3DPoint]
+    /// The window glass's triangles that do not face sideways, over the
+    /// floor (under it, a box coloured as glass): their first corners, and
+    /// how far each faces forward (model +x).
+    private var glass: [(first: Int32, forward: Float)] = []
     /// The triangles over each half metre of the car's length.
     private var bins: [[Int32]]
     private let low: Map3DPoint, high: Map3DPoint
@@ -198,6 +214,10 @@ struct Dresser {
             let from = Int((min(a.x, b.x, c.x) - minimum.x) / Self.cell), to = Int((max(a.x, b.x, c.x) - minimum.x) / Self.cell)
             for bin in max(0, from)...min(bins.count - 1, max(0, to)) { bins[bin].append(Int32(first)) }
             let v = vertices[first]
+            if [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(v.layer), abs(v.ny) < Map3DChristmasLivery.sideward,
+               min(a.z, b.z, c.z) >= minimum.z + (maximum.z - minimum.z) * 0.3 {
+                glass.append((Int32(first), v.nx))
+            }
             guard abs(v.ny) >= Map3DChristmasLivery.sideward, v.color >> 24 == 0xFF, !Map3DTrainLights.isGlass(v.color),
                   a.z >= bottom, a.z <= top else { continue }
             let area = (b - a).cross(c - a).length / 2
@@ -401,8 +421,38 @@ struct Dresser {
         }
     }
 
-    /// A wreath on the cab's front, lying on the nose where it slopes.
+    /// The lower edge of the windscreen of the cab at `nose`: the lowest
+    /// corner of the glass facing that way (not sideways) in the car's front
+    /// part, among the panes over the middle `span` metres either side of
+    /// its axis. `nil` for a cab with no such glass.
+    func windscreen(nose: Float, span: Float) -> (x: Float, z: Float)? {
+        let front = nose > 0 ? high.x : -low.x, reach = (high.x - low.x) * Map3DChristmasLivery.cabShare
+        var best: (x: Float, z: Float)?
+        for (first, forward) in glass where forward * nose > 0 {
+            let at = Int(first), a = corners[at], b = corners[at + 1], c = corners[at + 2]
+            guard [a, b, c].allSatisfy({ $0.x * nose > front - reach }),
+                  min(a.y, b.y, c.y) <= span, max(a.y, b.y, c.y) >= -span else { continue }
+            for p in [a, b, c] where best.map({ p.z < $0.z }) ?? true { best = (p.x, p.z) }
+        }
+        return best
+    }
+
+    /// The windscreen's lower edge (``windscreen(nose:span:)``) of the cab
+    /// at `nose` if it has a long nose: that edge at least
+    /// ``Map3DChristmasLivery/longNose`` behind its front, where a wreath on
+    /// its front would lie on the glass; otherwise `nil`.
+    func longNose(_ nose: Float) -> (x: Float, z: Float)? {
+        let front = nose > 0 ? high.x : -low.x
+        guard let edge = windscreen(nose: nose, span: half * Map3DChristmasLivery.wreath),
+              front - edge.x * nose >= Map3DChristmasLivery.longNose else { return nil }
+        return edge
+    }
+
+    /// A wreath on the cab's front: on a long nose (``longNose(_:)``) a
+    /// smaller one on its tip under the windscreen, which stays clear;
+    /// otherwise on the front, leaning with it.
     mutating func addWreath(nose: Float) {
+        if let edge = longNose(nose), addNoseWreath(nose: nose, under: edge.z) { return }
         let outer = half * Map3DChristmasLivery.wreath, inner = outer * 0.55, height = bottom + (top - bottom) * 0.62
         func front(_ y: Float, _ z: Float) -> Float? { surface(axis: 0, sign: nose, y, z) }
         guard let mid = front(0, height) else { return }
@@ -425,6 +475,53 @@ struct Dresser {
         let knotColour = redBody ? Map3DChristmasLivery.gold : Map3DChristmasLivery.red
         tri(knot, knot + Map3DPoint(0, -w, h * 0.6), knot + Map3DPoint(0, -w, -h), knotColour, outward: outward)
         tri(knot, knot + Map3DPoint(0, w, -h), knot + Map3DPoint(0, w, h * 0.6), knotColour, outward: outward)
+    }
+
+    /// The wreath on a long nose's tip: lying on the slope between the tip
+    /// and ``Map3DChristmasLivery/wreathGap`` under the windscreen's lower
+    /// edge `glass`, round on the slope, never out past the car's front.
+    /// `false`, and nothing, where the nose there is no slope (a hood's
+    /// flat top) or has no room.
+    @discardableResult
+    mutating func addNoseWreath(nose: Float, under glass: Float) -> Bool {
+        let front = nose > 0 ? high.x : -low.x, ceiling = glass - Map3DChristmasLivery.wreathGap
+        func ahead(_ y: Float, _ z: Float) -> Float? { surface(axis: 0, sign: nose, y, z) }
+        // The nose's middle, every 5 cm up to under the glass: its tip is the
+        // highest of its foremost points.
+        var profile: [(z: Float, x: Float)] = []
+        var z = bottom
+        while z <= ceiling {
+            if let x = ahead(0, z) { profile.append((z, x)) }
+            z += 0.05
+        }
+        guard let foremost = profile.map(\.x).max(), let tip = profile.last(where: { $0.x >= foremost - 0.05 }),
+              let under = profile.last else { return false }
+        let lower = tip.z + Map3DChristmasLivery.wreathGap, room = ceiling - lower
+        // Metres back for each metre up, over that stretch; a ring this
+        // round on the slope is that much lower than wide.
+        let lean = (tip.x - under.x) / max(under.z - tip.z, 0.01)
+        guard room >= Map3DChristmasLivery.noseRoom, lean >= 0.3, lean <= 6 else { return false }
+        let cosine = 1 / (1 + lean * lean).squareRoot()
+        let outer = min(half * Map3DChristmasLivery.wreath * Map3DChristmasLivery.noseWreath, room / 2 / cosine), inner = outer * 0.45
+        let middle = lower + room / 2
+        let normal = Map3DPoint(nose * cosine, 0, lean * cosine), upSlope = Map3DPoint(-nose * lean * cosine, 0, cosine)
+        func at(_ r: Float, _ t: Float, _ lift: Float = 0.06) -> Map3DPoint {
+            let y = cos(t * 2 * .pi) * r, z = middle + sin(t * 2 * .pi) * r * cosine
+            let x = ahead(y, z) ?? ahead(0, z) ?? foremost
+            return Map3DPoint(min(x + lift * cosine, front) * nose, y, z + lift * lean * cosine)
+        }
+        let outward = normal + Map3DPoint(0, 0, 0.3)
+        let steps = 12
+        for step in 0..<steps {
+            let a = Float(step) / Float(steps), b = Float(step + 1) / Float(steps)
+            quad(at(inner, a), at(outer, a), at(outer, b), at(inner, b), Map3DColor.shaded(Map3DChristmasLivery.green, step % 2 == 0 ? 1 : 0.8), outward: outward)
+        }
+        let knot = at(outer * 0.82, 0.75, 0.1), w = outer * 0.55, h = outer * 0.4
+        let side = Map3DPoint(0, 1, 0)
+        let knotColour = redBody ? Map3DChristmasLivery.gold : Map3DChristmasLivery.red
+        tri(knot, knot - side * w + upSlope * (h * 0.6), knot - side * w - upSlope * h, knotColour, outward: outward)
+        tri(knot, knot + side * w - upSlope * h, knot + side * w + upSlope * (h * 0.6), knotColour, outward: outward)
+        return true
     }
 }
 
