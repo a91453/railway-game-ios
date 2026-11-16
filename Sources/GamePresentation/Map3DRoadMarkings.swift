@@ -396,6 +396,8 @@ struct Map3DRoadMarkings {
     /// red along a trunk or primary road and for ``redNearJunction``
     /// either side of where they are left out.
     private mutating func addKerbs(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double]) {
+        // Decision 802: none on Finland's kerbs.
+        guard region.hasKerbLines else { return }
         let cut = (kerbCuts[number] ?? []) + (cuts[number] ?? [])
         let red = cut.map { ($0.lowerBound - Self.redNearJunction)...($0.upperBound + Self.redNearJunction) }
         // Decision 732: Hong Kong's kerbs, yellow all along.

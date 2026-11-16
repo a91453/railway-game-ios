@@ -478,7 +478,7 @@ public struct Map3DScene: Sendable {
         builder.studyRegion = studies
         builder.buildsFacades = facades
         // Decision 732: Hong Kong's streets on its map.
-        builder.streetLife.region = Map3DStreetRegion(world: world)
+        builder.streetLife.region = builder.look.streets
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 737: the ground levelled before anything is laid on it.
         builder.levelGround(under: snapshot)
@@ -1221,8 +1221,11 @@ extension Map3DScene {
         let fileGround: FileGround?
         /// The ground the player's buildings take (``onPlacedGround(_:)``).
         let placedGround: [PlacedSquare]
+        /// Decision 802: the look of the place the map is of.
+        let look: Map3DRegionLook
 
         init(originX: Double, originY: Double, region: WorldRegion, world: GameWorld, heights: HeightGrid? = nil) {
+            look = Map3DRegionLook(world: world)
             self.originX = originX
             self.originY = originY
             self.region = region
@@ -1412,7 +1415,7 @@ extension Map3DScene {
                 drawn.addFacadeParts()
                 return drawn.chunks()
             }
-            let snowy = Map3DSnowGround.covers(world)
+            let snowy = look.snow
             return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(facadeMeshes.keys).union(standInMeshes.keys).union(ownColourNear.keys).union(ownColourFar.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
@@ -1825,7 +1828,7 @@ extension Map3DScene {
             }
             // The rails, their middles half a rail outside the gauge.
             // Decision 799: at the map's gauge (Finland's 1,524 mm).
-            let offset = (Map3DTrackGauge.metres(world: world) + Self.railWidth) / 2
+            let offset = (look.gauge + Self.railWidth) / 2
             let target = self.target
             if railsNear { self.target = .near }
             defer { self.target = target }
@@ -2257,6 +2260,7 @@ extension Map3DScene {
             }
             if let fronts { depth = min(depth, [fronts.north, fronts.south].compactMap { $0 }.map { $0 - 0.5 }.min() ?? depth) }
             guard depth > 4 else { return }
+            let look = look
             // Decision 267: the street's smallest things, drawn only close.
             var closeDetail = Map3DMesh()
             // Decision 352: the blade signs' words.
@@ -2282,7 +2286,7 @@ extension Map3DScene {
                         // on a busy street's houses now and then.
                         let shops = lotShops || r(13) < (fronts?.shopShare(facing: facing) ?? 0)
                         Self.addTownHouse(&mesh, close: &closeDetail, blades: &blades, middle: rowMiddle, front: front, width: width,
-                                          depth: depth, flats: flats, shops: shops, wall: wall, far: far, r: r)
+                                          depth: depth, flats: flats, shops: shops, wall: wall, far: far, look: look, r: r)
                         x += width
                         number += 1
                     }

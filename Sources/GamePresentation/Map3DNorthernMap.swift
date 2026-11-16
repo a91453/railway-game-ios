@@ -17,12 +17,13 @@ public enum Map3DTrackGauge {
     /// Finland, else Taiwan's (a map with no anchor, the generated ones,
     /// too).
     public static func metres(world: GameWorld) -> Float {
-        world.geoAnchor.map(metres(anchor:)) ?? cape
+        Map3DRegionLook(world: world).gauge
     }
 
-    /// Finland within 59.5–70.2° N and 19.0–31.6° E.
+    /// Finland within 59.5–70.2° N and 19.0–31.6° E (decision 802:
+    /// ``Map3DRegionLook/init(anchor:)``).
     static func metres(anchor: GeoAnchor) -> Float {
-        595_000_000...702_000_000 ~= anchor.latitude && 190_000_000...316_000_000 ~= anchor.longitude ? finnish : cape
+        Map3DRegionLook(anchor: anchor).gauge
     }
 }
 
@@ -40,7 +41,7 @@ public enum Map3DSnowGround {
     /// 60° N (Rovaniemi is at 66.5°; Taiwan and Hong Kong are south of
     /// 26°).
     public static func covers(_ world: GameWorld) -> Bool {
-        world.geoAnchor.map { $0.latitude >= 600_000_000 } ?? false
+        Map3DRegionLook(world: world).snow
     }
 
     /// Open snow, the brightest ground: the palette's pavement white.

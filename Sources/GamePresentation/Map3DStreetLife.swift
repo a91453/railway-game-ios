@@ -877,12 +877,15 @@ public struct Map3DStreetLife: Sendable {
         if bus {
             let variant = r(6)
             model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
-        } else if lane.scooters {
+        } else if lane.scooters, region.hasScooters {
             model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : kind < 0.9 ? .car : .van
         } else {
             model = kind < 0.75 ? .car : .van
         }
-        let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints
+        // Decision 802: private cars without Taiwan's taxi yellow (the
+        // last) where the taxis are not yellow.
+        let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints
+            : region.hasYellowTaxis ? Self.carPaints : Array(Self.carPaints.dropLast())
         let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
         let lone = model == .scooter
         if model.isScooter { model = Self.scooter(model, pick: r(7)) }
