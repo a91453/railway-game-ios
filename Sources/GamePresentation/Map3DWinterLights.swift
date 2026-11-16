@@ -45,14 +45,153 @@ public struct Map3DWinterLights: Equatable, Sendable {
     /// The most lengths of lights along one building's front: 32 m, the
     /// middle of a big station's.
     static let mostStringsAFront = 8
-    /// How high the lights hang: three fifths of the building, as its eaves
-    /// (the kit's houses have theirs at 0.56–0.65 of their tops), at most
-    /// this many metres.
-    static let highestString: Float = 6
-    static let eaveShare: Float = 0.6
-    /// How far in from the building's outermost front the lights hang, so
-    /// they are under its overhang.
-    static let stringSetIn: Float = 0.4
+    /// One length of lights, metres (``Map3DWinterDecor/lightString``).
+    static let stringLength: Float = 4
+    /// The heights the lights hang between: over a door, and no higher
+    /// than a two-floor front's eaves.
+    static let lowestString: Float = 2.4
+    static let highestString: Float = 9
+    /// How far before the face they hang on the lights are, so the bulbs
+    /// clear it.
+    static let stringOut: Float = 0.15
+    /// How far apart the front is looked at, along it and up it, and how
+    /// far two neighbours may differ and still be one straight stretch.
+    static let frontStep: Float = 0.5
+    static let heightStep: Float = 0.1
+    static let sameFace: Float = 0.3
+    /// How far behind the farthest forward of them the lights may hang:
+    /// a porch and the wall beside it, not a wing well behind.
+    static let frontDepth: Float = 3
+
+    /// WINTER-LIGHTS-2: where the lights hang on a station building
+    /// (`house`, the kit's: +x its front, y up, z along it): on what
+    /// stands out farthest between ``lowestString`` and ``highestString``
+    /// (the edge of a porch's canopy, the eaves, else the wall), at the
+    /// top of that face, ``stringLength`` lengths along each straight
+    /// stretch of it, the ``mostStringsAFront`` nearest the middle. Each
+    /// is the middle of a length, which runs along z. Looked for on the
+    /// building itself, not its bounds: those take in the forecourt
+    /// before it, over which the lights hung in the air.
+    static func strings(on house: Map3DMesh) -> [Map3DPoint] {
+        guard let bounds = house.bounds else { return [] }
+        let count = Int(((bounds.max.z - bounds.min.z) / frontStep).rounded(.down))
+        guard count > 0 else { return [] }
+        let first = (bounds.min.z + bounds.max.z) / 2 - Float(count - 1) / 2 * frontStep
+        // The triangles over each place along the front.
+        var over = [[Int]](repeating: [], count: count)
+        for start in stride(from: 0, to: house.indices.count - 2, by: 3) {
+            let z = (0..<3).map { house.vertices[Int(house.indices[start + $0])].z }
+            let y = (0..<3).map { house.vertices[Int(house.indices[start + $0])].y }
+            guard y.max()! >= lowestString, y.min()! <= highestString else { continue }
+            let from = max(0, Int(((z.min()! - first) / frontStep).rounded(.up)))
+            let to = min(count - 1, Int(((z.max()! - first) / frontStep).rounded(.down)))
+            guard from <= to else { continue }
+            for place in from...to { over[place].append(start) }
+        }
+        // The face at (z, y): the farthest forward of what is there.
+        func face(_ place: Int, _ height: Float) -> Float? {
+            let z = first + Float(place) * frontStep
+            var found: Float?
+            for start in over[place] {
+                let a = house.vertices[Int(house.indices[start])].position
+                let b = house.vertices[Int(house.indices[start + 1])].position
+                let c = house.vertices[Int(house.indices[start + 2])].position
+                let whole = (b.z - a.z) * (c.y - a.y) - (c.z - a.z) * (b.y - a.y)
+                guard abs(whole) > 1e-6 else { continue }
+                let u = ((z - a.z) * (c.y - a.y) - (c.z - a.z) * (height - a.y)) / whole
+                let v = ((b.z - a.z) * (height - a.y) - (z - a.z) * (b.y - a.y)) / whole
+                guard u >= -1e-4, v >= -1e-4, u + v <= 1 + 1e-4 else { continue }
+                let x = a.x + (b.x - a.x) * u + (c.x - a.x) * v
+                if x > (found ?? -.infinity) { found = x }
+            }
+            return found
+        }
+        // Each place's farthest face and the top of it.
+        let heights = Int(((highestString - lowestString) / heightStep).rounded())
+        var profile: [(x: Float, y: Float)?] = (0..<count).map { place in
+            var faces: [(x: Float, y: Float)] = []
+            for step in 0...heights {
+                let y = lowestString + Float(step) * heightStep
+                if let x = face(place, y) { faces.append((x, y)) }
+            }
+            guard let out = faces.map(\.x).max() else { return nil }
+            return faces.last { $0.x >= out - sameFace }.map { (out, $0.y) }
+        }
+        func same(_ a: (x: Float, y: Float)?, _ b: (x: Float, y: Float)?) -> Bool {
+            guard let a, let b else { return a == nil && b == nil }
+            return abs(a.x - b.x) <= sameFace && abs(a.y - b.y) <= sameFace
+        }
+        // A post or a mullion one place wide is not a stretch of its own.
+        if count >= 3 {
+            for place in 1..<count - 1 where !same(profile[place], profile[place - 1]) && same(profile[place - 1], profile[place + 1]) {
+                profile[place] = profile[place - 1]
+            }
+        }
+        // The straight stretches, from the middle outwards so a building
+        // alike on both sides is hung alike: each all within ``sameFace``
+        // of where it starts, so an arched canopy's edge is followed in
+        // steps.
+        var hung: [Map3DPoint] = []
+        func hang(_ from: Int, _ to: Int) {
+            let run = profile[from...to].compactMap { $0 }
+            guard run.count == to - from + 1 else { return }
+            let lengths = min(mostStringsAFront, Int((Float(run.count) * frontStep / stringLength).rounded(.down)))
+            let x = run.map(\.x).max()! + stringOut, y = run.map(\.y).min()!
+            let middle = first + Float(from + to) / 2 * frontStep
+            for number in 0..<lengths {
+                hung.append(Map3DPoint(x, y, middle + (Float(number) - Float(lengths - 1) / 2) * stringLength))
+            }
+        }
+        func reach(from start: Int, by step: Int) -> Int {
+            var end = start
+            while end + step >= 0, end + step < count, same(profile[end + step], profile[end]), same(profile[end + step], profile[start]) { end += step }
+            return end
+        }
+        // The middle stretch: both ways from the two middle places.
+        let left = (count - 1) / 2, right = count / 2
+        var low = left, high = right
+        if same(profile[left], profile[right]) {
+            low = reach(from: left, by: -1)
+            high = reach(from: right, by: 1)
+            hang(low, high)
+            low -= 1
+            high += 1
+        } else {
+            high = left + 1
+        }
+        while low >= 0 {
+            let end = reach(from: low, by: -1)
+            hang(end, low)
+            low = end - 1
+        }
+        while high < count {
+            let end = reach(from: high, by: 1)
+            hang(high, end)
+            high = end + 1
+        }
+        // Only the front: not a wall well behind the porch.
+        guard let front = hung.map(\.x).max() else { return [] }
+        let centre = (bounds.min.z + bounds.max.z) / 2
+        let nearest = hung.filter { $0.x >= front - frontDepth }.enumerated().sorted {
+            abs($0.element.z - centre) != abs($1.element.z - centre) ? abs($0.element.z - centre) < abs($1.element.z - centre) : $0.offset < $1.offset
+        }
+        var kept = Array(nearest.prefix(mostStringsAFront))
+        // A pair as far out on both sides is kept or dropped together, so a
+        // building alike on both sides stays hung alike.
+        if nearest.count > kept.count, let last = kept.last,
+           abs(abs(nearest[kept.count].element.z - centre) - abs(last.element.z - centre)) < 0.01 {
+            let cut = abs(last.element.z - centre)
+            kept.removeAll { abs(abs($0.element.z - centre) - cut) < 0.01 }
+        }
+        return kept.map(\.element).sorted { $0.z < $1.z }
+    }
+
+    /// WINTER-LIGHTS-2: where the lights hang on an underground station's
+    /// exit or a viaduct's stair entrance (the kit's `undergroundExit` and
+    /// `stairHead`: +x the way in, y up): a length along each long edge of
+    /// its canopy, running along x.
+    static let exitStrings = [Map3DPoint(0, 2.8, -1.9), Map3DPoint(0, 2.8, 1.9)]
+
     /// How far before a big station's front its tree stands: the middle of
     /// the plaza, clear of the bushes (4 m) and of the shops across it
     /// (their awnings from about 12 m).
@@ -150,17 +289,8 @@ extension Map3DScene.Builder {
         typealias Lights = Map3DWinterLights
         for front in stationFronts {
             let right = front.forward.cross(.up)
-            let ground = drawnGround(x: front.centre.x, z: front.centre.z)
-            // The lights: 4 m lengths along the front, as many as fit.
-            let length: Float = 4
-            let count = min(Lights.mostStringsAFront, Int(((front.wide - 1) / length).rounded(.down)))
-            if count > 0 {
-                let height = min(front.top * Lights.eaveShare, Lights.highestString)
-                let line = front.centre + front.forward * (front.depth / 2 - Lights.stringSetIn)
-                for number in 0..<count {
-                    let at = line + right * ((Float(number) - Float(count - 1) / 2) * length)
-                    winterDecor.append(.init(decor: .lightString, point: Map3DPoint(at.x, ground + height, at.z), forward: right))
-                }
+            for at in front.strings {
+                winterDecor.append(.init(decor: .lightString, point: at, forward: right))
             }
             guard front.big else { continue }
             let spot = front.centre + front.forward * (front.depth / 2 + Lights.treeOut)
@@ -168,6 +298,9 @@ extension Map3DScene.Builder {
             let footprint = corners.map { spot + front.forward * $0.0 + right * $0.1 }
             guard isClear(footprint, facing: front.forward) else { continue }
             winterDecor.append(.init(decor: .treeMedium, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z), forward: front.forward))
+        }
+        for exit in exitLights {
+            winterDecor.append(.init(decor: .lightString, point: exit.at, forward: exit.forward))
         }
         guard let frame else { return }
         for plaza in Lights.plazas {

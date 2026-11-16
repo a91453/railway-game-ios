@@ -60,10 +60,61 @@ final class Map3DWinterLightsTests: XCTestCase {
         let ground = Self.demo.drawnGround
         for string in strings {
             let height = string.point.y - ground.height(x: string.point.x, z: string.point.z, world: Self.demoWorld)
-            XCTAssertGreaterThan(height, 2.5)
+            XCTAssertGreaterThanOrEqual(height, Map3DWinterLights.lowestString)
             XCTAssertLessThanOrEqual(height, Map3DWinterLights.highestString + 0.5)
         }
         XCTAssertEqual(Map3DScene(world: DemoWorld.make(in: .english)).winterLights, Self.demo.winterLights)
+    }
+
+    /// WINTER-LIGHTS-2: on every kind of station building the lights hang
+    /// on the building itself: none over the forecourt (the last six
+    /// metres of its bounds, four metres past each end), each on a face
+    /// (something of the building just behind its line), alike on both
+    /// sides of a building alike on both sides, no more than
+    /// ``Map3DWinterLights/mostStringsAFront``.
+    func testTheLightsHangOnEveryKindOfBuilding() throws {
+        for profile in Map3DStationKit.Profile.allCases where Map3DStationKit.hasHouse(profile) {
+            let all = Map3DStationKit.stations.filter { $0.profile == profile }
+            var kinds = Array(all.prefix(1))
+            if let first = all.first, let other = all.first(where: { $0.seed % 7 % 2 != first.seed % 7 % 2 }) { kinds.append(other) }
+            for station in kinds {
+                for expansion in [nil, StationExpansion.concourse, .hall] {
+                    var kit = StationKitBuilder()
+                    kit.house(station, expansion: expansion)
+                    let bounds = try XCTUnwrap(kit.mesh.bounds)
+                    let strings = Map3DWinterLights.strings(on: kit.mesh)
+                    let name = "\(profile.rawValue) \(station.name) \(String(describing: expansion))"
+                    XCTAssertFalse(strings.isEmpty, name)
+                    XCTAssertLessThanOrEqual(strings.count, Map3DWinterLights.mostStringsAFront, name)
+                    let middle = (bounds.min.z + bounds.max.z) / 2, half = (bounds.max.z - bounds.min.z) / 2
+                    for string in strings {
+                        XCTAssertLessThanOrEqual(string.x, bounds.max.x - 6 + Map3DWinterLights.stringOut + 0.01, "\(name): over the forecourt")
+                        XCTAssertLessThanOrEqual(abs(string.z - middle) + Map3DWinterLights.stringLength / 2, half - 4 + 0.26, "\(name): past the building's end")
+                        XCTAssertGreaterThanOrEqual(string.y, Map3DWinterLights.lowestString, name)
+                        XCTAssertLessThanOrEqual(string.y, Map3DWinterLights.highestString + 0.01, name)
+                        // Something of the building within half a metre behind the line, at its middle.
+                        let behind = kit.mesh.vertices.contains { vertex in
+                            vertex.x >= string.x - Map3DWinterLights.stringOut - 0.5 && vertex.x <= string.x
+                                && abs(vertex.y - string.y) <= 3 && abs(vertex.z - string.z) <= 40
+                        }
+                        XCTAssertTrue(behind, "\(name): hangs in the air")
+                    }
+                    // The kit's plain buildings are alike on both sides.
+                    if [.regional, .halt, .banqiao, .nangang, .hualien, .zuoying, .highSpeed].contains(profile) {
+                        let offsets = strings.map { ($0.z - middle) }.sorted()
+                        for (a, b) in zip(offsets, offsets.reversed()) { XCTAssertEqual(a, -b, accuracy: 0.01, name) }
+                    }
+                }
+            }
+        }
+        // The kit's exit: along each long edge of its canopy, under its top.
+        var exit = StationKitBuilder()
+        exit.part(.undergroundExit)
+        let top = try XCTUnwrap(exit.mesh.bounds).max
+        for string in Map3DWinterLights.exitStrings {
+            XCTAssertLessThan(string.y, top.y)
+            XCTAssertEqual(abs(string.z), top.z, accuracy: 0.3)
+        }
     }
 
     /// The most a frame draws stays in the budget, and a frame over the
