@@ -5,10 +5,12 @@ import GameCore
 // are the Lands Department's surveyed models (3D Visualisation Map,
 // non-textured individualised models), cut down and painted by the local
 // studio in Blender (`a91453/railway-assets-private`,
-// `game-art-previews/docs/art/hk-landmarks-2026-11/revision-10/`);
+// `game-art-previews/docs/art/hk-landmarks-2026-11/revision-11/`);
 // `tools/hk-landmarks/glb_to_swift.py` writes them into
 // `Map3DHongKongLandmarkMeshes.swift`. Decision 793 adds the bank
-// headquarters at 1 Queen's Road Central, which the studio made again.
+// headquarters at 1 Queen's Road Central, which the studio made again;
+// decision 798 the Convention and Exhibition Centre in Wan Chai, its
+// curved roofs rebuilt piece by piece from the surveyed one.
 
 /// Decision 791: the landmarks, each in its own metres (x east, y north,
 /// z up, the middle of its footprint at the origin), stood where it is.
@@ -22,6 +24,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     case theCenter = "the-center"
     case tsimShaTsuiClockTower = "tsim-sha-tsui-clock-tower"
     case culturalCentre = "cultural-centre"
+    case conventionCentre = "convention-centre"
 
     /// Where the middle of its footprint stands: the surveyed model's, from
     /// the Hong Kong 1980 Grid (`base/landmarks.json`).
@@ -36,6 +39,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .theCenter: 22.2846127
         case .tsimShaTsuiClockTower: 22.2935845
         case .culturalCentre: 22.2937068
+        case .conventionCentre: 22.2830975
         }
     }
     var longitude: Double {
@@ -49,6 +53,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .theCenter: 114.1547296
         case .tsimShaTsuiClockTower: 114.1695373
         case .culturalCentre: 114.1702111
+        case .conventionCentre: 114.1730512
         }
     }
 
@@ -66,6 +71,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .theCenter: 3.35
         case .tsimShaTsuiClockTower: 4.32
         case .culturalCentre: 3.97
+        case .conventionCentre: 3.99
         }
     }
 

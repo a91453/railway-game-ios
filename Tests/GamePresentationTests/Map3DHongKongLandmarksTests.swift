@@ -18,6 +18,7 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         .theCenter: (59.1, 59.2, 346.7),
         .tsimShaTsuiClockTower: (11.6, 11.6, 49.2),
         .culturalCentre: (144.3, 123.5, 56.3),
+        .conventionCentre: (201.3, 349.0, 67.9),
     ]
 
     /// Every model decodes, near and far, as tall and wide as the surveyed
@@ -73,7 +74,7 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         }
         var central = builder()
         let built = central.addHongKongLandmarks(frame: frame)
-        XCTAssertTrue(built.isSuperset(of: [.twoIFC, .bankOfChinaTower, .cheungKongCenter, .hsbcMainBuilding, .theCenter, .centralPlaza]), "\(built)")
+        XCTAssertTrue(built.isSuperset(of: [.twoIFC, .bankOfChinaTower, .cheungKongCenter, .hsbcMainBuilding, .theCenter, .centralPlaza, .conventionCentre]), "\(built)")
         let triangles = { (meshes: [Map3DScene.ChunkKey: Map3DMesh]) in meshes.values.reduce(0) { $0 + $1.indices.count / 3 } }
         XCTAssertEqual(triangles(central.nearMeshes), built.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
         XCTAssertEqual(triangles(central.farMeshes), built.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })
