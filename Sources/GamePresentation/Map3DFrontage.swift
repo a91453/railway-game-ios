@@ -344,7 +344,7 @@ extension Map3DScene.Builder {
         let centre = point(x: (Double(column) + 0.5) * cell, y: (Double(row) + 0.5) * cell, height: 0)
         var closeDetail = Map3DMesh()
         var blades: [Map3DSign] = []
-        let far = isFar
+        let far = isFar, look = look
         var grounded: [StreetHouse] = []
         for house in laid.houses.map(\.house) {
             grounded.append(StreetHouse(middle: Map3DPoint(house.middle.x, ground(at: house.middle), house.middle.z), front: house.front,
@@ -355,10 +355,10 @@ extension Map3DScene.Builder {
                 let r = { (extra: Int32) in map3DRandom(lot.seed.0, lot.seed.1, salt: lot.salt + extra) }
                 if far {
                     Self.addFarTownHouse(&mesh, middle: house.middle, front: house.front, width: house.width, depth: house.depth,
-                                         flats: lot.flats, wall: lot.wall, tallest: laid.tallest, r: r)
+                                         flats: lot.flats, wall: lot.wall, tallest: laid.tallest, look: look, r: r)
                 } else {
                     Self.addTownHouse(&mesh, close: &closeDetail, blades: &blades, middle: house.middle, front: house.front, width: house.width,
-                                      depth: house.depth, flats: lot.flats, shops: lot.shops, wall: lot.wall, far: false, tallest: laid.tallest, r: r)
+                                      depth: house.depth, flats: lot.flats, shops: lot.shops, wall: lot.wall, far: false, tallest: laid.tallest, look: look, r: r)
                 }
             }
         }
@@ -433,7 +433,13 @@ extension Map3DScene.Builder {
     /// (decision 238): one box of its height, its front and back painted
     /// with its windows, no roof clutter.
     static func addFarTownHouse(_ mesh: inout Map3DMesh, middle: Map3DPoint, front: Map3DPoint, width: Float, depth: Float, flats: Bool,
-                                wall: UInt32, tallest: Int? = nil, r: (Int32) -> Float) {
+                                wall: UInt32, tallest: Int? = nil, look: Map3DRegionLook = .taiwan, r: (Int32) -> Float) {
+        // Decision 802: Finland's houses.
+        if look.buildings == .nordic {
+            addNordicHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, far: true, snow: look.snow,
+                           tallest: tallest, r: r)
+            return
+        }
         let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
@@ -452,7 +458,13 @@ extension Map3DScene.Builder {
     /// `front`, a shop below with `shops`; its look from `r`.
     static func addTownHouse(_ mesh: inout Map3DMesh, close closeDetail: inout Map3DMesh, blades: inout [Map3DSign], middle: Map3DPoint,
                              front: Map3DPoint, width: Float, depth: Float, flats: Bool, shops: Bool, wall: UInt32, far: Bool,
-                             tallest: Int? = nil, r: (Int32) -> Float) {
+                             tallest: Int? = nil, look: Map3DRegionLook = .taiwan, r: (Int32) -> Float) {
+        // Decision 802: Finland's houses.
+        if look.buildings == .nordic {
+            addNordicHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, far: far, snow: look.snow,
+                           tallest: tallest, r: r)
+            return
+        }
         let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3

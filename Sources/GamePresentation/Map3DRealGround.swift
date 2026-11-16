@@ -202,7 +202,7 @@ extension Map3DScene.Builder {
         sizing = Map3DFarDetail.sidewalks
         for road in roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {
             addStrip(road.points, bounds: road.bounds, width: road.kind.width(ramp: false) + 2 * Self.sidewalk(of: road.kind),
-                     lift: Self.sidewalkLift, color: Map3DPalette.sidewalk, paint: Self.paving, raised: true, onDeck: road.bridgeLevel > 0,
+                     lift: Self.sidewalkLift, color: look.streets.sidewalk, paint: Self.paving, raised: true, onDeck: road.bridgeLevel > 0,
                      taking: &taken)
         }
         mark("sidewalks")
@@ -220,7 +220,7 @@ extension Map3DScene.Builder {
         // their signals' offsets.
         mark("roads")
         // Decision 732: whose roads they are, Hong Kong's on its map.
-        let streets = Map3DStreetRegion(world: world)
+        let streets = look.streets
         let markings = Map3DRoadMarkings(roads, origin: Map3DBaseMap.Point(x: originX / Double(WorldCoordinate.unitsPerMetre),
                                                                            z: originY / Double(WorldCoordinate.unitsPerMetre)),
                                          region: streets)

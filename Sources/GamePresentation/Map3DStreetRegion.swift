@@ -16,20 +16,23 @@ import GameCore
 public enum Map3DStreetRegion: Sendable, Equatable {
     case taiwan
     case hongKong
+    /// Decision 802: Finland's (Rovaniemi's map, decision 789): traffic on
+    /// the right as Taiwan's, white lines between its two ways (yellow
+    /// until the Road Traffic Act of 2020), no paint on its kerbs, no
+    /// scooters, and signals that show red and amber before green.
+    case finland
 
     /// The region of `world`'s map: Hong Kong for a map anchored in Hong
-    /// Kong (the map pack's, ``OverseasMap/hongKong``), else Taiwan (a map
-    /// with no anchor, the generated ones, too).
+    /// Kong (the map pack's, ``OverseasMap/hongKong``), Finland for one
+    /// anchored there, else Taiwan (a map with no anchor, the generated
+    /// ones, too). Decision 802: ``Map3DRegionLook``'s.
     public init(world: GameWorld) {
-        self = world.geoAnchor.map(Self.init(anchor:)) ?? .taiwan
+        self = Map3DRegionLook(world: world).streets
     }
 
-    /// The region round `anchor`: Hong Kong within 22.1–22.6° N and
-    /// 113.8–114.5° E, which holds the whole territory and none of
-    /// Taiwan (Kinmen is at 118.3° E).
+    /// The region round `anchor` (``Map3DRegionLook/init(anchor:)``).
     init(anchor: GeoAnchor) {
-        let hongKong = 221_000_000...226_000_000 ~= anchor.latitude && 1_138_000_000...1_145_000_000 ~= anchor.longitude
-        self = hongKong ? .hongKong : .taiwan
+        self = Map3DRegionLook(anchor: anchor).streets
     }
 
     /// Whether its road traffic keeps to the left.
@@ -61,7 +64,26 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     public var animatesPedestrianSignals: Bool { self == .taiwan }
 
     /// Whether its signals show red and amber together before green.
-    public var hasRedAmber: Bool { self == .hongKong }
+    /// Decision 802: Finland's too.
+    public var hasRedAmber: Bool { self != .taiwan }
+
+    /// Decision 802: whether its kerbs are painted where no stopping or
+    /// waiting is allowed (decision 447): Taiwan's red and yellow, Hong
+    /// Kong's yellow. Finland's are bare.
+    var hasKerbLines: Bool { self != .finland }
+
+    /// Decision 802: whether scooters ride its streets (decision 259):
+    /// not Finland's, under snow.
+    var hasScooters: Bool { self != .finland }
+
+    /// Decision 802: whether its taxis are Taiwan's yellow (the last of
+    /// ``Map3DStreetLife/carPaints``).
+    var hasYellowTaxis: Bool { self == .taiwan }
+
+    /// Decision 802: the pavement beside its roads. Taiwan's and Hong
+    /// Kong's the palette's white; Finland's the lots' pale grey paving,
+    /// which stands off the snow as the white would not.
+    var sidewalk: UInt32 { self == .finland ? Map3DPalette.paved : Map3DPalette.sidewalk }
 
     /// Decision 743: whether its garbage trucks come round in the evening
     /// playing music (decision 437): Taiwan's.

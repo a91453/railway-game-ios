@@ -145,7 +145,15 @@ extension Map3DScene.Builder {
         let centre = Map3DPoint(box.centre.x, ground, box.centre.z)
         let area = polygons.reduce(Float(0)) { $0 + abs(Self.signedArea($1.first ?? [])) }
         // Decision 765: a hut drawn as a shed, a great low hall as a hall.
-        let kind = Self.drawnKind(given, area: area, width: box.width, storeys: storeys)
+        var kind = Self.drawnKind(given, area: area, width: box.width, storeys: storeys)
+        // Decision 802: on a Finnish map no hall is a Taiwanese temple (a
+        // church is drawn as a public building), and a house of three
+        // floors or more is a block of flats.
+        let nordic = look.buildings == .nordic, clutter = look.buildings.hasRoofClutter
+        if nordic {
+            if kind == .temple { kind = .civic }
+            if kind == .house, storeys > 2 { kind = .flats }
+        }
         // Decision 765: windows a floor high, not stretched up a hall
         // whose storeys are fewer than its height holds.
         func floors(_ high: Float, _ storeys: Int) -> Int { max(storeys, Int(high / Self.tallestStorey)) }
@@ -212,6 +220,34 @@ extension Map3DScene.Builder {
             wall = Self.pick(Map3DPalette.cityConcreteWalls, seed)
             upperPaint = Self.concrete.on(.formConcrete)
         }
+        // Decision 802: Finland's houses and blocks: boards or plaster in
+        // its own colours, a window to each bay, no shutter below and no
+        // tile on the walls.
+        if nordic {
+            switch kind {
+            case .house where storeys <= 2, .shophouse where storeys <= 2:
+                wall = Self.pick(Map3DNordic.houseWalls, r(1043))
+                roof = Self.pick(Map3DNordic.pitchedRoofs, r(1040))
+                (groundFloor, groundPaint) = (0, nil)
+                upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: floors(height, storeys))
+            case .shophouse, .flats:
+                wall = Self.pick(Map3DNordic.blockWalls, r(1043))
+                roof = Map3DPalette.roof
+                if kind == .shophouse {
+                    groundFloor = min(3.8, height / 3)
+                    groundPaint = .bays(Self.pick(Map3DSurface.shops, r(2)), bay: 5.4, floors: 1)
+                } else {
+                    (groundFloor, groundPaint) = (0, nil)
+                }
+                upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2,
+                                             floors: floors(height - groundFloor, groundFloor > 0 ? upperFloors : storeys))
+            case .civic:
+                wall = Self.pick(Map3DNordic.blockWalls, r(1043))
+                upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: floors(height, storeys))
+            default:
+                break
+            }
+        }
         // Decision 764: a big low hall (an arena, a gym, a market) its own
         // walls and sheet-steel roof; and every city building's walls a
         // little lighter or darker by where it stands. Decision 765: and
@@ -234,6 +270,12 @@ extension Map3DScene.Builder {
             roof = Map3DPalette.tankSteel
             upperPaint = nil
         }
+        // Decision 802: a northern map's roofs under snow, and a Finnish
+        // house's pitched.
+        if look.snow { roof = Map3DSnowGround.roof(roof) }
+        let pitched = look.buildings.pitchesLowRoofs && !canopy && !hipped
+            && Self.isPitched(kind, storeys: storeys, area: area, single: polygons.count == 1 && polygons[0].count == 1, box: box)
+        if pitched { roofPaint = nil }
         let far = isFar
         // Decision 455: afar, an outline of four corners each within
         // ``rectangleReach`` of the box round it is drawn as that box (as
@@ -288,7 +330,14 @@ extension Map3DScene.Builder {
                 // The flat roof over the outline and its holes.
                 let lifted = polygon.map { $0.map { Map3DPoint($0.x, ground + eaves, $0.z) } }
                 let triangles = Earcut.triangulate(lifted.map { $0.map { (x: Double($0.x), y: Double($0.z)) } })
-                mesh.addFlat(lifted.flatMap { $0 }, triangles: triangles, color: roof, paint: roofPaint)
+                if pitched {
+                    // Decision 802: the ridge along the house, the roof
+                    // over its box (4 triangles more than the flat one).
+                    mesh.addGableRoof(base: Map3DPoint(box.centre.x, ground + eaves, box.centre.z), forward: box.along, length: box.length,
+                                      width: box.width, rise: box.width / 2 * Map3DNordic.pitch, overhang: 0.5, color: roof, gable: wall)
+                } else {
+                    mesh.addFlat(lifted.flatMap { $0 }, triangles: triangles, color: roof, paint: roofPaint)
+                }
                 // Decision 699: a terminal's white roof edge, and on a
                 // plain hall or pier its skylight and ribs.
                 if kind == .terminal, !far { Self.addTerminalRoof(to: &mesh, outline: lifted[0], box: box, plain: polygon.count == 1) }
@@ -331,7 +380,8 @@ extension Map3DScene.Builder {
             switch kind {
             case _ where house:
                 // Only on a house's roof, not a long terrace's or a hall's.
-                guard box.length > 4, box.width > 3.2, box.length < 30, box.width < 16 else { break }
+                // Decision 802: and only where roofs have them.
+                guard clutter, box.length > 4, box.width > 3.2, box.length < 30, box.width < 16 else { break }
                 let spot = top - box.along * (box.length / 4)
                 if r(6) < 0.55 {
                     let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
@@ -356,7 +406,7 @@ extension Map3DScene.Builder {
         // Decision 610: near, what stands out of its street fronts (none
         // on a temple's hall or a station's roof, whose kinds have none),
         // a rooftop room only where decision 235's clutter left the roof.
-        if !far, buildsFacades, facadeStreets != nil, !canopy, !hipped {
+        if !far, buildsFacades, look.buildings.hasStreetFronts, facadeStreets != nil, !canopy, !hipped {
             var street = FrontStreetLevel(height: groundFloor)
             switch kind {
             case .shophouse: street.arcade = true; street.shops = r(1) < 0.75

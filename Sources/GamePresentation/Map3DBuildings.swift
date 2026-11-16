@@ -311,7 +311,8 @@ extension Map3DScene.Builder {
     mutating func addLeisure(base: Map3DPoint, side: Float, seed: (Int32, Int32), front: (forward: Map3DPoint, distance: Float)? = nil) {
         let r = Self.numbers(seed)
         let lot = max(side - 2, 14)
-        if r(1) < 0.55 {
+        // Decision 802: a temple only where temples are Taiwan's.
+        if r(1) < 0.55, look.buildings == .taiwan {
             addTemple(base: base, lot: lot, forward: front?.forward ?? Map3DPoint(0, 0, 1), front: front?.distance ?? lot / 2)
         } else {
             addMall(base: base, lot: lot, r: r)
