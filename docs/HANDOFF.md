@@ -412,7 +412,7 @@
   - **只重排還沒開始的事**（作者：「可是叫他停不就白做了等他先做完一個段落吧」）：已經在做的 session 不叫停，讓它做到能停的地方（commit、push、開 PR）再換順序；做完的東西開 PR 留著，不要丟。
 - **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
   - **2026-10-27 改了**（作者：「遊戲規劃也可以自己開 到鄰近第7.8次的時候需要我自己開再說」「遊戲規劃的模型永遠都選opus 5.5高」）：
-    - 規劃可以自己用 `create_session` 開下一任。**模型：2026-11-13 起 `claude-opus-5-5`、強度「高」（`effort: "high"`）**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」「連遊戲規劃也只用opus 高」；11-12 到 11-13 之間用過 `claude-fable-5-2`）。
+    - 規劃可以自己用 `create_session` 開下一任。**模型：2026-11-13 起 `claude-opus-5-5`、強度「高」（`effort: "high"`）**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」「連遊戲規劃也只用opus 高」；11-12 到 11-13 之間用過 `claude-fable-5-2`）。（**2026-11-16 作者改回**：「這裡目前已經改成max了 額度還很充足 可以全部模型都用fable」；新開的 session，規劃與實作，都可用 `claude-fable-5-2`，已在跑的 Opus session 跑完不重開。）
     - 開之前用 `get_session`（不帶 id）看自己的 `lineage.depth`（上限 8）。下一任會到第 7 層時，改請作者在 claude.ai 開。
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
     - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
@@ -432,7 +432,7 @@
     - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
     - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
     - 派工單和 #1041 的登記寫上用了哪個模型。
-    - **2026-11-13 起不再用 Fable**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」）：新開的 session 回到上面的 Opus／Sonnet 照難易度選；已在跑的 fable session 跑完（作者：「沒關係 還在跑的繼續」），不重開。下面這段是用完之前的規矩，留作紀錄。
+    - **2026-11-13 起不再用 Fable**（作者：「我fable重置券用完了 記得之後都改opus 或sonnet」）：新開的 session 回到上面的 Opus／Sonnet 照難易度選；已在跑的 fable session 跑完（作者：「沒關係 還在跑的繼續」），不重開。下面這段是用完之前的規矩，留作紀錄。（**2026-11-16 作者改回**：「這裡目前已經改成max了 額度還很充足 可以全部模型都用fable」；新開的 session，規劃與實作，都可用 `claude-fable-5-2`，已在跑的 Opus session 跑完不重開。）
     - **2026-11-11 到 11-13，Fable 5.2 開放期間以它為主**（作者：「Fable 模型只有最近5.2開放的時候能依難易度選擇」「之後新模型在看當下的決定」「但因為有重置券所以盡量用fable 5.2為主／等用完之後再改其他沒寫」）。下面是第 60 任的理解，不是作者原話：
       - 現在：實作 session 盡量用 `claude-fable-5-2`（作者有額度重置券）。
       - 額度用完之後：回到上面的 Opus／Sonnet 照難易度選。什麼時候算用完，由作者說，或 `get_session` 的 `rate_limit_info` 顯示用完。
@@ -644,7 +644,7 @@
 - **作者 11-13 的新交代**（都還有效）：
   - 「還有誰綠了就合 不要都不合」「記得要合併 每次都要我提醒」：每次巡查掃**全部**開著的 PR，綠了（第三級的看過圖）就自己轉 ready、合併，不等 session 留「可合併」。
   - 做完並合併的 session **馬上封存**（規劃不能刪除）。
-  - 模型：新開的 session 只用 `claude-opus-5-5`（要判斷的）或 `claude-sonnet-5-5`（範圍清楚的小事）；規劃用 opus、effort high；還在跑的舊 session 跑完，不重開（已寫進 CLAUDE.md 與第 1 節，#2140）。
+  - 模型：新開的 session 只用 `claude-opus-5-5`（要判斷的）或 `claude-sonnet-5-5`（範圍清楚的小事）；規劃用 opus、effort high；還在跑的舊 session 跑完，不重開（已寫進 CLAUDE.md 與第 1 節，#2140）。（**2026-11-16 作者改回**：「這裡目前已經改成max了 額度還很充足 可以全部模型都用fable」；新開的 session，規劃與實作，都可用 `claude-fable-5-2`，已在跑的 Opus session 跑完不重開。）
   - 觀光資料只用官方來源（stat.taiwan.net.tw、data.gov.tw 8116），不用新聞。
   - meshoptimizer 已在用（決策 467，只在轉檔工具），不是新依賴。
 - **國土測繪中心三維建物：付費申請，不是開放資料**（`docs/research/TW_3D_MODELS_2026-11-13.md` 開頭的再更正）。等級一加值型每公頃 8 元（臺北市 30,320 元，表上 15 縣市約 81 萬元）；做進遊戲要加值型、要申請書與同意書、要標示來源並回報。**要不要買是作者的決定**，他決定前不接、NLSC-HEIGHTS 不重開（已封存，決策 725 已釋出）。下面 3556 行附近與決策 389 的「作者還在考慮」就是這件事。
