@@ -1607,6 +1607,12 @@ final class Map3DTrainFeed {
            let routes = Self.readCoachRoutes(), let laid = coaches.coaches(world: world, in: scene, routes: routes) {
             laid.add(to: &frame, pack: models, second: second, eye: eye, reach: reach.farModel)
         }
+        // Decision 794: and the winter event's trees and lights, while it
+        // shows its decorations (its dates and the settings' switch).
+        if let models, !scene.winterLights.isEmpty {
+            let switchedOn = UserDefaults.standard.object(forKey: WinterEvent.decorationsKey) as? Bool ?? true
+            scene.winterLights.add(to: &frame, pack: models, eye: eye, reach: reach.farModel, at: Date(), switchedOn: switchedOn)
+        }
         return frame
     }
 

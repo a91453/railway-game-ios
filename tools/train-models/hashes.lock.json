@@ -45,6 +45,26 @@
       "hash" : "1ed3dda4b61bee5c",
       "triangles" : 288
     },
+    "winter-xmas-tree-medium" : {
+      "hash" : "ee23a0b11636c1b5",
+      "triangles" : 496
+    },
+    "winter-xmas-tree-medium-far" : {
+      "hash" : "8d3093b3971b2dd7",
+      "triangles" : 156
+    },
+    "winter-xmas-tree-large" : {
+      "hash" : "4e38a09df1ca003d",
+      "triangles" : 1104
+    },
+    "winter-xmas-tree-large-far" : {
+      "hash" : "e4d006eeb0754651",
+      "triangles" : 264
+    },
+    "winter-light-string-4m" : {
+      "hash" : "da6298a86b360a13",
+      "triangles" : 152
+    },
     "hk-signal-amber" : {
       "hash" : "53b50320a69bc411",
       "triangles" : 80
