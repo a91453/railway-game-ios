@@ -601,6 +601,17 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**0.6.0 (134) 準備好了（2026-11-15 23:30 UTC，RELEASE-134 記；原帳號額度用完，這一任由 Pro 帳號接手，交接在 `a91453/railway-reference-private` 的 `handoff/PRO-HANDOFF-2026-11-15.md`）**
+- 要發的 commit 是 RELEASE-134 那個 PR 合進 main 後的 HEAD；作者 11-15 說「先發 134」。照 §1.2：作者自己按 `testflight.yml`（main、`archive_signing=adhoc`、`testing_scope=external`），不等 full lane。
+- 範圍：133（`49fffa3`）之後的 #2279–#2289。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-16-134` 與 `research/PLAYER_FEEDBACK.md` 的 134 一節。
+- 沒寫進說明（玩家還看不到）：冬季活動外框（#2279，照裝置日期 12/1 才開）、聖誕樹與燈串模型（#2281，還沒擺）、羅瓦涅米地圖包（#2283，開關關著）、分包下載第二段（#2254，App 照舊帶香港）。
+- **134 第一次帶下載器 extension 與上傳香港地圖包**（`docs/handoff/ASSET-PACK.md`）：看 `testflight.yml` 的 export 與「Upload the map packs」有沒有警告；作者在 App Store Connect 確認 `mappack-hongkong` 處理完、和 build 一起送外部審查。
+- `14bf9e6`（這個 PR 的前一個 main）：push `ci.yml` 43746007131 綠；full lane（`ios-build.yml` 43771142652）寫這段時還在跑。
+- 號碼：main 決策到 791、存檔 107；golden schema 不動。
+- 原帳號留下的三串：#2287（133 例行檢查）、#2289（機捷／文湖少發班次，決策 784）已合併；工作室重修港鐵三款車 #2288 已合併。
+- 下一張：收購整條線時真實島式站直接鋪島式（`REVIEW_L23_2026-11-15` P2-3）。
+- **實機還沒看過的**（134 全部）：香港八棟地標、港鐵三款車重修、機廠屋頂、運用表橫拿、重複建物。
+
 **0.6.0 (133) 發了（2026-11-15 13:49 UTC，RELEASE-133 記）**
 - 從 main **`49fffa3`**（#2278 的合併，前一個是 #2276）建置，TestFlight `testflight.yml` run 43720988195（run 133），作者自己按；寫這段時 run 還在跑。
 - 範圍：132（`3b2a3f5`）之後到近景通勤乘客 #2276 合併為止的 `main`（#2245–#2276）。說明見 `.github/testflight-whats-new.md`、`WhatsNew` 的 `2026-11-15-133` 與 `research/PLAYER_FEEDBACK.md` 的 133 一節。
