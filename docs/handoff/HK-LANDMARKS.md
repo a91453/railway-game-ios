@@ -5,6 +5,12 @@
 
 - 2026-11-16，本地派工 session（Mac），HSBC-REDO（決策 793）：**滙豐總行大廈進地圖**，現在九棟。分支 `claude/hsbc-redo`；素材 `railway-assets-private` #128（`revision-9/`：滙豐新做，其餘八棟的 GLB 從 `revision-8/` 搬過去、內容不變）。
 
+- 2026-11-16，本地派工 2 session（Mac），**LANDMARK-FLICKER 進行中**（分支 `claude/landmark-flicker`；素材 `railway-assets-private` #129，`revision-10/`）：
+  - `coplanar_check.py` 多一欄 `flush`（相距 < 0.5 mm、完全貼合的異色重疊面，以前沒算）與 `--cm`。修前：長江中心近 60＋524、國金二期近 76＋2／遠 4、環球貿易廣場近 0＋48／遠 6、中環廣場近 37、滙豐近 0＋20／遠 0＋4、中銀遠 10、文化中心近 2、中環中心近 1。所以要修 11 個檔，另外 7 個不動。
+  - 工作室任務 `landmark-flicker`（派工單 `~/AlongTheLine-Studio/reports/landmark-flicker/brief/README.md`，也在素材 `revision-10/studio-brief.md`）：做的人（Codex）交了第 3 輪（`reports/landmark-flicker/revision-3/`，commit `4da9c3a77`）：切掉貼片底下的牆、貼片不動；它自己量 18 個檔 overlap／flush 都是 0、外框差 0。自報未全過：8 個檔切口接縫有沒接合的點（最大 0.45 m）、公分取整後還有間距 < 2 cm 的配對。
+  - **審查第 1 輪（Claude，Profile pro，session `2fb2d27c-7c2d-4096-9fea-ff30f060e06e`）還在跑**，報告會寫在 `reports/landmark-flicker/r1/verify.md`。**還沒有任何一棟過審，`Map3DHongKongLandmarkMeshes.swift` 還沒重轉，遊戲裡仍是修前的模型。**
+  - 下一個人：讀 `r1/verify.md`；pass 就用素材 `revision-10/` 的 18 個 GLB 重跑 `glb_to_swift.py`（面數會變：近景合計 41,718 → 約 43,304，測試的上限不用改）、跑 `swift test --filter Map3DHongKongLandmarksTests` 與模型包雜湊測試，更新素材 README 的狀態，兩邊 PR 轉 ready 後告訴規劃；needs-fix 就照 model-look `studio-brief.md` §5 的返工步驟重開做的位置（最多三輪審查）。工作室的兩個 session 用完要 `conductor.py close`。
+
 ## 還留下什麼
 
 1. **會展**（HKCEC-REDO，決策 798）：照滙豐這次的做法另開工作室（屋頂、玻璃牆、基座分開做）。底稿在 `base/`。滙豐的派工單、三次審查報告與腳本在 `revision-9/`，可以照抄。
