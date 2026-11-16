@@ -2,9 +2,9 @@
 
 ## 進度（中斷後只讀這一節與 `git status`、`git log -3`）
 
-- 做到哪：PR #2309（draft）head `2ef12ce` 的 CI 與 iOS 建置全綠。2026-11-16 18:37 UTC 開了唯一一次 `website-screenshots.yml`（ref `claude/build-mode-clean-2`，`tests=testTrackHeightFixes`），不重跑。
-- 已驗證：Linux 本機建置與 151 個相關測試；CI 的 Swift 與 iOS（含教學 UI 測試的 gate）在 `2ef12ce` 綠。
-- 下一步的第一個指令：看那一次截圖執行的結果（Actions → Website screenshots，分支 `claude/build-mode-clean-2`）；成功就下載 artifact `website-screenshots`，轉 JPEG 85 放 `docs/art/build-mode-clean-2-2026-11-16/`、貼進 PR、補「截圖結果」、轉 ready、#2118 留言；失敗就照 ui-review §3 直接轉 ready 並寫明。
+- 做到哪：全部做完。PR #2309 已合（2026-11-16 19:07 UTC，head `b5b7c93`）。截圖拍了一次（執行 43930481005，成功），三張與「截圖結果」在合併後才到，另開一個只有文件與圖的 PR。
+- 已驗證：Linux 本機建置與 151 個相關測試；CI 的 Swift 與 iOS 在 `2ef12ce` 綠；截圖三張自己看過（本檔最後）。
+- 下一步的第一個指令：沒有；這張工單結束，剩下的在下面「留下的」。
 
 ## 改了什麼（對照表與細節在決策 803 第 8 節）
 
@@ -44,3 +44,14 @@
 - 畫面、VoiceOver、放大字級：只有 `website-screenshots.yml` 的 `testTrackHeightFixes`（iPhone 橫拿、深色）拍一次；直拿、iPad、小 iPhone、淺色、最大字級、實機都沒看。
 - 道路與建物拖的時候沒有卡片、放開才出：UI 測試用點的，只有實機看得到。
 - 套件其餘的測試交 CI（這張動 GamePresentation，跑它的 tier）。
+
+## 截圖結果
+
+`website-screenshots.yml` 拍了一次（執行 43930481005，head `2ef12ce`，`tests=testTrackHeightFixes`，成功），iPhone 橫拿、深色。三張存成 JPEG 品質 85，在 `docs/art/build-mode-clean-2-2026-11-16/`：
+
+- `track-height-refused.jpg`：不能鋪。原因一行「要過水：用橋或走隧道」與卡片同寬；下面一列是「↑ 用橋 NT$ 3,361」「↓ 走隧道 NT$ 6,006」兩顆同寬，接 ✕ ✓。卡片在虛線軌道上方，沒有蓋到它。
+- `track-height-refused-en.jpg`：英文。"Over water: bridge or tunnel"、"Bridge NT$ 3,361"、"Tunnel NT$ 6,006"，沒有截斷。
+- `track-height-bridge.jpg`：套用用橋之後能鋪。卡片只剩 ✕ 與「✓ NT$ 3,361」，在右側，與原本相同。
+
+沒拍到、沒看的：直拿、iPad、小 iPhone、淺色、最大字級。這支測試只拍橫拿；直拿與 iPad 的上下排只有算式的 Linux 測試。
+
