@@ -176,15 +176,16 @@ final class SantaFlightTests: XCTestCase {
         XCTAssertNil(SantaFlight.sound(of: nil, camera: camera))
     }
 
-    func testTheStandInModelIsInThePackAfterTheWinterDecorations() throws {
+    func testTheStudioSleighIsInThePackAfterTheWinterDecorations() throws {
         let pack = Map3DModelPack.standard
         let index = try XCTUnwrap(pack.index(of: SantaFlight.Model.name))
         let winter = try XCTUnwrap(Map3DWinterLights.drawn.last.flatMap { pack.index(of: $0.name) })
         XCTAssertEqual(index, winter + 1)
         let model = pack.models[index]
-        XCTAssertLessThan(model.triangleCount, 2_000)
+        XCTAssertLessThanOrEqual(model.triangleCount, 8_000)
         XCTAssertEqual(model.maximum.x - model.minimum.x, SantaFlight.Model.length, accuracy: 0.3)
-        // Rudolph's nose and the lantern are lit at night.
-        XCTAssertTrue(model.vertices.contains { $0.layer == Map3DVertex.glowing && $0.color == SantaFlight.Model.noseLamp })
+        // The leading reindeer's nose and the lantern are lit at night.
+        XCTAssertTrue(model.vertices.contains { $0.layer == Map3DVertex.glowing && $0.color == Map3DPalette.lantern })
+        XCTAssertTrue(model.vertices.contains { $0.layer == Map3DVertex.glowing && $0.color == Map3DPalette.tunnelLamp })
     }
 }

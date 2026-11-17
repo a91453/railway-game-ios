@@ -199,7 +199,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstWinter + winter.count + 1..<firstWinter + winter.count + 1 + taiwanCars.count].map(\.name)),
                        Map3DTaiwanCars.drawn.map(\.name))
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "f497c51adf763440")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "5b069746258d7cd")
+        // Decision 840: the studio's sleigh in the stand-in's place (the
+        // same name and order; its model is new, `hashes.lock.json`).
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "50e9977ce2a97cef")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
