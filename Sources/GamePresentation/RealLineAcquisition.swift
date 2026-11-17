@@ -1341,12 +1341,14 @@ extension RealLineLaying {
             // island's width out, the others 5 m from the track inside them.
             // Decision 792: a TRA branch line's too (a single track's
             // every station is laid as an end is), where it has two
-            // tracks: one of three and more stays as it was (Zhongzhou and
-            // Shalun, whose third track 16 m out does not fit their curves).
-            let island = !between && line.islandStations.contains(name) && (line.isUrban || loops == 1)
+            // tracks; decision 792's sequel: three too (Zhongzhou and
+            // Shalun), the third 16 m out on the other side with a loop's
+            // first reach and ramp, as a branch line's other loops: with
+            // the second level's longer ones it did not fit their curves.
+            let island = !between && line.islandStations.contains(name) && (line.isUrban || loops <= 2)
             let close = RealLineAcquisition.besideIslandOffset
             let islandSides: [(Double, Int, Bool)] = [(RealLineAcquisition.islandSpacing, 1, false)]
-                + (2...layout.endLevels + 2).map { level in (-(close + Double(level - 2) * offset), level, false) }
+                + (2...layout.endLevels + 2).map { level in (-(close + Double(level - 2) * offset), line.isUrban ? level : level - 1, false) }
             let endSides: [(Double, Int, Bool)] = (1...layout.endLevels).flatMap { level -> [(Double, Int, Bool)] in
                 [(Double(level) * offset, level, false), (-Double(level) * offset, level, false)]
             }

@@ -1,0 +1,15 @@
+{
+  "role": "stem",
+  "title": "Theme: melody",
+  "beatsPerBar": 4,
+  "motif": 0,
+  "fadeOut": 0,
+  "tracks": [
+    {"voice": "pluck", "gain": 60, "pan": 0},
+    {"voice": "glock", "gain": 50, "pan": -10},
+    null,
+    null,
+    null,
+    null
+  ]
+}

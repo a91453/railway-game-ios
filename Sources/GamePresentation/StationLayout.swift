@@ -400,17 +400,26 @@ extension GameSession {
     /// The edges of the track from the node at `start` to the node at
     /// `end` by way of the edge through `point`, through nodes the line
     /// runs straight on through; `nil` where it does not get there.
+    ///
+    /// A node within a metre of `start` or `end` is the one: a turnout
+    /// split on a curve (a bought line's loop ramp, decision 792's
+    /// sequel) stands where GameCore's own geometry puts it, some 0.2 m
+    /// from where the plan worked it out, and the walk ran on past it.
     func stretchBetween(_ start: PlanPoint, _ end: PlanPoint, through point: PlanPoint, in world: GameWorld) -> [TrackEdgeID]? {
         guard let found = world.trackEdgePoint(near: point, within: WorldCoordinate.unitsPerMetre),
               let first = world.network.edge(found.edge) else { return nil }
+        func near(_ a: PlanPoint, _ b: PlanPoint) -> Bool {
+            let dx = a.x - b.x, dy = a.y - b.y
+            return dx * dx + dy * dy <= WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre
+        }
         var edges = [first.id]
         var reached: Set<PlanPoint> = []
         for node in [first.from, first.to] {
             var nodeID = node, came = first.id
             for _ in 0..<64 {
                 guard let current = world.network.node(nodeID) else { return nil }
-                if current.position.plan == start || current.position.plan == end {
-                    reached.insert(current.position.plan)
+                if let mark = [start, end].first(where: { near(current.position.plan, $0) }) {
+                    reached.insert(mark)
                     break
                 }
                 guard let into = current.end(of: came), into.exits.count == 1, let next = world.network.edge(into.exits[0]) else { return nil }

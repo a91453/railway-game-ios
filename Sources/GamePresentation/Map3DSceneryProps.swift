@@ -282,11 +282,14 @@ extension Map3DScene.Builder {
     /// 512 m chunk high up, some 25,000 triangles), more of them the
     /// higher the ground (``coniferShare(atHeight:)``); none on water,
     /// within 2 m of a road or on the cells in `cleared`. The same every
-    /// time, seeded by the world's cells.
+    /// time, seeded by the world's cells. Decision 811: the spots below
+    /// the conifers' share a broadleaf tree, so the woods of the foothills
+    /// are no longer bare (``woodTree(seed:x:z:height:conifers:broadleaf:)``).
     mutating func addConifers(clearOf cleared: Set<Map3DScene.ChunkKey>) {
         guard !woodCells.isEmpty else { return }
         let models = Map3DSceneryProp.conifers.compactMap { Self.sceneryModels[$0] }
         guard models.count == Map3DSceneryProp.conifers.count else { return }
+        let broadleaf = Self.propModels[.tree]
         let cells = Set(woodCells.keys).subtracting(cleared)
         let pieces = roadPieces(near: cells)
         let side = Float(Double(Land.cellLength) / Self.metre), quarter = side / 2
@@ -300,14 +303,10 @@ extension Map3DScene.Builder {
                     let spot = Map3DPoint(x, 0, z)
                     guard isInside(spot, woodCells), !isOverWater(spot) else { continue }
                     let height = drawnGround(x: x, z: z)
-                    guard r(82) < Self.coniferShare(atHeight: height), !Self.isNearRoad(x: x, z: z, pieces[key] ?? [], margin: 2) else { continue }
-                    // Most of them tall, the young ones fewest.
-                    let pick = r(83), model = models[pick < 0.45 ? 0 : pick < 0.8 ? 1 : 2]
-                    let angle = r(84) * 2 * Float.pi
-                    let foot = Map3DPoint(x, height, z)
-                    props[self.key(of: foot), default: []].append(.prop(model, at: foot, forward: Map3DPoint(cosf(angle), 0, sinf(angle)),
-                                                                        scale: 0.8 + 0.45 * r(85),
-                                                                        tint: Self.pick(Map3DSceneryProp.coniferGreens, r(86))))
+                    guard !Self.isNearRoad(x: x, z: z, pieces[key] ?? [], margin: 2),
+                          let tree = woodTree(seed: seed, x: x, z: z, height: height, conifers: models, broadleaf: broadleaf)
+                    else { continue }
+                    props[self.key(of: Map3DPoint(x, height, z)), default: []].append(tree)
                 }
             }
         }

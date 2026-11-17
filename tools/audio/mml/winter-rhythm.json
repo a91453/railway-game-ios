@@ -1,0 +1,15 @@
+{
+  "role": "stem",
+  "title": "Winter tune: sleigh bells and rail joints",
+  "beatsPerBar": 4,
+  "motif": 0,
+  "fadeOut": 0,
+  "tracks": [
+    {"voice": "sleigh", "gain": 90, "pan": -30},
+    {"voice": "clack", "gain": 35, "pan": 0},
+    null,
+    null,
+    null,
+    null
+  ]
+}

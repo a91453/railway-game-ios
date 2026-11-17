@@ -4793,7 +4793,7 @@ public struct GameWorld: Equatable, Sendable {
     /// station (see ``berthChange(memo:)``). Returns the train's ID, or
     /// `nil`.
     private mutating func changeBerth(memo: inout DispatchMemo) -> TrainID? {
-        guard let changed = berthChange(memo: &memo.directions), let index = trains.firstIndex(where: { $0.id == changed.id }) else { return nil }
+        guard let changed = berthChange(memo: &memo), let index = trains.firstIndex(where: { $0.id == changed.id }) else { return nil }
         trains[index] = changed
         return changed.id
     }

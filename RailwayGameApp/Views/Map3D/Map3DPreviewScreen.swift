@@ -1040,6 +1040,8 @@ final class Map3DSceneCache {
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
         let heights = session.heights
+        // Decision 811: the land cover, for the countryside and its forests.
+        let landCover = world.geoAnchor == nil ? nil : session.landCover
         // Decision 326: the real railways, for where the real track has no
         // overhead line.
         let railways = world.geoAnchor == nil ? nil : session.railways
@@ -1098,7 +1100,7 @@ final class Map3DSceneCache {
                                                       try? Data(contentsOf: $0, options: .alwaysMapped)
                                                   })
                                               },
-                                          heights: heights,
+                                          heights: heights, landCover: landCover,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: BaseMapFiles.temples(temples),
                                           noBuild: BaseMapFiles.noBuildLand(noBuild, airfields: airfields),
@@ -1149,6 +1151,8 @@ struct Map3DChunkSource: Sendable {
     let cityTiles: [CityTileArea]
     let footprints: FootprintTiles?
     let heights: HeightGrid?
+    /// Decision 811: the land cover.
+    let landCover: LandCoverGrid?
     let lineBands: Map3DLineBands
     let railways: RealRailways?
     let temples: RealTemples?
@@ -1159,7 +1163,7 @@ struct Map3DChunkSource: Sendable {
 
     func scene(focus: (x: Double, y: Double)?) -> Map3DScene {
         Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: baseMap, cityTiles: cityTiles,
-                   footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                   footprints: footprints, heights: heights, landCover: landCover, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
                    facades: facades)
     }
 
@@ -1167,7 +1171,7 @@ struct Map3DChunkSource: Sendable {
     /// city and the lines' bands (`lineBands`) worked out again.
     func with(_ world: GameWorld, lineBands: Map3DLineBands) -> Map3DChunkSource {
         Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
-                         cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways,
+                         cityTiles: cityTiles, footprints: footprints, heights: heights, landCover: landCover, lineBands: lineBands, railways: railways,
                          temples: temples, noBuild: noBuild, facades: facades)
     }
 
@@ -1176,7 +1180,7 @@ struct Map3DChunkSource: Sendable {
     /// full round the middle on a map that builds ahead, decision 368).
     func scene(rebuilding keys: Set<Map3DStreaming.Key>, of old: Map3DScene) -> Map3DScene {
         Map3DScene(rebuilding: keys, of: old, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
-                   footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                   footprints: footprints, heights: heights, landCover: landCover, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
                    detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil, facades: facades)
     }
 
@@ -1185,7 +1189,7 @@ struct Map3DChunkSource: Sendable {
     /// `detail`.
     func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover, detail: Map3DPoint) -> [Map3DScene.Chunk] {
         Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
-                          footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                          footprints: footprints, heights: heights, landCover: landCover, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
                           trackCover: trackCover, detail: detail, facades: facades)
     }
 }
