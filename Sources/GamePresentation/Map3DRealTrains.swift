@@ -373,11 +373,13 @@ public struct Map3DRealTrains: Sendable {
             // (``hongKongCars``), not three boxes; decision 780: but the
             // Airport Express and the Tung Chung Line their own trains;
             // decision 786: and the four urban lines (the Tseung Kwan O
-            // Line's LOHAS Park branch too) theirs.
+            // Line's LOHAS Park branch too) theirs; decision 839: and the
+            // Tuen Ma line its own.
             switch id {
             case "AEL": return Formation(key: Map3DMTRAirportLine.expressKey, cars: 8)
             case "TCL": return Formation(key: Map3DMTRAirportLine.tungChungKey, cars: 8)
             case "TWL", "ISL", "KTL", "TKL", "TKL_LHP": return Formation(key: Map3DMTRUrbanLine.key, cars: 8)
+            case "TML": return Formation(key: Map3DMTRTuenMaLine.key, cars: 8)
             default: return Formation(key: "metroGeneric", cars: hongKongCars[id] ?? 8)
             }
         default:

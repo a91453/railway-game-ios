@@ -149,6 +149,21 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 
 在 Mac 上跑工具：`tools/train-models/run.sh` 已支援 Swift 6.4.2 的模組位置；`render.mjs` 要 `CHROMIUM_PATH=<Playwright 的 Chrome for Testing 執行檔>` 與 `NODE_GLOBAL=<有 playwright 的 node_modules/>`。
 
+### 8.1 工作室的 GLB 轉進遊戲（市區綫、屯馬綫學到的，2026-11-18）
+
+工作室（Claude 或 Codex 做、另一家對照片審）交的是一個材質一個色的 GLB，不是貼圖車，照決策 786、839 的做法：
+
+1. `tools/train-models/glb_to_swift.py --enum <車> --materials <派工單材質表的順序>`，Swift 端 `meshPalette` 照同一順序給色；GLB 裡的材質順序不重要，名字對就好。
+2. 編組用 `cycle`：兩端對稱的（D P M T T M P D）用不帶 `cycleFromFront` 的 cycle，後半自動鏡像，給 `middleBack`／`pantographBack`／`centreBack` 用 `.turned`；A C B C B C B A 這種一路重複的才用 `cycleFromFront`。
+3. 鎖檔：`run.sh OUT --lock tools/train-models/hashes.lock.json` 會把**所有**鎖檔重寫成另一種排序與格式（`hashes.lock.json` 上千行變動、別台車的註解少一段）。只留新車的 `locks/<id>.json`（補回註解裡的 enum 名與結尾換行），其他用 `git checkout` 還原。
+4. 公開 repo 的 `docs/art/<車>/overview.jpg` 只留模型那一半：工作室總覽圖並排了 Commons 照片，照片只在素材庫。
+
+派工單（寫給工作室）要注意的，詳見素材庫 `local-studio-2026-11-10/LESSONS.md`：
+
+- **車頭分俯視、側視、正視三個方向寫，並指一款已做過、形狀相近的車頭當底**（東鐵綫第 1 版派工單寫「比市區綫更直、更方」，三輪都做成方盒，作者一眼看出「人家是圓弧」）。
+- 夜裡亮窗是遊戲用**顏色**認玻璃（`Map3DTrainLights.isGlass`）。窗框、門、面罩用的深色若落在玻璃色的範圍會被點亮；派工單選色時避開，或審查用遊戲同一個判斷量「非玻璃亮三角形 = 0」（屯馬綫改窗框形狀過關，東鐵綫第 1 輪 1,164 個錯亮）。
+- 派工單先合進素材庫 `main` 再開工作室任務，一款一個派工 commit：工作室交件用 `origin/main` 算範圍，派工單不在 main 上時，同一個 commit 裡的另一款會被當成越界、卡在交件。
+
 ## 9. 這份是怎麼來的
 
 2026-10-11 原本寫給網頁版（Meshy 生成、Blender 烘焙、`trains.js`）。之後遊戲改成原生 Metal，列車變成 Swift 配方，每款車各開一個 `tools/` 資料夾，工具重複；2026-10-27 作者同意統一（派工單 AC）：共用工具 `tools/train-models/`，這份改寫成原生做法，網頁版降成附錄（原文保留，只把標題降一級）。
