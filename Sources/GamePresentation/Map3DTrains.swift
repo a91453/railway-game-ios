@@ -319,7 +319,6 @@ public enum Map3DTrains {
         of run: TrainMotion.Run, progress: Double, heights: Heights, models: Map3DModelPack?
     ) -> (type: String, hasModels: Bool, layout: [Map3DModelPack.LaidCar]?, cars: [[TrainMotion.Point]]) {
         guard let head = run.head(at: progress) else { return ("", false, nil, []) }
-        let gap = Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
         let body = run.body(at: progress)
         let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
         let steady = run.steadyHead(at: progress, over: Self.steadySpan)
@@ -332,6 +331,10 @@ public enum Map3DTrains {
         let hasModels = models?.models(forType: trainType) != nil
         // Decision 399: or each car at its model's own length.
         let layout = hasModels ? models?.layout(forType: trainType, count: count) : nil
+        // CAR-GAP: no gap but the models' own where they reach their
+        // couplers.
+        let touching = hasModels && models?.touches(forType: trainType, count: count) == true
+        let gap = touching ? 0 : Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
         let heading = steady?.heading ?? head.heading
         let units = Double(WorldCoordinate.unitsPerMetre)
         // Decision 538: past the body's ends along the track.

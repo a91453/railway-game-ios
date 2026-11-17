@@ -18,11 +18,22 @@ public struct Map3DWinterLights: Equatable, Sendable {
     /// One tree or one length of lights: the model it is drawn with near
     /// (``Map3DWinterDecor/treeMedium``, ``Map3DWinterDecor/treeLarge`` or
     /// ``Map3DWinterDecor/lightString``), where its foot (or, for a string,
-    /// the line it hangs from) is, and the way its +x faces.
+    /// the line it hangs from) is, the way its +x faces, and how many
+    /// times the model's size it is drawn (XMAS-TREE-SIZE: a tree as big
+    /// as its plaza has room for, ``stationTreeScales`` and
+    /// ``plazaTreeScales``; a string of lights 1).
     public struct Placement: Equatable, Sendable {
         public let decor: Map3DWinterDecor
         public let point: Map3DPoint
         public let forward: Map3DPoint
+        public let scale: Float
+
+        public init(decor: Map3DWinterDecor, point: Map3DPoint, forward: Map3DPoint, scale: Float = 1) {
+            self.decor = decor
+            self.point = point
+            self.forward = forward
+            self.scale = scale
+        }
     }
 
     public let placements: [Placement]
@@ -197,6 +208,30 @@ public struct Map3DWinterLights: Equatable, Sendable {
     /// (their awnings from about 12 m).
     static let treeOut: Float = 8
 
+    /// XMAS-TREE-SIZE: how big a station's tree is drawn, the biggest
+    /// first: 15 m, 12 m, 9 m, then the model's own 6 m. Drawn at 6 m it
+    /// was the height of a two-floor shop and, seen from the game's
+    /// camera over a city of 20–60 m blocks, a dot; a plaza's tree in a
+    /// real city stands over the people and the shops round it. It takes
+    /// the biggest whose planter (``stationTreeFoot`` across, times the
+    /// scale) keeps off the track, the platforms, the roads, the station's
+    /// building and its shops.
+    static let stationTreeScales: [Float] = [2.5, 2, 1.5, 1]
+    /// The medium tree's planter, the widest of it: 1.6 m from its middle
+    /// (``Map3DWinterDecor/treeMedium``).
+    static let stationTreeFoot: Float = 1.6
+    /// How far the planter keeps from the station's front (the doors and
+    /// the bushes beside them, 4 m out) and from a shop's awning.
+    static let treeClearance: Float = 0.5
+
+    /// XMAS-TREE-SIZE: how big a plaza's tree is drawn, the biggest first:
+    /// 27 m, then the model's own 18 m, the size of the trees on the real
+    /// civic squares beside 20-floor towers.
+    static let plazaTreeScales: [Float] = [1.5, 1]
+    /// The large tree's planter, the widest of it: 3.5 m from its middle
+    /// (``Map3DWinterDecor/treeLarge``).
+    static let plazaTreeFoot: Float = 3.5
+
     /// A plaza that puts up a big tree each December.
     public struct Plaza: Equatable, Sendable {
         public let name: String
@@ -270,7 +305,7 @@ public struct Map3DWinterLights: Equatable, Sendable {
         for (away, placement) in nearest(trees, Self.mostTrees) {
             let far = away >= Self.treeNearReach * reach
             let decor = far ? (placement.decor == .treeLarge ? .treeLargeFar : .treeMediumFar) : placement.decor
-            frame.instances.append(.prop(index[decor]!, at: placement.point, forward: placement.forward, scale: 1, tint: 0xFFFFFF))
+            frame.instances.append(.prop(index[decor]!, at: placement.point, forward: placement.forward, scale: placement.scale, tint: 0xFFFFFF))
         }
         for (_, placement) in nearest(strings, Self.mostStrings) {
             frame.instances.append(.prop(index[.lightString]!, at: placement.point, forward: placement.forward, scale: 1, tint: 0xFFFFFF))
@@ -293,11 +328,18 @@ extension Map3DScene.Builder {
                 winterDecor.append(.init(decor: .lightString, point: at, forward: right))
             }
             guard front.big else { continue }
-            let spot = front.centre + front.forward * (front.depth / 2 + Lights.treeOut)
-            let corners: [(Float, Float)] = [(-1.8, -1.8), (1.8, -1.8), (1.8, 1.8), (-1.8, 1.8)]
-            let footprint = corners.map { spot + front.forward * $0.0 + right * $0.1 }
-            guard isClear(footprint, facing: front.forward) else { continue }
-            winterDecor.append(.init(decor: .treeMedium, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z), forward: front.forward))
+            // XMAS-TREE-SIZE: the biggest tree the plaza has room for.
+            for scale in Lights.stationTreeScales {
+                let half = Lights.stationTreeFoot * scale + Lights.treeClearance
+                let out = max(Lights.treeOut, Self.stationTreeFrontage + half)
+                let spot = front.centre + front.forward * (front.depth / 2 + out)
+                let corners: [(Float, Float)] = [(-half, -half), (half, -half), (half, half), (-half, half)]
+                let footprint = corners.map { spot + front.forward * $0.0 + right * $0.1 }
+                guard isClear(footprint, facing: front.forward), isClearOfBuildings(spot, radius: half) else { continue }
+                winterDecor.append(.init(decor: .treeMedium, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z),
+                                         forward: front.forward, scale: scale))
+                break
+            }
         }
         for exit in exitLights {
             winterDecor.append(.init(decor: .lightString, point: exit.at, forward: exit.forward))
@@ -307,15 +349,55 @@ extension Map3DScene.Builder {
             let place = frame.worldPosition(latitude: plaza.latitude, longitude: plaza.longitude)
             guard contains(x: place.x, y: place.y) else { continue }
             let middle = point(x: place.x, y: place.y, height: 0)
-            if let spot = Self.plazaSpot(round: middle, isClear: { spot in
-                let corners: [(Float, Float)] = [(-3, -3), (3, -3), (3, 3), (-3, 3)]
-                let footprint = corners.map { spot + Map3DPoint($0.0, 0, $0.1) }
-                return !underLandmark(spot) && isClear(footprint, facing: Map3DPoint(1, 0, 0))
-            }) {
+            // XMAS-TREE-SIZE: the biggest tree that finds room near the
+            // plaza's middle. Its footprint is a little inside the
+            // planter, as decision 794's was (3 m of 3.5 m).
+            for scale in Lights.plazaTreeScales {
+                let half = 3 * scale
+                guard let spot = Self.plazaSpot(round: middle, isClear: { spot in
+                    let corners: [(Float, Float)] = [(-half, -half), (half, -half), (half, half), (-half, half)]
+                    let footprint = corners.map { spot + Map3DPoint($0.0, 0, $0.1) }
+                    return !underLandmark(spot) && isClear(footprint, facing: Map3DPoint(1, 0, 0))
+                        && isClearOfBuildings(spot, radius: Lights.plazaTreeFoot * scale)
+                }) else { continue }
                 winterDecor.append(.init(decor: .treeLarge, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z),
-                                         forward: Map3DPoint(1, 0, 0)))
+                                         forward: Map3DPoint(1, 0, 0), scale: scale))
+                break
             }
         }
+    }
+
+    /// XMAS-TREE-SIZE: how far before a station's front the doors and the
+    /// bushes beside them reach (``addSceneryProps``' entrance, 4 m),
+    /// and a little more, which a tree's planter keeps clear of.
+    static let stationTreeFrontage: Float = 4
+
+    /// XMAS-TREE-SIZE: whether a tree's planter, `radius` round `spot`,
+    /// keeps off every station building and station shop
+    /// (``houseFootprints``, ``shopFootprints``), each a convex outline
+    /// on the ground.
+    func isClearOfBuildings(_ spot: Map3DPoint, radius: Float) -> Bool {
+        !(houseFootprints + shopFootprints).contains { Self.distance(from: spot, to: $0) < radius }
+    }
+
+    /// How far `point` is from the convex outline `corners` on the
+    /// ground (x and z): 0 inside it.
+    static func distance(from point: Map3DPoint, to corners: [Map3DPoint]) -> Float {
+        guard corners.count >= 3 else { return .infinity }
+        var inside = true, sign: Float = 0, nearest = Float.infinity
+        for (index, a) in corners.enumerated() {
+            let b = corners[(index + 1) % corners.count]
+            let edge = Map3DPoint(b.x - a.x, 0, b.z - a.z), to = Map3DPoint(point.x - a.x, 0, point.z - a.z)
+            let cross = edge.x * to.z - edge.z * to.x
+            if cross != 0 {
+                if sign == 0 { sign = cross > 0 ? 1 : -1 } else if (cross > 0 ? 1 : -1) != sign { inside = false }
+            }
+            let length = edge.x * edge.x + edge.z * edge.z
+            let along = length > 0 ? min(1, max(0, (to.x * edge.x + to.z * edge.z) / length)) : 0
+            let dx = to.x - edge.x * along, dz = to.z - edge.z * along
+            nearest = min(nearest, (dx * dx + dz * dz).squareRoot())
+        }
+        return inside ? 0 : nearest
     }
 
     /// Decision 794: the spot nearest `middle` that `isClear` says is
