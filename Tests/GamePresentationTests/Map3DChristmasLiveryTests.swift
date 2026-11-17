@@ -304,6 +304,35 @@ final class Map3DChristmasLiveryTests: XCTestCase {
         XCTAssertNil(LauncherPreferences.read(from: file)?.christmasLiveries)
     }
 
+    /// L25 P3-1 (decision 814): a game never saved by hand has no row, so
+    /// its livery had nowhere to be kept, and an autosave read back after
+    /// the app reopened wore none. The first choice now gives the game its
+    /// row, which its autosaves name.
+    @MainActor
+    func testAGameOnlyAutosavedKeepsItsLiveryWhenTheAppReopens() async throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 60)
+        let line = try XCTUnwrap(world.lines.first)
+        let library = SaveLibrary(directory: directory)
+        try library.save(world, as: .autosave, at: date(2026, 12, 23))
+        do {
+            let launcher = GameLauncher(library: library, language: .traditionalChinese)
+            await launcher.continueGame(at: date(2026, 12, 23))?.value
+            let session = try XCTUnwrap(launcher.session)
+            XCTAssertNil(launcher.gameRow, "never saved by hand")
+            launcher.attachChristmasLivery(to: session, row: launcher.gameRow, at: date(2026, 12, 23), calendar: calendar)
+            session.setChristmasLivery(true, for: line.id)
+            XCTAssertNotNil(launcher.gameRow, "the first choice gives the game its row")
+            XCTAssertTrue(launcher.autosaveCurrentGame(at: date(2026, 12, 23)))
+        }
+        let reopened = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await reopened.continueGame(at: date(2026, 12, 24))?.value
+        let session = try XCTUnwrap(reopened.session)
+        XCTAssertEqual(session.christmasLiveryChosen, [line.id], "the autosave's row keeps it")
+        XCTAssertEqual(reopened.entries.count, 1, "no save of the player's was made")
+    }
+
     /// Without the badge, after the event: not chosen, not drawn.
     @MainActor
     func testAfterTheEventWithoutTheBadgeNothingWearsIt() throws {
