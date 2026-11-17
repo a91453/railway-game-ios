@@ -2700,7 +2700,7 @@ FACADE-VARIETY、ROOF-VARIETY、ROAD-LOOK-REAL、ROAD-JUNCTION 可用參考包�
 
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態 |
 | --: | --- | --: | --: | --: | --: | --: | --: | --- |
-| 1 | **ROAD-RAMP-HEIGHT**（bug）：匝道橋和主橋併成一座以後全站在主橋高度（這一帶 24 m），橋端以外的地面路才往下，剩下的疊板多半是這個。改法：移植作者參考庫 slop-taipei `tools/taipei/build-elevated.mjs`（MIT）的做法：從高架網與地面路共用的點（高度 0）跑 Dijkstra，坡度上限 6%，每點高度 = min(該層高度, 鄰點 + 0.06·距離)，橋在自己裡面降到地面；`Map3DRoadBridges.Deck` 的 lifts 與 bounds 改成每點高度。只動 GamePresentation | 4 | 3 | 4 | 3 | 1 | 3.15 | 未派；大單，一個 session |
+| 1 | **ROAD-RAMP-HEIGHT**（bug）：匝道橋和主橋併成一座以後全站在主橋高度（這一帶 24 m），橋端以外的地面路才往下，剩下的疊板多半是這個。改法：移植作者參考庫 slop-taipei `tools/taipei/build-elevated.mjs`（MIT）的做法：從高架網與地面路共用的點（高度 0）跑 Dijkstra，坡度上限 6%，每點高度 = min(該層高度, 鄰點 + 0.06·距離)，橋在自己裡面降到地面；`Map3DRoadBridges.Deck` 的 lifts 與 bounds 改成每點高度。只動 GamePresentation | 4 | 3 | 4 | 3 | 1 | 3.15 | **已做**（`claude/project-thread-he18iy`，決策 822「後來」；三重還剩約 1,500 m²，`docs/handoff/ROAD-RAMP-HEIGHT.md`） |
 | 2 | **ROAD-STRIP-WEDGE**（bug）：`addStrip` 每段前後各延伸半個路寬，在橋端後面那一小塊沒被抬高，成了一片斜的楔形；急彎處延伸出去成尖刺（還沒量）。改法：延伸的那一點用端點的高度，急彎改成補角（MapLibre line join 的做法，BSD-3，只看做法） | 3 | 4 | 3 | 1 | 1 | 2.65 | 未派；可和第 1 項同一張，或先做 |
 | 3 | **ELEVATED-BOUGHT-LOOK**：買來的路線的高架（香港、機捷）急彎與引道，照概念影片角度拍圖，有問題記數字 | 2 | 3 | 3 | 3 | 1 | 2.40 | 未派；第 1 項之後 |
 | 4 | **ROAD-OVER-WATER-REST**：水面上還剩 288 m² 的路面，四處（(400,−800) 108、(−200,500) 84、(200,100) 60、(200,0) 28 m²，場景座標）。多半是橋端外 1.5 m 才併的短橋，查了再定 | 2 | 3 | 2 | 1 | 1 | 1.95 | 未派 |
