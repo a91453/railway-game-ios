@@ -70,6 +70,9 @@ final class GameAudio {
     /// Tells this object when a turn of the music has played to its end
     /// (made with the first player).
     @ObservationIgnored private var musicEnd: MusicEnd?
+    /// Decision 815's later note (``MusicTurnChange``): the rest before
+    /// the next turn of the music.
+    @ObservationIgnored private var musicRest: Task<Void, Never>?
     /// Decision 379: the cues' players, played on a queue of their own.
     @ObservationIgnored private let cues = CuePlayers()
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
@@ -293,11 +296,13 @@ final class GameAudio {
     /// foreground, so the winter tune begins on 1 December and gives way
     /// on 7 January; in between it and the theme take turns.
     private func updateMusic() {
+        musicRest?.cancel()
+        musicRest = nil
         if plays && musicOn && isActive {
             let play = MusicTune.play(at: Date(), continuing: musicPlay)
-            if music == nil || play.tune != musicPlay?.tune {
+            if music == nil || musicPlay.map({ $0.resource != play.resource }) ?? true {
                 music?.stop()
-                music = Self.player(named: play.tune.resource.name, extension: play.tune.resource.extension, volume: musicLevel)
+                music = Self.player(named: play.resource.name, extension: play.resource.extension, volume: musicLevel)
                 if musicEnd == nil {
                     musicEnd = MusicEnd { [weak self] player in self?.musicEnded(player) }
                 }
@@ -311,12 +316,20 @@ final class GameAudio {
         }
     }
 
-    /// A turn of the music has played to its end: the next one starts.
+    /// A turn of the music has played to its end: after a rest, the next
+    /// one starts.
     private func musicEnded(_ player: ObjectIdentifier) {
         guard let music, ObjectIdentifier(music) == player, let finished = musicPlay?.tune else { return }
         self.music = nil
         musicPlay = MusicTune.play(after: finished, at: Date())
-        updateMusic()
+        // A turn rings out at its end; a short rest, then the next
+        // (``MusicTurnChange``).
+        musicRest?.cancel()
+        musicRest = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(MusicTurnChange.rest))
+            guard !Task.isCancelled, let self else { return }
+            self.updateMusic()
+        }
     }
 
     /// Starts, moves or fades out the running loops (decision 343): the

@@ -1,12 +1,12 @@
 # 遊戲的音樂與音效
 
-`make_game_audio.py` 合成 App 的音樂與音效（`RailwayGameApp/Resources/Audio/`）。它和第一支介紹影片的配樂是同一套合成，所以遊戲聽起來和影片一樣（ARCHITECTURE 決策 79）。
+`make_game_audio.py` 做 App 的音樂與音效（`RailwayGameApp/Resources/Audio/`）。音效和第一支介紹影片的配樂是同一套合成（ARCHITECTURE 決策 79）；兩首循環配樂（主題曲、冬季曲）從 MML 分軌用取樣樂器演奏（決策 815 的後來，見下面「取樣樂器」）。
 
 ```sh
 python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
 ```
 
-需要 numpy，以及 `PATH` 上的 ffmpeg（把音樂轉成 IMA4 的 CAF）。每次輸出相同。同時寫出 `manifest.json`。
+需要 numpy、`PATH` 上的 ffmpeg（音樂存成 ALAC 的 CAF，音效是 IMA4 的 CAF），以及 Node 與 npm（取樣樂器的演奏器，第一次用時裝進 `sampled/node_modules`）。音色庫第一次用時下載到 `~/.cache/railway-game-ios/`（或設 `AUDIO_SOUNDBANK` 指到已下載的檔），核對 SHA-256。每次輸出相同。同時寫出 `manifest.json`。
 
 檢查（決策 219）：重新產生到暫存資料夾，每個音檔與 `manifest.json` 都要和提交的一個位元組都不差；`PATH` 上有 Node 時，也檢查樂譜和 MML 原稿一致。
 
@@ -45,7 +45,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | `length` | 全長（tick）；鈴聲在這裡截斷 |
 | `motif` | 高速時播前幾個音：鈴聲與發車旋律 2–3，分軌 0 |
 | `fadeOut` | 結尾線性淡出的長度（tick），0 是不淡出 |
-| `tracks[]` | 每軌：`voice`（`bell`、`pluck`、`pad`、`clack`，決策 815 加 `glock` 鐘琴、`sleigh` 雪橇鈴）、`gain`（0–100）、`pan`（−100–100）、`notes[]` |
+| `tracks[]` | 每軌：`voice`（`bell`、`pluck`、`pad`、`clack`，決策 815 加 `glock` 鐘琴、`sleigh` 雪橇鈴，合成器的聲音；主題曲與冬季曲的分軌另由 `sampled/arrangements.json` 指定取樣樂器）、`gain`（0–100）、`pan`（−100–100）、`notes[]` |
 | `notes[]` | `pitch`（MIDI 0–127）、`start`、`length`（tick，結束不超過 `length`）、`velocity`（1–127）；依 `start`、`pitch` 排序，不重複 |
 
 - **每拍 960 tick**：64 分音符 60、三連音 320、五連音 192 都整除。
@@ -57,15 +57,52 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 
 ## 配樂分軌（`role: stem`，決策 815）
 
-一首配樂可以由幾份分軌樂譜一起循環（研究文件 §2.5），每份分軌一份 MML（六格不夠放一首完整的編曲）。`stems_loop()` 的規則：
+一首配樂由幾份分軌樂譜一起循環（研究文件 §2.5），每份分軌一份 MML（六格不夠放一首完整的編曲）。主題曲（`music-loop.caf`）是 `mml/theme-melody`、`theme-harmony`、`theme-rhythm` 三份，冬季曲（`music-winter.caf`）是 `mml/winter-melody`、`winter-harmony`、`winter-rhythm` 三份。
 
-- 所有分軌同一個速度、長度、拍號；長度要是 IMA4 封包（64 個取樣）的整數倍。
-- **力度照寫的算**：一個音的大小是 `velocity ÷ 127 × gain ÷ 100`，不是各自除以自己最大的力度，所以分軌之間的平衡就是寫的那樣（研究文件 §2.5：分軌不各自正規化）。
-- 分軌裡的 `pad` 比寫的長度多響 0.6 秒（主題曲的和弦墊一直是這樣疊到下一個和弦），同一個和弦跨小節時用 `&` 連起來，就不會每小節掉下去。
-- 響過結尾的餘音折回開頭，再加主題曲那個附點八分的左右回聲（也是繞一圈），所以結尾接得回開頭。
-- 整首照響度（ITU-R BS.1770-4 的 LUFS，`loudness_lufs()`，K 加權用兩個 48 kHz 雙二階濾波器的頻率響應繞圈套上）調到 `MUSIC_LUFS`，峰值不能超過 0.9。
+- 所有分軌同一個速度、長度、拍號；長度要是 64 個取樣的整數倍（CAF 的封包，循環才不會有空隙）。
+- **力度照寫的算**：分軌不各自正規化（研究文件 §2.5），分軌之間的平衡就是寫的力度與 `arrangements.json` 的音量。
+- 分軌 `.json` 裡每一格的 `voice` 是合成器的聲音，只在用合成器試聽時有用；遊戲裡的檔案由 `arrangements.json` 決定每一格用哪個樂器。
 
-主題曲（`music-loop.caf`）是 `mml/theme-melody`、`theme-harmony`、`theme-rhythm` 三份，冬季曲（`music-winter.caf`）是 `mml/winter-melody`、`winter-harmony`、`winter-rhythm` 三份。兩首都調到 `MUSIC_LUFS`（−15.95，改版前主題曲量到的響度），玩家設的音樂音量意思不變。
+## 取樣樂器（決策 815 的後來，2026-11-18）
+
+兩首循環配樂不用合成器的正弦波演奏，改用真實錄音的樂器取樣：合成器的撥弦、鐘、和弦墊在耳機上聽得出「粗糙」，舊的 IMA4 壓縮在安靜的段落還有約 43 dB 訊噪比的嘶聲。
+
+```
+mml/theme-*.mml → scores/theme-*.score.json（同上）
+        │  sampled_music.py：照 sampled/arrangements.json 寫成一個 MIDI 檔，整首演奏兩遍
+        ▼
+node sampled/render.mjs 音色庫.sf2 song.mid out.f32 秒數（SpessaSynth，關掉它自己的殘響與合唱）
+        │  取第二遍（已帶著第一遍的餘音，就是循環時聽到的樣子）
+        ▼
+鐵軌接縫（合成器的 clack）繞圈疊上 → 小廳殘響（繞圈卷積）→ 母帶（60 Hz 以下切、9 kHz 以上緩降）
+        │  make_game_audio.py：繞圈的峰值限制（MUSIC_CEILING 0.85）→ 調到 MUSIC_LUFS
+        ▼
+RailwayGameApp/Resources/Audio/music-loop.caf（ALAC，16-bit 無損，沒有編碼延遲）
+```
+
+**播一遍的版本**（冬季活動期間兩首輪流）：循環檔不能直接拿來播一遍，它的開頭帶著上一圈的餘音，結尾在餘音中間截斷。`sampled_once()` 另外從頭演奏一遍，最後一小節之後讓和弦與殘響再響 3 秒（`RING`，最後 1.5 秒緩緩收到零），存成 AAC 192 kb/s（`music-theme.m4a`、`music-winter.m4a`；不循環，編碼延遲無所謂，大小約 ALAC 的十分之一）。增益用一遍本身（不含收尾）的響度算，和循環檔一樣大聲。App 在一首播完後停 1.5 秒（`MusicTurnChange.rest`）再播下一首，不淡出、不交叉：兩首拍子與速度不同。冬季曲只會播一遍，所以沒有循環檔。
+
+**演奏**（`played()`）：照寫的力度直接演奏聽起來像電腦在彈。每 `phraseBars` 小節（4）一句，往句子中間漸強、句尾收（寫的力度的 0.90–1.04 倍）；小節第一拍重 5%，不在拍點上的音輕 5%，再加 2% 的不均；`looseness` 毫秒（標準差，最多兩倍）讓音稍早或稍晚，旋律 3 毫秒、和弦音 4、低音 6、長音 10；`pedal` 是鋼琴的延音踏板從每小節第一拍之後踩幾拍（主題曲 1 拍，冬季曲 2 拍），下一拍之前放開，所以第一拍會響開、音階不會糊在一起。同一個鍵再按之前，前一個音一定先放開。全部用固定的種子（分軌名與軌號），每一圈都一樣，輸出可重現。
+
+| 東西 | 內容 | 授權 |
+| --- | --- | --- |
+| 音色庫 | [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS) v2.0.3，釘在 commit `684543d5…`，SHA-256 寫在 `arrangements.json`；**不提交**，第一次用時下載 | 可用於音樂與軟體，見 `sampled/GeneralUser-GS-LICENSE.txt` |
+| 演奏器 | npm `spessasynth_core` 4.4.10（`sampled/package.json`、`package-lock.json`） | Apache-2.0 |
+
+兩者都是工具，和 ffmpeg 一樣：只用來做音檔，不進 App。
+
+**版權**：主題曲是為遊戲原創的曲子、冬季曲的編曲是遊戲自己的，都是作者的。`arrangements.json` 每首的 `copyright` 寫進 manifest，也內嵌在音檔的 copyright 標籤；App 的資料來源頁「音樂」一筆寫「© 2026 〈品牌〉開發者」與樂器取樣的出處。
+
+`arrangements.json` 以曲為單位（`theme`、`winter`），寫它做哪些檔（`loop` 循環檔、`once` 播一遍的檔）、殘響量（`reverb`）、一句幾小節（`phraseBars`）與每份分軌每一格的樂器：`program`（General MIDI 音色號碼）、`volume`（CC7）、`pan`（CC10）、可省略的 `transpose`（半音）；`drum` 是打擊樂通道的音（冬季曲的鈴鐺 83）；`synth` 是留給合成器的聲音（鐵軌接縫 `clack`，`level` 是大小）；`looseness`、`pedal` 見上面的「演奏」。改了它要重新產生音檔，manifest 記下它的 SHA-256。
+
+| 曲 | 編制 |
+| --- | --- |
+| 主題曲 | 鋼琴旋律（0）；撥弦低音與第二、三拍的和弦音（45 pizzicato）；很輕的弦樂長音（49）；鐵軌接縫；殘響 0.32 |
+| 冬季曲 | 主歌鋼琴（0）、副歌鋼片琴（8）、高聲部管鐘（14）；弦樂長音（49）、撥弦低音（45）、豎琴分解和弦（46）；鈴鐺（打擊樂 83）、鐵軌接縫；殘響 0.32；沒有鐘琴 |
+
+**峰值限制**：取樣樂器的起音同時落在一拍上（和弦、鐘、低音一起）時，峰值會比響度高很多，`level_to` 的 0.9 會拒絕。`limit()` 在「調到響度後會超過 0.85」的地方剛好壓下去，前後各約 10 毫秒緩和，也是繞圈，所以接縫不受影響。這是母帶限制器的工作，不要用調低樂器音量去湊。
+
+試聽與比較幾種編制時，用 `sampled_music.sampled_loop()` 直接產生，不必改 `arrangements.json`；做好後先轉成 m4a 或 mp3 給作者聽（技能 `music-review`）。
 
 ## 清單（`manifest.json`）
 
@@ -83,8 +120,9 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 
 | 檔案 | 內容 | 遊戲裡 |
 | --- | --- | --- |
-| `music-loop.caf` | 76.8 秒、可無縫循環的主題曲（決策 815 的補充）：決策 79 的和弦 C 大調 I – vi – IV – V（Cmaj7、Am7、Fmaj7、G7 各兩小節）、100 bpm，32 小節；A 段撥弦唱一句「E G A G E」開頭的旋律兩次，B 段鐘琴高一點、長一點地回答兩次；和弦墊、撥弦低音、原曲的撥弦琶音與鐵軌接縫聲；分軌 `mml/theme-*.mml`；響度 −15.95 LUFS（和改版前一樣）；IMA4，48 kHz 立體聲 | App 在前景時循環播放（12/1–1/6 換成冬季曲） |
-| `music-winter.caf` | 112 秒、可無縫循環的冬季曲：〈Jingle Bells〉（J. Pierpont 1857，公有領域）自己重新編曲，沒有任何現成錄音。前奏 4 小節、主歌 16、副歌 16（鐘琴，記譜高八度的 C6–G6）、間奏 4（鐘）、副歌再一次 16（鐘琴，撥弦低三度合唱、鐘的高聲部）；和弦墊、撥弦低音一拍一拍、撥弦琶音、雪橇鈴（2.5–7 kHz）與鐵軌接縫聲，C 大調，120 bpm；響度和主題曲一樣（−15.9 LUFS）；分軌 `mml/winter-*.mml`；IMA4 | 12/1–1/6（裝置日期，決策 815 `MusicTune`）和 `music-loop.caf` 輪流，各播一遍；開關、音量、跟車淡出照舊 |
+| `music-loop.caf` | 76.8 秒、可無縫循環的主題曲（決策 815 的後來：配合畫風改成小步舞曲）：C 大調、3/4 拍、150 bpm，64 小節；低音在第一拍，第二、三拍輕點兩個和弦音；旋律走在一步步往下的低音上（C B A G F E D G C），中段轉到 F 與 D 小調再回來；鋼琴旋律、弦樂撥弦伴奏、很輕的弦樂長音與鐵軌接縫（取樣樂器，見上）；分軌 `mml/theme-*.mml`；響度 −15.95 LUFS（和前幾版一樣）；ALAC，48 kHz 立體聲 | App 在前景時循環播放 |
+| `music-theme.m4a` | 主題曲完整演奏一遍（同上），從安靜開始，最後的和弦與殘響再響 3 秒、緩緩收到零；AAC 192 kb/s，79.8 秒 | 12/1–1/6 和冬季曲輪流，各播一遍，中間停 1.5 秒 |
+| `music-winter.m4a` | 冬季曲完整演奏一遍（112 秒，最後的和弦與殘響再響 3 秒、緩緩收到零）：〈Jingle Bells〉（J. Pierpont 1857，公有領域）自己重新編曲，沒有任何現成錄音。前奏 4 小節、主歌 16、副歌 16、間奏 4、副歌再一次 16，旋律與段落是決策 815 寫的；決策 815 的後來改成取樣樂器：主歌鋼琴、副歌鋼片琴、高聲部管鐘，撥弦低音、豎琴分解和弦、輕的弦樂長音，鈴鐺與鐵軌接縫，沒有鐘琴；C 大調，120 bpm；響度和主題曲一樣；分軌 `mml/winter-*.mml`；AAC 192 kb/s，只會播一遍，所以沒有循環檔 | 12/1–1/6（裝置日期，決策 815 `MusicTune`）和 `music-theme.m4a` 輪流，各播一遍；開關、音量、跟車淡出照舊 |
 | `station-chime.wav` | 兩個音的到站鈴（C6、G6），樂譜 `scores/chime-local.score.json` | 在看的列車到「地方小站」；沒在看的列車到任何站（小聲，決策 219） |
 | `chime-metro.wav` | 四音鐘 C5–E5–G5–C6，每 0.3 秒一個，1.8 秒；照搬參考庫的 `chimeBuffer`，用我們的鐘聲，樂譜 `scores/chime-metro.score.json` | 在看的列車到「都會轉運」站：停靠的客運路線 2 條以上，或有高鐵（決策 219） |
 | `chime-tourist.wav` | 撥弦 G5 A5 C6 D6 往上、E6、落在 C6，下面一聲小小的 C5 鐘，五聲音階，2.4 秒；MML 原稿 `mml/chime-tourist.mml` | 在看的列車到「觀光」站：800 m 內有景點（決策 174、219） |
@@ -186,4 +224,4 @@ python3 -I tools/audio/measure_thunder.py SoundMap201504211.mp3 75.4 0 74 SoundM
 
 資料來源頁的「聲音」多了一筆（`DataSourceCredits` 的 `weatherSound`），寫六段的標題、錄音者、授權與連結。
 
-主題曲 32 小節、100 bpm，3,686,400 個取樣，是 IMA4 封包（64 個取樣）的整數倍（57,600 個），所以 CAF 結尾沒有補零；腳本會檢查這一點。冬季曲 56 小節、120 bpm，5,376,000 個取樣（84,000 個封包），`stems_loop()` 會檢查。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒；柴油的怠轉 192,000 個，4 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
+主題曲 64 小節、3/4 拍、150 bpm，3,686,400 個取樣，是 64 個取樣的整數倍（57,600 個），所以 CAF 結尾沒有補零；`sampled_loop()` 會檢查這一點。冬季曲 56 小節、120 bpm，5,376,000 個取樣（84,000 個），雖然只播一遍，`sampled_once()` 一樣檢查。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒；柴油的怠轉 192,000 個，4 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
