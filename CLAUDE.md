@@ -261,7 +261,11 @@ needs OSM data reads the same extract.
   `main`, drafts too, that conflicts with `main`: 「和 main 衝突，CI 不會跑，
   請併 main」, once per head, as github-actions[bot], never with an at sign;
   a conflicting pull request gets no CI run at all, so the comment is what
-  wakes its session, which then merges `main` and pushes; decision 830).
+  wakes its session, which then merges `main` and pushes; decision 830),
+  `ios-compilation-cache.yml` (a push to `main` that changes GameCore, the
+  package manifest or the Xcode project builds the app for the Simulator
+  with `ios-build.yml`'s exact build command and saves the compilation
+  cache pull requests read; no UI tests; decision 775's later note).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the

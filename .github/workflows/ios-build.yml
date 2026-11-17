@@ -80,6 +80,7 @@ on:
       - ".github/workflows/claude.yml"
       - ".github/workflows/full-lane-watch.yml"
       - ".github/workflows/conflict-watch.yml"
+      - ".github/workflows/ios-compilation-cache.yml"
       - ".github/scripts/swift-shards*.sh"
       - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
@@ -487,6 +488,10 @@ jobs:
       # build is replayed instead of compiled. The cache (CAS) is main's
       # newest one (the build job saves it on runs that are not pull
       # requests); a failure to read it builds from nothing.
+      # ios-compilation-cache.yml (decision 775's later note) builds main
+      # with this same command and saves the cache when GameCore, the
+      # package manifest or the project changes on main: change both
+      # commands together, or its cache stops matching.
       - name: Key of the compilation cache
         id: cas
         run: echo "prefix=xcode-cas-v1-$( { xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; } | shasum -a 256 | cut -c1-16)-" >>"$GITHUB_OUTPUT"

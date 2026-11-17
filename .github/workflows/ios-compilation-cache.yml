@@ -1,0 +1,188 @@
+name: iOS compilation cache (main)
+
+# Decision 775's later note (CIOPT-9, 2026-11-18). A pull request's iOS
+# build reads main's newest Xcode compilation cache (CAS), and until now
+# only main's nightly full lane (or a run by hand) saved one, so after a
+# change to GameCore merged during the day every pull request built GameCore
+# again until the next night: 9 GameCore compiles missed and the build took
+# 17.5 minutes in run 44124277580 against 13.4-13.5 for pull requests whose
+# GameCore hit (runs 44094491703, 44094812453). This workflow builds main
+# for the iOS Simulator exactly as ios-build.yml's build job does (same
+# command, flags and paths, or the keys would differ and nothing would hit)
+# and saves the cache, when a push to main changes what every later build
+# compiles first: GameCore, the package manifest or the Xcode project.
+# GamePresentation is not listed: it changes in most merges (14 to 25 a day
+# on 2026-11-15..17), a pull request that changes it compiles all of it again
+# anyway (one whole-module -O module, decision 624), and 20 macOS builds a
+# day would take the runners pull requests need.
+#
+# Only a build: no UI tests, no translation check (ios-build.yml does
+# those). A failure here blocks nothing; the next one or the nightly full
+# lane saves instead. A pull request that changes this file builds the same
+# way to prove the keys still match main's (its cache hits), and saves
+# nothing, as ios-build.yml's pull request runs save nothing.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Sources/GameCore/**"
+      - "Package.swift"
+      - "Package.resolved"
+      - "RailwayGameApp/RailwayGame.xcodeproj/**"
+      - ".github/workflows/ios-compilation-cache.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/ios-compilation-cache.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One at a time on main: a burst of merges builds the one in progress and
+# the newest (GitHub keeps one pending run per group), whose cache holds
+# everything the replaced one would have.
+concurrency:
+  group: ios-compilation-cache-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build main and save its compilation cache
+    runs-on: macos-26
+    # 13 to 18 minutes with GameCore and GamePresentation missing on the
+    # runners of 2026-11-17; a slow runner takes up to about 1.8 times as
+    # long (decision 719).
+    timeout-minutes: 45
+    outputs:
+      cas-prefix: ${{ steps.cas-saved.outputs.prefix }}
+      cas-key: ${{ steps.cas-saved.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain versions
+        run: |
+          xcodebuild -version
+          echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
+
+      # As ios-build.yml: the first available iPhone, the destination its
+      # build uses (Debug builds only the active architecture).
+      - name: Select an available iPhone Simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
+          iphones = [device for runtime, group in devices.items()
+                     if ".iOS-" in runtime for device in group
+                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone Simulator")
+          device = iphones[0]
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"SIMULATOR_UDID={device['udid']}\n")
+          PY
+
+      # The same key and restore as ios-build.yml's build job.
+      - name: Key of the compilation cache
+        id: cas
+        run: echo "prefix=xcode-cas-v1-$( { xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; } | shasum -a 256 | cut -c1-16)-" >>"$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        id: cas-restore
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
+      # Keep this command identical to ios-build.yml's "Build for iOS
+      # Simulator": every argument is part of each compile's key.
+      - name: Build for iOS Simulator
+        id: app-build
+        run: |
+          xcodebuild build-for-testing \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -disableAutomaticPackageResolution \
+            SWIFT_EMIT_LOC_STRINGS=YES \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_LIMIT_SIZE=3G \
+            CODE_SIGN_IDENTITY=- \
+            | tee "$RUNNER_TEMP/build.log"
+          exit "${PIPESTATUS[0]}"
+
+      # How much of this build the restored cache answered, by target, so
+      # a pull request that changes this file shows its keys match main's.
+      - name: Size of the compilation cache and what it answered
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          cas="$RUNNER_TEMP/DerivedData/CompilationCache.noindex"
+          {
+            echo "Restored from: ${{ steps.cas-restore.outputs.cache-matched-key || 'nothing' }}"
+            du -sh "$cas" 2>/dev/null | sed 's/^/Compilation cache: /' || echo "No compilation cache at $cas"
+            echo
+            echo '| target | hit | miss |'
+            echo '| --- | ---: | ---: |'
+            awk '
+              /^(SwiftCompile|SwiftEmitModule) .*in target / {
+                match($0, /in target .[^'"'"']*/); target = substr($0, RSTART + 11, RLENGTH - 11); next
+              }
+              target != "" && /^Cache (hit|miss)$/ { count[target, $2]++; seen[target] = 1; target = "" }
+              END { for (t in seen) printf "| %s | %d | %d |\n", t, count[t, "hit"], count[t, "miss"] }
+            ' "$RUNNER_TEMP/build.log" | sort
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save the compilation cache
+        id: cas-save
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event_name != 'pull_request' && steps.cas-restore.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Name the saved compilation cache
+        id: cas-saved
+        if: ${{ !cancelled() && steps.cas-save.outcome == 'success' }}
+        run: |
+          echo "prefix=${{ steps.cas.outputs.prefix }}" >>"$GITHUB_OUTPUT"
+          echo "key=${{ steps.cas.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}" >>"$GITHUB_OUTPUT"
+
+  # As ios-build.yml's job of the same name: one compilation cache per
+  # branch, the newest.
+  prune-compilation-cache:
+    name: Keep only the newest compilation cache
+    needs: build
+    if: ${{ !cancelled() && needs.build.outputs.cas-key != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Delete the branch's older compilation caches
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY: ${{ needs.build.outputs.cas-key }}
+        run: |
+          entries="$(gh cache list -R "$GITHUB_REPOSITORY" --key xcode-cas- --ref "$GITHUB_REF" --limit 100 --json id,key,sizeInBytes)"
+          echo "$entries"
+          if ! jq -e --arg key "$KEY" 'any(.[]; .key == $key)' <<<"$entries" >/dev/null; then
+            echo "The new entry $KEY is not listed; nothing deleted."
+            exit 0
+          fi
+          jq -r --arg key "$KEY" '.[] | select(.key != $key) | .id' <<<"$entries" | while read -r id; do
+            gh cache delete -R "$GITHUB_REPOSITORY" "$id" && echo "Deleted cache $id"
+          done
