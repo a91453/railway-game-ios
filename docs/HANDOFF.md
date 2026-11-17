@@ -645,7 +645,8 @@
 - **死結一次只歸一個 session 修**（作者 11-17：「因為一堆人在處理死結」）：健檢量到的只記數字，轉給 DEADLOCK-HK。
 - **音樂**：作者上班不能聽，規劃用量測審（music-review skill）；試聽檔在 assets #132，作者有空用手機聽。
 - **136 實機回報**（NEXT_PRIORITIES §29.18）：香港地圖包下載到了但被拒用（`incomplete("airfields.json")`），已派 **MAPPACK-FIX**（819，session_01JMHz9YiuyqQSmoz6Bk5oTv）；第一次開 3D 要 44.87 秒（**PERF-3D-FIRST** 2.55，下一個空位先派）。香港、羅瓦涅米地圖包下一版照舊內建加下載兩份都帶，實機顯示「已下載」才拿掉內建的。
-- **號碼**：決策 810、812–814 已用；811、815–819 預留中；下一個可取 **820**。存檔 107、golden schema 77。
+- **道路歪來歪去**（作者 11-17 傳概念影片，NEXT_PRIORITIES §29.19）：歪的是畫法（格子中心連成鋸齒），先派 **ROAD-JOIN-DRAW＋ROAD-SMOOTH**（決策 821，只動 GamePresentation）；改存檔的自由曲線道路等作者實機看過 ROAD-SMOOTH 再決定。鋪軌 TRACK-CURVE-COLOUR＋TRACK-ALIGN 排在它之後的空位。
+- **號碼**：決策 810–815 已用（811、815 已合）；816–821 預留中（816 DEADLOCK-HK、817 FACADE-VARIETY、818 ROVANIEMI-OPEN、819 MAPPACK-FIX、820 PERF-3D-FIRST、821 ROAD-SMOOTH）；下一個可取 **822**。存檔 107、golden schema 77。
 
 **2026-11-17 白天（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；下一任接手時以這段為最新，22:00 換 Ultra 前會再補一段）**
 
