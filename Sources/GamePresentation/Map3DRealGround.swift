@@ -458,31 +458,95 @@ extension Map3DScene.Builder {
 
     /// A strip `width` metres wide along `points`, kept to `bounds`, `lift`
     /// over the drawn ground: each segment split where it crosses the
-    /// ground's grid and its triangles' diagonals, and drawn a half width
-    /// past its ends so bends close. Decision 391: a `raised` strip (a
-    /// road's) on a bridge's ramps at their height, and `onDeck` (a
-    /// bridge's) on its deck too, split every ``raisedStep`` metres near
-    /// one.
+    /// ground's grid and its triangles' diagonals. Decision 391: a `raised`
+    /// strip (a road's) on a bridge's ramps at their height, and `onDeck`
+    /// (a bridge's) on its deck too, split every ``raisedStep`` metres near
+    /// one. ROAD-STRIP-WEDGE: where it bends it stops at the bend, closed by
+    /// a join there (``addStripJoin``); at its own ends, and at a bend too
+    /// slight to join, it runs on a half width so it meets the next way,
+    /// past its own ends at their height.
     mutating func addStrip(_ points: [Map3DBaseMap.Point], bounds: Map3DBaseMap.Bounds, width: Float, lift: Float, color: UInt32,
                            paint: Map3DPaint?, water: Bool = false, raised: Bool = false, onDeck: Bool = false, roadCuts: Bool = true,
                            taking taken: inout Set<Map3DScene.ChunkKey>) {
+        guard points.count >= 2 else { return }
         let half = Double(width) / 2
-        for index in 1..<points.count {
-            guard let (start, end) = Self.clipSegment(points[index - 1], points[index], to: bounds) else { continue }
+        // Each segment kept to `bounds`, and whether it reaches its own
+        // first and last points.
+        typealias Laid = (start: Map3DBaseMap.Point, end: Map3DBaseMap.Point, along: (x: Double, z: Double), length: Double,
+                          fromFirst: Bool, toLast: Bool)
+        let laid: [Laid?] = (1..<points.count).map { index in
+            guard let (start, end) = Self.clipSegment(points[index - 1], points[index], to: bounds) else { return nil }
             let dx = end.x - start.x, dz = end.z - start.z
             let length = (dx * dx + dz * dz).squareRoot()
-            guard length > 0.01 else { continue }
-            let along = (x: dx / length, z: dz / length)
-            // Out a half width past each end, so bends and joins close.
-            let first = Map3DBaseMap.Point(x: start.x - along.x * half, z: start.z - along.z * half)
-            let last = Map3DBaseMap.Point(x: end.x + along.x * half, z: end.z + along.z * half)
+            guard length > 0.01 else { return nil }
+            func same(_ a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point) -> Bool { abs(a.x - b.x) < 1e-6 && abs(a.z - b.z) < 1e-6 }
+            return (start, end, (dx / length, dz / length), length, same(start, points[index - 1]), same(end, points[index]))
+        }
+        // ROAD-STRIP-WEDGE: the points where both segments reach and bend.
+        let joined: [Bool] = (0..<points.count).map { vertex in
+            guard vertex > 0, vertex < points.count - 1, let before = laid[vertex - 1], let after = laid[vertex],
+                  before.toLast, after.fromFirst else { return false }
+            return before.along.x * after.along.x + before.along.z * after.along.z < Self.joinedBend
+        }
+        var bridged: [Bool] = Array(repeating: false, count: laid.count)
+        for index in 1..<points.count {
+            guard let segment = laid[index - 1] else { continue }
+            let (start, end, along, length) = (segment.start, segment.end, segment.along, segment.length)
+            // Out a half width past each end, so the ways meeting there
+            // close; none where it bends, which its join closes.
+            let back = joined[index - 1] ? 0 : half, forth = joined[index] ? 0 : half
+            let first = Map3DBaseMap.Point(x: start.x - along.x * back, z: start.z - along.z * back)
+            let last = Map3DBaseMap.Point(x: end.x + along.x * forth, z: end.z + along.z * forth)
             var cuts = splits(from: first, to: last)
             // Decision 391: a road near a raised one at its height.
             let lifted = raised && nearRaisedRoad(from: first, to: last)
             if raised { cuts = merged(cuts, raisedCuts(from: first, to: last, anchor: points[index - 1], along: along, onDeck: onDeck)) }
+            // ROAD-STRIP-WEDGE: past the way's own first and last points
+            // (where another way may go on, or nothing), at the end's
+            // height, going on at the end's own grade only where the
+            // ground there is as high: under a deck the way ends beside,
+            // the rise there is the ground's, a wedge down to it.
+            let whole = length + back + forth
+            // Near a raised road by the end itself, not the segment, which a
+            // region cuts short.
+            func nearEnd(_ end: Map3DBaseMap.Point) -> Bool {
+                raised && nearRaisedRoad(from: Map3DBaseMap.Point(x: end.x - half, z: end.z - half),
+                                         to: Map3DBaseMap.Point(x: end.x + half, z: end.z + half))
+            }
+            let capsFirst = index == 1 && segment.fromFirst && back > 0 && nearEnd(start)
+            let capsLast = index == points.count - 1 && segment.toLast && forth > 0 && nearEnd(end)
+            // Each at its own end only, so a segment a region cuts short
+            // elsewhere is cut where the whole scene cuts it.
+            if capsFirst { cuts = merged(cuts, [back / whole]) }
+            if capsLast { cuts = merged(cuts, [1 - forth / whole]) }
+            func cap(at end: Map3DBaseMap.Point, outward: (x: Double, z: Double)) -> (out: Float, end: Float, onBridge: Bool) {
+                let atEnd = roadRise(at: end, along: along, onDeck: onDeck)
+                let inward = min(half, length)
+                let behind = roadRise(at: Map3DBaseMap.Point(x: end.x - outward.x * inward, z: end.z - outward.z * inward),
+                                      along: along, onDeck: onDeck).rise
+                let past = roadRise(at: Map3DBaseMap.Point(x: end.x + outward.x * half, z: end.z + outward.z * half),
+                                    along: along, onDeck: onDeck).rise
+                let graded = atEnd.rise + (atEnd.rise - behind) * Float(half / inward)
+                return (min(graded, max(past, atEnd.rise)), atEnd.rise, atEnd.onBridge)
+            }
+            let firstCap = capsFirst ? cap(at: start, outward: (-along.x, -along.z)) : nil
+            let lastCap = capsLast ? cap(at: end, outward: along) : nil
+            // Decision 391: a road's rise over the ground at `t` of the way.
+            func rise(_ t: Double, _ p: Map3DBaseMap.Point) -> (rise: Float, onBridge: Bool) {
+                if let firstCap, t * whole < back - 1e-9 {
+                    let share = Float(t * whole / back)
+                    return (firstCap.out + (firstCap.end - firstCap.out) * share, firstCap.onBridge)
+                }
+                if let lastCap, (1 - t) * whole < forth - 1e-9 {
+                    let share = Float((1 - t) * whole / forth)
+                    return (lastCap.out + (lastCap.end - lastCap.out) * share, lastCap.onBridge)
+                }
+                return lifted ? roadRise(at: p, along: along, onDeck: onDeck) : (0, false)
+            }
             // Decision 375: a road across a trench deep enough bridges it,
             // the whole of this stretch; otherwise it gives way to it.
             let bridges = bridgesTrench(from: first, to: last)
+            bridged[index - 1] = bridges
             for step in 1..<cuts.count {
                 let t0 = cuts[step - 1], t1 = cuts[step]
                 guard t1 - t0 > 1e-6 else { continue }
@@ -490,9 +554,7 @@ extension Map3DScene.Builder {
                 let b = Map3DBaseMap.Point(x: first.x + (last.x - first.x) * t1, z: first.z + (last.z - first.z) * t1)
                 // Decision 391: each end at the road's height over the
                 // ground there.
-                let level: (rise: Float, onBridge: Bool) = (0, false)
-                let riseA = lifted ? roadRise(at: a, along: along, onDeck: onDeck) : level,
-                    riseB = lifted ? roadRise(at: b, along: along, onDeck: onDeck) : level
+                let riseA = rise(t0, a), riseB = rise(t1, b)
                 // Left of the way along is (z, −x) in x east, z south.
                 let leftX = along.z * half, leftZ = -along.x * half
                 var corners = [
@@ -518,7 +580,109 @@ extension Map3DScene.Builder {
                 take(from: a, to: b, half: half, into: &taken)
             }
         }
+        for vertex in joined.indices where joined[vertex] {
+            guard let before = laid[vertex - 1], let after = laid[vertex] else { continue }
+            addStripJoin(at: points[vertex], before: before.along, after: after.along, half: half, lift: lift, color: color,
+                         paint: paint, water: water, lifted: raised && nearRaisedRoad(from: points[vertex], to: points[vertex]),
+                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts)
+        }
     }
+
+    /// ROAD-STRIP-WEDGE: the cosine of the least bend a strip is joined
+    /// at, 1°; under it each segment runs a half width on, sticking out
+    /// under a fiftieth of the half width.
+    static let joinedBend = 0.999_847_695_156_391_3
+
+    /// ROAD-STRIP-WEDGE (MapLibre's line join, BSD-3, its way only): the
+    /// outside of a strip's bend at `joint`, from the segment running
+    /// `before` to the one running `after`, `half` metres each side: a
+    /// mitre while it reaches at most twice `half` out and the bend is
+    /// sharp enough to show it, else a bevel. Cut to the ground's
+    /// triangles, at each segment's height over it at the joint.
+    mutating func addStripJoin(at joint: Map3DBaseMap.Point, before: (x: Double, z: Double), after: (x: Double, z: Double),
+                               half: Double, lift: Float, color: UInt32, paint: Map3DPaint?, water: Bool, lifted: Bool,
+                               onDeck: Bool, bridges: Bool, roadCuts: Bool) {
+        typealias Point = Map3DBaseMap.Point
+        // The bend's outside: the side whose edge the next segment leaves.
+        let left1 = (x: before.z, z: -before.x), left2 = (x: after.z, z: -after.x)
+        let sign = left1.x * after.x + left1.z * after.z < 0 ? 1.0 : -1.0
+        let n1 = (x: left1.x * sign, z: left1.z * sign), n2 = (x: left2.x * sign, z: left2.z * sign)
+        let o1 = Point(x: joint.x + n1.x * half, z: joint.z + n1.z * half), o2 = Point(x: joint.x + n2.x * half, z: joint.z + n2.z * half)
+        var outline = [joint, o1, o2]
+        let dot = before.x * after.x + before.z * after.z
+        let cosHalf = ((1 + dot) / 2).squareRoot()
+        if dot <= Self.mitredBend && cosHalf * Self.mitreLimit >= 1 {
+            let bx = n1.x + n2.x, bz = n1.z + n2.z, length = (bx * bx + bz * bz).squareRoot()
+            let reach = half / cosHalf
+            outline = [joint, o1, Point(x: joint.x + bx / length * reach, z: joint.z + bz / length * reach), o2]
+        }
+        // Each segment's rise at the joint, from one side's edge to the
+        // other's.
+        var rise1: (rise: Float, onBridge: Bool) = (0, false), rise2 = rise1
+        if lifted {
+            rise1 = roadRise(at: joint, along: before, onDeck: onDeck)
+            rise2 = roadRise(at: joint, along: after, onDeck: onDeck)
+        }
+        let dx = o2.x - o1.x, dz = o2.z - o1.z, span = dx * dx + dz * dz
+        func rise(_ p: Point) -> Float {
+            guard span > 1e-12, abs(rise2.rise - rise1.rise) > 1e-4 else { return rise1.rise }
+            let share = min(max(((p.x - o1.x) * dx + (p.z - o1.z) * dz) / span, 0), 1)
+            return rise1.rise + (rise2.rise - rise1.rise) * Float(share)
+        }
+        // Cut to the ground's triangles, as addArea() cuts an area.
+        let xs = outline.map(\.x), zs = outline.map(\.z)
+        var points: [Map3DPoint] = []
+        var triangles: [Int] = []
+        for row in gridCell(zs.min()!, origin: originY)...gridCell(zs.max()!, origin: originY) {
+            let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
+            for column in gridCell(xs.min()!, origin: originX)...gridCell(xs.max()!, origin: originX) {
+                let westX = gridLine(column, origin: originX), eastX = gridLine(column + 1, origin: originX)
+                for side in [1.0, -1.0] {
+                    var piece = outline
+                    let keeps: [(Point) -> Double] = [
+                        { $0.z - top }, { bottom - $0.z }, { $0.x - westX }, { eastX - $0.x },
+                        { side * (($0.z - top) - ($0.x - westX)) },
+                    ]
+                    for keep in keeps {
+                        piece = Self.clip(piece, keep)
+                        if piece.count < 3 { break }
+                    }
+                    guard piece.count >= 3, abs(Self.area(piece)) > 1e-6 else { continue }
+                    let start = points.count
+                    for p in piece {
+                        let x = Float(p.x), z = Float(p.z)
+                        points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift + rise(p), z))
+                    }
+                    for index in 1..<(piece.count - 1) { triangles += [start, start + index, start + index + 1] }
+                }
+            }
+        }
+        guard !triangles.isEmpty else { return }
+        // Decision 375, as its segments.
+        if !bridges && !(rise1.onBridge && rise2.onBridge) && min(rise1.rise, rise2.rise) < 1 {
+            (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift, roadCuts: roadCuts)
+            guard !triangles.isEmpty else { return }
+        }
+        // Decision 709: sized as what it adds, its own width across, so
+        // the far views leave it out before the road.
+        let roadSizing = sizing
+        sizing = min(sizing ?? .infinity, Float(2 * half))
+        defer { sizing = roadSizing }
+        mesh(at: Map3DPoint(Float(joint.x), 0, Float(joint.z))) {
+            let start = $0.vertices.count
+            $0.addFlat(points, triangles: triangles, color: color, paint: paint)
+            if water { $0.makeWater(from: start) }
+        }
+    }
+
+    /// ROAD-STRIP-WEDGE: the cosine of the least bend mitred rather than
+    /// bevelled, 20°: under it the bevel leaves out a sliver under a
+    /// twentieth of the half width.
+    static let mitredBend = 0.939_692_620_785_908_4
+
+    /// ROAD-STRIP-WEDGE: MapLibre's `line-miter-limit` default: a mitre
+    /// reaching more than twice the half width out is bevelled.
+    static let mitreLimit = 2.0
 
     /// Decision 391: how finely a road near a raised one is laid, metres,
     /// so its ramps keep their grade.
