@@ -23,8 +23,7 @@ final class Map3DRealFacadeTests: XCTestCase {
     /// the scene's origin at (`shift`, `shift / 2`) metres; the scene's
     /// street-front vertices put back where they stand on the map.
     private func front(x: Float = 0, shift: Float = 0, streets: Set<Map3DScene.ChunkKey>?, target: Map3DScene.Builder.Target = .near,
-                       kind: Map3DScene.Builder.RealKind = .shophouse, facades: Bool = true) -> [Map3DVertex] {
-        let world = GameWorld.newGame()
+                       kind: Map3DScene.Builder.RealKind = .shophouse, facades: Bool = true, world: GameWorld = .newGame()) -> [Map3DVertex] {
         var builder = Map3DScene.Builder(originX: Double(shift) * metre, originY: Double(shift / 2) * metre, region: WorldRegion(bounds: world.bounds),
                                          world: world)
         builder.target = target
@@ -89,6 +88,25 @@ final class Map3DRealFacadeTests: XCTestCase {
         let north = front(streets: street(z: -8, to: -2))
         XCTAssertFalse(north.isEmpty)
         XCTAssertTrue(north.allSatisfy { $0.z <= 0.001 || $0.y >= 14.2 - 0.001 })
+    }
+
+    /// Decision 812: a Hong Kong tenement's shops open straight on the
+    /// pavement: its front has signs, grilles or air conditioners, but no
+    /// arcade pillar from the ground and no Taiwanese rooftop room; a
+    /// Taiwanese shophouse's has pillars.
+    func testAHongKongTenementHasNoArcade() throws {
+        let streets = street(z: 16, to: 22)
+        func pillars(_ front: [Map3DVertex]) -> Int { front.filter { $0.y == 0 }.count }
+        XCTAssertGreaterThan(pillars(front(streets: streets)), 0)
+        let hongKong = GameWorld.newOverseasGame(try HongKongBaseMapTests.ground())
+        var fronts = 0
+        for x in stride(from: Float(0), to: 400, by: 40) {
+            let front = front(x: x, streets: streets, world: hongKong)
+            fronts += front.count
+            XCTAssertEqual(pillars(front), 0, "at \(x)")
+            XCTAssertTrue(front.allSatisfy { $0.y <= 14.2 + 0.001 }, "nothing on the roof at \(x)")
+        }
+        XCTAssertGreaterThan(fronts, 0)
     }
 
     /// A street of 600 shophouses in one chunk keeps its fronts to the

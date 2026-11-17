@@ -4,7 +4,8 @@ import XCTest
 @testable import GamePresentation
 
 /// Decision 802: the 3D map draws Rovaniemi's streets and buildings as
-/// Finland's; Taiwan's maps and Hong Kong's are drawn as they were.
+/// Finland's; Taiwan's maps are drawn as they were. Decision 812: Hong
+/// Kong's buildings as Hong Kong's.
 final class Map3DRegionLookTests: XCTestCase {
     private typealias Point = Map3DBaseMap.Point
 
@@ -21,15 +22,15 @@ final class Map3DRegionLookTests: XCTestCase {
     // MARK: The look by where the map is
 
     /// Taiwan's maps, with an anchor or none, keep every part of Taiwan's
-    /// look; Hong Kong's keeps its streets and Taiwan's buildings, gauge
-    /// and bare ground.
+    /// look; Hong Kong's has its own streets and (decision 812) buildings,
+    /// and Taiwan's gauge and bare ground.
     func testTaiwanAndHongKongKeepTheirLook() throws {
         for world in [GameWorld.newGame(), try taipei(), GameWorld.newWholeTaiwanGame()] {
             XCTAssertEqual(Map3DRegionLook(world: world), .taiwan)
         }
         XCTAssertEqual(Map3DRegionLook(anchor: try anchor(24.4369, 118.3186)), .taiwan, "Kinmen")
         XCTAssertEqual(Map3DRegionLook.taiwan, Map3DRegionLook(streets: .taiwan, buildings: .taiwan, snow: false, gauge: 1.067))
-        XCTAssertEqual(Map3DRegionLook(world: try hongKong()), Map3DRegionLook(streets: .hongKong, buildings: .taiwan, snow: false, gauge: 1.067))
+        XCTAssertEqual(Map3DRegionLook(world: try hongKong()), Map3DRegionLook(streets: .hongKong, buildings: .hongKong, snow: false, gauge: 1.067))
     }
 
     func testRovaniemiHasFinlandsLook() throws {
@@ -140,15 +141,53 @@ final class Map3DRegionLookTests: XCTestCase {
             && zip(a.vertices, b.vertices).allSatisfy { $0.x == $1.x && $0.y == $1.y && $0.z == $1.z && $0.color == $1.color && $0.layer == $1.layer }
     }
 
-    /// The same building is drawn the same on a generated map, a map of
-    /// Taipei and Hong Kong's: vertex for vertex.
-    func testTaiwansAndHongKongsBuildingsAreDrawnAlike() throws {
-        for (kind, storeys) in [(Map3DScene.Builder.RealKind.house, 2), (.shophouse, 4), (.flats, 6), (.temple, 1), (.civic, 3)] {
+    /// The same building is drawn the same on a generated map and a map
+    /// of Taipei: vertex for vertex.
+    func testTaiwansBuildingsAreDrawnAlike() throws {
+        for (kind, storeys) in [(Map3DScene.Builder.RealKind.house, 2), (.shophouse, 4), (.flats, 6), (.flats, 14), (.office, 12), (.temple, 1),
+                                (.civic, 3), (.industry, 1)] {
             let plain = buildings(in: GameWorld.newGame(), kind: kind, storeys: storeys)
             XCTAssertFalse(plain.vertices.isEmpty)
             XCTAssertTrue(sameMesh(plain, buildings(in: try taipei(), kind: kind, storeys: storeys)), "\(kind) in Taipei")
-            XCTAssertTrue(sameMesh(plain, buildings(in: try hongKong(), kind: kind, storeys: storeys)), "\(kind) in Hong Kong")
         }
+    }
+
+    /// Decision 812: Hong Kong's buildings are drawn as Hong Kong's: no
+    /// Taiwanese water tank, no blue, green or red waterproofing on a
+    /// roof; a tower of flats crowned with its lift room and tank; shops
+    /// on a tenement's pavement with no arcade; an office in the glass of
+    /// its palette; the same kinds Taiwan's draws alike drawn otherwise.
+    func testHongKongsBuildingsAreHongKongs() throws {
+        let world = try hongKong()
+        let tanks: Set<UInt32> = [Map3DPalette.tankBlue, Map3DPalette.tankSteel]
+        let taiwanRoofs = Set(Map3DPalette.cityRoofs.map(\.color).filter { $0 != Map3DPalette.roof } + Map3DPalette.tinRoofs)
+        for (kind, storeys) in [(Map3DScene.Builder.RealKind.house, 2), (.shophouse, 4), (.flats, 6), (.flats, 14), (.office, 12), (.civic, 3),
+                                (.industry, 1)] {
+            let mesh = buildings(in: world, kind: kind, storeys: storeys)
+            XCTAssertFalse(mesh.vertices.isEmpty)
+            XCTAssertFalse(sameMesh(mesh, buildings(in: GameWorld.newGame(), kind: kind, storeys: storeys)), "\(kind) \(storeys)")
+            XCTAssertFalse(mesh.vertices.contains { tanks.contains($0.color) }, "\(kind) \(storeys)")
+            XCTAssertFalse(mesh.vertices.contains { taiwanRoofs.contains($0.color) }, "\(kind) \(storeys)")
+        }
+        // A tower's crown: its machine room and tank 7.4 m over its roof
+        // (14 storeys, 44.8 m), on every one of the forty.
+        let tower = buildings(in: world, kind: .flats, storeys: 14)
+        XCTAssertEqual(tower.vertices.map(\.y).max() ?? 0, 14 * 3.2 + Map3DHongKong.crownHeight + 2.4, accuracy: 0.01)
+        let tops = tower.vertices.filter { abs($0.y - (14 * 3.2 + Map3DHongKong.crownHeight + 2.4)) < 0.01 }
+        XCTAssertEqual(Set(tops.map { Int(($0.x / 40).rounded(.down)) + 8 * Int(($0.z / 40).rounded(.down)) }).count, 40)
+        // A tenement's walls and an office's glass from their palettes.
+        func walls(_ mesh: Map3DMesh) -> Set<UInt32> { Set(mesh.vertices.filter { $0.ny == 0 && $0.y > 6 }.map(\.color)) }
+        let tenement = Set(Map3DHongKong.tenementWalls.flatMap { wall in (0...8).map { Map3DColor.shaded(wall, 1 - 0.01 * Float($0)) } })
+        XCTAssertFalse(walls(buildings(in: world, kind: .flats, storeys: 6)).isDisjoint(with: tenement))
+        let glass = Map3DHongKong.glass.map { Map3DLook.colour($0) }
+        XCTAssertTrue(walls(buildings(in: world, kind: .office, storeys: 12)).contains { wall in
+            glass.contains { near(Map3DLook.colour(wall), $0, by: 24) }
+        })
+    }
+
+    /// Whether two colours are within `step` of each other in every channel.
+    private func near(_ a: UInt32, _ b: UInt32, by step: Int = 3) -> Bool {
+        (0..<3).allSatisfy { abs(Int((a >> ($0 * 8)) & 0xFF) - Int((b >> ($0 * 8)) & 0xFF)) <= step }
     }
 
     /// A Taiwanese house's roof has a water tank or a sheet-steel room on
@@ -211,6 +250,18 @@ final class Map3DRegionLookTests: XCTestCase {
                 XCTAssertFalse(nordic.mesh.vertices.contains { tanks.contains($0.color) })
             }
         }
+        // Decision 812: Hong Kong's: no Taiwanese tank, sign or close
+        // detail; a tower crowned.
+        let hongKong = Map3DRegionLook(streets: .hongKong, buildings: .hongKong, snow: false, gauge: 1.067)
+        for flats in [false, true] {
+            for far in [false, true] {
+                let houses = house(hongKong, flats: flats, far: far)
+                XCTAssertFalse(houses.mesh.vertices.isEmpty)
+                XCTAssertTrue(houses.close.isEmpty)
+                XCTAssertEqual(houses.blades, 0)
+                XCTAssertFalse(houses.mesh.vertices.contains { [Map3DPalette.tankBlue, Map3DPalette.tankSteel].contains($0.color) })
+            }
+        }
         // A wooden house: one or two floors and its roof.
         let houses = house(finland, flats: false, far: false).mesh
         XCTAssertLessThanOrEqual(houses.vertices.map(\.y).max() ?? 0, 0.4 + 2 * Map3DNordic.storey + 4.5 * Map3DNordic.pitch)
@@ -218,13 +269,15 @@ final class Map3DRegionLookTests: XCTestCase {
 
     // MARK: Colours
 
-    /// The Nordic palette is written as the map draws it: through the
+    /// The Nordic and Hong Kong palettes are written as the map draws them: through the
     /// city's look each colour comes out within a step of what was written.
     func testThePaletteIsDrawnAsWritten() {
         func near(_ a: UInt32, _ b: UInt32) -> Bool {
             (0..<3).allSatisfy { abs(Int((a >> ($0 * 8)) & 0xFF) - Int((b >> ($0 * 8)) & 0xFF)) <= 3 }
         }
-        for written: UInt32 in [0xE2B65E, 0xB5523E, 0xF2EFE6, 0xA2A8B1, 0xBC8478, 0xC6CBD8, 0x9DB3A3] {
+        // Decision 812: Hong Kong's too.
+        for written: UInt32 in [0xE2B65E, 0xB5523E, 0xF2EFE6, 0xA2A8B1, 0xBC8478, 0xC6CBD8, 0x9DB3A3, 0xF2EFE8, 0xE9C8BA, 0xD9C9AE, 0xA9BDBB,
+                                0x608E9D, 0xCFD0CC] {
             let colour = Map3DColor.rgb(written)
             XCTAssertTrue(near(Map3DLook.colour(Map3DLook.source(drawing: colour)), colour), String(written, radix: 16))
         }

@@ -440,6 +440,12 @@ extension Map3DScene.Builder {
                            tallest: tallest, r: r)
             return
         }
+        // Decision 812: Hong Kong's tenements and towers.
+        if look.buildings == .hongKong {
+            addHongKongHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, shops: !flats, far: true,
+                             tallest: tallest, r: r)
+            return
+        }
         let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
@@ -463,6 +469,12 @@ extension Map3DScene.Builder {
         if look.buildings == .nordic {
             addNordicHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, far: far, snow: look.snow,
                            tallest: tallest, r: r)
+            return
+        }
+        // Decision 812: Hong Kong's tenements and towers.
+        if look.buildings == .hongKong {
+            addHongKongHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, shops: shops, far: far,
+                             tallest: tallest, r: r)
             return
         }
         let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))

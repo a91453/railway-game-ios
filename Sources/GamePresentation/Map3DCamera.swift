@@ -379,9 +379,12 @@ public struct Map3DLighting: Hashable, Sendable {
     public let sunDirection: Map3DPoint
     /// Decision 277: the day's weather, clear unless it rains.
     public var weather: Map3DWeather = .clear
-    /// Decision 347: the hour of the day, 0 to 24, for the sky's sun and
-    /// moon (``Map3DSky``).
+    /// Decision 347: the hour of the day, 0 to 24.
     public let hour: Float
+    /// Decision 813: toward the sky's sun and (full) moon, one metre long,
+    /// where they stand, below the horizon too (``Map3DSky``).
+    public let skySun: Map3DPoint
+    public let skyMoon: Map3DPoint
 
     struct Key {
         let hour: Float
@@ -410,30 +413,72 @@ public struct Map3DLighting: Hashable, Sendable {
         Key(hour: 24, zenith: 0x06141C, sky: 0x163742, sun: 0x9FD0D8, ground: 0x2C4A52, ambient: 0.75, sunStrength: 1, night: 1),
     ]
 
-    /// The light at `minute` of the day (wrapped into a day).
+    /// The keyframes at `hour`, channels 0–255 unrounded.
+    struct Keyed {
+        var zenith: SIMD3<Float>, sky: SIMD3<Float>, sun: SIMD3<Float>, ground: SIMD3<Float>
+        var ambient: Float, sunStrength: Float, night: Float
+
+        init(hour: Float) {
+            var index = 1
+            while index < Map3DLighting.keys.count - 1, Map3DLighting.keys[index].hour <= hour { index += 1 }
+            let a = Map3DLighting.keys[index - 1], b = Map3DLighting.keys[index]
+            let t = b.hour > a.hour ? min(max((hour - a.hour) / (b.hour - a.hour), 0), 1) : 0
+            func mix(_ x: UInt32, _ y: UInt32) -> SIMD3<Float> {
+                func channel(_ shift: UInt32) -> Float {
+                    let p = Float((x >> shift) & 0xFF), q = Float((y >> shift) & 0xFF)
+                    return p + (q - p) * t
+                }
+                return SIMD3(channel(16), channel(8), channel(0))
+            }
+            zenith = mix(a.zenith, b.zenith)
+            sky = mix(a.sky, b.sky)
+            sun = mix(a.sun, b.sun)
+            ground = mix(a.ground, b.ground)
+            ambient = a.ambient + (b.ambient - a.ambient) * t
+            sunStrength = a.sunStrength + (b.sunStrength - a.sunStrength) * t
+            night = a.night + (b.night - a.night) * t
+        }
+
+        /// Decision 813: `self` turned `share` of the way to `other`.
+        func mixed(with other: Keyed, _ share: Float) -> Keyed {
+            guard share > 0 else { return self }
+            var out = self
+            out.zenith = zenith + (other.zenith - zenith) * share
+            out.sky = sky + (other.sky - sky) * share
+            out.sun = sun + (other.sun - sun) * share
+            out.ground = ground + (other.ground - ground) * share
+            out.ambient = ambient + (other.ambient - ambient) * share
+            out.sunStrength = sunStrength + (other.sunStrength - sunStrength) * share
+            out.night = night + (other.night - night) * share
+            return out
+        }
+    }
+
+    init(keyed: Keyed, hour: Float, sunDirection: Map3DPoint, skySun: Map3DPoint, skyMoon: Map3DPoint) {
+        func rgb(_ value: SIMD3<Float>) -> PopTravel.RGB {
+            PopTravel.RGB(red: UInt8(value.x.rounded()), green: UInt8(value.y.rounded()), blue: UInt8(value.z.rounded()))
+        }
+        zenith = rgb(keyed.zenith)
+        sky = rgb(keyed.sky)
+        sun = rgb(keyed.sun)
+        ground = rgb(keyed.ground)
+        ambient = keyed.ambient
+        sunStrength = keyed.sunStrength
+        night = keyed.night
+        self.hour = hour
+        self.sunDirection = sunDirection
+        self.skySun = skySun
+        self.skyMoon = skyMoon
+    }
+
+    /// The light at `minute` of the day (wrapped into a day), the sun up
+    /// at 06:00 and down at 18:00 whatever the day and the place: the
+    /// light before decision 813, kept for the showcase and for a light
+    /// with no date.
     public init(minute: Double) {
         var m = minute.truncatingRemainder(dividingBy: 1_440)
         if m < 0 { m += 1_440 }
         let hour = Float(m / 60)
-        self.hour = hour
-        var index = 1
-        while index < Self.keys.count - 1, Self.keys[index].hour <= hour { index += 1 }
-        let a = Self.keys[index - 1], b = Self.keys[index]
-        let t = b.hour > a.hour ? min(max((hour - a.hour) / (b.hour - a.hour), 0), 1) : 0
-        func mix(_ x: UInt32, _ y: UInt32) -> PopTravel.RGB {
-            func channel(_ shift: UInt32) -> UInt8 {
-                let p = Float((x >> shift) & 0xFF), q = Float((y >> shift) & 0xFF)
-                return UInt8((p + (q - p) * t).rounded())
-            }
-            return PopTravel.RGB(red: channel(16), green: channel(8), blue: channel(0))
-        }
-        zenith = mix(a.zenith, b.zenith)
-        sky = mix(a.sky, b.sky)
-        sun = mix(a.sun, b.sun)
-        ground = mix(a.ground, b.ground)
-        ambient = a.ambient + (b.ambient - a.ambient) * t
-        sunStrength = a.sunStrength + (b.sunStrength - a.sunStrength) * t
-        night = a.night + (b.night - a.night) * t
         // The sun rises in the east at 06:00, stands high in the south at
         // noon and sets in the west at 18:00; at night the moon lights the
         // scene from overhead, a little to the south. Within half an hour of
@@ -443,12 +488,127 @@ public struct Map3DLighting: Hashable, Sendable {
         let angle = Float.pi * min(max(dayShare, 0), 1)
         let elevation = max(sinf(angle), 0.08) * 1.15
         let sunLight = Map3DPoint(cosf(angle), elevation, 0.45 * sinf(angle)).normalized ?? .up
-        let moonLight = Map3DPoint(0.2, 1, 0.3).normalized ?? .up
         let fromEdge = min(abs(hour - 6), abs(hour - 18)) / Self.lightTurnHours
         let isDay = dayShare > 0 && dayShare < 1
         let sunShare = fromEdge >= 1 ? (isDay ? 1 : 0) : 0.5 + (isDay ? 0.5 : -0.5) * fromEdge
-        sunDirection = (sunLight * sunShare + moonLight * (1 - sunShare)).normalized ?? .up
+        // The sky's sun and the (full) moon cross it as the light's sun
+        // does: the moon up in the east at 18:00, down in the west at 06:00.
+        var night = hour - 18
+        if night < 0 { night += 24 }
+        self.init(keyed: Keyed(hour: hour), hour: hour,
+                  sunDirection: (sunLight * sunShare + Self.moonLight * (1 - sunShare)).normalized ?? .up,
+                  skySun: Map3DSky.path(at: dayShare, rise: 1.15), skyMoon: Map3DSky.path(at: night / 12, rise: 0.9))
     }
+
+    /// The moon's light by night: from overhead, a little to the south.
+    static let moonLight = Map3DPoint(0.2, 1, 0.3).normalized ?? .up
+
+    /// Decision 813: the light at game time `time` over `place`, the sun
+    /// where it stands there on the game's day (``Map3DSunPath``).
+    ///
+    /// The keyframes stay the hours of a day at 25° N in March, when the
+    /// sun is up from 06:00 to 18:00: the sun's elevation now is read as
+    /// the hour it stood that high on that day, before noon on the
+    /// morning's side and after it on the evening's (``keyHours(elevation:)``).
+    /// So a low winter sun gives a morning's or an evening's light at noon,
+    /// and a sun that never clears the horizon (Rovaniemi in December)
+    /// only the blue of the dawn. The morning's and the evening's keys are
+    /// not the same, so within two hours of the true noon and of the true
+    /// midnight the light turns from the one to the other (``eveningShare(hourAngle:)``),
+    /// and nothing steps.
+    public init(at time: GameTime, place: Map3DSunPlace) {
+        let seconds = time.seconds - GameDate.floorDivide(time.seconds, GameTime.secondsPerDay) * GameTime.secondsPerDay
+        let minute = Double(seconds) / 60
+        let day = Map3DSunPath.realDayOfYear(gameDay: GameDate.floorDivide(time.seconds, GameTime.secondsPerDay))
+        let position = Map3DSunPath.position(day: day, minute: minute, at: place)
+        let keys = Self.keyHours(elevation: position.elevation)
+        let keyed = Keyed(hour: keys.morning).mixed(with: Keyed(hour: keys.evening), Self.eveningShare(hourAngle: position.hourAngle))
+            .mixed(with: Self.polarNoon, Self.polarNoonShare(elevation: position.elevation, highest: position.highest(atLatitude: place.latitude)))
+        let toSun = Self.direction(elevation: position.elevation, azimuth: position.azimuth)
+        let lit = Self.direction(elevation: max(position.elevation, Self.lowestLight), azimuth: position.azimuth)
+        let sunShare = Float(min(max(0.5 + 0.5 * position.elevation / Self.lightTurnDegrees, 0), 1))
+        self.init(keyed: keyed, hour: Float(minute / 60),
+                  sunDirection: (lit * sunShare + Self.moonLight * (1 - sunShare)).normalized ?? .up,
+                  skySun: toSun, skyMoon: -toSun)
+    }
+
+    /// Decision 813: the light of a day whose sun never climbs far (the
+    /// Arctic's winter, kaamos): no dawn and no dusk but a long blue
+    /// twilight round noon, the snow lit blue by the sky, the horizon rose
+    /// where the sun is under it, the street lights still on. Without it
+    /// the keyframes' dawn, which lasts there all day, came out a dark grey
+    /// night. The colours are this project's own, after photographs of
+    /// Rovaniemi's December noon.
+    static let polarNoon: Keyed = {
+        var keyed = Keyed(hour: 12)
+        keyed.zenith = SIMD3(0x4F, 0x6E, 0x9E)
+        keyed.sky = SIMD3(0xC4, 0xB4, 0xC8)
+        keyed.sun = SIMD3(0xFF, 0xB8, 0xA0)
+        keyed.ground = SIMD3(0x70, 0x82, 0xA6)
+        keyed.ambient = 1.05
+        keyed.sunStrength = 0.45
+        keyed.night = 0.3
+        return keyed
+    }()
+
+    /// How much of ``polarNoon`` the light takes: on a day whose sun climbs
+    /// no higher than 4° (and none at 14° and over, so never in Taiwan or
+    /// Hong Kong, whose winter noon sun is 40° high), while the sun is
+    /// higher than 9° under the horizon (the civil twilight's end, 6°,
+    /// and a little), so the twilight goes on round noon even where the sun
+    /// does not rise at all.
+    static func polarNoonShare(elevation: Double, highest: Double) -> Float {
+        func smooth(_ low: Double, _ high: Double, _ x: Double) -> Double {
+            let t = min(max((x - low) / (high - low), 0), 1)
+            return t * t * (3 - 2 * t)
+        }
+        return Float((1 - smooth(4, 14, highest)) * smooth(-9, -3, elevation))
+    }
+
+    /// The latitude and season the keyframes were drawn for: 25° N at the
+    /// equinox, the sun up 06:00 to 18:00.
+    static let keyLatitude = 25.0
+
+    /// The hours of the keyframes' day the sun stood `elevation` degrees
+    /// high, before noon and after it: 6 and 18 on the horizon, 12 at 65°
+    /// and over, 0 and 24 at 65° under.
+    static func keyHours(elevation: Double) -> (morning: Float, evening: Float) {
+        let share = min(max(sin(elevation * Map3DSunPath.rad) / cos(keyLatitude * Map3DSunPath.rad), -1), 1)
+        let hours = Float(asin(share) / Map3DSunPath.rad / 15)
+        return (6 + hours, 18 - hours)
+    }
+
+    /// How much of the evening's keys the light takes at `hourAngle`
+    /// (degrees from the true noon): none in the morning, all of them in
+    /// the afternoon, turning over the two hours either side of noon and
+    /// halfway at the true midnight.
+    static func eveningShare(hourAngle: Double) -> Float {
+        func smooth(_ low: Double, _ high: Double, _ x: Double) -> Double {
+            let t = min(max((x - low) / (high - low), 0), 1)
+            return t * t * (3 - 2 * t)
+        }
+        let share: Double
+        if hourAngle > 150 { share = 1 - 0.5 * smooth(150, 180, hourAngle) }
+        else if hourAngle < -150 { share = 0.5 * (1 - smooth(-180, -150, hourAngle)) }
+        else { share = smooth(-30, 30, hourAngle) }
+        return Float(share)
+    }
+
+    /// Toward a sun `elevation` degrees high, `azimuth` round from the
+    /// north through the east: east is +x, south +z.
+    static func direction(elevation: Double, azimuth: Double) -> Map3DPoint {
+        let e = elevation * Map3DSunPath.rad, a = azimuth * Map3DSunPath.rad
+        return Map3DPoint(Float(cos(e) * sin(a)), Float(sin(e)), Float(-cos(e) * cos(a)))
+    }
+
+    /// The lowest the light comes from, degrees, as the light before
+    /// decision 813 (about 5°): a sun on the horizon does not lay shadows
+    /// across the whole map or light a wall from below.
+    static let lowestLight = 5.3
+
+    /// How many degrees under and over the horizon the light takes to turn
+    /// from the moon to the sun: the half hour of the keyframes' day.
+    static let lightTurnDegrees = 6.8
 
     /// How long before and after sunrise and sunset the light takes to
     /// turn from the sun to the moon or back, in hours, half each side.

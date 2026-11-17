@@ -252,6 +252,13 @@ extension Map3DScene.Builder {
                 break
             }
         }
+        // Decision 812: Hong Kong's towers, tenements, village houses,
+        // glass offices and public buildings, under grey concrete roofs.
+        let hongKong = look.buildings == .hongKong
+        if hongKong, let faces = Self.hongKongFaces(kind, storeys: storeys, height: height, r: r, floors: floors) {
+            (wall, roof, groundFloor, groundPaint, upperPaint) = (faces.wall, faces.roof, faces.groundFloor, faces.groundPaint, faces.upperPaint)
+            roofPaint = faces.metalRoof ? Self.metal : Self.roofing
+        }
         // Decision 764: a big low hall (an arena, a gym, a market) its own
         // walls and sheet-steel roof; and every city building's walls a
         // little lighter or darker by where it stands. Decision 765: and
@@ -261,6 +268,11 @@ extension Map3DScene.Builder {
             roof = Self.pick(Map3DPalette.hallRoofs, r(1042))
             roofPaint = Self.metal
             snowedRoof = false
+            // Decision 812: Hong Kong's podiums and malls under concrete.
+            if hongKong {
+                roof = Self.pick(Map3DHongKong.roofs, r(1042))
+                roofPaint = Self.roofing
+            }
         }
         if kind != .temple, kind != .terminal { wall = Self.varied(wall, r(1041)) }
         // A temple of a single hall under its hipped roof, the walls lower.
@@ -383,6 +395,11 @@ extension Map3DScene.Builder {
                                          length: max(2, box.length - box.width))
                 return
             }
+            // Decision 812: a Hong Kong roof's crown, hut or plant.
+            if hongKong {
+                Self.addHongKongRoof(&mesh, kind: kind, storeys: storeys, wall: wall, top: top, box: box, far: far, r: r)
+                return
+            }
             // Decision 235's roof clutter: on a house a water tank or a
             // sheet-steel room (頂樓加蓋); on a block, near, its stair
             // house and air conditioners.
@@ -419,15 +436,16 @@ extension Map3DScene.Builder {
         if !far, buildsFacades, look.buildings.hasStreetFronts, facadeStreets != nil, !canopy, !hipped {
             var street = FrontStreetLevel(height: groundFloor)
             switch kind {
-            case .shophouse: street.arcade = true; street.shops = r(1) < 0.75
-            case .flats: street.arcade = groundFloor > 0; street.shops = groundFloor > 0
+            // Decision 812: no arcade where shops open on the pavement.
+            case .shophouse: street.arcade = look.buildings.hasArcades; street.shops = hongKong || r(1) < 0.75
+            case .flats: street.arcade = groundFloor > 0 && look.buildings.hasArcades; street.shops = groundFloor > 0
             case .office: street.shops = r(1) >= 0.5
             default: break
             }
             let small = box.length > 4 && box.width > 3.2 && box.length < 30 && box.width < 16
             let cluttered = (kind == .shophouse || kind == .house || (kind == .flats && storeys <= 6)) && small && r(6) < 0.8
             addRealFacade(outline, centre: centre, ground: ground, height: height, storeys: storeys, kind: kind, wall: wall, street: street,
-                          rooms: !cluttered, r: r)
+                          rooms: !cluttered && look.buildings.hasArcades, r: r)
         }
         // Decision 232: the shadow round its foot, wider under a taller
         // one (none under a canopy, whose box is mostly open ground).
