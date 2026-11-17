@@ -203,6 +203,20 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(session.world.station(id: depot.id)?.isDepot, true)
     }
 
+    /// Decision 824: Zhuzhong is one island and one side platform, but the
+    /// Liujia Line's two tracks lie between them and the Neiwan Line has
+    /// the island's other face alone, so neither line is laid an island
+    /// there; the Neiwan Line's other real islands (竹東, 九讚頭) still are.
+    func testZhuzhongIsNotLaidAsAnIsland() throws {
+        let session = try Self.game(round: "NEIWAN", side: 1 << 21)
+        let neiwan = try line("NEIWAN", in: session), liujia = try line("LIUJIA", in: session)
+        XCTAssertFalse(neiwan.islandStations.contains("竹中"))
+        XCTAssertFalse(liujia.islandStations.contains("竹中"))
+        XCTAssertEqual(Set(neiwan.islandStations), ["竹東", "九讚頭"])
+        let zhuzhong = try XCTUnwrap(session.railways?.stations.first { $0.id == "tra_sched|竹中" })
+        XCTAssertEqual(RealStationPlatformKind.of(zhuzhong), .sides)
+    }
+
     /// Decision 462: the Liujia and Neiwan Lines part at Zhuzhong, the
     /// Liujia Line's platforms up on its viaduct and the Neiwan Line's on
     /// the ground. Either is bought after the other, in either order: one
