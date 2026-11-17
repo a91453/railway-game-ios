@@ -123,4 +123,32 @@ final class RoadLookRealTests: XCTestCase {
         }
         XCTAssertEqual(covered.count, 0, "the land in a sea's hole")
     }
+
+    /// IMG_5324: a flat road on the river under a raised bridge. 華江橋's
+    /// scooter lane is a bridge of its own on the map, beside the
+    /// carriageway, its ends 4 m and its line 12 m from the carriageway's: decision 391
+    /// joined bridges by their ends only, so the carriageway rose over the
+    /// road it crosses and the lane lay on the water beside it.
+    func testALaneBesideARaisedBridgeRisesWithIt() throws {
+        func road(_ points: [(Double, Double)], level: Int, kind: Map3DBaseMap.RoadKind) -> Map3DBaseMap.Road {
+            Map3DBaseMap.Road(kind: kind, isRamp: false, points: Self.points(points), bounds: Self.bounds, bridgeLevel: level)
+        }
+        let roads = [
+            road([(100, 500), (900, 500)], level: 1, kind: .secondary),
+            road([(104, 512), (896, 512)], level: 1, kind: .service),
+            // The street the carriageway crosses, ending before the lane.
+            road([(500, 300), (500, 503)], level: 0, kind: .tertiary),
+        ]
+        let world = try flatWorld()
+        var builder = built(world, Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 250, minZ: 480, maxX: 750, maxZ: 520)
+        let ground = builder.drawnGround(x: 500, z: 512)
+        for x: Float in [350, 500, 650] {
+            let carriageway = try XCTUnwrap(faces(over: x, 500, in: drawn).filter { $0.color == Map3DPalette.road(.secondary) }.map(\.y).max())
+            let lane = try XCTUnwrap(faces(over: x, 512, in: drawn).filter { $0.color == Map3DPalette.road(.service) }.map(\.y).max())
+            print(String(format: "ROADLOOK at %.0f carriageway %.2f m, lane %.2f m over the ground", x, carriageway - ground, lane - ground))
+            XCTAssertGreaterThan(carriageway - ground, 5, "the carriageway over the street at \(x)")
+            XCTAssertEqual(lane, carriageway, accuracy: 0.2, "the lane at the carriageway's height at \(x)")
+        }
+    }
 }

@@ -145,6 +145,10 @@ struct Map3DRoadBridges: Sendable {
     /// How far apart two bridges' lines may be and be one, metres: the
     /// tiles' 4,096 units to a 2.2 km side, twice.
     static let join: Double = 1.5
+    /// Decision 822: how far apart two bridges' edges may run side by side
+    /// and be one deck, metres: 華江橋's scooter lanes run 4.6 m off
+    /// their carriageways' edges as the map draws them.
+    static let alongside: Double = 6
     /// A level of the tiles' `layer` over the ground, metres: a storey of
     /// a crossing, the rail-3d viaduct's 6 m clear under a 1.8 m girder
     /// less the road's own 1.6 m (`regionTiles`' `B`).
@@ -330,6 +334,46 @@ extension Map3DScene.Builder {
                 for other in near { parent[root(other)] = root(number) }
                 if near.isEmpty { openEnds.append((number, last)) }
             }
+        }
+        // Decision 822: bridges of a level running side by side (a bridge's
+        // carriageways, its scooter lane, mapped apart), their edges
+        // ``Map3DRoadBridges/alongside`` apart or less for 30 m or more,
+        // are one deck too: the owner's IMG_5324 (華江橋's scooter lane, its
+        // ends 4 m from the carriageway's, flat on the river beside its
+        // raised deck) and IMG_5323 (parallel decks at different heights).
+        for (number, bridge) in bridges.enumerated() {
+            let half = Double(Map3DRoadBridges.half(bridge.kind))
+            var runs: [Int: Int] = [:]
+            var travelled = 0.0
+            for (a, b) in zip(bridge.points, bridge.points.dropFirst()) {
+                let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+                guard length > 0.01 else { continue }
+                var along = (10 - travelled.truncatingRemainder(dividingBy: 10)).truncatingRemainder(dividingBy: 10)
+                while along <= length {
+                    let p = Point(x: a.x + dx * along / length, z: a.z + dz * along / length)
+                    let reach = half + Double(Map3DRoadBridges.half(.motorway)) + Map3DRoadBridges.alongside
+                    let low = Map3DRoadBridges.key(p.x - reach, p.z - reach), high = Map3DRoadBridges.key(p.x + reach, p.z + reach)
+                    var seen = Set<Int>()
+                    for row in low.row...high.row {
+                        for column in low.column...high.column {
+                            for (other, index) in cells[Map3DScene.ChunkKey(column: column, row: row)] ?? []
+                            where other > number && bridges[other].level == bridge.level && !seen.contains(other) {
+                                let c = bridges[other].points[index - 1], d = bridges[other].points[index]
+                                let ex = d.x - c.x, ez = d.z - c.z, span = (ex * ex + ez * ez).squareRoot()
+                                guard span > 0.01, abs(ex * dx + ez * dz) / (span * length) >= 0.9 else { continue }
+                                let gap = Map3DRoadBridges.nearest(p, c, d).distance - half - Double(Map3DRoadBridges.half(bridges[other].kind))
+                                if gap <= Map3DRoadBridges.alongside {
+                                    seen.insert(other)
+                                    runs[other, default: 0] += 1
+                                }
+                            }
+                        }
+                    }
+                    along += 10
+                }
+                travelled += length
+            }
+            for (other, count) in runs where count >= 4 { parent[root(other)] = root(number) }
         }
         var deckOf: [Int: Int] = [:]
         var members: [[Int]] = []
