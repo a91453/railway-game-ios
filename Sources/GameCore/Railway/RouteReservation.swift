@@ -1404,6 +1404,7 @@ extension GameWorld {
         }
         holders.claims = claims
         var released: [TrainID: Set<TrainID>] = [:]
+        var paths = PathMemo()
         for (place, train) in trains.enumerated() {
             guard let claim = claims[train.id] else { continue }
             for (ahead, isAhead) in holders.holding(claim.cover, except: train.id, fouling: false, in: network).enumerated() where isAhead {
@@ -1412,9 +1413,39 @@ extension GameWorld {
                 for (other, blocks) in holders.holding(cover, except: leader.id, fouling: true, in: network).enumerated() where blocks && other != place {
                     released[train.id, default: []].insert(trains[other].id)
                 }
+                // Decision 836: an empty run's claim does not bind a train
+                // without a service standing where the service it follows
+                // is due to go.
+                if train.isDeadheading, claims[leader.id] == nil, let leaving = leavingCover(of: leader, memo: &paths) {
+                    for (other, blocks) in holders.holding(leaving, except: leader.id, fouling: true, in: network).enumerated()
+                    where blocks && other != place && trains[other].execution == nil {
+                        released[train.id, default: []].insert(trains[other].id)
+                    }
+                }
             }
         }
         holders.released = released
+    }
+
+    /// Decision 836: the track `train`, a service standing at a call whose
+    /// departure is due, would cover leaving it along its default way (see
+    /// ``leaving(_:stop:cycle:memo:)``), as ``settleClaims(_:covers:)``
+    /// reads the route of a train an empty run follows; `nil` for any other
+    /// train, or with no way on. A train standing in the way of that
+    /// departure (the leader waits for it) without a service of its own is
+    /// not bound by the empty run's claim (only an empty run's, and only a
+    /// train without a service: released for every following train, or
+    /// every train in the way, the Taoyuan Airport MRT rebuilt line
+    /// deadlocked 13 and 9 trains): on Hong Kong's Tung Chung Line under the simple rules with
+    /// traffic control an empty run to Siu Ho Wan, following a service
+    /// waiting at Sunny Bay for the Tung Chung platform, claimed the
+    /// crossover into the depot ten minutes ahead of itself, and the train
+    /// on that platform waited for the crossover to leave it.
+    private func leavingCover(of train: Train, memo: inout PathMemo) -> TrackCover? {
+        guard case .waitingAtStop(let stop, let cycle)? = train.execution, let due = departureDue(of: train), due <= clock.now,
+              case .setsOff(let moved, _) = leaving(train, stop: stop, cycle: cycle, memo: &memo)
+        else { return nil }
+        return envelopeCover(of: moved)
     }
 
     /// ``holder(of:except:)`` of the track `cover` covers (see
