@@ -8,5 +8,5 @@
 
 ## 還留下什麼
 
-- ROAD-FORK-CELL、ROAD-PRICE-SLANT：打分在 NEXT_PRIORITIES §29.21。
+- ROAD-FORK-CELL、ROAD-PRICE-SLANT：打分在 NEXT_PRIORITIES §29.26。
 - UNVERIFIED：iOS 實機與 Simulator 上的樣子（網站截圖沒有玩家鋪路的場景，這次沒跑截圖）；作者發版後看斜路、彎路、T 字路口。

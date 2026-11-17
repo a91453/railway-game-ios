@@ -1076,6 +1076,10 @@ extension Map3DScene {
         /// Decision 610: each chunk's buildings' street fronts as built, with
         /// the number they are kept by (``addFacadeParts()``).
         var facadeParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
+        /// Decision 817: each chunk's towers' reliefs (balconies, fins, bay
+        /// windows) as built, kept by their number within their own budget
+        /// (``Map3DFacadeVariety/chunkBudget``).
+        var reliefParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
         /// Decision 610: while the real buildings are built in full, the
         /// 4 m cells by their streets (``streetCells(within:)``), for
         /// ``addRealFacade``; `nil` builds no street fronts.
@@ -1454,7 +1458,7 @@ extension Map3DScene {
                 return drawn.chunks()
             }
             // Decision 610: the street fronts not yet kept, kept first.
-            guard facadeParts.isEmpty else {
+            guard facadeParts.isEmpty, reliefParts.isEmpty else {
                 var drawn = self
                 drawn.addFacadeParts()
                 return drawn.chunks()
@@ -1987,7 +1991,19 @@ extension Map3DScene {
                     .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 && abs($0.lateral) / 2 >= wide }
                     .min { abs($0.lateral) < abs($1.lateral) }
                 var side: Float = -1, width = Self.platformWidth
-                if let partner {
+                // Decision 792's sequel: an island between two tracks that
+                // run apart along it on a sharp curve (Zhongzhou's, 12 to
+                // 17 m): half of it each side, as wide as the gap where it
+                // stands.
+                var curved: [Float]?
+                if partner == nil, let island = Self.curvedIsland(
+                    beside: line, partners: candidates.map { platforms[$0.index].points.map { point($0) + Self.lifted } },
+                    near: near, wide: wide
+                ) {
+                    side = island.side
+                    curved = island.gaps.map { $0 / 2 - edge }
+                    width = curved!.min()!
+                } else if let partner {
                     side = partner.lateral >= 0 ? 1 : -1
                     width = abs(partner.lateral) / 2 - edge
                 } else {
@@ -2003,7 +2019,8 @@ extension Map3DScene {
                 addStationLife(line: line, offset: offset, width: width, station: platform.platform.station)
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
-                                   top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
+                                   top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete,
+                                   widths: curved, offsets: curved?.map { side * (edge + $0 / 2) })
                     // Decision 721: its edge line lit after dark.
                     let start = mesh.vertices.count
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (edge + 0.35), lift: Self.platformHeight + 0.01,
@@ -2014,8 +2031,57 @@ extension Map3DScene {
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
-                                                  structure: platform.structure, island: partner != nil))
+                                                  structure: platform.structure, island: partner != nil || curved != nil))
             }
+        }
+
+        /// Decision 792's sequel: the side (1 right, -1 left) of `line` on
+        /// which one of `partners` (the other platforms' tracks of its
+        /// station) runs alongside it 2 × `narrowest` to 18 m away all the
+        /// way, with no other track between (`near`, as
+        /// ``nearestTracks(beside:others:)`` gives it), and how far away
+        /// it runs at each point of `line`; the nearest such, `nil` where
+        /// none does. For the islands ``addPlatforms(_:)``'s middle-to-
+        /// middle test misses: tracks running apart on a sharp curve.
+        static func curvedIsland(beside line: [Map3DPoint], partners: [[Map3DPoint]], near: [Float], wide: Float)
+            -> (side: Float, gaps: [Float])? {
+            let across = Map3DMesh.acrossDirections(line)
+            var best: (side: Float, gaps: [Float])?
+            for other in partners where other.count > 1 {
+                // How far across `line` the other runs at each point, where
+                // it runs beside that point (not past either of its ends).
+                let laterals: [Float?] = line.indices.map { index in
+                    var closest: (point: Map3DPoint, distance: Float, end: Bool)?
+                    for (k, (a, b)) in zip(other, other.dropFirst()).enumerated() {
+                        let ab = b - a, length = ab.dot(ab)
+                        let t = length > 0 ? min(1, max(0, (line[index] - a).dot(ab) / length)) : 0
+                        let at = a + ab * t, distance = (at - line[index]).length
+                        let end = (k == 0 && t == 0) || (k == other.count - 2 && t == 1)
+                        if closest == nil || distance < closest!.distance { closest = (at, distance, end) }
+                    }
+                    guard let closest else { return nil }
+                    let offset = closest.point - line[index], lateral = across[index].dot(offset)
+                    // Past its end: much further than straight across.
+                    guard !closest.end || closest.distance - abs(lateral) < 0.5, abs(offset.y) < 3 else { return nil }
+                    return lateral
+                }
+                let found = laterals.compactMap { $0 }
+                guard found.count * 2 >= line.count, let first = found.first else { continue }
+                let side: Float = first >= 0 ? 1 : -1
+                let gaps = found.map { $0 * side }
+                guard let low = gaps.min(), let high = gaps.max(), low < 15, low / 2 >= wide, high <= 18,
+                      near[side > 0 ? 1 : 0] > low - 1 else { continue }
+                // Where it does not run beside a point, the gap at the
+                // nearest point it does.
+                var filled: [Float] = []
+                for index in line.indices {
+                    if let lateral = laterals[index] { filled.append(lateral * side); continue }
+                    let nearest = line.indices.filter { laterals[$0] != nil }.min { abs($0 - index) < abs($1 - index) }!
+                    filled.append(laterals[nearest]! * side)
+                }
+                if best == nil || low < best!.gaps.min()! { best = (side, filled) }
+            }
+            return best
         }
 
         /// Decision 721: a platform's lamps on the ground round it after
@@ -2410,7 +2476,18 @@ extension Map3DScene {
             // Decision 242: flats faced with tiles or grit, offices now and
             // then fair-faced concrete.
             let facing = facade == .officeGlass ? (r(5) < 0.4 ? Map3DSurface.formConcrete : nil) : Self.homeMaterial(r(5))
-            func windows(_ floors: Float) -> Map3DPaint { Map3DPaint.bays(windowSurface, bay: bay, floors: Int(floors)).on(facing) }
+            // Decision 817: a tower's windows of their own kind, bays and
+            // floors; the rest as before (a slab keeps decision 238's
+            // balconies, floor for floor). A tower has 18 floors or more
+            // (below), enough for Hong Kong's too.
+            let towerLook = density >= 4 && look.buildings != .nordic
+                ? Map3DFacadeVariety.look(facade == .officeGlass ? .office : .flats, storeys: 18,
+                                          hongKong: hongKong, nordic: false, solid: facade == .officeGlass && facing != nil, r: r)
+                : nil
+            func windows(_ floors: Float, high: Float? = nil, side: Bool = false) -> Map3DPaint {
+                if let towerLook, let high { return towerLook.paint(high: high, detail: facing, side: side) }
+                return Map3DPaint.bays(windowSurface, bay: bay, floors: Int(floors)).on(facing)
+            }
             let far = isFar
             mesh(at: base) { mesh in
                 let footprint = max(side - 4, 8)
@@ -2447,7 +2524,8 @@ extension Map3DScene {
                     mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: roof, side: Map3DColor.shaded(walls, 0.9),
                                 topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
-                                top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
+                                top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors, high: 3.3 * floors),
+                                flankPaint: windows(floors, high: 3.3 * floors))
                     if hongKong, facade != .officeGlass {
                         let side = footprint * 0.55
                         Self.addHongKongCrown(&mesh, wall: walls, top: base + Map3DPoint(0, 9 + 3.3 * floors, 0),
@@ -2459,6 +2537,13 @@ extension Map3DScene {
                 }
             }
             if !far { addBlockAds(base: base, side: side, density: density, office: facade == .officeGlass, commercial: commercial, r: r) }
+            // Decision 817: near, what stands out of a tower's walls.
+            if let towerLook, !far, density >= 4 {
+                let half = max(side - 4, 8) * 0.55 / 2, floors = Float(18 + Int(r(1) * 23))
+                let outline = [Map3DPoint(base.x - half, 0, base.z - half), Map3DPoint(base.x + half, 0, base.z - half),
+                               Map3DPoint(base.x + half, 0, base.z + half), Map3DPoint(base.x - half, 0, base.z + half)]
+                addTowerRelief(outline, centre: base, bottom: base.y + 9, top: base.y + 9 + 3.3 * floors, look: towerLook, wall: walls, r: r)
+            }
             // Decision 259: shoppers round a tower's shops.
             if density >= 4, facade != .officeGlass {
                 let half = max(side - 4, 8) / 2 + 1.7
