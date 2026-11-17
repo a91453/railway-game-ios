@@ -6,7 +6,7 @@
 python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
 ```
 
-需要 numpy、`PATH` 上的 ffmpeg（音樂存成 ALAC 的 CAF，音效是 IMA4 的 CAF），以及 Node 與 npm（取樣樂器的演奏器，第一次用時裝進 `sampled/node_modules`）。音色庫第一次用時下載到 `~/.cache/railway-game-ios/`（或設 `AUDIO_SOUNDBANK` 指到已下載的檔），核對 SHA-256。每次輸出相同。同時寫出 `manifest.json`。
+需要 numpy、`PATH` 上的 ffmpeg（音樂存成 ALAC 的 CAF，音效是 IMA4 的 CAF），以及 Node 與 npm（取樣樂器的演奏器，第一次用時裝進 `sampled/node_modules`）。音色庫第一次用時下載到 `~/.cache/railway-game-ios/`（或設 `AUDIO_SOUNDBANK` 指到已下載的檔），核對 SHA-256；室內樂音色庫（下面「室內樂音色庫」）第一次用時下載約 400 MB 的取樣、在同一個資料夾組成約 400 MB 的 SoundFont（約 4 分鐘），每個檔與組好的音色庫都核對 SHA-256。每次輸出相同。同時寫出 `manifest.json`。
 
 檢查（決策 219）：重新產生到暫存資料夾，每個音檔與 `manifest.json` 都要和提交的一個位元組都不差；`PATH` 上有 Node 時，也檢查樂譜和 MML 原稿一致。
 
@@ -71,7 +71,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 mml/theme-*.mml → scores/theme-*.score.json（同上）
         │  sampled_music.py：照 sampled/arrangements.json 寫成一個 MIDI 檔，整首演奏兩遍
         ▼
-node sampled/render.mjs 音色庫.sf2 song.mid out.f32 秒數（SpessaSynth，關掉它自己的殘響與合唱）
+node sampled/render.mjs song.mid out.f32 秒數 室內樂音色庫.sf2 GeneralUser-GS.sf2（SpessaSynth，關掉它自己的殘響與合唱；前面的音色庫有的樂器蓋過後面的）
         │  取第二遍（已帶著第一遍的餘音，就是循環時聽到的樣子）
         ▼
 鐵軌接縫（合成器的 clack）繞圈疊上 → 小廳殘響（繞圈卷積）→ 母帶（60 Hz 以下切、9 kHz 以上緩降）
@@ -87,9 +87,12 @@ RailwayGameApp/Resources/Audio/music-loop.caf（ALAC，16-bit 無損，沒有編
 | 東西 | 內容 | 授權 |
 | --- | --- | --- |
 | 音色庫 | [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS) v2.0.3，釘在 commit `684543d5…`，SHA-256 寫在 `arrangements.json`；**不提交**，第一次用時下載 | 可用於音樂與軟體，見 `sampled/GeneralUser-GS-LICENSE.txt` |
+| 室內樂音色庫 | `chamber_bank.py` 照 `sampled/chamber.json` 組成：鋼琴（0）、撥弦（45）、豎琴（46）、弦樂長音（49）；其他樂器仍由 GeneralUser GS 演奏 | 見下表 |
+| 鋼琴取樣 | [Salamander Grand Piano V3](https://github.com/sfzinstruments/SalamanderGrandPiano)（Alexander Holm，Yamaha C5），釘在 commit `3382bf94…` | CC BY 3.0：要署名、寫明修改過（資料來源頁「音樂」） |
+| 弦樂與豎琴取樣 | [VS Chamber Orchestra: Community Edition](https://github.com/sgossner/VSCO-2-CE)（Versilian Studios）SFZ 分支，釘在 commit `6dd651d5…` | CC0 1.0 |
 | 演奏器 | npm `spessasynth_core` 4.4.10（`sampled/package.json`、`package-lock.json`） | Apache-2.0 |
 
-兩者都是工具，和 ffmpeg 一樣：只用來做音檔，不進 App。
+這些都是工具，和 ffmpeg 一樣：只用來做音檔，不進 App。
 
 **版權**：主題曲是為遊戲原創的曲子、冬季曲的編曲是遊戲自己的，都是作者的。`arrangements.json` 每首的 `copyright` 寫進 manifest，也內嵌在音檔的 copyright 標籤；App 的資料來源頁「音樂」一筆寫「© 2026 〈品牌〉開發者」與樂器取樣的出處。
 
@@ -97,10 +100,27 @@ RailwayGameApp/Resources/Audio/music-loop.caf（ALAC，16-bit 無損，沒有編
 
 | 曲 | 編制 |
 | --- | --- |
-| 主題曲 | 鋼琴旋律（0）；撥弦低音與第二、三拍的和弦音（45 pizzicato）；很輕的弦樂長音（49）；鐵軌接縫；殘響 0.32 |
-| 冬季曲 | 主歌鋼琴（0）、副歌鋼片琴（8）、高聲部管鐘（14）；弦樂長音（49）、撥弦低音（45）、豎琴分解和弦（46）；鈴鐺（打擊樂 83）、鐵軌接縫；殘響 0.32；沒有鐘琴 |
+| 主題曲 | 鋼琴旋律（0，室內樂音色庫）；撥弦低音與第二、三拍的和弦音（45 pizzicato，室內樂）；很輕的弦樂長音（49，室內樂）；鐵軌接縫；殘響 0.32 |
+| 冬季曲 | 主歌鋼琴（0，室內樂）、副歌鋼片琴（8）、高聲部管鐘（14）；弦樂長音（49，室內樂）、撥弦低音（45，室內樂）、豎琴分解和弦（46，室內樂）；鈴鐺（打擊樂 83）、鐵軌接縫；殘響 0.32；沒有鐘琴 |
 
 **峰值限制**：取樣樂器的起音同時落在一拍上（和弦、鐘、低音一起）時，峰值會比響度高很多，`level_to` 的 0.9 會拒絕。`limit()` 在「調到響度後會超過 0.85」的地方剛好壓下去，前後各約 10 毫秒緩和，也是繞圈，所以接縫不受影響。這是母帶限制器的工作，不要用調低樂器音量去湊。
+
+### 室內樂音色庫（THEME-PLAIN 第 1 項，2026-11-18）
+
+GeneralUser GS 的鋼琴每個力度都是同一個約 31 kHz 的循環取樣；撥弦是 22 kHz、五個八度只錄四個音（每個音被拉高拉低到 ±5 個半音）、循環只有 32 個取樣；豎琴 22 kHz。換成真實錄音：
+
+| 樂器 | 取樣 | 怎麼處理 |
+| --- | --- | --- |
+| 鋼琴（0） | Salamander：每小三度一個音、16 層力度、48 kHz、不循環（自然衰減） | 只取右聲道一支麥克風（`mic`）：這對麥克風相距約 12 公分，兩聲道的相關從音到音在 −0.8 到 +0.6 之間跳，相加（手機單喇叭聽到的）會忽大忽小；右邊那支在旋律音域較大聲。單一支在 1–2 kHz 比原版暗，加一個 1.5 kHz +4 dB 的鐘形等化（`presence`），能量重心回到原版的約 720 Hz。力度再減 260 cB（`velocity`：16 層已經有強弱，預設的 960 會再加一次） |
+| 撥弦（45） | VSCO 大提琴、中提琴、小提琴聲部的撥奏，每 2–3 個半音一個、兩層力度、44.1 kHz | 依音域分給三個聲部（51 以下大提琴、52–66 中提琴、67 以上小提琴）；只取第一組輪替（SoundFont 沒有輪替）|
+| 豎琴（46） | VSCO 豎琴，每 2–3 個半音一個 | |
+| 弦樂長音（49） | VSCO 中提琴（59 以下）、小提琴（60 以上）聲部的揉弦長音，兩層力度 | 取樣只有 8–12 秒、沒有循環點，冬季曲的長音到 14 秒：`sustain_loop()` 在穩定段做一個最多 4 秒的循環，起點在 ±20 毫秒內找和終點最像的波形，終點前 0.25 秒等功率交叉淡化 |
+
+- **逐音拉平**（`even`）：聲部是一個音一個音錄的，相鄰的取樣最多差約 10 dB（例如中提琴撥奏，MIDI 57–60 用的那個取樣比 54–56 的大約 9 dB；大提琴撥奏 40–41 比 42 小約 8 dB），旋律跨過去會一跳一跳。同一層力度裡每個取樣調到該層的中位數（量起音後 0.3 秒，長音 1 秒）。
+- **立體聲寬度**（`width` 0.5）：聲部錄得很寬，GeneralUser GS 的幾乎是單聲道；側聲道留一半。
+- **存法**：每個取樣各自放大到滿刻度再轉 16 位元（三角形抖動、固定種子），放大多少寫進那個區的衰減，所以錄音本身的強弱不變；SpessaSynth 把衰減乘 0.4（E-mu 的修正），寫入時先除回來。
+- **音量**：換音色庫後各樂器的大小不同，`arrangements.json` 的 `volume` 重新調過，讓每一軌單獨演奏時的響度和換之前一樣（CC7 每差一倍音量約 12 dB：新值 = 舊值 × 10^(−差的 dB ÷ 40)），所以旋律對伴奏的比例、混音都和定案版一樣。
+- **檢查**：`sampled/chamber-files.json` 是每個讀到的檔的 SHA-256，`chamber.json` 的 `sha256` 是組好的音色庫。改了 `chamber.json` 或 `chamber_bank.py`，跑 `python3 tools/audio/chamber_bank.py --lock` 重記兩者，再重產音檔。
 
 試聽與比較幾種編制時，用 `sampled_music.sampled_loop()` 直接產生，不必改 `arrangements.json`；做好後先轉成 m4a 或 mp3 給作者聽（技能 `music-review`）。
 
