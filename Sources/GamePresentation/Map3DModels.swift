@@ -209,10 +209,12 @@ public struct Map3DModelPack: Sendable {
         // Decision 743: Hong Kong's vehicles not among them (after Hong
         // Kong's signals, below).
         // Decision 787: the close-up commuter not among them either (after
-        // Hong Kong's vehicles, below).
+        // Hong Kong's vehicles, below); decision 838: nor Taiwan's SUV and
+        // taxi (after Santa's sleigh).
         groups.append {
-            Map3DStreetModel.allCases.filter { !Map3DHongKongVehicles.models.contains($0) && !Map3DCommuterFigure.models.contains($0) }
-                .map { $0.model() }
+            Map3DStreetModel.allCases.filter {
+                !Map3DHongKongVehicles.models.contains($0) && !Map3DCommuterFigure.models.contains($0) && !Map3DTaiwanCars.added.contains($0)
+            }.map { $0.model() }
         }
         // Decision 318: and the sets that had none.
         groups += Map3DTrainSet.all.map { set in { set.models() } }
@@ -259,6 +261,10 @@ public struct Map3DModelPack: Sendable {
         // Decision 831: Santa's sleigh (a stand-in until the studio's
         // REINDEER), after the winter decorations and before the route bus.
         groups.append { [SantaFlight.Model.model] }
+        // Decision 838: Taiwan's SUV and yellow taxi (the saloon and the
+        // van keep decision 259's places), after the sleigh and before
+        // the route bus.
+        groups.append { Map3DTaiwanCars.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

@@ -83,6 +83,7 @@ public enum DataSourceCredits {
     static let meshyURL = "https://www.meshy.ai"
     static let kenneyNatureKitURL = "https://kenney.nl/assets/nature-kit"
     static let kenneyIndustrialURL = "https://kenney.nl/assets/city-kit-industrial"
+    static let kenneyCarKitURL = "https://kenney.nl/assets/car-kit"
     static let taipeiGarbageTrucksURL = "https://data.gov.tw/dataset/136515"
     static let busPhotoURL = "https://commons.wikimedia.org/wiki/File:Capital_Bus_735-FW_right_side_and_TWTC_ITB_(46106172592).jpg"
     static let earcutURL = "https://github.com/mapbox/earcut"
@@ -1127,21 +1128,24 @@ public enum DataSourceCredits {
                     // Decision 458: the conifers, bushes and tanks
                     // (Map3DSceneryProp), reshaped from Kenney's CC0 models
                     // (tools/kenney-props/SOURCE.md). CC0 asks for no
-                    // credit; Kenney's licence file welcomes it.
+                    // credit; Kenney's licence file welcomes it. Decision
+                    // 838: and the cars on Taiwan's streets (Car Kit,
+                    // tools/tw-cars/README.md).
                     DataSourceCredit(
                         id: "kenney",
                         title: "Kenney",
                         detail: language.text(
-                            "The conifers in the 3D map’s mountain woods, the bushes by the stations and the line, and the tanks in the factory yards: Kenney’s models, reshaped and in the game’s colours.",
-                            "3D 地圖山區樹林裡的針葉樹、車站前與沿線的灌木叢、工廠空地的儲槽：Kenney 的模型，改了形狀並換成遊戲的配色。"
+                            "The conifers in the 3D map’s mountain woods, the bushes by the stations and the line, the tanks in the factory yards and the cars on the streets: Kenney’s models, reshaped and in the game’s colours.",
+                            "3D 地圖山區樹林裡的針葉樹、車站前與沿線的灌木叢、工廠空地的儲槽、街上的汽車：Kenney 的模型，改了形狀並換成遊戲的配色。"
                         ),
                         notice: language.text(
-                            "Nature Kit and City Kit (Industrial) by Kenney (kenney.nl), under CC0 1.0 (public domain dedication).",
-                            "Kenney（kenney.nl）的 Nature Kit 與 City Kit (Industrial)，依 CC0 1.0（公眾領域貢獻宣告）使用。"
+                            "Nature Kit, City Kit (Industrial) and Car Kit by Kenney (kenney.nl), under CC0 1.0 (public domain dedication).",
+                            "Kenney（kenney.nl）的 Nature Kit、City Kit (Industrial) 與 Car Kit，依 CC0 1.0（公眾領域貢獻宣告）使用。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Nature Kit", url: kenneyNatureKitURL),
                             DataSourceCredit.Link(title: "City Kit (Industrial)", url: kenneyIndustrialURL),
+                            DataSourceCredit.Link(title: "Car Kit", url: kenneyCarKitURL),
                             DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
                         ]
                     ),
