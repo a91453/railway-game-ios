@@ -55,19 +55,35 @@ final class StationIslandRebuildAllTests: XCTestCase {
         XCTAssertFalse(session.opensIslandRebuildListByItself)
     }
 
-    /// REVIEW-L22: the real-world demo lays 瑞芳, 猴硐 and 十分 on side
-    /// platforms with no room past them for turnouts. The list shows them,
-    /// each saying why it cannot be rebuilt, but the card does not open by
-    /// itself over the demo with nothing to tick (it covered the toolbar a
-    /// full lane UI test went on to tap).
-    func testTheRealWorldDemosListDoesNotOpenByItself() throws {
+    /// REVIEW-L22, then decision 792's sequel: the real-world demo lays
+    /// 瑞芳, 猴硐 and 十分 on side platforms, a loop 6 m from the line, as
+    /// a branch line bought before decision 792 laid 十分. Their turnouts
+    /// fall on the loop's curved ramp, where GameCore split the track some
+    /// 0.2 m from where the plan put the turnout, and the rebuild found no
+    /// stretch between them ("not enough track for the turnouts"). Now
+    /// each is priced, and 十分 is rebuilt as an island.
+    func testTheRealWorldDemosStationsAreRebuilt() throws {
         let railways = try BundledRealData.railways()
         let session = GameSession(world: RealWorldDemo.make(in: .traditionalChinese, railways: railways), language: .traditionalChinese)
         session.railways = railways
         XCTAssertTrue(session.hasRealIslandsToRebuild)
-        XCTAssertFalse(session.islandRebuildList.isEmpty)
-        XCTAssertTrue(session.islandRebuildList.allSatisfy { $0.cost == nil && $0.problem != nil })
-        XCTAssertFalse(session.opensIslandRebuildListByItself)
+        let list = session.islandRebuildList
+        XCTAssertEqual(Set(list.map(\.name)), ["瑞芳", "猴硐", "十分"])
+        XCTAssertTrue(list.allSatisfy { $0.cost != nil && $0.problem == nil }, list.map { "\($0.name): \($0.problem ?? "")" }.joined(separator: "; "))
+        let shifen = try id("十分", in: session)
+        session.rebuildStationAsIsland(shifen)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertNil(session.stationIslandOffer(for: shifen))
+        XCTAssertFalse(session.islandRebuildList.contains { $0.id == shifen })
+        // Its two tracks an island's 11 m apart, one platform each.
+        let platforms = session.world.trackPlatforms(of: shifen)
+        XCTAssertEqual(platforms.count, 2)
+        let middles = platforms.map { session.middle(of: ($0.edge, $0.start, $0.end), in: session.world) }
+        let dx = Double(middles[0].x - middles[1].x), dy = Double(middles[0].y - middles[1].y)
+        let apart = (dx * dx + dy * dy).squareRoot() / Double(WorldCoordinate.unitsPerMetre)
+        XCTAssertGreaterThan(apart, 10)
+        XCTAssertLessThan(apart, 14)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(session.world)), session.world)
     }
 
     func testRebuildingTheTickedOnes() throws {

@@ -545,6 +545,37 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertLessThanOrEqual(Double(ground.off), 0.04 * Double(ground.all), "\(ground)")
     }
 
+    /// Decision 792's sequel (BACKLOG_AUDIT 2026-11-17, bug 2.20): the
+    /// Shalun Line's two ends, real islands that the timetable stands on
+    /// three tracks, are laid as islands too: the first loop the island's
+    /// 11 m out, the third track 16 m out the other side with a loop's
+    /// first reach (with the second level's longer one the line did not
+    /// fit its curves and could not be bought). At Shalun the 3D map draws
+    /// the island between the first two and a side platform at the third.
+    func testTheShalunLinesThreeTrackIslandsAreLaid() throws {
+        let session = try Self.game(round: "SHALUN", side: 1 << 21, heights: true)
+        let offer = session.realLineOffer(for: try line("SHALUN", in: session))
+        XCTAssertNil(offer.problem, offer.problem ?? "")
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        let world = session.world
+        func platforms(at name: String) throws -> [TrackPlatform] {
+            world.trackPlatforms(of: try XCTUnwrap(world.stations.first { $0.name == name }?.id, name))
+        }
+        XCTAssertEqual(try platforms(at: "中洲").count, 3)
+        let shalun = try XCTUnwrap(world.stations.first { $0.name == "沙崙" })
+        XCTAssertEqual(try platforms(at: "沙崙").count, 3)
+        let frame = Map3DScene.frame(world: world, focus: (x: Double(shalun.location.x), y: Double(shalun.location.y)))
+        var builder = Map3DScene.Builder(originX: frame.originX, originY: frame.originY, region: frame.region, world: world)
+        let snapshot = world.railwaySnapshot()
+        _ = builder.addTrack(snapshot)
+        builder.addPlatforms(snapshot)
+        let laid = builder.laidPlatforms.filter { $0.station == shalun.id }
+        XCTAssertEqual(laid.filter(\.island).count, 2, "the island between the first two tracks")
+        XCTAssertEqual(laid.filter { !$0.island }.count, 1, "a side platform at the third")
+        var running = world
+        try running.advance(ticks: 2 * 24 * 60)
+    }
+
     /// Past the junction, the station card calls Taiwan Railway's riders
     /// the line's regulars; at the junction they still change from it.
     func testTheStationCardCallsTheRidersAlongALineBoughtItsRegulars() throws {
