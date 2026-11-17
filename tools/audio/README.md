@@ -83,13 +83,8 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 
 | 檔案 | 內容 | 遊戲裡 |
 | --- | --- | --- |
-<<<<<<< HEAD
 | `music-loop.caf` | 76.8 秒、可無縫循環的主題曲（決策 815 的補充）：決策 79 的和弦 C 大調 I – vi – IV – V（Cmaj7、Am7、Fmaj7、G7 各兩小節）、100 bpm，32 小節；A 段撥弦唱一句「E G A G E」開頭的旋律兩次，B 段鐘琴高一點、長一點地回答兩次；和弦墊、撥弦低音、原曲的撥弦琶音與鐵軌接縫聲；分軌 `mml/theme-*.mml`；響度 −15.95 LUFS（和改版前一樣）；IMA4，48 kHz 立體聲 | App 在前景時循環播放（12/1–1/6 換成冬季曲） |
-| `music-winter.caf` | 112 秒、可無縫循環的冬季曲：〈Jingle Bells〉（J. Pierpont 1857，公有領域）自己重新編曲，沒有任何現成錄音。前奏 4 小節、主歌 16、副歌 16（鐘琴）、間奏 4（鐘）、副歌再一次 16（鐘琴，撥弦低三度合唱、鐘的高聲部）；和弦墊、撥弦低音一拍一拍、撥弦琶音、雪橇鈴與鐵軌接縫聲，C 大調，120 bpm；響度和主題曲一樣（−15.9 LUFS）；分軌 `mml/winter-*.mml`；IMA4 | 12/1–1/6（裝置日期，決策 815 `MusicTune`）代替 `music-loop.caf`，開關、音量、跟車淡出照舊 |
-=======
-| `music-loop.caf` | 38.4 秒、可無縫循環的音樂：和弦墊、琶音與鐵軌接縫聲，C 大調 I – vi – IV – V，100 bpm；IMA4，48 kHz 立體聲 | App 在前景時循環播放 |
-| `music-winter.caf` | 112 秒、可無縫循環的冬季曲：〈Jingle Bells〉（J. Pierpont 1857，公有領域）自己重新編曲，沒有任何現成錄音。前奏 4 小節、主歌 16、副歌 16（鐘琴）、間奏 4（鐘）、副歌再一次 16（鐘琴，撥弦低三度合唱、鐘的高聲部）；和弦墊、撥弦低音一拍一拍、撥弦琶音、雪橇鈴與鐵軌接縫聲，C 大調，120 bpm；響度和主題曲一樣（−15.9 LUFS）；分軌 `mml/winter-*.mml`；IMA4 | 12/1–1/6（裝置日期，決策 815 `MusicTune`）代替 `music-loop.caf`，開關、音量、跟車淡出照舊 |
->>>>>>> claude/music-winter
+| `music-winter.caf` | 112 秒、可無縫循環的冬季曲：〈Jingle Bells〉（J. Pierpont 1857，公有領域）自己重新編曲，沒有任何現成錄音。前奏 4 小節、主歌 16、副歌 16（鐘琴，記譜高八度的 C6–G6）、間奏 4（鐘）、副歌再一次 16（鐘琴，撥弦低三度合唱、鐘的高聲部）；和弦墊、撥弦低音一拍一拍、撥弦琶音、雪橇鈴（2.5–7 kHz）與鐵軌接縫聲，C 大調，120 bpm；響度和主題曲一樣（−15.9 LUFS）；分軌 `mml/winter-*.mml`；IMA4 | 12/1–1/6（裝置日期，決策 815 `MusicTune`）和 `music-loop.caf` 輪流，各播一遍；開關、音量、跟車淡出照舊 |
 | `station-chime.wav` | 兩個音的到站鈴（C6、G6），樂譜 `scores/chime-local.score.json` | 在看的列車到「地方小站」；沒在看的列車到任何站（小聲，決策 219） |
 | `chime-metro.wav` | 四音鐘 C5–E5–G5–C6，每 0.3 秒一個，1.8 秒；照搬參考庫的 `chimeBuffer`，用我們的鐘聲，樂譜 `scores/chime-metro.score.json` | 在看的列車到「都會轉運」站：停靠的客運路線 2 條以上，或有高鐵（決策 219） |
 | `chime-tourist.wav` | 撥弦 G5 A5 C6 D6 往上、E6、落在 C6，下面一聲小小的 C5 鐘，五聲音階，2.4 秒；MML 原稿 `mml/chime-tourist.mml` | 在看的列車到「觀光」站：800 m 內有景點（決策 174、219） |

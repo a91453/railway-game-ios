@@ -7,7 +7,7 @@ import SwiftUI
 /// `tools/audio/make_game_audio.py`): the soundtrack of the first promo
 /// video, so the game sounds as the video does. Decision 219: an arrival
 /// rings the station's chime (local, metro or tourist), or its motif at
-/// high speed. The music loops while the
+/// high speed. The music plays while the
 /// app is in the foreground; the sounds play for the session's cues
 /// (``SoundCue``). The player turns either off in the game menu, and the
 /// choice is kept on the device, never in a save. Decision 219, stage 2:
@@ -59,9 +59,13 @@ final class GameAudio {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
-    /// Decision 815: the tune `music` plays (``MusicTune``): the winter
-    /// one from 1 December to 6 January, the theme otherwise.
-    @ObservationIgnored private var musicTune: MusicTune?
+    /// Decision 815: what `music` plays (``MusicPlay``): from 1 December
+    /// to 6 January the winter tune and the theme in turns, the theme
+    /// looping otherwise.
+    @ObservationIgnored private var musicPlay: MusicPlay?
+    /// Tells this object when a turn of the music has played to its end
+    /// (made with the first player).
+    @ObservationIgnored private var musicEnd: MusicEnd?
     /// Decision 379: the cues' players, played on a queue of their own.
     @ObservationIgnored private let cues = CuePlayers()
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
@@ -270,21 +274,34 @@ final class GameAudio {
     }
 
     /// Decision 815: the tune is chosen by the device's date each time
-    /// the music starts or the app comes back to the foreground, so the
-    /// winter tune begins on 1 December and gives way on 7 January.
+    /// the music starts, a turn ends or the app comes back to the
+    /// foreground, so the winter tune begins on 1 December and gives way
+    /// on 7 January; in between it and the theme take turns.
     private func updateMusic() {
         if plays && musicOn && isActive {
-            let track = MusicTune.playing(at: Date())
-            if music == nil || track != musicTune {
+            let play = MusicTune.play(at: Date(), continuing: musicPlay)
+            if music == nil || play.tune != musicPlay?.tune {
                 music?.stop()
-                music = Self.player(named: track.resource.name, extension: track.resource.extension, volume: musicLevel)
-                music?.numberOfLoops = -1
-                musicTune = track
+                music = Self.player(named: play.tune.resource.name, extension: play.tune.resource.extension, volume: musicLevel)
+                if musicEnd == nil {
+                    musicEnd = MusicEnd { [weak self] player in self?.musicEnded(player) }
+                }
+                music?.delegate = musicEnd
             }
+            music?.numberOfLoops = play.loops ? -1 : 0
+            musicPlay = play
             music?.play()
         } else {
             music?.pause()
         }
+    }
+
+    /// A turn of the music has played to its end: the next one starts.
+    private func musicEnded(_ player: ObjectIdentifier) {
+        guard let music, ObjectIdentifier(music) == player, let finished = musicPlay?.tune else { return }
+        self.music = nil
+        musicPlay = MusicTune.play(after: finished, at: Date())
+        updateMusic()
     }
 
     /// Starts, moves or fades out the running loops (decision 343): the
@@ -567,6 +584,23 @@ final class GameAudio {
         player.volume = volume
         player.prepareToPlay()
         return player
+    }
+}
+
+/// Decision 815: the music player's delegate, which hands the end of a
+/// turn (a tune played once) to ``GameAudio`` on the main actor. A
+/// player stopped by the game does not call it.
+private final class MusicEnd: NSObject, AVAudioPlayerDelegate, @unchecked Sendable {
+    private let ended: @MainActor @Sendable (ObjectIdentifier) -> Void
+
+    init(_ ended: @escaping @MainActor @Sendable (ObjectIdentifier) -> Void) {
+        self.ended = ended
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        let player = ObjectIdentifier(player)
+        let ended = ended
+        Task { @MainActor in ended(player) }
     }
 }
 

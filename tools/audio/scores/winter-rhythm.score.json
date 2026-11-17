@@ -11,7 +11,7 @@
   "tracks": [
     {
       "voice": "sleigh",
-      "gain": 50,
+      "gain": 90,
       "pan": -30,
       "notes": [
         {"pitch": 62, "start": 960, "length": 960, "velocity": 68},

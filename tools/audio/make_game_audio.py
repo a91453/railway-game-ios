@@ -116,9 +116,9 @@ def glock_frames(m, frames):
 
 def sleigh_frames(m, frames):
     """Decision 815: a shake of sleigh bells: four little jingles within
-    35 ms, each a handful of inharmonic partials between 3.5 and 8.5 kHz
-    that die in a few hundredths of a second, over a breath of
-    high-passed noise. The note's pitch only picks the shake (its seed),
+    35 ms, each a handful of inharmonic partials between 2.5 and 7 kHz
+    (where a phone's speaker still plays them) that die in a few
+    hundredths of a second, over a breath of high-passed noise. The note's pitch only picks the shake (its seed),
     so a pattern of pitches does not repeat one shake mechanically."""
     rng = np.random.default_rng(1_000 + m)
     k = np.arange(frames) / SR
@@ -129,7 +129,7 @@ def sleigh_frames(m, frames):
         t = k[: frames - i]
         jingle = np.zeros(len(t))
         for _ in range(5):
-            f = rng.uniform(3_500, 8_500)
+            f = rng.uniform(2_500, 7_000)
             jingle += rng.uniform(0.3, 1.0) * np.exp(-t * rng.uniform(25, 45)) * np.sin(2 * np.pi * f * t + rng.uniform(0, 2 * np.pi))
         out[i:] += (1.0 if j == 0 else rng.uniform(0.5, 0.9)) * np.minimum(1, t * 2000) * jingle
     noise = np.diff(rng.standard_normal(frames + 1))

@@ -2,15 +2,9 @@
 
 ## 進度
 
-<<<<<<< HEAD
-- 做到哪：#2333、#2335 的 Xcode 建置第一次紅在 `MusicTrack` 與 AudioToolbox 同名，改名 `MusicTune` 後重推，等 CI。PR 2（`claude/music-refresh`）接在 PR 1 之上，選候選 1；試聽檔在 railway-assets-private#132 的 `game-art-previews/docs/art/music-refresh-2026-11-17/`。
-- 已驗證：PR 1 見下；PR 2 `make_game_audio.py --check` 逐位元組相同、`MusicTuneTests` 5 個通過；新主題曲 76.8 秒、−15.95 LUFS、120 Hz 以下能量 72% → 4%。
-- 下一步的第一個指令：兩個 PR 的 CI 綠了各自在 #2118 留「可合併、head …」並轉 ready；PR 2 要在 #2333 合併之後合（它包含 #2333 的 commit）。
-=======
-- 做到哪：PR 1（冬季曲，`claude/music-winter`，決策 815）程式、音檔、測試、文件都好了，開 draft PR 等 CI。PR 2（主題曲改版，`claude/music-refresh`）還沒開始。
-- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`MusicTuneTests` 5 個、`WinterEventTests`、`RunningSoundTests`、`SoundCueTests` 共 53 個通過；`make_game_audio.py --check` 逐位元組相同、三份冬季 MML 與樂譜相符；冬季曲 −15.94 LUFS 對主題曲 −15.95，峰值 −1.27 dBFS，112 秒，接縫 0.023。
-- 下一步的第一個指令：PR 1 的 CI 綠了就在 #2118 留「可合併、head …」並轉 ready；接著 `git checkout -b claude/music-refresh origin/main`，在 `tools/audio/` 做三個主題曲候選。
->>>>>>> claude/music-winter
+- 做到哪：遊戲規劃聽過後要的兩點已改（#2333）：活動期間冬季曲與主題曲輪流各播一遍（`MusicTune.play`、`MusicPlay`、`GameAudio` 的 `MusicEnd`）；鐘琴高八度、雪橇鈴 2.5–7 kHz。#2335 已 merge 進來，等兩個 PR 的 CI；新的冬季曲試聽檔要更新到 railway-assets-private#132。
+- 已驗證：Linux 建置（warnings-as-errors）乾淨、`MusicTuneTests` 7 個通過、`make_game_audio.py --check` 逐位元組相同；冬季曲 1–4 kHz 能量 4.1% → 33%、−15.95 LUFS（ffmpeg −16.0）、true peak −2.1 dBTP、接縫 0.024；主題曲位元組不變。
+- 下一步的第一個指令：CI 綠了在 #2118 留「可合併、head …」並轉 ready（#2335 在 #2333 之後合）；#132 等遊戲規劃說可以。
 
 ## 派工
 
@@ -20,8 +14,8 @@
 
 ## PR 1 冬季曲（決策 815）
 
-- 12/1–1/6（裝置日期）背景音樂換成 `music-winter.caf`：〈Jingle Bells〉（公有領域）自己編，三份 MML 分軌 → 樂譜 → 同一套合成器，加 `glock`、`sleigh` 兩種音色。
-- `MusicTune`（GamePresentation）決定哪天播哪首；`GameAudio.updateMusic()` 換檔。
+- 12/1–1/6（裝置日期）背景音樂是 `music-winter.caf` 與主題曲輪流各一遍：〈Jingle Bells〉（公有領域）自己編，三份 MML 分軌 → 樂譜 → 同一套合成器，加 `glock`、`sleigh` 兩種音色；鐘琴高八度、雪橇鈴 2.5–7 kHz（遊戲規劃要的亮度）。
+- `MusicTune`（GamePresentation）決定哪天播哪首、輪到哪首（`play(at:continuing:)`、`play(after:at:)`）；`GameAudio.updateMusic()` 換檔，播完由 `MusicEnd`（`AVAudioPlayerDelegate`）接下一首。
 - **UNVERIFIED**：實機聽感（TestFlight）；iOS 建置與播放（`ios-build.yml`）。
 
 ## PR 2 主題曲改版（決策 815 的補充）
