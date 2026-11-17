@@ -443,6 +443,7 @@
       1. 規劃每派一張、每次叫 session 繼續，就在 §2.0 最上面一段記下它的 session、分支、PR、做到哪；這段就是停工時的交接，不等 session 自己寫。
       2. 重置後，規劃用 `list_sessions` 找出 `failed`（events 的結果是 `usage_limit_reached`）的 session，逐一 `send_message` 請它「從停下的地方繼續」，並在 #2118 留一則列出叫回了哪些。
       3. 同時跑的實作 session 照上面「同時幾個實作」：Max 6 個一起跑約兩個半小時就碰到上限，所以 Max 降到 4 個，先做 bug 與快收尾的。
+    - **等 PR 時先看它真的在跑**（作者 2026-11-17：「那你要怎麼改善這種問題 還是只能我自己看pr」）：每次檢查等著的 PR，先看有沒有和 main 衝突（`mergeable_state` 是 `dirty` 就不會跑 CI）、新 head 有沒有 CI 在跑或跑完，再看綠不綠。衝突或沒在跑就當下叫那個 session 處理（自己停了就派人或自己接），回作者時照實說「在解衝突」，不說「在跑測試」。根本的修法在 NEXT_PRIORITIES §29.29（DOCNUM-CI、CONFLICT-WATCH、PRIO-FILES）：定時檢查要有人在、額度也要夠才會跑（作者：「可是定時我有時候也不會按啊」），所以衝突要由 GitHub 自己在 PR 上留言叫醒那個 session，規劃的檢查只是第二道。DOCNUM-CI＋CONFLICT-WATCH 是 bug，有空位先派。
     - **合併並交接完就封存**（作者 2026-11-17：「另外你怎麼沒把已合併已交接的封存 說了多少次了」）：實作 session 的 PR 合併、而且它的交接已在 main（`docs/handoff/<TASK>.md` 或 #2118）之後，規劃**當下**用 `archive_session` 封存它，不留到之後一起做。PR 還沒合的不封存（停了的也一樣，接手的人要讀它）。封存不了的（例如前一任規劃，要作者在可信任的裝置上按）在回作者時列出來。
     - **兩個帳號輪流當主帳號**（作者 2026-11-17：遠端連線要本機與雲端同一個帳號，「好 照這樣寫進交接手冊」）：同一時間只有一個主帳號，**規劃、Mac 本機（本地派工、建模工作室）、規劃開的雲端實作都在主帳號**；另一個帳號是額外人手。
       - **週額度重置**：Ultra 每週二台灣時間 22:00（UTC 週二 14:00）；Max 每週六台灣時間 08:00（UTC 週五 24:00，即週六 00:00）。
@@ -645,10 +646,12 @@
 
 **2026-11-17 晚上（現任規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 記；這段最新，下面的「傍晚交接」是前一版）**
 
+- **137 的範圍**（作者 11-17：「好 不等 高架下一版」）：137 不等 ROAD-LOOK-REAL（#2364，決策 822），它放 138。137 等 #2365 PERF-3D-FIRST、E200-REDO（825，規劃看總覽圖才合）。**羅瓦涅米改到 138**（作者問「你用五方專家角度看呢」，規劃 11-17 定）：兩條真實路線怎麼經營都虧、兩條一起買主線人數減半，第一印象太差；#2355 ROVANIEMI-OPEN 跑綠轉 ready 但先不合，等 ROVANIEMI-PAIR（bug，2.40）與 ROVANIEMI-FARE（2.85）兩個 GameCore 修正合了再一起合，138 開，仍趕在 11/30 冬季活動前；railway-reference-private #145 也改成 138 開放後才合。五方：玩家（新地圖永遠虧錢是壞的第一印象）、鐵道迷（路線真、數字錯，修好才對得起真路線）、開發（價錢修正可馬上派，#2355 只是等）、美術（無）、音樂（無）。發版說明在 137 準備 PR（`claude/whatsnew-137`）先寫好，這兩張合完照實際內容改，最後合；再對 main HEAD 跑完整 ci.yml 與 full lane，都綠才請作者說「發」。
+- **11:10 UTC**：合了 #2366、#2356 ROAD-SMOOTH（821）、#2362 TRACK-CURVE（826），兩個 session 已封存；派 ROAD-LOOK-REAL-2 session_01JMHz9bn8HzazZzMYbhURDh 接 #2364（順手量 §29.23 VIADUCT-PIERS 的墩數）。§29.23 ROAD-GRADE-CAP 等 #2364 合併後派。
 - **10:50 UTC 更新**（規劃壓縮第 1 次後）：
   - **合併了**：#2347 DEADLOCK-HK（816，`2ffc2db`）、#2360、#2361（交接）。main 的 ci.yml 綠。已封存約 46 個合併且交接完的 session；前一任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 要作者在可信任的裝置上封存。還沒封存的舊 session（描線、隱私資料夾新增檔案評估、PR 審查與修復、沿線官網和測試進度、優先移植部分）是失敗或卡住的，等作者說。
   - #2356 ROAD-SMOOTH：已併 main（`26001f3`），NEXT_PRIORITIES §29.26，CI 綠了就合。
-  - #2355 ROVANIEMI-OPEN：又和 main 衝突，已請它併 main；小節接在 §29.26 後面。**`railway-reference-private#145`（網站的羅瓦涅米資料來源）在 #2355 合併、137 發版後才合。**
+  - #2355 ROVANIEMI-OPEN：又和 main 衝突，已請它併 main；小節接在 §29.26 後面。**`railway-reference-private#145`（網站的羅瓦涅米資料來源）在 #2355 合併、138 發版後才合（羅瓦涅米改到 138，見上面「137 的範圍」）。**
   - #2362 TRACK-CURVE（826）、#2365 PERF-3D-FIRST（820）：草稿，CI 跑中。
   - #2364 ROAD-LOOK-REAL（822）：session 壓縮 2 次已停，交接 `docs/handoff/ROAD-LOOK-REAL.md` 在分支上；要派新 session 接手，新外觀規劃看總覽圖才合。
   - E200-REDO（825）：還在做。

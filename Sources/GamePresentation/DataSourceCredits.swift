@@ -69,6 +69,7 @@ public enum DataSourceCredits {
     /// MapLibre Native's licence, from its project (the text also comes with the app).
     static let mapLibreLicenseURL = "https://github.com/maplibre/maplibre-native/blob/main/LICENSE.md"
     static let proceduralTokyoURL = "https://github.com/jeantimex/tokyo"
+    static let slopNewYorkURL = "https://github.com/mrdoob/slop-newyork"
     /// The notices of the 3D city view's page and the libraries it bundles
     /// (decision 152), next to the page on the game's website (decision 163).
     /// Decision 503: whom the ODbL notices offer the derived files from,
@@ -1161,6 +1162,21 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: taipeiGarbageTrucksURL),
                             openGovernmentLicense(in: language),
                         ]
+                    ),
+                    // Decision 827: the Tamsui-Xinyi line's elevated station
+                    // shells started from Slop New York's code and shapes.
+                    DataSourceCredit(
+                        id: "slopNewYork",
+                        title: "Slop New York",
+                        detail: language.text(
+                            "Its station shapes were the starting point for the elevated stations of the Tamsui-Xinyi Line.",
+                            "淡水信義線高架車站的外觀以它的車站造型為起點。"
+                        ),
+                        notice: language.text(
+                            "Copyright (c) 2026 Mr.doob, under the MIT License.",
+                            "Copyright (c) 2026 Mr.doob，依 MIT 授權使用。"
+                        ),
+                        links: [DataSourceCredit.Link(title: "Slop New York", url: slopNewYorkURL)]
                     ),
                 ]
             ),

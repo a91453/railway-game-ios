@@ -84,7 +84,10 @@ final class Map3DTrainSetTests: XCTestCase {
                     // 6,932 far; #1671's coaches 13,194 to 13,278 near, 5,370
                     // to 5,478 far.
                     : ["BLUE", "BLUEFar"].contains(set.key) ? 5_000...15_000
-                    : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
+                    // Decision 825: the E200 drawn from photographs, 5,784
+                    // near and 1,132 far.
+                    : name == set.headName && set.key == "E200CK" ? 5_000...6_000
+                    : name == set.headName && ["E200CKFar", "MINGRIFar"].contains(set.key) ? 1_000...1_300
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
                     : name == set.headName && ["R200CK", "R200CKFar", "FREIGHT", "FREIGHTFar"].contains(set.key) ? 5_000...12_800
                     // Decision 554: #1539's EMC and EM, 8,076 near and 3,420 far.
@@ -329,7 +332,10 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.reach(of: "EMU3000"),Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
-        for key in ["", "dieselExpress", "puyumaFar", "metroGeneric"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        for key in ["", "puyumaFar", "metroGeneric"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        // Decision 825: the DR1000 and DR3100 have far sets (decision 511),
+        // so they are drawn as them from 500 m, not as their near cars to 900 m.
+        for key in ["dieselExpress", "dieselRailcar"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrainSet.tramReach, key) }
         // Decision 461: the player's metro is the C381 now, its far set from 500 m.
         XCTAssertEqual(Map3DTrainSet.reach(of: "B"), Map3DTrainSet.tramReach)
         // Decision 426: the Puyuma, ten thousand triangles a set, like the Taroko.
