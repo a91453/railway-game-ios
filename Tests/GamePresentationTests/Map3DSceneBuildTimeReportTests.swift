@@ -90,8 +90,22 @@ final class Map3DSceneBuildTimeReportTests: XCTestCase {
         }
         print("MAP3D-BUILD memory before building: \(memory())")
         let runs = max(1, Int(environment["MAP3D_BUILD_RUNS"] ?? "") ?? 1)
+        // `MAP3D_BUILD_WITH_PACK=1`: the model pack made on another thread
+        // as the scene starts, as the app makes it when a pinch rests near
+        // the 3D map (decision 546); `=wait` and the scene first asks for
+        // the pack, as it did before decision 820.
+        let withPack = environment["MAP3D_BUILD_WITH_PACK"]
+        if withPack != nil {
+            Thread.detachNewThread {
+                let begun = clock.now
+                let count = Map3DModelPack.standard.models.count
+                print("MAP3D-BUILD pack beside the scene: \(count) models in \(String(format: "%.2f", seconds(clock.now - begun))) s")
+            }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
         for run in 1...runs {
             let begun = clock.now
+            if withPack == "wait" { _ = Map3DModelPack.standard.models.count }
             let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: tiles, cityTiles: city,
                                    footprints: footprints, heights: heights, landCover: landCover, lineBands: bands, railways: railways,
                                    temples: temples, noBuild: land)
@@ -106,5 +120,24 @@ final class Map3DSceneBuildTimeReportTests: XCTestCase {
                 print("MAP3D-BUILD   \(String(format: "%6.2f", time)) s  \(String(format: "%4.1f", 100 * time / took)) %  \(step)")
             }
         }
+    }
+
+    /// How long the model pack takes beside the recipes alone
+    /// (`MAP3D_BUILD_PACK=1`), the part the scene's catalog of models needs.
+    func testReportOfThePack() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_BUILD_PACK"] != nil else { throw XCTSkip("set MAP3D_BUILD_PACK=1") }
+        let clock = ContinuousClock()
+        func seconds(_ duration: Duration) -> Double {
+            Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18
+        }
+        var begun = clock.now
+        let recipes = Map3DModelPack(styles: Map3DTrainStyle.all, baked: false)
+        print("MAP3D-BUILD recipes: \(recipes.models.count) models in \(String(format: "%.2f", seconds(clock.now - begun))) s")
+        begun = clock.now
+        let catalog = Map3DModelCatalog.standard
+        print("MAP3D-BUILD catalog: \(catalog.names.count) models in \(String(format: "%.2f", seconds(clock.now - begun))) s")
+        begun = clock.now
+        let pack = Map3DModelPack(styles: Map3DTrainStyle.all)
+        print("MAP3D-BUILD pack: \(pack.models.count) models in \(String(format: "%.2f", seconds(clock.now - begun))) s")
     }
 }

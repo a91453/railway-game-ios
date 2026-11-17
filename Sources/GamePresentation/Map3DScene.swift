@@ -1523,7 +1523,7 @@ extension Map3DScene {
                 if let own = ownColourFar[key] { Map3DFarDetail.appendAlwaysDrawn(own, to: &far, steps: &farSteps.indices) }
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
-                let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }
+                let propBoxes = (props[key] ?? []).compactMap { $0.bounds(from: Map3DModelCatalog.standard) }
                 // And the signs, a rooftop board above its building.
                 let signBoxes = (signs[key] ?? []).map { sign in
                     sign.corners.reduce((min: sign.centre, max: sign.centre)) {
