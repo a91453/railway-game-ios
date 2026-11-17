@@ -605,6 +605,35 @@ def garbage_truck():
     return np.fft.irfft(spectrum * gain, n)
 
 
+# Decision 831: Santa's sleigh's bells as it flies over the 3D map, the
+# winter tune's `sleigh` voice (decision 815) shaken to a reindeer's
+# gallop: three shakes a stride (the hind feet, the fore feet a little
+# louder, a light one after), a stride every half second, eight strides
+# to the loop. Each shake is its own (`sleigh_frames` takes its seed from
+# the note), and the strides swell and fall a little, so the loop does not
+# tick like a clock.
+SLEIGH_STRIDE = int(0.5 * SR)
+SLEIGH_STRIDES = 8
+SLEIGH_SHAKES = [(0.0, 0.8), (0.12, 1.0), (0.27, 0.55)]
+
+
+def sleigh_bells():
+    """Decision 831: the loop of the sleigh's bells, its shakes' rings
+    carried round from its end into its start, so it loops without a
+    seam."""
+    n = SLEIGH_STRIDE * SLEIGH_STRIDES
+    assert n % 64 == 0
+    out = np.zeros(n)
+    for stride in range(SLEIGH_STRIDES):
+        swell = 0.85 + 0.15 * np.cos(2 * np.pi * stride / SLEIGH_STRIDES)
+        for shake, (at, gain) in enumerate(SLEIGH_SHAKES):
+            ring = sleigh_frames(60 + stride * len(SLEIGH_SHAKES) + shake, RING_FRAMES["sleigh"])
+            start = stride * SLEIGH_STRIDE + int(at * SR)
+            index = (start + np.arange(len(ring))) % n
+            np.add.at(out, index, swell * gain * ring)
+    return out
+
+
 def normalized(x, peak):
     return x / np.abs(x).max() * peak
 
@@ -908,6 +937,7 @@ SYNTH_SOURCES = {
     "ticket-issued.wav": "ticket(), decision 373",
     **{f"horn-{kind}.wav": f"horn(\"{kind}\"), decision 403" for kind in HORNS},
     "garbage-truck.caf": "garbage_truck(), decision 437",
+    "sleigh-bells.caf": "sleigh_bells(), decision 831",
 }
 
 
@@ -947,7 +977,7 @@ def manifest(out_dir):
             entry["kind"] = (
                 "running" if file.startswith("run-")
                 else "weather" if file.startswith(("rain-", "thunder"))
-                else "street" if file.startswith("garbage-truck")
+                else "street" if file.startswith(("garbage-truck", "sleigh-bells"))
                 else "music" if file.endswith(".caf")
                 else "sound"
             )
@@ -999,6 +1029,8 @@ def main(out_dir):
     write_caf(os.path.join(out_dir, "thunder.caf"), normalized(thunder(), 0.7))
     # Decision 437: the evening garbage truck's tune.
     write_caf(os.path.join(out_dir, "garbage-truck.caf"), normalized(garbage_truck(), 0.5))
+    # Decision 831: Santa's sleigh's bells.
+    write_caf(os.path.join(out_dir, "sleigh-bells.caf"), normalized(sleigh_bells(), 0.8))
 
     # Decision 219: the station chimes from their scores. The local one is
     # decision 79's station chime, a bell on C6 and, 0.25 s later, a softer

@@ -184,6 +184,9 @@ public enum Map3DAircraft {
         public let landing: Bool
         public let index: Int
         public let leg: Leg?
+        /// Decision 831: Santa's sleigh, the pass of Christmas Eve it flies
+        /// (``SantaFlight``); `nil` for an aircraft.
+        public let santa: Int?
 
         public init(field: Int32, hours: Int64, landing: Bool, index: Int) {
             self.field = field
@@ -191,6 +194,7 @@ public enum Map3DAircraft {
             self.landing = landing
             self.index = index
             leg = nil
+            santa = nil
         }
 
         public init(leg: Leg, landing: Bool) {
@@ -199,6 +203,17 @@ public enum Map3DAircraft {
             self.landing = landing
             index = 0
             self.leg = leg
+            santa = nil
+        }
+
+        /// Decision 831: the sleigh of Christmas Eve's pass `pass`.
+        public init(santa pass: Int) {
+            field = 0
+            hours = 0
+            landing = false
+            index = 0
+            leg = nil
+            santa = pass
         }
     }
 

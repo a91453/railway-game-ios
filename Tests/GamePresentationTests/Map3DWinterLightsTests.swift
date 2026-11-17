@@ -178,7 +178,9 @@ final class Map3DWinterLightsTests: XCTestCase {
         let first = try XCTUnwrap(names.firstIndex(of: Map3DWinterDecor.treeMedium.modelName))
         XCTAssertEqual(Array(names[first..<first + 5]), Map3DWinterDecor.allCases.map(\.modelName))
         XCTAssertEqual(names[first - 1], Map3DStreetModel.commuterWalking.modelName)
-        XCTAssertEqual(names[first + 5], Map3DLowFloorBus.routeModel().name)
+        // Decision 831: then Santa's sleigh, then the route bus.
+        XCTAssertEqual(names[first + 5], SantaFlight.Model.name)
+        XCTAssertEqual(names[first + 6], Map3DLowFloorBus.routeModel().name)
         for decor in Map3DWinterDecor.allCases {
             XCTAssertEqual(pack.models[first + decor.index].triangleCount, try XCTUnwrap(decor.model).triangleCount)
         }

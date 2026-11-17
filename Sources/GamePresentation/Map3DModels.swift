@@ -256,6 +256,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 794: the winter event's trees, near and far, and the
         // lights, after the commuter and before the route bus.
         groups.append { Map3DWinterLights.drawn }
+        // Decision 831: Santa's sleigh (a stand-in until the studio's
+        // REINDEER), after the winter decorations and before the route bus.
+        groups.append { [SantaFlight.Model.model] }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

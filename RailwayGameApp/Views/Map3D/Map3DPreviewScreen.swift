@@ -414,6 +414,7 @@ struct Map3DPreviewScreen: View {
             FrameTimeRecorder.shared.show3D(true)
             let audio = audio
             feed.garbageTruckSound = { [weak audio] sound in audio?.setGarbageTruck(sound) }
+            feed.sleighBells = { [weak audio] sound in audio?.setSleighBells(sound) }
             let session = session
             feed.manualDrive = { [weak session] now in session?.stepManualDrive(at: now) }
             // Decision 702: what the aircraft followed is doing, and when
@@ -429,6 +430,8 @@ struct Map3DPreviewScreen: View {
             if !FrameTimeRecorder.memoryTier.keepsSceneBuilt { Map3DSceneCache.shared.clear() }
             feed.garbageTruckSound = nil
             audio?.setGarbageTruck(nil)
+            feed.sleighBells = nil
+            audio?.setSleighBells(nil)
         }
         .sheet(item: $photo.snapshot) { snapshot in
             Map3DSnapshotSheet(snapshot: snapshot, language: language)
@@ -505,6 +508,8 @@ struct Map3DPreviewScreen: View {
         if let boat = session.followedFerryBoatID, session.ferryFollowBar != nil { return Map3DFollow(ferry: boat, view: view) }
         // Decision 702 (FOLLOW-AIR): an aircraft, from behind, beside or its cabin's window.
         if let flight = session.followedAircraftID, let bar = session.aircraftFollowBar {
+            // Decision 831: Santa's sleigh, from behind or beside.
+            if flight.santa != nil { return Map3DFollow(aircraft: flight, view: SantaFlight.view(view), length: SantaFlight.Model.length) }
             return Map3DFollow(aircraft: flight, view: view, length: Map3DAircraftStudies.dimensions(bar.state.kind).length)
         }
         return nil
@@ -1460,6 +1465,12 @@ final class Map3DTrainFeed {
     /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
     /// acts only on a change), `nil` when there is none near.
     var garbageTruckSound: ((Map3DGarbageTruck.Sound?) -> Void)?
+    /// Decision 831: Santa's sleigh over the map on Christmas Eve, the one
+    /// drawn last frame, and who is told its bells as heard from the camera
+    /// (``GameAudio/setSleighBells(_:)``).
+    private var santaSky = SantaFlight.Sky()
+    private var santaDrawn: Map3DAircraft.Drawn?
+    var sleighBells: ((SantaFlight.Sound?) -> Void)?
 
     /// Decision 485: the glide and the heights the tick worked out off
     /// the main actor (the glide shared with the 2D map under this one),
@@ -1536,6 +1547,7 @@ final class Map3DTrainFeed {
         let trucks = Map3DGarbageTruck.frame(in: scene.streetLife, camera: camera, clock: busClock, glides: busGlides, now: now,
                                              still: UIAccessibility.isReduceMotionEnabled, budget: budget)
         garbageTruckSound?(Map3DGarbageTruck.sound(of: trucks, camera: camera))
+        sleighBells?(SantaFlight.sound(of: santaDrawn, camera: camera))
         let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now).adding(trucks)
         // Decision 596: while the signals change, the traffic and the
         // walkers go by the game's clock (the buses'), waiting at them.
@@ -1608,6 +1620,10 @@ final class Map3DTrainFeed {
             laid.aircraft.add(to: &frame, pack: models, second: second, traffic: laid.traffic, eye: eye, reach: reach.farModel,
                               still: still, following: followedAircraft, blink: still ? nil : now, lit: lit)
         }
+        // Decision 831: and Santa's sleigh on Christmas Eve, each pass over
+        // where the camera looked as it began.
+        santaDrawn = santa(in: scene, target: target ?? eye)
+        if let models, let santaDrawn { SantaFlight.add(santaDrawn, to: &frame, pack: models, lit: lit) }
         // Decision 708: and the real coaches on the roads and the coach
         // stops, on the same clock.
         if let models, let world = busWorld, !world.coachStops.isEmpty, let second = cableSecond(at: now),
@@ -1670,9 +1686,29 @@ final class Map3DTrainFeed {
         airTraffic = traffic
     }
 
+    /// Decision 831: whether the winter event's decorations are switched
+    /// on in the settings (Santa flies only with them).
+    private static var festive: Bool {
+        UserDefaults.standard.object(forKey: WinterEvent.decorationsKey) as? Bool ?? true
+    }
+
+    /// Decision 831: Santa's sleigh now, on a real-world map on Christmas
+    /// Eve; a pass that begins now flies over `target`.
+    private func santa(in scene: Map3DScene, target: Map3DPoint) -> Map3DAircraft.Drawn? {
+        guard let world = busWorld, world.geoAnchor != nil else { return nil }
+        return santaSky.sleigh(at: Date(), origin: (scene.originX, scene.originY), switchedOn: Self.festive,
+                               still: UIAccessibility.isReduceMotionEnabled) {
+            SantaFlight.track(world: world, scene: scene, over: target)
+        }
+    }
+
     /// Decision 702 (FOLLOW-AIR): the aircraft of flight `id` now, while
     /// the camera can follow it.
     private func aircraftFollowed(_ id: Map3DAircraft.FlightID, in scene: Map3DScene) -> Map3DAircraft.Followed? {
+        // Decision 831: or Santa's sleigh.
+        if id.santa != nil {
+            return santaSky.followed(id, at: Date(), switchedOn: Self.festive, still: UIAccessibility.isReduceMotionEnabled)
+        }
         guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
         return laid.aircraft.followed(id, second: second, traffic: laid.traffic, still: UIAccessibility.isReduceMotionEnabled)
     }
@@ -1686,7 +1722,7 @@ final class Map3DTrainFeed {
         // Decision 713: while the airfields are laid again (the scene was
         // built anew round another place), it is not gone: the camera
         // waits where it is.
-        if found == nil, aircraft.isLaying { return nil }
+        if found == nil, id.santa == nil, aircraft.isLaying { return nil }
         if aircraftTold?.flight != id || aircraftTold?.state != found?.state {
             aircraftTold = (id, found?.state)
             let state = found?.state, tell = aircraftChanged
@@ -1698,6 +1734,11 @@ final class Map3DTrainFeed {
     /// Decision 702: the aircraft landing, leaving or taxiing drawn under
     /// the finger at (`x`, `y`), if any.
     func aircraft(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene, tight: Bool = false) -> Map3DAircraft.Followed? {
+        // Decision 831: Santa's sleigh first: there is one, in the sky.
+        if let santa = santaSky.followable(atX: x, y: y, camera: camera, at: Date(), switchedOn: Self.festive,
+                                           still: UIAccessibility.isReduceMotionEnabled, within: Map3DBuses.tapReach) {
+            return santa
+        }
         guard let second = cableSecond(at: Date().timeIntervalSinceReferenceDate), let laid = laidAircraft(in: scene, second: second) else { return nil }
         return laid.aircraft.followable(atX: x, y: y, camera: camera, second: second, traffic: laid.traffic,
                                         still: UIAccessibility.isReduceMotionEnabled, within: Map3DBuses.tapReach, tight: tight)
@@ -2726,6 +2767,8 @@ private struct Map3DFollowChoice: View {
     var ferry = false
     /// Decision 702 (FOLLOW-AIR): an aircraft's names (機艙窗).
     var aircraft = false
+    /// Decision 831: Santa's sleigh's hints.
+    var santa = false
 
     var body: some View {
         let blocked = unavailable != nil && selection != option
@@ -2749,7 +2792,7 @@ private struct Map3DFollowChoice: View {
         .buttonStyle(.plain)
         .disabled(blocked)
         .opacity(blocked ? 0.4 : 1)
-        .accessibilityHint(Text(verbatim: unavailable ?? (aircraft ? option.aircraftHint(in: language)
+        .accessibilityHint(Text(verbatim: unavailable ?? (santa ? SantaFlight.hint(option, in: language) : aircraft ? option.aircraftHint(in: language)
                                                           : ferry ? option.ferryHint(in: language) : option.hint(in: language))))
         .accessibilityAddTraits(selection == option ? .isSelected : [])
         .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
@@ -3336,7 +3379,7 @@ private struct Map3DAircraftFollowBar: View {
 
     private var title: some View {
         HStack(spacing: 7) {
-            Image(systemName: "airplane")
+            Image(systemName: santa ? "gift.fill" : "airplane")
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityHidden(true)
@@ -3354,12 +3397,17 @@ private struct Map3DAircraftFollowBar: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Decision 831: Santa's sleigh, followed from behind or beside.
+    private var santa: Bool { facts.state.flight.santa != nil }
+
     private var choices: some View {
         let shown = $view
-        let selection = Binding(get: { Map3DFollow.aircraftView(shown.wrappedValue) }, set: { shown.wrappedValue = $0 })
+        let santa = santa
+        let selection = Binding(get: { santa ? SantaFlight.view(shown.wrappedValue) : Map3DFollow.aircraftView(shown.wrappedValue) },
+                                set: { shown.wrappedValue = $0 })
         let language = session.language
-        return ForEach(Map3DFollow.aircraftViews, id: \.self) { @Sendable option in
-            Map3DFollowChoice(option: option, selection: selection, language: language, aircraft: true)
+        return ForEach(santa ? SantaFlight.views : Map3DFollow.aircraftViews, id: \.self) { @Sendable option in
+            Map3DFollowChoice(option: option, selection: selection, language: language, aircraft: !santa, santa: santa)
         }
     }
 

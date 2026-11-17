@@ -56,6 +56,10 @@ final class GameAudio {
     @ObservationIgnored private var garbageTruck: Map3DGarbageTruck.Sound?
     /// Its loop, made when first heard.
     @ObservationIgnored private var garbageTruckPlayer: AVAudioPlayer?
+    /// Decision 831: Santa's sleigh's bells as the 3D map last asked for
+    /// them (``SantaFlight/Sound``), `nil` for none near; and their loop.
+    @ObservationIgnored private var sleighBells: SantaFlight.Sound?
+    @ObservationIgnored private var sleighBellsPlayer: AVAudioPlayer?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
@@ -132,6 +136,7 @@ final class GameAudio {
         updateRunning()
         updateWeather()
         updateGarbageTruck()
+        updateSleighBells()
     }
 
     /// Sets one of the three volumes (decision 219, stage 2); the music
@@ -146,6 +151,7 @@ final class GameAudio {
             updateRunning()
             updateWeather()
             updateGarbageTruck()
+            updateSleighBells()
         }
     }
 
@@ -174,6 +180,14 @@ final class GameAudio {
         guard sound != garbageTruck else { return }
         garbageTruck = sound
         updateGarbageTruck()
+    }
+
+    /// Plays Santa's sleigh's bells as heard from the 3D map's camera
+    /// (decision 831), or fades them out with `nil`.
+    func setSleighBells(_ sound: SantaFlight.Sound?) {
+        guard sound != sleighBells else { return }
+        sleighBells = sound
+        updateSleighBells()
     }
 
     /// Takes the music down by `gain` (``MusicDuck``), or brings it back
@@ -239,6 +253,7 @@ final class GameAudio {
         updateRunning()
         updateWeather()
         updateGarbageTruck()
+        updateSleighBells()
     }
 
     /// Plays the sound for `cue`, unless sounds are off, the app is not
@@ -427,6 +442,37 @@ final class GameAudio {
             }
         }
     }
+
+    /// Starts, moves or fades out Santa's sleigh's bells (decision 831) as
+    /// the garbage truck's tune.
+    private func updateSleighBells() {
+        let level = sleighBells.map { volumes.volume(Self.sleighBellsVolume * Float($0.volume), for: .effects) } ?? 0
+        if plays, soundsOn, isActive, level > 0, let sleighBells {
+            let file = SantaFlight.Sound.resource
+            if sleighBellsPlayer == nil {
+                sleighBellsPlayer = Self.player(named: file.name, extension: file.extension, volume: 0)
+                sleighBellsPlayer?.numberOfLoops = -1
+            }
+            guard let player = sleighBellsPlayer else { return }
+            player.pan = Float(sleighBells.pan)
+            if !player.isPlaying {
+                player.volume = 0
+                player.play()
+            }
+            player.setVolume(level, fadeDuration: 0.5)
+        } else if let player = sleighBellsPlayer, player.isPlaying {
+            player.setVolume(0, fadeDuration: 0.5)
+            Task { @MainActor [weak self, weak player] in
+                try? await Task.sleep(for: .milliseconds(600))
+                guard let self, let player, !(self.plays && self.soundsOn && self.isActive && self.sleighBells != nil) else { return }
+                player.pause()
+            }
+        }
+    }
+
+    /// The bells' own volume at their loudest, before the player's: as the
+    /// garbage truck's loudspeaker.
+    private static let sleighBellsVolume: Float = 0.4
 
     /// Whether the garbage truck's tune is asked for and can be heard.
     private var garbageTruckHeard: Bool {
