@@ -75,11 +75,11 @@ final class Map3DTaiwanCarsTests: XCTestCase {
             XCTAssertEqual(missing.models[index].vertices, standard.models[index].vertices, "\(model)")
         }
         // The SUV's and the taxi's stand-ins right after Santa's sleigh,
-        // before the route bus.
+        // before the route bus (decision 840: the reindeer between them).
         let sleigh = try XCTUnwrap(standard.index(of: SantaFlight.Model.name))
         XCTAssertEqual(standard.index(of: Map3DStreetModel.suv.modelName), sleigh + 1)
         XCTAssertEqual(standard.index(of: Map3DStreetModel.yellowTaxi.modelName), sleigh + 2)
-        XCTAssertEqual(standard.models[sleigh + 3].name, Map3DLowFloorBus.routeModel().name)
+        XCTAssertEqual(standard.models[sleigh + 3 + Map3DReindeerHerd.drawn.count].name, Map3DLowFloorBus.routeModel().name)
     }
 
     private func vehicles(_ region: Map3DStreetRegion, scooters: Bool) throws -> [Map3DStreetLife.Vehicle] {

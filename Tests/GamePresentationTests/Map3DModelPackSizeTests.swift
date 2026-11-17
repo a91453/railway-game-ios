@@ -88,9 +88,13 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // KB a copy). Decision 831: Santa's sleigh's stand-in after the
         // winter models (1 model, 4,536 vertices more, 181 KB a copy).
         // Decision 838: Taiwan's SUV and yellow taxi stand-ins after the
-        // sleigh (2 models, 690 vertices more, 28 KB a copy).
-        XCTAssertEqual(models.count, 906)
-        XCTAssertEqual(vertices, 6_590_070)
+        // sleigh (2 models, 690 vertices more, 28 KB a copy). Decision 840:
+        // the studio's sleigh and reindeer team in place of the stand-in
+        // (the same model, 18,900 vertices more, 756 KB a copy), and the
+        // Santa Claus village's reindeer after Taiwan's cars (6 models,
+        // 13,314 vertices more, 533 KB a copy).
+        XCTAssertEqual(models.count, 912)
+        XCTAssertEqual(vertices, 6_622_284)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

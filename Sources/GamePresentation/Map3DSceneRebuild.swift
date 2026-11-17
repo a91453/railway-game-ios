@@ -166,6 +166,7 @@ extension Map3DScene {
         var life = Map3DStreetLife()
         var exteriors = old.stationExteriors
         var winter = old.winterLights.placements.filter { !keys.contains(grid.key(of: $0.point)) }
+        var herd = old.reindeerHerd.placements.filter { !keys.contains(grid.key(of: $0.point)) }
         var yards = old.freightYards.filter { !keys.contains(grid.key(of: $0.centre)) }
         var left = keys.sorted()
         while !left.isEmpty {
@@ -185,12 +186,15 @@ extension Map3DScene {
             exteriors = Self.exteriors(exteriors, rebuilt: part.stationExteriors) { wanted.contains(grid.key(of: $0)) }
             // Decision 794: the trees and lights of the blocks built again.
             winter += part.winterLights.placements.filter { wanted.contains(grid.key(of: $0.point)) }
+            // Decision 840: and the reindeer.
+            herd += part.reindeerHerd.placements.filter { wanted.contains(grid.key(of: $0.point)) }
             // Decision 837: and the freight yards.
             yards += part.freightYards.filter { wanted.contains(grid.key(of: $0.centre)) }
             life.spots += part.streetLife.spots.filter { Self.isStations($0) && wanted.contains(grid.key(of: $0.path.points[0])) }
         }
         stationExteriors = exteriors
         winterLights = Map3DWinterLights(placements: winter)
+        reindeerHerd = Map3DReindeerHerd(placements: herd)
         freightYards = yards
         chunks = (old.chunks.filter { !keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } + built)
             .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
