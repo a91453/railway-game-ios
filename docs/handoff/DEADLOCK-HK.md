@@ -18,7 +18,7 @@
 - VERIFIED：`swift test --skip-build --filter 'GoldenScenarioTests|ReplayFixtureTests|SavedGameTests|NightTerminalBerthTests|TerminalPlatformWaitTests|FullEndWithoutDepotTests'` 71 個測試、1 個略過、0 失敗（併 main 之後）。
 - VERIFIED：`FullEndWithoutDepotTests` 放到 135 版（沒有修法）會紅：2 個測試、10 個斷言。
 - VERIFIED：`python3 -I tools/golden-checks/doc_numbers.py --check` 通過（`docs/OVERVIEW.md` §2 的存檔 fixture 個數 111 → 113）。
-- 量到的數字在決策 816 §4。
+- 量到的數字在決策 816 §4：兩線新局兩晚的死結 469 → 11 分鐘；第二天沒發的班 14 → 12（740 班裡），**誤點的班 438 → 477**（多 39 班，沒有往下查）。作者的存檔併 main 之後重放：南港島綫 1 分鐘內解開，東涌綫仍到 05:54。
 - UNVERIFIED：整輪測試與 25 個 HEALTH 世界（留給 CI；有機廠的世界條件上碰不到這一招，但沒有整輪重跑雜湊）。
 - UNVERIFIED：iOS、實機。作者的畫面要在下一個 TestFlight 版本開擬實規則的香港新局看收班後。
 
@@ -34,4 +34,5 @@
 4. **6.2 秒卡頓**（STALL-0229）：裝置上沒量。Linux 上作者的存檔、135 版：`deadlockedTrains()` 14 ms、`situationAlerts()` 19 ms、60 倍速 600 tick 共 9.2 秒、最慢一個 tick 165 ms，沒有重現。
 5. **下載的香港地圖包沒被採用**（HK-PACK-INCOMPLETE）：`MapPackDownloads` 的檢查說裝置上那一包少 `airfields.json` 或大小不符；內建那一包 15 個檔都對。和死結無關，沒有往下查（下載的那一包怎麼做出來、怎麼送到裝置還沒看）。
 6. 香港各線的車廠資料（HK-DEPOTS）；簡化規則或沒有閉塞區間時的同一種不平衡（等觸發）。
-7. 找過什麼：參考庫與外部專案這次都沒有搜尋（修法接在這個專案自己的決策 808 後面）；接手做第 2、3、6 項的人照 CLAUDE.md 先找。
+7. 規劃 05:10、05:20 的訊息要的兩件事：重放作者的存檔做了（上面）；**HEALTH-136 那幾格（機捷有乘客擬實、文湖簡化加管制）沒有重量**，session 停手了。這一招的條件是沒有機廠的路線，台灣的世界碰不到，但沒有用雜湊確認。
+8. 找過什麼：參考庫與外部專案這次都沒有搜尋（修法接在這個專案自己的決策 808 後面）；接手做第 2、3、6 項的人照 CLAUDE.md 先找。
