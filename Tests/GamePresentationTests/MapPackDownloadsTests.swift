@@ -40,6 +40,59 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertNotEqual(MapPack.current(.hongKong)?.root, root)
     }
 
+    /// Decision 819 (MAPPACK-FIX): an Apple-hosted asset pack hands out a
+    /// URL per file (`AssetPackManager.url(for:)`); the folder of the one
+    /// it gave for `pack.json` need not hold the rest. On the owner's
+    /// iPhone (0.6.0 (136)) that folder held `pack.json` alone, and the
+    /// pack was refused at the first file it lists. Each file is looked
+    /// for in turn until one is found at its listed size.
+    func testAPackWhoseFilesLieApartFromItsManifestIsRead() throws {
+        let whole = try downloaded()
+        let names = try FileManager.default.contentsOfDirectory(atPath: whole.path).sorted()
+        // `pack.json` alone in a folder, as the device had it.
+        let manifestOnly = whole.deletingLastPathComponent().appendingPathComponent("manifest-only").appendingPathComponent("hongkong")
+        try FileManager.default.createDirectory(at: manifestOnly, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: whole.appendingPathComponent("pack.json"), to: manifestOnly.appendingPathComponent("pack.json"))
+        // Every other file in a folder of its own.
+        var apart: [String: URL] = [:]
+        for name in names where name != "pack.json" {
+            let folder = whole.deletingLastPathComponent().appendingPathComponent("apart-\(name)")
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try FileManager.default.moveItem(at: whole.appendingPathComponent(name), to: folder.appendingPathComponent(name))
+            apart[name] = folder.appendingPathComponent(name)
+        }
+        try FileManager.default.removeItem(at: whole)
+
+        // Read from the manifest's folder alone, it is the device's refusal.
+        XCTAssertEqual(MapPackDownloads.use(.hongKong, root: manifestOnly, bundled: try bundled), .incomplete("airfields.json"))
+        XCTAssertNil(MapPackDownloads.root(.hongKong))
+        let clue = try XCTUnwrap(MapPackDownloads.clue(.hongKong))
+        XCTAssertTrue(clue.contains("found 0 of 15 files"), clue)
+        XCTAssertTrue(clue.contains("manifest-only/hongkong (1 item)"), clue)
+
+        // Looked for one by one, it is taken, and read from where each lies.
+        let locators: [MapPackDownloads.Locator] = [
+            { manifestOnly.appendingPathComponent($0) },
+            { apart[$0] },
+        ]
+        XCTAssertNil(MapPackDownloads.use(.hongKong, locators: locators, bundled: try bundled))
+        XCTAssertNil(MapPackDownloads.clue(.hongKong))
+        let pack = try XCTUnwrap(MapPack.current(.hongKong))
+        XCTAssertEqual(pack.root, manifestOnly)
+        XCTAssertEqual(pack.baseMapFile, apart["basemap.pmtiles"])
+        XCTAssertEqual(pack.buildingsFile, apart["buildings.pmtiles"])
+        XCTAssertEqual(pack.terrainFile, apart["terrain.pmtiles"])
+        XCTAssertEqual(try pack.extent(), try bundled.extent())
+        XCTAssertNotNil(pack.airfields())
+        XCTAssertEqual(try pack.file("hkmtr", "json"), try bundled.file("hkmtr", "json"))
+
+        // A file no locator finds is named, with what each one found.
+        apart["water.json"] = nil
+        XCTAssertEqual(MapPackDownloads.use(.hongKong, locators: locators, bundled: try bundled), .incomplete("water.json"))
+        let missing = try XCTUnwrap(MapPackDownloads.clue(.hongKong))
+        XCTAssertTrue(missing.contains("found 14 of 15 files (0, 14 by locator)"), missing)
+    }
+
     func testTheBundledPackIsReadWithoutADownload() {
         XCTAssertNil(MapPackDownloads.root(.hongKong))
         XCTAssertEqual(MapPack.current(.hongKong)?.root, MapPack.bundled(.hongKong)?.root)
