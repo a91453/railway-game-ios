@@ -644,7 +644,21 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
-**2026-11-17 深夜交接（規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 壓縮 3 次後交出；新規劃照這一段接手，下面的「晚上」是前一版）**
+**2026-11-17 換到 Ultra 的交接（Max 的規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 收尾時寫；Ultra 的新規劃照這一段接手，下面的「深夜交接」是前一版）**
+
+- **為什麼換**：Ultra 週額度 11-17 台灣時間 22:00 重置、沒有五小時上限；Max 今晚 13:39 UTC 碰到五小時上限，三個實作同時停住（§1.1「兩個帳號輪流當主帳號」）。作者 11-17：「看要不要給ultra做」，規劃答「137 發完就換」。
+- **main**：`478d0da`（#2369）之後再加這份交接。137 已發（下面「深夜交接」第一條）。
+- **Max 上還在做的三件**（11-17 約 14:58 UTC 規劃叫回，從停下的地方接著做；Ultra 傳不了訊息給它們，只看 #2118 與 PR，做完由 Ultra 規劃合）：
+  - ROVANIEMI-PAIR＋FARE（828，session_01JMHz9bnKhejDxHKpyueHQ3）：動 GameCore、存檔 108，帶 #2355 一起合，**羅瓦涅米在 138 開放**。
+  - ROAD-LOOK-REAL-2（822，session_01JMHz9bn8HzazZzMYbhURDh，#2364）：新外觀，**看總覽圖才合**。
+  - DEPOT-REAL（829，session_01JMHz9bsrazDrT4xMPmDZJE，Fable）：死結唯一的 session。
+  - 三個都被交代：再碰到上限或第二次壓縮，先推分支、寫 `docs/handoff/<TASK>.md`（ROVANIEMI-FARE、ROAD-LOOK-REAL、DEPOT-REAL）。**停了沒再動**（#2118 很久沒消息、分支沒新 commit）就在 Ultra 開新 session 照交接檔接手，不從頭做。
+- **Ultra 先派**：REVIEW-L27＋HEALTH-137（審 #2341 之後到 `85507e2`，也寫 PLAYER_FEEDBACK 的 137 一節）；再來 REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）、§29.29 第 3 名 PRIO-FILES。Ultra 同時最多 6 個實作，Max 那三件也算在內。
+- **Threads**：作者貼了 134～137 那篇以後，用文件 PR 補 `docs/research/THREADS_WRITING.md` §5 一列（下一篇從 `85507e2` 之後寫）。
+- **號碼**：下一個決策 **831**，存檔 107（108 給 ROVANIEMI-FARE），golden schema 77，NEXT_PRIORITIES 到 §29.29。
+- **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（後者只接了一下就停，由前者收尾），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
+
+**2026-11-17 深夜交接（規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 壓縮 3 次後交出；下面的「晚上」是前一版）**
 
 - **137 已發（新規劃 session_01JMHz9caNPdHNkVjVgrCB6J 補記）**：作者 13:32 UTC 自己按 `testflight.yml`（run 44093811838，`85507e2`，成功）。同一個 commit 的完整 `ci.yml`（run 44085363286）與 full lane（run 44085389506）都綠。發完合了 #2369（830，`478d0da`）與這份交接；PLAYER_FEEDBACK 的 137 一節由 REVIEW-L27＋HEALTH-137 寫。下面這一條是交接當時的狀態。
 - **（交接當時）137 還沒發**：main HEAD `85507e2`（#2368 發版說明）。完整 `ci.yml`（手動）與 push run 都綠；full lane（iOS App Build run 44085389506，workflow_dispatch）13:40 UTC 還在跑。兩個都綠了先告訴作者，**作者在規劃對話說「發」才**照 §1.2 按一次 `testflight.yml`。**發之前不要合任何 PR**（main HEAD 一動就要重跑完整測試和 full lane），本段的交接 PR 也等發完再合。
