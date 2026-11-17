@@ -2,9 +2,9 @@
 
 ## 進度
 
-- 做到哪：做完，draft PR 等 CI 與遊戲規劃看總覽圖（`docs/art/santa-flight-2026-11-17/overview.jpg`）。
+- 做到哪：做完，#2382 CI 全綠後合併（作者常設授權：綠了就合、截圖自己判斷；規劃換到新專案，總覽圖沒有另外審）。
 - 已驗證：Linux 建置（warnings-as-errors）乾淨；`SantaFlightTests` 8 個與模型包、冬季、飛機相關的測試通過；`make_game_audio.py --check` 通過；雪橇鈴 −15.1 LUFS、真峰值 −1.5 dBTP。
-- 下一步的第一個指令：CI 綠了、規劃看過圖，轉 ready，在 #2118 留「可合併、#N、head <SHA>」。
+- 下一步的第一個指令：REINDEER 的模型到了，照「還留下的」第 1 點換掉暫用造型。
 
 ## 派工
 
