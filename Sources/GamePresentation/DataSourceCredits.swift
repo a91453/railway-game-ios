@@ -83,6 +83,11 @@ public enum DataSourceCredits {
     /// Decision 815's later note: the instruments the music is played on.
     /// Its licence asks for links to its own pages, not its download files.
     static let generalUserGSURL = "https://github.com/mrbumpy409/GeneralUser-GS"
+    /// THEME-PLAIN item 1: the piano the music is played on (CC BY 3.0,
+    /// which asks for the author, the title, the licence and that the
+    /// samples were changed) and the strings and harp (CC0).
+    static let salamanderPianoURL = "https://github.com/sfzinstruments/SalamanderGrandPiano"
+    static let vscoURL = "https://github.com/sgossner/VSCO-2-CE"
     /// Decision 815's later note: whose the game's own music is, the
     /// brand's developer (``GameBrand``).
     static var musicHolder: (english: String, chinese: String) {
@@ -1263,19 +1268,24 @@ public enum DataSourceCredits {
                     // Decision 815's later note: the theme is the game's own
                     // composition and the winter tune its own arrangement of
                     // a tune in the public domain, both the developer's;
-                    // the instruments are a sample bank's.
+                    // the instruments are sample banks' (the piano, the
+                    // strings and the harp recorded ones, THEME-PLAIN
+                    // item 1).
                     DataSourceCredit(
                         id: "music",
                         title: language.text("Music", "音樂"),
                         detail: language.text(
-                            "The theme is an original composition for the game. The winter tune is the game’s own arrangement of Jingle Bells (James Lord Pierpont, 1857, in the public domain). Both are played on the instruments of GeneralUser GS.",
-                            "主題曲是為遊戲原創的曲子；冬季曲是遊戲自己編曲的〈Jingle Bells〉（James Lord Pierpont 1857 年作，屬公眾領域）。兩首都用 GeneralUser GS 的樂器演奏。"
+                            "The theme is an original composition for the game. The winter tune is the game’s own arrangement of Jingle Bells (James Lord Pierpont, 1857, in the public domain). The piano is the Salamander Grand Piano, the strings and harp are from VS Chamber Orchestra: Community Edition, and the other instruments are from GeneralUser GS.",
+                            "主題曲是為遊戲原創的曲子；冬季曲是遊戲自己編曲的〈Jingle Bells〉（James Lord Pierpont 1857 年作，屬公眾領域）。鋼琴是 Salamander Grand Piano，弦樂與豎琴取自 VS Chamber Orchestra: Community Edition，其他樂器取自 GeneralUser GS。"
                         ),
                         notice: language.text(
-                            "Music © 2026 \(musicHolder.english). All rights reserved. Instrument samples: GeneralUser GS by S. Christian Collins, under the GeneralUser GS License v2.0.",
-                            "音樂版權所有 © 2026 \(musicHolder.chinese)，保留一切權利。樂器取樣：S. Christian Collins 的 GeneralUser GS，依 GeneralUser GS 授權第 2.0 版使用。"
+                            "Music © 2026 \(musicHolder.english). All rights reserved. Instrument samples: Salamander Grand Piano V3 by Alexander Holm, under CC BY 3.0, changed (one microphone, levels and tone); VS Chamber Orchestra: Community Edition by Versilian Studios, under CC0 1.0; GeneralUser GS by S. Christian Collins, under the GeneralUser GS License v2.0.",
+                            "音樂版權所有 © 2026 \(musicHolder.chinese)，保留一切權利。樂器取樣：Alexander Holm 的 Salamander Grand Piano V3，依 CC BY 3.0 使用，經修改（只取一支麥克風、調整音量與音色）；Versilian Studios 的 VS Chamber Orchestra: Community Edition，依 CC0 1.0；S. Christian Collins 的 GeneralUser GS，依 GeneralUser GS 授權第 2.0 版使用。"
                         ),
                         links: [
+                            DataSourceCredit.Link(title: "Salamander Grand Piano", url: salamanderPianoURL),
+                            DataSourceCredit.Link(title: "CC BY 3.0", url: ccBy3URL),
+                            DataSourceCredit.Link(title: "VS Chamber Orchestra: Community Edition", url: vscoURL),
                             DataSourceCredit.Link(title: "GeneralUser GS", url: generalUserGSURL),
                         ]
                     ),

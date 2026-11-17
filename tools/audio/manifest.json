@@ -222,22 +222,28 @@
         }
       ],
       "arrangement": "tools/audio/sampled/arrangements.json",
-      "arrangementSha256": "682bb00ff275b33594b8d293665f1d82ba2afef87265d1b85b414d25244e1626",
+      "arrangementSha256": "ac0091ff1b6bd4efae0036092ad3dc1f5e24b43910b43fd571294eff8e50984e",
       "bank": {
         "name": "GeneralUser GS v2.0.3",
         "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
         "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
       },
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
       "kind": "music",
       "tune": "theme",
       "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
-      "sha256": "ed2742ac62ba17c8930a5f93fb97844c5b43efb91b48d89dd670b02aa4b2ae83",
+      "sha256": "ec66b3c2a219ab2360a28ad0c2c0e9ffdec7712268cdf6487c79d33049c31dce",
       "frames": 3686400,
       "seconds": 76.8,
-      "peakDbfs": -1.41,
-      "rmsDbfs": -18.37,
-      "largestStep": 0.08456,
-      "loopSeam": 0.01068,
+      "peakDbfs": -2.04,
+      "rmsDbfs": -18.4,
+      "largestStep": 0.09818,
+      "loopSeam": 0.00076,
       "loudnessLufs": -15.95
     },
     {
@@ -263,23 +269,29 @@
         }
       ],
       "arrangement": "tools/audio/sampled/arrangements.json",
-      "arrangementSha256": "682bb00ff275b33594b8d293665f1d82ba2afef87265d1b85b414d25244e1626",
+      "arrangementSha256": "ac0091ff1b6bd4efae0036092ad3dc1f5e24b43910b43fd571294eff8e50984e",
       "bank": {
         "name": "GeneralUser GS v2.0.3",
         "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
         "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
       },
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
       "kind": "music",
       "tune": "theme",
       "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
-      "sha256": "6bf09d1d1d81dc76073732f482e799482e0135c54dffe02ea601e66c16452132",
+      "sha256": "d716b42e431356fa837632b71a4c677d00057dce64a16e65aec3a3a7b3496632",
       "frames": 3830784,
       "seconds": 79.808,
-      "peakDbfs": -1.43,
-      "rmsDbfs": -18.55,
-      "largestStep": 0.08395,
+      "peakDbfs": -2.92,
+      "rmsDbfs": -18.58,
+      "largestStep": 0.09631,
       "endLevel": 0.0,
-      "loudnessLufs": -15.97
+      "loudnessLufs": -15.96
     },
     {
       "file": "music-winter.m4a",
@@ -304,21 +316,27 @@
         }
       ],
       "arrangement": "tools/audio/sampled/arrangements.json",
-      "arrangementSha256": "682bb00ff275b33594b8d293665f1d82ba2afef87265d1b85b414d25244e1626",
+      "arrangementSha256": "ac0091ff1b6bd4efae0036092ad3dc1f5e24b43910b43fd571294eff8e50984e",
       "bank": {
         "name": "GeneralUser GS v2.0.3",
         "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
         "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
       },
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
       "kind": "music",
       "tune": "winter",
       "copyright": "Arrangement copyright (c) 2026 a91453. All rights reserved. Melody: Jingle Bells (James Lord Pierpont, 1857), public domain.",
-      "sha256": "33dc1a516e7bcf27e581e9a00373ff73f5431a172b6164da21c7af92c9f40df6",
+      "sha256": "2fddd17e196900afc7fd2e53f84fcc22b294e229ff83523b6ce49cd316b68946",
       "frames": 5520384,
       "seconds": 115.008,
-      "peakDbfs": -1.34,
-      "rmsDbfs": -18.53,
-      "largestStep": 0.16992,
+      "peakDbfs": -1.41,
+      "rmsDbfs": -18.64,
+      "largestStep": 0.15765,
       "endLevel": 0.0,
       "loudnessLufs": -16.0
     },

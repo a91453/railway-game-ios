@@ -9,8 +9,9 @@ train's horn (decision 403) and the evening garbage truck's tune (decision
 437, Für Elise, public domain). They are made here from sine waves and
 seeded noise. The two music loops (the theme, a minuet in C, and the
 winter tune) are played from their MML stems on sampled instruments
-(`sampled_music.py`, decision 815's later note): a pinned SoundFont bank
-and an npm renderer, both tools only. The output is the same on every run.
+(`sampled_music.py`, decision 815's later note): a pinned SoundFont bank,
+a bank built from recorded piano and string samples in front of it
+(`chamber_bank.py`) and an npm renderer, all tools only. The output is the same on every run.
 
 Decision 219: the station chimes are played from scores of railway game ios
 (`scores/*.score.json`, checked by `score.py`): the local chime (the
@@ -37,7 +38,9 @@ scores match their MML, when Node is on the PATH).
 Needs numpy, ffmpeg on the PATH (the music's ALAC CAF) and Node with npm
 (the sampled renderer, installed into `sampled/node_modules` on first use);
 the bank is downloaded once into `~/.cache/railway-game-ios/` (or read from
-`AUDIO_SOUNDBANK`) and checked by SHA-256.
+`AUDIO_SOUNDBANK`) and checked by SHA-256, and the chamber bank's samples
+(about 400 MB) are downloaded and the bank built there once, every file
+and the bank checked by SHA-256.
 """
 
 import hashlib
@@ -51,6 +54,7 @@ import wave
 
 import numpy as np
 
+import chamber_bank
 import sampled_music
 import score as scores
 
@@ -980,6 +984,9 @@ def manifest(out_dir):
     # Decision 815: the tunes, from their stems; its later note: played on
     # the sampled instruments of the arrangement, from the pinned bank.
     bank = sampled_music.arrangements()["bank"]
+    # THEME-PLAIN item 1: the piano, the strings and the harp come from the
+    # chamber bank, built from recordings in front of it.
+    chamber = chamber_bank.spec()
     for file, tune in MUSIC_FILES.items():
         stems = []
         for name in sampled_music.stems(tune):
@@ -995,6 +1002,7 @@ def manifest(out_dir):
             "arrangement": relative(sampled_music.ARRANGEMENTS),
             "arrangementSha256": sha256(sampled_music.ARRANGEMENTS),
             "bank": {"name": bank["name"], "commit": bank["commit"], "sha256": bank["sha256"]},
+            "chamberBank": {"name": chamber["name"], "spec": relative(chamber_bank.SPEC), "specSha256": sha256(chamber_bank.SPEC), "sha256": chamber["sha256"]},
             "kind": "music",
             "tune": tune,
             "copyright": sampled_music.tunes()[tune]["copyright"],

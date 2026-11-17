@@ -1,7 +1,10 @@
-// Renders a MIDI file on a SoundFont bank to raw stereo float32 at 48 kHz
+// Renders a MIDI file on SoundFont banks to raw stereo float32 at 48 kHz
 // (interleaved), for tools/audio/sampled_music.py (decision 815, later note).
 //
-//     node render.mjs <bank.sf2> <song.mid> <out.f32> <seconds>
+//     node render.mjs <song.mid> <out.f32> <seconds> <bank.sf2>...
+//
+// A program of an earlier bank takes the place of the same program in a
+// later one (the chamber bank in front of GeneralUser GS).
 //
 // SpessaSynth (spessasynth_core, Apache-2.0, npm, pinned in package.json)
 // plays the file with its own effects off: the reverb and the master are
@@ -9,13 +12,17 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { BasicMIDI, SoundBankLoader, SpessaSynthProcessor, SpessaSynthSequencer } from 'spessasynth_core';
 
-const [bankPath, midiPath, outPath, seconds] = process.argv.slice(2);
+const [midiPath, outPath, seconds, ...bankPaths] = process.argv.slice(2);
 const view = (bytes) => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 const midi = BasicMIDI.fromArrayBuffer(view(await readFile(midiPath)));
-const bank = SoundBankLoader.fromArrayBuffer(view(await readFile(bankPath)));
 const rate = 48_000;
 const synth = new SpessaSynthProcessor(rate, { eventsEnabled: false, effectsEnabled: false });
-synth.soundBankManager.addSoundBank(bank, 'main');
+const ids = [];
+for (const [index, bankPath] of bankPaths.entries()) {
+  ids.push(`bank${index}`);
+  synth.soundBankManager.addSoundBank(SoundBankLoader.fromArrayBuffer(view(await readFile(bankPath))), ids.at(-1));
+}
+synth.soundBankManager.priorityOrder = ids;
 await synth.ready;
 synth.setSystemParameter?.('autoAllocateVoices', true);
 const sequencer = new SpessaSynthSequencer(synth);
