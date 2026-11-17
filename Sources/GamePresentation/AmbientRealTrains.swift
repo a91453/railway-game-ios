@@ -269,30 +269,34 @@ extension Map3DRealTrains {
     /// its front car where it is drawn; `nil` when it is not running or
     /// its front is not drawn (in a tunnel, past the scene, on a line the
     /// player bought).
-    public func pose(of id: RealTrainID, second: Double, day: RealServiceDay, dayBefore: RealServiceDay) -> Map3DFollow.Pose? {
+    /// REAL-CAR-LENGTH (decision 399, later): its cars laid as
+    /// ``add(to:second:day:dayBefore:models:eye:reach:)`` lays them with
+    /// `models`, each its model's own length.
+    public func pose(of id: RealTrainID, second: Double, day: RealServiceDay, dayBefore: RealServiceDay,
+                     models: Map3DModelPack? = nil) -> Map3DFollow.Pose? {
         guard let index = traffic.lines.firstIndex(where: { $0.system == id.system && $0.line.id == id.line }), !tracks[index].isEmpty,
               let place = traffic.places(of: traffic.lines[index], at: second, on: day, dayBefore: dayBefore).first(where: { $0.key == id.place })
         else { return nil }
         let line = traffic.lines[index]
         let ring = line.ringKm ?? line.shape.lengthKm
         let isRing = line.ringKm != nil
-        let formation = Self.formation(of: formations[index], system: line.system, place: place.key)
+        let formation = Self.formation(of: formations[index], system: line.system, place: place.key, locked: models?.locked ?? [])
         let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
-        let length = Double(formation.cars) * Self.carPitch
+        let (cars, length) = Self.cars(of: formation, hasModels: models?.models(forType: formation.key) != nil, models: models)
         var front = place.km + way * length / 2
         if !isRing { front = min(max(front, 0), ring) }
         let bound = legs[index][place.key.hasPrefix("-") ? String(place.key.dropFirst()) : place.key]
         func at(_ km: Double) -> Map3DPoint? {
             railPoint(line: index, atKm: km, way: way, ring: isRing ? ring : nil, bound: bound)
         }
-        guard let a = at(front), let b = at(front - way * Self.carLength) else { return nil }
+        guard let first = cars.first, let a = at(front), let b = at(front - way * first.length) else { return nil }
         var ahead = a - b
         ahead.y = 0
         guard let forward = ahead.normalized else { return nil }
         var bases: [Map3DPoint] = []
-        for car in 0..<formation.cars {
-            let start = front - way * Double(car) * Self.carPitch
-            if let p = at(start), let q = at(start - way * Self.carLength) { bases.append((p + q) * 0.5) }
+        for car in cars {
+            let start = front - way * car.start
+            if let p = at(start), let q = at(start - way * car.length) { bases.append((p + q) * 0.5) }
         }
         let middle = bases.isEmpty ? nil : bases.reduce(Map3DPoint(0, 0, 0), +) * (1 / Float(bases.count))
         return Map3DFollow.Pose(forward: forward, nose: a, rail: (a + b) * 0.5, middle: middle,

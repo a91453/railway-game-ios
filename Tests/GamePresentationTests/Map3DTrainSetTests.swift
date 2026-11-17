@@ -19,6 +19,12 @@ final class Map3DTrainSetTests: XCTestCase {
     /// running car's in the pack only at its train's ends).
     private var recipes: Map3DModelPack { .unbaked }
 
+    /// Decision 539's freight sets and decision 837's (the empty and stone
+    /// trains), all behind the R200.
+    static let lowFreight: Set<String> = [Map3DFreightWagons.emptyKey, Map3DFreightWagons.emptyKey + "Far",
+                                          Map3DFreightWagons.bulkKey, Map3DFreightWagons.bulkKey + "Far"]
+    static let freight: [String] = ["FREIGHT", "FREIGHTFar"] + lowFreight.sorted()
+
     /// Every set's cars are in the pack: a car's length and width, on the
     /// rail, up to a lowered pantograph's height, in their own colours (none
     /// takes the line's but the metro's band), lit at the right end.
@@ -35,7 +41,9 @@ final class Map3DTrainSetTests: XCTestCase {
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 // Decision 782: a registered train's, its own.
-                let registered = Map3DTrainRegistry.registration(ofSet: set.key)
+                // Decision 837: but a head it borrows (``Map3DTrainSet/headOf``)
+                // is the hand-written set's, measured as that one's.
+                let registered = name == set.headName && set.headOf != nil ? nil : Map3DTrainRegistry.registration(ofSet: set.key)
                 // Decision 331: a tram car is two of its sections.
                 let triangles = registered?.triangles ?? (set.key == "greenTram" ? 2_500...3_200
                     // Decision 430: #1306's standard coach as measured, 6,476
@@ -89,7 +97,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && set.key == "E200CK" ? 5_000...6_000
                     : name == set.headName && ["E200CKFar", "MINGRIFar"].contains(set.key) ? 1_000...1_300
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
-                    : name == set.headName && ["R200CK", "R200CKFar", "FREIGHT", "FREIGHTFar"].contains(set.key) ? 5_000...12_800
+                    : name == set.headName && (["R200CK", "R200CKFar"] + Self.freight).contains(set.key) ? 5_000...12_800
                     // Decision 554: #1539's EMC and EM, 8,076 near and 3,420 far.
                     : Self.tourism.contains(set.key) && [set.headName, set.tailName].contains(name) ? 3_400...8_100
                     // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
@@ -125,7 +133,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "blueSeven" ? 7.5...8.4
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 15.79...15.81
                     // Decision 539: the R200 20.01 m, its container wagons 14.2 m.
-                    : name == set.headName && ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 20.0...20.02
+                    // Decision 837: and the empty and stone trains'.
+                    : name == set.headName && Self.freight.contains(set.key) ? 20.0...20.02
                     : ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 14.1...14.3
                     // Decision 541: the Blue Train's head unit, two R100s back to back.
                     : name == set.headName && ["BLUE", "BLUEFar"].contains(set.key) ? 31.58...31.62
@@ -150,7 +159,11 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 560: and #1730's EMU700's EP, 4.98 m.
                     : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far", "emu700", "emu700Far"].contains(set.key) || Self.tourism.contains(set.key) ? 3.4...5.3
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
-                    : alishan ? 3.0...3.3 : 3.4...4.6
+                    : alishan ? 3.0...3.3
+                    // Decision 837: a bare flat wagon (its hand brake and tail
+                    // lamp the highest) and the stone wagons, lower than a
+                    // container wagon.
+                    : name != set.headName && Self.lowFreight.contains(set.key) ? 1.1...2.8 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")

@@ -1346,6 +1346,9 @@ struct Map3DSceneKey: Hashable {
     /// Decision 696: the railway museum's exhibits, each new one with its
     /// track or shed.
     let exhibits: Int
+    /// Decision 837: the freight yards, each built, taken down or switched
+    /// to another kind of cargo with its own look.
+    let freightYards: [Int]
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil,
          facades: Bool = Map3DQuality.scenesKeepFacades) {
@@ -1366,6 +1369,7 @@ struct Map3DSceneKey: Hashable {
         ownRoads = world.roads?.built ?? []
         expansions = Map3DStationKit.expansionSignature(of: world)
         exhibits = Map3DRailwayMuseum.shown(in: world)
+        freightYards = Map3DFreightYard.signature(of: world)
     }
 
     /// Decision 517 續 (PR 3b): whether `other` differs from this only in
@@ -1374,7 +1378,7 @@ struct Map3DSceneKey: Hashable {
         self != other && hasHeights == other.hasHeights && hasRailways == other.hasRailways && focus == other.focus
             && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
             && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
-            && facades == other.facades && exhibits == other.exhibits
+            && facades == other.facades && exhibits == other.exhibits && freightYards == other.freightYards
     }
 }
 
@@ -1394,6 +1398,10 @@ final class Map3DTrainFeed {
     /// they are hidden, and whether they glide between ticks.
     private var realClock: RealTrainClock?
     private var realGlides = true
+    /// REAL-CAR-LENGTH (decision 399, later): the model pack the real
+    /// trains were last drawn with, so the follow camera lays their cars
+    /// at the same lengths.
+    private var realModels: Map3DModelPack?
     /// Decision 400, 10i-6: the player's bus routes, the clock their buses
     /// are drawn at and the routes laid in the scene, laid again when the
     /// routes or the scene change (off the main actor, decision 424's
@@ -1428,8 +1436,18 @@ final class Map3DTrainFeed {
     /// main actor (counting them builds the passenger graph), and which
     /// airfields they are for; the last day's are drawn until they are in.
     private var airTrafficAsked: (day: Int64, serial: Int, routes: Int)?
-    /// Decision 733: with the open cities' own.
-    private static let airfields = BaseMapFiles.readAirfields(BaseMapFiles.airfields)
+    /// Decision 733: with the open cities' own. REVIEW-L27 P3-1
+    /// (MAP-PACK-ONCE): read again when a map pack download is taken or
+    /// forgotten (``MapPackDownloads/changes``), so Hong Kong's airport
+    /// comes from the pack downloaded after the first read.
+    private static var airfields: RealAirfields? {
+        let changes = MapPackDownloads.changes
+        if let read = airfieldsRead, read.changes == changes { return read.airfields }
+        let airfields = BaseMapFiles.readAirfields(BaseMapFiles.airfields)
+        airfieldsRead = (changes, airfields)
+        return airfields
+    }
+    private static var airfieldsRead: (changes: Int, airfields: RealAirfields?)?
     /// Decision 708: the real coaches and the coach stops laid in the
     /// scene (off the main actor), from the routes' file, read once off
     /// the main actor the first time a map with coach stops is drawn.
@@ -1580,6 +1598,7 @@ final class Map3DTrainFeed {
         if let driven { driven.track.addStopMark(to: &frame, at: driven.stop, in: scene) }
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
+            realModels = models
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
                      models: models, eye: eye, reach: reach)
         }
@@ -1757,7 +1776,7 @@ final class Map3DTrainFeed {
     func realTrainPose(_ id: RealTrainID, in scene: Map3DScene) -> Map3DFollow.Pose? {
         guard let real = scene.realTrains, let clock = realClock else { return nil }
         return real.pose(of: id, second: clock.second(at: Date().timeIntervalSinceReferenceDate, glides: realGlides),
-                         day: clock.today, dayBefore: clock.dayBefore)
+                         day: clock.today, dayBefore: clock.dayBefore, models: realModels)
     }
 
     /// Decision 585 PR-4 (FERRYFOLLOW): where boat `id` is now, as the

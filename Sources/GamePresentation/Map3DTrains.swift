@@ -325,8 +325,9 @@ public enum Map3DTrains {
         // Decision 408: half the high-speed trains the N700S-G (decision
         // 338, second later: none while the train pack is locked).
         // Decision 539: a freight train, whatever its type, the R200 and
-        // its container wagons.
-        let trainType = run.look == .freight ? Map3DTrainSet.freightKey
+        // its container wagons. Decision 837: its wagons as it is loaded,
+        // bare when it runs empty.
+        let trainType = run.look == .freight ? run.freightLoad.setKey
             : Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue, locked: models?.locked ?? [])
         let hasModels = models?.models(forType: trainType) != nil
         // Decision 399: or each car at its model's own length.

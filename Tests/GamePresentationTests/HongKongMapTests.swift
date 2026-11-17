@@ -118,7 +118,10 @@ final class HongKongMapTests: XCTestCase {
             session.world.missingGroundBlocks(under: [PlanPoint(x: Int64(peak.x.rounded()), y: Int64(peak.y.rounded()))]).isEmpty,
             "the map has ground, read as track comes to it"
         )
+        // Decision 835: and its own land cover, Taiwan's elsewhere.
+        XCTAssertEqual(session.landCover?.cover(latitude: 22.252, longitude: 113.862), .cropland, "Tai O")
         let taiwan = GameWorld.newWholeTaiwanGame()
+        XCTAssertEqual(launcher.landCover(for: taiwan)?.cover(latitude: 23.53, longitude: 120.80), launcher.landCover?.cover(latitude: 23.53, longitude: 120.80))
         XCTAssertEqual(launcher.water(for: taiwan)?.isWater(latitude: 22.2880, longitude: 114.1720), launcher.water?.isWater(latitude: 22.2880, longitude: 114.1720))
         XCTAssertEqual(
             launcher.heights(for: taiwan)?.height(latitude: 23.47, longitude: 120.957), launcher.heights?.height(latitude: 23.47, longitude: 120.957),

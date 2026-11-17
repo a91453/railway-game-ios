@@ -42,7 +42,10 @@ final class Map3DTrainRegistryTests: XCTestCase {
         for train in Map3DTrainRegistry.trains {
             let keys = Set(train.sets.map(\.key))
             for set in train.sets {
-                XCTAssertTrue(train.owns(set.headName), "\(train.id): \(set.key)'s head is its own")
+                // Decision 837: or a hand-written set's, borrowed
+                // (``Map3DTrainSet/headOf``: the freight wagons' R200).
+                XCTAssertTrue(train.owns(set.headName) || set.headOf.map { Map3DTrainSet.named($0) != nil && !train.owns(set.headName) } == true,
+                              "\(train.id): \(set.key)'s head is its own")
                 if let far = set.far {
                     XCTAssertTrue(keys.contains(far), "\(train.id): \(set.key)'s far set \(far)")
                     XCTAssertTrue(Map3DTrainSet.nearOnly.contains(set.key), set.key)

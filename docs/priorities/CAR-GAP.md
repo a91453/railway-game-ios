@@ -4,7 +4,7 @@
 
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、注意 |
 | --: | --- | --: | --: | --: | --: | --: | --: | --- |
-| 1 | **REAL-CAR-LENGTH** 真實時刻表的列車照模型自己的長度排（`Map3DModelPack.layout`，像玩家的列車），不再每節拉成 20 m：高鐵 25 m 的車、太魯閣 24 m、捷運 23.6 m 的車現在被壓短約兩成 | 3 | 3 | 3 | 4 | 1 | 2.85 | 未派；整列變長（高鐵 12 節 240 → 約 303 m），`Map3DRealTrains` 的 `span`、跟車鏡頭（`AmbientRealTrains.pose`）、`Map3DRealDispatchTests` 的位置要一起改 |
+| 1 | **REAL-CAR-LENGTH** 真實時刻表的列車照模型自己的長度排（`Map3DModelPack.layout`，像玩家的列車），不再每節拉成 20 m：高鐵 25 m 的車、太魯閣 24 m、捷運 23.6 m 的車現在被壓短約兩成 | 3 | 3 | 3 | 4 | 1 | 2.85 | 已做（REAL-CAR-LENGTH，決策 399 的後來）；整列變長（高鐵 12 節 240 → 約 303 m），`Map3DRealTrains` 的 `span`、跟車鏡頭（`AmbientRealTrains.pose`）、`Map3DRealDispatchTests` 的位置要一起改 |
 
 五方：
 - 玩家：近看高鐵與捷運比例會對，但多數玩家不會察覺短了兩成（3）。

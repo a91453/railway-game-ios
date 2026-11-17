@@ -262,6 +262,28 @@ public enum DataSourceCredits {
                             ),
                         ]
                     ),
+                    // Decision 835: what covers Hong Kong's ground
+                    // (`MapPacks/hongkong/landcover.dat`), from the
+                    // Planning Department's land use grid.
+                    DataSourceCredit(
+                        id: "hongKongLandUse",
+                        title: language.text("Hong Kong’s land use", "香港的土地用途"),
+                        detail: language.text(
+                            "On Hong Kong’s 3D map, the colour of the ground outside the city, its woods, scrub, grassland, farms and wetlands, and the trees in its woods.",
+                            "香港的 3D 地圖上，市區以外地面的顏色：樹林、灌叢、草地、農地與濕地，以及樹林裡的樹。"
+                        ),
+                        notice: language.text(
+                            "Land use: Planning Department, Government of the Hong Kong SAR, via DATA.GOV.HK (2025 Raster Grids on Land Utilization), used under DATA.GOV.HK’s Terms and Conditions of Use. Simplified for the game.",
+                            "土地用途：香港特別行政區政府規劃署，經「資料一線通」（DATA.GOV.HK）提供（2025 年土地利用網格），依「資料一線通」的使用條款及條件使用，為遊戲簡化過。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(
+                                title: language.text("Raster Grids on Land Utilization", "土地利用網格"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-pland-pland1-land-utilization-in-hong-kong-raster-grid"
+                            ),
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                        ]
+                    ),
                     // Decisions 712, 729 and 791: the buildings of Hong Kong's
                     // map (`MapPacks/hongkong/buildings.pmtiles`): the
                     // Lands Department's outlines and heights,
