@@ -291,10 +291,9 @@ extension Map3DScene.Builder {
         // where a hole (a river's island) reached the triangle's edge: the
         // whole triangle came out water (the owner's IMG_5325, sharp
         // triangles of water over the Tamsui's islands).
-        // Only cells a hole reaches are cut that way: elsewhere the cell's
-        // piece of the outline is triangulated as before, with fewer
-        // triangles (the far view's budget, decision 709).
-        let corners = area.rings.flatMap { $0 }
+        // Only an area with holes needs it; a cell's half no hole reaches
+        // is triangulated as before, with fewer triangles.
+        let corners = area.rings.count > 1 ? area.rings.flatMap { $0 } : []
         let whole = area.rings.count > 1 ? Earcut.triangulate(area.rings.map { $0.map { (x: $0.x, y: $0.z) } }) : []
         var byCell: [Map3DScene.ChunkKey: [Int]] = [:]
         for first in stride(from: 0, to: whole.count - 2, by: 3) {
@@ -324,51 +323,57 @@ extension Map3DScene.Builder {
                 var covered = 0.0
                 let mine = byCell[Map3DScene.ChunkKey(column: column, row: row)] ?? []
                 for side in [1.0, -1.0] {
-                    // Decision 822: each of the area's triangles cut to
-                    // this half of the cell, a convex cut.
-                    let keeps: [(Map3DBaseMap.Point) -> Double] = [
-                        { $0.z - top }, { bottom - $0.z }, { $0.x - left }, { right - $0.x },
-                        { side * (($0.z - northZ) - ($0.x - westX)) },
-                    ]
-                    var pieces: [[Map3DBaseMap.Point]] = []
-                    var net = 0.0
+                    let diagonal: (Map3DBaseMap.Point) -> Double = { side * (($0.z - northZ) - ($0.x - westX)) }
+                    let half = Self.clipRings(cellRings, by: [diagonal])
+                    guard let outline = half.first, outline.count >= 3 else { continue }
                     var points: [Map3DPoint] = []
                     var triangles: [Int] = []
-                    if cellRings.count == 1 {
-                        let piece = Self.clipRings(cellRings, by: [keeps[4]])
-                        guard let ring = piece.first, ring.count >= 3 else { continue }
-                        net = abs(Self.area(ring))
+                    if half.count == 1 {
+                        // No hole reaches this half: its outline,
+                        // triangulated.
+                        let net = abs(Self.area(outline))
                         guard net > 0.5 else { continue }
-                        triangles = Earcut.triangulate([ring.map { (x: $0.x, y: $0.z) }])
+                        triangles = Earcut.triangulate([outline.map { (x: $0.x, y: $0.z) }])
                         guard !triangles.isEmpty else { continue }
-                        for point in ring {
+                        covered += net
+                        for point in outline {
                             let x = Float(point.x), z = Float(point.z)
                             points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
                         }
-                    }
-                    for first in mine where cellRings.count > 1 {
-                        var piece = (0..<3).map { corners[whole[first + $0]] }
-                        for keep in keeps {
-                            piece = Self.clip(piece, keep)
-                            if piece.count < 3 { break }
+                    } else {
+                        // Decision 822: where a hole reaches, each of the
+                        // area's triangles cut to this half of the cell, a
+                        // convex cut.
+                        let keeps: [(Map3DBaseMap.Point) -> Double] = [
+                            { $0.z - top }, { bottom - $0.z }, { $0.x - left }, { right - $0.x },
+                            diagonal,
+                        ]
+                        var pieces: [[Map3DBaseMap.Point]] = []
+                        var net = 0.0
+                        for first in mine {
+                            var piece = (0..<3).map { corners[whole[first + $0]] }
+                            for keep in keeps {
+                                piece = Self.clip(piece, keep)
+                                if piece.count < 3 { break }
+                            }
+                            guard piece.count >= 3 else { continue }
+                            let size = abs(Self.area(piece))
+                            guard size > 1e-4 else { continue }
+                            net += size
+                            pieces.append(piece)
                         }
-                        guard piece.count >= 3 else { continue }
-                        let size = abs(Self.area(piece))
-                        guard size > 1e-4 else { continue }
-                        net += size
-                        pieces.append(piece)
-                    }
-                    // Slivers along a cell's edge (the base map's sea, its
-                    // holes the land, over a tile inland) leave nothing.
-                    guard net > 0.5 else { continue }
-                    covered += net
-                    for piece in pieces {
-                        let start = points.count
-                        for point in piece {
-                            let x = Float(point.x), z = Float(point.z)
-                            points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                        // Slivers along a cell's edge (the base map's sea, its
+                        // holes the land, over a tile inland) leave nothing.
+                        guard net > 0.5 else { continue }
+                        covered += net
+                        for piece in pieces {
+                            let start = points.count
+                            for point in piece {
+                                let x = Float(point.x), z = Float(point.z)
+                                points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                            }
+                            for index in 1..<(piece.count - 1) { triangles += [start, start + index, start + index + 1] }
                         }
-                        for index in 1..<(piece.count - 1) { triangles += [start, start + index, start + index + 1] }
                     }
                     // Decision 375: none of it over a trench.
                     (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift)
