@@ -197,6 +197,10 @@ struct Map3DRoadBridges: Sendable {
     /// road's height there (a link drawn beside its main road, within
     /// their widths, comes down only past it).
     static let steepestRamp: Double = 2
+    /// Decision 822 (後來三): the least sine of the angle at which a lower
+    /// bridge crosses under a higher one of its deck (20°); less is two
+    /// running side by side whose lines the map draws across each other.
+    static let crossingSine: Double = 0.34
     /// A level of the tiles' `layer` over the ground, metres: a storey of
     /// a crossing, the rail-3d viaduct's 6 m clear under a 1.8 m girder
     /// less the road's own 1.6 m (`regionTiles`' `B`).
@@ -628,6 +632,74 @@ extension Map3DScene.Builder {
         for (number, last) in openEnds {
             if last { result.pieces[number].opens.last = true } else { result.pieces[number].opens.first = true }
         }
+        // Decision 822 (後來三): a bridge of a lower level than a higher
+        // one of its deck, ending on the higher one's surface (三重's
+        // approaches to 忠孝橋 and 台北橋: the scooter lane's and the
+        // street's bridges, `layer` 1, end beside the trunk's viaduct,
+        // `layer` 2–4, which goes on), comes down inside itself as a link
+        // road does: it ramped on from its end at the deck's height, over
+        // the streets under the viaduct, 1–6 m beneath it.
+        for (number, last) in openEnds where !bridges[number].isRamp {
+            let bridge = bridges[number], deck = deckOf[root(number)]!
+            let end = last ? bridge.points[bridge.points.count - 1] : bridge.points[0]
+            let half = Double(Map3DRoadBridges.half(bridge.kind))
+            let reach = half + Double(Map3DRoadBridges.half(.motorway))
+            let low = Map3DRoadBridges.key(end.x - reach, end.z - reach), high = Map3DRoadBridges.key(end.x + reach, end.z + reach)
+            var under = false
+            for row in low.row...high.row where !under {
+                for column in low.column...high.column where !under {
+                    for (other, index) in cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                        let higher = bridges[other]
+                        guard higher.level > bridge.level, !higher.isRamp, deckOf[root(other)] == deck else { continue }
+                        let a = higher.points[index - 1], b = higher.points[index]
+                        let dx = b.x - a.x, dz = b.z - a.z, span = dx * dx + dz * dz
+                        guard span > 1e-6 else { continue }
+                        // Beside it, not past one of its ends.
+                        let share = ((end.x - a.x) * dx + (end.z - a.z) * dz) / span
+                        guard share >= 0, share <= 1 else { continue }
+                        if Map3DRoadBridges.nearest(end, a, b).distance < half + Double(Map3DRoadBridges.half(higher.kind)) {
+                            under = true
+                            break
+                        }
+                    }
+                }
+            }
+            // Not one crossing under a higher bridge of its deck where it
+            // would be coming down (忠孝橋's east end under 市民大道's
+            // viaduct): it would pass under it a metre or two beneath, the
+            // deck's height being one. Farther from its end than it comes
+            // down in at twice its grade, it keeps the deck's height there.
+            let rise = Double(result.decks[deck].lifts.map(\.rise).max() ?? 0)
+            let room = rise / (Map3DRoadBridges.steepestRamp * Double(Map3DRoadBridges.grade(bridge.kind)))
+            let total = zip(bridge.points, bridge.points.dropFirst()).reduce(0.0) { $0 + ((($1.1.x - $1.0.x) * ($1.1.x - $1.0.x) + ($1.1.z - $1.0.z) * ($1.1.z - $1.0.z)).squareRoot()) }
+            func crossesUnder() -> Bool {
+                var travelled = 0.0
+                for (a, b) in zip(bridge.points, bridge.points.dropFirst()) {
+                    let length = ((b.x - a.x) * (b.x - a.x) + (b.z - a.z) * (b.z - a.z)).squareRoot()
+                    defer { travelled += length }
+                    let low = Map3DRoadBridges.key(min(a.x, b.x), min(a.z, b.z)), high = Map3DRoadBridges.key(max(a.x, b.x), max(a.z, b.z))
+                    for row in low.row...high.row {
+                        for column in low.column...high.column {
+                            for (other, index) in cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                                let higher = bridges[other]
+                                guard higher.level > bridge.level, deckOf[root(other)] == deck else { continue }
+                                let c = higher.points[index - 1], d = higher.points[index]
+                                guard let share = Map3DRoadBridges.crossing(a, b, c, d) else { continue }
+                                let fromEnd = last ? total - travelled - share * length : travelled + share * length
+                                guard fromEnd < room else { continue }
+                                // A crossing, not two running side by side
+                                // (their lines drawn across each other).
+                                let ux = b.x - a.x, uz = b.z - a.z, vx = d.x - c.x, vz = d.z - c.z
+                                let lengths = ((ux * ux + uz * uz) * (vx * vx + vz * vz)).squareRoot()
+                                if lengths > 1e-9, abs(ux * vz - uz * vx) / lengths >= Map3DRoadBridges.crossingSine { return true }
+                            }
+                        }
+                    }
+                }
+                return false
+            }
+            if under, !crossesUnder() { result.pieces[number].isRamp = true }
+        }
         rampDistances(into: &result, others: others)
         for (number, last) in openEnds {
             let points = bridges[number].points
@@ -942,9 +1014,16 @@ extension Map3DScene.Builder {
             for node in [low, high] {
                 let p = samples[node].point
                 for other in others(p, number) where pieces[other].deck == pieces[number].deck {
-                    if pieces[other].isRamp, first[other] != nil {
-                        for otherNode in [first[other]!, final[other]!] where distance(samples[otherNode].point, p) <= Map3DRoadBridges.join {
-                            edges[node].append((otherNode, 0))
+                    if pieces[other].isRamp, let low = first[other], let high = final[other] {
+                        let ends = [low, high].filter { distance(samples[$0].point, p) <= Map3DRoadBridges.join }
+                        for otherNode in ends { edges[node].append((otherNode, 0)) }
+                        // Decision 822 (後來三): an end meeting the other's
+                        // side (三重's link from 忠孝橋 meets a loop's
+                        // middle): joined to its nearest sample.
+                        if ends.isEmpty, let nearest = (low...high).min(by: { distance(samples[$0].point, p) < distance(samples[$1].point, p) }) {
+                            let length = distance(samples[nearest].point, p)
+                            edges[node].append((nearest, length))
+                            edges[nearest].append((node, length))
                         }
                     } else if !pieces[other].isRamp {
                         junctions.append(node)
@@ -952,7 +1031,7 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        guard !portals.isEmpty, !junctions.isEmpty else { return }
+        guard !portals.isEmpty else { return }
         // Dijkstra from `sources` (a binary heap of distance, node).
         func distances(from sources: [Int]) -> [Double] {
             var found = [Double](repeating: .infinity, count: samples.count)
@@ -999,6 +1078,7 @@ extension Map3DScene.Builder {
             guard down[node] * Map3DRoadBridges.steepestRamp * Double(Map3DRoadBridges.grade(piece.kind)) >= rise else { continue }
             if onMain(sample.point, deck: piece.deck, half: Double(piece.kind.width(ramp: true)) / 2) { junctions.append(node) }
         }
+        guard !junctions.isEmpty else { return }
         let up = distances(from: junctions)
         for number in ramps {
             let nodes = first[number]!...final[number]!
