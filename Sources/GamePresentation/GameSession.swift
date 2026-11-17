@@ -720,6 +720,9 @@ public final class GameSession {
     /// Observed: the map's ✕ ✓ pill waits for the finger to let go
     /// (``buildFingerDraws``).
     var roadDragStart: PlanPoint?
+    /// Where the finger drawing a road was at the last move (decision 821):
+    /// the road goes on along the line from there.
+    @ObservationIgnored var roadDragFinger: PlanPoint?
     /// Each bus route's way on the map, kept for the stops and station it
     /// was worked out for.
     @ObservationIgnored var busPathMemo: [BusRouteID: BusPathMemo] = [:]

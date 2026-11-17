@@ -5,66 +5,114 @@ import GameCore
 // line through the middles of their cells with its corners rounded, not a
 // block a cell. The same lines draw the road being dragged (faint), the
 // road laid, and the 3D map's road, so what the finger draws is what gets
-// built.
+// built. Decision 821: each line is the straightest one inside its cells
+// (RoadSmoothing.swift), not a zigzag through their middles.
 
 /// The lines a set of road cells is drawn as (decision 476).
 public enum RoadCentreLines {
-    /// Each road through the middles of `cells`: two cells side by side are
-    /// joined, and two corner to corner only when neither cell beside both
-    /// is in `cells` (else the road turns through that cell, and a third
-    /// side would make a triangle). With `touching`, only the joins with an
-    /// end in it, and its cells joined to nothing as a single point. Each
-    /// line runs from an end or a fork to the next; the corners rounded
-    /// (``rounded(_:)``).
+    /// Each road through `cells`: two cells side by side are joined, and
+    /// two corner to corner only when neither cell beside both is in
+    /// `cells` (else the road turns through that cell, and a third side
+    /// would make a triangle). Each line runs from an end or a fork to the
+    /// next, from the one cell's middle to the other's, and is drawn as the
+    /// straightest line inside its own cells with its bends rounded
+    /// (decision 821, ``smoothed(_:)``). With `touching`, only the lines
+    /// through a cell of it, whole (so the road being drawn is drawn as it
+    /// will be laid), and its cells joined to nothing as a single point.
     public static func lines(of cells: Set<CellPosition>, touching: Set<CellPosition>? = nil) -> [[PlanPoint]] {
-        let joined = joins(of: cells, touching: touching)
+        var known: [CellPosition: [CellPosition]] = [:]
+        func near(_ cell: CellPosition) -> [CellPosition] {
+            if let found = known[cell] { return found }
+            let found = neighbours(of: cell, in: cells)
+            known[cell] = found
+            return found
+        }
         struct Join: Hashable { let a: CellPosition, b: CellPosition }
         func join(_ a: CellPosition, _ b: CellPosition) -> Join { a < b ? Join(a: a, b: b) : Join(a: b, b: a) }
         var walked: Set<Join> = []
-        var chains: [[CellPosition]] = []
-        func walk(from start: CellPosition, to first: CellPosition) {
-            guard walked.insert(join(start, first)).inserted else { return }
+        // The cells from `start` on through `first` to the next end or fork
+        // (or round to `start` again).
+        func walk(from start: CellPosition, to first: CellPosition) -> [CellPosition] {
             var chain = [start, first], previous = start, at = first
-            while let near = joined[at], near.count == 2 {
-                let next = near[0] == previous ? near[1] : near[0]
-                guard walked.insert(join(at, next)).inserted else { break }
-                chain.append(next)
+            walked.insert(join(start, first))
+            while at != start {
+                let next = near(at)
+                guard next.count == 2 else { break }
+                let on = next[0] == previous ? next[1] : next[0]
+                guard walked.insert(join(at, on)).inserted else { break }
+                chain.append(on)
                 previous = at
-                at = next
+                at = on
             }
-            chains.append(chain)
+            return chain
         }
-        let ordered = joined.keys.sorted()
-        // From the ends and forks first, then round the loops left.
-        for cell in ordered where joined[cell]?.count != 2 {
-            for near in joined[cell] ?? [] { walk(from: cell, to: near) }
+        var chains: [[CellPosition]] = []
+        if let touching {
+            for cell in touching.sorted() where cells.contains(cell) {
+                for first in near(cell) where !walked.contains(join(cell, first)) {
+                    // Back along the other way to where the line begins.
+                    var chain = walk(from: cell, to: first)
+                    if chain.last != cell, near(cell).count == 2, let other = near(cell).first(where: { $0 != first }),
+                       !walked.contains(join(cell, other)) {
+                        chain = walk(from: cell, to: other).reversed() + chain.dropFirst()
+                    }
+                    chains.append(chain)
+                }
+            }
+        } else {
+            let ordered = cells.sorted()
+            // From the ends and forks first, then round the loops left.
+            for cell in ordered where near(cell).count != 2 {
+                for first in near(cell) where !walked.contains(join(cell, first)) { chains.append(walk(from: cell, to: first)) }
+            }
+            for cell in ordered {
+                for first in near(cell) where !walked.contains(join(cell, first)) { chains.append(walk(from: cell, to: first)) }
+            }
         }
-        for cell in ordered {
-            for near in joined[cell] ?? [] { walk(from: cell, to: near) }
+        // The same cells draw the same line whichever end they are walked
+        // from: the lower end first, and a ring with no fork from its
+        // lowest cell.
+        func canonical(_ chain: [CellPosition]) -> [CellPosition] {
+            guard chain.first == chain.last, chain.count > 2 else { return chain.last! < chain.first! ? chain.reversed() : chain }
+            var ring = Array(chain.dropLast())
+            if near(ring[0]).count == 2, let lowest = ring.indices.min(by: { ring[$0] < ring[$1] }) {
+                ring = Array(ring[lowest...] + ring[..<lowest])
+            }
+            if ring.count > 2, ring[ring.count - 1] < ring[1] { ring = [ring[0]] + ring.dropFirst().reversed() }
+            return ring + [ring[0]]
         }
-        var lines = chains.map { rounded($0.map(\.middle)) }
-        for cell in (touching ?? cells).sorted() where cells.contains(cell) && joined[cell] == nil {
+        var lines = chains.map { smoothed(canonical($0)) }
+        for cell in (touching ?? cells).sorted() where cells.contains(cell) && near(cell).isEmpty {
             lines.append([cell.middle])
         }
         return lines
     }
 
-    /// Each cell of `cells` and the cells it is joined to (``lines(of:touching:)``'s
-    /// rule).
-    static func joins(of cells: Set<CellPosition>, touching: Set<CellPosition>? = nil) -> [CellPosition: [CellPosition]] {
-        var joined: [CellPosition: [CellPosition]] = [:]
-        for cell in cells.sorted() {
-            for (dr, dc) in [(0, 1), (1, -1), (1, 0), (1, 1)] {
+    /// The cells of `cells` that `cell` is joined to (``lines(of:touching:)``'s
+    /// rule), lowest first.
+    static func neighbours(of cell: CellPosition, in cells: Set<CellPosition>) -> [CellPosition] {
+        var found: [CellPosition] = []
+        for dr in -1...1 {
+            for dc in -1...1 where dr != 0 || dc != 0 {
                 let near = CellPosition(row: cell.row + dr, column: cell.column + dc)
                 guard cells.contains(near) else { continue }
                 if dr != 0, dc != 0 {
                     guard !cells.contains(CellPosition(row: cell.row + dr, column: cell.column)),
                           !cells.contains(CellPosition(row: cell.row, column: cell.column + dc)) else { continue }
                 }
-                if let touching, !touching.contains(cell), !touching.contains(near) { continue }
-                joined[cell, default: []].append(near)
-                joined[near, default: []].append(cell)
+                found.append(near)
             }
+        }
+        return found
+    }
+
+    /// Each cell of `cells` and the cells it is joined to (``lines(of:touching:)``'s
+    /// rule).
+    static func joins(of cells: Set<CellPosition>) -> [CellPosition: [CellPosition]] {
+        var joined: [CellPosition: [CellPosition]] = [:]
+        for cell in cells {
+            let near = neighbours(of: cell, in: cells)
+            if !near.isEmpty { joined[cell] = near }
         }
         return joined
     }
@@ -77,39 +125,10 @@ public enum RoadCentreLines {
         return cells.sorted().filter { (joined[$0]?.count ?? 0) <= 1 }.map(\.middle)
     }
 
-    /// How far before a corner the road starts to turn: a quarter of a
-    /// cell (16 m), as a street corner, not the whole block.
+    /// How far before a sharp corner the road starts to turn: a quarter of
+    /// a cell (16 m), as a street corner, not the whole block (slighter
+    /// bends turn wider, ``rounded(_:in:)``).
     static let cornerCut = Double(Land.cellLength) / 4
-
-    /// `points` with each corner rounded: the line leaves the straight
-    /// ``cornerCut`` (or half the shorter side) before the corner and
-    /// curves round it, a quadratic curve with the corner as its control.
-    static func rounded(_ points: [PlanPoint]) -> [PlanPoint] {
-        guard points.count >= 3 else { return points }
-        func point(_ p: PlanPoint) -> (x: Double, y: Double) { (Double(p.x), Double(p.y)) }
-        func plan(_ x: Double, _ y: Double) -> PlanPoint { PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded())) }
-        var out = [points[0]]
-        for index in 1..<(points.count - 1) {
-            let a = point(points[index - 1]), b = point(points[index]), c = point(points[index + 1])
-            let inX = b.x - a.x, inY = b.y - a.y, outX = c.x - b.x, outY = c.y - b.y
-            let inLength = (inX * inX + inY * inY).squareRoot(), outLength = (outX * outX + outY * outY).squareRoot()
-            // Straight on: no corner.
-            guard inLength > 0, outLength > 0, abs(inX * outY - inY * outX) > 1e-9 * inLength * outLength else {
-                out.append(points[index])
-                continue
-            }
-            let cut = min(cornerCut, inLength / 2, outLength / 2)
-            let start = (x: b.x - inX / inLength * cut, y: b.y - inY / inLength * cut)
-            let end = (x: b.x + outX / outLength * cut, y: b.y + outY / outLength * cut)
-            let steps = 4
-            for step in 0...steps {
-                let t = Double(step) / Double(steps), u = 1 - t
-                out.append(plan(u * u * start.x + 2 * u * t * b.x + t * t * end.x, u * u * start.y + 2 * u * t * b.y + t * t * end.y))
-            }
-        }
-        out.append(points[points.count - 1])
-        return out
-    }
 
     /// The base map's width of a lane (`minor`), in points, at map `zoom`
     /// (``BaseMapStyle``'s road widths), never under a point: the player's

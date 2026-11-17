@@ -62,6 +62,65 @@ public struct RoadDraft: Hashable, Sendable {
             at = next
         }
     }
+
+    /// Goes on along the finger's way from `from` to `to` (decision 821):
+    /// through each cell the line crosses, in turn, side by side, and
+    /// corner to corner only where it passes within
+    /// ``RoadCentreLines/cornerReach`` of the corner, so the road is drawn
+    /// straight along the finger and inside its own cells. From the last
+    /// cell's middle when `from` is not in it.
+    mutating func extend(from: PlanPoint, to: PlanPoint) {
+        guard let last = cells.last else {
+            extend(to: CellPosition(containing: to))
+            return
+        }
+        let start = CellPosition(containing: from) == last ? from : last.middle
+        let side = Double(Land.cellLength)
+        let ax = Double(start.x), ay = Double(start.y), dx = Double(to.x) - ax, dy = Double(to.y) - ay
+        let target = CellPosition(containing: to)
+        var row = last.row, column = last.column
+        let stepColumn = dx > 0 ? 1 : -1, stepRow = dy > 0 ? 1 : -1
+        // Where the line crosses the next column line and row line, as a
+        // share of the way.
+        func crossing(_ index: Int, _ step: Int, _ origin: Double, _ delta: Double) -> Double {
+            guard delta != 0 else { return .infinity }
+            return ((Double(index + (step > 0 ? 1 : 0)) * side) - origin) / delta
+        }
+        let length = (dx * dx + dy * dy).squareRoot()
+        while row != target.row || column != target.column {
+            let columnsLeft = target.column != column, rowsLeft = target.row != row
+            let atColumn = columnsLeft ? crossing(column, stepColumn, ax, dx) : .infinity
+            let atRow = rowsLeft ? crossing(row, stepRow, ay, dy) : .infinity
+            var next = CellPosition(row: row, column: column)
+            if columnsLeft, rowsLeft, length > 0 {
+                let cornerX = Double(column + (stepColumn > 0 ? 1 : 0)) * side, cornerY = Double(row + (stepRow > 0 ? 1 : 0)) * side
+                let offLine = abs(dx * (cornerY - ay) - dy * (cornerX - ax)) / length
+                if offLine <= RoadCentreLines.cornerReach {
+                    next = CellPosition(row: row + stepRow, column: column + stepColumn)
+                }
+            }
+            if next.row == row, next.column == column {
+                next = atColumn <= atRow ? CellPosition(row: row, column: column + stepColumn) : CellPosition(row: row + stepRow, column: column)
+                // A side step at right angles to the one before, round a
+                // corner the line passes as near (a move ended between
+                // the two): corner to corner instead.
+                if cells.count >= 2, length > 0 {
+                    let before = cells[cells.count - 2]
+                    if abs(next.row - before.row) == 1, abs(next.column - before.column) == 1 {
+                        let cornerX = Double(max(before.column, next.column)) * side, cornerY = Double(max(before.row, next.row)) * side
+                        if abs(dx * (cornerY - ay) - dy * (cornerX - ax)) / length <= RoadCentreLines.cornerReach {
+                            cells.removeLast()
+                        }
+                    }
+                }
+            }
+            let before = cells.count
+            extend(to: next)
+            if cells.count == before, cells.last != next { return }
+            row = next.row
+            column = next.column
+        }
+    }
 }
 
 /// What the drawn road would be, as GameCore quotes it.
@@ -193,13 +252,15 @@ extension GameSession {
         guard busMode == .roads, world.roads != nil else { return }
         if roadDragStart != start {
             roadDragStart = start
+            roadDragFinger = start
             roadRemoval = nil
             if roadDraft.cells.last != CellPosition(containing: start) { roadDraft = RoadDraft() }
             roadDraft.extend(to: CellPosition(containing: start))
         }
         guard world.bounds.contains(end) else { return }
         let before = roadDraft
-        roadDraft.extend(to: CellPosition(containing: end))
+        roadDraft.extend(from: roadDragFinger ?? start, to: end)
+        roadDragFinger = end
         if roadDraft != before || roadPreview == nil { refreshRoadPreview() }
     }
 
@@ -208,11 +269,13 @@ extension GameSession {
     public func endRoadDrag(from start: PlanPoint, to end: PlanPoint) {
         dragRoad(from: start, to: end)
         roadDragStart = nil
+        roadDragFinger = nil
     }
 
     /// The drag was taken over (a second finger): the road drawn goes.
     public func cancelRoadDrag() {
         roadDragStart = nil
+        roadDragFinger = nil
         clearRoadDraft()
     }
 
@@ -412,6 +475,7 @@ extension GameSession {
         roadPreview = nil
         roadRemoval = nil
         roadDragStart = nil
+        roadDragFinger = nil
     }
 
     /// Takes back the road drawn's last cell.
@@ -462,14 +526,18 @@ extension GameSession {
             overlay.own = own
             let drawn = Set(roadDraft.cells)
             if !drawn.isEmpty {
-                // With the roads beside it, which it joins (only those: the
-                // whole map's would be slow to go through every frame).
-                var near = drawn
-                for cell in drawn {
-                    for dr in -1...1 {
-                        for dc in -1...1 {
-                            let beside = CellPosition(row: cell.row + dr, column: cell.column + dc)
-                            if real ? roads.built.contains(beside) : roads.contains(beside) { near.insert(beside) }
+                // Decision 821: with the player's roads it joins, whole, so
+                // each line through the cells drawn is drawn as it will be
+                // laid (only those lines are walked); on a map with no base
+                // map, with the city's road cells beside it too.
+                var near = roads.built.union(drawn)
+                if !real {
+                    for cell in drawn {
+                        for dr in -1...1 {
+                            for dc in -1...1 {
+                                let beside = CellPosition(row: cell.row + dr, column: cell.column + dc)
+                                if roads.contains(beside) { near.insert(beside) }
+                            }
                         }
                     }
                 }
