@@ -278,7 +278,7 @@ extension Map3DScene.Builder {
                               drawnElsewhere: Set<Map3DStationKit.Profile> = []) -> Set<Map3DScene.ChunkKey> {
         let saved = target
         defer { target = saved }
-        // Decision 826: the Tamsui-Xinyi line's elevated stations under
+        // Decision 827: the Tamsui-Xinyi line's elevated stations under
         // their shells, which roof their platforms (no kit canopy there).
         var shells: [StationID: (station: Map3DTaipeiMRTStation, placement: Map3DTaipeiMRTStation.Placement)] = [:]
         if frame != nil {

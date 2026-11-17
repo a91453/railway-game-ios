@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Write the local studio's Tamsui-Xinyi line elevated station GLBs (decision
-826) into the game's Swift source as encoded meshes (no third-party modules).
+827) into the game's Swift source as encoded meshes (no third-party modules).
 
     python3 -I tools/tpe-mrt-stations/glb_to_swift.py \
         --out Sources/GamePresentation/Map3DTaipeiMRTStationMeshes.swift DIR/*.glb

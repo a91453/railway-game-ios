@@ -135,6 +135,10 @@ public struct NetworkPreview: Hashable, Sendable {
     /// Decision 629: GameCore's refusal, for the build card to offer the
     /// height that gets round it; `nil` when it would be built.
     public var refusal: GameError? = nil
+    /// Decision 826: its slow curves, tightest curve and steepest grade,
+    /// for the map; `nil` until the session works them out with the
+    /// preview (``GameSession/networkPreview``).
+    public var marks: TrackPreviewMarks? = nil
 }
 
 /// What a stretch of track the network tool would build costs, part by

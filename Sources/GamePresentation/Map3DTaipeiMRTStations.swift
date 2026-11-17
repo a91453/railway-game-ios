@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-/// Decision 826: the Tamsui-Xinyi line's elevated stations, the local
+/// Decision 827: the Tamsui-Xinyi line's elevated stations, the local
 /// studio's four shells (`tools/tpe-mrt-stations/glb_to_swift.py`): the
 /// palace-style standard station (Yuanshan to Qiyan), Jiantan's
 /// suspension station, Beitou's four-track station and Xinbeitou's
@@ -198,7 +198,7 @@ enum Map3DTaipeiMRTStation: String, CaseIterable, Sendable {
 }
 
 extension Map3DScene.Builder {
-    /// Decision 826: the shell for station `id`, if its platforms
+    /// Decision 827: the shell for station `id`, if its platforms
     /// (`lines`, at the rails) lie within ``Map3DTaipeiMRTStation/reach``
     /// of one of the Tamsui-Xinyi line's elevated stations, run straight
     /// there and stand at least ``Map3DTaipeiMRTStation/leastRise`` over
@@ -221,7 +221,7 @@ extension Map3DScene.Builder {
         return nil
     }
 
-    /// Decision 826: the shell drawn, in its own colours (as the exterior
+    /// Decision 827: the shell drawn, in its own colours (as the exterior
     /// studies, decision 625), in the chunk of its middle; the cells under
     /// it, for no city lot there.
     mutating func addTaipeiMRTShell(_ station: Map3DTaipeiMRTStation, at placement: Map3DTaipeiMRTStation.Placement)

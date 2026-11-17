@@ -583,7 +583,8 @@ public struct Map3DBuses: Sendable {
     }
 
     /// The model's place in ``Map3DModelPack/standard``.
-    static let model = Map3DModelPack.standard.index(of: Map3DLowFloorBus.routeModelName)
+    /// Decision 820: from ``Map3DModelCatalog``, not waiting for the pack.
+    static let model = Map3DModelCatalog.standard.index(of: Map3DLowFloorBus.routeModelName)
 
     /// The buses at `second` of the game's day round `target` seen from
     /// `distance` away, as the street's vehicles are drawn (within

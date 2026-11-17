@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 826: the Tamsui-Xinyi line's elevated station shells.
+/// Decision 827: the Tamsui-Xinyi line's elevated station shells.
 final class Map3DTaipeiMRTStationsTests: XCTestCase {
     typealias Station = Map3DTaipeiMRTStation
 
