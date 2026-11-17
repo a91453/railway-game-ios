@@ -22,11 +22,11 @@ enum RealStationPlatformTypes {
         "tra_sched|橋頭", "tra_sched|民雄", "tra_sched|水里", "tra_sched|汐止", "tra_sched|沙崙", "tra_sched|沙鹿", "tra_sched|泰安", "tra_sched|浮洲",
         "tra_sched|湖口", "tra_sched|漢本", "tra_sched|潭子", "tra_sched|潮州", "tra_sched|濁水", "tra_sched|烏日", "tra_sched|牡丹", "tra_sched|猴硐",
         "tra_sched|瑞源", "tra_sched|瑞芳", "tra_sched|田中", "tra_sched|百福", "tra_sched|知本", "tra_sched|石城", "tra_sched|礁溪", "tra_sched|社頭",
-        "tra_sched|福隆", "tra_sched|竹中", "tra_sched|竹北", "tra_sched|竹南", "tra_sched|竹東", "tra_sched|美術館", "tra_sched|臺中", "tra_sched|臺中港",
-        "tra_sched|臺北", "tra_sched|臺南", "tra_sched|臺東", "tra_sched|花壇", "tra_sched|花蓮", "tra_sched|苑裡", "tra_sched|苗栗", "tra_sched|萬榮",
-        "tra_sched|萬華", "tra_sched|蘇澳", "tra_sched|蘇澳新", "tra_sched|西勢", "tra_sched|談文", "tra_sched|豐原", "tra_sched|路竹", "tra_sched|車埕",
-        "tra_sched|追分", "tra_sched|通霄", "tra_sched|銅鑼", "tra_sched|關山", "tra_sched|隆田", "tra_sched|集集", "tra_sched|雙溪", "tra_sched|頭城",
-        "tra_sched|香山", "tra_sched|高雄", "tra_sched|鳳山", "tra_sched|鶯歌", "tra_sched|龍井",
+        "tra_sched|福隆", "tra_sched|竹北", "tra_sched|竹南", "tra_sched|竹東", "tra_sched|美術館", "tra_sched|臺中", "tra_sched|臺中港", "tra_sched|臺北",
+        "tra_sched|臺南", "tra_sched|臺東", "tra_sched|花壇", "tra_sched|花蓮", "tra_sched|苑裡", "tra_sched|苗栗", "tra_sched|萬榮", "tra_sched|萬華",
+        "tra_sched|蘇澳", "tra_sched|蘇澳新", "tra_sched|西勢", "tra_sched|談文", "tra_sched|豐原", "tra_sched|路竹", "tra_sched|車埕", "tra_sched|追分",
+        "tra_sched|通霄", "tra_sched|銅鑼", "tra_sched|關山", "tra_sched|隆田", "tra_sched|集集", "tra_sched|雙溪", "tra_sched|頭城", "tra_sched|香山",
+        "tra_sched|高雄", "tra_sched|鳳山", "tra_sched|鶯歌", "tra_sched|龍井",
     ]
 
     /// Stations with a side platform on each of two tracks.
@@ -39,8 +39,8 @@ enum RealStationPlatformTypes {
         "tra_sched|新莊", "tra_sched|日南", "tra_sched|暖暖", "tra_sched|東澳", "tra_sched|東里", "tra_sched|松竹", "tra_sched|枋山", "tra_sched|柳營",
         "tra_sched|栗林", "tra_sched|桃園", "tra_sched|正義", "tra_sched|武塔", "tra_sched|歸來", "tra_sched|民族", "tra_sched|水上", "tra_sched|永康",
         "tra_sched|永樂", "tra_sched|永靖", "tra_sched|海科館", "tra_sched|清水", "tra_sched|瑞穗", "tra_sched|白沙屯", "tra_sched|石榴", "tra_sched|石龜",
-        "tra_sched|科工館", "tra_sched|竹田", "tra_sched|精武", "tra_sched|羅東", "tra_sched|豐富", "tra_sched|豐田", "tra_sched|造橋", "tra_sched|金崙",
-        "tra_sched|鎮安", "tra_sched|長榮大學", "tra_sched|頂埔", "tra_sched|頭家厝", "tra_sched|鳳林", "tra_sched|鳳鳴", "tra_sched|鹿野", "tra_sched|麟洛",
-        "tra_sched|鼓山", "tra_sched|龍泉", "tra_sched|龍港",
+        "tra_sched|科工館", "tra_sched|竹中", "tra_sched|竹田", "tra_sched|精武", "tra_sched|羅東", "tra_sched|豐富", "tra_sched|豐田", "tra_sched|造橋",
+        "tra_sched|金崙", "tra_sched|鎮安", "tra_sched|長榮大學", "tra_sched|頂埔", "tra_sched|頭家厝", "tra_sched|鳳林", "tra_sched|鳳鳴", "tra_sched|鹿野",
+        "tra_sched|麟洛", "tra_sched|鼓山", "tra_sched|龍泉", "tra_sched|龍港",
     ]
 }
