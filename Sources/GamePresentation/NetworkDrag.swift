@@ -84,8 +84,12 @@ extension GameSession {
         var guide: TrackDrawGuide?
         if networkSnapsToTrack, anchor == .point(end), let start = networkStart, let from = planPoint(of: start) {
             let references = alignmentReferences(start: start, from: from, end: end, guideReach: reach * TrackAlignment.guideReaches)
+            // REVIEW-L27 P3-3 (SNAP-REANCHOR): lining up turns the end
+            // round the start by up to 3° (some 100 m at 2 km); only
+            // where it stays a free end, not on or beside other track it
+            // would not join.
             if let (moved, found) = TrackAlignment.align(start: from, end: end, references: references, reach: reach),
-               world.bounds.contains(moved) {
+               world.bounds.contains(moved), networkAnchor(at: moved, reach: reach) == .point(moved) {
                 anchor = .point(moved)
                 guide = found
             }
