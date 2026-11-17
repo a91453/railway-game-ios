@@ -800,6 +800,10 @@ public final class GameSession {
     /// Where the finger drawing track is, for the magnifier (decision 204);
     /// `nil` when no drag draws track.
     public internal(set) var networkDragFinger: PlanPoint?
+    /// What the stretch the finger draws lines up with, and its dashed
+    /// guides (decision 826); `nil` when it lines up with nothing or no
+    /// drag draws track.
+    public internal(set) var networkDragGuide: TrackDrawGuide?
     /// What carries the next stretch of track: what the ground asks for
     /// (decision 124) unless the player forces a structure.
     public var networkStructure: TrackStructure = .automatic

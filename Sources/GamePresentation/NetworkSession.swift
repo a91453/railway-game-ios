@@ -186,7 +186,7 @@ extension GameSession {
     private func workOutNetworkDraftPreview(
         from start: NetworkAnchor, to end: NetworkAnchor, key: NetworkPreviewMemo.Key
     ) -> (preview: NetworkPreview, crossing: [WorldCoordinate])? {
-        let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
+        var found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
         } else if let traced = tracePreview(from: start, to: end) {
             // Decision 213: along the real line, when both ends are on one;
@@ -197,6 +197,8 @@ extension GameSession {
             // middle is: a second line.
             preview(from: start, to: end)
         }
+        // Decision 826: worked out once with the preview, not each frame.
+        if let preview = found?.preview { found?.preview.marks = TrackPreviewMarks(preview, curveSpeedLimits: world.curveSpeedLimits) }
         networkPreviewMemo = NetworkPreviewMemo(key: key, preview: found, affordable: affords(found?.preview.cost))
         buildPreviewsWorkedOut += 1
         return found
@@ -1402,6 +1404,28 @@ public struct NetworkOverlay: Hashable, Sendable {
     /// The company's buildings the next stretch would pull down (decision
     /// 95).
     public var cleared: [PlanRect] = []
+    /// Decision 826: the stretches of the next stretch its curves slow a
+    /// train, drawn over its centre line in their band's colour.
+    public var slowStretches: [TrackPreviewMarks.Stretch] = []
+    /// Decision 826: its tightest curve and steepest grade, labelled.
+    public var marks: [Mark] = []
+    /// Decision 826: the dashed lines the stretch a finger draws lines up
+    /// along (``TrackDrawGuide``).
+    public var guides: [[WorldCoordinate]] = []
+
+    /// A labelled point of the next stretch (decision 826).
+    public struct Mark: Hashable, Sendable {
+        public enum Kind: Hashable, Sendable {
+            /// The tightest curve, coloured as its band.
+            case curve(TrackSpeedBand?)
+            /// The steepest grade; `tooSteep` past what track may climb.
+            case grade(tooSteep: Bool)
+        }
+
+        public let position: WorldCoordinate
+        public let kind: Kind
+        public let text: String
+    }
 
     public init() {}
 
@@ -1461,6 +1485,18 @@ extension GameSession {
                 overlay.existing = draft.preview.existing
                 overlay.newPieces = draft.preview.newPieces
                 overlay.cleared = draft.preview.cleared.map(PlanRect.init)
+                if let marks = draft.preview.marks {
+                    // Coloured only where it would be built: a refused
+                    // stretch is drawn grey, whatever its curves.
+                    if overlay.previewIsBuildable { overlay.slowStretches = marks.stretches }
+                    overlay.marks = [
+                        marks.tightest.map { NetworkOverlay.Mark(position: $0.position, kind: .curve($0.band), text: $0.text(in: language)) },
+                        marks.steepest.map { NetworkOverlay.Mark(position: $0.position, kind: .grade(tooSteep: $0.tooSteep), text: $0.text(in: language)) },
+                    ].compactMap { $0 }
+                }
+            }
+            if networkDragFinger != nil, let guide = networkDragGuide {
+                overlay.guides = guide.lines.map { $0.map { WorldCoordinate(x: $0.x, y: $0.y, z: 0) } }
             }
         case .platform:
             if let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge), stretch.start < stretch.end {
