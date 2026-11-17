@@ -637,6 +637,16 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**2026-11-17 白天（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；下一任接手時以這段為最新，22:00 換 Ultra 前會再補一段）**
+
+- **136 發了**：作者 01:52 UTC 按，`testflight.yml` run 43998784830（run 136），commit `19f3cc58`（#2326）。發版後檢查：完整 `ci.yml` 43998595808、full lane 43998599964；健康報告貼在 #2118。WREATH-NOSE、#2316、DEADLOCK-D1、HKCEC 都在 136 裡。
+- **發版後例行**：REVIEW-L26＋HEALTH-136（session_01JMHz9cBHLCf2Qau1dU117D，`claude/review-l26`）審 #2315 起（另加 #2310）到 `19f3cc58`，也補 PLAYER_FEEDBACK 的 136 一節。CI 牆鐘：PR 完整 tier 最慢 29 分，比 CIOPT-8 的 25.1 分慢約 16%，未到 20%，這輪不派 CIOPT-9；完整 `ci.yml` 跑完再看一次。
+- **在跑的實作**（都是 Max、Opus 高；綠了而且 ready 就照 §1.2 合）：DEADLOCK-D2（810）、NATURE-BASE（811）、REGION-LOOK-HK（812）、SUN-TIMES（813）、WINTER-FIX（814）、REVIEW-L26、**MUSIC-WINTER＋MUSIC-REFRESH**（session_01JMHz9cGsvfsJaQrxo2Y89Z，`claude/music-winter`，決策 815）、**MODEL-AGE**（session_01JMHz9cR1KqUEPbSgrumB6S，`claude/model-age`，只寫文件，含 art-style §7 兩句的修改）。
+- **新排進優先清單**：NEXT_PRIORITIES §29.14（作者 11-17 白天問的音樂、模型新舊、窗戶、畫風規則）。**FACADE-VARIETY（3.45）等 REGION-LOOK-HK 合併後第一個派**。MODEL-AGE 合併後照它寫進的分數往下派（作者點名：汽車、E200 等早期列車、公車）。
+- **137（今晚）**：上面幾串綠了就合；新 3D 模型與畫面先看總覽圖；D2 的 golden 變動要逐值說明。D2 合了再派 ROVANIEMI-OPEN（目標 11-30）。
+- **號碼**：決策用到 815（808、809 已合；810–815 預留中）；下一個可取 **816**。存檔 107、golden schema 77。
+- **等作者的**：136 的出口合規與「測試項目」說明；134 香港地圖包實機檢查、Threads 貼文；國土測繪中心三維建物免費或付費（BACKLOG_AUDIT「等作者的」）。主題曲三個候選做好後請作者用手機聽。
+
 **2026-11-17 換到 Ultra 的交接（Max 的規劃 session_01JMHz9Yps9xJyFfDFR4mUed 寫；新規劃照這一段接手）**
 
 - **為什麼換**：Ultra 週額度在 11-17 台灣時間 22:00 重置，換回 Ultra 當主帳號（§1.1「兩個帳號輪流當主帳號」）。Max 下次重置是 11-21（六）08:00，留作備援。
