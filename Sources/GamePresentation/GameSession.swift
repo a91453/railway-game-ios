@@ -986,6 +986,11 @@ public final class GameSession {
         didSet { suggestStationNameAtTheMiddle() }
     }
 
+    /// What covers Taiwan's ground (decision 811): the 3D map's countryside
+    /// and its forests' trees. Handed to each session by the launcher;
+    /// never saved, and the rules do not read it.
+    @ObservationIgnored public var landCover: LandCoverGrid?
+
     /// The sights' visitors of a year by the official count, for their
     /// cards in the sights panel (decision 724). Handed to each session by
     /// the launcher with the place names; never saved, and the rules do not
