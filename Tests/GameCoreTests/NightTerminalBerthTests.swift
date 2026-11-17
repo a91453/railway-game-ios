@@ -18,6 +18,12 @@ import XCTest
 /// 5, train 1 runs empty to Qingpu, train 20 after it, and train 5 goes
 /// on two minutes late.
 final class NightTerminalBerthTests: XCTestCase {
+    override func setUp() { // PROBE-D2 (temporary)
+        GameWorld.probeNoA2 = ProcessInfo.processInfo.environment["PROBE_NO_A2"] != nil // PROBE-D2 (temporary)
+        GameWorld.probeNoB = ProcessInfo.processInfo.environment["PROBE_NO_B"] != nil // PROBE-D2 (temporary)
+        GameWorld.probeNoC = ProcessInfo.processInfo.environment["PROBE_NO_C"] != nil // PROBE-D2 (temporary)
+        GameWorld.probeLog = true // PROBE-D2 (temporary)
+    } // PROBE-D2 (temporary)
     private static func world() throws -> GameWorld {
         let data = try Data(contentsOf: SavedGameTests.fixtures.appendingPathComponent("v107-night-terminal-berths.json"))
         var world = try JSONDecoder().decode(SavedGame.self, from: data).world
@@ -35,10 +41,12 @@ final class NightTerminalBerthTests: XCTestCase {
         var waited = 0
         var longest = 0
         var running = 0
+        var minutes: [GameTime] = []
         for _ in 0..<40 {
             try world.advance(ticks: 1)
             let stuck = world.deadlockedTrains()
             if stuck.contains(last) { waited += 1 }
+            if !stuck.isEmpty { minutes.append(world.clock.now) }
             // The waits of a minute as a train comes in on one that has
             // just ended its run are still there (decision 805's fourth
             // case), and the one here is two: none lasts longer.
@@ -47,6 +55,7 @@ final class NightTerminalBerthTests: XCTestCase {
         }
         XCTAssertLessThanOrEqual(waited, 2)
         XCTAssertLessThanOrEqual(longest, 2)
+        print("PROBE-D2 minutes \(minutes.map { "\($0.seconds % 86_400 / 60)" })") // PROBE-D2 (temporary)
         // 00:50: its run has ended at Terminal 2, and the two that stood
         // in its way are in Qingpu depot.
         XCTAssertNil(world.train(id: last)?.execution)

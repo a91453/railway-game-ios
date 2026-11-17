@@ -526,22 +526,44 @@ extension GameWorld {
     /// in the high-speed demo with traffic control and block sections,
     /// seven sets ran out of Zuoying's depot towards the berth the first of
     /// them stopped on, and none of the eight ever moved again.
-    func berthChange(memo: inout DirectionMemo) -> Train? {
+    ///
+    /// Decision 810: so too a train still on its way, once it takes the
+    /// rest of its route (decision 294), where the train on its berth is a
+    /// spare of its line (see ``isSpare(_:)``), which nothing sends on: it
+    /// changes berth without stopping (see ``diverted(_:along:left:)``),
+    /// as a signaller sets the road for the free platform before the train
+    /// is at the home signal. In Rovaniemi the morning train to Kemijärvi
+    /// ran up to the platform the night train's set stood on, stopped
+    /// outside and waited for the dispatcher's next look.
+    func berthChange(memo dispatch: inout DispatchMemo) -> Train? {
         guard isTrafficControlEnabled else { return nil }
         let idle = Set(trains.lazy.filter { $0.execution == nil && $0.position != nil }.map(\.id))
         guard !idle.isEmpty || !blockSections else { return nil }
+        // Decision 810: the spares among them, found when first asked for.
+        var spares: Set<TrainID>?
         for train in trains.sorted(by: { $0.id < $1.id }) {
             guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-                  let position = train.position, isFollowing(train, memo: &memo)
+                  let position = train.position, let (_, envelopes) = authority(of: train, memo: &dispatch.directions)
             else { continue }
-            let step = travelling(train, distance: 1, memo: &memo)
-            guard step.position == train.position, step.cursor == train.movement.cursor else { continue }
-            let blocking = blockedTrack(except: train.id, among: idle, holders: trackHolders(memo: &memo))
-            // Decision 308: or, without block sections, it waits short of a
-            // line's train ending its service on its berth.
-            guard blocking.blocks(envelopeCover(of: train), in: network)
-                || approachesStandingTrain(train, along: envelopeCover(of: train), holders: trackHolders(memo: &memo))
-            else { continue }
+            let step = travelling(train, distance: 1, memo: &dispatch.directions)
+            let stopped = step.position == train.position && step.cursor == train.movement.cursor
+            let blocking = blockedTrack(except: train.id, among: idle, holders: trackHolders(memo: &dispatch.directions))
+            let blocked = blocking.blocks(envelopeCover(of: train), in: network)
+            if stopped {
+                // Decision 308: or, without block sections, it waits short of a
+                // line's train ending its service on its berth.
+                guard blocked || approachesStandingTrain(train, along: envelopeCover(of: train), holders: trackHolders(memo: &dispatch.directions))
+                else { continue }
+            } else {
+                // Decision 810: still on its way, once it takes the rest of
+                // its route (decision 294), only where a spare of its line
+                // (see ``isSpare(_:)``) keeps it from its berth.
+                guard !GameWorld.probeNoB, blocked, approachLimit(of: train, envelopes) == nil else { continue } // PROBE-D2 (temporary)
+                if spares == nil { spares = Set(trains.filter { idle.contains($0.id) && isSpare($0, memo: &dispatch) }.map(\.id)) }
+                guard !spares!.isEmpty,
+                      blockedTrack(except: train.id, among: spares!, holders: trackHolders(memo: &dispatch.directions)).blocks(envelopeCover(of: train), in: network)
+                else { continue }
+            }
             let station = train.timetable[stop].station
             // The berths the other trains on their way there will stand at.
             var taken: Set<TrackEdgeID> = []
@@ -553,21 +575,41 @@ extension GameWorld {
                     taken.insert(traversal.edge)
                 }
             }
-            let forbidden = opposingServiceTraversals(for: train, memo: &memo)
-            let (limit, overflow) = routeLength(of: train).addingReportingOverflow(Self.detourAllowance)
+            let forbidden = opposingServiceTraversals(for: train, memo: &dispatch.directions)
+            let left = routeLength(of: train)
+            let (limit, overflow) = left.addingReportingOverflow(Self.detourAllowance)
             var best: (train: Train, distance: Int64)?
             for berth in berths(of: station, length: train.length) where !taken.contains(berth.traversal.edge) {
                 guard let free = path(from: position, toStation: station, length: train.length, avoiding: blocking, only: berth),
                       let way = path(from: position, toStation: station, length: train.length, avoiding: blocking,
                                      forbidden: forbidden.subtracting(terminusTraversals(along: free, to: station)), only: berth),
                       way.distance > 0, overflow || way.distance <= limit, way.distance < best?.distance ?? .max,
-                      case .granted(let granted) = reserving(rerouted(train, along: way, stop: stop, cycle: cycle), following: true, memo: &memo)
+                      case .granted(let granted) = reserving(stopped ? rerouted(train, along: way, stop: stop, cycle: cycle) : diverted(train, along: way, left: left),
+                                                             following: true, memo: &dispatch.directions)
                 else { continue }
                 best = (granted, way.distance)
             }
             if let best { return best.train }
         }
         return nil
+    }
+
+    /// Decision 810: `train`, a service on its way with `left` of its
+    /// route to go, along `way` to another berth instead, without stopping:
+    /// its run as it set off, longer or shorter by what the way to the
+    /// other berth is, in the same seconds, when its performance builds a
+    /// curve for that; otherwise the run it has (one that ends short of
+    /// the berth sets off again for the rest, see `resumeRun(_:at:)`).
+    func diverted(_ train: Train, along way: TrainPath, left: Int64) -> Train {
+        var diverted = train
+        follow(way, &diverted)
+        guard let run = train.times?.run, left < .max else { return diverted }
+        let (length, overflow) = run.length.addingReportingOverflow(way.distance - left)
+        guard !overflow, length >= 1, length != run.length else { return diverted }
+        let limits = run.limits.filter { $0.end <= length }
+        let fitted = ServiceRun(start: run.start, length: length, seconds: run.seconds, limits: limits)
+        if fitted.curve(for: train.performance) != nil { diverted.times?.run = fitted }
+        return diverted
     }
 
     // MARK: - Turning back short

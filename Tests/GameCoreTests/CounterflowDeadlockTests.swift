@@ -1,3 +1,4 @@
+import Foundation // PROBE-D2 (temporary)
 @testable import GameCore
 import XCTest
 
@@ -18,6 +19,10 @@ import XCTest
 /// way, which decision 57's direction protection forbids. Simple rules (no
 /// block sections), traffic control on, as a new game starts.
 final class CounterflowDeadlockTests: XCTestCase {
+    override func setUp() { // PROBE-D2 (temporary)
+        GameWorld.probeNoA2 = ProcessInfo.processInfo.environment["PROBE_NO_A2"] != nil // PROBE-D2 (temporary)
+        GameWorld.probeNoB = ProcessInfo.processInfo.environment["PROBE_NO_B"] != nil // PROBE-D2 (temporary)
+    } // PROBE-D2 (temporary)
     private struct Scene {
         var world: GameWorld
         let x: TrainID
@@ -29,7 +34,11 @@ final class CounterflowDeadlockTests: XCTestCase {
 
     /// `farther` moves the two free berths, W2 and E1, that much farther
     /// out (the rest of the scene that much east).
-    private func makeScene(farther: Int64 = 0) throws -> Scene {
+    ///
+    /// `spare` (decision 810): with block sections, Y is no service but
+    /// the spare of a line calling at W and E that runs none of its trains
+    /// now, and X is due to leave half a minute past minute 1.
+    private func makeScene(farther: Int64 = 0, spare: Bool = false) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 229_376 + 131_072, height: 65_536), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
@@ -69,9 +78,20 @@ final class CounterflowDeadlockTests: XCTestCase {
         let x = try stand(&world, at: TrackTraversal(edge: aWest, direction: .forward), offset: 5_120)
         let y = try stand(&world, at: TrackTraversal(edge: bEast, direction: .backward), offset: 6_528 - 1_408)
         try world.setTrainTimetable(x, to: [
-            ScheduledStop(station: w, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: w, arrival: GameTime(minutes: 0), departure: spare ? GameTime(seconds: 90) : GameTime(minutes: 1)),
             ScheduledStop(station: e, arrival: GameTime(minutes: 30), departure: GameTime(minutes: 30)),
         ])
+        if spare {
+            world.setBlockSections(true)
+            let line = try world.createLine(named: "L", stops: [w, e]).id
+            try world.assignTrain(y, to: line)
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: .none)
+            try world.setTrafficControl(true)
+            try world.startTrainService(x)
+            XCTAssertTrue(world.isSpare(try XCTUnwrap(world.train(id: y))), "Y is its line's spare")
+            return Scene(world: world, x: x, y: y, w: w, e: e, aMain: aMain)
+        }
         try world.setTrainTimetable(y, to: [
             ScheduledStop(station: e, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 3)),
             ScheduledStop(station: w, arrival: GameTime(minutes: 30), departure: GameTime(minutes: 30)),
@@ -135,6 +155,26 @@ final class CounterflowDeadlockTests: XCTestCase {
                scene.world.train(id: scene.x)?.movement.edges.contains(scene.aMain) == true { usedABeforeYWasDue = true }
         }
         XCTAssertTrue(usedABeforeYWasDue, "X left along A as soon as it was due")
+    }
+
+    /// Decision 810: with block sections too, past a spare of its line
+    /// standing on the berth X is bound for. X is due half a minute past
+    /// minute 1 and leaves for the free berth then, along A: before, it
+    /// waited for the dispatcher's look at minute 2, and that minute showed
+    /// a deadlock. The spare stays where it stands.
+    func testWithBlockSectionsTheFreeBerthPastASpareIsTakenAtTheDeparture() throws {
+        var scene = try makeScene(spare: true)
+        let stood = scene.world.train(id: scene.y)?.position
+        var leftAt: GameTime?
+        for _ in 0..<40 {
+            try scene.world.advance(ticks: 1)
+            XCTAssertEqual(scene.world.deadlockedTrains(), [], "at \(scene.world.clock.now)")
+            if leftAt == nil, scene.world.train(id: scene.x)?.movement.edges.contains(scene.aMain) == true { leftAt = scene.world.clock.now }
+            XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
+        }
+        XCTAssertEqual(leftAt, GameTime(minutes: 2), "X left along A within the minute it was due in")
+        XCTAssertEqual(scene.world.stationsStoppedAt(by: scene.x), [scene.e], "X calls at E")
+        XCTAssertEqual(scene.world.train(id: scene.y)?.position, stood, "the spare has not moved")
     }
 
     /// A free berth is taken only within ``GameWorld/detourAllowance`` of

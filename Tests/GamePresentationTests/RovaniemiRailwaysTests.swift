@@ -109,10 +109,11 @@ final class RovaniemiRailwaysTests: XCTestCase {
     /// Both lines are on sale on the map, each is bought with its trains
     /// and runs a whole day. The Kemijärvi line's spare train stands at
     /// Kemijärvi from Saturday night to Thursday on the line's own
-    /// platform, and the night train from Helsinki, due in at 08:50, is
-    /// held a minute before the game sends it to a loop: a minute, never
-    /// more (docs/handoff/ROVANIEMI-MAP-1.md, left for the next pull
-    /// request).
+    /// platform, and the night train from Helsinki, due in at 08:50, was
+    /// held a minute before the game sent it to a loop
+    /// (docs/handoff/ROVANIEMI-MAP-1.md). Decision 810: it is sent to the
+    /// loop while still on its way, so no train waits in a deadlock in any
+    /// minute of the day.
     func testBothLinesAreBoughtAndRunADay() throws {
         XCTAssertEqual(try Self.rovaniemi().buyableRealLines.map(\.id).sorted(), ["vr:KJA", "vr:MUL"])
         for (id, trains) in [("vr:KJA", 3), ("vr:MUL", 4)] {
@@ -126,13 +127,12 @@ final class RovaniemiRailwaysTests: XCTestCase {
             let ran = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)))
             XCTAssertEqual(ran.assignedTrains.count, trains, id)
             var played = session.world
-            var stuck = 0, longest = 0
+            var stuck = 0
             for _ in 0..<(24 * 60) {
                 try played.advance(ticks: 1)
-                stuck = played.deadlockedTrains().isEmpty ? 0 : stuck + 1
-                longest = max(longest, stuck)
+                if !played.deadlockedTrains().isEmpty { stuck += 1 }
             }
-            XCTAssertLessThanOrEqual(longest, 1, id)
+            XCTAssertEqual(stuck, 0, "\(id): minutes of the day with a deadlock")
             let after = try XCTUnwrap(played.line(id: ran.id))
             XCTAssertGreaterThan(zip(after.runs, after.runDays).filter { $0.1 != nil }.count, 0, id)
         }
@@ -153,13 +153,12 @@ final class RovaniemiRailwaysTests: XCTestCase {
             }
             XCTAssertEqual(session.buyableRealLines.map(\.id), [], "\(order)")
             var played = session.world
-            var stuck = 0, longest = 0
+            var stuck = 0
             for _ in 0..<(24 * 60) {
                 try played.advance(ticks: 1)
-                stuck = played.deadlockedTrains().isEmpty ? 0 : stuck + 1
-                longest = max(longest, stuck)
+                if !played.deadlockedTrains().isEmpty { stuck += 1 }
             }
-            XCTAssertLessThanOrEqual(longest, 1, "\(order)")
+            XCTAssertEqual(stuck, 0, "\(order): minutes of the day with a deadlock")
             for id in order {
                 let bought = try XCTUnwrap(played.acquisition(of: id), "\(order): \(id)")
                 let ran = try XCTUnwrap(played.line(id: try XCTUnwrap(bought.line)), "\(order): \(id)")
