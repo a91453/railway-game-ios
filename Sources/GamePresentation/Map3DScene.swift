@@ -510,6 +510,9 @@ public struct Map3DScene: Sendable {
         var real: Map3DBaseMap?
         if let baseMap, let frame = RealWorldFrame(world: world) {
             real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY)
+            // Decision 833: the motorways held to their grade, their
+            // cuttings cut out of the ground laid next.
+            builder.roadGrade = builder.gradeMotorways(of: real!)
             // Decision 385: the city's low homes and shops along the real
             // roads, and none on the land OpenStreetMap keeps clear.
             builder.streetFrontage = true
@@ -1257,6 +1260,8 @@ extension Map3DScene {
         var trackCover = Map3DTrackCover()
         /// Decision 391: the base map's road bridges and their decks.
         var roadBridges = Map3DRoadBridges()
+        /// Decision 833: the motorways' profiles and cuttings.
+        var roadGrade = Map3DRoadGrade()
         /// Decision 368: the scene point within ``Map3DScene/detailRadius``
         /// of which the city is built in full; everywhere when `nil`.
         var detail: Map3DPoint?

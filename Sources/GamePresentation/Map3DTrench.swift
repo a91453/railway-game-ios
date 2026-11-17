@@ -305,16 +305,29 @@ extension Map3DScene.Builder {
 
     /// Decision 375: `polygon` (convex, level) less the trenches: convex
     /// pieces of it, or `nil` when no trench meets it.
-    func outsideTrenches(_ polygon: [Map3DBaseMap.Point]) -> [[Map3DBaseMap.Point]]? {
-        let trenches = trackCover.trenches
-        guard !trenches.isEmpty, let first = polygon.first else { return nil }
-        var box = (minX: first.x, minZ: first.z, maxX: first.x, maxZ: first.z)
-        for p in polygon {
-            box = (min(box.minX, p.x), min(box.minZ, p.z), max(box.maxX, p.x), max(box.maxZ, p.z))
+    /// Decision 833: and less the motorways' cuttings, unless not
+    /// `roadCuts` (a motorway's own lanes, which lie in them).
+    func outsideTrenches(_ polygon: [Map3DBaseMap.Point], roadCuts: Bool = true) -> [[Map3DBaseMap.Point]]? {
+        var parts: [[Map3DBaseMap.Point]]?
+        for trenches in roadCuts ? [trackCover.trenches, roadGrade.cuts] : [trackCover.trenches] where !trenches.isEmpty {
+            var next: [[Map3DBaseMap.Point]] = [], touched = false
+            for part in parts ?? [polygon] {
+                guard let first = part.first else { continue }
+                var box = (minX: first.x, minZ: first.z, maxX: first.x, maxZ: first.z)
+                for p in part {
+                    box = (min(box.minX, p.x), min(box.minZ, p.z), max(box.maxX, p.x), max(box.maxZ, p.z))
+                }
+                let near = trenches.pieces(minX: box.minX, minZ: box.minZ, maxX: box.maxX, maxZ: box.maxZ)
+                if !near.isEmpty, let cut = trenches.cut(part, by: near) {
+                    touched = true
+                    next += cut
+                } else {
+                    next.append(part)
+                }
+            }
+            if touched { parts = next }
         }
-        let near = trenches.pieces(minX: box.minX, minZ: box.minZ, maxX: box.maxX, maxZ: box.maxZ)
-        guard !near.isEmpty else { return nil }
-        return trenches.cut(polygon, by: near)
+        return parts
     }
 
     /// Decision 375: whether a road running along `along` (level) at level
@@ -352,10 +365,11 @@ extension Map3DScene.Builder {
     /// Decision 375: `triangles` of `points` (laid `lift` over the drawn
     /// ground) less the trenches, each cut triangle's pieces laid as the
     /// rest are.
-    mutating func outsideTrenches(_ points: [Map3DPoint], triangles: [Int], lift: Float) -> (points: [Map3DPoint], triangles: [Int]) {
-        guard !trackCover.trenches.isEmpty, !points.isEmpty else { return (points, triangles) }
+    mutating func outsideTrenches(_ points: [Map3DPoint], triangles: [Int], lift: Float, roadCuts: Bool = true) -> (points: [Map3DPoint], triangles: [Int]) {
+        guard !points.isEmpty else { return (points, triangles) }
         let xs = points.map { Double($0.x) }, zs = points.map { Double($0.z) }
-        guard !trackCover.trenches.pieces(minX: xs.min()!, minZ: zs.min()!, maxX: xs.max()!, maxZ: zs.max()!).isEmpty else {
+        let all = roadCuts ? [trackCover.trenches, roadGrade.cuts] : [trackCover.trenches]
+        guard all.contains(where: { !$0.pieces(minX: xs.min()!, minZ: zs.min()!, maxX: xs.max()!, maxZ: zs.max()!).isEmpty }) else {
             return (points, triangles)
         }
         var kept = points, keptTriangles: [Int] = []
@@ -363,7 +377,7 @@ extension Map3DScene.Builder {
         while index + 2 < triangles.count {
             let corner = triangles[index..<(index + 3)]
             index += 3
-            guard let pieces = outsideTrenches(corner.map { Map3DBaseMap.Point(x: Double(points[$0].x), z: Double(points[$0].z)) }) else {
+            guard let pieces = outsideTrenches(corner.map { Map3DBaseMap.Point(x: Double(points[$0].x), z: Double(points[$0].z)) }, roadCuts: roadCuts) else {
                 keptTriangles += corner
                 continue
             }
@@ -391,7 +405,12 @@ extension Map3DScene.Builder {
     /// road is), and round a portal its end, closed to the ground over
     /// the portal's head wall.
     mutating func addTrenches() {
-        let trenches = trackCover.trenches
+        addTrenches(trackCover.trenches)
+        // Decision 833: the motorways' cuttings, drawn as the track's.
+        addTrenches(roadGrade.cuts)
+    }
+
+    private mutating func addTrenches(_ trenches: Map3DTrenches) {
         for (number, run) in trenches.runs.enumerated() {
             guard run.contains(where: { section in
                 contains(x: originX + Double(section.rail.x) * Self.metre, y: originY + Double(section.rail.z) * Self.metre)
