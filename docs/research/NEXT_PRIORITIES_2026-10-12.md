@@ -2664,8 +2664,9 @@ FACADE-VARIETY、ROOF-VARIETY、ROAD-LOOK-REAL、ROAD-JUNCTION 可用參考包�
 
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、前置 |
 | --: | --- | --: | --: | --: | --: | --: | --: | --- |
-| 1 | bug：**DOCNUM-CI**：`tools/golden-checks/doc_numbers.py --check` 進 CI（改到 `docs/` 的 PR 跑，紅就擋）；826 的格式錯就是這樣漏進 main（#2368 已修） | 1 | 4 | 1 | 1 | 1 | 1.75 | 未派；只動 `.github/`；不改 `Swift CI (gate)` 的名字；和下一列同一張 |
-| 2 | **PRIO-FILES**：PR 打分的新列不再接在 NEXT_PRIORITIES 最後一節搶號，改成各自一個檔（像決策 329 的 `docs/decisions/<N>.md`），規劃定期併回清單 | 1 | 5 | 1 | 1 | 1 | 2.00 | 未派；照 decision 329 的做法；`doc_numbers.py` 一起認新檔 |
+| 1 | bug：**DOCNUM-CI**：`tools/golden-checks/doc_numbers.py --check` 進 CI（改到 `docs/` 的 PR 跑，紅就擋）；826 的格式錯就是這樣漏進 main（#2368 已修） | 1 | 4 | 1 | 1 | 1 | 1.75 | 未派；只動 `.github/`；不改 `Swift CI (gate)` 的名字；和下一列同一張（一個 session 做第 1、2 列） |
+| 2 | bug：**CONFLICT-WATCH**：push 到 main 後，一個 workflow 找出因此和 main 衝突（`dirty`）的 open PR，在**那張 PR** 留一則 github-actions[bot] 留言（不帶 at 符號）「和 main 衝突，CI 不會跑」。訂閱自己 PR 的實作 session 會被這則留言叫醒自己去解，不靠規劃的定時檢查、也不靠作者去按（作者 11-17：「可是定時我有時候也不會按啊」） | 1 | 5 | 1 | 1 | 1 | 2.00 | 未派；照 `full-lane-watch.yml`（決策 329）的寫法；同一張 PR 一次衝突只留一則；和第 1 列同一張 |
+| 3 | **PRIO-FILES**：PR 打分的新列不再接在 NEXT_PRIORITIES 最後一節搶號，改成各自一個檔（像決策 329 的 `docs/decisions/<N>.md`），規劃定期併回清單 | 1 | 5 | 1 | 1 | 1 | 2.00 | 未派；照 decision 329 的做法；`doc_numbers.py` 一起認新檔 |
 
 五方：
 - 玩家：無直接影響；卡住的 PR 少了，新東西早一點到手上。
@@ -2674,4 +2675,4 @@ FACADE-VARIETY、ROOF-VARIETY、ROAD-LOOK-REAL、ROAD-JUNCTION 可用參考包�
 - 美術：無。
 - 音樂：無。
 
-**規劃的做法（當下就改，不等上面兩張）**：等一張 PR 時，每次檢查都看它「有沒有和 main 衝突（`mergeable_state`）、新的 head 有沒有真的在跑 CI」，不只看綠不綠；衝突或沒在跑就當下叫那個 session 處理，回作者時照實說「在解衝突」而不是「在跑測試」。寫在 HANDOFF §1.1。
+**規劃的做法（當下就改，不等上面三張）**：等一張 PR 時，每次檢查都看它「有沒有和 main 衝突（`mergeable_state`）、新的 head 有沒有真的在跑 CI」，不只看綠不綠；衝突或沒在跑就當下叫那個 session 處理，回作者時照實說「在解衝突」而不是「在跑測試」。寫在 HANDOFF §1.1。
