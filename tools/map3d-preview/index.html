@@ -10,12 +10,13 @@ void main(){ vec4 p = viewProjection * vec4(position,1.0); p.z = 2.0*p.z - p.w; 
  vColor=color; vNormal=normal; vWorld=position; vUV=tex.xy; vLayer=tex.z; vPlane=dot(position, normalize(normal)); }`;
 const fs = `#version 300 es
 precision highp float; precision highp sampler2DArray; precision highp sampler2DShadow;
-uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade; uniform vec4 nightWindows[12]; uniform vec4 mirror, zenith, glint; uniform sampler2DArray surfaces; uniform int textured;
+uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade; uniform vec4 nightWindows[16]; uniform vec4 mirror, zenith, glint; uniform sampler2DArray surfaces; uniform int textured;
 uniform mat4 sunMatrix; uniform vec4 sunShadow; uniform sampler2DShadow sunMap;
 in vec3 vColor; in vec3 vNormal; in vec3 vWorld; in vec2 vUV; flat in float vLayer; flat in float vPlane; out vec4 outColor;
 const float detailRepeat[4] = float[4](3.6, 1.8, 1.8, 1.8);
-const vec2 glassMirror[24] = vec2[24](vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0.7,0), vec2(0.7,0),
- vec2(0.8,1), vec2(0,0), vec2(0.7,0), vec2(1,0), vec2(0,0), vec2(0.8,1), vec2(0.8,1), vec2(0.8,1), vec2(0.8,1), vec2(0.5,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0));
+const vec2 glassMirror[32] = vec2[32](vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0.7,0), vec2(0.7,0),
+ vec2(0.8,1), vec2(0,0), vec2(0.7,0), vec2(1,0), vec2(0,0), vec2(0.8,1), vec2(0.8,1), vec2(0.8,1), vec2(0.8,1), vec2(0.5,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0),
+ vec2(0.6,0), vec2(0.6,0), vec2(1,0), vec2(0.6,0), vec2(0.5,0), vec2(0,0), vec2(0,0), vec2(0,0)); /* Decision 817: layers 24-28 */
 const vec4 rippleWaves[4] = vec4[4](vec4(0.92,0.39,1.1,0.3), vec4(-0.45,0.89,1.6,0.28), vec4(0.2,-0.98,2.7,0.22), vec4(-0.8,-0.6,4.3,0.14));
 const vec2 rippleRuns[4] = vec2[4](vec2(1.1,0.0), vec2(-1.4,1.3), vec2(1.9,4.0), vec2(-2.6,0.0));
 float hash12(vec2 p){ vec3 q=fract(vec3(p.xyx)*0.1031); q+=dot(q,q.yzx+33.33); return fract((q.x+q.y)*q.z); }
@@ -55,7 +56,7 @@ void main(){ float kept = ((vLayer < -12.5 && vLayer > -15.5) || (vLayer < -19.5
  if (vLayer < -9.5 && vLayer > -10.5 && lights > 0.0 && abs(n.y) < 0.7) glow += WINDOW_WARM * (0.10 + 0.55 * smoothstep(-12.0, 0.0, vUV.y)) * lights;
  if (vLayer < -11.5 && vLayer > -12.5) glow += WINDOW_WARM * 0.75 * lights;
  if (textured==1 && vLayer >= 0.0) { int packed = int(vLayer + 0.5); vec4 t = texture(surfaces, vec3(vUV, float(packed % 64)));
-  vec2 pane = glassMirror[min(packed % 64, 23)]; bool wall = abs(n.y) < 0.7 && (WALL_NOT_GRASS == 0 || packed % 64 != 0); /* Decision 645 (D8) */ float contrast = wall ? 0.60 : 0.35; vec3 tinted = base; if (pane.x > 0.6 && pane.y < 0.5) tinted = mix(tinted, vec3(0.80, 0.87, 0.93), 0.6);
+  vec2 pane = glassMirror[min(packed % 64, 31)]; bool wall = abs(n.y) < 0.7 && (WALL_NOT_GRASS == 0 || packed % 64 != 0); /* Decision 645 (D8) */ float contrast = wall ? 0.60 : 0.35; vec3 tinted = base; if (pane.x > 0.6 && pane.y < 0.5) tinted = mix(tinted, vec3(0.80, 0.87, 0.93), 0.6);
   tinted *= mix(1.0, clamp(dot(t.rgb, vec3(0.2126, 0.7152, 0.0722)) * 2.0, 0.6, 1.2), contrast); int material = packed / 64;
   if (material > 0) { int layer = material - 1; float metres = detailRepeat[min(layer - 18, 3)];
    vec2 at = abs(n.y) > 0.7 ? vWorld.xz : vec2(dot(vWorld, normalize(cross(vec3(0.0,1.0,0.0), n))), vWorld.y);
@@ -65,7 +66,7 @@ void main(){ float kept = ((vLayer < -12.5 && vLayer > -15.5) || (vLayer < -19.5
   if (wall && abs(n.y) < 0.6) tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, vUV.y * 3.2));
   base = tinted; if (packed == 2) { kept = 1.0; glow += base * TRACK_LIT * smoothstep(NIGHT_FALL.x, NIGHT_FALL.y, lights); }
   if (packed == 22 || packed == 23) { base = mix(t.rgb, vColor, t.a); glow += base * streetLight * roadPool(vWorld.xz); }
-  int surface = packed % 64; vec4 row = nightWindows[min(surface / 2, 11)]; vec2 rule = (surface % 2 == 0) ? row.xy : row.zw;
+  int surface = packed % 64; vec4 row = nightWindows[min(surface / 2, 15)]; vec2 rule = (surface % 2 == 0) ? row.xy : row.zw;
   float bright = dot(t.rgb, vec3(0.2126, 0.7152, 0.0722));
   float mirrorGlass = mirrors ? (1.0 - t.a) * step(bright, 0.45) * pane.x : 0.0;
   float distant = FAR_WINDOWS == 1 ? smoothstep(0.25, 0.7, max(fwidth(vUV.x), fwidth(vUV.y))) : 0.0; // Decision 645 (D6)
@@ -223,7 +224,7 @@ precision highp float; void main(){}`;
   }
   const u=window.meta.views[view];
   // Decision 357: the sun's rows (none in a dump from before them), and its map drawn first, biased by the depth's slope.
-  const sunRows = u.length>=128 ? u.slice(108,128) : [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1, 0,0,0,0];
+  const NW = u.length>=144 ? 16 : 12; /* Decision 817: 16 rows of night windows (12 before) */ const sunRows = u.length>=80+NW*4 ? u.slice(60+NW*4,80+NW*4) : [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1, 0,0,0,0];
   if (sunRows[16] > 0) { gl.useProgram(window.dprog); gl.uniformMatrix4fv(gl.getUniformLocation(window.dprog,'sun'),false,new Float32Array(sunRows.slice(0,16)));
     gl.bindFramebuffer(gl.FRAMEBUFFER,window.sunFB); gl.viewport(0,0,2048,2048); gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.clearDepth(1); gl.depthFunc(gl.LESS);
     gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 0); gl.bindVertexArray(window.vao);
@@ -233,9 +234,9 @@ precision highp float; void main(){}`;
   gl.uniform4fv(gl.getUniformLocation(p,'sunShadow'),new Float32Array(sunRows.slice(16,20))); gl.uniform1i(gl.getUniformLocation(p,'sunMap'),2);
   gl.uniformMatrix4fv(gl.getUniformLocation(p,'viewProjection'),false,new Float32Array(u.slice(0,16)));
   ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog','shade'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.slice(16+i*4,20+i*4))));
-  gl.uniform4fv(gl.getUniformLocation(p,'nightWindows'),new Float32Array(u.slice(48,96)));
+  gl.uniform4fv(gl.getUniformLocation(p,'nightWindows'),new Float32Array(u.slice(48,48+NW*4).concat(NW<16?new Array(16).fill(0):[])));
   // Decision 356: the reflections' rows (zeros in a dump from before them: nothing mirrors).
-  ['mirror','zenith','glint'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.length>=108?u.slice(96+i*4,100+i*4):[0,0,0,0])));
+  ['mirror','zenith','glint'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.length>=60+NW*4?u.slice(48+NW*4+i*4,52+NW*4+i*4):[0,0,0,0])));
   gl.uniform1i(gl.getUniformLocation(p,'textured'),textured?1:0); gl.uniform1i(gl.getUniformLocation(p,'surfaces'),0);
   const sky=window.meta.sky; gl.viewport(0,0,1600,900); gl.clearColor(sky[0],sky[1],sky[2],1); gl.enable(gl.DEPTH_TEST); gl.clearDepth(0); gl.depthFunc(gl.GREATER);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.bindVertexArray(window.vao); gl.depthMask(true); gl.disable(gl.BLEND); gl.drawElements(gl.TRIANGLES,window.count,gl.UNSIGNED_INT,0);

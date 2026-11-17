@@ -1038,6 +1038,10 @@ extension Map3DScene {
         /// Decision 610: each chunk's buildings' street fronts as built, with
         /// the number they are kept by (``addFacadeParts()``).
         var facadeParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
+        /// Decision 817: each chunk's towers' reliefs (balconies, fins, bay
+        /// windows) as built, kept by their number within their own budget
+        /// (``Map3DFacadeVariety/chunkBudget``).
+        var reliefParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
         /// Decision 610: while the real buildings are built in full, the
         /// 4 m cells by their streets (``streetCells(within:)``), for
         /// ``addRealFacade``; `nil` builds no street fronts.
@@ -1410,7 +1414,7 @@ extension Map3DScene {
                 return drawn.chunks()
             }
             // Decision 610: the street fronts not yet kept, kept first.
-            guard facadeParts.isEmpty else {
+            guard facadeParts.isEmpty, reliefParts.isEmpty else {
                 var drawn = self
                 drawn.addFacadeParts()
                 return drawn.chunks()
@@ -2360,7 +2364,18 @@ extension Map3DScene {
             // Decision 242: flats faced with tiles or grit, offices now and
             // then fair-faced concrete.
             let facing = facade == .officeGlass ? (r(5) < 0.4 ? Map3DSurface.formConcrete : nil) : Self.homeMaterial(r(5))
-            func windows(_ floors: Float) -> Map3DPaint { Map3DPaint.bays(windowSurface, bay: bay, floors: Int(floors)).on(facing) }
+            // Decision 817: a tower's windows of their own kind, bays and
+            // floors; the rest as before (a slab keeps decision 238's
+            // balconies, floor for floor). A tower has 18 floors or more
+            // (below), enough for Hong Kong's too.
+            let towerLook = density >= 4 && look.buildings != .nordic
+                ? Map3DFacadeVariety.look(facade == .officeGlass ? .office : .flats, storeys: 18,
+                                          hongKong: hongKong, nordic: false, solid: facade == .officeGlass && facing != nil, r: r)
+                : nil
+            func windows(_ floors: Float, high: Float? = nil, side: Bool = false) -> Map3DPaint {
+                if let towerLook, let high { return towerLook.paint(high: high, detail: facing, side: side) }
+                return Map3DPaint.bays(windowSurface, bay: bay, floors: Int(floors)).on(facing)
+            }
             let far = isFar
             mesh(at: base) { mesh in
                 let footprint = max(side - 4, 8)
@@ -2397,7 +2412,8 @@ extension Map3DScene {
                     mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: roof, side: Map3DColor.shaded(walls, 0.9),
                                 topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
-                                top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
+                                top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors, high: 3.3 * floors),
+                                flankPaint: windows(floors, high: 3.3 * floors))
                     if hongKong, facade != .officeGlass {
                         let side = footprint * 0.55
                         Self.addHongKongCrown(&mesh, wall: walls, top: base + Map3DPoint(0, 9 + 3.3 * floors, 0),
@@ -2409,6 +2425,13 @@ extension Map3DScene {
                 }
             }
             if !far { addBlockAds(base: base, side: side, density: density, office: facade == .officeGlass, commercial: commercial, r: r) }
+            // Decision 817: near, what stands out of a tower's walls.
+            if let towerLook, !far, density >= 4 {
+                let half = max(side - 4, 8) * 0.55 / 2, floors = Float(18 + Int(r(1) * 23))
+                let outline = [Map3DPoint(base.x - half, 0, base.z - half), Map3DPoint(base.x + half, 0, base.z - half),
+                               Map3DPoint(base.x + half, 0, base.z + half), Map3DPoint(base.x - half, 0, base.z + half)]
+                addTowerRelief(outline, centre: base, bottom: base.y + 9, top: base.y + 9 + 3.3 * floors, look: towerLook, wall: walls, r: r)
+            }
             // Decision 259: shoppers round a tower's shops.
             if density >= 4, facade != .officeGlass {
                 let half = max(side - 4, 8) / 2 + 1.7

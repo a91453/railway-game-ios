@@ -249,6 +249,16 @@ final class Map3DPreviewDump: XCTestCase {
                            Float(c & 0xFF) / 255, Float((c >> 8) & 0xFF) / 255, Float((c >> 16) & 0xFF) / 255, v.u, v.v, v.layer]
             }
             indices += chunk.close.indices.map { $0 + closeBase }
+            // Decision 610: the real buildings' street fronts, and decision
+            // 817: the towers' balconies, fins and bay windows, drawn as
+            // close (above the lowest tier).
+            let facadeBase = UInt32(floats.count / 12)
+            for v in chunk.facade.vertices {
+                let c = v.color
+                floats += [v.x, v.y, v.z, v.nx, v.ny, v.nz,
+                           Float(c & 0xFF) / 255, Float((c >> 8) & 0xFF) / 255, Float((c >> 16) & 0xFF) / 255, v.u, v.v, v.layer]
+            }
+            indices += chunk.facade.indices.map { $0 + facadeBase }
         }
         // Decision 259: MAP3D_LIFE=x:z:distance, the people and vehicles a
         // camera that far from that target draws at 10:00:00 of a clock,
@@ -425,7 +435,7 @@ final class Map3DPreviewDump: XCTestCase {
                 let p = scene.point(worldX: (Double(lot.column) + 0.5) * cell, worldY: (Double(lot.row) + 0.5) * cell, height: 0)
                 return ["x": p.x, "z": p.z, "d": lot.density, "use": lot.use.rawValue]
             }
-        try JSONSerialization.data(withJSONObject: ["drawn": drawn, "drawnInFull": drawnInFull, "uses": uses, "stations": stations, "low": Array(low.prefix(400)), "triangles": indices.count / 3, "views": views, "sky": [lighting.background.x, lighting.background.y, lighting.background.z],
+        try JSONSerialization.data(withJSONObject: ["drawn": drawn, "drawnInFull": drawnInFull, "facadeTriangles": scene.chunks.reduce(0) { $0 + $1.facade.triangleCount }, "uses": uses, "stations": stations, "low": Array(low.prefix(400)), "triangles": indices.count / 3, "views": views, "sky": [lighting.background.x, lighting.background.y, lighting.background.z],
                                                         "signClock": Map3DSign.clock(seconds: 0, hour: lighting.hour, quality: .automatic, reduceMotion: false),
                                                         "rain": streaks, "rainColour": [Double(look.colour >> 16 & 0xFF), Double(look.colour >> 8 & 0xFF),
                                                                                          Double(look.colour & 0xFF), look.opacity]])

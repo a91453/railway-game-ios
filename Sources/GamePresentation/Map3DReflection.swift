@@ -39,6 +39,11 @@ public enum Map3DReflection {
         case .flatWindows, .homeWindows, .homeBalcony: (0.7, false)
         // Blinds half down: less glass shows.
         case .flatBlinds: (0.5, false)
+        // Decision 817: a tower's walls keep their colour (none over 0.6
+        // takes the pale glass tint but the curtain wall's).
+        case .curtainSpandrel: (1, false)
+        case .flatBalconies, .officeRibbon, .officeFins: (0.6, false)
+        case .hkWindows: (0.5, false)
         case .shopfront, .shopOptical, .shopPhone, .shopEatery, .shopTea: (0.8, true)
         case .grass, .paving, .ballast, .concrete, .roof, .plaster, .shutter, .metalSheet,
              .formConcrete, .brickTile, .mosaicTile, .terrazzo, .crosswalk, .laneArrows: (0, false)
