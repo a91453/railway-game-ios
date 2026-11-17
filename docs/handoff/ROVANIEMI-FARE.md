@@ -15,14 +15,14 @@ session_01JMHz9bnKhejDxHKpyueHQ3，分支 `claude/rovaniemi-fare`（從 `claude/
 - VERIFIED：`FarDemandTests`、`StateTrackTests`、`DistanceDemandTests`、`LineAcquisitionTests`、`SavedGameTests`（38）、
   `FullEndWithoutDepotTests`、`RovaniemiRailwaysTests`（7）通過（同上）。
 - VERIFIED：`doc_numbers.py --check` 0 差異（合併之後）。
-- UNVERIFIED：合併 main（`8814010`）之後沒有重新 build（main 改的是 GamePresentation 的 3D 檔）；交給 CI。
-- UNVERIFIED：香港關掉遠距需求的對照（`ROVANIEMI_FAR_OFF=1 ROVANIEMI_CITY=hk`）開始跑了，結果若沒寫進決策 828 §2 就是沒跑完。
+- VERIFIED：香港 SIL 關掉遠距需求和打開一模一樣（64,216 旅次、+84,022／天）。UNVERIFIED：TCL 的對照沒跑完。
+- VERIFIED：合併 main 之後重 build 乾淨；CI rest-1 的 `HarbourSightsTests.testASaveOfVersion106IsReclassifiedWhenRead`（寫死 107）改讀 `SavedGame.currentVersion`，本機通過。
 - UNVERIFIED：iOS（Xcode、UI 測試）交給 `ios-build.yml`。
 
 ## 接手的下一步
 
 1. 看 PR 的 CI；紅了照失敗修。全綠後轉 ready，在 #2118 留「可合併、head …」。
-2. 補香港的對照（約 15 與 32 分）：
+2. 補香港 TCL 的對照（約 32 分；SIL 已量）：
    ```sh
    swift build --build-tests -Xswiftc -warnings-as-errors
    ROVANIEMI_REPORT=30 ROVANIEMI_CITY=hk ROVANIEMI_FAR_OFF=1 ROVANIEMI_ONLY=hkmtr:SIL swift test --skip-build --filter RovaniemiReportTests
