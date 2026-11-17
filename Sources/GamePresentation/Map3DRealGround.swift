@@ -518,7 +518,7 @@ extension Map3DScene.Builder {
                 let past = roadRise(at: Map3DBaseMap.Point(x: end.x + outward.x * half, z: end.z + outward.z * half),
                                     along: along, onDeck: onDeck).rise
                 let graded = atEnd.rise + (atEnd.rise - behind) * Float(half / inward)
-                return (max(0, min(graded, max(past, atEnd.rise))), atEnd.rise, atEnd.onBridge)
+                return (min(graded, max(past, atEnd.rise)), atEnd.rise, atEnd.onBridge)
             }
             let firstCap = capsFirst ? cap(at: start, outward: (-along.x, -along.z)) : nil
             let lastCap = capsLast ? cap(at: end, outward: along) : nil
@@ -576,7 +576,7 @@ extension Map3DScene.Builder {
             guard let before = laid[vertex - 1], let after = laid[vertex] else { continue }
             addStripJoin(at: points[vertex], before: before.along, after: after.along, half: half, lift: lift, color: color,
                          paint: paint, water: water, lifted: raised && nearRaisedRoad(from: points[vertex], to: points[vertex]),
-                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex])
+                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts)
         }
     }
 
@@ -593,7 +593,7 @@ extension Map3DScene.Builder {
     /// triangles, at each segment's height over it at the joint.
     mutating func addStripJoin(at joint: Map3DBaseMap.Point, before: (x: Double, z: Double), after: (x: Double, z: Double),
                                half: Double, lift: Float, color: UInt32, paint: Map3DPaint?, water: Bool, lifted: Bool,
-                               onDeck: Bool, bridges: Bool) {
+                               onDeck: Bool, bridges: Bool, roadCuts: Bool) {
         typealias Point = Map3DBaseMap.Point
         // The bend's outside: the side whose edge the next segment leaves.
         let left1 = (x: before.z, z: -before.x), left2 = (x: after.z, z: -after.x)
@@ -652,7 +652,7 @@ extension Map3DScene.Builder {
         guard !triangles.isEmpty else { return }
         // Decision 375, as its segments.
         if !bridges && !(rise1.onBridge && rise2.onBridge) && min(rise1.rise, rise2.rise) < 1 {
-            (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift)
+            (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift, roadCuts: roadCuts)
             guard !triangles.isEmpty else { return }
         }
         mesh(at: Map3DPoint(Float(joint.x), 0, Float(joint.z))) {
