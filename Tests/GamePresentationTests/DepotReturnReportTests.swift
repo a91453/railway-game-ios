@@ -28,12 +28,6 @@ import XCTest
 @MainActor
 final class DepotReturnReportTests: XCTestCase {
     private func wanted(_ name: String) throws {
-        GameWorld.probeNoRestOrder = ProcessInfo.processInfo.environment["PROBE_NO_808A"] != nil // PROBE-D2 (temporary)
-        GameWorld.probeLog = ProcessInfo.processInfo.environment["PROBE_LOG"] != nil // PROBE-D2 (temporary)
-        GameWorld.probeNoA1 = ProcessInfo.processInfo.environment["PROBE_NO_A1"] != nil // PROBE-D2 (temporary)
-        GameWorld.probeNoA2 = ProcessInfo.processInfo.environment["PROBE_NO_A2"] != nil // PROBE-D2 (temporary)
-        GameWorld.probeNoB = ProcessInfo.processInfo.environment["PROBE_NO_B"] != nil // PROBE-D2 (temporary)
-        GameWorld.probeNoC = ProcessInfo.processInfo.environment["PROBE_NO_C"] != nil // PROBE-D2 (temporary)
         guard ProcessInfo.processInfo.environment["DEPOT_RETURN_REPORT"] != nil else {
             throw XCTSkip("Set DEPOT_RETURN_REPORT=1 to measure the depots (decision 535).")
         }

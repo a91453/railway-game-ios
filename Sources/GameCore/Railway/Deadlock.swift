@@ -558,7 +558,7 @@ extension GameWorld {
                 // Decision 810: still on its way, once it takes the rest of
                 // its route (decision 294), only where a spare of its line
                 // (see ``isSpare(_:)``) keeps it from its berth.
-                guard !GameWorld.probeNoB, blocked, approachLimit(of: train, envelopes) == nil else { continue } // PROBE-D2 (temporary)
+                guard blocked, approachLimit(of: train, envelopes) == nil else { continue }
                 if spares == nil { spares = Set(trains.filter { idle.contains($0.id) && isSpare($0, memo: &dispatch) }.map(\.id)) }
                 guard !spares!.isEmpty,
                       blockedTrack(except: train.id, among: spares!, holders: trackHolders(memo: &dispatch.directions)).blocks(envelopeCover(of: train), in: network)

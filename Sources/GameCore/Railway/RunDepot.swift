@@ -448,32 +448,8 @@ extension GameWorld {
     func otherDepotRun(of line: ServiceLine, for train: Train, besides full: StationID, memo: inout DirectionMemo) -> LineTrip? {
         guard isTrafficControlEnabled, line.hasRuns else { return nil }
         let others = line.depots.filter { $0 != full && depotHasRoom($0, for: train) }
-        guard !others.isEmpty, trainsInTheWay(memo: &memo).contains(train.id) || (!GameWorld.probeNoC && isAtRest(line)) else { return nil } // PROBE-D2 (temporary)
+        guard !others.isEmpty, trainsInTheWay(memo: &memo).contains(train.id) else { return nil }
         return emptyRun(of: line, for: train, to: others)
-    }
-
-    /// Decision 810: whether `line`, a line with runs, is at rest: none of
-    /// its trains runs a service (an empty run is none), and none of its
-    /// runs leaves within ``runDepotLookahead``. A train waiting then for
-    /// a siding of the depot it reaches soonest waits until the morning's
-    /// first trains have left it, so it goes to another depot with a
-    /// siding for it (see ``otherDepotRun(of:for:besides:memo:)``): a long
-    /// empty run is in no service's way while none runs. On the Taoyuan
-    /// Airport MRT as it was bought before decision 605, under the simple
-    /// rules with traffic control, two trains stood the night at Sanchong
-    /// and Airport Terminal 1, Luzhu being full, and ran into Luzhu at
-    /// 05:40 as its first trains left: the 24 km of the one from the
-    /// Taipei end kept the train for the 05:56 from Chang Gung Memorial
-    /// Hospital in the depot until 06:07.
-    func isAtRest(_ line: ServiceLine) -> Bool {
-        guard line.hasRuns else { return false }
-        for id in line.trains {
-            if let train = train(id: id), train.execution != nil, !train.isDeadheading { return false }
-        }
-        let horizon = clock.now.seconds + Self.runDepotLookahead
-        return !Set(line.runs.map { line.stops[$0.from] }).contains { station in
-            pendingRunStarts(of: line, from: station).contains { $0 <= horizon }
-        }
     }
 
     /// Decision 808: the first train its line would send into a depot now

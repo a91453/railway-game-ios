@@ -17,10 +17,6 @@ import XCTest
 /// its route ending at P1. Then I, a train without a service, is placed at
 /// P1: F can never go on to it.
 final class BerthChangeTests: XCTestCase {
-    override func setUp() { // PROBE-D2 (temporary)
-        GameWorld.probeNoA2 = ProcessInfo.processInfo.environment["PROBE_NO_A2"] != nil // PROBE-D2 (temporary)
-        GameWorld.probeNoB = ProcessInfo.processInfo.environment["PROBE_NO_B"] != nil // PROBE-D2 (temporary)
-    } // PROBE-D2 (temporary)
     private func forward(_ edge: Int) -> TrackTraversal {
         TrackTraversal(edge: .edge(edge), direction: .forward)
     }

@@ -179,13 +179,6 @@ public struct GameWorld: Equatable, Sendable {
     /// first even while that one stands held by a third, which stood three
     /// trains in a ring. Never set by the game, never saved.
     var passesHeldTrains = false
-    nonisolated(unsafe) static var probeNoRestOrder = false // PROBE-D2 (temporary)
-    nonisolated(unsafe) static var probeLog = false // PROBE-D2 (temporary)
-    nonisolated(unsafe) static var probeNoA1 = false // PROBE-D2 (temporary)
-    nonisolated(unsafe) static var probeNoA2 = false // PROBE-D2 (temporary)
-    nonisolated(unsafe) static var probeNoB = false // PROBE-D2 (temporary)
-    nonisolated(unsafe) static var probeNoC = false // PROBE-D2 (temporary)
-    nonisolated(unsafe) static var probeBranch = "" // PROBE-D2 (temporary)
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -3649,7 +3642,6 @@ public struct GameWorld: Equatable, Sendable {
             // of a train waiting for its route, its own way into a depot
             // held, steps aside.
             if start.isWholeMinute, let resolved = resolveDeadlock(memo: &memo) ?? changeBerth(memo: &memo) ?? makeWayForDepot(memo: &memo) {
-                if GameWorld.probeLog { print("PROBE-RD \(clock.now.seconds) \(GameWorld.probeBranch) \(train(id: resolved)?.name ?? "?")") } // PROBE-D2 (temporary)
                 held.removeAll { $0.candidate.id == resolved }
                 changed = true
             }
@@ -4449,7 +4441,6 @@ public struct GameWorld: Equatable, Sendable {
     /// one of them waits for moves out of the way (a later fix, see
     /// ``spareStandingAside(in:memo:)``). Returns the train's ID, or `nil`.
     private mutating func resolveDeadlock(memo: inout DispatchMemo) -> TrainID? {
-        GameWorld.probeBranch = "berth-or-depot" // PROBE-D2 (temporary)
         guard isTrafficControlEnabled else { return nil }
         // Only such a service is ever sent: without one, nothing to find
         // but a spare in the way of a line's train due to be sent out (a
@@ -4471,7 +4462,6 @@ public struct GameWorld: Equatable, Sendable {
                   case .granted(let granted) = takingAnyDeparture(request.candidate, memo: &memo.directions),
                   turnOwed(by: granted, memo: &memo.directions) == nil
             else { continue }
-            GameWorld.probeBranch = "740" // PROBE-D2 (temporary)
             setOff(index, as: granted)
             serve(departureOf: id, from: stop, distance: routeLength(of: granted))
             return id
@@ -4491,7 +4481,6 @@ public struct GameWorld: Equatable, Sendable {
             let fastest = run(of: aside, length: passing.path.distance)
             aside.times?.run = fastest
             guard case .granted(let granted) = reserving(aside, memo: &memo.directions) else { continue }
-            GameWorld.probeBranch = "passing" // PROBE-D2 (temporary)
             let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
             setOff(index, as: granted)
             if let left {
@@ -4504,7 +4493,6 @@ public struct GameWorld: Equatable, Sendable {
         guard serviceDue || stuck.keys.contains(where: { train(id: $0)?.execution == nil }) else { return nil }
         if let aside = spareStandingAside(in: stuck, memo: &memo.directions),
            let index = trains.firstIndex(where: { $0.id == aside.id }) {
-            GameWorld.probeBranch = "spare-aside" // PROBE-D2 (temporary)
             trains[index] = aside
             // A train of a line with runs stands aside at its own station
             // (decision 212), where its next run finds it.
@@ -4528,7 +4516,6 @@ public struct GameWorld: Equatable, Sendable {
                   let turned = shortTurn(of: trains[index], in: stuck),
                   case .waitingAtStop = turned.execution
             else { continue }
-            GameWorld.probeBranch = "short-turn" // PROBE-D2 (temporary)
             setOff(index, as: turned)
             // Decision 288, a later fix (R1): the trip log's scheduled
             // arrival comes forward with the timetable.
@@ -4550,16 +4537,13 @@ public struct GameWorld: Equatable, Sendable {
                                              avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
                   case .granted(let granted) = reserving(rerouted(request.candidate, along: way, stop: stop, cycle: cycle), memo: &memo.directions)
             else { continue }
-            GameWorld.probeBranch = "571-counterflow" // PROBE-D2 (temporary)
             setOff(index, as: granted)
             serve(departureOf: id, from: left, distance: way.distance)
             return id
         }
         // Decision 556, continued (TYMCLIST9): so too a service of a line
         // with runs standing aside at a passing place.
-        GameWorld.probeBranch = "556-list9" // PROBE-D2 (temporary)
         if let id = standingAsideServiceTakingAFreeBerth(in: stuck, memo: &memo) { return id }
-        GameWorld.probeBranch = "tail" // PROBE-D2 (temporary)
         // Decision 577: with nothing else to do, a service due to leave
         // whose route only the track trains following others wait for
         // (decision 56, point 6) keeps it from, those trains waiting in

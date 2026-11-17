@@ -352,34 +352,14 @@ extension GameWorld {
     func takingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
         if let listed = listedDepartures(of: candidate, memo: &memo.paths) {
             var first: Reserving?
-            // Decision 810: whether each platform of the list is kept by a
-            // train its line leaves standing there.
-            var kept = !GameWorld.probeNoA1 // PROBE-D2 (temporary)
             for departure in listed {
                 let taken = reserving(departure, following: true, memo: &memo)
                 if case .granted = taken { return taken }
                 if first == nil { first = taken }
-                if kept, case .held(let holder) = taken { kept = standsSpareAtCall(holder, of: departure) } else { kept = false }
             }
-            // Decision 810: with every platform of the list so kept, any
-            // platform it can take, at once (decision 740's way out, which
-            // the dispatcher only took at its next look).
-            if kept, case .granted(let granted) = takingAnyDeparture(candidate, memo: &memo) { return .granted(granted) }
             return first!
         }
         return takingAnyDeparture(candidate, memo: &memo)
-    }
-
-    /// Decision 810: whether train `id` stands without a service at a
-    /// platform of the station `departure`, a service setting off, is
-    /// bound for, as a spare of its line (see ``isSpare(_:)``): nothing
-    /// sends it on before its line wants it, so a train waiting for its
-    /// platform would wait as long.
-    func standsSpareAtCall(_ id: TrainID, of departure: Train) -> Bool {
-        guard case .travellingToStop(let stop, _)? = departure.execution, let other = train(id: id),
-              other.execution == nil, isStopped(other, at: departure.timetable[stop].station)
-        else { return false }
-        return isSpare(other)
     }
 
     /// ``takingDeparture(_:memo:)`` to any platform of the station, as a
@@ -412,18 +392,11 @@ extension GameWorld {
             return false
         }.map(\.id))
         let standingBlocked = blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo))
-        if standingBlocked.blocks(envelopeCover(of: candidate), in: network),
-           let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: standingBlocked, memo: &memo),
-           case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo) {
-            return .granted(granted)
-        }
-        // Decision 810: with block sections too, failing that, a free berth
-        // against the planned way at once, past a spare of its line
-        // standing on the berth (decision 571's way out).
-        if !GameWorld.probeNoA2, let granted = takingFreeBerthPastStandingTrain(candidate, stop: stop, cycle: cycle, memo: &memo) { // PROBE-D2 (temporary)
-            return .granted(granted)
-        }
-        return planned
+        guard standingBlocked.blocks(envelopeCover(of: candidate), in: network),
+              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: standingBlocked, memo: &memo),
+              case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
+        else { return planned }
+        return .granted(granted)
     }
 
     /// `candidate`, a service setting off for stop `stop` (of cycle
@@ -525,12 +498,6 @@ extension GameWorld {
     /// double track whose crossovers let each way into one berth at each
     /// end, every trip showed the two trains deadlocked for up to a
     /// minute. Not inlined: off the stack of every departure that runs.
-    ///
-    /// Decision 810: with block sections too, past a spare of its line
-    /// (see ``isSpare(_:)``, which there is also a train of a line with
-    /// runs standing between them): on the Taoyuan Airport MRT under the
-    /// realistic rules, 17 of the 32 short deadlocks of two days were a
-    /// service waiting up to a minute for this.
     @inline(never)
     func takingFreeBerthPastStandingTrain(_ candidate: Train, stop: Int, cycle: Int64, memo: inout DirectionMemo) -> Train? {
         // A service leaving a stop: one standing aside at a passing place
@@ -545,11 +512,8 @@ extension GameWorld {
         else { return nil }
         switch other.execution {
         case nil:
-            // Decision 810: with block sections, a spare of any line (a
-            // train between runs too, decision 212).
-            guard blockSections ? isSpare(other) : assignedLine(of: id, memo: &memo)?.hasRuns != true else { return nil }
+            guard assignedLine(of: id, memo: &memo)?.hasRuns != true else { return nil }
         case .waitingAtStop(let otherStop, let otherCycle)?:
-            guard !blockSections else { return nil }
             let here = stationsStoppedAt(by: candidate.id)
             guard other.timetable.count > 1, here.contains(other.timetable[(otherStop + 1) % other.timetable.count].station),
                   case .setsOff(let leaving, _) = leaving(other, stop: otherStop, cycle: otherCycle, memo: &memo.paths),
@@ -1197,7 +1161,6 @@ extension GameWorld {
         /// before.
         private func goesFirst(_ id: TrainID, before claim: Claim) -> Bool {
             guard let own = claims[id] else { return false }
-            if GameWorld.probeNoRestOrder { return id < claim.train } // PROBE-D2 (temporary)
             let ends = own.rest.contains(where: claim.routeContains)
             if ends != claim.rest.contains(where: own.routeContains) { return !ends }
             return id < claim.train
