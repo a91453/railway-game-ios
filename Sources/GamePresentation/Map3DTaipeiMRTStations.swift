@@ -49,7 +49,7 @@ enum Map3DTaipeiMRTStation: String, CaseIterable, Sendable {
     /// The materials' colours, in `glb_to_swift.py`'s `MATERIALS` order,
     /// each one the game already has.
     static let materialColours: [UInt32] = [
-        0xEBD099, // roofGold: Map3DPalette.hallWalls[4]
+        0xF2C94C, // roofGold: Map3DPalette.platformEdge (round 4, deeper than hallWalls[4])
         0xDADCDD, // trimWhite: cityConcreteWalls[4]
         0xE3DCCB, // stoneBeige: Map3DPalette.terrazzo
         0xE3002C, // lineRed: the line's colour (RealRailways mrt|R)
@@ -62,6 +62,8 @@ enum Map3DTaipeiMRTStation: String, CaseIterable, Sendable {
         0xBFC8B4, // roofSeam: houseWalls[7]
         0x2B2F36, // cable: Map3DPalette.dark
         0xF2C94C, // clampGold: Map3DPalette.platformEdge
+        0xA9B0B8, // graniteDark: cityConcreteWalls[5] (Beitou's end towers)
+        0xDAE2E6, // glassBright: cityOfficeWalls[4] (Beitou's truss glass)
     ].map(Map3DColor.rgb)
 
     /// The rails' height in the model, and how far under and over them,
