@@ -648,12 +648,13 @@
 
 - **為什麼換**：Ultra 週額度 11-17 台灣時間 22:00 重置、沒有五小時上限；Max 今晚 13:39 UTC 碰到五小時上限，三個實作同時停住（§1.1「兩個帳號輪流當主帳號」）。作者 11-17：「看要不要給ultra做」，規劃答「137 發完就換」。
 - **main**：`478d0da`（#2369）之後再加這份交接。137 已發（下面「深夜交接」第一條）。
-- **Max 上還在做的三件**（11-17 約 14:58 UTC 規劃叫回，從停下的地方接著做；Ultra 傳不了訊息給它們，只看 #2118 與 PR，做完由 Ultra 規劃合）：
+- **Max 上還在做的三件實作**（11-17 約 14:58 UTC 規劃叫回，從停下的地方接著做；Ultra 傳不了訊息給它們，只看 #2118 與 PR，做完由 Ultra 規劃合）：
   - ROVANIEMI-PAIR＋FARE（828，session_01JMHz9bnKhejDxHKpyueHQ3）：動 GameCore、存檔 108，帶 #2355 一起合，**羅瓦涅米在 138 開放**。
   - ROAD-LOOK-REAL-2（822，session_01JMHz9bn8HzazZzMYbhURDh，#2364）：新外觀，**看總覽圖才合**。
   - DEPOT-REAL（829，session_01JMHz9bsrazDrT4xMPmDZJE，Fable）：死結唯一的 session。
   - 三個都被交代：再碰到上限或第二次壓縮，先推分支、寫 `docs/handoff/<TASK>.md`（ROVANIEMI-FARE、ROAD-LOOK-REAL、DEPOT-REAL）。**停了沒再動**（#2118 很久沒消息、分支沒新 commit）就在 Ultra 開新 session 照交接檔接手，不從頭做。
-- **Ultra 先派**：REVIEW-L27＋HEALTH-137（審 #2341 之後到 `85507e2`，也寫 PLAYER_FEEDBACK 的 137 一節）；再來 REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）、§29.29 第 3 名 PRIO-FILES。Ultra 同時最多 6 個實作，Max 那三件也算在內。
+- **REVIEW-L27＋HEALTH-137 已在 Max 派了**（session_01JMHz9YJbkYec1ERxquXPKR，14:56 UTC，審 #2341 之後到 `85507e2`，也寫 PLAYER_FEEDBACK 的 137 一節），Ultra 不重派，照上面三件一樣看 #2118、合它的 PR。
+- **Ultra 先派**：REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）、§29.29 第 3 名 PRIO-FILES。Ultra 同時最多 6 個實作，Max 那四件也算在內。
 - **Threads**：作者貼了 134～137 那篇以後，用文件 PR 補 `docs/research/THREADS_WRITING.md` §5 一列（下一篇從 `85507e2` 之後寫）。
 - **號碼**：下一個決策 **831**，存檔 107（108 給 ROVANIEMI-FARE），golden schema 77，NEXT_PRIORITIES 到 §29.29。
 - **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（後者只接了一下就停，由前者收尾），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
