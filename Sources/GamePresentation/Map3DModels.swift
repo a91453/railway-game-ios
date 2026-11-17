@@ -84,6 +84,10 @@ public struct Map3DModelPack: Sendable {
     /// with no vertices. Tests and tools never let go.
     public static var standard: Map3DModelPack { StandardPack.shared.pack }
 
+    /// Decision 820: ``standard`` if it is made and not being made now,
+    /// without waiting for it; `nil` otherwise.
+    static var standardIfMade: Map3DModelPack? { StandardPack.shared.ifMade }
+
     /// Decision 608: from now on ``standard`` keeps no vertices (made
     /// first if it is not yet). Only the app calls it, once the models it
     /// draws are on the GPU; a copy taken before keeps its own.
@@ -124,6 +128,12 @@ public struct Map3DModelPack: Sendable {
             return pack
         }
 
+        var ifMade: Map3DModelPack? {
+            guard lock.try() else { return nil }
+            defer { lock.unlock() }
+            return made
+        }
+
         func letGoOfVertices() {
             let slim = pack.withoutVertices()
             lock.lock()
@@ -147,6 +157,31 @@ public struct Map3DModelPack: Sendable {
     }
 
     init(styles: [Map3DTrainStyle], baked: Bool) {
+        self.init(recipes: Self.recipes(styles: styles), baked: baked)
+    }
+
+    /// Decision 820: the models of ``init(styles:)`` as their recipes make
+    /// them, in its order, then the running cars' windows' models it puts
+    /// after them (``Map3DTrainLights/split(_:recipes:)``), with the same
+    /// names and bounds, no shade baked and no vertices
+    /// (``Map3DModelCatalog``): each group's let go of as soon as it is
+    /// made, so they are never all held at once.
+    static func recipesWithWindows(styles: [Map3DTrainStyle]) -> [Model] {
+        let groups = recipeGroups(styles: styles)
+        let made = Map3DParallel.map(groups.count) { at -> (models: [Model], panes: [Model]) in
+            let models = groups[at]()
+            let panes = models.filter { Map3DTrainLights.isRunning($0.name) }.compactMap { Map3DTrainLights.windowModel(of: $0) }
+            return (models.map(\.withoutVertices), panes.map(\.withoutVertices))
+        }
+        return made.flatMap(\.models) + made.flatMap(\.panes)
+    }
+
+    private static func recipes(styles: [Map3DTrainStyle]) -> [Model] {
+        let made = recipeGroups(styles: styles)
+        return Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
+    }
+
+    private static func recipeGroups(styles: [Map3DTrainStyle]) -> [@Sendable () -> [Model]] {
         // Decision 546: each group of recipes below made on whichever core
         // is free, put together in this order (the same models, to the
         // bit, as made one after another).
@@ -224,9 +259,7 @@ public struct Map3DModelPack: Sendable {
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
-        let made = groups
-        let models = Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
-        self.init(recipes: models, baked: baked)
+        return groups
     }
 
     /// K1-1, K2-8: the static studies of trains the game draws from their
@@ -1013,8 +1046,19 @@ public struct Map3DInstance: Sendable {
     /// The box in scene space round its model of `pack` as placed, or
     /// `nil` for a model `pack` does not have.
     func bounds(in pack: Map3DModelPack) -> (min: Map3DPoint, max: Map3DPoint)? {
-        guard pack.models.indices.contains(model), transform.count == 16 else { return nil }
-        let shape = pack.models[model], t = transform
+        guard pack.models.indices.contains(model) else { return nil }
+        return bounds(minimum: pack.models[model].minimum, maximum: pack.models[model].maximum)
+    }
+
+    /// Decision 820: the same box, from ``Map3DModelCatalog``.
+    func bounds(from catalog: Map3DModelCatalog) -> (min: Map3DPoint, max: Map3DPoint)? {
+        guard catalog.names.indices.contains(model) else { return nil }
+        return bounds(minimum: catalog.minimum[model], maximum: catalog.maximum[model])
+    }
+
+    private func bounds(minimum: Map3DPoint, maximum: Map3DPoint) -> (min: Map3DPoint, max: Map3DPoint)? {
+        guard transform.count == 16 else { return nil }
+        let shape = (minimum: minimum, maximum: maximum), t = transform
         var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
         for x in [shape.minimum.x, shape.maximum.x] {
             for y in [shape.minimum.y, shape.maximum.y] {
