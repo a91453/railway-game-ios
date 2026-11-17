@@ -16,27 +16,16 @@
     中環中心 3,720 → 3,739、國金二期 6,067 → 6,523／遠 2,014 → 2,030。測試的尺寸表與上限都沒有改。
   - 審查第 2 輪第一行是 needs-fix（18 個檔沒有全過），逐棟判八棟可進、滙豐遠景不可進（站出的屋頂蓋片封邊貼上玻璃牆，多一條 8 cm 高的新閃爍細條）。協調者照逐棟的結論定，沒有為滙豐再開一輪。
 
+- 2026-11-17，本地派工 3 session（Mac），**HKCEC-REDO**（決策 798；分支 `claude/hkcec-redo`；素材 `railway-assets-private` 的 `revision-11/`）：**會展進地圖，現在十棟。**
+  用工作室的 revision-9（第 2 輪）：近景 11,455、遠景 4,861 面（遊戲併點後）；十棟近景合計 54,852（上限 60,000）。審查 r2：needs-fix、建議進遊戲並列已知缺點，revision-9 比 8 適合。
+  第 2 輪中途做的人（Codex）帳號額度用完停了一個半小時，換另一個 Codex 帳號接著做完；做的人交件後審查沒有自己開始，協調者重開審查才接上（`studio-brief.md` §5 寫了這兩條）。
+  工作室兩個 session 已關、任務已 release。
+
 ## 還留下什麼
 
-1. **會展**（HKCEC-REDO，決策 798）：2026-11-17 本地派工 2 開了工作室任務 `hkcec-redo`（分支 `claude/hkcec-redo`；派工單在 Mac 的 `~/AlongTheLine-Studio/reports/hkcec-redo/brief/`，過審後進素材庫新一輪）。
-   底稿 `base/convention-centre-base.glb` 先量到的（腳本在派工單的 `measure/`）：
-   - 41,250 面，外框 201.3 × 349.0 × 67.9 m；**32,798 面焊成同一個連通件**，不能靠連通件拆零件，要靠位置與朝向拆。牆的主方向比世界軸斜約 4.7°，在局部座標做與量。
-   - 北翼（Y −70…+174 m）是幾片疊著的曲面屋頂：中央的脊 65–67 m，一路到最北端 Y 174 仍有 66 m（翹起挑出的船頭）；兩側 59–64 m，再往外 50–53、44–48、37–42 m 三層簷。
-     南翼（Y −175…−70 m）平屋頂 52–53 m，兩道南北向的拱形桁架最高 66–68 m。
-   - 面積：水平 65,000 m²、緩斜面（5°–30°，就是屋頂）38,400 m²、垂直 70,100 m²。Z 0–5 m 有 5,535 面（柱腳、雨庇、雜物；行道樹很少）。
-   - 上一輪失敗的原因：整棟一起減面，曲面屋頂變成跨 50–100 m 的斜片。這次屋頂每片各自用「外圈輪廓＋規則網格往底稿取高度」重做，其餘照滙豐的做法分件；預算近景 ≤ 12,000、遠景 ≤ 5,000（九棟近景現在合計 43,397，上限 60,000）。
-   - 色：屋頂頂面 `mast`、簷口與底面 `roofGrey`、玻璃 `glassBlueGrey`、白橫帶與桁架 `mullionWhite`、基座 `podiumStone`；不用 `steelGrey`（和 `glassBlueGrey` 幾乎同色）。
-   **做到哪（2026-11-17，本地派工 2 在第 2 次壓縮停手，沒有整合進遊戲）**：
-   - 工作室的東西都在 Mac 的 `~/AlongTheLine-Studio/reports/hkcec-redo/`（不在任何 repo）。`revision-8/` 是審過的一版（做的人 commit `8a5d447bf646bdb0359a3eb10a7ed9372dc52dba`，在 `~/Studio/railway-game-ios` 的分支 `backup/codexa-hkcec-redo-r1`）：近景 14,050 面、遠景 4,952 面、浮空 0、繞序 0、尺寸差 0.04 m。
-     屋頂每片各自用規則網格往底稿取高度（對底稿 p95 0.10–0.21 m），屋頂以下用分高度的截面稜柱疊（北 7 段、南 4 段）。
-   - 審查第 1 輪 `r1/verify.md`：第一行 needs-fix，結論「建議進遊戲並列已知缺點」，沒有「不修不能進」的項；鏡頭看得到的閃爍像素近景 0、遠景 2；六條辨識特徵都在。
-     已知缺點十一條，最重的：北翼屋頂下的牆（`G_north_roofwall_0/_1`）牆頂沒接到屋頂底面，正側面看有約 9 m 的縫；遠景有兩個稜柱從屋頂冒出；近景比預算多 2,050 面。
-   - 返工第 2 輪：做的人照 `r1/verify.md` §3 修（屋頂頂面不動），已經在 `revision-9/` 出檔；停手時做的人還在跑、還沒交接，審查的 `r2/verify.md` 還沒有。
-   - 接手的人：先看 `r2/verify.md` 有沒有出來。出來了照它定 revision-8 或 9；沒出來又不想等，revision-8 可以進，把十一條寫進決策 798。然後照下面第 5 條整合（位置 22.2830975, 114.1730512，`baseHeight` 3.99，都在 `brief/base/landmarks.json`），
-     寫 `docs/decisions/798.md`，素材開 `revision-11/`，兩邊各一張 PR。整合後九棟變十棟，近景合計約 57,400，仍在 60,000 內，但只剩約 2,600，先把會展近景省回 12,000 比較好。
-   - 沒收的尾：工作室兩個 session 還開著（做 `257dc2cd-e8ae-4eed-829b-a1d202de1306`、審 `8da53c87-fbec-4d61-af57-466296791329`，Profile pro），用 `conductor.py close` 關；任務還沒 `studio.py release --task hkcec-redo --as done`。
-   - 同一天改的工作室設定：`~/.orchestra/profiles/pro/claude/settings.json` 的審查模型改成 Opus 5.5（備份 `settings.json.bak-2026-11-17`）；強度沒有寫進去（不知道鍵名），總機的 `open` 也帶不了模型與強度。
-     各位置用哪個模型、做與審怎麼自己交接、快速視覺預審（還沒盲測，不能上線）寫在素材庫 `local-studio-2026-11-10/RUN-REMOTE.md`。
+1. **會展的已知缺點**（決策 798「審查結論與已知缺點」六條；審查報告在素材 `revision-11/review/r2-verify.md` §3–4，每條有零件名與局部座標）：
+   西向剪影（北翼基座往外胖、拱的立柱太粗、南翼少一塊）、白帶斷頭與南翼窗帶兩端沒封口、遠景南北翼交界的窄縫與南翼頂蓋的裁切邊、`R0_top` 一處 3.5° 細皺摺、北翼第 1 段兩片斜擺牆片、船頭舌片。
+   都不會閃、遊戲大小只有幾個像素；和第 3 條一起排進下一輪工作室。做的人的重建腳本在 `revision-11/tools/`（commit `a57b36af5`），屋頂頂面審過，返工時照舊「頂面逐三角形不動」。
 2. **共面閃爍剩下的**（LANDMARK-FLICKER 之後；審查報告在素材 `revision-10/review/r2-verify.md`）：
    - **滙豐**沒有換：`coplanar_check.py` 近 4＋20、遠 6＋4。看得到的是北面 (−22.6, 43–137, −36) 兩個構件小角度交會、近景 (23.6, 145–156, −5.7) 背對背貼合，各幾十個像素；
      其餘貼合面藏在構件裡。再修時封邊不要落在玻璃牆的平面上，門檻用「鏡頭看得到的閃爍像素不比修前多」（審查的 `v7_zfight.py`）。
@@ -46,7 +35,7 @@
    - 中環廣場、中銀遠景、環球貿易廣場遠景、國金二期遠景修前的間距本來就大於幾公釐，修前修後在審查的量法下看不出差別。
 3. **六棟的已知缺點**（決策 791 §4）與**滙豐的十條**（決策 793）：下一輪工作室一起修。
 4. **青馬大橋**：在地政總署的 `INFRASTRUCTURE/`（圖幅 10-NE-3A 附近），還沒取。
-5. 換成新模型：重跑 `python3 -I tools/hk-landmarks/glb_to_swift.py --out Sources/GamePresentation/Map3DHongKongLandmarkMeshes.swift <全部的 GLB…>`（每棟先 `-far` 再近景、照檔名排，沒改的那幾棟輸出才會逐位元組不變），在 `Map3DHongKongLandmark` 加 case、位置與 `baseHeight`（`base/landmarks.json`），測試的尺寸表加一行、`testOnHongKongsMap` 的清單視位置加上。GLB 現在在素材庫的 `revision-10/`。素材庫一個資料夾只能有一輪留 GLB：開新的 `revision-N/`，沒重做的用 `git mv` 搬過去。
+5. 換成新模型：重跑 `python3 -I tools/hk-landmarks/glb_to_swift.py --out Sources/GamePresentation/Map3DHongKongLandmarkMeshes.swift <全部的 GLB…>`（每棟先 `-far` 再近景、照檔名排，沒改的那幾棟輸出才會逐位元組不變），在 `Map3DHongKongLandmark` 加 case、位置與 `baseHeight`（`base/landmarks.json`），測試的尺寸表加一行、`testOnHongKongsMap` 的清單視位置加上。GLB 現在在素材庫的 `revision-11/`。素材庫一個資料夾只能有一輪留 GLB：開新的 `revision-N/`，沒重做的用 `git mv` 搬過去。
 
 ## UNVERIFIED
 
@@ -54,4 +43,4 @@
 - 地面高程比模型腳高的地方（中銀在斜坡上）腳會埋一點，沒有逐棟在遊戲裡確認。
 - 滙豐（決策 793）沒有在 App 或實機上看過；底層架空處和地面怎麼接沒有確認。
 - LANDMARK-FLICKER：沒有在 App（Metal）、Simulator 或實機上看過修後還閃不閃；工作室量的是 Blender 的圖與幾何（鏡頭看得到的閃爍像素：長江中心 11,270 → 195）。
-- 會展（HKCEC-REDO）：還沒進遊戲，沒有在 App 或實機上看過；整合後要在 App 看常用俯角、貼近看腳、拉遠切遠景、和鄰棟同框四個畫面，開不起來就照實寫沒看。
+- 會展（HKCEC-REDO）：2026-11-17 在 App 看過（iPhone 18 Pro Simulator、Debug、畫質高、上午 10 點，`docs/art/hk-landmarks-hkcec-2026-11-17/app-*.jpg`）：位置與方向對，在灣仔北海邊，四周道路沒被蓋住，外框裡沒有再畫一般建物；剛進 3D 的俯視、拉遠的遠景、拉近傾斜和鄰棟同框、再拉近看屋頂層次四個畫面，屋頂分層、簷下深色、南翼平頂與拱都看得出來，靜止畫面沒有看到閃爍或破洞，60 fps。看得出的缺點：淺色屋頂在淡色城市裡偏淡，拉遠只剩一塊淡色（已知缺點 6）。**沒看到的**：貼地的低角度（看牆腳、白帶封口 N2、窗帶端 N4）——Simulator 注入的兩指上推不會讓鏡頭再傾斜，香港地圖在 450 m 以上幾乎是俯視；實機與轉動中的閃爍也沒看。
