@@ -1,8 +1,8 @@
-# ROAD-GRADE-CAP 交接（決策 833）
+# ROAD-GRADE-CAP 交接（決策 834）
 
 2026-11-17，session_01YGNNum9KxAQFvUm7wHrWuP，分支 `claude/project-thread-h4qjzh`。
 
-做完的：國道（`motorway`）沿路自己的縱斷面，坡度 5%（最陡 8%），填方抬高、挖方路塹。內容與量測在 `docs/decisions/833.md`，量測腳本 `docs/research/road-grade-cap/measure_grade.py`。
+做完的：國道（`motorway`）沿路自己的縱斷面，坡度 5%（最陡 8%），填方抬高、挖方路塹。內容與量測在 `docs/decisions/834.md`，量測腳本 `docs/research/road-grade-cap/measure_grade.py`。
 
 留下的（沒有人在做）：
 

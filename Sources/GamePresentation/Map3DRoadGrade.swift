@@ -1,6 +1,6 @@
 import GameCore
 
-// Decision 833 (ROAD-GRADE-CAP, NEXT_PRIORITIES §29.23): a motorway keeps
+// Decision 834 (ROAD-GRADE-CAP, NEXT_PRIORITIES §29.23): a motorway keeps
 // to a motorway's grade.
 //
 // Every road lies on the drawn ground (decisions 234, 241, 737), and the
@@ -38,7 +38,7 @@ import GameCore
 // GameCore's ground, the saves and the golden scenarios are untouched; the
 // drawn ground itself is not moved, so nothing else on it moves.
 
-/// Decision 833: the motorways round a scene, each with its profile held
+/// Decision 834: the motorways round a scene, each with its profile held
 /// to ``grade``.
 struct Map3DRoadGrade: Sendable {
     /// One motorway of the base map, kept to its tile (a road on the
@@ -65,7 +65,7 @@ struct Map3DRoadGrade: Sendable {
     /// climbs faster than ``grade`` for longer than the window (林口's
     /// climb from the basin), held at 5 % the road would sink 27 m into
     /// its cutting; at 8 % only the window's edge is clipped (decision
-    /// 833's measurements).
+    /// 834's measurements).
     static let steepest: Float = 0.08
     /// How far round a point its profile looks along the same road,
     /// metres: within ``Map3DBaseMap/bridgeReach`` less a chunk's margin,
@@ -150,7 +150,7 @@ struct Map3DRoadGrade: Sendable {
 }
 
 extension Map3DScene.Builder {
-    /// Decision 833: `map`'s motorways, each with its profile held to
+    /// Decision 834: `map`'s motorways, each with its profile held to
     /// ``Map3DRoadGrade/grade`` over the drawn ground, and their cuttings.
     mutating func gradeMotorways(of map: Map3DBaseMap) -> Map3DRoadGrade {
         typealias Point = Map3DBaseMap.Point
@@ -314,7 +314,7 @@ extension Map3DScene.Builder {
         return result
     }
 
-    /// Decision 833: the sections of the motorways' cuttings `lines` (each
+    /// Decision 834: the sections of the motorways' cuttings `lines` (each
     /// a piece's run of samples): the floor under the road, its shoulder
     /// and a drain, shared halfway with a cutting beside (the other
     /// carriageway's), and 1 : 1 slopes up to the drawn ground.

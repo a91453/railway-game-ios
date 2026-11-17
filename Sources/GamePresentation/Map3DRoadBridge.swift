@@ -844,7 +844,7 @@ extension Map3DScene.Builder {
             guard rise > 0, bridges.isOn(p, join.roads) else { continue }
             best = (max(best.rise, rise), best.onBridge || out <= join.plateau)
         }
-        // Decision 833: a motorway on its profile: a deck no lower, a road
+        // Decision 834: a motorway on its profile: a deck no lower, a road
         // on the ground lifted over it (a deck once its girder is clear)
         // or down in its cutting.
         if !roadGrade.isEmpty, let graded = roadGrade.profile(at: p, along: along, onDeck: onDeck) {
@@ -904,7 +904,7 @@ extension Map3DScene.Builder {
             for column in low.column...high.column {
                 let key = Map3DScene.ChunkKey(column: column, row: row)
                 if roadBridges.segments[key] != nil || roadBridges.endCells[key] != nil || roadBridges.joinCells[key] != nil { return true }
-                // Decision 833: a motorway off its ground.
+                // Decision 834: a motorway off its ground.
                 if roadGrade.cells[key] != nil { return true }
             }
         }

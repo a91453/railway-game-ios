@@ -305,7 +305,7 @@ extension Map3DScene.Builder {
 
     /// Decision 375: `polygon` (convex, level) less the trenches: convex
     /// pieces of it, or `nil` when no trench meets it.
-    /// Decision 833: and less the motorways' cuttings, unless not
+    /// Decision 834: and less the motorways' cuttings, unless not
     /// `roadCuts` (a motorway's own lanes, which lie in them).
     func outsideTrenches(_ polygon: [Map3DBaseMap.Point], roadCuts: Bool = true) -> [[Map3DBaseMap.Point]]? {
         var parts: [[Map3DBaseMap.Point]]?
@@ -406,7 +406,7 @@ extension Map3DScene.Builder {
     /// the portal's head wall.
     mutating func addTrenches() {
         addTrenches(trackCover.trenches)
-        // Decision 833: the motorways' cuttings, drawn as the track's.
+        // Decision 834: the motorways' cuttings, drawn as the track's.
         addTrenches(roadGrade.cuts)
     }
 

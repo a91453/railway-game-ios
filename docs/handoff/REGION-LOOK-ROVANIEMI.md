@@ -8,7 +8,7 @@
 
 1. **香港的建物**（REGION-LOOK-HK）：在 `Map3DRegionLook.Buildings` 加 case，`init(anchor:)` 的香港範圍指過去；`addRealBuilding` 與 `addTownHouse` 已依 `look.buildings` 分支。
 2. **照片沒有真的並排看**：Commons 的圖檔在這個環境被限流，只讀到說明頁（連結在決策 802）。請看得到照片的 session 或作者判 `docs/art/region-look-rovaniemi-2026-11-16/overview.jpg`。
-3. **樹還是夏天的綠**、河湖沒結冰（ROVANIEMI-SNOW）。
+3. ~~**樹還是夏天的綠**、河湖沒結冰（ROVANIEMI-SNOW）~~：決策 833 做了（`docs/handoff/ROVANIEMI-SNOW.md`）。
 4. **車站本體、號誌機、路燈、站牌還是台灣的模型**。
 5. **遠景的房子是平頂**（`addFarTownHouse` 的北歐版與真實足跡的遠景網格沒有斜屋頂），拉近會跳；不是矩形的矮房子也是平頂。
 6. **森林與水**：預覽看起來市區外的林地與河面夠分辨，這張沒有動 WorldCover / Maastotietokanta；要更細的林地邊界時另開一張。
