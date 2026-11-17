@@ -1,4 +1,4 @@
-# REAL-CAR-LENGTH（2026-11-18，工作串「修正高鐵捷運車廂長度」）
+# REAL-CAR-LENGTH（2026-11-18，#2405）
 
 真實列車照模型自己的長度排之後留下的一項；做了的寫在決策 399 的後來（REAL-CAR-LENGTH）。尺同 NEXT_PRIORITIES §19。
 
