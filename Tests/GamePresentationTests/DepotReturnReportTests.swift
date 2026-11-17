@@ -393,8 +393,23 @@ final class DepotReturnReportTests: XCTestCase {
                 func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "?" }
                 func hm(_ seconds: Int64) -> String { String(format: "%02d:%02d", seconds % GameTime.secondsPerDay / 3_600, seconds % 3_600 / 60) }
                 var text = "DEPOT_RETURN \(label) stuck \(clock(world.clock.now.seconds)) \(requests.count)\n"
+                let waits = Dictionary(world.routeWaits().map { ($0.train, $0) }, uniquingKeysWith: { a, _ in a })
                 for id in requests.keys.sorted() {
                     guard let request = requests[id], let train = world.train(id: id) else { continue }
+                    // DEADLOCK-D2: whom it waits for and what that train
+                    // does, when its departure fell due, whether its leg
+                    // names platforms (decision 740) and whether any
+                    // platform of the station would take it now.
+                    if let wait = waits[id], let holder = world.train(id: wait.holder) {
+                        let holderAt = world.stationsStoppedAt(by: holder.id).map(name).joined(separator: "/")
+                        let holderEdge: String = if case .onEdge(let t, let o)? = holder.position { "\(t.edge)\(t.direction == .forward ? "+" : "-")@\(o)" } else { "-" }
+                        let due = world.departureDue(of: train).map { hm($0.seconds) + String(format: ":%02d", $0.seconds % 60) } ?? "-"
+                        let listed = world.listedDepartures(of: request.candidate, memo: &memo.paths) != nil
+                        var any = "-"
+                        if request.departs { if case .granted = world.takingAnyDeparture(request.candidate, memo: &memo) { any = "granted" } else { any = "held" } }
+                        var dispatch = GameWorld.DispatchMemo()
+                        text += "    \(train.name) waits for \(holder.name) on \(holderEdge) (\(holderAt.isEmpty ? "line" : holderAt)) exec \(String(describing: holder.execution).prefix(40)) dead \(holder.isDeadheading) spare \(world.isSpare(holder, memo: &dispatch)) rate \(holder.movement.rate); due \(due) listed \(listed) any \(any) following \(world.isFollowing(train, memo: &memo))\n"
+                    }
                     let to: String = if case .travellingToStop(let s, _)? = request.candidate.execution { name(request.candidate.timetable[s].station) } else { "-" }
                     let edge: String = if case .onEdge(let t, let o)? = train.position { "\(t.edge)\(t.direction == .forward ? "+" : "-")@\(o)" } else { "-" }
                     let at = world.stationsStoppedAt(by: id).map(name).joined(separator: "/")

@@ -28,7 +28,9 @@ final class BerthChangeTests: XCTestCase {
         let t: StationID
     }
 
-    private func makeScene(blocks: Bool) throws -> Scene {
+    /// `spare` (decision 810): I is a train of a line calling at S and T
+    /// that runs none of its trains now, the line's spare.
+    private func makeScene(blocks: Bool, spare: Bool = false) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 106_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
@@ -83,7 +85,49 @@ final class BerthChangeTests: XCTestCase {
         let idle = try world.purchaseTrain(named: "I").id
         try world.setTrainCars(idle, to: 2)
         try world.placeTrain(idle, at: .onEdge(forward(3), offset: 36_864))
+        if spare {
+            try world.setTrainContinuation(idle, along: [], stoppingAt: 36_864)
+            try world.setTrainMovementRate(idle, to: 4_096)
+            let line = try world.createLine(named: "L", stops: [s, t]).id
+            try world.assignTrain(idle, to: line)
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: .none)
+            XCTAssertTrue(world.isSpare(try XCTUnwrap(world.train(id: idle))), "I is its line's spare")
+        }
         return Scene(world: world, follower: follower, idle: idle, t: t)
+    }
+
+    /// Decision 810: where the train on its berth is a spare of its line,
+    /// F changes berth while still on its way, at the dispatcher's next
+    /// look, and never stops short of T; where it is only a train without
+    /// a service (which a player may yet move), F runs on to where its way
+    /// ends first, as before (decision 278).
+    func testAFollowerBoundForASparesBerthChangesBerthOnItsWay() throws {
+        var early = try makeScene(blocks: true, spare: true)
+        var late = try makeScene(blocks: true)
+        XCTAssertEqual(early.world.clock.now, late.world.clock.now)
+        var stoodShort = false, changedMoving = false
+        for _ in 0..<60 {
+            let before = early.world.train(id: early.follower)
+            try early.world.advance(ticks: 1)
+            try late.world.advance(ticks: 1)
+            XCTAssertEqual(early.world.deadlockedTrains(), [], "at \(early.world.clock.now)")
+            let after = try XCTUnwrap(early.world.train(id: early.follower))
+            if before?.movement.edges.last == .edge(3), after.movement.edges.last == .edge(4), case .travellingToStop? = after.execution {
+                changedMoving = after.position != before?.position
+            }
+            if case .travellingToStop? = after.execution, after.position == before?.position { stoodShort = true }
+            XCTAssertEqual(WorldInvariants.violations(in: early.world), [])
+            if early.world.stationsStoppedAt(by: early.follower) == [early.t] { break }
+        }
+        XCTAssertTrue(changedMoving, "F's way changed to P2 while it was moving")
+        XCTAssertFalse(stoodShort, "F never stood short of T")
+        XCTAssertEqual(early.world.stationsStoppedAt(by: early.follower), [early.t], "F calls at T")
+        guard case .onEdge(let traversal, _)? = early.world.train(id: early.follower)?.position else { return XCTFail("F is placed") }
+        XCTAssertEqual(traversal.edge, .edge(4), "at P2")
+        XCTAssertEqual(early.world.train(id: early.idle)?.position, .onEdge(forward(3), offset: 36_864), "I has not moved")
+        // No later than where it stopped first.
+        XCTAssertNotEqual(late.world.stationsStoppedAt(by: late.follower), [late.t], "without a spare it is still on its way then")
     }
 
     /// Before decision 278 F stopped short of I and stayed there: I has no
