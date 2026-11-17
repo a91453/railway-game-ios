@@ -26,3 +26,4 @@ python3 -I tools/station-platform-types/make_swift_table.py tools/station-platfo
 
 - `tracks` 股數含站場側線，不能當旅客股道數。
 - 示範路線的島式月台以官方站內圖為準，見決策 741（`docs/decisions/741.md`）；OSM 與官方不一致的站（例如頭城、礁溪、蘇澳新、高鐵板橋）以官方為準。
+- 一島一岸（`mixed`）預設算島式；竹中例外算岸式（決策 824）：六家線兩股夾在岸式與島式之間，內灣線一股在島式另一面，每條線看到的都不是島式。
