@@ -85,7 +85,6 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "EAL", name: "EAL"), .init(key: "metroGeneric", cars: 9))
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: "metroGeneric", cars: 3))
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "DRL", name: "DRL"), .init(key: "metroGeneric", cars: 4))
-        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "TML", name: "TML"), .init(key: "metroGeneric", cars: 8))
         // Decision 780: the Airport Express and the Tung Chung Line their own.
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "AEL", name: "AEL"), .init(key: Map3DMTRAirportLine.expressKey, cars: 8))
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "TCL", name: "TCL"), .init(key: Map3DMTRAirportLine.tungChungKey, cars: 8))
@@ -93,6 +92,8 @@ final class Map3DRealTrainsTests: XCTestCase {
         for id in ["TWL", "ISL", "KTL", "TKL", "TKL_LHP"] {
             XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: id, name: id), .init(key: Map3DMTRUrbanLine.key, cars: 8), id)
         }
+        // Decision 839: the Tuen Ma line its own.
+        XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "TML", name: "TML"), .init(key: Map3DMTRTuenMaLine.key, cars: 8))
         // Every MTR line the game sells is in the table, drawn by a set the game has.
         for line in RealBranchLine.overseasLines where line.system == "hkmtr" {
             XCTAssertNotNil(Map3DRealTrains.hongKongCars[line.network], line.network)

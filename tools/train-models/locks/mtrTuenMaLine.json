@@ -1,0 +1,135 @@
+{
+  "comment" : "Decision 782: the models of the registered train mtrTuenMaLine (Map3DMTRTuenMaLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 16,
+  "lamps" : "3be54d2e89bffc3c",
+  "models" : {
+    "light-set-mtrTuenMaLine-car" : {
+      "hash" : "7a4a58a542aee3c5",
+      "triangles" : 240
+    },
+    "light-set-mtrTuenMaLine-carBack" : {
+      "hash" : "1456224c9ce502c5",
+      "triangles" : 240
+    },
+    "light-set-mtrTuenMaLine-centre" : {
+      "hash" : "7a4a58a542aee3c5",
+      "triangles" : 240
+    },
+    "light-set-mtrTuenMaLine-centreBack" : {
+      "hash" : "1456224c9ce502c5",
+      "triangles" : 240
+    },
+    "light-set-mtrTuenMaLine-head" : {
+      "hash" : "49dddc54c031521d",
+      "triangles" : 252
+    },
+    "light-set-mtrTuenMaLine-panto" : {
+      "hash" : "7a4a58a542aee3c5",
+      "triangles" : 240
+    },
+    "light-set-mtrTuenMaLine-pantoBack" : {
+      "hash" : "1456224c9ce502c5",
+      "triangles" : 240
+    },
+    "light-set-mtrTuenMaLine-tail" : {
+      "hash" : "c93e99ee1b63ee1d",
+      "triangles" : 252
+    },
+    "light-set-mtrTuenMaLineFar-car" : {
+      "hash" : "85d8bc8878d4ffa1",
+      "triangles" : 80
+    },
+    "light-set-mtrTuenMaLineFar-carBack" : {
+      "hash" : "b66253a2c7ec2ca1",
+      "triangles" : 80
+    },
+    "light-set-mtrTuenMaLineFar-centre" : {
+      "hash" : "85d8bc8878d4ffa1",
+      "triangles" : 80
+    },
+    "light-set-mtrTuenMaLineFar-centreBack" : {
+      "hash" : "b66253a2c7ec2ca1",
+      "triangles" : 80
+    },
+    "light-set-mtrTuenMaLineFar-head" : {
+      "hash" : "b53320dca4e0c055",
+      "triangles" : 84
+    },
+    "light-set-mtrTuenMaLineFar-panto" : {
+      "hash" : "85d8bc8878d4ffa1",
+      "triangles" : 80
+    },
+    "light-set-mtrTuenMaLineFar-pantoBack" : {
+      "hash" : "b66253a2c7ec2ca1",
+      "triangles" : 80
+    },
+    "light-set-mtrTuenMaLineFar-tail" : {
+      "hash" : "a72ef16056723255",
+      "triangles" : 84
+    },
+    "set-mtrTuenMaLine-car" : {
+      "hash" : "2d7832c3784e06e0",
+      "triangles" : 3350
+    },
+    "set-mtrTuenMaLine-carBack" : {
+      "hash" : "1891fc0c0c9bcf29",
+      "triangles" : 3350
+    },
+    "set-mtrTuenMaLine-centre" : {
+      "hash" : "2d7832c3784e06e0",
+      "triangles" : 3350
+    },
+    "set-mtrTuenMaLine-centreBack" : {
+      "hash" : "1891fc0c0c9bcf29",
+      "triangles" : 3350
+    },
+    "set-mtrTuenMaLine-head" : {
+      "hash" : "c38647211343282c",
+      "triangles" : 6225
+    },
+    "set-mtrTuenMaLine-panto" : {
+      "hash" : "848667e1d68e9d98",
+      "triangles" : 3494
+    },
+    "set-mtrTuenMaLine-pantoBack" : {
+      "hash" : "ba807e22ba876485",
+      "triangles" : 3494
+    },
+    "set-mtrTuenMaLine-tail" : {
+      "hash" : "5e072b0ec55adbf",
+      "triangles" : 6225
+    },
+    "set-mtrTuenMaLineFar-car" : {
+      "hash" : "2c7ddcab6e3975b7",
+      "triangles" : 1530
+    },
+    "set-mtrTuenMaLineFar-carBack" : {
+      "hash" : "3dcbccb74e093e0f",
+      "triangles" : 1530
+    },
+    "set-mtrTuenMaLineFar-centre" : {
+      "hash" : "2c7ddcab6e3975b7",
+      "triangles" : 1530
+    },
+    "set-mtrTuenMaLineFar-centreBack" : {
+      "hash" : "3dcbccb74e093e0f",
+      "triangles" : 1530
+    },
+    "set-mtrTuenMaLineFar-head" : {
+      "hash" : "ff1cbd16d4c5457b",
+      "triangles" : 2117
+    },
+    "set-mtrTuenMaLineFar-panto" : {
+      "hash" : "9e718a02dfab4685",
+      "triangles" : 1626
+    },
+    "set-mtrTuenMaLineFar-pantoBack" : {
+      "hash" : "1780dfb643b801a",
+      "triangles" : 1626
+    },
+    "set-mtrTuenMaLineFar-tail" : {
+      "hash" : "41f6d6a1684af8f2",
+      "triangles" : 2117
+    }
+  }
+}
