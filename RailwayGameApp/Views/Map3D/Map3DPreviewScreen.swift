@@ -1428,8 +1428,18 @@ final class Map3DTrainFeed {
     /// main actor (counting them builds the passenger graph), and which
     /// airfields they are for; the last day's are drawn until they are in.
     private var airTrafficAsked: (day: Int64, serial: Int, routes: Int)?
-    /// Decision 733: with the open cities' own.
-    private static let airfields = BaseMapFiles.readAirfields(BaseMapFiles.airfields)
+    /// Decision 733: with the open cities' own. REVIEW-L27 P3-1
+    /// (MAP-PACK-ONCE): read again when a map pack download is taken or
+    /// forgotten (``MapPackDownloads/changes``), so Hong Kong's airport
+    /// comes from the pack downloaded after the first read.
+    private static var airfields: RealAirfields? {
+        let changes = MapPackDownloads.changes
+        if let read = airfieldsRead, read.changes == changes { return read.airfields }
+        let airfields = BaseMapFiles.readAirfields(BaseMapFiles.airfields)
+        airfieldsRead = (changes, airfields)
+        return airfields
+    }
+    private static var airfieldsRead: (changes: Int, airfields: RealAirfields?)?
     /// Decision 708: the real coaches and the coach stops laid in the
     /// scene (off the main actor), from the routes' file, read once off
     /// the main actor the first time a map with coach stops is drawn.

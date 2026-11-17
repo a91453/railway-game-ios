@@ -718,10 +718,10 @@ enum BaseMapFiles {
         return cityPacks.compactMap { $0.airfields() }.reduce(taiwan) { $0.adding($1) }
     }
 
-    /// Decision 733: the open cities' map packs.
-    nonisolated static let cityPacks: [MapPack] = OverseasMap.allCases.compactMap { city in
-        OverseasMaps.open.contains(city) ? MapPack.current(city) : nil
-    }
+    /// Decision 733: the open cities' map packs. REVIEW-L27 P3-1
+    /// (MAP-PACK-ONCE): asked at every read, not kept from the first one,
+    /// so a pack downloaded after it is read in the same launch.
+    nonisolated static var cityPacks: [MapPack] { MapPack.currentOpen() }
 
     private static func file(_ name: String) -> URL? {
         folder.map { $0.appendingPathComponent(name) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
