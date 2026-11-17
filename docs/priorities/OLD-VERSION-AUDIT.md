@@ -1,4 +1,4 @@
-# OLD-VERSION-AUDIT（2026-11-18，舊版逐項盤點）
+# OLD-VERSION-AUDIT（2026-11-18，#2393）
 
 作者舊版逐項和新版比對之後，新版還沒有、以前也沒打過數字的項目。盤點與每項的狀態在 [OLD_VERSION_AUDIT_2026-11-18.md](../research/OLD_VERSION_AUDIT_2026-11-18.md)；貨運四項的做法與真實資料在 [FREIGHT_DEEPENING_2026-11-05.md](../research/FREIGHT_DEEPENING_2026-11-05.md) §4、§6。舊版只提供規則，數值由新版量過再定。尺同 NEXT_PRIORITIES §19；沒有 bug。
 
