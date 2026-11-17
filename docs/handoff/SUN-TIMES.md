@@ -12,6 +12,14 @@
 4. **月相與月出月落**：月亮現在畫成太陽正對面的滿月。參考庫 `city_map_reference_clean/source/environment/celestial-math.js` 有月亮位置、月相、月出月落（`getMoonPosition`、`getMoonIllumination`、`getMoonTimes`），可以照它翻，給夜景的月亮用。
 5. **環境音的晝夜切換**（MAP_DATA_SOURCES §4.3 的音樂角度）可以改問真的日落。
 
+## 交給遊戲規劃排序的新項目（作者 2026-11-17 問「還有其他測試能用類似方法加速嗎」）
+
+**TEST-JUMP：讓測試直接從要測的時刻或狀態開始，不從頭跑**（還沒量，先評分）
+
+- 背景：光線只看時刻，測試可以直接給「第 350 天」。GameCore 的模擬不行：狀態是一分鐘一分鐘接著算的，跳過去就不是玩家會遇到的狀態，存檔與重播的確定性也守不住。慢的也不是天數：`AnnualPropertyTaxesTests` 空世界跑滿一年，7 項共 0.1 秒；花時間的是車多、站多的那幾天。
+- 要做的：(1) 先量：各 shard 與 iOS UI 測試的時間花在哪幾支、哪些是「開新局一路點到某個狀態」；(2) UI 測試若有這種，改成啟動時讀準備好的存檔或時刻；(3) 長的 campaign 從存好的中途狀態開始，只在規則改了會自動失效時才做（`ReplayFixtures` 的風險）。
+- 五方（權重照 NEXT_PRIORITIES §19）：玩家 2（CI 快一點，修正早一點進 TestFlight，間接）、開發 4（PR 的 gate 與 shard 變短）、美術 1、鐵道迷 1、音樂 1 → **2.05**。和 CI 優化那條線（HANDOFF §1「多久做一次 CI 優化」：看數字過線才開）是同一件事，可以併進下一次 CI 優化。
+
 ## UNVERIFIED
 
 - iOS 建置、Metal 畫面、實機（macOS CI、TestFlight）。預覽圖是 WebGL 算的。
