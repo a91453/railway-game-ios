@@ -8,7 +8,7 @@
 
 1. **2D 地圖的晝夜**（`DayNight.swift`，決策 182）還是照時鐘的分鐘固定 06–18 時；照 `Map3DSunPath` 的高度角算 night 只要改 `DayNight.tint(at:)` 一處（參考 train-lighting.js 本來就是用高度角 −6°～8° 的 smoothstep）。
 2. **雪景（ROVANIEMI-SNOW）**：`Map3DLighting.polarNoon` 是藍色暮光的關鍵格；下雪天的灰藍光（WINTER_EVENT §4.1 第 2 點）可以疊在它上面，`Map3DWeather` 的 `skyMix` 照舊。
-3. **極光**：要「晚上偶爾」時，用 `Map3DSky` 的 `stars`（晴天的夜）乘上一個依日期的種子決定哪幾晚有；只在 `Map3DSunPlace.latitude` 高於約 60° 畫，照 `motion` skill 減少動態時不動。
+3. ~~**極光**~~：已做（AURORA，決策 813 的「後來：極光」）。
 4. **月相與月出月落**：月亮現在畫成太陽正對面的滿月。參考庫 `city_map_reference_clean/source/environment/celestial-math.js` 有月亮位置、月相、月出月落（`getMoonPosition`、`getMoonIllumination`、`getMoonTimes`），可以照它翻，給夜景的月亮用。
 5. **環境音的晝夜切換**（MAP_DATA_SOURCES §4.3 的音樂角度）可以改問真的日落。
 

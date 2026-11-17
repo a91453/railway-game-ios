@@ -560,9 +560,14 @@ extension Map3DStationExterior {
                 // up at a roof's underside, and the ribs cost half as much.
                 // Ribs of its own triangles, then clear of the room (a rib
                 // is cut only across), not of the many pieces the room cut.
+                // Decision 625, later (ZUOYING-ROOF): the ribs in the
+                // palette's steel, not the roof's own white, so from above
+                // they read as steelwork and not as white bars across the
+                // trains and platforms.
                 for triangle in part {
-                    let v = (0..<3).map { mesh.vertices[Int(mesh.indices[triangle * 3 + $0])] }
+                    var v = (0..<3).map { mesh.vertices[Int(mesh.indices[triangle * 3 + $0])] }
                     guard v[0].ny > -0.3 else { continue }
+                    for k in v.indices { v[k].color = Self.ribColour }
                     for rib in Map3DTrainRoom.frame(v, along: way, spacing: frameSpacing) where rib.count >= 3 {
                         for piece in room.outside(rib) { triangles(piece.polygon, into: &pieces) }
                     }
@@ -617,6 +622,10 @@ extension Map3DStationExterior {
     /// Decision 625 續: the share of a part over the room from which it
     /// stands as its frame.
     static let framedShare: Float = 0.25
+
+    /// Decision 625, later (ZUOYING-ROOF): the colour of a framed roof's
+    /// ribs, ``Map3DPalette/steel``.
+    static let ribColour = Map3DPalette.steel
 
     /// Whether the triangle is a sliver: thinner than a centimetre across
     /// its longest side, or of no area.

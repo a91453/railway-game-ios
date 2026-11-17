@@ -12,8 +12,8 @@
 
 | 名次 | 項目 | 分 | 出處 | 卡 |
 | --: | --- | --: | --- | --- |
-| 1 | ROAD-RAMP-HEIGHT：匝道橋和主橋併成一座後全站在主橋高度 | 3.15 | §29.29（822） | 無；大單 |
-| 2 | 左營月台上方的白條（決策 625 屋頂骨架的肋） | 3.10 | MISC-BACKLOG | 無；先出兩三種預覽 |
+| 1 | ~~ROAD-RAMP-HEIGHT：匝道橋和主橋併成一座後全站在主橋高度~~ | 3.15 | §29.29（822） | **已做**（#2391，決策 822「後來」） |
+| 2 | ~~左營月台上方的白條（決策 625 屋頂骨架的肋）~~ 已修：肋改深鋼色（ZUOYING-ROOF） | 3.10 | MISC-BACKLOG | 完成 |
 | 3 | ROAD-STRIP-WEDGE：橋端後面斜楔形與急彎尖刺 | 2.65 | §29.29（822） | 可和第 1 名同一張 |
 | 3 | ROAD-FORK-CELL：斜拖分岔多佔一格 | 2.65 | §29.26 | 和 ROAD-SNAP／ROAD-HINT 一張 |
 | 5 | HK-LATE-RUNS：香港擬實大半班次誤點、每天十幾班沒發 | 2.60 | §29.25 | 動 GameCore |
@@ -34,13 +34,14 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 | --: | --- | --: | --- | --- |
 | ~~1~~ | ~~雪景剩下的：樹變白、河湖結冰、下雪~~ | 3.75 | §29.11 F | **11-18 已合 #2386（決策 833）**；剩下四項在 `priorities/ROVANIEMI-SNOW.md`（最高 3.00 鏟雪後的路與道床） |
 | 2 | 港鐵其餘四綫真車（屯馬、東鐵、南港島、迪士尼） | 3.35 | §29.9、MODEL_PALETTE #3、MISC-BACKLOG | 工作室，一次一款 |
-| 3 | 極光（羅瓦涅米） | 3.30 | §29.11 I | 無 |
-| 3 | ROAD-GRADE-CAP：國道快速道路坡度 ≤ 5%、高架與路塹 | 3.30 | §29.23 | 原本等 822，#2364 已合，可派 |
-| 3 | 島式月台雨棚（台灣與香港） | 3.30 | MISC-BACKLOG | 無；station-kit |
+| 3 | ~~極光（羅瓦涅米）~~ | 3.30 | §29.11 I | **已做**（#2388，決策 813 後來） |
+| 3 | ~~ROAD-GRADE-CAP：國道快速道路坡度 ≤ 5%、高架與路塹~~ | 3.30 | §29.23 | **已做**（決策 834，國道；快速公路沒做，見 `handoff/ROAD-GRADE-CAP.md`） |
+| 3 | ~~島式月台雨棚（台灣與香港）~~ 已有：實拍宜蘭、左營、黃竹坑島上都有雨棚（ZUOYING-ROOF） | 3.30 | MISC-BACKLOG | 完成 |
 | 6 | 香港地面顏色（土地利用網格＋生境圖） | 3.25 | §29.12 | 原本等 REGION-LOOK-HK，已合，可派 |
 | 6 | 機廠檢修庫牆分上下段 | 3.25 | MISC-BACKLOG | #2371 已合，可派 |
 | 6 | TW-CARS：台灣汽車、廂型車換掉盒子 | 3.25 | §29.15 | 部分：車色已有計程車黃（`Map3DStreetLife.carPaints`），車形還是盒子 |
 | 6 | REINDEER：羅瓦涅米的真馴鹿（吃草的群、拉雪橇的）（玩家 3、開發 4、美術 4、鐵道迷 4、音樂 1） | 3.25 | §29.17，11-17 深夜重評同分 | 模型派 Mac 工作室，**等作者說再派**；放置接在羅瓦涅米開放（11-30）之後；冬季活動 12/1–1/6，有時效。聖誕老人（#2382）的雪橇現在是方塊，模型到了照決策 831「換模型的接點」換（`handoff/SANTA-FLIGHT.md`） |
+| 6 | FREIGHT-LOOK：貨運列車照車上的貨換外觀（石斗車、水泥罐車、貨櫃平車）、貨場道具、街上卡車（FREIGHT_DEEPENING F1） | 3.25 | `priorities/OLD-VERSION-AUDIT.md`（#2393） | 無；不動 GameCore；新貨車先找舊版模型庫與私有素材庫再交工作室 |
 | 9 | 北歐建築逐棟、羅瓦涅米四座地標 | 3.20 | §29.11 G | 工作室 |
 | 10 | 颱風、地震停駛與復駛 | 3.10 | §29.9 | 先寫設計；動 GameCore |
 | 10 | VIADUCT-PIERS：公路高架墩不站在路面上 | 3.10 | §29.23 | 和 ROAD-GRADE-CAP 同區 |
@@ -50,6 +51,7 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 | 13 | REAL-STATIONS-3D 下一批（淡水高架以外） | 3.05 | §29.9 | 和 STATION-KIT-LOOK 2.75 同一批站 |
 | 13 | 車齡、故障與檢修 | 3.05 | §29.9 | 先寫設計；動 GameCore |
 | 13 | 榕樹灰樹皮、氣根 | 3.05 | MISC-BACKLOG | 等榕樹接進遊戲 |
+| 18 | 鏟雪後的路與道床（路邊堆雪、道床一層白、鋼軌露出） | 3.00 | `priorities/ROVANIEMI-SNOW.md`（#2386） | 道床是貼圖層 2，要看 Metal 畫面 |
 | 18 | LEVEE：河岸堤防 | 2.95 | §29.22 | 無 |
 | 18 | 北投四角石塊比屋頂深（照片是比屋頂亮的米白） | 2.95 | `priorities/TPE-MRT-ELEVATED.md` | 工作室第 5 輪，和新北投白圓柱同一輪 |
 | 20 | 車門開關（近景停站滑門） | 2.90 | MISC-BACKLOG | 白天版本後 |
@@ -58,10 +60,13 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 | 20 | TRACK-STROKE：一筆畫多段曲線 | 2.90 | §29.16 | 無 |
 | 20 | TRACK-REALIGN-BEND：拖折點改線 | 2.90 | §29.24 | 826 已合，可派 |
 | 25 | TRACK-SPEED-LAYER：已鋪軌道依限速上色 | 2.85 | §29.16 | 無 |
+| 25 | 羅瓦涅米車站屋頂與月台上緣積雪 | 2.85 | `priorities/ROVANIEMI-SNOW.md`（#2386） | 和北歐車站本體一起做較省 |
 | 26 | ROAD-SNAP＋ROAD-HINT | 2.80 | §29.16 | 和 ROAD-FORK-CELL 一張 |
 | 26 | HK-NAMES；車站與車身廣告；自由曲線道路（等作者看 ROAD-SMOOTH） | 2.80 | §29.9、§29.19 | 廣告動 GameCore |
 
 2.80 以下照原出處（2.75 建材外銷、ROAD-JUNCTION、TPE-LANDMARKS-2…）；新北投牌樓柱不是白圓柱 2.70（`priorities/TPE-MRT-ELEVATED.md`，和北投石塊同一輪工作室）；DEPOT-ADD-MID 2.15、三線共用小蠔灣車廠 1.85（`priorities/DEPOT-REAL.md`）。
+
+**11-18 併回的評分檔（2.80 以下）**：舊版逐項盤點（`priorities/OLD-VERSION-AUDIT.md`，#2393）的貨運加深照 FREIGHT_DEEPENING §6 的順序做：F4 真實港口與臨港線資料 2.70（可和 F2 並行）、F2 港口與工廠當貨物節點 2.60（動 GameCore；建材外銷 2.75 等它）、F3 新貨種 2.70（接在 F2 後）；其餘是接續等候 2.45、卡車貨運 2.30、可動橋 2.30、連結與解編 2.20、貨船航線 2.05、每月公共投資 2.00、庫存車 1.95、高架與地下巴士總站 1.55。雪景的 2D 雨畫成雪 2.35、有深度的雪花 2.30（`priorities/ROVANIEMI-SNOW.md`）；GP-SPLIT 1.25（`priorities/CIOPT-9.md`）。
 
 **有期限的**：羅瓦涅米開放（ROVANIEMI-OPEN，`priorities/ROVANIEMI-OPEN.md`，3.30）**已做完**：開關（#2355）與票價（#2375）都在 `main`，11-18 在 `main` `b4ae9c5` 重驗過建置、相關測試與 30 天量測；玩家要等 **138 發版**才看得到，期限 11-30（發版是作者的決定）。網站 credits（railway-reference-private #145，2.05）138 發了再合。開放之後的 §29.30 四項（這份原本沒收）：ROVANIEMI-KJA 2.40、FAR-DEMAND-TW 2.30、LINE-COST-SPLIT 1.95、ROVANIEMI-PACK-OUT 1.80（等下載修好），都在第 2 節 2.80 以下。雪景第 1 名最好趕 12/1。
 
@@ -76,7 +81,7 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 
 清單沒同步，看起來亂多半是這個。下面這些在 `main` 都合了，併回時把狀態改成已完成：
 
-FACADE-VARIETY（#2352）、ROAD-SMOOTH（#2356）、ROAD-LOOK-REAL（#2364）、E200-REDO 與 DR1000／DR3100 遠景 bug（#2367）、TPE-MRT-ELEVATED 前三輪（#2363）、TRACK-CURVE-COLOUR＋TRACK-ALIGN（#2362）、MAPPACK-FIX（#2349）、PERF-3D-FIRST（#2365）、DEADLOCK-HK（#2347）、ZHUZHONG-SIDE、ROAD-JOIN-DRAW（#2338）、MUSIC-REFRESH（#2335）、MUSIC-WINTER（#2333）、music-review skill（#2343）、NATURE-BASE（#2336）、SUN-TIMES（#2331）、REGION-LOOK-HK（#2330）、art-style §7 兩句（併在 MODEL-AGE #2334）、FULLLANE-136（L26 P2-1，#2341）、DOCNUM-CI＋CONFLICT-WATCH（#2369）、PRIO-FILES（#2378）、REVIEW-L27＋HEALTH-137（#2376）、DEPOT-REAL（#2371）、ROVANIEMI-FARE（#2375）、SANTA-FLIGHT（#2382）、TPE-MRT-ELEVATED 第 4 輪（#2372）。
+FACADE-VARIETY（#2352）、ROAD-SMOOTH（#2356）、ROAD-LOOK-REAL（#2364）、E200-REDO 與 DR1000／DR3100 遠景 bug（#2367）、TPE-MRT-ELEVATED 前三輪（#2363）、TRACK-CURVE-COLOUR＋TRACK-ALIGN（#2362）、MAPPACK-FIX（#2349）、PERF-3D-FIRST（#2365）、DEADLOCK-HK（#2347）、ZHUZHONG-SIDE、ROAD-JOIN-DRAW（#2338）、MUSIC-REFRESH（#2335）、MUSIC-WINTER（#2333）、music-review skill（#2343）、NATURE-BASE（#2336）、SUN-TIMES（#2331）、REGION-LOOK-HK（#2330）、art-style §7 兩句（併在 MODEL-AGE #2334）、FULLLANE-136（L26 P2-1，#2341）、DOCNUM-CI＋CONFLICT-WATCH（#2369）、PRIO-FILES（#2378）、REVIEW-L27＋HEALTH-137（#2376）、DEPOT-REAL（#2371）、ROVANIEMI-FARE（#2375）、SANTA-FLIGHT（#2382）、TPE-MRT-ELEVATED 第 4 輪（#2372）、AURORA 極光（#2388）。
 
 ## 5. 重複或衝突要合併的
 

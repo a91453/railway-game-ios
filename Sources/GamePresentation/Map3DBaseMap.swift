@@ -97,6 +97,8 @@ struct Map3DBaseMap: Sendable {
         let kind: RoadKind
         let level: Int
         let points: [Point]
+        /// ROAD-RAMP-HEIGHT: a link road's bridge (the tiles' `ramp`).
+        var isRamp = false
     }
 
     struct Waterway: Sendable {
@@ -145,7 +147,7 @@ struct Map3DBaseMap: Sendable {
         for road in roads {
             for part in Self.parts(of: road.points, in: road.bounds) {
                 if road.bridgeLevel > 0 {
-                    bridges.append(Bridge(kind: road.kind, level: road.bridgeLevel, points: part))
+                    bridges.append(Bridge(kind: road.kind, level: road.bridgeLevel, points: part, isRamp: road.isRamp))
                 } else {
                     groundRoads.append((road.kind, part, road.isRamp))
                 }
@@ -243,13 +245,13 @@ struct Map3DBaseMap: Sendable {
         for feature in layer.features where feature.kind == .line {
             guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
             let level = Self.bridgeLevel(feature)
+            var isRamp = false
+            if case .number(let ramp) = feature.properties["ramp"] { isRamp = ramp != 0 }
             for part in feature.parts where part.count >= 2 {
                 for run in Self.parts(of: part.map(scene), in: tile) {
                     if level > 0 {
-                        bridges.append(Bridge(kind: kind, level: level, points: run))
+                        bridges.append(Bridge(kind: kind, level: level, points: run, isRamp: isRamp))
                     } else {
-                        var isRamp = false
-                        if case .number(let ramp) = feature.properties["ramp"] { isRamp = ramp != 0 }
                         groundRoads.append((kind, run, isRamp))
                     }
                 }
