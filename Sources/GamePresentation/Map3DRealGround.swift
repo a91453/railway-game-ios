@@ -291,8 +291,11 @@ extension Map3DScene.Builder {
         // where a hole (a river's island) reached the triangle's edge: the
         // whole triangle came out water (the owner's IMG_5325, sharp
         // triangles of water over the Tamsui's islands).
+        // Only cells a hole reaches are cut that way: elsewhere the cell's
+        // piece of the outline is triangulated as before, with fewer
+        // triangles (the far view's budget, decision 709).
         let corners = area.rings.flatMap { $0 }
-        let whole = Earcut.triangulate(area.rings.map { $0.map { (x: $0.x, y: $0.z) } })
+        let whole = area.rings.count > 1 ? Earcut.triangulate(area.rings.map { $0.map { (x: $0.x, y: $0.z) } }) : []
         var byCell: [Map3DScene.ChunkKey: [Int]] = [:]
         for first in stride(from: 0, to: whole.count - 2, by: 3) {
             let triangle = (0..<3).map { corners[whole[first + $0]] }
@@ -329,7 +332,21 @@ extension Map3DScene.Builder {
                     ]
                     var pieces: [[Map3DBaseMap.Point]] = []
                     var net = 0.0
-                    for first in mine {
+                    var points: [Map3DPoint] = []
+                    var triangles: [Int] = []
+                    if cellRings.count == 1 {
+                        let piece = Self.clipRings(cellRings, by: [keeps[4]])
+                        guard let ring = piece.first, ring.count >= 3 else { continue }
+                        net = abs(Self.area(ring))
+                        guard net > 0.5 else { continue }
+                        triangles = Earcut.triangulate([ring.map { (x: $0.x, y: $0.z) }])
+                        guard !triangles.isEmpty else { continue }
+                        for point in ring {
+                            let x = Float(point.x), z = Float(point.z)
+                            points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                        }
+                    }
+                    for first in mine where cellRings.count > 1 {
                         var piece = (0..<3).map { corners[whole[first + $0]] }
                         for keep in keeps {
                             piece = Self.clip(piece, keep)
@@ -345,8 +362,6 @@ extension Map3DScene.Builder {
                     // holes the land, over a tile inland) leave nothing.
                     guard net > 0.5 else { continue }
                     covered += net
-                    var points: [Map3DPoint] = []
-                    var triangles: [Int] = []
                     for piece in pieces {
                         let start = points.count
                         for point in piece {
