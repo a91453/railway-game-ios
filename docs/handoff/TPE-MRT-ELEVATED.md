@@ -23,6 +23,9 @@
 2. 接回遊戲：GLB 轉 Swift mesh，照決策 625／665 的 `Map3DExteriorStudy` 放在真實站點與方位（玩家在那裡蓋了站時畫，
    離軌道與月台太近的零件照舊拿掉）；Slop New York 的 MIT 聲明加進遊戲的第三方授權清單；OSM 出處照 `DataSourceCredits`；
    寫 `docs/decisions/826.md`；遊戲 repo 只留一張總覽圖與 README（`docs/art/tpe-mrt-elevated-2026-11/`）。
+   **軌道接上站體（作者 11-17 問）**：模型的名義軌面在 Z = 9.0 m，遊戲那一站真實高架的軌面高度不一定是 9.0（`level-profiles.json` 的 `flatOffsets`）。
+   接回時要把站體整個上下移到那一站在遊戲裡的軌面高度、墩柱往下拉到地面，並加一個測試：每站淨空的底等於遊戲在站中心的軌面高度
+   （±0.3 m），淨空裡沒有站體的面；站體兩端外面也不能有零件擋住進站的軌道（第 1 輪審查退回的就是這條）。
 3. 新外觀：總覽圖給規劃看過才合（決策 482）。
 
 ## UNVERIFIED
