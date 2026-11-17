@@ -219,6 +219,8 @@
 - 底稿是實心盒：先改成柱列加屋頂再做細部；照片和底稿不同時照照片。
 - 「出簷 ≥ X m」要寫清楚是**沿長向還是橫向**（第 3 輪牌樓兩個方向混在一起，橫向 1.5 m 過了、沿長向只有 0.1 m）。
 - 量共面與閃爍先把座標取到公分整數再量（遊戲存公分），原始與取公分各報一次。
+- **遊戲大小最常不像的是顏色和小零件，不是形**：第 4 輪只換色、放大牌樓就修好三輪改形沒修好的。第 1 輪就該在遊戲大小、和照片並排挑色。
+- 換色要照照片的**明暗順序**，不只拉開色差：北投石塊第 4 輪分開了，但比屋頂深，照片是比屋頂亮。
 - **數字都過、遊戲大小仍分不開的色**（第 3 輪過了才發現）：相鄰兩色 ΔE 太小（北投 #C4C8D6 屋頂對 #C9CCD5 石材）、
   大片玻璃用窗的深色變成黑格、照片日照色在色票上最近的那格放在近白地面上太淡（金頂 #EBD099）。派工單要寫「相鄰材質在遊戲大小要分得開」，
   大片玻璃另給亮的材質，色票挑格看遊戲大小的圖，不只看 ΔE 最近。
@@ -232,3 +234,13 @@
 - 「切到就紅」的測試**取三角形的角、邊中點與重心**，不只頂點：新北投的終點牆是兩個大三角形，頂點都在盒外，只看頂點測不到。
 - 有外殼的站不畫 kit 站房與雨棚；資料來源頁加開源底稿的一項。
 - 新材質名（例如第 4 輪的 `graniteDark`、`glassBright`）要加進 `glb_to_swift.py` 的 `MATERIALS` 與 `materialColours`，順序一致。
+- 接回遊戲的切法**第 1 輪就模擬**，不要等到最後一輪才知道整站不畫。
+
+**工作室流程（這次新踩到的）**
+
+- 帳本一個任務最多 3 輪：修已進遊戲的模型開新任務名（`tpe-mrt-elevated-r4`），從上一輪的 commit 開始。
+- 不用 Orchestra（STUDIO-RUNNER.md）時：`studio.py start` 只寫認領與開場檔，不開 worktree 與 AI（它印的 `orchestra session create` 不用跑）；
+  worktree 用 `git worktree add`，AI 用 `studio.py agent` 背景開 `codex exec --sandbox workspace-write`（`CODEX_HOME`）或 `claude -p`（`CLAUDE_CONFIG_DIR`）。
+  `start` 與 `release` 是作者限定的指令，Remote Control 會被 auto mode 擋，請作者在「終端機」App 一次貼一行。
+- Codex 的 `workspace-write` 沙盒寫不了 worktree 在 `.git/worktrees/` 下的 `index.lock`，commit 由協調者照它的 worktree 原樣代做（hook 照跑）。
+- 帳號資料夾不一定照名字：這次 Ultra 的 Claude 登入在 `profiles/ultra-2/claude`，`profiles/ultra/claude` 沒登入；開工前用 `claude auth status` 確認。
