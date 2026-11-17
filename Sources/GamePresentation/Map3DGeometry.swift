@@ -39,6 +39,11 @@ public struct Map3DVertex: Hashable, Sendable {
     /// Decision 356: no texture, and water: the shader tilts it with
     /// ripples and mirrors the sky in it (``Map3DReflection``).
     public static let water: Float = -3
+    /// Decision 833: water frozen over (a map under snow,
+    /// ``Map3DSnowGround/ice``): drawn as ``plain``, matte, with no
+    /// ripples and no sky in it, but still water to whatever asks where
+    /// the water is (a ferry's quay, a coach's stand).
+    public static let ice: Float = -4
     /// Decision 370: no texture, and a road's carriageway: the shader lights
     /// it with its street lights once the sky is dark (``Map3DLook``).
     public static let road: Float = -11

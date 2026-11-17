@@ -784,6 +784,9 @@ struct Map3DSkyUniforms {
     float4 sun;
     float4 moon;
     float4 stars;
+    // Decision 813's later part (AURORA): how much of the aurora shows and
+    // the seconds that move it.
+    float4 aurora;
 };
 
 struct Map3DSkyOut {
@@ -826,6 +829,25 @@ fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyU
     float pixel = max(length(fwidth(cells)), 1e-4);
     float spot = 1.0 - smoothstep(0.6, 1.4, length(cells - centre) / pixel);
     colour += float3(0.8, 0.85, 1.0) * (star * spot * 0.5 * sky.stars.x);
+    // Decision 813's later part (AURORA): a curtain over the northern sky,
+    // worked as Map3DSky.auroraLight (the owner's geo-scene aurora ribbon).
+    if (sky.aurora.x > 0.0 && d.y > 0.0) {
+        float around = atan2(d.x, -d.z);
+        if (fabs(around) < 1.4) {
+            float u = (around / 1.4 + 1.0) * 0.5;
+            float t = sky.aurora.y * 0.15;
+            const float tau = 6.2831853;
+            float foot = 0.19 + sin(u * tau * 2.0 + t * 1.5) * 0.05 + cos(u * tau * 3.5 + t * 0.8) * 0.05 * 0.4;
+            float v = (asin(min(d.y, 1.0)) - foot) / 0.42;
+            if (v > 0.0 && v < 1.0) {
+                float band = sin((v + t * 0.25) * tau) * 0.5 + 0.5;
+                float3 tint = mix(float3(0x4C, 0xFF, 0xA6) / 255.0, float3(0xA0, 0x80, 0xFF) / 255.0, band * v);
+                float edge = pow(sin(u * 3.14159265), 0.5) * pow(1.0 - v, 0.5) * smoothstep(0.0, 0.06, v);
+                float rays = 0.7 + 0.3 * sin(u * tau * 23.0 + sin(u * tau * 5.0 + t * 0.6) * 2.0);
+                colour += tint * (edge * rays * 0.55 * sky.aurora.x);
+            }
+        }
+    }
     // Decision 349: the haze on the ground (a ray that meets nothing taken
     // 60 km), in the fog's colour, and the picture's finish, as on the city.
     colour = mix(colour, sky.horizon.rgb, map3dHaze(sky.stars.y, d, 60000.0, sky.stars.z, sky.stars.w));
