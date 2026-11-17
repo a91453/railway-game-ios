@@ -507,9 +507,18 @@ extension Map3DScene.Builder {
             // ground there is as high: under a deck the way ends beside,
             // the rise there is the ground's, a wedge down to it.
             let whole = length + back + forth
-            let capsFirst = lifted && index == 1 && segment.fromFirst && back > 0
-            let capsLast = lifted && index == points.count - 1 && segment.toLast && forth > 0
-            if capsFirst || capsLast { cuts = merged(cuts, [back / whole, 1 - forth / whole]) }
+            // Near a raised road by the end itself, not the segment, which a
+            // region cuts short.
+            func nearEnd(_ end: Map3DBaseMap.Point) -> Bool {
+                raised && nearRaisedRoad(from: Map3DBaseMap.Point(x: end.x - half, z: end.z - half),
+                                         to: Map3DBaseMap.Point(x: end.x + half, z: end.z + half))
+            }
+            let capsFirst = index == 1 && segment.fromFirst && back > 0 && nearEnd(start)
+            let capsLast = index == points.count - 1 && segment.toLast && forth > 0 && nearEnd(end)
+            // Each at its own end only, so a segment a region cuts short
+            // elsewhere is cut where the whole scene cuts it.
+            if capsFirst { cuts = merged(cuts, [back / whole]) }
+            if capsLast { cuts = merged(cuts, [1 - forth / whole]) }
             func cap(at end: Map3DBaseMap.Point, outward: (x: Double, z: Double)) -> (out: Float, end: Float, onBridge: Bool) {
                 let atEnd = roadRise(at: end, along: along, onDeck: onDeck)
                 let inward = min(half, length)
@@ -524,7 +533,6 @@ extension Map3DScene.Builder {
             let lastCap = capsLast ? cap(at: end, outward: along) : nil
             // Decision 391: a road's rise over the ground at `t` of the way.
             func rise(_ t: Double, _ p: Map3DBaseMap.Point) -> (rise: Float, onBridge: Bool) {
-                guard lifted else { return (0, false) }
                 if let firstCap, t * whole < back - 1e-9 {
                     let share = Float(t * whole / back)
                     return (firstCap.out + (firstCap.end - firstCap.out) * share, firstCap.onBridge)
@@ -533,7 +541,7 @@ extension Map3DScene.Builder {
                     let share = Float((1 - t) * whole / forth)
                     return (lastCap.out + (lastCap.end - lastCap.out) * share, lastCap.onBridge)
                 }
-                return roadRise(at: p, along: along, onDeck: onDeck)
+                return lifted ? roadRise(at: p, along: along, onDeck: onDeck) : (0, false)
             }
             // Decision 375: a road across a trench deep enough bridges it,
             // the whole of this stretch; otherwise it gives way to it.
@@ -655,6 +663,11 @@ extension Map3DScene.Builder {
             (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift, roadCuts: roadCuts)
             guard !triangles.isEmpty else { return }
         }
+        // Decision 709: sized as what it adds, its own width across, so
+        // the far views leave it out before the road.
+        let roadSizing = sizing
+        sizing = min(sizing ?? .infinity, Float(2 * half))
+        defer { sizing = roadSizing }
         mesh(at: Map3DPoint(Float(joint.x), 0, Float(joint.z))) {
             let start = $0.vertices.count
             $0.addFlat(points, triangles: triangles, color: color, paint: paint)
