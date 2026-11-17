@@ -201,15 +201,34 @@
     },
     {
       "file": "music-loop.caf",
+      "stems": [
+        {
+          "score": "tools/audio/scores/theme-melody.score.json",
+          "scoreSha256": "2b4694e8feb61bb160711ba26a6756d7b8e8d1b1b820b64e7369af154bcf00d9",
+          "mml": "tools/audio/mml/theme-melody.mml",
+          "mmlSha256": "dfe13e3c082199b17d6bb4bedc34f1e1da0c0b747800367c7c58cc169e0cfb6d"
+        },
+        {
+          "score": "tools/audio/scores/theme-harmony.score.json",
+          "scoreSha256": "21093f38e894fa5322ebce0c0f1fc111bbe0496c656f5d60b3763996346d270e",
+          "mml": "tools/audio/mml/theme-harmony.mml",
+          "mmlSha256": "6e9ddd27bd3d34b4c05049ebfacbc1daf8e18b8b969b11cacf3a5fb5f01a0d65"
+        },
+        {
+          "score": "tools/audio/scores/theme-rhythm.score.json",
+          "scoreSha256": "9a599f6bf321e21d7a7d1d6d57b24d8aa1d1dc71ae14a5ea331e3116931d222f",
+          "mml": "tools/audio/mml/theme-rhythm.mml",
+          "mmlSha256": "221366a4d05de06ee2c11408c1ce3a1c3c75b704aa12748fe930642f4a0a7e80"
+        }
+      ],
       "kind": "music",
-      "synth": "make_game_audio.py music()",
-      "sha256": "64ff573efa2a1112d8490912236a619c80bb1ead885fad65412272cc5e347a35",
-      "frames": 1843200,
-      "seconds": 38.4,
-      "peakDbfs": -3.09,
-      "rmsDbfs": -15.98,
-      "largestStep": 0.08463,
-      "loopSeam": 0.00635,
+      "sha256": "a2109fb0a16d7ea4f6f1fda0092b99af507ae6e323f905279608b02e1a81665c",
+      "frames": 3686400,
+      "seconds": 76.8,
+      "peakDbfs": -2.67,
+      "rmsDbfs": -18.62,
+      "largestStep": 0.16495,
+      "loopSeam": 0.03656,
       "loudnessLufs": -15.95
     },
     {
@@ -235,14 +254,14 @@
         }
       ],
       "kind": "music",
-      "sha256": "f7d15ff7c53faa09bfc8f073604b2979be53907d33cafea8c4934cd5f6e51e6a",
+      "sha256": "bb1161afc219e18405ffedf7b7d544574e68391e39cf5343df1d377f44a1305d",
       "frames": 5376000,
       "seconds": 112.0,
-      "peakDbfs": -2.26,
-      "rmsDbfs": -19.03,
+      "peakDbfs": -2.27,
+      "rmsDbfs": -19.04,
       "largestStep": 0.36209,
-      "loopSeam": 0.02393,
-      "loudnessLufs": -15.94
+      "loopSeam": 0.02386,
+      "loudnessLufs": -15.95
     },
     {
       "file": "new-train.wav",

@@ -36,7 +36,7 @@ struct Map3DUniforms {
     float4 eye;
     float4 fog;
     float4 shade;
-    float4 nightWindows[12];
+    float4 nightWindows[16];
     float4 mirror;
     float4 zenith;
     float4 glint;
@@ -255,10 +255,11 @@ float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3
 // materials.js and reflections.js, MIT; the reference street scene's
 // display glass). Per surface layer, how much its glass mirrors and
 // whether it is a shop's display glass (Map3DReflection.glass).
-constant float2 glassMirror[24] = {
+constant float2 glassMirror[32] = {
     {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0.7, 0}, {0.7, 0},
     {0.8, 1}, {0, 0}, {0.7, 0}, {1, 0}, {0, 0}, {0.8, 1}, {0.8, 1}, {0.8, 1},
     {0.8, 1}, {0.5, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+    {0.6, 0}, {0.6, 0}, {1, 0}, {0.6, 0}, {0.5, 0}, {0, 0}, {0, 0}, {0, 0},
 };
 
 // What a mirror sees toward `way`: the sky from the horizon (the fog's
@@ -447,7 +448,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         // wall, so the buildings are not flat), an office's glass pale
         // blue, thin lines between its bays and floors, and its foot a
         // little darker (ambient occlusion, the 10 m nearest its foot).
-        float2 pane = glassMirror[min(packed % 64u, 23u)];
+        float2 pane = glassMirror[min(packed % 64u, 31u)];
         float3 tinted = base;
         if (pane.x > 0.6 && pane.y < 0.5) { tinted = mix(tinted, float3(0.80, 0.87, 0.93), 0.6); }
         // Decision 645 (D8): a wall is steep and not the ground's grass
@@ -491,7 +492,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         // A lit window: its glass (untinted and dark enough, or a shop's
         // whole front) where the hash of its bay, floor and face says so.
         uint surface = packed % 64u;
-        float4 row = uniforms.nightWindows[min(surface / 2u, 11u)];
+        float4 row = uniforms.nightWindows[min(surface / 2u, 15u)];
         float2 rule = (surface % 2u == 0u) ? row.xy : row.zw;
         float bright = dot(texel.rgb, float3(0.2126, 0.7152, 0.0722));
         float mirrorGlass = mirrors ? (1.0 - texel.a) * step(bright, 0.45) * pane.x : 0.0;

@@ -637,6 +637,28 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**2026-11-17 傍晚交接（規劃 session_01JMHz9Yps9xJyFfDFR4mUed 壓縮 3 次後交出；這段最新，下面的「下午」是前一版）**
+
+- **在跑的實作 session**（每張單都在 #2118 登記過檔案範圍）：
+  - ROAD-SMOOTH（821，session_01JMHz9biVWhZiRyEa1eaFLN）：作者畫的路畫順，只動 GamePresentation，還沒開 PR。
+  - ROAD-LOOK-REAL（822，session_01JMHz9bEFthgKRraGjXnPYN，壓縮 1 次）：預設實景地圖的路與高架。作者四張實機截圖在 assets repo `game-art-previews/docs/art/road-look-real-2026-11-17/`。是新外觀，**規劃看過總覽圖才合**。
+  - PERF-3D-FIRST（820，session_01JMHz9YukbhK9SrgZCqr1Xw，壓縮 1 次）：第一次開 3D 要 44.87 秒，還沒開 PR。
+  - ROVANIEMI-OPEN（818，session_01JMHz9bckVEprLBmpgpVmVQ）：地圖包照舊內建；目標 11-30 開放，還沒開 PR。
+- **待合的 PR**（照批次合，合完等 main 的 ci.yml 綠）：
+  - #2345 REVIEW-L26＋HEALTH-136：session 已留「可合併、head 63e3d2ad」，只有文件和一個報告測試。
+  - #2349 MAPPACK-FIX（819）：CI 全綠、還是 draft，可轉 ready 合。實機驗收：下一版設定裡「香港地圖」顯示「已下載」。
+  - #2347 DEADLOCK-HK（816，動 GameCore）：session 壓縮兩次已停，PR 是 draft；head ee1db241 的 CI 跑完綠了才轉 ready 合。誤點多 39 班、作者存檔東涌綫仍等到 05:54，都寫在 §29.20。**合了以後才派 DEPOT-REAL（§29.17）**，死結一次只歸一個 session。
+  - #2352 FACADE-VARIETY（817）：新外觀，**先看總覽圖** `docs/art/facade-variety-2026-11-17/overview.jpg`（在 PR 分支）再合。
+  - #2350 中洲島式畫法、#2353 竹中岸式（824）：作者自己的對話開的，照常看 CI 合。
+  - **注意**：#2345 和 #2347 都在 NEXT_PRIORITIES 加了「§29.20」，後合的那個要併 main，把自己的改成 §29.21。
+- **等作者**：
+  - 136 的出口合規與 What to Test、Threads 貼文、NLSC 3D 免費或付費。
+  - 聽音樂試聽檔（assets #132）；實機看 MAPPACK-FIX、ROAD-SMOOTH。
+  - 自由曲線道路（§29.19 第 4 項）等作者實機看過 ROAD-SMOOTH 再決定。
+- **下一個空位先派**：TRACK-CURVE-COLOUR＋TRACK-ALIGN（鋪軌，§29.16，一張單）；REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）；P2-1 橫拿最大字重疊（REVIEW-L26）。
+- **我做錯的一件**：作者的道路截圖我直接推到 assets repo 的 main（c51af32），沒開 PR，違反該 repo AGENTS.md 第 8 條。內容合規，不改寫歷史；以後 assets repo 一律開 PR。
+- **號碼**：決策 816–822 預留中，824 已被竹中登記；823 在 #2118 沒看到登記，**下一個從 825 取**，取之前先看 #2118 最新。存檔 107、golden schema 77。
+
 **2026-11-17 下午（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；這段比下面的「白天」新）**
 
 - **合併**：#2329 WINTER-FIX（814）、#2331 SUN-TIMES（813）、#2330 REGION-LOOK-HK（812）、#2332、#2334 MODEL-AGE（art-style 兩句）、#2340 DEADLOCK-D2（810）、#2341 FULLLANE-136（橫拿教學 UI 測試，觸控被系統取消就再點；不是玩家會碰到的問題）、#2343 music-review skill（規劃寫，含 `tools/audio/measure_music.py`）。
@@ -645,7 +667,8 @@
 - **死結一次只歸一個 session 修**（作者 11-17：「因為一堆人在處理死結」）：健檢量到的只記數字，轉給 DEADLOCK-HK。
 - **音樂**：作者上班不能聽，規劃用量測審（music-review skill）；試聽檔在 assets #132，作者有空用手機聽。
 - **136 實機回報**（NEXT_PRIORITIES §29.18）：香港地圖包下載到了但被拒用（`incomplete("airfields.json")`），已派 **MAPPACK-FIX**（819，session_01JMHz9YiuyqQSmoz6Bk5oTv）；第一次開 3D 要 44.87 秒（**PERF-3D-FIRST** 2.55，下一個空位先派）。香港、羅瓦涅米地圖包下一版照舊內建加下載兩份都帶，實機顯示「已下載」才拿掉內建的。
-- **號碼**：決策 810、812–814 已用；811、815–819 預留中；下一個可取 **820**。存檔 107、golden schema 77。
+- **道路歪來歪去**（作者 11-17 傳概念影片，NEXT_PRIORITIES §29.19）：歪的是畫法（格子中心連成鋸齒），已派 **ROAD-SMOOTH**（決策 821，只動 GamePresentation；T 字路口接線 #2338 已合）；改存檔的自由曲線道路等作者實機看過 ROAD-SMOOTH 再決定。預設實景地圖的路要像影片、高架與平面：**ROAD-LOOK-REAL** 3.40，**已派**（決策 822，session_01JMHz9bEFthgKRraGjXnPYN；作者的四張實機截圖在 assets repo `game-art-previews/docs/art/road-look-real-2026-11-17/`，壞的是底圖道路，作者自己鋪的高架鐵軌是好的）。空白地圖自己長的路也歪（規劃讀程式找到，沒人回報）：**ROAD-GROW-STRAIGHT** 2.25，等有人回報再派。鋪軌 TRACK-CURVE-COLOUR＋TRACK-ALIGN 排在它之後的空位。
+- **號碼**：決策 810–815 已用（811、815 已合）；816–822 預留中（816 DEADLOCK-HK、817 FACADE-VARIETY、818 ROVANIEMI-OPEN、819 MAPPACK-FIX、820 PERF-3D-FIRST、821 ROAD-SMOOTH、822 ROAD-LOOK-REAL）；下一個可取 **823**。存檔 107、golden schema 77。
 
 **2026-11-17 白天（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；下一任接手時以這段為最新，22:00 換 Ultra 前會再補一段）**
 

@@ -196,6 +196,16 @@ extension Map3DScene.Builder {
             facadeMeshes[key, default: Map3DMesh()].append(kept)
         }
         facadeParts = [:]
+        // Decision 817: the towers' reliefs, within their own budget.
+        for (key, parts) in reliefParts {
+            var kept = Map3DMesh()
+            for part in parts.sorted(by: { ($0.rank, $0.mesh.triangleCount) < ($1.rank, $1.mesh.triangleCount) }) {
+                guard kept.triangleCount + part.mesh.triangleCount <= Map3DFacadeVariety.chunkBudget else { continue }
+                kept.append(part.mesh)
+            }
+            facadeMeshes[key, default: Map3DMesh()].append(kept)
+        }
+        reliefParts = [:]
     }
 
     /// Decision 610: a box `depth` out from a wall along `out`, `width`
