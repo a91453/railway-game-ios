@@ -24,15 +24,15 @@
 
 ## 還留下什麼
 
-分數在 `docs/research/NEXT_PRIORITIES_2026-10-12.md` §29.17，說明在決策 816 §5、§6。
+分數在 `docs/research/NEXT_PRIORITIES_2026-10-12.md` §29.20，說明在決策 816 §5、§6。
 
 1. **PR 還是草稿**：CI 綠了之後，在 #2118 留「可合併、#NNNN、head <完整 SHA>」並轉 ready（這個 session 停手了，沒做）。CI 紅了就修。
 2. **作者存檔那一晚的東涌綫仍等到 05:54**（HK-NIGHT-PARKED）：存檔在 02:33，過夜車已停在奧運、九龍的上行正線，空車路訂不到。新局沒有這個問題。
    作者的存檔在私庫 `a91453/railway-assets-private` 分支 `claude/report-deadlock-hk-1117` 的 `problem-reports/2026-11-17-deadlock-hk/`，**不要提交進這個公開庫**（規劃的交代；要做成 fixture 只能提交轉出來的指令與檢查碼，檔名與內容不帶遊戲名稱）。
    重播：取出存檔的 `game` 物件存成檔，`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_EPISODES=1 DEPOT_RETURN_ONLY=hk DEPOT_RETURN_FROM=<檔> swift test --skip-build --filter DepotReturnReportTests/testHongKong`。
 3. **擬實規則下南港島綫、東涌綫大量誤點與丟班**（HK-LATE-RUNS）：不平衡的來源，沒有動。
-4. **6.2 秒卡頓**（STALL-0229）：裝置上沒量。Linux 上作者的存檔、135 版：`deadlockedTrains()` 14 ms、`situationAlerts()` 19 ms、60 倍速 600 tick 共 9.2 秒、最慢一個 tick 165 ms，沒有重現。
-5. **下載的香港地圖包沒被採用**（HK-PACK-INCOMPLETE）：`MapPackDownloads` 的檢查說裝置上那一包少 `airfields.json` 或大小不符；內建那一包 15 個檔都對。和死結無關，沒有往下查（下載的那一包怎麼做出來、怎麼送到裝置還沒看）。
-6. 香港各線的車廠資料（HK-DEPOTS）；簡化規則或沒有閉塞區間時的同一種不平衡（等觸發）。
+4. **6.2 秒卡頓**（§29.18 的 PERF-3D-FIRST 一併記著）：裝置上沒量。Linux 上作者的存檔、135 版：`deadlockedTrains()` 14 ms、`situationAlerts()` 19 ms、60 倍速 600 tick 共 9.2 秒、最慢一個 tick 165 ms，沒有重現。
+5. **下載的香港地圖包沒被採用**（§29.18 的 MAPPACK-FIX，規劃已派，決策 819）：`MapPackDownloads` 的檢查說裝置上那一包少 `airfields.json` 或大小不符；內建那一包 15 個檔都對。和死結無關，沒有往下查（下載的那一包怎麼做出來、怎麼送到裝置還沒看）。
+6. 香港各線的車廠資料（§29.17 的 DEPOT-REAL，等這個 PR 合併後才派）；簡化規則或沒有閉塞區間時的同一種不平衡（等觸發）。
 7. 規劃 05:10、05:20 的訊息要的兩件事：重放作者的存檔做了（上面）；**HEALTH-136 那幾格（機捷有乘客擬實、文湖簡化加管制）沒有重量**，session 停手了。這一招的條件是沒有機廠的路線，台灣的世界碰不到，但沒有用雜湊確認。
 8. 找過什麼：參考庫與外部專案這次都沒有搜尋（修法接在這個專案自己的決策 808 後面）；接手做第 2、3、6 項的人照 CLAUDE.md 先找。

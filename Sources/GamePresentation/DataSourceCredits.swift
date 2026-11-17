@@ -52,6 +52,7 @@ public enum DataSourceCredits {
     static let worldPopURL = "https://www.worldpop.org"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
+    static let worldCoverURL = "https://doi.org/10.5281/zenodo.7254221"
     static let travelSurveyURL = "https://data.gov.tw/dataset/6248"
     static let civilAviationURL = "https://www.caa.gov.tw"
     static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
@@ -152,10 +153,11 @@ public enum DataSourceCredits {
     /// the railways (OpenStreetMap, TDX), the buildings' footprints
     /// (Overture Maps, OpenStreetMap's under the ODbL) and the ground's
     /// heights (Copernicus DEM): the photo, shared away from the game's
-    /// data sources page, names them all.
+    /// data sources page, names them all. Decision 811: and the ground's
+    /// land cover (ESA WorldCover, CC BY 4.0).
     public static func map3DPhoto(realWorld: Bool, in language: DisplayLanguage) -> String {
         guard realWorld else { return "" }
-        return "© OpenStreetMap · Overture Maps · Copernicus DEM · \(language.text("MOTC TDX", "交通部 TDX"))"
+        return "© OpenStreetMap · Overture Maps · Copernicus DEM · © ESA WorldCover · \(language.text("MOTC TDX", "交通部 TDX"))"
     }
 
     /// The Open Government Data License, linked from every source under it.
@@ -880,6 +882,25 @@ public enum DataSourceCredits {
                         notice: "Copernicus DEM GLO-30 (Matsu: GLO-90). Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
                         links: [
                             DataSourceCredit.Link(title: "Copernicus DEM", url: copernicusDEMURL),
+                        ]
+                    ),
+                    // Decision 811: what covers the countryside's ground,
+                    // and where the 3D map's forests have trees; CC BY 4.0
+                    // asks for the project's own credit line.
+                    DataSourceCredit(
+                        id: "esaWorldCover",
+                        title: "ESA WorldCover",
+                        detail: language.text(
+                            "What covers the ground of Taiwan, Penghu, Kinmen and Matsu outside the towns, forest, fields, grassland, bare ground and wetland, on the 3D map, and where its forests have trees.",
+                            "台灣、澎湖、金門與馬祖城鎮以外的地面是森林、農田、草地、裸地還是濕地，畫在 3D 地圖上，森林裡也長出樹。"
+                        ),
+                        notice: language.text(
+                            "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium. ESA WorldCover 10 m 2021 v200, under CC BY 4.0. Simplified for the game.",
+                            "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium。ESA WorldCover 10 m 2021 v200，依 CC BY 4.0 授權使用，為遊戲簡化過。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "ESA WorldCover", url: worldCoverURL),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
                         ]
                     ),
                     // Decision 262: where the large cities' main stations
