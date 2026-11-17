@@ -546,8 +546,9 @@ public struct Map3DStreetLife: Sendable {
     static let fadeShare: Float = 0.15
 
     /// The models' places in ``Map3DModelPack/standard``.
+    /// Decision 820: from ``Map3DModelCatalog``, not waiting for the pack.
     static let models: [Map3DStreetModel: Int] = Dictionary(uniqueKeysWithValues: Map3DStreetModel.allCases.compactMap { model in
-        Map3DModelPack.standard.index(of: model.modelName).map { (model, $0) }
+        Map3DModelCatalog.standard.index(of: model.modelName).map { (model, $0) }
     })
 
     /// The figures' tops: bright and many, as a busy Taiwanese street's.

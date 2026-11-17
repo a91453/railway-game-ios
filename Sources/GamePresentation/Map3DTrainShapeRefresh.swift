@@ -9,16 +9,37 @@ public enum Map3DTrainShapeRefresh {
     public static let highSpeedGlassColor=Map3DColor.shaded(Map3DPalette.glazing,0.5)
     public static let ids = ["refresh-e200", "refresh-700t-cab", "refresh-700t-middle", "refresh-700t-panto", "refresh-700t-tail"]
     public static func model(_ id: String) -> Map3DModelPack.Model { model(id, far: false) }
+    /// Decision 825: the E200's livery, the parts of it a repaint changes.
+    public struct E200Paint: Sendable {
+        public let lower: UInt32, upper: UInt32, line: UInt32, chevron: UInt32, roof: UInt32
+        /// TRA orange (photographs) below, ivory above and on the roof.
+        public static let standard = E200Paint(lower: e200Orange, upper: e200Ivory, line: e200Orange, chevron: e200Ivory,
+                                               roof: e200Roof)
+    }
+    public static let e200Orange = Map3DColor.rgb(0xE8692F)
+    public static let e200Ivory = Map3DColor.rgb(0xE9DCBC)
+    /// The flat of the roof as photographs show it, weathered grey (the
+    /// rounded edges keep the sides' ivory), so from the game's camera the
+    /// orange still reads.
+    public static let e200Roof = Map3DColor.rgb(0xBDB8AA)
+    /// Decision 825: the E200 in `paint`, near or `far`, its front lamps
+    /// not yet lit (``Map3DTrainSet/lit(_:front:)`` lights them).
+    public static func e200(_ paint: E200Paint, far: Bool, named name: String) -> Map3DModelPack.Model {
+        var b = StationKitBuilder()
+        b.refreshElectric(paint: paint, far: far)
+        return .flat(named: name, from: b.mesh)
+    }
     /// `far`: decision 422's light 700T car drawn from 500 m out, made by
     /// this recipe as ``Map3DE500/model(far:)`` is by its own: the same
     /// shell, paint and length on half the sections and fewer nose rings,
     /// each window one flat pane, a door its window,
     /// plain bogies and pantograph, the windscreen in a few flat cells, and
-    /// none of the small fittings. The E200 has none.
+    /// none of the small fittings. Decision 825: and the E200's, as
+    /// ``StationKitBuilder/refreshElectric(paint:far:)`` makes it.
     public static func model(_ id: String, far: Bool) -> Map3DModelPack.Model {
-        let far = far && id != ids[0], name = far ? id + "-far" : id
+        let name = far ? id + "-far" : id
         var b = StationKitBuilder()
-        if id == ids[0] { b.refreshElectric() }
+        if id == ids[0] { b.refreshElectric(far: far) }
         else { b.refreshHighSpeed(cab: id == ids[1] || id == ids[4], panto: id == ids[3], far: far) }
         let m = Map3DModelPack.Model.flat(named: name, from: b.mesh)
         if id == ids[4] {
@@ -89,93 +110,182 @@ extension StationKitBuilder {
         }
         box(x,roof+0.88,0,0.16,1.5,0.07,Self.steel)
     }
-    mutating func refreshElectric() {
+    /// Decision 825: the E200 as the real locomotive (Commons photographs of
+    /// E217, E227 and the reference's garage E200): TRA orange below, ivory
+    /// above and on the roof with an orange line in the ivory along each
+    /// side, an ivory V on each orange face, the two windscreens in black
+    /// rubber frames, the twin headlamps over them, black number plates and
+    /// a black and yellow striped pilot. `paint` is the livery (the Ming-Ri
+    /// repaints it, decision 483); `far`: the light version drawn from 500 m
+    /// out (decision 420's rules: the same shell, paint, lamps and length,
+    /// plain running gear, no small fittings).
+    mutating func refreshElectric(paint: Map3DTrainShapeRefresh.E200Paint = .standard,far: Bool = false) {
         // E200 dimensions from the project's sourced engineering catalog.
-        let half: Float = 8.5245, w: Float = 1.486
-        let profile: [(Float,Float)] = [(1.13,-w),(3.35,-w),(3.92,-1.14),(3.92,1.14),(3.35,w),(1.13,w)]
+        // Black parts black (``Map3DPalette/dark``), not the kit's navy ink.
+        let black = Map3DPalette.dark
+        let half: Float = 8.5245, w: Float = 1.486, floor: Float = 1.13, eave: Float = 3.35, top: Float = 3.92
+        // The side's bands (photographs): orange to 2.50 m, a thin ivory and
+        // a thin orange line, the ivory up to the roof's grey flat.
+        let lowerTop: Float = 2.50, lineBottom: Float = 2.57, lineTop: Float = 2.64
+        let profile: [(Float,Float)] = [(floor,-w),(lowerTop,-w),(lineBottom,-w),(lineTop,-w),(eave,-w),(top,-1.14),
+                                        (top,1.14),(eave,w),(lineTop,w),(lineBottom,w),(lowerTop,w),(floor,w)]
+        let bands = [paint.lower,paint.upper,paint.line,paint.upper,paint.upper,paint.roof,
+                     paint.upper,paint.upper,paint.line,paint.upper,paint.lower,black]
+        // The cab roof raked back 0.18 m over the windscreens.
         let rings = [-half,-half+0.42,half-0.42,half].map { x in
-            profile.map { h,z in Map3DPoint(x.sign == .minus ? x + (h>3.35 ? 0.18:0) : x - (h>3.35 ? 0.18:0),h,z) }
+            profile.map { h,z in Map3DPoint(x.sign == .minus ? x + (h>eave ? 0.18:0) : x - (h>eave ? 0.18:0),h,z) }
         }
         let inside = Map3DPoint(0,2.5,0)
         for k in 0..<3 { for i in profile.indices {
             let j=(i+1)%profile.count
-            face([rings[k][i],rings[k][j],rings[k+1][j],rings[k+1][i]],inside:inside,color:i==5 ? Self.ink:refreshWhite)
+            face([rings[k][i],rings[k][j],rings[k+1][j],rings[k+1][i]],inside:inside,color:bands[i])
         } }
-        for k in [0,3] {
-            face([rings[k][0],rings[k][1],rings[k][4],rings[k][5]],inside:inside,color:refreshWhite)
-            face([rings[k][1],rings[k][2],rings[k][3],rings[k][4]],inside:inside,color:refreshWhite)
-        }
-        for sign: Float in [-1,1] { box(sign*(half+0.008),1.13,0,0.018,2*w,1.62,refreshTeal) }
-        box(0,0.99,0,16.8,2.65,0.14,Self.ink)
-        refreshRunning([-5.1,5.1],axles:[-1.5,0,1.5],radius:0.51,gauge:1.067)
         for s: Float in [-1,1] {
-            box(0,1.15,s*1.482,16.15,0.02,1.42,refreshTeal)
-            box(0,2.64,s*1.486,16.15,0.022,0.055,refreshTeal)
-            for x: Float in [-7.2,7.2] {
-                box(x,1.3,s*1.49,0.63,0.018,2.05,Map3DPalette.tankWhite)
-                box(x,2.65,s*1.502,0.44,0.012,0.57,refreshGlass)
-                box(x+(x>0 ? 0.65:-0.65),2.73,s*1.49,0.84,0.02,0.59,refreshGlass)
-            }
-            // Photo shows broad smooth side panels; vents belong on the roof.
-            for x: Float in [-5.9,0,5.9] {
-                box(x,1.35,s*1.493,0.025,0.014,2.0,Self.steel)
-                for h: Float in [1.62,2.16,2.74,3.15] { box(x, h,s*1.502,0.06,0.018,0.055,Self.ink) }
-            }
             let x=s*half
-            // Two front windows; face panel is almost upright below shoulder.
-            for z: Float in [-0.68,0.68] {
-                let outline=refreshRoundedOutline(x:z,y:3.285,width:1.16,height:0.65,radius:0.075)
+            // The face: orange, the ivory V from the side's line down to a
+            // point at the middle, ivory from under the windscreens up.
+            let vTopCorner: Float = 2.50, vBottomCorner: Float = 2.30, vTopMiddle: Float = 1.92, vBottomMiddle: Float = 1.70
+            for side: Float in [-1,1] {
+                func p(_ z: Float,_ h: Float) -> Map3DPoint { Map3DPoint(x,h,side*z) }
+                face([p(0,floor),p(w,floor),p(w,vBottomCorner),p(0,vBottomMiddle)],inside:inside,color:paint.lower)
+                face([p(0,vBottomMiddle),p(w,vBottomCorner),p(w,vTopCorner),p(0,vTopMiddle)],inside:inside,color:paint.chevron)
+                face([p(0,vTopMiddle),p(w,vTopCorner),p(w,lineTop),p(0,lineTop)],inside:inside,color:paint.lower)
+                face([p(0,lineTop),p(w,lineTop),p(w,eave),p(0,eave)],inside:inside,color:paint.upper)
+            }
+            let r=s<0 ? 0:3
+            face([rings[r][4],rings[r][5],rings[r][6],rings[r][7]],inside:inside,color:paint.upper)
+            // Two windscreens, each in a black rubber frame, raked with the
+            // roof above the eave.
+            func raked(_ outline: [(Float,Float)],proud: Float,thickness: Float,color: UInt32) {
                 for upper in [false,true] {
                     var clipped: [(Float,Float)]=[]
                     for i in outline.indices {
                         let a=outline[i],b=outline[(i+1)%outline.count]
-                        let ia=upper ? a.1>=3.35:a.1<=3.35,ib=upper ? b.1>=3.35:b.1<=3.35
+                        let ia=upper ? a.1>=eave:a.1<=eave,ib=upper ? b.1>=eave:b.1<=eave
                         if ia { clipped.append(a) }
-                        if ia != ib { let t=(3.35-a.1)/(b.1-a.1);clipped.append((a.0+(b.0-a.0)*t,3.35)) }
+                        if ia != ib { let t=(eave-a.1)/(b.1-a.1);clipped.append((a.0+(b.0-a.0)*t,eave)) }
                     }
-                    let p=clipped.map { lateral,h in Map3DPoint(x-s*max(0,h-3.35)*0.18/0.57+s*0.022,h,lateral) }
-                    refreshPanel(p,thickness:0.025,color:refreshGlass)
+                    guard clipped.count>=3 else { continue }
+                    let q=clipped.map { lateral,h in Map3DPoint(x-s*max(0,h-eave)*0.18/0.57+s*proud,h,lateral) }
+                    refreshPanel(q,thickness:thickness,color:color)
                 }
             }
-            box(x-s*0.12,3.70,0,0.24,0.62,0.18,Self.steel)
+            for z: Float in [-0.68,0.68] {
+                if far {
+                    raked([(z-0.62,2.93),(z+0.62,2.93),(z+0.62,3.64),(z-0.62,3.64)],proud:0.012,thickness:0.012,color:black)
+                    raked([(z-0.58,2.96),(z+0.58,2.96),(z+0.58,3.61),(z-0.58,3.61)],proud:0.026,thickness:0.025,color:refreshGlass)
+                } else {
+                    raked(refreshRoundedOutline(x:z,y:3.285,width:1.26,height:0.75,radius:0.11),proud:0.012,thickness:0.012,color:black)
+                    raked(refreshRoundedOutline(x:z,y:3.285,width:1.16,height:0.65,radius:0.075),proud:0.026,thickness:0.025,color:refreshGlass)
+                }
+            }
+            // The headlamps' housing on the cab roof and its twin lamps.
+            box(x-s*0.12,3.70,0,0.24,0.62,0.18,paint.upper)
             for z: Float in [-0.15,0.15] {
-                civicTube(Map3DPoint(x-s*0.01,3.79,z),Map3DPoint(x+s*0.035,3.79,z),radius:0.095,color:Map3DPalette.tunnelLamp,sides:12)
+                civicTube(Map3DPoint(x-s*0.01,3.79,z),Map3DPoint(x+s*0.035,3.79,z),radius:0.095,color:Map3DPalette.tunnelLamp,sides:far ? 8:12)
             }
-            for z: Float in [-1,1] {
-                beam(Map3DPoint(x+s*0.02,2.66,z*1.35),Map3DPoint(x+s*0.02,1.91,0),0.065,refreshWhite)
+            // The number plates under the windscreens.
+            for z: Float in [-0.68,0.68] { box(x+s*0.015,2.30,z,0.03,0.46,0.17,black) }
+            // The pilot: black, its face striped yellow in a V like the
+            // body's, the coupler in the middle.
+            let pilotBottom: Float = 0.45, pilotTop: Float = 1.11, pilotHalf: Float = 1.30
+            box(x+s*0.0,pilotBottom,0,0.11,2*pilotHalf,pilotTop-pilotBottom,black)
+            let front=x+s*0.067, period: Float = 0.28, slope: Float = 1.0
+            for side: Float in [-1,1] {
+                let rectangle: [(Float,Float)]=[(0,pilotBottom),(pilotHalf,pilotBottom),(pilotHalf,pilotTop),(0,pilotTop)]
+                func clip(_ input: [(Float,Float)],_ edge: Float,_ keepAbove: Bool) -> [(Float,Float)] {
+                    var output: [(Float,Float)]=[]
+                    func score(_ p: (Float,Float)) -> Float { (p.1-slope*p.0)/period-edge }
+                    for i in input.indices {
+                        let a=input[i],b=input[(i+1)%input.count],fa=score(a),fb=score(b)
+                        let insideA=keepAbove ? fa>=0:fa<=0,insideB=keepAbove ? fb>=0:fb<=0
+                        if insideA { output.append(a) }
+                        if insideA != insideB { let t=fa/(fa-fb);output.append((a.0+(b.0-a.0)*t,a.1+(b.1-a.1)*t)) }
+                    }
+                    return output
+                }
+                let low=Int(((pilotBottom-slope*pilotHalf)/period).rounded(.down)),high=Int((pilotTop/period).rounded(.up))
+                for band in low...high where band.isMultiple(of:2) {
+                    let q=clip(clip(rectangle,Float(band),true),Float(band)+0.5,false)
+                    guard q.count>=3 else { continue }
+                    face(q.map { Map3DPoint(front,$0.1,side*$0.0) },inside:Map3DPoint(x,0.8,0),color:Map3DG12.hazard)
+                }
             }
-            box(x,0.54,0,0.11,2.55,0.48,Self.steel)
-            box(x+s*0.15,0.83,0,0.44,0.34,0.22,Self.ink)
+            box(x+s*0.15,0.83,0,0.44,0.34,0.22,black)
+            if !far {
+                // Marker lamps at the face's top corners, and the round
+                // lamp housings low at its corners.
+                for z: Float in [-1.22,1.22] {
+                    civicTube(Map3DPoint(x,3.62,z),Map3DPoint(x+s*0.03,3.62,z),radius:0.06,color:Self.steel,sides:8)
+                    civicTube(Map3DPoint(x,1.42,z*0.95),Map3DPoint(x+s*0.04,1.42,z*0.95),radius:0.10,color:black,sides:8)
+                }
+            }
+            // The cab doors' seams and windows, the cab's side windows.
+            for side: Float in [-1,1] {
+                let dx=x-s*1.32, out=side*(w+0.006)
+                if !far {
+                    for edge: Float in [-0.315,0.315] { box(dx+edge,1.30,out,0.03,0.012,2.0,black) }
+                    box(dx,3.27,out,0.66,0.012,0.03,black)
+                }
+                box(dx,2.65,side*(w+0.017),0.44,0.012,0.57,refreshGlass)
+                box(dx+s*0.65,2.73,side*(w+0.018),0.84,0.012,0.59,refreshGlass)
+            }
         }
-        for x: Float in [-4.8,4.8] { refreshPanto(x,roof:3.92,singleArm:true) }
+        box(0,0.99,0,16.8,2.65,0.14,black)
+        if far {
+            // Two bogies, three axles each, plain.
+            for x: Float in [-5.1,5.1] {
+                box(x,0.40,0,3.9,2.0,0.58,black)
+                for dx: Float in [-1.5,0,1.5] { for side: Float in [-1,1] {
+                    civicTube(Map3DPoint(x+dx,0.51,side*0.98),Map3DPoint(x+dx,0.51,side*1.10),radius:0.51,color:Map3DStreetModel.tyre,sides:8)
+                } }
+            }
+            box(0,0.38,0,4.9,1.95,0.59,Self.steel)
+            // Each pantograph as one arm, its head as high as the near
+            // one's, so the far car keeps the near car's box.
+            for x: Float in [-4.8,4.8] {
+                box(x,top,0,1.8,1.15,0.12,Self.steel)
+                beam(Map3DPoint(x-0.6,top+0.12,0),Map3DPoint(x+0.05,top+0.88,0),0.07,black)
+                box(x,top+0.88,0,0.16,1.5,0.07,Self.steel)
+            }
+            box(1.72,top,0,3.85,1.88,0.14,Self.steel)
+            box(1.72,top+0.14,0,3.58,1.55,0.23,paint.roof)
+            return
+        }
+        refreshRunning([-5.1,5.1],axles:[-1.5,0,1.5],radius:0.51,gauge:1.067)
+        for s: Float in [-1,1] {
+            // Panel seams down each side, the orange body otherwise smooth.
+            for x: Float in [-5.9,0,5.9] { box(x,1.35,s*(w+0.006),0.025,0.012,2.0,Map3DColor.shaded(paint.lower,0.7)) }
+        }
+        for x: Float in [-4.8,4.8] { refreshPanto(x,roof:top,singleArm:true) }
         // E201 source study: asymmetric roof equipment, rebuilt in simple solids.
         // Its source mesh/texture is not copied and its dimensions are not used.
-        box(1.72,3.92,0,3.85,1.88,0.14,Self.steel)
-        box(1.72,4.06,0,3.58,1.55,0.23,refreshWhite)
+        box(1.72,top,0,3.85,1.88,0.14,Self.steel)
+        box(1.72,top+0.14,0,3.58,1.55,0.23,paint.roof)
         for side: Float in [-1,1] { for i in 0..<3 {
-            box(0.55+Float(i)*1.14,4.11,side*0.786,1.00,0.025,0.14,Self.ink)
+            box(0.55+Float(i)*1.14,4.11,side*0.786,1.00,0.025,0.14,black)
             for j in 0..<4 { box(0.55+Float(i)*1.14,4.12+Float(j)*0.033,side*0.804,0.94,0.012,0.009,Self.steel) }
         } }
         for x: Float in [-7.45,7.45] {
-            box(x,3.92,0,0.9,1.3,0.18,refreshWhite)
-            cylinder(x,4.10,0,radius:0.43,height:0.035,color:Self.ink,sides:16)
+            box(x,top,0,0.9,1.3,0.18,paint.roof)
+            cylinder(x,4.10,0,radius:0.43,height:0.035,color:black,sides:16)
             for j in -2...2 { box(x+Float(j)*0.14,4.14,0,0.025,0.70,0.018,Self.steel) }
         }
         for lateral: Float in [-0.47,0.47] {
-            box(-2.15,3.92,lateral,2.75,0.28,0.10,Self.steel)
+            box(-2.15,top,lateral,2.75,0.28,0.10,Self.steel)
             for i in 0..<9 { cylinder(-3.2+Float(i)*0.26,4.02,lateral,radius:0.10,height:0.19,color:refreshWhite,sides:8) }
         }
         for sign: Float in [-1,1] { for x: Float in [-7.15,7.15] {
             for j in 0..<3 { box(x,0.56+Float(j)*0.22,sign*1.39,0.64,0.24,0.07,Self.steel) }
-            for dx: Float in [-0.30,0.30] { beam(Map3DPoint(x+dx,0.55,sign*1.4),Map3DPoint(x+dx,1.3,sign*1.4),0.045,Self.ink) }
+            for dx: Float in [-0.30,0.30] { beam(Map3DPoint(x+dx,0.55,sign*1.4),Map3DPoint(x+dx,1.3,sign*1.4),0.045,black) }
         } }
         box(0,0.38,0,4.9,1.95,0.59,Self.steel)
-        for side: Float in [-1,1] { for j in 0..<9 { box(-2.1+Float(j)*0.52,0.52,side*0.987,0.33,0.025,0.27,Self.ink) } }
+        for side: Float in [-1,1] { for j in 0..<9 { box(-2.1+Float(j)*0.52,0.52,side*0.987,0.33,0.025,0.27,black) } }
         for x: Float in [-3.45,3.45] {
-            cylinder(x,3.92,0,radius:0.16,height:0.43,color:refreshWhite,sides:10)
+            cylinder(x,top,0,radius:0.16,height:0.43,color:refreshWhite,sides:10)
             for j in 0..<4 { cylinder(x,4.00+Float(j)*0.085,0,radius:0.20,height:0.035,color:Self.steel,sides:10) }
         }
-        beam(Map3DPoint(-4.8,4.17,0.43),Map3DPoint(4.8,4.17,0.43),0.04,Self.ink)
+        beam(Map3DPoint(-4.8,4.17,0.43),Map3DPoint(4.8,4.17,0.43),0.04,black)
     }
     mutating func refreshHighSpeed(cab: Bool,panto: Bool,far: Bool = false) {
         let hsrBody=Map3DTrainShapeRefresh.highSpeedBodyColor

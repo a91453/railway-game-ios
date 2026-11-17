@@ -83,9 +83,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // and mid-stride, after Hong Kong's vehicles (2 models, 1,728
         // vertices more, 69 KB a copy). Decision 794: the winter event's
         // trees, near and far, and lights after it (5 models, 6,516
-        // vertices more, 261 KB a copy).
+        // vertices more, 261 KB a copy). Decision 825: the E200 drawn from
+        // photographs, its far version its own (23,832 vertices fewer, 953
+        // KB a copy).
         XCTAssertEqual(models.count, 903)
-        XCTAssertEqual(vertices, 6_608_676)
+        XCTAssertEqual(vertices, 6_584_844)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

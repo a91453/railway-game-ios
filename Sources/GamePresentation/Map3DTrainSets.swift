@@ -145,7 +145,8 @@ public struct Map3DTrainSet: Sendable {
             // has no light model but the E500's, is the same).
             // Decision 408: the E200 as #1201's, its front lamps lit.
             hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang),
-            hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang, far: true),
+            // Decision 825: from 500 m out the E200's own light version.
+            hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200", far: true), front: true) }, coach: chuKuang, far: true),
             e500Hauled("E500CK", coach: chuKuang),
             e500Hauled("E500CK", far: true, coach: chuKuang),
             r100Hauled(),
@@ -385,10 +386,12 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
     /// Decision 782: and the registered trains' sets with a far set.
+    /// Decision 825: and the DR1000 railcar and the DR3100 (their far
+    /// sets, decision 511), left out until then.
     static let nearOnly: Set<String> = Set(Map3DTrainRegistry.sets.filter { $0.far != nil }.map(\.key)).union(["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
-                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
+                                "HAIFENG", "SHANLAN", "dieselRailcar", "dieselExpress", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -949,8 +952,8 @@ public struct Map3DTrainSet: Sendable {
     /// (#1201's E200, its front lamps lit, and #1306's automatic-door
     /// coaches) painted in ``TrainLivery/mingRi``'s black and orange
     /// (``Map3DE200MingriStyle``), laid as the E200CK (no own lengths), the
-    /// last coach's end lit red. `far`: the light coaches, the same E200
-    /// (it has no light model).
+    /// last coach's end lit red. `far`: the light coaches and, decision 825,
+    /// the E200's light version.
     static func mingRi(far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? "MINGRIFar" : "MINGRI", far: far ? nil : "MINGRIFar") {
             Cars(head: Map3DE200MingriStyle.model(.head, far: far), middle: Map3DE200MingriStyle.model(.car, far: far),

@@ -361,7 +361,7 @@ final class RealRailwaysTests: XCTestCase {
                 "tdx", "realBuses", "realCoaches", "traOpenData", "nlsc", "openStreetMap",
                 "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "esaWorldCover", "wikidata", "worldUrbanizationProspects",
-                "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks",
+                "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
                 "proceduralTokyo", "polyHaven", "runningSound", "dieselSound", "motorSound", "weatherSound",
                 // Decision 712: Hong Kong's, open since its third pull request.
                 "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongBuildings", "hongKongPeople", "hongKongAirport",

@@ -805,11 +805,12 @@ extension Map3DScene.Builder {
     /// ``Map3DModelPack/standard``, by the road they face (each placed as
     /// it shows while the lights do not change).
     static let hongKongSignals: [Map3DSignalTiming.Road: Int] = Dictionary(uniqueKeysWithValues: [Map3DSignalTiming.Road.main, .cross].compactMap { road in
-        Map3DModelPack.standard.index(of: Map3DHongKongSignal.placedName(road)).map { (road, $0) }
+        Map3DModelCatalog.standard.index(of: Map3DHongKongSignal.placedName(road)).map { (road, $0) }
     })
 
     /// Decision 445: the pedestrian signals' models in ``Map3DModelPack/standard``.
-    static let walkModels = Map3DPedestrianSignal.Models(pack: .standard)
+    /// Decision 820: from ``Map3DModelCatalog``, not waiting for the pack.
+    static let walkModels = Map3DPedestrianSignal.Models(index: Map3DModelCatalog.standard.index(of:))
 
     /// How far apart the bus stops are along a road (vending machines
     /// alone along a smaller one), in metres; `nil` for none. Taiwan's city

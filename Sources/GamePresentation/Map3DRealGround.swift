@@ -721,8 +721,9 @@ extension Map3DScene.Builder {
     static let lampPoolStrength: Float = 0.55
 
     /// The models' places in ``Map3DModelPack/standard``.
+    /// Decision 820: from ``Map3DModelCatalog``, not waiting for the pack.
     static let propModels: [Map3DProp: Int] = Dictionary(uniqueKeysWithValues: Map3DProp.allCases.compactMap { prop in
-        Map3DModelPack.standard.index(of: prop.modelName).map { (prop, $0) }
+        Map3DModelCatalog.standard.index(of: prop.modelName).map { (prop, $0) }
     })
 
     /// Trees, lights and poles along `map`'s roads (not on ramps, nor
