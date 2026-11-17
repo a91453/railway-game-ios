@@ -94,9 +94,10 @@ public enum WinterEvent {
 public struct WinterMissionFacts: Hashable, Sendable {
     /// The stations a running passenger line calls at after 18:00.
     public var stationsLitAtNight = 0
-    /// Whether a running passenger line runs from 17:00 to 22:00 with at
-    /// least ``WinterMission/marketTrains`` trains.
-    public var hasEveningMarketLine = false
+    /// The most trains a running passenger line calling at the
+    /// Christmas market (``WinterMarket``) sends out from 17:00 to 22:00,
+    /// one way: the trains it runs over its round trip, hour by hour.
+    public var eveningMarketDepartures: Int64 = 0
     /// The riders of the day just ended.
     public var yesterdayRiders: Int64 = 0
     /// Whether a running passenger line wears the Christmas livery.
@@ -112,32 +113,83 @@ public struct WinterMissionFacts: Hashable, Sendable {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         yesterdayRiders = world.accounts.days.first { $0.day == today - 1 }?.fareTrips ?? 0
         var lit: Set<StationID> = []
+        let market = WinterMarket.stations(in: world)
         for line in world.lines where !line.isFreight && !line.assignedTrains.isEmpty {
             let runsAfter: (Int) -> Bool
-            let covers: (Int, Int) -> Bool
             switch line.window {
             case .allDay:
                 runsAfter = { _ in true }
-                covers = { _, _ in true }
-            case .hours(let open, let close):
+            case .hours(_, let close):
                 runsAfter = { close > $0 }
-                covers = { open <= $0 && close >= $1 }
             }
             if runsAfter(Self.nightStarts) { lit.formUnion(line.stops) }
-            if covers(Self.marketOpens, Self.marketCloses), line.assignedTrains.count >= WinterMission.marketTrains {
-                hasEveningMarketLine = true
+            if market.map({ !$0.isDisjoint(with: line.stops) }) ?? true {
+                eveningMarketDepartures = max(eveningMarketDepartures, Self.eveningDepartures(of: line, in: world))
             }
-            if runsAfter(Int(GameTime.minutesPerDay)) { hasLineAfterMidnight = true }
+            // L23 P3-1 (decision 814): a train at 00:00, whether its
+            // hours run past midnight or open at it.
+            if line.window.contains(minuteOfDay: 0) { hasLineAfterMidnight = true }
             if liveried.contains(line.id) { hasLiveriedLineRunning = true }
         }
         stationsLitAtNight = lit.count
     }
 
     /// 18:00, when the stations' lights count; 17:00 to 22:00, the
-    /// market's evening (minutes of the day).
+    /// market's evening (hours of the day).
     static let nightStarts = 18 * 60
-    static let marketOpens = 17 * 60
-    static let marketCloses = 22 * 60
+    static let marketHours = 17..<22
+
+    /// The trains `line` sends out one way over the market's evening: in
+    /// each hour it is open, the trains it runs then (no more than it has)
+    /// over its round trip, rounded down at the end.
+    static func eveningDepartures(of line: ServiceLine, in world: GameWorld) -> Int64 {
+        guard let roundTrip = world.lineJourney(line.id)?.roundTripMinutes, roundTrip > 0 else { return 0 }
+        var trips = 0.0
+        for hour in marketHours {
+            guard let level = world.serviceLevel(of: line.id, at: GameTime(minutes: Int64(hour * 60))) else { continue }
+            let trains = min(line.assignedTrains.count, world.lineTrainsInService(line.id, at: level) ?? 0)
+            trips += 60 * Double(trains) / Double(roundTrip)
+        }
+        return Int64(trips + 1e-9)
+    }
+}
+
+/// Week 2's Christmas market (decision 814; the plan's §2.4): New Taipei's
+/// Christmasland on Banqiao's civic square, or Tsim Sha Tsui's waterfront,
+/// on a map that holds one (the plazas of ``Map3DWinterLights``); on any
+/// other map its middle, the place with the most jobs.
+public enum WinterMarket {
+    /// The plazas a market may be at, by ``Map3DWinterLights/Plaza/name``.
+    static let plazaNames: Set<String> = ["banqiao", "tsim-sha-tsui"]
+
+    /// Where the market is in `world`, or `nil` on a map with no plaza
+    /// and no jobs.
+    public static func place(in world: GameWorld) -> PlanPoint? {
+        if let frame = RealWorldFrame(world: world) {
+            let region = WorldRegion(bounds: world.bounds)
+            for plaza in Map3DWinterLights.plazas where plazaNames.contains(plaza.name) {
+                let at = frame.worldPosition(latitude: plaza.latitude, longitude: plaza.longitude)
+                if (region.minX...region.maxX).contains(at.x), (region.minY...region.maxY).contains(at.y) {
+                    return PlanPoint(x: Int64(at.x.rounded()), y: Int64(at.y.rounded()))
+                }
+            }
+        }
+        // The first of the busiest cells, in the land's own order.
+        guard let busiest = world.land.cells.max(by: { $0.jobs < $1.jobs }), busiest.jobs > 0 else { return nil }
+        return busiest.middle
+    }
+
+    /// The stations within a station's reach (``Land/catchmentRadius``)
+    /// of the market, or `nil` when `world` has none: then any line will
+    /// do.
+    static func stations(in world: GameWorld) -> Set<StationID>? {
+        guard let place = place(in: world) else { return nil }
+        let reach = Double(Land.catchmentRadius)
+        return Set(world.stations.filter { station in
+            let dx = Double(station.location.x - place.x), dy = Double(station.location.y - place.y)
+            return dx * dx + dy * dy <= reach * reach
+        }.map(\.id))
+    }
 }
 
 /// One week's mission (decision 788; the plan's §2.4). Its numbers are the
@@ -170,19 +222,12 @@ public struct WinterMission: Identifiable, Hashable, Sendable {
     /// good (the fourth week's).
     public var unlocksLivery: Bool { id == "christmasEve" }
 
-    /// The SF Symbol standing in for the badge until its drawing is made.
-    public var placeholderSymbol: String {
-        switch id {
-        case "lights": "lightbulb.fill"
-        case "market": "basket.fill"
-        case "arctic": "snowflake"
-        case "christmasEve": "gift.fill"
-        default: "sparkles"
-        }
-    }
+    /// The badge's drawing in the app's asset catalog (decision 814):
+    /// `WinterBadge-<id>`, a medal on the winter night's navy.
+    public var badgeImageName: String { "WinterBadge-\(id)" }
 
     static let litStations: Int64 = 3
-    static let marketTrains = 2
+    static let marketDepartures: Int64 = 6
     static let santaRiders: Int64 = 1_000
 
     public static let all: [WinterMission] = [
@@ -195,10 +240,10 @@ public struct WinterMission: Identifiable, Hashable, Sendable {
         ),
         WinterMission(
             id: "market", week: 2,
-            english: ("Christmas Market Specials", "Run a line from 17:00 to 22:00 with at least \(marketTrains) trains.", "Market"),
-            chinese: ("聖誕市集專車", "讓一條路線 17:00 到 22:00 都營運，而且至少有 \(marketTrains) 列車。", "市集"),
-            progress: { _ in nil },
-            test: \.hasEveningMarketLine
+            english: ("Christmas Market Specials", "Run a line to the Christmas market (Banqiao, Tsim Sha Tsui or the city centre) with \(marketDepartures) trains out between 17:00 and 22:00.", "Market"),
+            chinese: ("聖誕市集專車", "讓一條路線連到聖誕市集（板橋、尖沙咀或市中心），17:00 到 22:00 開出 \(marketDepartures) 班以上。", "市集"),
+            progress: { ($0.eveningMarketDepartures, marketDepartures) },
+            test: { $0.eveningMarketDepartures >= marketDepartures }
         ),
         WinterMission(
             id: "arctic", week: 3,
