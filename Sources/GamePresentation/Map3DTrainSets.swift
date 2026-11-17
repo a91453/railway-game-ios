@@ -385,10 +385,12 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
     /// Decision 782: and the registered trains' sets with a far set.
+    /// Decision 825: and the DR1000 railcar and the DR3100 (their far
+    /// sets, decision 511), left out until then.
     static let nearOnly: Set<String> = Set(Map3DTrainRegistry.sets.filter { $0.far != nil }.map(\.key)).union(["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
-                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
+                                "HAIFENG", "SHANLAN", "dieselRailcar", "dieselExpress", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the

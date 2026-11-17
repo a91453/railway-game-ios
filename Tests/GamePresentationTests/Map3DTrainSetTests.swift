@@ -329,7 +329,10 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.reach(of: "EMU3000"),Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
-        for key in ["", "dieselExpress", "puyumaFar", "metroGeneric"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        for key in ["", "puyumaFar", "metroGeneric"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        // Decision 825: the DR1000 and DR3100 have far sets (decision 511),
+        // so they are drawn as them from 500 m, not as their near cars to 900 m.
+        for key in ["dieselExpress", "dieselRailcar"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrainSet.tramReach, key) }
         // Decision 461: the player's metro is the C381 now, its far set from 500 m.
         XCTAssertEqual(Map3DTrainSet.reach(of: "B"), Map3DTrainSet.tramReach)
         // Decision 426: the Puyuma, ten thousand triangles a set, like the Taroko.
