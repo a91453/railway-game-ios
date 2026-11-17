@@ -162,14 +162,14 @@ private final class TutorialJourney {
 
         arrive(at: 6)
         check(map: firstStation, "the first station's place on the track")
-        tap(firstStation)
+        tap(firstStation, movingOnTo: 7)
 
         arrive(at: 7)
         tapConfirm("the ✓ that builds the first station")
 
         arrive(at: 8)
         check(map: secondStation, "the second station's place on the track")
-        tap(secondStation)
+        tap(secondStation, movingOnTo: 9)
 
         arrive(at: 9)
         tapConfirm("the ✓ that builds the second station")
@@ -532,6 +532,34 @@ private final class TutorialJourney {
     private func tap(_ point: CGPoint) {
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).tap()
         Thread.sleep(forTimeInterval: 0.5)
+    }
+
+    /// Taps the map at `point`, which moves the tutorial on to step
+    /// `next`, once more only if the touch was lost. The system can cancel
+    /// a tap on the map before the app acts on it (136's full lane, run
+    /// 43998599964: the app's trace has "touch began at (352, 274) view
+    /// MapGestureView", then "touch cancelled" 180 ms later, with nothing
+    /// over the point in the recording), and no station is placed. A
+    /// cancelled touch is no tap: tapped again while the step is still the
+    /// one before `next` and the point is still clear. A tap that placed
+    /// the station has moved the step on, so a second never comes.
+    private func tap(_ point: CGPoint, movingOnTo next: Int) {
+        tap(point)
+        if !shows(next, within: 10), shownStep() == step, coveringCard(CGRect(x: point.x - 12, y: point.y - 12, width: 24, height: 24)) == nil {
+            print("Step \(step): the tap at \(point) did not move the tutorial on to step \(next); tapping once more")
+            tap(point)
+        }
+    }
+
+    /// Whether step `number` is shown, on the card or its folded pill,
+    /// within `timeout`; fails nothing.
+    private func shows(_ number: Int, within timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if shownStep() == number { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        return false
     }
 
     // MARK: - Failures
