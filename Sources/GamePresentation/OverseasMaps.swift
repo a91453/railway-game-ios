@@ -254,10 +254,13 @@ public struct OverseasGround: Sendable {
 extension GameWorld {
     /// A new game on a city's map (decision 712): ``newGame(anchor:bounds:balance:eventSeed:land:)``
     /// over `ground`, its land read in as it is needed, as the whole of
-    /// Taiwan's (``newWholeTaiwanGame(balance:eventSeed:)``).
+    /// Taiwan's (``newWholeTaiwanGame(balance:eventSeed:)``). Decision
+    /// 828: with far demand on, so a city's far stations draw less of its
+    /// trips than its near ones.
     public static func newOverseasGame(_ ground: OverseasGround, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
         var world = newGame(anchor: ground.anchor, bounds: ground.bounds, balance: balance, eventSeed: eventSeed, land: [])
         world.setLandOnDemand()
+        world.setFarDemand(true)
         return world
     }
 }

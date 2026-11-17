@@ -85,6 +85,13 @@ public struct RealBranchLine: Hashable, Sendable {
         return Map3DRealTrains.rightHand.contains(network == "trtc" ? "mrt" : network)
     }
 
+    /// Decision 828: whether the line bought as `realLine` runs on the
+    /// state's track (``LineAcquisition/stateTrack``): Finland's, whose
+    /// track the state keeps and lets VR's trains run on.
+    static func runsOnStateTrack(realLine: String) -> Bool {
+        realLine.hasPrefix("vr:")
+    }
+
     /// Whether it is laid with a second track beside the first.
     /// Decision 603: every light rail and metro but those in
     /// ``singleTrackUrban``, laid on one track as the real ones are.
@@ -1944,30 +1951,40 @@ extension RealLineLaying {
         let standing = Set(world.network.edges.map(\.id))
         var nodes: [[TrackNodeID]] = []
         var edges: [[TrackEdgeID]] = []
-        for piece in acquisition.pieces {
-            try world.readGround(under: piece.ground, from: heights)
-            var ids: [TrackNodeID] = []
-            for (index, position) in piece.nodes.enumerated() {
-                if index == 0, let start = piece.start {
-                    ids.append(nodes[start.piece][start.node])
-                } else if index == piece.nodes.count - 1, let end = piece.end {
-                    ids.append(nodes[end.piece][end.node])
+        func lay(_ world: inout GameWorld) throws(GameError) {
+            for piece in acquisition.pieces {
+                try world.readGround(under: piece.ground, from: heights)
+                var ids: [TrackNodeID] = []
+                for (index, position) in piece.nodes.enumerated() {
+                    if index == 0, let start = piece.start {
+                        ids.append(nodes[start.piece][start.node])
+                    } else if index == piece.nodes.count - 1, let end = piece.end {
+                        ids.append(nodes[end.piece][end.node])
+                    } else {
+                        ids.append(try world.buildTrackNode(at: position))
+                    }
+                }
+                if piece.together {
+                    edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
+                        TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure)
+                    }))
                 } else {
-                    ids.append(try world.buildTrackNode(at: position))
+                    var built: [TrackEdgeID] = []
+                    for (index, curve) in piece.curves.enumerated() {
+                        built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure))
+                    }
+                    edges.append(built)
                 }
+                nodes.append(ids)
             }
-            if piece.together {
-                edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
-                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure)
-                }))
-            } else {
-                var built: [TrackEdgeID] = []
-                for (index, curve) in piece.curves.enumerated() {
-                    built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure))
-                }
-                edges.append(built)
-            }
-            nodes.append(ids)
+        }
+        // Decision 828: the state pays for the track of a line on its
+        // track, so its price is the stations, depots and trains.
+        let stateTrack = RealBranchLine.runsOnStateTrack(realLine: acquisition.realLine)
+        if stateTrack {
+            try world.layStateTrack(lay)
+        } else {
+            try lay(&world)
         }
         /// The edge `at` is on and how far along it.
         func edge(_ at: RealLineAcquisition.PieceAt) throws(GameError) -> (TrackEdgeID, Int64) {
@@ -2079,7 +2096,7 @@ extension RealLineLaying {
             let laid = world.network.edges.map(\.id).filter { !standing.contains($0) }
             try world.recordLineAcquisition(
                 line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders, tier: acquisition.tier ?? .branch,
-                track: laid.isEmpty ? nil : laid
+                track: laid.isEmpty ? nil : laid, stateTrack: stateTrack
             )
         }
         return RealLineAcquisitionPrice(

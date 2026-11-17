@@ -17,6 +17,11 @@ import XCTest
 /// its own game, then both in one, with NT$1,000 million in the bank so the
 /// cash never runs short; the price is set against what a standard opening
 /// can reach (its cash and the most it may borrow).
+///
+/// Decision 828: `ROVANIEMI_ONLY=vr:MUL+vr:KJA` plays only those purchases,
+/// in that order; `ROVANIEMI_CITY=hk` plays Hong Kong's map instead
+/// (`hkmtr:SIL` and `hkmtr:TCL` without `ROVANIEMI_ONLY`), and
+/// `ROVANIEMI_FAR_OFF=1` turns far demand off, as before decision 828.
 @MainActor
 final class RovaniemiReportTests: XCTestCase {
     private static let checkpoints: Set<Int> = [1, 2, 3, 4, 5, 6, 7, 14, 30, 60, 90, 180, 360]
@@ -37,14 +42,16 @@ final class RovaniemiReportTests: XCTestCase {
             "| --- | --: | --: | --: | --: | --: | --: |",
         ]
         var trace = [
-            "| Bought | Day | Trips | Fares | Operating profit | Each line: boardings, departures | Deadlock minutes (first) |",
-            "| --- | --: | --: | --: | --: | --- | --- |",
+            "| Bought | Day | Trips | Fares | Operating profit | Each line: boardings, departures | Each line's day | Deadlock minutes (first) |",
+            "| --- | --: | --: | --: | --: | --- | --- | --- |",
         ]
-        // `ROVANIEMI_ONLY=vr:MUL+vr:KJA` plays only those purchases, in that order.
-        let only = ProcessInfo.processInfo.environment["ROVANIEMI_ONLY"].map { [$0.split(separator: "+").map(String.init)] }
-        for ids in only ?? [["vr:KJA"], ["vr:MUL"], ["vr:KJA", "vr:MUL"], ["vr:MUL", "vr:KJA"]] {
+        let environment = ProcessInfo.processInfo.environment
+        let hongKong = environment["ROVANIEMI_CITY"] == "hk"
+        let only = environment["ROVANIEMI_ONLY"].map { [$0.split(separator: "+").map(String.init)] }
+        let all = hongKong ? [["hkmtr:SIL"], ["hkmtr:TCL"]] : [["vr:KJA"], ["vr:MUL"], ["vr:KJA", "vr:MUL"], ["vr:MUL", "vr:KJA"]]
+        for ids in only ?? all {
             let started = Date()
-            let session = try Self.rovaniemi(simple: simple)
+            let session = try Self.rovaniemi(simple: simple, hongKong: hongKong, far: environment["ROVANIEMI_FAR_OFF"] == nil)
             var paid = Money.zero
             for id in ids {
                 let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, id)
@@ -85,6 +92,12 @@ final class RovaniemiReportTests: XCTestCase {
                         "| \(ids.joined(separator: " + ")) | \(day) | \(trips.last!) | \(Money(fares.last!).moneyText) | \(Money(profits.last!).moneyText) | "
                             + lines.enumerated().map { "\(ids[$0.offset]) \(played.lineYesterday($0.element)?.boardings ?? 0), \(played.lineYesterday($0.element)?.departures ?? 0)" }
                             .joined(separator: "; ") + " | "
+                            + lines.enumerated().map { entry in
+                                let tally = played.lineYesterday(entry.element) ?? LineTally()
+                                return "\(ids[entry.offset]) fares \(tally.fareRevenue.moneyText), operating \(tally.operatingCost.moneyText), "
+                                    + "upkeep \(tally.maintenanceCost.moneyText), energy \(tally.energyCost.moneyText), staff \(tally.staffCost.moneyText), "
+                                    + "\(tally.trainDistance / (1_000 * WorldCoordinate.unitsPerMetre)) train-km"
+                            }.joined(separator: "; ") + " | "
                             + "\(stuckToday.count)\(stuckToday.isEmpty ? "" : " (" + stuckToday.prefix(4).joined(separator: ", ") + ")") |"
                     )
                 }
@@ -102,20 +115,22 @@ final class RovaniemiReportTests: XCTestCase {
             FileHandle.standardError.write(Data("\(summary.last!) (\(Int(Date().timeIntervalSince(started))) s)\n".utf8))
         }
         print(
-            "### Rovaniemi's lines (\(days) days, \(simple ? "simple" : "realistic") rules)\n\n" + prices.joined(separator: "\n")
+            "### \(hongKong ? "Hong Kong" : "Rovaniemi")'s lines (\(days) days, \(simple ? "simple" : "realistic") rules)\n\n" + prices.joined(separator: "\n")
                 + "\n\n" + summary.joined(separator: "\n") + "\n\n" + trace.joined(separator: "\n")
         )
     }
 
-    /// ``RovaniemiRailwaysTests/rovaniemi()``, under the simple rules when
-    /// `simple`.
-    private static func rovaniemi(simple: Bool) throws -> GameSession {
-        let ground = try RovaniemiRailwaysTests.ground()
+    /// ``RovaniemiRailwaysTests/rovaniemi()``, or Hong Kong's map when
+    /// `hongKong`, under the simple rules when `simple`, far demand off
+    /// unless `far`.
+    private static func rovaniemi(simple: Bool, hongKong: Bool = false, far: Bool = true) throws -> GameSession {
+        let ground = try hongKong ? HongKongMapTests.ground() : RovaniemiRailwaysTests.ground()
         var world = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000))
         if simple { NewGameRules.simple.apply(to: &world) }
+        world.setFarDemand(far)
         try world.mapGround()
         let session = GameSession(world: world, language: .traditionalChinese)
-        session.railways = try RovaniemiRailwaysTests.railways()
+        session.railways = try hongKong ? HongKongRailwaysTests.railways() : RovaniemiRailwaysTests.railways()
         session.population = ground.population
         session.water = ground.water
         session.heights = ground.heights

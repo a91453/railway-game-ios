@@ -494,7 +494,7 @@ extension GameWorld {
             guard let trip else { continue }
             reached.append((record.station, weight, trip))
         }
-        let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
+        let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map { farWeight($0.weight, from: origin, to: $0.destination) })
         let typhoons = typhoonMultipliers()
         let rivals = network ? coachRivals() : [:]
         return zip(reached, shares).map { reached, trips in
@@ -626,8 +626,9 @@ extension GameWorld {
     /// to 0. The shares add up to `total` otherwise.
     ///
     /// `total` is at most ``StationDemand/maximumDailyTrips`` and every
-    /// weight at most 2035 × 2923 × 2923 (decision 319's tidal hours), so
-    /// `total × weight` stays well inside an `Int64`.
+    /// weight at most 2035 × 2923 × 2923 (decision 319's tidal hours) or
+    /// 1,000,000 × 3,000 × 1,000 (an attraction drawn by decision 828's
+    /// far share), so `total × weight` stays inside an `Int64`.
     static func apportion(_ total: Int64, by weights: [Int64]) -> [Int64] {
         let sum = weights.reduce(0, +)
         guard sum > 0 else { return Array(repeating: 0, count: weights.count) }
@@ -746,6 +747,8 @@ extension GameWorld {
         /// ``stations``).
         let distanceDemand: Bool
         let outsideConnections: Bool
+        /// Decision 828: each destination's draw by its distance.
+        let farDemand: Bool
         /// Decision 174: the sights and their shops, and each one's rating
         /// with the hotels near it.
         let tourism: Tourism?
@@ -784,7 +787,7 @@ extension GameWorld {
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
             day: demandDay, weeklyDemand: weeklyDemand, tidalDemand: tidalDemand, modeShift: modeShift, demandEvents: demandEvents, disruptions: disruptions,
-            distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
+            distanceDemand: distanceDemand, outsideConnections: outsideConnections, farDemand: farDemand, tourism: tourism,
             tourismStars: tourismStars, realisticOperation: realisticOperation,
             curveSpeedLimits: curveSpeedLimits,
             busFeeders: busRoutes.flatMap { [Int64($0.feeds?.rawValue ?? 0), $0.feederTrips, $0.feederMinutes] }
@@ -845,7 +848,7 @@ extension GameWorld {
                 $0.demand != nil && (touristTo.contains($0.station) || drawingStations.contains($0.station))
             }
             let reached = candidates.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
-            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station] ?? 0 })
+            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { farWeight(pull[$0.0.station] ?? 0, from: record.station, to: $0.0.station) })
             for ((destination, trip), shared) in zip(reached, shares) {
                 let trips = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
                 let extra = tourists.trips(from: record.station, to: destination.station)
@@ -928,7 +931,7 @@ extension GameWorld {
                 }
                 return options.isEmpty ? nil : (other, options, journeys)
             }
-            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station] ?? 0 })
+            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { farWeight(pull[$0.0.station] ?? 0, from: record.station, to: $0.0.station) })
             for ((destination, options, journeys), shared) in zip(reached, shares) {
                 let fared = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
                 let minutes = options.map(\.route.totalMinutes).min()!

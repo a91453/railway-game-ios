@@ -437,3 +437,9 @@ its map's airports when it opens the save).
   Tsing Yi behind it (`FullEndWithoutDepotTests`; written the same
   way). The format is version 107's; it is here for the world, not for
   a new field.
+- `v108-state-track.json`: `StateTrackTests`' line laid on the state's
+  track and bought on it at 05:00 with far demand on, run to 06:30 of the
+  next day, the train under way
+  (`StateTrackTests.testTheVersion108SaveKeepsTheStatesTrackAndFarDemand`,
+  written with `STATE_TRACK_SAVE_NEW=1` by the build that first made it;
+  decision 828).

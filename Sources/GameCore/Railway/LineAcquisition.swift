@@ -32,6 +32,14 @@ public struct LineAcquisition: Hashable, Sendable {
     /// stays as the line's ``LeftTrack`` when the line is removed; `nil`
     /// for a bus route's and a purchase saved before version 79.
     public private(set) var track: [TrackEdgeID]?
+    /// Decision 828: whether the line runs on the state's track, as a
+    /// Finnish line runs on the track the state keeps: the company did not
+    /// pay for the track it laid (``GameWorld/handOverTrack(_:)``), pays
+    /// only ``stateTrackAccessPermille`` of the track's upkeep and route
+    /// energy, and its riders pay the kilometre fare
+    /// (``stateTrackFare(squaredDistance:)``). `false` for a bus route's
+    /// and a purchase saved before version 108.
+    public private(set) var stateTrack = false
 
     /// What kind of railway a line bought is, which sets what each of its
     /// riders costs (decision 400, 10j-3).
@@ -75,6 +83,27 @@ public struct LineAcquisition: Hashable, Sendable {
     /// line's first train.
     public static let sameDayCutoff: Int64 = 4 * 3_600
 
+    /// Decision 828: the share of its track's upkeep and route energy a
+    /// line on the state's track pays as its access charge, in
+    /// thousandths: 1 %, about what Finland's basic infrastructure charge
+    /// asks of the Kemijärvi line's trains.
+    public static let stateTrackAccessPermille: Int64 = 10
+    /// Decision 828: what a trip riding a line on the state's track pays a
+    /// kilometre of the straight line between its stations, in cents:
+    /// NT$5, about what VR's regional trains in Lapland charge.
+    public static let stateTrackCentsPerKilometre: Int64 = 500
+
+    /// Decision 828: the kilometre fare of a trip `squaredDistance` (world
+    /// units squared) long riding a line on the state's track, in whole
+    /// dollars rounded half up. A trip pays this or the network's fare,
+    /// whichever is more (``GameWorld/tripFare(from:to:highSpeed:stateTrack:)``).
+    public static func stateTrackFare(squaredDistance: Int64) -> Money {
+        let units = FixedPoint.squareRoot(max(0, squaredDistance))
+        // units / 64,000 kilometres × 500 / 100 dollars.
+        let dollars = (units * stateTrackCentsPerKilometre + 3_200_000) / 6_400_000
+        return Money(dollars * 100)
+    }
+
     /// What a line of `tier` whose stations carry `riders` a day costs
     /// for them.
     public static func value(ofDailyRiders riders: Int64, tier: Tier = .branch) -> Money {
@@ -88,8 +117,9 @@ public struct LineAcquisition: Hashable, Sendable {
         return time.seconds - day * GameTime.secondsPerDay < sameDayCutoff ? day : day + 1
     }
 
-    /// Railway `realLine`, bought as `line`, laying `track`.
-    public init(realLine: String, line: LineID, day: Int64, value: Money, track: [TrackEdgeID]? = nil) {
+    /// Railway `realLine`, bought as `line`, laying `track`, on the
+    /// state's track if `stateTrack` (decision 828).
+    public init(realLine: String, line: LineID, day: Int64, value: Money, track: [TrackEdgeID]? = nil, stateTrack: Bool = false) {
         kind = .railway
         self.realLine = realLine
         self.line = line
@@ -97,6 +127,7 @@ public struct LineAcquisition: Hashable, Sendable {
         self.day = day
         self.value = value
         self.track = track
+        self.stateTrack = stateTrack
     }
 
     /// Bus route `realLine`, bought as `busRoute`.
@@ -121,13 +152,13 @@ public struct LineAcquisition: Hashable, Sendable {
     var isValid: Bool {
         !realLine.isEmpty && realLine.count <= Self.maximumNameLength && day >= 0 && value >= .zero
             && (kind == .railway) == (line != nil) && (kind == .bus) == (busRoute != nil)
-            && (kind == .railway || track == nil) && track.map { !$0.isEmpty && Set($0).count == $0.count } ?? true
+            && (kind == .railway || (track == nil && !stateTrack)) && track.map { !$0.isEmpty && Set($0).count == $0.count } ?? true
     }
 }
 
 extension LineAcquisition: Codable {
     private enum CodingKeys: String, CodingKey {
-        case kind, realLine, line, busRoute, day, value, track
+        case kind, realLine, line, busRoute, day, value, track, stateTrack
     }
 
     /// A railway's without `"kind"` (saves before version 73), a bus
@@ -141,6 +172,7 @@ extension LineAcquisition: Codable {
         day = try container.decode(Int64.self, forKey: .day)
         value = try container.decode(Money.self, forKey: .value)
         track = try container.decodeIfPresent([Int].self, forKey: .track)?.map(TrackEdgeID.edge)
+        stateTrack = try container.decodeIfPresent(Bool.self, forKey: .stateTrack) ?? false
         guard isValid else {
             throw DecodingError.dataCorruptedError(forKey: .realLine, in: container, debugDescription: "A line bought has a name, a day and a value of at least 0.")
         }
@@ -157,6 +189,9 @@ extension LineAcquisition: Codable {
         try container.encode(day, forKey: .day)
         try container.encode(value, forKey: .value)
         try container.encodeIfPresent(track?.compactMap(\.networkNumber), forKey: .track)
+        if stateTrack {
+            try container.encode(true, forKey: .stateTrack)
+        }
     }
 }
 
@@ -225,8 +260,12 @@ extension GameWorld {
     /// and left as its ``LeftTrack`` when the line is removed; the track
     /// `realLine` left before, and what of any track left is gone, is then
     /// forgotten.
+    ///
+    /// Decision 828: with `stateTrack` the line runs on the state's track
+    /// (``LineAcquisition/stateTrack``).
     public mutating func recordLineAcquisition(
-        line id: LineID, realLine: String, dailyRiders: Int64, tier: LineAcquisition.Tier = .branch, track: [TrackEdgeID]? = nil
+        line id: LineID, realLine: String, dailyRiders: Int64, tier: LineAcquisition.Tier = .branch, track: [TrackEdgeID]? = nil,
+        stateTrack: Bool = false
     ) throws(GameError) {
         let index = try lineIndex(of: id)
         guard !acquisitions.contains(where: { $0.realLine == realLine || $0.line == id }) else { throw .lineAlreadyAcquired }
@@ -241,12 +280,42 @@ extension GameWorld {
         try economy.spend(value)
         let lastDayDone = LineAcquisition.firstServiceDay(at: clock.now) - 1
         setRunsDone(ofLine: index, through: lastDayDone >= 0 ? lastDayDone : nil)
-        acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value, track: track))
+        acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value, track: track, stateTrack: stateTrack))
         acquireAsset(.acquiredLine, owner: id.rawValue, cost: value)
         leftTrack = leftTrack.compactMap { left in
             let standing = left.edges.filter { network.edge($0) != nil }
             return left.realLine == realLine || standing.isEmpty ? nil : LeftTrack(realLine: left.realLine, edges: standing)
         }
+    }
+
+    /// Decision 828: runs `body`, which lays the track of a line the
+    /// company buys on the state's track, at the state's cost: what it
+    /// builds costs the company nothing, and a managed company keeps no
+    /// record of it and books no capital spending for it, so `body` lays
+    /// that track and nothing else. The track stays the company's to use
+    /// and take up; taking it up refunds nothing, as for any track. If
+    /// `body` throws, so does this, and what it built stays built (at no
+    /// cost): call it on a copy of the world to keep the world unchanged.
+    public mutating func layStateTrack(_ body: (inout GameWorld) throws(GameError) -> Void) throws(GameError) {
+        let unlimited = economy.unlimitedFunds
+        let records = accounts.assets.count
+        economy.unlimitedFunds = true
+        defer {
+            economy.unlimitedFunds = unlimited
+            // Its records, at their cost, leave the books and the day's
+            // capital spending.
+            let laid = accounts.assets[records...].reduce(Money.zero) { $0 + $1.cost }
+            accounts.assets.removeSubrange(records...)
+            if laid > .zero {
+                accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending - laid }
+            }
+        }
+        try body(&self)
+    }
+
+    /// Whether line `id` was bought on the state's track (decision 828).
+    func runsOnStateTrack(_ id: LineID) -> Bool {
+        acquisitions.contains { $0.stateTrack && $0.line == id }
     }
 
     /// Decision 528: drops the purchase line `id` runs, as the line is

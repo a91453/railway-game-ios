@@ -146,6 +146,34 @@ final class RovaniemiRailwaysTests: XCTestCase {
         }
     }
 
+    /// Decision 828: a new game on the map has far demand on, and each line
+    /// is bought on the state's track: the company pays for its stations,
+    /// depot and trains but not its track, so a standard opening's cash
+    /// and loan reach either line, and the purchase leaves no track on
+    /// the books.
+    func testTheLinesAreBoughtOnTheStatesTrack() throws {
+        let reach = GameWorld.startingBalance + CompanyAccounts.maximumLoan
+        for id in ["vr:KJA", "vr:MUL"] {
+            let ground = try Self.ground()
+            var world = GameWorld.newOverseasGame(ground)
+            XCTAssertTrue(world.farDemand)
+            try world.mapGround()
+            let session = GameSession(world: world, language: .traditionalChinese)
+            session.railways = try Self.railways()
+            session.population = ground.population
+            session.water = ground.water
+            session.heights = ground.heights
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
+            let offer = session.realLineOffer(for: line)
+            let price = try XCTUnwrap(offer.price, "\(id): \(offer.problem ?? "")")
+            XCTAssertLessThan(price.total, reach, id)
+            let tracks = session.world.accounts.assets.filter { $0.kind == .track }.count
+            XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
+            XCTAssertEqual(session.world.acquisition(of: id)?.stateTrack, true, id)
+            XCTAssertEqual(session.world.accounts.assets.filter { $0.kind == .track }.count, tracks, id)
+        }
+    }
+
     /// Both lines bought on the same map, in either order: the second is
     /// not refused for running beside the first at Rovaniemi, where the
     /// two share the station, and both lines then run their trains
