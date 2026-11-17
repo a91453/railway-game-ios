@@ -35,10 +35,6 @@ public enum WhatsNew {
             id: "2026-11-17-137",
             items: [
                 Line(
-                    english: "Rovaniemi opens: pick it from the new-game list from the start.",
-                    chinese: "羅瓦涅米開放：新遊戲的地圖清單一開始就能選。"
-                ),
-                Line(
                     english: "The 3D map opens faster the first time.",
                     chinese: "第一次打開 3D 地圖變快了。"
                 ),

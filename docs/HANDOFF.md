@@ -645,12 +645,12 @@
 
 **2026-11-17 晚上（現任規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 記；這段最新，下面的「傍晚交接」是前一版）**
 
-- **137 的範圍**（作者 11-17：「好 不等 高架下一版」）：137 不等 ROAD-LOOK-REAL（#2364，決策 822），它放 138。137 等 #2365 PERF-3D-FIRST、#2355 ROVANIEMI-OPEN、E200-REDO（825，規劃看總覽圖才合）。發版說明在 137 準備 PR（`claude/whatsnew-137`）先寫好，這三張合完照實際內容改，最後合；再對 main HEAD 跑完整 ci.yml 與 full lane，都綠才請作者說「發」。
+- **137 的範圍**（作者 11-17：「好 不等 高架下一版」）：137 不等 ROAD-LOOK-REAL（#2364，決策 822），它放 138。137 等 #2365 PERF-3D-FIRST、E200-REDO（825，規劃看總覽圖才合）。**羅瓦涅米改到 138**（作者問「你用五方專家角度看呢」，規劃 11-17 定）：兩條真實路線怎麼經營都虧、兩條一起買主線人數減半，第一印象太差；#2355 ROVANIEMI-OPEN 跑綠轉 ready 但先不合，等 ROVANIEMI-PAIR（bug，2.40）與 ROVANIEMI-FARE（2.85）兩個 GameCore 修正合了再一起合，138 開，仍趕在 11/30 冬季活動前；railway-reference-private #145 也改成 138 開放後才合。五方：玩家（新地圖永遠虧錢是壞的第一印象）、鐵道迷（路線真、數字錯，修好才對得起真路線）、開發（價錢修正可馬上派，#2355 只是等）、美術（無）、音樂（無）。發版說明在 137 準備 PR（`claude/whatsnew-137`）先寫好，這兩張合完照實際內容改，最後合；再對 main HEAD 跑完整 ci.yml 與 full lane，都綠才請作者說「發」。
 - **11:10 UTC**：合了 #2366、#2356 ROAD-SMOOTH（821）、#2362 TRACK-CURVE（826），兩個 session 已封存；派 ROAD-LOOK-REAL-2 session_01JMHz9bn8HzazZzMYbhURDh 接 #2364（順手量 §29.23 VIADUCT-PIERS 的墩數）。§29.23 ROAD-GRADE-CAP 等 #2364 合併後派。
 - **10:50 UTC 更新**（規劃壓縮第 1 次後）：
   - **合併了**：#2347 DEADLOCK-HK（816，`2ffc2db`）、#2360、#2361（交接）。main 的 ci.yml 綠。已封存約 46 個合併且交接完的 session；前一任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 要作者在可信任的裝置上封存。還沒封存的舊 session（描線、隱私資料夾新增檔案評估、PR 審查與修復、沿線官網和測試進度、優先移植部分）是失敗或卡住的，等作者說。
   - #2356 ROAD-SMOOTH：已併 main（`26001f3`），NEXT_PRIORITIES §29.26，CI 綠了就合。
-  - #2355 ROVANIEMI-OPEN：又和 main 衝突，已請它併 main；小節接在 §29.26 後面。**`railway-reference-private#145`（網站的羅瓦涅米資料來源）在 #2355 合併、137 發版後才合。**
+  - #2355 ROVANIEMI-OPEN：又和 main 衝突，已請它併 main；小節接在 §29.26 後面。**`railway-reference-private#145`（網站的羅瓦涅米資料來源）在 #2355 合併、138 發版後才合（羅瓦涅米改到 138，見上面「137 的範圍」）。**
   - #2362 TRACK-CURVE（826）、#2365 PERF-3D-FIRST（820）：草稿，CI 跑中。
   - #2364 ROAD-LOOK-REAL（822）：session 壓縮 2 次已停，交接 `docs/handoff/ROAD-LOOK-REAL.md` 在分支上；要派新 session 接手，新外觀規劃看總覽圖才合。
   - E200-REDO（825）：還在做。
