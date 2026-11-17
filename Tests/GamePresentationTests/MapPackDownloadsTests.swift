@@ -68,7 +68,7 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertEqual(MapPackDownloads.use(.hongKong, root: manifestOnly, bundled: try bundled), .incomplete("airfields.json"))
         XCTAssertNil(MapPackDownloads.root(.hongKong))
         let clue = try XCTUnwrap(MapPackDownloads.clue(.hongKong))
-        XCTAssertTrue(clue.contains("found 0 of 15 files"), clue)
+        XCTAssertTrue(clue.contains("found 0 of 16 files"), clue)
         XCTAssertTrue(clue.contains("manifest-only/hongkong (1 item)"), clue)
 
         // Looked for one by one, it is taken, and read from where each lies.
@@ -91,7 +91,7 @@ final class MapPackDownloadsTests: XCTestCase {
         apart["water.json"] = nil
         XCTAssertEqual(MapPackDownloads.use(.hongKong, locators: locators, bundled: try bundled), .incomplete("water.json"))
         let missing = try XCTUnwrap(MapPackDownloads.clue(.hongKong))
-        XCTAssertTrue(missing.contains("found 14 of 15 files (0, 14 by locator)"), missing)
+        XCTAssertTrue(missing.contains("found 15 of 16 files (0, 15 by locator)"), missing)
     }
 
     func testTheBundledPackIsReadWithoutADownload() {

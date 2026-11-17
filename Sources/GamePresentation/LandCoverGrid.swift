@@ -10,12 +10,18 @@ import GameCore
 // by `tools/worldcover/build_landcover_grid.py`, in the heights file's form
 // (``HeightGrid``) under the magic `TWLC`.
 //
+// Decision 835: Hong Kong's map pack holds its own, `landcover.dat`, in
+// the same form and covers, from the Planning Department's land use grid
+// (`tools/hk-map/build_hk_landcover.py`); `TWLC` names the form, not the
+// place.
+//
 // Only the presentation reads it, for the look of the 3D map's ground
 // outside OpenStreetMap's land cover and the trees in its forests
 // (``Map3DScene/Builder/landCover``); nothing of the game's rules or saves
 // depends on it.
 
-/// What covers each cell of a grid of Taiwan (decision 811).
+/// What covers each cell of a grid of Taiwan (decision 811) or of a
+/// city's map pack (decision 835).
 public struct LandCoverGrid: Sendable {
     /// The game's eight covers, folded from WorldCover's eleven classes
     /// (the tool's docstring).
