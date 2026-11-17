@@ -69,6 +69,30 @@
       "hash" : "63dfd2622aed6635",
       "triangles" : 7812
     },
+    "reindeer-standing" : {
+      "hash" : "a09e2fa56e6157b6",
+      "triangles" : 978
+    },
+    "reindeer-standing-far" : {
+      "hash" : "bf84d1096da59250",
+      "triangles" : 244
+    },
+    "reindeer-grazing" : {
+      "hash" : "1f4d3c3aff02031e",
+      "triangles" : 978
+    },
+    "reindeer-grazing-far" : {
+      "hash" : "849f191e089d464",
+      "triangles" : 244
+    },
+    "reindeer-sled-ride" : {
+      "hash" : "866038e215c29808",
+      "triangles" : 1476
+    },
+    "reindeer-sled-ride-far" : {
+      "hash" : "adc28b7857745fd4",
+      "triangles" : 518
+    },
     "hk-signal-amber" : {
       "hash" : "53b50320a69bc411",
       "triangles" : 80

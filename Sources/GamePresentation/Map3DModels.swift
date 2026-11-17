@@ -265,6 +265,10 @@ public struct Map3DModelPack: Sendable {
         // van keep decision 259's places), after the sleigh and before
         // the route bus.
         groups.append { Map3DTaiwanCars.drawn }
+        // Decision 840: the Santa Claus village's reindeer, standing,
+        // grazing and pulling a sled, near and far, after Taiwan's cars and
+        // before the route bus.
+        groups.append { Map3DReindeerHerd.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

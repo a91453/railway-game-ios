@@ -144,6 +144,9 @@ public struct Map3DScene: Sendable {
     /// Decision 794: the winter event's trees and lights, drawn only while
     /// it shows its decorations (``Map3DWinterLights/add(to:pack:eye:reach:)``).
     public let winterLights: Map3DWinterLights
+    /// Decision 840: the Santa Claus village's reindeer, drawn all year
+    /// (``Map3DReindeerHerd/add(to:pack:eye:reach:)``).
+    public let reindeerHerd: Map3DReindeerHerd
     /// Decision 837: where its freight yards stand (``Map3DFreightYard``).
     public let freightYards: [Map3DFreightYard.Place]
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
@@ -597,6 +600,9 @@ public struct Map3DScene: Sendable {
         // Decision 794: where the winter event's trees and lights go.
         builder.addWinterDecor(frame: RealWorldFrame(world: world))
         winterLights = Map3DWinterLights(placements: builder.winterDecor)
+        // Decision 840: the Santa Claus village's reindeer, clear of its tree.
+        builder.addReindeerHerd(frame: RealWorldFrame(world: world))
+        reindeerHerd = Map3DReindeerHerd(placements: builder.reindeerHerd)
         freightYards = builder.freightYardPlaces
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
@@ -1179,6 +1185,8 @@ extension Map3DScene {
         var exitLights: [(at: Map3DPoint, forward: Map3DPoint)] = []
         /// Decision 794: the winter event's trees and lights laid.
         var winterDecor: [Map3DWinterLights.Placement] = []
+        /// Decision 840: the Santa Claus village's reindeer laid.
+        var reindeerHerd: [Map3DReindeerHerd.Placement] = []
         /// Decision 407: the player's track a high-speed line runs on.
         var highSpeedEdges: Set<TrackEdgeID>?
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]

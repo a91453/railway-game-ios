@@ -1650,6 +1650,8 @@ final class Map3DTrainFeed {
             let switchedOn = UserDefaults.standard.object(forKey: WinterEvent.decorationsKey) as? Bool ?? true
             scene.winterLights.add(to: &frame, pack: models, eye: eye, reach: reach.farModel, at: Date(), switchedOn: switchedOn)
         }
+        // Decision 840: and the Santa Claus village's reindeer, all year.
+        if let models { scene.reindeerHerd.add(to: &frame, pack: models, eye: eye, reach: reach.farModel) }
         return frame
     }
 
