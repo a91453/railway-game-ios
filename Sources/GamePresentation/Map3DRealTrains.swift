@@ -189,6 +189,39 @@ public struct Map3DRealTrains: Sendable {
         return carPitch
     }
 
+    /// REAL-CAR-LENGTH (decision 399, later): a car of a real train as it
+    /// is laid: how far back from the train's front it starts and how long
+    /// it is, in the line's km, and its model in the pack where its set is
+    /// drawn at its models' own lengths.
+    struct LaidCar: Equatable, Sendable {
+        let start: Double
+        let length: Double
+        let model: Int?
+    }
+
+    /// REAL-CAR-LENGTH (decision 399, later): the cars of `formation`
+    /// front to back and the train's length end to end, in the line's km.
+    /// Drawn with `models` whose set has its own lengths
+    /// (``Map3DModelPack/layout(forType:count:)``), each car its model's
+    /// own length, end to end, as the player's trains are: a High Speed
+    /// Rail car 25.5 m, a Taipei Metro car 23.6 m, a Wenhu line car
+    /// 13.8 m, not all stretched or squeezed to ``carPitch`` (a 12-car
+    /// 700T 305 m, not 240). Otherwise a car each ``carPitch``,
+    /// ``carLength(of:hasModels:models:)`` long, as before.
+    static func cars(of formation: Formation, hasModels: Bool, models: Map3DModelPack?) -> (cars: [LaidCar], length: Double) {
+        if hasModels, let models, let laid = models.layout(forType: formation.key, count: formation.cars), !laid.isEmpty {
+            var cars: [LaidCar] = [], start = 0.0
+            for car in laid {
+                let length = Double(car.length) / 1_000
+                cars.append(LaidCar(start: start, length: length, model: car.model))
+                start += length + Double(car.gap) / 1_000
+            }
+            return (cars, start)
+        }
+        let length = carLength(of: formation, hasModels: hasModels, models: models)
+        return ((0..<formation.cars).map { LaidCar(start: Double($0) * carPitch, length: length, model: nil) }, Double(formation.cars) * carPitch)
+    }
+
     /// Decision 433: the key a train of `system`'s `key` set is drawn as,
     /// ``Map3DTrainSet/variant(of:number:locked:)``, but the C341 only on
     /// Taipei Metro's lines: Kaohsiung's, Taoyuan's and Taichung's metro
@@ -340,11 +373,13 @@ public struct Map3DRealTrains: Sendable {
             // (``hongKongCars``), not three boxes; decision 780: but the
             // Airport Express and the Tung Chung Line their own trains;
             // decision 786: and the four urban lines (the Tseung Kwan O
-            // Line's LOHAS Park branch too) theirs.
+            // Line's LOHAS Park branch too) theirs; decision 839: and the
+            // Tuen Ma line its own.
             switch id {
             case "AEL": return Formation(key: Map3DMTRAirportLine.expressKey, cars: 8)
             case "TCL": return Formation(key: Map3DMTRAirportLine.tungChungKey, cars: 8)
             case "TWL", "ISL", "KTL", "TKL", "TKL_LHP": return Formation(key: Map3DMTRUrbanLine.key, cars: 8)
+            case "TML": return Formation(key: Map3DMTRTuenMaLine.key, cars: 8)
             default: return Formation(key: "metroGeneric", cars: hongKongCars[id] ?? 8)
             }
         default:
@@ -631,10 +666,10 @@ public struct Map3DRealTrains: Sendable {
                 let formation = Self.formation(of: lineFormation, system: line.system, place: place.key, locked: models?.locked ?? [])
                 let hasModels = formation.key == lineFormation.key ? hasModels : models?.models(forType: formation.key) != nil
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
-                let length = Double(formation.cars) * Self.carPitch
                 // CAR-GAP: a set whose models reach their couplers end to
                 // end, the gap between two bodies the models' own.
-                let carLength = Self.carLength(of: formation, hasModels: hasModels, models: models)
+                // REAL-CAR-LENGTH: and each car its model's own length.
+                let (cars, length) = Self.cars(of: formation, hasModels: hasModels, models: models)
                 // Its middle where the timetable has it; held at the line's
                 // end, its front there.
                 var front = place.km + way * length / 2
@@ -645,12 +680,12 @@ public struct Map3DRealTrains: Sendable {
                 var shown = false
                 // Decision 600: its legs, where the assignment binds it.
                 let bound = legs[index][place.key.hasPrefix("-") ? String(place.key.dropFirst()) : place.key]
-                for car in 0..<formation.cars {
+                for (car, laid) in cars.enumerated() {
                     func at(_ km: Double) -> Map3DPoint? {
                         railPoint(line: index, atKm: km, way: way, ring: isRing ? ring : nil, bound: bound)
                     }
-                    let start = front - way * Double(car) * Self.carPitch
-                    guard let a = at(start), let b = at(start - way * carLength) else { continue }
+                    let start = front - way * laid.start
+                    guard let a = at(start), let b = at(start - way * laid.length) else { continue }
                     let along = (a - b).length
                     guard along > 1 else { continue }
                     shown = true
@@ -661,13 +696,13 @@ public struct Map3DRealTrains: Sendable {
                         outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: along + 1, width: Map3DTrains.carWidth + 1),
                         darkness: 0.38)
                     if let models, hasModels, let eye,
-                       let near = models.modelIndex(forType: formation.key, carIndex: car, count: formation.cars),
+                       let near = laid.model ?? models.modelIndex(forType: formation.key, carIndex: car, count: formation.cars),
                        // Decision 408: past its set's reach, its far set's car.
                        let model = models.model(near, forType: formation.key, count: formation.cars, at: (base - eye).length, reach: reach) {
-                        let turned = models.isTurned(forType: formation.key, carIndex: car, count: formation.cars)
+                        let turned = models.isTurned(forType: formation.key, carIndex: car, count: cars.count)
                         frame.instances.append(Map3DTrains.instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                                     stripe: stripe))
-                        frame.addEnds(ofCar: car, count: formation.cars, turned: turned)
+                        frame.addEnds(ofCar: car, count: cars.count, turned: turned)
                         continue
                     }
                     frame.boxes.addBox(base: base + Map3DPoint(0, 0.3, 0), forward: a - b, length: along, width: Map3DTrains.carWidth,

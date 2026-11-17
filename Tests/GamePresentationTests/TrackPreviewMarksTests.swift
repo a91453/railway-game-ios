@@ -241,6 +241,52 @@ final class TrackPreviewMarksTests: XCTestCase {
         XCTAssertNil(session.networkDragGuideText, "only while the finger is down")
     }
 
+    /// REVIEW-L27 P3-3 (SNAP-REANCHOR): lining the end up moves it round
+    /// the start; when that would put it on or beside other track (here
+    /// 3 m from the end of a track it would not join, while the finger is
+    /// 11 m away), it is not lined up: the end stays where the finger is.
+    func testAnEndLinedUpBesideOtherTrackStaysWithTheFinger() throws {
+        let world = try makeWorld(width: 40_960, height: 20_480, balance: 10_000_000, speed: .paused)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        let reach: Int64 = 640
+        session.tapNetwork(at: PlanPoint(x: 2_048, y: 4_096), reach: reach)
+        session.tapNetwork(at: PlanPoint(x: 20_480, y: 4_096), reach: reach)
+        session.buildNetworkTrack()
+        session.clearNetworkDraft()
+        session.tapNetwork(at: PlanPoint(x: 38_000, y: 1_000), reach: reach)
+        session.tapNetwork(at: PlanPoint(x: 38_000, y: 3_800), reach: reach)
+        session.buildNetworkTrack()
+        session.clearNetworkDraft()
+        XCTAssertEqual(session.world.network.edges.count, 2)
+
+        let from = PlanPoint(x: 20_480, y: 4_096)
+        let finger = PlanPoint(x: 38_000, y: 4_900)
+        XCTAssertNil(session.world.trackNode(near: finger, within: reach))
+        XCTAssertNil(session.world.trackEdgePoint(near: finger, within: reach))
+        // Lined up straight on, the end would be some 300 units from the
+        // other track's end.
+        let (moved, _) = try XCTUnwrap(TrackAlignment.align(
+            start: from, end: finger,
+            references: [TrackAlignment.Reference(direction: PlanVector(dx: 1, dy: 0), at: from, continues: true)], reach: reach
+        ))
+        XCTAssertNotNil(session.world.trackNode(near: moved, within: reach))
+
+        session.dragNetwork(from: from, to: finger, reach: reach)
+        XCTAssertEqual(session.networkEnd, .point(finger))
+        XCTAssertNil(session.networkDragGuide)
+        session.endNetworkDrag(from: from, to: finger, reach: reach)
+        XCTAssertEqual(session.networkEnd, .point(finger))
+
+        // Further from that track, it is lined up as before.
+        let clear = PlanPoint(x: 30_000, y: 4_500)
+        session.dragNetwork(from: from, to: clear, reach: reach)
+        XCTAssertEqual(session.networkDragGuide?.kind, .straightOn)
+        guard case .point(let end)? = session.networkEnd else { return XCTFail("a free end") }
+        XCTAssertEqual(end.y, 4_096)
+        session.cancelNetworkDrag()
+    }
+
     /// The screenshot scenes show what they are for: a slow curve with
     /// its marks, and a held finger lined up parallel.
     func testTheScreenshotScenes() throws {

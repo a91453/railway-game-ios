@@ -1398,6 +1398,10 @@ final class Map3DTrainFeed {
     /// they are hidden, and whether they glide between ticks.
     private var realClock: RealTrainClock?
     private var realGlides = true
+    /// REAL-CAR-LENGTH (decision 399, later): the model pack the real
+    /// trains were last drawn with, so the follow camera lays their cars
+    /// at the same lengths.
+    private var realModels: Map3DModelPack?
     /// Decision 400, 10i-6: the player's bus routes, the clock their buses
     /// are drawn at and the routes laid in the scene, laid again when the
     /// routes or the scene change (off the main actor, decision 424's
@@ -1594,6 +1598,7 @@ final class Map3DTrainFeed {
         if let driven { driven.track.addStopMark(to: &frame, at: driven.stop, in: scene) }
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
+            realModels = models
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
                      models: models, eye: eye, reach: reach)
         }
@@ -1773,7 +1778,7 @@ final class Map3DTrainFeed {
     func realTrainPose(_ id: RealTrainID, in scene: Map3DScene) -> Map3DFollow.Pose? {
         guard let real = scene.realTrains, let clock = realClock else { return nil }
         return real.pose(of: id, second: clock.second(at: Date().timeIntervalSinceReferenceDate, glides: realGlides),
-                         day: clock.today, dayBefore: clock.dayBefore)
+                         day: clock.today, dayBefore: clock.dayBefore, models: realModels)
     }
 
     /// Decision 585 PR-4 (FERRYFOLLOW): where boat `id` is now, as the

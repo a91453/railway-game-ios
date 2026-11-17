@@ -119,4 +119,37 @@ final class Map3DTaipeiMRTStationsTests: XCTestCase {
             XCTAssertEqual(Station.scenePoint(Map3DPoint(0, 13, 0), placement, ground: 1).y, rails + 4, accuracy: 1e-4)
         }
     }
+
+    /// REVIEW-L27 P3-2 (ELEVATED-SHELL-CHUNK): a block of chunks that lays
+    /// one of a station's two raised platforms places its shell by both,
+    /// as the whole scene does; a station with only its ground platforms
+    /// laid here, or none, gets no lines, and tunnel and ground platforms
+    /// are never among them.
+    func testTheShellIsPlacedByAllTheStationsRaisedPlatforms() {
+        typealias Laid = Map3DScene.Builder.LaidPlatform
+        let a = StationID(rawValue: 1), b = StationID(rawValue: 2), c = StationID(rawValue: 3)
+        func line(_ y: Int64) -> [WorldCoordinate] { [WorldCoordinate(x: 0, y: y), WorldCoordinate(x: 10_000, y: y)] }
+        let network: [(station: StationID, structure: TrackStructure, points: [WorldCoordinate])] = [
+            (a, .elevated, line(0)), (a, .elevated, line(400)), (a, .tunnel, line(800)),
+            (b, .surface, line(2_000)), (b, .bridge, line(2_400)),
+            (c, .elevated, line(4_000)),
+        ]
+        func lift(_ point: WorldCoordinate) -> Map3DPoint { Map3DPoint(Float(point.x) / 100, 10, Float(point.y) / 100) }
+        // Only a's first platform and b's ground one are laid in this block.
+        let laid = [
+            Laid(station: a, line: line(0).map(lift), offset: 2, width: 4, structure: .elevated),
+            Laid(station: b, line: line(2_000).map(lift), offset: 2, width: 4, structure: .surface),
+        ]
+        let lines = Map3DScene.Builder.shellLines(laid: laid, network: network, lift: lift)
+        XCTAssertEqual(Set(lines.keys), [a])
+        XCTAssertEqual(lines[a], [line(0).map(lift), line(400).map(lift)])
+        // The whole scene, every platform laid: the same lines for a.
+        let whole = network.filter { $0.structure != .tunnel }.map {
+            Laid(station: $0.station, line: $0.points.map(lift), offset: 2, width: 4, structure: $0.structure)
+        }
+        let all = Map3DScene.Builder.shellLines(laid: whole, network: network, lift: lift)
+        XCTAssertEqual(all[a], lines[a])
+        XCTAssertEqual(all[b], [line(2_400).map(lift)])
+        XCTAssertEqual(all[c], [line(4_000).map(lift)])
+    }
 }
