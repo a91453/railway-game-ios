@@ -644,7 +644,8 @@
 - **新排進優先清單**：NEXT_PRIORITIES §29.17（REINDEER 3.25、SANTA-FLIGHT 3.15，要在 12/24 前的版本，最晚 12/20 發版；DEPOT-REAL 2.90 等 DEADLOCK-HK；TEST-JUMP 2.05 併進下一次 CI 優化；小矮人不做）。
 - **死結一次只歸一個 session 修**（作者 11-17：「因為一堆人在處理死結」）：健檢量到的只記數字，轉給 DEADLOCK-HK。
 - **音樂**：作者上班不能聽，規劃用量測審（music-review skill）；試聽檔在 assets #132，作者有空用手機聽。
-- **號碼**：決策 810、812–814 已用；811、815、816、817、818 預留中；下一個可取 **819**。存檔 107、golden schema 77。
+- **136 實機回報**（NEXT_PRIORITIES §29.18）：香港地圖包下載到了但被拒用（`incomplete("airfields.json")`），已派 **MAPPACK-FIX**（819，session_01JMHz9YiuyqQSmoz6Bk5oTv）；第一次開 3D 要 44.87 秒（**PERF-3D-FIRST** 2.55，下一個空位先派）。香港、羅瓦涅米地圖包下一版照舊內建加下載兩份都帶，實機顯示「已下載」才拿掉內建的。
+- **號碼**：決策 810、812–814 已用；811、815–819 預留中；下一個可取 **820**。存檔 107、golden schema 77。
 
 **2026-11-17 白天（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；下一任接手時以這段為最新，22:00 換 Ultra 前會再補一段）**
 
