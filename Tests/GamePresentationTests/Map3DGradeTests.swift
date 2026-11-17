@@ -92,7 +92,7 @@ final class Map3DGradeTests: XCTestCase {
     func testTheSkysFloatsCarryTheHaze() {
         let camera = Map3DCamera(distance: 300)
         let floats = Map3DSky(Map3DLighting(minute: 12 * 60)).floats(camera: camera)
-        XCTAssertEqual(floats.count, 36)
+        XCTAssertEqual(floats.count, 40) // then the aurora row (decision 813, AURORA)
         XCTAssertEqual(floats[33], camera.eye.y)
         XCTAssertEqual(floats[34], Map3DGrade.hazeDensity)
         XCTAssertEqual(floats[35], Map3DGrade.hazeHeight)
