@@ -2,12 +2,12 @@
 
 ## 進度
 
-- 做到哪：台灣的第一版在 draft PR #2336（head `ad787d1` 之後只多這個交接檔），CI 剛開始。2026-11-17 02:44 規劃說額度剩約 10 %，要停手，所以停在這裡，等規劃通知再繼續。
-- 已驗證：Linux 快檢通過。整輪 `--filter Map3D`（1535 個）跑過一次，兩個類別失敗：`Map3DGroundTintTests`（森林地面原本太深、混色數改 209）和 `Map3DNorthernMapTests`，修好後這兩類重跑通過，整輪沒有再跑。花蓮縱谷的樹 1807 → 5380。
-- 下一步：照規劃 2026-11-17 01:26 的補充（我開 PR 前沒讀到）改兩件事：
-  - (1) 先讀 `Railway/taiwan-rail-reference-clean/source/scripts/build_worldcover.py`，能移植就換掉 `tools/worldcover/build_landcover_grid.py`，並寫進 PR 對照表。
-  - (2) 規劃要求「地面顏色只對到既有的 `Map3DPalette`，不新增顏色」，但這版新增了 `bare` E7E3D9 和 `forestFloor` D4E8DA。要改成既有顏色（裸地可用 `paved` 或 `cover(.sand)`；森林要找一個在 5 L* 以內的既有綠，例如 `yard`），再跑 `Map3DGroundTintTests|Map3DNorthernMapTests|LandCoverGridTests`。
-  - 規劃補充的其他要求，這版已符合：不寫進 GameCore、不走 `addArea(.wood)`、香港不做。
+- 做到哪：規劃 2026-11-17 04:53 說額度恢復，三件都做了：
+  - CI 紅（`HongKongAirportTests`，`groundMixes` 含了底圖的草地色）已修；
+  - 網站版 `build_worldcover.py` 比對過，同樣 4 個圖塊（SHA-256 相同），移植了類別表、SHA-256 檢查與出處；向量圖磚格式與「大片林地不長樹」刻意不照做，理由在決策 811 §5；
+  - 裸地改用既有的 `paved`，只留 `forestFloor` 一個新色，五方理由在決策 811 §3。
+- 已驗證：Linux 快檢與 `LandCoverGridTests|Map3DGroundTintTests|Map3DNorthernMapTests|HongKongAirportTests|Map3DSceneryPropsTests` 通過。
+- 下一步：等 #2336 的 CI；綠了在 #2118 留「可合併、head <SHA>」。規劃還沒看總覽圖。
 
 ## 派工與範圍
 

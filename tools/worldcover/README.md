@@ -38,6 +38,12 @@ python3 -I tools/worldcover/build_landcover_grid.py \
 
 檔名照 WorldCover 原本的名字（工具認這個名字）。五個圖塊共約 120 MB，跑約 2 分鐘；N24E123 在格子東邊之外，工具會略過，實際用到 4 個。2026-11-17 跑出的比例：陸地有類別的格 11,590,345 個，森林 78.2 %、草地 2.6 %、農地 10.2 %、建成區 7.6 %、裸地 0.5 %、水 0.9 %（灌叢、濕地不到 0.1 %）。
 
+## 和網站版的關係
+
+作者的網站版（railway-reference-private `Railway/rail-reference/regions/taiwan/source/scripts/build_worldcover.py`，說明 `docs/worldcover-0908.md`）讀的是同樣 4 個圖塊：工具開頭的 `SHA256` 照它的 `manifest.json` 抄，檔案不同（例如 WorldCover 出了新版）就停下，不讓兩邊的地圖悄悄不一致。類別表、出處文字也和它一樣。
+
+不同的地方：網站版輸出 z6–11 的 Mapbox 向量圖磚（918 個、約 23 MB，要 rasterio、shapely、mapbox-vector-tile、mercantile 四個套件），App 只要每 64 m 一格的類別，所以這裡存成高度檔格式的格子（1.8 MB，只用 tifffile 和 numpy）；海岸用水域檔的格子，不另讀內政部縣市界線。
+
 ## 出處
 
 © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium。CC BY 4.0，<https://doi.org/10.5281/zenodo.7254221>。App 的資料來源頁（`DataSourceCredits` 的 `esaWorldCover`）與 3D 地圖角落的出處都列了它。

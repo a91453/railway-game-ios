@@ -704,15 +704,14 @@ public enum Map3DPalette {
     /// version ``Map3DLook`` gave them (#D9DBE2), which ran into the ground.
     public static let cityRoof = Map3DColor.rgb(0xBABDC8)
 
-    /// Decision 811: the land cover's ground outside the city's lots, as
-    /// OpenStreetMap's own cover (``cover(_:)``) where it has one, so the
-    /// two read as one: the fields' and grassland's, the wetlands'; bare
-    /// ground (river beds, scree, landslides) a pale stone. All within 5 L*
-    /// of ``ground``, as decision 720's lots are, so the track and the
-    /// trains stand off them: the woods' green (#B6DDCA, 9 L* deeper) is
-    /// too deep for that, so the forest floor is a paler green of it and
-    /// the trees on it give the forest its colour.
-    public static let bare = Map3DColor.rgb(0xE7E3D9)
+    /// Decision 811: the land cover's ground outside the city's lots is
+    /// the palette's own (``cover(_:)``, as OpenStreetMap's, so the two
+    /// read as one; bare ground the lots' ``paved``), within 5 L* of
+    /// ``ground`` as decision 720's lots are, so the track and the trains
+    /// stand off it. The forest's alone is new: the woods' green (#B6DDCA)
+    /// is 9 L* deeper than that, and the palette's paler greens are the
+    /// yards' and fields', so the forest floor is a paler green of the
+    /// woods' and the trees on it give the forest its colour.
     public static let forestFloor = Map3DColor.rgb(0xD4E8DA)
 
     /// Decision 720: what a 64 m square of ground is drawn as. Decision
@@ -749,7 +748,7 @@ public enum Map3DPalette {
             case .forest: Map3DPalette.forestFloor
             case .field: Map3DPalette.cover(.farmland)
             case .meadow: Map3DPalette.cover(.grass)
-            case .bareGround: Map3DPalette.bare
+            case .bareGround: Map3DPalette.paved
             case .marsh: Map3DPalette.cover(.wetland)
             }
         }

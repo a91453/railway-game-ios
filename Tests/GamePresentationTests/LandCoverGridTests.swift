@@ -50,7 +50,7 @@ final class LandCoverGridTests: XCTestCase {
         XCTAssertEqual(Map3DPalette.GroundKind(.grassland)?.colour, Map3DPalette.cover(.grass))
         XCTAssertEqual(Map3DPalette.GroundKind(.shrubland)?.colour, Map3DPalette.cover(.grass))
         XCTAssertEqual(Map3DPalette.GroundKind(.wetland)?.colour, Map3DPalette.cover(.wetland))
-        XCTAssertEqual(Map3DPalette.GroundKind(.bare)?.colour, Map3DPalette.bare)
+        XCTAssertEqual(Map3DPalette.GroundKind(.bare)?.colour, Map3DPalette.paved)
         for cover in [LandCoverGrid.Cover.unknown, .builtUp, .water] {
             XCTAssertNil(Map3DPalette.GroundKind(cover), "\(cover)")
         }

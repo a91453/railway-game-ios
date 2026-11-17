@@ -49,6 +49,7 @@ its own magic, `TWLC`: row by row as varint differences with runs of equal
 values, each row read alone (GamePresentation's `LandCoverGrid`).
 """
 import glob
+import hashlib
 import json
 import os
 import sys
@@ -63,6 +64,20 @@ from build_slope_grid import encode_heights, water_mask  # noqa: E402
 # WorldCover's sample size: 1/12000°.
 SAMPLES_PER_DEGREE = 12000
 TILE_DEGREES = 3
+
+# The four tiles over Taiwan, Penghu, Kinmen and Matsu by their SHA-256, as
+# the owner's web edition recorded them (railway-reference-private
+# `Railway/rail-reference/regions/taiwan/source/rail-3d/landcover/
+# worldcover-2021/manifest.json`, written by its `scripts/
+# build_worldcover.py`): the same source, so the two maps agree. Another
+# file (a later WorldCover release) stops the tool rather than change the
+# map unnoticed.
+SHA256 = {
+    'N21E117': '072533cfdf31cfddf3f4d033fe4b48df36448a5b36dd20f80abd80e2841244fb',
+    'N21E120': 'b23a186262569b69c05b7638e6fa0645a7376ebbb2644a8eac8c58fa8a767bd2',
+    'N24E117': '99cbc3abd8b76a1bcb81e1e614323506807076dad6799b0727644cbf6a4024c1',
+    'N24E120': '730c11c72158595d6fcc9b0fe4a61ff2fb786e17f08a3412542ce7e4de17a3c9',
+}
 
 # WorldCover's classes → the game's (the module's docstring).
 FOLD = {10: 1, 20: 2, 30: 3, 100: 3, 40: 4, 50: 5, 60: 6, 70: 6, 80: 7, 90: 8, 95: 8}
@@ -138,7 +153,20 @@ def majority(cover):
     return out
 
 
+def check_sources(folder):
+    """Each tile the grid needs is there and is the file the web edition
+    read (``SHA256``)."""
+    for name, expected in SHA256.items():
+        path = os.path.join(folder, f'ESA_WorldCover_10m_2021_v200_{name}_Map.tif')
+        if not os.path.exists(path):
+            sys.exit(f'{path}: missing (the module\'s docstring has the download)')
+        digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()
+        if digest != expected:
+            sys.exit(f'{path}: SHA-256 {digest}, not the {expected} the web edition read')
+
+
 def main(water_path, folder, out):
+    check_sources(folder)
     data = json.load(open(water_path))
     raw, read = landcover(data, folder)
     cover = majority(raw)
