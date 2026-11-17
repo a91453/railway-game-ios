@@ -75,9 +75,22 @@ extension GameSession {
         // Back within reach of the start: no stretch, as tapping the start.
         if let at = networkStart.flatMap({ planPoint(of: $0) }), Self.distance(at, end) <= Double(reach) {
             networkEnd = nil
+            networkDragGuide = nil
             return
         }
-        let anchor = networkAnchor(at: end, reach: reach)
+        var anchor = networkAnchor(at: end, reach: reach)
+        // Decision 826: a free end close to lining up with the track
+        // around it is drawn exactly in line, while the tool snaps.
+        var guide: TrackDrawGuide?
+        if networkSnapsToTrack, anchor == .point(end), let start = networkStart, let from = planPoint(of: start) {
+            let references = alignmentReferences(start: start, from: from, end: end, guideReach: reach * TrackAlignment.guideReaches)
+            if let (moved, found) = TrackAlignment.align(start: from, end: end, references: references, reach: reach),
+               world.bounds.contains(moved) {
+                anchor = .point(moved)
+                guide = found
+            }
+        }
+        if networkDragGuide != guide { networkDragGuide = guide }
         networkEnd = anchor == networkStart ? nil : anchor
     }
 
@@ -88,6 +101,7 @@ extension GameSession {
         dragNetwork(from: start, to: end, reach: reach)
         networkDragEndBefore = nil
         networkDragFinger = nil
+        networkDragGuide = nil
     }
 
     /// A second finger or the system took the drag: the end picked before
@@ -95,6 +109,7 @@ extension GameSession {
     /// with no end: the old end was picked for the old start.
     public func cancelNetworkDrag() {
         networkDragFinger = nil
+        networkDragGuide = nil
         guard let before = networkDragEndBefore else { return }
         networkEnd = networkDragMovedStart ? nil : before
         networkDragEndBefore = nil
