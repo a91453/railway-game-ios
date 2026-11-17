@@ -770,7 +770,7 @@ def stems_loop(names):
 
 # Decision 815: the game's two tunes, each from its stems in mixing order:
 # the theme (decision 79's chords with a melody, the 815 supplement) and
-# the winter tune, played from 1 December to 6 January (`MusicTrack`).
+# the winter tune, played from 1 December to 6 January (`MusicTune`).
 THEME_STEMS = ["theme-melody", "theme-harmony", "theme-rhythm"]
 WINTER_STEMS = ["winter-melody", "winter-harmony", "winter-rhythm"]
 MUSIC_STEMS = {"music-loop.caf": THEME_STEMS, "music-winter.caf": WINTER_STEMS}
