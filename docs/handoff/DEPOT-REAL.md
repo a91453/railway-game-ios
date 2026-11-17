@@ -16,7 +16,7 @@
 - 小蠔灣在第一條正線那一側，加了鏡像鋪法（`RealLineDepotLayout.lay(onFirst:)`）；只開給香港的線，台灣各線鋪出來的軌道不變。
 - 回歸測試 `Tests/GamePresentationTests/HongKongDepotTests.swift`（在 `main` 上是紅的）。
 - 機捷兩座機廠的真實停車股道數查到了（蘆竹 23、青埔 15，`tools/rail-depots/tymc_yard_tracks.py`），照鋪與只補到 18 都量過，**沒有收**：簡化＋管制清晨多漏班（決策 829 §4 的表）。兩座機廠維持 16、12。
-- 數字、資料來源、五方、對照表都在 `docs/decisions/829.md`；留下的三項打了分，在 NEXT_PRIORITIES §29.31。
+- 數字、資料來源、五方、對照表都在 `docs/decisions/829.md`；留下的三項打了分，在 `docs/priorities/DEPOT-REAL.md`。
 
 ## HK-NIGHT-PARKED（§29.25 第 2 列）量到的
 
@@ -25,7 +25,7 @@
 
 ## 還留下什麼
 
-分數與五方在 NEXT_PRIORITIES §29.31；細節在決策 829 §6。
+分數與五方在 `docs/priorities/DEPOT-REAL.md`；細節在決策 829 §6。
 
 1. **D2 的兩點都沒有解**（「05:56 那一班」「蘆竹機廠滿」）。量到的成因是同一個：清晨幾班同時要從蘆竹出庫，出庫的提前量只算一列自己的路程（`RunDepot.swift` 的 `runTrainLeavingDepot`）。加股數只會讓清晨要出庫的車更多。這是 GameCore 的死結類工作，這個 session 沒有動（壓縮過一次之後不接新工作；D2 已經試錯三條路，要從頭量）。DEPOT-DAWN-QUEUE，2.40。
 2. 已經買下的線補線中間的機廠（香港舊存檔）。DEPOT-ADD-MID，2.15。
