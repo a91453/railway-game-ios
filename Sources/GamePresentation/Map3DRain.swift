@@ -25,10 +25,17 @@ public struct Map3DRain: Hashable, Sendable {
     public let slant: Double
     /// Whether lightning flashes (``MapWeather/flash(at:)``).
     public let flashes: Bool
+    /// Decision 833: whether it falls as snow (a map under snow,
+    /// ``Map3DRegionLook/snow``) rather than rain.
+    public let snow: Bool
     private let weather: MapWeather
 
-    public init(_ weather: MapWeather) {
+    /// Decision 833: `snow` for a map under snow, where a day of rain falls
+    /// as snow: the reference's flakes (`QUALITY.*.snow`, white), slower,
+    /// drifting more, and no lightning.
+    public init(_ weather: MapWeather, snow: Bool = false) {
         self.weather = weather
+        self.snow = snow
         switch weather.sky {
         case .clear: amount = 0
         case .rain: amount = 1
@@ -36,12 +43,39 @@ public struct Map3DRain: Hashable, Sendable {
         case .typhoon: amount = 1.5
         }
         // The typhoon's wind blows its rain across, as on the 2D map.
-        slant = weather.sky == .typhoon ? 0.4 : Self.referenceSlant
-        flashes = weather.flashes
+        if snow {
+            slant = weather.sky == .typhoon ? Self.blizzardSlant : Self.snowSlant
+        } else {
+            slant = weather.sky == .typhoon ? 0.4 : Self.referenceSlant
+        }
+        flashes = !snow && weather.flashes
+    }
+
+    /// Decision 833: the day's rain over `world`'s map, as snow on a map
+    /// under snow (``Map3DRegionLook/snow``).
+    public init(world: GameWorld) {
+        self.init(MapWeather(world: world), snow: Map3DRegionLook(world: world).snow)
     }
 
     /// No rain.
     public static let none = Map3DRain(.clear)
+
+    /// Decision 833: how far a snowflake drifts sideways for each point it
+    /// falls, and in a gale.
+    public static let snowSlant = 0.3
+    public static let blizzardSlant = 0.9
+    /// Decision 833: how fast the flakes fall, in points a second: a
+    /// fifth of the rain's.
+    public static let snowSpeed = 44.0
+    /// Decision 833: a flake's width, in points; its height is its
+    /// ``seed(_:snow:)`` length, 1.4 to 3.2.
+    public static let flakeWidth = 2.4
+    /// Decision 833: the flakes' colour and opacity: the reference's
+    /// white (`PointsMaterial` `0xffffff`), by day a little less
+    /// opaque than at night, where it shows on the dark.
+    public static let snowColour: UInt32 = 0xFFFFFF
+    public static let snowDayOpacity = 0.8
+    public static let snowNightOpacity = 0.6
 
     /// `RAIN_SPEED`, in points a second.
     public static let speed = 220.0
@@ -63,6 +97,7 @@ public struct Map3DRain: Hashable, Sendable {
     /// ``amount``.
     public func look(night: Float) -> (colour: UInt32, opacity: Double) {
         let t = Double(min(max(night, 0), 1))
+        if snow { return (Self.snowColour, (Self.snowDayOpacity + (Self.snowNightOpacity - Self.snowDayOpacity) * t) * min(amount, 1)) }
         let colour = (0..<3).reduce(UInt32(0)) { colour, channel in
             let shift = UInt32(channel * 8)
             let day = Double(Self.dayColour >> shift & 0xFF), dark = Double(Self.nightColour >> shift & 0xFF)
@@ -74,11 +109,13 @@ public struct Map3DRain: Hashable, Sendable {
     /// How many streaks fall: the reference's high, medium and low counts
     /// (480, 260, 140) for the street life the device draws, more in a
     /// thunderstorm and a typhoon (``amount``).
+    /// Decision 833: snow's are the reference's flakes (1,800, 1,000,
+    /// 500).
     public func streakCount(_ detail: Map3DStreetDetail) -> Int {
         let base: Double = switch detail {
-        case .full: 480
-        case .reduced: 260
-        case .off: 140
+        case .full: snow ? 1_800 : 480
+        case .reduced: snow ? 1_000 : 260
+        case .off: snow ? 500 : 140
         }
         return Int((base * amount).rounded())
     }
@@ -90,7 +127,7 @@ public struct Map3DRain: Hashable, Sendable {
     public func streaks(at time: Double, width: Double, height: Double, detail: Map3DStreetDetail) -> [MapWeather.Streak] {
         guard amount > 0, width > 0, height > 0 else { return [] }
         return (0..<streakCount(detail)).map { index in
-            let seed = Self.seed(index)
+            let seed = Self.seed(index, snow: snow)
             let travel = seed.speed * time
             let x = Self.wrapped(seed.x + travel * slant / width) * width
             let y = Self.wrapped(seed.y + travel / height) * height
@@ -99,9 +136,15 @@ public struct Map3DRain: Hashable, Sendable {
     }
 
     /// Streak `index`'s own start (shares of the screen across and down),
-    /// length in points and pace in points a second.
-    static func seed(_ index: Int) -> (x: Double, y: Double, length: Double, speed: Double) {
+    /// length in points and pace in points a second. Decision 833: a
+    /// snowflake's from its own hash, short and slow, each at 0.7 to 1.3
+    /// times ``snowSpeed`` so the near and far flakes part.
+    static func seed(_ index: Int, snow: Bool = false) -> (x: Double, y: Double, length: Double, speed: Double) {
         let i = Int32(index)
+        if snow {
+            return (Double(map3DRandom(i, 0, salt: snowSalt)), Double(map3DRandom(i, 1, salt: snowSalt)),
+                    1.4 + 1.8 * Double(map3DRandom(i, 2, salt: snowSalt)), snowSpeed * (0.7 + 0.6 * Double(map3DRandom(i, 3, salt: snowSalt))))
+        }
         return (Double(map3DRandom(i, 0, salt: salt)), Double(map3DRandom(i, 1, salt: salt)),
                 5 + 6 * Double(map3DRandom(i, 2, salt: salt)), speed * (0.85 + 0.3 * Double(map3DRandom(i, 3, salt: salt))))
     }
@@ -109,7 +152,7 @@ public struct Map3DRain: Hashable, Sendable {
     // MARK: - PERF_3D_RAIN (2026-10-30): drawn by the 3D map's GPU
 
     /// The streaks as the 3D map's GPU draws them (`map3dRainVertex` in
-    /// `Map3DShaders.metal`): four floats a streak, ``seed(_:)``'s start
+    /// `Map3DShaders.metal`): four floats a streak, ``seed(_:snow:)``'s start
     /// across, start down, length and pace, made once for a rain and a
     /// street detail (``Map3DRainDrawing``). Each frame the shader moves
     /// them by the clock alone (``uniforms(seconds:width:height:night:flash:count:)``),
@@ -118,7 +161,7 @@ public struct Map3DRain: Hashable, Sendable {
     public func seeds(_ detail: Map3DStreetDetail) -> [Float] {
         guard amount > 0 else { return [] }
         return (0..<streakCount(detail)).flatMap { index in
-            let seed = Self.seed(index)
+            let seed = Self.seed(index, snow: snow)
             return [Float(seed.x), Float(seed.y), Float(seed.length), Float(seed.speed)]
         }
     }
@@ -148,7 +191,7 @@ public struct Map3DRain: Hashable, Sendable {
         return [Float(width), Float(height), Self.shaderSeconds(seconds), Float(slant),
                 channel(look.colour, 16), channel(look.colour, 8), channel(look.colour, 0), Float(look.opacity),
                 1, 1, 1, Float(Self.flashOpacity * min(max(flash, 0), 1)),
-                Float(Self.lineWidth / 2), Float(count), 0, 0]
+                Float((snow ? Self.flakeWidth : Self.lineWidth) / 2), Float(count), 0, 0]
     }
 
     /// Whether the 3D map draws the streaks (and the lightning): when it
@@ -184,6 +227,7 @@ public struct Map3DRain: Hashable, Sendable {
     public static let flashOpacity = 0.35
 
     private static let salt: Int32 = 320
+    private static let snowSalt: Int32 = 833
 
     private static func wrapped(_ share: Double) -> Double {
         let part = share - share.rounded(.down)
@@ -204,8 +248,9 @@ public struct Map3DRainDrawing: Sendable {
     /// How many times the seeds were made.
     public private(set) var builds = 0
     /// How many streaks the seeds were made for: they are
-    /// ``Map3DRain/seed(_:)``'s first so many, whatever the rain.
-    private var made: Int?
+    /// ``Map3DRain/seed(_:snow:)``'s first so many, whatever the rain;
+    /// decision 833: and whether as snow.
+    private var made: (count: Int, snow: Bool)?
 
     public init() {}
 
@@ -216,8 +261,8 @@ public struct Map3DRainDrawing: Sendable {
     /// already; whether it made them (the map then hands them over again).
     public mutating func update(_ rain: Map3DRain, detail: Map3DStreetDetail) -> Bool {
         let count = rain.streakCount(detail)
-        guard count != made else { return false }
-        made = count
+        guard made?.count != count || made?.snow != rain.snow else { return false }
+        made = (count, rain.snow)
         seeds = rain.seeds(detail)
         builds += 1
         return true

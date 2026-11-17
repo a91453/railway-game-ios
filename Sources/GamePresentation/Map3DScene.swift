@@ -259,7 +259,7 @@ public struct Map3DScene: Sendable {
             var best: (y: Float, water: Bool)?
             for face in faces where Self.covers(face, x: x, z: z) {
                 let y = (face.a.y + face.b.y + face.c.y) / 3
-                if best.map({ y > $0.y + 0.001 }) ?? true { best = (y, abs(face.a.layer - Map3DVertex.water) < 0.01) }
+                if best.map({ y > $0.y + 0.001 }) ?? true { best = (y, abs(face.a.layer - Map3DVertex.water) < 0.01 || abs(face.a.layer - Map3DVertex.ice) < 0.01) }
             }
             return best?.water ?? false
         }
@@ -1550,8 +1550,10 @@ extension Map3DScene {
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
+                // Decision 833: and its trees under snow.
+                let chunkProps = snowy ? Map3DSnowTrees.cover(props[key] ?? []) : props[key] ?? []
                 var chunk = Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, farBoxes: farBoxes, close: close,
-                             standIn: standIn, shadows: shadows, props: props[key] ?? [], minimum: low, maximum: high,
+                             standIn: standIn, shadows: shadows, props: chunkProps, minimum: low, maximum: high,
                              cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0), (standIn, 0)],
                                                             boxes: farBoxes),
                              signs: signs[key] ?? [], coarse: isCoarse(key))
