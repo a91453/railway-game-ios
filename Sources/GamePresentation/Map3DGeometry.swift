@@ -555,15 +555,20 @@ public struct Map3DMesh: Sendable {
     /// painted with `topPaint` along the line, the middle of its width
     /// at the middle of the layer (so a 3.4 m bed shows the middle of the
     /// ballast's 5 m), and the sides with `sidePaint`.
+    /// Decision 792's sequel: `widths` and `offsets`, one for each point
+    /// of `line`, in place of `width` and `offset` where they are given (an
+    /// island between two tracks that run apart on a curve).
     public mutating func addRibbon(
         along line: [Map3DPoint], width: Float, offset: Float = 0, lift: Float = 0, depth: Float = 0, top: UInt32, side: UInt32? = nil,
-        topPaint: Map3DPaint? = nil, sidePaint: Map3DPaint? = nil
+        topPaint: Map3DPaint? = nil, sidePaint: Map3DPaint? = nil, widths: [Float]? = nil, offsets: [Float]? = nil
     ) {
         guard line.count > 1 else { return }
         let across = Self.acrossDirections(line)
-        let half = width / 2
-        let left = line.indices.map { line[$0] + across[$0] * (offset - half) + Map3DPoint(0, lift, 0) }
-        let right = line.indices.map { line[$0] + across[$0] * (offset + half) + Map3DPoint(0, lift, 0) }
+        let halves = widths.map { $0.map { $0 / 2 } } ?? Array(repeating: width / 2, count: line.count)
+        let shifts = offsets ?? Array(repeating: offset, count: line.count)
+        precondition(halves.count == line.count && shifts.count == line.count)
+        let left = line.indices.map { line[$0] + across[$0] * (shifts[$0] - halves[$0]) + Map3DPoint(0, lift, 0) }
+        let right = line.indices.map { line[$0] + across[$0] * (shifts[$0] + halves[$0]) + Map3DPoint(0, lift, 0) }
         // How far along the line each point is, in metres.
         var travelled: [Float] = [0]
         for index in 1..<line.count {
@@ -578,6 +583,7 @@ public struct Map3DMesh: Sendable {
         }
         let topLayer = topPaint.map { $0.layer }, sideLayer = sidePaint.map { $0.layer }
         for index in 0..<(line.count - 1) {
+            let half = halves[index]
             let corners = [left[index], right[index], right[index + 1], left[index + 1]]
             if let normal = Self.normal(of: corners) {
                 var texture: [(u: Float, v: Float)]?
