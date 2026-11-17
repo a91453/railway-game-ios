@@ -6,9 +6,9 @@
 
 ## 還留下的（照順序）
 
-1. **凱米耶爾維的備用車擋住夜車一分鐘**：週六晚上到週四，一列備用車停在凱米耶爾維的本線月台；PYO 265 08:50 到站時被判卡住 1 分鐘，遊戲再把它送到側線（測試釘住「最多 1 分鐘」）。修法二選一：(a) `extract_rovaniemi_runs.py` 改成週四下午才從羅瓦涅米回送過去；(b) 收購時，整天沒班的車停到最後一股。(a) 只動資料，先試。
+1. （決策 810 修好，決策 818 量了 30 天都是 0 分鐘，不用改資料。）**凱米耶爾維的備用車擋住夜車一分鐘**：週六晚上到週四，一列備用車停在凱米耶爾維的本線月台；PYO 265 08:50 到站時被判卡住 1 分鐘，遊戲再把它送到側線（測試釘住「最多 1 分鐘」）。修法二選一：(a) `extract_rovaniemi_runs.py` 改成週四下午才從羅瓦涅米回送過去；(b) 收購時，整天沒班的車停到最後一股。(a) 只動資料，先試。
 2. **ROVANIEMI-MAP-2**：建物（OSM 的外形、樓層，照 `build_hk_buildings.py` 改）、雪景色票接地形；企劃 §3.3。
-3. **開關打開那一張**：`OverseasMaps.open` 加 `.rovaniemi`、加 `RailwayGameApp/AssetPacks/rovaniemi.json`（照 `hongkong.json`，決策 776）、新遊戲清單直接列（不用航班解鎖，企劃 §3.1）、網站 `credits.html`、`economy-balance` 量兩條線的價格（`.branch` 一人 300 萬，可能太貴）。
+3. （決策 818 做了，`docs/handoff/ROVANIEMI-OPEN.md`；地圖包照舊隨 App 帶。）**開關打開那一張**：`OverseasMaps.open` 加 `.rovaniemi`、加 `RailwayGameApp/AssetPacks/rovaniemi.json`（照 `hongkong.json`，決策 776）、新遊戲清單直接列（不用航班解鎖，企劃 §3.1）、網站 `credits.html`、`economy-balance` 量兩條線的價格（`.branch` 一人 300 萬，可能太貴）。
 4. 3D 列車：先借現有的機車＋客車，Sr3、Sr2 與雙層客車交工作室（企劃 §4.2 第 5 項）。
 5. 軌距 1,524 mm：3D 軌道有沒有寫死軌距沒查。
 
