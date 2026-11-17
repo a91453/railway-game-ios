@@ -20,9 +20,8 @@ FORMAT = 1
 TICKS_PER_BEAT = 960
 ROLES = ("chime", "departure", "stem")
 # Decision 815: the glockenspiel and the sleigh bells, the two voices
-# §2.1 of the research note allows beyond the first four; its later note
-# (the theme made plain) re-weighed that limit and added the felt mallet.
-VOICES = ("bell", "pluck", "pad", "clack", "glock", "sleigh", "felt")
+# §2.1 of the research note allows beyond the first four.
+VOICES = ("bell", "pluck", "pad", "clack", "glock", "sleigh")
 # §3: C D E G A, the official chimes' scale.
 PENTATONIC = {0, 2, 4, 7, 9}
 # §3 and §6: a chime lasts at most 3 s; the motif file is 0.8 s, and its

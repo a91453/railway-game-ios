@@ -204,35 +204,85 @@
       "stems": [
         {
           "score": "tools/audio/scores/theme-melody.score.json",
-          "scoreSha256": "dbce67e989fa8b2d2a2511c1385d54dcba233bc463945f642f5c62eb9270b01a",
+          "scoreSha256": "404d9e7e3fc7c4302173de9b302662e8eb6a9166a3161714d34b428649706296",
           "mml": "tools/audio/mml/theme-melody.mml",
-          "mmlSha256": "4e61e0ea64b9a20300f071739baa2f36e4b2b3f644d4ed095d4ce8ada669846b"
+          "mmlSha256": "80560607d4ec3dc4831a27b892eec37d77dce348fdf9865d087a405959d8a2f5"
         },
         {
           "score": "tools/audio/scores/theme-harmony.score.json",
-          "scoreSha256": "0b3541ea05e5430b06138aea33e36dc5946ddbb0352a2759d1be93ee7086d3f8",
+          "scoreSha256": "aed36ad61663a5e0f7a7cf7a9e4c4b36e233f2313791e3b3c45ee7a1bedeeb4f",
           "mml": "tools/audio/mml/theme-harmony.mml",
-          "mmlSha256": "717048527de2deb97615b270cd471b67f63ab037c71cb60e944ad4f45350dda5"
+          "mmlSha256": "8168004e1d073dea038deaf4c2a3e8a5e81091d2f656b232c8eccb6774d43c4d"
         },
         {
           "score": "tools/audio/scores/theme-rhythm.score.json",
-          "scoreSha256": "e78b982fc3f2ef6c1d082455e9ba6f21672ed2a4b9a581e06ed55bea02456367",
+          "scoreSha256": "f17d68124dc77093e7c81e1fb33ee6a9932221ff2fb5dff7330b1bd91b7cce1a",
           "mml": "tools/audio/mml/theme-rhythm.mml",
-          "mmlSha256": "26ed023865369b12f665cc8a548f9dfdac993edc5bf20a4d0caa9ba83f8152a8"
+          "mmlSha256": "046e58d045eee72ce7cbcab0882392befd13639cdd856d3ebc00f7bc6dbf7072"
         }
       ],
+      "arrangement": "tools/audio/sampled/arrangements.json",
+      "arrangementSha256": "682bb00ff275b33594b8d293665f1d82ba2afef87265d1b85b414d25244e1626",
+      "bank": {
+        "name": "GeneralUser GS v2.0.3",
+        "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+        "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
+      },
       "kind": "music",
-      "sha256": "c2a780df813bf86b19ebf17a7c7e378a7d2badb21b46df42f59599800cbaadb8",
+      "tune": "theme",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "sha256": "ed2742ac62ba17c8930a5f93fb97844c5b43efb91b48d89dd670b02aa4b2ae83",
       "frames": 3686400,
       "seconds": 76.8,
-      "peakDbfs": -3.66,
-      "rmsDbfs": -18.6,
-      "largestStep": 0.09534,
-      "loopSeam": 0.02551,
+      "peakDbfs": -1.41,
+      "rmsDbfs": -18.37,
+      "largestStep": 0.08456,
+      "loopSeam": 0.01068,
       "loudnessLufs": -15.95
     },
     {
-      "file": "music-winter.caf",
+      "file": "music-theme.m4a",
+      "stems": [
+        {
+          "score": "tools/audio/scores/theme-melody.score.json",
+          "scoreSha256": "404d9e7e3fc7c4302173de9b302662e8eb6a9166a3161714d34b428649706296",
+          "mml": "tools/audio/mml/theme-melody.mml",
+          "mmlSha256": "80560607d4ec3dc4831a27b892eec37d77dce348fdf9865d087a405959d8a2f5"
+        },
+        {
+          "score": "tools/audio/scores/theme-harmony.score.json",
+          "scoreSha256": "aed36ad61663a5e0f7a7cf7a9e4c4b36e233f2313791e3b3c45ee7a1bedeeb4f",
+          "mml": "tools/audio/mml/theme-harmony.mml",
+          "mmlSha256": "8168004e1d073dea038deaf4c2a3e8a5e81091d2f656b232c8eccb6774d43c4d"
+        },
+        {
+          "score": "tools/audio/scores/theme-rhythm.score.json",
+          "scoreSha256": "f17d68124dc77093e7c81e1fb33ee6a9932221ff2fb5dff7330b1bd91b7cce1a",
+          "mml": "tools/audio/mml/theme-rhythm.mml",
+          "mmlSha256": "046e58d045eee72ce7cbcab0882392befd13639cdd856d3ebc00f7bc6dbf7072"
+        }
+      ],
+      "arrangement": "tools/audio/sampled/arrangements.json",
+      "arrangementSha256": "682bb00ff275b33594b8d293665f1d82ba2afef87265d1b85b414d25244e1626",
+      "bank": {
+        "name": "GeneralUser GS v2.0.3",
+        "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+        "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
+      },
+      "kind": "music",
+      "tune": "theme",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "sha256": "6bf09d1d1d81dc76073732f482e799482e0135c54dffe02ea601e66c16452132",
+      "frames": 3830784,
+      "seconds": 79.808,
+      "peakDbfs": -1.43,
+      "rmsDbfs": -18.55,
+      "largestStep": 0.08395,
+      "endLevel": 0.0,
+      "loudnessLufs": -15.97
+    },
+    {
+      "file": "music-winter.m4a",
       "stems": [
         {
           "score": "tools/audio/scores/winter-melody.score.json",
@@ -253,15 +303,24 @@
           "mmlSha256": "6cc80fea3947bd689d324fe6dbc3e96e66d89a9c9cb5449b8dc330a3c30937c6"
         }
       ],
+      "arrangement": "tools/audio/sampled/arrangements.json",
+      "arrangementSha256": "682bb00ff275b33594b8d293665f1d82ba2afef87265d1b85b414d25244e1626",
+      "bank": {
+        "name": "GeneralUser GS v2.0.3",
+        "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+        "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
+      },
       "kind": "music",
-      "sha256": "bb1161afc219e18405ffedf7b7d544574e68391e39cf5343df1d377f44a1305d",
-      "frames": 5376000,
-      "seconds": 112.0,
-      "peakDbfs": -2.27,
-      "rmsDbfs": -19.04,
-      "largestStep": 0.36209,
-      "loopSeam": 0.02386,
-      "loudnessLufs": -15.95
+      "tune": "winter",
+      "copyright": "Arrangement copyright (c) 2026 a91453. All rights reserved. Melody: Jingle Bells (James Lord Pierpont, 1857), public domain.",
+      "sha256": "33dc1a516e7bcf27e581e9a00373ff73f5431a172b6164da21c7af92c9f40df6",
+      "frames": 5520384,
+      "seconds": 115.008,
+      "peakDbfs": -1.34,
+      "rmsDbfs": -18.53,
+      "largestStep": 0.16992,
+      "endLevel": 0.0,
+      "loudnessLufs": -16.0
     },
     {
       "file": "new-train.wav",

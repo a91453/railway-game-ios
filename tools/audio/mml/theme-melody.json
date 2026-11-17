@@ -1,13 +1,13 @@
 {
   "role": "stem",
-  "title": "Theme: felt ostinato and the long line",
-  "beatsPerBar": 4,
+  "title": "Theme: the minuet's melody",
+  "beatsPerBar": 3,
   "motif": 0,
   "fadeOut": 0,
   "tracks": [
-    {"voice": "felt", "gain": 34, "pan": -15},
-    {"voice": "felt", "gain": 26, "pan": 22},
-    {"voice": "pad", "gain": 60, "pan": 0},
+    {"voice": "pluck", "gain": 58, "pan": 0},
+    null,
+    null,
     null,
     null,
     null

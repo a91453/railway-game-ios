@@ -80,6 +80,14 @@ public enum DataSourceCredits {
 
     static var cityViewNoticesURL: String? { CityViewPage.root().map { $0 + "NOTICES.txt" } }
     static let polyHavenURL = "https://polyhaven.com"
+    /// Decision 815's later note: the instruments the music is played on.
+    /// Its licence asks for links to its own pages, not its download files.
+    static let generalUserGSURL = "https://github.com/mrbumpy409/GeneralUser-GS"
+    /// Decision 815's later note: whose the game's own music is, the
+    /// brand's developer (``GameBrand``).
+    static var musicHolder: (english: String, chinese: String) {
+        ("the developer of \(GameBrand.current.english)", "\(GameBrand.current.chinese)開發者")
+    }
     static let meshyURL = "https://www.meshy.ai"
     static let kenneyNatureKitURL = "https://kenney.nl/assets/nature-kit"
     static let kenneyIndustrialURL = "https://kenney.nl/assets/city-kit-industrial"
@@ -1226,6 +1234,25 @@ public enum DataSourceCredits {
                 id: "sounds",
                 title: language.text("Sounds", "聲音"),
                 credits: [
+                    // Decision 815's later note: the theme is the game's own
+                    // composition and the winter tune its own arrangement of
+                    // a tune in the public domain, both the developer's;
+                    // the instruments are a sample bank's.
+                    DataSourceCredit(
+                        id: "music",
+                        title: language.text("Music", "音樂"),
+                        detail: language.text(
+                            "The theme is an original composition for the game. The winter tune is the game’s own arrangement of Jingle Bells (James Lord Pierpont, 1857, in the public domain). Both are played on the instruments of GeneralUser GS.",
+                            "主題曲是為遊戲原創的曲子；冬季曲是遊戲自己編曲的〈Jingle Bells〉（James Lord Pierpont 1857 年作，屬公眾領域）。兩首都用 GeneralUser GS 的樂器演奏。"
+                        ),
+                        notice: language.text(
+                            "Music © 2026 \(musicHolder.english). All rights reserved. Instrument samples: GeneralUser GS by S. Christian Collins, under the GeneralUser GS License v2.0.",
+                            "音樂版權所有 © 2026 \(musicHolder.chinese)，保留一切權利。樂器取樣：S. Christian Collins 的 GeneralUser GS，依 GeneralUser GS 授權第 2.0 版使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "GeneralUser GS", url: generalUserGSURL),
+                        ]
+                    ),
                     DataSourceCredit(
                         id: "runningSound",
                         title: language.text("Train recordings", "列車錄音"),

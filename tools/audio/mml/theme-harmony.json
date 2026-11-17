@@ -1,14 +1,14 @@
 {
   "role": "stem",
-  "title": "Theme: pad chords and bass",
-  "beatsPerBar": 4,
+  "title": "Theme: bass, the two chord tones on beats two and three, and the strings",
+  "beatsPerBar": 3,
   "motif": 0,
   "fadeOut": 0,
   "tracks": [
-    {"voice": "pad", "gain": 18, "pan": -20},
-    {"voice": "pad", "gain": 18, "pan": 0},
-    {"voice": "pad", "gain": 18, "pan": 20},
-    {"voice": "pad", "gain": 24, "pan": 0},
+    {"voice": "pluck", "gain": 40, "pan": -10},
+    {"voice": "pluck", "gain": 22, "pan": 18},
+    {"voice": "pluck", "gain": 22, "pan": 25},
+    {"voice": "pad", "gain": 10, "pan": 0},
     null,
     null
   ]

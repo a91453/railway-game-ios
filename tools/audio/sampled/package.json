@@ -1,0 +1,9 @@
+{
+  "name": "railway-game-ios-sampled-music",
+  "private": true,
+  "description": "Renders the game's music from its scores on sampled instruments (tools/audio/sampled_music.py). Not part of the app.",
+  "type": "module",
+  "dependencies": {
+    "spessasynth_core": "4.4.10"
+  }
+}

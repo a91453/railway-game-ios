@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Synthesize the game's music and sound effects (RailwayGameApp/Resources/Audio/).
 
-The same synth as the first promo video's soundtrack, so the game sounds as
-the video does: the theme, a felt-mallet ostinato over slow pad chords
-and rail joints in C, with no dominant (decision 815's later note), a
-station chime, a whoosh, a rail joint, and the sounds of something
-put up and of money coming in (decision 117), and of something refused
-and a warning (decision 184), a ticket issued (decision 373), the
-followed train's horn (decision 403) and the evening garbage truck's tune
-(decision 437, Für Elise, public domain). Everything is made here from
-sine waves and seeded noise: no samples or third-party audio. The output is
-the same on every run.
+The sound effects use the same synth as the first promo video's soundtrack:
+a station chime, a whoosh, a rail joint, and the sounds of something put
+up and of money coming in (decision 117), and of something refused and a
+warning (decision 184), a ticket issued (decision 373), the followed
+train's horn (decision 403) and the evening garbage truck's tune (decision
+437, Für Elise, public domain). They are made here from sine waves and
+seeded noise. The two music loops (the theme, a minuet in C, and the
+winter tune) are played from their MML stems on sampled instruments
+(`sampled_music.py`, decision 815's later note): a pinned SoundFont bank
+and an npm renderer, both tools only. The output is the same on every run.
 
 Decision 219: the station chimes are played from scores of railway game ios
 (`scores/*.score.json`, checked by `score.py`): the local chime (the
@@ -19,9 +19,11 @@ each also as its motif, the first notes alone, for high speed. Decision
 256: the goal-met tune is played from its score too (`scores/goal-met`,
 kept to the chime rules), as a whole only, and so is decision 315's
 line-acquired tune (`scores/line-acquired`). Decision 815:
-the winter tune (`music-winter.caf`, Jingle Bells, public domain) is mixed
-from three stems written in MML (`mml/winter-*.mml`), as loud as the theme
-by ITU-R BS.1770 loudness. Every file
+the theme (`music-loop.caf`) and the winter tune (`music-winter.caf`,
+Jingle Bells, public domain) are each three stems written in MML
+(`mml/theme-*.mml`, `mml/winter-*.mml`), the instruments in
+`sampled/arrangements.json`, peak-limited and levelled to the same ITU-R
+BS.1770 loudness. Every file
 is listed in `manifest.json` with its source, SHA-256, peak, RMS and its
 loop seam or end, and the music its loudness.
 
@@ -32,7 +34,10 @@ loop seam or end, and the music its loudness.
 every file and the manifest are byte for byte the committed ones (and the
 scores match their MML, when Node is on the PATH).
 
-Needs numpy, and ffmpeg on the PATH for the music's IMA4 CAF.
+Needs numpy, ffmpeg on the PATH (the music's ALAC CAF) and Node with npm
+(the sampled renderer, installed into `sampled/node_modules` on first use);
+the bank is downloaded once into `~/.cache/railway-game-ios/` (or read from
+`AUDIO_SOUNDBANK`) and checked by SHA-256.
 """
 
 import hashlib
@@ -46,6 +51,7 @@ import wave
 
 import numpy as np
 
+import sampled_music
 import score as scores
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -111,23 +117,6 @@ def glock_frames(m, frames):
         np.exp(-k * 2.6) * np.sin(2 * np.pi * f * k)
         + 0.25 * np.exp(-k * 9) * np.sin(2 * np.pi * f * 2.756 * k)
         + 0.08 * np.exp(-k * 20) * np.sin(2 * np.pi * f * 5.404 * k)
-    )
-
-
-def felt_frames(m, frames):
-    """Decision 815's later note (the theme made plain): a soft felt
-    mallet, the flat, rounded look of the game's art in sound: a 12 ms
-    strike (soft, never a click), the fundamental with a little of its
-    second and third harmonics and a trace of the bar's fourth mode (3.98
-    times) that dies within a tenth of a second, no bright partials; low
-    notes ring longer than high ones."""
-    k = np.arange(frames) / SR
-    f = note_hz(m)
-    return np.minimum(1, k / 0.012) * np.exp(-k * (1.3 + f / 900)) * (
-        np.sin(2 * np.pi * f * k)
-        + 0.45 * np.exp(-k * 1.5) * np.sin(4 * np.pi * f * k)
-        + 0.15 * np.exp(-k * 3) * np.sin(6 * np.pi * f * k)
-        + 0.08 * np.exp(-k * 8) * np.sin(2 * np.pi * f * 3.98 * k)
     )
 
 
@@ -680,10 +669,70 @@ def write_caf(path, loop):
         )
 
 
+def write_alac_caf(path, loop, copyright):
+    """Decision 815's later note: music as a lossless (Apple Lossless) CAF,
+    16-bit stereo. IMA4's four bits a sample hiss under quiet sampled
+    instruments (about 43 dB signal to noise); ALAC has no encoder delay,
+    so it loops without a gap as IMA4 does. The file carries `copyright`
+    (the tune's, from the arrangement)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        source = os.path.join(tmp, "loop.wav")
+        write_wav(source, loop)
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", source, "-c:a", "alac", "-sample_fmt", "s16p",
+             "-map_metadata", "-1", "-metadata", f"copyright={copyright}",
+             "-fflags", "+bitexact", "-flags:a", "+bitexact", path],
+            check=True,
+        )
+
+
+def write_aac(path, x, copyright):
+    """Decision 815's later note: a tune played once (it rings out at its
+    end, so it never loops and the encoder's delay does not matter) as
+    AAC at 192 kb/s, about a tenth of ALAC's size; it carries `copyright`."""
+    with tempfile.TemporaryDirectory() as tmp:
+        source = os.path.join(tmp, "once.wav")
+        write_wav(source, x)
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", source, "-c:a", "aac", "-b:a", "192k",
+             "-map_metadata", "-1", "-metadata", f"copyright={copyright}",
+             "-fflags", "+bitexact", "-flags:a", "+bitexact", path],
+            check=True,
+        )
+
+
+# Decision 815's later note: the sampled music's peaks are limited to this
+# at MUSIC_LUFS (level_to refuses above 0.9; this leaves room, about -1.4 dBFS).
+MUSIC_CEILING = 0.85
+
+
+def music_files(tune):
+    """Decision 815's later note: the files of `tune` played on sampled
+    instruments (`sampled_music.py`) from its stem scores, by name: its
+    loop, levelled to `MUSIC_LUFS`, and its time played once, at the gain
+    its one time through needs for `MUSIC_LUFS` (the ring at its end
+    left as it falls)."""
+    music = sampled_music.tunes()[tune]
+    sheets = [scores.load(os.path.join(HERE, "scores", f"{name}.score.json")) for name in sampled_music.stems(tune)]
+    files = {}
+    if "loop" in music:
+        loop = sampled_music.sampled_loop(tune, sheets, lambda name: clack())
+        loop = sampled_music.limit(loop, 10 ** ((MUSIC_LUFS - loudness_lufs(loop)) / 20), MUSIC_CEILING)
+        files[music["loop"]] = level_to(loop, MUSIC_LUFS)
+    if "once" in music:
+        once, n = sampled_music.sampled_once(tune, sheets, lambda name: clack())
+        gain = 10 ** ((MUSIC_LUFS - loudness_lufs(once[:n])) / 20)
+        once = sampled_music.limit(once, gain, MUSIC_CEILING) * gain
+        if np.abs(once).max() > 0.9:
+            raise SystemExit(f"{music['once']}: peaks at {np.abs(once).max():.2f}")
+        files[music["once"]] = once
+    return files
+
+
 # Decision 219: how long a struck voice rings when its note is shorter (a
 # bell or a pluck sounds on past its written length, as the chimes and the
 # music above always played them), cut at the score's end.
-RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9), "glock": int(SR * 1.6), "sleigh": int(SR * 0.4), "felt": int(SR * 2.4)}
+RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9), "glock": int(SR * 1.6), "sleigh": int(SR * 0.4)}
 # The official chimes' peak (§3 of the research note: the station chime's).
 CHIME_PEAK = 0.6
 
@@ -709,8 +758,6 @@ def voice(name, pitch, frames):
         return glock_frames(pitch, max(frames, RING_FRAMES["glock"]))
     if name == "sleigh":
         return sleigh_frames(pitch, max(frames, RING_FRAMES["sleigh"]))
-    if name == "felt":
-        return felt_frames(pitch, max(frames, RING_FRAMES["felt"]))
     return clack()
 
 
@@ -765,63 +812,17 @@ def motif(score):
     return normalized(fade_tail(sound, int(SR * scores.MOTIF_FADE_SECONDS)), CHIME_PEAK)
 
 
-# Decision 815: a pad note in a stem rings this long past its written
-# length, as decision 79's theme always overlapped its pads into the next chord (it
-# gives each 0.6 s more), so a chord held over a bar line does not dip.
-STEM_PAD_OVERLAP = 0.6
-# The longest any voice rings past its note: the felt mallet.
-STEM_TAIL = max(RING_FRAMES.values())
-
-
-def stem_voice(name, pitch, frames):
-    if name == "pad":
-        return pad([pitch], frames / SR + STEM_PAD_OVERLAP)
-    return voice(name, pitch, frames)
-
-
-def stems_loop(names):
-    """Decision 815: the loop the stems `names` make together (research
-    note §2.5): every stem the same tempo and length, mixed at the
-    velocities written (velocity ÷ 127 × gain ÷ 100, not each stem by its
-    own loudest note, so the stems keep their balance), the tails past the
-    end folded back onto the start so the loop runs on into itself, then
-    the theme's ping-pong echo of a dotted eighth, round the circle."""
-    sheets = [scores.load(os.path.join(HERE, "scores", f"{name}.score.json")) for name in names]
-    first = sheets[0]
-    for sheet in sheets:
-        if sheet["role"] != "stem":
-            raise SystemExit(f"{sheet['title']} is not a stem")
-        if (sheet["tempo"], sheet["length"], sheet["beatsPerBar"]) != (first["tempo"], first["length"], first["beatsPerBar"]):
-            raise SystemExit(f"{sheet['title']}: the stems differ in tempo, length or metre")
-    step = frames_per_tick(first)
-    n = first["length"] * step
-    assert n % 64 == 0, "the loop must be whole IMA4 packets"
-    mix = np.zeros((n + STEM_TAIL + int(SR * STEM_PAD_OVERLAP), 2))
-    for sheet in sheets:
-        for track in sheet["tracks"]:
-            pan = track["pan"] / 100
-            for note in track["notes"]:
-                start = note["start"] * step
-                amp = note["velocity"] / 127 * track["gain"] / 100
-                sig = amp * stem_voice(track["voice"], note["pitch"], note["length"] * step)
-                sig = sig[: len(mix) - start]
-                mix[start : start + len(sig), 0] += sig * (1 - pan) / 2**0.5
-                mix[start : start + len(sig), 1] += sig * (1 + pan) / 2**0.5
-    loop = mix[:n].copy()
-    loop[: len(mix) - n] += mix[n:]
-    d = int(SR * 60 / first["tempo"] * 0.75)
-    echo = np.zeros_like(loop)
-    echo[:, 0] = np.roll(loop[:, 1], d) * 0.25
-    echo[:, 1] = np.roll(loop[:, 0], d) * 0.25
-    return loop + echo
-
-
-# Decision 815: the game's two tunes, each from its stems in mixing order:
-# the theme (a felt ostinato over pad chords, decision 815's later note) and
-# the winter tune, played from 1 December to 6 January (`MusicTune`).
-THEME_STEMS = ["theme-melody", "theme-harmony", "theme-rhythm"]
-WINTER_STEMS = ["winter-melody", "winter-harmony", "winter-rhythm"]
-MUSIC_STEMS = {"music-loop.caf": THEME_STEMS, "music-winter.caf": WINTER_STEMS}
+# Decision 815 and its later note: the game's two tunes, the theme (a
+# minuet) and the winter tune, played from 1 December to 6 January
+# (`MusicTune`), each from its stem scores on the sampled instruments of
+# `sampled/arrangements.json`.
+# Decision 815's later note: each file a tune makes, and the tune.
+MUSIC_FILES = {
+    file: tune
+    for tune, music in sampled_music.tunes().items()
+    for file in (music.get("loop"), music.get("once"))
+    if file
+}
 
 
 def k_weighted_power(x):
@@ -976,10 +977,12 @@ def manifest(out_dir):
     for name, file in TUNES:
         path = os.path.join(HERE, "scores", f"{name}.score.json")
         by_file[file] = {"score": relative(path), "scoreSha256": sha256(path), "kind": "tune"}
-    # Decision 815: the tunes, from their stems.
-    for file, names in MUSIC_STEMS.items():
+    # Decision 815: the tunes, from their stems; its later note: played on
+    # the sampled instruments of the arrangement, from the pinned bank.
+    bank = sampled_music.arrangements()["bank"]
+    for file, tune in MUSIC_FILES.items():
         stems = []
-        for name in names:
+        for name in sampled_music.stems(tune):
             path = os.path.join(HERE, "scores", f"{name}.score.json")
             stem = {"score": relative(path), "scoreSha256": sha256(path)}
             mml = scores.load(path).get("source", "")
@@ -987,7 +990,15 @@ def manifest(out_dir):
                 stem["mml"] = mml
                 stem["mmlSha256"] = sha256(os.path.join(ROOT, mml))
             stems.append(stem)
-        by_file[file] = {"stems": stems, "kind": "music"}
+        by_file[file] = {
+            "stems": stems,
+            "arrangement": relative(sampled_music.ARRANGEMENTS),
+            "arrangementSha256": sha256(sampled_music.ARRANGEMENTS),
+            "bank": {"name": bank["name"], "commit": bank["commit"], "sha256": bank["sha256"]},
+            "kind": "music",
+            "tune": tune,
+            "copyright": sampled_music.tunes()[tune]["copyright"],
+        }
     for file in sorted(os.listdir(out_dir)):
         entry = {"file": file}
         if file in by_file:
@@ -1029,9 +1040,11 @@ def manifest(out_dir):
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-    # Decision 815: the two tunes from their stems, equally loud.
-    for file, stems in MUSIC_STEMS.items():
-        write_caf(os.path.join(out_dir, file), level_to(stems_loop(stems), MUSIC_LUFS))
+    # Decision 815: the two tunes from their stems, equally loud; its later
+    # note: the loops lossless, the tunes played once as AAC.
+    for tune, music in sampled_music.tunes().items():
+        for file, x in music_files(tune).items():
+            (write_alac_caf if file.endswith(".caf") else write_aac)(os.path.join(out_dir, file), x, music["copyright"])
     # Decision 343: the running loops.
     write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
     write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))
