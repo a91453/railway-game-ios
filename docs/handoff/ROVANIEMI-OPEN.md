@@ -2,17 +2,25 @@
 
 ## 進度
 
-- **做到哪**：做完。開關、新遊戲清單、第 3 週聖誕老人村、價格與備用車量測、網站 credits（railway-reference-private #145，draft）。
+- **做到哪**：做完。開關、新遊戲清單、第 3 週聖誕老人村、價格與備用車量測、網站 credits（railway-reference-private #145，已轉 ready，138 發了再合）。
 - **已驗證**（Linux 雲端，VERIFIED）：
   - `swift build --build-tests -Xswiftc -warnings-as-errors`；
   - release 跑相關的 90 項測試；
   - `RovaniemiReportTests` 30 天：兩條線都虧，死結 0 分鐘。
-- **下一步的第一個指令**：無。**#2355 等價錢修正一起合，138**（規劃 11-17：羅瓦涅米不在 137 開，等 ROVANIEMI-PAIR、ROVANIEMI-FARE 修好和它一起在 138 開，仍趕在 11/30 前）。
+- **下一步的第一個指令**：無。#2355 已和價錢修正（#2375，決策 828）一起合進 `main`（11-18），隨 **138** 上架（期限 11-30，發版是作者的決定）。11-18 的收尾（session_01YGNNupJ9rnKFMekn5KuUdx）在 `main` `b4ae9c5` 重驗了建置、羅瓦涅米相關 56 項測試與 30 天量測（見下方「11-18 重驗」），開放本身的分數寫在 `docs/priorities/ROVANIEMI-OPEN.md`（3.30）。
 
 ---
 
 - 派工單：ROVANIEMI-OPEN（遊戲規劃，2026-11-17）；session_01JMHz9bckVEprLBmpgpVmVQ；分支 `claude/rovaniemi-open`。
 - 決策 818。存檔版本、golden schema、GameCore、`project.yml`（Xcode 專案）都不動。
+
+## 11-18 重驗（`main` `b4ae9c5`，Linux 雲端，VERIFIED）
+
+在 #2371 DEPOT-REAL、#2375 ROVANIEMI-FARE、#2382 SANTA-FLIGHT 都合進去之後再跑一次：
+
+- `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨。
+- 56 項測試通過：`RovaniemiRailwaysTests`、`RovaniemiBuildingsTests`、`StartMenuTests`、`WinterEventTests`、`SantaFlightTests`、`Map3DRegionLookTests`、`DataSourceCreditsOSMUseTests`、`DataSourceCreditsNoRepoLinkTests`；另有 `FarDemandTests`、`StateTrackTests`、`DistanceDemandTests` 17 項。
+- `ROVANIEMI_REPORT=30` 第 30 天和決策 828 §2 一模一樣：KJA 104 旅次、+NT$239／天；MUL 916、+NT$41,108（84 天回本）；兩條（兩種順序）948、+NT$29,157（219 天）；死結都是 0 分鐘。
 
 ## 做了什麼
 
