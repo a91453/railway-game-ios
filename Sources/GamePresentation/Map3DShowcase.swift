@@ -301,7 +301,8 @@ public enum Map3DShowcase {
         return (0..<count).compactMap { index in
             guard let model = pack.modelIndex(of: set, carIndex: index, count: count) else { return nil }
             let turned = count > 1 && index == count - 1 && tail == nil
-            return (model, carLength, carPitch - carLength, turned)
+            // CAR-GAP: a set whose models reach their couplers end to end.
+            return (model, carLength, set.touching ? 0 : carPitch - carLength, turned)
         }
     }
 
