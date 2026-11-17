@@ -361,6 +361,7 @@ extension Map3DScene.Builder {
             }
             return nil
         }
+        let yards = freightYards
         for (id, station, open, longest, middle) in found {
             if self.world.station(id: id)?.isDepot == true {
                 // Decision 441: a depot's maintenance shed, not a station's
@@ -379,6 +380,13 @@ extension Map3DScene.Builder {
                 cells.formUnion(addHouse(station, id: id, platforms: open, middle: middle))
             } else {
                 addEntrances(station, id: id, platforms: open, path: longest, middle: middle)
+            }
+            // Decision 837: its freight yard, beside platforms on the
+            // ground, away from its building.
+            if let product = yards[id], open.contains(where: { $0.structure != .elevated && $0.structure != .bridge }) {
+                let house = stationFronts.last { ($0.centre - middle.point).length < 60 }?.forward
+                cells.formUnion(addFreightYard(product, at: id, platforms: open.filter { $0.structure != .elevated && $0.structure != .bridge },
+                                               house: house, middle: middle))
             }
         }
         if shops { addShopStreets() }
@@ -490,8 +498,10 @@ extension Map3DScene.Builder {
     /// them (`forward`) and the middle of its back (`back`), on the side
     /// with less other track, a metre past the farthest platform or the
     /// track just beyond it; over the middle when there are none.
+    /// Decision 837: on one of `sides` only (−1 left of the line, 1 right).
     func besidePlatforms(depth: Float, wide: Float, platforms: [LaidPlatform],
-                         middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) -> (forward: Map3DPoint, back: Map3DPoint) {
+                         middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint),
+                         sides: [Float] = [-1, 1]) -> (forward: Map3DPoint, back: Map3DPoint) {
         if platforms.isEmpty {
             let forward = middle.right
             return (forward, middle.point - forward * (depth / 2))
@@ -541,7 +551,7 @@ extension Map3DScene.Builder {
         let half = platforms.compactMap { Map3DStreetLife.Path($0.line)?.length }.max().map { $0 / 2 } ?? 0
         let slides = [Float(0), 1, -1, 2, -2].map { $0 * (wide / 2 + 4) }.filter { abs($0) <= max(half, 1) }
         let choices = slides.flatMap { slide in
-            [Float(-1), 1].map { side in
+            sides.map { side in
                 let anchor = middle.point + middle.along * slide, edge = clear(side, at: anchor)
                 return (side: side, slide: slide, edge: edge, blocked: farthest(side, from: edge, to: edge + depth, at: anchor).count,
                         shut: opensOnto(side) ? 0 : 1)

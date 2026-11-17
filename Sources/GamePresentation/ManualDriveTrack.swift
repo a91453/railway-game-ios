@@ -73,7 +73,7 @@ public struct ManualDriveTrack: Sendable {
             train: run.train, look: run.look, isHighSpeed: run.isHighSpeed, livery: run.livery, trail: behind, lag: 0,
             length: run.length, carPitch: run.carPitch, heading: heading,
             aheadTrail: TrainMotion.Trail(trail.points(from: head, to: head + Double(TrainTrackReach.ahead))),
-            bodyEnd: behind.length
+            bodyEnd: behind.length, freightLoad: run.freightLoad
         )
     }
 
