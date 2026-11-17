@@ -165,7 +165,7 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 
 ### 0.6.0 (136)，2026-11-17
 
-從 `main` **`19f3cc5`**（#2326 的合併）建置，135（`89ed04b`）之後的 #2310、#2315–#2328。TestFlight `testflight.yml` run 43998784830（run 136，2026-11-17 01:52 UTC 作者自己按）：RESULT_TF。同一個 commit 的完整 `ci.yml` run 43998595808 RESULT_CI；full lane run 43998599964 RESULT_FL（見 `research/HEALTH_136_2026-11-17.md` §4）。
+從 `main` **`19f3cc5`**（#2326 的合併）建置，135（`89ed04b`）之後的 #2310、#2315–#2328。TestFlight `testflight.yml` run 43998784830（run 136，2026-11-17 01:52 UTC 作者自己按）：成功（02:29 UTC）。同一個 commit 的完整 `ci.yml` run 43998595808 綠；full lane run 43998599964 紅一支：`TutorialJourneyUITests/testTheWholeTutorialOnAPhoneOnItsSide`（橫拿教學第 9 步等不到第二站的 ✓，FULLLANE-136 在修）；lessons、second、iPad 教學綠，135 紅的雙線月台與兩支鋪軌膠囊都修好了（見 `research/HEALTH_136_2026-11-17.md` §4）。
 
 **玩家看得到的**：這版新增卡 `2026-11-17-136` 與 `.github/testflight-whats-new.md`（只寫 136）：香港會議展覽中心（#2324，決策 798）、聖誕塗裝改成雪頂、花環與燈、頭車緞帶（#2310、#2321，決策 806；12/1 才看得到）；修好：iPhone 橫拿大字級的建造卡 ✕ ✓（#2325）、管制開著時終點與航廈月台的先後與擋路的閒置車（#2322，決策 808）。
 
