@@ -30,9 +30,9 @@ public struct Map3DRegionLook: Sendable, Equatable {
     }
 
     /// The look round `anchor`.
-    /// - Hong Kong's streets within 22.1–22.6° N and 113.8–114.5° E, which
-    ///   holds the whole territory and none of Taiwan (Kinmen is at
-    ///   118.3° E).
+    /// - Hong Kong's streets and buildings within 22.1–22.6° N and
+    ///   113.8–114.5° E, which holds the whole territory and none of
+    ///   Taiwan (Kinmen is at 118.3° E); decision 812 its buildings.
     /// - Finland's streets, buildings and 1,524 mm gauge within
     ///   59.5–70.2° N and 19.0–31.6° E.
     /// - Snow north of 60° N (Rovaniemi is at 66.5°; Taiwan and Hong Kong
@@ -40,7 +40,7 @@ public struct Map3DRegionLook: Sendable, Equatable {
     public init(anchor: GeoAnchor) {
         let hongKong = 221_000_000...226_000_000 ~= anchor.latitude && 1_138_000_000...1_145_000_000 ~= anchor.longitude
         let finland = 595_000_000...702_000_000 ~= anchor.latitude && 190_000_000...316_000_000 ~= anchor.longitude
-        self.init(streets: hongKong ? .hongKong : finland ? .finland : .taiwan, buildings: finland ? .nordic : .taiwan,
+        self.init(streets: hongKong ? .hongKong : finland ? .finland : .taiwan, buildings: hongKong ? .hongKong : finland ? .nordic : .taiwan,
                   snow: anchor.latitude >= 600_000_000, gauge: finland ? Map3DTrackGauge.finnish : Map3DTrackGauge.cape)
     }
 
@@ -53,8 +53,7 @@ public struct Map3DRegionLook: Sendable, Equatable {
 
     /// Decision 802: whose buildings the city's are drawn as: the real
     /// outlines (decisions 239 and 389) and the houses the game lays along
-    /// the roads (decisions 263 and 385). Hong Kong's are Taiwan's until
-    /// they get a case of their own here.
+    /// the roads (decisions 263 and 385).
     public enum Buildings: Sendable, Equatable {
         /// 透天厝 and blocks of flats in tile, a water tank or a sheet-steel
         /// room on the roof, arcades, window grilles and blade signs.
@@ -64,14 +63,26 @@ public struct Map3DRegionLook: Sendable, Equatable {
         /// brick blocks of flats under a flat roof; nothing on the roofs,
         /// and nothing hung on the street fronts.
         case nordic
+        /// Decision 812: Hong Kong's: slender towers of flats in pale
+        /// pastels with their lift and tank rooms on the roof; walk-up
+        /// tenements (唐樓) in faded mosaic, shops below and huts on the
+        /// roof; offices walled in blue-green glass; grey concrete roofs.
+        case hongKong
 
         /// Whether a house's roof has a water tank or a sheet-steel room
         /// (decisions 235 and 267).
         var hasRoofClutter: Bool { self == .taiwan }
 
-        /// Whether the street fronts have arcade pillars, window grilles,
-        /// air conditioners, blade signs and rooftop rooms (decision 610).
-        var hasStreetFronts: Bool { self == .taiwan }
+        /// Whether the street fronts have window grilles, air
+        /// conditioners and blade signs (decision 610). Decision 812:
+        /// Hong Kong's too.
+        var hasStreetFronts: Bool { self != .nordic }
+
+        /// Decision 812: whether shops stand under arcades (騎樓) and
+        /// rooms are built on house roofs: Taiwan's. Hong Kong's
+        /// tenements open straight on the pavement, and their huts are
+        /// drawn with their roofs (``Map3DScene/Builder/addHongKongRoof``).
+        var hasArcades: Bool { self == .taiwan }
 
         /// Whether a low house stands under a pitched roof.
         var pitchesLowRoofs: Bool { self == .nordic }

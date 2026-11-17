@@ -454,7 +454,10 @@ extension GameSession {
         guard inMode || (real && !roads.built.isEmpty) else { return nil }
         var overlay = RoadMapOverlay()
         let own = RoadCentreLines.lines(of: roads.built)
-        if real { overlay.streets = own }
+        // ROAD-JOIN-DRAW: with the pieces the buses take from a road's end
+        // to the street beside it, so the road is seen to meet it.
+        let onRoads = real ? busRoads : nil
+        if real { overlay.streets = own + (onRoads?.ownJoins ?? []) }
         if inMode {
             overlay.own = own
             let drawn = Set(roadDraft.cells)
@@ -471,6 +474,11 @@ extension GameSession {
                     }
                 }
                 overlay.draft = RoadCentreLines.lines(of: near, touching: drawn)
+                if let onRoads {
+                    // The joins it would have where it ends beside a street.
+                    let ends = RoadCentreLines.ends(of: roads.built.union(drawn)).filter { drawn.contains(CellPosition(containing: $0)) }
+                    overlay.draft += onRoads.joins(ofEnds: ends)
+                }
             }
             overlay.refused = roadPreview?.refused
             overlay.isBuildable = roadPreview?.canBuild ?? false
