@@ -30,6 +30,30 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 136.
+        Entry(
+            id: "2026-11-17-136",
+            items: [
+                Line(
+                    english: "Hong Kong has the Hong Kong Convention and Exhibition Centre in 3D.",
+                    chinese: "香港 3D 地圖多了香港會議展覽中心。"
+                ),
+                Line(
+                    english: "From 1 December to 6 January, a Christmas livery for a passenger line adds a snowy roof, wreaths and lights, and a ribbon on the lead car.",
+                    chinese: "12 月 1 日到 1 月 6 日，聖誕塗裝會替列車加上雪頂、花環與燈，頭車繫緞帶。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "On an iPhone held sideways with large text, the ✕ ✓ buttons for double track and platform spots no longer squeeze off the screen.",
+                    chinese: "iPhone 橫拿、字級調大時，鋪雙線與選月台的 ✕ ✓ 不再擠出畫面。"
+                ),
+                Line(
+                    english: "With signalling on, trains that only stop at a terminal no longer cut in front of trains that still have to go on, so fewer trains wait on one another.",
+                    chinese: "管制開著時，只是進終點停著的列車不再搶在還要往前開的車前面，互相等的情況變少。"
+                ),
+            ]
+        ),
         // 135.
         Entry(
             id: "2026-11-17-135",
