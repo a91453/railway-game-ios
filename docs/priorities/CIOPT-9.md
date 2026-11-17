@@ -1,4 +1,4 @@
-# CIOPT-9（2026-11-18，137 發版後 CI 優化）
+# CIOPT-9（2026-11-18，#2385）
 
 137 發版後的 CI 量測（[CI_MEASURE_2026-11-18](../research/CI_MEASURE_2026-11-18.md)）留下的一項；做了的寫在決策 775 的後來，交接在 `docs/handoff/CIOPT-9.md`。尺同 NEXT_PRIORITIES §19。
 
