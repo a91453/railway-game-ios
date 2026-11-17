@@ -109,6 +109,9 @@ public final class GameLauncher {
     /// The sights' visitors of a year by the official count (decision
     /// 724), handed to every game it starts (``GameSession/sightVisitors``).
     public var sightVisitors: SightVisitors?
+    /// What covers Taiwan's ground (decision 811), handed to every game it
+    /// starts (``GameSession/landCover``).
+    public var landCover: LandCoverGrid?
 
     /// Taiwan's real railways (stations and lines) for real-world maps, handed
     /// to every game it starts (``GameSession/railways``).
@@ -1909,6 +1912,7 @@ public final class GameLauncher {
         started.realBuses = realBuses
         started.placeNames = placeNames
         started.sightVisitors = sightVisitors
+        started.landCover = landCover
         started.railways = railways
         started.collectedStamps = stationStamps.dates
         // Decision 88: land not read round a station built while the app
@@ -2010,6 +2014,7 @@ public final class GameLauncher {
         realBuses = data.realBuses
         placeNames = data.placeNames
         sightVisitors = data.sightVisitors
+        landCover = data.landCover
         railways = data.railways
         coachNetwork = data.coaches
         realWorldIssues = data.issues
@@ -2025,6 +2030,7 @@ public final class GameLauncher {
             session.realBuses = realBuses
             session.placeNames = placeNames
             session.sightVisitors = sightVisitors
+            session.landCover = landCover
             session.railways = railways
             // Decision 88: land not read round a station built while the
             // app had no population, as when a game begins (``begin``);
@@ -2461,6 +2467,8 @@ public struct RealWorldData: Sendable {
     public var overseas: [OverseasGround] = []
     /// The sights' visitors of a year by the official count (decision 724).
     public var sightVisitors: SightVisitors?
+    /// What covers Taiwan's ground (decision 811), for the 3D map.
+    public var landCover: LandCoverGrid?
     /// The files that could not be read, and why: the grids' and the
     /// railways' (``RealRailways/Loaded/issues``).
     public let issues: [RealDataLoadIssue]
@@ -2487,7 +2495,7 @@ public struct RealWorldData: Sendable {
     /// (decision 147), `taiwan_place_names.json` (decision 159),
     /// `taiwan_station_landmarks.json` (decision 569),
     /// `taiwan_no_build.json` (decision 385 (續)), `taiwan_sight_visitors.json`
-    /// (decision 724), the real bus stops' index
+    /// (decision 724), `taiwan_landcover.dat` (decision 811), the real bus stops' index
     /// `real_buses_index.json` (decision 424, C2; its city files are read
     /// later, when the bus tool asks) and the
     /// railways' files
@@ -2551,6 +2559,8 @@ public struct RealWorldData: Sendable {
         )
         data.overseas = grounds
         data.sightVisitors = sightVisitors
+        // Decision 811: the land cover, for the 3D map's countryside.
+        data.landCover = grid("taiwan_landcover", ext: "dat", LandCoverGrid.init(data:))
         return data
     }
 }

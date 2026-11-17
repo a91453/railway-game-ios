@@ -379,14 +379,15 @@ public struct Map3DScene: Sendable {
     /// city's own only where there are none.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
+                landCover: LandCoverGrid? = nil,
                 lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil,
                 facades: Bool = true) {
         // Decision 368: on a map the camera builds ahead on (decision 358),
         // the city in full only round the middle, which the window builds
         // in full as the camera comes near.
         self.init(world: world, snapshot: snapshot, skyline: skyline, frame: Self.frame(world: world, focus: focus), baseMap: baseMap,
-                  cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
-                  noBuild: noBuild,
+                  cityTiles: cityTiles, footprints: footprints, heights: heights, landCover: landCover, lineBands: lineBands, railways: railways,
+                  temples: temples, noBuild: noBuild,
                   detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil, facades: facades,
                   studies: Self.studyRegion(world: world, scene: Self.frame(world: world, focus: focus).region))
     }
@@ -412,7 +413,7 @@ public struct Map3DScene: Sendable {
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
                               cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
-                              lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
+                              landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
                               noBuild: RealNoBuildLand? = nil,
                               trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, facades: Bool = true) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
@@ -423,8 +424,8 @@ public struct Map3DScene: Sendable {
         // Decision 359: the whole network's track cover (`trackCover`, the
         // scene's, or worked out again), which lays the tunnels.
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
-                               baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands,
-                               railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail,
+                               baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, landCover: landCover,
+                               lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail,
                                facades: facades, studies: map)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
@@ -468,7 +469,7 @@ public struct Map3DScene: Sendable {
     /// (``Builder/studyRegion``).
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
-         lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
+         landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
          trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
          studies: WorldRegion? = nil) {
         (region, originX, originY) = frame
@@ -477,6 +478,9 @@ public struct Map3DScene: Sendable {
         builder.detail = detail
         builder.studyRegion = studies
         builder.buildsFacades = facades
+        // Decision 811: the land cover round the region, for the ground
+        // and the forests' trees.
+        if let landCover, let frame = RealWorldFrame(world: world) { builder.readLandCover(landCover, frame: frame) }
         // Decision 732: Hong Kong's streets on its map.
         builder.streetLife.region = builder.look.streets
         let snapshot = snapshot ?? world.railwaySnapshot()
@@ -642,6 +646,10 @@ public struct Map3DScene: Sendable {
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
                         besideRoads: taken.byRoads, thinlyBuilt: thinlyBuilt)
         builder.mark("the game's own city")
+        // Decision 811: the land cover's forests' trees, on nothing built.
+        builder.addWildTrees(clearOf: stations.union(landmarkCells).union(turntable).union(standing).union(taken.whole)
+            .union(builder.realTrackCells))
+        builder.mark("forest trees")
         builder.target = .far
         // Decision 455: the city's boxes as instances: the lots', the real
         // buildings' on rectangles and their roofs'; the other real
@@ -696,9 +704,22 @@ public enum Map3DPalette {
     /// version ``Map3DLook`` gave them (#D9DBE2), which ran into the ground.
     public static let cityRoof = Map3DColor.rgb(0xBABDC8)
 
-    /// Decision 720: what a 64 m square of ground is drawn as.
+    /// Decision 811: the land cover's ground outside the city's lots, as
+    /// OpenStreetMap's own cover (``cover(_:)``) where it has one, so the
+    /// two read as one: the fields' and grassland's, the wetlands'; bare
+    /// ground (river beds, scree, landslides) a pale stone. All within 5 L*
+    /// of ``ground``, as decision 720's lots are, so the track and the
+    /// trains stand off them: the woods' green (#B6DDCA, 9 L* deeper) is
+    /// too deep for that, so the forest floor is a paler green of it and
+    /// the trees on it give the forest its colour.
+    public static let bare = Map3DColor.rgb(0xE7E3D9)
+    public static let forestFloor = Map3DColor.rgb(0xD4E8DA)
+
+    /// Decision 720: what a 64 m square of ground is drawn as. Decision
+    /// 811: and the land cover's, where no lot is.
     public enum GroundKind: CaseIterable, Sendable {
         case plain, yard, paved
+        case forest, field, meadow, bareGround, marsh
 
         /// A lot's ground: none for open ground, which draws its own park
         /// or field.
@@ -707,11 +728,29 @@ public enum Map3DPalette {
             self = lot.use == .residential && lot.density <= 2 ? .yard : .paved
         }
 
+        /// Decision 811: the land cover's ground: none for the built-up
+        /// land, water (the base map's lies on it) and what is not known.
+        init?(_ cover: LandCoverGrid.Cover) {
+            switch cover {
+            case .forest: self = .forest
+            case .cropland: self = .field
+            case .shrubland, .grassland: self = .meadow
+            case .bare: self = .bareGround
+            case .wetland: self = .marsh
+            case .unknown, .builtUp, .water: return nil
+            }
+        }
+
         var colour: UInt32 {
             switch self {
             case .plain: Map3DPalette.ground
             case .yard: Map3DPalette.yard
             case .paved: Map3DPalette.paved
+            case .forest: Map3DPalette.forestFloor
+            case .field: Map3DPalette.cover(.farmland)
+            case .meadow: Map3DPalette.cover(.grass)
+            case .bareGround: Map3DPalette.bare
+            case .marsh: Map3DPalette.cover(.wetland)
             }
         }
     }
@@ -1076,6 +1115,12 @@ extension Map3DScene {
         /// the conifers and the bushes beside the line.
         var woodCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
         var grassCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        /// Decision 811: the land cover of each 64 m cell round the region
+        /// (``readLandCover(_:frame:)``), and the cells the city's lots
+        /// stand on (``addGround(water:lots:clearOf:)``), which no forest
+        /// tree of it takes.
+        var landCover: [ChunkKey: LandCoverGrid.Cover] = [:]
+        var lotCells = Set<ChunkKey>()
         /// Decision 458: each station building's middle, the way its
         /// front faces, its depth and width, for the bushes on its plaza.
         /// Decision 794: and its top and whether it is a big station's,
@@ -1564,6 +1609,7 @@ extension Map3DScene {
                 let around = WorldRegion(minX: region.minX - cell, minY: region.minY - cell, maxX: region.maxX + cell, maxY: region.maxY + cell)
                 for lot in lots.lots(in: around) {
                     let key = ChunkKey(column: lot.column, row: lot.row)
+                    lotCells.insert(key)
                     guard let kind = Map3DPalette.GroundKind(lot), !track.contains(key) else { continue }
                     // Decision 733: none on the no-build land, where no
                     // lot's building stands either (``addCity``): the
@@ -1572,6 +1618,11 @@ extension Map3DScene {
                     else { continue }
                     kinds[key] = kind
                 }
+            }
+            // Decision 811: the land cover's ground where no lot is, but
+            // plain where the player's track runs.
+            for (key, cover) in landCover where kinds[key] == nil && !track.contains(key) {
+                if let kind = Map3DPalette.GroundKind(cover) { kinds[key] = kind }
             }
             // A corner's colour: its four squares' run together.
             func tint(_ row: Int, _ column: Int) -> UInt32 {

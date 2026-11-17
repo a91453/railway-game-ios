@@ -33,9 +33,11 @@ final class Map3DGroundTintTests: XCTestCase {
     }
 
     /// The look leaves every colour the ground can take as it is: a paler
-    /// one would differ from the square beside it.
+    /// one would differ from the square beside it. Decision 720's three
+    /// kinds met in 15 colours; with decision 811's five kinds of the land
+    /// cover (the fields' and the grassland's one colour) they meet in 209.
     func testTheLookKeepsTheGroundsColours() {
-        XCTAssertEqual(Map3DPalette.groundMixes.count, 15)
+        XCTAssertEqual(Map3DPalette.groundMixes.count, 209)
         for colour in Map3DPalette.groundMixes { XCTAssertEqual(Map3DLook.colour(colour), colour) }
     }
 

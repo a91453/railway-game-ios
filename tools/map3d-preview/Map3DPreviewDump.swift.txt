@@ -172,6 +172,10 @@ final class Map3DPreviewDump: XCTestCase {
         // not read its own, as the app passes it.
         let heights = ProcessInfo.processInfo.environment["MAP3D_HEIGHTS"] == "1"
             ? try HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
+        // MAP3D_LANDCOVER=1: the land cover file's ground and forest trees
+        // (decision 811), as the app passes it.
+        let landCover = ProcessInfo.processInfo.environment["MAP3D_LANDCOVER"] == "1"
+            ? try LandCoverGrid(data: resource("RealWorld/taiwan_landcover.dat")) : nil
         // MAP3D_FOOTPRINTS=1: the app's real footprints (decision 389).
         let footprints = ProcessInfo.processInfo.environment["MAP3D_FOOTPRINTS"] == "1"
             ? try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped),
@@ -183,7 +187,7 @@ final class Map3DPreviewDump: XCTestCase {
         // Decision 699: the airfields, as the app hands them.
         noBuild?.airfields = try RealAirfields(data: resource("BaseMap/taiwan_airfields.json"))
         let scene = Map3DScene(world: world, focus: focus, baseMap: tiles, cityTiles: cityTiles, footprints: footprints, heights: heights,
-                               railways: railways, noBuild: noBuild)
+                               landCover: landCover, railways: railways, noBuild: noBuild)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
         let chunks = scene.chunks.filter { chunk in
             guard let crop else { return true }
