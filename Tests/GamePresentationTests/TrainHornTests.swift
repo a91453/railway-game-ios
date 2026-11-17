@@ -37,7 +37,7 @@ final class TrainHornTests: XCTestCase {
     func testAPhotoOfARealWorldMapCreditsItsData() {
         XCTAssertEqual(DataSourceCredits.map3DPhoto(realWorld: false, in: .english), "", "the player's own map owes nothing")
         let credit = DataSourceCredits.map3DPhoto(realWorld: true, in: .traditionalChinese)
-        for name in ["OpenStreetMap", "Overture Maps", "Copernicus DEM", "交通部 TDX"] {
+        for name in ["OpenStreetMap", "Overture Maps", "Copernicus DEM", "ESA WorldCover", "交通部 TDX"] {
             XCTAssertTrue(credit.contains(name), name)
         }
     }

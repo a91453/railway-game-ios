@@ -1,0 +1,65 @@
+---
+name: music-review
+description: 遊戲音樂怎麼做、怎麼審：背景音樂、季節曲、主題曲改版、到站鈴與介面音效的響度、頻段、峰值、循環接縫、聽膩的風險，與試聽檔怎麼交給作者。加或改 RailwayGameApp/Resources/Audio 的任何音樂、或審查音樂的 PR 之前先讀。Use before adding or changing any music or jingle in the app (tools/audio, RailwayGameApp/Resources/Audio), and when reviewing a music pull request, especially when nobody can listen to it yet.
+---
+
+# 遊戲音樂的做法與審查
+
+2026-11-17 第一次審音樂（MUSIC-WINTER／MUSIC-REFRESH，決策 815）。作者在上班，不能聽聲音，由遊戲規劃用量測來判。這份是那次的做法與經驗。耳朵仍是最後一關：量測過了，作者有空時再用 iPhone 聽試聽檔。
+
+## 1. 先量，再判
+
+```sh
+python3 -I tools/audio/measure_music.py RailwayGameApp/Resources/Audio/music-loop.caf [...]
+```
+
+它會印出長度、響度（LUFS）、響度範圍（LRA）、真峰值（dBTP）、五個頻段的能量占比、每秒音量的範圍，以及循環接縫的跳動。改版前的檔一起量，數字並排放進 PR。
+
+| 項目 | 目標 | 為什麼 |
+| --- | --- | --- |
+| 響度 | 所有背景音樂 −16 LUFS，相差 ≤ 0.5 LU（`MUSIC_LUFS`，決策 815） | 換曲時玩家不用調音量；手機遊戲常見的大小 |
+| 真峰值 | ≤ −1 dBTP | 轉成 AAC 之後不破音 |
+| 120 Hz 以下 | ≤ 10% | iPhone 喇叭幾乎放不出來；舊主題曲 73% 在這裡，聽起來就是悶 |
+| 1–4 kHz | ≥ 15% | 旋律、鐘琴、鈴鐺在手機上靠這段聽清楚。冬季曲第一版只有 4%，300–1000 Hz 占 71%，像在箱子裡；改後是 33% |
+| 300–1000 Hz | ≤ 60% | 超過就悶、發箱子聲 |
+| LRA | 2–5 LU | 背景音樂不要忽大忽小；段落之間仍要有起伏 |
+| 每秒音量 | 最大與最小相差 ≤ 12 dB | 安靜段太小，玩家會以為音樂斷了 |
+| 循環接縫 | 跳動 ≤ 全曲第 99 百分位 | 超過就可能「喀」一聲 |
+| 旋律比伴奏 | +3 到 +5 dB（用分軌量） | 聽得出旋律，又不蓋過列車聲與介面音效 |
+
+## 2. 聽膩
+
+經營遊戲一開就是幾個小時，最常見的抱怨是聽膩，不是不好聽。
+
+- 一首循環至少 60 秒。舊主題曲 38 秒太短。
+- 大家熟悉的旋律（例如〈Jingle Bells〉）最容易聽膩，不要單獨連播好幾週。冬季曲因此改成和主題曲輪流。
+- 長期目標是 3–4 首輪播，或依城市大小、日夜加層（配樂第三階段，NEXT_PRIORITIES §29.14 第 6 項）。
+
+## 3. 同一家族
+
+- 同一套合成器（`make_game_audio.py`），走 MML → 樂譜 → 分軌（決策 219）。
+- 調性和到站鈴相容（C 大調），速度、和弦能接上配樂第三階段。
+- 保留鐵軌接縫聲，這是「坐在車上」的招牌聲音。
+- 新音色一次最多兩種（決策 219 §2.1）。
+
+## 4. 來源與授權
+
+- 只用公有領域的曲子，自己編曲，不用任何錄音或別人的編曲。
+- 參考庫 `town-scene` 的 `music.js` 沒有授權文字，不用。
+- 曲名、作曲者、年份寫進決策。
+
+## 5. 交給作者聽
+
+- 改版前一份、每個候選一份，都轉成 AAC（`.m4a`），放 a91453/railway-assets-private 的 `game-art-previews/docs/art/<task>-<date>/`，PR 列出路徑。檔案太大不放這個 repo（約 2 MB 的規矩）。
+- 主題曲這類「選一個」的改動，給三個候選，選定的那個寫五個角度的理由；另外兩個留著試聽，作者聽了想換可以換。
+- 季節曲只在那段日期播，作者在其他日子用試聽檔聽，不必改裝置日期。
+
+## 6. 回報
+
+- **VERIFIED**：上面的量測、`make_game_audio.py --check`、Linux 測試。
+- **UNVERIFIED**：實機聽感（作者用試聽檔與 TestFlight）、iOS 的建置與換曲（`ios-build.yml`）。
+
+## 7. 這次踩到的
+
+- 新型別取名 `MusicTrack`，和 AudioToolbox 的 `MusicTrack` 同名。App 同時匯入 AVFoundation，Xcode 建置失敗（Linux 看不到）。音訊相關的新型別名，先查 Apple 的音訊框架有沒有同名的。後來改名 `MusicTune`。
+- 冬季曲第一版的響度、峰值、接縫都合格，但頻段偏在中低，鈴鐺不亮。只看響度會漏掉，所以要看頻段占比。

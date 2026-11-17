@@ -1,0 +1,15 @@
+{
+  "role": "stem",
+  "title": "Theme: pad, bass and arpeggio (decision 79's chords)",
+  "beatsPerBar": 4,
+  "motif": 0,
+  "fadeOut": 0,
+  "tracks": [
+    {"voice": "pad", "gain": 22, "pan": -15},
+    {"voice": "pad", "gain": 22, "pan": 0},
+    {"voice": "pad", "gain": 22, "pan": 15},
+    {"voice": "pluck", "gain": 30, "pan": 0},
+    {"voice": "pluck", "gain": 16, "pan": 35},
+    null
+  ]
+}

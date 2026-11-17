@@ -1,0 +1,15 @@
+{
+  "role": "stem",
+  "title": "Winter tune: melody (Jingle Bells, J. Pierpont 1857, public domain)",
+  "beatsPerBar": 4,
+  "motif": 0,
+  "fadeOut": 0,
+  "tracks": [
+    {"voice": "pluck", "gain": 60, "pan": 0},
+    {"voice": "glock", "gain": 42, "pan": -10},
+    {"voice": "bell", "gain": 35, "pan": 25},
+    null,
+    null,
+    null
+  ]
+}

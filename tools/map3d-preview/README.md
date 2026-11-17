@@ -34,6 +34,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | （注意） | `taipei`、`kaohsiung`、`taichung`、`douliu` 的土地不是真實的：`GameWorld.newGame(anchor:)` 不給土地，用空白地圖的種子城鎮（底圖、足跡、地標仍是真的）。要看 App 新局在那裡的樣子，用 `MAP3D_WORLD=island MAP3D_AT=緯度:經度`（決策 431 的「後來」） |
 | `MAP3D_AT`、`MAP3D_LAND` | 和 `MAP3D_WORLD=island` 一起用（決策 707）：`MAP3D_AT=緯度:經度` 是新局的中心；`MAP3D_LAND=towns` 不讀真實土地（空白地圖的城鎮，機場截圖場景改之前的樣子，邊長兩倍）、`empty` 沒有土地（那些場景現在的樣子）、不設就是 App 新局讀的真實人口與分區 |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
+| `MAP3D_LANDCOVER` | `1`：讀 App 的地表覆蓋（`taiwan_landcover.dat`，ESA WorldCover），鄉間的地面顏色與森林裡的樹（決策 811） |
 | `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）與機場場面（`taiwan_airfields.json`，決策 699）；不設就是改之前的畫法 |
 | `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_FOOTPRINTS` | `1`：讀 App 的真實建物足跡（`taiwan_buildings.pmtiles`，決策 389；要和 `MAP3D_BASEMAP=1` 一起用） |

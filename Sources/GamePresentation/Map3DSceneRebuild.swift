@@ -136,8 +136,8 @@ extension Map3DScene {
     /// within `keys` are the blocks' own.
     public init(rebuilding keys: Set<Map3DStreaming.Key>, of old: Map3DScene, world: GameWorld, snapshot: RailwaySnapshot? = nil,
                 skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil,
-                heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
-                noBuild: RealNoBuildLand? = nil, detail: Map3DPoint? = nil, facades: Bool = true) {
+                heights: HeightGrid? = nil, landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil,
+                temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil, detail: Map3DPoint? = nil, facades: Bool = true) {
         region = old.region
         originX = old.originX
         originY = old.originY
@@ -174,7 +174,8 @@ extension Map3DScene {
                                    maxX: min(region.maxX, box.maxX + apron), maxY: min(region.maxY, box.maxY + apron))
             guard area.minX < area.maxX, area.minY < area.maxY else { continue }
             let part = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (area, originX, originY), baseMap: baseMap,
-                                  cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways,
+                                  cityTiles: cityTiles, footprints: footprints, heights: heights, landCover: landCover, lineBands: lineBands,
+                                  railways: railways,
                                   temples: temples, noBuild: noBuild, trackCover: cover, detail: detail, facades: facades,
                                   studies: Self.studyRegion(world: world, scene: region))
             let wanted = Set(block)
