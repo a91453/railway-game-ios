@@ -1200,6 +1200,9 @@ extension Map3DScene {
         /// The corners of each station building's ground, and the
         /// shop streets still to lay beside them.
         var houseFootprints: [[Map3DPoint]] = []
+        /// XMAS-TREE-SIZE: the ground each station shop takes (its slab
+        /// and awning), so a station's Christmas tree keeps off it.
+        var shopFootprints: [[Map3DPoint]] = []
         /// Decision 331: the big stations' buildings, for their commercial
         /// kit (`addStationCommerce`).
         var bigStations: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float)] = []
