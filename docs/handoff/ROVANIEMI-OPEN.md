@@ -7,7 +7,7 @@
   - `swift build --build-tests -Xswiftc -warnings-as-errors`；
   - release 跑相關的 90 項測試；
   - `RovaniemiReportTests` 30 天：兩條線都虧，死結 0 分鐘。
-- **下一步的第一個指令**：無（等 PR 的 CI）。
+- **下一步的第一個指令**：無。**#2355 等價錢修正一起合，138**（規劃 11-17：羅瓦涅米不在 137 開，等 ROVANIEMI-PAIR、ROVANIEMI-FARE 修好和它一起在 138 開，仍趕在 11/30 前）。
 
 ---
 
