@@ -6,6 +6,8 @@
 
 `docs/OVERVIEW.md` 第 2 節「現況數字」寫的號碼是人手補的，這支工具負責比對它們和 repository 裡的實際值（`docs/HANDOFF.md` 第 2 節、§7.4）。它只讀檔案，不改任何東西。
 
+**CI 會跑它**（決策 830）：PR 或 push 改到它讀的檔（`docs/`、這支工具、`SavedGame.swift`、`GoldenScenario.swift`、三個 fixture 目錄），`ci.yml` 的 `doc-numbers` 工作就跑 `--selftest` 與 `--check`，紅了 `Swift CI (gate)` 就紅。讓它多讀一個檔時，同步改 `.github/scripts/swift-shards.sh` 的 `doc_paths`。
+
 ```sh
 python3 -I tools/golden-checks/doc_numbers.py            # 印出比對結果，一律 exit 0
 python3 -I tools/golden-checks/doc_numbers.py --check    # 有差異時 exit 1
