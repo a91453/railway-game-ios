@@ -1,0 +1,30 @@
+# TPE-MRT-ELEVATED：淡水信義線高架車站外觀（決策 826）
+
+- 2026-11-17，雲端 project thread「做淡水信義線高架車站外觀」，分支 `claude/project-thread-vqunh2`（遊戲 repo 與素材庫同名）。
+  NEXT_PRIORITIES §29.22 第 1 名（3.45），REAL-STATIONS-3D 的第一批。存檔版本、golden schema、GameCore 都不動。
+- 作者額度不多，台灣 18:20 先停，**22:00 額度重置後接著做**。
+
+## 做到哪裡
+
+- 素材庫 `a91453/railway-assets-private` PR #133，`game-art-previews/docs/art/tpe-mrt-elevated-2026-11/`：
+  - `README.md`：工作室派工單。四型 standard（圓山、士林、芝山、明德、石牌、唭哩岸、奇岩）、jiantan、beitou、xinbeitou；
+    軌道淨空、預算、色票格位、自查表。§3、§6 已照 Commons 照片改寫：standard 與新北投是**宮殿式**（金黃兩坡長屋頂、兩層簷、
+    山牆白搏風板與圓窗、月台層兩側開、簷下紅梁），不是底稿的紅磚盒。
+  - `base/`：灰色底稿 GLB（大形起點，改寫自 Slop New York，Copyright (c) 2026 Mr.doob，MIT，https://github.com/mrdoob/slop-newyork ；
+    作者 11-17 定：版權只寫 Slop New York）與十站的 OSM 外框（ODbL）。
+  - `ref/`：15 張照片（CC BY／BY-SA／CC0，`ref/SOURCE.md`）。作者舊版 `~/SwiftRailMac/assets/分類/` 看過 48 個，沒有可沿用的。
+  - `revision-1/`：工作室第 1 輪（8 個 GLB、7 向圖、遊戲大小、總覽）＋審查：**needs-fix**（站體長度以外的淨空）。
+- 工作室（作者 Mac）：任務 `tpe-mrt-elevated`，做的人 Codex A（額度快用完，用完換 Codex B `--profile pro` 接手，作者 11-17 指示），
+  審查 Claude Pro。第 2 輪開工中。
+
+## 接下來
+
+1. 工作室做完第 2、3 輪，審查給結論（最多三輪）；每輪推到素材庫 `claude/project-thread-vqunh2`。
+2. 接回遊戲：GLB 轉 Swift mesh，照決策 625／665 的 `Map3DExteriorStudy` 放在真實站點與方位（玩家在那裡蓋了站時畫，
+   離軌道與月台太近的零件照舊拿掉）；Slop New York 的 MIT 聲明加進遊戲的第三方授權清單；OSM 出處照 `DataSourceCredits`；
+   寫 `docs/decisions/826.md`；遊戲 repo 只留一張總覽圖與 README（`docs/art/tpe-mrt-elevated-2026-11/`）。
+3. 新外觀：總覽圖給規劃看過才合（決策 482）。
+
+## UNVERIFIED
+
+- 都還沒進遊戲，沒有在 App、Simulator 或實機看過。
