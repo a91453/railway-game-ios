@@ -718,10 +718,44 @@ expect_decision true presentation 'GamePresentationTests' "a label that only loo
 expect_decision false none none "a pull request of docs skips" EVENT=pull_request LISTED=true -- docs/ROADMAP.md README.md
 expect_decision true full full "a pull request whose files could not be listed" EVENT=pull_request LISTED=false --
 
+# decide's docs output (decision 830): the number check runs when a listed
+# file is one doc_numbers.py reads, and always when the files are not listed.
+# expect_docs <true|false> <description> <VAR=value...> -- <path>...
+expect_docs() {
+  local want="$1" what="$2" got
+  shift 2
+  local -a vars=()
+  while [[ $# -gt 0 && "$1" != -- ]]; do vars+=("$1"); shift; done
+  shift
+  got="$(cd "$tree" && printf '%s\n' "$@" | env "${vars[@]}" "$script" decide 2>"$work/err.txt" | sed -n 's/^docs=//p')"
+  if [[ "$got" == "$want" ]]; then
+    echo "ok   pass  decide docs: $what -> $want"
+  else
+    echo "FAIL decide docs: $what: expected docs=$want; got '$got'"
+    failures=$((failures + 1))
+  fi
+}
+expect_docs true "a pull request of docs only (the Swift jobs skip)" EVENT=pull_request LISTED=true -- docs/ROADMAP.md README.md
+expect_docs true "a pull request of a decision file" EVENT=pull_request LISTED=true -- docs/decisions/830.md
+expect_docs true "a pull request of the number tool" EVENT=pull_request LISTED=true -- tools/golden-checks/doc_numbers.py
+expect_docs true "a pull request that raises the save version" EVENT=pull_request LISTED=true -- Sources/GameCore/World/SavedGame.swift SaveFixtures/save-v108.json
+expect_docs true "a pull request of the golden schema" EVENT=pull_request LISTED=true -- Tests/GameCoreTests/GoldenScenario.swift
+expect_docs true "a pull request of a golden or replay fixture" EVENT=pull_request LISTED=true -- GoldenScenarios/x.json ReplayFixtures/y.json
+expect_docs true "#414: GamePresentation and docs/ARCHITECTURE.md" EVENT=pull_request LISTED=true -- "${pr414[@]}"
+expect_docs false "a pull request of GamePresentation only" EVENT=pull_request LISTED=true -- "${pr414[@]:0:4}"
+expect_docs false "a pull request of other GameCore files" EVENT=pull_request LISTED=true -- Sources/GameCore/World/GameWorld.swift
+expect_docs false "a pull request of other tools and README" EVENT=pull_request LISTED=true -- tools/golden-checks/tourism.py README.md
+expect_docs true "a push to main of docs" EVENT=push LISTED=true -- docs/ROADMAP.md
+expect_docs true "a push to main whose files could not be listed" EVENT=push LISTED=false --
+expect_docs true "a manual run" EVENT=workflow_dispatch LISTED=false --
+expect_docs true "the nightly run" EVENT=schedule LISTED=false --
+
 # The gate: red when the detection or any Swift job of the tier did not
 # succeed (a failed or cancelled job makes the combined result so), green
 # when every job passed or none was needed and none ran.
-gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u SELFTEST -u BUILD -u CURRENT "$@" "$script" gate; }
+# The number check (decision 830) is not needed and skipped unless a case
+# says otherwise (env takes the later of two assignments).
+gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u SELFTEST -u BUILD -u CURRENT -u DOCS_NEEDED -u DOCS DOCS_NEEDED=false DOCS=skipped "$@" "$script" gate; }
 expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD=success CURRENT=success
 expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation SELFTEST=success BUILD=success CURRENT=success
 expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped
@@ -740,6 +774,16 @@ WHY='Swift build did not succeed \(failure\)' expect fail "gate: the build faile
 WHY='Swift build did not succeed \(cancelled\)' expect fail "gate: the build was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation SELFTEST=success BUILD=cancelled CURRENT=skipped
 WHY='Swift build did not succeed \(no result\)' expect fail "gate: no build result" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD= CURRENT=success
 WHY='build did not skip \(success\)' expect fail "gate: an unneeded build that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=success CURRENT=skipped
+# The number check (decision 830): on a docs-only pull request the Swift
+# jobs skip, and the gate is still red when the numbers are wrong.
+expect pass "gate: docs only, the number check passed" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped DOCS_NEEDED=true DOCS=success
+expect pass "gate: a full run with the number check passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD=success CURRENT=success DOCS_NEEDED=true DOCS=success
+WHY='number check \(doc_numbers.py --check\) did not succeed \(failure\)' expect fail "gate: docs only, the number check failed" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped DOCS_NEEDED=true DOCS=failure
+WHY='number check \(doc_numbers.py --check\) did not succeed \(failure\)' expect fail "gate: every Swift job passed, the number check failed" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD=success CURRENT=success DOCS_NEEDED=true DOCS=failure
+WHY='did not succeed \(skipped\)' expect fail "gate: a needed number check that did not run" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped DOCS_NEEDED=true DOCS=skipped
+WHY='did not succeed \(no result\)' expect fail "gate: no number check result" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped DOCS_NEEDED=true DOCS=
+WHY='number check was not needed but did not skip \(success\)' expect fail "gate: an unneeded number check that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped DOCS_NEEDED=false DOCS=success
+WHY='neither that the number check' expect fail "gate: no docs answer from the detection" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped DOCS_NEEDED= DOCS=skipped
 
 # A pull request's gate waits for its iOS App Build run (ios-gate). A fake
 # `gh` answers each look in turn with the next of FAKE_IOS's words: a run as
