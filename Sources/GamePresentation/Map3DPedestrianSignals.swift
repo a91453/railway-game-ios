@@ -311,10 +311,15 @@ public enum Map3DPedestrianSignal {
         let ones: [Int]
 
         public init?(pack: Map3DModelPack) {
-            guard let stop = pack.index(of: Map3DPedestrianSignal.stopName), let dark = pack.index(of: Map3DPedestrianSignal.darkName) else { return nil }
-            let walk = (0..<Map3DPedestrianSignal.frames).compactMap { pack.index(of: Map3DPedestrianSignal.walkName($0)) }
-            let tens = (1...9).compactMap { pack.index(of: Map3DPedestrianSignal.tensName($0)) }
-            let ones = (0...9).compactMap { pack.index(of: Map3DPedestrianSignal.onesName($0)) }
+            self.init(index: pack.index(of:))
+        }
+
+        /// Decision 820: from where each model, by name, is.
+        init?(index: (String) -> Int?) {
+            guard let stop = index(Map3DPedestrianSignal.stopName), let dark = index(Map3DPedestrianSignal.darkName) else { return nil }
+            let walk = (0..<Map3DPedestrianSignal.frames).compactMap { index(Map3DPedestrianSignal.walkName($0)) }
+            let tens = (1...9).compactMap { index(Map3DPedestrianSignal.tensName($0)) }
+            let ones = (0...9).compactMap { index(Map3DPedestrianSignal.onesName($0)) }
             guard walk.count == Map3DPedestrianSignal.frames, tens.count == 9, ones.count == 10 else { return nil }
             (self.stop, self.dark, self.walk, self.tens, self.ones) = (stop, dark, walk, [nil] + tens, ones)
         }

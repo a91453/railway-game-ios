@@ -1110,7 +1110,7 @@ final class Map3DSceneCache {
             let number = Map3DSceneBuildLog.shared.add(Map3DSceneBuildTime(
                 why: why, realWorld: world.geoAnchor != nil, edges: world.network.edges.count, chunks: scene.chunks.count,
                 triangles: scene.triangleCount, readSeconds: seconds(read - started), buildSeconds: seconds(clock.now - read),
-                wall: Date().timeIntervalSince1970))
+                wall: Date().timeIntervalSince1970, slowest: scene.slowestSteps(3)))
             return Map3DBuiltScene(scene: scene, source: source, buildNumber: number)
         }
         self.key = key

@@ -41,9 +41,24 @@ public struct Map3DSceneBuildTime: Hashable, Sendable {
     /// Decision 517 續 (PR 3b): how many of its chunks were built again
     /// from the scene before (the rest kept); `nil` for a scene built whole.
     public let rebuiltChunks: Int?
+    /// Decision 820: the steps of building it that took longest, the
+    /// longest first (``Map3DScene/slowestSteps(_:)``); empty for a scene
+    /// built again from the one before.
+    public let slowest: [Step]
+
+    /// Decision 820: a step of building a scene, and its seconds.
+    public struct Step: Hashable, Sendable {
+        public let name: String
+        public let seconds: Double
+
+        public init(name: String, seconds: Double) {
+            self.name = name
+            self.seconds = seconds
+        }
+    }
 
     public init(why: Why, realWorld: Bool, edges: Int, chunks: Int, triangles: Int, readSeconds: Double, buildSeconds: Double,
-                wall: Double, rebuiltChunks: Int? = nil) {
+                wall: Double, rebuiltChunks: Int? = nil, slowest: [Step] = []) {
         self.why = why
         self.realWorld = realWorld
         self.edges = edges
@@ -53,6 +68,7 @@ public struct Map3DSceneBuildTime: Hashable, Sendable {
         self.buildSeconds = buildSeconds
         self.wall = wall
         self.rebuiltChunks = rebuiltChunks
+        self.slowest = slowest
     }
 
     /// Its line in a problem report.
@@ -68,6 +84,10 @@ public struct Map3DSceneBuildTime: Hashable, Sendable {
         times += showSeconds.map { language.text(", shown \(s($0))", "、上 GPU \(s($0))") } ?? language.text(", not shown", "、沒顯示")
         let total = readSeconds + buildSeconds + (showSeconds ?? 0)
         times += language.text(" (total \(s(total)))", "（共 \(s(total))）")
+        if !slowest.isEmpty {
+            let steps = slowest.map { "\($0.name) \(s($0.seconds))" }.joined(separator: ", ")
+            times += language.text("; slowest: \(steps)", "；最慢：\(steps)")
+        }
         var size = language.text("\(edges) edges, \(chunks) chunks, \(triangles) triangles", "\(edges) 段軌道、\(chunks) 區塊、\(triangles) 三角形")
         if let rebuiltChunks { size += language.text(", \(rebuiltChunks) built again", "、只重蓋 \(rebuiltChunks) 區塊") }
         return "\(DeviceDiagnostics.timeText(wall)) \(why), \(map), \(size): \(times)"

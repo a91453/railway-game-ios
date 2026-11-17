@@ -23,14 +23,14 @@
 - `AssetPacks/rovaniemi.json`。地圖包**照舊隨 App 帶**（規劃 11-17 補充）。
 - 地圖說明改成兩條線。
 - 第 3 週在羅瓦涅米改成「讓一條路線連到北極圈上的聖誕老人村」。
-- 平衡：**CRITICAL**，兩條線怎麼買都虧，沒修，排進優先清單 §29.27。
+- 平衡：**CRITICAL**，兩條線怎麼買都虧，沒修，排進優先清單 §29.29。
 - 凱米耶爾維的備用車：決策 810 已經修好，量到 0 分鐘，沒改資料。
 
 ## 還留下的
 
-1. **ROVANIEMI-PAIR**（bug，§29.27 第 1 項）：兩條一起買，主線的上車人數少一半。重現與數字在決策 818 §2。
-2. **ROVANIEMI-FARE**（§29.27 第 2 項）：買來的線永遠回不了本，票價或成本要在 GameCore 改。
-3. **ROVANIEMI-PACK-OUT**（§29.27 第 3 項）：下載修好後，把地圖包移出 App。現成的做法在這個分支的 commit `4967086`（之後在 `b938cf0` 收回）：
+1. **ROVANIEMI-PAIR**（bug，§29.29 第 1 項）：兩條一起買，主線的上車人數少一半。重現與數字在決策 818 §2。
+2. **ROVANIEMI-FARE**（§29.29 第 2 項）：買來的線永遠回不了本，票價或成本要在 GameCore 改。
+3. **ROVANIEMI-PACK-OUT**（§29.29 第 3 項）：下載修好後，把地圖包移出 App。現成的做法在這個分支的 commit `4967086`（之後在 `b938cf0` 收回）：
    - `project.yml` 只列 `Resources/MapPacks/hongkong`（`copyFiles` 到 `MapPacks`），XcodeGen 重產。
    - `MapPack.bundled` 在沒有 `pack.json` 時回傳 `nil`；`OverseasMap.isCarried`。
    - `MapPackDownloads.waitForAnswers(_:timeout:)`：App 啟動讀實景資料前，最多等 8 秒 App 沒帶的包。

@@ -157,6 +157,7 @@ extension Map3DScene {
         seededStreets = old.seededStreets
         levelCrossings = old.levelCrossings
         layers = old.layers
+        steps = []
 
         let map = WorldRegion(bounds: world.bounds)
         let grid = Map3DStreaming(originX: originX, originY: originY, map: map)
