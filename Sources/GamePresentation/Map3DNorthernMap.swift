@@ -33,9 +33,10 @@ public enum Map3DTrackGauge {
 /// like summer. So, once the scene's colours are made, the fields, grass,
 /// parks and sand take the palette's own whites, the yards under the low
 /// houses the plain ground, the grass banks of the track's bed the lots'
-/// pale paving, and the woods a wood under snow (the one new colour). Frozen bog keeps its blue-grey, the water its blue (the rivers
-/// freezing is the snow scene's, later), and the trees, roads, track and
-/// buildings their own colours. The same all year: the game has no seasons.
+/// pale paving, and the woods a wood under snow (the one new colour). Frozen bog keeps its blue-grey, and the roads, track and
+/// buildings their own colours. Decision 833: the water frozen
+/// (``ice``) and the trees under snow (``Map3DSnowTrees``). The same all
+/// year: the game has no seasons.
 public enum Map3DSnowGround {
     /// Whether `world`'s map is drawn under snow: one anchored north of
     /// 60° N (Rovaniemi is at 66.5°; Taiwan and Hong Kong are south of
@@ -71,10 +72,23 @@ public enum Map3DSnowGround {
         return map
     }()
 
-    /// `mesh`'s ground under snow.
+    /// Decision 833: the rivers and lakes frozen over: the palette's
+    /// wetland blue-grey (``Map3DPalette/cover(_:)``'s `.wetland`), the
+    /// frozen bog's, a step darker than the snow beside it, so the ice
+    /// still reads as water under snow. Matte: it takes no ripples and
+    /// mirrors no sky (``Map3DVertex/ice``).
+    public static let ice = Map3DPalette.cover(.wetland)
+
+    /// `mesh`'s ground under snow. Decision 833: and its water frozen
+    /// (``ice``).
     static func cover(_ mesh: inout Map3DMesh) {
         var last: (from: UInt32, to: UInt32)?
         mesh.restyleVertices { vertex in
+            if vertex.layer == Map3DVertex.water {
+                vertex.color = (ice & 0x00FF_FFFF) | (vertex.color & 0xFF00_0000)
+                vertex.layer = Map3DVertex.ice
+                return
+            }
             let from = vertex.color
             if let last, last.from == from {
                 vertex.color = last.to
@@ -83,6 +97,56 @@ public enum Map3DSnowGround {
                 vertex.color = to
                 last = (from, to)
             }
+        }
+    }
+}
+
+/// Decision 833: the trees of a northern map under snow. A tree's leaves
+/// take its instance's colour (``Map3DSceneryProp/leaves``), so, as the
+/// ground is restyled once the scene is made, each tree's, bush's and
+/// conifer's green is taken part of the way to the snow's white
+/// (``Map3DSnowGround/field``): the conifers least, so a wood of spruce
+/// stays dark green flecked with white, as Lapland's do; the broadleaf
+/// trees (birch, bare in winter, its crown frosted) and the street trees
+/// further; the bushes, low and buried, most. The trunks and every other
+/// prop keep their colours.
+public enum Map3DSnowTrees {
+    /// How far toward the snow's white each kind of tree's green goes.
+    public static let coniferShare: Float = 0.45
+    public static let broadleafShare: Float = 0.62
+    public static let bushShare: Float = 0.75
+
+    /// The share for each model of ``Map3DModelCatalog/standard`` that is
+    /// a tree: the street tree's (also the woods' broadleaf), the
+    /// conifers' and the bushes'.
+    static let shares: [Int: Float] = {
+        var shares: [Int: Float] = [:]
+        let catalog = Map3DModelCatalog.standard
+        if let tree = catalog.index(of: Map3DProp.tree.modelName) { shares[tree] = broadleafShare }
+        for conifer in Map3DSceneryProp.conifers {
+            if let index = catalog.index(of: conifer.modelName) { shares[index] = coniferShare }
+        }
+        for bush in [Map3DSceneryProp.bushes, .bushesLarge] {
+            if let index = catalog.index(of: bush.modelName) { shares[index] = bushShare }
+        }
+        return shares
+    }()
+
+    /// `props` with their trees under snow.
+    static func cover(_ props: [Map3DInstance]) -> [Map3DInstance] {
+        props.map { prop in
+            guard let share = shares[prop.model] else { return prop }
+            let white = Map3DSnowGround.field
+            func channel(_ value: Float, _ shift: UInt32) -> Float {
+                let snow = Float((white >> shift) & 0xFF) / 255
+                return value + (snow - value) * share
+            }
+            var snowed = Map3DInstance(model: prop.model, transform: prop.transform,
+                                       stripe: (channel(prop.stripe.0, 0), channel(prop.stripe.1, 8), channel(prop.stripe.2, 16)))
+            snowed.group = prop.group
+            snowed.lit = prop.lit
+            snowed.christmas = prop.christmas
+            return snowed
         }
     }
 }

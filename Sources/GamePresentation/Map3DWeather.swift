@@ -7,7 +7,8 @@ import GameCore
 /// weaker by day, the light and the sky greyer and bluer, the fog nearer
 /// and greyer. What day it rains is GameCore's own weather
 /// (``MapWeather``, decision 162), not the reference's dice; the
-/// reference's cloudy and snowy days are not GameCore weathers.
+/// reference's cloudy days are not GameCore weathers. Decision 833: its
+/// snowy day is a day of rain on a map under snow (``Map3DRegionLook/snow``).
 public struct Map3DWeather: Hashable, Sendable {
     /// The sun's strength by day and at night, as a share.
     public var daySunScale: Float
@@ -42,14 +43,29 @@ public struct Map3DWeather: Hashable, Sendable {
                                           groundTint: 0x68737F, groundMix: 0.12, fogTint: 0x586777, fogMix: 0.24,
                                           fogNear: 0.84, fogFar: 0.76)
 
+    /// Decision 833: a day of snow (`PRESETS.snow`): the sun a little
+    /// weaker, the light and the sky paler and bluer, the fog a little
+    /// nearer and pale.
+    public static let snow = Map3DWeather(daySunScale: 0.9, nightSunScale: 0.98, dayHemiScale: 0.98, nightHemiScale: 1,
+                                          skyTint: 0xC4D1DF, skyMix: 0.14, hemiTint: 0xC4D0DC, hemiMix: 0.08,
+                                          groundTint: 0xA3ADB7, groundMix: 0.08, fogTint: 0xBAC6D1, fogMix: 0.18,
+                                          fogNear: 0.9, fogFar: 0.84)
+
     /// The light of the day's weather on the map: rain for rain, a
     /// thunderstorm and a typhoon (their lightning and heavier rain are the
-    /// rain streaks', ``Map3DRain``, decision 320).
-    public init(_ weather: MapWeather) {
+    /// rain streaks', ``Map3DRain``, decision 320). Decision 833: on a
+    /// map under snow (`snow`) they are a day of snow.
+    public init(_ weather: MapWeather, snow: Bool = false) {
         switch weather.sky {
         case .clear: self = .clear
-        case .rain, .thunderstorm, .typhoon: self = .rain
+        case .rain, .thunderstorm, .typhoon: self = snow ? .snow : .rain
         }
+    }
+
+    /// Decision 833: the light of the day's weather over `world`'s map,
+    /// snow's on a map under snow (``Map3DRegionLook/snow``).
+    public init(world: GameWorld) {
+        self.init(MapWeather(world: world), snow: Map3DRegionLook(world: world).snow)
     }
 
     init(daySunScale: Float, nightSunScale: Float, dayHemiScale: Float, nightHemiScale: Float,
