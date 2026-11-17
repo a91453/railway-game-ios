@@ -1,5 +1,7 @@
 # REVIEW-L27（2026-11-17，#2376）
 
+併回：PRIORITY_ROLLUP_2026-11-17（總表）（2026-11-17）
+
 0.6.0 (137) 發版後的例行審查與健檢留下的新項目。細節在 [REVIEW-L27](../research/REVIEW_L27_2026-11-17.md)（P2、P3 各條的情境、玩家看到什麼、修法一行）與 [HEALTH-137](../research/HEALTH_137_2026-11-17.md)（§3.2 香港六組），交接在 `docs/handoff/REVIEW-L27.md`。尺同 NEXT_PRIORITIES §19；bug 排在前面。沿用的舊項目（L26、L25 的 P3）照舊在 NEXT_PRIORITIES §29.20，這裡不重評。
 
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、注意 |
