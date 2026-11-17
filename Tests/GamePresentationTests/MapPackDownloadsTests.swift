@@ -94,6 +94,34 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertTrue(missing.contains("found 15 of 16 files (0, 15 by locator)"), missing)
     }
 
+    /// REVIEW-L27 P3-1 (MAP-PACK-ONCE): the open cities' packs are asked
+    /// at every read, and ``MapPackDownloads/changes`` moves when a
+    /// download is taken or forgotten, so what the app keeps (the
+    /// airfields) is read again from a pack downloaded after the first
+    /// read; a refused download or forgetting none leaves it as it was.
+    func testTheOpenCitiesPacksFollowADownloadTakenAfterTheFirstRead() throws {
+        let first = MapPack.currentOpen()
+        XCTAssertEqual(first.map(\.root).first { $0.lastPathComponent == "hongkong" }, MapPack.bundled(.hongKong)?.root)
+        let before = MapPackDownloads.changes
+
+        let root = try downloaded()
+        XCTAssertNil(MapPackDownloads.use(.hongKong, root: root, bundled: try bundled))
+        XCTAssertEqual(MapPackDownloads.changes, before + 1)
+        XCTAssertTrue(MapPack.currentOpen().contains { $0.root == root })
+        XCTAssertEqual(MapPack.currentOpen().count, first.count)
+
+        let cut = try downloaded()
+        try FileManager.default.removeItem(at: cut.appendingPathComponent("pack.json"))
+        XCTAssertEqual(MapPackDownloads.use(.hongKong, root: cut, bundled: try bundled), .noManifest)
+        XCTAssertEqual(MapPackDownloads.changes, before + 1)
+
+        MapPackDownloads.forget(.hongKong)
+        XCTAssertEqual(MapPackDownloads.changes, before + 2)
+        XCTAssertFalse(MapPack.currentOpen().contains { $0.root == root })
+        MapPackDownloads.forget(.hongKong)
+        XCTAssertEqual(MapPackDownloads.changes, before + 2)
+    }
+
     func testTheBundledPackIsReadWithoutADownload() {
         XCTAssertNil(MapPackDownloads.root(.hongKong))
         XCTAssertEqual(MapPack.current(.hongKong)?.root, MapPack.bundled(.hongKong)?.root)

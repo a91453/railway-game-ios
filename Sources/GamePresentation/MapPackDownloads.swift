@@ -16,6 +16,7 @@ public enum MapPackDownloads {
         var packs: [OverseasMap: MapPack] = [:]
         var statuses: [OverseasMap: MapPackStatus] = [:]
         var clues: [OverseasMap: String] = [:]
+        var changes = 0
     }
 
     private static let store = Store()
@@ -64,6 +65,7 @@ public enum MapPackDownloads {
         case let .success(pack):
             store.packs[city] = pack
             store.clues[city] = nil
+            store.changes += 1
             return nil
         case let .failure(refused):
             store.clues[city] = refused.clue
@@ -75,9 +77,20 @@ public enum MapPackDownloads {
     public static func forget(_ city: OverseasMap) {
         store.lock.lock()
         defer { store.lock.unlock() }
-        store.packs[city] = nil
+        if store.packs.removeValue(forKey: city) != nil { store.changes += 1 }
         store.statuses[city] = nil
         store.clues[city] = nil
+    }
+
+    /// REVIEW-L27 P3-1 (MAP-PACK-ONCE): how many times a download was
+    /// taken or forgotten. What is read from ``MapPack/current(_:)`` and
+    /// kept (the open cities' airfields and no-build land) is read again
+    /// when this moves, so a pack downloaded after the first read is used
+    /// in the same launch.
+    public static var changes: Int {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        return store.changes
     }
 
     /// Decision 819: what was seen of the last download of `city` that was
@@ -299,5 +312,12 @@ extension MapPack {
     /// when ``MapPackDownloads`` took one, the bundled one otherwise.
     public static func current(_ city: OverseasMap) -> MapPack? {
         MapPackDownloads.pack(city) ?? bundled(city)
+    }
+
+    /// REVIEW-L27 P3-1 (MAP-PACK-ONCE): the open cities' packs as they are
+    /// now (each ``current(_:)``), asked again at every read rather than
+    /// kept from the first one.
+    public static func currentOpen() -> [MapPack] {
+        OverseasMap.allCases.compactMap { OverseasMaps.open.contains($0) ? current($0) : nil }
     }
 }

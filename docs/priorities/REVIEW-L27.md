@@ -7,7 +7,7 @@
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、注意 |
 | --: | --- | --: | --: | --: | --: | --: | --: | --- |
 | 1 | bug：**HK-PEAK-CONTROL** 香港新局預設（簡化＋管制）買南港島綫與東涌綫，第二天兩個尖峰沒發 31/740 班（南港島綫 22、東涌綫 9；0 死結；管制關著 0 班；136 也是 31，不是 137 的退步）。REVIEW-L27 P2-1 | 3 | 3 | 1 | 3 | 1 | 2.40 | 未派；先在 DEPOT-REAL（#2371，香港兩座車廠）之後的 `main` 用 HEALTH-137「重現」的指令重量一次，還有才派人逐班查；不歸 DEPOT-REAL |
-| 2 | bug：**MAP-PACK-ONCE** `OSMMapBackground.cityPacks` 是 `static let`，下載完成前第一次讀到就整次 App 用內建那一包；香港資料移出 App 後，那一次會沒有機場禁建地。REVIEW-L27 P3-1 | 2 | 3 | 1 | 1 | 1 | 1.80 | 未派；併進 ASSET-PACK 第三段 |
+| 2 | bug：**MAP-PACK-ONCE** `OSMMapBackground.cityPacks` 是 `static let`，下載完成前第一次讀到就整次 App 用內建那一包；香港資料移出 App 後，那一次會沒有機場禁建地。REVIEW-L27 P3-1 | 2 | 3 | 1 | 1 | 1 | 1.80 | **已做**（REVIEW-L27 工作串，2026-11-18）：`cityPacks` 每次問 `MapPack.currentOpen()`，3D 的機場在 `MapPackDownloads.changes` 變了時重讀；實機 UNVERIFIED |
 | 3 | bug：**ELEVATED-SHELL-CHUNK** #2363 高架外殼只看這一塊的月台（`laidPlatforms`），跨塊邊的車站分塊重建時外殼可能偏位或一半變一般雨棚。REVIEW-L27 P3-2 | 1 | 2 | 3 | 2 | 1 | 1.70 | 未派；下次動 `Map3DStations.swift` 時順手；實機看一個跨塊邊的高架站 |
 | 4 | bug：**SNAP-REANCHOR** #2362 終點對齊最多轉 3°（2 km 約橫移 100 m），移過去的點沒再找軌道，可能停在線旁沒接上或建造被拒。REVIEW-L27 P3-3 | 2 | 2 | 1 | 1 | 1 | 1.55 | 未派；下次動 `NetworkDrag.swift` 時順手 |
 | 5 | **OPEN3D-PEAK-MEM** #2365 第一次開 3D 時場景、模型包、目錄三件同時佔記憶體（Linux 同時跑 1,877 MB，依序的峰值沒量）。REVIEW-L27 P3-4 | 2 | 2 | 1 | 1 | 1 | 1.55 | 未派；交效能串，和 L26 P3-2、L25 P3-2 一起量 |
