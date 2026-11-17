@@ -40,7 +40,9 @@ final class RovaniemiReportTests: XCTestCase {
             "| Bought | Day | Trips | Fares | Operating profit | Each line: boardings, departures | Deadlock minutes (first) |",
             "| --- | --: | --: | --: | --: | --- | --- |",
         ]
-        for ids in [["vr:KJA"], ["vr:MUL"], ["vr:KJA", "vr:MUL"]] {
+        // `ROVANIEMI_ONLY=vr:MUL+vr:KJA` plays only those purchases, in that order.
+        let only = ProcessInfo.processInfo.environment["ROVANIEMI_ONLY"].map { [$0.split(separator: "+").map(String.init)] }
+        for ids in only ?? [["vr:KJA"], ["vr:MUL"], ["vr:KJA", "vr:MUL"], ["vr:MUL", "vr:KJA"]] {
             let started = Date()
             let session = try Self.rovaniemi(simple: simple)
             var paid = Money.zero
