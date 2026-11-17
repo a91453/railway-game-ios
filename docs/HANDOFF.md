@@ -644,6 +644,23 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**2026-11-17 換到新專案的交接（Ultra 的規劃 session_01YGNNupAVETTN22PN18vAjU 寫；作者 15:27 UTC 開了新專案，新專案的規劃照這一段接手，下面「換到 Ultra 的交接」是前一版）**
+
+- **main**：`2a1bd77`（#2378 PRIO-FILES 已合，決策 832）。之後再加這份交接。
+- **這一任做了的**：在 #2118 接手；派了 SANTA-FLIGHT 與 PRIO-FILES 兩串；沒有合併任何 PR。作者要換新專案，所以 15:30 UTC 起不再合、不再派，原本 15:43 的巡查已取消。
+- **等著合的 PR（15:30 UTC 的狀態；照 §1.2 確認 head 一次就合）**：
+  - #2375 ROVANIEMI-FARE＋#2355（決策 828、存檔 108，動 GameCore）：draft，head `772c51e`，CI 在跑。session 壓縮兩次已停，綠了由規劃自己轉 ready 再合，#2355 會一起標成 merged（#2355 本身目前和 main 衝突，不用另外解）。照 `docs/handoff/ROVANIEMI-FARE.md`。合併前確認 main 的 ci.yml 綠。羅瓦涅米在 138 開放。
+  - #2371 DEPOT-REAL（829）：draft，head `8cb6d42`，clean。session 壓縮兩次，正在補一次只加文件的推送，等它在 #2118 留「可合併、head」。
+  - #2364 ROAD-LOOK-REAL-2（822）：已 ready、clean，head `d4fa961`。總覽圖 Max 規劃已看過通過，不用再看圖。等 #2118 的「綠、head」或直接照 §1.2 確認後合；合了封存 session_01JMHz9bn8HzazZzMYbhURDh 與 session_01JMHz9bEFthgKRraGjXnPYN（Max 帳號的，可能要作者封存）。
+  - #2376 REVIEW-L27＋HEALTH-137：draft，head `e2894ff`，clean，session 還在做（Max）。下一輪 REVIEW-L28 從 `85507e2` 之後數。
+  - #2372 TPE-MRT-ELEVATED 第 4 輪：作者專案串的，等它留「可合併」。
+- **在跑的實作**：SANTA-FLIGHT（決策 831，`claude/santa-flight`，專案串「做聖誕夜聖誕老人飛過天空」，Opus high；派工單 `/mnt/project-files/dispatch/SANTA-FLIGHT.md`）。最晚 12/20 發版，12/10 前要合；新 3D 外觀，規劃看總覽圖才合。另外 Max 上 DEPOT-REAL、ROAD-LOOK-REAL-2、REVIEW-L27 跑完為止。
+- **暫停**：REINDEER（馴鹿與雪橇模型）作者 11-17 23:21 台灣說「先不要做 等我開新專案」：不交 Mac 工作室、不派，等作者說。SANTA-FLIGHT 先用暫時造型留接點。
+- **不重派**：淡水信義線高架站第 4 輪（#2372）、工作室換帳號程式（assets PR 135 已合，r4 收工後安裝驗收）、TRACK-CURVE-COLOUR（另一帳號）。
+- **新規則**（決策 832）：PR 打分的新列寫成 `docs/priorities/<工作名>.md`，規劃用 `doc_numbers.py --priorities` 併回 NEXT_PRIORITIES。
+- **號碼**：下一個決策 **833**；存檔 107（108 給 ROVANIEMI-FARE）；golden schema 77。
+- **這個專案串的限制**：專案串沒有 `create_session`，派實作是請專案協調者開新串，派工單放 `/mnt/project-files/dispatch/`。
+
 **2026-11-17 換到 Ultra 的交接（Max 的規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 收尾時寫；Ultra 的新規劃照這一段接手，下面的「深夜交接」是前一版）**
 
 - **為什麼換**：Ultra 週額度 11-17 台灣時間 22:00 重置、沒有五小時上限；Max 今晚 13:39 UTC 碰到五小時上限，三個實作同時停住（§1.1「兩個帳號輪流當主帳號」）。作者 11-17：「看要不要給ultra做」，規劃答「137 發完就換」。
