@@ -13,7 +13,9 @@ import XCTest
 ///         --filter Map3DSceneBuildTimeReportTests
 ///
 /// `MAP3D_BUILD_FOCUS=x,y` (metres from the map's west and north edges)
-/// builds round that point instead of the save's busiest station;
+/// builds round that point instead of the save's busiest station,
+/// `MAP3D_BUILD_AT=latitude,longitude` round that place, and
+/// `MAP3D_BUILD_MIDDLE=1` round the map's middle;
 /// `MAP3D_BUILD_RUNS` builds it that many times (the first is reported
 /// apart: it reads the files' pages in).
 final class Map3DSceneBuildTimeReportTests: XCTestCase {
@@ -62,6 +64,12 @@ final class Map3DSceneBuildTimeReportTests: XCTestCase {
         var focus: (x: Double, y: Double)?
         if let given = environment["MAP3D_BUILD_FOCUS"]?.split(separator: ",").compactMap({ Double($0) }), given.count == 2 {
             focus = (given[0] * metre, given[1] * metre)
+        } else if let given = environment["MAP3D_BUILD_AT"]?.split(separator: ",").compactMap({ Double($0) }), given.count == 2,
+                  let frame = RealWorldFrame(world: world) {
+            let at = frame.worldPosition(latitude: given[0], longitude: given[1])
+            focus = (at.x, at.y)
+        } else if environment["MAP3D_BUILD_MIDDLE"] != nil {
+            focus = nil
         } else {
             let stations = world.stations.map { (x: Double($0.point.x), y: Double($0.point.y)) }
             focus = stations.max { a, b in
@@ -73,6 +81,14 @@ final class Map3DSceneBuildTimeReportTests: XCTestCase {
             + "focus \(focus.map { "\(Int($0.x / metre)),\(Int($0.y / metre))" } ?? "the middle")")
         print("MAP3D-BUILD read \(String(format: "%.2f", seconds(read - started))) s, snapshot and skyline \(String(format: "%.2f", seconds(worked - read))) s")
 
+        // Linux: the process's memory now and at its peak (`/proc`).
+        func memory() -> String {
+            let status = (try? String(contentsOfFile: "/proc/self/status", encoding: .utf8)) ?? ""
+            return status.split(separator: "\n").filter { $0.hasPrefix("VmRSS") || $0.hasPrefix("VmHWM") }
+                .map { $0.split(whereSeparator: \.isWhitespace).dropFirst().first.map { "\((Int($0) ?? 0) >> 10) MB" } ?? "" }
+                .joined(separator: " now, peak ")
+        }
+        print("MAP3D-BUILD memory before building: \(memory())")
         let runs = max(1, Int(environment["MAP3D_BUILD_RUNS"] ?? "") ?? 1)
         for run in 1...runs {
             let begun = clock.now
@@ -80,7 +96,8 @@ final class Map3DSceneBuildTimeReportTests: XCTestCase {
                                    footprints: footprints, heights: heights, landCover: landCover, lineBands: bands, railways: railways,
                                    temples: temples, noBuild: land)
             let took = seconds(clock.now - begun)
-            print("MAP3D-BUILD run \(run): \(scene.chunks.count) chunks, \(scene.triangleCount) triangles, built in \(String(format: "%.2f", took)) s")
+            print("MAP3D-BUILD run \(run): \(scene.chunks.count) chunks, \(scene.triangleCount) triangles, built in \(String(format: "%.2f", took)) s, "
+                + "memory \(memory())")
             var summed: [(step: String, seconds: Double)] = []
             for (step, time) in scene.steps {
                 if let at = summed.firstIndex(where: { $0.step == step }) { summed[at].seconds += time } else { summed.append((step, time)) }
