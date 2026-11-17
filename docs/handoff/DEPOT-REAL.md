@@ -5,7 +5,8 @@
 
 ## 進度
 
-- **做到哪**：做完了，PR 已開（等 CI）。這個 session 壓縮過 1 次，不再接新工作。
+- **做到哪**：做完了，PR #2371。這個 session 壓縮過 2 次，照規定停在這裡；留下的四項（下面）沒有人在做。
+- **接手機廠的工作前先讀** `.claude/skills/depot-work/SKILL.md`：歷次做機廠量過不行的路與動手前要量的格子，這一次的教訓也寫在裡面。
 - **已驗證（Linux debug）**：香港兩線新局（擬實）收班死結 11 分鐘 → 0、誤點 477 → 326、沒發 12/740 → 13/732；`HongKongDepotTests` 4 個通過；機捷擬實一天的雜湊與 `main` 相同（`225289834efa6054`）。
 - **下一步的第一個指令**：留下的第 1 項（清晨出庫排隊）：`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_EPISODES=1 DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1 DEPOT_RETURN_WATCH=106200-108600 DEPOT_RETURN_WATCH_AT=蘆竹 swift test --skip-build --filter DepotReturnReportTests/testTheTaoyuanAirportLine`
 
@@ -15,7 +16,7 @@
 - 小蠔灣在第一條正線那一側，加了鏡像鋪法（`RealLineDepotLayout.lay(onFirst:)`）；只開給香港的線，台灣各線鋪出來的軌道不變。
 - 回歸測試 `Tests/GamePresentationTests/HongKongDepotTests.swift`（在 `main` 上是紅的）。
 - 機捷兩座機廠的真實停車股道數查到了（蘆竹 23、青埔 15，`tools/rail-depots/tymc_yard_tracks.py`），照鋪與只補到 18 都量過，**沒有收**：簡化＋管制清晨多漏班（決策 829 §4 的表）。兩座機廠維持 16、12。
-- 數字、資料來源、五方、對照表都在 `docs/decisions/829.md`；留下的三項打了分，在 NEXT_PRIORITIES §29.30。
+- 數字、資料來源、五方、對照表都在 `docs/decisions/829.md`；留下的三項打了分，在 NEXT_PRIORITIES §29.31。
 
 ## HK-NIGHT-PARKED（§29.25 第 2 列）量到的
 
@@ -24,7 +25,7 @@
 
 ## 還留下什麼
 
-分數與五方在 NEXT_PRIORITIES §29.30；細節在決策 829 §6。
+分數與五方在 NEXT_PRIORITIES §29.31；細節在決策 829 §6。
 
 1. **D2 的兩點都沒有解**（「05:56 那一班」「蘆竹機廠滿」）。量到的成因是同一個：清晨幾班同時要從蘆竹出庫，出庫的提前量只算一列自己的路程（`RunDepot.swift` 的 `runTrainLeavingDepot`）。加股數只會讓清晨要出庫的車更多。這是 GameCore 的死結類工作，這個 session 沒有動（壓縮過一次之後不接新工作；D2 已經試錯三條路，要從頭量）。DEPOT-DAWN-QUEUE，2.40。
 2. 已經買下的線補線中間的機廠（香港舊存檔）。DEPOT-ADD-MID，2.15。
