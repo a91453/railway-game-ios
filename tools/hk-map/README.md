@@ -14,6 +14,7 @@
 
 | `hkg_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop，香港 2025，constrained，30 角秒（約 1 公里）一格，R2025A v1（和台灣的 `taiwan_population.json` 同一個系列），`https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif`（12 KB） | CC BY 4.0，WorldPop |
 | `Building_Outline_Public_v20261020_Building_converted.geojson` | 地政總署 Building（建物外形、`BaseHeight`／`TopHeight`），經 CSDI 提供，資料集 `landsd_rcd_1637211194312_35158`；下載的 zip `https://static.csdi.gov.hk/csdi-webpage/download/common/c0623f7db229af2dfb5bdfe62a8fdbc9d094d459b50baa200da4ddbe4e6b5c62`（73,920,546 B，SHA-256 `7f47f7cc…9f44`，資料版本 v20261020，2026-11-13 下載；網址是內容雜湊，資料更新後要從 metadata 重新取） | CSDI 使用條款及免責聲明；知識產權屬香港特別行政區政府與地政總署（決策 729） |
+| 土地利用網格（`build_hk_landcover.py`） | 規劃署「2025 年土地利用網格」（10 m，EPSG:2326），CSDI 資料集 `pland_rcd_1754559265139_25057`，經地圖服務 `https://portal.csdi.gov.hk/server/rest/services/common/pland_rcd_1754559265139_25057/MapServer` 取（2026-11-17）；四張圖的 SHA-256 與灰階對代碼的表在 `hk_sources.json` | DATA.GOV.HK 使用條款及條件；香港特別行政區政府規劃署（決策 835） |
 | `Digital Terrain Model.tif` | 地政總署數碼地形模型（5 m，HK1980 方格網 EPSG:2326），經空間數據共享平台（CSDI）提供，資料集 `landsd_rcd_1638158088368_93806`；下載的 zip `https://static.csdi.gov.hk/csdi-webpage/download/common/e9a836d098a3a9ccf55a7f61f69a93e71923c722fb94ddf7b36be83a67b99140`（24,206,651 B，SHA-256 `6dbcdfb5…1af`，2026-11-13 下載；網址是內容雜湊，資料更新後要從 metadata 重新取） | CSDI 使用條款及免責聲明；知識產權屬香港特別行政區政府與地政總署（決策 726） |
 
 四個來源這個環境都連得到，不用改網路設定（地形的 DTM 與 2026-11-13 的整包例外，見第 8 步）。OSM 用整包加 pyosmium（`pip install osmium`，BSD 2-Clause，決策 93），不問 Overpass。
@@ -76,6 +77,13 @@ swift test --skip-build --filter "HongKongGroundTests|HongKongMapTests|HongKongR
 python3 -I tools/airfields/build_airfields.py /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong/airfields.json
 python3 -I tools/no-build-land/build_no_build.py /tmp/hk/osm/hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong/no_build.json
 swift test --skip-build --filter "HongKongAirportTests|HongKongRailwaysTests"
+
+# 10. 香港的地表覆蓋（決策 835）：landcover.dat，並更新 pack.json 與 hk_sources.json。
+#     規劃署 2025 年土地利用網格；下載連結在雲端 403，改從同一資料集的地圖服務取 10 m 的圖（約 1 分鐘）。
+pip install numpy pillow osmium
+python3 -I tools/hk-map/build_hk_landcover.py fetch /tmp/hk/landuse
+python3 -I tools/hk-map/build_hk_landcover.py build /tmp/hk/landuse RailwayGameApp/Resources/MapPacks/hongkong
+swift test --skip-build --filter "HongKongLandCoverTests|HongKongRailwaysTests"
 ```
 
 取樣的原始回應（幾十 MB）不進 repo；進 repo 的是算出來的 `service.json`。
@@ -91,6 +99,7 @@ swift test --skip-build --filter "HongKongAirportTests|HongKongRailwaysTests"
 - **`build_hk_ground.py`**（決策 712）：把 WorldPop 的香港人口格網寫成 `population.json`，格式和台灣的 `taiwan_population.json` 一樣（`PopulationGrid` 讀），合計 7,396,724 人、277 段、12 KB；檢查每一格有人的地方都在地圖範圍內。地圖範圍是 `build_hk_mtr.py` 的 `EXTENT`（WorldPop 香港格網的外框，北 22.5584、南 22.15、西 113.8333、東 114.4417，約 62.6 × 45.5 公里），寫進 `pack.json` 的 `extent`；遊戲照它開香港的世界（`MapPack.extent()`、`OverseasGround`），不再是 16 公里見方。
 - **`build_hk_basemap.py`**（決策 712 續三）：用台灣底圖的工具（`tools/basemap/build_basemap.py`，同樣的圖層與 zoom）把整包檔切成 `basemap.pmtiles`，2D 與 3D 地圖、土地的真實道路都讀它。香港的新界與九龍連著大陸，整包檔把大陸的海岸切斷：開口的海岸線頭尾相接、從北邊繞回去閉合，大陸那一側算陸地（檔頭有說明）。2026-11-13 下載的整包檔（SHA-256 `20b9e1fc…1e3310`，OSM 資料到 2026-11-11）：152,099 筆圖形，海岸線 911 圈（其中 2 條開口的線接成 1 圈）；45,296 塊圖磚、786 種不同的內容，7,072,817 位元組，約 30 秒；同一份輸入每次建出來逐位元相同。這一份整包檔比建港鐵那幾個檔時（`hk_sources.json`）新，那幾個檔沒有重建。
 - **`build_hk_ground_grids.py`**（決策 726）：香港的地形與水域，格式和台灣的 `taiwan_heights.dat`、`taiwan_water.json`、`taiwan_terrain.pmtiles` 一樣（`HeightGrid`、`WaterGrid`、2D 地圖的山影讀）。格網是台灣那一種（1.875″，從 `population.json` 的角起算，蓋滿 `pack.json` 的範圍，816 × 1,200 格）。水域照 `build_water_grid.py` 的規則，海岸線照底圖那樣把大陸被切開的海岸繞北方閉合（深圳是陸地）。高度是地政總署 DTM 每格範圍內 5 m 樣本的平均：格子中心從 WGS 84 用地政總署的簡化位移（緯度 +5.5″、經度 −8.8″）轉 HK80，再用國際 1924 橢球的橫麥卡托轉成方格網，都自己寫（標準函式庫加 numpy）；水邊照決策 132 取水面，外海 0；DTM 沒有涵蓋的陸地（深圳）是 0。陡坡照決策 115 的規則。核對：大帽山附近最高 953 m（官方 957 m）；DTM 高於 1 m 的格子有 98.03% 在 OSM 的陸上（位移正負號反過來是 89%，不加位移 93%），低於 97% 就停。
+- **`build_hk_landcover.py`**（決策 835）：規劃署「2025 年土地利用網格」（10 m）摺成決策 811 的八類（林地→森林、灌叢、草地、農地、魚塘與紅樹林→濕地、荒地與施工中→裸地、水塘與河溪→水、其餘建成用途→建成區），放在 `water.json` 的格子上（每格 6 × 6 點取最多、再 3 × 3 多數），寫成 `landcover.dat`（台灣 `taiwan_landcover.dat` 的格式）。下載連結 403，所以從資料集的地圖服務照 10 m 取圖，再用服務的 `identify` 把每種灰對回代碼；代碼 0、1、2 畫成同一個黑，從圖邊連得到的算海、其餘算住宅。代碼表與理由在檔頭與決策 835。
 - **`extract_hk_runs.py`**：用 `tools/real-timetables/extract_metro_runs.py` 同一套排法（一列車到終點後折返接下一班，夜裡停在哪就從哪出車），把 `hkmtr_times.json` 排成 `metro_runs.json`，並更新 `pack.json`。終點站停不下那麼多車的綫會被留在外面並列出來：那條綫就還不能買。
 
 ## 哪些來自哪一邊

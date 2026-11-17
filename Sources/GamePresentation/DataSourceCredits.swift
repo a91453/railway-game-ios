@@ -80,9 +80,18 @@ public enum DataSourceCredits {
 
     static var cityViewNoticesURL: String? { CityViewPage.root().map { $0 + "NOTICES.txt" } }
     static let polyHavenURL = "https://polyhaven.com"
+    /// Decision 815's later note: the instruments the music is played on.
+    /// Its licence asks for links to its own pages, not its download files.
+    static let generalUserGSURL = "https://github.com/mrbumpy409/GeneralUser-GS"
+    /// Decision 815's later note: whose the game's own music is, the
+    /// brand's developer (``GameBrand``).
+    static var musicHolder: (english: String, chinese: String) {
+        ("the developer of \(GameBrand.current.english)", "\(GameBrand.current.chinese)開發者")
+    }
     static let meshyURL = "https://www.meshy.ai"
     static let kenneyNatureKitURL = "https://kenney.nl/assets/nature-kit"
     static let kenneyIndustrialURL = "https://kenney.nl/assets/city-kit-industrial"
+    static let kenneyCarKitURL = "https://kenney.nl/assets/car-kit"
     static let taipeiGarbageTrucksURL = "https://data.gov.tw/dataset/136515"
     static let busPhotoURL = "https://commons.wikimedia.org/wiki/File:Capital_Bus_735-FW_right_side_and_TWTC_ITB_(46106172592).jpg"
     static let earcutURL = "https://github.com/mapbox/earcut"
@@ -251,6 +260,28 @@ public enum DataSourceCredits {
                                 title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
                                 url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
                             ),
+                        ]
+                    ),
+                    // Decision 835: what covers Hong Kong's ground
+                    // (`MapPacks/hongkong/landcover.dat`), from the
+                    // Planning Department's land use grid.
+                    DataSourceCredit(
+                        id: "hongKongLandUse",
+                        title: language.text("Hong Kong’s land use", "香港的土地用途"),
+                        detail: language.text(
+                            "On Hong Kong’s 3D map, the colour of the ground outside the city, its woods, scrub, grassland, farms and wetlands, and the trees in its woods.",
+                            "香港的 3D 地圖上，市區以外地面的顏色：樹林、灌叢、草地、農地與濕地，以及樹林裡的樹。"
+                        ),
+                        notice: language.text(
+                            "Land use: Planning Department, Government of the Hong Kong SAR, via DATA.GOV.HK (2025 Raster Grids on Land Utilization), used under DATA.GOV.HK’s Terms and Conditions of Use. Simplified for the game.",
+                            "土地用途：香港特別行政區政府規劃署，經「資料一線通」（DATA.GOV.HK）提供（2025 年土地利用網格），依「資料一線通」的使用條款及條件使用，為遊戲簡化過。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(
+                                title: language.text("Raster Grids on Land Utilization", "土地利用網格"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-pland-pland1-land-utilization-in-hong-kong-raster-grid"
+                            ),
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
                         ]
                     ),
                     // Decisions 712, 729 and 791: the buildings of Hong Kong's
@@ -1127,21 +1158,24 @@ public enum DataSourceCredits {
                     // Decision 458: the conifers, bushes and tanks
                     // (Map3DSceneryProp), reshaped from Kenney's CC0 models
                     // (tools/kenney-props/SOURCE.md). CC0 asks for no
-                    // credit; Kenney's licence file welcomes it.
+                    // credit; Kenney's licence file welcomes it. Decision
+                    // 838: and the cars on Taiwan's streets (Car Kit,
+                    // tools/tw-cars/README.md).
                     DataSourceCredit(
                         id: "kenney",
                         title: "Kenney",
                         detail: language.text(
-                            "The conifers in the 3D map’s mountain woods, the bushes by the stations and the line, and the tanks in the factory yards: Kenney’s models, reshaped and in the game’s colours.",
-                            "3D 地圖山區樹林裡的針葉樹、車站前與沿線的灌木叢、工廠空地的儲槽：Kenney 的模型，改了形狀並換成遊戲的配色。"
+                            "The conifers in the 3D map’s mountain woods, the bushes by the stations and the line, the tanks in the factory yards and the cars on the streets: Kenney’s models, reshaped and in the game’s colours.",
+                            "3D 地圖山區樹林裡的針葉樹、車站前與沿線的灌木叢、工廠空地的儲槽、街上的汽車：Kenney 的模型，改了形狀並換成遊戲的配色。"
                         ),
                         notice: language.text(
-                            "Nature Kit and City Kit (Industrial) by Kenney (kenney.nl), under CC0 1.0 (public domain dedication).",
-                            "Kenney（kenney.nl）的 Nature Kit 與 City Kit (Industrial)，依 CC0 1.0（公眾領域貢獻宣告）使用。"
+                            "Nature Kit, City Kit (Industrial) and Car Kit by Kenney (kenney.nl), under CC0 1.0 (public domain dedication).",
+                            "Kenney（kenney.nl）的 Nature Kit、City Kit (Industrial) 與 Car Kit，依 CC0 1.0（公眾領域貢獻宣告）使用。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Nature Kit", url: kenneyNatureKitURL),
                             DataSourceCredit.Link(title: "City Kit (Industrial)", url: kenneyIndustrialURL),
+                            DataSourceCredit.Link(title: "Car Kit", url: kenneyCarKitURL),
                             DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
                         ]
                     ),
@@ -1226,6 +1260,25 @@ public enum DataSourceCredits {
                 id: "sounds",
                 title: language.text("Sounds", "聲音"),
                 credits: [
+                    // Decision 815's later note: the theme is the game's own
+                    // composition and the winter tune its own arrangement of
+                    // a tune in the public domain, both the developer's;
+                    // the instruments are a sample bank's.
+                    DataSourceCredit(
+                        id: "music",
+                        title: language.text("Music", "音樂"),
+                        detail: language.text(
+                            "The theme is an original composition for the game. The winter tune is the game’s own arrangement of Jingle Bells (James Lord Pierpont, 1857, in the public domain). Both are played on the instruments of GeneralUser GS.",
+                            "主題曲是為遊戲原創的曲子；冬季曲是遊戲自己編曲的〈Jingle Bells〉（James Lord Pierpont 1857 年作，屬公眾領域）。兩首都用 GeneralUser GS 的樂器演奏。"
+                        ),
+                        notice: language.text(
+                            "Music © 2026 \(musicHolder.english). All rights reserved. Instrument samples: GeneralUser GS by S. Christian Collins, under the GeneralUser GS License v2.0.",
+                            "音樂版權所有 © 2026 \(musicHolder.chinese)，保留一切權利。樂器取樣：S. Christian Collins 的 GeneralUser GS，依 GeneralUser GS 授權第 2.0 版使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "GeneralUser GS", url: generalUserGSURL),
+                        ]
+                    ),
                     DataSourceCredit(
                         id: "runningSound",
                         title: language.text("Train recordings", "列車錄音"),

@@ -74,6 +74,14 @@ public final class GameLauncher {
         return heights
     }
 
+    /// What covers the ground of `world`'s map: a city's own on its map
+    /// (decision 835; none, a plain countryside, for a pack without it),
+    /// Taiwan's on any other (decision 811).
+    func landCover(for world: GameWorld) -> LandCoverGrid? {
+        if let ground = overseasGrounds.first(where: { $0.holds(world) }) { return ground.landCover }
+        return landCover
+    }
+
     /// What there is around places on real-world maps in Taiwan, handed to
     /// every game it starts (``GameSession/places``).
     public var places: PlaceGrid?
@@ -1918,7 +1926,7 @@ public final class GameLauncher {
         started.realBuses = realBuses
         started.placeNames = placeNames
         started.sightVisitors = sightVisitors
-        started.landCover = landCover
+        started.landCover = self.landCover(for: world)
         started.railways = railways
         started.collectedStamps = stationStamps.dates
         // Decision 88: land not read round a station built while the app
@@ -2036,7 +2044,7 @@ public final class GameLauncher {
             session.realBuses = realBuses
             session.placeNames = placeNames
             session.sightVisitors = sightVisitors
-            session.landCover = landCover
+            session.landCover = self.landCover(for: session.world)
             session.railways = railways
             // Decision 88: land not read round a station built while the
             // app had no population, as when a game begins (``begin``);

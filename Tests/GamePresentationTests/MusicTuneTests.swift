@@ -86,19 +86,27 @@ final class MusicTuneTests: XCTestCase {
         XCTAssertEqual(MusicTune.play(after: .theme, at: over, calendar: calendar), looping)
     }
 
-    /// Both tunes are made by the audio tool, listed in its manifest as
-    /// music loops at the same loudness, and bundled with the app.
-    func testEveryTuneIsABundledLoopInTheManifest() throws {
+    /// Every file the music plays is made by the audio tool, listed in
+    /// its manifest as music of that tune at the same loudness, and
+    /// bundled with the app: the theme's loop has a seam, a turn's file
+    /// rings out to silence.
+    func testEveryTuneIsBundledInTheManifest() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("tools/audio/manifest.json"))) as? [String: Any]
         let entries = manifest?["files"] as? [[String: Any]] ?? []
         let project = try String(contentsOf: root.appendingPathComponent("RailwayGameApp/RailwayGame.xcodeproj/project.pbxproj"), encoding: .utf8)
         var loudness: [Double] = []
-        for track in MusicTune.allCases {
-            let file = "\(track.resource.name).\(track.resource.extension)"
+        let plays = [MusicPlay(tune: .theme, loops: true), MusicPlay(tune: .theme, loops: false), MusicPlay(tune: .winter, loops: false)]
+        for play in plays {
+            let file = "\(play.resource.name).\(play.resource.extension)"
             let entry = try XCTUnwrap(entries.first { $0["file"] as? String == file }, file)
             XCTAssertEqual(entry["kind"] as? String, "music", file)
-            XCTAssertNotNil(entry["loopSeam"], file)
+            XCTAssertEqual(entry["tune"] as? String, play.tune.rawValue, file)
+            if play.loops {
+                XCTAssertNotNil(entry["loopSeam"], file)
+            } else {
+                XCTAssertEqual(try XCTUnwrap(entry["endLevel"] as? Double, file), 0, accuracy: 0.001, "\(file) rings out to silence")
+            }
             loudness.append(try XCTUnwrap(entry["loudnessLufs"] as? Double, file))
             XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("RailwayGameApp/Resources/Audio/\(file)").path), "\(file) is bundled")
             XCTAssertTrue(project.contains("\(file) in Resources"), "\(file) is in the app's resources")
@@ -112,7 +120,7 @@ final class MusicTuneTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("tools/audio/manifest.json"))) as? [String: Any]
         let entries = manifest?["files"] as? [[String: Any]] ?? []
-        let entry = try XCTUnwrap(entries.first { $0["file"] as? String == "music-winter.caf" })
+        let entry = try XCTUnwrap(entries.first { $0["file"] as? String == "music-winter.m4a" })
         XCTAssertGreaterThanOrEqual(try XCTUnwrap(entry["seconds"] as? Double), 90)
     }
 }

@@ -226,11 +226,17 @@ public struct OverseasGround: Sendable {
     /// of Taiwan's `taiwan_heights.dat`), or `nil` for a pack without
     /// them, or out of shape: its map is then flat.
     public let heights: HeightGrid?
+    /// Decision 835: what covers the city's ground (`landcover.dat`, in
+    /// the form of Taiwan's `taiwan_landcover.dat`), or `nil` for a pack
+    /// without it, or one out of shape: its 3D map's countryside is then
+    /// plain.
+    public let landCover: LandCoverGrid?
 
     /// The ground `pack` says `city` has. Throws for a pack whose
     /// `pack.json` cannot be read or has no extent that fits a world; a
     /// pack with no `population.json`, or one out of shape, has no people;
-    /// likewise its water and heights (decision 726).
+    /// likewise its water and heights (decision 726) and land cover
+    /// (decision 835).
     public init(city: OverseasMap, pack: MapPack) throws {
         let extent = try pack.extent()
         guard let anchor = extent.anchor, let bounds = extent.bounds else {
@@ -243,6 +249,7 @@ public struct OverseasGround: Sendable {
         baseMap = pack.baseMapFile.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
         water = (try? pack.file("water", "json")).flatMap { try? WaterGrid(data: $0) }
         heights = (try? pack.file("heights", "dat")).flatMap { try? HeightGrid(data: $0) }
+        landCover = (try? pack.file("landcover", "dat")).flatMap { try? LandCoverGrid(data: $0) }
     }
 
     /// Whether `world` is this city's map: laid over its extent.

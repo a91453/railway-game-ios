@@ -1,12 +1,12 @@
 {
   "role": "stem",
-  "title": "Theme: melody",
-  "beatsPerBar": 4,
+  "title": "Theme: the minuet's melody",
+  "beatsPerBar": 3,
   "motif": 0,
   "fadeOut": 0,
   "tracks": [
-    {"voice": "pluck", "gain": 60, "pan": 0},
-    {"voice": "glock", "gain": 50, "pan": -10},
+    {"voice": "pluck", "gain": 58, "pan": 0},
+    null,
     null,
     null,
     null,

@@ -198,6 +198,9 @@ public struct TrainMotion: Sendable {
         /// last tick ends: past it, ``trail`` goes on along the track past
         /// its tail. `nil`: all of ``trail``.
         var bodyEnd: Double?
+        /// Decision 837: what it carries, for a freight line's train
+        /// (``Map3DFreightLoad``); empty for any other.
+        public internal(set) var freightLoad: Map3DFreightLoad = .empty
 
         /// Its head at `progress` from the last tick (0) to now (1): where
         /// and which way it faces.
@@ -334,6 +337,8 @@ public struct TrainMotion: Sendable {
             let look: TrainLook = line.isFreight ? .freight : .line(line.id, line.color)
             for train in line.trains + line.patterns.flatMap(\.trains) { looks[train] = look }
         }
+        // Decision 837: what each freight train carries.
+        let loads = Map3DFreightLoad.loads(in: world)
         var runs: [Run] = []
         var samples: [TrainID: Sample] = [:]
         for train in world.trains {
@@ -372,7 +377,8 @@ public struct TrainMotion: Sendable {
                 train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type?.isHighSpeed == true,
                 livery: TrainLivery.of(type: train.type, performance: train.performance),
                 trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading,
-                aheadTrail: Trail(TrainTrackReach.front(of: train, in: world).map(Point.init)), bodyEnd: bodyEnd
+                aheadTrail: Trail(TrainTrackReach.front(of: train, in: world).map(Point.init)), bodyEnd: bodyEnd,
+                freightLoad: loads[train.id] ?? .empty
             ))
         }
         self.runs = runs

@@ -305,12 +305,19 @@ OSM, MTR, OURS, WORLDPOP = "OpenStreetMap", "MTR open data", "this project", "Wo
 LANDSD = "Lands Department DTM"
 # Decision 729: the Lands Department's buildings (outlines and heights).
 LANDSD_BUILDINGS = "Lands Department Building"
+# Decision 835: the Planning Department's land use grid.
+PLAND = "Planning Department land utilization"
 # Decision 712: how far Hong Kong's map reaches, in degrees: the box of
 # WorldPop's grid of Hong Kong (`build_hk_ground.py`), which holds all its
 # land and every line here, some 62 km by 45 km. The game lays the city's
 # world over this box (`MapPack.extent`), not over a 16 km square.
 EXTENT = {"north": 22.5584, "south": 22.1500, "west": 113.8333, "east": 114.4417}
 SOURCES = {
+    # Decision 733 (README step 9): written by the airfields' and no-build
+    # land's own tools, listed here so a later manifest keeps them.
+    "airfields.json": {"runways, taxiways, aprons, stands, jet bridges, control tower (tools/airfields/build_airfields.py)": OSM},
+    "no_build.json": {"airports, military land, cemeteries, golf courses, railway land, ports and the airports' buildings "
+                      "(tools/no-build-land/build_no_build.py)": OSM},
     "buildings.pmtiles": {"outlines and heights (build_hk_buildings.py)": LANDSD_BUILDINGS,
                           "uses, storeys of the few unmeasured towers where tagged": OSM,
                           "storeys where not measured (from the measured ones and the people round them)": OURS},
@@ -322,6 +329,8 @@ SOURCES = {
                     "where the sea and the shore are": OSM, "water's surface and the sea at 0": OURS},
     "water.json": {"water (coastline, bodies of water)": OSM, "the mainland's shore closed past the extract": OURS,
                    "steep (slopes over 30 %)": LANDSD},
+    "landcover.dat": {"covers (the 2025 land use grid's 10 m classes, the most of each 1.875 arc-second cell's, folded into eight)": PLAND,
+                      "the sea, OpenStreetMap's water": OSM, "the fold and the 3 × 3 majority": OURS},
     "terrain.pmtiles": {"heights (heights.dat, Terrarium-encoded)": LANDSD},
     "track_lines.geojson": {"geometry": OSM, "color": OSM, "id (MTR's line code)": MTR, "name": OURS},
     "track_stations.geojson": {"geometry": OSM, "name (checked against MTR's list)": OSM, "name of 茘景 and 茘枝角 (MTR's form of 荔)": MTR, "color": OSM,
@@ -353,6 +362,9 @@ def write_manifest(folder):
     if "buildings.pmtiles" in files:
         licences[LANDSD_BUILDINGS] = ("Building, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal; "
                                       "CSDI Portal Terms and Conditions of Use")
+    if "landcover.dat" in files:
+        licences[PLAND] = ("2025 Raster Grids on Land Utilization, Planning Department, Government of the Hong Kong SAR, "
+                           "via DATA.GOV.HK and the CSDI Portal; DATA.GOV.HK Terms and Conditions of Use")
     write(folder, "pack.json", {
         "id": "hongkong", "system": SYSTEM, "decision": 697,
         "english": "Hong Kong", "chinese": "香港",

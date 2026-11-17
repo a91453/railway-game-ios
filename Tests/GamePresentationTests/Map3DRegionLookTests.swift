@@ -115,7 +115,8 @@ final class Map3DRegionLookTests: XCTestCase {
         let yellow = try XCTUnwrap(Map3DStreetLife.carPaints.last)
         XCTAssertFalse(finland.contains { !$0.model.isBus && $0.tint == yellow })
         XCTAssertTrue(taiwan.contains { $0.model.isScooter })
-        XCTAssertTrue(taiwan.contains { $0.model == .car && $0.tint == yellow })
+        // Decision 838: a yellow car in Taiwan is its taxi, with its sign.
+        XCTAssertTrue(taiwan.contains { $0.model == .yellowTaxi && $0.tint == yellow })
         let plain = try vehicles(nil)
         XCTAssertEqual(taiwan.map(\.model), plain.map(\.model))
         XCTAssertEqual(taiwan.map(\.tint), plain.map(\.tint))

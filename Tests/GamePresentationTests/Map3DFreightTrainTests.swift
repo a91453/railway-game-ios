@@ -40,8 +40,11 @@ final class Map3DFreightTrainTests: XCTestCase {
     }
 
     func testAFreightTrainIsTheR200AndItsWagonsNearAndFar() throws {
-        let (world, _) = try world(freight: true)
+        var (world, train) = try world(freight: true)
         XCTAssertTrue(world.isFreightTrain(world.trains[0].id))
+        // Decision 837: carrying goods, its containers.
+        let origin = try XCTUnwrap(world.stations.first).id
+        world.freight?.loads = [TrainCargo(train: train, groups: [CargoGroup(origin: origin, kind: .goods, tons: 320)])]
         let near = try frame(world, eyeAbove: 100)
         let names = near.instances.map { pack.models[$0.model].name }
         XCTAssertEqual(names, ["set-R200CK-head", "set-FREIGHT-car", "set-FREIGHT-fourth", "set-FREIGHT-centre",
