@@ -1015,7 +1015,7 @@ extension Map3DScene.Builder {
     /// on the ground under it is not.
     mutating func roadRise(at p: Map3DBaseMap.Point, along: (x: Double, z: Double)?, onDeck: Bool) -> (rise: Float, onBridge: Bool) {
         let bridges = roadBridges
-        guard !bridges.isEmpty else { return (0, false) }
+        guard !bridges.isEmpty || !roadGrade.isEmpty else { return (0, false) }
         let key = Map3DRoadBridges.key(p.x, p.z)
         var best: (rise: Float, onBridge: Bool) = (0, false)
         // ROAD-RAMP-HEIGHT: on each deck, the piece whose line is nearest:
@@ -1067,6 +1067,19 @@ extension Map3DScene.Builder {
             guard rise > 0, bridges.isOn(p, join.roads) else { continue }
             best = (max(best.rise, rise), best.onBridge || out <= join.plateau)
         }
+        // Decision 834: a motorway on its profile: a deck no lower, a road
+        // on the ground lifted over it (a deck once its girder is clear)
+        // or down in its cutting.
+        if !roadGrade.isEmpty, let graded = roadGrade.profile(at: p, along: along, onDeck: onDeck) {
+            let rise = graded.height - drawnGround(x: Float(p.x), z: Float(p.z))
+            if onDeck {
+                best = (max(best.rise, rise), true)
+            } else if graded.inCut, best.rise <= 0 {
+                best.rise = rise
+            } else if rise > best.rise {
+                best = (rise, best.onBridge || rise >= Map3DElevatedLook.roadBridge.girderDepth + 0.5)
+            }
+        }
         return best
     }
 
@@ -1108,12 +1121,14 @@ extension Map3DScene.Builder {
     /// Decision 391: whether a road from `a` to `b` may come near a
     /// raised road (a bridge or a ramp onto one).
     func nearRaisedRoad(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point) -> Bool {
-        guard !roadBridges.isEmpty else { return false }
+        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return false }
         let low = Map3DRoadBridges.key(min(a.x, b.x), min(a.z, b.z)), high = Map3DRoadBridges.key(max(a.x, b.x), max(a.z, b.z))
         for row in low.row...high.row {
             for column in low.column...high.column {
                 let key = Map3DScene.ChunkKey(column: column, row: row)
                 if roadBridges.segments[key] != nil || roadBridges.endCells[key] != nil || roadBridges.joinCells[key] != nil { return true }
+                // Decision 834: a motorway off its ground.
+                if roadGrade.cells[key] != nil { return true }
             }
         }
         return false
@@ -1194,7 +1209,7 @@ extension Map3DScene.Builder {
     /// road's first point and a pier every ``Map3DElevatedLook/pierSpacing``
     /// from it, so a chunk built apart draws what the whole scene does.
     mutating func addRoadBridges(_ roads: [Map3DBaseMap.Road], look: Map3DElevatedLook = .roadBridge) {
-        guard !roadBridges.isEmpty else { return }
+        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return }
         typealias Point = Map3DBaseMap.Point
         for road in roads where road.points.count >= 2 {
             let xs = road.points.map(\.x), zs = road.points.map(\.z)
