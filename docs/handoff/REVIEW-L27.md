@@ -22,3 +22,33 @@
 - 死結的數字只記錄、不修（照派工：死結歸 DEPOT-REAL，決策 829 §6 的 DEPOT-DAWN-QUEUE）。
 - L28 從 #2369 起數，加上 137 之後才合併的 #2364、#2370–#2375 等。
 - UNVERIFIED：iOS、Metal、實機（3D 外殼、對齊、記憶體、縱谷的樹、香港地圖包、冬季音樂）都沒看；教練報告這次沒跑（⚪）。
+
+## 2026-11-18 接手：七項處理完（REVIEW-L27 工作串）
+
+- 派工：新專案協調者，「照分數逐項、一項一個 PR、綠了就合」。雲端 Linux，分支 `claude/project-thread-e9ppta`（同名分支依序重開）。
+- **已合併**：#2403 MAP-PACK-ONCE（第 2 列）、#2406 ELEVATED-SHELL-CHUNK（第 3 列，決策 827 後來）、#2410 SNAP-REANCHOR（第 4 列，決策 826 後來）。
+- **量了、寫進評分檔**：第 1 列 HK-PEAK-CONTROL（23/732，卡在金鐘折返渡線）、第 5 列 OPEN3D-PEAK-MEM（同時只多 37 MB，不改）、新第 8 列 HK-CTRL-DEADLOCK（DEPOT-REAL 之後東涌綫的短死結，2.25）。
+- **沒做**：第 6 列 VALLEY-TREES-GPU 要實機；第 7 列 NOTES-138 交寫 138 說明的那串（下面）。
+
+### 下一步的第一個指令
+
+香港簡＋控（release，先 `swift build -c release -Xswiftc -enable-testing --build-tests`，雲端 4 核約 33 分鐘）：
+
+```sh
+DEPOT_RETURN_REPORT=1 DEPOT_RETURN_EPISODES=1 DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1 \
+  .build/release/GamePresentationTests-test-runner GamePresentationTests.DepotReturnReportTests/testHongKong
+```
+
+約 4.5 分鐘。金鐘的尖峰：加 `DEPOT_RETURN_WATCH=116820-116822 DEPOT_RETURN_WATCH_AT=金鐘 DEPOT_RETURN_WATCH_TRAINS=1,2,3,4,5,6,7,8,9,10`
+（第二天 08:27；南港島綫 3、6、7、10 號都在等 4 號放開節點 56、57）。東涌綫的死結：`DEPOT_RETURN_WATCH=51900-52260 DEPOT_RETURN_WATCH_AT=東涌`（第一天 14:25–14:31）。
+
+### 138 的說明（第 7 列）
+
+照 [REVIEW-L27「137 的說明逐句對照」](../research/REVIEW_L27_2026-11-17.md) 的修法，加上這幾張：
+
+- 香港地圖包：#2403 讓「下載完成後同一次開 App 就用上」；但下載本身在實機有沒有用上（決策 819）仍沒證實。手機上「設定 → 香港地圖」若顯示已下載才寫「會用」，否則不提。
+- #2406 高架站外殼、#2410 鋪軌對齊：都是修小錯，玩家幾乎看不到，可以一句「修正淡水線高架站在某些鏡頭位置的外觀」「鋪軌時終點不會再停在別的軌道旁邊」。
+- 香港新局的尖峰漏班（南港島綫 23 班）**還沒修**，不要寫成已改善；東涌綫的短死結（第 8 列）也還在。
+- 3D 第一次開的記憶體：量過、不改，不寫。
+
+UNVERIFIED：以上三張的實機畫面與手感；香港的數字只在雲端 Linux release 跑過一次（`main` `8a9ca6f`）。
