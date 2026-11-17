@@ -2,8 +2,9 @@
 """Synthesize the game's music and sound effects (RailwayGameApp/Resources/Audio/).
 
 The same synth as the first promo video's soundtrack, so the game sounds as
-the video does: a pad, a plucked arpeggio and rail joints over I - vi - IV - V
-in C, a station chime, a whoosh, a rail joint, and the sounds of something
+the video does: the theme, a melody over the video's pad, plucked arpeggio
+and rail joints on I - vi - IV - V in C (decision 815's supplement), a
+station chime, a whoosh, a rail joint, and the sounds of something
 put up and of money coming in (decision 117), and of something refused
 and a warning (decision 184), a ticket issued (decision 373), the
 followed train's horn (decision 403) and the evening garbage truck's tune
@@ -55,14 +56,6 @@ MML_CORE = os.path.join(HERE, "mml-core", "core.js")
 MML_CORE_COMMIT = "0a974f68c05112f2d871c5de837ae15d29fc9af2"
 
 SR = 48_000
-# 100 bpm makes a cycle of the chords exactly 921,600 frames: a whole number
-# of IMA4 packets (64 frames), so the CAF ends without padding and loops
-# without a gap.
-BPM = 100
-BEAT = 60 / BPM
-BAR = 4 * BEAT
-CHORDS = [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 65]]
-CYCLE_BARS = 8  # each chord for two bars
 
 
 def note_hz(m):
@@ -555,45 +548,6 @@ def thunder():
     return x * (0.5 - 0.5 * np.cos(np.pi * fade))
 
 
-def music(cycles):
-    """`cycles` cycles of the chords in steady state, so they loop seamlessly.
-
-    One more cycle is played before them (its tails ring into the first) and
-    one after; only the middle is kept, and since the music repeats, its end
-    runs on into its start.
-    """
-    cycle = int(round(SR * CYCLE_BARS * BAR))
-    total = cycles + 2
-    n = cycle * total
-    mix = np.zeros((n, 2))
-
-    def add(sig, start, pan=0.0, gain=1.0):
-        i = int(round(start * SR))
-        if i >= n:
-            return
-        sig = sig[: n - i] * gain
-        mix[i : i + len(sig), 0] += sig * (1 - pan) / 2**0.5
-        mix[i : i + len(sig), 1] += sig * (1 + pan) / 2**0.5
-
-    for b in range(CYCLE_BARS * total):
-        start = b * BAR
-        chord = CHORDS[(b // 2) % 4]
-        if b % 2 == 0:
-            add(pad([m - 12 for m in chord], 2 * BAR + 0.6), start, gain=0.55)
-            add(pad([chord[0] - 24], 2 * BAR + 0.4), start, gain=0.45)
-        for j, p in enumerate([0, 2, 1, 3, 2, 1, 3, 2]):
-            add(pluck(chord[p] + 12), start + j * BEAT / 2, pan=(-0.35 if j % 2 else 0.35), gain=0.20)
-        add(clack(), start + 2 * BEAT, gain=0.18)
-        add(clack(), start + 2 * BEAT + 0.13, gain=0.14)
-    # A ping-pong echo of a dotted eighth.
-    d = int(SR * BEAT * 0.75)
-    echo = np.zeros_like(mix)
-    echo[d:, 0] = mix[:-d, 1] * 0.25
-    echo[d:, 1] = mix[:-d, 0] * 0.25
-    mix += echo
-    return mix[cycle : cycle * (1 + cycles)]
-
-
 # Decision 437: the evening garbage truck's tune, the opening of
 # Beethoven's 〈給愛麗絲〉 (Für Elise, WoO 59, public domain) as Taiwan's
 # trucks play it, note for note as the owner's Taiwan 3D city
@@ -764,7 +718,7 @@ def motif(score):
 
 
 # Decision 815: a pad note in a stem rings this long past its written
-# length, as the theme's pads always overlapped the next chord (`music()`
+# length, as decision 79's theme always overlapped its pads into the next chord (it
 # gives each 0.6 s more), so a chord held over a bar line does not dip.
 STEM_PAD_OVERLAP = 0.6
 # The longest any voice rings past its note: the bell.
@@ -814,9 +768,12 @@ def stems_loop(names):
     return loop + echo
 
 
-# Decision 815: the winter tune, played in the game's music from 1 December
-# to 6 January (`MusicTrack`): its stems, in mixing order.
+# Decision 815: the game's two tunes, each from its stems in mixing order:
+# the theme (decision 79's chords with a melody, the 815 supplement) and
+# the winter tune, played from 1 December to 6 January (`MusicTrack`).
+THEME_STEMS = ["theme-melody", "theme-harmony", "theme-rhythm"]
 WINTER_STEMS = ["winter-melody", "winter-harmony", "winter-rhythm"]
+MUSIC_STEMS = {"music-loop.caf": THEME_STEMS, "music-winter.caf": WINTER_STEMS}
 
 
 def k_weighted_power(x):
@@ -845,9 +802,11 @@ def loudness_lufs(x):
     return -0.691 + 10 * np.log10(power.mean())
 
 
-# The music's peak (decision 79): the theme is normalized to it, and the
-# winter tune, levelled by loudness to the theme, must stay under it.
-MUSIC_PEAK = 0.7
+# The music's loudness: the theme's as decision 79 made it (normalized to a
+# peak of 0.7, it measured -15.95 LUFS), kept when the theme was rewritten
+# (decision 815's supplement) so the player's music volume means what it
+# did; both tunes are levelled to it.
+MUSIC_LUFS = -15.95
 
 
 def level_to(x, lufs):
@@ -928,7 +887,6 @@ def measured(path, loops):
 
 # The files `main` makes that no score describes, and what makes them.
 SYNTH_SOURCES = {
-    "music-loop.caf": "music()",
     "rail-joint.wav": "clack()",
     "whoosh.wav": "whoosh()",
     "build-done.wav": "clack() and pluck(), decision 117",
@@ -969,17 +927,18 @@ def manifest(out_dir):
     for name, file in TUNES:
         path = os.path.join(HERE, "scores", f"{name}.score.json")
         by_file[file] = {"score": relative(path), "scoreSha256": sha256(path), "kind": "tune"}
-    # Decision 815: the winter tune, from its stems.
-    stems = []
-    for name in WINTER_STEMS:
-        path = os.path.join(HERE, "scores", f"{name}.score.json")
-        stem = {"score": relative(path), "scoreSha256": sha256(path)}
-        mml = scores.load(path).get("source", "")
-        if mml.startswith("tools/audio/mml/"):
-            stem["mml"] = mml
-            stem["mmlSha256"] = sha256(os.path.join(ROOT, mml))
-        stems.append(stem)
-    by_file["music-winter.caf"] = {"stems": stems, "kind": "music"}
+    # Decision 815: the tunes, from their stems.
+    for file, names in MUSIC_STEMS.items():
+        stems = []
+        for name in names:
+            path = os.path.join(HERE, "scores", f"{name}.score.json")
+            stem = {"score": relative(path), "scoreSha256": sha256(path)}
+            mml = scores.load(path).get("source", "")
+            if mml.startswith("tools/audio/mml/"):
+                stem["mml"] = mml
+                stem["mmlSha256"] = sha256(os.path.join(ROOT, mml))
+            stems.append(stem)
+        by_file[file] = {"stems": stems, "kind": "music"}
     for file in sorted(os.listdir(out_dir)):
         entry = {"file": file}
         if file in by_file:
@@ -1021,10 +980,9 @@ def manifest(out_dir):
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-    theme = normalized(music(cycles=2), MUSIC_PEAK)
-    write_caf(os.path.join(out_dir, "music-loop.caf"), theme)
-    # Decision 815: the winter tune, as loud as the theme.
-    write_caf(os.path.join(out_dir, "music-winter.caf"), level_to(stems_loop(WINTER_STEMS), loudness_lufs(theme)))
+    # Decision 815: the two tunes from their stems, equally loud.
+    for file, stems in MUSIC_STEMS.items():
+        write_caf(os.path.join(out_dir, file), level_to(stems_loop(stems), MUSIC_LUFS))
     # Decision 343: the running loops.
     write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
     write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))
