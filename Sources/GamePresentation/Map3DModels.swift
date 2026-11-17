@@ -553,6 +553,13 @@ public struct Map3DModelPack: Sendable {
         }
     }
 
+    /// CAR-GAP (decision 399, later): whether the cars of a `count`-car
+    /// train of type `code` drawn with this pack's models are laid end to
+    /// end (``Map3DTrainSet/touching``), not ``Map3DTrains/carGap`` apart.
+    public func touches(forType code: String, count: Int) -> Bool {
+        drawnSet(forKey: code, count: count)?.touching ?? false
+    }
+
     /// Whether car `carIndex` of a `count`-car train of type `code` is the
     /// head car's model turned round: the last car, unless the set has a
     /// tail of its own or the train is one car.

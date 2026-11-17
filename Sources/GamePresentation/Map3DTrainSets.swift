@@ -57,7 +57,19 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 558: the key of the set drawn in this one's place while
     /// the pack has none of its models (the Wenhu line's generic car).
     var fallback: String? = nil
+    /// CAR-GAP (decision 399, later): a set not drawn at its own lengths
+    /// whose models still reach their couplers (the Chu-Kuang coaches
+    /// behind their locomotive), so laid end to end as ``touching``.
+    var reachesCouplers = false
     let build: @Sendable () -> Cars
+
+    /// CAR-GAP (decision 399, later): whether its cars are laid end to
+    /// end, with no ``Map3DTrains/carGap`` between them: its models reach
+    /// their couplers or gangways, so the gap between two bodies is the
+    /// models' own (some 0.5–0.7 m, as on the real trains), and a
+    /// ``Map3DTrains/carGap`` more doubled it (a TRA EMU's 1.3 m beside
+    /// the High Speed Rail's 1.0 m on the real timetables' trains).
+    var touching: Bool { ownLengths || reachesCouplers }
 
     struct Cars {
         var head: Map3DModelPack.Model
@@ -684,7 +696,7 @@ public struct Map3DTrainSet: Sendable {
     /// same locomotive, the light coaches); a set of any other coach has none.
     static func hauled(_ key: String, head locomotive: @escaping @Sendable () -> Map3DModelPack.Model, coach: Coach,
                        lastIsLocomotive: Bool = false, far: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? key + "Far" : key, far: coach.chuKuang && !far ? key + "Far" : nil) {
+        Map3DTrainSet(key: far ? key + "Far" : key, far: coach.chuKuang && !far ? key + "Far" : nil, reachesCouplers: true) {
             let head = locomotive()
             let middle = coach.middle(named: key, far: far)
             return Cars(head: head, middle: middle, tail: lastIsLocomotive ? nil : coach.tail(named: key, far: far), single: nil)
@@ -955,7 +967,7 @@ public struct Map3DTrainSet: Sendable {
     /// last coach's end lit red. `far`: the light coaches and, decision 825,
     /// the E200's light version.
     static func mingRi(far: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? "MINGRIFar" : "MINGRI", far: far ? nil : "MINGRIFar") {
+        Map3DTrainSet(key: far ? "MINGRIFar" : "MINGRI", far: far ? nil : "MINGRIFar", reachesCouplers: true) {
             Cars(head: Map3DE200MingriStyle.model(.head, far: far), middle: Map3DE200MingriStyle.model(.car, far: far),
                  tail: Map3DE200MingriStyle.model(.tail, far: far), single: nil)
         }

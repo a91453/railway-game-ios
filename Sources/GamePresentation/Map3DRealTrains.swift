@@ -177,6 +177,18 @@ public struct Map3DRealTrains: Sendable {
     static let carPitch = 0.020
     static let carLength = carPitch - Double(Map3DTrains.carGap) / 1_000
 
+    /// CAR-GAP (decision 399, later): how long a car of `formation` is
+    /// laid, in the line's km: the whole ``carPitch`` where it is drawn
+    /// with `models` whose cars reach their couplers
+    /// (``Map3DModelPack/touches(forType:count:)``), so two bodies stand
+    /// the models' own gap apart (some 0.7 m an EMU's, 0.4 m the High
+    /// Speed Rail's), not that and ``Map3DTrains/carGap`` more; otherwise
+    /// ``carLength``, the boxes ``Map3DTrains/carGap`` apart.
+    static func carLength(of formation: Formation, hasModels: Bool, models: Map3DModelPack?) -> Double {
+        guard hasModels, let models, models.touches(forType: formation.key, count: formation.cars) else { return carLength }
+        return carPitch
+    }
+
     /// Decision 433: the key a train of `system`'s `key` set is drawn as,
     /// ``Map3DTrainSet/variant(of:number:locked:)``, but the C341 only on
     /// Taipei Metro's lines: Kaohsiung's, Taoyuan's and Taichung's metro
@@ -620,6 +632,9 @@ public struct Map3DRealTrains: Sendable {
                 let hasModels = formation.key == lineFormation.key ? hasModels : models?.models(forType: formation.key) != nil
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
                 let length = Double(formation.cars) * Self.carPitch
+                // CAR-GAP: a set whose models reach their couplers end to
+                // end, the gap between two bodies the models' own.
+                let carLength = Self.carLength(of: formation, hasModels: hasModels, models: models)
                 // Its middle where the timetable has it; held at the line's
                 // end, its front there.
                 var front = place.km + way * length / 2
@@ -635,7 +650,7 @@ public struct Map3DRealTrains: Sendable {
                         railPoint(line: index, atKm: km, way: way, ring: isRing ? ring : nil, bound: bound)
                     }
                     let start = front - way * Double(car) * Self.carPitch
-                    guard let a = at(start), let b = at(start - way * Self.carLength) else { continue }
+                    guard let a = at(start), let b = at(start - way * carLength) else { continue }
                     let along = (a - b).length
                     guard along > 1 else { continue }
                     shown = true
