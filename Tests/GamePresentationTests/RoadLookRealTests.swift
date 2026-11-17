@@ -212,4 +212,75 @@ final class RoadLookRealTests: XCTestCase {
         XCTAssertGreaterThan(looked, 10)
         XCTAssertEqual(stacked, 0, "points where a road lies 0.5–4.5 m under another")
     }
+
+    /// ROAD-RAMP-HEIGHT (decision 822's next step): a link road's bridge
+    /// joined to the main road's deck stood all of it at the deck's height
+    /// (24 m on a fourth level), and only the road on the ground past its
+    /// end came down, beside and under the deck: the slabs left round
+    /// 三重 and 忠孝橋. It comes down inside itself from where it meets
+    /// the ground, at its grade (slop-taipei's `build-elevated.mjs`).
+    func testALinkRoadsBridgeComesDownInsideItself() throws {
+        let roads = [
+            road([(100, 500), (900, 500)], level: 4, kind: .secondary),
+            // The street the deck crosses.
+            road([(500, 300), (500, 700)], level: 0, kind: .tertiary),
+            // The link road's bridge, leaving the deck at (700, 500), and
+            // the road on the ground it runs on to.
+            road([(700, 500), (650, 540), (300, 540)], level: 4, kind: .secondary, ramp: true),
+            road([(300, 540), (100, 540)], level: 0, kind: .secondary, ramp: true),
+        ]
+        var builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 150, minZ: 490, maxX: 720, maxZ: 560)
+        func top(_ x: Double) throws -> Float {
+            // On the link road's line.
+            let z = x > 650 ? 500 + (700 - x) * 0.8 : 540
+            let tops = faces(over: Float(x), Float(z), in: drawn).filter { $0.color == Map3DPalette.road(.secondary) }.map(\.y)
+            return try XCTUnwrap(tops.max(), "a road at \(x)") - builder.drawnGround(x: Float(x), z: Float(z))
+        }
+        for x in [200.0, 304, 400, 500, 600, 680] {
+            print(String(format: "ROADRAMP link road at x %.0f: %.2f m over the ground", x, try top(x)))
+        }
+        // Where it reaches the ground and the road running on from it.
+        XCTAssertLessThan(try top(200), 0.5)
+        XCTAssertLessThan(try top(304), 1)
+        // 100 m in, at the 6 % of a main road.
+        XCTAssertEqual(try top(400), 6.3, accuracy: 1)
+        XCTAssertEqual(try top(500), 12.3, accuracy: 1)
+        // It climbs all the way to the deck.
+        XCTAssertLessThan(try top(600), try top(680))
+        XCTAssertGreaterThan(try top(680), 20)
+        // The main road keeps its deck's height (within 150 m of the street
+        // it crosses at x 500).
+        let main = try XCTUnwrap(faces(over: 400, 500, in: drawn).filter { $0.color == Map3DPalette.road(.secondary) }.map(\.y).max())
+        XCTAssertGreaterThan(main - builder.drawnGround(x: 400, z: 500), 23)
+    }
+
+    /// ROAD-RAMP-HEIGHT: a link road drawn beside its main road, their
+    /// surfaces overlapping as the map's widths draw them (忠孝橋's east
+    /// end), comes down only once it leaves the main road's surface: had
+    /// it come down from where it met the main road, it lay 1–4 m under
+    /// the main road's edge (the first try's new slabs).
+    func testALinkRoadBesideItsMainRoadComesDownPastIt() throws {
+        let roads = [
+            road([(100, 500), (900, 500)], level: 4, kind: .secondary),
+            road([(500, 300), (500, 700)], level: 0, kind: .tertiary),
+            // Beside the deck, 6 m off its middle, for 300 m, then away.
+            road([(800, 500), (780, 506), (480, 506), (450, 540), (250, 540)], level: 4, kind: .secondary, ramp: true),
+            road([(250, 540), (100, 540)], level: 0, kind: .secondary, ramp: true),
+        ]
+        let builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 470, minZ: 495, maxX: 790, maxZ: 520)
+        var stacked = 0, looked = 0
+        for x in stride(from: Float(490), through: 770, by: 4) {
+            for z in stride(from: Float(500), through: 510, by: 1) {
+                let tops = faces(over: x, z, in: drawn).filter { $0.color == Map3DPalette.road(.secondary) }.map(\.y).sorted()
+                guard tops.count >= 2 else { continue }
+                looked += 1
+                if zip(tops, tops.dropFirst()).contains(where: { $1 - $0 > 0.5 && $1 - $0 < 4.5 }) { stacked += 1 }
+            }
+        }
+        print("ROADRAMP beside: points with two road surfaces \(looked), stacked 0.5–4.5 m apart \(stacked)")
+        XCTAssertGreaterThan(looked, 10)
+        XCTAssertEqual(stacked, 0)
+    }
 }
