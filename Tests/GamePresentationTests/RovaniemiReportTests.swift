@@ -36,7 +36,10 @@ final class RovaniemiReportTests: XCTestCase {
             "| Bought | Trips a day, days \(min(days, 30))–\(days) | Fares a day | Operating profit a day | Payback (price ÷ profit) | Cash change by day \(days) | Deadlock minutes |",
             "| --- | --: | --: | --: | --: | --: | --: |",
         ]
-        var trace = ["| Bought | Day | Trips | Fares | Operating profit | Deadlock minutes (first) |", "| --- | --: | --: | --: | --: | --- |"]
+        var trace = [
+            "| Bought | Day | Trips | Fares | Operating profit | Each line: boardings, departures | Deadlock minutes (first) |",
+            "| --- | --: | --: | --: | --: | --- | --- |",
+        ]
         for ids in [["vr:KJA"], ["vr:MUL"], ["vr:KJA", "vr:MUL"]] {
             let started = Date()
             let session = try Self.rovaniemi(simple: simple)
@@ -56,6 +59,9 @@ final class RovaniemiReportTests: XCTestCase {
                 XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
             }
             var played = session.world
+            // Decision 179's accounts, for each line's own day.
+            played.setLineAccounts(true)
+            let lines = try ids.map { id in try XCTUnwrap(played.acquisition(of: id)?.line, id) }
             let before = played.economy.balance.amount
             var profits: [Int64] = [], fares: [Int64] = [], trips: [Int64] = []
             var stuck = 0
@@ -75,6 +81,8 @@ final class RovaniemiReportTests: XCTestCase {
                 if Self.checkpoints.contains(day) || !stuckToday.isEmpty {
                     trace.append(
                         "| \(ids.joined(separator: " + ")) | \(day) | \(trips.last!) | \(Money(fares.last!).moneyText) | \(Money(profits.last!).moneyText) | "
+                            + lines.enumerated().map { "\(ids[$0.offset]) \(played.lineYesterday($0.element)?.boardings ?? 0), \(played.lineYesterday($0.element)?.departures ?? 0)" }
+                            .joined(separator: "; ") + " | "
                             + "\(stuckToday.count)\(stuckToday.isEmpty ? "" : " (" + stuckToday.prefix(4).joined(separator: ", ") + ")") |"
                     )
                 }
