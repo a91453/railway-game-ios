@@ -98,6 +98,37 @@ final class BuildConfirmLayoutTests: XCTestCase {
         XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, ridesWithDrawer: true), .stacked)
     }
 
+    /// The 135 full lane (a phone on its side, the largest accessibility
+    /// text, the track card open): the pill no wider than its least, 160
+    /// points, and ✕ ✓ with the price some 250 across, so beside them the
+    /// words had no room, stood a letter to a line, and the pill ran
+    /// below the screen with its ✓. They then stand over the buttons, as
+    /// before decision 803; with room for the narrowest words, beside.
+    func testWordsWithNoRoomBesideTheButtonsStandOverThem() {
+        let squeezed = BuildConfirmLayout.wordsRoomBeside(pillWidth: BuildConfirmLayout.minimumWidth, buttonsWidth: 250)
+        XCTAssertLessThan(squeezed, 0)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, roomBeside: squeezed), .stacked)
+        let wide = BuildConfirmLayout.wordsRoomBeside(pillWidth: 600, buttonsWidth: 250)
+        XCTAssertEqual(wide, 600 - 12 - 6 - 250)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, roomBeside: wide), .beside)
+        // Just room for the narrowest words, and a point short of it.
+        let edge = 2 * StationPairDrawerLayout.pillPadding + BuildConfirmLayout.besideSpacing + 250 + BuildConfirmLayout.minimumWidth
+        XCTAssertEqual(BuildConfirmLayout.arrangement(
+            compactHeight: true, hasWords: true,
+            roomBeside: BuildConfirmLayout.wordsRoomBeside(pillWidth: edge, buttonsWidth: 250)
+        ), .beside)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(
+            compactHeight: true, hasWords: true,
+            roomBeside: BuildConfirmLayout.wordsRoomBeside(pillWidth: edge - 1, buttonsWidth: 250)
+        ), .stacked)
+        // Not measured yet: beside, as before; a refusal with fixes keeps
+        // its strip, whose words run across the top.
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, roomBeside: nil), .beside)
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: true, hasWords: true, hasFixes: true, roomBeside: squeezed), .strip)
+        // Upright, stacked whatever the room.
+        XCTAssertEqual(BuildConfirmLayout.arrangement(compactHeight: false, hasWords: true, roomBeside: wide), .stacked)
+    }
+
     // MARK: Decision 803, continued (the owner: "字不會太多嗎")
 
     /// A refusal with fixes on a phone held sideways: why across the top

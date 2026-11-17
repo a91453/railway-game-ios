@@ -31,6 +31,9 @@ struct MapBuildConfirm: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var pillSize = CGSize(width: 160, height: 44)
+    /// How wide ✕ ✓ are, measured: whether the words fit beside them
+    /// (``BuildConfirmLayout/arrangement(compactHeight:hasWords:ridesWithDrawer:hasFixes:roomBeside:)``).
+    @State private var buttonsWidth: CGFloat?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -161,19 +164,24 @@ struct MapBuildConfirm: View {
     /// one row of the fixes and ✕ ✓ under it.
     @ViewBuilder
     private func words(_ build: BuildConfirmation) -> some View {
+        let pillWidth = BuildConfirmLayout.maximumWidth(
+            viewportWidth: viewport.width, leading: Double(insets.leading), trailing: Double(insets.trailing)
+        )
         let arrangement = BuildConfirmLayout.arrangement(
             compactHeight: verticalSizeClass == .compact, hasWords: build.hasWords, ridesWithDrawer: build.kind == .line,
-            hasFixes: build.heights?.fixes.isEmpty == false
+            hasFixes: build.heights?.fixes.isEmpty == false,
+            roomBeside: buttonsWidth.map { BuildConfirmLayout.wordsRoomBeside(pillWidth: pillWidth, buttonsWidth: Double($0)) }
         )
         let height = CGFloat(BuildConfirmLayout.buttonHeight(arrangement))
         switch arrangement {
         case .beside:
-            HStack(spacing: 6) {
+            HStack(spacing: CGFloat(BuildConfirmLayout.besideSpacing)) {
                 PillColumn {
                     said(build, arrangement: arrangement)
                 }
                 buttons(build, height: height)
                     .fixedSize()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { buttonsWidth = $0 }
             }
         case .strip:
             PillColumn {
@@ -199,6 +207,7 @@ struct MapBuildConfirm: View {
                 // fixes.
                 buttons(build, height: height)
                     .fixedSize()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { buttonsWidth = $0 }
             }
         }
     }
