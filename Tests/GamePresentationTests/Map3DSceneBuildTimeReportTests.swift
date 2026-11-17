@@ -28,7 +28,7 @@ final class Map3DSceneBuildTimeReportTests: XCTestCase {
         guard let path = environment["MAP3D_BUILD_SAVE"] else { throw XCTSkip("set MAP3D_BUILD_SAVE to a save file") }
         let world = try JSONDecoder().decode(File.self, from: Data(contentsOf: URL(fileURLWithPath: path))).game.world
         let clock = ContinuousClock()
-        func seconds(_ duration: Duration) -> Double {
+        @Sendable func seconds(_ duration: Duration) -> Double {
             Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18
         }
 

@@ -163,15 +163,25 @@ public struct Map3DModelPack: Sendable {
     /// Decision 820: the models of ``init(styles:)`` as their recipes make
     /// them, in its order, then the running cars' windows' models it puts
     /// after them (``Map3DTrainLights/split(_:recipes:)``), with the same
-    /// names and bounds, no shade baked (``Map3DModelCatalog``).
+    /// names and bounds, no shade baked and no vertices
+    /// (``Map3DModelCatalog``): each group's let go of as soon as it is
+    /// made, so they are never all held at once.
     static func recipesWithWindows(styles: [Map3DTrainStyle]) -> [Model] {
-        let models = recipes(styles: styles)
-        let running = models.indices.filter { Map3DTrainLights.isRunning(models[$0].name) }
-        let panes = Map3DParallel.map(running.count) { Map3DTrainLights.windowModel(of: models[running[$0]]) }
-        return models + panes.compactMap { $0 }
+        let groups = recipeGroups(styles: styles)
+        let made = Map3DParallel.map(groups.count) { at -> (models: [Model], panes: [Model]) in
+            let models = groups[at]()
+            let panes = models.filter { Map3DTrainLights.isRunning($0.name) }.compactMap { Map3DTrainLights.windowModel(of: $0) }
+            return (models.map(\.withoutVertices), panes.map(\.withoutVertices))
+        }
+        return made.flatMap(\.models) + made.flatMap(\.panes)
     }
 
     private static func recipes(styles: [Map3DTrainStyle]) -> [Model] {
+        let made = recipeGroups(styles: styles)
+        return Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
+    }
+
+    private static func recipeGroups(styles: [Map3DTrainStyle]) -> [@Sendable () -> [Model]] {
         // Decision 546: each group of recipes below made on whichever core
         // is free, put together in this order (the same models, to the
         // bit, as made one after another).
@@ -249,8 +259,7 @@ public struct Map3DModelPack: Sendable {
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
-        let made = groups
-        return Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
+        return groups
     }
 
     /// K1-1, K2-8: the static studies of trains the game draws from their
