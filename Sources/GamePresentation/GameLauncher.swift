@@ -940,10 +940,16 @@ public final class GameLauncher {
         }
     }
 
-    /// Decision 795: writes the game's livery under its row; a game not
-    /// saved yet keeps it until it has one.
-    func keepChristmasLivery() {
-        guard let session, let row = gameRow else { return }
+    /// Decision 795: writes the game's livery under its row. A game not
+    /// saved yet takes its row now (L25 P3-1, decision 814): its autosaves
+    /// name that row, so the livery comes back with them when the app
+    /// reopens, and Save Game later writes the row.
+    func keepChristmasLivery(at date: Date = Date()) {
+        guard let session, !isLookingAtSharedNetwork else { return }
+        if gameRow == nil, !session.christmasLiveryChosen.isEmpty {
+            gameRow = library.newRow(at: date)
+        }
+        guard let row = gameRow else { return }
         var all = preferences.christmasLiveries ?? [:]
         let lines = session.christmasLiveryChosen.map(\.rawValue).sorted()
         all[row] = lines.isEmpty ? nil : lines
