@@ -204,9 +204,9 @@
       "stems": [
         {
           "score": "tools/audio/scores/theme-melody.score.json",
-          "scoreSha256": "b1a3a9cfc9b504d275f360f44a8b8d6242fccf5333fc412eaa8e592b8ca352c6",
+          "scoreSha256": "dbce67e989fa8b2d2a2511c1385d54dcba233bc463945f642f5c62eb9270b01a",
           "mml": "tools/audio/mml/theme-melody.mml",
-          "mmlSha256": "8f2057ae6c33d24ede7773cb5de8e38c42ccbe96464cd1c07fdb1320943be298"
+          "mmlSha256": "4e61e0ea64b9a20300f071739baa2f36e4b2b3f644d4ed095d4ce8ada669846b"
         },
         {
           "score": "tools/audio/scores/theme-harmony.score.json",
@@ -222,13 +222,13 @@
         }
       ],
       "kind": "music",
-      "sha256": "808b1a7ab0459074474c7f8fc95b1908ad7f80d21f6a1f65142af1f75d92d936",
+      "sha256": "c2a780df813bf86b19ebf17a7c7e378a7d2badb21b46df42f59599800cbaadb8",
       "frames": 3686400,
       "seconds": 76.8,
-      "peakDbfs": -3.62,
-      "rmsDbfs": -18.95,
-      "largestStep": 0.13956,
-      "loopSeam": 0.03143,
+      "peakDbfs": -3.66,
+      "rmsDbfs": -18.6,
+      "largestStep": 0.09534,
+      "loopSeam": 0.02551,
       "loudnessLufs": -15.95
     },
     {

@@ -116,17 +116,18 @@ def glock_frames(m, frames):
 
 def felt_frames(m, frames):
     """Decision 815's later note (the theme made plain): a soft felt
-    mallet, the flat, rounded look of the game's art in sound: a 6 ms
-    strike, the fundamental with its second and third harmonics and a
-    touch of the bar's fourth mode (3.98 times) fading first, no bright
-    partials; low notes ring longer than high ones."""
+    mallet, the flat, rounded look of the game's art in sound: a 12 ms
+    strike (soft, never a click), the fundamental with a little of its
+    second and third harmonics and a trace of the bar's fourth mode (3.98
+    times) that dies within a tenth of a second, no bright partials; low
+    notes ring longer than high ones."""
     k = np.arange(frames) / SR
     f = note_hz(m)
-    return np.minimum(1, k / 0.006) * np.exp(-k * (1.3 + f / 900)) * (
+    return np.minimum(1, k / 0.012) * np.exp(-k * (1.3 + f / 900)) * (
         np.sin(2 * np.pi * f * k)
-        + 0.70 * np.exp(-k * 1.5) * np.sin(4 * np.pi * f * k)
-        + 0.35 * np.exp(-k * 3) * np.sin(6 * np.pi * f * k)
-        + 0.30 * np.exp(-k * 4) * np.sin(2 * np.pi * f * 3.98 * k)
+        + 0.45 * np.exp(-k * 1.5) * np.sin(4 * np.pi * f * k)
+        + 0.15 * np.exp(-k * 3) * np.sin(6 * np.pi * f * k)
+        + 0.08 * np.exp(-k * 8) * np.sin(2 * np.pi * f * 3.98 * k)
     )
 
 
