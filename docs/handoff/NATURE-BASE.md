@@ -2,9 +2,12 @@
 
 ## 進度
 
-- 做到哪：台灣做完（決策 811）。ESA WorldCover → `taiwan_landcover.dat`（1.82 MB）→ 3D 地圖的鄉間地面上色、森林種樹；draft PR 開了，等 CI 與遊戲規劃看截圖（新的外觀，ui-review 第三級）。
-- 已驗證：Linux 的快檢與 `Map3D*`、`LandCoverGridTests` 全過；花蓮縱谷 23.60, 121.40 的樹 1807 → 5380，場景建置時間不變；前後對照圖在 PR。
-- 下一步的第一個指令：看 PR 的 CI（`Swift CI (gate)` 與 `iOS App Build`）；紅了照紀錄修，綠了在 #2118 留 head 與截圖。
+- 做到哪：台灣的第一版在 draft PR #2336（head `ad787d1` 之後只多這個交接檔），CI 剛開始。2026-11-17 02:44 規劃說額度剩約 10 %，要停手，所以停在這裡，等規劃通知再繼續。
+- 已驗證：Linux 快檢通過。整輪 `--filter Map3D`（1535 個）跑過一次，兩個類別失敗：`Map3DGroundTintTests`（森林地面原本太深、混色數改 209）和 `Map3DNorthernMapTests`，修好後這兩類重跑通過，整輪沒有再跑。花蓮縱谷的樹 1807 → 5380。
+- 下一步：照規劃 2026-11-17 01:26 的補充（我開 PR 前沒讀到）改兩件事：
+  - (1) 先讀 `Railway/taiwan-rail-reference-clean/source/scripts/build_worldcover.py`，能移植就換掉 `tools/worldcover/build_landcover_grid.py`，並寫進 PR 對照表。
+  - (2) 規劃要求「地面顏色只對到既有的 `Map3DPalette`，不新增顏色」，但這版新增了 `bare` E7E3D9 和 `forestFloor` D4E8DA。要改成既有顏色（裸地可用 `paved` 或 `cover(.sand)`；森林要找一個在 5 L* 以內的既有綠，例如 `yard`），再跑 `Map3DGroundTintTests|Map3DNorthernMapTests|LandCoverGridTests`。
+  - 規劃補充的其他要求，這版已符合：不寫進 GameCore、不走 `addArea(.wood)`、香港不做。
 
 ## 派工與範圍
 
