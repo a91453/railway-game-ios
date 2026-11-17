@@ -34,6 +34,15 @@ name: CI
 # run and is red when that run fails (decision 265), so the one check main's
 # branch rule requires covers the Xcode build and the UI test gate too.
 #
+# The number check (decision 830): when a pull request or a push changes a
+# file tools/golden-checks/doc_numbers.py reads (docs/, the tool, the save
+# version, the golden schema, the fixture directories; swift-shards.sh
+# doc_paths), and on every manual and nightly run, the doc-numbers job runs
+# `doc_numbers.py --check`, and the gate is red when it fails. It runs on a
+# pull request that changes only docs too, where the Swift jobs skip: on
+# 2026-11-17 decision 826's file with three `### N.` headings reached main
+# because nothing ran the check.
+#
 # The workflow always starts, so the "Swift CI (gate)" check always reports
 # (but on a cancelled push run of main, see the gate job):
 # on a pull request or a push to main that changes nothing the package builds
@@ -115,6 +124,7 @@ jobs:
       swift: ${{ steps.detect.outputs.swift }}
       tier: ${{ steps.detect.outputs.tier }}
       matrix: ${{ steps.detect.outputs.matrix }}
+      docs: ${{ steps.detect.outputs.docs }}
     steps:
       # On a pull request depth 2 is enough: the checkout is the pull request
       # merged into its base, whose two parents are both fetched. A push to
@@ -141,7 +151,7 @@ jobs:
             # passed every shard (decision 413).
             if full="$(.github/scripts/swift-shards.sh head-full-run)" && [[ -n "$full" ]]; then
               echo "Swift jobs: skipped, $full already ran every shard of this commit." | tee -a "$GITHUB_STEP_SUMMARY"
-              { echo "swift=false"; echo "tier=none"; echo "matrix=$(.github/scripts/swift-shards.sh matrix)"; } >> "$GITHUB_OUTPUT"
+              { echo "swift=false"; echo "tier=none"; echo "matrix=$(.github/scripts/swift-shards.sh matrix)"; echo "docs=false"; } >> "$GITHUB_OUTPUT"
               exit 0
             fi
           fi
@@ -187,6 +197,38 @@ jobs:
             echo "Swift jobs: run, tier $tier (event: $EVENT)." | tee -a "$GITHUB_STEP_SUMMARY"
           else
             echo "Swift jobs: skipped, no changed file can change what the package builds or tests." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ "$(sed -n 's/^docs=//p' <<<"$decision")" == true ]]; then
+            echo "Number check (doc_numbers.py --check): run." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Number check (doc_numbers.py --check): skipped, no changed file is one it reads." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Decision 830: the numbers docs/OVERVIEW.md §2 states, one decision per
+  # docs/decisions/<N>.md file, and the decision headings
+  # (tools/golden-checks/doc_numbers.py; its self-test first). Python's
+  # standard library only, on the runner's python3; some 10 seconds. The
+  # gate needs it, so a wrong number turns the required check red, on a
+  # pull request of docs alone too.
+  doc-numbers:
+    name: Decision and document numbers (doc_numbers.py)
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Self-test the number tool
+        run: python3 -I tools/golden-checks/doc_numbers.py --selftest
+
+      - name: Check the numbers
+        run: |
+          set -o pipefail
+          if ! python3 -I tools/golden-checks/doc_numbers.py --check | tee "$RUNNER_TEMP/numbers.md"; then
+            { echo "### doc_numbers.py --check found differences (decision 830)"; echo; cat "$RUNNER_TEMP/numbers.md"; } >>"$GITHUB_STEP_SUMMARY"
+            echo "::error title=Document numbers::doc_numbers.py --check found differences; fix them before merging (the list is in this job's log and summary)."
+            exit 1
           fi
 
   # The shard script is what proves the Swift jobs ran every test once;
@@ -477,7 +519,7 @@ jobs:
   # pull request's head is not superseded and keeps its red gate.
   superseded:
     name: Superseded by a newer push?
-    needs: [changes, selftest, swift-build, swift-current]
+    needs: [changes, doc-numbers, selftest, swift-build, swift-current]
     if: ${{ cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -499,7 +541,7 @@ jobs:
 
   gate:
     name: Swift CI (gate)
-    needs: [changes, selftest, swift-build, swift-current, superseded]
+    needs: [changes, doc-numbers, selftest, swift-build, swift-current, superseded]
     # A push run of main that was cancelled (by hand, or replaced while
     # waiting) has no verdict to give, so the gate is skipped there rather
     # than red on a commit where no test failed; the next push run tests its
@@ -531,6 +573,8 @@ jobs:
           SELFTEST: ${{ needs.selftest.result }}
           BUILD: ${{ needs.swift-build.result }}
           CURRENT: ${{ needs.swift-current.result }}
+          DOCS_NEEDED: ${{ needs.changes.outputs.docs }}
+          DOCS: ${{ needs.doc-numbers.result }}
         run: .github/scripts/swift-shards.sh gate
 
       # On a pull request the gate is also red until ios-build.yml's run of

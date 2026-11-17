@@ -2681,8 +2681,8 @@ FACADE-VARIETY、ROOF-VARIETY、ROAD-LOOK-REAL、ROAD-JUNCTION 可用參考包�
 
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、前置 |
 | --: | --- | --: | --: | --: | --: | --: | --: | --- |
-| 1 | bug：**DOCNUM-CI**：`tools/golden-checks/doc_numbers.py --check` 進 CI（改到 `docs/` 的 PR 跑，紅就擋）；826 的格式錯就是這樣漏進 main（#2368 已修） | 1 | 4 | 1 | 1 | 1 | 1.75 | 未派；只動 `.github/`；不改 `Swift CI (gate)` 的名字；和下一列同一張（一個 session 做第 1、2 列） |
-| 2 | bug：**CONFLICT-WATCH**：push 到 main 後，一個 workflow 找出因此和 main 衝突（`dirty`）的 open PR，在**那張 PR** 留一則 github-actions[bot] 留言（不帶 at 符號）「和 main 衝突，CI 不會跑」。訂閱自己 PR 的實作 session 會被這則留言叫醒自己去解，不靠規劃的定時檢查、也不靠作者去按（作者 11-17：「可是定時我有時候也不會按啊」） | 1 | 5 | 1 | 1 | 1 | 2.00 | 未派；照 `full-lane-watch.yml`（決策 329）的寫法；同一張 PR 一次衝突只留一則；和第 1 列同一張 |
+| 1 | bug：**DOCNUM-CI**：`tools/golden-checks/doc_numbers.py --check` 進 CI（改到 `docs/` 的 PR 跑，紅就擋）；826 的格式錯就是這樣漏進 main（#2368 已修） | 1 | 4 | 1 | 1 | 1 | 1.75 | 決策 830（DOCNUM-CI＋CONFLICT-WATCH 的 PR）：`doc-numbers` 工作，gate 等它 |
+| 2 | bug：**CONFLICT-WATCH**：push 到 main 後，一個 workflow 找出因此和 main 衝突（`dirty`）的 open PR，在**那張 PR** 留一則 github-actions[bot] 留言（不帶 at 符號）「和 main 衝突，CI 不會跑」。訂閱自己 PR 的實作 session 會被這則留言叫醒自己去解，不靠規劃的定時檢查、也不靠作者去按（作者 11-17：「可是定時我有時候也不會按啊」） | 1 | 5 | 1 | 1 | 1 | 2.00 | 決策 830（同一張 PR）：`conflict-watch.yml`＋`tools/ci-watch/conflict_watch.py`；合併後第一次 push 才真的跑，確認方法在 `docs/handoff/CONFLICT-WATCH.md` |
 | 3 | **PRIO-FILES**：PR 打分的新列不再接在 NEXT_PRIORITIES 最後一節搶號，改成各自一個檔（像決策 329 的 `docs/decisions/<N>.md`），規劃定期併回清單 | 1 | 5 | 1 | 1 | 1 | 2.00 | 未派；照 decision 329 的做法；`doc_numbers.py` 一起認新檔 |
 
 五方：

@@ -1484,6 +1484,26 @@ relevant_paths() {
   echo false
 }
 
+# true when a changed path is one tools/golden-checks/doc_numbers.py reads
+# (decision 830): the docs it compares (OVERVIEW, ARCHITECTURE, the
+# decision files), the save version and golden schema it reads from the
+# code, the fixture directories it counts, and the tool itself. ci.yml then
+# runs `doc_numbers.py --check`, and the gate is red when it fails; on
+# 2026-11-17 decision 826's file (three `### N.` headings) reached main
+# because nothing ran it. Keep this list beside the tool's constants
+# (OVERVIEW, ARCHITECTURE, DECISIONS, SAVED_GAME, GOLDEN_SCENARIO).
+doc_paths() {
+  local path
+  while IFS= read -r path; do
+    case "$path" in
+      docs/* | tools/golden-checks/doc_numbers.py) echo true; return ;;
+      Sources/GameCore/World/SavedGame.swift | Tests/GameCoreTests/GoldenScenario.swift) echo true; return ;;
+      SaveFixtures/* | GoldenScenarios/* | ReplayFixtures/*) echo true; return ;;
+    esac
+  done
+  echo false
+}
+
 # The commit a push to main is compared with: the head of the newest
 # successful push run of ci.yml on main, when it is an ancestor of HEAD.
 # Pushes to main share one concurrency group in ci.yml, so a run that waits
@@ -1940,18 +1960,22 @@ pr_plan() {
 #   EVENT    push, pull_request, workflow_dispatch or schedule
 #   LISTED   true when the changed files (on stdin) could be listed
 #   LABELS   the pull request's labels, separated by spaces or new lines
-# Prints swift=<true|false>, tier=<tier> and matrix=<JSON> for $GITHUB_OUTPUT
-# (and the tests and tier on stderr). A pull request and a push to main run
+# Prints swift=<true|false>, tier=<tier>, matrix=<JSON> and docs=<true|false>
+# for $GITHUB_OUTPUT (and the tests and tier on stderr). docs is true when a
+# listed file is one doc_numbers.py reads (doc_paths, decision 830), and
+# whenever the files are not listed (a manual run, the nightly run, a push
+# whose base cannot be found). A pull request and a push to main run
 # the tier of their listed files (decision 185 for pull requests, decision
 # 413 for pushes: a push is compared with the last successful push run, so
 # the files are everything since); a pull request labelled full-ci, a push
 # whose files could not be listed, a manual run and the nightly run are full.
 ci_decide() {
-  local files swift=true tier=full matrix plan tests parts k sep
+  local files swift=true tier=full matrix plan tests parts k sep docs=true
   files="$(cat)"
   matrix="$("$0" matrix)"
   if [[ "${LISTED:-false}" == true ]]; then
     swift="$(relevant_paths <<<"$files")"
+    docs="$(doc_paths <<<"$files")"
     if [[ "${EVENT:-}" == pull_request || "${EVENT:-}" == push ]]; then
       if [[ "${EVENT:-}" == pull_request && " $(tr '\n' ' ' <<<"${LABELS:-}") " == *" full-ci "* ]]; then
         echo "Label full-ci: every shard runs." >&2
@@ -1987,6 +2011,7 @@ ci_decide() {
   echo "swift=$swift"
   echo "tier=$tier"
   echo "matrix=$matrix"
+  echo "docs=$docs"
 }
 
 # Has HEAD already passed every shard? Prints the URL of a successful ci.yml
@@ -2034,11 +2059,24 @@ head_full_run() {
 #   BUILD         the swift-build job's result (decision 411, shared build)
 #   CURRENT       the test jobs' combined result (failure if any job failed,
 #                 cancelled if any was cancelled, skipped if none ran)
-# Passes only when the detection succeeded and either the build and every
-# test job of the tier succeeded or none was needed and none ran.
+#   DOCS_NEEDED   the detection's docs output (decision 830)
+#   DOCS          the number check's result (doc_numbers.py --check)
+# Passes only when the detection succeeded, the number check passed when it
+# was needed (and skipped when not), and either the build and every test job
+# of the tier succeeded or none was needed and none ran. The number check
+# runs on a pull request that changes only docs too, where the Swift jobs
+# skip, so the one required check is red when the numbers are wrong.
 ci_gate() {
-  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; self-test: ${SELFTEST:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; self-test: ${SELFTEST:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}; numbers needed: ${DOCS_NEEDED:-}; numbers: ${DOCS:-}"
   [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
+  if [[ "${DOCS_NEEDED:-}" == true ]]; then
+    [[ "${DOCS:-}" == success ]] || die "The number check (doc_numbers.py --check) did not succeed (${DOCS:-no result}): see its job's log."
+    echo "The number check (doc_numbers.py --check) passed."
+  elif [[ "${DOCS_NEEDED:-}" == false ]]; then
+    [[ "${DOCS:-}" == skipped ]] || die "The number check was not needed but did not skip (${DOCS:-no result})."
+  else
+    die "The change detection said neither that the number check is needed nor that it is not ('${DOCS_NEEDED:-}')."
+  fi
   if [[ "${SWIFT_NEEDED:-}" == true ]]; then
     [[ "${SELFTEST:-}" == success ]] || die "The shard script's self-test did not succeed (${SELFTEST:-no result})."
     [[ "${BUILD:-}" == success ]] || die "The Swift build did not succeed (${BUILD:-no result}); the test jobs need it."
@@ -2185,6 +2223,9 @@ case "${1:-}" in
   relevant)
     relevant_paths
     ;;
+  docs)
+    doc_paths
+    ;;
   push-base)
     push_base
     ;;
@@ -2207,6 +2248,6 @@ case "${1:-}" in
     superseded
     ;;
   *)
-    die "usage: $0 build | stamp | pack <file> | unpack <file> | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
+    die "usage: $0 build | stamp | pack <file> | unpack <file> | run <shard> | select <shard> | shards | classes | matrix | relevant | docs | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
     ;;
 esac

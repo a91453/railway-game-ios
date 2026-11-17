@@ -1,0 +1,58 @@
+name: Conflict watch
+
+# After every push to main, tells each open pull request into main that now
+# conflicts with main, on that pull request, that it does (decision 830): a
+# pull request that conflicts gets no CI run at all, so nothing turns red and
+# nobody is told. On 2026-11-17 #2367 waited like this while the planner
+# reported it as running its tests. The session that opened the pull request
+# is subscribed to it, so the comment wakes it to merge main itself. One
+# comment per head (the rules live in tools/ci-watch/conflict_watch.py);
+# drafts are told too.
+#
+# Like full-lane-watch.yml (decision 329): it reads the pull requests and
+# their comments, and writes only comments. The comment is
+# github-actions[bot]'s, which claude.yml does not answer, and it never
+# holds an at sign. Run it by hand (workflow_dispatch on main) to check the
+# open pull requests now.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pull requests: read them and comment on them (an issue comment on a pull
+# request). Nothing else.
+permissions:
+  contents: read
+  pull-requests: write
+
+# One run at a time, so two pushes in a row never both comment on the same
+# head; a newer push replaces a waiting run (it looks at every pull request
+# again anyway).
+concurrency:
+  group: conflict-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Tell pull requests that conflict with main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    # GitHub works out a pull request's mergeability only when asked after
+    # main moved: up to 8 rounds 15 seconds apart, a few seconds a pull
+    # request.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: tools/ci-watch
+          sparse-checkout-cone-mode: false
+
+      - name: Self-test
+        run: python3 -I tools/ci-watch/conflict_watch.py --selftest
+
+      - name: Comment on the pull requests that conflict with main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIN_SHA: ${{ github.sha }}
+        run: python3 -I tools/ci-watch/conflict_watch.py --main "$MAIN_SHA"
