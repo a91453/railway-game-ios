@@ -103,7 +103,10 @@ public enum Map3DFreightWagons {
     static let registration = Map3DTrainRegistration(
         id: "freightWagons",
         sets: [Map3DTrainSet.freightEmpty(), .freightEmpty(far: true), .freightBulk(), .freightBulk(far: true)],
-        showcase: [],
+        showcase: [
+            .init(emptyKey, "Empty freight, R200 diesel", "空車貨物列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
+            .init(bulkKey, "Stone freight, R200 diesel", "砂石列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
+        ],
         triangles: 300...4_100, length: 14.1...14.3)
 }
 
