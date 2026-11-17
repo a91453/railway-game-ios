@@ -1,5 +1,7 @@
 # DEPOT-REAL（2026-11-17，#2371）
 
+併回：PRIORITY_ROLLUP_2026-11-17（總表）（2026-11-17）
+
 NEXT_PRIORITIES §29.17 第 3 列 DEPOT-REAL 做了一半：香港的南港島綫、東涌綫收購時蓋出黃竹坑、小蠔灣車廠（新局收班死結 11 分鐘 → 0、誤點 477 → 326 班）；機捷兩座機廠照真實股數（蘆竹 23、青埔 15）試過，清晨多漏班，沒有收。數字與指令在 [決策 829](../decisions/829.md) §4–§6，交接在 `docs/handoff/DEPOT-REAL.md`。接這三列的 session 先讀 `.claude/skills/depot-work/SKILL.md`（歷次做機廠量過不行的路與要量的格子）。尺同 NEXT_PRIORITIES §19；bug 排在前面。
 
 | 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、注意 |
