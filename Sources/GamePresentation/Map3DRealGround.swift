@@ -24,7 +24,7 @@ extension Map3DScene.Builder {
 
     /// Decision 822: what a river's or a lake's island is drawn as, and
     /// how high, under every cover (``lift(of:)``'s least).
-    static let islandCover = Map3DBaseMap.Cover.wetland
+    static let islandCover = Map3DBaseMap.Cover.grass
     static let islandLift: Float = 0.0175
 
     static func lift(of road: Map3DBaseMap.RoadKind) -> Float {
