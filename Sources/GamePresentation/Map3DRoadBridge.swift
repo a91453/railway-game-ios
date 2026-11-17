@@ -31,6 +31,37 @@ struct Map3DRoadBridges: Sendable {
         /// Whether its first and last points are a deck's ends: nothing of
         /// it lies past them.
         var opens = (first: false, last: false)
+        /// ROAD-RAMP-HEIGHT: a link road's bridge (the tiles' `ramp`).
+        var isRamp = false
+        /// ROAD-RAMP-HEIGHT: on a link road's bridge joined to a deck's
+        /// main road, how far along the link roads it is from where they
+        /// come down to the ground and from where they leave the main road;
+        /// `nil` when it has no way to either.
+        var ramp: Ramp?
+
+        /// ROAD-RAMP-HEIGHT: every ``Map3DRoadBridges/rampSample`` metres
+        /// along a piece from its first point, and at its last: how far
+        /// along it (`along`), and how far along the link roads from an
+        /// open end (`down`) and from the main road (`up`), metres.
+        struct Ramp: Sendable {
+            let samples: [(along: Double, down: Double, up: Double)]
+        }
+
+        /// How far along it from its first point level point `p` lies
+        /// (at its nearest point), metres.
+        func travelled(to p: Map3DBaseMap.Point) -> Double {
+            var best = (distance: Double.infinity, along: 0.0)
+            var travelled = 0.0
+            for (a, b) in zip(points, points.dropFirst()) {
+                let length = ((b.x - a.x) * (b.x - a.x) + (b.z - a.z) * (b.z - a.z)).squareRoot()
+                let on = Map3DRoadBridges.nearest(p, a, b)
+                if on.distance < best.distance {
+                    best = (on.distance, travelled + ((on.point.x - a.x) * (on.point.x - a.x) + (on.point.z - a.z) * (on.point.z - a.z)).squareRoot())
+                }
+                travelled += length
+            }
+            return best.along
+        }
     }
 
     /// A height a deck must reach (`isFloor`) or keep under at a point,
@@ -157,6 +188,15 @@ struct Map3DRoadBridges: Sendable {
     /// viaduct, which stays on the ground (at 300 m, streets under 三重's
     /// viaduct rose to it).
     static let longestLevel: Double = 150
+    /// ROAD-RAMP-HEIGHT: how far apart a link road's bridge is looked at
+    /// along it, metres.
+    static let rampSample: Double = 5
+    /// ROAD-RAMP-HEIGHT: how many times its own grade a link road's bridge
+    /// may come down at, at its steepest, while it still lies on its main
+    /// road's surface before it leaves it: else it stays at the main
+    /// road's height there (a link drawn beside its main road, within
+    /// their widths, comes down only past it).
+    static let steepestRamp: Double = 2
     /// A level of the tiles' `layer` over the ground, metres: a storey of
     /// a crossing, the rail-3d viaduct's 6 m clear under a 1.8 m girder
     /// less the road's own 1.6 m (`regionTiles`' `B`).
@@ -581,18 +621,20 @@ extension Map3DScene.Builder {
             let lifts = length < Map3DRoadBridges.culvert || overCutting[deck] ? [] : crossings[deck].sorted { ($0.key.row, $0.key.column) < ($1.key.row, $1.key.column) }.map { (point: $0.value, rise: rise) }
             result.decks.append(.init(lifts: lifts, grade: Map3DRoadBridges.grade(kind), bounds: bounds[deck]))
         }
-        result.pieces = bridges.enumerated().map { number, bridge in .init(kind: bridge.kind, points: bridge.points, deck: deckOf[root(number)]!) }
+        result.pieces = bridges.enumerated().map { number, bridge in
+            .init(kind: bridge.kind, points: bridge.points, deck: deckOf[root(number)]!, isRamp: bridge.isRamp)
+        }
         result.segments = cells
         for (number, last) in openEnds {
             if last { result.pieces[number].opens.last = true } else { result.pieces[number].opens.first = true }
         }
+        rampDistances(into: &result, others: others)
         for (number, last) in openEnds {
             let points = bridges[number].points
             let end = last ? points[points.count - 1] : points[0], inner = last ? points[points.count - 2] : points[1]
             let dx = end.x - inner.x, dz = end.z - inner.z, length = (dx * dx + dz * dz).squareRoot()
             guard length > 1e-6 else { continue }
-            let deck = result.pieces[number].deck
-            let rise = deckRise(result.decks[deck], at: end)
+            let rise = pieceRise(result, piece: number, at: end)
             guard rise > 0.05 else { continue }
             let kind = bridges[number].kind
             let outward = Point(x: dx / length, z: dz / length)
@@ -636,7 +678,7 @@ extension Map3DScene.Builder {
                 let dx = b.x - a.x, dz = b.z - a.z, length = dx * dx + dz * dz
                 let share = length > 0 ? ((p.x - a.x) * dx + (p.z - a.z) * dz) / length : 0.5
                 if share < 0 && index == 1 && piece.opens.first || share > 1 && index == piece.points.count - 1 && piece.opens.last { continue }
-                guard abs(deckRise(bridges.decks[piece.deck], at: p) - rise) < Map3DRoadBridges.levelGap else { continue }
+                guard abs(pieceRise(bridges, piece: number, at: p) - rise) < Map3DRoadBridges.levelGap else { continue }
                 last = out
                 break
             }
@@ -791,6 +833,180 @@ extension Map3DScene.Builder {
         return max(0, height - ground)
     }
 
+    /// ROAD-RAMP-HEIGHT: how far piece `number` of `bridges` stands over
+    /// the drawn ground at `p`, metres: its deck's height (``deckRise(_:at:)``),
+    /// but on a link road's bridge joined to a deck's main road no higher
+    /// than its way along the link roads from where they reach the ground
+    /// allows at its grade (slop-taipei's `build-elevated.mjs`, MIT: "the
+    /// height function itself is the ramp"), steeper where the link is too
+    /// short to reach the main road's height at its grade, so it meets
+    /// the main road at the main road's height; never under what it must
+    /// clear of the track.
+    mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point) -> Float {
+        let piece = bridges.pieces[number], deck = bridges.decks[piece.deck]
+        let rise = deckRise(deck, at: p)
+        guard let ramp = piece.ramp, rise > 0, ramp.samples.count >= 2 else { return rise }
+        let s = piece.travelled(to: p)
+        var index = 1
+        while index < ramp.samples.count - 1, ramp.samples[index].along < s { index += 1 }
+        let before = ramp.samples[index - 1], after = ramp.samples[index]
+        let t = after.along > before.along ? min(max((s - before.along) / (after.along - before.along), 0), 1) : 0
+        func mix(_ a: Double, _ b: Double) -> Double { a.isFinite && b.isFinite ? a + (b - a) * t : min(a, b) }
+        let down = mix(before.down, after.down), up = mix(before.up, after.up)
+        guard down.isFinite, up.isFinite else { return rise }
+        let grade = Map3DRoadBridges.grade(piece.kind)
+        let cap = down + up > 0 ? max(Float(down) * grade, rise * Float(down / (down + up))) : 0
+        guard cap < rise else { return rise }
+        // What it must clear of the track.
+        let ground = drawnGround(x: Float(p.x), z: Float(p.z))
+        var floor: Float = 0
+        for bound in deck.bounds where bound.isFloor {
+            let distance = Float(((p.x - bound.point.x) * (p.x - bound.point.x) + (p.z - bound.point.z) * (p.z - bound.point.z)).squareRoot())
+            floor = max(floor, bound.height - deck.grade * distance - ground)
+        }
+        return min(rise, max(cap, floor))
+    }
+
+    /// ROAD-RAMP-HEIGHT: each link road's bridge joined end to end to a
+    /// deck's main road (a bridge not a link) gets its ``Map3DRoadBridges/Piece/ramp``:
+    /// shortest ways along the link roads' bridges of the deck, end to
+    /// end, from their open ends (where they come down to the ground) and
+    /// from where they leave the main road: their ends that meet it, and
+    /// where they still lie on its surface with room enough to come down
+    /// (slop-taipei's `build-elevated.mjs`, MIT: Dijkstra from the
+    /// portals). `others` gives the pieces within ``Map3DRoadBridges/join``
+    /// of a point.
+    func rampDistances(into result: inout Map3DRoadBridges, others: (Map3DBaseMap.Point, Int) -> [Int]) {
+        typealias Point = Map3DBaseMap.Point
+        let pieces = result.pieces
+        var mains = Set<Int>()
+        for piece in pieces where !piece.isRamp { mains.insert(piece.deck) }
+        let ramps = pieces.indices.filter {
+            pieces[$0].isRamp && mains.contains(pieces[$0].deck) && pieces[$0].points.count >= 2 && !result.decks[pieces[$0].deck].lifts.isEmpty
+        }
+        guard !ramps.isEmpty else { return }
+        func distance(_ a: Point, _ b: Point) -> Double { ((a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z)).squareRoot() }
+        // Whether `q` on a link road of `deck` `half` wide lies on one of
+        // the deck's main roads' surfaces.
+        func onMain(_ q: Point, deck: Int, half: Double) -> Bool {
+            let reach = half + Double(Map3DRoadBridges.half(.motorway))
+            let low = Map3DRoadBridges.key(q.x - reach, q.z - reach), high = Map3DRoadBridges.key(q.x + reach, q.z + reach)
+            for row in low.row...high.row {
+                for column in low.column...high.column {
+                    for (number, index) in result.segments[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                        let piece = pieces[number]
+                        guard piece.deck == deck, !piece.isRamp else { continue }
+                        if Map3DRoadBridges.nearest(q, piece.points[index - 1], piece.points[index]).distance < half + Double(Map3DRoadBridges.half(piece.kind)) {
+                            return true
+                        }
+                    }
+                }
+            }
+            return false
+        }
+        // Each ramp piece looked at every sample, the samples nodes joined
+        // along it, and its ends to the ends of the deck's other ramp
+        // pieces they meet.
+        var first: [Int: Int] = [:], final: [Int: Int] = [:]
+        var samples: [(piece: Int, along: Double, point: Point)] = []
+        for number in ramps {
+            first[number] = samples.count
+            let points = pieces[number].points
+            var travelled = 0.0
+            samples.append((number, 0, points[0]))
+            for (a, b) in zip(points, points.dropFirst()) {
+                let length = distance(a, b)
+                var along = Map3DRoadBridges.rampSample - travelled.truncatingRemainder(dividingBy: Map3DRoadBridges.rampSample)
+                while along < length {
+                    samples.append((number, travelled + along, Point(x: a.x + (b.x - a.x) * along / length, z: a.z + (b.z - a.z) * along / length)))
+                    along += Map3DRoadBridges.rampSample
+                }
+                travelled += length
+            }
+            if travelled > samples[samples.count - 1].along + 1e-9 || samples.count - first[number]! < 2 {
+                samples.append((number, travelled, points[points.count - 1]))
+            }
+            final[number] = samples.count - 1
+        }
+        var edges = [[(node: Int, length: Double)]](repeating: [], count: samples.count)
+        var portals: [Int] = [], junctions: [Int] = []
+        for number in ramps {
+            let low = first[number]!, high = final[number]!
+            for node in low..<high {
+                let length = samples[node + 1].along - samples[node].along
+                edges[node].append((node + 1, length))
+                edges[node + 1].append((node, length))
+            }
+            if pieces[number].opens.first { portals.append(low) }
+            if pieces[number].opens.last { portals.append(high) }
+            for node in [low, high] {
+                let p = samples[node].point
+                for other in others(p, number) where pieces[other].deck == pieces[number].deck {
+                    if pieces[other].isRamp, first[other] != nil {
+                        for otherNode in [first[other]!, final[other]!] where distance(samples[otherNode].point, p) <= Map3DRoadBridges.join {
+                            edges[node].append((otherNode, 0))
+                        }
+                    } else if !pieces[other].isRamp {
+                        junctions.append(node)
+                    }
+                }
+            }
+        }
+        guard !portals.isEmpty, !junctions.isEmpty else { return }
+        // Dijkstra from `sources` (a binary heap of distance, node).
+        func distances(from sources: [Int]) -> [Double] {
+            var found = [Double](repeating: .infinity, count: samples.count)
+            var heap: [(distance: Double, node: Int)] = []
+            func less(_ a: Int, _ b: Int) -> Bool { (heap[a].distance, heap[a].node) < (heap[b].distance, heap[b].node) }
+            func push(_ item: (distance: Double, node: Int)) {
+                heap.append(item)
+                var child = heap.count - 1
+                while child > 0, less(child, (child - 1) / 2) {
+                    heap.swapAt(child, (child - 1) / 2)
+                    child = (child - 1) / 2
+                }
+            }
+            func pop() -> (distance: Double, node: Int) {
+                let top = heap[0]
+                heap[0] = heap[heap.count - 1]
+                heap.removeLast()
+                var parent = 0
+                while true {
+                    var smallest = parent
+                    for child in [2 * parent + 1, 2 * parent + 2] where child < heap.count && less(child, smallest) { smallest = child }
+                    guard smallest != parent else { break }
+                    heap.swapAt(parent, smallest)
+                    parent = smallest
+                }
+                return top
+            }
+            for source in Set(sources).sorted() { push((0, source)) }
+            while !heap.isEmpty {
+                let next = pop()
+                guard next.distance < found[next.node] else { continue }
+                found[next.node] = next.distance
+                for edge in edges[next.node] where next.distance + edge.length < found[edge.node] { push((next.distance + edge.length, edge.node)) }
+            }
+            return found
+        }
+        let down = distances(from: portals)
+        // Where a link road still lies on its main road's surface with
+        // room to come down from there at twice its grade at most, it
+        // leaves the main road there.
+        for (node, sample) in samples.enumerated() where down[node].isFinite {
+            let piece = pieces[sample.piece]
+            let rise = Double(result.decks[piece.deck].lifts.map(\.rise).max() ?? 0)
+            guard down[node] * Map3DRoadBridges.steepestRamp * Double(Map3DRoadBridges.grade(piece.kind)) >= rise else { continue }
+            if onMain(sample.point, deck: piece.deck, half: Double(piece.kind.width(ramp: true)) / 2) { junctions.append(node) }
+        }
+        let up = distances(from: junctions)
+        for number in ramps {
+            let nodes = first[number]!...final[number]!
+            guard nodes.contains(where: { down[$0].isFinite }), nodes.contains(where: { up[$0].isFinite }) else { continue }
+            result.pieces[number].ramp = .init(samples: nodes.map { (samples[$0].along, down[$0], up[$0]) })
+        }
+    }
+
     /// Decision 391: how far a road at level point `p`, running along
     /// `along` (or any way, when `nil`), lies over the drawn ground,
     /// metres, and whether it is on a bridge's deck there: on one, the
@@ -799,14 +1015,19 @@ extension Map3DScene.Builder {
     /// on the ground under it is not.
     mutating func roadRise(at p: Map3DBaseMap.Point, along: (x: Double, z: Double)?, onDeck: Bool) -> (rise: Float, onBridge: Bool) {
         let bridges = roadBridges
-        guard !bridges.isEmpty else { return (0, false) }
+        guard !bridges.isEmpty || !roadGrade.isEmpty else { return (0, false) }
         let key = Map3DRoadBridges.key(p.x, p.z)
         var best: (rise: Float, onBridge: Bool) = (0, false)
-        var decks = Set<Int>()
+        // ROAD-RAMP-HEIGHT: on each deck, the piece whose line is nearest:
+        // a link road coming down beside or under its main road is at its
+        // own height, the main road at the deck's.
+        var nearest: [Int: (distance: Double, piece: Int)] = [:]
         for (number, index) in onDeck ? bridges.segments[key] ?? [] : [] {
             let piece = bridges.pieces[number]
             let a = piece.points[index - 1], b = piece.points[index]
-            guard !decks.contains(piece.deck), Map3DRoadBridges.nearest(p, a, b).distance <= Double(Map3DRoadBridges.half(piece.kind)) + 0.5 else { continue }
+            let distance = Map3DRoadBridges.nearest(p, a, b).distance
+            guard distance <= Double(Map3DRoadBridges.half(piece.kind)) + 0.5 else { continue }
+            if let kept = nearest[piece.deck], (kept.distance, kept.piece) <= (distance, number) { continue }
             let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
             // Past a deck's end is off it: a road running on ramps down.
             let share = length > 0 ? ((p.x - a.x) * dx + (p.z - a.z) * dz) / (length * length) : 0.5
@@ -814,8 +1035,10 @@ extension Map3DScene.Builder {
             if let along {
                 guard length < 1 || abs(dx * along.x + dz * along.z) / length >= 0.9 else { continue }
             }
-            decks.insert(piece.deck)
-            best = (max(best.rise, deckRise(bridges.decks[piece.deck], at: p)), true)
+            nearest[piece.deck] = (distance, number)
+        }
+        for (_, found) in nearest.sorted(by: { $0.key < $1.key }) {
+            best = (max(best.rise, pieceRise(bridges, piece: found.piece, at: p)), true)
         }
         for number in bridges.endCells[key] ?? [] {
             let end = bridges.ends[number]
@@ -844,6 +1067,19 @@ extension Map3DScene.Builder {
             guard rise > 0, bridges.isOn(p, join.roads) else { continue }
             best = (max(best.rise, rise), best.onBridge || out <= join.plateau)
         }
+        // Decision 834: a motorway on its profile: a deck no lower, a road
+        // on the ground lifted over it (a deck once its girder is clear)
+        // or down in its cutting.
+        if !roadGrade.isEmpty, let graded = roadGrade.profile(at: p, along: along, onDeck: onDeck) {
+            let rise = graded.height - drawnGround(x: Float(p.x), z: Float(p.z))
+            if onDeck {
+                best = (max(best.rise, rise), true)
+            } else if graded.inCut, best.rise <= 0 {
+                best.rise = rise
+            } else if rise > best.rise {
+                best = (rise, best.onBridge || rise >= Map3DElevatedLook.roadBridge.girderDepth + 0.5)
+            }
+        }
         return best
     }
 
@@ -868,7 +1104,7 @@ extension Map3DScene.Builder {
             let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
             let share = length > 0 ? ((probe.x - a.x) * dx + (probe.z - a.z) * dz) / (length * length) : 0.5
             if share < 0 && index == 1 && piece.opens.first || share > 1 && index == piece.points.count - 1 && piece.opens.last { continue }
-            let top = ground + Self.lift(of: piece.kind) + deckRise(bridges.decks[piece.deck], at: probe)
+            let top = ground + Self.lift(of: piece.kind) + pieceRise(bridges, piece: number, at: probe)
             if abs(top - height) < within { return true }
         }
         for (number, index) in bridges.groundCells[key] ?? [] {
@@ -885,12 +1121,14 @@ extension Map3DScene.Builder {
     /// Decision 391: whether a road from `a` to `b` may come near a
     /// raised road (a bridge or a ramp onto one).
     func nearRaisedRoad(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point) -> Bool {
-        guard !roadBridges.isEmpty else { return false }
+        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return false }
         let low = Map3DRoadBridges.key(min(a.x, b.x), min(a.z, b.z)), high = Map3DRoadBridges.key(max(a.x, b.x), max(a.z, b.z))
         for row in low.row...high.row {
             for column in low.column...high.column {
                 let key = Map3DScene.ChunkKey(column: column, row: row)
                 if roadBridges.segments[key] != nil || roadBridges.endCells[key] != nil || roadBridges.joinCells[key] != nil { return true }
+                // Decision 834: a motorway off its ground.
+                if roadGrade.cells[key] != nil { return true }
             }
         }
         return false
@@ -971,7 +1209,7 @@ extension Map3DScene.Builder {
     /// road's first point and a pier every ``Map3DElevatedLook/pierSpacing``
     /// from it, so a chunk built apart draws what the whole scene does.
     mutating func addRoadBridges(_ roads: [Map3DBaseMap.Road], look: Map3DElevatedLook = .roadBridge) {
-        guard !roadBridges.isEmpty else { return }
+        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return }
         typealias Point = Map3DBaseMap.Point
         for road in roads where road.points.count >= 2 {
             let xs = road.points.map(\.x), zs = road.points.map(\.z)

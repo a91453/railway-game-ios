@@ -95,7 +95,7 @@ extension Map3DScene.Builder {
                 guard out <= join.reach else { return nil }
                 return join.height - join.grade * max(0, out - join.plateau) - drawnGround(x: Float(q.x), z: Float(q.z))
             case .piece(let number):
-                return deckRise(result.decks[result.pieces[number].deck], at: q)
+                return pieceRise(result, piece: number, at: q)
             }
         }
         // Its surface's segments (a line, half its width) near `q`.
@@ -219,7 +219,7 @@ extension Map3DScene.Builder {
                                     let piece = result.pieces[number]
                                     guard Map3DRoadBridges.nearest(q, piece.points[index - 1], piece.points[index]).distance <= Double(piece.kind.width(ramp: false)) / 2
                                     else { continue }
-                                    let over = deckRise(result.decks[piece.deck], at: q)
+                                    let over = pieceRise(result, piece: number, at: q)
                                     // Only a deck over it: one under it (a bridge at the
                                     // ground's height it runs on to) is passed over.
                                     guard over - r > 0.5, over - r < Map3DRoadBridges.underDeck else { continue }
