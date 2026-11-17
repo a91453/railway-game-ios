@@ -152,6 +152,13 @@ final class Map3DPreviewDump: XCTestCase {
             XCTAssertTrue(session.buyRealStation(offer), offer.problem ?? session.message?.text ?? "")
             world = session.world
         }
+        // MAP3D_FOCUS=lat:lon: the scene's origin there instead of the
+        // world's own focus (decision 822: the scene beside a river that
+        // a new game's middle does not reach).
+        if let text = ProcessInfo.processInfo.environment["MAP3D_FOCUS"] {
+            let at = text.split(separator: ":").map { Double(String($0))! }
+            focus = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: at[0], longitude: at[1])
+        }
         // MAP3D_LINE=x:z;x:z;...: the player's line through these points of
         // the scene (metres), a station with its platform at each, laid
         // on whichever world was asked for.

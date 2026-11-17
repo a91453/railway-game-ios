@@ -84,7 +84,7 @@ struct Map3DRoadBridges: Sendable {
     /// The roads on the ground, and their segments (road, first point) by
     /// the ``cell`` squares their surfaces reach: what may lie beside a
     /// raised road at its height.
-    var grounds: [(kind: Map3DBaseMap.RoadKind, points: [Map3DBaseMap.Point])] = []
+    var grounds: [(kind: Map3DBaseMap.RoadKind, points: [Map3DBaseMap.Point], isRamp: Bool)] = []
     var groundCells: [Map3DScene.ChunkKey: [(road: Int, index: Int)]] = [:]
 
     /// Decision 391 (續篇二): where a road on the ground crosses the track
@@ -145,6 +145,18 @@ struct Map3DRoadBridges: Sendable {
     /// How far apart two bridges' lines may be and be one, metres: the
     /// tiles' 4,096 units to a 2.2 km side, twice.
     static let join: Double = 1.5
+    /// Decision 822: how far apart two bridges' edges may run side by side
+    /// and be one deck, metres: 華江橋's scooter lanes run 4.6 m off
+    /// their carriageways' edges as the map draws them.
+    static let alongside: Double = 6
+    /// Decision 822: how near a deck's height a road running on from a
+    /// deck's end must be to stay on it (``Map3DScene/Builder/levelRun(from:outward:rise:reach:in:)``), metres.
+    static let levelGap: Float = 0.5
+    /// Decision 822: the longest a road running on from a deck's end stays
+    /// on a deck at its height, metres: a run longer is a street under the
+    /// viaduct, which stays on the ground (at 300 m, streets under 三重's
+    /// viaduct rose to it).
+    static let longestLevel: Double = 150
     /// A level of the tiles' `layer` over the ground, metres: a storey of
     /// a crossing, the rail-3d viaduct's 6 m clear under a 1.8 m girder
     /// less the road's own 1.6 m (`regionTiles`' `B`).
@@ -189,6 +201,15 @@ struct Map3DRoadBridges: Sendable {
     /// Half a road's width with its pavements, metres.
     static func half(_ kind: Map3DBaseMap.RoadKind) -> Float {
         kind.width(ramp: false) / 2 + Map3DScene.Builder.sidewalk(of: kind)
+    }
+
+    /// Decision 822: half a road's drawn width, metres: a ramp's own
+    /// (``Map3DBaseMap/RoadKind/width(ramp:)``, no pavements), else
+    /// ``half(_:)``. A street 7.5 m off a trunk's ramp is not on it
+    /// (三重, beside 台北橋's ramp: it rose with the ramp to 2 m under
+    /// the deck).
+    static func half(_ kind: Map3DBaseMap.RoadKind, ramp: Bool) -> Float {
+        ramp ? kind.width(ramp: true) / 2 : half(kind)
     }
 
     /// The freeway bureau's tallest bridges (data.gov.tw 30616, 國道最高橋梁
@@ -250,11 +271,12 @@ struct Map3DRoadBridges: Sendable {
     }
 
     /// Review H4: whether level point `p` is on one of `roads`' segments
-    /// (within half its width and pavements, and half a metre).
+    /// (within half its drawn width, ``half(_:ramp:)``, and half a metre).
     func isOn(_ p: Map3DBaseMap.Point, _ roads: [(road: Int, index: Int)]) -> Bool {
         roads.contains { segment in
             let line = grounds[segment.road].points
-            return Self.nearest(p, line[segment.index - 1], line[segment.index]).distance <= Double(Self.half(grounds[segment.road].kind)) + 0.5
+            let road = grounds[segment.road]
+            return Self.nearest(p, line[segment.index - 1], line[segment.index]).distance <= Double(Self.half(road.kind, ramp: road.isRamp)) + 0.5
         }
     }
 
@@ -330,6 +352,46 @@ extension Map3DScene.Builder {
                 for other in near { parent[root(other)] = root(number) }
                 if near.isEmpty { openEnds.append((number, last)) }
             }
+        }
+        // Decision 822: bridges of a level running side by side (a bridge's
+        // carriageways, its scooter lane, mapped apart), their edges
+        // ``Map3DRoadBridges/alongside`` apart or less for 30 m or more,
+        // are one deck too: the owner's IMG_5324 (華江橋's scooter lane, its
+        // ends 4 m from the carriageway's, flat on the river beside its
+        // raised deck) and IMG_5323 (parallel decks at different heights).
+        for (number, bridge) in bridges.enumerated() {
+            let half = Double(Map3DRoadBridges.half(bridge.kind))
+            var runs: [Int: Int] = [:]
+            var travelled = 0.0
+            for (a, b) in zip(bridge.points, bridge.points.dropFirst()) {
+                let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+                guard length > 0.01 else { continue }
+                var along = (10 - travelled.truncatingRemainder(dividingBy: 10)).truncatingRemainder(dividingBy: 10)
+                while along <= length {
+                    let p = Point(x: a.x + dx * along / length, z: a.z + dz * along / length)
+                    let reach = half + Double(Map3DRoadBridges.half(.motorway)) + Map3DRoadBridges.alongside
+                    let low = Map3DRoadBridges.key(p.x - reach, p.z - reach), high = Map3DRoadBridges.key(p.x + reach, p.z + reach)
+                    var seen = Set<Int>()
+                    for row in low.row...high.row {
+                        for column in low.column...high.column {
+                            for (other, index) in cells[Map3DScene.ChunkKey(column: column, row: row)] ?? []
+                            where other > number && bridges[other].level == bridge.level && !seen.contains(other) {
+                                let c = bridges[other].points[index - 1], d = bridges[other].points[index]
+                                let ex = d.x - c.x, ez = d.z - c.z, span = (ex * ex + ez * ez).squareRoot()
+                                guard span > 0.01, abs(ex * dx + ez * dz) / (span * length) >= 0.9 else { continue }
+                                let gap = Map3DRoadBridges.nearest(p, c, d).distance - half - Double(Map3DRoadBridges.half(bridges[other].kind))
+                                if gap <= Map3DRoadBridges.alongside {
+                                    seen.insert(other)
+                                    runs[other, default: 0] += 1
+                                }
+                            }
+                        }
+                    }
+                    along += 10
+                }
+                travelled += length
+            }
+            for (other, count) in runs where count >= 4 { parent[root(other)] = root(number) }
         }
         var deckOf: [Int: Int] = [:]
         var members: [[Int]] = []
@@ -533,17 +595,53 @@ extension Map3DScene.Builder {
             let rise = deckRise(result.decks[deck], at: end)
             guard rise > 0.05 else { continue }
             let kind = bridges[number].kind
-            let reach = Double(min(rise / Map3DRoadBridges.grade(kind), Map3DRoadBridges.longestRamp) + Map3DRoadBridges.half(kind)) + 4
+            let outward = Point(x: dx / length, z: dz / length)
+            // Decision 822: a road running on from the end under a deck at
+            // the end's height stays at it while it lies there, as one
+            // leaving a raised road at a junction does (decision 607): it
+            // ramped down under the deck, a slab 1–4 m beneath it (the
+            // owner's IMG_5323, 忠孝橋's east end and 台北橋's in 三重).
+            let level = Double(levelRun(from: end, outward: outward, rise: rise, reach: Double(rise / Map3DRoadBridges.grade(kind)), in: result))
+            let reach = Double(min(rise / Map3DRoadBridges.grade(kind), Map3DRoadBridges.longestRamp) + Map3DRoadBridges.half(kind)) + 4 + level
             let low = Map3DRoadBridges.key(end.x - reach, end.z - reach), high = Map3DRoadBridges.key(end.x + reach, end.z + reach)
             for row in low.row...high.row {
                 for column in low.column...high.column { result.endCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(result.ends.count) }
             }
-            let outward = Point(x: dx / length, z: dz / length)
             result.ends.append(.init(point: end, outward: outward, half: Map3DRoadBridges.half(kind), rise: rise,
-                                     grade: Map3DRoadBridges.grade(kind), roads: result.runOn(from: end, axis: outward, reach: reach)))
+                                     grade: Map3DRoadBridges.grade(kind), plateau: Float(level),
+                                     roads: result.runOn(from: end, axis: outward, reach: reach)))
         }
         spreadRamps(into: &result)
         return result
+    }
+
+    /// Decision 822: how far out from a deck's end at `end`, along level
+    /// unit `outward`, the line lies on a deck of `bridges` standing
+    /// within ``levelGap`` of `rise` over the ground, metres, looked at
+    /// every 2 m up to `reach` and given up 20 m past the last found; 0
+    /// where it leaves the decks at once, and where it runs on along one
+    /// past ``Map3DRoadBridges/longestLevel`` (a street under a viaduct
+    /// the end's ramp meets, not a road leaving it).
+    mutating func levelRun(from end: Map3DBaseMap.Point, outward: Map3DBaseMap.Point, rise: Float, reach: Double,
+                           in bridges: Map3DRoadBridges) -> Float {
+        var last = 0.0
+        var out = 2.0
+        while out <= min(reach, Map3DRoadBridges.longestLevel + 2), out - last <= 20 {
+            defer { out += 2 }
+            let p = Map3DBaseMap.Point(x: end.x + outward.x * out, z: end.z + outward.z * out)
+            for (number, index) in bridges.segments[Map3DRoadBridges.key(p.x, p.z)] ?? [] {
+                let piece = bridges.pieces[number]
+                let a = piece.points[index - 1], b = piece.points[index]
+                guard Map3DRoadBridges.nearest(p, a, b).distance <= Double(Map3DRoadBridges.half(piece.kind)) + 0.5 else { continue }
+                let dx = b.x - a.x, dz = b.z - a.z, length = dx * dx + dz * dz
+                let share = length > 0 ? ((p.x - a.x) * dx + (p.z - a.z) * dz) / length : 0.5
+                if share < 0 && index == 1 && piece.opens.first || share > 1 && index == piece.points.count - 1 && piece.opens.last { continue }
+                guard abs(deckRise(bridges.decks[piece.deck], at: p) - rise) < Map3DRoadBridges.levelGap else { continue }
+                last = out
+                break
+            }
+        }
+        return last > Map3DRoadBridges.longestLevel ? 0 : Float(last)
     }
 
     /// Decision 391 (續篇二, HANDOFF §4.12 第 6 點): where each road on the
@@ -777,7 +875,7 @@ extension Map3DScene.Builder {
             let road = bridges.grounds[number]
             let a = road.points[index - 1], b = road.points[index]
             let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
-            guard length > 0.01, covers(a, b, half: Map3DRoadBridges.half(road.kind)) else { continue }
+            guard length > 0.01, covers(a, b, half: Map3DRoadBridges.half(road.kind, ramp: road.isRamp)) else { continue }
             let top = ground + Self.lift(of: road.kind) + roadRise(at: probe, along: (dx / length, dz / length), onDeck: false).rise
             if abs(top - height) < within { return true }
         }

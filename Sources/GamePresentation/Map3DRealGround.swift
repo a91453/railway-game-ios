@@ -22,6 +22,11 @@ extension Map3DScene.Builder {
         0.035 * Float(cover.rawValue + 1)
     }
 
+    /// Decision 822: what a river's or a lake's island is drawn as, and
+    /// how high, under every cover (``lift(of:)``'s least).
+    static let islandCover = Map3DBaseMap.Cover.grass
+    static let islandLift: Float = 0.0175
+
     static func lift(of road: Map3DBaseMap.RoadKind) -> Float {
         switch road {
         case .service, .minor: 0.28
@@ -72,6 +77,15 @@ extension Map3DScene.Builder {
         var taken = TakenGround()
         // Decision 391: its bridges' decks, before the roads on them.
         roadBridges = bridgeDecks(of: map, frame: RealWorldFrame(world: world))
+        // Decision 822: a river's or a lake's islands (its holes) under
+        // every cover, so one the tiles give no cover of its own is no
+        // bare ground in the water (IMG_5324's grey strips).
+        for area in map.areas where area.cover == .water && !area.isSea {
+            for island in area.rings.dropFirst() where island.count >= 3 {
+                addArea(Map3DBaseMap.Area(cover: Self.islandCover, rings: [island], bounds: area.bounds), lift: Self.islandLift,
+                        taking: &taken.whole)
+            }
+        }
         for cover in Map3DBaseMap.Cover.allCases {
             for area in map.areas where area.cover == cover {
                 addArea(area, taking: &taken.whole)
@@ -261,16 +275,38 @@ extension Map3DScene.Builder {
 
     /// `area` cut to the ground's triangles, each piece at its triangle's
     /// height.
-    mutating func addArea(_ area: Map3DBaseMap.Area, taking taken: inout Set<Map3DScene.ChunkKey>) {
+    mutating func addArea(_ area: Map3DBaseMap.Area, lift drawnLift: Float? = nil, taking taken: inout Set<Map3DScene.ChunkKey>) {
         guard let outer = area.rings.first else { return }
         let bounds = area.bounds
         let lowX = max(outer.map(\.x).min() ?? 0, bounds.minX), highX = min(outer.map(\.x).max() ?? 0, bounds.maxX)
         let lowZ = max(outer.map(\.z).min() ?? 0, bounds.minZ), highZ = min(outer.map(\.z).max() ?? 0, bounds.maxZ)
         guard lowX < highX, lowZ < highZ else { return }
         let color = Map3DPalette.cover(area.cover), paint: Map3DPaint? = area.cover == .water ? nil : Self.grass
-        let lift = Self.lift(of: area.cover)
+        let lift = drawnLift ?? Self.lift(of: area.cover)
         let cellArea = Double(Land.cellLength) * Double(Land.cellLength) / (Self.metre * Self.metre)
         let takes = area.cover == .water || area.cover == .park || area.cover == .wood
+        // Decision 822: the area's triangles, cut once with its holes, each
+        // then cut to the cells' triangles below. Cutting the outline and
+        // its holes to a cell's triangle first, then triangulating, failed
+        // where a hole (a river's island) reached the triangle's edge: the
+        // whole triangle came out water (the owner's IMG_5325, sharp
+        // triangles of water over the Tamsui's islands).
+        // Only an area with holes needs it; a cell's half no hole reaches
+        // is triangulated as before, with fewer triangles.
+        let corners = area.rings.count > 1 ? area.rings.flatMap { $0 } : []
+        let whole = area.rings.count > 1 ? Earcut.triangulate(area.rings.map { $0.map { (x: $0.x, y: $0.z) } }) : []
+        var byCell: [Map3DScene.ChunkKey: [Int]] = [:]
+        for first in stride(from: 0, to: whole.count - 2, by: 3) {
+            let triangle = (0..<3).map { corners[whole[first + $0]] }
+            let xs = triangle.map(\.x), zs = triangle.map(\.z)
+            guard let minX = xs.min(), let maxX = xs.max(), let minZ = zs.min(), let maxZ = zs.max(),
+                  maxX > lowX, minX < highX, maxZ > lowZ, minZ < highZ else { continue }
+            for row in gridCell(max(minZ, lowZ), origin: originY)...gridCell(min(maxZ, highZ), origin: originY) {
+                for column in gridCell(max(minX, lowX), origin: originX)...gridCell(min(maxX, highX), origin: originX) {
+                    byCell[Map3DScene.ChunkKey(column: column, row: row), default: []].append(first)
+                }
+            }
+        }
         for row in gridCell(lowZ, origin: originY)...gridCell(highZ, origin: originY) {
             let top = max(gridLine(row, origin: originY), bounds.minZ), bottom = min(gridLine(row + 1, origin: originY), bounds.maxZ)
             guard top < bottom else { continue }
@@ -285,23 +321,58 @@ extension Map3DScene.Builder {
                 // its south-east one, as addGround() splits it.
                 let westX = gridLine(column, origin: originX), northZ = gridLine(row, origin: originY)
                 var covered = 0.0
+                let mine = byCell[Map3DScene.ChunkKey(column: column, row: row)] ?? []
                 for side in [1.0, -1.0] {
-                    let piece = Self.clipRings(cellRings, by: [{ side * (($0.z - northZ) - ($0.x - westX)) }])
-                    guard let ring = piece.first, ring.count >= 3 else { continue }
-                    // A hole as big as what is left of the outer ring
-                    // (the base map's sea, its holes the land, over a
-                    // tile inland) leaves nothing.
-                    let net = abs(Self.area(ring)) - piece.dropFirst().reduce(0) { $0 + abs(Self.area($1)) }
-                    guard net > 0.5 else { continue }
-                    covered += net
-                    let flat = piece.map { $0.map { (x: $0.x, y: $0.z) } }
-                    var triangles = Earcut.triangulate(flat)
-                    guard !triangles.isEmpty else { continue }
+                    let diagonal: (Map3DBaseMap.Point) -> Double = { side * (($0.z - northZ) - ($0.x - westX)) }
+                    let half = Self.clipRings(cellRings, by: [diagonal])
+                    guard let outline = half.first, outline.count >= 3 else { continue }
                     var points: [Map3DPoint] = []
-                    for ring in piece {
-                        for point in ring {
+                    var triangles: [Int] = []
+                    if half.count == 1 {
+                        // No hole reaches this half: its outline,
+                        // triangulated.
+                        let net = abs(Self.area(outline))
+                        guard net > 0.5 else { continue }
+                        triangles = Earcut.triangulate([outline.map { (x: $0.x, y: $0.z) }])
+                        guard !triangles.isEmpty else { continue }
+                        covered += net
+                        for point in outline {
                             let x = Float(point.x), z = Float(point.z)
                             points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                        }
+                    } else {
+                        // Decision 822: where a hole reaches, each of the
+                        // area's triangles cut to this half of the cell, a
+                        // convex cut.
+                        let keeps: [(Map3DBaseMap.Point) -> Double] = [
+                            { $0.z - top }, { bottom - $0.z }, { $0.x - left }, { right - $0.x },
+                            diagonal,
+                        ]
+                        var pieces: [[Map3DBaseMap.Point]] = []
+                        var net = 0.0
+                        for first in mine {
+                            var piece = (0..<3).map { corners[whole[first + $0]] }
+                            for keep in keeps {
+                                piece = Self.clip(piece, keep)
+                                if piece.count < 3 { break }
+                            }
+                            guard piece.count >= 3 else { continue }
+                            let size = abs(Self.area(piece))
+                            guard size > 1e-4 else { continue }
+                            net += size
+                            pieces.append(piece)
+                        }
+                        // Slivers along a cell's edge (the base map's sea, its
+                        // holes the land, over a tile inland) leave nothing.
+                        guard net > 0.5 else { continue }
+                        covered += net
+                        for piece in pieces {
+                            let start = points.count
+                            for point in piece {
+                                let x = Float(point.x), z = Float(point.z)
+                                points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                            }
+                            for index in 1..<(piece.count - 1) { triangles += [start, start + index, start + index + 1] }
                         }
                     }
                     // Decision 375: none of it over a trench.
