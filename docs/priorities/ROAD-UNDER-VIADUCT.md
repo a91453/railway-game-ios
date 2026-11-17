@@ -1,4 +1,4 @@
-# ROAD-UNDER-VIADUCT（2026-11-18，工作串「修高架下道路與三重疊板」）
+# ROAD-UNDER-VIADUCT（2026-11-18，#2412）
 
 三重的引道修好之後留下的；細節在決策 822「後來（三）」與 `docs/handoff/ROAD-UNDER-VIADUCT.md`。尺同 NEXT_PRIORITIES §19。
 
