@@ -32,14 +32,11 @@ public struct Map3DSky: Equatable, Sendable {
                                    lighting.weather.skyMix * lighting.weatherStrength)
         // Rain hides the sun's disc, the moon and the stars.
         let clear = 1 - min(max(lighting.weather.skyMix / Map3DWeather.rain.skyMix, 0), 1)
-        sun = Self.path(at: (lighting.hour - 6) / 12, rise: 1.15)
+        sun = lighting.skySun
         sunShown = clear * Map3DSeeThrough.smoothstep(-0.08, 0.04, sun.y)
-        // The moon (full, the one shape drawn) crosses the night's sky as
-        // the sun the day's: up in the east at 18:00, down in the west at
-        // 06:00.
-        var night = lighting.hour - 18
-        if night < 0 { night += 24 }
-        moon = Self.path(at: night / 12, rise: 0.9)
+        // The moon (full, the one shape drawn) stands across the sky from
+        // the sun (decision 813; ``Map3DLighting/skyMoon``).
+        moon = lighting.skyMoon
         moonShown = clear * min(max(lighting.night, 0), 1) * Map3DSeeThrough.smoothstep(-0.04, 0.08, moon.y)
         stars = clear * Map3DSeeThrough.smoothstep(0.5, 1, lighting.night)
     }
