@@ -963,8 +963,12 @@ struct WinterEventSection: View {
                 }
             }
         } icon: {
-            Image(systemName: earned ? "checkmark.seal.fill" : mission.placeholderSymbol)
-                .foregroundStyle(earned ? Theme.success : Theme.primary)
+            // Decision 814: the week's badge, in colour once earned.
+            Image(decorative: mission.badgeImageName)
+                .resizable()
+                .frame(width: 28, height: 28)
+                .grayscale(earned ? 0 : 1)
+                .opacity(earned ? 1 : 0.5)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("goals.winter.mission")
@@ -975,9 +979,13 @@ struct WinterEventSection: View {
             ForEach(WinterMission.all) { mission in
                 let earned = records.hasEarned(mission, season: season)
                 VStack(spacing: 4) {
-                    Image(systemName: mission.placeholderSymbol)
-                        .font(.title3)
-                        .foregroundStyle(earned ? Theme.primary : Theme.textSecondary.opacity(0.4))
+                    // Decision 814: as the achievements' badges (decision
+                    // 396), not yet earned is grey and faint.
+                    Image(decorative: mission.badgeImageName)
+                        .resizable()
+                        .frame(width: 32, height: 32)
+                        .grayscale(earned ? 0 : 1)
+                        .opacity(earned ? 1 : 0.4)
                     Text(verbatim: mission.badge(in: language))
                         .font(.caption2)
                         .foregroundStyle(earned ? Theme.textPrimary : Theme.textSecondary)

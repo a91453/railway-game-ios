@@ -83,8 +83,9 @@ final class WinterEventTests: XCTestCase {
         XCTAssertEqual(WinterMission.all.filter { $0.isMet(by: facts) }.map(\.id), [])
     }
 
-    /// A line running all day: its stations are lit after 18:00, it runs
-    /// the market's evening when it has the trains, and past midnight.
+    /// A line running all day: its stations are lit after 18:00, its
+    /// evening trains count towards the market when it calls there, and
+    /// it runs past midnight.
     func testALineBetweenTwoTownsIsReadFromTheNetwork() throws {
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
         var world = try newGameLine(through: [towns[0], towns[1]])
@@ -92,12 +93,96 @@ final class WinterEventTests: XCTestCase {
         let facts = WinterMissionFacts(world: world)
         let line = try XCTUnwrap(world.lines.first)
         XCTAssertEqual(facts.stationsLitAtNight, Set(line.stops).count)
-        XCTAssertEqual(facts.hasEveningMarketLine, line.assignedTrains.count >= WinterMission.marketTrains)
+        // The first town's middle is the busiest place on a new map.
+        let market = try XCTUnwrap(WinterMarket.stations(in: world))
+        XCTAssertFalse(market.isDisjoint(with: line.stops), "the line calls at the market")
+        XCTAssertEqual(facts.eveningMarketDepartures, WinterMissionFacts.eveningDepartures(of: line, in: world))
+        XCTAssertGreaterThan(facts.eveningMarketDepartures, 0)
         // The helper's line runs all day: past midnight too.
         XCTAssertEqual(line.window, .allDay)
         XCTAssertTrue(facts.hasLineAfterMidnight)
         XCTAssertFalse(facts.hasLiveriedLineRunning)
         XCTAssertTrue(WinterMissionFacts(world: world, liveried: [line.id]).hasLiveriedLineRunning)
+    }
+
+    /// L23 P3-1 (decision 814): week 5 counts a line with trains after
+    /// midnight, whether its hours run into the next morning or open at
+    /// 00:00; one closing at midnight has none after it.
+    func testWeekFiveCountsALineOpeningAtMidnight() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 60)
+        let line = try XCTUnwrap(world.lines.first)
+        for (window, after) in [
+            (ServiceWindow.hours(open: 0, close: 360), true),
+            (.hours(open: 360, close: 1500), true),
+            (.hours(open: 360, close: 1440), false),
+            (.hours(open: 1200, close: 1440), false),
+        ] {
+            try world.setLineServiceWindow(line.id, to: window)
+            XCTAssertEqual(WinterMissionFacts(world: world).hasLineAfterMidnight, after, "\(window)")
+        }
+    }
+
+    /// Decision 814: on a map laid over Banqiao, the market is the civic
+    /// square's Christmasland, not the map's middle; over Tsim Sha Tsui,
+    /// its waterfront. A station far from it does not reach it.
+    func testTheMarketIsBanqiaoOrTsimShaTsuiWhereTheMapHasThem() throws {
+        for name in ["banqiao", "tsim-sha-tsui"] {
+            let plaza = try XCTUnwrap(Map3DWinterLights.plazas.first { $0.name == name })
+            var world = GameWorld.newGame()
+            // The map's middle 2 km north of the plaza.
+            let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((plaza.latitude + 0.018) * 1e7), longitude: Int64(plaza.longitude * 1e7)))
+            world.setGeoAnchor(anchor)
+            let frame = try XCTUnwrap(RealWorldFrame(world: world))
+            let at = frame.worldPosition(latitude: plaza.latitude, longitude: plaza.longitude)
+            let place = try XCTUnwrap(WinterMarket.place(in: world))
+            XCTAssertEqual(Double(place.x), at.x, accuracy: 1, name)
+            XCTAssertEqual(Double(place.y), at.y, accuracy: 1, name)
+            XCTAssertGreaterThan(Double(place.y) - frame.middleY, 1_900 * Double(WorldCoordinate.unitsPerMetre), "south of the middle")
+        }
+        // A map elsewhere has its busiest place instead.
+        var taichung = GameWorld.newGame()
+        taichung.setGeoAnchor(GeoAnchor(latitude: 241_400_000, longitude: 1_206_800_000))
+        let busiest = try XCTUnwrap(taichung.land.cells.max { $0.jobs < $1.jobs })
+        XCTAssertEqual(WinterMarket.place(in: taichung), busiest.middle)
+    }
+
+    /// The evening counts a line's trains over its round trip only in the
+    /// hours it is open: closed from 19:00, it has two of the five.
+    func testTheEveningDeparturesFollowTheLinesHours() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 60)
+        let line = try XCTUnwrap(world.lines.first)
+        let allEvening = WinterMissionFacts.eveningDepartures(of: line, in: world)
+        try world.setLineServiceWindow(line.id, to: .hours(open: 360, close: 19 * 60))
+        let shut = try XCTUnwrap(world.lines.first)
+        let early = WinterMissionFacts.eveningDepartures(of: shut, in: world)
+        XCTAssertLessThan(early, allEvening)
+        try world.setLineServiceWindow(line.id, to: .hours(open: 22 * 60, close: 1500))
+        XCTAssertEqual(WinterMissionFacts.eveningDepartures(of: try XCTUnwrap(world.lines.first), in: world), 0, "opens after the market")
+    }
+
+    /// Decision 814: each week's badge is a drawing in the app's asset
+    /// catalog, an SVG of the shapes Xcode reads (art-style §3).
+    func testEachBadgeIsADrawingInTheAssetCatalog() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let catalog = root.appendingPathComponent("RailwayGameApp/Resources/Assets.xcassets")
+        let allowed: Set<String> = ["svg", "path", "circle", "ellipse", "rect"]
+        for mission in WinterMission.all {
+            let set = catalog.appendingPathComponent("\(mission.badgeImageName).imageset")
+            let contents = try JSONSerialization.jsonObject(with: Data(contentsOf: set.appendingPathComponent("Contents.json"))) as? [String: Any]
+            let file = try XCTUnwrap((contents?["images"] as? [[String: Any]])?.first?["filename"] as? String, mission.id)
+            let svg = try String(contentsOf: set.appendingPathComponent(file), encoding: .utf8)
+            XCTAssertTrue(svg.hasPrefix(#"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">"#), mission.id)
+            let elements = Set(svg.split(separator: "<").dropFirst().compactMap { $0.split(whereSeparator: { " >/".contains($0) }).first.map(String.init) })
+            XCTAssertTrue(elements.isSubset(of: allowed), "\(mission.id): \(elements.subtracting(allowed))")
+            for banned in ["transform", "opacity", "gradient", "<text", "<g"] {
+                XCTAssertFalse(svg.contains(banned), "\(mission.id) uses \(banned)")
+            }
+        }
     }
 
     func testThresholds() throws {
@@ -114,6 +199,12 @@ final class WinterEventTests: XCTestCase {
         facts.yesterdayRiders = 1_000
         XCTAssertTrue(santa.isMet(by: facts))
         XCTAssertEqual(santa.progress(of: facts)?.now, 1_000)
+        let market = try XCTUnwrap(WinterMission.named("market"))
+        facts.eveningMarketDepartures = 5
+        XCTAssertFalse(market.isMet(by: facts))
+        XCTAssertEqual(market.progress(of: facts)?.need, 6)
+        facts.eveningMarketDepartures = 6
+        XCTAssertTrue(market.isMet(by: facts))
     }
 
     /// A badge is the week's only: met in week 2, the first week's mission
@@ -146,7 +237,7 @@ final class WinterEventTests: XCTestCase {
         var records = WinterEventRecords(file: directory.appendingPathComponent(WinterEventRecords.fileName))
         var facts = WinterMissionFacts()
         facts.stationsLitAtNight = 3
-        facts.hasEveningMarketLine = true
+        facts.eveningMarketDepartures = 6
         facts.yesterdayRiders = 1_000
         facts.hasLiveriedLineRunning = true
         facts.hasLineAfterMidnight = true
