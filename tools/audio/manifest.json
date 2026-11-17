@@ -209,7 +209,40 @@
       "peakDbfs": -3.09,
       "rmsDbfs": -15.98,
       "largestStep": 0.08463,
-      "loopSeam": 0.00635
+      "loopSeam": 0.00635,
+      "loudnessLufs": -15.95
+    },
+    {
+      "file": "music-winter.caf",
+      "stems": [
+        {
+          "score": "tools/audio/scores/winter-melody.score.json",
+          "scoreSha256": "418622a2216e28d0964dacd1a7bdcd7ec8ba7f4f2655a9d29cf4ea46afd1e87e",
+          "mml": "tools/audio/mml/winter-melody.mml",
+          "mmlSha256": "d91954af06c7d0edb3acabcff36186d61ad03ce612358f439b665d898addfad3"
+        },
+        {
+          "score": "tools/audio/scores/winter-harmony.score.json",
+          "scoreSha256": "04245402eee74d4c7e99d7e3c3fb1e63756e0ed77b2954b658e38f75673fa3e9",
+          "mml": "tools/audio/mml/winter-harmony.mml",
+          "mmlSha256": "49231db993964b73e333f06a5aec3f4c432dac933bdfc9566949d21203aa18bb"
+        },
+        {
+          "score": "tools/audio/scores/winter-rhythm.score.json",
+          "scoreSha256": "59a36f0b25072f8cb3cb8617bf42d61b77dbb5c14979b07b1177e96bb6578bdb",
+          "mml": "tools/audio/mml/winter-rhythm.mml",
+          "mmlSha256": "6cc80fea3947bd689d324fe6dbc3e96e66d89a9c9cb5449b8dc330a3c30937c6"
+        }
+      ],
+      "kind": "music",
+      "sha256": "f7d15ff7c53faa09bfc8f073604b2979be53907d33cafea8c4934cd5f6e51e6a",
+      "frames": 5376000,
+      "seconds": 112.0,
+      "peakDbfs": -2.26,
+      "rmsDbfs": -19.03,
+      "largestStep": 0.36209,
+      "loopSeam": 0.02393,
+      "loudnessLufs": -15.94
     },
     {
       "file": "new-train.wav",

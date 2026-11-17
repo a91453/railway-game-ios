@@ -17,9 +17,12 @@ station chime above), the metro interchange chime and the tourist chime,
 each also as its motif, the first notes alone, for high speed. Decision
 256: the goal-met tune is played from its score too (`scores/goal-met`,
 kept to the chime rules), as a whole only, and so is decision 315's
-line-acquired tune (`scores/line-acquired`). Every file
+line-acquired tune (`scores/line-acquired`). Decision 815:
+the winter tune (`music-winter.caf`, Jingle Bells, public domain) is mixed
+from three stems written in MML (`mml/winter-*.mml`), as loud as the theme
+by ITU-R BS.1770 loudness. Every file
 is listed in `manifest.json` with its source, SHA-256, peak, RMS and its
-loop seam or end.
+loop seam or end, and the music its loudness.
 
     python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
     python3 tools/audio/make_game_audio.py --check RailwayGameApp/Resources/Audio
@@ -103,6 +106,42 @@ def bell_frames(m, frames):
     k = np.arange(frames) / SR
     f = note_hz(m)
     return np.exp(-k * 2.2) * (np.sin(2 * np.pi * f * k) + 0.4 * np.sin(2 * np.pi * f * 2.76 * k) * np.exp(-k * 3))
+
+
+def glock_frames(m, frames):
+    """Decision 815: a glockenspiel, the bell's brighter, shorter cousin:
+    the bar's first three modes (1, 2.756 and 5.404 times the note), the
+    upper ones dying fast, struck in a millisecond."""
+    k = np.arange(frames) / SR
+    f = note_hz(m)
+    return np.minimum(1, k * 1000) * (
+        np.exp(-k * 2.6) * np.sin(2 * np.pi * f * k)
+        + 0.25 * np.exp(-k * 9) * np.sin(2 * np.pi * f * 2.756 * k)
+        + 0.08 * np.exp(-k * 20) * np.sin(2 * np.pi * f * 5.404 * k)
+    )
+
+
+def sleigh_frames(m, frames):
+    """Decision 815: a shake of sleigh bells: four little jingles within
+    35 ms, each a handful of inharmonic partials between 2.5 and 7 kHz
+    (where a phone's speaker still plays them) that die in a few
+    hundredths of a second, over a breath of high-passed noise. The note's pitch only picks the shake (its seed),
+    so a pattern of pitches does not repeat one shake mechanically."""
+    rng = np.random.default_rng(1_000 + m)
+    k = np.arange(frames) / SR
+    out = np.zeros(frames)
+    offsets = np.concatenate([[0.0], np.sort(rng.uniform(0.004, 0.035, 3))])
+    for j, at in enumerate(offsets):
+        i = int(at * SR)
+        t = k[: frames - i]
+        jingle = np.zeros(len(t))
+        for _ in range(5):
+            f = rng.uniform(2_500, 7_000)
+            jingle += rng.uniform(0.3, 1.0) * np.exp(-t * rng.uniform(25, 45)) * np.sin(2 * np.pi * f * t + rng.uniform(0, 2 * np.pi))
+        out[i:] += (1.0 if j == 0 else rng.uniform(0.5, 0.9)) * np.minimum(1, t * 2000) * jingle
+    noise = np.diff(rng.standard_normal(frames + 1))
+    out += 0.3 * noise * np.exp(-k * 60)
+    return out / 5
 
 
 def whoosh(length):
@@ -644,7 +683,7 @@ def write_caf(path, loop):
 # Decision 219: how long a struck voice rings when its note is shorter (a
 # bell or a pluck sounds on past its written length, as the chimes and the
 # music above always played them), cut at the score's end.
-RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9)}
+RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9), "glock": int(SR * 1.6), "sleigh": int(SR * 0.4)}
 # The official chimes' peak (§3 of the research note: the station chime's).
 CHIME_PEAK = 0.6
 
@@ -666,6 +705,10 @@ def voice(name, pitch, frames):
         return pluck_frames(pitch, max(frames, RING_FRAMES["pluck"]))
     if name == "pad":
         return pad([pitch], frames / SR)
+    if name == "glock":
+        return glock_frames(pitch, max(frames, RING_FRAMES["glock"]))
+    if name == "sleigh":
+        return sleigh_frames(pitch, max(frames, RING_FRAMES["sleigh"]))
     return clack()
 
 
@@ -718,6 +761,101 @@ def motif(score):
     (§6: 600× and faster play it for the watched train)."""
     sound = render(score, only=scores.motif_notes(score), frames=int(SR * scores.MOTIF_SECONDS))
     return normalized(fade_tail(sound, int(SR * scores.MOTIF_FADE_SECONDS)), CHIME_PEAK)
+
+
+# Decision 815: a pad note in a stem rings this long past its written
+# length, as the theme's pads always overlapped the next chord (`music()`
+# gives each 0.6 s more), so a chord held over a bar line does not dip.
+STEM_PAD_OVERLAP = 0.6
+# The longest any voice rings past its note: the bell.
+STEM_TAIL = int(SR * 2.2)
+
+
+def stem_voice(name, pitch, frames):
+    if name == "pad":
+        return pad([pitch], frames / SR + STEM_PAD_OVERLAP)
+    return voice(name, pitch, frames)
+
+
+def stems_loop(names):
+    """Decision 815: the loop the stems `names` make together (research
+    note §2.5): every stem the same tempo and length, mixed at the
+    velocities written (velocity ÷ 127 × gain ÷ 100, not each stem by its
+    own loudest note, so the stems keep their balance), the tails past the
+    end folded back onto the start so the loop runs on into itself, then
+    the theme's ping-pong echo of a dotted eighth, round the circle."""
+    sheets = [scores.load(os.path.join(HERE, "scores", f"{name}.score.json")) for name in names]
+    first = sheets[0]
+    for sheet in sheets:
+        if sheet["role"] != "stem":
+            raise SystemExit(f"{sheet['title']} is not a stem")
+        if (sheet["tempo"], sheet["length"], sheet["beatsPerBar"]) != (first["tempo"], first["length"], first["beatsPerBar"]):
+            raise SystemExit(f"{sheet['title']}: the stems differ in tempo, length or metre")
+    step = frames_per_tick(first)
+    n = first["length"] * step
+    assert n % 64 == 0, "the loop must be whole IMA4 packets"
+    mix = np.zeros((n + STEM_TAIL + int(SR * STEM_PAD_OVERLAP), 2))
+    for sheet in sheets:
+        for track in sheet["tracks"]:
+            pan = track["pan"] / 100
+            for note in track["notes"]:
+                start = note["start"] * step
+                amp = note["velocity"] / 127 * track["gain"] / 100
+                sig = amp * stem_voice(track["voice"], note["pitch"], note["length"] * step)
+                sig = sig[: len(mix) - start]
+                mix[start : start + len(sig), 0] += sig * (1 - pan) / 2**0.5
+                mix[start : start + len(sig), 1] += sig * (1 + pan) / 2**0.5
+    loop = mix[:n].copy()
+    loop[: len(mix) - n] += mix[n:]
+    d = int(SR * 60 / first["tempo"] * 0.75)
+    echo = np.zeros_like(loop)
+    echo[:, 0] = np.roll(loop[:, 1], d) * 0.25
+    echo[:, 1] = np.roll(loop[:, 0], d) * 0.25
+    return loop + echo
+
+
+# Decision 815: the winter tune, played in the game's music from 1 December
+# to 6 January (`MusicTune`): its stems, in mixing order.
+WINTER_STEMS = ["winter-melody", "winter-harmony", "winter-rhythm"]
+
+
+def k_weighted_power(x):
+    """ITU-R BS.1770's K-weighting (its two 48 kHz biquads) applied to a
+    loop round the circle, through the filters' exact frequency response:
+    a loop has no start, so this is the filters' steady state. Returns the
+    weighted signal, frames × channels."""
+    z = np.exp(-1j * 2 * np.pi * np.fft.rfftfreq(len(x)))
+    shelf = (1.53512485958697 - 2.69169618940638 * z + 1.19839281085285 * z**2) / (1 - 1.69065929318241 * z + 0.73248077421585 * z**2)
+    high = (1 - 2 * z + z**2) / (1 - 1.99004745483398 * z + 0.99007225036621 * z**2)
+    return np.fft.irfft(np.fft.rfft(x, axis=0) * (shelf * high)[:, None], len(x), axis=0)
+
+
+def loudness_lufs(x):
+    """Integrated loudness (LUFS, ITU-R BS.1770-4) of a stereo loop: 400 ms
+    blocks every 100 ms, gated at -70 LUFS and then 10 LU under the
+    blocks' loudness. The manifest records it for the music; the winter
+    tune is levelled to the theme's."""
+    y = k_weighted_power(x)
+    block, hop = int(0.4 * SR), int(0.1 * SR)
+    power = np.array([np.sum(np.mean(y[i : i + block] ** 2, axis=0)) for i in range(0, len(y) - block + 1, hop)])
+    loud = -0.691 + 10 * np.log10(np.maximum(power, 1e-20))
+    power = power[loud > -70]
+    relative = -0.691 + 10 * np.log10(power.mean()) - 10
+    power = power[-0.691 + 10 * np.log10(power) > relative]
+    return -0.691 + 10 * np.log10(power.mean())
+
+
+# The music's peak (decision 79): the theme is normalized to it, and the
+# winter tune, levelled by loudness to the theme, must stay under it.
+MUSIC_PEAK = 0.7
+
+
+def level_to(x, lufs):
+    """`x` scaled to `lufs`; it must not peak above 0.9."""
+    y = x * 10 ** ((lufs - loudness_lufs(x)) / 20)
+    if np.abs(y).max() > 0.9:
+        raise SystemExit(f"levelled to {lufs:.2f} LUFS the loop peaks at {np.abs(y).max():.2f}")
+    return y
 
 
 # Decision 219: the station chimes, by score: (score, chime file, motif file).
@@ -831,6 +969,17 @@ def manifest(out_dir):
     for name, file in TUNES:
         path = os.path.join(HERE, "scores", f"{name}.score.json")
         by_file[file] = {"score": relative(path), "scoreSha256": sha256(path), "kind": "tune"}
+    # Decision 815: the winter tune, from its stems.
+    stems = []
+    for name in WINTER_STEMS:
+        path = os.path.join(HERE, "scores", f"{name}.score.json")
+        stem = {"score": relative(path), "scoreSha256": sha256(path)}
+        mml = scores.load(path).get("source", "")
+        if mml.startswith("tools/audio/mml/"):
+            stem["mml"] = mml
+            stem["mmlSha256"] = sha256(os.path.join(ROOT, mml))
+        stems.append(stem)
+    by_file["music-winter.caf"] = {"stems": stems, "kind": "music"}
     for file in sorted(os.listdir(out_dir)):
         entry = {"file": file}
         if file in by_file:
@@ -847,6 +996,9 @@ def manifest(out_dir):
         # The thunder is a CAF too (IMA4 keeps it small), but plays once.
         loops = file.endswith(".caf") and not file.startswith("thunder")
         entry.update(measured(os.path.join(out_dir, file), loops=loops))
+        if entry["kind"] == "music":
+            # Decision 815: the music's loudness, so its tunes stay level.
+            entry["loudnessLufs"] = round(float(loudness_lufs(read_pcm(os.path.join(out_dir, file)))), 2)
         files.append(entry)
     data = {
         "about": "Made by tools/audio/make_game_audio.py (decision 219); never edit by hand.",
@@ -869,7 +1021,10 @@ def manifest(out_dir):
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-    write_caf(os.path.join(out_dir, "music-loop.caf"), normalized(music(cycles=2), 0.7))
+    theme = normalized(music(cycles=2), MUSIC_PEAK)
+    write_caf(os.path.join(out_dir, "music-loop.caf"), theme)
+    # Decision 815: the winter tune, as loud as the theme.
+    write_caf(os.path.join(out_dir, "music-winter.caf"), level_to(stems_loop(WINTER_STEMS), loudness_lufs(theme)))
     # Decision 343: the running loops.
     write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
     write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))

@@ -45,14 +45,27 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | `length` | 全長（tick）；鈴聲在這裡截斷 |
 | `motif` | 高速時播前幾個音：鈴聲與發車旋律 2–3，分軌 0 |
 | `fadeOut` | 結尾線性淡出的長度（tick），0 是不淡出 |
-| `tracks[]` | 每軌：`voice`（`bell`、`pluck`、`pad`、`clack`）、`gain`（0–100）、`pan`（−100–100）、`notes[]` |
+| `tracks[]` | 每軌：`voice`（`bell`、`pluck`、`pad`、`clack`，決策 815 加 `glock` 鐘琴、`sleigh` 雪橇鈴）、`gain`（0–100）、`pan`（−100–100）、`notes[]` |
 | `notes[]` | `pitch`（MIDI 0–127）、`start`、`length`（tick，結束不超過 `length`）、`velocity`（1–127）；依 `start`、`pitch` 排序，不重複 |
 
 - **每拍 960 tick**：64 分音符 60、三連音 320、五連音 192 都整除。
 - **力度是相對的**：合成時一個音的大小是 `velocity ÷ 最大的力度 × gain ÷ 100`，整個檔案再正規化到峰值。
-- **撥弦與鐘聲會響過寫的長度**（鐘 2.2 秒、撥弦 0.9 秒，比寫的短時照自然的餘音），到樂譜結尾截斷；`pad` 照寫的長度；`clack` 固定 0.08 秒。所有軌都不左右移時輸出單聲道複製成兩聲道。
+- **撥弦與鐘聲會響過寫的長度**（鐘 2.2 秒、撥弦 0.9 秒、鐘琴 1.6 秒、雪橇鈴 0.4 秒，比寫的短時照自然的餘音），到樂譜結尾截斷；`pad` 照寫的長度；`clack` 固定 0.08 秒。所有軌都不左右移時輸出單聲道複製成兩聲道。
+- **鐘琴 `glock`**（決策 815）：鐵琴的前三個振動模態（1、2.756、5.404 倍），高的兩個很快消失，1 毫秒敲下；比 `bell` 亮、短。**雪橇鈴 `sleigh`**：35 毫秒內搖出四個小鈴，每個是 3.5–8.5 kHz 之間五個不成諧波的音，幾百分之一秒就消失，下面一口高通的氣聲；音高只用來選哪一種搖法（固定種子），所以同一個節奏不會每下都一樣。
 - **鈴聲（`role: chime`）另外的規則**（研究文件第 3 節）：最長 3 秒、最多 4 軌、音域 C3–C7（MIDI 48–96）、只用 C 大調五聲音階 C D E G A、動機的音都在前 0.68 秒內開始。
 - **動機檔**：只播動機那幾個音，0.8 秒，最後 0.12 秒淡出，峰值同鈴聲 0.6。600 倍速以上在看的列車播它（研究文件第 6 節）。
+
+## 配樂分軌（`role: stem`，決策 815）
+
+一首配樂可以由幾份分軌樂譜一起循環（研究文件 §2.5），每份分軌一份 MML（六格不夠放一首完整的編曲）。`stems_loop()` 的規則：
+
+- 所有分軌同一個速度、長度、拍號；長度要是 IMA4 封包（64 個取樣）的整數倍。
+- **力度照寫的算**：一個音的大小是 `velocity ÷ 127 × gain ÷ 100`，不是各自除以自己最大的力度，所以分軌之間的平衡就是寫的那樣（研究文件 §2.5：分軌不各自正規化）。
+- 分軌裡的 `pad` 比寫的長度多響 0.6 秒（主題曲的和弦墊一直是這樣疊到下一個和弦），同一個和弦跨小節時用 `&` 連起來，就不會每小節掉下去。
+- 響過結尾的餘音折回開頭，再加主題曲那個附點八分的左右回聲（也是繞一圈），所以結尾接得回開頭。
+- 整首照響度（ITU-R BS.1770-4 的 LUFS，`loudness_lufs()`，K 加權用兩個 48 kHz 雙二階濾波器的頻率響應繞圈套上）調到和主題曲一樣大，峰值不能超過 0.9。
+
+冬季曲（`music-winter.caf`）是 `mml/winter-melody`、`winter-harmony`、`winter-rhythm` 三份。
 
 ## 清單（`manifest.json`）
 
@@ -62,6 +75,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 - 音檔的 SHA-256、取樣數、秒數；
 - 峰值與 RMS（dBFS）、相鄰兩個取樣最大的落差（`largestStep`）；
 - 循環的音樂、行駛聲與雨聲記 `loopSeam`（最後一個取樣跳回第一個的落差，比 `largestStep` 大就會聽到「喀」一聲），單次的音效記 `endLevel`（最後一個取樣的大小）。
+- 音樂另外記 `loudnessLufs`（整首的響度，決策 815）：兩首要在 0.5 LU 以內（`MusicTuneTests`）。從分軌合成的音樂記每份分軌的樂譜、MML 與 SHA-256（`stems`）。
 
 另外記下 `mml-core/core.js` 的來源 commit 與 SHA-256。三種到站鈴的 RMS 差超過 3 dB 時腳本停下（研究文件第 3 節）。
 
@@ -70,6 +84,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | 檔案 | 內容 | 遊戲裡 |
 | --- | --- | --- |
 | `music-loop.caf` | 38.4 秒、可無縫循環的音樂：和弦墊、琶音與鐵軌接縫聲，C 大調 I – vi – IV – V，100 bpm；IMA4，48 kHz 立體聲 | App 在前景時循環播放 |
+| `music-winter.caf` | 112 秒、可無縫循環的冬季曲：〈Jingle Bells〉（J. Pierpont 1857，公有領域）自己重新編曲，沒有任何現成錄音。前奏 4 小節、主歌 16、副歌 16（鐘琴，記譜高八度的 C6–G6）、間奏 4（鐘）、副歌再一次 16（鐘琴，撥弦低三度合唱、鐘的高聲部）；和弦墊、撥弦低音一拍一拍、撥弦琶音、雪橇鈴（2.5–7 kHz）與鐵軌接縫聲，C 大調，120 bpm；響度和主題曲一樣（−15.9 LUFS）；分軌 `mml/winter-*.mml`；IMA4 | 12/1–1/6（裝置日期，決策 815 `MusicTune`）和 `music-loop.caf` 輪流，各播一遍；開關、音量、跟車淡出照舊 |
 | `station-chime.wav` | 兩個音的到站鈴（C6、G6），樂譜 `scores/chime-local.score.json` | 在看的列車到「地方小站」；沒在看的列車到任何站（小聲，決策 219） |
 | `chime-metro.wav` | 四音鐘 C5–E5–G5–C6，每 0.3 秒一個，1.8 秒；照搬參考庫的 `chimeBuffer`，用我們的鐘聲，樂譜 `scores/chime-metro.score.json` | 在看的列車到「都會轉運」站：停靠的客運路線 2 條以上，或有高鐵（決策 219） |
 | `chime-tourist.wav` | 撥弦 G5 A5 C6 D6 往上、E6、落在 C6，下面一聲小小的 C5 鐘，五聲音階，2.4 秒；MML 原稿 `mml/chime-tourist.mml` | 在看的列車到「觀光」站：800 m 內有景點（決策 174、219） |
@@ -102,7 +117,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 
 ## 來源與授權
 
-全部由這支腳本用正弦波與固定種子的雜訊產生，沒有取樣、現成音樂或第三方音源（行駛聲只用了錄音量到的頻譜數字，見下），是本專案自己的素材。都會轉運鈴的音高與節奏照搬作者的參考庫（`a91453/railway-reference-private` 的 `Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs`，也是合成的、沒有音檔）。`mml-core/core.js` 是作者的 `a91453/mml-tools`（MIT），授權在 `mml-core/LICENSE`。
+全部由這支腳本用正弦波與固定種子的雜訊產生，沒有取樣、現成錄音或第三方音源（冬季曲與垃圾車的曲子是公有領域的作品，自己重新編寫）（行駛聲只用了錄音量到的頻譜數字，見下），是本專案自己的素材。都會轉運鈴的音高與節奏照搬作者的參考庫（`a91453/railway-reference-private` 的 `Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs`，也是合成的、沒有音檔）。`mml-core/core.js` 是作者的 `a91453/mml-tools`（MIT），授權在 `mml-core/LICENSE`。
 
 行駛聲（決策 343）照真實錄音的頻譜合成，錄音本身不提交、不打包。`measure_running_spectrum.py` 量錄音一段的三分之一八度頻帶中位數（每 2 秒一窗），結果寫在 `make_game_audio.py` 的 `RUNNING_SPECTRA`；重產不需要錄音。量的錄音（都在 radio aporee ::: maps，Internet Archive 上）：
 
@@ -171,4 +186,4 @@ python3 -I tools/audio/measure_thunder.py SoundMap201504211.mp3 75.4 0 74 SoundM
 
 資料來源頁的「聲音」多了一筆（`DataSourceCredits` 的 `weatherSound`），寫六段的標題、錄音者、授權與連結。
 
-音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒；柴油的怠轉 192,000 個，4 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
+音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。冬季曲 56 小節、120 bpm，5,376,000 個取樣（84,000 個封包），`stems_loop()` 會檢查。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒；柴油的怠轉 192,000 個，4 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
