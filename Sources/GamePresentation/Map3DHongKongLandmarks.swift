@@ -94,6 +94,10 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         0xC8CDD2, // mast: Map3DPalette.tankSteel
     ].map(Map3DColor.rgb)
 
+    /// Decision 817: the materials that are glass (blue-grey, silver and
+    /// dark), lit at night.
+    static let glassMaterials: Set<Int> = [0, 1, 2]
+
     /// The model in full close by, or the studio's far model.
     func model(full: Bool) -> LandmarkMesh {
         let name = rawValue + (full ? "" : "-far")
@@ -126,7 +130,18 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
             let paint = Int(bytes[at])
             at += 1
             guard [a, b, c].allSatisfy(points.indices.contains), materialColours.indices.contains(paint) else { return nil }
-            mesh.tri(points[a], points[b], points[c], materialColours[paint], LandmarkMesh.plain)
+            // Decision 817: their glass walls the landmarks' curtain glass
+            // (``Map3DVertex/curtainGlass``), u metres along the wall and v
+            // metres up: mullions and floors by day, one bay in three lit
+            // after dark, as Taipei's (decision 791 left them dark).
+            let (p, q, s) = (points[a], points[b], points[c])
+            let n = Map3DPoint(q.x - p.x, q.y - p.y, q.z - p.z).cross(Map3DPoint(s.x - p.x, s.y - p.y, s.z - p.z)).normalized
+            if glassMaterials.contains(paint), let n, abs(n.z) < 0.7, let along = Map3DPoint(-n.y, n.x, 0).normalized {
+                let uv = [p, q, s].map { (x: $0.x * along.x + $0.y * along.y, y: $0.z) }
+                mesh.tri(p, q, s, materialColours[paint], LandmarkMesh.curtain, uv)
+            } else {
+                mesh.tri(p, q, s, materialColours[paint], LandmarkMesh.plain)
+            }
         }
         guard at == bytes.count else { return nil }
         return mesh

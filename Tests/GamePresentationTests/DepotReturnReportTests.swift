@@ -135,11 +135,20 @@ final class DepotReturnReportTests: XCTestCase {
         try report("rovaniemi-mul", Self.rovaniemiBought("vr:MUL"))
     }
 
-    private static func rovaniemiBought(_ id: String) throws -> GameWorld {
+    /// HEALTH-136: both of Rovaniemi's lines bought in one game, the
+    /// Kemijärvi line first (the order decision 809 opened).
+    func testRovaniemiBothLines() throws {
+        try wanted("rovaniemi-both")
+        try report("rovaniemi-both", Self.rovaniemiBought("vr:KJA", "vr:MUL"))
+    }
+
+    private static func rovaniemiBought(_ ids: String...) throws -> GameWorld {
         let session = try RovaniemiRailwaysTests.rovaniemi()
-        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
-        let offer = session.realLineOffer(for: line)
-        XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
+        for id in ids {
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
+            let offer = session.realLineOffer(for: line)
+            XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
+        }
         return session.world
     }
 

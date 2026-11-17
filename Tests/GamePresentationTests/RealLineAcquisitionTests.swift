@@ -203,6 +203,20 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(session.world.station(id: depot.id)?.isDepot, true)
     }
 
+    /// Decision 824: Zhuzhong is one island and one side platform, but the
+    /// Liujia Line's two tracks lie between them and the Neiwan Line has
+    /// the island's other face alone, so neither line is laid an island
+    /// there; the Neiwan Line's other real islands (竹東, 九讚頭) still are.
+    func testZhuzhongIsNotLaidAsAnIsland() throws {
+        let session = try Self.game(round: "NEIWAN", side: 1 << 21)
+        let neiwan = try line("NEIWAN", in: session), liujia = try line("LIUJIA", in: session)
+        XCTAssertFalse(neiwan.islandStations.contains("竹中"))
+        XCTAssertFalse(liujia.islandStations.contains("竹中"))
+        XCTAssertEqual(Set(neiwan.islandStations), ["竹東", "九讚頭"])
+        let zhuzhong = try XCTUnwrap(session.railways?.stations.first { $0.id == "tra_sched|竹中" })
+        XCTAssertEqual(RealStationPlatformKind.of(zhuzhong), .sides)
+    }
+
     /// Decision 462: the Liujia and Neiwan Lines part at Zhuzhong, the
     /// Liujia Line's platforms up on its viaduct and the Neiwan Line's on
     /// the ground. Either is bought after the other, in either order: one
@@ -572,6 +586,17 @@ final class RealLineAcquisitionTests: XCTestCase {
         let laid = builder.laidPlatforms.filter { $0.station == shalun.id }
         XCTAssertEqual(laid.filter(\.island).count, 2, "the island between the first two tracks")
         XCTAssertEqual(laid.filter { !$0.island }.count, 1, "a side platform at the third")
+        // Decision 792's sequel: Zhongzhou's two tracks run apart along
+        // its platforms on the junction's sharp curve (12 to 17 m), and
+        // still have their island between them.
+        let zhongzhou = try XCTUnwrap(world.stations.first { $0.name == "中洲" })
+        let near = Map3DScene.frame(world: world, focus: (x: Double(zhongzhou.location.x), y: Double(zhongzhou.location.y)))
+        var nearBuilder = Map3DScene.Builder(originX: near.originX, originY: near.originY, region: near.region, world: world)
+        _ = nearBuilder.addTrack(snapshot)
+        nearBuilder.addPlatforms(snapshot)
+        let zhongzhouLaid = nearBuilder.laidPlatforms.filter { $0.station == zhongzhou.id }
+        XCTAssertEqual(zhongzhouLaid.filter(\.island).count, 2, "Zhongzhou's island between the first two tracks")
+        XCTAssertEqual(zhongzhouLaid.filter { !$0.island }.count, 1, "a side platform at Zhongzhou's third")
         var running = world
         try running.advance(ticks: 2 * 24 * 60)
     }

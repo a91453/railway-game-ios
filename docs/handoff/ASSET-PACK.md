@@ -31,6 +31,10 @@ extension、App Group 權限、Info.plist 三個鍵、`testflight.yml` 打包上
 - 還留下：第三段（上面第 3 點）照舊；第三段把香港移出 App 之後，「使用內建資料」這個說法要跟著改（那時沒有內建的）。
 - UNVERIFIED：iOS 編譯（看 PR 的 `ios-build.yml`）；實機下載與那一列的顯示。
 
+## MAPPACK-FIX（2026-11-17）
+
+136 實機香港地圖包下載到但被拒用（`incomplete("airfields.json")`）：每個檔改各自問 `AssetPackManager`，拒用時回報帶線索。見 `docs/handoff/MAPPACK-FIX.md`、決策 819；驗收是設定那一列變「已下載」，之後才做上面的第三段。
+
 ## UNVERIFIED
 
 - `MapPackDownloader` 在 iOS 上的編譯（看 PR 的 `ios-build.yml`）。
