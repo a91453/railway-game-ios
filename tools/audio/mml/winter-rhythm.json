@@ -5,7 +5,7 @@
   "motif": 0,
   "fadeOut": 0,
   "tracks": [
-    {"voice": "sleigh", "gain": 50, "pan": -30},
+    {"voice": "sleigh", "gain": 90, "pan": -30},
     {"voice": "clack", "gain": 35, "pan": 0},
     null,
     null,

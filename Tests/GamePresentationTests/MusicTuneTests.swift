@@ -46,6 +46,46 @@ final class MusicTuneTests: XCTestCase {
         XCTAssertEqual(MusicTune.playing(at: taipeiMidnight, calendar: utc), .theme)
     }
 
+    /// During the winter event the winter tune and the theme take turns,
+    /// each played once; outside it the theme loops on its own.
+    func testTheTunesTakeTurnsDuringTheWinterEvent() {
+        let christmas = date(2026, 12, 25)
+        let winter = MusicPlay(tune: .winter, loops: false)
+        let theme = MusicPlay(tune: .theme, loops: false)
+        XCTAssertEqual(MusicTune.play(at: christmas, continuing: nil, calendar: calendar), winter)
+        XCTAssertEqual(MusicTune.play(after: .winter, at: christmas, calendar: calendar), theme)
+        XCTAssertEqual(MusicTune.play(after: .theme, at: christmas, calendar: calendar), winter)
+        // Four turns: winter, theme, winter, theme.
+        var turns = [MusicTune.play(at: christmas, continuing: nil, calendar: calendar)]
+        while turns.count < 4 { turns.append(MusicTune.play(after: turns.last!.tune, at: christmas, calendar: calendar)) }
+        XCTAssertEqual(turns.map(\.tune), [.winter, .theme, .winter, .theme])
+        XCTAssertFalse(turns.contains(where: \.loops))
+
+        let summer = date(2027, 7, 15)
+        let looping = MusicPlay(tune: .theme, loops: true)
+        XCTAssertEqual(MusicTune.play(at: summer, continuing: nil, calendar: calendar), looping)
+        XCTAssertEqual(MusicTune.play(at: summer, continuing: looping, calendar: calendar), looping)
+    }
+
+    /// Coming back to the app keeps the turn under way; the event's first
+    /// and last days switch at once.
+    func testATurnGoesOnAndTheEventsEdgesSwitch() {
+        let christmas = date(2026, 12, 25)
+        let theme = MusicPlay(tune: .theme, loops: false)
+        let winter = MusicPlay(tune: .winter, loops: false)
+        let looping = MusicPlay(tune: .theme, loops: true)
+        XCTAssertEqual(MusicTune.play(at: christmas, continuing: theme, calendar: calendar), theme)
+        XCTAssertEqual(MusicTune.play(at: christmas, continuing: winter, calendar: calendar), winter)
+        // The theme looping since November gives way on 1 December.
+        XCTAssertEqual(MusicTune.play(at: date(2026, 12, 1, 0, 0), continuing: looping, calendar: calendar), winter)
+        // On 7 January either turn gives way to the theme, looping.
+        let over = date(2027, 1, 7, 0, 0)
+        XCTAssertEqual(MusicTune.play(at: over, continuing: winter, calendar: calendar), looping)
+        XCTAssertEqual(MusicTune.play(at: over, continuing: theme, calendar: calendar), looping)
+        XCTAssertEqual(MusicTune.play(after: .winter, at: over, calendar: calendar), looping)
+        XCTAssertEqual(MusicTune.play(after: .theme, at: over, calendar: calendar), looping)
+    }
+
     /// Both tunes are made by the audio tool, listed in its manifest as
     /// music loops at the same loudness, and bundled with the app.
     func testEveryTuneIsABundledLoopInTheManifest() throws {

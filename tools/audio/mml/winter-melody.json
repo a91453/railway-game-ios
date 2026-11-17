@@ -6,7 +6,7 @@
   "fadeOut": 0,
   "tracks": [
     {"voice": "pluck", "gain": 60, "pan": 0},
-    {"voice": "glock", "gain": 55, "pan": -10},
+    {"voice": "glock", "gain": 42, "pan": -10},
     {"voice": "bell", "gain": 35, "pan": 25},
     null,
     null,
