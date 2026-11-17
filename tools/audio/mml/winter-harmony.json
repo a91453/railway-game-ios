@@ -1,0 +1,15 @@
+{
+  "role": "stem",
+  "title": "Winter tune: pad, bass and arpeggio",
+  "beatsPerBar": 4,
+  "motif": 0,
+  "fadeOut": 0,
+  "tracks": [
+    {"voice": "pad", "gain": 26, "pan": -15},
+    {"voice": "pad", "gain": 26, "pan": 0},
+    {"voice": "pad", "gain": 26, "pan": 15},
+    {"voice": "pluck", "gain": 32, "pan": 0},
+    {"voice": "pluck", "gain": 16, "pan": 35},
+    null
+  ]
+}

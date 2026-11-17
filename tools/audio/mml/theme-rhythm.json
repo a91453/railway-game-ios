@@ -1,0 +1,15 @@
+{
+  "role": "stem",
+  "title": "Theme: rail joints",
+  "beatsPerBar": 4,
+  "motif": 0,
+  "fadeOut": 0,
+  "tracks": [
+    {"voice": "clack", "gain": 35, "pan": 0},
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
+}
