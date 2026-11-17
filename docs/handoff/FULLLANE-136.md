@@ -1,10 +1,10 @@
 # FULLLANE-136：136 full lane 唯一的紅（橫拿教學卡在第 8 步）
 
-## 進度
+## 進度（收尾）
 
-- 做到哪：已修測試，draft PR，等 `ios-build.yml` 的 `only_testing` 單跑 `TutorialJourneyUITests` 的結果（寫在 PR）。
-- 已驗證：根因從 run 43998599964 的 trace 與 xcresult 錄影確認（見下）。Linux 沒有可跑的部分（只動 UI 測試）。
-- 下一步：看 only_testing run 的結果，綠了就在 #2118 留「可合併、head」並轉 ready。
+- 做了什麼：查出 136 full lane 的紅是系統取消了第 8 步那一下地圖點擊（不是 #2325、玩家不會卡）；測試的放車站點擊沒前進就再點一次。PR #2341。
+- 已驗證：`ios-build.yml` 的 `only_testing=TutorialJourneyUITests`（run 44020758876，`d5cf85d`）通過，`testTheWholeTutorialOnAPhoneOnItsSide` 102 秒；這次沒有用到重點（log 沒有 "tapping once more"）。PR 的 Swift CI (gate) 與 Xcode build 綠。
+- 剩下：無。下一次 full lane 確認仍綠即可。
 
 ## 派工
 
@@ -27,5 +27,5 @@
 
 ## 驗證
 
-- UI 測試：`ios-build.yml` 的 `only_testing`（`TutorialJourneyUITests`）的結果寫在 PR。
+- VERIFIED（macOS CI）：`ios-build.yml` 的 `only_testing=TutorialJourneyUITests`，run 44020758876，手機橫拿那支通過（102 秒），iPad 那支照規則略過。
 - UNVERIFIED：實機沒看（不需要：畫面沒改）。
