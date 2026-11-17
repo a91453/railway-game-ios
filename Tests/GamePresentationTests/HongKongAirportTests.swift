@@ -142,7 +142,12 @@ final class HongKongAirportTests: XCTestCase {
         XCTAssertGreaterThan(count([Paint.yellow], in: scene), 300, "the taxiways' centre lines")
         // The lots' ground: the corners of the 64 m squares whose four
         // squares round them are all on the airport.
-        let tinted = Map3DPalette.groundMixes.subtracting([Map3DPalette.ground])
+        // Decision 811: only the lots' kinds (decision 720); the land
+        // cover's take the base map's own grass, which the airfield has.
+        let lots: [Map3DPalette.GroundKind] = [.plain, .yard, .paved]
+        var tinted = Set<UInt32>()
+        for a in lots { for b in lots { for c in lots { for d in lots { tinted.insert(Map3DPalette.ground(mixing: [a, b, c, d])) } } } }
+        tinted.remove(Map3DPalette.ground)
         let cell = Double(Land.cellLength)
         var airportCorners = Set<Map3DScene.ChunkKey>()
         let noBuild = try XCTUnwrap(Self.pack().noBuildLand(airfields: false))
