@@ -1653,7 +1653,10 @@ final class Map3DMetalView: MTKView {
         if !below {
             encoder.setRenderPipelineState(skyPipeline)
             encoder.setDepthStencilState(skyDepthState)
-            Map3DSky(shown).floats(camera: camera).withUnsafeBytes { bytes in
+            // Decision 813's later part: the aurora moves on the clock, and
+            // stands still under Reduce Motion.
+            let skySeconds = reduceMotion ? 0 : Float(start.truncatingRemainder(dividingBy: 100_000))
+            Map3DSky(shown).floats(camera: camera, seconds: skySeconds).withUnsafeBytes { bytes in
                 guard let base = bytes.baseAddress else { return }
                 encoder.setFragmentBytes(base, length: bytes.count, index: 3)
             }
