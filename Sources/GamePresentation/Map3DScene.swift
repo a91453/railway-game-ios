@@ -164,6 +164,11 @@ public struct Map3DScene: Sendable {
     /// for the far view's report (`Map3DFarViewTests`).
     let layers: [LayerTriangles]
 
+    /// Decision 820: how long each step of building the scene took, in
+    /// seconds, in the order they ran, for the build-time report
+    /// (`Map3DSceneBuildTimeReportTests`). Not part of what is drawn.
+    let steps: [(step: String, seconds: Double)]
+
     /// Decision 585 PR-3: the water as drawn within `radius` metres of
     /// `centre`, for the ferry piers to stand at its shore. The ground's
     /// faces (the first ``Chunk/baseIndexCount`` indices) no more than 4 m
@@ -481,11 +486,13 @@ public struct Map3DScene: Sendable {
         // Decision 811: the land cover round the region, for the ground
         // and the forests' trees.
         if let landCover, let frame = RealWorldFrame(world: world) { builder.readLandCover(landCover, frame: frame) }
+        builder.time("read the land cover")
         // Decision 732: Hong Kong's streets on its map.
         builder.streetLife.region = builder.look.streets
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 737: the ground levelled before anything is laid on it.
         builder.levelGround(under: snapshot)
+        builder.time("level the ground under the track")
         // Decision 234: on a real-world map, the base map's water, cover
         // and roads; the ground's own water then gives way to its finer
         // shores.
@@ -497,12 +504,14 @@ public struct Map3DScene: Sendable {
             builder.streetFrontage = true
             if let noBuild { builder.prepareNoBuild(noBuild, frame: frame) }
         }
+        builder.time("read the base map")
         let airfields = real == nil ? nil : noBuild?.airfields
         // Decision 359 (續): the whole network's, so a chunk built apart
         // lays a bore beside another as the whole scene does; decision 375:
         // first, as its trenches are cut out of the ground and what lies
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
+        builder.time("track cover")
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
         // Decision 720: the ground under the city's lots in their colours,
@@ -510,7 +519,9 @@ public struct Map3DScene: Sendable {
         builder.addGround(water: real == nil, lots: city, clearOf: builder.trackCells(snapshot))
         builder.mark("ground")
         drawnGround = builder.groundGrid()
+        builder.time("ground grid")
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
+        builder.time("base map")
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads(baseMap: baseMap, frame: RealWorldFrame(world: world)) }
         builder.mark("own roads")
@@ -638,6 +649,7 @@ public struct Map3DScene: Sendable {
             builder.lowRise = Map3DLowRise(tiles: tiles, frame: frame)
         }
         let beforeFootprints = standing
+        builder.time("read the footprints")
         if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
         builder.mark("real buildings (footprints)")
         // Decision 723: the cells the real buildings cover little of,
@@ -673,6 +685,8 @@ public struct Map3DScene: Sendable {
         layers = builder.layers
 
         chunks = builder.chunks()
+        builder.time("chunks")
+        steps = builder.steps
         streetLife = builder.streetLife
         levelCrossings = builder.crossings
     }
@@ -1026,8 +1040,22 @@ extension Map3DScene {
         var layers: [LayerTriangles] = []
         private var marked = LayerTriangles(layer: "")
 
+        /// Decision 820: how long each step took (``Map3DScene/steps``),
+        /// and when the last one ended.
+        var steps: [(step: String, seconds: Double)] = []
+        private var stepEnded = ContinuousClock.now
+
+        /// Decision 820: the time since the last step is `step`'s.
+        mutating func time(_ step: String) {
+            let now = ContinuousClock.now, took = (now - stepEnded).components
+            stepEnded = now
+            steps.append((step, Double(took.seconds) + Double(took.attoseconds) * 1e-18))
+        }
+
         /// Decision 709: everything built since the last mark is `layer`'s.
+        /// Decision 820: and the time since the last step.
         mutating func mark(_ layer: String) {
+            time(layer)
             func sum(_ meshes: [ChunkKey: Map3DMesh]) -> Int { meshes.values.reduce(0) { $0 + $1.triangleCount } }
             let now = LayerTriangles(layer: layer, base: sum(meshes), near: sum(nearMeshes),
                                      far: sum(farMeshes) + sum(ownColourFar),
