@@ -1,4 +1,4 @@
-# ROAD-STRIP-WEDGE（2026-11-18，工作串「修正橋端楔形與尖刺」）
+# ROAD-STRIP-WEDGE（2026-11-18，#2398）
 
 修橋端楔形與轉角尖刺時，甲板下拿掉斜板後露出的舊毛病；細節在決策 822「後來（二）」與 `docs/handoff/ROAD-STRIP-WEDGE.md`。尺同 NEXT_PRIORITIES §19。
 
