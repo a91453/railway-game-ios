@@ -65,9 +65,27 @@ extension BusRoadNetwork {
             }
             roads.append(Road(points: way < 0 ? run.reversed() : run, oneway: way != 0))
         }
+        roads += endJoins(ends: ends, open: open) { near($0, $1, reach: $2) }
+        return roads
+    }
+
+    /// The pieces ``joining(own:ends:to:)`` adds from each of `ends` to
+    /// the nearest point of `base` within ``ownJoinReach``, alone: what the
+    /// maps draw so that a road ending beside a street is seen to meet it
+    /// (ROAD-JOIN-DRAW, docs/research/ROAD_EDITING_2026-11-17.md §2.2).
+    static func ownEndJoins(ends: [Point], to base: [Road]) -> [Road] {
+        let open = base.filter { !$0.tunnel && $0.points.count >= 2 }
+        return endJoins(ends: ends, open: open) { _, _, _ in Array(open.indices) }
+    }
+
+    /// Each of `ends` joined to the nearest point of the roads `open`
+    /// within ``ownJoinReach`` (of them, those `near` gives), where it is
+    /// not on one already.
+    private static func endJoins(ends: [Point], open: [Road], near: (Point, Point, Double) -> [Int]) -> [Road] {
+        var roads: [Road] = []
         for end in ends {
             var best: (point: Point, away: Double)?
-            for index in near(end, end, reach: ownJoinReach) {
+            for index in near(end, end, ownJoinReach) {
                 let road = open[index].points
                 for (a, b) in zip(road, road.dropFirst()) {
                     let on = closest(on: a, b, to: end)

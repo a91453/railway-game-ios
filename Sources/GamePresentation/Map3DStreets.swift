@@ -430,8 +430,11 @@ extension Map3DScene.Builder {
 
     /// Decision 438: on a real-world map, the player's own roads, which the
     /// base map does not have, laid as the base map's minor roads
-    /// (``RoadCentreLines``).
-    mutating func addOwnRoads() {
+    /// (``RoadCentreLines``). ROAD-JOIN-DRAW: with the pieces the buses
+    /// take from a road's end to the base map's road beside it
+    /// (``BusRoads/joins(ofEnds:)``), read from `baseMap`, so the road is
+    /// seen to meet the street.
+    mutating func addOwnRoads(baseMap: BaseMapTiles? = nil, frame: RealWorldFrame? = nil) {
         guard let built = world.roads?.built, !built.isEmpty else { return }
         let bounds = Map3DBaseMap.Bounds(minX: (region.minX - originX) / Self.metre, minZ: (region.minY - originY) / Self.metre,
                                          maxX: (region.maxX - originX) / Self.metre, maxZ: (region.maxY - originY) / Self.metre)
@@ -440,7 +443,17 @@ extension Map3DScene.Builder {
         func scene(_ point: PlanPoint) -> Map3DBaseMap.Point {
             Map3DBaseMap.Point(x: (Double(point.x) - originX) / Self.metre, z: (Double(point.y) - originY) / Self.metre)
         }
-        let roads = RoadCentreLines.lines(of: built).compactMap { line -> Map3DBaseMap.Road? in
+        var lines = RoadCentreLines.lines(of: built)
+        if let baseMap, let frame {
+            // Only the ends a join from could reach this scene.
+            let reach = BusRoadNetwork.ownJoinReach * Double(WorldCoordinate.unitsPerMetre)
+            let ends = RoadCentreLines.ends(of: built).filter { end in
+                Double(end.x) >= region.minX - reach && Double(end.x) <= region.maxX + reach
+                    && Double(end.y) >= region.minY - reach && Double(end.y) <= region.maxY + reach
+            }
+            if !ends.isEmpty { lines += BusRoads(tiles: baseMap, frame: frame).joins(ofEnds: ends) }
+        }
+        let roads = lines.compactMap { line -> Map3DBaseMap.Road? in
             guard line.count >= 2, line.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { return nil }
             return Map3DBaseMap.Road(kind: .minor, isRamp: false, points: line.map(scene), bounds: bounds)
         }
