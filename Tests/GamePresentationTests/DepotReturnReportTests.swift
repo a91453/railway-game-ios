@@ -25,6 +25,10 @@ import XCTest
 /// deadlocked; a line without runs or depots reports only those. Decision
 /// 735: and the most trains stranded at once (``GameWorld/strandedTrains()``),
 /// standing half an hour past their departure with no way asked for.
+/// DEADLOCK-HK (decision 816): Hong Kong's South Island and Tung Chung
+/// Lines under the realistic rules (`hk-sil-tcl`; by name only `hk-sil`,
+/// `hk-tcl`, `hk-airport` and `hk`, see ``testHongKong()``), lines with
+/// runs and no depot; `DEPOT_RETURN_SPEED=x60` plays at that speed.
 @MainActor
 final class DepotReturnReportTests: XCTestCase {
     private func wanted(_ name: String) throws {
@@ -136,6 +140,52 @@ final class DepotReturnReportTests: XCTestCase {
         let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id })
         let offer = session.realLineOffer(for: line)
         XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
+        return session.world
+    }
+
+    /// DEADLOCK-HK (decision 816): Hong Kong's map as the launcher starts
+    /// it, under the realistic rules (the simple ones with
+    /// `DEPOT_RETURN_SIMPLE`), with lines of the MTR bought as the game
+    /// opens: the South Island Line and the Tung Chung Line
+    /// (`hk-sil-tcl`), whose trains ended the first night with more at one
+    /// end than it has tracks. Only when named: each alone (`hk-sil`,
+    /// `hk-tcl`), the three lines of one track to the airport
+    /// (`hk-airport`: the Airport Express, the Tung Chung Line and the
+    /// Disneyland Resort Line), or the lines `DEPOT_RETURN_HK` names
+    /// (`hk`: `DEPOT_RETURN_HK=SIL,TCL`; every line on sale without it).
+    func testHongKong() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["DEPOT_RETURN_REPORT"] != nil else {
+            throw XCTSkip("Set DEPOT_RETURN_REPORT=1 to measure the depots (decision 535).")
+        }
+        let worlds: [String: [String]] = [
+            "hk-sil": ["SIL"], "hk-tcl": ["TCL"], "hk-sil-tcl": ["SIL", "TCL"], "hk-airport": ["AEL", "TCL", "DRL"],
+            "hk": (environment["DEPOT_RETURN_HK"] ?? "all").split(separator: ",").map(String.init),
+        ]
+        let name = environment["DEPOT_RETURN_ONLY"] ?? "hk-sil-tcl"
+        guard let lines = worlds[name] else { throw XCTSkip("Only \(name).") }
+        try report(name, Self.resumed() ?? Self.hongKongBought(lines))
+    }
+
+    static func hongKongBought(_ ids: [String], rules: NewGameRules? = nil) throws -> GameWorld {
+        let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
+        let ground = try HongKongMapTests.ground()
+        var world = GameWorld.newOverseasGame(ground, balance: Money(1_000_000_000_000))
+        var options = NewGameOptions()
+        options.rules = rules ?? (simple ? .simple : .realistic)
+        options.apply(to: &world)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.railways = try HongKongRailwaysTests.railways()
+        session.population = ground.population
+        session.water = ground.water
+        session.heights = ground.heights
+        let wanted = ids == ["all"] ? session.buyableRealLines.map(\.id).sorted() : ids.map { "hkmtr:\($0)" }
+        for id in wanted {
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) is not on sale")
+            let offer = session.realLineOffer(for: line)
+            XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
+        }
         return session.world
     }
 
@@ -309,7 +359,12 @@ final class DepotReturnReportTests: XCTestCase {
         // HEALTH-110: a minute a tick, or ten at the top speed.
         let fast = environment["DEPOT_RETURN_FAST"] != nil
         world.setSpeed(fast ? .fast : .normal)
-        let label = "\(name)\(fast ? " fast" : "")"
+        // DEADLOCK-HK: `DEPOT_RETURN_SPEED=x60` (a ``GameSpeed``) plays at
+        // that speed instead, six seconds a tick as a player watching at
+        // 60× plays; the samples are then that speed's ticks.
+        let speed = environment["DEPOT_RETURN_SPEED"].flatMap(GameSpeed.init(rawValue:))
+        if let speed { world.setSpeed(speed) }
+        let label = "\(name)\(fast ? " fast" : "")\(speed.map { " \($0.rawValue)" } ?? "")"
         let started = Date()
         var into: Set<String> = [], outOf: Set<String> = []
         // The empty runs' length: what each had still to go, along the
@@ -550,9 +605,9 @@ final class DepotReturnReportTests: XCTestCase {
             summary += " (most in a row \(longestRow.count): \(longestRow.train), \(clock(longestRow.since)) to \(clock(longestRow.until).suffix(5)), \(calls))"
         }
         summary += "; most standing at the ends: \(most); most deadlocked \(deadlocked)"
-        if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
+        if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : speed != nil ? "ticks" : "minutes"))" }
         summary += "; most stranded \(stranded)"
-        if stranded > 0 { summary += " (first \(strandedWhere); stranded in \(strandedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
+        if stranded > 0 { summary += " (first \(strandedWhere); stranded in \(strandedSamples) \(fast ? "ten-minute ticks" : speed != nil ? "ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
         // Decision 805: `DEPOT_RETURN_CHECKSUM=1` adds a checksum of the
         // world as the report ends (FNV-1a of its JSON, keys sorted), to
