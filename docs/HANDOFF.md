@@ -438,6 +438,10 @@
     - **為什麼這樣分**（作者給的官方四張成績對成本圖，2026-11-17；這些圖測開源專案的修改與找漏洞，不是這個遊戲，當方向不當保證）：Fable 5.2 單價是 Opus 5.5 的兩倍（8／40 對 4／20 美元每百萬 token；快取讀取同為 0.20），但同強度每張工單只貴約三成；Fable「高」約等於 Opus 最好的成績、花費約一半；Fable「最大」比「超高」分數低又貴三倍多；長時間的難題 Fable 差距很大（30 小時 100% 對 27%，單次實驗）。行為稽核（越低越好）：Fable／Mythos 5.2 2.67、Opus 2.79、Sonnet 3.10。所以 Fable 該限的是它的週上限，不是價錢。
     - **規劃**：`claude-opus-5-5`、effort `high`，下一任也是。規劃的花費大半是重讀對話（快取讀取兩者同價），換 Fable 沒好處，卻吃掉難題的週上限。很難的單次判斷另開一條短的 Fable 做完就關。
     - **Max 帳號的兩個實作位置**：一條 `claude-fable-5-2` 做排隊裡最難的那張（GameCore 決定性或存檔、根因不明的 bug、Opus 做過一輪沒解的、長時間量測），一條 `claude-opus-5-5` 做其餘的。這樣大約一半額度用在 Fable，不超過它的上限。Fable 週上限出現警告後全部回到 Opus。
+    - **碰到 5 小時上限時**（2026-11-17 兩次：07:26 UTC 全部實作與規劃一起停，09:50 重置；約 10:00 又碰到。作者問「這次有改善交接情況嗎」）：上限是整個帳號一起算，實作 session 會停在半路，自己來不及寫交接。所以：
+      1. 規劃每派一張、每次叫 session 繼續，就在 §2.0 最上面一段記下它的 session、分支、PR、做到哪；這段就是停工時的交接，不等 session 自己寫。
+      2. 重置後，規劃用 `list_sessions` 找出 `failed`（events 的結果是 `usage_limit_reached`）的 session，逐一 `send_message` 請它「從停下的地方繼續」，並在 #2118 留一則列出叫回了哪些。
+      3. 同時跑的實作 session 照額度調：6 個一起跑約兩個半小時就碰到上限；上限常碰到時先減到 4 個，先做 bug 與快收尾的。
     - **兩個帳號輪流當主帳號**（作者 2026-11-17：遠端連線要本機與雲端同一個帳號，「好 照這樣寫進交接手冊」）：同一時間只有一個主帳號，**規劃、Mac 本機（本地派工、建模工作室）、規劃開的雲端實作都在主帳號**；另一個帳號是額外人手。
       - **週額度重置**：Ultra 每週二台灣時間 22:00（UTC 週二 14:00）；Max 每週六台灣時間 08:00（UTC 週五 24:00，即週六 00:00）。
       - **誰當主帳號**：有額度的那個，兩個都有時用 Ultra（週總量約 Max 的兩倍、沒有五小時上限）。主帳號用完就換。
@@ -636,6 +640,22 @@
 ## 2. 正在做的線（2026-10-20）
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
+
+**2026-11-17 晚上（現任規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 記；這段最新，下面的「傍晚交接」是前一版）**
+
+- **5 小時上限**：07:26 UTC 全部停，09:50 重置後規劃叫回六個實作 session，約 10:00 又碰到上限。重置後照 §1.1「碰到 5 小時上限時」逐一叫回下面的 session。
+- **合併了**：#2345 REVIEW-L26＋HEALTH-136、#2349 MAPPACK-FIX（819）、#2354 交接、#2352 FACADE-VARIETY（817，總覽圖規劃看過）。作者自己的串合了 #2350、#2353（824）、#2357、#2358、#2359（研究，§29.22–§29.24）。
+- **在跑的實作 session 與做到哪**（停了就叫回，PR 綠了照 §1.2 合）：
+  - DEADLOCK-HK #2347（816，GameCore）：session 已停（壓縮 2 次），規劃併了 main（`1d62425`），它的小節改成 §29.25；CI 綠了由規劃轉 ready 合。**合了才派 DEPOT-REAL**（§29.17，死結一次只歸一個 session）。
+  - ROAD-SMOOTH #2356（821，session_01JMHz9biVWhZiRyEa1eaFLN）：草稿，在併 main、把 §29.21 改號。
+  - ROVANIEMI-OPEN #2355（818，session_01JMHz9bckVEprLBmpgpVmVQ）：草稿，在併 main、把 §29.20 改號。價格 CRITICAL（兩線每天虧、一起買主線上車少一半）三項待排：ROVANIEMI-PAIR（bug）2.40、ROVANIEMI-FARE 2.85、ROVANIEMI-PACK-OUT 1.80，動 GameCore。
+  - PERF-3D-FIRST（820，session_01JMHz9YukbhK9SrgZCqr1Xw）：還沒開 PR，在寫交接。
+  - ROAD-LOOK-REAL（822，session_01JMHz9bEFthgKRraGjXnPYN）：還沒開 PR；新外觀，規劃看總覽圖才合。
+  - E200-REDO＋DR 遠景 bug（825，session_01JMHz9Yzqh7zPKkn1zZsWPQ，Opus 高）：還沒開 PR；新外觀，規劃看總覽圖才合。
+  - TRACK-CURVE-COLOUR＋TRACK-ALIGN（826，session_01JMHz9ambminugTbRq1gqEq，Opus 高）：還沒開 PR。
+  - TPE-MRT-ELEVATED（作者的專案串 `claude/project-thread-vqunh2`）：誤登記 826，規劃已請它改 827。
+- **137**（作者 11-17 晚上：「目前開著的做完我就要發137」）：上面這幾張合完，規劃照 §1.1「每次發版」改 `.github/testflight-whats-new.md` 與 `WhatsNew.entries`（標題 `0.5.0 (137)` 的寫法照決策 616），確認 main HEAD 的完整 `ci.yml` 與 full lane 都綠，再等作者在規劃對話說「發」。MAPPACK-FIX 的實機驗收：設定→「地圖」→「香港地圖」顯示「已下載」。
+- **號碼**：決策 816–826 預留或已用，827 給 TPE-MRT-ELEVATED，**下一個從 828 取**。存檔 107、golden schema 77。NEXT_PRIORITIES 到 §29.25。
 
 **2026-11-17 傍晚交接（規劃 session_01JMHz9Yps9xJyFfDFR4mUed 壓縮 3 次後交出；這段最新，下面的「下午」是前一版）**
 
