@@ -148,6 +148,71 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
         }
     }
 
+    /// MODEL_PALETTE_REVIEW §3 #2 (decision 785, later): each depot's
+    /// shed is clad above its concrete dado in one of the big halls' wall
+    /// colours, by its station's number; the far box's sides too.
+    func testEachDepotPicksItsCladding() {
+        let claddings = Map3DDepotFacilities.claddings
+        XCTAssertEqual(claddings.count, 4)
+        XCTAssertTrue(claddings.allSatisfy(Map3DPalette.hallWalls.contains))
+        XCTAssertFalse(claddings.contains(Map3DPalette.hallWalls[3]), "brick is masonry, not cladding")
+        let picked = (1...4).map { Map3DDepotFacilities.cladding(for: StationID(rawValue: $0)) }
+        XCTAssertEqual(Set(picked).count, 4)
+        XCTAssertEqual(Map3DDepotFacilities.cladding(for: StationID(rawValue: 7)), Map3DDepotFacilities.cladding(for: StationID(rawValue: 7)))
+        XCTAssertTrue(claddings.contains(Map3DDepotFacilities.cladding(for: StationID(rawValue: -3))))
+        for cladding in claddings {
+            let colours = Set(Map3DDepotYardKit.shedMesh(system: .metro, tracks: 2, bays: 3, cladding: cladding).vertices.map(\.color))
+            XCTAssertTrue(colours.contains(cladding))
+            XCTAssertTrue(colours.contains(Map3DDepotFacilities.wall))
+            for other in claddings where other != cladding { XCTAssertFalse(colours.contains(other)) }
+        }
+        // Far off the sides (shaded) are each cladding's own.
+        let far = claddings.map { Set(Map3DDepotYardKit.shedFarMesh(system: .metro, tracks: 2, bays: 3, cladding: $0).vertices.map(\.color)) }
+        XCTAssertEqual(Set(far).count, claddings.count)
+    }
+
+    /// No two faces of the shed of different colours face the same way
+    /// within 5 cm of each other and overlap (the map would flicker
+    /// there), flush ones included: what `tools/hk-landmarks/coplanar_check.py`
+    /// counts, for the shed's faces square to its axes (all but the
+    /// roof's two sides).
+    func testTheShedHasNoCoplanarFacesOfTwoColours() {
+        struct Face { let axis: Int, sign: Bool, plane: Float, lo: [Float], hi: [Float], color: UInt32 }
+        for system in Map3DDepotYardKit.System.allCases {
+            for tracks in 2...4 {
+                let mesh = Map3DDepotYardKit.shedMesh(system: system, tracks: tracks, bays: 4)
+                var faces: [Face] = []
+                for t in stride(from: 0, to: mesh.indices.count, by: 3) {
+                    let v = (0..<3).map { mesh.vertices[Int(mesh.indices[t + $0])] }
+                    let p = v.map { [$0.x, $0.y, $0.z] }
+                    let e1 = (0..<3).map { p[1][$0] - p[0][$0] }, e2 = (0..<3).map { p[2][$0] - p[0][$0] }
+                    let n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]
+                    let length = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).squareRoot()
+                    guard length > 1e-6, let axis = (0..<3).first(where: { abs(n[$0]) / length > 0.999 }) else { continue }
+                    let others = (0..<3).filter { $0 != axis }
+                    faces.append(Face(axis: axis, sign: n[axis] > 0, plane: p[0][axis],
+                                      lo: others.map { k in p.map { $0[k] }.min()! }, hi: others.map { k in p.map { $0[k] }.max()! },
+                                      color: v[0].color))
+                }
+                var pairs = 0
+                let groups = Dictionary(grouping: faces) { "\($0.axis)\($0.sign)" }
+                for group in groups.values {
+                    let sorted = group.sorted { $0.plane < $1.plane }
+                    for i in sorted.indices {
+                        var j = i + 1
+                        while j < sorted.count, sorted[j].plane - sorted[i].plane < 0.05 {
+                            let a = sorted[i], b = sorted[j]
+                            let w = min(a.hi[0], b.hi[0]) - max(a.lo[0], b.lo[0]), h = min(a.hi[1], b.hi[1]) - max(a.lo[1], b.lo[1])
+                            if a.color != b.color, w > 0.001, h > 0.001, w * h > 1e-4 { pairs += 1 }
+                            j += 1
+                        }
+                    }
+                }
+                XCTAssertEqual(pairs, 0, "\(system.rawValue) \(tracks) tracks")
+            }
+        }
+    }
+
     /// A new game round the Changhua Roundhouse has its turntable where
     /// it stands, its bridge towards the roundhouse; in full close by, its
     /// pit and a box far off. None in Taipei, on a map of nowhere, or

@@ -16,11 +16,28 @@ import GameCore
 /// The depot's maintenance shed and the roundhouse's turntable.
 public enum Map3DDepotFacilities {
     /// The pack's colours not in ``Map3DPalette``: its steel, dark and
-    /// glass, and its wall (one of the concrete walls).
+    /// glass, and its wall (the first of the concrete walls, #C9CCD5;
+    /// the yard kit's shed's dado).
     static let steel = Map3DPalette.steel
     static let dark = Map3DPalette.dark
     static let glass = Map3DColor.rgb(0x26313D)
-    static let wall = Map3DColor.rgb(0xC9CCD5)
+    static let wall = Map3DPalette.concreteWalls[0]
+    /// MODEL_PALETTE_REVIEW §3 #2 (decision 785, later): the yard kit's
+    /// shed's walls are concrete (``wall``) to 2.4 m over the ground and
+    /// sheet steel above, in one of the big halls' wall colours
+    /// (``Map3DPalette/hallWalls``) each depot picks: white #DADCDD,
+    /// warm grey #BBB2A9, silver grey #A9B0B8 or cream #EBD099. Not the
+    /// halls' brick #B0624A, which is masonry, not cladding.
+    static let dado: Float = 2.4
+    public static let claddings: [UInt32] = [0, 1, 2, 4].map { Map3DPalette.hallWalls[$0] }
+
+    /// The cladding of the depot `station`'s shed: by its number, so a
+    /// depot keeps its colour through saves and rebuilds and depots made
+    /// one after another differ.
+    public static func cladding(for station: StationID) -> UInt32 {
+        let count = claddings.count
+        return claddings[((station.rawValue % count) + count) % count]
+    }
     /// The shed's and the parking canopy's sheet-steel roof: the big
     /// halls' silver-grey sheet steel (``Map3DPalette/hallRoofs``), not
     /// the city's pale flat roof, which from above ran into the ground.
@@ -236,10 +253,11 @@ extension Map3DScene.Builder {
         let saved = target
         defer { target = saved }
         target = .near
-        mesh(at: foot) { $0.append(Map3DDepotYardKit.shedMesh(system: system, tracks: tracks, bays: bays), at: foot, forward: facing) }
+        let cladding = Map3DDepotFacilities.cladding(for: id)
+        mesh(at: foot) { $0.append(Map3DDepotYardKit.shedMesh(system: system, tracks: tracks, bays: bays, cladding: cladding), at: foot, forward: facing) }
         addShadow(centre: foot, forward: facing, length: wide, width: depth, spread: 3, darkness: 0.3)
         target = .far
-        mesh(at: foot) { $0.append(Map3DDepotYardKit.shedFarMesh(system: system, tracks: tracks, bays: bays), at: foot, forward: facing) }
+        mesh(at: foot) { $0.append(Map3DDepotYardKit.shedFarMesh(system: system, tracks: tracks, bays: bays, cladding: cladding), at: foot, forward: facing) }
         // The cells under its footprint.
         let corners = Map3DMesh.footprint(centre: foot, forward: facing, length: wide, width: depth)
         houseFootprints.append(corners)

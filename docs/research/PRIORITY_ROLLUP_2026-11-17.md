@@ -38,7 +38,7 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 | 3 | ~~ROAD-GRADE-CAP：國道快速道路坡度 ≤ 5%、高架與路塹~~ | 3.30 | §29.23 | **已做**（決策 834，國道；快速公路沒做，見 `handoff/ROAD-GRADE-CAP.md`） |
 | 3 | ~~島式月台雨棚（台灣與香港）~~ 已有：實拍宜蘭、左營、黃竹坑島上都有雨棚（ZUOYING-ROOF） | 3.30 | MISC-BACKLOG | 完成 |
 | 6 | 香港地面顏色（土地利用網格＋生境圖） | 3.25 | §29.12 | 原本等 REGION-LOOK-HK，已合，可派 |
-| 6 | 機廠檢修庫牆分上下段 | 3.25 | MISC-BACKLOG | #2371 已合，可派 |
+| 6 | ~~機廠檢修庫牆分上下段~~ 已做：下段混凝土、上段每座從 `hallWalls` 挑一格（DEPOT-WALL-BANDS，決策 785 §8） | 3.25 | MISC-BACKLOG | 完成 |
 | 6 | TW-CARS：台灣汽車、廂型車換掉盒子 | 3.25 | §29.15 | 部分：車色已有計程車黃（`Map3DStreetLife.carPaints`），車形還是盒子 |
 | 6 | REINDEER：羅瓦涅米的真馴鹿（吃草的群、拉雪橇的）（玩家 3、開發 4、美術 4、鐵道迷 4、音樂 1） | 3.25 | §29.17，11-17 深夜重評同分 | 模型派 Mac 工作室，**等作者說再派**；放置接在羅瓦涅米開放（11-30）之後；冬季活動 12/1–1/6，有時效。聖誕老人（#2382）的雪橇現在是方塊，模型到了照決策 831「換模型的接點」換（`handoff/SANTA-FLIGHT.md`） |
 | 6 | FREIGHT-LOOK：貨運列車照車上的貨換外觀（石斗車、水泥罐車、貨櫃平車）、貨場道具、街上卡車（FREIGHT_DEEPENING F1） | 3.25 | `priorities/OLD-VERSION-AUDIT.md`（#2393） | 無；不動 GameCore；新貨車先找舊版模型庫與私有素材庫再交工作室 |
