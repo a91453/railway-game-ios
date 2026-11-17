@@ -164,12 +164,34 @@ extension BuildConfirmLayout {
     /// stretch of track's alone; but the new line's (`ridesWithDrawer`),
     /// which carries its station pair drawer beside its words already
     /// (decision 384).
+    ///
+    /// `roomBeside`: how wide the words would be beside the buttons
+    /// (``wordsRoomBeside(pillWidth:buttonsWidth:)``), `nil` before the
+    /// buttons are measured. Under ``minimumWidth`` the words stand over
+    /// the buttons instead: the 135 full lane (a phone on its side, the
+    /// largest accessibility text, the track card open) left them a
+    /// letter's width beside ✕ ✓, a line a letter, and the pill ran taller
+    /// than the screen with its ✓ below it.
     public static func arrangement(
-        compactHeight: Bool, hasWords: Bool, ridesWithDrawer: Bool = false, hasFixes: Bool = false
+        compactHeight: Bool, hasWords: Bool, ridesWithDrawer: Bool = false, hasFixes: Bool = false,
+        roomBeside: Double? = nil
     ) -> Arrangement {
         guard compactHeight, hasWords, !ridesWithDrawer else { return .stacked }
-        return hasFixes ? .strip : .beside
+        if hasFixes { return .strip }
+        if let roomBeside, roomBeside < minimumWidth { return .stacked }
+        return .beside
     }
+
+    /// How wide the words are beside ✕ ✓ (``Arrangement/beside``) in a pill
+    /// at most `pillWidth` wide (``maximumWidth(viewportWidth:leading:trailing:)``)
+    /// whose buttons are `buttonsWidth` across: the pill's padding and the
+    /// gap between them taken off.
+    public static func wordsRoomBeside(pillWidth: Double, buttonsWidth: Double) -> Double {
+        pillWidth - 2 * StationPairDrawerLayout.pillPadding - besideSpacing - buttonsWidth
+    }
+
+    /// The gap between the words and ✕ ✓ beside them.
+    public static let besideSpacing = 6.0
 
     /// How tall the pill's buttons are, in points: 48, and 44 (a finger's
     /// least) in ``Arrangement/strip``, so the pill with its one line of

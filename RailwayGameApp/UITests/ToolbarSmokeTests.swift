@@ -589,42 +589,54 @@ extension XCUIApplication {
     /// the row was chosen. One snapshot took up to 4 s on a by-hand runner
     /// (run 40429077102) and three are needed, so the row gets 30 s to
     /// hold.
-    func chooseSpeed(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
+    ///
+    /// A touch can also be cancelled on the row: in the 135 full lane (run
+    /// 43936559208, `testTheStatusBarKeepsItsWidthAsTheDaysGoBy`) the app
+    /// stalled for two seconds at a time as the demo ran on, the app's
+    /// own trace logged the touch on the row as began and then cancelled,
+    /// and the speed stayed at 600×. A player taps again; so does this,
+    /// up to `attempts` times, opening the menu again when it closed.
+    func chooseSpeed(_ name: String, attempts: Int = 3, file: StaticString = #filePath, line: UInt = #line) {
         let speed = buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
         let row = buttons[name].firstMatch
         XCTAssertTrue(speed.appears(within: 10), "Missing the speed button", file: file, line: line)
         XCTAssertTrue(speed.becomesHittable(within: 10), "The speed button is covered: \(speed)", file: file, line: line)
         speed.waitUntilSettled()
-        guard speed.openMenu(showing: row) else {
-            return XCTFail("The speed menu never showed \(name): \(speed.label)", file: file, line: line)
-        }
         let screen = frame
-        var place = CGRect.null
-        var held = 0
-        let settle = Date().addingTimeInterval(30)
-        while held < 2, Date() < settle {
-            Thread.sleep(forTimeInterval: 0.25)
-            let now = (try? row.snapshot())?.frame ?? .null
-            let shown = now.width > 0 && now.height > 0 && screen.contains(CGPoint(x: now.midX, y: now.midY))
-            held = shown && now == place ? held + 1 : 0
-            place = now
-        }
-        guard held == 2 else {
-            return XCTFail("The \(name) row never held still: \(place)", file: file, line: line)
-        }
-        coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: place.midX - screen.minX, dy: place.midY - screen.minY)).tap()
         let chosen = NSPredicate(format: "label == %@", "Speed: \(name)")
-        // The waiter's look can be its only one: on main 447891f's full
-        // lane (run 41187572538) 6000× was chosen, the app stalled for
-        // seconds as the demo ran into midnight at it, and the one look,
-        // begun before the label changed, took 9 of the 10 seconds; the
-        // label read for the message said 6000×. So the label is read once
-        // more, as `chooseMenuAction` does, before the touch counts as lost.
-        let waited = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10)
-        XCTAssertTrue(waited == .completed || speed.label == "Speed: \(name)",
-                      "The touch did not choose \(name): \(speed.label)", file: file, line: line)
-        XCTAssertTrue(row.disappears(within: 10), "The speed menu stayed open after \(name) was chosen", file: file, line: line)
+        for attempt in 1...attempts {
+            guard row.exists || speed.openMenu(showing: row) else {
+                return XCTFail("The speed menu never showed \(name): \(speed.label)", file: file, line: line)
+            }
+            var place = CGRect.null
+            var held = 0
+            let settle = Date().addingTimeInterval(30)
+            while held < 2, Date() < settle {
+                Thread.sleep(forTimeInterval: 0.25)
+                let now = (try? row.snapshot())?.frame ?? .null
+                let shown = now.width > 0 && now.height > 0 && screen.contains(CGPoint(x: now.midX, y: now.midY))
+                held = shown && now == place ? held + 1 : 0
+                place = now
+            }
+            guard held == 2 else {
+                return XCTFail("The \(name) row never held still: \(place)", file: file, line: line)
+            }
+            coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: place.midX - screen.minX, dy: place.midY - screen.minY)).tap()
+            // The waiter's look can be its only one: on main 447891f's full
+            // lane (run 41187572538) 6000× was chosen, the app stalled for
+            // seconds as the demo ran into midnight at it, and the one look,
+            // begun before the label changed, took 9 of the 10 seconds; the
+            // label read for the message said 6000×. So the label is read once
+            // more, as `chooseMenuAction` does, before the touch counts as lost.
+            let waited = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10)
+            if waited == .completed || speed.label == "Speed: \(name)" {
+                XCTAssertTrue(row.disappears(within: 10), "The speed menu stayed open after \(name) was chosen", file: file, line: line)
+                return
+            }
+            print("chooseSpeed \(name): touch \(attempt) at \(place) did not choose it, \(speed.label), menu \(row.exists ? "open" : "closed")")
+        }
+        XCTFail("The touch did not choose \(name): \(speed.label)", file: file, line: line)
     }
 
     /// Drags a list until `element` lies wholly on screen; whether it does
