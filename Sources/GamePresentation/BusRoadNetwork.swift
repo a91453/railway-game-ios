@@ -491,6 +491,7 @@ public final class BusRoads: @unchecked Sendable {
     private var ownLines: [[BusRoadNetwork.Point]] = []
     private var ownEnds: [BusRoadNetwork.Point] = []
     private var ownChanges = 0
+    private var ownJoinsMemo: (version: Int, lines: [[PlanPoint]])?
 
     init(tiles: BaseMapTiles, frame: RealWorldFrame) {
         self.tiles = tiles
@@ -575,6 +576,46 @@ public final class BusRoads: @unchecked Sendable {
         ownEnds = RoadCentreLines.ends(of: cells).map(BusRoadNetwork.Point.init)
         built.removeAll()
         ownChanges += 1
+    }
+
+    /// ROAD-JOIN-DRAW (docs/research/ROAD_EDITING_2026-11-17.md §2.2): the
+    /// pieces that join the ends of the player's roads to the base map's
+    /// roads, the ones ``network(from:to:)`` adds for the buses, as lines
+    /// in plan units for the 2D and 3D maps to draw. Kept until the roads
+    /// change.
+    var ownJoins: [[PlanPoint]] {
+        lock.lock()
+        defer { lock.unlock() }
+        if let known = ownJoinsMemo, known.version == ownChanges { return known.lines }
+        let lines = joinsLocked(ofEnds: ownEnds)
+        ownJoinsMemo = (ownChanges, lines)
+        return lines
+    }
+
+    /// The pieces that would join a road ending at each of `ends` (plan
+    /// points) to the base map's roads (``ownJoins``'s rule): for the road
+    /// being drawn.
+    func joins(ofEnds ends: [PlanPoint]) -> [[PlanPoint]] {
+        lock.lock()
+        defer { lock.unlock() }
+        return joinsLocked(ofEnds: ends.map(BusRoadNetwork.Point.init))
+    }
+
+    /// ``joins(ofEnds:)`` with the lock held: each end against the roads of
+    /// the tiles within ``BusRoadNetwork/ownJoinReach`` of it.
+    private func joinsLocked(ofEnds ends: [BusRoadNetwork.Point]) -> [[PlanPoint]] {
+        let reach = BusRoadNetwork.ownJoinReach
+        var lines: [[PlanPoint]] = []
+        for end in ends {
+            var base: [BusRoadNetwork.Road] = []
+            for row in projection.row(end.y - reach)...projection.row(end.y + reach) {
+                for column in projection.column(end.x - reach)...projection.column(end.x + reach) {
+                    base += roads(of: Tile(column: column, row: row))
+                }
+            }
+            lines += BusRoadNetwork.ownEndJoins(ends: [end], to: base).map { $0.points.map(\.plan) }
+        }
+        return lines
     }
 
     /// Counts the changes of the player's roads, for the ways worked out

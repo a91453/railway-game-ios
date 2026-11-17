@@ -508,7 +508,7 @@ public struct Map3DScene: Sendable {
         drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
         // Decision 438: the player's own roads, which the base map has not.
-        if real != nil { builder.addOwnRoads() }
+        if real != nil { builder.addOwnRoads(baseMap: baseMap, frame: RealWorldFrame(world: world)) }
         builder.mark("own roads")
         // Decision 699: the airports' runways, taxiways and aprons, over
         // the base map's ground and roads.
