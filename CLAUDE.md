@@ -196,7 +196,13 @@ needs OSM data reads the same extract.
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
   several apply. The label `full-ci` runs every shard of a pull request (add
-  it, then re-run the pull request's run). On a pull request the gate also waits for the
+  it, then re-run the pull request's run). A pull request or push that
+  changes a file `tools/golden-checks/doc_numbers.py` reads (`docs/`, the
+  tool, the save version, the golden schema, the fixture directories), and
+  every manual and nightly run, also runs its `doc-numbers` job
+  (`doc_numbers.py --selftest` and `--check`), and the gate is red when it
+  fails, on a docs-only pull request too, where the Swift jobs skip
+  (decision 830). On a pull request the gate also waits for the
   same commit's `ios-build.yml` run and is red when that run fails
   (decision 265), so a pull request set to merge automatically waits for
   its Xcode build and UI tests; after a failed iOS run is re-run and passes,
@@ -249,7 +255,13 @@ needs OSM data reads the same extract.
   `full-lane-watch.yml` (when an iOS App Build full lane of `main` finishes,
   `tools/ci-watch/full_lane_watch.py` comments on the work registry (#2118) if it turned red, a
   job turned red that had not in this red streak, or it turned green again;
-  as github-actions[bot], never with an at sign; decision 329).
+  as github-actions[bot], never with an at sign; decision 329),
+  `conflict-watch.yml` (after every push to `main`, and by hand,
+  `tools/ci-watch/conflict_watch.py` comments on each open pull request into
+  `main`, drafts too, that conflicts with `main`: 「和 main 衝突，CI 不會跑，
+  請併 main」, once per head, as github-actions[bot], never with an at sign;
+  a conflicting pull request gets no CI run at all, so the comment is what
+  wakes its session, which then merges `main` and pushes; decision 830).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the
@@ -402,9 +414,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   weights of `docs/research/NEXT_PRIORITIES_2026-10-12.md` §19 (player 30,
   developer 25, art 15, railway fan 15, music 15), and the weighted score
   puts it in the priority list; bugs go before features. A pull request
-  that scores new items (a research or study) adds them to that list
-  itself, in the same pull request, rather than leaving them for the
-  planner to add (owner, 2026-11-17, after #2304's were missed). Do not ask the
+  that scores new items (a research or study) writes them itself, in the
+  same pull request, rather than leaving them for the planner to add
+  (owner, 2026-11-17, after #2304's were missed), as a file of its own,
+  `docs/priorities/<TASK>.md` (`docs/priorities/README.md`, decision 832),
+  not as the next section of NEXT_PRIORITIES, whose numbers parallel pull
+  requests raced for; `doc_numbers.py --check` checks its form and
+  weights, and the planner merges the files back into the list with
+  `doc_numbers.py --priorities`. Do not ask the
   owner whether to do it (owner, 2026-11-14: 「看你先評分在排優先級」
   「之後都是這樣寫進去md或交接手冊」). Previews and generated art the game does not load
   (more than about 2 MB in one pull request) go to
