@@ -77,7 +77,11 @@ public enum Map3DDepotYardKit {
         return Part(kind: kind, system: system, tracks: count, length: length)
     }
 
-    public static func model(for part: Part, far: Bool = false) -> Map3DModelPack.Model {
+    /// `cladding` is the colour of the shed's walls above their concrete
+    /// dado (``Map3DDepotFacilities/claddings``; each depot picks one,
+    /// ``Map3DDepotFacilities/cladding(for:)``).
+    public static func model(for part: Part, far: Bool = false,
+                             cladding: UInt32 = Map3DDepotFacilities.claddings[0]) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
         let w = part.width
         let isShed = [.shedHead, .shedMiddle, .shedTail].contains(part.kind)
@@ -93,28 +97,45 @@ public enum Map3DDepotYardKit {
             case .fence, .gate: 2.5
             case .guardHouse: 3.4
             }
-            b.box(0, 0, 0, part.length, w, height, part.kind == .shedHead || part.kind == .shedMiddle || part.kind == .shedTail ? Map3DDepotFacilities.wall : Map3DPalette.concrete)
+            b.box(0, 0, 0, part.length, w, height, isShed ? cladding : Map3DPalette.concrete)
             return .flat(named: part.id + "-far", from: b.mesh)
         }
         switch part.kind {
         case .shedHead, .shedMiddle, .shedTail:
-            b.box(0, 0, 0, part.length, w, 0.2, Map3DPalette.concrete)
+            // MODEL_PALETTE_REVIEW §3 #2: the walls stand on the floor in
+            // two bands, a concrete dado to 2.4 m and the depot's sheet-
+            // steel cladding above it. No two faces of different colours
+            // lie within 5 cm of each other facing the same way: the
+            // windows stand 8 cm proud, the piers 8 cm before the walls'
+            // ends and lintel and 8 cm or more below its top, the lintel
+            // between the walls, the pit markers 8 cm over their beds.
+            let floor: Float = 0.2, dado = Map3DDepotFacilities.dado
+            b.box(0, 0, 0, part.length, w, floor, Map3DPalette.concrete)
+            // The dado has no underside: it would lie on the floor under the
+            // piers' and the tracks' undersides.
+            func wall(_ x: Float, _ z: Float, _ length: Float, _ width: Float) {
+                b.mesh.addBox(base: Map3DPoint(x, floor, z), forward: Map3DPoint(1, 0, 0), length: length, width: width,
+                              height: dado - floor, top: Map3DDepotFacilities.wall, side: Map3DDepotFacilities.wall)
+                b.box(x, dado, z, length, width, h - dado, cladding)
+            }
             for side: Float in [-1, 1] {
-                b.box(0, 0, side * (w / 2 - 0.18), part.length, 0.36, h, Map3DDepotFacilities.wall)
+                wall(0, side * (w / 2 - 0.18), part.length, 0.36)
                 let rise: Float = 2.6, slope = hypotf(w / 2, rise)
                 b.slab(centre: Map3DPoint(0, h + rise / 2, side * w / 4),
                        up: Map3DPoint(0, rise / slope, -side * w / 2 / slope),
                        length: part.length + 0.7, wide: slope, thickness: 0.22, color: Map3DDepotFacilities.roof)
-                for x: Float in [-3.5, 3.5] { b.box(x, 3.425, side * (w / 2 - 0.02), 2.2, 0.05, 1.25, Map3DDepotFacilities.glass) }
+                for x: Float in [-3.5, 3.5] { b.box(x, 3.425, side * (w / 2 - 0.01), 2.2, 0.18, 1.25, Map3DDepotFacilities.glass) }
             }
-            if part.kind == .shedTail { b.box(-part.length / 2 + 0.18, 0, 0, 0.36, w, h, Map3DDepotFacilities.wall) }
+            if part.kind == .shedTail { wall(-part.length / 2 + 0.18, 0, 0.36, w) }
             if part.kind == .shedHead {
-                for i in 0...part.tracks { b.box(part.length / 2 - 0.18, 0, -w / 2 + Float(i) * w / Float(part.tracks), 0.36, 0.42, h, Map3DDepotFacilities.steel) }
-                b.box(part.length / 2 - 0.18, h - 0.625, 0, 0.36, w, 0.55, Map3DPalette.canopy)
+                for i in 0...part.tracks {
+                    b.box(part.length / 2 - 0.18, floor, -w / 2 + Float(i) * w / Float(part.tracks), 0.52, 0.42, h - 0.16 - floor, Map3DDepotFacilities.steel)
+                }
+                b.box(part.length / 2 - 0.18, h - 0.625, 0, 0.36, w - 0.72, 0.55, Map3DPalette.canopy)
             }
             for c in part.trackCentres {
                 guideway(&b, system: part.system, x: 0, z: c, length: part.length - 0.2)
-                if part.system != .wenhu { b.box(0, 0.34, c, part.length - 1, 0.72, 0.02, Map3DDepotFacilities.steel) }
+                if part.system != .wenhu { b.box(0, 0.34, c, part.length - 1, 0.72, 0.08, Map3DDepotFacilities.steel) }
             }
             b.box(0, h + 2.64, 0, part.length - 1, 0.28, 0.24, Map3DDepotFacilities.steel)
         case .parkingCanopy:
@@ -147,10 +168,11 @@ public enum Map3DDepotYardKit {
         return .flat(named: part.id, from: b.mesh)
     }
 
-    public static func shed(system: System, tracks: Int, middleBays: Int, far: Bool = false) -> [Map3DModelPack.Model] {
-        [model(for: part(.shedHead, system: system, tracks: tracks), far: far)] +
-        (0..<max(0, middleBays)).map { _ in model(for: part(.shedMiddle, system: system, tracks: tracks), far: far) } +
-        [model(for: part(.shedTail, system: system, tracks: tracks), far: far)]
+    public static func shed(system: System, tracks: Int, middleBays: Int, far: Bool = false,
+                            cladding: UInt32 = Map3DDepotFacilities.claddings[0]) -> [Map3DModelPack.Model] {
+        [model(for: part(.shedHead, system: system, tracks: tracks), far: far, cladding: cladding)] +
+        (0..<max(0, middleBays)).map { _ in model(for: part(.shedMiddle, system: system, tracks: tracks), far: far, cladding: cladding) } +
+        [model(for: part(.shedTail, system: system, tracks: tracks), far: far, cladding: cladding)]
     }
 
     // Wenhu's existing APM256 model puts load wheels at ±0.99 m and guide
@@ -160,7 +182,7 @@ public enum Map3DDepotYardKit {
             b.box(x, 0.2, z, length, 2.7, 0.16, Map3DPalette.concrete)
             for side: Float in [-1, 1] {
                 b.box(x, 0.36, z + side * 0.99, length, 0.36, 0.09, Map3DDepotFacilities.dark)
-                b.box(x, 0.33, z + side * 1.27, length, 0.10, 0.32, Map3DDepotFacilities.steel)
+                b.box(x, 0.36, z + side * 1.27, length, 0.10, 0.29, Map3DDepotFacilities.steel)
             }
         } else {
             b.box(x, 0.2, z, length, 1.9, 0.14, Map3DDepotFacilities.dark)
@@ -247,24 +269,28 @@ extension Map3DDepotYardKit {
     /// Decision 785: the shed of `bays` bays for `system`'s trains on
     /// `tracks` tracks (2 to 4), as the review scenes lay it: the tail
     /// closed at −x, the head's open bays at +x, its middle on the ground
-    /// at the origin, in the station kit's axes (x along it, y up).
-    public static func shedMesh(system: System, tracks: Int, bays: Int) -> Map3DMesh {
+    /// at the origin, in the station kit's axes (x along it, y up); its
+    /// walls clad in `cladding` above their dado.
+    public static func shedMesh(system: System, tracks: Int, bays: Int,
+                                cladding: UInt32 = Map3DDepotFacilities.claddings[0]) -> Map3DMesh {
         var b = StationKitBuilder()
         let count = max(3, bays), length = Float(count) * 12
         for index in 0..<count {
             let kind: Kind = index == 0 ? .shedTail : index == count - 1 ? .shedHead : .shedMiddle
-            b.add(model(for: part(kind, system: system, tracks: tracks)), at: Map3DPoint(Float(index) * 12 - length / 2 + 6, 0, 0))
+            b.add(model(for: part(kind, system: system, tracks: tracks), cladding: cladding), at: Map3DPoint(Float(index) * 12 - length / 2 + 6, 0, 0))
         }
         return b.mesh
     }
 
     /// Decision 785: the shed far off, a box as long and wide, as high as
-    /// the kit's far shed parts, its roof's colour on top.
-    public static func shedFarMesh(system: System, tracks: Int, bays: Int) -> Map3DMesh {
+    /// the kit's far shed parts, its roof's colour on top and its
+    /// cladding's on the sides (the dado is too low to see that far).
+    public static func shedFarMesh(system: System, tracks: Int, bays: Int,
+                                   cladding: UInt32 = Map3DDepotFacilities.claddings[0]) -> Map3DMesh {
         let shed = part(.shedHead, system: system, tracks: tracks)
         var mesh = Map3DMesh()
         mesh.addBox(base: .zero, forward: Map3DPoint(1, 0, 0), length: Float(max(3, bays)) * 12, width: shed.width,
-                    height: system.clearHeight + 0.45 + 0.625 + 1.5, top: Map3DDepotFacilities.roof, side: Map3DDepotFacilities.wall)
+                    height: system.clearHeight + 0.45 + 0.625 + 1.5, top: Map3DDepotFacilities.roof, side: cladding)
         return mesh
     }
 }
