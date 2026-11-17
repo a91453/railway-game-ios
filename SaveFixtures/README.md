@@ -414,3 +414,10 @@ its map's airports when it opens the save).
   (`TerminalPlatformWaitTests`; written by the build before decision 805
   with `DepotReturnReportTests`' `DEPOT_RETURN_SAVE`). The format is
   version 107's; it is here for the world, not for a new field.
+- `v107-night-terminal-berths.json`: the same line under the realistic
+  rules, at 00:10 of its second day: fifteen minutes before the last
+  service of the night stops at Kengkou for a berth of Airport Terminal
+  1, where it stood until 05:38 (`NightTerminalBerthTests`; written by
+  the build before decision 808 with `DepotReturnReportTests`'
+  `DEPOT_RETURN_SAVE`). The format is version 107's; it is here for the
+  world, not for a new field.

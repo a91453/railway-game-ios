@@ -768,6 +768,10 @@ extension GameWorld {
         /// The spans it waits for that foul spans of other edges (see
         /// ``RailwayNetwork/foulingSpans``).
         fileprivate var foulingWaiting: [TrackSpan] = []
+        /// Decision 808: the track it comes to rest on (and fouls there)
+        /// when the call it travels to is the last of its timetable, an
+        /// empty run's or a service's; empty for any other train.
+        fileprivate var rest: [TrackResource] = []
 
         /// Whether `resource` is on its route.
         func routeContains(_ resource: TrackResource) -> Bool {
@@ -1137,14 +1141,29 @@ extension GameWorld {
         /// Whether `claim`, the track a following train waits for, keeps
         /// train `id` from it (decision 56, point 6): unless `id` holds any
         /// of its route (it is the train ahead), or `id` follows a train
-        /// too and has the lower ID. Two following trains whose routes
-        /// meet would otherwise each wait for the track the other waits
-        /// for, and neither ever go on; the lower goes first. Nor
+        /// too and goes first (see ``goesFirst(_:before:)``). Two
+        /// following trains whose routes meet would otherwise each wait
+        /// for the track the other waits for, and neither ever go on. Nor
         /// (decision 308) when `id` holds or fouls track a train it
         /// follows needs (one holding some of its route): the train
         /// ahead waits for `id`, so `id` must go on first.
         func binds(_ claim: Claim, _ id: TrainID) -> Bool {
-            !holdsAny(of: claim, id) && !(claims[id] != nil && id < claim.train) && released[claim.train]?.contains(id) != true
+            !holdsAny(of: claim, id) && !goesFirst(id, before: claim) && released[claim.train]?.contains(id) != true
+        }
+
+        /// Whether train `id`, following a train too, goes before
+        /// `claim`'s train where their routes meet. Decision 808: of the
+        /// two, one whose timetable ends where it comes to rest on the
+        /// other's route (an empty run, or a service at its last call)
+        /// goes after one that does not end on its route: it would stand
+        /// there, in the way of a train that only calls and goes on.
+        /// When neither does, or both do, the lower ID goes first, as
+        /// before.
+        private func goesFirst(_ id: TrainID, before claim: Claim) -> Bool {
+            guard let own = claims[id] else { return false }
+            let ends = own.rest.contains(where: claim.routeContains)
+            if ends != claim.rest.contains(where: own.routeContains) { return !ends }
+            return id < claim.train
         }
 
         /// These holders but for the claims of `followers` (decision 577):
@@ -1370,6 +1389,10 @@ extension GameWorld {
             // the track of its route no other placed train holds.
             guard let route else { continue }
             var claim = Claim(train: train.id, cover: route)
+            if case .travellingToStop(let stop, let cycle)? = train.execution, train.call(after: stop, cycle: cycle) == nil {
+                let arrived = arrived(train)
+                claim.rest = occupied(arrived) + foulingNodes(covering: bodyStretches(of: arrived))
+            }
             if !network.foulingSpans.isEmpty {
                 for edge in claim.cover.edges {
                     for span in holders.foulingByEdge[edge] ?? [] where holders.waits(claim, for: .span(span)) {
@@ -1970,13 +1993,19 @@ extension GameWorld {
     /// another (decision 212), where it stops for its call, not where its
     /// authority ends.
     func stopsOn(_ route: TrackCover, _ train: Train, fouling: Bool = true) -> Bool {
+        let arrived = arrived(train)
+        return occupied(arrived).contains(where: route.contains)
+            || fouling && foulingNodes(covering: bodyStretches(of: arrived)).contains(where: route.contains)
+    }
+
+    /// `train` where the route it travels ends, holding nothing.
+    private func arrived(_ train: Train) -> Train {
         var arrived = train
         arrived.reservation = []
         let end = travelling(arrived, distance: routeLength(of: train))
         arrived.position = end.position
         arrived.movement.cursor = end.cursor
-        return occupied(arrived).contains(where: route.contains)
-            || fouling && foulingNodes(covering: bodyStretches(of: arrived)).contains(where: route.contains)
+        return arrived
     }
 
     // MARK: - The resources of a stretch

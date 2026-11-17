@@ -138,7 +138,7 @@ extension ReferenceWorld {
         let own = held(other)
         guard following(other) else { return own }
         let route = needs(other).resources
-        if let train = trains.first(where: { $0.id == id }), !held(train).isDisjoint(with: route) || (following(train) && id < other.id) { return own }
+        if let train = trains.first(where: { $0.id == id }), !held(train).isDisjoint(with: route) || (following(train) && goesFirst(train, before: other)) { return own }
         if let train = trains.first(where: { $0.id == id }), train.position != nil {
             let mine = held(train)
             for leader in trains where leader.id != other.id && leader.id != id && leader.position != nil && !held(leader).isDisjoint(with: route) {
@@ -152,7 +152,24 @@ extension ReferenceWorld {
         return own.union(waiting)
     }
 
-    /// Everything the other trains keep train `id` from, together.
+    /// Decision 808: of two following trains, whether `train` goes before
+    /// `other` where their routes meet. One whose timetable ends where it
+    /// stops, on the other's route, goes after one that does not end on
+    /// its route; otherwise the lower ID goes first.
+    private func goesFirst(_ train: Train, before other: Train) -> Bool {
+        let ends = !rest(train).isDisjoint(with: needs(other).resources)
+        if ends != !rest(other).isDisjoint(with: needs(train).resources) { return !ends }
+        return train.id < other.id
+    }
+
+    /// The track `train` stands on and fouls where its route ends, when
+    /// the call it travels to is the last of its timetable; none otherwise.
+    private func rest(_ train: Train) -> Set<TrackResource> {
+        guard let service = train.service, !service.waiting, let window = routeWindow(train) else { return [] }
+        let hasNext = service.stop + 1 < train.timetable.count || (train.period != nil && Self.fits(train, cycle: service.cycle + 1))
+        return hasNext ? [] : track(along: window.path, from: window.finish - Self.length(train), to: window.finish)
+    }
+
     func blocked(for id: Int) -> Set<TrackResource> {
         trains.filter { $0.id != id && $0.position != nil }.reduce(into: []) { $0.formUnion(blocking($1, for: id)) }
     }

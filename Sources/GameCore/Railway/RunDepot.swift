@@ -452,6 +452,64 @@ extension GameWorld {
         return emptyRun(of: line, for: train, to: others)
     }
 
+    /// Decision 808: the first train its line would send into a depot now
+    /// (see ``runDepotEntryCandidates(of:memo:)``) but for the depot it
+    /// reaches soonest having no siding for it, in no service's way
+    /// itself, that holds track of the empty run a train in the way would
+    /// make into a depot (see ``holdsDepotRun(_:ofAny:memo:)``), with the
+    /// empty run into the depot it reaches soonest of those with a siding
+    /// for it, whose way it can take now; or `nil`. A last resort of the
+    /// deadlock's ways out: decision 556's continuation (TYMCLIST9) sends
+    /// only a train in a service's way to the farther depot. On the
+    /// Taoyuan Airport MRT as it was bought before decision 605, under
+    /// the realistic rules, the last service of the night waited at
+    /// Kengkou until morning for a berth of Airport Terminal 1: the train
+    /// on it was in the way and bound for Qingpu, Luzhu being full, by
+    /// the berth of Terminal 2 where another stood between runs, in no
+    /// service's way itself and so waiting for Luzhu.
+    func depotRunClearing(memo: inout DispatchMemo) -> (index: Int, line: ServiceLine, trip: LineTrip)? {
+        guard isTrafficControlEnabled else { return nil }
+        var inTheWay: Set<TrainID>?
+        for line in lines where line.hasRuns && line.depots.count > 1 {
+            for index in runDepotEntryCandidates(of: line, memo: &memo) {
+                let train = trains[index]
+                guard let nearest = emptyRun(of: line, for: train, to: line.depots)?.deadhead?.to, !depotHasRoom(nearest, for: train) else { continue }
+                let others = line.depots.filter { $0 != nearest && depotHasRoom($0, for: train) }
+                guard !others.isEmpty else { continue }
+                if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
+                guard !inTheWay!.contains(train.id), holdsDepotRun(train, ofAny: inTheWay!, memo: &memo.directions),
+                      let trip = emptyRun(of: line, for: train, to: others),
+                      let leaving = firstDeparture(of: train, on: trip, calling: line.stops),
+                      case .granted = reservingDeparture(leaving, memo: &memo.directions)
+                else { continue }
+                return (index, line, trip)
+            }
+        }
+        return nil
+    }
+
+    /// Decision 808: whether `train`, without a service, holds track of
+    /// the empty run one of `inTheWay` (see ``trainsInTheWay(memo:)``)
+    /// would make now into a depot of its line with a siding for it, a
+    /// run whose route is held.
+    private func holdsDepotRun(_ train: Train, ofAny inTheWay: Set<TrainID>, memo: inout DirectionMemo) -> Bool {
+        guard !inTheWay.isEmpty else { return false }
+        let own = held(train)
+        for other in trains where other.id != train.id && inTheWay.contains(other.id) {
+            guard let line = lines.first(where: { $0.hasRuns && !$0.depots.isEmpty && $0.trains.contains(other.id) }),
+                  !isInDepot(other, of: line)
+            else { continue }
+            let depots = line.depots.filter { depotHasRoom($0, for: other) }
+            guard !depots.isEmpty, let trip = emptyRun(of: line, for: other, to: depots),
+                  let leaving = firstDeparture(of: other, on: trip, calling: line.stops),
+                  case .held = reservingDeparture(leaving, memo: &memo),
+                  network.fouls(own, routeEnvelope(of: leaving).resources)
+            else { continue }
+            return true
+        }
+        return false
+    }
+
     /// Decision 296: whether `train`, standing without a service at
     /// `station`, last ran there empty out of a depot (its timetable, kept
     /// once the run ends, starts at a depot and ends there).
