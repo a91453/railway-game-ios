@@ -529,6 +529,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Before adding or changing any animation or transition in the app, read
   `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
   253) and what Reduce Motion does.
+- Before adding or changing any music or jingle in the app, or reviewing a
+  music pull request, read `.claude/skills/music-review/SKILL.md`: the
+  loudness, band, peak and loop-seam targets (`tools/audio/measure_music.py`),
+  listening fatigue, and how listening files reach the owner.
 - Before adding or changing a screen, panel, list or chart in the app, read
   `.claude/skills/ui-review/SKILL.md`, and before marking its pull request
   ready, take its screenshot review (`website-screenshots.yml`, one run at
