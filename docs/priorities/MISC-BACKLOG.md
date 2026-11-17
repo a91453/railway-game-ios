@@ -1,4 +1,4 @@
-# MISC-BACKLOG（2026-11-17，評分雜項）
+# MISC-BACKLOG（2026-11-17，#2380）
 
 作者 2026-11-17 在新專案點名：舊專案評過分或沒評分、但還沒進優先清單的七件雜項，全部照現行標準（NEXT_PRIORITIES §19 權重）重評。舊分（§29.9、MODEL_PALETTE_REVIEW_2026-11-15 §3、AIR_ROUTE_ACQUISITION_DESIGN）只當參考；每項都先對過 `main`（`f35a8d3`）看做了沒。第 4 項色票加色拆成五列，所以共 12 列。
 
