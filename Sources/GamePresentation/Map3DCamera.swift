@@ -704,14 +704,14 @@ public struct Map3DLighting: Hashable, Sendable {
     /// order, two to a row, the share of its
     /// windows lit at night and how bright its own colour may be to be
     /// lit (glass is dark; a shop's goods and signs are lit whole).
-    public static let nightWindowRowCount = 12
+    public static let nightWindowRowCount = 16
     public static let nightWindowRows: [Float] = {
         var values: [Float] = []
         for surface in Map3DSurface.allCases {
             let rule = Map3DNightWindows.rule(surface)
             values += [rule.share, rule.brightest]
         }
-        precondition(values.count <= nightWindowRowCount * 4, "the shader's nightWindows holds 24 layers")
+        precondition(values.count <= nightWindowRowCount * 4, "the shader's nightWindows holds 32 layers")
         return values + Array(repeating: 0, count: nightWindowRowCount * 4 - values.count)
     }()
 }
@@ -733,7 +733,8 @@ public enum Map3DNightWindows {
         switch surface {
         case .shopfront, .shopOptical, .shopPhone, .shopEatery, .shopTea: (0.75, 1)
         case .officeGlass: (0.4, 0.45)
-        case .homeWindows, .homeBalcony, .flatWindows, .flatBlinds: (0.35, 0.45)
+        case .homeWindows, .homeBalcony, .flatWindows, .flatBlinds, .flatBalconies, .hkWindows: (0.35, 0.45)
+        case .officeRibbon, .curtainSpandrel, .officeFins: (0.4, 0.45)
         case .grass, .paving, .ballast, .concrete, .roof, .plaster, .shutter, .metalSheet,
              .formConcrete, .brickTile, .mosaicTile, .terrazzo, .crosswalk, .laneArrows: (0, 0)
         }

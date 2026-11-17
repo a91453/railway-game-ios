@@ -184,6 +184,21 @@ public enum Map3DSurface: Int, CaseIterable, Sendable {
     /// the traffic goes) at `v` 0: through in `u` 0–0.5, through and left
     /// in 0.5–1.
     case laneArrows
+    /// Decision 817: a tower's windows of five more kinds
+    /// (``Map3DFacadeStyle``, `tools/map3d-facades/layers.py`). A tower of
+    /// flats' bay: full-height glass doors behind a balcony's parapet, an
+    /// air conditioner on it, the slab of the one above.
+    case flatBalconies
+    /// An office's ribbon of windows the bay wide between spandrels.
+    case officeRibbon
+    /// A curtain wall's bay: glass, and the pale spandrel band at the slab.
+    case curtainSpandrel
+    /// An office's two tall windows a bay between the piers its sun fins
+    /// stand out of.
+    case officeFins
+    /// A Hong Kong flat's bay: a bay window, a narrow window over a window
+    /// air conditioner.
+    case hkWindows
 
     /// The shops a ground floor may be, and the windows a block of flats
     /// may have; one is picked by where it stands.
