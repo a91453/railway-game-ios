@@ -2347,7 +2347,12 @@ extension Map3DScene {
                                commercial: Bool = false) {
             let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
             // Decision 764: its roof, and its walls a little lighter or darker.
-            let walls = Self.varied(walls, r(1041)), roof = Self.pickRoof(r(1040), low: false)
+            // Decision 812: on Hong Kong's map its walls and roof Hong Kong's.
+            let hongKong = look.buildings == .hongKong
+            let own = !hongKong ? walls : facade == .officeGlass ? Self.pick(Map3DHongKong.glass, r(1043))
+                : Self.pick(density >= 4 ? Map3DHongKong.towerWalls : Map3DHongKong.tenementWalls, r(1043))
+            let walls = Self.varied(own, r(1041))
+            let roof = hongKong ? Self.pick(Map3DHongKong.roofs, r(1040)) : Self.pickRoof(r(1040), low: false)
             let bay: Float = facade == .officeGlass ? 3 : 3.2
             // Flats' windows with or without blinds, and the podium's shop,
             // picked by where the block stands.
@@ -2393,7 +2398,11 @@ extension Map3DScene {
                                 topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
                                 top: roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
-                    if !far {
+                    if hongKong, facade != .officeGlass {
+                        let side = footprint * 0.55
+                        Self.addHongKongCrown(&mesh, wall: walls, top: base + Map3DPoint(0, 9 + 3.3 * floors, 0),
+                                              box: (centre: base, along: Map3DPoint(0, 0, -1), length: side, width: side), far: far, r: r)
+                    } else if !far {
                         Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 9 + 3.3 * floors, 0), forward: Map3DPoint(0, 0, -1),
                                           length: footprint * 0.55, width: footprint * 0.55, r: r, salt: 30)
                     }
