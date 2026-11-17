@@ -34,6 +34,21 @@ final class Map3DDR3100Tests: XCTestCase {
         }
     }
 
+    /// Decision 825: the DR1000 railcar and the DR3100 are drawn as their
+    /// far sets from 500 m out (``Map3DTrainSet/nearOnly``), not their
+    /// 3,604-triangle near cars as far as 900 m (MODEL-AGE §2.4).
+    func testTheirFarSetsAreDrawnFrom500Metres() throws {
+        let pack = Map3DModelPack.standard
+        XCTAssertTrue(Map3DTrainSet.nearOnly.isSuperset(of: ["dieselRailcar", "dieselExpress"]))
+        for (code, count, farKey) in [("dieselExpress", 3, "dieselExpressFar"), ("dieselExpress", 2, "dieselRailcarFar"), ("dieselExpress", 1, "dieselRailcarFar")] {
+            let near = try XCTUnwrap(pack.modelIndex(forType: code, carIndex: 0, count: count))
+            XCTAssertEqual(pack.model(near, forType: code, count: count, at: 300), near, "\(count) cars at 300 m")
+            let far = try XCTUnwrap(pack.model(near, forType: code, count: count, at: 700), "\(count) cars at 700 m")
+            XCTAssertTrue(pack.models[far].name.hasPrefix("set-\(farKey)-"), "\(count) cars at 700 m: \(pack.models[far].name)")
+            XCTAssertNil(pack.model(near, forType: code, count: count, at: 950), "\(count) cars at 950 m")
+        }
+    }
+
     /// The trains the DR3100 runs: 209, 221, 238 and 246, Shulin to
     /// Hualien, every day of the TRA's week (decision 532's
     /// `tra-schedule.json`, which took over decision 511's own file).

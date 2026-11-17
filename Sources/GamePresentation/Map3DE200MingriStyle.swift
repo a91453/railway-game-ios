@@ -7,9 +7,15 @@ public enum Map3DE200MingriStyle {
     public static let orange = Map3DColor.rgb(UInt32(TrainLivery.mingRi.stripe!))
     public static let black = Map3DColor.rgb(UInt32(TrainLivery.mingRi.body!))
 
+    /// Decision 825: the Ming-Ri's E200 as #1480 painted it, the orange
+    /// below and black above, the V and the roof black.
+    static let mingRiPaint = Map3DTrainShapeRefresh.E200Paint(lower: orange, upper: black, line: orange, chevron: black,
+                                                             roof: black)
+
     static func original(_ role: Role, far: Bool) -> Map3DModelPack.Model {
         let raw: Map3DModelPack.Model = switch role {
-        case .head: Map3DTrainSet.lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true)
+        // Decision 825: the E200 drawn in the Ming-Ri's paint, not repainted.
+        case .head: Map3DTrainSet.lit(Map3DTrainShapeRefresh.e200(mingRiPaint, far: far, named: "refresh-e200"), front: true)
         case .car: Map3DChuKuangPassenger.model(.standard, far: far)
         case .tail: Map3DTrainSet.chuKuangTail(far: far)
         }
@@ -30,13 +36,8 @@ public enum Map3DE200MingriStyle {
             return nil
         }
         if role == .head {
-            // Original shell is the first 44 triangles, including the dark floor.
-            if index < 44, c == Map3DPalette.shopAwnings[3] { return black }
-            if let v = recolour(Map3DPalette.shopAwnings[0], orange), z > 1.1, z < 2.8 { return v }
-            // Existing painted cab doors and V stripe, not roof insulators.
-            if abs(y) > 1.47, abs(x) > 6.8, abs(x) < 7.6, z < 3.4,
-               let v = recolour(Map3DPalette.tankWhite,black) { return v }
-            if abs(x) > 8.50, z > 1.8, z < 2.8, c == Map3DPalette.shopAwnings[3] { return black }
+            // Decision 825: painted in its recipe (``mingRiPaint``).
+            return nil
         } else {
             // Only shell and existing door leaves/waist stripe. Roof, A/C,
             // dark frames, glass, gangways, vents, bogies and equipment stay.

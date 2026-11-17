@@ -191,20 +191,23 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     }
 
     /// The locomotives stay as they were (decision 529: but the R200, now
-    /// #1589's, near and far): the far set has the near one's
+    /// #1589's, near and far; decision 825: and the E200, drawn from
+    /// photographs, near and far): the far set has the near one's
     /// where it has no light model of its own, the E500's light model where
     /// it has.
     func testTheLocomotivesAreUnchanged() throws {
         let heads: [String: String] = [
-            "E200CK": "8627afbfece96e5e", "R200CK": "a7b06e165ca838c8",
+            "E200CK": "c53c8986c5845c10", "R200CK": "a7b06e165ca838c8",
             "SUMMER": "bfdb194e7eb7d9ea", "E500CK": "9847c0f5eb19364",
         ]
         for (key, expected) in heads {
             XCTAssertEqual(hash(try model(try set(key, far: false).headName)), expected, key)
         }
-        for key in ["E200CK", "SUMMER"] {
-            XCTAssertEqual(payload(try model(try set(key, far: true).headName)), payload(try model(try set(key, far: false).headName)), key)
-        }
+        XCTAssertEqual(payload(try model(try set("SUMMER", far: true).headName)), payload(try model(try set("SUMMER", far: false).headName)))
+        // Decision 825: the E200 drawn from photographs, with a light
+        // version of its own from 500 m out.
+        XCTAssertEqual(payload(try model(try set("E200CK", far: true).headName)),
+                       payload(Map3DTrainSet.lit(Map3DTrainShapeRefresh.model("refresh-e200", far: true), front: true)))
         // Decision 529: the R200 as #1589's, near and far.
         XCTAssertEqual(hash(try model("set-R200CKFar-head")), "85118900406cf626")
         XCTAssertEqual(payload(try model("set-R200CKFar-head")), payload(Map3DTrainSet.litLenses(Map3DR200.model(far: true), front: true)))

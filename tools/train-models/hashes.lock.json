@@ -414,12 +414,12 @@
       "triangles" : 4008
     },
     "e200mingri-style-head" : {
-      "hash" : "d14da19f3555a811",
-      "triangles" : 5512
+      "hash" : "d8cdd7a3d6eaa82d",
+      "triangles" : 5784
     },
     "e200mingri-style-head-far" : {
-      "hash" : "340dca9e69735d43",
-      "triangles" : 5512
+      "hash" : "d997f60d3c1b0a55",
+      "triangles" : 1132
     },
     "e200mingri-style-tail" : {
       "hash" : "46f6e3705b72555",
@@ -2126,8 +2126,8 @@
       "triangles" : 9126
     },
     "refresh-e200" : {
-      "hash" : "480933673ebeadc8",
-      "triangles" : 5512
+      "hash" : "7e3469b47e1557cb",
+      "triangles" : 5784
     },
     "sanying-a" : {
       "hash" : "2d13807c6e799891",
@@ -2330,8 +2330,8 @@
       "triangles" : 6476
     },
     "set-E200CK-head" : {
-      "hash" : "be8377caf2702c3e",
-      "triangles" : 5512
+      "hash" : "975568db7942cb79",
+      "triangles" : 5784
     },
     "set-E200CK-tail" : {
       "hash" : "ac77eb322d524d1a",
@@ -2342,8 +2342,8 @@
       "triangles" : 4008
     },
     "set-E200CKFar-head" : {
-      "hash" : "3aa0e6c5e37957",
-      "triangles" : 5512
+      "hash" : "13baef01972515e6",
+      "triangles" : 1132
     },
     "set-E200CKFar-tail" : {
       "hash" : "ef4c9712a6fa04ed",
@@ -2894,8 +2894,8 @@
       "triangles" : 6476
     },
     "set-MINGRI-head" : {
-      "hash" : "d14da19f3555a811",
-      "triangles" : 5512
+      "hash" : "d8cdd7a3d6eaa82d",
+      "triangles" : 5784
     },
     "set-MINGRI-tail" : {
       "hash" : "46f6e3705b72555",
@@ -2906,8 +2906,8 @@
       "triangles" : 4008
     },
     "set-MINGRIFar-head" : {
-      "hash" : "340dca9e69735d43",
-      "triangles" : 5512
+      "hash" : "d997f60d3c1b0a55",
+      "triangles" : 1132
     },
     "set-MINGRIFar-tail" : {
       "hash" : "239b493d71d5c3d7",
