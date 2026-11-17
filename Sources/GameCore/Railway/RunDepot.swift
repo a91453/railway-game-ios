@@ -559,12 +559,79 @@ extension GameWorld {
     /// and leaving it from stop `stop`, runs to at `call`; `nil` for any
     /// other departure, or when none is free (it then takes the nearest,
     /// as before).
+    ///
+    /// Decision 816: so too a train run empty between the stops of a line
+    /// with runs and no depot (see ``runTrainToAnotherEnd(in:memo:)``).
     func pullOutBerths(of train: Train, leaving stop: Int, to call: StationID) -> Set<Berth>? {
-        guard isTrafficControlEnabled, train.isDeadheading, station(id: train.timetable[stop].station)?.isDepot == true,
-              station(id: call)?.isDepot == false, followsRealTimetable(train)
+        guard isTrafficControlEnabled, train.isDeadheading, station(id: call)?.isDepot == false, followsRealTimetable(train),
+              station(id: train.timetable[stop].station)?.isDepot == true
+                || lines.contains(where: { $0.hasRuns && $0.depots.isEmpty && $0.trains.contains(train.id) })
         else { return nil }
         let free = freeEndBerths(call, for: train)
         return free.isEmpty ? nil : Set(free)
+    }
+
+    // MARK: - Lines without a depot
+
+    /// Decision 816: a last resort of the deadlock's ways out, for a line
+    /// with runs and no depot, whose trains stand between runs at its
+    /// stops. In the deadlock `stuck`, the first of such a line's trains
+    /// without a service and with no run due, holding track a train of the
+    /// deadlock waits for, with its empty run to an end of the line
+    /// with room for it (see ``endsWithRoom(of:besides:for:)``), the
+    /// first of those whose way it can take now; or `nil`. A line with a
+    /// depot sends such a train in (decision 297); without one nothing
+    /// moved it before its next run. On Hong Kong's South Island Line under
+    /// the realistic rules, the runs dropped for lateness on the first day
+    /// were seven from Admiralty and five from South Horizons, so seven
+    /// trains ended the night bound for Admiralty's five tracks: the last
+    /// two waited at Ocean Park and Wong Chuk Hang until the first runs of
+    /// the morning, while two of South Horizons' five tracks stood empty.
+    func runTrainToAnotherEnd(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> (index: Int, line: ServiceLine, trip: LineTrip)? {
+        guard isTrafficControlEnabled, !stuck.isEmpty else { return nil }
+        var needs: [Set<TrackResource>]?
+        for line in lines where line.hasRuns && line.depots.isEmpty {
+            for id in line.trains {
+                guard stuck[id] == nil, let index = trains.firstIndex(where: { $0.id == id }) else { continue }
+                var train = trains[index]
+                guard train.execution == nil, train.placement != nil, train.movement.rate > 0,
+                      let here = stationsStoppedAt(by: id).first, dueRunDeparture(of: train, on: line) == nil
+                else { continue }
+                if needs == nil { needs = stuck.keys.sorted().map { routeEnvelope(of: stuck[$0]!.candidate).resources } }
+                let own = held(train)
+                guard needs!.contains(where: { network.fouls(own, $0) }) else { continue }
+                // As it leaves: empty, so bound for a free berth there
+                // (``pullOutBerths(of:leaving:to:)``).
+                train.isDeadheading = true
+                for end in endsWithRoom(of: line, besides: here, for: train) {
+                    guard let trip = emptyRun(of: line, for: train, to: [end]),
+                          let leaving = firstDeparture(of: train, on: trip, calling: line.stops),
+                          case .granted = reservingDeparture(leaving, memo: &memo.directions)
+                    else { continue }
+                    return (index, line, trip)
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Decision 816: the ends of `line` (its first and last stop; a ring
+    /// has none) other than `here`, with a berth free for `train` (see
+    /// ``freeEndBerths(_:for:)``) beyond one for each train on its way to
+    /// end its timetable there: the end with the most such berths first,
+    /// then the line's first. Not a stop between: a train left on a
+    /// through platform there stands in every later train's way, and
+    /// faces only one way out.
+    private func endsWithRoom(of line: ServiceLine, besides here: StationID, for train: Train) -> [StationID] {
+        guard !line.isRing, let first = line.stops.first, let last = line.stops.last, first != last else { return [] }
+        var ends: [(station: StationID, room: Int)] = []
+        for station in [first, last] where station != here {
+            let coming = trains.count { $0.id != train.id && $0.execution != nil && $0.timetable.last?.station == station }
+            let room = freeEndBerths(station, for: train).count - coming
+            if room > 0 { ends.append((station, room)) }
+        }
+        if ends.count == 2, ends[1].room > ends[0].room { ends.swapAt(0, 1) }
+        return ends.map(\.station)
     }
 
     // MARK: - Waking
