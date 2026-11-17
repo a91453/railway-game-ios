@@ -30,6 +30,70 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 138.
+        Entry(
+            id: "2026-11-18-138",
+            items: [
+                Line(
+                    english: "Rovaniemi opens: pick it from the new-game list from the start.",
+                    chinese: "羅瓦涅米開放：新遊戲的地圖清單一開始就能選。"
+                ),
+                Line(
+                    english: "Rovaniemi's track belongs to the state: buying a line costs nothing for the track.",
+                    chinese: "羅瓦涅米的軌道屬於國家，買線不用付鋪軌的錢。"
+                ),
+                Line(
+                    english: "Rovaniemi has snowy trees, frozen rivers, the northern lights on clear nights, and reindeer by Santa Claus Village.",
+                    chinese: "羅瓦涅米樹帶雪、河結冰，晴夜有極光，聖誕老人村旁有馴鹿。"
+                ),
+                Line(
+                    english: "Buying Hong Kong's South Island or Tung Chung line builds its real depot, where trains spend the night.",
+                    chinese: "香港新買南港島綫、東涌綫時會蓋出真實車廠，收班後列車回廠。"
+                ),
+                Line(
+                    english: "Hong Kong's Tuen Ma line has its own eight-car train.",
+                    chinese: "香港屯馬綫有自己的 8 節列車。"
+                ),
+                Line(
+                    english: "Hong Kong's countryside in 3D is coloured from real land use, and woods grow trees.",
+                    chinese: "香港 3D 地圖的鄉間照真實土地上色，林地會長樹。"
+                ),
+                Line(
+                    english: "Cars on Taiwan's streets are saloons, SUVs, vans and yellow taxis instead of boxes.",
+                    chinese: "台灣街上的汽車換成轎車、休旅車、廂型車與黃色計程車。"
+                ),
+                Line(
+                    english: "Freight trains show what they carry, and stations with a freight yard show it beside the track.",
+                    chinese: "貨運列車看得出載了什麼，有貨運場的車站旁邊有貨場。"
+                ),
+                Line(
+                    english: "High-speed, metro and Wenhu line trains are as long as the real ones.",
+                    chinese: "高鐵、捷運與文湖線的列車照真車的長度排。"
+                ),
+                Line(
+                    english: "Motorways no longer ride over every hill, and ramps come down to the ground inside their bridges.",
+                    chinese: "國道不再跟著山起伏，匝道與引道在橋裡就下到地面。"
+                ),
+                Line(
+                    english: "The theme is now a minuet for piano and strings, and in December it takes turns with the winter music.",
+                    chinese: "主題曲換成鋼琴與弦樂的小步舞曲，12 月起與冬季曲輪流播放。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Real trains on the map no longer have a double-width gap between cars.",
+                    chinese: "地圖上真實列車的車廂之間，縫隙不再是兩倍寬。"
+                ),
+                Line(
+                    english: "Laying track, the end no longer snaps to a spot beside another track.",
+                    chinese: "鋪軌時終點不會再停在另一條軌道旁邊。"
+                ),
+                Line(
+                    english: "Zuoying's roof frame no longer shows as white stripes across the trains.",
+                    chinese: "左營站屋頂骨架不再像一排白條橫過列車。"
+                ),
+            ]
+        ),
         // 137.
         Entry(
             id: "2026-11-17-137",
