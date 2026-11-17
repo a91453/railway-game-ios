@@ -21,7 +21,16 @@ final class Map3DE200MingriStyleTests: XCTestCase {
                     XCTAssertNotNil(Map3DE200MingriStyle.paint(old.vertices[(i/3*3)..<(i/3*3+3)],role:role,index:i/3,far:far))
                 }
             }
-            XCTAssertGreaterThan(changed,100)
+            if role == .head {
+                // Decision 825: the E200 is painted in its recipe, orange
+                // below and black above, not the standard orange and ivory.
+                XCTAssertEqual(changed,0)
+                let colours = Set(new.vertices.map(\.color))
+                XCTAssertTrue(colours.contains(Map3DE200MingriStyle.black)); XCTAssertTrue(colours.contains(Map3DE200MingriStyle.orange))
+                XCTAssertFalse(colours.contains(Map3DTrainShapeRefresh.e200Orange)); XCTAssertFalse(colours.contains(Map3DTrainShapeRefresh.e200Ivory))
+            } else {
+                XCTAssertGreaterThan(changed,100)
+            }
         }}
     }
     func testOriginalSetAndSelectionStayOriginal() {

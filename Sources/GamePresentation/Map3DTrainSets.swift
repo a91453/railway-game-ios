@@ -145,7 +145,8 @@ public struct Map3DTrainSet: Sendable {
             // has no light model but the E500's, is the same).
             // Decision 408: the E200 as #1201's, its front lamps lit.
             hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang),
-            hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang, far: true),
+            // Decision 825: from 500 m out the E200's own light version.
+            hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200", far: true), front: true) }, coach: chuKuang, far: true),
             e500Hauled("E500CK", coach: chuKuang),
             e500Hauled("E500CK", far: true, coach: chuKuang),
             r100Hauled(),
@@ -951,8 +952,8 @@ public struct Map3DTrainSet: Sendable {
     /// (#1201's E200, its front lamps lit, and #1306's automatic-door
     /// coaches) painted in ``TrainLivery/mingRi``'s black and orange
     /// (``Map3DE200MingriStyle``), laid as the E200CK (no own lengths), the
-    /// last coach's end lit red. `far`: the light coaches, the same E200
-    /// (it has no light model).
+    /// last coach's end lit red. `far`: the light coaches and, decision 825,
+    /// the E200's light version.
     static func mingRi(far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? "MINGRIFar" : "MINGRI", far: far ? nil : "MINGRIFar") {
             Cars(head: Map3DE200MingriStyle.model(.head, far: far), middle: Map3DE200MingriStyle.model(.car, far: far),

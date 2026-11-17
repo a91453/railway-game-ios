@@ -208,4 +208,30 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertTrue(lamps.allSatisfy { $0.color == Map3DTrainStyle.headlamp && $0.x > 0 })
         XCTAssertEqual(try XCTUnwrap(pack.modelIndex(forType: "E200CK", carIndex: 0, count: 4)), pack.index(of: "set-E200CK-head"))
     }
+
+    /// Decision 825: the E200 drawn from photographs, orange below and
+    /// ivory above, with a light version of its own from 500 m out
+    /// (before it the far set drew the whole near locomotive).
+    func testTheE200IsOrangeAndIvoryWithItsOwnFarVersion() throws {
+        let near = Map3DTrainShapeRefresh.model("refresh-e200")
+        let far = Map3DTrainShapeRefresh.model("refresh-e200", far: true)
+        XCTAssertEqual(far.name, "refresh-e200-far")
+        XCTAssertLessThan(far.triangleCount * 2, near.triangleCount)
+        for model in [near, far] {
+            let colours = Set(model.vertices.map(\.color))
+            XCTAssertTrue(colours.contains(Map3DTrainShapeRefresh.e200Orange), model.name)
+            XCTAssertTrue(colours.contains(Map3DTrainShapeRefresh.e200Ivory), model.name)
+            XCTAssertTrue(colours.contains(Map3DG12.hazard), model.name)
+        }
+        let nearHead = try model("set-E200CK-head"), farHead = try model("set-E200CKFar-head")
+        XCTAssertEqual(farHead.triangleCount, far.triangleCount)
+        XCTAssertFalse(farHead.vertices.filter(\.glows).isEmpty)
+        // The far version keeps the near one's box (tools/train-models/check.mjs).
+        let top = { (m: Map3DModelPack.Model) in m.vertices.map(\.z).max() ?? 0 }
+        let length = { (m: Map3DModelPack.Model) in m.vertices.map(\.x).max() ?? 0 }
+        XCTAssertEqual(top(farHead), top(nearHead), accuracy: 0.05)
+        XCTAssertEqual(length(farHead), length(nearHead), accuracy: 0.1)
+        let index = try XCTUnwrap(pack.modelIndex(forType: "E200CK", carIndex: 0, count: 4))
+        XCTAssertEqual(pack.model(index, forType: "E200CK", count: 4, at: 700), pack.index(of: "set-E200CKFar-head"))
+    }
 }
