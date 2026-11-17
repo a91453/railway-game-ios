@@ -15,8 +15,8 @@
 ## 還留下什麼
 
 - **UNVERIFIED**：手機上的建造時間（目標 15 秒內）；App 那一行改動（`Map3DPreviewScreen.swift` 傳 `slowest:`）只有 macOS CI 編得到。
-- 2D 的 6.2 秒停頓沒查到成因：列在 §29.26 第 1 項（2.15，等觸發）。
-- 場景本身再快：§29.26 第 2 項（2.10）。量法：
+- 2D 的 6.2 秒停頓沒查到成因：列在 §29.27 第 1 項（2.15，等觸發）。
+- 場景本身再快：§29.27 第 2 項（2.10）。量法：
 
   ```sh
   MAP3D_BUILD_SAVE=<存檔> MAP3D_BUILD_RUNS=2 swift test -c release -Xswiftc -enable-testing \

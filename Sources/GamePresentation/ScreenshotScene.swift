@@ -274,6 +274,16 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// request that moved it.
     case stationSite
 
+    /// Decision 826: a blank map with the curve limits on, a straight
+    /// track, and a stretch drawn off its end round a tight curve, climbing
+    /// 6 m: the preview coloured by the curve's limit, its tightest curve
+    /// and steepest grade marked (``trackCurve``); then a finger held
+    /// drawing a stretch beside the track, lined up parallel with it, the
+    /// guides and the loupe's line showing (``trackAlign``). For the
+    /// screenshot review of the pull request that added them.
+    case trackCurve
+    case trackAlign
+
     /// Decision 663 (the Mac playtest's A12): a blank map bought tile by
     /// tile, its middle tile owned, with the sights drawn in every tile:
     /// the sights panel's own sights, then those off the map folded away.
@@ -449,6 +459,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .cijinShore: Self.cijinShoreWorld(water: water)
         case .trackHeight: Self.trackHeightWorld()
         case .stationSite: Self.pausedDemo(in: language)
+        case .trackCurve, .trackAlign: Self.trackCurveWorld()
         case .sightsOffMap: Self.sightsOffMapWorld()
         case .museum: Self.museumWorld(in: language)
         case .sightVisitors: Self.sightVisitorsWorld(in: language)
@@ -661,6 +672,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             }
             return
         }
+        if self == .trackCurve || self == .trackAlign {
+            Self.prepareTrackCurve(session, holdsFinger: self == .trackAlign)
+            return
+        }
         if self == .stationSite {
             // Decision 744: the middle of the demo's longest slanting
             // stretch, picked with the network tool's station mode.
@@ -743,6 +758,57 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         from: PlanPoint(x: 26 * 4_096, y: 32 * 4_096), to: PlanPoint(x: 40 * 4_096, y: 32 * 4_096),
         middle: PlanPoint(x: 33 * 4_096, y: 32 * 4_096)
     )
+
+    /// ``trackCurve``'s straight track, west to east, and the free end of
+    /// the stretch drawn round a tight curve off its east end (some 190 m
+    /// of radius: under 70 km/h); and where ``trackAlign``'s finger starts
+    /// and is held, 36 m south of the track and a degree and a half off
+    /// its line.
+    static let trackCurveTrack = (
+        west: PlanPoint(x: 100_000, y: 131_072), east: PlanPoint(x: 131_072, y: 131_072),
+        curveEnd: PlanPoint(x: 137_472, y: 140_672),
+        alignFrom: PlanPoint(x: 102_400, y: 133_376), alignFinger: PlanPoint(x: 126_000, y: 133_976)
+    )
+
+    /// ``trackCurve``'s world: a blank map 4 km a side with the curve
+    /// limits on, paused at the start.
+    static func trackCurveWorld() -> GameWorld {
+        var world = GameWorld(
+            bounds: try! WorldBounds(width: 262_144, height: 262_144),
+            economy: GameEconomy(balance: Money(500_000_000), costs: .standard),
+            clock: GameClock(speed: .paused)
+        )
+        world.setCurveSpeedLimits(true)
+        return world
+    }
+
+    /// Lays ``trackCurveTrack``'s straight track, then previews the curve
+    /// off it, its end 6 m up; or, `holdsFinger`, a drag beside it still
+    /// under the finger.
+    @MainActor static func prepareTrackCurve(_ session: GameSession, holdsFinger: Bool) {
+        let track = trackCurveTrack
+        session.selectTool(.network)
+        session.tapNetwork(at: track.west, reach: 64)
+        session.tapNetwork(at: track.east, reach: 64)
+        session.buildNetworkTrack()
+        let middle: PlanPoint
+        if holdsFinger {
+            session.dragNetwork(from: track.alignFrom, to: track.alignFinger, reach: 640)
+            middle = PlanPoint(x: (track.alignFrom.x + track.alignFinger.x) / 2, y: track.alignFrom.y)
+        } else {
+            session.tapNetwork(at: track.curveEnd, reach: 64)
+            // After the tap: picking a new end sets its raise back to 0.
+            session.networkEndRaise = 6 * WorldCoordinate.unitsPerMetre
+            middle = PlanPoint(x: (track.east.x + track.curveEnd.x) / 2, y: (track.east.y + track.curveEnd.y) / 2)
+        }
+        session.lookAt(middle)
+        Task { @MainActor in
+            for _ in 0..<30 {
+                try? await Task.sleep(for: .seconds(1))
+                session.lookAt(middle)
+            }
+        }
+    }
 
     /// ``trackHeight``'s world: 4 × 4 blocks of ground 5 m up, cell
     /// columns 31 to 33 water, paused at the start.
