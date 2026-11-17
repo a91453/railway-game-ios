@@ -13,16 +13,18 @@ final class RoadCentreLinesTests: XCTestCase {
         XCTAssertEqual(RoadCentreLines.lines(of: Set(road)), [road.map(\.middle)])
     }
 
-    func testACornerIsRoundedAQuarterCellEachSide() throws {
+    func testAShortCornerIsCutAcrossInsideItsCells() throws {
+        // Decision 821: one cell each side of a turn is a step, drawn as a
+        // bend inside the cells (a long corner stays a street corner,
+        // RoadSmoothTests).
         let lines = RoadCentreLines.lines(of: cells([(0, 0), (0, 1), (1, 1)]))
         let line = try XCTUnwrap(lines.first)
         XCTAssertEqual(lines.count, 1)
-        let corner = CellPosition(row: 0, column: 1).middle, quarter = Land.cellLength / 4
-        XCTAssertFalse(line.contains(corner), "the corner is cut")
-        XCTAssertTrue(line.contains(PlanPoint(x: corner.x - quarter, y: corner.y)))
-        XCTAssertTrue(line.contains(PlanPoint(x: corner.x, y: corner.y + quarter)))
+        XCTAssertFalse(line.contains(CellPosition(row: 0, column: 1).middle), "the corner is cut")
         XCTAssertEqual(line.first, CellPosition(row: 0, column: 0).middle)
         XCTAssertEqual(line.last, CellPosition(row: 1, column: 1).middle)
+        let room = RoadCentreLines.Corridor([CellPosition(row: 0, column: 0), CellPosition(row: 0, column: 1), CellPosition(row: 1, column: 1)])
+        XCTAssertTrue(line.allSatisfy { room.outside(RoadCentreLines.Point($0)) == 0 }, "inside its cells")
     }
 
     func testAStaircaseTurnsThroughItsCellsWithNoTriangle() {
@@ -39,11 +41,15 @@ final class RoadCentreLinesTests: XCTestCase {
         XCTAssertEqual(RoadCentreLines.lines(of: cells([(5, 5)])), [[CellPosition(row: 5, column: 5).middle]])
     }
 
-    func testTouchingKeepsOnlyTheJoinsOfTheCellsDrawn() {
-        let city = cells([(0, 0), (0, 1), (0, 2)]), drawn = cells([(1, 2), (2, 2)])
-        let lines = RoadCentreLines.lines(of: city.union(drawn), touching: drawn)
-        XCTAssertEqual(lines, [[CellPosition(row: 0, column: 2).middle, CellPosition(row: 1, column: 2).middle,
-                                CellPosition(row: 2, column: 2).middle]], "joined to the road it meets, the road itself left out")
+    func testTouchingKeepsOnlyTheLinesThroughTheCellsDrawn() {
+        // Decision 821: whole, as they will be drawn once laid.
+        let city = cells([(0, 0), (0, 1), (0, 2)]), drawn = cells([(1, 2), (2, 2)]), apart = cells([(6, 6), (6, 7)])
+        let all = city.union(drawn).union(apart)
+        let lines = RoadCentreLines.lines(of: all, touching: drawn)
+        XCTAssertEqual(lines.count, 1)
+        XCTAssertTrue(RoadCentreLines.lines(of: all).contains(lines[0]))
+        XCTAssertEqual(lines[0].first, CellPosition(row: 0, column: 0).middle)
+        XCTAssertEqual(lines[0].last, CellPosition(row: 2, column: 2).middle)
     }
 
     func testTheWidthIsTheBaseMapsLane() {

@@ -49,4 +49,24 @@ final class Map3DSceneBuildLogTests: XCTestCase {
         XCTAssertTrue(chinese.contains("軌道變了"))
         XCTAssertTrue(chinese.contains("上 GPU 0.50 s（共 4.25 s）"))
     }
+
+    /// Decision 820: the slowest steps of a scene built whole, after its times.
+    func testTheReportNamesTheSlowestSteps() {
+        let time = Map3DSceneBuildTime(why: .first, realWorld: true, edges: 12, chunks: 40, triangles: 1_200_000, readSeconds: 0.25,
+                                       buildSeconds: 3.5, wall: 1_793_000_000,
+                                       slowest: [.init(name: "real buildings (footprints)", seconds: 1.62), .init(name: "roads", seconds: 0.75)])
+        XCTAssertTrue(time.reportLine(in: .english).hasSuffix("(total 3.75 s); slowest: real buildings (footprints) 1.62 s, roads 0.75 s"))
+        XCTAssertTrue(time.reportLine(in: .traditionalChinese).hasSuffix("（共 3.75 s）；最慢：real buildings (footprints) 1.62 s, roads 0.75 s"))
+    }
+
+    /// Decision 820: a scene's steps, each summed, the longest first.
+    func testASceneNamesItsSlowestSteps() {
+        let world = ScreenshotScene.museumWorld(in: .english)
+        let scene = Map3DScene(world: world, snapshot: world.railwaySnapshot())
+        XCTAssertFalse(scene.slowestSteps(3).isEmpty)
+        let slowest = scene.slowestSteps(3)
+        XCTAssertLessThanOrEqual(slowest.count, 3)
+        XCTAssertEqual(slowest.map(\.seconds), slowest.map(\.seconds).sorted(by: >))
+        XCTAssertEqual(Set(slowest.map(\.name)).count, slowest.count)
+    }
 }
