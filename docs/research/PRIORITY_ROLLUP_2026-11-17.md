@@ -63,7 +63,7 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 
 2.80 以下照原出處（2.75 建材外銷、ROAD-JUNCTION、TPE-LANDMARKS-2…）；新北投牌樓柱不是白圓柱 2.70（`priorities/TPE-MRT-ELEVATED.md`，和北投石塊同一輪工作室）；DEPOT-ADD-MID 2.15、三線共用小蠔灣車廠 1.85（`priorities/DEPOT-REAL.md`）。
 
-**有期限的**：羅瓦涅米開放（ROVANIEMI-OPEN，目標 11-30，沒打分，BACKLOG_AUDIT 表二「高」），ROVANIEMI-FARE（#2375）已合，可派；雪景第 1 名也最好趕 12/1。
+**有期限的**：羅瓦涅米開放（ROVANIEMI-OPEN，`priorities/ROVANIEMI-OPEN.md`，3.30）**已做完**：開關（#2355）與票價（#2375）都在 `main`，11-18 在 `main` `b4ae9c5` 重驗過建置、相關測試與 30 天量測；玩家要等 **138 發版**才看得到，期限 11-30（發版是作者的決定）。網站 credits（railway-reference-private #145，2.05）138 發了再合。開放之後的 §29.30 四項（這份原本沒收）：ROVANIEMI-KJA 2.40、FAR-DEMAND-TW 2.30、LINE-COST-SPLIT 1.95、ROVANIEMI-PACK-OUT 1.80（等下載修好），都在第 2 節 2.80 以下。雪景第 1 名最好趕 12/1。
 
 ## 3. 不佔名次的
 
