@@ -625,7 +625,7 @@
 - 只回報「完成」或「需要決定」，簡短白話。不要一直報中間進度，作者抱怨過「怎麼一堆回報」。
 - 回玩家的話要簡單、和藹、親近、簡短，不要兇。
 - 選項、外觀、預設值、順序、golden 值的變更，由 session 自己從各個角度決定（現在是玩家、鐵道迷、開發、美術、音樂五個），PR 裡每個角度寫一行。
-- **先評分再排、再派**（作者 2026-11-14：「一優先評分排清單」「看你先評分在排優先級」「之後都是這樣寫進去md或交接手冊」）：任何新項目或待處理項目（新功能、修正、交接裡留下的、決策的「下一步」）在派工之前先做五方評比：五個角度各 1–5 分，權重照 `research/NEXT_PRIORITIES_2026-10-12.md` §19（玩家 30、開發 25、美術 15、鐵道迷 15、音樂 15），加權分決定它在優先清單的位置；bug 排在功能前面。不問作者要不要做。寫交接或「下一步」時，沒有分數的項目當場打分、排進優先清單（現在是 §29），不要只列名字。
+- **先評分再排、再派**（作者 2026-11-14：「一優先評分排清單」「看你先評分在排優先級」「之後都是這樣寫進去md或交接手冊」）：任何新項目或待處理項目（新功能、修正、交接裡留下的、決策的「下一步」）在派工之前先做五方評比：五個角度各 1–5 分，權重照 `research/NEXT_PRIORITIES_2026-10-12.md` §19（玩家 30、開發 25、美術 15、鐵道迷 15、音樂 15），加權分決定它在優先清單的位置；bug 排在功能前面。不問作者要不要做。寫交接或「下一步」時，沒有分數的項目當場打分，不要只列名字。**分數寫在哪**（決策 832，2026-11-17）：實作與研究的 PR 寫成自己的 `docs/priorities/<工作名>.md`（`docs/priorities/README.md`），不再接 NEXT_PRIORITIES 的新小節；規劃定期跑 `python3 -I tools/golden-checks/doc_numbers.py --priorities` 收齊還沒併回的列（已排好序），貼進優先清單（現在是 §29），再加 `--mark "<貼到哪>"` 標記。規劃自己打的分可以直接寫進清單。
 - 作者自己保留：TestFlight 發版（作者說「發」，遊戲規劃才替作者按，§1.2）、Apple 帳號與 App Store Connect、secrets、新增依賴、copyleft 或沒有授權的程式碼。
 - 作者說過「不要限制，可以任意開 PR」：收尾時開幾個 PR 都可以，不用先問。
 
@@ -653,11 +653,18 @@
   - ROAD-LOOK-REAL-2（822，session_01JMHz9bn8HzazZzMYbhURDh，#2364）：新外觀，**看總覽圖才合**。
   - DEPOT-REAL（829，session_01JMHz9bsrazDrT4xMPmDZJE，Fable）：死結唯一的 session。
   - 三個都被交代：再碰到上限或第二次壓縮，先推分支、寫 `docs/handoff/<TASK>.md`（ROVANIEMI-FARE、ROAD-LOOK-REAL、DEPOT-REAL）。**停了沒再動**（#2118 很久沒消息、分支沒新 commit）就在 Ultra 開新 session 照交接檔接手，不從頭做。
+- **15:05 UTC 更新（Max 的規劃 session_01JMHz9caNPdHNkVjVgrCB6J，作者：「你來合，前一任停手」，交出前補）**：上面三件的實況，以這條為準。
+  - **ROVANIEMI-FARE #2375**（head `772c51e`，帶 #2355）：session **壓縮兩次已停**，不會再動。它的交接 `docs/handoff/ROVANIEMI-FARE.md` 列了兩件：(1) CI 全綠後轉 ready 合（動 GameCore、存檔 108，照 §1.2 確認 main 的 ci.yml 綠）。合了 #2355 會一起標成 merged，再封存 session_01JMHz9bnKhejDxHKpyueHQ3 與 session_01JMHz9bckVEprLBmpgpVmVQ。(2) 香港「關掉遠距需求」的對照：Max 的規劃在本機跑了，跑完會把數字留在 #2118。**不擋合併**，因為決策 828 §2 已量過香港「開」的情況是 HEALTHY。判定 CONCERNS 只因凱米耶爾維線單買要四十年回本，後續是 §29.30。
+  - **DEPOT-REAL #2371**（head `8cb6d42`）：已推，CI 在跑。session 還在 Max 上做。
+  - **ROAD-LOOK-REAL-2 #2364**：還在做，看總覽圖才合。
+  - 這三件與 REVIEW-L27 都已經被告知：「綠、head」寫在 #2118（Ultra 收不到 Max 的 send_message）。
+  - NEXT_PRIORITIES：§29.30 給羅瓦涅米，§29.31 給 DEPOT-REAL 留下的。REVIEW-L27 從下一個空號取。
+  - Max 的規劃交出後不再合、不再派。
 - **REVIEW-L27＋HEALTH-137 已在 Max 派了**（session_01JMHz9YJbkYec1ERxquXPKR，14:56 UTC，審 #2341 之後到 `85507e2`，也寫 PLAYER_FEEDBACK 的 137 一節），Ultra 不重派，照上面三件一樣看 #2118、合它的 PR。
 - **Ultra 先派**：REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）、§29.29 第 3 名 PRIO-FILES。Ultra 同時最多 6 個實作，Max 那四件也算在內。
 - **Threads**：作者貼了 134～137 那篇以後，用文件 PR 補 `docs/research/THREADS_WRITING.md` §5 一列（下一篇從 `85507e2` 之後寫）。
 - **號碼**：下一個決策 **831**，存檔 107（108 給 ROVANIEMI-FARE），golden schema 77，NEXT_PRIORITIES 到 §29.29。
-- **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（後者只接了一下就停，由前者收尾），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
+- **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（前者 15:01 停手，後者照作者的話接著合到 15:05 才交出），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
 
 **2026-11-17 深夜交接（規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 壓縮 3 次後交出；下面的「晚上」是前一版）**
 
