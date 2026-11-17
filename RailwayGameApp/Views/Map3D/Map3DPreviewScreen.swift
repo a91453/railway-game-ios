@@ -107,7 +107,7 @@ struct Map3DPreviewScreen: View {
         let driving = session.manualDrivePhase
         let ambient = ambientScreen?.ambient
         ZStack {
-            Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
+            Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now, place: Map3DSunPlace(world: session.world)),
                       weather: Map3DWeather(MapWeather(world: session.world)), rain: Map3DRain(MapWeather(world: session.world)),
                       feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,

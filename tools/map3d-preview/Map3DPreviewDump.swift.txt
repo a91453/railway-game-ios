@@ -353,8 +353,14 @@ final class Map3DPreviewDump: XCTestCase {
                 return ["x": p.x, "z": p.z, "d": lot.density, "shop": lot.use == .commercial]
             }
         // Uniforms as Map3DMetalView.uniformValues writes them, for a few
-        // cameras at MAP3D_MINUTE of the day (14:00 unless set).
-        var lighting = Map3DLighting(minute: ProcessInfo.processInfo.environment["MAP3D_MINUTE"].flatMap(Double.init) ?? 14 * 60)
+        // cameras at MAP3D_MINUTE of the day (14:00 unless set). Decision
+        // 813: with MAP3D_DAY (the game's day, from 0) the sun stands where
+        // it does over the world's place that day, as in the App; without
+        // it, the fixed 06:00–18:00 day.
+        let minute = ProcessInfo.processInfo.environment["MAP3D_MINUTE"].flatMap(Double.init) ?? 14 * 60
+        var lighting = ProcessInfo.processInfo.environment["MAP3D_DAY"].flatMap(Int64.init).map { day in
+            Map3DLighting(at: GameTime(seconds: day * GameTime.secondsPerDay + Int64(minute * 60)), place: Map3DSunPlace(world: world))
+        } ?? Map3DLighting(minute: minute)
         // Decisions 277 and 320: MAP3D_WEATHER=rain|thunderstorm|typhoon,
         // the light, the fog and the rain's streaks of that weather: the
         // streaks at second 36,000, the picture taken as a 533 × 300 point
