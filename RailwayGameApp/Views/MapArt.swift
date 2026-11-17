@@ -846,6 +846,16 @@ enum MapArt {
         for points in overlay.previewTracks {
             context.stroke(polyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
         }
+        // Decision 826: the stretches its curves slow a train, in their
+        // band's colour, over the centre line (the labels below say the
+        // speed, so the colour is not alone).
+        for stretch in overlay.slowStretches where stretch.points.count > 1 {
+            context.stroke(polyline(stretch.points, projection: projection), with: .color(speedBandColour(stretch.band)), style: StrokeStyle(lineWidth: width * 1.4, lineCap: .butt, lineJoin: .round))
+        }
+        // Decision 826: the guides a finger's stretch lines up along.
+        for line in overlay.guides where line.count > 1 {
+            context.stroke(wholePolyline(line, projection: projection), with: .color(Palette.ink.opacity(0.7)), style: StrokeStyle(lineWidth: 1.5, lineCap: .butt, dash: [6, 4]))
+        }
         if overlay.previewIsBuildable {
             for points in overlay.existing where points.count > 1 {
                 context.stroke(wholePolyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
@@ -858,6 +868,7 @@ enum MapArt {
         }
         let radius = max(5, referenceSize * 0.2)
         let region = drawingRegion(projection)
+        drawPreviewMarks(overlay.marks, region: region, projection: projection, in: context)
         for (index, anchor) in overlay.anchors.enumerated() where region.contains(anchor) {
             let dot = disc(at: projection.screenPoint(of: anchor), radius: radius)
             if index == 0 {
@@ -867,6 +878,37 @@ enum MapArt {
                 context.stroke(dot, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
                 context.stroke(dot, with: .color(Color.accentColor), lineWidth: 3)
             }
+        }
+    }
+
+    /// Decision 826: a slowed stretch's colour, from the status colours.
+    private static func speedBandColour(_ band: TrackSpeedBand?) -> Color {
+        switch band {
+        case .reduced: Theme.warning
+        case .slow: Theme.error
+        case nil: Palette.ink
+        }
+    }
+
+    /// Decision 826: the next stretch's tightest curve and steepest grade,
+    /// each a dot on the line and a capsule above it saying what it is.
+    private static func drawPreviewMarks(_ marks: [NetworkOverlay.Mark], region: WorldRegion, projection: some MapProjection, in context: GraphicsContext) {
+        for mark in marks where region.contains(mark.position) {
+            let colour: Color = switch mark.kind {
+            case .curve(let band): speedBandColour(band)
+            case .grade(let tooSteep): tooSteep ? Theme.error : Palette.ink
+            }
+            let at = projection.screenPoint(of: mark.position)
+            let dot = disc(at: at, radius: 4)
+            context.fill(dot, with: .color(colour))
+            context.stroke(dot, with: .color(Palette.land), lineWidth: 1.5)
+            let text = context.resolve(Text(verbatim: mark.text).font(.caption2.weight(.bold).monospacedDigit()).foregroundStyle(Palette.ink))
+            let size = text.measure(in: CGSize(width: 220, height: 40))
+            let rect = CGRect(x: at.x - size.width / 2 - 5, y: at.y - 10 - size.height - 2, width: size.width + 10, height: size.height + 2)
+            let shape = Path(roundedRect: rect, cornerRadius: rect.height / 2)
+            context.fill(shape, with: .color(Palette.land.opacity(0.94)))
+            context.stroke(shape, with: .color(colour), lineWidth: 1.5)
+            context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY), anchor: .center)
         }
     }
 

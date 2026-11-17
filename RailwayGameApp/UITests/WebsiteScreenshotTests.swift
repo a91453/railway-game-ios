@@ -1463,6 +1463,27 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-site", app)
     }
 
+    /// Decision 826 (TRACK-CURVE-COLOUR, TRACK-ALIGN): a stretch drawn
+    /// round a tight curve off a straight track, climbing, its slow curve
+    /// coloured and its tightest curve and steepest grade marked, in
+    /// Chinese and in English; then a finger held drawing beside the track,
+    /// lined up parallel, the guides and the loupe's line showing. For the
+    /// pull request's screenshot review.
+    func testTrackCurveColour() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "trackCurve"], english: english)
+            XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 180), "The stretch is previewed")
+            settle(seconds: 3)
+            keep("track-curve-colour\(english ? "-en" : "")", app)
+            app.terminate()
+        }
+        let align = launch(extra: ["-screenshot-scene", "trackAlign"])
+        defer { align.terminate() }
+        XCTAssertTrue(align.descendants(matching: .any)["map.constructionHUD"].firstMatch.appears(within: 180), "The stretch is previewed")
+        settle(seconds: 3)
+        keep("track-align", align)
+    }
+
     func testTrackHeightHint() {
         for english in [false, true] {
             let app = launch(extra: ["-screenshot-scene", "trackHeight", "-show-height-hint"], english: english)

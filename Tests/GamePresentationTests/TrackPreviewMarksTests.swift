@@ -240,4 +240,23 @@ final class TrackPreviewMarksTests: XCTestCase {
         session.endNetworkDrag(from: from, to: round, reach: reach)
         XCTAssertNil(session.networkDragGuideText, "only while the finger is down")
     }
+
+    /// The screenshot scenes show what they are for: a slow curve with
+    /// its marks, and a held finger lined up parallel.
+    func testTheScreenshotScenes() throws {
+        let curve = GameSession(world: ScreenshotScene.trackCurve.make(in: .traditionalChinese), language: .traditionalChinese)
+        ScreenshotScene.prepareTrackCurve(curve, holdsFinger: false)
+        let marks = try XCTUnwrap(curve.networkPreview?.marks)
+        XCTAssertNil(curve.networkPreview?.problem)
+        XCTAssertTrue(marks.stretches.contains { $0.band == .slow })
+        XCTAssertNotNil(marks.tightest?.speed)
+        XCTAssertNotNil(marks.steepest)
+        XCTAssertEqual(curve.networkOverlay?.marks.count, 2)
+
+        let align = GameSession(world: ScreenshotScene.trackAlign.make(in: .traditionalChinese), language: .traditionalChinese)
+        ScreenshotScene.prepareTrackCurve(align, holdsFinger: true)
+        XCTAssertEqual(align.networkDragGuide?.kind, .parallel)
+        XCTAssertEqual(align.networkDragGuideText, "與軌道平行")
+        XCTAssertNotNil(align.networkDragFinger)
+    }
 }

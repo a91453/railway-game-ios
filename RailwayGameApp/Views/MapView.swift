@@ -613,7 +613,19 @@ struct MapView: View {
                                     .padding(.vertical, 3)
                                     .background(Theme.panel, in: Capsule())
                             }
+                            // Decision 826: what the stretch lines up
+                            // with, or how far it turns.
+                            if let guide = session.networkDragGuideText {
+                                Text(verbatim: guide)
+                                    .font(.caption.weight(.semibold))
+                                    .monospacedDigit()
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Theme.panel, in: Capsule())
+                            }
                         }
+                        // Decision 826: a tick as the end snaps into line.
+                        .sensoryFeedback(.alignment, trigger: session.networkDragGuide?.kind) { _, new in new != nil }
                         .position(
                             x: leftOfFinger ? clear.leading + 12 + side / 2 : viewport.width - clear.trailing - 12 - side / 2,
                             y: clear.top + 12 + side / 2
