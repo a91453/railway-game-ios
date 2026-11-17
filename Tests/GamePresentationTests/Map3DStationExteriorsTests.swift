@@ -193,6 +193,10 @@ final class Map3DStationExteriorsTests: XCTestCase {
         }
         XCTAssertEqual(Set(top.keys), Set([-1, 0, 1].map { $0 * Map3DTrainRoom.frameSpacing }))
         for (_, area) in top { XCTAssertEqual(area, Map3DTrainRoom.frameWidth * 20, accuracy: 0.5) }
+        // Decision 625, later (ZUOYING-ROOF): the ribs in the palette's
+        // steel, not the roof's own colour.
+        XCTAssertTrue(cut.mesh.vertices.filter { $0.y > 12.3 }.allSatisfy { $0.color == Map3DStationExterior.ribColour })
+        XCTAssertEqual(Map3DStationExterior.ribColour, Map3DPalette.steel)
         // The ribs cross the track.
         XCTAssertTrue(cut.mesh.vertices.contains { $0.y > 12 && $0.z < -Map3DTrainRoom.trackHalf }
                       && cut.mesh.vertices.contains { $0.y > 12 && $0.z > Map3DTrainRoom.trackHalf })
