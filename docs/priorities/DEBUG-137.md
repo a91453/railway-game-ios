@@ -1,4 +1,4 @@
-# DEBUG-137（2026-11-18，DEBUG-137 分支 claude/project-thread-l7jant）
+# DEBUG-137（2026-11-18，#2408）
 
 137 發版後的除錯（決策 836）重量了 HEALTH-137 的兩條線索，留下的兩項。數字在[決策 836](../decisions/836.md) §3，交接在 `docs/handoff/DEBUG-137.md`。尺同 NEXT_PRIORITIES §19；bug 排在前面。
 
