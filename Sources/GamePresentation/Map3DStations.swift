@@ -278,7 +278,19 @@ extension Map3DScene.Builder {
                               drawnElsewhere: Set<Map3DStationKit.Profile> = []) -> Set<Map3DScene.ChunkKey> {
         let saved = target
         defer { target = saved }
-        addCanopies()
+        // Decision 826: the Tamsui-Xinyi line's elevated stations under
+        // their shells, which roof their platforms (no kit canopy there).
+        var shells: [StationID: (station: Map3DTaipeiMRTStation, placement: Map3DTaipeiMRTStation.Placement)] = [:]
+        if frame != nil {
+            var lines: [StationID: [[Map3DPoint]]] = [:]
+            for platform in laidPlatforms where platform.structure == .elevated || platform.structure == .bridge {
+                lines[platform.station, default: []].append(platform.line)
+            }
+            for (id, platformLines) in lines.sorted(by: { $0.key < $1.key }) where world.station(id: id)?.isDepot != true {
+                if let shell = taipeiMRTShell(platforms: platformLines, frame: frame) { shells[id] = shell }
+            }
+        }
+        addCanopies(skipping: Set(shells.keys))
         let tunnels = snapshot.platforms.filter { platform in
             platform.structure == .tunnel && platform.points.count > 1
                 && platform.points.contains { contains(x: Double($0.x), y: Double($0.y)) }
@@ -356,6 +368,8 @@ extension Map3DScene.Builder {
                 if !open.isEmpty { cells.formUnion(addDepotShed(id, platforms: open, path: longest, middle: middle)) }
             } else if drawnElsewhere.contains(station.profile) {
                 continue
+            } else if let shell = shells[id] {
+                cells.formUnion(addTaipeiMRTShell(shell.station, at: shell.placement))
             } else if let study = exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) {
                 // Decision 625: the real building stands for it.
                 if let expansion = self.world.station(id: id)?.expansion, let frame {
@@ -386,8 +400,8 @@ extension Map3DScene.Builder {
     /// most of TRA's are, decision 259), more of it at an expanded station
     /// (decision 506, later: ``Map3DStationKit/canopyShare(_:)``), in
     /// pieces of at most 8 m along its line; far off the flat canopy.
-    private mutating func addCanopies() {
-        for platform in laidPlatforms {
+    private mutating func addCanopies(skipping roofed: Set<StationID> = []) {
+        for platform in laidPlatforms where !roofed.contains(platform.station) {
             let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let middle = Self.middle(of: platform.line, share: share)
             guard let path = Map3DStreetLife.Path(middle) else { continue }
