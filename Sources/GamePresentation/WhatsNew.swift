@@ -30,6 +30,74 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 137.
+        Entry(
+            id: "2026-11-17-137",
+            items: [
+                Line(
+                    english: "Rovaniemi opens: pick it from the new-game list from the start.",
+                    chinese: "羅瓦涅米開放：新遊戲的地圖清單一開始就能選。"
+                ),
+                Line(
+                    english: "The 3D map opens faster the first time.",
+                    chinese: "第一次打開 3D 地圖變快了。"
+                ),
+                Line(
+                    english: "The E200 electric locomotive is rebuilt, its roof and sides closer to the real one.",
+                    chinese: "台鐵 E200 電力機車重做，車頂與車身側面更像真車。"
+                ),
+                Line(
+                    english: "Tall buildings in 3D have five kinds of windows, and balconies, sunshades and bay windows up close.",
+                    chinese: "3D 高樓多了五種窗戶，近看有陽台、遮陽板與凸窗。"
+                ),
+                Line(
+                    english: "Hong Kong's buildings look like Hong Kong: residential towers, tong lau and glass towers.",
+                    chinese: "香港的建物換成香港的樣子：住宅塔、唐樓與玻璃帷幕。"
+                ),
+                Line(
+                    english: "Taiwan's countryside in 3D is coloured from real land cover, and forests grow trees.",
+                    chinese: "台灣 3D 地圖的鄉間照真實土地上色，森林會長樹。"
+                ),
+                Line(
+                    english: "Sunrise and sunset in 3D follow the place and the game's date.",
+                    chinese: "3D 地圖的日出日落照所在地與遊戲日期。"
+                ),
+                Line(
+                    english: "The theme has a new melody, and winter music plays from 1 December to 6 January.",
+                    chinese: "主題曲改版；12 月 1 日到 1 月 6 日換成冬季曲。"
+                ),
+                Line(
+                    english: "Laying track colours the preview by how fast a curve can be run, and the end snaps to track beside it.",
+                    chinese: "鋪軌預覽依彎道能跑多快上色，拖到旁邊的軌道時終點會對齊。"
+                ),
+                Line(
+                    english: "Roads you draw run straight and smooth, and join the streets they meet.",
+                    chinese: "自己畫的路又直又順，接到街道時路口會接起來。"
+                ),
+                Line(
+                    english: "Shifen can be rebuilt with an island platform after you buy it.",
+                    chinese: "買下的十分可以改成島式月台。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Settings now use the Hong Kong map you downloaded.",
+                    chinese: "設定的香港地圖下載後，現在會真的用上。"
+                ),
+                Line(
+                    english: "On Hong Kong's South Island and Tung Chung lines, idle trains blocking a full end run empty to the other end.",
+                    chinese: "香港南港島綫與東涌綫收班後一端停滿時，擋路的空車會開去另一端。"
+                ),
+                Line(
+                    english: "A train no longer waits behind a spare train on its platform; it takes an empty one on the way.",
+                    chinese: "備用車占著月台時，後面的車在路上就改進空的月台。"
+                ),
+                Line(
+                    english: "A Christmas livery picked in a game never saved by hand stays after the app restarts.",
+                    chinese: "沒手動存過的新遊戲，選的聖誕塗裝重開 App 不再不見。"
+                ),
+            ]
+        ),
         // 136.
         Entry(
             id: "2026-11-17-136",
