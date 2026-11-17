@@ -1930,8 +1930,12 @@ private struct Map3DView: UIViewRepresentable {
             Bundle.main.url(forResource: prop.fileName, withExtension: Map3DSceneryProp.fileExtension).map { (prop, $0) }
         }))
         // Decision 743: Hong Kong's double-decker, minibus and taxi.
-        return Map3DHongKongVehicles.pack(pack, files: Map3DHongKongVehicles.fileNames.compactMapValues {
+        let hongKong = Map3DHongKongVehicles.pack(pack, files: Map3DHongKongVehicles.fileNames.compactMapValues {
             Bundle.main.url(forResource: $0, withExtension: Map3DHongKongVehicles.fileExtension)
+        })
+        // Decision 838: Taiwan's saloon, SUV, van and yellow taxi.
+        return Map3DTaiwanCars.pack(hongKong, files: Map3DTaiwanCars.fileNames.compactMapValues {
+            Bundle.main.url(forResource: $0, withExtension: Map3DTaiwanCars.fileExtension)
         })
     }
 

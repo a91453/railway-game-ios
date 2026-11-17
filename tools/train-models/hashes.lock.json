@@ -897,6 +897,14 @@
       "hash" : "4ce5aebc8b8efc90",
       "triangles" : 110
     },
+    "life-suv" : {
+      "hash" : "2863993cf6dea264",
+      "triangles" : 110
+    },
+    "life-yellowTaxi" : {
+      "hash" : "6beac4d4ad5f851a",
+      "triangles" : 120
+    },
     "life-walking" : {
       "hash" : "f644b2057fec536d",
       "triangles" : 70

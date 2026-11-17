@@ -74,6 +74,11 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case commuterStanding
     /// The commuter mid-stride; farther, ``walking``.
     case commuterWalking
+    /// Decision 838: a crossover SUV (``Map3DTaiwanCars``), in the
+    /// instance's colour.
+    case suv
+    /// Decision 838: Taiwan's yellow taxi, a saloon with its lit roof sign.
+    case yellowTaxi
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
@@ -163,13 +168,16 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             if self == .scooterPair {
                 Self.addRider(to: &mesh, at: -0.62, shirt: Self.pillionShirt, helmet: Self.helmets[0], reach: false)
             }
-        case .car, .van, .taxi:
+        case .car, .van, .taxi, .suv, .yellowTaxi:
             // `traffic.js`'s sedan and van: length, width, the belt and the
             // roof, the glasshouse from z0 to z1 of the length. Decision
             // 743: Hong Kong's taxi the sedan with a silver roof and its
-            // sign.
+            // sign. Decision 838: the SUV between them, Taiwan's taxi the
+            // sedan with its sign (these are the stand-ins where
+            // ``Map3DTaiwanCars``' files cannot be read).
             let spec: (length: Float, width: Float, belt: Float, roof: Float, z0: Float, z1: Float, rake: Float) =
-                self == .van ? (4.6, 1.8, 1.04, 1.9, 0.08, 0.86, 0.45) : (4.4, 1.76, 0.92, 1.46, 0.2, 0.72, 0.7)
+                self == .van ? (4.6, 1.8, 1.04, 1.9, 0.08, 0.86, 0.45)
+                : self == .suv ? (4.46, 1.82, 1.0, 1.62, 0.12, 0.84, 0.5) : (4.4, 1.76, 0.92, 1.46, 0.2, 0.72, 0.7)
             let rear = -spec.length / 2, front = spec.length / 2
             for x in [rear + 0.85, front - 0.85] {
                 for z: Float in [-1, 1] { box(x, 0, z * (spec.width / 2 - 0.12), 0.62, 0.22, 0.62, Self.tyre) }
@@ -187,7 +195,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
                 mesh.addFacet([bottom[from], bottom[to], top[to], top[from]], color: Self.glass)
             }
             mesh.addFacet([top[0], top[3], top[2], top[1]], color: self == .taxi ? Map3DHongKongVehicles.roofSilver : tinted)
-            if self == .taxi { Map3DHongKongVehicles.addRoofSign(to: &mesh, height: spec.roof) }
+            if self == .taxi || self == .yellowTaxi { Map3DHongKongVehicles.addRoofSign(to: &mesh, height: spec.roof) }
             glowing {
                 for z: Float in [-1, 1] { box(front - 0.02, spec.belt - 0.3, z * (spec.width / 2 - 0.26), 0.06, 0.36, 0.15, Self.headlamp) }
             }
@@ -879,15 +887,17 @@ public struct Map3DStreetLife: Sendable {
             let variant = r(6)
             model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
         } else if lane.scooters, region.hasScooters {
-            model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : kind < 0.9 ? .car : .van
+            model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : Map3DTaiwanCars.streetModel((kind - 0.62) / 0.38)
         } else {
-            model = kind < 0.75 ? .car : .van
+            model = Map3DTaiwanCars.streetModel(kind)
         }
         // Decision 802: private cars without Taiwan's taxi yellow (the
         // last) where the taxis are not yellow.
         let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints
             : region.hasYellowTaxis ? Self.carPaints : Array(Self.carPaints.dropLast())
         let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
+        // Decision 838: a car in the taxis' yellow is a taxi, with its sign.
+        if !model.isBus, !model.isScooter, region.hasYellowTaxis, tint == Self.carPaints.last { model = .yellowTaxi }
         let lone = model == .scooter
         if model.isScooter { model = Self.scooter(model, pick: r(7)) }
         var beside: (model: Map3DStreetModel, tint: UInt32)?
@@ -969,6 +979,7 @@ extension Map3DStreetModel {
         case .bus: 6
         case .car: 2.2
         case .van: 2.3
+        case .suv, .yellowTaxi: Map3DTaiwanCars.size(self).length / 2
         case .garbageTruck, .recyclingTruck: Map3DGarbageTruck.size.length / 2
         case .doubleDecker, .minibus, .taxi: Map3DHongKongVehicles.size(self).length / 2
         case .walking, .standing, .commuterStanding, .commuterWalking: 0.2

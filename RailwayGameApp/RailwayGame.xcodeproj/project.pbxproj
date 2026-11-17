@@ -77,6 +77,7 @@
 		3CD0719BA9F8CDD5FC42B134 /* tymc.json in Resources */ = {isa = PBXBuildFile; fileRef = 9066371AFA922B8308EA3748 /* tymc.json */; };
 		3D33656D59BCB77B82347CA8 /* StoryCardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C27C444707F74B8AF2F918 /* StoryCardUITests.swift */; };
 		3D4A3D25CBF2BBABD63DB985 /* real_buses_HualienCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 9BE814C300C924D2C6F37C10 /* real_buses_HualienCounty.json */; };
+		3D98EE0387D5AC3459BAC1A0 /* tw-suv.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = BBE48B552EFAEF0115F36257 /* tw-suv.m3dmodel */; };
 		3DF2130DC14F56AC507C8AA2 /* run-motor-brake-20.caf in Resources */ = {isa = PBXBuildFile; fileRef = 526C4A9ECE234BA6D08137DB /* run-motor-brake-20.caf */; };
 		3F4E6EB1D04071F2D7E13A02 /* WebsiteScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */; };
 		3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 905E65E0102E822A86C5ECF8 /* trtc_codes.json */; };
@@ -99,6 +100,7 @@
 		4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903982CCE649E985E784BE87 /* HUDView.swift */; };
 		4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */; };
 		513B53E96772630BCE8334FA /* run-motor-brake-68.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1EB8181F2A0F10308F7FFE23 /* run-motor-brake-68.caf */; };
+		528CA6862737178FF60243A0 /* tw-taxi.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = CC9B153E0B52C2BD4D55263D /* tw-taxi.m3dmodel */; };
 		52A5F98849E3111A1729CB31 /* hk-double-decker.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = B2569C176B215F8F92510A45 /* hk-double-decker.m3dmodel */; };
 		543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */; };
 		54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */ = {isa = PBXBuildFile; fileRef = 37971520DEDE438F5E6272D6 /* music-loop.caf */; };
@@ -167,6 +169,7 @@
 		86E0CE8EE136B4BD0E31D90E /* horn-highSpeed.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5417A59A2D7B4DC4A5CEEF0C /* horn-highSpeed.wav */; };
 		86EB45BA9705BF6B815B4D1B /* ntalrt.json in Resources */ = {isa = PBXBuildFile; fileRef = C604A41EF44E46BC47C90819 /* ntalrt.json */; };
 		87A7B5C3940191B63231B2F7 /* coach_network.json in Resources */ = {isa = PBXBuildFile; fileRef = 3DE8BEF1DE72647A7D9A265F /* coach_network.json */; };
+		8A3D36DBB4DE47BDCF9090C7 /* tw-sedan.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = BE9C29BA5642DAC52074A1A6 /* tw-sedan.m3dmodel */; };
 		8A77E1AFF3E0508D9C8C15CA /* goal-met.wav in Resources */ = {isa = PBXBuildFile; fileRef = F9D622682F53E544329A323C /* goal-met.wav */; };
 		8AA825EB511ADB250AD7FEC6 /* TrainShowcaseUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BEE1289DAE317B9E7290A0 /* TrainShowcaseUITests.swift */; };
 		8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A0EEF6BF7DEFF9BA44F2679A /* InfoPlist.strings */; };
@@ -221,6 +224,7 @@
 		AEA94B60157383F2A9A1D826 /* thsr-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 86547460C77F513B1976E1A4 /* thsr-schedule.json */; };
 		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
 		AF92C9C88BE3029BAAEC6A23 /* MapButtonsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58125CB8705666FD497C6E13 /* MapButtonsUITests.swift */; };
+		AFBBA2C421EB74167147BE5A /* tw-van.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 3E9BEDFADA5DAD4F6659F7E6 /* tw-van.m3dmodel */; };
 		B0440D353DD982E7ECA1AFBC /* real_buses_Keelung.json in Resources */ = {isa = PBXBuildFile; fileRef = D70569DF2A7B974DC2964234 /* real_buses_Keelung.json */; };
 		B254D84D28603B6DF754191E /* real_buses_PingtungCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 8DBD0CD0D1C1450DD0CFFE9A /* real_buses_PingtungCounty.json */; };
 		B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */ = {isa = PBXBuildFile; fileRef = 58D2ECE334BAC4B7C9744680 /* whoosh.wav */; };
@@ -418,6 +422,7 @@
 		3D0BB76CFCE33B148C01AADC /* garbage-truck.m3dmodel */ = {isa = PBXFileReference; path = "garbage-truck.m3dmodel"; sourceTree = "<group>"; };
 		3D5BF8179644D02716F92269 /* OneShotLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocation.swift; sourceTree = "<group>"; };
 		3DE8BEF1DE72647A7D9A265F /* coach_network.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coach_network.json; sourceTree = "<group>"; };
+		3E9BEDFADA5DAD4F6659F7E6 /* tw-van.m3dmodel */ = {isa = PBXFileReference; path = "tw-van.m3dmodel"; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
 		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
 		40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRealLinesButton.swift; sourceTree = "<group>"; };
@@ -567,12 +572,14 @@
 		B9632F6F7D420675666B2F9E /* Map3DShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Map3DShaders.metal; sourceTree = "<group>"; };
 		B9E396F04F921CD6475423B8 /* ticket-issued.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "ticket-issued.wav"; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
+		BBE48B552EFAEF0115F36257 /* tw-suv.m3dmodel */ = {isa = PBXFileReference; path = "tw-suv.m3dmodel"; sourceTree = "<group>"; };
 		BBFF707BB9379ADCD2D345D3 /* run-motor-brake-45.caf */ = {isa = PBXFileReference; path = "run-motor-brake-45.caf"; sourceTree = "<group>"; };
 		BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLineChips.swift; sourceTree = "<group>"; };
 		BCC33070865431E53CA5C950 /* FinanceCompositionChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceCompositionChart.swift; sourceTree = "<group>"; };
 		BDC928DD3917E8959E2930DD /* track_stations.geojson */ = {isa = PBXFileReference; path = track_stations.geojson; sourceTree = "<group>"; };
 		BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListSearchField.swift; sourceTree = "<group>"; };
 		BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntalrt_times.json; sourceTree = "<group>"; };
+		BE9C29BA5642DAC52074A1A6 /* tw-sedan.m3dmodel */ = {isa = PBXFileReference; path = "tw-sedan.m3dmodel"; sourceTree = "<group>"; };
 		BEB483D5847D06BCBC26230C /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackViews.swift; sourceTree = "<group>"; };
 		C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonUITests.swift; sourceTree = "<group>"; };
@@ -591,6 +598,7 @@
 		C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionStyle.swift; sourceTree = "<group>"; };
 		CB6CFDE772AE458BC8B1AD89 /* build-done.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "build-done.wav"; sourceTree = "<group>"; };
 		CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopulationLegendView.swift; sourceTree = "<group>"; };
+		CC9B153E0B52C2BD4D55263D /* tw-taxi.m3dmodel */ = {isa = PBXFileReference; path = "tw-taxi.m3dmodel"; sourceTree = "<group>"; };
 		CCAFE6C4740826EF37F0FA0C /* MapPackDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapPackDownloader.swift; sourceTree = "<group>"; };
 		CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_place_names.json; sourceTree = "<group>"; };
 		CE177E709243BF5670A3607B /* StationCommerceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCommerceSection.swift; sourceTree = "<group>"; };
@@ -976,6 +984,10 @@
 				D8281E5A3E536515E578D731 /* tpe-temple-xiahai-city-god.m3dmodel */,
 				EAFC35DA6CCA86527B6803D7 /* tpe-temple-xingtian.m3dmodel */,
 				C251D4CCDA182936D3B548DB /* tpe-temple-zhinan.m3dmodel */,
+				BE9C29BA5642DAC52074A1A6 /* tw-sedan.m3dmodel */,
+				BBE48B552EFAEF0115F36257 /* tw-suv.m3dmodel */,
+				CC9B153E0B52C2BD4D55263D /* tw-taxi.m3dmodel */,
+				3E9BEDFADA5DAD4F6659F7E6 /* tw-van.m3dmodel */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1415,6 +1427,10 @@
 				3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */,
 				8E8DF7ADF7EF189838D3BB26 /* trtc_ridership.json in Resources */,
 				8F7D3D9A5618E26E83A6DA59 /* trtc_times.json in Resources */,
+				8A3D36DBB4DE47BDCF9090C7 /* tw-sedan.m3dmodel in Resources */,
+				3D98EE0387D5AC3459BAC1A0 /* tw-suv.m3dmodel in Resources */,
+				528CA6862737178FF60243A0 /* tw-taxi.m3dmodel in Resources */,
+				AFBBA2C421EB74167147BE5A /* tw-van.m3dmodel in Resources */,
 				3CD0719BA9F8CDD5FC42B134 /* tymc.json in Resources */,
 				81123B585970D45CCAB1E455 /* tymc_ridership.json in Resources */,
 				2B45A912226EB245FACCA4F3 /* tymc_times.json in Resources */,
