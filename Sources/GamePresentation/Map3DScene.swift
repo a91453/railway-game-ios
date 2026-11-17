@@ -169,6 +169,17 @@ public struct Map3DScene: Sendable {
     /// (`Map3DSceneBuildTimeReportTests`). Not part of what is drawn.
     let steps: [(step: String, seconds: Double)]
 
+    /// Decision 820: the `count` steps of building it that took longest,
+    /// each step's times summed, the longest first, for the problem
+    /// report's line (``Map3DSceneBuildTime/slowest``).
+    public func slowestSteps(_ count: Int) -> [Map3DSceneBuildTime.Step] {
+        var summed: [(step: String, seconds: Double)] = []
+        for (step, seconds) in steps {
+            if let at = summed.firstIndex(where: { $0.step == step }) { summed[at].seconds += seconds } else { summed.append((step, seconds)) }
+        }
+        return summed.sorted { $0.seconds > $1.seconds }.prefix(count).map { Map3DSceneBuildTime.Step(name: $0.step, seconds: $0.seconds) }
+    }
+
     /// Decision 585 PR-3: the water as drawn within `radius` metres of
     /// `centre`, for the ferry piers to stand at its shore. The ground's
     /// faces (the first ``Chunk/baseIndexCount`` indices) no more than 4 m
