@@ -145,6 +145,7 @@
 		792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 68B0C0FD89F59C53A9685C67 /* sanying_times.json */; };
 		79E93C89D5CBC16C6999156A /* real_buses_LienchiangCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */; };
 		7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */; };
+		7AC19AF0231E1CD39DDBC271 /* sleigh-bells.caf in Resources */ = {isa = PBXBuildFile; fileRef = A5BE130616B8EF300E724027 /* sleigh-bells.caf */; };
 		7B2C7C245265CD7529B9371B /* RollingStockCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 771361B568387359268A6B83 /* RollingStockCatalogView.swift */; };
 		7B33A9D56D70E34C9244D283 /* DeviceDiagnosticsRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A5BD1F73E69B878537F5E6 /* DeviceDiagnosticsRecorder.swift */; };
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
@@ -538,6 +539,7 @@
 		A24863901005CB57D9568970 /* kenney-pine-young.m3dmodel */ = {isa = PBXFileReference; path = "kenney-pine-young.m3dmodel"; sourceTree = "<group>"; };
 		A2C27C444707F74B8AF2F918 /* StoryCardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryCardUITests.swift; sourceTree = "<group>"; };
 		A32E5B7462B864BC37E88A37 /* Map3DPreviewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DPreviewScreen.swift; sourceTree = "<group>"; };
+		A5BE130616B8EF300E724027 /* sleigh-bells.caf */ = {isa = PBXFileReference; path = "sleigh-bells.caf"; sourceTree = "<group>"; };
 		A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView3D.swift; sourceTree = "<group>"; };
 		A718C2A85A5CD79308AD3851 /* run-motor-power-04.caf */ = {isa = PBXFileReference; path = "run-motor-power-04.caf"; sourceTree = "<group>"; };
 		A78EE664114638279C7BCC3A /* StationStampPassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationStampPassportView.swift; sourceTree = "<group>"; };
@@ -1036,6 +1038,7 @@
 				D676D8B2F681ED388F065F97 /* run-motor-power-20.caf */,
 				B94D537EFD16B15799F225AC /* run-motor-power-30.caf */,
 				7979AC35B97A2E454868F1AA /* run-motor-power-68.caf */,
+				A5BE130616B8EF300E724027 /* sleigh-bells.caf */,
 				4966256D18F5622FE1A080BB /* station-chime.wav */,
 				C51CA7B153E66D7649E1713A /* thunder.caf */,
 				B9E396F04F921CD6475423B8 /* ticket-issued.wav */,
@@ -1359,6 +1362,7 @@
 				4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */,
 				FA57C7F457ADE1E1971249E7 /* sanying_ridership.json in Resources */,
 				792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */,
+				7AC19AF0231E1CD39DDBC271 /* sleigh-bells.caf in Resources */,
 				F46D9B04101FA9F89A33CB08 /* station-chime.wav in Resources */,
 				10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */,
 				A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */,

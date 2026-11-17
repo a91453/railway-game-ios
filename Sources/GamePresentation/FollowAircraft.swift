@@ -60,6 +60,8 @@ extension Map3DAircraft {
     /// over.
     public static func canFollow(_ drawn: Drawn) -> Bool {
         guard let flight = drawn.flight, drawn.flying, let phase = drawn.phase else { return false }
+        // Decision 831: Santa's sleigh, all its way.
+        if flight.santa != nil { return true }
         if flight.leg != nil { return phase != .climb || Double(drawn.height) < cruiseHeight }
         return phase != .climb || Double(drawn.height) < followedOut * climb
     }
@@ -69,6 +71,7 @@ extension Map3DAircraft {
     /// seat is on the left, ahead of the wing of a jet and of the
     /// propellers of the others, at its cabin windows' height.
     public static func pose(of aircraft: Drawn) -> Map3DFollow.Pose {
+        if aircraft.flight?.santa != nil { return SantaFlight.pose(of: aircraft) }
         let size = Map3DAircraftStudies.dimensions(aircraft.kind), shape = Map3DAircraftStudies.shape(aircraft.kind)
         let (origin, x, y, z) = axes(of: aircraft)
         func at(_ behindNose: Float, _ left: Float, _ up: Float) -> Map3DPoint {
@@ -269,6 +272,10 @@ extension Map3DAircraft.Phase {
 extension GameWorld {
     /// The text for the bar of an aircraft followed.
     func aircraftFollowFacts(of state: Map3DAircraft.State, in language: DisplayLanguage) -> AircraftFollowFacts {
+        // Decision 831: Santa's sleigh.
+        if state.flight.santa != nil {
+            return SantaFlight.followFacts(of: state, in: language, speed: clock.isPaused ? nil : clock.speed)
+        }
         // Decision 771: a company route's aircraft is named by its route.
         if let leg = state.flight.leg, let window = AirFlightWindow.make(leg, in: self, language: language) {
             let direction = language.text("Your route", "公司航線") + " · " + state.kind.text(in: language)
