@@ -225,7 +225,8 @@ extension Map3DScene.Builder {
             sizing = size.isFinite ? size : nil
             for road in roads where road.kind == kind {
                 addStrip(road.points, bounds: road.bounds, width: kind.width(ramp: road.isRamp), lift: Self.lift(of: kind),
-                         color: Map3DPalette.road(kind), paint: nil, raised: true, onDeck: road.bridgeLevel > 0, taking: &taken)
+                         color: Map3DPalette.road(kind), paint: nil, raised: true, onDeck: road.bridgeLevel > 0,
+                         roadCuts: kind != .motorway, taking: &taken)
             }
         }
         // Decision 355: the paint at the junctions, the centre lines
@@ -463,7 +464,7 @@ extension Map3DScene.Builder {
     /// bridge's) on its deck too, split every ``raisedStep`` metres near
     /// one.
     mutating func addStrip(_ points: [Map3DBaseMap.Point], bounds: Map3DBaseMap.Bounds, width: Float, lift: Float, color: UInt32,
-                           paint: Map3DPaint?, water: Bool = false, raised: Bool = false, onDeck: Bool = false,
+                           paint: Map3DPaint?, water: Bool = false, raised: Bool = false, onDeck: Bool = false, roadCuts: Bool = true,
                            taking taken: inout Set<Map3DScene.ChunkKey>) {
         let half = Double(width) / 2
         for index in 1..<points.count {
@@ -507,7 +508,7 @@ extension Map3DScene.Builder {
                 // is a road a metre or more over the ground (續篇二: a road
                 // lifted over a cutting, onto its deck).
                 if !bridges && !(riseA.onBridge && riseB.onBridge) && min(riseA.rise, riseB.rise) < 1 {
-                    (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift)
+                    (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift, roadCuts: roadCuts)
                 }
                 mesh(at: middle) {
                     let start = $0.vertices.count
@@ -544,7 +545,7 @@ extension Map3DScene.Builder {
     /// apart cuts it where the whole scene does.
     mutating func raisedCuts(from first: Map3DBaseMap.Point, to last: Map3DBaseMap.Point, anchor: Map3DBaseMap.Point,
                              along: (x: Double, z: Double), onDeck: Bool) -> [Double] {
-        guard !roadBridges.isEmpty else { return [] }
+        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return [] }
         let step = Self.raisedStep
         let start = (first.x - anchor.x) * along.x + (first.z - anchor.z) * along.z
         let end = (last.x - anchor.x) * along.x + (last.z - anchor.z) * along.z

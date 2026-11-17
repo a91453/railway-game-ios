@@ -208,7 +208,61 @@ final class Map3DWinterLightsTests: XCTestCase {
             let tree = try XCTUnwrap(trees.first)
             XCTAssertLessThanOrEqual(Map3DPoint(tree.point.x, 0, tree.point.z).length, Map3DWinterLights.plazaSearch + 0.01, plaza)
             XCTAssertFalse(builder.underLandmark(tree.point), plaza)
+            // XMAS-TREE-SIZE: as big as it has room for, and its planter
+            // on no station building or shop.
+            XCTAssertEqual(tree.scale, Map3DWinterLights.plazaTreeScales[0], plaza)
+            XCTAssertTrue(builder.isClearOfBuildings(tree.point, radius: Map3DWinterLights.plazaTreeFoot * tree.scale), plaza)
         }
+    }
+
+    /// XMAS-TREE-SIZE: a big station's tree is drawn as big as its plaza
+    /// has room for: on the demo's plazas, shops across them, 12 m (the
+    /// 15 m one's planter would reach the shops' awnings); on a plaza with
+    /// nothing across, 15 m; and a frame draws it at its size.
+    func testAStationsTreeIsAsBigAsItsPlaza() throws {
+        let trees = Self.demo.winterLights.placements.filter { $0.decor == .treeMedium }
+        XCTAssertFalse(trees.isEmpty)
+        XCTAssertTrue(trees.allSatisfy { Map3DWinterLights.stationTreeScales.contains($0.scale) }, "\(trees.map(\.scale))")
+        XCTAssertTrue(trees.allSatisfy { $0.scale == 2 }, "\(trees.map(\.scale))")
+        // With nothing across the plaza, the biggest; a shop across it,
+        // 12 m; the plaza no deeper than the model's own planter, 6 m.
+        let banqiao = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0141, longitudeDegrees: 121.4637))
+        let world = GameWorld.newGame(anchor: banqiao)
+        let metre = Double(WorldCoordinate.unitsPerMetre), reach = 500 * metre
+        let place = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: 25.0141, longitude: 121.4637)
+        let x = place.x, y = place.y
+        func scale(shopFrom near: Float?) -> Float? {
+            let region = WorldRegion(minX: x - reach, minY: y - reach, maxX: x + reach, maxY: y + reach)
+            var builder = Map3DScene.Builder(originX: x, originY: y, region: region, world: world, heights: nil)
+            builder.stationFronts = [(centre: .zero, forward: Map3DPoint(1, 0, 0), depth: 20, wide: 40, top: 10, big: true, strings: [])]
+            builder.houseFootprints = [[Map3DPoint(-10, 0, -20), Map3DPoint(10, 0, -20), Map3DPoint(10, 0, 20), Map3DPoint(-10, 0, 20)]]
+            if let near {
+                builder.shopFootprints = [[Map3DPoint(10 + near, 0, -3), Map3DPoint(30, 0, -3), Map3DPoint(30, 0, 3), Map3DPoint(10 + near, 0, 3)]]
+            }
+            builder.addWinterDecor(frame: nil)
+            return builder.winterDecor.first { $0.decor == .treeMedium }?.scale
+        }
+        XCTAssertEqual(scale(shopFrom: nil), 2.5)
+        XCTAssertEqual(scale(shopFrom: 12.1), 2)
+        XCTAssertEqual(scale(shopFrom: 10.2), 1)
+        XCTAssertNil(scale(shopFrom: 9))
+        XCTAssertTrue(Self.demo.winterLights.placements.filter { $0.decor == .lightString }.allSatisfy { $0.scale == 1 })
+        let tree = try XCTUnwrap(trees.first)
+        let pack = Map3DModelPack.standard
+        let drawn = frame(Map3DWinterLights(placements: [tree]), eye: tree.point + Map3DPoint(0, 30, 0), on: date(2026, 12, 20), pack: pack)
+        let instance = try XCTUnwrap(drawn.instances.first)
+        let up = Map3DPoint(instance.transform[8], instance.transform[9], instance.transform[10])
+        XCTAssertEqual(up.length, tree.scale, accuracy: 0.001)
+    }
+
+    /// XMAS-TREE-SIZE: how far a point is from a building's outline.
+    func testTheDistanceToAnOutline() {
+        let square = [Map3DPoint(0, 0, 0), Map3DPoint(10, 0, 0), Map3DPoint(10, 0, 10), Map3DPoint(0, 0, 10)]
+        XCTAssertEqual(Map3DScene.Builder.distance(from: Map3DPoint(5, 0, 5), to: square), 0)
+        XCTAssertEqual(Map3DScene.Builder.distance(from: Map3DPoint(13, 0, 5), to: square), 3, accuracy: 0.001)
+        XCTAssertEqual(Map3DScene.Builder.distance(from: Map3DPoint(13, 0, 14), to: square), 5, accuracy: 0.001)
+        XCTAssertEqual(Map3DScene.Builder.distance(from: Map3DPoint(13, 0, 14), to: square.reversed()), 5, accuracy: 0.001)
+        XCTAssertEqual(Map3DScene.Builder.distance(from: Map3DPoint(5, 0, 5), to: square.reversed()), 0)
     }
 
     /// A plaza's tree is moved to the nearest clear spot, and left out

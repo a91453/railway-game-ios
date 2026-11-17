@@ -84,6 +84,7 @@ extension Map3DScene.Builder {
             let shop = Self.shop(seed: seed, index: Int32(slot.order), lane: slot.lane, tall: tall)
             let footprint = Self.shopFootprint(slot, depth: shop.depth)
             guard footprint.allSatisfy({ cells.contains(chunk(of: $0)) }), isClear(footprint, facing: slot.facing) else { continue }
+            shopFootprints.append(footprint)
             let foot = Map3DPoint(slot.front.x, footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, slot.front.z)
             let middle = foot - slot.facing * (shop.depth / 2)
             target = .near
