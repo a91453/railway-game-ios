@@ -646,7 +646,8 @@
 
 **2026-11-17 深夜交接（規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 壓縮 3 次後交出；新規劃照這一段接手，下面的「晚上」是前一版）**
 
-- **137 還沒發**：main HEAD `85507e2`（#2368 發版說明）。完整 `ci.yml`（手動）與 push run 都綠；full lane（iOS App Build run 44085389506，workflow_dispatch）13:40 UTC 還在跑。兩個都綠了先告訴作者，**作者在規劃對話說「發」才**照 §1.2 按一次 `testflight.yml`。**發之前不要合任何 PR**（main HEAD 一動就要重跑完整測試和 full lane），本段的交接 PR 也等發完再合。
+- **137 已發（新規劃 session_01JMHz9caNPdHNkVjVgrCB6J 補記）**：作者 13:32 UTC 自己按 `testflight.yml`（run 44093811838，`85507e2`，成功）。同一個 commit 的完整 `ci.yml`（run 44085363286）與 full lane（run 44085389506）都綠。發完合了 #2369（830，`478d0da`）與這份交接；PLAYER_FEEDBACK 的 137 一節由 REVIEW-L27＋HEALTH-137 寫。下面這一條是交接當時的狀態。
+- **（交接當時）137 還沒發**：main HEAD `85507e2`（#2368 發版說明）。完整 `ci.yml`（手動）與 push run 都綠；full lane（iOS App Build run 44085389506，workflow_dispatch）13:40 UTC 還在跑。兩個都綠了先告訴作者，**作者在規劃對話說「發」才**照 §1.2 按一次 `testflight.yml`。**發之前不要合任何 PR**（main HEAD 一動就要重跑完整測試和 full lane），本段的交接 PR 也等發完再合。
 - **137 帶到但說明沒寫的**：#2363 淡水信義線高架車站（827）在 `85507e2` 之前合進 main。決定不改說明（改了要重跑），Threads 寫進新功能；138 的說明不要再寫它。
 - **Threads**：134～137 的草稿已交給作者（#2118「Threads 草稿交付：涵蓋到 main 85507e2」），格式照 `docs/research/THREADS_WRITING.md`。作者貼了以後，用一個文件 PR 把那份檔案 §5 補一列（134～137，下一篇從 `85507e2` 之後寫）。冬季那則要不要預告由作者決定。
 - **發完 137 之後**：`docs/research/PLAYER_FEEDBACK.md` 記這次發版；派 REVIEW-L27＋HEALTH-137（審 #2341 之後到 `85507e2`）。
