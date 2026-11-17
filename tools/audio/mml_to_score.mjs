@@ -25,7 +25,7 @@ import { validateMML, f } from './mml-core/core.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 export const TICKS_PER_BEAT = 960;
-const VOICES = ['bell', 'pluck', 'pad', 'clack', 'glock', 'sleigh'];
+const VOICES = ['bell', 'pluck', 'pad', 'clack', 'glock', 'sleigh', 'felt'];
 const ROLES = ['chime', 'departure', 'stem'];
 
 function fail(message) {

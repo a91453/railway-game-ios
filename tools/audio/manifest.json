@@ -204,31 +204,31 @@
       "stems": [
         {
           "score": "tools/audio/scores/theme-melody.score.json",
-          "scoreSha256": "2b4694e8feb61bb160711ba26a6756d7b8e8d1b1b820b64e7369af154bcf00d9",
+          "scoreSha256": "b1a3a9cfc9b504d275f360f44a8b8d6242fccf5333fc412eaa8e592b8ca352c6",
           "mml": "tools/audio/mml/theme-melody.mml",
-          "mmlSha256": "dfe13e3c082199b17d6bb4bedc34f1e1da0c0b747800367c7c58cc169e0cfb6d"
+          "mmlSha256": "8f2057ae6c33d24ede7773cb5de8e38c42ccbe96464cd1c07fdb1320943be298"
         },
         {
           "score": "tools/audio/scores/theme-harmony.score.json",
-          "scoreSha256": "21093f38e894fa5322ebce0c0f1fc111bbe0496c656f5d60b3763996346d270e",
+          "scoreSha256": "0b3541ea05e5430b06138aea33e36dc5946ddbb0352a2759d1be93ee7086d3f8",
           "mml": "tools/audio/mml/theme-harmony.mml",
-          "mmlSha256": "6e9ddd27bd3d34b4c05049ebfacbc1daf8e18b8b969b11cacf3a5fb5f01a0d65"
+          "mmlSha256": "717048527de2deb97615b270cd471b67f63ab037c71cb60e944ad4f45350dda5"
         },
         {
           "score": "tools/audio/scores/theme-rhythm.score.json",
-          "scoreSha256": "9a599f6bf321e21d7a7d1d6d57b24d8aa1d1dc71ae14a5ea331e3116931d222f",
+          "scoreSha256": "e78b982fc3f2ef6c1d082455e9ba6f21672ed2a4b9a581e06ed55bea02456367",
           "mml": "tools/audio/mml/theme-rhythm.mml",
-          "mmlSha256": "221366a4d05de06ee2c11408c1ce3a1c3c75b704aa12748fe930642f4a0a7e80"
+          "mmlSha256": "26ed023865369b12f665cc8a548f9dfdac993edc5bf20a4d0caa9ba83f8152a8"
         }
       ],
       "kind": "music",
-      "sha256": "a2109fb0a16d7ea4f6f1fda0092b99af507ae6e323f905279608b02e1a81665c",
+      "sha256": "808b1a7ab0459074474c7f8fc95b1908ad7f80d21f6a1f65142af1f75d92d936",
       "frames": 3686400,
       "seconds": 76.8,
-      "peakDbfs": -2.67,
-      "rmsDbfs": -18.62,
-      "largestStep": 0.16495,
-      "loopSeam": 0.03656,
+      "peakDbfs": -3.62,
+      "rmsDbfs": -18.95,
+      "largestStep": 0.13956,
+      "loopSeam": 0.03143,
       "loudnessLufs": -15.95
     },
     {

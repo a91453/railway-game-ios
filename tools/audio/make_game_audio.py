@@ -2,8 +2,8 @@
 """Synthesize the game's music and sound effects (RailwayGameApp/Resources/Audio/).
 
 The same synth as the first promo video's soundtrack, so the game sounds as
-the video does: the theme, a melody over the video's pad, plucked arpeggio
-and rail joints on I - vi - IV - V in C (decision 815's supplement), a
+the video does: the theme, a felt-mallet ostinato over slow pad chords
+and rail joints in C, with no dominant (decision 815's later note), a
 station chime, a whoosh, a rail joint, and the sounds of something
 put up and of money coming in (decision 117), and of something refused
 and a warning (decision 184), a ticket issued (decision 373), the
@@ -111,6 +111,22 @@ def glock_frames(m, frames):
         np.exp(-k * 2.6) * np.sin(2 * np.pi * f * k)
         + 0.25 * np.exp(-k * 9) * np.sin(2 * np.pi * f * 2.756 * k)
         + 0.08 * np.exp(-k * 20) * np.sin(2 * np.pi * f * 5.404 * k)
+    )
+
+
+def felt_frames(m, frames):
+    """Decision 815's later note (the theme made plain): a soft felt
+    mallet, the flat, rounded look of the game's art in sound: a 6 ms
+    strike, the fundamental with its second and third harmonics and a
+    touch of the bar's fourth mode (3.98 times) fading first, no bright
+    partials; low notes ring longer than high ones."""
+    k = np.arange(frames) / SR
+    f = note_hz(m)
+    return np.minimum(1, k / 0.006) * np.exp(-k * (1.3 + f / 900)) * (
+        np.sin(2 * np.pi * f * k)
+        + 0.70 * np.exp(-k * 1.5) * np.sin(4 * np.pi * f * k)
+        + 0.35 * np.exp(-k * 3) * np.sin(6 * np.pi * f * k)
+        + 0.30 * np.exp(-k * 4) * np.sin(2 * np.pi * f * 3.98 * k)
     )
 
 
@@ -666,7 +682,7 @@ def write_caf(path, loop):
 # Decision 219: how long a struck voice rings when its note is shorter (a
 # bell or a pluck sounds on past its written length, as the chimes and the
 # music above always played them), cut at the score's end.
-RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9), "glock": int(SR * 1.6), "sleigh": int(SR * 0.4)}
+RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9), "glock": int(SR * 1.6), "sleigh": int(SR * 0.4), "felt": int(SR * 2.4)}
 # The official chimes' peak (§3 of the research note: the station chime's).
 CHIME_PEAK = 0.6
 
@@ -692,6 +708,8 @@ def voice(name, pitch, frames):
         return glock_frames(pitch, max(frames, RING_FRAMES["glock"]))
     if name == "sleigh":
         return sleigh_frames(pitch, max(frames, RING_FRAMES["sleigh"]))
+    if name == "felt":
+        return felt_frames(pitch, max(frames, RING_FRAMES["felt"]))
     return clack()
 
 
@@ -750,8 +768,8 @@ def motif(score):
 # length, as decision 79's theme always overlapped its pads into the next chord (it
 # gives each 0.6 s more), so a chord held over a bar line does not dip.
 STEM_PAD_OVERLAP = 0.6
-# The longest any voice rings past its note: the bell.
-STEM_TAIL = int(SR * 2.2)
+# The longest any voice rings past its note: the felt mallet.
+STEM_TAIL = max(RING_FRAMES.values())
 
 
 def stem_voice(name, pitch, frames):
@@ -798,7 +816,7 @@ def stems_loop(names):
 
 
 # Decision 815: the game's two tunes, each from its stems in mixing order:
-# the theme (decision 79's chords with a melody, the 815 supplement) and
+# the theme (a felt ostinato over pad chords, decision 815's later note) and
 # the winter tune, played from 1 December to 6 January (`MusicTune`).
 THEME_STEMS = ["theme-melody", "theme-harmony", "theme-rhythm"]
 WINTER_STEMS = ["winter-melody", "winter-harmony", "winter-rhythm"]

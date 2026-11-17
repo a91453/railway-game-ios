@@ -5,7 +5,7 @@
   "motif": 0,
   "fadeOut": 0,
   "tracks": [
-    {"voice": "clack", "gain": 35, "pan": 0},
+    {"voice": "clack", "gain": 24, "pan": 0},
     null,
     null,
     null,
