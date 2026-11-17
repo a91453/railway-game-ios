@@ -868,7 +868,10 @@ enum MapArt {
         }
         let radius = max(5, referenceSize * 0.2)
         let region = drawingRegion(projection)
-        drawPreviewMarks(overlay.marks, region: region, projection: projection, in: context)
+        drawPreviewMarks(
+            overlay.marks, flags: overlay.anchors, track: overlay.preview,
+            region: region, projection: projection, in: context
+        )
         for (index, anchor) in overlay.anchors.enumerated() where region.contains(anchor) {
             let dot = disc(at: projection.screenPoint(of: anchor), radius: radius)
             if index == 0 {
@@ -891,24 +894,41 @@ enum MapArt {
     }
 
     /// Decision 826: the next stretch's tightest curve and steepest grade,
-    /// each a dot on the line and a capsule above it saying what it is.
-    private static func drawPreviewMarks(_ marks: [NetworkOverlay.Mark], region: WorldRegion, projection: some MapProjection, in context: GraphicsContext) {
-        for mark in marks where region.contains(mark.position) {
+    /// each a dot on the line and a capsule saying what it is: over the dot,
+    /// or where it covers neither the flags at the stretch's ends (`flags`)
+    /// nor the other capsule, and crosses as little of `track` as it can
+    /// (``PreviewMarkLabelLayout``; the owner's report of 2026-11-18, where
+    /// the start flag covered "Radius 150 · 65 km/h").
+    private static func drawPreviewMarks(
+        _ marks: [NetworkOverlay.Mark], flags: [WorldCoordinate], track: [WorldCoordinate],
+        region: WorldRegion, projection: some MapProjection, in context: GraphicsContext
+    ) {
+        let shown = marks.filter { region.contains($0.position) }
+        guard !shown.isEmpty else { return }
+        let drawn = shown.map { mark in
             let colour: Color = switch mark.kind {
             case .curve(let band): speedBandColour(band)
             case .grade(let tooSteep): tooSteep ? Theme.error : Palette.ink
             }
-            let at = projection.screenPoint(of: mark.position)
-            let dot = disc(at: at, radius: 4)
-            context.fill(dot, with: .color(colour))
-            context.stroke(dot, with: .color(Palette.land), lineWidth: 1.5)
             let text = context.resolve(Text(verbatim: mark.text).font(.caption2.weight(.bold).monospacedDigit()).foregroundStyle(Palette.ink))
             let size = text.measure(in: CGSize(width: 220, height: 40))
-            let rect = CGRect(x: at.x - size.width / 2 - 5, y: at.y - 10 - size.height - 2, width: size.width + 10, height: size.height + 2)
+            return (at: projection.screenPoint(of: mark.position), colour: colour, text: text,
+                    size: (width: Double(size.width) + 10, height: Double(size.height) + 2))
+        }
+        let frames = PreviewMarkLabelLayout.place(
+            drawn.map { (point: $0.at, size: $0.size) },
+            flags: flags.map { projection.screenPoint(of: $0) },
+            track: track.map { projection.screenPoint(of: $0) }
+        )
+        for (mark, frame) in zip(drawn, frames) {
+            let dot = disc(at: mark.at, radius: 4)
+            context.fill(dot, with: .color(mark.colour))
+            context.stroke(dot, with: .color(Palette.land), lineWidth: 1.5)
+            let rect = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
             let shape = Path(roundedRect: rect, cornerRadius: rect.height / 2)
             context.fill(shape, with: .color(Palette.land.opacity(0.94)))
-            context.stroke(shape, with: .color(colour), lineWidth: 1.5)
-            context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY), anchor: .center)
+            context.stroke(shape, with: .color(mark.colour), lineWidth: 1.5)
+            context.draw(mark.text, at: CGPoint(x: rect.midX, y: rect.midY), anchor: .center)
         }
     }
 
