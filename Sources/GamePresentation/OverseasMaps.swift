@@ -65,23 +65,40 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
 /// to download it apart from the app, and a downloaded pack is read the
 /// same way, from its folder.
 public struct MapPack: Sendable {
-    /// The pack's folder.
+    /// The pack's folder: the one its `pack.json` is in.
     public let root: URL
 
+    /// Decision 819: where a file of the pack lies when it is not in
+    /// ``root`` (a downloaded asset pack hands out a URL per file), by its
+    /// name in `pack.json`.
+    private let located: [String: URL]
+
     public init(root: URL) {
+        self.init(root: root, files: [:])
+    }
+
+    /// Decision 819: a pack whose files lie at `files` (by their names in
+    /// `pack.json`); a file not among them is looked for in `root`.
+    public init(root: URL, files: [String: URL]) {
         self.root = root
+        located = files
+    }
+
+    /// Where the pack's file `name` (its name in `pack.json`) lies.
+    public func url(of name: String) -> URL {
+        located[name] ?? root.appendingPathComponent(name)
     }
 
     /// The contents of the pack's file `name.ext`.
     public func file(_ name: String, _ ext: String) throws -> Data {
-        try Data(contentsOf: root.appendingPathComponent("\(name).\(ext)"))
+        try Data(contentsOf: url(of: "\(name).\(ext)"))
     }
 
     /// Decision 712: the pack's base map (`basemap.pmtiles`: OpenStreetMap
     /// in the layers of Taiwan's, `tools/hk-map/build_hk_basemap.py`), or
     /// `nil` for a pack without one.
     public var baseMapFile: URL? {
-        let file = root.appendingPathComponent("basemap.pmtiles")
+        let file = url(of: "basemap.pmtiles")
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
@@ -90,7 +107,7 @@ public struct MapPack: Sendable {
     /// `tools/hk-map/build_hk_buildings.py`), or `nil` for a pack without
     /// them: its 3D map then has only the towns the game grows.
     public var buildingsFile: URL? {
-        let file = root.appendingPathComponent("buildings.pmtiles")
+        let file = url(of: "buildings.pmtiles")
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
@@ -99,7 +116,7 @@ public struct MapPack: Sendable {
     /// `taiwan_terrain.pmtiles`, `tools/hk-map/build_hk_ground_grids.py`),
     /// or `nil` for a pack without it: its map is then not shaded.
     public var terrainFile: URL? {
-        let file = root.appendingPathComponent("terrain.pmtiles")
+        let file = url(of: "terrain.pmtiles")
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 

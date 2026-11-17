@@ -19,6 +19,11 @@ OFFICIAL = {
     ("thsr_sched", "板橋"): "island",  # an island on each of two levels
     ("thsr_sched", "台北"): "island",
     ("thsr_sched", "苗栗"): "side",
+    # Decision 824: one island and one side platform, but the Liujia
+    # Line's two tracks lie between them (platforms 2 and 1B) and the
+    # Neiwan Line has the island's other face (1A) alone: a line bought
+    # here sees side platforms, not an island.
+    ("tra_sched", "竹中"): "side",
 }
 
 

@@ -11,7 +11,7 @@
 
 ## 還留下的
 
-1. （決策 818：開關打開了，這 13 MB 就是玩家玩得到的地圖；移出 App 等下載修好，§29.20 第 3 項。）**羅瓦涅米地圖包開關關著也隨 App 帶（L24 P3-3，約 13 MB）：沒改**，因為羅瓦涅米目標 11/30 開放，現在移出、開放時又得改回來。若開放延到 12 月以後再做：
+1. （決策 818：開關打開了，這 13 MB 就是玩家玩得到的地圖；移出 App 等下載修好，§29.26 第 3 項。）**羅瓦涅米地圖包開關關著也隨 App 帶（L24 P3-3，約 13 MB）：沒改**，因為羅瓦涅米目標 11/30 開放，現在移出、開放時又得改回來。若開放延到 12 月以後再做：
    - `RailwayGameApp/project.yml` 的 `Resources/MapPacks` 是整個資料夾參照（`type: folder`）。改成兩個資料夾參照 `Resources/MapPacks/hongkong`（目的地仍是 `MapPacks/hongkong`，`MapPack.bundled` 照路徑找），羅瓦涅米不列。
    - 依 CLAUDE.md 用 XcodeGen 2.46.0 重產專案並一起提交。
    - 開放那張單把它加回來，或照決策 776 加 `RailwayGameApp/AssetPacks/rovaniemi.json` 改成下載。

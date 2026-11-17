@@ -259,6 +259,16 @@ extension Map3DScene.Builder {
             (wall, roof, groundFloor, groundPaint, upperPaint) = (faces.wall, faces.roof, faces.groundFloor, faces.groundPaint, faces.upperPaint)
             roofPaint = faces.metalRoof ? Self.metal : Self.roofing
         }
+        // Decision 817: a tower's windows of its own kind, its bays, its
+        // floors and the bays of its narrow walls its own.
+        let facadeLook = Map3DFacadeVariety.look(kind, storeys: storeys, hongKong: hongKong, nordic: nordic,
+                                                 solid: hongKong ? r(6) >= 0.65 : r(6) < 0.4, r: r)
+        var sidePaint: Map3DPaint?
+        if let facadeLook {
+            let detail = upperPaint?.detail
+            upperPaint = facadeLook.paint(high: height - groundFloor, detail: detail)
+            sidePaint = facadeLook.paint(high: height - groundFloor, detail: detail, side: true)
+        }
         // Decision 764: a big low hall (an arena, a gym, a market) its own
         // walls and sheet-steel roof; and every city building's walls a
         // little lighter or darker by where it stands. Decision 765: and
@@ -318,14 +328,18 @@ extension Map3DScene.Builder {
                     bottom.y += groundFloor
                     upper -= groundFloor
                 }
+                // Decision 817: its narrow ends' bays a tower's own.
+                let ends = box.width < box.length * Map3DFacadeVariety.narrowShare ? sidePaint ?? upperPaint : upperPaint
                 mesh.addBox(base: bottom, forward: box.along, length: box.length, width: box.width, height: upper, top: roof, side: wall,
-                            topPaint: roofPaint, frontPaint: plain(box.width, upperPaint), flankPaint: plain(box.length, upperPaint), shaded: false)
+                            topPaint: roofPaint, frontPaint: plain(box.width, ends), flankPaint: plain(box.length, upperPaint), shaded: false)
             }
             for polygon in polygons where !rectangle {
                 for (index, ring) in polygon.enumerated() where ring.count >= 3 {
                     // Outlines counter-clockwise and holes clockwise in x
                     // and z, so every wall faces away from the building.
                     let ring = (Self.signedArea(ring) > 0) == (index == 0) ? ring : ring.reversed()
+                    // Decision 817: a narrow wall of a tower takes its side bays.
+                    let longestWall = sidePaint == nil ? 0 : ring.indices.map { (ring[($0 + 1) % ring.count] - ring[$0]).length }.max() ?? 0
                     for (at, a) in ring.enumerated() {
                         let b = ring[(at + 1) % ring.count]
                         let low = Map3DPoint(0, ground + wallBottom, 0)
@@ -335,8 +349,9 @@ extension Map3DScene.Builder {
                         // plain, not given a window squeezed into it.
                         let length = (b - a).length
                         let curve = Self.isCurvePiece(ring[(at + ring.count - 1) % ring.count], a, b, ring[(at + 2) % ring.count])
-                        func plain(_ paint: Map3DPaint?) -> Map3DPaint? {
-                            length < Self.plainBelow(paint) || (curve && length < Self.longestCurvePiece) ? nil : paint
+                        func plain(_ given: Map3DPaint?) -> Map3DPaint? {
+                            let paint = given == upperPaint && length < longestWall * Map3DFacadeVariety.narrowShare ? sidePaint ?? given : given
+                            return length < Self.plainBelow(paint) || (curve && length < Self.longestCurvePiece) ? nil : paint
                         }
                         if groundFloor > 0 {
                             let up = Map3DPoint(0, groundFloor, 0)
@@ -429,6 +444,10 @@ extension Map3DScene.Builder {
             default:
                 break
             }
+        }
+        // Decision 817: near, what stands out of a tower's walls.
+        if let facadeLook, !far, !canopy, !hipped, polygons.count == 1 || polygons.allSatisfy({ $0.count == 1 }) {
+            addTowerRelief(outline, centre: centre, bottom: ground + groundFloor, top: ground + height, look: facadeLook, wall: wall, r: r)
         }
         // Decision 610: near, what stands out of its street fronts (none
         // on a temple's hall or a station's roof, whose kinds have none),

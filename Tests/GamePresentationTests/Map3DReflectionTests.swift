@@ -62,9 +62,9 @@ final class Map3DReflectionTests: XCTestCase {
             let text = source[start.upperBound..<end.lowerBound]
             return text.split(whereSeparator: { !"0123456789.-".contains($0) }).compactMap { Float($0) }
         }
-        let table = try block(after: "constant float2 glassMirror[24] = {")
-        XCTAssertEqual(table.count, 48)
-        XCTAssertLessThanOrEqual(Map3DSurface.allCases.count, 24)
+        let table = try block(after: "constant float2 glassMirror[32] = {")
+        XCTAssertEqual(table.count, 64)
+        XCTAssertLessThanOrEqual(Map3DSurface.allCases.count, 32)
         for surface in Map3DSurface.allCases {
             let glass = Map3DReflection.glass(surface)
             XCTAssertEqual(table[surface.rawValue * 2], glass.share, "\(surface)")
