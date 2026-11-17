@@ -605,14 +605,7 @@ struct MapView: View {
                             .background(Theme.background)
                             .clipShape(Circle())
                             .overlay { Circle().stroke(Palette.ink, lineWidth: 2) }
-                            if let preview = session.networkPreview {
-                                Text(verbatim: preview.radiusText(in: session.language, curveSpeedLimits: session.world.curveSpeedLimits))
-                                    .font(.caption.weight(.semibold))
-                                    .monospacedDigit()
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Theme.panel, in: Capsule())
-                            }
+                            LoupeCaptions(session: session)
                         }
                         .position(
                             x: leftOfFinger ? clear.leading + 12 + side / 2 : viewport.width - clear.trailing - 12 - side / 2,
@@ -2162,6 +2155,37 @@ struct MapView: View {
         // it, it would describe another cell, as after a pan.
         if moved != projection { cellTooltip = nil; cityTooltip = nil; terrainTooltip = nil; sectionFlowTooltip = nil }
         camera = moved
+    }
+}
+
+/// The loupe's lines under the circle: the stretch's radius and speed, and
+/// (decision 826) what it lines up with or how far it turns, with a tick as
+/// its end snaps into line. A view of its own so `MapView.body` stays quick
+/// to type-check.
+private struct LoupeCaptions: View {
+    let session: GameSession
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if let preview = session.networkPreview {
+                caption(preview.radiusText(in: session.language, curveSpeedLimits: session.world.curveSpeedLimits))
+            }
+            if let guide = session.networkDragGuideText {
+                caption(guide)
+            }
+        }
+        .sensoryFeedback(.alignment, trigger: session.networkDragGuide?.kind) { (_: TrackDrawGuide.Kind?, new: TrackDrawGuide.Kind?) -> Bool in
+            new != nil
+        }
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Theme.panel, in: Capsule())
     }
 }
 

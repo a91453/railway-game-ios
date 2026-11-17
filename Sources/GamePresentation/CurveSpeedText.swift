@@ -62,9 +62,16 @@ extension TrackCurvature {
 extension NetworkPreview {
     /// "Radius 320 m · up to 75 km/h" with the curve limits on, or just the
     /// radius (see ``radiusText(in:)``).
+    ///
+    /// Decision 826: with ``marks`` worked out, the speed is GameCore's
+    /// lowest posted limit along the stretch, the one its colour on the map
+    /// shows, rather than the radius's own.
     public func radiusText(in language: DisplayLanguage, curveSpeedLimits: Bool) -> String {
         let radius = tightestRadius
-        guard curveSpeedLimits, let speed = TrackCurvature.speedText(radius, in: language) else {
+        let speed = marks.map { marks in
+            marks.lowestSpeed.map { language.text("up to \($0) km/h", "可跑 \($0) km/h") }
+        } ?? TrackCurvature.speedText(radius, in: language)
+        guard curveSpeedLimits, let speed else {
             return TrackCurvature.radiusText(radius, in: language)
         }
         return "\(TrackCurvature.radiusText(radius, in: language)) · \(speed)"
