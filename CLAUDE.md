@@ -414,9 +414,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   weights of `docs/research/NEXT_PRIORITIES_2026-10-12.md` §19 (player 30,
   developer 25, art 15, railway fan 15, music 15), and the weighted score
   puts it in the priority list; bugs go before features. A pull request
-  that scores new items (a research or study) adds them to that list
-  itself, in the same pull request, rather than leaving them for the
-  planner to add (owner, 2026-11-17, after #2304's were missed). Do not ask the
+  that scores new items (a research or study) writes them itself, in the
+  same pull request, rather than leaving them for the planner to add
+  (owner, 2026-11-17, after #2304's were missed), as a file of its own,
+  `docs/priorities/<TASK>.md` (`docs/priorities/README.md`, decision 832),
+  not as the next section of NEXT_PRIORITIES, whose numbers parallel pull
+  requests raced for; `doc_numbers.py --check` checks its form and
+  weights, and the planner merges the files back into the list with
+  `doc_numbers.py --priorities`. Do not ask the
   owner whether to do it (owner, 2026-11-14: 「看你先評分在排優先級」
   「之後都是這樣寫進去md或交接手冊」). Previews and generated art the game does not load
   (more than about 2 MB in one pull request) go to
