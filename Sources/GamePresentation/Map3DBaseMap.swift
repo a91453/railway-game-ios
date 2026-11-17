@@ -131,7 +131,8 @@ struct Map3DBaseMap: Sendable {
     /// Decision 391: the roads on the ground (out of a tunnel, on no
     /// bridge) as far round as ``bridges``, each kept to its tile: what a
     /// bridge may cross over, and what may lie beside one.
-    var groundRoads: [(kind: RoadKind, points: [Point])] = []
+    /// Decision 822: with whether each is a ramp (narrower, no pavements).
+    var groundRoads: [(kind: RoadKind, points: [Point], isRamp: Bool)] = []
 
     /// A base map of the features given (a scene laid by hand): its
     /// bridges the roads' on bridges, each kept to its bounds, and the
@@ -146,7 +147,7 @@ struct Map3DBaseMap: Sendable {
                 if road.bridgeLevel > 0 {
                     bridges.append(Bridge(kind: road.kind, level: road.bridgeLevel, points: part))
                 } else {
-                    groundRoads.append((road.kind, part))
+                    groundRoads.append((road.kind, part, road.isRamp))
                 }
             }
         }
@@ -247,7 +248,9 @@ struct Map3DBaseMap: Sendable {
                     if level > 0 {
                         bridges.append(Bridge(kind: kind, level: level, points: run))
                     } else {
-                        groundRoads.append((kind, run))
+                        var isRamp = false
+                        if case .number(let ramp) = feature.properties["ramp"] { isRamp = ramp != 0 }
+                        groundRoads.append((kind, run, isRamp))
                     }
                 }
             }

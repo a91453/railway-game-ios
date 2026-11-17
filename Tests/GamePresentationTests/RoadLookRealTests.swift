@@ -151,4 +151,65 @@ final class RoadLookRealTests: XCTestCase {
             XCTAssertEqual(lane, carriageway, accuracy: 0.2, "the lane at the carriageway's height at \(x)")
         }
     }
+
+    private func road(_ points: [(Double, Double)], level: Int, kind: Map3DBaseMap.RoadKind, ramp: Bool = false) -> Map3DBaseMap.Road {
+        Map3DBaseMap.Road(kind: kind, isRamp: ramp, points: Self.points(points), bounds: Self.bounds, bridgeLevel: level)
+    }
+
+    /// IMG_5323 (台北橋's ramp in 三重): a street running beside a trunk's
+    /// ramp down from a bridge's end rose with the ramp, as if on it, and
+    /// stood 2 m under the deck: the ramp was taken as wide as a trunk
+    /// with its pavements (9 m each side), not its own 3.5 m.
+    func testAStreetBesideARampStaysOnTheGround() throws {
+        let roads = [
+            road([(100, 500), (500, 500)], level: 1, kind: .trunk),
+            // The street the bridge crosses.
+            road([(420, 300), (420, 700)], level: 0, kind: .tertiary),
+            // Its ramp down, on the ground, and a street beside it.
+            road([(500, 500), (700, 500)], level: 0, kind: .trunk, ramp: true),
+            road([(480, 507.5), (700, 507.5)], level: 0, kind: .tertiary),
+        ]
+        var builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 540, minZ: 490, maxX: 600, maxZ: 515)
+        for x: Float in [560, 580] {
+            let ground = builder.drawnGround(x: x, z: 508)
+            let ramp = try XCTUnwrap(faces(over: x, 500, in: drawn).filter { $0.color == Map3DPalette.road(.trunk) }.map(\.y).max())
+            let street = try XCTUnwrap(faces(over: x, 508, in: drawn).filter { $0.color == Map3DPalette.road(.tertiary) }.map(\.y).max())
+            print(String(format: "ROADLOOK at %.0f ramp %.2f m, street %.2f m over the ground", x, ramp - ground, street - ground))
+            XCTAssertGreaterThan(ramp - ground, 1.5, "the ramp at \(x)")
+            XCTAssertLessThan(street - ground, 0.5, "the street beside the ramp at \(x)")
+        }
+    }
+
+    /// IMG_5323 (忠孝橋's east end): a ramp's bridge ends under the main
+    /// deck it joins, and the road running on from it ramped down at once,
+    /// under the deck: two slabs 1–4 m apart. It stays at the deck's
+    /// height while it lies under it, as a road leaving a raised one at a
+    /// junction does (decision 607).
+    func testARoadLeavingADeckUnderItKeepsItsHeight() throws {
+        let roads = [
+            road([(100, 500), (900, 500)], level: 1, kind: .secondary),
+            road([(500, 300), (500, 700)], level: 0, kind: .tertiary),
+            // The ramp's bridge, joined to the deck, its end under it.
+            road([(600, 500), (450, 505)], level: 1, kind: .secondary),
+            // The road running on from it, out from under the deck.
+            road([(450, 505), (250, 535)], level: 0, kind: .secondary),
+        ]
+        let builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 380, minZ: 490, maxX: 460, maxZ: 530)
+        var stacked = 0, looked = 0
+        // Past the end: the strip's half width laid back behind it is a
+        // wedge of its own (NEXT_PRIORITIES, decision 822's leftovers).
+        for x in stride(from: Float(390), through: 446, by: 2) {
+            for z in stride(from: Float(494), through: 520, by: 2) {
+                let tops = faces(over: x, z, in: drawn).filter { [Map3DPalette.road(.secondary)].contains($0.color) }.map(\.y).sorted()
+                guard tops.count >= 2 else { continue }
+                looked += 1
+                if zip(tops, tops.dropFirst()).contains(where: { $1 - $0 > 0.5 && $1 - $0 < 4.5 }) { stacked += 1 }
+            }
+        }
+        print("ROADLOOK points with two road surfaces \(looked), stacked 0.5–4.5 m apart \(stacked)")
+        XCTAssertGreaterThan(looked, 10)
+        XCTAssertEqual(stacked, 0, "points where a road lies 0.5–4.5 m under another")
+    }
 }
