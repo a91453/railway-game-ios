@@ -13,8 +13,9 @@ import Foundation
 public enum MapPackDownloads {
     private final class Store: @unchecked Sendable {
         let lock = NSLock()
-        var roots: [OverseasMap: URL] = [:]
+        var packs: [OverseasMap: MapPack] = [:]
         var statuses: [OverseasMap: MapPackStatus] = [:]
+        var clues: [OverseasMap: String] = [:]
     }
 
     private static let store = Store()
@@ -43,19 +44,50 @@ public enum MapPackDownloads {
     /// app that carries none of the city).
     @discardableResult
     public static func use(_ city: OverseasMap, root: URL, bundled: MapPack?) -> Refusal? {
-        if let refusal = check(city, root: root, bundled: bundled) { return refusal }
+        use(city, locators: [{ root.appendingPathComponent($0) }], bundled: bundled)
+    }
+
+    /// Decision 819: where a downloaded pack's file may lie, by its name in
+    /// `pack.json` (`nil` when this way of looking finds no place for it).
+    public typealias Locator = (String) -> URL?
+
+    /// Takes the pack downloaded for `city` whose files lie where
+    /// `locators` say: each file (`pack.json` first) is the first place
+    /// they give, in order, that holds it at the listed size. Says why not
+    /// otherwise, and keeps a ``clue(_:)`` of what was seen.
+    @discardableResult
+    public static func use(_ city: OverseasMap, locators: [Locator], bundled: MapPack?) -> Refusal? {
+        let found = inspect(city, locators: locators, bundled: bundled)
         store.lock.lock()
         defer { store.lock.unlock() }
-        store.roots[city] = root
-        return nil
+        switch found {
+        case let .success(pack):
+            store.packs[city] = pack
+            store.clues[city] = nil
+            return nil
+        case let .failure(refused):
+            store.clues[city] = refused.clue
+            return refused.refusal
+        }
     }
 
     /// Forgets the download of `city`; the bundled pack is read again.
     public static func forget(_ city: OverseasMap) {
         store.lock.lock()
         defer { store.lock.unlock() }
-        store.roots[city] = nil
+        store.packs[city] = nil
         store.statuses[city] = nil
+        store.clues[city] = nil
+    }
+
+    /// Decision 819: what was seen of the last download of `city` that was
+    /// not taken (where its `pack.json` lay, how many of its files were
+    /// found and by which locator), for a problem report; `nil` after one
+    /// was taken.
+    public static func clue(_ city: OverseasMap) -> String? {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        return store.clues[city]
     }
 
     /// Posted (on the thread that changed it) when a city's ``status(_:)``
@@ -83,15 +115,24 @@ public enum MapPackDownloads {
     /// The downloads of `cities` in one line for a problem report, reasons
     /// and all ("mappack-hongkong used"); `nil` when there are none.
     public static func report(of cities: Set<OverseasMap> = OverseasMaps.open) -> String? {
-        let parts = OverseasMap.allCases.filter(cities.contains).map { "\($0.assetPackID) \(status($0).reportText)" }
+        let parts = OverseasMap.allCases.filter(cities.contains).map { city -> String in
+            let line = "\(city.assetPackID) \(status(city).reportText)"
+            guard case .refused = status(city), let clue = clue(city) else { return line }
+            return "\(line) (\(clue))"
+        }
         return parts.isEmpty ? nil : parts.joined(separator: "; ")
     }
 
     /// The folder of the downloaded pack of `city` that was taken, if any.
     public static func root(_ city: OverseasMap) -> URL? {
+        pack(city)?.root
+    }
+
+    /// The downloaded pack of `city` that was taken, if any.
+    public static func pack(_ city: OverseasMap) -> MapPack? {
         store.lock.lock()
         defer { store.lock.unlock() }
-        return store.roots[city]
+        return store.packs[city]
     }
 
     /// Whether the pack downloaded to `root` can be read for `city`: its
@@ -100,20 +141,83 @@ public enum MapPackDownloads {
     /// `bundled`, its `pack.json` is byte for byte the bundled one's.
     /// `nil` when it can.
     public static func check(_ city: OverseasMap, root: URL, bundled: MapPack?) -> Refusal? {
-        let pack = MapPack(root: root)
-        guard let data = try? pack.file("pack", "json"),
-              let manifest = try? JSONDecoder().decode(Manifest.self, from: data)
-        else { return .noManifest }
-        guard manifest.id == city.packFolder else { return .otherCity(manifest.id) }
-        for (name, entry) in manifest.files.sorted(by: { $0.key < $1.key }) {
-            let path = root.appendingPathComponent(name).path
-            let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? NSNumber)?.int64Value
-            guard size == entry.bytes else { return .incomplete(name) }
-        }
-        if let bundled, let carried = try? bundled.file("pack", "json"), carried != data {
-            return .differsFromBundled
+        if case let .failure(refused) = inspect(city, locators: [{ root.appendingPathComponent($0) }], bundled: bundled) {
+            return refused.refusal
         }
         return nil
+    }
+
+    private struct Refused: Error {
+        let refusal: Refusal
+        let clue: String
+    }
+
+    /// ``check(_:root:bundled:)`` with each file looked for by `locators`
+    /// in turn: the pack it would read, or why not with what was seen.
+    private static func inspect(_ city: OverseasMap, locators: [Locator], bundled: MapPack?) -> Result<MapPack, Refused> {
+        func size(_ url: URL) -> Int64? {
+            (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value
+        }
+        // `pack.json`: the first place that holds one.
+        var manifestURL: URL?
+        var data: Data?
+        for locate in locators {
+            guard let url = locate("pack.json"), let read = try? Data(contentsOf: url) else { continue }
+            manifestURL = url
+            data = read
+            break
+        }
+        guard let manifestURL, let data, let manifest = try? JSONDecoder().decode(Manifest.self, from: data) else {
+            let tried = locators.compactMap { $0("pack.json") }.map(shortened)
+            return .failure(Refused(refusal: .noManifest, clue: "pack.json looked for at \(tried.isEmpty ? "nowhere" : tried.joined(separator: ", "))"))
+        }
+        // The folder as a folder is named when handed over ("…/hongkong", no
+        // closing slash), so a pack read from it is the one it was given.
+        let root = URL(fileURLWithPath: manifestURL.deletingLastPathComponent().path, isDirectory: false)
+        guard manifest.id == city.packFolder else {
+            return .failure(Refused(refusal: .otherCity(manifest.id), clue: "pack.json in \(describe(root))"))
+        }
+        // Every file it lists: the first place that holds it at its size.
+        var files: [String: URL] = [:]
+        var byLocator = Array(repeating: 0, count: locators.count)
+        var missing: String?
+        for (name, entry) in manifest.files.sorted(by: { $0.key < $1.key }) {
+            guard let hit = locators.indices.lazy.compactMap({ index in
+                locators[index](name).flatMap { size($0) == entry.bytes ? (index: index, url: $0) : nil }
+            }).first else {
+                if missing == nil { missing = name }
+                continue
+            }
+            byLocator[hit.index] += 1
+            if hit.url != root.appendingPathComponent(name) { files[name] = hit.url }
+        }
+        if let missing {
+            let found = byLocator.reduce(0, +)
+            let split = locators.count > 1 ? " (\(byLocator.map(String.init).joined(separator: ", ")) by locator)" : ""
+            let tried = locators.compactMap { $0(missing) }.map { url in "\(shortened(url)) \(size(url).map { "\($0) B" } ?? "absent")" }
+            return .failure(Refused(
+                refusal: .incomplete(missing),
+                clue: "found \(found) of \(manifest.files.count) files\(split); pack.json in \(describe(root)); \(missing) listed \(manifest.files[missing]?.bytes ?? 0) B, at \(tried.isEmpty ? "nowhere" : tried.joined(separator: ", "))"
+            ))
+        }
+        if let bundled, let carried = try? bundled.file("pack", "json"), carried != data {
+            return .failure(Refused(refusal: .differsFromBundled, clue: "pack.json in \(describe(root)), \(data.count) B; the app's \(carried.count) B"))
+        }
+        return .success(MapPack(root: root, files: files))
+    }
+
+    /// The last three parts of `url`'s path ("…/MapPacks/hongkong/pack.json"),
+    /// enough to tell one place from another without the device's folders.
+    private static func shortened(_ url: URL) -> String {
+        let parts = url.standardizedFileURL.pathComponents.filter { $0 != "/" }
+        return (parts.count > 3 ? "…/" : "/") + parts.suffix(3).joined(separator: "/")
+    }
+
+    /// `folder` shortened, with how many items it holds.
+    private static func describe(_ folder: URL) -> String {
+        let count = (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.count
+        let items = count.map { $0 == 1 ? "1 item" : "\($0) items" } ?? "unreadable"
+        return "\(shortened(folder)) (\(items))"
     }
 
     private struct Manifest: Decodable {
@@ -180,7 +284,13 @@ extension OverseasMap {
     /// Decision 776: where the city's `pack.json` lies in the downloaded
     /// assets (the asset pack holds `MapPacks/<folder>`, as the bundle does).
     public var assetPackManifestPath: String {
-        "MapPacks/\(packFolder)/pack.json"
+        "\(assetPackFolderPath)/pack.json"
+    }
+
+    /// Decision 819: the city's folder in the downloaded assets; each file
+    /// of its pack is asked for as `<this>/<its name in pack.json>`.
+    public var assetPackFolderPath: String {
+        "MapPacks/\(packFolder)"
     }
 }
 
@@ -188,6 +298,6 @@ extension MapPack {
     /// Decision 776: the pack the game reads for `city`: the downloaded one
     /// when ``MapPackDownloads`` took one, the bundled one otherwise.
     public static func current(_ city: OverseasMap) -> MapPack? {
-        MapPackDownloads.root(city).map(MapPack.init(root:)) ?? bundled(city)
+        MapPackDownloads.pack(city) ?? bundled(city)
     }
 }

@@ -256,7 +256,7 @@
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
 
 **額度**（作者 2026-10-20 同意的做法）：
-- 實作 session 同時 2–4 個（**規劃所在的 Max 帳號最多 2 個**，見 §1.1「模型與額度」）。GameCore 的完整 tier 本來就最多 2 個，macOS runner 也只有 5 台，開更多只是排隊。
+- 實作 session 同時幾個照 §1.1「模型與額度」的「同時幾個實作」：**Max 帳號 4 個、Ultra 帳號 6 個**（作者 2026-11-17 晚上）。GameCore 的完整 tier 本來就最多 2 個，macOS runner 也只有 5 台，開更多只是排隊。
 - 實作 session 做完一件就收工：在 #231 留合併紀錄、把沒做完的寫進這份。不要留著等下一件。
 - **做完就封存**（作者 2026-10-23：「以後只要完成開完pr 檢測／有記錄231 與交接手冊 還有後續檢查都通過就能進入封存了防止之後太多session」）：一個 session 的 PR 開了、CI 綠了、#1041 留了「可合併」或合併紀錄、沒做完的寫進這份，後續檢查也過了，就封存（`archive_session`；要回來可以 `unarchive_session`）。session 列表才不會越堆越多。
 - **換手時改舊 session 的標題**（作者同日：「記得把舊遊戲規劃session的標題修改 不然每次都點錯」）：被接手的 session（規劃或實作）封存前，標題改成「【舊・已換手】<角色>（日期）→ 改用 <新 session id>」，現任的標題以「★ 現任：」開頭，作者在列表裡才不會點錯。
@@ -437,7 +437,13 @@
     - **帳號**：作者有一個 Max 與一個 Ultra。規劃所在的帳號是 **Max**（作者：「我現在這裡是max」）。兩個方案的 Fable 都另有週上限，作者說是週額度的一半（第三方說明也這樣寫；以帳號的用量頁為準）。Ultra 的週總量約是 Max 的兩倍，而且沒有五小時上限。
     - **為什麼這樣分**（作者給的官方四張成績對成本圖，2026-11-17；這些圖測開源專案的修改與找漏洞，不是這個遊戲，當方向不當保證）：Fable 5.2 單價是 Opus 5.5 的兩倍（8／40 對 4／20 美元每百萬 token；快取讀取同為 0.20），但同強度每張工單只貴約三成；Fable「高」約等於 Opus 最好的成績、花費約一半；Fable「最大」比「超高」分數低又貴三倍多；長時間的難題 Fable 差距很大（30 小時 100% 對 27%，單次實驗）。行為稽核（越低越好）：Fable／Mythos 5.2 2.67、Opus 2.79、Sonnet 3.10。所以 Fable 該限的是它的週上限，不是價錢。
     - **規劃**：`claude-opus-5-5`、effort `high`，下一任也是。規劃的花費大半是重讀對話（快取讀取兩者同價），換 Fable 沒好處，卻吃掉難題的週上限。很難的單次判斷另開一條短的 Fable 做完就關。
-    - **Max 帳號的兩個實作位置**：一條 `claude-fable-5-2` 做排隊裡最難的那張（GameCore 決定性或存檔、根因不明的 bug、Opus 做過一輪沒解的、長時間量測），一條 `claude-opus-5-5` 做其餘的。這樣大約一半額度用在 Fable，不超過它的上限。Fable 週上限出現警告後全部回到 Opus。
+    - **同時幾個實作**（作者 2026-11-17 晚上：「那做完 再把max同時開縮減成4個 但ultra因為沒有五小時限制 維持6個」）：主帳號是 **Max 時同時最多 4 個**實作 session，是 **Ultra 時維持 6 個**（Ultra 沒有五小時上限）。從 11-17 晚上這批（DEADLOCK-HK、ROAD-SMOOTH、ROVANIEMI-OPEN、PERF-3D-FIRST、ROAD-LOOK-REAL、E200-REDO、TRACK-CURVE-COLOUR）做完後開始：在跑的不中途關，做完一個不補，降到 4 個以下才派新的。GameCore 的完整 tier 仍最多 2 個在跑 CI。
+    - **Max 帳號的實作位置怎麼分**：一條 `claude-fable-5-2` 做排隊裡最難的那張（GameCore 決定性或存檔、根因不明的 bug、Opus 做過一輪沒解的、長時間量測），其餘用 `claude-opus-5-5`。這樣大約一半額度用在 Fable，不超過它的上限。Fable 週上限出現警告後全部回到 Opus。
+    - **碰到 5 小時上限時**（2026-11-17：07:26 UTC 全部實作與規劃一起停，09:50 重置。之前這裡寫「約 10:00 又碰到」是規劃看錯，那時 session 的額度狀態是 allowed、都在做事。作者問「這次有改善交接情況嗎」）：上限是整個帳號一起算，實作 session 會停在半路，自己來不及寫交接。所以：
+      1. 規劃每派一張、每次叫 session 繼續，就在 §2.0 最上面一段記下它的 session、分支、PR、做到哪；這段就是停工時的交接，不等 session 自己寫。
+      2. 重置後，規劃用 `list_sessions` 找出 `failed`（events 的結果是 `usage_limit_reached`）的 session，逐一 `send_message` 請它「從停下的地方繼續」，並在 #2118 留一則列出叫回了哪些。
+      3. 同時跑的實作 session 照上面「同時幾個實作」：Max 6 個一起跑約兩個半小時就碰到上限，所以 Max 降到 4 個，先做 bug 與快收尾的。
+    - **合併並交接完就封存**（作者 2026-11-17：「另外你怎麼沒把已合併已交接的封存 說了多少次了」）：實作 session 的 PR 合併、而且它的交接已在 main（`docs/handoff/<TASK>.md` 或 #2118）之後，規劃**當下**用 `archive_session` 封存它，不留到之後一起做。PR 還沒合的不封存（停了的也一樣，接手的人要讀它）。封存不了的（例如前一任規劃，要作者在可信任的裝置上按）在回作者時列出來。
     - **兩個帳號輪流當主帳號**（作者 2026-11-17：遠端連線要本機與雲端同一個帳號，「好 照這樣寫進交接手冊」）：同一時間只有一個主帳號，**規劃、Mac 本機（本地派工、建模工作室）、規劃開的雲端實作都在主帳號**；另一個帳號是額外人手。
       - **週額度重置**：Ultra 每週二台灣時間 22:00（UTC 週二 14:00）；Max 每週六台灣時間 08:00（UTC 週五 24:00，即週六 00:00）。
       - **誰當主帳號**：有額度的那個，兩個都有時用 Ultra（週總量約 Max 的兩倍、沒有五小時上限）。主帳號用完就換。
@@ -637,6 +643,53 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**2026-11-17 晚上（現任規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 記；這段最新，下面的「傍晚交接」是前一版）**
+
+- **10:50 UTC 更新**（規劃壓縮第 1 次後）：
+  - **合併了**：#2347 DEADLOCK-HK（816，`2ffc2db`）、#2360、#2361（交接）。main 的 ci.yml 綠。已封存約 46 個合併且交接完的 session；前一任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 要作者在可信任的裝置上封存。還沒封存的舊 session（描線、隱私資料夾新增檔案評估、PR 審查與修復、沿線官網和測試進度、優先移植部分）是失敗或卡住的，等作者說。
+  - #2356 ROAD-SMOOTH：已併 main（`26001f3`），NEXT_PRIORITIES §29.26，CI 綠了就合。
+  - #2355 ROVANIEMI-OPEN：又和 main 衝突，已請它併 main；小節接在 §29.26 後面。**`railway-reference-private#145`（網站的羅瓦涅米資料來源）在 #2355 合併、137 發版後才合。**
+  - #2362 TRACK-CURVE（826）、#2365 PERF-3D-FIRST（820）：草稿，CI 跑中。
+  - #2364 ROAD-LOOK-REAL（822）：session 壓縮 2 次已停，交接 `docs/handoff/ROAD-LOOK-REAL.md` 在分支上；要派新 session 接手，新外觀規劃看總覽圖才合。
+  - E200-REDO（825）：還在做。
+  - TPE-MRT-ELEVATED #2363（作者的專案串）：10:19 的留言仍寫 826，規劃傳不到專案串，已在 #2118 再提醒改 827。
+  - 實作還有 6 個在跑，降到 4 個以下才派：先接 ROAD-LOOK-REAL，再 DEPOT-REAL（§29.17，Fable 高，死結唯一一個 session）。
+- **5 小時上限**：07:26 UTC 全部停，09:50 重置後規劃叫回六個實作 session。重置後照 §1.1「碰到 5 小時上限時」逐一叫回下面的 session。下面這批做完後，Max 帳號同時最多 4 個（§1.1「同時幾個實作」）。
+- **合併了**：#2345 REVIEW-L26＋HEALTH-136、#2349 MAPPACK-FIX（819）、#2354 交接、#2352 FACADE-VARIETY（817，總覽圖規劃看過）。作者自己的串合了 #2350、#2353（824）、#2357、#2358、#2359（研究，§29.22–§29.24）。
+- **在跑的實作 session 與做到哪**（停了就叫回，PR 綠了照 §1.2 合）：
+  - DEADLOCK-HK #2347（816，GameCore）：session 已停（壓縮 2 次），規劃併了 main（`1d62425`），它的小節改成 §29.25；CI 綠了由規劃轉 ready 合。**合了才派 DEPOT-REAL**（§29.17，死結一次只歸一個 session）。
+  - ROAD-SMOOTH #2356（821，session_01JMHz9biVWhZiRyEa1eaFLN）：草稿，在併 main、把 §29.21 改號。
+  - ROVANIEMI-OPEN #2355（818，session_01JMHz9bckVEprLBmpgpVmVQ）：草稿，在併 main、把 §29.20 改號。價格 CRITICAL（兩線每天虧、一起買主線上車少一半）三項待排：ROVANIEMI-PAIR（bug）2.40、ROVANIEMI-FARE 2.85、ROVANIEMI-PACK-OUT 1.80，動 GameCore。
+  - PERF-3D-FIRST（820，session_01JMHz9YukbhK9SrgZCqr1Xw）：還沒開 PR，在寫交接。
+  - ROAD-LOOK-REAL（822，session_01JMHz9bEFthgKRraGjXnPYN）：還沒開 PR；新外觀，規劃看總覽圖才合。
+  - E200-REDO＋DR 遠景 bug（825，session_01JMHz9Yzqh7zPKkn1zZsWPQ，Opus 高）：還沒開 PR；新外觀，規劃看總覽圖才合。
+  - TRACK-CURVE-COLOUR＋TRACK-ALIGN（826，session_01JMHz9ambminugTbRq1gqEq，Opus 高）：還沒開 PR。
+  - TPE-MRT-ELEVATED（作者的專案串 `claude/project-thread-vqunh2`）：誤登記 826，規劃已請它改 827。
+- **137**（作者 11-17 晚上：「目前開著的做完我就要發137」）：上面這幾張合完，規劃照 §1.1「每次發版」改 `.github/testflight-whats-new.md` 與 `WhatsNew.entries`（標題 `0.5.0 (137)` 的寫法照決策 616），確認 main HEAD 的完整 `ci.yml` 與 full lane 都綠，再等作者在規劃對話說「發」。MAPPACK-FIX 的實機驗收：設定→「地圖」→「香港地圖」顯示「已下載」。
+- **號碼**：決策 816–826 預留或已用，827 給 TPE-MRT-ELEVATED，**下一個從 828 取**。存檔 107、golden schema 77。NEXT_PRIORITIES 到 §29.25。
+
+**2026-11-17 傍晚交接（規劃 session_01JMHz9Yps9xJyFfDFR4mUed 壓縮 3 次後交出；這段最新，下面的「下午」是前一版）**
+
+- **在跑的實作 session**（每張單都在 #2118 登記過檔案範圍）：
+  - ROAD-SMOOTH（821，session_01JMHz9biVWhZiRyEa1eaFLN）：作者畫的路畫順，只動 GamePresentation，還沒開 PR。
+  - ROAD-LOOK-REAL（822，session_01JMHz9bEFthgKRraGjXnPYN，壓縮 1 次）：預設實景地圖的路與高架。作者四張實機截圖在 assets repo `game-art-previews/docs/art/road-look-real-2026-11-17/`。是新外觀，**規劃看過總覽圖才合**。
+  - PERF-3D-FIRST（820，session_01JMHz9YukbhK9SrgZCqr1Xw，壓縮 1 次）：第一次開 3D 要 44.87 秒，還沒開 PR。
+  - ROVANIEMI-OPEN（818，session_01JMHz9bckVEprLBmpgpVmVQ）：地圖包照舊內建；目標 11-30 開放，還沒開 PR。
+- **待合的 PR**（照批次合，合完等 main 的 ci.yml 綠）：
+  - #2345 REVIEW-L26＋HEALTH-136：session 已留「可合併、head 63e3d2ad」，只有文件和一個報告測試。
+  - #2349 MAPPACK-FIX（819）：CI 全綠、還是 draft，可轉 ready 合。實機驗收：下一版設定裡「香港地圖」顯示「已下載」。
+  - #2347 DEADLOCK-HK（816，動 GameCore）：session 壓縮兩次已停，PR 是 draft；head ee1db241 的 CI 跑完綠了才轉 ready 合。誤點多 39 班、作者存檔東涌綫仍等到 05:54，都寫在 §29.20。**合了以後才派 DEPOT-REAL（§29.17）**，死結一次只歸一個 session。
+  - #2352 FACADE-VARIETY（817）：新外觀，**先看總覽圖** `docs/art/facade-variety-2026-11-17/overview.jpg`（在 PR 分支）再合。
+  - #2350 中洲島式畫法、#2353 竹中岸式（824）：作者自己的對話開的，照常看 CI 合。
+  - **注意**：#2345 和 #2347 都在 NEXT_PRIORITIES 加了「§29.20」，後合的那個要併 main，把自己的改成 §29.21。
+- **等作者**：
+  - 136 的出口合規與 What to Test、Threads 貼文、NLSC 3D 免費或付費。
+  - 聽音樂試聽檔（assets #132）；實機看 MAPPACK-FIX、ROAD-SMOOTH。
+  - 自由曲線道路（§29.19 第 4 項）等作者實機看過 ROAD-SMOOTH 再決定。
+- **下一個空位先派**：TRACK-CURVE-COLOUR＋TRACK-ALIGN（鋪軌，§29.16，一張單）；REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）；P2-1 橫拿最大字重疊（REVIEW-L26）。
+- **我做錯的一件**：作者的道路截圖我直接推到 assets repo 的 main（c51af32），沒開 PR，違反該 repo AGENTS.md 第 8 條。內容合規，不改寫歷史；以後 assets repo 一律開 PR。
+- **號碼**：決策 816–822 預留中，824 已被竹中登記；823 在 #2118 沒看到登記，**下一個從 825 取**，取之前先看 #2118 最新。存檔 107、golden schema 77。
+
 **2026-11-17 下午（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；這段比下面的「白天」新）**
 
 - **合併**：#2329 WINTER-FIX（814）、#2331 SUN-TIMES（813）、#2330 REGION-LOOK-HK（812）、#2332、#2334 MODEL-AGE（art-style 兩句）、#2340 DEADLOCK-D2（810）、#2341 FULLLANE-136（橫拿教學 UI 測試，觸控被系統取消就再點；不是玩家會碰到的問題）、#2343 music-review skill（規劃寫，含 `tools/audio/measure_music.py`）。
@@ -645,8 +698,8 @@
 - **死結一次只歸一個 session 修**（作者 11-17：「因為一堆人在處理死結」）：健檢量到的只記數字，轉給 DEADLOCK-HK。
 - **音樂**：作者上班不能聽，規劃用量測審（music-review skill）；試聽檔在 assets #132，作者有空用手機聽。
 - **136 實機回報**（NEXT_PRIORITIES §29.18）：香港地圖包下載到了但被拒用（`incomplete("airfields.json")`），已派 **MAPPACK-FIX**（819，session_01JMHz9YiuyqQSmoz6Bk5oTv）；第一次開 3D 要 44.87 秒（**PERF-3D-FIRST** 2.55，下一個空位先派）。香港、羅瓦涅米地圖包下一版照舊內建加下載兩份都帶，實機顯示「已下載」才拿掉內建的。
-- **道路歪來歪去**（作者 11-17 傳概念影片，NEXT_PRIORITIES §29.19）：歪的是畫法（格子中心連成鋸齒），已派 **ROAD-SMOOTH**（決策 821，只動 GamePresentation；T 字路口接線 #2338 已合）；改存檔的自由曲線道路等作者實機看過 ROAD-SMOOTH 再決定。預設實景地圖的路要像影片、高架與平面：**ROAD-LOOK-REAL** 3.40（先研究畫法哪裡歪，高架已有決策 391），下一個空位先派。空白地圖自己長的路也歪（長路先挑有人住的格子、街道只走格線）：**ROAD-GROW-STRAIGHT** 2.85，動 GameCore，ROAD-SMOOTH 與 DEADLOCK-HK 合併後派。鋪軌 TRACK-CURVE-COLOUR＋TRACK-ALIGN 排在它之後的空位。
-- **號碼**：決策 810–815 已用（811、815 已合）；816–821 預留中（816 DEADLOCK-HK、817 FACADE-VARIETY、818 ROVANIEMI-OPEN、819 MAPPACK-FIX、820 PERF-3D-FIRST、821 ROAD-SMOOTH）；下一個可取 **822**。存檔 107、golden schema 77。
+- **道路歪來歪去**（作者 11-17 傳概念影片，NEXT_PRIORITIES §29.19）：歪的是畫法（格子中心連成鋸齒），已派 **ROAD-SMOOTH**（決策 821，只動 GamePresentation；T 字路口接線 #2338 已合）；改存檔的自由曲線道路等作者實機看過 ROAD-SMOOTH 再決定。預設實景地圖的路要像影片、高架與平面：**ROAD-LOOK-REAL** 3.40，**已派**（決策 822，session_01JMHz9bEFthgKRraGjXnPYN；作者的四張實機截圖在 assets repo `game-art-previews/docs/art/road-look-real-2026-11-17/`，壞的是底圖道路，作者自己鋪的高架鐵軌是好的）。空白地圖自己長的路也歪（規劃讀程式找到，沒人回報）：**ROAD-GROW-STRAIGHT** 2.25，等有人回報再派。鋪軌 TRACK-CURVE-COLOUR＋TRACK-ALIGN 排在它之後的空位。
+- **號碼**：決策 810–815 已用（811、815 已合）；816–822 預留中（816 DEADLOCK-HK、817 FACADE-VARIETY、818 ROVANIEMI-OPEN、819 MAPPACK-FIX、820 PERF-3D-FIRST、821 ROAD-SMOOTH、822 ROAD-LOOK-REAL）；下一個可取 **823**。存檔 107、golden schema 77。
 
 **2026-11-17 白天（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；下一任接手時以這段為最新，22:00 換 Ultra 前會再補一段）**
 

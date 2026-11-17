@@ -421,3 +421,19 @@ its map's airports when it opens the save).
   the build before decision 808 with `DepotReturnReportTests`'
   `DEPOT_RETURN_SAVE`). The format is version 107's; it is here for the
   world, not for a new field.
+- `v107-full-end-south-island.json`: Hong Kong's South Island Line
+  alone under the realistic rules (a line with real runs and no depot),
+  at 00:20 of its first day: fourteen minutes before two of the seven
+  trains ending the night at Admiralty, which has five tracks, stop at
+  Ocean Park and Wong Chuk Hang until the first runs of the morning,
+  while South Horizons' five tracks hold three
+  (`FullEndWithoutDepotTests`; written by the build before decision 816
+  with `DepotReturnReportTests`' `DEPOT_RETURN_SAVE`). The format is
+  version 107's; it is here for the world, not for a new field.
+- `v107-full-end-tung-chung.json`: the Tung Chung Line alone under the
+  same rules, at 00:30 of its first day: before a sixth train ends at
+  Tung Chung's five tracks and stands at Sunny Bay from 01:09 until
+  morning, with the two trains bound for the night at Sunny Bay and
+  Tsing Yi behind it (`FullEndWithoutDepotTests`; written the same
+  way). The format is version 107's; it is here for the world, not for
+  a new field.
