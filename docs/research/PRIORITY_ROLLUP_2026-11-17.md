@@ -13,7 +13,7 @@
 | 名次 | 項目 | 分 | 出處 | 卡 |
 | --: | --- | --: | --- | --- |
 | 1 | ROAD-RAMP-HEIGHT：匝道橋和主橋併成一座後全站在主橋高度 | 3.15 | §29.29（822） | 無；大單 |
-| 2 | 左營月台上方的白條（決策 625 屋頂骨架的肋） | 3.10 | MISC-BACKLOG | 無；先出兩三種預覽 |
+| 2 | ~~左營月台上方的白條（決策 625 屋頂骨架的肋）~~ 已修：肋改深鋼色（ZUOYING-ROOF） | 3.10 | MISC-BACKLOG | 完成 |
 | 3 | ROAD-STRIP-WEDGE：橋端後面斜楔形與急彎尖刺 | 2.65 | §29.29（822） | 可和第 1 名同一張 |
 | 3 | ROAD-FORK-CELL：斜拖分岔多佔一格 | 2.65 | §29.26 | 和 ROAD-SNAP／ROAD-HINT 一張 |
 | 5 | HK-LATE-RUNS：香港擬實大半班次誤點、每天十幾班沒發 | 2.60 | §29.25 | 動 GameCore |
@@ -34,9 +34,9 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 | --: | --- | --: | --- | --- |
 | ~~1~~ | ~~雪景剩下的：樹變白、河湖結冰、下雪~~ | 3.75 | §29.11 F | **11-18 已合 #2386（決策 833）**；剩下四項在 `priorities/ROVANIEMI-SNOW.md`（最高 3.00 鏟雪後的路與道床） |
 | 2 | 港鐵其餘四綫真車（屯馬、東鐵、南港島、迪士尼） | 3.35 | §29.9、MODEL_PALETTE #3、MISC-BACKLOG | 工作室，一次一款 |
-| 3 | 極光（羅瓦涅米） | 3.30 | §29.11 I | 無 |
+| 3 | ~~極光（羅瓦涅米）~~ | 3.30 | §29.11 I | **已做**（#2388，決策 813 後來） |
 | 3 | ~~ROAD-GRADE-CAP：國道快速道路坡度 ≤ 5%、高架與路塹~~ | 3.30 | §29.23 | **已做**（決策 834，國道；快速公路沒做，見 `handoff/ROAD-GRADE-CAP.md`） |
-| 3 | 島式月台雨棚（台灣與香港） | 3.30 | MISC-BACKLOG | 無；station-kit |
+| 3 | ~~島式月台雨棚（台灣與香港）~~ 已有：實拍宜蘭、左營、黃竹坑島上都有雨棚（ZUOYING-ROOF） | 3.30 | MISC-BACKLOG | 完成 |
 | 6 | 香港地面顏色（土地利用網格＋生境圖） | 3.25 | §29.12 | 原本等 REGION-LOOK-HK，已合，可派 |
 | 6 | 機廠檢修庫牆分上下段 | 3.25 | MISC-BACKLOG | #2371 已合，可派 |
 | 6 | TW-CARS：台灣汽車、廂型車換掉盒子 | 3.25 | §29.15 | 部分：車色已有計程車黃（`Map3DStreetLife.carPaints`），車形還是盒子 |
@@ -76,7 +76,7 @@ REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTRO
 
 清單沒同步，看起來亂多半是這個。下面這些在 `main` 都合了，併回時把狀態改成已完成：
 
-FACADE-VARIETY（#2352）、ROAD-SMOOTH（#2356）、ROAD-LOOK-REAL（#2364）、E200-REDO 與 DR1000／DR3100 遠景 bug（#2367）、TPE-MRT-ELEVATED 前三輪（#2363）、TRACK-CURVE-COLOUR＋TRACK-ALIGN（#2362）、MAPPACK-FIX（#2349）、PERF-3D-FIRST（#2365）、DEADLOCK-HK（#2347）、ZHUZHONG-SIDE、ROAD-JOIN-DRAW（#2338）、MUSIC-REFRESH（#2335）、MUSIC-WINTER（#2333）、music-review skill（#2343）、NATURE-BASE（#2336）、SUN-TIMES（#2331）、REGION-LOOK-HK（#2330）、art-style §7 兩句（併在 MODEL-AGE #2334）、FULLLANE-136（L26 P2-1，#2341）、DOCNUM-CI＋CONFLICT-WATCH（#2369）、PRIO-FILES（#2378）、REVIEW-L27＋HEALTH-137（#2376）、DEPOT-REAL（#2371）、ROVANIEMI-FARE（#2375）、SANTA-FLIGHT（#2382）、TPE-MRT-ELEVATED 第 4 輪（#2372）。
+FACADE-VARIETY（#2352）、ROAD-SMOOTH（#2356）、ROAD-LOOK-REAL（#2364）、E200-REDO 與 DR1000／DR3100 遠景 bug（#2367）、TPE-MRT-ELEVATED 前三輪（#2363）、TRACK-CURVE-COLOUR＋TRACK-ALIGN（#2362）、MAPPACK-FIX（#2349）、PERF-3D-FIRST（#2365）、DEADLOCK-HK（#2347）、ZHUZHONG-SIDE、ROAD-JOIN-DRAW（#2338）、MUSIC-REFRESH（#2335）、MUSIC-WINTER（#2333）、music-review skill（#2343）、NATURE-BASE（#2336）、SUN-TIMES（#2331）、REGION-LOOK-HK（#2330）、art-style §7 兩句（併在 MODEL-AGE #2334）、FULLLANE-136（L26 P2-1，#2341）、DOCNUM-CI＋CONFLICT-WATCH（#2369）、PRIO-FILES（#2378）、REVIEW-L27＋HEALTH-137（#2376）、DEPOT-REAL（#2371）、ROVANIEMI-FARE（#2375）、SANTA-FLIGHT（#2382）、TPE-MRT-ELEVATED 第 4 輪（#2372）、AURORA 極光（#2388）。
 
 ## 5. 重複或衝突要合併的
 

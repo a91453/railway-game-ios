@@ -385,6 +385,10 @@ public struct Map3DLighting: Hashable, Sendable {
     /// where they stand, below the horizon too (``Map3DSky``).
     public let skySun: Map3DPoint
     public let skyMoon: Map3DPoint
+    /// Decision 813's later part (AURORA): how bright tonight's aurora is,
+    /// 0 to 1, before the sky's darkness and the clouds (``Map3DSky/aurora``);
+    /// 0 but far in the north (``aurora(at:latitude:)``).
+    public var aurora: Float = 0
 
     struct Key {
         let hour: Float
@@ -530,6 +534,7 @@ public struct Map3DLighting: Hashable, Sendable {
         self.init(keyed: keyed, hour: Float(minute / 60),
                   sunDirection: (lit * sunShare + Self.moonLight * (1 - sunShare)).normalized ?? .up,
                   skySun: toSun, skyMoon: -toSun)
+        aurora = Self.aurora(at: time, latitude: place.latitude)
     }
 
     /// Decision 813: the light of a day whose sun never climbs far (the
