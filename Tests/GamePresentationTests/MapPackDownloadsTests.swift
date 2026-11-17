@@ -37,8 +37,7 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertEqual(try MapPack.current(.hongKong)?.extent(), try bundled.extent())
         XCTAssertNotNil(MapPack.current(.hongKong)?.baseMapFile)
         MapPackDownloads.forget(.hongKong)
-        // The bundled one again (none in a test run, which has no app).
-        XCTAssertEqual(MapPack.current(.hongKong)?.root, MapPack.bundled(.hongKong)?.root)
+        XCTAssertEqual(MapPack.current(.hongKong)?.root.lastPathComponent, "hongkong")
         XCTAssertNotEqual(MapPack.current(.hongKong)?.root, root)
     }
 
@@ -88,7 +87,8 @@ final class MapPackDownloadsTests: XCTestCase {
     /// app asks for, under the ID the app asks for. Decision 789: an open
     /// city's; a city not open yet has none, so no release uploads its
     /// pack and no device fetches it before it can be played. Decision
-    /// 818: Rovaniemi's is open.
+    /// 818: Rovaniemi's is open, so it has one (the app still carries its
+    /// pack, as Hong Kong's).
     func testTheAssetPackManifestMatchesWhatTheAppAsksFor() throws {
         let repository = BundledRealData.directory.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         for city in OverseasMap.allCases where !OverseasMaps.open.contains(city) {
@@ -142,48 +142,5 @@ final class MapPackDownloadsTests: XCTestCase {
 
         MapPackDownloads.forget(.hongKong)
         XCTAssertEqual(MapPackDownloads.status(.hongKong), .bundled)
-    }
-
-    /// Decision 818: the app carries Hong Kong's pack and not Rovaniemi's,
-    /// which only its asset pack brings: the app's project copies the one
-    /// folder and leaves the other out.
-    func testTheAppCarriesHongKongsPackAndNotRovaniemis() throws {
-        let repository = BundledRealData.directory.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let project = try String(contentsOf: repository.appendingPathComponent("RailwayGameApp/project.yml"), encoding: .utf8)
-        XCTAssertTrue(project.contains("- path: Resources/MapPacks/hongkong\n        type: folder"))
-        XCTAssertFalse(project.contains("- path: Resources/MapPacks\n"))
-        XCTAssertFalse(project.contains("Resources/MapPacks/rovaniemi"))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: repository.appendingPathComponent("RailwayGameApp/AssetPacks/rovaniemi.json").path))
-    }
-
-    /// Decision 818: a city the app does not carry is "not downloaded" in
-    /// the settings until its download is in, not "built-in data".
-    func testACityTheAppDoesNotCarryIsNotDownloadedUntilItIs() {
-        XCTAssertEqual(MapPackStatus.bundled.text(in: .traditionalChinese, carried: false), "尚未下載")
-        XCTAssertEqual(MapPackStatus.failed("x").text(in: .english, carried: false), "Not downloaded")
-        XCTAssertEqual(MapPackStatus.downloading.text(in: .traditionalChinese, carried: false), "下載中")
-        XCTAssertEqual(MapPackStatus.downloaded.text(in: .english, carried: false), "Downloaded")
-        XCTAssertEqual(MapPackStatus.bundled.text(in: .traditionalChinese), "使用內建資料")
-        // A test run carries no app bundle, so neither city is carried here.
-        XCTAssertNil(MapPack.bundled(.rovaniemi))
-        XCTAssertFalse(OverseasMap.rovaniemi.isCarried)
-        XCTAssertNil(MapPack.current(.rovaniemi))
-    }
-
-    /// Decision 818: the real-world data waits for a download only until it
-    /// answers, or for at most the time it is given.
-    func testWaitingForADownloadEndsWhenItAnswersOrTimesOut() {
-        XCTAssertTrue(MapPackDownloads.waitForAnswers([], timeout: 5))
-        var started = Date()
-        XCTAssertFalse(MapPackDownloads.waitForAnswers([.rovaniemi], timeout: 0.2), "not begun")
-        XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(started), 0.2)
-        MapPackDownloads.note(.rovaniemi, .downloading)
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
-            MapPackDownloads.note(.rovaniemi, .failed("no network"))
-        }
-        started = Date()
-        XCTAssertTrue(MapPackDownloads.waitForAnswers([.rovaniemi], timeout: 10))
-        XCTAssertLessThan(Date().timeIntervalSince(started), 5)
-        XCTAssertTrue(MapPackDownloads.waitForAnswers([.rovaniemi], timeout: 0), "answered already")
     }
 }

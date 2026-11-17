@@ -492,14 +492,6 @@ struct RailwayGameApp: App {
         #if DEBUG
         if DebugLaunch.isSet("-open-overseas") { overseas = Set(OverseasMap.allCases) }
         #endif
-        // Decision 818: a city whose map pack the app does not carry
-        // (Rovaniemi's) is read only from its download. One already on the
-        // device answers within moments of the launch, so the read waits
-        // for it a little; one that answers later is read at the next
-        // launch (the map picker says so).
-        if MapPackDownloader.isAvailable {
-            MapPackDownloads.waitForAnswers(overseas.filter { !$0.isCarried }, timeout: 8)
-        }
         var data = RealWorldData.load(overseas: overseas) { name, ext in
             guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
                 throw RealRailways.ResourceError.missing("\(name).\(ext)")

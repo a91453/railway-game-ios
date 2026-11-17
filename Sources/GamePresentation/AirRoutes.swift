@@ -305,9 +305,8 @@ extension GameLauncher {
 
     /// Decision 818: the map picker's rows of the cities outside Taiwan, in
     /// order: each city whose flights the app offers (decision 712), closed
-    /// with the way to open it until they open, and each open city no
-    /// flights open (Rovaniemi), offered from the start and closed only
-    /// while its downloaded map pack is not in, with what to do. None
+    /// with the way to open it until they open, and each city no flights
+    /// open (Rovaniemi), open from the start once its ground is read. None
     /// while the real-world data is read.
     public func overseasMapRows(in language: DisplayLanguage) -> [OverseasMapRow] {
         guard !isLoadingRealWorldData else { return [] }
@@ -315,12 +314,9 @@ extension GameLauncher {
         let read = Set(overseasGrounds.map(\.city))
         return OverseasMap.allCases.compactMap { city in
             if routes.offers(city.rawValue) {
-                let closed = routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language)
-                return OverseasMapRow(city: city, closed: closed, waitsForDownload: false)
+                return OverseasMapRow(city: city, closed: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language))
             }
-            guard !city.opensByFlights, OverseasMaps.open.contains(city) else { return nil }
-            if read.contains(city) { return OverseasMapRow(city: city, closed: nil, waitsForDownload: false) }
-            return OverseasMapRow(city: city, closed: city.notDownloadedText(MapPackDownloads.status(city), in: language), waitsForDownload: true)
+            return !city.opensByFlights && read.contains(city) ? OverseasMapRow(city: city, closed: nil) : nil
         }
     }
 
@@ -380,7 +376,4 @@ public struct OverseasMapRow: Equatable, Sendable {
     public let city: OverseasMap
     /// Why a new game cannot start there yet, `nil` when it can.
     public let closed: String?
-    /// Whether it is closed because its map pack has not been downloaded,
-    /// not because its flights have not opened.
-    public let waitsForDownload: Bool
 }

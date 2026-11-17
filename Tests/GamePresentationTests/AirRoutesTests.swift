@@ -485,8 +485,8 @@ final class AirRoutesTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = await launcher(in: directory, overseas: [.hongKong, .rovaniemi])
         XCTAssertEqual(launcher.overseasMapRows(in: .english), [
-            OverseasMapRow(city: .hongKong, closed: nil, waitsForDownload: false),
-            OverseasMapRow(city: .rovaniemi, closed: nil, waitsForDownload: false),
+            OverseasMapRow(city: .hongKong, closed: nil),
+            OverseasMapRow(city: .rovaniemi, closed: nil),
         ])
         XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
         XCTAssertEqual(launcher.preferences.airRoutesOpened ?? [], [])
@@ -494,40 +494,24 @@ final class AirRoutesTests: XCTestCase {
         let rows = launcher.overseasMapRows(in: .english)
         XCTAssertEqual(rows.map(\.city), [.hongKong, .rovaniemi])
         XCTAssertNotNil(rows[0].closed, "Hong Kong waits for its flights")
-        XCTAssertFalse(rows[0].waitsForDownload)
         XCTAssertNil(rows[1].closed)
         XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
         XCTAssertEqual(launcher.preferences.airRoutesOpened, [taiwan])
         XCTAssertFalse(launcher.startOverseasMap(.hongKong))
     }
 
-    /// While Rovaniemi's pack is not in (the app does not carry it, and its
-    /// download has not answered or failed), its row says so and does not
-    /// start; there are no rows at all while the real-world data is read.
-    func testRovaniemiWaitsForItsDownload() async throws {
+    /// Without Rovaniemi's ground (its pack could not be read) it has no
+    /// row and does not start; there are no rows at all while the
+    /// real-world data is read.
+    func testRovaniemiHasNoRowWithoutItsGround() async throws {
         let directory = folder()
-        defer {
-            try? FileManager.default.removeItem(at: directory)
-            MapPackDownloads.forget(.rovaniemi)
-        }
+        defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         XCTAssertEqual(launcher.overseasMapRows(in: .english), [])
         await launcher.loadRealWorldData {
             RealWorldData.load(overseas: [.hongKong, .rovaniemi], pack: { $0 == .rovaniemi ? nil : HongKongRailwaysTests.pack($0) }, file: RealWorldDataLoadTests.file)
         }.value
-        for (status, english) in [
-            (MapPackStatus.bundled, "The map has not downloaded yet. Connect to the internet, then close and reopen the app."),
-            (.downloading, "The map is downloading. You can start here once it has."),
-            (.failed("no network"), "The map has not downloaded yet. Connect to the internet, then close and reopen the app."),
-            (.downloaded, "The map has downloaded. Close and reopen the app to start here."),
-        ] {
-            MapPackDownloads.note(.rovaniemi, status)
-            XCTAssertEqual(launcher.overseasMapRows(in: .english), [
-                OverseasMapRow(city: .hongKong, closed: nil, waitsForDownload: false),
-                OverseasMapRow(city: .rovaniemi, closed: english, waitsForDownload: true),
-            ])
-        }
-        XCTAssertFalse(launcher.overseasMapRows(in: .traditionalChinese)[1].closed?.isEmpty ?? true)
+        XCTAssertEqual(launcher.overseasMapRows(in: .english), [OverseasMapRow(city: .hongKong, closed: nil)])
         XCTAssertFalse(launcher.startOverseasMap(.rovaniemi))
         XCTAssertNil(launcher.session)
     }

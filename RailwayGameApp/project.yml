@@ -60,16 +60,9 @@ targets:
         type: folder
       # Decision 697: the overseas cities' map packs, each one folder whose
       # files have the names Taiwan's have, so copied as a folder
-      # (MapPack.bundled finds a city's by path, MapPacks/<city>).
-      # Decision 818: only Hong Kong's; Rovaniemi's (and any city's not
-      # listed here) the app does not carry: it is an Apple-hosted asset
-      # pack (AssetPacks/rovaniemi.json), downloaded apart from the app.
-      - path: Resources/MapPacks/hongkong
+      # (MapPack.bundled finds a city's by path).
+      - path: Resources/MapPacks
         type: folder
-        buildPhase:
-          copyFiles:
-            destination: resources
-            subpath: MapPacks
     dependencies:
       - package: RailwayGame
         product: GameCore

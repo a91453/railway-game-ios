@@ -27,10 +27,8 @@ enum MapPackDownloader {
     /// Starts fetching every city's pack in the background; returns at once.
     static func start() {
         guard isAvailable else { return }
-        // Decision 789: only the open cities have asset packs. Decision
-        // 818: Rovaniemi's the app does not carry, so it is fetched first:
-        // the real-world data waits for it.
-        let cities = OverseasMap.allCases.filter(OverseasMaps.open.contains).sorted { !$0.isCarried && $1.isCarried }
+        // Decision 789: only the open cities have asset packs.
+        let cities = OverseasMap.allCases.filter(OverseasMaps.open.contains)
         // Decision 776, later: the settings show how each stands.
         for city in cities { MapPackDownloads.note(city, .downloading) }
         Task.detached(priority: .utility) {
