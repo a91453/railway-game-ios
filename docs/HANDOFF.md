@@ -625,7 +625,7 @@
 - 只回報「完成」或「需要決定」，簡短白話。不要一直報中間進度，作者抱怨過「怎麼一堆回報」。
 - 回玩家的話要簡單、和藹、親近、簡短，不要兇。
 - 選項、外觀、預設值、順序、golden 值的變更，由 session 自己從各個角度決定（現在是玩家、鐵道迷、開發、美術、音樂五個），PR 裡每個角度寫一行。
-- **先評分再排、再派**（作者 2026-11-14：「一優先評分排清單」「看你先評分在排優先級」「之後都是這樣寫進去md或交接手冊」）：任何新項目或待處理項目（新功能、修正、交接裡留下的、決策的「下一步」）在派工之前先做五方評比：五個角度各 1–5 分，權重照 `research/NEXT_PRIORITIES_2026-10-12.md` §19（玩家 30、開發 25、美術 15、鐵道迷 15、音樂 15），加權分決定它在優先清單的位置；bug 排在功能前面。不問作者要不要做。寫交接或「下一步」時，沒有分數的項目當場打分、排進優先清單（現在是 §29），不要只列名字。
+- **先評分再排、再派**（作者 2026-11-14：「一優先評分排清單」「看你先評分在排優先級」「之後都是這樣寫進去md或交接手冊」）：任何新項目或待處理項目（新功能、修正、交接裡留下的、決策的「下一步」）在派工之前先做五方評比：五個角度各 1–5 分，權重照 `research/NEXT_PRIORITIES_2026-10-12.md` §19（玩家 30、開發 25、美術 15、鐵道迷 15、音樂 15），加權分決定它在優先清單的位置；bug 排在功能前面。不問作者要不要做。寫交接或「下一步」時，沒有分數的項目當場打分，不要只列名字。**分數寫在哪**（決策 832，2026-11-17）：實作與研究的 PR 寫成自己的 `docs/priorities/<工作名>.md`（`docs/priorities/README.md`），不再接 NEXT_PRIORITIES 的新小節；規劃定期跑 `python3 -I tools/golden-checks/doc_numbers.py --priorities` 收齊還沒併回的列（已排好序），貼進優先清單（現在是 §29），再加 `--mark "<貼到哪>"` 標記。規劃自己打的分可以直接寫進清單。
 - 作者自己保留：TestFlight 發版（作者說「發」，遊戲規劃才替作者按，§1.2）、Apple 帳號與 App Store Connect、secrets、新增依賴、copyleft 或沒有授權的程式碼。
 - 作者說過「不要限制，可以任意開 PR」：收尾時開幾個 PR 都可以，不用先問。
 
@@ -644,7 +644,63 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
-**2026-11-17 晚上（現任規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 記；這段最新，下面的「傍晚交接」是前一版）**
+**2026-11-17 換到新專案的交接（Ultra 的規劃 session_01YGNNupAVETTN22PN18vAjU 寫；作者 15:27 UTC 開了新專案，新專案的規劃照這一段接手，下面「換到 Ultra 的交接」是前一版）**
+
+- **main**：`2a1bd77`（#2378 PRIO-FILES 已合，決策 832）。之後再加這份交接。
+- **這一任做了的**：在 #2118 接手；派了 SANTA-FLIGHT 與 PRIO-FILES 兩串；沒有合併任何 PR。作者要換新專案，所以 15:30 UTC 起不再合、不再派，原本 15:43 的巡查已取消。
+- **等著合的 PR（15:30 UTC 的狀態；照 §1.2 確認 head 一次就合）**：
+  - #2375 ROVANIEMI-FARE＋#2355（決策 828、存檔 108，動 GameCore）：draft，head `772c51e`，CI 在跑。session 壓縮兩次已停，綠了由規劃自己轉 ready 再合，#2355 會一起標成 merged（#2355 本身目前和 main 衝突，不用另外解）。照 `docs/handoff/ROVANIEMI-FARE.md`。合併前確認 main 的 ci.yml 綠。羅瓦涅米在 138 開放。
+  - #2371 DEPOT-REAL（829）：draft，head `8cb6d42`，clean。session 壓縮兩次，正在補一次只加文件的推送，等它在 #2118 留「可合併、head」。
+  - #2364 ROAD-LOOK-REAL-2（822）：已 ready、clean，head `d4fa961`。總覽圖 Max 規劃已看過通過，不用再看圖。等 #2118 的「綠、head」或直接照 §1.2 確認後合；合了封存 session_01JMHz9bn8HzazZzMYbhURDh 與 session_01JMHz9bEFthgKRraGjXnPYN（Max 帳號的，可能要作者封存）。
+  - #2376 REVIEW-L27＋HEALTH-137：draft，head `e2894ff`，clean，session 還在做（Max）。下一輪 REVIEW-L28 從 `85507e2` 之後數。
+  - #2372 TPE-MRT-ELEVATED 第 4 輪：作者專案串的，等它留「可合併」。
+- **在跑的實作**：SANTA-FLIGHT（決策 831，`claude/santa-flight`，專案串「做聖誕夜聖誕老人飛過天空」，Opus high；派工單 `/mnt/project-files/dispatch/SANTA-FLIGHT.md`）。最晚 12/20 發版，12/10 前要合；新 3D 外觀，規劃看總覽圖才合。另外 Max 上 DEPOT-REAL、ROAD-LOOK-REAL-2、REVIEW-L27 跑完為止。
+- **暫停**：REINDEER（馴鹿與雪橇模型）作者 11-17 23:21 台灣說「先不要做 等我開新專案」：不交 Mac 工作室、不派，等作者說。SANTA-FLIGHT 先用暫時造型留接點。
+- **不重派**：淡水信義線高架站第 4 輪（#2372）、工作室換帳號程式（assets PR 135 已合，r4 收工後安裝驗收）、TRACK-CURVE-COLOUR（另一帳號）。
+- **新規則**（決策 832）：PR 打分的新列寫成 `docs/priorities/<工作名>.md`，規劃用 `doc_numbers.py --priorities` 併回 NEXT_PRIORITIES。
+- **號碼**：下一個決策 **833**；存檔 107（108 給 ROVANIEMI-FARE）；golden schema 77。
+- **這個專案串的限制**：專案串沒有 `create_session`，派實作是請專案協調者開新串，派工單放 `/mnt/project-files/dispatch/`。
+
+**2026-11-17 換到 Ultra 的交接（Max 的規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 收尾時寫；Ultra 的新規劃照這一段接手，下面的「深夜交接」是前一版）**
+
+- **為什麼換**：Ultra 週額度 11-17 台灣時間 22:00 重置、沒有五小時上限；Max 今晚 13:39 UTC 碰到五小時上限，三個實作同時停住（§1.1「兩個帳號輪流當主帳號」）。作者 11-17：「看要不要給ultra做」，規劃答「137 發完就換」。
+- **main**：`478d0da`（#2369）之後再加這份交接。137 已發（下面「深夜交接」第一條）。
+- **Max 上還在做的三件實作**（11-17 約 14:58 UTC 規劃叫回，從停下的地方接著做；Ultra 傳不了訊息給它們，只看 #2118 與 PR，做完由 Ultra 規劃合）：
+  - ROVANIEMI-PAIR＋FARE（828，session_01JMHz9bnKhejDxHKpyueHQ3）：動 GameCore、存檔 108，帶 #2355 一起合，**羅瓦涅米在 138 開放**。
+  - ROAD-LOOK-REAL-2（822，session_01JMHz9bn8HzazZzMYbhURDh，#2364）：新外觀，**看總覽圖才合**。
+  - DEPOT-REAL（829，session_01JMHz9bsrazDrT4xMPmDZJE，Fable）：死結唯一的 session。
+  - 三個都被交代：再碰到上限或第二次壓縮，先推分支、寫 `docs/handoff/<TASK>.md`（ROVANIEMI-FARE、ROAD-LOOK-REAL、DEPOT-REAL）。**停了沒再動**（#2118 很久沒消息、分支沒新 commit）就在 Ultra 開新 session 照交接檔接手，不從頭做。
+- **15:05 UTC 更新（Max 的規劃 session_01JMHz9caNPdHNkVjVgrCB6J，作者：「你來合，前一任停手」，交出前補）**：上面三件的實況，以這條為準。
+  - **ROVANIEMI-FARE #2375**（head `772c51e`，帶 #2355）：session **壓縮兩次已停**，不會再動。它的交接 `docs/handoff/ROVANIEMI-FARE.md` 列了兩件：(1) CI 全綠後轉 ready 合（動 GameCore、存檔 108，照 §1.2 確認 main 的 ci.yml 綠）。合了 #2355 會一起標成 merged，再封存 session_01JMHz9bnKhejDxHKpyueHQ3 與 session_01JMHz9bckVEprLBmpgpVmVQ。(2) 香港「關掉遠距需求」的對照：Max 的規劃在本機跑了，跑完會把數字留在 #2118。**不擋合併**，因為決策 828 §2 已量過香港「開」的情況是 HEALTHY。判定 CONCERNS 只因凱米耶爾維線單買要四十年回本，後續是 §29.30。
+  - **DEPOT-REAL #2371**（head `8cb6d42`）：已推，CI 在跑。session 還在 Max 上做。
+  - **ROAD-LOOK-REAL-2 #2364**：還在做，看總覽圖才合。
+  - 這三件與 REVIEW-L27 都已經被告知：「綠、head」寫在 #2118（Ultra 收不到 Max 的 send_message）。
+  - NEXT_PRIORITIES：§29.30 給羅瓦涅米，§29.31 給 DEPOT-REAL 留下的。REVIEW-L27 從下一個空號取。
+  - Max 的規劃交出後不再合、不再派。
+- **REVIEW-L27＋HEALTH-137 已在 Max 派了**（session_01JMHz9YJbkYec1ERxquXPKR，14:56 UTC，審 #2341 之後到 `85507e2`，也寫 PLAYER_FEEDBACK 的 137 一節），Ultra 不重派，照上面三件一樣看 #2118、合它的 PR。
+- **Ultra 先派**：REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）、§29.29 第 3 名 PRIO-FILES。Ultra 同時最多 6 個實作，Max 那四件也算在內。
+- **Threads**：作者貼了 134～137 那篇以後，用文件 PR 補 `docs/research/THREADS_WRITING.md` §5 一列（下一篇從 `85507e2` 之後寫）。
+- **號碼**：下一個決策 **831**，存檔 107（108 給 ROVANIEMI-FARE），golden schema 77，NEXT_PRIORITIES 到 §29.29。
+- **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（前者 15:01 停手，後者照作者的話接著合到 15:05 才交出），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
+
+**2026-11-17 深夜交接（規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 壓縮 3 次後交出；下面的「晚上」是前一版）**
+
+- **137 已發（新規劃 session_01JMHz9caNPdHNkVjVgrCB6J 補記）**：作者 13:32 UTC 自己按 `testflight.yml`（run 44093811838，`85507e2`，成功）。同一個 commit 的完整 `ci.yml`（run 44085363286）與 full lane（run 44085389506）都綠。發完合了 #2369（830，`478d0da`）與這份交接；PLAYER_FEEDBACK 的 137 一節由 REVIEW-L27＋HEALTH-137 寫。下面這一條是交接當時的狀態。
+- **（交接當時）137 還沒發**：main HEAD `85507e2`（#2368 發版說明）。完整 `ci.yml`（手動）與 push run 都綠；full lane（iOS App Build run 44085389506，workflow_dispatch）13:40 UTC 還在跑。兩個都綠了先告訴作者，**作者在規劃對話說「發」才**照 §1.2 按一次 `testflight.yml`。**發之前不要合任何 PR**（main HEAD 一動就要重跑完整測試和 full lane），本段的交接 PR 也等發完再合。
+- **137 帶到但說明沒寫的**：#2363 淡水信義線高架車站（827）在 `85507e2` 之前合進 main。決定不改說明（改了要重跑），Threads 寫進新功能；138 的說明不要再寫它。
+- **Threads**：134～137 的草稿已交給作者（#2118「Threads 草稿交付：涵蓋到 main 85507e2」），格式照 `docs/research/THREADS_WRITING.md`。作者貼了以後，用一個文件 PR 把那份檔案 §5 補一列（134～137，下一篇從 `85507e2` 之後寫）。冬季那則要不要預告由作者決定。
+- **發完 137 之後**：`docs/research/PLAYER_FEEDBACK.md` 記這次發版；派 REVIEW-L27＋HEALTH-137（審 #2341 之後到 `85507e2`）。
+- **可合（發完 137 才合）**：#2369 DOCNUM-CI＋CONFLICT-WATCH（830），session 留了「可合併、head 623b55f」，CI 綠、不衝突。合了就封存 session_01JMHz9YzPuJx6TUnmdk2nXR。CONFLICT-WATCH 合了以後，PR 和 main 衝突時 GitHub 會自己在 PR 留言叫醒那個 session；§1.1「等 PR 時先看它真的在跑」還是照做。
+- **在跑的實作**（Max，最多 4 個）：
+  - ROVANIEMI-PAIR＋FARE（828，session_01JMHz9bnKhejDxHKpyueHQ3，壓縮 1 次，不接新工作）：存檔 108，動 GameCore；它的 PR 會帶著 #2355 一起合，**羅瓦涅米在 138 開放**。合了以後封存 ROVANIEMI-OPEN session_01JMHz9bckVEprLBmpgpVmVQ；`railway-reference-private#145` 在 138 發版後才合。
+  - ROAD-LOOK-REAL-2（822，session_01JMHz9bn8HzazZzMYbhURDh，壓縮 1 次）：接 #2364，新外觀，**規劃看總覽圖才合**；合了封存它和舊的 session_01JMHz9bEFthgKRraGjXnPYN。之後派 §29.23 ROAD-GRADE-CAP。
+  - DEPOT-REAL（829，session_01JMHz9bsrazDrT4xMPmDZJE，Fable）：死結唯一的 session，還沒開 PR。
+  - DOCNUM-CI＋CONFLICT-WATCH：做完了，見上。
+- **下一個空位先派**：REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）；§29.29 第 3 名 PRIO-FILES（2.00）。
+- **號碼**：決策 827 TPE-MRT-ELEVATED（已合）、828 ROVANIEMI-FARE、829 DEPOT-REAL、830 DOCNUM-CI＋CONFLICT-WATCH，**下一個從 831 取**（先看 #2118）。存檔 107（ROVANIEMI-FARE 預留 108）、golden schema 77。NEXT_PRIORITIES 到 §29.29。
+- **還沒封存、要作者在可信任裝置上封存的**：前一任規劃 session_01JMHz9Yps9xJyFfDFR4mUed，以及描線、隱私資料夾新增檔案評估、PR 審查與修復、沿線官網和測試進度、優先移植部分。我（session_01JMHz9ZJWaKh8kjuNDLtvar）交接完也請作者封存。
+
+**2026-11-17 晚上（現任規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 記；下面的「傍晚交接」是前一版）**
 
 - **137 的範圍**（作者 11-17：「好 不等 高架下一版」）：137 不等 ROAD-LOOK-REAL（#2364，決策 822），它放 138。137 等 #2365 PERF-3D-FIRST、E200-REDO（825，規劃看總覽圖才合）。**羅瓦涅米改到 138**（作者問「你用五方專家角度看呢」，規劃 11-17 定）：兩條真實路線怎麼經營都虧、兩條一起買主線人數減半，第一印象太差；#2355 ROVANIEMI-OPEN 跑綠轉 ready 但先不合，等 ROVANIEMI-PAIR（bug，2.40）與 ROVANIEMI-FARE（2.85）兩個 GameCore 修正合了再一起合，138 開，仍趕在 11/30 冬季活動前；railway-reference-private #145 也改成 138 開放後才合。五方：玩家（新地圖永遠虧錢是壞的第一印象）、鐵道迷（路線真、數字錯，修好才對得起真路線）、開發（價錢修正可馬上派，#2355 只是等）、美術（無）、音樂（無）。發版說明在 137 準備 PR（`claude/whatsnew-137`）先寫好，這兩張合完照實際內容改，最後合；再對 main HEAD 跑完整 ci.yml 與 full lane，都綠才請作者說「發」。
 - **11:10 UTC**：合了 #2366、#2356 ROAD-SMOOTH（821）、#2362 TRACK-CURVE（826），兩個 session 已封存；派 ROAD-LOOK-REAL-2 session_01JMHz9bn8HzazZzMYbhURDh 接 #2364（順手量 §29.23 VIADUCT-PIERS 的墩數）。§29.23 ROAD-GRADE-CAP 等 #2364 合併後派。

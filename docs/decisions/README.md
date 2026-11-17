@@ -13,4 +13,4 @@
   ```
 
 - 1–328 的決策要補「後來」，照舊改 ARCHITECTURE 裡那一節。
-- `python3 -I tools/golden-checks/doc_numbers.py --check` 會檢查：檔名和標題的號碼一致、一個檔只有一個決策、同一號沒有同時在 ARCHITECTURE 和這裡。
+- `python3 -I tools/golden-checks/doc_numbers.py --check` 會檢查：檔名和標題的號碼一致、一個檔只有一個決策、同一號沒有同時在 ARCHITECTURE 和這裡。改到 `docs/` 的 PR 與 push，CI 的 `doc-numbers` 工作會跑它，紅了 `Swift CI (gate)` 就紅（決策 830）。
