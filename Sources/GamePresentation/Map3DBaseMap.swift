@@ -74,6 +74,9 @@ struct Map3DBaseMap: Sendable {
         /// The outer ring, then its holes.
         let rings: [[Point]]
         let bounds: Bounds
+        /// Decision 822: the tiles' sea (water `class` `ocean`), whose
+        /// holes are the land; a river's or a lake's are its islands.
+        var isSea = false
     }
 
     struct Road: Sendable {
@@ -261,7 +264,7 @@ struct Map3DBaseMap: Sendable {
                     let rings = polygon.map { $0.map(scene) }
                     // No fountain, pool or pond too small to read as one.
                     if lake, Self.isSpeck(rings, in: tile) { continue }
-                    areas.append(Area(cover: cover, rings: rings, bounds: bounds))
+                    areas.append(Area(cover: cover, rings: rings, bounds: bounds, isSea: feature.string("class") == "ocean"))
                 }
             case ("transportation", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
