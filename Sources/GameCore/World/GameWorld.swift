@@ -121,6 +121,11 @@ public struct GameWorld: Equatable, Sendable {
     /// 137). Off in a new world and in saves from before it; the app's new
     /// games turn it on. Set by ``setDistanceDemand(_:)`` only.
     public internal(set) var distanceDemand: Bool = false
+    /// Whether a station beyond ``DistanceDemand/farDistance`` from an
+    /// origin draws less of its trips the farther it is (decision 828).
+    /// Off in a new world and in saves from before it; the app's new
+    /// overseas games turn it on. Set by ``setFarDemand(_:)`` only.
+    public internal(set) var farDemand: Bool = false
     /// Whether the crowd at a train's doors slows the passengers going
     /// through them (decision 169). Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
@@ -6163,7 +6168,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, farDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
     }
 
@@ -6278,6 +6283,7 @@ extension GameWorld: Codable {
         }
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
+        farDemand = try container.decodeIfPresent(Bool.self, forKey: .farDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
         switchInterlocking = try container.decodeIfPresent(Bool.self, forKey: .switchInterlocking) ?? false
@@ -6474,6 +6480,9 @@ extension GameWorld: Codable {
         }
         if distanceDemand {
             try container.encode(true, forKey: .distanceDemand)
+        }
+        if farDemand {
+            try container.encode(true, forKey: .farDemand)
         }
         if doorCrowding {
             try container.encode(true, forKey: .doorCrowding)

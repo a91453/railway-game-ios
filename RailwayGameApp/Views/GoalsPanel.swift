@@ -945,7 +945,7 @@ struct WinterEventSection: View {
                     "第 \(week) 週（\(WinterEvent.datesText(ofWeek: week))）：\(mission.title(in: language))"
                 ))
                 .fontWeight(.semibold)
-                Text(verbatim: mission.how(in: language))
+                Text(verbatim: mission.how(in: language, facts: facts))
                     .font(.footnote)
                 if earned {
                     Text(verbatim: language.text("Done: badge earned.", "已完成，拿到徽章。"))

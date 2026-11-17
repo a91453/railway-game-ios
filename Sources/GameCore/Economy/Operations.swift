@@ -186,8 +186,11 @@ extension GameWorld {
     /// high-speed line (decision 168), the kilometres' fare
     /// (``HighSpeed/fare(squaredDistance:)``) if it is more; or, between
     /// two stations of the high-speed fare table (decision 325), the
-    /// table's fare. `nil` for the same station or an unknown one.
-    public func tripFare(from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money? {
+    /// table's fare. With `stateTrack`, a trip that rides a line bought on
+    /// the state's track (decision 828), the kilometre fare
+    /// (``LineAcquisition/stateTrackFare(squaredDistance:)``) if it is more.
+    /// `nil` for the same station or an unknown one.
+    public func tripFare(from origin: StationID, to destination: StationID, highSpeed: Bool = false, stateTrack: Bool = false) -> Money? {
         guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
         var fare = FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
         // Decision 168: a trip that rides a high-speed line pays the
@@ -196,6 +199,11 @@ extension GameWorld {
         // real line charges it, however it compares with the network's.
         if highSpeed {
             fare = accounts.highSpeedFare(between: origin, and: destination) ?? max(fare, HighSpeed.fare(squaredDistance: squared))
+        }
+        // Decision 828: a trip that rides a line on the state's track pays
+        // the kilometre fare, if that is more.
+        if stateTrack {
+            fare = max(fare, LineAcquisition.stateTrackFare(squaredDistance: squared))
         }
         guard isOutsideConnection(origin) || isOutsideConnection(destination) else { return fare }
         return fare + outsideFare
@@ -240,8 +248,10 @@ extension GameWorld {
     /// Returns what was added to the hour's fares (decision 179 shares it
     /// among the lines).
     @discardableResult
-    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money {
-        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed) else { return .zero }
+    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false,
+                              stateTrack: Bool = false) -> Money {
+        guard accounts.mode == .management, count > 0,
+              let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed, stateTrack: stateTrack) else { return .zero }
         let before = accounts.pending.fareRevenue
         let fares = before.amount + Self.wholeDollars(count * fare.amount).amount
         accounts.pending.fareRevenue = Money(min(fares, Self.maximumHourly / 100 * 100))
@@ -317,6 +327,8 @@ extension GameWorld {
         var trains: Int64 = 0
         var weight: Int64 = 0
         var perLine: [LineAssets] = []
+        // Decision 828: the lines bought on the state's track.
+        let onStateTrack = Set(acquisitions.filter(\.stateTrack).compactMap(\.line))
         for line in lines {
             var lineLength: Int64 = 0
             var lineTrains: Int64 = 0
@@ -334,6 +346,12 @@ extension GameWorld {
                 // whole route, as the reference measures a ring closed.
                 let route = journey.isRing ? journey.legs[...] : journey.legs.prefix(journey.legs.count / 2)
                 lineLength = route.reduce(0) { $0 + $1.path.distance }
+                // Decision 828: the state keeps a bought line's track; the
+                // line pays the access charge, a share of what keeping it
+                // would cost.
+                if onStateTrack.contains(line.id) {
+                    lineLength = lineLength * LineAcquisition.stateTrackAccessPermille / 1_000
+                }
                 length += lineLength
             }
             for service in 0..<line.serviceCount {
