@@ -39,3 +39,26 @@ python3 -I tools/rail-depots/plot_depots.py taiwan.pbf after.png after.json
 ```
 
 高雄輕軌機廠（`RealLineDepotSite.klrt`，決策 535「續」KLRT、決策 621）：OSM 的 workshop way 445644637，停車股道 way 501281474–501281479、1153379542–1153379546 與 1342616485；分岔點是南入出庫線 way 501281475 離開西側正線的 node，約 (22.605961, 120.325089)；北入出庫線 way 1561884685 約在分岔點北方 658 m 接回正線。決策 621 從 osmtoday 的 extract（2026-11-07）重量：真實車場是沿西側正線一條約 60 m 寬的帶，南群（分岔點北方約 87–295 m）離正線 10–57 m、北群（約 360–620 m）8–45 m，機廠站（輕軌機廠站）在兩群之間約 296 m。`yard` 改成南群兩端的中點 (22.607947, 120.325549) 到 (22.610101, 120.326153)，`strip: Strip(banks: 2)`：wye 照舊，股道沿線排在走行線和正線之間（`RealLineDepotStrip.swift`）。俯視圖：`KLRT_DEPOT_DUMP=klrt.json swift test --skip-build --filter KaohsiungLightRailDepotDumpTests`，再 `PLOT_SITES=klrt python3 -I tools/rail-depots/plot_depots.py taiwan.pbf out.png klrt.json`。
+
+香港的兩座車廠（`RealLineDepotSite.wongChukHang`、`.siuHoWan`，決策 829）：`hk_depot_site.py` 讀 osmtoday.com 的香港整包檔（`asia/china/hong_kong.pbf`，約 44 MB；2026-11-17 下載的那一份 sha256 `8dd1ba8b948b55efd8ae48c2d0343d29c4659b5bc82dcf4992e3bc45447ec955`），約 10 秒：
+
+```sh
+curl -LO https://osmtoday.com/asia/china/hong_kong.pbf
+python3 -I tools/rail-depots/hk_depot_site.py hong_kong.pbf
+```
+
+- 小蠔灣車廠（way 26321752）：在東涌綫欣澳與東涌之間、正線北側。車廠裡畫了 73 條 `service=yard` 的軌道，其中 39 條 250 m 以上；入出庫線在五個 node 離開正線，遊戲用中間那一個（node 2291194538，(22.303002, 113.976749)，way 219993904／219994031）。四條有棚的長停車線（way 453753728 到 453753731）近端中點 (22.306620, 113.980458)、遠端中點 (22.309116, 113.984772)，長 524 m，就是 `yard`。
+- 黃竹坑車廠（way 454129803）：在黃竹坑站南邊的平台底下。OSM 只畫了建築外框（最遠的兩個角相距 351 m），沒有畫裡面的軌道；真實的入出庫線從站東邊高架上的第三條軌道（way 462266216、648423547）離開正線。遊戲的分岔點放在那條高架再往東約 130 m（(22.248350, 114.172200)），三角線才不會壓到黃竹坑站前後的道岔；`yard` 是站南邊到建築西南角。
+- 將軍澳車廠（way 28279911，康城站就在裡面）：只印出來備查，遊戲沒有替康城支線的兩列車鋪車廠。
+
+港鐵沒有公開車廠的軌道配置與可停列數（`tools/hk-map/README.md`「沒有的」），所以遊戲的股數是這條線的列車數，一股停一列（南港島綫 10、東涌綫 12），和台灣各機廠的算法一樣。
+
+小蠔灣車廠在正線的北側，也就是遊戲第一條正線那一側。決策 829 之前，線中間的機廠只能從第二條正線分出去（機廠要在第二條正線那一側）；現在香港的線兩側都可以，三角線與前後兩組渡線照鏡像鋪。
+
+桃園機場捷運兩座機廠的真實停車股道數（決策 829）：`tymc_yard_tracks.py` 讀台灣的整包檔，數 OSM 畫的停車股道裡 110 m 以上的（一列直達車約 102 m）：
+
+```sh
+python3 -I tools/rail-depots/tymc_yard_tracks.py taiwan.pbf
+```
+
+2026-11-17 的整包檔（sha256 `2eca488d858f7c5270ec7384cc4d728a6a72bf3a84b73340f98ffee31f275384`）：蘆竹 23 股（17 股約 119 m、6 股約 152 m，way 1576463688 到 1576463746 之間），青埔 15 股（228 m 以上，way 499824857 到 499824866 與 499831993 到 499832001）。桃園捷運公司沒有公開兩座機廠可停幾列。遊戲鋪幾股、為什麼不是照這兩個數，見決策 829。

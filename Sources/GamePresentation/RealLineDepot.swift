@@ -207,6 +207,14 @@ struct RealLineDepotSite: Sendable {
     /// the real one. Its sidings hold the trains the real timetable leaves
     /// overnight at the stations from Sanchong to the airport, one each,
     /// as far as they go; the rest stand in the Qingpu depot.
+    ///
+    /// Decision 829: the real yard has more stabling tracks, 23 (17 of
+    /// some 119 m and 6 of some 152 m, among ways 1576463688 to
+    /// 1576463746; `tools/rail-depots/tymc_yard_tracks.py`), and Qingpu's
+    /// 15. Laid with as many, or with 18 here, more trains went in and
+    /// out and more of the first runs of the morning went without a
+    /// train under the simple rules (the decision has the numbers), so
+    /// both keep the sidings they had.
     static let luzhu = RealLineDepotSite(
         line: "tymc:A", english: "Luzhu Depot", chinese: "蘆竹機廠",
         junction: (25.081437, 121.278549),
@@ -262,12 +270,48 @@ struct RealLineDepotSite: Sendable {
         strip: Strip(banks: 2)
     )
 
+    /// Decision 829: the Wong Chuk Hang Depot (黃竹坑車廠, the building way
+    /// 454129803), the South Island Line's, under the podium south of
+    /// Wong Chuk Hang station (`tools/rail-depots/hk_depot_site.py`,
+    /// osmtoday's whole extract of Hong Kong, 2026-11-17). OpenStreetMap
+    /// maps the building, not the tracks inside it: the real leads leave
+    /// the viaduct by its third track east of the station (ways
+    /// 462266216, 648423547; from 22.248362, 114.170898); the game's wye
+    /// leaves the line some 130 m further east on that viaduct, toward
+    /// Ocean Park, clear of the turnouts either side of Wong Chuk Hang's
+    /// platforms, and its yard runs through the building from south of
+    /// the station to its south-west corner. The MTR
+    /// publishes no stabling capacity; its sidings hold the line's ten
+    /// trains, one each, as the real depot keeps the whole fleet.
+    static let wongChukHang = RealLineDepotSite(
+        line: "hkmtr:SIL", english: "Wong Chuk Hang Depot", chinese: "黃竹坑車廠",
+        junction: (22.248350, 114.172200),
+        yard: ((22.247700, 114.168900), (22.246245, 114.166520)),
+        sidings: 10, beyond: nil, compact: true
+    )
+
+    /// Decision 829: the Siu Ho Wan Depot (港鐵小蠔灣車廠, way 26321752),
+    /// north of the Tung Chung Line between Sunny Bay and Tung Chung,
+    /// where the real Tung Chung Line, Airport Express and Disneyland
+    /// Resort Line trains stand. Its west lead leaves the line at node
+    /// 2291194538 (ways 219993904, 219994031); ``yard`` is the middle of
+    /// the west ends and of the east ends of its four long covered
+    /// stabling tracks (ways 453753728 to 453753731, 524 m). Of its 73
+    /// yard tracks 39 are 250 m or longer; the game's sidings hold the
+    /// Tung Chung Line's twelve trains, one each.
+    static let siuHoWan = RealLineDepotSite(
+        line: "hkmtr:TCL", english: "Siu Ho Wan Depot", chinese: "小蠔灣車廠",
+        junction: (22.303002, 113.976749),
+        yard: ((22.306620, 113.980458), (22.309116, 113.984772)),
+        sidings: 12, beyond: nil, compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
     /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not
@@ -275,6 +319,11 @@ struct RealLineDepotSite: Sendable {
     /// alongside it, and fanned toward the junction the Qingpu yard's
     /// crossed the line's own track.
     var fansAwayFromLine: Bool { line == "tymc:A" }
+
+    /// Decision 829: whether its wye may leave the line's first track,
+    /// where its yard lies on that side of the line; the depots of before
+    /// are laid only on the second track's side, as they were.
+    var mayLeaveTheFirstTrack: Bool { line.hasPrefix("hkmtr:") }
 
     func name(in language: DisplayLanguage) -> String {
         language.text(english, chinese)
@@ -357,18 +406,25 @@ extension RealLineDepotLayout {
     /// them, the lead from there down to the real yard, and the sidings
     /// fanning out along it, each with a platform `length` long at the
     /// same place. `nil` where the lead cannot get down at its grade.
+    ///
+    /// Decision 829: with `onFirst`, off the first track (piece 0, the
+    /// plan given as `second`), its foot on that track's side of the line.
     static func lay(
         _ site: RealLineDepotSite, points: [WorldVector], along path: WorldPath, at j: Double, second: RealWorldDemo.TrackPlan,
-        marks: [(main: Int, second: Int)], first: Int, length: Int64, ground: (WorldVector) -> Double,
+        onFirst: Bool = false, marks: [(main: Int, second: Int)], first: Int, length: Int64, ground: (WorldVector) -> Double,
         water: (WorldVector) -> Bool = { _ in false }, in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
         guard marks.count == 6, points.count == 3, site.sidings > 0 else { return nil }
         func node(_ mark: (main: Int, second: Int)) -> (point: WorldVector, direction: WorldVector, height: Int64) {
-            (WorldVector(second.nodes[mark.second].point), second.nodes[mark.second].direction.unit, second.heights[mark.second])
+            let index = onFirst ? mark.main : mark.second
+            return (WorldVector(second.nodes[index].point), second.nodes[index].direction.unit, second.heights[index])
+        }
+        func at(_ mark: (main: Int, second: Int)) -> RealLineAcquisition.NodeAt {
+            RealLineAcquisition.NodeAt(piece: onFirst ? 0 : 1, node: onFirst ? mark.main : mark.second)
         }
         let up = node(marks[2]), down = node(marks[3])
         let middle = j + armReach
-        let foot = path.point(at: middle) + path.tangent(at: middle).normal * (-HighSpeedDemo.trackOffset - armReach)
+        let foot = path.point(at: middle) + path.tangent(at: middle).normal * (onFirst ? armReach : -HighSpeedDemo.trackOffset - armReach)
         let lead = (points[1] - foot).unit
         // The foot's height within the grade of both turnouts, as near
         // the ground as that lets it (the chord, shorter than the track,
@@ -389,12 +445,12 @@ extension RealLineDepotLayout {
             piece(
                 [coordinate(up.point, up.height), coordinate(foot, footHeight)],
                 [cubic(up.point, leaving: up.direction, foot, arriving: lead, handle: handle)],
-                start: RealLineAcquisition.NodeAt(piece: 1, node: marks[2].second)
+                start: at(marks[2])
             ),
             piece(
                 [coordinate(down.point, down.height), coordinate(foot, footHeight)],
                 [cubic(down.point, leaving: down.direction.reversed, foot, arriving: lead, handle: handle)],
-                start: RealLineAcquisition.NodeAt(piece: 1, node: marks[3].second), end: footNode
+                start: at(marks[3]), end: footNode
             ),
         ]
         guard let laid = yard(
