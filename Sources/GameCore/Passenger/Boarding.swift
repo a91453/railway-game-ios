@@ -213,13 +213,15 @@ extension GameWorld {
 
     /// Boarders who pay their fare together (G1c): those going to one
     /// destination, on a journey that rides a high-speed line (decision
-    /// 168) or not.
+    /// 168) or not, and one that rides a line on the state's track
+    /// (decision 828) or not.
     private struct FarePayers: Hashable, Comparable {
         let destination: StationID
         let highSpeed: Bool
+        var stateTrack = false
 
         static func < (lhs: Self, rhs: Self) -> Bool {
-            (lhs.destination, lhs.highSpeed ? 1 : 0) < (rhs.destination, rhs.highSpeed ? 1 : 0)
+            (lhs.destination, lhs.highSpeed ? 1 : 0, lhs.stateTrack ? 1 : 0) < (rhs.destination, rhs.highSpeed ? 1 : 0, rhs.stateTrack ? 1 : 0)
         }
     }
 
@@ -343,7 +345,10 @@ extension GameWorld {
             if group.journey?.current == nil || group.journey?.current == 0 {
                 // Decision 168: a journey that rides a high-speed line pays
                 // its fare.
-                let payers = FarePayers(destination: group.journey?.destination ?? group.destination, highSpeed: ridesHighSpeed(group))
+                // Decision 828: and one that rides a line on the state's
+                // track the kilometre fare.
+                let payers = FarePayers(destination: group.journey?.destination ?? group.destination, highSpeed: ridesHighSpeed(group),
+                                        stateTrack: ridesStateTrack(group))
                 paying[payers, default: 0] += count
                 if lineAccounts != nil {
                     shares[payers, default: []] += fareWeights(of: group.journey, line: boardingLine, count: count)
@@ -354,7 +359,8 @@ extension GameWorld {
         // dollars (G1c; the reference's fare trips of a boarding plan).
         var tripFare = Money.zero
         for payers in paying.keys.sorted() {
-            let fare = chargeFares(paying[payers]!, from: passengers[record].station, to: payers.destination, highSpeed: payers.highSpeed)
+            let fare = chargeFares(paying[payers]!, from: passengers[record].station, to: payers.destination, highSpeed: payers.highSpeed,
+                                   stateTrack: payers.stateTrack)
             if let weights = shares[payers] { tripFare = tripFare + shareFare(fare, among: Self.merged(weights), crediting: boardingLine) }
         }
         // Decision 223: the train's trip takes its line's share.

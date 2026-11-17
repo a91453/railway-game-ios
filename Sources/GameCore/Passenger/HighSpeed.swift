@@ -150,6 +150,17 @@ extension GameWorld {
         return isHighSpeedLine(group.line)
     }
 
+    /// Whether the passengers of `group` ride a line bought on the state's
+    /// track (decision 828) on their way: their journey's legs, or the
+    /// line they wait for.
+    func ridesStateTrack(_ group: WaitingGroup) -> Bool {
+        guard acquisitions.contains(where: \.stateTrack) else { return false }
+        if let journey = group.journey {
+            return journey.legs.contains { runsOnStateTrack($0.line) }
+        }
+        return runsOnStateTrack(group.line)
+    }
+
     // MARK: - Deriving
 
     /// The people of each open high-speed station's hinterland: the

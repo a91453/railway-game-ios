@@ -41,8 +41,8 @@ extension OverseasMap {
             "整個香港，約 63 × 45 公里，一開始全部開放，可以收購港鐵的路線。"
         )
         case .rovaniemi: language.text(
-            "Rovaniemi in Finnish Lapland and the country round it to Kemijärvi, about 107 by 55 km, all open from the start. You can buy the line to Kemijärvi.",
-            "芬蘭拉普蘭的羅瓦涅米，一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維的路線。"
+            "Rovaniemi in Finnish Lapland and the country round it, from Muurola to Kemijärvi, about 107 by 55 km, all open from the start. You can buy the line to Kemijärvi and the main line to Muurola.",
+            "芬蘭拉普蘭的羅瓦涅米，從穆羅拉一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維與往穆羅拉的路線。"
         )
         }
     }
@@ -145,9 +145,12 @@ public struct AirRoutes: Equatable, Sendable {
     }
 
     /// Taiwan and `cities`, with flights both ways between Taiwan and each
-    /// city; nothing at all while there is no city.
+    /// city; nothing at all while there is no city. Decision 818: a city
+    /// whose map no flights open (``OverseasMap/opensByFlights``) is left
+    /// out: the picker offers it from the start, and choosing it first
+    /// leaves the others as they were.
     public init(cities: Set<OverseasMap>, opened: Set<String> = [], here: String = AirMap.taiwan.id, best: [String: Int64] = [:]) {
-        let cities = OverseasMap.allCases.filter(cities.contains).map(AirMap.init)
+        let cities = OverseasMap.allCases.filter { cities.contains($0) && $0.opensByFlights }.map(AirMap.init)
         self.init(
             maps: cities.isEmpty ? [] : [.taiwan] + cities,
             routes: cities.flatMap { [AirRoute(from: AirMap.taiwan.id, to: $0.id), AirRoute(from: $0.id, to: AirMap.taiwan.id)] },
@@ -300,6 +303,23 @@ extension GameLauncher {
         )
     }
 
+    /// Decision 818: the map picker's rows of the cities outside Taiwan, in
+    /// order: each city whose flights the app offers (decision 712), closed
+    /// with the way to open it until they open, and each city no flights
+    /// open (Rovaniemi), open from the start once its ground is read. None
+    /// while the real-world data is read.
+    public func overseasMapRows(in language: DisplayLanguage) -> [OverseasMapRow] {
+        guard !isLoadingRealWorldData else { return [] }
+        let routes = airRoutes
+        let read = Set(overseasGrounds.map(\.city))
+        return OverseasMap.allCases.compactMap { city in
+            if routes.offers(city.rawValue) {
+                return OverseasMapRow(city: city, closed: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language))
+            }
+            return !city.opensByFlights && read.contains(city) ? OverseasMapRow(city: city, closed: nil) : nil
+        }
+    }
+
     /// The id of the map `world` is on: the city whose ground holds it, or
     /// Taiwan.
     func airMap(of world: GameWorld) -> String {
@@ -349,4 +369,11 @@ extension GameLauncher {
         if !isDemoMode, routes.offers(id), routes.opened.isEmpty { rememberAirRoutes([id]) }
         return true
     }
+}
+
+/// Decision 818: a city's row in the map picker (``GameLauncher/overseasMapRows(in:)``).
+public struct OverseasMapRow: Equatable, Sendable {
+    public let city: OverseasMap
+    /// Why a new game cannot start there yet, `nil` when it can.
+    public let closed: String?
 }

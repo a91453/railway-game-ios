@@ -430,13 +430,14 @@ struct RealWorldPicker: View {
                 // Decision 712: the cities outside Taiwan the app has the
                 // whole map of. The player's first map is open; flights
                 // from a map already open open each of the others.
-                ForEach(OverseasMap.allCases.filter { routes.offers($0.rawValue) }, id: \.self) { city in
+                // Decision 818: and Rovaniemi from the start.
+                ForEach(launcher.overseasMapRows(in: language), id: \.city) { row in
                     WholeMapRow(
-                        id: "realWorld.overseas.\(city.rawValue)", name: city.name(in: language), symbol: "airplane",
-                        summary: city.mapSummary(in: language),
-                        howToOpen: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language)
+                        id: "realWorld.overseas.\(row.city.rawValue)", name: row.city.name(in: language),
+                        symbol: row.city.opensByFlights ? "airplane" : "snowflake",
+                        summary: row.city.mapSummary(in: language), howToOpen: row.closed
                     ) {
-                        if launcher.startOverseasMap(city) { dismiss() }
+                        if launcher.startOverseasMap(row.city) { dismiss() }
                     }
                 }
             }

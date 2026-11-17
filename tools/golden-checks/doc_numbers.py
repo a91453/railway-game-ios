@@ -37,11 +37,23 @@ than README.md whose name is not a number (or is one written with leading
 zeros), a number that is both a file and an ARCHITECTURE heading, or an
 ARCHITECTURE heading of 329 or later is a difference.
 
+Since decision 832 the rows a pull request scores are a file of their own
+too, docs/priorities/<TASK>.md, rather than the next section of
+NEXT_PRIORITIES that every parallel pull request took the same number of.
+Its first line is `# <TASK>（YYYY-MM-DD，<source, with the #PR>）`, its
+table has the columns 項目, 玩家, 開發, 美術, 鐵道迷, 音樂 and 加權, every
+score is 1-5 and every weighted score is §19's (30/25/15/15/15). A file
+not in that form is a difference; a source with no #PR is a note.
+`--priorities` prints the rows of the files not merged back yet (no line
+「併回：」), sorted, for the game planner to paste into the list, and
+`--mark WHERE` then writes 「併回：WHERE（date）」 into those files.
+
 Python 3 standard library only:
     python3 -I tools/golden-checks/doc_numbers.py            # report
     python3 -I tools/golden-checks/doc_numbers.py --check    # exit 1 on a difference
     python3 -I tools/golden-checks/doc_numbers.py --selftest
     python3 -I tools/golden-checks/doc_numbers.py --index    # the whole decision index
+    python3 -I tools/golden-checks/doc_numbers.py --priorities [--mark "NEXT_PRIORITIES §29.30"]
 """
 import argparse
 import pathlib
@@ -58,6 +70,16 @@ DECISIONS = "docs/decisions"
 FIRST_FILED = 329
 SAVED_GAME = "Sources/GameCore/World/SavedGame.swift"
 GOLDEN_SCENARIO = "Tests/GameCoreTests/GoldenScenario.swift"
+# Decision 832: the rows a pull request scores are a file of their own,
+# docs/priorities/<TASK>.md, which the game planner merges back into the
+# priority list (`--priorities`), instead of every pull request adding the
+# next section of NEXT_PRIORITIES and racing for its number.
+PRIORITIES = "docs/priorities"
+# NEXT_PRIORITIES §19: player 30, developer 25, art 15, railway fan 15, music 15.
+WEIGHTS = (("玩家", 30), ("開發", 25), ("美術", 15), ("鐵道迷", 15), ("音樂", 15))
+PRIORITY_HEADING = re.compile(r"^# ([A-Z0-9]+(?:-[A-Z0-9]+)*)（(\d{4})-(\d{2})-(\d{2})，([^）]+)）\s*$")
+PRIORITY_NAME = re.compile(r"[A-Z0-9]+(?:-[A-Z0-9]+)*")
+MERGED = "併回："
 
 HEADING = re.compile(r"^### (\d+)\.(?:\s|$)")
 CONTINUATION = re.compile(r"^### (\d+)（[^）]*）\.")
@@ -160,6 +182,117 @@ def decision_files(root, differences):
     return sorted(files)
 
 
+def priority_files(root, differences, notes):
+    """The scored rows of each docs/priorities/<TASK>.md (decision 832), as
+    dicts, and whether the file was merged back. A file not written in the
+    fixed form is a difference."""
+    import datetime
+    directory = pathlib.Path(root) / PRIORITIES
+    found = []
+    if not directory.is_dir():
+        return found
+    columns = [name for name, _ in WEIGHTS]
+    for path in sorted(directory.glob("*.md")):
+        relative = f"{PRIORITIES}/{path.name}"
+        if path.name == "README.md":
+            continue
+        if not PRIORITY_NAME.fullmatch(path.stem):
+            differences.append(f"{relative} 的檔名不是工作名（大寫英數與連字號，例如 E200-REDO.md）")
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        match = PRIORITY_HEADING.match(lines[0]) if lines else None
+        if not match:
+            differences.append(f"{relative} 第一行應該是「# <工作名>（YYYY-MM-DD，來源）」，例如「# E200-REDO（2026-11-17，#2367）」")
+            continue
+        task, year, month, day, source = match.groups()
+        if task != path.stem:
+            differences.append(f"{relative} 的標題是 {task}，檔名應該是 {task}.md")
+            continue
+        try:
+            datetime.date(int(year), int(month), int(day))
+        except ValueError:
+            differences.append(f"{relative} 的日期 {year}-{month}-{day} 不存在")
+            continue
+        pull = re.search(r"#(\d+)", source)
+        if not pull:
+            notes.append(f"{relative} 的來源沒有 PR 號（#N），開了 PR 後補上")
+        merged = next((line[len(MERGED):].strip() for line in lines if line.startswith(MERGED)), None)
+        rows, header, problems = [], None, False
+        for number, line in enumerate(lines, 1):
+            if not line.startswith("|"):
+                header = None
+                continue
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if all(re.fullmatch(r":?-+:?", cell) for cell in cells if cell):
+                continue
+            if header is None:
+                header = cells if all(name in cells for name in ["項目", *columns, "加權"]) else []
+                continue
+            if not header:
+                continue
+            row = dict(zip(header, cells))
+            item = row.get("項目", "")
+            scores = []
+            for name in columns:
+                value = row.get(name, "")
+                if not re.fullmatch(r"[1-5]", value):
+                    differences.append(f"{relative} 第 {number} 行「{item}」的{name}分是 {value or '（空）'}，要是 1–5 的整數")
+                    problems = True
+                    break
+                scores.append(int(value))
+            else:
+                total = sum(score * weight for score, (_, weight) in zip(scores, WEIGHTS))
+                expected = f"{total // 100}.{total % 100:02d}"
+                if row.get("加權", "") != expected:
+                    differences.append(f"{relative} 第 {number} 行「{item}」的加權寫 {row.get('加權', '') or '（空）'}，照 §19 的權重是 {expected}")
+                    problems = True
+                status = next((value for key, value in row.items() if "狀態" in key), "")
+                rows.append({"task": task, "pull": pull.group(1) if pull else None, "item": item,
+                             "scores": scores, "weighted": expected, "total": total, "status": status})
+        if not rows and not problems:
+            differences.append(f"{relative} 沒有評分表（欄位要有 項目、{'、'.join(columns)}、加權）")
+            continue
+        found.append((relative, merged, rows))
+    return found
+
+
+def is_bug(item):
+    return item.strip("* ").lower().startswith("bug")
+
+
+def priorities(root, mark=None):
+    """The rows of the priority files not merged back yet, bugs first, then
+    by weighted score, player, developer and railway fan (§19's ties), as a
+    table to paste into the priority list. With `mark`, each of those files
+    gets the line 「併回：<mark>（date）」 under its heading."""
+    import datetime
+    root = pathlib.Path(root)
+    differences, notes = [], []
+    files = [entry for entry in priority_files(root, differences, notes) if entry[1] is None]
+    rows = [row for _, _, found in files for row in found]
+    rows.sort(key=lambda row: (not is_bug(row["item"]), -row["total"], -row["scores"][0], -row["scores"][1], -row["scores"][3]))
+    print(f"還沒併回的評分檔 {len(files)} 個、{len(rows)} 列" + ("：" if files else "。"))
+    if rows:
+        print()
+        print("| 名次 | 項目 | 來源 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態 |")
+        print("| --: | --- | --- | --: | --: | --: | --: | --: | --: | --- |")
+        for place, row in enumerate(rows, 1):
+            source = f"[{row['task']}](../priorities/{row['task']}.md)" + (f"（#{row['pull']}）" if row["pull"] else "")
+            scores = " | ".join(map(str, row["scores"]))
+            print(f"| {place} | {row['item']} | {source} | {scores} | {row['weighted']} | {row['status']} |")
+    for line in differences:
+        print(f"- {line}", file=sys.stderr)
+    if mark:
+        today = datetime.date.today().isoformat()
+        for relative, _, _ in files:
+            path = root / relative
+            lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+            lines[1:1] = ["\n", f"{MERGED}{mark}（{today}）\n"]
+            path.write_text("".join(lines), encoding="utf-8")
+            print(f"已標記 {relative}：{MERGED}{mark}", file=sys.stderr)
+    return 1 if differences else 0
+
+
 def index_rows(text):
     """(number, title) of each row of OVERVIEW §9's table, in order."""
     return [(int(row[0]), row[1] if len(row) > 1 else "") for row in table_rows(section(text, 9)) if row and row[0].isdigit()]
@@ -203,6 +336,7 @@ def compare(root):
     stated = overview_numbers(overview)
     found, continued = headings(architecture)
     files = decision_files(root, differences)
+    priority_files(root, differences, notes)
     filed = [number for number, _, _ in files]
     numbers = [number for number, _ in found] + filed
     actual = {
@@ -306,7 +440,7 @@ def report(root):
 
 # MARK: - Self-test
 
-def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒有使用，#5）。之後以 #231 為準", architecture_extra="", index_extra="", replay_reports=True, decision_files=None):
+def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒有使用，#5）。之後以 #231 為準", architecture_extra="", index_extra="", replay_reports=True, decision_files=None, priority_files=None):
     """A small repository whose numbers all agree unless told otherwise."""
     root = pathlib.Path(root)
     files = {
@@ -363,10 +497,26 @@ def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒�
         files["ReplayFixtures/Reports/report.json"] = "{}"
     for name, content in (decision_files or {}).items():
         files[f"{DECISIONS}/{name}"] = content
+    for name, content in (priority_files or {}).items():
+        files[f"{PRIORITIES}/{name}"] = content
     for relative, content in files.items():
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+
+
+PRIORITY_EXAMPLE = """# E200-REDO（2026-11-17，#2367）
+
+E200 重做之後留下的。
+
+| 順位 | 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 | 狀態、注意 |
+| --: | --- | --: | --: | --: | --: | --: | --: | --- |
+| 1 | E200 的菱形集電弓 | 1 | 4 | 2 | 4 | 1 | 2.35 | 未派 |
+| 2 | E200 側面的通風百葉 | 1 | 3 | 3 | 3 | 1 | 2.10 | 未派 |
+
+五方：
+- 玩家：拉遠後幾乎看不出來。
+"""
 
 
 def selftest():
@@ -447,6 +597,64 @@ def selftest():
     _, differences, _ = case("a decision both in ARCHITECTURE and a file", decisions="見決策索引（§9）", architecture_extra="\n### 5. 五\n", decision_files={"5.md": "### 5. 五\n"})
     assert differences == ["決策 5 同時在 ARCHITECTURE 與 docs/decisions/5.md"], differences
 
+
+    # Decision 832: the rows a pull request scores are a file of their own.
+    good = PRIORITY_EXAMPLE
+    table, differences, notes = case("a priority file", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": good, "README.md": "# 說明\n"})
+    assert differences == [], differences
+    assert not any("E200-REDO" in note for note in notes), notes
+
+    _, differences, notes = case("a priority file with no pull request", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": good.replace("，#2367）", "，E200 重做）")})
+    assert differences == [], differences
+    assert "docs/priorities/E200-REDO.md 的來源沒有 PR 號（#N），開了 PR 後補上" in notes, notes
+
+    _, differences, _ = case("a priority file whose first line is not the heading", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": "E200 重做之後\n\n" + good})
+    assert differences == ["docs/priorities/E200-REDO.md 第一行應該是「# <工作名>（YYYY-MM-DD，來源）」，例如「# E200-REDO（2026-11-17，#2367）」"], differences
+
+    _, differences, _ = case("a priority file named after another task", decisions="見決策索引（§9）", priority_files={"E200.md": good})
+    assert differences == ["docs/priorities/E200.md 的標題是 E200-REDO，檔名應該是 E200-REDO.md"], differences
+
+    _, differences, _ = case("a priority file not named like a task", decisions="見決策索引（§9）", priority_files={"e200 redo.md": good})
+    assert differences == ["docs/priorities/e200 redo.md 的檔名不是工作名（大寫英數與連字號，例如 E200-REDO.md）"], differences
+
+    _, differences, _ = case("a priority file with an impossible date", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": good.replace("2026-11-17", "2026-11-31")})
+    assert differences == ["docs/priorities/E200-REDO.md 的日期 2026-11-31 不存在"], differences
+
+    _, differences, _ = case("a priority file with no score table", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": good.split("| 項目")[0]})
+    assert differences == ["docs/priorities/E200-REDO.md 沒有評分表（欄位要有 項目、玩家、開發、美術、鐵道迷、音樂、加權）"], differences
+
+    _, differences, _ = case("a score out of range", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": good.replace("| 1 | 4 | 2 | 4 | 1 | 2.35 |", "| 1 | 6 | 2 | 4 | 1 | 2.85 |")})
+    assert differences == ["docs/priorities/E200-REDO.md 第 7 行「E200 的菱形集電弓」的開發分是 6，要是 1–5 的整數"], differences
+
+    _, differences, _ = case("a weighted score that does not add up", decisions="見決策索引（§9）", priority_files={"E200-REDO.md": good.replace("2.35", "2.40")})
+    assert differences == ["docs/priorities/E200-REDO.md 第 7 行「E200 的菱形集電弓」的加權寫 2.40，照 §19 的權重是 2.35"], differences
+
+    with tempfile.TemporaryDirectory() as directory:
+        write_repository(directory, priority_files={
+            "E200-REDO.md": good,
+            "OLD.md": "# OLD（2026-11-16，#2300）\n\n併回：NEXT_PRIORITIES §29.27（2026-11-17）\n\n| 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |\n| --- | --: | --: | --: | --: | --: | --: |\n| 早就併回的 | 5 | 5 | 5 | 5 | 5 | 5.00 |\n",
+            "FIX.md": "# FIX（2026-11-17，#2380）\n\n| 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |\n| --- | --: | --: | --: | --: | --: | --: |\n| bug：低分的錯 | 1 | 1 | 1 | 1 | 1 | 1.00 |\n",
+        })
+        cases.append("--priorities lists what is not merged back, bugs first")
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            assert main(["--priorities", "--root", directory]) == 0
+        lines = [line for line in out.getvalue().splitlines() if line.startswith("| ") and line[2].isdigit()]
+        assert [line.split(" | ")[1] for line in lines] == ["bug：低分的錯", "E200 的菱形集電弓", "E200 側面的通風百葉"], out.getvalue()
+        assert "早就併回的" not in out.getvalue(), out.getvalue()
+        assert "[E200-REDO](../priorities/E200-REDO.md)（#2367）" in lines[1], lines[1]
+        cases.append("--mark records where the files went")
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            assert main(["--priorities", "--mark", "NEXT_PRIORITIES §29.30", "--root", directory]) == 0
+        text = (pathlib.Path(directory) / PRIORITIES / "E200-REDO.md").read_text(encoding="utf-8")
+        assert text.splitlines()[2].startswith("併回：NEXT_PRIORITIES §29.30（"), text
+        assert compare(directory)[1] == [], compare(directory)[1]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            main(["--priorities", "--root", directory])
+        assert "E200" not in out.getvalue() and "低分" not in out.getvalue(), out.getvalue()
+
     with tempfile.TemporaryDirectory() as directory:
         write_repository(directory, decision_files={"5.md": "### 5. 五\n"})
         cases.append("--index lists the rows and the files")
@@ -481,12 +689,16 @@ def main(argv=None, quiet=False):
     parser.add_argument("--check", action="store_true", help="有差異時 exit 1")
     parser.add_argument("--selftest", action="store_true", help="用假的 repository 測這支工具")
     parser.add_argument("--index", action="store_true", help="印出整份決策索引：OVERVIEW §9 加上 docs/decisions/ 的檔")
+    parser.add_argument("--priorities", action="store_true", help="印出 docs/priorities/ 還沒併回優先清單的列，排好序（決策 832）")
+    parser.add_argument("--mark", metavar="WHERE", help="和 --priorities 一起用：在那些檔的標題下寫「併回：WHERE（日期）」")
     parser.add_argument("--root", default=str(ROOT), help="repository 的根目錄（預設：這支工具所在的 repository）")
     options = parser.parse_args(argv)
     if options.selftest:
         return selftest()
     if options.index:
         return index(options.root)
+    if options.priorities:
+        return priorities(options.root, options.mark)
     if quiet:
         _, differences, _ = compare(options.root)
     else:

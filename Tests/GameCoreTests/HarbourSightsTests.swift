@@ -121,7 +121,7 @@ final class HarbourSightsTests: XCTestCase {
                                      point: PlanPoint(x: 6_632, y: 1_536), kind: .coast, baseStars: 250)])
         let data = try JSONEncoder().encode(SavedGame(world: world))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 107)
+        XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
         let current = try JSONDecoder().decode(SavedGame.self, from: data)
         XCTAssertEqual(current.world.tourism?.attractions.first?.kind, .coast, "a coast written by this build stays one")
         object["saveVersion"] = 106

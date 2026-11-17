@@ -16,7 +16,8 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     case hongKong
     /// Decision 789: Rovaniemi in Finnish Lapland, from Muurola to
     /// Kemijärvi: VR's Kemijärvi line and the main line's end on the map,
-    /// with Fintraffic's real timetables. Not open yet.
+    /// with Fintraffic's real timetables. Decision 818: open, and offered
+    /// from the start, with no flights to open it.
     case rovaniemi
 
     /// The system its lines are (``RealRailways/System/id``, and the key of
@@ -33,6 +34,16 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
         switch self {
         case .hongKong: "hongkong"
         case .rovaniemi: "rovaniemi"
+        }
+    }
+
+    /// Decision 818: whether flights open its map (decision 712), or the
+    /// map picker offers it from the start: Hong Kong is opened by an
+    /// airport's flights; Rovaniemi, the winter event's map, is not.
+    public var opensByFlights: Bool {
+        switch self {
+        case .hongKong: true
+        case .rovaniemi: false
         }
     }
 
@@ -243,20 +254,24 @@ public struct OverseasGround: Sendable {
 extension GameWorld {
     /// A new game on a city's map (decision 712): ``newGame(anchor:bounds:balance:eventSeed:land:)``
     /// over `ground`, its land read in as it is needed, as the whole of
-    /// Taiwan's (``newWholeTaiwanGame(balance:eventSeed:)``).
+    /// Taiwan's (``newWholeTaiwanGame(balance:eventSeed:)``). Decision
+    /// 828: with far demand on, so a city's far stations draw less of its
+    /// trips than its near ones.
     public static func newOverseasGame(_ ground: OverseasGround, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
         var world = newGame(anchor: ground.anchor, bounds: ground.bounds, balance: balance, eventSeed: eventSeed, land: [])
         world.setLandOnDemand()
+        world.setFarDemand(true)
         return world
     }
 }
 
 public enum OverseasMaps {
     /// The cities whose railways and ground the app reads. A player still
-    /// reaches a city's map only once an airport's flights opened it
-    /// (decision 712, ``AirRoutes``); a city not listed here is not read,
-    /// offered or credited at all.
-    public static let open: Set<OverseasMap> = [.hongKong]
+    /// reaches Hong Kong's map only once an airport's flights opened it
+    /// (decision 712, ``AirRoutes``); Rovaniemi's is offered from the start
+    /// (decision 818, ``OverseasMap/opensByFlights``). A city not listed here is not
+    /// read, offered or credited at all.
+    public static let open: Set<OverseasMap> = [.hongKong, .rovaniemi]
 }
 
 extension RealRailways.System {

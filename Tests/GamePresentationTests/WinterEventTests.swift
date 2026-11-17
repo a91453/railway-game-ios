@@ -148,6 +148,48 @@ final class WinterEventTests: XCTestCase {
         XCTAssertEqual(WinterMarket.place(in: taichung), busiest.middle)
     }
 
+    /// Decision 818: on a map that holds Santa Claus Village, week 3 asks
+    /// for a line to it, not for 1,000 riders; a line elsewhere on that
+    /// map does not meet it, and on any other map it is the riders.
+    func testWeekThreeOnRovaniemisMapIsALineToSantaClausVillage() throws {
+        let arctic = try XCTUnwrap(WinterMission.named("arctic"))
+        let plaza = try XCTUnwrap(Map3DWinterLights.plazas.first { $0.name == "santa-claus-village" })
+        var start = GameWorld.newGame()
+        start.setGeoAnchor(try XCTUnwrap(GeoAnchor(latitude: Int64(plaza.latitude * 1e7), longitude: Int64(plaza.longitude * 1e7))))
+        let village = try XCTUnwrap(WinterSantaVillage.place(in: start))
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        let far = try XCTUnwrap(towns.first { abs($0.x - village.x) + abs($0.y - village.y) > 6 * Land.catchmentRadius })
+        let other = try XCTUnwrap(towns.first { $0 != far && abs($0.x - village.x) + abs($0.y - village.y) > 6 * Land.catchmentRadius })
+
+        let empty = WinterMissionFacts(world: start)
+        XCTAssertEqual(empty.reachesSantaVillage, false)
+        XCTAssertFalse(arctic.isMet(by: empty))
+        XCTAssertNil(arctic.progress(of: empty))
+        XCTAssertEqual(arctic.how(in: .traditionalChinese, facts: empty), "讓一條路線連到北極圈上的聖誕老人村。")
+        XCTAssertEqual(arctic.how(in: .english, facts: empty), "Run a line to Santa Claus Village on the Arctic Circle.")
+
+        var elsewhere = try newGameLine(through: [far, other], in: start)
+        try elsewhere.advance(ticks: 60)
+        XCTAssertEqual(WinterMissionFacts(world: elsewhere).reachesSantaVillage, false)
+
+        var there = try newGameLine(through: [village, far], in: start)
+        try there.advance(ticks: 60)
+        let facts = WinterMissionFacts(world: there)
+        XCTAssertEqual(facts.reachesSantaVillage, true)
+        XCTAssertTrue(arctic.isMet(by: facts))
+
+        // Any other map: the riders, as before.
+        var riders = WinterMissionFacts()
+        XCTAssertNil(riders.reachesSantaVillage)
+        XCTAssertNil(WinterSantaVillage.place(in: .newGame()))
+        riders.yesterdayRiders = 999
+        XCTAssertFalse(arctic.isMet(by: riders))
+        XCTAssertEqual(arctic.progress(of: riders)?.need, 1_000)
+        riders.yesterdayRiders = 1_000
+        XCTAssertTrue(arctic.isMet(by: riders))
+        XCTAssertEqual(arctic.how(in: .english, facts: riders), arctic.how(in: .english))
+    }
+
     /// The evening counts a line's trains over its round trip only in the
     /// hours it is open: closed from 19:00, it has two of the five.
     func testTheEveningDeparturesFollowTheLinesHours() throws {
