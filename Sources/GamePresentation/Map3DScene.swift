@@ -144,6 +144,8 @@ public struct Map3DScene: Sendable {
     /// Decision 794: the winter event's trees and lights, drawn only while
     /// it shows its decorations (``Map3DWinterLights/add(to:pack:eye:reach:)``).
     public let winterLights: Map3DWinterLights
+    /// Decision 837: where its freight yards stand (``Map3DFreightYard``).
+    public let freightYards: [Map3DFreightYard.Place]
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
@@ -592,6 +594,7 @@ public struct Map3DScene: Sendable {
         // Decision 794: where the winter event's trees and lights go.
         builder.addWinterDecor(frame: RealWorldFrame(world: world))
         winterLights = Map3DWinterLights(placements: builder.winterDecor)
+        freightYards = builder.freightYardPlaces
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
@@ -1216,6 +1219,8 @@ extension Map3DScene {
         var realTrackLines: [[Map3DPoint]] = []
         /// Decision 625: the exterior studies stood.
         var stationExteriors: [Map3DStationExterior] = []
+        /// Decision 837: the freight yards laid so far.
+        var freightYardPlaces: [Map3DFreightYard.Place] = []
         /// Review L14-7: where a study can be drawn (its origin in a chunk
         /// some block of the scene builds): a station stands for one only
         /// whose origin is in it, else it draws its own building, as a

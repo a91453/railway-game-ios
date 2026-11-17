@@ -1346,6 +1346,9 @@ struct Map3DSceneKey: Hashable {
     /// Decision 696: the railway museum's exhibits, each new one with its
     /// track or shed.
     let exhibits: Int
+    /// Decision 837: the freight yards, each built, taken down or switched
+    /// to another kind of cargo with its own look.
+    let freightYards: [Int]
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil,
          facades: Bool = Map3DQuality.scenesKeepFacades) {
@@ -1366,6 +1369,7 @@ struct Map3DSceneKey: Hashable {
         ownRoads = world.roads?.built ?? []
         expansions = Map3DStationKit.expansionSignature(of: world)
         exhibits = Map3DRailwayMuseum.shown(in: world)
+        freightYards = Map3DFreightYard.signature(of: world)
     }
 
     /// Decision 517 續 (PR 3b): whether `other` differs from this only in
@@ -1374,7 +1378,7 @@ struct Map3DSceneKey: Hashable {
         self != other && hasHeights == other.hasHeights && hasRailways == other.hasRailways && focus == other.focus
             && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
             && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
-            && facades == other.facades && exhibits == other.exhibits
+            && facades == other.facades && exhibits == other.exhibits && freightYards == other.freightYards
     }
 }
 

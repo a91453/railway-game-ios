@@ -72,7 +72,9 @@ public enum Map3DContainerWagon {
 
 extension StationKitBuilder {
     /// The skeletal flat wagon, its couplers at ±``Map3DContainerWagon/halfLength``.
-    fileprivate mutating func containerWagon(far: Bool) {
+    /// Decision 837: the freight wagons' other loads (``Map3DFreightWagons``)
+    /// stand on it too.
+    mutating func containerWagon(far: Bool) {
         let frame = Map3DContainerWagon.frame, metal = Map3DContainerWagon.metal, bogie = Map3DContainerWagon.bogie
         let end = Map3DContainerWagon.halfLength
         // Centre sill, side sills, end sills and the bolsters over the bogies.
@@ -135,9 +137,10 @@ extension StationKitBuilder {
 
     /// One ISO container centred at `x`, standing on the wagon's floor: its
     /// corrugated sides, the corner posts and castings, and its doors at
-    /// the back (−X) end.
-    fileprivate mutating func container(x centre: Float, length: Float, colour: UInt32, far: Bool) {
-        let deck = Map3DContainerWagon.deck, width: Float = 2.438, height: Float = 2.591
+    /// the back (−X) end. Decision 837: on `deck` (the freight yard's
+    /// stacks stand on the ground, or on another container).
+    mutating func container(x centre: Float, length: Float, colour: UInt32, far: Bool, deck: Float = Map3DContainerWagon.deck) {
+        let width: Float = 2.438, height: Float = 2.591
         let half = length / 2, dark = Map3DColor.shaded(colour, 0.72), post = Map3DColor.shaded(colour, 0.80)
         box(centre, deck, 0, length - 0.02, width - 0.04, height, colour)
         // Corner posts and the top and bottom side rails.
