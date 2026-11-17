@@ -189,6 +189,17 @@ CODEX_HOME="$STUDIO/accounts/<名>/codex" codex                                #
 - Antigravity 能不能不開視窗在背景跑、它的核准怎麼設才不會卡住等人按。
 - `claude -p` 在背景時，`settings.json` 沒允許的工具會不會直接失敗（應該是失敗而不是等人按，要確認）。
 
+## 10. 第六位：本地模型（之後才加，先預留接口）
+
+工作室已裝 Ollama 與三個本地模型（HANDBOOK F 節），程式裡有唯讀的 `local` 角色，但開工的分法沒有用到它。它不吃任何帳號的額度，適合在所有帳號都用完時整理記錄檔、寫進度摘要。自動換帳號跑順之後再加進分配。
+
+作者 2026-11-17：「那如果需要第六個本地的時候記得預留MLX（ml-explore 的 mlx-lm）轉移接口」。所以：
+
+- `runner.py` **不寫死 Ollama**。本地模型一律走 OpenAI 相容的 API，`accounts.json` 加一段 `"local": {"backend": "ollama", "base_url": "http://127.0.0.1:11434/v1", "model": "qwen3.5:9b"}`；換成 Apple 的 `mlx_lm.server`（ml-explore/mlx-lm，MIT）只改 `backend`、`base_url`（預設 `http://127.0.0.1:8080/v1`）與 `model`，程式不動。
+- 啟動、停止、釋放記憶體各後端不同（`ollama stop` 對 `mlx_lm.server` 要停程序），寫成依 `backend` 分的一個小函式；`studio-kit/local-ai/mode.sh`、`studio.py free-models` 已經兩邊通用的部分照用。
+- 只綁 `127.0.0.1`，不開對外連線；本地模型照舊唯讀（HANDBOOK F.0 第 5 點）。
+- 何時真的換到 MLX：照 HANDBOOK I.8 的條件（量到明顯比 Ollama 快，或 Ollama 在長 context 開始用 Swap）。
+
 ## 附：原本的缺口（會展那一輪留下的，2026-11-16）
 
 | 缺口 | 以前怎麼繞 | 現在 |
