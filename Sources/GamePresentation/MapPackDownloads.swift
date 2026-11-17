@@ -12,7 +12,7 @@ import Foundation
 /// downloads them and the loaders that read them.
 public enum MapPackDownloads {
     private final class Store: @unchecked Sendable {
-        let lock = NSLock()
+        let lock = NSCondition()
         var roots: [OverseasMap: URL] = [:]
         var statuses: [OverseasMap: MapPackStatus] = [:]
     }
@@ -76,8 +76,31 @@ public enum MapPackDownloads {
         store.lock.lock()
         let changed = (store.statuses[city] ?? .bundled) != status
         store.statuses[city] = status
+        store.lock.broadcast()
         store.lock.unlock()
         if changed { NotificationCenter.default.post(name: statusChanged, object: nil) }
+    }
+
+    /// Decision 818: waits, at most `timeout` seconds, until the download
+    /// of each of `cities` has answered (``MapPackStatus/downloaded``,
+    /// ``MapPackStatus/refused(_:)`` or ``MapPackStatus/failed(_:)``), for
+    /// the real-world data to read a city whose pack only a download brings
+    /// (one the app does not carry). Only for an app that downloads its
+    /// packs: in one that does not, the status stays
+    /// ``MapPackStatus/bundled`` and the whole `timeout` is spent. Blocks
+    /// the calling thread: call it off the main actor. Whether every one
+    /// answered.
+    @discardableResult
+    public static func waitForAnswers(_ cities: Set<OverseasMap>, timeout: TimeInterval) -> Bool {
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        while cities.contains(where: { (store.statuses[$0] ?? .bundled).isWaiting }) {
+            guard store.lock.wait(until: deadline) else {
+                return !cities.contains { (store.statuses[$0] ?? .bundled).isWaiting }
+            }
+        }
+        return true
     }
 
     /// The downloads of `cities` in one line for a problem report, reasons
@@ -143,12 +166,20 @@ public enum MapPackStatus: Equatable, Sendable {
     /// pack is read.
     case failed(String)
 
-    /// What the settings say of it, after the city's name.
-    public func text(in language: DisplayLanguage) -> String {
+    /// Whether the download has not answered yet: not begun, or asked for.
+    var isWaiting: Bool {
+        self == .bundled || self == .downloading
+    }
+
+    /// What the settings say of it, after the city's name; `carried` is
+    /// whether the app carries the city's pack (decision 818: Rovaniemi's
+    /// it does not, so its map is there only once downloaded).
+    public func text(in language: DisplayLanguage, carried: Bool = true) -> String {
         switch self {
         case .downloading: language.text("Downloading", "下載中")
         case .downloaded: language.text("Downloaded", "已下載")
-        case .bundled, .refused, .failed: language.text("Built-in data", "使用內建資料")
+        case .bundled, .refused, .failed:
+            carried ? language.text("Built-in data", "使用內建資料") : language.text("Not downloaded", "尚未下載")
         }
     }
 
@@ -165,6 +196,32 @@ public enum MapPackStatus: Equatable, Sendable {
 }
 
 extension OverseasMap {
+    /// Decision 818: whether the app carries the city's map pack
+    /// (``MapPack/bundled(_:)``); Rovaniemi's only a download brings.
+    public var isCarried: Bool {
+        MapPack.bundled(self) != nil
+    }
+
+    /// Decision 818: the line the map picker shows under a city's row while
+    /// its map cannot be played yet because its pack has not been
+    /// downloaded: still downloading, or not reached.
+    public func notDownloadedText(_ status: MapPackStatus, in language: DisplayLanguage) -> String {
+        switch status {
+        case .downloading: language.text(
+            "The map is downloading. You can start here once it has.",
+            "地圖下載中，下載完就可以開始。"
+        )
+        case .downloaded: language.text(
+            "The map has downloaded. Close and reopen the app to start here.",
+            "地圖下載好了，關掉 App 再打開就可以開始。"
+        )
+        case .bundled, .refused, .failed: language.text(
+            "The map has not downloaded yet. Connect to the internet, then close and reopen the app.",
+            "地圖還沒下載。連上網路後，關掉 App 再打開。"
+        )
+        }
+    }
+
     /// Decision 776, later: the name of the settings' row of the city's
     /// map pack ("Hong Kong Map").
     public func mapPackTitle(in language: DisplayLanguage) -> String {

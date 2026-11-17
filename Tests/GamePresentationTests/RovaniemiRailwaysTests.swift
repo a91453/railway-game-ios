@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 789: Rovaniemi's map pack, VR's Kemijärvi line and the main
 /// line's end to Muurola with Fintraffic's real timetables, read only when
-/// its map is open, which it is not yet.
+/// its map is open, which it is since decision 818.
 @MainActor
 final class RovaniemiRailwaysTests: XCTestCase {
     private let metre = Double(WorldCoordinate.unitsPerMetre)
@@ -39,17 +39,25 @@ final class RovaniemiRailwaysTests: XCTestCase {
 
     // MARK: - The switch
 
-    /// Rovaniemi is not open: the game reads, offers and credits nothing
-    /// of it, and Hong Kong is as it was.
-    func testRovaniemiIsNotOpenYet() throws {
-        XCTAssertFalse(OverseasMaps.open.contains(.rovaniemi))
-        let railways = try HongKongRailwaysTests.railways()
-        XCTAssertFalse(railways.lines.contains { $0.system.id == "vr" })
-        XCTAssertFalse(railways.metroRuns.keys.contains { $0.hasPrefix("vr:") })
+    /// Decision 818: Rovaniemi is open: the game reads its railways beside
+    /// Taiwan's and Hong Kong's, credits it, and offers its map from the
+    /// start, with no flights to open it.
+    func testRovaniemiIsOpen() throws {
+        XCTAssertTrue(OverseasMaps.open.contains(.rovaniemi))
+        XCTAssertFalse(OverseasMap.rovaniemi.opensByFlights)
+        XCTAssertTrue(OverseasMap.hongKong.opensByFlights)
+        let all = RealRailways.load(pack: HongKongRailwaysTests.pack) { try BundledRealData.file($0, $1) }
+        XCTAssertEqual(all.issues, [])
+        let railways = try XCTUnwrap(all.railways)
+        XCTAssertTrue(railways.lines.contains { $0.system.id == "vr" })
+        XCTAssertTrue(railways.lines.contains { $0.system.id == "hkmtr" })
+        XCTAssertEqual(Set(railways.metroRuns.keys.filter { $0.hasPrefix("vr:") }), ["vr:KJA", "vr:MUL"])
         for language in [DisplayLanguage.english, .traditionalChinese] {
-            XCTAssertFalse(DataSourceCredits.sections(in: language).contains { $0.id == "rovaniemiRailways" })
-            XCTAssertTrue(DataSourceCredits.sections(in: language, overseas: [.rovaniemi]).contains { $0.id == "rovaniemiRailways" })
+            XCTAssertTrue(DataSourceCredits.sections(in: language).contains { $0.id == "rovaniemiRailways" })
         }
+        // No flights to it: the routes are Taiwan's and Hong Kong's alone.
+        XCTAssertEqual(AirRoutes(cities: [.hongKong, .rovaniemi]), AirRoutes(cities: [.hongKong]))
+        XCTAssertEqual(AirRoutes(cities: [.rovaniemi]), AirRoutes())
     }
 
     // MARK: - The railways

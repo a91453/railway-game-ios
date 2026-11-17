@@ -639,17 +639,27 @@ enum BaseMapFiles {
     /// Decision 712: the base maps of the open cities outside Taiwan, each
     /// with the box its map covers; a city whose pack has none is left out.
     /// Decision 726: and its hill shading, `nil` for a pack without it.
-    static let cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)] = OverseasMap.allCases.compactMap { city in
-        guard OverseasMaps.open.contains(city), let pack = MapPack.current(city), let tiles = pack.baseMapFile,
-              let extent = try? pack.extent()
-        else { return nil }
-        return (city, extent, tiles, pack.terrainFile)
+    /// Decision 818: of the packs read now (``cityPacks``), so a pack
+    /// downloaded after the first look is in from then on; worked out
+    /// again only when they change.
+    static var cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)] {
+        let packs = cityPacks
+        let roots = packs.map { $0.pack.root }
+        if let cached = cityTilesCache, cached.roots == roots { return cached.tiles }
+        let tiles = packs.compactMap { city, pack -> (city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)? in
+            guard let tiles = pack.baseMapFile, let extent = try? pack.extent() else { return nil }
+            return (city, extent, tiles, pack.terrainFile)
+        }
+        cityTilesCache = (roots, tiles)
+        return tiles
     }
+
+    private static var cityTilesCache: (roots: [URL], tiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)])?
 
     /// Decision 712: the buildings of the open cities outside Taiwan,
     /// for the 3D map; a city whose pack has none is left out.
-    static let cityFootprints: [URL] = OverseasMap.allCases.compactMap { city in
-        OverseasMaps.open.contains(city) ? MapPack.current(city)?.buildingsFile : nil
+    static var cityFootprints: [URL] {
+        cityPacks.compactMap { $0.pack.buildingsFile }
     }
 
     /// Taiwan's ground heights for the hill shading, `nil` if the app has
@@ -704,7 +714,7 @@ enum BaseMapFiles {
     nonisolated static func noBuildLand(_ noBuild: URL?, airfields: URL?) -> RealNoBuildLand? {
         guard var land = noBuild.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealNoBuildLand(data: $0) }) else { return nil }
         land.airfields = airfields.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealAirfields(data: $0) }
-        for pack in cityPacks {
+        for (_, pack) in cityPacks {
             if let city = pack.noBuildLand(airfields: airfields != nil) { land = land.adding(city) }
         }
         return land
@@ -715,12 +725,16 @@ enum BaseMapFiles {
     /// Taiwan's (the Debug app's `-map3D.noAirfields`).
     nonisolated static func readAirfields(_ file: URL?) -> RealAirfields? {
         guard let taiwan = file.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? RealAirfields(data: $0) }) else { return nil }
-        return cityPacks.compactMap { $0.airfields() }.reduce(taiwan) { $0.adding($1) }
+        return cityPacks.compactMap { $0.pack.airfields() }.reduce(taiwan) { $0.adding($1) }
     }
 
-    /// Decision 733: the open cities' map packs.
-    nonisolated static let cityPacks: [MapPack] = OverseasMap.allCases.compactMap { city in
-        OverseasMaps.open.contains(city) ? MapPack.current(city) : nil
+    /// Decision 733: the open cities' map packs. Decision 818: as they are
+    /// now, so one downloaded later (Rovaniemi's, which the app does not
+    /// carry) is in once it is.
+    nonisolated static var cityPacks: [(city: OverseasMap, pack: MapPack)] {
+        OverseasMap.allCases.compactMap { city in
+            OverseasMaps.open.contains(city) ? MapPack.current(city).map { (city, $0) } : nil
+        }
     }
 
     private static func file(_ name: String) -> URL? {

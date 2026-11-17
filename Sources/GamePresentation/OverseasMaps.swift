@@ -16,7 +16,9 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     case hongKong
     /// Decision 789: Rovaniemi in Finnish Lapland, from Muurola to
     /// Kemijärvi: VR's Kemijärvi line and the main line's end on the map,
-    /// with Fintraffic's real timetables. Not open yet.
+    /// with Fintraffic's real timetables. Decision 818: open, its map pack
+    /// downloaded apart from the app, and offered from the start, with no
+    /// flights to open it.
     case rovaniemi
 
     /// The system its lines are (``RealRailways/System/id``, and the key of
@@ -33,6 +35,16 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
         switch self {
         case .hongKong: "hongkong"
         case .rovaniemi: "rovaniemi"
+        }
+    }
+
+    /// Decision 818: whether flights open its map (decision 712), or the
+    /// map picker offers it from the start: Hong Kong is opened by an
+    /// airport's flights; Rovaniemi, the winter event's map, is not.
+    public var opensByFlights: Bool {
+        switch self {
+        case .hongKong: true
+        case .rovaniemi: false
         }
     }
 
@@ -110,9 +122,13 @@ public struct MapPack: Sendable {
         (try? file("airfields", "json")).flatMap { try? RealAirfields(data: $0) }
     }
 
-    /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
+    /// The pack of `city` in the app's bundle (`MapPacks/<folder>`), `nil`
+    /// when the app does not carry one (decision 818: Rovaniemi's is only
+    /// downloaded).
     public static func bundled(_ city: OverseasMap) -> MapPack? {
-        Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }
+        guard let resources = Bundle.main.resourceURL else { return nil }
+        let root = resources.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)
+        return FileManager.default.fileExists(atPath: root.appendingPathComponent("pack.json").path) ? MapPack(root: root) : nil
     }
 }
 
@@ -236,10 +252,12 @@ extension GameWorld {
 
 public enum OverseasMaps {
     /// The cities whose railways and ground the app reads. A player still
-    /// reaches a city's map only once an airport's flights opened it
-    /// (decision 712, ``AirRoutes``); a city not listed here is not read,
-    /// offered or credited at all.
-    public static let open: Set<OverseasMap> = [.hongKong]
+    /// reaches Hong Kong's map only once an airport's flights opened it
+    /// (decision 712, ``AirRoutes``); Rovaniemi's is offered from the start
+    /// once its downloaded pack is in (decision 818,
+    /// ``OverseasMap/opensByFlights``). A city not listed here is not
+    /// read, offered or credited at all.
+    public static let open: Set<OverseasMap> = [.hongKong, .rovaniemi]
 }
 
 extension RealRailways.System {
