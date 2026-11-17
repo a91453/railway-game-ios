@@ -637,6 +637,15 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
+**2026-11-17 下午（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；這段比下面的「白天」新）**
+
+- **合併**：#2329 WINTER-FIX（814）、#2331 SUN-TIMES（813）、#2330 REGION-LOOK-HK（812）、#2332、#2334 MODEL-AGE（art-style 兩句）、#2340 DEADLOCK-D2（810）、#2341 FULLLANE-136（橫拿教學 UI 測試，觸控被系統取消就再點；不是玩家會碰到的問題）、#2343 music-review skill（規劃寫，含 `tools/audio/measure_music.py`）。
+- **在跑**：DEADLOCK-HK（816，Fable，**唯一修死結的 session**；D2 合了要併 main、重放作者的存檔、重量 HEALTH-136 那幾格）、NATURE-BASE #2336（811，總覽圖規劃看過；遠處樹像深色小點已請它確認）、MUSIC #2333→#2335（815；規劃量過，冬季曲提亮後合格、改成和主題曲輪流；主題曲選候選 1）、REVIEW-L26＋HEALTH-136、**FACADE-VARIETY**（817，session_01JMHz9af2P3vR3U4bFQFtGD）、**ROVANIEMI-OPEN**（818，session_01JMHz9bckVEprLBmpgpVmVQ，目標 11-30）。
+- **新排進優先清單**：NEXT_PRIORITIES §29.17（REINDEER 3.25、SANTA-FLIGHT 3.15，要在 12/24 前的版本，最晚 12/20 發版；DEPOT-REAL 2.90 等 DEADLOCK-HK；TEST-JUMP 2.05 併進下一次 CI 優化；小矮人不做）。
+- **死結一次只歸一個 session 修**（作者 11-17：「因為一堆人在處理死結」）：健檢量到的只記數字，轉給 DEADLOCK-HK。
+- **音樂**：作者上班不能聽，規劃用量測審（music-review skill）；試聽檔在 assets #132，作者有空用手機聽。
+- **號碼**：決策 810、812–814 已用；811、815、816、817、818 預留中；下一個可取 **819**。存檔 107、golden schema 77。
+
 **2026-11-17 白天（現任規劃 session_01JMHz9Yps9xJyFfDFR4mUed 記；下一任接手時以這段為最新，22:00 換 Ultra 前會再補一段）**
 
 - **136 發了**：作者 01:52 UTC 按，`testflight.yml` run 43998784830（run 136），commit `19f3cc58`（#2326）。發版後檢查：完整 `ci.yml` 43998595808、full lane 43998599964；健康報告貼在 #2118。WREATH-NOSE、#2316、DEADLOCK-D1、HKCEC 都在 136 裡。
