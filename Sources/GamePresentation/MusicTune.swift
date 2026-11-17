@@ -7,7 +7,7 @@ import Foundation
 // switch, the three volumes and the follow duck act on whichever plays.
 
 /// Which tune the game's music plays.
-public enum MusicTrack: String, CaseIterable, Sendable {
+public enum MusicTune: String, CaseIterable, Sendable {
     /// The game's own theme (decision 79).
     case theme
     /// The winter tune, during the winter event (decision 815).
@@ -23,7 +23,7 @@ public enum MusicTrack: String, CaseIterable, Sendable {
 
     /// The tune for `date`: the winter one while the winter event is on,
     /// the theme otherwise.
-    public static func playing(at date: Date, calendar: Calendar = WinterEvent.calendar()) -> MusicTrack {
+    public static func playing(at date: Date, calendar: Calendar = WinterEvent.calendar()) -> MusicTune {
         WinterEvent.isOn(at: date, calendar: calendar) ? .winter : .theme
     }
 }

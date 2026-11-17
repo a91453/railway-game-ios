@@ -59,9 +59,9 @@ final class GameAudio {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
-    /// Decision 815: the tune `music` plays (``MusicTrack``): the winter
+    /// Decision 815: the tune `music` plays (``MusicTune``): the winter
     /// one from 1 December to 6 January, the theme otherwise.
-    @ObservationIgnored private var musicTrack: MusicTrack?
+    @ObservationIgnored private var musicTune: MusicTune?
     /// Decision 379: the cues' players, played on a queue of their own.
     @ObservationIgnored private let cues = CuePlayers()
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
@@ -274,12 +274,12 @@ final class GameAudio {
     /// winter tune begins on 1 December and gives way on 7 January.
     private func updateMusic() {
         if plays && musicOn && isActive {
-            let track = MusicTrack.playing(at: Date())
-            if music == nil || track != musicTrack {
+            let track = MusicTune.playing(at: Date())
+            if music == nil || track != musicTune {
                 music?.stop()
                 music = Self.player(named: track.resource.name, extension: track.resource.extension, volume: musicLevel)
                 music?.numberOfLoops = -1
-                musicTrack = track
+                musicTune = track
             }
             music?.play()
         } else {

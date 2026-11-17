@@ -3,7 +3,7 @@
 ## 進度
 
 - 做到哪：PR 1（冬季曲，`claude/music-winter`，決策 815）程式、音檔、測試、文件都好了，開 draft PR 等 CI。PR 2（主題曲改版，`claude/music-refresh`）還沒開始。
-- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`MusicTrackTests` 5 個、`WinterEventTests`、`RunningSoundTests`、`SoundCueTests` 共 53 個通過；`make_game_audio.py --check` 逐位元組相同、三份冬季 MML 與樂譜相符；冬季曲 −15.94 LUFS 對主題曲 −15.95，峰值 −1.27 dBFS，112 秒，接縫 0.023。
+- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`MusicTuneTests` 5 個、`WinterEventTests`、`RunningSoundTests`、`SoundCueTests` 共 53 個通過；`make_game_audio.py --check` 逐位元組相同、三份冬季 MML 與樂譜相符；冬季曲 −15.94 LUFS 對主題曲 −15.95，峰值 −1.27 dBFS，112 秒，接縫 0.023。
 - 下一步的第一個指令：PR 1 的 CI 綠了就在 #2118 留「可合併、head …」並轉 ready；接著 `git checkout -b claude/music-refresh origin/main`，在 `tools/audio/` 做三個主題曲候選。
 
 ## 派工
@@ -15,7 +15,7 @@
 ## PR 1 冬季曲（決策 815）
 
 - 12/1–1/6（裝置日期）背景音樂換成 `music-winter.caf`：〈Jingle Bells〉（公有領域）自己編，三份 MML 分軌 → 樂譜 → 同一套合成器，加 `glock`、`sleigh` 兩種音色。
-- `MusicTrack`（GamePresentation）決定哪天播哪首；`GameAudio.updateMusic()` 換檔。
+- `MusicTune`（GamePresentation）決定哪天播哪首；`GameAudio.updateMusic()` 換檔。
 - **UNVERIFIED**：實機聽感（TestFlight）；iOS 建置與播放（`ios-build.yml`）。
 
 ## PR 2 主題曲改版（還沒做）

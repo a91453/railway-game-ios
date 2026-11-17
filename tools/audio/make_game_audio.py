@@ -815,7 +815,7 @@ def stems_loop(names):
 
 
 # Decision 815: the winter tune, played in the game's music from 1 December
-# to 6 January (`MusicTrack`): its stems, in mixing order.
+# to 6 January (`MusicTune`): its stems, in mixing order.
 WINTER_STEMS = ["winter-melody", "winter-harmony", "winter-rhythm"]
 
 
