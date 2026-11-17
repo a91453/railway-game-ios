@@ -1,3 +1,4 @@
+import GameCore
 import XCTest
 @testable import GamePresentation
 
@@ -88,10 +89,14 @@ final class Map3DSkyTests: XCTestCase {
         }
     }
 
-    func testTheShaderGetsNineRowsOfFour() {
+    func testTheShaderGetsTenRowsOfFour() {
         let camera = Map3DCamera(target: .zero, distance: 300, heading: 0.4)
         let floats = Map3DSky(lighting(21)).floats(camera: camera)
-        XCTAssertEqual(floats.count, 36)
+        XCTAssertEqual(floats.count, 40)
+        XCTAssertEqual(Array(floats[36...]), [0, 0, 0, 0])
+        var lit = lighting(23)
+        lit.aurora = 0.8
+        XCTAssertEqual(Array(Map3DSky(lit).floats(camera: camera, seconds: 12).suffix(4)), [Map3DSky(lit).aurora, 12, 0, 0])
         // The camera's way is a unit vector looking down at the target.
         let look = Map3DPoint(floats[0], floats[1], floats[2])
         XCTAssertEqual(look.length, 1, accuracy: 0.001)
@@ -113,5 +118,74 @@ final class Map3DSkyTests: XCTestCase {
             XCTAssertEqual(seen.x, x, accuracy: 0.001)
             XCTAssertEqual(seen.y, y, accuracy: 0.001)
         }
+    }
+
+    // MARK: - The aurora (decision 813's later part, AURORA)
+
+    private let rovaniemi = Map3DSunPlace(latitude: 66.50, longitude: 25.717, standardOffset: 120, summerOffset: 180)
+
+    private func time(day: Int64, hour: Double) -> GameTime {
+        GameTime(seconds: day * GameTime.secondsPerDay + Int64(hour * 3600))
+    }
+
+    /// The share of nights is the Finnish Meteorological Institute's: one
+    /// night a month on the south coast, every other night over Rovaniemi,
+    /// three of four in the far north; never in Taiwan or Hong Kong.
+    func testTheAuroraComesOnTheNightsTheFinnishFiguresGive() {
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 25.05), 0)
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 22.3), 0)
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 58), 0)
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 60), 0.033, accuracy: 0.001)
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 66.5), 0.5, accuracy: 0.001)
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 69), 0.75, accuracy: 0.001)
+        XCTAssertEqual(Map3DLighting.auroraNights(latitude: 75), 0.75, accuracy: 0.001)
+        // Over a year of nights at Rovaniemi, about every other one.
+        let nights = (0..<720 as Range<Int64>).filter { Map3DLighting.aurora(at: time(day: $0, hour: 23.5), latitude: 66.5) > 0 }.count
+        XCTAssertEqual(Double(nights) / 720, 0.5, accuracy: 0.06)
+        let taipei = (0..<360 as Range<Int64>).filter { Map3DLighting.aurora(at: time(day: $0, hour: 23.5), latitude: 25.05) > 0 }
+        XCTAssertTrue(taipei.isEmpty)
+    }
+
+    /// One night is one draw: the same before and after midnight, the same
+    /// every time it is asked; out in the late evening, gone by day.
+    func testANightsAuroraLastsTheNightAndNotTheDay() throws {
+        let night = try XCTUnwrap((0..<60 as Range<Int64>).first { Map3DLighting.aurora(at: time(day: $0, hour: 23.5), latitude: 66.5) > 0 })
+        let evening = Map3DLighting.aurora(at: time(day: night, hour: 23.5), latitude: 66.5)
+        XCTAssertGreaterThanOrEqual(evening, 0.55)
+        XCTAssertEqual(Map3DLighting.aurora(at: time(day: night + 1, hour: 1), latitude: 66.5), evening, accuracy: 0.001)
+        XCTAssertEqual(Map3DLighting.aurora(at: time(day: night, hour: 23.5), latitude: 66.5), evening)
+        for hour in [8.0, 12, 15, 18] {
+            XCTAssertEqual(Map3DLighting.aurora(at: time(day: night, hour: hour), latitude: 66.5), 0)
+        }
+        XCTAssertEqual(Map3DLighting.aurora(at: time(day: night + 1, hour: 5), latitude: 66.5), 0)
+        XCTAssertLessThan(Map3DLighting.aurora(at: time(day: night, hour: 20), latitude: 66.5), evening)
+    }
+
+    /// The light over Rovaniemi carries it; the sky shows it in the north
+    /// on a clear dark night, not in the south, not by day, not in rain.
+    func testTheSkyShowsTheAuroraInTheNorthOnAClearNight() throws {
+        let gameDecember: Int64 = 11 * 30
+        let night = try XCTUnwrap((gameDecember..<gameDecember + 30).first { Map3DLighting.aurora(at: time(day: $0, hour: 23.5), latitude: 66.5) > 0 })
+        let dark = Map3DLighting(at: time(day: night, hour: 23.5), place: rovaniemi)
+        XCTAssertGreaterThan(dark.aurora, 0)
+        let sky = Map3DSky(dark)
+        XCTAssertGreaterThan(sky.aurora, 0.5)
+        let north = Map3DPoint(0, 0.45, -1).normalized!, south = Map3DPoint(0, 0.45, 1).normalized!
+        let without = Map3DSky(Map3DLighting(at: time(day: night, hour: 23.5), place: .taipei))
+        XCTAssertEqual(without.aurora, 0)
+        let green = sky.colour(toward: north) - sky.colour(toward: south)
+        XCTAssertGreaterThan(green.y, 0.1)
+        XCTAssertGreaterThan(green.y, green.x)
+        // Under the foot of the curtain and below the horizon: nothing.
+        XCTAssertEqual(Map3DSky.auroraLight(Map3DPoint(0, 0.05, -1).normalized!, seconds: 0), .zero)
+        XCTAssertEqual(Map3DSky.auroraLight(Map3DPoint(0, -0.3, -1).normalized!, seconds: 0), .zero)
+        XCTAssertEqual(Map3DSky.auroraLight(south, seconds: 0), .zero)
+        // It moves with the seconds (none pass under Reduce Motion).
+        XCTAssertNotEqual(Map3DSky.auroraLight(north, seconds: 0), Map3DSky.auroraLight(north, seconds: 20))
+        // Rain hides it; by day there is none.
+        var rainy = dark
+        rainy.weather = .rain
+        XCTAssertEqual(Map3DSky(rainy).aurora, 0)
+        XCTAssertEqual(Map3DSky(Map3DLighting(at: time(day: night, hour: 12), place: rovaniemi)).aurora, 0)
     }
 }
