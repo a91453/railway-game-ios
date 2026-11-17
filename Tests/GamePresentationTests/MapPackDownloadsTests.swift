@@ -10,6 +10,7 @@ final class MapPackDownloadsTests: XCTestCase {
 
     override func tearDown() {
         MapPackDownloads.forget(.hongKong)
+        MapPackDownloads.forget(.rovaniemi)
         for folder in folders { try? FileManager.default.removeItem(at: folder) }
         super.tearDown()
     }
@@ -137,8 +138,10 @@ final class MapPackDownloadsTests: XCTestCase {
 
     /// The asset pack's manifest holds the city's folder at the path the
     /// app asks for, under the ID the app asks for. Decision 789: an open
-    /// city's; a city not open yet (Rovaniemi) has none, so no release
-    /// uploads its pack and no device fetches it before it can be played.
+    /// city's; a city not open yet has none, so no release uploads its
+    /// pack and no device fetches it before it can be played. Decision
+    /// 818: Rovaniemi's is open, so it has one (the app still carries its
+    /// pack, as Hong Kong's).
     func testTheAssetPackManifestMatchesWhatTheAppAsksFor() throws {
         let repository = BundledRealData.directory.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         for city in OverseasMap.allCases where !OverseasMaps.open.contains(city) {
@@ -188,7 +191,7 @@ final class MapPackDownloadsTests: XCTestCase {
         // A long error is cut, not carried whole.
         XCTAssertEqual(MapPackStatus.failed(String(repeating: "x", count: 500)).reportText.count, "not fetched: ".count + 200)
         // The open cities are what a report lists unasked.
-        XCTAssertEqual(MapPackDownloads.report(), "mappack-hongkong not fetched: no network")
+        XCTAssertEqual(MapPackDownloads.report(), "mappack-hongkong not fetched: no network; mappack-rovaniemi bundled")
 
         MapPackDownloads.forget(.hongKong)
         XCTAssertEqual(MapPackDownloads.status(.hongKong), .bundled)

@@ -64,6 +64,21 @@ public enum DistanceDemand {
         guard distance < fullDistance else { return 1_000 }
         return nearShare + (1_000 - nearShare) * (distance - nearDistance) / (fullDistance - nearDistance)
     }
+
+    /// Decision 828: up to this straight-line distance (20 km) a station
+    /// draws an origin's trips by its whole attraction.
+    public static let farDistance: Int64 = 20_000 * WorldCoordinate.unitsPerMetre
+
+    /// Decision 828: what a station `squaredDistance` (world units squared)
+    /// from an origin draws of that origin's trips, in thousandths of its
+    /// attraction: 1000 up to ``farDistance``, then 1000 × farDistance² ÷
+    /// distance² (gravity's distance squared), rounded half up, never
+    /// below 1.
+    public static func farShare(squaredDistance: Int64) -> Int64 {
+        let far = farDistance * farDistance
+        guard squaredDistance > far else { return 1_000 }
+        return max(1, (1_000 * far + squaredDistance / 2) / squaredDistance)
+    }
 }
 
 extension GameWorld {
@@ -75,6 +90,17 @@ extension GameWorld {
     public mutating func setDistanceDemand(_ enabled: Bool) {
         guard enabled != distanceDemand else { return }
         distanceDemand = enabled
+        passengerPlan = PassengerPlanCache()
+    }
+
+    /// Turns far demand on or off (decision 828): on, a station beyond
+    /// ``DistanceDemand/farDistance`` from an origin draws less of its
+    /// trips the farther it is (``DistanceDemand/farShare(squaredDistance:)``),
+    /// so opening a far line does not take the trips a near one carried.
+    /// Passengers already waiting stay.
+    public mutating func setFarDemand(_ enabled: Bool) {
+        guard enabled != farDemand else { return }
+        farDemand = enabled
         passengerPlan = PassengerPlanCache()
     }
 
@@ -146,6 +172,21 @@ extension GameWorld {
               let squared = squaredDistance(from: origin, to: destination)
         else { return trips }
         return (trips * DistanceDemand.share(squaredDistance: squared) + 500) / 1_000
+    }
+
+    /// Decision 828: how strongly `destination`, drawing `weight` (its
+    /// attraction), draws `origin`'s trips: `weight` times its
+    /// ``DistanceDemand/farShare(squaredDistance:)`` while far demand is
+    /// on, and `weight` unchanged with it off or between an outside
+    /// connection and a station that is not one (the trip goes beyond the
+    /// map, as ``distancedTrips(_:from:to:)`` keeps it). An attraction is
+    /// at most 1,000,000 trips × 3,000 (an event's multiplier), so the
+    /// weight stays within ``apportion(_:by:)``'s bound.
+    func farWeight(_ weight: Int64, from origin: StationID, to destination: StationID) -> Int64 {
+        guard farDemand, weight > 0, isOutsideConnection(origin) == isOutsideConnection(destination),
+              let squared = squaredDistance(from: origin, to: destination)
+        else { return weight }
+        return weight * DistanceDemand.farShare(squaredDistance: squared)
     }
 
     /// `trips` from `origin` to `destination` as today's typhoons (decision

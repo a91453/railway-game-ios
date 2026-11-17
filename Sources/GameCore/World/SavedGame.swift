@@ -585,9 +585,18 @@
 ///     and the whole save with it, so it says the save is newer than it
 ///     instead. A save of an earlier version has them as coasts: the step
 ///     turns those it knows by English name (``Tourism/harbourNames``).
+/// 108. Far demand and the state's track (decision 828): a world can have
+///     `"farDemand"`, a far station drawing less of an origin's trips, and
+///     a line bought can have `"stateTrack"`, running on the state's
+///     track. A build that reads only an earlier version would drop them,
+///     and a far line would take a near one's riders again and a line on
+///     the state's track pay for its track and charge the city's fare, so
+///     it says the save is newer than it instead. A save of any earlier
+///     version needs no step: far demand is off and no line runs on the
+///     state's track.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 107
+    public static let currentVersion = 108
 
     public let world: GameWorld
 
@@ -847,6 +856,9 @@ extension SavedGame: Codable {
         // Version 104 or earlier to 105: a sight held as a town whose
         // English name ends in "Night Market" is a night market (decision
         // 769, ``GameWorld/reclassifyNightMarkets()`` below).
+        // Version 107 or earlier to 108: a world without `"farDemand"`
+        // draws its trips as before, and a line bought without
+        // `"stateTrack"` keeps its track (decision 828): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

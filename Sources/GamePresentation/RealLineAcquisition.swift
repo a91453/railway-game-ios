@@ -85,6 +85,13 @@ public struct RealBranchLine: Hashable, Sendable {
         return Map3DRealTrains.rightHand.contains(network == "trtc" ? "mrt" : network)
     }
 
+    /// Decision 828: whether the line bought as `realLine` runs on the
+    /// state's track (``LineAcquisition/stateTrack``): Finland's, whose
+    /// track the state keeps and lets VR's trains run on.
+    static func runsOnStateTrack(realLine: String) -> Bool {
+        realLine.hasPrefix("vr:")
+    }
+
     /// Whether it is laid with a second track beside the first.
     /// Decision 603: every light rail and metro but those in
     /// ``singleTrackUrban``, laid on one track as the real ones are.
@@ -1438,7 +1445,11 @@ extension RealLineLaying {
         // Decision 479: the depot's wye and crossovers, on the second
         // track's side of the line, clear of the stations and the second
         // track's ramps.
-        var depotsAt: [(site: RealLineDepotSite, points: [WorldVector], j: Double)] = []
+        // Decision 829: `onFirst` where the yard lies on the first track's
+        // side of the line (Siu Ho Wan, north of the Tung Chung Line): the
+        // wye leaves the first track, and the crossovers either side are
+        // the other way round.
+        var depotsAt: [(site: RealLineDepotSite, points: [WorldVector], j: Double, onFirst: Bool)] = []
         var taken: [ClosedRange<Double>] = []
         // Decision 748: round each island station between the ends, the
         // second track moved out to the island's width along the station's
@@ -1466,10 +1477,10 @@ extension RealLineLaying {
                 let marks = RealLineDepotLayout.marks(at: j)
                 let reach = marks[0]...marks[marks.count - 1]
                 let side = (points[1] - path.point(at: j)).dot(path.tangent(at: j).normal)
-                if side < 0, reach.lowerBound > second.a + ramp + gap, reach.upperBound < second.b - ramp - gap,
+                if side < 0 || site.mayLeaveTheFirstTrack, reach.lowerBound > second.a + ramp + gap, reach.upperBound < second.b - ramp - gap,
                    !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) {
                     forced += marks
-                    depotsAt.append((site, points, j))
+                    depotsAt.append((site, points, j, side >= 0))
                     taken.append(reach)
                 }
             }
@@ -1615,7 +1626,7 @@ extension RealLineLaying {
         // the first track, as the second track's ramps are laid.
         let mainNode = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
         var depotMarks: [[(main: Int, second: Int)]] = []
-        for (_, _, j) in depotsAt {
+        for (_, _, j, onFirst) in depotsAt {
             let marks: [(main: Int, second: Int)] = RealLineDepotLayout.marks(at: j).compactMap { mark in
                 mainNode(mark).flatMap { node in besideNodes.firstIndex(of: node).map { (main: node, second: $0) } }
             }
@@ -1623,13 +1634,17 @@ extension RealLineLaying {
             if marks.count == 6 {
                 let depotMarks = marks
                 let offset = -HighSpeedDemo.trackOffset
+                let first = { (mark: Int) in RealLineAcquisition.NodeAt(piece: 0, node: depotMarks[mark].main) }
+                let second = { (mark: Int) in RealLineAcquisition.NodeAt(piece: 1, node: depotMarks[mark].second) }
+                // Decision 829: to the track the wye leaves before it, and
+                // back from that track after it.
                 plans.append((
-                    RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[0].main, depotMarks[1].main], offsets: [0, offset]),
-                    RealLineAcquisition.NodeAt(piece: 0, node: depotMarks[0].main), RealLineAcquisition.NodeAt(piece: 1, node: depotMarks[1].second), true
+                    RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[0].main, depotMarks[1].main], offsets: onFirst ? [offset, 0] : [0, offset]),
+                    onFirst ? second(0) : first(0), onFirst ? first(1) : second(1), true
                 ))
                 plans.append((
-                    RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[4].main, depotMarks[5].main], offsets: [offset, 0]),
-                    RealLineAcquisition.NodeAt(piece: 1, node: depotMarks[4].second), RealLineAcquisition.NodeAt(piece: 0, node: depotMarks[5].main), true
+                    RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[4].main, depotMarks[5].main], offsets: onFirst ? [0, offset] : [offset, 0]),
+                    onFirst ? first(4) : second(4), onFirst ? second(5) : first(5), true
                 ))
             }
         }
@@ -1688,10 +1703,10 @@ extension RealLineLaying {
         var depotsLaid: [(stop: Int?, depot: RealLineAcquisition.Depot)] = []
         // Decision 556: where along the line each depot beside it stands.
         var depotAlong: [Int: Double] = [:]
-        for ((site, points, j), marks) in zip(depotsAt, depotMarks) {
+        for ((site, points, j, onFirst), marks) in zip(depotsAt, depotMarks) {
             guard let laid = RealLineDepotLayout.lay(
-                site, points: points, along: path, at: j, second: plans[1].plan, marks: marks, first: pieces.count, length: platformLength,
-                ground: ground, water: water, in: language
+                site, points: points, along: path, at: j, second: plans[onFirst ? 0 : 1].plan, onFirst: onFirst, marks: marks, first: pieces.count,
+                length: platformLength, ground: ground, water: water, in: language
             ) else { continue }
             pieces += laid.pieces
             depotAlong[depotsLaid.count] = j
@@ -1944,30 +1959,40 @@ extension RealLineLaying {
         let standing = Set(world.network.edges.map(\.id))
         var nodes: [[TrackNodeID]] = []
         var edges: [[TrackEdgeID]] = []
-        for piece in acquisition.pieces {
-            try world.readGround(under: piece.ground, from: heights)
-            var ids: [TrackNodeID] = []
-            for (index, position) in piece.nodes.enumerated() {
-                if index == 0, let start = piece.start {
-                    ids.append(nodes[start.piece][start.node])
-                } else if index == piece.nodes.count - 1, let end = piece.end {
-                    ids.append(nodes[end.piece][end.node])
+        func lay(_ world: inout GameWorld) throws(GameError) {
+            for piece in acquisition.pieces {
+                try world.readGround(under: piece.ground, from: heights)
+                var ids: [TrackNodeID] = []
+                for (index, position) in piece.nodes.enumerated() {
+                    if index == 0, let start = piece.start {
+                        ids.append(nodes[start.piece][start.node])
+                    } else if index == piece.nodes.count - 1, let end = piece.end {
+                        ids.append(nodes[end.piece][end.node])
+                    } else {
+                        ids.append(try world.buildTrackNode(at: position))
+                    }
+                }
+                if piece.together {
+                    edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
+                        TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure)
+                    }))
                 } else {
-                    ids.append(try world.buildTrackNode(at: position))
+                    var built: [TrackEdgeID] = []
+                    for (index, curve) in piece.curves.enumerated() {
+                        built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure))
+                    }
+                    edges.append(built)
                 }
+                nodes.append(ids)
             }
-            if piece.together {
-                edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
-                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure)
-                }))
-            } else {
-                var built: [TrackEdgeID] = []
-                for (index, curve) in piece.curves.enumerated() {
-                    built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure))
-                }
-                edges.append(built)
-            }
-            nodes.append(ids)
+        }
+        // Decision 828: the state pays for the track of a line on its
+        // track, so its price is the stations, depots and trains.
+        let stateTrack = RealBranchLine.runsOnStateTrack(realLine: acquisition.realLine)
+        if stateTrack {
+            try world.layStateTrack(lay)
+        } else {
+            try lay(&world)
         }
         /// The edge `at` is on and how far along it.
         func edge(_ at: RealLineAcquisition.PieceAt) throws(GameError) -> (TrackEdgeID, Int64) {
@@ -2079,7 +2104,7 @@ extension RealLineLaying {
             let laid = world.network.edges.map(\.id).filter { !standing.contains($0) }
             try world.recordLineAcquisition(
                 line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders, tier: acquisition.tier ?? .branch,
-                track: laid.isEmpty ? nil : laid
+                track: laid.isEmpty ? nil : laid, stateTrack: stateTrack
             )
         }
         return RealLineAcquisitionPrice(

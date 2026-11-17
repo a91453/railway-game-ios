@@ -104,6 +104,10 @@ public struct WinterMissionFacts: Hashable, Sendable {
     public var hasLiveriedLineRunning = false
     /// Whether a running passenger line runs past midnight.
     public var hasLineAfterMidnight = false
+    /// Decision 818: on a map that holds Santa Claus Village
+    /// (``WinterSantaVillage``), whether a running passenger line calls
+    /// within a station's reach of it; `nil` on any other map.
+    public var reachesSantaVillage: Bool?
 
     public init() {}
 
@@ -114,6 +118,8 @@ public struct WinterMissionFacts: Hashable, Sendable {
         yesterdayRiders = world.accounts.days.first { $0.day == today - 1 }?.fareTrips ?? 0
         var lit: Set<StationID> = []
         let market = WinterMarket.stations(in: world)
+        let village = WinterSantaVillage.stations(in: world)
+        reachesSantaVillage = village.map { _ in false }
         for line in world.lines where !line.isFreight && !line.assignedTrains.isEmpty {
             let runsAfter: (Int) -> Bool
             switch line.window {
@@ -130,6 +136,7 @@ public struct WinterMissionFacts: Hashable, Sendable {
             // hours run past midnight or open at it.
             if line.window.contains(minuteOfDay: 0) { hasLineAfterMidnight = true }
             if liveried.contains(line.id) { hasLiveriedLineRunning = true }
+            if let village, !village.isDisjoint(with: line.stops) { reachesSantaVillage = true }
         }
         stationsLitAtNight = lit.count
     }
@@ -192,6 +199,35 @@ public enum WinterMarket {
     }
 }
 
+/// Decision 818: Santa Claus Village on the Arctic Circle north of
+/// Rovaniemi (the plaza of ``Map3DWinterLights``), which has no railway:
+/// on Rovaniemi's map week 3 asks for a line to it (the plan's §2.4).
+public enum WinterSantaVillage {
+    static let plazaName = "santa-claus-village"
+
+    /// Where the village is in `world`, or `nil` when the map does not
+    /// hold it.
+    public static func place(in world: GameWorld) -> PlanPoint? {
+        guard let frame = RealWorldFrame(world: world),
+              let plaza = Map3DWinterLights.plazas.first(where: { $0.name == plazaName }) else { return nil }
+        let region = WorldRegion(bounds: world.bounds)
+        let at = frame.worldPosition(latitude: plaza.latitude, longitude: plaza.longitude)
+        guard (region.minX...region.maxX).contains(at.x), (region.minY...region.maxY).contains(at.y) else { return nil }
+        return PlanPoint(x: Int64(at.x.rounded()), y: Int64(at.y.rounded()))
+    }
+
+    /// The stations within a station's reach (``Land/catchmentRadius``)
+    /// of the village, or `nil` when the map does not hold it.
+    static func stations(in world: GameWorld) -> Set<StationID>? {
+        guard let place = place(in: world) else { return nil }
+        let reach = Double(Land.catchmentRadius)
+        return Set(world.stations.filter { station in
+            let dx = Double(station.location.x - place.x), dy = Double(station.location.y - place.y)
+            return dx * dx + dy * dy <= reach * reach
+        }.map(\.id))
+    }
+}
+
 /// One week's mission (decision 788; the plan's §2.4). Its numbers are the
 /// frame's first ones: WINTER-MISSIONS measures them so a new game's first
 /// week can meet them.
@@ -209,6 +245,14 @@ public struct WinterMission: Identifiable, Hashable, Sendable {
 
     public func title(in language: DisplayLanguage) -> String { language.text(english.title, chinese.title) }
     public func how(in language: DisplayLanguage) -> String { language.text(english.how, chinese.how) }
+    /// What to do on the map `facts` were read from: week 3 on a map that
+    /// holds Santa Claus Village asks for a line to it (decision 818).
+    public func how(in language: DisplayLanguage, facts: WinterMissionFacts?) -> String {
+        if id == "arctic", facts?.reachesSantaVillage != nil {
+            return language.text("Run a line to Santa Claus Village on the Arctic Circle.", "讓一條路線連到北極圈上的聖誕老人村。")
+        }
+        return how(in: language)
+    }
     /// The badge the mission gives.
     public func badge(in language: DisplayLanguage) -> String { language.text(english.badge, chinese.badge) }
 
@@ -249,8 +293,10 @@ public struct WinterMission: Identifiable, Hashable, Sendable {
             id: "arctic", week: 3,
             english: ("Santa Week", "Carry \(santaRiders.groupedText) riders in a day.", "Arctic Circle"),
             chinese: ("聖誕老人週", "一天載 \(santaRiders.groupedText) 位以上的旅客。", "北極圈"),
-            progress: { ($0.yesterdayRiders, santaRiders) },
-            test: { $0.yesterdayRiders >= santaRiders }
+            // Decision 818: on Rovaniemi's map, a line to Santa Claus
+            // Village instead.
+            progress: { $0.reachesSantaVillage == nil ? ($0.yesterdayRiders, santaRiders) : nil },
+            test: { $0.reachesSantaVillage ?? ($0.yesterdayRiders >= santaRiders) }
         ),
         WinterMission(
             id: "christmasEve", week: 4,

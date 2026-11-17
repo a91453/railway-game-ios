@@ -64,12 +64,14 @@ final class DemoRealLinesEverySystemTests: XCTestCase {
             if keys[system] == nil { keys[system] = key }
         }
         XCTAssertEqual(
-            Set(keys.keys), ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "hkmtr"],
+            Set(keys.keys), ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "hkmtr", "vr"],
             "every system of the bundled railways"
         )
-        // Hong Kong's MTR is not on Taiwan's map: its lines are laid on its
-        // own (`HongKongMapTests`, `HongKongEveryLineTests`).
-        for (system, key) in keys.sorted(by: { $0.key < $1.key }) where system != OverseasMap.hongKong.system {
+        // Hong Kong's MTR and Rovaniemi's VR lines are not on Taiwan's map:
+        // theirs are laid on their own maps (`HongKongMapTests`,
+        // `HongKongEveryLineTests`, `RovaniemiRailwaysTests`).
+        let overseas = Set(OverseasMap.allCases.map(\.system))
+        for (system, key) in keys.sorted(by: { $0.key < $1.key }) where !overseas.contains(system) {
             let session = try taiwan()
             let stations = try XCTUnwrap(railways.stops[key]).prefix(4).map(\.chinese)
             let view = try view(round: Array(stations), of: system, in: session.world)

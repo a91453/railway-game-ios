@@ -409,7 +409,7 @@ final class AirRoutesTests: XCTestCase {
     func testNothingIsOfferedWhileNoCityIsRead() async throws {
         let directory = folder()
         defer { try? FileManager.default.removeItem(at: directory) }
-        let launcher = await launcher(in: directory, overseas: OverseasMaps.open.subtracting([.hongKong]))
+        let launcher = await launcher(in: directory, overseas: [])
         XCTAssertEqual(launcher.airRoutes, AirRoutes())
         let session = GameSession(world: try taiwanWorld("Kaohsiung International Airport", riders: 5_000), language: .english)
         launcher.checkAirRoutes(of: session)
@@ -473,5 +473,46 @@ final class AirRoutesTests: XCTestCase {
         // keeps it.
         XCTAssertFalse(GameWorld.newWholeTaiwanGame().airports.contains { $0.name == "香港國際機場" })
         XCTAssertEqual(AirportCatalog.withAirports(world).airports, world.airports)
+    }
+
+    // MARK: - Decision 818: Rovaniemi
+
+    /// Rovaniemi's row is open from the start, before and after the player
+    /// chose a first map, and starting there remembers no first map, so
+    /// Hong Kong is still opened by flights only.
+    func testRovaniemiIsOfferedFromTheStart() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory, overseas: [.hongKong, .rovaniemi])
+        XCTAssertEqual(launcher.overseasMapRows(in: .english), [
+            OverseasMapRow(city: .hongKong, closed: nil),
+            OverseasMapRow(city: .rovaniemi, closed: nil),
+        ])
+        XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
+        XCTAssertEqual(launcher.preferences.airRoutesOpened ?? [], [])
+        launcher.rememberAirRoutes([taiwan])
+        let rows = launcher.overseasMapRows(in: .english)
+        XCTAssertEqual(rows.map(\.city), [.hongKong, .rovaniemi])
+        XCTAssertNotNil(rows[0].closed, "Hong Kong waits for its flights")
+        XCTAssertNil(rows[1].closed)
+        XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
+        XCTAssertEqual(launcher.preferences.airRoutesOpened, [taiwan])
+        XCTAssertFalse(launcher.startOverseasMap(.hongKong))
+    }
+
+    /// Without Rovaniemi's ground (its pack could not be read) it has no
+    /// row and does not start; there are no rows at all while the
+    /// real-world data is read.
+    func testRovaniemiHasNoRowWithoutItsGround() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        XCTAssertEqual(launcher.overseasMapRows(in: .english), [])
+        await launcher.loadRealWorldData {
+            RealWorldData.load(overseas: [.hongKong, .rovaniemi], pack: { $0 == .rovaniemi ? nil : HongKongRailwaysTests.pack($0) }, file: RealWorldDataLoadTests.file)
+        }.value
+        XCTAssertEqual(launcher.overseasMapRows(in: .english), [OverseasMapRow(city: .hongKong, closed: nil)])
+        XCTAssertFalse(launcher.startOverseasMap(.rovaniemi))
+        XCTAssertNil(launcher.session)
     }
 }
