@@ -653,11 +653,18 @@
   - ROAD-LOOK-REAL-2（822，session_01JMHz9bn8HzazZzMYbhURDh，#2364）：新外觀，**看總覽圖才合**。
   - DEPOT-REAL（829，session_01JMHz9bsrazDrT4xMPmDZJE，Fable）：死結唯一的 session。
   - 三個都被交代：再碰到上限或第二次壓縮，先推分支、寫 `docs/handoff/<TASK>.md`（ROVANIEMI-FARE、ROAD-LOOK-REAL、DEPOT-REAL）。**停了沒再動**（#2118 很久沒消息、分支沒新 commit）就在 Ultra 開新 session 照交接檔接手，不從頭做。
+- **15:05 UTC 更新（Max 的規劃 session_01JMHz9caNPdHNkVjVgrCB6J，作者：「你來合，前一任停手」，交出前補）**：上面三件的實況，以這條為準。
+  - **ROVANIEMI-FARE #2375**（head `772c51e`，帶 #2355）：session **壓縮兩次已停**，不會再動。它的交接 `docs/handoff/ROVANIEMI-FARE.md` 列了兩件：(1) CI 全綠後轉 ready 合（動 GameCore、存檔 108，照 §1.2 確認 main 的 ci.yml 綠）。合了 #2355 會一起標成 merged，再封存 session_01JMHz9bnKhejDxHKpyueHQ3 與 session_01JMHz9bckVEprLBmpgpVmVQ。(2) 香港「關掉遠距需求」的對照：Max 的規劃在本機跑了，跑完會把數字留在 #2118。**不擋合併**，因為決策 828 §2 已量過香港「開」的情況是 HEALTHY。判定 CONCERNS 只因凱米耶爾維線單買要四十年回本，後續是 §29.30。
+  - **DEPOT-REAL #2371**（head `8cb6d42`）：已推，CI 在跑。session 還在 Max 上做。
+  - **ROAD-LOOK-REAL-2 #2364**：還在做，看總覽圖才合。
+  - 這三件與 REVIEW-L27 都已經被告知：「綠、head」寫在 #2118（Ultra 收不到 Max 的 send_message）。
+  - NEXT_PRIORITIES：§29.30 給羅瓦涅米，§29.31 給 DEPOT-REAL 留下的。REVIEW-L27 從下一個空號取。
+  - Max 的規劃交出後不再合、不再派。
 - **REVIEW-L27＋HEALTH-137 已在 Max 派了**（session_01JMHz9YJbkYec1ERxquXPKR，14:56 UTC，審 #2341 之後到 `85507e2`，也寫 PLAYER_FEEDBACK 的 137 一節），Ultra 不重派，照上面三件一樣看 #2118、合它的 PR。
 - **Ultra 先派**：REINDEER 與 SANTA-FLIGHT（§29.17，最晚 12/20 發版）、§29.29 第 3 名 PRIO-FILES。Ultra 同時最多 6 個實作，Max 那四件也算在內。
 - **Threads**：作者貼了 134～137 那篇以後，用文件 PR 補 `docs/research/THREADS_WRITING.md` §5 一列（下一篇從 `85507e2` 之後寫）。
 - **號碼**：下一個決策 **831**，存檔 107（108 給 ROVANIEMI-FARE），golden schema 77，NEXT_PRIORITIES 到 §29.29。
-- **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（後者只接了一下就停，由前者收尾），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
+- **請作者封存**（可信任裝置上）：Max 的兩個規劃 session_01JMHz9ZJWaKh8kjuNDLtvar、session_01JMHz9caNPdHNkVjVgrCB6J（前者 15:01 停手，後者照作者的話接著合到 15:05 才交出），前一任 session_01JMHz9Yps9xJyFfDFR4mUed，以及「深夜交接」最後一條列的舊 session。DOCNUM-CI session 已封存。
 
 **2026-11-17 深夜交接（規劃 session_01JMHz9ZJWaKh8kjuNDLtvar 壓縮 3 次後交出；下面的「晚上」是前一版）**
 
