@@ -906,10 +906,24 @@ extension RealLineLaying {
             } catch {
                 return (refusal(error), nil)
             }
-            let again = RealLineLaying(
+            let laying = RealLineLaying(
                 world: cleared, railways: railways, traces: traces, language: language, population: population, places: places, water: water,
                 coverage: coverage, heights: heights
-            ).laidOffer(for: line)
+            )
+            let again = laying.laidOffer(for: line)
+            // LIUJIA-REBUY (decision 528, later): still refused, the line
+            // is laid where it stood, on its real way, no station moved
+            // beside the company's track (SHARED-STATION-LEVEL): not
+            // beside track that was itself laid beside this line (the
+            // Neiwan Line's at Zhuzhong, bought with the Liujia Line and
+            // after it: beside that, 60 m from where the Neiwan Line lies
+            // bought alone, the Liujia Line's hooked way crossed itself
+            // at every height). Only then: a line laid beside another's
+            // (the Neiwan Line) would be laid under it on its real way.
+            if again.offer.acquisition == nil {
+                let stood = laying.laidOffer(for: line, whereItStood: true)
+                if stood.offer.acquisition != nil { return (stood.offer, cleared) }
+            }
             return (again.offer, cleared)
         }
         let again = laying(taking: clearing)
@@ -968,10 +982,19 @@ extension RealLineLaying {
 
     /// ``offer(for:)`` without taking up what the line left before, and
     /// the line as laid where GameCore refused it.
-    private func laidOffer(for line: RealBranchLine) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
+    /// With `whereItStood`, on its real way, no station moved beside the
+    /// company's track (decision 528, later).
+    private func laidOffer(for line: RealBranchLine, whereItStood: Bool = false) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
         func offer(depot: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
-            let laid = self.offer(for: line, raising: .viaducts, depot: depot)
+            let laid = self.offer(for: line, raising: .viaducts, depot: depot, whereItStood: whereItStood)
             guard laid.crossesTrack else { return (laid.offer, laid.laid) }
+            if whereItStood {
+                for (raising, clear) in [(StationRaising.viaductsAndShared, false), (.viaducts, true), (.viaductsAndShared, true)] {
+                    let other = self.offer(for: line, raising: raising, depot: depot, clearingTrack: clear, whereItStood: true)
+                    if other.offer.problem == nil { return (other.offer, other.laid) }
+                }
+                return (laid.offer, laid.laid)
+            }
             // SHARED-STATION-THROUGH: before standing the shared stations
             // up, the line laid beside the company's track at a station it
             // shares between its ends too (Fukuoka's Kuko Line, bought last,
@@ -1090,18 +1113,23 @@ extension RealLineLaying {
     /// the Liujia Line's at Zhuzhong, which only two levels allow), it is
     /// laid as before the decision, each station by its own line's real
     /// structure.
+    ///
+    /// Decision 528 (later, LIUJIA-REBUY): with `whereItStood`, no station
+    /// is moved beside the company's track (SHARED-STATION-LEVEL): the
+    /// line lies on its real way, as when nothing stood there.
     func offer(
-        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false
+        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false,
+        whereItStood: Bool = false
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         var followed = false
         let level = offer(
-            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, followingPlatforms: true,
-            followed: &followed
+            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, whereItStood: whereItStood,
+            followingPlatforms: true, followed: &followed
         )
         guard level.offer.problem != nil, followed else { return level }
         return offer(
-            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, followingPlatforms: false,
-            followed: &followed
+            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, whereItStood: whereItStood,
+            followingPlatforms: false, followed: &followed
         )
     }
 
@@ -1109,8 +1137,8 @@ extension RealLineLaying {
     /// decision 875's rule or without it; `followed` is set where the rule
     /// moved a station from where its own line's structure stood it.
     private func offer(
-        for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, followingPlatforms: Bool,
-        followed: inout Bool
+        for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, whereItStood: Bool,
+        followingPlatforms: Bool, followed: inout Bool
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
@@ -1301,7 +1329,7 @@ extension RealLineLaying {
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.
         let inItsLane = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
-        let besideShared = sharedEnds(
+        let besideShared = whereItStood ? nil : sharedEnds(
             of: inItsLane, points: points, through: besideThrough, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
             extent: { index in
                 let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
