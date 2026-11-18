@@ -7,8 +7,15 @@ Instructions for Claude Code sessions in this repository.
 A native iPhone / iPad railway and city management game (long-term goal: deep
 railway and city management gameplay). Current status, doc map and decision
 index: `docs/OVERVIEW.md`; who is doing what, what the owner said to leave
-alone, and every handoff: `docs/HANDOFF.md`; the one priority list:
-`docs/research/NEXT_PRIORITIES_2026-10-12.md`; stage history: `docs/ROADMAP.md`.
+alone, and every handoff: `docs/planning/HANDOFF.md`; the one priority list:
+`docs/planning/NEXT_PRIORITIES_2026-10-12.md`; the scored items:
+`docs/priorities/`; stage history: `docs/ROADMAP.md`. The handoff, the
+priority list and the scored items are in the private
+`a91453/railway-assets-private-2` since 2026-11-18 (planning is the
+project's own way of working, not kept in this public repository); the
+old paths here (`docs/HANDOFF.md`, `docs/research/NEXT_PRIORITIES_…`,
+`docs/priorities/`) hold one-line pointers, and every `HANDOFF §N` or
+`NEXT_PRIORITIES §N` below means the private copy, same section numbers.
 Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md)
 and may also absorb implementation and data from the owner's
 `a91453/railway-reference-private` repository. Treat `Ci/`, `Railway/`,
@@ -427,11 +434,13 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   that scores new items (a research or study) writes them itself, in the
   same pull request, rather than leaving them for the planner to add
   (owner, 2026-11-17, after #2304's were missed), as a file of its own,
-  `docs/priorities/<TASK>.md` (`docs/priorities/README.md`, decision 832),
-  not as the next section of NEXT_PRIORITIES, whose numbers parallel pull
-  requests raced for; `doc_numbers.py --check` checks its form and
-  weights, and the planner merges the files back into the list with
-  `doc_numbers.py --priorities`. Do not ask the
+  `docs/priorities/<TASK>.md` in `a91453/railway-assets-private-2` (its
+  `docs/priorities/README.md`, decision 832; a pull request there beside
+  this repository's), not as the next section of NEXT_PRIORITIES, whose
+  numbers parallel pull requests raced for;
+  `doc_numbers.py --priorities --root ../railway-assets-private-2` checks
+  its form and weights and is how the planner merges the files back into
+  the list. Do not ask the
   owner whether to do it (owner, 2026-11-14: 「看你先評分在排優先級」
   「之後都是這樣寫進去md或交接手冊」). Previews and generated art the game does not load
   (more than about 2 MB in one pull request) go to
@@ -472,7 +481,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   would change at the same lines. The claim in the registry is the reservation.
   Decisions 1–328 and their later amendments stay in ARCHITECTURE. Check
   with `python3 -I tools/golden-checks/doc_numbers.py --check`.
-- Handoffs live on `main`, in `docs/HANDOFF.md` (owner, 2026-10-16). Read it
+- Handoffs live on `main`, in `docs/planning/HANDOFF.md` of
+  `a91453/railway-assets-private-2` (owner, 2026-10-16; moved there
+  2026-11-18, `docs/HANDOFF.md` here points to it). Read it
   before starting; when a session stops with work half done, left for later
   or passed to another session, write that into `docs/HANDOFF.md` (or the
   decision's next step, with a line there pointing to it) in its last pull
@@ -547,8 +558,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   in the decision (docs/decisions/, or docs/ARCHITECTURE.md for 1–328); data
   and licence credits stay (docs/UI_THEME.md, 玩家看的文字).
 - Before drawing or changing any icon, glyph, character or illustration for
-  the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
-  chose and how to check a drawing before showing it.
+  the app, read `.claude/skills/art-style/SKILL.md` (the SVG format) and
+  the private `a91453/railway-assets-private-2` `docs/studio/art-style.md`
+  it points to: the art style the owner chose and how to check a drawing
+  before showing it.
 - Before building, rebuilding or restyling a native 3D model (a station, a
   building, a kit part, a train, a bus), read
   `.claude/skills/model-look/SKILL.md` (decision 685): the kits' tests only
