@@ -134,11 +134,12 @@ final class DepartureMelodyTests: XCTestCase {
     }
 
     /// A line's melody comes from its name, the same every time, and the
-    /// names spread over all three; a line's train plays its line's.
+    /// names spread over the first of all three pairs (the melodies lines
+    /// had before decision 868); a line's train plays its line's.
     func testEachLinePlaysItsOwnMelodyAlways() throws {
         let names = ["Shuttle", "淡水信義線", "板南線", "文湖線", "East Rail Line", "Tuen Ma Line", "臺鐵西部幹線", "Rovaniemi–Kemijärvi"]
         XCTAssertEqual(names.map(DepartureMelody.of(lineNamed:)), names.map(DepartureMelody.of(lineNamed:)))
-        XCTAssertEqual(Set(names.map(DepartureMelody.of(lineNamed:))), Set(DepartureMelody.allCases), "every melody has a line")
+        XCTAssertEqual(Set(names.map(DepartureMelody.of(lineNamed:))), [.a, .b, .c], "every pair has a line")
         XCTAssertEqual(DepartureMelody.of(lineNamed: ""), .b, "FNV-1a of no bytes is its offset basis, 2,166,136,261, which leaves 1 over 3")
 
         var world = try makeServiceWorld(speed: .x10)
@@ -148,6 +149,35 @@ final class DepartureMelodyTests: XCTestCase {
         let line = try world.createLine(named: "Shuttle", stops: [Self.west, Self.east]).id
         try world.assignTrain(Self.tram, to: line)
         XCTAssertEqual(DepartureMelody.of(Self.tram, in: world), DepartureMelody.of(lineNamed: "Shuttle"))
+    }
+
+    /// Decision 868: six melodies in three pairs; a line's stations play
+    /// its melody or that melody's companion, each station always the
+    /// same one, and a station the player set plays what it was set to.
+    func testALinesStationsPlayOneOfItsPairEachItsOwn() throws {
+        XCTAssertEqual(DepartureMelody.allCases, [.a, .b, .c, .d, .e, .f])
+        XCTAssertEqual(DepartureMelody.allCases.map(\.companion), [.d, .e, .f, .a, .b, .c])
+        let stations = ["West", "East", "台北車站", "中山", "Admiralty", "Rovaniemi", "博多", "天神"]
+        for line in ["Shuttle", "板南線", "East Rail Line"] {
+            let melody = DepartureMelody.of(lineNamed: line)
+            let heard = stations.map { DepartureMelody.of(lineNamed: line, atStationNamed: $0) }
+            XCTAssertEqual(Set(heard), [melody, melody.companion], "\(line): both of its pair, and no other")
+            XCTAssertEqual(heard, stations.map { DepartureMelody.of(lineNamed: line, atStationNamed: $0) })
+        }
+        XCTAssertEqual(DepartureMelody.of(lineNamed: "Shuttle", atStationNamed: ""), DepartureMelody.of(lineNamed: "Shuttle").companion,
+                       "FNV-1a of no bytes, 2,166,136,261, is odd")
+
+        var world = try makeServiceWorld(speed: .x10)
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.west, in: world), .a, "on no line")
+        try world.stopTrainService(Self.tram)
+        try world.setTrainTimetable(Self.tram, to: [])
+        let line = try world.createLine(named: "Shuttle", stops: [Self.west, Self.east]).id
+        try world.assignTrain(Self.tram, to: line)
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.west, in: world), DepartureMelody.of(lineNamed: "Shuttle", atStationNamed: "West"))
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.east, in: world), DepartureMelody.of(lineNamed: "Shuttle", atStationNamed: "East"))
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: nil, in: world), DepartureMelody.of(lineNamed: "Shuttle"))
+        try world.setStationDepartureMelody(Self.west, to: .f)
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.west, in: world), .f)
     }
 
     /// Each melody is a file the app bundles and the audio manifest lists,
