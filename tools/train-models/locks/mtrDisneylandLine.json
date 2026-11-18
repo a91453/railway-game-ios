@@ -1,0 +1,71 @@
+{
+  "comment" : "Decision 782: the models of the registered train mtrDisneylandLine (Map3DMTRDisneylandLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 8,
+  "lamps" : "40dcf4511b057de8",
+  "models" : {
+    "light-set-mtrDisneylandLine-car" : {
+      "hash" : "7f1be47d9e22101d",
+      "triangles" : 640
+    },
+    "light-set-mtrDisneylandLine-head" : {
+      "hash" : "301cb22c6f0dc01d",
+      "triangles" : 560
+    },
+    "light-set-mtrDisneylandLine-panto" : {
+      "hash" : "7f1be47d9e22101d",
+      "triangles" : 640
+    },
+    "light-set-mtrDisneylandLine-tail" : {
+      "hash" : "a110a1bde6d7e1d",
+      "triangles" : 560
+    },
+    "light-set-mtrDisneylandLineFar-car" : {
+      "hash" : "a91c086fbbb4d9b9",
+      "triangles" : 344
+    },
+    "light-set-mtrDisneylandLineFar-head" : {
+      "hash" : "4ddb1b5b7f5fd564",
+      "triangles" : 304
+    },
+    "light-set-mtrDisneylandLineFar-panto" : {
+      "hash" : "a91c086fbbb4d9b9",
+      "triangles" : 344
+    },
+    "light-set-mtrDisneylandLineFar-tail" : {
+      "hash" : "cf73134584ee3564",
+      "triangles" : 304
+    },
+    "set-mtrDisneylandLine-car" : {
+      "hash" : "754374912ed37492",
+      "triangles" : 9502
+    },
+    "set-mtrDisneylandLine-head" : {
+      "hash" : "380db023fd29cdce",
+      "triangles" : 11862
+    },
+    "set-mtrDisneylandLine-panto" : {
+      "hash" : "754374912ed37492",
+      "triangles" : 9502
+    },
+    "set-mtrDisneylandLine-tail" : {
+      "hash" : "bfa4c97b143e8636",
+      "triangles" : 11862
+    },
+    "set-mtrDisneylandLineFar-car" : {
+      "hash" : "11a75946a1d34bc5",
+      "triangles" : 3418
+    },
+    "set-mtrDisneylandLineFar-head" : {
+      "hash" : "13fbc2125a518796",
+      "triangles" : 5150
+    },
+    "set-mtrDisneylandLineFar-panto" : {
+      "hash" : "11a75946a1d34bc5",
+      "triangles" : 3418
+    },
+    "set-mtrDisneylandLineFar-tail" : {
+      "hash" : "676762241815cb2d",
+      "triangles" : 5150
+    }
+  }
+}

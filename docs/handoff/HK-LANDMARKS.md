@@ -1,7 +1,7 @@
 # HK-LANDMARKS：香港地標上 3D 地圖（決策 791）
 
 - 2026-11-15，雲端 thread session，分支 `claude/project-thread-yz1qsu`（PR #2280）；素材 `a91453/railway-assets-private` #118（`game-art-previews/docs/art/hk-landmarks-2026-11/`）。
-- 做完：八棟進香港地圖（環球貿易廣場、國金二期、中環廣場、中銀、長江中心、中環中心、尖沙咀鐘樓、文化中心）；model-look `references/studio-brief.md` §5 寫了工作室做建築的經驗。
+- 做完：八棟進香港地圖（環球貿易廣場、國金二期、中環廣場、中銀、長江中心、中環中心、尖沙咀鐘樓、文化中心）；私有素材庫 `docs/studio/studio-brief.md` §5 寫了工作室做建築的經驗。
 
 - 2026-11-16，本地派工 session（Mac），HSBC-REDO（決策 793）：**滙豐總行大廈進地圖**，現在九棟。分支 `claude/hsbc-redo`；素材 `railway-assets-private` #128（`revision-9/`：滙豐新做，其餘八棟的 GLB 從 `revision-8/` 搬過去、內容不變）。
 
@@ -18,7 +18,7 @@
 
 - 2026-11-17，本地派工 3 session（Mac），**HKCEC-REDO**（決策 798；分支 `claude/hkcec-redo`；素材 `railway-assets-private` 的 `revision-11/`）：**會展進地圖，現在十棟。**
   用工作室的 revision-9（第 2 輪）：近景 11,455、遠景 4,861 面（遊戲併點後）；十棟近景合計 54,852（上限 60,000）。審查 r2：needs-fix、建議進遊戲並列已知缺點，revision-9 比 8 適合。
-  第 2 輪中途做的人（Codex）帳號額度用完停了一個半小時，換另一個 Codex 帳號接著做完；做的人交件後審查沒有自己開始，協調者重開審查才接上（`studio-brief.md` §5 寫了這兩條）。
+  第 2 輪中途做的人（Codex）帳號額度用完停了一個半小時，換另一個 Codex 帳號接著做完；做的人交件後審查沒有自己開始，協調者重開審查才接上（私有素材庫 `docs/studio/studio-brief.md` §5 寫了這兩條）。
   工作室兩個 session 已關、任務已 release。
 
 ## 還留下什麼

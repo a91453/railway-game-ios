@@ -45,26 +45,28 @@ enum MapPackDownloader {
             let manager = AssetPackManager.shared
             let pack = try await manager.assetPack(withID: city.assetPackID)
             try await manager.ensureLocalAvailability(of: pack)
-            // Decision 819: each file is asked for by its own path. The URL
-            // `url(for:)` gives for one file is of that file only: on the
-            // owner's iPhone (0.6.0 (136)) the folder of `pack.json`'s held
-            // nothing else. The city's folder, asked for whole, is the second
-            // place to look (Apple's answer to a bug in asking for a file,
-            // FB19512759); asked for at most once, and only when needed.
-            let folder = city.assetPackFolderPath
-            var askedForFolder = false
-            var folderURL: URL?
-            let locators: [MapPackDownloads.Locator] = [
-                { try? manager.url(for: FilePath("\(folder)/\($0)")) },
-                { name in
-                    if !askedForFolder {
-                        askedForFolder = true
-                        folderURL = try? manager.url(for: FilePath(folder))
+            var refusal = take(city, from: manager)
+            // DEBUG-138: a pack whose files are not the app's own is the
+            // version an earlier build was given (0.6.0 (138) on the owner's
+            // iPhone kept 137's Hong Kong pack, uploaded again eight minutes
+            // before the build came out). The system looks for a new version
+            // only now and then, so ask it now, while the app is open, and
+            // take the new version once it is down.
+            if refusal == .differsFromBundled {
+                let (updating, _) = try await manager.checkForUpdates()
+                log.notice("map pack \(city.assetPackID, privacy: .public) differs from the app's; updating: \(updating.contains(city.assetPackID), privacy: .public)")
+                if updating.contains(city.assetPackID) {
+                    MapPackDownloads.note(city, .downloading)
+                    let latest = try await manager.assetPack(withID: city.assetPackID)
+                    if #available(iOS 26.4, *) {
+                        try await manager.ensureLocalAvailability(of: latest, requireLatestVersion: true)
+                    } else {
+                        try await manager.ensureLocalAvailability(of: latest)
                     }
-                    return folderURL?.appendingPathComponent(name)
-                },
-            ]
-            if let refusal = MapPackDownloads.use(city, locators: locators, bundled: MapPack.bundled(city)) {
+                    refusal = take(city, from: manager)
+                }
+            }
+            if let refusal {
                 MapPackDownloads.note(city, .refused(refusal))
                 let clue = MapPackDownloads.clue(city) ?? ""
                 log.notice("map pack \(city.assetPackID, privacy: .public) not used: \(String(describing: refusal), privacy: .public) (\(clue, privacy: .public))")
@@ -76,5 +78,30 @@ enum MapPackDownloader {
             MapPackDownloads.note(city, .failed(String(describing: error)))
             log.notice("map pack \(city.assetPackID, privacy: .public) not fetched: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    /// Takes `city`'s pack as it lies on the device now (``MapPackDownloads``),
+    /// or says why not.
+    private static func take(_ city: OverseasMap, from manager: AssetPackManager) -> MapPackDownloads.Refusal? {
+        // Decision 819: each file is asked for by its own path. The URL
+        // `url(for:)` gives for one file is of that file only: on the
+        // owner's iPhone (0.6.0 (136)) the folder of `pack.json`'s held
+        // nothing else. The city's folder, asked for whole, is the second
+        // place to look (Apple's answer to a bug in asking for a file,
+        // FB19512759); asked for at most once, and only when needed.
+        let folder = city.assetPackFolderPath
+        var askedForFolder = false
+        var folderURL: URL?
+        let locators: [MapPackDownloads.Locator] = [
+            { try? manager.url(for: FilePath("\(folder)/\($0)")) },
+            { name in
+                if !askedForFolder {
+                    askedForFolder = true
+                    folderURL = try? manager.url(for: FilePath(folder))
+                }
+                return folderURL?.appendingPathComponent(name)
+            },
+        ]
+        return MapPackDownloads.use(city, locators: locators, bundled: MapPack.bundled(city))
     }
 }

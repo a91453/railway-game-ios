@@ -179,6 +179,21 @@ public enum Map3DPedestrianSignal {
     static func tensName(_ digit: Int) -> String { "walk-tens-\(digit)" }
     static func onesName(_ digit: Int) -> String { "walk-ones-\(digit)" }
 
+    /// Decision 846: the faces with no countdown's box (Hong Kong's and
+    /// Finland's, ``Map3DStreetRegion/hasCountdownBoxes``): the red figure
+    /// lit, neither, and the green figure lit in the stride it stands in
+    /// (``still(_:)``; their figure never walks).
+    static let plainStopName = "walk-plain-stop"
+    static let plainDarkName = "walk-plain-dark"
+    static let plainWalkName = "walk-plain-walk"
+
+    /// Decision 846: the faces with no countdown's box, for
+    /// ``Map3DModelPack``: after the reindeer, before the route bus.
+    static var plainDrawn: [Map3DModelPack.Model] {
+        [head(plainStopName, figure: .stop, countdown: false), head(plainDarkName, figure: .dark, countdown: false),
+         head(plainWalkName, figure: .walk(still(.hongKong)), countdown: false)].map(Map3DLook.restyle)
+    }
+
     /// The models, for ``Map3DModelPack``.
     static func models() -> [Map3DModelPack.Model] {
         var models = [head(stopName, figure: .stop), head(darkName, figure: .dark)]
@@ -209,13 +224,16 @@ public enum Map3DPedestrianSignal {
     static let countMiddle = Map3DPoint(0.36, 2.42, 0)
 
     /// The pole, the housing with its two lenses' figures (the lit one
-    /// glowing), and the countdown's box, its face toward −z.
-    static func head(_ name: String, figure: Face.Figure) -> Map3DModelPack.Model {
+    /// glowing), and the countdown's box (decision 846: unless not
+    /// `countdown`), its face toward −z.
+    static func head(_ name: String, figure: Face.Figure, countdown: Bool = true) -> Map3DModelPack.Model {
         var mesh = Map3DMesh()
         let back = Map3DPoint(0, 0, -1)
         mesh.addCylinder(base: .zero, radius: 0.06, height: 2.95, sides: 6, top: steel, side: steel)
         mesh.addBox(base: Map3DPoint(0, 2.24, -0.16), forward: back, length: 0.2, width: 0.36, height: 0.72, top: housing, side: housing)
-        mesh.addBox(base: Map3DPoint(0.36, 2.24, -0.16), forward: back, length: 0.2, width: 0.36, height: 0.36, top: housing, side: housing)
+        if countdown {
+            mesh.addBox(base: Map3DPoint(0.36, 2.24, -0.16), forward: back, length: 0.2, width: 0.36, height: 0.36, top: housing, side: housing)
+        }
         let stopLit = figure == .stop, walkLit: Bool, frame: Int
         if case .walk(let f) = figure { (walkLit, frame) = (true, f) } else { (walkLit, frame) = (false, 0) }
         addFigure(&mesh, limbs: standing, at: redMiddle, colour: stopLit ? red.lit : red.unlit, lit: stopLit)
@@ -309,6 +327,20 @@ public enum Map3DPedestrianSignal {
         /// By digit; the tens' 0 is none (a blank).
         let tens: [Int?]
         let ones: [Int]
+        /// Decision 846: the faces with no countdown's box; `nil` in a pack
+        /// without them.
+        let plain: Plain?
+        /// Decision 846's later note: Finland's faces
+        /// (``Map3DFinlandStreet``), still and with no countdown; `nil` in
+        /// a pack without them.
+        let finland: Plain?
+
+        /// Decision 846: the faces with no countdown's box.
+        struct Plain: Sendable, Equatable {
+            let stop: Int
+            let dark: Int
+            let walk: Int
+        }
 
         public init?(pack: Map3DModelPack) {
             self.init(index: pack.index(of:))
@@ -322,15 +354,36 @@ public enum Map3DPedestrianSignal {
             let ones = (0...9).compactMap { index(Map3DPedestrianSignal.onesName($0)) }
             guard walk.count == Map3DPedestrianSignal.frames, tens.count == 9, ones.count == 10 else { return nil }
             (self.stop, self.dark, self.walk, self.tens, self.ones) = (stop, dark, walk, [nil] + tens, ones)
+            if let stop = index(Map3DPedestrianSignal.plainStopName), let dark = index(Map3DPedestrianSignal.plainDarkName),
+               let walk = index(Map3DPedestrianSignal.plainWalkName) {
+                plain = Plain(stop: stop, dark: dark, walk: walk)
+            } else {
+                plain = nil
+            }
+            if let stop = index(Map3DFinlandStreet.Unit.walkStop.rawValue), let dark = index(Map3DFinlandStreet.Unit.walkDark.rawValue),
+               let walk = index(Map3DFinlandStreet.Unit.walkWalk.rawValue) {
+                finland = Plain(stop: stop, dark: dark, walk: walk)
+            } else {
+                finland = nil
+            }
         }
 
-        /// The models a signal's three instances are placed with.
-        public var placed: (head: Int, tens: Int, ones: Int) { (stop, tens[1] ?? stop, ones[0]) }
+        /// The models a signal's three instances are placed with; decision
+        /// 846: and the one a signal with no countdown is placed with alone
+        /// (Taiwan's face where the pack has none).
+        public var placed: (head: Int, tens: Int, ones: Int, plain: Int) { (stop, tens[1] ?? stop, ones[0], plain?.stop ?? stop) }
 
         /// Whether `model` is one a pedestrian signal is placed with: drawn
         /// only close up (decision 267), and casting no shadow.
         public func places(_ model: Int) -> Bool {
-            model == placed.head || model == placed.tens || model == placed.ones
+            model == placed.head || model == placed.tens || model == placed.ones || model == placed.plain || model == finland?.stop
+        }
+
+        /// Decision 846's later note: the model a signal of `region` with
+        /// no countdown is placed with alone: Finland's own on its
+        /// streets, ``placed``'s `plain` elsewhere.
+        func placedPlain(_ region: Map3DStreetRegion) -> Int {
+            region.hasFinnishFurniture ? finland?.stop ?? placed.plain : placed.plain
         }
 
         /// The model to draw the instances of `model` of `group` with: what
@@ -340,6 +393,13 @@ public enum Map3DPedestrianSignal {
             guard places(model) else { return model }
             let (junction, road) = Map3DPedestrianSignal.junction(of: group)
             let face = Map3DPedestrianSignal.face(road, group: junction, clock: clock, time: time, pace: pace, reduceMotion: reduceMotion)
+            if let plain = [plain, finland].compactMap({ $0 }).first(where: { model == $0.stop }) {
+                switch face.figure {
+                case .stop: return plain.stop
+                case .dark: return plain.dark
+                case .walk: return plain.walk
+                }
+            }
             switch model {
             case placed.head:
                 switch face.figure {
@@ -360,8 +420,12 @@ public enum Map3DPedestrianSignal {
             let head = ([stop, dark] + walk).map { pack.models[$0].triangleCount }.max() ?? 0
             let tensMost = tens.compactMap { $0 }.map { pack.models[$0].triangleCount }.max() ?? 0
             let onesMost = ones.map { pack.models[$0].triangleCount }.max() ?? 0
+            func most(_ plain: Plain?) -> Int { plain.map { [$0.stop, $0.dark, $0.walk].map { pack.models[$0].triangleCount }.max() ?? 0 } ?? 0 }
+            let plainMost = most(plain), finlandMost = most(finland)
             return runs.reduce(0) { sum, run in
-                switch run.model {
+                if let plain, run.model == plain.stop { return sum + plainMost * run.count }
+                if let finland, run.model == finland.stop { return sum + finlandMost * run.count }
+                return switch run.model {
                 case placed.head: sum + head * run.count
                 case placed.tens: sum + tensMost * run.count
                 case placed.ones: sum + onesMost * run.count

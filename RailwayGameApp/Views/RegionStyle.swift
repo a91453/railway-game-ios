@@ -55,27 +55,43 @@ extension EnvironmentValues {
 /// A station's name as its region writes it on the platform: for Taiwan a
 /// blue board with the name in white. A long name shrinks, then wraps, so
 /// "Frankfurt (Main) Hauptbahnhof" fits as well as "臺北".
+///
+/// Decision 845: a real station's other name (``GameSession/stationSecondName(of:)``),
+/// its English or its own, stands under it, smaller and a little fainter,
+/// as Taiwan's and Hong Kong's signs carry both; VoiceOver reads both.
 struct StationNameboard: View {
     let name: String
+    var secondName: String? = nil
     @Environment(\.regionStyle) private var region
 
     var body: some View {
-        Text(verbatim: name)
-            .font(.title3.weight(.bold))
-            .foregroundStyle(region.onNameboard)
-            .lineLimit(2)
-            .minimumScaleFactor(0.7)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, minHeight: 40)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(region.nameboard, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            // The website's tactile edge: a hard shadow under the board.
-            .background(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.black.opacity(0.22))
-                    .offset(y: 3)
+        VStack(spacing: 0) {
+            Text(verbatim: name)
+                .font(.title3.weight(.bold))
+                .lineLimit(2)
+            if let secondName {
+                Text(verbatim: secondName)
+                    .font(.subheadline.weight(.semibold))
+                    // At least 5.3:1 on the board in both appearances.
+                    .opacity(0.85)
+                    .lineLimit(2)
             }
-            .accessibilityAddTraits(.isHeader)
+        }
+        .foregroundStyle(region.onNameboard)
+        .minimumScaleFactor(0.7)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, minHeight: 40)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(region.nameboard, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        // The website's tactile edge: a hard shadow under the board.
+        .background(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.black.opacity(0.22))
+                .offset(y: 3)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("station.nameboard")
     }
 }

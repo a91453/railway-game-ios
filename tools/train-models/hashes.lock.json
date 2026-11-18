@@ -4588,6 +4588,58 @@
     "coach-stop-roadside-far" : {
       "hash" : "e9a55d5131e8cb05",
       "triangles" : 364
+    },
+    "walk-plain-dark" : {
+      "hash" : "5fa1a0dfea5ef929",
+      "triangles" : 54
+    },
+    "walk-plain-stop" : {
+      "hash" : "7ac1d9524226a109",
+      "triangles" : 54
+    },
+    "walk-plain-walk" : {
+      "hash" : "8e0b7df06efbf6a3",
+      "triangles" : 54
+    },
+    "fi-signal-red" : {
+      "hash" : "8e4e1b2f6bba8102",
+      "triangles" : 242
+    },
+    "fi-signal-red-amber" : {
+      "hash" : "508ea2b324e7e0b5",
+      "triangles" : 242
+    },
+    "fi-signal-amber" : {
+      "hash" : "bdb4fa0c7a082f27",
+      "triangles" : 242
+    },
+    "fi-signal-green" : {
+      "hash" : "34d5890c185ab9a8",
+      "triangles" : 242
+    },
+    "fi-walk-stop" : {
+      "hash" : "8925076f14729208",
+      "triangles" : 254
+    },
+    "fi-walk-dark" : {
+      "hash" : "981e0c1e94805444",
+      "triangles" : 254
+    },
+    "fi-walk-walk" : {
+      "hash" : "566ed9b15d355b44",
+      "triangles" : 254
+    },
+    "fi-lamp" : {
+      "hash" : "ba401dc3fbffd3bb",
+      "triangles" : 112
+    },
+    "fi-bus-stop" : {
+      "hash" : "cf430bd335e7293b",
+      "triangles" : 200
+    },
+    "fi-crossing-sign" : {
+      "hash" : "6fda83ba0e24305a",
+      "triangles" : 143
     }
   }
 }
