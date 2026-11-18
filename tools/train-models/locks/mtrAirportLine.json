@@ -1,67 +1,63 @@
 {
   "comment" : "Decision 782: the models of the registered train mtrAirportLine (Map3DMTRAirportLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 16,
-  "lamps" : "61a68d4372c7dd4c",
+  "lamps" : "b19c9ed5ca0b8e4a",
   "models" : {
     "light-set-mtrAirportExpress-car" : {
-      "hash" : "90c8e6528f94d96d",
-      "triangles" : 308
+      "hash" : "3464a2e2d3883c95",
+      "triangles" : 72
     },
     "light-set-mtrAirportExpress-head" : {
-      "hash" : "d6990de772789f8d",
-      "triangles" : 312
+      "hash" : "249a9669bffc24ad",
+      "triangles" : 60
     },
     "light-set-mtrAirportExpress-panto" : {
-      "hash" : "d31ad4983b3aed59",
-      "triangles" : 284
-    },
-    "light-set-mtrAirportExpress-tail" : {
-      "hash" : "581293c7f49c8c85",
-      "triangles" : 320
+      "hash" : "3464a2e2d3883c95",
+      "triangles" : 72
     },
     "light-set-mtrAirportExpressFar-car" : {
-      "hash" : "28dc7c51dd7ecb45",
-      "triangles" : 172
+      "hash" : "a033775dad0bd899",
+      "triangles" : 64
     },
     "light-set-mtrAirportExpressFar-head" : {
-      "hash" : "77bc3f9e28ea1d59",
-      "triangles" : 144
+      "hash" : "1b03155ccc468731",
+      "triangles" : 52
     },
     "light-set-mtrAirportExpressFar-panto" : {
-      "hash" : "28dc7c51dd7ecb45",
-      "triangles" : 172
+      "hash" : "a033775dad0bd899",
+      "triangles" : 64
     },
     "light-set-mtrTungChung-car" : {
-      "hash" : "d38ac4f3152cc801",
-      "triangles" : 668
+      "hash" : "299cc8183674df95",
+      "triangles" : 64
     },
     "light-set-mtrTungChung-head" : {
-      "hash" : "50b4f5ac680089a5",
-      "triangles" : 620
+      "hash" : "514471bbb4495421",
+      "triangles" : 60
     },
     "light-set-mtrTungChung-panto" : {
-      "hash" : "73f762239890b525",
-      "triangles" : 588
+      "hash" : "299cc8183674df95",
+      "triangles" : 64
     },
     "light-set-mtrTungChung-tail" : {
-      "hash" : "e8020d05f79aeca5",
-      "triangles" : 620
+      "hash" : "8d6236cee1733521",
+      "triangles" : 60
     },
     "light-set-mtrTungChungFar-car" : {
-      "hash" : "f843370d5ca5e39d",
-      "triangles" : 128
+      "hash" : "609be11b96549",
+      "triangles" : 24
     },
     "light-set-mtrTungChungFar-head" : {
-      "hash" : "74e81345e6ffd9",
-      "triangles" : 104
+      "hash" : "9ccc1edcbbf2fd81",
+      "triangles" : 20
     },
     "light-set-mtrTungChungFar-panto" : {
-      "hash" : "f843370d5ca5e39d",
-      "triangles" : 128
+      "hash" : "609be11b96549",
+      "triangles" : 24
     },
     "light-set-mtrTungChungFar-tail" : {
-      "hash" : "b7024e1f4c8dead9",
-      "triangles" : 104
+      "hash" : "fc788afaf0498781",
+      "triangles" : 20
     },
     "set-mtrAirportExpress-car" : {
       "hash" : "9c9fc414c0d677cb",

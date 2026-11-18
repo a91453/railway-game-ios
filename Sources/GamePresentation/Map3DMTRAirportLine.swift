@@ -51,12 +51,18 @@ public enum Map3DMTRAirportLine {
         Map3DColor.rgb(0x4B535C), Map3DColor.rgb(0x30363D),
     ]
 
+    /// The palette index of the studio's glass material: its faces, and
+    /// only they, are the windows the game lights at night and mirrors
+    /// the sky in. The dark greys round the doors and windows are close
+    /// to the glass in colour and stay dark (decision 450's later note).
+    static let glassIndex = 8
+
     /// `unit`'s car, its cab (if it has one) at +x; `far`, the light
     /// version drawn from 500 m out. `nil` if its mesh does not decode.
     public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model? {
         let name = unit.rawValue + (far ? "-far" : "")
         guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
-        return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette)
+        return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette, glass: glassIndex)
     }
 }
 

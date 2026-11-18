@@ -435,8 +435,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   owner whether to do it (owner, 2026-11-14: 「看你先評分在排優先級」
   「之後都是這樣寫進去md或交接手冊」). Previews and generated art the game does not load
   (more than about 2 MB in one pull request) go to
-  a91453/railway-assets-private, `game-art-previews/docs/art/`
-  (owner, 2026-10-21; moved from `a91453/railway-reference-private`,
+  the assets repository that `docs/ASSET_REPOSITORIES.md` names as taking
+  new material, `game-art-previews/docs/art/` (decision 842: from 2026-11-18
+  the next one is `railway-assets-private-2`, and older material stays at the
+  same paths in `a91453/railway-assets-private`; owner, 2026-10-21; moved from `a91453/railway-reference-private`,
   `Railway/game-art-previews/docs/art/`, on 2026-10-28 because that
   repository passed 3 GB; the old copy was deleted, so read the same path in the new repository); the pull request keeps one overview image, the
   README and the images code or docs link to. There, only the newest

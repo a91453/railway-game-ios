@@ -62,6 +62,7 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
   - 客室窗：每款跑的車另有一個窗模型（`light-` 加車名），是側面玻璃三角形的複製（玻璃色見 `Map3DTrainLights.isGlass`：`Map3DTrainStyle.glass`、`Map3DPalette.glazing` 和 TEMU 的客室玻璃），離有燈的那端 2.8 m 內的駕駛室窗不亮。新車的窗要用這幾種玻璃色才會亮；用別的顏色就加進 `glassShades`。
   - **只有真的窗玻璃才用玻璃色**（作者 2026-11-15，機場快綫在清晨 06:50 實機）：窗模型把每塊側面玻璃（|法線側向| ≥ 0.75、中心在車高 30–92 %）整塊亮成米色。門板整面用玻璃色，清晨就是一扇米色大方塊；一整條窗帶用玻璃，就是一條米色長條。所以門用車身色（塞拉門以 1–2 cm 的深色細縫畫門框），只有門上的小窗是玻璃；客室窗是深色窗帶（`mask`）裡一格一格的玻璃，窗柱與窗框是深色。拍圖時另出一張「亮窗」版（只把遊戲會亮的玻璃換成 #F2D9A0，規則見下）來看。
     - 亮不亮只看頂點顏色是不是玻璃色、三角形第一個頂點的側向法線、中心高度（模型最高點的 30–92 %），不看材質名；本來就發光的三角形不算。
+    - **工作室的車例外：逐面看材質**（決策 450 的後來，2026-11-18）：顏色猜法容許 ±6，港鐵的深灰（charcoal #464B51、mask #1D2125、hardware #4B535C、dark #30363D）全被當成玻璃，夜裡門板、窗框跟著亮。所以工作室 GLB 轉成的車，`Map3DRedCommuter.decodedMesh(..., glass: <glass 材質的色票格位>)` 一定要傳玻璃格位（港鐵三綫的 `glassIndex`）：那個格位的面標成 `trainGlass`，模型一有這種面，夜燈和反光就只認它們，不再用顏色猜。新的工作室車（東鐵綫、南港島綫、迪士尼綫）照做；`Map3DTrainOwnGlassTests` 把它加進 `studioCars`。
     - 駕駛室的窗是**逐個三角形**排除的，而且只在有頭尾燈的那端：三角形最大 x 超過「有燈那端 − 2.8 m」才不亮（中間車兩端的客室窗照亮）。一塊側窗跨在這條線上，清晨就亮半塊三角形。駕駛室側窗的每個三角形都要有一個頂點落在離有燈那端 2.8 m 以內：從窗的前緣頂點扇形切，整扇保留原大，不要把窗縮小。駕駛室側門的小窗用深色，不用玻璃。
     - 「亮窗」版照遊戲的規則拍：車高用模型最高點（有集電弓的車比車身高）、兩端駕駛室段不亮。把所有玻璃都換色的圖看不出駕駛室半亮。
     - 門框不可重疊；客室門與駕駛室門之間照照片留車身，至少 0.5 m。塗裝斜升的地方，門板顏色取門所在位置的車身色。
@@ -110,7 +111,7 @@ node tools/train-models/viewer.mjs OUT/index.html OUT     # 離線預覽頁；�
 
 作者看真機（TestFlight），所以：
 
-- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer 放 `a91453/railway-assets-private: game-art-previews/docs/art/<模型>/<revision-N>/`。每輪最多 21 張 PNG、每張 ≤2 MiB、單檔 ≤50 MiB、PR 新增 ≤200 MiB；不放 ZIP 或 `history/`／`old/`／`backup/`。以該庫最新 AGENTS.md 及 asset_guard 為準。
+- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer 放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/<模型>/<revision-N>/`。每輪最多 21 張 PNG、每張 ≤2 MiB、單檔 ≤50 MiB、PR 新增 ≤200 MiB；不放 ZIP 或 `history/`／`old/`／`backup/`。以該庫最新 AGENTS.md 及 asset_guard 為準。
 - 寫清楚：Linux 的 WebGL 預覽不是 Metal；靜態素材合併後**不會**自動出現在遊戲（要接 set 才會）；真機的 Metal、效能、動畫 UNVERIFIED。
 - 作者說「好醜」「怪」的時候，先量（同相機的前後對照、局部放大），再改；每輪先記真正前版 producer commit，留 PNG、README、來源；被取代輪次的重檔在同一 PR 移除，完整模型由 git 歷史／producer 重建，不複製歷史包（見建模手冊第 11、13 節）。
 - 決策、五方評分、先拍後選的規則照 CLAUDE.md「Workflow」。
@@ -136,7 +137,7 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 
 作者自己做的列車模型（舊版遊戲的、帶貼圖的）是作者的作品，可以進遊戲；但遊戲不用貼圖，所以照這個順序轉。第一台是 e752e7a2（#2249，`Map3DRedCommuter`），照它做：
 
-1. **原檔不進公開 repo**：GLB、貼圖留在作者的電腦或 `a91453/railway-assets-private`；公開的只有工具、文件與轉好的 Swift 網格。文件裡不寫作者電腦上的路徑。
+1. **原檔不進公開 repo**：GLB、貼圖留在作者的電腦或私有素材庫（`docs/ASSET_REPOSITORIES.md`）；公開的只有工具、文件與轉好的 Swift 網格。文件裡不寫作者電腦上的路徑。
 2. **切面**：`tools/texture-palette/`（README 有指令）。`flatten.py` 把貼圖平塗成色票色塊，`cut_faces.py` 沿色塊邊界把三角形切開（窗、門、帶各自成面），窗標 `glass`。不要把整台車塗成幾個大色塊，窗會不見。不要批次轉，一台一台做（作者 2026-11-15）。
 3. **顏色**：只用色票色。色票沒有的顏色（例如車身紅）加進 `Map3DPalette`（決策 782 起寫在車自己的檔裡的 `extension Map3DPalette`），命名寫用途；原色在遊戲光下看起來不對就調（#711604 偏咖啡 → `trainRed` #8C1C1C）。**glTF 的 `COLOR_0` 與 base color factor 是線性值**：`tools/texture-palette/to_swift.py` 會轉回 sRGB；用 `tools/glb-to-m3dmodel/convert.mjs` 時要加 `--linear-colors yes`（不加是專案自己 GLB writer 的舊讀法，全部當 sRGB，紅帶會變成接近黑紅）。
 4. **進 Swift**：網格以 base64 內嵌（`to_swift.py`，同 N700S-G 的做法），顏色存色票索引、由 Swift 端給色；玻璃用 `Map3DTrainStyle.glass`，夜裡窗才會亮、白天才會反光。glTF 是 +y 上，要轉成遊戲軸（+x 車頭、+y 左、+z 上、車廂中心 x 0、最低點 z 0），轉換必須是旋轉（行列式 +1），不然整台翻面。
