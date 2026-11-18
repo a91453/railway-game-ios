@@ -30,6 +30,58 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 139.
+        Entry(
+            id: "2026-11-18-139",
+            items: [
+                Line(
+                    english: "Hong Kong's East Rail, South Island and Disneyland Resort lines run their own real trains.",
+                    chinese: "香港東鐵綫、南港島綫、迪士尼綫換上自己的真實列車。"
+                ),
+                Line(
+                    english: "At night only the windows of Hong Kong's trains light up, not their doors and frames.",
+                    chinese: "港鐵列車夜裡只有窗戶亮，門與窗框不再跟著發光。"
+                ),
+                Line(
+                    english: "Following or driving a train, each line plays its own departure melody as the doors close.",
+                    chinese: "跟著列車或駕駛時，關門前會響那條路線自己的發車旋律。"
+                ),
+                Line(
+                    english: "Real lines you buy have platform screen doors where the real stations do, full or half height.",
+                    chinese: "收購的真實路線，月台照真實裝上全高或半高的月台門。"
+                ),
+                Line(
+                    english: "A station's card shows the real station's name in its other language under its name.",
+                    chinese: "車站卡片的站名下面，多一行真實車站的原文名字。"
+                ),
+                Line(
+                    english: "Rovaniemi's streets have Finland's own signals, street lights and bus stops, and no traffic lights at roundabouts.",
+                    chinese: "羅瓦涅米街上換成芬蘭的號誌、路燈與站牌，圓環不再裝紅綠燈。"
+                ),
+                Line(
+                    english: "Ballast trains are made of Taiwan Railway's hopper wagons.",
+                    chinese: "砂石列車換成台鐵的石斗車。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Two lines sharing a station now have their platforms side by side at one height, not one stacked above the other.",
+                    chinese: "兩條線共用車站時，月台並排在同一高度，不再一座疊在另一座上方。"
+                ),
+                Line(
+                    english: "Hong Kong's South Island line no longer misses trains at the peaks.",
+                    chinese: "香港南港島綫尖峰不再漏發班次。"
+                ),
+                Line(
+                    english: "Roads crossing on one bridge deck stand at their own levels, and ramp edges no longer show under the main road.",
+                    chinese: "同一座橋上交叉的道路照各自樓層分高度，引道邊緣不再畫進主線底下。"
+                ),
+                Line(
+                    english: "The Hong Kong map fetches its new version itself instead of staying on the built-in data.",
+                    chinese: "香港地圖遇到舊版會自己要新版，不再停在「使用內建資料」。"
+                ),
+            ]
+        ),
         // 138.
         Entry(
             id: "2026-11-18-138",
