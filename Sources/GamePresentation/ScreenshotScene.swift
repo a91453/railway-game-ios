@@ -163,6 +163,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// station view greyed out while the next stop is too far.
     case farStops
 
+    /// Decision 845: a new real-world game round Taipei Main Station, a
+    /// line from it to Shandao Temple, its stations named after the real
+    /// ones: for the screenshot of the station card's nameboard with each
+    /// station's second name under its own.
+    case stationNames
+
     /// Decision 573: the demo map, where ``prepare(_:)`` lays a depot with
     /// the depot tool off Line 2's north end (on its viaduct, so the
     /// sidings pass over the ring): Line 2 and the Ring Line both end or
@@ -359,6 +365,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
+        case .stationNames: (25.0478, 121.5170)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
         // Between the ropeway's two stations.
@@ -445,6 +452,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             Self.realLineWorld(at: self, ticks: 117, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
+        case .stationNames: Self.stationNamesWorld(in: language)
 
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
@@ -1146,6 +1154,24 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             if let train = opened.trains.first, case .onEdge(let traversal, let offset)? = train.position,
                traversal.direction == .forward, offset == berth { break }
             try? opened.advance(ticks: 1)
+        }
+        opened.setSpeed(.paused)
+        return opened
+    }
+
+    /// Decision 845: Taipei Main Station and Shandao Temple, where the real
+    /// ones stand, named as the game names them.
+    private static func stationNamesWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let anchor = GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170) else { return DemoWorld.make(in: language) }
+        let world = GameWorld.newGame(anchor: anchor)
+        guard let frame = RealWorldFrame(world: world) else { return world }
+        let stops = [(25.0478, 121.5170), (25.0446, 121.5231)].map { place in
+            let at = frame.worldPosition(latitude: place.0, longitude: place.1)
+            return PlanPoint(x: Int64(at.x), y: Int64(at.y))
+        }
+        guard var opened = try? LineBuilder.line(through: stops, in: world) else { return world }
+        for (station, name) in zip(opened.stations, [language.text("Taipei", "臺北"), language.text("Shandao Temple", "善導寺")]) {
+            try? opened.renameStation(station.id, to: name)
         }
         opened.setSpeed(.paused)
         return opened

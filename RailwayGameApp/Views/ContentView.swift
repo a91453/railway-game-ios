@@ -1499,7 +1499,7 @@ private struct DetailsCard: View {
         VStack(alignment: .leading, spacing: Self.spacing) {
             if let station = selectedStation {
                 VStack(alignment: .leading, spacing: 8) {
-                    StationNameboard(name: station.name)
+                    StationNameboard(name: station.name, secondName: session.stationSecondName(of: station.id))
                     StationLineChips(session: session, station: station)
                 }
             }

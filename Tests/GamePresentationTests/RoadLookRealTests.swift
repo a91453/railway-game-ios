@@ -371,4 +371,33 @@ final class RoadLookRealTests: XCTestCase {
         XCTAssertGreaterThan(joined, 14, "the lower bridge where it meets the trunk")
         XCTAssertEqual(away, 6.3, accuracy: 0.5, "the lower bridge at its own level")
     }
+    /// RAMP-EDGE-OVERLAP (decision 822 後來三's leftover): a lower bridge
+    /// drawn 6 m off a higher one's middle, their widths overlapping as
+    /// the map draws them, came down inside itself with its edge under
+    /// the higher one's, 0.5–4.5 m beneath it, for the first 30–40 m
+    /// (三重, some 420 m²). It is cut back to where it leaves the higher
+    /// one's surface.
+    func testALowerBridgeComingDownBesideAHigherOneIsNotUnderItsEdge() throws {
+        let roads = [
+            road([(100, 500), (900, 500)], level: 2, kind: .trunk),
+            road([(500, 300), (500, 700)], level: 0, kind: .tertiary),
+            road([(800, 500), (780, 506), (250, 506)], level: 1, kind: .secondary),
+            road([(250, 506), (150, 506), (100, 600)], level: 0, kind: .secondary),
+        ]
+        let builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 240, minZ: 490, maxX: 600, maxZ: 520)
+        var stacked = 0, looked = 0
+        for x in stride(from: Float(250), through: 600, by: 2) {
+            for z in stride(from: Float(496), through: 516, by: 1) {
+                let tops = faces(over: x, z, in: drawn).filter { [Map3DPalette.road(.trunk), Map3DPalette.road(.secondary)].contains($0.color) }
+                    .map(\.y).sorted()
+                guard !tops.isEmpty else { continue }
+                looked += 1
+                if zip(tops, tops.dropFirst()).contains(where: { $1 - $0 > 0.5 && $1 - $0 < 4.5 }) { stacked += 1 }
+            }
+        }
+        print("ROADEDGE points with a road surface \(looked), stacked 0.5–4.5 m apart \(stacked)")
+        XCTAssertGreaterThan(looked, 1_000)
+        XCTAssertEqual(stacked, 0, "points where the lower bridge lies 0.5–4.5 m under the higher one's edge")
+    }
 }

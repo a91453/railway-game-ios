@@ -61,7 +61,7 @@ final class Map3DFreightLookTests: XCTestCase {
         world.freight?.loads = [TrainCargo(train: train, groups: [CargoGroup(origin: alpha, kind: .materials, tons: 300)])]
         XCTAssertEqual(try names(world), ["set-R200CK-head", "set-FREIGHTBULK-car", "set-FREIGHTBULK-centre", "set-FREIGHTBULK-car",
                                           "set-FREIGHTBULK-car", "set-FREIGHTBULK-centre", "set-FREIGHTBULK-car", "set-FREIGHTBULK-tail"],
-                       "building materials: the stone wagons, rust and green from each end inward")
+                       "building materials: the hopper wagons, black and rust-doored in turn")
         world.freight?.loads = [TrainCargo(train: train, groups: [CargoGroup(origin: alpha, kind: .goods, tons: 300)])]
         XCTAssertEqual(try names(world).dropFirst().first, "set-FREIGHT-car", "goods: decision 539's containers")
     }
@@ -69,7 +69,9 @@ final class Map3DFreightLookTests: XCTestCase {
     func testTheWagonsShapeAndBudget() throws {
         for wagon in Map3DFreightWagons.Wagon.allCases {
             let near = Map3DFreightWagons.model(wagon), far = Map3DFreightWagons.model(wagon, far: true)
-            XCTAssertEqual(near.length, 14.2, accuracy: 0.05, "\(wagon) over its couplers, as the container wagon")
+            let isHopper = Map3DFreightHopper.file(wagon) != nil
+            XCTAssertEqual(near.length, isHopper ? 12.0 : 14.2, accuracy: 0.05,
+                           "\(wagon) over its couplers: the hopper 12 m, the bare wagon as the container wagon")
             XCTAssertEqual(far.length, near.length, accuracy: 0.001, "\(wagon)")
             // The bare wagon's near hand brake wheel stands 0.1 m over its
             // floor; the rest as tall near and far.
@@ -81,14 +83,28 @@ final class Map3DFreightLookTests: XCTestCase {
             for model in [near, far] {
                 let glass = Set(model.vertices.map(\.color).filter(Map3DTrainLights.isGlass)).map { String($0, radix: 16) }
                 XCTAssertEqual(glass, [], "\(wagon): no window to light at night")
+                // No face marked glass either (#2417: only real glass
+                // lights), so nothing but the tail lamp lights after dark.
+                XCTAssertFalse(Map3DTrainMaterial.marksOwnGlass(model), "\(wagon)")
+                XCTAssertNil(Map3DTrainLights.windowModel(of: model), "\(wagon): no lit windows")
+                XCTAssertFalse(Map3DTrainMaterial.marked(model).vertices.contains { $0.layer == Map3DVertex.trainGlass || $0.layer == Map3DVertex.trainGlassLit },
+                               "\(wagon): the pack's marking finds no glass")
             }
         }
-        // A stone wagon is lower than a container wagon, and its stone
-        // stands over the rim, seen from the side and from above.
+        // A stone wagon is the studio's hopper: 2.84 m wide, its stone
+        // 3.21 m over the rail, 0.27 m over its sides, lower than a
+        // container wagon with a high cube on it.
         let stone = Map3DFreightWagons.model(.stone), box = Map3DContainerWagon.model(.forty)
-        XCTAssertLessThan(stone.maximum.z, box.maximum.z - 0.9)
-        XCTAssertEqual(stone.maximum.z, 1.12 + Map3DFreightWagons.halfHeight + Map3DFreightWagons.stoneRidge, accuracy: 0.01)
+        XCTAssertLessThan(stone.maximum.z, box.maximum.z)
+        XCTAssertEqual(stone.maximum.z, 3.2127, accuracy: 0.01)
+        XCTAssertEqual(stone.maximum.y - stone.minimum.y, 2.84, accuracy: 0.01)
+        XCTAssertEqual(stone.minimum.z, 0, accuracy: 0.001)
         XCTAssertTrue(stone.vertices.contains { $0.color == Map3DFreightWagons.stone })
+        XCTAssertTrue(Map3DFreightWagons.model(.stoneGreen).vertices.contains { $0.color == Map3DContainerWagon.rust }, "the 35B1000's doors")
+        XCTAssertFalse(stone.vertices.contains { $0.color == Map3DContainerWagon.rust })
+        // The tail lamp at the back end, lit.
+        let tail = Map3DFreightWagons.model(.stoneTail)
+        XCTAssertTrue(tail.vertices.filter(\.glows).allSatisfy { $0.x < tail.minimum.x + 0.5 && $0.color == Map3DPalette.lantern })
         XCTAssertEqual(Map3DFreightWagons.model(.empty).maximum.z, 1.12, accuracy: 0.2, "bare: no higher than its floor and its fittings")
     }
 

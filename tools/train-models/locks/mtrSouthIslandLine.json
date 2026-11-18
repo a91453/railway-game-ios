@@ -1,0 +1,71 @@
+{
+  "comment" : "Decision 782: the models of the registered train mtrSouthIslandLine (Map3DMTRSouthIslandLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 8,
+  "lamps" : "2ab7477db252976",
+  "models" : {
+    "light-set-mtrSouthIslandLine-car" : {
+      "hash" : "119ca9dd4b24c3f5",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLine-head" : {
+      "hash" : "b13e92244b4b2575",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLine-panto" : {
+      "hash" : "119ca9dd4b24c3f5",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLine-tail" : {
+      "hash" : "865666dd03dc1d75",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLineFar-car" : {
+      "hash" : "119ca9dd4b24c3f5",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLineFar-head" : {
+      "hash" : "b13e92244b4b2575",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLineFar-panto" : {
+      "hash" : "119ca9dd4b24c3f5",
+      "triangles" : 144
+    },
+    "light-set-mtrSouthIslandLineFar-tail" : {
+      "hash" : "865666dd03dc1d75",
+      "triangles" : 144
+    },
+    "set-mtrSouthIslandLine-car" : {
+      "hash" : "643591e303c5832a",
+      "triangles" : 7890
+    },
+    "set-mtrSouthIslandLine-head" : {
+      "hash" : "225e2d7fea977a1d",
+      "triangles" : 11456
+    },
+    "set-mtrSouthIslandLine-panto" : {
+      "hash" : "643591e303c5832a",
+      "triangles" : 7890
+    },
+    "set-mtrSouthIslandLine-tail" : {
+      "hash" : "c3858a15bdf37e03",
+      "triangles" : 11456
+    },
+    "set-mtrSouthIslandLineFar-car" : {
+      "hash" : "8a8fcd47a7588c17",
+      "triangles" : 3186
+    },
+    "set-mtrSouthIslandLineFar-head" : {
+      "hash" : "d3a2cf8c115fadef",
+      "triangles" : 4984
+    },
+    "set-mtrSouthIslandLineFar-panto" : {
+      "hash" : "8a8fcd47a7588c17",
+      "triangles" : 3186
+    },
+    "set-mtrSouthIslandLineFar-tail" : {
+      "hash" : "dd0abb486c5d6755",
+      "triangles" : 4984
+    }
+  }
+}

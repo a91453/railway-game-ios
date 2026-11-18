@@ -92,4 +92,36 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// Decision 743: whether its bus stops have Taiwan's red and green
     /// post boxes beside them (decision 467): Taiwan's.
     var hasTaiwanPostBoxes: Bool { self == .taiwan }
+
+    /// Decision 846: whether its signals stand on posts at the kerb, the
+    /// head upright (``Map3DHongKongSignal``): Hong Kong's and Finland's.
+    /// Taiwan's hang over the lanes from an arm (decision 355).
+    var standsSignalsAtKerb: Bool { self != .taiwan }
+
+    /// Decision 846: whether its pedestrian signals have a countdown's box
+    /// beside the lights (decision 445): Taiwan's. Hong Kong's and
+    /// Finland's are the two lights alone
+    /// (``Map3DPedestrianSignal/plainStopName``).
+    var hasCountdownBoxes: Bool { animatesPedestrianSignals }
+
+    /// Decision 846: whether its roundabouts have signals. Taiwan's big
+    /// roundabouts mostly do (Taichung's, Chiayi's); Hong Kong's and
+    /// Finland's traffic gives way to the ring, with no lights, no stop
+    /// line and no pedestrian signals.
+    var signalsRoundabouts: Bool { self == .taiwan }
+
+    /// Decision 846: whether Taiwan's concrete utility poles with their
+    /// crossarms and transformer (decision 244's ``Map3DProp/pole``) stand
+    /// along its lanes: not Finland's, whose town lines are under ground.
+    var hasUtilityPoles: Bool { self != .finland }
+
+    /// Decision 846: whether vending machines stand by its bus stops
+    /// (decision 355): Taiwan's and Hong Kong's, not Finland's.
+    var hasVendingMachines: Bool { self != .finland }
+
+    /// Decision 846's later note: whether its streets stand Finland's own
+    /// furniture (``Map3DFinlandStreet``): its signals, pedestrian signals,
+    /// street lights, bus stops' signs, and the pedestrian crossing's sign
+    /// where a crossing has no signal.
+    var hasFinnishFurniture: Bool { self == .finland }
 }

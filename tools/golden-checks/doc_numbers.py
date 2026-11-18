@@ -44,6 +44,9 @@ Its first line is `# <TASK>（YYYY-MM-DD，<source, with the #PR>）`, its
 table has the columns 項目, 玩家, 開發, 美術, 鐵道迷, 音樂 and 加權, every
 score is 1-5 and every weighted score is §19's (30/25/15/15/15). A file
 not in that form is a difference; a source with no #PR is a note.
+Since 2026-11-18 those files live in the private a91453/railway-assets-
+private-2, at the same path; `--priorities --root <its checkout>` reads them
+there, and prints a file not in the fixed form as a difference.
 `--priorities` prints the rows of the files not merged back yet (no line
 「併回：」), sorted, for the game planner to paste into the list, and
 `--mark WHERE` then writes 「併回：WHERE（date）」 into those files.

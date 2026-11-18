@@ -269,6 +269,14 @@ public struct Map3DModelPack: Sendable {
         // grazing and pulling a sled, near and far, after Taiwan's cars and
         // before the route bus.
         groups.append { Map3DReindeerHerd.drawn }
+        // Decision 846: the pedestrian signals with no countdown's box
+        // (Hong Kong's and Finland's), after the reindeer and before the
+        // route bus.
+        groups.append { Map3DPedestrianSignal.plainDrawn }
+        // Decision 846's later note: Finland's signals, pedestrian
+        // signals, street light, bus stop and crossing sign, after them
+        // and before the route bus.
+        groups.append { Map3DFinlandStreet.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

@@ -147,7 +147,7 @@ def comment(run, failed, previous, streak_failed, headline, tests=None, streak_t
         if streak_tests and new_tests and run.get("conclusion") == "failure":
             lines.append("- 這一段紅燈裡之前沒紅過的測試：" + "、".join(f"`{name}`" for name in new_tests))
     if run.get("conclusion") == "failure":
-        lines += ["", "照 `docs/HANDOFF.md` §1.2「full lane 紅了」查：失敗的測試與行號、和上一次綠的比、交給可疑 PR 的 session。修好以前不發版。"]
+        lines += ["", "照私有素材庫 `docs/planning/HANDOFF.md` §1.2「full lane 紅了」查：失敗的測試與行號、和上一次綠的比、交給可疑 PR 的 session。修好以前不發版。"]
     else:
         lines += ["", "要發版的 commit 仍要有自己的一輪綠 full lane（HANDOFF §1.2）。"]
     return clean("\n".join(lines))
@@ -321,7 +321,7 @@ def selftest():
     assert failed_jobs([{"name": "b", "conclusion": "failure"}, {"name": "a", "conclusion": "timed_out"},
                         {"name": "c", "conclusion": "success"}, {"name": "d", "conclusion": "skipped"}]) == ["a", "b"]
     text = comment(red, ["job @claude"], green, [], "main 的 full lane 紅了")
-    assert "@" not in text and "HANDOFF.md` §1.2" in text and "https://example.invalid/1" in text, text
+    assert "@" not in text and "planning/HANDOFF.md` §1.2" in text and "https://example.invalid/1" in text, text
     text = comment(red, a, run(0, "failure", "x"), a, "main 的 full lane 還是紅的，又有測試紅了", sorted(t + u), t)
     assert "紅的測試：`MapInteractionTests/testB`、`SettingsUITests/testA`" in text, text
     assert "之前沒紅過的測試：`MapInteractionTests/testB`" in text, text

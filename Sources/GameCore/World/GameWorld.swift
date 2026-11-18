@@ -5856,7 +5856,7 @@ public struct GameWorld: Equatable, Sendable {
             guard let (held, envelopes) = authority(of: train, memo: &memo) else { continue }
             // Decision 294: a long leg of a line with runs, no farther than
             // its approach allows yet.
-            let limit = approachLimit(of: train, envelopes)
+            let limit = approachLimit(of: train, holding: held, envelopes)
             if let limit, held >= limit { continue }
             // Its route envelope (see ``routeEnvelope(of:)``): the base and
             // the track of every stretch, asked a resource at a time.
@@ -5894,7 +5894,7 @@ public struct GameWorld: Equatable, Sendable {
         let holders = trackHolders(memo: &memo)
         return zip(trains, authorities).contains { train, authority in
             guard let (held, envelopes) = authority else { return false }
-            if let limit = approachLimit(of: train, envelopes), held >= limit { return false }
+            if let limit = approachLimit(of: train, holding: held, envelopes), held >= limit { return false }
             let reach = reachToExtend(envelopes, beyond: held) ?? .max
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
             return isAuthority(envelopes, to: reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)

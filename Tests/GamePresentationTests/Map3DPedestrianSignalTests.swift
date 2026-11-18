@@ -184,7 +184,8 @@ final class Map3DPedestrianSignalTests: XCTestCase {
     func testTheModelsAreSmallAndLightTheRightFigure() throws {
         let pack = Map3DModelPack.standard
         let named = Dictionary(uniqueKeysWithValues: pack.models.filter { $0.name.hasPrefix("walk-") }.map { ($0.name, $0) })
-        XCTAssertEqual(named.count, Signal.modelCount)
+        // Decision 846: and the three faces with no countdown's box.
+        XCTAssertEqual(named.count, Signal.modelCount + Signal.plainDrawn.count)
         let stop = try XCTUnwrap(named["walk-stop"]), dark = try XCTUnwrap(named["walk-dark"]), walk = try XCTUnwrap(named["walk-3"])
         for model in named.values {
             XCTAssertLessThanOrEqual(model.triangleCount, 300, model.name)

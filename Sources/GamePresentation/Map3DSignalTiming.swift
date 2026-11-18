@@ -147,21 +147,27 @@ public enum Map3DSignalTiming {
         /// placed with their green (the main road's) or red (the
         /// crossing road's); `nil` in a pack without them.
         let hongKong: (red: Int, redAmber: Int, amber: Int, green: Int)?
+        /// Decision 846's later note: Finland's (``Map3DFinlandStreet``),
+        /// placed and lit as Hong Kong's; `nil` in a pack without them.
+        let finland: (red: Int, redAmber: Int, amber: Int, green: Int)?
 
         public init?(pack: Map3DModelPack) {
             guard let red = pack.index(of: Map3DProp.signalStop.modelName), let amber = pack.index(of: Map3DProp.signalAmber.modelName),
                   let green = pack.index(of: Map3DProp.signalGo.modelName) else { return nil }
             (self.red, self.amber, self.green) = (red, amber, green)
-            let hk = Light.allCases.map { pack.index(of: Map3DHongKongSignal.modelName($0)) }
-            if let r = hk[Light.red.rawValue], let a = hk[Light.amber.rawValue], let g = hk[Light.green.rawValue], let ra = hk[Light.redAmber.rawValue] {
-                hongKong = (r, ra, a, g)
-            } else {
-                hongKong = nil
+            func upright(_ name: (Light) -> String) -> (red: Int, redAmber: Int, amber: Int, green: Int)? {
+                let found = Light.allCases.map { pack.index(of: name($0)) }
+                guard let r = found[Light.red.rawValue], let a = found[Light.amber.rawValue], let g = found[Light.green.rawValue],
+                      let ra = found[Light.redAmber.rawValue] else { return nil }
+                return (r, ra, a, g)
             }
+            hongKong = upright(Map3DHongKongSignal.modelName)
+            finland = upright(Map3DFinlandStreet.modelName)
         }
 
         public static func == (a: Models, b: Models) -> Bool {
             (a.red, a.amber, a.green) == (b.red, b.amber, b.green) && a.hongKong.map { [$0.red, $0.redAmber, $0.amber, $0.green] } == b.hongKong.map { [$0.red, $0.redAmber, $0.amber, $0.green] }
+                && a.finland.map { [$0.red, $0.redAmber, $0.amber, $0.green] } == b.finland.map { [$0.red, $0.redAmber, $0.amber, $0.green] }
         }
 
         /// The model to draw the instances of `model` of `group` with at
@@ -169,16 +175,18 @@ public enum Map3DSignalTiming {
         /// one), any other model itself.
         public func model(_ model: Int, group: Int, clock: Clock?) -> Int {
             let road: Road
-            let hk = hongKong.map { model == $0.green || model == $0.red } ?? false
-            if model == green || (hk && model == hongKong?.green) {
+            // The upright signals at the kerb (Hong Kong's, Finland's) this
+            // model is one of, placed with its green or its red.
+            let upright = [hongKong, finland].compactMap { $0 }.first { model == $0.green || model == $0.red }
+            if model == green || model == upright?.green {
                 road = .main
-            } else if model == red || hk {
+            } else if model == red || upright != nil {
                 road = .cross
             } else {
                 return model
             }
             let light = clock?.light(road, group: group) ?? Map3DSignalTiming.steady(road)
-            if hk, let models = hongKong {
+            if let models = upright {
                 switch light {
                 case .red: return models.red
                 case .redAmber: return models.redAmber
