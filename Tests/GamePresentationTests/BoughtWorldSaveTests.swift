@@ -3,7 +3,7 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 876 (TICK-REAL): the games a tick is timed in, written as
+/// Decision 878 (TICK-REAL): the games a tick is timed in, written as
 /// saves. The tick's earlier measurements (decision 703, TICK-L1, TICK-2)
 /// were of maps made up for them; a player's heavy game is a real map with
 /// every line on sale bought, which takes minutes to lay in a debug build
@@ -58,7 +58,7 @@ final class BoughtWorldSaveTests: XCTestCase {
     func testWritingTheWorlds() throws {
         let environment = ProcessInfo.processInfo.environment
         guard let directory = environment["BOUGHT_WORLDS"] else {
-            throw XCTSkip("Set BOUGHT_WORLDS=<directory> to write the bought worlds' saves (decision 876).")
+            throw XCTSkip("Set BOUGHT_WORLDS=<directory> to write the bought worlds' saves (decision 878).")
         }
         let only = environment["BOUGHT_WORLDS_ONLY"]
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)

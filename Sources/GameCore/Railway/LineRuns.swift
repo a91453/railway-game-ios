@@ -389,7 +389,7 @@ extension GameWorld {
         return runTrip(of: line, run, for: train, paths: &paths)
     }
 
-    /// ``runTrip(of:_:for:)`` kept in `memo` (decision 876, TICK-REAL) by
+    /// ``runTrip(of:_:for:)`` kept in `memo` (decision 878, TICK-REAL) by
     /// the line, the stops the run calls at, its way round a ring and
     /// where the train stands: it reads nothing else of the run or the
     /// train, and of the world only the network, the line's stops, routes
@@ -502,7 +502,7 @@ extension GameWorld {
     }
 
     /// ``readyRunTrain(of:_:day:)`` with what it works out kept in `memo`
-    /// (decision 876, TICK-REAL): the trains' holders (see
+    /// (decision 878, TICK-REAL): the trains' holders (see
     /// ``trackHolders(memo:)``), every line's planned directions, the
     /// paths and the runs' trips, which each train asked about worked out
     /// again from nothing.
@@ -570,7 +570,7 @@ extension GameWorld {
     }
 
     /// ``dueRunDeparture(of:on:)``, with the run's trip and the paths kept
-    /// in `memo` (decision 876, see ``runTrip(of:_:for:memo:)``).
+    /// in `memo` (decision 878, see ``runTrip(of:_:for:memo:)``).
     func dueRunDeparture(of train: Train, on line: ServiceLine, memo: inout DirectionMemo) -> Train? {
         dueRun(of: train, on: line, memo: &memo).flatMap { sentOut(train, on: $0.timetable, paths: &memo.paths) }
     }

@@ -1081,8 +1081,36 @@ extension RealLineLaying {
     /// as an end is (``sharedEnds(of:points:through:shared:extent:)``);
     /// refused where no such station moves the way, so that only a line
     /// that needs it is laid so.
+    ///
+    /// Decision 875 (TSING-YI-LEVEL): a station the company has already
+    /// stands at the height of its platforms there up on a viaduct too,
+    /// as at those on the ground (decision 863): one station, one level.
+    /// Where the line cannot be laid so (no grade reaches it, or its
+    /// track then meets another's at one level: the Neiwan Line's crosses
+    /// the Liujia Line's at Zhuzhong, which only two levels allow), it is
+    /// laid as before the decision, each station by its own line's real
+    /// structure.
     func offer(
         for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false
+    ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
+        var followed = false
+        let level = offer(
+            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, followingPlatforms: true,
+            followed: &followed
+        )
+        guard level.offer.problem != nil, followed else { return level }
+        return offer(
+            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, followingPlatforms: false,
+            followed: &followed
+        )
+    }
+
+    /// ``offer(for:raising:depot:clearingTrack:besideThrough:)``, with
+    /// decision 875's rule or without it; `followed` is set where the rule
+    /// moved a station from where its own line's structure stood it.
+    private func offer(
+        for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, followingPlatforms: Bool,
+        followed: inout Bool
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
@@ -1381,8 +1409,13 @@ extension RealLineLaying {
         // two share (the Airport Express 25 m from the Tung Chung Line's
         // under Hong Kong and Kowloon), so its tunnels are looked for that
         // much further off.
+        // Decision 875: and its bridges and viaducts: the Airport Express
+        // found none of the viaduct Tsing Yi's station stands on nor of
+        // the Lantau Link's bridges, 25 m off its lane, and ran along the
+        // ground and low over the water beside the Tung Chung Line up on
+        // them.
         let lane = abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) * RealLineAcquisition.metre
-        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, tunnelReach: RealRailStructures.reach + lane) ?? []
+        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, reach: RealRailStructures.reach + lane) ?? []
         // Decision 678: the stations in the line's real tunnel (the Wenhu
         // Line's first; decision 867, Hong Kong's and Fukuoka's; decision
         // 871, every line's: Qizhang on the Xiaobitan branch, Huanbei on
@@ -1466,10 +1499,12 @@ extension RealLineLaying {
             // on it, clear over a station on the ground beside it (the
             // Liujia Line's platforms at Zhuzhong over the Neiwan Line's).
             let shared = (index == 0 ? junctionStation?.id : sameName(index)) != nil
+            // Decision 809: stood up to clear the company's track there.
+            let stoodUp = raising == .viaductsAndShared && shared
             let raised = switch raising {
             case .none: false
             case .viaducts, .viaductsAndShared:
-                (raising == .viaductsAndShared && shared) || RealLineAcquisition.isRaised(
+                stoodUp || RealLineAcquisition.isRaised(
                     at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
                 )
             }
@@ -1491,13 +1526,25 @@ extension RealLineLaying {
             // tunnel's drawing (the Hakozaki Line's first 440 m, from
             // Nakasu-Kawabata) down at the company's underground platforms.
             let under = (height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach)...(height + RealWorldDemo.stationReach)
-            if !raised,
-               let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
-               let there = sharedPlatformHeight(of: station),
+            let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index)
+            if !raised, let station, let there = sharedPlatformHeight(of: station),
                (level.low...level.high).contains(there) || under.contains(there) {
                 level = TrackRise.Level(span, at: there)
             }
             level.staysUnder = sunk
+            // Decision 875: one station, one level, on a viaduct too. At
+            // the company's platforms up on a viaduct there: a station
+            // on the line's own real viaduct (the Tung Chung Line's and
+            // the Airport Express's at Tsing Yi, to the metre), and one
+            // on none where the company has no platform on the ground
+            // (the Blue Coast Line's at Binhai Shalun, at the Green
+            // Mountain Line's 5 m over falling ground). Not one stood up
+            // to clear them (decision 809), nor one in its real tunnel.
+            if followingPlatforms, !stoodUp, !sunk, let station, let there = sharedPlatformHeight(of: station, onViaduct: true),
+               raised || sharedPlatformHeight(of: station) == nil {
+                level = TrackRise.Level(span, at: there)
+                followed = true
+            }
             levels.append(level)
         }
         // A double track's second track, for the trains toward the

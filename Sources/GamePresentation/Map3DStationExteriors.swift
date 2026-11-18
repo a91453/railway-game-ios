@@ -710,9 +710,14 @@ extension Map3DScene.Builder {
             if run.count > 1 { runs.append(run) }
             return runs
         }
-        for alignment in snapshot.edges {
-            for span in alignment.edge.sectionSpans where span.end > span.start && span.kind != .tunnel {
-                let line = sample(alignment.geometry, from: span.start, to: span.end).map { point($0) + Self.lifted }
+        // Decision 876: the scene's samples; a stretch whose box is more
+        // than a metre past the reach has no segment that reaches.
+        let past = (Double(20) + 1) * Self.metre
+        let near = WorldRegion(minX: originX + Double(box.min.x) * Self.metre, minY: originY + Double(box.min.z) * Self.metre,
+                               maxX: originX + Double(box.max.x) * Self.metre, maxY: originY + Double(box.max.z) * Self.metre)
+        for spans in shared.samples(of: snapshot).edges {
+            for span in spans where span.end > span.start && span.kind != .tunnel && span.reaches(near, by: past) {
+                let line = span.line.map { point($0) + Self.lifted }
                 for run in runs(line) {
                     room.add(line: run, half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: ground)
                 }

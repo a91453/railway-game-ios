@@ -124,14 +124,18 @@ extension Map3DScene.Builder {
         let saved = target
         target = .near
         defer { target = saved }
-        for alignment in snapshot.edges {
+        // Decision 876: a band is sampled only along a stretch whose box
+        // comes within a metre of the region (a band's samples lie on its
+        // stretch's line, within the 3 cm its thinning leaves).
+        let samples = shared.samples(of: snapshot), near = Self.metre
+        for (number, alignment) in snapshot.edges.enumerated() {
             for band in bands.on(alignment.edge.id) {
                 let color = Map3DColor.rgb(UInt32(band.rgb))
                 // Decision 370: the player's line keeps its colour.
                 keptColours.insert(color)
-                for span in alignment.edge.sectionSpans where span.kind != .tunnel {
+                for span in samples.edges[number] where span.kind != .tunnel {
                     let start = max(span.start, band.start), end = min(span.end, band.end)
-                    guard end > start else { continue }
+                    guard end > start, span.reaches(region, by: near) else { continue }
                     let line = sample(alignment.geometry, from: start, to: end)
                     guard line.count > 1, line.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
                     let points = line.map { point($0) + Self.lifted }

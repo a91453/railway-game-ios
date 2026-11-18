@@ -401,7 +401,7 @@ extension GameWorld {
     /// Terminal 1 was bound for, and that one on the platform the first
     /// one's was: neither was a service, so neither was in the way.
     func trainsInTheWay(memo: inout DirectionMemo) -> Set<TrainID> {
-        // Decision 876 (TICK-REAL): as last worked out, for the world as
+        // Decision 878 (TICK-REAL): as last worked out, for the world as
         // it was then (see ``WorldAnswers``).
         if answersHold(memo), let known = memo.answers.inTheWay {
             if let audit = Self.answerAudit {
@@ -442,7 +442,7 @@ extension GameWorld {
     /// trains in left the Wenhu line's runs later under the realistic rules.
     func heldRunDepartures(memo: inout DirectionMemo) -> [(train: TrainID, needs: Set<TrackResource>)] {
         guard isTrafficControlEnabled, !blockSections else { return [] }
-        // Decision 876 (TICK-REAL): as last worked out, for the world as
+        // Decision 878 (TICK-REAL): as last worked out, for the world as
         // it was then (see ``WorldAnswers``).
         if answersHold(memo), let known = memo.answers.heldRuns {
             if let audit = Self.answerAudit {

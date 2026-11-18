@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 876 (TICK-REAL): what a tick costs in a saved game, GameCore
+/// Decision 878 (TICK-REAL): what a tick costs in a saved game, GameCore
 /// alone, and a checksum of the world it ends in. A report, run only on
 /// request; it asserts nothing about speed and changes no rule:
 ///
@@ -57,7 +57,7 @@ final class SavedWorldTickReportTests: XCTestCase {
     func testWhatASavedWorldCostsATick() throws {
         let environment = ProcessInfo.processInfo.environment
         guard let path = environment["SAVED_WORLD"] else {
-            throw XCTSkip("Set SAVED_WORLD=<save> to time its ticks (decision 876).")
+            throw XCTSkip("Set SAVED_WORLD=<save> to time its ticks (decision 878).")
         }
         guard environment["SAVED_WORLD_AUDIT"] != nil else { return try report(environment, path) }
         let answers = GameWorld.AnswerAudit(), holders = GameWorld.HolderAudit()
