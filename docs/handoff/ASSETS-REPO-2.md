@@ -10,7 +10,7 @@
 
 派工單 ASSETS-REPO-2，session_01YGNNuknSM2yzrpwkeQmuY3，三個 repo 的分支都是 `claude/project-thread-re5ii8`。
 
-1. 新庫：作者建 repo 時勾「Add a README file」，`main` 就有第一個 commit；`seed` 加 `--force`（蓋掉那份 README）推到分支、開第一個 PR，不直接推 `main`。
+1. 新庫：作者建 repo 時勾「Add a README file」，`main` 就有第一個 commit；`seed`（會換掉那份 README）推到分支、開第一個 PR，不直接推 `main`。
 2. 舊庫：`python3 -I tools/next_repo.py close --name a91453/railway-assets-private-2 --date <那天>`，開 PR。
 3. 這個 repo：`docs/ASSET_REPOSITORIES.md` 兩列改狀態；`docs/HANDOFF.md` 的「先用 `add_repo` 加 …」（§ 新規劃開場那幾行）加上新庫，由遊戲規劃改。
 4. `a91453/railway-reference-private` 的 `AGENTS.md` 寫「放到 railway-assets-private」那段改指 `docs/ASSET_REPOSITORIES.md`。

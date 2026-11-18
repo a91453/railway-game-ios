@@ -21,7 +21,7 @@
 素材庫 `AGENTS.md`「How to switch」是完整版。簡單說：
 
 1. 作者在 GitHub 建私有 repo（勾「Add a README file」，`main` 才有第一個 commit，之後全走 PR），加進專案（唯一要作者動手的一步）。
-2. 雲端 session：`python3 -I tools/next_repo.py seed --force …`（蓋掉那份 README）在新 repo 開第一個 PR（規則、guard、branding、記憶備份、工作室 kit、tools，加上排隊中派工單的文字檔與 `ref/` 照片；重檔不搬）。
+2. 雲端 session：`python3 -I tools/next_repo.py seed …`（會換掉那份 README）在新 repo 開第一個 PR（規則、guard、branding、記憶備份、工作室 kit、tools，加上排隊中派工單的文字檔與 `ref/` 照片；重檔不搬）。
 3. 同一次：舊庫 `next_repo.py close` 寫 `CLOSED.md`；這張表改兩列。
 4. Mac：在 `~/Developer/` 旁 clone 新庫、`studio.py init --repo` 裝工作室的 hook、從新庫重裝 studio-kit；之後 `runner.py start --repo` 用新庫的完整路徑。
 5. 舊庫沒有開著的 PR、也沒有在那裡開工的工作室任務之後，才在 GitHub 按 Archive。
