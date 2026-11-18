@@ -488,7 +488,10 @@ jobs:
         env:
           TIMETABLE_CHECKUP: '1'
           TIMETABLE_CHECKUP_RULES: ${{ matrix.rules }}
+        # Not -e: the summary is written whether the tests pass or not,
+        # and the step then fails with them.
         run: |
+          set +e
           [[ -n "$TIMETABLE_CHECKUP_RULES" ]] || unset TIMETABLE_CHECKUP_RULES
           swift test --skip-build --filter "GamePresentationTests\.TimetableCheckupFullTests/(${{ matrix.test }})\$" 2>&1 | tee "$RUNNER_TEMP/checkup.log"
           status="${PIPESTATUS[0]}"
