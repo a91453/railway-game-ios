@@ -1306,6 +1306,39 @@ extension Map3DScene.Builder {
         }
     }
 
+    /// RAMP-EDGE-OVERLAP: whether level point `p`, on a bridge's road
+    /// `rise` metres over the drawn ground running along `along`, lies
+    /// under another bridge's drawn surface (its width with its
+    /// pavements) running within 25° of it and standing 0.5–4.5 m higher
+    /// there: a link road coming down beside its main road, the map's
+    /// widths overlapping.
+    mutating func underHigherDeck(_ p: Map3DBaseMap.Point, along: (x: Double, z: Double), rise: Float) -> Bool {
+        let bridges = roadBridges
+        let reach = Double(Map3DRoadBridges.half(.motorway))
+        let low = Map3DRoadBridges.key(p.x - reach, p.z - reach), high = Map3DRoadBridges.key(p.x + reach, p.z + reach)
+        var seen = Set<Int>()
+        for row in low.row...high.row {
+            for column in low.column...high.column {
+                for (number, index) in bridges.segments[Map3DScene.ChunkKey(column: column, row: row)] ?? [] where !seen.contains(number) {
+                    let piece = bridges.pieces[number]
+                    let a = piece.points[index - 1], b = piece.points[index]
+                    guard Map3DRoadBridges.nearest(p, a, b).distance <= Double(Map3DRoadBridges.half(piece.kind, ramp: piece.isRamp)) else { continue }
+                    let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+                    guard length >= 1, abs(dx * along.x + dz * along.z) / length >= 0.9 else { continue }
+                    let share = ((p.x - a.x) * dx + (p.z - a.z) * dz) / (length * length)
+                    if share < 0 && index == 1 && piece.opens.first || share > 1 && index == piece.points.count - 1 && piece.opens.last { continue }
+                    seen.insert(number)
+                    let over = pieceRise(bridges, piece: number, at: p) - rise
+                    // A little wider than 0.5–4.5 m: the two roads' own
+                    // lifts over their decks differ, and a strip is drawn
+                    // straight between its cuts.
+                    if over > 0.3, over < 4.8 { return true }
+                }
+            }
+        }
+        return false
+    }
+
     /// Decision 391: how far a road at level point `p`, running along
     /// `along` (or any way, when `nil`), lies over the drawn ground,
     /// metres, and whether it is on a bridge's deck there: on one, the

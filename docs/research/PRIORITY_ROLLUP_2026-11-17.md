@@ -23,7 +23,7 @@
 | 8 | DEPOT-DAWN-QUEUE：機捷清晨同時出庫 | 2.40 | `priorities/DEPOT-REAL.md` | 可派；動 GameCore、死結類 |
 | 9 | REVIEW-L19 P3 剩下的六項 | 2.05 | §29.8 B2 | 工作室 |
 | 10 | 舊存檔沒有活動場館與新漁港 | 1.95 | §29.15 | 下一個碰 `SavedGame.swift` 的 PR |
-| 10 | RAMP-EDGE-OVERLAP：引道在主線旁剛開始下坡的 30–40 m，邊緣壓在主線路面下 | 1.95 | `priorities/ROAD-UNDER-VIADUCT.md` | ROAD-LAYER-HEIGHT 那串接著做 |
+| 10 | ~~RAMP-EDGE-OVERLAP：引道在主線旁剛開始下坡的 30–40 m，邊緣壓在主線路面下~~ | 1.95 | `priorities/ROAD-UNDER-VIADUCT.md` | **已做**（決策 822「後來（五）」） |
 | 11 | 示範地圖配不到車時訊息照說在跑；真愛碼頭月台略過 | 1.90 | §29.15 | — |
 | 12 | LAYER-LEVEL-CROSSING：交流道糾結處較低的橋降不滿一層，照舊和較高的橋同高平交 | 1.85 | `priorities/ROAD-LAYER-HEIGHT.md` | — |
 
