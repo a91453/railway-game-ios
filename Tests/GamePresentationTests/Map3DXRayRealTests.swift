@@ -37,6 +37,17 @@ final class Map3DXRayRealTests: XCTestCase {
         XCTAssertFalse(buried.isEmpty)
         let platforms = Map3DXRay.platforms(snapshot, in: scene)
         XCTAssertEqual(platforms.count, buried.count, "every underground platform laid")
+        // Decision 860: the same platforms drawn solid, each in its
+        // station's box at its own level, and the box open where its
+        // tracks run on.
+        let underground = Map3DUndergroundStations(snapshot, point: scene.point, cover: scene.trackCover)
+        XCTAssertEqual(underground.platforms.count, buried.count)
+        XCTAssertEqual(zip(underground.platforms, platforms).filter { $0.line != $1.line }.count, 0, "the see-through view's places")
+        for box in underground.boxes {
+            XCTAssertFalse(box.openings.start.isEmpty && box.openings.end.isEmpty, "a box its tracks run into")
+            let levels = box.platforms.map { underground.platforms[$0].line[underground.platforms[$0].line.count / 2].y }
+            XCTAssertLessThanOrEqual((levels.max() ?? 0) - (levels.min() ?? 0), Map3DXRay.sameLevel)
+        }
 
         var report: [String] = []
         for (platform, source) in zip(platforms, buried) {

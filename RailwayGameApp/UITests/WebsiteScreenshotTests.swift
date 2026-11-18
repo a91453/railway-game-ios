@@ -3779,6 +3779,58 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("ankeng-for-sale-card", app)
     }
 
+    /// Decision 862: the Liujia and Neiwan lines, which share Zhuzhong,
+    /// sold together on a real-world game there: their one row in the
+    /// lines panel's lines for sale, and the purchase card with each
+    /// line's price and the price of both. For the screenshot review of
+    /// its pull request.
+    func testLinesSoldTogether() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.appears(within: 30), "The picker opens")
+        search.tap()
+        search.typeText("竹中")
+        let zhuzhong = app.buttons["station.tra_sched|竹中"]
+        XCTAssertTrue(zhuzhong.appears(within: 30), "Zhuzhong is found")
+        zhuzhong.waitUntilSettled()
+        app.tapMiddle(of: zhuzhong)
+        if !app.buttons["realWorld.start"].appears(within: 3) {
+            // The one on the search field's row, not the picker's own Cancel.
+            let ends = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "關閉", "Cancel", "Close"]))
+            let row = search.frame
+            let end = ends.allElementsBoundByIndex.first { abs($0.frame.midY - row.midY) < row.height }
+            XCTAssertNotNil(end, "The search can be ended")
+            end?.tap()
+        }
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        settle(seconds: 4)
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let together = app.buttons["line.acquire.LIUJIA"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(together, in: list, below: app.linesListTop(under: bar)), "The two lines are for sale in one row")
+        settle(seconds: 1)
+        keep("lines-sold-together", app)
+        together.tap()
+        // The second line's row comes once both lines are laid out and
+        // priced. Not the price rows: they are further down the card, off
+        // the screen of a phone on its side until it is scrolled.
+        XCTAssertTrue(app.descendants(matching: .any)["acquire.line.1"].firstMatch.appears(within: 180), "Their card is laid out and priced")
+        settle(seconds: 2)
+        keep("lines-sold-together-card", app)
+    }
+
     /// Decision 513: a trace along the North-Link Line south of Nan'ao
     /// that no grade reaches says why, with the real line's length and its
     /// ends' heights. For the screenshot review of its pull request. The
