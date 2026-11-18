@@ -24,6 +24,11 @@ struct PMTilesArchive: Sendable {
     /// 1 none, 2 gzip, of the directories and of the tiles.
     let directoryCompression: UInt8, tileCompression: UInt8
     let minimumZoom: Int, maximumZoom: Int
+    /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the directories read
+    /// before, unpacked, so a tile does not unpack its root and leaf
+    /// directories again (a 3D block reads dozens of tiles, each through
+    /// two or three of them).
+    private let directories = Directories()
 
     init(data: Data) throws(Failure) {
         guard data.count >= 127, data.prefix(7) == Data("PMTiles".utf8), data[data.startIndex + 7] == 3 else { throw .malformed }
@@ -105,7 +110,38 @@ struct PMTilesArchive: Sendable {
         let runLength: Int
     }
 
+    /// The directory at `offset`, unpacked once (``Directories``).
     func entries(offset: Int, length: Int) throws(Failure) -> [Entry] {
+        if let known = directories.entries(at: offset, length: length) { return known }
+        let read = try unpackEntries(offset: offset, length: length)
+        directories.keep(read, at: offset, length: length)
+        return read
+    }
+
+    /// Decision 876 (later): the directories unpacked, by where they lie
+    /// in the archive; at most ``most`` of them, all let go when it is
+    /// full. Read from the scene's two building threads at once.
+    final class Directories: @unchecked Sendable {
+        static let most = 256
+        private let lock = NSLock()
+        private var kept: [Int: (length: Int, entries: [Entry])] = [:]
+
+        func entries(at offset: Int, length: Int) -> [Entry]? {
+            lock.lock()
+            defer { lock.unlock() }
+            guard let found = kept[offset], found.length == length else { return nil }
+            return found.entries
+        }
+
+        func keep(_ entries: [Entry], at offset: Int, length: Int) {
+            lock.lock()
+            defer { lock.unlock() }
+            if kept.count >= Self.most { kept.removeAll(keepingCapacity: true) }
+            kept[offset] = (length, entries)
+        }
+    }
+
+    private func unpackEntries(offset: Int, length: Int) throws(Failure) -> [Entry] {
         let bytes = try unpack(bytes(at: offset, length: length), compression: directoryCompression)
         var at = 0
         func varint() throws(Failure) -> UInt64 {

@@ -1606,9 +1606,12 @@ extension Map3DScene.Builder {
     /// down; else 0. Only a road `onDeck` (a bridge's) is on a deck: one
     /// on the ground under it is not.
     mutating func roadRise(at p: Map3DBaseMap.Point, along: (x: Double, z: Double)?, onDeck: Bool) -> (rise: Float, onBridge: Bool) {
-        let bridges = roadBridges
-        guard !bridges.isEmpty || !roadGrade.isEmpty else { return (0, false) }
+        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return (0, false) }
         let key = Map3DRoadBridges.key(p.x, p.z)
+        // Decision 876 (later, PERF-3D-BLOCK-FIXED): the bridges copied
+        // (the ground below changes `self`) only where a cell holds one
+        // of them: copying them was most of what this cost elsewhere.
+        let bridges = Self.bridgesNear(roadBridges, key: key, decks: onDeck, ends: true, joins: !onDeck)
         var best: (rise: Float, onBridge: Bool) = (0, false)
         // Decision 865: over the road's bed there, which whoever asks
         // stands the road on (``roadGround(at:along:onDeck:beyond:)``).
@@ -1690,8 +1693,9 @@ extension Map3DScene.Builder {
     /// `height` over the sea: a road beside the one along `centre`, at its
     /// height, so no parapet or wall stands between them.
     mutating func roadBeside(_ probe: Map3DBaseMap.Point, of centre: Map3DBaseMap.Point, at height: Float, within: Float) -> Bool {
-        let bridges = roadBridges
         let key = Map3DRoadBridges.key(probe.x, probe.z)
+        // Decision 876 (later): copied only where a cell holds one.
+        let bridges = roadBridges.segments[key] == nil && roadBridges.groundCells[key] == nil ? Map3DRoadBridges() : roadBridges
         // Over the probe, and not the road along `centre` itself.
         func covers(_ a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point, half: Float) -> Bool {
             Map3DRoadBridges.nearest(probe, a, b).distance <= Double(half)
@@ -1719,6 +1723,16 @@ extension Map3DScene.Builder {
             if abs(top - height) < within { return true }
         }
         return false
+    }
+
+    /// Decision 876 (later): `bridges`, or none where cell `key` holds
+    /// none of what ``roadRise(at:along:onDeck:)`` reads by cell: the
+    /// decks' segments (with `decks`), the ends, the joins (with `joins`).
+    static func bridgesNear(_ bridges: Map3DRoadBridges, key: Map3DScene.ChunkKey, decks: Bool, ends: Bool, joins: Bool) -> Map3DRoadBridges {
+        if decks, bridges.segments[key] != nil { return bridges }
+        if ends, bridges.endCells[key] != nil { return bridges }
+        if joins, bridges.joinCells[key] != nil { return bridges }
+        return Map3DRoadBridges()
     }
 
     /// Decision 391: whether a road from `a` to `b` may come near a
