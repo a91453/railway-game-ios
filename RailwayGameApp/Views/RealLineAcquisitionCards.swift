@@ -112,6 +112,14 @@ struct RealLineOfferCard: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(alignment: .leading, spacing: 6) {
+                    // Decision 862: of lines sold together, the price of
+                    // them all beside Buy; its rows are down the card.
+                    if let total = offer?.totalText(in: language) {
+                        Text(verbatim: total)
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(Theme.textPrimary)
+                            .accessibilityIdentifier("acquire.total")
+                    }
                     if let shortfall, offer?.problem == nil {
                         Text(verbatim: shortfall)
                             .font(.footnote)

@@ -4,7 +4,7 @@ import GameCore
 // a station are sold together, in one purchase. Bought one at a time, the
 // one bought later was laid round whatever the first had left at the
 // station they share, in whichever order the player happened to buy them:
-// platforms on two levels (decisions 809, 848, 859), runs not sent and
+// platforms on two levels (decisions 809, 848, 863), runs not sent and
 // trains locked at the shared platforms (the checkup's worlds of decision
 // 844). Sold together, a map's lines that meet are always laid in one
 // order, the one the nightly checkup plays.
@@ -155,6 +155,15 @@ public struct RealLineBundleOffer: Sendable {
             (language.text("Their regulars along the lines", "沿線的常客"), price.riders),
             (language.text("Total", "合計"), price.total),
         ]
+    }
+
+    /// What the card's foot says of lines sold together, above Buy: the
+    /// price of them all, whose rows are further down the card than a
+    /// phone on its side shows at once. `nil` for one line (its card is
+    /// as it was), or where a line cannot be bought.
+    public func totalText(in language: DisplayLanguage) -> String? {
+        guard !bundle.isSingle, let total = price?.total else { return nil }
+        return language.text("\(bundle.lines.count) lines, \(total.moneyText) in all", "\(bundle.lines.count) 條路線合計 \(total.moneyText)")
     }
 
     /// What the company still lacks to buy it with `balance`, or `nil`

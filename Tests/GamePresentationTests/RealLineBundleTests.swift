@@ -162,6 +162,12 @@ final class RealLineBundleTests: XCTestCase {
         XCTAssertEqual(prices.map(\.label).suffix(2), ["沿線的常客", "合計"])
         XCTAssertEqual(prices.dropLast().map(\.amount).reduce(.zero, +), prices.last?.amount)
         XCTAssertEqual(prices.last?.amount, offer.price?.total)
+        // Beside Buy, the price of both; one line's card has none.
+        XCTAssertEqual(offer.totalText(in: .traditionalChinese), "2 條路線合計 \(try XCTUnwrap(offer.price?.total).moneyText)")
+        XCTAssertEqual(offer.totalText(in: .english), "2 lines, \(try XCTUnwrap(offer.price?.total).moneyText) in all")
+        let alone = RealLineBundleOffer(bundle: RealLineBundle([bundle.first]), offers: [offer.offers[0]])
+        XCTAssertNotNil(alone.price)
+        XCTAssertNil(alone.totalText(in: .traditionalChinese))
     }
 
     // MARK: - A game that already has one of them
@@ -217,6 +223,7 @@ final class RealLineBundleTests: XCTestCase {
         XCTAssertNil(refused.acquisitions)
         XCTAssertNil(refused.price)
         XCTAssertEqual(refused.priceRows(in: .traditionalChinese).count, 0)
+        XCTAssertNil(refused.totalText(in: .traditionalChinese))
         XCTAssertEqual(refused.problemText(in: .traditionalChinese), "羅瓦涅米—穆羅拉：不行")
         XCTAssertFalse(session.acquireRealLines(refused))
         XCTAssertEqual(session.message?.kind, .failure)

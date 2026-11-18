@@ -14,8 +14,10 @@
 
 ## 還留下什麼
 
-- **UNVERIFIED**：SwiftUI 的收購卡、完成卡、路線面板在 Linux 編不了，只靠 `ios-build.yml` 編過與既有 UI 測試；
-  iPhone、iPad 上實際看卡片、實際買一組，等下一版 TestFlight。卡片在小螢幕上三條線逐條列價會不會太長，沒有看過。
+- **UNVERIFIED**：收購卡與完成卡的樣子沒有圖。截圖只試一次（`WebsiteScreenshotTests.testLinesSoldTogether`）：路線面板那一列拍到了，
+  收購卡那張沒拍到（測試等的價格列在卡片下半、還沒捲到；元素樹顯示卡片已排好兩條線與價格），照規則不重跑，測試已改成等第二條線那一列。
+  iPhone、iPad 上實際看卡片、實際買一組，等下一版 TestFlight。**要看的畫面**：收購卡（兩條、三條線逐條列價會不會太長，
+  橫拿的 iPhone 上價格明細與合計要往下捲才看得到）、完成卡（標題「…等 N 條路線」與各線一行）。
 - 沒有新的 UI 測試：收購卡的識別碼沿用（`line.acquire.<network>`、`acquire.buy`），多了 `acquire.together`、`acquire.line.<n>`。
 - 低階的單線 API（`realLineOffer(for:)`、`acquireRealLine(_:)`）留著：五十多個測試檔與截圖場景用它一條條買，也是舊存檔那種狀態的測法。
   玩家走的三個入口（路線面板、車站面板、描線提示）都經過線組，買不到線組裡的單一條。

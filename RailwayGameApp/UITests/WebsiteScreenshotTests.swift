@@ -3823,8 +3823,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 1)
         keep("lines-sold-together", app)
         together.tap()
-        // The price rows come once both lines are laid out and priced.
-        XCTAssertTrue(app.descendants(matching: .any)["acquire.price.0"].firstMatch.appears(within: 180), "Their card is laid out and priced")
+        // The second line's row comes once both lines are laid out and
+        // priced. Not the price rows: they are further down the card, off
+        // the screen of a phone on its side until it is scrolled.
+        XCTAssertTrue(app.descendants(matching: .any)["acquire.line.1"].firstMatch.appears(within: 180), "Their card is laid out and priced")
         settle(seconds: 2)
         keep("lines-sold-together-card", app)
     }
