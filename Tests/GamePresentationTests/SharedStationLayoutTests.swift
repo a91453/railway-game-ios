@@ -128,11 +128,11 @@ final class SharedStationLayoutTests: XCTestCase {
         let world = session.world
         let laid = Self.platforms(of: world, laidBy: laidBy)
         XCTAssertEqual(Self.stacked(laid, in: world), [])
-        // Decision 859: at the stations the line bought second shares, at
+        // Decision 863: at the stations the line bought second shares, at
         // one height (Kowloon was 4.9 m apart, Sunny Bay 5.8 m). Not Tsing
         // Yi's: the Tung Chung Line's stand 16 m up on its real viaduct
         // (decision 462), the Airport Express's 4.4 m (left as they were,
-        // decision 859's next step).
+        // decision 863's next step).
         for (name, ids) in [("香港", ["hkmtr:AEL", "hkmtr:TCL"]), ("九龍", ["hkmtr:AEL", "hkmtr:TCL"]), ("欣澳", ["hkmtr:DRL", "hkmtr:TCL"])] {
             let station = try XCTUnwrap(world.stations.first { $0.name == name }?.id, name)
             let pair = try XCTUnwrap(Self.between(ids[0], ids[1], at: station, in: laid), name)
@@ -147,7 +147,7 @@ final class SharedStationLayoutTests: XCTestCase {
     /// Nanakuma) and Nakasu-Kawabata (Kuko, Hakozaki) stay one station each,
     /// both lines stopping there, no platform of a station lies over
     /// another of it, and the two lines' platforms stand at one height
-    /// (within 0.5 m), an island's width or more apart. Decision 859
+    /// (within 0.5 m), an island's width or more apart. Decision 863
     /// (SHARED-STATION-THROUGH): before, with the Kuko Line bought last its
     /// platforms at both stood 16 m up (the raise of decision 809:
     /// ``RealLineLaying/sharedEnds(of:points:through:shared:extent:)``
