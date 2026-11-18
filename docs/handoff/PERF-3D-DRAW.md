@@ -5,9 +5,9 @@
 
 ## 進度
 
-- 做完的：邊走邊建的區塊不再把整個路網、整份時刻表重算一次（`Map3DSharedBuild`，決策 876）；量測用的報告測試 `Map3DMapLoadReportTests`。
+- 做完的：邊走邊建的區塊不再把整個路網、整份時刻表重算一次（`Map3DSharedBuild`，決策 876）；量測用的報告測試 `Map3DMapLoadReportTests`；地下車站也進了備忘（決策 876「後來」，第二串）。
 - 已驗證（Linux，Swift 6.4）：改前改後五張圖 40 個指紋相同（基準 `ce5129b`）；台北一個區塊 2.6–2.9 → 0.40–0.76 s（本機 debug `-O`）；`Map3DSharedBuildTests` 與碰到的既有類別通過（清單在 PR）。**實機沒跑過。**
-- 下一步的第一個指令（接手時先量現況）：`MAP3D_LOAD_MAP=fukuoka MAP3D_LOAD_BUY=all swift test -c release -Xswiftc -enable-testing --filter Map3DMapLoadReportTests`
+- 下一步的第一個指令（接手時先量現況；有空格的 `MAP3D_LOAD_AT` 要用 `env "MAP3D_LOAD_AT=…"` 帶，不然 shell 會當成指令）：`MAP3D_LOAD_MAP=hongkong MAP3D_LOAD_BUY=all swift test -c release -Xswiftc -enable-testing --filter Map3DMapLoadReportTests`
 
 ## 怎麼量
 
@@ -30,10 +30,11 @@ MAP3D_LOAD_MAP=taiwan MAP3D_LOAD_BUY=all 'MAP3D_LOAD_AT=Taipei:25.0478:121.5170;
 
 ## 這次量到、還沒動的（評分在私有庫 `docs/priorities/PERF-3D-DRAW.md`）
 
-1. **地下車站的整網計算（PERF-3D-UNDERGROUND-MEMO）**：`Map3DUndergroundStations(snapshot, point:, cover:)`（`lay`、`boxes`、`openings`）
-   每個區塊都從整個路網算一次，和區塊在哪無關。福岡（82 座地下月台）一個區塊的「track cover」步驟 0.277 s，佔 76 %；
-   香港的區塊這次幾乎沒變快也是它。放進 `Map3DSharedBuild`（鑰匙：路網指紋加場景原點），做法和這次的 `samples` 一樣，
-   用指紋證明沒變。這是下一個最划算的。
+1. ~~地下車站的整網計算（PERF-3D-UNDERGROUND-MEMO）~~ **做完**（工作串「加快地下車站的 3D 建構」，分支 `claude/project-thread-a8lk3q`，
+   決策 876「後來」）：`Map3DSharedBuild.undergroundStations`，鑰匙是路網指紋、隧道裡每座月台、場景原點。福岡一個區塊
+   0.33–0.48 → 0.09 s（debug `-O`），福岡與香港 20 個指紋相同。**香港沒有變快**：它的 track cover 步驟本來只有 0.02 s，
+   上一輪猜錯了；香港一個區塊的 0.4–0.8 s 在下面第 2 項那些步驟。福岡改後剩下的 0.06–0.10 s 在「the player's track and platforms」
+   （`addTrack` 的 `undergroundStations.outside`、`addUndergroundPlatforms`），沒有拆開看，併進第 2 項。台灣全買沒有重量。
 2. **道路橋與隧道、土地覆蓋與水每個區塊的固定成本（PERF-3D-BLOCK-FIXED）**：各約 0.09 s 與 0.05 s，還有建物輪廓與
    `Map3DLowRise` 讀圖磚；`PMTilesArchive.tile(zoom:x:y:)` 每讀一片都把根目錄與葉目錄重新解壓、重新解析。
 3. **每個區塊的 draw call（PERF-3D-DRAWS）**：遠景 8–12 km 一幀 575–1,440 次（每個區塊底圖、遠景、方盒、影子各一次）；

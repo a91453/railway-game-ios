@@ -258,12 +258,23 @@ public enum AttractionCatalog {
         Spot("t192", "布袋漁港", "Budai Fishing Port", .harbour, 250, 23.37931, 120.15568),
     ]
 
+    /// Decision 880: Hong Kong's sights, kept apart from Taiwan's table
+    /// (which `tools/tourism-spots` writes). The first is the one the
+    /// Ngong Ping cable car goes up to: the Tian Tan Buddha, OpenStreetMap
+    /// way 45659816 (`tourism=attraction`, 天壇大佛; osmtoday.com's Hong
+    /// Kong extract of 2026-11-18, ODbL), 460 m from the cable car's upper
+    /// station. Three and a half stars, below the alert bubbles' rating
+    /// as decision 250's are, so the map asks for no line to it.
+    public static let hongKongSpots: [Spot] = [
+        Spot("hk01", "天壇大佛", "Tian Tan Buddha", .landmark, 350, 22.25395, 113.90502),
+    ]
+
     /// The spots that lie inside a world of `bounds` laid over the Earth as
-    /// `frame` says, as attractions numbered from 1 in the catalog's order.
-    /// Empty away from Taiwan.
+    /// `frame` says, as attractions numbered from 1 in the catalog's order
+    /// (Taiwan's, then Hong Kong's). Empty away from both.
     public static func attractions(in frame: RealWorldFrame, bounds: WorldBounds, only ids: Set<String>? = nil) -> [Attraction] {
         var found: [Attraction] = []
-        for spot in spots where ids?.contains(spot.id) ?? true {
+        for spot in spots + hongKongSpots where ids?.contains(spot.id) ?? true {
             let position = frame.worldPosition(latitude: spot.latitude, longitude: spot.longitude)
             guard position.x >= 0, position.y >= 0, position.x < Double(bounds.width), position.y < Double(bounds.height) else { continue }
             found.append(Attraction(
@@ -272,5 +283,20 @@ public enum AttractionCatalog {
             ))
         }
         return found
+    }
+
+    /// Decision 880: `world` with the sights of its map, when it is a free
+    /// game on a real-world map that had none when it was saved and has
+    /// some now (Hong Kong, whose first sight came with decision 880): as
+    /// ``AirportCatalog/withAirports(_:)`` gives an older save its
+    /// airports. Any other world is returned as it is: one with sights
+    /// keeps its own, shops and counts and all.
+    public static func withSights(_ world: GameWorld) -> GameWorld {
+        guard world.tourism == nil, world.scenario == nil, let frame = RealWorldFrame(world: world) else { return world }
+        let sights = attractions(in: frame, bounds: world.bounds, only: Set(hongKongSpots.map(\.id)))
+        guard !sights.isEmpty else { return world }
+        var world = world
+        world.setTourism(sights)
+        return world
     }
 }
