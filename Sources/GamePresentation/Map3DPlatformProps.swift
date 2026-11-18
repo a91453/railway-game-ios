@@ -128,13 +128,21 @@ public enum Map3DPlatformProps {
     /// the two within half a door of each other once.
     public static func doorCentres(length: Float, formations: [Formation], kind: Kind, stands: Stands = []) -> [Float] {
         guard kind == .metro, let train = markedTrain(length: length, formations: formations) else { return [] }
-        let all = trainStarts(length: length, train: train.length, stands: stands).flatMap { start in
-            (0..<train.cars).flatMap { car in
-                (0..<train.doors).map { door in start + train.carLength * (Float(car) + (Float(door) + 0.5) / Float(train.doors)) }
+        let doors = Float(train.doors)
+        var all: [Float] = []
+        for start in trainStarts(length: length, train: train.length, stands: stands) {
+            for car in 0..<train.cars {
+                for door in 0..<train.doors {
+                    let share = (Float(door) + 0.5) / doors
+                    all.append(start + train.carLength * (Float(car) + share))
+                }
             }
-        }.sorted()
+        }
         var centres: [Float] = []
-        for centre in all where centres.last.map({ centre - $0 >= 0.7 }) ?? true { centres.append(centre) }
+        for centre in all.sorted() {
+            if let last = centres.last, centre - last < 0.7 { continue }
+            centres.append(centre)
+        }
         return centres
     }
 

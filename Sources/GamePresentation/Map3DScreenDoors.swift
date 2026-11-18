@@ -146,7 +146,9 @@ public enum Map3DScreenDoors {
             // which way they come in. Each leg of each of its journeys ends
             // at such a berth.
             for line in world.lines where lineOf[line.id] != nil {
-                for pattern in [nil] + line.patterns.indices.map(Optional.some) {
+                var patterns: [Int?] = [nil]
+                for index in line.patterns.indices { patterns.append(index) }
+                for pattern in patterns {
                     guard let journey = world.lineJourney(line.id, pattern: pattern),
                           case .onEdge(var at, _) = journey.start else { continue }
                     let farEnd = journey.isRing ? -1 : journey.legs.count / 2
