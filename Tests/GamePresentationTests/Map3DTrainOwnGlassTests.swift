@@ -15,6 +15,7 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
                 for unit in Map3DMTRUrbanLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRUrbanLine.model(unit, far: far))) }
                 for unit in Map3DMTRTuenMaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRTuenMaLine.model(unit, far: far))) }
                 for unit in Map3DMTRAirportLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRAirportLine.model(unit, far: far))) }
+                for unit in Map3DMTREastRailLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTREastRailLine.model(unit, far: far))) }
             }
             return cars
         }
