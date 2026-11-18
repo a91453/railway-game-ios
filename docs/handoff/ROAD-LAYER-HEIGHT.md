@@ -5,12 +5,12 @@
 
 ## 狀態
 
-1. **ROAD-LAYER-HEIGHT 做完**：同一座甲板的橋照各自的 `layer`，只在相接、並排處抬高（`levelHeights(into:others:)`）。五個交流道的同高交叉 113 → 22；疊板面積多 22%（原因、量測、五個角度在決策 822「後來（四）」）。
+1. **ROAD-LAYER-HEIGHT 做完**：同一座甲板的橋照各自的 `layer`，只在相接、並排處抬高（`levelHeights(into:others:)`）。五個交流道的同高交叉 113 → 58、拉開一層以上 8 → 61；疊板面積多 5%（原因、量測、五個角度在決策 822「後來（四）」）。
 2. RAMP-EDGE-OVERLAP（1.95）：下一張，同一個分支。
 
 ## 留給之後的
 
-- LAYER-TIGHT-CROSSING（1.85，`docs/priorities/ROAD-LAYER-HEIGHT.md`）：交流道糾結處較低的橋從另一座底下 0.5–4.5 m 穿過。
+- LAYER-LEVEL-CROSSING（1.85，`docs/priorities/ROAD-LAYER-HEIGHT.md`）：交流道糾結處較低的橋降不滿一層，照舊同高平交。
 - 實機（Metal）沒看過；只有 Linux 的量測與 WebGL 預覽。
 
 ## 量測探針

@@ -17,7 +17,7 @@
 | 3 | ~~ROAD-STRIP-WEDGE：橋端後面斜楔形與急彎尖刺~~ | 2.65 | §29.29（822） | **已做**（`claude/project-thread-tmgn4n`，決策 822「後來（二）」；留下一項 `priorities/ROAD-STRIP-WEDGE.md`） |
 | 3 | ROAD-FORK-CELL：斜拖分岔多佔一格 | 2.65 | §29.26 | 和 ROAD-SNAP／ROAD-HINT 一張 |
 | 5 | HK-LATE-RUNS：香港擬實大半班次誤點、每天十幾班沒發 | 2.60 | §29.25 | 動 GameCore |
-| 6 | ~~ROAD-LAYER-HEIGHT：同一座甲板的橋照各自的 `layer` 分高度~~ | 2.45 | `priorities/ROAD-UNDER-VIADUCT.md` | **已做**（決策 822「後來（四）」）；留下 LAYER-TIGHT-CROSSING 1.85（`priorities/ROAD-LAYER-HEIGHT.md`） |
+| 6 | ~~ROAD-LAYER-HEIGHT：同一座甲板的橋照各自的 `layer` 分高度~~ | 2.45 | `priorities/ROAD-UNDER-VIADUCT.md` | **已做**（決策 822「後來（四）」）；留下 LAYER-LEVEL-CROSSING 1.85（`priorities/ROAD-LAYER-HEIGHT.md`） |
 | 6 | 八堵停住時自動救回 | 2.45 | §29.8 B1 | 等實機確認還會不會停 |
 | 7 | HK-NIGHT-PARKED：過夜車停在中途站 | 2.40 | §29.25 | #2371 已合：新買的線不再發生，只剩作者舊存檔（靠 DEPOT-ADD-MID 2.15） |
 | 8 | DEPOT-DAWN-QUEUE：機捷清晨同時出庫 | 2.40 | `priorities/DEPOT-REAL.md` | 可派；動 GameCore、死結類 |
@@ -25,7 +25,7 @@
 | 10 | 舊存檔沒有活動場館與新漁港 | 1.95 | §29.15 | 下一個碰 `SavedGame.swift` 的 PR |
 | 10 | RAMP-EDGE-OVERLAP：引道在主線旁剛開始下坡的 30–40 m，邊緣壓在主線路面下 | 1.95 | `priorities/ROAD-UNDER-VIADUCT.md` | ROAD-LAYER-HEIGHT 那串接著做 |
 | 11 | 示範地圖配不到車時訊息照說在跑；真愛碼頭月台略過 | 1.90 | §29.15 | — |
-| 12 | LAYER-TIGHT-CROSSING：交流道糾結處較低的橋從另一座底下 0.5–4.5 m 穿過 | 1.85 | `priorities/ROAD-LAYER-HEIGHT.md` | — |
+| 12 | LAYER-LEVEL-CROSSING：交流道糾結處較低的橋降不滿一層，照舊和較高的橋同高平交 | 1.85 | `priorities/ROAD-LAYER-HEIGHT.md` | — |
 
 REVIEW-L27（#2376，`priorities/REVIEW-L27.md`）留下的：bug HK-PEAK-CONTROL（香港簡＋控尖峰漏 31/740）2.40，和第 7、8 名同分；MAP-PACK-ONCE 1.80、ELEVATED-SHELL-CHUNK 1.70、SNAP-REANCHOR 1.55 排在第 11 名之後；功能 OPEN3D-PEAK-MEM 1.55、VALLEY-TREES-GPU 1.40、NOTES-138 1.30 在 2.80 以下。
 

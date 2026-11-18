@@ -912,17 +912,25 @@ extension Map3DScene.Builder {
     /// the main road at the main road's height; never under what it must
     /// clear of the track.
     mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point) -> Float {
+        pieceRise(bridges, piece: number, at: p, deckRise: deckRise(bridges.decks[bridges.pieces[number].deck], at: p), along: nil)
+    }
+
+    /// The same, given its deck's ``deckRise(_:at:)`` at `p` and, when
+    /// known, how far along it `p` is (``levelHeights(into:others:)``
+    /// asks again and again at the same points).
+    mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point, deckRise full: Float, along known: Double?) -> Float {
         let piece = bridges.pieces[number], deck = bridges.decks[piece.deck]
-        var rise = deckRise(deck, at: p)
-        var along: Double?
+        var rise = full
+        var along = known
         // ROAD-LAYER-HEIGHT: a lower level's bridge no higher than its own
         // level, or what lifts it to a higher one it joins; never under
         // what it must clear of the track.
         if let ceiling = piece.ceiling, rise > ceiling {
             var cap = ceiling
             if !piece.lifted.isEmpty {
-                along = piece.travelled(to: p)
-                cap = piece.levelCap(at: along!)
+                let s = along ?? piece.travelled(to: p)
+                along = s
+                cap = piece.levelCap(at: s)
             }
             if cap < rise { rise = max(cap, min(rise, floorRise(deck, at: p))) }
         }
@@ -977,7 +985,8 @@ extension Map3DScene.Builder {
         guard !lower.isEmpty else { return }
         for number in lower { result.pieces[number].ceiling = Map3DRoadBridges.levelRise * Float(result.pieces[number].level) }
         func distance(_ a: Point, _ b: Point) -> Double { ((a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z)).squareRoot() }
-        // Each lower piece's samples every ``rampSample`` metres along it.
+        // Each lower piece's samples every ``rampSample`` metres along it,
+        // and where it meets another end to line, exactly.
         var looked: [Int: [(along: Double, point: Point, direction: Point)]] = [:]
         for number in lower {
             let piece = result.pieces[number]
@@ -997,22 +1006,82 @@ extension Map3DScene.Builder {
             if let last = found.last, travelled > last.along + 1e-9 { found.append((travelled, piece.points[piece.points.count - 1], last.direction)) }
             if !found.isEmpty { looked[number] = found }
         }
-        // What may hold each up: (its sample, the other piece, the point
-        // on it): pieces of its deck it meets end to line, either way,
-        // and those whose surface it runs along.
-        var holds: [Int: [(sample: Int, other: Int, point: Point)]] = [:]
-        func nearestSample(_ number: Int, _ p: Point) -> Int {
-            let along = result.pieces[number].travelled(to: p), samples = looked[number]!
-            return samples.indices.min { abs(samples[$0].along - along) < abs(samples[$1].along - along) }!
-        }
+        // Where pieces of a deck meet end to line, either way: (the piece,
+        // the other, the point).
+        var touches: [(piece: Int, other: Int, point: Point)] = []
         for (number, piece) in result.pieces.enumerated() where piece.points.count >= 2 {
             for end in [piece.points[0], piece.points[piece.points.count - 1]] {
                 for other in others(end, number) where result.pieces[other].deck == piece.deck {
-                    if looked[number] != nil { holds[number, default: []].append((nearestSample(number, end), other, end)) }
-                    if looked[other] != nil { holds[other, default: []].append((nearestSample(other, end), number, end)) }
+                    if looked[number] != nil { touches.append((number, other, end)) }
+                    if looked[other] != nil { touches.append((other, number, end)) }
                 }
             }
         }
+        for touch in touches {
+            let along = result.pieces[touch.piece].travelled(to: touch.point)
+            guard var samples = looked[touch.piece], !samples.contains(where: { abs($0.along - along) < 0.05 }) else { continue }
+            let at = samples.firstIndex { $0.along > along } ?? samples.count
+            let direction = samples[max(at - 1, 0)].direction
+            samples.insert((along, touch.point, direction), at: at)
+            looked[touch.piece] = samples
+        }
+        // Where each crosses another of its deck (20° or more apart, not
+        // by either one's ends): an exact sample there too.
+        var crossings: [(piece: Int, other: Int, point: Point, along: Double)] = []
+        for number in lower {
+            let piece = result.pieces[number]
+            var travelled = 0.0
+            for (a, b) in zip(piece.points, piece.points.dropFirst()) {
+                let length = distance(a, b)
+                defer { travelled += length }
+                guard length > 1e-6 else { continue }
+                let low = Map3DRoadBridges.key(min(a.x, b.x), min(a.z, b.z)), high = Map3DRoadBridges.key(max(a.x, b.x), max(a.z, b.z))
+                var seen = Set<Int>()
+                for row in low.row...high.row {
+                    for column in low.column...high.column {
+                        for (other, at) in result.segments[Map3DScene.ChunkKey(column: column, row: row)] ?? [] where other != number {
+                            let them = result.pieces[other]
+                            guard them.deck == piece.deck, seen.insert(other * 100_000 + at).inserted else { continue }
+                            let c = them.points[at - 1], d = them.points[at], span = distance(c, d)
+                            guard span > 1e-6, let share = Map3DRoadBridges.crossing(a, b, c, d),
+                                  abs((b.x - a.x) * (d.z - c.z) - (b.z - a.z) * (d.x - c.x)) / (length * span) >= Map3DRoadBridges.crossingSine else { continue }
+                            let p = Point(x: a.x + (b.x - a.x) * share, z: a.z + (b.z - a.z) * share)
+                            let ends = [piece.points[0], piece.points[piece.points.count - 1], them.points[0], them.points[them.points.count - 1]]
+                            guard !ends.contains(where: { distance($0, p) < 2 }) else { continue }
+                            crossings.append((number, other, p, travelled + share * length))
+                        }
+                    }
+                }
+            }
+        }
+        for crossing in crossings {
+            guard var samples = looked[crossing.piece], !samples.contains(where: { abs($0.along - crossing.along) < 0.05 }) else { continue }
+            let at = samples.firstIndex { $0.along > crossing.along } ?? samples.count
+            samples.insert((crossing.along, crossing.point, samples[max(at - 1, 0)].direction), at: at)
+            looked[crossing.piece] = samples
+        }
+        // What may hold each up: (its sample, the other piece, the point
+        // on it, the other's deck height there, how far along the other
+        // it is, whether it crosses it, its own deck height there): the
+        // touches, the pieces of its deck whose surface it runs along,
+        // and those it crosses.
+        var holds: [Int: [(sample: Int, other: Int, point: Point, deck: Float, along: Double, crossing: Bool, own: Float)]] = [:]
+        func hold(_ number: Int, _ index: Int, _ other: Int, _ point: Point, crossing: Bool = false) {
+            let deck = deckRise(result.decks[result.pieces[other].deck], at: point)
+            holds[number, default: []].append((index, other, point, deck, result.pieces[other].travelled(to: point), crossing, crossing ? deck : 0))
+        }
+        for touch in touches {
+            let along = result.pieces[touch.piece].travelled(to: touch.point)
+            guard let index = looked[touch.piece]!.firstIndex(where: { abs($0.along - along) < 0.05 }) else { continue }
+            hold(touch.piece, index, touch.other, touch.point)
+        }
+        for crossing in crossings {
+            guard let index = looked[crossing.piece]!.firstIndex(where: { abs($0.along - crossing.along) < 0.05 }) else { continue }
+            hold(crossing.piece, index, crossing.other, crossing.point, crossing: true)
+        }
+        // Where two pieces meet (a fork, a T), each one's points there.
+        var meets: [Int: [Int: [Point]]] = [:]
+        for touch in touches { meets[touch.piece, default: [:]][touch.other, default: []].append(touch.point) }
         for number in lower {
             guard let samples = looked[number] else { continue }
             let piece = result.pieces[number]
@@ -1029,11 +1098,15 @@ extension Map3DScene.Builder {
                             guard beside.deck == piece.deck, !seen.contains(other) else { continue }
                             let c = beside.points[at - 1], d = beside.points[at], span = distance(c, d)
                             let on = Map3DRoadBridges.nearest(q, c, d)
-                            guard span > 1e-6, on.distance < half + Double(Map3DRoadBridges.half(beside.kind, ramp: beside.isRamp)),
-                                  abs(sample.direction.x * (d.z - c.z) - sample.direction.z * (d.x - c.x)) / span < Map3DRoadBridges.crossingSine
-                            else { continue }
+                            let width = half + Double(Map3DRoadBridges.half(beside.kind, ramp: beside.isRamp))
+                            guard span > 1e-6, on.distance < width else { continue }
+                            // Along it, or by where the two meet (their
+                            // surfaces overlap round a fork or a T at any
+                            // angle); not one crossing it elsewhere.
+                            let along = abs(sample.direction.x * (d.z - c.z) - sample.direction.z * (d.x - c.x)) / span < Map3DRoadBridges.crossingSine
+                            guard along || (meets[number]?[other] ?? []).contains(where: { distance($0, q) < width + Map3DRoadBridges.rampSample }) else { continue }
                             seen.insert(other)
-                            holds[number, default: []].append((index, other, on.point))
+                            hold(number, index, other, on.point)
                         }
                     }
                 }
@@ -1048,7 +1121,14 @@ extension Map3DScene.Builder {
                 let piece = result.pieces[number], ceiling = piece.ceiling!
                 var need = [Float](repeating: 0, count: samples.count)
                 for hold in found {
-                    let rise = pieceRise(result, piece: hold.other, at: hold.point)
+                    let rise = pieceRise(result, piece: hold.other, at: hold.point, deckRise: hold.deck, along: hold.along)
+                    if hold.crossing {
+                        // Decision 607: a storey apart or at one height. One
+                        // that cannot come down far enough under the other
+                        // crosses it at its height, as the whole deck did.
+                        let mine = pieceRise(result, piece: number, at: hold.point, deckRise: hold.own, along: samples[hold.sample].along)
+                        guard rise - mine > 0.3, rise - mine < 4.8 else { continue }
+                    }
                     if rise > ceiling, rise > need[hold.sample] { need[hold.sample] = rise }
                 }
                 guard need.contains(where: { $0 > ceiling + 0.01 }) || !piece.lifted.isEmpty else { continue }
