@@ -312,7 +312,11 @@ final class TutorialUITests: XCTestCase {
 
         // Pause through the real HUD, as checkNavigation, so a running clock
         // does not rebuild the menu while XCTest targets it.
-        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause"))).tap()
+        // The demo lays its real lines first, and the speed controls wait
+        // for it (Review E's E2): on the iOS 27.2 iPad Simulator that took
+        // longer than the 5 seconds this waited (pull request #2453), so
+        // the Pause is given 30.
+        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), within: 30).tap()
         app.buttons["Game menu"].tap()
         hittableButton(app.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", "menu.tutorial", "Tutorial"))).tap()
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -613,8 +617,8 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
     }
 
-    private func hittableButton(_ query: XCUIElementQuery) -> XCUIElement {
-        let deadline = Date().addingTimeInterval(5)
+    private func hittableButton(_ query: XCUIElementQuery, within timeout: TimeInterval = 5) -> XCUIElement {
+        let deadline = Date().addingTimeInterval(timeout)
         repeat {
             if let visible = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
                 return visible
@@ -622,7 +626,7 @@ final class TutorialUITests: XCTestCase {
             // Only the test runner waits; the app can finish opening the menu.
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
-        XCTFail("No visible tutorial menu action: \(XCUIApplication().logTree("no hittable \(query)"))")
+        XCTFail("No visible tutorial menu action: \(XCUIApplication().logTree("no hittable \(query), enabled \(query.allElementsBoundByIndex.map(\.isEnabled))"))")
         return query.firstMatch
     }
 

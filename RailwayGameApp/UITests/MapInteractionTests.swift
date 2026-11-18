@@ -1751,6 +1751,10 @@ final class MapInteractionTests: XCTestCase {
         }
         let newLine = app.buttons["station.newLine"]
         XCTAssertTrue(newLine.appears(within: 10), "The station's card offers a new line")
+        // The card slides in after Show Controls: a touch read mid-slide
+        // went by New Line on the iOS 27.2 Simulator, no line was started,
+        // and the second station was only selected (pull request #2453).
+        newLine.waitUntilSettled()
         newLine.tap()
         // As on the owner's screenshot: the card folded, the map open.
         if card.exists {
