@@ -1,4 +1,4 @@
-# REVIEW-L28（2026-11-18，#PR）
+# REVIEW-L28（2026-11-18，#2421）
 
 0.6.0 (138) 發版後的例行 PR 審查留下的項目。細節在 [REVIEW-L28](../research/REVIEW_L28_2026-11-18.md)，交接在 `docs/handoff/REVIEW-L28.md`。尺同 NEXT_PRIORITIES §19；bug 排在前面。沿用的舊項目（L27、L26、L25）照舊，這裡不重評。
 

@@ -1,6 +1,6 @@
 # REVIEW-L28（2026-11-18）
 
-- 派工：新專案協調者（138 發版後的例行 PR 審查）。雲端 Linux，分支 `claude/project-thread-136xqq`，PR #PR。
+- 派工：新專案協調者（138 發版後的例行 PR 審查）。雲端 Linux，分支 `claude/project-thread-136xqq`，PR #2421。
 - 審查範圍 `85507e2..0067d9f`（48 個 PR，35 點）。報告 `docs/research/REVIEW_L28_2026-11-18.md`，評分 `docs/priorities/REVIEW-L28.md`。
 - 存檔、決策號、golden schema 都不動；修法寫成決策 828 的「後來」（GameCore `LineAcquisition.swift` 的 `layStateTrack`）。
 
