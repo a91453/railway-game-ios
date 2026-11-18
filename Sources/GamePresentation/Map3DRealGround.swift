@@ -502,9 +502,18 @@ extension Map3DScene.Builder {
             let first = Map3DBaseMap.Point(x: start.x - along.x * back, z: start.z - along.z * back)
             let last = Map3DBaseMap.Point(x: end.x + along.x * forth, z: end.z + along.z * forth)
             var cuts = splits(from: first, to: last)
-            // Decision 865: a road on its bed, cut where the bed bends.
+            // Decision 865: a road on its bed, cut where the bed bends;
+            // wholly on it, there only (its bed's bends are no further
+            // apart than the ground's grid), not where the ground it is
+            // not laid on does.
             let bedded = raised && !roadBed.isEmpty
-            if bedded { cuts = merged(cuts, bedCuts(from: first, to: last, along: along, onDeck: onDeck)) }
+            if bedded {
+                let onBed = cuts.allSatisfy { cut in
+                    roadBed.level(at: Map3DBaseMap.Point(x: first.x + (last.x - first.x) * cut, z: first.z + (last.z - first.z) * cut), along: along,
+                                  onDeck: onDeck) != nil
+                }
+                cuts = merged(onBed ? [0, 1] : cuts, bedCuts(from: first, to: last, along: along, onDeck: onDeck))
+            }
             // Decision 391: a road near a raised one at its height.
             let lifted = raised && nearRaisedRoad(from: first, to: last)
             if raised { cuts = merged(cuts, raisedCuts(from: first, to: last, anchor: points[index - 1], along: along, onDeck: onDeck)) }
@@ -803,8 +812,9 @@ extension Map3DScene.Builder {
     }
 
     /// Where the segment from `a` to `b` crosses the ground's grid lines
-    /// and its triangles' diagonals, as fractions of the way, with 0 and 1.
-    func splits(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point) -> [Double] {
+    /// and (but without `diagonals`) its triangles' diagonals, as
+    /// fractions of the way, with 0 and 1.
+    func splits(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point, diagonals: Bool = true) -> [Double] {
         var cuts: [Double] = [0, 1]
         let cell = Double(Land.cellLength) / Self.metre
         // In world metres, where the grid lines fall on whole cells.
@@ -821,7 +831,7 @@ extension Map3DScene.Builder {
         crossings(ax, bx)
         crossings(az, bz)
         // The diagonals: x − z on a whole number of cells.
-        crossings(ax - az, bx - bz)
+        if diagonals { crossings(ax - az, bx - bz) }
         var kept: [Double] = []
         for cut in cuts.filter({ $0 >= 0 && $0 <= 1 }).sorted() where kept.last.map({ cut - $0 > 1e-9 }) ?? true {
             kept.append(cut)

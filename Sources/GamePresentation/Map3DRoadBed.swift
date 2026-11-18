@@ -49,16 +49,35 @@ struct Map3DRoadBed: Sendable {
         let points: [Point]
         /// How far each point lies along it from the first, metres.
         let distances: [Double]
-        /// Its samples: how far along it each lies, and the bed's height
-        /// there, metres over the sea; straight between them.
+        /// Its bed's bends: how far along it each lies, and the bed's
+        /// height there, metres over the sea; straight between them.
+        /// Everything along the road is cut at them
+        /// (``Map3DScene/Builder/bedCuts(from:to:along:onDeck:turning:)``).
         var along: [Double] = []
         var levels: [Float] = []
+        /// Which of them the bed turns at by more than a centimetre (its
+        /// ends, where it climbs or falls to them: past them it is
+        /// level): where what only has to stay near it (a wall) is cut.
+        var bent: [Bool] = []
+
+        /// The point `distance` metres along it.
+        func point(at distance: Double) -> Point {
+            var low = 1, high = points.count - 1
+            while low < high {
+                let middle = (low + high) / 2
+                if distances[middle] < distance { low = middle + 1 } else { high = middle }
+            }
+            let a = points[low - 1], b = points[low]
+            let span = distances[low] - distances[low - 1]
+            let share = span > 0 ? min(max((distance - distances[low - 1]) / span, 0), 1) : 0
+            return Point(x: a.x + (b.x - a.x) * share, z: a.z + (b.z - a.z) * share)
+        }
     }
 
     /// How far apart a bed's samples lie, metres: on the whole multiples of
     /// it along each straight stretch, measured in the world (not from the
     /// road's first point), so anything laid along the same line finds the
-    /// same places (``Map3DScene/Builder/bedCuts(from:to:along:onDeck:)``).
+    /// same places (``Map3DScene/Builder/bedCuts(from:to:along:onDeck:turning:)``).
     static let step: Double = 2
     /// How far under the highest ground across it a bed may lie, metres:
     /// under the least a road is lifted over its bed (a pavement's 0.26),
@@ -87,8 +106,14 @@ struct Map3DRoadBed: Sendable {
     /// scene does.
     static let reach: Double = 250
     /// A wall stands under a bed's edge this far over the ground or more,
-    /// metres.
-    static let wall: Float = 0.35
+    /// metres: twice what a pavement's edge stood over the ground before
+    /// it had a bed (its 0.26 m), which nothing closed.
+    static let wall: Float = 0.5
+    /// How far a bed's line may pass over or under a sample it leaves out
+    /// between two bends, metres: under half what the least lifted thing
+    /// on it (a pavement, 0.26 m) stands over the highest ground across
+    /// it (``slack`` under the bed), so the ground stays covered.
+    static let tolerance: Float = 0.05
 
     var pieces: [Piece] = []
     /// The pieces' segments (piece, first point), by the ``cell`` squares
@@ -136,7 +161,14 @@ struct Map3DRoadBed: Sendable {
     /// as near; `nil` where no road's does. `beyond` metres past the bed's
     /// edge still counts (what stands beside a road stands on its bed).
     func level(at p: Point, along: (x: Double, z: Double)?, onDeck: Bool, beyond: Double = 0.5) -> Float? {
-        var best: (distance: Double, level: Float)?
+        found(at: p, along: along, onDeck: onDeck, beyond: beyond)?.level
+    }
+
+    /// The same, with the piece whose bed it is and how far along it `p`
+    /// lies.
+    func found(at p: Point, along: (x: Double, z: Double)?, onDeck: Bool, beyond: Double = 0.5)
+        -> (piece: Int, index: Int, travelled: Double, level: Float)? {
+        var best: (distance: Double, level: Float, piece: Int, index: Int, travelled: Double)?
         for (number, index) in cells[Self.key(p.x, p.z)] ?? [] {
             let piece = pieces[number]
             guard piece.onBridge == onDeck else { continue }
@@ -150,9 +182,67 @@ struct Map3DRoadBed: Sendable {
             let travelled = piece.distances[index - 1] + ((near.point.x - a.x) * dx + (near.point.z - a.z) * dz) / length
             let found = Self.level(along: piece.along, levels: piece.levels, at: travelled)
             if let best, near.distance >= best.distance - 1e-6, found <= best.level { continue }
-            best = (near.distance, found)
+            best = (near.distance, found, number, index, travelled)
         }
-        return best?.level
+        return best.map { ($0.piece, $0.index, $0.travelled, $0.level) }
+    }
+
+    /// Which of a bed's samples (`along` metres along it, at `levels`) are
+    /// its bends: every `fixed` one (the first and the last are), and
+    /// between each two of them those the line through the bends kept
+    /// passes more than ``tolerance`` from (Douglas and Peucker's way,
+    /// between the fixed ones only, so a bend depends on nothing past the
+    /// fixed samples either side of it: a chunk built apart keeps the ones
+    /// the whole scene does). The fixed ones are the road's own points and
+    /// where its line crosses the ground's 64 m grid, so nothing on a bed
+    /// is longer than a cell is across, as on the ground.
+    static func bends(along: [Double], levels: [Float], fixed: [Bool]) -> [Int] {
+        guard along.count > 2 else { return Array(along.indices) }
+        var kept = [0]
+        var from = 0
+        for to in 1..<along.count where fixed[to] || to == along.count - 1 {
+            var inner: [Int] = []
+            var spans = [(from, to)]
+            while let (first, last) = spans.popLast() {
+                guard last - first > 1 else { continue }
+                let span = along[last] - along[first]
+                var worst: Float = tolerance, at: Int?
+                for index in (first + 1)..<last {
+                    let share = span > 0 ? Float((along[index] - along[first]) / span) : 0
+                    let off = abs(levels[index] - (levels[first] + (levels[last] - levels[first]) * share))
+                    if off > worst { (worst, at) = (off, index) }
+                }
+                guard let at else { continue }
+                inner.append(at)
+                spans.append((first, at))
+                spans.append((at, last))
+            }
+            kept += inner.sorted()
+            kept.append(to)
+            from = to
+        }
+        return kept
+    }
+
+    /// Where the bed under level point `p` bends within half a
+    /// ``step`` along it of `p` (from half a step behind it up to, not
+    /// with, half a step ahead, so a line asked every step finds each
+    /// bend): every one of them, or with `turning` the ones it turns at
+    /// by more than a centimetre.
+    func bends(at p: Point, along: (x: Double, z: Double), onDeck: Bool, turning: Bool) -> [Point] {
+        guard let found = found(at: p, along: along, onDeck: onDeck) else { return [] }
+        let piece = pieces[found.piece]
+        var low = 0, high = piece.along.count
+        while low < high {
+            let middle = (low + high) / 2
+            if piece.along[middle] < found.travelled - Self.step / 2 { low = middle + 1 } else { high = middle }
+        }
+        var bends: [Point] = []
+        while low < piece.along.count, piece.along[low] < found.travelled + Self.step / 2 {
+            if !turning || piece.bent[low] { bends.append(piece.point(at: piece.along[low])) }
+            low += 1
+        }
+        return bends
     }
 }
 
@@ -211,8 +301,11 @@ extension Map3DScene.Builder {
         // steps of the world's metres along each stretch.
         let east = originX / Self.metre, south = originY / Self.metre
         var places: [[Point]] = [], ways: [[(x: Double, z: Double)]] = [], alongs: [[Double]] = [], raw: [[Float]] = []
+        // Which samples are bends whatever the bed does there: the piece's
+        // points, and where its line crosses the ground's grid.
+        var fixes: [[Bool]] = []
         for piece in result.pieces {
-            var place: [Point] = [], way: [(x: Double, z: Double)] = [], along: [Double] = [], levels: [Float] = []
+            var place: [Point] = [], way: [(x: Double, z: Double)] = [], along: [Double] = [], levels: [Float] = [], fixed: [Bool] = []
             for index in 1..<piece.points.count {
                 let a = piece.points[index - 1], b = piece.points[index]
                 let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
@@ -223,22 +316,32 @@ extension Map3DScene.Builder {
                 if let last = along.last, abs(last - piece.distances[index - 1]) < 1e-9 {
                     levels[levels.count - 1] = max(levels[levels.count - 1], first)
                 } else {
-                    place.append(a); way.append(direction); along.append(piece.distances[index - 1]); levels.append(first)
+                    place.append(a); way.append(direction); along.append(piece.distances[index - 1]); levels.append(first); fixed.append(true)
                 }
+                // Between them, where the line crosses the ground's grid
+                // (fixed) and its diagonals (where the ground under it may
+                // bend), and the whole steps.
+                let lines = splits(from: a, to: b, diagonals: false)
+                var between: [(travelled: Double, fixed: Bool)] = splits(from: a, to: b).dropFirst().dropLast().map { cut in
+                    (cut * length, lines.contains { abs($0 - cut) < 1e-12 })
+                }.filter { $0.travelled > 0.01 && $0.travelled < length - 0.01 }
+                let crossings = between.map(\.travelled)
                 let start = (east + a.x) * direction.x + (south + a.z) * direction.z
                 var number = Int((start / Bed.step).rounded(.down)) + 1
                 while Double(number) * Bed.step < start + length - 0.01 {
                     let travelled = Double(number) * Bed.step - start
-                    if travelled > 0.01 {
-                        let p = Point(x: a.x + direction.x * travelled, z: a.z + direction.z * travelled)
-                        place.append(p); way.append(direction); along.append(piece.distances[index - 1] + travelled)
-                        levels.append(bedLevel(at: p, along: direction, half: piece.half))
-                    }
+                    if travelled > 0.01, !crossings.contains(where: { abs($0 - travelled) < 0.01 }) { between.append((travelled, false)) }
                     number += 1
                 }
+                for sample in between.sorted(by: { $0.travelled < $1.travelled }) {
+                    let p = Point(x: a.x + direction.x * sample.travelled, z: a.z + direction.z * sample.travelled)
+                    place.append(p); way.append(direction); along.append(piece.distances[index - 1] + sample.travelled)
+                    levels.append(bedLevel(at: p, along: direction, half: piece.half)); fixed.append(sample.fixed)
+                }
                 place.append(b); way.append(direction); along.append(piece.distances[index]); levels.append(bedLevel(at: b, along: direction, half: piece.half))
+                fixed.append(true)
             }
-            places.append(place); ways.append(way); alongs.append(along); raw.append(levels)
+            places.append(place); ways.append(way); alongs.append(along); raw.append(levels); fixes.append(fixed)
         }
         // The roads on the ground, by the squares within two beds of them.
         let widest = result.pieces.map(\.half).max() ?? 0
@@ -327,50 +430,62 @@ extension Map3DScene.Builder {
             levels = next
             if !moved { break }
         }
+        // Each bed kept as its bends, straight between them: everything on
+        // it (the road, its pavements, its paint, its walls) is cut at
+        // them and no oftener.
         for number in result.pieces.indices {
-            result.pieces[number].along = alongs[number]
-            result.pieces[number].levels = levels[number]
+            let along = alongs[number], level = levels[number]
+            let kept = Bed.bends(along: along, levels: level, fixed: fixes[number])
+            result.pieces[number].along = kept.map { along[$0] }
+            result.pieces[number].levels = kept.map { level[$0] }
+            result.pieces[number].bent = kept.indices.map { index in
+                guard index > 0, index < kept.count - 1 else {
+                    // An end: level past it, so it turns as it climbs to it.
+                    let next = kept[index > 0 ? index - 1 : min(1, kept.count - 1)], here = kept[index]
+                    let span = abs(along[next] - along[here])
+                    return span > 0 && abs(level[next] - level[here]) / Float(span) * Float(Bed.step) > 0.01
+                }
+                let before = kept[index - 1], here = kept[index], after = kept[index + 1]
+                let span = along[after] - along[before]
+                let share = span > 0 ? Float((along[here] - along[before]) / span) : 0
+                return abs(level[here] - (level[before] + (level[after] - level[before]) * share)) > 0.01
+            }
         }
         return result
     }
 
     /// Decision 865: where the way from `first` to `last` along `along` is
     /// cut so it follows its road's bed (a bridge's when `onDeck`), as
-    /// fractions of it: on the whole ``Map3DRoadBed/step``s of the world's
-    /// metres along it, which are the bed's own samples, where the bed
-    /// bends, seen a step, four or sixteen either side
-    /// (``bends(_:)``). Measured in the world, so every strip along the
-    /// same line (a road, its pavements, its centre line) is cut at the
-    /// same places, and a chunk built apart cuts it where the whole scene
-    /// does.
-    mutating func bedCuts(from first: Map3DBaseMap.Point, to last: Map3DBaseMap.Point, along: (x: Double, z: Double), onDeck: Bool) -> [Double] {
+    /// fractions of it: at the bed's own bends
+    /// (``Map3DRoadBed/bends(at:along:onDeck:turning:)``), asked for on
+    /// the whole ``Map3DRoadBed/step``s of the world's metres along it.
+    /// What lies on the road (the road, its pavements, its paint) is cut
+    /// at every bend, so it lies on the bed all the way; what only has to
+    /// stay near it (`turning`: a wall) at the bends the bed turns at.
+    /// The same places for everything along the same line, and for a
+    /// chunk built apart as for the whole scene.
+    func bedCuts(from first: Map3DBaseMap.Point, to last: Map3DBaseMap.Point, along: (x: Double, z: Double), onDeck: Bool, turning: Bool = false) -> [Double] {
         guard !roadBed.isEmpty else { return [] }
         let step = Map3DRoadBed.step
         let start = (originX / Self.metre + first.x) * along.x + (originY / Self.metre + first.z) * along.z
         let end = start + (last.x - first.x) * along.x + (last.z - first.z) * along.z
         guard end - start > 1e-9 else { return [] }
-        let bed = roadBed
-        var known: [Int: Float?] = [:]
-        func level(_ number: Int) -> Float? {
-            if let found = known[number] { return found }
-            let travelled = Double(number) * step - start
-            let found = bed.level(at: Map3DBaseMap.Point(x: first.x + along.x * travelled, z: first.z + along.z * travelled), along: along, onDeck: onDeck)
-            known[number] = found
-            return found
-        }
-        var cuts: [Double] = []
-        var number = Int((start / step).rounded(.down)) + 1
-        while Double(number) * step < end - 1e-6 {
+        var found: [Double] = []
+        // From the step before the way to the one after it: a bend half a
+        // step past either end is asked for from outside it.
+        var number = Int((start / step).rounded(.down))
+        while Double(number) * step < end + step {
             defer { number += 1 }
             let travelled = Double(number) * step - start
-            guard travelled > 1e-6, let here = level(number) else { continue }
-            let bent = Self.bendScales.contains { scale in
-                guard number % scale == 0 else { return false }
-                guard let before = level(number - scale), let after = level(number + scale) else { return true }
-                return Self.bends([before, here, after])
+            for bend in roadBed.bends(at: Map3DBaseMap.Point(x: first.x + along.x * travelled, z: first.z + along.z * travelled), along: along,
+                                      onDeck: onDeck, turning: turning) {
+                // Where the bend lies along the way.
+                let at = ((bend.x - first.x) * along.x + (bend.z - first.z) * along.z) / (end - start)
+                if at > 1e-6, at < 1 - 1e-6 { found.append(at) }
             }
-            if bent { cuts.append(travelled / (end - start)) }
         }
+        var cuts: [Double] = []
+        for cut in found.sorted() where cuts.last.map({ cut - $0 > 1e-9 }) ?? true { cuts.append(cut) }
         return cuts
     }
 
@@ -380,14 +495,19 @@ extension Map3DScene.Builder {
     /// ground, or another road's bed), from its edge down into the ground,
     /// in the road bridges' concrete. Not where a ramp's own walls or a
     /// deck's girder stand (decision 391: a road a parapet's height or
-    /// more over its bed). Each tile's share, on the bed's own samples
-    /// along the road's line, so a chunk built apart draws what the whole
-    /// scene does.
+    /// more over its bed). Each tile's share, cut where the bed bends and
+    /// where a wall begins or ends, no piece longer than 64 m, so a chunk
+    /// built apart draws what the whole scene does.
     mutating func addRoadBedWalls(_ roads: [Map3DBaseMap.Road], look: Map3DElevatedLook = .roadBridge) {
         guard !roadBed.isEmpty else { return }
         typealias Point = Map3DBaseMap.Point
         let step = Map3DRoadBed.step
         let east = originX / Self.metre, south = originY / Self.metre
+        // A side's edge at a place along a road: its top, the ground under
+        // it, how far it stands over what lies beside it, whether a ramp's
+        // own wall stands there instead, and the road's rise over its bed.
+        struct Edge { let top: Map3DPoint; let ground: Float; let over: Float; let low: Bool; let rise: Float }
+        func needs(_ edge: Edge?) -> Bool { edge.map { $0.low && $0.over >= Map3DRoadBed.wall } ?? false }
         for road in roads where road.points.count >= 2 && road.bridgeLevel == 0 {
             let half = Map3DRoadBed.half(road.kind, ramp: road.isRamp)
             let lift = (Self.sidewalk(of: road.kind) > 0 && !road.isRamp ? Self.sidewalkLift : Self.lift(of: road.kind)) - 0.02
@@ -403,27 +523,64 @@ extension Map3DScene.Builder {
                     }
                 }
             }
-            // The last stretch's end, each side: (top, foot, over, low).
-            var ended: [(top: Map3DPoint, foot: Float, over: Float, low: Bool)?]?
-            for (a, b) in zip(road.points, road.points.dropFirst()) {
+            // Each stretch's way; none for one too short to have one.
+            let ways: [(x: Double, z: Double)?] = zip(road.points, road.points.dropFirst()).map { a, b in
                 let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
-                guard length > 0.01 else { continue }
-                let along = (x: dx / length, z: dz / length)
-                // The stretch's ends and the bed's samples between them.
+                return length > 0.01 ? (dx / length, dz / length) : nil
+            }
+            // How far out of `joint` a side's edge (left of the way, or
+            // right) stands where the road bends from `before` to `after`:
+            // on the bend's outside, where the two stretches' edges part,
+            // at their corner (the pavement's mitre), so the wall goes
+            // round in one; `nil` on its inside (the edges cross under the
+            // road), on a straight, and round a bend sharper than 60°,
+            // which a piece of its own closes.
+            func corner(before: (x: Double, z: Double), after: (x: Double, z: Double), side: Double) -> (x: Double, z: Double)? {
+                let first = (x: before.z * side, z: -before.x * side), second = (x: after.z * side, z: -after.x * side)
+                guard first.x * after.x + first.z * after.z < -1e-9 else { return nil }
+                let cosHalf = ((1 + before.x * after.x + before.z * after.z) / 2).squareRoot()
+                guard cosHalf >= 0.866 else { return nil }
+                let x = first.x + second.x, z = first.z + second.z, length = (x * x + z * z).squareRoot()
+                return (x / length / cosHalf, z / length / cosHalf)
+            }
+            func outside(before: (x: Double, z: Double), after: (x: Double, z: Double), side: Double) -> Bool {
+                before.z * side * after.x - before.x * side * after.z < -1e-9
+            }
+            // The last stretch's end, each side.
+            var ended: [Edge?]?
+            for index in 1..<road.points.count {
+                let a = road.points[index - 1], b = road.points[index]
+                guard let along = ways[index - 1] else {
+                    ended = nil
+                    continue
+                }
+                let length = ((b.x - a.x) * (b.x - a.x) + (b.z - a.z) * (b.z - a.z)).squareRoot()
+                // The stretch's ends, the bed's bends between them, and
+                // the whole steps (where a wall may begin or end).
+                var stations: [(number: Int?, travelled: Double, bend: Bool)] = []
                 let start = (east + a.x) * along.x + (south + a.z) * along.z
-                var stations: [(number: Int?, travelled: Double)] = [(nil, 0)]
                 var number = Int((start / step).rounded(.down)) + 1
                 while Double(number) * step < start + length - 0.01 {
-                    if Double(number) * step - start > 0.01 { stations.append((number, Double(number) * step - start)) }
+                    if Double(number) * step - start > 0.01 { stations.append((number, Double(number) * step - start, false)) }
                     number += 1
                 }
-                stations.append((nil, length))
+                for cut in bedCuts(from: a, to: b, along: along, onDeck: false, turning: true) {
+                    let travelled = cut * length
+                    guard travelled > 0.01, travelled < length - 0.01 else { continue }
+                    if let same = stations.firstIndex(where: { abs($0.travelled - travelled) < 0.01 }) {
+                        stations[same].bend = true
+                    } else {
+                        stations.append((nil, travelled, true))
+                    }
+                }
+                stations.sort { $0.travelled < $1.travelled }
+                stations.insert((nil, 0, true), at: 0)
+                stations.append((nil, length, true))
                 // Each station's edge on each side (left, right of the
-                // way): its top, the ground under it, and how far it
-                // stands over what lies beside it; `nil` off a bed.
-                struct Edge { let top: Map3DPoint; let foot: Float; let over: Float; let low: Bool }
+                // way); `nil` off a bed.
+                let before = index >= 2 ? ways[index - 2] : nil, after = index < ways.count ? ways[index] : nil
                 var edges: [[Edge?]] = []
-                for station in stations {
+                for (place, station) in stations.enumerated() {
                     let p = Point(x: a.x + along.x * station.travelled, z: a.z + along.z * station.travelled)
                     guard let bed = roadBed.level(at: p, along: along, onDeck: false) else {
                         edges.append([nil, nil])
@@ -432,8 +589,12 @@ extension Map3DScene.Builder {
                     let raised = roadRise(at: p, along: along, onDeck: false)
                     let top = bed + lift + raised.rise
                     edges.append([1.0, -1.0].map { side in
-                        let edge = Point(x: p.x + along.z * side * half, z: p.z - along.x * side * half)
-                        let probe = Point(x: p.x + along.z * side * (half + 0.6), z: p.z - along.x * side * (half + 0.6))
+                        // Straight out from the way, or at a bend's corner.
+                        var out = (x: along.z * side, z: -along.x * side)
+                        if place == 0, let before, let turned = corner(before: before, after: along, side: side) { out = turned }
+                        if place == stations.count - 1, let after, let turned = corner(before: along, after: after, side: side) { out = turned }
+                        let edge = Point(x: p.x + out.x * half, z: p.z + out.z * half)
+                        let probe = Point(x: p.x + out.x * (half + 0.6), z: p.z + out.z * (half + 0.6))
                         let ground = drawnGround(x: Float(edge.x), z: Float(edge.z))
                         // Another road's bed beside it, at its height: no
                         // wall between them.
@@ -441,46 +602,64 @@ extension Map3DScene.Builder {
                         // The bed's own standing over the ground, not a
                         // ramp's rise: a road rising to a deck has no
                         // wall under a parapet's height (decision 391).
-                        return Edge(top: Map3DPoint(Float(edge.x), top, Float(edge.z)), foot: ground - 0.3, over: bed + lift - beside,
-                                    low: raised.rise < look.parapet)
+                        return Edge(top: Map3DPoint(Float(edge.x), top, Float(edge.z)), ground: ground, over: bed + lift - beside,
+                                    low: raised.rise < look.parapet, rise: raised.rise)
                     })
                 }
-                // Round a bend, from the last stretch's end to this one's
-                // start.
-                if let ended, Map3DRoadMarkings.inside(a, road.bounds) {
-                    for side in 0..<2 {
-                        guard let first = ended[side], let last = edges[0][side], first.low || last.low, max(first.over, last.over) >= Map3DRoadBed.wall,
-                              abs(first.top.x - last.top.x) + abs(first.top.z - last.top.z) > 0.05 else { continue }
-                        lay(first.top, first.foot, last.top, last.foot, side: side)
+                // Round a bend too sharp for a corner, on its outside:
+                // from the last stretch's end to this one's start.
+                if let ended, let before, Map3DRoadMarkings.inside(a, road.bounds) {
+                    for (side, sign) in [1.0, -1.0].enumerated() {
+                        guard outside(before: before, after: along, side: sign), corner(before: before, after: along, side: sign) == nil,
+                              let first = ended[side], let last = edges[0][side], needs(first) || needs(last) else { continue }
+                        lay(first.top, first.ground - Self.wallFoot, last.top, last.ground - Self.wallFoot, side: side)
                     }
                 }
-                ended = edges[edges.count - 1].map { edge in edge.map { ($0.top, $0.foot, $0.over, $0.low) } }
+                ended = edges[edges.count - 1]
                 for side in 0..<2 {
-                    // Laid where the top or the ground under it bends, and
-                    // at the stretch's ends.
-                    // No piece longer than 64 m, so each lies in its chunk.
-                    func bent(_ index: Int) -> Bool {
-                        guard let number = stations[index].number, let here = edges[index][side], number % 32 != 0 else { return true }
-                        return Self.bendScales.contains { scale in
-                            guard number % scale == 0 else { return false }
-                            guard index >= scale, index + scale < stations.count, stations[index - scale].number == number - scale,
-                                  stations[index + scale].number == number + scale,
-                                  let before = edges[index - scale][side], let after = edges[index + scale][side] else { return true }
-                            return Self.bends([before.top.y, here.top.y, after.top.y]) || Self.bends([before.foot, here.foot, after.foot])
-                        }
+                    // Laid from one station kept to the next: the ends,
+                    // the bed's bends, where a wall begins or ends, where
+                    // a ramp's rise bends, and every 64 m, so each piece
+                    // lies in its chunk.
+                    func kept(_ place: Int) -> Bool {
+                        let station = stations[place]
+                        guard !station.bend, let here = edges[place][side] else { return true }
+                        if let number = station.number, number % 32 == 0 { return true }
+                        let before = edges[place - 1][side], after = edges[place + 1][side]
+                        if needs(here) != needs(before) || needs(here) != needs(after) { return true }
+                        guard let before, let after else { return true }
+                        guard max(abs(here.rise), abs(before.rise), abs(after.rise)) > 0.001 else { return false }
+                        let span = stations[place + 1].travelled - stations[place - 1].travelled
+                        let share = span > 0 ? Float((station.travelled - stations[place - 1].travelled) / span) : 0
+                        return abs(here.top.y - (before.top.y + (after.top.y - before.top.y) * share)) > 0.01
                     }
-                    let kept = stations.indices.filter(bent)
-                    for (from, to) in zip(kept, kept.dropFirst()) {
-                        guard let first = edges[from][side], let last = edges[to][side], first.low || last.low,
-                              max(first.over, last.over) >= Map3DRoadBed.wall else { continue }
+                    let places = stations.indices.filter(kept)
+                    for (from, to) in zip(places, places.dropFirst()) {
+                        guard let first = edges[from][side], let last = edges[to][side], needs(first) || needs(last) else { continue }
                         // The tile's own share of the road.
                         guard Map3DRoadMarkings.inside(Point(x: a.x + along.x * (stations[from].travelled + stations[to].travelled) / 2,
                                                              z: a.z + along.z * (stations[from].travelled + stations[to].travelled) / 2), road.bounds)
                         else { continue }
-                        lay(first.top, first.foot, last.top, last.foot, side: side)
+                        // Its foot in the ground all the way: under the
+                        // ground at both ends, and lower still where the
+                        // ground between them dips under the line.
+                        var firstFoot = first.ground - Self.wallFoot, lastFoot = last.ground - Self.wallFoot
+                        let span = stations[to].travelled - stations[from].travelled
+                        var proud: Float = 0
+                        for place in (from + 1)..<to {
+                            guard let between = edges[place][side] else { continue }
+                            let share = span > 0 ? Float((stations[place].travelled - stations[from].travelled) / span) : 0
+                            proud = max(proud, firstFoot + (lastFoot - firstFoot) * share - (between.ground - Self.wallFoot))
+                        }
+                        firstFoot -= proud
+                        lastFoot -= proud
+                        lay(first.top, firstFoot, last.top, lastFoot, side: side)
                     }
                 }
             }
         }
     }
+
+    /// Decision 865: how far into the ground a bed's wall goes, metres.
+    static let wallFoot: Float = 0.3
 }
