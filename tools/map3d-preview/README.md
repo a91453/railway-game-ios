@@ -39,11 +39,11 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）與機場場面（`taiwan_airfields.json`，決策 699）；不設就是改之前的畫法 |
 | `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_FOOTPRINTS` | `1`：讀 App 的真實建物足跡（`taiwan_buildings.pmtiles`，決策 389；要和 `MAP3D_BASEMAP=1` 一起用） |
-| `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺；可再加 `:高度`，看那個高度的點（山上的車站，決策 321） |
+| `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺；可再加 `:高度`，看那個高度的點（山上的車站，決策 321），再加 `:傾角`（度，從正上方算起；不給就照距離自動傾斜），從側面看長橋 |
 | `MAP3D_CROP` | `x:z:半徑`：只輸出這一圈內的分塊（大場景會讓瀏覽器記憶體不夠） |
 | `MAP3D_MINUTE` | 一天裡的第幾分鐘（`0`–`1439`），照那時的光線畫；預設 `840`（14:00） |
 | `MAP3D_DAY` | 遊戲的第幾天（從 `0` 起；一年 360 天、一個月 30 天，12 月 21 日是 `350`）：和 `MAP3D_MINUTE` 一起用，照那天那地的太陽畫（決策 813，同 App）；不設就是固定 06:00 升、18:00 落的光線 |
-| `MAP3D_HEIGHTS` | `1`：世界還沒讀的地面用 App 的高度檔（`taiwan_heights.dat`），和 App 一樣 |
+| `MAP3D_HEIGHTS` | `1`：世界還沒讀的地面用 App 的高度檔（`taiwan_heights.dat`；`hongkong`、`rovaniemi` 用地圖包自己的 `heights.dat`，`MAP3D_LANDCOVER` 同），和 App 一樣 |
 | `MAP3D_LIFE` | `x:z:距離`：決策 259 的行人與車輛，鏡頭在這個距離看這一點時畫的那些（時鐘的第 36,000 秒），每個實例展開成網格 |
 | `MAP3D_GARBAGE` | 秒數：和 `MAP3D_LIFE` 一起用，加上決策 437 傍晚的垃圾車（與跟著的資源回收車）：第一個附近有街道收運的那天的 19:30，街道時鐘的這一秒；印出車的位置 |
 | `MAP3D_LIFE_DETAIL` | `reduced`：和 `MAP3D_LIFE` 一起用，畫舊機型的份量（決策 259） |
@@ -51,7 +51,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_WEATHER` | `rain`、`thunderstorm`、`typhoon`：那種天氣的光線與霧（決策 277），和第 36,000 秒的雨絲（決策 320）。雨絲照手機畫：圖當成 533 × 300 點、每點 3 像素；預設是晴天 |
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238）；`near`：近版但不含最近一層（決策 267 的騎樓、遮雨棚、晾衣）；預設是最近的完整版（連街道設施一起，決策 244：每個實例展開成網格） |
 | `MAP3D_TRAINS` | `x:z`：在這一點的灰色地面上排出每一套列車（決策 318），一列一套：頭車、中間車、最後一節，最上面一列是一般通勤車；和 `MAP3D_CROP` 一起用 |
-| `MAP3D_REAL` | `1`：用 App 的全部真實鐵路資料（含 `rail_tracks.json` 與時刻表），場景會畫真實線的每一股軌道（決策 402、742）；不設就只有中心線，沒有真實軌道 |
+| `MAP3D_REAL` | `1`：用 App 的全部真實鐵路資料（含 `rail_tracks.json` 與時刻表），場景會畫真實線的每一股軌道（決策 402、742）；不設就只有中心線，沒有真實軌道；`hongkong`、`rovaniemi` 連地圖包的鐵路一起讀（它們的橋與隧道） |
 | `MAP3D_BUY_STATION` | 台鐵站名：和 `MAP3D_WORLD=island`、`MAP3D_AT=該站緯度:經度` 一起用，先照站卡收購這一站（決策 400 A.8），連帶 `MAP3D_REAL=1`；看收購後真實軌道讓不讓開（決策 742） |
 | `MAP3D_LINE` | `x:z;x:z;...`：在選好的世界上鋪一條玩家的路線，經過這些點（場景的公尺），每一點一個車站與月台；鋪了之後場景的原點會移到路線的範圍中間，鏡頭照輸出的 `.json` 裡 `stations` 的座標對 |
 | `MAP3D_TRAIN` | `x:z:x:z[:高度]`：一列三節的通勤車停在軌道上，車頭在第一點、往第二點排；高度預設 0.2，玩家的軌道（道床 0.5 m）給 0.7。列車的面輸出成層 -20，預覽頁照決策 721 夜裡不把它變暗 |

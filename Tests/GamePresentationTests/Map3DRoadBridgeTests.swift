@@ -177,6 +177,45 @@ final class Map3DRoadBridgeTests: XCTestCase {
         }
     }
 
+    /// HK-ROADS (the owner, 2026-11-18: 「青馬大橋都在海底了」): a deck is
+    /// every bridge joined to it, and one that spanned the track in a
+    /// cutting anywhere lost every lift, so 青馬大橋 and the interchanges at
+    /// both its ends lay on the sea and the ground once the railway under
+    /// it was bought. It lies on the ground at the cutting only.
+    func testADeckOverACuttingStillStandsOverARoadFarAlongIt() throws {
+        let world = try flatWorld(track: true, trackHeight: 10)
+        let builder = built(world, roads: [road([(500, 100), (500, 900)], level: 1), road([(300, 150), (700, 150)], kind: .minor)])
+        let meshes = meshes(builder)
+        let lift = Map3DScene.Builder.lift(of: .secondary)
+        // Over the street 362 m from the cutting: a level up.
+        XCTAssertEqual(try XCTUnwrap(roadTop(500, 150, in: meshes)), 20 + lift + Map3DRoadBridges.levelRise, accuracy: 0.05)
+        // Over the cutting: at the ground, as decision 375's bridge.
+        XCTAssertEqual(try XCTUnwrap(roadTop(500, 512, in: meshes)), 20 + lift, accuracy: 0.05)
+        // A street under it within the plateau of the cutting lifts nothing.
+        let near = built(world, roads: [road([(500, 100), (500, 900)], level: 1), road([(300, 450), (700, 450)], kind: .minor)])
+        XCTAssertEqual(try XCTUnwrap(roadTop(500, 450, in: self.meshes(near))), 20 + lift, accuracy: 0.05)
+    }
+
+    /// HK-ROADS: a road bridge running along a viaduct's track, its own
+    /// level higher than the room under the girder (青馬大橋's upper deck
+    /// over the railway), rides over the track; it was taken to pass under
+    /// at every point their lines met and held down under the girder. A
+    /// bridge crossing under at an angle keeps under.
+    func testARoadBridgeAlongAViaductRidesOverIt() throws {
+        let world = try flatWorld(track: true, trackHeight: 32)
+        let bed = Float(32) + Map3DScene.railLift - Map3DScene.Builder.bedDrop
+        let along = built(world, roads: [road([(100, 508), (500, 516), (900, 508)], level: 3, kind: .motorway)])
+        XCTAssertTrue(along.trackCover.pieces.contains(where: \.isViaduct), "the track stands on a viaduct")
+        for x in stride(from: Float(150), through: 850, by: 50) {
+            let z: Float = x <= 500 ? 508 + (x - 100) / 50 : 516 - (x - 500) / 50
+            let top = try XCTUnwrap(roadTop(x, z, in: meshes(along), kind: .motorway), "the road at \(x)")
+            // Held every 50 m or nearer, giving way at 5 % between.
+            XCTAssertGreaterThanOrEqual(top, bed + Map3DRoadBridges.overTrack - 1.5, "over the track at \(x)")
+        }
+        let across = built(world, roads: [road([(500, 300), (500, 724)], level: 3, kind: .motorway)])
+        XCTAssertLessThan(try XCTUnwrap(roadTop(500, 512, in: meshes(across), kind: .motorway)), bed, "under the viaduct where it crosses")
+    }
+
     /// TestFlight 113.1's crash (EXC_BREAKPOINT in `addJoins`): a road
     /// crossing a cutting's piece whose bed stands far over the drawn
     /// ground there (the ground under it lower than when the cutting was
