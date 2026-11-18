@@ -43,3 +43,17 @@ Mac 有 Xcode 27.2 與 iOS 27.2 的 Simulator。2026-11-18 連跑 UI 測試把�
 
 - 實機上的外觀與手感（iOS 27 SDK 編出來的畫面要在 TestFlight 版再看一次）。
 - 真正的 `testflight.yml`（簽署、上傳）還沒用 Xcode 27 跑過。
+
+## 2026-11-18 晚：接手後（分支 `claude/project-thread-mszmc5`，取代 #2453 的分支）
+
+14 支紅單都已用 `only_testing` 在 iOS 27.2 上跑綠（iPhone 與 iPad）：
+
+- **原生選單丟識別碼（9 支）**：`SettingsUITests`（`tapHittable(_:label:in:)`、`openSettingsFromTheGameMenu`）、`Feature284To286UITests` 改用 `menuItems(_:label:)`。`PromoMaterialTests`、`WebsiteScreenshotTests` 還是舊寫法（不在 full lane，失敗時只少截圖），下次跑截圖前要改。
+- **`MapButtonsUITests` 圖層條**：`hudFrameMark` 排在後面後（f650b28），標記本身不再 hittable，改 `waitUntilStill()`。
+- **`ShellLayoutUITests` 欄寬**：iOS 27 單獨放在玻璃 tile 裡的按鈕（細節切換鈕、建設中的建設與完成）回報整塊 tile 的 frame（56×48）；測試用 `touchFrame(_:)` 量 tile 裡的觸控範圍。
+- **iPad `TutorialUITests` 資料圖層**：示範鋪真實路線時速度鈕停用，27.2 的 iPad 超過 5 秒，暫停鈕改等 30 秒。另一支（Lines 按鈕被蓋）第二輪就過了，沒改。
+- **`MapInteractionTests` 建線預覽 HUD**：第二輪就過了，沒改。
+- **`MapInteractionTests` 新路線第二站（App 修正）**：手機橫放、上方有訊息時，新路線的 ✕✓ 上下都放不下，蓋在起點站與下一站上，點下一站按到 ✕。`MapBuildConfirm.siteObstacles` 讓 `.line`／`.addStop` 的按鈕避開它所在的站（同決策 744 的做法）。還沒在實機看過。
+- 失敗時用 `XCUIApplication.logTree(_:)` 把無障礙樹印進日誌；觸控落在哪個 view 在 `ui-*-trace` artifact（API zip 讀得到）。
+
+還在等：最後 head 的手動 full lane。前一輪 full lane（e6eabfc）`second` job 有兩支 `HUDAlignmentUITests` 紅，都是模擬器慢（第一支 App 啟動 225 秒沒有 process、第二支 UI 查詢逾時），不是測試邏輯；若再出現，考慮在 `ios-build.yml` 加長暖機或重試第一次啟動。
