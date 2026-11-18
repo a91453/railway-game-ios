@@ -149,6 +149,7 @@ struct RailwayGameApp: App {
         // About 2.4 MB of JSON: decoded off the main thread, so the
         // start screen shows at once; its real-world maps wait for it.
         launcher.loadRealWorldData { RailwayGameApp.bundledRealWorldData() }
+        RailwayGameApp.readMapPacksThatArrive(into: launcher)
         #if DEBUG
         // UI tests keep their cleared save folder on the Simulator alone.
         if DebugLaunch.isSet("-ui-testing") {
@@ -484,6 +485,39 @@ struct RailwayGameApp: App {
     /// population grid new stations get the city's ridership everywhere,
     /// without the places grid they all serve homes, and without the map
     /// files there are no real railways.
+    /// Decision 858: when a city's map pack is taken after the real-world
+    /// data was read (downloaded while the app is open), the data is read
+    /// again, so its map is there without the app being opened again.
+    @MainActor
+    private static func readMapPacksThatArrive(into launcher: GameLauncher) {
+        _ = NotificationCenter.default.addObserver(forName: MapPackDownloads.statusChanged, object: nil, queue: .main) { _ in
+            Task { @MainActor in await readMapPacksNotRead(into: launcher) }
+        }
+        Task { @MainActor in await readMapPacksNotRead(into: launcher) }
+    }
+
+    @MainActor private static var isReadingMapPacks = false
+    @MainActor private static var readsMapPacksAgain = false
+
+    /// One at a time: waits for the first read, then reads again when a
+    /// pack was taken or forgotten since the last read began.
+    @MainActor
+    private static func readMapPacksNotRead(into launcher: GameLauncher) async {
+        guard !isReadingMapPacks else {
+            readsMapPacksAgain = true
+            return
+        }
+        isReadingMapPacks = true
+        defer { isReadingMapPacks = false }
+        repeat {
+            readsMapPacksAgain = false
+            await launcher.loadRealWorldData { RailwayGameApp.bundledRealWorldData() }.value
+            if MapPackDownloads.hasUnread {
+                await launcher.reloadRealWorldData { RailwayGameApp.bundledRealWorldData() }.value
+            }
+        } while readsMapPacksAgain
+    }
+
     private nonisolated static func bundledRealWorldData() -> RealWorldData {
         // Decision 712: a Debug build launched with -open-overseas reads the
         // cities outside Taiwan whatever ``OverseasMaps/open`` holds, for
@@ -492,6 +526,16 @@ struct RailwayGameApp: App {
         #if DEBUG
         if DebugLaunch.isSet("-open-overseas") { overseas = Set(OverseasMap.allCases) }
         #endif
+        // Decision 858: a city whose map pack the app does not carry is
+        // read only from its download. One already on the device answers
+        // within moments of the launch, so the read waits for it a
+        // little; one that comes later is read in then
+        // (``readMapPacksThatArrive(into:)``).
+        if MapPackDownloader.isAvailable {
+            MapPackDownloads.waitForAnswers(overseas.filter { !$0.isCarried }, timeout: 5)
+        }
+        // What is taken from here on is read by the next read.
+        MapPackDownloads.noteRead()
         var data = RealWorldData.load(overseas: overseas) { name, ext in
             guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
                 throw RealRailways.ResourceError.missing("\(name).\(ext)")

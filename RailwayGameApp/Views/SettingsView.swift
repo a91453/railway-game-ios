@@ -283,7 +283,7 @@ struct SettingsView: View {
             // Decision 776, later: how each open city's map pack stands.
             ForEach(OverseasMap.allCases.filter(OverseasMaps.open.contains), id: \.self) { city in
                 LabeledContent {
-                    Text(verbatim: (mapPackStatuses[city] ?? MapPackDownloads.status(city)).text(in: DisplayLanguage.app))
+                    Text(verbatim: (mapPackStatuses[city] ?? MapPackDownloads.status(city)).text(in: DisplayLanguage.app, carried: city.isCarried))
                 } label: {
                     Label {
                         Text(verbatim: city.mapPackTitle(in: DisplayLanguage.app))
