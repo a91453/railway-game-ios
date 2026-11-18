@@ -10,8 +10,10 @@ Simulator SDK version, and appends NAME=udid to $GITHUB_ENV.
 A runner image holds several iOS runtimes, and "the first device simctl
 lists" is then whichever runtime comes first. The device is taken from the
 runtime of the SDK the app is built with; an iPhone is a Pro that is not a
-Max when there is one (the size the tests were written on), and never a
-folding iPhone, whose screen is another shape. With --devices and --sdk the
+Max when there is one, and never a folding iPhone, whose screen is another
+shape; an iPad is the 13-inch Pro when there is one. Those are the sizes the
+tests were written on (iPhone 17 Pro and iPad Pro 13-inch on macos-26): on
+an iPad mini three of the tutorial's tests failed (#2453, run 44265510040). With --devices and --sdk the
 choice is made from a file, for the self-test (--selftest).
 """
 import json
@@ -36,6 +38,13 @@ def choose(devices, sdk, kind):
         plain = [pair for pair in pool if "Duo" not in pair[1]["name"] and "Fold" not in pair[1]["name"]]
         pros = [pair for pair in plain if pair[1]["name"].endswith(" Pro")]
         pool = pros or plain or pool
+    else:
+        # The iPad the tests were written on: the 13-inch Pro, then any Pro.
+        for start in ("iPad Pro 13", "iPad Pro"):
+            large = [pair for pair in pool if pair[1]["name"].startswith(start)]
+            if large:
+                pool = large
+                break
     return pool[0]
 
 
@@ -47,14 +56,18 @@ def selftest():
         prefix + "iOS-27-0": [device("iPhone 17"), device("iPhone 18 Pro"), device("iPad (A16)")],
         prefix + "iOS-27-1": [device("iPhone Duo")],
         prefix + "iOS-27-2": [device("iPhone Duo"), device("iPhone 17"), device("iPhone 18 Pro Max"),
-                              device("iPhone 18 Pro"), device("iPad (A16)"), device("iPad Pro 11-inch (M5)")],
+                              device("iPhone 18 Pro"), device("iPad mini (A20 Pro)"), device("iPad (A16)"),
+                              device("iPad Pro 11-inch (M5)"), device("iPad Pro 13-inch (M5)")],
         prefix + "tvOS-27-2": [device("iPhone in name only")],
     }
     def name(sdk, kind, source=devices):
         runtime, chosen = choose(source, sdk, kind)
         return runtime.removeprefix(prefix), chosen["name"]
     assert name("27.2", "iPhone") == ("iOS-27-2", "iPhone 18 Pro")
-    assert name("27.2", "iPad") == ("iOS-27-2", "iPad (A16)")
+    assert name("27.2", "iPad") == ("iOS-27-2", "iPad Pro 13-inch (M5)")
+    assert name("27.0", "iPad") == ("iOS-27-0", "iPad (A16)")
+    no_13 = {prefix + "iOS-27-2": [device("iPad mini (A20 Pro)"), device("iPad Pro 11-inch (M5)")]}
+    assert name("27.2", "iPad", no_13) == ("iOS-27-2", "iPad Pro 11-inch (M5)")
     assert name("27.0", "iPhone") == ("iOS-27-0", "iPhone 18 Pro")
     # Only a folding iPhone in the SDK's runtime: it is still that runtime's.
     assert name("27.1", "iPhone") == ("iOS-27-1", "iPhone Duo")
