@@ -73,6 +73,11 @@ public enum PlayerCommand: Hashable, Sendable {
     /// its track, stations, trains and real timetable, and the purchase
     /// GameCore records, all or none.
     case acquireRealLine(RealLineAcquisition)
+    /// Real lines that share a station bought together (decision 862,
+    /// ``GameSession/realLineBundleOffer(for:)``): each built as
+    /// ``acquireRealLine(_:)`` builds one, in order, every one of them or
+    /// none.
+    case acquireRealLines([RealLineAcquisition])
     /// A real depot added to a line bought before it came with one
     /// (decision 557, ``GameSession/realDepotOffer(for:site:)``): its
     /// track from the end of the line's, the depot and its sidings, made
@@ -263,6 +268,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildDoubleTrackChain: "buildDoubleTrackChain"
         case .autoService: "autoService"
         case .acquireRealLine: "acquireRealLine"
+        case .acquireRealLines: "acquireRealLines"
         case .addRealLineDepot: "addRealLineDepot"
         case .rebuildRealLine: "rebuildRealLine"
         case .buyRealStation: "buyRealStation"
@@ -379,6 +385,16 @@ extension GameSession {
         case .acquireRealLine(let acquisition):
             _ = try build(acquisition, in: &world)
             outcome.line = world.acquisition(of: acquisition.realLine)?.line.flatMap { world.line(id: $0) }
+        case .acquireRealLines(let acquisitions):
+            for (index, acquisition) in acquisitions.enumerated() {
+                _ = try build(acquisition, in: &world)
+                // As its offer laid the next line out: on the world with
+                // this one's stations' land read (decision 88).
+                if index < acquisitions.count - 1 {
+                    Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+                }
+            }
+            outcome.line = acquisitions.first.flatMap { world.acquisition(of: $0.realLine)?.line }.flatMap { world.line(id: $0) }
         case .addRealLineDepot(let addition):
             try build(addition, in: &world)
             outcome.line = world.line(id: addition.line)
@@ -477,6 +493,8 @@ extension PlayerCommand: Codable {
         var autoService: AutoService?
         /// Decision 315.
         var acquisition: RealLineAcquisition?
+        /// Decision 862.
+        var acquisitions: [RealLineAcquisition]?
         /// Decision 557.
         var realDepot: RealLineDepotAddition?
         /// Decision 605.
@@ -637,6 +655,9 @@ extension PlayerCommand: Codable {
         case "acquireRealLine":
             guard let acquisition = record.acquisition else { throw invalid("a line bought needs its layout") }
             self = .acquireRealLine(acquisition)
+        case "acquireRealLines":
+            guard let acquisitions = record.acquisitions, !acquisitions.isEmpty else { throw invalid("lines bought together need their layouts") }
+            self = .acquireRealLines(acquisitions)
         case "addRealLineDepot":
             guard let addition = record.realDepot else { throw invalid("a depot added needs its layout") }
             self = .addRealLineDepot(addition)
@@ -823,6 +844,8 @@ extension PlayerCommand: Codable {
             record.autoService = plan
         case .acquireRealLine(let acquisition):
             record.acquisition = acquisition
+        case .acquireRealLines(let acquisitions):
+            record.acquisitions = acquisitions
         case .addRealLineDepot(let addition):
             record.realDepot = addition
         case .rebuildRealLine(let rebuild):
@@ -911,6 +934,10 @@ extension PlayerCommand {
             }
         case .acquireRealLine(let acquisition):
             language.text("buy \(acquisition.lineName)", "收購\(acquisition.lineName)")
+        case .acquireRealLines(let acquisitions):
+            language.text(
+                "buy \(acquisitions.map(\.lineName).joined(separator: ", "))", "收購\(acquisitions.map(\.lineName).joined(separator: "、"))"
+            )
         case .addRealLineDepot(let addition):
             language.text("add \(addition.depot.name)", "加建\(addition.depot.name)")
         case .rebuildRealLine:
