@@ -12,6 +12,8 @@ session `session_01YGNNuq5GFB4XjtpH5pQdKz`，分支 `claude/project-thread-q98be
 
 ### 1. 東鐵綫接進遊戲（新決策，到 #2118 取號）
 
+**已做**（2026-11-18，#2424，決策 843）：九節 D P M F P M M P D，玻璃照 #2417 逐面認；EAL、EAL_LMC 改畫這款。以下留作紀錄。
+
 - 素材：素材庫 main 的 `game-art-previews/docs/art/mtr-east-rail-line-2026-11/revision-6/`。四種車 `cab`、`car`、`first`、`pantograph`，各有近景和遠景，共 8 個 GLB。另有 `overview.jpg`、`front-view.jpg`、`check_report.json`、`stats.json`。
 - 做法照屯馬綫那次（commit d679c2360，#2409），要動的檔：
   - `Map3DMTR<線>.swift` 與 `…Mesh.swift`
@@ -28,7 +30,7 @@ session `session_01YGNNuq5GFB4XjtpH5pQdKz`，分支 `claude/project-thread-q98be
 
 ### 2. 南港島綫、迪士尼綫（工作室）
 
-- **南港島綫已做**（2026-11-18）：素材庫 #166 合併、接進遊戲（決策 848）。下面只剩迪士尼綫。
+- **南港島綫已做**（2026-11-18）：素材庫 #166 合併、接進遊戲（決策 851）。下面只剩迪士尼綫。
 
 - 派工單和 ref/ 照片都已經在素材庫 main：`mtr-south-island-line-2026-11/README.md`、`mtr-disneyland-line-2026-11/README.md`。
 - 開工參數照 mtr-east-rail-r1：`--preset art --use codexa=claude,codexb=codex`。任務名用 `mtr-south-island-r1`、`mtr-disneyland-r1`，同時最多跑兩個工作室任務。

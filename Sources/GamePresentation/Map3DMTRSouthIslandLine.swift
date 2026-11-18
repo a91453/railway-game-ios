@@ -1,6 +1,6 @@
 import Foundation
 
-/// Decision 848: the three-car train of Hong Kong's South Island line (the
+/// Decision 851: the three-car train of Hong Kong's South Island line (the
 /// driverless trains it opened with in 2016, a short version of the Kwun
 /// Tong line's), as the local studio modelled them in Blender from
 /// photographs and the published width (3.12 m; the cab car about 23.0 m
@@ -71,7 +71,7 @@ extension Map3DMTRSouthIslandLine {
 }
 
 extension Map3DTrainSet {
-    /// Decision 848: the local studio's South Island line cars
+    /// Decision 851: the local studio's South Island line cars
     /// (``Map3DMTRSouthIslandLine``), each its own length, laid as the
     /// real three cars run, A B A: the cab car, the pantograph car between
     /// (``Map3DTrainSet/cycleFromFront``), the second cab car turned round

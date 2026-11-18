@@ -549,6 +549,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   say nothing is broken, so the model is looked at beside real photographs
   at the game's camera angle and on-screen size, for at least three rounds,
   and the owner or another session judges its overview, not its maker.
+- Before changing how a real line is laid when bought (stations, loops,
+  viaducts, a station shared with another line), read
+  `.claude/skills/real-line-laying/SKILL.md` (decision 848): two lines at
+  one station stand side by side at one height, never stacked.
 - Before adding or changing any animation or transition in the app, read
   `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
   253) and what Reduce Motion does.

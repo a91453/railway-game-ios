@@ -345,4 +345,59 @@ final class RoadLookRealTests: XCTestCase {
         XCTAssertLessThan(middle, 10, "the link halfway down")
         XCTAssertGreaterThan(middle, 2, "the link halfway down")
     }
+    /// ROAD-LAYER-HEIGHT: a deck stood every bridge of it at its highest
+    /// level's height, so a lower level's bridge crossing under a higher
+    /// one of the same deck met it at the same height (忠孝橋, `layer` 1,
+    /// under 市民大道's viaduct, both 24 m; in 三重 78 crossings so). Each
+    /// stands at its own level, lifted only where it meets a higher one.
+    func testALowerLevelsBridgeCrossesUnderAHigherOneOfItsDeck() throws {
+        let roads = [
+            road([(100, 500), (900, 500)], level: 3, kind: .trunk),
+            // The street the trunk crosses.
+            road([(450, 300), (450, 700)], level: 0, kind: .tertiary),
+            // A lower bridge leaving the trunk's side, round and back under it.
+            road([(600, 500), (600, 700), (500, 700), (500, 300)], level: 1, kind: .secondary),
+        ]
+        var builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 480, minZ: 480, maxX: 620, maxZ: 720)
+        let trunk = try XCTUnwrap(roadTops(&builder, drawn, kind: .trunk, at: 500, 500).first)
+        let under = try XCTUnwrap(roadTops(&builder, drawn, kind: .secondary, at: 500, 500).first)
+        let joined = try XCTUnwrap(roadTops(&builder, drawn, kind: .secondary, at: 600, 520).first)
+        let away = try XCTUnwrap(roadTops(&builder, drawn, kind: .secondary, at: 550, 700).first)
+        print(String(format: "ROADLAYER trunk %.2f m, the lower bridge under it %.2f m, by where it joins %.2f m, away %.2f m", trunk, under, joined, away))
+        XCTAssertGreaterThan(trunk, 17, "the trunk, a third level")
+        XCTAssertLessThan(under, 7, "the lower bridge under the trunk")
+        XCTAssertGreaterThan(trunk - under, 4.5, "clear of each other")
+        XCTAssertGreaterThan(joined, 14, "the lower bridge where it meets the trunk")
+        XCTAssertEqual(away, 6.3, accuracy: 0.5, "the lower bridge at its own level")
+    }
+    /// RAMP-EDGE-OVERLAP (decision 822 後來三's leftover): a lower bridge
+    /// drawn 6 m off a higher one's middle, their widths overlapping as
+    /// the map draws them, came down inside itself with its edge under
+    /// the higher one's, 0.5–4.5 m beneath it, for the first 30–40 m
+    /// (三重, some 420 m²). It is cut back to where it leaves the higher
+    /// one's surface.
+    func testALowerBridgeComingDownBesideAHigherOneIsNotUnderItsEdge() throws {
+        let roads = [
+            road([(100, 500), (900, 500)], level: 2, kind: .trunk),
+            road([(500, 300), (500, 700)], level: 0, kind: .tertiary),
+            road([(800, 500), (780, 506), (250, 506)], level: 1, kind: .secondary),
+            road([(250, 506), (150, 506), (100, 600)], level: 0, kind: .secondary),
+        ]
+        let builder = built(try flatWorld(), Map3DBaseMap(roads: roads))
+        let drawn = triangles(builder, minX: 240, minZ: 490, maxX: 600, maxZ: 520)
+        var stacked = 0, looked = 0
+        for x in stride(from: Float(250), through: 600, by: 2) {
+            for z in stride(from: Float(496), through: 516, by: 1) {
+                let tops = faces(over: x, z, in: drawn).filter { [Map3DPalette.road(.trunk), Map3DPalette.road(.secondary)].contains($0.color) }
+                    .map(\.y).sorted()
+                guard !tops.isEmpty else { continue }
+                looked += 1
+                if zip(tops, tops.dropFirst()).contains(where: { $1 - $0 > 0.5 && $1 - $0 < 4.5 }) { stacked += 1 }
+            }
+        }
+        print("ROADEDGE points with a road surface \(looked), stacked 0.5–4.5 m apart \(stacked)")
+        XCTAssertGreaterThan(looked, 1_000)
+        XCTAssertEqual(stacked, 0, "points where the lower bridge lies 0.5–4.5 m under the higher one's edge")
+    }
 }

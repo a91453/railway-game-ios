@@ -103,6 +103,9 @@ public struct Map3DXRay: Sendable {
         public let line: [Map3DPoint]
         public let offset: Float
         public let width: Float
+        /// Decision 847: the screen doors along its edge by its track,
+        /// `nil` for none.
+        public var doors: Map3DScreenDoors.Doors? = nil
     }
 
     /// `snapshot`'s platforms in tunnels, in `scene`'s space: beside their
@@ -117,6 +120,7 @@ public struct Map3DXRay: Sendable {
         let edge = Map3DScene.Builder.platformEdge
         var laid: [Platform] = []
         for (index, platform) in buried.enumerated() {
+            let doors = scene.screenDoors.doors(edge: platform.platform.edge, station: platform.platform.station, underground: true)
             let line = lines[index], middle = line[line.count / 2]
             let across = Map3DMesh.acrossDirections(line)[line.count / 2]
             let way = Self.way(of: line)
@@ -130,14 +134,15 @@ public struct Map3DXRay: Sendable {
                 .min { abs($0) < abs($1) }
             if let partner {
                 let width = abs(partner) - 2 * edge
-                laid.append(Platform(station: platform.platform.station, line: line, offset: partner / 2, width: width))
+                laid.append(Platform(station: platform.platform.station, line: line, offset: partner / 2, width: width, doors: doors))
             } else {
                 // Decision 674: on the side away from a track beside it too
                 // near for an island (Taipei Main's Tamsui–Xinyi Line, its
                 // two tracks 5 m apart), not over that track.
                 let width = Map3DScene.Builder.platformWidth
                 let side: Float = beside.contains { $0 < 0 } && !beside.contains { $0 > 0 } ? 1 : -1
-                laid.append(Platform(station: platform.platform.station, line: line, offset: side * (edge + width / 2), width: width))
+                laid.append(Platform(station: platform.platform.station, line: line, offset: side * (edge + width / 2), width: width,
+                                     doors: doors))
             }
         }
         return laid
@@ -173,6 +178,27 @@ public struct Map3DXRay: Sendable {
             let rim = platform.offset + side * (platform.width / 2 - 0.35)
             mesh.addRibbon(along: platform.line, width: 0.3, offset: rim, lift: height + 0.01,
                            top: seen(Map3DPalette.platformEdge, platformOpacity))
+        }
+        if let doors = platform.doors { addScreenDoors(doors, along: platform, to: &mesh) }
+    }
+
+    /// Decision 847: how much of the screen doors' glass shows.
+    static let doorOpacity: UInt32 = 120
+
+    /// Decision 847: `platform`'s screen doors, a see-through band of
+    /// glass standing along its edge by its track (the track at offset 0),
+    /// the header of full-height ones in the kit's canopy colour; no
+    /// openings: from over the ground only that they are there reads.
+    static func addScreenDoors(_ doors: Map3DScreenDoors.Doors, along platform: Platform, to mesh: inout Map3DMesh) {
+        let towards: Float = platform.offset >= 0 ? 1 : -1
+        let across = platform.offset - towards * (platform.width / 2 - Map3DScreenDoors.setBack)
+        let normals = Map3DMesh.acrossDirections(platform.line)
+        let foot = platform.line.indices.map { platform.line[$0] + normals[$0] * across + Map3DPoint(0, Map3DScene.Builder.platformHeight, 0) }
+        let band = doors.full ? Map3DScene.Builder.doorHeader : Map3DScene.Builder.gateRail
+        let glassTop = Map3DPoint(0, doors.height - band, 0), top = Map3DPoint(0, doors.height, 0)
+        for (a, b) in zip(foot, foot.dropFirst()) {
+            mesh.addQuad(a, b, b + glassTop, a + glassTop, color: seen(StationKitBuilder.glass, doorOpacity))
+            mesh.addQuad(a + glassTop, b + glassTop, b + top, a + top, color: seen(Map3DPalette.canopy, platformOpacity))
         }
     }
 
