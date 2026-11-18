@@ -28,7 +28,8 @@ final class EmptyRunClaimDueServiceTests: XCTestCase {
         TrackTraversal(edge: .edge(edge), direction: .backward)
     }
 
-    private func makeWorld() throws -> (world: GameWorld, trains: [String: TrainID], stations: [String: StationID]) {
+    /// `dueAt`: when D's timetable has it leave P2 (S leaves Q a minute in).
+    private func makeWorld(dueAt: GameTime = GameTime(minutes: 1)) throws -> (world: GameWorld, trains: [String: TrainID], stations: [String: StationID]) {
         var world = try GameWorld(bounds: WorldBounds(width: 462_848, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
                                   clock: GameClock(speed: .normal))
         func node(_ x: Int64, _ y: Int64) throws -> TrackNodeID { try world.buildTrackNode(at: WorldCoordinate(x: x, y: y)) }
@@ -66,7 +67,7 @@ final class EmptyRunClaimDueServiceTests: XCTestCase {
         }
         for (name, from, to) in [("D", "P2", "K"), ("S", "Q", "P2")] {
             try world.setTrainTimetable(trains[name]!, to: [
-                ScheduledStop(station: stations[from]!, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+                ScheduledStop(station: stations[from]!, arrival: GameTime(minutes: 0), departure: name == "D" ? dueAt : GameTime(minutes: 1)),
                 ScheduledStop(station: stations[to]!, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 20)),
             ])
         }
@@ -116,6 +117,34 @@ final class EmptyRunClaimDueServiceTests: XCTestCase {
             }
         }
         XCTAssertEqual(arrived, [d, s, f])
+    }
+
+    /// Decision 877: D due two and a half minutes in, when F has long come
+    /// up behind S and every train stands. The holders settled before D
+    /// was due were kept for as long as no train changed, so D stayed
+    /// bound by F's claim to the end of the call it fell due in: second
+    /// by second it left at 0:02:30, a minute a call at 0:03:00, and in
+    /// one call of ten minutes only as a deadlock was resolved. Now each
+    /// ends where second by second does.
+    func testADueServiceLeavesWhenDueWithEveryTrainStanding() throws {
+        let due = GameTime(seconds: 150)
+        var seconds = try makeWorld(dueAt: due).world
+        let d = try makeWorld(dueAt: due).trains["D"]!
+        seconds.setSpeed(.x1)
+        var left: Int64?
+        for _ in 0..<600 {
+            try seconds.advance(ticks: 10)
+            XCTAssertEqual(seconds.deadlockedTrains(), [], "at \(seconds.clock.now.seconds) s")
+            if left == nil, case .travellingToStop? = seconds.train(id: d)?.execution { left = seconds.clock.now.seconds }
+        }
+        XCTAssertEqual(left, 151, "D leaves in the second it is due")
+        seconds.setSpeed(.normal)
+        var minutes = try makeWorld(dueAt: due).world
+        for _ in 0..<10 { try minutes.advance(ticks: 1) }
+        XCTAssertEqual(minutes, seconds, "a minute a call")
+        var batch = try makeWorld(dueAt: due).world
+        try batch.advance(ticks: 10)
+        XCTAssertEqual(batch, seconds, "ten minutes in one call")
     }
 
     /// A batch of minutes ends where minute by minute does.

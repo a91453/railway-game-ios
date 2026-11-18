@@ -877,6 +877,11 @@ extension GameWorld {
         /// ``binds(_:_:)``), because they hold or foul the track a train
         /// it follows needs.
         fileprivate var released: [TrainID: Set<TrainID>] = [:]
+        /// Decision 877: whether whom the claims do not bind was read from
+        /// the time as well as the trains (decisions 836 and 850: whether
+        /// a departure is due). Such holders are the world's only at the
+        /// time they were settled for (see ``GameWorld/trackHolders(memo:)``).
+        fileprivate var readsTheTime = false
 
         /// TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): the train at
         /// `place` now holds `track` (`placed`: whether it is on the track
@@ -1260,20 +1265,50 @@ extension GameWorld {
                 changed.append(place)
                 if changed.count > limit { break }
             }
-            if changed.isEmpty { return memo.holders[0].holders }
+            if changed.isEmpty { return keptHolders(memo: &memo) }
             if changed.count <= limit, changed.allSatisfy({ memo.holders[0].trains[$0].id == trains[$0].id }) {
                 return trackHolders(changedAt: changed, memo: &memo)
             }
         }
         if let index = memo.holders.indices.dropFirst().first(where: { memo.holders[$0].trains == trains }) {
             memo.holders.insert(memo.holders.remove(at: index), at: 0)
-            return memo.holders[0].holders
+            return keptHolders(memo: &memo)
         }
         let worked = workedOutHolders(memo: &memo)
-        memo.holders.insert((trains, worked.covers, worked.holders), at: 0)
+        memo.holders.insert((trains, worked.covers, worked.holders, clock.now), at: 0)
         if memo.holders.count > 2 { memo.holders.removeLast() }
         Self.holderAudit?.rebuilds += 1
         return worked.holders
+    }
+
+    /// Decision 877: the first holders kept in `memo`, whose trains are
+    /// the world's, as the world's holders now. Whom a claim does not bind
+    /// can depend on the time as well as on the trains (decisions 836 and
+    /// 850: an empty run's claim does not bind a train whose departure is
+    /// due), and a memo lives through many seconds of one
+    /// ``advance(ticks:)``: holders settled a second before a departure
+    /// fell due, as a step ended, were given again at the start of the
+    /// next, the trains being the same, and the train due stayed bound.
+    /// With every other train standing too (a line at night) nothing
+    /// changed the trains again, so it stayed bound for the rest of the
+    /// call: ten minutes at the top speed, where a call a minute settled
+    /// them again at the next minute, and a batch no longer ended where
+    /// its minutes do. So holders that read the time are settled again
+    /// when it is no longer the time they were settled for.
+    private func keptHolders(memo: inout DirectionMemo) -> TrackHolders {
+        guard memo.holders[0].holders.readsTheTime, memo.holders[0].at != clock.now, Self.holderAudit?.keepsStaleClaims != true else {
+            return memo.holders[0].holders
+        }
+        var entry = memo.holders.removeFirst()
+        let before = Self.holderAudit == nil ? nil : entry.holders.released
+        settleClaims(&entry.holders, covers: entry.covers)
+        entry.at = clock.now
+        memo.holders.insert(entry, at: 0)
+        if let audit = Self.holderAudit, let before {
+            audit.settledAgain += 1
+            if before != entry.holders.released { audit.staleClaims.append(clock.now) }
+        }
+        return entry.holders
     }
 
     /// The world's track holders worked out from every train, each train's
@@ -1318,10 +1353,11 @@ extension GameWorld {
             entry.trains[place] = train
         }
         if !blockSections { settleClaims(&entry.holders, covers: entry.covers) }
+        entry.at = clock.now
         memo.holders.insert(entry, at: 0)
         if let audit = Self.holderAudit {
             audit.updates += 1
-            precondition(entry.holders.matches(workedOutHolders(memo: &memo).holders), "the holders changed in place are not the holders worked out again")
+            precondition(audit.countsOnly || entry.holders.matches(workedOutHolders(memo: &memo).holders), "the holders changed in place are not the holders worked out again")
         }
         return entry.holders
     }
@@ -1333,6 +1369,18 @@ extension GameWorld {
     final class HolderAudit: @unchecked Sendable {
         var updates = 0
         var rebuilds = 0
+        /// Decision 877: how often holders kept for the same trains were
+        /// settled again for another time (see ``keptHolders(memo:)``),
+        /// and the times at which that changed whom a claim binds.
+        var settledAgain = 0
+        var staleClaims: [GameTime] = []
+        /// Decision 877: keeps such holders as they were settled, as the
+        /// game did before it, to tell what settling them again changes.
+        var keepsStaleClaims = false
+        /// Only counts, without checking each answer changed in place
+        /// against one worked out again: for whole days of a large game,
+        /// where that check is most of the time.
+        var countsOnly = false
     }
 
     @TaskLocal static var holderAudit: HolderAudit?
@@ -1398,6 +1446,8 @@ extension GameWorld {
     private func settleClaims(_ holders: inout TrackHolders, covers: [TrackCover?]) {
         holders.claims = [:]
         holders.released = [:]
+        // Decision 877: whether any of what follows asked the time.
+        var readsTheTime = false
         var claims: [TrainID: Claim] = [:]
         for (train, route) in zip(trains, covers) {
             // A following train's route envelope (see ``routeEnvelope(of:)``)
@@ -1433,7 +1483,9 @@ extension GameWorld {
                 // without a service standing where the service it follows
                 // is due to go. Decision 850: nor a train standing there
                 // whose own departure is due.
-                if train.isDeadheading, claims[leader.id] == nil, let leaving = leavingCover(of: leader, memo: &paths) {
+                guard train.isDeadheading, claims[leader.id] == nil else { continue }
+                readsTheTime = true
+                if let leaving = leavingCover(of: leader, memo: &paths) {
                     for (other, blocks) in holders.holding(leaving, except: leader.id, fouling: true, in: network).enumerated()
                     where blocks && other != place && (trains[other].execution == nil || isDueToLeave(trains[other])) {
                         released[train.id, default: []].insert(trains[other].id)
@@ -1442,6 +1494,7 @@ extension GameWorld {
             }
         }
         holders.released = released
+        holders.readsTheTime = readsTheTime
     }
 
     /// Decision 836: the track `train`, a service standing at a call whose

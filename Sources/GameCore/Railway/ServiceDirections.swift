@@ -62,8 +62,9 @@ extension GameWorld {
         /// command, kept from one plan to the next.
         var trafficParts = TrafficParts()
         /// The track the trains hold (see ``trackHolders(memo:)``), for the
-        /// last sets of trains asked about.
-        var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders)] = []
+        /// last sets of trains asked about, each with the time its claims
+        /// were settled for (decision 877).
+        var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders, at: GameTime)] = []
         /// Each train's movement authority (see ``authority(of:memo:)``),
         /// for its last values asked about.
         var authorities: [TrainID: [(train: Train, authority: (left: Int64, envelopes: AuthorityEnvelopes)?)]] = [:]
