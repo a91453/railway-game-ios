@@ -1,4 +1,4 @@
-# CIOPT-10（2026-11-18，claude/project-thread-2u3fly）
+# CIOPT-10（2026-11-18，#2427）
 
 138 發版後的 CI 量測（[CI_MEASURE_2026-11-18](../research/CI_MEASURE_2026-11-18.md) §7）留下的一項；做了的寫在決策 719 的後來，交接在 `docs/handoff/CIOPT-10.md`。尺同 NEXT_PRIORITIES §19。
 
