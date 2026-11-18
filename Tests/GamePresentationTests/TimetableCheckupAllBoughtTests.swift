@@ -8,24 +8,30 @@ import XCTest
 /// with a timetable alone in a game; a line bought alone cannot show what
 /// happens where two of a player's lines meet. So the lines on sale of a
 /// map that **share a station** (and so track, platforms or a depot's
-/// approach) are also bought together, in both orders, under a new
-/// game's rules and the realistic ones: on Taiwan the two Danhai light
-/// rails and the Liujia and Neiwan lines (Zhuzhong), in Rovaniemi its two
-/// lines (also each alone, which nothing played); Hong Kong's three on
-/// one track to the airport are ``TimetableCheckupFullTests``'s. Lines
-/// that share nothing are played alone only (owner, 2026-11-18: a whole
-/// map bought at once costs a nightly job each and showed nothing a
-/// line alone does not). Nightly and by hand (`TIMETABLE_CHECKUP=1`;
-/// ci.yml's timetable-checkup jobs), each world's whole second day;
-/// `TIMETABLE_CHECKUP_ONLY=<name>` plays one
-/// (`taiwan ntdlrt:V+ntdlrt:VB simple`, `rovaniemi vr:KJA realistic`, ...).
+/// approach) are also bought together, under a new game's rules and the
+/// realistic ones: on Taiwan the two Danhai light rails and the Liujia
+/// and Neiwan lines (Zhuzhong), in Rovaniemi its two lines (also each
+/// alone, which nothing played); Hong Kong's three on one track to the
+/// airport are ``TimetableCheckupFullTests``'s. Lines that share nothing
+/// are played alone only (owner, 2026-11-18: a whole map bought at once
+/// costs a nightly job each and showed nothing a line alone does not).
+/// Nightly and by hand (`TIMETABLE_CHECKUP=1`; ci.yml's timetable-checkup
+/// jobs), each world's whole second day; `TIMETABLE_CHECKUP_ONLY=<name>`
+/// plays one (`taiwan ntdlrt:V+ntdlrt:VB simple`,
+/// `rovaniemi vr:KJA realistic`, ...).
 ///
-/// The groups are worked out from the game's own list of lines on sale
-/// (``GameSession/buyableRealLines``), so a line added to a map that
-/// shares a station with another is played with it without a change
-/// here, and `testEveryLineOnSaleIsPlayed` (always run, a few seconds)
-/// is red when a map sells a line no world buys alone, or has a group
-/// of lines sharing a station that no world buys together.
+/// Decision 862: those lines are now sold together, so the groups are
+/// the game's own bundles (``GameSession/realLineBundles``), and each is
+/// bought as a player buys it, in one purchase, in the order the game
+/// lays it. The other order, and a line of a group alone, is what a game
+/// saved before decision 862 may hold (one line bought then, the rest
+/// since), still played, bought one line at a time.
+///
+/// A line added to a map that shares a station with another is played
+/// with it without a change here, and `testEveryLineOnSaleIsPlayed`
+/// (always run, a few seconds) is red when a map sells a line no world
+/// buys alone, or has a group of lines sharing a station that no world
+/// buys together.
 @MainActor
 final class TimetableCheckupAllBoughtTests: XCTestCase {
     private static let rules: [(String, NewGameRules)] = [("simple", .simple), ("realistic", .realistic)]
@@ -43,23 +49,24 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     ]
 
     /// The lines on sale in `session` that share a station with another,
-    /// in groups (each sorted, the groups sorted): two lines are in one
-    /// group when a stop of one has the name of a stop of the other, in
-    /// the same railway system, or a third line joins them.
+    /// in groups, each in the order it is laid, the groups sorted by
+    /// their first line: the game's bundles of more than one line
+    /// (decision 862; two lines are in one group when a stop of one has
+    /// the name of a stop of the other, in the same railway system, or a
+    /// third line joins them).
     static func sharingGroups(in session: GameSession) -> [[String]] {
-        let lines = session.buyableRealLines
-        var group = Dictionary(uniqueKeysWithValues: lines.map { ($0.id, $0.id) })
-        func root(_ id: String) -> String {
-            var id = id
-            while let parent = group[id], parent != id { id = parent }
-            return id
-        }
-        for (index, a) in lines.enumerated() {
-            for b in lines[(index + 1)...] where a.system == b.system && !Set(a.stops).isDisjoint(with: b.stops) {
-                group[root(a.id)] = root(b.id)
-            }
-        }
-        return Dictionary(grouping: lines.map(\.id), by: root).values.filter { $0.count > 1 }.map { $0.sorted() }.sorted { $0[0] < $1[0] }
+        session.realLineBundles.filter { !$0.isSingle }.map { $0.lines.map(\.id) }.sorted { $0[0] < $1[0] }
+    }
+
+    /// Buys the bundle of `session` whose lines are `ids`, in one
+    /// purchase, as a player does (decision 862).
+    static func buyTogether(_ ids: [String], in session: GameSession, file: StaticString = #filePath, line: UInt = #line) throws {
+        let bundle = try XCTUnwrap(session.realLineBundles.first { $0.lines.map(\.id) == ids }, "\(ids) sold together", file: file, line: line)
+        let offer = session.realLineBundleOffer(for: bundle)
+        XCTAssertTrue(
+            session.acquireRealLines(offer), "\(ids) not bought: \(offer.problemText(in: .traditionalChinese) ?? session.message?.text ?? "")",
+            file: file, line: line
+        )
     }
 
     // MARK: - The games
@@ -164,7 +171,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         let rovaniemi = Self.sharingGroups(in: try Self.rovaniemi(rules: .simple))
         FileHandle.standardError.write(Data("TIMETABLE_CHECKUP sharing a station: Taiwan \(taiwan), Hong Kong \(hongKong), Rovaniemi \(rovaniemi)\n".utf8))
         XCTAssertEqual(taiwan, [["ntdlrt:V", "ntdlrt:VB"], ["tra:LIUJIA", "tra:NEIWAN"]])
-        XCTAssertEqual(hongKong, [["hkmtr:AEL", "hkmtr:DRL", "hkmtr:TCL"]], "TimetableCheckupFullTests plays hk AEL+TCL+DRL")
+        XCTAssertEqual(hongKong, [["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]], "TimetableCheckupFullTests plays hk AEL+TCL+DRL, in this order")
         XCTAssertEqual(rovaniemi, [["vr:KJA", "vr:MUL"]])
     }
 
@@ -189,21 +196,26 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     }
 
     /// Taiwan's lines on sale that share a station, each group bought in
-    /// a game round its first line, in the order of their ids and the
-    /// other way round (the second line bought is laid beside the first,
-    /// or sold from where they part: decisions 400, 493, 848).
+    /// a game round its first line: together, as it is sold (decision
+    /// 862), and the other way round one line at a time, as a game saved
+    /// before it may have them (the second line bought is laid beside the
+    /// first, or sold from where they part: decisions 400, 493, 848).
     func testTaiwanLinesSharingAStation() throws {
         try full()
         let groups = Self.sharingGroups(in: try Self.wholeTaiwan(rules: .simple))
         XCTAssertFalse(groups.isEmpty)
         for group in groups {
-            for ids in [group, group.reversed()] {
+            for (ids, together) in [(group, true), (Array(group.reversed()), false)] {
                 for (label, rules) in Self.rules {
                     let name = "taiwan \(ids.joined(separator: "+")) \(label)"
                     try check(name, {
                         let round = ids[0].hasPrefix("tra:") ? String(ids[0].dropFirst(4)) : ids[0]
                         let session = try RealLineAcquisitionTests.game(round: round, side: 1 << 21, heights: true, rules: rules)
-                        for id in ids { XCTAssertEqual(Self.buy([id], in: session), [id], name) }
+                        if together {
+                            try Self.buyTogether(ids, in: session)
+                        } else {
+                            for id in ids { XCTAssertEqual(Self.buy([id], in: session), [id], name) }
+                        }
                         return session.world
                     }())
                 }
@@ -211,9 +223,11 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         }
     }
 
-    /// Rovaniemi's lines each alone and both (in both orders), under both rules
+    /// Rovaniemi's lines each alone and both, under both rules
     /// (``TimetableCheckupFullTests/testRovaniemiLines`` plays the two
-    /// together under the rules a world has before a new game's are set).
+    /// together under the rules a world has before a new game's are set):
+    /// together as they are sold (decision 862); the other order and each
+    /// alone as a game saved before it may have them.
     func testRovaniemiEachLineAndBoth() throws {
         try full()
         for (label, rules) in Self.rules {
@@ -221,7 +235,11 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
                 let name = "rovaniemi \(ids.joined(separator: "+")) \(label)"
                 try check(name, {
                     let session = try Self.rovaniemi(rules: rules)
-                    for id in ids { XCTAssertEqual(Self.buy([id], in: session), [id], name) }
+                    if ids == ["vr:KJA", "vr:MUL"] {
+                        try Self.buyTogether(ids, in: session)
+                    } else {
+                        for id in ids { XCTAssertEqual(Self.buy([id], in: session), [id], name) }
+                    }
                     return session.world
                 }())
             }

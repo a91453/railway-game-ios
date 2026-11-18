@@ -53,8 +53,9 @@ public struct TracedSaleHint: Hashable, Sendable {
 }
 
 /// A line's offer laid out for ``TracedSaleHint``, and on which world.
+/// Decision 862: the offer of the bundle it is sold in.
 struct TracedSaleQuote: Sendable {
-    let offer: RealLineOffer
+    let offer: RealLineBundleOffer
     /// ``GameSession/commandRevision`` and ``GameSession/railwaysRevision``
     /// as they were.
     let revision: Int
@@ -102,8 +103,8 @@ enum TracedSale {
 
     /// "You can buy the Neiwan Line as it is (its price, with its trains
     /// and real timetable)."; without the price while it is worked out.
-    static func text(_ line: RealBranchLine, price: Money?, in language: DisplayLanguage) -> String {
-        let name = line.name(in: language)
+    /// Decision 862: `name` is the bundle's (``RealLineBundle/title(in:)``).
+    static func text(_ name: String, price: Money?, in language: DisplayLanguage) -> String {
         guard let price else {
             return language.text(
                 "You can buy the \(name) as it is, with its trains and real timetable.",
@@ -116,14 +117,17 @@ enum TracedSale {
         )
     }
 
-    /// The hint for `line`: with its price and what the company lacks from
-    /// `quote`'s offer when there is one; `nil` where that offer says it
-    /// cannot be bought here.
-    static func hint(_ line: RealBranchLine, quote: RealLineOffer?, balance: Money, in language: DisplayLanguage) -> TracedSaleHint? {
-        guard let quote else { return TracedSaleHint(line: line, price: nil, text: text(line, price: nil, in: language), shortfall: nil) }
+    /// The hint for `line`, sold in `bundle`: with its price and what the
+    /// company lacks from `quote`'s offer when there is one; `nil` where
+    /// that offer says it cannot be bought here.
+    static func hint(
+        _ line: RealBranchLine, bundle: RealLineBundle, quote: RealLineBundleOffer?, balance: Money, in language: DisplayLanguage
+    ) -> TracedSaleHint? {
+        let name = bundle.title(in: language)
+        guard let quote else { return TracedSaleHint(line: line, price: nil, text: text(name, price: nil, in: language), shortfall: nil) }
         guard quote.problem == nil, let price = quote.price?.total else { return nil }
         return TracedSaleHint(
-            line: line, price: price, text: text(line, price: price, in: language),
+            line: line, price: price, text: text(name, price: price, in: language),
             shortfall: quote.shortfallText(balance: balance, in: language)
         )
     }
@@ -171,29 +175,30 @@ extension GameSession {
     /// runs along no line for sale, or the line cannot be bought here.
     public var tracedSaleHint: TracedSaleHint? {
         guard let line = networkPreview?.forSale else { return nil }
-        if let quote = currentTracedSaleQuote(of: line) {
-            return TracedSale.hint(line, quote: quote.offer, balance: world.economy.balance, in: language)
+        let bundle = realLineBundle(of: line)
+        if let quote = currentTracedSaleQuote(of: bundle) {
+            return TracedSale.hint(line, bundle: bundle, quote: quote.offer, balance: world.economy.balance, in: language)
         }
-        quoteTracedSale(line)
-        return TracedSale.hint(line, quote: nil, balance: world.economy.balance, in: language)
+        quoteTracedSale(line, in: bundle)
+        return TracedSale.hint(line, bundle: bundle, quote: nil, balance: world.economy.balance, in: language)
     }
 
-    /// The offer of `line` laid out on the world as it is now, if any.
-    private func currentTracedSaleQuote(of line: RealBranchLine) -> TracedSaleQuote? {
-        guard let quote = tracedSaleQuote, quote.offer.line == line, quote.revision == commandRevision,
+    /// The offer of `bundle` laid out on the world as it is now, if any.
+    private func currentTracedSaleQuote(of bundle: RealLineBundle) -> TracedSaleQuote? {
+        guard let quote = tracedSaleQuote, quote.offer.bundle == bundle, quote.revision == commandRevision,
               quote.railways == railwaysRevision else { return nil }
         return quote
     }
 
-    /// Lays out `line`'s offer off the main actor for ``tracedSaleQuote``,
-    /// unless that is already under way; again where the world changed
-    /// meanwhile, once laid out.
-    private func quoteTracedSale(_ line: RealBranchLine) {
+    /// Lays out the offer of `bundle`, which `line` is sold in, off the
+    /// main actor for ``tracedSaleQuote``, unless that is already under
+    /// way; again where the world changed meanwhile, once laid out.
+    private func quoteTracedSale(_ line: RealBranchLine, in bundle: RealLineBundle) {
         if let running = tracedSaleQuoteTask, running.line == line { return }
         tracedSaleQuoteTask?.task.cancel()
         let laying = realLineLaying, revision = commandRevision, railways = railwaysRevision
         let task = Task {
-            let offer = await Task.detached(priority: .utility) { laying.offer(for: line) }.value
+            let offer = await Task.detached(priority: .utility) { laying.offer(for: bundle) }.value
             guard !Task.isCancelled else { return }
             tracedSaleQuoteTask = nil
             guard commandRevision == revision, railwaysRevision == railways else {
@@ -201,7 +206,7 @@ extension GameSession {
                 // out again while the trace still runs along the line, or
                 // a paused game's hint would stay without a price, as
                 // nothing it shows changed.
-                if networkPreview(now: true)?.forSale == line { quoteTracedSale(line) }
+                if networkPreview(now: true)?.forSale == line { quoteTracedSale(line, in: realLineBundle(of: line)) }
                 return
             }
             tracedSaleQuote = TracedSaleQuote(offer: offer, revision: revision, railways: railways)
@@ -222,7 +227,7 @@ extension GameSession {
     /// where it is still the world's. The trace stays drawn.
     public func offerTracedSaleLine() {
         guard let line = networkPreview(now: true)?.forSale else { return }
-        if let quote = currentTracedSaleQuote(of: line) {
+        if let quote = currentTracedSaleQuote(of: realLineBundle(of: line)) {
             closeRealLineOffer()
             shownRealLineOffer = quote.offer
         } else {

@@ -108,8 +108,12 @@ final class RealLineListingTests: XCTestCase {
             await session.realLineAvailabilityChecked()
             let buyable = session.realLineListings.filter(\.isBuyable)
             XCTAssertFalse(buyable.isEmpty)
+            // Decision 862: lines that share a station are one row, bought
+            // from the land that reaches any of them.
             for listing in buyable {
-                XCTAssertNotEqual(session.realLineOffer(for: listing.line).problem, GameSession.landProblem(in: .traditionalChinese), listing.line.id)
+                XCTAssertNotEqual(
+                    session.realLineBundleOffer(for: listing.bundle).problem, GameSession.landProblem(in: .traditionalChinese), listing.bundle.id
+                )
             }
         }
     }

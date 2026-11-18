@@ -21,13 +21,18 @@ public struct RealLineLandNote: Hashable, Sendable {
     }
 }
 
-/// A row of the list.
+/// A row of the list. Decision 862: one for each bundle, the lines that
+/// share a station sold together.
 public struct RealLineListing: Hashable, Sendable {
-    public let line: RealBranchLine
+    public let bundle: RealLineBundle
+    /// The line the row is named after and opens the card of: the first
+    /// laid of its bundle.
+    public var line: RealBranchLine { bundle.first }
     /// From the middle of the company's land (``GameSession/realLineFocus``)
-    /// to its nearest station, in metres.
+    /// to its nearest station (of any of its lines), in metres.
     public let metres: Int64
-    /// Set when the line cannot be bought from the land owned.
+    /// Set when the line cannot be bought from the land owned (none of
+    /// its bundle's lines can).
     public let note: RealLineLandNote?
 
     public var isBuyable: Bool { note == nil }
@@ -46,19 +51,22 @@ extension GameSession {
         return PlanPoint(x: world.bounds.width / 2, y: world.bounds.height / 2)
     }
 
-    /// ``buyableRealLines`` nearest ``realLineFocus`` first (ties by id),
-    /// each with why it cannot be bought yet, if so.
+    /// ``realLineBundles`` nearest ``realLineFocus`` first (ties by id),
+    /// each with why it cannot be bought yet, if so. Decision 862: a
+    /// bundle can be bought from the land that reaches any of its lines
+    /// (that one is laid first, and its land reaches the others).
     public var realLineListings: [RealLineListing] {
         guard let railways, let frame = RealWorldFrame(world: world) else {
-            return buyableRealLines.map { RealLineListing(line: $0, metres: 0, note: nil) }
+            return realLineBundles.map { RealLineListing(bundle: $0, metres: 0, note: nil) }
         }
         let focus = WorldVector(realLineFocus)
-        return buyableRealLines.map { line -> RealLineListing in
-            let nearest = line.stops.compactMap {
-                RealLineLaying.realPoint(of: $0, system: line.system, railways: railways, frame: frame)
+        return realLineBundles.map { bundle -> RealLineListing in
+            let nearest = bundle.lines.flatMap { line in
+                line.stops.compactMap { RealLineLaying.realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
             }.map { ($0 - focus).length }.min() ?? 0
             let metres = Int64((nearest / RealLineAcquisition.metre).rounded())
-            return RealLineListing(line: line, metres: metres, note: realLineOutOfReach.contains(line.id) ? RealLineLandNote(metres: metres) : nil)
+            let outOfReach = bundle.lines.allSatisfy { realLineOutOfReach.contains($0.id) }
+            return RealLineListing(bundle: bundle, metres: metres, note: outOfReach ? RealLineLandNote(metres: metres) : nil)
         }.sorted { ($0.metres, $0.line.id) < ($1.metres, $1.line.id) }
     }
 
@@ -91,7 +99,7 @@ extension GameSession {
         }
         var laying = realLineLaying
         laying.landCheckOnly = true
-        let lines = realLineListings.map(\.line)
+        let lines = realLineListings.flatMap(\.bundle.lines)
         let checking = laying
         realLineAvailabilityTask = Task {
             var failed: Set<String> = []
