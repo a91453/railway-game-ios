@@ -5,14 +5,15 @@
 
 ## 做了什麼
 
-- 決策 849：沒有閉塞區間時，有班次路線的服務整條路空著才出發時，只拿到下一站咽喉前的進站號誌，離號誌 1 km 內才拿進站的路；停在號誌前的車只 claim 拿著的路與它的月台，後面的車可以跟它。`ApproachLocking.swift`（`homeLimit`、`throatPoint`、`claimCover`、`holdsToItsApproach`、`approachLimit(of:holding:_:)`）。
-- 香港新局預設（簡化＋管制）南港島綫第二天沒發 21 → 0/458；29 個世界的比對在決策 849 §3。
-- HK-CTRL-DEADLOCK（REVIEW-L27 第 8 列）：決策 836 之後 `main` 已是 0 死結，結案。
+- 決策 849：沒有閉塞區間時，班次跑全線、每站都停的路線上，服務往它折返或終到的站、整條路空著才出發時，只拿到下一站咽喉前的進站號誌，離號誌 1 km 內才拿進站的路；停在號誌前的車只 claim 拿著的路與它的月台，後面的車可以跟它。`ApproachLocking.swift`（`homeLimit`、`throatPoint`、`claimCover`、`holdsToItsApproach`、`approachLimit(of:holding:_:)`）。
+- 香港新局預設（簡化＋管制）兩線第二天沒發 26 → 1/732（南港島綫 23 → 0，剩的是東涌綫清晨 06:17 的 TCL-DAWN）；29 個世界的比對在決策 849 §3，其餘世界與 `main` 一樣。
+- HK-CTRL-DEADLOCK（REVIEW-L27 第 8 列）：決策 836 之後 `main` 已是 0 死結，結案。但這個 PR 之後車位變了，`main` 潛伏的 TCL-DEPOT-CLAIM 在每晚 00:03、00:10 各出現一次 1 分鐘的 5 列死結，自己解開；重評在 `docs/priorities/HK-PEAK-CONTROL.md` 第 1 列（2.40）。
 - 測試：`HomeSignalTests`（GameCore）、`HongKongDepotTests.testTheSouthIslandLineMorningPeakSendsEveryRun`。
 
 ## 還留下什麼
 
-- `docs/priorities/HK-PEAK-CONTROL.md`：HK-PEAK-REALISTIC 2.10（擬實的南港島綫仍 10/458）。
+- `docs/priorities/HK-PEAK-CONTROL.md`：TCL-DEPOT-CLAIM 重評 2.40（先修）、HK-PEAK-REALISTIC 2.10（擬實的南港島綫仍 10/458）。
+- 時刻表體檢（#2432）合併後，把 `TimetableCheckupTests.swift` 裡 hk SIL 的上限（含 PR 版那組）調低到 0。
 - TCL-DAWN（東涌綫清晨 06:17 等 3 班）照舊歸 DEPOT-DAWN-QUEUE（決策 841 那一串）。
 
 ## UNVERIFIED

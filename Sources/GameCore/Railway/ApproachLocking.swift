@@ -103,16 +103,20 @@ extension GameWorld {
     /// sections off, may hold now, or `nil` when it may hold all of it:
     /// short of the first junction or crossing its route reaches within
     /// ``throatReach`` of the stop (the station's throat), while that is
-    /// more than ``homeReach`` away. On Hong Kong's South Island Line a
-    /// train leaving Ocean Park held Admiralty's crossovers for the four
-    /// minutes it took to get there, and the trains due out of Admiralty
-    /// waited behind it; a real railway sets the route into a station only
-    /// as the train nears its home signal.
+    /// more than ``homeReach`` away. Only a service (not an empty run)
+    /// turning back or ending at the stop, on a line whose runs all run
+    /// its whole length and call at every stop: at a through station, or
+    /// on a line with expresses or short runs (the Taoyuan Airport MRT),
+    /// trains queued worse with it. On Hong Kong's
+    /// South Island Line a train leaving Ocean Park held Admiralty's
+    /// crossovers for the four minutes it took to get there, and the
+    /// trains due out of Admiralty waited behind it; a real railway sets
+    /// the route into a station only as the train nears its home signal.
     func homeLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
         let length = envelopes.length
         guard length > Self.homeReach + RailwayNetwork.junctionZone, !train.isDeadheading, case .travellingToStop(let stop, let cycle)? = train.execution,
               train.timetable[stop].reverses || train.call(after: stop, cycle: cycle) == nil,
-              let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }), line.runs.allSatisfy({ $0.passes.isEmpty })
+              let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }), line.runs.allSatisfy({ $0.passes.isEmpty && min($0.from, $0.to) == 0 && max($0.from, $0.to) == line.stops.count - 1 })
         else { return nil }
         let window = length - Self.throatReach
         guard let first = envelopes.ends.firstIndex(where: { $0 > window }) else { return nil }
