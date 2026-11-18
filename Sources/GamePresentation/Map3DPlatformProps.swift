@@ -194,7 +194,8 @@ extension Map3DScene.Builder {
         let depots = Set(world.stations.filter(\.isDepot).map(\.id))
         // Decision 847: the real lines' screen doors.
         let screenDoors = Map3DScreenDoors.Plan(world: world)
-        for platform in laidPlatforms where !depots.contains(platform.station) {
+        // Decision 860: the underground platforms' too.
+        for platform in laidPlatforms + laidUnderground where !depots.contains(platform.station) {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
             let trains = calling[platform.station]
             let doorsHere = platform.edge.flatMap {
