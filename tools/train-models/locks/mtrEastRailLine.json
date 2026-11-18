@@ -1,0 +1,103 @@
+{
+  "comment" : "Decision 782: the models of the registered train mtrEastRailLine (Map3DMTREastRailLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 12,
+  "lamps" : "2dc9e7641ae7e40e",
+  "models" : {
+    "light-set-mtrEastRailLine-car" : {
+      "hash" : "c5c4276ec55b9795",
+      "triangles" : 176
+    },
+    "light-set-mtrEastRailLine-centre" : {
+      "hash" : "d84d0dc2f9187785",
+      "triangles" : 200
+    },
+    "light-set-mtrEastRailLine-fourth" : {
+      "hash" : "71e36bed22cb3295",
+      "triangles" : 176
+    },
+    "light-set-mtrEastRailLine-head" : {
+      "hash" : "6bbeaf546168497d",
+      "triangles" : 152
+    },
+    "light-set-mtrEastRailLine-panto" : {
+      "hash" : "c5c4276ec55b9795",
+      "triangles" : 176
+    },
+    "light-set-mtrEastRailLine-tail" : {
+      "hash" : "400be4d7f4190f7d",
+      "triangles" : 152
+    },
+    "light-set-mtrEastRailLineFar-car" : {
+      "hash" : "5cd736b9a35a9e5",
+      "triangles" : 96
+    },
+    "light-set-mtrEastRailLineFar-centre" : {
+      "hash" : "6e32a8783bf04f8d",
+      "triangles" : 168
+    },
+    "light-set-mtrEastRailLineFar-fourth" : {
+      "hash" : "682cc28bb709f7e5",
+      "triangles" : 96
+    },
+    "light-set-mtrEastRailLineFar-head" : {
+      "hash" : "bdf95e9dc1387e05",
+      "triangles" : 72
+    },
+    "light-set-mtrEastRailLineFar-panto" : {
+      "hash" : "5cd736b9a35a9e5",
+      "triangles" : 96
+    },
+    "light-set-mtrEastRailLineFar-tail" : {
+      "hash" : "9e5dba13fdfda105",
+      "triangles" : 72
+    },
+    "set-mtrEastRailLine-car" : {
+      "hash" : "d39363b4e6780ab5",
+      "triangles" : 8258
+    },
+    "set-mtrEastRailLine-centre" : {
+      "hash" : "a5133d41351bd74e",
+      "triangles" : 6098
+    },
+    "set-mtrEastRailLine-fourth" : {
+      "hash" : "2da27e2521d612cd",
+      "triangles" : 8402
+    },
+    "set-mtrEastRailLine-head" : {
+      "hash" : "ed9fe826cccea1a2",
+      "triangles" : 11614
+    },
+    "set-mtrEastRailLine-panto" : {
+      "hash" : "3dd11553a8b4d2ee",
+      "triangles" : 8402
+    },
+    "set-mtrEastRailLine-tail" : {
+      "hash" : "2b8ca2f83e20655e",
+      "triangles" : 11614
+    },
+    "set-mtrEastRailLineFar-car" : {
+      "hash" : "abaf05803e2cd159",
+      "triangles" : 2554
+    },
+    "set-mtrEastRailLineFar-centre" : {
+      "hash" : "a85eb1d40e571457",
+      "triangles" : 2746
+    },
+    "set-mtrEastRailLineFar-fourth" : {
+      "hash" : "977b09730194c42b",
+      "triangles" : 2650
+    },
+    "set-mtrEastRailLineFar-head" : {
+      "hash" : "72f233c8b49fdf0c",
+      "triangles" : 4008
+    },
+    "set-mtrEastRailLineFar-panto" : {
+      "hash" : "9bc89395d36e1cbb",
+      "triangles" : 2650
+    },
+    "set-mtrEastRailLineFar-tail" : {
+      "hash" : "865077139972f3b2",
+      "triangles" : 4008
+    }
+  }
+}
