@@ -25,7 +25,7 @@ swift test --skip-build --filter RovaniemiRailwaysTests
 swift test --skip-build --filter "RealLineAcquisitionTests|RealLineRebuildTests|HongKongEveryLineTests|HongKongSharedTrackBuyOrderTests|LiujiaLineTrainsTests"
 ```
 
-加新地圖（新的 `OverseasMap`）或新的出售路線時，在 `SharedStationLayoutTests` 加一個「全部依序買下、`stacked` 為空」的測試。
+加新地圖（新的 `OverseasMap`）或新的出售路線時，在 `SharedStationLayoutTests` 加一個「全部依序買下、`stacked` 為空」的測試（有共站的線兩種順序都買），再把地圖加進 `mapsChecked`；沒加的話 `testEveryOverseasMapHasItsSharedStationsChecked` 會紅。
 
 ## 3. 探針（看每座月台在哪）
 
@@ -49,5 +49,6 @@ for p in world.network.platforms(of: station) {
 | 竹中六家線（真實高架）的月台在內灣線地面月台正上方 | 高架可以，但要在旁邊，不在頭上 | 462 → 848 |
 | 拆掉的線重買，旁邊留著自己的舊軌道 | 舊軌道要拆掉重鋪（`RealLineClearing`），不是鋪在旁邊：`sharedEnds` 只看有別條線停靠的站 | 528、848 |
 | 香港兩條線沿同一條真實線形（機場快綫、東涌綫） | 整段推成兩條車道（`overseasLanes`） | 753 |
+| 福岡加地圖時漏了本檔第 2 節的共站測試；補了之後發現：先買只到共站的線、最後買穿過它的線（空港線過博多、中洲川端），穿過那條的月台被抬高 16 m（`sharedEnds` 只挪端點） | `SharedStationLayoutTests.mapsChecked` 沒列新地圖就紅；中間站共站同高待修（SHARED-STATION-THROUGH） | 854 |
 
 做完一件收購鋪線的工作，在第 4 節加一列，寫決策號。
