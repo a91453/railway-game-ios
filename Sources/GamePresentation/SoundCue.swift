@@ -53,6 +53,9 @@ public enum SoundCue: Hashable, Sendable {
     case uiConfirm
     case uiCancel
     case uiOpen
+    /// Decision 853: a watched train's doors started closing at 60× or
+    /// slower, and its line's melody plays (``DepartureMelody``).
+    case departure(DepartureMelody)
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -190,6 +193,9 @@ public enum SoundCue: Hashable, Sendable {
         case .uiConfirm: ("kenney-ui-confirm", "wav")
         case .uiCancel: ("kenney-ui-cancel", "wav")
         case .uiOpen: ("kenney-ui-open", "wav")
+        // Decision 853: played once on the sampled piano, AAC as the
+        // music's tunes played once are.
+        case .departure(let melody): ("departure-\(melody.rawValue)", "m4a")
         }
     }
 }

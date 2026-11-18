@@ -469,8 +469,10 @@ jobs:
           - group: hong-kong-realistic
             test: testHongKongLines
             rules: realistic
+          # Decision 844's later note: and the lines that share a station
+          # bought together (TimetableCheckupAllBoughtTests).
           - group: branch-lines-and-rovaniemi
-            test: testTaiwanBranchLines|testRovaniemiLines
+            test: testTaiwanBranchLines|testRovaniemiLines|testRovaniemiEachLineAndBoth|testTaiwanLinesSharingAStation
             rules: ""
     steps:
       - uses: actions/checkout@v5
@@ -493,7 +495,7 @@ jobs:
         run: |
           set +e
           [[ -n "$TIMETABLE_CHECKUP_RULES" ]] || unset TIMETABLE_CHECKUP_RULES
-          swift test --skip-build --filter "GamePresentationTests\.TimetableCheckupFullTests/(${{ matrix.test }})\$" 2>&1 | tee "$RUNNER_TEMP/checkup.log"
+          swift test --skip-build --filter "GamePresentationTests\.TimetableCheckup(Full|AllBought)Tests/(${{ matrix.test }})\$" 2>&1 | tee "$RUNNER_TEMP/checkup.log"
           status="${PIPESTATUS[0]}"
           { echo "### Timetable checkup: ${{ matrix.group }}"; echo '```'; grep -E '^(TIMETABLE_CHECKUP|  )' "$RUNNER_TEMP/checkup.log" || true; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
           exit "$status"
