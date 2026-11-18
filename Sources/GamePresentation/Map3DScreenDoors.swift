@@ -109,6 +109,9 @@ public enum Map3DScreenDoors {
         var formations: [String: [Map3DPlatformProps.Formation]] = [:]
         /// The stations' names.
         var names: [StationID: String] = [:]
+        /// Decision 859: which way the trains calling at the platform on
+        /// each edge stand there, as the lines' journeys stop them.
+        var stands: [TrackEdgeID: Map3DPlatformProps.Stands] = [:]
 
         public init() {}
 
@@ -137,6 +140,45 @@ public enum Map3DScreenDoors {
                                                                                   doors: Int(doors)))
             }
             for key in stations.keys { stations[key]?.sort() }
+            // Decision 859: GameCore stops every train with its head at
+            // the platform's far end the way it travels (its berth), not
+            // in its middle; so where the line's trains stand depends on
+            // which way they come in. Each leg of each of its journeys ends
+            // at such a berth.
+            for line in world.lines where lineOf[line.id] != nil {
+                var patterns: [Int?] = [nil]
+                for index in line.patterns.indices { patterns.append(index) }
+                for pattern in patterns {
+                    guard let journey = world.lineJourney(line.id, pattern: pattern),
+                          case .onEdge(var at, _) = journey.start else { continue }
+                    let farEnd = journey.isRing ? -1 : journey.legs.count / 2
+                    for (index, leg) in journey.legs.enumerated() {
+                        // It turns round where it stands at the far end and
+                        // where it turns back between the ends.
+                        if index == farEnd || journey.intermediateTurnbacks.contains(index) { at = at.reversed }
+                        if let last = leg.path.traversals.last { at = last }
+                        guard leg.path.distance > 0 else { continue }
+                        stands[at.edge, default: []].insert(at.direction == .forward ? .forward : .backward)
+                    }
+                }
+            }
+            // At the line's two ends trains stand both ways round: those
+            // in from the line at the end away from it, those out of the
+            // sidings and depots beyond, which its journeys leave out, at
+            // the end towards it, and each platform takes both through the
+            // day (the Wenhu Line's Taipei Zoo and Nangang Exhibition
+            // Center, four tracks each).
+            for line in world.lines where lineOf[line.id] != nil && !line.isRing && line.stops.count >= 2 {
+                for end in [line.stops[0], line.stops[line.stops.count - 1]] {
+                    for platform in world.network.platforms(of: end) { stands[platform.edge] = [.forward, .backward] }
+                }
+            }
+        }
+
+        /// Decision 859: which way the trains calling at the platform on
+        /// `edge` stand there; empty when none of the lines bought does.
+        public func stands(edge: TrackEdgeID) -> Map3DPlatformProps.Stands {
+            stands[edge] ?? []
         }
 
         /// The real line of the platform on `edge` at `station`: the one
@@ -167,23 +209,33 @@ public enum Map3DScreenDoors {
     public static let setBack: Float = 0.3
 
     /// The pieces along a platform `length` metres long, from its start:
-    /// the run of doors spans the calling train (`formations`, the longest
-    /// that fits, as ``Map3DPlatformProps/doorCentres(length:formations:kind:)``
-    /// stands it), each of its doors an opening (`door` true) between
-    /// fixed panels. Empty when no train fits.
-    public static func pieces(length: Float, formations: [Map3DPlatformProps.Formation]) -> [(from: Float, to: Float, door: Bool)] {
+    /// an opening (`door` true) at each door of the calling train
+    /// (`formations`, the longest that fits, standing where `stands`
+    /// says, as ``Map3DPlatformProps/doorCentres(length:formations:kind:stands:)``
+    /// stands it), fixed panels between them and, decision 859, on along
+    /// the rest of the platform, as the real ones run its whole length.
+    /// Empty when no train fits.
+    public static func pieces(length: Float, formations: [Map3DPlatformProps.Formation],
+                              stands: Map3DPlatformProps.Stands = []) -> [(from: Float, to: Float, door: Bool)] {
         let calling = formations.filter { $0.doors > 0 }
-        guard let train = Map3DPlatformProps.markedTrain(length: length, formations: calling) else { return [] }
-        let doors = Map3DPlatformProps.doorCentres(length: length, formations: calling, kind: .metro)
-        let start = max(0.2, (length - train.length) / 2 - 0.5), end = min(length - 0.2, (length + train.length) / 2 + 0.5)
+        guard Map3DPlatformProps.markedTrain(length: length, formations: calling) != nil else { return [] }
+        let doors = Map3DPlatformProps.doorCentres(length: length, formations: calling, kind: .metro, stands: stands)
+        let start: Float = 0.2, end = length - 0.2
         guard end > start + opening else { return [] }
         var pieces: [(from: Float, to: Float, door: Bool)] = []
         var at = start
         for centre in doors {
-            let from = max(at, centre - opening / 2), to = min(end, centre + opening / 2)
-            guard to > from else { continue }
-            if from > at + 0.05 { pieces.append((at, from, false)) }
-            pieces.append((from, to, true))
+            let from = max(start, centre - opening / 2), to = min(end, centre + opening / 2)
+            guard to > at else { continue }
+            // Decision 859: two doors nearer than an opening's width (a
+            // train standing each way round at a line's end) share one
+            // wider opening.
+            if let last = pieces.last, last.door, from < at + 0.05 {
+                pieces[pieces.count - 1].to = to
+            } else {
+                if from > at + 0.05 { pieces.append((at, from, false)) }
+                pieces.append((max(at, from), to, true))
+            }
             at = to
         }
         if end > at + 0.05 { pieces.append((at, end, false)) }
@@ -200,7 +252,7 @@ extension Map3DScene.Builder {
     static let gateRail: Float = 0.08
 
     /// Decision 847: the doors along a platform `doors`, its pieces (as
-    /// ``Map3DScreenDoors/pieces(length:formations:)`` cuts them) at
+    /// ``Map3DScreenDoors/pieces(length:formations:stands:)`` cuts them) at
     /// `across` metres to the line's right of `path`, standing on `top`:
     /// glass between the steel frames of each opening, a header in the
     /// kit's canopy colour over them (a rail on a gate). Only the glass is
