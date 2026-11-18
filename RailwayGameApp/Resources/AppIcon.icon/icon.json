@@ -16,6 +16,47 @@
     {
       "layers": [
         {
+          "image-name": "christmas-hat-white.svg",
+          "name": "christmas-hat-white",
+          "glass": false
+        },
+        {
+          "image-name": "christmas-hat-red.svg",
+          "name": "christmas-hat-red",
+          "glass": false
+        },
+        {
+          "image-name": "christmas-hat-outline.svg",
+          "name": "christmas-hat-outline",
+          "glass": false,
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.92549,0.93333,0.96471,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.92549,0.93333,0.96471,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "layers": [
+        {
           "image-name": "train.svg",
           "name": "train",
           "glass": true
