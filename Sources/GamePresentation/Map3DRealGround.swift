@@ -893,9 +893,11 @@ extension Map3DScene.Builder {
     /// heads, seen as much as the city's lights are on
     /// (``Map3DMesh/addPool``): after the lights on the track are gone.
     mutating func addLampPools() {
-        guard let lamp = Self.propModels[.lamp] else { return }
+        // Decision 846's later note: Finland's street lights too.
+        let lamps = Set([Self.propModels[.lamp], Self.finlandModels[.lamp]].compactMap { $0 })
+        guard !lamps.isEmpty else { return }
         for key in props.keys.sorted() {
-            for instance in props[key] ?? [] where instance.model == lamp {
+            for instance in props[key] ?? [] where lamps.contains(instance.model) {
                 addLampPool(instance)
             }
         }
@@ -981,8 +983,11 @@ extension Map3DScene.Builder {
                             let x = centre.x + left.x * out, z = centre.z + left.z * out
                             let seed = (Int32(truncatingIfNeeded: Int(((x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((z + south) * 2).rounded())))
                             // Now and then a gap, as a real street has.
+                            // Decision 846's later note: Finland's own
+                            // street light on its streets.
+                            let finnish = rule.prop == .lamp && look.streets.hasFinnishFurniture ? Self.finlandModels[.lamp] : nil
                             guard map3DRandom(seed.0, seed.1, salt: 71) >= (rule.prop == .tree ? 0.18 : 0.08), !nearJunction(x, z),
-                                  let model = Self.propModels[rule.prop] else { continue }
+                                  let model = finnish ?? Self.propModels[rule.prop] else { continue }
                             // Decision 391: none on a bridge or its ramp.
                             guard roadRise(at: Map3DBaseMap.Point(x: centre.x, z: centre.z), along: along, onDeck: road.bridgeLevel > 0).rise < Self.propRise
                             else { continue }

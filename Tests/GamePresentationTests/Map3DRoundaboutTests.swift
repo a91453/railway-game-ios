@@ -37,11 +37,11 @@ final class Map3DRoundaboutTests: XCTestCase {
 
     func testTheRegionsStreetFurniture() {
         func flags(_ r: Map3DStreetRegion) -> [Bool] {
-            [r.standsSignalsAtKerb, r.hasCountdownBoxes, r.signalsRoundabouts, r.hasUtilityPoles, r.hasVendingMachines]
+            [r.standsSignalsAtKerb, r.hasCountdownBoxes, r.signalsRoundabouts, r.hasUtilityPoles, r.hasVendingMachines, r.hasFinnishFurniture]
         }
-        XCTAssertEqual(flags(.taiwan), [false, true, true, true, true])
-        XCTAssertEqual(flags(.hongKong), [true, false, false, true, true])
-        XCTAssertEqual(flags(.finland), [true, false, false, false, false])
+        XCTAssertEqual(flags(.taiwan), [false, true, true, true, true, false])
+        XCTAssertEqual(flags(.hongKong), [true, false, false, true, true, false])
+        XCTAssertEqual(flags(.finland), [true, false, false, false, false, true])
     }
 
     /// Finland's and Hong Kong's roundabouts: no signal, pedestrian signal,
@@ -66,6 +66,17 @@ final class Map3DRoundaboutTests: XCTestCase {
                 let out = Map3DRoadMarkings.distance(crosswalk.centre, ring.centre)
                 XCTAssertGreaterThan(out, 15 + 2)
                 XCTAssertLessThan(out, 15 + 15)
+            }
+            // Decision 846's later note: Finland's sign at each crossing,
+            // one a way, on the pavement just before the bars; none in
+            // Hong Kong.
+            XCTAssertEqual(markings.crossingSigns.count, region == .finland ? 8 : 0)
+            for sign in markings.crossingSigns {
+                let crosswalk = try XCTUnwrap(crosswalks.min { Map3DRoadMarkings.distance($0.centre, sign.foot) < Map3DRoadMarkings.distance($1.centre, sign.foot) })
+                let offset = Point(x: sign.foot.x - crosswalk.centre.x, z: sign.foot.z - crosswalk.centre.z)
+                // Before the bars the way its traffic goes, off the carriageway.
+                XCTAssertEqual(offset.x * sign.along.x + offset.z * sign.along.z, -(Map3DRoadMarkings.crosswalkDepth / 2 + 0.5), accuracy: 0.01)
+                XCTAssertGreaterThan(abs(offset.x * sign.along.z - offset.z * sign.along.x), crosswalk.width / 2)
             }
         }
         let taiwan = Map3DRoadMarkings(roundabout())
@@ -158,9 +169,10 @@ final class Map3DRoundaboutTests: XCTestCase {
         XCTAssertEqual(models.triangles([run], in: pack), 3 * [plain.stop, plain.dark, plain.walk].map { pack.models[$0].triangleCount }.max()!)
     }
 
-    /// Rovaniemi's scene: Hong Kong's kerbside signals and the plain
-    /// pedestrian signals, none of Taiwan's signals, countdowns, utility
-    /// poles or vending machines.
+    /// Rovaniemi's scene: Finland's own signals, pedestrian signals,
+    /// street lights and crossing signs (decision 846's later note), none
+    /// of Hong Kong's or Taiwan's signals, countdowns, street lights,
+    /// utility poles or vending machines.
     func testRovaniemisStreetsHaveFinlandsFurniture() throws {
         let ground = try RovaniemiRailwaysTests.ground()
         let world = GameWorld.newOverseasGame(ground)
@@ -171,9 +183,14 @@ final class Map3DRoundaboutTests: XCTestCase {
         let catalog = Map3DModelCatalog.standard
         var used = Set<String>()
         for chunk in scene.chunks { used.formUnion(chunk.props.map { catalog.names[$0.model] }) }
-        XCTAssertTrue(used.contains(Signal.plainStopName))
-        XCTAssertTrue(used.contains(Map3DHongKongSignal.placedName(.main)) || used.contains(Map3DHongKongSignal.placedName(.cross)))
-        let taiwans = [Map3DProp.signalGo, .signalStop, .pole, .vending].map(\.modelName) + [Signal.stopName, Signal.onesName(0), Signal.tensName(1)]
-        XCTAssertTrue(used.isDisjoint(with: taiwans), "\(used.intersection(taiwans))")
+        typealias Unit = Map3DFinlandStreet.Unit
+        XCTAssertTrue(used.contains(Unit.walkStop.rawValue))
+        XCTAssertTrue(used.contains(Unit.signalGreen.rawValue) || used.contains(Unit.signalRed.rawValue))
+        XCTAssertTrue(used.contains(Unit.lamp.rawValue))
+        XCTAssertTrue(used.contains(Unit.crossingSign.rawValue))
+        let others = [Map3DProp.signalGo, .signalStop, .lamp, .busStop, .pole, .vending].map(\.modelName)
+            + [Signal.stopName, Signal.onesName(0), Signal.tensName(1), Signal.plainStopName, Map3DSceneryProp.busStopPole.modelName]
+            + Map3DSignalTiming.Light.allCases.map(Map3DHongKongSignal.modelName)
+        XCTAssertTrue(used.isDisjoint(with: others), "\(used.intersection(others))")
     }
 }

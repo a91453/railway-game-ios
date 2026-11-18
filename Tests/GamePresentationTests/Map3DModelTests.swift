@@ -38,13 +38,15 @@ final class Map3DModelTests: XCTestCase {
         let herd: Int = Map3DReindeerHerd.drawn.count
         // Decision 846: the pedestrian signals with no countdown's box.
         let plainWalks: Int = Map3DPedestrianSignal.plainDrawn.count
+        // Its later note: Finland's street furniture.
+        let finlandStreet: Int = Map3DFinlandStreet.Unit.allCases.count
         // Decision 449: and after them, the running cars' windows. Decision
         // 575: the cable car; decision 585, PR-3: the ferries and their pier;
         // decision 699: the aircraft and the airfields' vehicles; decision
         // 708: the coaches and the coach stop.
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest
                        + Map3DCableCar.drawn.count + Map3DFerry.drawn.count + Map3DAircraft.drawn.count + Map3DCoaches.drawn.count + hongKongSignals + winterDecor
-                       + santa + herd + plainWalks)
+                       + santa + herd + plainWalks + finlandStreet)
         // One term per line, typed: as a single sum of 30 terms the type
         // checker took 213 s on it (decision 563).
         let studyModels: [Int] = [

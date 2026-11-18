@@ -189,6 +189,11 @@ final class Map3DModelPackLockTests: XCTestCase {
         // whole pack's names and hashes and the windows' indices move by 3,
         // the rest as before).
         let plain = Set(Map3DPedestrianSignal.plainDrawn.map(\.name))
+        // Decision 846's later note: Finland's street furniture after them,
+        // before the route bus; left out with them (the whole pack's names
+        // and hashes and the windows' indices move by 10, the rest as
+        // before).
+        let finland = Set(Map3DFinlandStreet.drawn.map(\.name))
         // Decision 767: the coal bunker's stand-in after the other scenery
         // props: every model after it, the cars' windows and the head
         // signs move by one, so the digests are made again; the models
@@ -203,7 +208,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name)
             && !figures.contains($0.name) && !winter.contains($0.name) && !santa.contains($0.name) && !taiwanCars.contains($0.name) && !herd.contains($0.name)
-            && !plain.contains($0.name) }
+            && !plain.contains($0.name) && !finland.contains($0.name) }
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "2a0641d0b8325")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
@@ -225,15 +230,18 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstHerd..<firstHerd + herd.count].map(\.name)), Map3DReindeerHerd.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstHerd + herd.count..<firstHerd + herd.count + plain.count].map(\.name)),
                        Map3DPedestrianSignal.plainDrawn.map(\.name))
+        let firstFinland = firstHerd + herd.count + plain.count
+        XCTAssertEqual(Array(pack.models[firstFinland..<firstFinland + finland.count].map(\.name)), Map3DFinlandStreet.Unit.allCases.map(\.rawValue))
         // Decision 840: the reindeer after Taiwan's cars (the whole
         // pack's names, hashes and lamps' window indices move).
         // Decision 846: and the pedestrian signals with no countdown's box
-        // after the reindeer.
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "9bf9ffd353819166")
+        // after the reindeer; its later note: and Finland's street
+        // furniture after them.
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "f0d52e4a2044a02c")
         // Decision 840: and the studio's sleigh in the stand-in's place
         // (the same name and order; its model is new, `hashes.lock.json`);
         // its later amendment: dark brown antlers, the sleigh's team brown.
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "5ec831118c815c03")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "6c6d911aee083827")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -246,8 +254,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
-                                                          + santa.count + taiwanCars.count + herd.count + plain.count)), "71b8c8010a530da0")
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "32f8fbd5dd622f50")
+                                                          + santa.count + taiwanCars.count + herd.count + plain.count + finland.count)), "71b8c8010a530da0")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "d5024cdbbe836aee")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")
     }
 

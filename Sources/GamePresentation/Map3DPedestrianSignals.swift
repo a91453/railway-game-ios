@@ -330,6 +330,10 @@ public enum Map3DPedestrianSignal {
         /// Decision 846: the faces with no countdown's box; `nil` in a pack
         /// without them.
         let plain: Plain?
+        /// Decision 846's later note: Finland's faces
+        /// (``Map3DFinlandStreet``), still and with no countdown; `nil` in
+        /// a pack without them.
+        let finland: Plain?
 
         /// Decision 846: the faces with no countdown's box.
         struct Plain: Sendable, Equatable {
@@ -356,6 +360,12 @@ public enum Map3DPedestrianSignal {
             } else {
                 plain = nil
             }
+            if let stop = index(Map3DFinlandStreet.Unit.walkStop.rawValue), let dark = index(Map3DFinlandStreet.Unit.walkDark.rawValue),
+               let walk = index(Map3DFinlandStreet.Unit.walkWalk.rawValue) {
+                finland = Plain(stop: stop, dark: dark, walk: walk)
+            } else {
+                finland = nil
+            }
         }
 
         /// The models a signal's three instances are placed with; decision
@@ -366,7 +376,14 @@ public enum Map3DPedestrianSignal {
         /// Whether `model` is one a pedestrian signal is placed with: drawn
         /// only close up (decision 267), and casting no shadow.
         public func places(_ model: Int) -> Bool {
-            model == placed.head || model == placed.tens || model == placed.ones || model == placed.plain
+            model == placed.head || model == placed.tens || model == placed.ones || model == placed.plain || model == finland?.stop
+        }
+
+        /// Decision 846's later note: the model a signal of `region` with
+        /// no countdown is placed with alone: Finland's own on its
+        /// streets, ``placed``'s `plain` elsewhere.
+        func placedPlain(_ region: Map3DStreetRegion) -> Int {
+            region.hasFinnishFurniture ? finland?.stop ?? placed.plain : placed.plain
         }
 
         /// The model to draw the instances of `model` of `group` with: what
@@ -376,7 +393,7 @@ public enum Map3DPedestrianSignal {
             guard places(model) else { return model }
             let (junction, road) = Map3DPedestrianSignal.junction(of: group)
             let face = Map3DPedestrianSignal.face(road, group: junction, clock: clock, time: time, pace: pace, reduceMotion: reduceMotion)
-            if let plain, model == plain.stop {
+            if let plain = [plain, finland].compactMap({ $0 }).first(where: { model == $0.stop }) {
                 switch face.figure {
                 case .stop: return plain.stop
                 case .dark: return plain.dark
@@ -403,9 +420,11 @@ public enum Map3DPedestrianSignal {
             let head = ([stop, dark] + walk).map { pack.models[$0].triangleCount }.max() ?? 0
             let tensMost = tens.compactMap { $0 }.map { pack.models[$0].triangleCount }.max() ?? 0
             let onesMost = ones.map { pack.models[$0].triangleCount }.max() ?? 0
-            let plainMost = plain.map { [$0.stop, $0.dark, $0.walk].map { pack.models[$0].triangleCount }.max() ?? 0 } ?? 0
+            func most(_ plain: Plain?) -> Int { plain.map { [$0.stop, $0.dark, $0.walk].map { pack.models[$0].triangleCount }.max() ?? 0 } ?? 0 }
+            let plainMost = most(plain), finlandMost = most(finland)
             return runs.reduce(0) { sum, run in
                 if let plain, run.model == plain.stop { return sum + plainMost * run.count }
+                if let finland, run.model == finland.stop { return sum + finlandMost * run.count }
                 return switch run.model {
                 case placed.head: sum + head * run.count
                 case placed.tens: sum + tensMost * run.count
