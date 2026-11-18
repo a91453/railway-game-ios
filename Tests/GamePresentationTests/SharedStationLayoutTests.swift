@@ -129,6 +129,49 @@ final class SharedStationLayoutTests: XCTestCase {
         XCTAssertEqual(Self.stacked(Self.platforms(of: world, laidBy: laidBy), in: world), [])
     }
 
+    // MARK: - Fukuoka
+
+    /// Fukuoka's three subway lines (decision 854), all bought on one map,
+    /// first from the Kuko Line and then from the other end: Hakata (Kuko,
+    /// Nanakuma) and Nakasu-Kawabata (Kuko, Hakozaki) stay one station each,
+    /// both lines stopping there, and no platform of a station lies over
+    /// another of it. Not yet at one height: underground, and with the Kuko
+    /// Line bought last, its platforms at both stand 16 m up (the raise
+    /// of decision 809, since ``sharedEnds`` moves only a line's ends);
+    /// FUKUOKA-INTERCHANGE-LEVEL, before the map opens.
+    func testFukuokasInterchangesStackNoPlatforms() throws {
+        let interchanges = [("博多", ["fksubway:K", "fksubway:N"]), ("中洲川端", ["fksubway:K", "fksubway:H"])]
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N"], ["fksubway:N", "fksubway:H", "fksubway:K"]] {
+            let session = try FukuokaRailwaysTests.fukuoka()
+            let laidBy = try Self.buy(order, on: session)
+            let world = session.world
+            let laid = Self.platforms(of: world, laidBy: laidBy)
+            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            for (name, ids) in interchanges {
+                let stations = world.stations.filter { $0.name == name }
+                XCTAssertEqual(stations.count, 1, "\(order): one \(name)")
+                let station = try XCTUnwrap(stations.first?.id)
+                for id in ids {
+                    let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line)))
+                    XCTAssertTrue(line.stops.contains(station), "\(order): \(id) stops at \(name)")
+                }
+                XCTAssertNotNil(Self.between(ids[0], ids[1], at: station, in: laid), "\(order): \(name)")
+            }
+        }
+    }
+
+    // MARK: - Every map
+
+    /// The maps this file buys every shared station of. A new
+    /// ``OverseasMap`` needs its own test above before it is added here
+    /// (real-line-laying §2): decision 854 left Fukuoka's out at first.
+    static let mapsChecked: Set<OverseasMap> = [.hongKong, .rovaniemi, .fukuoka]
+
+    func testEveryOverseasMapHasItsSharedStationsChecked() {
+        XCTAssertEqual(Set(OverseasMap.allCases), Self.mapsChecked,
+                       "A new map's lines are bought together here, both orders where two share a station (real-line-laying §2)")
+    }
+
     // MARK: - Taiwan
 
     /// The Liujia and Neiwan Lines through Zhuzhong, in either order: the

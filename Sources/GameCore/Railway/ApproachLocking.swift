@@ -36,24 +36,27 @@ extension GameWorld {
     /// stop. `nil` also when there is no such boundary beyond its head.
     ///
     /// Decision 849: without block sections, the home signal instead (see
-    /// ``homeLimit(of:_:)``).
+    /// ``homeLimit(of:_:)``); and, its later part, with them too once the
+    /// stop is within ``approachReach``, where decision 294 held all.
     func approachLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
         guard isTrafficControlEnabled, case .travellingToStop? = train.execution, envelopes.length < .max else { return nil }
         guard blockSections else { return homeLimit(of: train, envelopes) }
-        guard envelopes.length > Self.approachReach, followsRealTimetable(train) else { return nil }
+        guard followsRealTimetable(train) else { return nil }
+        guard envelopes.length > Self.approachReach else { return homeLimit(of: train, envelopes) }
         let limit = blockBoundary(envelopes, atOrBefore: envelopes.length - Self.approachHold)
         return limit >= 1 ? limit : nil
     }
 
     /// The approach limit (see ``approachLimit(of:_:)``) of `train`,
     /// holding `held` of its route along `envelopes`, that keeps it now:
-    /// with block sections any; without them (decision 849) only one it
+    /// with block sections and its stop more than ``approachReach`` away
+    /// any (decision 294); a home signal's (decision 849) only one it
     /// holds as far as already, as a train given its route that far at
     /// once with the rest free holds it (see ``reserving(_:following:memo:)``).
     /// A train following others short of it takes its route as before.
     func approachLimit(of train: Train, holding held: Int64, _ envelopes: AuthorityEnvelopes) -> Int64? {
         guard let limit = approachLimit(of: train, envelopes) else { return nil }
-        return blockSections || held >= limit ? limit : nil
+        return (blockSections && envelopes.length > Self.approachReach) || held >= limit ? limit : nil
     }
 
     /// Decision 294: `candidate`, about to set off, with its route held
@@ -99,8 +102,9 @@ extension GameWorld {
     static let throatReach: Int64 = 64_000
 
     /// Decision 849: how far along its route `train`, a service of a line
-    /// with runs travelling to a stop with traffic control on and block
-    /// sections off, may hold now, or `nil` when it may hold all of it:
+    /// with runs travelling to a stop with traffic control on (and block
+    /// sections off, or the stop within ``approachReach``), may hold now,
+    /// or `nil` when it may hold all of it:
     /// short of the first junction or crossing its route reaches within
     /// ``throatReach`` of the stop (the station's throat), while that is
     /// more than ``homeReach`` away. Only a service (not an empty run)
@@ -112,6 +116,10 @@ extension GameWorld {
     /// crossovers for the four minutes it took to get there, and the
     /// trains due out of Admiralty waited behind it; a real railway sets
     /// the route into a station only as the train nears its home signal.
+    /// With block sections (the later part) the same: the Lok Ma Chau
+    /// spur's 7 km leg has one throat at each end, and a train leaving one
+    /// end held the other's for the ten minutes it took to get there, so
+    /// the two ends took turns as on a single line.
     func homeLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
         let length = envelopes.length
         guard length > Self.homeReach + RailwayNetwork.junctionZone, !train.isDeadheading, case .travellingToStop(let stop, let cycle)? = train.execution,
