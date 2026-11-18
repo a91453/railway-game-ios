@@ -353,6 +353,126 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertEqual(transfer.stop, 0, "at the cable car's Tung Chung stop")
     }
 
+    // MARK: - Decision 880: the sights' visitors ride
+
+    /// ``realSession(latitude:longitude:cells:)`` with Taiwan's sights on
+    /// the map, as a new game has them.
+    private func sightsSession(latitude: Double, longitude: Double, cells: Int64 = 128) throws -> GameSession {
+        var world = try makeWorld(width: cells * Self.cell, height: cells * Self.cell, balance: Money(10_000_000_000))
+        world.setEconomyMode(.management)
+        world.setGeoAnchor(try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude)))
+        world.setTourism(RealWorldFrame(world: world).map { AttractionCatalog.attractions(in: $0, bounds: world.bounds) })
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectTool(.network)
+        session.setNetworkMode(.cableway)
+        return session
+    }
+
+    /// Plays `world` past the second midnight, so days 0 (a Monday) and 1
+    /// are settled.
+    private func playTwoDays(_ world: inout GameWorld) throws {
+        world.setSpeed(.normal)
+        while world.clock.now.seconds < 2 * GameTime.secondsPerDay + 60 { try world.advance(ticks: 60) }
+    }
+
+    /// The rides `cableway`'s sightseers take on `day`, by hand: of each
+    /// sight's visitors `permille` thousandths, there and back.
+    private func rides(_ sights: [Attraction], permille: Int64, in world: GameWorld, onDay day: Int64) -> Int64 {
+        sights.reduce(0) { $0 + 2 * (world.visitorsExpected(for: $1, onDay: day) * permille / 1_000) }
+    }
+
+    /// The Sun Moon Lake Ropeway meets no railway and no one lives by it:
+    /// the visitors of the lake (1.8 km from its lakeside station) and of
+    /// the Formosan Aboriginal Culture Village at its other end ride it,
+    /// a tenth of each, and the takings of a Tuesday pay its running many
+    /// times over.
+    func testTheSunMoonLakeRopewayCarriesTheLakesVisitors() throws {
+        let session = try sightsSession(latitude: 23.8562, longitude: 120.9429)
+        session.traceRealCableway(.sunMoonLake)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        var world = session.world
+        let built = try XCTUnwrap(world.cableways.last)
+        XCTAssertNil(built.transfer)
+        let sights = world.sights(ofCableway: built.id)
+        XCTAssertEqual(sights.map(\.name), ["日月潭", "九族文化村"])
+        XCTAssertEqual(built.sightseerPermille, 100)
+        let tuesday = world.cablewaySightseerRides(built.id, onDay: 1)
+        XCTAssertEqual(tuesday, rides(sights, permille: 100, in: world, onDay: 1))
+        XCTAssertGreaterThan(tuesday, 500)
+        XCTAssertEqual(session.cablewayCard(built.id)?.rows.contains("日月潭、九族文化村的遊客會來搭"), true)
+        try playTwoDays(&world)
+        let days = try XCTUnwrap(world.cableway(id: built.id)).days
+        XCTAssertEqual(days.map(\.riders), [0, tuesday], "Monday it stands still")
+        XCTAssertGreaterThan(days[1].fares, Money(days[1].cost.amount * 5))
+    }
+
+    /// The Wulai cable car, 381 m: Wulai's hot spring street is 1.7 km
+    /// down the valley, and a quarter of the tenth (381 of 1,500 m) of its
+    /// visitors come up for the ride, enough to pay its running.
+    func testTheWulaiCableCarCarriesWulaisVisitors() throws {
+        let session = try sightsSession(latitude: 24.8560, longitude: 121.5522, cells: 64)
+        session.traceRealCableway(.wulai)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        var world = session.world
+        let built = try XCTUnwrap(world.cableways.last)
+        let sights = world.sights(ofCableway: built.id)
+        XCTAssertEqual(sights.map(\.name), ["烏來溫泉"])
+        XCTAssertEqual(built.sightseerPermille, 25)
+        let tuesday = world.cablewaySightseerRides(built.id, onDay: 1)
+        XCTAssertEqual(tuesday, rides(sights, permille: 25, in: world, onDay: 1))
+        try playTwoDays(&world)
+        let days = try XCTUnwrap(world.cableway(id: built.id)).days
+        XCTAssertEqual(days.map(\.riders), [0, tuesday])
+        XCTAssertGreaterThan(days[1].fares, days[1].cost)
+    }
+
+    /// Hong Kong had no sights: a game saved before decision 880 gets the
+    /// Tian Tan Buddha when it is opened, and the Ngong Ping cable car,
+    /// with no line bought, carries a tenth of its visitors.
+    func testAnOlderHongKongSaveGetsTheBuddhaAndTheCableCarItsVisitors() throws {
+        let session = try realSession(latitude: 22.2735, longitude: 113.92, cells: 128)
+        XCTAssertEqual(session.world.tourism?.attractions.map(\.name), ["天壇大佛"])
+        XCTAssertEqual(session.world.tourism?.attractions.first?.kind, .landmark)
+        session.traceRealCableway(.ngongPing)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        var world = session.world
+        let built = try XCTUnwrap(world.cableways.last)
+        XCTAssertNil(built.transfer, "no line bought")
+        let sights = world.sights(ofCableway: built.id)
+        XCTAssertEqual(sights.map(\.name), ["天壇大佛"])
+        let tuesday = world.cablewaySightseerRides(built.id, onDay: 1)
+        XCTAssertEqual(tuesday, rides(sights, permille: 100, in: world, onDay: 1))
+        XCTAssertEqual(session.cablewayCard(built.id)?.rows.contains("天壇大佛的遊客會來搭"), true)
+        try playTwoDays(&world)
+        let days = try XCTUnwrap(world.cableway(id: built.id)).days
+        XCTAssertEqual(days.map(\.riders), [0, tuesday])
+        XCTAssertGreaterThan(days[1].fares, days[1].cost)
+        // Opened again, it keeps the sights it has.
+        XCTAssertEqual(AttractionCatalog.withSights(world), world)
+    }
+
+    /// Only a free game on a map that had no sights gets them: a map of
+    /// Taiwan without tourism (a demo that turned it off) stays without,
+    /// and a new game in Hong Kong starts with the Buddha.
+    func testOnlyAMapThatHadNoSightsGetsThem() throws {
+        let taiwan = try realSession(latitude: 23.8562, longitude: 120.9429)
+        XCTAssertNil(taiwan.world.tourism)
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 22.2735, longitudeDegrees: 113.92))
+        let fresh = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 128 * Self.cell, height: 128 * Self.cell), land: [])
+        XCTAssertEqual(fresh.tourism?.attractions.map(\.englishName), ["Tian Tan Buddha"])
+        XCTAssertLessThan(AttractionCatalog.hongKongSpots[0].stars, GameWorld.alertedSightStars)
+    }
+
+    /// A cable car with no station, no sight and no one living by it says
+    /// so on its card.
+    func testTheCardSaysWhenNoOneHasAReasonToRide() throws {
+        let session = try realSession(latitude: 23.8562, longitude: 120.9429)
+        session.traceRealCableway(.sunMoonLake)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        let id = try XCTUnwrap(session.world.cableways.last?.id)
+        XCTAssertEqual(session.cablewayCard(id)?.rows.contains("附近沒有車站，也沒有景點：搭的人會很少"), true)
+    }
+
     /// Each real cable car's spans are one fewer than its stops, within
     /// what a cable car may span, and no two share a first stop's place.
     func testEveryRealCableCarCanBeLaid() {

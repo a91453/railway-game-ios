@@ -110,8 +110,9 @@ struct Map3DTrackSamples: Sendable {
 /// built apart after it (``Map3DScene/chunks(_:of:world:snapshot:skyline:baseMap:cityTiles:footprints:heights:landCover:lineBands:railways:temples:noBuild:trackCover:detail:detailAhead:facades:)``,
 /// two at a time on the streamer's threads) work it out once between
 /// them: the network's samples, the real lines' boxes on the map, their
-/// timetables' runs and track assignment, the screen doors' plan and the
-/// trains calling at each station.
+/// timetables' runs and track assignment, the screen doors' plan, the
+/// trains calling at each station and the underground
+/// stations.
 ///
 /// Nothing here changes what is built: each is what the build worked out
 /// itself before, keyed by what it was worked out from, and a build
@@ -151,6 +152,45 @@ final class Map3DSharedBuild: @unchecked Sendable {
         let boxes = snapshot.edges.map { Map3DRealTrains.PlayerTrack.Box($0.geometry.points.map(point)) }
         if edgeBoxes == nil { edgeBoxes = (mark, originX, originY, boxes) }
         return boxes
+    }
+
+    // MARK: The underground stations
+
+    /// What tells the underground stations of a snapshot laid in a scene:
+    /// its track (``Map3DTrackSamples/mark(of:)``), its platforms in
+    /// tunnels, whole (a platform is added to a tunnel without its track
+    /// changing), and the scene's origin. The same only within one run of
+    /// the program (it is hashed).
+    struct UndergroundKey: Equatable {
+        let track: Int, platforms: Int
+        let originX: Double, originY: Double
+
+        init(_ snapshot: RailwaySnapshot, originX: Double, originY: Double) {
+            track = Map3DTrackSamples.mark(of: snapshot)
+            var hasher = Hasher()
+            for platform in snapshot.platforms where platform.structure == .tunnel { hasher.combine(platform) }
+            platforms = hasher.finalize()
+            (self.originX, self.originY) = (originX, originY)
+        }
+    }
+
+    private var underground: (key: UndergroundKey, stations: Map3DUndergroundStations)?
+
+    /// Decision 876 (later): the underground platforms and their stations' boxes
+    /// of `snapshot` in the scene whose origin is (`originX`, `originY`)
+    /// (``Map3DUndergroundStations/init(_:point:cover:)``, `make`): laid
+    /// from the whole network and the whole track cover, the same
+    /// whatever the region, so those kept when they are of it, or made
+    /// (and kept, when none were).
+    func undergroundStations(of snapshot: RailwaySnapshot, originX: Double, originY: Double,
+                             make: () -> Map3DUndergroundStations) -> Map3DUndergroundStations {
+        let key = UndergroundKey(snapshot, originX: originX, originY: originY)
+        lock.lock()
+        defer { lock.unlock() }
+        if let underground, underground.key == key { return underground.stations }
+        let made = make()
+        if underground == nil { underground = (key, made) }
+        return made
     }
 
     // MARK: The real lines

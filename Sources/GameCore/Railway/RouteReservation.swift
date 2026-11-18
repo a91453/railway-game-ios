@@ -1267,11 +1267,13 @@ extension GameWorld {
         }
         if let index = memo.holders.indices.dropFirst().first(where: { memo.holders[$0].trains == trains }) {
             memo.holders.insert(memo.holders.remove(at: index), at: 0)
+            memo.holderChanges += 1
             return memo.holders[0].holders
         }
         let worked = workedOutHolders(memo: &memo)
         memo.holders.insert((trains, worked.covers, worked.holders), at: 0)
         if memo.holders.count > 2 { memo.holders.removeLast() }
+        memo.holderChanges += 1
         Self.holderAudit?.rebuilds += 1
         return worked.holders
     }
@@ -1319,6 +1321,7 @@ extension GameWorld {
         }
         if !blockSections { settleClaims(&entry.holders, covers: entry.covers) }
         memo.holders.insert(entry, at: 0)
+        memo.holderChanges += 1
         if let audit = Self.holderAudit {
             audit.updates += 1
             precondition(entry.holders.matches(workedOutHolders(memo: &memo).holders), "the holders changed in place are not the holders worked out again")

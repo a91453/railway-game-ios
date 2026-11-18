@@ -550,7 +550,11 @@ public struct Map3DScene: Sendable {
         // first, as its trenches are cut out of the ground and what lies
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
-        builder.undergroundStations = Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
+        // Decision 876 (later): once for the scene and the blocks built with its
+        // track cover, not again for each block.
+        builder.undergroundStations = builder.shared.undergroundStations(of: snapshot, originX: originX, originY: originY) {
+            Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
+        }
         builder.time("track cover")
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)

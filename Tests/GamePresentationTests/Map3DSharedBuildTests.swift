@@ -155,4 +155,121 @@ final class Map3DSharedBuildTests: XCTestCase {
             XCTAssertEqual(Map3DMapLoad.digest(built[keys[0].column] ?? []), digest)
         }
     }
+
+    // MARK: The underground stations (decision 876, later)
+
+    /// Flat ground; a track from x = 32 m down a tunnel to 15 m under it
+    /// at 480 m and on, level, to 960 m, and beside its level part, 10 m
+    /// to the south, a second tunnel track; a station with a platform
+    /// (520 m to 740 m) on the first track and, with `both`, one on the
+    /// second: an island. The track is the same either way.
+    private func deepWorld(both: Bool) throws -> GameWorld {
+        var world = try GameWorld(bounds: WorldBounds(width: 81_920, height: 32_768),
+                                  economy: GameEconomy(balance: 100_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 16_384))
+        let portal = try world.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 16_384))
+        let down = try world.buildTrackNode(at: WorldCoordinate(x: 30_720, y: 16_384, z: -960))
+        let end = try world.buildTrackNode(at: WorldCoordinate(x: 61_440, y: 16_384, z: -960))
+        try world.buildTrackEdge(from: a, to: portal)
+        try world.buildTrackEdge(from: portal, to: down, structure: .tunnel)
+        try world.buildTrackEdge(from: down, to: end, structure: .tunnel)
+        let besideA = try world.buildTrackNode(at: WorldCoordinate(x: 30_720, y: 17_024, z: -960))
+        let besideB = try world.buildTrackNode(at: WorldCoordinate(x: 61_440, y: 17_024, z: -960))
+        try world.buildTrackEdge(from: besideA, to: besideB, structure: .tunnel)
+        let station = try world.buildStation(named: "Deep", at: PlanPoint(x: 40_000, y: 16_700))
+        try world.addTrackPlatform(station.id, on: .edge(3), from: 40 * 64, to: 260 * 64)
+        if both { try world.addTrackPlatform(station.id, on: .edge(4), from: 40 * 64, to: 260 * 64) }
+        return world
+    }
+
+    /// The memo's underground stations are those laid from the snapshot
+    /// itself, made once; a snapshot with another platform on the same
+    /// track, and the same snapshot in a scene with another origin, are
+    /// answered with their own.
+    func testTheMemosUndergroundStationsAreTheSnapshotsOwn() throws {
+        let one = try deepWorld(both: false), two = try deepWorld(both: true)
+        let first = one.railwaySnapshot(), second = two.railwaySnapshot()
+        // Only the platforms differ.
+        XCTAssertEqual(Map3DTrackSamples.mark(of: first), Map3DTrackSamples.mark(of: second))
+        let scene = Map3DScene(world: one)
+        func laid(_ snapshot: RailwaySnapshot, _ scene: Map3DScene) -> Map3DUndergroundStations {
+            Map3DUndergroundStations(snapshot, point: scene.point, cover: scene.trackCover)
+        }
+        func same(_ a: Map3DUndergroundStations, _ b: Map3DUndergroundStations, file: StaticString = #filePath, line: UInt = #line) {
+            XCTAssertEqual(a.platforms, b.platforms, file: file, line: line)
+            XCTAssertEqual(a.boxes, b.boxes, file: file, line: line)
+        }
+        let shared = Map3DSharedBuild()
+        var made = 0
+        func asked(_ snapshot: RailwaySnapshot, _ scene: Map3DScene) -> Map3DUndergroundStations {
+            shared.undergroundStations(of: snapshot, originX: scene.originX, originY: scene.originY) {
+                made += 1
+                return laid(snapshot, scene)
+            }
+        }
+        let own = laid(first, scene)
+        XCTAssertEqual(own.platforms.count, 1)
+        XCTAssertEqual(own.boxes.count, 1)
+        XCTAssertFalse(own.boxes[0].openings.start.isEmpty)
+        same(asked(first, scene), own)
+        same(asked(first, scene), own)
+        XCTAssertEqual(made, 1, "kept after the first")
+        // Another platform on the same track: its own, an island.
+        let island = asked(second, scene)
+        same(island, laid(second, scene))
+        XCTAssertEqual(island.platforms.count, 2)
+        XCTAssertTrue(island.platforms.allSatisfy(\.island))
+        XCTAssertEqual(made, 2)
+        // Another origin: its own, elsewhere in the scene.
+        let whole = WorldRegion(bounds: one.bounds)
+        let moved = Map3DScene(world: one, snapshot: first, skyline: nil, frame: (whole, 0, 0), baseMap: nil, cityTiles: [],
+                               heights: nil, lineBands: nil, railways: nil, temples: nil)
+        XCTAssertNotEqual(moved.originX, scene.originX)
+        let elsewhere = asked(first, moved)
+        same(elsewhere, laid(first, moved))
+        XCTAssertNotEqual(elsewhere.platforms, own.platforms)
+        XCTAssertEqual(made, 3)
+        // The first is still kept.
+        same(asked(first, scene), own)
+        XCTAssertEqual(made, 3)
+        // The scene's own memo holds what the scene laid.
+        same(scene.trackCover.shared.undergroundStations(of: first, originX: scene.originX, originY: scene.originY) {
+            XCTFail("the scene kept none")
+            return Map3DUndergroundStations()
+        }, own)
+    }
+
+    /// A block round an underground station built with the scene's memo,
+    /// again and after other blocks, is the block built alone, to the
+    /// byte: its box, its platforms and the bores cut away along it.
+    func testABlockOfAnUndergroundStationBuiltWithTheScenesMemoIsTheBlockBuiltAlone() throws {
+        let world = try deepWorld(both: true)
+        let origin = (x: 40_960.0, y: 16_384.0)
+        let whole = WorldRegion(bounds: world.bounds)
+        let grid = Map3DStreaming(originX: origin.x, originY: origin.y, map: whole)
+        let snapshot = world.railwaySnapshot()
+        let scene = Map3DScene(world: world, snapshot: snapshot, skyline: nil, frame: (whole, origin.x, origin.y), baseMap: nil, cityTiles: [],
+                               heights: nil, lineBands: nil, railways: nil, temples: nil)
+        let blocks = [-1, 0, 1].map { column in
+            [Map3DStreaming.Key(column: column, row: -1), Map3DStreaming.Key(column: column, row: 0)]
+        }
+        let alone = blocks.map { Map3DMapLoad.digest(Map3DScene.chunks($0, of: grid, world: world, snapshot: snapshot)) }
+        for _ in 0..<2 {
+            for (keys, digest) in zip(blocks, alone) {
+                let chunks = Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, trackCover: scene.trackCover)
+                XCTAssertEqual(Map3DMapLoad.digest(chunks), digest)
+            }
+        }
+        XCTAssertEqual(Set(alone).count, alone.count, "the blocks differ")
+        // The station is in them: without its platforms they are other blocks.
+        let bare = try deepWorld(both: false)
+        let bareAlone = blocks.map { Map3DMapLoad.digest(Map3DScene.chunks($0, of: grid, world: bare, snapshot: bare.railwaySnapshot())) }
+        XCTAssertNotEqual(bareAlone, alone)
+        // One platform fewer on the same track, built with the island
+        // scene's memo: the block of one platform, not of the island.
+        for (keys, digest) in zip(blocks, bareAlone) {
+            let chunks = Map3DScene.chunks(keys, of: grid, world: bare, snapshot: bare.railwaySnapshot(), trackCover: scene.trackCover)
+            XCTAssertEqual(Map3DMapLoad.digest(chunks), digest)
+        }
+    }
 }
