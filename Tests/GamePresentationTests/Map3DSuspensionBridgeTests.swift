@@ -177,7 +177,8 @@ final class Map3DSuspensionBridgeTests: XCTestCase {
         XCTAssertTrue(builder.meshes.isEmpty)
         let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
         var taiwan = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
-        XCTAssertTrue(taiwan.suspensionBridges().isEmpty)
+        // (Taiwan's own, decision 873, is a cable-stayed bridge.)
+        XCTAssertFalse(taiwan.suspensionBridges().contains { $0.bridge.stays == nil })
         XCTAssertFalse(taiwan.hangsFromCables(x: 100, z: 100))
     }
 }
