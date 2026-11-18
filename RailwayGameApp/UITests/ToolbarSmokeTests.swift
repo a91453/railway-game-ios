@@ -473,6 +473,16 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// The app's accessibility tree in the test's log, headed `XC27-TREE
+    /// why`, for a failure only a Simulator can show (pull request #2453:
+    /// the run's result bundle cannot be read where the failure is fixed).
+    /// Returns `why`, to end the failure's message with.
+    @discardableResult
+    func logTree(_ why: String) -> String {
+        print("XC27-TREE \(why)\n\(debugDescription)\nXC27-TREE-END")
+        return why
+    }
+
     /// A native menu's items `identifier`. The iOS 27.2 Simulator drops
     /// the identifier of an item in a ``ControlGroup`` (the game menu's
     /// shortcuts side by side) and of a nested menu's items, which then
@@ -1073,6 +1083,7 @@ final class ShellLayoutUITests: XCTestCase {
             return (id, button.frame)
         }
         guard let first = frames.first?.1 else { return }
+        if frames.contains(where: { $0.1.width != first.width }) || abs(first.width - 48) > 0.5 { app.logTree("column sizes \(state)") }
         // 66.1's width (TestFlight 67.1 beside 66.1, ``ToolColumn``).
         XCTAssertEqual(first.width, 48, accuracy: 0.5, "The column's buttons are 48 points wide \(state): \(frames)", file: file, line: line)
         for (id, frame) in frames {

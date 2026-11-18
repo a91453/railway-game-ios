@@ -199,7 +199,8 @@ final class TutorialUITests: XCTestCase {
         // 1b64367's full lane, run 41272201294: its recording shows the
         // folded card above the dock and Lines uncovered throughout).
         // Something that really covers it still fails, with the frames.
-        XCTAssertTrue(lines.becomesHittable(within: 10),
+        if !lines.becomesHittable(within: 10) { app.logTree("Lines not hittable") }
+        XCTAssertTrue(lines.isHittable,
                       "The Lines button is covered: button \(lines.frame), card \(card.exists ? card.frame : .null), folded \(folded.exists ? folded.frame : .null)")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
@@ -621,7 +622,7 @@ final class TutorialUITests: XCTestCase {
             // Only the test runner waits; the app can finish opening the menu.
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
-        XCTFail("No visible tutorial menu action")
+        XCTFail("No visible tutorial menu action: \(XCUIApplication().logTree("no hittable \(query)"))")
         return query.firstMatch
     }
 

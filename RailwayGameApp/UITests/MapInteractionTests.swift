@@ -903,7 +903,8 @@ final class MapInteractionTests: XCTestCase {
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
 
-        XCTAssertTrue(hud.appears(within: 5), "MapConstructionHUD must appear when preview is active")
+        if !hud.appears(within: 5) { app.logTree("no construction HUD") }
+        XCTAssertTrue(hud.exists, "MapConstructionHUD must appear when preview is active")
 
         // Cancelling construction removes preview and HUD: the map's ✕
         // beside the track, which a phone shows with the details card
@@ -1758,7 +1759,8 @@ final class MapInteractionTests: XCTestCase {
         }
         tap(nearest[1])
         let drawer = app.descendants(matching: .any)["map.stationPair"].firstMatch
-        XCTAssertTrue(drawer.appears(within: 10), "The two stations are compared")
+        if !drawer.appears(within: 10) { app.logTree("no station pair drawer, tapped \(nearest[0]) and \(nearest[1])") }
+        XCTAssertTrue(drawer.exists, "The two stations are compared")
         let confirm = app.buttons["map.build.confirm"]
         XCTAssertTrue(confirm.appears(within: 10))
         XCTAssertTrue(confirm.becomesHittable(within: 10), "A finger reaches the ✓: \(confirm.frame), drawer \(drawer.frame)")
