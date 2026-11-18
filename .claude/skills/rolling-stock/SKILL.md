@@ -59,9 +59,11 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
 - **夜間亮燈**（決策 449，`Map3DTrainLights`）：每一列車都一樣，配方只要畫燈的鏡片和窗玻璃，不必自己決定哪裡亮。
   - 做 pack 時，跑的車（`set-*`，與 `Map3DTrainStyle` 的 `-cab`／`-car`／`-panto`）自己的發光三角形改成不亮。它的燈從配方找：發光的三角形，或鏡片色（`Map3DTrainStyle.headlamp`、`Map3DPalette.lantern`、`tunnelLamp` 與它們的暗色），在車長兩端各 30 % 內；紅的是尾燈，其餘是頭燈。一端只有一種，另一種用同一組鏡片換色；兩種都沒有，就在車端面高 1.25 m、左右 0.82 m 補兩盞小燈。
   - 每一格畫面：列車的第一節在前進那端亮頭燈，最後一節在另一端亮紅尾燈，不管駕駛室在哪、列車往哪開（推拉式與機車牽引的後面那台動力車是轉過來的那台）。
-  - 客室窗：每款跑的車另有一個窗模型（`light-` 加車名），是側面玻璃三角形的複製（玻璃色見 `Map3DTrainLights.isGlass`：`Map3DTrainStyle.glass`、`Map3DPalette.glazing` 和 TEMU 的客室玻璃），離有燈的那端 2.8 m 內的駕駛室窗不亮。新車的窗要用這幾種玻璃色才會亮；用別的顏色就加進 `glassShades`。
+  - 客室窗：每款跑的車另有一個窗模型（`light-` 加車名），是側面玻璃三角形的複製，離有燈的那端 2.8 m 內的駕駛室窗不亮。
+    **新車一律逐面標玻璃，不靠顏色**（#2417、#2433）：GLB 轉的車把玻璃材質的格位傳給 `decodedMesh(..., glass:)`，模型裡標成 `trainGlass` 的面才是窗（`Map3DTrainMaterial.marksOwnGlass` 為真時，`windowModel` 只看這些面）；手寫配方的車同樣標面。新車加進 `Map3DTrainOwnGlassTests.studioCars`，釘住亮窗只在玻璃上。
+    照顏色猜（`Map3DTrainLights.isGlass`：`Map3DTrainStyle.glass`、`Map3DPalette.glazing`、TEMU 的客室玻璃）只留給沒有標面的舊車；它會把接近玻璃的深灰（面罩、窗框、門）一起點亮。
   - **只有真的窗玻璃才用玻璃色**（作者 2026-11-15，機場快綫在清晨 06:50 實機）：窗模型把每塊側面玻璃（|法線側向| ≥ 0.75、中心在車高 30–92 %）整塊亮成米色。門板整面用玻璃色，清晨就是一扇米色大方塊；一整條窗帶用玻璃，就是一條米色長條。所以門用車身色（塞拉門以 1–2 cm 的深色細縫畫門框），只有門上的小窗是玻璃；客室窗是深色窗帶（`mask`）裡一格一格的玻璃，窗柱與窗框是深色。拍圖時另出一張「亮窗」版（只把遊戲會亮的玻璃換成 #F2D9A0，規則見下）來看。
-    - 亮不亮只看頂點顏色是不是玻璃色、三角形第一個頂點的側向法線、中心高度（模型最高點的 30–92 %），不看材質名；本來就發光的三角形不算。
+    - 亮不亮看三件事：是不是玻璃（逐面標的車看 `trainGlass` 標記，沒有標面的舊車看頂點顏色）、三角形第一個頂點的側向法線、中心高度（模型最高點的 30–92 %）；本來就發光的三角形不算。
     - **工作室的車例外：逐面看材質**（決策 450 的後來，2026-11-18）：顏色猜法容許 ±6，港鐵的深灰（charcoal #464B51、mask #1D2125、hardware #4B535C、dark #30363D）全被當成玻璃，夜裡門板、窗框跟著亮。所以工作室 GLB 轉成的車，`Map3DRedCommuter.decodedMesh(..., glass: <glass 材質的色票格位>)` 一定要傳玻璃格位（港鐵三綫的 `glassIndex`）：那個格位的面標成 `trainGlass`，模型一有這種面，夜燈和反光就只認它們，不再用顏色猜。新的工作室車（東鐵綫、南港島綫、迪士尼綫）照做；`Map3DTrainOwnGlassTests` 把它加進 `studioCars`。
     - 駕駛室的窗是**逐個三角形**排除的，而且只在有頭尾燈的那端：三角形最大 x 超過「有燈那端 − 2.8 m」才不亮（中間車兩端的客室窗照亮）。一塊側窗跨在這條線上，清晨就亮半塊三角形。駕駛室側窗的每個三角形都要有一個頂點落在離有燈那端 2.8 m 以內：從窗的前緣頂點扇形切，整扇保留原大，不要把窗縮小。駕駛室側門的小窗用深色，不用玻璃。
     - 「亮窗」版照遊戲的規則拍：車高用模型最高點（有集電弓的車比車身高）、兩端駕駛室段不亮。把所有玻璃都換色的圖看不出駕駛室半亮。
@@ -157,14 +159,10 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 1. `tools/train-models/glb_to_swift.py --enum <車> --materials <派工單材質表的順序>`，Swift 端 `meshPalette` 照同一順序給色；GLB 裡的材質順序不重要，名字對就好。
 2. 編組用 `cycle`：兩端對稱的（D P M T T M P D）用不帶 `cycleFromFront` 的 cycle，後半自動鏡像，給 `middleBack`／`pantographBack`／`centreBack` 用 `.turned`；A C B C B C B A 這種一路重複的才用 `cycleFromFront`。
 3. 鎖檔：`run.sh OUT --lock tools/train-models/hashes.lock.json` 會把**所有**鎖檔重寫成另一種排序與格式（`hashes.lock.json` 上千行變動、別台車的註解少一段）。只留新車的 `locks/<id>.json`（補回註解裡的 enum 名與結尾換行），其他用 `git checkout` 還原。
-4. **沒有玻璃的車（貨車，例：石斗車 `Map3DFreightHopper`，2026-11-18）**：`decodedMesh` 不給 `glass`，派工單的深色也要不落在 `Map3DTrainLights.isGlass` 裡；測試同時量 `marksOwnGlass == false`、`windowModel(of:) == nil`、`Map3DTrainMaterial.marked` 後沒有玻璃層，夜裡只有尾燈亮。尾燈用 `Map3DPalette.lantern` 格位、轉完用 `litLenses(_, front: false)` 點亮。車比原配方高時，`Map3DTrainSetTests` 的 `lowFreight` 高度範圍跟著改。
+4. **沒有玻璃的車（貨車，例：石斗車 `Map3DFreightHopper`，2026-11-18）**：`decodedMesh` 不給 `glass`，沒有標面的模型會退回照顏色猜，所以 `marksOwnGlass` 也要是假、深色不落在 `Map3DTrainLights.isGlass` 裡；測試同時量 `marksOwnGlass == false`、`windowModel(of:) == nil`、`Map3DTrainMaterial.marked` 後沒有玻璃層，夜裡只有尾燈亮。尾燈用 `Map3DPalette.lantern` 格位、轉完用 `litLenses(_, front: false)` 點亮。車比原配方高時，`Map3DTrainSetTests` 的 `lowFreight` 高度範圍跟著改。
 5. 公開 repo 的 `docs/art/<車>/overview.jpg` 只留模型那一半：工作室總覽圖並排了 Commons 照片，照片只在素材庫。
 
-派工單（寫給工作室）要注意的，詳見素材庫 `local-studio-2026-11-10/LESSONS.md`：
-
-- **車頭分俯視、側視、正視三個方向寫，並指一款已做過、形狀相近的車頭當底**（東鐵綫第 1 版派工單寫「比市區綫更直、更方」，三輪都做成方盒，作者一眼看出「人家是圓弧」）。
-- 夜裡亮窗是遊戲用**顏色**認玻璃（`Map3DTrainLights.isGlass`）。窗框、門、面罩用的深色若落在玻璃色的範圍會被點亮；派工單選色時避開，或審查用遊戲同一個判斷量「非玻璃亮三角形 = 0」（屯馬綫改窗框形狀過關，東鐵綫第 1 輪 1,164 個錯亮）。
-- 派工單先合進素材庫 `main` 再開工作室任務，一款一個派工 commit：工作室交件用 `origin/main` 算範圍，派工單不在 main 上時，同一個 commit 裡的另一款會被當成越界、卡在交件。
+派工單（寫給工作室）要注意的：見私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/rolling-stock-studio.md`。
 
 ## 9. 這份是怎麼來的
 

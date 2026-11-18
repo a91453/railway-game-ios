@@ -75,4 +75,4 @@ unchanged. In this repository:
   from `a91453/railway-reference-private` on 2026-10-28).
 - On the owner's Mac the Meshy and Blender MCP servers are installed. When to use Meshy at all, and the Meshy →
   background Blender chain (voxel remesh before decimating, one palette colour per face), are in
-  `.claude/skills/model-look/references/meshy-blender.md` (2026-11-15).
+  `docs/studio/meshy-blender.md` in the private `a91453/railway-assets-private-2` (moved there 2026-11-18).

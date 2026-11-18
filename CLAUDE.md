@@ -555,6 +555,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   say nothing is broken, so the model is looked at beside real photographs
   at the game's camera angle and on-screen size, for at least three rounds,
   and the owner or another session judges its overview, not its maker.
+  The studio workflow (who builds, briefs, reviews, lessons, the list of
+  models still to make) is kept in the private assets repository,
+  `a91453/railway-assets-private-2` `docs/studio/` (owner, 2026-11-18),
+  not in this public repository.
 - Before changing how a real line is laid when bought (stations, loops,
   viaducts, a station shared with another line), read
   `.claude/skills/real-line-laying/SKILL.md` (decision 848): two lines at
