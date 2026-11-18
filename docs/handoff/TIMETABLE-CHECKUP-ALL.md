@@ -10,6 +10,6 @@
 
 ## 還留下什麼
 
-- 新加的世界沒有新問題（決策 844「後來」）。把整個體檢在 `main` `ed1c86f` 手動跑一次時，原有的一格紅了：`hk AEL+TCL+DRL realistic` 誤點 64，上限 57。評分與重現在 `docs/priorities/TIMETABLE-CHECKUP-ALL.md`（HK-AIRPORT-3-LATE），這張不修、上限不動，夜間那個 job 在修好或調上限之前會紅。
+- 新加的世界沒有新問題（決策 844「後來」）。把整個體檢在 `main` `ed1c86f` 手動跑一次時，原有的一格紅了：`hk AEL+TCL+DRL realistic` 誤點 64，上限 57。重現：`TIMETABLE_CHECKUP=1 TIMETABLE_CHECKUP_ONLY="hk AEL+TCL+DRL realistic" swift test --skip-build --filter TimetableCheckupFullTests/testHongKongLines`（約 5 分鐘）。評分檔在私有庫 `a91453/railway-assets-private-2` 的 `docs/priorities/TIMETABLE-CHECKUP-ALL.md`（HK-AIRPORT-3-LATE；評分檔 2026-11-18 起不放這個公開 repo）。這張不修、上限不動，夜間那個 job 在修好或調上限之前會紅。
 - 香港其餘六條線（屯馬、東鐵主線、荃灣、港島、觀塘、將軍澳主線）開賣時，涵蓋檢查會因為在售數變了而紅：把 `testEveryLineOnSaleIsPlayed` 的數字改掉，共站的組別（例如金鐘、北角）照紅字加一起買的世界。
 - 整張地圖全買不做（作者 2026-11-18）。要量時：`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=hk` 的 `DepotReturnReportTests/testHongKong` 買香港全部在售線。
