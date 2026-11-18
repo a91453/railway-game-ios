@@ -41,12 +41,22 @@ final class Map3DInterchangeStreetTests: XCTestCase {
         let count = { (props: [Map3DInstance], model: Int) in props.filter { $0.model == model }.count }
         print(String(format: "ROADIX2 front trees %d, bus stops %d; within 600 m trees %d, bus stops %d; bus lanes %.0f m",
                       count(front, tree), count(front, busStop), count(near, tree), count(near, busStop), busLanes))
+        // `ROADIX2_TREES=1` prints where each tree within 600 m stands
+        // (metres east and south of the place), to compare two builds.
+        if ProcessInfo.processInfo.environment["ROADIX2_TREES"] != nil {
+            for prop in near where prop.model == tree { print(String(format: "TREE %.1f %.1f", prop.transform[12] - cx, prop.transform[14] - cz)) }
+        }
         // main 4e244db0 and this branch alike: front 31 trees and 2 bus
         // stops, within 600 m 300 trees and 8 bus stops, 25,738 m of
         // buses' lanes within 1.5 km.
+        // Decision 391's later note (ELEVATED-ROAD-HEIGHT): with the first
+        // level at 9 m, 288 trees within 600 m and the rest as it was. No
+        // tree stands on a ramp (decision 391), and the ramps that cannot
+        // come down inside their bridge start 3 m higher and run 60 m
+        // further along the street: docs/decisions/391.md.
         XCTAssertGreaterThanOrEqual(count(front, tree), 31, "the trees along the street across the picture")
         XCTAssertGreaterThanOrEqual(count(front, busStop), 2, "its bus stops")
-        XCTAssertGreaterThanOrEqual(count(near, tree), 300)
+        XCTAssertGreaterThanOrEqual(count(near, tree), 288)
         XCTAssertGreaterThanOrEqual(count(near, busStop), 8)
         XCTAssertGreaterThanOrEqual(busLanes, 25_700, "the buses' lanes")
     }

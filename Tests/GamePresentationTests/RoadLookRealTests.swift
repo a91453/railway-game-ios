@@ -243,9 +243,12 @@ final class RoadLookRealTests: XCTestCase {
         // Where it reaches the ground and the road running on from it.
         XCTAssertLessThan(try top(200), 0.5)
         XCTAssertLessThan(try top(304), 1)
-        // 100 m in, at the 6 % of a main road.
-        XCTAssertEqual(try top(400), 6.3, accuracy: 1)
-        XCTAssertEqual(try top(500), 12.3, accuracy: 1)
+        // 100 m and 200 m in: a little over the 6 % of a main road, its
+        // 414 m being 36 m short of the fourth level's 27 m at that
+        // (ELEVATED-ROAD-HEIGHT; 24 m before it, which they reached at 6 %:
+        // 6.3 m and 12.3 m).
+        XCTAssertEqual(try top(400), 7.1, accuracy: 1)
+        XCTAssertEqual(try top(500), 13.9, accuracy: 1)
         // It climbs all the way to the deck.
         XCTAssertLessThan(try top(600), try top(680))
         XCTAssertGreaterThan(try top(680), 20)
@@ -365,11 +368,11 @@ final class RoadLookRealTests: XCTestCase {
         let joined = try XCTUnwrap(roadTops(&builder, drawn, kind: .secondary, at: 600, 520).first)
         let away = try XCTUnwrap(roadTops(&builder, drawn, kind: .secondary, at: 550, 700).first)
         print(String(format: "ROADLAYER trunk %.2f m, the lower bridge under it %.2f m, by where it joins %.2f m, away %.2f m", trunk, under, joined, away))
-        XCTAssertGreaterThan(trunk, 17, "the trunk, a third level")
-        XCTAssertLessThan(under, 7, "the lower bridge under the trunk")
+        XCTAssertGreaterThan(trunk, 20, "the trunk, a third level")
+        XCTAssertLessThan(under, 10, "the lower bridge under the trunk")
         XCTAssertGreaterThan(trunk - under, 4.5, "clear of each other")
         XCTAssertGreaterThan(joined, 14, "the lower bridge where it meets the trunk")
-        XCTAssertEqual(away, 6.3, accuracy: 0.5, "the lower bridge at its own level")
+        XCTAssertEqual(away, 9.3, accuracy: 0.5, "the lower bridge at its own level")
     }
     /// RAMP-EDGE-OVERLAP (decision 822 後來三's leftover): a lower bridge
     /// drawn 6 m off a higher one's middle, their widths overlapping as
