@@ -10,7 +10,7 @@
 | 榕樹 | 背景 Blender 腳本手寫：圓錐樹幹、主枝、12 條氣根、少邊數球體疊扁平冠，照部位上色票 | 586 面，和遊戲的 `leafyTree`、`kenney-pine` 並排風格一致、認得出是榕樹 | 0 | `street-trees-2026-11/revision-1/`（`tools/banyan.py` 改參數就能換樹種） |
 | 站立的通勤乘客 | Meshy 生成 → 背景 Blender 減面、每面取色 | 300 面在遊戲距離認得出是背背包、站著的人；臉上有幾片誤判成頭髮色、上衣混進深色，取色規則要再修 | 30 | `commuter-figure-2026-11/revision-1/`（`tools/figure.py`） |
 
-素材庫是 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/`。
+素材庫是目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/`；2026-11-18 以前的在 `a91453/railway-assets-private`。
 
 ## 環境（作者的 Mac）
 

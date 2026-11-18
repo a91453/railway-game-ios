@@ -110,7 +110,7 @@ node tools/train-models/viewer.mjs OUT/index.html OUT     # 離線預覽頁；�
 
 作者看真機（TestFlight），所以：
 
-- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer 放 `a91453/railway-assets-private: game-art-previews/docs/art/<模型>/<revision-N>/`。每輪最多 21 張 PNG、每張 ≤2 MiB、單檔 ≤50 MiB、PR 新增 ≤200 MiB；不放 ZIP 或 `history/`／`old/`／`backup/`。以該庫最新 AGENTS.md 及 asset_guard 為準。
+- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer 放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/<模型>/<revision-N>/`。每輪最多 21 張 PNG、每張 ≤2 MiB、單檔 ≤50 MiB、PR 新增 ≤200 MiB；不放 ZIP 或 `history/`／`old/`／`backup/`。以該庫最新 AGENTS.md 及 asset_guard 為準。
 - 寫清楚：Linux 的 WebGL 預覽不是 Metal；靜態素材合併後**不會**自動出現在遊戲（要接 set 才會）；真機的 Metal、效能、動畫 UNVERIFIED。
 - 作者說「好醜」「怪」的時候，先量（同相機的前後對照、局部放大），再改；每輪先記真正前版 producer commit，留 PNG、README、來源；被取代輪次的重檔在同一 PR 移除，完整模型由 git 歷史／producer 重建，不複製歷史包（見建模手冊第 11、13 節）。
 - 決策、五方評分、先拍後選的規則照 CLAUDE.md「Workflow」。
@@ -136,7 +136,7 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 
 作者自己做的列車模型（舊版遊戲的、帶貼圖的）是作者的作品，可以進遊戲；但遊戲不用貼圖，所以照這個順序轉。第一台是 e752e7a2（#2249，`Map3DRedCommuter`），照它做：
 
-1. **原檔不進公開 repo**：GLB、貼圖留在作者的電腦或 `a91453/railway-assets-private`；公開的只有工具、文件與轉好的 Swift 網格。文件裡不寫作者電腦上的路徑。
+1. **原檔不進公開 repo**：GLB、貼圖留在作者的電腦或私有素材庫（`docs/ASSET_REPOSITORIES.md`）；公開的只有工具、文件與轉好的 Swift 網格。文件裡不寫作者電腦上的路徑。
 2. **切面**：`tools/texture-palette/`（README 有指令）。`flatten.py` 把貼圖平塗成色票色塊，`cut_faces.py` 沿色塊邊界把三角形切開（窗、門、帶各自成面），窗標 `glass`。不要把整台車塗成幾個大色塊，窗會不見。不要批次轉，一台一台做（作者 2026-11-15）。
 3. **顏色**：只用色票色。色票沒有的顏色（例如車身紅）加進 `Map3DPalette`（決策 782 起寫在車自己的檔裡的 `extension Map3DPalette`），命名寫用途；原色在遊戲光下看起來不對就調（#711604 偏咖啡 → `trainRed` #8C1C1C）。**glTF 的 `COLOR_0` 與 base color factor 是線性值**：`tools/texture-palette/to_swift.py` 會轉回 sRGB；用 `tools/glb-to-m3dmodel/convert.mjs` 時要加 `--linear-colors yes`（不加是專案自己 GLB writer 的舊讀法，全部當 sRGB，紅帶會變成接近黑紅）。
 4. **進 Swift**：網格以 base64 內嵌（`to_swift.py`，同 N700S-G 的做法），顏色存色票索引、由 Swift 端給色；玻璃用 `Map3DTrainStyle.glass`，夜裡窗才會亮、白天才會反光。glTF 是 +y 上，要轉成遊戲軸（+x 車頭、+y 左、+z 上、車廂中心 x 0、最低點 z 0），轉換必須是旋轉（行列式 +1），不然整台翻面。
