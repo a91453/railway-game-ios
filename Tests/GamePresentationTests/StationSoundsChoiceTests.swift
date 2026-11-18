@@ -67,7 +67,7 @@ final class StationSoundsChoiceTests: XCTestCase {
         XCTAssertNil(session.world.station(id: Self.west)?.departureMelody)
         XCTAssertEqual(heard, [
             .arrival(watched: true, chime: .metro), .arrival(watched: true, chime: .local),
-            .departure(.b), .departure(DepartureMelody.of(lineNamed: "Shuttle")),
+            .departure(.b), .departure(DepartureMelody.of(lineNamed: "Shuttle", atStationNamed: "West")),
         ])
         XCTAssertEqual(session.commandLog.entries.suffix(4).map(\.action), [
             .command(.edit(.setStationChime(Self.west, .metro))), .command(.edit(.setStationChime(Self.west, nil))),

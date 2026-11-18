@@ -188,12 +188,12 @@ final class UndergroundStationsTests: XCTestCase {
 
     // MARK: Real maps
 
-    /// Hong Kong's lines all bought (Lei Tung, on the South Island Line, is
-    /// the station they lay in a tunnel; Taipei Main's are checked in
+    /// Hong Kong's lines and Fukuoka's all bought (decision 867 lays their
+    /// real underground stations in tunnels; before it only Lei Tung, on
+    /// the South Island Line, was; Taipei Main's are checked in
     /// ``Map3DXRayRealTests``): each underground platform in its
     /// station's box, room for its track's bore either side, one level to
-    /// a box. Fukuoka's subway stations are laid at the ground or in
-    /// cuttings, not in tunnels (decision 860's next step).
+    /// a box.
     func testRealUndergroundStationsAreBoxedRoundTheirPlatforms() throws {
         var report: [String] = []
         for (name, world) in try realWorlds() {
@@ -231,6 +231,9 @@ final class UndergroundStationsTests: XCTestCase {
         let hongKong = try HongKongMapTests.hongKong()
         _ = try SharedStationLayoutTests.buy(hongKong.buyableRealLines.map(\.id).sorted(), on: hongKong)
         worlds.append(("Hong Kong", hongKong.world))
+        let fukuoka = try FukuokaRailwaysTests.fukuoka()
+        _ = try SharedStationLayoutTests.buy(["fksubway:K", "fksubway:H", "fksubway:N"], on: fukuoka)
+        worlds.append(("Fukuoka", fukuoka.world))
         return worlds
     }
 }

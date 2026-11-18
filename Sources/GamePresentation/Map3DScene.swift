@@ -578,6 +578,8 @@ public struct Map3DScene: Sendable {
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
         // Decision 791: Hong Kong's landmark towers, clear of the track.
         if let frame = RealWorldFrame(world: world) { builder.addHongKongLandmarks(frame: frame) }
+        // Decision 869: the suspension bridges' towers and cables.
+        builder.addSuspensionBridges()
         // Decision 625: the real stations' exterior studies, as landmarks,
         // cut clear of the track.
         let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
@@ -1261,6 +1263,9 @@ extension Map3DScene {
         /// Decision 791: the ground Hong Kong's landmarks stand on, where
         /// no footprint is drawn.
         var landmarkPlots: [PlacedSquare] = []
+        /// Decision 869: the suspension bridges round the scene, once found
+        /// (``suspensionBridges()``).
+        var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 455: whether the simplified city's boxes are kept as
         /// instances (the city's lots), not vertices.

@@ -449,3 +449,10 @@ its map's airports when it opens the save).
   speed (`StationSoundsTests.testTheVersion109SaveKeepsTheStationsSounds`,
   written with `STATION_SOUNDS_SAVE_NEW=1` by the build that first made
   it; decision 866).
+- `v110-more-melodies.json`: the same two stations and line, Station A
+  set to play departure melody 5 (one of the three decision 868 added,
+  which a version 109 build does not know) and Station B melody 2, run 30
+  minutes at the normal speed
+  (`StationSoundsTests.testTheVersion110SaveKeepsALaterMelody`, written
+  with `MORE_MELODIES_SAVE_NEW=1` by the build that first made it;
+  decision 868).
