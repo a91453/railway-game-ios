@@ -1,24 +1,21 @@
 import GameCore
 
 /// Which of the official arrival chimes a station rings (decision 219,
-/// stage 1): worked out from the world each time, never saved. Stage 2 lets
-/// the player choose a station's chime; until then every station rings the
-/// one its place in the network calls for.
-public enum StationChime: String, CaseIterable, Hashable, Sendable {
-    /// A small station: the two-note bell (`station-chime.wav`).
-    case local
-    /// An interchange: two passenger lines or more call there, or a high
-    /// speed line does. The four-note bell of the reference's airport
-    /// announcements, C5–E5–G5–C6.
-    case metro
-    /// An attraction is within the station's catchment (decision 174): a
-    /// light plucked phrase on the C major pentatonic scale.
-    case tourist
+/// stage 1; the cases are GameCore's, decision 866). Worked out from the
+/// world each time: the chime the player set the station to ring
+/// (``Station/chime``), or else the one its place in the network calls for.
+extension StationChime {
+    /// The chime `station` rings in `world`: the one the player set it to
+    /// ring, or else ``automatic(_:in:)``'s.
+    public static func of(_ station: StationID, in world: GameWorld) -> StationChime {
+        world.station(id: station)?.chime ?? automatic(station, in: world)
+    }
 
-    /// The chime `station` rings in `world`: tourist before metro before
+    /// The chime a station's place in the network calls for, which it
+    /// rings unless the player set another: tourist before metro before
     /// local (tourist stations are fewer and their chime the easiest to
     /// remember). A station that no longer exists rings the local chime.
-    public static func of(_ station: StationID, in world: GameWorld) -> StationChime {
+    public static func automatic(_ station: StationID, in world: GameWorld) -> StationChime {
         guard let point = world.station(id: station)?.point else { return .local }
         if let attractions = world.tourism?.attractions {
             let reach = Tourism.reach
