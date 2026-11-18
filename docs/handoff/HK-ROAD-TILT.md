@@ -1,38 +1,39 @@
 # HK-ROAD-TILT：道路橫向找平（路床）
 
-派工單 HK-ROAD-TILT（bug，2.60，`a91453/railway-assets-private-2` `docs/priorities/HK-ROADS.md` 第 1 項），工作串「修香港山坡道路左右傾斜」，分支 `claude/project-thread-lw0f37`，決策 865。只改 GamePresentation；GameCore、存檔版本、golden、replay 都不動。原 session 在第二次壓縮後照規定停手，**PR 留 draft，還不能合**。
+派工單 HK-ROAD-TILT（bug，2.60，`a91453/railway-assets-private-2` `docs/priorities/HK-ROADS.md` 第 1 項）與它的後續 ROAD-BED-TRIANGLES（bug，2.50，同庫 `docs/priorities/HK-ROAD-TILT.md`）。決策 865 與它的「後來（ROAD-BED-TRIANGLES）」。只改 GamePresentation；GameCore、存檔版本、golden、replay 都不動。
+
+兩條工作串：「修香港山坡道路左右傾斜」（`claude/project-thread-lw0f37`，PR #2465，沒有合，第二次壓縮後停手）做了路床；「降低山坡路面三角形數」（`claude/project-thread-y8il8g`）接手把三角形降下來，兩者一起合。
 
 ## 進度
 
-- 做到哪：路床（`Map3DRoadBed.swift`）寫完並接到路面、人行道、中線、標線、街具、車流、橋與匝道的高度、國道縱斷面；決策 865、對照圖、新測試都在分支上。**還沒做：把多出來的三角形降下來**（下面第 1 項），所以 PR 是 draft。
-- 已驗證（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DRoadBedTests` 5 個通過；相關既有測試的結果寫在 PR。真實地形量測（預覽工具，不是實機）：路面左右高差 p95 香港薄扶林 3.29 → 0.00 m、台北 0.13 → 0.00 m、羅瓦涅米 0.38 → 0.00 m；三角形香港 +55%、台北 +22%、羅瓦涅米 +56%。
-- 下一步的第一個指令：照專案檔案區 `handoff/HK-ROAD-TILT-measure.patch` 開頭的說明把量測補丁放回去（不提交），`swift build --build-tests`，再跑裡面的 `measure2.sh tpe taipei` 當基準，然後動下面第 1 項。
+- 做完的：路床（`Map3DRoadBed.swift`）接到路面、人行道、中線、標線、街具、車流、橋與匝道的高度、國道縱斷面；路床留成折線，路面與擋牆只切在折點；立牆門檻 0.5 m；預覽工具會先呼叫 `mapGround()`。
+- 量到的（預覽工具，Linux，**不是實機**）：路面左右高差 p95 香港薄扶林 3.29 → 0.00 m、台北 0.13 → 0.00 m、羅瓦涅米 0.38 → 0.00 m；三角形比沒有路床時香港 +20%（第一版 +55%）、羅瓦涅米 +10%（+56%）、台北 +0.02%（+22%）。數字與對照圖在決策 865。
+- 已驗證（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DRoadBedTests` 8 個與道路相關的既有類別通過（清單在 PR）。其餘交給 CI。
 
-## 做了什麼
+## 還留下什麼（評分在私有庫 `docs/priorities/HK-ROAD-TILT.md`）
 
-決策 865 寫了規則、沒選的做法、量測、五方與參考對照。一句話：地面不動，每條底圖的路沿線每 2 m 取「橫向最高的地面」當床高，路面兩側同高，路口互相撐到同高再降回，並行的路併成一個平台，低側立擋牆。平地的路高度不變。所有地圖共用（`addBaseMap`）。
+1. **實機（Metal）沒看過，每幀成本沒量。** 下一版 TestFlight 請看香港山坡路（薄扶林、半山）與台北平地的路有沒有異狀。
+2. **高擋牆（ROAD-BED-HIGH-WALLS，2.30）**：這次拍圖量過後決定不改半挖半填（決策 865「後來」有數字與理由）。香港薄扶林的牆高過 6 m 的佔 8%，最高 14.5 m 在圓環旁（場景座標 x −1103、z −300，鏡頭 `a:-1110:-326:170:30:62:62`）。要修先動路口撐高：圓環每一段都被相接的路撐到同高（`Map3DRoadBed.tallest` 9 m、`passes` 3），可以讓環上各段取自己的床高再沿環平滑；不要先做全面半挖半填（要切地面的三角形，三角形會更多）。
+3. **縱坡（HK-ROAD-GRADE，2.30）**：沒有變好（香港 secondary p95 17.8%、primary 17.7%）。
+4. 小項（ROAD-BED-REST，1.95）：公司自己的公車路與種子街道沒有路床、斷頭路端面沒牆、`Map3DRoadTunnels` 洞口與 `bridgeDecks` 內部仍讀 `drawnGround`、高低差超過 2 m 的並行路各走各的。
+5. 台北、羅瓦涅米只量了數字，沒拍改前改後的圖；海邊的路沒有單獨拍。
 
-對照圖：`docs/art/hk-road-tilt-2026-11-18/overview.jpg`。
+## 想再降三角形的話
 
-## 還留下什麼（照順序）
+香港還多的三萬一千個裡，擋牆一萬六千（45.4 km、7,820 片）、路面與人行道一萬五千。可以動的：
 
-1. **三角形多兩成到五成，合併前要降下來。** 來源與方向：
-   - 路面、人行道、中線、標線在路床每個轉折多切一刀（`bedCuts`，1 cm 的 `bends`，和決策 391 共用）。路床的折點在「路中心±半寬」過 64 m 網格線與對角線的地方，一格大約 6 個，折點不落在 2 m 的取樣點上時前後兩點都算轉折，所以一個折點切兩刀。原本一格只切 3 刀（`splits`）。
-   - 可以試的：(a) 路床自己先簡化成折線（只留偏離超過幾公分的點，而且不低於原值），`bedCuts` 只切折線的頂點；(b) 整段都在床上的路面不再併 `splits` 的網格切點（床上的路不需要跟著地面的三角形）；(c) 擋牆的站點放寬（現在牆頂、牆腳各 1 cm），`Map3DRoadBed.wall` 0.35 m 在羅瓦涅米立了一萬六千個三角形的矮牆，可以提高門檻或只在落差大於人行道高度很多時才立；(d) 側傾很小的地圖（台北 p95 0.13 m）幾乎沒有得到什麼，卻付了兩成，可以考慮床高與中心地面差不到某個值的路不切。
-   - 目標自己定，建議：台北 +5% 以內、香港與羅瓦涅米 +20% 以內，再量一次實機或 `Map3DFrameCostReportTests`。
-2. **看圖**：香港薄扶林的圓環低側牆很高（路面 68.1 m，路緣下地面 57–60 m）。寬路的床取到上坡側人行道外緣，路口再把相接的路撐到同高（最多 9 m，`tallest`）。要不要改成床高取路中心附近（半挖半填，上坡側切進地面一點）是設計題，動之前先拍圖。
-3. 縱坡沒變好、略差（香港 secondary p95 16.1% → 17.9%）。評分在私有庫 `docs/priorities/HK-ROAD-TILT.md`。
-4. 台北、羅瓦涅米只量了數字，沒拍改前改後的圖；海邊的路（派工單寫「山坡與海邊」）沒有單獨拍。
-5. 沒做的小項（決策 865「沒做、沒驗證」）：公司自己的公車路與種子街道沒有路床、斷頭路端面沒牆、`Map3DRoadTunnels` 洞口與 `bridgeDecks` 內部仍讀 `drawnGround`、高低差超過 2 m 的並行路各走各的。
-6. **實機（Metal）沒看過。**
+- `Map3DRoadBed.tolerance`（5 cm）：再大地面會從人行道邊穿出來（人行道只高出橫向最高地面 0.11 m），要一起調 `slack`。
+- 擋牆在床每個超過 1 cm 的轉折都切一刀（`bent`）；牆頂可以改成自己的容許值（例如 5 cm，牆頂比人行道低 2 cm，會露出一條縫或凸出來，要看圖）。
+- 固定點（路自己的點、過 64 m 網格線）不能拿掉：分開蓋的 chunk 要留一樣的折點，床上的每一片也不能超過一格。
 
 ## 量測怎麼重跑
 
-補丁與三個腳本在專案檔案區 `handoff/HK-ROAD-TILT-measure.patch`（不在 repo 裡）。重點：
+補丁與腳本在專案檔案區 `handoff/HK-ROAD-TILT-measure.patch`（不在 repo 裡，已更新成合併後的樣子）。重點：
 
-- 預覽工具的世界若沒有買線，`GameWorld.groundHeight` 整張圖回答 0，場景是平的；補丁在蓋場景前呼叫 `world.mapGround()`（App 的 `GameLauncher` 也這樣做），高度檔才會被讀到。這個該正式加進 `tools/map3d-preview/Map3DPreviewDump.swift.txt`（這次沒加）。
-- `MAP3D_TILT=1` 印出各級道路左右高差與縱坡的百分位、三角形數；`MAP3D_NO_BED=1`（三行暫時的開關）是「改前」。
-- 香港：`MAP3D_WORLD=hongkong MAP3D_AT=22.2715:114.1290 MAP3D_REAL=1 MAP3D_BASEMAP=1 MAP3D_FOOTPRINTS=1 MAP3D_HEIGHTS=1 MAP3D_LANDCOVER=1 MAP3D_DAY=1 MAP3D_MINUTE=600`，鏡頭 `a:-1110:-326:170:30:62:62;b:180:472:170:120:85:62;wide:-400:-400:900:20:50:50`。
+- 把 `tools/map3d-preview/Map3DPreviewDump.swift.txt` 複製成 `Tests/GamePresentationTests/Map3DPreviewDump.swift` 再套補丁；`MAP3D_TILT=1` 印出各級道路左右高差與縱坡的百分位、三角形數與混凝土三角形數。量完刪掉那個檔。
+- `MAP3D_NO_BED=1`（補丁開頭寫的三行暫時開關）是「沒有路床」。
+- 量測在跑的時候不要重新建置（它跑的是測試執行檔）。
+- 香港：`MAP3D_WORLD=hongkong MAP3D_AT=22.2715:114.1290 MAP3D_REAL=1 MAP3D_BASEMAP=1 MAP3D_FOOTPRINTS=1 MAP3D_HEIGHTS=1 MAP3D_LANDCOVER=1 MAP3D_DAY=1 MAP3D_MINUTE=600`，鏡頭 `a:-1110:-326:170:30:62:62;b:180:472:170:120:85:62;c:200:460:70:120:86:55`（名字:x:z:距離:方向:看的高度:傾角）。羅瓦涅米、台北用各自預設的場景中心（不給 `MAP3D_AT`）。
 
 ## UNVERIFIED
 
