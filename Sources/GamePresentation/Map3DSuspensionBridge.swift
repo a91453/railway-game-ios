@@ -23,13 +23,16 @@ struct Map3DSuspensionBridge: Sendable {
     /// Whether each side span hangs from the cables (else it stands on its
     /// own piers under the backstays).
     let hungSides: [Bool]
+    /// Decision 873: a cable-stayed bridge's mast and stays: its mast at
+    /// the first of ``towers``, the second the far end of its main span.
+    var stays: Map3DCableStays?
 
     /// 青馬大橋: 馬灣's tower and 青衣's, 1,377 m apart; 馬灣's side span
     /// (355 m) hangs, 青衣's (300 m) stands on piers.
     static let tsingMa = Map3DSuspensionBridge(towers: [(22.349_340, 114.067_644), (22.352_902, 114.080_452)],
                                                sideSpans: [355, 300], hungSides: [true, false])
 
-    static let all = [tsingMa]
+    static let all = [tsingMa, danjiang]
 
     // The towers as surveyed, metres; heights over the road at the tower
     // (73.5 m over Principal Datum).
@@ -338,6 +341,11 @@ extension Map3DScene.Builder {
         let saved = target
         defer { target = saved }
         for bridge in suspensionBridges() {
+            // Decision 873: a cable-stayed bridge's mast and stays.
+            if let stays = bridge.bridge.stays {
+                addCableStayedBridge(bridge, stays: stays)
+                continue
+            }
             target = .base
             // The towers.
             for station in [0, bridge.span] {

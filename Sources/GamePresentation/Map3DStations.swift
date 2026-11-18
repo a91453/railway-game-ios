@@ -311,6 +311,7 @@ extension Map3DScene.Builder {
             }
         }
         addCanopies(skipping: Set(shells.keys))
+        shellRoofed = Set(shells.keys)
         let tunnels = snapshot.platforms.filter { platform in
             platform.structure == .tunnel && platform.points.count > 1
                 && platform.points.contains { contains(x: Double($0.x), y: Double($0.y)) }

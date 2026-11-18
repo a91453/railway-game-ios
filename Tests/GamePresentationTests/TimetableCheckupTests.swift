@@ -167,6 +167,12 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// Chung Line from 4 (alone) and 3 (with the Airport Express and the
     /// Disneyland Resort Line, 64 late on `main` `5a1efcf`), the Tseung
     /// Kwan O Line from 92 late to none (and the Liujia Line's 3 late).
+    /// Decision 871 (the Taoyuan Airport MRT under the Tamsui River and
+    /// at Huanbei, its viaduct stations at 16 m) moved its realistic
+    /// day from 2 not sent, 26 late, 11 late out of a depot and a peak
+    /// gap of +10 min to 1, 19, 7 and +13 (one gap of 27.7 min against
+    /// 15 at Airport Terminal 1 at 18:01); under a new game's rules it
+    /// is as it was.
     static let budgets: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
@@ -174,7 +180,7 @@ final class TimetableCheckupFullTests: XCTestCase {
         "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
         "tymc:A simple": .init(notSent: 4, late: 103, lateOutOfDepot: 8, peakGapMinutes: 26),
-        "tymc:A realistic": .init(notSent: 2, late: 26, lateOutOfDepot: 11, peakGapMinutes: 10),
+        "tymc:A realistic": .init(notSent: 1, late: 19, lateOutOfDepot: 7, peakGapMinutes: 13),
         "hk EAL_LMC simple": .init(notSent: 0, late: 40, lateOutOfDepot: 0, peakGapMinutes: 7),
         "hk EAL_LMC realistic": .init(notSent: 0, late: 9, lateOutOfDepot: 0, peakGapMinutes: 3),
         "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),

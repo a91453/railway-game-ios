@@ -513,10 +513,24 @@ extension GameSession {
         let layout = RealLineLayout.metro
         let reach = layout.loopReach, gap = RealWorldDemo.shortestEdge, ramp = HighSpeedDemo.rampLength
         let need = reach + 2 * gap + ramp + gap
-        guard let low = along.lastIndex(where: { $0 <= middle - need }), let high = along.firstIndex(where: { $0 >= middle + need }),
+        guard var low = along.lastIndex(where: { $0 <= middle - need }), var high = along.firstIndex(where: { $0 >= middle + need }),
               low > 0, high < mainNodes.count - 1
         else {
             return problem("there is no room along the line for its passing tracks.", "線上放不下待避線。")
+        }
+        // Decision 871: a station laid above the track either side (a
+        // viaduct station at its 16 m, the viaduct between at 10 m) takes
+        // more than that reach to come down from its level stretch to the
+        // track kept: the stretch goes on outward, node by node, until the
+        // line's grade reaches the kept track's height (with a fifth to spare).
+        let grade = realLine == "tymc:A" ? 0.038 : RealWorldDemo.rulingGrade
+        if let level = world.trackGeometry(of: ordered[0].edge)?.height(at: ordered[0].start) {
+            func reaches(_ index: Int) -> Bool {
+                guard let node = world.network.node(mainNodes[index]) else { return true }
+                return abs(Double(node.position.z) - Double(level)) <= 0.8 * grade * (abs(along[index] - middle) - reach)
+            }
+            while low > 1, !reaches(low) { low -= 1 }
+            while high < mainNodes.count - 2, !reaches(high) { high += 1 }
         }
         guard let lowNode = world.network.node(mainNodes[low]), let highNode = world.network.node(mainNodes[high]) else { return changed }
         // The second track's nodes beside those two, a double track's
@@ -594,7 +608,7 @@ extension GameSession {
                 TrackRise.Level(0...0, at: Double(lowNode.position.z)), TrackRise.Level(levelled, at: Double(height)),
                 TrackRise.Level(path.length...path.length, at: Double(highNode.position.z)),
             ],
-            grade: realLine == "tymc:A" ? 0.038 : RealWorldDemo.rulingGrade, slack: [0]
+            grade: grade, slack: [0]
         ) else {
             return problem("the track cannot be laid level there within the steepest grade.", "那裡的高低差太大，鋪不成平的。")
         }
