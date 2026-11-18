@@ -378,7 +378,7 @@ struct NetworkControls: View {
 
     /// Decision 574: the cable car mode. Taps put down the stops in turn;
     /// here whether the next is an angle station, the last taken back, the
-    /// real cable car on this map laid as it is, and the company's cable
+    /// real cable cars on this map laid as they are, and the company's cable
     /// cars, each on a card that can take it down.
     private var cablewayOptions: some View {
         let language = session.language
@@ -400,7 +400,9 @@ struct NetworkControls: View {
                 }
                 .disabled(session.cablewayDraft.isEmpty)
                 .accessibilityIdentifier("network.cablewayUndo")
-                if let real = session.realCablewayOffer {
+                // Decision 870: every real cable car on the map, nearest first.
+                let offers = session.realCablewayOffers
+                ForEach(Array(offers.enumerated()), id: \.element.name) { index, real in
                     Button {
                         session.traceRealCableway(real)
                     } label: {
@@ -410,7 +412,7 @@ struct NetworkControls: View {
                             Image(systemName: "cablecar")
                         }
                     }
-                    .accessibilityIdentifier("network.cablewayReal")
+                    .accessibilityIdentifier(index == 0 ? "network.cablewayReal" : "network.cablewayReal.\(index)")
                 }
             }
             .buttonStyle(.bordered)
