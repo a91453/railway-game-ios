@@ -843,7 +843,13 @@ selected_pattern() {
 # takes its tests' times in campaigns-1 times 1.27 (638/502), rounded:
 # HongKongSharedTrackBuyOrderTests 320, HongKongTungChungDayTests 140,
 # HongKongEveryLineTests 130, HongKongMapTests 50.
+# Decision 844 (TIMETABLE-CHECKUP, 2026-11-18): the pull request
+# checkup's two classes, new, take their local debug times (63 and 56 s)
+# times about 1.3: TimetableCheckupTests 80, TimetableCheckupTaiwanTests
+# 75. TimetableCheckupFullTests skips without TIMETABLE_CHECKUP (its
+# nightly jobs in ci.yml set it), so it weighs the default.
 CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
+  TimetableCheckupTests:80 TimetableCheckupTaiwanTests:75
   HongKongTungChungDayTests:140 Map3DFarViewTests:135
   HongKongEveryLineTests:130 HongKongMapTests:50
   DemoRealLinesEverySystemTests:78 WenhuUndergroundTests:52
