@@ -94,6 +94,46 @@
           {"program": 49, "name": "slow strings", "volume": 70, "pan": 64, "looseness": 10}
         ]
       }
+    },
+    "departure-d": {
+      "role": "departure",
+      "once": "departure-d.m4a",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "reverb": 0.28,
+      "phraseBars": 4,
+      "stems": {
+        "departure-d": [
+          {"program": 0, "name": "piano", "volume": 96, "pan": 60, "looseness": 3, "pedal": 1},
+          {"program": 46, "name": "harp", "volume": 94, "pan": 72, "looseness": 5}
+        ]
+      }
+    },
+    "departure-e": {
+      "role": "departure",
+      "once": "departure-e.m4a",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "reverb": 0.28,
+      "phraseBars": 4,
+      "stems": {
+        "departure-e": [
+          {"program": 0, "name": "piano", "volume": 96, "pan": 60, "looseness": 3, "pedal": 1},
+          {"program": 45, "name": "pizzicato strings", "volume": 104, "pan": 70, "looseness": 5}
+        ]
+      }
+    },
+    "departure-f": {
+      "role": "departure",
+      "once": "departure-f.m4a",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "reverb": 0.28,
+      "phraseBars": 4,
+      "stems": {
+        "departure-f": [
+          {"program": 0, "name": "piano", "volume": 96, "pan": 60, "looseness": 3, "pedal": 1},
+          {"program": 46, "name": "harp", "volume": 90, "pan": 72, "looseness": 5},
+          {"program": 49, "name": "slow strings", "volume": 70, "pan": 64, "looseness": 10}
+        ]
+      }
     }
   }
 }

@@ -1,0 +1,56 @@
+{
+  "format": 1,
+  "role": "departure",
+  "title": "Departure melody D (falling figures, each a step higher)",
+  "source": "Written for the game, decision 868 (no MML original)",
+  "tempo": 150,
+  "beatsPerBar": 3,
+  "length": 11520,
+  "motif": 3,
+  "fadeOut": 0,
+  "tracks": [
+    {
+      "voice": "pluck",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 88, "start": 0, "length": 1440, "velocity": 92},
+        {"pitch": 84, "start": 1440, "length": 480, "velocity": 92},
+        {"pitch": 79, "start": 1920, "length": 960, "velocity": 92},
+        {"pitch": 89, "start": 2880, "length": 1440, "velocity": 92},
+        {"pitch": 86, "start": 4320, "length": 480, "velocity": 92},
+        {"pitch": 81, "start": 4800, "length": 960, "velocity": 92},
+        {"pitch": 91, "start": 5760, "length": 960, "velocity": 92},
+        {"pitch": 88, "start": 6720, "length": 960, "velocity": 92},
+        {"pitch": 86, "start": 7680, "length": 960, "velocity": 92},
+        {"pitch": 84, "start": 8640, "length": 2880, "velocity": 92}
+      ]
+    },
+    {
+      "voice": "pluck",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 48, "start": 0, "length": 960, "velocity": 74},
+        {"pitch": 55, "start": 960, "length": 960, "velocity": 56},
+        {"pitch": 64, "start": 960, "length": 960, "velocity": 56},
+        {"pitch": 55, "start": 1920, "length": 960, "velocity": 56},
+        {"pitch": 64, "start": 1920, "length": 960, "velocity": 56},
+        {"pitch": 50, "start": 2880, "length": 960, "velocity": 74},
+        {"pitch": 57, "start": 3840, "length": 960, "velocity": 56},
+        {"pitch": 60, "start": 3840, "length": 960, "velocity": 56},
+        {"pitch": 57, "start": 4800, "length": 960, "velocity": 56},
+        {"pitch": 60, "start": 4800, "length": 960, "velocity": 56},
+        {"pitch": 43, "start": 5760, "length": 960, "velocity": 74},
+        {"pitch": 60, "start": 6720, "length": 960, "velocity": 56},
+        {"pitch": 65, "start": 6720, "length": 960, "velocity": 56},
+        {"pitch": 60, "start": 7680, "length": 960, "velocity": 56},
+        {"pitch": 65, "start": 7680, "length": 960, "velocity": 56},
+        {"pitch": 48, "start": 8640, "length": 2880, "velocity": 74},
+        {"pitch": 55, "start": 8640, "length": 2880, "velocity": 56},
+        {"pitch": 62, "start": 8640, "length": 2880, "velocity": 56},
+        {"pitch": 64, "start": 8640, "length": 2880, "velocity": 56}
+      ]
+    }
+  ]
+}

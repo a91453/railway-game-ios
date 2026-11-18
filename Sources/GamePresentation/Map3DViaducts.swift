@@ -441,7 +441,8 @@ extension Map3DScene.Builder {
                 top = Map3DPoint((top.x + other.top.x) / 2, min(top.y, other.top.y), (top.z + other.top.z) / 2)
                 foot = (foot + other.foot) / 2
             }
-            guard top.y - foot > 0.5 else { continue }
+            // Decision 869: none under a deck a suspension bridge's cables carry.
+            guard top.y - foot > 0.5, !hangsFromCables(x: top.x, z: top.z) else { continue }
             let base = Map3DPoint(top.x, foot, top.z), capFoot = top.y - look.capDepth
             piers.append(base)
             mesh(at: base) { mesh in

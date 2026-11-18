@@ -43,7 +43,7 @@ final class StationSoundsTests: XCTestCase {
         XCTAssertTrue(text.contains(#""chime":"tourist""#))
         XCTAssertTrue(text.contains(#""departureMelody":"c""#))
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(text.utf8)), world)
-        let bad = text.replacingOccurrences(of: #""departureMelody":"c""#, with: #""departureMelody":"d""#)
+        let bad = text.replacingOccurrences(of: #""departureMelody":"c""#, with: #""departureMelody":"g""#)
         XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(bad.utf8)), "a melody the game does not have")
 
         let before = world
@@ -90,6 +90,34 @@ final class StationSoundsTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 109)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded.station(id: a)?.chime, .metro)
+        XCTAssertEqual(loaded.station(id: b)?.departureMelody, .b)
+        XCTAssertEqual(loaded, world, "the save is the world this build makes the same way")
+        var running = world
+        try loaded.advance(ticks: 600)
+        try running.advance(ticks: 600)
+        XCTAssertEqual(loaded, running)
+    }
+
+    /// The version 110 save (decision 868): a station set to play melody
+    /// 5, one of the three a version 109 build does not know, run 30
+    /// minutes; it loads as the same world and runs on the same. Written
+    /// with `MORE_MELODIES_SAVE_NEW=1` by the build that first made it.
+    func testTheVersion110SaveKeepsALaterMelody() throws {
+        var (world, a, b) = try world()
+        try world.setStationDepartureMelody(a, to: .e)
+        try world.setStationDepartureMelody(b, to: .b)
+        try world.advance(ticks: 1_800)
+        let url = SavedGameTests.fixtures.appendingPathComponent("v110-more-melodies.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["MORE_MELODIES_SAVE_NEW"] != nil, SavedGame.currentVersion == 110 {
+            try encoder.encode(SavedGame(world: world)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 110)
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded.station(id: a)?.departureMelody, .e)
         XCTAssertEqual(loaded.station(id: b)?.departureMelody, .b)
         XCTAssertEqual(loaded, world, "the save is the world this build makes the same way")
         var running = world
