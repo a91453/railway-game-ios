@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 842: under traffic control without block sections, a service of
+/// Decision 849: under traffic control without block sections, a service of
 /// a line with runs holds its route only as far as just short of the first
 /// junction or crossing within 1 km of its stop (the station's throat)
 /// until it is within 1 km of it; a train that needs that junction

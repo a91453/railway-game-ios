@@ -1,5 +1,5 @@
 {
-  "about": "The tunes the game's music plays on sampled instruments (decision 815, later note). Each tune: copyright, whose the composition or arrangement is (the files it makes carry it in the manifest); loop, the seamless loop it makes (ALAC CAF), once, the file of it played once through that rings out at its end (AAC), either or both; reverb, the room's share; phraseBars, how many bars a phrase is (its notes swell to its middle); stems, by stem score, one entry for each track of that score, in order. program: a General MIDI program of the bank (melodic, bank 0), transpose: semitones added to its notes; drum: a note of the GS standard kit on channel 10, every note of the track played as it; synth: the track is played by make_game_audio.py's own voice (the rail joints), at that level. volume and pan are MIDI controllers 7 and 10; looseness, milliseconds the notes sit off the beat (a standard deviation); pedal, beats the sustain pedal holds from each bar's first beat.",
+  "about": "The tunes the game's music plays on sampled instruments (decision 815, later note). Each tune: copyright, whose the composition or arrangement is (the files it makes carry it in the manifest); loop, the seamless loop it makes (ALAC CAF), once, the file of it played once through that rings out at its end (AAC), either or both; reverb, the room's share; phraseBars, how many bars a phrase is (its notes swell to its middle); stems, by stem score, one entry for each track of that score, in order. program: a General MIDI program (melodic, bank 0), played by the chamber bank (chamber.json: the piano, the pizzicato, the harp and the slow strings, recorded) where it has it and by this bank otherwise; volume is matched to the level each track had on this bank alone, transpose: semitones added to its notes; drum: a note of the GS standard kit on channel 10, every note of the track played as it; synth: the track is played by make_game_audio.py's own voice (the rail joints), at that level. volume and pan are MIDI controllers 7 and 10; looseness, milliseconds the notes sit off the beat (a standard deviation); pedal, beats the sustain pedal holds from each bar's first beat.",
   "bank": {
     "name": "GeneralUser GS v2.0.3",
     "repository": "https://github.com/mrbumpy409/GeneralUser-GS",
@@ -18,13 +18,13 @@
       "phraseBars": 4,
       "stems": {
         "theme-melody": [
-          {"program": 0, "name": "piano", "volume": 104, "pan": 60, "looseness": 3, "pedal": 1}
+          {"program": 0, "name": "piano", "volume": 96, "pan": 60, "looseness": 3, "pedal": 1}
         ],
         "theme-harmony": [
-          {"program": 45, "name": "pizzicato strings", "volume": 92, "pan": 70, "looseness": 6},
-          {"program": 45, "name": "pizzicato strings", "volume": 92, "pan": 70, "looseness": 4},
-          {"program": 45, "name": "pizzicato strings", "volume": 92, "pan": 70, "looseness": 4},
-          {"program": 49, "name": "slow strings", "volume": 60, "pan": 64, "looseness": 10}
+          {"program": 45, "name": "pizzicato strings", "volume": 95, "pan": 70, "looseness": 6},
+          {"program": 45, "name": "pizzicato strings", "volume": 110, "pan": 70, "looseness": 4},
+          {"program": 45, "name": "pizzicato strings", "volume": 114, "pan": 70, "looseness": 4},
+          {"program": 49, "name": "slow strings", "volume": 92, "pan": 64, "looseness": 10}
         ],
         "theme-rhythm": [
           {"synth": "clack", "level": 0.05}
@@ -38,16 +38,16 @@
       "phraseBars": 4,
       "stems": {
         "winter-melody": [
-          {"program": 0, "name": "piano", "volume": 104, "pan": 60, "looseness": 3, "pedal": 2},
+          {"program": 0, "name": "piano", "volume": 97, "pan": 60, "looseness": 3, "pedal": 2},
           {"program": 8, "name": "celesta", "transpose": -12, "volume": 104, "pan": 56, "looseness": 3},
           {"program": 14, "name": "tubular bells", "volume": 56, "pan": 80, "looseness": 5}
         ],
         "winter-harmony": [
-          {"program": 49, "name": "slow strings", "volume": 52, "pan": 54, "looseness": 10},
-          {"program": 49, "name": "slow strings", "volume": 52, "pan": 64, "looseness": 10},
-          {"program": 49, "name": "slow strings", "volume": 52, "pan": 74, "looseness": 10},
-          {"program": 45, "name": "pizzicato strings", "volume": 96, "pan": 64, "looseness": 7},
-          {"program": 46, "name": "harp", "volume": 78, "pan": 86, "looseness": 7}
+          {"program": 49, "name": "slow strings", "volume": 54, "pan": 54, "looseness": 10},
+          {"program": 49, "name": "slow strings", "volume": 57, "pan": 64, "looseness": 10},
+          {"program": 49, "name": "slow strings", "volume": 74, "pan": 74, "looseness": 10},
+          {"program": 45, "name": "pizzicato strings", "volume": 97, "pan": 64, "looseness": 7},
+          {"program": 46, "name": "harp", "volume": 94, "pan": 86, "looseness": 7}
         ],
         "winter-rhythm": [
           {"drum": 83, "name": "jingle bell", "volume": 64, "pan": 44, "looseness": 6},

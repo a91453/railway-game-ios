@@ -3,9 +3,13 @@
 The notes are the music's stem scores (MML → `scores/*.score.json`, decision
 219). `sampled/arrangements.json` says, for each tune, the files it makes and
 which instrument plays each track:
-a General MIDI program of GeneralUser GS (a SoundFont bank whose licence
-allows use in games, fetched at a pinned commit and checked by SHA-256,
-never committed), or the synth's own rail joint. The scores become one
+a General MIDI program, or the synth's own rail joint. The programs are
+played on two SoundFont banks, never committed: the chamber bank
+(`chamber_bank.py`, THEME-PLAIN item 1), built from recordings of a
+concert grand (Salamander, CC BY 3.0) and a chamber string section and
+harp (VSCO 2 CE, CC0), for the piano, the pizzicato, the slow strings and
+the harp, in front of GeneralUser GS (a bank whose licence allows use in
+games, fetched at a pinned commit and checked by SHA-256) for the rest. The scores become one
 MIDI file, played twice through so the second time round carries the first
 one's tails, which SpessaSynth (`sampled/render.mjs`, npm, Apache-2.0)
 renders; the second time round is the loop. A room reverb and a gentle
@@ -33,6 +37,8 @@ import tempfile
 import urllib.request
 
 import numpy as np
+
+import chamber_bank
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SAMPLED = os.path.join(HERE, "sampled")
@@ -73,6 +79,17 @@ def bank_path():
     if digest != bank["sha256"]:
         raise SystemExit(f"{path}: SHA-256 {digest}, not the pinned {bank['sha256']}")
     return path
+
+
+def bank_paths():
+    """The banks the music plays on, first first: the chamber bank
+    (`chamber_bank.py`: the piano, the pizzicato, the slow strings and the
+    harp, recorded) in front of GeneralUser GS (every other program)."""
+    return [chamber_bank.bank_path(), bank_path()]
+
+
+# Banks to play on in place of `bank_paths()`, for comparing (None: those).
+BANKS = None
 
 
 def _vlq(n):
@@ -242,7 +259,7 @@ def _render(tune, sheets, times, seconds):
         if not os.path.isdir(os.path.join(SAMPLED, "node_modules")):
             subprocess.run(["npm", "ci", "--silent", "--no-audit", "--no-fund"], cwd=SAMPLED, check=True)
         subprocess.run(
-            ["node", os.path.join(SAMPLED, "render.mjs"), bank_path(), mid, raw, str(seconds(n))],
+            ["node", os.path.join(SAMPLED, "render.mjs"), mid, raw, str(seconds(n)), *(BANKS or bank_paths())],
             cwd=SAMPLED,
             check=True,
         )

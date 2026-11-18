@@ -150,7 +150,7 @@ final class HongKongDepotTests: XCTestCase {
         XCTAssertEqual(worst.count, 0, "\(worst.count) trains deadlocked at \(worst.at / 3_600):\(worst.at % 3_600 / 60)")
     }
 
-    /// Decision 842: under a new game's rules (traffic control, no block
+    /// Decision 849: under a new game's rules (traffic control, no block
     /// sections) the South Island Line sends every run of the second
     /// day's morning peak out of Admiralty. A train leaving Ocean Park took
     /// Admiralty's crossovers for the whole four minutes to get there, and

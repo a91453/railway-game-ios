@@ -4,7 +4,7 @@
 
 - 做到哪：做完，#2382 CI 全綠後合併（作者常設授權：綠了就合、截圖自己判斷；規劃換到新專案，總覽圖沒有另外審）。
 - 已驗證：Linux 建置（warnings-as-errors）乾淨；`SantaFlightTests` 8 個與模型包、冬季、飛機相關的測試通過；`make_game_audio.py --check` 通過；雪橇鈴 −15.1 LUFS、真峰值 −1.5 dBTP。
-- 下一步的第一個指令：REINDEER 的模型到了，照「還留下的」第 1 點換掉暫用造型。
+- 下一步的第一個指令：REINDEER 的模型已換上（決策 [840](../decisions/840.md)）；羅瓦涅米聖誕老人村旁的鹿群也擺好了；剩實機看。
 
 ## 派工
 
@@ -20,7 +20,7 @@
 
 ## 還留下的
 
-1. **REINDEER 的模型到了換上**：工作室 GLB → `tools/train-models/glb_to_swift.py` → `SantaFlight.Model.model` 回傳它（名字不變），量 `length`、`seat`、`nose`、`lantern`，更新 `hashes.lock.json` 與 `Map3DModelPackSizeTests`、`Map3DModelPackLockTests` 的數字（決策 831「換模型的接點」）。
+1. ~~**REINDEER 的模型到了換上**~~（決策 840 做完）：工作室 GLB → `tools/train-models/glb_to_swift.py` → `SantaFlight.Model.model` 回傳它（名字不變），量 `length`、`seat`、`nose`、`lantern`，更新 `hashes.lock.json` 與 `Map3DModelPackSizeTests`、`Map3DModelPackLockTests` 的數字（決策 831「換模型的接點」）。
 2. 這張不拍 CI 截圖（截圖要裝置日期在 12/24 晚上）；作者在 TestFlight 把日期調到 12/24 20:00 看。
 
 ## UNVERIFIED

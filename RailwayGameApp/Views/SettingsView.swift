@@ -310,13 +310,13 @@ struct SettingsView: View {
                 get: { linePalette == .colourBlindSafe },
                 set: { linePalette = $0 ? .colourBlindSafe : .standard }
             )) {
-                Label("Colour-Blind Friendly Colours", systemImage: "eye")
+                Label("High-Contrast Line Colours", systemImage: "eye")
             }
             .accessibilityIdentifier("settings.colourBlindLines")
         } header: {
             Text("Line Colours")
         } footer: {
-            Text("Lines use colours that stay easy to tell apart with colour blindness, and every line badge shows its code.")
+            Text("Lines use colours that are easier to tell apart, and every line badge shows its code.")
         }
     }
 

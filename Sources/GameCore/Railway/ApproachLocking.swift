@@ -35,7 +35,7 @@ extension GameWorld {
     /// to the last block boundary ``approachHold`` or more short of the
     /// stop. `nil` also when there is no such boundary beyond its head.
     ///
-    /// Decision 842: without block sections, the home signal instead (see
+    /// Decision 849: without block sections, the home signal instead (see
     /// ``homeLimit(of:_:)``).
     func approachLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
         guard isTrafficControlEnabled, case .travellingToStop? = train.execution, envelopes.length < .max else { return nil }
@@ -47,7 +47,7 @@ extension GameWorld {
 
     /// The approach limit (see ``approachLimit(of:_:)``) of `train`,
     /// holding `held` of its route along `envelopes`, that keeps it now:
-    /// with block sections any; without them (decision 842) only one it
+    /// with block sections any; without them (decision 849) only one it
     /// holds as far as already, as a train given its route that far at
     /// once with the rest free holds it (see ``reserving(_:following:memo:)``).
     /// A train following others short of it takes its route as before.
@@ -85,20 +85,20 @@ extension GameWorld {
         return bodyStretches(of: train) + Array(envelopes.stretches[..<end.index]) + [end.part]
     }
 
-    // MARK: - The home signal (decision 842)
+    // MARK: - The home signal (decision 849)
 
-    /// Decision 842: how near the first junction before its stop a service
+    /// Decision 849: how near the first junction before its stop a service
     /// of a line with runs comes, without block sections, before it takes
     /// the rest of its route: 64,000 units, 1 km, where a home signal's
     /// distant signal stands on a metro.
     static let homeReach: Int64 = 64_000
 
-    /// Decision 842: how far before its stop a junction on its route counts
+    /// Decision 849: how far before its stop a junction on its route counts
     /// as the station's throat: 64,000 units, 1 km, more than a metro or
     /// a branch line's platforms and turnouts.
     static let throatReach: Int64 = 64_000
 
-    /// Decision 842: how far along its route `train`, a service of a line
+    /// Decision 849: how far along its route `train`, a service of a line
     /// with runs travelling to a stop with traffic control on and block
     /// sections off, may hold now, or `nil` when it may hold all of it:
     /// short of the first junction or crossing its route reaches within
@@ -160,7 +160,7 @@ extension GameWorld {
         return point
     }
 
-    /// Decision 842: whether `train` holds its route as far as its approach
+    /// Decision 849: whether `train` holds its route as far as its approach
     /// limit lets it (see ``approachLimit(of:_:)``) and so waits for
     /// nothing but its nearing its stop: a train another may follow, as
     /// it would one holding its whole route.
@@ -169,7 +169,7 @@ extension GameWorld {
         return approachLimit(of: train, holding: left, envelopes) != nil
     }
 
-    /// Decision 842: what `train`, holding `authority` short of its route's
+    /// Decision 849: what `train`, holding `authority` short of its route's
     /// end, claims without block sections (decision 56, point 6): its route
     /// envelope (`whole`); a train held at its home signal (see
     /// ``homeLimit(of:_:)``) only its route as far as that and the berth

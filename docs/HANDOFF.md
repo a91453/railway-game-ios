@@ -2460,7 +2460,7 @@
 
 新任開工：
 - 讀第 1 節與這一段。
-- 先用 `add_repo` 加 railway-reference-private 與 railway-assets-private。
+- 先用 `add_repo` 加 railway-reference-private、railway-assets-private-2（收新素材）與 railway-assets-private（2026-11-18 前的素材，唯讀；`docs/ASSET_REPOSITORIES.md`）。
 - #1041 從「session_01YGNNuqBYkjv4r12NahDH4X 壓縮第 3 次」往後讀。這一任合的與派的都記在 #1041，從第二十五次換手那段往後。
 
 **93.1 今晚發**（作者：「還是順便有綠的都加入 反正我大概9點多才要發」，台灣 21:xx ＝ 13:xx UTC）：
@@ -2542,7 +2542,7 @@
 
 新任開工：
 - 讀第 1 節與這一段。
-- `create_session` 只帶得進 railway-game-ios，所以先用 `add_repo` 加 railway-reference-private 與 railway-assets-private。
+- `create_session` 只帶得進 railway-game-ios，所以先用 `add_repo` 加 railway-reference-private、railway-assets-private-2 與 railway-assets-private（`docs/ASSET_REPOSITORIES.md`）。
 - #1041 從「session_01YGNNupX9CPMXwaBoNU5tma 壓縮第 2 次」往後讀。狀態快照在 #1041 comment 6464024607。
 
 **本任合的**（照 §1.2，記在 #1041）：#1404（ひと駅複查）、#1405（BJ Kenney 報告）、#1396（BD，full lane 時限）、#1406（BG，標線、人行道、小綠人）、#1403（BF，模型包瘦身）、#1400（BH，速度不倒回、示範背景讀道路）、#1407（BM，`run.sh --night-lights`）、#1411（NEXT_PRIORITIES 7c、7d）。main `ci.yml` 與 full lane 綠到 `8be2242`；#1400、#1407 這批（`12b5013`）合完還沒看到 `ci.yml` 結果，新任先看它綠了再合下一批。TestFlight 92 已發，出口合規已答。
@@ -2579,7 +2579,7 @@
 
 新任開工：
 - 讀第 1 節、這一段與下面的「第二十三任中途記錄」。
-- 確認自己有 railway-game-ios、railway-reference-private、railway-assets-private 三個 repository。
+- 確認自己有 railway-game-ios、railway-reference-private、railway-assets-private-2、railway-assets-private 四個 repository（`docs/ASSET_REPOSITORIES.md`）。
 - #1041 從「遊戲規劃（session_01YGNNupfaTiuQSAJ5tsf5a4）壓縮第 3 次」往後讀。
 - 換手時在跑的，新任接著看：
   - **TestFlight 92**：作者 10-28 05:03 UTC 自己按的（run 40635737393，commit `e17eb67`，「我自己按了懶得等BD」），沒等完整 CI 與 full lane。跑完告訴作者結果，提醒在 App Store Connect 回答出口合規；PLAYER_FEEDBACK 記 92。請作者在實機看記憶體與第一次開 3D 的卡頓（K1-1 還沒修）。

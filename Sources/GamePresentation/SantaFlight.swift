@@ -237,7 +237,7 @@ public enum SantaFlight {
     }
 
     /// The sleigh drawn under the finger at (`x`, `y`) in `camera`'s view,
-    /// within `reach` points of its middle or of the line to Rudolph's nose.
+    /// within `reach` points of its middle or of the line to the leading reindeer's nose.
     public static func followable(_ drawn: Map3DAircraft.Drawn, atX x: Float, y: Float, camera: Map3DCamera, within reach: Float) -> Bool {
         let pose = pose(of: drawn)
         guard let middle = camera.screenPoint(of: pose.rail) else { return false }
@@ -249,7 +249,7 @@ public enum SantaFlight {
     }
 
     /// The sleigh `drawn` added to `frame` with `pack`'s model, and at
-    /// night (`lit`) Rudolph's red nose and the lantern on the sleigh's
+    /// night (`lit`) the leading reindeer's red nose and the lantern on the sleigh's
     /// front as glows. Drawn at any distance: there is one.
     public static func add(_ drawn: Map3DAircraft.Drawn, to frame: inout Map3DTrains.Frame, pack: Map3DModelPack, lit: Bool) {
         guard let index = pack.index(of: Model.name) else { return }
@@ -397,85 +397,34 @@ extension SantaFlight {
     }
 }
 
-// MARK: - The stand-in model
+// MARK: - The model
 
 extension SantaFlight {
-    /// The stand-in for the studio's reindeer and sleigh (REINDEER): boxes
-    /// in the game's own colours, nine reindeer in four pairs and Rudolph
-    /// ahead, the sleigh behind them with Santa and his sack. The model's
-    /// frame is the aircraft's (x forward, y left, z up, metres), its
-    /// origin under the middle of the team. When the studio's mesh comes,
-    /// it is drawn under ``name`` in its place, and ``length``, ``seat``
-    /// and the lamps are measured on it.
+    /// The studio's reindeer and sleigh (decision 840, REINDEER): nine
+    /// reindeer in four pairs and one leading, the sleigh behind them with
+    /// Santa and his sack (``Map3DReindeer/Unit/sleigh``). The model's frame
+    /// is the aircraft's (x forward, y left, z up, metres), its origin under
+    /// the middle of the team; ``length``, ``seat`` and the lamps are
+    /// measured on it.
     public enum Model {
-        public static let name = "santa-sleigh-single"
-        /// From the back of the sleigh to Rudolph's nose, metres.
-        public static let length: Float = 16.6
-        static let halfWidth: Float = 1.0
-        static let height: Float = 2.5
-        /// Santa's seat: how far ahead of the middle, and how high.
-        static let seat: Float = -6.6
-        static let seatHeight: Float = 1.9
-        /// Rudolph's nose and the sleigh's lantern.
-        static let nose = Map3DPoint(8.05, 0, 1.95)
-        static let lantern = Map3DPoint(-5.05, 0.75, 1.25)
+        public static let name = Map3DReindeer.Unit.sleigh.rawValue
+        /// From the back of the sleigh to the leading reindeer's nose, metres.
+        public static let length: Float = 16.66
+        static let halfWidth: Float = 0.98
+        static let height: Float = 2.68
+        /// Santa's seat: how far ahead of the middle, and the height of his
+        /// eyes (the follow camera's window beside him).
+        static let seat: Float = -6.95
+        static let seatHeight: Float = 1.7
+        /// The leading reindeer's red nose and the sleigh's lantern, the
+        /// middles of their lenses.
+        static let nose = Map3DPoint(8.28, 0, 1.70)
+        static let lantern = Map3DPoint(-5.25, 0.64, 1.42)
 
-        static let red = Map3DPalette.mtrRed
-        static let gold = Map3DCityBus.destinationBoard
-        static let white = Map3DScene.Builder.Airfield.paint
-        static let fur = Map3DPalette.trunk
-        static let antler = Map3DPalette.playerRoof
-        static let harness = Map3DProp.signalHousing
-        static let noseLamp = Map3DStreetModel.tailLamp
-
-        /// The model in the pack, after the winter decorations.
+        /// The model in the pack, after the winter decorations; an empty
+        /// one should its mesh not decode (the tests see that it does).
         public static var model: Map3DModelPack.Model {
-            var mesh = Map3DStudyMesh()
-            // The sleigh: its runners, curled up at the front, its body,
-            // its high back, the sack behind Santa.
-            for side: Float in [-1, 1] {
-                mesh.box(-6.7, side * 0.65, 0, 3.4, 0.12, 0.12, gold)
-                mesh.box(-4.95, side * 0.65, 0, 0.12, 0.12, 0.7, gold)
-                mesh.box(-6.7, side * 0.65, 0.12, 0.12, 0.12, 0.25, gold)
-            }
-            mesh.box(-6.7, 0, 0.35, 3.0, 1.5, 0.8, red)
-            mesh.box(-7.95, 0, 1.15, 0.5, 1.5, 0.5, red)
-            mesh.box(-6.7, 0, 1.15, 2.9, 1.6, 0.08, gold)
-            mesh.box(-7.85, 0, 1.65, 0.8, 1.0, 0.8, fur)
-            // Santa: his coat, his beard and his hat.
-            mesh.box(seat, 0, 1.15, 0.7, 0.8, 0.8, red)
-            mesh.box(seat, 0, 1.95, 0.45, 0.5, 0.45, white)
-            mesh.box(seat, 0, 2.4, 0.4, 0.4, 0.35, red)
-            mesh.box(seat - 0.1, 0, 2.75, 0.15, 0.15, 0.15, white)
-            // The reins, from the sleigh to the leading pair.
-            for side: Float in [-1, 1] {
-                mesh.beam(Map3DPoint(-5.2, side * 0.6, 1.1), Map3DPoint(4.6, side * 0.65, 1.3), 0.06, harness)
-            }
-            mesh.box(lantern.x, lantern.y, lantern.z - 0.1, 0.2, 0.2, 0.2, gold, glow: true)
-            // Eight reindeer in pairs, and Rudolph leading.
-            for x: Float in [-3.4, -0.9, 1.6, 4.1] {
-                for side: Float in [-1, 1] { reindeer(&mesh, x: x, y: side * 0.65) }
-            }
-            reindeer(&mesh, x: 6.6, y: 0)
-            mesh.box(nose.x, 0, nose.z - 0.1, 0.2, 0.2, 0.2, noseLamp, glow: true)
-            return mesh.model(named: name)
-        }
-
-        /// A reindeer flying, its middle at (`x`, `y`): its body, legs
-        /// tucked forward and stretched back, neck, head and antlers.
-        static func reindeer(_ mesh: inout Map3DStudyMesh, x: Float, y: Float) {
-            mesh.box(x, y, 0.95, 1.5, 0.45, 0.55, fur)
-            mesh.box(x - 0.8, y, 1.2, 0.2, 0.3, 0.2, white)
-            for side: Float in [-1, 1] {
-                mesh.beam(Map3DPoint(x + 0.55, y + side * 0.15, 1.0), Map3DPoint(x + 0.95, y + side * 0.15, 0.45), 0.12, fur)
-                mesh.beam(Map3DPoint(x - 0.55, y + side * 0.15, 1.0), Map3DPoint(x - 1.15, y + side * 0.15, 0.55), 0.12, fur)
-            }
-            mesh.beam(Map3DPoint(x + 0.6, y, 1.35), Map3DPoint(x + 0.95, y, 1.85), 0.25, fur)
-            mesh.box(x + 1.15, y, 1.75, 0.55, 0.25, 0.28, fur)
-            for side: Float in [-1, 1] {
-                mesh.beam(Map3DPoint(x + 1.0, y + side * 0.08, 2.0), Map3DPoint(x + 0.75, y + side * 0.35, 2.55), 0.06, antler)
-                mesh.beam(Map3DPoint(x + 0.85, y + side * 0.25, 2.3), Map3DPoint(x + 1.1, y + side * 0.3, 2.5), 0.05, antler)
-            }
+            Map3DReindeer.model(.sleigh) ?? Map3DModelPack.Model(name: name, vertices: [], minimum: .zero, maximum: .zero)
         }
     }
 }

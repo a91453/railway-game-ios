@@ -66,8 +66,32 @@
       "triangles" : 152
     },
     "santa-sleigh-single" : {
-      "hash" : "39f5e216f00cf91a",
-      "triangles" : 1512
+      "hash" : "188612ac5808bbc2",
+      "triangles" : 7812
+    },
+    "reindeer-standing" : {
+      "hash" : "2e8e34e720f2780d",
+      "triangles" : 978
+    },
+    "reindeer-standing-far" : {
+      "hash" : "12b5bea5d510e62d",
+      "triangles" : 244
+    },
+    "reindeer-grazing" : {
+      "hash" : "3659884c835fd0e",
+      "triangles" : 978
+    },
+    "reindeer-grazing-far" : {
+      "hash" : "e9e0ba1f56f452c4",
+      "triangles" : 244
+    },
+    "reindeer-sled-ride" : {
+      "hash" : "dc15c5899904bf62",
+      "triangles" : 1476
+    },
+    "reindeer-sled-ride-far" : {
+      "hash" : "454dabbf25f894c1",
+      "triangles" : 518
     },
     "hk-signal-amber" : {
       "hash" : "53b50320a69bc411",

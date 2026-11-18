@@ -5,8 +5,10 @@ This repository is public and names the game only as **railway game ios**
 players' files already carry, the website and the mailbox are kept out of
 it:
 
-- the master copy is `branding/game-brand.json` in the private repository
-  `a91453/railway-assets-private`;
+- the master copy is `branding/game-brand.json` in the private assets
+  repository that takes new material (`docs/ASSET_REPOSITORIES.md`;
+  `a91453/railway-assets-private` until the switch of decision 842, whose
+  copy stays there unchanged);
 - CI reads the same JSON from the repository secret `GAME_BRAND_JSON`
   (Settings → Secrets and variables → Actions → Repository secrets).
 
@@ -47,8 +49,9 @@ zh-Hant `InfoPlist.strings` (the Home Screen name, the save type's name) and
 - `ios-build.yml`, the full lane and `release-archive.yml` build the
   neutral game; `SettingsUITests`' city preview test skips there.
 - `tools/procedural-city/build_city_view.sh` puts the names into the built
-  3D city page from `../railway-assets-private/branding/game-brand.json`
-  (or `GAME_BRAND_FILE`).
+  3D city page from the newest assets checkout beside this one
+  (`../railway-assets-private-N/`, else `../railway-assets-private/`,
+  `branding/game-brand.json`), or `GAME_BRAND_FILE`.
 
 On the Mac, before building in Xcode with the released name:
 

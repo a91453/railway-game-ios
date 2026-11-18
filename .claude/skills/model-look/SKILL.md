@@ -11,12 +11,12 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 ## 1. 沒有參考不開工
 
-**誰做**（作者 2026-11-15）：要建的模型一律先交給 Mac 上的本地工作室（Antigravity 在 Blender 做、Codex 看圖審；`a91453/railway-assets-private` 的 `local-studio-2026-11-10/RUN-REMOTE.md`），才能保證品質與遊戲風格。雲端 session 寫派工單、接回遊戲，不自己從頭手寫配方，除非工作室開不了。
+**誰做**（作者 2026-11-15）：要建的模型一律先交給 Mac 上的本地工作室（Antigravity 在 Blender 做、Codex 看圖審；目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `local-studio-2026-11-10/RUN-REMOTE.md`），才能保證品質與遊戲風格。雲端 session 寫派工單、接回遊戲，不自己從頭手寫配方，除非工作室開不了。
 
 **先找作者自己的東西**，再從頭建。派工單要寫出找過哪裡、找到什麼，有可用的就放進工作室看得到的 `brief/`（工作室的 AI 只看得到自己的 worktree 和 `brief/`，不會自己去翻）：
 
 1. 舊版資料夾 `~/SwiftRailMac/assets/分類/`（`ASSETS_INDEX.md`、各類 `_縮圖/` 與 `對照表.csv`）：外型接近的白模。有就照第 6 節「舊版模型」的做法沿用或切面重新上色，比重建好。
-2. `a91453/railway-assets-private`：之前輪次的模型、`game-art-previews/docs/art/` 的同類車或建築。
+2. 素材庫（`docs/ASSET_REPOSITORIES.md` 列的每一個，已封存的也要找）：之前輪次的模型、`game-art-previews/docs/art/` 的同類車或建築。
 3. `a91453/railway-reference-private`：CLAUDE.md 列的參考庫（尺寸、照片、同款車的網格）。
 
 都沒有，才用下面的照片從頭建。
@@ -112,7 +112,7 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 ## 7. 交付
 
-- 重檔（模型、viewer、各輪大圖、照片）放 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/<資料夾>/`，照那邊的 `AGENTS.md`：先跑 `python3 tools/asset_guard.py --base origin/main`，新一輪同 PR 刪上一輪重檔。
+- 重檔（模型、viewer、各輪大圖、照片）放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/<資料夾>/`，照那邊的 `AGENTS.md`：先跑 `python3 tools/asset_guard.py --base origin/main`，新一輪同 PR 刪上一輪重檔。
 - 遊戲 repo 的 PR 只留一張總覽圖與 README（`docs/art/<資料夾>/`）。
 - 配方改了，kit 原有的測試照跑；替這次修掉的毛病留一個會在舊幾何失敗的測試（例如「屋脊高於簷口」「山牆在月台側」）。
 

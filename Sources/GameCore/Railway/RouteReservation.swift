@@ -225,7 +225,7 @@ extension GameWorld {
         }
         var train = candidate
         train.reservation = route.moves ? Set(envelope.resources).sorted() : []
-        // Decision 842: without block sections, a service of a line with
+        // Decision 849: without block sections, a service of a line with
         // runs whose whole route is free takes it only to its home signal
         // while that is far (see ``homeLimit(of:_:)``).
         if route.moves, !blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
