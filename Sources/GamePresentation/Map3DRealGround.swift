@@ -964,7 +964,8 @@ extension Map3DScene.Builder {
                 let along = (x: dx / length, z: dz / length)
                 // Left of the way along is (z, −x) in x east, z south.
                 let left = (x: along.z, z: -along.x)
-                for rule in rules {
+                // Decision 846: no Taiwan's utility poles on Finland's lanes.
+                for rule in rules where rule.prop != .pole || look.streets.hasUtilityPoles {
                     let first = phase * rule.spacing
                     var place = ((travelled - first) / rule.spacing).rounded(.up) * rule.spacing + first
                     while place < travelled + length {
