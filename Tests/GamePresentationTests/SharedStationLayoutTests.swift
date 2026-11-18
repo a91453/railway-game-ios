@@ -374,4 +374,25 @@ final class SharedStationLayoutTests: XCTestCase {
         let pair = try XCTUnwrap(Self.between("ntdlrt:V", "ntdlrt:VB", at: shalun, in: laid))
         XCTAssertLessThanOrEqual(pair.height, 0.5, "the two lines' platforms at one height")
     }
+
+    /// DANHAI-OLD-SAVE: a game saved before the two were sold together
+    /// (decision 862) may hold the Blue Coast Line alone, bought whole
+    /// from Hongshulin. The Green Mountain Line bought after it lies 30 m
+    /// beside it to Binhai Shalun (decision 493), off the real viaduct
+    /// the two share: its platforms stood on the ground, 10 to 17 m under
+    /// the Blue Coast Line's at seven stations. They stand at one level,
+    /// but at Hongshulin: its end there is longer than the Blue Coast
+    /// Line's, and no grade reaches both that line's platforms there and
+    /// the next station's (2.6 m apart, DANHAI-HONGSHULIN-LEVEL).
+    func testTheGreenMountainLineAfterTheBlueCoastLineStandsAtItsLevel() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple)
+        let laidBy = try Self.buy(["ntdlrt:VB", "ntdlrt:V"], on: session)
+        let world = session.world
+        let laid = Self.platforms(of: world, laidBy: laidBy)
+        XCTAssertEqual(Self.stacked(laid, in: world), [])
+        XCTAssertEqual(Self.uneven(laid, in: world).filter { $0 != "紅樹林" }, [])
+        let hongshulin = try XCTUnwrap(world.stations.first { $0.name == "紅樹林" }?.id)
+        let pair = try XCTUnwrap(Self.between("ntdlrt:V", "ntdlrt:VB", at: hongshulin, in: laid))
+        XCTAssertLessThanOrEqual(pair.height, 3, "both on the viaduct there")
+    }
 }

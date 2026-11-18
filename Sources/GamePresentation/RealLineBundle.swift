@@ -185,12 +185,38 @@ extension RealBranchLine {
         in world: GameWorld, railways: RealRailways
     ) -> RealBranchLine? {
         let id = "\(dataSystem(of: rail.system)):\(rail.network)"
-        let after = rail.shares.flatMap { world.acquisition(of: $0) == nil ? nil : $0 }
+        let after = rail.shares.flatMap { isLaidAlong(sharedBy: id, system: rail.system, $0, in: world, railways: railways) ? $0 : nil }
         guard let runs = metroRuns(of: id, after: after, in: railways) else { return nil }
         return RealBranchLine(
             network: rail.network, english: rail.english, chinese: rail.chinese, stops: runs.stops, system: rail.system, after: after,
             tier: rail.tier, leavesALine: rail.leavesALine, ring: runs.ring
         )
+    }
+
+    /// Whether `other`, the line `id` shares its first stations with, is
+    /// the company's in `world` and lies where `id` is laid after it
+    /// (``after``): from where they part, for a line with runs of its own
+    /// from there (the Blue Coast Line after the Green Mountain Line);
+    /// along the whole stretch they share, for one laid whole beside it
+    /// (decision 493, the Green Mountain Line after the Blue Coast Line).
+    ///
+    /// DANHAI-REBUY-PLACE: the Blue Coast Line bought after the Green
+    /// Mountain Line (as the two are sold together, decision 862) starts
+    /// at Binhai Shalun, and none of its track lies from Hongshulin to
+    /// there. The Green Mountain Line removed and bought again was laid
+    /// 30 m beside its own real way all the same, beside nothing, off its
+    /// real viaduct and 10 to 17 m lower at nine stations. It is then
+    /// sold whole on its real way, where the first purchase stood it.
+    /// A purchase that kept no line or no real station to tell by counts
+    /// as before.
+    static func isLaidAlong(sharedBy id: String, system: String, _ other: String, in world: GameWorld, railways: RealRailways) -> Bool {
+        guard let bought = world.acquisition(of: other) else { return false }
+        guard railways.metroRuns["\(id) after \(other)"] == nil, let first = railways.metroRuns[id]?.stops.first,
+              let line = bought.line.flatMap({ world.line(id: $0) }), let frame = RealWorldFrame(world: world),
+              let point = RealLineLaying.realPoint(of: first, system: system, railways: railways, frame: frame) else { return true }
+        return line.stops.contains { stop in
+            world.station(id: stop).map { (WorldVector($0.location) - point).length <= RealLineAcquisition.junctionReach } ?? false
+        }
     }
 
     /// This line as it is sold in `world`: itself, but a light rail or
