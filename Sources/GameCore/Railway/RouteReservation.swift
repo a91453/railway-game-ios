@@ -225,6 +225,15 @@ extension GameWorld {
         }
         var train = candidate
         train.reservation = route.moves ? Set(envelope.resources).sorted() : []
+        // Decision 842: without block sections, a service of a line with
+        // runs whose whole route is free takes it only to its home signal
+        // while that is far (see ``homeLimit(of:_:)``).
+        if route.moves, !blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
+            let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
+            if let limit = approachLimit(of: candidate, envelopes) {
+                train.reservation = authorityEnvelope(envelopes, to: limit).sorted()
+            }
+        }
         return .granted(train)
     }
 
@@ -1280,7 +1289,9 @@ extension GameWorld {
             // With block sections a following train claims nothing more
             // than it holds (decision 212), so its route envelope is not
             // read.
-            covers.append(blockSections ? nil : authority.map { followingCover(of: train, $0.envelopes, memo: &memo) })
+            covers.append(blockSections ? nil : authority.flatMap { authority in
+                claimCover(of: train, authority) { followingCover(of: train, authority.envelopes, memo: &memo) }
+            })
         }
         if memo.foulingByEdge == nil { memo.foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge() }
         return (covers, trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!))
@@ -1299,7 +1310,9 @@ extension GameWorld {
             let train = trains[place]
             let authority = authority(of: train, memo: &memo)
             let track = heldTrack(train, memo: &memo)
-            entry.covers[place] = blockSections ? nil : authority.map { followingCover(of: train, $0.envelopes, memo: &memo) }
+            entry.covers[place] = blockSections ? nil : authority.flatMap { authority in
+                claimCover(of: train, authority) { followingCover(of: train, authority.envelopes, memo: &memo) }
+            }
             entry.holders.replace(place, with: track, placed: train.position != nil, in: network)
             entry.trains[place] = train
         }
@@ -1337,7 +1350,9 @@ extension GameWorld {
     /// order.
     func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?]) -> TrackHolders {
         trackHolders(authorities: authorities, tracks: trains.map(heldTrack),
-                     covers: zip(trains, authorities).map { train, authority in authority.map { cover(of: bodyStretches(of: train) + $0.envelopes.stretches) } },
+                     covers: zip(trains, authorities).map { train, authority in
+                         authority.flatMap { authority in claimCover(of: train, authority) { cover(of: bodyStretches(of: train) + authority.envelopes.stretches) } }
+                     },
                      foulingByEdge: network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge())
     }
 
@@ -2007,7 +2022,7 @@ extension GameWorld {
     /// never followed.
     func isLeading(_ train: Train, onto route: TrackCover, for follower: Train) -> Bool {
         guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-              routeStretches(of: train).moves, blockSections || !isFollowing(train)
+              routeStretches(of: train).moves, blockSections || !isFollowing(train) || holdsToItsApproach(train)
         else { return false }
         let ways = Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
@@ -2030,7 +2045,7 @@ extension GameWorld {
     }
 
     /// `train` where the route it travels ends, holding nothing.
-    private func arrived(_ train: Train) -> Train {
+    func arrived(_ train: Train) -> Train {
         var arrived = train
         arrived.reservation = []
         let end = travelling(arrived, distance: routeLength(of: train))

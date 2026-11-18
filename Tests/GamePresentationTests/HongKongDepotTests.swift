@@ -149,4 +149,26 @@ final class HongKongDepotTests: XCTestCase {
         }
         XCTAssertEqual(worst.count, 0, "\(worst.count) trains deadlocked at \(worst.at / 3_600):\(worst.at % 3_600 / 60)")
     }
+
+    /// Decision 842: under a new game's rules (traffic control, no block
+    /// sections) the South Island Line sends every run of the second
+    /// day's morning peak out of Admiralty. A train leaving Ocean Park took
+    /// Admiralty's crossovers for the whole four minutes to get there, and
+    /// the trains due out waited behind it: 13 runs from 08:27 to 09:36
+    /// were not sent before a train came in took its route only near the
+    /// home signal.
+    func testTheSouthIslandLineMorningPeakSendsEveryRun() throws {
+        var world = try DepotReturnReportTests.hongKongBought(["SIL"], rules: .simple)
+        XCTAssertTrue(world.isTrafficControlEnabled, "a new game's rules keep traffic control on")
+        XCTAssertFalse(world.blockSections, "a new game's simple rules have no block sections")
+        world.setSpeed(.normal)
+        let end = GameTime.secondsPerDay + 10 * 3_600
+        while world.clock.now.seconds < end {
+            try world.advance(ticks: 1)
+        }
+        let line = try bought("SIL", in: world)
+        let missed = RunsNotSent.on(1, of: line, at: world.clock.now).map { line.runs[$0].start(onDay: 1) % GameTime.secondsPerDay }
+        XCTAssertEqual(missed.map { "\($0 / 3_600):\($0 % 3_600 / 60)" }, [], "runs of the second morning not sent")
+        XCTAssertEqual(world.deadlockedTrains(), [])
+    }
 }
