@@ -217,20 +217,6 @@ public struct RealBranchLine: Hashable, Sendable {
         isTaoyuanAirport ? TrackRise.slack + [24.0, 36, 48].map { $0 * RealWorldDemo.metre } : TrackRise.slack
     }
 
-    /// Decision 678: whether its stations in the real line's tunnels are
-    /// laid under the ground (``RealLineAcquisition/isSunk(at:before:after:carried:)``)
-    /// and the water over those tunnels is passed under, not bridged
-    /// (``TrackRise``'s `sunk`). The Wenhu Line, whose Songshan Airport
-    /// and Dazhi stations and the Keelung River between them were laid on
-    /// the ground and bridged; and, decision 867, Hong Kong's and
-    /// Fukuoka's lines, whose underground stations stood on the ground or
-    /// in cuttings (of Hong Kong's, only Lei Tung in a tunnel; of
-    /// Fukuoka's subway, none). Taiwan's other lines with real stations
-    /// underground (Qizhang on the Xiaobitan branch, the Taoyuan Airport
-    /// MRT under the Tamsui River and at Huanbei) stay as they were until
-    /// each is measured.
-    var followsRealTunnels: Bool { id == "trtc:BR" || system == OverseasMap.hongKong.system || system == OverseasMap.fukuoka.system }
-
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
     /// rail joins the one bought before, whose riders that paid for.
@@ -1395,9 +1381,13 @@ extension RealLineLaying {
         // two share (the Airport Express 25 m from the Tung Chung Line's
         // under Hong Kong and Kowloon), so its tunnels are looked for that
         // much further off.
-        let lane = line.followsRealTunnels ? abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) * RealLineAcquisition.metre : 0
+        let lane = abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) * RealLineAcquisition.metre
         let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, tunnelReach: RealRailStructures.reach + lane) ?? []
-        // Decision 678: the stations in the line's real tunnel. Decision
+        // Decision 678: the stations in the line's real tunnel (the Wenhu
+        // Line's first; decision 867, Hong Kong's and Fukuoka's; decision
+        // 871, every line's: Qizhang on the Xiaobitan branch, Huanbei on
+        // the Taoyuan Airport MRT, which also passes under the Tamsui
+        // River). Decision
         // 867: and one the real tunnel reaches from one side only, when
         // the station next to it on the other side is under the ground
         // (in the real tunnel itself, or at the company's underground
@@ -1405,7 +1395,6 @@ extension RealLineLaying {
         // Gofukumachi, 440 m from Nakasu-Kawabata's platforms under the
         // Kuko Line's.
         let sunkStations: [Bool] = {
-            guard line.followsRealTunnels else { return runs.stops.map { _ in false } }
             let before = { (index: Int) in index > 0 ? along[index - 1].along : nil }
             let after = { (index: Int) in index < along.count - 1 ? along[index + 1].along : nil }
             let strict = along.indices.map {
@@ -1505,7 +1494,7 @@ extension RealLineLaying {
             if !raised,
                let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
                let there = sharedPlatformHeight(of: station),
-               (level.low...level.high).contains(there) || (line.followsRealTunnels && under.contains(there)) {
+               (level.low...level.high).contains(there) || under.contains(there) {
                 level = TrackRise.Level(span, at: there)
             }
             level.staysUnder = sunk
@@ -1634,8 +1623,7 @@ extension RealLineLaying {
             }
         }
         guard var rise = TrackRise(
-            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack,
-            sunk: line.followsRealTunnels
+            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack, sunk: true
         ) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
@@ -1646,8 +1634,7 @@ extension RealLineLaying {
             let crossings = RealLineLaying.crossingLevels(of: world.network, along: path, rise: rise)
             guard !crossings.isEmpty,
                   let clear = TrackRise(
-                      path: path, ground: ground, water: water, levels: levels + crossings, grade: line.rulingGrade, carried: carried, slack: line.stationSlack,
-                      sunk: line.followsRealTunnels
+                      path: path, ground: ground, water: water, levels: levels + crossings, grade: line.rulingGrade, carried: carried, slack: line.stationSlack, sunk: true
                   ) else {
                 return refused(
                     "The track cannot climb along this line within the steepest grade.",
