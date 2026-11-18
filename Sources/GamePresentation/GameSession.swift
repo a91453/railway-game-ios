@@ -1781,6 +1781,27 @@ public final class GameSession {
         playSound(.horn(horn))
     }
 
+    /// Decision 853: the calls still closing whose departure melody has
+    /// played, so a call plays it once however many steps its doors take
+    /// to close (90 ticks at 1×).
+    @ObservationIgnored private var departuresPlayed: Set<DepartureMelody.Closing> = []
+
+    /// Plays the line's departure melody (``DepartureMelody``) when the
+    /// doors of a watched train started closing within the step, at 60×
+    /// and slower: one melody a step, the first train's.
+    private func noteDeparture(from before: GameWorld) {
+        guard let playSound, !world.clock.isPaused,
+              world.clock.speed.tenthsPerTick <= DepartureMelody.upTo.tenthsPerTick
+        else { return }
+        let watched = watchedTrainIDs
+        guard !watched.isEmpty || !departuresPlayed.isEmpty else { return }
+        let closings = DepartureMelody.closings(from: before, to: world, watched: watched)
+        departuresPlayed.formIntersection(closings)
+        guard let closing = closings.first(where: { !departuresPlayed.contains($0) }) else { return }
+        departuresPlayed.insert(closing)
+        playSound(.departure(DepartureMelody.of(closing.train, in: world)))
+    }
+
     /// Whether the speed is held to 10× at most now: the 3D map is open and
     /// follows a train (decision 360).
     public private(set) var isSpeedCappedIn3D = false
@@ -2363,6 +2384,7 @@ public final class GameSession {
             }
             updateFollowSounds()
             noteHorn()
+            noteDeparture(from: worldBefore)
         }
         meter.measure(.stepIncome) {
             // Decision 117: fares and rent settled within the step.
