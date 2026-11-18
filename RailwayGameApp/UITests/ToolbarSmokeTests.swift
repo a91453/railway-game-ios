@@ -1059,7 +1059,7 @@ final class ShellLayoutUITests: XCTestCase {
         // above its first; between them the screen's gap of 10, as from the
         // board to the strip. The toggle is touched 2 above what it draws
         // (decision 509).
-        XCTAssertGreaterThanOrEqual(toggleFrame(toggle).minY - more.frame.maxY, 3 + 10 + 4 - 2 - 0.5,
+        XCTAssertGreaterThanOrEqual(touchFrame(toggle).minY - more.frame.maxY, 3 + 10 + 4 - 2 - 0.5,
                                     "The column stops a gap below the layer strip: toggle \(toggle.frame), strip \(more.frame)")
 
         let build = app.buttons["dock.build"]
@@ -1075,14 +1075,16 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertEqual(done.midY, build.frame.midY, accuracy: 0.5, "Done beside Build: \(done), \(build.frame)")
     }
 
-    /// The toggle's touch area. On iOS 27 a button alone in its glass
-    /// tile (``View/controlTile(vertical:)``) reports the tile's frame,
-    /// the tile's 4 points of padding round it (pull request #2453: 56 by
-    /// 48 where iOS 26 reported 48 by 44), not the area it is touched over,
-    /// which reaches only 2 above and below what it draws (decision 509).
-    private func toggleFrame(_ toggle: XCUIElement) -> CGRect {
-        let frame = toggle.frame
-        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 else { return frame }
+    /// A column button's touch area. On iOS 27 a button alone in its glass
+    /// tile (``View/controlTile(vertical:)``: the details toggle, and Build
+    /// and Done while building) reports the tile's frame, the tile's 4
+    /// points of padding round it (pull request #2453: 56 by 48 where iOS
+    /// 26 reported 48 by 44), not the area it is touched over, which
+    /// reaches only 2 above and below what it draws (decision 509).
+    private func touchFrame(_ button: XCUIElement) -> CGRect {
+        let frame = button.frame
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27,
+              abs(frame.width - 56) < 0.5 else { return frame }
         let padding = 4.0, reach = 2.0
         return frame.insetBy(dx: padding, dy: padding - reach)
     }
@@ -1092,7 +1094,7 @@ final class ShellLayoutUITests: XCTestCase {
         let frames = identifiers.map { id -> (String, CGRect) in
             let button = app.buttons[id]
             XCTAssertTrue(button.appears(within: 10), "Missing \(id) \(state)", file: file, line: line)
-            return (id, id == "controls.toggle" ? toggleFrame(button) : button.frame)
+            return (id, touchFrame(button))
         }
         guard let first = frames.first?.1 else { return }
         if frames.contains(where: { $0.1.width != first.width }) || abs(first.width - 48) > 0.5 { app.logTree("column sizes \(state)") }

@@ -1756,6 +1756,13 @@ final class MapInteractionTests: XCTestCase {
         // and the second station was only selected (pull request #2453).
         newLine.waitUntilSettled()
         newLine.tap()
+        // The line has started when the game says where it starts. If not,
+        // New Line is touched once more, and what the screen held is logged.
+        let started = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH %@", "The line starts at")).firstMatch
+        if !started.appears(within: 5) {
+            app.logTree("no line started after New Line")
+            if newLine.exists, newLine.isHittable { newLine.tap() }
+        }
         // As on the owner's screenshot: the card folded, the map open.
         if card.exists {
             app.buttons["controls.toggle"].tap()
