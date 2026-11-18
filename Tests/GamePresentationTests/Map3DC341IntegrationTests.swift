@@ -219,16 +219,8 @@ final class Map3DC341IntegrationTests: XCTestCase {
     }
 
     /// Every vertex field, FNV-1a, to pin a model as it was on main.
-    private func hash(_ model: Map3DModelPack.Model) -> String {
-        var h: UInt64 = 0xcbf29ce484222325
-        for v in model.vertices {
-            for word in [v.x.bitPattern, v.y.bitPattern, v.z.bitPattern, v.nx.bitPattern, v.ny.bitPattern, v.nz.bitPattern,
-                         v.color, v.u.bitPattern, v.v.bitPattern, v.layer.bitPattern] {
-                for shift in stride(from: 0, to: 32, by: 8) { h = (h ^ UInt64((word >> UInt32(shift)) & 0xFF)) &* 0x100000001b3 }
-            }
-        }
-        return String(h, radix: 16)
-    }
+    /// `Map3DModelPackLockTests.hash`: `export.swift`'s FNV-1a.
+    private func hash(_ model: Map3DModelPack.Model) -> String { Map3DModelPackLockTests.hash(model) }
 
     /// The C341's near cars are #1323's as they were: only a far version is
     /// added to the file. (Hashes and triangle counts of main's models.)

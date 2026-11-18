@@ -10,15 +10,27 @@ import XCTest
 /// them in (a model's index, a car's lamps and windows' model) pinned.
 final class Map3DModelPackLockTests: XCTestCase {
     /// `export.swift`'s `hash`.
+    /// The same words in the same order, each byte low first, as
+    /// `export.swift`; without an array per vertex or a stride per word,
+    /// which in this unoptimized test build took most of this class's
+    /// two minutes (CIOPT-10).
     static func hash(_ model: Map3DModelPack.Model) -> String {
         var h: UInt64 = 0xcbf29ce484222325
         for v in model.vertices {
-            for word in [v.x.bitPattern, v.y.bitPattern, v.z.bitPattern, v.nx.bitPattern, v.ny.bitPattern, v.nz.bitPattern,
-                         v.color, v.u.bitPattern, v.v.bitPattern, v.layer.bitPattern] {
-                for shift in stride(from: 0, to: 32, by: 8) { h = (h ^ UInt64((word >> UInt32(shift)) & 0xFF)) &* 0x100000001b3 }
-            }
+            mix(&h, v.x.bitPattern); mix(&h, v.y.bitPattern); mix(&h, v.z.bitPattern)
+            mix(&h, v.nx.bitPattern); mix(&h, v.ny.bitPattern); mix(&h, v.nz.bitPattern)
+            mix(&h, v.color); mix(&h, v.u.bitPattern); mix(&h, v.v.bitPattern); mix(&h, v.layer.bitPattern)
         }
         return String(h, radix: 16)
+    }
+
+    /// FNV-1a of one 32-bit word's four bytes, low first.
+    private static func mix(_ h: inout UInt64, _ word: UInt32) {
+        let prime: UInt64 = 0x100000001b3
+        h = (h ^ UInt64(word & 0xFF)) &* prime
+        h = (h ^ UInt64((word >> 8) & 0xFF)) &* prime
+        h = (h ^ UInt64((word >> 16) & 0xFF)) &* prime
+        h = (h ^ UInt64(word >> 24)) &* prime
     }
 
     static func digest(_ words: [String]) -> String {
