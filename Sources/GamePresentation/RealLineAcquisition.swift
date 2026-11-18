@@ -644,7 +644,7 @@ extension GameSession {
 
     /// The lines on sale and those the map holds only part of, worked out
     /// again only when what they come from changes.
-    private var realLineSale: RealLineSale {
+    var realLineSale: RealLineSale {
         let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
         if let memo = buyableRealLinesMemo, memo.key == key { return memo.sale }
         let sale = workOutRealLineSale()
@@ -659,6 +659,10 @@ extension GameSession {
             guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { return nil }
             return RealBranchLine(network: network, english: names.english, chinese: names.chinese, stops: runs.stops)
         }
+        // Decision 862: every line the map holds whole, bought or not,
+        // by its id, with its whole line's stops: which lines share a
+        // station does not change as they are bought.
+        var whole: [(id: String, system: String, stops: [String])] = lines.map { ($0.id, $0.system, $0.stops) }
         // Decision 400: the light rails; one sharing its first stations
         // with a line bought, from where they part, or not at all where its
         // trips from there do not fit.
@@ -666,30 +670,41 @@ extension GameSession {
         // when its files are read.
         for rail in RealBranchLine.urbanLines + RealBranchLine.overseasLines {
             let id = "\(RealBranchLine.dataSystem(of: rail.system)):\(rail.network)"
-            let after = rail.shares.flatMap { world.acquisition(of: $0) == nil ? nil : $0 }
-            guard let runs = RealBranchLine.metroRuns(of: id, after: after, in: railways) else {
+            if let runs = RealBranchLine.metroRuns(of: id, after: nil, in: railways) { whole.append((id, rail.system, runs.stops)) }
+            guard let line = RealBranchLine.onSale(rail, in: world, railways: railways) else {
                 if world.acquisition(of: id) != nil { sale.bought = true }
                 continue
             }
-            lines.append(RealBranchLine(
-                network: rail.network, english: rail.english, chinese: rail.chinese, stops: runs.stops, system: rail.system, after: after,
-                tier: rail.tier, leavesALine: rail.leavesALine, ring: runs.ring
-            ))
+            lines.append(line)
+        }
+        func isOnTheMap(_ name: String, system: String) -> Bool {
+            realPoint(of: name, system: system, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
         }
         for line in lines {
             guard world.acquisition(of: line.id) == nil else {
                 sale.bought = true
                 continue
             }
-            let onTheMap = line.stops.count { name in
-                realPoint(of: name, system: line.system, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
-            }
+            let onTheMap = line.stops.count { isOnTheMap($0, system: line.system) }
             if onTheMap == line.stops.count {
                 sale.lines.append(line)
             } else if onTheMap > 0 {
                 sale.partlyOnTheMap.append(line)
             }
         }
+        // Decision 862: the lines on sale that share a station with
+        // another the map holds whole (one bought too) are sold together.
+        whole.removeAll { line in !line.stops.allSatisfy { isOnTheMap($0, system: line.system) } }
+        let groups = RealLineBundle.groups(of: whole.map { ($0.system, $0.stops) })
+        let groupOf = Dictionary(zip(whole.map(\.id), groups), uniquingKeysWith: { first, _ in first })
+        var together: [Int: [RealBranchLine]] = [:], order: [Int] = []
+        for (index, line) in sale.lines.enumerated() {
+            // A line the list does not hold whole (none today) is sold alone.
+            let group = groupOf[line.id] ?? -1 - index
+            if together[group] == nil { order.append(group) }
+            together[group, default: []].append(line)
+        }
+        sale.bundles = order.compactMap { together[$0].map(RealLineBundle.init) }
         return sale
     }
 
@@ -736,7 +751,6 @@ extension GameSession {
         return place.stations.lazy.compactMap { self.buyableRealLine(through: $0.chinese, system: $0.system.id) }.first
     }
 
-    /// Opens the purchase card for `line`, laid out and priced now.
     /// Opens the purchase card for `line` (decision 497): at once, saying
     /// it is being prepared (``preparingRealLine``), while the line is laid
     /// out and priced off the main actor (``realLineLaying``; up to 2 s on
@@ -744,20 +758,23 @@ extension GameSession {
     /// offer shows only if it was laid out on the world as it still is
     /// (``commandRevision`` and the railways unchanged); otherwise it is
     /// laid out again on the world as it is now. Closing the card drops it.
+    /// Decision 862: the card is that of the bundle `line` is sold in,
+    /// every line that shares a station with it.
     public func offerRealLine(_ line: RealBranchLine) {
         shownRealLineOffer = nil
-        preparingRealLine = line
-        layRealLineOffer(line)
+        let bundle = realLineBundle(of: line)
+        preparingRealLine = bundle
+        layRealLineOffer(bundle)
     }
 
-    private func layRealLineOffer(_ line: RealBranchLine) {
+    private func layRealLineOffer(_ bundle: RealLineBundle) {
         realLineOfferTask?.cancel()
         let laying = realLineLaying, revision = commandRevision, railways = railwaysRevision
         realLineOfferTask = Task {
-            let offer = await Task.detached(priority: .userInitiated) { laying.offer(for: line) }.value
-            guard !Task.isCancelled, preparingRealLine == line else { return }
+            let offer = await Task.detached(priority: .userInitiated) { laying.offer(for: bundle) }.value
+            guard !Task.isCancelled, preparingRealLine == bundle else { return }
             guard commandRevision == revision, railwaysRevision == railways else {
-                layRealLineOffer(line)
+                layRealLineOffer(bundle)
                 return
             }
             realLineOfferTask = nil
@@ -2140,20 +2157,33 @@ public struct RealLineAcquired: Hashable, Sendable {
     public var startsToday = false
     /// Decision 535 (continued, KLRT): whether it is a ring, with no ends.
     public var ring = false
+    /// Decision 862: the lines bought with it in one purchase, in the
+    /// order they were laid after it; none for a line bought alone.
+    public var with: [RealLineAcquired] = []
 
     public static func == (a: RealLineAcquired, b: RealLineAcquired) -> Bool {
         a.line == b.line && a.name == b.name && a.color == b.color && a.ends == b.ends && a.stations == b.stations && a.metres == b.metres
             && a.trains == b.trains && a.weekdayTrains == b.weekdayTrains && a.startsToday == b.startsToday && a.ring == b.ring
+            && a.with == b.with
     }
 
-    /// Where it runs, under the seal: its two ends, or round the ring.
+    /// What the card's band says: the line, or "Airport Express and 2
+    /// more" (``RealLineBundle/title(in:)``).
+    public func titleText(in language: DisplayLanguage) -> String {
+        with.isEmpty ? name : language.text("\(name) and \(with.count) more", "\(name)等 \(with.count + 1) 條路線")
+    }
+
+    /// Where it runs, under the seal: its two ends, or round the ring;
+    /// decision 862: how many lines, of several bought together.
     public func endsText(in language: DisplayLanguage) -> String {
-        ring ? language.text("Round the ring", "繞一圈") : "\(ends.from)—\(ends.to)"
+        guard with.isEmpty else { return language.text("\(with.count + 1) lines", "\(with.count + 1) 條路線") }
+        return ring ? language.text("Round the ring", "繞一圈") : "\(ends.from)—\(ends.to)"
     }
 
     /// The seal, as VoiceOver reads it.
     public func sealText(in language: DisplayLanguage) -> String {
-        ring ? language.text("Bought: round the ring", "收購：繞一圈")
+        guard with.isEmpty else { return language.text("Bought: \(with.count + 1) lines", "收購：\(with.count + 1) 條路線") }
+        return ring ? language.text("Bought: round the ring", "收購：繞一圈")
             : language.text("Bought: \(ends.from) to \(ends.to)", "收購：\(ends.from)—\(ends.to)")
     }
 
@@ -2168,6 +2198,13 @@ public struct RealLineAcquired: Hashable, Sendable {
             "\(stations) stations, \(km) km, \(trains) \(trains == 1 ? "train" : "trains")",
             "\(stations) 站、\(km) 公里、\(trains) 列車"
         )
+    }
+
+    /// The card's lines under the seal: ``sizeText(in:)``, or (decision
+    /// 862) each line bought with its name before its size.
+    public func sizeTexts(in language: DisplayLanguage) -> [String] {
+        guard !with.isEmpty else { return [sizeText(in: language)] }
+        return ([self] + with).map { $0.name + language.text(": ", "：") + $0.sizeText(in: language) }
     }
 
     public func handoverText(in language: DisplayLanguage) -> String {
@@ -2191,7 +2228,31 @@ public struct RealLineAcquired: Hashable, Sendable {
     }
 
     public func timetableText(in language: DisplayLanguage) -> String {
-        language.text("Real timetable: \(weekdayTrains) trains a weekday", "真實班次：平日 \(weekdayTrains) 班")
+        let weekdayTrains = with.reduce(weekdayTrains) { $0 + $1.weekdayTrains }
+        return language.text("Real timetable: \(weekdayTrains) trains a weekday", "真實班次：平日 \(weekdayTrains) 班")
+    }
+}
+
+extension RealLineAcquired {
+    /// What the card says of `acquisition`, bought as `line`.
+    init(_ acquisition: RealLineAcquisition, line: LineID, today: Bool) {
+        let main = acquisition.pieces.first
+        let ring = acquisition.ring == true
+        // A ring's main track and its seam, round once; a line with ends
+        // without the run-on past them.
+        let metres = ring
+            ? Int64(acquisition.pieces.prefix(3).enumerated().filter { $0.offset != 1 }.reduce(0) { $0 + ($1.element.distances.last ?? 0) } / RealLineAcquisition.metre)
+            : main.map { piece in
+                Int64(((piece.distances.last ?? 0) - 2 * RealLineAcquisition.runOn) / RealLineAcquisition.metre)
+            } ?? 0
+        // Wednesday: 1 << 3.
+        let weekday = acquisition.runs.count { $0.days & (1 << 3) != 0 }
+        self.init(
+            line: line, name: acquisition.lineName, color: acquisition.color,
+            ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
+            stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday,
+            startsToday: today, ring: ring
+        )
     }
 }
 
@@ -2215,23 +2276,7 @@ extension GameSession {
             )
         }
         guard let line = made?.line else { return false }
-        let main = acquisition.pieces.first
-        let ring = acquisition.ring == true
-        // A ring's main track and its seam, round once; a line with ends
-        // without the run-on past them.
-        let metres = ring
-            ? Int64(acquisition.pieces.prefix(3).enumerated().filter { $0.offset != 1 }.reduce(0) { $0 + ($1.element.distances.last ?? 0) } / RealLineAcquisition.metre)
-            : main.map { piece in
-                Int64(((piece.distances.last ?? 0) - 2 * RealLineAcquisition.runOn) / RealLineAcquisition.metre)
-            } ?? 0
-        // Wednesday: 1 << 3.
-        let weekday = acquisition.runs.count { $0.days & (1 << 3) != 0 }
-        lastLineAcquired = RealLineAcquired(
-            line: line.id, name: name, color: acquisition.color,
-            ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
-            stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday,
-            startsToday: today, ring: ring
-        )
+        lastLineAcquired = RealLineAcquired(acquisition, line: line.id, today: today)
         shownRealLineOffer = nil
         selectLine(line.id)
         playSound?(.lineAcquired)
@@ -2254,4 +2299,7 @@ struct RealLineSale {
     var lines: [RealBranchLine]
     var partlyOnTheMap: [RealBranchLine]
     var bought: Bool
+    /// Decision 862: ``lines`` as they are sold, those that share a
+    /// station together.
+    var bundles: [RealLineBundle] = []
 }

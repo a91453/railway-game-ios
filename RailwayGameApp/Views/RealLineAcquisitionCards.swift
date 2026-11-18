@@ -9,10 +9,12 @@ import SwiftUI
 /// session's (``GameSession/shownRealLineOffer``); this view only draws it.
 /// Decision 497: without an offer yet, it says the line is being prepared
 /// (``GameSession/preparingRealLine``), Buy off.
+/// Decision 862: the lines that share a station are offered together,
+/// each with what it brings and its own price, and the price of them all.
 struct RealLineOfferCard: View {
     let session: GameSession
-    let line: RealBranchLine
-    let offer: RealLineOffer?
+    let bundle: RealLineBundle
+    let offer: RealLineBundleOffer?
     /// Called after Buy bought the line.
     var bought: () -> Void = {}
 
@@ -21,10 +23,39 @@ struct RealLineOfferCard: View {
         let shortfall = offer?.shortfallText(balance: session.world.economy.balance, in: language)
         NavigationStack {
             Form {
+                if let together = bundle.togetherText(in: language) {
+                    Text(verbatim: together)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("acquire.together")
+                }
                 if let offer {
                     Section {
-                        Text(verbatim: offer.summaryText(in: language))
-                            .font(.subheadline)
+                        let rows = offer.lineRows(in: language)
+                        ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                            if bundle.isSingle {
+                                Text(verbatim: row.summary)
+                                    .font(.subheadline)
+                            } else {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack {
+                                        Text(verbatim: row.name)
+                                            .font(.subheadline.weight(.semibold))
+                                        Spacer()
+                                        if let price = row.price {
+                                            Text(verbatim: price.moneyText)
+                                                .font(.subheadline.monospacedDigit())
+                                        }
+                                    }
+                                    Text(verbatim: row.summary)
+                                        .font(.footnote)
+                                        .foregroundStyle(Theme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityIdentifier("acquire.line.\(index)")
+                            }
+                        }
                         Text(verbatim: RealLineAcquired.handoverText(today: RealLineAcquired.startsToday(at: session.world.clock.now), in: language)
                             + language.text(".", "。"))
                             .font(.footnote)
@@ -68,7 +99,7 @@ struct RealLineOfferCard: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
-                if let problem = offer?.problem {
+                if let problem = offer?.problemText(in: language) {
                     Label {
                         Text(verbatim: problem)
                     } icon: {
@@ -88,15 +119,15 @@ struct RealLineOfferCard: View {
                             .accessibilityIdentifier("acquire.shortfall")
                     }
                     Button {
-                        if let offer, session.acquireRealLine(offer) { bought() }
+                        if let offer, session.acquireRealLines(offer) { bought() }
                     } label: {
-                        Text(verbatim: language.text("Buy \(line.name(in: language))", "收購\(line.name(in: language))"))
+                        Text(verbatim: language.text("Buy \(bundle.title(in: language))", "收購\(bundle.title(in: language))"))
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     // Decision 110: the card's main action, as the theme draws one.
                     .buttonStyle(ThemeProminentButtonStyle())
-                    .disabled(offer?.acquisition == nil || shortfall != nil)
+                    .disabled(offer?.acquisitions == nil || shortfall != nil)
                     .accessibilityIdentifier("acquire.buy")
                 }
                 .padding(.horizontal, 16)
@@ -106,7 +137,7 @@ struct RealLineOfferCard: View {
                     Rectangle().fill(Theme.panelBorder).frame(height: 1)
                 }
             }
-            .navigationTitle(Text(verbatim: line.name(in: language)))
+            .navigationTitle(Text(verbatim: bundle.title(in: language)))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -144,9 +175,13 @@ struct AcquisitionCompleteCard: View {
                 .accessibilityLabel(Text(verbatim: acquired.sealText(in: language)))
                 .accessibilityIdentifier("acquired.seal")
             VStack(spacing: 4) {
-                Text(verbatim: acquired.sizeText(in: language))
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
+                // Decision 862: of lines bought together, each line's.
+                let sizes = acquired.sizeTexts(in: language)
+                ForEach(Array(sizes.enumerated()), id: \.offset) { _, size in
+                    Text(verbatim: size)
+                        .font(sizes.count == 1 ? .headline : .subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
                 Text(verbatim: acquired.handoverText(in: language))
                 Text(verbatim: acquired.timetableText(in: language))
             }
@@ -177,9 +212,11 @@ struct AcquisitionCompleteCard: View {
             .fill(acquired.color.map { Palette.color($0) } ?? Theme.primary)
             .frame(height: 40)
             .overlay {
-                Text(verbatim: acquired.name)
+                Text(verbatim: acquired.titleText(in: language))
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 3)
                     .background(Theme.panel, in: Capsule())

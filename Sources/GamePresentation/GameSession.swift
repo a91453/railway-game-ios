@@ -630,13 +630,13 @@ public final class GameSession {
     @ObservationIgnored var trainArrivalsShown: Set<String> = []
 
     /// The real line offered on the purchase card (decision 315), while
-    /// the card is open.
-    public var shownRealLineOffer: RealLineOffer?
+    /// the card is open. Decision 862: with the lines sold with it.
+    public var shownRealLineOffer: RealLineBundleOffer?
 
     /// The real line whose purchase card is being prepared (decision 497,
     /// ``offerRealLine(_:)``): the card is open and says so until its offer
-    /// is laid out.
-    public internal(set) var preparingRealLine: RealBranchLine?
+    /// is laid out. Decision 862: with the lines sold with it.
+    public internal(set) var preparingRealLine: RealLineBundle?
     /// Lays out the offer of ``preparingRealLine`` off the main actor.
     @ObservationIgnored var realLineOfferTask: Task<Void, Never>?
     /// Decision 649: why each real line for sale cannot be bought from the
