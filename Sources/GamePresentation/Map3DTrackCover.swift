@@ -49,6 +49,9 @@ public struct Map3DTrackCover: Sendable {
     /// (``Map3DScene/Builder/portalEnds(_:)``), for the cab view in a
     /// tunnel (``Map3DUnderground``).
     public let openings: [Map3DPoint]
+    /// Decision 876: what the scene this is of and the blocks of chunks
+    /// built apart with it work out once between them.
+    let shared: Map3DSharedBuild
 
     /// The squares the pieces are found by, in metres.
     static let cell: Float = 32
@@ -67,6 +70,7 @@ public struct Map3DTrackCover: Sendable {
         cells = [:]
         trenches = Map3DTrenches()
         openings = []
+        shared = Map3DSharedBuild()
     }
 
     /// `snapshot`'s track, laid out as `builder` lays it.
@@ -77,11 +81,15 @@ public struct Map3DTrackCover: Sendable {
         // Decision 672: the bores whose bank the ground is cut away round.
         var bores: [[Map3DTrenches.Section]] = []
         let fast = builder.highSpeedTrack()
-        for alignment in snapshot.edges {
-            let spans = alignment.edge.sectionSpans
+        // Decision 876: the builder's samples, kept with this for the
+        // blocks built with it.
+        shared = builder.shared
+        let samples = builder.shared.samples(of: snapshot)
+        for (edge, alignment) in snapshot.edges.enumerated() {
+            let spans = samples.edges[edge]
             let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
             for (number, span) in spans.enumerated() where span.end > span.start {
-                let line = builder.sample(alignment.geometry, from: span.start, to: span.end).map { builder.point($0) + Map3DScene.Builder.lifted }
+                let line = span.line.map { builder.point($0) + Map3DScene.Builder.lifted }
                 guard line.count > 1 else { continue }
                 var grounds = line.map { builder.drawnGround(x: $0.x, z: $0.z) }
                 // Decision 375: where the track runs in a trench, its

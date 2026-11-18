@@ -424,11 +424,21 @@ public struct Map3DRealTrains: Sendable {
     init(traffic: RealTrainTraffic, structures: RealRailStructures?, railTracks: RealRailTracks? = nil,
          operations: RealRailwayOperations? = nil,
          bought: [(system: String, shape: [RealRailways.Coordinate])] = [], frame: RealWorldFrame, snapshot: RailwaySnapshot,
-         builder: inout Map3DScene.Builder) {
+         builder: inout Map3DScene.Builder, key: Map3DSharedBuild.RealKey? = nil) {
         self.traffic = traffic
         formations = traffic.lines.map { Self.formation(system: $0.system, line: $0.line) }
         stripes = traffic.lines.map { Map3DColor.rgb(UInt32($0.color.red) << 16 | UInt32($0.color.green) << 8 | UInt32($0.color.blue)) }
-        let player = PlayerTrack(snapshot.edges.map { $0.geometry.points.map(builder.point) })
+        // Decision 876: the network's edges by their boxes (the scene's
+        // builds keep them), each hashed only when a real track comes
+        // near it: a block no longer hashes every point of the network.
+        let shared = builder.shared, originX = builder.originX, originY = builder.originY
+        func scene(_ c: WorldCoordinate) -> Map3DPoint {
+            Map3DScene.Builder.point(x: Double(c.x), y: Double(c.y), height: Double(c.z), originX: originX, originY: originY)
+        }
+        let edges = snapshot.edges
+        let player = PlayerTrack(boxes: shared.edgeBoxes(of: snapshot, originX: originX, originY: originY, point: scene)) { edge in
+            edges[edge].geometry.points.map(scene)
+        }
         let platforms = PlayerTrack(snapshot.platforms.map { $0.points.map(builder.point) })
         func site(_ system: String) -> String { RealRailwayOperations.siteSystems[system] ?? system }
         guard let railTracks else {
@@ -449,10 +459,15 @@ public struct Map3DRealTrains: Sendable {
             boughtTrack[site(line.system), default: PlayerTrack([])].add(points)
         }
         let laid = builder.realTracks(railTracks, systems: Set(traffic.lines.map { site($0.system) }), frame: frame, clearOf: player,
-                                      platforms: platforms, bought: boughtTrack)
+                                      platforms: platforms, bought: boughtTrack,
+                                      boxes: key.map { shared.trackBoxes(of: railTracks, key: $0, frame: frame) })
         let dispatch = railTracks.dispatch
-        let legs = traffic.lines.map { line in
-            dispatch.flatMap { dispatch in operations.map { Self.legs(of: line, traffic: traffic, dispatch: dispatch, operations: $0) } } ?? [:]
+        let legs = traffic.lines.map { line -> [String: [Leg]] in
+            guard let dispatch, let operations else { return [:] }
+            // Decision 876: a line's trains' legs are the same whatever
+            // the region.
+            func made() -> [String: [Leg]] { Self.legs(of: line, traffic: traffic, dispatch: dispatch, operations: operations) }
+            return key.map { shared.legs(of: line, key: $0, make: made) } ?? made()
         }
         self.legs = legs
         tracks = traffic.lines.enumerated().map { index, line in
@@ -576,9 +591,75 @@ public struct Map3DRealTrains: Sendable {
     struct PlayerTrack {
         static let cell: Float = 32
         var segments: [Int64: [(Map3DPoint, Map3DPoint)]] = [:]
+        /// Decision 876: the lines hashed only when something asks near
+        /// them; `nil` when every line is in ``segments``.
+        private var lines: Lines?
 
         init(_ lines: [[Map3DPoint]]) {
             for line in lines { add(line) }
+        }
+
+        /// Decision 876: the lines `line` gives (as many as `boxes`, each
+        /// within its box), a line hashed when a point within ``square``
+        /// of its box is first asked about, so what is asked of a few
+        /// places reads the lines near them, not all. The answers are
+        /// those of ``init(_:)`` with every line.
+        init(boxes: [Box], line: @escaping (Int) -> [Map3DPoint]) {
+            lines = Lines(boxes: boxes, line: line)
+        }
+
+        /// The box of a line's points, seen from above; none of no points.
+        struct Box: Sendable {
+            var minX = Float.infinity, minZ = Float.infinity, maxX = -Float.infinity, maxZ = -Float.infinity
+
+            init(_ line: [Map3DPoint]) {
+                for point in line {
+                    minX = min(minX, point.x); maxX = max(maxX, point.x)
+                    minZ = min(minZ, point.z); maxZ = max(maxZ, point.z)
+                }
+            }
+        }
+
+        /// Decision 876: lines hashed a square of the map at a time.
+        final class Lines {
+            /// How many cells (``PlayerTrack/cell``) a square is across:
+            /// 512 m, a chunk's side.
+            static let cells = 16
+            let boxes: [Box]
+            let line: (Int) -> [Map3DPoint]
+            private var hashed: [Bool]
+            private var squares = Set<Int64>()
+            private var track = PlayerTrack([])
+
+            init(boxes: [Box], line: @escaping (Int) -> [Map3DPoint]) {
+                self.boxes = boxes
+                self.line = line
+                hashed = Array(repeating: false, count: boxes.count)
+            }
+
+            /// The segments through cell (`column`, `row`): every line
+            /// whose box touches the cell's square is hashed first. A
+            /// segment through the cell is of a line whose box holds it.
+            func segments(_ column: Int, _ row: Int) -> [(Map3DPoint, Map3DPoint)] {
+                let squareColumn = Int((Double(column) / Double(Self.cells)).rounded(.down))
+                let squareRow = Int((Double(row) / Double(Self.cells)).rounded(.down))
+                if squares.insert(PlayerTrack.key(squareColumn, squareRow)).inserted {
+                    let side = Float(Self.cells) * PlayerTrack.cell
+                    let minX = Float(squareColumn) * side, minZ = Float(squareRow) * side
+                    for index in boxes.indices where !hashed[index] {
+                        let box = boxes[index]
+                        guard box.maxX >= minX, box.minX <= minX + side, box.maxZ >= minZ, box.minZ <= minZ + side else { continue }
+                        hashed[index] = true
+                        track.add(line(index))
+                    }
+                }
+                return track.segments[PlayerTrack.key(column, row)] ?? []
+            }
+        }
+
+        /// The segments through cell (`column`, `row`).
+        private func through(_ column: Int, _ row: Int) -> [(Map3DPoint, Map3DPoint)] {
+            lines?.segments(column, row) ?? segments[Self.key(column, row)] ?? []
         }
 
         mutating func add(_ line: [Map3DPoint]) {
@@ -601,7 +682,7 @@ public struct Map3DRealTrains: Sendable {
             let column = Self.index(p.x), row = Self.index(p.z)
             for c in column - 1...column + 1 {
                 for r in row - 1...row + 1 {
-                    for (a, b) in segments[Self.key(c, r)] ?? [] {
+                    for (a, b) in through(c, r) {
                         let ax = b.x - a.x, az = b.z - a.z
                         let squared = ax * ax + az * az
                         let t = squared > 0 ? max(0, min(1, ((p.x - a.x) * ax + (p.z - a.z) * az) / squared)) : 0
@@ -623,7 +704,7 @@ public struct Map3DRealTrains: Sendable {
             let column = Self.index(p.x), row = Self.index(p.z)
             for c in column - 1...column + 1 {
                 for r in row - 1...row + 1 {
-                    for (a, b) in segments[Self.key(c, r)] ?? [] {
+                    for (a, b) in through(c, r) {
                         let ax = b.x - a.x, az = b.z - a.z
                         let squared = ax * ax + az * az
                         guard squared > 0, abs(ax * dx + az * dz) >= Map3DRealTrains.alongCosine * squared.squareRoot() * way else { continue }
@@ -1038,12 +1119,20 @@ extension Map3DScene.Builder {
     mutating func realTracks(_ tracks: RealRailTracks, systems: Set<String>, frame: RealWorldFrame,
                              clearOf player: Map3DRealTrains.PlayerTrack,
                              platforms: Map3DRealTrains.PlayerTrack = .init([]),
-                             bought: [String: Map3DRealTrains.PlayerTrack] = [:]) -> Map3DRealTrains.Laid {
+                             bought: [String: Map3DRealTrains.PlayerTrack] = [:],
+                             boxes: [Map3DSharedBuild.Box]? = nil) -> Map3DRealTrains.Laid {
         var laid = Map3DRealTrains.Laid()
         let margin = Map3DRealTrains.margin * Self.metre
         let near = (minX: region.minX - margin, minY: region.minY - margin, maxX: region.maxX + margin, maxY: region.maxY + margin)
         let windowLength = Map3DRealTrains.window * 1_000
+        let reach = windowLength * Self.metre
         for (number, track) in tracks.tracks.enumerated() where systems.contains(track.system) {
+            // Decision 876: with the tracks' boxes on the map (`boxes`),
+            // a track whose box is clear of the region by more than a
+            // window is not read: it has no point that near.
+            if let boxes, !boxes[number].meets(minX: near.minX - reach, minY: near.minY - reach, maxX: near.maxX + reach, maxY: near.maxY + reach) {
+                continue
+            }
             let world = track.points.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
             guard world.contains(where: { $0.x >= near.minX - windowLength * Self.metre && $0.x <= near.maxX + windowLength * Self.metre
                 && $0.y >= near.minY - windowLength * Self.metre && $0.y <= near.maxY + windowLength * Self.metre }) else { continue }
