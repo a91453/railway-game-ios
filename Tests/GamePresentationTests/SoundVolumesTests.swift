@@ -1,3 +1,4 @@
+import GameCore
 @testable import GamePresentation
 import XCTest
 

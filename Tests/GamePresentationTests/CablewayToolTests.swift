@@ -237,6 +237,86 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertEqual(transfer.stop, 0, "at the gondola's Taipei Zoo stop")
     }
 
+    // MARK: - Decision 870: every real cable car
+
+    /// A game on the Earth round `latitude`, `longitude`, `cells` land
+    /// cells a side, in the cable car mode.
+    private func realSession(latitude: Double, longitude: Double, cells: Int64 = 128) throws -> GameSession {
+        var world = try makeWorld(width: cells * Self.cell, height: cells * Self.cell, balance: Money(10_000_000_000))
+        world.setEconomyMode(.management)
+        world.setGeoAnchor(try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude)))
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectTool(.network)
+        session.setNetworkMode(.cableway)
+        return session
+    }
+
+    /// On a map of Sun Moon Lake the mode offers the ropeway and lays its
+    /// two stations with the real span, 1,860 m; once built it is the
+    /// real one, with its stops' names and Sun Moon Lake's cabins.
+    func testTheSunMoonLakeRopewayIsOffered() throws {
+        let session = try realSession(latitude: 23.8562, longitude: 120.9429)
+        XCTAssertEqual(session.realCablewayOffers.map(\.name), ["日月潭纜車"])
+        session.traceRealCableway(try XCTUnwrap(session.realCablewayOffer))
+        XCTAssertEqual(session.realCablewayOffers, [], "not while one is drawn")
+        let preview = try XCTUnwrap(session.cablewayPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertEqual(preview.stations, 2)
+        XCTAssertEqual(preview.metres, 1_860)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        XCTAssertEqual(session.realCablewayOffers, [], "not once it is built")
+        let built = try XCTUnwrap(session.world.cableways.last)
+        XCTAssertEqual(RealCableway.matching(built, in: session.world), .sunMoonLake)
+        XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .sunMoonLake)
+    }
+
+    /// On a map of Wulai the mode offers the Wulai cable car: two stations
+    /// 381 m apart, on different land cells, the upper one to the south-east.
+    func testTheWulaiCableCarIsOffered() throws {
+        let session = try realSession(latitude: 24.8475, longitude: 121.5522, cells: 64)
+        XCTAssertEqual(session.realCablewayOffers.map(\.name), ["烏來空中纜車"])
+        session.traceRealCableway(.wulai)
+        let stops = session.cablewayDraft
+        XCTAssertEqual(stops.map(\.boards), [true, true])
+        XCTAssertGreaterThan(stops[1].cell.row, stops[0].cell.row, "south")
+        XCTAssertGreaterThan(stops[1].cell.column, stops[0].cell.column, "east")
+        let preview = try XCTUnwrap(session.cablewayPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertEqual(preview.metres, 381)
+        XCTAssertEqual(session.networkDraftText(), "2 站 · 381 公尺 · 全程 1 分")
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        XCTAssertEqual(RealCableway.matching(try XCTUnwrap(session.world.cableways.last), in: session.world), .wulai)
+        XCTAssertEqual(session.realCablewayOffers, [])
+    }
+
+    /// A map with Maokong and Wulai both on it offers both, the one nearer
+    /// the middle of the map first, and building one leaves the other.
+    func testAMapWithTwoRealCableCarsOffersBothNearestFirst() throws {
+        // Wulai is some 16 km south of Maokong: a map 512 cells (32.8 km)
+        // a side holds both, its middle nearer Wulai's.
+        let session = try realSession(latitude: 24.90, longitude: 121.57, cells: 512)
+        XCTAssertEqual(session.realCablewayOffers.map(\.name), ["烏來空中纜車", "貓空纜車"])
+        XCTAssertEqual(session.realCablewayOffer, .wulai)
+        session.traceRealCableway(.maokong)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        XCTAssertEqual(session.realCablewayOffers.map(\.name), ["烏來空中纜車"])
+        session.traceRealCableway(.wulai)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        XCTAssertEqual(session.realCablewayOffers, [])
+        XCTAssertEqual(session.world.cableways.count, 2)
+    }
+
+    /// Each real cable car's spans are one fewer than its stops, within
+    /// what a cable car may span, and no two share a first stop's place.
+    func testEveryRealCableCarCanBeLaid() {
+        for real in RealCableway.all {
+            XCTAssertEqual(real.legMetres.count, real.stops.count - 1, real.name)
+            XCTAssertTrue(real.legMetres.allSatisfy { (1...Cableway.maximumLegMetres).contains($0) }, real.name)
+            XCTAssertTrue(real.stops.first?.boards == true && real.stops.last?.boards == true, real.name)
+        }
+        XCTAssertEqual(Set(RealCableway.all.map(\.name)).count, RealCableway.all.count)
+    }
+
     /// Off the Earth, or with Maokong off the map, nothing is offered.
     func testNoOfferOffTheMap() throws {
         let session = try makeSession()
