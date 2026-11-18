@@ -19,6 +19,7 @@ extension OverseasMap {
         switch self {
         case .hongKong: language.text("Hong Kong", "香港")
         case .rovaniemi: language.text("Rovaniemi", "羅瓦涅米")
+        case .fukuoka: language.text("Fukuoka", "福岡")
         }
     }
 
@@ -28,6 +29,7 @@ extension OverseasMap {
         switch self {
         case .hongKong: "香港"
         case .rovaniemi: "羅瓦涅米"
+        case .fukuoka: "福岡"
         }
     }
 }
@@ -43,6 +45,10 @@ extension OverseasMap {
         case .rovaniemi: language.text(
             "Rovaniemi in Finnish Lapland and the country round it, from Muurola to Kemijärvi, about 107 by 55 km, all open from the start. You can buy the line to Kemijärvi and the main line to Muurola.",
             "芬蘭拉普蘭的羅瓦涅米，從穆羅拉一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維與往穆羅拉的路線。"
+        )
+        case .fukuoka: language.text(
+            "The city of Fukuoka in Japan, from Meinohama to Fukuoka Airport and Kaizuka, about 18 by 22 km, all open from the start. You can buy the Fukuoka City Subway's three lines.",
+            "日本的福岡市，從姪濱到福岡機場與貝塚，約 18 × 22 公里，一開始全部開放，可以收購福岡市地鐵的三條路線。"
         )
         }
     }

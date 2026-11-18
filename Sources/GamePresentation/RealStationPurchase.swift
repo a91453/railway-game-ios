@@ -8,7 +8,9 @@ import GameCore
 // platform as long as decision 295 makes it and 150 m on past each end (the
 // room decision 351 leaves for a crossover), with the station named as the
 // real one. All of it on the ground, as the game's stations are (decision
-// 132). Decision 760: a station whose real platforms are an island gets two
+// 132); decision 856: up on the real line's viaduct where the real station
+// stands on a long one (an elevated metro station), never in a tunnel.
+// Decision 760: a station whose real platforms are an island gets two
 // tracks 11 m apart, the island between; one with a side platform on each
 // of two tracks gets two tracks 5 m apart, a platform on each; the others
 // (one side platform, or no data) one track.
@@ -209,7 +211,7 @@ extension GameSession {
         // with the usual run-on beyond; where the ground climbs too
         // steeply for that, a longer run-on; where even that cannot be
         // laid, the platform alone level, as before.
-        func lay(level: Double, runOn: Double) -> RealStationOffer {
+        func lay(level: Double, runOn: Double, viaduct: Bool) -> RealStationOffer {
             // Centred on the real station, the track on past both ends, across
             // the joins of the real line's pieces (a big station's line is
             // drawn in two, split at it); at the end of the real line, as much
@@ -233,7 +235,7 @@ extension GameSession {
             }
             guard let plan = tracePlan(
                 from: .point(ends[0]), to: .point(ends[1]), along: path.points(from: lower, to: upper),
-                platforms: [(path.point(at: levelLow), path.point(at: levelHigh))], onGround: true
+                platforms: [(path.point(at: levelLow), path.point(at: levelHigh))], onGround: true, onRealViaduct: viaduct
             ) else {
                 return refused("The real line's track could not be followed here.", "這裡沒辦法沿著真實鐵路鋪軌。")
             }
@@ -254,7 +256,8 @@ extension GameSession {
             // one track where it does not fit; its level stretch beside the
             // first's (decision 766).
             if kind != .single, let pair = secondTrack(
-                beside: path, from: lower, to: upper, platform: levelLow...levelHigh, spacing: kind.spacing, single: single
+                beside: path, from: lower, to: upper, platform: levelLow...levelHigh, spacing: kind.spacing, single: single,
+                viaduct: viaduct
             ), let price = try? priced(pair) {
                 var offer = RealStationOffer(suggestion: suggestion, system: system, purchase: pair, metres: metres, price: price, problem: nil)
                 offer.platforms = kind
@@ -269,9 +272,16 @@ extension GameSession {
         }
         let level = Double(Self.realStationLevelRunOn)
         let tries = [(level, Self.realStationRunOn), (level, 2 * Self.realStationRunOn), (0, Self.realStationRunOn)]
-        var offer = lay(level: tries[0].0, runOn: tries[0].0 + tries[0].1)
+        // Decision 856: first up on the real line's viaduct where the real
+        // station stands on one (an elevated metro station), then on the
+        // ground as before.
+        for next in tries {
+            let raised = lay(level: next.0, runOn: next.0 + next.1, viaduct: true)
+            if raised.purchase != nil { return raised }
+        }
+        var offer = lay(level: tries[0].0, runOn: tries[0].0 + tries[0].1, viaduct: false)
         for next in tries.dropFirst() where offer.purchase == nil {
-            let other = lay(level: next.0, runOn: next.0 + next.1)
+            let other = lay(level: next.0, runOn: next.0 + next.1, viaduct: false)
             if other.purchase != nil { offer = other }
         }
         return offer
@@ -284,7 +294,7 @@ extension GameSession {
     /// laid.
     func secondTrack(
         beside path: WorldPath, from lower: Double, to upper: Double, platform: ClosedRange<Double>, spacing: Double,
-        single: RealStationPurchase
+        single: RealStationPurchase, viaduct: Bool = false
     ) -> RealStationPurchase? {
         let base = HighSpeedDemo.trackOffset
         let ramp = max(RealRailwayTraces.metre, min(platform.lowerBound - lower, upper - platform.upperBound))
@@ -294,7 +304,7 @@ extension GameSession {
         let ends = [beside.point(at: 0).plan, beside.point(at: beside.length).plan]
         guard ends.allSatisfy(world.bounds.contains), let plan = tracePlan(
             from: .point(ends[0]), to: .point(ends[1]), along: beside.points,
-            platforms: [(beside.point(at: start), beside.point(at: end))], onGround: true
+            platforms: [(beside.point(at: start), beside.point(at: end))], onGround: true, onRealViaduct: viaduct
         ), !plan.stopped, !plan.stretches.isEmpty, let index = plan.platformStretches.first ?? nil else { return nil }
         return RealStationPurchase(
             stretches: single.stretches, platform: single.platform, secondStretches: plan.stretches, secondPlatform: index,
