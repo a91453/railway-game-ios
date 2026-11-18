@@ -144,7 +144,7 @@ final class CommandEditTests: XCTestCase {
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
         let data = try JSONEncoder().encode(entries)
         XCTAssertEqual(try JSONDecoder().decode([CommandLog.Entry].self, from: data), entries)
-        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 10, "each kind, ten of them twice")
+        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 12, "each kind, twelve of them twice")
         XCTAssertEqual(PlayerCommand.edit(.reverseTrain(train)).name, "reverseTrain")
 
         // A zone this build does not know: read back as not recorded.
