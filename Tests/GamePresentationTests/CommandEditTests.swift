@@ -122,6 +122,7 @@ final class CommandEditTests: XCTestCase {
             .linkTransfer(station, StationID(rawValue: 5)), .unlinkTransfer(station), .buildFreightYard(station), .removeFreightYard(station),
             .buildStationRoad(station), .turnOnRoads(towns: [PlanPoint(x: 900, y: 1_200)]),
             .setFreightProduct(station, CargoKind.allCases[0]),
+            .setStationChime(station, .metro), .setStationChime(station, nil), .setStationDepartureMelody(station, .b), .setStationDepartureMelody(station, nil),
             .createLine(name: "Main", stops: [station, StationID(rawValue: 5)], targets: TargetHeadways(peak: 10, offPeak: 15)),
             .createLine(name: "Branch", stops: [station], targets: nil), .duplicateLine(line, name: "Main - Fork"), .removeLine(line),
             .renameLine(line, name: "Main"), .setLineColor(line, LineColor(rgb: 0x3366CC)), .setLineColor(line, nil),
@@ -143,7 +144,7 @@ final class CommandEditTests: XCTestCase {
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
         let data = try JSONEncoder().encode(entries)
         XCTAssertEqual(try JSONDecoder().decode([CommandLog.Entry].self, from: data), entries)
-        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 10, "each kind, ten of them twice")
+        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 12, "each kind, twelve of them twice")
         XCTAssertEqual(PlayerCommand.edit(.reverseTrain(train)).name, "reverseTrain")
 
         // A zone this build does not know: read back as not recorded.
