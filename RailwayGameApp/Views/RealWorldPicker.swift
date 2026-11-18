@@ -1,3 +1,4 @@
+import Combine
 import GameCore
 import GamePresentation
 import MapKit
@@ -36,13 +37,16 @@ private struct WholeMapRow: View {
     let summary: String
     /// What opens it, or `nil` when it is open.
     let howToOpen: String?
+    /// The symbol while it is closed: a lock, or (decision 858) the
+    /// download's for a map whose map pack is not on the device yet.
+    var closedSymbol = "lock.fill"
     let start: () -> Void
 
     var body: some View {
         let isOpen = howToOpen == nil
         Button(action: start) {
             HStack(spacing: 10) {
-                Image(systemName: isOpen ? symbol : "lock.fill")
+                Image(systemName: isOpen ? symbol : closedSymbol)
                     .font(.subheadline)
                     .foregroundStyle(isOpen ? Theme.primary : Theme.textSecondary)
                     .accessibilityHidden(true)
@@ -79,6 +83,9 @@ struct RealWorldPicker: View {
     /// Taiwan's real railways as the map draws them, made when the picker
     /// appears (it opens once the launcher has read them).
     @State private var railwayLines: [RailwayLineDrawing] = []
+    /// Decision 858: counts the map pack downloads' answers, so the
+    /// overseas rows are read again when one comes.
+    @State private var mapPackAnswers = 0
     /// How far the camera is from the map, kept so a tap moves the square
     /// without zooming.
     @State private var cameraDistance: Double?
@@ -431,14 +438,21 @@ struct RealWorldPicker: View {
                 // whole map of. The player's first map is open; flights
                 // from a map already open open each of the others.
                 // Decision 818: and Rovaniemi from the start.
+                // Decision 858: a city whose map pack is still to come
+                // says so, read afresh when its download answers.
+                let _ = mapPackAnswers
                 ForEach(launcher.overseasMapRows(in: language), id: \.city) { row in
                     WholeMapRow(
                         id: "realWorld.overseas.\(row.city.rawValue)", name: row.city.name(in: language),
                         symbol: row.city.opensByFlights ? "airplane" : "snowflake",
-                        summary: row.city.mapSummary(in: language), howToOpen: row.closed
+                        summary: row.city.mapSummary(in: language), howToOpen: row.closed,
+                        closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
                     ) {
                         if launcher.startOverseasMap(row.city) { dismiss() }
                     }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: MapPackDownloads.statusChanged).receive(on: DispatchQueue.main)) { _ in
+                    mapPackAnswers += 1
                 }
             }
             // Decision 312: where games were started before, ahead of the

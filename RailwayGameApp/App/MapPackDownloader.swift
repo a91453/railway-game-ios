@@ -14,7 +14,9 @@ import System
 /// Info.plist names the App Group the downloader extension shares
 /// (`BAAppGroupID`) and that can open that group's folder. Without them
 /// `AssetPackManager` stops the app on first use, so nothing here touches
-/// it; the bundled packs are read as before.
+/// it. Decision 858: the app people install carries no pack, only each
+/// city's `pack.json`, so there a city is read only once this has taken its
+/// download; the Debug app carries the packs whole and reads its own.
 enum MapPackDownloader {
     private static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RailwayGame", category: "map-packs")
 
@@ -29,24 +31,52 @@ enum MapPackDownloader {
     /// Starts fetching every city's pack in the background; returns at once.
     static func start() {
         guard isAvailable else { return }
-        // Decision 789: only the open cities have asset packs.
-        let cities = OverseasMap.allCases.filter(OverseasMaps.open.contains)
+        // Decision 789: only the open cities have asset packs. Decision
+        // 858: those the app does not carry first: the real-world data
+        // waits for them.
+        let cities = OverseasMap.allCases.filter(OverseasMaps.open.contains).sorted { !$0.isCarried && $1.isCarried }
         // Decision 776, later: the settings show how each stands.
         for city in cities { MapPackDownloads.note(city, .downloading) }
-        Task.detached(priority: .utility) {
+        Task.detached(priority: .userInitiated) {
+            // Decision 858: what is on the device already is taken before
+            // anything is asked of the network, so a city downloaded
+            // before is there at once, offline too.
+            var waiting: [OverseasMap] = []
             for city in cities {
-                await fetch(city)
+                if take(city, from: AssetPackManager.shared) == nil {
+                    MapPackDownloads.note(city, .downloaded)
+                    log.notice("map pack \(city.assetPackID, privacy: .public) used (on the device)")
+                } else {
+                    waiting.append(city)
+                }
+            }
+            // The rest are fetched, and fetched again while they fail
+            // (no network on the first launch): after 15 seconds, then
+            // twice as long each time, up to five minutes.
+            var pause: UInt64 = 15
+            while !waiting.isEmpty {
+                var failed: [OverseasMap] = []
+                for city in waiting {
+                    let fetched = await fetch(city)
+                    if !fetched { failed.append(city) }
+                }
+                waiting = failed
+                guard !waiting.isEmpty else { break }
+                try? await Task.sleep(nanoseconds: pause * 1_000_000_000)
+                pause = min(pause * 2, 300)
             }
         }
     }
 
-    private static func fetch(_ city: OverseasMap) async {
+    /// Fetches `city`'s pack and takes it; `false` when it did not arrive
+    /// and is worth asking for again.
+    private static func fetch(_ city: OverseasMap) async -> Bool {
         do {
             let manager = AssetPackManager.shared
             let pack = try await manager.assetPack(withID: city.assetPackID)
             try await manager.ensureLocalAvailability(of: pack)
             var refusal = take(city, from: manager)
-            // DEBUG-138: a pack whose files are not the app's own is the
+            // DEBUG-138: a pack whose `pack.json` is not the app's own is the
             // version an earlier build was given (0.6.0 (138) on the owner's
             // iPhone kept 137's Hong Kong pack, uploaded again eight minutes
             // before the build came out). The system looks for a new version
@@ -66,6 +96,15 @@ enum MapPackDownloader {
                     refusal = take(city, from: manager)
                 }
             }
+            // Decision 858: the app carries no pack of the city, and the
+            // one it lists has not come (a new version of the pack still
+            // waits for its review, say): the one on the device is read
+            // rather than none.
+            if refusal == .differsFromBundled, !city.isCarried, take(city, from: manager, expected: nil) == nil {
+                MapPackDownloads.note(city, .earlier)
+                log.notice("map pack \(city.assetPackID, privacy: .public) used: not the version the app lists")
+                return true
+            }
             if let refusal {
                 MapPackDownloads.note(city, .refused(refusal))
                 let clue = MapPackDownloads.clue(city) ?? ""
@@ -74,15 +113,31 @@ enum MapPackDownloader {
                 MapPackDownloads.note(city, .downloaded)
                 log.notice("map pack \(city.assetPackID, privacy: .public) used")
             }
+            return true
         } catch {
-            MapPackDownloads.note(city, .failed(String(describing: error)))
             log.notice("map pack \(city.assetPackID, privacy: .public) not fetched: \(String(describing: error), privacy: .public)")
+            // Decision 858: offline with another version of the pack on the
+            // device, and no pack in the app: that one is read meanwhile
+            // (taken once; asking again goes on).
+            if !city.isCarried, MapPackDownloads.pack(city) != nil || take(city, from: AssetPackManager.shared, expected: nil) == nil {
+                MapPackDownloads.note(city, .earlier)
+                return false
+            }
+            MapPackDownloads.note(city, .failed(String(describing: error)))
+            return false
         }
     }
 
     /// Takes `city`'s pack as it lies on the device now (``MapPackDownloads``),
     /// or says why not.
     private static func take(_ city: OverseasMap, from manager: AssetPackManager) -> MapPackDownloads.Refusal? {
+        take(city, from: manager, expected: MapPack.carriedManifest(city))
+    }
+
+    /// ``take(_:from:)`` against `expected`, the `pack.json` the download's
+    /// must be (decision 858: the app's own copy of it); `nil` takes any
+    /// whole pack of the city.
+    private static func take(_ city: OverseasMap, from manager: AssetPackManager, expected: Data?) -> MapPackDownloads.Refusal? {
         // Decision 819: each file is asked for by its own path. The URL
         // `url(for:)` gives for one file is of that file only: on the
         // owner's iPhone (0.6.0 (136)) the folder of `pack.json`'s held
@@ -102,6 +157,6 @@ enum MapPackDownloader {
                 return folderURL?.appendingPathComponent(name)
             },
         ]
-        return MapPackDownloads.use(city, locators: locators, bundled: MapPack.bundled(city))
+        return MapPackDownloads.use(city, locators: locators, expected: expected)
     }
 }
