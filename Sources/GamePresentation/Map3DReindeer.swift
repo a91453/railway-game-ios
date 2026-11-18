@@ -28,12 +28,28 @@ public enum Map3DReindeer {
     /// coat, noseLamp, lanternGlass. All the game's own colours: the
     /// winter coat's grey brown (``Map3DPalette/arcade``), the pale mane
     /// (``Map3DPalette/terrazzo``), the darker legs (``Map3DPalette/trunk``),
-    /// the bone-grey antlers (``Map3DPalette/concrete``).
+    /// and the dark brown antlers of the photographs, a winter antler's
+    /// bone stained dark (``antler``).
     static let meshPalette: [UInt32] = [
-        Map3DPalette.arcade, Map3DPalette.terrazzo, Map3DPalette.trunk, Map3DPalette.concrete,
+        Map3DPalette.arcade, Map3DPalette.terrazzo, Map3DPalette.trunk, antler,
         Map3DPalette.dark, Map3DPalette.mtrRed, Map3DPalette.platformEdge, Map3DPalette.sidewalk,
         Map3DPalette.plaza, Map3DPalette.timber, Map3DPalette.canopy, Map3DPalette.lantern, Map3DPalette.tunnelLamp,
     ]
+
+    /// The antlers' dark brown: the city's warm grey waterproofing
+    /// (``Map3DPalette/cityRoofs`` 2, #5A4E4A), darker than any coat.
+    static let antler: UInt32 = Map3DPalette.cityRoofs[2].color
+
+    /// Santa's team (the sleigh) in the warm brown of the storybooks rather
+    /// than the farms' grey, so the two read apart: its coat the trunks'
+    /// brown (``Map3DPalette/trunk``), its legs the antlers' dark brown;
+    /// the rest as ``meshPalette``.
+    static let sleighPalette: [UInt32] = {
+        var palette = meshPalette
+        palette[0] = Map3DPalette.trunk
+        palette[2] = antler
+        return palette
+    }()
 
     /// The lamps' lenses, drawn lit: the leading reindeer's red nose and
     /// the sleigh's lantern (decision 831's lamps, their glow added at
@@ -45,7 +61,8 @@ public enum Map3DReindeer {
     public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model? {
         let name = unit.rawValue + (far ? "-far" : "")
         guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
-              let model = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette) else { return nil }
+              let model = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: unit == .sleigh ? sleighPalette : meshPalette)
+        else { return nil }
         guard unit == .sleigh else { return model }
         let lit = model.vertices.map { vertex -> Map3DVertex in
             var vertex = vertex
