@@ -105,6 +105,13 @@ struct Map3DRoadMarkings {
         let group: Int
     }
 
+    /// Decision 846's later note: a pedestrian crossing's sign: its foot on
+    /// the pavement and the way the traffic it faces goes.
+    struct CrossingSign {
+        let foot: Map3DBaseMap.Point
+        let along: Map3DBaseMap.Point
+    }
+
     /// Decision 445: a pedestrian signal at a crossing's end: its foot,
     /// the way it looks (across the road, to the other end), the road
     /// whose traffic its pedestrians walk alongside (the other one than
@@ -183,6 +190,10 @@ struct Map3DRoadMarkings {
     var walks: [Walk] = []
     var stops: [Stop] = []
     var crossings: [Crossing] = []
+    /// Decision 846's later note: the pedestrian crossing's signs
+    /// (``Map3DFinlandStreet/Unit/crossingSign``) at a crossing with no
+    /// signal, one a way the traffic comes, where the region stands them.
+    var crossingSigns: [CrossingSign] = []
     /// Decision 445: how far past the crossing's outer edge the pedestrian
     /// signals stand, along the road.
     static let walkGap = 0.4
@@ -683,6 +694,20 @@ struct Map3DRoadMarkings {
                 guard !along.contains(number), length >= crosswalk + Self.crosswalkDepth + 4, let zebra = arm.place(crosswalk) else { continue }
                 marks.append(Mark(kind: .crosswalk, centre: zebra.point, along: Map3DBaseMap.Point(x: -zebra.out.x, z: -zebra.out.z),
                                   length: Self.crosswalkDepth, width: 2 * arm.half, onDeck: arm.onDeck))
+                // Decision 846's later note: Finland's sign at the
+                // crossing, on the pavement where each way's traffic
+                // reaches it, on the side that traffic keeps to.
+                if region.hasFinnishFurniture {
+                    let kerb = arm.half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3)), keep = Double(region.trafficSide)
+                    for way in [Map3DBaseMap.Point(x: -zebra.out.x, z: -zebra.out.z), zebra.out] {
+                        // Half a metre before the crossing's bars, the way
+                        // that traffic comes.
+                        let back = Self.crosswalkDepth / 2 + 0.5
+                        let foot = Map3DBaseMap.Point(x: zebra.point.x - way.x * back - way.z * keep * kerb,
+                                                      z: zebra.point.z - way.z * back + way.x * keep * kerb)
+                        crossingSigns.append(CrossingSign(foot: foot, along: way))
+                    }
+                }
                 continue
             case .bare:
                 continue
@@ -950,9 +975,18 @@ extension Map3DScene.Builder {
         for signal in markings.signals {
             // Decision 732: Hong Kong's own on its map. Decision 846: and
             // on Finland's, whose signals stand at the kerb too.
+            // Its later note: Finland's own, where the pack has them.
+            let finland = markings.region.hasFinnishFurniture ? Self.finlandSignals[signal.road] : nil
             let hongKong = markings.region.standsSignalsAtKerb ? Self.hongKongSignals[signal.road] : nil
-            guard let model = hongKong ?? Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
+            guard let model = finland ?? hongKong ?? Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
             place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), group: signal.group)
+        }
+        // Decision 846's later note: Finland's sign at a crossing with no
+        // signal, looking at the traffic that comes to it.
+        if let model = Self.finlandModels[.crossingSign] {
+            for sign in markings.crossingSigns {
+                place(model, at: sign.foot, forward: sign.along, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF))
+            }
         }
         // Decision 445: each pedestrian signal its face and its countdown's
         // two digits, in one place, looking across the road (the model
@@ -965,7 +999,7 @@ extension Map3DScene.Builder {
             for walk in markings.walks {
                 let forward = Map3DBaseMap.Point(x: -walk.facing.z, z: walk.facing.x), group = Map3DPedestrianSignal.group(walk.group, road: walk.road)
                 guard countdown else {
-                    place(placed.plain, at: walk.foot, forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF), group: group)
+                    place(walking.placedPlain(markings.region), at: walk.foot, forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF), group: group)
                     continue
                 }
                 place(placed.head, at: walk.foot, forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF), group: group)
@@ -1002,8 +1036,14 @@ extension Map3DScene.Builder {
                         Map3DBaseMap.Point(x: centre.x + left.x * by * side + along.x * ahead, z: centre.z + left.z * by * side + along.z * ahead)
                     }
                     let seed = (Int32(truncatingIfNeeded: Int(((centre.x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((centre.z + south) * 2).rounded())))
-                    let sheltered = pavement >= 2.5
-                    if sheltered, let model = Self.propModels[.busStop] {
+                    // Decision 846's later note: Finland's stop is its sign
+                    // on a post by the kerb, with no shelter of Taiwan's.
+                    let finnish = markings.region.hasFinnishFurniture ? Self.finlandModels[.busStop] : nil
+                    let sheltered = pavement >= 2.5 && finnish == nil
+                    if let finnish {
+                        place(finnish, at: out(width / 2 + 0.45, ahead: -1.5), forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF),
+                              onDeck: road.bridgeLevel > 0)
+                    } else if sheltered, let model = Self.propModels[.busStop] {
                         // The shelter stands back from the kerb.
                         place(model, at: out(width / 2 + pavement - 1.05), forward: forward, clearing: 3, tint: Map3DColor.rgb(0xFFFFFF),
                               onDeck: road.bridgeLevel > 0)
@@ -1043,6 +1083,16 @@ extension Map3DScene.Builder {
         Map3DModelCatalog.standard.index(of: Map3DHongKongSignal.placedName(road)).map { (road, $0) }
     })
 
+    /// Decision 846's later note: Finland's street furniture's models in
+    /// ``Map3DModelPack/standard``, and its signals' by the road they face
+    /// (as ``hongKongSignals``).
+    static let finlandModels: [Map3DFinlandStreet.Unit: Int] = Dictionary(uniqueKeysWithValues: Map3DFinlandStreet.Unit.allCases.compactMap { unit in
+        Map3DModelCatalog.standard.index(of: unit.rawValue).map { (unit, $0) }
+    })
+    static let finlandSignals: [Map3DSignalTiming.Road: Int] = Dictionary(uniqueKeysWithValues: [Map3DSignalTiming.Road.main, .cross].compactMap { road in
+        Map3DModelCatalog.standard.index(of: Map3DFinlandStreet.placedName(road)).map { (road, $0) }
+    })
+
     /// Decision 445: the pedestrian signals' models in ``Map3DModelPack/standard``.
     /// Decision 820: from ``Map3DModelCatalog``, not waiting for the pack.
     static let walkModels = Map3DPedestrianSignal.Models(index: Map3DModelCatalog.standard.index(of:))
@@ -1080,7 +1130,7 @@ extension Map3DScene.Builder {
         let x = Float(at.x), z = Float(at.z)
         let foot = Map3DPoint(x, drawnGround(x: x, z: z) + Self.sidewalkLift, z)
         let key = key(of: foot)
-        let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] })
+        let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] } + [Self.finlandModels[.lamp]].compactMap { $0 })
         props[key] = props[key]?.filter { instance in
             guard streetFurniture.contains(instance.model) else { return true }
             let dx = instance.transform[12] - x, dz = instance.transform[14] - z

@@ -118,4 +118,10 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// Decision 846: whether vending machines stand by its bus stops
     /// (decision 355): Taiwan's and Hong Kong's, not Finland's.
     var hasVendingMachines: Bool { self != .finland }
+
+    /// Decision 846's later note: whether its streets stand Finland's own
+    /// furniture (``Map3DFinlandStreet``): its signals, pedestrian signals,
+    /// street lights, bus stops' signs, and the pedestrian crossing's sign
+    /// where a crossing has no signal.
+    var hasFinnishFurniture: Bool { self == .finland }
 }
