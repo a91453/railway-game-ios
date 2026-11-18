@@ -19,6 +19,13 @@
 // typhoon covers its first stop (``GameWorld/cablewayIsOpen(_:onDay:)``):
 // the riders that day stay off, and its running is paid all the same.
 //
+// Since decision 880 a cableway is a ride people come for, station or no
+// station: on a day it runs, ``Cableway/sightseerPermille`` of the visitors
+// of each sight within ``Cableway/sightseerReach`` of a boarding stop ride
+// it there and back (``GameWorld/cablewaySightseerRides(_:onDay:)``), so
+// the Sun Moon Lake Ropeway and the Wulai cable car, which meet no
+// railway, carry the people who are at the lake and the waterfall anyway.
+//
 // The references: the owner's transit map site gives a gondola 20 km/h and
 // no stop time (`_app`'s `H` table, `GONDOLA`), and OpenWorld's Sun Moon
 // Lake ropeway runs six cabins on a fixed cycle along a polyline
@@ -162,8 +169,30 @@ public struct Cableway: Hashable, Sendable {
     public static let localShare: (numerator: Int64, denominator: Int64) = (1, 4)
     /// The part that rides to the trains: a half, as a bus feeder's.
     public static let riderShare: (numerator: Int64, denominator: Int64) = (1, 2)
+    /// Decision 880: how far from a boarding stop a sight's visitors come
+    /// for the ride: 2 km. Sun Moon Lake's own point is 1.8 km from its
+    /// ropeway's lakeside station and Wulai's hot spring street 1.7 km
+    /// from its cable car's: the visitors of both go on to them.
+    public static let sightseerReach: Int64 = 2_000 * WorldCoordinate.unitsPerMetre
+    /// Decision 880: the part of such a sight's visitors of the day, in
+    /// thousandths, that rides a cableway of ``sightseerFullMetres`` and
+    /// more: a tenth. The project's own (the Sun Moon Lake Ropeway carries
+    /// about a fifth of the lake's visitors; the game keeps it below a
+    /// railway's fifth, ``Tourism/captureRate``).
+    public static let sightseerShare: Int64 = 100
+    /// Decision 880: the rope a ride needs to draw the whole of
+    /// ``sightseerShare``: 1,500 m; a shorter one draws in proportion, so
+    /// two stops a street apart are no ride at all.
+    public static let sightseerFullMetres: Int64 = 1_500
     /// The days of takings kept.
     public static let keptDays = 30
+
+    /// Decision 880: the thousandths of a nearby sight's visitors that
+    /// ride it: ``sightseerShare`` by its rope's metres up to
+    /// ``sightseerFullMetres``.
+    public var sightseerPermille: Int64 {
+        Self.sightseerShare * min(metres, Self.sightseerFullMetres) / Self.sightseerFullMetres
+    }
 
     /// The rope's metres from end to end.
     public var metres: Int64 {
@@ -624,8 +653,71 @@ extension GameWorld {
         }
     }
 
+    // MARK: - Sightseers (decision 880)
+
+    /// Decision 880: the sights whose visitors come for each cableway's
+    /// ride, by the cableways' order: every attraction within
+    /// ``Cableway/sightseerReach`` of a boarding stop goes to the cableway
+    /// with the nearest one (then the lower cableway), so two ropes at one
+    /// sight share nothing twice. Each list in the attractions' order;
+    /// all empty without tourism.
+    func cablewaySights() -> [[Attraction]] {
+        var sights = [[Attraction]](repeating: [], count: cableways.count)
+        guard let tourism, !cableways.isEmpty else { return sights }
+        let reach = Cableway.sightseerReach * Cableway.sightseerReach
+        for attraction in tourism.attractions {
+            var best: (squared: Int64, cableway: Int)?
+            for (position, cableway) in cableways.enumerated() {
+                for stop in cableway.stops where stop.boards {
+                    let squared = Self.squaredDistance(Self.middle(of: stop.cell), attraction.point)
+                    guard squared <= reach else { continue }
+                    if best.map({ (squared, position) < $0 }) ?? true { best = (squared, position) }
+                }
+            }
+            if let best { sights[best.cableway].append(attraction) }
+        }
+        return sights
+    }
+
+    /// Decision 880: the sights whose visitors ride cableway `id`
+    /// (``cablewaySights()``); none for no such cableway.
+    public func sights(ofCableway id: CablewayID) -> [Attraction] {
+        guard let position = cableways.firstIndex(where: { $0.id == id }) else { return [] }
+        return cablewaySights()[position]
+    }
+
+    /// Decision 880: the rides cableway `id`'s sightseers take on game day
+    /// `day`: of each of its sights' visitors that day
+    /// (``visitorsExpected(for:onDay:)``), ``Cableway/sightseerPermille``
+    /// in thousandths, rounded down, there and back. 0 on a day it stands
+    /// still (``cablewayIsOpen(_:onDay:)``) and for no such cableway.
+    public func cablewaySightseerRides(_ id: CablewayID, onDay day: Int64) -> Int64 {
+        guard let position = cableways.firstIndex(where: { $0.id == id }) else { return 0 }
+        return sightseerRides(of: cableways[position], sights: cablewaySights()[position], onDay: day)
+    }
+
+    private func sightseerRides(of cableway: Cableway, sights: [Attraction], onDay day: Int64) -> Int64 {
+        guard !sights.isEmpty, cablewayIsOpen(cableway.id, onDay: day) else { return 0 }
+        let permille = cableway.sightseerPermille
+        return sights.reduce(0) { $0 + 2 * (visitorsExpected(for: $1, onDay: day) * permille / 1_000) }
+    }
+
+    /// Decision 880: adds the sightseers' rides of the day that ended to
+    /// each cableway's riders of that day, before it is settled. In
+    /// management mode only, as the riders from the trains.
+    mutating func countCablewaySightseers(onDay day: Int64) {
+        guard accounts.mode == .management, !cableways.isEmpty, tourism != nil else { return }
+        let sights = cablewaySights()
+        for index in cableways.indices {
+            let rides = sightseerRides(of: cableways[index], sights: sights[index], onDay: day)
+            guard rides > 0 else { continue }
+            cableways[index].ridersToday = min(Self.maximumHourly, cableways[index].ridersToday + rides)
+        }
+    }
+
     /// The day's cableways, a row for them all: each one's riders (those
-    /// from the trains and its ``Cableway/localTrips``, at most
+    /// from the trains, since decision 880 the sightseers, and its
+    /// ``Cableway/localTrips``, at most
     /// ``Cableway/dailyCapacity(onDay:)``, none on a day it stands still)
     /// pay ``Cableway/fare`` in, and its ``Cableway/dailyCost`` goes out
     /// every day; kept on the cableway for ``Cableway/keptDays`` days.

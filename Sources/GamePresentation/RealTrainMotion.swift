@@ -516,12 +516,22 @@ public struct RealTrainTraffic: Sendable {
     /// a real line the company bought runs the company's trains instead
     /// (decision 315).
     public init(operations: RealRailwayOperations, bought: Set<String> = [], isNear: (RealRailways.Coordinate) -> Bool) {
+        self.init(operations: operations, bought: bought, mayBeNear: { _, _ in true },
+                  made: { Self.line($0, of: $1, in: operations) }, isNear: isNear)
+    }
+
+    /// Decision 876: the same lines, found faster by a caller that keeps
+    /// what does not hang on `isNear`: `mayBeNear` is false only of a line
+    /// (and its system) `isNear` holds for no point of, and `made` is the
+    /// line with its trains (``line(_:of:in:)``).
+    init(operations: RealRailwayOperations, bought: Set<String>, mayBeNear: (RealOperationLine, String) -> Bool,
+         made: (RealOperationLine, String) -> Line?, isNear: (RealRailways.Coordinate) -> Bool) {
         var lines: [Line] = []
         for system in operations.orderedSystems {
-            for line in system.lines where !bought.contains("\(system.id):\(line.id)") {
+            for line in system.lines where !bought.contains("\(system.id):\(line.id)") && mayBeNear(line, system.id) {
                 let stationPoints = line.stations.map { RealRailways.Coordinate(latitude: $0.latitude, longitude: $0.longitude) }
                 guard line.shape.contains(where: isNear) || stationPoints.contains(where: isNear) else { continue }
-                if let made = Self.line(line, of: system.id, in: operations) { lines.append(made) }
+                if let made = made(line, system.id) { lines.append(made) }
             }
         }
         self.lines = lines
