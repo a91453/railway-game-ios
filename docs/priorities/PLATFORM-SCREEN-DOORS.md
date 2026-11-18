@@ -1,4 +1,4 @@
-# PLATFORM-SCREEN-DOORS（2026-11-18，作者問「要有增設月台門的選項嗎」）
+# PLATFORM-SCREEN-DOORS（2026-11-18，#2425）
 
 設計與現況在 `docs/research/PLATFORM_TRANSFER_2026-11-18.md` §4。站體 kit 已有全高與半高月台門零件，還沒擺上任何月台；GameCore 沒有月台門規則。
 

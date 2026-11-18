@@ -1,4 +1,4 @@
-# CROSS-PLATFORM-TRANSFER（2026-11-18，作者問「同月台不同線換乘要加嗎」）
+# CROSS-PLATFORM-TRANSFER（2026-11-18，#2425）
 
 設計與現況在 `docs/research/PLATFORM_TRANSFER_2026-11-18.md`。現在同一站換線一律當成同月台（感覺成本 12 分、實際 120 秒），月台在哪不影響；這裡評「換乘時間看兩條線停的月台」。
 
