@@ -13,17 +13,18 @@
    - 地形：Copernicus GLO-30（羅瓦涅米用的）或國土地理院 DEM（授權要查）。
    - 範圍 `EXTENT` 已含北邊的西鐵貝塚線（到北緯 33.72）。
    - 現在沒有高度檔，`FukuokaRailwaysTests` 給遊戲一片 5 m 高的平地（`flat()`）才鋪得了線；有了 `heights.dat` 之後改讀地圖包的高度、拿掉 `flat()`。
-2. **FUKUOKA-OPEN**（3.15）：開關。
+2. **SHARED-STATION-THROUGH**（2.70，bug，開圖前要先修）：中間站共站的線同一高度。`SharedStationLayoutTests.testFukuokasInterchangesStackNoPlatforms` 量到：先買七隈線、箱崎線，最後買空港線時，空港線在博多、中洲川端的月台被抬高 16 m（決策 809 的抬高；`RealLineLaying.sharedEnds` 只把線的**端點**挪到原有股道旁，穿過共站的線沒有）。沒有疊在別條線正上方，但違反 real-line-laying「同一站同一高度」。先買空港線時，箱崎線在中洲川端差 5.9 m、七隈線在博多差 3.1 m（兩站都在地下，`sharedPlatformHeight` 只看地面月台）。修好後在那個測試加「兩種順序都同一高度」。香港、台灣有沒有同樣的情形一起量。
+3. **FUKUOKA-OPEN**（3.15）：開關。
    - `OverseasMaps.open` 加福岡；`AirportCatalog` 加福岡機場（`fuk`）與台灣各機場往返的航線（民航局表 50-x 的 2025 年數字），航班開圖（決策 712、763）。
    - 分包下載：照 PACK-OUT 定案的做法（香港、羅瓦涅米實機兩列都「已下載」後），能只下載就不內建；`MapPackDownloadsTests` 會要求開了的城市有清單。
    - 共站綁賣：三條線在博多、中洲川端共站，等「收購改共線綁賣」那串（淡海兩線、六家＋內灣、香港機場三綫）合併後，福岡三線是一組。
    - `economy-balance` 量價格與回本：**新局與擬實兩種規則都量，並且一定要跑機捷**（看共用的規則沒有被改壞）。
    - 時刻表體檢（決策 844、`TimetableCheckupAllBoughtTests`）加福岡三線；共站的三條要一起買來測。
    - 網站 `credits.html` 加福岡（reference-private），發版後才合。
-3. **FUKUOKA-TRAINS**（3.00）：地鐵三線的車交工作室。簡化造型、不用官方車名（日本鐵道公司常收商品化授權），先找 Chien 舊版與私有庫有沒有類似的。開圖前先用現成的通用捷運車。
-4. **NISHITETSU-KAIZUKA**（2.40）：西鐵貝塚線（OSM 關係 9436788，N02 `西日本鉄道` `貝塚線`，11.3 km、10 站），在貝塚和箱崎線共站。
-5. **FUKUOKA-THROUGH**（2.15）：箱崎線直通空港線到姪濱、空港線直通 JR 筑肥線（地圖邊界進出，照羅瓦涅米往穆羅拉的車）。
-6. **FUKUOKA-DEPOT**（沒評分）：七隈線真實的機廠在橋本、空港線在姪濱。有了機廠，七隈線尖峰可以改回最短的 3 分（現在 3 分 15 秒，README 有原因）。
+4. **FUKUOKA-TRAINS**（3.00）：地鐵三線的車交工作室。簡化造型、不用官方車名（日本鐵道公司常收商品化授權），先找 Chien 舊版與私有庫有沒有類似的。開圖前先用現成的通用捷運車。
+5. **NISHITETSU-KAIZUKA**（2.40）：西鐵貝塚線（OSM 關係 9436788，N02 `西日本鉄道` `貝塚線`，11.3 km、10 站），在貝塚和箱崎線共站。
+6. **FUKUOKA-THROUGH**（2.15）：箱崎線直通空港線到姪濱、空港線直通 JR 筑肥線（地圖邊界進出，照羅瓦涅米往穆羅拉的車）。
+7. **FUKUOKA-DEPOT**（沒評分）：七隈線真實的機廠在橋本、空港線在姪濱。有了機廠，七隈線尖峰可以改回最短的 3 分（現在 3 分 15 秒，README 有原因）。
 
 ## 這次參考了哪些香港、芬蘭的教訓
 
@@ -35,6 +36,7 @@
 | 地圖資料要能下載、不要內建（PACK-OUT，記憶 rovaniemi-map） | 地圖包照現在的格式放在 `Resources/MapPacks/`（下載與內建同一個資料夾）；改成只下載等 PACK-OUT 定案，寫在上面第 2 項 |
 | 共站的線綁在一起賣（作者 11-18 14:39） | 博多、中洲川端共站，三條線開圖時是一組；等綁賣那串 |
 | 雙語站名（決策 845，STATION-BILINGUAL） | `station_names.json` 每站有英文（`en`）與日文原名（`ja`）；中文是正體字；測試釘住每站都有英文名 |
+| 共站的線並排、同一高度（決策 848，skill real-line-laying） | 一開始漏了，作者問了才補：`SharedStationLayoutTests` 加福岡三線兩種順序全買、不疊；加 `mapsChecked`，新地圖沒列就紅。量到中間站被抬高 16 m，列為第 2 項 |
 | 時刻表體檢要涵蓋新線（決策 844、TIMETABLE-CHECKUP-ALL） | 寫進開關那一張；這一步各線先買來跑一整天、0 分鐘死結（`FukuokaRailwaysTests`） |
 | 新局與擬實都要量、一定要跑機捷（HEALTH、TYMCLIST 系列） | 寫進開關那一張；這一步不動 GameCore，所以沒有量 |
 | 香港沒有公開時刻表時用估計班距（決策 697） | 同樣：尖峰照福岡市新聞稿，其餘估計，檔案寫 `estimated` |
@@ -44,6 +46,6 @@
 
 ## UNVERIFIED
 
-- 雲端 Linux 跑過：`swift build --build-tests -Xswiftc -warnings-as-errors`、`FukuokaRailwaysTests`（結果見 PR）。
+- 雲端 Linux 跑過：`swift build --build-tests -Xswiftc -warnings-as-errors`、`FukuokaRailwaysTests`、`SharedStationLayoutTests`（結果見 PR）。
 - 沒在 iOS Simulator、iPhone 上看過：開關關著，玩家看不到；3D 裡的隧道與地下車站沒看過。
 - 價格與平衡沒量；只有鐵道、沒有人口，運量沒意義。
