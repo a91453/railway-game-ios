@@ -110,7 +110,10 @@ extension GameWorld {
     /// as the train nears its home signal.
     func homeLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
         let length = envelopes.length
-        guard length > Self.homeReach + RailwayNetwork.junctionZone else { return nil }
+        guard length > Self.homeReach + RailwayNetwork.junctionZone, !train.isDeadheading, case .travellingToStop(let stop, let cycle)? = train.execution,
+              train.timetable[stop].reverses || train.call(after: stop, cycle: cycle) == nil,
+              let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }), line.runs.allSatisfy({ $0.passes.isEmpty })
+        else { return nil }
         let window = length - Self.throatReach
         guard let first = envelopes.ends.firstIndex(where: { $0 > window }) else { return nil }
         var start = first == 0 ? 0 : envelopes.ends[first - 1]
@@ -124,7 +127,7 @@ extension GameWorld {
                 if limit != nil { break }
             }
         }
-        guard let limit, limit > Self.homeReach, followsRealTimetable(train) else { return nil }
+        guard let limit, limit > Self.homeReach else { return nil }
         return limit
     }
 
