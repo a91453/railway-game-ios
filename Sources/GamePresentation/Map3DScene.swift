@@ -1302,6 +1302,8 @@ extension Map3DScene {
         var roadBridges = Map3DRoadBridges()
         /// Decision 834: the motorways' profiles and cuttings.
         var roadGrade = Map3DRoadGrade()
+        /// Decision 865: the base map's roads' beds, level across.
+        var roadBed = Map3DRoadBed()
         /// Decision 368: the scene point within ``Map3DScene/detailRadius``
         /// of which the city is built in full; everywhere when `nil`.
         var detail: Map3DPoint?
