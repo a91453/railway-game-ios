@@ -18,7 +18,10 @@ not only Claude Code. Read it first and follow it. In particular:
 - Never run `testflight.yml`, add a trigger to it, or let pull requests reach
   its secrets. Never commit secrets, keys, certificates, `.env` files or
   personal data: this repository is public.
-- Never commit to `main`, merge a pull request or enable auto-merge.
+- Never commit to `main`, force-push or rewrite `main`'s history, or enable
+  auto-merge. Merge a pull request once its CI is green (owner's standing
+  rule, 2026-11-17; merge `origin/main` into it first if `main` moved);
+  when CI is red, fix it and push (`CLAUDE.md`, Workflow).
 - Report every check as **VERIFIED** (it ran, and where) or **UNVERIFIED**.
 - A choice that would otherwise wait for the owner is made by the agent
   itself from five angles, one line of reason each in the pull request:
