@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 // Decision 355: the paint on the 3D map's roads and the small things beside
@@ -187,6 +188,9 @@ struct Map3DRoadMarkings {
     static let walkGap = 0.4
     /// The junctions marked.
     var junctions: [Map3DBaseMap.Point] = []
+    /// Decision 846: the junctions found on a roundabout's ring (where the
+    /// region's roundabouts have no signals).
+    var roundabouts: [Ring] = []
     /// Per road (by index), the stretches of its length (metres from its
     /// first point) where its centre line is left out.
     var cuts: [Int: [ClosedRange<Double>]] = [:]
@@ -262,13 +266,27 @@ struct Map3DRoadMarkings {
             }
             return arms
         }
+        // Decision 846: the roads' segments by square, for whether a ring
+        // goes round (made only when a junction might be on one).
+        var near = Segments(roads)
+        var found: [(point: Map3DBaseMap.Point, arms: [Arm])] = []
         for key in at.keys.sorted() {
             guard let (point, entries) = at[key].map({ ($0.point, $0.entries) }), entries.count >= 2,
                   entries.contains(where: { Self.inside(point, roads[$0.road].bounds) }) else { continue }
             let arms = arms(entries)
             guard arms.count >= 3 else { continue }
             junctions.append(point)
-            add(arms, group: Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: point.x + origin.x, z: point.z + origin.z)))
+            found.append((point, arms))
+            // Decision 846: the roundabouts, where the region's have no
+            // signals: each ring once, from the first junction it is read at.
+            guard !region.signalsRoundabouts,
+                  let ring = Self.ring(at: point, arms: arms, near: { near.near($0, within: $1) }),
+                  !roundabouts.contains(where: { Self.distance($0.centre, ring.centre) < Self.ringSame }) else { continue }
+            roundabouts.append(ring)
+        }
+        for (point, arms) in found {
+            let group = Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: point.x + origin.x, z: point.z + origin.z))
+            add(arms, group: group, layout: Self.layout(at: point, arms: arms, rings: roundabouts))
         }
         // Decision 447: where any road on the ground (a lane too) meets a
         // kerbed one, its kerb lines stop across the mouth.
@@ -431,7 +449,202 @@ struct Map3DRoadMarkings {
     /// Decision 447: the longest piece of a kerb line, metres.
     static let kerbPiece = 64.0
 
-    private mutating func add(_ arms: [Arm], group: Int) {
+    // MARK: Roundabouts (decision 846)
+
+    /// Decision 846: a roundabout's ring: its middle and radius.
+    struct Ring: Sendable, Equatable {
+        let centre: Map3DBaseMap.Point
+        let radius: Double
+    }
+
+    /// Decision 846: what a junction gets.
+    enum Layout: Equatable {
+        /// Decision 355's: crossings, stop lines, arrows and signals (and
+        /// decision 447's scooter boxes where the region has them).
+        case signals
+        /// On a roundabout's ring: the arms `along` it nothing; the roads
+        /// coming in a crossing alone, no stop line, arrows, scooter box,
+        /// signal or pedestrian signal, nor a place to wait at a light.
+        case ring(along: Set<Int>)
+        /// Where a road coming to a roundabout splits round its island
+        /// (``ringApproach``): nothing, its crossings being the ring's.
+        case bare
+    }
+
+    /// Rings read at two junctions this near are one, metres.
+    static let ringSame = 5.0
+    /// How far beyond a ring a junction is taken to be the split of a road
+    /// coming in round its island, metres.
+    static let ringApproach = 60.0
+
+    /// How far off a ring a point on it may be read, metres: a quarter of
+    /// its radius, at least 3 m.
+    static func ringSlack(_ ring: Ring) -> Double { max(3, ring.radius / 4) }
+
+    /// Decision 846: the layout of the junction at `point` of `arms`, with
+    /// the roundabouts `rings` found: on a ring (within its slack), its
+    /// arms that run on along it (6 m out still on it); within
+    /// ``ringApproach`` beyond one, bare; else signals.
+    static func layout(at point: Map3DBaseMap.Point, arms: [Arm], rings: [Ring]) -> Layout {
+        var approach = false
+        for ring in rings {
+            let off = distance(point, ring.centre) - ring.radius, slack = ringSlack(ring)
+            if abs(off) <= slack {
+                let along = arms.indices.filter { index in
+                    guard let out = arms[index].place(min(6, arms[index].length))?.point else { return false }
+                    return abs(distance(out, ring.centre) - ring.radius) <= slack
+                }
+                return .ring(along: Set(along))
+            }
+            if off > 0, off <= ringApproach { approach = true }
+        }
+        return approach ? .bare : .signals
+    }
+
+    /// The radii a roundabout's ring is taken to have, metres: from a
+    /// small town's (Finland's guide has 10–20 m rings in towns) to a big
+    /// city's; a road bending tighter or wider is not one.
+    static let ringRadii = 5.0...60.0
+    /// How far along an arm its bend is read, metres.
+    static let ringReach = 16.0
+    /// How many points round a ring are looked for road at, and how many
+    /// must have it.
+    static let ringSamples = 12
+    static let ringFound = 10
+
+    /// The circle through `a`, `b` and `c`; `nil` when they are (nearly)
+    /// in a line.
+    static func circle(_ a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point, _ c: Map3DBaseMap.Point) -> (centre: Map3DBaseMap.Point, radius: Double)? {
+        let bx = b.x - a.x, bz = b.z - a.z, cx = c.x - a.x, cz = c.z - a.z
+        let d = 2 * (bx * cz - bz * cx)
+        guard abs(d) > 1e-6 else { return nil }
+        let b2 = bx * bx + bz * bz, c2 = cx * cx + cz * cz
+        let ux = (cz * b2 - bz * c2) / d, uz = (bx * c2 - cx * b2) / d
+        return (Map3DBaseMap.Point(x: a.x + ux, z: a.z + uz), (ux * ux + uz * uz).squareRoot())
+    }
+
+    /// The circle `points` lie nearest (Kåsa's least squares, round the
+    /// first point); `nil` for fewer than three, or in a line.
+    static func fit(_ points: [Map3DBaseMap.Point]) -> (centre: Map3DBaseMap.Point, radius: Double)? {
+        guard points.count >= 3, let origin = points.first else { return nil }
+        // Sums for x² + z² + D x + E z + F = 0.
+        var m = [[Double]](repeating: [0, 0, 0], count: 3), v = [0.0, 0, 0]
+        for p in points {
+            let x = p.x - origin.x, z = p.z - origin.z, row = [x, z, 1.0], r = -(x * x + z * z)
+            for a in 0..<3 {
+                v[a] += row[a] * r
+                for b in 0..<3 { m[a][b] += row[a] * row[b] }
+            }
+        }
+        // Cramer's rule.
+        func det(_ m: [[Double]]) -> Double {
+            m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+                + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+        }
+        let d = det(m)
+        guard abs(d) > 1e-9 else { return nil }
+        let solved = (0..<3).map { column -> Double in
+            var replaced = m
+            for row in 0..<3 { replaced[row][column] = v[row] }
+            return det(replaced) / d
+        }
+        let cx = -solved[0] / 2, cz = -solved[1] / 2, squared = cx * cx + cz * cz - solved[2]
+        guard squared > 0 else { return nil }
+        return (Map3DBaseMap.Point(x: origin.x + cx, z: origin.z + cz), squared.squareRoot())
+    }
+
+    /// Decision 846: whether the junction at `point` of `arms` is on a
+    /// roundabout's ring. The map's roads carry no tag for it (the tiles'
+    /// schema has none), so it is read from their shape: two of the arms
+    /// bend round one middle, within ``ringRadii``, and road is found all
+    /// the way round that circle (``ringFound`` of ``ringSamples`` points
+    /// within a fifth of its radius, at least 3 m, of a road), which a
+    /// road bending through a junction does not have.
+    static func ring(at point: Map3DBaseMap.Point, arms: [Arm], near: (Map3DBaseMap.Point, Double) -> Bool) -> Ring? {
+        let circles = arms.map { arm -> (centre: Map3DBaseMap.Point, radius: Double)? in
+            let reach = min(ringReach, arm.length)
+            guard reach >= 6, let middle = arm.place(reach / 2)?.point, let end = arm.place(reach)?.point,
+                  let circle = circle(point, middle, end), ringRadii.contains(circle.radius) else { return nil }
+            return circle
+        }
+        for i in arms.indices {
+            guard let a = circles[i] else { continue }
+            for j in arms.indices where j > i {
+                guard let b = circles[j] else { continue }
+                let larger = max(a.radius, b.radius)
+                guard distance(a.centre, b.centre) <= 2 + 0.25 * larger, abs(a.radius - b.radius) <= 0.3 * larger else { continue }
+                // The circle that fits the two arms best, from a point
+                // every 2 m along each (three points read it roughly).
+                var samples = [point]
+                for arm in [arms[i], arms[j]] {
+                    let reach = min(ringReach, arm.length)
+                    samples += stride(from: 2.0, through: reach, by: 2).compactMap { arm.place($0)?.point }
+                }
+                guard let (centre, radius) = fit(samples), ringRadii.contains(radius) else { continue }
+                let reach = max(3, radius / 5)
+                let found = (0..<ringSamples).filter { index in
+                    let angle = Double(index) / Double(ringSamples) * 2 * .pi
+                    return near(Map3DBaseMap.Point(x: centre.x + cos(angle) * radius, z: centre.z + sin(angle) * radius), reach)
+                }.count
+                guard found >= ringFound else { continue }
+                return Ring(centre: centre, radius: radius)
+            }
+        }
+        return nil
+    }
+
+    /// Decision 846: the roads' segments by 32 m square, made the first
+    /// time it is asked, for whether a point is near a road.
+    struct Segments {
+        private let roads: [Map3DBaseMap.Road]
+        private var squares: [Int64: [(Map3DBaseMap.Point, Map3DBaseMap.Point)]]?
+        static let side = 32.0
+
+        init(_ roads: [Map3DBaseMap.Road]) { self.roads = roads }
+
+        private static func square(_ column: Int, _ row: Int) -> Int64 { Int64(column) << 32 ^ (Int64(row) & 0xFFFF_FFFF) }
+
+        /// Whether a road's middle line passes within `reach` metres of `p`.
+        mutating func near(_ p: Map3DBaseMap.Point, within reach: Double) -> Bool {
+            if squares == nil {
+                var made: [Int64: [(Map3DBaseMap.Point, Map3DBaseMap.Point)]] = [:]
+                for road in roads where road.points.count >= 2 {
+                    for (a, b) in zip(road.points, road.points.dropFirst()) {
+                        let columns = Int((min(a.x, b.x) / Self.side).rounded(.down))...Int((max(a.x, b.x) / Self.side).rounded(.down))
+                        let rows = Int((min(a.z, b.z) / Self.side).rounded(.down))...Int((max(a.z, b.z) / Self.side).rounded(.down))
+                        // A long segment (a motorway's) in no more than a
+                        // few hundred squares.
+                        guard columns.count * rows.count <= 400 else { continue }
+                        for column in columns {
+                            for row in rows { made[Self.square(column, row), default: []].append((a, b)) }
+                        }
+                    }
+                }
+                squares = made
+            }
+            let columns = Int(((p.x - reach) / Self.side).rounded(.down))...Int(((p.x + reach) / Self.side).rounded(.down))
+            let rows = Int(((p.z - reach) / Self.side).rounded(.down))...Int(((p.z + reach) / Self.side).rounded(.down))
+            for column in columns {
+                for row in rows {
+                    for (a, b) in squares?[Self.square(column, row)] ?? [] where Map3DRoadMarkings.distance(p, toSegment: a, b) <= reach {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+    }
+
+    /// How far `p` is from the segment `a`–`b`, metres.
+    static func distance(_ p: Map3DBaseMap.Point, toSegment a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point) -> Double {
+        let dx = b.x - a.x, dz = b.z - a.z, length = dx * dx + dz * dz
+        let t = length > 1e-12 ? min(1, max(0, ((p.x - a.x) * dx + (p.z - a.z) * dz) / length)) : 0
+        return distance(p, Map3DBaseMap.Point(x: a.x + dx * t, z: a.z + dz * t))
+    }
+
+    /// The marks, signals and crossings of a junction of `arms`, as its
+    /// `layout` has them (decision 846).
+    private mutating func add(_ arms: [Arm], group: Int, layout: Layout = .signals) {
         let outs = arms.map { $0.place(min(6, $0.length))?.out ?? Map3DBaseMap.Point(x: 1, z: 0) }
         // The main road: the widest arm (the first of the widest), its way
         // and the opposite (decision 355 showed them green; decision 429
@@ -461,6 +674,19 @@ struct Map3DRoadMarkings {
             // The centre line stops where the crossing starts.
             let cut = min(length, crosswalk + Self.crosswalkDepth / 2)
             cuts[arm.road, default: []].append(arm.forward ? arm.at...(arm.at + cut) : (arm.at - cut)...arm.at)
+            switch layout {
+            case .signals:
+                break
+            case .ring(let along):
+                // Decision 846: the ring itself unmarked; a road coming in
+                // its crossing, clear of the ring.
+                guard !along.contains(number), length >= crosswalk + Self.crosswalkDepth + 4, let zebra = arm.place(crosswalk) else { continue }
+                marks.append(Mark(kind: .crosswalk, centre: zebra.point, along: Map3DBaseMap.Point(x: -zebra.out.x, z: -zebra.out.z),
+                                  length: Self.crosswalkDepth, width: 2 * arm.half, onDeck: arm.onDeck))
+                continue
+            case .bare:
+                continue
+            }
             // Room for the crossing and the stop line before the arm ends
             // (at its next junction, or the map's edge).
             guard length >= stop + Self.stopDepth + 8, let zebra = arm.place(crosswalk), let line = arm.place(stop) else { continue }
@@ -722,8 +948,9 @@ extension Map3DScene.Builder {
     /// (``Map3DSignalTiming/Models``).
     mutating func addStreetStops(_ roads: [Map3DBaseMap.Road], markings: Map3DRoadMarkings) {
         for signal in markings.signals {
-            // Decision 732: Hong Kong's own on its map.
-            let hongKong = markings.region == .hongKong ? Self.hongKongSignals[signal.road] : nil
+            // Decision 732: Hong Kong's own on its map. Decision 846: and
+            // on Finland's, whose signals stand at the kerb too.
+            let hongKong = markings.region.standsSignalsAtKerb ? Self.hongKongSignals[signal.road] : nil
             guard let model = hongKong ?? Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
             place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), group: signal.group)
         }
@@ -732,8 +959,15 @@ extension Map3DScene.Builder {
         // looks toward its left).
         if let walking = Self.walkModels {
             let placed = walking.placed
+            // Decision 846: Hong Kong's and Finland's the two lights alone,
+            // with no countdown.
+            let countdown = markings.region.hasCountdownBoxes
             for walk in markings.walks {
                 let forward = Map3DBaseMap.Point(x: -walk.facing.z, z: walk.facing.x), group = Map3DPedestrianSignal.group(walk.group, road: walk.road)
+                guard countdown else {
+                    place(placed.plain, at: walk.foot, forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF), group: group)
+                    continue
+                }
                 place(placed.head, at: walk.foot, forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF), group: group)
                 place(placed.tens, at: walk.foot, forward: forward, clearing: 0, tint: Map3DColor.rgb(0xFFFFFF), group: group)
                 place(placed.ones, at: walk.foot, forward: forward, clearing: 0, tint: Map3DColor.rgb(0xFFFFFF), group: group)
@@ -791,7 +1025,8 @@ extension Map3DScene.Builder {
                     if sheltered {
                         guard map3DRandom(seed.0, seed.1, salt: 356) < 0.4 else { continue }
                     }
-                    if let model = Self.propModels[.vending] {
+                    // Decision 846: none in Finland.
+                    if markings.region.hasVendingMachines, let model = Self.propModels[.vending] {
                         let tint = Self.pick(Self.vendingColours, map3DRandom(seed.0, seed.1, salt: 357))
                         place(model, at: out(width / 2 + pavement - 0.6, ahead: pavement >= 2.5 ? 3.4 : 0), forward: forward, clearing: 1.2, tint: tint,
                               onDeck: road.bridgeLevel > 0)
