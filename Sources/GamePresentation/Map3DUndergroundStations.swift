@@ -513,7 +513,25 @@ enum Map3DOldIslandModule {
         let colour: UInt32
         /// Lit always (the signs' faces).
         var glows = false
+        /// What it is a part of (decision 874: which of them stand on a
+        /// platform under the sky, and what each keeps clear of).
+        var kind: Kind = .bench
     }
+
+    /// A hung sign's case across the module (from its island's middle)
+    /// and its top, and how much shorter its face is at each end.
+    static let signNear: Float = 0.71
+    static let signFar: Float = 4.8
+    static let signTop: Float = 7.27
+    static let signFaceInset: Float = 0.19
+
+    /// What a part belongs to.
+    enum Kind: Sendable { case bench, sign, vending, column, board }
+
+    /// The headroom the module is drawn under in an underground station's
+    /// box (decision 860), which sets its furniture's size on every kind
+    /// of platform (decision 874).
+    static let drawnHeadroom: Float = Map3DUndergroundStations.ceiling - Map3DScene.Builder.platformHeight
 
     /// The module's parts, read off the file (its heights less the
     /// platform's top, 3.66 m in it; the benches' legs under the platform
@@ -526,20 +544,20 @@ enum Map3DOldIslandModule {
         Part(from: 9.01, to: 14.99, left: -0.12, right: 0.12, bottom: 0.38, top: 1.53, colour: Map3DPalette.timber),
         // A sign hung from the ceiling over the island's right half and
         // its track, and its lit face.
-        Part(from: 15.56, to: 16.2, left: 0.71, right: 4.8, bottom: 6.32, top: 7.27, colour: Map3DPalette.dark),
-        Part(from: 15.5, to: 16.26, left: 0.9, right: 4.6, bottom: 6.62, top: 6.97, colour: Map3DPalette.platformEdge, glows: true),
+        Part(from: 15.56, to: 16.2, left: 0.71, right: 4.8, bottom: 6.32, top: 7.27, colour: Map3DPalette.dark, kind: .sign),
+        Part(from: 15.5, to: 16.26, left: 0.9, right: 4.6, bottom: 6.62, top: 6.97, colour: Map3DPalette.platformEdge, glows: true, kind: .sign),
         // The vending machine, by the column.
-        Part(from: 17.55, to: 18.66, left: -0.97, right: 1.05, bottom: 0, top: 3.53, colour: Map3DPalette.trainRed),
+        Part(from: 17.55, to: 18.66, left: -0.97, right: 1.05, bottom: 0, top: 3.53, colour: Map3DPalette.trainRed, kind: .vending),
         // The square column, up to the ceiling.
-        Part(from: 18.8, to: 21.2, left: -1.2, right: 1.2, bottom: 0, top: 7.34, colour: Map3DPalette.tunnelWall),
+        Part(from: 18.8, to: 21.2, left: -1.2, right: 1.2, bottom: 0, top: 7.34, colour: Map3DPalette.tunnelWall, kind: .column),
         // A sign hung over the left half and its track.
-        Part(from: 23.58, to: 24.25, left: -4.8, right: -0.71, bottom: 6.32, top: 7.27, colour: Map3DPalette.dark),
-        Part(from: 23.52, to: 24.31, left: -4.6, right: -0.9, bottom: 6.62, top: 6.97, colour: Map3DPalette.platformEdge, glows: true),
+        Part(from: 23.58, to: 24.25, left: -4.8, right: -0.71, bottom: 6.32, top: 7.27, colour: Map3DPalette.dark, kind: .sign),
+        Part(from: 23.52, to: 24.31, left: -4.6, right: -0.9, bottom: 6.62, top: 6.97, colour: Map3DPalette.platformEdge, glows: true, kind: .sign),
         // Two poster boards on the middle, their posts and panels.
-        Part(from: 28.53, to: 32.85, left: -0.1, right: 0.1, bottom: 0, top: 3.61, colour: Map3DPalette.steel),
-        Part(from: 28.73, to: 32.65, left: -0.12, right: 0.12, bottom: 0.94, top: 3.48, colour: Map3DPalette.concrete),
-        Part(from: 33.57, to: 38.08, left: -0.1, right: 0.1, bottom: 0, top: 3.61, colour: Map3DPalette.steel),
-        Part(from: 33.76, to: 37.89, left: -0.12, right: 0.12, bottom: 0.35, top: 3.48, colour: Map3DPalette.concrete),
+        Part(from: 28.53, to: 32.85, left: -0.1, right: 0.1, bottom: 0, top: 3.61, colour: Map3DPalette.steel, kind: .board),
+        Part(from: 28.73, to: 32.65, left: -0.12, right: 0.12, bottom: 0.94, top: 3.48, colour: Map3DPalette.concrete, kind: .board),
+        Part(from: 33.57, to: 38.08, left: -0.1, right: 0.1, bottom: 0, top: 3.61, colour: Map3DPalette.steel, kind: .board),
+        Part(from: 33.76, to: 37.89, left: -0.12, right: 0.12, bottom: 0.35, top: 3.48, colour: Map3DPalette.concrete, kind: .board),
     ]
 
     /// How many whole modules an island `length` long takes, and where
