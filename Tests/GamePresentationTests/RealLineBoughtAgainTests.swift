@@ -44,9 +44,9 @@ final class RealLineBoughtAgainTests: XCTestCase {
     /// taking up all it left; its stations and trains are those it had,
     /// the other lines' track and platforms stay, no platform stands
     /// over another, and every platform stands where the first purchase
-    /// stood it (to a track's spacing; not the lines of `elsewhere`).
+    /// stood it (to a track's spacing).
     static func boughtAgain(
-        _ ids: [String], elsewhere: [String] = [], _ open: () throws -> GameSession, file: StaticString = #filePath, line: UInt = #line
+        _ ids: [String], _ open: () throws -> GameSession, file: StaticString = #filePath, line: UInt = #line
     ) throws {
         for id in ids {
             let session = try open()
@@ -87,9 +87,7 @@ final class RealLineBoughtAgainTests: XCTestCase {
             XCTAssertTrue(theirs.allSatisfy { world.network.edge($0) != nil }, "\(id): the other lines' track stays", file: file, line: line)
             XCTAssertEqual(theirPlatforms(), platforms, "\(id): and their platforms", file: file, line: line)
             XCTAssertEqual(world.network.platforms.count, stood.count, "\(id): as many platforms", file: file, line: line)
-            if !elsewhere.contains(id) {
-                XCTAssertEqual(Self.moved(Self.standing(in: world), from: stood), [], "\(id): every platform where the first purchase stood it", file: file, line: line)
-            }
+            XCTAssertEqual(Self.moved(Self.standing(in: world), from: stood), [], "\(id): every platform where the first purchase stood it", file: file, line: line)
             var laidBy: [TrackPlatform: String] = [:]
             for platform in world.network.platforms { laidBy[platform] = old.contains(platform) ? "theirs" : id }
             XCTAssertEqual(
@@ -113,13 +111,13 @@ final class RealLineBoughtAgainTests: XCTestCase {
         }
     }
 
-    /// The Green Mountain Line bought again stands elsewhere: nine of its
-    /// stations some 30 m aside and 10 to 17 m lower, off their viaduct
-    /// (DANHAI-REBUY-PLACE, `docs/handoff/LIUJIA-REBUY.md`; as when it is
-    /// bought after the Blue Coast Line in a game saved before decision
-    /// 862). Not looked at here until that is mended.
+    /// DANHAI-REBUY-PLACE: the Green Mountain Line bought again stood
+    /// elsewhere, nine of its stations some 30 m aside and 10 to 17 m
+    /// lower, off their viaduct: laid beside the Blue Coast Line as
+    /// decision 493 lays it after that line bought whole, though bought
+    /// with it the Blue Coast Line starts at Binhai Shalun.
     func testDanhaisLinesAreBoughtAgain() throws {
-        try Self.boughtAgain(["ntdlrt:V", "ntdlrt:VB"], elsewhere: ["ntdlrt:V"]) {
+        try Self.boughtAgain(["ntdlrt:V", "ntdlrt:VB"]) {
             try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple)
         }
     }
