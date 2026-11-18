@@ -432,14 +432,17 @@ public struct Map3DScene: Sendable {
     /// are not kept. Decision 359 (續): `trackCover` is the whole scene's
     /// (``trackCover``), worked out again when `nil`. Decision 368: with
     /// `detail`, a scene point, only the chunks within ``detailRadius`` of
-    /// it in full (``Chunk/coarse``). Decision 610 續: the real buildings'
-    /// street fronts only with `facades` (``Map3DRealFacade/mayDraw(quality:device:)``).
+    /// it in full (``Chunk/coarse``); HSRPACE (decision 861): with
+    /// `detailAhead` too, within it of the way from `detail` to there.
+    /// Decision 610 續: the real buildings' street fronts only with
+    /// `facades` (``Map3DRealFacade/mayDraw(quality:device:)``).
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
                               cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
                               landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
                               noBuild: RealNoBuildLand? = nil,
-                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, facades: Bool = true) -> [Chunk] {
+                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, detailAhead: Map3DPoint? = nil,
+                              facades: Bool = true) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
         let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
@@ -450,7 +453,7 @@ public struct Map3DScene: Sendable {
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
                                baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, landCover: landCover,
                                lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail,
-                               facades: facades, studies: map)
+                               detailAhead: detailAhead, facades: facades, studies: map)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -494,12 +497,13 @@ public struct Map3DScene: Sendable {
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
          landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
-         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, detailAhead: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
          studies: WorldRegion? = nil) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         builder.detail = detail
+        builder.detailAhead = detailAhead
         builder.studyRegion = studies
         builder.buildsFacades = facades
         // Decision 811: the land cover round the region, for the ground
@@ -1285,6 +1289,10 @@ extension Map3DScene {
         /// Decision 368: the scene point within ``Map3DScene/detailRadius``
         /// of which the city is built in full; everywhere when `nil`.
         var detail: Map3DPoint?
+        /// HSRPACE (decision 861): with it, the city is built in full
+        /// within ``Map3DScene/detailRadius`` of the way from `detail` to
+        /// here (``Map3DStreaming/way(target:velocity:)``).
+        var detailAhead: Map3DPoint?
 
         static let metre = Double(WorldCoordinate.unitsPerMetre)
 
@@ -1511,7 +1519,8 @@ extension Map3DScene {
         /// full: further than ``Map3DScene/detailRadius`` from ``detail``.
         func isCoarse(_ key: ChunkKey) -> Bool {
             guard let detail else { return false }
-            return Map3DStreaming.distance(of: Map3DStreaming.Key(column: key.column, row: key.row), to: detail) > Map3DScene.detailRadius
+            return Map3DStreaming.distance(of: Map3DStreaming.Key(column: key.column, row: key.row), toWayFrom: detail, to: detailAhead)
+                > Map3DScene.detailRadius
         }
 
         func chunks() -> [Chunk] {
