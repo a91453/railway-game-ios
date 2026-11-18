@@ -164,7 +164,6 @@ final class DepotReturnReportTests: XCTestCase {
     /// (`hk`: `DEPOT_RETURN_HK=SIL,TCL`; every line on sale without it).
     func testHongKong() throws {
         let environment = ProcessInfo.processInfo.environment
-        if let w = environment["TRACE_DEPOT"]?.split(separator: "-").compactMap({ Int64($0) }), w.count == 2 { GameWorld.traceDepot = (w[0], w[1]) }
         guard environment["DEPOT_RETURN_REPORT"] != nil else {
             throw XCTSkip("Set DEPOT_RETURN_REPORT=1 to measure the depots (decision 535).")
         }
@@ -360,8 +359,6 @@ final class DepotReturnReportTests: XCTestCase {
         // Decision 549: `DEPOT_RETURN_CONTROLLED=1` keeps it on under
         // simple rules too, as a new game has it.
         let environment = ProcessInfo.processInfo.environment
-        if let w = environment["TRACE_DEPOT"]?.split(separator: "-").compactMap({ Int64($0) }), w.count == 2 { GameWorld.traceDepot = (w[0], w[1]) }
-        GameWorld.dawnQueueVariant = Int(environment["DAWN_QUEUE"] ?? "") ?? 0
         if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
         // Decision 618: the high-speed demo opens with realistic operation
         // off; `DEPOT_RETURN_REALISTIC=1` turns it on. (Traffic control

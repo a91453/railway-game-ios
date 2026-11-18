@@ -125,22 +125,6 @@ extension GameWorld {
         return missing
     }
 
-    /// Decision 841: the starts of `starts` that find no train of `ready`
-    /// (when each can take one, earliest first), as
-    /// ``runsWithoutTrains(_:ready:)`` matches them, earliest first.
-    static func startsWithoutTrains(_ starts: [Int64], ready: [Int64]) -> [Int64] {
-        var next = 0
-        var missing: [Int64] = []
-        for start in starts.sorted() {
-            if next < ready.count, ready[next] <= start {
-                next += 1
-            } else {
-                missing.append(start)
-            }
-        }
-        return missing
-    }
-
     // MARK: - Into the depot
 
     /// The train of `line`, a line with runs and depots, to send into a
@@ -363,11 +347,6 @@ extension GameWorld {
     /// last moment to leave count (decision 296); a train on its way
     /// expected there by the time this one would stand there takes a run
     /// whenever it leaves (decision 302).
-    nonisolated(unsafe) static var traceDepot: (from: Int64, to: Int64)? = nil
-    func traceOut(_ text: @autoclosure () -> String) {
-        guard let t = Self.traceDepot, clock.now.seconds >= t.from, clock.now.seconds <= t.to else { return }
-        print("TRACE \(clock.now.seconds % 86400 / 3600):\(clock.now.seconds % 3600 / 60) \(text())")
-    }
     func runTrainLeavingDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         let now = clock.now.seconds
@@ -382,7 +361,6 @@ extension GameWorld {
                 guard Self.runsWithoutTrains(soon, ready: ready) > 0, let (index, trip) = runPullOut(of: line, to: station, way: way, memo: &memo),
                       let run = trip.deadhead
                 else { continue }
-                traceOut("\(self.station(id: station)?.name ?? "?") soon \(soon.map { $0 % 86400 / 60 }) ready \(ready.map { $0 % 86400 / 60 }) lead \(Self.lead(of: run)) train \(trains[index].name)")
                 let lead = Self.lead(of: run) * GameTime.secondsPerMinute
                 // Decision 296: under traffic control, only the runs it can
                 // stand at in time for: a run out that arrives after a run's
@@ -397,130 +375,15 @@ extension GameWorld {
                 guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: covering) > 0 else { continue }
                 // Decision 290: under traffic control, only with a berth there
                 // for it; without one it stays in the depot.
-                if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { traceOut("  no room"); continue }
+                if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
                 if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-                   case .held(let by) = reservingDeparture(leaving, memo: &memo.directions) {
-                    traceOut("  held by \(train(id: by)?.name ?? "?")")
+                   case .held = reservingDeparture(leaving, memo: &memo.directions) {
                     continue
                 }
-                traceOut("  SEND")
                 return (index, trip)
             }
         }
-        // Decision 841: early, for the runs queued for the same way out.
-        if let queued = queuedPullOut(of: line, memo: &memo), queued.at <= now {
-            traceOut("QUEUE \(self.station(id: queued.station)?.name ?? "?") at \(queued.at % 86400 / 60) train \(trains[queued.index].name)")
-            if !endHasRoom(queued.station, for: trains[queued.index]) { traceOut("  no room"); return nil }
-            if let leaving = firstDeparture(of: trains[queued.index], on: queued.trip, calling: line.stops),
-               case .held(let by) = reservingDeparture(leaving, memo: &memo.directions) {
-                traceOut("  held by \(train(id: by)?.name ?? "?")")
-                return nil
-            }
-            traceOut("  SEND")
-            return (queued.index, queued.trip)
-        }
         return nil
-    }
-
-    nonisolated(unsafe) static var dawnQueueVariant = 0
-
-    /// Decision 841: the first departures, in seconds, of `line`'s runs
-    /// from `station` still to send a train out (as ``pendingRunStarts(of:from:way:)``
-    /// finds them) that leave before any run of their day arrives at
-    /// `station`: the morning's first runs from there, which only a train
-    /// out of a depot (or one that stood there all night) can take.
-    func dawnRunStarts(of line: ServiceLine, from station: StationID, firstArrivals: inout [Int64: [StationID: Int64]]) -> [Int64] {
-        let now = clock.now.seconds
-        let today = GameTime.floorDivide(now, GameTime.secondsPerDay)
-        var starts: [Int64] = []
-        for (index, run) in line.runs.enumerated() where line.stops[run.from] == station && run.way == nil {
-            for day in (today - 2)...(today + 1) where day >= 0 && run.runs(onDay: day) && (line.runDays[index] ?? -1) < day && run.fits(onDay: day) {
-                let start = run.start(onDay: day)
-                guard start + LineRun.latestDispatch >= now else { continue }
-                if firstArrivals[day] == nil { firstArrivals[day] = Self.firstArrivals(of: line, onDay: day) }
-                if start < firstArrivals[day]![station] ?? .min { starts.append(start) }
-            }
-        }
-        return starts.sorted()
-    }
-
-    /// Decision 841: when the first run of `line` on game day `day` to
-    /// arrive at each of its stops arrives there, in seconds (a run's
-    /// first stop is where it leaves, not where it arrives).
-    static func firstArrivals(of line: ServiceLine, onDay day: Int64) -> [StationID: Int64] {
-        var first: [StationID: Int64] = [:]
-        for run in line.runs where run.way == nil && run.runs(onDay: day) {
-            var stop = run.from
-            let step = run.to >= run.from ? 1 : -1
-            var call = 0
-            while call < run.times.count {
-                if !run.passes.contains(stop) {
-                    if call > 0 {
-                        let at = day * GameTime.secondsPerDay + run.times[call].arrival
-                        if at < first[line.stops[stop]] ?? .max { first[line.stops[stop]] = at }
-                    }
-                    call += 1
-                }
-                if stop == run.to { break }
-                stop += step
-            }
-        }
-        return first
-    }
-
-    /// Decision 841: the train of `line` to send out of a depot ahead of
-    /// its lead, and from when: ...
-    @inline(never)
-    func queuedPullOut(of line: ServiceLine, memo: inout DispatchMemo) -> (at: Int64, index: Int, trip: LineTrip, station: StationID)? {
-        guard Self.dawnQueueVariant != 0, isTrafficControlEnabled, !line.depots.isEmpty, line.hasRuns, !line.isRing else { return nil }
-        let now = clock.now.seconds
-        guard now >= 0 else { return nil }
-        struct Demand {
-            let deadline: Int64
-            let gap: Int64
-            let depot: StationID
-            let stop: Int
-            let index: Int
-            let trip: LineTrip
-            let station: StationID
-        }
-        var demands: [Demand] = []
-        // Where each depot's runs out take the least time to: the stop
-        // nearest it along the line.
-        var nearest: [StationID: (stop: Int, seconds: Int64)] = [:]
-        var seen: Set<StationID> = []
-        var firstArrivals: [Int64: [StationID: Int64]] = [:]
-        for (stop, station) in line.stops.enumerated() where seen.insert(station).inserted {
-            let dawn = dawnRunStarts(of: line, from: station, firstArrivals: &firstArrivals).filter { $0 - LineRun.earliestDispatch - Self.runDepotLookahead <= now }
-            guard !dawn.isEmpty, let (index, trip) = runPullOut(of: line, to: station, memo: &memo), let run = trip.deadhead else { continue }
-            let missing = Self.startsWithoutTrains(dawn, ready: runTrainsReady(of: line, at: station))
-            if run.seconds < nearest[run.from]?.seconds ?? .max { nearest[run.from] = (stop, run.seconds) }
-            let lead = Self.lead(of: run) * GameTime.secondsPerMinute
-            for start in missing where start + LineRun.latestDispatch >= now + lead {
-                demands.append(Demand(deadline: start - LineRun.earliestDispatch - lead, gap: lead, depot: run.from, stop: stop, index: index, trip: trip, station: station))
-            }
-        }
-        guard !demands.isEmpty else { return nil }
-        // Whether a run out for `earlier` stops on the way of one for `later`.
-        func onTheWay(_ earlier: Demand, _ later: Demand) -> Bool {
-            guard earlier.depot == later.depot, let near = nearest[earlier.depot]?.stop else { return false }
-            if earlier.station == later.station { return true }
-            guard Self.dawnQueueVariant == 1 else { return false }
-            let a = earlier.stop - near, b = later.stop - near
-            return (a >= 0) == (b >= 0) && abs(a) < abs(b)
-        }
-        let order = demands.indices.sorted { (demands[$0].deadline, $0) > (demands[$1].deadline, $1) }
-        var at = [Int64](repeating: .max, count: demands.count)
-        for (position, i) in order.enumerated() {
-            var latest = demands[i].deadline
-            for k in order[..<position] where onTheWay(demands[i], demands[k]) && at[k] != .max {
-                latest = min(latest, at[k] - demands[i].gap)
-            }
-            at[i] = latest
-        }
-        guard let first = demands.indices.min(by: { (at[$0], demands[$0].deadline, $0) < (at[$1], demands[$1].deadline, $1) }) else { return nil }
-        // The run out for the earliest of those that must leave first.
-        return (at[first], demands[first].index, demands[first].trip, demands[first].station)
     }
 
     /// Decision 297: the trains without a service holding track that a
@@ -794,7 +657,6 @@ extension GameWorld {
             guard seconds > now.seconds else { return }
             soonest = min(soonest ?? .max, Self.minutes(from: now, until: GameTime(seconds: seconds)))
         }
-        if let queued = queuedPullOut(of: line, memo: &memo) { wake(at: queued.at) }
         var seen: Set<StationID> = []
         for station in line.stops where seen.insert(station).inserted {
             for way in runWays(of: line) {
