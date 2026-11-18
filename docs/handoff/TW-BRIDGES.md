@@ -1,6 +1,6 @@
 # TW-BRIDGES（2026-11-18）
 
-工作串「做台灣的地標橋」，分支 `claude/project-thread-2rlx4u`（從 #2468 的 head 接著做，#2468 先合），決策 873。GameCore、存檔版本、golden 不動。
+工作串「做台灣的地標橋」，分支 `claude/project-thread-2rlx4u`（接在 #2468 之後，#2468 已合），決策 873。GameCore、存檔版本、golden 不動。
 
 ## 做了什麼
 
