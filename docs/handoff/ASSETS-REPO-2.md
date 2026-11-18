@@ -2,9 +2,9 @@
 
 ## 進度
 
-- 做到哪：準備好了（決策 842）。素材庫 PR #157（`tools/next_repo.py`、guard 規則 9 與 3.5 GB 提醒），這個 repo 的 PR（`docs/ASSET_REPOSITORIES.md`、skill 改指向它）。**等作者建 `a91453/railway-assets-private-2`。**
-- 已驗證：`next_repo.py seed` 在空 git repo 試跑，142 個檔、7.9 MB；guard 規則 9 用假 tree 測過。
-- 下一步的第一個指令：新 repo 建好後 `git clone https://github.com/a91453/railway-assets-private-2`，在舊庫 checkout 跑 `python3 -I tools/next_repo.py seed --new ../railway-assets-private-2 --name a91453/railway-assets-private-2 --date <那天> --carry game-art-previews/docs/art/freight-hopper-2026-11 game-art-previews/docs/art/mtr-south-island-line-2026-11 game-art-previews/docs/art/mtr-disneyland-line-2026-11 game-art-previews/docs/art/mtr-east-rail-line-2026-11 game-art-previews/docs/art/mtr-urban-line-2026-11/revision-6/tools`（當天排隊中的派工單可能不同，先看 #2118 與工作室佇列）。
+- 做到哪：作者 2026-11-18 建好 `a91453/railway-assets-private-2`。新庫開張 PR a91453/railway-assets-private-2#1（seed，185 個檔，舊庫來源 `bcd2a6b6`）、舊庫關閉 PR a91453/railway-assets-private#160（`CLOSED.md`）、這裡的 `docs/ASSET_REPOSITORIES.md` 已改成新庫收新素材。合併順序：新庫 #1 → 舊庫 #160 → 這個 repo。
+- 已驗證：兩個素材庫的 guard 本機都沒有違規；`next_repo.py seed` 與 `close` 實跑過。
+- 下一步：清單第 5–7 項（reference 的 `AGENTS.md` 已開 PR；Mac 上 clone 新庫與 `studio.py init`、專案記憶路徑、舊庫收完才 Archive）。
 
 ## 新 repo 建好後的清單
 

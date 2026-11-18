@@ -4,8 +4,8 @@
 
 | Repository | 狀態 | 期間 | 放什麼 |
 | --- | --- | --- | --- |
-| `a91453/railway-assets-private` | **收新素材** | 2026-10-28 起 | 預覽、截圖、模型與 viewer、工作室紀錄（`local-studio-2026-11-10/`）、宣傳片原片、`branding/`、規劃記憶備份（`docs/memory/`） |
-| `a91453/railway-assets-private-2` | 準備中：作者建好空 repo 後由 `tools/next_repo.py` 帶小檔過去，然後這一列改成「收新素材」、上一列改成「已關閉」 | — | 同上 |
+| `a91453/railway-assets-private-2` | **收新素材** | 2026-11-18 起 | 預覽、截圖、模型與 viewer、工作室紀錄與 kit（`local-studio-2026-11-10/`）、宣傳片原片、`branding/`、規劃記憶備份（`docs/memory/`）；開張時帶來的檔與來源 commit 見它的 `CARRIED.md` |
+| `a91453/railway-assets-private` | 已關閉（`CLOSED.md`），照舊可讀 | 2026-10-28 至 2026-11-18 | 2026-11-18 以前的全部素材，路徑不變；開著的 PR 與已在那裡開工的工作室任務（東鐵綫第 4 輪）在那裡做完 |
 | `a91453/railway-reference-private` | 參考資料，不放素材 | — | 參考網站原始碼與資料快照（`CLAUDE.md` 列的那些）；2026-10-28 之前的素材已搬走 |
 
 ## 規矩
