@@ -106,7 +106,7 @@ python3 -I tools/audio/measure_music.py RailwayGameApp/Resources/Audio/music-loo
 
 ## 5. 交給作者聽
 
-- 改版前一份、每個候選一份，都轉成 AAC（`.m4a`；Artifact 試聽頁不收 m4a，那裡用 mp3），放 a91453/railway-assets-private 的 `game-art-previews/docs/art/<task>-<date>/`，PR 列出路徑。檔案太大不放這個 repo（約 2 MB 的規矩）。
+- 改版前一份、每個候選一份，都轉成 AAC（`.m4a`；Artifact 試聽頁不收 m4a，那裡用 mp3），放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/<task>-<date>/`，PR 列出路徑。檔案太大不放這個 repo（約 2 MB 的規矩）。
 - 主題曲這類「選一個」的改動，給三個候選，選定的那個寫五個角度的理由；另外兩個留著試聽，作者聽了想換可以換。
 - 季節曲只在那段日期播，作者在其他日子用試聽檔聽，不必改裝置日期。
 

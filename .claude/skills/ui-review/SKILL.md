@@ -99,7 +99,7 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 **交**：
 
-- PR 放**最後一輪的總覽圖**（幾張拼成一張），以及**每一輪發現與修掉的問題**（輪次、問題、改法、commit）。圖大於約 2 MB 時照 CLAUDE.md 放 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/`，PR 只留總覽與連結。
+- PR 放**最後一輪的總覽圖**（幾張拼成一張），以及**每一輪發現與修掉的問題**（輪次、問題、改法、commit）。圖大於約 2 MB 時照 CLAUDE.md 放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/`，PR 只留總覽與連結。
 - **規劃看過截圖才合**：只限「規劃看過才合」那一級；「拍了自己看」那一級 CI 綠就合，規劃事後補看（決策 482「續」）。
 
 ## 4. 回饋稽核表（rshankras `feedback-audit.md`）
