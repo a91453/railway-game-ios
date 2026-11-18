@@ -533,6 +533,7 @@ public struct Map3DScene: Sendable {
         // first, as its trenches are cut out of the ground and what lies
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
+        builder.undergroundStations = Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
         builder.time("track cover")
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
@@ -1156,6 +1157,10 @@ extension Map3DScene {
         var platformLines: [[Map3DPoint]] = []
         /// Decision 321: the platforms as laid, for the station kit.
         var laidPlatforms: [LaidPlatform] = []
+        /// Decision 860: the underground platforms as laid, for their
+        /// props and screen doors (``addPlatformProps``) only: no canopy,
+        /// building, street or shop stands by them as by those above.
+        var laidUnderground: [LaidPlatform] = []
         /// Decision 436: each station's station kit system
         /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
         var stationSystems: [StationID: String] = [:]
@@ -1278,6 +1283,9 @@ extension Map3DScene {
         /// Decision 359 (續): the whole network's track, for the tunnels
         /// beside a tunnel (``addBore(_:into:)``).
         var trackCover = Map3DTrackCover()
+        /// Decision 860: the underground platforms and their stations'
+        /// boxes, from the whole network.
+        var undergroundStations = Map3DUndergroundStations()
         /// Decision 391: the base map's road bridges and their decks.
         var roadBridges = Map3DRoadBridges()
         /// Decision 834: the motorways' profiles and cuttings.
@@ -1907,7 +1915,9 @@ extension Map3DScene {
             case .tunnel:
                 // Decision 359 (續): its bore round its bed.
                 var bore = Map3DMesh()
-                addBore(line, into: &bore)
+                // Decision 860: none along an underground station, its
+                // box there instead.
+                for piece in undergroundStations.outside(line) { addBore(piece, into: &bore) }
                 mesh(at: middle) { mesh in
                     mesh.append(bore)
                     mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: 0.6, top: Map3DPalette.ballast, side: Map3DPalette.ballast,
@@ -2034,6 +2044,8 @@ extension Map3DScene {
         /// there is no such room either side (the high-speed demo's through
         /// tracks between their loops, 5 m apart), none.
         mutating func addPlatforms(_ snapshot: RailwaySnapshot) {
+            // Decision 860: those in tunnels, in their stations' boxes.
+            addUndergroundPlatforms()
             let platforms = snapshot.platforms.filter { $0.points.count > 1 && $0.structure != .tunnel }
             let middles = platforms.map { point($0.points[$0.points.count / 2]) }
             let others = snapshot.edges.map { ($0.edge.id, $0.geometry.points.map(point)) }
