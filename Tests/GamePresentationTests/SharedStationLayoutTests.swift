@@ -76,6 +76,28 @@ final class SharedStationLayoutTests: XCTestCase {
         return (distance / metre, height / metre)
     }
 
+    /// The stations two purchases laid platforms at whose platforms stand
+    /// more than half a metre apart in height, by name (decision 875: one
+    /// station, one level).
+    static func uneven(_ laid: [Laid], in world: GameWorld) -> [String] {
+        Dictionary(grouping: laid, by: \.station).compactMap { station, platforms -> String? in
+            let heights = platforms.flatMap(\.points).map(\.z)
+            guard Set(platforms.map(\.line)).count > 1, let low = heights.min(), let high = heights.max(),
+                  Double(high - low) > metre / 2 else { return nil }
+            return world.station(id: station)?.name
+        }.sorted()
+    }
+
+    /// How far over the ground each platform of `station` stands at its
+    /// middle, in metres.
+    static func overGround(_ station: StationID, in world: GameWorld) -> [Double] {
+        world.network.platforms(of: station).compactMap { platform in
+            guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
+            let middle = geometry.location(at: (platform.start + platform.end) / 2).position
+            return (Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / metre
+        }
+    }
+
     /// Buys `ids` in order on `session`, recording which purchase laid each
     /// platform.
     static func buy(_ ids: [String], on session: GameSession, file: StaticString = #filePath, line: UInt = #line) throws -> [TrackPlatform: String] {
@@ -107,6 +129,7 @@ final class SharedStationLayoutTests: XCTestCase {
             let world = session.world
             let laid = Self.platforms(of: world, laidBy: laidBy)
             XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            XCTAssertEqual(Self.uneven(laid, in: world), [], "\(order)")
             let rovaniemi = try XCTUnwrap(world.stations.first { $0.name == "羅瓦涅米" }?.id)
             let lines = try order.map { id in try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line))) }
             XCTAssertTrue(lines.allSatisfy { $0.stops.contains(rovaniemi) }, "\(order): one Rovaniemi of both lines")
@@ -129,14 +152,44 @@ final class SharedStationLayoutTests: XCTestCase {
         let laid = Self.platforms(of: world, laidBy: laidBy)
         XCTAssertEqual(Self.stacked(laid, in: world), [])
         // Decision 863: at the stations the line bought second shares, at
-        // one height (Kowloon was 4.9 m apart, Sunny Bay 5.8 m). Not Tsing
-        // Yi's: the Tung Chung Line's stand 16 m up on its real viaduct
-        // (decision 462), the Airport Express's 4.4 m (left as they were,
-        // decision 863's next step).
-        for (name, ids) in [("香港", ["hkmtr:AEL", "hkmtr:TCL"]), ("九龍", ["hkmtr:AEL", "hkmtr:TCL"]), ("欣澳", ["hkmtr:DRL", "hkmtr:TCL"])] {
+        // one height (Kowloon was 4.9 m apart, Sunny Bay 5.8 m). Decision
+        // 875: Tsing Yi's too, both lines' on the real viaduct (the
+        // Airport Express's stood 11.6 m under the Tung Chung Line's).
+        XCTAssertEqual(Self.uneven(laid, in: world), [])
+        for (name, ids) in [
+            ("香港", ["hkmtr:AEL", "hkmtr:TCL"]), ("九龍", ["hkmtr:AEL", "hkmtr:TCL"]), ("青衣", ["hkmtr:AEL", "hkmtr:TCL"]),
+            ("欣澳", ["hkmtr:DRL", "hkmtr:TCL"]),
+        ] {
             let station = try XCTUnwrap(world.stations.first { $0.name == name }?.id, name)
             let pair = try XCTUnwrap(Self.between(ids[0], ids[1], at: station, in: laid), name)
             XCTAssertLessThanOrEqual(pair.height, 0.5, "\(name): the two lines' platforms at one height")
+        }
+    }
+
+    /// Decision 875 (TSING-YI-LEVEL): the Airport Express and the Tung
+    /// Chung Line at Tsing Yi, in the order the three are sold together
+    /// (decision 862) and the two others a game may have bought them in:
+    /// both lines' platforms up on the station's real viaduct (decision
+    /// 462), at one height, the Airport Express's in its lane beside the
+    /// Tung Chung Line's. Before, the Airport Express's stood 4.4 m over
+    /// the ground (6.5 m bought second) under the Tung Chung Line's 16 m:
+    /// laid 25 m beside the drawing (decision 753), it found none of the
+    /// viaduct, looked for within 20 m.
+    func testTsingYisTwoLinesStandOnOneViaduct() throws {
+        for order in [["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"], ["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"], ["hkmtr:DRL", "hkmtr:TCL", "hkmtr:AEL"]] {
+            let session = try HongKongMapTests.hongKong()
+            let laidBy = try Self.buy(order, on: session)
+            let world = session.world
+            let laid = Self.platforms(of: world, laidBy: laidBy)
+            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            XCTAssertEqual(Self.uneven(laid, in: world), [], "\(order)")
+            let tsingYi = try XCTUnwrap(world.stations.first { $0.name == "青衣" }?.id)
+            let pair = try XCTUnwrap(Self.between("hkmtr:AEL", "hkmtr:TCL", at: tsingYi, in: laid), "\(order)")
+            XCTAssertLessThanOrEqual(pair.height, 0.5, "\(order): the two lines' platforms at one height")
+            XCTAssertGreaterThanOrEqual(pair.distance, 8, "\(order): an island's width or more between the two lines")
+            let over = Self.overGround(tsingYi, in: world)
+            XCTAssertEqual(over.count, 4, "\(order): two platforms of each line")
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(over.min()), 10, "\(order): every platform up on the viaduct")
         }
     }
 
@@ -163,6 +216,7 @@ final class SharedStationLayoutTests: XCTestCase {
             let world = session.world
             let laid = Self.platforms(of: world, laidBy: laidBy)
             XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            XCTAssertEqual(Self.uneven(laid, in: world), [], "\(order)")
             for (name, ids) in interchanges {
                 let stations = world.stations.filter { $0.name == name }
                 XCTAssertEqual(stations.count, 1, "\(order): one \(name)")
@@ -190,6 +244,106 @@ final class SharedStationLayoutTests: XCTestCase {
                        "A new map's lines are bought together here, both orders where two share a station (real-line-laying §2)")
     }
 
+    // MARK: - The report
+
+    /// Every station two purchases laid platforms at, each line's
+    /// platforms there: how far over the ground (metres, lowest to
+    /// highest), their height, and from the first line's the least plan
+    /// distance and the greatest difference in height.
+    static func report(_ title: String, of world: GameWorld, laidBy: [TrackPlatform: String]) -> [String] {
+        var lines = ["SHARED \(title)"]
+        let byStation = Dictionary(grouping: world.network.platforms.filter { laidBy[$0] != nil }, by: \.station)
+        let laid = platforms(of: world, laidBy: laidBy)
+        for (station, platforms) in byStation.sorted(by: { $0.key < $1.key }) {
+            let ids = Set(platforms.compactMap { laidBy[$0] }).sorted()
+            guard ids.count > 1, let name = world.station(id: station)?.name else { continue }
+            var row = "SHARED   \(name):"
+            for id in ids {
+                let overs = platforms.filter { laidBy[$0] == id }.compactMap { platform -> (over: Double, z: Double)? in
+                    guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
+                    let middle = geometry.location(at: (platform.start + platform.end) / 2).position
+                    return ((Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / metre, Double(middle.z) / metre)
+                }
+                let over = overs.map(\.over), z = overs.map(\.z)
+                row += String(format: " %@ ×%d over %.1f…%.1f z %.1f…%.1f;", id, overs.count, over.min() ?? 0, over.max() ?? 0, z.min() ?? 0, z.max() ?? 0)
+            }
+            for id in ids.dropFirst() {
+                if let pair = between(ids[0], id, at: station, in: laid) {
+                    row += String(format: " %@/%@ %.1f m apart, %.1f m in height;", ids[0], id, pair.distance, pair.height)
+                }
+            }
+            lines.append(row)
+        }
+        return lines
+    }
+
+    /// TSING-YI-LEVEL: the shared stations of every map, in the order the
+    /// lines are sold together and the other way, written to the file
+    /// `SHARED_STATION_REPORT` names; skipped without it.
+    /// `SHARED_STATION_ONLY=zhuzhong` (or `hongkong`, `danhai`,
+    /// `rovaniemi`, `fukuoka`) for one map's.
+    func testReport() throws {
+        guard let path = ProcessInfo.processInfo.environment["SHARED_STATION_REPORT"] else {
+            throw XCTSkip("SHARED_STATION_REPORT=<file to write> prints every shared station's platforms")
+        }
+        var lines: [String] = []
+        let only = ProcessInfo.processInfo.environment["SHARED_STATION_ONLY"]
+        func buy(_ title: String, _ ids: [String], _ open: () throws -> GameSession) throws {
+            guard only.map({ $0 == title }) ?? true else { return }
+            let session = try open()
+            var laidBy: [TrackPlatform: String] = [:]
+            for id in ids {
+                guard let real = session.buyableRealLines.first(where: { $0.id == id }) else {
+                    lines.append("SHARED \(title): \(id) not on sale")
+                    continue
+                }
+                let offer = session.realLineOffer(for: real)
+                guard session.acquireRealLine(offer) else {
+                    lines.append("SHARED \(title): \(id) refused: \(offer.problem ?? session.message?.text ?? "")")
+                    continue
+                }
+                lines.append("SHARED_PRICE \(title) \(id) total=\(offer.price?.total.amount ?? 0) building=\(offer.price?.building.amount ?? 0)")
+                for platform in session.world.network.platforms where laidBy[platform] == nil { laidBy[platform] = id }
+                // `SHARED_STATION_PROFILE=<ids>`: the line's first track
+                // too, node by node: how far along, its height and how
+                // far over the ground (metres).
+                if ProcessInfo.processInfo.environment["SHARED_STATION_PROFILE"]?.split(separator: ",").contains(Substring(id)) == true,
+                   let nodes = offer.acquisition?.pieces.first?.nodes {
+                    var along = 0.0
+                    var row = "SHARED_PROFILE \(title) \(id):"
+                    for (index, node) in nodes.enumerated() {
+                        if index > 0 {
+                            let dx = Double(node.x - nodes[index - 1].x), dy = Double(node.y - nodes[index - 1].y)
+                            along += (dx * dx + dy * dy).squareRoot() / Self.metre
+                        }
+                        let over = (Double(node.z) - Double(session.world.groundHeight(at: node.plan) ?? 0)) / Self.metre
+                        row += String(format: " %.0f:%.1f/%+.1f", along, Double(node.z) / Self.metre, over)
+                    }
+                    lines.append(row)
+                }
+            }
+            lines += Self.report("\(title) \(ids)", of: session.world, laidBy: laidBy)
+        }
+        let hongKong = try HongKongMapTests.hongKong().buyableRealLines.map(\.id)
+        let airport = ["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]
+        try buy("hongkong", hongKong) { try HongKongMapTests.hongKong() }
+        try buy("hongkong", ["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]) { try HongKongMapTests.hongKong() }
+        try buy("hongkong", Array(airport.reversed())) { try HongKongMapTests.hongKong() }
+        for order in [["tra:LIUJIA", "tra:NEIWAN"], ["tra:NEIWAN", "tra:LIUJIA"]] {
+            try buy("zhuzhong", order) { try RealLineAcquisitionTests.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple) }
+        }
+        for order in [["ntdlrt:V", "ntdlrt:VB"], ["ntdlrt:VB", "ntdlrt:V"]] {
+            try buy("danhai", order) { try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple) }
+        }
+        for order in [["vr:KJA", "vr:MUL"], ["vr:MUL", "vr:KJA"]] {
+            try buy("rovaniemi", order) { try RovaniemiRailwaysTests.rovaniemi() }
+        }
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N"], ["fksubway:N", "fksubway:H", "fksubway:K"]] {
+            try buy("fukuoka", order) { try FukuokaRailwaysTests.fukuoka() }
+        }
+        try lines.joined(separator: "\n").appending("\n").write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
     // MARK: - Taiwan
 
     /// The Liujia and Neiwan Lines through Zhuzhong, in either order: the
@@ -202,5 +356,22 @@ final class SharedStationLayoutTests: XCTestCase {
             let world = session.world
             XCTAssertEqual(Self.stacked(Self.platforms(of: world, laidBy: laidBy), in: world), [], "\(order)")
         }
+    }
+
+    /// Decision 875: the Danhai light rail's two lines in the order they
+    /// are sold together (decision 862): at Binhai Shalun the Blue Coast
+    /// Line's platforms stand at the Green Mountain Line's, which are 5 m
+    /// over ground that falls away there (they stood 3.2 m under them: a
+    /// platform that far up was not counted as one to stand level with).
+    func testBinhaiShalunsTwoLinesStandAtOneLevel() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple)
+        let laidBy = try Self.buy(["ntdlrt:V", "ntdlrt:VB"], on: session)
+        let world = session.world
+        let laid = Self.platforms(of: world, laidBy: laidBy)
+        XCTAssertEqual(Self.stacked(laid, in: world), [])
+        XCTAssertEqual(Self.uneven(laid, in: world), [])
+        let shalun = try XCTUnwrap(world.stations.first { $0.name == "濱海沙崙" }?.id)
+        let pair = try XCTUnwrap(Self.between("ntdlrt:V", "ntdlrt:VB", at: shalun, in: laid))
+        XCTAssertLessThanOrEqual(pair.height, 0.5, "the two lines' platforms at one height")
     }
 }

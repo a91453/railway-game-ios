@@ -184,13 +184,17 @@ extension RealLineLaying {
     /// they differ; `nil` for none. SHARED-STATION-THROUGH: Fukuoka's
     /// subway stations stand a few metres down, and were not counted
     /// (only those within half a crossing's clearance of the ground were).
-    func sharedPlatformHeight(of station: StationID) -> Double? {
+    ///
+    /// Decision 875: with `onViaduct`, of those raised (half a crossing's
+    /// clearance over the ground or more) instead: a station on its
+    /// line's real viaduct (decision 462), or one a few metres up over
+    /// falling ground (the Green Mountain Line's at Binhai Shalun, 5 m).
+    func sharedPlatformHeight(of station: StationID, onViaduct: Bool = false) -> Double? {
         let heights = world.network.platforms(of: station).compactMap { platform -> Int64? in
             guard let edge = world.network.edge(platform.edge), edge.structure == .automatic || edge.structure == .surface,
                   let geometry = world.trackGeometry(of: platform.edge) else { return nil }
             let middle = geometry.location(at: (platform.start + platform.end) / 2).position
-            // Not one raised on its line's viaduct (decision 462).
-            guard let ground = world.groundHeight(at: middle.plan), middle.z - ground < TrackStructure.clearance / 2 else { return nil }
+            guard let ground = world.groundHeight(at: middle.plan), (middle.z - ground >= TrackStructure.clearance / 2) == onViaduct else { return nil }
             return middle.z
         }.sorted()
         return heights.isEmpty ? nil : Double(heights[heights.count / 2])
