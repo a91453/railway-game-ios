@@ -4588,6 +4588,18 @@
     "coach-stop-roadside-far" : {
       "hash" : "e9a55d5131e8cb05",
       "triangles" : 364
+    },
+    "walk-plain-dark" : {
+      "hash" : "5fa1a0dfea5ef929",
+      "triangles" : 54
+    },
+    "walk-plain-stop" : {
+      "hash" : "7ac1d9524226a109",
+      "triangles" : 54
+    },
+    "walk-plain-walk" : {
+      "hash" : "8e0b7df06efbf6a3",
+      "triangles" : 54
     }
   }
 }

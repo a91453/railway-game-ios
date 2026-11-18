@@ -264,6 +264,8 @@ extension Map3DScene.Builder {
         let structure: TrackStructure
         /// Half of an island, the other half laid from the track across.
         var island = false
+        /// Decision 847: the track it stands beside.
+        var edge: TrackEdgeID?
     }
 
     /// REVIEW-L27 P3-2 (ELEVATED-SHELL-CHUNK): the lines (at the rails'

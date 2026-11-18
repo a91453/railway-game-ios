@@ -9,7 +9,7 @@
 
 ## 還留下什麼
 
-1. **石斗車（工作室）**：派工單在 railway-assets-private `game-art-previews/docs/art/freight-hopper-2026-11/BRIEF.md`（同名分支）。工作室交件、照片對照三輪審過後，只換 `Map3DFreightWagons.model(.stone / .stoneGreen / .stoneTail)` 的配方（或照決策 782 的 `meshPalette` 接 GLB 轉的網格），重算 `tools/train-models/locks/freightWagons.json`（`tools/train-models/run.sh OUT --lock tools/train-models/hashes.lock.json`，只留 `freightWagons.json` 的變動）。貨場裡的兩只開頂櫃（`Map3DFreightYard.stoneYard`）照舊，或換成停在貨場線上的一節石斗車。工作室要作者在自己終端機開總機（`runner.py serve`）才能開工。
+1. ~~石斗車（工作室）~~ **做完（2026-11-18，工作串「把石斗車接進遊戲」，分支 `claude/project-thread-8g0wpu`）**：工作室第 5 版（素材庫 #165）由 `glb_to_swift.py` 轉成 `Map3DFreightHopperMesh.swift`，`Map3DFreightWagons.model(.stone / .stoneGreen / .stoneTail)` 改回傳石斗車（黑門、35B1000 鐵鏽紅門、尾車），解不開時才退回半高開頂櫃。沒有玻璃面，夜裡只亮尾燈。貨場的兩只開頂櫃照舊。已知缺點：砂石在遊戲大小像平灰塊（規劃接受，不再改模型；以後改 `stone` 堆腳的直邊）。總覽在 `docs/art/freight-hopper-2026-11/`。
 2. 其餘評分在 `docs/priorities/FREIGHT-LOOK.md`：會動的街景卡車、水泥罐車（等 F3）、貨場的裝卸線。
 
 ## UNVERIFIED

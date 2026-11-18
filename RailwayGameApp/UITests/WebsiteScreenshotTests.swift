@@ -2476,6 +2476,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-expansion-full-days-\(english ? "en" : "zh")", app)
     }
 
+    /// Decision 845: the station card's nameboard on a real map, the
+    /// station's second name under its own, in Chinese (Taipei under 臺北)
+    /// and English (臺北 under Taipei). For the screenshot review of the
+    /// pull request that added it, not the website.
+    func testStationNameboardSecondName() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "stationNames", "-screenshot-select-station", "1"], english: english)
+            defer { app.terminate() }
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            // Selecting the station marks it on the map; a tap on its tag
+            // opens its details card (run 44216046525).
+            let tag = app.buttons["map.stationTag"].firstMatch
+            XCTAssertTrue(tag.appears(within: 60), "The station's tag shows")
+            XCTAssertTrue(tag.becomesHittable(within: 10))
+            tag.tap()
+            let board = app.descendants(matching: .any)["station.nameboard"].firstMatch
+            XCTAssertTrue(board.appears(within: 30), "The station's card shows its nameboard")
+            // The real railways are read after the map opens.
+            let second = english ? "臺北" : "Taipei"
+            for _ in 0..<30 where !board.label.contains(second) {
+                settle(seconds: 2)
+            }
+            XCTAssertTrue(board.label.contains(second), "The nameboard reads both names: \(board.label)")
+            settle()
+            keep(english ? "station-nameboard-en" : "station-nameboard", app)
+        }
+    }
+
     /// Decision 533: the station panel's row of the riders a school and a
     /// hospital beside the station bring, under its trips by hour, at
     /// half past seven on a school day (`ScreenshotScene.commute`). For

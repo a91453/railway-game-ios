@@ -149,6 +149,9 @@ public struct Map3DScene: Sendable {
     public let reindeerHerd: Map3DReindeerHerd
     /// Decision 837: where its freight yards stand (``Map3DFreightYard``).
     public let freightYards: [Map3DFreightYard.Place]
+    /// Decision 847: which of its platforms have screen doors, for the
+    /// underground ones drawn through the ground (``Map3DXRay``).
+    public let screenDoors: Map3DScreenDoors.Plan
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
@@ -604,6 +607,7 @@ public struct Map3DScene: Sendable {
         builder.addReindeerHerd(frame: RealWorldFrame(world: world))
         reindeerHerd = Map3DReindeerHerd(placements: builder.reindeerHerd)
         freightYards = builder.freightYardPlaces
+        screenDoors = Map3DScreenDoors.Plan(world: world)
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
@@ -2093,7 +2097,8 @@ extension Map3DScene {
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
-                                                  structure: platform.structure, island: partner != nil || curved != nil))
+                                                  structure: platform.structure, island: partner != nil || curved != nil,
+                                                  edge: platform.platform.edge))
             }
         }
 

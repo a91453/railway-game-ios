@@ -47,6 +47,16 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
         }
     }
 
+    /// Decision 845: whether its stations' own names are written in Latin
+    /// letters, so their English name is the one on their signs: Finnish
+    /// in Rovaniemi; Hong Kong's are Chinese and English.
+    public var namesInLatin: Bool {
+        switch self {
+        case .hongKong: false
+        case .rovaniemi: true
+        }
+    }
+
     /// Where its map is opened: Hong Kong International Airport's station
     /// on the Airport Express, where the flights will land.
     public var arrival: RealRailways.Coordinate {
@@ -282,6 +292,12 @@ public enum OverseasMaps {
 }
 
 extension RealRailways.System {
+    /// Decision 845: whether its stations' own names are written in Latin
+    /// letters (``OverseasMap/namesInLatin``); Taiwan's are not.
+    var namesInLatin: Bool {
+        OverseasMap.allCases.contains { $0.system == id && $0.namesInLatin }
+    }
+
     /// The systems of the cities outside Taiwan, which ``all`` (Taiwan's,
     /// what the pickers and the credits list) does not hold.
     public static let overseas: [OverseasMap: RealRailways.System] = [

@@ -186,7 +186,13 @@ needs OSM data reads the same extract.
   `main`'s newest commit already had a green full run; decision 413) build
   everything and run every test with the campaigns not reduced, split into
   parallel shards by `.github/scripts/swift-shards.sh`, which also proves
-  each job ran exactly its tests. A pull request and a push to `main` build
+  each job ran exactly its tests; the nightly and manual runs also play
+  every line with a real timetable through a whole day in five
+  `timetable-checkup` jobs (decision 844: runs not sent, late, late out of
+  a depot, peak gaps, against `main`'s numbers; the gate does not wait
+  for them), and a pull request runs the short checkup,
+  `TimetableCheckupTests` and `TimetableCheckupTaiwanTests`, with the
+  GamePresentation tests. A pull request and a push to `main` build
   everything but run the tier their changed files need (ARCHITECTURE
   decision 185, `swift-shards.sh plan`; pushes since decision 413): every shard
   for GameCore, the package, the CI scripts or a test file other test files
@@ -549,6 +555,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   say nothing is broken, so the model is looked at beside real photographs
   at the game's camera angle and on-screen size, for at least three rounds,
   and the owner or another session judges its overview, not its maker.
+  The studio workflow (who builds, briefs, reviews, lessons, the list of
+  models still to make) is kept in the private assets repository,
+  `a91453/railway-assets-private-2` `docs/studio/` (owner, 2026-11-18),
+  not in this public repository.
+- Before changing how a real line is laid when bought (stations, loops,
+  viaducts, a station shared with another line), read
+  `.claude/skills/real-line-laying/SKILL.md` (decision 848): two lines at
+  one station stand side by side at one height, never stacked.
 - Before adding or changing any animation or transition in the app, read
   `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
   253) and what Reduce Motion does.

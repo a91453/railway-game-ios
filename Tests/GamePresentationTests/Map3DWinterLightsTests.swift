@@ -180,13 +180,16 @@ final class Map3DWinterLightsTests: XCTestCase {
         XCTAssertEqual(names[first - 1], Map3DStreetModel.commuterWalking.modelName)
         // Decision 831: then Santa's sleigh; decision 838: then Taiwan's
         // SUV and yellow taxi; decision 840: then the Santa Claus
-        // village's reindeer, then the route bus.
+        // village's reindeer; decision 846: then the pedestrian signals
+        // with no countdown, then the route bus.
         XCTAssertEqual(names[first + 5], SantaFlight.Model.name)
         XCTAssertEqual(names[first + 6], Map3DStreetModel.suv.modelName)
         XCTAssertEqual(names[first + 7], Map3DStreetModel.yellowTaxi.modelName)
         let herd = Map3DReindeerHerd.drawn.map(\.name)
         XCTAssertEqual(Array(names[first + 8..<first + 8 + herd.count]), herd)
-        XCTAssertEqual(names[first + 8 + herd.count], Map3DLowFloorBus.routeModel().name)
+        let plain = Map3DPedestrianSignal.plainDrawn.map(\.name)
+        XCTAssertEqual(Array(names[first + 8 + herd.count..<first + 8 + herd.count + plain.count]), plain)
+        XCTAssertEqual(names[first + 8 + herd.count + plain.count], Map3DLowFloorBus.routeModel().name)
         for decor in Map3DWinterDecor.allCases {
             XCTAssertEqual(pack.models[first + decor.index].triangleCount, try XCTUnwrap(decor.model).triangleCount)
         }

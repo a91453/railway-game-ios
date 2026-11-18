@@ -1217,7 +1217,35 @@ extension RealLineLaying {
             })
             return parts > 0 ? moved.smoothed() : moved
         }
-        let path = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
+        // The stations: the company's own by the junction, if it has one;
+        // and, decision 400, any other by its real name within 450 m (a
+        // transfer to the company's line, or the line bought before): the
+        // line's platforms join it.
+        // Review BUGHUNT_BUILD P3-3: never a depot, which no line calls at.
+        let junctionStation = world.stations
+            .filter { !$0.isDepot && (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
+            .min { (WorldVector($0.location) - points[0]).length < (WorldVector($1.location) - points[0]).length }
+        func sameName(_ index: Int) -> StationID? {
+            let real = railways.stations.first { $0.id == "\(line.system)|\(runs.stops[index])" }
+            let names = Set([runs.stops[index], real?.name(in: language)].compactMap { $0 })
+            return world.stations
+                .filter { !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - points[index]).length <= RealLineAcquisition.junctionReach }
+                .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
+        }
+        let cars = line.cars
+        let half = Double(Int64(cars + 1) * Train.carLength) / 2
+        let platformLength = Int64(cars + 1) * Train.carLength
+        let double = line.isDoubleTrack
+        let layout = !line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+        // SHARED-STATION-LEVEL: a line's end at a station another of the
+        // company's lines calls at, whose track lies along its way, is laid
+        // beside that track, an island's width out, not over it.
+        let inItsLane = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
+        let besideShared = sharedEnds(
+            of: inItsLane, points: points, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
+            extent: { index in Self.endStationExtent(of: line, name: runs.stops[index], tracks: runs.tracks[runs.stops[index]] ?? 1, layout: layout) }
+        )
+        let path = besideShared?.path ?? inItsLane
         let along = points.map { path.nearest($0) }
         guard along.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(along, along.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
             return refused("The real line's stations are not along its track here.", "真實車站不在這段鐵路上。")
@@ -1298,31 +1326,11 @@ extension RealLineLaying {
         // Each station level, its loops' stretch with it. On a double track
         // a station between the ends has the second track's platform too,
         // and a loop only on the other side.
-        let cars = line.cars
-        let half = Double(Int64(cars + 1) * Train.carLength) / 2
-        let platformLength = Int64(cars + 1) * Train.carLength
-        let double = line.isDoubleTrack
-        let layout = !line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
         var forced = [0, path.length]
         var levels: [TrackRise.Level] = []
         var zones: [ClosedRange<Double>] = []
         var spans: [ClosedRange<Double>] = []
         var loopSpans: [(stop: Int, a: Double, b: Double, offset: Double, ramp: Double, onSecond: Bool)] = []
-        // The stations: the company's own by the junction, if it has one;
-        // and, decision 400, any other by its real name within 450 m (a
-        // transfer to the company's line, or the line bought before): the
-        // line's platforms join it.
-        // Review BUGHUNT_BUILD P3-3: never a depot, which no line calls at.
-        let junctionStation = world.stations
-            .filter { !$0.isDepot && (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
-            .min { (WorldVector($0.location) - points[0]).length < (WorldVector($1.location) - points[0]).length }
-        func sameName(_ index: Int) -> StationID? {
-            let real = railways.stations.first { $0.id == "\(line.system)|\(runs.stops[index])" }
-            let names = Set([runs.stops[index], real?.name(in: language)].compactMap { $0 })
-            return world.stations
-                .filter { !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - points[index]).length <= RealLineAcquisition.junctionReach }
-                .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
-        }
         // Decision 809: whether one of its stations is the company's
         // already, which ``StationRaising/viaductsAndShared`` stands up.
         func sharesAStation() -> Bool { junctionStation != nil || runs.stops.indices.contains { sameName($0) != nil } }
@@ -1352,16 +1360,9 @@ extension RealLineLaying {
             // Shalun), the third 16 m out on the other side with a loop's
             // first reach and ramp, as a branch line's other loops: with
             // the second level's longer ones it did not fit their curves.
-            let island = !between && line.islandStations.contains(name) && (line.isUrban || loops <= 2)
-            let close = RealLineAcquisition.besideIslandOffset
-            let islandSides: [(Double, Int, Bool)] = [(RealLineAcquisition.islandSpacing, 1, false)]
-                + (2...layout.endLevels + 2).map { level in (-(close + Double(level - 2) * offset), line.isUrban ? level : level - 1, false) }
-            let endSides: [(Double, Int, Bool)] = (1...layout.endLevels).flatMap { level -> [(Double, Int, Bool)] in
-                [(Double(level) * offset, level, false), (-Double(level) * offset, level, false)]
-            }
             let sides: [(Double, Int, Bool)] = overtakes
                 ? [(offset, 1, false), (-offset, 1, true)]
-                : between ? [(offset, 1, false)] : island ? islandSides : endSides
+                : between ? [(offset, 1, false)] : Self.endStationSides(of: line, name: name, loops: loops, layout: layout)
             guard loops <= sides.count else {
                 return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
             }
@@ -1400,6 +1401,13 @@ extension RealLineLaying {
                 ? height + RealLineAcquisition.raisedStation
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
             var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
+            // SHARED-STATION-LEVEL: laid beside the company's station, at
+            // the height of its platforms there.
+            if !raised, !sunk, besideShared?.moved.contains(index) == true,
+               let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
+               let there = sharedPlatformHeight(of: station), (level.low...level.high).contains(there) {
+                level = TrackRise.Level(span, at: there)
+            }
             level.staysUnder = sunk
             levels.append(level)
         }

@@ -1,31 +1,31 @@
 {
   "comment" : "Decision 782: the models of the registered train freightWagons (Map3DFreightWagons): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 10,
-  "lamps" : "259a1b09d1d621d4",
+  "lamps" : "cc3dfb0dc8bfae47",
   "models" : {
     "set-FREIGHTBULK-car" : {
-      "hash" : "93814e5f26f93f0",
-      "triangles" : 2576
+      "hash" : "b5da52f64582a7b3",
+      "triangles" : 2784
     },
     "set-FREIGHTBULK-centre" : {
-      "hash" : "5c6edc74924e7f0f",
-      "triangles" : 2576
+      "hash" : "b42023a619506766",
+      "triangles" : 2664
     },
     "set-FREIGHTBULK-tail" : {
-      "hash" : "a829d2c2dea5c332",
-      "triangles" : 2600
+      "hash" : "e80d6ec9de2fbd6f",
+      "triangles" : 2824
     },
     "set-FREIGHTBULKFar-car" : {
-      "hash" : "4bb9a9965fbbf908",
-      "triangles" : 1100
+      "hash" : "5ac43b12e7207b5c",
+      "triangles" : 1304
     },
     "set-FREIGHTBULKFar-centre" : {
-      "hash" : "769c20fd4cde2e4c",
-      "triangles" : 1100
+      "hash" : "5f72c8bae06f014c",
+      "triangles" : 1232
     },
     "set-FREIGHTBULKFar-tail" : {
-      "hash" : "cb6d3448d243eb",
-      "triangles" : 1124
+      "hash" : "faf29123717e33ae",
+      "triangles" : 1344
     },
     "set-FREIGHTEMPTY-car" : {
       "hash" : "2db3ef14e1998353",

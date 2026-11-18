@@ -11,28 +11,7 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 ## 1. 沒有參考不開工
 
-**誰做**（作者 2026-11-15）：要建的模型一律先交給 Mac 上的本地工作室（Antigravity 在 Blender 做、Codex 看圖審；目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `local-studio-2026-11-10/RUN-REMOTE.md`），才能保證品質與遊戲風格。雲端 session 寫派工單、接回遊戲，不自己從頭手寫配方，除非工作室開不了。
-
-**先找作者自己的東西**，再從頭建。派工單要寫出找過哪裡、找到什麼，有可用的就放進工作室看得到的 `brief/`（工作室的 AI 只看得到自己的 worktree 和 `brief/`，不會自己去翻）：
-
-1. 舊版資料夾 `~/SwiftRailMac/assets/分類/`（`ASSETS_INDEX.md`、各類 `_縮圖/` 與 `對照表.csv`）：外型接近的白模。有就照第 6 節「舊版模型」的做法沿用或切面重新上色，比重建好。
-2. 素材庫（`docs/ASSET_REPOSITORIES.md` 列的每一個，已封存的也要找）：之前輪次的模型、`game-art-previews/docs/art/` 的同類車或建築。
-3. `a91453/railway-reference-private`：CLAUDE.md 列的參考庫（尺寸、照片、同款車的網格）。
-
-都沒有，才用下面的照片從頭建。
-
-**選做法**（2026-11-15 試過三種，紀錄在 [references/meshy-blender.md](references/meshy-blender.md)）：
-
-| 東西 | 做法 | 點數 |
-| --- | --- | --: |
-| 舊版有實心白模的（建築、站房） | 沿用白模、照部位換色票（第 6 節） | 0 |
-| 形狀能用幾個基本形說清楚的（樹、柱、牌、棚、車殼） | Blender 腳本手寫白模＋色票，面數一開始就在預算內 | 0 |
-| 人、動物、雕塑（石獅）這類手寫很難的有機形 | Meshy 生成 → 交工作室：Antigravity 在背景 Blender 體素重建、減面、每面取色票、擺姿勢，Codex 審（預設流程與交件自查在 references/meshy-blender.md） | 約 30／個 |
-| 有輪子、細桿的車輛與小物 | 不用 Meshy（減面後輪子、細桿會碎） | — |
-
-舊版的樹都是交叉的透明貼圖片，不要拿來換色（遊戲每個三角形一色，透明輪廓會變實心方塊，俯視也會穿幫成十字）。
-
-派工單怎麼寫、交件前要做的人自己數哪些數字、成品怎麼接回遊戲：[references/studio-brief.md](references/studio-brief.md)。車站（軌道淨空、對齊遊戲的軌道、審查常退的點）在它的第 6 節。
+**誰做、用什麼做、先找哪些舊模型、派工單怎麼寫**：詳細流程在私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/`（README、studio-brief、meshy-blender、LESSONS-2026-11-18；2026-11-18 從這裡搬過去）。有權限的 session 開工前先讀那裡。
 
 - 找到這個東西的**真實照片**：至少一張正面、一張另一側或斜角；有俯視更好（遊戲是從上往下看的）。Wikimedia Commons 可以用 API 查授權。
 - 記下**尺寸**：長、深、簷高、脊高。量不到就從照片裡的門（約 2.1 m）、人、車推估，並寫明是推估。
@@ -98,7 +77,7 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 **取色與分色**（作者 2026-11-15：「我怕他製作模型還在簡單幾色而已」）：
 
-- 每個材質先從遊戲已有的色取：`Map3DPalette`（建築、大型廠房用多色組 `cityOfficeWalls`、`cityConcreteWalls`、`cityRoofs`、`hallWalls`、`hallRoofs`，一組裡挑一格，不是整組只用第一格）與舊材質對照表 `tools/texture-palette/t003/building-map.csv`（舊材質最常見、2026-11-15 加進遊戲的 `steel` 鋼、`dark` 深色／窗、`redBrick` 紅磚、`timber` 木頭、`terrazzo` 洗石子）。派工單的材質表寫出是哪一格（`references/studio-brief.md` §1 第 7 條）；遊戲沒有的色標「新提」並寫原因；舊表上的「新提」先查是不是已經進了 `Map3DPalette`，進了就改寫成格位名（程式裡的註解也改）。
+- 每個材質先從遊戲已有的色取：`Map3DPalette`（建築、大型廠房用多色組 `cityOfficeWalls`、`cityConcreteWalls`、`cityRoofs`、`hallWalls`、`hallRoofs`，一組裡挑一格，不是整組只用第一格）與舊材質對照表 `tools/texture-palette/t003/building-map.csv`（舊材質最常見、2026-11-15 加進遊戲的 `steel` 鋼、`dark` 深色／窗、`redBrick` 紅磚、`timber` 木頭、`terrazzo` 洗石子）。派工單的材質表寫出是哪一格（私有素材庫 `docs/studio/studio-brief.md` §1 第 7 條）；遊戲沒有的色標「新提」並寫原因；舊表上的「新提」先查是不是已經進了 `Map3DPalette`，進了就改寫成格位名（程式裡的註解也改）。
 - 兩個色在遊戲大小分不開時，不為一個模型加新色：用深一格的線（板縫、框）把面分開（滙豐，決策 793）。
 - 照部位分色：牆、窗、窗框、樓層線、屋頂、設備、底座各自是面、各一個色。只有兩三個大色塊的模型，在遊戲大小看起來就是盒子（第 2 節），不算交件。
 - 列車、公車的塗裝照真車照片取色（遊戲沒有的塗裝色可以新提）；車底、轉向架、車頂設備優先用 `Map3DPalette.steel` 與 `dark`。
