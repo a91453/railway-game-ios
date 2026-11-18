@@ -105,6 +105,12 @@ extension PlayerCommand {
         case setFreightProduct(StationID, CargoKind)
         /// A depot, or an ordinary station again (decision 209).
         case setStationDepot(StationID, Bool)
+        /// The arrival chime the station rings, `nil` for automatic
+        /// (decision 866).
+        case setStationChime(StationID, StationChime?)
+        /// The melody the station plays as doors close, `nil` for each
+        /// line's own (decision 866).
+        case setStationDepartureMelody(StationID, DepartureMelody?)
 
         // MARK: Lines
         /// A line, and the real line's target headways where it is one.
@@ -422,6 +428,8 @@ extension GameSession {
         case .sellAirRoute(let id): try world.sellAirRoute(id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
+        case .setStationChime(let id, let chime): try world.setStationChime(id, to: chime)
+        case .setStationDepartureMelody(let id, let melody): try world.setStationDepartureMelody(id, to: melody)
 
         case .createLine(let name, let stops, let targets):
             let line = try world.createLine(named: name, stops: stops)

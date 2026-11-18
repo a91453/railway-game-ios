@@ -127,8 +127,12 @@ final class Map3DCoarseChunkTests: XCTestCase {
         run(&window, for: 50, target: { Map3DPoint(Float(833 * $0) - 6_000, 0, 200) }) { window, _ in
             most = max(most, window.built.subtracting(window.coarse).count)
         }
-        // The whole 12 km scene is 576 chunks.
-        XCTAssertLessThan(most, 200)
+        // The whole 12 km scene is 576 chunks. HSRPACE (decision 861): 200
+        // before, now 228 with the way ahead in full (7 km of it, 2 km each
+        // side): its chunks are no longer built simplified and again in
+        // full; the bytes stay within the device's budget
+        // (``Map3DSceneBudget/bytes(memory:)``, decision 711).
+        XCTAssertLessThan(most, 250)
         run(&window, from: 50, for: 60, target: { _ in end })
         for key in window.built.subtracting(window.coarse) {
             XCTAssertLessThanOrEqual(Map3DStreaming.distance(of: key, to: end), Map3DScene.detailRadius + Map3DStreaming.slack, "\(key)")
