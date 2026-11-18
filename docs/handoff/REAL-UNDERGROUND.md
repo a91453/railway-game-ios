@@ -26,3 +26,11 @@
 ```sh
 REAL_UNDERGROUND_REPORT=/tmp/ug.txt swift test --skip-build --filter RealUndergroundTests/testReport
 ```
+
+## 接續：TW-UNDERGROUND（決策 871，2026-11-18）
+
+- 雲端工作串「把台灣地下站鋪進隧道」，分支 `claude/project-thread-8nxpqn`；存檔版本、golden schema、GameCore 不動。
+- 做了上面「還留下什麼」的第 1 項：規則開給每一條收購線，七張、環北在隧道，機捷在地下過淡水河。數字、價格、體檢在 `docs/decisions/871.md`。
+- 還留下：第 2、3 項照舊。機捷擬真規則的尖峰間隔 +10 → +13 分鐘（其他三項變好），之後修機捷班次的人從這個數字往下。
+- UNVERIFIED：沒有在實機看過。下一版 TestFlight 請買小碧潭支線看七張、買機捷跟車從台北車站過淡水河到三重。
+- 怎麼量：`LINE_HEIGHT_REPORT=1 LINE_HEIGHT_ONLY=tymc:A swift test --skip-build --filter LineHeightReportTests`。

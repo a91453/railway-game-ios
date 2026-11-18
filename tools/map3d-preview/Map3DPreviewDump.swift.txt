@@ -205,6 +205,11 @@ final class Map3DPreviewDump: XCTestCase {
             ? try RealNoBuildLand(data: resource("RealWorld/taiwan_no_build.json")) : nil
         // Decision 699: the airfields, as the app hands them.
         noBuild?.airfields = try RealAirfields(data: resource("BaseMap/taiwan_airfields.json"))
+        // As GameLauncher does for a real-world game: a world that has
+        // read no ground yet (no line bought, so no track) answers 0 m
+        // everywhere and the heights file is never asked; mapped, its
+        // unread ground comes from the file (decision 865's handoff).
+        if heights != nil { try? world.mapGround() }
         let scene = Map3DScene(world: world, focus: focus, baseMap: tiles, cityTiles: cityTiles, footprints: footprints, heights: heights,
                                landCover: landCover, railways: railways, noBuild: noBuild)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }

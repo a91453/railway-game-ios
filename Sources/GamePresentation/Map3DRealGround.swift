@@ -75,6 +75,8 @@ extension Map3DScene.Builder {
     /// Lays `map` on the ground; the cells it takes from the city's lots.
     mutating func addBaseMap(_ map: Map3DBaseMap) -> TakenGround {
         var taken = TakenGround()
+        // Decision 865: its roads' beds, before anything is laid on them.
+        roadBed = roadBed(of: map)
         // Decision 391: its bridges' decks, before the roads on them.
         roadBridges = bridgeDecks(of: map, frame: RealWorldFrame(world: world))
         // Decision 822: a river's or a lake's islands (its holes) under
@@ -101,6 +103,8 @@ extension Map3DScene.Builder {
         // Decision 709: what carries the bridges, under their decks.
         sizing = Map3DFarDetail.bridgeStructure
         addRoadBridges(map.roads)
+        // Decision 865: and the walls under their beds.
+        addRoadBedWalls(map.roads)
         sizing = nil
         // Decision 611: where the roads go into a hill.
         addRoadTunnels(map.tunnelEnds, areas: map.areas)
@@ -498,6 +502,18 @@ extension Map3DScene.Builder {
             let first = Map3DBaseMap.Point(x: start.x - along.x * back, z: start.z - along.z * back)
             let last = Map3DBaseMap.Point(x: end.x + along.x * forth, z: end.z + along.z * forth)
             var cuts = splits(from: first, to: last)
+            // Decision 865: a road on its bed, cut where the bed bends;
+            // wholly on it, there only (its bed's bends are no further
+            // apart than the ground's grid), not where the ground it is
+            // not laid on does.
+            let bedded = raised && !roadBed.isEmpty
+            if bedded {
+                let onBed = cuts.allSatisfy { cut in
+                    roadBed.level(at: Map3DBaseMap.Point(x: first.x + (last.x - first.x) * cut, z: first.z + (last.z - first.z) * cut), along: along,
+                                  onDeck: onDeck) != nil
+                }
+                cuts = merged(onBed ? [0, 1] : cuts, bedCuts(from: first, to: last, along: along, onDeck: onDeck))
+            }
             // Decision 391: a road near a raised one at its height.
             let lifted = raised && nearRaisedRoad(from: first, to: last)
             if raised { cuts = merged(cuts, raisedCuts(from: first, to: last, anchor: points[index - 1], along: along, onDeck: onDeck)) }
@@ -562,12 +578,16 @@ extension Map3DScene.Builder {
                 let sideA = onDeck && lifted ? uncovered(a, rise: riseA.rise, along: along, half: half) : (left: half, right: half)
                 let sideB = onDeck && lifted ? uncovered(b, rise: riseB.rise, along: along, half: half) : (left: half, right: half)
                 guard sideA.left + sideA.right > 0.05 || sideB.left + sideB.right > 0.05 else { continue }
+                // Decision 865: both kerbs at its bed's height there; off
+                // any bed, each corner on the ground under it.
+                let bedA = bedded ? roadBed.level(at: a, along: along, onDeck: onDeck) : nil
+                let bedB = bedded ? roadBed.level(at: b, along: along, onDeck: onDeck) : nil
                 var corners = [
-                    (a.x + leftX * sideA.left, a.z + leftZ * sideA.left, riseA.rise), (a.x - leftX * sideA.right, a.z - leftZ * sideA.right, riseA.rise),
-                    (b.x - leftX * sideB.right, b.z - leftZ * sideB.right, riseB.rise), (b.x + leftX * sideB.left, b.z + leftZ * sideB.left, riseB.rise),
+                    (a.x + leftX * sideA.left, a.z + leftZ * sideA.left, riseA.rise, bedA), (a.x - leftX * sideA.right, a.z - leftZ * sideA.right, riseA.rise, bedA),
+                    (b.x - leftX * sideB.right, b.z - leftZ * sideB.right, riseB.rise, bedB), (b.x + leftX * sideB.left, b.z + leftZ * sideB.left, riseB.rise, bedB),
                 ].map { corner -> Map3DPoint in
                     let x = Float(corner.0), z = Float(corner.1)
-                    return Map3DPoint(x, drawnGround(x: x, z: z) + lift + corner.2, z)
+                    return Map3DPoint(x, (corner.3 ?? drawnGround(x: x, z: z)) + lift + corner.2, z)
                 }
                 var triangles = [0, 1, 2, 0, 2, 3]
                 let middle = Map3DPoint(Float((a.x + b.x) / 2), 0, Float((a.z + b.z) / 2))
@@ -575,7 +595,7 @@ extension Map3DScene.Builder {
                 // is a road a metre or more over the ground (續篇二: a road
                 // lifted over a cutting, onto its deck).
                 if !bridges && !(riseA.onBridge && riseB.onBridge) && min(riseA.rise, riseB.rise) < 1 {
-                    (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift, roadCuts: roadCuts)
+                    (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift, roadCuts: roadCuts, level: bedA != nil || bedB != nil)
                 }
                 mesh(at: middle) {
                     let start = $0.vertices.count
@@ -589,7 +609,7 @@ extension Map3DScene.Builder {
             guard let before = laid[vertex - 1], let after = laid[vertex] else { continue }
             addStripJoin(at: points[vertex], before: before.along, after: after.along, half: half, lift: lift, color: color,
                          paint: paint, water: water, lifted: raised && nearRaisedRoad(from: points[vertex], to: points[vertex]),
-                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts)
+                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts, bedded: raised && !roadBed.isEmpty)
         }
     }
 
@@ -633,7 +653,7 @@ extension Map3DScene.Builder {
     /// triangles, at each segment's height over it at the joint.
     mutating func addStripJoin(at joint: Map3DBaseMap.Point, before: (x: Double, z: Double), after: (x: Double, z: Double),
                                half: Double, lift: Float, color: UInt32, paint: Map3DPaint?, water: Bool, lifted: Bool,
-                               onDeck: Bool, bridges: Bool, roadCuts: Bool) {
+                               onDeck: Bool, bridges: Bool, roadCuts: Bool, bedded: Bool = false) {
         typealias Point = Map3DBaseMap.Point
         // The bend's outside: the side whose edge the next segment leaves.
         let left1 = (x: before.z, z: -before.x), left2 = (x: after.z, z: -after.x)
@@ -665,7 +685,13 @@ extension Map3DScene.Builder {
         let xs = outline.map(\.x), zs = outline.map(\.z)
         var points: [Map3DPoint] = []
         var triangles: [Int] = []
-        for row in gridCell(zs.min()!, origin: originY)...gridCell(zs.max()!, origin: originY) {
+        // Decision 865: on its road's bed, level, in one piece.
+        let bed = bedded ? roadBed.level(at: joint, along: before, onDeck: onDeck) : nil
+        if let bed {
+            points = outline.map { Map3DPoint(Float($0.x), bed + lift + rise($0), Float($0.z)) }
+            triangles = Self.fan(outline.count)
+        }
+        for row in gridCell(zs.min()!, origin: originY)...gridCell(zs.max()!, origin: originY) where bed == nil {
             let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
             for column in gridCell(xs.min()!, origin: originX)...gridCell(xs.max()!, origin: originX) {
                 let westX = gridLine(column, origin: originX), eastX = gridLine(column + 1, origin: originX)
@@ -692,7 +718,7 @@ extension Map3DScene.Builder {
         guard !triangles.isEmpty else { return }
         // Decision 375, as its segments.
         if !bridges && !(rise1.onBridge && rise2.onBridge) && min(rise1.rise, rise2.rise) < 1 {
-            (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift, roadCuts: roadCuts)
+            (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift, roadCuts: roadCuts, level: bed != nil)
             guard !triangles.isEmpty else { return }
         }
         // Decision 709: sized as what it adds, its own width across, so
@@ -786,8 +812,9 @@ extension Map3DScene.Builder {
     }
 
     /// Where the segment from `a` to `b` crosses the ground's grid lines
-    /// and its triangles' diagonals, as fractions of the way, with 0 and 1.
-    func splits(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point) -> [Double] {
+    /// and (but without `diagonals`) its triangles' diagonals, as
+    /// fractions of the way, with 0 and 1.
+    func splits(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point, diagonals: Bool = true) -> [Double] {
         var cuts: [Double] = [0, 1]
         let cell = Double(Land.cellLength) / Self.metre
         // In world metres, where the grid lines fall on whole cells.
@@ -804,7 +831,7 @@ extension Map3DScene.Builder {
         crossings(ax, bx)
         crossings(az, bz)
         // The diagonals: x − z on a whole number of cells.
-        crossings(ax - az, bx - bz)
+        if diagonals { crossings(ax - az, bx - bz) }
         var kept: [Double] = []
         for cut in cuts.filter({ $0 >= 0 && $0 <= 1 }).sorted() where kept.last.map({ cut - $0 > 1e-9 }) ?? true {
             kept.append(cut)
@@ -991,7 +1018,9 @@ extension Map3DScene.Builder {
                             // Decision 391: none on a bridge or its ramp.
                             guard roadRise(at: Map3DBaseMap.Point(x: centre.x, z: centre.z), along: along, onDeck: road.bridgeLevel > 0).rise < Self.propRise
                             else { continue }
-                            let foot = Map3DPoint(Float(x), drawnGround(x: Float(x), z: Float(z)) + Self.sidewalkLift, Float(z))
+                            // Decision 865: on the road's bed.
+                            let foot = Map3DPoint(Float(x), roadGround(at: Map3DBaseMap.Point(x: x, z: z), along: along, onDeck: road.bridgeLevel > 0,
+                                                                       beyond: 2.5) + Self.sidewalkLift, Float(z))
                             // Its left, where a light's arm reaches, toward the road.
                             let forward = side > 0 ? Map3DPoint(Float(-along.x), 0, Float(-along.z)) : Map3DPoint(Float(along.x), 0, Float(along.z))
                             let scale: Float = rule.prop == .tree ? 0.8 + 0.45 * map3DRandom(seed.0, seed.1, salt: 72) : 1

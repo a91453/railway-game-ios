@@ -1052,7 +1052,9 @@ extension Map3DScene.Builder {
                     if points.count > 1 { lines.append(points) }
                     points = []
                 } else {
-                    points.append(groundPoint(x: x, z: z, lift: lift) + Map3DPoint(0, raised.rise, 0))
+                    // Decision 865: on the road's bed.
+                    let bed = roadGround(at: Map3DBaseMap.Point(x: x, z: z), along: along, onDeck: road.bridgeLevel > 0, beyond: 2.5)
+                    points.append(Map3DPoint(Float(x), bed + lift + crossingLift(x: Float(x), z: Float(z)) + raised.rise, Float(z)))
                 }
             }
             for (index, point) in run.enumerated() {
