@@ -307,6 +307,100 @@ public struct Map3DStreaming: Sendable {
         return wanted.filter { abs($0.column - first.column) <= reach && abs($0.row - first.row) <= reach }.sorted()
     }
 
+    /// HSRPACE (decision 861): the next block to build from `wanted`'s
+    /// first, filled from `fill` (chunks wanted a little later, not built):
+    /// of the ``blockSide`` squares holding the first, the one holding the
+    /// most of `fill` (then the most of `wanted`, then the one round the
+    /// first), and of it, every chunk of `wanted` or `fill`, sorted.
+    ///
+    /// A block costs about what the square round its chunks costs (the
+    /// scene of their bounding square is built and the rest thrown away),
+    /// most of it a fixed part (decision 358's numbers: 50–60 ms of a 5 × 5
+    /// block's 0.1–0.25 s). Moving at speed, and worse on a slant, the
+    /// chunks newly wanted at the strip's far end are a thin line, so a
+    /// block of only those held a handful of chunks for the price of a
+    /// whole square: at ten times real time the window fell behind a High
+    /// Speed Rail train and the ground under it was missing.
+    public static func block(of wanted: [Key], filling fill: Set<Key>) -> [Key] {
+        guard let first = wanted.first else { return [] }
+        let soon = Set(wanted)
+        let every = soon.union(fill)
+        var best: (column: Int, row: Int, filled: Int, soon: Int, off: Int)?
+        for row in (first.row - blockSide + 1)...first.row {
+            for column in (first.column - blockSide + 1)...first.column {
+                var filled = 0, wantedIn = 0
+                for key in every where key.column >= column && key.column < column + blockSide && key.row >= row && key.row < row + blockSide {
+                    filled += 1
+                    if soon.contains(key) { wantedIn += 1 }
+                }
+                let off = abs(column + blockSide / 2 - first.column) + abs(row + blockSide / 2 - first.row)
+                if let current = best, (current.filled, current.soon, -current.off) >= (filled, wantedIn, -off) { continue }
+                best = (column, row, filled, wantedIn, off)
+            }
+        }
+        guard let best else { return [first] }
+        return every.filter { $0.column >= best.column && $0.column < best.column + blockSide && $0.row >= best.row && $0.row < best.row + blockSide }.sorted()
+    }
+
+    /// HSRPACE (decision 861): how far down the way ahead the city is built
+    /// in full (``way(target:velocity:)``), in metres: the whole strip
+    /// ahead and its slack. Shorter (1–4 km tried in
+    /// `Map3DStreamingPaceTests`), the chunks past it were built
+    /// simplified and again in full as the target neared them, and the
+    /// window was busy 94% of the time instead of 52–63%.
+    public static let inFullAhead: Float = ahead + slack
+
+    /// HSRPACE (decision 861): the far end of the way `target` moving at
+    /// `velocity` is on, ``inFullAhead`` ahead; `nil` while it stands
+    /// still. The city is built in full within ``Map3DScene/detailRadius``
+    /// of the way from the target to it, so the chunks the target is
+    /// about to pass are built in full the first time rather than
+    /// simplified and built again as it nears them.
+    public static func way(target: Map3DPoint, velocity: SIMD2<Float>) -> Map3DPoint? {
+        let speed = simd_length(velocity)
+        guard speed >= still else { return nil }
+        let end = SIMD2(target.x, target.z) + velocity / speed * inFullAhead
+        return Map3DPoint(end.x, target.y, end.y)
+    }
+
+    /// HSRPACE (decision 861): how far `key`'s square is from the way from
+    /// `start` to `end` (from `start` alone without it), seen from above,
+    /// in metres (0 where the way crosses it).
+    public static func distance(of key: Key, toWayFrom start: Map3DPoint, to end: Map3DPoint?) -> Float {
+        guard let end else { return distance(of: key, to: start) }
+        let side = Map3DScene.chunkSize
+        let low = SIMD2(Float(key.column) * side, Float(key.row) * side), high = low + side
+        let a = SIMD2(start.x, start.z), b = SIMD2(end.x, end.z), d = b - a
+        // Whether the way crosses the square (Liang–Barsky).
+        var t0: Float = 0, t1: Float = 1, crosses = true
+        for (p, q) in [(-d.x, a.x - low.x), (d.x, high.x - a.x), (-d.y, a.y - low.y), (d.y, high.y - a.y)] {
+            if p == 0 {
+                if q < 0 { crosses = false }
+            } else if p < 0 {
+                t0 = max(t0, q / p)
+            } else {
+                t1 = min(t1, q / p)
+            }
+        }
+        if crosses, t0 <= t1 { return 0 }
+        func toSquare(_ point: SIMD2<Float>) -> Float { simd_length(simd_clamp(point, low, high) - point) }
+        func toWay(_ point: SIMD2<Float>) -> Float {
+            let length = (d * d).sum()
+            let t = length > 0 ? min(max(((point - a) * d).sum() / length, 0), 1) : 0
+            return simd_length(a + d * t - point)
+        }
+        return min(toSquare(a), toSquare(b), toWay(low), toWay(high), toWay(SIMD2(low.x, high.y)), toWay(SIMD2(high.x, low.y)))
+    }
+
+    /// HSRPACE (decision 861): whether `key` is within
+    /// ``Map3DScene/detailRadius`` of the way `target` moving at `velocity`
+    /// is on (``way(target:velocity:)``): built in full however far ahead.
+    /// Never while the target stands still.
+    public static func isOnTheWay(_ key: Key, target: Map3DPoint, velocity: SIMD2<Float>) -> Bool {
+        guard let end = way(target: target, velocity: velocity) else { return false }
+        return distance(of: key, toWayFrom: target, to: end) <= Map3DScene.detailRadius
+    }
+
     // MARK: - The window
 
     /// Faster than this, in metres a second, nothing is built or let go:
@@ -317,6 +411,13 @@ public struct Map3DStreaming: Sendable {
     /// How often the window plans while nothing has just been built, in
     /// seconds.
     public static let interval: Double = 0.25
+    /// HSRPACE (decision 861): the most blocks built at once: a second
+    /// only while the target is within ``hurry`` of what it holds.
+    public static let builders = 2
+    /// HSRPACE (decision 861): how near the target the soonest chunk of a
+    /// second block must be, in metres: some 3.6 s ahead of a High Speed
+    /// Rail train at ten times real time, more than a block takes.
+    public static let hurry: Float = 3_000
 
     /// The chunks a 3D map has and is building, and what to do next as
     /// its camera moves: the scene first built (``init(scene:map:kept:)``),
@@ -341,12 +442,20 @@ public struct Map3DStreaming: Sendable {
         /// (``Map3DScene/Chunk/coarse``), built again in full when the
         /// target comes within ``Map3DScene/detailRadius``.
         public private(set) var coarse: Set<Key>
-        /// The block being built, and the scene it is for.
-        public private(set) var building: [Key] = []
-        /// Decision 368: the scene point the block is built in full round
+        /// HSRPACE (decision 861): the blocks being built (at most
+        /// ``Map3DStreaming/builders``), each with where it is built in full
+        /// round (``buildingAround``, ``buildingAhead``).
+        private var inFlight: [(keys: [Key], around: Map3DPoint, ahead: Map3DPoint?)] = []
+        /// The chunks being built, for the scene ``generation``.
+        public var building: [Key] { inFlight.flatMap(\.keys) }
+        /// Decision 368: the scene point the newest block is built in full round
         /// (``Map3DScene/chunks(_:of:world:snapshot:skyline:baseMap:cityTiles:footprints:heights:lineBands:railways:temples:noBuild:trackCover:detail:)``'s
         /// `detail`): the target when it was asked for.
         public private(set) var buildingAround = Map3DPoint(0, 0, 0)
+        /// HSRPACE (decision 861): with it, the block is built in full
+        /// round the way from ``buildingAround`` to here
+        /// (``Map3DStreaming/way(target:velocity:)``), not round a point.
+        public private(set) var buildingAhead: Map3DPoint?
         public let generation: Int
         public private(set) var motion = Motion()
         private var planned: Double?
@@ -418,19 +527,59 @@ public struct Map3DStreaming: Sendable {
             built.subtract(drop)
             stale.subtract(drop)
             coarse.subtract(drop)
-            guard building.isEmpty else { return (drop, []) }
-            var block = Map3DStreaming.block(of: plan.build)
+            // HSRPACE (decision 861): a second block only to catch up.
+            guard inFlight.count < Map3DStreaming.builders else { return (drop, []) }
+            let catchingUp = !inFlight.isEmpty
+            let underway = Set(building)
+            // HSRPACE (decision 861): moving, every block is built in full
+            // round the way ahead, as far as ``Map3DStreaming/inFullAhead``,
+            // as well as round the target.
+            let way = Map3DStreaming.way(target: target, velocity: velocity)
+            var around = target, wayEnd = way
+            // HSRPACE: the coarse chunks to build in full: near the target
+            // (decision 368) and on the way ahead, the soonest reached first.
+            let upgrade = coarse.subtracting(underway).compactMap { key -> (key: Key, soon: Float)? in
+                let distance = Map3DStreaming.distance(of: key, to: target)
+                if distance <= Map3DScene.detailRadius { return (key, distance) }
+                guard Map3DStreaming.isOnTheWay(key, target: target, velocity: velocity) else { return nil }
+                return (key, grid.wantedIn(key, target: target, velocity: velocity) ?? distance)
+            }.sorted { ($0.soon, $0.key) < ($1.soon, $1.key) }
+            // HSRPACE: the block filled with the chunks wanted a little
+            // later (as far as the plan keeps them), while the scene's
+            // buffers are within the device's budget; or, reached sooner
+            // than the first missing chunk, the coarse ones.
+            let fill = room ? Set(grid.wantedWithin(slack: Map3DStreaming.slack, target: target, velocity: velocity).map(\.key))
+                .subtracting(built).subtracting(underway) : []
+            var block = Map3DStreaming.block(of: plan.build, filling: fill)
+            var soonest = plan.build.first.flatMap { grid.wantedIn($0, target: target, velocity: velocity) } ?? .infinity
+            if let first = upgrade.first, first.soon < soonest {
+                block = Map3DStreaming.block(of: upgrade.map(\.key))
+                soonest = first.soon
+            }
+            // HSRPACE: while a block is built, a second one only when the
+            // target is about to reach what it holds (``Map3DStreaming/hurry``):
+            // a device too slow for one at a time keeps up on two cores,
+            // and otherwise the window keeps to one.
+            if catchingUp {
+                guard simd_length(velocity) >= Map3DStreaming.still, soonest <= Map3DStreaming.hurry, !block.isEmpty else { return (drop, []) }
+                inFlight.append((block, around, wayEnd))
+                buildingAround = around
+                buildingAhead = wayEnd
+                return (drop, block)
+            }
             func nearest(_ keys: some Sequence<Key>) -> [Key] {
                 keys.map { (key: $0, distance: Map3DStreaming.distance(of: $0, to: target)) }.sorted { ($0.distance, $0.key) < ($1.distance, $1.key) }.map(\.key)
             }
-            var around = target
             let stopKeys = stops.flatMap { stop in grid.area(round: stop, radius: Map3DStreaming.stationRadius).map { (key: $0, stop: stop) } }
             if block.isEmpty {
                 // Decision 578: the chunks round the stops ahead, missing or
                 // simplified, the nearest to a stop first.
                 let missing = stopKeys.filter { !building.contains($0.key) && (!built.contains($0.key) || coarse.contains($0.key)) }
                 block = Map3DStreaming.block(of: missing.map(\.key))
-                if let first = block.first, let stop = missing.first(where: { $0.key == first })?.stop { around = stop }
+                if let first = block.first, let stop = missing.first(where: { $0.key == first })?.stop {
+                    around = stop
+                    wayEnd = nil
+                }
             }
             if block.isEmpty, room, let camera {
                 // Decision 714: what the camera sees and is not there.
@@ -438,8 +587,9 @@ public struct Map3DStreaming: Sendable {
             }
             if block.isEmpty {
                 // Decision 368: nothing missing: the coarse chunks near the
-                // target in full, the nearest first.
-                block = Map3DStreaming.block(of: nearest(coarse.filter { Map3DStreaming.distance(of: $0, to: target) <= Map3DScene.detailRadius }))
+                // target in full, the nearest first; HSRPACE: and those on
+                // the way ahead.
+                block = Map3DStreaming.block(of: upgrade.map(\.key))
             }
             if block.isEmpty {
                 // The kept chunks again, the soonest first.
@@ -450,8 +600,14 @@ public struct Map3DStreaming: Sendable {
                 // scene's are never let go, the others only beyond the
                 // plan's reach) simplified again, so the city in full stays
                 // round the target only.
+                // HSRPACE (decision 861): moving, only the scene's own
+                // (those built since are let go behind the target soon
+                // after: built again simplified, they kept a High Speed
+                // Rail train's ground waiting), and not those on the way.
+                let moving = simd_length(velocity) >= Map3DStreaming.still
                 let far = built.subtracting(coarse).subtracting(stale).subtracting(stopKeys.map(\.key))
-                    .filter { Map3DStreaming.distance(of: $0, to: target) > Map3DScene.detailRadius + Map3DStreaming.slack }
+                    .filter { Map3DStreaming.distance(of: $0, to: target) > Map3DScene.detailRadius + Map3DStreaming.slack
+                        && (!moving || scene.contains($0)) && !Map3DStreaming.isOnTheWay($0, target: target, velocity: velocity) }
                 block = Map3DStreaming.block(of: nearest(far))
             }
             if block.isEmpty, !gone.isEmpty {
@@ -467,8 +623,11 @@ public struct Map3DStreaming: Sendable {
                     return distance <= Map3DStreaming.around || grid.isSeen(key, by: camera, slack: Map3DStreaming.slack)
                 }))
             }
-            building = block
-            if !block.isEmpty { buildingAround = around }
+            if !block.isEmpty {
+                inFlight.append((block, around, wayEnd))
+                buildingAround = around
+                buildingAhead = wayEnd
+            }
             return (drop, block)
         }
 
@@ -542,15 +701,15 @@ public struct Map3DStreaming: Sendable {
         /// whether to place it. A block for a scene since built anew is not
         /// placed.
         public mutating func finished(_ keys: [Key], generation: Int) -> Bool {
-            guard generation == self.generation, keys == building else { return false }
-            building = []
+            guard generation == self.generation, let index = inFlight.firstIndex(where: { $0.keys == keys }) else { return false }
+            let done = inFlight.remove(at: index)
             built.formUnion(keys)
             stale.subtract(keys)
             // Decision 711: the scene's chunks let go are the scene's again.
             scene.formUnion(gone.intersection(keys))
             gone.subtract(keys)
             for key in keys {
-                if Map3DStreaming.distance(of: key, to: buildingAround) > Map3DScene.detailRadius { coarse.insert(key) } else { coarse.remove(key) }
+                if Map3DStreaming.distance(of: key, toWayFrom: done.around, to: done.ahead) > Map3DScene.detailRadius { coarse.insert(key) } else { coarse.remove(key) }
             }
             planned = nil
             return true
