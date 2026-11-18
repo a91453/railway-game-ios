@@ -1,0 +1,6 @@
+# actionlint's own list of GitHub-hosted labels does not yet hold the
+# Xcode 27 image (a public preview; decision 857). Named here so the lint
+# in testflight-checks.yml accepts it; remove it once actionlint knows it.
+self-hosted-runner:
+  labels:
+    - xcode-27
