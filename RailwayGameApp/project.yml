@@ -58,11 +58,32 @@ targets:
       # (BaseMapFiles finds them by path; the fonts' ranges share names).
       - path: Resources/BaseMap
         type: folder
-      # Decision 697: the overseas cities' map packs, each one folder whose
-      # files have the names Taiwan's have, so copied as a folder
-      # (MapPack.bundled finds a city's by path).
-      - path: Resources/MapPacks
-        type: folder
+    # Decision 697: the overseas cities' map packs, each one folder whose
+    # files have the names Taiwan's have (MapPack.bundled finds a city's by
+    # path, MapPacks/<city>). Decision 858: the app people install (Release)
+    # carries only each city's pack.json, which says what its pack holds and
+    # where its map lies; the files are an Apple-hosted asset pack
+    # (AssetPacks/<city>.json), downloaded apart from the app. The Debug
+    # app, which the Simulator, the UI tests and the screenshots run and
+    # which cannot download, carries the packs whole.
+    postBuildScripts:
+      - name: Copy the map packs (whole in Debug, pack.json only in Release)
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          from="$SRCROOT/Resources/MapPacks"
+          to="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/MapPacks"
+          rm -rf "$to"
+          mkdir -p "$to"
+          if [ "$CONFIGURATION" = "Debug" ]; then
+            cp -R "$from/." "$to/"
+          else
+            for manifest in "$from"/*/pack.json; do
+              city="$(basename "$(dirname "$manifest")")"
+              mkdir -p "$to/$city"
+              cp "$manifest" "$to/$city/pack.json"
+            done
+          fi
     dependencies:
       - package: RailwayGame
         product: GameCore

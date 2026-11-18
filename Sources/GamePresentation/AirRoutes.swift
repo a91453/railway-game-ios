@@ -295,7 +295,10 @@ extension GameLauncher {
     /// open to this player (decision 712): the ones the device remembers,
     /// and every one in the demo mode, as the lessons are.
     public var airRoutes: AirRoutes {
-        let cities = Set(overseasGrounds.map(\.city))
+        // Decision 858: a city whose map pack is still to come has its
+        // flights all the same: what the player opened does not wait for
+        // a download.
+        let cities = Set(overseasGrounds.map(\.city)).union(overseasAwaited.map(\.city))
         let all = AirRoutes(cities: cities)
         return AirRoutes(
             cities: cities, opened: isDemoMode ? Set(all.maps.map(\.id)) : Set(preferences.airRoutesOpened ?? []),
@@ -306,24 +309,35 @@ extension GameLauncher {
     /// Decision 818: the map picker's rows of the cities outside Taiwan, in
     /// order: each city whose flights the app offers (decision 712), closed
     /// with the way to open it until they open, and each city no flights
-    /// open (Rovaniemi), open from the start once its ground is read. None
-    /// while the real-world data is read.
-    public func overseasMapRows(in language: DisplayLanguage) -> [OverseasMapRow] {
+    /// open (Rovaniemi), open from the start. Decision 858: a city whose
+    /// map pack is not on the device yet is closed, with how its download
+    /// stands (`status`), until it is. None while the real-world data is
+    /// read.
+    public func overseasMapRows(
+        in language: DisplayLanguage, status: (OverseasMap) -> MapPackStatus = MapPackDownloads.status
+    ) -> [OverseasMapRow] {
         guard !isLoadingRealWorldData else { return [] }
         let routes = airRoutes
         let read = Set(overseasGrounds.map(\.city))
+        let awaited = Set(overseasAwaited.map(\.city))
         return OverseasMap.allCases.compactMap { city in
+            let waiting = awaited.contains(city) ? city.notDownloadedText(status(city), in: language) : nil
             if routes.offers(city.rawValue) {
-                return OverseasMapRow(city: city, closed: routes.canStart(city.rawValue) ? nil : routes.howToOpen(city.rawValue, in: language))
+                guard routes.canStart(city.rawValue) else {
+                    return OverseasMapRow(city: city, closed: routes.howToOpen(city.rawValue, in: language))
+                }
+                return OverseasMapRow(city: city, closed: waiting, waitsForDownload: waiting != nil)
             }
-            return !city.opensByFlights && read.contains(city) ? OverseasMapRow(city: city, closed: nil) : nil
+            guard !city.opensByFlights, read.contains(city) || awaited.contains(city) else { return nil }
+            return OverseasMapRow(city: city, closed: waiting, waitsForDownload: waiting != nil)
         }
     }
 
-    /// The id of the map `world` is on: the city whose ground holds it, or
+    /// The id of the map `world` is on: the city whose ground holds it
+    /// (or, decision 858, whose map it is while its pack is to come), or
     /// Taiwan.
     func airMap(of world: GameWorld) -> String {
-        overseasGrounds.first { $0.holds(world) }?.city.rawValue ?? AirMap.taiwan.id
+        (overseasGrounds.first { $0.holds(world) }?.city ?? awaitedCity(of: world))?.rawValue ?? AirMap.taiwan.id
     }
 
     /// Opens the flights `session`'s airports earned yesterday, remembers
@@ -376,4 +390,7 @@ public struct OverseasMapRow: Equatable, Sendable {
     public let city: OverseasMap
     /// Why a new game cannot start there yet, `nil` when it can.
     public let closed: String?
+    /// Decision 858: whether it is closed because its map pack is not on
+    /// the device yet, not because its flights have not opened.
+    public var waitsForDownload = false
 }

@@ -148,9 +148,45 @@ public struct MapPack: Sendable {
         (try? file("airfields", "json")).flatMap { try? RealAirfields(data: $0) }
     }
 
-    /// The pack of `city` in the app's bundle (`MapPacks/<folder>`).
+    /// The pack of `city` in the app's bundle (`MapPacks/<folder>`), `nil`
+    /// when the app does not carry it. Decision 858: the app people
+    /// install carries only each city's `pack.json`
+    /// (``carriedManifest(_:)``), its files come as a download
+    /// (``MapPackDownloads``); the Debug app, which the Simulator and the
+    /// UI tests run and which cannot download, carries the whole pack.
     public static func bundled(_ city: OverseasMap) -> MapPack? {
-        Bundle.main.resourceURL.map { MapPack(root: $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder)) }
+        carried[city]
+    }
+
+    /// Decision 858: the app's own copy of the city's `pack.json`, which
+    /// says what its pack holds and how far its map reaches; `nil` in an
+    /// app without it.
+    public static func carriedManifest(_ city: OverseasMap) -> Data? {
+        carriedFolder(city).flatMap { try? Data(contentsOf: $0.appendingPathComponent("pack.json")) }
+    }
+
+    private static func carriedFolder(_ city: OverseasMap) -> URL? {
+        Bundle.main.resourceURL.map { $0.appendingPathComponent("MapPacks").appendingPathComponent(city.packFolder) }
+    }
+
+    /// The packs the app carries whole, looked at once: the bundle does
+    /// not change while the app runs.
+    private static let carried: [OverseasMap: MapPack] = Dictionary(uniqueKeysWithValues: OverseasMap.allCases.compactMap { city in
+        guard let folder = carriedFolder(city), isWhole(folder) else { return nil }
+        return (city, MapPack(root: folder))
+    })
+
+    /// Decision 858: whether `folder` holds a pack with its files, not
+    /// its `pack.json` alone: every file the `pack.json` lists is there.
+    static func isWhole(_ folder: URL) -> Bool {
+        struct Manifest: Decodable {
+            let files: [String: FileEntry]
+            struct FileEntry: Decodable {}
+        }
+        guard let data = try? Data(contentsOf: folder.appendingPathComponent("pack.json")),
+              let manifest = try? JSONDecoder().decode(Manifest.self, from: data), !manifest.files.isEmpty
+        else { return false }
+        return manifest.files.keys.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
     }
 }
 
@@ -206,10 +242,39 @@ extension MapPack {
 
     /// The pack's `extent`.
     public func extent() throws -> Extent {
+        try Self.extent(ofManifest: file("pack", "json"))
+    }
+
+    /// The `extent` a `pack.json` (`manifest`) gives.
+    public static func extent(ofManifest manifest: Data) throws -> Extent {
         struct Manifest: Decodable {
             let extent: Extent
         }
-        return try JSONDecoder().decode(Manifest.self, from: file("pack", "json")).extent
+        return try JSONDecoder().decode(Manifest.self, from: manifest).extent
+    }
+}
+
+/// Decision 858: where an open city's map lies, known from the app's own
+/// `pack.json` of it while its pack is not on the device: enough to tell
+/// that a saved game is on that map, so it is not played on another's
+/// ground.
+public struct OverseasPlace: Equatable, Sendable {
+    public let city: OverseasMap
+    public let anchor: GeoAnchor
+    public let bounds: WorldBounds
+
+    /// The place `manifest`, the city's `pack.json`, gives; `nil` when it
+    /// has no extent that fits a world.
+    public init?(city: OverseasMap, manifest: Data) {
+        guard let extent = try? MapPack.extent(ofManifest: manifest), let anchor = extent.anchor, let bounds = extent.bounds else { return nil }
+        self.city = city
+        self.anchor = anchor
+        self.bounds = bounds
+    }
+
+    /// Whether `world` is this city's map (``OverseasGround/holds(_:)``).
+    public func holds(_ world: GameWorld) -> Bool {
+        world.geoAnchor == anchor && world.bounds == bounds
     }
 }
 
