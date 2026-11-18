@@ -47,9 +47,12 @@ Actions → TestFlight → Run workflow（只允許 main）
   │      失敗時再試，最多 3 次
   │    → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
   │      發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
-  │    → 上傳地圖包（asset packs，決策 776）：**一定在上傳 build 之前**（#2423）。
+  │    → 上傳有變的地圖包（asset packs，決策 776、858）：**一定在上傳 build 之前**（#2423）。
   │      138 的 build 比新的香港地圖包早幾分鐘出來，手機留著 137 的舊包；
-  │      改順序時要保持「地圖包先、App 後」。上傳失敗只是警告，App 仍帶內建的一份
+  │      改順序時要保持「地圖包先、App 後」。
+  │      只上傳和上一次成功發版不同的那幾包（每上傳一次就多一個要審的版本；
+  │      `testflight-map-packs.py`，要全部重傳時 `map_packs` 選 `all`）。
+  │      App 不再帶地圖資料，所以該傳的沒傳成功，發版在這裡停、build 不上傳
   │    → 上傳：同一份 archive、相同設定再以 xcodebuild -exportArchive
   │      （destination=upload，API key）送到 App Store Connect；
   │      只在 IPA 檢查通過後執行；失敗時再試，最多 3 次
