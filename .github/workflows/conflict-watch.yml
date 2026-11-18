@@ -45,6 +45,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          # The tool talks to the API with GH_TOKEN; git needs no token here.
+          persist-credentials: false
           sparse-checkout: tools/ci-watch
           sparse-checkout-cone-mode: false
 

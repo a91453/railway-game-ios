@@ -68,6 +68,9 @@ jobs:
     timeout-minutes: ${{ inputs.kind == 'promo' && 340 || 40 }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Nothing here pushes or fetches; the brand secret's job keeps no token in .git.
+          persist-credentials: false
 
       # The website shows the released game's name (tools/brand/README.md);
       # with no GAME_BRAND_JSON the screenshots are of the neutral game.
