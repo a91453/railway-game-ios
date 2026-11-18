@@ -1,6 +1,6 @@
 # GitHub Actions → TestFlight
 
-目前的發佈路線是在 GitHub 標準 macOS runner（`macos-26`，預設 Xcode 26.6）上完成以下步驟，再上傳到 TestFlight。手動執行時可選 `internal`（僅內部測試）或 `external`（可加入 External Testing 群組並送 Beta App Review）：
+目前的發佈路線是在 GitHub 託管的 macOS runner（`xcode-27` 映像，選 Xcode 27.2、iOS 27 SDK；決策 857，2026-11-18 之前是 `macos-26` 的 Xcode 26.6）上完成以下步驟，再上傳到 TestFlight。手動執行時可選 `internal`（僅內部測試）或 `external`（可加入 External Testing 群組並送 Beta App Review）：
 
 1. Archive（Release）
 2. 簽章
@@ -35,7 +35,7 @@ Actions → TestFlight → Run workflow（只允許 main）
   ├─ preflight（Linux，數秒）
   │    分支與觸發方式、每個必要設定是否存在且格式正確；
   │    缺少就一次列出全部並停止，不啟動 macOS runner
-  ├─ release（macos-26）
+  ├─ release（xcode-27）
   │    再檢查一次設定，並依這次執行的 attempt 決定 build number
   │    → 暫存 keychain + API key 檔（權限 600）
   │    → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
@@ -271,7 +271,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | 匯出或上傳 3 次都失敗 | 看最後一次的錯誤。不是斷線的錯誤依本表其他列處理；斷線就按 Re-run failed jobs（會拿到新的 build number） |
 | 上傳再試之後被拒：build number 重複 | 第一次上傳其實已經送到 Apple；看 processing job 的結果，不必重跑 |
 | 上傳被拒：build number 重複或較小 | 不要重跑舊的執行；按新的 Run workflow，必要時設定 `BUILD_NUMBER_OFFSET` |
-| 上傳被拒：SDK / Xcode 太舊 | 需要 Xcode 26 以上；workflow 一開始就會檢查 |
+| 上傳被拒：SDK / Xcode 太舊 | 2027 年 4 月起需要 Xcode 27（iOS 27 SDK）以上；workflow 一開始就會檢查（決策 857） |
 | TestFlight 顯示 Missing Compliance | 在 App Store Connect 回答出口合規問題 |
 | processing：`INVALID` 或 `FAILED` | Apple 寄給 Account Holder 的信會說明原因；修好後按新的 Run workflow |
 | processing：60 分鐘還沒處理完（警告） | 到 App Store Connect 看；稍後可以只重跑 processing job |
@@ -340,6 +340,6 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - https://docs.github.com/en/actions/reference/security/secure-use
   - https://docs.github.com/en/actions/reference/security/secrets
 - 在 macOS runner 使用暫存 keychain：https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications
-- macos-26 runner 的 Xcode 26.6 與公開 repository 免費：
+- runner 的 Xcode 版本與公開 repository 免費（2026-11-18 起用 `xcode-27` 映像，`images/macos/xcode-27-arm64-Readme.md`；下面是當時 `macos-26` 的出處）：
   - https://docs.github.com/en/actions/reference/runners/github-hosted-runners
   - https://github.com/actions/runner-images（`images/macos/macos-26-arm64-Readme.md`）
