@@ -47,7 +47,13 @@ extension Map3DScene.Builder {
             railways.stations(named: name, near: nil).first { $0.system.id == "tra_sched" }.map { scene($0.coordinate) }
         }
         let zhuzhong = station(Map3DScene.neiwanWiresEnd), hsinchu = station("新竹")
-        for line in railways.lines {
+        // Decision 876: the lines' boxes on the map, the scene's builds'
+        // own: a line whose box is clear of the reach has no point in it,
+        // and is not read point by point.
+        let boxes = shared.lineBoxes(of: railways, frame: frame)
+        for (number, line) in railways.lines.enumerated() {
+            guard boxes[number].meets(minX: region.minX - reach, minY: region.minY - reach, maxX: region.maxX + reach, maxY: region.maxY + reach)
+            else { continue }
             let worlds = line.points.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
             guard worlds.contains(where: { $0.x >= region.minX - reach && $0.x <= region.maxX + reach && $0.y >= region.minY - reach && $0.y <= region.maxY + reach })
             else { continue }
