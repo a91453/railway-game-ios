@@ -51,6 +51,7 @@ SAVED_WORLD=/tmp/worlds/hk-all-simple.json SAVED_WORLD_AUDIT=1 swift test --skip
    這次只在 main 的台灣簡單傍晚（17–18 時，那一小時要跑十幾分鐘）取了 20 秒：`trafficPlan(memo:)` 26.9 %（其中 `planTrafficOvertakes(_:lines:)` 18.8 %）、
    `runDepotEntryCandidates` 33 %（`runTrainEnteringDepot` 19.6 %＋`depotBoundMakingWay` 13.6 %，裡面是 `trainsInTheWay`／`heldRunDepartures`，第一批已經備忘）、`reservingDeparture` 12.4 %。
    所以台灣下一個要看的是 `planTrafficOvertakes`（待避推論隨線數與列車數長得快），改後的台灣還沒取樣。
+   **後來**：TICK-TAIWAN 做了（決策 878「後來」，台灣到 10 時少一半），還剩的寫在 `docs/handoff/TICK-TAIWAN.md`。
 
 另：把 `SavedWorldTickReportTests` 接進 nightly 當報告（香港全買一天的平均 tick 與雜湊），之後誰讓 tick 變慢或世界變了當晚就知道。沒做。
 

@@ -273,7 +273,15 @@ extension GameWorld {
     /// starts: no way to another station runs over them.
     func sidings(except edge: TrackEdgeID) -> Set<TrackEdgeID> {
         guard stations.contains(where: \.isDepot) else { return [] }
-        let depots = network.platforms.filter { station(id: $0.station)?.isDepot == true }
+        // Decision 878, later (TICK-TAIWAN): whether each platform's
+        // station is a depot, as ``station(id:)`` (the first station of
+        // that ID) has it, looked up once for all of them, not by
+        // searching the stations again for each platform: every path
+        // search asks this, and with 161 stations and thousands of
+        // platforms the searching was a fifth of a tick.
+        var isDepot: [StationID: Bool] = [:]
+        for station in stations where isDepot[station.id] == nil { isDepot[station.id] = station.isDepot }
+        let depots = network.platforms.filter { isDepot[$0.station] == true }
         let starting = Set(depots.filter { $0.edge == edge }.map(\.station))
         return Set(depots.filter { !starting.contains($0.station) }.map(\.edge))
     }

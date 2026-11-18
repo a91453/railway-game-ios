@@ -90,6 +90,16 @@ extension GameWorld {
         /// Decision 637: how many services run each traversal the other
         /// way (see ``trafficOppositeCounts(_:)``).
         var opposite: [TrackTraversal: Int]?
+        /// Decision 878, later (TICK-TAIWAN): each service's stretches
+        /// between two of its points (see
+        /// ``preferredTrafficStretches(_:_:_:_:)``), kept as the plan is
+        /// worked out.
+        var corridors: [TrafficCorridorKey: [TrackStretch]] = [:]
+    }
+    struct TrafficCorridorKey: Hashable {
+        var train: TrainID
+        var from: Int
+        var to: Int
     }
     /// A berth of a station, the next call's station and a train's length:
     /// what ``trafficHasSiding(at:train:known:)`` reads of the network.
@@ -188,13 +198,21 @@ extension GameWorld {
         /// a train going back and forth along a line runs two.
         var kept: [TrainID: [Kept]] = [:]
         static let keptShapes = 2
+        /// Decision 878, later (TICK-TAIWAN): the last plan's
+        /// ``trafficOppositeCounts(_:)`` and the runs of its services, in
+        /// order. The counts read only each service's nominal directions,
+        /// which its run decides (its points are the run's, kept in
+        /// ``points``), so a plan of the same runs counts the same.
+        var opposite: (runs: [Run], counts: [TrackTraversal: Int])?
 
-        /// Keeps what `plan` worked out that a later plan reads.
-        mutating func keep(_ plan: TrafficPlan) {
+        /// Keeps what `plan`, of services of `runs` (when known), worked
+        /// out that a later plan reads.
+        mutating func keep(_ plan: TrafficPlan, runs: [Run]? = nil) {
             tracks = plan.tracks
             hasSiding = plan.hasSiding
             nominal = plan.nominal
             for (id, entry) in plan.kept { kept[id]?[0] = entry }
+            if let runs, let counts = plan.opposite { opposite = (runs, counts) }
         }
 
         /// Puts what is kept for `service`, of `run`, first among its
@@ -275,6 +293,7 @@ extension GameWorld {
     func trafficPlan(parts: inout TrafficParts, paths: inout PathMemo, headwayOvertakes: Bool = true) -> TrafficPlan {
         guard isTrafficControlEnabled else { return TrafficPlan() }
         var plan = TrafficPlan()
+        var runs: [TrafficParts.Run] = []
         // Running services, and finished ones whose visits a waiting train
         // may still need. No hypothetical trips: the plan depends on the
         // trains' state alone, never on the clock (decision 59, point 6).
@@ -292,6 +311,7 @@ extension GameWorld {
             }
             if let points, points.count >= 2 {
                 plan.services.append(TrafficService(train: source, points: points))
+                runs.append(run)
                 parts.keep(plan.services[plan.services.count - 1], run: run)
             }
         }
@@ -300,7 +320,8 @@ extension GameWorld {
         plan.hasSiding = parts.hasSiding
         plan.nominal = parts.nominal
         for service in plan.services { plan.kept[service.train.id] = parts.kept[service.train.id]?.first }
-        defer { parts.keep(plan) }
+        if let known = parts.opposite, known.runs == runs { plan.opposite = known.counts }
+        defer { parts.keep(plan, runs: runs) }
         inferTrafficMeets(&plan)
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;
         // each accepted overtake rebuilds that train's meets immediately.
@@ -720,15 +741,31 @@ extension GameWorld {
         var proposals: [Proposal] = []
         // Decision 703: asked once of each service, not twice of each pair.
         let prefers = plan.services.map { hasRoutePreferences($0.train, known: &known) }
+        // Decision 878, later (TICK-TAIWAN): each service's first point at
+        // each of its stations, and for each service the later ones that
+        // share two of its stations or more, in service order. A pair
+        // sharing fewer finds no common points in a row of two (each
+        // station gives one point of `a`, and the run must climb), so it
+        // proposes nothing and is not looked at, as before it found nothing.
+        let first = plan.services.map { service in
+            service.points.indices.reversed().reduce(into: [StationID: Int]()) { $0[service.points[$1].station] = $1 }
+        }
+        let partners = Self.trafficPartners(first)
+        let directed = prefers.contains(true) ? plan.services.map(Self.trafficRuns) : []
         for ia in plan.services.indices {
-            for ib in plan.services.indices where ib > ia {
+            for ib in partners[ia] {
                 let a = plan.services[ia], b = plan.services[ib]
-                var common: [(ai: Int, bi: Int)] = []
-                for (j, p) in b.points.enumerated() {
-                    if let i = a.points.firstIndex(where: { $0.station == p.station }) { common.append((i, j)) }
-                }
                 let physical = prefers[ia] || prefers[ib]
-                let runs = physical ? preferredTrafficCommon(a, b) : [common]
+                let runs: [[(ai: Int, bi: Int)]]
+                if physical {
+                    runs = preferredTrafficCommon(a, directed[ia], b, directed[ib])
+                } else {
+                    var common: [(ai: Int, bi: Int)] = []
+                    for (j, p) in b.points.enumerated() {
+                        if let i = first[ia][p.station] { common.append((i, j)) }
+                    }
+                    runs = [common]
+                }
                 let timetabled = blockSections && followsRealTimetable(a.train) && followsRealTimetable(b.train)
                 for common in runs {
                     guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) else { continue }
@@ -740,7 +777,7 @@ extension GameWorld {
                         guard d0 != 0, d1 != 0, (d0 < 0) != (d1 < 0) else { continue }
                         // Same physical corridor, in the same direction.
                         if physical {
-                            guard preferredTrafficSharesCorridor(a, from: p.ai, to: q.ai, b, from: p.bi, to: q.bi) else { continue }
+                            guard preferredTrafficSharesCorridor(&plan, ia, from: p.ai, to: q.ai, ib, from: p.bi, to: q.bi) else { continue }
                         } else {
                             guard a.points[p.ai].berth.traversal == b.points[p.bi].berth.traversal,
                                   a.points[q.ai].berth.traversal == b.points[q.bi].berth.traversal else { continue }
@@ -805,6 +842,24 @@ extension GameWorld {
         return changed
     }
 
+    /// Decision 878, later (TICK-TAIWAN): for each service (by its
+    /// stations, `first`), the services after it that share two of its
+    /// stations or more, in ascending order: the only pairs
+    /// ``planTrafficOvertakes(_:lines:)`` can propose an overtake for.
+    static func trafficPartners(_ first: [[StationID: Int]]) -> [[Int]] {
+        var calling: [StationID: [Int]] = [:]
+        for (index, stations) in first.enumerated() {
+            for station in stations.keys { calling[station, default: []].append(index) }
+        }
+        return first.indices.map { ia in
+            var shared: [Int: Int] = [:]
+            for station in first[ia].keys {
+                for ib in calling[station]! where ib > ia { shared[ib, default: 0] += 1 }
+            }
+            return shared.compactMap { $0.value >= 2 ? $0.key : nil }.sorted()
+        }
+    }
+
     /// Decision 294: the overtake the timetables of the services at `ia`
     /// and `ib`, both of lines with runs, already have at their common
     /// point `at`: one calls there, arrives before the other comes and is
@@ -828,7 +883,7 @@ extension GameWorld {
             (slow, fast, sp, fp) = (ib, ia, point.bi, point.ai)
         } else { return nil }
         if physical {
-            guard preferredTrafficSharesCorridor(a, from: point.ai, to: next.ai, b, from: point.bi, to: next.bi) else { return nil }
+            guard preferredTrafficSharesCorridor(&plan, ia, from: point.ai, to: next.ai, ib, from: point.bi, to: next.bi) else { return nil }
         } else {
             guard a.points[next.ai].berth.traversal == b.points[next.bi].berth.traversal else { return nil }
         }
