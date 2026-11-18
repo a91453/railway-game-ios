@@ -11,6 +11,7 @@ extension Map3DTrainRegistry {
         Map3DFreightWagons.registration,
         Map3DMTRTuenMaLine.registration,
         Map3DMTRSouthIslandLine.registration,
+        Map3DMTRDisneylandLine.registration,
         Map3DMTREastRailLine.registration,
     ]
 }
