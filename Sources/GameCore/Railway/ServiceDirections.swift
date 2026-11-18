@@ -62,8 +62,9 @@ extension GameWorld {
         /// command, kept from one plan to the next.
         var trafficParts = TrafficParts()
         /// The track the trains hold (see ``trackHolders(memo:)``), for the
-        /// last sets of trains asked about.
-        var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders)] = []
+        /// last sets of trains asked about, each with the time its claims
+        /// were settled for (decision 877).
+        var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders, at: GameTime)] = []
         /// Decision 878: how often ``holders`` has been changed, so that
         /// what was worked out from them (see ``WorldAnswers``) is known
         /// to be of them still.
@@ -71,7 +72,7 @@ extension GameWorld {
         /// Decision 878: the holders of another moment set aside (see
         /// ``exchangeHolders(with:)``).
         struct HolderStore {
-            var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders)] = []
+            var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders, at: GameTime)] = []
             var changes = 0
             var answers = WorldAnswers()
         }
