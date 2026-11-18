@@ -2,9 +2,9 @@
 
 ## 進度
 
-- 做到哪：作者 2026-11-18 建好 `a91453/railway-assets-private-2`。新庫開張 PR a91453/railway-assets-private-2#1（seed，185 個檔，舊庫來源 `bcd2a6b6`）、舊庫關閉 PR a91453/railway-assets-private#160（`CLOSED.md`）、這裡的 `docs/ASSET_REPOSITORIES.md` 已改成新庫收新素材。合併順序：新庫 #1 → 舊庫 #160 → 這個 repo。
-- 已驗證：兩個素材庫的 guard 本機都沒有違規；`next_repo.py seed` 與 `close` 實跑過。
-- 下一步：清單第 5–7 項（reference 的 `AGENTS.md` 已開 PR；Mac 上 clone 新庫與 `studio.py init`、專案記憶路徑、舊庫收完才 Archive）。
+- 做完了（2026-11-18）：新庫 a91453/railway-assets-private-2 開張（#1，185 個小檔，舊庫來源 `bcd2a6b6`；#2 runner 預設先找新庫的 kit）；舊庫 a91453/railway-assets-private#160 寫了 `CLOSED.md`；a91453/railway-reference-private#150 的 `AGENTS.md` 改指這裡的 `docs/ASSET_REPOSITORIES.md`；這個 repo 的表、skill、`docs/HANDOFF.md` 開場的 `add_repo` 都改成新庫。Mac 已 clone 新庫、`studio.py init` 裝好 hook，工作室新任務用新庫。
+- 已驗證：兩個素材庫的 guard 都綠；`next_repo.py seed`、`close` 實跑；studio-kit `tests.py` 86 個測試通過；Mac 上 doctor 對新庫全過。
+- **只剩一件**：舊庫 #134、#143 與工作室在舊庫開工的東鐵綫第 4 輪都收完後，告訴遊戲規劃，由規劃請作者在舊庫 Settings 按 Archive（清單第 7 項）。
 
 ## 新 repo 建好後的清單
 
