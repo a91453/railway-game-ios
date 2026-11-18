@@ -1121,16 +1121,52 @@ extension RealLineLaying {
         for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false,
         whereItStood: Bool = false
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
-        var followed = false
-        let level = offer(
-            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, whereItStood: whereItStood,
-            followingPlatforms: true, followed: &followed
-        )
-        guard level.offer.problem != nil, followed else { return level }
-        return offer(
-            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, whereItStood: whereItStood,
-            followingPlatforms: false, followed: &followed
-        )
+        func laid(following: Set<Int>?, followed: inout Set<Int>) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
+            offer(
+                for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, whereItStood: whereItStood,
+                following: following, followed: &followed
+            )
+        }
+        var followed: Set<Int> = []
+        let level = laid(following: nil, followed: &followed)
+        guard level.offer.problem != nil, !followed.isEmpty else { return level }
+        var none: Set<Int> = []
+        var best = laid(following: [], followed: &none)
+        // DANHAI-OLD-SAVE: where not every such station can be stood at
+        // the company's platforms at once, as many as can be: taken one
+        // by one from the line's first on, and from its last back, the
+        // way that stands more of them (the Green Mountain Line beside
+        // the Blue Coast Line bought whole before it, decision 493: its
+        // end at Hongshulin is longer than the Blue Coast Line's, and no
+        // grade reaches both that line's platforms there and those of
+        // the stations after it). Only where the line can be laid at all
+        // without the rule, and one station is stood so or not as before.
+        guard followed.count > 1, best.offer.problem == nil else { return best }
+        // All but the first or the last of them first: an end's level
+        // stretch is the line's longest.
+        let inOrder = followed.sorted()
+        for left in [inOrder[0], inOrder[inOrder.count - 1]] {
+            var stood: Set<Int> = []
+            let tried = laid(following: followed.subtracting([left]), followed: &stood)
+            if tried.offer.problem == nil { return tried }
+        }
+        var most = 0
+        for stops in [inOrder, inOrder.reversed()] {
+            var kept: Set<Int> = [], last = best
+            for stop in stops {
+                var stood: Set<Int> = []
+                let tried = laid(following: kept.union([stop]), followed: &stood)
+                guard tried.offer.problem == nil else { continue }
+                kept.insert(stop)
+                last = tried
+            }
+            if kept.count > most {
+                most = kept.count
+                best = last
+            }
+            if kept.count >= followed.count - 1 { break }
+        }
+        return best
     }
 
     /// ``offer(for:raising:depot:clearingTrack:besideThrough:)``, with
@@ -1138,7 +1174,7 @@ extension RealLineLaying {
     /// moved a station from where its own line's structure stood it.
     private func offer(
         for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, whereItStood: Bool,
-        followingPlatforms: Bool, followed: inout Bool
+        following: Set<Int>?, followed: inout Set<Int>
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
@@ -1442,7 +1478,14 @@ extension RealLineLaying {
         // the Lantau Link's bridges, 25 m off its lane, and ran along the
         // ground and low over the water beside the Tung Chung Line up on
         // them.
-        let lane = abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) * RealLineAcquisition.metre
+        // DANHAI-OLD-SAVE: and one laid beside the line it shares its
+        // first stations with along the whole of their stretch (decision
+        // 493, the Green Mountain Line after the Blue Coast Line), 30 m
+        // off the real viaduct the two share: it found none of it, and
+        // its platforms stood on the ground 10 to 17 m under the other's
+        // at seven stations.
+        let lane = (abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) + (line.after != nil && parts > 0 ? RealLineAcquisition.besideOffset / RealLineAcquisition.metre : 0))
+            * RealLineAcquisition.metre
         let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, reach: RealRailStructures.reach + lane) ?? []
         // Decision 678: the stations in the line's real tunnel (the Wenhu
         // Line's first; decision 867, Hong Kong's and Fukuoka's; decision
@@ -1568,10 +1611,10 @@ extension RealLineLaying {
             // (the Blue Coast Line's at Binhai Shalun, at the Green
             // Mountain Line's 5 m over falling ground). Not one stood up
             // to clear them (decision 809), nor one in its real tunnel.
-            if followingPlatforms, !stoodUp, !sunk, let station, let there = sharedPlatformHeight(of: station, onViaduct: true),
+            if following?.contains(index) ?? true, !stoodUp, !sunk, let station, let there = sharedPlatformHeight(of: station, onViaduct: true),
                raised || sharedPlatformHeight(of: station) == nil {
                 level = TrackRise.Level(span, at: there)
-                followed = true
+                followed.insert(index)
             }
             levels.append(level)
         }

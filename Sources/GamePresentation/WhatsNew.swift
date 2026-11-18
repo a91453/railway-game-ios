@@ -30,6 +30,70 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 140.
+        Entry(
+            id: "2026-11-19-140",
+            items: [
+                Line(
+                    english: "Real lines that share a station are sold together, so you buy the whole group at once.",
+                    chinese: "共用車站的真實路線改成一起收購，一次買下整組。"
+                ),
+                Line(
+                    english: "Cable car mode can lay the real Sun Moon Lake, Wulai and Ngong Ping cable cars, and visitors nearby ride them.",
+                    chinese: "纜車模式可以照真實路線拉日月潭、烏來、昂坪纜車，附近景點的遊客會來搭。"
+                ),
+                Line(
+                    english: "Tsing Ma Bridge has its towers and cables, and Danjiang Bridge its tower and stay cables.",
+                    chinese: "青馬大橋有了橋塔與主纜，淡江大橋有了橋塔與斜拉索。"
+                ),
+                Line(
+                    english: "Sun Moon Lake has its pier, boats, Wenwu Temple and pavilion.",
+                    chinese: "日月潭多了碼頭、遊艇、文武廟與涼亭。"
+                ),
+                Line(
+                    english: "Underground stations show their platforms, and bought underground stations lie in tunnels.",
+                    chinese: "地下車站畫出月台，收購的真實地下站照真實鋪進隧道。"
+                ),
+                Line(
+                    english: "Every platform has the same benches, vending machines and signs.",
+                    chinese: "平面、高架、地下月台都放上同一套長椅、販賣機與看板。"
+                ),
+                Line(
+                    english: "Choose each station's arrival chime and departure melody; there are now six melodies.",
+                    chinese: "可以替每一站選到站鈴與發車旋律，發車旋律加到六首。"
+                ),
+                Line(
+                    english: "Rovaniemi's trains are Finland's Sr2 locomotives with double-deck coaches.",
+                    chinese: "羅瓦涅米的列車換成芬蘭 Sr2 電力機車與雙層客車。"
+                ),
+                Line(
+                    english: "Elevated roads stand higher, and new parts of the 3D map appear faster.",
+                    chinese: "高架道路蓋得更高，3D 地圖補畫新地方更快。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "A line you remove and buy back returns to its old place.",
+                    chinese: "刪掉再買回來的路線會回到原本的位置。"
+                ),
+                Line(
+                    english: "Lines sharing a station always have platforms side by side at one height.",
+                    chinese: "共用車站的路線，月台一律並排在同一高度。"
+                ),
+                Line(
+                    english: "Tsing Ma Bridge's road no longer sinks to the sea, and Hong Kong's hillside roads lie level.",
+                    chinese: "青馬大橋公路不再沉到海面，香港山坡路不再傾斜。"
+                ),
+                Line(
+                    english: "Screen doors, queue lines and stop signs match where trains really stop.",
+                    chinese: "月台門、排隊線與停車位置牌照列車實際停的位置排。"
+                ),
+                Line(
+                    english: "A game plays out the same at normal and ten-times speed.",
+                    chinese: "一倍速和十倍速玩出來的結果一樣。"
+                ),
+            ]
+        ),
         // 139.
         Entry(
             id: "2026-11-18-139",
