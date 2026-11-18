@@ -289,6 +289,13 @@ extension GameWorld {
             ?? path(from: start, toStation: line.stops[to], length: length)
     }
 
+    /// ``linePath(_:from:to:start:length:routes:)``, with the searches
+    /// kept in `memo` (see ``PathMemo``).
+    func linePath(_ line: ServiceLine, from: Int, to: Int, start: TrainPosition, length: Int64, routes: [LineRoutePreference], memo: inout PathMemo) -> TrainPath? {
+        routes.first(where: { $0.from == from && $0.to == to }).flatMap { preferredPath(from: start, preference: $0, length: length, memo: &memo) }
+            ?? path(from: start, toStation: line.stops[to], length: length, memo: &memo)
+    }
+
     /// Match the whole currently running order before using a line's plan:
     /// editing its stops does not attach new legs to an old timetable.
     func routePreference(for train: Train, from: Int, to: Int) -> LineRoutePreference? {

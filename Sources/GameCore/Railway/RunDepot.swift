@@ -401,6 +401,23 @@ extension GameWorld {
     /// Terminal 1 was bound for, and that one on the platform the first
     /// one's was: neither was a service, so neither was in the way.
     func trainsInTheWay(memo: inout DirectionMemo) -> Set<TrainID> {
+        // Decision 878 (TICK-REAL): as last worked out, for the world as
+        // it was then (see ``WorldAnswers``).
+        if answersHold(memo), let known = memo.answers.inTheWay {
+            if let audit = Self.answerAudit {
+                audit.checked += 1
+                precondition(known == workedOutTrainsInTheWay(memo: &memo), "the trains in the way kept are not those worked out again")
+            }
+            return known
+        }
+        let worked = workedOutTrainsInTheWay(memo: &memo)
+        settleAnswers(&memo)
+        memo.answers.inTheWay = worked
+        return worked
+    }
+
+    /// ``trainsInTheWay(memo:)``, worked out.
+    private func workedOutTrainsInTheWay(memo: inout DirectionMemo) -> Set<TrainID> {
         let idle = trains.filter { $0.execution == nil && $0.position != nil }
         guard !idle.isEmpty else { return [] }
         var ways: [(train: TrainID, needs: Set<TrackResource>)] = []
@@ -425,13 +442,32 @@ extension GameWorld {
     /// trains in left the Wenhu line's runs later under the realistic rules.
     func heldRunDepartures(memo: inout DirectionMemo) -> [(train: TrainID, needs: Set<TrackResource>)] {
         guard isTrafficControlEnabled, !blockSections else { return [] }
+        // Decision 878 (TICK-REAL): as last worked out, for the world as
+        // it was then (see ``WorldAnswers``).
+        if answersHold(memo), let known = memo.answers.heldRuns {
+            if let audit = Self.answerAudit {
+                audit.checked += 1
+                let again = workedOutHeldRunDepartures(memo: &memo)
+                precondition(again.count == known.count && zip(again, known).allSatisfy { $0.train == $1.train && $0.needs == $1.needs },
+                             "the due runs that cannot leave kept are not those worked out again")
+            }
+            return known
+        }
+        let worked = workedOutHeldRunDepartures(memo: &memo)
+        settleAnswers(&memo)
+        memo.answers.heldRuns = worked
+        return worked
+    }
+
+    /// ``heldRunDepartures(memo:)``, worked out.
+    private func workedOutHeldRunDepartures(memo: inout DirectionMemo) -> [(train: TrainID, needs: Set<TrackResource>)] {
         var held: [(train: TrainID, needs: Set<TrackResource>)] = []
         for train in trains where train.execution == nil && train.position != nil {
             guard let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }),
-                  let departing = dueRunDeparture(of: train, on: line),
+                  let departing = dueRunDeparture(of: train, on: line, memo: &memo),
                   case .held = reservingDeparture(departing, memo: &memo)
             else { continue }
-            if let preferred = dueRunPreferredDeparture(of: train, on: line),
+            if let preferred = dueRunPreferredDeparture(of: train, on: line, memo: &memo),
                case .granted = reserving(preferred, following: blockSections, memo: &memo) {
                 continue
             }
@@ -595,7 +631,7 @@ extension GameWorld {
                 guard stuck[id] == nil, let index = trains.firstIndex(where: { $0.id == id }) else { continue }
                 var train = trains[index]
                 guard train.execution == nil, train.placement != nil, train.movement.rate > 0,
-                      let here = stationsStoppedAt(by: id).first, dueRunDeparture(of: train, on: line) == nil
+                      let here = stationsStoppedAt(by: id).first, dueRunDeparture(of: train, on: line, memo: &memo.directions) == nil
                 else { continue }
                 if needs == nil { needs = stuck.keys.sorted().map { routeEnvelope(of: stuck[$0]!.candidate).resources } }
                 let own = held(train)
