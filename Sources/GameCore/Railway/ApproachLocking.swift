@@ -35,12 +35,25 @@ extension GameWorld {
     /// to the last block boundary ``approachHold`` or more short of the
     /// stop. `nil` also when there is no such boundary beyond its head.
     func approachLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
-        guard isTrafficControlEnabled, blockSections, case .travellingToStop? = train.execution,
-              envelopes.length > Self.approachReach, envelopes.length < .max, followsRealTimetable(train)
+        guard isTrafficControlEnabled, case .travellingToStop(let stop, let cycle)? = train.execution,
+              envelopes.length < .max, followsRealTimetable(train)
         else { return nil }
-        let limit = blockBoundary(envelopes, atOrBefore: envelopes.length - Self.approachHold)
+        if blockSections, envelopes.length > Self.approachReach {
+            let limit = blockBoundary(envelopes, atOrBefore: envelopes.length - Self.approachHold)
+            return limit >= 1 ? limit : nil
+        }
+        guard !train.isDeadheading, envelopes.length > Self.terminalApproachReach, stop > 0,
+              station(id: train.timetable[stop].station)?.isDepot == false,
+              station(id: train.timetable[stop - 1].station)?.isDepot == false,
+              train.timetable[stop].reverses || train.call(after: stop, cycle: cycle) == nil
+        else { return nil }
+        let limit = blockBoundary(envelopes, atOrBefore: envelopes.length - Self.terminalApproachHold)
         return limit >= 1 ? limit : nil
     }
+
+    nonisolated(unsafe) static var debugApproach = false
+    nonisolated(unsafe) static var terminalApproachReach: Int64 = 192_000
+    nonisolated(unsafe) static var terminalApproachHold: Int64 = 64_000
 
     /// Decision 294: `candidate`, about to set off, with its route held
     /// only to `limit` along `envelopes` (see ``approachLimit(of:_:)``),

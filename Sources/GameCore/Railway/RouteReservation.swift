@@ -210,9 +210,30 @@ extension GameWorld {
             return .held(by: follower)
         }
         // Decision 294: a long leg of a line with runs, only part of the way.
-        if route.moves, blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
+        if route.moves, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
             let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
             if let limit = approachLimit(of: candidate, envelopes) {
+                if !(blockSections && envelopes.length > Self.approachReach), let berth = route.stretches.last {
+                    if Self.debugApproach { print("APPROACH T\(candidate.id.rawValue) at \(clock.now.seconds) len \(envelopes.length) to \(candidate.timetable[candidate.execution!.stop].station.rawValue)") }
+                    // Not to a berth another train stands on, or comes
+                    // to: the rest of the way is taken later.
+                    let standing = Set(trains.filter { train in
+                        guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
+                        return false
+                    }.map(\.id))
+                    let holders = trackHolders(memo: &memo)
+                    let whole = cover(of: bodyStretches(of: candidate) + route.stretches)
+                    let comingTo = trains.contains { other in
+                        guard other.id != candidate.id, case .travellingToStop? = other.execution else { return false }
+                        if let last = other.movement.edges.last { return last == berth.traversal.edge }
+                        if case .onEdge(let traversal, _)? = other.position { return traversal.edge == berth.traversal.edge }
+                        return false
+                    }
+                    if comingTo || blockedTrack(except: candidate.id, among: standing, holders: holders).blocks(whole, in: network)
+                        || holder(of: cover(of: [berth]), except: candidate.id, holders: holders) != nil {
+                        return .held(by: holder(of: whole, except: candidate.id, holders: holders) ?? candidate.id)
+                    }
+                }
                 return reservingApproach(candidate, envelopes: envelopes, limit: limit, following: following, memo: &memo)
             }
         }
@@ -1280,7 +1301,12 @@ extension GameWorld {
             // With block sections a following train claims nothing more
             // than it holds (decision 212), so its route envelope is not
             // read.
-            covers.append(blockSections ? nil : authority.map { followingCover(of: train, $0.envelopes, memo: &memo) })
+            // Nor does a train holding its route only to its approach
+            // limit, which waits for no train.
+            covers.append(blockSections ? nil : authority.flatMap { authority in
+                if let limit = approachLimit(of: train, authority.envelopes), authority.left >= limit { return nil }
+                return followingCover(of: train, authority.envelopes, memo: &memo)
+            })
         }
         if memo.foulingByEdge == nil { memo.foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge() }
         return (covers, trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!))
