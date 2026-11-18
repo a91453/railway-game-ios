@@ -85,4 +85,18 @@ final class Map3DReindeerTests: XCTestCase {
         XCTAssertEqual(drawn(from: Map3DPoint(0, 400, 1_000)), Map3DReindeerHerd.members.map { $0.unit.rawValue + "-far" })
         XCTAssertEqual(drawn(from: Map3DPoint(0, 400, 4_000)), [])
     }
+
+    /// Decision 840's later amendment: every reindeer's antlers dark
+    /// brown, as in the photographs; Santa's team brown, the farms' grey.
+    func testTheColours() throws {
+        func colours(_ unit: Map3DReindeer.Unit) throws -> Set<UInt32> { Set(try XCTUnwrap(Map3DReindeer.model(unit)).vertices.map(\.color)) }
+        for unit in Map3DReindeer.Unit.allCases {
+            let used = try colours(unit)
+            XCTAssertTrue(used.contains(Map3DReindeer.antler), "\(unit)")
+            XCTAssertFalse(used.contains(Map3DPalette.concrete), "\(unit): no pale antlers")
+        }
+        XCTAssertTrue(try colours(.sleigh).contains(Map3DPalette.trunk))
+        XCTAssertFalse(try colours(.sleigh).contains(Map3DPalette.arcade))
+        XCTAssertTrue(try colours(.standing).contains(Map3DPalette.arcade))
+    }
 }

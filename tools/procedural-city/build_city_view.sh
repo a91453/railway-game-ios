@@ -35,7 +35,15 @@ node "$root/tools/procedural-city/shrink_textures.mjs" "$web"
 node "$root/tools/procedural-city/notices.mjs" "$web" "$out/NOTICES.txt"
 # The page's source has the neutral game's name (GameBrand, tools/brand/README.md);
 # the website's page gets the released game's from the private brand file.
-brand="${GAME_BRAND_FILE:-$root/../railway-assets-private/branding/game-brand.json}"
+# A numbered assets checkout beside this one (the newer repository) first, else the
+# first one (docs/ASSET_REPOSITORIES.md).
+brand="${GAME_BRAND_FILE:-}"
+if [[ -z "$brand" ]]; then
+  for candidate in "$root"/../railway-assets-private-[0-9]*/branding/game-brand.json \
+                   "$root/../railway-assets-private/branding/game-brand.json"; do
+    [[ -f "$candidate" ]] && { brand="$candidate"; break; }
+  done
+fi
 if [[ -f "$brand" ]]; then
   python3 -I - "$brand" "$out/index.html" "$out/boot.js" <<'PY'
 import json, sys

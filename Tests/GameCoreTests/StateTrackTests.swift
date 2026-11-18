@@ -71,6 +71,37 @@ final class StateTrackTests: XCTestCase {
         XCTAssertEqual(spent(own) - spent(state), cost)
     }
 
+    /// REVIEW-L28: the state's track through two of the company's houses.
+    /// They come down for their fees, paid from the cash as the ledger
+    /// books them (decision 95), and no record of the track stays, though
+    /// the houses' records came out from before it in the list (that
+    /// stopped the app: the records were taken from where the list had
+    /// ended, now past its end).
+    func testTheStatesTrackThroughTheCompanysBuildingsLeavesNoTrackRecord() throws {
+        let bounds = try WorldBounds(width: 131_072, height: 98_304)
+        var world = GameWorld(bounds: bounds, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        world.setEconomyMode(.management)
+        let west = try world.placeBuilding(.house, at: PlanPoint(x: 8_000, y: 10_000))
+        let east = try world.placeBuilding(.house, at: PlanPoint(x: 12_000, y: 10_000))
+        let fees = world.demolitionCost(of: west) + world.demolitionCost(of: east)
+        XCTAssertGreaterThan(fees, .zero)
+        XCTAssertEqual(world.accounts.assets.count, 2)
+        let balance = world.economy.balance
+        let spent = { (world: GameWorld) in world.accounts.capitalDays.reduce(Money.zero) { $0 + $1.capitalSpending } }
+        let before = spent(world)
+        try world.layStateTrack { (world: inout GameWorld) throws(GameError) in
+            let a = try world.buildTrackNode(at: WorldCoordinate(x: 4_000, y: 10_000))
+            let b = try world.buildTrackNode(at: WorldCoordinate(x: 16_000, y: 10_000))
+            try world.buildTrackEdge(from: a, to: b)
+        }
+        XCTAssertTrue(world.placedBuildings.isEmpty)
+        XCTAssertEqual(world.network.edges.count, 1)
+        XCTAssertEqual(world.accounts.assets, [], "the houses' records are written off and the track has none")
+        XCTAssertEqual(world.economy.balance, balance - fees)
+        XCTAssertEqual(spent(world), before)
+        XCTAssertEqual(world.financeReport(.day).current.netCashFlow, world.economy.balance - 1_000_000_000)
+    }
+
     /// The line's route counts 1 % of its length in the upkeep and route
     /// energy once it is bought on the state's track.
     func testALineOnTheStatesTrackPaysOnePercentOfItsRoute() throws {
