@@ -405,7 +405,11 @@ extension GameSession {
 
     /// Decision 400 A.8: `onGround`, all of it on the ground, as the game's
     /// stations are (decision 132), whatever the tool's height and
-    /// structure and the real line's tunnels and viaducts.
+    /// structure and the real line's tunnels and viaducts. Decision 856:
+    /// with `onRealViaduct` too, up on the real line's long viaducts
+    /// (still never in its tunnels), and `nil` unless each of `platforms`
+    /// stands on one: a real station bought where the real one is
+    /// elevated (Jiantan) stands on the viaduct, as a traced one does.
     ///
     /// Decision 401's sequel: `system`, the real line's system, sets the
     /// tightest curve (``traceMinimumRadius(ofSystem:)``; the line at the
@@ -418,8 +422,9 @@ extension GameSession {
     /// way.
     func tracePlan(
         from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = [],
-        onGround: Bool = false, system: String? = nil, buildingOn base: GameWorld? = nil
+        onGround: Bool = false, onRealViaduct: Bool = false, system: String? = nil, buildingOn base: GameWorld? = nil
     ) -> TracePlan? {
+        let followsViaducts = onGround && onRealViaduct
         let networkHeight = onGround ? 0 : self.networkHeight
         let networkStructure = onGround ? TrackStructure.automatic : self.networkStructure
         guard given != nil || tracesRealRailway, var from = world.position(of: start, height: networkHeight),
@@ -468,9 +473,17 @@ extension GameSession {
         var carried: [TrackRise.Carried] = []
         var carriedEnds = (start: false, end: false)
         var looseEnds = (start: false, end: false)
-        if mapped, !onGround, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
+        if mapped, followsViaducts || (!onGround && networkStructure == .automatic && (networkHeight == 0 || demoKeepsRealStructures)),
+           let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
+            if followsViaducts {
+                // Decision 856: only the long viaducts, each platform on one.
+                carried = carried.filter { $0.kind == .bridge && $0.isLong }
+                guard !spans.isEmpty, spans.allSatisfy({ span in
+                    carried.contains { $0.range.contains(span.lowerBound) && $0.range.contains(span.upperBound) }
+                }) else { return nil }
+            }
             // A new end on a long viaduct or in a long tunnel (a metro's
             // station over the street or under it, laid a station at a
             // time) stands on it, as the real line does, the structure
