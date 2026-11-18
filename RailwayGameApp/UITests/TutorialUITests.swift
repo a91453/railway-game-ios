@@ -599,10 +599,10 @@ final class TutorialUITests: XCTestCase {
         )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
-        let resume = app.buttons["menu.tutorial.resume"]
+        let resume = app.menuItems("menu.tutorial.resume", label: language == "en" ? "Continue Tutorial" : "繼續教學").firstMatch
         XCTAssertTrue(resume.appears(within: 10), "The skipped tutorial is not offered to continue")
         XCTAssertTrue(resume.label.contains(language == "en" ? "Step 1" : "第 1 步"), resume.label)
-        hittableButton(app.buttons.matching(identifier: "menu.tutorial.restart")).tap()
+        hittableButton(app.menuItems("menu.tutorial.restart", label: language == "en" ? "Start Over" : "從頭開始")).tap()
         openCard(app)
         XCTAssertTrue(next.appears(within: 10))
         XCTAssertFalse(back.exists)

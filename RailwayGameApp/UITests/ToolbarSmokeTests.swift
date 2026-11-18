@@ -473,6 +473,17 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// A native menu's items `identifier`. The iOS 27.2 Simulator drops
+    /// the identifier of an item in a ``ControlGroup`` (the game menu's
+    /// shortcuts side by side) and of a nested menu's items, which then
+    /// show only their label (pull request #2453): an item with no
+    /// identifier whose label begins with `label` is that item too.
+    func menuItems(_ identifier: String, label: String) -> XCUIElementQuery {
+        buttons.matching(NSPredicate(
+            format: "identifier == %@ OR (identifier == '' AND label BEGINSWITH %@)", identifier, label
+        ))
+    }
+
     /// The network tool's mode `name` as it shows: a segment where the six
     /// modes fit, else a chip in the row that scrolls sideways
     /// (`network.modeRow`, decision 574). Not slid into view: for asking
