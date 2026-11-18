@@ -150,8 +150,31 @@ public struct RealCableway: Hashable, Sendable {
         legMetres: [381]
     )
 
+    /// Decision 872: Hong Kong's Ngong Ping cable car (Ngong Ping 360),
+    /// from Tung Chung over the bay and Lantau's hills to Ngong Ping: two
+    /// stations and two angle stations along OpenStreetMap way 26351045
+    /// (`aerialway=gondola`, 昂坪纜車; osmtoday.com's Hong Kong extract of
+    /// 2026-11-18, ODbL). The stations are the way's ends (nodes
+    /// 4402125187 東涌 and 4402125186 昂坪), the angle stations its two
+    /// `aerialway=deflection_roller` nodes where the rope turns (288710867
+    /// 機場島, 288709227 彌勒山); each span is the way's metres between
+    /// them, 5,767 m in all (the operator says 5.7 km). It meets MTR Tung
+    /// Chung (the Tung Chung Line's end in `hongkong/track_stations.geojson`),
+    /// 323 m from the cable car's terminal.
+    public static let ngongPing = RealCableway(
+        name: "昂坪纜車", englishName: "Ngong Ping Cable Car",
+        stops: [
+            Stop(name: "東涌", englishName: "Tung Chung", latitude: 22.2902758, longitude: 113.9385089, boards: true),
+            Stop(name: "機場島", englishName: "Airport Island", latitude: 22.2917448, longitude: 113.9327026, boards: false),
+            Stop(name: "彌勒山", englishName: "Nei Lak Shan", latitude: 22.2691908, longitude: 113.9079404, boards: false),
+            Stop(name: "昂坪", englishName: "Ngong Ping", latitude: 22.2563956, longitude: 113.9014311, boards: true)
+        ],
+        legMetres: [619, 3_575, 1_573],
+        meets: Stop(name: "東涌", englishName: "Tung Chung", latitude: 22.289158, longitude: 113.941405, boards: true)
+    )
+
     /// The real cable cars the mode knows by their stops.
-    public static let all: [RealCableway] = [.maokong, .sunMoonLake, .wulai]
+    public static let all: [RealCableway] = [.maokong, .sunMoonLake, .wulai, .ngongPing]
 
     /// The real cable car `cableway` was laid as (decision 583: its stops'
     /// names for the follow bar): the same stops on the same cells, the

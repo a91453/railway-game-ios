@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 867 (REAL-UNDERGROUND): every line on sale on Hong Kong's and
 /// Fukuoka's maps bought, the stations of the real lines' tunnels stand
-/// in tunnels. ``testReport()`` writes each platform as laid (its
+/// in tunnels; decision 871, Taiwan's too (Qizhang, Huanbei). ``testReport()`` writes each platform as laid (its
 /// section's kind and how far over the ground) beside the real line there
 /// (within 30 m of a tunnel of `rail_structures.json` or not) and each
 /// line's price, only when asked (`REAL_UNDERGROUND_REPORT=<file to write>`).
@@ -109,6 +109,75 @@ final class RealUndergroundTests: XCTestCase {
         XCTAssertEqual(found.open, ["姪濱", "貝塚"])
         XCTAssertEqual(found.under.count, 34)
         XCTAssertEqual(found.under.intersection(found.open), [])
+    }
+
+    /// A Taiwan line bought on its city's real opening (which reads the
+    /// water and the heights, as a player's game does), built on a pricing
+    /// copy as ``LineHeightReportTests`` builds it: the world and the main
+    /// track's path.
+    static func taiwanLaid(_ id: String, opening: String) throws -> (world: GameWorld, path: WorldPath) {
+        let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
+        let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == opening })
+        let start = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
+        let world = GameLauncher.newWorld(at: start, options: NewGameOptions(), data: GameLauncher.NewWorldData(
+            population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
+        ))
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.coverage = data.coverage
+        session.railways = data.railways
+        session.population = data.population
+        session.places = data.places
+        session.water = data.water
+        session.heights = data.heights
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale")
+        let offer = session.realLineOffer(for: line)
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        var built = session.world.pricingCopy()
+        _ = try session.buildStepByStep(acquisition, in: &built, recording: false)
+        return (built, WorldPath(acquisition.pieces[0].nodes.map { WorldVector(x: Double($0.x), y: Double($0.y)) }))
+    }
+
+    /// The kinds of the sections under the platforms of the station named `name`.
+    static func platformKinds(of name: String, in world: GameWorld) throws -> [TrackSectionKind] {
+        let station = try XCTUnwrap(world.stations.first { $0.name == name && !$0.isDepot }, name)
+        return world.network.platforms(of: station.id).compactMap { platform in
+            let middle = (platform.start + platform.end) / 2
+            return world.network.edge(platform.edge)?.sectionSpans.first { $0.start <= middle && middle < $0.end }?.kind
+        }
+    }
+
+    /// Decision 871: the Xiaobitan Branch Line's Qizhang, in the real
+    /// line's tunnel, is laid in one (it stood on the ground), and
+    /// Xiaobitan stays on its viaduct.
+    func testQizhangOnTheXiaobitanBranchIsLaidInATunnel() throws {
+        let laid = try Self.taiwanLaid("trtc:G_XBT", opening: "Taipei")
+        let qizhang = try Self.platformKinds(of: "七張", in: laid.world)
+        XCTAssertFalse(qizhang.isEmpty)
+        XCTAssertEqual(Set(qizhang), [.tunnel])
+        XCTAssertEqual(Set(try Self.platformKinds(of: "小碧潭", in: laid.world)), [.viaduct])
+    }
+
+    /// Decision 871: the Taoyuan Airport MRT's Huanbei, in the real
+    /// line's tunnel, is laid in one (it stood in a cutting), and the
+    /// line passes under the Tamsui River in its real tunnel from Taipei
+    /// Main Station (it crossed on a bridge 5 m over the water): no
+    /// bridge in the first 2.4 km.
+    func testTheAirportLineIsLaidUnderTheTamsuiRiverAndAtHuanbei() throws {
+        let laid = try Self.taiwanLaid("tymc:A", opening: "Taoyuan")
+        XCTAssertEqual(Set(try Self.platformKinds(of: "環北站", in: laid.world)), [.tunnel])
+        XCTAssertEqual(Set(try Self.platformKinds(of: "台北車站", in: laid.world)), [.tunnel])
+        XCTAssertEqual(Set(try Self.platformKinds(of: "三重站", in: laid.world)), [.viaduct])
+        var bridged = 0
+        for edge in laid.world.network.edges {
+            let geometry = try XCTUnwrap(laid.world.trackGeometry(of: edge.id))
+            for span in edge.sectionSpans where span.kind == .bridge && span.end > span.start {
+                for point in geometry.points(from: span.start, to: span.end) {
+                    let near = laid.path.nearest(WorldVector(x: Double(point.x), y: Double(point.y)))
+                    if near.away < 30 * Self.metre, near.along < 2400 * Self.metre { bridged += 1 }
+                }
+            }
+        }
+        XCTAssertEqual(bridged, 0, "points on a bridge over the Tamsui River")
     }
 
     func testReport() throws {
