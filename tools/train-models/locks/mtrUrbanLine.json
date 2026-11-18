@@ -4,36 +4,36 @@
   "lamps" : "1266182caf88d1ec",
   "models" : {
     "light-set-mtrUrbanLine-car" : {
-      "hash" : "f31d02336dc9445d",
-      "triangles" : 1076
+      "hash" : "de41e70d5a350dd",
+      "triangles" : 72
     },
     "light-set-mtrUrbanLine-head" : {
-      "hash" : "bec7b25b740d7879",
-      "triangles" : 1100
+      "hash" : "8ef9ad8703df5e45",
+      "triangles" : 72
     },
     "light-set-mtrUrbanLine-panto" : {
-      "hash" : "66d8b4468238137d",
-      "triangles" : 956
+      "hash" : "de41e70d5a350dd",
+      "triangles" : 72
     },
     "light-set-mtrUrbanLine-tail" : {
-      "hash" : "e81b80337bbb2379",
-      "triangles" : 1100
+      "hash" : "7f8fc9322ada6a45",
+      "triangles" : 72
     },
     "light-set-mtrUrbanLineFar-car" : {
-      "hash" : "b4171f5867084e31",
-      "triangles" : 316
+      "hash" : "8efadb91d9cac34d",
+      "triangles" : 32
     },
     "light-set-mtrUrbanLineFar-head" : {
-      "hash" : "1149966018bfba35",
-      "triangles" : 320
+      "hash" : "8e8c400be917ae7d",
+      "triangles" : 32
     },
     "light-set-mtrUrbanLineFar-panto" : {
-      "hash" : "e15f53ebe7b77e65",
-      "triangles" : 296
+      "hash" : "8efadb91d9cac34d",
+      "triangles" : 32
     },
     "light-set-mtrUrbanLineFar-tail" : {
-      "hash" : "723275882ee32535",
-      "triangles" : 320
+      "hash" : "3a7fbf5572f1227d",
+      "triangles" : 32
     },
     "set-mtrUrbanLine-car" : {
       "hash" : "43c5e2a8a5bda6a9",

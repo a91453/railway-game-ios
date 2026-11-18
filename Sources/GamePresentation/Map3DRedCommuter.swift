@@ -48,7 +48,12 @@ public enum Map3DRedCommuter {
     /// (UInt8). A triangle with no area is left out.
     /// Decision 780: `palette`, the colours of the indices (the local
     /// studio's cars, ``Map3DMTRAirportLine``, have their own).
-    static func decodedMesh(_ bytes: [UInt8], named name: String, palette: [UInt32] = meshPalette) -> Map3DModelPack.Model? {
+    /// `glass`: the palette index of the studio's glass material. Its
+    /// faces, and only they, are the car's window glass
+    /// (``Map3DVertex/trainGlass``, ``Map3DTrainMaterial/marksOwnGlass(_:)``):
+    /// the dark greys of a door or a window's frame, close to the glass in
+    /// colour, stay what they are.
+    static func decodedMesh(_ bytes: [UInt8], named name: String, palette: [UInt32] = meshPalette, glass: Int? = nil) -> Map3DModelPack.Model? {
         var at = 0
         func u16() -> Int? {
             guard at + 2 <= bytes.count else { return nil }
@@ -74,8 +79,11 @@ public enum Map3DRedCommuter {
             guard [a, b, c].allSatisfy(points.indices.contains), palette.indices.contains(paint) else { return nil }
             let corners = [points[a], points[b], points[c]]
             guard let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { continue }
+            // A face looking down is not glass (the pack's rule,
+            // ``Map3DTrainMaterial/lowestNormal``): not seen against the sky.
+            let layer = paint == glass && normal.z >= Map3DTrainMaterial.lowestNormal ? Map3DVertex.trainGlass : Map3DVertex.plain
             for p in corners {
-                vertices.append(Map3DVertex(p, normal: normal, color: palette[paint], layer: Map3DVertex.plain))
+                vertices.append(Map3DVertex(p, normal: normal, color: palette[paint], layer: layer))
                 low = Map3DPoint(min(low.x, p.x), min(low.y, p.y), min(low.z, p.z))
                 high = Map3DPoint(max(high.x, p.x), max(high.y, p.y), max(high.z, p.z))
             }

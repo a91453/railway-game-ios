@@ -57,10 +57,12 @@ final class Map3DTrainMaterialTests: XCTestCase {
                 XCTAssertEqual(after.first!.glows, lamp, "\(recipe.name): a lamp stays a lamp")
                 let layer = after.first!.layer
                 // Decision 615: a cable car cabin's recipe marks its own glass
-                // by meaning, not by colour; the pack keeps that layer.
+                // by meaning, not by colour, and so do the studio's Hong Kong
+                // trains (decision 450's later note); the pack keeps that layer.
                 if materials.contains(before.layer) {
                     XCTAssertEqual(layer, before.layer, recipe.name)
-                    XCTAssertTrue(train && recipe.name.hasPrefix("cablecar-cabin-"), "\(recipe.name): only a cabin marks its own glass")
+                    XCTAssertTrue(train && ["cablecar-cabin-", "set-mtr"].contains { recipe.name.hasPrefix($0) },
+                                  "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }
                 guard materials.contains(layer) else {
