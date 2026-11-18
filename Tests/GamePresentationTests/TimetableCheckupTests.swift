@@ -41,8 +41,6 @@ enum TimetableCheckupWorlds {
                       file: StaticString = #filePath, line: UInt = #line) throws {
         var world = opened
         world.setSpeed(.normal)
-        if let v = ProcessInfo.processInfo.environment["TAR"] { GameWorld.terminalApproachReach = Int64(v)! }
-        if let v = ProcessInfo.processInfo.environment["TAH"] { GameWorld.terminalApproachHold = Int64(v)! }
         let started = Date()
         let results = try TimetableCheckup.play(&world, day: day, windows: windows, until: until)
         let measured = TimetableCheckup.measured(results)
