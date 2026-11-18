@@ -33,12 +33,12 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// `main`'s numbers for each world (2026-11-18), as
     /// ``TimetableCheckupFullTests/budgets``: a world not listed must have
     /// none of any. The sessions fixing a bug lower its world's numbers.
-    /// The Liujia line's three late runs are its own
-    /// (`tra:LIUJIA`, LIUJIA-LATE), the same with the Neiwan line bought.
+    /// The Liujia line's three late runs under the realistic rules are
+    /// its own (`tra:LIUJIA realistic`, LIUJIA-LATE), the same with the
+    /// Neiwan line bought; under a new game's rules it has none since
+    /// decision 849 (measured again on `main` `5a1efcf`), as alone.
     static let budgets: [String: TimetableCheckup.Budget] = [
-        "taiwan tra:LIUJIA+tra:NEIWAN simple": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "taiwan tra:NEIWAN+tra:LIUJIA simple": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
 

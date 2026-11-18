@@ -1301,8 +1301,8 @@ public enum DataSourceCredits {
                         id: "music",
                         title: language.text("Music", "音樂"),
                         detail: language.text(
-                            "The theme is an original composition for the game. The winter tune is the game’s own arrangement of Jingle Bells (James Lord Pierpont, 1857, in the public domain). The piano is the Salamander Grand Piano, the strings and harp are from VS Chamber Orchestra: Community Edition, and the other instruments are from GeneralUser GS.",
-                            "主題曲是為遊戲原創的曲子；冬季曲是遊戲自己編曲的〈Jingle Bells〉（James Lord Pierpont 1857 年作，屬公眾領域）。鋼琴是 Salamander Grand Piano，弦樂與豎琴取自 VS Chamber Orchestra: Community Edition，其他樂器取自 GeneralUser GS。"
+                            "The theme and the departure melodies are original compositions for the game. The winter tune is the game’s own arrangement of Jingle Bells (James Lord Pierpont, 1857, in the public domain). The piano is the Salamander Grand Piano, the strings and harp are from VS Chamber Orchestra: Community Edition, and the other instruments are from GeneralUser GS.",
+                            "主題曲與發車旋律是為遊戲原創的曲子；冬季曲是遊戲自己編曲的〈Jingle Bells〉（James Lord Pierpont 1857 年作，屬公眾領域）。鋼琴是 Salamander Grand Piano，弦樂與豎琴取自 VS Chamber Orchestra: Community Edition，其他樂器取自 GeneralUser GS。"
                         ),
                         notice: language.text(
                             "Music © 2026 \(musicHolder.english). All rights reserved. Instrument samples: Salamander Grand Piano V3 by Alexander Holm, under CC BY 3.0, changed (one microphone, levels and tone); VS Chamber Orchestra: Community Edition by Versilian Studios, under CC0 1.0; GeneralUser GS by S. Christian Collins, under the GeneralUser GS License v2.0.",

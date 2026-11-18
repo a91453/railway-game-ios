@@ -578,6 +578,9 @@ final class GameAudio {
         // Decision 403 (續二): over the running sound (0.35), a little
         // under a watched train's chime, which comes after it at the stop.
         case .horn: 0.45
+        // Decision 853: a little under the arrival chime of the watched
+        // train; the file itself is 2 LU quieter than the chimes.
+        case .departure: 0.5
         }
     }
 
@@ -586,6 +589,8 @@ final class GameAudio {
     /// watched and a motif, whichever station's chime it is.
     private static func spacingKey(of cue: SoundCue) -> SoundCue {
         if case .arrival(let watched, _, let motif) = cue { return .arrival(watched: watched, motif: motif) }
+        // Decision 853: every line's melody shares one spacing.
+        if case .departure = cue { return .departure(.a) }
         return cue
     }
 
@@ -620,6 +625,9 @@ final class GameAudio {
         // presses stays a soft patter.
         case .uiTap, .uiToggle, .uiConfirm, .uiCancel: .milliseconds(90)
         case .uiOpen: .milliseconds(250)
+        // Decision 853: one melody a call; another train's, right after,
+        // waits.
+        case .departure: .seconds(4)
         }
     }
 
@@ -630,7 +638,7 @@ final class GameAudio {
         case .warning: .warning
         case .built, .goalMet, .lineAcquired, .newTrain: .success
         case .arrival, .track, .transition, .income, .ticketIssued, .horn,
-             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen: nil
+             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .departure: nil
         }
     }
 

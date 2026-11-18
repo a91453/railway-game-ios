@@ -725,12 +725,22 @@ def music_files(tune):
         files[music["loop"]] = level_to(loop, MUSIC_LUFS)
     if "once" in music:
         once, n = sampled_music.sampled_once(tune, sheets, lambda name: clack())
-        gain = 10 ** ((MUSIC_LUFS - loudness_lufs(once[:n])) / 20)
-        once = sampled_music.limit(once, gain, MUSIC_CEILING) * gain
-        if np.abs(once).max() > 0.9:
+        # Decision 853: a departure melody is a station's sound, levelled
+        # with the chimes rather than the music.
+        lufs, ceiling, most = (DEPARTURE_LUFS, CHIME_PEAK, CHIME_PEAK) if music.get("role") == "departure" else (MUSIC_LUFS, MUSIC_CEILING, 0.9)
+        gain = 10 ** ((lufs - loudness_lufs(once[:n])) / 20)
+        once = sampled_music.limit(once, gain, ceiling) * gain
+        if np.abs(once).max() > most:
             raise SystemExit(f"{music['once']}: peaks at {np.abs(once).max():.2f}")
         files[music["once"]] = once
     return files
+
+
+# Decision 853: the departure melodies' loudness, 2 LU under the station
+# chimes' (-12.5 to -13.5 LUFS): a melody of five seconds sounds louder
+# than a chime of two at the same level, and it plays before the arrival
+# chime of the next station, not over it.
+DEPARTURE_LUFS = -15.0
 
 
 # Decision 219: how long a struck voice rings when its note is shorter (a
@@ -1003,7 +1013,7 @@ def manifest(out_dir):
             "arrangementSha256": sha256(sampled_music.ARRANGEMENTS),
             "bank": {"name": bank["name"], "commit": bank["commit"], "sha256": bank["sha256"]},
             "chamberBank": {"name": chamber["name"], "spec": relative(chamber_bank.SPEC), "specSha256": sha256(chamber_bank.SPEC), "sha256": chamber["sha256"]},
-            "kind": "music",
+            "kind": "departure" if sampled_music.tunes()[tune].get("role") == "departure" else "music",
             "tune": tune,
             "copyright": sampled_music.tunes()[tune]["copyright"],
         }
@@ -1023,7 +1033,7 @@ def manifest(out_dir):
         # The thunder is a CAF too (IMA4 keeps it small), but plays once.
         loops = file.endswith(".caf") and not file.startswith("thunder")
         entry.update(measured(os.path.join(out_dir, file), loops=loops))
-        if entry["kind"] == "music":
+        if entry["kind"] in ("music", "departure"):
             # Decision 815: the music's loudness, so its tunes stay level.
             entry["loudnessLufs"] = round(float(loudness_lufs(read_pcm(os.path.join(out_dir, file)))), 2)
         files.append(entry)
