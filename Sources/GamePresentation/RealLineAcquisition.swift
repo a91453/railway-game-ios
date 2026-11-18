@@ -953,6 +953,13 @@ extension RealLineLaying {
         func offer(depot: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
             let laid = self.offer(for: line, raising: .viaducts, depot: depot)
             guard laid.crossesTrack else { return (laid.offer, laid.laid) }
+            // SHARED-STATION-THROUGH: before standing the shared stations
+            // up, the line laid beside the company's track at a station it
+            // shares between its ends too (Fukuoka's Kuko Line, bought last,
+            // along the Hakozaki Line's track at Nakasu-Kawabata), at the
+            // height of the platforms there.
+            let through = self.offer(for: line, raising: .viaducts, depot: depot, besideThrough: true)
+            if through.offer.problem == nil { return (through.offer, through.laid) }
             let raised = self.offer(for: line, raising: .viaductsAndShared, depot: depot)
             if raised.offer.problem == nil { return (raised.offer, raised.laid) }
             // Decision 552 (continued): still meeting another track at one
@@ -1049,8 +1056,14 @@ extension RealLineLaying {
     /// held at least ``TrackStructure/clearance`` and a margin over each
     /// track of the company's it crosses (under it, where the line as
     /// first laid runs lower), as a real line bridges another.
+    ///
+    /// SHARED-STATION-THROUGH: with `besideThrough`, a station between the
+    /// line's ends that the company has already is laid beside its track
+    /// as an end is (``sharedEnds(of:points:through:shared:extent:)``);
+    /// refused where no such station moves the way, so that only a line
+    /// that needs it is laid so.
     func offer(
-        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false
+        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
@@ -1242,9 +1255,19 @@ extension RealLineLaying {
         // beside that track, an island's width out, not over it.
         let inItsLane = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
         let besideShared = sharedEnds(
-            of: inItsLane, points: points, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
-            extent: { index in Self.endStationExtent(of: line, name: runs.stops[index], tracks: runs.tracks[runs.stops[index]] ?? 1, layout: layout) }
+            of: inItsLane, points: points, through: besideThrough, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
+            extent: { index in
+                let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
+                guard index > 0, index < runs.stops.count - 1 else {
+                    return Self.endStationExtent(of: line, name: name, tracks: tracks, layout: layout)
+                }
+                let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
+                return Self.throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
+            }
         )
+        if besideThrough, besideShared?.moved.contains(where: { $0 > 0 && $0 < runs.stops.count - 1 }) != true {
+            return refused("No station between the line's ends is beside the company's track.", "這條線中間沒有和公司軌道並排的共用車站。")
+        }
         let path = besideShared?.path ?? inItsLane
         let along = points.map { path.nearest($0) }
         guard along.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(along, along.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
@@ -1402,8 +1425,10 @@ extension RealLineLaying {
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
             var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
             // SHARED-STATION-LEVEL: laid beside the company's station, at
-            // the height of its platforms there.
-            if !raised, !sunk, besideShared?.moved.contains(index) == true,
+            // the height of its platforms there. SHARED-STATION-THROUGH: at
+            // any station of the company's, laid beside it or not (Fukuoka's
+            // two Hakatas, 150 m apart), and between the ends too.
+            if !raised, !sunk,
                let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
                let there = sharedPlatformHeight(of: station), (level.low...level.high).contains(there) {
                 level = TrackRise.Level(span, at: there)

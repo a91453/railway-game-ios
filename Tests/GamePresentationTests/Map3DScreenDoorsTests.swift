@@ -92,13 +92,14 @@ final class Map3DScreenDoorsTests: XCTestCase {
             XCTAssertEqual(opening.to - opening.from, Doors.opening, accuracy: 0.001)
         }
         // One run, piece after piece, a panel between each two openings,
-        // the train's length and half a metre each end.
+        // and (decision 859) on along the whole platform, 0.2 m short of
+        // each end.
         for (a, b) in zip(pieces, pieces.dropFirst()) {
             XCTAssertEqual(a.to, b.from, accuracy: 0.001)
             XCTAssertFalse(a.door && b.door)
         }
-        XCTAssertEqual(pieces.first?.from ?? 0, 9 - 0.5, accuracy: 0.001)
-        XCTAssertEqual(pieces.last?.to ?? 0, 141 + 0.5, accuracy: 0.001)
+        XCTAssertEqual(pieces.first?.from ?? 0, 0.2, accuracy: 0.001)
+        XCTAssertEqual(pieces.last?.to ?? 0, 150 - 0.2, accuracy: 0.001)
         // No train fits: none.
         XCTAssertTrue(Doors.pieces(length: 60, formations: [six]).isEmpty)
     }

@@ -1,4 +1,5 @@
 import Foundation
+import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -36,9 +37,11 @@ final class MapPackDownloadsTests: XCTestCase {
         // It is read as the bundled one is.
         XCTAssertEqual(try MapPack.current(.hongKong)?.extent(), try bundled.extent())
         XCTAssertNotNil(MapPack.current(.hongKong)?.baseMapFile)
+        // Decision 858: forgotten, the app's own is read again, and the
+        // tests' process, like the app people install, carries none.
         MapPackDownloads.forget(.hongKong)
-        XCTAssertEqual(MapPack.current(.hongKong)?.root.lastPathComponent, "hongkong")
-        XCTAssertNotEqual(MapPack.current(.hongKong)?.root, root)
+        XCTAssertNil(MapPack.bundled(.hongKong))
+        XCTAssertNil(MapPack.current(.hongKong))
     }
 
     /// Decision 819 (MAPPACK-FIX): an Apple-hosted asset pack hands out a
@@ -108,7 +111,7 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertNil(MapPackDownloads.use(.hongKong, root: root, bundled: try bundled))
         XCTAssertEqual(MapPackDownloads.changes, before + 1)
         XCTAssertTrue(MapPack.currentOpen().contains { $0.root == root })
-        XCTAssertEqual(MapPack.currentOpen().count, first.count)
+        XCTAssertEqual(MapPack.currentOpen().count, first.count + 1, "the tests' process carries no pack (decision 858)")
 
         let cut = try downloaded()
         try FileManager.default.removeItem(at: cut.appendingPathComponent("pack.json"))
@@ -162,6 +165,101 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertNil(MapPackDownloads.root(.hongKong))
         XCTAssertNil(MapPackDownloads.use(.hongKong, root: root, bundled: nil))
         XCTAssertEqual(MapPackDownloads.root(.hongKong), root)
+    }
+
+    // MARK: - Decision 858: the app carries pack.json alone
+
+    /// A folder with a pack's `pack.json` and none of its files, as the
+    /// app people install carries each city, is not a pack to read; with
+    /// every file it lists it is.
+    func testAFolderWithItsPackJSONAloneIsNotAPack() throws {
+        let whole = try downloaded()
+        XCTAssertTrue(MapPack.isWhole(whole))
+        let alone = whole.deletingLastPathComponent().appendingPathComponent("alone")
+        try FileManager.default.createDirectory(at: alone, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: whole.appendingPathComponent("pack.json"), to: alone.appendingPathComponent("pack.json"))
+        XCTAssertFalse(MapPack.isWhole(alone))
+        try FileManager.default.removeItem(at: whole.appendingPathComponent("water.json"))
+        XCTAssertFalse(MapPack.isWhole(whole))
+        XCTAssertFalse(MapPack.isWhole(whole.appendingPathComponent("nowhere")))
+    }
+
+    /// The download is held against the app's own copy of `pack.json`
+    /// (`expected`), which the app carries without the pack's files: the
+    /// same is taken; another version is refused, and taken only when
+    /// asked for with no `pack.json` to hold it against (the listed one
+    /// did not come, and the app has no pack of its own to read).
+    func testADownloadIsHeldAgainstTheAppsPackJSON() throws {
+        let expected = try bundled.file("pack", "json")
+        let root = try downloaded()
+        let locators: [MapPackDownloads.Locator] = [{ root.appendingPathComponent($0) }]
+        XCTAssertNil(MapPackDownloads.use(.hongKong, locators: locators, expected: expected))
+        XCTAssertEqual(MapPackDownloads.root(.hongKong), root)
+        MapPackDownloads.forget(.hongKong)
+
+        let manifest = root.appendingPathComponent("pack.json")
+        var text = try String(contentsOf: manifest, encoding: .utf8)
+        text = text.replacingOccurrences(of: #""english":"Hong Kong""#, with: #""english":"Hong Kong ""#)
+        try text.write(to: manifest, atomically: true, encoding: .utf8)
+        XCTAssertEqual(MapPackDownloads.use(.hongKong, locators: locators, expected: expected), .differsFromBundled)
+        XCTAssertNil(MapPack.current(.hongKong))
+        XCTAssertNil(MapPackDownloads.use(.hongKong, locators: locators, expected: nil))
+        XCTAssertEqual(MapPack.current(.hongKong)?.root, root)
+    }
+
+    /// Where a city's map lies is known from its `pack.json` alone, and is
+    /// where its ground lies once its pack is read.
+    func testACitysPlaceIsKnownFromItsPackJSON() throws {
+        for city in OverseasMap.allCases where OverseasMaps.open.contains(city) {
+            let pack = try XCTUnwrap(HongKongRailwaysTests.pack(city))
+            let place = try XCTUnwrap(OverseasPlace(city: city, manifest: try pack.file("pack", "json")))
+            let ground = try OverseasGround(city: city, pack: pack)
+            XCTAssertEqual(place.anchor, ground.anchor)
+            XCTAssertEqual(place.bounds, ground.bounds)
+            XCTAssertTrue(place.holds(GameWorld.newOverseasGame(ground)))
+            XCTAssertFalse(place.holds(GameWorld.newWholeTaiwanGame()))
+        }
+        XCTAssertNil(OverseasPlace(city: .hongKong, manifest: Data("{}".utf8)))
+    }
+
+    /// The real-world data waits for the downloads' answers, and no longer
+    /// than it is told to.
+    func testTheReadWaitsForTheDownloadsAnswers() {
+        XCTAssertTrue(MapPackDownloads.waitForAnswers([], timeout: 0))
+        let began = Date()
+        XCTAssertFalse(MapPackDownloads.waitForAnswers([.hongKong], timeout: 0.2), "not begun is not answered")
+        XCTAssertLessThan(Date().timeIntervalSince(began), 2)
+        MapPackDownloads.note(.hongKong, .downloading)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { MapPackDownloads.note(.hongKong, .failed("offline")) }
+        XCTAssertTrue(MapPackDownloads.waitForAnswers([.hongKong], timeout: 5))
+        XCTAssertLessThan(Date().timeIntervalSince(began), 3)
+        for answered in [MapPackStatus.downloaded, .earlier, .refused(.noManifest)] {
+            MapPackDownloads.note(.hongKong, answered)
+            XCTAssertTrue(MapPackDownloads.waitForAnswers([.hongKong], timeout: 0))
+        }
+    }
+
+    /// A pack taken after the data was read is unread until the next read.
+    func testAPackTakenAfterTheReadIsUnread() throws {
+        MapPackDownloads.noteRead()
+        XCTAssertFalse(MapPackDownloads.hasUnread)
+        XCTAssertNil(MapPackDownloads.use(.hongKong, root: try downloaded(), bundled: nil))
+        XCTAssertTrue(MapPackDownloads.hasUnread)
+        MapPackDownloads.noteRead()
+        XCTAssertFalse(MapPackDownloads.hasUnread)
+    }
+
+    /// What the settings say of a city the app does not carry, and of one
+    /// read from a version the app does not list.
+    func testTheSettingsSayNotDownloadedOfACityTheAppDoesNotCarry() {
+        XCTAssertFalse(OverseasMap.hongKong.isCarried, "the tests' process carries no pack")
+        for status in [MapPackStatus.bundled, .failed("no network"), .refused(.noManifest)] {
+            XCTAssertEqual(status.text(in: .english, carried: false), "Not downloaded")
+            XCTAssertEqual(status.text(in: .traditionalChinese, carried: false), "尚未下載")
+        }
+        XCTAssertEqual(MapPackStatus.downloading.text(in: .traditionalChinese, carried: false), "下載中")
+        XCTAssertEqual(MapPackStatus.earlier.text(in: .traditionalChinese, carried: false), "已下載")
+        XCTAssertEqual(MapPackStatus.earlier.reportText, "used: not the version the app lists")
     }
 
     /// The asset pack's manifest holds the city's folder at the path the

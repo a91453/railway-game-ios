@@ -9,11 +9,15 @@
   tools/asset-packs/package.sh /tmp/asset-packs
   ```
 
-- 上傳（App Store Connect API 金鑰，和 `testflight.yml` 用的同一把；還沒接進 workflow）：
+  只包其中幾包：後面接 `assetPackID`（`tools/asset-packs/package.sh /tmp/asset-packs mappack-hongkong`）。
+
+- 上傳由 `testflight.yml` 做（決策 858）：**只上傳內容有變的那幾包**，因為 App Store Connect 每上傳一次就多一個版本、每個版本都要審。哪幾包有變由 `.github/scripts/testflight-map-packs.py` 判斷（和上一次成功發版的 commit 比 git 雜湊）；要全部重傳，按 workflow 時 `map_packs` 選 `all`。手動上傳是：
 
   ```sh
   xcrun altool --upload-asset-pack /tmp/asset-packs/mappack-hongkong.aar \
-    --apple-id <App 的 Apple ID> --api-key <KEY_ID> --api-issuer <ISSUER_ID> --wait
+    --apple-id <App 的 Apple ID> --api-key <KEY_ID> --api-issuer <ISSUER_ID>
   ```
+
+- Release 的 App 不帶這些資料夾裡的檔，只帶各自的 `pack.json`（決策 858）；Debug 的 App 整包帶。所以改了地圖包的任何檔，下一次發版就會上傳新版本。
 
 - 授權：包裡的檔案和 `MapPacks/hongkong/pack.json` 的 `licences` 一樣（OpenStreetMap ODbL、DATA.GOV.HK、WorldPop CC BY 4.0、CSDI），鳴謝照舊在 `DataSourceCredits`。

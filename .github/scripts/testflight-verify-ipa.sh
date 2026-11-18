@@ -130,6 +130,20 @@ elif [[ -e "$app/embedded.mobileprovision" ]]; then
   fail "The embedded provisioning profile cannot be read."
 fi
 
+# --- Map packs ---------------------------------------------------------------
+# Decision 858: the app carries each city's pack.json and none of its files
+# (they are downloaded as asset packs); a pack's files in the IPA are some
+# 14 MB a city that every player would download twice.
+map_pack_manifests=0
+map_pack_files=0
+if [[ -d "$app/MapPacks" ]]; then
+  map_pack_manifests="$(find "$app/MapPacks" -type f -name pack.json | wc -l | tr -d ' ')"
+  map_pack_files="$(find "$app/MapPacks" -type f ! -name pack.json | wc -l | tr -d ' ')"
+fi
+if ((map_pack_files > 0)); then
+  fail "The app carries $map_pack_files map pack file(s) besides pack.json; they are downloaded, not carried (decision 858)."
+fi
+
 {
   echo "### IPA check"
   echo "| Check | Result |"
@@ -139,9 +153,11 @@ fi
   echo "| Signed with a distribution certificate | $distribution |"
   echo "| App Store provisioning profile for this team and app | $profile_ok |"
   echo "| App structure complete | $(yes_no "$structure_ok") |"
-  # Decision 776: without it the map packs are not downloaded (the app
-  # reads its own), so it is reported, not failed.
+  # Decision 776: without it the map packs are not downloaded in the
+  # background; the app still asks for them itself, so it is reported, not
+  # failed.
   echo "| Map pack downloader extension | $(yes_no test -d "$app/Extensions/MapPackDownloader.appex") |"
+  echo "| Map packs listed in the app (pack.json only; their files are downloaded) | $map_pack_manifests |"
 } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
 if ((failures > 0)); then

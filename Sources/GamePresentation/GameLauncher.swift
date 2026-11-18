@@ -48,21 +48,37 @@ public final class GameLauncher {
     /// with the real-world data: empty while no city is open.
     public var overseasGrounds: [OverseasGround] = []
 
+    /// Decision 858: the open cities whose map pack is not on the device
+    /// yet, read with the real-world data. A game on one's map gets no
+    /// ground at all (as while the data is read) rather than Taiwan's, and
+    /// a save on it is not opened (``awaitedCity(of:)``).
+    public var overseasAwaited: [OverseasPlace] = []
+
+    /// Decision 858: the city whose map `world` is on while that city's
+    /// map pack is not on the device, or `nil`.
+    public func awaitedCity(of world: GameWorld) -> OverseasMap? {
+        overseasAwaited.first { $0.holds(world) }?.city
+    }
+
     /// Who lives on `world`'s map: a city's own people on its map
     /// (decision 712), Taiwan's on any other.
     func population(for world: GameWorld) -> PopulationGrid? {
         if let ground = overseasGrounds.first(where: { $0.holds(world) }) { return ground.population }
+        if awaitedCity(of: world) != nil { return nil }
         return population
     }
 
     /// The water on `world`'s map: a city's own on its map (decision 726;
     /// none for a pack without it), Taiwan's on any other.
     func water(for world: GameWorld) -> WaterGrid? {
-        Self.water(for: world, grounds: overseasGrounds, taiwan: water)
+        Self.water(for: world, grounds: overseasGrounds, awaited: overseasAwaited, taiwan: water)
     }
 
-    nonisolated static func water(for world: GameWorld, grounds: [OverseasGround], taiwan: WaterGrid?) -> WaterGrid? {
+    nonisolated static func water(
+        for world: GameWorld, grounds: [OverseasGround], awaited: [OverseasPlace] = [], taiwan: WaterGrid?
+    ) -> WaterGrid? {
         if let ground = grounds.first(where: { $0.holds(world) }) { return ground.water }
+        if awaited.contains(where: { $0.holds(world) }) { return nil }
         return taiwan
     }
 
@@ -71,6 +87,7 @@ public final class GameLauncher {
     /// Taiwan's on any other.
     func heights(for world: GameWorld) -> HeightGrid? {
         if let ground = overseasGrounds.first(where: { $0.holds(world) }) { return ground.heights }
+        if awaitedCity(of: world) != nil { return nil }
         return heights
     }
 
@@ -79,6 +96,7 @@ public final class GameLauncher {
     /// Taiwan's on any other (decision 811).
     func landCover(for world: GameWorld) -> LandCoverGrid? {
         if let ground = overseasGrounds.first(where: { $0.holds(world) }) { return ground.landCover }
+        if awaitedCity(of: world) != nil { return nil }
         return landCover
     }
 
@@ -223,6 +241,8 @@ public final class GameLauncher {
     /// saved. Save Game writes that row again; its autosaves name it.
     public private(set) var gameRow: String?
     @ObservationIgnored private var realWorldLoad: Task<Void, Never>?
+    /// Decision 858: the last read after the first (``reloadRealWorldData(reading:)``).
+    @ObservationIgnored private var realWorldReload: Task<Void, Never>?
 
     public init(library: SaveLibrary, language: DisplayLanguage) {
         self.library = library
@@ -797,7 +817,9 @@ public final class GameLauncher {
     @discardableResult
     public func startOverseasMap(_ city: OverseasMap) -> Bool {
         guard let ground = overseasGrounds.first(where: { $0.city == city }) else {
-            message = StatusMessage(kind: .failure, text: language.text("The real-world data is not ready yet.", "實景資料還沒準備好。"))
+            // Decision 858: its map pack is not on the device yet.
+            let waiting = overseasAwaited.contains { $0.city == city } ? city.notDownloadedText(MapPackDownloads.status(city), in: language) : nil
+            message = StatusMessage(kind: .failure, text: waiting ?? language.text("The real-world data is not ready yet.", "實景資料還沒準備好。"))
             return false
         }
         // Decision 712: the city's flights open its map.
@@ -1892,6 +1914,13 @@ public final class GameLauncher {
             try? afterSaves { () throws(SaveError) in }
             guard settleLeaving() else { return false }
         }
+        // Decision 858: a game on a city's map whose map pack is not on
+        // the device is not opened: it would be played with no ground,
+        // sea or people of its own. Its save stays as it is.
+        if let city = awaitedCity(of: world) {
+            message = StatusMessage(kind: .failure, text: city.notDownloadedText(MapPackDownloads.status(city), in: language))
+            return false
+        }
         // Decision 706: a free game on a real-world map gets its map's
         // coach stops, once the app has read them.
         let world = Self.withFreePlayFunds(coachNetwork.map { CoachCatalog.withCoachStops(world, network: $0) } ?? world)
@@ -1996,7 +2025,31 @@ public final class GameLauncher {
     public func loadRealWorldData(reading read: @escaping @Sendable () -> RealWorldData) -> Task<Void, Never> {
         if let realWorldLoad { return realWorldLoad }
         isLoadingRealWorldData = true
+        let load = Task { await self.readRealWorldData(read) }
+        realWorldLoad = load
+        return load
+    }
+
+    /// Decision 858: reads the real-world data again with `read`, after
+    /// the first read (``loadRealWorldData(reading:)``) and any earlier
+    /// one of these: a city's map pack arrived since, so its map, its
+    /// railways and its flights are in from then on, in the game being
+    /// played too, without the app being opened again.
+    /// ``isLoadingRealWorldData`` stays `false`: what was read before is
+    /// used until the new data replaces it, all at once.
+    @discardableResult
+    public func reloadRealWorldData(reading read: @escaping @Sendable () -> RealWorldData) -> Task<Void, Never> {
+        let earlier = realWorldReload ?? realWorldLoad
         let load = Task {
+            await earlier?.value
+            await self.readRealWorldData(read)
+        }
+        realWorldReload = load
+        return load
+    }
+
+    private func readRealWorldData(_ read: @escaping @Sendable () -> RealWorldData) async {
+        do {
             let data = await Task.detached(priority: .userInitiated, operation: read).value
             // Decision 400's sequel (#1260's rest): the roads the game being
             // played will read with the data, read here too, off the main
@@ -2007,19 +2060,18 @@ public final class GameLauncher {
                 world.flatMap {
                     GameSession.roadsReadAhead(
                         of: $0, population: data.population, places: data.places,
-                        water: Self.water(for: $0, grounds: data.overseas, taiwan: data.water), coverage: data.coverage, baseMap: data.baseMap
+                        water: Self.water(for: $0, grounds: data.overseas, awaited: data.overseasAwaited, taiwan: data.water), coverage: data.coverage, baseMap: data.baseMap
                     )
                 }
             }.value
             self.install(data, roads: roads)
         }
-        realWorldLoad = load
-        return load
     }
 
     private func install(_ data: RealWorldData, roads: RoadsReadAhead?) {
         population = data.population
         overseasGrounds = data.overseas
+        overseasAwaited = data.overseasAwaited
         places = data.places
         water = data.water
         heights = data.heights
@@ -2052,6 +2104,12 @@ public final class GameLauncher {
             session.readLandRoundStations(roads: roads)
             // Decision 712: the cities read just now, and their flights.
             checkAirRoutes(of: session)
+            // Decision 858: a game begun while the data was read, on a
+            // city's map whose pack is not here: it has no ground until
+            // the pack is, and the player is told why.
+            if let city = awaitedCity(of: session.world) {
+                message = StatusMessage(kind: .failure, text: city.notDownloadedText(MapPackDownloads.status(city), in: language))
+            }
         }
         isLoadingRealWorldData = false
     }
@@ -2479,6 +2537,10 @@ public struct RealWorldData: Sendable {
     public let railways: RealRailways?
     /// The ground of each open city outside Taiwan (decision 712).
     public var overseas: [OverseasGround] = []
+    /// Decision 858: the open cities whose map pack is not on the device
+    /// (not downloaded yet), each where the app's own `pack.json` says its
+    /// map lies.
+    public var overseasAwaited: [OverseasPlace] = []
     /// The sights' visitors of a year by the official count (decision 724).
     public var sightVisitors: SightVisitors?
     /// What covers Taiwan's ground (decision 811), for the 3D map.
@@ -2523,6 +2585,7 @@ public struct RealWorldData: Sendable {
     public static func load(
         overseas: Set<OverseasMap> = OverseasMaps.open,
         pack: (OverseasMap) -> MapPack? = MapPack.current,
+        manifest: (OverseasMap) -> Data? = MapPack.carriedManifest,
         file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data
     ) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []
@@ -2555,8 +2618,14 @@ public struct RealWorldData: Sendable {
         // Decision 712: a city whose pack cannot be read is listed by the
         // railways already; one without an extent is listed here.
         var grounds: [OverseasGround] = []
+        // Decision 858: a city whose pack is not here yet is known by the
+        // app's own `pack.json` of it (`manifest`).
+        var awaited: [OverseasPlace] = []
         for city in OverseasMap.allCases where overseas.contains(city) {
-            guard let pack = pack(city) else { continue }
+            guard let pack = pack(city) else {
+                if let place = manifest(city).flatMap({ OverseasPlace(city: city, manifest: $0) }) { awaited.append(place) }
+                continue
+            }
             do {
                 grounds.append(try OverseasGround(city: city, pack: pack))
             } catch {
@@ -2569,9 +2638,12 @@ public struct RealWorldData: Sendable {
         var data = RealWorldData(
             population: population, places: places, water: water, heights: heights, coverage: coverage, placeNames: placeNames,
             realBuses: realBuses, coaches: coaches, railways: railways.railways,
-            issues: issues + railways.issues
+            // Decision 858: a pack still to come is not a file that could
+            // not be read; the map picker and the settings say it waits.
+            issues: (issues + railways.issues).filter { issue in !awaited.contains { issue.file == "MapPacks/\($0.city.packFolder)" } }
         )
         data.overseas = grounds
+        data.overseasAwaited = awaited
         data.sightVisitors = sightVisitors
         // Decision 811: the land cover, for the 3D map's countryside.
         data.landCover = grid("taiwan_landcover", ext: "dat", LandCoverGrid.init(data:))

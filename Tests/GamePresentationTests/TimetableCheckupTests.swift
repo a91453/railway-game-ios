@@ -158,8 +158,9 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// Rail Line from 15, the Tseung Kwan O Line from 92 late to none
     /// (and the Liujia Line's 3 late).
     /// The Tung Chung Line's went from 2 not sent, 81 late and 6 late out
-    /// of a depot: one more late out of Siu Ho Wan, a run after midnight
-    /// (TCL-DEPOT-CLAIM, `docs/priorities/HK-PEAK-CONTROL.md`).
+    /// of a depot to 1, 64 and 7: one more late out of Siu Ho Wan, a run
+    /// after midnight, which decision 850 (TCL-DEPOT-CLAIM) took back,
+    /// with two of the late runs.
     /// Decision 849's later part (the home signal with block sections
     /// too) lowered Hong Kong's under the realistic rules: the South
     /// Island Line from 10 not sent, the East Rail Line from 4, the Tung
@@ -178,9 +179,9 @@ final class TimetableCheckupFullTests: XCTestCase {
         "hk EAL_LMC realistic": .init(notSent: 0, late: 9, lateOutOfDepot: 0, peakGapMinutes: 3),
         "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),
         "hk SIL realistic": .init(notSent: 0, late: 91, lateOutOfDepot: 1, peakGapMinutes: 4),
-        "hk TCL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
+        "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
-        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
+        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk AEL+TCL+DRL realistic": .init(notSent: 0, late: 25, lateOutOfDepot: 1, peakGapMinutes: 7),
     ]
 

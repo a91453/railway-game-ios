@@ -40,3 +40,7 @@ extension、App Group 權限、Info.plist 三個鍵、`testflight.yml` 打包上
 - `MapPackDownloader` 在 iOS 上的編譯（看 PR 的 `ios-build.yml`）。
 - `package.sh`、清單格式、上傳指令（要 Mac）。
 - 實機下載（第二段之後）。
+
+## 第三段做完了（2026-11-18，MAP-PACK-OUT）
+
+決策 858、`docs/handoff/MAP-PACK-OUT.md`：Release 的 App 只帶各城市的 `pack.json`，香港與羅瓦涅米的資料都靠下載；發版只上傳有變的地圖包。上面「還留下的」第 3 點到此結束。

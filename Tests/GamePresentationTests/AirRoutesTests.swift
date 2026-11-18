@@ -515,4 +515,106 @@ final class AirRoutesTests: XCTestCase {
         XCTAssertFalse(launcher.startOverseasMap(.rovaniemi))
         XCTAssertNil(launcher.session)
     }
+
+    // MARK: - Decision 858: a city whose map pack is not on the device
+
+    /// The app's own copy of a city's `pack.json`, as the app people
+    /// install carries it (without the pack's files).
+    private nonisolated static func manifest(_ city: OverseasMap) -> Data? {
+        try? HongKongRailwaysTests.pack(city)?.file("pack", "json")
+    }
+
+    /// A launcher whose real-world data was read with none of `missing`'s
+    /// map packs on the device.
+    private func launcher(in directory: URL, without missing: Set<OverseasMap>) async -> GameLauncher {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.loadRealWorldData {
+            RealWorldData.load(
+                overseas: [.hongKong, .rovaniemi], pack: { missing.contains($0) ? nil : HongKongRailwaysTests.pack($0) },
+                manifest: Self.manifest, file: RealWorldDataLoadTests.file
+            )
+        }.value
+        return launcher
+    }
+
+    /// Until a city's map pack is downloaded its row says so and starts
+    /// nothing; its flights are as they would be with it, so the player's
+    /// first map is still remembered; Taiwan's maps are as ever. Once the
+    /// pack is in and the data read again, the row is open, with no
+    /// restart.
+    func testACityWithoutItsMapPackWaitsForItsDownload() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory, without: [.hongKong, .rovaniemi])
+        XCTAssertEqual(launcher.overseasGrounds.map(\.city), [])
+        XCTAssertEqual(launcher.overseasAwaited.map(\.city), [.hongKong, .rovaniemi])
+        XCTAssertNotNil(launcher.population, "Taiwan's data does not wait")
+        XCTAssertFalse(launcher.realWorldIssues.contains { $0.file.hasPrefix("MapPacks/") }, "a pack still to come is not a broken file")
+        XCTAssertEqual(launcher.airRoutes, AirRoutes(cities: [.hongKong]))
+
+        let failed = launcher.overseasMapRows(in: .traditionalChinese) { _ in .failed("no network") }
+        XCTAssertEqual(failed, [
+            OverseasMapRow(city: .hongKong, closed: "香港的地圖還沒下載。連上網路後會自動下載。", waitsForDownload: true),
+            OverseasMapRow(city: .rovaniemi, closed: "羅瓦涅米的地圖還沒下載。連上網路後會自動下載。", waitsForDownload: true),
+        ])
+        let coming = launcher.overseasMapRows(in: .english) { _ in .downloading }
+        XCTAssertEqual(coming.map(\.closed), [
+            "The map of Hong Kong is downloading. You can play here once it has.",
+            "The map of Rovaniemi is downloading. You can play here once it has.",
+        ])
+        XCTAssertFalse(launcher.startOverseasMap(.rovaniemi))
+        XCTAssertEqual(launcher.message?.text, OverseasMap.rovaniemi.notDownloadedText(.bundled, in: .traditionalChinese))
+        XCTAssertNil(launcher.session)
+
+        // A player whose first map was Taiwan: Hong Kong's row waits for
+        // its flights first, as with the pack.
+        launcher.rememberAirRoutes([taiwan])
+        let rows = launcher.overseasMapRows(in: .traditionalChinese) { _ in .downloading }
+        XCTAssertEqual(rows[0], OverseasMapRow(city: .hongKong, closed: launcher.airRoutes.howToOpen(hongKong, in: .traditionalChinese)))
+        XCTAssertTrue(rows[1].waitsForDownload)
+
+        // The packs arrive: the data is read again, the rows open.
+        await launcher.reloadRealWorldData {
+            RealWorldData.load(overseas: [.hongKong, .rovaniemi], pack: HongKongRailwaysTests.pack, manifest: Self.manifest, file: RealWorldDataLoadTests.file)
+        }.value
+        XCTAssertFalse(launcher.isLoadingRealWorldData)
+        XCTAssertEqual(launcher.overseasAwaited.map(\.city), [])
+        XCTAssertEqual(launcher.overseasMapRows(in: .traditionalChinese).last, OverseasMapRow(city: .rovaniemi, closed: nil))
+        XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
+    }
+
+    /// A game saved on a city's map is not opened while that city's map
+    /// pack is not on the device: it would be played on no ground, or
+    /// Taiwan's. The save stays, and opens once the pack is in.
+    func testASaveOnACityWithoutItsMapPackIsKeptAndNotOpened() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = await launcher(in: directory, without: [])
+        XCTAssertTrue(first.startOverseasMap(.rovaniemi), first.message?.text ?? "")
+        let world = try XCTUnwrap(first.session?.world)
+        first.returnToStart()
+
+        let later = await launcher(in: directory, without: [.rovaniemi])
+        XCTAssertEqual(later.awaitedCity(of: world), .rovaniemi)
+        XCTAssertNil(later.awaitedCity(of: GameWorld.newWholeTaiwanGame()))
+        XCTAssertNil(later.population(for: world), "not Taiwan's people")
+        XCTAssertNil(later.water(for: world))
+        XCTAssertNil(later.heights(for: world))
+        XCTAssertNotNil(later.population(for: GameWorld.newWholeTaiwanGame()))
+        let saves = later.entries.filter { $0.kind == .autosave }.count
+        XCTAssertGreaterThan(saves, 0)
+        await later.continueGame()?.value
+        XCTAssertNil(later.session)
+        XCTAssertEqual(later.message?.kind, .failure)
+        XCTAssertEqual(later.message?.text, OverseasMap.rovaniemi.notDownloadedText(.bundled, in: .traditionalChinese))
+        XCTAssertEqual(later.entries.filter { $0.kind == .autosave }.count, saves, "the save is kept")
+
+        await later.reloadRealWorldData {
+            RealWorldData.load(overseas: [.hongKong, .rovaniemi], pack: HongKongRailwaysTests.pack, manifest: Self.manifest, file: RealWorldDataLoadTests.file)
+        }.value
+        await later.continueGame()?.value
+        let session = try XCTUnwrap(later.session, later.message?.text ?? "")
+        XCTAssertNotNil(session.population)
+        XCTAssertEqual(session.world.geoAnchor, world.geoAnchor)
+    }
 }
