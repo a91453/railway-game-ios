@@ -220,13 +220,16 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Decision 678: whether its stations in the real line's tunnels are
     /// laid under the ground (``RealLineAcquisition/isSunk(at:before:after:carried:)``)
     /// and the water over those tunnels is passed under, not bridged
-    /// (``TrackRise``'s `sunk`). Only the Wenhu Line, whose Songshan
-    /// Airport and Dazhi stations and the Keelung River between them were
-    /// laid on the ground and bridged; the other lines with real stations
+    /// (``TrackRise``'s `sunk`). The Wenhu Line, whose Songshan Airport
+    /// and Dazhi stations and the Keelung River between them were laid on
+    /// the ground and bridged; and, decision 867, Hong Kong's and
+    /// Fukuoka's lines, whose underground stations stood on the ground or
+    /// in cuttings (of Hong Kong's, only Lei Tung in a tunnel; of
+    /// Fukuoka's subway, none). Taiwan's other lines with real stations
     /// underground (Qizhang on the Xiaobitan branch, the Taoyuan Airport
     /// MRT under the Tamsui River and at Huanbei) stay as they were until
     /// each is measured.
-    var followsRealTunnels: Bool { id == "trtc:BR" }
+    var followsRealTunnels: Bool { id == "trtc:BR" || system == OverseasMap.hongKong.system || system == OverseasMap.fukuoka.system }
 
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
@@ -523,15 +526,28 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// the station's do not clash.
     static let sunkStation = TrackRise.carriedDepth
 
+    /// Decision 867: how far past a real tunnel's end a station's middle
+    /// may be and still stand in it (``isSunk(at:before:after:carried:)``):
+    /// about half a platform.
+    static let sunkNear = 96.0 * RealWorldDemo.metre
+
     /// Decision 678, decision 462's other half: whether a station `at`
     /// along a line's path, its neighbours `before` and `after` (`nil` at
     /// an end), stands in the real line's tunnel: a tunnel at least
     /// ``TrackRise/shortestCarried`` long over it carries the line on at
     /// least that far toward each neighbour.
+    ///
+    /// Decision 867: the tunnel may begin or end up to ``sunkNear`` from
+    /// the station's middle. The real tunnels are drawn from one
+    /// station's middle to the next's (the Tung Chung Line's from Hong
+    /// Kong, the Hakozaki Line's from Gofukumachi), so a station at a
+    /// tunnel's end stood on its very edge and was in it or not by a
+    /// rounding.
     static func isSunk(at: Double, before: Double?, after: Double?, carried: [TrackRise.Carried]) -> Bool {
         let reach = TrackRise.shortestCarried
         return carried.contains { stretch in
-            stretch.kind == .tunnel && stretch.isLong && stretch.range.contains(at)
+            stretch.kind == .tunnel && stretch.isLong
+                && stretch.range.lowerBound - sunkNear <= at && at <= stretch.range.upperBound + sunkNear
                 && before.map { stretch.range.lowerBound <= at - min(reach, at - $0) } ?? true
                 && after.map { stretch.range.upperBound >= at + min(reach, $0 - at) } ?? true
         }
@@ -1374,7 +1390,43 @@ extension RealLineLaying {
         // Decision 809: whether one of its stations is the company's
         // already, which ``StationRaising/viaductsAndShared`` stands up.
         func sharesAStation() -> Bool { junctionStation != nil || runs.stops.indices.contains { sameName($0) != nil } }
-        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system) ?? []
+        // Decision 867: a line laid in a lane beside another's drawing
+        // (decision 753) is its lane's offset from the real tunnels the
+        // two share (the Airport Express 25 m from the Tung Chung Line's
+        // under Hong Kong and Kowloon), so its tunnels are looked for that
+        // much further off.
+        let lane = line.followsRealTunnels ? abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) * RealLineAcquisition.metre : 0
+        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, tunnelReach: RealRailStructures.reach + lane) ?? []
+        // Decision 678: the stations in the line's real tunnel. Decision
+        // 867: and one the real tunnel reaches from one side only, when
+        // the station next to it on the other side is under the ground
+        // (in the real tunnel itself, or at the company's underground
+        // platforms there): the Hakozaki Line's tunnel is drawn from
+        // Gofukumachi, 440 m from Nakasu-Kawabata's platforms under the
+        // Kuko Line's.
+        let sunkStations: [Bool] = {
+            guard line.followsRealTunnels else { return runs.stops.map { _ in false } }
+            let before = { (index: Int) in index > 0 ? along[index - 1].along : nil }
+            let after = { (index: Int) in index < along.count - 1 ? along[index + 1].along : nil }
+            let strict = along.indices.map {
+                RealLineAcquisition.isSunk(at: along[$0].along, before: before($0), after: after($0), carried: carried)
+            }
+            func isUnder(_ index: Int) -> Bool {
+                if strict[index] { return true }
+                guard let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
+                      let there = sharedPlatformHeight(of: station) else { return false }
+                return there <= ground(path.point(at: along[index].along)) - RealLineAcquisition.sunkStation + RealWorldDemo.metre
+            }
+            return along.indices.map { index in
+                if strict[index] { return true }
+                let at = along[index].along
+                let fromAfter = index > 0 && after(index) != nil && isUnder(index - 1)
+                    && RealLineAcquisition.isSunk(at: at, before: nil, after: after(index), carried: carried)
+                let fromBefore = index < along.count - 1 && before(index) != nil && isUnder(index + 1)
+                    && RealLineAcquisition.isSunk(at: at, before: before(index), after: nil, carried: carried)
+                return fromAfter || fromBefore
+            }
+        }()
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
             let zone = (at - half)...(at + half)
@@ -1434,9 +1486,7 @@ extension RealLineLaying {
             }
             // Decision 678: one in its line's real tunnel stands down in
             // it (the Wenhu Line's Songshan Airport and Dazhi).
-            let sunk = !raised && line.followsRealTunnels && RealLineAcquisition.isSunk(
-                at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
-            )
+            let sunk = !raised && sunkStations[index]
             let low = raised
                 ? height + RealLineAcquisition.raisedStation
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
@@ -1445,9 +1495,17 @@ extension RealLineLaying {
             // the height of its platforms there. SHARED-STATION-THROUGH: at
             // any station of the company's, laid beside it or not (Fukuoka's
             // two Hakatas, 150 m apart), and between the ends too.
-            if !raised, !sunk,
+            // Decision 867: a station in the real tunnel too, at the
+            // company's platforms there wherever they are under the
+            // ground's reach (in a tunnel as this one would be, or on the
+            // ground in a game saved before); and one not in the real
+            // tunnel's drawing (the Hakozaki Line's first 440 m, from
+            // Nakasu-Kawabata) down at the company's underground platforms.
+            let under = (height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach)...(height + RealWorldDemo.stationReach)
+            if !raised,
                let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
-               let there = sharedPlatformHeight(of: station), (level.low...level.high).contains(there) {
+               let there = sharedPlatformHeight(of: station),
+               (level.low...level.high).contains(there) || (line.followsRealTunnels && under.contains(there)) {
                 level = TrackRise.Level(span, at: there)
             }
             level.staysUnder = sunk

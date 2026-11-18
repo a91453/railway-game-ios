@@ -143,16 +143,29 @@ struct Map3DUndergroundStations: Sendable {
         return laid
     }
 
-    /// One box for each station's platforms at one level: along the
-    /// longest of them, across from the outermost track's bore or
-    /// platform's back to the other's.
+    /// How far across one of a box's platforms another may lie and be in
+    /// that box, metres (decision 867).
+    static let besideReach: Float = 40
+
+    /// One box for each station's platforms at one level that lie beside
+    /// each other: along the longest of them, across from the outermost
+    /// track's bore or platform's back to the other's. Decision 867: a
+    /// station's platforms off the others' ends or further than
+    /// ``besideReach`` across them have a box of their own (Fukuoka's
+    /// Hakata, whose Nanakuma Line platforms are 160 m from the Kuko
+    /// Line's, and Nakasu-Kawabata, whose Hakozaki Line platforms lie past
+    /// the Kuko Line's ends): in one box along the longest they stood
+    /// outside it, in the earth.
     static func boxes(_ platforms: [Platform]) -> [Box] {
         var groups: [[Int]] = []
         for index in platforms.indices {
-            let here = platforms[index], level = here.line[here.line.count / 2].y
+            let here = platforms[index], middle = here.line[here.line.count / 2], level = middle.y
             if let group = groups.firstIndex(where: { group in
                 let first = platforms[group[0]]
                 return first.station == here.station && abs(first.line[first.line.count / 2].y - level) <= Map3DXRay.sameLevel
+                    && group.contains { member in
+                        locate(middle, along: platforms[member].line, beyond: endRoom).map { abs($0.across) <= besideReach } ?? false
+                    }
             }) {
                 groups[group].append(index)
             } else {
