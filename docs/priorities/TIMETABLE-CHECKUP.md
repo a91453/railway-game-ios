@@ -1,4 +1,4 @@
-# TIMETABLE-CHECKUP（2026-11-18，決策 844）
+# TIMETABLE-CHECKUP（2026-11-18，#2432）
 
 全日時刻表體檢（決策 844）第一次跑完每一條有時刻表的在售線，抓到的、以前沒記的問題。數字是 `main` `2cd9c94` 第二天整天（決策 844 §5、§6），每一格的上限在 `Tests/GamePresentationTests/TimetableCheckupTests.swift` 的 `budgets`：修好的工作串把那一格調低。尺同 NEXT_PRIORITIES §19；bug 排在前面。
 
