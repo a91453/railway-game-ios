@@ -85,10 +85,11 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertTrue(lanes.contains { abs($0.x - 512) < 1 && abs($0.z - 320) < 8 && abs($0.y - 20 - lift) < 0.1 }, "on the ground")
     }
 
-    /// Over a road on the ground, a bridge stands 6 m a level up; over
-    /// nothing (a river) and as a culvert (under 20 m) it stays at the
-    /// ground; two tiles' pieces of one bridge, meeting end to end, are one
-    /// deck with no ramp between.
+    /// Over a road on the ground, a bridge stands 9 m up on the first
+    /// level and 6 m more a level (ELEVATED-ROAD-HEIGHT; 6 m a level
+    /// before it); over nothing (a river) and as a culvert (under 20 m) it
+    /// stays at the ground; two tiles' pieces of one bridge, meeting end to
+    /// end, are one deck with no ramp between.
     func testABridgeStandsALevelUp() throws {
         let world = try flatWorld(track: false)
         let lift = Map3DScene.Builder.lift(of: .secondary)
@@ -101,14 +102,64 @@ final class Map3DRoadBridgeTests: XCTestCase {
         let builder = built(world, roads: [road([(100, 600), (400, 600)], level: 1), road([(500, 800), (515, 800)], level: 1),
                                            road([(100, 900), (400, 900)], level: 1), west, east] + under)
         let meshes = meshes(builder)
-        XCTAssertEqual(try XCTUnwrap(roadTop(250, 600, in: meshes)), 20 + lift + 6, accuracy: 0.01)
+        XCTAssertEqual(Map3DRoadBridges.rise(ofLevel: 1), 9)
+        XCTAssertEqual(Map3DRoadBridges.rise(ofLevel: 2), 15)
+        XCTAssertEqual(Map3DRoadBridges.rise(ofLevel: 5), 33)
+        XCTAssertEqual(try XCTUnwrap(roadTop(250, 600, in: meshes)), 20 + lift + 9, accuracy: 0.01)
         XCTAssertEqual(try XCTUnwrap(roadTop(508, 800, in: meshes)), 20 + lift, accuracy: 0.01)
         XCTAssertEqual(try XCTUnwrap(roadTop(250, 900, in: meshes)), 20 + lift, accuracy: 0.01, "over a river")
         // The road under it stays on the ground.
         XCTAssertEqual(try XCTUnwrap(roadTop(250, 520, in: meshes, kind: .minor)), 20 + Map3DScene.Builder.lift(of: .minor), accuracy: 0.01)
         for x: Float in [180, 200, 220] {
-            XCTAssertEqual(try XCTUnwrap(roadTop(x, 200, in: meshes)), 20 + lift + 12, accuracy: 0.01, "at the tiles' edge, \(x)")
+            XCTAssertEqual(try XCTUnwrap(roadTop(x, 200, in: meshes)), 20 + lift + 15, accuracy: 0.01, "at the tiles' edge, \(x)")
         }
+    }
+
+    /// ELEVATED-ROAD-HEIGHT: a bridge's end with no bridge going on comes
+    /// down inside the bridge by the 3 m the first level gained, so the
+    /// ramp on along the road lands where it did at 6 m a level (left at
+    /// 9 m it ran 50 m further into the streets); the deck keeps its whole
+    /// height over what it crosses, and nothing is steeper than its grade.
+    func testABridgesEndComesDownInsideItSoItsRampLandsWhereItDid() throws {
+        let world = try flatWorld(track: false)
+        let lift = Map3DScene.Builder.lift(of: .secondary)
+        let street = road([(300, 400), (700, 400)], kind: .minor)
+        func tops(_ roads: [Map3DBaseMap.Road]) -> (Float) throws -> Float {
+            let meshes = meshes(built(world, roads: roads + [street]))
+            return { z in try XCTUnwrap(self.roadTop(500, z, in: meshes), "a road at \(z)") - 20 - lift }
+        }
+        func gentle(_ top: (Float) throws -> Float, from: Float, to: Float) throws {
+            var previous = try top(from)
+            for z in stride(from: from + 2, through: to, by: 2) {
+                let now = try top(z)
+                XCTAssertLessThanOrEqual(abs(now - previous), 2 * Map3DRoadBridges.grade(.secondary) + 0.02, "the grade at \(z)")
+                previous = now
+            }
+        }
+        // Its ends 100 m either side of the street it crosses, a road on from each.
+        var top = tops([road([(500, 150), (500, 300)]), road([(500, 300), (500, 500)], level: 1), road([(500, 500), (500, 700)])])
+        for z: Float in [360, 390, 400, 410, 440] { XCTAssertEqual(try top(z), 9, accuracy: 0.05, "over the street, \(z)") }
+        // Its last 50 m, at 6 %.
+        XCTAssertEqual(try top(475), 7.5, accuracy: 0.15)
+        XCTAssertEqual(try top(496), 6.24, accuracy: 0.2)
+        // The ramp on: down in 100 m, as from 6 m.
+        XCTAssertEqual(try top(550), 3.1, accuracy: 0.3)
+        XCTAssertEqual(try top(610), 0, accuracy: 0.02)
+        XCTAssertEqual(try top(190), 0, accuracy: 0.02)
+        try gentle(top, from: 160, to: 690)
+        // An end 30 m past the street comes down only from 10 m past it.
+        top = tops([road([(500, 300), (500, 430)], level: 1), road([(500, 430), (500, 700)])])
+        XCTAssertEqual(try top(406), 9, accuracy: 0.05)
+        XCTAssertEqual(try top(426), 8.04, accuracy: 0.2)
+        try gentle(top, from: 402, to: 690)
+        // One 200 m past it, where the deck is already on its way down:
+        // as much lower, no steeper.
+        top = tops([road([(500, 300), (500, 600)], level: 1), road([(500, 600), (500, 800)])])
+        XCTAssertEqual(try top(490), 9, accuracy: 0.05)
+        XCTAssertEqual(try top(550), 6, accuracy: 0.2)
+        XCTAssertEqual(try top(596), 3.24, accuracy: 0.2)
+        XCTAssertEqual(try top(660), 0, accuracy: 0.02)
+        try gentle(top, from: 402, to: 790)
     }
 
     /// Decision 391 (續): the app's tiles keep OpenStreetMap's `layer` on
@@ -188,7 +239,7 @@ final class Map3DRoadBridgeTests: XCTestCase {
         let meshes = meshes(builder)
         let lift = Map3DScene.Builder.lift(of: .secondary)
         // Over the street 362 m from the cutting: a level up.
-        XCTAssertEqual(try XCTUnwrap(roadTop(500, 150, in: meshes)), 20 + lift + Map3DRoadBridges.levelRise, accuracy: 0.05)
+        XCTAssertEqual(try XCTUnwrap(roadTop(500, 150, in: meshes)), 20 + lift + Map3DRoadBridges.rise(ofLevel: 1), accuracy: 0.05)
         // Over the cutting: at the ground, as decision 375's bridge.
         XCTAssertEqual(try XCTUnwrap(roadTop(500, 512, in: meshes)), 20 + lift, accuracy: 0.05)
         // A street under it within the plateau of the cutting lifts nothing.
@@ -252,7 +303,7 @@ final class Map3DRoadBridgeTests: XCTestCase {
                                            road([(250, 500), (250, 750)], kind: .minor)])
         let meshes = meshes(builder)
         let top = try XCTUnwrap(roadTop(230, Float(north), in: meshes))
-        XCTAssertEqual(top, 20 + Map3DScene.Builder.lift(of: .secondary) + 6, accuracy: 0.01, "both decks a level up")
+        XCTAssertEqual(top, 20 + Map3DScene.Builder.lift(of: .secondary) + 9, accuracy: 0.01, "both decks a level up")
         // Parapets' tops, a metre over the decks.
         let over = top + 0.5
         let parapets: [Float] = meshes.flatMap(\.vertices).filter { (vertex: Map3DVertex) -> Bool in

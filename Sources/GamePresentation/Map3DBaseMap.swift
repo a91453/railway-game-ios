@@ -157,10 +157,12 @@ struct Map3DBaseMap: Sendable {
 
     /// Decision 391: how far round the scene's region its bridges and the
     /// roads they cross are read, metres: past the longest ramp down from
-    /// a bridge's end (``Map3DRoadBridges``), and past a 6 m ramp's 120 m
-    /// and the 270 m a crossing lifts a deck over, so a chunk built apart
-    /// raises and ramps its roads as the whole scene does.
-    static let bridgeReach: Double = 450
+    /// a bridge's end (``Map3DRoadBridges``), and past a 9 m ramp's 180 m
+    /// and the 330 m a crossing lifts a deck over, so a chunk built apart
+    /// raises and ramps its roads as the whole scene does. (450 m while
+    /// the first level stood 6 m and the longest ramp ran 360 m, before
+    /// ELEVATED-ROAD-HEIGHT.)
+    static let bridgeReach: Double = 510
 
     /// The runs of `points` inside `bounds`.
     static func parts(of points: [Point], in bounds: Bounds) -> [[Point]] {

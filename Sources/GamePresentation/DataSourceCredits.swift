@@ -1230,12 +1230,14 @@ public enum DataSourceCredits {
                     ),
                     // Decision 827: the Tamsui-Xinyi line's elevated station
                     // shells started from Slop New York's code and shapes.
+                    // Decision 391 (後來, ELEVATED-ROAD-HEIGHT): the heights
+                    // of the elevated roads' levels are its Taipei edition's.
                     DataSourceCredit(
                         id: "slopNewYork",
                         title: "Slop New York",
                         detail: language.text(
-                            "Its station shapes were the starting point for the elevated stations of the Tamsui-Xinyi Line.",
-                            "淡水信義線高架車站的外觀以它的車站造型為起點。"
+                            "Its station shapes were the starting point for the elevated stations of the Tamsui-Xinyi Line, and the heights of the elevated roads follow its Taipei edition.",
+                            "淡水信義線高架車站的外觀以它的車站造型為起點；高架道路的高度參考它的台北版。"
                         ),
                         notice: language.text(
                             "Copyright (c) 2026 Mr.doob, under the MIT License.",
