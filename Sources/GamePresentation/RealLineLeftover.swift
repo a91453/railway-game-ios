@@ -10,9 +10,12 @@ import GameCore
 // edge any line still runs over (a platform of a station a line calls at,
 // the way between two of a line's stops, the way to its depot, a route it
 // keeps to, a station a train calls at on a timetable of its own, the
-// way between two of its stops). Old saves kept no track, so nothing is
-// taken up there. The track the line sharing its first stations left is
-// taken up only where the line laid again comes onto it.
+// way between two of its stops), counted on the pieces of track that
+// line's trains stand on: the lane the removed line left beside another
+// line's, which that line's trains cannot get onto, is taken up
+// (decision 528's later note, 2026-11-18). Old saves kept no track, so
+// nothing is taken up there. The track the line sharing its first
+// stations left is taken up only where the line laid again comes onto it.
 
 /// What a purchase takes up before it lays its track (decision 528): the
 /// track left by the same line bought and removed before.
@@ -66,6 +69,30 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
         Set(world.lines.flatMap { $0.stops + $0.depots } + world.trains.flatMap { $0.timetable.map(\.station) })
     }
 
+    /// The pieces of `world`'s track: for each edge, the number of its
+    /// piece. Two edges are of one piece when edges meeting at nodes join
+    /// them, whichever way trains may run over them: a train on one piece
+    /// never gets onto another.
+    static func pieces(in world: GameWorld) -> [TrackEdgeID: Int] {
+        var meeting: [TrackNodeID: [TrackEdge]] = [:]
+        for edge in world.network.edges {
+            meeting[edge.from, default: []].append(edge)
+            meeting[edge.to, default: []].append(edge)
+        }
+        var pieces: [TrackEdgeID: Int] = [:]
+        var count = 0
+        for first in world.network.edges where pieces[first.id] == nil {
+            var reached = [first]
+            while let edge = reached.popLast() {
+                guard pieces[edge.id] == nil else { continue }
+                pieces[edge.id] = count
+                reached += (meeting[edge.from] ?? []) + (meeting[edge.to] ?? [])
+            }
+            count += 1
+        }
+        return pieces
+    }
+
     /// The edges some line or train runs over in `world`: those holding
     /// a platform of a station a line or a train's timetable calls at,
     /// the ways between each line's consecutive stops (and its patterns'
@@ -73,14 +100,42 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
     /// the ways between each train's consecutive timetable stops (back to
     /// the first of a timetable that repeats), whether or not it runs
     /// for a line (#1636 second review, P2).
+    ///
+    /// A line whose trains all stand on the track runs only over the
+    /// pieces of track (``pieces(in:)``) they stand on, and a train on
+    /// the track only over its own: at a station two lines call at, each
+    /// on a lane of its own (Hong Kong, Kowloon and Tsing Yi of the
+    /// Airport Express and the Tung Chung Line), the platforms on the lane
+    /// a removed line left are not the other line's, whose trains cannot
+    /// get onto them. A line with no train, or with one not on the track,
+    /// may yet run anywhere, as before.
     static func edgesInUse(in world: GameWorld) -> Set<TrackEdgeID> {
         var used: Set<TrackEdgeID> = []
-        let called = stationsCalledAt(in: world)
-        for platform in world.network.platforms where called.contains(platform.station) {
-            used.insert(platform.edge)
+        let pieces = pieces(in: world)
+        /// The pieces `trains` stand on; `nil`, any piece, for none or
+        /// where one of them is not on the track.
+        func reach(of trains: [TrainID]) -> Set<Int>? {
+            var reach: Set<Int> = []
+            for train in trains {
+                guard case .onEdge(let traversal, _) = world.train(id: train)?.position, let piece = pieces[traversal.edge] else { return nil }
+                reach.insert(piece)
+            }
+            return reach.isEmpty ? nil : reach
         }
-        func connect(_ from: StationID, _ to: StationID) {
-            for platform in world.network.platforms where platform.station == from {
+        func platforms(of station: StationID, within reach: Set<Int>?) -> [TrackPlatform] {
+            world.network.platforms.filter { platform in
+                guard platform.station == station else { return false }
+                guard let reach, let piece = pieces[platform.edge] else { return true }
+                return reach.contains(piece)
+            }
+        }
+        func call(at stations: [StationID], within reach: Set<Int>?) {
+            for station in Set(stations) {
+                used.formUnion(platforms(of: station, within: reach).map(\.edge))
+            }
+        }
+        func connect(_ from: StationID, _ to: StationID, within reach: Set<Int>?) {
+            for platform in platforms(of: from, within: reach) {
                 for direction in [TrackEdgeDirection.forward, .backward] {
                     let offset = direction == .forward ? platform.end : (world.network.edge(platform.edge)?.length ?? 0) - platform.start
                     let start = TrainPosition.onEdge(TrackTraversal(edge: platform.edge, direction: direction), offset: offset)
@@ -91,15 +146,17 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
             }
         }
         for line in world.lines {
+            let reach = reach(of: line.assignedTrains)
+            call(at: line.stops + line.depots, within: reach)
             for (from, to) in zip(line.stops, line.stops.dropFirst()) {
-                connect(from, to)
-                connect(to, from)
+                connect(from, to, within: reach)
+                connect(to, from, within: reach)
             }
             for pattern in line.patterns {
                 let calls = pattern.calls.compactMap { line.stops.indices.contains($0) ? line.stops[$0] : nil }
                 for (from, to) in zip(calls, calls.dropFirst()) {
-                    connect(from, to)
-                    connect(to, from)
+                    connect(from, to, within: reach)
+                    connect(to, from, within: reach)
                 }
                 for route in pattern.routePreferences {
                     used.formUnion(route.tracks.map(\.edge))
@@ -110,17 +167,19 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
             }
             for depot in line.depots {
                 for end in [line.stops.first, line.stops.last].compactMap({ $0 }) {
-                    connect(depot, end)
-                    connect(end, depot)
+                    connect(depot, end, within: reach)
+                    connect(end, depot, within: reach)
                 }
             }
         }
         for train in world.trains {
+            let reach = reach(of: [train.id])
             var stops = train.timetable.map(\.station)
+            call(at: stops, within: reach)
             if train.timetablePeriod != nil, let first = stops.first, stops.count > 1 { stops.append(first) }
             for (from, to) in zip(stops, stops.dropFirst()) where from != to {
-                connect(from, to)
-                connect(to, from)
+                connect(from, to, within: reach)
+                connect(to, from, within: reach)
             }
         }
         return used
