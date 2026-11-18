@@ -13,7 +13,7 @@
    - 地形：Copernicus GLO-30（羅瓦涅米用的）或國土地理院 DEM（授權要查）。
    - 範圍 `EXTENT` 已含北邊的西鐵貝塚線（到北緯 33.72）。
    - 現在沒有高度檔，`FukuokaRailwaysTests` 給遊戲一片 5 m 高的平地（`flat()`）才鋪得了線；有了 `heights.dat` 之後改讀地圖包的高度、拿掉 `flat()`。
-2. **SHARED-STATION-THROUGH**（2.70，bug，開圖前要先修）：中間站共站的線同一高度。`SharedStationLayoutTests.testFukuokasInterchangesStackNoPlatforms` 量到：先買七隈線、箱崎線，最後買空港線時，空港線在博多、中洲川端的月台被抬高 16 m（決策 809 的抬高；`RealLineLaying.sharedEnds` 只把線的**端點**挪到原有股道旁，穿過共站的線沒有）。沒有疊在別條線正上方，但違反 real-line-laying「同一站同一高度」。先買空港線時，箱崎線在中洲川端差 5.9 m、七隈線在博多差 3.1 m（兩站都在地下，`sharedPlatformHeight` 只看地面月台）。修好後在那個測試加「兩種順序都同一高度」。香港、台灣有沒有同樣的情形一起量。
+2. ~~**SHARED-STATION-THROUGH**~~（2.70，bug）：**已修，決策 859**（兩種順序都同一高度，測試已加；香港九龍、欣澳一起對齊；青衣另開 TSING-YI-LEVEL）。原本的描述：中間站共站的線同一高度。`SharedStationLayoutTests.testFukuokasInterchangesStackNoPlatforms` 量到：先買七隈線、箱崎線，最後買空港線時，空港線在博多、中洲川端的月台被抬高 16 m（決策 809 的抬高；`RealLineLaying.sharedEnds` 只把線的**端點**挪到原有股道旁，穿過共站的線沒有）。沒有疊在別條線正上方，但違反 real-line-laying「同一站同一高度」。先買空港線時，箱崎線在中洲川端差 5.9 m、七隈線在博多差 3.1 m（兩站都在地下，`sharedPlatformHeight` 只看地面月台）。修好後在那個測試加「兩種順序都同一高度」。香港、台灣有沒有同樣的情形一起量。
 3. **FUKUOKA-OPEN**（3.15）：開關。
    - `OverseasMaps.open` 加福岡；`AirportCatalog` 加福岡機場（`fuk`）與台灣各機場往返的航線（民航局表 50-x 的 2025 年數字），航班開圖（決策 712、763）。
    - 分包下載：照 PACK-OUT 定案的做法（香港、羅瓦涅米實機兩列都「已下載」後），能只下載就不內建；`MapPackDownloadsTests` 會要求開了的城市有清單。

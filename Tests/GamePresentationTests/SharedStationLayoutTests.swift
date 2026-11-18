@@ -126,7 +126,18 @@ final class SharedStationLayoutTests: XCTestCase {
         let session = try HongKongMapTests.hongKong()
         let laidBy = try Self.buy(session.buyableRealLines.map(\.id).sorted(), on: session)
         let world = session.world
-        XCTAssertEqual(Self.stacked(Self.platforms(of: world, laidBy: laidBy), in: world), [])
+        let laid = Self.platforms(of: world, laidBy: laidBy)
+        XCTAssertEqual(Self.stacked(laid, in: world), [])
+        // Decision 859: at the stations the line bought second shares, at
+        // one height (Kowloon was 4.9 m apart, Sunny Bay 5.8 m). Not Tsing
+        // Yi's: the Tung Chung Line's stand 16 m up on its real viaduct
+        // (decision 462), the Airport Express's 4.4 m (left as they were,
+        // decision 859's next step).
+        for (name, ids) in [("香港", ["hkmtr:AEL", "hkmtr:TCL"]), ("九龍", ["hkmtr:AEL", "hkmtr:TCL"]), ("欣澳", ["hkmtr:DRL", "hkmtr:TCL"])] {
+            let station = try XCTUnwrap(world.stations.first { $0.name == name }?.id, name)
+            let pair = try XCTUnwrap(Self.between(ids[0], ids[1], at: station, in: laid), name)
+            XCTAssertLessThanOrEqual(pair.height, 0.5, "\(name): the two lines' platforms at one height")
+        }
     }
 
     // MARK: - Fukuoka
@@ -134,11 +145,16 @@ final class SharedStationLayoutTests: XCTestCase {
     /// Fukuoka's three subway lines (decision 854), all bought on one map,
     /// first from the Kuko Line and then from the other end: Hakata (Kuko,
     /// Nanakuma) and Nakasu-Kawabata (Kuko, Hakozaki) stay one station each,
-    /// both lines stopping there, and no platform of a station lies over
-    /// another of it. Not yet at one height: underground, and with the Kuko
-    /// Line bought last, its platforms at both stand 16 m up (the raise
-    /// of decision 809, since ``sharedEnds`` moves only a line's ends);
-    /// FUKUOKA-INTERCHANGE-LEVEL, before the map opens.
+    /// both lines stopping there, no platform of a station lies over
+    /// another of it, and the two lines' platforms stand at one height
+    /// (within 0.5 m), an island's width or more apart. Decision 859
+    /// (SHARED-STATION-THROUGH): before, with the Kuko Line bought last its
+    /// platforms at both stood 16 m up (the raise of decision 809:
+    /// ``RealLineLaying/sharedEnds(of:points:through:shared:extent:)``
+    /// moved only a line's ends, and the Kuko Line runs through both), and
+    /// with it bought first the Hakozaki Line stood 5.9 m over it at
+    /// Nakasu-Kawabata and the Nanakuma Line 3.1 m at Hakata (a platform
+    /// a few metres down was not counted as one to stand level with).
     func testFukuokasInterchangesStackNoPlatforms() throws {
         let interchanges = [("博多", ["fksubway:K", "fksubway:N"]), ("中洲川端", ["fksubway:K", "fksubway:H"])]
         for order in [["fksubway:K", "fksubway:H", "fksubway:N"], ["fksubway:N", "fksubway:H", "fksubway:K"]] {
@@ -155,7 +171,9 @@ final class SharedStationLayoutTests: XCTestCase {
                     let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line)))
                     XCTAssertTrue(line.stops.contains(station), "\(order): \(id) stops at \(name)")
                 }
-                XCTAssertNotNil(Self.between(ids[0], ids[1], at: station, in: laid), "\(order): \(name)")
+                let pair = try XCTUnwrap(Self.between(ids[0], ids[1], at: station, in: laid), "\(order): \(name)")
+                XCTAssertLessThanOrEqual(pair.height, 0.5, "\(order): \(name): the two lines' platforms at one height")
+                XCTAssertGreaterThanOrEqual(pair.distance, 8, "\(order): \(name): an island's width or more between the two lines")
             }
         }
     }
