@@ -161,9 +161,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
                     : alishan ? 3.0...3.3
                     // Decision 837: a bare flat wagon (its hand brake and tail
-                    // lamp the highest) and the stone wagons, lower than a
-                    // container wagon.
-                    : name != set.headName && Self.lowFreight.contains(set.key) ? 1.1...2.8 : 3.4...4.6
+                    // lamp the highest) and the hopper wagons of stone (3.21 m,
+                    // its later note), lower than a container wagon.
+                    : name != set.headName && Self.lowFreight.contains(set.key) ? 1.1...3.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
