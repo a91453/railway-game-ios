@@ -43,16 +43,6 @@
               }
             }
           ]
-        },
-        {
-          "image-name": "christmas-bird.svg",
-          "name": "christmas-bird",
-          "glass": false
-        },
-        {
-          "image-name": "christmas-bird-ring.svg",
-          "name": "christmas-bird-ring",
-          "glass": false
         }
       ],
       "shadow": {
