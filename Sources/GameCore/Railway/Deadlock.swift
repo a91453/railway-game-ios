@@ -120,7 +120,7 @@ extension GameWorld {
         case nil:
             guard let line = assignedLine(of: train.id, memo: &memo) else { return nil }
             // Decision 133: a train a due run would send out.
-            if line.hasRuns { return dueRunDeparture(of: train, on: line) }
+            if line.hasRuns { return dueRunDeparture(of: train, on: line, memo: &memo) }
             guard let stream = line.dispatchStream(of: train.id) else { return nil }
             var memo = DispatchMemo()
             guard let trip = readyTrip(of: train, on: line, stream.service, memo: &memo),
@@ -149,7 +149,7 @@ extension GameWorld {
             return preferredGoingOn(train)
         case nil:
             guard let line = assignedLine(of: train.id, memo: &memo), line.hasRuns else { return nil }
-            return dueRunPreferredDeparture(of: train, on: line)
+            return dueRunPreferredDeparture(of: train, on: line, memo: &memo)
         }
     }
 
@@ -183,7 +183,7 @@ extension GameWorld {
               let line = assignedLine(of: train.id, memo: &memo.directions)
         else { return false }
         if line.hasRuns {
-            return blockSections && dueRunDeparture(of: train, on: line) == nil
+            return blockSections && dueRunDeparture(of: train, on: line, memo: &memo.directions) == nil
         }
         guard line.window.contains(minuteOfDay: clock.now.minuteOfDay),
               let stream = line.dispatchStream(of: train.id)
@@ -262,7 +262,7 @@ extension GameWorld {
             // once the run is due to leave, as a service does (see
             // ``departureDue(of:)``), not while it may be sent out early.
             if train.execution == nil, let line = assignedLine(of: train.id, memo: &memo), line.hasRuns,
-               !dueRunHasStarted(of: train, on: line) { continue }
+               !dueRunHasStarted(of: train, on: line, memo: &memo) { continue }
             if let request = waitingRoute(of: train, memo: &memo) {
                 waiting[train.id] = request
                 if request.departs { preferred[train.id] = preferredDepartureRequest(of: train, memo: &memo) }
@@ -450,7 +450,7 @@ extension GameWorld {
         var waiting: [TrainID: (candidate: Train, departs: Bool)] = [:]
         for train in trains {
             if train.execution == nil, let line = assignedLine(of: train.id, memo: &memo), line.hasRuns,
-               !dueRunHasStarted(of: train, on: line) { continue }
+               !dueRunHasStarted(of: train, on: line, memo: &memo) { continue }
             if let request = waitingRoute(of: train, memo: &memo) { waiting[train.id] = request }
         }
         return waiting
