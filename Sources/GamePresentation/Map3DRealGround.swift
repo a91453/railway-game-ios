@@ -556,10 +556,15 @@ extension Map3DScene.Builder {
                 // ground there.
                 let riseA = rise(t0, a), riseB = rise(t1, b)
                 // Left of the way along is (z, −x) in x east, z south.
-                let leftX = along.z * half, leftZ = -along.x * half
+                let leftX = along.z, leftZ = -along.x
+                // RAMP-EDGE-OVERLAP: a bridge's road cut back from where it
+                // lies under another one's edge 0.5–4.5 m higher.
+                let sideA = onDeck && lifted ? uncovered(a, rise: riseA.rise, along: along, half: half) : (left: half, right: half)
+                let sideB = onDeck && lifted ? uncovered(b, rise: riseB.rise, along: along, half: half) : (left: half, right: half)
+                guard sideA.left + sideA.right > 0.05 || sideB.left + sideB.right > 0.05 else { continue }
                 var corners = [
-                    (a.x + leftX, a.z + leftZ, riseA.rise), (a.x - leftX, a.z - leftZ, riseA.rise),
-                    (b.x - leftX, b.z - leftZ, riseB.rise), (b.x + leftX, b.z + leftZ, riseB.rise),
+                    (a.x + leftX * sideA.left, a.z + leftZ * sideA.left, riseA.rise), (a.x - leftX * sideA.right, a.z - leftZ * sideA.right, riseA.rise),
+                    (b.x - leftX * sideB.right, b.z - leftZ * sideB.right, riseB.rise), (b.x + leftX * sideB.left, b.z + leftZ * sideB.left, riseB.rise),
                 ].map { corner -> Map3DPoint in
                     let x = Float(corner.0), z = Float(corner.1)
                     return Map3DPoint(x, drawnGround(x: x, z: z) + lift + corner.2, z)
@@ -586,6 +591,33 @@ extension Map3DScene.Builder {
                          paint: paint, water: water, lifted: raised && nearRaisedRoad(from: points[vertex], to: points[vertex]),
                          onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts)
         }
+    }
+
+    /// RAMP-EDGE-OVERLAP: how far each side of level point `p` (left and
+    /// right of `along`) a bridge's road `half` metres wide each side and
+    /// `rise` over the ground is drawn: cut back from the side whose edge
+    /// lies under another bridge's surface 0.5–4.5 m higher
+    /// (``underHigherDeck(_:along:rise:)``) to where it leaves it, to
+    /// nothing where all of it does (it is out of sight under the other);
+    /// the whole width where neither edge does.
+    mutating func uncovered(_ p: Map3DBaseMap.Point, rise: Float, along: (x: Double, z: Double), half: Double) -> (left: Double, right: Double) {
+        // Offsets left of the way, from -half (its right edge) to half.
+        func covered(_ offset: Double) -> Bool {
+            underHigherDeck(Map3DBaseMap.Point(x: p.x + along.z * offset, z: p.z - along.x * offset), along: along, rise: rise)
+        }
+        let left = covered(half), right = covered(-half)
+        guard left || right else { return (half, half) }
+        if left && right { return covered(0) ? (0, 0) : (half, half) }
+        // From the covered edge in to where it is not: the uncovered side
+        // keeps its edge, the other ends there.
+        let sign = left ? 1.0 : -1.0
+        var inside = -half, outside = half
+        guard !covered(-sign * half * 0.999) else { return (0, 0) }
+        for _ in 0..<7 {
+            let middle = (inside + outside) / 2
+            if covered(sign * middle) { outside = middle } else { inside = middle }
+        }
+        return left ? (inside, half) : (half, inside)
     }
 
     /// ROAD-STRIP-WEDGE: the cosine of the least bend a strip is joined
