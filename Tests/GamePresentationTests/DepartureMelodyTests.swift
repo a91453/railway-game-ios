@@ -72,6 +72,22 @@ final class DepartureMelodyTests: XCTestCase {
         }
     }
 
+    /// Decision 866: a station set to a melody plays it, whatever the
+    /// line's; set back to each line's own, the line's again.
+    func testAStationSetToAMelodyPlaysIt() async throws {
+        var world = try makeServiceWorld(speed: .x10)
+        try world.setStationDepartureMelody(Self.west, to: .c)
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.west, in: world), .c)
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.east, in: world), .a, "East is not set: the train's own")
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: nil, in: world), .a)
+        let set = world
+        await MainActor.run {
+            XCTAssertEqual(Self.departures(Self.heard(set, ticks: 600, follow: true)).map(\.cue), [.departure(.c)])
+        }
+        try world.setStationDepartureMelody(Self.west, to: nil)
+        XCTAssertEqual(DepartureMelody.of(Self.tram, at: Self.west, in: world), .a)
+    }
+
     /// At 60× (six game seconds a tick) the doors close within a tick or
     /// two; the melody still plays once.
     func testAtSixtyTimesItStillPlaysOnce() async throws {
@@ -109,7 +125,7 @@ final class DepartureMelodyTests: XCTestCase {
         }
         let before = try XCTUnwrap(open), during = try XCTUnwrap(closing), after = try XCTUnwrap(gone)
         let atWest = try XCTUnwrap(before.train(id: Self.tram)?.times?.arrival)
-        let expected = [DepartureMelody.Closing(train: Self.tram, arrival: atWest)]
+        let expected = [DepartureMelody.Closing(train: Self.tram, arrival: atWest, station: Self.west)]
         XCTAssertEqual(DepartureMelody.closings(from: before, to: during, watched: [Self.tram]), expected)
         XCTAssertEqual(DepartureMelody.closings(from: before, to: after, watched: [Self.tram]), expected, "a step that jumped over the closing")
         XCTAssertEqual(DepartureMelody.closings(from: before, to: before, watched: [Self.tram]), [], "the doors still open")

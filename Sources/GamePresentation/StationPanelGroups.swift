@@ -79,8 +79,9 @@ public enum StationPanelGroup: String, CaseIterable, Hashable, Sendable, Identif
 
 /// One section of the station panel, in the panel's order.
 public enum StationPanelPart: String, CaseIterable, Hashable, Sendable {
-    // Operations.
-    case buyLine, operations, departureBoard, journey, rename, operationMode, depot, transfer, platforms
+    // Operations; the station's chime and departure melody (decision 866)
+    // last.
+    case buyLine, operations, departureBoard, journey, rename, operationMode, depot, transfer, platforms, sounds
     // Riders; the station's expansion (decision 506) under who waits.
     case tripsByHour, passengers, expansion, demand, events, tripsByStation
     // Surroundings.
@@ -90,7 +91,7 @@ public enum StationPanelPart: String, CaseIterable, Hashable, Sendable {
 
     public var group: StationPanelGroup {
         switch self {
-        case .buyLine, .operations, .departureBoard, .journey, .rename, .operationMode, .depot, .transfer, .platforms:
+        case .buyLine, .operations, .departureBoard, .journey, .rename, .operationMode, .depot, .transfer, .platforms, .sounds:
             .operations
         case .tripsByHour, .passengers, .expansion, .demand, .events, .tripsByStation:
             .riders

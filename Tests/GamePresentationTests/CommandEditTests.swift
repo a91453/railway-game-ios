@@ -122,6 +122,7 @@ final class CommandEditTests: XCTestCase {
             .linkTransfer(station, StationID(rawValue: 5)), .unlinkTransfer(station), .buildFreightYard(station), .removeFreightYard(station),
             .buildStationRoad(station), .turnOnRoads(towns: [PlanPoint(x: 900, y: 1_200)]),
             .setFreightProduct(station, CargoKind.allCases[0]),
+            .setStationChime(station, .metro), .setStationChime(station, nil), .setStationDepartureMelody(station, .b), .setStationDepartureMelody(station, nil),
             .createLine(name: "Main", stops: [station, StationID(rawValue: 5)], targets: TargetHeadways(peak: 10, offPeak: 15)),
             .createLine(name: "Branch", stops: [station], targets: nil), .duplicateLine(line, name: "Main - Fork"), .removeLine(line),
             .renameLine(line, name: "Main"), .setLineColor(line, LineColor(rgb: 0x3366CC)), .setLineColor(line, nil),

@@ -1786,7 +1786,8 @@ public final class GameSession {
     /// to close (90 ticks at 1×).
     @ObservationIgnored private var departuresPlayed: Set<DepartureMelody.Closing> = []
 
-    /// Plays the line's departure melody (``DepartureMelody``) when the
+    /// Plays the departure melody (``DepartureMelody``: the station's, or
+    /// else the line's) when the
     /// doors of a watched train started closing within the step, at 60×
     /// and slower: one melody a step, the first train's.
     private func noteDeparture(from before: GameWorld) {
@@ -1799,7 +1800,7 @@ public final class GameSession {
         departuresPlayed.formIntersection(closings)
         guard let closing = closings.first(where: { !departuresPlayed.contains($0) }) else { return }
         departuresPlayed.insert(closing)
-        playSound(.departure(DepartureMelody.of(closing.train, in: world)))
+        playSound(.departure(DepartureMelody.of(closing.train, at: closing.station, in: world)))
     }
 
     /// Whether the speed is held to 10× at most now: the 3D map is open and
