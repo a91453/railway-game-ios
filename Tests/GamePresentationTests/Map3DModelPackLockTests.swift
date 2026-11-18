@@ -209,8 +209,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         // pack's names, hashes and lamps' window indices move).
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "86adec9fda5c4ab6")
         // Decision 840: and the studio's sleigh in the stand-in's place
-        // (the same name and order; its model is new, `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "2363e1ba6322d27f")
+        // (the same name and order; its model is new, `hashes.lock.json`);
+        // its later amendment: dark brown antlers, the sleigh's team brown.
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "ccbfc2bb6b677f67")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
