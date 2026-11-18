@@ -475,6 +475,15 @@ public struct Tourism: Hashable, Sendable {
         return (potentialTourists(stars: stars) * day * season * weather * captureRate + scale / 2) / scale
     }
 
+    /// Decision 880: everyone who comes to an attraction of `stars` on a
+    /// day with these factors (all in thousandths), however they come,
+    /// rounded half up: ``tourists(stars:day:season:weather:)`` before
+    /// ``captureRate``.
+    public static func visitors(stars: Int, day: Int64, season: Int64, weather: Int64) -> Int64 {
+        let scale: Int64 = 1_000_000_000
+        return (potentialTourists(stars: stars) * day * season * weather + scale / 2) / scale
+    }
+
     /// What the day's tourists spend at a shop of `level`.
     public static func shopRevenue(tourists: Int64, level: Int) -> Money {
         Money(tourists * spendPerLevel * Int64(level))
@@ -1149,8 +1158,24 @@ extension GameWorld {
 
     /// The same for any attraction value, for example one with the next level of shop.
     public func touristsExpected(for attraction: Attraction, onDay day: Int64) -> Int64 {
+        guard let factors = dayFactors(of: attraction, onDay: day) else { return 0 }
+        return Tourism.tourists(stars: stars(of: attraction), day: factors.day, season: factors.season, weather: factors.weather)
+    }
+
+    /// Decision 880: everyone who comes to `attraction` on game day `day`,
+    /// however they come (``Tourism/visitors(stars:day:season:weather:)``):
+    /// ``touristsExpected(for:onDay:)`` before ``Tourism/captureRate``. 0
+    /// while a typhoon blows over it.
+    public func visitorsExpected(for attraction: Attraction, onDay day: Int64) -> Int64 {
+        guard let factors = dayFactors(of: attraction, onDay: day) else { return 0 }
+        return Tourism.visitors(stars: stars(of: attraction), day: factors.day, season: factors.season, weather: factors.weather)
+    }
+
+    /// The day's, the season's and the weather's factors of `attraction` on
+    /// game day `day`, in thousandths; `nil` while a typhoon blows over it.
+    private func dayFactors(of attraction: Attraction, onDay day: Int64) -> (day: Int64, season: Int64, weather: Int64)? {
         let blowing = typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(attraction.point) }
-        guard !blowing else { return 0 }
+        guard !blowing else { return nil }
         let year = FinancePeriod.year.days
         let dayOfYear = day - CompanyAccounts.floorDivide(day, year) * year
         let month = Int(dayOfYear / 30) + 1
@@ -1159,8 +1184,7 @@ extension GameWorld {
                                           dayOfMonth: Int(dayOfYear % 30) + 1)
         // Decision 773: a harbour's by the kind of weather.
         let weather = Tourism.weatherFactor(attraction.kind, weather: self.weather(onDay: day))
-        return Tourism.tourists(stars: stars(of: attraction), day: dayFactor,
-                                season: Tourism.seasonFactor(attraction.kind, month: month), weather: weather)
+        return (dayFactor, Tourism.seasonFactor(attraction.kind, month: month), weather)
     }
 
     /// Why attraction `id` draws no tourists now, or ``AttractionStatus/ok``.
@@ -1419,6 +1443,8 @@ extension GameWorld {
         // it is settled, take on those of the sights they reach; decision
         // 587: the bus routes' too; decision 589: the ferry routes'.
         countFeederRides(counted.flows.feederRides)
+        // Decision 880: and the sights' visitors who came for the ride.
+        countCablewaySightseers(onDay: day)
         let year = day / FinancePeriod.year.days
         if year != tourism.year {
             for index in tourism.attractions.indices {
