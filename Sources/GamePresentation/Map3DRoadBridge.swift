@@ -95,6 +95,9 @@ struct Map3DRoadBridges: Sendable {
         let point: Map3DBaseMap.Point
         let height: Float
         let isFloor: Bool
+        /// Decision 873: how far round its point it holds its height
+        /// before giving way.
+        var flat: Float = 0
     }
 
     /// Bridges joined end to end, or end to side: one deck.
@@ -697,6 +700,37 @@ extension Map3DScene.Builder {
                 }
             }
         }
+        // Decision 873: a cable-stayed bridge's deck at its real height
+        // where its stays carry it (a bridge over a river only lies on the
+        // water, and 淡江大橋's did): a hold every 25 m along its middle,
+        // level across the bridge and between them, on every deck with a
+        // bridge within its corridor. From the bridge's own stations, so a
+        // chunk built apart raises it as the whole scene does (its last
+        // hold gives way to the ground within ``Map3DBaseMap/bridgeReach``).
+        for landmark in suspensionBridges() {
+            guard let height = landmark.bridge.stays?.road else { continue }
+            let reach = Double(Map3DSuspensionBridge.corridor), spacing: Float = 25
+            var holds: [Point] = [], raised = Set<Int>()
+            var station = landmark.hung.lowerBound
+            while station <= landmark.hung.upperBound + 0.01 {
+                let at = landmark.point(along: station, across: 0)
+                let p = Point(x: Double(at.x), z: Double(at.z))
+                holds.append(p)
+                let low = Map3DRoadBridges.key(p.x - reach, p.z - reach), high = Map3DRoadBridges.key(p.x + reach, p.z + reach)
+                for row in low.row...high.row {
+                    for column in low.column...high.column {
+                        for (piece, index) in cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                            let points = bridges[piece].points
+                            if Map3DRoadBridges.nearest(p, points[index - 1], points[index]).distance <= reach { raised.insert(deckOf[root(piece)]!) }
+                        }
+                    }
+                }
+                station += spacing
+            }
+            for deck in raised.sorted() {
+                bounds[deck] += holds.map { .init(point: $0, height: height, isFloor: true, flat: Float(reach) + spacing / 2) }
+            }
+        }
         for (deck, numbers) in members.enumerated() {
             let length = numbers.reduce(0.0) { total, number in
                 zip(bridges[number].points, bridges[number].points.dropFirst()).reduce(total) { sum, step in
@@ -955,7 +989,7 @@ extension Map3DScene.Builder {
         }
         for bound in deck.bounds where bound.isFloor {
             let distance = Float(((p.x - bound.point.x) * (p.x - bound.point.x) + (p.z - bound.point.z) * (p.z - bound.point.z)).squareRoot())
-            height = max(height, bound.height - deck.grade * distance)
+            height = max(height, bound.height - deck.grade * max(0, distance - bound.flat))
         }
         for bound in deck.bounds where !bound.isFloor {
             let distance = Float(((p.x - bound.point.x) * (p.x - bound.point.x) + (p.z - bound.point.z) * (p.z - bound.point.z)).squareRoot())
@@ -1021,7 +1055,7 @@ extension Map3DScene.Builder {
         var floor: Float = 0
         for bound in deck.bounds where bound.isFloor {
             let distance = Float(((p.x - bound.point.x) * (p.x - bound.point.x) + (p.z - bound.point.z) * (p.z - bound.point.z)).squareRoot())
-            floor = max(floor, bound.height - deck.grade * distance - ground)
+            floor = max(floor, bound.height - deck.grade * max(0, distance - bound.flat) - ground)
         }
         return floor
     }
