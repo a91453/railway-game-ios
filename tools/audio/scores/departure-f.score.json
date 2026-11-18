@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "role": "departure",
+  "title": "Departure melody F (long notes, left open)",
+  "source": "Written for the game, decision 868 (no MML original)",
+  "tempo": 150,
+  "beatsPerBar": 3,
+  "length": 11520,
+  "motif": 3,
+  "fadeOut": 0,
+  "tracks": [
+    {
+      "voice": "pluck",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 91, "start": 0, "length": 1920, "velocity": 92},
+        {"pitch": 88, "start": 1920, "length": 960, "velocity": 92},
+        {"pitch": 88, "start": 2880, "length": 1920, "velocity": 92},
+        {"pitch": 84, "start": 4800, "length": 960, "velocity": 92},
+        {"pitch": 86, "start": 5760, "length": 960, "velocity": 92},
+        {"pitch": 89, "start": 6720, "length": 960, "velocity": 92},
+        {"pitch": 93, "start": 7680, "length": 960, "velocity": 92},
+        {"pitch": 91, "start": 8640, "length": 2880, "velocity": 92}
+      ]
+    },
+    {
+      "voice": "pluck",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 48, "start": 0, "length": 960, "velocity": 74},
+        {"pitch": 60, "start": 960, "length": 960, "velocity": 56},
+        {"pitch": 64, "start": 960, "length": 960, "velocity": 56},
+        {"pitch": 60, "start": 1920, "length": 960, "velocity": 56},
+        {"pitch": 64, "start": 1920, "length": 960, "velocity": 56},
+        {"pitch": 45, "start": 2880, "length": 960, "velocity": 74},
+        {"pitch": 60, "start": 3840, "length": 960, "velocity": 56},
+        {"pitch": 65, "start": 3840, "length": 960, "velocity": 56},
+        {"pitch": 60, "start": 4800, "length": 960, "velocity": 56},
+        {"pitch": 65, "start": 4800, "length": 960, "velocity": 56},
+        {"pitch": 43, "start": 5760, "length": 960, "velocity": 74},
+        {"pitch": 57, "start": 6720, "length": 960, "velocity": 56},
+        {"pitch": 62, "start": 6720, "length": 960, "velocity": 56},
+        {"pitch": 57, "start": 7680, "length": 960, "velocity": 56},
+        {"pitch": 62, "start": 7680, "length": 960, "velocity": 56},
+        {"pitch": 48, "start": 8640, "length": 2880, "velocity": 74},
+        {"pitch": 55, "start": 8640, "length": 2880, "velocity": 56},
+        {"pitch": 64, "start": 8640, "length": 2880, "velocity": 56},
+        {"pitch": 67, "start": 8640, "length": 2880, "velocity": 56}
+      ]
+    },
+    {
+      "voice": "pad",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 55, "start": 0, "length": 11520, "velocity": 46},
+        {"pitch": 60, "start": 0, "length": 11520, "velocity": 50}
+      ]
+    }
+  ]
+}
