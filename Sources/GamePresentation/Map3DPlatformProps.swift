@@ -192,12 +192,22 @@ extension Map3DScene.Builder {
         let calling = callingFormations()
         // Decision 441: none at a depot, where no one boards.
         let depots = Set(world.stations.filter(\.isDepot).map(\.id))
+        // Decision 847: the real lines' screen doors.
+        let screenDoors = Map3DScreenDoors.Plan(world: world)
         for platform in laidPlatforms where !depots.contains(platform.station) {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
             let trains = calling[platform.station]
-            let kind = Map3DPlatformProps.kind(system: stationSystems[platform.station], calling: trains?.formations.count ?? 0,
-                                               metroTrains: trains?.metro ?? 0)
-            let formations = (trains?.formations ?? []).filter { kind == .railway || $0.doors > 0 }
+            let doorsHere = platform.edge.flatMap {
+                screenDoors.doors(edge: $0, station: platform.station, underground: platform.structure == .tunnel)
+            }
+            // Decision 847: behind screen doors, the line's own trains
+            // mark its doors, so the queue lines meet the openings.
+            let lineTrains = platform.edge.map { screenDoors.trains(edge: $0, station: platform.station) } ?? []
+            let kind = doorsHere != nil ? .metro
+                : Map3DPlatformProps.kind(system: stationSystems[platform.station], calling: trains?.formations.count ?? 0,
+                                          metroTrains: trains?.metro ?? 0)
+            let formations = (doorsHere != nil && !lineTrains.isEmpty ? lineTrains : trains?.formations ?? [])
+                .filter { kind == .railway || $0.doors > 0 }
             let marks = Map3DPlatformProps.stopMarks(length: path.length, formations: formations, kind: kind)
             let doors = Map3DPlatformProps.doorCentres(length: path.length, formations: formations, kind: kind)
             let side: Float = platform.offset >= 0 ? 1 : -1
@@ -232,6 +242,10 @@ extension Map3DScene.Builder {
                                     top: Map3DPalette.tunnelLamp, side: Map3DPalette.tunnelLamp)
                         mesh.makeGlowing(from: first)
                     }
+                }
+                if let doorsHere {
+                    Self.addScreenDoors(&mesh, path: path, across: edge + side * Map3DScreenDoors.setBack, top: top,
+                                        pieces: Map3DScreenDoors.pieces(length: path.length, formations: formations), doors: doorsHere)
                 }
                 // The bins at the back, their long side along it; none on
                 // a platform too narrow to walk past one.

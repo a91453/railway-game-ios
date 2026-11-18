@@ -196,6 +196,7 @@ extension Map3DScene {
         winterLights = Map3DWinterLights(placements: winter)
         reindeerHerd = Map3DReindeerHerd(placements: herd)
         freightYards = yards
+        screenDoors = Map3DScreenDoors.Plan(world: world)
         chunks = (old.chunks.filter { !keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } + built)
             .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         var streetLife = old.streetLife

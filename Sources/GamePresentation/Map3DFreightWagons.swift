@@ -41,10 +41,11 @@ public enum Map3DFreightLoad: String, CaseIterable, Sendable {
 /// (``Map3DContainerWagon``): the same skeletal flat wagon bare, and the
 /// same wagon carrying two 20 ft half-height open-top containers heaped with
 /// stone, the box used for heavy bulk such as stone and ore (ISO 668's 1CC
-/// half height, 6.058 × 2.438 × 1.295 m). Taiwan Railway's stone trains run
-/// hopper wagons (石斗車, FREIGHT_DEEPENING §2.5); the hopper wagon is the
-/// local studio's next model (`docs/handoff/FREIGHT-LOOK.md`), and these
-/// stand in until it comes. No logos or lettering.
+/// half height, 6.058 × 2.438 × 1.295 m), now drawn only in the freight
+/// yards (``Map3DFreightYard``) and if the hopper's mesh does not decode.
+/// A stone train's wagons are Taiwan Railway's hopper wagons (石斗車,
+/// FREIGHT_DEEPENING §2.5), the local studio's model
+/// (``Map3DFreightHopper``). No logos or lettering.
 ///
 /// Metres, +X the front, +Y left, +Z up, the rail at 0 (``Map3DModelPack``);
 /// the builder works in x front, y up, z right and turns once at the end.
@@ -59,11 +60,11 @@ public enum Map3DFreightWagons {
         case empty
         /// The bare flat wagon with the red tail marker lamp.
         case emptyTail
-        /// Two half-height open-top containers of stone, rust red.
+        /// The hopper wagon of stone, its discharge doors black.
         case stone
-        /// The same, dark green.
+        /// The same, its discharge doors rust red (the 35B1000s).
         case stoneGreen
-        /// The last wagon: ochre containers and the tail marker lamp.
+        /// The last wagon: the black hopper with the tail marker lamp.
         case stoneTail
 
         var isTail: Bool { self == .emptyTail || self == .stoneTail }
@@ -78,6 +79,10 @@ public enum Map3DFreightWagons {
     static let stone = Map3DPalette.ballast
 
     public static func model(_ wagon: Wagon, far: Bool = false) -> Map3DModelPack.Model {
+        let name = "freight-wagon-\(wagon.rawValue)" + (far ? "-far" : "")
+        if let hopper = Map3DFreightHopper.model(wagon, far: far) {
+            return Map3DModelPack.Model(name: name, vertices: hopper.vertices, minimum: hopper.minimum, maximum: hopper.maximum)
+        }
         var b = StationKitBuilder()
         b.containerWagon(far: far)
         switch wagon {
@@ -95,7 +100,7 @@ public enum Map3DFreightWagons {
             b.box(-half + 0.32, 1.22, -1.05, 0.02, 0.16, 0.16, Map3DPalette.lantern)
             b.mesh.makeGlowing(from: lens)
         }
-        return .flat(named: "freight-wagon-\(wagon.rawValue)" + (far ? "-far" : ""), from: b.mesh)
+        return .flat(named: name, from: b.mesh)
     }
 
     /// Decision 837: the registered sets (decision 782), each the R200 of
@@ -107,7 +112,51 @@ public enum Map3DFreightWagons {
             .init(emptyKey, "Empty freight, R200 diesel", "空車貨物列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
             .init(bulkKey, "Stone freight, R200 diesel", "砂石列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
         ],
-        triangles: 300...4_100, length: 14.1...14.3)
+        triangles: 300...4_100, length: 11.9...14.3)
+}
+
+/// The local studio's hopper wagon of Taiwan Railway's stone trains
+/// (石斗車, the 35B1000 and 35B1300 kinds), modelled in Blender from
+/// photographs and checked against them over five rounds
+/// (`a91453/railway-assets-private`,
+/// `game-art-previews/docs/art/freight-hopper-2026-11/revision-5`), one
+/// palette colour a triangle, and written here by
+/// `tools/train-models/glb_to_swift.py` (``encoded``): a black open hopper
+/// 12 m over the couplers, its two heaps of stone standing 0.27 m over the
+/// sides, the discharge chutes under it, a hand brake wheel on the front
+/// end. It has no glass, so nothing on it lights at night but the last
+/// wagon's tail lamp. No logos or lettering.
+enum Map3DFreightHopper {
+    /// The colours of the mesh's palette indices, in the order
+    /// `glb_to_swift.py --materials` gave them: the studio's material
+    /// names body, frame, bogie, metal, stone, chute, handwheel, taillamp
+    /// (decision 539's wagon colours, the ballast's grey for the stone).
+    static let meshPalette: [UInt32] = [
+        Map3DContainerWagon.frame, Map3DContainerWagon.frame, Map3DContainerWagon.bogie, Map3DContainerWagon.metal,
+        Map3DFreightWagons.stone, Map3DContainerWagon.rust, Map3DPalette.tankWhite, Map3DPalette.lantern,
+    ]
+
+    /// The GLB each stone wagon is.
+    static func file(_ wagon: Map3DFreightWagons.Wagon) -> String? {
+        switch wagon {
+        case .empty, .emptyTail: nil
+        case .stone: "freight-hopper"
+        case .stoneGreen: "freight-hopper-b"
+        case .stoneTail: "freight-hopper-tail"
+        }
+    }
+
+    /// `wagon`'s hopper, its front at +x, the tail lamp (on the last one)
+    /// lit; `nil` for the empty wagons and if its mesh does not decode.
+    /// No face is marked glass (``Map3DRedCommuter/decodedMesh(_:named:palette:glass:)``
+    /// with no glass index; its colours are none of the glass shades).
+    static func model(_ wagon: Map3DFreightWagons.Wagon, far: Bool) -> Map3DModelPack.Model? {
+        guard let file = file(wagon) else { return nil }
+        let name = file + (far ? "-far" : "")
+        guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
+              let mesh = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette) else { return nil }
+        return Map3DTrainSet.litLenses(mesh, front: false)
+    }
 }
 
 extension Map3DTrainSet {
@@ -123,8 +172,8 @@ extension Map3DTrainSet {
     }
 
     /// Decision 837: a freight train carrying building materials: the R200
-    /// and the wagons of stone, rust and green from each end inward, the
-    /// last one ochre with the tail lamp.
+    /// and the hopper wagons of stone (``Map3DFreightHopper``), black and
+    /// rust-doored in turn, the last one with the tail lamp.
     static func freightBulk(far: Bool = false) -> Map3DTrainSet {
         let key = Map3DFreightWagons.bulkKey
         return Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .centre], ownLengths: true, far: far ? nil : key + "Far",

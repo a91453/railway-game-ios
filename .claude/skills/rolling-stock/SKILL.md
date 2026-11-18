@@ -157,7 +157,8 @@ G12／R21（#1485）與阿里山 DL-38（決策 531）都是先被作者說醜�
 1. `tools/train-models/glb_to_swift.py --enum <車> --materials <派工單材質表的順序>`，Swift 端 `meshPalette` 照同一順序給色；GLB 裡的材質順序不重要，名字對就好。
 2. 編組用 `cycle`：兩端對稱的（D P M T T M P D）用不帶 `cycleFromFront` 的 cycle，後半自動鏡像，給 `middleBack`／`pantographBack`／`centreBack` 用 `.turned`；A C B C B C B A 這種一路重複的才用 `cycleFromFront`。
 3. 鎖檔：`run.sh OUT --lock tools/train-models/hashes.lock.json` 會把**所有**鎖檔重寫成另一種排序與格式（`hashes.lock.json` 上千行變動、別台車的註解少一段）。只留新車的 `locks/<id>.json`（補回註解裡的 enum 名與結尾換行），其他用 `git checkout` 還原。
-4. 公開 repo 的 `docs/art/<車>/overview.jpg` 只留模型那一半：工作室總覽圖並排了 Commons 照片，照片只在素材庫。
+4. **沒有玻璃的車（貨車，例：石斗車 `Map3DFreightHopper`，2026-11-18）**：`decodedMesh` 不給 `glass`，派工單的深色也要不落在 `Map3DTrainLights.isGlass` 裡；測試同時量 `marksOwnGlass == false`、`windowModel(of:) == nil`、`Map3DTrainMaterial.marked` 後沒有玻璃層，夜裡只有尾燈亮。尾燈用 `Map3DPalette.lantern` 格位、轉完用 `litLenses(_, front: false)` 點亮。車比原配方高時，`Map3DTrainSetTests` 的 `lowFreight` 高度範圍跟著改。
+5. 公開 repo 的 `docs/art/<車>/overview.jpg` 只留模型那一半：工作室總覽圖並排了 Commons 照片，照片只在素材庫。
 
 派工單（寫給工作室）要注意的，詳見素材庫 `local-studio-2026-11-10/LESSONS.md`：
 
