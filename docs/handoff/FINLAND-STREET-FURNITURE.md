@@ -8,6 +8,6 @@
 
 ## 還留下
 
-- `docs/priorities/FINLAND-STREET-FURNITURE.md`：圓環讓路線、路名牌、玻璃候車亭、雙臂路燈（都未派）。
+- 私有素材庫 `a91453/railway-assets-private-2` 的 `docs/priorities/FINLAND-STREET-FURNITURE.md`（評分檔 2026-11-18 搬過去）：圓環讓路線、路名牌、玻璃候車亭、雙臂路燈（都未派）。
 - UNVERIFIED：iOS 實機與 Simulator 的畫面（只有 WebGL 預覽）。
 - 加一個新模型到模型包時，會數模型順序與大小的測試不只 `Map3DModelPackLockTests`：還有 `Map3DModelPackSizeTests`、`Map3DWinterLightsTests.testThePackHoldsTheModels`、`Map3DTaiwanCarsTests`、`Map3DModelTests`（#2436 第一次 CI 就紅在前三個）。
