@@ -1353,7 +1353,8 @@ public final class GameSession {
     public init(world: GameWorld, language: DisplayLanguage = .english) {
         // Decision 695: a free game on a real-world map saved before there
         // were airports gets its map's.
-        let world = AirportCatalog.withAirports(Self.withCityRidership(world))
+        // Decision 880: and one saved before its map had sights gets them.
+        let world = AttractionCatalog.withSights(AirportCatalog.withAirports(Self.withCityRidership(world)))
         self.world = world
         self.commandLog = CommandLog(start: world)
         self.language = language
