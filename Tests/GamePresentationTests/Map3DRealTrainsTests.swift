@@ -95,6 +95,10 @@ final class Map3DRealTrainsTests: XCTestCase {
         for id in ["EAL", "EAL_LMC"] {
             XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: id, name: id), .init(key: Map3DMTREastRailLine.key, cars: 9), id)
         }
+        // Decision 864: Rovaniemi's two lines, the Sr2 and six double-deck coaches.
+        for id in ["KJA", "MUL"] {
+            XCTAssertEqual(Map3DRealTrains.formation(system: "vr", id: id, name: id), .init(key: Map3DFinlandSr2.key, cars: 7), id)
+        }
         // Decision 851: the South Island line its own.
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: Map3DMTRSouthIslandLine.key, cars: 3))
         // Decision 852: the Disneyland Resort line its own.

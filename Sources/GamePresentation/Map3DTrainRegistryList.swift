@@ -13,5 +13,6 @@ extension Map3DTrainRegistry {
         Map3DMTRSouthIslandLine.registration,
         Map3DMTRDisneylandLine.registration,
         Map3DMTREastRailLine.registration,
+        Map3DFinlandSr2.registration,
     ]
 }

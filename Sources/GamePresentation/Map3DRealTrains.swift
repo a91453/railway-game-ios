@@ -388,6 +388,12 @@ public struct Map3DRealTrains: Sendable {
             case "DRL": return Formation(key: Map3DMTRDisneylandLine.key, cars: 4)
             default: return Formation(key: "metroGeneric", cars: hongKongCars[id] ?? 8)
             }
+        case "vr":
+            // Decision 864: Rovaniemi's two lines (the Kemijärvi line and
+            // Rovaniemi–Muurola), whose intercity and night trains are
+            // hauled: the Sr2 and six double-deck coaches, the coach every
+            // train of the week counted had and the locomotive most of them.
+            return Formation(key: Map3DFinlandSr2.key, cars: Map3DFinlandSr2.cars)
         default:
             // A system the game has no set for: boxes.
             return Formation(key: "", cars: 3)
