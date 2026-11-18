@@ -130,19 +130,23 @@ final class HongKongDepotTests: XCTestCase {
         let missed = RunsNotSent.on(1, of: bought, at: now).filter { bought.runs[$0].start(onDay: 1) % GameTime.secondsPerDay < 7 * 3_600 - 600 }
         XCTAssertEqual(missed, [])
     }
-    /// Decision 836: the Tung Chung Line's first afternoon under a new
-    /// game's rules (simple, traffic control on). At 14:25 an empty run to
-    /// Siu Ho Wan, following a service waiting at Sunny Bay for the Tung
-    /// Chung platform, claimed the crossover into the depot ten minutes
-    /// ahead of itself; the train on that platform waited for it to leave,
-    /// and six trains stood deadlocked, on and off, for 17 minutes. Until
-    /// 15:00 none is deadlocked. About a minute.
-    func testTheTungChungLineAfternoonHasNoDeadlock() throws {
+    /// Decisions 836 and 850: the Tung Chung Line's first day under a new
+    /// game's rules (simple, traffic control on), to half past midnight.
+    /// At 14:25 an empty run to Siu Ho Wan, following a service waiting at
+    /// Sunny Bay for the Tung Chung platform, claimed the crossover into
+    /// the depot ten minutes ahead of itself; the train on that platform,
+    /// with no service, waited for it to leave, and six trains stood
+    /// deadlocked, on and off, for 17 minutes (decision 836). Since
+    /// decision 849, at 00:03 and 00:10 of every night the same held
+    /// trains at Tung Chung that were due out, for Hong Kong or for the
+    /// depot: five trains, a minute each time (decision 850). None is
+    /// deadlocked all day. About two minutes.
+    func testTheTungChungLineFirstDayHasNoDeadlock() throws {
         var world = try DepotReturnReportTests.hongKongBought(["TCL"], rules: .simple)
         XCTAssertTrue(world.isTrafficControlEnabled, "a new game's rules keep traffic control on")
         world.setSpeed(.normal)
         var worst: (count: Int, at: Int64) = (0, 0)
-        while world.clock.now.seconds < 15 * 3_600 {
+        while world.clock.now.seconds < 24 * 3_600 + 1_800 {
             try world.advance(ticks: 1)
             let stuck = world.deadlockedTrains().count
             if stuck > worst.count { worst = (stuck, world.clock.now.seconds) }
