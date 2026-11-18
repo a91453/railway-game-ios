@@ -126,7 +126,14 @@ final class TutorialUITests: XCTestCase {
         waitForStep(app, title: "Tap Station", "The ✓ did not build the track")
         let platform = app.networkMode("Station")
         XCTAssertTrue(platform.appears(within: 10))
-        XCTAssertTrue(platform.becomesHittable(), "The Platform mode cannot be tapped")
+        // The card with the modes slides open after the ✓: on the iOS 27.2
+        // Simulator the mode was there and could not be touched for the 2
+        // seconds this waited (pull request #2453, run 44265510040), so it
+        // is given as long as it is given to appear, and a failure says
+        // where everything was.
+        XCTAssertTrue(
+            platform.becomesHittable(within: 10),
+            "The Platform mode cannot be tapped: mode \(platform.frame), tutorial card \(card.exists ? card.frame : .null), details card \(app.descendants(matching: .any)["details.card"].firstMatch.exists ? app.descendants(matching: .any)["details.card"].firstMatch.frame : .null), screen \(app.frame)")
         if card.exists {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
