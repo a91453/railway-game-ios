@@ -306,6 +306,53 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertEqual(session.world.cableways.count, 2)
     }
 
+    // MARK: - Decision 872: Ngong Ping
+
+    /// On a map of north Lantau the mode offers the Ngong Ping cable car:
+    /// Tung Chung, two angle stations where the rope turns, Ngong Ping,
+    /// 5,767 m, no span over what a cable car may span; Ngong Ping lies
+    /// to the south-west of Tung Chung.
+    func testTheNgongPingCableCarIsOffered() throws {
+        let session = try realSession(latitude: 22.2735, longitude: 113.92, cells: 128)
+        XCTAssertEqual(session.realCablewayOffers.map(\.name), ["昂坪纜車"])
+        session.traceRealCableway(.ngongPing)
+        let stops = session.cablewayDraft
+        XCTAssertEqual(stops.map(\.boards), [true, false, false, true])
+        XCTAssertGreaterThan(stops[3].cell.row - stops[0].cell.row, 50, "some 3.8 km south")
+        XCTAssertGreaterThan(stops[0].cell.column - stops[3].cell.column, 50, "some 3.8 km west")
+        XCTAssertGreaterThan(stops[0].cell.column, stops[1].cell.column, "first west, to Airport Island")
+        let preview = try XCTUnwrap(session.cablewayPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertEqual(preview.stations, 2)
+        XCTAssertEqual(preview.metres, 5_767)
+        XCTAssertEqual(RealCableway.ngongPing.legMetres, [619, 3_575, 1_573])
+        // No station of the company's is there to meet: the place given
+        // (MTR Tung Chung) is within reach of the first stop all the same.
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        let built = try XCTUnwrap(session.world.cableways.last)
+        XCTAssertEqual(RealCableway.matching(built, in: session.world), .ngongPing)
+        XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .maokong)
+        XCTAssertEqual(session.realCablewayOffers, [])
+    }
+
+    /// With the Tung Chung Line bought, the cable car laid as it is meets
+    /// MTR Tung Chung at its Tung Chung stop.
+    func testTheNgongPingCableCarMeetsTungChung() throws {
+        let session = try RealLineAcquisitionTests.game(round: "hkmtr:TCL", side: 1 << 22)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "hkmtr:TCL" }, "on sale")
+        let offer = session.realLineOffer(for: line)
+        XCTAssertTrue(session.acquireRealLine(offer), offer.problem ?? session.message?.text ?? "")
+        session.selectTool(.network)
+        session.setNetworkMode(.cableway)
+        XCTAssertTrue(session.realCablewayOffers.contains(.ngongPing))
+        session.traceRealCableway(.ngongPing)
+        XCTAssertNil(session.cablewayPreview?.problem)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        let transfer = try XCTUnwrap(session.world.cableways.last?.transfer)
+        XCTAssertEqual(session.world.station(id: transfer.station)?.name, "東涌")
+        XCTAssertEqual(transfer.stop, 0, "at the cable car's Tung Chung stop")
+    }
+
     /// Each real cable car's spans are one fewer than its stops, within
     /// what a cable car may span, and no two share a first stop's place.
     func testEveryRealCableCarCanBeLaid() {
