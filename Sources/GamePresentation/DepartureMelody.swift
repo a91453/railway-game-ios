@@ -5,16 +5,10 @@ import GameCore
 /// 60× and slower. Three melodies written for the game
 /// (`tools/audio/scores/departure-*.score.json`, played on the music's
 /// sampled piano); each line plays one of them, the same one every time,
-/// so a line the player knows sounds like itself. Worked out each time,
-/// never saved.
-public enum DepartureMelody: String, CaseIterable, Hashable, Sendable {
-    /// Rising: I, IV, ii, I, over a harp.
-    case a
-    /// Falling, the bass stepping down: IV, I, ii, I, over pizzicato strings.
-    case b
-    /// Over a held C: I, IV, a suspended V, I, over a harp and soft strings.
-    case c
-
+/// so a line the player knows sounds like itself, unless the station the
+/// train leaves was set to play another (decision 866, ``Station/departureMelody``).
+/// The cases are GameCore's (decision 866). Worked out each time.
+extension DepartureMelody {
     /// The slowest speed it plays at no longer: at 600× a train stands at a
     /// station for a second or less (the research note's §6).
     public static let upTo: GameSpeed = .x60
@@ -32,18 +26,29 @@ public enum DepartureMelody: String, CaseIterable, Hashable, Sendable {
         return allCases[Int(hash % UInt32(allCases.count))]
     }
 
-    /// The melody train `id` plays in `world`: its line's, or, for a train
-    /// on no line (a timetable of its own), the first melody.
+    /// The melody train `id` plays leaving `station` in `world`: the one
+    /// the player set the station to play (decision 866), or else the
+    /// train's line's, or, for a train on no line (a timetable of its
+    /// own), the first melody.
+    public static func of(_ id: TrainID, at station: StationID?, in world: GameWorld) -> DepartureMelody {
+        if let station, let chosen = world.station(id: station)?.departureMelody { return chosen }
+        return of(id, in: world)
+    }
+
+    /// The melody of train `id`'s line in `world`, or, for a train on no
+    /// line (a timetable of its own), the first melody.
     public static func of(_ id: TrainID, in world: GameWorld) -> DepartureMelody {
         guard let line = world.assignedLine(of: id).flatMap({ world.line(id: $0) }) else { return .a }
         return of(lineNamed: line.name)
     }
 
     /// A call whose doors started closing: the train and when it arrived
-    /// there (which, with the train, names the call).
+    /// there (which, with the train, names the call), and the station it
+    /// stands at (decision 866: which melody plays is the station's).
     public struct Closing: Hashable, Sendable {
         public var train: TrainID
         public var arrival: GameTime
+        public var station: StationID?
     }
 
     /// The calls of the trains `watched` whose doors started closing
@@ -57,15 +62,19 @@ public enum DepartureMelody: String, CaseIterable, Hashable, Sendable {
             guard case .waitingAtStop(let stop, _)? = train.execution else { return false }
             return stop < train.timetable.count - 1
         }
+        func station(_ train: Train) -> StationID? {
+            guard case .waitingAtStop(let stop, _)? = train.execution, train.timetable.indices.contains(stop) else { return nil }
+            return train.timetable[stop].station
+        }
         return watched.sorted().compactMap { id in
             let now = after.train(id: id)
             if let now, let times = now.times, times.closing != nil, leaves(now) {
-                return Closing(train: id, arrival: times.arrival)
+                return Closing(train: id, arrival: times.arrival, station: station(now))
             }
             guard let earlier = before.train(id: id), let times = earlier.times, times.closing == nil,
                   leaves(earlier), times.exchangeEnd != nil, now?.execution != earlier.execution
             else { return nil }
-            return Closing(train: id, arrival: times.arrival)
+            return Closing(train: id, arrival: times.arrival, station: station(earlier))
         }
     }
 }
