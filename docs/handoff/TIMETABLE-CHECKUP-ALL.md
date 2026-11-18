@@ -6,7 +6,7 @@
 
 - 盤點三張地圖在售的真實路線（台灣 15、香港 6、羅瓦涅米 2）對照全日體檢：台灣、香港每條都有單買；缺的是羅瓦涅米單買，以及共用車站的線一起買（淡海兩線、六家＋內灣）。
 - 新檔 `Tests/GamePresentationTests/TimetableCheckupAllBoughtTests.swift`：補上那些世界（夜間／手動，在 `branch-lines-and-rovaniemi` job），和兩個每個 PR 都跑的涵蓋檢查（約 2.4 秒）。
-- 新世界的上限在那個檔的 `budgets`（六家＋內灣 4 格誤點 3，其餘 0）。原有的上限仍在 `TimetableCheckupTests.swift`。
+- 新世界的上限在那個檔的 `budgets`（六家＋內灣擬實 2 格誤點 3，其餘 0；在 `main` `5a1efcf`、決策 849 之後量的）。原有的上限仍在 `TimetableCheckupTests.swift`。
 
 ## 還留下什麼
 
