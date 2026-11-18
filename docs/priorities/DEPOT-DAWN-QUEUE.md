@@ -1,4 +1,4 @@
-# DEPOT-DAWN-QUEUE（2026-11-18，派工 DEPOT-DAWN-QUEUE 併 TCL-DAWN）
+# DEPOT-DAWN-QUEUE（2026-11-18，#2434）
 
 清晨出庫排隊量完了，改出庫時刻的四種寫法都沒有收（[決策 841](../decisions/841.md)），GameCore 沒改。這裡取代 `DEPOT-REAL.md` 第 1 列與 `DEBUG-137.md` 第 2 列的評分。交接在 `docs/handoff/DEPOT-DAWN-QUEUE.md`。尺同 NEXT_PRIORITIES §19；bug 排在前面。
 
