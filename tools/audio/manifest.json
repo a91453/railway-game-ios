@@ -102,6 +102,105 @@
       "endLevel": 0.0
     },
     {
+      "file": "departure-a.m4a",
+      "stems": [
+        {
+          "score": "tools/audio/scores/departure-a.score.json",
+          "scoreSha256": "d1a3fe94f2a79997161bf47571eeedd3e0f4af0dcb3f4ffa0f159bbf5f366228"
+        }
+      ],
+      "arrangement": "tools/audio/sampled/arrangements.json",
+      "arrangementSha256": "26eb108c693f828732fba4a9e9b4d0e75ee4c52df381182306bbe4225e1eeab2",
+      "bank": {
+        "name": "GeneralUser GS v2.0.3",
+        "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+        "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
+      },
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "kind": "departure",
+      "tune": "departure-a",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "sha256": "3fb416e59cf948ce94464781fc1cef5f24b028383e0e2c1703504cda7bbe6681",
+      "frames": 374784,
+      "seconds": 7.808,
+      "peakDbfs": -4.35,
+      "rmsDbfs": -21.06,
+      "largestStep": 0.10287,
+      "endLevel": 0.0,
+      "loudnessLufs": -15.6
+    },
+    {
+      "file": "departure-b.m4a",
+      "stems": [
+        {
+          "score": "tools/audio/scores/departure-b.score.json",
+          "scoreSha256": "5ae2c7ef9d0709b595d5dd2218f3b562a188ad69b556aed3ac97484c68d8a5dd"
+        }
+      ],
+      "arrangement": "tools/audio/sampled/arrangements.json",
+      "arrangementSha256": "26eb108c693f828732fba4a9e9b4d0e75ee4c52df381182306bbe4225e1eeab2",
+      "bank": {
+        "name": "GeneralUser GS v2.0.3",
+        "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+        "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
+      },
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "kind": "departure",
+      "tune": "departure-b",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "sha256": "a6b5dc88a509e98dbd74e9f43b49245fca005a08cb64df3768832f90342d51fa",
+      "frames": 374784,
+      "seconds": 7.808,
+      "peakDbfs": -4.39,
+      "rmsDbfs": -21.62,
+      "largestStep": 0.11444,
+      "endLevel": 0.0,
+      "loudnessLufs": -15.89
+    },
+    {
+      "file": "departure-c.m4a",
+      "stems": [
+        {
+          "score": "tools/audio/scores/departure-c.score.json",
+          "scoreSha256": "2ce505ee3723a852a2ab36717f0bc958d6081f9a9d907bf01d4d44783e42e998"
+        }
+      ],
+      "arrangement": "tools/audio/sampled/arrangements.json",
+      "arrangementSha256": "26eb108c693f828732fba4a9e9b4d0e75ee4c52df381182306bbe4225e1eeab2",
+      "bank": {
+        "name": "GeneralUser GS v2.0.3",
+        "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+        "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe"
+      },
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "kind": "departure",
+      "tune": "departure-c",
+      "copyright": "Original composition for the game. Copyright (c) 2026 a91453. All rights reserved.",
+      "sha256": "0f971f6ec0589fb4d220de084a721699a1be23901c4c4cd7781fd429a535a600",
+      "frames": 374784,
+      "seconds": 7.808,
+      "peakDbfs": -4.41,
+      "rmsDbfs": -21.31,
+      "largestStep": 0.12527,
+      "endLevel": 0.0,
+      "loudnessLufs": -15.87
+    },
+    {
       "file": "garbage-truck.caf",
       "kind": "street",
       "synth": "make_game_audio.py garbage_truck(), decision 437",
@@ -222,7 +321,7 @@
         }
       ],
       "arrangement": "tools/audio/sampled/arrangements.json",
-      "arrangementSha256": "ac0091ff1b6bd4efae0036092ad3dc1f5e24b43910b43fd571294eff8e50984e",
+      "arrangementSha256": "26eb108c693f828732fba4a9e9b4d0e75ee4c52df381182306bbe4225e1eeab2",
       "bank": {
         "name": "GeneralUser GS v2.0.3",
         "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
@@ -269,7 +368,7 @@
         }
       ],
       "arrangement": "tools/audio/sampled/arrangements.json",
-      "arrangementSha256": "ac0091ff1b6bd4efae0036092ad3dc1f5e24b43910b43fd571294eff8e50984e",
+      "arrangementSha256": "26eb108c693f828732fba4a9e9b4d0e75ee4c52df381182306bbe4225e1eeab2",
       "bank": {
         "name": "GeneralUser GS v2.0.3",
         "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
@@ -316,7 +415,7 @@
         }
       ],
       "arrangement": "tools/audio/sampled/arrangements.json",
-      "arrangementSha256": "ac0091ff1b6bd4efae0036092ad3dc1f5e24b43910b43fd571294eff8e50984e",
+      "arrangementSha256": "26eb108c693f828732fba4a9e9b4d0e75ee4c52df381182306bbe4225e1eeab2",
       "bank": {
         "name": "GeneralUser GS v2.0.3",
         "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
