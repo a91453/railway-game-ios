@@ -900,8 +900,20 @@ final class MapInteractionTests: XCTestCase {
         // Tap start anchor and end anchor to trigger track preview, in the
         // map's leading half: the details card floats over its trailing
         // side while a tool is chosen (decision 106).
+        // The details card slides in when the tool is chosen: on the iOS
+        // 27.2 Simulator two touches 0.6 s after Network reached the app
+        // and picked no track start (pull request #2480, full lane: the
+        // card still asked where the track starts). They wait for the card
+        // to rest, and are made once more if no stretch is previewed.
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        if card.exists { card.waitUntilStill() }
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        if !hud.appears(within: 5) {
+            app.logTree("no construction HUD after the first two touches")
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        }
 
         if !hud.appears(within: 5) { app.logTree("no construction HUD") }
         XCTAssertTrue(hud.exists, "MapConstructionHUD must appear when preview is active")
