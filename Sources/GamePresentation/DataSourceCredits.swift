@@ -436,6 +436,32 @@ public enum DataSourceCredits {
                     ),
                 ]
             )
+        // Decision 854: Fukuoka's map (`MapPacks/fukuoka`, made by
+        // `tools/fukuoka-map/`), credited once it is open.
+        case .fukuoka:
+            DataSourceSection(
+                id: "fukuokaRailways",
+                title: language.text("Fukuoka’s Railways", "福岡的鐵道"),
+                credits: [
+                    DataSourceCredit(
+                        id: "fukuokaSubway",
+                        title: language.text("Fukuoka City Subway", "福岡市地鐵"),
+                        detail: language.text(
+                            "The Fukuoka City Subway’s three lines, the Kuko, Hakozaki and Nanakuma lines, with their stations’ names in Chinese, English and Japanese. There is no published timetable, so their trains run at estimated intervals.",
+                            "福岡市地鐵的空港線、箱崎線與七隈線三條路線，車站有中文、英文與日文站名。沒有公開的時刻表，所以列車照估計的班距行駛。"
+                        ),
+                        notice: language.text(
+                            "Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, tunnels, viaducts and line colours: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with the Fukuoka City Transportation Bureau or the Government of Japan.",
+                            "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、隧道、高架與路線色：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與福岡市交通局、日本政府沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("National Land Numerical Information: Railway Data", "国土数値情報 鉄道データ"), url: "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html"),
+                            DataSourceCredit.Link(title: language.text("CC BY 4.0", "CC BY 4.0"), url: "https://creativecommons.org/licenses/by/4.0/"),
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
+                ]
+            )
         }
     }
 
