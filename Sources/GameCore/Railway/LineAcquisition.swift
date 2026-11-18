@@ -293,21 +293,42 @@ extension GameWorld {
     /// builds costs the company nothing, and a managed company keeps no
     /// record of it and books no capital spending for it, so `body` lays
     /// that track and nothing else. The track stays the company's to use
-    /// and take up; taking it up refunds nothing, as for any track. If
-    /// `body` throws, so does this, and what it built stays built (at no
-    /// cost): call it on a copy of the world to keep the world unchanged.
+    /// and take up; taking it up refunds nothing, as for any track. A
+    /// company building in its way still comes down at the company's cost
+    /// (decision 95): its fee is paid from the cash, as the ledger books
+    /// it. If `body` throws, so does this, and what it built stays built
+    /// (at no cost): call it on a copy of the world to keep the world
+    /// unchanged.
     public mutating func layStateTrack(_ body: (inout GameWorld) throws(GameError) -> Void) throws(GameError) {
         let unlimited = economy.unlimitedFunds
-        let records = accounts.assets.count
+        // Edge numbers are never handed out again: the edges `body` lays
+        // are numbered from here on.
+        let firstEdge = network.nextEdgeNumber
+        let standing = placedBuildings
         economy.unlimitedFunds = true
         defer {
             economy.unlimitedFunds = unlimited
             // Its records, at their cost, leave the books and the day's
-            // capital spending.
-            let laid = accounts.assets[records...].reduce(Money.zero) { $0 + $1.cost }
-            accounts.assets.removeSubrange(records...)
+            // capital spending. Found by their edges, not by where they
+            // stand in the list: a company building the track cleared
+            // takes its own record out from among the earlier ones
+            // (REVIEW-L28).
+            var laid = Money.zero
+            accounts.assets.removeAll { record in
+                guard record.kind == .track, record.owner >= firstEdge else { return false }
+                laid = laid + record.cost
+                return true
+            }
             if laid > .zero {
                 accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending - laid }
+            }
+            // The company's buildings it cleared: the ledger booked their
+            // fees, and the cash pays them (``clear(_:)`` settled nothing
+            // while the funds were unlimited).
+            let left = Set(placedBuildings.map(\.id))
+            let fees = standing.filter { !left.contains($0.id) }.reduce(Money.zero) { $0 + demolitionCost(of: $1) }
+            if fees > .zero {
+                economy.settle(.zero - fees)
             }
         }
         try body(&self)
