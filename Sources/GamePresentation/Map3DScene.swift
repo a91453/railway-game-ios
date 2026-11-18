@@ -578,6 +578,9 @@ public struct Map3DScene: Sendable {
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
         // Decision 791: Hong Kong's landmark towers, clear of the track.
         if let frame = RealWorldFrame(world: world) { builder.addHongKongLandmarks(frame: frame) }
+        // Decision 879: the earlier Sun Moon Lake's pier, boats, temple
+        // and pavilion, where the real ones stand.
+        if let frame = RealWorldFrame(world: world) { builder.addSunMoonLandmarks(frame: frame) }
         // Decision 869: the suspension bridges' towers and cables.
         builder.addSuspensionBridges()
         // Decision 625: the real stations' exterior studies, as landmarks,
@@ -1266,6 +1269,12 @@ extension Map3DScene {
         /// Decision 791: the ground Hong Kong's landmarks stand on, where
         /// no footprint is drawn.
         var landmarkPlots: [PlacedSquare] = []
+        /// Decision 879: the squares a model stands on in the place of one
+        /// real building (the Wenwu temple's middle hall): the footprint
+        /// whose middle is within one is not drawn again, but counts as
+        /// built, so the houses along the roads round it stay
+        /// (``landmarkPlots`` keeps them off its cells).
+        var replacedPlots: [PlacedSquare] = []
         /// Decision 869: the suspension bridges round the scene, once found
         /// (``suspensionBridges()``).
         var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
