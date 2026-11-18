@@ -1431,10 +1431,11 @@ extension GameWorld {
                 }
                 // Decision 836: an empty run's claim does not bind a train
                 // without a service standing where the service it follows
-                // is due to go.
+                // is due to go. Decision 850: nor a train standing there
+                // whose own departure is due.
                 if train.isDeadheading, claims[leader.id] == nil, let leaving = leavingCover(of: leader, memo: &paths) {
                     for (other, blocks) in holders.holding(leaving, except: leader.id, fouling: true, in: network).enumerated()
-                    where blocks && other != place && trains[other].execution == nil {
+                    where blocks && other != place && (trains[other].execution == nil || isDueToLeave(trains[other])) {
                         released[train.id, default: []].insert(trains[other].id)
                     }
                 }
@@ -1462,6 +1463,23 @@ extension GameWorld {
               case .setsOff(let moved, _) = leaving(train, stop: stop, cycle: cycle, memo: &memo)
         else { return nil }
         return envelopeCover(of: moved)
+    }
+
+    /// Decision 850: whether `train`, a service or an empty run, stands at
+    /// a call with its departure due. An empty run's claim does not bind
+    /// one standing where the service the empty run follows is due to go
+    /// (see ``settleClaims(_:covers:)``): on Hong Kong's Tung Chung Line
+    /// under the simple rules with traffic control an empty run from Hong
+    /// Kong to Siu Ho Wan claimed the crossover into the depot from 25 km
+    /// away; the train at Tung Chung, due for Hong Kong (or itself for the
+    /// depot) over that crossover, waited for it, the service at Sunny Bay
+    /// for its platform, and the empty run, through the trains between,
+    /// for that one. Released for every due service wherever it stands,
+    /// the Taoyuan Airport MRT sent out none of a day's 333 runs; for due
+    /// services alone, an empty run due out of Tung Chung still stood.
+    private func isDueToLeave(_ train: Train) -> Bool {
+        guard case .waitingAtStop? = train.execution, let due = departureDue(of: train) else { return false }
+        return due <= clock.now
     }
 
     /// ``holder(of:except:)`` of the track `cover` covers (see
