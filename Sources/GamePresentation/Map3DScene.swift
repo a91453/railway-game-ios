@@ -1170,6 +1170,9 @@ extension Map3DScene {
         /// Decision 436: each station's station kit system
         /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
         var stationSystems: [StationID: String] = [:]
+        /// Decision 874: the stations under a shell of their own
+        /// (decision 827), with no kit canopy a sign could hang from.
+        var shellRoofed: Set<StationID> = []
         var piers: [Map3DPoint] = []
         /// Decision 407: the viaducts laid and their piers, drawn together
         /// (``addViaducts()``) so the tracks of a pair share a pier and a
