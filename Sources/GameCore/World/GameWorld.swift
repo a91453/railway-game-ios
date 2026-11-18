@@ -3910,7 +3910,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func dispatchTrains(memo: inout DispatchMemo) -> Bool {
         let now = clock.now
         var dispatched = false
-        // Decision 876 (TICK-REAL): the holders the due runs' trains are
+        // Decision 878 (TICK-REAL): the holders the due runs' trains are
         // asked of, worked out at this second and changed as trains are
         // sent out, apart from the step's (see
         // ``DirectionMemo/exchangeHolders(with:)``).
@@ -4015,7 +4015,7 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// ``dispatchRuns(ofLine:)`` with what the runs' trains are asked kept
-    /// in `memo` (decision 876, see ``readyRunTrain(of:_:day:memo:)``),
+    /// in `memo` (decision 878, see ``readyRunTrain(of:_:day:memo:)``),
     /// whose holders are of this second.
     mutating func dispatchRuns(ofLine index: Int, memo: inout DirectionMemo) -> Bool {
         var dispatched = false

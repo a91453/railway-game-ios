@@ -64,11 +64,11 @@ extension GameWorld {
         /// The track the trains hold (see ``trackHolders(memo:)``), for the
         /// last sets of trains asked about.
         var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders)] = []
-        /// Decision 876: how often ``holders`` has been changed, so that
+        /// Decision 878: how often ``holders`` has been changed, so that
         /// what was worked out from them (see ``WorldAnswers``) is known
         /// to be of them still.
         var holderChanges = 0
-        /// Decision 876: the holders of another moment set aside (see
+        /// Decision 878: the holders of another moment set aside (see
         /// ``exchangeHolders(with:)``).
         struct HolderStore {
             var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders)] = []
@@ -130,7 +130,7 @@ extension GameWorld {
         /// are kept: the steps of an advance try the trains moved on by
         /// different seconds from the same start.
         var released: [TrainID: [Train]] = [:]
-        /// Decision 876 (TICK-REAL): the trips trains would make for runs
+        /// Decision 878 (TICK-REAL): the trips trains would make for runs
         /// (see ``GameWorld/runTrip(of:_:for:memo:)``), by all a trip is
         /// worked out from but what no memo outlives.
         struct RunTripQuery: Hashable, Sendable {
@@ -142,7 +142,7 @@ extension GameWorld {
             let placement: TrainPlacement
         }
         var runTrips: [RunTripQuery: RunTrip?] = [:]
-        /// Decision 876: each line service's plans for a train's length,
+        /// Decision 878: each line service's plans for a train's length,
         /// in the plans' order: what each is planned along (see
         /// ``GameWorld/plannedDirections(_:memo:)``) and its first call.
         /// A plan is its calls and every leg's route, and was put together
@@ -153,7 +153,7 @@ extension GameWorld {
             let length: Int64
         }
         var linePlans: [LinePlanQuery: [(planned: Planned, first: StationID?)]] = [:]
-        /// Decision 876: what was asked of the whole world at one moment
+        /// Decision 878: what was asked of the whole world at one moment
         /// of one step, for as long as the world stays as it was asked
         /// (see ``WorldAnswers``).
         var answers = WorldAnswers()
@@ -168,7 +168,7 @@ extension GameWorld {
         }
     }
 
-    /// Decision 876 (TICK-REAL): the trains in the way (see
+    /// Decision 878 (TICK-REAL): the trains in the way (see
     /// ``trainsInTheWay(memo:)``) and the due runs that cannot leave (see
     /// ``heldRunDepartures(memo:)``), as they were last worked out, with
     /// what they were worked out from. Each line with a depot asks both of
@@ -218,7 +218,7 @@ extension GameWorld {
                                     stamp: memo.holderChanges)
     }
 
-    /// Tests and reports only (decision 876): has every answer given
+    /// Tests and reports only (decision 878): has every answer given
     /// again from a memo (a run's trip, a line's plans, the trains in the
     /// way, the due runs that cannot leave) checked against the answer
     /// worked out again. `nil` in the game.
@@ -239,7 +239,7 @@ extension GameWorld {
     struct RouteMemo: Equatable, Sendable {
         struct Key: Equatable, Sendable {
             let network: RailwayNetwork
-            /// Decision 876 (TICK-REAL): the lines but for when they last
+            /// Decision 878 (TICK-REAL): the lines but for when they last
             /// sent trains out (``ServiceLine/withoutDispatchTimes``), as
             /// ``ServiceKey`` has them. A path, a line's planned
             /// directions and a curve read the lines' stops, routes and
@@ -315,7 +315,7 @@ extension GameWorld {
         private var trafficParts = TrafficParts()
         private var paths = PathMemo()
         private var curves: [DirectionMemo.CurveQuery: RunCurve?] = [:]
-        /// Decision 876: the runs' trips and the lines' plans, kept with
+        /// Decision 878: the runs' trips and the lines' plans, kept with
         /// the services (they read whether traffic control is on).
         private var runTrips: [DirectionMemo.RunTripQuery: RunTrip?] = [:]
         private var linePlans: [DirectionMemo.LinePlanQuery: [(planned: DirectionMemo.Planned, first: StationID?)]] = [:]
@@ -626,7 +626,7 @@ extension GameWorld {
                 // itself is never protected from its own line.
                 let lengths = Set(line.trains(ofService: service).filter { $0 != candidate.id }.compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
                 guard !lengths.isEmpty else { continue }
-                // Decision 876: each length's plans kept by the line, in
+                // Decision 878: each length's plans kept by the line, in
                 // the order they were gone through before: every plan,
                 // and for each every length.
                 let planned = lengths.map { linePlans(of: line, service: service, length: $0, memo: &memo) }
@@ -646,7 +646,7 @@ extension GameWorld {
         return OpposingParts(directions: directions, defaultWays: defaultWays, departures: departures)
     }
 
-    /// Decision 876 (TICK-REAL): what each plan of `line`'s service
+    /// Decision 878 (TICK-REAL): what each plan of `line`'s service
     /// `service` (see ``plans(of:service:)``) is planned along for a train
     /// `length` long, and its first call, in the plans' order, kept in
     /// `memo` by the line: they read the line's stops and routes, the

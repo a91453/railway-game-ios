@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import GameCore
 
-/// Decision 876 (TICK-REAL): a run's trip, a line's plans, the trains in
+/// Decision 878 (TICK-REAL): a run's trip, a line's plans, the trains in
 /// the way and the due runs that cannot leave are given again from a memo
 /// rather than worked out each time they are asked. Here every answer
 /// given again is checked against working it out again (the game never

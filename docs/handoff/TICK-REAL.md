@@ -2,19 +2,19 @@
 
 ## 進度
 
-- 做到哪：第一批（五項備忘，決策 876）做完、開 PR；第二批（逐秒那一層）與台灣全買的秒級 tick **沒做**，這個 session 壓縮兩次停手。
-- 已驗證：六個全買世界各一天，新舊 build 的整點雜湊相同（數字在決策 876 的表）；稽核模式香港一天；`swift build --build-tests -Xswiftc -warnings-as-errors`。
+- 做到哪：第一批（五項備忘，決策 878）做完、開 PR；第二批（逐秒那一層）與台灣全買的秒級 tick **沒做**，這個 session 壓縮兩次停手。
+- 已驗證：六個全買世界各一天，新舊 build 的整點雜湊相同（數字在決策 878 的表）；稽核模式香港一天；`swift build --build-tests -Xswiftc -warnings-as-errors`。
 - 下一步的第一個指令：`BOUGHT_WORLDS=/tmp/worlds swift test --skip-build --filter BoughtWorldSaveTests`（約 15 分鐘，六個存檔），再照下面「怎麼量」。
 
 ## 派工
 
-- 協調者派工（作者：「進量做 難度高一點的才值得 看要優化3d或是tick 死結 等」），雲端工作串「優化模擬 tick 並清查死結」，分支 `claude/project-thread-n8icjx`，決策 876。
+- 協調者派工（作者：「進量做 難度高一點的才值得 看要優化3d或是tick 死結 等」），雲端工作串「優化模擬 tick 並清查死結」，分支 `claude/project-thread-n8icjx`，決策 878。
 - 存檔版本、golden schema：不動。`GoldenScenarios/`、`SaveFixtures/`、`ReplayFixtures/` 沒動。
 - 第二部分（死結清查）在另一條工作串：DEADLOCK-SWEEP，決策 877，分支 `claude/project-thread-xmlajh`。它會修 holders 的時刻過期（見下），和這裡動到同一段（`DirectionMemo.holders`、`trackHolders`）；後合的併 main。
 
 ## 做了什麼
 
-決策 876 寫了五項與各自「為什麼結果一樣」。檔案：`ServiceDirections.swift`（`RouteMemo.Key`、`DirectionMemo` 的 `runTrips`／`linePlans`／`HolderStore`／`answers`、`WorldAnswers`、`AnswerAudit`）、
+決策 878 寫了五項與各自「為什麼結果一樣」。檔案：`ServiceDirections.swift`（`RouteMemo.Key`、`DirectionMemo` 的 `runTrips`／`linePlans`／`HolderStore`／`answers`、`WorldAnswers`、`AnswerAudit`）、
 `LineRuns.swift`（帶備忘的 `runTrip`、`dueRun*`、`readyRunTrain`）、`RunDepot.swift`（`trainsInTheWay`、`heldRunDepartures`）、`GameWorld.swift`（`dispatchTrains`）、`Deadlock.swift`、`RouteReservation.swift`（`holderChanges`）、`LineRoutePreference.swift`。
 
 ## 怎麼量（工具都在 repo）
