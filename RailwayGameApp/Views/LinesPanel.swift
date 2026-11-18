@@ -772,16 +772,25 @@ struct LinesPanel: View {
                 }
                 // Decision 649: nearest the land owned first; one the
                 // land does not reach is greyed, with how far it is.
-                ForEach(session.realLineListings, id: \.line.id) { listing in
+                // Decision 862: the lines that share a station in one
+                // row, sold together.
+                ForEach(session.realLineListings, id: \.bundle.id) { listing in
                     let line = listing.line
+                    let title = listing.bundle.title(in: session.language)
                     Button {
                         session.offerRealLine(line)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Label {
-                                Text(verbatim: session.language.text("Buy \(line.name(in: session.language))…", "收購\(line.name(in: session.language))…"))
+                                Text(verbatim: session.language.text("Buy \(title)…", "收購\(title)…"))
                             } icon: {
                                 Image(systemName: "signature")
+                            }
+                            if let together = listing.bundle.togetherText(in: session.language) {
+                                Text(verbatim: together)
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             if let note = listing.note {
                                 Text(verbatim: note.text(in: session.language))

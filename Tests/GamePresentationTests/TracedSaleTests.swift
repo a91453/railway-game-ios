@@ -63,28 +63,34 @@ final class TracedSaleTests: XCTestCase {
         )
     }
 
+    /// The hint for the line sold alone, with `quote` its offer.
+    private func hint(quote: RealLineOffer?, balance: Money, in language: DisplayLanguage) -> TracedSaleHint? {
+        let bundle = RealLineBundle([line])
+        return TracedSale.hint(line, bundle: bundle, quote: quote.map { RealLineBundleOffer(bundle: bundle, offers: [$0]) }, balance: balance, in: language)
+    }
+
     func testTheHintGivesThePriceOnceKnownAndWhatTheCompanyLacks() throws {
         let price = Money(80_000_000)
-        let waiting = try XCTUnwrap(TracedSale.hint(line, quote: nil, balance: .zero, in: .traditionalChinese))
+        let waiting = try XCTUnwrap(hint(quote: nil, balance: .zero, in: .traditionalChinese))
         XCTAssertNil(waiting.price)
         XCTAssertNil(waiting.shortfall)
         XCTAssertEqual(waiting.text, "測試線可以直接收購，含列車與真實班表。")
 
-        let rich = try XCTUnwrap(TracedSale.hint(line, quote: offer(total: price), balance: Money(100_000_000), in: .traditionalChinese))
+        let rich = try XCTUnwrap(hint(quote: offer(total: price), balance: Money(100_000_000), in: .traditionalChinese))
         XCTAssertEqual(rich.price, price)
         XCTAssertEqual(rich.text, "測試線可以直接收購（\(price.moneyText)，含列車與真實班表）。")
         XCTAssertNil(rich.shortfall)
 
-        let poor = try XCTUnwrap(TracedSale.hint(line, quote: offer(total: price), balance: Money(30_000_000), in: .english))
+        let poor = try XCTUnwrap(hint(quote: offer(total: price), balance: Money(30_000_000), in: .english))
         XCTAssertEqual(poor.text, "You can buy the Test Line as it is (\(price.moneyText), with its trains and real timetable).")
         XCTAssertEqual(poor.shortfall, "\(Money(50_000_000).moneyText) short of the price.")
         XCTAssertEqual(
-            TracedSale.hint(line, quote: offer(total: price), balance: .zero, in: .traditionalChinese)?.shortfall,
+            hint(quote: offer(total: price), balance: .zero, in: .traditionalChinese)?.shortfall,
             "還差 \(price.moneyText)。"
         )
 
         // Where the line cannot be bought here, nothing is said.
-        XCTAssertNil(TracedSale.hint(line, quote: offer(total: nil, problem: "軌道擋住了"), balance: .zero, in: .traditionalChinese))
+        XCTAssertNil(hint(quote: offer(total: nil, problem: "軌道擋住了"), balance: .zero, in: .traditionalChinese))
     }
 
     // MARK: - On a real-world map
@@ -134,7 +140,7 @@ final class TracedSaleTests: XCTestCase {
         // The button opens the purchase card at once, with that offer; the
         // trace stays drawn.
         session.offerTracedSaleLine()
-        XCTAssertEqual(session.shownRealLineOffer?.line, liujia)
+        XCTAssertEqual(session.shownRealLineOffer?.bundle.lines, [liujia], "this map holds only part of the Neiwan Line, so it is sold alone")
         XCTAssertEqual(session.shownRealLineOffer?.price?.total, expected)
         XCTAssertNil(session.preparingRealLine)
         XCTAssertNotNil(session.networkPreview)

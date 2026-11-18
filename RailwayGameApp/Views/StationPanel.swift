@@ -1401,15 +1401,14 @@ struct StationPanel: View {
     @ViewBuilder
     private func buyLineSection(_ station: Station) -> some View {
         if let buyable = session.buyableRealLine(at: station.id) {
+            // Decision 862: with the lines it is sold with.
+            let title = session.realLineBundle(of: buyable).title(in: session.language)
             Section {
                 Button {
                     session.offerRealLine(buyable)
                 } label: {
                     Label {
-                        Text(verbatim: session.language.text(
-                            "Buy the \(buyable.name(in: session.language))…",
-                            "收購\(buyable.name(in: session.language))…"
-                        ))
+                        Text(verbatim: session.language.text("Buy the \(title)…", "收購\(title)…"))
                     } icon: {
                         Image(systemName: "signature")
                     }

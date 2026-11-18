@@ -340,10 +340,10 @@ struct ContentView: View {
                     }
                     .gameSheetDetents()
                 } else if let offer = session.shownRealLineOffer {
-                    RealLineOfferCard(session: session, line: offer.line, offer: offer)
+                    RealLineOfferCard(session: session, bundle: offer.bundle, offer: offer)
                         .gameSheetDetents()
-                } else if let line = session.preparingRealLine {
-                    RealLineOfferCard(session: session, line: line, offer: nil)
+                } else if let bundle = session.preparingRealLine {
+                    RealLineOfferCard(session: session, bundle: bundle, offer: nil)
                         .gameSheetDetents()
                 }
                 }
