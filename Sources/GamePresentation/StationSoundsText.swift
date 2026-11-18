@@ -24,6 +24,9 @@ extension DepartureMelody {
         case .a: language.text("Melody 1", "旋律一")
         case .b: language.text("Melody 2", "旋律二")
         case .c: language.text("Melody 3", "旋律三")
+        case .d: language.text("Melody 4", "旋律四")
+        case .e: language.text("Melody 5", "旋律五")
+        case .f: language.text("Melody 6", "旋律六")
         }
     }
 }
@@ -95,7 +98,8 @@ extension GameSession {
     /// Decision 866: sets the selected station's departure melody, `nil`
     /// for each line's own, through
     /// `GameWorld.setStationDepartureMelody(_:to:)`, and plays the melody
-    /// once (for each line's own, the first line calling there's).
+    /// once (for each line's own, what the first line calling there plays
+    /// at this station, decision 868).
     public func setSelectedStationDepartureMelody(_ melody: DepartureMelody?) {
         guard let station = selectedStation else { return }
         let done = perform(.setStationDepartureMelody(station.id, melody)) { _, _, _ in
@@ -106,7 +110,7 @@ extension GameSession {
                                  "\(station.name) 的發車旋律改為\(melody.title(in: .traditionalChinese))。")
         }
         guard done != nil else { return }
-        let heard = melody ?? world.lines.first { !$0.isFreight && $0.stops.contains(station.id) }.map { DepartureMelody.of(lineNamed: $0.name) }
+        let heard = melody ?? world.lines.first { !$0.isFreight && $0.stops.contains(station.id) }.map { DepartureMelody.of(lineNamed: $0.name, atStationNamed: station.name) }
         if let heard { playSound?(.departure(heard)) }
     }
 }

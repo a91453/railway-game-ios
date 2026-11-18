@@ -147,6 +147,8 @@ python3 tools/audio/make_video_music.py /tmp/cue.wav
 
 三首原創的發車旋律（`scores/departure-a|b|c.score.json`，手寫的樂譜）照主題曲的做法用取樣樂器演奏一遍（`arrangements.json` 的 `departure-a|b|c`，`once`），存成 `departure-a|b|c.m4a`。和配樂不同的只有大小：`"role": "departure"` 的照車站鈴調（`DEPARTURE_LUFS` −15、峰值 `CHIME_PEAK` 0.6），不照 `MUSIC_LUFS`。每首四小節加 3 秒餘音共 7.8 秒（研究文件 §3：最長 8 秒）。哪條路線響哪一首在 GamePresentation 的 `DepartureMelody`。
 
+決策 868 加了三首（`departure-d|e|f`），做法與大小相同，和前三首成三對（A 與 D 豎琴、B 與 E 撥奏、C 與 F 豎琴＋弦樂）：路線挑到一對，每站固定響其中一首。寫新旋律時量 2–5 kHz（頻譜自己算）：旋律常在 G6–A6 會到 4–5%，比其他幾首亮。
+
 ## 清單（`manifest.json`）
 
 腳本產生，不要手改。每個音檔一列：

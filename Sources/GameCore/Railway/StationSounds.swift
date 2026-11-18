@@ -19,6 +19,8 @@ public enum StationChime: String, Codable, CaseIterable, Hashable, Sendable {
 
 /// Decision 853: the melodies a train plays as its doors start closing,
 /// written for the game (`tools/audio/scores/departure-*.score.json`).
+/// Decision 868 added `d`, `e` and `f`, which a save of version 110 on can
+/// hold.
 public enum DepartureMelody: String, Codable, CaseIterable, Hashable, Sendable {
     /// Rising: I, IV, ii, I, over a harp.
     case a
@@ -26,4 +28,12 @@ public enum DepartureMelody: String, Codable, CaseIterable, Hashable, Sendable {
     case b
     /// Over a held C: I, IV, a suspended V, I, over a harp and soft strings.
     case c
+    /// Falling figures, each a step higher: I, ii, a suspended V, I, over a
+    /// harp.
+    case d
+    /// Falling, then climbing: ii, I, IV, I, over pizzicato strings.
+    case e
+    /// Long notes, left open on the fifth: I, IV, a suspended V, I, over a
+    /// harp and soft strings.
+    case f
 }

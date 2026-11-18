@@ -89,10 +89,11 @@ public struct RealRailStructures: Sendable, Equatable {
     /// path to its first sample to the nearest to its last (a part of a
     /// structure at least ``shortestPart`` long); one stretch where those
     /// of a kind overlap or touch. In order along the path.
-    func stretches(along path: WorldPath, frame: RealWorldFrame, system: String) -> [TrackRise.Carried] {
+    func stretches(along path: WorldPath, frame: RealWorldFrame, system: String, tunnelReach: Double = RealRailStructures.reach) -> [TrackRise.Carried] {
         let xs = path.points.map(\.x), ys = path.points.map(\.y)
         guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return [] }
-        let box = (x: (minX - Self.reach)...(maxX + Self.reach), y: (minY - Self.reach)...(maxY + Self.reach))
+        let widest = max(Self.reach, tunnelReach)
+        let box = (x: (minX - widest)...(maxX + widest), y: (minY - widest)...(maxY + widest))
         var found: [TrackRise.Carried] = []
         for structure in structures where structure.system == system {
             let points = structure.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
@@ -117,7 +118,7 @@ public struct RealRailStructures: Sendable, Equatable {
             }
             for (index, sample) in samples.enumerated() {
                 let inBox = box.x.contains(sample.x) && box.y.contains(sample.y)
-                guard inBox, case let nearest = path.nearest(sample), nearest.away <= Self.reach else {
+                guard inBox, case let nearest = path.nearest(sample), nearest.away <= (structure.kind == .tunnel ? tunnelReach : Self.reach) else {
                     close(at: index - 1)
                     continue
                 }
