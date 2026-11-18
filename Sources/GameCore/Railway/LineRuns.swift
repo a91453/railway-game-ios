@@ -385,13 +385,43 @@ extension GameWorld {
     /// round is one track of a double ring, and turned round where it is
     /// shorter it would run against that way's trains.
     func runTrip(of line: ServiceLine, _ run: LineRun, for train: Train) -> RunTrip? {
+        var paths = PathMemo()
+        return runTrip(of: line, run, for: train, paths: &paths)
+    }
+
+    /// ``runTrip(of:_:for:)`` kept in `memo` (decision 876, TICK-REAL) by
+    /// the line, the stops the run calls at, its way round a ring and
+    /// where the train stands: it reads nothing else of the run or the
+    /// train, and of the world only the network, the line's stops, routes
+    /// and performance, and whether traffic control is on, none of which
+    /// changes within one memo. A due run's trip was driven again, every
+    /// leg's path searched for, for every train waiting at its first stop
+    /// each time the dispatcher or a depot looked: on Hong Kong with every
+    /// line bought, some 4 % of a day's ticks.
+    func runTrip(of line: ServiceLine, _ run: LineRun, for train: Train, memo: inout DirectionMemo) -> RunTrip? {
+        guard let placement = train.placement else { return nil }
+        let query = DirectionMemo.RunTripQuery(line: line.id, calls: line.calls(of: run), from: run.from, way: run.way, placement: placement)
+        if let known = memo.runTrips[query] {
+            if let audit = Self.answerAudit {
+                audit.checked += 1
+                precondition(known == runTrip(of: line, run, for: train), "a run's trip kept is not the trip worked out again")
+            }
+            return known
+        }
+        let trip = runTrip(of: line, run, for: train, paths: &memo.paths)
+        memo.runTrips[query] = .some(trip)
+        return trip
+    }
+
+    /// ``runTrip(of:_:for:)``, with the legs' paths kept in `paths`.
+    private func runTrip(of line: ServiceLine, _ run: LineRun, for train: Train, paths: inout PathMemo) -> RunTrip? {
         guard let placement = train.placement else { return nil }
         let calls = line.calls(of: run)
-        let ahead = driveRun(line, calling: calls, from: placement)
-        if let way = run.way, let ahead, facesRingWay(placement, way, on: line, at: run.from) {
+        let ahead = driveRun(line, calling: calls, from: placement, paths: &paths)
+        if let way = run.way, let ahead, facesRingWay(placement, way, on: line, at: run.from, paths: &paths) {
             return RunTrip(turnsFirst: false, legs: ahead.legs, turnbacks: ahead.turnbacks)
         }
-        let turned = driveRun(line, calling: calls, from: turnedRound(placement))
+        let turned = driveRun(line, calling: calls, from: turnedRound(placement), paths: &paths)
         if run.way != nil {
             if let turned { return RunTrip(turnsFirst: true, legs: turned.legs, turnbacks: turned.turnbacks) }
             return ahead.map { RunTrip(turnsFirst: false, legs: $0.legs, turnbacks: $0.turnbacks) }
@@ -409,29 +439,35 @@ extension GameWorld {
     /// (which, facing that way, it reaches only round the whole ring), or
     /// the other way has no route ahead at all.
     func facesRingWay(_ placement: TrainPlacement, _ way: RingDirection, on line: ServiceLine, at stop: Int) -> Bool {
+        var paths = PathMemo()
+        return facesRingWay(placement, way, on: line, at: stop, paths: &paths)
+    }
+
+    /// ``facesRingWay(_:_:on:at:)``, with the paths kept in `paths`.
+    private func facesRingWay(_ placement: TrainPlacement, _ way: RingDirection, on line: ServiceLine, at stop: Int, paths: inout PathMemo) -> Bool {
         let count = line.stops.count
         guard line.isRing, count >= 3 else { return false }
         let routes = line.routes(ofService: 0)
         let next = way == .inner ? (stop + 1) % count : (stop + count - 1) % count
         let other = way == .inner ? (stop + count - 1) % count : (stop + 1) % count
-        guard let there = linePath(line, from: stop, to: next, start: placement.position, length: placement.length, routes: routes) else { return false }
-        guard let back = linePath(line, from: stop, to: other, start: placement.position, length: placement.length, routes: routes) else { return true }
+        guard let there = linePath(line, from: stop, to: next, start: placement.position, length: placement.length, routes: routes, memo: &paths) else { return false }
+        guard let back = linePath(line, from: stop, to: other, start: placement.position, length: placement.length, routes: routes, memo: &paths) else { return true }
         return there.distance < back.distance
     }
 
     /// The legs of `line` calling at `calls` one way, driven from `start`,
     /// and where the train turns round between them, or `nil` if a leg has
     /// no route or no running curve.
-    private func driveRun(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement) -> (legs: [LineLeg], turnbacks: [Int])? {
+    private func driveRun(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement, paths: inout PathMemo) -> (legs: [LineLeg], turnbacks: [Int])? {
         let routes = line.routes(ofService: 0)
         var placement = start
         var legs: [LineLeg] = []
         var turnbacks: [Int] = []
         for (from, to) in zip(calls, calls.dropFirst()) {
-            var chosen = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes)
+            var chosen = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes, memo: &paths)
             if chosen == nil, isTrafficControlEnabled, !legs.isEmpty {
                 let reverse = turnedRound(placement)
-                if let path = linePath(line, from: from, to: to, start: reverse.position, length: reverse.length, routes: routes) {
+                if let path = linePath(line, from: from, to: to, start: reverse.position, length: reverse.length, routes: routes, memo: &paths) {
                     placement = reverse
                     chosen = path
                     turnbacks.append(legs.count)
@@ -461,28 +497,41 @@ extension GameWorld {
     /// Decision 535: on a ring, a train that faces the run's way round
     /// first, and only when none does one that turns round.
     func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64) -> (index: Int, timetable: [ScheduledStop])? {
+        var memo = DirectionMemo()
+        return readyRunTrain(of: line, run, day: day, memo: &memo)
+    }
+
+    /// ``readyRunTrain(of:_:day:)`` with what it works out kept in `memo`
+    /// (decision 876, TICK-REAL): the trains' holders (see
+    /// ``trackHolders(memo:)``), every line's planned directions, the
+    /// paths and the runs' trips, which each train asked about worked out
+    /// again from nothing.
+    ///
+    /// - Precondition: `memo`'s holders are of this second (see
+    ///   ``GameWorld/dispatchTrains(memo:)``): a route is asked of the
+    ///   trains as they are now.
+    func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64, memo: inout DirectionMemo) -> (index: Int, timetable: [ScheduledStop])? {
         if run.way != nil {
-            return readyRunTrain(of: line, run, day: day, turning: false) ?? readyRunTrain(of: line, run, day: day, turning: true)
+            return readyRunTrain(of: line, run, day: day, turning: false, memo: &memo) ?? readyRunTrain(of: line, run, day: day, turning: true, memo: &memo)
         }
-        return readyRunTrain(of: line, run, day: day, turning: nil)
+        return readyRunTrain(of: line, run, day: day, turning: nil, memo: &memo)
     }
 
     /// ``readyRunTrain(of:_:day:)`` among the trains whose trip turns
     /// round first when `turning` is `true`, or does not when `false`, or
     /// either when `nil`.
-    private func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64, turning: Bool?) -> (index: Int, timetable: [ScheduledStop])? {
+    private func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64, turning: Bool?, memo: inout DirectionMemo) -> (index: Int, timetable: [ScheduledStop])? {
         let first = line.stops[run.from]
         for id in line.trains {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
             let train = trains[index]
             guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: first),
-                  let trip = runTrip(of: line, run, for: train), turning.map({ $0 == trip.turnsFirst }) ?? true
+                  let trip = runTrip(of: line, run, for: train, memo: &memo), turning.map({ $0 == trip.turnsFirst }) ?? true
             else { continue }
             let timetable = trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now)
-            if isTrafficControlEnabled, let leaving = sentOut(train, on: timetable), case .held = reservingDeparture(leaving) {
-                var memo = PathMemo()
-                guard case .setsOff(let preferred, _)? = preferredLeaving(dispatched(train, on: timetable), stop: 0, cycle: 0, memo: &memo),
-                      case .granted = reserving(preferred, following: blockSections)
+            if isTrafficControlEnabled, let leaving = sentOut(train, on: timetable, paths: &memo.paths), case .held = reservingDeparture(leaving, memo: &memo) {
+                guard case .setsOff(let preferred, _)? = preferredLeaving(dispatched(train, on: timetable), stop: 0, cycle: 0, memo: &memo.paths),
+                      case .granted = reserving(preferred, following: blockSections, memo: &memo)
                 else { continue }
             }
             return (index, timetable)
@@ -494,6 +543,11 @@ extension GameWorld {
     /// the first call.
     func sentOut(_ train: Train, on timetable: [ScheduledStop]) -> Train? {
         leaving(dispatched(train, on: timetable), stop: 0, cycle: 0).train
+    }
+
+    /// ``sentOut(_:on:)``, with the path kept in `paths`.
+    func sentOut(_ train: Train, on timetable: [ScheduledStop], paths: inout PathMemo) -> Train? {
+        leaving(dispatched(train, on: timetable), stop: 0, cycle: 0, memo: &paths).train
     }
 
     /// `train` given `timetable` now, waiting at its first call.
@@ -511,17 +565,30 @@ extension GameWorld {
     /// that it stands at the first stop of and can drive, as it would
     /// leave. `nil` when there is none.
     func dueRunDeparture(of train: Train, on line: ServiceLine) -> Train? {
-        dueRun(of: train, on: line).flatMap { sentOut(train, on: $0.timetable) }
+        var memo = DirectionMemo()
+        return dueRunDeparture(of: train, on: line, memo: &memo)
+    }
+
+    /// ``dueRunDeparture(of:on:)``, with the run's trip and the paths kept
+    /// in `memo` (decision 876, see ``runTrip(of:_:for:memo:)``).
+    func dueRunDeparture(of train: Train, on line: ServiceLine, memo: inout DirectionMemo) -> Train? {
+        dueRun(of: train, on: line, memo: &memo).flatMap { sentOut(train, on: $0.timetable, paths: &memo.paths) }
     }
 
     /// The run ``dueRunDeparture(of:on:)`` sends `train` out on (its index
     /// in `line`'s runs), the day, and the timetable it gives the train;
     /// `nil` when there is none.
     func dueRun(of train: Train, on line: ServiceLine) -> (run: Int, day: Int64, timetable: [ScheduledStop])? {
+        var memo = DirectionMemo()
+        return dueRun(of: train, on: line, memo: &memo)
+    }
+
+    /// ``dueRun(of:on:)``, with the run's trip kept in `memo`.
+    func dueRun(of train: Train, on line: ServiceLine, memo: inout DirectionMemo) -> (run: Int, day: Int64, timetable: [ScheduledStop])? {
         guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { return nil }
         for (index, day) in line.dueRuns(at: clock.now) {
             let run = line.runs[index]
-            guard isStopped(train, at: line.stops[run.from]), let trip = runTrip(of: line, run, for: train) else { continue }
+            guard isStopped(train, at: line.stops[run.from]), let trip = runTrip(of: line, run, for: train, memo: &memo) else { continue }
             return (index, day, trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now))
         }
         return nil
@@ -533,10 +600,16 @@ extension GameWorld {
     /// take on passengers; until then a train kept from being sent out is
     /// no later than a service standing before its departure time.
     func dueRunHasStarted(of train: Train, on line: ServiceLine) -> Bool {
+        var memo = DirectionMemo()
+        return dueRunHasStarted(of: train, on: line, memo: &memo)
+    }
+
+    /// ``dueRunHasStarted(of:on:)``, with the run's trip kept in `memo`.
+    func dueRunHasStarted(of train: Train, on line: ServiceLine, memo: inout DirectionMemo) -> Bool {
         guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { return false }
         for (index, day) in line.dueRuns(at: clock.now) {
             let run = line.runs[index]
-            guard isStopped(train, at: line.stops[run.from]), runTrip(of: line, run, for: train) != nil else { continue }
+            guard isStopped(train, at: line.stops[run.from]), runTrip(of: line, run, for: train, memo: &memo) != nil else { continue }
             return run.start(onDay: day) <= clock.now.seconds
         }
         return false
@@ -547,13 +620,19 @@ extension GameWorld {
     /// ``readyRunTrain(of:_:day:)`` tries it when the run's own route is
     /// held, whether or not it is free. `nil` where the line names none.
     func dueRunPreferredDeparture(of train: Train, on line: ServiceLine) -> Train? {
+        var memo = DirectionMemo()
+        return dueRunPreferredDeparture(of: train, on: line, memo: &memo)
+    }
+
+    /// ``dueRunPreferredDeparture(of:on:)``, with the run's trip and the
+    /// paths kept in `memo`.
+    func dueRunPreferredDeparture(of train: Train, on line: ServiceLine, memo: inout DirectionMemo) -> Train? {
         guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { return nil }
         for (index, day) in line.dueRuns(at: clock.now) {
             let run = line.runs[index]
-            guard isStopped(train, at: line.stops[run.from]), let trip = runTrip(of: line, run, for: train) else { continue }
-            var memo = PathMemo()
+            guard isStopped(train, at: line.stops[run.from]), let trip = runTrip(of: line, run, for: train, memo: &memo) else { continue }
             guard case .setsOff(let preferred, _)? = preferredLeaving(dispatched(train, on: trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now)),
-                                                                       stop: 0, cycle: 0, memo: &memo)
+                                                                       stop: 0, cycle: 0, memo: &memo.paths)
             else { return nil }
             return preferred
         }

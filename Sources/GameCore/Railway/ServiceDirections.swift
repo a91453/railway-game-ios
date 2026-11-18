@@ -43,7 +43,7 @@ extension GameWorld {
             let call: Int
         }
         /// A line plan's traversals (see ``plannedDirections(_:memo:)``).
-        struct Planned: Hashable {
+        struct Planned: Hashable, Sendable {
             var directions: Set<TrackTraversal> = []
             /// Decision 344: those only a train standing at one berth of
             /// the first call sets off along, from there.
@@ -65,6 +65,31 @@ extension GameWorld {
         /// last sets of trains asked about, each with the time its claims
         /// were settled for (decision 877).
         var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders, at: GameTime)] = []
+        /// Decision 876: how often ``holders`` has been changed, so that
+        /// what was worked out from them (see ``WorldAnswers``) is known
+        /// to be of them still.
+        var holderChanges = 0
+        /// Decision 876: the holders of another moment set aside (see
+        /// ``exchangeHolders(with:)``).
+        struct HolderStore {
+            var holders: [(trains: [Train], covers: [TrackCover?], holders: TrackHolders, at: GameTime)] = []
+            var changes = 0
+            var answers = WorldAnswers()
+        }
+
+        /// Puts ``holders``, with ``holderChanges`` and what was worked
+        /// out from them, into `store` and takes what `store` held: the
+        /// holders are kept by the trains alone, though whom a claim binds
+        /// reads the clock too (decisions 836, 850), so a question that
+        /// has always been asked of holders worked out at its own second
+        /// (the dispatcher's of a due run's train, see
+        /// ``GameWorld/readyRunTrain(of:_:day:memo:)``) keeps its own, and
+        /// leaves the step's as it found them.
+        mutating func exchangeHolders(with store: inout HolderStore) {
+            swap(&holders, &store.holders)
+            swap(&holderChanges, &store.changes)
+            swap(&answers, &store.answers)
+        }
         /// Each train's movement authority (see ``authority(of:memo:)``),
         /// for its last values asked about.
         var authorities: [TrainID: [(train: Train, authority: (left: Int64, envelopes: AuthorityEnvelopes)?)]] = [:]
@@ -106,6 +131,33 @@ extension GameWorld {
         /// are kept: the steps of an advance try the trains moved on by
         /// different seconds from the same start.
         var released: [TrainID: [Train]] = [:]
+        /// Decision 876 (TICK-REAL): the trips trains would make for runs
+        /// (see ``GameWorld/runTrip(of:_:for:memo:)``), by all a trip is
+        /// worked out from but what no memo outlives.
+        struct RunTripQuery: Hashable, Sendable {
+            let line: LineID
+            /// The stops the run calls at (``ServiceLine/calls(of:)``).
+            let calls: [Int]
+            let from: Int
+            let way: RingDirection?
+            let placement: TrainPlacement
+        }
+        var runTrips: [RunTripQuery: RunTrip?] = [:]
+        /// Decision 876: each line service's plans for a train's length,
+        /// in the plans' order: what each is planned along (see
+        /// ``GameWorld/plannedDirections(_:memo:)``) and its first call.
+        /// A plan is its calls and every leg's route, and was put together
+        /// and hashed again for every line each time a departure asked.
+        struct LinePlanQuery: Hashable, Sendable {
+            let line: LineID
+            let service: Int
+            let length: Int64
+        }
+        var linePlans: [LinePlanQuery: [(planned: Planned, first: StationID?)]] = [:]
+        /// Decision 876: what was asked of the whole world at one moment
+        /// of one step, for as long as the world stays as it was asked
+        /// (see ``WorldAnswers``).
+        var answers = WorldAnswers()
 
         /// Keeps `train` in ``released``.
         mutating func release(_ train: Train) {
@@ -116,6 +168,66 @@ extension GameWorld {
             released[train.id] = known
         }
     }
+
+    /// Decision 876 (TICK-REAL): the trains in the way (see
+    /// ``trainsInTheWay(memo:)``) and the due runs that cannot leave (see
+    /// ``heldRunDepartures(memo:)``), as they were last worked out, with
+    /// what they were worked out from. Each line with a depot asks both of
+    /// the whole world as the dispatcher goes through the lines, and again
+    /// as a deadlock is looked for: on Hong Kong with every line bought
+    /// they were a tenth of a day's ticks, nearly all of it the same
+    /// answer worked out again for the next line.
+    ///
+    /// An answer is given again only to the world it was worked out from:
+    /// the same trains and lines at the same second, with the step's
+    /// traffic plan set or not as it was, and the memo's holders (see
+    /// ``trackHolders(memo:)``) untouched since, which are dropped with
+    /// what was kept here whenever they change. Within one second of one
+    /// step nothing else these read changes without a train changing: a
+    /// dispatch, an arrival and a departure each change their train.
+    struct WorldAnswers {
+        struct Key {
+            let trains: [Train]
+            let lines: [ServiceLine]
+            let now: GameTime
+            let hasStepTraffic: Bool
+        }
+        var key: Key?
+        /// The memo's ``DirectionMemo/holderChanges`` when they were kept.
+        var stamp = 0
+        var inTheWay: Set<TrainID>?
+        var heldRuns: [(train: TrainID, needs: Set<TrackResource>)]?
+    }
+
+    /// Whether `memo`'s ``WorldAnswers`` are of the world as it is and of
+    /// the memo's holders as they are.
+    func answersHold(_ memo: DirectionMemo) -> Bool {
+        guard let key = memo.answers.key else { return false }
+        return memo.answers.stamp == memo.holderChanges && key.now == clock.now && key.hasStepTraffic == (memo.stepTraffic != nil)
+            && key.trains == trains && key.lines == lines
+    }
+
+    /// Has `memo`'s ``WorldAnswers`` be of the world as it is and of the
+    /// memo's holders as they are, an answer just worked out about to be
+    /// kept: those of any other are dropped. Working an answer out asks
+    /// the holders only of the world's own trains, so they change at most
+    /// once in it, the first time they are asked, and the answer is of the
+    /// holders as it leaves them.
+    func settleAnswers(_ memo: inout DirectionMemo) {
+        guard !answersHold(memo) else { return }
+        memo.answers = WorldAnswers(key: WorldAnswers.Key(trains: trains, lines: lines, now: clock.now, hasStepTraffic: memo.stepTraffic != nil),
+                                    stamp: memo.holderChanges)
+    }
+
+    /// Tests and reports only (decision 876): has every answer given
+    /// again from a memo (a run's trip, a line's plans, the trains in the
+    /// way, the due runs that cannot leave) checked against the answer
+    /// worked out again. `nil` in the game.
+    final class AnswerAudit: @unchecked Sendable {
+        var checked = 0
+    }
+
+    @TaskLocal static var answerAudit: AnswerAudit?
 
     /// What a ``DirectionMemo`` works out from the network, the lines, the
     /// stations, flexible dispatch and keeping left (decision 202) alone:
@@ -128,6 +240,14 @@ extension GameWorld {
     struct RouteMemo: Equatable, Sendable {
         struct Key: Equatable, Sendable {
             let network: RailwayNetwork
+            /// Decision 876 (TICK-REAL): the lines but for when they last
+            /// sent trains out (``ServiceLine/withoutDispatchTimes``), as
+            /// ``ServiceKey`` has them. A path, a line's planned
+            /// directions and a curve read the lines' stops, routes and
+            /// sides, never a departure; with the lines whole, every
+            /// minute a line with runs sent a train out threw away every
+            /// path searched for, and the next minute searched for them
+            /// all again.
             let lines: [ServiceLine]
             let stations: [StationID]
             /// Decision 209: no line's path runs over a depot's sidings.
@@ -141,7 +261,7 @@ extension GameWorld {
 
             init(_ world: GameWorld) {
                 network = world.network
-                lines = world.lines
+                lines = world.lines.map(\.withoutDispatchTimes)
                 stations = world.stations.map(\.id)
                 depots = world.stations.filter(\.isDepot).map(\.id)
                 flexDispatch = world.flexDispatch
@@ -196,6 +316,10 @@ extension GameWorld {
         private var trafficParts = TrafficParts()
         private var paths = PathMemo()
         private var curves: [DirectionMemo.CurveQuery: RunCurve?] = [:]
+        /// Decision 876: the runs' trips and the lines' plans, kept with
+        /// the services (they read whether traffic control is on).
+        private var runTrips: [DirectionMemo.RunTripQuery: RunTrip?] = [:]
+        private var linePlans: [DirectionMemo.LinePlanQuery: [(planned: DirectionMemo.Planned, first: StationID?)]] = [:]
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -237,6 +361,8 @@ extension GameWorld {
             }
             if serviceKey != nil, serviceKey == ServiceKey(world) {
                 memo.trafficParts = trafficParts
+                memo.runTrips = runTrips
+                memo.linePlans = linePlans
             }
         }
 
@@ -256,6 +382,8 @@ extension GameWorld {
             // The traffic plan's parts read the lines' runs and routes,
             // never when they last sent trains out: kept across departures.
             memo.directions.trafficParts = trafficParts
+            memo.directions.runTrips = runTrips
+            memo.directions.linePlans = linePlans
         }
 
         /// Keeps what `memo` worked out of the services and the runs out of
@@ -271,6 +399,8 @@ extension GameWorld {
             runDepotTrips = memo.runDepotTrips.count > Self.limit ? [:] : memo.runDepotTrips
             let parts = memo.directions.trafficParts
             trafficParts = parts.points.count > Self.limit || parts.nominal.count > Self.limit ? TrafficParts() : parts
+            runTrips = memo.directions.runTrips.count > Self.limit ? [:] : memo.directions.runTrips
+            linePlans = memo.directions.linePlans
         }
 
         /// The curve kept for `query`, if one was: a curve depends on its
@@ -497,13 +627,16 @@ extension GameWorld {
                 // itself is never protected from its own line.
                 let lengths = Set(line.trains(ofService: service).filter { $0 != candidate.id }.compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
                 guard !lengths.isEmpty else { continue }
-                for plan in plans(of: line, service: service) {
-                    for length in lengths {
-                        let planned = plannedDirections(plan(length), memo: &memo)
-                        if !planned.departures.isEmpty, let first = plan(length).calls.first {
-                            departures[directions.count] = (first.station, planned.departures)
+                // Decision 876: each length's plans kept by the line, in
+                // the order they were gone through before: every plan,
+                // and for each every length.
+                let planned = lengths.map { linePlans(of: line, service: service, length: $0, memo: &memo) }
+                for plan in 0..<(planned.first?.count ?? 0) {
+                    for plans in planned {
+                        if !plans[plan].planned.departures.isEmpty, let first = plans[plan].first {
+                            departures[directions.count] = (first, plans[plan].planned.departures)
                         }
-                        directions.append(planned.directions)
+                        directions.append(plans[plan].planned.directions)
                     }
                 }
             }
@@ -512,6 +645,31 @@ extension GameWorld {
         // Only additional track borrowed by an alternative is restricted.
         let defaultWays = Set(routeStretches(of: candidate).stretches.filter { $0.to > $0.from }.map(\.traversal))
         return OpposingParts(directions: directions, defaultWays: defaultWays, departures: departures)
+    }
+
+    /// Decision 876 (TICK-REAL): what each plan of `line`'s service
+    /// `service` (see ``plans(of:service:)``) is planned along for a train
+    /// `length` long, and its first call, in the plans' order, kept in
+    /// `memo` by the line: they read the line's stops and routes, the
+    /// network and whether traffic control is on, none of which changes
+    /// within one memo.
+    private func linePlans(of line: ServiceLine, service: Int, length: Int64, memo: inout DirectionMemo) -> [(planned: DirectionMemo.Planned, first: StationID?)] {
+        let query = DirectionMemo.LinePlanQuery(line: line.id, service: service, length: length)
+        if let known = memo.linePlans[query] {
+            if let audit = Self.answerAudit {
+                audit.checked += 1
+                let again = plans(of: line, service: service).map { plan in (plannedDirections(plan(length), memo: &memo), plan(length).calls.first?.station) }
+                precondition(again.count == known.count && zip(again, known).allSatisfy { $0.0 == $1.planned && $0.1 == $1.first },
+                             "a line's plans kept are not the plans worked out again")
+            }
+            return known
+        }
+        let worked = plans(of: line, service: service).map { plan -> (planned: DirectionMemo.Planned, first: StationID?) in
+            let plan = plan(length)
+            return (plannedDirections(plan, memo: &memo), plan.calls.first?.station)
+        }
+        memo.linePlans[query] = worked
+        return worked
     }
 
     /// The plans of `line`'s service `service` (a ring's both ways round,

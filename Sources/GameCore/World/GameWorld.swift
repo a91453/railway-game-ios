@@ -3910,11 +3910,19 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func dispatchTrains(memo: inout DispatchMemo) -> Bool {
         let now = clock.now
         var dispatched = false
+        // Decision 876 (TICK-REAL): the holders the due runs' trains are
+        // asked of, worked out at this second and changed as trains are
+        // sent out, apart from the step's (see
+        // ``DirectionMemo/exchangeHolders(with:)``).
+        var runHolders = DirectionMemo.HolderStore()
         for index in lines.indices {
             // Decision 133: a line with runs sends its trains out at the
             // runs' times instead.
             if lines[index].hasRuns {
-                if dispatchRuns(ofLine: index) { dispatched = true }
+                memo.directions.exchangeHolders(with: &runHolders)
+                let sent = dispatchRuns(ofLine: index, memo: &memo.directions)
+                memo.directions.exchangeHolders(with: &runHolders)
+                if sent { dispatched = true }
                 // Decision 221: out of a depot in time for a run, or into
                 // one when no run wants the train for a while.
                 let line = lines[index]
@@ -4002,9 +4010,17 @@ public struct GameWorld: Equatable, Sendable {
     /// Sends out a train for each run of line `index` due now that has one
     /// ready (decision 133), earliest first. Returns whether any was sent.
     mutating func dispatchRuns(ofLine index: Int) -> Bool {
+        var memo = DirectionMemo()
+        return dispatchRuns(ofLine: index, memo: &memo)
+    }
+
+    /// ``dispatchRuns(ofLine:)`` with what the runs' trains are asked kept
+    /// in `memo` (decision 876, see ``readyRunTrain(of:_:day:memo:)``),
+    /// whose holders are of this second.
+    mutating func dispatchRuns(ofLine index: Int, memo: inout DirectionMemo) -> Bool {
         var dispatched = false
         for (run, day) in lines[index].dueRuns(at: clock.now) {
-            guard let (ready, timetable) = readyRunTrain(of: lines[index], lines[index].runs[run], day: day) else { continue }
+            guard let (ready, timetable) = readyRunTrain(of: lines[index], lines[index].runs[run], day: day, memo: &memo) else { continue }
             trains[ready].trafficVisits = []
             trains[ready].timetable = timetable
             trains[ready].timetablePeriod = nil
@@ -4779,7 +4795,7 @@ public struct GameWorld: Equatable, Sendable {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
                   let line = assignedLineIndex(of: id, known: &memo.directions.paths.trainLines), lines[line].hasRuns,
-                  let due = dueRun(of: trains[index], on: lines[line]),
+                  let due = dueRun(of: trains[index], on: lines[line], memo: &memo.directions),
                   case .travellingToStop(let stop, let cycle)? = request.candidate.execution
             else { continue }
             // TYMCLIST8: or, once on its run, decision 577's way out would
@@ -4910,7 +4926,7 @@ public struct GameWorld: Equatable, Sendable {
             guard let index = lineOf[train.id] else { continue }
             let line = lines[index]
             if line.hasRuns {
-                if dueRunDeparture(of: train, on: line) != nil { return true }
+                if dueRunDeparture(of: train, on: line, memo: &memo.directions) != nil { return true }
                 continue
             }
             if streams[index] == nil {
