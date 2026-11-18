@@ -47,14 +47,15 @@ final class Map3DCableStayedBridgeTests: XCTestCase {
         XCTAssertLessThan(bridge.along.x, 0)
     }
 
-    /// The stays: as many to the main span as behind the mast, the
+    /// The stays: 27 pairs to the main span and 20 behind the mast (the
+    /// owner's earlier version of the bridge), the
     /// farther anchored the higher held, each a straight line from the
     /// mast down to the deck, drawn in pieces that leave no gap.
     func testTheStaysFanFromTheMast() throws {
         let look = try XCTUnwrap(Bridge.danjiang.stays)
         let stays = look.stays
-        XCTAssertEqual(stays.count, 2 * look.count)
-        XCTAssertEqual(stays.filter { $0.anchor > 0 }.count, look.count)
+        XCTAssertEqual(stays.count, 47)
+        XCTAssertEqual(stays.filter { $0.anchor > 0 }.count, 27)
         for side in [stays.filter { $0.anchor > 0 }, stays.filter { $0.anchor < 0 }] {
             for (near, far) in zip(side, side.dropFirst()) {
                 XCTAssertGreaterThan(abs(far.anchor), abs(near.anchor))
@@ -65,14 +66,17 @@ final class Map3DCableStayedBridgeTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(try XCTUnwrap(stays.map(\.anchor).min()), -175)
         XCTAssertLessThan(try XCTUnwrap(stays.map(\.hold).max()), look.top)
         for stay in stays {
-            XCTAssertEqual(look.height(of: stay, at: 0), stay.hold)
+            XCTAssertEqual(look.height(of: stay, at: stay.start), stay.hold)
+            // Held on the face of the leg on its own side.
+            let leg = look.leg(at: stay.hold)
+            XCTAssertEqual(stay.start, leg.offset + leg.along, accuracy: 0.01)
             XCTAssertEqual(look.height(of: stay, at: abs(stay.anchor)), Map3DCableStays.anchorRise, accuracy: 0.01)
             XCTAssertEqual(look.across(of: stay, at: abs(stay.anchor)), look.plane.deck, accuracy: 0.01)
             let pieces = look.pieces(of: stay)
-            XCTAssertEqual(pieces.first?.from, 0)
+            XCTAssertEqual(pieces.first?.from, stay.start)
             XCTAssertEqual(try XCTUnwrap(pieces.last?.to), abs(stay.anchor), accuracy: 0.01)
             for (piece, next) in zip(pieces, pieces.dropFirst()) { XCTAssertEqual(piece.to, next.from) }
-            XCTAssertTrue(pieces.allSatisfy { $0.to - $0.from > 5 && $0.to - $0.from < 40 }, "\(pieces)")
+            XCTAssertTrue(pieces.allSatisfy { $0.to - $0.from > 5 && $0.to - $0.from < 70 }, "\(pieces)")
         }
     }
 
@@ -87,12 +91,18 @@ final class Map3DCableStayedBridgeTests: XCTestCase {
         // A carriageway each side of the mast, none through it.
         XCTAssertLessThan(deck.left, -10)
         XCTAssertGreaterThan(deck.right, 10)
-        var offset = -look.sections[0].across - 1
-        while offset <= look.sections[0].across + 1 {
-            let p = bridge.point(along: 0, across: offset)
-            let raised = builder.roadRise(at: Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z)), along: (Double(bridge.along.x), Double(bridge.along.z)), onDeck: true)
-            XCTAssertFalse(raised.onBridge, "a carriageway through the mast, \(offset) m across")
-            offset += 0.5
+        // Its two legs stand apart along the bridge, each between the
+        // carriageways where it passes the road.
+        let leg = look.leg(at: 0)
+        XCTAssertGreaterThan(leg.offset, 10)
+        for station in [-leg.offset, 0, leg.offset] {
+            var offset = -leg.across - 1
+            while offset <= leg.across + 1 {
+                let p = bridge.point(along: station, across: offset)
+                let raised = builder.roadRise(at: Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z)), along: (Double(bridge.along.x), Double(bridge.along.z)), onDeck: true)
+                XCTAssertFalse(raised.onBridge, "a carriageway through the mast, \(station) m along, \(offset) m across")
+                offset += 0.5
+            }
         }
         // A road bridge all the way under the stays.
         var station = bridge.hung.lowerBound
@@ -104,7 +114,7 @@ final class Map3DCableStayedBridgeTests: XCTestCase {
         builder.addSuspensionBridges()
         let added = (builder.meshes.values.reduce(0) { $0 + $1.indices.count } - before) / 3
         XCTAssertGreaterThan(added, 2_000)
-        XCTAssertLessThan(added, 8_000)
+        XCTAssertLessThan(added, 9_000)
         XCTAssertTrue(builder.nearMeshes.isEmpty || builder.nearMeshes.values.allSatisfy { mesh in
             !mesh.vertices.contains { $0.y > deck.road + 30 }
         }, "the stays are drawn from any distance")
@@ -114,16 +124,21 @@ final class Map3DCableStayedBridgeTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(mast.max()), deck.road + look.top, accuracy: 0.5)
         XCTAssertEqual(try XCTUnwrap(all.map(\.y).max()), deck.road + look.top, accuracy: 0.5)
         XCTAssertLessThan(try XCTUnwrap(mast.min()), 4)
+        // Two legs apart at the road, one at the top.
+        let waist = all.filter { abs($0.y - deck.road) < 0.01 && abs($0.at.across) < 6 && abs($0.at.along) < 20 }.map { abs($0.at.along) }
+        XCTAssertGreaterThan(try XCTUnwrap(waist.min()), 8, "the legs stand apart at the road")
+        let crown = all.filter { abs($0.y - deck.road - look.top) < 0.01 }.map { abs($0.at.along) }
+        XCTAssertLessThan(try XCTUnwrap(crown.max()), 3, "the legs are one at the top")
         // The farthest stay each way: by the road at its anchorage, both
         // planes, and half way up half way along.
-        for anchor in [look.mainAnchors.upperBound, -look.backAnchors.upperBound] {
+        for anchor in [look.reach.main, -look.reach.back] {
             let here = try XCTUnwrap(builder.suspendedDeck(bridge, at: anchor))
             for side in [Float(-1), 1] {
                 XCTAssertTrue(all.contains { abs($0.at.along - anchor) < 1 && abs($0.at.across - side * look.plane.deck) < 1 && abs($0.y - here.road - Map3DCableStays.anchorRise) < 1 },
                               "the stay anchored at \(anchor), side \(side)")
             }
         }
-        let half = look.mainAnchors.upperBound / 2
+        let half = look.reach.main / 2
         XCTAssertTrue(all.contains { abs($0.at.along - half) < 13 && abs($0.at.across) < 5 && abs($0.y - deck.road - look.holds.upperBound / 2) < 8 })
         // One deck between the carriageways, a little under the road.
         let amid = all.filter { abs($0.at.along - 200) < 13 && abs($0.at.across) < 2 && abs($0.y - deck.road) < 0.5 }

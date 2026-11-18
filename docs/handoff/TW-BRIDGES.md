@@ -31,3 +31,7 @@ MAP3D_DUMP=<dir>/a swift test --skip-build --filter Map3DPreviewDump
 
 - Metal 與實機沒看過。下一版 TestFlight 請在台灣地圖的淡水漁人碼頭旁看淡江大橋：斜看要看得到塔與索、橋下沒有墩、河中央沒有那棟高樓。
 - `Bound.flat` 只用在淡江大橋；其他橋的高度沒有變（`Map3DRoadBridgeTests` 全過）。
+
+## 後來（同一天）：改照作者舊版
+
+作者指出淡江大橋他做過：參考庫 `OpenWorld/reference_snapshot/play/src/world/tamkang-bridge.js`（程式）與 `play/assets/bridge/`（Blender 零件）。塔與索已改成那一版的雙腿合十塔與 27 對、20 對的扇形（決策 873 §3 的對照表）。同一個資料夾還有日月潭（`play/assets/sunmoon/`：船、碼頭、涼亭、廟、纜車，`sunmoon-*.js`），還沒搬。之後做別的地標先用英文、拼音與中文搜檔名。
