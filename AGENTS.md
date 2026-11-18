@@ -41,7 +41,8 @@ not only Claude Code. Read it first and follow it. In particular:
 Its Claude-specific parts translate as follows:
 
 - Claude Code loads the skills in `.claude/skills/` by itself. Another agent
-  reads `.claude/skills/art-style/SKILL.md` before drawing or changing any
+  reads `.claude/skills/art-style/SKILL.md` (and the private
+  `docs/studio/art-style.md` it points to) before drawing or changing any
   icon, glyph, character or illustration for the app.
   Before building, rebuilding or restyling a native 3D model (a station, a
   building, a kit part, a train, a bus), it reads
@@ -116,8 +117,10 @@ How they work together:
   review the same work, but only the one that claimed the files in the work registry (#2118)
   changes them, on its own branch (and its own working directory when
   agents share a computer).
-- One priority list (`docs/research/NEXT_PRIORITIES_2026-10-12.md`) and one
-  handoff file (`docs/HANDOFF.md`) for every agent. Read `docs/HANDOFF.md`
+- One priority list (`docs/planning/NEXT_PRIORITIES_2026-10-12.md`) and one
+  handoff file (`docs/planning/HANDOFF.md`) for every agent, both in the
+  private `a91453/railway-assets-private-2` since 2026-11-18 (the old paths
+  here point to them). Read the handoff
   before starting; work left half done is written there in the agent's last
   pull request, not only in its own conversation.
 - Mark who made a pull request: Codex branches start with `codex/` and its
