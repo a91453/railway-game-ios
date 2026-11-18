@@ -1708,8 +1708,10 @@ extension Map3DScene.Builder {
                         guard mark < d.travelled || (mark == d.travelled && d.travelled == run.last!.travelled) else { continue }
                         let share = Float((mark - c.travelled) / max(d.travelled - c.travelled, 1e-9))
                         let top = c.top + (d.top - c.top) * share
+                        // Decision 869: none under a deck its cables carry.
                         guard !nearTrack(x: top.x, z: top.z, within: look.column / 2 + 3),
-                              trackCover.trenches.piece(at: Point(x: Double(top.x), z: Double(top.z))) == nil else { continue }
+                              trackCover.trenches.piece(at: Point(x: Double(top.x), z: Double(top.z))) == nil,
+                              !hangsFromCables(x: top.x, z: top.z) else { continue }
                         let foot = Map3DPoint(top.x, drawnGround(x: top.x, z: top.z), top.z)
                         built.addPier(foot: foot, deckTop: top.y - lift, forward: d.top - c.top, width: width, look: look)
                     }
