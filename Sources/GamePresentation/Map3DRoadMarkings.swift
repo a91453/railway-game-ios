@@ -906,7 +906,9 @@ extension Map3DScene.Builder {
         let back = Map3DBaseMap.Point(x: mark.centre.x - along.x * halfLength, z: mark.centre.z - along.z * halfLength)
         let front = Map3DBaseMap.Point(x: mark.centre.x + along.x * halfLength, z: mark.centre.z + along.z * halfLength)
         func at(_ t: Double) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: back.x + (front.x - back.x) * t, z: back.z + (front.z - back.z) * t) }
-        let cuts = merged([0, 1], raisedCuts(from: back, to: front, anchor: mark.anchor ?? back, along: way, onDeck: mark.onDeck))
+        // Decision 865: and where its road's bed bends.
+        let cuts = merged(merged([0, 1], raisedCuts(from: back, to: front, anchor: mark.anchor ?? back, along: way, onDeck: mark.onDeck)),
+                          bedCuts(from: back, to: front, along: way, onDeck: mark.onDeck))
         for (t0, t1) in zip(cuts, cuts.dropFirst()) where t1 - t0 > 1e-9 {
             let middle = at((t0 + t1) / 2)
             guard !roadRise(at: middle, along: way, onDeck: mark.onDeck).onBridge, !givesWay(at: middle, along: way) else { continue }
@@ -921,14 +923,53 @@ extension Map3DScene.Builder {
                 let share = to - from > 1e-9 ? (((p.x - mark.centre.x) * along.x + (p.z - mark.centre.z) * along.z) - from) / (to - from) : 0
                 return Self.centreLineLift + riseA + (riseB - riseA) * Float(min(1, max(0, share)))
             }
-            addMarkPiece(corners, colour: colour, layer: layer, texture: texture, lift: lift)
+            // Decision 865: on its road's bed, level across, from its back
+            // end's height to its front's.
+            var bed: ((Map3DBaseMap.Point) -> Float)?
+            if let bedA = roadBed.level(at: at(t0), along: way, onDeck: mark.onDeck), let bedB = roadBed.level(at: at(t1), along: way, onDeck: mark.onDeck) {
+                bed = { p in
+                    let share = to - from > 1e-9 ? (((p.x - mark.centre.x) * along.x + (p.z - mark.centre.z) * along.z) - from) / (to - from) : 0
+                    return bedA + (bedB - bedA) * Float(min(1, max(0, share)))
+                }
+            }
+            addMarkPiece(corners, colour: colour, layer: layer, texture: texture, lift: lift, bed: bed)
         }
     }
 
     /// The quadrilateral `corners` of a mark laid on the drawn ground,
     /// `lift(p)` over it, cut at the ground's grid lines and diagonals.
+    /// A mark's piece `points` (convex), each triangle facing up.
+    private static func addMarkFan(_ points: [Map3DVertex], to mesh: inout Map3DMesh) {
+        for index in 1..<(points.count - 1) {
+            var triangle = [points[0], points[index], points[index + 1]]
+            guard var normal = (triangle[1].position - triangle[0].position).cross(triangle[2].position - triangle[0].position).normalized
+            else { continue }
+            if normal.y < 0 {
+                triangle.swapAt(1, 2)
+                normal = normal * -1
+            }
+            mesh.appendTriangle(triangle.map { vertex in
+                var faced = vertex
+                (faced.nx, faced.ny, faced.nz) = (normal.x, normal.y, normal.z)
+                return faced
+            })
+        }
+    }
+
+    /// Decision 865: on `bed` when given (its road's bed, the height at
+    /// each point), in one piece.
     private mutating func addMarkPiece(_ corners: [Map3DBaseMap.Point], colour: UInt32, layer: Float,
-                                       texture: (Map3DBaseMap.Point) -> (Float, Float), lift: (Map3DBaseMap.Point) -> Float) {
+                                       texture: (Map3DBaseMap.Point) -> (Float, Float), lift: (Map3DBaseMap.Point) -> Float,
+                                       bed: ((Map3DBaseMap.Point) -> Float)? = nil) {
+        if let bed {
+            let points = corners.map { p -> Map3DVertex in
+                let (tu, tv) = texture(p)
+                return Map3DVertex(Map3DPoint(Float(p.x), bed(p) + lift(p), Float(p.z)), normal: .up, color: colour, u: tu, v: tv, layer: layer)
+            }
+            let middle = Map3DPoint(Float(corners.map(\.x).reduce(0, +) / Double(corners.count)), 0, Float(corners.map(\.z).reduce(0, +) / Double(corners.count)))
+            mesh(at: middle) { mesh in Self.addMarkFan(points, to: &mesh) }
+            return
+        }
         for row in gridCell(corners.map(\.z).min()!, origin: originY)...gridCell(corners.map(\.z).max()!, origin: originY) {
             let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
             for column in gridCell(corners.map(\.x).min()!, origin: originX)...gridCell(corners.map(\.x).max()!, origin: originX) {
@@ -942,22 +983,7 @@ extension Map3DScene.Builder {
                         return Map3DVertex(Map3DPoint(x, drawnGround(x: x, z: z) + lift(p), z), normal: .up, color: colour, u: tu, v: tv, layer: layer)
                     }
                     let middle = Map3DPoint(Float((west + east) / 2), 0, Float((top + bottom) / 2))
-                    mesh(at: middle) { mesh in
-                        for index in 1..<(points.count - 1) {
-                            var triangle = [points[0], points[index], points[index + 1]]
-                            guard var normal = (triangle[1].position - triangle[0].position).cross(triangle[2].position - triangle[0].position).normalized
-                            else { continue }
-                            if normal.y < 0 {
-                                triangle.swapAt(1, 2)
-                                normal = normal * -1
-                            }
-                            mesh.appendTriangle(triangle.map { vertex in
-                                var faced = vertex
-                                (faced.nx, faced.ny, faced.nz) = (normal.x, normal.y, normal.z)
-                                return faced
-                            })
-                        }
-                    }
+                    mesh(at: middle) { mesh in Self.addMarkFan(points, to: &mesh) }
                 }
             }
         }
@@ -1128,7 +1154,8 @@ extension Map3DScene.Builder {
         // Decision 391: none on a bridge or its ramp.
         guard roadRise(at: at, along: nil, onDeck: onDeck).rise < Self.propRise else { return }
         let x = Float(at.x), z = Float(at.z)
-        let foot = Map3DPoint(x, drawnGround(x: x, z: z) + Self.sidewalkLift, z)
+        // Decision 865: on the road's bed.
+        let foot = Map3DPoint(x, roadGround(at: at, onDeck: onDeck, beyond: 2.5) + Self.sidewalkLift, z)
         let key = key(of: foot)
         let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] } + [Self.finlandModels[.lamp]].compactMap { $0 })
         props[key] = props[key]?.filter { instance in
