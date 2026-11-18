@@ -57,20 +57,56 @@ public enum Map3DPlatformProps {
     /// At most this many lengths are marked each way, the longest.
     public static let mostMarks = 4
 
+    /// Decision 859: which way the trains calling at a platform stand
+    /// there. GameCore stops every train with its head at the platform's
+    /// far end the way it travels (``GameWorld/path(from:toStation:length:)``),
+    /// so one coming in along the platform's track forward (from the
+    /// platform's start to its end) stands at its end, one coming in
+    /// backward at its start. Empty when not known: then each train is
+    /// taken to stand in the middle, as before.
+    public struct Stands: OptionSet, Hashable, Sendable {
+        public let rawValue: UInt8
+        public init(rawValue: UInt8) { self.rawValue = rawValue }
+        public static let forward = Stands(rawValue: 1)
+        public static let backward = Stands(rawValue: 2)
+    }
+
+    /// Decision 859: where along a platform `length` metres long a train
+    /// `train` metres long stands from (its end nearer the platform's
+    /// start), for each way in `stands`: at the platform's end coming in
+    /// forward, at its start coming in backward; in the middle when
+    /// `stands` is empty.
+    public static func trainStarts(length: Float, train: Float, stands: Stands) -> [Float] {
+        var starts: [Float] = []
+        if stands.contains(.backward) { starts.append(0) }
+        if stands.contains(.forward) { starts.append(max(0, length - train)) }
+        return starts.isEmpty ? [(length - train) / 2] : starts
+    }
+
     /// Where the heads stop: each train stands in the middle of the
     /// platform (a station's stairs and gates are in its middle, and a
     /// shorter train stops there), so a `cars`-car train's head stops half
     /// its length past the middle, each way. Only lengths that fit, the
     /// longest ``mostMarks``; on a metro platform the longest train only.
     /// `formations` empty: ``railwayDefaults`` or ``metroDefault``.
-    public static func stopMarks(length: Float, formations: [Formation], kind: Kind) -> [StopMark] {
+    /// Decision 859: where `stands` says which way the trains come in, the
+    /// heads stop where GameCore stops them, at the far end, whatever
+    /// their length: one board that way, the longest train's.
+    public static func stopMarks(length: Float, formations: [Formation], kind: Kind, stands: Stands = []) -> [StopMark] {
         let calling = formations.filter { $0.cars > 0 && $0.carLength > 0 }
         let fitting = (calling.isEmpty ? (kind == .metro ? [metroDefault] : railwayDefaults) : calling).filter { $0.length <= length }
         // The longest of each count of cars.
         var byCars: [Int: Float] = [:]
         for formation in fitting { byCars[formation.cars] = max(byCars[formation.cars] ?? 0, formation.length) }
-        let kept = byCars.sorted { $0.value > $1.value }.prefix(kind == .metro ? 1 : mostMarks)
+        let kept = byCars.sorted { $0.value > $1.value }.prefix(kind == .metro || !stands.isEmpty ? 1 : mostMarks)
         var marks: [StopMark] = []
+        if !stands.isEmpty {
+            for (cars, _) in kept {
+                if stands.contains(.forward) { marks.append(StopMark(along: length, heading: 1, cars: cars)) }
+                if stands.contains(.backward) { marks.append(StopMark(along: 0, heading: -1, cars: cars)) }
+            }
+            return marks.sorted { ($0.along, $0.heading) < ($1.along, $1.heading) }
+        }
         for (cars, train) in kept {
             marks.append(StopMark(along: (length + train) / 2, heading: 1, cars: cars))
             marks.append(StopMark(along: (length - train) / 2, heading: -1, cars: cars))
@@ -87,12 +123,27 @@ public enum Map3DPlatformProps {
     /// The middles of the marked metro train's doors (``markedTrain``),
     /// standing in the platform's middle: each car's doors evenly along it.
     /// None on a railway platform, whose trains' doors differ.
-    public static func doorCentres(length: Float, formations: [Formation], kind: Kind) -> [Float] {
+    /// Decision 859: standing where `stands` says (``trainStarts(length:train:stands:)``),
+    /// the doors of both ways when trains come in both ways, those of
+    /// the two within half a door of each other once.
+    public static func doorCentres(length: Float, formations: [Formation], kind: Kind, stands: Stands = []) -> [Float] {
         guard kind == .metro, let train = markedTrain(length: length, formations: formations) else { return [] }
-        let start = (length - train.length) / 2
-        return (0..<train.cars).flatMap { car in
-            (0..<train.doors).map { door in start + train.carLength * (Float(car) + (Float(door) + 0.5) / Float(train.doors)) }
+        let doors = Float(train.doors)
+        var all: [Float] = []
+        for start in trainStarts(length: length, train: train.length, stands: stands) {
+            for car in 0..<train.cars {
+                for door in 0..<train.doors {
+                    let share = (Float(door) + 0.5) / doors
+                    all.append(start + train.carLength * (Float(car) + share))
+                }
+            }
         }
+        var centres: [Float] = []
+        for centre in all.sorted() {
+            if let last = centres.last, centre - last < 0.7 { continue }
+            centres.append(centre)
+        }
+        return centres
     }
 
     /// The Taipei Metro's lights at the platform edge that flash as a
@@ -208,8 +259,11 @@ extension Map3DScene.Builder {
                                           metroTrains: trains?.metro ?? 0)
             let formations = (doorsHere != nil && !lineTrains.isEmpty ? lineTrains : trains?.formations ?? [])
                 .filter { kind == .railway || $0.doors > 0 }
-            let marks = Map3DPlatformProps.stopMarks(length: path.length, formations: formations, kind: kind)
-            let doors = Map3DPlatformProps.doorCentres(length: path.length, formations: formations, kind: kind)
+            // Decision 859: where the line's trains stand, at the end
+            // they come in towards.
+            let stands = platform.edge.map { screenDoors.stands(edge: $0) } ?? []
+            let marks = Map3DPlatformProps.stopMarks(length: path.length, formations: formations, kind: kind, stands: stands)
+            let doors = Map3DPlatformProps.doorCentres(length: path.length, formations: formations, kind: kind, stands: stands)
             let side: Float = platform.offset >= 0 ? 1 : -1
             // Across the line: the platform's edge by the track, and its back.
             let edge = platform.offset - side * platform.width / 2
@@ -245,7 +299,8 @@ extension Map3DScene.Builder {
                 }
                 if let doorsHere {
                     Self.addScreenDoors(&mesh, path: path, across: edge + side * Map3DScreenDoors.setBack, top: top,
-                                        pieces: Map3DScreenDoors.pieces(length: path.length, formations: formations), doors: doorsHere)
+                                        pieces: Map3DScreenDoors.pieces(length: path.length, formations: formations, stands: stands),
+                                        doors: doorsHere)
                 }
                 // The bins at the back, their long side along it; none on
                 // a platform too narrow to walk past one.
