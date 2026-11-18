@@ -1768,6 +1768,7 @@ final class MapInteractionTests: XCTestCase {
             app.buttons["controls.toggle"].tap()
             XCTAssertTrue(card.disappears(within: 10), "The card folds")
         }
+        app.logTree("before touching the second station at \(nearest[1])")
         tap(nearest[1])
         let drawer = app.descendants(matching: .any)["map.stationPair"].firstMatch
         // A touch on the map just after the card folded went by on the
