@@ -1052,7 +1052,9 @@ extension Map3DScene.Builder {
                     if points.count > 1 { lines.append(points) }
                     points = []
                 } else {
-                    points.append(groundPoint(x: x, z: z, lift: lift) + Map3DPoint(0, raised.rise, 0))
+                    // Decision 865: on the road's bed.
+                    let bed = roadGround(at: Map3DBaseMap.Point(x: x, z: z), along: along, onDeck: road.bridgeLevel > 0, beyond: 2.5)
+                    points.append(Map3DPoint(Float(x), bed + lift + crossingLift(x: Float(x), z: Float(z)) + raised.rise, Float(z)))
                 }
             }
             for (index, point) in run.enumerated() {
@@ -1149,13 +1151,15 @@ extension Map3DScene.Builder {
     /// Decision 259: a platform's waiting crowd on it, and outside it, on
     /// the side away from the track, the station's passengers coming and
     /// going.
-    mutating func addStationLife(line: [Map3DPoint], offset: Float, width: Float, station: StationID) {
+    /// Decision 860: none outside an underground platform (`outside`
+    /// false), over which the street runs.
+    mutating func addStationLife(line: [Map3DPoint], offset: Float, width: Float, station: StationID, outside: Bool = true) {
         let top = line.map { $0 + Map3DPoint(0, Self.platformHeight + 0.01, 0) }
         guard let middle = Map3DStreetLife.Path(top), let platform = middle.shifted(offset) else { return }
         streetLife.spots.append(Map3DStreetLife.Spot(kind: .platform, path: platform, width: max(width / 2 - 0.6, 0.2), people: 0, station: station,
                                                      seed: lifeSeed(platform.points[0], salt: 262)))
         let side: Float = offset >= 0 ? 1 : -1
-        guard let outside = middle.shifted(offset + side * (width / 2 + 5)) else { return }
+        guard outside, let outside = middle.shifted(offset + side * (width / 2 + 5)) else { return }
         // On the ground beside the station.
         var ground: [Map3DPoint] = []
         for point in outside.points { ground.append(groundPoint(x: Double(point.x), z: Double(point.z), lift: 0.05)) }

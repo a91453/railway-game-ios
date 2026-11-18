@@ -639,17 +639,29 @@ enum BaseMapFiles {
     /// Decision 712: the base maps of the open cities outside Taiwan, each
     /// with the box its map covers; a city whose pack has none is left out.
     /// Decision 726: and its hill shading, `nil` for a pack without it.
-    static let cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)] = OverseasMap.allCases.compactMap { city in
-        guard OverseasMaps.open.contains(city), let pack = MapPack.current(city), let tiles = pack.baseMapFile,
-              let extent = try? pack.extent()
-        else { return nil }
-        return (city, extent, tiles, pack.terrainFile)
+    /// Decision 858: of the packs read now, so a pack downloaded after the
+    /// first look is in from then on; worked out again only when a
+    /// download is taken or forgotten (``MapPackDownloads/changes``).
+    static var cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)] {
+        let changes = MapPackDownloads.changes
+        if let kept = cityTilesKept, kept.changes == changes { return kept.tiles }
+        let tiles = OverseasMap.allCases.compactMap { city -> (city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)? in
+            guard OverseasMaps.open.contains(city), let pack = MapPack.current(city), let tiles = pack.baseMapFile,
+                  let extent = try? pack.extent()
+            else { return nil }
+            return (city, extent, tiles, pack.terrainFile)
+        }
+        cityTilesKept = (changes, tiles)
+        return tiles
     }
+
+    private static var cityTilesKept: (changes: Int, tiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)])?
 
     /// Decision 712: the buildings of the open cities outside Taiwan,
     /// for the 3D map; a city whose pack has none is left out.
-    static let cityFootprints: [URL] = OverseasMap.allCases.compactMap { city in
-        OverseasMaps.open.contains(city) ? MapPack.current(city)?.buildingsFile : nil
+    /// Decision 858: of the packs read now.
+    static var cityFootprints: [URL] {
+        cityPacks.compactMap(\.buildingsFile)
     }
 
     /// Taiwan's ground heights for the hill shading, `nil` if the app has
@@ -746,7 +758,10 @@ enum BaseMapFiles {
     /// written.
     static func styleAddress(taiwan: Bool, city: (name: String, tiles: URL, terrain: URL?)? = nil, dark: Bool) -> String? {
         let name = "BaseMapStyle-\(taiwan ? "taiwan" : city?.name ?? "world")-\(dark ? "dark" : "light").json"
-        if let address = written[name] { return address }
+        // Decision 858: a city's style is written again when its pack's
+        // files lie elsewhere (a newer download of it).
+        let key = name + (taiwan ? "" : city?.tiles.path ?? "")
+        if let address = written[key] { return address }
         let source: BaseMapStyle.Tiles = if taiwan, let tiles {
             .bundled(pmtiles: tiles.absoluteString)
         } else if let city {
@@ -761,7 +776,7 @@ enum BaseMapFiles {
         else { return nil }
         let file = caches.appendingPathComponent(name)
         guard (try? data.write(to: file, options: .atomic)) != nil else { return nil }
-        written[name] = file.absoluteString
+        written[key] = file.absoluteString
         return file.absoluteString
     }
 }

@@ -117,8 +117,8 @@ public enum FerryCollection {
     /// Decision 632: the cable car page's note: how one comes into a game.
     public static func cablewayNote(in language: DisplayLanguage) -> String {
         language.text(
-            "Build a cable car with the building tools' Cable car mode: tap its stations, or lay the Maokong Gondola where the map has it. Near Sun Moon Lake its cabins are Sun Moon Lake's.",
-            "用建造工具的「纜車」模式蓋纜車：點出各站，或在地圖上有貓空纜車的地方照真實路線拉。蓋在日月潭附近，吊廂就是日月潭的。"
+            "Build a cable car with the building tools' Cable car mode: tap its stations, or lay a real one (Maokong, Sun Moon Lake, Wulai, Ngong Ping) where the map has it. Near Sun Moon Lake its cabins are Sun Moon Lake's.",
+            "用建造工具的「纜車」模式蓋纜車：點出各站，或在地圖上有真實纜車（貓空、日月潭、烏來、昂坪）的地方照真實路線拉。蓋在日月潭附近，吊廂就是日月潭的。"
         )
     }
 }

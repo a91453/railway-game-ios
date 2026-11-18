@@ -64,30 +64,49 @@ extension RealLineLaying {
     /// How near the way the company's track counts as lying along it.
     static let sharedEndReach = 60 * RealLineAcquisition.metre
 
+    /// How far a station between a line's ends stands to either side of
+    /// its way: the second track on the left (out to the island's width at
+    /// an island station, decision 748), a loop on the right, and an
+    /// overtaking station's second loop outside the second track (decision
+    /// 605). SHARED-STATION-THROUGH.
+    static func throughStationExtent(of line: RealBranchLine, name: String, tracks: Int, overtakes: Bool, layout: RealLineLayout) -> ClosedRange<Double> {
+        let second = !line.isDoubleTrack ? 0 : line.islandStations.contains(name) ? RealLineAcquisition.islandSpacing : HighSpeedDemo.trackOffset
+        let loops = overtakes ? 2 : tracks - (line.isDoubleTrack ? 2 : 1)
+        let left = second + (overtakes ? layout.loopOffset : 0)
+        return -left...(loops > 0 ? layout.loopOffset : 0)
+    }
+
     /// `path`, with each end at a station of the company's (`shared`, by
     /// the stop's index) whose track lies along it moved beside that track
-    /// (SHARED-STATION-LEVEL); `nil` where no end is moved. `extent` is
-    /// how far the end station's own tracks will stand to either side of
-    /// the way.
+    /// (SHARED-STATION-LEVEL); with `through`, each station between the
+    /// ends too (SHARED-STATION-THROUGH), held beside the company's track
+    /// either way along the line as far as it runs along the way; `nil`
+    /// where no stop is moved. `extent` is how far the stop's own tracks
+    /// will stand to either side of the way.
     func sharedEnds(
-        of path: WorldPath, points: [WorldVector], shared: (Int) -> StationID?, extent: (Int) -> ClosedRange<Double>
+        of path: WorldPath, points: [WorldVector], through: Bool = false, shared: (Int) -> StationID?, extent: (Int) -> ClosedRange<Double>
     ) -> (path: WorldPath, moved: [Int])? {
         guard points.count >= 2 else { return nil }
         // The company's track near the way, sampled as the network tool
         // surveys it.
         let reach = Self.sharedEndReach, gap = RealLineAcquisition.islandSpacing
-        var moves: [(stop: Int, at: Double, hold: Double, by: Double)] = []
-        for stop in [0, points.count - 1] {
+        let last = points.count - 1
+        // Each move: the stop, where it is along the way, and how far it
+        // is held toward the way's start (`before`) and its end (`after`);
+        // `nil` for all the way past an end.
+        var moves: [(stop: Int, at: Double, before: Double?, after: Double?, by: Double)] = []
+        for stop in through ? Array(0...last) : [0, last] {
             // Only a station another line calls at: track a line left
             // when it was removed is taken up and laid again (decision 528),
             // not laid beside.
             guard let station = shared(stop), world.station(id: station) != nil,
                   world.lines.contains(where: { $0.stops.contains(station) }) else { continue }
             let at = path.nearest(points[stop]).along
-            let towardEnd: Double = stop == 0 ? -1 : 1
-            // Every point of the company's track beside the way from this
-            // stop's far side of its station to the way's end.
-            var across: [Double] = [], back: [Double] = []
+            // Every point of the company's track beside the way within
+            // reach of this stop: for an end, from the end of the way back
+            // past its station toward the line's middle; for a station
+            // between the ends, either way along the line.
+            var across: [Double] = [], toward: [Double] = [], away: [Double] = []
             let box = RealLineAcquisition.runOn + RealLineAcquisition.junctionReach
             let stopPoint = points[stop]
             for edge in world.network.edges {
@@ -100,12 +119,21 @@ extension RealLineLaying {
                     let near = path.nearest(point)
                     guard near.away < reach else { continue }
                     let side = (point - path.point(at: near.along)).dot(path.tangent(at: near.along).normal)
-                    // Behind the stop (toward the line's middle) as far as
-                    // the company's track runs on along the way.
-                    let behind = (at - near.along) * towardEnd
-                    guard behind < box else { continue }
-                    across.append(side)
-                    back.append(behind)
+                    // How far toward the way's start (negative) or end
+                    // (positive) of the stop.
+                    let along = near.along - at
+                    if stop == 0 || stop == last {
+                        // Behind the stop (toward the line's middle) as far
+                        // as the company's track runs on along the way.
+                        let behind = stop == 0 ? along : -along
+                        guard behind < box else { continue }
+                        across.append(side)
+                        if stop == 0 { away.append(behind) } else { toward.append(behind) }
+                    } else {
+                        guard abs(along) < box else { continue }
+                        across.append(side)
+                        if along < 0 { toward.append(-along) } else { away.append(along) }
+                    }
                 }
             }
             guard let low = across.min(), let high = across.max() else { continue }
@@ -114,14 +142,17 @@ extension RealLineLaying {
             guard high > own.lowerBound - gap, low < own.upperBound + gap else { continue }
             let right = high + gap - own.lowerBound, left = low - gap - own.upperBound
             let by = abs(right) <= abs(left) ? right : left
-            // Held past the furthest of the company's track behind the stop
+            // Held past the furthest of the company's track from the stop
             // in one run (gaps under 50 m), and at least past its station.
-            var hold = RealLineAcquisition.runOn
-            for behind in back.sorted() where behind > 0 {
-                guard behind <= hold + 50 * RealLineAcquisition.metre else { break }
-                hold = max(hold, behind)
+            func hold(_ distances: [Double]) -> Double {
+                var hold = RealLineAcquisition.runOn
+                for distance in distances.sorted() where distance > 0 {
+                    guard distance <= hold + 50 * RealLineAcquisition.metre else { break }
+                    hold = max(hold, distance)
+                }
+                return hold
             }
-            moves.append((stop, at, hold, by))
+            moves.append((stop, at, stop == 0 ? nil : hold(toward), stop == last ? nil : hold(away), by))
         }
         guard !moves.isEmpty else { return nil }
         let spacing = 5 * RealLineAcquisition.metre, count = max(2, Int((path.length / spacing).rounded()))
@@ -130,8 +161,14 @@ extension RealLineLaying {
             let distance = path.length * Double(step) / Double(count)
             var point = path.point(at: distance)
             for move in moves {
-                let behind = move.stop == 0 ? distance - move.at : move.at - distance
-                let t = min(max((behind - move.hold) / blend, 0), 1), share = 1 - t * t * (3 - 2 * t)
+                let held = distance < move.at ? move.before : move.after
+                let share: Double
+                if let held {
+                    let t = min(max((abs(distance - move.at) - held) / blend, 0), 1)
+                    share = 1 - t * t * (3 - 2 * t)
+                } else {
+                    share = 1
+                }
                 guard share > 0 else { continue }
                 point = point + path.tangent(at: distance).normal * (move.by * share)
             }
@@ -142,16 +179,22 @@ extension RealLineLaying {
 }
 
 extension RealLineLaying {
-    /// The height of the platforms of `station` on the ground (not on a
-    /// viaduct or in a tunnel), the middle one where they differ; `nil`
-    /// for none.
-    func sharedPlatformHeight(of station: StationID) -> Double? {
+    /// The height of the platforms of `station` not raised on a viaduct
+    /// (on the ground, in a cutting or under it), the middle one where
+    /// they differ; `nil` for none. SHARED-STATION-THROUGH: Fukuoka's
+    /// subway stations stand a few metres down, and were not counted
+    /// (only those within half a crossing's clearance of the ground were).
+    ///
+    /// Decision 875: with `onViaduct`, of those raised (half a crossing's
+    /// clearance over the ground or more) instead: a station on its
+    /// line's real viaduct (decision 462), or one a few metres up over
+    /// falling ground (the Green Mountain Line's at Binhai Shalun, 5 m).
+    func sharedPlatformHeight(of station: StationID, onViaduct: Bool = false) -> Double? {
         let heights = world.network.platforms(of: station).compactMap { platform -> Int64? in
             guard let edge = world.network.edge(platform.edge), edge.structure == .automatic || edge.structure == .surface,
                   let geometry = world.trackGeometry(of: platform.edge) else { return nil }
             let middle = geometry.location(at: (platform.start + platform.end) / 2).position
-            // Not one raised on its line's viaduct (decision 462).
-            guard let ground = world.groundHeight(at: middle.plan), abs(middle.z - ground) < TrackStructure.clearance / 2 else { return nil }
+            guard let ground = world.groundHeight(at: middle.plan), (middle.z - ground >= TrackStructure.clearance / 2) == onViaduct else { return nil }
             return middle.z
         }.sorted()
         return heights.isEmpty ? nil : Double(heights[heights.count / 2])

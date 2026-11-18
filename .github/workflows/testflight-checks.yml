@@ -73,6 +73,11 @@ jobs:
           python3 --version
           python3 -I .github/scripts/testflight-selftest-processing.py
 
+      # Decision 858: which map packs a release uploads again, on a
+      # throwaway git history.
+      - name: Map pack choice tests (throwaway repository)
+        run: python3 -I .github/scripts/testflight-map-packs.py --selftest
+
   # The macOS dry run takes two unsigned archives (the longest check a pull
   # request has). A pull request that only rewrites the What to Test text
   # changes nothing it reads, so it runs only for the release workflow, this

@@ -2169,6 +2169,26 @@ public struct GameWorld: Equatable, Sendable {
         stations[index].name = name
     }
 
+    /// Decision 866: sets the arrival chime station `id` rings, or `nil`
+    /// for the one its place in the network calls for. Free; no rule
+    /// reads it.
+    ///
+    /// - Throws: ``GameError/unknownStation(_:)``.
+    public mutating func setStationChime(_ id: StationID, to chime: StationChime?) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        stations[index].chime = chime
+    }
+
+    /// Decision 866: sets the departure melody station `id` plays as a
+    /// train's doors close, or `nil` for the line's own. Free; no rule
+    /// reads it.
+    ///
+    /// - Throws: ``GameError/unknownStation(_:)``.
+    public mutating func setStationDepartureMelody(_ id: StationID, to melody: DepartureMelody?) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        stations[index].departureMelody = melody
+    }
+
     /// Renames line `id`. Free.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or

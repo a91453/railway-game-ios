@@ -301,8 +301,8 @@ public enum DataSourceCredits {
                             "香港的 3D 地圖上每棟建物的位置、外形與高度。"
                         ),
                         notice: language.text(
-                            "Outlines and heights: Building data, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal (Common Spatial Data Infrastructure), used under the CSDI Portal Terms and Conditions of Use; the Government and the Lands Department keep their intellectual property rights in the data. What each building is used for: © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the file made from them and the tool that makes it come with the app. Where a building’s height is not recorded, the game estimates it from the recorded buildings like it and from WorldPop’s population (CC BY 4.0). The shapes of the landmark towers: 3D Visualisation Map (non-textured individualised models), Lands Department, Government of the Hong Kong SAR, via Open3Dhk; the Government and the Lands Department keep their intellectual property rights in the data.",
-                            "外形與高度：建築物資料，香港特別行政區政府地政總署，經空間數據共享平台（CSDI）提供，依空間數據共享平台的使用條款使用；資料的智慧財產權屬香港特別行政區政府與地政總署。建物的用途：© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；由它們做成的檔與產生它的工具隨 App 提供。沒有記載高度的建物，由遊戲依同類有記載的建物與 WorldPop 的人口（CC BY 4.0）估計。地標大樓的外形：三維視像化地圖（無紋理單體模型），香港特別行政區政府地政總署，經 Open3Dhk 提供；資料的智慧財產權屬香港特別行政區政府與地政總署。"
+                            "Outlines and heights: Building data, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal (Common Spatial Data Infrastructure), used under the CSDI Portal Terms and Conditions of Use; the Government and the Lands Department keep their intellectual property rights in the data. What each building is used for: © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026; the file made from them and the tool that makes it come with the app. Where a building’s height is not recorded, the game estimates it from the recorded buildings like it and from WorldPop’s population (CC BY 4.0). The shapes of the landmark towers, and where the Tsing Ma Bridge’s towers stand and how tall they are: 3D Visualisation Map (non-textured individualised models), Lands Department, Government of the Hong Kong SAR, via Open3Dhk; the Government and the Lands Department keep their intellectual property rights in the data.",
+                            "外形與高度：建築物資料，香港特別行政區政府地政總署，經空間數據共享平台（CSDI）提供，依空間數據共享平台的使用條款使用；資料的智慧財產權屬香港特別行政區政府與地政總署。建物的用途：© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月；由它們做成的檔與產生它的工具隨 App 提供。沒有記載高度的建物，由遊戲依同類有記載的建物與 WorldPop 的人口（CC BY 4.0）估計。地標大樓的外形，以及青馬大橋橋塔的位置與高度：三維視像化地圖（無紋理單體模型），香港特別行政區政府地政總署，經 Open3Dhk 提供；資料的智慧財產權屬香港特別行政區政府與地政總署。"
                         ),
                         links: [
                             DataSourceCredit.Link(
@@ -433,6 +433,32 @@ public enum DataSourceCredits {
                             "WorldPop（www.worldpop.org），芬蘭 2025 年 1 公里格網，CC BY 4.0。"
                         ),
                         links: []
+                    ),
+                ]
+            )
+        // Decision 854: Fukuoka's map (`MapPacks/fukuoka`, made by
+        // `tools/fukuoka-map/`), credited once it is open.
+        case .fukuoka:
+            DataSourceSection(
+                id: "fukuokaRailways",
+                title: language.text("Fukuoka’s Railways", "福岡的鐵道"),
+                credits: [
+                    DataSourceCredit(
+                        id: "fukuokaSubway",
+                        title: language.text("Fukuoka City Subway", "福岡市地鐵"),
+                        detail: language.text(
+                            "The Fukuoka City Subway’s three lines, the Kuko, Hakozaki and Nanakuma lines, with their stations’ names in Chinese, English and Japanese. There is no published timetable, so their trains run at estimated intervals.",
+                            "福岡市地鐵的空港線、箱崎線與七隈線三條路線，車站有中文、英文與日文站名。沒有公開的時刻表，所以列車照估計的班距行駛。"
+                        ),
+                        notice: language.text(
+                            "Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, tunnels, viaducts and line colours: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with the Fukuoka City Transportation Bureau or the Government of Japan.",
+                            "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、隧道、高架與路線色：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與福岡市交通局、日本政府沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("National Land Numerical Information: Railway Data", "国土数値情報 鉄道データ"), url: "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html"),
+                            DataSourceCredit.Link(title: language.text("CC BY 4.0", "CC BY 4.0"), url: "https://creativecommons.org/licenses/by/4.0/"),
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
                     ),
                 ]
             )

@@ -54,6 +54,14 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// (decision 506), `nil` for not at all. Set by
     /// ``GameWorld/expandStation(at:)`` only; a depot is never expanded.
     public internal(set) var expansion: StationExpansion?
+    /// Decision 866: the arrival chime the player set it to ring, `nil`
+    /// for the one its place in the network calls for. Set by
+    /// ``GameWorld/setStationChime(_:to:)`` only; no rule reads it.
+    public internal(set) var chime: StationChime?
+    /// Decision 866: the departure melody the player set it to play as a
+    /// train's doors close, `nil` for the line's own. Set by
+    /// ``GameWorld/setStationDepartureMelody(_:to:)`` only; no rule reads it.
+    public internal(set) var departureMelody: DepartureMelody?
 
     /// A station standing at `point`.
     ///
@@ -73,7 +81,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints, expansion
+        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints, expansion, chime, departureMelody
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -146,6 +154,10 @@ extension Station: Codable {
                 forKey: .expansion, in: container, debugDescription: "Station \(id.rawValue) is a depot, which is never expanded."
             )
         }
+        // Decision 866: a station without `"chime"` or `"departureMelody"`
+        // plays what its place calls for (every save before version 109).
+        chime = try container.decodeIfPresent(StationChime.self, forKey: .chime)
+        departureMelody = try container.decodeIfPresent(DepartureMelody.self, forKey: .departureMelody)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -165,6 +177,8 @@ extension Station: Codable {
             try container.encode(transferPoints, forKey: .transferPoints)
         }
         try container.encodeIfPresent(expansion, forKey: .expansion)
+        try container.encodeIfPresent(chime, forKey: .chime)
+        try container.encodeIfPresent(departureMelody, forKey: .departureMelody)
     }
 }
 

@@ -630,13 +630,13 @@ public final class GameSession {
     @ObservationIgnored var trainArrivalsShown: Set<String> = []
 
     /// The real line offered on the purchase card (decision 315), while
-    /// the card is open.
-    public var shownRealLineOffer: RealLineOffer?
+    /// the card is open. Decision 862: with the lines sold with it.
+    public var shownRealLineOffer: RealLineBundleOffer?
 
     /// The real line whose purchase card is being prepared (decision 497,
     /// ``offerRealLine(_:)``): the card is open and says so until its offer
-    /// is laid out.
-    public internal(set) var preparingRealLine: RealBranchLine?
+    /// is laid out. Decision 862: with the lines sold with it.
+    public internal(set) var preparingRealLine: RealLineBundle?
     /// Lays out the offer of ``preparingRealLine`` off the main actor.
     @ObservationIgnored var realLineOfferTask: Task<Void, Never>?
     /// Decision 649: why each real line for sale cannot be bought from the
@@ -1786,7 +1786,8 @@ public final class GameSession {
     /// to close (90 ticks at 1×).
     @ObservationIgnored private var departuresPlayed: Set<DepartureMelody.Closing> = []
 
-    /// Plays the line's departure melody (``DepartureMelody``) when the
+    /// Plays the departure melody (``DepartureMelody``: the station's, or
+    /// else the line's) when the
     /// doors of a watched train started closing within the step, at 60×
     /// and slower: one melody a step, the first train's.
     private func noteDeparture(from before: GameWorld) {
@@ -1799,7 +1800,7 @@ public final class GameSession {
         departuresPlayed.formIntersection(closings)
         guard let closing = closings.first(where: { !departuresPlayed.contains($0) }) else { return }
         departuresPlayed.insert(closing)
-        playSound(.departure(DepartureMelody.of(closing.train, in: world)))
+        playSound(.departure(DepartureMelody.of(closing.train, at: closing.station, in: world)))
     }
 
     /// Whether the speed is held to 10× at most now: the 3D map is open and

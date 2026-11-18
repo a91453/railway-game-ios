@@ -16,6 +16,10 @@ final class Map3DPreviewDump: XCTestCase {
         // their buildings.
         var cities: [Data] = []
         var cityFootprints: [Data] = []
+        // A city's own heights and land cover (its pack's), read for
+        // MAP3D_HEIGHTS and MAP3D_LANDCOVER on its map, as the app does.
+        var cityHeights: HeightGrid?
+        var cityLandCover: LandCoverGrid?
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("RailwayGameApp/Resources/")
         func resource(_ path: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent(path)) }
@@ -26,7 +30,7 @@ final class Map3DPreviewDump: XCTestCase {
         // scene lays the real lines' tracks and trains (decisions 402, 600).
         let fullRailways = ProcessInfo.processInfo.environment["MAP3D_REAL"] == "1"
             || ProcessInfo.processInfo.environment["MAP3D_BUY_STATION"] != nil
-        let railways = fullRailways ? try BundledRealData.railways() : try RealRailways(
+        var railways = fullRailways ? try BundledRealData.railways() : try RealRailways(
             lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
             names: resource("RealRailways/station_names.json"),
             pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")))
@@ -109,6 +113,11 @@ final class Map3DPreviewDump: XCTestCase {
             let at = (ProcessInfo.processInfo.environment["MAP3D_AT"] ?? "22.2819:114.1582").split(separator: ":").map { Double(String($0))! }
             focus = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: at[0], longitude: at[1])
             cities = ground.baseMap.map { [$0] } ?? []
+            cityHeights = ground.heights
+            cityLandCover = ground.landCover
+            // MAP3D_REAL=1: the city's own railways with Taiwan's, as the app
+            // hands its map's scene them (its lines' bridges and tunnels).
+            if fullRailways { railways = try HongKongRailwaysTests.railways() }
         // Decision 799: a new game on Rovaniemi's map, looking at MAP3D_AT
         // (the station without it); MAP3D_BASEMAP, MAP3D_FOOTPRINTS and
         // MAP3D_BUY (vr:KJA,vr:MUL) as Hong Kong's.
@@ -129,6 +138,9 @@ final class Map3DPreviewDump: XCTestCase {
             let at = (ProcessInfo.processInfo.environment["MAP3D_AT"] ?? "66.4977:25.7143").split(separator: ":").map { Double(String($0))! }
             focus = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: at[0], longitude: at[1])
             cities = ground.baseMap.map { [$0] } ?? []
+            cityHeights = ground.heights
+            cityLandCover = ground.landCover
+            if fullRailways { railways = try RovaniemiRailwaysTests.railways() }
         case "realdemo":
             let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
             let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
@@ -178,11 +190,11 @@ final class Map3DPreviewDump: XCTestCase {
         // MAP3D_HEIGHTS=1: the heights file's ground where the world has
         // not read its own, as the app passes it.
         let heights = ProcessInfo.processInfo.environment["MAP3D_HEIGHTS"] == "1"
-            ? try HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
+            ? try cityHeights ?? HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
         // MAP3D_LANDCOVER=1: the land cover file's ground and forest trees
         // (decision 811), as the app passes it.
         let landCover = ProcessInfo.processInfo.environment["MAP3D_LANDCOVER"] == "1"
-            ? try LandCoverGrid(data: resource("RealWorld/taiwan_landcover.dat")) : nil
+            ? try cityLandCover ?? LandCoverGrid(data: resource("RealWorld/taiwan_landcover.dat")) : nil
         // MAP3D_FOOTPRINTS=1: the app's real footprints (decision 389).
         let footprints = ProcessInfo.processInfo.environment["MAP3D_FOOTPRINTS"] == "1"
             ? try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped),
@@ -193,6 +205,11 @@ final class Map3DPreviewDump: XCTestCase {
             ? try RealNoBuildLand(data: resource("RealWorld/taiwan_no_build.json")) : nil
         // Decision 699: the airfields, as the app hands them.
         noBuild?.airfields = try RealAirfields(data: resource("BaseMap/taiwan_airfields.json"))
+        // As GameLauncher does for a real-world game: a world that has
+        // read no ground yet (no line bought, so no track) answers 0 m
+        // everywhere and the heights file is never asked; mapped, its
+        // unread ground comes from the file (decision 865's handoff).
+        if heights != nil { try? world.mapGround() }
         let scene = Map3DScene(world: world, focus: focus, baseMap: tiles, cityTiles: cityTiles, footprints: footprints, heights: heights,
                                landCover: landCover, railways: railways, noBuild: noBuild)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
@@ -420,17 +437,22 @@ final class Map3DPreviewDump: XCTestCase {
                 // draws it; MAP3D_SUN=0 leaves it out, for a picture before.
                 + Map3DSunShadow.rows(sun(camera), lighting: lighting)
         }
-        let presets: [(String, Map3DPoint, Float, Float)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
+        // A seventh field tilts the camera that many degrees from straight
+        // down (`Map3DCamera.pitch`), whatever its distance: a long bridge
+        // seen from the side.
+        let presets: [(String, Map3DPoint, Float, Float, Float?)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
             .split(separator: ";").map { part in
                 let f = part.split(separator: ":").map(String.init)
-                return (f[0], Map3DPoint(Float(f[1])!, f.count > 5 ? Float(f[5])! : 0, Float(f[2])!), Float(f[3])!, Float(f[4])! * .pi / 180)
+                return (f[0], Map3DPoint(Float(f[1])!, f.count > 5 ? Float(f[5])! : 0, Float(f[2])!), Float(f[3])!, Float(f[4])! * .pi / 180,
+                        f.count > 6 ? Float(f[6])! * .pi / 180 : nil)
             }
         var views: [String: [Float]] = [:]
         // What the app would draw from each camera (decision 238): the
         // chunks in view, each in full or simplified.
         var drawn: [String: Int] = [:], drawnInFull: [String: Int] = [:]
-        for (name, target, distance, heading) in presets {
-            let camera = Map3DCamera(target: target, distance: distance, heading: heading, viewport: (1600, 900))
+        for (name, target, distance, heading, pitch) in presets {
+            var camera = Map3DCamera(target: target, distance: distance, heading: heading, viewport: (1600, 900))
+            camera.pitch = pitch
             views[name] = uniforms(camera)
             drawnInFull[name] = scene.chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: camera.viewProjection) }
                 .reduce(0) { $0 + $1.mesh.triangleCount }

@@ -148,6 +148,187 @@ final class Map3DPlatformPropsTests: XCTestCase {
         XCTAssertFalse(b.closeMeshes.values.flatMap(\.vertices).contains { $0.color == StationKitBuilder.commBlue })
     }
 
+    // MARK: Furniture (decision 874)
+
+    /// To the nearest 0.1 m.
+    private func tenths(_ values: [Float]) -> [Int] { values.map { Int(($0 * 10).rounded()) } }
+
+    /// The old version's module on a side platform under the sky: the
+    /// half that faces the track, every 40 m; no square column, and no
+    /// sign without a roof.
+    func testASidePlatformHasTheOldModulesHalfAtItsBack() {
+        let pieces = Props.furniture(length: 200, depth: 3.2, island: false, rightHalf: true, forward: true, bins: [], roof: nil)
+        // Each module: two benches (seat and back), the machine, two boards (post and panel).
+        XCTAssertEqual(pieces.count, 5 * 9)
+        XCTAssertFalse(pieces.contains { $0.colour == Map3DPalette.tunnelWall }, "no column to a ceiling")
+        XCTAssertFalse(pieces.contains { $0.lit })
+        XCTAssertEqual(pieces.filter { $0.colour == Map3DPalette.trainRed }.count, 5)
+        for piece in pieces {
+            XCTAssertGreaterThanOrEqual(piece.near, 0)
+            XCTAssertLessThanOrEqual(piece.far, 3.2 - Props.furnitureWalk + 0.001, "a walk left inside the yellow line")
+            XCTAssertGreaterThanOrEqual(piece.bottom, 0)
+            XCTAssertLessThan(piece.top, 2.5, "under a canopy 3.2 m up")
+            XCTAssertTrue(piece.along - piece.length / 2 >= 0 && piece.along + piece.length / 2 <= 200)
+        }
+        // As big as under ground: a bench's back 1.53 m in the module, a metre here.
+        let back = pieces.filter { $0.colour == Map3DPalette.timber }.map(\.top).max() ?? 0
+        XCTAssertEqual(back, 1.53 * 4.85 / 7.34, accuracy: 0.001)
+        // Shorter than a module, or too narrow to walk past a bench: none.
+        XCTAssertTrue(Props.furniture(length: 39, depth: 3.2, island: false, rightHalf: true, forward: true, bins: [], roof: nil).isEmpty)
+        XCTAssertTrue(Props.furniture(length: 200, depth: 2.2, island: false, rightHalf: true, forward: true, bins: [], roof: nil).isEmpty)
+    }
+
+    func testTheSignsHangUnderTheRoofClearOfItsColumns() {
+        let roof: ClosedRange<Float> = 40...160
+        let pieces = Props.furniture(length: 200, depth: 3.2, island: false, rightHalf: true, forward: true, bins: [], roof: roof,
+                                     signTop: Props.signTopUnderCanopy)
+        let signs = pieces.filter { $0.colour == Map3DPalette.dark }, faces = pieces.filter(\.lit)
+        // The module's right sign 15.88 m along it: under the roof in the second to the fourth module.
+        XCTAssertEqual(tenths(signs.map(\.along)), [559, 959, 1359])
+        XCTAssertEqual(faces.count, 3)
+        for sign in signs {
+            XCTAssertEqual(sign.top, 3.15, accuracy: 0.001)
+            XCTAssertGreaterThan(sign.bottom, 2.4, "over the heads")
+            XCTAssertGreaterThanOrEqual(sign.near, Props.signInset)
+            XCTAssertLessThanOrEqual(sign.far, 3.2 - Props.signInset + 0.001, "not out over the track")
+        }
+        for face in faces { XCTAssertTrue(face.near > signs[0].near && face.far < signs[0].far && face.top < 3.15) }
+        // A column where a sign would hang: the sign moves a metre, clear of it.
+        let moved = Props.furniture(length: 200, depth: 3.2, island: false, rightHalf: true, forward: true, bins: [], roof: roof,
+                                    signTop: Props.signTopUnderCanopy, columns: [56, 96.5])
+        XCTAssertEqual(tenths(moved.filter { $0.colour == Map3DPalette.dark }.map(\.along)), [549, 949, 1359])
+        // The canopy's columns: at the ends of its pieces.
+        XCTAssertEqual(tenths(Props.canopyColumns(length: 100, share: 0.6)), [200, 275, 350, 425, 500, 575, 650, 725, 800])
+    }
+
+    func testTheFurnitureKeepsClearOfTheBins() {
+        // The first bench is 1 to 7 m along its module, the machine 17.5 to 18.7 m.
+        let pieces = Props.furniture(length: 200, depth: 3.2, island: false, rightHalf: true, forward: true, bins: [5, 60], roof: nil)
+        XCTAssertEqual(pieces.count, 5 * 9 - 2 - 1)
+        for piece in pieces {
+            for bin in [Float(5), 60] {
+                XCTAssertGreaterThanOrEqual(abs(piece.along - bin), piece.length / 2 + 1.3 + Props.furnitureBinClearance)
+            }
+        }
+    }
+
+    /// An island's two halves each lay their own side of the module, the
+    /// other way along when their lines run against it, so they meet.
+    func testAnIslandsHalvesMirrorEachOther() {
+        let right = Props.furniture(length: 200, depth: 3, island: true, rightHalf: true, forward: true, bins: [], roof: 0...200)
+        let left = Props.furniture(length: 200, depth: 3, island: true, rightHalf: false, forward: false, bins: [], roof: 0...200)
+        // The benches, machine and boards stand across the middle: both halves have them, at the same place.
+        func floor(_ pieces: [Props.Furniture]) -> [Float] { pieces.filter { $0.colour != Map3DPalette.dark && !$0.lit }.map(\.along).sorted() }
+        XCTAssertEqual(tenths(floor(right)), tenths(floor(left).map { 200 - $0 }.sorted()))
+        // The signs differ: one over each half.
+        XCTAssertEqual(tenths(right.filter(\.lit).map(\.along)), [159, 559, 959, 1359, 1759])
+        XCTAssertEqual(tenths(left.filter(\.lit).map { 200 - $0.along }), [239, 639, 1039, 1439, 1839])
+        // A narrow island's furniture is narrower with it; one under 3 m has none.
+        let narrow = Props.furniture(length: 200, depth: 1.6, island: true, rightHalf: true, forward: true, bins: [], roof: nil)
+        XCTAssertFalse(narrow.isEmpty)
+        XCTAssertTrue(narrow.allSatisfy { $0.far <= 1.6 - Props.furnitureWalk + 0.001 })
+        XCTAssertTrue(Props.furniture(length: 200, depth: 1.4, island: true, rightHalf: true, forward: true, bins: [], roof: nil).isEmpty)
+    }
+
+    func testThePlatformsFurnitureIsLaidCloseUpOnlyAtItsBack() {
+        var b = builder(system: "tra_sched")
+        b.addPlatformProps()
+        func timber(_ meshes: [Map3DScene.ChunkKey: Map3DMesh]) -> [Map3DVertex] {
+            meshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.timber }
+        }
+        let benches = timber(b.closeMeshes)
+        XCTAssertFalse(benches.isEmpty)
+        // The platform from z 1.6 to 4.8: the benches against its back.
+        XCTAssertTrue(benches.allSatisfy { $0.z >= 4.8 - 0.88 && $0.z <= 4.801 })
+        let top = Map3DScene.railLift + Builder.platformHeight
+        XCTAssertTrue(benches.allSatisfy { $0.y > top && $0.y < top + 1.1 })
+        XCTAssertTrue(b.closeMeshes.values.flatMap(\.vertices).contains { $0.color == Map3DPalette.trainRed }, "the machine")
+        // Its signs under the canopy, over the platform.
+        let signs = b.closeMeshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.dark && $0.y > top + 2.4 }
+        XCTAssertFalse(signs.isEmpty)
+        XCTAssertTrue(signs.allSatisfy { $0.z > 1.6 && $0.z < 4.8 && $0.y <= top + 3.151 })
+        for meshes in [b.meshes, b.nearMeshes, b.farMeshes, b.standInMeshes] { XCTAssertTrue(timber(meshes).isEmpty) }
+        // Under a shell of its own (no kit canopy): no sign.
+        var shell = builder(system: "mrt")
+        shell.shellRoofed = [StationID(rawValue: 1)]
+        shell.addPlatformProps()
+        XCTAssertFalse(timber(shell.closeMeshes).isEmpty)
+        XCTAssertFalse(shell.closeMeshes.values.flatMap(\.vertices).contains { $0.color == Map3DPalette.dark && $0.y > top + 2.4 })
+        // Too narrow: none.
+        var narrow = builder(system: "tra_sched", width: 2.2)
+        narrow.addPlatformProps()
+        XCTAssertTrue(timber(narrow.closeMeshes).isEmpty)
+    }
+
+    /// Two halves of an island whose lines run opposite ways: their
+    /// benches back to back on the island's middle.
+    func testAnIslandsBenchesStandBackToBack() {
+        var b = builder(system: "tra_sched")
+        let there = stride(from: Float(-100), through: 100, by: 20).map { Map3DPoint($0, Map3DScene.railLift, 0) }
+        let back = stride(from: Float(100), through: -100, by: -20).map { Map3DPoint($0, Map3DScene.railLift, 9.2) }
+        b.laidPlatforms = [there, back].map {
+            Builder.LaidPlatform(station: StationID(rawValue: 1), line: $0, offset: 1.6 + 1.5, width: 3, structure: .elevated, island: true)
+        }
+        b.addPlatformProps()
+        let timber = b.closeMeshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.timber }
+        let near = timber.filter { $0.z < 4.6 - 0.01 }, far = timber.filter { $0.z > 4.6 + 0.01 }
+        XCTAssertFalse(near.isEmpty)
+        // Where neither half has a bin in the way, a double bench.
+        let both = Set(near.map { ($0.x * 10).rounded() }).intersection(far.map { ($0.x * 10).rounded() })
+        XCTAssertGreaterThanOrEqual(both.count, 12)
+        XCTAssertTrue(timber.allSatisfy { abs($0.z - 4.6) <= 0.88 })
+    }
+
+    /// Decision 874's preview (`tools/platform-furniture/preview.py`):
+    /// the scene's own meshes round three stations on flat ground, an
+    /// island and a side platform on the ground and a side platform on a
+    /// viaduct. Only when asked.
+    @MainActor
+    func testWriteTheFurniturePreviewsMeshes() throws {
+        guard let out = ProcessInfo.processInfo.environment["PLATFORM_FURNITURE_PREVIEW"] else {
+            throw XCTSkip("PLATFORM_FURNITURE_PREVIEW=<file.json> writes the preview's meshes")
+        }
+        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 32_768),
+                                  economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        // Two tracks 10 m apart, 2 km long; a third on a viaduct 10 m up, 60 m to the south.
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 12_800))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 122_880, y: 12_800))
+        let c = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 13_440))
+        let d = try world.buildTrackNode(at: WorldCoordinate(x: 122_880, y: 13_440))
+        let e = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 17_280, z: 640))
+        let f = try world.buildTrackNode(at: WorldCoordinate(x: 122_880, y: 17_280, z: 640))
+        try world.buildTrackEdge(from: a, to: b)
+        try world.buildTrackEdge(from: c, to: d)
+        try world.buildTrackEdge(from: e, to: f, structure: .elevated)
+        let island = try world.buildStation(named: "Island", at: PlanPoint(x: 25_600, y: 12_000))
+        try world.addTrackPlatform(island.id, on: .edge(1), from: 290 * 64, to: 510 * 64)
+        try world.addTrackPlatform(island.id, on: .edge(2), from: 290 * 64, to: 510 * 64)
+        let side = try world.buildStation(named: "Side", at: PlanPoint(x: 76_800, y: 12_000))
+        try world.addTrackPlatform(side.id, on: .edge(1), from: 1_090 * 64, to: 1_310 * 64)
+        let raised = try world.buildStation(named: "Raised", at: PlanPoint(x: 25_600, y: 18_000))
+        try world.addTrackPlatform(raised.id, on: .edge(3), from: 290 * 64, to: 510 * 64)
+        let scene = Map3DScene(world: world)
+        var positions: [Float] = [], colours: [Int] = [], lit: [Bool] = [], indices: [Int] = []
+        for chunk in scene.chunks {
+            for mesh in [chunk.mesh, chunk.close] {
+                let first = lit.count
+                for vertex in mesh.vertices {
+                    positions += [vertex.x, vertex.y, vertex.z]
+                    colours.append(Int(vertex.color & 0xFF_FFFF))
+                    lit.append(vertex.glows)
+                }
+                indices += mesh.indices.map { first + Int($0) }
+            }
+        }
+        func middle(_ x: Int64, _ y: Int64, _ z: Int64 = 0) -> [Float] {
+            let point = scene.point(WorldCoordinate(x: x, y: y, z: z))
+            return [point.x, point.y, point.z]
+        }
+        let json: [String: Any] = ["island": middle(25_600, 13_120), "side": middle(76_800, 12_800), "raised": middle(25_600, 17_280, 640),
+                                   "positions": positions, "colours": colours, "lit": lit, "indices": indices]
+        try JSONSerialization.data(withJSONObject: json).write(to: URL(fileURLWithPath: out))
+    }
+
     /// Decision 436's count for its budget: what one platform adds.
     func testTrianglesAPlatformAdds() {
         for system in ["tra_sched", "mrt"] {

@@ -191,6 +191,7 @@ struct StationPanel: View {
         case .depot: depotSection
         case .transfer: transferSection(station)
         case .platforms: platformsSection(station)
+        case .sounds: soundsSection
         case .tripsByHour: tripsByHourSection(station)
         case .passengers: passengersSection(station)
         // Decision 506: room for more to wait, once busy enough.
@@ -719,6 +720,56 @@ struct StationPanel: View {
             .accessibilityIdentifier("station.operation")
         } footer: {
             Text(verbatim: mode.detail(in: session.language))
+        }
+    }
+
+    /// Decision 866: the arrival chime and the departure melody the
+    /// station plays, picked from menus; each pick plays once
+    /// (`GameSession.setSelectedStationChime(_:)`,
+    /// `setSelectedStationDepartureMelody(_:)`). Not at a depot.
+    @ViewBuilder private var soundsSection: some View {
+        if let sounds = session.selectedStationSounds {
+            let language = session.language
+            Section {
+                Picker(selection: Binding(
+                    get: { sounds.chime },
+                    set: { session.setSelectedStationChime($0) }
+                )) {
+                    Text(verbatim: sounds.chimeTitle(nil, in: language)).tag(StationChime?.none)
+                    ForEach(StationChime.allCases, id: \.self) { chime in
+                        Text(verbatim: sounds.chimeTitle(chime, in: language)).tag(StationChime?.some(chime))
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Arrival bell", "到站鈴"))
+                    } icon: {
+                        Image(systemName: "bell")
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("station.chime")
+                Picker(selection: Binding(
+                    get: { sounds.departureMelody },
+                    set: { session.setSelectedStationDepartureMelody($0) }
+                )) {
+                    Text(verbatim: StationSoundsChoice.melodyTitle(nil, in: language)).tag(DepartureMelody?.none)
+                    ForEach(DepartureMelody.allCases, id: \.self) { melody in
+                        Text(verbatim: StationSoundsChoice.melodyTitle(melody, in: language)).tag(DepartureMelody?.some(melody))
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Departure melody", "發車旋律"))
+                    } icon: {
+                        Image(systemName: "music.note")
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("station.departureMelody")
+            } header: {
+                Text(verbatim: language.text("Station Sounds", "車站鈴聲"))
+            } footer: {
+                Text(verbatim: StationSoundsChoice.note(in: language))
+            }
         }
     }
 
@@ -1350,15 +1401,14 @@ struct StationPanel: View {
     @ViewBuilder
     private func buyLineSection(_ station: Station) -> some View {
         if let buyable = session.buyableRealLine(at: station.id) {
+            // Decision 862: with the lines it is sold with.
+            let title = session.realLineBundle(of: buyable).title(in: session.language)
             Section {
                 Button {
                     session.offerRealLine(buyable)
                 } label: {
                     Label {
-                        Text(verbatim: session.language.text(
-                            "Buy the \(buyable.name(in: session.language))…",
-                            "收購\(buyable.name(in: session.language))…"
-                        ))
+                        Text(verbatim: session.language.text("Buy the \(title)…", "收購\(title)…"))
                     } icon: {
                         Image(systemName: "signature")
                     }

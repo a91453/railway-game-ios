@@ -123,7 +123,8 @@ public struct RealCableway: Hashable, Sendable {
     /// the length of OpenStreetMap way 65630200 (`aerialway=gondola`,
     /// osmtoday.com's Taiwan extract of 2026-11-06, ODbL), 1,860 m. Used to
     /// tell which cable cars run its cabins (``Map3DCableways/look(of:in:)``)
-    /// and to name its stops; the mode offers only Maokong to lay as it is.
+    /// and to name its stops; since decision 870 the mode offers it to lay
+    /// as it is too.
     public static let sunMoonLake = RealCableway(
         name: "日月潭纜車", englishName: "Sun Moon Lake Ropeway",
         stops: [
@@ -133,8 +134,47 @@ public struct RealCableway: Hashable, Sendable {
         legMetres: [1_860]
     )
 
+    /// Decision 870: the Wulai cable car, from Wulai Waterfall up to Yun
+    /// Hsien Resort: the two ends of OpenStreetMap way 188552077
+    /// (`aerialway=cable_car`, 烏來空中纜車; nodes 1991814130, the lower,
+    /// and 1991814131; osmtoday.com's Taiwan extract of 2026-11-18, ODbL),
+    /// its span the way's length, 381 m (the operator gives 382 m). The
+    /// real one is an aerial tramway of two large cabins; in the game it
+    /// runs as every cable car does (gap, decision 870).
+    public static let wulai = RealCableway(
+        name: "烏來空中纜車", englishName: "Wulai Cable Car",
+        stops: [
+            Stop(name: "烏來瀑布", englishName: "Wulai Waterfall", latitude: 24.8489501, longitude: 121.5512864, boards: true),
+            Stop(name: "雲仙樂園", englishName: "Yun Hsien Resort", latitude: 24.845975, longitude: 121.5531608, boards: true)
+        ],
+        legMetres: [381]
+    )
+
+    /// Decision 872: Hong Kong's Ngong Ping cable car (Ngong Ping 360),
+    /// from Tung Chung over the bay and Lantau's hills to Ngong Ping: two
+    /// stations and two angle stations along OpenStreetMap way 26351045
+    /// (`aerialway=gondola`, 昂坪纜車; osmtoday.com's Hong Kong extract of
+    /// 2026-11-18, ODbL). The stations are the way's ends (nodes
+    /// 4402125187 東涌 and 4402125186 昂坪), the angle stations its two
+    /// `aerialway=deflection_roller` nodes where the rope turns (288710867
+    /// 機場島, 288709227 彌勒山); each span is the way's metres between
+    /// them, 5,767 m in all (the operator says 5.7 km). It meets MTR Tung
+    /// Chung (the Tung Chung Line's end in `hongkong/track_stations.geojson`),
+    /// 323 m from the cable car's terminal.
+    public static let ngongPing = RealCableway(
+        name: "昂坪纜車", englishName: "Ngong Ping Cable Car",
+        stops: [
+            Stop(name: "東涌", englishName: "Tung Chung", latitude: 22.2902758, longitude: 113.9385089, boards: true),
+            Stop(name: "機場島", englishName: "Airport Island", latitude: 22.2917448, longitude: 113.9327026, boards: false),
+            Stop(name: "彌勒山", englishName: "Nei Lak Shan", latitude: 22.2691908, longitude: 113.9079404, boards: false),
+            Stop(name: "昂坪", englishName: "Ngong Ping", latitude: 22.2563956, longitude: 113.9014311, boards: true)
+        ],
+        legMetres: [619, 3_575, 1_573],
+        meets: Stop(name: "東涌", englishName: "Tung Chung", latitude: 22.289158, longitude: 113.941405, boards: true)
+    )
+
     /// The real cable cars the mode knows by their stops.
-    public static let all: [RealCableway] = [.maokong, .sunMoonLake]
+    public static let all: [RealCableway] = [.maokong, .sunMoonLake, .wulai, .ngongPing]
 
     /// The real cable car `cableway` was laid as (decision 583: its stops'
     /// names for the follow bar): the same stops on the same cells, the
@@ -176,16 +216,29 @@ extension GameSession {
         cablewayDraftMeets = nil
     }
 
-    /// The real cable car on this map the mode offers to lay as it is
-    /// (decision 574's demo), while nothing is drawn and none is built
-    /// from its first stop; `nil` otherwise.
-    public var realCablewayOffer: RealCableway? {
-        guard cablewayDraft.isEmpty, let stops = RealCableway.maokong.stops(in: world),
-              !world.cableways.contains(where: { $0.stops.first?.cell == stops.first?.cell }) else { return nil }
-        return RealCableway.maokong
+    /// The real cable cars on this map the mode offers to lay as they are
+    /// (decision 574's demo; decision 870: every one of
+    /// ``RealCableway/all``, not Maokong alone), while nothing is drawn:
+    /// those whose stops are all on the map and none is built from their
+    /// first stop, nearest ``realLineFocus`` first.
+    public var realCablewayOffers: [RealCableway] {
+        guard cablewayDraft.isEmpty else { return [] }
+        let focus = realLineFocus
+        return RealCableway.all.enumerated().compactMap { index, real -> (distance: Double, index: Int, real: RealCableway)? in
+            guard let first = real.stops(in: world)?.first,
+                  !world.cableways.contains(where: { $0.stops.first?.cell == first.cell }) else { return nil }
+            let middle = first.cell.middle
+            let dx = Double(middle.x - focus.x), dy = Double(middle.y - focus.y)
+            return (dx * dx + dy * dy, index, real)
+        }.sorted { ($0.distance, $0.index) < ($1.distance, $1.index) }.map(\.real)
     }
 
-    /// Draws `real` (``realCablewayOffer``) as the mode's stops, with its
+    /// The nearest of ``realCablewayOffers``, or `nil`.
+    public var realCablewayOffer: RealCableway? {
+        realCablewayOffers.first
+    }
+
+    /// Draws `real` (one of ``realCablewayOffers``) as the mode's stops, with its
     /// real spans, for the action button to build.
     public func traceRealCableway(_ real: RealCableway) {
         guard let stops = real.stops(in: world) else { return }

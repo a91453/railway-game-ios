@@ -594,9 +594,21 @@
 ///     it says the save is newer than it instead. A save of any earlier
 ///     version needs no step: far demand is off and no line runs on the
 ///     state's track.
+/// 109. Station sounds (decision 866): a station can have `"chime"`, the
+///     arrival chime the player set it to ring, and `"departureMelody"`,
+///     the melody it plays as a train's doors close. A build that reads
+///     only an earlier version would drop them, and the station would ring
+///     what its place calls for again, so it says the save is newer than
+///     it instead. A save of any earlier version needs no step: no station
+///     was set to either.
+/// 110. More departure melodies (decision 868): a station's
+///     `"departureMelody"` can be `"d"`, `"e"` or `"f"`. A build that reads
+///     only an earlier version knows three melodies and would call such a
+///     save damaged, so it says the save is newer than it instead. A save
+///     of any earlier version needs no step: its melodies read as before.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 108
+    public static let currentVersion = 110
 
     public let world: GameWorld
 
@@ -859,6 +871,11 @@ extension SavedGame: Codable {
         // Version 107 or earlier to 108: a world without `"farDemand"`
         // draws its trips as before, and a line bought without
         // `"stateTrack"` keeps its track (decision 828): nothing to turn.
+        // Version 108 or earlier to 109: a station without `"chime"` or
+        // `"departureMelody"` plays what its place calls for (decision
+        // 866): nothing to turn.
+        // Version 109 or earlier to 110: a station's melody is one of the
+        // first three, which read as before (decision 868): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

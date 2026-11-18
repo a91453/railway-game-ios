@@ -21,14 +21,14 @@ final class RealLineOfferPreparingTests: XCTestCase {
 
         session.offerRealLine(line)
         XCTAssertNil(session.shownRealLineOffer, "not laid out on the main actor")
-        XCTAssertEqual(session.preparingRealLine, line)
+        XCTAssertEqual(session.preparingRealLine?.lines, [line])
 
         await session.realLineOfferPrepared()
         let offer = try XCTUnwrap(session.shownRealLineOffer)
         XCTAssertNil(session.preparingRealLine)
         let onTheMainActor = session.realLineOffer(for: line)
         XCTAssertNil(offer.problem, offer.problem ?? "")
-        XCTAssertEqual(offer.acquisition, onTheMainActor.acquisition)
+        XCTAssertEqual(offer.acquisitions, onTheMainActor.acquisition.map { [$0] })
         XCTAssertEqual(offer.price, onTheMainActor.price)
     }
 
@@ -49,7 +49,7 @@ final class RealLineOfferPreparingTests: XCTestCase {
         let built = try session.performEdit { try $0.buildStation(named: "十分", at: PlanPoint(x: Int64(at.x), y: Int64(at.y))).id }
 
         await session.realLineOfferPrepared()
-        let offer = try XCTUnwrap(session.shownRealLineOffer?.acquisition, session.shownRealLineOffer?.problem ?? "")
+        let offer = try XCTUnwrap(session.shownRealLineOffer?.acquisitions?.first, session.shownRealLineOffer?.problem ?? "")
         XCTAssertEqual(offer.stops.compactMap(\.existing), [built], "laid out on the world with the new station")
         XCTAssertEqual(offer, session.realLineOffer(for: line).acquisition)
     }

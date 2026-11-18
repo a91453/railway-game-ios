@@ -250,7 +250,9 @@ final class Map3DStreamingTests: XCTestCase {
         XCTAssertFalse(first.build.isEmpty)
         XCTAssertLessThanOrEqual(first.build.count, Map3DStreaming.blockSide * Map3DStreaming.blockSide)
         XCTAssertTrue(first.build.allSatisfy { !window.built.contains($0) })
-        XCTAssertEqual(first.build, Map3DStreaming.block(of: window.grid.plan(target: .zero, velocity: .zero, built: window.built).build))
+        // HSRPACE (decision 861): filled with what the plan keeps and is not built.
+        let fill = Set(window.grid.wantedWithin(slack: Map3DStreaming.slack, target: .zero, velocity: .zero).map(\.key)).subtracting(window.built)
+        XCTAssertEqual(first.build, Map3DStreaming.block(of: window.grid.plan(target: .zero, velocity: .zero, built: window.built).build, filling: fill))
         // Too soon, and then while it builds: nothing more.
         XCTAssertTrue(window.step(target: .zero, at: 0.1).build.isEmpty)
         XCTAssertTrue(window.step(target: .zero, at: 0.5).build.isEmpty)

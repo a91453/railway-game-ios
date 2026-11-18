@@ -217,17 +217,6 @@ public struct RealBranchLine: Hashable, Sendable {
         isTaoyuanAirport ? TrackRise.slack + [24.0, 36, 48].map { $0 * RealWorldDemo.metre } : TrackRise.slack
     }
 
-    /// Decision 678: whether its stations in the real line's tunnels are
-    /// laid under the ground (``RealLineAcquisition/isSunk(at:before:after:carried:)``)
-    /// and the water over those tunnels is passed under, not bridged
-    /// (``TrackRise``'s `sunk`). Only the Wenhu Line, whose Songshan
-    /// Airport and Dazhi stations and the Keelung River between them were
-    /// laid on the ground and bridged; the other lines with real stations
-    /// underground (Qizhang on the Xiaobitan branch, the Taoyuan Airport
-    /// MRT under the Tamsui River and at Huanbei) stay as they were until
-    /// each is measured.
-    var followsRealTunnels: Bool { id == "trtc:BR" }
-
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
     /// rail joins the one bought before, whose riders that paid for.
@@ -523,15 +512,28 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// the station's do not clash.
     static let sunkStation = TrackRise.carriedDepth
 
+    /// Decision 867: how far past a real tunnel's end a station's middle
+    /// may be and still stand in it (``isSunk(at:before:after:carried:)``):
+    /// about half a platform.
+    static let sunkNear = 96.0 * RealWorldDemo.metre
+
     /// Decision 678, decision 462's other half: whether a station `at`
     /// along a line's path, its neighbours `before` and `after` (`nil` at
     /// an end), stands in the real line's tunnel: a tunnel at least
     /// ``TrackRise/shortestCarried`` long over it carries the line on at
     /// least that far toward each neighbour.
+    ///
+    /// Decision 867: the tunnel may begin or end up to ``sunkNear`` from
+    /// the station's middle. The real tunnels are drawn from one
+    /// station's middle to the next's (the Tung Chung Line's from Hong
+    /// Kong, the Hakozaki Line's from Gofukumachi), so a station at a
+    /// tunnel's end stood on its very edge and was in it or not by a
+    /// rounding.
     static func isSunk(at: Double, before: Double?, after: Double?, carried: [TrackRise.Carried]) -> Bool {
         let reach = TrackRise.shortestCarried
         return carried.contains { stretch in
-            stretch.kind == .tunnel && stretch.isLong && stretch.range.contains(at)
+            stretch.kind == .tunnel && stretch.isLong
+                && stretch.range.lowerBound - sunkNear <= at && at <= stretch.range.upperBound + sunkNear
                 && before.map { stretch.range.lowerBound <= at - min(reach, at - $0) } ?? true
                 && after.map { stretch.range.upperBound >= at + min(reach, $0 - at) } ?? true
         }
@@ -644,7 +646,7 @@ extension GameSession {
 
     /// The lines on sale and those the map holds only part of, worked out
     /// again only when what they come from changes.
-    private var realLineSale: RealLineSale {
+    var realLineSale: RealLineSale {
         let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
         if let memo = buyableRealLinesMemo, memo.key == key { return memo.sale }
         let sale = workOutRealLineSale()
@@ -659,6 +661,10 @@ extension GameSession {
             guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { return nil }
             return RealBranchLine(network: network, english: names.english, chinese: names.chinese, stops: runs.stops)
         }
+        // Decision 862: every line the map holds whole, bought or not,
+        // by its id, with its whole line's stops: which lines share a
+        // station does not change as they are bought.
+        var whole: [(id: String, system: String, stops: [String])] = lines.map { ($0.id, $0.system, $0.stops) }
         // Decision 400: the light rails; one sharing its first stations
         // with a line bought, from where they part, or not at all where its
         // trips from there do not fit.
@@ -666,30 +672,41 @@ extension GameSession {
         // when its files are read.
         for rail in RealBranchLine.urbanLines + RealBranchLine.overseasLines {
             let id = "\(RealBranchLine.dataSystem(of: rail.system)):\(rail.network)"
-            let after = rail.shares.flatMap { world.acquisition(of: $0) == nil ? nil : $0 }
-            guard let runs = RealBranchLine.metroRuns(of: id, after: after, in: railways) else {
+            if let runs = RealBranchLine.metroRuns(of: id, after: nil, in: railways) { whole.append((id, rail.system, runs.stops)) }
+            guard let line = RealBranchLine.onSale(rail, in: world, railways: railways) else {
                 if world.acquisition(of: id) != nil { sale.bought = true }
                 continue
             }
-            lines.append(RealBranchLine(
-                network: rail.network, english: rail.english, chinese: rail.chinese, stops: runs.stops, system: rail.system, after: after,
-                tier: rail.tier, leavesALine: rail.leavesALine, ring: runs.ring
-            ))
+            lines.append(line)
+        }
+        func isOnTheMap(_ name: String, system: String) -> Bool {
+            realPoint(of: name, system: system, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
         }
         for line in lines {
             guard world.acquisition(of: line.id) == nil else {
                 sale.bought = true
                 continue
             }
-            let onTheMap = line.stops.count { name in
-                realPoint(of: name, system: line.system, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
-            }
+            let onTheMap = line.stops.count { isOnTheMap($0, system: line.system) }
             if onTheMap == line.stops.count {
                 sale.lines.append(line)
             } else if onTheMap > 0 {
                 sale.partlyOnTheMap.append(line)
             }
         }
+        // Decision 862: the lines on sale that share a station with
+        // another the map holds whole (one bought too) are sold together.
+        whole.removeAll { line in !line.stops.allSatisfy { isOnTheMap($0, system: line.system) } }
+        let groups = RealLineBundle.groups(of: whole.map { ($0.system, $0.stops) })
+        let groupOf = Dictionary(zip(whole.map(\.id), groups), uniquingKeysWith: { first, _ in first })
+        var together: [Int: [RealBranchLine]] = [:], order: [Int] = []
+        for (index, line) in sale.lines.enumerated() {
+            // A line the list does not hold whole (none today) is sold alone.
+            let group = groupOf[line.id] ?? -1 - index
+            if together[group] == nil { order.append(group) }
+            together[group, default: []].append(line)
+        }
+        sale.bundles = order.compactMap { together[$0].map(RealLineBundle.init) }
         return sale
     }
 
@@ -736,7 +753,6 @@ extension GameSession {
         return place.stations.lazy.compactMap { self.buyableRealLine(through: $0.chinese, system: $0.system.id) }.first
     }
 
-    /// Opens the purchase card for `line`, laid out and priced now.
     /// Opens the purchase card for `line` (decision 497): at once, saying
     /// it is being prepared (``preparingRealLine``), while the line is laid
     /// out and priced off the main actor (``realLineLaying``; up to 2 s on
@@ -744,20 +760,23 @@ extension GameSession {
     /// offer shows only if it was laid out on the world as it still is
     /// (``commandRevision`` and the railways unchanged); otherwise it is
     /// laid out again on the world as it is now. Closing the card drops it.
+    /// Decision 862: the card is that of the bundle `line` is sold in,
+    /// every line that shares a station with it.
     public func offerRealLine(_ line: RealBranchLine) {
         shownRealLineOffer = nil
-        preparingRealLine = line
-        layRealLineOffer(line)
+        let bundle = realLineBundle(of: line)
+        preparingRealLine = bundle
+        layRealLineOffer(bundle)
     }
 
-    private func layRealLineOffer(_ line: RealBranchLine) {
+    private func layRealLineOffer(_ bundle: RealLineBundle) {
         realLineOfferTask?.cancel()
         let laying = realLineLaying, revision = commandRevision, railways = railwaysRevision
         realLineOfferTask = Task {
-            let offer = await Task.detached(priority: .userInitiated) { laying.offer(for: line) }.value
-            guard !Task.isCancelled, preparingRealLine == line else { return }
+            let offer = await Task.detached(priority: .userInitiated) { laying.offer(for: bundle) }.value
+            guard !Task.isCancelled, preparingRealLine == bundle else { return }
             guard commandRevision == revision, railwaysRevision == railways else {
-                layRealLineOffer(line)
+                layRealLineOffer(bundle)
                 return
             }
             realLineOfferTask = nil
@@ -953,6 +972,13 @@ extension RealLineLaying {
         func offer(depot: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
             let laid = self.offer(for: line, raising: .viaducts, depot: depot)
             guard laid.crossesTrack else { return (laid.offer, laid.laid) }
+            // SHARED-STATION-THROUGH: before standing the shared stations
+            // up, the line laid beside the company's track at a station it
+            // shares between its ends too (Fukuoka's Kuko Line, bought last,
+            // along the Hakozaki Line's track at Nakasu-Kawabata), at the
+            // height of the platforms there.
+            let through = self.offer(for: line, raising: .viaducts, depot: depot, besideThrough: true)
+            if through.offer.problem == nil { return (through.offer, through.laid) }
             let raised = self.offer(for: line, raising: .viaductsAndShared, depot: depot)
             if raised.offer.problem == nil { return (raised.offer, raised.laid) }
             // Decision 552 (continued): still meeting another track at one
@@ -1049,8 +1075,42 @@ extension RealLineLaying {
     /// held at least ``TrackStructure/clearance`` and a margin over each
     /// track of the company's it crosses (under it, where the line as
     /// first laid runs lower), as a real line bridges another.
+    ///
+    /// SHARED-STATION-THROUGH: with `besideThrough`, a station between the
+    /// line's ends that the company has already is laid beside its track
+    /// as an end is (``sharedEnds(of:points:through:shared:extent:)``);
+    /// refused where no such station moves the way, so that only a line
+    /// that needs it is laid so.
+    ///
+    /// Decision 875 (TSING-YI-LEVEL): a station the company has already
+    /// stands at the height of its platforms there up on a viaduct too,
+    /// as at those on the ground (decision 863): one station, one level.
+    /// Where the line cannot be laid so (no grade reaches it, or its
+    /// track then meets another's at one level: the Neiwan Line's crosses
+    /// the Liujia Line's at Zhuzhong, which only two levels allow), it is
+    /// laid as before the decision, each station by its own line's real
+    /// structure.
     func offer(
-        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false
+        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false
+    ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
+        var followed = false
+        let level = offer(
+            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, followingPlatforms: true,
+            followed: &followed
+        )
+        guard level.offer.problem != nil, followed else { return level }
+        return offer(
+            for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, followingPlatforms: false,
+            followed: &followed
+        )
+    }
+
+    /// ``offer(for:raising:depot:clearingTrack:besideThrough:)``, with
+    /// decision 875's rule or without it; `followed` is set where the rule
+    /// moved a station from where its own line's structure stood it.
+    private func offer(
+        for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, followingPlatforms: Bool,
+        followed: inout Bool
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
@@ -1242,9 +1302,19 @@ extension RealLineLaying {
         // beside that track, an island's width out, not over it.
         let inItsLane = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
         let besideShared = sharedEnds(
-            of: inItsLane, points: points, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
-            extent: { index in Self.endStationExtent(of: line, name: runs.stops[index], tracks: runs.tracks[runs.stops[index]] ?? 1, layout: layout) }
+            of: inItsLane, points: points, through: besideThrough, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
+            extent: { index in
+                let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
+                guard index > 0, index < runs.stops.count - 1 else {
+                    return Self.endStationExtent(of: line, name: name, tracks: tracks, layout: layout)
+                }
+                let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
+                return Self.throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
+            }
         )
+        if besideThrough, besideShared?.moved.contains(where: { $0 > 0 && $0 < runs.stops.count - 1 }) != true {
+            return refused("No station between the line's ends is beside the company's track.", "這條線中間沒有和公司軌道並排的共用車站。")
+        }
         let path = besideShared?.path ?? inItsLane
         let along = points.map { path.nearest($0) }
         guard along.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(along, along.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
@@ -1334,7 +1404,51 @@ extension RealLineLaying {
         // Decision 809: whether one of its stations is the company's
         // already, which ``StationRaising/viaductsAndShared`` stands up.
         func sharesAStation() -> Bool { junctionStation != nil || runs.stops.indices.contains { sameName($0) != nil } }
-        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system) ?? []
+        // Decision 867: a line laid in a lane beside another's drawing
+        // (decision 753) is its lane's offset from the real tunnels the
+        // two share (the Airport Express 25 m from the Tung Chung Line's
+        // under Hong Kong and Kowloon), so its tunnels are looked for that
+        // much further off.
+        // Decision 875: and its bridges and viaducts: the Airport Express
+        // found none of the viaduct Tsing Yi's station stands on nor of
+        // the Lantau Link's bridges, 25 m off its lane, and ran along the
+        // ground and low over the water beside the Tung Chung Line up on
+        // them.
+        let lane = abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) * RealLineAcquisition.metre
+        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, reach: RealRailStructures.reach + lane) ?? []
+        // Decision 678: the stations in the line's real tunnel (the Wenhu
+        // Line's first; decision 867, Hong Kong's and Fukuoka's; decision
+        // 871, every line's: Qizhang on the Xiaobitan branch, Huanbei on
+        // the Taoyuan Airport MRT, which also passes under the Tamsui
+        // River). Decision
+        // 867: and one the real tunnel reaches from one side only, when
+        // the station next to it on the other side is under the ground
+        // (in the real tunnel itself, or at the company's underground
+        // platforms there): the Hakozaki Line's tunnel is drawn from
+        // Gofukumachi, 440 m from Nakasu-Kawabata's platforms under the
+        // Kuko Line's.
+        let sunkStations: [Bool] = {
+            let before = { (index: Int) in index > 0 ? along[index - 1].along : nil }
+            let after = { (index: Int) in index < along.count - 1 ? along[index + 1].along : nil }
+            let strict = along.indices.map {
+                RealLineAcquisition.isSunk(at: along[$0].along, before: before($0), after: after($0), carried: carried)
+            }
+            func isUnder(_ index: Int) -> Bool {
+                if strict[index] { return true }
+                guard let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
+                      let there = sharedPlatformHeight(of: station) else { return false }
+                return there <= ground(path.point(at: along[index].along)) - RealLineAcquisition.sunkStation + RealWorldDemo.metre
+            }
+            return along.indices.map { index in
+                if strict[index] { return true }
+                let at = along[index].along
+                let fromAfter = index > 0 && after(index) != nil && isUnder(index - 1)
+                    && RealLineAcquisition.isSunk(at: at, before: nil, after: after(index), carried: carried)
+                let fromBefore = index < along.count - 1 && before(index) != nil && isUnder(index + 1)
+                    && RealLineAcquisition.isSunk(at: at, before: before(index), after: nil, carried: carried)
+                return fromAfter || fromBefore
+            }
+        }()
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
             let zone = (at - half)...(at + half)
@@ -1385,30 +1499,52 @@ extension RealLineLaying {
             // on it, clear over a station on the ground beside it (the
             // Liujia Line's platforms at Zhuzhong over the Neiwan Line's).
             let shared = (index == 0 ? junctionStation?.id : sameName(index)) != nil
+            // Decision 809: stood up to clear the company's track there.
+            let stoodUp = raising == .viaductsAndShared && shared
             let raised = switch raising {
             case .none: false
             case .viaducts, .viaductsAndShared:
-                (raising == .viaductsAndShared && shared) || RealLineAcquisition.isRaised(
+                stoodUp || RealLineAcquisition.isRaised(
                     at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
                 )
             }
             // Decision 678: one in its line's real tunnel stands down in
             // it (the Wenhu Line's Songshan Airport and Dazhi).
-            let sunk = !raised && line.followsRealTunnels && RealLineAcquisition.isSunk(
-                at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
-            )
+            let sunk = !raised && sunkStations[index]
             let low = raised
                 ? height + RealLineAcquisition.raisedStation
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
             var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
             // SHARED-STATION-LEVEL: laid beside the company's station, at
-            // the height of its platforms there.
-            if !raised, !sunk, besideShared?.moved.contains(index) == true,
-               let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index),
-               let there = sharedPlatformHeight(of: station), (level.low...level.high).contains(there) {
+            // the height of its platforms there. SHARED-STATION-THROUGH: at
+            // any station of the company's, laid beside it or not (Fukuoka's
+            // two Hakatas, 150 m apart), and between the ends too.
+            // Decision 867: a station in the real tunnel too, at the
+            // company's platforms there wherever they are under the
+            // ground's reach (in a tunnel as this one would be, or on the
+            // ground in a game saved before); and one not in the real
+            // tunnel's drawing (the Hakozaki Line's first 440 m, from
+            // Nakasu-Kawabata) down at the company's underground platforms.
+            let under = (height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach)...(height + RealWorldDemo.stationReach)
+            let station = index == 0 ? junctionStation?.id ?? sameName(index) : sameName(index)
+            if !raised, let station, let there = sharedPlatformHeight(of: station),
+               (level.low...level.high).contains(there) || under.contains(there) {
                 level = TrackRise.Level(span, at: there)
             }
             level.staysUnder = sunk
+            // Decision 875: one station, one level, on a viaduct too. At
+            // the company's platforms up on a viaduct there: a station
+            // on the line's own real viaduct (the Tung Chung Line's and
+            // the Airport Express's at Tsing Yi, to the metre), and one
+            // on none where the company has no platform on the ground
+            // (the Blue Coast Line's at Binhai Shalun, at the Green
+            // Mountain Line's 5 m over falling ground). Not one stood up
+            // to clear them (decision 809), nor one in its real tunnel.
+            if followingPlatforms, !stoodUp, !sunk, let station, let there = sharedPlatformHeight(of: station, onViaduct: true),
+               raised || sharedPlatformHeight(of: station) == nil {
+                level = TrackRise.Level(span, at: there)
+                followed = true
+            }
             levels.append(level)
         }
         // A double track's second track, for the trains toward the
@@ -1534,8 +1670,7 @@ extension RealLineLaying {
             }
         }
         guard var rise = TrackRise(
-            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack,
-            sunk: line.followsRealTunnels
+            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack, sunk: true
         ) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
@@ -1546,8 +1681,7 @@ extension RealLineLaying {
             let crossings = RealLineLaying.crossingLevels(of: world.network, along: path, rise: rise)
             guard !crossings.isEmpty,
                   let clear = TrackRise(
-                      path: path, ground: ground, water: water, levels: levels + crossings, grade: line.rulingGrade, carried: carried, slack: line.stationSlack,
-                      sunk: line.followsRealTunnels
+                      path: path, ground: ground, water: water, levels: levels + crossings, grade: line.rulingGrade, carried: carried, slack: line.stationSlack, sunk: true
                   ) else {
                 return refused(
                     "The track cannot climb along this line within the steepest grade.",
@@ -2140,20 +2274,33 @@ public struct RealLineAcquired: Hashable, Sendable {
     public var startsToday = false
     /// Decision 535 (continued, KLRT): whether it is a ring, with no ends.
     public var ring = false
+    /// Decision 862: the lines bought with it in one purchase, in the
+    /// order they were laid after it; none for a line bought alone.
+    public var with: [RealLineAcquired] = []
 
     public static func == (a: RealLineAcquired, b: RealLineAcquired) -> Bool {
         a.line == b.line && a.name == b.name && a.color == b.color && a.ends == b.ends && a.stations == b.stations && a.metres == b.metres
             && a.trains == b.trains && a.weekdayTrains == b.weekdayTrains && a.startsToday == b.startsToday && a.ring == b.ring
+            && a.with == b.with
     }
 
-    /// Where it runs, under the seal: its two ends, or round the ring.
+    /// What the card's band says: the line, or "Airport Express and 2
+    /// more" (``RealLineBundle/title(in:)``).
+    public func titleText(in language: DisplayLanguage) -> String {
+        with.isEmpty ? name : language.text("\(name) and \(with.count) more", "\(name)等 \(with.count + 1) 條路線")
+    }
+
+    /// Where it runs, under the seal: its two ends, or round the ring;
+    /// decision 862: how many lines, of several bought together.
     public func endsText(in language: DisplayLanguage) -> String {
-        ring ? language.text("Round the ring", "繞一圈") : "\(ends.from)—\(ends.to)"
+        guard with.isEmpty else { return language.text("\(with.count + 1) lines", "\(with.count + 1) 條路線") }
+        return ring ? language.text("Round the ring", "繞一圈") : "\(ends.from)—\(ends.to)"
     }
 
     /// The seal, as VoiceOver reads it.
     public func sealText(in language: DisplayLanguage) -> String {
-        ring ? language.text("Bought: round the ring", "收購：繞一圈")
+        guard with.isEmpty else { return language.text("Bought: \(with.count + 1) lines", "收購：\(with.count + 1) 條路線") }
+        return ring ? language.text("Bought: round the ring", "收購：繞一圈")
             : language.text("Bought: \(ends.from) to \(ends.to)", "收購：\(ends.from)—\(ends.to)")
     }
 
@@ -2168,6 +2315,13 @@ public struct RealLineAcquired: Hashable, Sendable {
             "\(stations) stations, \(km) km, \(trains) \(trains == 1 ? "train" : "trains")",
             "\(stations) 站、\(km) 公里、\(trains) 列車"
         )
+    }
+
+    /// The card's lines under the seal: ``sizeText(in:)``, or (decision
+    /// 862) each line bought with its name before its size.
+    public func sizeTexts(in language: DisplayLanguage) -> [String] {
+        guard !with.isEmpty else { return [sizeText(in: language)] }
+        return ([self] + with).map { $0.name + language.text(": ", "：") + $0.sizeText(in: language) }
     }
 
     public func handoverText(in language: DisplayLanguage) -> String {
@@ -2191,7 +2345,31 @@ public struct RealLineAcquired: Hashable, Sendable {
     }
 
     public func timetableText(in language: DisplayLanguage) -> String {
-        language.text("Real timetable: \(weekdayTrains) trains a weekday", "真實班次：平日 \(weekdayTrains) 班")
+        let weekdayTrains = with.reduce(weekdayTrains) { $0 + $1.weekdayTrains }
+        return language.text("Real timetable: \(weekdayTrains) trains a weekday", "真實班次：平日 \(weekdayTrains) 班")
+    }
+}
+
+extension RealLineAcquired {
+    /// What the card says of `acquisition`, bought as `line`.
+    init(_ acquisition: RealLineAcquisition, line: LineID, today: Bool) {
+        let main = acquisition.pieces.first
+        let ring = acquisition.ring == true
+        // A ring's main track and its seam, round once; a line with ends
+        // without the run-on past them.
+        let metres = ring
+            ? Int64(acquisition.pieces.prefix(3).enumerated().filter { $0.offset != 1 }.reduce(0) { $0 + ($1.element.distances.last ?? 0) } / RealLineAcquisition.metre)
+            : main.map { piece in
+                Int64(((piece.distances.last ?? 0) - 2 * RealLineAcquisition.runOn) / RealLineAcquisition.metre)
+            } ?? 0
+        // Wednesday: 1 << 3.
+        let weekday = acquisition.runs.count { $0.days & (1 << 3) != 0 }
+        self.init(
+            line: line, name: acquisition.lineName, color: acquisition.color,
+            ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
+            stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday,
+            startsToday: today, ring: ring
+        )
     }
 }
 
@@ -2215,23 +2393,7 @@ extension GameSession {
             )
         }
         guard let line = made?.line else { return false }
-        let main = acquisition.pieces.first
-        let ring = acquisition.ring == true
-        // A ring's main track and its seam, round once; a line with ends
-        // without the run-on past them.
-        let metres = ring
-            ? Int64(acquisition.pieces.prefix(3).enumerated().filter { $0.offset != 1 }.reduce(0) { $0 + ($1.element.distances.last ?? 0) } / RealLineAcquisition.metre)
-            : main.map { piece in
-                Int64(((piece.distances.last ?? 0) - 2 * RealLineAcquisition.runOn) / RealLineAcquisition.metre)
-            } ?? 0
-        // Wednesday: 1 << 3.
-        let weekday = acquisition.runs.count { $0.days & (1 << 3) != 0 }
-        lastLineAcquired = RealLineAcquired(
-            line: line.id, name: name, color: acquisition.color,
-            ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
-            stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday,
-            startsToday: today, ring: ring
-        )
+        lastLineAcquired = RealLineAcquired(acquisition, line: line.id, today: today)
         shownRealLineOffer = nil
         selectLine(line.id)
         playSound?(.lineAcquired)
@@ -2254,4 +2416,7 @@ struct RealLineSale {
     var lines: [RealBranchLine]
     var partlyOnTheMap: [RealBranchLine]
     var bought: Bool
+    /// Decision 862: ``lines`` as they are sold, those that share a
+    /// station together.
+    var bundles: [RealLineBundle] = []
 }

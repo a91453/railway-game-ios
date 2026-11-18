@@ -365,7 +365,8 @@ extension Map3DScene.Builder {
     /// Decision 375: `triangles` of `points` (laid `lift` over the drawn
     /// ground) less the trenches, each cut triangle's pieces laid as the
     /// rest are.
-    mutating func outsideTrenches(_ points: [Map3DPoint], triangles: [Int], lift: Float, roadCuts: Bool = true) -> (points: [Map3DPoint], triangles: [Int]) {
+    mutating func outsideTrenches(_ points: [Map3DPoint], triangles: [Int], lift: Float, roadCuts: Bool = true,
+                                  level: Bool = false) -> (points: [Map3DPoint], triangles: [Int]) {
         guard !points.isEmpty else { return (points, triangles) }
         let xs = points.map { Double($0.x) }, zs = points.map { Double($0.z) }
         let all = roadCuts ? [trackCover.trenches, roadGrade.cuts] : [trackCover.trenches]
@@ -381,11 +382,21 @@ extension Map3DScene.Builder {
                 keptTriangles += corner
                 continue
             }
+            // Decision 865: a road on its bed (`level`) keeps its own
+            // triangle's heights, not the ground's.
+            let (a, b, c) = (points[corner[corner.startIndex]], points[corner[corner.startIndex + 1]], points[corner[corner.startIndex + 2]])
+            let across = Double(b.z - c.z) * Double(a.x - c.x) + Double(c.x - b.x) * Double(a.z - c.z)
             for piece in pieces {
                 let start = kept.count
                 for p in piece {
                     let x = Float(p.x), z = Float(p.z)
-                    kept.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                    if level, abs(across) > 1e-9 {
+                        let u = (Double(b.z - c.z) * (p.x - Double(c.x)) + Double(c.x - b.x) * (p.z - Double(c.z))) / across
+                        let v = (Double(c.z - a.z) * (p.x - Double(c.x)) + Double(a.x - c.x) * (p.z - Double(c.z))) / across
+                        kept.append(Map3DPoint(x, Float(u * Double(a.y) + v * Double(b.y) + (1 - u - v) * Double(c.y)), z))
+                    } else {
+                        kept.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
+                    }
                 }
                 keptTriangles += Self.fan(piece.count).map { $0 + start }
             }

@@ -432,14 +432,17 @@ public struct Map3DScene: Sendable {
     /// are not kept. Decision 359 (續): `trackCover` is the whole scene's
     /// (``trackCover``), worked out again when `nil`. Decision 368: with
     /// `detail`, a scene point, only the chunks within ``detailRadius`` of
-    /// it in full (``Chunk/coarse``). Decision 610 續: the real buildings'
-    /// street fronts only with `facades` (``Map3DRealFacade/mayDraw(quality:device:)``).
+    /// it in full (``Chunk/coarse``); HSRPACE (decision 861): with
+    /// `detailAhead` too, within it of the way from `detail` to there.
+    /// Decision 610 續: the real buildings' street fronts only with
+    /// `facades` (``Map3DRealFacade/mayDraw(quality:device:)``).
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
                               cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
                               landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
                               noBuild: RealNoBuildLand? = nil,
-                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, facades: Bool = true) -> [Chunk] {
+                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, detailAhead: Map3DPoint? = nil,
+                              facades: Bool = true) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
         let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
@@ -450,7 +453,7 @@ public struct Map3DScene: Sendable {
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
                                baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, landCover: landCover,
                                lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail,
-                               facades: facades, studies: map)
+                               detailAhead: detailAhead, facades: facades, studies: map)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -494,12 +497,13 @@ public struct Map3DScene: Sendable {
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
          landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
-         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, detailAhead: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
          studies: WorldRegion? = nil) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         builder.detail = detail
+        builder.detailAhead = detailAhead
         builder.studyRegion = studies
         builder.buildsFacades = facades
         // Decision 811: the land cover round the region, for the ground
@@ -533,6 +537,7 @@ public struct Map3DScene: Sendable {
         // first, as its trenches are cut out of the ground and what lies
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
+        builder.undergroundStations = Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
         builder.time("track cover")
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
@@ -573,6 +578,8 @@ public struct Map3DScene: Sendable {
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
         // Decision 791: Hong Kong's landmark towers, clear of the track.
         if let frame = RealWorldFrame(world: world) { builder.addHongKongLandmarks(frame: frame) }
+        // Decision 869: the suspension bridges' towers and cables.
+        builder.addSuspensionBridges()
         // Decision 625: the real stations' exterior studies, as landmarks,
         // cut clear of the track.
         let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
@@ -1156,9 +1163,16 @@ extension Map3DScene {
         var platformLines: [[Map3DPoint]] = []
         /// Decision 321: the platforms as laid, for the station kit.
         var laidPlatforms: [LaidPlatform] = []
+        /// Decision 860: the underground platforms as laid, for their
+        /// props and screen doors (``addPlatformProps``) only: no canopy,
+        /// building, street or shop stands by them as by those above.
+        var laidUnderground: [LaidPlatform] = []
         /// Decision 436: each station's station kit system
         /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
         var stationSystems: [StationID: String] = [:]
+        /// Decision 874: the stations under a shell of their own
+        /// (decision 827), with no kit canopy a sign could hang from.
+        var shellRoofed: Set<StationID> = []
         var piers: [Map3DPoint] = []
         /// Decision 407: the viaducts laid and their piers, drawn together
         /// (``addViaducts()``) so the tracks of a pair share a pier and a
@@ -1252,6 +1266,9 @@ extension Map3DScene {
         /// Decision 791: the ground Hong Kong's landmarks stand on, where
         /// no footprint is drawn.
         var landmarkPlots: [PlacedSquare] = []
+        /// Decision 869: the suspension bridges round the scene, once found
+        /// (``suspensionBridges()``).
+        var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 455: whether the simplified city's boxes are kept as
         /// instances (the city's lots), not vertices.
@@ -1278,13 +1295,22 @@ extension Map3DScene {
         /// Decision 359 (續): the whole network's track, for the tunnels
         /// beside a tunnel (``addBore(_:into:)``).
         var trackCover = Map3DTrackCover()
+        /// Decision 860: the underground platforms and their stations'
+        /// boxes, from the whole network.
+        var undergroundStations = Map3DUndergroundStations()
         /// Decision 391: the base map's road bridges and their decks.
         var roadBridges = Map3DRoadBridges()
         /// Decision 834: the motorways' profiles and cuttings.
         var roadGrade = Map3DRoadGrade()
+        /// Decision 865: the base map's roads' beds, level across.
+        var roadBed = Map3DRoadBed()
         /// Decision 368: the scene point within ``Map3DScene/detailRadius``
         /// of which the city is built in full; everywhere when `nil`.
         var detail: Map3DPoint?
+        /// HSRPACE (decision 861): with it, the city is built in full
+        /// within ``Map3DScene/detailRadius`` of the way from `detail` to
+        /// here (``Map3DStreaming/way(target:velocity:)``).
+        var detailAhead: Map3DPoint?
 
         static let metre = Double(WorldCoordinate.unitsPerMetre)
 
@@ -1511,7 +1537,8 @@ extension Map3DScene {
         /// full: further than ``Map3DScene/detailRadius`` from ``detail``.
         func isCoarse(_ key: ChunkKey) -> Bool {
             guard let detail else { return false }
-            return Map3DStreaming.distance(of: Map3DStreaming.Key(column: key.column, row: key.row), to: detail) > Map3DScene.detailRadius
+            return Map3DStreaming.distance(of: Map3DStreaming.Key(column: key.column, row: key.row), toWayFrom: detail, to: detailAhead)
+                > Map3DScene.detailRadius
         }
 
         func chunks() -> [Chunk] {
@@ -1907,7 +1934,9 @@ extension Map3DScene {
             case .tunnel:
                 // Decision 359 (續): its bore round its bed.
                 var bore = Map3DMesh()
-                addBore(line, into: &bore)
+                // Decision 860: none along an underground station, its
+                // box there instead.
+                for piece in undergroundStations.outside(line) { addBore(piece, into: &bore) }
                 mesh(at: middle) { mesh in
                     mesh.append(bore)
                     mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: 0.6, top: Map3DPalette.ballast, side: Map3DPalette.ballast,
@@ -2034,6 +2063,8 @@ extension Map3DScene {
         /// there is no such room either side (the high-speed demo's through
         /// tracks between their loops, 5 m apart), none.
         mutating func addPlatforms(_ snapshot: RailwaySnapshot) {
+            // Decision 860: those in tunnels, in their stations' boxes.
+            addUndergroundPlatforms()
             let platforms = snapshot.platforms.filter { $0.points.count > 1 && $0.structure != .tunnel }
             let middles = platforms.map { point($0.points[$0.points.count / 2]) }
             let others = snapshot.edges.map { ($0.edge.id, $0.geometry.points.map(point)) }
@@ -2078,7 +2109,13 @@ extension Map3DScene {
                     width = room(side)
                 }
                 platformLines.append(line) // Decision 263: no street over it.
-                guard width >= Self.narrowestPlatform else { continue }
+                // An island's `width` is its half on this track's side: the
+                // whole of it is held to the narrowest, as its partner was
+                // picked (decision 856; before, an island 2 to 4 m wide
+                // between tracks 5.2 to 7.2 m apart, the Xinbeitou Branch
+                // Line's, was picked and then not drawn at all).
+                let island = partner != nil || curved != nil
+                guard (island ? 2 * width : width) >= Self.narrowestPlatform else { continue }
                 let offset = side * (edge + width / 2)
                 // Decision 259: its waiting crowd, and the station's
                 // passengers outside.
@@ -2097,7 +2134,7 @@ extension Map3DScene {
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
-                                                  structure: platform.structure, island: partner != nil || curved != nil,
+                                                  structure: platform.structure, island: island,
                                                   edge: platform.platform.edge))
             }
         }

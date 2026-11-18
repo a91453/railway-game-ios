@@ -48,6 +48,17 @@ on:
           - internal
           - external
         default: internal
+      map_packs:
+        description: >-
+          Which map packs (asset packs) are uploaded. "changed" (default):
+          only a city's pack that differs from the last successful release's,
+          since every upload is a new version App Store Connect reviews.
+          "all": every pack, whatever changed.
+        type: choice
+        options:
+          - changed
+          - all
+        default: changed
 
 permissions:
   contents: read
@@ -95,6 +106,11 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 45
     environment: testflight
+    permissions:
+      contents: read
+      # Decision 858: the last successful run of this workflow, whose map
+      # packs App Store Connect has (testflight-map-packs.py).
+      actions: read
     # One release at a time: a second run's release job waits instead of
     # uploading in parallel, and a running upload is never cancelled. Only
     # this job: waiting for Apple's processing does not hold up the next one.
@@ -206,31 +222,42 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       # Decision 776: the cities' map packs, uploaded apart from the build as
-      # Apple-hosted asset packs (tools/asset-packs/). The app still carries
-      # them and reads its own when a download is missing, so a failed upload
-      # is a warning, not a failed release. App Store Connect refuses a pack
-      # whose contents it already has; that is a warning too. DEBUG-138:
-      # before the build, so App Store Connect has processed a changed pack
-      # by the time the build comes out (0.6.0 (138) was out minutes before
-      # its new Hong Kong pack, and the owner's iPhone kept 137's).
-      - name: Upload the map packs (asset packs)
+      # Apple-hosted asset packs (tools/asset-packs/). Decision 858: the app
+      # carries none of their files, so a pack that has to be uploaded and
+      # is not stops the release here, before the build is uploaded. App
+      # Store Connect makes a new version at every upload, the same files or
+      # not, and each version is reviewed, so only a pack that differs from
+      # the last successful release's is uploaded
+      # (testflight-map-packs.py); `map_packs: all` uploads every one.
+      # DEBUG-138: before the build, so App Store Connect has processed a
+      # changed pack by the time the build comes out (0.6.0 (138) was out
+      # minutes before its new Hong Kong pack, and the owner's iPhone kept
+      # 137's).
+      - name: Upload the map packs that changed (asset packs)
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MAP_PACKS: ${{ inputs.map_packs }}
         run: |
-          packs="$TESTFLIGHT_DIR/asset-packs"
-          if ! tools/asset-packs/package.sh "$packs"; then
-            echo "::warning title=Map packs::Packing the map packs failed; nothing was uploaded."
+          if [[ "$MAP_PACKS" == "all" ]]; then
+            changed="$(python3 -I .github/scripts/testflight-map-packs.py --all)"
+          else
+            changed="$(python3 -I .github/scripts/testflight-map-packs.py)"
+          fi
+          if [[ -z "$changed" ]]; then
+            echo "The map packs are the same as at the last release; none was uploaded." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          for pack in "$packs"/*.aar; do
-            if API_PRIVATE_KEYS_DIR="$(dirname "$ASC_KEY_PATH")" xcrun altool --upload-asset-pack "$pack" \
-              --apple-id "$ASC_APP_ID" --api-key "$ASC_KEY_ID" --api-issuer "$ASC_ISSUER_ID"; then
-              echo "Uploaded the map pack $(basename "$pack")." >>"$GITHUB_STEP_SUMMARY"
-            else
-              echo "::warning title=Map packs::$(basename "$pack") was not uploaded (see the log above)."
-            fi
+          packs="$TESTFLIGHT_DIR/asset-packs"
+          # shellcheck disable=SC2086 # one ID a word
+          tools/asset-packs/package.sh "$packs" $changed
+          for id in $changed; do
+            API_PRIVATE_KEYS_DIR="$(dirname "$ASC_KEY_PATH")" xcrun altool --upload-asset-pack "$packs/$id.aar" \
+              --apple-id "$ASC_APP_ID" --api-key "$ASC_KEY_ID" --api-issuer "$ASC_ISSUER_ID"
+            echo "Uploaded a new version of the map pack $id. Before external testers or the App Store get this build, submit that version for review with it in App Store Connect." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=Map packs::A new version of $id was uploaded; it is reviewed with the build."
           done
 
       # From here on App Store Connect may have the build, even if the upload
