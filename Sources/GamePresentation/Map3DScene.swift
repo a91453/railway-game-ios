@@ -2078,7 +2078,13 @@ extension Map3DScene {
                     width = room(side)
                 }
                 platformLines.append(line) // Decision 263: no street over it.
-                guard width >= Self.narrowestPlatform else { continue }
+                // An island's `width` is its half on this track's side: the
+                // whole of it is held to the narrowest, as its partner was
+                // picked (decision 856; before, an island 2 to 4 m wide
+                // between tracks 5.2 to 7.2 m apart, the Xinbeitou Branch
+                // Line's, was picked and then not drawn at all).
+                let island = partner != nil || curved != nil
+                guard (island ? 2 * width : width) >= Self.narrowestPlatform else { continue }
                 let offset = side * (edge + width / 2)
                 // Decision 259: its waiting crowd, and the station's
                 // passengers outside.
@@ -2097,7 +2103,7 @@ extension Map3DScene {
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
-                                                  structure: platform.structure, island: partner != nil || curved != nil,
+                                                  structure: platform.structure, island: island,
                                                   edge: platform.platform.edge))
             }
         }
