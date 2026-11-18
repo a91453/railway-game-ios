@@ -10,5 +10,6 @@ extension Map3DTrainRegistry {
         Map3DMTRUrbanLine.registration,
         Map3DFreightWagons.registration,
         Map3DMTRTuenMaLine.registration,
+        Map3DMTRSouthIslandLine.registration,
     ]
 }
