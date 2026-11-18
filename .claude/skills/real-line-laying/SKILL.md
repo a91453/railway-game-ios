@@ -28,6 +28,10 @@ swift test --skip-build --filter "RealLineAcquisitionTests|RealLineRebuildTests|
 
 加新地圖（新的 `OverseasMap`）或新的出售路線時，在 `SharedStationLayoutTests` 加一個「全部依序買下、`stacked` 為空」的測試（有共站的線兩種順序都買），再把地圖加進 `mapsChecked`；沒加的話 `testEveryOverseasMapHasItsSharedStationsChecked` 會紅。
 
+共用車站的線是**整組一起賣**的（決策 862，`RealLineBundle`）：哪幾條一組從站名自動算，鋪設順序＝遊戲列出路線的順序（`urbanLines`、`overseasLines` 裡誰寫在前面誰先鋪）。
+所以新路線在清單裡的位置就是它在線組裡的鋪設順序，放之前先想好；`RealLineBundleTests.testEveryMapSellsItsLinesThatShareAStationTogether` 釘住每張地圖的線組，新地圖加一行。
+反過來的順序只會出現在舊存檔（以前單買的），測試仍然兩種順序都買。
+
 ## 3. 探針（看每座月台在哪）
 
 在測試裡買好線之後：
@@ -46,6 +50,7 @@ for p in world.network.platforms(of: station) {
 
 | 發生過什麼 | 之後照這樣做 | 出處 |
 | --- | --- | --- |
+| 共站的線一條條賣，後買的要繞著先買的鋪，每種購買順序各出過事（疊月台、漏班、鎖死），每修一次要量每一種順序 | 共站的線整組一起賣、一種鋪法（清單順序＝每晚體檢量的順序）；整組買與照順序一條條買的世界必須相等（`RealLineBundleTests`） | 862 |
 | 第二條線被拒「並行不到 4 m」，改成抬高共站再試，結果四股月台疊在第一條線正上方 16 m | 共站先鋪在旁邊（`sharedEnds`）、同一高度；抬高只留給真實高架 | 809 → 848 |
 | 竹中六家線（真實高架）的月台在內灣線地面月台正上方 | 高架可以，但要在旁邊，不在頭上 | 462 → 848 |
 | 拆掉的線重買，旁邊留著自己的舊軌道 | 舊軌道要拆掉重鋪（`RealLineClearing`），不是鋪在旁邊：`sharedEnds` 只看有別條線停靠的站 | 528、848 |
