@@ -467,10 +467,20 @@ public struct Map3DScene: Sendable {
                            builder: inout Builder) -> Map3DRealTrains? {
         if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
             let region = builder.region, margin = Map3DRealTrains.margin * Builder.metre
-            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine))) { coordinate in
+            // Decision 876: a line's box on the map and its trains are the
+            // same whatever the region, so the scene's builds keep them: a
+            // line whose box is clear of the region is not read point by
+            // point, and its timetable is made into runs once.
+            let shared = builder.shared, key = Map3DSharedBuild.RealKey(railways, frame: frame)
+            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine)), mayBeNear: { line, system in
+                shared.box(of: line, system: system, key: key, frame: frame)
+                    .meets(minX: region.minX - margin, minY: region.minY - margin, maxX: region.maxX + margin, maxY: region.maxY + margin)
+            }, made: { line, system in
+                shared.trafficLine(line, system: system, key: key, operations: operations)
+            }, isNear: { coordinate in
                 let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
                 return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
-            }
+            })
             // Decision 402: the real tracks, clear of the lines the
             // player bought.
             let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
@@ -480,7 +490,7 @@ public struct Map3DScene: Sendable {
             }
             return Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks,
                                    operations: operations, bought: bought,
-                                   frame: frame, snapshot: snapshot, builder: &builder)
+                                   frame: frame, snapshot: snapshot, builder: &builder, key: key)
         }
         return nil
     }
@@ -506,6 +516,9 @@ public struct Map3DScene: Sendable {
         builder.detailAhead = detailAhead
         builder.studyRegion = studies
         builder.buildsFacades = facades
+        // Decision 876: a part of a scene, built with the scene's track
+        // cover, with what the scene's builds worked out before it.
+        if let trackCover { builder.shared = trackCover.shared }
         // Decision 811: the land cover round the region, for the ground
         // and the forests' trees.
         if let landCover, let frame = RealWorldFrame(world: world) { builder.readLandCover(landCover, frame: frame) }
@@ -617,7 +630,7 @@ public struct Map3DScene: Sendable {
         builder.addReindeerHerd(frame: RealWorldFrame(world: world))
         reindeerHerd = Map3DReindeerHerd(placements: builder.reindeerHerd)
         freightYards = builder.freightYardPlaces
-        screenDoors = Map3DScreenDoors.Plan(world: world)
+        screenDoors = builder.shared.screenDoors(of: world)
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
@@ -1304,6 +1317,10 @@ extension Map3DScene {
         /// Decision 359 (續): the whole network's track, for the tunnels
         /// beside a tunnel (``addBore(_:into:)``).
         var trackCover = Map3DTrackCover()
+        /// Decision 876: what the scene's builds work out once between
+        /// them; a builder's own until it is given a scene's
+        /// (``Map3DTrackCover/shared``).
+        var shared = Map3DSharedBuild()
         /// Decision 860: the underground platforms and their stations'
         /// boxes, from the whole network.
         var undergroundStations = Map3DUndergroundStations()
@@ -1382,7 +1399,13 @@ extension Map3DScene {
         }
 
         func point(x: Double, y: Double, height: Double) -> Map3DPoint {
-            Map3DPoint(Float((x - originX) / Self.metre), Float(height / Self.metre), Float((y - originY) / Self.metre))
+            Self.point(x: x, y: y, height: height, originX: originX, originY: originY)
+        }
+
+        /// The scene point of a world point, in the scene whose origin is
+        /// (`originX`, `originY`).
+        static func point(x: Double, y: Double, height: Double, originX: Double, originY: Double) -> Map3DPoint {
+            Map3DPoint(Float((x - originX) / metre), Float(height / metre), Float((y - originY) / metre))
         }
 
         func point(_ c: WorldCoordinate) -> Map3DPoint {
@@ -1447,15 +1470,8 @@ extension Map3DScene {
             guard RealWorldFrame(world: world) != nil else { return }
             let cell = Double(Land.cellLength), bounds = world.bounds
             // The whole network's cells, so regions built apart hold the
-            // same corners.
-            var held = Set<ChunkKey>()
-            for alignment in snapshot.edges {
-                for span in alignment.edge.sectionSpans where span.end > span.start {
-                    for coordinate in sample(alignment.geometry, from: span.start, to: span.end) {
-                        held.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
-                    }
-                }
-            }
+            // same corners. Decision 876: sampled once for the scene.
+            let held = shared.samples(of: snapshot).cells
             // The region's corners and two cells round them, which the
             // strips reaching past its edge read.
             let firstColumn = Int((region.minX / cell).rounded(.down)) - 2, lastColumn = Int((region.maxX / cell).rounded(.up)) + 2
@@ -1796,9 +1812,10 @@ extension Map3DScene {
         func trackCells(_ snapshot: RailwaySnapshot) -> Set<ChunkKey> {
             var cells = Set<ChunkKey>()
             let cell = Double(Land.cellLength), region = region
-            for alignment in snapshot.edges {
-                for span in alignment.edge.sectionSpans where span.end > span.start {
-                    for coordinate in sample(alignment.geometry, from: span.start, to: span.end) {
+            for spans in shared.samples(of: snapshot).edges {
+                // Decision 876: only the stretches whose box reaches.
+                for span in spans where span.end > span.start && span.reaches(region, by: cell) {
+                    for coordinate in span.line {
                         let x = Double(coordinate.x), y = Double(coordinate.y)
                         guard x >= region.minX - cell, x <= region.maxX + cell, y >= region.minY - cell, y <= region.maxY + cell else { continue }
                         cells.insert(ChunkKey(column: Int((x / cell).rounded(.down)), row: Int((y / cell).rounded(.down))))
@@ -1823,11 +1840,14 @@ extension Map3DScene {
                 let x = Double(coordinate.x), y = Double(coordinate.y)
                 return x >= region.minX && x <= region.maxX && y >= region.minY && y <= region.maxY
             }
-            for alignment in snapshot.edges {
+            // Decision 876: the scene's samples, and only the stretches
+            // whose box reaches the region (the rest lay nothing here).
+            let samples = shared.samples(of: snapshot)
+            for (number, alignment) in snapshot.edges.enumerated() {
                 // Decision 407: a high-speed line's on its box girder.
                 let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
-                for span in alignment.edge.sectionSpans where span.end > span.start {
-                    let line = sample(alignment.geometry, from: span.start, to: span.end)
+                for span in samples.edges[number] where span.end > span.start && span.reaches(region) {
+                    let line = span.line
                     guard line.count > 1 else { continue }
                     for coordinate in line where inside(coordinate) {
                         cleared.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
@@ -1846,7 +1866,11 @@ extension Map3DScene {
         /// The centre line between `start` and `end` along `geometry`, at
         /// least every ``trackStep`` metres, with its heights.
         func sample(_ geometry: TrackGeometry, from start: Int64, to end: Int64) -> [WorldCoordinate] {
-            let step = Int64(Self.trackStep * Self.metre)
+            Self.sample(geometry, from: start, to: end)
+        }
+
+        static func sample(_ geometry: TrackGeometry, from start: Int64, to end: Int64) -> [WorldCoordinate] {
+            let step = Int64(trackStep * metre)
             var distances: [Int64] = [start]
             var next = start + step
             for distance in geometry.distances where distance > start && distance < end {
@@ -1862,7 +1886,7 @@ extension Map3DScene {
                 next += step
             }
             distances.append(end)
-            return Self.thinned(distances.map { geometry.location(at: $0).position })
+            return thinned(distances.map { geometry.location(at: $0).position })
         }
 
         /// MAP3D-CAP: how far, in metres, the drawn track may stand from

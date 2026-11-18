@@ -350,11 +350,13 @@ extension Map3DScene.Builder {
         let saved = target
         defer { target = saved }
         target = .close
-        let calling = callingFormations()
+        // Decision 876: the world's trains by station and the screen
+        // doors' plan are the same for every part of a scene.
+        let calling = shared.calling(in: world) { callingFormations() }
         // Decision 441: none at a depot, where no one boards.
         let depots = Set(world.stations.filter(\.isDepot).map(\.id))
         // Decision 847: the real lines' screen doors.
-        let screenDoors = Map3DScreenDoors.Plan(world: world)
+        let screenDoors = shared.screenDoors(of: world)
         // Decision 860: the underground platforms' too.
         for platform in laidPlatforms + laidUnderground where !depots.contains(platform.station) {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
