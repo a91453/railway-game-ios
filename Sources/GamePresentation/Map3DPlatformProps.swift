@@ -198,6 +198,116 @@ public enum Map3DPlatformProps {
         }
     }
 
+    // MARK: Furniture (decision 874)
+
+    /// A piece of furniture's box on a platform: its middle `along` the
+    /// platform and its `length` there, from `near` to `far` metres from
+    /// the platform's back towards its track, from `bottom` to `top` over
+    /// the platform.
+    struct Furniture: Equatable, Sendable {
+        let along: Float, length: Float
+        let near: Float, far: Float
+        let bottom: Float, top: Float
+        let colour: UInt32
+        /// A sign's face, lit.
+        let lit: Bool
+    }
+
+    /// A platform at least so deep has furniture at its back (a bench
+    /// 0.87 m deep leaves the walk inside the yellow line, as a bin does).
+    static let furnishedPlatform: Float = 2.8
+    /// How far a bench, machine or board keeps from a bin's end.
+    static let furnitureBinClearance: Float = 0.5
+    /// How far a hung sign keeps from a canopy's column, and from the
+    /// platform's back and edge.
+    static let signColumnClearance: Float = 0.6
+    static let signInset: Float = 0.3
+    /// A sign's top under a canopy (the kit's eaves are 3.2 m up).
+    static let signTopUnderCanopy: Float = 3.15
+    /// The walk kept between a piece on the floor and the platform's edge.
+    static let furnitureWalk: Float = 1.2
+
+    /// Where a canopy's columns stand along a platform `length` long,
+    /// the canopy over its middle `share` in pieces of at most 8 m
+    /// (``Map3DScene/Builder/addCanopies``).
+    static func canopyColumns(length: Float, share: Float) -> [Float] {
+        let from = length * (1 - share) / 2, span = length * share
+        guard span > 0 else { return [] }
+        let count = max(1, Int((span / 8).rounded(.up))), step = span / Float(count)
+        return (0...count).map { from + step * Float($0) }
+    }
+
+    /// Decision 874: the old version's platform furniture
+    /// (``Map3DOldIslandModule``, decision 860) on one platform `length`
+    /// long and `depth` deep, half of an `island` or a side platform: the
+    /// half of each module that faces its track (`rightHalf`: the
+    /// module's right) at its back, every 40 m as under ground, `forward`
+    /// when the platform's line runs as the module does. The benches,
+    /// machines and boards keep clear of the `bins`; the signs hang only
+    /// under a roof (`roof`: the stretch along the platform; `signTop`:
+    /// its underside over the platform, `nil` the box's ceiling), clear
+    /// of its `columns` and inside the platform's edge; no square column,
+    /// which holds a ceiling up. Sizes as in an underground station's
+    /// box (`Map3DOldIslandModule.drawnHeadroom`), never wider than the
+    /// module's own.
+    static func furniture(length: Float, depth: Float, island: Bool, rightHalf: Bool, forward: Bool, bins: [Float],
+                          roof: ClosedRange<Float>?, signTop: Float? = nil, columns: [Float] = []) -> [Furniture] {
+        typealias Module = Map3DOldIslandModule
+        guard island ? 2 * depth >= Map3DUndergroundStations.furnishedIsland : depth >= furnishedPlatform else { return [] }
+        let (count, start) = Module.modules(along: length)
+        let across = min(1, 2 * depth / Module.width), up = Module.drawnHeadroom / Module.headroom
+        var pieces: [Furniture] = []
+        for number in 0..<count {
+            let base = start + Float(number) * Module.length
+            // A piece's parts stand or fall together: a bench's seat and
+            // back, a board's post and panel, a sign and its face.
+            var piece: (kind: Module.Kind, from: Float)?, kept = false, shift: Float = 0
+            for part in Module.parts where part.kind != .column {
+                let (left, right) = rightHalf ? (part.left, part.right) : (-part.right, -part.left)
+                guard right > 0 else { continue }
+                let middle = base + (part.from + part.to) / 2, half = (part.to - part.from) / 2
+                let along = forward ? middle : length - middle
+                // A new piece where the kind changes or the parts no
+                // longer begin together along the module.
+                if piece?.kind != part.kind || abs((piece?.from ?? 0) - part.from) > 1 {
+                    piece = (part.kind, part.from)
+                    shift = 0
+                    if part.kind == .sign {
+                        let clear = [0, 1, -1, 2, -2].first { move in
+                            columns.allSatisfy { abs($0 - along - Float(move)) >= signColumnClearance + half }
+                        }
+                        kept = clear != nil && (roof.map { $0.contains(along - half - 2) && $0.contains(along + half + 2) } ?? false)
+                        shift = Float(clear ?? 0)
+                    } else {
+                        kept = bins.allSatisfy { abs($0 - along) >= binHalfLength + furnitureBinClearance + half }
+                    }
+                }
+                guard kept else { continue }
+                var near = max(left, 0) * across, far = right * across
+                var bottom = part.bottom * up, top = part.top * up
+                if part.kind == .sign {
+                    // Over the platform only, not out over the track; its
+                    // face a little shorter than its case, as the module's.
+                    let inset = part.glows ? Module.signFaceInset * across : 0
+                    near = max(Module.signNear * across, signInset) + inset
+                    far = min(Module.signFar * across, depth - signInset) - inset
+                    guard far - near >= 1 else { continue }
+                    if let signTop {
+                        let drop = Module.signTop * up - signTop
+                        bottom -= drop
+                        top -= drop
+                    }
+                } else {
+                    far = min(far, depth - furnitureWalk)
+                    guard far > near else { continue }
+                }
+                pieces.append(Furniture(along: along + shift, length: part.to - part.from, near: near, far: far, bottom: bottom, top: top,
+                                        colour: part.colour, lit: part.glows))
+            }
+        }
+        return pieces
+    }
+
     /// The kind of a station: a metro when its station kit recipe is a
     /// metro's (`system`), else a metro when every train calling there is
     /// one (`metroTrains` of `calling`), else a railway.
@@ -269,6 +379,8 @@ extension Map3DScene.Builder {
             // Across the line: the platform's edge by the track, and its back.
             let edge = platform.offset - side * platform.width / 2
             let top = Self.platformHeight
+            let canopyShare = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
+            let shellRoofed = shellRoofed
             mesh(at: path.at(path.length / 2).point) { mesh in
                 func place(_ along: Float, _ across: Float, _ up: Float) -> (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint) {
                     let at = path.at(min(max(along, 0), path.length))
@@ -305,11 +417,37 @@ extension Map3DScene.Builder {
                 }
                 // The bins at the back, their long side along it; none on
                 // a platform too narrow to walk past one.
-                if platform.width >= Self.binPlatform {
-                    for bin in Map3DPlatformProps.bins(length: path.length, doors: doors, boards: marks.map(\.along)) {
-                        let at = place(bin, platform.offset + side * (platform.width / 2 - 0.55), top)
-                        mesh.append(Self.binMesh, at: at.point, forward: at.right * -side)
-                    }
+                let bins = platform.width >= Self.binPlatform
+                    ? Map3DPlatformProps.bins(length: path.length, doors: doors, boards: marks.map(\.along)) : []
+                for bin in bins {
+                    let at = place(bin, platform.offset + side * (platform.width / 2 - 0.55), top)
+                    mesh.append(Self.binMesh, at: at.point, forward: at.right * -side)
+                }
+                // Decision 874: the old version's furniture at its back,
+                // as on an underground island (decision 860, which lays
+                // its own with its box).
+                let under = platform.structure == .tunnel
+                guard !(under && platform.island) else { return }
+                let back = platform.offset + side * platform.width / 2
+                // Which way the module runs and which half faces this
+                // track, by the compass, so an island's two halves agree.
+                let whole = path.at(path.length).point - path.at(0).point
+                let forward = abs(whole.x) >= abs(whole.z) ? whole.x >= 0 : whole.z >= 0
+                let roof: ClosedRange<Float>? = under ? 0...path.length
+                    : shellRoofed.contains(platform.station) ? nil
+                    : (path.length * (1 - canopyShare) / 2)...(path.length * (1 + canopyShare) / 2)
+                let furniture = Map3DPlatformProps.furniture(
+                    length: path.length, depth: platform.width, island: platform.island,
+                    rightHalf: (side < 0) == forward, forward: forward, bins: bins, roof: roof,
+                    signTop: under ? nil : Map3DPlatformProps.signTopUnderCanopy,
+                    columns: under ? [] : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
+                )
+                for piece in furniture {
+                    let at = place(piece.along, back - side * (piece.near + piece.far) / 2, top + piece.bottom)
+                    let first = mesh.vertices.count
+                    mesh.addBox(base: at.point, forward: at.along, length: piece.length, width: piece.far - piece.near,
+                                height: piece.top - piece.bottom, top: piece.colour, side: piece.colour)
+                    if piece.lit { if under { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) } }
                 }
             }
         }
