@@ -46,7 +46,15 @@ enum TimetableCheckupWorlds {
         let measured = TimetableCheckup.measured(results)
         let seconds = String(format: "%.1f", Date().timeIntervalSince(started))
         var text = "TIMETABLE_CHECKUP \(name) day \(day) (from clock \(opened.clock.now.seconds) s) in \(seconds) s: \(measured)\n"
-        for result in results { text += "  \(result)\n" }
+        for result in results {
+            text += "  \(result)\n"
+            // `TIMETABLE_CHECKUP_RUNS=1`: which runs (their index in the
+            // line's runs), to tell a run not sent from the same run sent late.
+            if ProcessInfo.processInfo.environment["TIMETABLE_CHECKUP_RUNS"] != nil {
+                let late = result.lateOutOfDepot.map { "\($0) (\((result.lateness[$0] ?? 0) / 60) min)" }.joined(separator: ", ")
+                text += "    not sent: \(result.notSent.sorted()); late out of a depot: \(late)\n"
+            }
+        }
         let over = TimetableCheckup.overBudget(measured, budget)
         if over.isEmpty, measured.notSent < budget.notSent || measured.late < budget.late
             || measured.lateOutOfDepot < budget.lateOutOfDepot || measured.peakGapMinutes < budget.peakGapMinutes {
@@ -67,7 +75,10 @@ enum TimetableCheckupWorlds {
 /// 09:30, played to 10:00. About a minute of a debug build. Every line's
 /// whole second day, under both rules, is ``TimetableCheckupFullTests``,
 /// nightly. The budgets are `main`'s numbers on 2026-11-18 (`2cd9c94`);
-/// the sessions fixing those bugs lower them.
+/// the sessions fixing those bugs lower them. Decision 849 (the home
+/// signal) took Hong Kong's from 16 runs not sent, 101 late and a peak
+/// gap of 26 minutes: 15 of the 16 are now sent, 17 of them late (the
+/// worst 14 minutes on the South Island Line, where it was 30).
 @MainActor
 final class TimetableCheckupTests: XCTestCase {
     /// The first day's runs from 05:00 to 09:30, played to 10:00.
@@ -78,7 +89,7 @@ final class TimetableCheckupTests: XCTestCase {
         try TimetableCheckupWorlds.check(
             "hk-sil-tcl simple", TimetableCheckupWorlds.hongKong(["SIL", "TCL"], rules: .simple), day: 0,
             windows: Self.morning, until: Self.untilTen,
-            budget: .init(notSent: 16, late: 101, lateOutOfDepot: 6, peakGapMinutes: 26)
+            budget: .init(notSent: 1, late: 118, lateOutOfDepot: 6, peakGapMinutes: 19)
         )
     }
 }
@@ -142,6 +153,13 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// 2026-11-18): runs not sent, late, late out of a depot, and the peak
     /// gap's minutes over the timetable's. A world not listed must have
     /// none of any. The sessions fixing a bug lower its world's numbers.
+    /// Decision 849 (the home signal) lowered Hong Kong's under a new
+    /// game's rules: the South Island Line from 21 not sent, the East
+    /// Rail Line from 15, the Tseung Kwan O Line from 92 late to none
+    /// (and the Liujia Line's 3 late).
+    /// The Tung Chung Line's went from 2 not sent, 81 late and 6 late out
+    /// of a depot: one more late out of Siu Ho Wan, a run after midnight
+    /// (TCL-DEPOT-CLAIM, `docs/priorities/HK-PEAK-CONTROL.md`).
     static let budgets: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
@@ -150,17 +168,15 @@ final class TimetableCheckupFullTests: XCTestCase {
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
         "tymc:A simple": .init(notSent: 4, late: 103, lateOutOfDepot: 8, peakGapMinutes: 26),
         "tymc:A realistic": .init(notSent: 2, late: 26, lateOutOfDepot: 11, peakGapMinutes: 10),
-        "tra:LIUJIA simple": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "hk EAL_LMC simple": .init(notSent: 15, late: 157, lateOutOfDepot: 0, peakGapMinutes: 13),
+        "hk EAL_LMC simple": .init(notSent: 0, late: 40, lateOutOfDepot: 0, peakGapMinutes: 7),
         "hk EAL_LMC realistic": .init(notSent: 4, late: 133, lateOutOfDepot: 0, peakGapMinutes: 13),
-        "hk SIL simple": .init(notSent: 21, late: 162, lateOutOfDepot: 1, peakGapMinutes: 13),
+        "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),
         "hk SIL realistic": .init(notSent: 10, late: 166, lateOutOfDepot: 1, peakGapMinutes: 14),
-        "hk TCL simple": .init(notSent: 2, late: 81, lateOutOfDepot: 6, peakGapMinutes: 26),
+        "hk TCL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
         "hk TCL realistic": .init(notSent: 4, late: 75, lateOutOfDepot: 1, peakGapMinutes: 28),
-        "hk TKL_LHP simple": .init(notSent: 0, late: 92, lateOutOfDepot: 0, peakGapMinutes: 3),
         "hk TKL_LHP realistic": .init(notSent: 0, late: 92, lateOutOfDepot: 0, peakGapMinutes: 3),
-        "hk AEL+TCL+DRL simple": .init(notSent: 3, late: 71, lateOutOfDepot: 6, peakGapMinutes: 26),
+        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
         "hk AEL+TCL+DRL realistic": .init(notSent: 3, late: 57, lateOutOfDepot: 2, peakGapMinutes: 28),
     ]
 

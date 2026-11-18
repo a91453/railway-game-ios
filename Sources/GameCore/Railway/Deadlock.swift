@@ -543,7 +543,7 @@ extension GameWorld {
         var spares: Set<TrainID>?
         for train in trains.sorted(by: { $0.id < $1.id }) {
             guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-                  let position = train.position, let (_, envelopes) = authority(of: train, memo: &dispatch.directions)
+                  let position = train.position, let (held, envelopes) = authority(of: train, memo: &dispatch.directions)
             else { continue }
             let step = travelling(train, distance: 1, memo: &dispatch.directions)
             let stopped = step.position == train.position && step.cursor == train.movement.cursor
@@ -558,7 +558,7 @@ extension GameWorld {
                 // Decision 810: still on its way, once it takes the rest of
                 // its route (decision 294), only where a spare of its line
                 // (see ``isSpare(_:)``) keeps it from its berth.
-                guard blocked, approachLimit(of: train, envelopes) == nil else { continue }
+                guard blocked, approachLimit(of: train, holding: held, envelopes) == nil else { continue }
                 if spares == nil { spares = Set(trains.filter { idle.contains($0.id) && isSpare($0, memo: &dispatch) }.map(\.id)) }
                 guard !spares!.isEmpty,
                       blockedTrack(except: train.id, among: spares!, holders: trackHolders(memo: &dispatch.directions)).blocks(envelopeCover(of: train), in: network)
