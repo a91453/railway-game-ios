@@ -79,6 +79,17 @@ public enum Map3DTrainMaterial {
         (Float(colour & 0xFF), Float((colour >> 8) & 0xFF), Float((colour >> 16) & 0xFF))
     }
 
+    /// Whether `model` marks its glass face by face, as the studio's
+    /// meshes do (``Map3DRedCommuter/decodedMesh(_:named:palette:glass:)``):
+    /// some face already ``Map3DVertex/trainGlass`` or
+    /// ``Map3DVertex/trainGlassLit`` before the pack marks it. Then those
+    /// faces are its glass and no other face is guessed to be glass by its
+    /// colour: a door's or a window frame's dark grey is not lit at night
+    /// (decision 450's later note).
+    public static func marksOwnGlass(_ model: Map3DModelPack.Model) -> Bool {
+        model.vertices.contains { $0.layer == Map3DVertex.trainGlass || $0.layer == Map3DVertex.trainGlassLit }
+    }
+
     /// Every model of `models` with its glass and stainless faces marked
     /// (``marked(_:)``); not a train's (``Map3DTrainOcclusion/isTrain(_:)``)
     /// as it was.
@@ -92,13 +103,14 @@ public enum Map3DTrainMaterial {
     public static func marked(_ model: Map3DModelPack.Model) -> Map3DModelPack.Model {
         guard Map3DTrainOcclusion.isTrain(model.name) else { return model }
         let stainless = isStainless(model.name)
+        let ownGlass = marksOwnGlass(model)
         var vertices = model.vertices
         var changed = false
         for start in stride(from: 0, to: vertices.count - 2, by: 3) {
             let first = vertices[start]
             guard first.layer == Map3DVertex.plain || first.layer == Map3DVertex.glowing, first.nz >= lowestNormal else { continue }
             let layer: Float
-            if isGlassColour(first.color) {
+            if !ownGlass, isGlassColour(first.color) {
                 layer = first.glows ? Map3DVertex.trainGlassLit : Map3DVertex.trainGlass
             } else if stainless, !first.glows, isSteelColour(first.color) {
                 layer = Map3DVertex.trainSteel

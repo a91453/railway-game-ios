@@ -221,7 +221,8 @@ public enum Map3DTrainLights {
     static let madeLampSize: Float = 0.2
 
     /// `model`'s windows lit: a copy of each triangle of its sides' glass
-    /// (``isGlass(_:)``, facing sideways as the reference's side glass does,
+    /// (``isGlass(_:)``, or the faces it marks as glass itself,
+    /// ``Map3DTrainMaterial/marksOwnGlass(_:)``; facing sideways as the reference's side glass does,
     /// `train-lighting.js` `prepareWindowLighting`; its middle between 30 % and 92 %
     /// of the car's height, wholly beyond ``cabReach`` of an end with
     /// lamps, a cab's), ``paneProud`` outside it, its colour the
@@ -238,10 +239,13 @@ public enum Map3DTrainLights {
         let middle = (model.minimum.x + model.maximum.x) / 2
         var saloon = false
         let bottom = model.maximum.z * 0.3, top = model.maximum.z * 0.92
+        // A model that marks its glass face by face: those faces only.
+        let ownGlass = Map3DTrainMaterial.marksOwnGlass(model)
         var vertices: [Map3DVertex] = []
         for start in stride(from: 0, to: model.vertices.count - 2, by: 3) {
             let first = model.vertices[start]
-            guard !first.glows, abs(first.ny) >= 0.75, isGlass(first.color) else { continue }
+            let glass = ownGlass ? first.layer == Map3DVertex.trainGlass : isGlass(first.color)
+            guard !first.glows, abs(first.ny) >= 0.75, glass else { continue }
             let corners = model.vertices[start ..< start + 3]
             // By the triangle's extremes, which both halves of a pane share.
             let xs = corners.map(\.x), zs = corners.map(\.z)
