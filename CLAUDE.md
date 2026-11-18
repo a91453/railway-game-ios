@@ -186,7 +186,13 @@ needs OSM data reads the same extract.
   `main`'s newest commit already had a green full run; decision 413) build
   everything and run every test with the campaigns not reduced, split into
   parallel shards by `.github/scripts/swift-shards.sh`, which also proves
-  each job ran exactly its tests. A pull request and a push to `main` build
+  each job ran exactly its tests; the nightly and manual runs also play
+  every line with a real timetable through a whole day in five
+  `timetable-checkup` jobs (decision 844: runs not sent, late, late out of
+  a depot, peak gaps, against `main`'s numbers; the gate does not wait
+  for them), and a pull request runs the short checkup,
+  `TimetableCheckupTests` and `TimetableCheckupTaiwanTests`, with the
+  GamePresentation tests. A pull request and a push to `main` build
   everything but run the tier their changed files need (ARCHITECTURE
   decision 185, `swift-shards.sh plan`; pushes since decision 413): every shard
   for GameCore, the package, the CI scripts or a test file other test files

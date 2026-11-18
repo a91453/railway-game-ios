@@ -435,6 +435,69 @@ jobs:
           # swift-shards-selftest.sh fails when the two differ.
           SHARD_LIMIT_MINUTES: 30
 
+  # Decision 844 (TIMETABLE-CHECKUP): every line with a real timetable on
+  # sale (Taiwan, Hong Kong, Rovaniemi) bought in a game and played a
+  # minute a tick to the end of its second day, under a new game's rules
+  # and the realistic ones: each run of that day sent, on time, out of its
+  # depot on time, and the peaks without gaps longer than main's
+  # (TimetableCheckupFullTests; TIMETABLE_CHECKUP=1). Nightly and by hand
+  # only: some 20 minutes a job of debug GamePresentation, too long for a
+  # pull request, which runs TimetableCheckupTests (the mornings that went
+  # wrong before) with the other GamePresentation tests instead. The gate
+  # does not wait for it, so it never holds a merge; a red job here turns
+  # the nightly run red, and a release needs a green full run (CLAUDE.md).
+  timetable-checkup:
+    name: Timetable checkup / ${{ matrix.group }}
+    needs: [changes, swift-build]
+    if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.swift-build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: swift:6.4-noble
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: taiwan-metro-simple
+            test: testTaiwanMetroLines
+            rules: simple
+          - group: taiwan-metro-realistic
+            test: testTaiwanMetroLines
+            rules: realistic
+          - group: hong-kong-simple
+            test: testHongKongLines
+            rules: simple
+          - group: hong-kong-realistic
+            test: testHongKongLines
+            rules: realistic
+          - group: branch-lines-and-rovaniemi
+            test: testTaiwanBranchLines|testRovaniemiLines
+            rules: ""
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: swift-build
+          path: ${{ runner.temp }}/swift-build
+
+      - name: Unpack the build
+        run: .github/scripts/swift-shards.sh unpack "$RUNNER_TEMP/swift-build/swift-build.tar.gz"
+
+      - name: Play the lines' days
+        env:
+          TIMETABLE_CHECKUP: '1'
+          TIMETABLE_CHECKUP_RULES: ${{ matrix.rules }}
+        # Not -e: the summary is written whether the tests pass or not,
+        # and the step then fails with them.
+        run: |
+          set +e
+          [[ -n "$TIMETABLE_CHECKUP_RULES" ]] || unset TIMETABLE_CHECKUP_RULES
+          swift test --skip-build --filter "GamePresentationTests\.TimetableCheckupFullTests/(${{ matrix.test }})\$" 2>&1 | tee "$RUNNER_TEMP/checkup.log"
+          status="${PIPESTATUS[0]}"
+          { echo "### Timetable checkup: ${{ matrix.group }}"; echo '```'; grep -E '^(TIMETABLE_CHECKUP|  )' "$RUNNER_TEMP/checkup.log" || true; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
   # Decision 590: a function takes its whole stack frame as it is entered,
   # and 112.1 ran out of the main thread's stack on a chain of frames of
   # tens of kilobytes. A pull request that changes GameCore or
