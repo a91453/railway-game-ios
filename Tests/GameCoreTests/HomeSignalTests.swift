@@ -107,15 +107,26 @@ final class HomeSignalTests: XCTestCase {
         XCTAssertNil(scene.world.authorityLeft(of: near), "near J A holds all its route")
     }
 
-    /// With block sections, as before (decision 294): a leg shorter than
-    /// 14 km is taken whole.
-    func testWithBlockSectionsTheLegIsTakenWhole() throws {
+    /// With block sections the same (decision 849, later): a leg of 14 km
+    /// or less, which decision 294 left taken whole, is held to short of J
+    /// too, and B crosses J meanwhile.
+    func testWithBlockSectionsTheThroatIsLeftFreeToo() throws {
         var scene = try makeScene(blockSections: true)
         try scene.world.advance(ticks: 6)
         let a = try XCTUnwrap(scene.world.train(id: scene.a))
         XCTAssertNotNil(a.execution, "A has set off")
-        XCTAssertNil(scene.world.authorityLeft(of: a))
-        XCTAssertTrue(scene.world.reservedResources(of: scene.a).contains(.node(scene.j)))
+        let held = try XCTUnwrap(scene.world.authorityLeft(of: a), "A holds its route only part of the way")
+        XCTAssertLessThan(held, scene.world.routeLength(of: a) - 30_000, "A stops short of J")
+        XCTAssertFalse(scene.world.reservedResources(of: scene.a).contains(.node(scene.j)), "A does not hold J")
+        var bAtY: GameTime?, aAtZ: GameTime?
+        for _ in 0..<14 {
+            try scene.world.advance(ticks: 1)
+            if bAtY == nil, scene.world.stationsStoppedAt(by: scene.b).contains(scene.y) { bAtY = scene.world.clock.now }
+            if aAtZ == nil, scene.world.stationsStoppedAt(by: scene.a).contains(scene.z) { aAtZ = scene.world.clock.now }
+        }
+        XCTAssertLessThanOrEqual(try XCTUnwrap(bAtY, "B reached Y").minute, 605)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(aAtZ, "A reached Z").minute, 607)
+        XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
     }
 
     /// The same, a minute at a time and at once.

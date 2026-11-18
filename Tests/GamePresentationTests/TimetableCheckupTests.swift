@@ -160,6 +160,12 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// The Tung Chung Line's went from 2 not sent, 81 late and 6 late out
     /// of a depot: one more late out of Siu Ho Wan, a run after midnight
     /// (TCL-DEPOT-CLAIM, `docs/priorities/HK-PEAK-CONTROL.md`).
+    /// Decision 849's later part (the home signal with block sections
+    /// too) lowered Hong Kong's under the realistic rules: the South
+    /// Island Line from 10 not sent, the East Rail Line from 4, the Tung
+    /// Chung Line from 4 (alone) and 3 (with the Airport Express and the
+    /// Disneyland Resort Line, 64 late on `main` `5a1efcf`), the Tseung
+    /// Kwan O Line from 92 late to none (and the Liujia Line's 3 late).
     static let budgets: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
@@ -168,16 +174,14 @@ final class TimetableCheckupFullTests: XCTestCase {
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
         "tymc:A simple": .init(notSent: 4, late: 103, lateOutOfDepot: 8, peakGapMinutes: 26),
         "tymc:A realistic": .init(notSent: 2, late: 26, lateOutOfDepot: 11, peakGapMinutes: 10),
-        "tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "hk EAL_LMC simple": .init(notSent: 0, late: 40, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "hk EAL_LMC realistic": .init(notSent: 4, late: 133, lateOutOfDepot: 0, peakGapMinutes: 13),
+        "hk EAL_LMC realistic": .init(notSent: 0, late: 9, lateOutOfDepot: 0, peakGapMinutes: 3),
         "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),
-        "hk SIL realistic": .init(notSent: 10, late: 166, lateOutOfDepot: 1, peakGapMinutes: 14),
+        "hk SIL realistic": .init(notSent: 0, late: 91, lateOutOfDepot: 1, peakGapMinutes: 4),
         "hk TCL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
-        "hk TCL realistic": .init(notSent: 4, late: 75, lateOutOfDepot: 1, peakGapMinutes: 28),
-        "hk TKL_LHP realistic": .init(notSent: 0, late: 92, lateOutOfDepot: 0, peakGapMinutes: 3),
+        "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
         "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
-        "hk AEL+TCL+DRL realistic": .init(notSent: 3, late: 57, lateOutOfDepot: 2, peakGapMinutes: 28),
+        "hk AEL+TCL+DRL realistic": .init(notSent: 0, late: 25, lateOutOfDepot: 1, peakGapMinutes: 7),
     ]
 
     private func check(_ name: String, _ world: @autoclosure () throws -> GameWorld) throws {
