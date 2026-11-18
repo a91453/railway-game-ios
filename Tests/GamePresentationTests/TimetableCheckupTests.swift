@@ -158,8 +158,9 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// Rail Line from 15, the Tseung Kwan O Line from 92 late to none
     /// (and the Liujia Line's 3 late).
     /// The Tung Chung Line's went from 2 not sent, 81 late and 6 late out
-    /// of a depot: one more late out of Siu Ho Wan, a run after midnight
-    /// (TCL-DEPOT-CLAIM, `docs/priorities/HK-PEAK-CONTROL.md`).
+    /// of a depot to 1, 64 and 7: one more late out of Siu Ho Wan, a run
+    /// after midnight, which decision 850 (TCL-DEPOT-CLAIM) took back,
+    /// with two of the late runs.
     static let budgets: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
@@ -173,10 +174,10 @@ final class TimetableCheckupFullTests: XCTestCase {
         "hk EAL_LMC realistic": .init(notSent: 4, late: 133, lateOutOfDepot: 0, peakGapMinutes: 13),
         "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),
         "hk SIL realistic": .init(notSent: 10, late: 166, lateOutOfDepot: 1, peakGapMinutes: 14),
-        "hk TCL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
+        "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk TCL realistic": .init(notSent: 4, late: 75, lateOutOfDepot: 1, peakGapMinutes: 28),
         "hk TKL_LHP realistic": .init(notSent: 0, late: 92, lateOutOfDepot: 0, peakGapMinutes: 3),
-        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 64, lateOutOfDepot: 7, peakGapMinutes: 19),
+        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk AEL+TCL+DRL realistic": .init(notSent: 3, late: 57, lateOutOfDepot: 2, peakGapMinutes: 28),
     ]
 
