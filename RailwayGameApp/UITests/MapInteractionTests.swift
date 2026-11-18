@@ -1770,7 +1770,15 @@ final class MapInteractionTests: XCTestCase {
         }
         tap(nearest[1])
         let drawer = app.descendants(matching: .any)["map.stationPair"].firstMatch
-        if !drawer.appears(within: 10) { app.logTree("no station pair drawer, tapped \(nearest[0]) and \(nearest[1])") }
+        // A touch on the map just after the card folded went by on the
+        // iOS 27.2 Simulator (pull request #2453: the second station was
+        // never picked, the first still selected); a cancelled touch is no
+        // pick, so the second station is touched once more, as #1951 does.
+        if !drawer.appears(within: 5) {
+            app.logTree("no station pair drawer after the first touch on \(nearest[1])")
+            tap(nearest[1])
+        }
+        if !drawer.appears(within: 10) { app.logTree("no station pair drawer, tapped \(nearest[0]) and \(nearest[1]) twice") }
         XCTAssertTrue(drawer.exists, "The two stations are compared")
         let confirm = app.buttons["map.build.confirm"]
         XCTAssertTrue(confirm.appears(within: 10))
