@@ -3003,12 +3003,12 @@
         }
       }
     },
-    "Colour-Blind Friendly Colours" : {
+    "High-Contrast Line Colours" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "色盲友善配色"
+            "value" : "高辨識度配色"
           }
         }
       }
@@ -3023,12 +3023,12 @@
         }
       }
     },
-    "Lines use colours that stay easy to tell apart with colour blindness, and every line badge shows its code." : {
+    "Lines use colours that are easier to tell apart, and every line badge shows its code." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "路線改用色盲也分得清的顏色，徽章上加上線號。"
+            "value" : "路線改用更容易分辨的顏色，徽章上加上線號。"
           }
         }
       }
