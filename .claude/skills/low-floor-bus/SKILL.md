@@ -5,19 +5,19 @@ description: 大型前中雙門低地板公車的原生3D、街景車流與七�
 
 # 雙門低地板公車
 
-先讀CLAUDE.md、art-style、station-kit、shuttle-bus與#231。這批是作者後來提供的4張大型綠色市區公車，不是上批高頂短鼻小巴。保留長車身、右前／中雙門、後側散熱格柵；暖白＋霧藍、斜肩頂、分件車頭／尾燈與HVAC重新建置，無品牌。不要把原始綠白配色或原模型直接搬入。
+這個 kit 的配方、造型做法、座標與接點、審查重點與歷次教訓是獨門做法，2026-11-18 搬到私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/skills/low-floor-bus.md`。**動這個 kit 之前先讀那一份**；這裡只留重建指令與一般的檢查。
 
-**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+做或改模型照 [model-look](../model-look/SKILL.md)。
 
-Map3DLowFloorBus.model()→life-lowFloorBus，Map3DStreetModel.lowFloorBus由standard自動收錄。沿用5%總公車池，30%小巴、35%新大型公車、35%既有公車（現在的比例：小巴 30％、低地板 35％、遊覽車 20％、中巴 10％、原大型 5％，見 `Map3DStreetLife.addVehicles`。）；小巴原本的seed選型不變。isBus含三款，17m間距／上限／道路資格／總交通量不變。這是街景車型，不是GameCore購車營運新功能。
-
-內部x前/y上/z右，flat只轉軸一次至native x前/y左/z上。長約12.08、身寬2.46、含鏡3.05、高3.40m，輪底0。輪徑.96、輪拱半徑.57，使用上批shuttleShell耳切凹多邊形；不能triangle fan填掉凹輪拱。側窗／門都有實體背板，風擋依實際前斜面法線偏移，門檻貼地板，鏡架碰車身與鏡殼。HVAC底3.20，支腳底3.14接車頂；封閉斜肩頂與底面，別把屋頂設備或玻璃懸空。
+## 重建
 
 ```sh
 export PATH=/path/to/swift-6.4/usr/bin:$PATH
 tools/low-floor-bus/rebuild.sh /private/output/low-floor-bus-2026-10-21
 ```
 
-交付1新車＋1既有對照，2native／2GLB／14七向RGBA，另前後底立體、總覽、比較、四底色／小尺寸／模糊灰階與viewer。不能把對照算新增。管線驗證native逐頂點position/color/glow及normal容差1e-5、GLB全量重編、PNG SHA／實際RGBA解碼／alpha與像素數、viewer操作和六組指定XCTest。模型改後須重建成品與manifest、重新看實際圖片。
+## 檢查
 
-公開留配方、工具、測試、skill、README、總覽、小驗證；完整成品／來源對照／ZIP放私有Railway/game-art-previews/docs/art/low-floor-bus-2026-10-21/。兩庫draft PR互鏈；PR一律以main為base；依賴的PR還沒合併就等它合併，或把需要的部分一起帶進來（#942、#949、#957曾合進過時分支）。不要改main／自行合併。標記VERIFIED／UNVERIFIED；Metal真機與效能由後續裝置檢查。
+- `swift build --build-tests -Xswiftc -warnings-as-errors`，再跑這個 kit 的 XCTest（`swift test --skip-build --filter <類別>`）。
+- 重建工具的說明與驗證在 `tools/low-floor-bus/README.md`。大型成品（native、GLB、七向 PNG、viewer）放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`），不放這個 repo。
+- 照 CLAUDE.md 寫 VERIFIED／UNVERIFIED：Linux 的 WebGL 預覽不是 Metal，實機效能與地圖接入另驗。

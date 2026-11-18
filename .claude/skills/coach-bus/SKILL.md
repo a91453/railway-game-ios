@@ -5,25 +5,19 @@ description: 三軸高車身遊覽車原生建模、四款巴士街景共存及�
 
 # 三軸遊覽車
 
-先讀CLAUDE.md、art-style、station-kit、shuttle-bus、low-floor-bus及#231。本批作者4張綠白遊覽車圖，保留高車身、連續窗帶、後雙軸與右側前門，改暖白／暖紅、重組車頭尾／頂／行李艙。上批小巴已在#941、低地板在#942改成遊戲風格，不重做也不重複計數。無品牌或原始mesh／貼圖／factory複製。
+這個 kit 的配方、造型做法、座標與接點、審查重點與歷次教訓是獨門做法，2026-11-18 搬到私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/skills/coach-bus.md`。**動這個 kit 之前先讀那一份**；這裡只留重建指令與一般的檢查。
 
-**看圖再改**：測試全過不算做完。新做或重做模型時照 [model-look](../model-look/SKILL.md)：先有真實照片，用遊戲鏡頭的角度與大小拍圖、對清單找毛病、改，至少三輪，最後交一張總覽圖給作者或另一個 session 判。
+做或改模型照 [model-look](../model-look/SKILL.md)。
 
-Map3DCoachBus.model()→life-coachBus，Map3DStreetModel.coachBus追加到standard。原5%公車池內30%小巴／35%低地板／20%遊覽車／15%既有大型（現在的比例：小巴 30％、低地板 35％、遊覽車 20％、中巴 10％、原大型 5％，見 `Map3DStreetLife.addVehicles`。）；前兩款seed選型不變，isBus統計四款，17m間距、密度、道路資格與上限不變。街景車型，不新增GameCore購車營運規則。
-
-內部x前/y上/z右，flat轉一次至native x前/y左/z上。長約13.19、身寬2.5、含鏡3.16、高3.76m，輪底0。輪軸x=-3.90/-2.60/+3.80，胎半徑.50、拱.57。耳切輪廓不能triangle fan填掉凹輪拱。玻璃都有背板；前風擋分兩個真實斜面，不能用跨折線的一張平面造成浮空。行李艙門沿用車身原色，coachLuggageDoor直接著色的薄封殼、面漆只突出9mm、12mm細接縫與12mm內小把手；面漆與接縫背板至少隔2mm避免深度閃爍；不能再用box陰影側色造成三大塊灰門。右側前門有背板與貼門踏階，兩節鏡架接到鏡殼，HVAC支腳底3.52／頂3.58接封殼，所有頂／底封閉。
+## 重建
 
 ```sh
 export PATH=/path/to/swift-6.4/usr/bin:$PATH
 tools/coach-bus/rebuild.sh /private/output/coach-bus-2026-10-21
 ```
 
-1新車＋3既有對照，4native／4GLB／28七向RGBA。額外前後底、四底色／小尺寸／模糊灰階、四車對照、同尺度車隊圖與viewer。對照車不算新增。管線驗證所有native頂點position/color/glow、normal容差1e-5、全量GLB重編／SHA、PNG雙解碼alpha／像素數／SHA／不裁邊、viewer操作和七組指定XCTest。造型改後一起重建，人工看七向／底部／車隊比較；不得只看雜湊宣稱美術已驗證。
+## 檢查
 
-公開配方／工具／測試／skill／README／一張總覽與驗證；完整成品／來源對照／ZIP放私有Railway/game-art-previews/docs/art/coach-bus-2026-10-21/。兩庫draft PR互鏈，PR一律以main為base；依賴的PR還沒合併就等它合併，或把需要的部分一起帶進來（#942、#949、#957曾合進過時分支）；不推main、不自行合併。標VERIFIED／UNVERIFIED；真機Metal／效能、車門輪子動畫留裝置驗證。
-
-## 塗裝變體（決策 593）
-
-`Map3DCoachLivery` 的固定 id、中英文名稱給日後國道路線對色用；`Map3DCoachBus.model(livery:far:)` 只重著色既有三角形。`model()` 仍是原暖白／暖紅，街景標準模型及種子不動。色帶使用既有面片，不跨輪拱補新三角；行李門同色；變體僅將既有玻璃面設夜間發光，原車燈旗標維持。無參數街景模型的玻璃與燈旗標完全不變。每組近遠景對同一個原生幾何 LOD，塗裝不得改幾何、法線、發光旗標。
-
-`tools/coach-bus/rebuild.sh <原車私庫輸出> <塗裝私庫輸出>` 會在原車驗證後額外產 16 個塗裝模型、224 張日夜透明圖、自含 viewer 與同尺度車隊圖。兩批輸出都在私庫；只保留最新一輪。自看日夜、七方向與縮小遠景，作者外觀接受及 Metal 真機另驗。
+- `swift build --build-tests -Xswiftc -warnings-as-errors`，再跑這個 kit 的 XCTest（`swift test --skip-build --filter <類別>`）。
+- 重建工具的說明與驗證在 `tools/coach-bus/README.md`。大型成品（native、GLB、七向 PNG、viewer）放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`），不放這個 repo。
+- 照 CLAUDE.md 寫 VERIFIED／UNVERIFIED：Linux 的 WebGL 預覽不是 Metal，實機效能與地圖接入另驗。
