@@ -521,9 +521,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Sessions comment on GitHub as the owner's account, so never write
   `@claude` in an issue, comment or review unless you mean to start
   `claude.yml`: every mention is a run billed to the API key.
-- Work on a task branch and open a pull request. Never commit to `main`, never
-  merge a PR, never enable auto-merge, never force-push `main`. The user
-  decides what gets merged.
+- Work on a task branch and open a pull request. Never commit to `main`,
+  never force-push `main` or rewrite its history, never enable auto-merge.
+  Merging (owner's standing rule, 2026-11-17: 「PR 綠了就合」): a session
+  merges a pull request once its CI is green, its own or another
+  session's; when CI is red, it fixes the failure and pushes. Before
+  merging, it merges `origin/main` into the branch if `main` has moved,
+  and merges only after the new head's CI is green. A TestFlight release
+  still waits for the user (below).
 - The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
   tier is 19 jobs (ARCHITECTURE decision 187; decision 411's shared build
   added the build job, decision 544's continuation cut the shards from 20
@@ -544,7 +549,7 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
     `ios-build.yml`'s `only_testing` input instead of running the full lane.
   - At most 2 pull requests that change GameCore (a full tier) run CI at
     once.
-  - Whoever merges (a session the user authorized, or the user): merge in
+  - Whoever merges (a session, under the standing rule above, or the user): merge in
     batches of 3 to 5 green pull requests, then wait for `ci.yml` on `main`
     to turn green before the next batch; check that `iOS App Build` is green
     too (or skipped because the same change passed), since only `Swift CI

@@ -212,7 +212,7 @@ extension GameWorld {
         // Decision 294: a long leg of a line with runs, only part of the way.
         if route.moves, blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
             let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
-            if let limit = approachLimit(of: candidate, envelopes) {
+            if envelopes.length > Self.approachReach, let limit = approachLimit(of: candidate, envelopes) {
                 return reservingApproach(candidate, envelopes: envelopes, limit: limit, following: following, memo: &memo)
             }
         }
@@ -225,10 +225,11 @@ extension GameWorld {
         }
         var train = candidate
         train.reservation = route.moves ? Set(envelope.resources).sorted() : []
-        // Decision 849: without block sections, a service of a line with
-        // runs whose whole route is free takes it only to its home signal
-        // while that is far (see ``homeLimit(of:_:)``).
-        if route.moves, !blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
+        // Decision 849: a service of a line with runs whose whole route is
+        // free takes it only to its home signal while that is far (see
+        // ``homeLimit(of:_:)``): without block sections, and with them on
+        // a leg decision 294 leaves whole.
+        if route.moves, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
             let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
             if let limit = approachLimit(of: candidate, envelopes) {
                 train.reservation = authorityEnvelope(envelopes, to: limit).sorted()
