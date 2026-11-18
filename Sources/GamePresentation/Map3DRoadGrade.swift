@@ -191,16 +191,24 @@ extension Map3DScene.Builder {
             var along = (0..<count).map { Double($0) * Grade.step }
             if total - along.last! > 1e-6 { along.append(total) }
             var points: [Point] = []
+            // Decision 865: the ground under a road is its bed, level
+            // across it (before other roads hold it up, so a chunk built
+            // apart finds the same).
+            var beds: [Float] = []
+            let half = Map3DRoadBed.half(piece.kind, ramp: piece.isRamp)
             var segment = 1
             for at in along {
                 while segment < piece.points.count - 1, piece.distances[segment] < at { segment += 1 }
                 let a = piece.points[segment - 1], b = piece.points[segment]
                 let span = piece.distances[segment] - piece.distances[segment - 1]
                 let t = span > 0 ? min(max((at - piece.distances[segment - 1]) / span, 0), 1) : 0
-                points.append(Point(x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t))
+                let p = Point(x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t)
+                points.append(p)
+                beds.append(span > 0.01 ? bedLevel(at: p, along: ((b.x - a.x) / span, (b.z - a.z) / span), half: half)
+                                        : drawnGround(x: Float(p.x), z: Float(p.z)))
             }
             samples.append(points)
-            grounds.append(points.map { drawnGround(x: Float($0.x), z: Float($0.z)) })
+            grounds.append(beds)
             let xs = piece.points.map(\.x), zs = piece.points.map(\.z)
             boxes.append((xs.min()!, zs.min()!, xs.max()!, zs.max()!))
         }

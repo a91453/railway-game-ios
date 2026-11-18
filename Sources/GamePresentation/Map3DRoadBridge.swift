@@ -945,8 +945,9 @@ extension Map3DScene.Builder {
     /// metres: lifted where it crosses over, up to what it must clear and
     /// under what it must keep, giving way at its grade; never under the
     /// ground.
-    mutating func deckRise(_ deck: Map3DRoadBridges.Deck, at p: Map3DBaseMap.Point) -> Float {
-        let ground = drawnGround(x: Float(p.x), z: Float(p.z))
+    /// Decision 865: over `ground` when given, the deck's bed there.
+    mutating func deckRise(_ deck: Map3DRoadBridges.Deck, at p: Map3DBaseMap.Point, ground known: Float? = nil) -> Float {
+        let ground = known ?? drawnGround(x: Float(p.x), z: Float(p.z))
         var height = ground
         for lift in deck.lifts {
             let distance = Float(((p.x - lift.point.x) * (p.x - lift.point.x) + (p.z - lift.point.z) * (p.z - lift.point.z)).squareRoot())
@@ -972,14 +973,16 @@ extension Map3DScene.Builder {
     /// short to reach the main road's height at its grade, so it meets
     /// the main road at the main road's height; never under what it must
     /// clear of the track.
-    mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point) -> Float {
-        pieceRise(bridges, piece: number, at: p, deckRise: deckRise(bridges.decks[bridges.pieces[number].deck], at: p), along: nil)
+    mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point, ground: Float? = nil) -> Float {
+        pieceRise(bridges, piece: number, at: p, deckRise: deckRise(bridges.decks[bridges.pieces[number].deck], at: p, ground: ground), along: nil,
+                  ground: ground)
     }
 
     /// The same, given its deck's ``deckRise(_:at:)`` at `p` and, when
     /// known, how far along it `p` is (``levelHeights(into:others:)``
     /// asks again and again at the same points).
-    mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point, deckRise full: Float, along known: Double?) -> Float {
+    mutating func pieceRise(_ bridges: Map3DRoadBridges, piece number: Int, at p: Map3DBaseMap.Point, deckRise full: Float, along known: Double?,
+                            ground: Float? = nil) -> Float {
         let piece = bridges.pieces[number], deck = bridges.decks[piece.deck]
         var rise = full
         var along = known
@@ -993,7 +996,7 @@ extension Map3DScene.Builder {
                 along = s
                 cap = piece.levelCap(at: s)
             }
-            if cap < rise { rise = max(cap, min(rise, floorRise(deck, at: p))) }
+            if cap < rise { rise = max(cap, min(rise, floorRise(deck, at: p, ground: ground))) }
         }
         guard let ramp = piece.ramp, rise > 0, ramp.samples.count >= 2 else { return rise }
         let s = along ?? piece.travelled(to: p)
@@ -1007,14 +1010,14 @@ extension Map3DScene.Builder {
         let grade = Map3DRoadBridges.grade(piece.kind)
         let cap = down + up > 0 ? max(Float(down) * grade, rise * Float(down / (down + up))) : 0
         guard cap < rise else { return rise }
-        return min(rise, max(cap, floorRise(deck, at: p)))
+        return min(rise, max(cap, floorRise(deck, at: p, ground: ground)))
     }
 
     /// What `deck` must clear of the track at `p`: how far over the drawn
     /// ground it must stand there, metres (0 where nothing holds it up).
-    mutating func floorRise(_ deck: Map3DRoadBridges.Deck, at p: Map3DBaseMap.Point) -> Float {
+    mutating func floorRise(_ deck: Map3DRoadBridges.Deck, at p: Map3DBaseMap.Point, ground known: Float? = nil) -> Float {
         guard deck.bounds.contains(where: \.isFloor) else { return 0 }
-        let ground = drawnGround(x: Float(p.x), z: Float(p.z))
+        let ground = known ?? drawnGround(x: Float(p.x), z: Float(p.z))
         var floor: Float = 0
         for bound in deck.bounds where bound.isFloor {
             let distance = Float(((p.x - bound.point.x) * (p.x - bound.point.x) + (p.z - bound.point.z) * (p.z - bound.point.z)).squareRoot())
@@ -1411,6 +1414,15 @@ extension Map3DScene.Builder {
         guard !bridges.isEmpty || !roadGrade.isEmpty else { return (0, false) }
         let key = Map3DRoadBridges.key(p.x, p.z)
         var best: (rise: Float, onBridge: Bool) = (0, false)
+        // Decision 865: over the road's bed there, which whoever asks
+        // stands the road on (``roadGround(at:along:onDeck:beyond:)``).
+        var bed: Float?
+        func ground() -> Float {
+            if let bed { return bed }
+            let found = roadGround(at: p, along: along, onDeck: onDeck)
+            bed = found
+            return found
+        }
         // ROAD-RAMP-HEIGHT: on each deck, the piece whose line is nearest:
         // a link road coming down beside or under its main road is at its
         // own height, the main road at the deck's.
@@ -1431,7 +1443,7 @@ extension Map3DScene.Builder {
             nearest[piece.deck] = (distance, number)
         }
         for (_, found) in nearest.sorted(by: { $0.key < $1.key }) {
-            best = (max(best.rise, pieceRise(bridges, piece: found.piece, at: p)), true)
+            best = (max(best.rise, pieceRise(bridges, piece: found.piece, at: p, ground: ground())), true)
         }
         for number in bridges.endCells[key] ?? [] {
             let end = bridges.ends[number]
@@ -1456,7 +1468,7 @@ extension Map3DScene.Builder {
             let out = Float(abs(vx * join.along.x + vz * join.along.z))
             guard out <= join.reach, Float(abs(vx * join.along.z - vz * join.along.x)) <= join.half + 0.5 + 0.1 * max(0, out - join.plateau) else { continue }
             if let along, abs(along.x * join.along.x + along.z * join.along.z) < 0.9 { continue }
-            let rise = join.height - join.grade * max(0, out - join.plateau) - drawnGround(x: Float(p.x), z: Float(p.z))
+            let rise = join.height - join.grade * max(0, out - join.plateau) - ground()
             guard rise > 0, bridges.isOn(p, join.roads) else { continue }
             best = (max(best.rise, rise), best.onBridge || out <= join.plateau)
         }
@@ -1464,7 +1476,7 @@ extension Map3DScene.Builder {
         // on the ground lifted over it (a deck once its girder is clear)
         // or down in its cutting.
         if !roadGrade.isEmpty, let graded = roadGrade.profile(at: p, along: along, onDeck: onDeck) {
-            let rise = graded.height - drawnGround(x: Float(p.x), z: Float(p.z))
+            let rise = graded.height - ground()
             if onDeck {
                 best = (max(best.rise, rise), true)
             } else if graded.inCut, best.rise <= 0 {
@@ -1489,7 +1501,6 @@ extension Map3DScene.Builder {
             Map3DRoadBridges.nearest(probe, a, b).distance <= Double(half)
                 && Map3DRoadBridges.nearest(centre, a, b).distance > Double(half) + 0.5
         }
-        let ground = drawnGround(x: Float(probe.x), z: Float(probe.z))
         for (number, index) in bridges.segments[key] ?? [] {
             let piece = bridges.pieces[number]
             let a = piece.points[index - 1], b = piece.points[index]
@@ -1497,7 +1508,9 @@ extension Map3DScene.Builder {
             let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
             let share = length > 0 ? ((probe.x - a.x) * dx + (probe.z - a.z) * dz) / (length * length) : 0.5
             if share < 0 && index == 1 && piece.opens.first || share > 1 && index == piece.points.count - 1 && piece.opens.last { continue }
-            let top = ground + Self.lift(of: piece.kind) + pieceRise(bridges, piece: number, at: probe)
+            // Decision 865: on its own bed.
+            let ground = roadGround(at: probe, along: length > 0.01 ? (dx / length, dz / length) : nil, onDeck: true)
+            let top = ground + Self.lift(of: piece.kind) + pieceRise(bridges, piece: number, at: probe, ground: ground)
             if abs(top - height) < within { return true }
         }
         for (number, index) in bridges.groundCells[key] ?? [] {
@@ -1505,7 +1518,8 @@ extension Map3DScene.Builder {
             let a = road.points[index - 1], b = road.points[index]
             let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
             guard length > 0.01, covers(a, b, half: Map3DRoadBridges.half(road.kind, ramp: road.isRamp)) else { continue }
-            let top = ground + Self.lift(of: road.kind) + roadRise(at: probe, along: (dx / length, dz / length), onDeck: false).rise
+            let top = roadGround(at: probe, along: (dx / length, dz / length), onDeck: false) + Self.lift(of: road.kind)
+                + roadRise(at: probe, along: (dx / length, dz / length), onDeck: false).rise
             if abs(top - height) < within { return true }
         }
         return false
@@ -1624,7 +1638,8 @@ extension Map3DScene.Builder {
                     let t = Double(step) / Double(steps)
                     let p = Point(x: a.x + dx * t, z: a.z + dz * t)
                     let raised = roadRise(at: p, along: along, onDeck: road.bridgeLevel > 0)
-                    let top = Map3DPoint(Float(p.x), drawnGround(x: Float(p.x), z: Float(p.z)) + lift + raised.rise, Float(p.z))
+                    // Decision 865: on the road's bed.
+                    let top = Map3DPoint(Float(p.x), roadGround(at: p, along: along, onDeck: road.bridgeLevel > 0) + lift + raised.rise, Float(p.z))
                     samples.append(Sample(at: p, top: top, rise: raised.rise, clear: raised.onBridge && raised.rise >= look.girderDepth + 0.5,
                                           travelled: travelled + length * t, corner: step == steps))
                 }
