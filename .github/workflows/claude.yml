@@ -57,7 +57,11 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@v1
+        # Pinned to the commit of tag v1 (v1.0.281 on 2026-11-18), not the
+        # moving tag: this job holds the API key and write access, so a
+        # moved tag must not change what runs. To update, take the commit of
+        # the newest tag: git ls-remote https://github.com/anthropics/claude-code-action 'refs/tags/v1^{}'
+        uses: anthropics/claude-code-action@e5812cd75691ca7bbfc57c0ecf4441db3a1ab7dd # v1.0.281
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # The owner's choice; Claude Code's own default model may change.
