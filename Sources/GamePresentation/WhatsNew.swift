@@ -35,6 +35,10 @@ public enum WhatsNew {
             id: "2026-11-19-141",
             items: [
                 Line(
+                    english: "A track you draw across another at the same height makes a level crossing where they meet.",
+                    chinese: "畫線越過同一高度的軌道時，交會處自動做成平面交叉。"
+                ),
+                Line(
                     english: "Write your own departure melody in the melody workshop and give it to any station.",
                     chinese: "在旋律工作坊寫自己的發車旋律，指定給想要的車站。"
                 ),
