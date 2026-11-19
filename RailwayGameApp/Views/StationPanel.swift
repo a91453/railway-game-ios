@@ -42,6 +42,8 @@ struct StationPanel: View {
     /// Decision 184: whether the searchable list of stations is up, and
     /// what was typed in it.
     @State private var choosingStation = false
+    /// Decision 883: the melody workshop, while it is open.
+    @State private var workshop: MelodyWorkshopSheet?
     @State private var stationSearch = ListSearch()
     /// Decision 423, second step: whether the "How to Get There" section is
     /// open, the station picked in it and the options worked out for it.
@@ -749,12 +751,11 @@ struct StationPanel: View {
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("station.chime")
                 Picker(selection: Binding(
-                    get: { sounds.departureMelody },
-                    set: { session.setSelectedStationDepartureMelody($0) }
+                    get: { sounds.melodyPick },
+                    set: { session.setSelectedStationMelody($0) }
                 )) {
-                    Text(verbatim: StationSoundsChoice.melodyTitle(nil, in: language)).tag(DepartureMelody?.none)
-                    ForEach(DepartureMelody.allCases, id: \.self) { melody in
-                        Text(verbatim: StationSoundsChoice.melodyTitle(melody, in: language)).tag(DepartureMelody?.some(melody))
+                    ForEach(sounds.melodyPicks, id: \.self) { pick in
+                        Text(verbatim: sounds.melodyTitle(pick, in: language)).tag(pick)
                     }
                 } label: {
                     Label {
@@ -765,12 +766,46 @@ struct StationPanel: View {
                 }
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("station.departureMelody")
+                // Decision 883: write a melody for this station, or
+                // rewrite the one it plays.
+                if case .player(let id) = sounds.melodyPick, let melody = session.world.playerMelody(id: id) {
+                    Button {
+                        openWorkshop(MelodyDraft(editing: melody))
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Edit \(melody.name)", "編輯「\(melody.name)」"))
+                        } icon: {
+                            Image(systemName: "pencil")
+                        }
+                    }
+                    .accessibilityIdentifier("station.editMelody")
+                }
+                Button {
+                    openWorkshop(MelodyDraft(newIn: session.world, language: language))
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Write a melody…", "自己寫一段旋律…"))
+                    } icon: {
+                        Image(systemName: "pianokeys")
+                    }
+                }
+                .disabled(sounds.playerMelodies.count >= PlayerMelody.maximumMelodies)
+                .accessibilityIdentifier("station.writeMelody")
+                .sheet(item: $workshop) { sheet in
+                    MelodyWorkshopView(session: session, draft: sheet.draft)
+                        .coversTheMap(session)
+                }
             } header: {
                 Text(verbatim: language.text("Station Sounds", "車站鈴聲"))
             } footer: {
                 Text(verbatim: StationSoundsChoice.note(in: language))
             }
         }
+    }
+
+    /// Decision 883: opens the melody workshop on `draft`.
+    private func openWorkshop(_ draft: MelodyDraft) {
+        workshop = MelodyWorkshopSheet(id: (workshop?.id ?? 0) + 1, draft: draft)
     }
 
     /// Decision 214: make the station a depot (decision 209), or an

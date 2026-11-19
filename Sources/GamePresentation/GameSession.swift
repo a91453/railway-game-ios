@@ -1801,7 +1801,7 @@ public final class GameSession {
         departuresPlayed.formIntersection(closings)
         guard let closing = closings.first(where: { !departuresPlayed.contains($0) }) else { return }
         departuresPlayed.insert(closing)
-        playSound(.departure(DepartureMelody.of(closing.train, at: closing.station, in: world)))
+        playSound(DepartureMelody.cue(closing.train, at: closing.station, in: world))
     }
 
     /// Whether the speed is held to 10× at most now: the 3D map is open and

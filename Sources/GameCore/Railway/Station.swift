@@ -62,6 +62,11 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// train's doors close, `nil` for the line's own. Set by
     /// ``GameWorld/setStationDepartureMelody(_:to:)`` only; no rule reads it.
     public internal(set) var departureMelody: DepartureMelody?
+    /// Decision 883: the melody the player wrote that it plays as a train's
+    /// doors close, `nil` for none; never set with ``departureMelody``. Set
+    /// by ``GameWorld/setStationPlayerMelody(_:to:)`` and
+    /// ``GameWorld/removePlayerMelody(_:)`` only; no rule reads it.
+    public internal(set) var playerMelody: PlayerMelodyID?
 
     /// A station standing at `point`.
     ///
@@ -81,7 +86,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints, expansion, chime, departureMelody
+        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints, expansion, chime, departureMelody, playerMelody
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -158,6 +163,10 @@ extension Station: Codable {
         // plays what its place calls for (every save before version 109).
         chime = try container.decodeIfPresent(StationChime.self, forKey: .chime)
         departureMelody = try container.decodeIfPresent(DepartureMelody.self, forKey: .departureMelody)
+        // Decision 883: only a station set to a player melody is written
+        // with one (every save before version 111 has none); the world
+        // checks that it exists.
+        playerMelody = try container.decodeIfPresent(PlayerMelodyID.self, forKey: .playerMelody)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -179,6 +188,7 @@ extension Station: Codable {
         try container.encodeIfPresent(expansion, forKey: .expansion)
         try container.encodeIfPresent(chime, forKey: .chime)
         try container.encodeIfPresent(departureMelody, forKey: .departureMelody)
+        try container.encodeIfPresent(playerMelody, forKey: .playerMelody)
     }
 }
 

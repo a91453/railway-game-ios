@@ -74,6 +74,16 @@ extension DepartureMelody {
         return of(lineNamed: line.name, atStationNamed: station.name)
     }
 
+    /// Decision 883: what train `id` plays leaving `station` in `world`:
+    /// the notes of the player melody the station is set to, or else
+    /// ``of(_:at:in:)``.
+    public static func cue(_ id: TrainID, at station: StationID?, in world: GameWorld) -> SoundCue {
+        if let melody = station.flatMap({ world.station(id: $0)?.playerMelody }).flatMap({ world.playerMelody(id: $0) }) {
+            return .playerDeparture(melody.notes)
+        }
+        return .departure(of(id, at: station, in: world))
+    }
+
     /// The melody of train `id`'s line in `world`, or, for a train on no
     /// line (a timetable of its own), the first melody.
     public static func of(_ id: TrainID, in world: GameWorld) -> DepartureMelody {

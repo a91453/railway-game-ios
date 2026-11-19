@@ -423,4 +423,12 @@ public enum GameError: Error, Hashable, Sendable {
     /// The company already has the air route, or as many as
     /// ``AirRoute/maximumRoutes`` (decision 758).
     case airRouteAlreadyBought
+    /// A player melody's notes break ``PlayerMelody/isValid(_:)``
+    /// (decision 883).
+    case invalidMelody
+    /// The world already holds ``PlayerMelody/maximumMelodies`` player
+    /// melodies (decision 883).
+    case tooManyMelodies
+    /// No player melody has this number (decision 883).
+    case unknownPlayerMelody(PlayerMelodyID)
 }

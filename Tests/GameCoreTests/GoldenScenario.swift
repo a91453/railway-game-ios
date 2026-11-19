@@ -1758,6 +1758,8 @@ extension StepOutcome: Codable {
         // golden schema reads none of these back.
         case .rejected(.unknownAirRoute), .rejected(.invalidAirRoute), .rejected(.airRouteAlreadyBought):
             try container.encode("airRouteRefused", forKey: .result)
+        case .rejected(.invalidMelody), .rejected(.tooManyMelodies), .rejected(.unknownPlayerMelody):
+            try container.encode("playerMelodyRefused", forKey: .result)
         // Decision 515: no golden scenario lays mountain track, and the
         // golden schema does not read it back.
         case .rejected(.trainCannotClimb(let id)):

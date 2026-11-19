@@ -606,9 +606,15 @@
 ///     only an earlier version knows three melodies and would call such a
 ///     save damaged, so it says the save is newer than it instead. A save
 ///     of any earlier version needs no step: its melodies read as before.
+/// 111. Player melodies (decision 883): a world's `"playerMelodies"` and
+///     `"nextPlayerMelodyID"`, and a station's `"playerMelody"`, the
+///     melody the player wrote that it plays. A build that reads only an
+///     earlier version would drop them, so it says the save is newer than
+///     it instead. A save of any earlier version needs no step: it has no
+///     player melody.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 110
+    public static let currentVersion = 111
 
     public let world: GameWorld
 

@@ -2556,6 +2556,52 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-civic-riders", app)
     }
 
+    /// Decision 883: the station panel's sounds rows with the workshop's
+    /// buttons, then the melody workshop opened from them with official
+    /// melody 1's tune to start from. For the screenshot review of the
+    /// pull request that made it, not the website.
+    func testMelodyWorkshop() {
+        let app = launch(extra: ["-screenshot-scene", "commute", "-screenshot-select-station", "1"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        func first() -> CGPoint? {
+            ((stations.value as? String) ?? "").split(separator: ";").first.flatMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        var last = first()
+        let still = Date().addingTimeInterval(10)
+        while Date() < still {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = first()
+            if now != nil, now == last { break }
+            last = now
+        }
+        guard let point = last else { return XCTFail("The scene has stations") }
+        var list: XCUIElement?
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            list = app.stationPanelList(within: 5)
+        }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let write = app.buttons["station.writeMelody"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(write, in: list), "The workshop's button comes into view")
+        settle()
+        keep("melody-station-sounds", app)
+        write.tap()
+        let start = app.buttons["melody.startFrom"].firstMatch
+        XCTAssertTrue(start.appears(within: 10), "The workshop opens")
+        start.tap()
+        let tune = app.buttons["旋律一"].firstMatch
+        if tune.appears(within: 5) { tune.tap() }
+        settle()
+        keep("melody-workshop", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that
