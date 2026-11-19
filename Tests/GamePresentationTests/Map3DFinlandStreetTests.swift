@@ -16,6 +16,8 @@ final class Map3DFinlandStreetTests: XCTestCase {
             .signalRed: (242, 6, 3.65), .signalRedAmber: (242, 12, 3.65), .signalAmber: (242, 6, 3.65), .signalGreen: (242, 6, 3.65),
             .walkStop: (254, 8, 2.74), .walkDark: (254, 0, 2.74), .walkWalk: (254, 14, 2.74),
             .lamp: (112, 2, 9.97), .busStop: (200, 0, 2.63), .crossingSign: (143, 0, 2.43),
+            // Decision 846's fourth later note: the second batch.
+            .shelter: (290, 6, 2.55), .lampDouble: (196, 4, 9.95), .giveWaySign: (138, 0, 2.79),
         ]
         XCTAssertEqual(Set(delivered.keys), Set(Unit.allCases))
         for unit in Unit.allCases {
@@ -27,7 +29,7 @@ final class Map3DFinlandStreetTests: XCTestCase {
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.001, "\(unit)")
             XCTAssertEqual(model.maximum.z, expected.height, accuracy: 0.01, "\(unit)")
             for vertex in model.vertices where vertex.layer == Map3DVertex.glowing {
-                XCTAssertTrue(Map3DFinlandStreet.lit.contains(vertex.color))
+                XCTAssertTrue(Map3DFinlandStreet.glows(vertex.color, in: unit))
             }
         }
         XCTAssertEqual(Map3DFinlandStreet.drawn.map(\.name), Unit.allCases.map(\.rawValue))
@@ -67,6 +69,22 @@ final class Map3DFinlandStreetTests: XCTestCase {
         XCTAssertTrue(plate.contains { $0.ny > 0.9 })
         let sign = try XCTUnwrap(Map3DFinlandStreet.drawn.first { $0.name == Unit.crossingSign.rawValue }).vertices.filter { $0.color == blue }
         XCTAssertTrue(sign.contains { $0.nx < -0.9 })
+        // Decision 846's fourth later note: the shelter long along x and
+        // open toward its left (the road): glass at its back (−y) and
+        // ends, none along its front; the double light's heads out on
+        // both sides; the give-way sign's yellow toward −x.
+        let shelter = try XCTUnwrap(Map3DFinlandStreet.model(.shelter))
+        XCTAssertGreaterThan(shelter.maximum.x - shelter.minimum.x, 2 * (shelter.maximum.y - shelter.minimum.y))
+        let glass = shelter.vertices.filter { $0.color == Map3DPalette.glazing }
+        XCTAssertFalse(glass.isEmpty)
+        let middle = (shelter.minimum.y + shelter.maximum.y) / 2
+        XCTAssertTrue(glass.allSatisfy { $0.y < middle + 0.2 || abs($0.nx) > 0.9 })
+        let heads = try glowing(.lampDouble)
+        XCTAssertTrue(heads.allSatisfy { $0.nz < -0.9 })
+        XCTAssertGreaterThan(heads.map(\.y).max()!, 1.5)
+        XCTAssertLessThan(heads.map(\.y).min()!, -1.5)
+        let yellow = try XCTUnwrap(Map3DFinlandStreet.model(.giveWaySign)).vertices.filter { $0.color == Map3DScene.Builder.barrierYellow }
+        XCTAssertTrue(yellow.contains { $0.nx < -0.9 })
     }
 
     /// The renderer shows Finland's signals as the clock says, red and
