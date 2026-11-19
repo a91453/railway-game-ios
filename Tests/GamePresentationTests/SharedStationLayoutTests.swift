@@ -426,8 +426,20 @@ final class SharedStationLayoutTests: XCTestCase {
         XCTAssertEqual(names.last, "紅樹林", "it runs on to Hongshulin")
         XCTAssertEqual(Set(names).count, 12)
         let at = try XCTUnwrap(blue.stops.firstIndex(of: shalun))
-        let there = Set(blue.routePreferences.filter { $0.to == at }.map(\.platform))
-        XCTAssertEqual(there.count, 1, "both ways on the track it leaves from")
+        // GRADE-CROSSING-SHALUN: toward the wharf (from Hongshulin's side,
+        // `at + 1`) on one face, back on the other, as the real ones; its
+        // first track crosses the Green Mountain Line's on the flat, a
+        // diamond, and the crossover east of the station is gone.
+        let outbound = try XCTUnwrap(blue.routePreferences.first { $0.from == at + 1 && $0.to == at }?.platform)
+        let inbound = try XCTUnwrap(blue.routePreferences.first { $0.from == at - 1 && $0.to == at }?.platform)
+        XCTAssertNotEqual(outbound.edge, inbound.edge, "one face each way")
+        let diamonds = world.network.nodes.filter { NetworkDiamond.isDiamond($0.id, in: world) }
+        XCTAssertEqual(diamonds.count, 1, "one diamond, west of Binhai Shalun")
+        if let diamond = diamonds.first {
+            XCTAssertLessThan((WorldVector(diamond.position.plan) - WorldVector(world.station(id: shalun)!.location)).length, 120 * RealLineAcquisition.metre)
+        }
+        let switches = world.network.nodes.filter { $0.ends.count == 3 && (WorldVector($0.position.plan) - WorldVector(world.station(id: shalun)!.location)).length < 300 * RealLineAcquisition.metre }
+        XCTAssertEqual(switches.count, 2, "the two lines part at each platform track's west end, and nowhere else near")
         // Its trains stand overnight two at Hongshulin, at the Green
         // Mountain Line's platforms there no train of it stands at, and
         // the rest on its own track.
