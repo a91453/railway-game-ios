@@ -71,9 +71,11 @@ struct MelodyWorkshopView: View {
     /// The note length, the play button, the tunes to start from and
     /// clearing.
     private var controls: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) { lengthPicker; Spacer(minLength: 0); actions }
-            VStack(alignment: .leading, spacing: 8) { lengthPicker; actions }
+        // Two rows, not a ViewThatFits: the picker's ForEach must not be
+        // measured off the main thread (CRASH101).
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal) { lengthPicker }
+            actions
         }
         .accessibilityElement(children: .contain)
     }
