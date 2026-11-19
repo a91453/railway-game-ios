@@ -19,10 +19,9 @@ public struct PlayerMelodySynth: Sendable {
     /// The tempo, as the official melodies'.
     public static let tempo = 150
     /// The recorded notes' pitches (MIDI), a major third apart up to A6,
-    /// the recorded piano's highest key: every note of
-    /// ``PlayerMelody/pitches`` is within two semitones of one, but B♭6 to
-    /// C7, played on A6 one to three higher.
-    public static let roots = [74, 78, 82, 86, 90, 93]
+    /// and C7, the top of ``PlayerMelody/pitches``: every note a player
+    /// can write is within two semitones of one.
+    public static let roots = [74, 78, 82, 86, 90, 93, 96]
     /// The file of the recorded note `root`, in the app's `Audio`
     /// resources.
     public static func sampleName(_ root: Int) -> String {

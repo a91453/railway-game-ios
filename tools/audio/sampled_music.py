@@ -248,6 +248,15 @@ def _render(tune, sheets, times, seconds):
             raise SystemExit(f"{sheet['title']}: the stems differ in tempo, length or metre")
         if len(entries) != len(sheet["tracks"]):
             raise SystemExit(f"{sheet['title']}: {len(sheet['tracks'])} tracks, {len(entries)} in the arrangement")
+        for track, entry in zip(sheet["tracks"], entries):
+            if "program" not in entry:
+                continue
+            silent = chamber_bank.unplayable(entry["program"], [n["pitch"] + entry.get("transpose", 0) for n in track["notes"]])
+            if silent:
+                raise SystemExit(
+                    f"{sheet['title']}: {entry['name']} plays MIDI {silent}, which the chamber bank's program "
+                    f"{entry['program']} has no recording for (sampled/chamber.json keys): it would be silent"
+                )
     seconds_per_tick = 60 / first["tempo"] / TPB
     n = round(first["length"] * seconds_per_tick * SR)
     if n % 64:
