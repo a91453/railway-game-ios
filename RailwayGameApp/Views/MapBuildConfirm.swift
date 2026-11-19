@@ -440,6 +440,15 @@ struct MapBuildConfirm: View {
                 around: anchor, reach: 2 * reach
             )
         }
+        // The new line's last station (and the one a stop joins), which
+        // the pill is anchored beside: on a phone held sideways with a
+        // message over the map there may be no room above or below it,
+        // and the pill stood over the station and the next one along, so
+        // a touch meant for the next station pressed ✕ (iOS 27.2, pull
+        // request #2453).
+        if build.kind == .line || build.kind == .addStop {
+            return BuildConfirmLayout.siteObstacles([], around: anchor, reach: reach)
+        }
         guard build.kind == .platform else { return [] }
         let lines = session.trackLines(near: build.anchor, within: reach / camera.pointsPerUnit)
             .map { $0.map { camera.screenPoint(of: $0) } }

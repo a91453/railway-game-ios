@@ -103,7 +103,7 @@ jobs:
     name: Archive, sign, export, check and upload
     needs: preflight
     if: github.ref == 'refs/heads/main'
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     environment: testflight
     permissions:
@@ -130,6 +130,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
+
       # The same check again, and BUILD_NUMBER for later steps. It is
       # computed here, from this job's own run attempt, so that re-running
       # only the failed jobs still gets a build number no attempt has used.
@@ -143,7 +146,9 @@ jobs:
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: .github/scripts/testflight-preflight.sh
 
-      # App Store Connect accepts only builds made with Xcode 26 or later.
+      # From April 2027 App Store Connect accepts only builds made with the
+      # iOS 27 SDK, Xcode 27 or later (its warning 90725 on build 139, which
+      # Xcode 26.6 made; decision 857). The check is below, after the brand.
       # The released game's name, save extension, website and mailbox into
       # the working copy the archive is built from (tools/brand/README.md).
       - name: Apply the game's brand
@@ -158,8 +163,8 @@ jobs:
           xcodebuild -version
           echo "iOS SDK: $(xcrun --sdk iphoneos --show-sdk-version)"
           major="$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')"
-          if (( major < 26 )); then
-            echo "::error::App Store Connect needs Xcode 26 or later; this runner has Xcode $major."
+          if (( major < 27 )); then
+            echo "::error::App Store Connect needs Xcode 27 or later from April 2027; this runner has Xcode $major."
             exit 1
           fi
 

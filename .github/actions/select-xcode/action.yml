@@ -1,0 +1,23 @@
+name: Select Xcode
+description: >-
+  Selects the Xcode every macOS job builds with (decision 857). The xcode-27
+  image's default is not the newest Xcode it holds, and App Store Connect asks
+  for the iOS 27 SDK from April 2027, so the version is written here, once.
+  To move to another Xcode, change XCODE_VERSION, and docs/MAC_LOCAL_SETUP.md
+  with it.
+
+runs:
+  using: composite
+  steps:
+    - name: Select Xcode
+      shell: bash
+      env:
+        XCODE_VERSION: "27.2"
+      run: |
+        app="/Applications/Xcode_$XCODE_VERSION.app"
+        if [[ ! -d "$app" ]]; then
+          echo "::error::This runner has no Xcode $XCODE_VERSION. It has: $(ls -d /Applications/Xcode_*.app 2>/dev/null | tr '\n' ' ')"
+          exit 1
+        fi
+        sudo xcode-select -s "$app/Contents/Developer"
+        xcodebuild -version

@@ -900,10 +900,23 @@ final class MapInteractionTests: XCTestCase {
         // Tap start anchor and end anchor to trigger track preview, in the
         // map's leading half: the details card floats over its trailing
         // side while a tool is chosen (decision 106).
+        // The details card slides in when the tool is chosen: on the iOS
+        // 27.2 Simulator two touches 0.6 s after Network reached the app
+        // and picked no track start (pull request #2480, full lane: the
+        // card still asked where the track starts). They wait for the card
+        // to rest, and are made once more if no stretch is previewed.
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        if card.exists { card.waitUntilStill() }
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        if !hud.appears(within: 5) {
+            app.logTree("no construction HUD after the first two touches")
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        }
 
-        XCTAssertTrue(hud.appears(within: 5), "MapConstructionHUD must appear when preview is active")
+        if !hud.appears(within: 5) { app.logTree("no construction HUD") }
+        XCTAssertTrue(hud.exists, "MapConstructionHUD must appear when preview is active")
 
         // Cancelling construction removes preview and HUD: the map's ✕
         // beside the track, which a phone shows with the details card
@@ -1750,15 +1763,36 @@ final class MapInteractionTests: XCTestCase {
         }
         let newLine = app.buttons["station.newLine"]
         XCTAssertTrue(newLine.appears(within: 10), "The station's card offers a new line")
+        // The card slides in after Show Controls: a touch read mid-slide
+        // went by New Line on the iOS 27.2 Simulator, no line was started,
+        // and the second station was only selected (pull request #2453).
+        newLine.waitUntilSettled()
         newLine.tap()
+        // The line has started when the game says where it starts. If not,
+        // New Line is touched once more, and what the screen held is logged.
+        let started = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "The line starts at")).firstMatch
+        if !started.appears(within: 5) {
+            app.logTree("no line started after New Line")
+            if newLine.exists, newLine.isHittable { newLine.tap() }
+        }
         // As on the owner's screenshot: the card folded, the map open.
         if card.exists {
             app.buttons["controls.toggle"].tap()
             XCTAssertTrue(card.disappears(within: 10), "The card folds")
         }
+        app.logTree("before touching the second station at \(nearest[1])")
         tap(nearest[1])
         let drawer = app.descendants(matching: .any)["map.stationPair"].firstMatch
-        XCTAssertTrue(drawer.appears(within: 10), "The two stations are compared")
+        // A touch on the map just after the card folded went by on the
+        // iOS 27.2 Simulator (pull request #2453: the second station was
+        // never picked, the first still selected); a cancelled touch is no
+        // pick, so the second station is touched once more, as #1951 does.
+        if !drawer.appears(within: 5) {
+            app.logTree("no station pair drawer after the first touch on \(nearest[1])")
+            tap(nearest[1])
+        }
+        if !drawer.appears(within: 10) { app.logTree("no station pair drawer, tapped \(nearest[0]) and \(nearest[1]) twice") }
+        XCTAssertTrue(drawer.exists, "The two stations are compared")
         let confirm = app.buttons["map.build.confirm"]
         XCTAssertTrue(confirm.appears(within: 10))
         XCTAssertTrue(confirm.becomesHittable(within: 10), "A finger reaches the ✓: \(confirm.frame), drawer \(drawer.frame)")

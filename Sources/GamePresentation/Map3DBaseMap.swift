@@ -88,6 +88,13 @@ struct Map3DBaseMap: Sendable {
         /// Decision 391: on a bridge, its level (the tiles' `layer`, 1
         /// when it has none); 0 off one.
         var bridgeLevel = 0
+        /// Decision 846's second later note: the tiles' `oneway` 1:
+        /// traffic takes it only the way its points run (decision 474).
+        var oneway = false
+        /// Decision 846's third later note: its name (the tiles'
+        /// `transportation_name` `name` along the same line), read only
+        /// where the map's street name signs need it (``init(tiles:frame:region:originX:originY:names:)``).
+        var name: String?
     }
 
     /// Decision 391: a road bridge kept to its tile's own square, whole
@@ -182,7 +189,9 @@ struct Map3DBaseMap: Sendable {
     /// on the Earth by `frame`, in the metres of a scene whose origin is
     /// the world point (`originX`, `originY`). Tiles that fail to read are
     /// left out.
-    init(tiles: BaseMapTiles, frame: RealWorldFrame, region: WorldRegion, originX: Double, originY: Double) {
+    /// Decision 846's third later note: `names`, each road's name read
+    /// too (``Road/name``).
+    init(tiles: BaseMapTiles, frame: RealWorldFrame, region: WorldRegion, originX: Double, originY: Double, names: Bool = false) {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let anchorLatitude = frame.anchor.latitudeDegrees
         let pointsPerMetre = RealWorldFrame.worldPoints / (2 * Double.pi * RealWorldFrame.earthRadius * cos(anchorLatitude * .pi / 180))
@@ -207,9 +216,12 @@ struct Map3DBaseMap: Sendable {
                 // Decision 391: the tiles round the region only for their
                 // bridges.
                 let isDrawn = drawn.columns.contains(column) && drawn.rows.contains(row)
+                let wanted: Set<String> = isDrawn ? ["water", "landcover", "park", "waterway", "transportation"] : ["transportation"]
                 guard let bytes = try? tiles.tile(zoom: zoom, x: column, y: row),
-                      let decoded = try? VectorTile(bytes, layers: isDrawn ? ["water", "landcover", "park", "waterway", "transportation"] : ["transportation"])
+                      let decoded = try? VectorTile(bytes, layers: names && isDrawn ? wanted.union(["transportation_name"]) : wanted)
                 else { continue }
+                let roadsBefore = roads.count
+                var named: [(name: String, points: [Point])] = []
                 for layer in decoded.layers.values {
                     // A tile unit to a scene metre.
                     let scale = tilePoints / Double(layer.extent) / pointsPerMetre
@@ -223,6 +235,13 @@ struct Map3DBaseMap: Sendable {
                         addBridges(layer, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), scene: scene)
                     }
                     guard isDrawn else { continue }
+                    if layer.name == "transportation_name" {
+                        for feature in layer.features where feature.kind == .line {
+                            guard let name = feature.string("name"), !name.isEmpty else { continue }
+                            for part in feature.parts where part.count >= 2 { named.append((name, part.map(scene))) }
+                        }
+                        continue
+                    }
                     let bounds = Bounds(minX: max(westX, low.x), minZ: max(northZ, low.z), maxX: min(westX + span, high.x), maxZ: min(northZ + span, high.z))
                     guard bounds.minX < bounds.maxX, bounds.minZ < bounds.maxZ else { continue }
                     add(layer, bounds: bounds, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), scene: scene)
@@ -231,8 +250,34 @@ struct Map3DBaseMap: Sendable {
                                       scene: scene)
                     }
                 }
+                if !named.isEmpty {
+                    for index in roadsBefore..<roads.count { roads[index].name = Self.name(of: roads[index].points, in: named) }
+                }
             }
         }
+    }
+
+    /// Decision 846's third later note: the name of the road along
+    /// `points`, from the tile's `named` lines (the base map keeps a
+    /// road's name on its road's own points): the one with a stretch
+    /// within half a metre of the middle of the road's longest stretch and
+    /// running along it; `nil` where none is.
+    static func name(of points: [Point], in named: [(name: String, points: [Point])]) -> String? {
+        guard let (a, b) = zip(points, points.dropFirst()).max(by: { Map3DRoadMarkings.distance($0.0, $0.1) < Map3DRoadMarkings.distance($1.0, $1.1) })
+        else { return nil }
+        let length = Map3DRoadMarkings.distance(a, b)
+        guard length > 1e-6 else { return nil }
+        let middle = Point(x: (a.x + b.x) / 2, z: (a.z + b.z) / 2), way = Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length)
+        var best: (name: String, away: Double)?
+        for line in named {
+            for (c, d) in zip(line.points, line.points.dropFirst()) {
+                let span = Map3DRoadMarkings.distance(c, d)
+                guard span > 1e-6, abs(((d.x - c.x) * way.x + (d.z - c.z) * way.z) / span) > 0.95 else { continue }
+                let away = Map3DRoadMarkings.distance(middle, toSegment: c, d)
+                if away <= 0.5, best.map({ away < $0.away || away == $0.away && line.name < $0.name }) ?? true { best = (line.name, away) }
+            }
+        }
+        return best?.name
     }
 
     /// Decision 391: a road feature's bridge level: the tiles' `layer`
@@ -278,8 +323,10 @@ struct Map3DBaseMap: Sendable {
                 let isRamp: Bool
                 if case .number(let ramp) = feature.properties["ramp"] { isRamp = ramp != 0 } else { isRamp = false }
                 let level = Self.bridgeLevel(feature)
+                let oneway: Bool
+                if case .number(let way) = feature.properties["oneway"] { oneway = way != 0 } else { oneway = false }
                 for part in feature.parts where part.count >= 2 {
-                    roads.append(Road(kind: kind, isRamp: isRamp, points: part.map(scene), bounds: bounds, bridgeLevel: level))
+                    roads.append(Road(kind: kind, isRamp: isRamp, points: part.map(scene), bounds: bounds, bridgeLevel: level, oneway: oneway))
                 }
             case ("waterway", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.waterwayKind(feature.string("class")) else { continue }

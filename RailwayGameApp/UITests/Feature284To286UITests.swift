@@ -76,10 +76,13 @@ final class Feature284To286UITests: XCTestCase {
         launch("sightseeing")
         tap(app.buttons["hud.menu"])
         // Decision 383: under More only in a game with goals too.
-        if !app.buttons["menu.tourism"].appears(within: 3) {
-            tap(app.buttons["menu.more"])
+        // On iOS 27.2 the menu's side-by-side items and a nested menu's
+        // items show only their labels (pull request #2453).
+        let tourism = app.menuItems("menu.tourism", label: "觀光景點").firstMatch
+        if !tourism.appears(within: 3) {
+            tap(app.menuItems("menu.more", label: "更多").firstMatch)
         }
-        tap(app.buttons["menu.tourism"])
+        tap(tourism)
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10))
         let list = app.collectionViews.firstMatch
         XCTAssertTrue(list.appears(within: 10))

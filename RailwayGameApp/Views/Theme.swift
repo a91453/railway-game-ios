@@ -330,6 +330,12 @@ extension View {
                 .allowsHitTesting(false)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier(identifier)
+                // First among its siblings: the iOS 27.2 Simulator orders a
+                // background after the view it is behind, and XCTest found
+                // the mark, not the control under it, at the control's hit
+                // point (the Station mode and the tools never hittable,
+                // pull request #2453). Higher priorities come first.
+                .accessibilitySortPriority(1)
             }
         } else {
             self
