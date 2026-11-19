@@ -85,9 +85,13 @@ final class HongKongDepotTests: XCTestCase {
 
     /// The Tung Chung Line's depot is laid whichever of the three lines
     /// beside one another to the airport is bought first.
+    /// LANE-SHARED-ISLAND (decision 753, later): bought before the Airport
+    /// Express, which now runs on its north side between it and the
+    /// depot: as the three are sold together (decision 862, the Tung Chung
+    /// Line first), and with the Disneyland Resort Line first.
     func testTheDepotIsLaidBesideTheAirportExpress() throws {
         let session = try HongKongMapTests.hongKong()
-        for id in ["AEL", "DRL", "TCL"] {
+        for id in ["DRL", "TCL", "AEL"] {
             let offer = try offer(id, in: session)
             XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
         }

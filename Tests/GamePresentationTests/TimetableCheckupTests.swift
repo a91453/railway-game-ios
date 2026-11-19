@@ -53,6 +53,7 @@ enum TimetableCheckupWorlds {
             if ProcessInfo.processInfo.environment["TIMETABLE_CHECKUP_RUNS"] != nil {
                 let late = result.lateOutOfDepot.map { "\($0) (\((result.lateness[$0] ?? 0) / 60) min)" }.joined(separator: ", ")
                 text += "    not sent: \(result.notSent.sorted()); late out of a depot: \(late)\n"
+                text += "    late: \(result.late.map { "\($0) (\(result.lateness[$0]! / 60) min, due \(result.starts[$0].map { String(format: "%02d:%02d", $0 % 86_400 / 3_600, $0 % 3_600 / 60) } ?? "?"))" }.joined(separator: ", "))\n"
             }
         }
         let over = TimetableCheckup.overBudget(measured, budget)
@@ -99,6 +100,12 @@ final class TimetableCheckupTests: XCTestCase {
 /// Airport MRT's first morning out of its two depots (DEPOT-DAWN-QUEUE),
 /// the runs from 05:00 to 07:00 played to 07:30, and the Sanying Line's
 /// morning as ``TimetableCheckupTests`` plays Hong Kong's. About a minute.
+/// Decision 881's later part (SANYING-0632) moved the Sanying Line's
+/// morning from 5 runs late, 1 late out of a depot and a peak gap of
+/// +6 min to 7, none and +5: the train at Yingtao Fude due at 06:32 no
+/// longer waits 24 minutes for an empty run from the depot bound there
+/// (a run counted on time, as it was sent when due), and the three runs
+/// after it, 06:38 to 06:50, leave 6 to 9 minutes late instead.
 @MainActor
 final class TimetableCheckupTaiwanTests: XCTestCase {
     func testTheTaoyuanAirportLineDawn() throws {
@@ -113,7 +120,7 @@ final class TimetableCheckupTaiwanTests: XCTestCase {
         try TimetableCheckupWorlds.check(
             "sanying simple", TimetableCheckupWorlds.taiwan("sanying:LB", rules: .simple), day: 0,
             windows: TimetableCheckupTests.morning, until: TimetableCheckupTests.untilTen,
-            budget: .init(notSent: 0, late: 5, lateOutOfDepot: 1, peakGapMinutes: 6)
+            budget: .init(notSent: 0, late: 7, lateOutOfDepot: 0, peakGapMinutes: 5)
         )
     }
 }
@@ -176,7 +183,7 @@ final class TimetableCheckupFullTests: XCTestCase {
     static let budgets: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "sanying:LB simple": .init(notSent: 0, late: 5, lateOutOfDepot: 1, peakGapMinutes: 6),
+        "sanying:LB simple": .init(notSent: 0, late: 7, lateOutOfDepot: 0, peakGapMinutes: 5),
         "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
         "tymc:A simple": .init(notSent: 4, late: 103, lateOutOfDepot: 8, peakGapMinutes: 26),
@@ -187,8 +194,8 @@ final class TimetableCheckupFullTests: XCTestCase {
         "hk SIL realistic": .init(notSent: 0, late: 91, lateOutOfDepot: 1, peakGapMinutes: 4),
         "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
-        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk AEL+TCL+DRL realistic": .init(notSent: 0, late: 25, lateOutOfDepot: 1, peakGapMinutes: 7),
+        "hk TCL+AEL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
+        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 18, lateOutOfDepot: 1, peakGapMinutes: 11),
     ]
 
     private func check(_ name: String, _ world: @autoclosure () throws -> GameWorld) throws {
@@ -231,7 +238,7 @@ final class TimetableCheckupFullTests: XCTestCase {
         let runs = try HongKongRailwaysTests.railways().metroRuns.keys.filter { $0.hasPrefix("hkmtr:") }.map { String($0.dropFirst(6)) }.sorted()
         for (label, rules) in Self.rules {
             for id in runs { try check("hk \(id) \(label)", TimetableCheckupWorlds.hongKong([id], rules: rules)) }
-            try check("hk AEL+TCL+DRL \(label)", TimetableCheckupWorlds.hongKong(["AEL", "TCL", "DRL"], rules: rules))
+            try check("hk TCL+AEL+DRL \(label)", TimetableCheckupWorlds.hongKong(["TCL", "AEL", "DRL"], rules: rules))
         }
     }
 

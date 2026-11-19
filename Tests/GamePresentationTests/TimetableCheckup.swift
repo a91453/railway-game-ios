@@ -38,6 +38,8 @@ enum TimetableCheckup {
         /// Seconds late leaving the first stop, by run index, for every
         /// run that was sent.
         var lateness: [Int: Int64] = [:]
+        /// Each run's timetabled first departure (clock seconds).
+        var starts: [Int: Int64] = [:]
         /// The runs whose train came out of a depot for them.
         var outOfDepot: Set<Int> = []
         /// Runs sent whose train was not found (its departure is then the
@@ -164,7 +166,10 @@ enum TimetableCheckup {
             let wanted = Set(indices)
             result.notSent = RunsNotSent.on(day, of: line, at: world.clock.now).filter(wanted.contains)
             let left = departures[id] ?? [:]
-            for (index, departure) in left { result.lateness[index] = max(0, departure - line.runs[index].start(onDay: day)) }
+            for (index, departure) in left {
+                result.lateness[index] = max(0, departure - line.runs[index].start(onDay: day))
+                result.starts[index] = line.runs[index].start(onDay: day)
+            }
             result.outOfDepot = outOfDepot[id] ?? []
             result.unmatched = unmatched[id] ?? 0
             // The peaks: each way from each first stop.
