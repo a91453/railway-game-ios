@@ -1509,13 +1509,22 @@ extension GameWorld {
                 // Decision 836: an empty run's claim does not bind a train
                 // without a service standing where the service it follows
                 // is due to go. Decision 850: nor a train standing there
-                // whose own departure is due.
-                guard train.isDeadheading, claims[leader.id] == nil else { continue }
+                // whose own departure is due. Decision 886: a service's
+                // claim does not bind a service standing there whose own
+                // departure is due either (on the Taoyuan Airport MRT
+                // rebuilt, an express behind a stopping train at Hengshan
+                // claimed the points out of Linghang, past the train late
+                // at Linghang the stopping train waited for); a train with
+                // no service, or an empty run, it still binds.
+                guard claims[leader.id] == nil else { continue }
                 readsTheTime = true
                 if let leaving = leavingCover(of: leader, memo: &paths) {
-                    for (other, blocks) in holders.holding(leaving, except: leader.id, fouling: true, in: network).enumerated()
-                    where blocks && other != place && (trains[other].execution == nil || isDueToLeave(trains[other])) {
-                        released[train.id, default: []].insert(trains[other].id)
+                    for (other, blocks) in holders.holding(leaving, except: leader.id, fouling: true, in: network).enumerated() where blocks && other != place {
+                        let standing = trains[other]
+                        let freed = train.isDeadheading
+                            ? standing.execution == nil || isDueToLeave(standing)
+                            : !standing.isDeadheading && isDueToLeave(standing)
+                        if freed { released[train.id, default: []].insert(standing.id) }
                     }
                 }
             }
@@ -1527,13 +1536,15 @@ extension GameWorld {
     /// Decision 836: the track `train`, a service standing at a call whose
     /// departure is due, would cover leaving it along its default way (see
     /// ``leaving(_:stop:cycle:memo:)``), as ``settleClaims(_:covers:)``
-    /// reads the route of a train an empty run follows; `nil` for any other
+    /// reads the route of a train any other follows (decision 886); `nil` for any other
     /// train, or with no way on. A train standing in the way of that
     /// departure (the leader waits for it) without a service of its own is
     /// not bound by the empty run's claim (only an empty run's, and only a
     /// train without a service: released for every following train, or
     /// every train in the way, the Taoyuan Airport MRT rebuilt line
-    /// deadlocked 13 and 9 trains): on Hong Kong's Tung Chung Line under the simple rules with
+    /// deadlocked 13 and 9 trains; decision 886: a service's claim, only
+    /// for a service due to leave, as a train due binds none of an empty
+    /// run's under decision 850): on Hong Kong's Tung Chung Line under the simple rules with
     /// traffic control an empty run to Siu Ho Wan, following a service
     /// waiting at Sunny Bay for the Tung Chung platform, claimed the
     /// crossover into the depot ten minutes ahead of itself, and the train
