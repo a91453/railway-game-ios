@@ -23,6 +23,13 @@ import GameCore
 // itself, so it does not fly; nor with the settings' "Festive decorations"
 // off.
 //
+// Decision 831, later (SANTA-SLEIGH-EGG): on the event's other days
+// (12/1–1/6 by the device's clock, ``WinterEvent/isOn(at:calendar:)``, but
+// Christmas Eve's night) it flies now and then the other way, home to
+// Rovaniemi: one pass every ``homeEvery`` seconds, all day, towards
+// Rovaniemi's way over the place looked at, and on the Rovaniemi map down
+// onto the airport's runway. An easter egg, not a way to open a map.
+//
 // The model is a stand-in (``Model``): the reindeer and the sleigh are
 // the studio's to make (REINDEER, shared with Rovaniemi's reindeer on the
 // ground), and their mesh takes this one's name when it comes.
@@ -35,6 +42,10 @@ public enum SantaFlight {
     public static let lastHour = 6
     /// A pass begins every this many seconds of the night.
     public static let every: Double = 360
+
+    /// On the event's other days a pass, flying home, begins every this
+    /// many seconds from the device's midnight.
+    public static let homeEvery: Double = 1_200
 
     /// The night `date` falls in, from 18:00 on 24 December to 06:00 on
     /// 25 December in `calendar`'s time zone; `nil` at any other time.
@@ -49,19 +60,35 @@ public enum SantaFlight {
     }
 
     /// Where the night stands at a moment: which pass (0 the first, at
-    /// 18:00) and how many seconds into it.
+    /// 18:00) and how many seconds into it. With `home`, a pass of the
+    /// event's other days, flying home to Rovaniemi, counted from the
+    /// device's midnight.
     public struct Moment: Hashable, Sendable {
         public let pass: Int
         public let seconds: Double
+        public let home: Bool
+
+        public init(pass: Int, seconds: Double, home: Bool = false) {
+            self.pass = pass
+            self.seconds = seconds
+            self.home = home
+        }
     }
 
-    /// The moment of the night at `date`; `nil` outside the night, and
-    /// with `switchedOn` false (the settings' "Festive decorations").
+    /// The moment of the sleigh's flying at `date`: Christmas Eve's night,
+    /// else the event's other days flying home; `nil` outside the event,
+    /// and with `switchedOn` false (the settings' "Festive decorations").
     public static func moment(at date: Date, switchedOn: Bool = true, calendar: Calendar = WinterEvent.calendar()) -> Moment? {
-        guard switchedOn, let night = night(at: date, calendar: calendar) else { return nil }
-        let since = date.timeIntervalSince(night.start)
-        let pass = Int((since / every).rounded(.down))
-        return Moment(pass: pass, seconds: since - Double(pass) * every)
+        guard switchedOn else { return nil }
+        if let night = night(at: date, calendar: calendar) {
+            let since = date.timeIntervalSince(night.start)
+            let pass = Int((since / every).rounded(.down))
+            return Moment(pass: pass, seconds: since - Double(pass) * every)
+        }
+        guard WinterEvent.isOn(at: date, calendar: calendar) else { return nil }
+        let since = date.timeIntervalSince(calendar.startOfDay(for: date))
+        let pass = Int((since / homeEvery).rounded(.down))
+        return Moment(pass: pass, seconds: since - Double(pass) * homeEvery, home: true)
     }
 
     // MARK: - Where
@@ -86,6 +113,8 @@ public enum SantaFlight {
     static let farthestFromRunway: Float = 8_000
     /// Nearer the runway than this, it keeps to the runway's way.
     static let nearestFromRunway: Float = 1_000
+    /// Flying home, it rolls this far along the runway once down, metres.
+    static let rollOut: Float = 400
 
     /// One pass's way through the scene: where it starts, the level way it
     /// flies, how far, and its height above `start` along it.
@@ -100,12 +129,37 @@ public enum SantaFlight {
         /// Whether it takes off from the runway at `start` (else it is at
         /// `level` all the way).
         public let fromRunway: Bool
+        /// Flying home on the Rovaniemi map: how far along it touches down
+        /// on the runway, at `start.y` (it comes down at the climb's
+        /// slope); `nil` when it does not land.
+        public let landsAt: Float?
+
+        public init(start: Map3DPoint, forward: Map3DPoint, length: Float, level: Float, fromRunway: Bool, landsAt: Float? = nil) {
+            self.start = start
+            self.forward = forward
+            self.length = length
+            self.level = level
+            self.fromRunway = fromRunway
+            self.landsAt = landsAt
+        }
 
         /// Its height over `start.y` `s` metres along, and its nose's pitch.
         public func height(at s: Float) -> (height: Float, pitch: Float) {
+            if let landsAt {
+                let descent = (landsAt - s) * SantaFlight.climb
+                if descent <= 0 { return (0, 0) }
+                return descent < level ? (descent, -atan(SantaFlight.climb)) : (level, 0)
+            }
             guard fromRunway else { return (level, 0) }
             let climbed = s * SantaFlight.climb
             return climbed < level ? (climbed, atan(SantaFlight.climb)) : (level, 0)
+        }
+
+        /// Whether it is coming down onto the runway or rolling on it `s`
+        /// metres along.
+        func landing(at s: Float) -> Bool {
+            guard let landsAt else { return false }
+            return (landsAt - s) * SantaFlight.climb < level
         }
 
         /// How long the pass flies, seconds.
@@ -116,9 +170,24 @@ public enum SantaFlight {
     /// middle is at `latitude`, `longitude`; from `runway` (its two ends in
     /// the scene, on the ground) when Rovaniemi's is on the map. `ground`
     /// is the drawn ground's height at a scene point (x, z): the sleigh
-    /// keeps ``clearance`` over it.
+    /// keeps ``clearance`` over it. With `home` it flies the other way, to
+    /// Rovaniemi: on the Rovaniemi map down onto the runway's threshold.
     public static func track(over anchor: Map3DPoint, latitude: Double, longitude: Double,
-                             runway: (from: Map3DPoint, to: Map3DPoint)? = nil, ground: (Float, Float) -> Float) -> Track {
+                             runway: (from: Map3DPoint, to: Map3DPoint)? = nil, home: Bool = false, ground: (Float, Float) -> Float) -> Track {
+        if let runway, home {
+            // The take-off flown backwards: from over the place looked at
+            // (1–8 km off) to the threshold, else along the runway's way,
+            // then down and along the runway.
+            let along = Map3DPoint(runway.to.x - runway.from.x, 0, runway.to.z - runway.from.z).normalized ?? Map3DPoint(0, 0, 1)
+            let toward = Map3DPoint(runway.from.x - anchor.x, 0, runway.from.z - anchor.z)
+            let away = toward.length
+            let near = away >= nearestFromRunway && away <= farthestFromRunway
+            let forward = near ? toward.normalized ?? along : along
+            let landsAt = min(Float(homeEvery - 30) * speed - rollOut, (near ? away : 0) + reach)
+            let start = Map3DPoint(runway.from.x - forward.x * landsAt, runway.from.y, runway.from.z - forward.z * landsAt)
+            let level = levelHeight(from: start, forward: forward, length: landsAt, over: runway.from.y, ground: ground)
+            return Track(start: start, forward: forward, length: landsAt + rollOut, level: level, fromRunway: false, landsAt: landsAt)
+        }
         if let runway {
             let toward = Map3DPoint(anchor.x - runway.from.x, 0, anchor.z - runway.from.z)
             let along = Map3DPoint(runway.to.x - runway.from.x, 0, runway.to.z - runway.from.z).normalized ?? Map3DPoint(0, 0, 1)
@@ -130,10 +199,12 @@ public enum SantaFlight {
             return Track(start: runway.from, forward: forward, length: length, level: level, fromRunway: true)
         }
         // Coming from Rovaniemi: the way it lies from the map's middle,
-        // turned round. The scene's x is east and its z south.
+        // turned round; flying home, that way itself. The scene's x is
+        // east and its z south.
         let bearing = initialBearing(fromLatitude: latitude, longitude: longitude,
                                      toLatitude: SantaFlight.runway.from.latitude, longitude: SantaFlight.runway.from.longitude)
-        let forward = Map3DPoint(-Float(sin(bearing)), 0, Float(cos(bearing)))
+        let turn: Float = home ? -1 : 1
+        let forward = Map3DPoint(-Float(sin(bearing)) * turn, 0, Float(cos(bearing)) * turn)
         let start = Map3DPoint(anchor.x - forward.x * reach, anchor.y, anchor.z - forward.z * reach)
         let level = levelHeight(from: start, forward: forward, length: 2 * reach, over: anchor.y, ground: ground)
         return Track(start: start, forward: forward, length: 2 * reach, level: level, fromRunway: false)
@@ -172,8 +243,9 @@ public enum SantaFlight {
     }
 
     /// The way of a pass over `anchor` in `scene` of `world`: from
-    /// Rovaniemi's runway when it is on the map; `nil` for a blank map.
-    public static func track(world: GameWorld, scene: Map3DScene, over anchor: Map3DPoint) -> Track? {
+    /// Rovaniemi's runway when it is on the map (onto it with `home`);
+    /// `nil` for a blank map.
+    public static func track(world: GameWorld, scene: Map3DScene, over anchor: Map3DPoint, home: Bool = false) -> Track? {
         guard let frame = RealWorldFrame(world: world) else { return nil }
         func ground(_ x: Float, _ z: Float) -> Float { scene.drawnGround.height(x: x, z: z, world: world) }
         func onGround(_ at: (x: Double, y: Double)) -> Map3DPoint {
@@ -182,7 +254,8 @@ public enum SantaFlight {
         }
         let ends = runwayEnds(frame: frame, bounds: world.bounds).map { (onGround($0.from), onGround($0.to)) }
         let below = Map3DPoint(anchor.x, ground(anchor.x, anchor.z), anchor.z)
-        return track(over: below, latitude: frame.anchor.latitudeDegrees, longitude: frame.anchor.longitudeDegrees, runway: ends, ground: ground)
+        return track(over: below, latitude: frame.anchor.latitudeDegrees, longitude: frame.anchor.longitudeDegrees, runway: ends, home: home,
+                     ground: ground)
     }
 
     // MARK: - The sleigh drawn
@@ -193,32 +266,41 @@ public enum SantaFlight {
     /// only a placeholder: what reads a Santa flight's asks
     /// ``Map3DAircraft/FlightID/santa`` first. Its phase is
     /// ``Map3DAircraft/Phase/climb`` while it climbs off the runway and
-    /// ``Map3DAircraft/Phase/approach`` while it flies level (``stage(of:)``).
-    public static func drawn(pass: Int, on track: Track, seconds: Double) -> Map3DAircraft.Drawn? {
+    /// ``Map3DAircraft/Phase/approach`` while it flies level (``stage(of:)``),
+    /// and flying home ``Map3DAircraft/Phase/landingRoll`` while it comes
+    /// down onto the runway and rolls along it. Its flight is a landing
+    /// one with `home`.
+    public static func drawn(pass: Int, on track: Track, seconds: Double, home: Bool = false) -> Map3DAircraft.Drawn? {
         guard seconds >= 0 else { return nil }
         let s = Float(seconds) * speed
         guard s <= track.length else { return nil }
         let (height, pitch) = track.height(at: s)
         let ground = Map3DPoint(track.start.x + track.forward.x * s, track.start.y, track.start.z + track.forward.z * s)
         let climbing = track.fromRunway && height < track.level
+        let phase: Map3DAircraft.Phase = climbing ? .climb : track.landing(at: s) ? .landingRoll : .approach
         return Map3DAircraft.Drawn(ground: ground, height: height, forward: track.forward, pitch: pitch, kind: .commuter19, livery: 0,
-                                   flying: true, flight: Map3DAircraft.FlightID(santa: pass), phase: climbing ? .climb : .approach)
+                                   flying: true, flight: Map3DAircraft.FlightID(santa: pass, home: home), phase: phase)
     }
 
     /// What the sleigh is doing, as the follow bar says it.
     public enum Stage: Hashable, Sendable {
-        case takingOff, flying
+        case takingOff, flying, landing
 
         public func text(in language: DisplayLanguage) -> String {
             switch self {
             case .takingOff: language.text("Taking off from Rovaniemi Airport", "從羅瓦涅米機場起飛")
             case .flying: language.text("Flying over the map", "飛過地圖上空")
+            case .landing: language.text("Landing at Rovaniemi Airport", "降落羅瓦涅米機場")
             }
         }
     }
 
     public static func stage(of phase: Map3DAircraft.Phase) -> Stage {
-        phase == .climb ? .takingOff : .flying
+        switch phase {
+        case .climb: .takingOff
+        case .landingRoll: .landing
+        default: .flying
+        }
     }
 
     /// Where the follow camera looks at the sleigh `drawn` and which way it
@@ -307,7 +389,8 @@ public enum SantaFlight {
     /// is doing.
     public static func followFacts(of state: Map3DAircraft.State, in language: DisplayLanguage, speed: GameSpeed?) -> AircraftFollowFacts {
         AircraftFollowFacts(state: state, name: language.text("Santa's sleigh", "聖誕老人的雪橇"),
-                            directionText: language.text("From Rovaniemi Airport", "從羅瓦涅米機場出發"),
+                            directionText: state.flight.landing ? language.text("Flying home to Rovaniemi", "飛回羅瓦涅米")
+                                : language.text("From Rovaniemi Airport", "從羅瓦涅米機場出發"),
                             stopText: stage(of: state.phase).text(in: language), runningSpeed: speed)
     }
 
@@ -335,6 +418,7 @@ extension SantaFlight {
     public struct Sky: Sendable {
         struct Flying: Sendable {
             let pass: Int
+            let home: Bool
             let origin: (x: Double, y: Double)
             let track: Track
         }
@@ -349,20 +433,21 @@ extension SantaFlight {
         /// ``Map3DScene/originX`` and ``Map3DScene/originY``); `nil` off
         /// the night, between passes, with `switchedOn` false, with `still`
         /// (Reduce Motion) and when `track` gives none (a blank map).
+        /// `track` is told whether the pass flies home.
         public mutating func sleigh(at date: Date, origin: (x: Double, y: Double), switchedOn: Bool, still: Bool,
-                                    calendar: Calendar = WinterEvent.calendar(), track: () -> Track?) -> Map3DAircraft.Drawn? {
+                                    calendar: Calendar = WinterEvent.calendar(), track: (_ home: Bool) -> Track?) -> Map3DAircraft.Drawn? {
             guard !still, let moment = moment(at: date, switchedOn: switchedOn, calendar: calendar) else {
                 flying = nil
                 return nil
             }
-            if flying?.pass != moment.pass || flying?.origin.x != origin.x || flying?.origin.y != origin.y {
-                guard let laid = track() else {
+            if flying?.pass != moment.pass || flying?.home != moment.home || flying?.origin.x != origin.x || flying?.origin.y != origin.y {
+                guard let laid = track(moment.home) else {
                     flying = nil
                     return nil
                 }
-                flying = Flying(pass: moment.pass, origin: origin, track: laid)
+                flying = Flying(pass: moment.pass, home: moment.home, origin: origin, track: laid)
             }
-            return flying.flatMap { drawn(pass: $0.pass, on: $0.track, seconds: moment.seconds) }
+            return flying.flatMap { drawn(pass: $0.pass, on: $0.track, seconds: moment.seconds, home: $0.home) }
         }
 
         /// The sleigh of flight `id` at `date`, as ``sleigh(at:origin:switchedOn:still:calendar:track:)``
@@ -370,10 +455,10 @@ extension SantaFlight {
         /// began.
         public func sleigh(of id: Map3DAircraft.FlightID, at date: Date, switchedOn: Bool, still: Bool,
                            calendar: Calendar = WinterEvent.calendar()) -> Map3DAircraft.Drawn? {
-            guard !still, let pass = id.santa, let flying, flying.pass == pass,
-                  let moment = moment(at: date, switchedOn: switchedOn, calendar: calendar), moment.pass == pass
+            guard !still, let pass = id.santa, let flying, flying.pass == pass, flying.home == id.landing,
+                  let moment = moment(at: date, switchedOn: switchedOn, calendar: calendar), moment.pass == pass, moment.home == id.landing
             else { return nil }
-            return drawn(pass: pass, on: flying.track, seconds: moment.seconds)
+            return drawn(pass: pass, on: flying.track, seconds: moment.seconds, home: flying.home)
         }
 
         /// The sleigh of flight `id` as the follow camera has it, while it
@@ -389,7 +474,7 @@ extension SantaFlight {
         public func followable(atX x: Float, y: Float, camera: Map3DCamera, at date: Date, switchedOn: Bool, still: Bool, within reach: Float,
                                calendar: Calendar = WinterEvent.calendar()) -> Map3DAircraft.Followed? {
             guard let pass = flying?.pass,
-                  let found = followed(Map3DAircraft.FlightID(santa: pass), at: date, switchedOn: switchedOn, still: still, calendar: calendar),
+                  let found = followed(Map3DAircraft.FlightID(santa: pass, home: flying?.home ?? false), at: date, switchedOn: switchedOn, still: still, calendar: calendar),
                   SantaFlight.followable(found.drawn, atX: x, y: y, camera: camera, within: reach)
             else { return nil }
             return found

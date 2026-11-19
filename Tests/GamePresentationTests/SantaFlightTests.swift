@@ -5,7 +5,8 @@ import XCTest
 
 /// Decision 831 (SANTA-FLIGHT): Santa's sleigh over the 3D map on
 /// Christmas Eve, by the device's own clock: when it flies, where it comes
-/// from, how it takes off from Rovaniemi, and what follows it.
+/// from, how it takes off from Rovaniemi, and what follows it; and
+/// (SANTA-SLEIGH-EGG) on the event's other days, home to Rovaniemi.
 final class SantaFlightTests: XCTestCase {
     private let taipei = WinterEvent.calendar(in: TimeZone(identifier: "Asia/Taipei")!)
 
@@ -15,18 +16,20 @@ final class SantaFlightTests: XCTestCase {
     }
 
     func testItFliesFromSixOnChristmasEveToSixOnChristmasMorning() throws {
-        XCTAssertNil(SantaFlight.moment(at: date(12, 24, 17, 59, second: 59), calendar: taipei))
+        // Before and after the night, only the passes flying home.
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 24, 17, 59, second: 59), calendar: taipei)?.home, true)
         XCTAssertEqual(SantaFlight.moment(at: date(12, 24, 18), calendar: taipei), .init(pass: 0, seconds: 0))
         // Every six minutes a pass: 19:00 is the eleventh's first second.
         XCTAssertEqual(SantaFlight.moment(at: date(12, 24, 19), calendar: taipei), .init(pass: 10, seconds: 0))
         XCTAssertEqual(SantaFlight.moment(at: date(12, 25, 0, 3), calendar: taipei), .init(pass: 60, seconds: 180))
         let last = try XCTUnwrap(SantaFlight.moment(at: date(12, 25, 5, 59, second: 59), calendar: taipei))
         XCTAssertEqual(last.pass, 119)
-        XCTAssertNil(SantaFlight.moment(at: date(12, 25, 6), calendar: taipei))
-        // Any other night of the event, or the year, nothing.
-        XCTAssertNil(SantaFlight.moment(at: date(12, 23, 20), calendar: taipei))
-        XCTAssertNil(SantaFlight.moment(at: date(12, 25, 20), calendar: taipei))
-        XCTAssertNil(SantaFlight.moment(at: date(12, 31, 22), calendar: taipei))
+        XCTAssertFalse(last.home)
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 25, 6), calendar: taipei)?.home, true)
+        // Any other night of the event it flies home (below); the rest of
+        // the year, nothing.
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 23, 20), calendar: taipei)?.home, true)
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 25, 20), calendar: taipei)?.home, true)
         XCTAssertNil(SantaFlight.moment(at: date(6, 24, 20), calendar: taipei))
         // The player's own evening, wherever the device is: 20:00 in
         // Rovaniemi is 02:00 in Taipei the next day.
@@ -35,6 +38,75 @@ final class SantaFlightTests: XCTestCase {
         XCTAssertEqual(SantaFlight.moment(at: date(12, 24, 20, in: helsinki), calendar: taipei)?.pass, 80)
         // The settings' "Festive decorations" off: none.
         XCTAssertNil(SantaFlight.moment(at: date(12, 24, 20), switchedOn: false, calendar: taipei))
+    }
+
+    func testOnTheEventsOtherDaysItFliesHomeNowAndThen() throws {
+        // From 1 December to 6 January, every twenty minutes from the
+        // device's midnight, all day.
+        XCTAssertNil(SantaFlight.moment(at: date(11, 30, 23, 59, second: 59), calendar: taipei))
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 1, 0), calendar: taipei), .init(pass: 0, seconds: 0, home: true))
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 10, 14, 25), calendar: taipei), .init(pass: 43, seconds: 300, home: true))
+        // Christmas Eve's evening is the night's: out from Rovaniemi.
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 24, 17, 59), calendar: taipei)?.home, true)
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 24, 18), calendar: taipei)?.home, false)
+        XCTAssertEqual(SantaFlight.moment(at: date(12, 25, 6), calendar: taipei), .init(pass: 18, seconds: 0, home: true))
+        XCTAssertEqual(SantaFlight.moment(at: date(1, 6, 23, 59, year: 2027), calendar: taipei)?.home, true)
+        XCTAssertNil(SantaFlight.moment(at: date(1, 7, 0, year: 2027), calendar: taipei))
+        XCTAssertNil(SantaFlight.moment(at: date(12, 10, 14), switchedOn: false, calendar: taipei))
+
+        // Over Taipei it flies the other way: north-north-west, to
+        // Rovaniemi, and the follow bar says so.
+        let anchor = Map3DPoint(500, 10, -200)
+        let track = SantaFlight.track(over: anchor, latitude: 25.0478, longitude: 121.5170, home: true) { _, _ in 10 }
+        let bearing = Double(atan2(track.forward.x, -track.forward.z)) * 180 / .pi
+        XCTAssertEqual((bearing + 360).truncatingRemainder(dividingBy: 360), 335, accuracy: 10)
+        XCTAssertEqual(track.seconds, 180)
+        XCTAssertLessThan(track.seconds, SantaFlight.homeEvery)
+        let over = try XCTUnwrap(SantaFlight.drawn(pass: 43, on: track, seconds: 90, home: true))
+        XCTAssertEqual(over.ground.x, anchor.x, accuracy: 0.01)
+        XCTAssertEqual(over.flight, Map3DAircraft.FlightID(santa: 43, home: true))
+        XCTAssertNotEqual(over.flight, Map3DAircraft.FlightID(santa: 43))
+        let state = Map3DAircraft.State(flight: try XCTUnwrap(over.flight), kind: over.kind, phase: try XCTUnwrap(over.phase), airport: nil)
+        let zh = SantaFlight.followFacts(of: state, in: .traditionalChinese, speed: nil)
+        XCTAssertEqual(zh.directionText, "飛回羅瓦涅米")
+        XCTAssertEqual(zh.stopText, "飛過地圖上空")
+    }
+
+    func testFlyingHomeOnTheRovaniemiMapItLandsOnTheRunway() throws {
+        let runway = (from: Map3DPoint(0, 100, 0), to: Map3DPoint(-1_500, 100, 2_600))
+        let town = Map3DPoint(-2_000, 100, 3_500)
+        let track = SantaFlight.track(over: town, latitude: 66.4985, longitude: 25.7124, runway: runway, home: true) { _, _ in 100 }
+        let landsAt = try XCTUnwrap(track.landsAt)
+        let away = Map3DPoint(town.x, 0, town.z).length
+        XCTAssertEqual(landsAt, away + SantaFlight.reach, accuracy: 0.5)
+        XCTAssertEqual(track.length, landsAt + SantaFlight.rollOut, accuracy: 0.01)
+        // From the town towards the threshold.
+        XCTAssertEqual(track.forward.x, -town.x / away, accuracy: 0.01)
+        XCTAssertEqual(track.forward.z, -town.z / away, accuracy: 0.01)
+        // Level over the town, 250 m up.
+        let over = try XCTUnwrap(SantaFlight.drawn(pass: 5, on: track, seconds: Double(SantaFlight.reach / SantaFlight.speed), home: true))
+        XCTAssertEqual(over.ground.x, town.x, accuracy: 0.5)
+        XCTAssertEqual(over.height, SantaFlight.cruise)
+        XCTAssertEqual(SantaFlight.stage(of: try XCTUnwrap(over.phase)), .flying)
+        // Coming down at the climb's slope, nose down.
+        let down = try XCTUnwrap(SantaFlight.drawn(pass: 5, on: track, seconds: Double((landsAt - 500) / SantaFlight.speed), home: true))
+        XCTAssertEqual(down.height, 500 * SantaFlight.climb, accuracy: 0.5)
+        XCTAssertLessThan(down.pitch, 0)
+        XCTAssertEqual(SantaFlight.stage(of: try XCTUnwrap(down.phase)), .landing)
+        // On the threshold, then rolling along, then gone.
+        let touch = try XCTUnwrap(SantaFlight.drawn(pass: 5, on: track, seconds: Double(landsAt / SantaFlight.speed), home: true))
+        XCTAssertEqual(touch.ground.x, runway.from.x, accuracy: 0.5)
+        XCTAssertEqual(touch.ground.z, runway.from.z, accuracy: 0.5)
+        XCTAssertEqual(touch.height, 0, accuracy: 0.01)
+        XCTAssertEqual(touch.ground.y, runway.from.y)
+        let state = Map3DAircraft.State(flight: try XCTUnwrap(touch.flight), kind: touch.kind, phase: try XCTUnwrap(touch.phase), airport: nil)
+        XCTAssertEqual(SantaFlight.followFacts(of: state, in: .traditionalChinese, speed: nil).stopText, "降落羅瓦涅米機場")
+        XCTAssertNil(SantaFlight.drawn(pass: 5, on: track, seconds: track.seconds + 1, home: true))
+        // A place too far, or the airport itself: it comes in along the
+        // runway's way, onto runway 21.
+        let far = SantaFlight.track(over: Map3DPoint(0, 100, -20_000), latitude: 66.4985, longitude: 25.7124, runway: runway, home: true) { _, _ in 100 }
+        XCTAssertEqual(far.forward.x, runway.to.x / 3_002.0, accuracy: 0.01)
+        XCTAssertEqual(far.landsAt, SantaFlight.reach)
     }
 
     func testOverTaiwanItComesFromRovaniemiAndPassesOverThePlaceLookedAt() throws {
@@ -114,8 +186,8 @@ final class SantaFlightTests: XCTestCase {
     func testTheSkyKeepsAPassWhereItBeganAndForgetsItAfter() throws {
         var sky = SantaFlight.Sky()
         var laid = 0
-        func track(over x: Float) -> () -> SantaFlight.Track? {
-            { laid += 1; return SantaFlight.track(over: Map3DPoint(x, 0, 0), latitude: 25.0478, longitude: 121.5170) { _, _ in 0 } }
+        func track(over x: Float) -> (Bool) -> SantaFlight.Track? {
+            { _ in laid += 1; return SantaFlight.track(over: Map3DPoint(x, 0, 0), latitude: 25.0478, longitude: 121.5170) { _, _ in 0 } }
         }
         let start = date(12, 24, 21)
         let first = try XCTUnwrap(sky.sleigh(at: start, origin: (0, 0), switchedOn: true, still: false, calendar: taipei, track: track(over: 0)))
@@ -142,7 +214,7 @@ final class SantaFlightTests: XCTestCase {
         XCTAssertNil(sky.sleigh(at: start.addingTimeInterval(360 + 91), origin: (0, 0), switchedOn: true, still: true, calendar: taipei,
                                 track: track(over: 5_000)))
         // A blank map: no way.
-        XCTAssertNil(sky.sleigh(at: start, origin: (0, 0), switchedOn: true, still: false, calendar: taipei) { nil })
+        XCTAssertNil(sky.sleigh(at: start, origin: (0, 0), switchedOn: true, still: false, calendar: taipei) { _ in nil })
     }
 
     func testTheFollowBarSaysOnlyWhatItIs() throws {
