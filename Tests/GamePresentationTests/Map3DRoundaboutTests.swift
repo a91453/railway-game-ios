@@ -111,6 +111,49 @@ final class Map3DRoundaboutTests: XCTestCase {
         XCTAssertGreaterThan(markings.signals.count, 0)
     }
 
+    /// Decision 846's second later note: Finland's give-way line on each
+    /// road coming into the ring, at the ring's edge, across the lanes
+    /// coming in only, its triangles pointing back at the traffic; none in
+    /// Hong Kong. A one-way road into the ring: kerb to kerb; out of it:
+    /// none.
+    func testFinlandsRoundaboutHasGiveWayLines() throws {
+        XCTAssertFalse(Map3DRoadMarkings(roundabout(), region: .hongKong).marks.contains { $0.kind == .giveWay })
+        let markings = Map3DRoadMarkings(roundabout(), region: .finland)
+        let teeth = markings.marks.filter { $0.kind == .giveWay }
+        let half = Double(Map3DBaseMap.RoadKind.secondary.width(ramp: false)) / 2
+        let ringHalf = Double(Map3DBaseMap.RoadKind.tertiary.width(ramp: false)) / 2
+        // Four a road (a secondary road's 4 m each way), four roads.
+        XCTAssertEqual(teeth.count, 16)
+        for tooth in teeth {
+            XCTAssertEqual(tooth.length, Map3DRoadMarkings.giveWayLength)
+            XCTAssertEqual(tooth.width, Map3DRoadMarkings.giveWayWidth)
+            // The road it is on: the way out of the four nearest it.
+            let out = try XCTUnwrap([3.0, 9, 15, 21].map { Point(x: cos($0 / 24 * 2 * .pi), z: sin($0 / 24 * 2 * .pi)) }
+                .max { $0.x * tooth.centre.x + $0.z * tooth.centre.z < $1.x * tooth.centre.x + $1.z * tooth.centre.z })
+            let radial = Map3DRoadMarkings.distance(tooth.centre, Point(x: 0, z: 0))
+            // Just outside the ring's kerb, before the crossing.
+            XCTAssertGreaterThan(radial, 15 + ringHalf)
+            XCTAssertLessThan(radial, 15 + ringHalf + Map3DRoadMarkings.kerbGap)
+            // Its traffic goes in toward the ring.
+            XCTAssertLessThan(out.x * tooth.along.x + out.z * tooth.along.z, -0.9)
+            // On the half Finland's incoming traffic keeps to: its right.
+            let right = Point(x: -tooth.along.z, z: tooth.along.x)
+            let side = tooth.centre.x * right.x + tooth.centre.z * right.z
+            XCTAssertGreaterThan(side, 0)
+            XCTAssertLessThan(side, half)
+        }
+        // One-way: one road into the ring, one out of it.
+        var roads = roundabout()
+        roads[1] = Map3DBaseMap.Road(kind: .secondary, isRamp: false, points: roads[1].points.reversed(), bounds: everywhere, oneway: true)
+        roads[2].oneway = true
+        let oneWay = Map3DRoadMarkings(roads, region: .finland).marks.filter { $0.kind == .giveWay }
+        let into = roads[1].points.last!, outOf = roads[2].points.first!
+        func near(_ p: Point) -> Int { oneWay.count { Map3DRoadMarkings.distance($0.centre, p) < 10 } }
+        XCTAssertEqual(near(into), 8)
+        XCTAssertEqual(near(outOf), 0)
+        XCTAssertEqual(oneWay.count, 8 + 4 + 4)
+    }
+
     func testTheCircleThroughThreePoints() throws {
         let circle = try XCTUnwrap(Map3DRoadMarkings.circle(Point(x: 10, z: 0), Point(x: 0, z: 10), Point(x: -10, z: 0)))
         XCTAssertEqual(circle.centre.x, 0, accuracy: 1e-9)
@@ -139,6 +182,14 @@ final class Map3DRoundaboutTests: XCTestCase {
         }
         XCTAssertEqual(finland.junctions, taiwan.junctions)
         XCTAssertLessThan(finland.signals.count, taiwan.signals.count * 2 / 3)
+        // Decision 846's second later note: their give-way lines, every
+        // triangle near a ring; none in Taiwan's look.
+        let teeth = finland.marks.filter { $0.kind == .giveWay }
+        XCTAssertGreaterThanOrEqual(teeth.count, finland.roundabouts.count * 4)
+        for tooth in teeth {
+            XCTAssertTrue(finland.roundabouts.contains { Map3DRoadMarkings.distance(tooth.centre, $0.centre) < $0.radius + 20 })
+        }
+        XCTAssertFalse(taiwan.marks.contains { $0.kind == .giveWay })
     }
 
     // MARK: Pedestrian signals with no countdown

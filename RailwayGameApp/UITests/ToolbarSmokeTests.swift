@@ -473,6 +473,27 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// The app's accessibility tree in the test's log, headed `XC27-TREE
+    /// why`, for a failure only a Simulator can show (pull request #2453:
+    /// the run's result bundle cannot be read where the failure is fixed).
+    /// Returns `why`, to end the failure's message with.
+    @discardableResult
+    func logTree(_ why: String) -> String {
+        print("XC27-TREE \(why)\n\(debugDescription)\nXC27-TREE-END")
+        return why
+    }
+
+    /// A native menu's items `identifier`. The iOS 27.2 Simulator drops
+    /// the identifier of an item in a ``ControlGroup`` (the game menu's
+    /// shortcuts side by side) and of a nested menu's items, which then
+    /// show only their label (pull request #2453): an item with no
+    /// identifier whose label begins with `label` is that item too.
+    func menuItems(_ identifier: String, label: String) -> XCUIElementQuery {
+        buttons.matching(NSPredicate(
+            format: "identifier == %@ OR (identifier == '' AND label BEGINSWITH %@)", identifier, label
+        ))
+    }
+
     /// The network tool's mode `name` as it shows: a segment where the six
     /// modes fit, else a chip in the row that scrolls sideways
     /// (`network.modeRow`, decision 574). Not slid into view: for asking
@@ -1038,7 +1059,7 @@ final class ShellLayoutUITests: XCTestCase {
         // above its first; between them the screen's gap of 10, as from the
         // board to the strip. The toggle is touched 2 above what it draws
         // (decision 509).
-        XCTAssertGreaterThanOrEqual(toggle.frame.minY - more.frame.maxY, 3 + 10 + 4 - 2 - 0.5,
+        XCTAssertGreaterThanOrEqual(touchFrame(toggle).minY - more.frame.maxY, 3 + 10 + 4 - 2 - 0.5,
                                     "The column stops a gap below the layer strip: toggle \(toggle.frame), strip \(more.frame)")
 
         let build = app.buttons["dock.build"]
@@ -1054,14 +1075,29 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertEqual(done.midY, build.frame.midY, accuracy: 0.5, "Done beside Build: \(done), \(build.frame)")
     }
 
+    /// A column button's touch area. On iOS 27 a button alone in its glass
+    /// tile (``View/controlTile(vertical:)``: the details toggle, and Build
+    /// and Done while building) reports the tile's frame, the tile's 4
+    /// points of padding round it (pull request #2453: 56 by 48 where iOS
+    /// 26 reported 48 by 44), not the area it is touched over, which
+    /// reaches only 2 above and below what it draws (decision 509).
+    private func touchFrame(_ button: XCUIElement) -> CGRect {
+        let frame = button.frame
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27,
+              abs(frame.width - 56) < 0.5 else { return frame }
+        let padding = 4.0, reach = 2.0
+        return frame.insetBy(dx: padding, dy: padding - reach)
+    }
+
     private func assertOneSize(_ identifiers: [String], in app: XCUIApplication, while state: String,
                                file: StaticString = #filePath, line: UInt = #line) {
         let frames = identifiers.map { id -> (String, CGRect) in
             let button = app.buttons[id]
             XCTAssertTrue(button.appears(within: 10), "Missing \(id) \(state)", file: file, line: line)
-            return (id, button.frame)
+            return (id, touchFrame(button))
         }
         guard let first = frames.first?.1 else { return }
+        if frames.contains(where: { $0.1.width != first.width }) || abs(first.width - 48) > 0.5 { app.logTree("column sizes \(state)") }
         // 66.1's width (TestFlight 67.1 beside 66.1, ``ToolColumn``).
         XCTAssertEqual(first.width, 48, accuracy: 0.5, "The column's buttons are 48 points wide \(state): \(frames)", file: file, line: line)
         for (id, frame) in frames {
