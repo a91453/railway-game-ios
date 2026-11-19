@@ -317,7 +317,7 @@ final class MapPackDownloadsTests: XCTestCase {
         // A long error is cut, not carried whole.
         XCTAssertEqual(MapPackStatus.failed(String(repeating: "x", count: 500)).reportText.count, "not fetched: ".count + 200)
         // The open cities are what a report lists unasked.
-        XCTAssertEqual(MapPackDownloads.report(), "mappack-hongkong not fetched: no network; mappack-rovaniemi bundled")
+        XCTAssertEqual(MapPackDownloads.report(), "mappack-hongkong not fetched: no network; mappack-rovaniemi bundled; mappack-fukuoka bundled")
 
         MapPackDownloads.forget(.hongKong)
         XCTAssertEqual(MapPackDownloads.status(.hongKong), .bundled)
