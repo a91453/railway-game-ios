@@ -321,6 +321,9 @@ public enum MapPackStatus: Equatable, Sendable {
     /// listed one did not come: the one on the device is read, and
     /// replaced when the listed one comes.
     case earlier
+    /// MAP-PACK-MANAGE: the player removed the pack in the settings; it
+    /// is not fetched again until they ask for it.
+    case removed
 
     /// Whether the download has not answered yet: not begun, or asked for.
     var isWaiting: Bool {
@@ -334,6 +337,7 @@ public enum MapPackStatus: Equatable, Sendable {
         switch self {
         case .downloading: language.text("Downloading", "下載中")
         case .downloaded, .earlier: language.text("Downloaded", "已下載")
+        case .removed: language.text("Removed", "已刪除")
         case .bundled, .refused, .failed:
             carried ? language.text("Built-in data", "使用內建資料") : language.text("Not downloaded", "尚未下載")
         }
@@ -348,6 +352,7 @@ public enum MapPackStatus: Equatable, Sendable {
         case .earlier: "used: not the version the app lists"
         case let .refused(refusal): "not used: \(refusal)"
         case let .failed(error): "not fetched: \(error.prefix(200))"
+        case .removed: "removed by the player"
         }
     }
 }
@@ -373,6 +378,10 @@ extension OverseasMap {
         case .bundled, .refused, .failed: return language.text(
             "The map of \(name) has not downloaded yet. It downloads by itself once this device is online.",
             "\(name)的地圖還沒下載。連上網路後會自動下載。"
+        )
+        case .removed: return language.text(
+            "You removed the map of \(name). Download it again in Settings to play here.",
+            "你刪除了\(name)的地圖。到設定重新下載就可以玩。"
         )
         }
     }
@@ -414,5 +423,80 @@ extension MapPack {
     /// kept from the first one.
     public static func currentOpen() -> [MapPack] {
         OverseasMap.allCases.compactMap { OverseasMaps.open.contains($0) ? current($0) : nil }
+    }
+}
+
+// MAP-PACK-MANAGE: the player keeps the map packs on the device or removes
+// them, in the settings (the coordinator's plan for opening Fukuoka: a pack
+// is some 4–14 MB, and a player who never flies to a city need not keep
+// it). Only what the player chose is kept here, in the app's preferences;
+// the saves on a removed map stay as they are and open again once it is
+// downloaded (decision 858 already stops a save whose map is not there).
+
+/// MAP-PACK-MANAGE: which map packs the player removed, and what the
+/// settings offer for each.
+public enum MapPackChoices {
+    /// The preferences key the removed cities are kept under.
+    public static let key = "mapPacks.removed"
+
+    /// The cities whose packs the player removed, as kept in `defaults`.
+    public static func removed(in defaults: UserDefaults = .standard) -> Set<OverseasMap> {
+        Set((defaults.stringArray(forKey: key) ?? []).compactMap(OverseasMap.init(rawValue:)))
+    }
+
+    /// Keeps that the player removed `city`'s pack, or (`removed` false)
+    /// wants it again.
+    public static func set(_ city: OverseasMap, removed: Bool, in defaults: UserDefaults = .standard) {
+        var cities = Self.removed(in: defaults)
+        if removed { cities.insert(city) } else { cities.remove(city) }
+        defaults.set(cities.map(\.rawValue).sorted(), forKey: key)
+    }
+
+    /// What the settings' row of a city's pack offers.
+    public enum Offer: Equatable, Sendable {
+        /// Nothing: the app carries the pack (the Debug app), or its
+        /// download has not answered.
+        case none
+        /// Remove it from the device.
+        case remove
+        /// Remove it, but not now: a game on its map is open.
+        case inUse
+        /// Download it again: the player removed it, or it did not come.
+        case download
+    }
+
+    /// What the row of `city` offers, its pack standing as `status`;
+    /// `carried` whether the app carries it, `playing` whether the open
+    /// game is on its map.
+    public static func offer(_ city: OverseasMap, status: MapPackStatus, carried: Bool, playing: Bool) -> Offer {
+        if carried { return .none }
+        switch status {
+        case .downloaded, .earlier: return playing ? .inUse : .remove
+        case .removed, .failed, .refused: return .download
+        case .bundled, .downloading: return .none
+        }
+    }
+
+    /// The button's name for `offer`.
+    public static func buttonTitle(_ offer: Offer, in language: DisplayLanguage) -> String? {
+        switch offer {
+        case .none: nil
+        case .remove, .inUse: language.text("Remove Map Data", "刪除地圖資料")
+        case .download: language.text("Download Again", "重新下載")
+        }
+    }
+
+    /// What the row says under the city's name for `offer`, if anything.
+    public static func note(_ offer: Offer, _ city: OverseasMap, in language: DisplayLanguage) -> String? {
+        offer == .inUse ? language.text("Close the game on this map to remove it.", "要先離開這張地圖上的遊戲才能刪除。") : nil
+    }
+
+    /// The question before `city`'s pack is removed.
+    public static func confirmation(_ city: OverseasMap, in language: DisplayLanguage) -> String {
+        let name = city.name(in: language)
+        return language.text(
+            "Remove the map of \(name) from this device? Your saves on it are kept and open again once you download it.",
+            "要從這台裝置刪除\(name)的地圖嗎？這張地圖上的存檔會留著，重新下載後就能再開。"
+        )
     }
 }

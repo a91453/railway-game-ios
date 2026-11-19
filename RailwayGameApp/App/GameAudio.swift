@@ -582,6 +582,8 @@ final class GameAudio {
         // Decision 853: a little under the arrival chime of the watched
         // train; the file itself is 2 LU quieter than the chimes.
         case .departure: 0.5
+        // Decision 883: as loud as an official one (the same peak).
+        case .playerDeparture: 0.5
         }
     }
 
@@ -592,6 +594,9 @@ final class GameAudio {
         if case .arrival(let watched, _, let motif) = cue { return .arrival(watched: watched, motif: motif) }
         // Decision 853: every line's melody shares one spacing.
         if case .departure = cue { return .departure(.a) }
+        // Decision 883: every player melody shares one spacing, its own,
+        // so the workshop's play button answers each press.
+        if case .playerDeparture = cue { return .playerDeparture([]) }
         return cue
     }
 
@@ -629,6 +634,9 @@ final class GameAudio {
         // Decision 853: one melody a call; another train's, right after,
         // waits.
         case .departure: .seconds(4)
+        // Decision 883: a press of the workshop's play button plays it
+        // again from the start (``CuePlayers``).
+        case .playerDeparture: .milliseconds(300)
         }
     }
 
@@ -639,7 +647,7 @@ final class GameAudio {
         case .warning: .warning
         case .built, .goalMet, .lineAcquired, .newTrain: .success
         case .arrival, .track, .transition, .income, .ticketIssued, .horn,
-             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .departure: nil
+             .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .departure, .playerDeparture: nil
         }
     }
 
@@ -672,6 +680,11 @@ private final class MusicEnd: NSObject, AVAudioPlayerDelegate, @unchecked Sendab
     }
 }
 
+private extension Array where Element == Float {
+    /// Decision 883: the frames as a WAV file ``AVAudioPlayer`` plays.
+    var wavData: Data { Data(PlayerMelodySynth.wav(self)) }
+}
+
 /// Decision 379: the cues' players (``SoundCue``), made and played on a
 /// serial queue of their own. `play()` waits for the audio output, some 10
 /// to 30 ms on an iPhone 17 Pro (TestFlight 85.1, the High Speed Rail at
@@ -683,12 +696,28 @@ private final class CuePlayers: @unchecked Sendable {
     /// Each cue's few players, so a sound can overlap itself; only on
     /// ``queue``.
     private var players: [SoundCue: [AVAudioPlayer]] = [:]
+    /// Decision 883: the piano the player's melodies are made on, read
+    /// from the app's seven `melody-piano-<root>.wav` the first time one
+    /// plays; `nil` when a file cannot be read (the official melody 1
+    /// plays instead, ``SoundCue/resource``).
+    private static let synth: PlayerMelodySynth? = {
+        var files: [Int: [UInt8]] = [:]
+        for root in PlayerMelodySynth.roots {
+            guard let url = Bundle.main.url(forResource: PlayerMelodySynth.sampleName(root), withExtension: "wav"),
+                  let data = try? Data(contentsOf: url) else { return nil }
+            files[root] = Array(data)
+        }
+        return PlayerMelodySynth(wavFiles: files)
+    }()
 
     /// Plays `cue` at `volume`, on a free player of its few, soon after.
     func play(_ cue: SoundCue, volume: Float) {
         queue.async { [self] in
             FrameCostMeter.shared.measure(.soundPlayback) {
                 let players = players[cue] ?? load(cue)
+                // Decision 883: a player melody starts again from the
+                // start rather than over itself.
+                if case .playerDeparture = cue { players.forEach { $0.stop() } }
                 guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
                 player.volume = volume
                 player.currentTime = 0
@@ -701,6 +730,17 @@ private final class CuePlayers: @unchecked Sendable {
     /// station's chime, or its motif at high speed. Each play sets its
     /// volume.
     private func load(_ cue: SoundCue) -> [AVAudioPlayer] {
+        // Decision 883: a melody the player wrote, made here once from the
+        // piano's notes (only the latest few are kept).
+        if case .playerDeparture(let notes) = cue, let wav = Self.synth?.render(notes).wavData {
+            if players.keys.count(where: { if case .playerDeparture = $0 { true } else { false } }) >= 4 {
+                players = players.filter { if case .playerDeparture = $0.key { false } else { true } }
+            }
+            let made = (0..<1).compactMap { _ in try? AVAudioPlayer(data: wav) }
+            made.forEach { $0.volume = GameAudio.baseVolume(of: cue); $0.prepareToPlay() }
+            players[cue] = made
+            return made
+        }
         let file = cue.resource
         let made = (0..<3).compactMap { _ in GameAudio.player(named: file.name, extension: file.extension, volume: GameAudio.baseVolume(of: cue)) }
         players[cue] = made

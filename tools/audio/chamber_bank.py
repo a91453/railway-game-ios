@@ -69,6 +69,26 @@ def spec():
     return load(SPEC)
 
 
+def keys(program):
+    """The keys the chamber bank's preset `program` has recordings for,
+    as (lowest, highest) per part, or None when the bank has no such
+    preset (GeneralUser GS plays it). A preset of this bank takes the
+    place of GeneralUser GS's whole program, so a key outside these
+    plays nothing at all (decision 883's later note: melody 2's C7)."""
+    for preset in spec()["presets"]:
+        if preset["program"] == program:
+            return [tuple(part["keys"]) for part in preset["parts"]]
+    return None
+
+
+def unplayable(program, pitches):
+    """Those of `pitches` the chamber bank's `program` would leave silent."""
+    ranges = keys(program)
+    if ranges is None:
+        return []
+    return sorted({p for p in pitches if not any(lo <= p <= hi for lo, hi in ranges)})
+
+
 def fetch(name, source, path, lock, record):
     """The bytes of `path` in `source` at its commit, from the cache or
     downloaded once; checked against the lock (or recorded in it)."""

@@ -18,36 +18,22 @@ final class FukuokaRailwaysTests: XCTestCase {
         try XCTUnwrap(open.railways)
     }
 
-    /// A game on Fukuoka's map with its railways, as the launcher would
-    /// start it. The pack has no ground yet (FUKUOKA-GROUND), so the game
-    /// stands on ``flat`` ground and has no people.
+    nonisolated static func ground() throws -> OverseasGround {
+        try OverseasGround(city: .fukuoka, pack: try XCTUnwrap(HongKongRailwaysTests.pack(.fukuoka)))
+    }
+
+    /// A game on Fukuoka's map with its railways, its people and its
+    /// ground (FUKUOKA-GROUND), as the launcher would start it.
     static func fukuoka() throws -> GameSession {
-        let ground = try OverseasGround(city: .fukuoka, pack: try XCTUnwrap(HongKongRailwaysTests.pack(.fukuoka)))
+        let ground = try Self.ground()
         var world = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000))
         try world.mapGround()
         let session = GameSession(world: world, language: .traditionalChinese)
         session.railways = try railways()
-        session.heights = try flat()
+        session.population = ground.population
+        session.water = ground.water
+        session.heights = ground.heights
         return session
-    }
-
-    /// Ground 5 m high over the whole map, in the heights file's form
-    /// (`HeightGrid`): a line cannot be laid where no height has been
-    /// read. FUKUOKA-GROUND brings the real heights.
-    static func flat(metres: Int = 5) throws -> HeightGrid {
-        let rows = 30, columns = 30
-        var bytes = Array("TWHG".utf8)
-        func put<T: FixedWidthInteger>(_ value: T) {
-            withUnsafeBytes(of: value.littleEndian) { bytes.append(contentsOf: $0) }
-        }
-        put(UInt16(1)); put(UInt16(0))
-        for degrees in [33.75, 130.25, 0.01] { put(degrees.bitPattern) }
-        put(UInt32(rows)); put(UInt32(columns))
-        // Each row: the first height (zigzag), then a run of the rest.
-        let row: [UInt8] = [UInt8(metres << 1), 0, UInt8(columns - 1)]
-        for index in 0...rows { put(UInt32(index * row.count)) }
-        for _ in 0..<rows { bytes += row }
-        return try HeightGrid(data: Data(bytes))
     }
 
     /// The three lines, end to end, as the operator numbers their stations.

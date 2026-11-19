@@ -35,12 +35,17 @@ public struct Map3DRegionLook: Sendable, Equatable {
     ///   Taiwan (Kinmen is at 118.3° E); decision 812 its buildings.
     /// - Finland's streets, buildings and 1,524 mm gauge within
     ///   59.5–70.2° N and 19.0–31.6° E.
+    /// - FUKUOKA-STREETS: Japan's streets and buildings within 24–46° N and
+    ///   east of 122.5° E (Yonaguni, Japan's westernmost, is at 123.0° E;
+    ///   Taiwan's easternmost islet at 122.1° E).
     /// - Snow north of 60° N (Rovaniemi is at 66.5°; Taiwan and Hong Kong
     ///   are south of 26°), whatever the country.
     public init(anchor: GeoAnchor) {
         let hongKong = 221_000_000...226_000_000 ~= anchor.latitude && 1_138_000_000...1_145_000_000 ~= anchor.longitude
         let finland = 595_000_000...702_000_000 ~= anchor.latitude && 190_000_000...316_000_000 ~= anchor.longitude
-        self.init(streets: hongKong ? .hongKong : finland ? .finland : .taiwan, buildings: hongKong ? .hongKong : finland ? .nordic : .taiwan,
+        let japan = 240_000_000...460_000_000 ~= anchor.latitude && 1_225_000_000...1_460_000_000 ~= anchor.longitude
+        self.init(streets: hongKong ? .hongKong : finland ? .finland : japan ? .japan : .taiwan,
+                  buildings: hongKong ? .hongKong : finland ? .nordic : japan ? .japan : .taiwan,
                   snow: anchor.latitude >= 600_000_000, gauge: finland ? Map3DTrackGauge.finnish : Map3DTrackGauge.cape)
     }
 
@@ -68,6 +73,12 @@ public struct Map3DRegionLook: Sendable, Equatable {
         /// tenements (唐樓) in faded mosaic, shops below and huts on the
         /// roof; offices walled in blue-green glass; grey concrete roofs.
         case hongKong
+        /// FUKUOKA-STREETS: Japan's: houses of one or two floors under a
+        /// pitched roof, blocks of flats and offices under flat ones,
+        /// nothing on the roofs, shops opening straight on the pavement
+        /// (no arcades) with their signs hung out, no Taiwanese temple
+        /// (a shrine or a temple is drawn as a public building).
+        case japan
 
         /// Whether a house's roof has a water tank or a sheet-steel room
         /// (decisions 235 and 267).
@@ -85,6 +96,11 @@ public struct Map3DRegionLook: Sendable, Equatable {
         var hasArcades: Bool { self == .taiwan }
 
         /// Whether a low house stands under a pitched roof.
-        var pitchesLowRoofs: Bool { self == .nordic }
+        var pitchesLowRoofs: Bool { self == .nordic || self == .japan }
+
+        /// FUKUOKA-STREETS: whether a hall tagged as a temple is drawn as
+        /// Taiwan's (decision 235's swallowtail roof): not in Finland
+        /// (decision 802) or Japan.
+        var drawsTaiwanTemples: Bool { self == .taiwan || self == .hongKong }
     }
 }

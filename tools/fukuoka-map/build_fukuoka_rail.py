@@ -403,7 +403,20 @@ def write(folder, name, value):
 
 
 OSM, MLIT, OURS = "OpenStreetMap", "National Land Numerical Information (railway data N02, 2025), MLIT", "this project"
+WORLDPOP, GSI = "WorldPop", "GSI elevation tiles"
 SOURCES = {
+    "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
+    "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_fukuoka_ground.py basemap)": OSM,
+                        "the coast closed along the extract's edge": OURS},
+    "buildings.pmtiles": {"outlines, uses, tagged storeys and heights (build_fukuoka_ground.py buildings)": OSM,
+                          "storeys where not tagged (from the tagged buildings and population.json)": OURS},
+    "airfields.json": {"runways, taxiways, aprons, stands, control tower (tools/airfields/build_airfields.py)": OSM},
+    "no_build.json": {"the airport, military land, cemeteries, golf courses, railway land and the airport's buildings "
+                      "(tools/no-build-land/build_no_build.py)": OSM},
+    # build_fukuoka_ground.py grids.
+    "heights.dat": {"heights (the mean of the model's pixels in each 1.875 arc-second cell)": GSI},
+    "water.json": {"water (the sea, rivers and ponds)": OSM, "steep (slopes over 30 %)": GSI},
+    "terrain.pmtiles": {"heights (heights.dat, Terrarium-encoded)": GSI},
     "track_lines.geojson": {"geometry": OSM, "id, name, color": OURS},
     "track_stations.geojson": {"geometry (N02's station, on OpenStreetMap's track)": MLIT, "code (the operator's numbering)": OURS,
                                "name (Chinese)": OURS, "color": OURS},
@@ -422,15 +435,20 @@ def write_manifest(folder):
     where its parts come from."""
     files = {name: {"bytes": os.path.getsize(os.path.join(folder, name)), "sources": SOURCES[name]}
              for name in sorted(SOURCES) if os.path.exists(os.path.join(folder, name))}
+    licences = {OSM: "© OpenStreetMap contributors, ODbL 1.0", MLIT: MLIT_CREDIT}
+    if "population.json" in files:
+        licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
+    if "heights.dat" in files:
+        licences[GSI] = "国土地理院の標高タイルを加工して作成 (国土地理院コンテンツ利用規約, compatible with CC BY 4.0)"
     write(folder, "pack.json", {
         "id": "fukuoka", "system": SYSTEM, "decision": 854,
         "english": "Fukuoka", "chinese": "福岡",
         "_readme": "Fukuoka's map pack: the Fukuoka City Subway's three lines, with estimated headways, in the formats "
                    "and under the file names of Taiwan's real railways, read from this folder alone. Made by "
-                   "tools/fukuoka-map (README.md there). Railways only so far: no base map, ground or people.",
+                   "tools/fukuoka-map (README.md there).",
         "bytes": sum(f["bytes"] for f in files.values()),
         "extent": EXTENT,
-        "licences": {OSM: "© OpenStreetMap contributors, ODbL 1.0", MLIT: MLIT_CREDIT},
+        "licences": licences,
         "files": files,
     })
 

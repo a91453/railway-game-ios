@@ -25,23 +25,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import build_basemap  # noqa: E402
 import build_rovaniemi_rail  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'overseas-map'))
+import overseas_ground  # noqa: E402
 
 # The cut extract's box: west, south, east, north.
 LAND = (25.15, 66.27, 27.65, 66.83)
 SEA_MARGIN = 0.01
 
 
-def coastline(path):
-    """One ring of land, the extract's box, anticlockwise as OpenStreetMap
-    draws an island's coast; nothing cut open; no edit of its own."""
-    west, south, east, north = LAND
-    ring = [(south, west), (south, east), (north, east), (north, west), (south, west)]
-    return [ring], 0, None
-
-
 if __name__ == '__main__':
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     build_basemap.SEA_MARGIN = SEA_MARGIN
-    build_basemap.main(sys.argv[1], sys.argv[2], name='Rovaniemi base map', center=(25.73, 66.50, 10), coastline=coastline)
+    build_basemap.main(sys.argv[1], sys.argv[2], name='Rovaniemi base map', center=(25.73, 66.50, 10), coastline=overseas_ground.land_box(LAND))
     build_rovaniemi_rail.write_manifest(os.path.dirname(os.path.abspath(sys.argv[2])))

@@ -1,7 +1,7 @@
 {
   "about": "The chamber bank (THEME-PLAIN item 1): a SoundFont that chamber_bank.py builds from recorded samples of a concert grand and a chamber string section, in place of GeneralUser GS's piano, pizzicato strings, slow strings and harp. It is a tool, as GeneralUser GS is: built into a cache outside the repository, never committed, not in the app. sources: each pinned at a commit; every file read from it is checked against chamber-files.json. presets: General MIDI programs; each takes the regions of its parts, a part being one sampler file of a source (sfz, a file of the source; salamander, the Salamander layout of Data/region.txt and Data/notes.txt) cut to its keys; gain, decibels added to the part; mic, one microphone of the stereo pair kept, mono (the Salamander pair is spaced: from note to note its two channels run from in phase to out of phase, so their sum, which a phone's single speaker plays, would come and go); presence, a bell [Hz, dB, octaves] (the one microphone is darker between 1 and 2 kHz than the pair, and than the piano the theme was approved on); width, the share of the side signal kept (the sections are recorded wide; GeneralUser GS's are nearly mono); loop, a sustained part gets a crossfaded loop; even, seconds after the onset over which every sample of a velocity layer is made as loud as the layer's median; attack and release, seconds of the volume envelope (release, when given, overrides the source's); velocity, centibels the velocity takes off (the layers already play softer and louder; 960 is the SoundFont default).",
   "name": "railway chamber",
-  "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e",
+  "sha256": "8eb3dfcf3205aaf477aad55fba5ecf0260f55d0db457ec050f43a67d06c00157",
   "sources": {
     "salamander": {
       "title": "Salamander Grand Piano V3 (Yamaha C5), by Alexander Holm, SFZ remap by kinwie",
@@ -25,7 +25,7 @@
       "velocity": 260,
       "release": 0.9,
       "parts": [
-        {"source": "salamander", "salamander": "Data", "keys": [55, 93], "mic": "right", "presence": [1500, 4, 0.6]}
+        {"source": "salamander", "salamander": "Data", "keys": [55, 96], "mic": "right", "presence": [1500, 4, 0.6]}
       ]
     },
     {

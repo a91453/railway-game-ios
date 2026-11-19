@@ -279,6 +279,14 @@ public struct GameWorld: Equatable, Sendable {
     /// a world without them. Changed by ``setCoachStops(_:)`` and every
     /// midnight only.
     public internal(set) var coachStops: [CoachStop] = []
+    /// The melodies the player wrote (decision 883), by ascending number;
+    /// none in a new world and in saves from before them (save version
+    /// 111). Set by ``addPlayerMelody(named:notes:)``,
+    /// ``editPlayerMelody(_:name:notes:)`` and ``removePlayerMelody(_:)``
+    /// only.
+    public internal(set) var playerMelodies: [PlayerMelody] = []
+    /// The next player melody's number.
+    public internal(set) var nextPlayerMelodyID = 1
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -2181,12 +2189,35 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Decision 866: sets the departure melody station `id` plays as a
     /// train's doors close, or `nil` for the line's own. Free; no rule
-    /// reads it.
+    /// reads it. Decision 883: either takes the place of any player
+    /// melody the station was set to.
     ///
     /// - Throws: ``GameError/unknownStation(_:)``.
     public mutating func setStationDepartureMelody(_ id: StationID, to melody: DepartureMelody?) throws(GameError) {
         guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
         stations[index].departureMelody = melody
+        stations[index].playerMelody = nil
+    }
+
+    /// Decision 883: sets station `id` to play player melody `melody` as a
+    /// train's doors close, or `nil` for each line's own, either in place
+    /// of any official melody it was set to. Free; no rule reads it.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
+    ///   ``GameError/unknownPlayerMelody(_:)``.
+    public mutating func setStationPlayerMelody(_ id: StationID, to melody: PlayerMelodyID?) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        if let melody, playerMelody(id: melody) == nil { throw .unknownPlayerMelody(melody) }
+        stations[index].playerMelody = melody
+        stations[index].departureMelody = nil
+    }
+
+    /// Decision 883: the stations set to player melody `id` play each
+    /// line's own again (``removePlayerMelody(_:)``).
+    mutating func stopPlaying(_ id: PlayerMelodyID) {
+        for station in stations.indices where stations[station].playerMelody == id {
+            stations[station].playerMelody = nil
+        }
     }
 
     /// Renames line `id`. Free.
@@ -6206,6 +6237,7 @@ extension GameWorld: Codable {
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, farDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
+        case playerMelodies, nextPlayerMelodyID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -6399,6 +6431,10 @@ extension GameWorld: Codable {
         airRoutes = try container.decodeIfPresent([AirRoute].self, forKey: .airRoutes) ?? []
         nextAirRouteID = try container.decodeIfPresent(Int.self, forKey: .nextAirRouteID) ?? 1
         coachStops = try container.decodeIfPresent([CoachStop].self, forKey: .coachStops) ?? []
+        // Decision 883: a world without player melodies has neither key
+        // (every save before version 111).
+        playerMelodies = try container.decodeIfPresent([PlayerMelody].self, forKey: .playerMelodies) ?? []
+        nextPlayerMelodyID = try container.decodeIfPresent(Int.self, forKey: .nextPlayerMelodyID) ?? 1
         // Decision 528: a purchase whose line or bus route was removed
         // before it went with it is dropped, so the real line is on sale
         // again; nothing is paid back or booked again. One naming a number
@@ -6594,6 +6630,12 @@ extension GameWorld: Codable {
         }
         if !coachStops.isEmpty {
             try container.encode(coachStops, forKey: .coachStops)
+        }
+        if !playerMelodies.isEmpty {
+            try container.encode(playerMelodies, forKey: .playerMelodies)
+        }
+        if nextPlayerMelodyID != 1 {
+            try container.encode(nextPlayerMelodyID, forKey: .nextPlayerMelodyID)
         }
         if !cableways.isEmpty {
             try container.encode(cableways, forKey: .cableways)
@@ -6894,7 +6936,7 @@ extension GameWorld: Codable {
             ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds) {
             return problem
         }
-        return busRoutesProblem() ?? cablewaysProblem() ?? ferryRoutesProblem() ?? airportsProblem() ?? airRoutesProblem() ?? coachStopsProblem()
+        return busRoutesProblem() ?? cablewaysProblem() ?? ferryRoutesProblem() ?? airportsProblem() ?? airRoutesProblem() ?? coachStopsProblem() ?? playerMelodiesProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE
