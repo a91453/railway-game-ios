@@ -152,6 +152,19 @@ final class MelodyWorkshopTests: XCTestCase {
         return try XCTUnwrap(PlayerMelodySynth(wavFiles: files))
     }
 
+    /// Decision 883's later note: every pitch a player can write, C7
+    /// too, is played from a recording at most two semitones off, and
+    /// the C7 of official melody 2 from its own.
+    func testEveryPitchHasARecordingNearby() throws {
+        for pitch in PlayerMelody.pitches {
+            XCTAssertLessThanOrEqual(PlayerMelodySynth.roots.map { abs($0 - pitch) }.min() ?? 99, 2, "MIDI \(pitch)")
+        }
+        XCTAssertTrue(PlayerMelodySynth.roots.contains(PlayerMelody.pitches.upperBound))
+        let synth = try Self.synth()
+        let high = synth.render([MelodyNote(pitch: 96, start: 0, length: 960)])
+        XCTAssertGreaterThan(high.prefix(PlayerMelodySynth.rate / 2).map(abs).max() ?? 0, 0.1, "C7 sounds")
+    }
+
     /// A melody plays as long as an official one, at its peak,
     /// the same every time, and as a WAV file the app can play. With
     /// `MELODY_PREVIEW_DIR` set, the six official tunes played this way

@@ -156,6 +156,7 @@
 		7AC19AF0231E1CD39DDBC271 /* sleigh-bells.caf in Resources */ = {isa = PBXBuildFile; fileRef = A5BE130616B8EF300E724027 /* sleigh-bells.caf */; };
 		7B2C7C245265CD7529B9371B /* RollingStockCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 771361B568387359268A6B83 /* RollingStockCatalogView.swift */; };
 		7B33A9D56D70E34C9244D283 /* DeviceDiagnosticsRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A5BD1F73E69B878537F5E6 /* DeviceDiagnosticsRecorder.swift */; };
+		7BEB5EF5E98619D640034729 /* melody-piano-96.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2202442100EE62C9D6A885AD /* melody-piano-96.wav */; };
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		7D3131E179FBE863523685B0 /* run-diesel-coast.caf in Resources */ = {isa = PBXBuildFile; fileRef = F390F949C4A3FC86EC095654 /* run-diesel-coast.caf */; };
 		7D49EA0784B2BD7293A9005D /* hk-taxi.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = E7C9AF0B862D5C7D596754AE /* hk-taxi.m3dmodel */; };
@@ -405,6 +406,7 @@
 		1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSaveFolder.swift; sourceTree = "<group>"; };
 		1FC5AEB0936E154EABD2610F /* YearEndReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearEndReport.swift; sourceTree = "<group>"; };
 		21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapInteractionTests.swift; sourceTree = "<group>"; };
+		2202442100EE62C9D6A885AD /* melody-piano-96.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "melody-piano-96.wav"; sourceTree = "<group>"; };
 		222E67E267AF07C25D4745C9 /* DataSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourcesView.swift; sourceTree = "<group>"; };
 		22B3E573D7A6A1CB02F279FF /* NextStepChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChip.swift; sourceTree = "<group>"; };
 		24B425FF34AEB844CE2FA815 /* StationMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationMasterView.swift; sourceTree = "<group>"; };
@@ -1061,6 +1063,7 @@
 				0CE083563998910969D137AB /* melody-piano-86.wav */,
 				276A52FCDDEFCE1FBE96BCEF /* melody-piano-90.wav */,
 				07EF14ABC107A3C3943C0F67 /* melody-piano-93.wav */,
+				2202442100EE62C9D6A885AD /* melody-piano-96.wav */,
 				37971520DEDE438F5E6272D6 /* music-loop.caf */,
 				FB74245E469669AFD43AC989 /* music-theme.m4a */,
 				B17E3EAEB5490DD4D7DDF777 /* music-winter.m4a */,
@@ -1357,6 +1360,7 @@
 				2A36AF71FFC617956D884DA1 /* melody-piano-86.wav in Resources */,
 				A509FCA68657020F4AB02C4F /* melody-piano-90.wav in Resources */,
 				212CC094C5B0E27037EAD07F /* melody-piano-93.wav in Resources */,
+				7BEB5EF5E98619D640034729 /* melody-piano-96.wav in Resources */,
 				5E5D2D211BDC490D078CE1DA /* meshy-bus-stop-pole.m3dmodel in Resources */,
 				D4861912DD9779D9E4B843F5 /* meshy-post-boxes.m3dmodel in Resources */,
 				E6499A0C099D064E114AE300 /* metro_runs.json in Resources */,
