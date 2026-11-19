@@ -408,6 +408,8 @@ SOURCES = {
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_fukuoka_ground.py basemap)": OSM,
                         "the coast closed along the extract's edge": OURS},
+    "buildings.pmtiles": {"outlines, uses, tagged storeys and heights (build_fukuoka_ground.py buildings)": OSM,
+                          "storeys where not tagged (from the tagged buildings and population.json)": OURS},
     "airfields.json": {"runways, taxiways, aprons, stands, control tower (tools/airfields/build_airfields.py)": OSM},
     "no_build.json": {"the airport, military land, cemeteries, golf courses, railway land and the airport's buildings "
                       "(tools/no-build-land/build_no_build.py)": OSM},

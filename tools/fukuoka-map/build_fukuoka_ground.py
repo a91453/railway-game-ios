@@ -237,8 +237,26 @@ def grids(tiles_folder, extract, folder):
           f'heights.dat {size} bytes')
 
 
+def buildings(extract, folder):
+    """`buildings.pmtiles` by Rovaniemi's rule (`overseas_buildings.make`,
+    decision 799), with the table of uses of Hong Kong's and Japan's
+    `agricultural` and `roof` (a free-standing roof, a shelter). Nine in
+    ten of Fukuoka's buildings in OpenStreetMap carry their storeys or
+    height (the city's 3D model imported by its mappers), so few are
+    guessed."""
+    import build_hk_buildings as hk
+    import overseas_buildings
+    use_of = dict(hk.USE_OF, agricultural='agricultural', roof='transportation')
+    overseas_buildings.make(
+        extract, folder, build_fukuoka_rail.EXTENT, title='Fukuoka building footprints', use_of=use_of,
+        report_path=os.path.join(HERE, 'fukuoka_buildings.json'),
+        extract_from='https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b '
+                     + ','.join(f'{v:g}' for v in BOX) + ' -s smart',
+        decision=854, write_manifest=build_fukuoka_rail.write_manifest)
+
+
 if __name__ == '__main__':
-    steps = {'population': (population, 2), 'basemap': (basemap, 2), 'grids': (grids, 3)}
+    steps = {'population': (population, 2), 'basemap': (basemap, 2), 'grids': (grids, 3), 'buildings': (buildings, 2)}
     if len(sys.argv) < 2 or sys.argv[1] not in steps or len(sys.argv) != 2 + steps[sys.argv[1]][1]:
         sys.exit(__doc__)
     steps[sys.argv[1]][0](*sys.argv[2:])

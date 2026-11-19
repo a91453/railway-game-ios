@@ -460,7 +460,7 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // FUKUOKA-GROUND: the pack's base map, heights and people.
+                    // FUKUOKA-GROUND: the pack's base map, buildings, heights and people.
                     DataSourceCredit(
                         id: "fukuokaMap",
                         title: language.text("Fukuoka’s map", "福岡的地圖"),
@@ -471,6 +471,21 @@ public enum DataSourceCredits {
                         notice: language.text(
                             "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0).",
                             "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。圖層照 OpenMapTiles 的格式（CC BY 4.0）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
+                    DataSourceCredit(
+                        id: "fukuokaBuildings",
+                        title: language.text("Fukuoka’s buildings", "福岡的建物"),
+                        detail: language.text(
+                            "On Fukuoka’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded.",
+                            "福岡地圖上，3D 地圖裡建物的外形與用途，有記錄的還有樓層數。"
+                        ),
+                        notice: language.text(
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are not recorded are this game’s estimate.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有記錄的樓層數是本遊戲的估計。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
