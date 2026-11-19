@@ -21,9 +21,12 @@ public enum Map3DRedCommuter {
     /// the door frames), the grey-white body, the dark underframe and cab
     /// panels, the light band round the windows, the red body, the blue
     /// marks and the glass (which lights at night and catches the sky,
-    /// ``Map3DTrainLights``, ``Map3DTrainMaterial``).
+    /// ``Map3DTrainLights``, ``Map3DTrainMaterial``). Decision 889: the
+    /// grey-white body and the light band are the palette's nearest
+    /// (``Map3DPalette/shedWalls`` [2] for #C9CECC, ``Map3DPalette/acUnit``
+    /// for #E9EBE5, ΔE 1.2 and 2.1).
     static let meshPalette: [UInt32] = [
-        Map3DPalette.steel, Map3DColor.rgb(0xC9CECC), Map3DPalette.dark, Map3DColor.rgb(0xE9EBE5),
+        Map3DPalette.steel, Map3DPalette.shedWalls[2], Map3DPalette.dark, Map3DPalette.acUnit,
         Map3DPalette.trainRed, Map3DPalette.canopy, Map3DTrainStyle.glass,
     ]
 
