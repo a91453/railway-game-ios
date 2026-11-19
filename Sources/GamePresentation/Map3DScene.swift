@@ -1362,6 +1362,9 @@ extension Map3DScene {
         /// Decision 860: the underground platforms and their stations'
         /// boxes, from the whole network.
         var undergroundStations = Map3DUndergroundStations()
+        /// Decision 888: the track network's diamond crossings
+        /// (``addTrack(_:)``'s).
+        var diamonds: [Map3DDiamondCrossing] = []
         /// Decision 391: the base map's road bridges and their decks.
         var roadBridges = Map3DRoadBridges()
         /// Decision 834: the motorways' profiles and cuttings.
@@ -1953,6 +1956,9 @@ extension Map3DScene {
             // Decision 876: the scene's samples, and only the stretches
             // whose box reaches the region (the rest lay nothing here).
             let samples = shared.samples(of: snapshot)
+            // Decision 888: the diamonds, their rails cut and their wing
+            // rails laid.
+            diamonds = Map3DDiamondCrossings.find(snapshot) { point($0) + Self.lifted }
             for (number, alignment) in snapshot.edges.enumerated() {
                 // Decision 407: a high-speed line's on its box girder.
                 let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
@@ -1970,6 +1976,7 @@ extension Map3DScene {
                     }
                 }
             }
+            addDiamondWings()
             return cleared
         }
 
@@ -2124,10 +2131,14 @@ extension Map3DScene {
             let target = self.target
             if railsNear { self.target = .near }
             defer { self.target = target }
+            // Decision 888: at a diamond, short of the rail it crosses.
+            let gaps = [Float(-1), 1].map { diamondGaps(line, offset: $0 * offset) }
             mesh(at: middle) { mesh in
-                for side: Float in [-1, 1] {
-                    mesh.addRibbon(along: line, width: Self.railWidth, offset: side * offset, lift: 0, depth: Self.railHeight,
-                                   top: Map3DPalette.railTop, side: Map3DPalette.rail)
+                for (number, side) in [Float(-1), 1].enumerated() {
+                    for piece in gaps[number].isEmpty ? [line] : Map3DDiamondCrossings.cut(line, without: gaps[number]) {
+                        mesh.addRibbon(along: piece, width: Self.railWidth, offset: side * offset, lift: 0, depth: Self.railHeight,
+                                       top: Map3DPalette.railTop, side: Map3DPalette.rail)
+                    }
                 }
             }
         }

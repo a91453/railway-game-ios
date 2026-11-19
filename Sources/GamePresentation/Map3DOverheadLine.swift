@@ -81,6 +81,9 @@ extension Map3DScene.Builder {
     /// above the rails.
     static let mastSpacing: Float = 40
     static let mastOffset: Float = 2.45
+    /// Decision 888: how far a mast's foot stands clear of other track's
+    /// middle: outside its rails and their sleepers' ends.
+    static let mastClearOfTrack: Float = 2
     static let mastTop: Float = 6.4
     /// A mast on a side platform stands this far in from its back; one
     /// within ``sharedMast`` of another (an island's two tracks) is that
@@ -182,6 +185,24 @@ extension Map3DScene.Builder {
                     return abs(v.dot(along)) < 4 && across > 1.8 && across < 7.5
                 }
             }
+        }
+        /// Decision 888: whether other track runs within 2 m of `p` (a mast's
+        /// foot): at a diamond, beside the node, the other track's.
+        func onOtherTrack(_ p: Map3DPoint, of line: Int) -> Bool {
+            around(p).contains { key in
+                (pieces[key] ?? []).contains { piece in
+                    guard piece.line != line else { return false }
+                    let ab = level(piece.b - piece.a), length = ab.dot(ab)
+                    let share = length > 0 ? min(max(level(p - piece.a).dot(ab) / length, 0), 1) : 0
+                    return level(piece.a + (piece.b - piece.a) * share - p).length < Self.mastClearOfTrack && abs(piece.a.y - p.y) < 3
+                }
+            }
+        }
+        let diamonds = diamonds
+        /// Near enough a diamond for a mast's foot to reach the other
+        /// track: the flatter the crossing, the farther out.
+        func nearDiamond(_ p: Map3DPoint) -> Bool {
+            diamonds.contains { level($0.point - p).length < (Self.mastOffset + Self.mastClearOfTrack) / $0.sine + 4 }
         }
         let platforms = laidPlatforms.compactMap { platform in Map3DStreetLife.Path(platform.line).map { (path: $0, platform: platform) } }
         /// The platform beside the track at `p` on `side`, if one is.
@@ -285,7 +306,10 @@ extension Map3DScene.Builder {
                     continue
                 }
                 if around(p).contains(where: { (masts[$0] ?? []).contains { level($0 - p).length < 2 } }) { continue }
-                let open = [Float(1), -1].filter { !neighbour(of: line.index, at: p, along: along, right: right, side: $0) }
+                let open = [Float(1), -1].filter {
+                    !neighbour(of: line.index, at: p, along: along, right: right, side: $0)
+                        && !(nearDiamond(p) && onOtherTrack(p + right * ($0 * Self.mastOffset), of: line.index))
+                }
                 guard let side = open.first(where: { platform(at: p, side: $0) == nil }) ?? open.first else { continue }
                 // None in a street crossing the track: the wire spans over
                 // it to the masts either side.
