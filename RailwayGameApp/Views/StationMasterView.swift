@@ -18,13 +18,15 @@ struct StationMasterAvatar: View {
     var size: CGFloat = 40
     var mood: StationMasterMood = .normal
     @Environment(\.regionStyle) private var region
+    /// Decision 884: the Christmas hat follows the event's decorations.
+    @AppStorage(WinterEvent.decorationsKey) private var festiveDecorations = true
 
     /// Narrower than this, the avatar shows the head alone, a size up, so
     /// the face still reads (decision 122).
     private static let headOnlyBelow: CGFloat = 60
 
     var body: some View {
-        Image(region.stationMasterArt + mood.rawValue)
+        Image(region.stationMasterArt + mood.rawValue + WinterStationMaster.outfit(at: Date(), switchedOn: festiveDecorations))
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
@@ -88,6 +90,9 @@ struct StationMasterCorner: View {
     /// it has been said.
     @State private var modeShiftHint: StationMasterAdvice?
     @AppStorage(ModeShiftHint.seenKey) private var modeShiftHintSeen = false
+    /// Decision 884: the last winter week whose mission the station master
+    /// told on this device.
+    @AppStorage(WinterStationMaster.toldKey) private var winterMissionTold = ""
     /// Decision 387: the challenge's story, told here, a beat at a time,
     /// in the bubble's place and with its speaker's face.
     @State private var teller = StoryTeller()
@@ -463,6 +468,12 @@ struct StationMasterCorner: View {
             storyBeat = nil
         }
         storyQueue += teller.look(at: session.world)
+        // Decision 884: the winter week's mission, once a week.
+        if let winter = WinterStationMaster.announcement(
+            at: Date(), told: winterMissionTold, onSantaMap: WinterSantaVillage.place(in: session.world) != nil
+        ), !storyQueue.contains(winter.beat), storyBeat != winter.beat {
+            storyQueue.append(winter.beat)
+        }
         tellNextBeat()
     }
 
@@ -488,6 +499,9 @@ struct StationMasterCorner: View {
         isTalking = false
         storyBeat = beat
         storyTalk &+= 1
+        if case .winterWeek(let season, let week) = beat.moment {
+            winterMissionTold = WinterStationMaster.key(season: season, week: week)
+        }
     }
 
     /// Puts the card away; the next beat, else the advice waiting, follows.

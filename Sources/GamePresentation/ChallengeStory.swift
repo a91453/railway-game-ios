@@ -140,6 +140,10 @@ public enum StoryMoment: Hashable, Sendable {
     case completed(ScenarioRating)
     /// The challenge was lost at the last midnight.
     case failed
+    /// Decision 884: not a challenge's at all, but the winter event's
+    /// (decision 788): week `week` of season `season` began on the
+    /// device's calendar, and the station master says its mission.
+    case winterWeek(season: Int, week: Int)
 
     /// Whether it is how the challenge ended.
     var isEnding: Bool {
@@ -154,7 +158,7 @@ public enum StoryMoment: Hashable, Sendable {
     /// (``StoryMoment/day(of:in:today:)``).
     var recurs: Bool {
         switch self {
-        case .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: true
+        case .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed, .winterWeek: true
         case .day, .firstProfitableDay, .ridersGoalMet, .milestone, .riders, .progress: false
         }
     }
@@ -403,7 +407,7 @@ extension StoryMoment {
                 return firstDay { $0.fareTrips * 100 >= target * percent }
             }
         case .firstProfitableDay: firstDay { StationMasterAdvice.operatingResult(on: $0) > .zero }
-        case .progress, .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: nil
+        case .progress, .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed, .winterWeek: nil
         }
         return day.flatMap { $0 > state.startDay ? $0 : nil }
     }

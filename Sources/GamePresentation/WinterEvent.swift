@@ -248,7 +248,11 @@ public struct WinterMission: Identifiable, Hashable, Sendable {
     /// What to do on the map `facts` were read from: week 3 on a map that
     /// holds Santa Claus Village asks for a line to it (decision 818).
     public func how(in language: DisplayLanguage, facts: WinterMissionFacts?) -> String {
-        if id == "arctic", facts?.reachesSantaVillage != nil {
+        how(in: language, onSantaMap: facts?.reachesSantaVillage != nil)
+    }
+    /// What to do, on a map that holds Santa Claus Village or not.
+    public func how(in language: DisplayLanguage, onSantaMap: Bool) -> String {
+        if id == "arctic", onSantaMap {
             return language.text("Run a line to Santa Claus Village on the Arctic Circle.", "讓一條路線連到北極圈上的聖誕老人村。")
         }
         return how(in: language)
@@ -426,5 +430,56 @@ extension GameSession {
         ))
         isMessageKeptOutOfNews = false
         playSound?(.income)
+    }
+}
+
+/// Decision 884: the station master's own part in the winter event. While
+/// the event's decorations show, Taiwan's station master wears a Christmas
+/// hat (its faces with ``outfitSuffix``), and each week's mission is told
+/// by it once, on a card in the corner, the first time the game is played
+/// that week.
+public enum WinterStationMaster {
+    /// Added to a face's name in the asset catalog while the hat is worn:
+    /// `StationMasterTaiwanNormal` + `Christmas`.
+    public static let outfitSuffix = "Christmas"
+    /// The last week whose mission was told, as ``key(season:week:)``.
+    public static let toldKey = "event.winterMissionTold"
+
+    /// What to add to a face's name at `date`: the hat during the event,
+    /// unless the player switched the decorations off, else nothing.
+    public static func outfit(at date: Date, switchedOn: Bool, calendar: Calendar = WinterEvent.calendar()) -> String {
+        WinterEvent.showsDecorations(at: date, switchedOn: switchedOn, calendar: calendar) ? outfitSuffix : ""
+    }
+
+    /// The key ``toldKey`` keeps for week `week` of season `season`.
+    public static func key(season: Int, week: Int) -> String { "\(season).\(week)" }
+
+    /// The card to tell at `date`, if this week's mission was not told yet
+    /// (`told` is the last told week's key, ``toldKey``), with the key to
+    /// keep once it is told. Nothing in the last days (6 January), when
+    /// there is no mission.
+    /// `onSantaMap`: the map holds Santa Claus Village (week 3 asks for a
+    /// line to it there, decision 818).
+    public static func announcement(
+        at date: Date, told: String?, onSantaMap: Bool = false, calendar: Calendar = WinterEvent.calendar()
+    ) -> (beat: StoryBeat, key: String)? {
+        let state = WinterEvent.phase(at: date, calendar: calendar)
+        guard let season = state.season, case .week(let week) = state.phase, let mission = WinterMission.of(week: week) else { return nil }
+        let key = key(season: season, week: week)
+        guard key != told else { return nil }
+        return (beat(mission, season: season, onSantaMap: onSantaMap), key)
+    }
+
+    /// The card's words: the week's mission and what it asks.
+    static func beat(_ mission: WinterMission, season: Int, onSantaMap: Bool) -> StoryBeat {
+        let week = mission.week
+        let first = week == 1
+        let english = (first ? "The winter event has begun! " : "")
+            + "Week \(week)'s mission: \(mission.english.title). \(mission.how(in: .english, onSantaMap: onSantaMap)) Its badge is in Goals."
+        let chinese = (first ? "冬季活動開始了！" : "")
+            + "第 \(week) 週的任務是「\(mission.chinese.title)」：\(mission.how(in: .traditionalChinese, onSantaMap: onSantaMap))徽章在「目標」裡。"
+        return StoryBeat(
+            "winter.\(season).\(week)", .winterWeek(season: season, week: week), .stationMaster, english, chinese
+        )
     }
 }
