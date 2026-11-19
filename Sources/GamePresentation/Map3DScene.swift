@@ -990,6 +990,34 @@ extension Map3DScene {
         let row: Int
 
         static func < (a: ChunkKey, b: ChunkKey) -> Bool { (a.row, a.column) < (b.row, b.column) }
+
+        /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the key as one
+        /// number, column over row (two keys equal in it may still differ,
+        /// as ``==`` tells).
+        private var packed: UInt64 {
+            UInt64(truncatingIfNeeded: column) &<< 32 ^ UInt64(truncatingIfNeeded: UInt32(truncatingIfNeeded: row))
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(packed)
+        }
+
+        /// Decision 876 (later): the key's hash in a dictionary or a set,
+        /// mixed with the table's `seed` by SplitMix64's finalizer instead
+        /// of the standard library's SipHash. A 3D block looks keys up
+        /// millions of times (the ground's corners, the roads' beds and
+        /// bridges by cell), and hashing them was a sixth of a Hong Kong
+        /// block's time. These tables hold the map's own cells, not
+        /// anything an attacker picks, so a hash that is fast and spreads
+        /// them well is enough. Where in a table a key lies changes, and
+        /// nothing built depends on it: the standard library seeds every
+        /// run differently already.
+        func _rawHashValue(seed: Int) -> Int {
+            var x = packed ^ UInt64(truncatingIfNeeded: seed) &* 0x9E37_79B9_7F4A_7C15
+            x = (x ^ (x &>> 30)) &* 0xBF58_476D_1CE4_E5B9
+            x = (x ^ (x &>> 27)) &* 0x94D0_49BB_1331_11EB
+            return Int(truncatingIfNeeded: x ^ (x &>> 31))
+        }
     }
 
     /// The heights file's ground at the 64 m grid's corners round a
@@ -1314,7 +1342,7 @@ extension Map3DScene {
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
         /// row and column, as ``addGround()`` lays them.
-        var corners: [ChunkKey: Float] = [:]
+        var corners = CornerHeights()
         /// Decision 737: the levelled ground of a real-world map, once
         /// ``levelGround(under:)`` has worked it out; the world's own before.
         var levelling: Map3DLevelledGround?
@@ -1400,6 +1428,7 @@ extension Map3DScene {
             self.world = world
             placedGround = Self.placedSquares(world, region: region, originX: originX, originY: originY)
             fileGround = heights.flatMap { grid in RealWorldFrame(world: world).map { FileGround(grid, frame: $0, region: region) } }
+            corners = CornerHeights(region: region)
         }
 
         func point(x: Double, y: Double, height: Double) -> Map3DPoint {
@@ -1482,7 +1511,7 @@ extension Map3DScene {
             let firstRow = Int((region.minY / cell).rounded(.down)) - 2, lastRow = Int((region.maxY / cell).rounded(.up)) + 2
             guard firstColumn <= lastColumn, firstRow <= lastRow else { return }
             let world = world, file = fileGround
-            corners = [:]
+            corners = CornerHeights(region: region)
             levelling = Map3DLevelledGround(
                 held: held, rows: firstRow...lastRow, columns: firstColumn...lastColumn,
                 lastRow: Int((Double(bounds.height) / cell).rounded(.down)), lastColumn: Int((Double(bounds.width) / cell).rounded(.down)),
@@ -1669,14 +1698,85 @@ extension Map3DScene {
         /// `column`), in metres, as ``addGround(water:)`` lays it, worked
         /// out once.
         mutating func groundCorner(row: Int, column: Int) -> Float {
-            let key = ChunkKey(column: column, row: row)
-            if let known = corners[key] { return known }
+            if let known = corners[row, column] { return known }
             let cell = Double(Land.cellLength)
             let own = worldGround(x: Double(column) * cell, y: Double(row) * cell)
             // Decision 737: the levelled ground on a real-world map.
             let height = levelling?.corner(row: row, column: column, own: own) ?? own
-            corners[key] = height
+            corners[row, column] = height
             return height
+        }
+
+        /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the corners worked
+        /// out (``groundCorner(row:column:)``), those of the region and
+        /// ``reach`` cells round it in an array, the rest by key. The
+        /// drawn ground is asked for hundreds of thousands of times in a
+        /// block (every road's bed, wall and bridge), and hashing each
+        /// corner's key was a tenth of a Hong Kong block's time; what is
+        /// kept is the same either way.
+        struct CornerHeights {
+            /// Cells round the region kept in the array: past the road
+            /// beds (``Map3DRoadBed/reach``) and the base map's bridges,
+            /// read from the tiles round the region
+            /// (``Map3DBaseMap/bridgeReach``), each kept to its tile
+            /// (some 2.3 km across in Hong Kong).
+            static let reach = 48
+            /// The most corners kept in the array (20 MB of heights and flags).
+            static let most = 4_000_000
+            private var firstRow = 0, firstColumn = 0, rows = 0, columns = 0
+            private var heights: [Float] = []
+            private var known: [Bool] = []
+            private var others: [ChunkKey: Float] = [:]
+
+            init() {}
+
+            init(region: WorldRegion) {
+                let cell = Double(Land.cellLength)
+                let first = (row: Int((region.minY / cell).rounded(.down)) - Self.reach, column: Int((region.minX / cell).rounded(.down)) - Self.reach)
+                let last = (row: Int((region.maxY / cell).rounded(.up)) + Self.reach, column: Int((region.maxX / cell).rounded(.up)) + Self.reach)
+                guard first.row <= last.row, first.column <= last.column else { return }
+                let rows = last.row - first.row + 1, columns = last.column - first.column + 1
+                guard rows.multipliedReportingOverflow(by: columns).partialValue <= Self.most, rows <= Self.most, columns <= Self.most else { return }
+                (firstRow, firstColumn, self.rows, self.columns) = (first.row, first.column, rows, columns)
+                heights = Array(repeating: 0, count: rows * columns)
+                known = Array(repeating: false, count: rows * columns)
+            }
+
+            private func index(_ row: Int, _ column: Int) -> Int? {
+                let r = row &- firstRow, c = column &- firstColumn
+                guard r >= 0, r < rows, c >= 0, c < columns else { return nil }
+                return r * columns + c
+            }
+
+            subscript(row: Int, column: Int) -> Float? {
+                get {
+                    if let at = index(row, column) { return known[at] ? heights[at] : nil }
+                    return others[ChunkKey(column: column, row: row)]
+                }
+                set {
+                    if let at = index(row, column) {
+                        known[at] = newValue != nil
+                        heights[at] = newValue ?? 0
+                    } else {
+                        others[ChunkKey(column: column, row: row)] = newValue
+                    }
+                }
+            }
+
+            /// The corner at `key` (its column and row).
+            subscript(key: ChunkKey) -> Float? {
+                get { self[key.row, key.column] }
+                set { self[key.row, key.column] = newValue }
+            }
+
+            /// The corners worked out.
+            var keys: [ChunkKey] {
+                var keys = Array(others.keys)
+                for at in known.indices where known[at] {
+                    keys.append(ChunkKey(column: firstColumn + at % columns, row: firstRow + at / columns))
+                }
+                return keys
+            }
         }
 
         /// Decision 517 續 (BUILD3D-3): the corners ``addGround(water:)``

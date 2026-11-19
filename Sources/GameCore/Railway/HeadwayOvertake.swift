@@ -26,8 +26,15 @@ extension GameWorld {
         var progresses: [Int: (point: Int, waiting: Bool, late: Int64)] = [:]
         for s in eligible { progresses[s] = progress(of: plan.services[s]) }
         var proposals: [(slow: Int, point: Int, wait: ScheduledTrafficWait, pass: Int64)] = []
+        // Decision 878, later (TICK-TAIWAN): the stations each one runs
+        // through. A fast one with no point at the station the slow one is
+        // at has nothing to overtake it at (``headwayOvertake(_:slow:fast:progresses:)``
+        // finds no point there and gives `nil`), so the pair is not asked.
+        var stations: [Int: Set<StationID>] = [:]
+        for s in eligible { stations[s] = Set(plan.services[s].points.map(\.station)) }
         for slow in eligible {
-            for fast in eligible where fast != slow {
+            let at = plan.services[slow].points[progresses[slow]!.point].station
+            for fast in eligible where fast != slow && stations[fast]!.contains(at) {
                 guard let proposal = headwayOvertake(&plan, slow: slow, fast: fast, progresses: progresses) else { continue }
                 // One wait at a point: for the train that comes first.
                 if let old = proposals.firstIndex(where: { $0.slow == slow && $0.point == proposal.point }) {
