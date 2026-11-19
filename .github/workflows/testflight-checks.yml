@@ -120,7 +120,7 @@ jobs:
     name: macOS dry run (no Apple account; nothing signed or uploaded)
     needs: changes
     if: needs.changes.outputs.macos == 'true'
-    runs-on: macos-26
+    runs-on: xcode-27
     # Two unsigned archives: 7 and 5 minutes on 2026-10-14, 20 and 9 minutes
     # on 2026-11-07 (#1915, where 30 minutes stopped it before the IPA check),
     # 25 and 27 on 2026-11-15, 32 and more than 28 on 2026-11-18 (#2423,
@@ -130,6 +130,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
 
       - name: Toolchain versions
         run: |

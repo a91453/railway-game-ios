@@ -11,10 +11,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
   metal:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
       - name: Install official Swift 6.4.0
         run: |
           package="$RUNNER_TEMP/swift-6.4.0.pkg"

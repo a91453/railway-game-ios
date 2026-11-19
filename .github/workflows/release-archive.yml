@@ -87,10 +87,13 @@ defaults:
 jobs:
   archive:
     name: Release archive (generic iOS device, unsigned)
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
 
       - name: Toolchain versions
         run: |

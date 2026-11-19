@@ -160,7 +160,12 @@ final class MapButtonsUITests: XCTestCase {
         card.waitUntilSettled()
         let strip = app.descendants(matching: .any)["map.quickLayer.strip"].firstMatch
         XCTAssertTrue(strip.appears(within: 10), "The layer strip shows")
-        strip.waitUntilSettled()
+        // The strip's mark is no control and takes no touch: since the
+        // mark is ordered behind what it marks (``hudFrameMark``, pull
+        // request #2453), XCTest finds the strip's buttons, not the mark,
+        // at its hit point, so it is waited for until it stands still, not
+        // until it is hittable.
+        strip.waitUntilStill()
         XCTAssertLessThanOrEqual(strip.frame.maxX, card.frame.minX, "Clear of the card: \(strip.frame) and \(card.frame)")
         let more = app.buttons["map.quickLayer.more"]
         XCTAssertTrue(more.becomesHittable(within: 10), "\(more) is covered: \(more.frame)")

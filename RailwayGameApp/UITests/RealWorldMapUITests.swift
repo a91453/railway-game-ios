@@ -259,9 +259,12 @@ final class RealWorldMapUITests: XCTestCase {
 
         app.openDemo("demo.highSpeed")
         let cancel = app.buttons["loading.cancel"]
-        XCTAssertTrue(cancel.appears(within: 30), "The loading screen has its button")
-        XCTAssertTrue(app.descendants(matching: .any)["loading.progress"].exists, "and says which step it is on")
-        XCTAssertTrue(cancel.becomesHittable(within: 5))
+        // On iOS 27.2 each look takes seconds while the app builds, and the
+        // build can end in about half a minute: the button is tapped as soon
+        // as the screen is up, with no look between (the tap itself waits
+        // for it to be hittable), or the loading screen is gone first.
+        XCTAssertTrue(app.descendants(matching: .any)["loading.progress"].appears(within: 30),
+                      "The loading screen says which step it is on")
         cancel.tap()
         XCTAssertTrue(cancel.disappears(within: 10), "The loading screen goes")
         XCTAssertTrue(app.buttons["start.newGame"].appears(within: 10), "back on the start screen")

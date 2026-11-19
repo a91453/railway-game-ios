@@ -268,7 +268,7 @@ final class HUDAlignmentUITests: XCTestCase {
             checkPanel("\(way) news", lines)
             close(["news.done", "Done"])
 
-            for (item, done) in [("menu.settings", "settings.done"), ("menu.help", "help.done"), ("menu.achievements", "achievements.done")] {
+            for (item, label, done) in [("menu.settings", "Settings", "settings.done"), ("menu.help", "Help", "help.done"), ("menu.achievements", "Achievements", "achievements.done")] {
                 // Touched again when the menu does not open: a touch on it
                 // was cancelled while the app's main thread stood still
                 // ("touch cancelled at (741, 35)", 26d5fca's full lane, run
@@ -278,9 +278,9 @@ final class HUDAlignmentUITests: XCTestCase {
                 menu.waitUntilSettled()
                 // Help stands on the menu's first row (decision 383), not
                 // under More.
-                XCTAssertTrue(menu.openMenu(showing: app.buttons.matching(identifier: item).firstMatch),
+                XCTAssertTrue(menu.openMenu(showing: app.menuItems(item, label: label).firstMatch),
                               "\(way): the menu opens with \(item)")
-                tapHittable(item)
+                tapHittable(item, app.menuItems(item, label: label))
                 XCTAssertTrue(app.buttons[done].appears(within: 15), "\(way): \(item) opens")
                 checkPanel("\(way) \(item)", lines)
                 close([done])
@@ -545,9 +545,10 @@ final class HUDAlignmentUITests: XCTestCase {
     }
 
     /// Taps the copy of `id` that can be touched: a native menu can hold
-    /// an unplaced copy of an action (as `SettingsUITests`).
-    private func tapHittable(_ id: String) {
-        let buttons = app.buttons.matching(identifier: id)
+    /// an unplaced copy of an action (as `SettingsUITests`). `buttons`,
+    /// when given, are its copies (a menu item's, ``XCUIApplication/menuItems(_:label:)``).
+    private func tapHittable(_ id: String, _ buttons: XCUIElementQuery? = nil) {
+        let buttons = buttons ?? app.buttons.matching(identifier: id)
         XCTAssertTrue(buttons.firstMatch.appears(within: 15), "Missing \(id)")
         let deadline = Date().addingTimeInterval(15)
         repeat {

@@ -162,7 +162,7 @@ final class SettingsUITests: XCTestCase {
 
         tapHittable("hud.menu", in: app)
         // Decision 383: in the menu's first level.
-        tapHittable("menu.report", in: app)
+        tapHittable("menu.report", label: "Report a Problem", in: app)
         XCTAssertTrue(app.buttons["settings.report"].appears(within: 10), "Missing Report a Problem")
         XCTAssertTrue(app.switches["settings.report.attach"].exists, "Missing the attach switch")
         XCTAssertFalse(app.switches["settings.music"].exists, "The report opens on its own, not the settings")
@@ -208,12 +208,12 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["map3D.close"].disappears(within: 10), "Close goes back to the game")
 
         tapHittable("hud.menu", in: app)
-        tapHittable("menu.postcard", in: app)
+        tapHittable("menu.postcard", label: "Make a Postcard", in: app)
         tap(app.buttons["postcard.done"], name: "postcard.done")
         XCTAssertTrue(app.buttons["postcard.done"].disappears(within: 10))
 
         tapHittable("hud.menu", in: app)
-        tapHittable("menu.achievements", in: app)
+        tapHittable("menu.achievements", label: "Achievements", in: app)
         tap(app.buttons["achievements.done"], name: "achievements.done")
         XCTAssertTrue(app.buttons["achievements.done"].disappears(within: 10))
 
@@ -254,7 +254,7 @@ final class SettingsUITests: XCTestCase {
 
         // Menu's place, from the copy a finger reaches.
         let spot = tapHittable("hud.menu", in: app)
-        tapHittable("menu.ambient", in: app)
+        tapHittable("menu.ambient", label: "Idle Mode", in: app)
         let curtain = app.descendants(matching: .any)["ambient.curtain"].firstMatch
         XCTAssertTrue(curtain.appears(within: 10), "The idle mode starts")
         // Put away, not taken out: `ambientHidden` keeps the controls in
@@ -284,22 +284,24 @@ final class SettingsUITests: XCTestCase {
         // lane, run 43721351302: `menu.ambient` never came in 15 s), as if
         // the controls were still coming back: touch the place again, up to
         // three times, until the menu shows.
-        let ambient = app.buttons.matching(identifier: "menu.ambient").firstMatch
+        let ambient = app.menuItems("menu.ambient", label: "Idle Mode").firstMatch
         for _ in 0..<3 {
             menuSpot.tap()
             if ambient.appears(within: 5) { break }
         }
-        tapHittable("menu.ambient", in: app)
+        tapHittable("menu.ambient", label: "Idle Mode", in: app)
         XCTAssertTrue(curtain.appears(within: 10), "The controls are back")
     }
 
     /// Taps the copy of the button `identifier` that can be touched: a
     /// native menu can hold an unplaced copy of an action
     /// (`WebsiteScreenshotTests.tapButton`).
-    /// Returns the frame of the copy it tapped.
+    /// Returns the frame of the copy it tapped. `label`, for a game menu
+    /// item, finds it on iOS 27.2 too, where a menu item side by side
+    /// with others shows only its label (``XCUIApplication/menuItems(_:label:)``).
     @discardableResult
-    private func tapHittable(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) -> CGRect? {
-        let buttons = app.buttons.matching(identifier: identifier)
+    private func tapHittable(_ identifier: String, label: String? = nil, in app: XCUIApplication, timeout: TimeInterval = 15) -> CGRect? {
+        let buttons = label.map { app.menuItems(identifier, label: $0) } ?? app.buttons.matching(identifier: identifier)
         XCTAssertTrue(buttons.firstMatch.appears(within: timeout), "Missing \(identifier)")
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
@@ -322,7 +324,7 @@ final class SettingsUITests: XCTestCase {
     /// once more if the menu is still open.
     private func openSettingsFromTheGameMenu(_ app: XCUIApplication) {
         tap(app.buttons["hud.menu"], name: "hud.menu")
-        let action = app.buttons["menu.settings"]
+        let action = app.menuItems("menu.settings", label: "Settings").firstMatch
         XCTAssertTrue(action.appears(within: 30), "Missing menu.settings")
         action.waitUntilSettled()
         let frame = action.frame, bounds = app.frame
