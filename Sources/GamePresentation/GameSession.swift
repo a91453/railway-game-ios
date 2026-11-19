@@ -3361,6 +3361,17 @@ public final class GameSession {
     /// sells its trains (decision 327), so none is left on the track.
     public func removeSelectedLine() {
         guard let line = requireSelectedLine() else { return }
+        // SHALUN-ONE-ISLAND: not a bought line whose track another line's
+        // trains run on and stop along (the Green Mountain Line's, the
+        // Blue Coast Line's): removed, its track would stay under the
+        // other line, and bought again it could not be taken up.
+        if let other = RealLineLaying.lineRunning(onTrackOf: line.id, in: world) {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "\(other.name)'s trains run on this line's track. Remove \(other.name) first.",
+                "\(other.name)的列車行駛在這條線的軌道上，請先刪除\(other.name)。"
+            ))
+            return
+        }
         let followsLineTrain = followedTrainID.map { world.assignedLine(of: $0) == line.id } ?? false
         let sale = world.lineRemovalSale(line.id)
         let removed = perform(.removeLineSellingTrains(line.id)) { _, _, _ in

@@ -46,9 +46,9 @@ final class RealLineBoughtAgainTests: XCTestCase {
     /// over another, and every platform stands where the first purchase
     /// stood it (to a track's spacing).
     static func boughtAgain(
-        _ ids: [String], _ open: () throws -> GameSession, file: StaticString = #filePath, line: UInt = #line
+        _ ids: [String], removing removed: [String]? = nil, _ open: () throws -> GameSession, file: StaticString = #filePath, line: UInt = #line
     ) throws {
-        for id in ids {
+        for id in removed ?? ids {
             let session = try open()
             let group = try XCTUnwrap(session.realLineBundles.first { $0.lines.contains { $0.id == id } }, id, file: file, line: line)
             XCTAssertEqual(Set(group.lines.map(\.id)), Set(ids), id, file: file, line: line)
@@ -116,10 +116,38 @@ final class RealLineBoughtAgainTests: XCTestCase {
     /// lower, off their viaduct: laid beside the Blue Coast Line as
     /// decision 493 lays it after that line bought whole, though bought
     /// with it the Blue Coast Line starts at Binhai Shalun.
+    /// SHALUN-ONE-ISLAND (decision 885): the Blue Coast Line's trains now
+    /// run on the Green Mountain Line's track, so the Green Mountain Line
+    /// is not removed while the Blue Coast Line is the company's
+    /// (`testTheGreenMountainLineStaysUnderTheBlueCoastLine`); the Blue
+    /// Coast Line is removed and bought again.
     func testDanhaisLinesAreBoughtAgain() throws {
-        try Self.boughtAgain(["ntdlrt:V", "ntdlrt:VB"]) {
+        try Self.boughtAgain(["ntdlrt:V", "ntdlrt:VB"], removing: ["ntdlrt:VB"]) {
             try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple)
         }
+    }
+
+    /// SHALUN-ONE-ISLAND (decision 885): removing the Green Mountain Line
+    /// while the Blue Coast Line runs on its track is refused, and says to
+    /// remove the Blue Coast Line first; once it is removed, the Green
+    /// Mountain Line can be.
+    func testTheGreenMountainLineStaysUnderTheBlueCoastLine() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple)
+        let group = try XCTUnwrap(session.realLineBundles.first { $0.lines.contains { $0.id == "ntdlrt:VB" } })
+        XCTAssertTrue(session.acquireRealLines(session.realLineBundleOffer(for: group)), session.message?.text ?? "")
+        let green = try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line)
+        let blue = try XCTUnwrap(session.world.acquisition(of: "ntdlrt:VB")?.line)
+        session.selectLine(green)
+        session.removeSelectedLine()
+        XCTAssertNotNil(session.world.line(id: green))
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertTrue(session.message?.text.contains("請先刪除") == true, session.message?.text ?? "")
+        session.selectLine(blue)
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.line(id: blue), session.message?.text ?? "")
+        session.selectLine(green)
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.line(id: green), session.message?.text ?? "")
     }
 
     func testRovaniemisLinesAreBoughtAgain() throws {
