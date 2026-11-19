@@ -503,7 +503,12 @@ extension GameWorld {
     /// the station `candidate` stands at, whose own way out is held by
     /// `candidate` (the two would only wait for each other), or a train
     /// with no service of a line without runs, a spare (decision 58),
-    /// which nothing else moves. Decision 571's dispatcher sent such a
+    /// which nothing else moves, or of a line with runs standing at an end
+    /// of its line with no depot of the line to go into and no run from
+    /// there before `candidate` is due there (LAST-TRAIN-TERMINUS: the
+    /// Sanying Line's trains that had ended their day there, the depot
+    /// full, on the berths the night's last services were bound for).
+    /// Decision 571's dispatcher sent such a
     /// train the same way, but only at its next look, once a minute: on a
     /// double track whose crossovers let each way into one berth at each
     /// end, every trip showed the two trains deadlocked for up to a
@@ -522,7 +527,25 @@ extension GameWorld {
         else { return nil }
         switch other.execution {
         case nil:
-            guard assignedLine(of: id, memo: &memo)?.hasRuns != true else { return nil }
+            // LAST-TRAIN-TERMINUS: a line with runs moves such a train
+            // only for a run from there or into a depot with room. At an
+            // end of the line, where its trains stand for the night
+            // (decision 816), with no depot of its line with room for it,
+            // and with runs from there but none leaving before `candidate`
+            // is due there, it stands there past that as a spare does.
+            // Elsewhere (an empty run's end, making way; a station between,
+            // where the Taoyuan Airport MRT's trains turned against the
+            // line's way at Sanchong), while a depot has room (the train
+            // at Taipei Main Station went in minutes later), and while a
+            // run from there may take it first, it is left to wait.
+            if let line = assignedLine(of: id, memo: &memo), line.hasRuns {
+                guard !line.isRing, call == line.stops.first || call == line.stops.last,
+                      !line.depots.contains(where: { depotHasRoom($0, for: other) })
+                else { return nil }
+                let starts = pendingRunStarts(of: line, from: call)
+                let due = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+                guard !starts.isEmpty, !starts.contains(where: { $0 <= due }) else { return nil }
+            }
         case .waitingAtStop(let otherStop, let otherCycle)?:
             let here = stationsStoppedAt(by: candidate.id)
             guard other.timetable.count > 1, here.contains(other.timetable[(otherStop + 1) % other.timetable.count].station),
