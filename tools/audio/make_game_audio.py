@@ -55,6 +55,7 @@ import wave
 import numpy as np
 
 import chamber_bank
+import melody_samples
 import sampled_music
 import score as scores
 
@@ -1017,6 +1018,15 @@ def manifest(out_dir):
             "tune": tune,
             "copyright": sampled_music.tunes()[tune]["copyright"],
         }
+    # Decision 883: the piano's notes the player's melodies are made of.
+    for root in melody_samples.ROOTS:
+        by_file[melody_samples.file_name(root)] = {
+            "kind": "sample",
+            "made": "melody_samples.py, decision 883",
+            "pitch": root,
+            "rate": melody_samples.RATE,
+            "chamberBank": {"name": chamber["name"], "spec": relative(chamber_bank.SPEC), "specSha256": sha256(chamber_bank.SPEC), "sha256": chamber["sha256"]},
+        }
     for file in sorted(os.listdir(out_dir)):
         entry = {"file": file}
         if file in by_file:
@@ -1033,6 +1043,8 @@ def manifest(out_dir):
         # The thunder is a CAF too (IMA4 keeps it small), but plays once.
         loops = file.endswith(".caf") and not file.startswith("thunder")
         entry.update(measured(os.path.join(out_dir, file), loops=loops))
+        if entry["kind"] == "sample":
+            entry["seconds"] = round(entry["frames"] / melody_samples.RATE, 4)
         if entry["kind"] in ("music", "departure"):
             # Decision 815: the music's loudness, so its tunes stay level.
             entry["loudnessLufs"] = round(float(loudness_lufs(read_pcm(os.path.join(out_dir, file)))), 2)
@@ -1063,6 +1075,9 @@ def main(out_dir):
     for tune, music in sampled_music.tunes().items():
         for file, x in music_files(tune).items():
             (write_alac_caf if file.endswith(".caf") else write_aac)(os.path.join(out_dir, file), x, music["copyright"])
+    # Decision 883: the piano's notes for the player's melodies.
+    for root, x in melody_samples.notes().items():
+        melody_samples.write(os.path.join(out_dir, melody_samples.file_name(root)), x)
     # Decision 343: the running loops.
     write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
     write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))

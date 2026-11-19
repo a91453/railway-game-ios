@@ -111,6 +111,13 @@ extension PlayerCommand {
         /// The melody the station plays as doors close, `nil` for each
         /// line's own (decision 866).
         case setStationDepartureMelody(StationID, DepartureMelody?)
+        /// A melody the player wrote (decision 883).
+        case addPlayerMelody(name: String, notes: [MelodyNote])
+        case editPlayerMelody(PlayerMelodyID, name: String, notes: [MelodyNote])
+        case removePlayerMelody(PlayerMelodyID)
+        /// The player melody the station plays, `nil` for each line's own
+        /// (decision 883).
+        case setStationPlayerMelody(StationID, PlayerMelodyID?)
 
         // MARK: Lines
         /// A line, and the real line's target headways where it is one.
@@ -430,6 +437,10 @@ extension GameSession {
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
         case .setStationChime(let id, let chime): try world.setStationChime(id, to: chime)
         case .setStationDepartureMelody(let id, let melody): try world.setStationDepartureMelody(id, to: melody)
+        case .addPlayerMelody(let name, let notes): try world.addPlayerMelody(named: name, notes: notes)
+        case .editPlayerMelody(let id, let name, let notes): try world.editPlayerMelody(id, name: name, notes: notes)
+        case .removePlayerMelody(let id): try world.removePlayerMelody(id)
+        case .setStationPlayerMelody(let id, let melody): try world.setStationPlayerMelody(id, to: melody)
 
         case .createLine(let name, let stops, let targets):
             let line = try world.createLine(named: name, stops: stops)

@@ -40,6 +40,12 @@ public struct StationSoundsChoice: Hashable, Sendable {
     public var departureMelody: DepartureMelody?
     /// The chime the station rings when set to automatic.
     public var automaticChime: StationChime
+    /// Decision 883: the melody the player wrote that it plays, `nil` for
+    /// none.
+    public var playerMelody: PlayerMelodyID?
+    /// Decision 883: the melodies the player wrote, which the picker lists
+    /// after the official ones.
+    public var playerMelodies: [PlayerMelody]
 
     /// The row of station `id` in `world`, or `nil` for a depot (no train
     /// calls there in service) or a station that does not exist.
@@ -48,6 +54,8 @@ public struct StationSoundsChoice: Hashable, Sendable {
         chime = station.chime
         departureMelody = station.departureMelody
         automaticChime = StationChime.automatic(id, in: world)
+        playerMelody = station.playerMelody
+        playerMelodies = world.playerMelodies
     }
 
     /// The chime picker's choice for `chime`: automatic says what it rings.
@@ -112,5 +120,48 @@ extension GameSession {
         guard done != nil else { return }
         let heard = melody ?? world.lines.first { !$0.isFreight && $0.stops.contains(station.id) }.map { DepartureMelody.of(lineNamed: $0.name, atStationNamed: station.name) }
         if let heard { playSound?(.departure(heard)) }
+    }
+}
+
+/// Decision 883: what the station panel's melody picker can pick: each
+/// line's own, one of the official melodies, or one the player wrote.
+public enum StationMelodyPick: Hashable, Sendable {
+    case lines
+    case official(DepartureMelody)
+    case player(PlayerMelodyID)
+}
+
+extension StationSoundsChoice {
+    /// Decision 883: the picker's pick now.
+    public var melodyPick: StationMelodyPick {
+        if let playerMelody { return .player(playerMelody) }
+        return departureMelody.map(StationMelodyPick.official) ?? .lines
+    }
+
+    /// Decision 883: the picker's choices, in order: each line's own, the
+    /// official melodies, then the player's.
+    public var melodyPicks: [StationMelodyPick] {
+        [.lines] + DepartureMelody.allCases.map(StationMelodyPick.official) + playerMelodies.map { .player($0.id) }
+    }
+
+    /// Decision 883: a choice's name on the picker.
+    public func melodyTitle(_ pick: StationMelodyPick, in language: DisplayLanguage) -> String {
+        switch pick {
+        case .lines: Self.melodyTitle(nil, in: language)
+        case .official(let melody): Self.melodyTitle(melody, in: language)
+        case .player(let id): playerMelodies.first { $0.id == id }?.name ?? ""
+        }
+    }
+}
+
+extension GameSession {
+    /// Decision 883: sets the selected station's melody to `pick`, and
+    /// plays it once.
+    public func setSelectedStationMelody(_ pick: StationMelodyPick) {
+        switch pick {
+        case .lines: setSelectedStationDepartureMelody(nil)
+        case .official(let melody): setSelectedStationDepartureMelody(melody)
+        case .player(let id): setSelectedStationPlayerMelody(id)
+        }
     }
 }
