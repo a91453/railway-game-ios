@@ -11,3 +11,5 @@ python3 -I tools/platform-name-board/preview.py /tmp/furniture.json docs/art/pla
 ```
 
 字形：Noto Sans TC Bold（SIL Open Font License 1.1），`tools/platform-name-board/build_glyphs.py` 轉成方塊。
+
+`old-vs-new.jpg`：左邊是舊版（SwiftRailMac `item_45e46be7…glb`）站名牌的貼圖，右邊是遊戲裡照它做的新站名牌。

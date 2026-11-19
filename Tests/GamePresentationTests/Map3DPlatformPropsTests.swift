@@ -401,14 +401,19 @@ final class Map3DPlatformPropsTests: XCTestCase {
         b.addPlatformProps()
         let top = Map3DScene.railLift + Builder.platformHeight
         let all = b.closeMeshes.values.flatMap(\.vertices)
-        // The face, white, from 1.5 to 2.3 m up, against the back (z 4.8).
-        let face = all.filter { $0.color == Map3DPalette.sidewalk && $0.y > top + 1.4 && $0.z > 4 }
+        // The face, white in a grey frame, from 1.36 to 2.41 m up, against
+        // the back (z 4.8), lit at night, facing the track; the green band across it.
+        let face = all.filter { $0.color == Map3DPalette.sidewalk && $0.y > top + 1.3 && $0.z > 4 }
         XCTAssertFalse(face.isEmpty)
-        XCTAssertTrue(face.allSatisfy { $0.z >= 4.69 && $0.z <= 4.801 && $0.y <= top + 2.301 && $0.layer == Map3DVertex.nightLit })
-        // The name in front of it, on the track's side, facing the track.
-        let ink = all.filter { $0.color == Map3DPalette.playerRim && $0.y > top + 1.4 && $0.z > 4 }
+        XCTAssertTrue(face.allSatisfy {
+            abs($0.z - 4.695) < 0.001 && $0.y >= top + 1.359 && $0.y <= top + 2.411 && $0.layer == Map3DVertex.nightLit && $0.nz < -0.99
+        })
+        XCTAssertTrue(all.contains { $0.color == Props.nameBoardGreen && $0.z > 4 })
+        // The name over the band, in front of the face.
+        let ink = all.filter { $0.color == Map3DPalette.playerRim && $0.y > top + 1.3 && $0.z > 4 }
         XCTAssertFalse(ink.isEmpty)
-        XCTAssertTrue(ink.allSatisfy { abs($0.z - 4.69) < 0.001 && $0.nz < -0.99 })
+        let band = top + 1.36 + 1.05 * Props.nameBoardBand.upperBound
+        XCTAssertTrue(ink.allSatisfy { abs($0.z - 4.687) < 0.001 && $0.nz < -0.99 && $0.y >= band - 0.001 && $0.y <= top + 2.411 })
         // Three boards, each name's two characters.
         let xs = ink.map(\.x).sorted()
         XCTAssertEqual(zip(xs, xs.dropFirst()).filter { $1 - $0 > 5 }.count + 1, 3)

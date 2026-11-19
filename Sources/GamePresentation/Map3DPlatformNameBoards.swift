@@ -69,13 +69,22 @@ public enum Map3DBoardGlyphs {
 }
 
 extension Map3DPlatformProps {
-    /// A name board: its face ``nameBoardLength`` long and
-    /// ``nameBoardHeight`` tall, its foot ``nameBoardFoot`` over the
-    /// platform, on two posts at the platform's back.
-    static let nameBoardLength: Float = 3
-    static let nameBoardHeight: Float = 0.8
-    static let nameBoardFoot: Float = 1.5
+    /// A name board, the old version's (SwiftRailMac's side platform
+    /// modules `45e46be7` and `460efb19`: 4.1 m by 1.77 m, scaled as the
+    /// furniture by 0.66): ``nameBoardLength`` long and
+    /// ``nameBoardHeight`` tall in its grey frame, its foot
+    /// ``nameBoardFoot`` over the platform, on two posts at the
+    /// platform's back.
+    static let nameBoardLength: Float = 2.7
+    static let nameBoardHeight: Float = 1.17
+    static let nameBoardFoot: Float = 1.3
     static let nameBoardDepth: Float = 0.1
+    /// The frame's width round the white face.
+    static let nameBoardFrame: Float = 0.06
+    /// The old board's green band across its face, from its bottom (a
+    /// share of the face's height), and its colour off the old texture.
+    static let nameBoardBand: ClosedRange<Float> = 0.30...0.43
+    public static let nameBoardGreen = Map3DColor.rgb(0x106118)
     /// Where along the old version's module (decision 860) a board
     /// stands: in its one long gap, between the square column and the
     /// poster boards (21.2 to 28.5 m), under the second hung sign.
@@ -114,14 +123,16 @@ extension Map3DPlatformProps {
 
 extension Map3DScene.Builder {
     /// Decision 882: a name board with its foot's middle at `foot` (the
-    /// platform's back), facing `out` (towards the track), `name` on its
-    /// face in navy on white, a band of the canopy's blue along its top;
-    /// its face lit at night (`underground`: always).
+    /// platform's back), facing `out` (towards the track), as the old
+    /// version's: a white face in a grey frame, a green band across it,
+    /// `name` in navy over the band; its face lit at night
+    /// (`underground`: always).
     static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, underground: Bool) {
         typealias Props = Map3DPlatformProps
         guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return }
         let along = Map3DPoint(-out.z, 0, out.x)
         let length = Props.nameBoardLength, height = Props.nameBoardHeight, depth = Props.nameBoardDepth
+        let frame = Props.nameBoardFrame
         let middle = foot + out * (depth / 2)
         // The two posts, a little in from its ends.
         for end: Float in [-1, 1] {
@@ -129,26 +140,33 @@ extension Map3DScene.Builder {
                         height: Props.nameBoardFoot, top: Map3DPalette.steel, side: Map3DPalette.steel)
         }
         let board = middle + Map3DPoint(0, Props.nameBoardFoot, 0)
-        let first = mesh.vertices.count
         mesh.addBox(base: board, forward: along, length: length, width: depth, height: height,
-                    top: Map3DPalette.sidewalk, side: Map3DPalette.sidewalk)
+                    top: Map3DPalette.rail, side: Map3DPalette.rail)
+        // The face, a little proud of the frame on the track's side.
+        let faceLength = length - 2 * frame, faceHeight = height - 2 * frame
+        let face = board + out * (depth / 2 + 0.005) + Map3DPoint(0, frame, 0)
+        // The reader, facing the board from the track, reads to their right.
+        let right = Map3DPoint(out.z, 0, -out.x)
+        func quad(_ x0: Float, _ y0: Float, _ x1: Float, _ y1: Float, _ lift: Float, _ colour: UInt32) {
+            func corner(_ x: Float, _ y: Float) -> Map3DPoint { face + out * lift + right * x + Map3DPoint(0, y, 0) }
+            mesh.addQuad(corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1), color: colour)
+        }
+        let first = mesh.vertices.count
+        quad(-faceLength / 2, 0, faceLength / 2, faceHeight, 0, Map3DPalette.sidewalk)
         if underground { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) }
-        mesh.addBox(base: board + Map3DPoint(0, height - 0.1, 0), forward: along, length: length + 0.02, width: depth + 0.02, height: 0.1,
-                    top: Map3DPalette.canopy, side: Map3DPalette.canopy)
-        // The name, as large as fits under the band.
+        let band = Props.nameBoardBand
+        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, Props.nameBoardGreen)
+        // The name over the band, as large as fits.
         let text = Map3DBoardGlyphs.layout(name)
         guard text.width > 0 else { return }
         let grid = Float(Map3DBoardGlyphs.grid)
-        let cell = min(0.62 / grid, (length - 0.3) / Float(text.width))
-        let face = board + out * (depth / 2 + 0.01)
-        // The reader, facing the board from the track, reads to their right.
-        let right = Map3DPoint(out.z, 0, -out.x)
-        let left = -Float(text.width) * cell / 2, top = (height - 0.1) / 2 + grid * cell / 2
+        let room = faceHeight * (1 - band.upperBound)
+        let cell = min(room * 0.92 / grid, (faceLength - 0.2) / Float(text.width))
+        let left = -Float(text.width) * cell / 2, top = faceHeight * band.upperBound + room / 2 + grid * cell / 2
         for r in text.rectangles {
             let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
             let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
-            func corner(_ x: Float, _ y: Float) -> Map3DPoint { face + right * x + Map3DPoint(0, y, 0) }
-            mesh.addQuad(corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1), color: Map3DPalette.playerRim)
+            quad(x0, y0, x1, y1, 0.008, Map3DPalette.playerRim)
         }
     }
 }
