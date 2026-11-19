@@ -109,6 +109,16 @@ struct Map3DRoadMarkings {
         let group: Int
     }
 
+    /// Decision 846's third later note: a street name sign at a
+    /// junction's corner: its post's foot on the pavement, the way along
+    /// the road it names (its plate's face across it, read from either
+    /// side) and the name.
+    struct StreetName {
+        let foot: Map3DBaseMap.Point
+        let along: Map3DBaseMap.Point
+        let name: String
+    }
+
     /// Decision 846's later note: a pedestrian crossing's sign: its foot on
     /// the pavement and the way the traffic it faces goes.
     struct CrossingSign {
@@ -198,6 +208,9 @@ struct Map3DRoadMarkings {
     /// (``Map3DFinlandStreet/Unit/crossingSign``) at a crossing with no
     /// signal, one a way the traffic comes, where the region stands them.
     var crossingSigns: [CrossingSign] = []
+    /// Decision 846's third later note: the street name signs, where the
+    /// region stands them.
+    var streetNames: [StreetName] = []
     /// Decision 445: how far past the crossing's outer edge the pedestrian
     /// signals stand, along the road.
     static let walkGap = 0.4
@@ -227,6 +240,8 @@ struct Map3DRoadMarkings {
         /// Decision 846's second later note: its road taken one way only,
         /// the way its points run (``Map3DBaseMap/Road/oneway``).
         var oneway = false
+        /// Decision 846's third later note: its road's name.
+        var name: String?
 
         var half: Double { Double(kind.width(ramp: false)) / 2 }
         var length: Double { zip(points, points.dropFirst()).reduce(0) { $0 + Map3DRoadMarkings.distance($1.0, $1.1) } }
@@ -275,7 +290,7 @@ struct Map3DRoadMarkings {
                     let way = forward ? Array(points[index...]) : Array(points[...index].reversed())
                     guard way.count >= 2 else { continue }
                     let arm = Arm(road: road, kind: roads[road].kind, onDeck: roads[road].bridgeLevel > 0, points: way, at: sums[index], forward: forward,
-                                  oneway: roads[road].oneway)
+                                  oneway: roads[road].oneway, name: roads[road].name)
                     // The same road from two tiles: one arm.
                     guard let out = arm.place(min(6, arm.length))?.out,
                           !arms.contains(where: { other in other.place(min(6, other.length)).map { Self.dot($0.out, out) > 0.98 } ?? false })
@@ -665,6 +680,7 @@ struct Map3DRoadMarkings {
     /// `layout` has them (decision 846).
     private mutating func add(_ arms: [Arm], group: Int, layout: Layout = .signals) {
         let outs = arms.map { $0.place(min(6, $0.length))?.out ?? Map3DBaseMap.Point(x: 1, z: 0) }
+        if region.hasStreetNameSigns, layout != .bare { addStreetNames(arms, outs: outs) }
         // The main road: the widest arm (the first of the widest), its way
         // and the opposite (decision 355 showed them green; decision 429
         // turns them with the crossing road).
@@ -805,6 +821,46 @@ struct Map3DRoadMarkings {
             }
         }
     }
+
+    /// Decision 846's third later note: at a junction of two or more named
+    /// roads, a sign for each name, on the first of its arms (as the
+    /// junction lists them): at the corner on that arm's left as one
+    /// leaves the junction along it (the signals stand on the right of the
+    /// traffic coming in, decision 846), ``streetNameBack`` past the
+    /// crossing roads' kerbs and ``streetNameOut`` past its own; its plate
+    /// along the road it names.
+    private mutating func addStreetNames(_ arms: [Arm], outs: [Map3DBaseMap.Point]) {
+        let names = arms.compactMap(\.name)
+        guard Set(names).count >= 2 else { return }
+        var done = Set<String>()
+        for (number, arm) in arms.enumerated() {
+            guard let name = arm.name, done.insert(name).inserted else { continue }
+            var clear = 0.0
+            for (other, crossing) in arms.enumerated() where other != number && Self.dot(outs[number], outs[other]) >= -0.9 {
+                let sine = max(0.5, abs(outs[number].x * outs[other].z - outs[number].z * outs[other].x))
+                clear = max(clear, crossing.half / sine)
+            }
+            let back = clear + Self.streetNameBack
+            guard arm.length >= back + 2, let place = arm.place(back) else { continue }
+            let keep = Double(region.trafficSide)
+            // Left of the way out, where traffic keeps right.
+            let left = Map3DBaseMap.Point(x: place.out.z * keep, z: -place.out.x * keep)
+            let out = arm.half + Self.streetNameOut
+            let foot = Map3DBaseMap.Point(x: place.point.x + left.x * out, z: place.point.z + left.z * out)
+            // One a name round a junction drawn as several (a divided
+            // road's two carriageways meet a road at two points).
+            guard !streetNames.contains(where: { $0.name == name && Self.distance($0.foot, foot) < Self.streetNameApart }) else { continue }
+            streetNames.append(StreetName(foot: foot, along: place.out, name: name))
+        }
+    }
+
+    /// Decision 846's third later note: how far along its road from the
+    /// crossing roads' kerbs a street name sign stands, and how far out
+    /// from its own road's carriageway.
+    static let streetNameBack = 1.2
+    static let streetNameOut = 1.0
+    /// How far apart two signs of one name stand at least.
+    static let streetNameApart = 40.0
 
     /// Decision 846's second later note: the give-way line (Traficom's
     /// L2: triangles 0.5 m wide at the base and 0.6 m long, 0.3–0.5 m
@@ -1211,6 +1267,85 @@ extension Map3DScene.Builder {
     /// `model` standing on the pavement at `at`, its left toward the road
     /// along level `forward`, no tree, light or pole within `clearing`
     /// metres of it.
+    /// The trees, street lights and poles within `clearing` of `foot`
+    /// taken away, for what stands there.
+    private mutating func clearStreetFurniture(at foot: Map3DPoint, within clearing: Float) {
+        let key = key(of: foot)
+        let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] } + [Self.finlandModels[.lamp]].compactMap { $0 })
+        props[key] = props[key]?.filter { instance in
+            guard streetFurniture.contains(instance.model) else { return true }
+            let dx = instance.transform[12] - foot.x, dz = instance.transform[14] - foot.z
+            return dx * dx + dz * dz >= clearing * clearing
+        }
+    }
+
+    /// Decision 846's third later note: the street name signs of
+    /// `markings`, in the closest detail: a galvanised post, on top of it a
+    /// blue plate along the road it names with a thin white edge and the
+    /// name in white on both faces (``Map3DBoardGlyphs``, decision 882),
+    /// as long as the name needs, up to ``streetNamePlateLongest``.
+    mutating func addStreetNameSigns(_ markings: Map3DRoadMarkings) {
+        let kept = target
+        target = .close
+        defer { target = kept }
+        for sign in markings.streetNames {
+            guard roadRise(at: sign.foot, along: nil, onDeck: false).rise < Self.propRise,
+                  let along = Map3DPoint(Float(sign.along.x), 0, Float(sign.along.z)).normalized else { continue }
+            let text = Map3DBoardGlyphs.layout(sign.name)
+            guard text.width > 0 else { continue }
+            let foot = Map3DPoint(Float(sign.foot.x), roadGround(at: sign.foot, onDeck: false, beyond: 2.5) + Self.sidewalkLift, Float(sign.foot.z))
+            clearStreetFurniture(at: foot, within: 1)
+            mesh(at: foot) { mesh in Self.addStreetNameSign(&mesh, foot: foot, along: along, text: text) }
+        }
+    }
+
+    /// Decision 846's third later note: a street name sign's sizes,
+    /// metres: Finland's plates (Rovaniemi's, on their own post at the
+    /// corner) about 0.3 m tall, as long as the name, the letters about
+    /// two thirds of it; the plate's foot at 2.3 m.
+    static let streetNamePlateHeight: Float = 0.3
+    static let streetNamePlateDepth: Float = 0.03
+    static let streetNamePlateFoot: Float = 2.3
+    static let streetNamePlateLongest: Float = 1.4
+    static let streetNamePlateShortest: Float = 0.5
+    static let streetNameLetters: Float = 0.2
+    static let streetNameEdge: Float = 0.02
+    static let streetNameMargin: Float = 0.06
+
+    /// One street name sign at `foot`, its plate along `along`.
+    static func addStreetNameSign(_ mesh: inout Map3DMesh, foot: Map3DPoint, along: Map3DPoint,
+                                  text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle])) {
+        let grid = Float(Map3DBoardGlyphs.grid)
+        let cell = min(streetNameLetters / grid, (streetNamePlateLongest - 2 * streetNameMargin) / Float(text.width))
+        let length = max(streetNamePlateShortest, Float(text.width) * cell + 2 * streetNameMargin)
+        let height = streetNamePlateHeight, depth = streetNamePlateDepth
+        mesh.addBox(base: foot, forward: along, length: 0.06, width: 0.06, height: streetNamePlateFoot + height,
+                    top: Map3DPalette.steel, side: Map3DPalette.steel)
+        let plate = foot + Map3DPoint(0, streetNamePlateFoot, 0)
+        mesh.addBox(base: plate, forward: along, length: length, width: depth, height: height, top: Map3DPalette.canopy, side: Map3DPalette.canopy)
+        // Each face: its white edge and the name, a little proud of it.
+        for side: Float in [1, -1] {
+            let out = Map3DPoint(-along.z * side, 0, along.x * side)
+            // The reader, facing the plate, reads to their right.
+            let right = Map3DPoint(out.z, 0, -out.x)
+            let face = plate + out * (depth / 2 + 0.004)
+            func quad(_ x0: Float, _ y0: Float, _ x1: Float, _ y1: Float) {
+                func corner(_ x: Float, _ y: Float) -> Map3DPoint { face + right * x + Map3DPoint(0, y, 0) }
+                mesh.addQuad(corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1), color: Map3DPalette.sidewalk)
+            }
+            let half = length / 2, edge = streetNameEdge, inset: Float = 0.015
+            quad(-half + inset, height - inset - edge, half - inset, height - inset)
+            quad(-half + inset, inset, half - inset, inset + edge)
+            quad(-half + inset, inset + edge, -half + inset + edge, height - inset - edge)
+            quad(half - inset - edge, inset + edge, half - inset, height - inset - edge)
+            let left = -Float(text.width) * cell / 2, top = height / 2 + grid * cell / 2
+            for r in text.rectangles {
+                let x0 = left + Float(r.x) * cell, y1 = top - Float(r.y) * cell
+                quad(x0, y1 - Float(r.height) * cell, x0 + Float(r.width) * cell, y1)
+            }
+        }
+    }
+
     private mutating func place(_ model: Int, at: Map3DBaseMap.Point, forward: Map3DBaseMap.Point, clearing: Float, tint: UInt32,
                                 onDeck: Bool = false, group: Int = 0) {
         // Decision 391: none on a bridge or its ramp.
@@ -1219,12 +1354,7 @@ extension Map3DScene.Builder {
         // Decision 865: on the road's bed.
         let foot = Map3DPoint(x, roadGround(at: at, onDeck: onDeck, beyond: 2.5) + Self.sidewalkLift, z)
         let key = key(of: foot)
-        let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] } + [Self.finlandModels[.lamp]].compactMap { $0 })
-        props[key] = props[key]?.filter { instance in
-            guard streetFurniture.contains(instance.model) else { return true }
-            let dx = instance.transform[12] - x, dz = instance.transform[14] - z
-            return dx * dx + dz * dz >= clearing * clearing
-        }
+        clearStreetFurniture(at: foot, within: clearing)
         var instance = Map3DInstance.prop(model, at: foot, forward: Map3DPoint(Float(forward.x), 0, Float(forward.z)), scale: 1, tint: tint)
         instance.group = group
         props[key, default: []].append(instance)

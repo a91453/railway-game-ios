@@ -131,4 +131,9 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// (Traficom L2, the "shark's teeth"). Hong Kong's roundabouts are
     /// left as they are.
     var paintsGiveWayLines: Bool { self == .finland }
+
+    /// Decision 846's third later note: whether a street name sign stands
+    /// at the corner of its junctions (Finland's blue plate with white
+    /// letters, from the base map's road names).
+    var hasStreetNameSigns: Bool { self == .finland }
 }

@@ -260,6 +260,8 @@ extension Map3DScene.Builder {
         mark("road markings")
         addStreetProps(roads)
         addStreetStops(roads, markings: markings)
+        // Decision 846's third later note: Finland's street name signs.
+        addStreetNameSigns(markings)
         mark("street furniture")
         // Decision 259: their traffic and their pavements' people.
         // Decision 596: waiting at their signals.

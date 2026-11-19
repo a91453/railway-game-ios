@@ -534,7 +534,8 @@ public struct Map3DScene: Sendable {
         // shores.
         var real: Map3DBaseMap?
         if let baseMap, let frame = RealWorldFrame(world: world) {
-            real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY)
+            real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY,
+                                names: builder.look.streets.hasStreetNameSigns)
             // Decision 834: the motorways held to their grade, their
             // cuttings cut out of the ground laid next.
             builder.roadGrade = builder.gradeMotorways(of: real!)
