@@ -124,4 +124,16 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// street lights, bus stops' signs, and the pedestrian crossing's sign
     /// where a crossing has no signal.
     var hasFinnishFurniture: Bool { self == .finland }
+
+    /// Decision 846's second later note: whether the roads coming into a
+    /// roundabout have the give-way line painted across their incoming
+    /// lanes at the ring's edge: Finland's row of white triangles
+    /// (Traficom L2, the "shark's teeth"). Hong Kong's roundabouts are
+    /// left as they are.
+    var paintsGiveWayLines: Bool { self == .finland }
+
+    /// Decision 846's third later note: whether a street name sign stands
+    /// at the corner of its junctions (Finland's blue plate with white
+    /// letters, from the base map's road names).
+    var hasStreetNameSigns: Bool { self == .finland }
 }
