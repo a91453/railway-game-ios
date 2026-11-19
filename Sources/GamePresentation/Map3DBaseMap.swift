@@ -88,6 +88,9 @@ struct Map3DBaseMap: Sendable {
         /// Decision 391: on a bridge, its level (the tiles' `layer`, 1
         /// when it has none); 0 off one.
         var bridgeLevel = 0
+        /// Decision 846's second later note: the tiles' `oneway` 1:
+        /// traffic takes it only the way its points run (decision 474).
+        var oneway = false
     }
 
     /// Decision 391: a road bridge kept to its tile's own square, whole
@@ -278,8 +281,10 @@ struct Map3DBaseMap: Sendable {
                 let isRamp: Bool
                 if case .number(let ramp) = feature.properties["ramp"] { isRamp = ramp != 0 } else { isRamp = false }
                 let level = Self.bridgeLevel(feature)
+                let oneway: Bool
+                if case .number(let way) = feature.properties["oneway"] { oneway = way != 0 } else { oneway = false }
                 for part in feature.parts where part.count >= 2 {
-                    roads.append(Road(kind: kind, isRamp: isRamp, points: part.map(scene), bounds: bounds, bridgeLevel: level))
+                    roads.append(Road(kind: kind, isRamp: isRamp, points: part.map(scene), bounds: bounds, bridgeLevel: level, oneway: oneway))
                 }
             case ("waterway", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.waterwayKind(feature.string("class")) else { continue }

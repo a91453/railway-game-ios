@@ -51,6 +51,10 @@ struct Map3DRoadMarkings {
         /// Decision 447 (continued): a painted walkway (標線型人行道) on a
         /// lane: its green band, or one of the white lines either side.
         case walkway(line: Bool)
+        /// Decision 846's second later note: one triangle of a give-way
+        /// line (Traficom L2), its point toward the traffic coming and its
+        /// base across the lane at the ring's edge.
+        case giveWay
     }
 
     /// Decision 447 (continued): where a road's pedestrians walk, by its
@@ -220,6 +224,9 @@ struct Map3DRoadMarkings {
         /// Where the junction is along the road, and which way out.
         let at: Double
         let forward: Bool
+        /// Decision 846's second later note: its road taken one way only,
+        /// the way its points run (``Map3DBaseMap/Road/oneway``).
+        var oneway = false
 
         var half: Double { Double(kind.width(ramp: false)) / 2 }
         var length: Double { zip(points, points.dropFirst()).reduce(0) { $0 + Map3DRoadMarkings.distance($1.0, $1.1) } }
@@ -267,7 +274,8 @@ struct Map3DRoadMarkings {
                 for forward in [true, false] {
                     let way = forward ? Array(points[index...]) : Array(points[...index].reversed())
                     guard way.count >= 2 else { continue }
-                    let arm = Arm(road: road, kind: roads[road].kind, onDeck: roads[road].bridgeLevel > 0, points: way, at: sums[index], forward: forward)
+                    let arm = Arm(road: road, kind: roads[road].kind, onDeck: roads[road].bridgeLevel > 0, points: way, at: sums[index], forward: forward,
+                                  oneway: roads[road].oneway)
                     // The same road from two tiles: one arm.
                     guard let out = arm.place(min(6, arm.length))?.out,
                           !arms.contains(where: { other in other.place(min(6, other.length)).map { Self.dot($0.out, out) > 0.98 } ?? false })
@@ -694,6 +702,11 @@ struct Map3DRoadMarkings {
                 guard !along.contains(number), length >= crosswalk + Self.crosswalkDepth + 4, let zebra = arm.place(crosswalk) else { continue }
                 marks.append(Mark(kind: .crosswalk, centre: zebra.point, along: Map3DBaseMap.Point(x: -zebra.out.x, z: -zebra.out.z),
                                   length: Self.crosswalkDepth, width: 2 * arm.half, onDeck: arm.onDeck))
+                // Decision 846's second later note: Finland's give-way
+                // line across the lanes coming in, at the ring's edge.
+                if region.paintsGiveWayLines {
+                    addGiveWay(arm, at: clear)
+                }
                 // Decision 846's later note: Finland's sign at the
                 // crossing, on the pavement where each way's traffic
                 // reaches it, on the side that traffic keeps to.
@@ -793,6 +806,44 @@ struct Map3DRoadMarkings {
         }
     }
 
+    /// Decision 846's second later note: the give-way line (Traficom's
+    /// L2: triangles 0.5 m wide at the base and 0.6 m long, 0.3–0.5 m
+    /// apart) across the lanes of `arm` that come into the ring, its
+    /// triangles' bases `edge` metres out from the junction (the ring's
+    /// kerb) and a little more. A road taken both ways: from its centre
+    /// line to the kerb its incoming traffic keeps to; one taken only
+    /// into the ring: kerb to kerb; one taken only out of it: none.
+    private mutating func addGiveWay(_ arm: Arm, at edge: Double) {
+        // Out from the junction with the road's points: the traffic of a
+        // one-way road goes out.
+        if arm.oneway && arm.forward { return }
+        let middle = edge + Self.giveWayGap + Self.giveWayLength / 2
+        guard arm.length >= middle + Self.giveWayLength, let place = arm.place(middle) else { return }
+        let way = Map3DBaseMap.Point(x: -place.out.x, z: -place.out.z), keep = Double(region.trafficSide)
+        let right = Map3DBaseMap.Point(x: -way.z * keep, z: way.x * keep)
+        let inner = arm.oneway ? -arm.half + Self.giveWayInset : Self.giveWayInset, outer = arm.half - Self.giveWayInset
+        // As many triangles as fit, the gaps shared out evenly.
+        let count = Int(((outer - inner) + Self.giveWayGapAcross) / (Self.giveWayWidth + Self.giveWayGapAcross))
+        guard count >= 1 else { return }
+        let pitch = count > 1 ? (outer - inner - Self.giveWayWidth) / Double(count - 1) : 0
+        for index in 0..<count {
+            let across = count > 1 ? inner + Self.giveWayWidth / 2 + Double(index) * pitch : (inner + outer) / 2
+            marks.append(Mark(kind: .giveWay, centre: Map3DBaseMap.Point(x: place.point.x + right.x * across, z: place.point.z + right.z * across),
+                              along: way, length: Self.giveWayLength, width: Self.giveWayWidth, onDeck: arm.onDeck))
+        }
+    }
+
+    /// Decision 846's second later note: the give-way line's triangles
+    /// (Traficom, 2021, tiemerkintöjen mitoitus L2: base 0.5 m, length
+    /// 0.6 m, 0.3–0.5 m apart), how far their bases stand back from the
+    /// ring's kerb, and how far in from the kerb and the centre line the
+    /// row stops.
+    static let giveWayWidth = 0.5
+    static let giveWayLength = 0.6
+    static let giveWayGapAcross = 0.4
+    static let giveWayGap = 0.3
+    static let giveWayInset = 0.3
+
     /// `road`'s centre line (road number `number`), less the stretches cut
     /// at its junctions: the pieces left.
     func centreLines(of road: Map3DBaseMap.Road, number: Int) -> [[Map3DBaseMap.Point]] {
@@ -863,6 +914,10 @@ extension Map3DScene.Builder {
                 addMark(mark, colour: red ? Self.kerbRed : Map3DPalette.centreLine, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
             case .walkway(let line):
                 addMark(mark, colour: line ? Self.paint : Self.walkwayGreen, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
+            case .giveWay:
+                // Decision 846's second later note: a triangle, its point
+                // back toward the traffic coming.
+                addMark(mark, colour: Self.paint, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1), pointed: true)
             case .arrow(let left, let mirrored):
                 // Decision 732: mirrored, the layer read right to left.
                 let u = left ? (0.5, 1.0) : (0, 0.5)
@@ -885,7 +940,10 @@ extension Map3DScene.Builder {
     /// at the ground's grid lines and diagonals (as ``addArea`` cuts) so
     /// it never sinks into it: `u` across it left to right as its traffic
     /// sees it, `v` from its far end back.
-    private mutating func addMark(_ mark: Map3DRoadMarkings.Mark, colour: UInt32, layer: Float, u: (Double, Double), v: (Double, Double)) {
+    /// Decision 846's second later note: `pointed`, a triangle, from a
+    /// point at its back end to its full width at its front.
+    private mutating func addMark(_ mark: Map3DRoadMarkings.Mark, colour: UInt32, layer: Float, u: (Double, Double), v: (Double, Double),
+                                  pointed: Bool = false) {
         let along = mark.along, right = Map3DBaseMap.Point(x: -along.z, z: along.x)
         let halfLength = mark.length / 2, halfWidth = mark.width / 2
         func texture(_ p: Map3DBaseMap.Point) -> (Float, Float) {
@@ -914,10 +972,14 @@ extension Map3DScene.Builder {
             guard !roadRise(at: middle, along: way, onDeck: mark.onDeck).onBridge, !givesWay(at: middle, along: way) else { continue }
             let riseA = roadRise(at: at(t0), along: way, onDeck: mark.onDeck).rise, riseB = roadRise(at: at(t1), along: way, onDeck: mark.onDeck).rise
             let from = (t0 - 0.5) * mark.length, to = (t1 - 0.5) * mark.length
-            let corners = [(-1.0, from), (1.0, from), (1.0, to), (-1.0, to)].map { a, b in
+            // How wide it is at `b` along it, of its half width.
+            func share(_ b: Double) -> Double { pointed ? min(1, max(0, (b + halfLength) / mark.length)) : 1 }
+            var corners = [(-share(from), from), (share(from), from), (share(to), to), (-share(to), to)].map { a, b in
                 Map3DBaseMap.Point(x: mark.centre.x + right.x * a * halfWidth + along.x * b,
                                    z: mark.centre.z + right.z * a * halfWidth + along.z * b)
             }
+            // A triangle's point: one corner, not two.
+            if share(from) == 0 { corners.removeFirst() }
             // The rise at a point of the piece, from its back end's to its front's.
             func lift(_ p: Map3DBaseMap.Point) -> Float {
                 let share = to - from > 1e-9 ? (((p.x - mark.centre.x) * along.x + (p.z - mark.centre.z) * along.z) - from) / (to - from) : 0
