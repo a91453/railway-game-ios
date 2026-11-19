@@ -277,6 +277,9 @@ public struct Map3DModelPack: Sendable {
         // signals, street light, bus stop and crossing sign, after them
         // and before the route bus.
         groups.append { Map3DFinlandStreet.drawn }
+        // Decision 889: the yellow tit's four poses, after them and
+        // before the route bus.
+        groups.append { Map3DYellowTit.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
