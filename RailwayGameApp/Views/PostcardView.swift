@@ -190,7 +190,9 @@ struct PostcardCard: View {
     private var stationMaster: some View {
         let frame = PostcardLayout.stationMaster
         let corner = RoundedRectangle(cornerRadius: PostcardLayout.stationMasterCornerRadius)
-        return Image(region.stationMasterArt + StationMasterMood.happy.rawValue)
+        // Decision 884: in its Christmas hat during the winter event.
+        let decorations = UserDefaults.standard.object(forKey: WinterEvent.decorationsKey) as? Bool ?? true
+        return Image(region.stationMasterArt + StationMasterMood.happy.rawValue + WinterStationMaster.outfit(at: Date(), switchedOn: decorations))
             .resizable()
             .scaledToFill()
             .frame(width: frame.width, height: frame.height)
