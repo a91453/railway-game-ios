@@ -383,6 +383,7 @@ extension GameWorld {
         else { return planned }
         if let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
                                               avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)), memo: &memo),
+           goesOn(candidate, along: alternative, stop: stop, paths: &memo.paths),
            case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
             return .granted(granted)
         }
@@ -404,9 +405,26 @@ extension GameWorld {
         let standingBlocked = blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo))
         guard standingBlocked.blocks(envelopeCover(of: candidate), in: network),
               let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: standingBlocked, memo: &memo),
+              goesOn(candidate, along: alternative, stop: stop, paths: &memo.paths),
               case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
         else { return planned }
         return .granted(granted)
+    }
+
+    /// Decision 885 (SHALUN-ONE-ISLAND): whether `candidate`, a service
+    /// setting off for stop `stop` along `alternative` to another berth
+    /// of the stop's station than its own (decision 57), can go on from
+    /// there to its next call, as it stands there or turned round: a
+    /// platform track that leads only onto another line's way (a branch
+    /// that leaves past the station, from one of its platform tracks)
+    /// would keep it there. True for its last call.
+    func goesOn(_ candidate: Train, along alternative: TrainPath, stop: Int, paths: inout PathMemo) -> Bool {
+        let next = stop + 1
+        guard candidate.timetable.indices.contains(next), let position = candidate.position else { return true }
+        let there = placement(TrainPlacement(position: position, trailEdges: candidate.trailEdges, length: candidate.length), after: alternative)
+        let station = candidate.timetable[next].station
+        return path(from: there.position, toStation: station, length: candidate.length, memo: &paths) != nil
+            || path(from: turnedRound(there).position, toStation: station, length: candidate.length, memo: &paths) != nil
     }
 
     /// `candidate`, a service setting off for stop `stop` (of cycle
