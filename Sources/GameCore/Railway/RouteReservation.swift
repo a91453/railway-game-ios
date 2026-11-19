@@ -899,7 +899,7 @@ extension GameWorld {
         /// By a following train: the trains its claim does not bind (see
         /// ``binds(_:_:)``), because they hold or foul the track a train
         /// it follows needs.
-        fileprivate var released: [TrainID: Set<TrainID>] = [:]
+        fileprivate(set) var released: [TrainID: Set<TrainID>] = [:]
         /// Decision 877: whether whom the claims do not bind was read from
         /// the time as well as the trains (decisions 836 and 850: whether
         /// a departure is due). Such holders are the world's only at the
