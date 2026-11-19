@@ -33,6 +33,29 @@ public struct HeightGrid: Sendable {
     /// The blocks' corners ``ground(of:frame:)`` has worked out, shared by
     /// every copy of this grid.
     let groundMemo = GroundMemo()
+    /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the rows ``Reader`` has
+    /// unpacked, shared by every copy of this grid and every reader: a
+    /// 3D block reading the ground of a bridge's far end unpacked two rows
+    /// for each corner of it.
+    let rowMemo = RowMemo()
+
+    /// Decision 876 (later): rows unpacked (``row(_:)``), at most
+    /// ``limit``; past it the memo starts again.
+    final class RowMemo: @unchecked Sendable {
+        static let limit = 512
+        private let lock = NSLock()
+        private var rows: [Int: [Int16]?] = [:]
+
+        func row(_ row: Int, unpack: () -> [Int16]?) -> [Int16]? {
+            if let known = lock.withLock({ rows[row] }) { return known }
+            let found = unpack()
+            lock.withLock {
+                if rows.count >= Self.limit { rows.removeAll(keepingCapacity: true) }
+                rows[row] = found
+            }
+            return found
+        }
+    }
 
     /// Reads the app's heights file. Throws for a file out of shape: the
     /// wrong magic or version, a grid of no cells, or offsets out of order
@@ -120,7 +143,7 @@ public struct HeightGrid: Sendable {
         mutating func height(row: Int, column: Int) -> Double {
             guard (0..<grid.rows).contains(row), (0..<grid.columns).contains(column) else { return 0 }
             if rows[row] == nil {
-                rows[row] = grid.row(row) ?? []
+                rows[row] = grid.rowMemo.row(row) { grid.row(row) } ?? []
             }
             guard let heights = rows[row], !heights.isEmpty else { return 0 }
             return Double(heights[column])
