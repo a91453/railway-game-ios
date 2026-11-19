@@ -67,9 +67,9 @@ final class RealLineBundleTests: XCTestCase {
     func testABundleIsNamedAfterItsFirstLine() throws {
         let session = try HongKongMapTests.hongKong()
         let airport = try XCTUnwrap(session.realLineBundles.first { !$0.isSingle })
-        XCTAssertEqual(airport.title(in: .traditionalChinese), "機場快綫等 3 條路線")
-        XCTAssertEqual(airport.title(in: .english), "Airport Express and 2 more")
-        XCTAssertEqual(airport.togetherText(in: .traditionalChinese), "這幾條線共用車站，一起收購：機場快綫、東涌綫、迪士尼綫。")
+        XCTAssertEqual(airport.title(in: .traditionalChinese), "東涌綫等 3 條路線")
+        XCTAssertEqual(airport.title(in: .english), "Tung Chung Line and 2 more")
+        XCTAssertEqual(airport.togetherText(in: .traditionalChinese), "這幾條線共用車站，一起收購：東涌綫、機場快綫、迪士尼綫。")
         XCTAssertEqual(session.realLineBundle(of: airport.lines[2]), airport, "opened from any of its lines")
         let alone = try XCTUnwrap(session.realLineBundles.first { $0.isSingle })
         XCTAssertEqual(alone.title(in: .traditionalChinese), alone.first.name(in: .traditionalChinese))

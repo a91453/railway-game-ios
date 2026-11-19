@@ -188,7 +188,7 @@ final class TimetableCheckupFullTests: XCTestCase {
         "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
         "hk TCL+AEL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 25, lateOutOfDepot: 1, peakGapMinutes: 7),
+        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 18, lateOutOfDepot: 1, peakGapMinutes: 11),
     ]
 
     private func check(_ name: String, _ world: @autoclosure () throws -> GameWorld) throws {
