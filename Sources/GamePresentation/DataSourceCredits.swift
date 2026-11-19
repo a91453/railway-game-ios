@@ -460,6 +460,50 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // FUKUOKA-GROUND: the pack's base map, heights and people.
+                    DataSourceCredit(
+                        id: "fukuokaMap",
+                        title: language.text("Fukuoka’s map", "福岡的地圖"),
+                        detail: language.text(
+                            "On Fukuoka’s map, the sea and rivers, roads, parks, the airport and place names, on the flat map and the 3D map.",
+                            "福岡地圖上的海與河川、道路、公園、機場與地名，平面地圖與 3D 地圖都用。"
+                        ),
+                        notice: language.text(
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0).",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。圖層照 OpenMapTiles 的格式（CC BY 4.0）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
+                    DataSourceCredit(
+                        id: "fukuokaTerrain",
+                        title: language.text("Fukuoka’s terrain", "福岡的地形"),
+                        detail: language.text(
+                            "Fukuoka’s hills and plains: how high the ground is where track is laid, and the hill shading of the map.",
+                            "福岡的山丘與平原：軌道鋪設處地面多高，以及地圖上山的陰影。"
+                        ),
+                        notice: language.text(
+                            "Made by processing the Geospatial Information Authority of Japan’s elevation tiles (国土地理院の標高タイルを加工して作成).",
+                            "国土地理院の標高タイルを加工して作成（以日本國土地理院的標高圖磚加工製作）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("GSI terms of use", "國土地理院使用條款"), url: "https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html"),
+                        ]
+                    ),
+                    DataSourceCredit(
+                        id: "fukuokaPopulation",
+                        title: language.text("Fukuoka’s people", "福岡的人口"),
+                        detail: language.text(
+                            "Where people live on Fukuoka’s map, for how many ride from each station.",
+                            "福岡地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                        ),
+                        notice: language.text(
+                            "WorldPop (www.worldpop.org), Japan 2025, 1 km grid, CC BY 4.0.",
+                            "WorldPop（www.worldpop.org），日本 2025 年 1 公里格網，CC BY 4.0。"
+                        ),
+                        links: []
+                    ),
                 ]
             )
         }

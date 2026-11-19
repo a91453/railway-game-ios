@@ -45,10 +45,10 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', 'real-world-population'))
 sys.path.insert(0, os.path.join(HERE, '..', 'basemap'))
 sys.path.insert(0, os.path.join(HERE, '..', 'hk-map'))
+sys.path.insert(0, os.path.join(HERE, '..', 'overseas-map'))
 import build_hk_ground_grids  # noqa: E402
+import overseas_ground  # noqa: E402
 import build_rovaniemi_rail  # noqa: E402
-import build_slope_grid  # noqa: E402
-import build_terrain  # noqa: E402
 import build_water_grid  # noqa: E402
 
 # The tiles as downloaded (2026-11-15).
@@ -115,17 +115,7 @@ def main(dem_folder, extract, folder):
     heights = np.clip(np.rint(level), -32768, 32767).astype(np.int16)
 
     # Steep slopes, as Taiwan's (decision 115).
-    smooth = build_slope_grid.median3(level.astype(np.float32))
-    dy = 2 * step * build_slope_grid.METRES_PER_DEGREE_LATITUDE
-    dx = (2 * step * build_slope_grid.METRES_PER_DEGREE_LONGITUDE * np.cos(np.radians(latitudes)))[:, None]
-    north_south = np.zeros_like(smooth)
-    east_west = np.zeros_like(smooth)
-    north_south[1:-1, :] = np.abs(smooth[:-2, :] - smooth[2:, :]) / dy
-    east_west[:, 1:-1] = np.abs(smooth[:, 2:] - smooth[:, :-2]) / dx
-    raw_steep = (np.maximum(north_south, east_west) > build_slope_grid.SLOPE) & dry
-    padded = np.pad(raw_steep, 1).astype(np.uint8)
-    votes = sum(padded[1 + dr:1 + dr + rows, 1 + dc:1 + dc + columns] for dr in (-1, 0, 1) for dc in (-1, 0, 1))
-    steep = (votes >= 5) & dry
+    steep = overseas_ground.steep(level, dry, latitudes, step)
 
     # The checks.
     def cell(point):
@@ -140,26 +130,11 @@ def main(dem_folder, extract, folder):
         sys.exit(f'the Kemijoki at Rovaniemi: water {bool(water[k_row, k_column])}, {river} m')
     print(f'Ounasvaara {top} m; the Kemijoki at Rovaniemi {river} m', flush=True)
 
-    data = {
-        'source': f'OpenStreetMap contributors, from the extract {os.path.basename(extract)}',
-        'licence': 'ODbL 1.0',
-        'osmData': [stamp, stamp],
-        'north': north,
-        'west': west,
-        'cellDegrees': step,
-        'rows': rows,
-        'columns': columns,
-        'water': build_slope_grid.encode(water),
-        'steep': build_slope_grid.encode(steep),
-        'slopeSource': 'Copernicus DEM GLO-30, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 '
-                       'provided under COPERNICUS by the European Union and ESA',
-    }
-    build_rovaniemi_rail.write(folder, 'water.json', data)
-    encoded = build_slope_grid.encode_heights(heights, data)
-    with open(os.path.join(folder, 'heights.dat'), 'wb') as f:
-        f.write(encoded)
-    build_terrain.main(os.path.join(folder, 'heights.dat'), os.path.join(folder, 'terrain.pmtiles'),
-                       name='Rovaniemi terrain', attribution='Copernicus DEM GLO-30 © DLR e.V., © Airbus Defence and Space GmbH')
+    size = overseas_ground.write_ground(
+        folder, extract, stamp, (north, west, step, rows, columns), heights, water, steep,
+        'Copernicus DEM GLO-30, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 '
+        'provided under COPERNICUS by the European Union and ESA',
+        'Rovaniemi terrain', 'Copernicus DEM GLO-30 © DLR e.V., © Airbus Defence and Space GmbH')
     build_rovaniemi_rail.write_manifest(folder)
 
     record = os.path.join(HERE, 'rovaniemi_sources.json')
@@ -178,7 +153,7 @@ def main(dem_folder, extract, folder):
 
     print(f'{rows} × {columns} cells of {step * 3600:.3f}″ from {north:.6f}°N {west:.6f}°E; {bodies} bodies of water, '
           f'OSM data to {stamp}; land {km2(dry)} km², water {km2(water)} km², steep {km2(steep)} km²; '
-          f'heights {int(heights.min())} to {int(heights.max())} m; heights.dat {len(encoded)} bytes')
+          f'heights {int(heights.min())} to {int(heights.max())} m; heights.dat {size} bytes')
 
 
 if __name__ == '__main__':
