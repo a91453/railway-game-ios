@@ -349,6 +349,46 @@ final class SharedStationLayoutTests: XCTestCase {
     /// The Liujia and Neiwan Lines through Zhuzhong, in either order: the
     /// Liujia Line's platforms up on its real viaduct (decision 462), but
     /// beside the Neiwan Line's, not over them.
+    /// ZHUZHONG-LEVEL (the owner on 140: 「竹中一個高架一個地面」): bought
+    /// together, in the order they are sold (decision 862), the two lines
+    /// stand on one viaduct at Zhuzhong, as the real station's three tracks
+    /// on its second floor do: one level (within 0.5 m), well over the
+    /// ground, and an island between them (their nearest tracks within the
+    /// 15 m the 3D map draws one island across). Before, the Liujia Line's
+    /// way doubled back at Zhuzhong, its platforms stood square to the
+    /// Neiwan Line's across them, and the Neiwan Line's stayed on the
+    /// ground 13.6 m under, 32 m off.
+    func testZhuzhongsTwoLinesStandOnOneViaduct() throws {
+        let session = try RealLineAcquisitionTests.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
+        let laidBy = try Self.buy(["tra:LIUJIA", "tra:NEIWAN"], on: session)
+        let world = session.world
+        let laid = Self.platforms(of: world, laidBy: laidBy)
+        XCTAssertEqual(Self.stacked(laid, in: world), [])
+        XCTAssertEqual(Self.uneven(laid, in: world), [])
+        let zhuzhong = try XCTUnwrap(world.stations.first { $0.name == "竹中" }?.id)
+        let pair = try XCTUnwrap(Self.between("tra:LIUJIA", "tra:NEIWAN", at: zhuzhong, in: laid))
+        XCTAssertLessThan(pair.distance, 15, "an island between the two lines")
+        XCTAssertGreaterThan(pair.distance, 9, "beside each other, not over")
+        XCTAssertTrue(Self.overGround(zhuzhong, in: world).allSatisfy { $0 > 8 }, "both up on the viaduct")
+        // As the 3D map draws it: a side platform, an island between the
+        // two lines, a side platform (the real one: a side platform and an
+        // island). Before, a 3 m island inside each line and nothing
+        // between them.
+        let station = try XCTUnwrap(world.station(id: zhuzhong))
+        let scene = Map3DScene.frame(world: world, focus: (x: Double(station.location.x), y: Double(station.location.y)))
+        var builder = Map3DScene.Builder(originX: scene.originX, originY: scene.originY, region: scene.region, world: world, heights: session.heights)
+        let snapshot = world.railwaySnapshot()
+        _ = builder.addTrack(snapshot)
+        builder.addPlatforms(snapshot)
+        let drawn = builder.laidPlatforms.filter { $0.station == zhuzhong }
+        let lineOf = Dictionary(laidBy.map { ($0.key.edge, $0.value) }, uniquingKeysWith: { a, _ in a })
+        let islands = drawn.filter(\.island)
+        XCTAssertEqual(drawn.count, 4)
+        XCTAssertEqual(islands.count, 2, "one island, its two halves")
+        XCTAssertEqual(Set(islands.compactMap { $0.edge.flatMap { lineOf[$0] } }), ["tra:LIUJIA", "tra:NEIWAN"], "the island between the two lines")
+        XCTAssertTrue(islands.allSatisfy { 2 * $0.width >= 6 }, "an island wide enough to change on")
+    }
+
     func testZhuzhongStacksNoPlatforms() throws {
         for order in [["tra:LIUJIA", "tra:NEIWAN"], ["tra:NEIWAN", "tra:LIUJIA"]] {
             let session = try RealLineAcquisitionTests.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)

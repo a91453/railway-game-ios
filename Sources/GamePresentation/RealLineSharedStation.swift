@@ -61,6 +61,9 @@ extension RealLineLaying {
     /// How far back from a shared end the way is held beside the
     /// company's track before it moves back onto the real line.
     static let sharedEndBlend = 200 * RealLineAcquisition.metre
+    /// How far past a shared end, beyond its station, the company's track
+    /// still sets how far the end is moved (ZHUZHONG-LEVEL).
+    static let sharedEndPast = 40 * RealLineAcquisition.metre
     /// How near the way the company's track counts as lying along it.
     static let sharedEndReach = 60 * RealLineAcquisition.metre
 
@@ -127,6 +130,14 @@ extension RealLineLaying {
                         // as the company's track runs on along the way.
                         let behind = stop == 0 ? along : -along
                         guard behind < box else { continue }
+                        // ZHUZHONG-LEVEL: not past the end beyond the
+                        // station, where the company's line joins this one
+                        // on the real track (Zhuzhong's two lines meet west
+                        // of it, toward Hsinchu): there it comes nearer than
+                        // an island's width anyway, and counting it set the
+                        // station 16 m off the other line's, too far for one
+                        // island between them.
+                        guard behind > -Self.sharedEndPast else { continue }
                         across.append(side)
                         if stop == 0 { away.append(behind) } else { toward.append(behind) }
                     } else {
@@ -138,10 +149,10 @@ extension RealLineLaying {
             }
             guard let low = across.min(), let high = across.max() else { continue }
             let own = extent(stop)
-            // Clear already, an island's width or more off its tracks.
-            guard high > own.lowerBound - gap, low < own.upperBound + gap else { continue }
             let right = high + gap - own.lowerBound, left = low - gap - own.upperBound
             let by = abs(right) <= abs(left) ? right : left
+            // Clear already, an island's width or more off its tracks.
+            guard high > own.lowerBound - gap, low < own.upperBound + gap else { continue }
             // Held past the furthest of the company's track from the stop
             // in one run (gaps under 50 m), and at least past its station.
             func hold(_ distances: [Double]) -> Double {
