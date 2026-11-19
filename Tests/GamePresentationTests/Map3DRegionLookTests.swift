@@ -308,4 +308,54 @@ final class Map3DRegionLookTests: XCTestCase {
         XCTAssertTrue(colours.contains(Map3DPalette.paved))
         XCTAssertGreaterThan(scene.triangleCount, 50_000)
     }
+
+    // MARK: Japan (FUKUOKA-STREETS)
+
+    private func fukuoka() throws -> GameWorld { GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground()) }
+
+    /// Fukuoka's map is drawn as Japan's, at Japan's narrow gauge, with no
+    /// snow; Yonaguni is Japan, Taiwan's easternmost islet is not.
+    func testFukuokaHasJapansLook() throws {
+        let look = Map3DRegionLook(world: try fukuoka())
+        XCTAssertEqual(look, Map3DRegionLook(streets: .japan, buildings: .japan, snow: false, gauge: 1.067))
+        XCTAssertEqual(Map3DStreetRegion(world: try fukuoka()), .japan)
+        XCTAssertEqual(Map3DRegionLook(anchor: try anchor(24.4676, 123.0047)), look, "Yonaguni")
+        XCTAssertEqual(Map3DRegionLook(anchor: try anchor(25.6294, 122.0717)), .taiwan, "Mianhua Islet")
+        XCTAssertEqual(Map3DRegionLook(anchor: try anchor(35.6812, 139.7671)), look, "Tokyo")
+    }
+
+    /// Japan's streets: on the left, white centre lines, no scooters, no
+    /// kerb paint, no red and amber together, no countdown; signals hung
+    /// over the lanes, poles and vending machines along them.
+    func testJapansStreets() {
+        let r = Map3DStreetRegion.japan
+        XCTAssertEqual([r.keepsLeft, r.hasScooterBoxes, r.hasRedKerbs, r.hasPaintedWalkways, r.hasYellowCentreLines, r.animatesPedestrianSignals,
+                        r.hasRedAmber, r.hasEveningGarbageTrucks, r.hasTaiwanPostBoxes, r.hasKerbLines, r.hasScooters, r.hasYellowTaxis],
+                       [true, false, false, false, false, false, false, false, false, false, false, false])
+        XCTAssertEqual(r.trafficSide, -1)
+        XCTAssertFalse(r.standsSignalsAtKerb)
+        XCTAssertTrue(r.hasUtilityPoles && r.hasVendingMachines)
+        XCTAssertFalse(r.hasCountdownBoxes || r.signalsRoundabouts || r.hasFinnishFurniture || r.paintsGiveWayLines)
+    }
+
+    /// A Japanese house: a pitched roof with no Taiwanese tank or room on
+    /// it; no Taiwanese temple; a shop with no arcade.
+    func testAJapaneseHouseHasNoTaiwaneseRoofOrTemple() throws {
+        let tanks: Set<UInt32> = [Map3DPalette.tankBlue, Map3DPalette.tankSteel]
+        let house = buildings(in: try fukuoka(), kind: .house, storeys: 2)
+        XCTAssertFalse(house.vertices.isEmpty)
+        XCTAssertFalse(house.vertices.contains { tanks.contains($0.color) })
+        XCTAssertGreaterThan(house.vertices.map(\.y).max() ?? 0, 6.4, "a ridge over the eaves")
+        let temple: Set<UInt32> = [Map3DPalette.templeWall, Map3DPalette.templeRoof]
+        XCTAssertFalse(buildings(in: try fukuoka(), kind: .temple, storeys: 1).vertices.contains { temple.contains($0.color) })
+        var mesh = Map3DMesh(), close = Map3DMesh(), blades: [Map3DSign] = []
+        let japan = Map3DRegionLook(streets: .japan, buildings: .japan, snow: false, gauge: 1.067)
+        for seed in Int32(0)..<30 {
+            let r = { (salt: Int32) in map3DRandom(seed, 11, salt: salt) }
+            Map3DScene.Builder.addTownHouse(&mesh, close: &close, blades: &blades, middle: Map3DPoint(Float(seed) * 20, 0, 0), front: Map3DPoint(0, 0, 1),
+                                            width: 9, depth: 12, flats: false, shops: true, wall: Map3DPalette.houseWalls[0].color, far: false,
+                                            look: japan, r: r)
+        }
+        XCTAssertFalse(mesh.vertices.contains { tanks.contains($0.color) || $0.color == Map3DPalette.arcade })
+    }
 }
