@@ -261,6 +261,16 @@ extension GameSession {
                 plan.stretch(structure: networkStructure), parallel: parallel.stretch(structure: networkStructure), crossovers: stretches
             )
         }
+        // Decision 887: across the company's track at one level, laid as a
+        // chain crossing it at a diamond where it may be.
+        var diamonds = 0
+        if !networkBuildsDouble {
+            var draft = prepared.pricingCopy()
+            if let chain = NetworkDiamond.chain(for: plan.stretch(structure: networkStructure), in: &draft, heights: heights) {
+                command = .buildTrackChain(chain.pieces)
+                diamonds = chain.nodes.count
+            }
+        }
         let built = perform(command) { outcome, before, world in
             guard let result = outcome.track else { return "" }
             let cleared = before.placedBuildings(clearedIn: world).count
@@ -275,7 +285,7 @@ extension GameSession {
             return language.text(
                 "Built \(result.edge.displayText(in: language)): \(length), \(structure.lowercased()), for \(cost.moneyText)\(demolished.0).",
                 "已建造\(result.edge.displayText(in: language))：\(length)，\(structure)，花費 \(cost.moneyText)\(demolished.1)。"
-            ) + Self.crossoverText(crossovers, in: language)
+            ) + Self.crossoverText(crossovers, in: language) + (diamonds == 0 ? "" : " " + Self.diamondText(diamonds, in: language))
         }
         if let built = built?.track {
             networkStart = .node(built.to)
@@ -343,6 +353,12 @@ extension GameSession {
             problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
             brief = problem == nil ? nil : GameError.shortOfCashBrief(in: language)
         } catch {
+            // Decision 887: across the company's track at one level, a
+            // diamond where it may be one.
+            if case .trackConflict = error, !networkBuildsDouble,
+               let diamond = diamondPreview(plan, structure: networkStructure, on: unbuilt) {
+                return (diamond, [])
+            }
             cost = nil
             refusal = error
             problem = networkBuildsDouble && parallel == nil
@@ -368,6 +384,33 @@ extension GameSession {
                 ? String(Self.crossoverText(crossoverOutcome, in: language).drop { $0 == " " }) : nil,
             refusal: refusal
         ), besides)
+    }
+
+    /// Decision 887: `plan`, refused for crossing the company's track at
+    /// one level, as a chain crossing it at diamonds
+    /// (``NetworkDiamond/chain(for:in:heights:)``) on a copy of `unbuilt`;
+    /// `nil` where it may not cross so.
+    func diamondPreview(_ plan: EdgePlan, structure: TrackStructure, on unbuilt: GameWorld) -> NetworkPreview? {
+        var draft = unbuilt
+        guard let chain = NetworkDiamond.chain(for: plan.stretch(structure: structure), in: &draft, heights: heights) else { return nil }
+        let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+        let problem = shortfallText(total, doing: .buildTrackChain(chain.pieces))
+        return NetworkPreview(
+            curve: plan.curve, profile: plan.profile, points: plan.geometry?.points ?? [plan.from, plan.to],
+            length: plan.length, startHeight: plan.from.z, endHeight: plan.to.z,
+            joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: total, problem: problem,
+            problemBrief: problem == nil ? nil : GameError.shortOfCashBrief(in: language),
+            cleared: problem == nil ? world.placedBuildings(clearedIn: draft) : [],
+            crossoverNote: Self.diamondText(chain.nodes.count, in: language)
+        )
+    }
+
+    /// Decision 887: what a stretch crossing `count` tracks on the flat
+    /// does, as the build card and the message say it.
+    static func diamondText(_ count: Int, in language: DisplayLanguage) -> String {
+        count == 1
+            ? language.text("Crosses a track on the flat: trains go straight across.", "與 1 條軌道平面交叉：列車只能直行通過。")
+            : language.text("Crosses \(count) tracks on the flat: trains go straight across.", "與 \(count) 條軌道平面交叉：列車只能直行通過。")
     }
 
     /// ``NetworkProblem/text(in:)``, and for a stretch that makes no edge
