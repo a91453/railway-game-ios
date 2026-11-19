@@ -136,6 +136,19 @@ struct RealRailwayTraces: Sendable {
         return best
     }
 
+    /// The place nearest `point` within `reach` on each line that comes
+    /// that near, nearest first, with the same filters as
+    /// ``snap(_:within:group:system:only:)``.
+    func snaps(_ point: WorldVector, within reach: Double, group: Int? = nil, system: String? = nil) -> [Snap] {
+        lines.compactMap { line -> Snap? in
+            guard (group == nil || groups[line.id] == group) && (system == nil || line.system == system),
+                  point.x >= line.minX - reach, point.x <= line.maxX + reach,
+                  point.y >= line.minY - reach, point.y <= line.maxY + reach,
+                  let found = Self.nearest(to: point, on: line, within: reach) else { return nil }
+            return Snap(place: Place(line: line.id, along: found.along), point: line.path.point(at: found.along), distance: found.distance)
+        }.sorted { $0.distance < $1.distance }
+    }
+
     /// The way along the lines from `start` to `end`: the shortest, along
     /// lines and across the links between them; `nil` where no way joins
     /// them.
