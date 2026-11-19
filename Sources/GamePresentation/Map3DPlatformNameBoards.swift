@@ -141,6 +141,10 @@ extension Map3DScene.Builder {
         return names
     }
 
+    /// Decision 882: a name as its board writes it: 臺 as 台, whose fewer
+    /// strokes stay clear on the glyphs' 16-cell grid.
+    static func boardText(_ name: String) -> String { name.replacingOccurrences(of: "臺", with: "台") }
+
     /// Decision 882: a name board with its foot's middle at `foot` (the
     /// platform's back), facing `out` (towards the track), as the old
     /// version's: a white face in a grey frame, a green band across it,
@@ -202,7 +206,9 @@ extension Map3DScene.Builder {
                 quad(x0, y0, x1, y1, 0.008, Map3DPalette.playerRim)
             }
         }
-        let main = Map3DBoardGlyphs.layout(name)
+        // 臺 is written 台 (as on many of the railway's own boards): its
+        // strokes run together on the glyphs' grid.
+        let main = Map3DBoardGlyphs.layout(Self.boardText(name))
         let other = second.map(Map3DBoardGlyphs.layout) ?? (width: 0, rectangles: [])
         if other.width > 0 {
             write(main, height: room * 0.66, middle: bandHigh + room * 0.62)

@@ -432,6 +432,11 @@ final class Map3DPlatformPropsTests: XCTestCase {
         Builder.addNameBoard(&both, foot: Map3DPoint(0, 0, 0), out: out, name: "臺南", second: "Tainan", underground: false)
         func ink(_ mesh: Map3DMesh) -> [Map3DVertex] { mesh.vertices.filter { $0.color == Map3DPalette.playerRim } }
         XCTAssertGreaterThan(ink(both).count, ink(plain).count)
+        // 臺 written 台, which stays clear on the grid.
+        XCTAssertEqual(Builder.boardText("臺南"), "台南")
+        var simple = Map3DMesh()
+        Builder.addNameBoard(&simple, foot: Map3DPoint(0, 0, 0), out: out, name: "台南", underground: false)
+        XCTAssertEqual(ink(simple).count, ink(plain).count)
         // The name smaller with a second name under it, all over the band.
         let band = Props.nameBoardFoot + Props.nameBoardFrame + (Props.nameBoardHeight - 2 * Props.nameBoardFrame) * Props.nameBoardBand.upperBound
         XCTAssertTrue(ink(both).allSatisfy { $0.y >= band - 0.001 && $0.nz < -0.99 })
