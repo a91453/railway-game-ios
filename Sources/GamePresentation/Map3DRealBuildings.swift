@@ -150,10 +150,8 @@ extension Map3DScene.Builder {
         // church is drawn as a public building), and a house of three
         // floors or more is a block of flats.
         let nordic = look.buildings == .nordic, clutter = look.buildings.hasRoofClutter
-        if nordic {
-            if kind == .temple { kind = .civic }
-            if kind == .house, storeys > 2 { kind = .flats }
-        }
+        if !look.buildings.drawsTaiwanTemples, kind == .temple { kind = .civic }
+        if nordic, kind == .house, storeys > 2 { kind = .flats }
         // Decision 765: windows a floor high, not stretched up a hall
         // whose storeys are fewer than its height holds.
         func floors(_ high: Float, _ storeys: Int) -> Int { max(storeys, Int(high / Self.tallestStorey)) }
