@@ -81,11 +81,12 @@ final class HongKongMapTests: XCTestCase {
     // MARK: - The switch
 
     /// Hong Kong is open (decision 712's third pull request), and
-    /// Rovaniemi (decision 818), so the app's real-world data holds their
+    /// Rovaniemi (decision 818), and Fukuoka (decision 854, FUKUOKA-OPEN),
+    /// so the app's real-world data holds their
     /// ground; with no city asked for it holds none, and reads what it did.
     func testTheGroundIsReadOnlyOfAnOpenCity() {
-        XCTAssertEqual(OverseasMaps.open, [.hongKong, .rovaniemi])
-        XCTAssertEqual(RealWorldData.load(overseas: OverseasMaps.open, pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file).overseas.map(\.city), [OverseasMap.hongKong, .rovaniemi])
+        XCTAssertEqual(OverseasMaps.open, [.hongKong, .rovaniemi, .fukuoka])
+        XCTAssertEqual(RealWorldData.load(overseas: OverseasMaps.open, pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file).overseas.map(\.city), [OverseasMap.hongKong, .rovaniemi, .fukuoka])
         XCTAssertTrue(RealWorldData.load(overseas: [], file: RealWorldDataLoadTests.file).overseas.isEmpty)
     }
 
