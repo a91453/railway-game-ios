@@ -174,8 +174,8 @@ final class CablewayTests: XCTestCase {
 
     /// ``world()`` with 1,000 residents beside B too, so tourists set out
     /// from there, and a three-star mountain at `cell`'s middle.
-    private func touring(sightAt cell: CellPosition) throws -> GameWorld {
-        var world = try world()
+    private func touring(sightAt cell: CellPosition, balance: Money = 1_000_000_000) throws -> GameWorld {
+        var world = try world(balance: balance)
         try world.setLand([LandCell(row: 8, column: 5, use: .residential, residents: 1_000, jobs: 0)]
             + (24...28).map { LandCell(row: 8, column: $0, use: .residential, residents: 200, jobs: 0) }
             + [LandCell(row: 8, column: 59, use: .residential, residents: 1_000, jobs: 0),
@@ -242,6 +242,99 @@ final class CablewayTests: XCTestCase {
         XCTAssertEqual(toured[0].riders, 0, "Monday")
         XCTAssertGreaterThanOrEqual(toured[1].riders, days[1].riders + rides)
         XCTAssertEqual(toured[1].fares, Money(toured[1].riders * 18_000))
+    }
+
+    // MARK: - Sightseers (decision 880)
+
+    /// A rope of 960 m (15 cells) far from both stations and from anyone's
+    /// home, a three-star mountain a cell past its far stop: it meets no
+    /// station and draws no land, and still the mountain's visitors come
+    /// for the ride. 960 of 1,500 m draw 64 of the 100 thousandths; each
+    /// rides there and back. None on Monday (day 0), when it stands
+    /// still, and the rides are booked with the day they were taken.
+    func testASightsVisitorsRideARopeThatMeetsNoStation() throws {
+        var world = try touring(sightAt: CellPosition(row: 1, column: 46))
+        let built = try world.createCableway(stops: [
+            CablewayStop(cell: CellPosition(row: 1, column: 30)), CablewayStop(cell: CellPosition(row: 1, column: 45)),
+        ])
+        XCTAssertNil(built.transfer)
+        XCTAssertEqual(built.feederTrips, 0)
+        XCTAssertEqual(built.localTrips, 0)
+        XCTAssertEqual(built.metres, 960)
+        XCTAssertEqual(built.sightseerPermille, 64)
+        XCTAssertEqual(world.sights(ofCableway: built.id).map(\.name), ["山"])
+        XCTAssertNil(world.attractionStation(of: AttractionID(rawValue: 1)), "the railway brings no one")
+        let sight = try XCTUnwrap(world.attraction(id: AttractionID(rawValue: 1)))
+        // Three stars draw 2,000 on a full day; a weekday 600 thousandths,
+        // a mountain in January 1,200.
+        let visitors = world.visitorsExpected(for: sight, onDay: 1)
+        XCTAssertEqual(visitors, 1_440)
+        XCTAssertEqual(world.touristsExpected(for: sight, onDay: 1), 288, "the railway's fifth of them")
+        XCTAssertEqual(world.cablewaySightseerRides(built.id, onDay: 1), 2 * (1_440 * 64 / 1_000))
+        XCTAssertEqual(world.cablewaySightseerRides(built.id, onDay: 0), 0, "Monday")
+        XCTAssertEqual(world.cablewaySightseerRides(CablewayID(rawValue: 9), onDay: 1), 0)
+        try world.advance(ticks: 2 * 1_440 + 30)
+        let days = try XCTUnwrap(world.cableway(id: built.id)).days
+        XCTAssertEqual(days.map(\.riders), [0, 184])
+        XCTAssertEqual(days[1].fares, Money(184 * 18_000))
+        XCTAssertEqual(days[1].cost, Money(960 * 500))
+    }
+
+    /// A sight goes to the rope with the nearest boarding stop, once; one
+    /// farther than 2 km from every boarding stop to none (an angle
+    /// station does not count); a rope of 1.5 km and more draws the whole
+    /// tenth; and without tourism, or in a sandbox, no one comes.
+    func testEachSightRidesItsNearestRopeWithinTwoKilometres() throws {
+        var world = try touring(sightAt: CellPosition(row: 1, column: 46), balance: 10_000_000_000)
+        let near = try world.createCableway(stops: [
+            CablewayStop(cell: CellPosition(row: 1, column: 30)), CablewayStop(cell: CellPosition(row: 1, column: 45)),
+        ])
+        // 32 cells (2,048 m) west of the sight at its nearer end, with an
+        // angle station 10 cells from it.
+        let far = try world.createCableway(stops: [
+            CablewayStop(cell: CellPosition(row: 14, column: 2)), CablewayStop(cell: CellPosition(row: 14, column: 40), boards: false),
+            CablewayStop(cell: CellPosition(row: 1, column: 14)),
+        ])
+        XCTAssertEqual(world.sights(ofCableway: near.id).count, 1)
+        XCTAssertEqual(world.sights(ofCableway: far.id), [])
+        XCTAssertEqual(world.cablewaySightseerRides(far.id, onDay: 1), 0)
+        XCTAssertGreaterThanOrEqual(far.metres, 1_500)
+        XCTAssertEqual(far.sightseerPermille, 100)
+        // A third, with a stop on the sight's own cell: nearer than the
+        // first's, a cell away.
+        let nearest = try world.createCableway(stops: [
+            CablewayStop(cell: CellPosition(row: 1, column: 46)), CablewayStop(cell: CellPosition(row: 14, column: 46)),
+        ])
+        XCTAssertEqual(world.sights(ofCableway: near.id), [], "the nearer rope has it now")
+        XCTAssertEqual(world.sights(ofCableway: nearest.id).count, 1)
+        XCTAssertEqual(world.sights(ofCableway: near.id).count + world.sights(ofCableway: far.id).count + world.sights(ofCableway: nearest.id).count, 1)
+        var plain = world
+        plain.setTourism(nil)
+        XCTAssertEqual(plain.sights(ofCableway: nearest.id), [])
+        XCTAssertEqual(plain.cablewaySightseerRides(nearest.id, onDay: 1), 0)
+        var sandbox = world
+        sandbox.setEconomyMode(.free)
+        try sandbox.advance(ticks: 2 * 1_440 + 30)
+        XCTAssertEqual(try XCTUnwrap(sandbox.cableway(id: nearest.id)).days, [], "a sandbox books no riders")
+    }
+
+    /// The sightseers come on top of the tourists the trains bring
+    /// (decision 586): the rope from A to the sight carries both.
+    func testSightseersComeOnTopOfTheTrainsTourists() throws {
+        var world = try touring(sightAt: CellPosition(row: 8, column: 26))
+        let built = try world.createCableway(stops: line)
+        let tourists = try XCTUnwrap(flows(world, onDay: 1).arrivals[AttractionID(rawValue: 1)])
+        XCTAssertEqual(built.metres, 1_378)
+        XCTAssertEqual(built.sightseerPermille, 91, "100 × 1,378 / 1,500")
+        let sightseers = world.cablewaySightseerRides(built.id, onDay: 1)
+        XCTAssertEqual(sightseers, 2 * (1_440 * 91 / 1_000))
+        var plain = world
+        plain.setTourism(nil)
+        try world.advance(ticks: 2 * 1_440 + 30)
+        try plain.advance(ticks: 2 * 1_440 + 30)
+        let toured = try XCTUnwrap(world.cableway(id: built.id)).days
+        let days = try XCTUnwrap(plain.cableway(id: built.id)).days
+        XCTAssertGreaterThanOrEqual(toured[1].riders, days[1].riders + 2 * tourists + sightseers)
     }
 
     // MARK: - Refused

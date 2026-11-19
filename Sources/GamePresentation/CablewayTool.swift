@@ -389,6 +389,21 @@ extension GameSession {
         if let station = cableway.transfer.flatMap({ world.station(id: $0.station) }) {
             rows.append(language.text("Meets \(station.name) station", "接 \(station.name)站"))
         }
+        // Decision 880: whose visitors come for the ride, or that no one
+        // has a reason to.
+        let sights = world.sights(ofCableway: id)
+        if !sights.isEmpty {
+            let shown = sights.prefix(3)
+            let more = sights.count - shown.count
+            rows.append(language.text(
+                "Visitors of \(shown.map(\.englishName).joined(separator: ", "))\(more > 0 ? " and \(more) more" : "") ride it",
+                "\(shown.map(\.name).joined(separator: "、"))\(more > 0 ? "等 \(sights.count) 個景點" : "")的遊客會來搭"
+            ))
+        } else if cableway.transfer == nil, cableway.localTrips == 0 {
+            rows.append(language.text(
+                "No station or sight nearby: few will ride it", "附近沒有車站，也沒有景點：搭的人會很少"
+            ))
+        }
         if let last = cableway.days.last {
             rows.append(last.closed
                 ? language.text("Yesterday: stood still · cost \(last.cost.moneyText)", "昨天：停駛 · 成本 \(last.cost.moneyText)")

@@ -467,10 +467,20 @@ public struct Map3DScene: Sendable {
                            builder: inout Builder) -> Map3DRealTrains? {
         if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
             let region = builder.region, margin = Map3DRealTrains.margin * Builder.metre
-            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine))) { coordinate in
+            // Decision 876: a line's box on the map and its trains are the
+            // same whatever the region, so the scene's builds keep them: a
+            // line whose box is clear of the region is not read point by
+            // point, and its timetable is made into runs once.
+            let shared = builder.shared, key = Map3DSharedBuild.RealKey(railways, frame: frame)
+            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine)), mayBeNear: { line, system in
+                shared.box(of: line, system: system, key: key, frame: frame)
+                    .meets(minX: region.minX - margin, minY: region.minY - margin, maxX: region.maxX + margin, maxY: region.maxY + margin)
+            }, made: { line, system in
+                shared.trafficLine(line, system: system, key: key, operations: operations)
+            }, isNear: { coordinate in
                 let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
                 return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
-            }
+            })
             // Decision 402: the real tracks, clear of the lines the
             // player bought.
             let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
@@ -480,7 +490,7 @@ public struct Map3DScene: Sendable {
             }
             return Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks,
                                    operations: operations, bought: bought,
-                                   frame: frame, snapshot: snapshot, builder: &builder)
+                                   frame: frame, snapshot: snapshot, builder: &builder, key: key)
         }
         return nil
     }
@@ -506,6 +516,9 @@ public struct Map3DScene: Sendable {
         builder.detailAhead = detailAhead
         builder.studyRegion = studies
         builder.buildsFacades = facades
+        // Decision 876: a part of a scene, built with the scene's track
+        // cover, with what the scene's builds worked out before it.
+        if let trackCover { builder.shared = trackCover.shared }
         // Decision 811: the land cover round the region, for the ground
         // and the forests' trees.
         if let landCover, let frame = RealWorldFrame(world: world) { builder.readLandCover(landCover, frame: frame) }
@@ -537,7 +550,11 @@ public struct Map3DScene: Sendable {
         // first, as its trenches are cut out of the ground and what lies
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
-        builder.undergroundStations = Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
+        // Decision 876 (later): once for the scene and the blocks built with its
+        // track cover, not again for each block.
+        builder.undergroundStations = builder.shared.undergroundStations(of: snapshot, originX: originX, originY: originY) {
+            Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
+        }
         builder.time("track cover")
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
@@ -578,6 +595,9 @@ public struct Map3DScene: Sendable {
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
         // Decision 791: Hong Kong's landmark towers, clear of the track.
         if let frame = RealWorldFrame(world: world) { builder.addHongKongLandmarks(frame: frame) }
+        // Decision 879: the earlier Sun Moon Lake's pier, boats, temple
+        // and pavilion, where the real ones stand.
+        if let frame = RealWorldFrame(world: world) { builder.addSunMoonLandmarks(frame: frame) }
         // Decision 869: the suspension bridges' towers and cables.
         builder.addSuspensionBridges()
         // Decision 625: the real stations' exterior studies, as landmarks,
@@ -614,13 +634,15 @@ public struct Map3DScene: Sendable {
         builder.addReindeerHerd(frame: RealWorldFrame(world: world))
         reindeerHerd = Map3DReindeerHerd(placements: builder.reindeerHerd)
         freightYards = builder.freightYardPlaces
-        screenDoors = Map3DScreenDoors.Plan(world: world)
+        screenDoors = builder.shared.screenDoors(of: world)
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
         builder.addOverheadLine()
         builder.mark("overhead line")
         // Decision 436: the platforms' small things, close up.
+        // Decision 882: the second names on the platforms' name boards.
+        if let railways, let frame = RealWorldFrame(world: world) { builder.boardSecondNames = Builder.boardSecondNames(world, railways, frame) }
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
@@ -970,6 +992,34 @@ extension Map3DScene {
         let row: Int
 
         static func < (a: ChunkKey, b: ChunkKey) -> Bool { (a.row, a.column) < (b.row, b.column) }
+
+        /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the key as one
+        /// number, column over row (two keys equal in it may still differ,
+        /// as ``==`` tells).
+        private var packed: UInt64 {
+            UInt64(truncatingIfNeeded: column) &<< 32 ^ UInt64(truncatingIfNeeded: UInt32(truncatingIfNeeded: row))
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(packed)
+        }
+
+        /// Decision 876 (later): the key's hash in a dictionary or a set,
+        /// mixed with the table's `seed` by SplitMix64's finalizer instead
+        /// of the standard library's SipHash. A 3D block looks keys up
+        /// millions of times (the ground's corners, the roads' beds and
+        /// bridges by cell), and hashing them was a sixth of a Hong Kong
+        /// block's time. These tables hold the map's own cells, not
+        /// anything an attacker picks, so a hash that is fast and spreads
+        /// them well is enough. Where in a table a key lies changes, and
+        /// nothing built depends on it: the standard library seeds every
+        /// run differently already.
+        func _rawHashValue(seed: Int) -> Int {
+            var x = packed ^ UInt64(truncatingIfNeeded: seed) &* 0x9E37_79B9_7F4A_7C15
+            x = (x ^ (x &>> 30)) &* 0xBF58_476D_1CE4_E5B9
+            x = (x ^ (x &>> 27)) &* 0x94D0_49BB_1331_11EB
+            return Int(truncatingIfNeeded: x ^ (x &>> 31))
+        }
     }
 
     /// The heights file's ground at the 64 m grid's corners round a
@@ -1170,6 +1220,9 @@ extension Map3DScene {
         /// Decision 436: each station's station kit system
         /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
         var stationSystems: [StationID: String] = [:]
+        /// Decision 882: each real station's other name (its English one
+        /// under a Chinese name), for its platforms' name boards.
+        var boardSecondNames: [StationID: String] = [:]
         /// Decision 874: the stations under a shell of their own
         /// (decision 827), with no kit canopy a sign could hang from.
         var shellRoofed: Set<StationID> = []
@@ -1266,6 +1319,12 @@ extension Map3DScene {
         /// Decision 791: the ground Hong Kong's landmarks stand on, where
         /// no footprint is drawn.
         var landmarkPlots: [PlacedSquare] = []
+        /// Decision 879: the squares a model stands on in the place of one
+        /// real building (the Wenwu temple's middle hall): the footprint
+        /// whose middle is within one is not drawn again, but counts as
+        /// built, so the houses along the roads round it stay
+        /// (``landmarkPlots`` keeps them off its cells).
+        var replacedPlots: [PlacedSquare] = []
         /// Decision 869: the suspension bridges round the scene, once found
         /// (``suspensionBridges()``).
         var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
@@ -1288,13 +1347,17 @@ extension Map3DScene {
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
         /// row and column, as ``addGround()`` lays them.
-        var corners: [ChunkKey: Float] = [:]
+        var corners = CornerHeights()
         /// Decision 737: the levelled ground of a real-world map, once
         /// ``levelGround(under:)`` has worked it out; the world's own before.
         var levelling: Map3DLevelledGround?
         /// Decision 359 (續): the whole network's track, for the tunnels
         /// beside a tunnel (``addBore(_:into:)``).
         var trackCover = Map3DTrackCover()
+        /// Decision 876: what the scene's builds work out once between
+        /// them; a builder's own until it is given a scene's
+        /// (``Map3DTrackCover/shared``).
+        var shared = Map3DSharedBuild()
         /// Decision 860: the underground platforms and their stations'
         /// boxes, from the whole network.
         var undergroundStations = Map3DUndergroundStations()
@@ -1370,10 +1433,17 @@ extension Map3DScene {
             self.world = world
             placedGround = Self.placedSquares(world, region: region, originX: originX, originY: originY)
             fileGround = heights.flatMap { grid in RealWorldFrame(world: world).map { FileGround(grid, frame: $0, region: region) } }
+            corners = CornerHeights(region: region)
         }
 
         func point(x: Double, y: Double, height: Double) -> Map3DPoint {
-            Map3DPoint(Float((x - originX) / Self.metre), Float(height / Self.metre), Float((y - originY) / Self.metre))
+            Self.point(x: x, y: y, height: height, originX: originX, originY: originY)
+        }
+
+        /// The scene point of a world point, in the scene whose origin is
+        /// (`originX`, `originY`).
+        static func point(x: Double, y: Double, height: Double, originX: Double, originY: Double) -> Map3DPoint {
+            Map3DPoint(Float((x - originX) / metre), Float(height / metre), Float((y - originY) / metre))
         }
 
         func point(_ c: WorldCoordinate) -> Map3DPoint {
@@ -1438,22 +1508,15 @@ extension Map3DScene {
             guard RealWorldFrame(world: world) != nil else { return }
             let cell = Double(Land.cellLength), bounds = world.bounds
             // The whole network's cells, so regions built apart hold the
-            // same corners.
-            var held = Set<ChunkKey>()
-            for alignment in snapshot.edges {
-                for span in alignment.edge.sectionSpans where span.end > span.start {
-                    for coordinate in sample(alignment.geometry, from: span.start, to: span.end) {
-                        held.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
-                    }
-                }
-            }
+            // same corners. Decision 876: sampled once for the scene.
+            let held = shared.samples(of: snapshot).cells
             // The region's corners and two cells round them, which the
             // strips reaching past its edge read.
             let firstColumn = Int((region.minX / cell).rounded(.down)) - 2, lastColumn = Int((region.maxX / cell).rounded(.up)) + 2
             let firstRow = Int((region.minY / cell).rounded(.down)) - 2, lastRow = Int((region.maxY / cell).rounded(.up)) + 2
             guard firstColumn <= lastColumn, firstRow <= lastRow else { return }
             let world = world, file = fileGround
-            corners = [:]
+            corners = CornerHeights(region: region)
             levelling = Map3DLevelledGround(
                 held: held, rows: firstRow...lastRow, columns: firstColumn...lastColumn,
                 lastRow: Int((Double(bounds.height) / cell).rounded(.down)), lastColumn: Int((Double(bounds.width) / cell).rounded(.down)),
@@ -1640,14 +1703,85 @@ extension Map3DScene {
         /// `column`), in metres, as ``addGround(water:)`` lays it, worked
         /// out once.
         mutating func groundCorner(row: Int, column: Int) -> Float {
-            let key = ChunkKey(column: column, row: row)
-            if let known = corners[key] { return known }
+            if let known = corners[row, column] { return known }
             let cell = Double(Land.cellLength)
             let own = worldGround(x: Double(column) * cell, y: Double(row) * cell)
             // Decision 737: the levelled ground on a real-world map.
             let height = levelling?.corner(row: row, column: column, own: own) ?? own
-            corners[key] = height
+            corners[row, column] = height
             return height
+        }
+
+        /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the corners worked
+        /// out (``groundCorner(row:column:)``), those of the region and
+        /// ``reach`` cells round it in an array, the rest by key. The
+        /// drawn ground is asked for hundreds of thousands of times in a
+        /// block (every road's bed, wall and bridge), and hashing each
+        /// corner's key was a tenth of a Hong Kong block's time; what is
+        /// kept is the same either way.
+        struct CornerHeights {
+            /// Cells round the region kept in the array: past the road
+            /// beds (``Map3DRoadBed/reach``) and the base map's bridges,
+            /// read from the tiles round the region
+            /// (``Map3DBaseMap/bridgeReach``), each kept to its tile
+            /// (some 2.3 km across in Hong Kong).
+            static let reach = 48
+            /// The most corners kept in the array (20 MB of heights and flags).
+            static let most = 4_000_000
+            private var firstRow = 0, firstColumn = 0, rows = 0, columns = 0
+            private var heights: [Float] = []
+            private var known: [Bool] = []
+            private var others: [ChunkKey: Float] = [:]
+
+            init() {}
+
+            init(region: WorldRegion) {
+                let cell = Double(Land.cellLength)
+                let first = (row: Int((region.minY / cell).rounded(.down)) - Self.reach, column: Int((region.minX / cell).rounded(.down)) - Self.reach)
+                let last = (row: Int((region.maxY / cell).rounded(.up)) + Self.reach, column: Int((region.maxX / cell).rounded(.up)) + Self.reach)
+                guard first.row <= last.row, first.column <= last.column else { return }
+                let rows = last.row - first.row + 1, columns = last.column - first.column + 1
+                guard rows.multipliedReportingOverflow(by: columns).partialValue <= Self.most, rows <= Self.most, columns <= Self.most else { return }
+                (firstRow, firstColumn, self.rows, self.columns) = (first.row, first.column, rows, columns)
+                heights = Array(repeating: 0, count: rows * columns)
+                known = Array(repeating: false, count: rows * columns)
+            }
+
+            private func index(_ row: Int, _ column: Int) -> Int? {
+                let r = row &- firstRow, c = column &- firstColumn
+                guard r >= 0, r < rows, c >= 0, c < columns else { return nil }
+                return r * columns + c
+            }
+
+            subscript(row: Int, column: Int) -> Float? {
+                get {
+                    if let at = index(row, column) { return known[at] ? heights[at] : nil }
+                    return others[ChunkKey(column: column, row: row)]
+                }
+                set {
+                    if let at = index(row, column) {
+                        known[at] = newValue != nil
+                        heights[at] = newValue ?? 0
+                    } else {
+                        others[ChunkKey(column: column, row: row)] = newValue
+                    }
+                }
+            }
+
+            /// The corner at `key` (its column and row).
+            subscript(key: ChunkKey) -> Float? {
+                get { self[key.row, key.column] }
+                set { self[key.row, key.column] = newValue }
+            }
+
+            /// The corners worked out.
+            var keys: [ChunkKey] {
+                var keys = Array(others.keys)
+                for at in known.indices where known[at] {
+                    keys.append(ChunkKey(column: firstColumn + at % columns, row: firstRow + at / columns))
+                }
+                return keys
+            }
         }
 
         /// Decision 517 續 (BUILD3D-3): the corners ``addGround(water:)``
@@ -1787,9 +1921,10 @@ extension Map3DScene {
         func trackCells(_ snapshot: RailwaySnapshot) -> Set<ChunkKey> {
             var cells = Set<ChunkKey>()
             let cell = Double(Land.cellLength), region = region
-            for alignment in snapshot.edges {
-                for span in alignment.edge.sectionSpans where span.end > span.start {
-                    for coordinate in sample(alignment.geometry, from: span.start, to: span.end) {
+            for spans in shared.samples(of: snapshot).edges {
+                // Decision 876: only the stretches whose box reaches.
+                for span in spans where span.end > span.start && span.reaches(region, by: cell) {
+                    for coordinate in span.line {
                         let x = Double(coordinate.x), y = Double(coordinate.y)
                         guard x >= region.minX - cell, x <= region.maxX + cell, y >= region.minY - cell, y <= region.maxY + cell else { continue }
                         cells.insert(ChunkKey(column: Int((x / cell).rounded(.down)), row: Int((y / cell).rounded(.down))))
@@ -1814,11 +1949,14 @@ extension Map3DScene {
                 let x = Double(coordinate.x), y = Double(coordinate.y)
                 return x >= region.minX && x <= region.maxX && y >= region.minY && y <= region.maxY
             }
-            for alignment in snapshot.edges {
+            // Decision 876: the scene's samples, and only the stretches
+            // whose box reaches the region (the rest lay nothing here).
+            let samples = shared.samples(of: snapshot)
+            for (number, alignment) in snapshot.edges.enumerated() {
                 // Decision 407: a high-speed line's on its box girder.
                 let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
-                for span in alignment.edge.sectionSpans where span.end > span.start {
-                    let line = sample(alignment.geometry, from: span.start, to: span.end)
+                for span in samples.edges[number] where span.end > span.start && span.reaches(region) {
+                    let line = span.line
                     guard line.count > 1 else { continue }
                     for coordinate in line where inside(coordinate) {
                         cleared.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
@@ -1837,7 +1975,11 @@ extension Map3DScene {
         /// The centre line between `start` and `end` along `geometry`, at
         /// least every ``trackStep`` metres, with its heights.
         func sample(_ geometry: TrackGeometry, from start: Int64, to end: Int64) -> [WorldCoordinate] {
-            let step = Int64(Self.trackStep * Self.metre)
+            Self.sample(geometry, from: start, to: end)
+        }
+
+        static func sample(_ geometry: TrackGeometry, from start: Int64, to end: Int64) -> [WorldCoordinate] {
+            let step = Int64(trackStep * metre)
             var distances: [Int64] = [start]
             var next = start + step
             for distance in geometry.distances where distance > start && distance < end {
@@ -1853,7 +1995,7 @@ extension Map3DScene {
                 next += step
             }
             distances.append(end)
-            return Self.thinned(distances.map { geometry.location(at: $0).position })
+            return thinned(distances.map { geometry.location(at: $0).position })
         }
 
         /// MAP3D-CAP: how far, in metres, the drawn track may stand from

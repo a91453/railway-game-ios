@@ -168,8 +168,15 @@ extension Map3DSceneMemoryTests {
         // run on along the ground crosses, kept on the ground (they are
         // there in the real world): in docs/decisions/607.md. Lower these
         // as they are mended.
+        // Decision 391's later note (ELEVATED-ROAD-HEIGHT): with the first
+        // level at 9 m, 232 sites (ramps 118 → 125, a deck and the ground
+        // 67 → 73, two decks 28 → 34; 44 new, 26 gone). A bridge too
+        // short to come down inside itself has ramps 60 m longer, past
+        // more side streets, and a link road's bridge comes down beside
+        // the bridge it left. The price of the height, taken knowingly
+        // and scored to mend (docs/decisions/391.md), not a mend undone.
         XCTAssertLessThanOrEqual(kinds[.deckAndGround] ?? 0, 80, "\(kinds[.deckAndGround] ?? 0) sites where a deck and a road on the ground meet 0.5–4.5 m apart")
-        XCTAssertLessThanOrEqual(all.count, 215, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
+        XCTAssertLessThanOrEqual(all.count, 235, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
     }
 }
 

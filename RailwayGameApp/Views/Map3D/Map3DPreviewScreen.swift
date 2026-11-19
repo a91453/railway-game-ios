@@ -1716,12 +1716,13 @@ final class Map3DTrainFeed {
     }
 
     /// Decision 831: Santa's sleigh now, on a real-world map on Christmas
-    /// Eve; a pass that begins now flies over `target`.
+    /// Eve, and now and then on the event's other days, flying home; a
+    /// pass that begins now flies over `target`.
     private func santa(in scene: Map3DScene, target: Map3DPoint) -> Map3DAircraft.Drawn? {
         guard let world = busWorld, world.geoAnchor != nil else { return nil }
         return santaSky.sleigh(at: Date(), origin: (scene.originX, scene.originY), switchedOn: Self.festive,
-                               still: UIAccessibility.isReduceMotionEnabled) {
-            SantaFlight.track(world: world, scene: scene, over: target)
+                               still: UIAccessibility.isReduceMotionEnabled) { home in
+            SantaFlight.track(world: world, scene: scene, over: target, home: home)
         }
     }
 

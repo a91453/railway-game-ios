@@ -288,8 +288,12 @@ extension Map3DScene.Builder {
             // no city lot.
             // Decision 791: nor on a landmark's ground (it draws the building).
             let drawn = !onPlacedGround(rings[0]) && !underLandmark(point(x: middle.x, y: middle.y, height: 0))
+            // Decision 879: nor where a model stands in its place, though
+            // it counts as built.
+            let spot = point(x: middle.x, y: middle.y, height: 0)
+            let replaced = replacedPlots.contains { $0.minX <= spot.x && spot.x <= $0.maxX && $0.minZ <= spot.z && spot.z <= $0.maxZ }
             standing.formUnion(count(building.rings, drawn: drawn, into: &cover))
-            guard drawn else { continue }
+            guard drawn, !replaced else { continue }
             var storeys = building.drawnStoreys, kind = building.kind
             // Decision 699: an airport's terminal, at least four storeys.
             if isTerminal(rings[0]) { (storeys, kind) = (max(storeys, 4), .terminal) }
