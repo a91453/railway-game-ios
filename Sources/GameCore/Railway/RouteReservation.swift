@@ -1518,6 +1518,18 @@ extension GameWorld {
         var paths = PathMemo()
         for (place, train) in trains.enumerated() {
             guard let claim = claims[train.id] else { continue }
+            // Decision 881, later (SANYING-0632): an empty run's claim
+            // does not bind a train standing at an end of a line where the
+            // empty run ends, its departure due: leaving, it frees a
+            // platform the empty run comes to.
+            if train.isDeadheading, let bound = destinationStation(of: train), isLineEnd(bound), arrivesLater(train) {
+                readsTheTime = true
+                for other in trains where other.id != train.id && isDueToLeave(other) {
+                    if case .waitingAtStop(let stop, _)? = other.execution, other.timetable[stop].station == bound {
+                        released[train.id, default: []].insert(other.id)
+                    }
+                }
+            }
             for (ahead, isAhead) in holders.holding(claim.cover, except: train.id, fouling: false, in: network).enumerated() where isAhead {
                 let leader = trains[ahead]
                 let cover = claims[leader.id]?.cover ?? envelopeCover(of: leader)
@@ -1572,6 +1584,36 @@ extension GameWorld {
               case .setsOff(let moved, _) = leaving(train, stop: stop, cycle: cycle, memo: &memo)
         else { return nil }
         return envelopeCover(of: moved)
+    }
+
+    /// Decision 881, later (SANYING-0632): the station of the last call
+    /// `train` travels to, the end of its run; `nil` while it travels to
+    /// any other call, or does not travel.
+    private func destinationStation(of train: Train) -> StationID? {
+        guard case .travellingToStop(let stop, let cycle)? = train.execution, train.call(after: stop, cycle: cycle) == nil else { return nil }
+        return train.timetable[stop].station
+    }
+
+    /// Decision 881, later: whether `train`, an empty run, is timetabled
+    /// to reach the end of its run more than two minutes from now. Released
+    /// for one due sooner, Hong Kong's Airport Express, Tung Chung and
+    /// Disneyland Resort lines bought together ran 67 runs late instead of
+    /// 62 under a new game's rules (a train at Hong Kong left a minute
+    /// before the empty run came in behind the one it followed); held for
+    /// one due within seven minutes, the Sanying Line's train at Yingtao
+    /// Fude still waited.
+    private func arrivesLater(_ train: Train) -> Bool {
+        guard case .travellingToStop(let stop, let cycle)? = train.execution else { return false }
+        return train.scheduledArrival(of: stop, cycle: cycle).seconds > clock.now.seconds + 120
+    }
+
+    /// Decision 881, later: whether `station` is the first or last stop of
+    /// a line with runs that is not a ring. Released at any station an
+    /// empty run ends, a train without a service there too, the Taoyuan
+    /// Airport MRT under a new game's rules deadlocked up to 28 trains;
+    /// at the ends of lines, with a train without a service, 26.
+    private func isLineEnd(_ station: StationID) -> Bool {
+        lines.contains { $0.hasRuns && !$0.isRing && ($0.stops.first == station || $0.stops.last == station) }
     }
 
     /// Decision 850: whether `train`, a service or an empty run, stands at

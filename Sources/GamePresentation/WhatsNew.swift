@@ -30,6 +30,58 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 141.
+        Entry(
+            id: "2026-11-19-141",
+            items: [
+                Line(
+                    english: "A track you draw across another at the same height makes a level crossing where they meet.",
+                    chinese: "畫線越過同一高度的軌道時，交會處自動做成平面交叉。"
+                ),
+                Line(
+                    english: "Write your own departure melody in the melody workshop and give it to any station.",
+                    chinese: "在旋律工作坊寫自己的發車旋律，指定給想要的車站。"
+                ),
+                Line(
+                    english: "Platforms have station name boards along their backs.",
+                    chinese: "平面、高架、地下月台的背面立起站名牌。"
+                ),
+                Line(
+                    english: "Rovaniemi's streets have Finnish bus shelters, street lights, give-way signs, roundabout lines and street name signs.",
+                    chinese: "羅瓦涅米多了芬蘭的候車亭、路燈、讓路標誌、圓環讓路線與路名牌。"
+                ),
+                Line(
+                    english: "Remove a downloaded map's data in Settings, or download it again.",
+                    chinese: "設定裡可以刪除已下載的地圖資料，或重新下載。"
+                ),
+                Line(
+                    english: "Zhuzhong has side platforms with an island between the two lines, all on one viaduct.",
+                    chinese: "竹中站照真實配成兩側月台加一座島，兩條線同在高架一層。"
+                ),
+                Line(
+                    english: "Hong Kong's 3D blocks draw faster, and saves with many Taiwan lines run more smoothly.",
+                    chinese: "香港 3D 街區畫得更快，台灣買很多線的存檔跑得更順。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "The last train gets into its terminus even when trains done for the day fill a platform there.",
+                    chinese: "收班車占著終點月台時，末班車改進另一個空月台。"
+                ),
+                Line(
+                    english: "The rebuilt Taoyuan Airport MRT no longer jams.",
+                    chinese: "機場捷運改建線不再卡死。"
+                ),
+                Line(
+                    english: "Official departure melody 2 plays its first, highest note.",
+                    chinese: "官方發車旋律二開頭最高的那個音會響出來。"
+                ),
+                Line(
+                    english: "Binhai Shalun has one island platform, and the Blue Coast Line runs through from Hongshulin.",
+                    chinese: "濱海沙崙站照真實只剩一座島，藍海線從紅樹林直通，不用在沙崙轉車。"
+                ),
+            ]
+        ),
         // 140.
         Entry(
             id: "2026-11-19-140",
