@@ -398,6 +398,126 @@
       "endLevel": 0.0
     },
     {
+      "file": "melody-piano-74.wav",
+      "kind": "sample",
+      "made": "melody_samples.py, decision 883",
+      "pitch": 74,
+      "rate": 32000,
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "sha256": "9f75cea1103d291d5b09176fbc9cfcf6cb9a0772bcce568b9d235fa5152ec7f5",
+      "frames": 115200,
+      "seconds": 3.6,
+      "peakDbfs": -5.12,
+      "rmsDbfs": -22.49,
+      "largestStep": 0.09698,
+      "endLevel": 0.0
+    },
+    {
+      "file": "melody-piano-78.wav",
+      "kind": "sample",
+      "made": "melody_samples.py, decision 883",
+      "pitch": 78,
+      "rate": 32000,
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "sha256": "337871b0b99d4c5cb6f670f00e307cfca921804d16dcde0a7b6d2b6454bc3726",
+      "frames": 115200,
+      "seconds": 3.6,
+      "peakDbfs": -3.9,
+      "rmsDbfs": -22.43,
+      "largestStep": 0.10577,
+      "endLevel": 0.0
+    },
+    {
+      "file": "melody-piano-82.wav",
+      "kind": "sample",
+      "made": "melody_samples.py, decision 883",
+      "pitch": 82,
+      "rate": 32000,
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "sha256": "0852b5a77540161bf19c424c114a3a36a0c74140ba4e42f78d3bba8cdcd466b1",
+      "frames": 115200,
+      "seconds": 3.6,
+      "peakDbfs": -3.31,
+      "rmsDbfs": -25.87,
+      "largestStep": 0.14157,
+      "endLevel": 0.0
+    },
+    {
+      "file": "melody-piano-86.wav",
+      "kind": "sample",
+      "made": "melody_samples.py, decision 883",
+      "pitch": 86,
+      "rate": 32000,
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "sha256": "9454d0ca3ddd8fb80d957471fadbe74497f05d56118fed7aeb581f1f0243b636",
+      "frames": 115200,
+      "seconds": 3.6,
+      "peakDbfs": -0.92,
+      "rmsDbfs": -21.48,
+      "largestStep": 0.21304,
+      "endLevel": 0.0
+    },
+    {
+      "file": "melody-piano-90.wav",
+      "kind": "sample",
+      "made": "melody_samples.py, decision 883",
+      "pitch": 90,
+      "rate": 32000,
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "sha256": "0a7257f4af426f6e2eb00c991760d3444ee5becfd3ccaa2106c786b653784294",
+      "frames": 115200,
+      "seconds": 3.6,
+      "peakDbfs": -5.69,
+      "rmsDbfs": -28.74,
+      "largestStep": 0.14935,
+      "endLevel": 0.0
+    },
+    {
+      "file": "melody-piano-93.wav",
+      "kind": "sample",
+      "made": "melody_samples.py, decision 883",
+      "pitch": 93,
+      "rate": 32000,
+      "chamberBank": {
+        "name": "railway chamber",
+        "spec": "tools/audio/sampled/chamber.json",
+        "specSha256": "904a29a1b35e50b603eadc4ed947850f370658b7dc7ec81c204aef1e7bc1adb5",
+        "sha256": "ccf4747a4b4801e54dc9397d976df84eb55c6812d0021d99e488ca6682916e4e"
+      },
+      "sha256": "94467f800f8d66d94b48083f3bee0eccc54d0c95db372d28565f81bbe86e22d2",
+      "frames": 115200,
+      "seconds": 3.6,
+      "peakDbfs": -4.87,
+      "rmsDbfs": -28.88,
+      "largestStep": 0.22534,
+      "endLevel": 0.0
+    },
+    {
       "file": "music-loop.caf",
       "stems": [
         {

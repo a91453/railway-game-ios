@@ -456,3 +456,10 @@ its map's airports when it opens the save).
   (`StationSoundsTests.testTheVersion110SaveKeepsALaterMelody`, written
   with `MORE_MELODIES_SAVE_NEW=1` by the build that first made it;
   decision 868).
+- `v111-player-melody.json`: the same two stations and line, a melody
+  the player wrote (the tune of official melody 1, eight notes and two
+  more) saved, Station A set to play it and Station B departure melody 3,
+  run 30 minutes at the normal speed
+  (`PlayerMelodyTests.testTheVersion111SaveKeepsAPlayerMelody`, written
+  with `PLAYER_MELODY_SAVE_NEW=1` by the build that first made it;
+  decision 883).

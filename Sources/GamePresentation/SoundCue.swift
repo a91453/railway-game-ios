@@ -56,6 +56,10 @@ public enum SoundCue: Hashable, Sendable {
     /// Decision 853: a watched train's doors started closing at 60× or
     /// slower, and its line's melody plays (``DepartureMelody``).
     case departure(DepartureMelody)
+    /// Decision 883: a watched train's doors started closing at a station
+    /// set to a melody the player wrote, and these notes play, made on the
+    /// device from the piano's samples (``PlayerMelodySynth``).
+    case playerDeparture([MelodyNote])
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -196,6 +200,9 @@ public enum SoundCue: Hashable, Sendable {
         // Decision 853: played once on the sampled piano, AAC as the
         // music's tunes played once are.
         case .departure(let melody): ("departure-\(melody.rawValue)", "m4a")
+        // Decision 883: made on the device; this file plays only when the
+        // samples cannot be read.
+        case .playerDeparture: ("departure-a", "m4a")
         }
     }
 }
