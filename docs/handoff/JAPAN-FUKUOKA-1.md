@@ -7,7 +7,7 @@
 
 ## 還留下的（照順序，一項一串）
 
-1. **FUKUOKA-GROUND**（2.85）：底圖、地形、水域、人口、機場、不蓋區、建物，照 `tools/rovaniemi-map/README.md` 的 3–6 步。
+1. ~~**FUKUOKA-GROUND**~~（2.85，**已做，`FUKUOKA-GROUND.md`**）：底圖、地形、水域、人口、機場、不蓋區、建物，照 `tools/rovaniemi-map/README.md` 的 3–6 步。
    - 九州的 OSM 全包：`https://osmtoday.com/asia/japan/kyushu.pbf`（354 MB，雲端下載約 2 分）；`apt-get update && apt-get install -y osmium-tool` 才裝得到。**不要用 pyosmium 直接掃全包**（單執行緒跑超過 10 分還沒完），先 `osmium extract` 切範圍（13 秒）。
    - 人口：WorldPop 日本，或国土数値情報 mesh1000（CC BY 4.0）；N05 是非商用，**不能用**。
    - 地形：Copernicus GLO-30（羅瓦涅米用的）或國土地理院 DEM（授權要查）。

@@ -1,0 +1,46 @@
+{
+ "decision": 854,
+ "extract": {
+  "file": "fukuoka.pbf",
+  "sha256": "c73183ab0d1bd0fa914d5c77b30996bb08ffbcc996cf5ae563c667d7a2df4b60",
+  "from": "https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b 130.25,33.49,130.52,33.75 -s smart",
+  "licence": "ODbL 1.0, © OpenStreetMap contributors",
+  "newestBuildingEdit": "2026-11-17T10:27:49Z",
+  "buildingsRead": 310896
+ },
+ "buildings": 284964,
+ "leftOut": {
+  "small": 25737
+ },
+ "tiles": 995,
+ "storeysFrom": {
+  "guess": 35538,
+  "tags": 249621
+ },
+ "uses": {
+  "agricultural": 590,
+  "civic": 8218,
+  "commercial": 17733,
+  "education": 1316,
+  "entertainment": 186,
+  "industrial": 3764,
+  "medical": 201,
+  "none": 46634,
+  "outbuilding": 45,
+  "religious": 80,
+  "residential": 206196,
+  "service": 4,
+  "transportation": 192
+ },
+ "storeys": {
+  "median": 2,
+  "tallest": 48,
+  "of1": 60327,
+  "of2": 178950,
+  "of3to5": 35361,
+  "of6andMore": 10521
+ },
+ "rawBytes": 5522159,
+ "archiveBytes": 4483124,
+ "sha256": "ba8f95cfec5723ed83eb70fa7edaf9ed92412eca87a273cc89c5d6ef26f85ecc"
+}
