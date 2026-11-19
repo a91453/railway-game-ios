@@ -72,6 +72,10 @@ public enum WhatsNew {
                     english: "Official departure melody 2 plays its first, highest note.",
                     chinese: "官方發車旋律二開頭最高的那個音會響出來。"
                 ),
+                Line(
+                    english: "Binhai Shalun has one island platform, and the Blue Coast Line runs through from Hongshulin.",
+                    chinese: "濱海沙崙站照真實只剩一座島，藍海線從紅樹林直通，不用在沙崙轉車。"
+                ),
             ]
         ),
         // 140.
