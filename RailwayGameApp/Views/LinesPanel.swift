@@ -1854,6 +1854,19 @@ struct LinesPanel: View {
                     ))
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
+                    // Decision 795 (later): every passenger line at once.
+                    if session.world.lines.filter({ !$0.isFreight }).count > 1 {
+                        let all = session.allPassengerLinesWearChristmasLivery
+                        Button {
+                            session.setChristmasLiveryOnAllPassengerLines(!all)
+                        } label: {
+                            Text(verbatim: all
+                                ? session.language.text("Take It Off Every Line", "全部路線取消")
+                                : session.language.text("Put It on Every Passenger Line", "全部客運路線套用"))
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("line.christmasLivery.all")
+                    }
                 }
             }
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
