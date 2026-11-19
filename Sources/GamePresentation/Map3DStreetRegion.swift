@@ -21,6 +21,15 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// until the Road Traffic Act of 2020), no paint on its kerbs, no
     /// scooters, and signals that show red and amber before green.
     case finland
+    /// FUKUOKA-STREETS: Japan's (Fukuoka's map, decision 854): traffic on
+    /// the left as Hong Kong's, white lines between its two ways (yellow
+    /// only where overtaking is barred), no paint on its kerbs, few
+    /// scooters, signals hung over the lanes from an arm as Taiwan's that
+    /// go green, amber, red with no red and amber together, pedestrian
+    /// signals of a standing and a walking figure with no countdown,
+    /// utility poles along the lanes and vending machines everywhere
+    /// (Road Traffic Act and its signal order, 道路交通法施行令 第2条).
+    case japan
 
     /// The region of `world`'s map: Hong Kong for a map anchored in Hong
     /// Kong (the map pack's, ``OverseasMap/hongKong``), Finland for one
@@ -36,7 +45,7 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     }
 
     /// Whether its road traffic keeps to the left.
-    public var keepsLeft: Bool { self == .hongKong }
+    public var keepsLeft: Bool { self == .hongKong || self == .japan }
 
     /// Which way across a road its traffic keeps from the middle, as a
     /// multiple of the way to the right: 1 in Taiwan, −1 in Hong Kong.
@@ -65,16 +74,16 @@ public enum Map3DStreetRegion: Sendable, Equatable {
 
     /// Whether its signals show red and amber together before green.
     /// Decision 802: Finland's too.
-    public var hasRedAmber: Bool { self != .taiwan }
+    public var hasRedAmber: Bool { self == .hongKong || self == .finland }
 
     /// Decision 802: whether its kerbs are painted where no stopping or
     /// waiting is allowed (decision 447): Taiwan's red and yellow, Hong
     /// Kong's yellow. Finland's are bare.
-    var hasKerbLines: Bool { self != .finland }
+    var hasKerbLines: Bool { self == .taiwan || self == .hongKong }
 
     /// Decision 802: whether scooters ride its streets (decision 259):
     /// not Finland's, under snow.
-    var hasScooters: Bool { self != .finland }
+    var hasScooters: Bool { self == .taiwan || self == .hongKong }
 
     /// Decision 802: whether its taxis are Taiwan's yellow (the last of
     /// ``Map3DStreetLife/carPaints``).
@@ -96,7 +105,7 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// Decision 846: whether its signals stand on posts at the kerb, the
     /// head upright (``Map3DHongKongSignal``): Hong Kong's and Finland's.
     /// Taiwan's hang over the lanes from an arm (decision 355).
-    var standsSignalsAtKerb: Bool { self != .taiwan }
+    var standsSignalsAtKerb: Bool { self == .hongKong || self == .finland }
 
     /// Decision 846: whether its pedestrian signals have a countdown's box
     /// beside the lights (decision 445): Taiwan's. Hong Kong's and
@@ -124,4 +133,16 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// street lights, bus stops' signs, and the pedestrian crossing's sign
     /// where a crossing has no signal.
     var hasFinnishFurniture: Bool { self == .finland }
+
+    /// Decision 846's second later note: whether the roads coming into a
+    /// roundabout have the give-way line painted across their incoming
+    /// lanes at the ring's edge: Finland's row of white triangles
+    /// (Traficom L2, the "shark's teeth"). Hong Kong's roundabouts are
+    /// left as they are.
+    var paintsGiveWayLines: Bool { self == .finland }
+
+    /// Decision 846's third later note: whether a street name sign stands
+    /// at the corner of its junctions (Finland's blue plate with white
+    /// letters, from the base map's road names).
+    var hasStreetNameSigns: Bool { self == .finland }
 }

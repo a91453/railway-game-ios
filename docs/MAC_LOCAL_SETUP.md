@@ -13,13 +13,13 @@
 
 ## 1. 工具版本要與 CI 一致
 
-CI 的 `macos-26` runner（2026-11-04，從 `ios-build.yml` 的 **Toolchain versions** 步驟 log 讀到）：
+CI 的 `xcode-27` 映像（決策 857，2026-11-18 起；版本選在 `.github/actions/select-xcode`，下表讀自 GitHub `actions/runner-images` 的映像說明）：
 
 | 項目 | 版本 |
 | --- | --- |
-| Xcode | 26.6（17F113） |
-| macOS | 26.6.2 |
-| iOS Simulator SDK | 26.5 |
+| Xcode | 27.2（27B52） |
+| macOS | 27.0.1 |
+| iOS Simulator SDK | 27.2 |
 
 **以 `ios-build.yml` 該步驟最新一次的 log 為準**：runner 映像會更新，這張表會舊。Mac 上用下面指令對照：
 

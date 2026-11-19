@@ -12,7 +12,7 @@ extension SoundCue {
     /// station chime, everything else an effect.
     public var category: SoundCategory {
         switch self {
-        case .arrival, .departure: .chimes
+        case .arrival, .departure, .playerDeparture: .chimes
         case .track, .transition, .built, .income, .refused, .warning, .goalMet, .lineAcquired, .ticketIssued, .horn, .newTrain, .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen: .effects
         }
     }

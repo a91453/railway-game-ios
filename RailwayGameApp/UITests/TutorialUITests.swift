@@ -126,7 +126,14 @@ final class TutorialUITests: XCTestCase {
         waitForStep(app, title: "Tap Station", "The ✓ did not build the track")
         let platform = app.networkMode("Station")
         XCTAssertTrue(platform.appears(within: 10))
-        XCTAssertTrue(platform.becomesHittable(), "The Platform mode cannot be tapped")
+        // The card with the modes slides open after the ✓: on the iOS 27.2
+        // Simulator the mode was there and could not be touched for the 2
+        // seconds this waited (pull request #2453, run 44265510040), so it
+        // is given as long as it is given to appear, and a failure says
+        // where everything was.
+        XCTAssertTrue(
+            platform.becomesHittable(within: 10),
+            "The Platform mode cannot be tapped: mode \(platform.frame), tutorial card \(card.exists ? card.frame : .null), details card \(app.descendants(matching: .any)["details.card"].firstMatch.exists ? app.descendants(matching: .any)["details.card"].firstMatch.frame : .null), screen \(app.frame)")
         if card.exists {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
@@ -192,7 +199,8 @@ final class TutorialUITests: XCTestCase {
         // 1b64367's full lane, run 41272201294: its recording shows the
         // folded card above the dock and Lines uncovered throughout).
         // Something that really covers it still fails, with the frames.
-        XCTAssertTrue(lines.becomesHittable(within: 10),
+        if !lines.becomesHittable(within: 10) { app.logTree("Lines not hittable") }
+        XCTAssertTrue(lines.isHittable,
                       "The Lines button is covered: button \(lines.frame), card \(card.exists ? card.frame : .null), folded \(folded.exists ? folded.frame : .null)")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
@@ -304,7 +312,11 @@ final class TutorialUITests: XCTestCase {
 
         // Pause through the real HUD, as checkNavigation, so a running clock
         // does not rebuild the menu while XCTest targets it.
-        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause"))).tap()
+        // The demo lays its real lines first, and the speed controls wait
+        // for it (Review E's E2): on the iOS 27.2 iPad Simulator that took
+        // longer than the 5 seconds this waited (pull request #2453), so
+        // the Pause is given 30.
+        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), within: 30).tap()
         app.buttons["Game menu"].tap()
         hittableButton(app.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", "menu.tutorial", "Tutorial"))).tap()
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -592,10 +604,10 @@ final class TutorialUITests: XCTestCase {
         )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
-        let resume = app.buttons["menu.tutorial.resume"]
+        let resume = app.menuItems("menu.tutorial.resume", label: language == "en" ? "Continue Tutorial" : "繼續教學").firstMatch
         XCTAssertTrue(resume.appears(within: 10), "The skipped tutorial is not offered to continue")
         XCTAssertTrue(resume.label.contains(language == "en" ? "Step 1" : "第 1 步"), resume.label)
-        hittableButton(app.buttons.matching(identifier: "menu.tutorial.restart")).tap()
+        hittableButton(app.menuItems("menu.tutorial.restart", label: language == "en" ? "Start Over" : "從頭開始")).tap()
         openCard(app)
         XCTAssertTrue(next.appears(within: 10))
         XCTAssertFalse(back.exists)
@@ -605,8 +617,8 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
     }
 
-    private func hittableButton(_ query: XCUIElementQuery) -> XCUIElement {
-        let deadline = Date().addingTimeInterval(5)
+    private func hittableButton(_ query: XCUIElementQuery, within timeout: TimeInterval = 5) -> XCUIElement {
+        let deadline = Date().addingTimeInterval(timeout)
         repeat {
             if let visible = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
                 return visible
@@ -614,7 +626,7 @@ final class TutorialUITests: XCTestCase {
             // Only the test runner waits; the app can finish opening the menu.
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
-        XCTFail("No visible tutorial menu action")
+        XCTFail("No visible tutorial menu action: \(XCUIApplication().logTree("no hittable \(query), enabled \(query.allElementsBoundByIndex.map(\.isEnabled))"))")
         return query.firstMatch
     }
 

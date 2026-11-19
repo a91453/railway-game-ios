@@ -483,7 +483,9 @@ extension Map3DScene.Builder {
         // Decision 764: its roof, and its walls a little lighter or darker.
         let wall = Self.varied(wall, r(1041)), roof = Self.pickRoof(r(1040), low: floors <= 3)
         let height = groundFloor + upper * (floors - 1)
-        let arcade = shops && r(5) < 0.8
+        // FUKUOKA-STREETS: arcades and roof clutter only where they are
+        // Taiwan's (Japan's houses fall through to here).
+        let arcade = shops && look.buildings.hasArcades && r(5) < 0.8
         // Decision 231: the ground floor a shop or a
         // rolling shutter, the floors above windows (a
         // grille or a balcony on a 透天厝), the flanks
@@ -519,6 +521,9 @@ extension Map3DScene.Builder {
             mesh.addBox(base: middle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
                         height: 0.7, top: roof, side: Map3DColor.shaded(wall, 0.95),
                         topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
+        }
+        if !look.buildings.hasRoofClutter {
+            return
         }
         if r(6) < 0.75 {
             // Decision 267: on three in four roofs, a round water

@@ -667,6 +667,12 @@ extension GameError {
             language.text("This route can't be flown from this airport.", "這座機場飛不了這條航線。")
         case .airRouteAlreadyBought:
             language.text("You already fly this route, or as many routes as you can.", "這條航線你已經在飛了，或已經到了航線的上限。")
+        case .invalidMelody:
+            language.text("A melody needs at least one note, and at most \(PlayerMelody.maximumNotes).", "旋律至少要有一個音，最多 \(PlayerMelody.maximumNotes) 個。")
+        case .tooManyMelodies:
+            language.text("You can keep up to \(PlayerMelody.maximumMelodies) melodies: delete one first.", "最多可以存 \(PlayerMelody.maximumMelodies) 首旋律：先刪掉一首。")
+        case .unknownPlayerMelody:
+            language.text("That melody no longer exists.", "這首旋律已經不在了。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:

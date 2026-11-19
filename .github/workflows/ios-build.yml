@@ -343,7 +343,7 @@ jobs:
     # failed, it runs.
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.passed != 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
     # first boot's data migration (up to 14 minutes), the warm-up launch and
@@ -370,6 +370,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
+
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
 
       # The translation check compares the export with the committed catalog,
       # not with what an Xcode build or export may add to the working copy.
@@ -445,23 +448,12 @@ jobs:
             exit 1
           fi
 
+      # An iPhone of the runtime the selected Xcode's SDK is (the image holds
+      # several), a Pro when there is one, never a folding one (decision 857).
       - name: Select an available iPhone Simulator
         run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
-          iphones = [device for runtime, group in devices.items()
-                     if ".iOS-" in runtime for device in group
-                     if device["isAvailable"] and device["name"].startswith("iPhone")]
-          if not iphones:
-              raise SystemExit("No available iPhone Simulator")
-          device = iphones[0]
-          print(f"Selected {device['name']} ({device['udid']})")
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"SIMULATOR_UDID={device['udid']}\n")
-          PY
+          python3 -I .github/scripts/select-simulator.py --selftest
+          python3 -I .github/scripts/select-simulator.py iPhone SIMULATOR_UDID
 
       # Built for the selected Simulator, the destination the UI tests use, so
       # only for its architecture (Debug builds only the active one). Building
@@ -968,7 +960,7 @@ jobs:
       max-parallel: 2
       matrix:
         partition: [second, lessons]
-    runs-on: macos-26
+    runs-on: xcode-27
     env:
       PARTITION: ${{ matrix.partition }}
     # Build (about 8 minutes on a slow runner), boot (14 at most), warm-up
@@ -978,6 +970,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
+
       - name: Toolchain versions
         run: |
           sw_vers
@@ -985,22 +980,7 @@ jobs:
           echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
 
       - name: Select an available iPhone Simulator
-        run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
-          iphones = [device for runtime, group in devices.items()
-                     if ".iOS-" in runtime for device in group
-                     if device["isAvailable"] and device["name"].startswith("iPhone")]
-          if not iphones:
-              raise SystemExit("No available iPhone Simulator")
-          device = iphones[0]
-          print(f"Selected {device['name']} ({device['udid']})")
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"SIMULATOR_UDID={device['udid']}\n")
-          PY
+        run: python3 -I .github/scripts/select-simulator.py iPhone SIMULATOR_UDID
 
       # Decision 775: Xcode 26's compilation cache. Each compile is looked up
       # by the hash of its inputs and arguments (not file times, which every
@@ -1199,12 +1179,15 @@ jobs:
     # those jobs, and the iPad job starts as soon as changes is done.
     needs: [changes, ui-full-lane]
     if: ${{ !cancelled() && needs.changes.outputs.ipad == 'true' && needs.changes.outputs.passed != 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     # Room for the step limits below (build 30, boot 14, tests 30) and the
     # rest (decision 658).
     timeout-minutes: 80
     steps:
       - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
 
       - name: Toolchain versions
         run: |
@@ -1215,22 +1198,7 @@ jobs:
           echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
 
       - name: Select an available iPad Simulator
-        run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/ipad-simulators.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "ipad-simulators.json").read_text())["devices"]
-          ipads = [device for runtime, group in devices.items()
-                   if ".iOS-" in runtime for device in group
-                   if device["isAvailable"] and device["name"].startswith("iPad")]
-          if not ipads:
-              raise SystemExit("No available iPad Simulator")
-          device = ipads[0]
-          print(f"Selected {device['name']} ({device['udid']})")
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"IPAD_SIMULATOR_UDID={device['udid']}\n")
-          PY
+        run: python3 -I .github/scripts/select-simulator.py iPad IPAD_SIMULATOR_UDID
 
       # Decision 658: built before the boot, as the iPhone jobs do, and in a
       # step of its own. Compiled inside the test step, beside the booted

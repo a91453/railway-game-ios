@@ -10,7 +10,10 @@ import GameCore
 // `Map3DHongKongLandmarkMeshes.swift`. Decision 793 adds the bank
 // headquarters at 1 Queen's Road Central, which the studio made again;
 // decision 798 the Convention and Exhibition Centre in Wan Chai, its
-// curved roofs rebuilt piece by piece from the surveyed one.
+// curved roofs rebuilt piece by piece from the surveyed one. Decision
+// 854's later note FUKUOKA-LANDMARKS adds Fukuoka Tower, the owner's own
+// model from the earlier version (`tools/fukuoka-map/fukuoka_tower.py`,
+// `Map3DOverseasLandmarkMeshes.swift`), placed the same way.
 
 /// Decision 791: the landmarks, each in its own metres (x east, y north,
 /// z up, the middle of its footprint at the origin), stood where it is.
@@ -25,6 +28,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     case tsimShaTsuiClockTower = "tsim-sha-tsui-clock-tower"
     case culturalCentre = "cultural-centre"
     case conventionCentre = "convention-centre"
+    case fukuokaTower = "fukuoka-tower"
 
     /// Where the middle of its footprint stands: the surveyed model's, from
     /// the Hong Kong 1980 Grid (`base/landmarks.json`).
@@ -40,6 +44,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .tsimShaTsuiClockTower: 22.2935845
         case .culturalCentre: 22.2937068
         case .conventionCentre: 22.2830975
+        case .fukuokaTower: 33.5933022
         }
     }
     var longitude: Double {
@@ -54,6 +59,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .tsimShaTsuiClockTower: 114.1695373
         case .culturalCentre: 114.1702111
         case .conventionCentre: 114.1730512
+        case .fukuokaTower: 130.3514745
         }
     }
 
@@ -72,6 +78,8 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .tsimShaTsuiClockTower: 4.32
         case .culturalCentre: 3.97
         case .conventionCentre: 3.99
+        // Stands on the ground the map draws (Momochihama's reclaimed land).
+        case .fukuokaTower: 0
         }
     }
 
@@ -101,7 +109,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     /// The model in full close by, or the studio's far model.
     func model(full: Bool) -> LandmarkMesh {
         let name = rawValue + (full ? "" : "-far")
-        guard let text = Self.encodedMeshes[name], let data = Data(base64Encoded: text),
+        guard let text = Self.encodedMeshes[name] ?? Self.overseasMeshes[name], let data = Data(base64Encoded: text),
               let mesh = Self.decoded(Array(data), full: full) else { return LandmarkMesh(full: full) }
         return mesh
     }

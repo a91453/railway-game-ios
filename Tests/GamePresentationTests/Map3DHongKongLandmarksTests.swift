@@ -19,6 +19,9 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         .tsimShaTsuiClockTower: (11.6, 11.6, 49.2),
         .culturalCentre: (144.3, 123.5, 56.3),
         .conventionCentre: (201.3, 349.0, 67.9),
+        // FUKUOKA-LANDMARKS: the earlier version's model, its mast to the
+        // real 234 m, turned as OpenStreetMap's outline.
+        .fukuokaTower: (19.8, 21.4, 234.0),
     ]
 
     /// Every model decodes, near and far, as tall and wide as the surveyed
@@ -92,5 +95,21 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         var tunnel = builder()
         tunnel.trackLines = [(line, .tunnel)]
         XCTAssertTrue(tunnel.addHongKongLandmarks(frame: frame).contains(.twoIFC))
+    }
+
+    /// FUKUOKA-LANDMARKS: on Fukuoka's map, Fukuoka Tower stands at
+    /// Momochihama, its mast as high as the real one's.
+    func testFukuokaTowerOnFukuokasMap() throws {
+        let world = GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground())
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let tower = Map3DHongKongLandmark.fukuokaTower
+        let place = frame.worldPosition(latitude: tower.latitude, longitude: tower.longitude)
+        let metre = Double(WorldCoordinate.unitsPerMetre), reach = 800 * metre
+        let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
+        var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
+        XCTAssertEqual(builder.addHongKongLandmarks(frame: frame), [.fukuokaTower])
+        let top = builder.nearMeshes.values.flatMap(\.vertices).map(\.y).max() ?? 0
+        XCTAssertEqual(top, 234, accuracy: 1)
+        XCTAssertTrue(builder.underLandmark(builder.point(x: place.x, y: place.y, height: 0)))
     }
 }

@@ -15,10 +15,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
   metal:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
       - name: Check native build input discovery
         run: bash tools/native-glass/test-build-inputs.sh
       # Xcode 26.6 currently ships Apple Swift 6.3.3. Keep this standalone

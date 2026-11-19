@@ -260,6 +260,8 @@ extension Map3DScene.Builder {
         mark("road markings")
         addStreetProps(roads)
         addStreetStops(roads, markings: markings)
+        // Decision 846's third later note: Finland's street name signs.
+        addStreetNameSigns(markings)
         mark("street furniture")
         // Decision 259: their traffic and their pavements' people.
         // Decision 596: waiting at their signals.
@@ -916,27 +918,109 @@ extension Map3DScene.Builder {
         }
     }
 
+    /// Decision 846's fourth later note: the one-way carriageways of a
+    /// divided road (trunk to tertiary, as the street lights stand on),
+    /// their pieces by the 32 m square they start in, to find the other
+    /// carriageway beside one.
+    struct Carriageways {
+        var pieces: [Int64: [(a: Map3DBaseMap.Point, b: Map3DBaseMap.Point, along: Map3DBaseMap.Point, half: Double)]] = [:]
+
+        /// How wide the median between the two carriageways' edges must be
+        /// at least, metres, and how far the other carriageway's centre
+        /// line may be at most (a wide boulevard's).
+        static let median = 1.0
+        static let farthest = 30.0
+
+        static func cell(_ x: Double, _ z: Double) -> Int64 {
+            Map3DScene.Builder.junctionKey(Int((x / 32).rounded(.down)), Int((z / 32).rounded(.down)))
+        }
+
+        /// How far from `point` toward `toward` (a unit vector across the
+        /// road) the centre line of a carriageway running against `along`
+        /// is, if one is within reach with a median between them (this
+        /// carriageway `half` metres wide each side): the nearest.
+        func gap(from point: Map3DBaseMap.Point, along: Map3DBaseMap.Point, toward: Map3DBaseMap.Point, half: Double) -> Double? {
+            var best: Double?
+            let end = Map3DBaseMap.Point(x: point.x + toward.x * Self.farthest, z: point.z + toward.z * Self.farthest)
+            var seen = Set<Int64>()
+            for step in 0...Int(Self.farthest / 16) {
+                let t = Double(step) * 16 / Self.farthest
+                let x = point.x + (end.x - point.x) * t, z = point.z + (end.z - point.z) * t
+                for dz in -1...1 {
+                    for dx in -1...1 {
+                        let key = Self.cell(x + Double(dx) * 32, z + Double(dz) * 32)
+                        guard seen.insert(key).inserted else { continue }
+                        for piece in pieces[key] ?? [] where piece.along.x * along.x + piece.along.z * along.z < -0.95 {
+                            // Where the ray across meets the piece.
+                            let ex = piece.b.x - piece.a.x, ez = piece.b.z - piece.a.z
+                            let denominator = toward.x * ez - toward.z * ex
+                            guard abs(denominator) > 1e-9 else { continue }
+                            let wx = piece.a.x - point.x, wz = piece.a.z - point.z
+                            let distance = (wx * ez - wz * ex) / denominator, share = (wx * toward.z - wz * toward.x) / denominator
+                            guard share >= 0, share <= 1, distance >= half + piece.half + Self.median, distance <= Self.farthest else { continue }
+                            best = min(best ?? distance, distance)
+                        }
+                    }
+                }
+            }
+            return best
+        }
+    }
+
+    static func carriageways(_ roads: [Map3DBaseMap.Road]) -> Carriageways {
+        var ways = Carriageways()
+        for road in roads where road.oneway && !road.isRamp && propRules(road.kind).contains(where: { $0.prop == .lamp }) {
+            for (a, b) in zip(road.points, road.points.dropFirst()) {
+                let length = ((b.x - a.x) * (b.x - a.x) + (b.z - a.z) * (b.z - a.z)).squareRoot()
+                guard length > 0.01 else { continue }
+                // In every square it passes through.
+                var cells: [Int64] = []
+                for step in 0...Int(length / 16) + 1 {
+                    let t = min(1, Double(step) * 16 / length)
+                    let cell = Carriageways.cell(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t)
+                    if !cells.contains(cell) { cells.append(cell) }
+                }
+                for cell in cells {
+                    ways.pieces[cell, default: []].append((a, b, Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length), Double(road.kind.width(ramp: false)) / 2))
+                }
+            }
+        }
+        return ways
+    }
+
     /// The pools of the street lights' light on the ground under their
     /// heads, seen as much as the city's lights are on
     /// (``Map3DMesh/addPool``): after the lights on the track are gone.
     mutating func addLampPools() {
         // Decision 846's later note: Finland's street lights too.
         let lamps = Set([Self.propModels[.lamp], Self.finlandModels[.lamp]].compactMap { $0 })
-        guard !lamps.isEmpty else { return }
+        // Its fourth later note: and the double one's, one under each arm.
+        let double = Self.finlandModels[.lampDouble]
+        guard !lamps.isEmpty || double != nil else { return }
         for key in props.keys.sorted() {
-            for instance in props[key] ?? [] where lamps.contains(instance.model) {
-                addLampPool(instance)
+            for instance in props[key] ?? [] {
+                if lamps.contains(instance.model) {
+                    addLampPool(instance)
+                } else if instance.model == double {
+                    addLampPool(instance, reach: Self.doubleLampReach)
+                    addLampPool(instance, reach: -Self.doubleLampReach)
+                }
             }
         }
     }
 
-    private mutating func addLampPool(_ instance: Map3DInstance) {
+    /// Decision 846's fourth later note: how far out the double street
+    /// light's heads are from its pole, metres (each arm 1.5–2.0 m, the
+    /// studio's model 2.46 m to each head's end).
+    static let doubleLampReach: Float = 2.25
+
+    private mutating func addLampPool(_ instance: Map3DInstance, reach: Float = Map3DProp.lampReach) {
         let t = instance.transform
         let foot = Map3DPoint(t[12], t[13], t[14])
         // The model's +y is the light's left, where its arm reaches
         // (`Map3DInstance.prop`).
         guard let left = Map3DPoint(t[4], 0, t[6]).normalized else { return }
-        let under = foot + left * Map3DProp.lampReach
+        let under = foot + left * reach
         let ring = Map3DProp.poolRing.map { under + $0 * Self.lampPoolRadius }
         // Decision 709: a pool as wide as its light reaches.
         let centre = onGround([under])[0], onGroundRing = onGround(ring)
@@ -974,6 +1058,11 @@ extension Map3DScene.Builder {
             return false
         }
         let east = originX / Double(WorldCoordinate.unitsPerMetre), south = originY / Double(WorldCoordinate.unitsPerMetre)
+        // Decision 846's fourth later note: on a divided road in Finland,
+        // the double street light in the middle, not a light on each
+        // carriageway's inner kerb.
+        let divided = look.streets.hasFinnishFurniture ? Self.finlandModels[.lampDouble].map { ($0, Self.carriageways(roads)) } : nil
+        let inner = Double(look.streets.trafficSide)
         for road in roads where !road.isRamp && road.points.count >= 2 {
             let rules = Self.propRules(road.kind)
             guard !rules.isEmpty else { continue }
@@ -1006,6 +1095,26 @@ extension Map3DScene.Builder {
                         else { continue }
                         let number = Int((place / rule.spacing).rounded())
                         for side: Double in rule.bothSides ? [1, -1] : [number % 2 == 0 ? 1 : -1] {
+                            // Decision 846's fourth later note: a light on a
+                            // one-way carriageway's inner side with the
+                            // other carriageway beside it stands in the
+                            // middle, two-armed, placed by the carriageway
+                            // that runs east (or south) alone.
+                            if rule.prop == .lamp, road.oneway, side == inner, let (double, ways) = divided,
+                               let gap = ways.gap(from: Map3DBaseMap.Point(x: centre.x, z: centre.z), along: Map3DBaseMap.Point(x: along.x, z: along.z),
+                                                  toward: Map3DBaseMap.Point(x: left.x * side, z: left.z * side), half: width / 2) {
+                                guard along.x > 0 || (along.x == 0 && along.z > 0) else { continue }
+                                let x = centre.x + left.x * side * gap / 2, z = centre.z + left.z * side * gap / 2
+                                let seed = (Int32(truncatingIfNeeded: Int(((x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((z + south) * 2).rounded())))
+                                guard map3DRandom(seed.0, seed.1, salt: 71) >= 0.08, !nearJunction(x, z),
+                                      roadRise(at: Map3DBaseMap.Point(x: centre.x, z: centre.z), along: along, onDeck: road.bridgeLevel > 0).rise < Self.propRise
+                                else { continue }
+                                let foot = Map3DPoint(Float(x), roadGround(at: Map3DBaseMap.Point(x: x, z: z), along: along, onDeck: road.bridgeLevel > 0,
+                                                                           beyond: gap) + Self.sidewalkLift, Float(z))
+                                props[key(of: foot), default: []].append(.prop(double, at: foot, forward: Map3DPoint(Float(along.x), 0, Float(along.z)),
+                                                                               scale: 1, tint: Map3DColor.rgb(0xFFFFFF)))
+                                continue
+                            }
                             let out = rule.offset(width) * side
                             let x = centre.x + left.x * out, z = centre.z + left.z * out
                             let seed = (Int32(truncatingIfNeeded: Int(((x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((z + south) * 2).rounded())))
