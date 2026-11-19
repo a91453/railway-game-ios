@@ -179,6 +179,28 @@ public struct RealBranchLine: Hashable, Sendable {
     /// between the stations has no room for a third.
     var facingTurnbackStations: [String] { isTaoyuanAirport ? ["機場第一航廈站"] : [] }
 
+    /// SHALUN-ONE-ISLAND: the stations between its ends (by their names in
+    /// the timetable) where another line leaves its track, as the Blue
+    /// Coast Line leaves the Green Mountain Line's just past Binhai
+    /// Shalun, laid with a crossover on the junction's side from the first
+    /// track to the second, facing the trains coming in (decision 652's
+    /// way round): a train toward the terminal crosses there to the second
+    /// track, whose end of the station the other line leaves from, without
+    /// crossing the first track at one level, which the game has no
+    /// crossing for.
+    var leavingStations: [String] { system == "ntdlrt" && network == "V" ? ["濱海沙崙"] : [] }
+
+    /// SHALUN-ONE-ISLAND: a line that, bought after the one it shares its
+    /// first stations with (decision 400), runs on that line's track as
+    /// far as this station (by its name in the timetable) and is laid only
+    /// from there: the Blue Coast Line, whose trains run from Hongshulin
+    /// over the Green Mountain Line's track and leave it past Binhai
+    /// Shalun's one island. `nil` for any other line, or one bought first.
+    var leavesAt: String? {
+        guard after != nil else { return nil }
+        return system == "ntdlrt" && network == "VB" ? "濱海沙崙" : nil
+    }
+
     /// Decision 556: whether the ground under its depots beside the line
     /// is read in as far as their ladders may reach, as under a yard past
     /// an end (decision 549, continued), so a yard over water (Qingpu's,
@@ -351,6 +373,24 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         public let structure: TrackStructure
         public let together: Bool
         public let ground: [PlanPoint]
+        /// SHALUN-ONE-ISLAND: whether its first node is one the world
+        /// already has, exactly at its first position (the other line's
+        /// track the line leaves); `nil` for one it builds (and in the logs
+        /// of before).
+        public var startsOnTrack: Bool? = nil
+    }
+
+    /// SHALUN-ONE-ISLAND: a line whose trains run on the track of the
+    /// line `line` (a real line's id) as far as its stop `stop`, past
+    /// which its own track leaves the platform track `platform` names:
+    /// at that station they stop there both ways, and at the stations
+    /// before it where `line`'s trains do.
+    public struct Joining: Hashable, Sendable, Codable {
+        public let line: String
+        public let stop: Int
+        /// The station's platform on the track left, by its edge's far
+        /// node: where the line's own track starts.
+        public let at: WorldCoordinate
     }
 
     /// A place on a piece: `distance` along its path.
@@ -382,6 +422,10 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         public let name: String
         public let at: PieceAt
         public let forward: Bool
+        /// SHALUN-ONE-ISLAND: a platform of the company's it stands at
+        /// instead, at a station of the line it joins (``joins``); `nil`
+        /// for one on its own track (and in the logs of before).
+        public var onPlatform: TrackPlatform? = nil
     }
 
     public let realLine: String
@@ -421,11 +465,15 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// runs going round it (``LineRun/way``, along ``stops``); `nil` for
     /// a line with ends (and in the logs of before).
     public let ring: Bool?
+    /// SHALUN-ONE-ISLAND: the line whose track it runs on to where it
+    /// leaves it; `nil` for one on its own track (and in the logs of
+    /// before).
+    public let joins: Joining?
 
     public init(
         realLine: String, pieces: [Piece], stops: [Stop], platforms: [Platform], lineName: String, color: LineColor?, runs: [LineRun],
         trains: [Start], cars: Int, trainType: TrainType? = nil, dailyRiders: Int64, tiles: [MapTile]?, tier: LineAcquisition.Tier? = nil,
-        depot: Depot? = nil, moreDepots: [Depot]? = nil, clearing: RealLineClearing? = nil, ring: Bool? = nil
+        depot: Depot? = nil, moreDepots: [Depot]? = nil, clearing: RealLineClearing? = nil, ring: Bool? = nil, joins: Joining? = nil
     ) {
         self.realLine = realLine
         self.pieces = pieces
@@ -444,6 +492,7 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         self.moreDepots = moreDepots
         self.clearing = clearing
         self.ring = ring
+        self.joins = joins
     }
 
     /// It, taking `clearing` up first (decision 528).
@@ -451,7 +500,7 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         RealLineAcquisition(
             realLine: realLine, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: runs, trains: trains,
             cars: cars, trainType: trainType, dailyRiders: dailyRiders, tiles: tiles, tier: tier, depot: depot, moreDepots: moreDepots,
-            clearing: clearing, ring: ring
+            clearing: clearing, ring: ring, joins: joins
         )
     }
 
@@ -986,6 +1035,14 @@ extension RealLineLaying {
     /// company's track (decision 528, later).
     private func laidOffer(for line: RealBranchLine, whereItStood: Bool = false) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
         func offer(depot: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
+            // SHALUN-ONE-ISLAND: a line that runs on over the track of the
+            // line it shares its first stations with is laid from where it
+            // leaves it, if it can be; as before (from where they part, its
+            // own end beside the other's) where it cannot.
+            if line.leavesAt != nil {
+                let joined = self.offer(for: line, raising: .viaducts, depot: depot, whereItStood: whereItStood, joining: true)
+                if joined.offer.problem == nil { return (joined.offer, joined.laid) }
+            }
             let laid = self.offer(for: line, raising: .viaducts, depot: depot, whereItStood: whereItStood)
             guard laid.crossesTrack else { return (laid.offer, laid.laid) }
             if whereItStood {
@@ -1119,12 +1176,12 @@ extension RealLineLaying {
     /// line lies on its real way, as when nothing stood there.
     func offer(
         for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false, besideThrough: Bool = false,
-        whereItStood: Bool = false
+        whereItStood: Bool = false, joining: Bool = false
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func laid(following: Set<Int>?, followed: inout Set<Int>) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             offer(
                 for: line, raising: raising, depot: depot, clearingTrack: clearingTrack, besideThrough: besideThrough, whereItStood: whereItStood,
-                following: following, followed: &followed
+                joining: joining, following: following, followed: &followed
             )
         }
         var followed: Set<Int> = []
@@ -1174,7 +1231,7 @@ extension RealLineLaying {
     /// moved a station from where its own line's structure stood it.
     private func offer(
         for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, whereItStood: Bool,
-        following: Set<Int>?, followed: inout Set<Int>
+        joining: Bool, following: Set<Int>?, followed: inout Set<Int>
     ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
@@ -1202,6 +1259,18 @@ extension RealLineLaying {
         }
         guard points.count == runs.stops.count, points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
+        }
+        // SHALUN-ONE-ISLAND: laid from the far end of the platform track
+        // of the other line's it leaves, along that track's way there.
+        var joined: (station: StationID, node: WorldCoordinate, way: WorldVector, full: RealLineRuns, stop: Int)?
+        if joining {
+            guard let name = line.leavesAt, runs.stops.first == name, points.count > 1,
+                  let full = railways.metroRuns[line.id], let stop = full.stops.firstIndex(of: name), stop > 0, Array(full.stops[stop...]) == runs.stops,
+                  let leaving = Self.leavingNode(at: points[0], toward: points[1], in: world) else {
+                return refused("The line cannot join the track it runs on here.", "這條線在這裡接不上它要行駛的軌道。")
+            }
+            joined = (leaving.station, leaving.node, leaving.way, full, stop)
+            points[0] = WorldVector(leaving.node.plan)
         }
         // Decision 535 (continued, KLRT): a ring is laid round, with no ends.
         if line.isRing {
@@ -1289,10 +1358,13 @@ extension RealLineLaying {
             }
             return [junction] + curve
         }
-        let laid = WorldPath(
-            runOn(from: traced.point(at: 0), leaving: startDirection.reversed, at: 0).reversed() + traced.points
-                + runOn(from: traced.point(at: traced.length), leaving: endDirection, at: runs.stops.count - 1)
-        )
+        let end = runOn(from: traced.point(at: traced.length), leaving: endDirection, at: runs.stops.count - 1)
+        // SHALUN-ONE-ISLAND: from the node it leaves, straight on along
+        // the track's way there, onto its own drawing.
+        let laid = joined.map { joined in
+            let start = WorldVector(joined.node.plan), lead = RealLineAcquisition.joinLead
+            return WorldPath([start, start + joined.way * (lead / 2)] + zip(traced.points, traced.distances).filter { $0.1 > lead }.map(\.0) + end)
+        } ?? WorldPath(runOn(from: traced.point(at: 0), leaving: startDirection.reversed, at: 0).reversed() + traced.points + end)
         // Decision 489: a line bought after the one it shares its first
         // stations with (decision 400) has its own end where they part,
         // whose loops and run-on lie along the other's track: it is laid
@@ -1364,8 +1436,8 @@ extension RealLineLaying {
         // SHARED-STATION-LEVEL: a line's end at a station another of the
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.
-        let inItsLane = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
-        let besideShared = whereItStood ? nil : sharedEnds(
+        let inItsLane = inLane(line.after == nil || joined != nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
+        let besideShared = whereItStood || joined != nil ? nil : sharedEnds(
             of: inItsLane, points: points, through: besideThrough, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
             extent: { index in
                 let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
@@ -1522,14 +1594,20 @@ extension RealLineLaying {
         }()
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
-            let zone = (at - half)...(at + half)
+            // SHALUN-ONE-ISLAND: the station it leaves the other line's
+            // track past has no platform of its own, its stretch the lead
+            // before the second track leaves the first.
+            let leaving = joined != nil && index == 0
+            let zone = leaving ? at...at : (at - half)...(at + half)
             zones.append(zone)
             let between = double && index > 0 && index < runs.stops.count - 1
             // Decision 605: a station where the expresses overtake has a
             // loop outside each track, whatever its timetable stands there;
             // a timetable with no expresses (as it was before) none.
             let overtakes = between && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
-            let loops = overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1)
+            // SHALUN-ONE-ISLAND: none at the station it leaves the other
+            // line's track past, whose platform is the other line's.
+            let loops = leaving ? 0 : overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1)
             // A positive offset is on the right going up the line; on a
             // double track the second track is on the left, so a loop
             // between the ends is on the right. An end station's loops lie
@@ -1560,6 +1638,8 @@ extension RealLineLaying {
                     loopSpans.append((index, at - reach, at + reach, side, layout.ramp(level: level), onSecond))
                     forced += [at - reach, at + reach]
                 }
+            } else if leaving {
+                span = at...(at + RealLineAcquisition.joinLead)
             } else {
                 span = (zone.lowerBound - RealWorldDemo.platformMargin)...(zone.upperBound + RealWorldDemo.platformMargin)
             }
@@ -1615,6 +1695,11 @@ extension RealLineLaying {
                raised || sharedPlatformHeight(of: station) == nil {
                 level = TrackRise.Level(span, at: there)
                 followed.insert(index)
+            }
+            // SHALUN-ONE-ISLAND: at the node it leaves the track from.
+            if index == 0, let joined {
+                level = TrackRise.Level(span, at: Double(joined.node.z))
+                followed.remove(index)
             }
             levels.append(level)
         }
@@ -1740,6 +1825,20 @@ extension RealLineLaying {
                 }
             }
         }
+        // SHALUN-ONE-ISLAND: the crossover on the junction's side of a
+        // station another line leaves the second track past, facing.
+        if let second {
+            for stop in line.leavingStations.compactMap({ runs.stops.firstIndex(of: $0) }) where stop > 0 && stop < runs.stops.count - 1 {
+                let span = spans[stop]
+                let low = span.lowerBound - 2 * gap - ramp, high = span.lowerBound - 2 * gap
+                let reach = (low - gap)...(high + gap)
+                guard low > second.a + ramp + gap, high < second.b - ramp - gap,
+                      !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) else { continue }
+                forced += [low, high]
+                turnbacks.append((low, high, line.keepsRight))
+                taken.append(reach)
+            }
+        }
         guard var rise = TrackRise(
             path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack, sunk: true
         ) else {
@@ -1768,12 +1867,15 @@ extension RealLineLaying {
         // rounding, not by the side they lead to (Danhai's Blue Coast Line
         // sent its trains back on the wrong track).
         let main = RealWorldDemo.TrackPlan(
-            path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b }, rise: rise, structure: .automatic
+            path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b }, start: joined.map { ($0.node.plan, $0.way) }, rise: rise,
+            structure: .automatic
         )
         var plans: [(plan: RealWorldDemo.TrackPlan, start: RealLineAcquisition.NodeAt?, end: RealLineAcquisition.NodeAt?, together: Bool)] = [
             (main, nil, nil, false),
         ]
-        var platformsAt: [(stop: Int, piece: Int, zone: ClosedRange<Double>)] = zones.enumerated().map { ($0.offset, 0, $0.element) }
+        var platformsAt: [(stop: Int, piece: Int, zone: ClosedRange<Double>)] = zones.enumerated().filter { joined == nil || $0.offset > 0 }.map {
+            ($0.offset, 0, $0.element)
+        }
         var besideNodes: [Int] = []
         if let second {
             let node = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
@@ -1913,6 +2015,15 @@ extension RealLineLaying {
                 together: entry.together, ground: ground
             )
         }
+        // SHALUN-ONE-ISLAND: its first node the one it leaves the track
+        // from, to the unit.
+        if let joined, var first = pieces.first {
+            first = RealLineAcquisition.Piece(
+                nodes: [joined.node] + first.nodes.dropFirst(), start: first.start, end: first.end, curves: first.curves, distances: first.distances,
+                structure: first.structure, together: first.together, ground: first.ground, startsOnTrack: true
+            )
+            pieces[0] = first
+        }
         var depotsLaid: [(stop: Int?, depot: RealLineAcquisition.Depot)] = []
         // Decision 556: where along the line each depot beside it stands.
         var depotAlong: [Int: Double] = [:]
@@ -1940,15 +2051,41 @@ extension RealLineLaying {
             depotsLaid.append((end, laid.depot))
         }
 
-        let stops = runs.stops.enumerated().map { index, name in
+        var stops = runs.stops.enumerated().map { index, name in
             let at = path.point(at: along[index].along).plan
             let real = railways.stations.first { $0.id == "\(line.system)|\(name)" }
             return RealLineAcquisition.Stop(
                 name: real?.name(in: language) ?? name, at: at, existing: index == 0 ? junctionStation?.id : sameName(index), demand: newStationDemand(at: at)
             )
         }
+        // SHALUN-ONE-ISLAND: the other line's stations before, the
+        // company's, where its trains call on that line's track.
+        var stopsBefore = 0
+        if let joined {
+            guard let station = world.station(id: joined.station) else {
+                return refused("The line cannot join the track it runs on here.", "這條線在這裡接不上它要行駛的軌道。")
+            }
+            var before: [RealLineAcquisition.Stop] = []
+            for name in joined.full.stops.prefix(joined.stop) {
+                let real = railways.stations.first { $0.id == "\(line.system)|\(name)" }
+                let names = Set([name, real?.name(in: language)].compactMap { $0 })
+                let point = realPoint(of: name, system: line.system, railways: railways, frame: frame)
+                guard let point, let existing = world.stations
+                    .filter({ !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - point).length <= RealLineAcquisition.junctionReach })
+                    .min(by: { (WorldVector($0.location) - point).length < (WorldVector($1.location) - point).length })
+                else {
+                    return refused("The line cannot join the track it runs on here.", "這條線在這裡接不上它要行駛的軌道。")
+                }
+                before.append(RealLineAcquisition.Stop(name: existing.name, at: existing.location, existing: existing.id, demand: newStationDemand(at: existing.location)))
+            }
+            stops[0] = RealLineAcquisition.Stop(name: station.name, at: station.location, existing: station.id, demand: stops[0].demand)
+            stops = before + stops
+            stopsBefore = before.count
+        }
         let platforms = platformsAt.map {
-            RealLineAcquisition.Platform(stop: $0.stop, at: RealLineAcquisition.PieceAt(piece: $0.piece, distance: $0.zone.lowerBound), length: platformLength)
+            RealLineAcquisition.Platform(
+                stop: stopsBefore + $0.stop, at: RealLineAcquisition.PieceAt(piece: $0.piece, distance: $0.zone.lowerBound), length: platformLength
+            )
         }
 
         // The trains where the real ones stand at midnight, one to a track,
@@ -1961,7 +2098,38 @@ extension RealLineLaying {
         var starts: [RealLineAcquisition.Start] = []
         var depotRooms = depotsLaid.map(\.depot.platforms)
         let lastStop = runs.stops.count - 1
-        for (name, overnight) in runs.overnight.sorted(by: { $0.key < $1.key }) {
+        // SHALUN-ONE-ISLAND: where the real ones stand at a station of the
+        // line it joins, at that line's platforms there no train stands
+        // at, facing along the line; the rest on its own track.
+        var standingOnTrack: [String: Int] = [:]
+        if let joined {
+            for (name, overnight) in joined.full.overnight.sorted(by: { $0.key < $1.key }) {
+                guard let index = joined.full.stops.firstIndex(of: name), index < joined.stop, let station = stops[index].existing,
+                      let next = index + 1 < stops.count ? stops[index + 1].existing.flatMap({ world.station(id: $0) }) : nil,
+                      let here = world.station(id: station) else { continue }
+                let taken = Set(world.trains.compactMap { train -> TrackEdgeID? in
+                    if case .onEdge(let traversal, _)? = train.position { return traversal.edge }
+                    return nil
+                })
+                let free = world.network.platforms(of: station)
+                    .filter { !taken.contains($0.edge) && $0.end - $0.start >= platformLength }
+                    .sorted { $0.edge == $1.edge ? $0.start < $1.start : $0.edge < $1.edge }
+                for platform in free.prefix(overnight) {
+                    guard let geometry = world.trackGeometry(of: platform.edge) else { continue }
+                    let direction = geometry.location(at: (platform.start + platform.end) / 2).direction
+                    let way = WorldVector(next.location) - WorldVector(here.location)
+                    let along = Double(direction.dx) * way.x + Double(direction.dy) * way.y
+                    var start = RealLineAcquisition.Start(name: "", at: RealLineAcquisition.PieceAt(piece: 0, distance: 0), forward: along > 0)
+                    start.onPlatform = platform
+                    starts.append(start)
+                    standingOnTrack[name, default: 0] += 1
+                }
+            }
+        }
+        let onOwnTrack = joined.map { joined in
+            Self.overnightOnOwnTrack(joined.full, stops: runs.stops, tracks: runs.tracks, elsewhere: standingOnTrack.values.reduce(0, +))
+        }
+        for (name, overnight) in (onOwnTrack ?? runs.overnight).sorted(by: { $0.key < $1.key }) {
             guard let stop = runs.stops.firstIndex(of: name) else { continue }
             var count = overnight
             // The depot past this end, or, on a line with none past an
@@ -2000,7 +2168,9 @@ extension RealLineLaying {
         }
         let lineName = line.name(in: language)
         starts = starts.enumerated().map { number, start in
-            RealLineAcquisition.Start(name: RealWorldDemo.trainName(line: lineName, number: number + 1, in: language), at: start.at, forward: start.forward)
+            var named = RealLineAcquisition.Start(name: RealWorldDemo.trainName(line: lineName, number: number + 1, in: language), at: start.at, forward: start.forward)
+            named.onPlatform = start.onPlatform
+            return named
         }
         // Decision 479: with the depot, its own empty runs take the
         // trains in and out, not the real timetable's positioning runs.
@@ -2009,7 +2179,13 @@ extension RealLineLaying {
         // for the night stay.
         // Decision 605: an express run passes the stations it does not
         // stop at.
-        let lineRuns = runs.runs.filter { depotsLaid.isEmpty || !depotEnds.isEmpty || !($0.positioning || $0.train == "回送") }.map { run in
+        // SHALUN-ONE-ISLAND: the whole line's runs, its empty ones too:
+        // a day's runs take as many trains into each end as out of it,
+        // so the trains standing at the far end instead of the other
+        // line's platforms stand there again each night.
+        let lineRuns = joined.map { joined in
+            joined.full.runs.map { $0.lineRun(stops: joined.full.stops) }
+        } ?? runs.runs.filter { depotsLaid.isEmpty || !depotEnds.isEmpty || !($0.positioning || $0.train == "回送") }.map { run in
             run.lineRun(stops: runs.stops)
         }
         let riders = (line.paysForFirstStop ? runs.stops[...] : runs.stops.dropFirst()).reduce(Int64(0)) { total, name in
@@ -2023,7 +2199,10 @@ extension RealLineLaying {
                 realLine: line.id, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: lineRuns,
                 trains: starts, cars: cars, trainType: line.trainType, dailyRiders: min(riders, LineAcquisition.maximumDailyRiders),
                 tiles: tiles.isEmpty ? nil : tiles, tier: line.tier == .branch ? nil : line.tier, depot: depotsLaid.first?.depot,
-                moreDepots: depotsLaid.count > 1 ? depotsLaid.dropFirst().map(\.depot) : nil
+                moreDepots: depotsLaid.count > 1 ? depotsLaid.dropFirst().map(\.depot) : nil,
+                joins: joined.flatMap { joined in
+                    line.after.map { RealLineAcquisition.Joining(line: $0, stop: joined.stop, at: joined.node) }
+                }
             )
         }
 
@@ -2177,7 +2356,11 @@ extension RealLineLaying {
                 try world.readGround(under: piece.ground, from: heights)
                 var ids: [TrackNodeID] = []
                 for (index, position) in piece.nodes.enumerated() {
-                    if index == 0, let start = piece.start {
+                    if index == 0, piece.startsOnTrack == true {
+                        // SHALUN-ONE-ISLAND: the node of the track it leaves.
+                        guard let node = world.network.nodes.first(where: { $0.position == position }) else { throw .invalidTrackGeometry }
+                        ids.append(node.id)
+                    } else if index == 0, let start = piece.start {
                         ids.append(nodes[start.piece][start.node])
                     } else if index == piece.nodes.count - 1, let end = piece.end {
                         ids.append(nodes[end.piece][end.node])
@@ -2270,11 +2453,20 @@ extension RealLineLaying {
         // Decision 564: a metro's or light rail's trains keep right, the
         // platforms it names and every other way its trains find.
         let keepsRight = RealBranchLine.keepsRight(realLine: acquisition.realLine)
+        // SHALUN-ONE-ISLAND: and, on the track of the line it joins, the
+        // platforms that line's trains take.
+        let onTrack = try acquisition.joins.map { joins throws(GameError) in try Self.routesOnTrack(of: joins, stations: stations, in: world) } ?? []
         try world.setLineRoutePreferences(
             line.id, to: ring ? Self.ringRoutePreferences(platformsOf, stops: stations.count)
-                : Self.routePreferences(platformsOf, stops: stations.count, keepingRight: keepsRight)
+                : Self.routePreferences(platformsOf, stops: stations.count, keepingRight: keepsRight) + onTrack
         )
         if keepsRight { try world.setLineKeepsRight(line.id, to: true) }
+        // SHALUN-ONE-ISLAND: into the station it leaves the track past,
+        // along the way to the platform track it leaves from, as a whole.
+        if let joins = acquisition.joins, let walk = Self.walkOntoLeavingTrack(of: joins, line: line.id, stations: stations, in: world) {
+            let routes = (world.line(id: line.id)?.routePreferences ?? []).filter { !($0.from == walk.from && $0.to == walk.to) } + [walk]
+            try world.setLineRoutePreferences(line.id, to: routes)
+        }
         // Decision 479: the depot, a platform along each siding, the line's.
         // Decision 535: and its others, the Wenhu Line's two.
         var depots: [StationID] = []
@@ -2302,7 +2494,13 @@ extension RealLineLaying {
                 train = try world.purchaseTrain(named: start.name).id
             }
             try world.setTrainCars(train, to: acquisition.cars)
-            let (on, at) = try berth(start.at, length: length)
+            let on: TrackEdgeID, at: Int64
+            if let platform = start.onPlatform {
+                guard world.network.platforms.contains(platform) else { throw .invalidTrackGeometry }
+                (on, at) = (platform.edge, platform.start)
+            } else {
+                (on, at) = try berth(start.at, length: length)
+            }
             let edgeLength = world.network.edge(on)?.length ?? 0
             let offset = start.forward ? at + length : edgeLength - at
             try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: on, direction: start.forward ? .forward : .backward), offset: offset))
