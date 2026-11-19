@@ -12,6 +12,7 @@ struct MelodyWorkshopView: View {
     @State var draft: MelodyDraft
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDeletion = false
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     /// One cell of the roll: a finger's width.
     @ScaledMetric(relativeTo: .body) private var cell: CGFloat = 44
@@ -19,17 +20,31 @@ struct MelodyWorkshopView: View {
     var body: some View {
         let language = session.language
         NavigationStack {
-            VStack(alignment: .leading, spacing: 12) {
-                TextField(text: $draft.name) {
-                    Text(verbatim: language.text("Name", "名稱"))
+            Group {
+                // A phone on its side has room for two or three rows of
+                // the roll under the controls: they go beside it instead.
+                if verticalSizeClass == .compact {
+                    HStack(alignment: .top, spacing: 16) {
+                        ScrollView(.vertical) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                nameField
+                                lengthPicker(segmented: false)
+                                actions(stacked: true)
+                                hint
+                            }
+                        }
+                        .frame(width: 240)
+                        roll
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 12) {
+                        nameField
+                        ScrollView(.horizontal) { lengthPicker(segmented: true) }
+                        actions(stacked: false)
+                        roll
+                        hint
+                    }
                 }
-                .textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("melody.name")
-                controls
-                roll
-                Text(verbatim: MelodyDraft.note(in: language))
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
             }
             .padding()
             .background(Theme.background)
@@ -68,34 +83,48 @@ struct MelodyWorkshopView: View {
         }
     }
 
-    /// The note length, the play button, the tunes to start from and
-    /// clearing.
-    private var controls: some View {
-        // Two rows, not a ViewThatFits: the picker's ForEach must not be
-        // measured off the main thread (CRASH101).
-        VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal) { lengthPicker }
-            actions
+    private var nameField: some View {
+        TextField(text: $draft.name) {
+            Text(verbatim: session.language.text("Name", "名稱"))
         }
-        .accessibilityElement(children: .contain)
+        .textFieldStyle(.roundedBorder)
+        .accessibilityIdentifier("melody.name")
     }
 
-    private var lengthPicker: some View {
-        Picker(selection: $draft.length) {
+    private var hint: some View {
+        Text(verbatim: MelodyDraft.note(in: session.language))
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+    }
+
+    /// The length of the next note: segments where there is room, else a
+    /// menu.
+    @ViewBuilder private func lengthPicker(segmented: Bool) -> some View {
+        let picker = Picker(selection: $draft.length) {
             ForEach(MelodyDraft.NoteLength.allCases, id: \.self) { length in
                 Text(verbatim: length.title(in: session.language)).tag(length)
             }
         } label: {
             Text(verbatim: session.language.text("Note length", "音符長度"))
         }
-        .pickerStyle(.segmented)
-        .fixedSize()
         .accessibilityIdentifier("melody.length")
+        if segmented {
+            picker.pickerStyle(.segmented).fixedSize()
+        } else {
+            LabeledContent {
+                picker.pickerStyle(.menu)
+            } label: {
+                Text(verbatim: session.language.text("Note length", "音符長度"))
+            }
+        }
     }
 
-    private var actions: some View {
+    /// The play button, the tunes to start from and clearing: in a row,
+    /// or one under another beside the roll.
+    private func actions(stacked: Bool) -> some View {
         let language = session.language
-        return HStack(spacing: 12) {
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
             Button(language.text("Play", "試聽"), systemImage: "play.fill") {
                 session.playMelodyPreview(draft.notes)
             }
