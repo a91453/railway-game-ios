@@ -400,19 +400,48 @@ final class SharedStationLayoutTests: XCTestCase {
 
     /// Decision 875: the Danhai light rail's two lines in the order they
     /// are sold together (decision 862): at Binhai Shalun the Blue Coast
-    /// Line's platforms stand at the Green Mountain Line's, which are 5 m
-    /// over ground that falls away there (they stood 3.2 m under them: a
-    /// platform that far up was not counted as one to stand level with).
-    func testBinhaiShalunsTwoLinesStandAtOneLevel() throws {
+    /// Line's platforms stood at the Green Mountain Line's height, 10 m
+    /// beside them. SHALUN-ONE-ISLAND (decision 885, the owner on 140:
+    /// 「濱海沙崙實際好像只有一島」): bought together, the Blue Coast Line
+    /// runs from Hongshulin on the Green Mountain Line's track and leaves
+    /// it west of Binhai Shalun, whose one island is the Green Mountain
+    /// Line's two platforms; the Blue Coast Line lays none there, calls
+    /// at the Green Mountain Line's stations, and its trains stop both
+    /// ways on the island's track it leaves from.
+    func testBinhaiShalunsTwoLinesShareOneIsland() throws {
         let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: .simple)
-        let laidBy = try Self.buy(["ntdlrt:V", "ntdlrt:VB"], on: session)
+        let group = try XCTUnwrap(session.realLineBundles.first { $0.lines.map(\.id) == ["ntdlrt:V", "ntdlrt:VB"] })
+        let offer = session.realLineBundleOffer(for: group)
+        XCTAssertNotNil(offer.acquisitions?.last?.joins, "the Blue Coast Line joins the Green Mountain Line's track")
+        XCTAssertTrue(session.acquireRealLines(offer), offer.problemText(in: .traditionalChinese) ?? session.message?.text ?? "")
         let world = session.world
-        let laid = Self.platforms(of: world, laidBy: laidBy)
-        XCTAssertEqual(Self.stacked(laid, in: world), [])
-        XCTAssertEqual(Self.uneven(laid, in: world), [])
         let shalun = try XCTUnwrap(world.stations.first { $0.name == "濱海沙崙" }?.id)
-        let pair = try XCTUnwrap(Self.between("ntdlrt:V", "ntdlrt:VB", at: shalun, in: laid))
-        XCTAssertLessThanOrEqual(pair.height, 0.5, "the two lines' platforms at one height")
+        let platforms = world.network.platforms(of: shalun)
+        XCTAssertEqual(platforms.count, 2, "one island, two tracks")
+        let greenTrack = Set(try XCTUnwrap(world.acquisition(of: "ntdlrt:V")?.track))
+        XCTAssertTrue(platforms.allSatisfy { greenTrack.contains($0.edge) }, "both the Green Mountain Line's")
+        let blue = try XCTUnwrap(world.acquisition(of: "ntdlrt:VB")?.line.flatMap { world.line(id: $0) })
+        let names = blue.stops.compactMap { world.station(id: $0)?.name }
+        XCTAssertEqual(names.first, "淡水漁人碼頭")
+        XCTAssertEqual(names.last, "紅樹林", "it runs on to Hongshulin")
+        XCTAssertEqual(Set(names).count, 12)
+        let at = try XCTUnwrap(blue.stops.firstIndex(of: shalun))
+        let there = Set(blue.routePreferences.filter { $0.to == at }.map(\.platform))
+        XCTAssertEqual(there.count, 1, "both ways on the track it leaves from")
+        // Its trains stand overnight two at Hongshulin, at the Green
+        // Mountain Line's platforms there no train of it stands at, and
+        // the rest on its own track.
+        let own = Set(world.network.edges.map(\.id)).subtracting(greenTrack)
+        let hongshulin = try XCTUnwrap(world.stations.first { $0.name == "紅樹林" && !$0.isDepot })
+        var atHongshulin: [TrackEdgeID] = []
+        for train in blue.assignedTrains {
+            guard case .onEdge(let traversal, _)? = world.train(id: train)?.position else { return XCTFail("\(train) placed") }
+            if own.contains(traversal.edge) { continue }
+            XCTAssertTrue(world.network.platforms(of: hongshulin.id).contains { $0.edge == traversal.edge }, "\(train) at Hongshulin")
+            atHongshulin.append(traversal.edge)
+        }
+        XCTAssertEqual(Set(atHongshulin).count, 2, "two of its trains at Hongshulin, on two platform tracks")
+        XCTAssertEqual(blue.assignedTrains.count, 5)
     }
 
     /// DANHAI-OLD-SAVE: a game saved before the two were sold together
