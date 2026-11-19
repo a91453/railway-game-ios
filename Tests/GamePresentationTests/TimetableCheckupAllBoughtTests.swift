@@ -62,9 +62,14 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// Fukuoka Airport is 10 minutes against 3.3 (60 runs late under a new
     /// game's rules, 3 under the realistic ones); the Hakozaki Line has
     /// none. FUKUOKA-LATE lowers them.
+    /// Decision 890 (FUKUOKA-LATE): the home signal at the Kuko Line's
+    /// ends, its trains late 0 (were 60 and 3) and its peak gap 7.0 and
+    /// 6.0 minutes; the Nanakuma Line's are its trains too few for its
+    /// peak (two more run it on time, but its ends have no tracks for
+    /// them: FUKUOKA-NANAKUMA-FLEET).
     static let budgets: [String: TimetableCheckup.Budget] = [
-        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 187, lateOutOfDepot: 0, peakGapMinutes: 8),
-        "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 129, lateOutOfDepot: 0, peakGapMinutes: 7),
+        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 127, lateOutOfDepot: 0, peakGapMinutes: 4),
+        "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 126, lateOutOfDepot: 0, peakGapMinutes: 4),
         "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 11, lateOutOfDepot: 0, peakGapMinutes: 10),
         "taiwan ntdlrt:V+ntdlrt:VB realistic": .init(notSent: 0, late: 4, lateOutOfDepot: 0, peakGapMinutes: 5),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
