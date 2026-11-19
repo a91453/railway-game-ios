@@ -266,6 +266,9 @@ extension Map3DScene.Builder {
         var island = false
         /// Decision 847: the track it stands beside.
         var edge: TrackEdgeID?
+        /// Decision 882: an underground island's half, whether its line
+        /// runs as its box's furniture modules do (decision 860).
+        var modulesForward: Bool?
     }
 
     /// REVIEW-L27 P3-2 (ELEVATED-SHELL-CHUNK): the lines (at the rails'
