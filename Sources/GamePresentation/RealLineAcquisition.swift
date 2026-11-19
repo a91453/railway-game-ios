@@ -1172,6 +1172,41 @@ extension RealLineLaying {
     /// ``offer(for:raising:depot:clearingTrack:besideThrough:)``, with
     /// decision 875's rule or without it; `followed` is set where the rule
     /// moved a station from where its own line's structure stood it.
+    /// ZHUZHONG-LEVEL (decision 875, later): where an end station stands
+    /// between two drawn lines of one railway (Zhuzhong: the Neiwan Line
+    /// and, 13 m beside it, the Liujia Line's own track, which leaves the
+    /// Neiwan Line 15 m short of the station), the nearest line is not
+    /// always the one the way goes on along: from the Neiwan Line the
+    /// Liujia Line's way ran back 15 m, across to its own track and on
+    /// again, a hook the smoothing turned into a platform square to both
+    /// lines that crossed the Neiwan Line in the station. Each end is
+    /// snapped to whichever drawn line about as near (within 30 m more) gives the shortest way
+    /// between them, so a way never doubles back at its ends; where only
+    /// one line is near, as at most stations, nothing changes.
+    static func endsWithoutDoublingBack(
+        traces: RealRailwayTraces, from start: WorldVector, to end: WorldVector,
+        nearest: (RealRailwayTraces.Snap, RealRailwayTraces.Snap)
+    ) -> (RealRailwayTraces.Snap, RealRailwayTraces.Snap) {
+        // Only lines about as near as the nearest: a line farther off is
+        // another track, not this station's.
+        let group = traces.groups[nearest.0.place.line], beside = 30 * RealLineAcquisition.metre
+        let firsts = traces.snaps(start, within: nearest.0.distance + beside, group: group)
+        let lasts = traces.snaps(end, within: nearest.1.distance + beside, group: group)
+        guard firsts.count > 1 || lasts.count > 1 else { return nearest }
+        func length(_ a: RealRailwayTraces.Snap, _ b: RealRailwayTraces.Snap) -> Double? {
+            traces.path(from: a.place, to: b.place).map { WorldPath($0).length }
+        }
+        guard var best = length(nearest.0, nearest.1).map({ (nearest, $0) }) else { return nearest }
+        for a in firsts {
+            for b in lasts where a.place != nearest.0.place || b.place != nearest.1.place {
+                // A metre's margin, so two lines drawn over each other keep
+                // the nearest.
+                if let way = length(a, b), way < best.1 - RealLineAcquisition.metre { best = ((a, b), way) }
+            }
+        }
+        return best.0
+    }
+
     private func offer(
         for line: RealBranchLine, raising: StationRaising, depot: Bool, clearingTrack: Bool, besideThrough: Bool, whereItStood: Bool,
         following: Set<Int>?, followed: inout Set<Int>
@@ -1219,9 +1254,14 @@ extension RealLineLaying {
         let parting = line.after == nil ? nil : traces.snap(points[points.count - 1], within: reach, system: ownSystem).flatMap {
             traces.snap(points[0], within: reach, only: $0.place.line)
         }
-        guard let first = parting ?? traces.snap(points[0], within: reach, system: ownSystem),
-              let last = traces.snap(points[points.count - 1], within: reach, group: traces.groups[first.place.line]),
-              let way = traces.path(from: first.place, to: last.place) else {
+        guard let nearestFirst = parting ?? traces.snap(points[0], within: reach, system: ownSystem),
+              let nearestLast = traces.snap(points[points.count - 1], within: reach, group: traces.groups[nearestFirst.place.line]) else {
+            return refused("The real line's track could not be followed here.", "這裡沒辦法沿著真實鐵路鋪軌。")
+        }
+        let (first, last) = parting == nil
+            ? Self.endsWithoutDoublingBack(traces: traces, from: points[0], to: points[points.count - 1], nearest: (nearestFirst, nearestLast))
+            : (nearestFirst, nearestLast)
+        guard let way = traces.path(from: first.place, to: last.place) else {
             return refused("The real line's track could not be followed here.", "這裡沒辦法沿著真實鐵路鋪軌。")
         }
         let traced = WorldPath(way).smoothed()
