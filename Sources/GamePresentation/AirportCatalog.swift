@@ -77,6 +77,7 @@ public enum AirportCatalog {
         "bkk": ("曼谷", "Bangkok", false), "sin": ("新加坡", "Singapore", false), "mnl": ("馬尼拉", "Manila", false),
         "oka": ("沖繩", "Okinawa", false), "mfm": ("澳門", "Macau", false), "sgn": ("胡志明市", "Ho Chi Minh City", false),
         "sha": ("上海虹橋", "Shanghai Hongqiao", false), "tpe": ("臺北桃園", "Taipei Taoyuan", true),
+        "fuk": ("福岡", "Fukuoka", false),
     ]
 
     /// Taoyuan's main destinations (table 50-1; Bangkok is its two
@@ -85,6 +86,8 @@ public enum AirportCatalog {
     private static let taoyuanRoutes = [
         Route("hkg", 4_905_000, 27_044), Route("nrt", 3_472_299, 15_471), Route("osa", 2_925_614, 12_773), Route("bkk", 2_747_310, 13_809),
         Route("icn", 2_453_298, 9_372), Route("sin", 1_994_149, 7_513), Route("mnl", 1_785_334, 8_906), Route("oka", 1_568_890, 9_027),
+        // FUKUOKA-OPEN: Fukuoka, for its map's flights (table 50-1).
+        Route("fuk", 1_134_359, 5_238),
     ]
 
     static let places: [Place] = [
@@ -112,7 +115,11 @@ public enum AirportCatalog {
               routes: [Route("mzg", 777_991, 12_534), Route("knh", 404_140, 6_272), Route("cmj", 17_681, 1_338), Route("hun", 17_070, 670),
                        Route("lzn", 3_485, 60), Route("wot", 1_766, 170),
                        Route("hkg", 1_253_468, 7_512), Route("nrt", 563_125, 3_776), Route("osa", 562_164, 3_382), Route("icn", 415_460, 2_314),
-                       Route("mfm", 324_799, 2_432), Route("oka", 242_680, 1_628)]),
+                       Route("mfm", 324_799, 2_432), Route("oka", 242_680, 1_628),
+                       // FUKUOKA-OPEN: Fukuoka (table 50-2: 172,363 passengers and
+                       // 1,120 flights from China Airlines' first flight on 15 April
+                       // 2025, 261 days, made a whole year's).
+                       Route("fuk", 241_044, 1_566)]),
         // Decision 700: the other airports of the map with scheduled
         // flights, after the five of decision 695 so those keep their
         // numbers.
@@ -164,6 +171,20 @@ public enum AirportCatalog {
         Place(key: "hkg", chinese: "香港國際機場", english: "Hong Kong International Airport",
               latitude: 22.315901, longitude: 113.936517, yearlyPassengers: 61_000_000, yearlyFlights: 394_730, firstHour: 0, lastHour: 24,
               routes: [Route("tpe", 4_905_000, 27_044), Route("khh", 1_253_468, 7_512), Route("rmq", 438_977, 2_416), Route("hun", 35_466, 418)],
+              isAbroad: true),
+        // FUKUOKA-OPEN: Fukuoka Airport, 28.4 million passengers in 2025
+        // (Fukuoka City's page on the airport, from the Ministry of Land,
+        // Infrastructure, Transport and Tourism's airport survey,
+        // preliminary) and about 195,000 movements (its fiscal year
+        // 2025, April to March: the calendar year's is not published);
+        // flights 07:00 to 22:00 (the airport's curfew). Its place is the
+        // Kuko Line's Fukuoka Airport station, under the domestic
+        // terminal (the map pack's own point). Its flights to Taiwan are
+        // tables 50-1 and 50-2's, the same as Taiwan's end (Songshan,
+        // Taichung, Hualien and Tainan do not fly there).
+        Place(key: "fuk", chinese: "福岡機場", english: "Fukuoka Airport",
+              latitude: 33.597347, longitude: 130.448069, yearlyPassengers: 28_400_000, yearlyFlights: 195_000, firstHour: 7, lastHour: 22,
+              routes: [Route("tpe", 1_134_359, 5_238), Route("khh", 241_044, 1_566)],
               isAbroad: true),
     ]
 

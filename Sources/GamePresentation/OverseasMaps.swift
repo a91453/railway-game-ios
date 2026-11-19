@@ -21,8 +21,8 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     case rovaniemi
     /// Decision 854: Fukuoka, Japan's first map: the Fukuoka City Subway's
     /// three lines, with headways estimated (no published timetable).
-    /// Not open yet (``OverseasMaps/open``): its pack holds only its
-    /// railways, and its flights come with the switch.
+    /// Open since FUKUOKA-OPEN, reached by flights to Fukuoka Airport as
+    /// Hong Kong is (``AirRoutes``).
     case fukuoka
 
     /// The system its lines are (``RealRailways/System/id``, and the key of
@@ -365,9 +365,10 @@ public enum OverseasMaps {
     /// The cities whose railways and ground the app reads. A player still
     /// reaches Hong Kong's map only once an airport's flights opened it
     /// (decision 712, ``AirRoutes``); Rovaniemi's is offered from the start
-    /// (decision 818, ``OverseasMap/opensByFlights``). A city not listed here is not
+    /// (decision 818, ``OverseasMap/opensByFlights``); Fukuoka's by flights,
+    /// as Hong Kong's (decision 854). A city not listed here is not
     /// read, offered or credited at all.
-    public static let open: Set<OverseasMap> = [.hongKong, .rovaniemi]
+    public static let open: Set<OverseasMap> = [.hongKong, .rovaniemi, .fukuoka]
 }
 
 extension RealRailways.System {

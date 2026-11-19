@@ -519,6 +519,24 @@ public enum DataSourceCredits {
                         ),
                         links: []
                     ),
+                    // FUKUOKA-OPEN: Fukuoka Airport on Fukuoka's map
+                    // (`AirportCatalog.overseasPlaces`).
+                    DataSourceCredit(
+                        id: "fukuokaAirport",
+                        title: language.text("Fukuoka Airport", "福岡機場"),
+                        detail: language.text(
+                            "On Fukuoka’s map, how many passengers and flights the airport has in a day, and its flights to Taiwan.",
+                            "福岡地圖上機場一天有多少旅客與航班，以及飛台灣的航線。"
+                        ),
+                        notice: language.text(
+                            "Passengers of 2025 and flights of the year to March 2026: Fukuoka City, from the Ministry of Land, Infrastructure, Transport and Tourism’s airport figures. Flights to Taiwan: Civil Aviation Administration, Ministry of Transportation and Communications (Taiwan), Civil Aviation Statistics annual report 2025. Position: OpenStreetMap contributors. The game is not affiliated with Fukuoka International Airport.",
+                            "2025 年的旅客與 2025 年度（到 2026 年 3 月）的航班：福岡市整理的日本國土交通省機場統計。飛台灣的航線：交通部民用航空局《民航統計年報》2025 年。位置：OpenStreetMap 貢獻者。本遊戲與福岡國際機場沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                            DataSourceCredit.Link(title: language.text("Fukuoka City: Fukuoka Airport", "福岡市：福岡空港について"), url: "https://www.city.fukuoka.lg.jp/shisei/kotsu-toshiseibi/kukouchosa.html"),
+                        ]
+                    ),
                 ]
             )
         }

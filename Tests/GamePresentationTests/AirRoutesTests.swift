@@ -65,6 +65,27 @@ final class AirRoutesTests: XCTestCase {
         XCTAssertFalse(AirMap.taiwan.airports.contains("香港"))
     }
 
+    /// FUKUOKA-OPEN: Taoyuan and Kaohsiung fly to Fukuoka (tables 50-1 and
+    /// 50-2), and Fukuoka Airport, on its own map, flies to Taiwan with the
+    /// same figures at both ends.
+    func testTheAirportsThatFlyToFukuoka() throws {
+        let airports = GameWorld.newWholeTaiwanGame().airports
+        XCTAssertEqual(airports.filter { $0.flies(to: .fukuoka) }.map(\.englishName), [
+            "Taoyuan Airport Terminal 1", "Taoyuan Airport Terminal 2", "Kaohsiung International Airport",
+        ])
+        var world = GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground())
+        XCTAssertEqual(world.airports.filter { $0.flies(to: AirMap.taiwan) }.map(\.name), ["福岡機場"])
+        XCTAssertFalse(world.airports[0].flies(to: .hongKong))
+        let place = try XCTUnwrap(AirportCatalog.overseasPlaces.first { $0.key == "fuk" })
+        for route in place.routes {
+            let taiwan = AirportCatalog.places.filter { $0.key.hasPrefix(route.to) }.flatMap(\.routes).first { $0.to == "fuk" }
+            XCTAssertEqual(taiwan?.passengers, route.passengers, route.to)
+            XCTAssertEqual(taiwan?.flights, route.flights, route.to)
+        }
+        world.airports[0].yesterdayRiders = 500
+        XCTAssertEqual(AirRoutes(cities: [.fukuoka], opened: [OverseasMap.fukuoka.rawValue], here: OverseasMap.fukuoka.rawValue).earned(in: world), [.taiwan])
+    }
+
     /// 500 riders in a day at one of them open Hong Kong; 499 do not, nor
     /// any number at an airport with no flights there.
     func testFiveHundredRidersInADayOpenTheCity() throws {

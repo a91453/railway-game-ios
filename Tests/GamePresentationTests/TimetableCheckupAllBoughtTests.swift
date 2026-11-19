@@ -55,7 +55,16 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// more. Of the 11 runs still late under a new game's rules, 10 leave
     /// Hongshulin late, both lines' (HONGSHULIN-TURN); 4 under the
     /// realistic rules; none late out of the depot (measured 2026-11-19).
+    /// FUKUOKA-OPEN: Fukuoka's three lines, bought together, as measured
+    /// when its map opened (2026-11-19, Release): every run sent, but the
+    /// Nanakuma Line's turns at its ends at 3 min 15 s run up to 15
+    /// minutes late (126 or 127 runs), and the Kuko Line's peak gap at
+    /// Fukuoka Airport is 10 minutes against 3.3 (60 runs late under a new
+    /// game's rules, 3 under the realistic ones); the Hakozaki Line has
+    /// none. FUKUOKA-LATE lowers them.
     static let budgets: [String: TimetableCheckup.Budget] = [
+        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 187, lateOutOfDepot: 0, peakGapMinutes: 8),
+        "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 129, lateOutOfDepot: 0, peakGapMinutes: 7),
         "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 11, lateOutOfDepot: 0, peakGapMinutes: 10),
         "taiwan ntdlrt:V+ntdlrt:VB realistic": .init(notSent: 0, late: 4, lateOutOfDepot: 0, peakGapMinutes: 5),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
@@ -124,6 +133,17 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         return session
     }
 
+    /// A game on Fukuoka's map, as the launcher starts it (FUKUOKA-OPEN).
+    static func fukuoka(rules: NewGameRules) throws -> GameSession {
+        let ground = try FukuokaRailwaysTests.ground()
+        let session = try session(GameWorld.newOverseasGame(ground, balance: Money(1_000_000_000_000)), rules: rules)
+        session.railways = try FukuokaRailwaysTests.railways()
+        session.population = ground.population
+        session.water = ground.water
+        session.heights = ground.heights
+        return session
+    }
+
     /// Buys the lines on sale in `session` whose ids `wanted` holds (every
     /// one when `nil`), in the order of their ids, looking at the list
     /// again after each: a line sharing its first stations with one just
@@ -164,7 +184,8 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         let taiwan = Set(try Self.wholeTaiwan(rules: .simple).buyableRealLines.map(\.id))
         let hongKong = Set(try Self.hongKong(rules: .simple).buyableRealLines.map(\.id))
         let rovaniemi = Set(try Self.rovaniemi(rules: .simple).buyableRealLines.map(\.id))
-        let text = "TIMETABLE_CHECKUP on sale: Taiwan \(taiwan.sorted()), Hong Kong \(hongKong.sorted()), Rovaniemi \(rovaniemi.sorted())\n"
+        let fukuoka = Set(try Self.fukuoka(rules: .simple).buyableRealLines.map(\.id))
+        let text = "TIMETABLE_CHECKUP on sale: Taiwan \(taiwan.sorted()), Hong Kong \(hongKong.sorted()), Rovaniemi \(rovaniemi.sorted()), Fukuoka \(fukuoka.sorted())\n"
         FileHandle.standardError.write(Data(text.utf8))
         XCTAssertEqual(taiwan.count, 15)
         XCTAssertEqual(hongKong.count, 6)
@@ -172,6 +193,11 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         XCTAssertEqual(taiwan.subtracting(taiwanAlone), [], "Taiwan lines on sale no world buys alone")
         XCTAssertEqual(hongKong.subtracting(hongKongAlone), [], "Hong Kong lines on sale no world buys alone")
         XCTAssertEqual(rovaniemi.subtracting(rovaniemiAlone), [], "Rovaniemi lines on sale no world buys alone")
+        // FUKUOKA-OPEN: Fukuoka's three lines share Hakata and
+        // Nakasu-Kawabata, so they are only ever sold together (decision
+        // 862, older than the map's opening: no save holds one alone);
+        // `testFukuokaLines` plays them together.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N"])
     }
 
     /// The groups of lines sharing a station on each map, and the worlds
@@ -183,10 +209,12 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         let taiwan = Self.sharingGroups(in: try Self.wholeTaiwan(rules: .simple))
         let hongKong = Self.sharingGroups(in: try Self.hongKong(rules: .simple))
         let rovaniemi = Self.sharingGroups(in: try Self.rovaniemi(rules: .simple))
-        FileHandle.standardError.write(Data("TIMETABLE_CHECKUP sharing a station: Taiwan \(taiwan), Hong Kong \(hongKong), Rovaniemi \(rovaniemi)\n".utf8))
+        let fukuoka = Self.sharingGroups(in: try Self.fukuoka(rules: .simple))
+        FileHandle.standardError.write(Data("TIMETABLE_CHECKUP sharing a station: Taiwan \(taiwan), Hong Kong \(hongKong), Rovaniemi \(rovaniemi), Fukuoka \(fukuoka)\n".utf8))
         XCTAssertEqual(taiwan, [["ntdlrt:V", "ntdlrt:VB"], ["tra:LIUJIA", "tra:NEIWAN"]])
         XCTAssertEqual(hongKong, [["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]], "TimetableCheckupFullTests plays hk TCL+AEL+DRL, in this order")
         XCTAssertEqual(rovaniemi, [["vr:KJA", "vr:MUL"]])
+        XCTAssertEqual(fukuoka.map(Set.init), [["fksubway:K", "fksubway:H", "fksubway:N"]], "testFukuokaLines plays them")
     }
 
     // MARK: - The whole days
@@ -257,6 +285,23 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
                     return session.world
                 }())
             }
+        }
+    }
+
+    /// FUKUOKA-OPEN: Fukuoka's three lines, sold together (they share
+    /// Hakata and Nakasu-Kawabata), bought as a player buys them, under
+    /// both rules.
+    func testFukuokaLines() throws {
+        try full()
+        let ids = Self.sharingGroups(in: try Self.fukuoka(rules: .simple)).first ?? []
+        XCTAssertEqual(ids.count, 3)
+        for (label, rules) in Self.rules {
+            let name = "fukuoka \(ids.joined(separator: "+")) \(label)"
+            try check(name, {
+                let session = try Self.fukuoka(rules: rules)
+                try Self.buyTogether(ids, in: session)
+                return session.world
+            }())
         }
     }
 }

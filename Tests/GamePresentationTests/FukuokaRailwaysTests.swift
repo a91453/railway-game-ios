@@ -6,7 +6,7 @@ import XCTest
 /// Decision 854: Fukuoka's map pack, Japan's first map: the Fukuoka City
 /// Subway's three lines (stations from the MLIT's National Land Numerical
 /// Information N02, track and tunnels from OpenStreetMap, headways
-/// estimated), read only once its map is open, which it is not yet.
+/// estimated), read since its map opened (FUKUOKA-OPEN).
 @MainActor
 final class FukuokaRailwaysTests: XCTestCase {
     /// The bundled files read with Fukuoka open.
@@ -45,16 +45,16 @@ final class FukuokaRailwaysTests: XCTestCase {
 
     // MARK: - The switch
 
-    /// Not open yet: the game neither reads, offers nor credits it, and no
-    /// release uploads its pack (no asset pack manifest,
-    /// `MapPackDownloadsTests`).
-    func testFukuokaIsNotOpenYet() throws {
-        XCTAssertFalse(OverseasMaps.open.contains(.fukuoka))
+    /// FUKUOKA-OPEN: open, reached by flights as Hong Kong is; the game
+    /// reads and credits it, and a release uploads its pack (its asset
+    /// pack manifest, `MapPackDownloadsTests`).
+    func testFukuokaIsOpen() throws {
+        XCTAssertTrue(OverseasMaps.open.contains(.fukuoka))
         XCTAssertTrue(OverseasMap.fukuoka.opensByFlights)
         let all = RealRailways.load(pack: HongKongRailwaysTests.pack) { try BundledRealData.file($0, $1) }
-        XCTAssertFalse(try XCTUnwrap(all.railways).lines.contains { $0.system.id == "fksubway" })
+        XCTAssertTrue(try XCTUnwrap(all.railways).lines.contains { $0.system.id == "fksubway" })
         for language in [DisplayLanguage.english, .traditionalChinese] {
-            XCTAssertFalse(DataSourceCredits.sections(in: language).contains { $0.id == "fukuokaRailways" })
+            XCTAssertTrue(DataSourceCredits.sections(in: language).contains { $0.id == "fukuokaRailways" })
             XCTAssertTrue(DataSourceCredits.sections(in: language, overseas: [.fukuoka]).contains { $0.id == "fukuokaRailways" })
         }
     }

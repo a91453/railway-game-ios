@@ -1,0 +1,12 @@
+{
+  "assetPackID": "mappack-fukuoka",
+  "downloadPolicy": {
+    "prefetch": {
+      "installationEventTypes": ["firstInstallation", "subsequentUpdate"]
+    }
+  },
+  "fileSelectors": [
+    { "directory": "MapPacks/fukuoka" }
+  ],
+  "platforms": ["iOS"]
+}
