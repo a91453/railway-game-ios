@@ -91,9 +91,9 @@ final class Map3DPlatformPropsTests: XCTestCase {
 
     /// A builder with one platform 200 m along x beside the track at z 0,
     /// of a station whose kit system is `system`.
-    private func builder(system: String, width: Float = 3.2) -> Builder {
+    private func builder(system: String, width: Float = 3.2, world: GameWorld = .newGame()) -> Builder {
         var builder = Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
-                              world: GameWorld.newGame())
+                              world: world)
         let line = stride(from: Float(-100), through: 100, by: 20).map { Map3DPoint($0, Map3DScene.railLift, 0) }
         builder.laidPlatforms = [Builder.LaidPlatform(station: StationID(rawValue: 1), line: line, offset: 1.6 + width / 2, width: width,
                                                       structure: .surface)]
@@ -102,7 +102,8 @@ final class Map3DPlatformPropsTests: XCTestCase {
     }
 
     private func boards(_ meshes: [Map3DScene.ChunkKey: Map3DMesh]) -> [Map3DVertex] {
-        meshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.sidewalk && $0.y > Map3DScene.railLift + 2.5 }
+        // Decision 882: not the name boards at the back.
+        meshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.sidewalk && $0.y > Map3DScene.railLift + 2.5 && $0.z < 4 }
     }
 
     private func glowing(_ meshes: [Map3DScene.ChunkKey: Map3DMesh]) -> [Map3DVertex] {
@@ -300,12 +301,12 @@ final class Map3DPlatformPropsTests: XCTestCase {
         try world.buildTrackEdge(from: a, to: b)
         try world.buildTrackEdge(from: c, to: d)
         try world.buildTrackEdge(from: e, to: f, structure: .elevated)
-        let island = try world.buildStation(named: "Island", at: PlanPoint(x: 25_600, y: 12_000))
+        let island = try world.buildStation(named: "高雄", at: PlanPoint(x: 25_600, y: 12_000))
         try world.addTrackPlatform(island.id, on: .edge(1), from: 290 * 64, to: 510 * 64)
         try world.addTrackPlatform(island.id, on: .edge(2), from: 290 * 64, to: 510 * 64)
-        let side = try world.buildStation(named: "Side", at: PlanPoint(x: 76_800, y: 12_000))
+        let side = try world.buildStation(named: "板橋", at: PlanPoint(x: 76_800, y: 12_000))
         try world.addTrackPlatform(side.id, on: .edge(1), from: 1_090 * 64, to: 1_310 * 64)
-        let raised = try world.buildStation(named: "Raised", at: PlanPoint(x: 25_600, y: 18_000))
+        let raised = try world.buildStation(named: "松山機場", at: PlanPoint(x: 25_600, y: 18_000))
         try world.addTrackPlatform(raised.id, on: .edge(3), from: 290 * 64, to: 510 * 64)
         let scene = Map3DScene(world: world)
         var positions: [Float] = [], colours: [Int] = [], lit: [Bool] = [], indices: [Int] = []
@@ -329,10 +330,102 @@ final class Map3DPlatformPropsTests: XCTestCase {
         try JSONSerialization.data(withJSONObject: json).write(to: URL(fileURLWithPath: out))
     }
 
+    // MARK: Name boards (decision 882)
+
+    func testTheGlyphsWriteTheGamesStationNames() {
+        let glyphs = Map3DBoardGlyphs.glyphs
+        XCTAssertGreaterThan(glyphs.count, 3_000)
+        for character in "高雄臺北車站鶯歌板橋松山機場福岡博多ロヴァニエミRovaniemiäöÅ0123456789" {
+            let glyph = glyphs[character]
+            XCTAssertNotNil(glyph, String(character))
+            XCTAssertTrue(glyph?.rectangles.allSatisfy { $0.x + $0.width <= 16 && $0.y + $0.height <= 16 } ?? false)
+        }
+        // A Chinese character a whole cell square; a Latin letter narrower.
+        XCTAssertEqual(glyphs["站"]?.width, 16)
+        XCTAssertLessThan(glyphs["i"]?.width ?? 16, 8)
+        // A line: the characters side by side; one with no glyph left out.
+        let line = Map3DBoardGlyphs.layout("高雄")
+        XCTAssertEqual(line.width, 32)
+        XCTAssertTrue(line.rectangles.contains { $0.x >= 16 })
+        XCTAssertEqual(Map3DBoardGlyphs.layout("高\u{E000}雄").width, 32)
+        XCTAssertEqual(Map3DBoardGlyphs.layout("\u{E000}").width, 0)
+    }
+
+    func testANameBoardStandsInTheModulesGapClearOfTheBins() {
+        // 200 m: five modules from 0 m; the middle one's and every second one out.
+        XCTAssertEqual(tenths(Props.nameBoards(length: 200, depth: 3.2, island: false, forward: true, bins: [])), [249, 1049, 1849])
+        // The other way along: the same gap, counted from the far end.
+        XCTAssertEqual(tenths(Props.nameBoards(length: 200, depth: 3.2, island: false, forward: false, bins: [])), [151, 951, 1751])
+        // A bin in the way: moved within the gap, or left out.
+        let moved = Props.nameBoards(length: 200, depth: 3.2, island: false, forward: true, bins: [101])
+        XCTAssertEqual(moved.count, 3)
+        XCTAssertGreaterThanOrEqual(abs(moved[1] - 101), 1.5 + 1.3 + Props.furnitureBinClearance)
+        XCTAssertTrue((102.8...106.9).contains(moved[1]))
+        XCTAssertEqual(tenths(Props.nameBoards(length: 200, depth: 3.2, island: false, forward: true, bins: [104.8])), [249, 1849])
+        // Clear of the canopy's columns, which would stand before it; the
+        // other way along, of the bins where they are.
+        let columns = Props.canopyColumns(length: 200, share: 0.6)
+        for forward in [true, false] {
+            let boards = Props.nameBoards(length: 200, depth: 3.2, island: false, forward: forward, bins: [], columns: columns)
+            XCTAssertFalse(boards.isEmpty)
+            for board in boards {
+                XCTAssertTrue(columns.allSatisfy { abs($0 - board) >= 1.5 + Props.nameBoardColumnClearance })
+            }
+        }
+        let reversed = Props.nameBoards(length: 200, depth: 3.2, island: false, forward: false, bins: [99])
+        XCTAssertEqual(reversed.count, 3)
+        XCTAssertGreaterThanOrEqual(abs(reversed[1] - 99), 1.5 + 1.3 + Props.furnitureBinClearance)
+        // Short, narrow: one or none.
+        XCTAssertEqual(Props.nameBoards(length: 50, depth: 3.2, island: false, forward: true, bins: []).count, 1)
+        XCTAssertTrue(Props.nameBoards(length: 30, depth: 3.2, island: false, forward: true, bins: []).isEmpty)
+        XCTAssertTrue(Props.nameBoards(length: 200, depth: 2.2, island: false, forward: true, bins: []).isEmpty)
+        XCTAssertEqual(Props.nameBoards(length: 200, depth: 1.6, island: true, forward: true, bins: []).count, 3)
+        // Never on the furniture's floor pieces.
+        let furniture = Props.furniture(length: 200, depth: 3.2, island: false, rightHalf: true, forward: true, bins: [], roof: nil)
+            .filter { $0.bottom < 2 }
+        for board in Props.nameBoards(length: 200, depth: 3.2, island: false, forward: true, bins: []) {
+            for piece in furniture {
+                XCTAssertGreaterThanOrEqual(abs(piece.along - board), piece.length / 2 + Props.nameBoardLength / 2)
+            }
+        }
+    }
+
+    func testANameBoardIsLaidCloseUpAtTheBackFacingTheTrack() throws {
+        var world = GameWorld.newGame()
+        let station = try world.buildStation(named: "高雄", at: PlanPoint(x: 0, y: 0))
+        var b = builder(system: "tra_sched", world: world)
+        b.laidPlatforms = b.laidPlatforms.map {
+            Builder.LaidPlatform(station: station.id, line: $0.line, offset: $0.offset, width: $0.width, structure: $0.structure)
+        }
+        b.stationSystems[station.id] = "tra_sched"
+        b.addPlatformProps()
+        let top = Map3DScene.railLift + Builder.platformHeight
+        let all = b.closeMeshes.values.flatMap(\.vertices)
+        // The face, white, from 1.5 to 2.3 m up, against the back (z 4.8).
+        let face = all.filter { $0.color == Map3DPalette.sidewalk && $0.y > top + 1.4 && $0.z > 4 }
+        XCTAssertFalse(face.isEmpty)
+        XCTAssertTrue(face.allSatisfy { $0.z >= 4.69 && $0.z <= 4.801 && $0.y <= top + 2.301 && $0.layer == Map3DVertex.nightLit })
+        // The name in front of it, on the track's side, facing the track.
+        let ink = all.filter { $0.color == Map3DPalette.playerRim && $0.y > top + 1.4 && $0.z > 4 }
+        XCTAssertFalse(ink.isEmpty)
+        XCTAssertTrue(ink.allSatisfy { abs($0.z - 4.69) < 0.001 && $0.nz < -0.99 })
+        // Three boards, each name's two characters.
+        let xs = ink.map(\.x).sorted()
+        XCTAssertEqual(zip(xs, xs.dropFirst()).filter { $1 - $0 > 5 }.count + 1, 3)
+        XCTAssertLessThanOrEqual((xs.last ?? 0) - (xs.first ?? 0), 160 + 1.3)
+        for meshes in [b.meshes, b.nearMeshes, b.farMeshes, b.standInMeshes] {
+            XCTAssertFalse(meshes.values.flatMap(\.vertices).contains { $0.color == Map3DPalette.playerRim && $0.z > 4 })
+        }
+    }
+
     /// Decision 436's count for its budget: what one platform adds.
-    func testTrianglesAPlatformAdds() {
+    func testTrianglesAPlatformAdds() throws {
+        // Decision 882: its name boards with a long name.
+        var world = GameWorld.newGame()
+        let station = try world.buildStation(named: "松山機場", at: PlanPoint(x: 0, y: 0))
+        XCTAssertEqual(station.id, StationID(rawValue: 1))
         for system in ["tra_sched", "mrt"] {
-            var b = builder(system: system)
+            var b = builder(system: system, world: world)
             b.addPlatformProps()
             let triangles = b.closeMeshes.values.reduce(0) { $0 + $1.triangleCount }
             print("Decision 436: a 200 m \(system) platform adds \(triangles) triangles close up")

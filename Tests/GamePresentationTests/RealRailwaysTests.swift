@@ -362,6 +362,8 @@ final class RealRailwaysTests: XCTestCase {
                 "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "esaWorldCover", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
+                // Decision 882: the platforms' name boards' letters.
+                "platformNameBoards",
                 "proceduralTokyo", "polyHaven", "music", "runningSound", "dieselSound", "motorSound", "weatherSound",
                 // Decision 712: Hong Kong's, open since its third pull request.
                 "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongLandUse", "hongKongBuildings", "hongKongPeople", "hongKongAirport",
