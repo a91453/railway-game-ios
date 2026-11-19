@@ -14,7 +14,7 @@ import GameCore
 // 854's later note FUKUOKA-LANDMARKS adds Fukuoka Tower, the owner's own
 // model from the earlier version (`tools/fukuoka-map/fukuoka_tower.py`,
 // `Map3DOverseasLandmarkMeshes.swift`), placed the same way, and the
-// local studio's Fukuoka Dome, rebuilt from the earlier version's dome and
+// local studio's Fukuoka Dome and Hakata Station, the dome rebuilt from the earlier version's dome and
 // photographs (`a91453/railway-assets-private-2`,
 // `game-art-previews/docs/art/fukuoka-landmarks-2026-11/`;
 // `Map3DFukuokaStudioMeshes.swift`).
@@ -34,6 +34,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     case conventionCentre = "convention-centre"
     case fukuokaTower = "fukuoka-tower"
     case fukuokaDome = "fukuoka-dome"
+    case hakataStation = "hakata-station"
 
     /// Where the middle of its footprint stands: the surveyed model's, from
     /// the Hong Kong 1980 Grid (`base/landmarks.json`).
@@ -54,6 +55,11 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         // centroid (way 28445837) moved 3.94 m east and 4.45 m south for
         // the hall on its south-east side (glb_to_swift.py --centre).
         case .fukuokaDome: 33.5952487
+        // The middle of the model's footprint (main building, platform
+        // roofs and the canopy at the Hakata exit): the main building's
+        // centroid (OpenStreetMap way 72653571) moved 25.37 m east and
+        // 40.09 m south.
+        case .hakataStation: 33.5895973
         }
     }
     var longitude: Double {
@@ -70,6 +76,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .conventionCentre: 114.1730512
         case .fukuokaTower: 130.3514745
         case .fukuokaDome: 130.3621835
+        case .hakataStation: 130.4203736
         }
     }
 
@@ -89,7 +96,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .culturalCentre: 3.97
         case .conventionCentre: 3.99
         // Stands on the ground the map draws (Momochihama's reclaimed land).
-        case .fukuokaTower, .fukuokaDome: 0
+        case .fukuokaTower, .fukuokaDome, .hakataStation: 0
         }
     }
 
