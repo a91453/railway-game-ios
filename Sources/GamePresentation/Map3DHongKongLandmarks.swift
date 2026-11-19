@@ -13,7 +13,11 @@ import GameCore
 // curved roofs rebuilt piece by piece from the surveyed one. Decision
 // 854's later note FUKUOKA-LANDMARKS adds Fukuoka Tower, the owner's own
 // model from the earlier version (`tools/fukuoka-map/fukuoka_tower.py`,
-// `Map3DOverseasLandmarkMeshes.swift`), placed the same way.
+// `Map3DOverseasLandmarkMeshes.swift`), placed the same way, and the
+// local studio's Fukuoka Dome, rebuilt from the earlier version's dome and
+// photographs (`a91453/railway-assets-private-2`,
+// `game-art-previews/docs/art/fukuoka-landmarks-2026-11/`;
+// `Map3DFukuokaStudioMeshes.swift`).
 
 /// Decision 791: the landmarks, each in its own metres (x east, y north,
 /// z up, the middle of its footprint at the origin), stood where it is.
@@ -29,6 +33,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     case culturalCentre = "cultural-centre"
     case conventionCentre = "convention-centre"
     case fukuokaTower = "fukuoka-tower"
+    case fukuokaDome = "fukuoka-dome"
 
     /// Where the middle of its footprint stands: the surveyed model's, from
     /// the Hong Kong 1980 Grid (`base/landmarks.json`).
@@ -45,6 +50,10 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .culturalCentre: 22.2937068
         case .conventionCentre: 22.2830975
         case .fukuokaTower: 33.5933022
+        // The middle of the model's footprint: OpenStreetMap's outline's
+        // centroid (way 28445837) moved 3.94 m east and 4.45 m south for
+        // the hall on its south-east side (glb_to_swift.py --centre).
+        case .fukuokaDome: 33.5952487
         }
     }
     var longitude: Double {
@@ -60,6 +69,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .culturalCentre: 114.1702111
         case .conventionCentre: 114.1730512
         case .fukuokaTower: 130.3514745
+        case .fukuokaDome: 130.3621835
         }
     }
 
@@ -79,7 +89,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         case .culturalCentre: 3.97
         case .conventionCentre: 3.99
         // Stands on the ground the map draws (Momochihama's reclaimed land).
-        case .fukuokaTower: 0
+        case .fukuokaTower, .fukuokaDome: 0
         }
     }
 
@@ -100,6 +110,13 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         0xCFCBC2, // graniteLight: Map3DPalette.concrete
         0xD9B9A2, // tilePink: the houses' pink
         0xC8CDD2, // mast: Map3DPalette.tankSteel
+        // FUKUOKA-LANDMARKS: the Fukuoka brief's.
+        0xDADCDD, // wallPale: cityConcreteWalls[4]
+        0x2B2F36, // bandDark: Map3DPalette.dark (not lit)
+        0x3C8A5A, // roofGreen: cityRoofs[3]
+        0xC4C8D6, // roofFlat: Map3DPalette.roof
+        0xBBB2A9, // wallWarm: cityConcreteWalls[3]
+        0x5A4E4A, // roofWarm: cityRoofs[2]
     ].map(Map3DColor.rgb)
 
     /// Decision 817: the materials that are glass (blue-grey, silver and
@@ -109,7 +126,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     /// The model in full close by, or the studio's far model.
     func model(full: Bool) -> LandmarkMesh {
         let name = rawValue + (full ? "" : "-far")
-        guard let text = Self.encodedMeshes[name] ?? Self.overseasMeshes[name], let data = Data(base64Encoded: text),
+        guard let text = Self.encodedMeshes[name] ?? Self.overseasMeshes[name] ?? Self.fukuokaStudioMeshes[name], let data = Data(base64Encoded: text),
               let mesh = Self.decoded(Array(data), full: full) else { return LandmarkMesh(full: full) }
         return mesh
     }
