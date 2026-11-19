@@ -194,8 +194,8 @@ final class TimetableCheckupFullTests: XCTestCase {
         "hk SIL realistic": .init(notSent: 0, late: 91, lateOutOfDepot: 1, peakGapMinutes: 4),
         "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
         "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
-        "hk AEL+TCL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk AEL+TCL+DRL realistic": .init(notSent: 0, late: 25, lateOutOfDepot: 1, peakGapMinutes: 7),
+        "hk TCL+AEL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
+        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 18, lateOutOfDepot: 1, peakGapMinutes: 11),
     ]
 
     private func check(_ name: String, _ world: @autoclosure () throws -> GameWorld) throws {
@@ -238,7 +238,7 @@ final class TimetableCheckupFullTests: XCTestCase {
         let runs = try HongKongRailwaysTests.railways().metroRuns.keys.filter { $0.hasPrefix("hkmtr:") }.map { String($0.dropFirst(6)) }.sorted()
         for (label, rules) in Self.rules {
             for id in runs { try check("hk \(id) \(label)", TimetableCheckupWorlds.hongKong([id], rules: rules)) }
-            try check("hk AEL+TCL+DRL \(label)", TimetableCheckupWorlds.hongKong(["AEL", "TCL", "DRL"], rules: rules))
+            try check("hk TCL+AEL+DRL \(label)", TimetableCheckupWorlds.hongKong(["TCL", "AEL", "DRL"], rules: rules))
         }
     }
 

@@ -908,6 +908,10 @@ struct RealLineLaying: Sendable {
     /// purchase, for the list of lines for sale to grey out those whose
     /// land does not.
     var landCheckOnly = false
+    /// LANE-SHARED-ISLAND: whether a line in a lane is held an island's
+    /// width off the other at the stations both call at
+    /// (``inLane(_:of:runs:frame:railways:traces:)``).
+    var laneIslands = true
 
     static func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
         railways.stations.first { $0.id == "\(system)|\(name)" }.map {
@@ -1040,6 +1044,18 @@ extension RealLineLaying {
     /// With `whereItStood`, on its real way, no station moved beside the
     /// company's track (decision 528, later).
     private func laidOffer(for line: RealBranchLine, whereItStood: Bool = false) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
+        let laid = laidOfferInLanes(for: line, whereItStood: whereItStood)
+        // LANE-SHARED-ISLAND: refused so (a game that bought the Airport
+        // Express before its lane moved, on the Disneyland side), laid in
+        // its lane as before.
+        guard laid.offer.acquisition == nil, laneIslands, line.sharesALane, !landCheckOnly else { return laid }
+        var plain = self
+        plain.laneIslands = false
+        let again = plain.laidOfferInLanes(for: line, whereItStood: whereItStood)
+        return again.offer.acquisition == nil ? laid : again
+    }
+
+    private func laidOfferInLanes(for line: RealBranchLine, whereItStood: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
         func offer(depot: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
             // SHALUN-ONE-ISLAND: a line that runs on over the track of the
             // line it shares its first stations with is laid from where it
@@ -1096,6 +1112,14 @@ extension RealLineLaying {
     /// from its first stop to its last, run on straight past each, or
     /// `nil`.
     private func drawnWay(of id: String, frame: RealWorldFrame, railways: RealRailways, traces: RealRailwayTraces) -> WorldPath? {
+        drawnWayAndStops(of: id, frame: frame, railways: railways, traces: traces)?.way
+    }
+
+    /// ``drawnWay(of:frame:railways:traces:)``, with the line's runs and
+    /// where each of its stops stands, in the runs' order.
+    private func drawnWayAndStops(
+        of id: String, frame: RealWorldFrame, railways: RealRailways, traces: RealRailwayTraces
+    ) -> (way: WorldPath, runs: RealLineRuns, points: [WorldVector], system: String)? {
         guard let rail = RealBranchLine.overseasLines.first(where: { "\($0.system):\($0.network)" == id }),
               let runs = RealBranchLine.metroRuns(of: id, after: nil, in: railways) else { return nil }
         let ownStops = railways.stops["\(rail.system)|\(rail.network)"] ?? []
@@ -1111,10 +1135,11 @@ extension RealLineLaying {
         let traced = WorldPath(way).smoothed()
         guard traced.length > 2 * RealLineAcquisition.runOn else { return nil }
         let start = traced.point(at: 0), end = traced.point(at: traced.length)
-        return WorldPath(
+        let drawn = WorldPath(
             [start + traced.tangent(at: 0).reversed * RealLineAcquisition.runOn] + traced.points
                 + [end + traced.tangent(at: traced.length) * RealLineAcquisition.runOn]
         )
+        return (drawn, runs, points, rail.system)
     }
 
     /// Decision 753: `laid`, the way of `line`, kept to its side of the
@@ -1122,24 +1147,97 @@ extension RealLineLaying {
     /// at least the lane's offset off it, where the two lie within
     /// ``laneReach``, and less and less out to twice that; unchanged for
     /// any other line.
+    ///
+    /// Decision 753 (later, LANE-SHARED-ISLAND): at a station both lines
+    /// call at (by its name in both timetables: Tsing Yi, Sunny Bay), the
+    /// way is held exactly ``laneIsland(at:of:runs:beside:besideLine:besideRuns:side:)``
+    /// off the other's drawing instead, so the two lines' nearest tracks
+    /// stand an island's width apart and the 3D map draws one island
+    /// between them, as the real cross-platform interchanges are; from
+    /// there it moves back out to the lane over ``laneIslandBlend``.
+    /// Before, the lane's offset held there too: the Airport Express's
+    /// track stood 20 m from the Tung Chung Line's at Tsing Yi, the
+    /// Disneyland Resort Line's 35 m at Sunny Bay, two stations side by
+    /// side. `points` are the line's stops, `runs` its runs.
     private func inLane(
-        _ laid: WorldPath, of line: RealBranchLine, frame: RealWorldFrame, railways: RealRailways, traces: RealRailwayTraces
+        _ laid: WorldPath, of line: RealBranchLine, runs: RealLineRuns,
+        frame: RealWorldFrame, railways: RealRailways, traces: RealRailwayTraces
     ) -> WorldPath {
         guard let lane = RealBranchLine.overseasLanes[line.id],
-              let other = drawnWay(of: lane.beside, frame: frame, railways: railways, traces: traces) else { return laid }
+              let drawn = drawnWayAndStops(of: lane.beside, frame: frame, railways: railways, traces: traces) else { return laid }
+        let other = drawn.way
         let offset = lane.offset * RealLineAcquisition.metre, reach = Self.laneReach
+        // The shared stations: where each stands along the other's
+        // drawing, and how far off it the way stands there.
+        let besideLine = RealBranchLine(
+            network: String(lane.beside.split(separator: ":", maxSplits: 1).last ?? ""), english: "", chinese: "",
+            stops: drawn.runs.stops, system: drawn.system, tier: line.tier
+        )
+        let islands: [(along: Double, offset: Double)] = !laneIslands ? [] : runs.stops.indices.compactMap { index in
+            let name = runs.stops[index]
+            guard let at = drawn.runs.stops.firstIndex(of: name) else { return nil }
+            let held = Self.laneIsland(
+                at: index, of: line, runs: runs, beside: at, besideLine: besideLine, besideRuns: drawn.runs, side: offset > 0 ? 1 : -1
+            )
+            guard abs(held) < abs(offset) else { return nil }
+            return (other.nearest(drawn.points[at]).along, held)
+        }
+        let platform = Double(Int64(line.cars + 1) * Train.carLength) / 2 + RealLineAcquisition.runOn
+        let blend = Self.laneIslandBlend
         let spacing = 5 * RealLineAcquisition.metre, count = max(2, Int((laid.length / spacing).rounded()))
         let moved = (0...count).map { laid.point(at: laid.length * Double($0) / Double(count)) }.map { point -> WorldVector in
             let near = other.nearest(point)
-            guard near.away < 2 * reach else { return point }
             let on = other.point(at: near.along), normal = other.tangent(at: near.along).normal
             let side = (point - on).dot(normal)
+            guard near.away < 2 * reach else { return point }
+            var lanePoint = point
             let short = offset > 0 ? max(0, offset - side) : min(0, offset - side)
-            guard short != 0 else { return point }
-            let t = min(max((near.away - reach) / reach, 0), 1), share = 1 - t * t * (3 - 2 * t)
-            return point + normal * (short * share)
+            if short != 0 {
+                let t = min(max((near.away - reach) / reach, 0), 1), share = 1 - t * t * (3 - 2 * t)
+                lanePoint = point + normal * (short * share)
+            }
+            // The nearest shared station's island, held over its platform
+            // and loops, and blended back to the lane beyond.
+            guard let island = islands.min(by: { abs($0.along - near.along) < abs($1.along - near.along) }) else { return lanePoint }
+            let t = min(max((abs(near.along - island.along) - platform) / blend, 0), 1)
+            let u = min(max((near.away - reach) / reach, 0), 1)
+            let share = (1 - t * t * (3 - 2 * t)) * (1 - u * u * (3 - 2 * u))
+            // Only ever nearer, on the lane's side: where the way already
+            // runs nearer than the island (Hong Kong, Kowloon), it stays.
+            let laneSide = (lanePoint - on).dot(normal), sign: Double = offset > 0 ? 1 : -1
+            guard share > 0, laneSide * sign > abs(island.offset) else { return lanePoint }
+            return lanePoint + normal * ((island.offset - laneSide) * share)
         }
         return WorldPath(moved).smoothed()
+    }
+
+    /// LANE-SHARED-ISLAND: how far a lane's line moves from the island
+    /// held at a shared station back out to its lane.
+    static let laneIslandBlend = 200 * RealLineAcquisition.metre
+
+    /// LANE-SHARED-ISLAND: how far off the drawing of the line it is laid
+    /// beside (on the lane's `side`, -1 left) a lane's line stands at a
+    /// station both call at, its stop `index` and the other's `beside`:
+    /// past the other's tracks there on that side, an island's width
+    /// (``RealLineAcquisition/islandSpacing``), and its own tracks on the
+    /// side toward the other.
+    static func laneIsland(
+        at index: Int, of line: RealBranchLine, runs: RealLineRuns,
+        beside: Int, besideLine: RealBranchLine, besideRuns: RealLineRuns, side: Double
+    ) -> Double {
+        func extent(_ line: RealBranchLine, _ runs: RealLineRuns, _ index: Int) -> ClosedRange<Double> {
+            let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
+            let layout = !line.isUrban ? RealLineLayout.branch : line.cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+            guard index > 0, index < runs.stops.count - 1 else {
+                return endStationExtent(of: line, name: name, tracks: tracks, layout: layout)
+            }
+            let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
+            return throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
+        }
+        let theirs = extent(besideLine, besideRuns, beside), own = extent(line, runs, index)
+        let past = side < 0 ? -theirs.lowerBound : theirs.upperBound
+        let toward = side < 0 ? own.upperBound : -own.lowerBound
+        return side * (past + RealLineAcquisition.islandSpacing + toward)
     }
 
     /// Which of a line's stations stand raised (decision 462).
@@ -1488,7 +1586,10 @@ extension RealLineLaying {
         // SHARED-STATION-LEVEL: a line's end at a station another of the
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.
-        let inItsLane = inLane(line.after == nil || joined != nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
+        let inItsLane = inLane(
+            line.after == nil || joined != nil ? laid : beside(laid, to: points[parts]), of: line, runs: runs,
+            frame: frame, railways: railways, traces: traces
+        )
         // ZHUZHONG-LEVEL: a branch line's end station with one loop that
         // another real line of its railway runs beside, 8 to 30 m off and
         // along it (Zhuzhong: the Liujia Line's own track 13 m from the
