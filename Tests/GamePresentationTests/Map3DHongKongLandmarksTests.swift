@@ -22,6 +22,13 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         // FUKUOKA-LANDMARKS: the earlier version's model, its mast to the
         // real 234 m, turned as OpenStreetMap's outline.
         .fukuokaTower: (19.8, 21.4, 234.0),
+        // The local studio's dome (revision-3): OpenStreetMap's outline,
+        // 84 m high, with the hall on its south-east side.
+        .fukuokaDome: (224.9, 223.9, 84.85),
+        // Hakata Station (revision-4): the main building and the platform
+        // roofs east of it, OpenStreetMap's outlines, and the Hakata exit's
+        // canopy to the west.
+        .hakataStation: (196.7, 400.7, 63.05),
     ]
 
     /// Every model decodes, near and far, as tall and wide as the surveyed
@@ -48,8 +55,13 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
             XCTAssertTrue(Set(far.vertices.map(\.color)).isSubset(of: Set(near.vertices.map(\.color))), "\(landmark) far colours")
             XCTAssertTrue(Set(near.vertices.map(\.color)).isSubset(of: Set(Map3DHongKongLandmark.materialColours)), "\(landmark) colours")
         }
-        let total = Map3DHongKongLandmark.allCases.reduce(0) { $0 + $1.model(full: true).indices.count / 3 }
-        XCTAssertLessThanOrEqual(total, 60_000)
+        // Each map's landmarks within one budget: Hong Kong's, and
+        // Fukuoka's (FUKUOKA-LANDMARKS), never drawn together.
+        let fukuoka: Set<Map3DHongKongLandmark> = [.fukuokaTower, .fukuokaDome, .hakataStation]
+        for map in [Set(Map3DHongKongLandmark.allCases).subtracting(fukuoka), fukuoka] {
+            let total = map.reduce(0) { $0 + $1.model(full: true).indices.count / 3 }
+            XCTAssertLessThanOrEqual(total, 60_000)
+        }
     }
 
     /// The encoding is read whole or not at all.
@@ -111,5 +123,23 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         let top = builder.nearMeshes.values.flatMap(\.vertices).map(\.y).max() ?? 0
         XCTAssertEqual(top, 234, accuracy: 1)
         XCTAssertTrue(builder.underLandmark(builder.point(x: place.x, y: place.y, height: 0)))
+    }
+
+    /// FUKUOKA-LANDMARKS: Fukuoka Dome stands beside the tower and Hakata
+    /// Station over the subway's Hakata station (in its tunnel, so the
+    /// building is not left out), each as high as the real one.
+    func testFukuokaDomeAndHakataStationOnFukuokasMap() throws {
+        let world = GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground())
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        for (landmark, height) in [(Map3DHongKongLandmark.fukuokaDome, Float(84.85)), (.hakataStation, 63.05)] {
+            let place = frame.worldPosition(latitude: landmark.latitude, longitude: landmark.longitude)
+            let metre = Double(WorldCoordinate.unitsPerMetre), reach = 400 * metre
+            let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
+            var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
+            XCTAssertEqual(builder.addHongKongLandmarks(frame: frame), [landmark])
+            let top = builder.nearMeshes.values.flatMap(\.vertices).map(\.y).max() ?? 0
+            XCTAssertEqual(top, height, accuracy: 1, "\(landmark)")
+            XCTAssertTrue(builder.underLandmark(builder.point(x: place.x, y: place.y, height: 0)), "\(landmark)")
+        }
     }
 }
