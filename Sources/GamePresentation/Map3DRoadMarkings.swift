@@ -208,6 +208,11 @@ struct Map3DRoadMarkings {
     /// (``Map3DFinlandStreet/Unit/crossingSign``) at a crossing with no
     /// signal, one a way the traffic comes, where the region stands them.
     var crossingSigns: [CrossingSign] = []
+    /// Decision 846's fourth later note: the give-way signs
+    /// (``Map3DFinlandStreet/Unit/giveWaySign``) where a road comes to a
+    /// roundabout, on the kerb of the traffic coming in, at its give-way
+    /// line, looking at that traffic.
+    var giveWaySigns: [CrossingSign] = []
     /// Decision 846's third later note: the street name signs, where the
     /// region stands them.
     var streetNames: [StreetName] = []
@@ -887,6 +892,12 @@ struct Map3DRoadMarkings {
             marks.append(Mark(kind: .giveWay, centre: Map3DBaseMap.Point(x: place.point.x + right.x * across, z: place.point.z + right.z * across),
                               along: way, length: Self.giveWayLength, width: Self.giveWayWidth, onDeck: arm.onDeck))
         }
+        // Decision 846's fourth later note: and its sign on the pavement
+        // beside the line, on the side the traffic coming in keeps to.
+        if region.hasFinnishFurniture {
+            let kerb = arm.half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3))
+            giveWaySigns.append(CrossingSign(foot: Map3DBaseMap.Point(x: place.point.x + right.x * kerb, z: place.point.z + right.z * kerb), along: way))
+        }
     }
 
     /// Decision 846's second later note: the give-way line's triangles
@@ -1132,6 +1143,13 @@ extension Map3DScene.Builder {
                 place(model, at: sign.foot, forward: sign.along, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF))
             }
         }
+        // Decision 846's fourth later note: the give-way sign where a road
+        // comes to a roundabout.
+        if let model = Self.finlandModels[.giveWaySign] {
+            for sign in markings.giveWaySigns {
+                place(model, at: sign.foot, forward: sign.along, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF))
+            }
+        }
         // Decision 445: each pedestrian signal its face and its countdown's
         // two digits, in one place, looking across the road (the model
         // looks toward its left).
@@ -1187,6 +1205,14 @@ extension Map3DScene.Builder {
                     if let finnish {
                         place(finnish, at: out(width / 2 + 0.45, ahead: -1.5), forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF),
                               onDeck: road.bridgeLevel > 0)
+                        // Decision 846's fourth later note: and its glass
+                        // shelter beside the sign where the pavement is
+                        // wide enough, open toward the road, its back at
+                        // the pavement's back.
+                        if pavement >= Self.finnishShelterPavement, let shelter = Self.finlandModels[.shelter] {
+                            place(shelter, at: out(width / 2 + pavement - Self.finnishShelterBack, ahead: Self.finnishShelterAhead), forward: forward,
+                                  clearing: 2.6, tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
+                        }
                     } else if sheltered, let model = Self.propModels[.busStop] {
                         // The shelter stands back from the kerb.
                         place(model, at: out(width / 2 + pavement - 1.05), forward: forward, clearing: 3, tint: Map3DColor.rgb(0xFFFFFF),
@@ -1219,6 +1245,15 @@ extension Map3DScene.Builder {
             }
         }
     }
+
+    /// Decision 846's fourth later note: Finland's shelter stands where the
+    /// pavement is this wide, metres, its middle this far in from the
+    /// pavement's back (half its 1.8 m depth and a little) and this far on
+    /// from the stop's sign (clear of the sign 1.5 m back and of its 4.7 m
+    /// length).
+    static let finnishShelterPavement = 2.5
+    static let finnishShelterBack = 1.0
+    static let finnishShelterAhead = 2.2
 
     /// Decision 732: Hong Kong's traffic signals' models in
     /// ``Map3DModelPack/standard``, by the road they face (each placed as

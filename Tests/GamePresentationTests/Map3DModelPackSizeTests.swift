@@ -96,9 +96,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // pedestrian signals with no countdown after the reindeer (3
         // models, 486 vertices more, 19 KB a copy). Its later note:
         // Finland's street furniture after them (10 models, 6,555 vertices
-        // more, 262 KB a copy).
-        XCTAssertEqual(models.count, 925)
-        XCTAssertEqual(vertices, 6_629_325)
+        // more, 262 KB a copy); its fourth later note: the second batch
+        // (3 models, 1,872 vertices more, 75 KB a copy).
+        XCTAssertEqual(models.count, 928)
+        XCTAssertEqual(vertices, 6_631_197)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

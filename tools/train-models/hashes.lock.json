@@ -4640,6 +4640,18 @@
     "fi-crossing-sign" : {
       "hash" : "6fda83ba0e24305a",
       "triangles" : 143
+    },
+    "fi-shelter" : {
+      "hash" : "e00d8fd049b386ef",
+      "triangles" : 290
+    },
+    "fi-lamp-double" : {
+      "hash" : "7689aa8c50de6b70",
+      "triangles" : 196
+    },
+    "fi-give-way-sign" : {
+      "hash" : "70db5bc1d7f67f32",
+      "triangles" : 138
     }
   }
 }

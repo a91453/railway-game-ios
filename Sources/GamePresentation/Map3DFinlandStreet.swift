@@ -22,6 +22,17 @@ import Foundation
 /// - the pedestrian crossing's sign: a blue square, a white triangle and
 ///   a dark figure walking, on a short post.
 ///
+/// Decision 846's fourth later note: and the second batch (Commons; Kemi,
+/// Vantaa, Helsinki and Rovaniemi):
+///
+/// - the bus shelter: a blue steel frame, a flat roof sloping back, glass
+///   at the back and the ends, a lit advertising box at one end, a bench
+///   and a bin, open toward the road;
+/// - the double street light: the street light's pole with two arms, one
+///   over each carriageway, for a divided road's middle;
+/// - the give-way sign (B5): a yellow triangle edged red, point down, on a
+///   galvanised post, where a road comes to a roundabout.
+///
 /// No word, crest or operator's mark is drawn.
 public enum Map3DFinlandStreet {
     /// The models, by their names in ``Map3DModelPack``.
@@ -36,6 +47,9 @@ public enum Map3DFinlandStreet {
         case lamp = "fi-lamp"
         case busStop = "fi-bus-stop"
         case crossingSign = "fi-crossing-sign"
+        case shelter = "fi-shelter"
+        case lampDouble = "fi-lamp-double"
+        case giveWaySign = "fi-give-way-sign"
 
         /// A pedestrian signal's face.
         var isWalk: Bool { self == .walkStop || self == .walkDark || self == .walkWalk }
@@ -44,19 +58,28 @@ public enum Map3DFinlandStreet {
     /// The colours of the mesh's palette indices, in the order
     /// `glb_to_swift.py --materials` gave them: the studio's material
     /// names steel, tankSteel, dark, red_lit, red_unlit, amber_lit,
-    /// amber_unlit, green_lit, green_unlit, lamp_lit, signBlue, signWhite.
+    /// amber_unlit, green_lit, green_unlit, lamp_lit, signBlue, signWhite,
+    /// and the second batch's frameBlue, roof, glazing, advert_lit, signRed,
+    /// signYellow.
     /// All the game's own colours: the galvanised steel
     /// (``Map3DPalette/steel``, brighter ``Map3DPalette/tankSteel``), the
     /// signals' housing and lights (``Map3DProp/signalHousing``,
     /// ``Map3DProp/signalLights``), the street lights' warm white
     /// (``Map3DProp/lampLight``), the signs' blue (``Map3DPalette/canopy``)
-    /// and white (``Map3DPalette/sidewalk``).
+    /// and white (``Map3DPalette/sidewalk``); the shelter's blue frame
+    /// (``Map3DPalette/canopy``), dark roof (``Map3DPalette/dark``), glass
+    /// (``Map3DPalette/glazing``) and lit advertising box
+    /// (``Map3DPalette/sidewalk``), and the give-way sign's red and yellow
+    /// (the barriers' ``Map3DScene/Builder/barrierRed`` and
+    /// ``Map3DScene/Builder/barrierYellow``).
     static let meshPalette: [UInt32] = [
         Map3DPalette.steel, Map3DPalette.tankSteel, Map3DProp.signalHousing,
         Map3DProp.signalLights[0].lit, Map3DProp.signalLights[0].unlit,
         Map3DProp.signalLights[1].lit, Map3DProp.signalLights[1].unlit,
         Map3DProp.signalLights[2].lit, Map3DProp.signalLights[2].unlit,
         Map3DProp.lampLight, Map3DPalette.canopy, Map3DPalette.sidewalk,
+        Map3DPalette.canopy, Map3DPalette.dark, Map3DPalette.glazing, Map3DPalette.sidewalk,
+        Map3DScene.Builder.barrierRed, Map3DScene.Builder.barrierYellow,
     ]
 
     /// The colours that glow: a signal's lit lights, the street light's
@@ -81,17 +104,24 @@ public enum Map3DFinlandStreet {
         modelName(Map3DSignalTiming.steady(road))
     }
 
-    /// The ten models, for ``Map3DModelPack``: after the pedestrian signals
+    /// The shelter's advertising box glows too: white, as the signs' white
+    /// that does not, so it is told by the model (only the shelter has it).
+    static func glows(_ color: UInt32, in unit: Unit) -> Bool {
+        lit.contains(color) || (unit == .shelter && color == Map3DPalette.sidewalk)
+    }
+
+    /// The thirteen models, for ``Map3DModelPack``: after the pedestrian signals
     /// with no countdown and before the route bus, which stays last.
     static var drawn: [Map3DModelPack.Model] {
         Unit.allCases.compactMap { model($0) }.map(Map3DLook.restyle)
     }
 
     /// `unit`'s model as the others of its kind stand: a traffic signal
-    /// and the crossing's sign look toward −x (the traffic they face
-    /// comes from −x, as ``Map3DHongKongSignal``'s), the street light's
-    /// arm and the bus stop's plate are toward the model's left (the road,
-    /// as ``Map3DProp/lamp``'s), and a pedestrian signal looks toward its
+    /// and the crossing's and give-way signs look toward −x (the traffic
+    /// they face comes from −x, as ``Map3DHongKongSignal``'s), the street
+    /// light's arm, the bus stop's plate and the shelter's open side are
+    /// toward the model's left (the road, as ``Map3DProp/lamp``'s), the
+    /// double street light's arms to its left and right, and a pedestrian signal looks toward its
     /// left (as ``Map3DPedestrianSignal``'s; the studio drew it looking
     /// toward −x, so it is turned a quarter here, by swapping its axes: no
     /// sine, the same to the bit on Linux and on a Mac). `nil` if its
@@ -104,7 +134,7 @@ public enum Map3DFinlandStreet {
         var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
         let vertices = model.vertices.map { vertex -> Map3DVertex in
             var vertex = vertex
-            if lit.contains(vertex.color) { vertex.layer = Map3DVertex.glowing }
+            if glows(vertex.color, in: unit) { vertex.layer = Map3DVertex.glowing }
             if unit.isWalk {
                 (vertex.x, vertex.y) = (vertex.y, -vertex.x)
                 (vertex.nx, vertex.ny) = (vertex.ny, -vertex.nx)

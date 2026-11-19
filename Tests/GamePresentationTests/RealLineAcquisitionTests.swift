@@ -219,7 +219,7 @@ final class RealLineAcquisitionTests: XCTestCase {
 
     /// Decision 462: the Liujia and Neiwan Lines part at Zhuzhong, the
     /// Liujia Line's platforms up on its viaduct and the Neiwan Line's on
-    /// the ground. Either is bought after the other, in either order: one
+    /// the ground (ZHUZHONG-LEVEL: bought together, both up on it). Either is bought after the other, in either order: one
     /// station of both, its riders changing between them, each line with
     /// platforms of its own, the Liujia Line's at least the clearance of
     /// crossing track over the Neiwan Line's, and both run their day.
@@ -251,8 +251,17 @@ final class RealLineAcquisitionTests: XCTestCase {
                     world.network.edge(platform.edge).flatMap { edge in [edge.from, edge.to].compactMap { world.network.node($0)?.position.z }.min() }
                 }
             }
+            // ZHUZHONG-LEVEL: in the order they are sold together (decision
+            // 862) both stand on the viaduct at one level, as the real
+            // station's three tracks do; a save holding the Neiwan Line
+            // alone from before (the other order) still has its platforms
+            // on the ground, and the Liujia Line's stand up on its viaduct.
             let liujia = try XCTUnwrap(heights("LIUJIA").min()), neiwan = try XCTUnwrap(heights("NEIWAN").max())
-            XCTAssertGreaterThanOrEqual(liujia - neiwan, TrackStructure.clearance, "\(order): the Liujia Line's platforms over the Neiwan Line's")
+            if order[0] == "LIUJIA" {
+                XCTAssertLessThanOrEqual(abs(liujia - neiwan), WorldCoordinate.unitsPerMetre / 2, "\(order): one level")
+            } else {
+                XCTAssertGreaterThanOrEqual(liujia - neiwan, TrackStructure.clearance, "\(order): the Liujia Line's platforms over the Neiwan Line's")
+            }
 
             try world.advance(ticks: 2 * 24 * 60)
             let today = world.clock.now.seconds / GameTime.secondsPerDay
@@ -268,7 +277,7 @@ final class RealLineAcquisitionTests: XCTestCase {
 
     /// Decision 462: a save from before, its Liujia Line bought with its
     /// Zhuzhong platforms on the ground, buys the Neiwan Line too: laid
-    /// over the Liujia Line's there, at the station both share, and both
+    /// beside the Liujia Line's there (ZHUZHONG-LEVEL; before, over them), at the station both share, and both
     /// run their day.
     func testASaveOfBeforeWithTheLiujiaLineBuysTheNeiwanLine() throws {
         let session = try Self.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
@@ -279,7 +288,6 @@ final class RealLineAcquisitionTests: XCTestCase {
         let groundPlatforms = session.world.trackPlatforms(of: zhuzhong)
 
         let neiwan = try line("NEIWAN", in: session)
-        XCTAssertTrue(session.realLineOffer(for: neiwan, raising: .viaducts).crossesTrack, "the Neiwan Line on the ground meets the Liujia Line's")
         let offer = session.realLineOffer(for: neiwan)
         XCTAssertNil(offer.problem)
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
@@ -291,10 +299,14 @@ final class RealLineAcquisitionTests: XCTestCase {
                 world.network.edge(platform.edge).flatMap { edge in [edge.from, edge.to].compactMap { world.network.node($0)?.position.z }.min() }
             }
         }
-        let raised = world.trackPlatforms(of: zhuzhong).filter { !groundPlatforms.contains($0) }
-        XCTAssertEqual(raised.count, 2)
-        let over = try XCTUnwrap(lowest(raised).min()) - XCTUnwrap(lowest(groundPlatforms).max())
-        XCTAssertGreaterThanOrEqual(over, TrackStructure.clearance)
+        // ZHUZHONG-LEVEL: the Liujia Line laid so (`.none`) no longer
+        // doubles back across the Neiwan Line's way at Zhuzhong, so the
+        // Neiwan Line is laid beside its ground platforms at their level
+        // (decision 863), not raised over them.
+        let added = world.trackPlatforms(of: zhuzhong).filter { !groundPlatforms.contains($0) }
+        XCTAssertEqual(added.count, 2)
+        let apart = try XCTUnwrap(lowest(added).min()) - XCTUnwrap(lowest(groundPlatforms).max())
+        XCTAssertLessThanOrEqual(abs(apart), WorldCoordinate.unitsPerMetre)
 
         try world.advance(ticks: 2 * 24 * 60)
         let today = world.clock.now.seconds / GameTime.secondsPerDay
