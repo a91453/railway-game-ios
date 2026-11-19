@@ -187,7 +187,13 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Shalun's one island. `nil` for any other line, or one bought first.
     var leavesAt: String? {
         guard after != nil else { return nil }
-        return system == "ntdlrt" && network == "VB" ? "濱海沙崙" : nil
+        return Self.leavesAt(system: system, network: network)
+    }
+
+    /// ``leavesAt`` of the line `network` of `system`, bought after the
+    /// one it shares its first stations with.
+    static func leavesAt(system: String, network: String) -> String? {
+        system == "ntdlrt" && network == "VB" ? "濱海沙崙" : nil
     }
 
     /// Decision 556: whether the ground under its depots beside the line
@@ -1382,10 +1388,11 @@ extension RealLineLaying {
             )
         }
         guard let railways, let frame = RealWorldFrame(world: world),
-              let runs = line.isUrban ? RealBranchLine.metroRuns(of: line.id, after: line.after, in: railways) : railways.branchRuns[line.network],
+              let laidRuns = line.isUrban ? RealBranchLine.metroRuns(of: line.id, after: line.after, in: railways) : railways.branchRuns[line.network],
               let traces else {
             return refused("This map has no real railway to buy.", "這張地圖沒有可以收購的真實鐵路。")
         }
+        let runs = line.joinedTracks(laidRuns, in: railways)
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
         }

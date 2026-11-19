@@ -55,6 +55,13 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// more. Of the 11 runs still late under a new game's rules, 10 leave
     /// Hongshulin late, both lines' (HONGSHULIN-TURN); 4 under the
     /// realistic rules; none late out of the depot (measured 2026-11-19).
+    /// HONGSHULIN-TURN: the Green Mountain Line's Hongshulin is laid with
+    /// 7 tracks, so the Blue Coast Line's three trains stand there at
+    /// night as the real ones do, not one of them at the wharf: none
+    /// leaves Hongshulin late. One run is left under a new game's rules,
+    /// the Green Mountain Line's from Kanding at 17:38, 15 minutes late,
+    /// and its evening peak gap at Hongshulin of 24.7 minutes against 18;
+    /// none under the realistic rules (measured 2026-11-19).
     /// FUKUOKA-OPEN: Fukuoka's three lines, bought together, as measured
     /// when its map opened (2026-11-19, Release): every run sent, but the
     /// Nanakuma Line's turns at its ends at 3 min 15 s run up to 15
@@ -65,8 +72,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     static let budgets: [String: TimetableCheckup.Budget] = [
         "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 187, lateOutOfDepot: 0, peakGapMinutes: 8),
         "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 129, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 11, lateOutOfDepot: 0, peakGapMinutes: 10),
-        "taiwan ntdlrt:V+ntdlrt:VB realistic": .init(notSent: 0, late: 4, lateOutOfDepot: 0, peakGapMinutes: 5),
+        "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 7),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
