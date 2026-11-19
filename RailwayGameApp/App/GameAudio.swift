@@ -697,7 +697,7 @@ private final class CuePlayers: @unchecked Sendable {
     /// ``queue``.
     private var players: [SoundCue: [AVAudioPlayer]] = [:]
     /// Decision 883: the piano the player's melodies are made on, read
-    /// from the app's six `melody-piano-<root>.wav` the first time one
+    /// from the app's seven `melody-piano-<root>.wav` the first time one
     /// plays; `nil` when a file cannot be read (the official melody 1
     /// plays instead, ``SoundCue/resource``).
     private static let synth: PlayerMelodySynth? = {

@@ -6,10 +6,11 @@ the music's sampled piano (the chamber bank's, Salamander, CC BY 3.0, the
 one the official departure melodies are played on, decision 853): one note
 every major third over C5–C7, each struck at the official melodies'
 velocity and held, dry (the synth adds the room), mono, at the synth's
-32 kHz, all with one gain so their levels stay the piano's own. The synth
-plays each melody note on the nearest of them, at most two semitones off,
-but B♭6 to C7 on A6, the highest key the chamber bank's piano has
-(`sampled/chamber.json`: keys 55–93).
+32 kHz, all with one gain so their levels stay the piano's own, and C7,
+the top of the workshop's range, as recorded (decision 883's later note:
+the chamber bank's piano reaches C7 since, `sampled/chamber.json`). The
+synth plays each melody note on the nearest of them, at most two
+semitones off.
 """
 
 import os
@@ -20,10 +21,11 @@ import wave
 
 import numpy as np
 
+import chamber_bank
 import sampled_music
 
 # The synth's (`PlayerMelodySynth.roots`, `rate`).
-ROOTS = [74, 78, 82, 86, 90, 93]
+ROOTS = [74, 78, 82, 86, 90, 93, 96]
 RATE = 32_000
 # How long each note is held and kept: the longest a melody's last note
 # rings, less what the synth's room adds.
@@ -83,8 +85,26 @@ def _to_rate(x):
     return np.fft.irfft(kept, n) * n / len(x)
 
 
+# The workshop's pitches (`PlayerMelody.pitches`: C5–C7).
+LOWEST, HIGHEST = 72, 96
+# The most a note is played off its recording, semitones.
+REACH = 2
+
+
+def check():
+    """Every root is a key the chamber bank's piano has, and every pitch
+    a player can write is within `REACH` of one."""
+    silent = chamber_bank.unplayable(0, ROOTS)
+    if silent:
+        raise SystemExit(f"melody piano roots {silent}: the chamber bank's piano has no recording there")
+    far = [p for p in range(LOWEST, HIGHEST + 1) if min(abs(p - r) for r in ROOTS) > REACH]
+    if far:
+        raise SystemExit(f"melody pitches {far}: more than {REACH} semitones from every root {ROOTS}")
+
+
 def notes():
     """The notes, by root, mono at `RATE`, levelled together."""
+    check()
     made = {root: _to_rate(_render(root)) for root in ROOTS}
     fade = int(0.25 * RATE)
     for x in made.values():
