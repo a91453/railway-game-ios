@@ -30,6 +30,30 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 142.
+        Entry(
+            id: "2026-11-20-142",
+            items: [
+                Line(
+                    english: "Fukuoka opens: fly there from Taoyuan or Kaohsiung, download its map, and run its three subway lines.",
+                    chinese: "福岡開放：從桃園或高雄飛福岡，下載地圖後經營市營地鐵三條線。"
+                ),
+                Line(
+                    english: "Fukuoka's 3D map has Japanese streets and buildings, Fukuoka Tower, the Dome and Hakata Station.",
+                    chinese: "福岡的 3D 地圖有日本的街道與建築、福岡塔、巨蛋與博多站。"
+                ),
+                Line(
+                    english: "Hong Kong's Sunny Bay and Tsing Yi each have one island where two lines meet.",
+                    chinese: "香港欣澳、青衣兩站照真實收成一座島，兩條線同島轉乘。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Sanying Line's early train at Yingtao Fude leaves on time instead of waiting behind an empty train.",
+                    chinese: "三鶯線鶯桃福德的早班車不再被空車擋住，準時發車。"
+                ),
+            ]
+        ),
         // 141.
         Entry(
             id: "2026-11-19-141",
