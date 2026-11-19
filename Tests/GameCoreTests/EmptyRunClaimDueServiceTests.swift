@@ -19,6 +19,7 @@ import XCTest
 /// the same: on Hong Kong's Tung Chung Line the services at Tung Chung
 /// bound for Hong Kong waited so for an empty run to Siu Ho Wan 25 km
 /// away. Now D leaves when it is due, and no train stands deadlocked.
+/// Decision 886: and so with F a service, not an empty run.
 final class EmptyRunClaimDueServiceTests: XCTestCase {
     private func forward(_ edge: Int) -> TrackTraversal {
         TrackTraversal(edge: .edge(edge), direction: .forward)
@@ -29,7 +30,9 @@ final class EmptyRunClaimDueServiceTests: XCTestCase {
     }
 
     /// `dueAt`: when D's timetable has it leave P2 (S leaves Q a minute in).
-    private func makeWorld(dueAt: GameTime = GameTime(minutes: 1)) throws -> (world: GameWorld, trains: [String: TrainID], stations: [String: StationID]) {
+    /// `emptyRun`: whether F runs empty (decision 850) or is a service
+    /// to Dp (decision 886).
+    private func makeWorld(dueAt: GameTime = GameTime(minutes: 1), emptyRun: Bool = true) throws -> (world: GameWorld, trains: [String: TrainID], stations: [String: StationID]) {
         var world = try GameWorld(bounds: WorldBounds(width: 462_848, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
                                   clock: GameClock(speed: .normal))
         func node(_ x: Int64, _ y: Int64) throws -> TrackNodeID { try world.buildTrackNode(at: WorldCoordinate(x: x, y: y)) }
@@ -79,7 +82,7 @@ final class EmptyRunClaimDueServiceTests: XCTestCase {
             ScheduledStop(station: stations["Q"]!, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
             ScheduledStop(station: stations["Dp"]!, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 20)),
         ]
-        train.isDeadheading = true
+        train.isDeadheading = emptyRun
         train.execution = .travellingToStop(1, cycle: 0)
         train.movement.edges = [.edge(10), .edge(2), .edge(11)]
         train.movement.end = e11 - 2_048
@@ -100,6 +103,35 @@ final class EmptyRunClaimDueServiceTests: XCTestCase {
         let (d, s, f) = (trains["D"]!, trains["S"]!, trains["F"]!)
         XCTAssertTrue(world.isFollowing(try XCTUnwrap(world.train(id: f))), "F follows S")
         XCTAssertEqual(world.train(id: f)?.isDeadheading, true)
+        world.setSpeed(.x1)
+        for _ in 0..<900 {
+            try world.advance(ticks: 1)
+            XCTAssertEqual(world.deadlockedTrains(), [], "at \(world.clock.now.seconds) s")
+        }
+        XCTAssertNotEqual(world.trainHoldingRoute(of: d), f, "D does not wait for F's claim")
+        world.setSpeed(.normal)
+        var arrived: Set<TrainID> = []
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            XCTAssertEqual(world.deadlockedTrains(), [])
+            XCTAssertEqual(WorldInvariants.violations(in: world), [])
+            for (id, station) in [(d, "K"), (s, "P2"), (f, "Dp")] where world.stationsStoppedAt(by: id).contains(stations[station]!) {
+                arrived.insert(id)
+            }
+        }
+        XCTAssertEqual(arrived, [d, s, f])
+    }
+
+    /// Decision 886: the same with F a service to Dp, not an empty run.
+    /// A service's claim bound every train; D waited for F's claim, F for
+    /// S and S for D, until decision 577 sent D (on the Taoyuan Airport
+    /// MRT rebuilt, an express behind a stopping train at Hengshan, and
+    /// the train late at Linghang). Now D leaves when it is due.
+    func testADueServiceLeavesPastAServicesClaim() throws {
+        var (world, trains, stations) = try makeWorld(emptyRun: false)
+        let (d, s, f) = (trains["D"]!, trains["S"]!, trains["F"]!)
+        XCTAssertTrue(world.isFollowing(try XCTUnwrap(world.train(id: f))), "F follows S")
+        XCTAssertEqual(world.train(id: f)?.isDeadheading, false)
         world.setSpeed(.x1)
         for _ in 0..<900 {
             try world.advance(ticks: 1)
