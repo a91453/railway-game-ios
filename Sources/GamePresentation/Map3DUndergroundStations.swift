@@ -330,7 +330,7 @@ extension Map3DScene.Builder {
     /// (``laidUnderground``) for their props and screen doors.
     mutating func addUndergroundPlatforms() {
         let underground = undergroundStations
-        for platform in underground.platforms {
+        for (index, platform) in underground.platforms.enumerated() {
             guard platform.line.contains(where: { contains(scenePoint: $0) }) else { continue }
             let line = platform.line, middle = line[line.count / 2]
             let edge = world.highSpeedStations.contains(platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge
@@ -347,8 +347,16 @@ extension Map3DScene.Builder {
                                top: Map3DPalette.platformEdge)
                 mesh.makeGlowing(from: start)
             }
-            laidUnderground.append(LaidPlatform(station: platform.station, line: line, offset: platform.offset, width: platform.width,
-                                                structure: .tunnel, island: platform.island, edge: platform.edge))
+            var laid = LaidPlatform(station: platform.station, line: line, offset: platform.offset, width: platform.width,
+                                    structure: .tunnel, island: platform.island, edge: platform.edge)
+            // Decision 882: which way its box's modules run along it
+            // (``addUndergroundBox``), so its name boards miss them.
+            if platform.island, let box = underground.boxes.first(where: { $0.platforms.contains(index) }),
+               let first = Map3DUndergroundStations.locate(line[0], along: box.path),
+               let last = Map3DUndergroundStations.locate(line[line.count - 1], along: box.path) {
+                laid.modulesForward = last.along >= first.along
+            }
+            laidUnderground.append(laid)
         }
         for box in underground.boxes where box.path.contains(where: { contains(scenePoint: $0) }) {
             addUndergroundBox(box, platforms: underground.platforms)

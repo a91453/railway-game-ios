@@ -383,6 +383,7 @@ extension Map3DScene.Builder {
             let top = Self.platformHeight
             let canopyShare = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let shellRoofed = shellRoofed
+            let name = world.station(id: platform.station)?.name, second = boardSecondNames[platform.station]
             mesh(at: path.at(path.length / 2).point) { mesh in
                 func place(_ along: Float, _ across: Float, _ up: Float) -> (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint) {
                     let at = path.at(min(max(along, 0), path.length))
@@ -429,12 +430,23 @@ extension Map3DScene.Builder {
                 // as on an underground island (decision 860, which lays
                 // its own with its box).
                 let under = platform.structure == .tunnel
-                guard !(under && platform.island) else { return }
                 let back = platform.offset + side * platform.width / 2
                 // Which way the module runs and which half faces this
-                // track, by the compass, so an island's two halves agree.
+                // track, by the compass, so an island's two halves agree;
+                // under ground, an island's as its box lays it.
                 let whole = path.at(path.length).point - path.at(0).point
-                let forward = abs(whole.x) >= abs(whole.z) ? whole.x >= 0 : whole.z >= 0
+                let forward = platform.modulesForward ?? (abs(whole.x) >= abs(whole.z) ? whole.x >= 0 : whole.z >= 0)
+                // Decision 882: the name boards at its back, facing its track.
+                if let name {
+                    let columns = under || shellRoofed.contains(platform.station) ? []
+                        : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
+                    for board in Map3DPlatformProps.nameBoards(length: path.length, depth: platform.width, island: platform.island,
+                                                               forward: forward, bins: bins, columns: columns) {
+                        let at = place(board, back, top)
+                        Self.addNameBoard(&mesh, foot: at.point, out: at.right * -side, name: name, second: second, underground: under)
+                    }
+                }
+                guard !(under && platform.island) else { return }
                 let roof: ClosedRange<Float>? = under ? 0...path.length
                     : shellRoofed.contains(platform.station) ? nil
                     : (path.length * (1 - canopyShare) / 2)...(path.length * (1 + canopyShare) / 2)

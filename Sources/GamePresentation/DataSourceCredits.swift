@@ -1245,6 +1245,23 @@ public enum DataSourceCredits {
                         ),
                         links: [DataSourceCredit.Link(title: "Slop New York", url: slopNewYorkURL)]
                     ),
+                    // Decision 882: the letters of the platforms' name boards.
+                    DataSourceCredit(
+                        id: "platformNameBoards",
+                        title: "Noto Sans TC",
+                        detail: language.text(
+                            "The letters of the station names on the platforms' name boards in the 3D map.",
+                            "3D 地圖月台站名牌上的站名字形。"
+                        ),
+                        notice: language.text(
+                            "Noto Sans CJK, © Adobe (http://www.adobe.com/), with Reserved Font Name 'Source', under the SIL Open Font License 1.1, which comes with the app.",
+                            "Noto Sans CJK，© Adobe（http://www.adobe.com/），保留字型名稱「Source」，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Noto Sans CJK", url: notoSansURL),
+                            DataSourceCredit.Link(title: language.text("Noto Sans licence", "Noto Sans 授權條款"), url: notoSansLicenseURL),
+                        ]
+                    ),
                 ]
             ),
             // Decision 152: the 3D city view of the settings' preview.
