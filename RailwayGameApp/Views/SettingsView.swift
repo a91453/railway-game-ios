@@ -86,6 +86,9 @@ struct SettingsView: View {
     /// Decision 776, later: the map packs' downloads as last heard
     /// (``MapPackDownloads/statusChanged``); read afresh until then.
     @State private var mapPackStatuses: [OverseasMap: MapPackStatus] = [:]
+    /// MAP-PACK-MANAGE: the city whose map pack the player asked to remove,
+    /// while the question is shown.
+    @State private var removingMapPack: OverseasMap?
 
     var body: some View {
         NavigationStack {
@@ -282,8 +285,9 @@ struct SettingsView: View {
             }
             // Decision 776, later: how each open city's map pack stands.
             ForEach(OverseasMap.allCases.filter(OverseasMaps.open.contains), id: \.self) { city in
+                let status = mapPackStatuses[city] ?? MapPackDownloads.status(city)
                 LabeledContent {
-                    Text(verbatim: (mapPackStatuses[city] ?? MapPackDownloads.status(city)).text(in: DisplayLanguage.app, carried: city.isCarried))
+                    Text(verbatim: status.text(in: DisplayLanguage.app, carried: city.isCarried))
                 } label: {
                     Label {
                         Text(verbatim: city.mapPackTitle(in: DisplayLanguage.app))
@@ -292,6 +296,8 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.mapPack.\(city.rawValue)")
+                // MAP-PACK-MANAGE: remove the pack, or download it again.
+                mapPackAction(city, status: status)
             }
             .onReceive(NotificationCenter.default.publisher(for: MapPackDownloads.statusChanged).receive(on: DispatchQueue.main)) { _ in
                 for city in OverseasMaps.open { mapPackStatuses[city] = MapPackDownloads.status(city) }
@@ -322,6 +328,43 @@ struct SettingsView: View {
 
     /// Decision 154: how strongly the game's holidays (and later its other
     /// events) bite, kept in the game's save, and whose holidays they are.
+    /// MAP-PACK-MANAGE: the button under a city's map pack row: remove it
+    /// (asked first; not while a game on its map is open) or download it
+    /// again; nothing for a pack the app carries or one still coming.
+    @ViewBuilder
+    private func mapPackAction(_ city: OverseasMap, status: MapPackStatus) -> some View {
+        let language = DisplayLanguage.app
+        let playing = session.map { open in launcher.overseasGrounds.contains { $0.city == city && $0.holds(open.world) } } ?? false
+        let offer = MapPackChoices.offer(city, status: status, carried: city.isCarried, playing: playing)
+        if let title = MapPackChoices.buttonTitle(offer, in: language) {
+            Button(role: offer == .download ? nil : .destructive) {
+                if offer == .download {
+                    MapPackDownloader.download(city)
+                } else {
+                    removingMapPack = city
+                }
+            } label: {
+                Text(verbatim: title)
+            }
+            .disabled(offer == .inUse)
+            .accessibilityIdentifier("settings.mapPack.\(city.rawValue).action")
+            .confirmationDialog(Text(verbatim: MapPackChoices.confirmation(city, in: language)),
+                                isPresented: Binding(get: { removingMapPack == city }, set: { if !$0 { removingMapPack = nil } }),
+                                titleVisibility: .visible) {
+                Button(role: .destructive) {
+                    Task { _ = await MapPackDownloader.remove(city) }
+                } label: {
+                    Text(verbatim: title)
+                }
+            }
+            if let note = MapPackChoices.note(offer, city, in: language) {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     private func eventsSection(_ session: GameSession) -> some View {
         let language = session.language
         let current = session.world.disruptions?.level

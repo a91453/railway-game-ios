@@ -34,10 +34,21 @@ enum MapPackDownloader {
         // Decision 789: only the open cities have asset packs. Decision
         // 858: those the app does not carry first: the real-world data
         // waits for them.
-        let cities = OverseasMap.allCases.filter(OverseasMaps.open.contains).sorted { !$0.isCarried && $1.isCarried }
+        // MAP-PACK-MANAGE: a pack the player removed is not fetched again
+        // (nor read, if the system fetched it back on an update: it is
+        // removed once more) until they ask for it in the settings.
+        let removed = MapPackChoices.removed()
+        let cities = OverseasMap.allCases.filter { OverseasMaps.open.contains($0) && !removed.contains($0) }
+            .sorted { !$0.isCarried && $1.isCarried }
         // Decision 776, later: the settings show how each stands.
         for city in cities { MapPackDownloads.note(city, .downloading) }
+        for city in OverseasMap.allCases where OverseasMaps.open.contains(city) && removed.contains(city) {
+            MapPackDownloads.note(city, .removed)
+        }
         Task.detached(priority: .userInitiated) {
+            for city in OverseasMap.allCases where OverseasMaps.open.contains(city) && removed.contains(city) {
+                try? await AssetPackManager.shared.remove(assetPackWithID: city.assetPackID)
+            }
             // Decision 858: what is on the device already is taken before
             // anything is asked of the network, so a city downloaded
             // before is there at once, offline too.
@@ -65,6 +76,34 @@ enum MapPackDownloader {
                 try? await Task.sleep(nanoseconds: pause * 1_000_000_000)
                 pause = min(pause * 2, 300)
             }
+        }
+    }
+
+    /// MAP-PACK-MANAGE: removes `city`'s pack from the device at the
+    /// player's word; the game stops reading it at once. Whether it went.
+    static func remove(_ city: OverseasMap) async -> Bool {
+        guard isAvailable, !city.isCarried else { return false }
+        do {
+            try await AssetPackManager.shared.remove(assetPackWithID: city.assetPackID)
+        } catch {
+            log.notice("map pack \(city.assetPackID, privacy: .public) not removed: \(String(describing: error), privacy: .public)")
+            return false
+        }
+        MapPackChoices.set(city, removed: true)
+        MapPackDownloads.forget(city)
+        MapPackDownloads.note(city, .removed)
+        log.notice("map pack \(city.assetPackID, privacy: .public) removed by the player")
+        return true
+    }
+
+    /// MAP-PACK-MANAGE: fetches `city`'s pack again at the player's word
+    /// (one they removed, or one that did not come), as at launch.
+    static func download(_ city: OverseasMap) {
+        guard isAvailable else { return }
+        MapPackChoices.set(city, removed: false)
+        MapPackDownloads.note(city, .downloading)
+        Task.detached(priority: .userInitiated) {
+            _ = await fetch(city)
         }
     }
 
