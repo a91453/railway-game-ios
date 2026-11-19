@@ -1,4 +1,5 @@
 import Foundation
+import GameCore
 
 // Decision 882: a name board at the back of every platform, the station's
 // name in the game on it, as on a real platform, the same rule on the
@@ -122,12 +123,31 @@ extension Map3DPlatformProps {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 882: the second name of each of `world`'s stations that is
+    /// a real one (as the station card's nameboard, decision 845): the
+    /// official English name under a Chinese name, the Chinese one under
+    /// an English name; none where the two are the same.
+    static func boardSecondNames(_ world: GameWorld, _ railways: RealRailways, _ frame: RealWorldFrame) -> [StationID: String] {
+        var names: [StationID: String] = [:]
+        for station in world.stations where !station.isDepot {
+            let at = frame.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
+            let real = railways.stations(named: station.name, near: RealRailways.Coordinate(latitude: at.latitude, longitude: at.longitude))
+            guard let first = real.first(where: { $0.english != nil }) ?? real.first else { continue }
+            let key = RealRailways.stationKey(station.name)
+            let english = first.english.map(RealRailways.Station.shown)
+            let second = english.map { RealRailways.stationKey($0) == key } ?? false ? first.chinese : english
+            if let second, RealRailways.stationKey(second) != key { names[station.id] = second }
+        }
+        return names
+    }
+
     /// Decision 882: a name board with its foot's middle at `foot` (the
     /// platform's back), facing `out` (towards the track), as the old
     /// version's: a white face in a grey frame, a green band across it,
     /// `name` in navy over the band; its face lit at night
     /// (`underground`: always).
-    static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, underground: Bool) {
+    static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, second: String? = nil,
+                             underground: Bool) {
         typealias Props = Map3DPlatformProps
         guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return }
         let along = Map3DPoint(-out.z, 0, out.x)
@@ -156,17 +176,39 @@ extension Map3DScene.Builder {
         if underground { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) }
         let band = Props.nameBoardBand
         quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, Props.nameBoardGreen)
-        // The name over the band, as large as fits.
-        let text = Map3DBoardGlyphs.layout(name)
-        guard text.width > 0 else { return }
+        // An arrow at each end of the band, pointing out, as on the
+        // railway's boards.
+        let bandLow = faceHeight * band.lowerBound, bandHigh = faceHeight * band.upperBound, mid = (bandLow + bandHigh) / 2
+        let arrow = (bandHigh - bandLow) * 0.8
+        for end: Float in [-1, 1] {
+            let tip = end * (faceLength / 2 - 0.05), back = tip - end * arrow
+            let a = face + out * 0.008 + right * tip + Map3DPoint(0, mid, 0)
+            let b = face + out * 0.008 + right * back + Map3DPoint(0, mid + arrow / 2, 0)
+            let c = face + out * 0.008 + right * back + Map3DPoint(0, mid - arrow / 2, 0)
+            // Counter-clockwise seen from the track.
+            mesh.addFan(end > 0 ? [c, a, b] : [a, c, b], normal: out, color: Map3DPalette.sidewalk)
+        }
+        // The name over the band, as large as fits, its second name small
+        // under it when it has one.
         let grid = Float(Map3DBoardGlyphs.grid)
         let room = faceHeight * (1 - band.upperBound)
-        let cell = min(room * 0.92 / grid, (faceLength - 0.2) / Float(text.width))
-        let left = -Float(text.width) * cell / 2, top = faceHeight * band.upperBound + room / 2 + grid * cell / 2
-        for r in text.rectangles {
-            let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
-            let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
-            quad(x0, y0, x1, y1, 0.008, Map3DPalette.playerRim)
+        func write(_ text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle]), height: Float, middle: Float) {
+            guard text.width > 0 else { return }
+            let cell = min(height / grid, (faceLength - 0.2) / Float(text.width))
+            let left = -Float(text.width) * cell / 2, top = middle + grid * cell / 2
+            for r in text.rectangles {
+                let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
+                let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
+                quad(x0, y0, x1, y1, 0.008, Map3DPalette.playerRim)
+            }
+        }
+        let main = Map3DBoardGlyphs.layout(name)
+        let other = second.map(Map3DBoardGlyphs.layout) ?? (width: 0, rectangles: [])
+        if other.width > 0 {
+            write(main, height: room * 0.66, middle: bandHigh + room * 0.62)
+            write(other, height: room * 0.3, middle: bandHigh + room * 0.17)
+        } else {
+            write(main, height: room * 0.92, middle: bandHigh + room / 2)
         }
     }
 }

@@ -383,7 +383,7 @@ extension Map3DScene.Builder {
             let top = Self.platformHeight
             let canopyShare = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let shellRoofed = shellRoofed
-            let name = world.station(id: platform.station)?.name
+            let name = world.station(id: platform.station)?.name, second = boardSecondNames[platform.station]
             mesh(at: path.at(path.length / 2).point) { mesh in
                 func place(_ along: Float, _ across: Float, _ up: Float) -> (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint) {
                     let at = path.at(min(max(along, 0), path.length))
@@ -443,7 +443,7 @@ extension Map3DScene.Builder {
                     for board in Map3DPlatformProps.nameBoards(length: path.length, depth: platform.width, island: platform.island,
                                                                forward: forward, bins: bins, columns: columns) {
                         let at = place(board, back, top)
-                        Self.addNameBoard(&mesh, foot: at.point, out: at.right * -side, name: name, underground: under)
+                        Self.addNameBoard(&mesh, foot: at.point, out: at.right * -side, name: name, second: second, underground: under)
                     }
                 }
                 guard !(under && platform.island) else { return }

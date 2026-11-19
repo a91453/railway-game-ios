@@ -641,6 +641,8 @@ public struct Map3DScene: Sendable {
         builder.addOverheadLine()
         builder.mark("overhead line")
         // Decision 436: the platforms' small things, close up.
+        // Decision 882: the second names on the platforms' name boards.
+        if let railways, let frame = RealWorldFrame(world: world) { builder.boardSecondNames = Builder.boardSecondNames(world, railways, frame) }
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
@@ -1218,6 +1220,9 @@ extension Map3DScene {
         /// Decision 436: each station's station kit system
         /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
         var stationSystems: [StationID: String] = [:]
+        /// Decision 882: each real station's other name (its English one
+        /// under a Chinese name), for its platforms' name boards.
+        var boardSecondNames: [StationID: String] = [:]
         /// Decision 874: the stations under a shell of their own
         /// (decision 827), with no kit canopy a sign could hang from.
         var shellRoofed: Set<StationID> = []

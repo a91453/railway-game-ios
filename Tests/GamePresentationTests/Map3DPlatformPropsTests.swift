@@ -403,7 +403,7 @@ final class Map3DPlatformPropsTests: XCTestCase {
         let all = b.closeMeshes.values.flatMap(\.vertices)
         // The face, white in a grey frame, from 1.36 to 2.41 m up, against
         // the back (z 4.8), lit at night, facing the track; the green band across it.
-        let face = all.filter { $0.color == Map3DPalette.sidewalk && $0.y > top + 1.3 && $0.z > 4 }
+        let face = all.filter { $0.color == Map3DPalette.sidewalk && $0.y > top + 1.3 && $0.z > 4 && $0.layer == Map3DVertex.nightLit }
         XCTAssertFalse(face.isEmpty)
         XCTAssertTrue(face.allSatisfy {
             abs($0.z - 4.695) < 0.001 && $0.y >= top + 1.359 && $0.y <= top + 2.411 && $0.layer == Map3DVertex.nightLit && $0.nz < -0.99
@@ -420,6 +420,34 @@ final class Map3DPlatformPropsTests: XCTestCase {
         XCTAssertLessThanOrEqual((xs.last ?? 0) - (xs.first ?? 0), 160 + 1.3)
         for meshes in [b.meshes, b.nearMeshes, b.farMeshes, b.standInMeshes] {
             XCTAssertFalse(meshes.values.flatMap(\.vertices).contains { $0.color == Map3DPalette.playerRim && $0.z > 4 })
+        }
+    }
+
+    /// A real station's board: its English name small under its name, and
+    /// an arrow at each end of the green band.
+    func testANameBoardWritesItsSecondNameSmallUnderItsName() throws {
+        var plain = Map3DMesh(), both = Map3DMesh()
+        let out = Map3DPoint(0, 0, -1)
+        Builder.addNameBoard(&plain, foot: Map3DPoint(0, 0, 0), out: out, name: "臺南", underground: false)
+        Builder.addNameBoard(&both, foot: Map3DPoint(0, 0, 0), out: out, name: "臺南", second: "Tainan", underground: false)
+        func ink(_ mesh: Map3DMesh) -> [Map3DVertex] { mesh.vertices.filter { $0.color == Map3DPalette.playerRim } }
+        XCTAssertGreaterThan(ink(both).count, ink(plain).count)
+        // The name smaller with a second name under it, all over the band.
+        let band = Props.nameBoardFoot + Props.nameBoardFrame + (Props.nameBoardHeight - 2 * Props.nameBoardFrame) * Props.nameBoardBand.upperBound
+        XCTAssertTrue(ink(both).allSatisfy { $0.y >= band - 0.001 && $0.nz < -0.99 })
+        let plainTop = try XCTUnwrap(ink(plain).map(\.y).max()), plainLow = try XCTUnwrap(ink(plain).map(\.y).min())
+        let bothLow = try XCTUnwrap(ink(both).map(\.y).min())
+        XCTAssertLessThan(bothLow, plainLow)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(ink(both).map(\.y).max()), plainTop + 0.001)
+        // Two white arrows on the band, inside the face.
+        let arrows = both.vertices.filter { $0.color == Map3DPalette.sidewalk && $0.layer != Map3DVertex.nightLit }
+        XCTAssertEqual(arrows.count, 6)
+        XCTAssertTrue(arrows.allSatisfy { abs($0.x) <= Props.nameBoardLength / 2 - Props.nameBoardFrame + 0.001 })
+        if let out = ProcessInfo.processInfo.environment["PLATFORM_NAME_BOARD_PREVIEW"] {
+            var positions: [Float] = [], colours: [Int] = [], lit: [Bool] = []
+            for v in both.vertices { positions += [v.x, v.y, v.z]; colours.append(Int(v.color & 0xFF_FFFF)); lit.append(v.glows) }
+            let json: [String: Any] = ["positions": positions, "colours": colours, "lit": lit, "indices": both.indices.map { Int($0) }]
+            try JSONSerialization.data(withJSONObject: json).write(to: URL(fileURLWithPath: out))
         }
     }
 
