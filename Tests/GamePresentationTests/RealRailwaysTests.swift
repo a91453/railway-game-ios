@@ -354,7 +354,7 @@ final class RealRailwaysTests: XCTestCase {
     func testEverySourceIsCredited() throws {
         for language in DisplayLanguage.allCases {
             let sections = DataSourceCredits.sections(in: language)
-            XCTAssertEqual(sections.map(\.id), ["railways", "railwayData", "population", "map", "map3D", "cityView", "sounds", "hongKongRailways", "rovaniemiRailways"])
+            XCTAssertEqual(sections.map(\.id), ["railways", "railwayData", "population", "map", "map3D", "cityView", "sounds", "hongKongRailways", "rovaniemiRailways", "fukuokaRailways"])
             let credits = sections.flatMap(\.credits)
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
@@ -369,6 +369,8 @@ final class RealRailwaysTests: XCTestCase {
                 "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongLandUse", "hongKongBuildings", "hongKongPeople", "hongKongAirport",
                 // Decision 818: Rovaniemi's, open for the winter event.
                 "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation",
+                // Decision 854 (FUKUOKA-OPEN): Fukuoka's.
+                "fukuokaSubway", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

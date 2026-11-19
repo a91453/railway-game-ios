@@ -2,7 +2,7 @@
 
 日本的第一張地圖。只開福岡市一小區（北緯 33.52–33.72、東經 130.29–130.48，約 17.6 × 22.2 公里），不匯入全日本；全國的 N02 只拿來挑這一區（評分在私有 `railway-assets-private-2` 的 `docs/priorities/JAPAN-MAP.md`）。做成自成一包的地圖包 `RailwayGameApp/Resources/MapPacks/fukuoka/`，檔名與格式和香港（`tools/hk-map/`）、羅瓦涅米（`tools/rovaniemi-map/`）一樣。
 
-有鐵道（福岡市地鐵空港線 K、箱崎線 H、七隈線 N）、人口、底圖、建物、高度、水域、地形、機場與不蓋區（FUKUOKA-GROUND，決策 854「後來」）。開關還關著：`OverseasMaps.open` 沒有福岡，`RailwayGameApp/AssetPacks/` 沒有它的清單。
+有鐵道（福岡市地鐵空港線 K、箱崎線 H、七隈線 N）、人口、底圖、建物、高度、水域、地形、機場與不蓋區（FUKUOKA-GROUND，決策 854「後來」）。FUKUOKA-OPEN（2026-11-19）打開了：`OverseasMaps.open` 有福岡，`RailwayGameApp/AssetPacks/fukuoka.json` 是它的地圖包清單（發版時上傳，App 只帶 `pack.json`，決策 858），福岡機場與桃園、高雄的航線開圖（決策 712）。
 
 地面這幾步和羅瓦涅米共用 `tools/overseas-map/overseas_ground.py`（人口裁切、陡坡、寫 `water.json`／`heights.dat`／`terrain.pmtiles`、海岸線在切出範圍邊上補齊）與 `overseas_buildings.py`（羅瓦涅米的建物規則，決策 799），這裡只留福岡自己的：高度從哪來、檢查哪座山。
 

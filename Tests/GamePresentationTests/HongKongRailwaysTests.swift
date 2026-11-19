@@ -50,9 +50,10 @@ final class HongKongRailwaysTests: XCTestCase {
     /// With no overseas city read the game reads what it did, no player
     /// can reach a Hong Kong line, and the credits list Taiwan's sources
     /// only. Hong Kong is read since decision 712's third pull request, and
-    /// Rovaniemi since decision 818, and both are credited.
+    /// Rovaniemi since decision 818, and Fukuoka since FUKUOKA-OPEN
+    /// (decision 854), and all three are credited.
     func testNoOverseasMapIsReadUnlessOpen() throws {
-        XCTAssertEqual(OverseasMaps.open, [.hongKong, .rovaniemi])
+        XCTAssertEqual(OverseasMaps.open, [.hongKong, .rovaniemi, .fukuoka])
         let railways = try Self.taiwanOnly()
         XCTAssertFalse(railways.lines.contains { $0.system.id == "hkmtr" })
         XCTAssertFalse(railways.stations.contains { $0.system.id == "hkmtr" })
@@ -61,7 +62,7 @@ final class HongKongRailwaysTests: XCTestCase {
         XCTAssertFalse(RealRailways.System.all.contains { $0.id == "hkmtr" })
         for language in [DisplayLanguage.english, .traditionalChinese] {
             XCTAssertEqual(DataSourceCredits.sections(in: language, overseas: []), DataSourceCredits.taiwanSections(in: language))
-            XCTAssertEqual(DataSourceCredits.sections(in: language).count, DataSourceCredits.taiwanSections(in: language).count + 2)
+            XCTAssertEqual(DataSourceCredits.sections(in: language).count, DataSourceCredits.taiwanSections(in: language).count + 3)
         }
     }
 

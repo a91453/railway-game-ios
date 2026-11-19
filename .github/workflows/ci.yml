@@ -470,9 +470,10 @@ jobs:
             test: testHongKongLines
             rules: realistic
           # Decision 844's later note: and the lines that share a station
-          # bought together (TimetableCheckupAllBoughtTests).
+          # bought together (TimetableCheckupAllBoughtTests); FUKUOKA-OPEN adds
+          # Fukuoka's three.
           - group: branch-lines-and-rovaniemi
-            test: testTaiwanBranchLines|testRovaniemiLines|testRovaniemiEachLineAndBoth|testTaiwanLinesSharingAStation
+            test: testTaiwanBranchLines|testRovaniemiLines|testRovaniemiEachLineAndBoth|testTaiwanLinesSharingAStation|testFukuokaLines
             rules: ""
     steps:
       - uses: actions/checkout@v5

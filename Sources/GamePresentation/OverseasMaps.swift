@@ -21,8 +21,8 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     case rovaniemi
     /// Decision 854: Fukuoka, Japan's first map: the Fukuoka City Subway's
     /// three lines, with headways estimated (no published timetable).
-    /// Not open yet (``OverseasMaps/open``): its pack holds only its
-    /// railways, and its flights come with the switch.
+    /// Open since FUKUOKA-OPEN, reached by flights to Fukuoka Airport as
+    /// Hong Kong is (``AirRoutes``).
     case fukuoka
 
     /// The system its lines are (``RealRailways/System/id``, and the key of
@@ -365,9 +365,10 @@ public enum OverseasMaps {
     /// The cities whose railways and ground the app reads. A player still
     /// reaches Hong Kong's map only once an airport's flights opened it
     /// (decision 712, ``AirRoutes``); Rovaniemi's is offered from the start
-    /// (decision 818, ``OverseasMap/opensByFlights``). A city not listed here is not
+    /// (decision 818, ``OverseasMap/opensByFlights``); Fukuoka's by flights,
+    /// as Hong Kong's (decision 854). A city not listed here is not
     /// read, offered or credited at all.
-    public static let open: Set<OverseasMap> = [.hongKong, .rovaniemi]
+    public static let open: Set<OverseasMap> = [.hongKong, .rovaniemi, .fukuoka]
 }
 
 extension RealRailways.System {
@@ -415,8 +416,13 @@ extension RealBranchLine {
     /// station (Sheung Shui, Tseung Kwan O), as the Xinbeitou Branch Line
     /// does.
     static let overseasLines: [(system: String, network: String, english: String, chinese: String, shares: String?, tier: LineAcquisition.Tier, leavesALine: Bool)] = [
-        ("hkmtr", "AEL", "Airport Express", "機場快綫", nil, .metro, false),
+        // LANE-SHARED-ISLAND (decision 753, later): the Tung Chung Line
+        // first, so the three sold together (decision 862) lay its depot
+        // at Siu Ho Wan before the Airport Express, now on its north side,
+        // runs past the depot's leads (laid first, it left the depot no
+        // way across it).
         ("hkmtr", "TCL", "Tung Chung Line", "東涌綫", nil, .metro, false),
+        ("hkmtr", "AEL", "Airport Express", "機場快綫", nil, .metro, false),
         ("hkmtr", "TML", "Tuen Ma Line", "屯馬綫", nil, .metro, false),
         ("hkmtr", "EAL", "East Rail Line", "東鐵綫", nil, .metro, false),
         ("hkmtr", "EAL_LMC", "East Rail Line (Lok Ma Chau)", "東鐵綫（落馬洲）", nil, .metro, true),
@@ -448,12 +454,20 @@ extension RealBranchLine {
     /// airport island (the same drawing or within 8 m of it for most of
     /// the 28 km, crossing it before Tsing Yi and at Tung Chung), the
     /// Disneyland Resort Line on its left at Sunny Bay, the side it comes
-    /// in from. The Tung Chung Line stays on its drawing. Each is laid so
+    /// in from. The Tung Chung Line stays on its drawing.
+    /// LANE-SHARED-ISLAND (decision 753, later): the Airport Express on
+    /// the right, as above (it was laid on the left, -25, till then): at
+    /// Sunny Bay it ran between the Tung Chung
+    /// Line and the Disneyland Resort Line, which could then not come up
+    /// to the Tung Chung Line's track across one island (the real Airport
+    /// Express passes through the middle of the station, not on the
+    /// Disneyland side). At the stations two lines both call at, each is
+    /// held an island's width off the other (``RealLineLaying/laneIsland(at:of:runs:beside:besideLine:besideRuns:side:)``). Each is laid so
     /// whichever is bought first: decision 712 refused the second of the
     /// Airport Express and the Tung Chung Line, and both after the
     /// Disneyland Resort Line, which lay on their track at Sunny Bay.
     static let overseasLanes: [String: (beside: String, offset: Double)] = [
-        "hkmtr:AEL": ("hkmtr:TCL", -25),
+        "hkmtr:AEL": ("hkmtr:TCL", 25),
         "hkmtr:DRL": ("hkmtr:TCL", -45),
     ]
 
