@@ -43,7 +43,15 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// its own (`tra:LIUJIA realistic`, LIUJIA-LATE), the same with the
     /// Neiwan line bought; under a new game's rules it has none since
     /// decision 849 (measured again on `main` `5a1efcf`), as alone.
+    /// Decision 885 (SHALUN-ONE-ISLAND): the Blue Coast Line's trains
+    /// run from Hongshulin on the Green Mountain Line's track, and those
+    /// toward Fisherman's Wharf share Binhai Shalun's south platform
+    /// track with the Green Mountain Line's trains toward Hongshulin
+    /// (the game has no level crossing), so some wait there: none not
+    /// sent, the latest 19 minutes behind (measured 2026-11-19).
     static let budgets: [String: TimetableCheckup.Budget] = [
+        "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 13, lateOutOfDepot: 2, peakGapMinutes: 10),
+        "taiwan ntdlrt:V+ntdlrt:VB realistic": .init(notSent: 0, late: 5, lateOutOfDepot: 0, peakGapMinutes: 5),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
