@@ -370,6 +370,23 @@ final class SharedStationLayoutTests: XCTestCase {
         XCTAssertLessThan(pair.distance, 15, "an island between the two lines")
         XCTAssertGreaterThan(pair.distance, 9, "beside each other, not over")
         XCTAssertTrue(Self.overGround(zhuzhong, in: world).allSatisfy { $0 > 8 }, "both up on the viaduct")
+        // As the 3D map draws it: a side platform, an island between the
+        // two lines, a side platform (the real one: a side platform and an
+        // island). Before, a 3 m island inside each line and nothing
+        // between them.
+        let station = try XCTUnwrap(world.station(id: zhuzhong))
+        let scene = Map3DScene.frame(world: world, focus: (x: Double(station.location.x), y: Double(station.location.y)))
+        var builder = Map3DScene.Builder(originX: scene.originX, originY: scene.originY, region: scene.region, world: world, heights: session.heights)
+        let snapshot = world.railwaySnapshot()
+        _ = builder.addTrack(snapshot)
+        builder.addPlatforms(snapshot)
+        let drawn = builder.laidPlatforms.filter { $0.station == zhuzhong }
+        let lineOf = Dictionary(laidBy.map { ($0.key.edge, $0.value) }, uniquingKeysWith: { a, _ in a })
+        let islands = drawn.filter(\.island)
+        XCTAssertEqual(drawn.count, 4)
+        XCTAssertEqual(islands.count, 2, "one island, its two halves")
+        XCTAssertEqual(Set(islands.compactMap { $0.edge.flatMap { lineOf[$0] } }), ["tra:LIUJIA", "tra:NEIWAN"], "the island between the two lines")
+        XCTAssertTrue(islands.allSatisfy { 2 * $0.width >= 6 }, "an island wide enough to change on")
     }
 
     func testZhuzhongStacksNoPlatforms() throws {

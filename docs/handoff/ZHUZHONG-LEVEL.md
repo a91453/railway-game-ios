@@ -2,7 +2,7 @@
 
 - 派工：協調者，作者 140 實機（2026-11-19）。session：雲端工作串「讓竹中站變成真實月台」，分支 `claude/project-thread-wtslol`。
 - 決策 875「後來（ZHUZHONG-LEVEL）」；存檔版本、golden schema、GameCore 不動。
-- 做了：端點站附近有幾條描線時選讓路徑最短的那條（路徑不折返）；共站端點量間距只看站內與站外 40 m。竹中兩條線同在高架、同高、隔 11.4 m。
+- 做了：端點站附近有幾條描線時選讓路徑最短的那條（路徑不折返）；共站端點量間距只看站內與站外 40 m；轉乘端點的待避股朝另一條線、離正線 4.5 m。竹中兩條線同在高架、同高：北側式、兩線之間一座 8.8 m 的島、南側式（真實是側式＋島式三股，遊戲內灣線多一股）。
 - 全地圖共站掃描（作者要的清單）：`SHARED_STATION_REPORT=<檔> swift test --skip-build --filter SharedStationLayoutTests/testReport`，
   140 的結果在專案共用資料夾 `shared-station-merge/scan-140.txt`。
 

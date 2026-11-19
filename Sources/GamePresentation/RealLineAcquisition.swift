@@ -466,6 +466,13 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     static let junctionReach = 450 * metre
     /// How far a real station may be from its line's centre line.
     static let stationReach = 150 * metre
+    /// ZHUZHONG-LEVEL: how far an interchange end's loop lies from its
+    /// track: close enough that the 3D map draws no island between the two
+    /// (half of it under ``Map3DScene/Builder``'s narrowest platform and
+    /// edge, 2.6 m, even where the curve opens it a little), so each faces
+    /// out: one to its side platform, the other across the island to the
+    /// other line.
+    static let interchangeLoopOffset = 4.5 * metre
     /// Decision 489: how far beside the other line's track a line bought
     /// after it is laid where they part: clear of its double track, with
     /// the end's loops two deep (12 m) and the 4 m between tracks.
@@ -1405,12 +1412,41 @@ extension RealLineLaying {
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.
         let inItsLane = inLane(line.after == nil ? laid : beside(laid, to: points[parts]), of: line, frame: frame, railways: railways, traces: traces)
+        // ZHUZHONG-LEVEL: a branch line's end station with one loop that
+        // another real line of its railway runs beside, 8 to 30 m off and
+        // along it (Zhuzhong: the Liujia Line's own track 13 m from the
+        // Neiwan Line's), is an interchange: its loop goes on the side away
+        // from the other line, 5 m out as two side platforms are (decision
+        // 760), so the track nearer the other line faces it across one
+        // island and the loop has a side platform of its own, as the real
+        // station's second floor stands (a side platform, then an island,
+        // three tracks). Before, the Liujia Line's loop lay toward the
+        // Neiwan Line 6 m from its track, and the 3D map drew a 3 m island
+        // inside each line and nothing between them. Which side the other
+        // line is on, by the stop's index: 1 on the right going up the line.
+        let interchangeSide: (Int) -> Double? = { index in
+            guard !line.isUrban, index == 0 || index == runs.stops.count - 1 else { return nil }
+            let at = inItsLane.nearest(points[index]).along
+            let point = inItsLane.point(at: at), way = inItsLane.tangent(at: at)
+            let other = traces.snaps(point, within: 30 * RealLineAcquisition.metre, system: line.system).first { snap in
+                snap.distance > 8 * RealLineAcquisition.metre
+                    && abs(traces.lines[snap.place.line].path.tangent(at: snap.place.along).dot(way)) > 0.9
+            }
+            return other.map { (($0.point - point).dot(way.normal)) > 0 ? 1 : -1 }
+        }
+        func endSides(_ index: Int, name: String, loops: Int) -> [(Double, Int, Bool)] {
+            if loops == 1, !line.islandStations.contains(name), let other = interchangeSide(index) {
+                return [(other * RealLineAcquisition.interchangeLoopOffset, 1, false)]
+            }
+            return Self.endStationSides(of: line, name: name, loops: loops, layout: layout)
+        }
         let besideShared = whereItStood ? nil : sharedEnds(
             of: inItsLane, points: points, through: besideThrough, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
             extent: { index in
                 let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
                 guard index > 0, index < runs.stops.count - 1 else {
-                    return Self.endStationExtent(of: line, name: name, tracks: tracks, layout: layout)
+                    let offsets = endSides(index, name: name, loops: max(0, tracks - 1)).prefix(max(0, tracks - 1)).map(\.0)
+                    return min(0, offsets.min() ?? 0)...max(0, offsets.max() ?? 0)
                 }
                 let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
                 return Self.throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
@@ -1587,7 +1623,7 @@ extension RealLineLaying {
             // the second level's longer ones it did not fit their curves.
             let sides: [(Double, Int, Bool)] = overtakes
                 ? [(offset, 1, false), (-offset, 1, true)]
-                : between ? [(offset, 1, false)] : Self.endStationSides(of: line, name: name, loops: loops, layout: layout)
+                : between ? [(offset, 1, false)] : endSides(index, name: name, loops: loops)
             guard loops <= sides.count else {
                 return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
             }
