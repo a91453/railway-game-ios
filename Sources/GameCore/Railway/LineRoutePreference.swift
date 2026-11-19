@@ -380,21 +380,38 @@ extension GameWorld {
     /// Source dispatch plans describe one directed run. A shared physical
     /// plan's out-and-back timetable is matched one run at a time.
     func preferredTrafficCommon(_ a: TrafficService, _ b: TrafficService) -> [[(ai: Int, bi: Int)]] {
-        func runs(_ service: TrafficService) -> [Range<Int>] {
-            var ranges: [Range<Int>] = [], start = 0
-            for i in service.points.indices where i > 0 && i + 1 < service.points.count {
-                let point = service.points[i]
-                if point.calls && service.train.timetable[point.stop].reverses {
-                    ranges.append(start..<(i + 1)); start = i
-                }
+        preferredTrafficCommon(a, Self.trafficRuns(a), b, Self.trafficRuns(b))
+    }
+
+    /// A service's directed runs (split where it reverses at a call), and
+    /// in each the first point at each of its stations: what
+    /// ``preferredTrafficCommon(_:_:)`` matches by. Decision 878, later
+    /// (TICK-TAIWAN): worked out once for each service, not again for
+    /// every pair and searched point by point.
+    struct TrafficRuns {
+        var ranges: [Range<Int>]
+        var first: [[StationID: Int]]
+    }
+
+    static func trafficRuns(_ service: TrafficService) -> TrafficRuns {
+        var ranges: [Range<Int>] = [], start = 0
+        for i in service.points.indices where i > 0 && i + 1 < service.points.count {
+            let point = service.points[i]
+            if point.calls && service.train.timetable[point.stop].reverses {
+                ranges.append(start..<(i + 1)); start = i
             }
-            ranges.append(start..<service.points.count)
-            return ranges
         }
+        ranges.append(start..<service.points.count)
+        return TrafficRuns(ranges: ranges, first: ranges.map { range in
+            range.reversed().reduce(into: [StationID: Int]()) { $0[service.points[$1].station] = $1 }
+        })
+    }
+
+    func preferredTrafficCommon(_ a: TrafficService, _ ar: TrafficRuns, _ b: TrafficService, _ br: TrafficRuns) -> [[(ai: Int, bi: Int)]] {
         var sequences: [[(ai: Int, bi: Int)]] = []
-        for x in runs(a) {
-            for y in runs(b) {
-                let common = y.compactMap { j in x.first { a.points[$0].station == b.points[j].station }.map { (ai: $0, bi: j) } }
+        for x in ar.first {
+            for y in br.ranges {
+                let common = y.compactMap { j in x[b.points[j].station].map { (ai: $0, bi: j) } }
                 if common.count >= 2 && zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) { sequences.append(common) }
             }
         }
@@ -404,16 +421,43 @@ extension GameWorld {
     /// Different station platforms can share the same corridor beyond a
     /// turnout. Compare positive head stretches and their actual directions.
     func preferredTrafficSharesCorridor(_ a: TrafficService, from ai: Int, to aj: Int, _ b: TrafficService, from bi: Int, to bj: Int) -> Bool {
-        func stretches(_ service: TrafficService, _ i: Int, _ j: Int) -> [TrackStretch] {
-            let p = service.points[i], q = service.points[j]
-            var start = TrainPlacement(position: .onEdge(p.berth.traversal, offset: p.berth.offset), trailEdges: [], length: service.train.length)
-            if p.calls && service.train.timetable[p.stop].reverses { start = turnedRound(start) }
-            guard let path = preferredTrafficPath(service, to: q, from: start.position, berth: q.berth)
-                ?? trafficPath(from: start.position, toStation: q.station, length: service.train.length, berthPenalty: [:], edgePenalty: [:], only: q.berth) else { return [] }
-            return trafficStretches(from: start.position, along: path).filter { $0.to > $0.from }
-        }
-        let x = stretches(a, ai, aj), y = stretches(b, bi, bj)
-        return x.contains { p in y.contains { q in p.traversal == q.traversal && p.from < q.to && q.from < p.to } }
+        let x = preferredTrafficStretches(a, ai, aj), y = preferredTrafficStretches(b, bi, bj)
+        return Self.trafficStretchesOverlap(x, y)
+    }
+
+    /// ``preferredTrafficSharesCorridor(_:from:to:_:from:to:)`` of the
+    /// plan's services at `ia` and `ib`, each one's stretches between two
+    /// of its points kept in the plan (decision 878, later: TICK-TAIWAN).
+    /// They read the service's train and its points' stations, stops,
+    /// calls and berths, which anchoring never moves (it moves times), so
+    /// they hold for the whole plan; the pairs of a busy line asked them
+    /// of the same two points again for each other service.
+    func preferredTrafficSharesCorridor(_ plan: inout TrafficPlan, _ ia: Int, from ai: Int, to aj: Int, _ ib: Int, from bi: Int, to bj: Int) -> Bool {
+        let x = preferredTrafficStretches(&plan, ia, ai, aj), y = preferredTrafficStretches(&plan, ib, bi, bj)
+        return Self.trafficStretchesOverlap(x, y)
+    }
+
+    static func trafficStretchesOverlap(_ x: [TrackStretch], _ y: [TrackStretch]) -> Bool {
+        x.contains { p in y.contains { q in p.traversal == q.traversal && p.from < q.to && q.from < p.to } }
+    }
+
+    func preferredTrafficStretches(_ plan: inout TrafficPlan, _ s: Int, _ i: Int, _ j: Int) -> [TrackStretch] {
+        let key = TrafficCorridorKey(train: plan.services[s].train.id, from: i, to: j)
+        if let kept = plan.corridors[key] { return kept }
+        let stretches = preferredTrafficStretches(plan.services[s], i, j)
+        plan.corridors[key] = stretches
+        return stretches
+    }
+
+    /// The positive head stretches of `service` from its point `i` to its
+    /// point `j`, as the corridor test compares them.
+    func preferredTrafficStretches(_ service: TrafficService, _ i: Int, _ j: Int) -> [TrackStretch] {
+        let p = service.points[i], q = service.points[j]
+        var start = TrainPlacement(position: .onEdge(p.berth.traversal, offset: p.berth.offset), trailEdges: [], length: service.train.length)
+        if p.calls && service.train.timetable[p.stop].reverses { start = turnedRound(start) }
+        guard let path = preferredTrafficPath(service, to: q, from: start.position, berth: q.berth)
+            ?? trafficPath(from: start.position, toStation: q.station, length: service.train.length, berthPenalty: [:], edgePenalty: [:], only: q.berth) else { return [] }
+        return trafficStretches(from: start.position, along: path).filter { $0.to > $0.from }
     }
 
     func plannedPath(for train: Train, from start: TrainPosition, departing stop: Int, to next: Int) -> TrainPath? {
