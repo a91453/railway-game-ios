@@ -171,7 +171,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// The groups of lines sharing a station on each map, and the worlds
     /// that buy each together: Taiwan's are bought as worked out
     /// (`testTaiwanLinesSharingAStation`), so only their number is pinned;
-    /// Hong Kong's is ``TimetableCheckupFullTests``'s `hk AEL+TCL+DRL`,
+    /// Hong Kong's is ``TimetableCheckupFullTests``'s `hk TCL+AEL+DRL`,
     /// Rovaniemi's is `testRovaniemiEachLineAndBoth`'s.
     func testEveryGroupSharingAStationIsPlayed() throws {
         let taiwan = Self.sharingGroups(in: try Self.wholeTaiwan(rules: .simple))
@@ -179,7 +179,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         let rovaniemi = Self.sharingGroups(in: try Self.rovaniemi(rules: .simple))
         FileHandle.standardError.write(Data("TIMETABLE_CHECKUP sharing a station: Taiwan \(taiwan), Hong Kong \(hongKong), Rovaniemi \(rovaniemi)\n".utf8))
         XCTAssertEqual(taiwan, [["ntdlrt:V", "ntdlrt:VB"], ["tra:LIUJIA", "tra:NEIWAN"]])
-        XCTAssertEqual(hongKong, [["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]], "TimetableCheckupFullTests plays hk AEL+TCL+DRL, in this order")
+        XCTAssertEqual(hongKong, [["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]], "TimetableCheckupFullTests plays hk TCL+AEL+DRL, in this order")
         XCTAssertEqual(rovaniemi, [["vr:KJA", "vr:MUL"]])
     }
 
