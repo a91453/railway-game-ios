@@ -97,9 +97,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // models, 486 vertices more, 19 KB a copy). Its later note:
         // Finland's street furniture after them (10 models, 6,555 vertices
         // more, 262 KB a copy); its fourth later note: the second batch
-        // (3 models, 1,872 vertices more, 75 KB a copy).
-        XCTAssertEqual(models.count, 928)
-        XCTAssertEqual(vertices, 6_631_197)
+        // (3 models, 1,872 vertices more, 75 KB a copy). Decision 889: the
+        // yellow tit's four poses after them (4 models, 3,936 vertices
+        // more, 157 KB a copy).
+        XCTAssertEqual(models.count, 932)
+        XCTAssertEqual(vertices, 6_635_133)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
