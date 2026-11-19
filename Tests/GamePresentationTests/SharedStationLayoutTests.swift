@@ -193,6 +193,49 @@ final class SharedStationLayoutTests: XCTestCase {
         }
     }
 
+    /// Decision 753 (later, LANE-SHARED-ISLAND): the Airport Express and
+    /// the Tung Chung Line at Tsing Yi, the Disneyland Resort Line and the
+    /// Tung Chung Line at Sunny Bay, are each one station of one island
+    /// between the two lines, as the real cross-platform interchanges
+    /// are: the two lines' nearest tracks an island's width apart (8 to
+    /// 15 m), and the 3D map draws an island platform of each line there
+    /// (``Map3DScene/Builder/addPlatforms(_:)``, what it actually draws).
+    /// Before, they stood 20 m and 35 m apart, two stations side by side:
+    /// the lanes (decision 753) held the lines 25 m and 45 m off the Tung
+    /// Chung Line's drawing at their shared stations too, and the Airport
+    /// Express ran between the Tung Chung Line and the Disneyland Resort
+    /// Line at Sunny Bay (it now keeps to the other side, as the real one
+    /// passes through the middle of the station, not on the Disneyland
+    /// side).
+    func testTheAirportLinesShareAnIslandAtTsingYiAndSunnyBay() throws {
+        for order in [["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"], ["hkmtr:DRL", "hkmtr:TCL", "hkmtr:AEL"]] {
+            let session = try HongKongMapTests.hongKong()
+            let laidBy = try Self.buy(order, on: session)
+            let world = session.world
+            let laid = Self.platforms(of: world, laidBy: laidBy)
+            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            XCTAssertEqual(Self.uneven(laid, in: world), [], "\(order)")
+            // The Tung Chung Line laid before the Airport Express, now on
+            // its north side, keeps its depot north of both.
+            let tungChung = try XCTUnwrap(world.acquisition(of: "hkmtr:TCL")?.line.flatMap { world.line(id: $0) })
+            XCTAssertEqual(tungChung.depots.compactMap { world.station(id: $0)?.name }, ["小蠔灣車廠"], "\(order)")
+            let lineOf = Dictionary(laidBy.map { ($0.key.edge, $0.value) }, uniquingKeysWith: { first, _ in first })
+            let snapshot = world.railwaySnapshot()
+            for (name, ids) in [("青衣", ["hkmtr:AEL", "hkmtr:TCL"]), ("欣澳", ["hkmtr:DRL", "hkmtr:TCL"])] {
+                let station = try XCTUnwrap(world.stations.first { $0.name == name }, name)
+                let pair = try XCTUnwrap(Self.between(ids[0], ids[1], at: station.id, in: laid), "\(order): \(name)")
+                XCTAssertGreaterThanOrEqual(pair.distance, 8, "\(order): \(name): an island's width between the two lines")
+                XCTAssertLessThanOrEqual(pair.distance, 15, "\(order): \(name): one island, within the 3D map's pairing")
+                let frame = Map3DScene.frame(world: world, focus: (x: Double(station.location.x), y: Double(station.location.y)))
+                var builder = Map3DScene.Builder(originX: frame.originX, originY: frame.originY, region: frame.region, world: world)
+                _ = builder.addTrack(snapshot)
+                builder.addPlatforms(snapshot)
+                let islands = builder.laidPlatforms.filter { $0.station == station.id && $0.island }.compactMap { $0.edge.flatMap { lineOf[$0] } }
+                XCTAssertEqual(Set(islands), Set(ids), "\(order): \(name): an island platform of each line, facing each other")
+            }
+        }
+    }
+
     // MARK: - Fukuoka
 
     /// Fukuoka's three subway lines (decision 854), all bought on one map,
@@ -325,9 +368,9 @@ final class SharedStationLayoutTests: XCTestCase {
             lines += Self.report("\(title) \(ids)", of: session.world, laidBy: laidBy)
         }
         let hongKong = try HongKongMapTests.hongKong().buyableRealLines.map(\.id)
-        let airport = ["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]
+        let airport = ["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]
         try buy("hongkong", hongKong) { try HongKongMapTests.hongKong() }
-        try buy("hongkong", ["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]) { try HongKongMapTests.hongKong() }
+        try buy("hongkong", ["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]) { try HongKongMapTests.hongKong() }
         try buy("hongkong", Array(airport.reversed())) { try HongKongMapTests.hongKong() }
         for order in [["tra:LIUJIA", "tra:NEIWAN"], ["tra:NEIWAN", "tra:LIUJIA"]] {
             try buy("zhuzhong", order) { try RealLineAcquisitionTests.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple) }

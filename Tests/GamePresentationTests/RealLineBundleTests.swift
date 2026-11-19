@@ -51,7 +51,7 @@ final class RealLineBundleTests: XCTestCase {
 
         let hongKong = try HongKongMapTests.hongKong()
         checkEveryLineIsSoldOnce(hongKong)
-        XCTAssertEqual(bundles(of: hongKong).filter { $0.count > 1 }, [["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]])
+        XCTAssertEqual(bundles(of: hongKong).filter { $0.count > 1 }, [["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]])
 
         let rovaniemi = try RovaniemiRailwaysTests.rovaniemi()
         checkEveryLineIsSoldOnce(rovaniemi)

@@ -168,7 +168,7 @@ final class DepotReturnReportTests: XCTestCase {
             throw XCTSkip("Set DEPOT_RETURN_REPORT=1 to measure the depots (decision 535).")
         }
         let worlds: [String: [String]] = [
-            "hk-sil": ["SIL"], "hk-tcl": ["TCL"], "hk-sil-tcl": ["SIL", "TCL"], "hk-airport": ["AEL", "TCL", "DRL"],
+            "hk-sil": ["SIL"], "hk-tcl": ["TCL"], "hk-sil-tcl": ["SIL", "TCL"], "hk-airport": ["TCL", "AEL", "DRL"],
             "hk": (environment["DEPOT_RETURN_HK"] ?? "all").split(separator: ",").map(String.init),
         ]
         let name = environment["DEPOT_RETURN_ONLY"] ?? "hk-sil-tcl"
