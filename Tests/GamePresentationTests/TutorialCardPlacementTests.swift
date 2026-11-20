@@ -724,6 +724,28 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertEqual(card.midY, Self.screen.midY, accuracy: 0.5)
     }
 
+    /// A phone on its side with the tools at the trailing edge (decision
+    /// 892), a step on the map, the frames from a UI test run (44646995068) on that phone:
+    /// nothing stands at the map's leading edge now, and the card at the
+    /// map's leading corner stands on the screen's margin, in line with the
+    /// status pill, not a gap in from the edge (it stood 2 points off).
+    func testAtTheMapsOwnEdgeTheCardStandsOnTheScreensMargin() {
+        let pill = Frame(x: 10, y: 10, width: 710, height: 50)
+        let column = Frame(x: 684, y: 150, width: 56, height: 222)
+        let map = Frame(x: 0, y: 60, width: 674, height: 291)
+        // Where the step has the player tap, at the map's trailing side.
+        let site = Frame(x: 340, y: 100, width: 320, height: 240)
+        let placement = TutorialCardPlacement(
+            target: map, controls: [pill, column], required: [], sites: [site], map: map, maxWidth: 320
+        )
+        let card = placement.frame(in: Self.screen) { Size(width: $0.width, height: min(150, $0.height)) }
+        XCTAssertFalse(card.intersects(site), "card \(card) covers the place to tap")
+        // Under the pill, which is a control beside the map: a gap from it.
+        XCTAssertEqual(card.minY, map.minY + 12, "card \(card)")
+        XCTAssertEqual(card.minX, HUDMargins.edge, "card \(card)")
+        XCTAssertFalse(card.intersects(pill), "card \(card) covers the pill")
+    }
+
     /// What the app shows: the card where it goes, or, where it covers what
     /// the step asks for, folded to its title (``TutorialCardPlacement/leavesStepFree(_:)``).
     private static func shownCard(_ placement: TutorialCardPlacement) -> Frame {

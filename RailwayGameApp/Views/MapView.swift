@@ -21,11 +21,16 @@ extension EnvironmentValues {
     /// drawn to the screen's edges, under the camera housing and the home
     /// indicator, and its banners, keys and buttons keep inside this.
     @Entry var mapSafeArea = EdgeInsets()
-    /// 98.1 (the planner's (a)): how far past the safe area's leading edge
-    /// a real-world map's credits start, the logo, the legal link and the
-    /// credit, so the tools column, which runs down beside them on a phone
-    /// on its side, covers none of them.
-    @Entry var mapCreditsLeading: CGFloat = 0
+    /// 98.1 (the planner's (a)): how far short of the safe area's trailing
+    /// edge a real-world map's credits end, the logo, the legal link and
+    /// the credit, so the tools column, which runs down beside them on a
+    /// phone on its side, covers none of them (the trailing edge since
+    /// decision 892).
+    @Entry var mapCreditsTrailing: CGFloat = 0
+    /// Decision 892: how much of ``mapInsets``' trailing inset is a phone's
+    /// tools column (with its margin), which stands at the foot of that
+    /// edge whatever else does: the rest is the card or a panel beside it.
+    @Entry var mapTrailingColumn: CGFloat = 0
     /// Mac playtest A3 (2026-11-08): how far past the safe area's leading
     /// edge the top of the map is covered: the tools column (or the build
     /// rail) alone. ``mapInsets``' leading edge also clears Undo and Redo
@@ -210,7 +215,8 @@ struct MapView: View {
     @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
     @Environment(\.mapButtonsUnderPanel) private var buttonsUnderPanel
     @Environment(\.mapSafeArea) private var safeArea
-    @Environment(\.mapCreditsLeading) private var creditsLeading
+    @Environment(\.mapCreditsTrailing) private var creditsTrailing
+    @Environment(\.mapTrailingColumn) private var trailingColumn
     @Environment(\.mapTopLeading) private var topLeading
     /// The height of the bottom-trailing buttons and key, with their margin.
     @State private var bottomTrailingHeight: CGFloat = 0
@@ -296,10 +302,10 @@ struct MapView: View {
         FrameCostMeter.shared.measure(.mapBody) { timedBody }
     }
 
-    /// The safe area the base map's credits keep inside: past the tools
-    /// column too (``EnvironmentValues/mapCreditsLeading``).
+    /// The safe area the base map's credits keep inside: short of the tools
+    /// column too (``EnvironmentValues/mapCreditsTrailing``).
     private var creditsSafeArea: EdgeInsets {
-        EdgeInsets(top: safeArea.top, leading: safeArea.leading + creditsLeading, bottom: safeArea.bottom, trailing: safeArea.trailing)
+        EdgeInsets(top: safeArea.top, leading: safeArea.leading, bottom: safeArea.bottom, trailing: safeArea.trailing + creditsTrailing)
     }
 
     private var timedBody: some View {
@@ -345,7 +351,7 @@ struct MapView: View {
             let bandEnd: CGFloat? = buttonsUnderPanel && realWorld != nil
                 ? MapCornerRow.bandEnd(
                     rowWidth: Double(cornerRowFrame.width), viewportWidth: viewport.width,
-                    trailingInset: Double(screenEdges.trailing), credits: attributionFrames.map { ScreenFrame($0) }
+                    trailingInset: Double(screenEdges.trailing + trailingColumn), credits: attributionFrames.map { ScreenFrame($0) }
                 ).map { CGFloat($0) }
                 : nil
             let rowInBand = bandEnd != nil
@@ -357,7 +363,10 @@ struct MapView: View {
             // leave it alone.
             // Decision 510: and on a short screen while the build's ✓ pill
             // shows, so the pill, the banner and the key do not overlap.
-            let legendBesideCard = buttonsUnderPanel || (insets.trailing > viewport.width / 3
+            // Decision 892: beside a phone's tools column alone the legend
+            // opens as on any map; `coverTrailing` is the card or panel.
+            let coverTrailing = max(0, insets.trailing - trailingColumn)
+            let legendBesideCard = (buttonsUnderPanel && coverTrailing > 0) || (insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - buttonsDepth < screenEdges.top + trailingInsetDepth)
                 || MapClutter.legendGivesWayToBuild(compactHeight: verticalSizeClass == .compact,
                                                     buildPillShown: MapBuildConfirm.isShown(session, panel: screen.panel))
@@ -847,7 +856,7 @@ struct MapView: View {
                                 }
                             }
                             .transition(.scale.combined(with: .opacity))
-                        } else if insets.trailing == 0, session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsMapExtras,
+                        } else if coverTrailing == 0, session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsMapExtras,
                                   // Decision 803: nor while a building tool is out.
                                   session.buildModeChrome().showsMiniMap,
                                   miniMap?.isShown(beside: projection.visibleRegion) ?? false {
@@ -882,7 +891,8 @@ struct MapView: View {
                     // Beside the trailing controls only where they reach,
                     // and then above the dock too: moved in from the edge on
                     // a phone, the zoom buttons were under it.
-                    .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing)
+                    // Decision 892: and always beside a phone's tools column.
+                    .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing + trailingColumn)
                     .padding(.bottom, foot)
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
                     .ambientHidden(screen.ambient != nil)
@@ -898,9 +908,13 @@ struct MapView: View {
                         let below: CGFloat = rowInBand ? safeArea.bottom + 1 : screenEdges.bottom + 2
                         let reach: CGFloat = min(CGFloat(MapCornerRow.reach - MapCornerRow.height), rowInBand || realWorld == nil ? below : 0)
                         // Decision 382: on the panel's trailing line above it.
-                        let rowEnd: CGFloat = bandEnd ?? CGFloat(viewport.width) - screenEdges.trailing - CGFloat(HUDMargins.edge)
+                        // Decision 892: beside a phone's tools column.
+                        let rowEnd: CGFloat = bandEnd ?? CGFloat(viewport.width) - screenEdges.trailing
+                            - (trailingColumn > 0 ? trailingColumn : CGFloat(HUDMargins.edge))
                         cornerButtons(camera: projection, limit: zoomLimit, place: .underPanel, compactReach: reach)
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { cornerRowFrame = $0 }
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.mapCornerRowFrame = $0 }
+                            .onDisappear { screen.mapCornerRowFrame = .zero }
                             .padding(.trailing, CGFloat(viewport.width) - rowEnd)
                             .padding(.bottom, below - reach)
                             .transition(.opacity)

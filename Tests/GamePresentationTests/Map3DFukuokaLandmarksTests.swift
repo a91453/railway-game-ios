@@ -27,13 +27,26 @@ final class Map3DFukuokaLandmarksTests: XCTestCase {
         }
     }
 
-    /// The tower's walls are glass, lit at night, and its mast steel;
-    /// Hakata Station's glass is its blue-grey glass alone.
+    /// FUKUOKA-TOWER-GLASS: Fukuoka Tower's mirror glass is banded by
+    /// its floors, not by mullions: its walls are floor-lined glass (lit
+    /// at night as curtain glass is), and none of it curtain glass. Hakata
+    /// Station's curtain glass is its blue-grey glass alone; the dome has
+    /// no glass.
     func testTheirGlass() {
-        let tower = Map3DFukuokaTower.registration.model(full: true).vertices
-        XCTAssertEqual(Set(tower.filter { $0.layer == Map3DVertex.curtainGlass }.map(\.color)), [Map3DPalette.officeWalls[2]])
+        let sky = Map3DPalette.officeWalls[2]
+        for full in [true, false] {
+            let vertices = Map3DFukuokaTower.registration.model(full: full).vertices
+            let banded = vertices.filter { $0.layer == Map3DVertex.floorLines }
+            XCTAssertGreaterThan(banded.count, 0)
+            XCTAssertTrue(banded.allSatisfy { abs($0.nz) < 0.7 }, "only walls")
+            XCTAssertEqual(Set(banded.map(\.color)), [sky])
+            XCTAssertTrue(banded.contains { $0.v > 100 }, "v is the height in metres")
+            XCTAssertFalse(vertices.contains { $0.layer == Map3DVertex.curtainGlass })
+        }
         let station = Map3DHakataStation.registration.model(full: true).vertices
         XCTAssertEqual(Set(station.filter { $0.layer == Map3DVertex.curtainGlass }.map(\.color)), [Map3DPalette.cityOfficeWalls[5]])
-        XCTAssertFalse(Map3DFukuokaDome.registration.model(full: true).vertices.contains { $0.layer == Map3DVertex.curtainGlass })
+        XCTAssertFalse(station.contains { $0.layer == Map3DVertex.floorLines && $0.color == sky })
+        let dome = Map3DFukuokaDome.registration.model(full: true).vertices
+        XCTAssertFalse(dome.contains { $0.layer == Map3DVertex.curtainGlass || $0.layer == Map3DVertex.floorLines })
     }
 }
