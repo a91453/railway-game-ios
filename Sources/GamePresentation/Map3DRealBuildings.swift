@@ -94,6 +94,8 @@ extension Map3DScene.Builder {
                 let cells = Set(points.map { Map3DScene.ChunkKey(column: Int(($0.x / cell).rounded(.down)), row: Int(($0.y / cell).rounded(.down))) })
                 guard cleared.isDisjoint(with: cells) else { continue }
                 let rings = polygons.map { $0.map { ring in ring.map { point(x: $0.x, y: $0.y, height: 0) } } }
+                // MRT-SHELL-CLEAR-OUTLINE: nor under the track or a station's own building.
+                guard !rings.contains(where: { underRailway($0.first ?? []) }) else { continue }
                 // Cleared for a building of the player's: its cells still
                 // keep no city lot.
                 let drawn = !rings.contains(where: { onPlacedGround($0.first ?? []) })
