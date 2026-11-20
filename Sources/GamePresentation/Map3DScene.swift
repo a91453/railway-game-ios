@@ -616,9 +616,16 @@ public struct Map3DScene: Sendable {
         // station kit, a plaza where a building stands; Taipei's the
         // landmark, where it stands (decision 370).
         // Decision 699: nor does a building stand on a runway.
-        let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world), shops: false,
-                                                         drawnElsewhere: landmarks[.taipeiMainStation] == nil ? [] : [.taipei]))
-            .union(runways)
+        let stationCells = builder.addStations(snapshot, frame: RealWorldFrame(world: world), shops: false,
+                                               drawnElsewhere: landmarks[.taipeiMainStation] == nil ? [] : [.taipei])
+        let stations = cleared.union(stationCells).union(runways)
+        // MRT-SHELL-CLEAR-OUTLINE: the real buildings are cleared by the
+        // runways and what has no outline of its own; the track and the
+        // stations' buildings leave out only those they overlap
+        // (``onTrack(_:)``, ``underRailway(_:)``). Their cells still
+        // keep no city lot.
+        let realClear = stationCells.subtracting(builder.outlineOnlyCells).union(runways)
+        builder.indexTrackOutline()
         // Decision 263: on a map not of the real world, seeded streets
         // between the lots, clear of the track and the platforms but where
         // they cross it, and of the stations' buildings.
@@ -664,7 +671,7 @@ public struct Map3DScene: Sendable {
         // stand.
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
-        var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations.union(landmarkCells)) } ?? [])
+        var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: realClear.union(landmarkCells)) } ?? [])
         // Decision 723: the cells of what is no building of the tiles' or
         // the footprints': the landmarks', then the temples', the kits'.
         var scenes = landmarkCells
@@ -707,7 +714,7 @@ public struct Map3DScene: Sendable {
         }
         let beforeFootprints = standing
         builder.time("read the footprints")
-        if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
+        if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: realClear.union(landmarkCells), takenBy: beforeFootprints)) }
         builder.mark("real buildings (footprints)")
         // Decision 723: the cells the real buildings cover little of,
         // which the houses along the roads are laid on, between them.
@@ -726,9 +733,9 @@ public struct Map3DScene: Sendable {
         builder.instancingBoxes = instancingBoxes
         // Decision 709: each building left out from afar by its own size.
         builder.sizesFar = true
-        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
+        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: realClear.union(landmarkCells)) }
         builder.mark("real buildings (city tiles)")
-        if let footprints { builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints) }
+        if let footprints { builder.addFootprints(footprints, clearOf: realClear.union(landmarkCells), takenBy: beforeFootprints) }
         builder.mark("real buildings (footprints)")
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
@@ -1291,6 +1298,18 @@ extension Map3DScene {
         /// The corners of each station building's ground, and the
         /// shop streets still to lay beside them.
         var houseFootprints: [[Map3DPoint]] = []
+        /// MRT-SHELL-CLEAR-OUTLINE: the outlines of the stations' own
+        /// buildings (the Tamsui line's shells, the kit's houses, the
+        /// depots' sheds), ``Map3DScene/Builder/stationOutlineMargin``
+        /// wider, where a real building is left out; and the 64 m cells
+        /// only they take, where no city lot goes but the real buildings
+        /// round them stay (``underRailway(_:)``).
+        var stationOutlines: [StationOutline] = []
+        /// MRT-SHELL-CLEAR-OUTLINE: the pieces of the track and the
+        /// platforms out of tunnels, with how far round them no real
+        /// building stands, by the 64 m cells they reach (``onTrack(_:)``).
+        var trackPieces: [ChunkKey: [(a: Map3DPoint, b: Map3DPoint, reach: Float)]] = [:]
+        var outlineOnlyCells: Set<ChunkKey> = []
         /// XMAS-TREE-SIZE: the ground each station shop takes (its slab
         /// and awning), so a station's Christmas tree keeps off it.
         var shopFootprints: [[Map3DPoint]] = []
