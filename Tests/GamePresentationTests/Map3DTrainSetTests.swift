@@ -163,8 +163,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
                     : alishan ? 3.0...3.3
                     : nanakuma ? 3.1...3.2
-                    // Decision 864: the Finnish double-deck coaches, 5.2 m.
-                    : name != set.headName && ["finlandIntercity", "finlandIntercityFar"].contains(set.key) ? 5.1...5.3
+                    // Decision 864: the Finnish double-deck coaches, 5.2 m (decision 900: the control car and the sleepers too).
+                    : name != set.headName && set.key.hasPrefix("finland") ? 5.1...5.3
                     // Decision 837: a bare flat wagon (its hand brake and tail
                     // lamp the highest) and the hopper wagons of stone (3.21 m,
                     // its later note), lower than a container wagon.

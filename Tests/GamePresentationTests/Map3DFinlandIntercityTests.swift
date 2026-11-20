@@ -47,9 +47,10 @@ final class Map3DFinlandIntercityTests: XCTestCase {
         XCTAssertTrue(coach.vertices.contains { $0.color == Map3DPalette.crown && abs($0.x) < 4 }, "the green band")
     }
 
-    /// The Sr2 at the front, six coaches behind, the last one's tail lamps
-    /// lit, each car at its own length.
-    func testRovaniemisTrainIsTheSr2AndSixCoaches() throws {
+    /// The Sr2 at the front, five coaches behind and FINLAND-TRAINS-2's
+    /// control car at the back, its tail lamps lit, each car at its own
+    /// length.
+    func testRovaniemisTrainIsTheSr2FiveCoachesAndTheControlCar() throws {
         let pack = Map3DModelPack.standard
         let key = Map3DFinlandSr2.key
         let count = Map3DFinlandSr2.cars
@@ -58,7 +59,7 @@ final class Map3DFinlandIntercityTests: XCTestCase {
         }
         XCTAssertEqual(names, ["set-\(key)-head"] + Array(repeating: "set-\(key)-car", count: 5) + ["set-\(key)-tail"])
         let layout = try XCTUnwrap(pack.layout(forType: key, count: count))
-        XCTAssertEqual(layout.map(\.length).reduce(0, +), 19.02 + 26.40 * 6, accuracy: 0.1, "177.42 m")
+        XCTAssertEqual(layout.map(\.length).reduce(0, +), 19.02 + 26.40 * 5 + 27.40, accuracy: 0.1, "178.42 m")
         XCTAssertEqual(Map3DRealTrains.formation(system: "vr", id: "KJA", name: "KJA"), .init(key: key, cars: count))
     }
 }

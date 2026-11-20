@@ -20,6 +20,9 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
                 for unit in Map3DMTRDisneylandLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRDisneylandLine.model(unit, far: far))) }
                 // Decision 864: and the Finnish double-deck coach.
                 cars.append(try XCTUnwrap(Map3DFinlandDoubleDeck.model(far: far)))
+                // Decision 900: the control car and the sleeping car.
+                cars.append(try XCTUnwrap(Map3DFinlandControlCar.model(far: far)))
+                cars.append(try XCTUnwrap(Map3DFinlandSleeper.model(far: far)))
                 // Decision 893: and Fukuoka's three.
                 for unit in Map3DFukuokaAirportLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaAirportLine.model(unit, far: far))) }
                 for unit in Map3DFukuokaKaizukaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaKaizukaLine.model(unit, far: far))) }

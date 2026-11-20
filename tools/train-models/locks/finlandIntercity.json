@@ -1,23 +1,23 @@
 {
-  "comment" : "Decision 782: the models of the registered train finlandIntercity (Map3DFinlandSr2, Map3DFinlandDoubleDeck): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "comment" : "Decision 782: the models of the registered train finlandIntercity (Map3DFinlandSr2, Map3DFinlandDoubleDeck, Map3DFinlandControlCar): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 6,
-  "lamps" : "386b48220b5daeca",
+  "lamps" : "e8719cffc984353",
   "models" : {
     "light-set-finlandIntercity-car" : {
       "hash" : "7bb4f35a17bba399",
       "triangles" : 416
     },
     "light-set-finlandIntercity-tail" : {
-      "hash" : "d129481bd8456699",
-      "triangles" : 416
+      "hash" : "231207c08b1d4f72",
+      "triangles" : 334
     },
     "light-set-finlandIntercityFar-car" : {
       "hash" : "27a3e65649f87965",
       "triangles" : 52
     },
     "light-set-finlandIntercityFar-tail" : {
-      "hash" : "377bfe53d0bd9c65",
-      "triangles" : 52
+      "hash" : "651497c152d41a41",
+      "triangles" : 42
     },
     "set-finlandIntercity-car" : {
       "hash" : "7f856506b3ac4b6f",
@@ -28,8 +28,8 @@
       "triangles" : 11644
     },
     "set-finlandIntercity-tail" : {
-      "hash" : "24a82403851b8ff",
-      "triangles" : 6736
+      "hash" : "fcdc75ac19af59be",
+      "triangles" : 7104
     },
     "set-finlandIntercityFar-car" : {
       "hash" : "988c82cb3573e672",
@@ -40,8 +40,8 @@
       "triangles" : 4116
     },
     "set-finlandIntercityFar-tail" : {
-      "hash" : "549353ce41afd60a",
-      "triangles" : 3076
+      "hash" : "c90f9a0803017c9e",
+      "triangles" : 3362
     }
   }
 }
