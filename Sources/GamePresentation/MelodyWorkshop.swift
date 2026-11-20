@@ -147,7 +147,7 @@ public struct MelodyDraft: Hashable, Sendable {
         language.text(
             "Tap the grid to put a note down or take it away. Saved melodies can be played at any station.",
             "點格子放下或拿掉一個音。存好的旋律可以指定給任何車站。"
-        ) + " " + StationSoundsChoice.silentModeNote(in: language)
+        ) + " " + StationSoundsChoice.quietPhoneNote(in: language)
     }
 }
 

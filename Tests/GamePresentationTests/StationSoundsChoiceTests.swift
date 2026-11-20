@@ -109,9 +109,13 @@ final class StationSoundsChoiceTests: XCTestCase {
             .departure(.a),
         ])
         XCTAssertEqual(heard, [], "never through the game's own sounds, which the switch turns off")
+        // The melodies ring out before the game's own sounds come back.
+        XCTAssertGreaterThan(own.previewSeconds, 7.8)
+        XCTAssertGreaterThan(SoundCue.playerDeparture([]).previewSeconds, 7.8)
+        XCTAssertGreaterThan(SoundCue.arrival(watched: true, chime: .tourist).previewSeconds, 2.4)
         for language in [DisplayLanguage.english, .traditionalChinese] {
-            XCTAssertTrue(StationSoundsChoice.note(in: language).hasSuffix(StationSoundsChoice.silentModeNote(in: language)))
-            XCTAssertTrue(MelodyDraft.note(in: language).hasSuffix(StationSoundsChoice.silentModeNote(in: language)))
+            XCTAssertTrue(StationSoundsChoice.note(in: language).hasSuffix(StationSoundsChoice.quietPhoneNote(in: language)))
+            XCTAssertTrue(MelodyDraft.note(in: language).hasSuffix(StationSoundsChoice.quietPhoneNote(in: language)))
         }
     }
 }
