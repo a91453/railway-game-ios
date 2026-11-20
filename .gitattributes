@@ -1,3 +1,5 @@
 # Decision 782: one registered train a line; two branches that each add
 # one keep both lines (Map3DTrainRegistryTests checks the result).
 Sources/GamePresentation/Map3DTrainRegistryList.swift merge=union
+# Decision 895: one registered landmark a line, the same way.
+Sources/GamePresentation/Map3DLandmarkRegistryList.swift merge=union

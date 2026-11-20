@@ -111,14 +111,19 @@ public enum FerryCollection {
                 language.text("1.877 km · 2 stations, over a hill", "全長 1.877 公里 · 2 個車站，翻過一座山"),
                 language.text("86 cabins · 8 passengers a cabin", "車廂 86 部 · 每部載 8 人"),
             ]),
+            Entry(id: "ngongPing", title: language.text("Ngong Ping Cable Car", "昂坪纜車"), lines: [
+                language.text("Lantau, Hong Kong · opened 18 September 2006", "香港大嶼山 · 2006 年 9 月 18 日通車"),
+                language.text("5.7 km · 2 stations and 2 angle stations", "全長 5.7 公里 · 2 個車站、2 個轉角站"),
+                language.text("Standard cabins and crystal cabins with a glass floor", "有一般車廂和玻璃地板的水晶車廂"),
+            ]),
         ]
     }
 
     /// Decision 632: the cable car page's note: how one comes into a game.
     public static func cablewayNote(in language: DisplayLanguage) -> String {
         language.text(
-            "Build a cable car with the building tools' Cable car mode: tap its stations, or lay a real one (Maokong, Sun Moon Lake, Wulai, Ngong Ping) where the map has it. Near Sun Moon Lake its cabins are Sun Moon Lake's.",
-            "用建造工具的「纜車」模式蓋纜車：點出各站，或在地圖上有真實纜車（貓空、日月潭、烏來、昂坪）的地方照真實路線拉。蓋在日月潭附近，吊廂就是日月潭的。"
+            "Build a cable car with the building tools' Cable car mode: tap its stations, or lay a real one (Maokong, Sun Moon Lake, Wulai, Ngong Ping) where the map has it. Near Sun Moon Lake or Ngong Ping its cabins are that line's own.",
+            "用建造工具的「纜車」模式蓋纜車：點出各站，或在地圖上有真實纜車（貓空、日月潭、烏來、昂坪）的地方照真實路線拉。蓋在日月潭或昂坪附近，吊廂就是那條纜車自己的。"
         )
     }
 }
