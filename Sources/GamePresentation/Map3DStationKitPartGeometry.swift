@@ -142,12 +142,13 @@ extension StationKitBuilder {
             box(0,0,0,2.5,2.5,0.2,Map3DPalette.concrete);box(0,0.2,0,2,2,2.8,Self.steel)
             for y in stride(from:Float(0.45),to:2.8,by:0.3) { box(1.03,y,0,0.08,1.6,0.10,Self.ink) }
             box(0,3,0,2.6,2.6,0.18,Self.white)
-        case .stairHead,.undergroundExit:
-            let below=part == .undergroundExit
-            stairs(0,below ? -2.4 : 0,0,run:4,width:2.4,rise:2.4)
-            for z: Float in [-1.5,1.5] { box(0,below ? -2.4 : 0,z,4.5,0.22,below ? 3.4 : 1.1,Map3DPalette.concrete);box(1.8,0,z,0.12,0.12,2.8,Self.steel) }
-            canopy(0,2.8,0,length:5,width:3.5,rise:0.5,color:Self.glass)
-            for z: Float in [-1.5,1.5] { box(-1.8,0,z,0.12,0.12,2.8,Self.steel) }
+        case .stairHead:
+            // Decision 899: the local studio's stair head, up along +x.
+            if let model=Map3DGenericStation.model(.stairHead) { add(model,at:.zero) }
+        case .undergroundExit:
+            // Decision 899: the studio's exit, turned so its stairs go
+            // down towards −x from the way in at +x, as the kit's did.
+            if let model=Map3DGenericStation.model(.undergroundExit) { add(model,at:.zero,angle:Float.pi) }
         case .stationEntrance:
             for z: Float in [-3,3] { box(0,0,z,1,0.65,4.2,Map3DPalette.schoolWalls) }
             box(0,3.3,0,1,6.5,0.7,Map3DPalette.schoolWalls)

@@ -38,7 +38,13 @@ final class Map3DRoofContrastTests: XCTestCase {
         "station-kit/highSpeed-v3", "station-kit/highSpeed-v6", "station-kit/hsrHsinchu-v3", "station-kit/hsrTaichung-v0",
         "station-kit/hsrTainan-v4", "station-kit/hsrTaoyuan-v3", "station-kit/hualien", "station-kit/keelung",
         "station-kit/nangang",
-        "station-kit/regional-v3-t1", "station-kit/regional-v3-t2", "station-kit/regional-v3-t3", "station-kit/taitung",
+        "station-kit/regional-v3-t3", "station-kit/taitung",
+        // Decision 899: the studio's one-floor station and halt, their
+        // white roofs on the forecourt (the two-floor one's blue band
+        // passes); a follow-up for the studio, not recoloured here.
+        "station-kit/halt-v0", "station-kit/halt-v1", "station-kit/halt-v2", "station-kit/halt-v4", "station-kit/halt-v5",
+        "station-kit/halt-v6", "station-kit/regional-v0-t3", "station-kit/regional-v1-t3", "station-kit/regional-v2-t3",
+        "station-kit/regional-v4-t3", "station-kit/regional-v5-t3", "station-kit/regional-v6-t3",
         "station-kit/zuoying-v1", "station-kit/zuoying-v4",
         "station-study/b2-tainan", "station-study/hsr-hsinchu", "station-study/hsr-taichung", "station-study/hsr-tainan",
         "station-study/hsr-taoyuan", "station-study/hsr-zuoying", "station-study/tra-banqiao", "station-study/tra-hualien",
