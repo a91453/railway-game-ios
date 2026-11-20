@@ -765,15 +765,13 @@ public struct Map3DTrainSet: Sendable {
     static func temu1000(far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? "tarokoFar" : "taroko", pantographCars: [2, 5], ownLengths: true, fixedCars: 8,
                       far: far ? nil : "tarokoFar") {
-            func cab(_ unit: Map3DTEMU1000.Unit, at x: Float, colour: UInt32) -> Map3DModelPack.Model {
-                var builder = StationKitBuilder()
-                builder.add(Map3DTEMU1000.model(unit, far: far), at: .zero)
-                builder.cabLamps(atX: x, colour: colour, height: 1.65, across: 0.70, width: 0.18, tall: 0.12)
-                return .flat(named: "taroko-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
+            // Decision 906: the studio's cars, the cab cars' own lamps lit.
+            func cab(_ unit: Map3DTEMU1000.Unit) -> Map3DModelPack.Model {
+                let model = Map3DTEMU1000.model(unit, far: far, lamps: true)
+                return Map3DModelPack.Model(name: "taroko-\(unit.rawValue)" + (far ? "-far" : ""), vertices: model.vertices,
+                                            minimum: model.minimum, maximum: model.maximum)
             }
-            return Cars(head: cab(.leading, at: 12.42, colour: Map3DTrainStyle.headlamp),
-                        middle: Map3DTEMU1000.model(.middle, far: far),
-                        tail: cab(.trailing, at: -12.42, colour: Map3DPalette.lantern),
+            return Cars(head: cab(.leading), middle: Map3DTEMU1000.model(.middle, far: far), tail: cab(.trailing),
                         single: nil, pantograph: Map3DTEMU1000.model(.pantograph, far: far))
         }
     }

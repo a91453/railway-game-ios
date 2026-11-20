@@ -60,11 +60,12 @@ final class Map3DTrainMaterialTests: XCTestCase {
                 // by meaning, not by colour, and so do the studio's Hong Kong
                 // trains (decision 450's later note), Finnish intercity
                 // (decision 864), Fukuoka's (decision 893), the EMU900's cab
-                // (decision 904) and the Puyuma (decision 905); the pack keeps that layer.
+                // (decision 904), the Puyuma (decision 905) and the Taroko
+                // (decision 906); the pack keeps that layer.
                 if materials.contains(before.layer) {
                     XCTAssertEqual(layer, before.layer, recipe.name)
                     XCTAssertTrue(train && ["cablecar-cabin-", "set-mtr", "set-finlandIntercity", "set-finlandNight", "set-fukuoka", "set-emu900-head",
-                                            "set-emu900-tail", "set-puyuma"].contains { recipe.name.hasPrefix($0) },
+                                            "set-emu900-tail", "set-puyuma", "set-taroko", "temu1000-"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

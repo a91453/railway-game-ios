@@ -80,6 +80,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
                     // Decision 466: #1422's Sanying cabs, 4,306 each.
                     : set.key == "sanying" ? 4_200...4_400
+                    // Decision 906: the studio's Taroko, 5,240 a cab and 2,840 to
+                    // 3,036 the others near, 1,384 to 1,952 far.
+                    : ["taroko", "tarokoFar"].contains(set.key) ? 1_300...5_300
                     // Decision 905: the studio's Puyuma, 8,182 a cab and 4,836
                     // to 5,056 the others near, 2,356 to 3,664 far.
                     : ["puyuma", "puyumaFar"].contains(set.key) ? 2_300...8_200
@@ -125,7 +128,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
                     // 610's 16.7 and 17.6 m.
-                    : ["taroko", "tarokoFar", "metroC341", "metroC341Far", "metroC371", "metroC371Far", "metroC381", "metroC381Far"].contains(set.key) ? 23...24.5
+                    // Decision 906: the studio's Taroko, each car its real length.
+                    : ["taroko", "tarokoFar"].contains(set.key) ? 20.4...22.1
+                    : ["metroC341", "metroC341Far", "metroC371", "metroC371Far", "metroC381", "metroC381Far"].contains(set.key) ? 23...24.5
                     : ["circular610", "circular610Far"].contains(set.key) ? 16.5...17.7 : set.key == "wenhu" ? 12...13.5
                     // Decision 558: #1742's Wenhu line cars, 13.78 m with their couplers.
                     : Self.wenhu.contains(set.key) ? 13.7...13.85
