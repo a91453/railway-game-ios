@@ -302,7 +302,7 @@ final class HUDAlignmentUITests: XCTestCase {
         // over them.
         for id in ["map.corner", "stationMaster.title"] {
             guard let frame = read(id, screen) else { continue }
-            if frame.minX >= tools.maxX - tolerance || frame.maxY > tools.minY + tolerance {
+            if frame.minX >= tools.maxX - tolerance || frame.maxX <= tools.minX + tolerance || frame.maxY > tools.minY + tolerance {
                 expect(frame.maxY, lines.bottom, "\(id)'s foot on the bottom line", screen)
             } else {
                 expect(frame.maxY, tools.minY - 10, "\(id)'s foot a margin over the tools", screen)
@@ -319,7 +319,7 @@ final class HUDAlignmentUITests: XCTestCase {
         log(screen, "navigationBar", bar.frame)
         // Beside the map, the panel's own glass; a sheet is the system's.
         guard let frame = read("hud.panel", screen) else { return }
-        expect(frame.maxX, lines.trailing, "the panel's trailing edge", screen)
+        expect(frame.maxX, besideTheTools(lines, screen), "the panel's trailing edge", screen)
         if let status = read("hud.bar", screen) {
             expect(frame.minY, status.maxY + 10, "the panel a margin under the status bar", screen)
         }
@@ -365,23 +365,40 @@ final class HUDAlignmentUITests: XCTestCase {
         // The corner column's trailing edge, or (where a card or the
         // tutorial put it away) as far from the screen's trailing edge as
         // the status bar is from its leading one.
-        let corner = read("map.corner", screen)
+        // Decision 892: on a phone the tools column stands on the trailing
+        // line, and the corner column a margin before it.
+        let corner = onPhone ? (tools == .zero ? nil : tools) : read("map.corner", screen)
         let trailing = corner?.maxX ?? (window.maxX - status.minX)
         XCTAssertNotEqual(status, .zero, "\(screen): no status bar")
         return Lines(leading: status.minX, top: status.minY, trailing: trailing, bottom: tools.maxY)
     }
 
+    /// Decision 892: a phone's tools stand at the trailing side.
+    private var onPhone: Bool { UIDevice.current.userInterfaceIdiom != .pad }
+
+    /// Where what stands at the trailing side ends: the trailing line, or
+    /// on a phone a margin before the tools column (decision 892).
+    private func besideTheTools(_ lines: Lines, _ screen: String) -> CGFloat {
+        guard onPhone, let tools = read("hud.tools", screen) else { return lines.trailing }
+        return tools.minX - 10
+    }
+
     private func leading(_ ids: [String], on lines: Lines, _ screen: String) {
         for id in ids {
             guard let frame = read(id, screen) else { continue }
+            if onPhone, id == "hud.tools" {
+                expect(frame.maxX, lines.trailing, "\(id)'s trailing edge", screen)
+                continue
+            }
             expect(frame.minX, lines.leading, "\(id)'s leading edge", screen)
         }
     }
 
     private func trailing(_ ids: [String], on lines: Lines, _ screen: String) {
+        let line = besideTheTools(lines, screen)
         for id in ids {
             guard let frame = read(id, screen) else { continue }
-            expect(frame.maxX, lines.trailing, "\(id)'s trailing edge", screen)
+            expect(frame.maxX, line, "\(id)'s trailing edge", screen)
         }
     }
 

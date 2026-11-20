@@ -329,8 +329,18 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         // above the zoom buttons. Along the map's bottom, as below, the card
         // stood over the middle of a phone's map, where the camera opens on
         // the town to build in (TestFlight 54.1).
-        if let map, target == map {
-            candidates.append(Point(x: min(map.maxX - gap - size.width, available.maxX - size.width), y: map.minY + gap))
+        // An edge of the map with no control beside it is the screen's own
+        // edge, and the card stands on the screen's margin there, in line
+        // with the status pill and the panels, not a gap in from it: on a
+        // phone on its side, whose tools stand at the trailing edge
+        // (decision 892), the card at the map's leading corner stood 2
+        // points off the line everything else keeps.
+        let mapLeft = map.map { $0.minX <= bounds.minX ? available.minX : $0.minX + gap }
+        let mapRight = map.map { $0.maxX >= bounds.maxX ? available.maxX - size.width : $0.maxX - gap - size.width }
+        let mapTop = map.map { $0.minY <= bounds.minY ? available.minY : $0.minY + gap }
+        let mapBottom = map.map { $0.maxY >= bounds.maxY ? available.maxY - size.height : $0.maxY - gap - size.height }
+        if let map, target == map, let mapRight, let mapTop {
+            candidates.append(Point(x: min(mapRight, available.maxX - size.width), y: mapTop))
         }
         candidates += [
             // Inside a target as large as the map, along its bottom or
@@ -340,12 +350,12 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         ]
         // The free map's corners: beside every control, where a card that
         // fits covers none of them.
-        if let map {
+        if let mapLeft, let mapRight, let mapTop, let mapBottom {
             candidates += [
-                Point(x: map.minX + gap, y: map.minY + gap),
-                Point(x: map.maxX - gap - size.width, y: map.minY + gap),
-                Point(x: map.minX + gap, y: map.maxY - gap - size.height),
-                Point(x: map.maxX - gap - size.width, y: map.maxY - gap - size.height),
+                Point(x: mapLeft, y: mapTop),
+                Point(x: mapRight, y: mapTop),
+                Point(x: mapLeft, y: mapBottom),
+                Point(x: mapRight, y: mapBottom),
             ]
         }
         candidates += [

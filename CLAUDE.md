@@ -275,6 +275,12 @@ needs OSM data reads the same extract.
   請併 main」, once per head, as github-actions[bot], never with an at sign;
   a conflicting pull request gets no CI run at all, so the comment is what
   wakes its session, which then merges `main` and pushes; decision 830),
+  `lessons-link.yml` (a pull request that adds or changes a file in
+  `RailwayGameApp/Resources/Models/` or adds a `Map3D*.swift` under
+  `Sources/GamePresentation/` names its lessons file, the private
+  `railway-assets-private-2` `docs/studio/lessons/<model>.md`, in its
+  description, or a line 「經驗：<reason>」; red otherwise; owner,
+  2026-11-20),
   `ios-compilation-cache.yml` (a push to `main` that changes GameCore, the
   package manifest or the Xcode project builds the app for the Simulator
   with `ios-build.yml`'s exact build command and saves the compilation
