@@ -146,10 +146,17 @@ extension Map3DJapaneseNameBoards {
     /// line a real line's key names (`K`, `BL`, `R_XBT`, Kaohsiung's
     /// `KR`, Taichung's `TG`): its letters are the line's, a branch's
     /// suffix (`_XBT`) aside, or the line's but its first letter.
-    static func number(_ number: String, isOn line: String) -> Bool {
+    static func number(_ number: String, isOn line: String, exactly: Bool = false) -> Bool {
         let letters = Self.line(ofNumber: number)
         let base = String(line.split(separator: "_").first ?? Substring(line))
-        return letters == base || (base.count > 1 && letters == String(base.dropFirst()))
+        return letters == base || (!exactly && base.count > 1 && letters == String(base.dropFirst()))
+    }
+
+    /// The first of `candidates` that `number` is on (``number(_:isOn:exactly:)``):
+    /// one whose letters are exactly its line's before one by the looser rule
+    /// (Da'an's R05 is on the Red Line `R`, not the Brown Line `BR`).
+    static func first<Value>(_ candidates: [Value], on number: String, line: (Value) -> String) -> Value? {
+        candidates.first { Self.number(number, isOn: line($0), exactly: true) } ?? candidates.first { Self.number(number, isOn: line($0)) }
     }
 }
 
@@ -186,6 +193,14 @@ extension Map3DPlatformProps {
         let style: BoardStyle
         let reading: String?
         let number: String?
+        let colour: UInt32
+        /// TRANSFER-BADGES: an interchange's other lines' numbers and
+        /// colours, small beside its own, as the metros' boards show them.
+        var transfers: [Badge] = []
+    }
+
+    struct Badge: Equatable {
+        let number: String
         let colour: UInt32
     }
 
@@ -232,15 +247,24 @@ struct Map3DBoardSign: Equatable {
         let line = realLine.map(Map3DJapaneseNameBoards.line(ofRealLine:))
         let number: String?
         if let line {
-            number = board.numbers.first { Map3DJapaneseNameBoards.number($0, isOn: line) } ?? (board.numbers.count == 1 ? board.numbers[0] : nil)
+            number = board.numbers.first { Map3DJapaneseNameBoards.number($0, isOn: line, exactly: true) }
+                ?? board.numbers.first { Map3DJapaneseNameBoards.number($0, isOn: line) } ?? (board.numbers.count == 1 ? board.numbers[0] : nil)
         } else {
             number = board.numbers.first
         }
         let lines = board.colours.sorted { $0.key < $1.key }
         var colour = line.flatMap { board.colours[$0] }
-        if colour == nil, let number { colour = lines.first { Map3DJapaneseNameBoards.number(number, isOn: $0.key) }?.value }
+        if colour == nil, let number { colour = Map3DJapaneseNameBoards.first(lines, on: number) { $0.key }?.value }
         let shown = colour ?? lines.first?.value ?? Map3DPalette.playerRim
-        return (board.name, board.second, Map3DPlatformProps.StyledBoard(style: board.style, reading: board.reading, number: number, colour: shown))
+        // TRANSFER-BADGES: the station's other lines' numbers, each in its
+        // line's colour, at most two.
+        var others: [Map3DPlatformProps.Badge] = []
+        for other in board.numbers where other != number && !others.contains(where: { $0.number == other }) && others.count < 2 {
+            guard let colour = Map3DJapaneseNameBoards.first(lines, on: other, line: { $0.key })?.value else { continue }
+            others.append(Map3DPlatformProps.Badge(number: other, colour: colour))
+        }
+        return (board.name, board.second, Map3DPlatformProps.StyledBoard(style: board.style, reading: board.reading, number: number,
+                                                                          colour: shown, transfers: others))
     }
 }
 
@@ -457,16 +481,30 @@ extension Map3DScene.Builder {
             var textLeft = -faceLength / 2 + 0.1
             if let number = styled.number {
                 let side = min(room * 0.78, 0.6), middle = bandHigh + room / 2
-                let badgeLeft = textLeft, badgeRight = badgeLeft + side
-                quad(badgeLeft, middle - side / 2, badgeRight, middle + side / 2, 0.006, styled.colour)
-                let letters = Map3DJapaneseNameBoards.line(ofNumber: number)
-                let figures = String(number.dropFirst(letters.count))
-                let badgeMiddle = (badgeLeft + badgeRight) / 2
-                write(Map3DBoardGlyphs.layout(letters), height: side * 0.36, middle: middle + side * 0.2, centre: badgeMiddle,
-                      span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
-                write(Map3DBoardGlyphs.layout(figures), height: side * 0.42, middle: middle - side * 0.17, centre: badgeMiddle,
-                      span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
-                textLeft = badgeRight + 0.08
+                // A number in its line's colour, its letters over its
+                // figures in white, `side` square with its middle at `x`, `y`.
+                func badge(_ number: String, colour: UInt32, x: Float, y: Float, side: Float) {
+                    quad(x - side / 2, y - side / 2, x + side / 2, y + side / 2, 0.006, colour)
+                    let letters = Map3DJapaneseNameBoards.line(ofNumber: number)
+                    let figures = String(number.dropFirst(letters.count))
+                    write(Map3DBoardGlyphs.layout(letters), height: side * 0.36, middle: y + side * 0.2, centre: x,
+                          span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+                    write(Map3DBoardGlyphs.layout(figures), height: side * 0.42, middle: y - side * 0.17, centre: x,
+                          span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+                }
+                badge(number, colour: styled.colour, x: textLeft + side / 2, y: middle, side: side)
+                textLeft += side + 0.08
+                // TRANSFER-BADGES: the other lines' numbers, smaller, in a
+                // column beside it (two at most), as on the metros'
+                // boards at an interchange.
+                if !styled.transfers.isEmpty {
+                    let small = side * 0.46, gap = side - 2 * small
+                    let top = styled.transfers.count == 1 ? middle : middle + (small + gap) / 2
+                    for (index, other) in styled.transfers.enumerated() {
+                        badge(other.number, colour: other.colour, x: textLeft + small / 2, y: top - Float(index) * (small + gap), side: small)
+                    }
+                    textLeft += small + 0.08
+                }
             }
             let textRight = faceLength / 2 - 0.1
             let centre = (textLeft + textRight) / 2, span = textRight - textLeft

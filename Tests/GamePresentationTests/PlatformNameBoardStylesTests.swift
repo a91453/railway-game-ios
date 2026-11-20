@@ -59,7 +59,9 @@ final class PlatformNameBoardStylesTests: XCTestCase {
         let k = try XCTUnwrap(hakata.board(realLine: "fksubway:K")), n = try XCTUnwrap(hakata.board(realLine: "fksubway:N"))
         XCTAssertEqual(k.name, "博多")
         XCTAssertEqual(k.second, "Hakata")
-        XCTAssertEqual(k.board, Props.StyledBoard(style: .metro, reading: "はかた", number: "K11", colour: Map3DColor.rgb(0xFF4500)))
+        XCTAssertEqual(k.board, Props.StyledBoard(style: .metro, reading: "はかた", number: "K11", colour: Map3DColor.rgb(0xFF4500),
+                                                  transfers: [Props.Badge(number: "N18", colour: Map3DColor.rgb(0x008000))]))
+        XCTAssertEqual(n.board.transfers.map(\.number), ["K11"])
         XCTAssertEqual(n.board.number, "N18")
         XCTAssertEqual(n.board.colour, Map3DColor.rgb(0x008000))
         XCTAssertEqual(hakata.board(realLine: nil)?.board.number, "K11")
@@ -78,7 +80,9 @@ final class PlatformNameBoardStylesTests: XCTestCase {
         XCTAssertEqual(brown.board.number, "BR09")
         XCTAssertNil(brown.board.reading)
         XCTAssertEqual(brown.board.colour, Map3DColor.rgb(0xC48C31))
+        XCTAssertEqual(brown.board.transfers, [Props.Badge(number: "R05", colour: Map3DColor.rgb(0xE3002C))])
         XCTAssertEqual(daan.board(realLine: "trtc:R")?.board.number, "R05")
+        XCTAssertEqual(daan.board(realLine: "trtc:R")?.board.transfers.map(\.number), ["BR09"])
         XCTAssertEqual(daan.board(realLine: "trtc:R_XBT")?.board.number, "R05")
         XCTAssertEqual(try XCTUnwrap(signs["忠孝復興"]).board(realLine: "trtc:BL")?.board.number, "BL15")
         // The railway's platforms keep decision 882's board.
@@ -99,6 +103,9 @@ final class PlatformNameBoardStylesTests: XCTestCase {
         XCTAssertEqual(sign.board(realLine: "krtc:KO")?.board.number, "O5")
         XCTAssertEqual(sign.board(realLine: "krtc:KO")?.board.colour, 2)
         XCTAssertEqual(sign.board(realLine: "krtc:KR")?.board.number, "R10")
+        // TRANSFER-BADGES: each platform's board shows the other line's number too.
+        XCTAssertEqual(sign.board(realLine: "krtc:KO")?.board.transfers, [Props.Badge(number: "R10", colour: 1)])
+        XCTAssertEqual(sign.board(realLine: "krtc:KR")?.board.transfers, [Props.Badge(number: "O5", colour: 2)])
         XCTAssertEqual(sign.board(realLine: nil)?.board.colour, numbers.first == "O5" ? 2 : 1)
     }
 
@@ -157,13 +164,17 @@ final class PlatformNameBoardStylesTests: XCTestCase {
             typealias Sample = (name: String, second: String?, styled: Props.StyledBoard?)
             let samples: [Sample] = [
                 ("臺南", "Tainan", nil),
-                ("台北車站", "Taipei Main Station", Props.StyledBoard(style: .metro, reading: nil, number: "BL12", colour: Map3DColor.rgb(0x0070BD))),
-                ("美麗島", "Formosa Boulevard", Props.StyledBoard(style: .metro, reading: nil, number: "O5", colour: Map3DColor.rgb(0xFF9500))),
+                ("台北車站", "Taipei Main Station", Props.StyledBoard(style: .metro, reading: nil, number: "BL12", colour: Map3DColor.rgb(0x0070BD),
+                                                                   transfers: [Props.Badge(number: "R10", colour: Map3DColor.rgb(0xE3002C))])),
+                ("美麗島", "Formosa Boulevard", Props.StyledBoard(style: .metro, reading: nil, number: "O5", colour: Map3DColor.rgb(0xFF9500),
+                                                              transfers: [Props.Badge(number: "R10", colour: Map3DColor.rgb(0xE30964))])),
+                ("美麗島", "Formosa Boulevard", Props.StyledBoard(style: .metro, reading: nil, number: "R10", colour: Map3DColor.rgb(0xE30964),
+                                                              transfers: [Props.Badge(number: "O5", colour: Map3DColor.rgb(0xFF9500))])),
                 ("中環", "Central", Props.StyledBoard(style: .metro, reading: nil, number: nil, colour: Map3DColor.rgb(0xED1D24))),
-                ("博多", "Hakata", Props.StyledBoard(style: .metro, reading: "はかた", number: "K11", colour: Map3DColor.rgb(0xFF4500))),
+                ("博多", "Hakata", Props.StyledBoard(style: .metro, reading: "はかた", number: "K11", colour: Map3DColor.rgb(0xFF4500),
+                                                     transfers: [Props.Badge(number: "N18", colour: Map3DColor.rgb(0x008000))])),
                 ("Rovaniemi", nil, Props.StyledBoard(style: .finnish, reading: nil, number: nil, colour: Map3DColor.rgb(0x3FA535))),
-                ("中環", "Central", nil),
-                ("羅瓦涅米", "Rovaniemi", nil),
+                ("美麗島", "Formosa Boulevard", Props.StyledBoard(style: .metro, reading: nil, number: "O5", colour: Map3DColor.rgb(0xFF9500))),
             ]
             let boards = samples.map { sample -> [String: Any] in
                 var board = Map3DMesh()
