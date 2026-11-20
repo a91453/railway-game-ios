@@ -179,4 +179,66 @@ final class FerryCijinShoreTests: XCTestCase {
         XCTAssertNotEqual(with, without, "the shore is worked out again with the water")
         XCTAssertFalse(with.isEmpty)
     }
+    /// Decision 585 續 (FERRY-STATION-TAP): the author, 2026-11-20: the
+    /// Cijin and Gushan ferry stations「好像都被當成地標而已 沒法真正開渡輪」.
+    /// With no tool, a tap on either station's building (decision 592's
+    /// terminal) opens the ferry mode with Gushan–Cijin laid, on the 2D
+    /// map and the 3D one; a tap away from them does not.
+    func testATapOnAFerryStationOpensItsFerry() throws {
+        let map = try map()
+        let session = map.session
+        let frame = map.frame
+        func point(_ latitude: Double, _ longitude: Double) -> PlanPoint {
+            let (x, y) = frame.worldPosition(latitude: latitude, longitude: longitude)
+            return PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))
+        }
+        for terminal in [(22.6139938, 120.2697235), (22.6198008, 120.2700518)] {
+            session.selectTool(.select)
+            let before = session.world
+            session.tapMap(at: point(terminal.0, terminal.1), reach: 0)
+            XCTAssertEqual(session.tool, .bus)
+            XCTAssertEqual(session.busMode, .ferries)
+            XCTAssertEqual(session.ferryDraft.count, 2, String(describing: session.message?.text))
+            XCTAssertTrue(session.message?.text.contains("渡輪站") == true, String(describing: session.message?.text))
+            XCTAssertNil(session.ferryPreview?.problem)
+            // Choosing the tool pauses the game (decision 99); nothing is built or read in.
+            XCTAssertEqual(session.world.ferryRoutes, before.ferryRoutes, "a tap builds nothing")
+            XCTAssertEqual(session.world.landBlocks, before.landBlocks, "a tap reads nothing in")
+        }
+        // The 3D map's tap does the same.
+        session.selectTool(.select)
+        let cijin = point(22.6139938, 120.2697235)
+        session.tapMap3D(at: Map3DPick.Hit(target: .ground, point: Map3DPoint(0, 0, 0), plan: cijin), reach: 0)
+        XCTAssertEqual(session.busMode, .ferries)
+        XCTAssertEqual(session.ferryDraft.count, 2)
+        XCTAssertTrue(session.buildFerryRoute(), String(describing: session.message?.text))
+        // Once it sails, a tap shows the route rather than a second one.
+        session.selectTool(.select)
+        session.tapMap(at: cijin, reach: 0)
+        XCTAssertEqual(session.tool, .bus)
+        XCTAssertTrue(session.ferryDraft.isEmpty)
+        XCTAssertEqual(session.message?.text, "旗津渡輪站：鼓山—旗津已經開航。")
+        // A kilometre away it is an ordinary tap.
+        session.selectTool(.select)
+        session.tapMap(at: point(22.6230, 120.2800), reach: 0)
+        XCTAssertEqual(session.tool, .select)
+    }
+
+    /// Decision 585 續 (FERRY-STATION-TAP): every real ferry the map has
+    /// is offered, not the first only: with Tamsui's land read in as well,
+    /// Gushan–Cijin is still offered beside Tamsui–Bali.
+    func testEveryRealFerryIsOffered() throws {
+        let map = try map()
+        let session = map.session
+        let (x, y) = map.frame.worldPosition(latitude: 25.164, longitude: 121.4376)
+        var world = session.world
+        GameSession.readLand(within: WholeTaiwan.landReach, of: [PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))],
+                             in: &world, population: map.session.population!, places: nil, water: map.water)
+        let both = GameSession(world: world, language: .traditionalChinese)
+        both.population = session.population
+        both.water = map.water
+        both.selectTool(.bus)
+        both.setBusMode(.ferries)
+        XCTAssertEqual(both.realFerryOffers.map(\.name), ["淡水—八里", "鼓山—旗津"])
+    }
 }

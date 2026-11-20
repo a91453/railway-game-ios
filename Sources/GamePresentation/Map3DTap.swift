@@ -80,6 +80,8 @@ extension GameSession {
         guard tool == .select, tutorial == nil else { return nil }
         if let id = holdMap(at: hit.plan, reach: reach) { return id }
         clearSelection()
+        // Decision 585 續 (FERRY-STATION-TAP): a real ferry station opens its ferry.
+        openRealFerryStation(at: hit.plan)
         return nil
     }
 }

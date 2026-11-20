@@ -158,15 +158,20 @@ final class ScreenshotSceneTests: XCTestCase {
                     XCTAssertTrue(drawn.isOpenWater(x: p.x, z: p.z), "\(shot) pier \(index): water \(s) m out")
                 }
             }
-            // The straight crossing between the berths over open water.
+            // The crossing between the berths over open water: straight,
+            // or bent round a point of land (decision 585 續,
+            // FERRY-STATION-TAP: Shaochuantou's, between Gushan and Cijin).
             let scene = Map3DScene(world: world, focus: (Double(route.piers[0].middle.x), Double(route.piers[0].middle.y)), baseMap: tiles,
                                    cityTiles: city, footprints: footprints)
-            let piers = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first).piers
-            let (a, b) = (piers[0].berth, piers[1].berth)
-            let drawn = scene.drawnWater(round: a, radius: (b - a).length + 20)
+            let line = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first)
+            let (a, b) = (line.piers[0].berth, line.piers[1].berth)
+            let drawn = scene.drawnWater(round: a, radius: (b - a).length * 1.2 + 20)
             for s in stride(from: Float(0), through: 1, by: 4 / (b - a).length) {
-                let p = a + (b - a) * s
+                let p = Map3DFerries.point(line, leg: 0, at: s)
                 XCTAssertTrue(drawn.isOpenWater(x: p.x, z: p.z), "\(shot): the crossing over water \(s)")
+            }
+            if shot == .gushanFerry {
+                XCTAssertGreaterThan((line.bends[0] - (a + b) * 0.5).length, 1, "it swings round Shaochuantou's point")
             }
         }
     }
