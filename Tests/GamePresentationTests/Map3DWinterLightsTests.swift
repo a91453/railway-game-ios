@@ -99,8 +99,9 @@ final class Map3DWinterLightsTests: XCTestCase {
                         }
                         XCTAssertTrue(behind, "\(name): hangs in the air")
                     }
-                    // The kit's plain buildings are alike on both sides.
-                    if [.regional, .halt, .banqiao, .nangang, .hualien, .zuoying, .highSpeed].contains(profile) {
+                    // The kit's plain buildings are alike on both sides
+                    // (decision 899: not the halt, its shelter at one end).
+                    if [.regional, .banqiao, .nangang, .hualien, .zuoying, .highSpeed].contains(profile) {
                         let offsets = strings.map { ($0.z - middle) }.sorted()
                         for (a, b) in zip(offsets, offsets.reversed()) { XCTAssertEqual(a, -b, accuracy: 0.01, name) }
                     }

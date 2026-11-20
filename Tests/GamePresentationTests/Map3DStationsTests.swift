@@ -32,12 +32,14 @@ final class Map3DStationsTests: XCTestCase {
 
     func testAStationsBuildingStandsBesideItsPlatformAwayFromOtherTrack() {
         // A through track on the left: the building on the platform's
-        // side, a metre past its edge (3.5 + 1.6), its back to it.
+        // side, a metre past its edge (3.5 + 1.6), its back to it; decision
+        // 899: the generic station's back canopy (above 2.8 m) reaches that
+        // metre, its walls a metre further.
         var b = builder(tracks: [-5])
         let cells = stations(&b)
         let walls = house(b)
         XCTAssertFalse(walls.isEmpty)
-        XCTAssertEqual(walls.map(\.z).min() ?? 0, 6.1, accuracy: 0.01)
+        XCTAssertEqual(walls.map(\.z).min() ?? 0, 7.1, accuracy: 0.01)
         XCTAssertFalse(cells.isEmpty, "the building's cells become a plaza")
         // Close up the kit's building there too, with its shadow.
         let near = b.ownColourNear.values.flatMap(\.vertices).filter { $0.color != Map3DPalette.canopy && $0.y < 1 }
@@ -49,10 +51,11 @@ final class Map3DStationsTests: XCTestCase {
     func testABuildingStandsPastAThroughTrackBesideThePlatformNotFacingBareTrack() {
         // Nothing on the left but the platform's own track; on the right
         // a through track past the platform: the building opens onto the
-        // platform, past that track (8 + 2.5 + 1).
+        // platform, past that track (8 + 2.5 + 1; decision 899: its walls
+        // a metre behind its back canopy).
         var b = builder(tracks: [8])
         _ = stations(&b)
-        XCTAssertEqual(house(b).map(\.z).min() ?? 0, 11.5, accuracy: 0.01)
+        XCTAssertEqual(house(b).map(\.z).min() ?? 0, 12.5, accuracy: 0.01)
     }
 
     func testAViaductStationHasStairEntrancesAndNoBuilding() {

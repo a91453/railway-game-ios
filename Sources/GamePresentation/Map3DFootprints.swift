@@ -284,6 +284,8 @@ extension Map3DScene.Builder {
             guard contains(x: middle.x, y: middle.y), !taken.contains(key(middle.x, middle.y)) else { continue }
             guard !outline.contains(where: { cleared.contains(key($0.x, $0.y)) }) else { continue }
             let rings = building.rings.map { $0.map { point(x: $0.x, y: $0.y, height: 0) } }
+            // MRT-SHELL-CLEAR-OUTLINE: nor under the track or a station's own building.
+            guard !underRailway(rings[0]) else { continue }
             // Cleared for a building of the player's: its cells still keep
             // no city lot.
             // Decision 791: nor on a landmark's ground (it draws the building).
