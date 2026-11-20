@@ -1,7 +1,7 @@
 # FUKUOKA-NANAKUMA-FLEET：七隈線車隊與橋本機廠
 
 - 派工：協調者（工作串「補足七隈線車隊並用橋本機廠」），2026-11-20，雲端 thread session，分支 `claude/project-thread-no5552`。
-- 決策 898（`docs/decisions/897.md`）。存檔版本、golden schema 不動；GameCore 沒有改。
+- 決策 898（`docs/decisions/898.md`）。存檔版本、golden schema 不動；GameCore 沒有改。
 
 ## 做了
 
