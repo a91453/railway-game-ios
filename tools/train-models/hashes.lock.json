@@ -2118,24 +2118,24 @@
       "triangles" : 288
     },
     "prop-lamp" : {
-      "hash" : "a74add8f36ae0b92",
-      "triangles" : 36
+      "hash" : "82058d830255363b",
+      "triangles" : 152
     },
     "prop-pole" : {
-      "hash" : "fcf999d1b19ce458",
-      "triangles" : 88
+      "hash" : "5fd07cc9dd161f8a",
+      "triangles" : 276
     },
     "prop-signalAmber" : {
-      "hash" : "c8787c39d5e9746f",
-      "triangles" : 76
+      "hash" : "37d1c6fe4dbf87d6",
+      "triangles" : 308
     },
     "prop-signalGo" : {
-      "hash" : "6afe355f070b4c6b",
-      "triangles" : 76
+      "hash" : "1847463064c63f7e",
+      "triangles" : 308
     },
     "prop-signalStop" : {
-      "hash" : "f1a45321d2d9463",
-      "triangles" : 76
+      "hash" : "8ebb498488720de2",
+      "triangles" : 308
     },
     "prop-tree" : {
       "hash" : "1d955bff82c6ceb3",

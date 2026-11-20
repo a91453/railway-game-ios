@@ -13,7 +13,7 @@ final class Map3DPropsTests: XCTestCase {
     private var pack: Map3DModelPack { .standard }
 
     func testTheModelsAreTheirRealSizes() throws {
-        for (prop, height, triangles) in [(Map3DProp.tree, Float(4.4 + 2.3 * 0.95), 60...90), (.lamp, 8.62, 30...60), (.pole, 10.2, 60...120)] {
+        for (prop, height, triangles) in [(Map3DProp.tree, Float(4.4 + 2.3 * 0.95), 60...90), (.lamp, 8.6, 140...170), (.pole, 10.36, 250...300)] {
             let model = pack.models[try XCTUnwrap(pack.index(of: prop.modelName))]
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.01, "\(prop) stands on the ground")
             XCTAssertEqual(model.maximum.z, height, accuracy: 0.1, "\(prop)")

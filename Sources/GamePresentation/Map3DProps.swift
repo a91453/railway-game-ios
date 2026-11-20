@@ -58,6 +58,8 @@ public enum Map3DProp: String, CaseIterable, Sendable {
     /// Its model, in the pack's space (+x along the street, +y toward the
     /// road, +z up, its foot at the origin).
     func model() -> Map3DModelPack.Model {
+        // Decision 903: the studio's street light, pole and signals.
+        if let studio = Map3DTaiwanStreet.model(self) { return studio }
         var mesh = Map3DMesh()
         // Built in the scene's axes (x, y up, z): the road is toward −z, as
         // the model's +y.
