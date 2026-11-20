@@ -127,7 +127,7 @@ final class Map3DEMU900IntegrationTests: XCTestCase {
             XCTAssertTrue(head.allSatisfy { $0.x > 4 && $0.color == Map3DTrainStyle.headlamp }, "\(key) head")
             XCTAssertFalse(tail.isEmpty, key)
             XCTAssertTrue(tail.allSatisfy { $0.x < -4 && $0.color == Map3DPalette.lantern }, "\(key) tail")
-            // Decision 900: the studio cab near has more headlamp faces than tail lamp faces.
+            // Decision 904: the studio cab near has more headlamp faces than tail lamp faces.
             if key == "emu900Far" { XCTAssertEqual(head.count, tail.count, key) }
             // The model's own lenses, lit in place: no lamp boxes added.
             XCTAssertEqual(laid[0].vertices.count, Map3DEMU900.model(.ed, light: key == "emu900Far").vertices.count, key)

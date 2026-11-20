@@ -66,7 +66,9 @@ public enum Map3DFinlandSr2 {
 extension Map3DFinlandSr2 {
     /// Decision 782: its set, near and far, its showcase row and its
     /// cars' triangles (the Sr2 11,644 near and 4,116 far, the coach
-    /// 6,736 and 3,076) and lengths (the Sr2 19.02 m, the coach 26.40 m).
+    /// 6,736 and 3,076, FINLAND-TRAINS-2's control car 7,104 and 3,362)
+    /// and lengths (the Sr2 19.02 m, the coach 26.40 m, the control car
+    /// 27.40 m).
     static let registration = Map3DTrainRegistration(
         id: "finlandIntercity",
         sets: [Map3DTrainSet.finlandIntercity(), .finlandIntercity(far: true)],
@@ -74,23 +76,27 @@ extension Map3DFinlandSr2 {
             Map3DShowcase.Entry(key, "Finnish intercity, Sr2 electric", "芬蘭城際列車（Sr2 電力機車）", .finland,
                                 cars: cars, most: 10, gauge: 1.524),
         ],
-        triangles: 3_000...11_700, length: 19.0...26.45)
+        triangles: 3_000...11_700, length: 19.0...27.45)
 }
 
 extension Map3DTrainSet {
-    /// Decision 864: the Sr2 (``Map3DFinlandSr2``) and its double-deck
-    /// coaches (``Map3DFinlandDoubleDeck``) at their own lengths, the
-    /// locomotive's front lamps lit and the last coach's tail lamps.
-    static func finlandIntercity(far: Bool = false) -> Map3DTrainSet {
-        let key = Map3DFinlandSr2.key
+    /// Decision 864: the Sr2 (``Map3DFinlandSr2``), or FINLAND-TRAINS-2's
+    /// Sr3 (``Map3DFinlandSr3``) when `sr3`, and its double-deck coaches
+    /// (``Map3DFinlandDoubleDeck``) at their own lengths, the locomotive's
+    /// front lamps lit. FINLAND-TRAINS-2: the control car
+    /// (``Map3DFinlandControlCar``) at the back, its cab facing back and
+    /// its tail lamps lit, as every intercity runs push-pull.
+    static func finlandIntercity(sr3: Bool = false, far: Bool = false) -> Map3DTrainSet {
+        let key = sr3 ? Map3DFinlandSr3.key : Map3DFinlandSr2.key
         return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true, far: far ? nil : key + "Far") {
             // A model that fails to decode draws as a plain car of its
             // length rather than nothing.
-            let sr2 = Map3DFinlandSr2.model(far: far)
-                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: true).model(named: Map3DFinlandSr2.name)
             let coach = Map3DFinlandDoubleDeck.model(far: far)
                 ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandDoubleDeck.name)
-            return Cars(head: litLenses(sr2, front: true), middle: coach, tail: litLenses(coach.turned, front: false), single: nil)
+            let control = Map3DFinlandControlCar.model(far: far)
+                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: true).model(named: Map3DFinlandControlCar.name)
+            return Cars(head: litLenses(finlandLocomotive(sr3: sr3, far: far), front: true), middle: coach,
+                        tail: litLenses(control.turned, front: false), single: nil)
         }
     }
 }

@@ -9,11 +9,11 @@ public enum Map3DEMU900 {
     public struct Placement: Sendable { public let role: Role; public let x: Float; public let reversed: Bool }
     public static let bodyColor = Map3DPalette.concreteWalls[2]
     public static let roofColor = Map3DPalette.concreteWalls[0]
-    /// Decision 900: the waist band's bright green, the real train's
+    /// Decision 904: the waist band's bright green, the real train's
     /// (the owner set #5CB82E on 2026-11-20, its own, not the Taichung
     /// metro's green).
     public static let band = Map3DPalette.emu900Green
-    /// The game's own muted teal the band was until decision 900, kept for
+    /// The game's own muted teal the band was until decision 904, kept for
     /// a livery the player may choose later.
     public static let teal = Map3DPalette.shopAwnings[0]
     public static let navy = Map3DColor.rgb(0x262C57)
@@ -43,7 +43,7 @@ public enum Map3DEMU900 {
         guard reversed else { return m }
         return .init(name:m.name,vertices:m.vertices.map { Map3DVertex(.init(-$0.x,-$0.y,$0.z),normal:.init(-$0.nx,-$0.ny,$0.nz),color:$0.color,layer:$0.layer) },minimum:.init(-m.maximum.x,-m.maximum.y,m.minimum.z),maximum:.init(-m.minimum.x,-m.minimum.y,m.maximum.z))
     }
-    /// Decision 900: the colours of the studio cab's palette indices, in the
+    /// Decision 904: the colours of the studio cab's palette indices, in the
     /// order its material names were given to `glb_to_swift.py` (the
     /// brief's §4): body, roof, band, mask, glass, white, steel, dark,
     /// headlamp, taillamp.
@@ -52,7 +52,7 @@ public enum Map3DEMU900 {
         Map3DTrainStyle.headlamp, Map3DPalette.lantern,
     ]
 
-    /// Decision 900: the local studio's driving car (ED), its cab at +x
+    /// Decision 904: the local studio's driving car (ED), its cab at +x
     /// (`a91453/railway-assets-private-2`
     /// `game-art-previews/docs/art/tra-emu900-face-2026-11/revision-2`, #217;
     /// lessons in `docs/studio/lessons/tra-emu900-face.md`), near or `far`,
@@ -66,7 +66,7 @@ public enum Map3DEMU900 {
         return decoded
     }
 
-    /// Decision 900: the studio cab with its own lamps lit: the headlamps
+    /// Decision 904: the studio cab with its own lamps lit: the headlamps
     /// at the front car's nose (`front`), the tail lamps at the back car's.
     static func litCab(_ model: Map3DModelPack.Model, front: Bool) -> Map3DModelPack.Model {
         let lamp = front ? Map3DTrainStyle.headlamp : Map3DPalette.lantern
@@ -311,6 +311,6 @@ private struct E900Builder {
 }
 
 extension Map3DPalette {
-    /// Decision 900: the EMU900's waist band (the owner, 2026-11-20).
+    /// Decision 904: the EMU900's waist band (the owner, 2026-11-20).
     public static let emu900Green = Map3DColor.rgb(0x5CB82E)
 }

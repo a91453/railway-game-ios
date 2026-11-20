@@ -280,7 +280,8 @@ extension Map3DRealTrains {
         let line = traffic.lines[index]
         let ring = line.ringKm ?? line.shape.lengthKm
         let isRing = line.ringKm != nil
-        let formation = Self.formation(of: formations[index], system: line.system, place: place.key, locked: models?.locked ?? [])
+        let formation = Self.formation(of: formations[index], system: line.system, place: place.key,
+                                       train: traffic.trainName(of: line, place: place.key), locked: models?.locked ?? [])
         let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
         let (cars, length) = Self.cars(of: formation, hasModels: models?.models(forType: formation.key) != nil, models: models)
         var front = place.km + way * length / 2

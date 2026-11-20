@@ -864,7 +864,7 @@ public struct Map3DTrainSet: Sendable {
             func part(_ role: Map3DEMU900.Role, reversed: Bool = false) -> Map3DModelPack.Model {
                 Map3DEMU900.model(role, reversed: reversed, light: far)
             }
-            // Decision 900: near, the studio's cab with its own lamps; the
+            // Decision 904: near, the studio's cab with its own lamps; the
             // light units' cab is still #1339's.
             func cab(front: Bool) -> Map3DModelPack.Model {
                 let model = part(.ed, reversed: !front)

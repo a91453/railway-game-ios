@@ -26,7 +26,7 @@ final class Map3DEMU900Tests: XCTestCase {
             if light {XCTAssertLessThanOrEqual(m.triangleCount,role == .ed ? 2467:1592)}
             if !far && !light {XCTAssertLessThanOrEqual(m.triangleCount,role == .ed ? 11506:5400)}
             XCTAssertEqual(role.hasPantograph,role == .epCompressor || role == .epAccessible)
-            // Decision 900: the studio cab's wheel flanges reach 25 mm under the rail's top.
+            // Decision 904: the studio cab's wheel flanges reach 25 mm under the rail's top.
             XCTAssertEqual(m.minimum.z,role == .ed && !light ? -0.025 : 0,accuracy:0.00001)
             XCTAssertEqual(m.vertices.count,r.vertices.count)
             for (a,b) in zip(m.vertices,r.vertices) {
