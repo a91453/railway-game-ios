@@ -8,6 +8,9 @@ source as encoded meshes (no third-party modules).
         --out Sources/GamePresentation/Map3DMTRAirportLineMesh.swift \
         DIR/mtr-airport-express-cab.glb DIR/mtr-airport-express-cab-far.glb ...
 
+`--scale N` draws the models N times larger than the GLBs (the yellow tit,
+decision 889, made at a real bird's 13 cm).
+
 The studio builds a car in Blender with one material per palette colour
 (`.claude/skills/model-look/SKILL.md`, the brief's material table) and
 exports a GLB: glTF's axes, +y up, the car along x with its cab at +x, the
@@ -58,13 +61,20 @@ def accessor(gltf, blob, index):
     return out
 
 
-def triangles(path, materials):
+def triangles(path, materials, scale=1.0):
     gltf, blob = read_glb(path)
+    # A node may only be moved (a translation, as Blender writes an
+    # object's origin), not turned or scaled; each mesh is read where its
+    # node puts it.
+    offsets = {}
     for node in gltf.get("nodes", []):
-        if any(k in node for k in ("matrix", "rotation", "scale", "translation")):
+        if any(k in node for k in ("matrix", "rotation", "scale")):
             raise SystemExit(f"{path}: node {node.get('name')} is transformed; apply the transform before export")
+        if "mesh" in node:
+            offsets[node["mesh"]] = node.get("translation", (0.0, 0.0, 0.0))
     out = []
-    for mesh in gltf["meshes"]:
+    for number, mesh in enumerate(gltf["meshes"]):
+        shift = offsets.get(number, (0.0, 0.0, 0.0))
         for primitive in mesh["primitives"]:
             if primitive.get("mode", 4) != 4:
                 raise SystemExit(f"{path}: only triangle lists are read")
@@ -72,7 +82,8 @@ def triangles(path, materials):
             if name not in materials:
                 raise SystemExit(f"{path}: material {name!r} is not in --materials")
             paint = materials.index(name)
-            points = accessor(gltf, blob, primitive["attributes"]["POSITION"])
+            points = [tuple((v + d) * scale for v, d in zip(p, shift))
+                      for p in accessor(gltf, blob, primitive["attributes"]["POSITION"])]
             ids = accessor(gltf, blob, primitive["indices"])
             for t in range(0, len(ids), 3):
                 # glTF (x, y up, z right) -> game (x front, y left, z up).
@@ -110,6 +121,8 @@ def main():
     parser.add_argument("--enum", required=True, help="the Swift enum the extension is for")
     parser.add_argument("--materials", required=True, help="material names in palette order, comma-separated")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--scale", type=float, default=1.0,
+                        help="how many times larger the game draws the models than the GLBs (default 1)")
     parser.add_argument("glbs", nargs="+")
     a = parser.parse_args()
     materials = a.materials.split(",")
@@ -123,7 +136,7 @@ def main():
     ]
     for path in a.glbs:
         name = os.path.splitext(os.path.basename(path))[0]
-        text, count = encode(triangles(path, materials))
+        text, count = encode(triangles(path, materials, a.scale))
         print(f"{name}: {count} triangles")
         lines.append(f'        // {count} triangles.')
         lines.append(f'        "{name}": """')
