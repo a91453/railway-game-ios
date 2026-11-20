@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark rovaniemi-arctic-village: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "rovaniemi-arctic-village" : {
+      "hash" : "7aba7648af0c8622",
+      "triangles" : 1478
+    },
+    "rovaniemi-arctic-village-far" : {
+      "hash" : "9957965c688e6466",
+      "triangles" : 370
+    }
+  }
+}

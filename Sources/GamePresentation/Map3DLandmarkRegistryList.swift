@@ -9,5 +9,9 @@ extension Map3DLandmarkRegistry {
         Map3DFukuokaTower.registration,
         Map3DFukuokaDome.registration,
         Map3DHakataStation.registration,
+        Map3DRovaniemiCandleBridge.registration,
+        Map3DRovaniemiArcticGallery.registration,
+        Map3DRovaniemiChurch.registration,
+        Map3DRovaniemiArcticVillage.registration,
     ]
 }
