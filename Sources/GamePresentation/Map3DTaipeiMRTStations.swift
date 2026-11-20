@@ -62,7 +62,9 @@ enum Map3DTaipeiMRTStation: String, CaseIterable, Sendable {
         0xBFC8B4, // roofSeam: houseWalls[7]
         0x2B2F36, // cable: Map3DPalette.dark
         0xF2C94C, // clampGold: Map3DPalette.platformEdge
-        0xA9B0B8, // graniteDark: cityConcreteWalls[5] (Beitou's end towers)
+        // graniteDark, Beitou's end towers: stoneBeige as the other
+        // stations' walls, not the darker grey (coordinator, 2026-11-20).
+        0xE3DCCB, // graniteDark: Map3DPalette.terrazzo
         0xDAE2E6, // glassBright: cityOfficeWalls[4] (Beitou's truss glass)
     ].map(Map3DColor.rgb)
 
