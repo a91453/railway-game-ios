@@ -17,5 +17,7 @@ extension Map3DTrainRegistry {
         Map3DFukuokaAirportLine.registration,
         Map3DFukuokaKaizukaLine.registration,
         Map3DFukuokaNanakumaLine.registration,
+        Map3DFinlandSr3.registration,
+        Map3DFinlandSleeper.registration,
     ]
 }

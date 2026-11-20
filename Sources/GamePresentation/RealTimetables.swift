@@ -62,6 +62,10 @@ public struct RealTimetableTrip: Hashable, Sendable {
     /// The trip's kind from the set's `kinds` (the Airport MRT: `1` all
     /// stops, `2` express), or `nil` where there is none (`0`).
     public let kind: Character?
+    /// FINLAND-TRAINS-2: the train's own name from the set's `trains`
+    /// (`PYO 265`, `IC 24`), where the file has one for each trip; the 3D
+    /// map draws a night train as its own formation.
+    public internal(set) var name: String?
 
     public init(calls: [Call], kind: Character? = nil) {
         self.calls = calls
@@ -138,6 +142,7 @@ public struct RealSystemTimetable: Hashable, Sendable {
             let sets: [String: [[Int]]]
             let dates: [String: String]?
             let kinds: [String: String]?
+            let trains: [String: [String]]?
             let estimated: Bool?
         }
         struct RawFile: Decodable {
@@ -154,11 +159,13 @@ public struct RealSystemTimetable: Hashable, Sendable {
                 // The site applies a set's kinds only when there is one for
                 // each trip.
                 let kinds = line.kinds?[name].map(Array.init).flatMap { $0.count == flat.count ? $0 : nil }
+                let names = line.trains?[name].flatMap { $0.count == flat.count ? $0 : nil }
                 sets[name] = try flat.enumerated().map { index, trip in
                     let kind = kinds.flatMap { $0[index] == "0" ? nil : $0[index] }
-                    guard let parsed = RealTimetableTrip(flat: trip, kind: kind) else {
+                    guard var parsed = RealTimetableTrip(flat: trip, kind: kind) else {
                         throw RealTimetables.FormatError.malformedTrip(line: id, set: name, index: index)
                     }
+                    parsed.name = names?[index]
                     return parsed
                 }
             }
