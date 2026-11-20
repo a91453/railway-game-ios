@@ -62,7 +62,7 @@ final class Map3DTrainMaterialTests: XCTestCase {
                 // (decision 864) and Fukuoka's (decision 893); the pack keeps that layer.
                 if materials.contains(before.layer) {
                     XCTAssertEqual(layer, before.layer, recipe.name)
-                    XCTAssertTrue(train && ["cablecar-cabin-", "set-mtr", "set-finlandIntercity", "set-fukuoka"].contains { recipe.name.hasPrefix($0) },
+                    XCTAssertTrue(train && ["cablecar-cabin-", "set-mtr", "set-finlandIntercity", "set-finlandNight", "set-fukuoka"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

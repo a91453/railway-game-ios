@@ -281,7 +281,8 @@ public struct Map3DRealTrains: Sendable {
     /// ``formation(of:system:number:locked:)`` by its number.
     /// Decision 561: and a Taoyuan Airport MRT express trip
     /// (``RealTrainTraffic/isExpress(place:)``), the 2000's five cars.
-    static func formation(of line: Formation, system: String, place: String, locked: Set<String> = []) -> Formation {
+    static func formation(of line: Formation, system: String, place: String, train: String? = nil, locked: Set<String> = []) -> Formation {
+        if system == "vr", let train { return finland(train: train) }
         let number = Map3DTrainSet.number(ofRealTrain: place)
         if system == "tymc", RealTrainTraffic.isExpress(place: place) {
             return Formation(key: Map3DTrainSet.taoyuanAirport2000Key, cars: 5)
@@ -291,6 +292,26 @@ public struct Map3DRealTrains: Sendable {
         }
         return formation(of: line, system: system, number: number, locked: locked)
     }
+
+    /// FINLAND-TRAINS-2: a Rovaniemi train by its name in the timetable
+    /// (`PYO 265`, `IC 24`): a night train (`PYO`) its locomotive and
+    /// double-deck sleepers, any other (`IC`, `S`, December's `MUS`) its
+    /// locomotive, double-deck coaches and the control car at the back.
+    /// The locomotive an Sr3 for three train numbers in eight (the
+    /// remainders ``sr3Remainders``) and an Sr2 for the others, about as a
+    /// week of Digitraffic's compositions had them (38 trains in 99);
+    /// which train has which is not fixed, but the Kemijärvi line's night
+    /// trains (265, 274), which the Sr2 hauled that week, keep it.
+    static func finland(train: String) -> Formation {
+        let sr3 = sr3Remainders.contains(Map3DTrainSet.number(ofRealTrain: train) % 8)
+        let night = train.hasPrefix("PYO")
+        let key = night ? (sr3 ? Map3DFinlandSleeper.sr3Key : Map3DFinlandSleeper.key) : (sr3 ? Map3DFinlandSr3.key : Map3DFinlandSr2.key)
+        return Formation(key: key, cars: Map3DFinlandSr2.cars)
+    }
+
+    /// FINLAND-TRAINS-2: the remainders of a train number divided by
+    /// eight drawn behind the Sr3.
+    static let sr3Remainders: Set<Int> = [3, 5, 6]
 
     /// Each line's trains (decision 339): as many cars as `Railway/`
     /// rail-3d's formations give its trains (`integration/formations.js`
@@ -393,6 +414,8 @@ public struct Map3DRealTrains: Sendable {
             // Rovaniemi–Muurola), whose intercity and night trains are
             // hauled: the Sr2 and six double-deck coaches, the coach every
             // train of the week counted had and the locomotive most of them.
+            // FINLAND-TRAINS-2: each timetable train by its name
+            // (``finland(train:)``); this, a bought line's, the intercity.
             return Formation(key: Map3DFinlandSr2.key, cars: Map3DFinlandSr2.cars)
         case "fksubway":
             // Decision 893: the Airport line's newest six-car train on
@@ -765,7 +788,8 @@ public struct Map3DRealTrains: Sendable {
                 // Decision 435: and the Taiwan Railway's local trains three
                 // ways.
                 // Decision 511: and the DR3100's trains its own.
-                let formation = Self.formation(of: lineFormation, system: line.system, place: place.key, locked: models?.locked ?? [])
+                let formation = Self.formation(of: lineFormation, system: line.system, place: place.key,
+                                               train: traffic.trainName(of: line, place: place.key), locked: models?.locked ?? [])
                 let hasModels = formation.key == lineFormation.key ? hasModels : models?.models(forType: formation.key) != nil
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
                 // CAR-GAP: a set whose models reach their couplers end to
