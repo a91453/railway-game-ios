@@ -184,6 +184,14 @@ public struct RealStationTransfers: Sendable {
         nearest(stationsBySystemName["\(system)|\(Self.transferStationName(name))"] ?? [], to: coordinate)
     }
 
+    /// NAME-BOARD-STYLES: every station of TDX system `system` named
+    /// `name` within reach of `coordinate` (an interchange's one for each
+    /// line: Taipei Main Station's BL12 and R10), in the file's order.
+    public func stations(inSystem system: String, named name: String, near coordinate: RealRailways.Coordinate) -> [Station] {
+        (stationsBySystemName["\(system)|\(Self.transferStationName(name))"] ?? []).map { stations[$0] }
+            .filter { Self.distanceMetres(coordinate, $0.coordinate) < maximumDistanceMetres }
+    }
+
     private func nearest(_ candidates: [Int], to coordinate: RealRailways.Coordinate) -> Station? {
         var best: (station: Station, metres: Double)?
         for index in candidates {

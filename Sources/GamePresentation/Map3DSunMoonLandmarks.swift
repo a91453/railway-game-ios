@@ -9,7 +9,7 @@ import GameCore
 // pier 0.67 × 1 × 2.5, the temple 2.1 × 1.3 × 2, three boats in a row off
 // the pier's head, each on its stone base). That scene is a lake of its
 // own, some 200 m across; here each stands where the real one does
-// (OpenStreetMap). `tools/sunmoon-landmarks/glb_to_swift.py` writes the
+// (OpenStreetMap). `tools/landmarks/glb_to_swift.py --legacy sunmoon` writes the
 // models into `Map3DSunMoonLandmarkMeshes.swift`; the colours are the
 // game's (``materialColours``), not the models' textures. The ropeway
 // there is the game's own (decisions 615 and 870).
@@ -120,7 +120,7 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
     ]
 
     /// The game's colour of each of the models' materials, in
-    /// `tools/sunmoon-landmarks/glb_to_swift.py`'s `MATERIALS` order: all
+    /// `tools/landmarks/glb_to_swift.py`'s `SUN_MOON` order: all
     /// the palette's own (``Map3DPalette``; the gold is Hong Kong's
     /// landmarks'). The models' stone, tile and wood textures are not used.
     static let materialColours: [UInt32] = [
@@ -138,7 +138,7 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
         Map3DPalette.gymGreen, // seat
     ]
 
-    /// Reads `tools/sunmoon-landmarks/glb_to_swift.py`'s encoding: the
+    /// Reads `tools/landmarks/glb_to_swift.py --legacy sunmoon`'s encoding: the
     /// vertices in centimetres, each triangle with its material. Whole or
     /// not at all.
     static func decoded(_ bytes: [UInt8], full: Bool) -> LandmarkMesh? {

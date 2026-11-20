@@ -228,7 +228,9 @@ extension CableSolids {
         let lower: [(Float, Float, Float, Float)] = [(-3.68, 1.72, 1.57, 0.14), (-3.44, 1.80, 1.68, 0.16), (-3.08, 1.89, 1.78, 0.20)]
         let glazing: [(Float, Float, Float, Float)] = [(-3.08, 1.89, 1.78, 0.20), (-2.65, 1.90, 1.79, 0.21), (-2.05, 1.86, 1.74, 0.16), (-1.50, 1.72, 1.60, 0.10)]
         m.loft(lower, C.white, far: far, hollow: true)
-        m.loft(glazing, C.glass, far: far, hollow: true, glass: true, thickness: 0.012)
+        // Decision 897: the glazing lit from within after dark, as a
+        // train's windows are.
+        m.loft(glazing, C.glass, far: far, hollow: true, glow: true, glass: true, thickness: 0.012)
         m.loft([(-1.50, 1.72, 1.60, 0.10), (-1.40, 1.82, 1.68, 0.12)], C.white, far: far, hollow: true)
         m.loft([(-1.40, 1.82, 1.68, 0.12), (-1.32, 1.84, 1.70, 0.14), (-1.27, 1.72, 1.58, 0.18)], C.white, far: far)
         // The floor: a solid slab, or a 48 mm laminated glass panel in a
@@ -238,14 +240,15 @@ extension CableSolids {
         } else {
             for x: Float in [-0.76, 0.76] { m.box(x, 0, -3.68, 0.14, 1.52, 0.08, C.steel) }
             for y: Float in [-0.69, 0.69] { m.box(0, y, -3.68, 1.38, 0.14, 0.08, C.steel) }
-            m.box(0, 0, floor - 0.048, 1.38, 1.24, 0.048, C.green, glass: true)
+            m.box(0, 0, floor - 0.048, 1.38, 1.24, 0.048, C.green, glow: true, glass: true)
         }
         // A bench and back at each end; the crystal cabin keeps them too.
         for sign: Float in [-1, 1] {
             let x = sign * 0.63
             for y: Float in [-0.50, 0.50] { m.box(sign * 0.75, y, floor, 0.10, 0.12, 0.43, C.steel) }
-            m.box(x, 0, floor + 0.43, 0.34, 1.36, 0.10, C.white)
-            m.box(sign * 0.78, 0, floor + 0.53, 0.06, 1.36, 0.42, C.white)
+            // Decision 897: the seat and back in the ceiling lamp's light.
+            m.box(x, 0, floor + 0.43, 0.34, 1.36, 0.10, C.white, glow: true)
+            m.box(sign * 0.78, 0, floor + 0.53, 0.06, 1.36, 0.42, C.white, glow: true)
             if !far { for y: Float in [-0.34, 0, 0.34] { m.box(x, y, floor + 0.53, 0.30, 0.012, 0.012, C.steel) } }
         }
         // Four swept corner posts with a colour panel and a rubber pad each.
@@ -288,6 +291,10 @@ extension CableSolids {
             m.beam(P(sx * 0.80, -0.62, -2.57), P(sx * 0.80, 0.62, -2.57), 0.026, C.steel)
             for y: Float in [-0.62, 0.62] { m.beam(P(sx * 0.80, y, -2.57), P(sx * 0.94, y, -2.57), 0.026, C.steel) }
         }
+        // Decision 897: the ceiling lamp, a warm panel under the roof, lit
+        // after dark (its place and size an estimate, as the Sun Moon Lake
+        // cabin's).
+        if !far { m.box(0, 0, -1.414, 0.70, 0.40, 0.012, Map3DPalette.tunnelLamp, glow: true) }
         // The roof saddle and yoke.
         m.box(0, 0, -1.27, 0.80, 0.75, 0.09, C.steel)
         m.cylinder(P(0, -0.47, -1.12), P(0, 0.47, -1.12), 0.075, C.steel, sides: n)

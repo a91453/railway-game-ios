@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hakata-station: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hakata-station" : {
+      "hash" : "dbe6c8d9d4728e89",
+      "triangles" : 2702
+    },
+    "hakata-station-far" : {
+      "hash" : "cf225dbe9830d206",
+      "triangles" : 1254
+    }
+  }
+}

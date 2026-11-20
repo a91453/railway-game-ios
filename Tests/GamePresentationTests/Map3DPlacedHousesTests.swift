@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 896: the company's houses drawn from the residential kit,
+/// Decision 897: the company's houses drawn from the residential kit,
 /// close up only, a box round each tall model from farther, which of five
 /// ways and which shed tin by the house's number.
 final class Map3DPlacedHousesTests: XCTestCase {
