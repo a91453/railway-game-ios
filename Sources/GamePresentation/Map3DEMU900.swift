@@ -9,6 +9,12 @@ public enum Map3DEMU900 {
     public struct Placement: Sendable { public let role: Role; public let x: Float; public let reversed: Bool }
     public static let bodyColor = Map3DPalette.concreteWalls[2]
     public static let roofColor = Map3DPalette.concreteWalls[0]
+    /// Decision 900: the waist band's bright green, the real train's
+    /// (the owner set #5CB82E on 2026-11-20, its own, not the Taichung
+    /// metro's green).
+    public static let band = Map3DPalette.emu900Green
+    /// The game's own muted teal the band was until decision 900, kept for
+    /// a livery the player may choose later.
     public static let teal = Map3DPalette.shopAwnings[0]
     public static let navy = Map3DColor.rgb(0x262C57)
     public static let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
@@ -27,11 +33,51 @@ public enum Map3DEMU900 {
         "emu900-"+role.rawValue+(reversed ? "-reverse":"")+(far ? "-far":"")+(light ? "-light":"")
     }
     public static func model(_ role: Role, reversed: Bool = false, far: Bool = false, light: Bool = false) -> Map3DModelPack.Model {
-        var b = E900Builder(role:role,far:far || light,light:light); b.build()
-        let m = Map3DModelPack.Model.flat(named:id(role,reversed:reversed,far:far,light:light),from:b.k.mesh)
+        let m: Map3DModelPack.Model
+        if role == .ed, !light, let studio = studioCab(far: far, named: id(role, reversed: reversed, far: far, light: light)) {
+            m = studio
+        } else {
+            var b = E900Builder(role:role,far:far || light,light:light); b.build()
+            m = Map3DModelPack.Model.flat(named:id(role,reversed:reversed,far:far,light:light),from:b.k.mesh)
+        }
         guard reversed else { return m }
         return .init(name:m.name,vertices:m.vertices.map { Map3DVertex(.init(-$0.x,-$0.y,$0.z),normal:.init(-$0.nx,-$0.ny,$0.nz),color:$0.color,layer:$0.layer) },minimum:.init(-m.maximum.x,-m.maximum.y,m.minimum.z),maximum:.init(-m.minimum.x,-m.minimum.y,m.maximum.z))
     }
+    /// Decision 900: the colours of the studio cab's palette indices, in the
+    /// order its material names were given to `glb_to_swift.py` (the
+    /// brief's §4): body, roof, band, mask, glass, white, steel, dark,
+    /// headlamp, taillamp.
+    static let meshPalette: [UInt32] = [
+        bodyColor, roofColor, band, rubber, glass, Map3DPalette.tileWhite, Map3DPalette.steel, Map3DPalette.dark,
+        Map3DTrainStyle.headlamp, Map3DPalette.lantern,
+    ]
+
+    /// Decision 900: the local studio's driving car (ED), its cab at +x
+    /// (`a91453/railway-assets-private-2`
+    /// `game-art-previews/docs/art/tra-emu900-face-2026-11/revision-2`, #217;
+    /// lessons in `docs/studio/lessons/tra-emu900-face.md`), near or `far`,
+    /// written in with
+    /// `tools/train-models/glb_to_swift.py` (``encoded``). `nil` if its
+    /// mesh does not decode.
+    static func studioCab(far: Bool, named name: String) -> Map3DModelPack.Model? {
+        guard let text = encoded[far ? "emu900-ed-far" : "emu900-ed"],
+              let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
+              let decoded = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette, glass: 4) else { return nil }
+        return decoded
+    }
+
+    /// Decision 900: the studio cab with its own lamps lit: the headlamps
+    /// at the front car's nose (`front`), the tail lamps at the back car's.
+    static func litCab(_ model: Map3DModelPack.Model, front: Bool) -> Map3DModelPack.Model {
+        let lamp = front ? Map3DTrainStyle.headlamp : Map3DPalette.lantern
+        let vertices = model.vertices.map { vertex -> Map3DVertex in
+            var vertex = vertex
+            if vertex.color == lamp && (vertex.x > 0) == front { vertex.layer = Map3DVertex.glowing }
+            return vertex
+        }
+        return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
+    }
+
     public static func formation(far: Bool = false, light: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
         for p in placements { b.add(model(p.role,reversed:p.reversed,far:far,light:light),at:.init(p.x,0,0)) }
@@ -137,7 +183,7 @@ private struct E900Builder {
         for i in ring.indices {
             let j=(i+1)%ring.count
             let band=(rows[i]==1&&rows[j]==2)||(rows[i]==2&&rows[j]==1)
-            let color=band ? E.teal:body
+            let color=band ? E.band:body
             for t in [[ring[i],ring[j],outer[j]],[ring[i],outer[j],outer[i]]] {face(t,inside,color);tris.append(t)}
             face([outer[i],outer[j],back[j],back[i]],inside,color)
         }
@@ -182,7 +228,7 @@ private struct E900Builder {
         // Body height excludes roof AC. Actual side band is part of the shell.
         let profile:[(Float,Float)]=[(1.0,-1.445),(1.53,-1.445),(1.80,-1.445),(3.28,-1.445),(3.48,-1.35),(3.62,-1.10),(3.65,-0.75),(3.65,0.75),(3.62,1.10),(3.48,1.35),(3.28,1.445),(1.80,1.445),(1.53,1.445),(1.0,1.445)]
         let a=profile.map {Map3DPoint(start,$0.0,$0.1)},b=profile.map {Map3DPoint(end,$0.0,$0.1)},inside=Map3DPoint(0,2.3,0)
-        for i in profile.indices {let j=(i+1)%profile.count,h=(profile[i].0+profile[j].0)/2;face([a[i],a[j],b[j],b[i]],inside,h>1.53&&h<1.8 ? E.teal:body)}
+        for i in profile.indices {let j=(i+1)%profile.count,h=(profile[i].0+profile[j].0)/2;face([a[i],a[j],b[j],b[i]],inside,h>1.53&&h<1.8 ? E.band:body)}
         face(a,inside,body);face(b,inside,body)
         if cab { buildCab(body,metal,dark) }
         let doors:[Float]=cab ? [-5.95,-0.35,5.25]:[-5.65,0,5.65]
@@ -262,4 +308,9 @@ private struct E900Builder {
             k.beam(.init(px,3.99,0.4),.init(px-1.8,3.73,0.4),0.03,dark)
         }
     }
+}
+
+extension Map3DPalette {
+    /// Decision 900: the EMU900's waist band (the owner, 2026-11-20).
+    public static let emu900Green = Map3DColor.rgb(0x5CB82E)
 }

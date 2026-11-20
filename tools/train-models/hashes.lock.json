@@ -550,147 +550,147 @@
       "triangles" : 3088
     },
     "emu900-ed" : {
-      "hash" : "ca6d032ec2383109",
-      "triangles" : 9256
+      "hash" : "f380f17c95de709e",
+      "triangles" : 7045
     },
     "emu900-ed-far" : {
-      "hash" : "e9b077dc3c97bf9c",
-      "triangles" : 5380
+      "hash" : "b858074f052166ae",
+      "triangles" : 3502
     },
     "emu900-ed-light" : {
-      "hash" : "10d33aeaf290189",
+      "hash" : "edd4c3c1b737b113",
       "triangles" : 2188
     },
     "emu900-ed-reverse" : {
-      "hash" : "af966efd9cdf3080",
-      "triangles" : 9256
+      "hash" : "514a3ff0216400d6",
+      "triangles" : 7045
     },
     "emu900-ed-reverse-far" : {
-      "hash" : "366fcfc7ca637ab2",
-      "triangles" : 5380
+      "hash" : "70477499dd8211a1",
+      "triangles" : 3502
     },
     "emu900-ed-reverse-light" : {
-      "hash" : "ed1c6a79e17e814f",
+      "hash" : "36ddc60377d684c7",
       "triangles" : 2188
     },
     "emu900-emCrew" : {
-      "hash" : "380889da40cb9269",
+      "hash" : "869cd54a07d8a7d9",
       "triangles" : 4992
     },
     "emu900-emCrew-far" : {
-      "hash" : "ff4e65bb5d262c54",
+      "hash" : "758f8f5eb88dea3c",
       "triangles" : 2780
     },
     "emu900-emCrew-light" : {
-      "hash" : "db45fe0d2a99a76d",
+      "hash" : "2112ffe0ac0d45dd",
       "triangles" : 868
     },
     "emu900-emCrew-reverse" : {
-      "hash" : "16061720965feda7",
+      "hash" : "238013d0dbb32137",
       "triangles" : 4992
     },
     "emu900-emCrew-reverse-far" : {
-      "hash" : "7984e8fd53e9a840",
+      "hash" : "fbde03bf9db6e018",
       "triangles" : 2780
     },
     "emu900-emCrew-reverse-light" : {
-      "hash" : "e3dc55a14b79a55f",
+      "hash" : "d817f0f57624a98f",
       "triangles" : 868
     },
     "emu900-emSIV" : {
-      "hash" : "7fca745045198c2",
+      "hash" : "1a387842ab573792",
       "triangles" : 5040
     },
     "emu900-emSIV-far" : {
-      "hash" : "d8c654f831e7e48a",
+      "hash" : "8594fa9c8a451dd2",
       "triangles" : 2792
     },
     "emu900-emSIV-light" : {
-      "hash" : "ecca3b412dcc13b0",
+      "hash" : "f1bd5ed7c45d9e80",
       "triangles" : 880
     },
     "emu900-emSIV-reverse" : {
-      "hash" : "156a7258722e2c8d",
+      "hash" : "1036f254c03e6fd",
       "triangles" : 5040
     },
     "emu900-emSIV-reverse-far" : {
-      "hash" : "8d15d8214fd21fd0",
+      "hash" : "e6840ea55d578a68",
       "triangles" : 2792
     },
     "emu900-emSIV-reverse-light" : {
-      "hash" : "b9c0da13fa1a5b4c",
+      "hash" : "629f5d63d886179c",
       "triangles" : 880
     },
     "emu900-emToilet" : {
-      "hash" : "f51d5c507b071b11",
+      "hash" : "bba3661d8ed3cfe1",
       "triangles" : 5080
     },
     "emu900-emToilet-far" : {
-      "hash" : "2103e8d279e5e5e5",
+      "hash" : "74c727e216bd08fd",
       "triangles" : 2836
     },
     "emu900-emToilet-light" : {
-      "hash" : "d70977c72168725e",
+      "hash" : "dd547e7c9b20da6e",
       "triangles" : 908
     },
     "emu900-emToilet-reverse" : {
-      "hash" : "c3ae53bbd372008d",
+      "hash" : "c335fba5bd0340dd",
       "triangles" : 5080
     },
     "emu900-emToilet-reverse-far" : {
-      "hash" : "a0edae3569371323",
+      "hash" : "1478e098d5ce010b",
       "triangles" : 2836
     },
     "emu900-emToilet-reverse-light" : {
-      "hash" : "7217266bce3a937e",
+      "hash" : "e1af75f22074992e",
       "triangles" : 908
     },
     "emu900-epAccessible" : {
-      "hash" : "c3acbe2edb117f45",
+      "hash" : "b298f94d581ddb95",
       "triangles" : 5176
     },
     "emu900-epAccessible-far" : {
-      "hash" : "d74a201b9b29f4e6",
+      "hash" : "f278e916012af87e",
       "triangles" : 2964
     },
     "emu900-epAccessible-light" : {
-      "hash" : "f6e5fd1eb2ce80c2",
+      "hash" : "80b9f76f96e4d172",
       "triangles" : 1052
     },
     "emu900-epAccessible-reverse" : {
-      "hash" : "7db0b08b367d6e46",
+      "hash" : "9cb230186310a4f6",
       "triangles" : 5176
     },
     "emu900-epAccessible-reverse-far" : {
-      "hash" : "a1481de8e2794a14",
+      "hash" : "5c9aa8c2cf0b031c",
       "triangles" : 2964
     },
     "emu900-epAccessible-reverse-light" : {
-      "hash" : "33705f522a2a9e8a",
+      "hash" : "644a6aafb6571f9a",
       "triangles" : 1052
     },
     "emu900-epCompressor" : {
-      "hash" : "3fe812a2c89a95f",
+      "hash" : "16b179ca73c697ef",
       "triangles" : 5264
     },
     "emu900-epCompressor-far" : {
-      "hash" : "edffccbe68d026d9",
+      "hash" : "97d943aa407b3fa1",
       "triangles" : 3020
     },
     "emu900-epCompressor-light" : {
-      "hash" : "8e32b4fbc1d8621d",
+      "hash" : "8b1e20daf688f80d",
       "triangles" : 1092
     },
     "emu900-epCompressor-reverse" : {
-      "hash" : "29af99bb8c3c105b",
+      "hash" : "78a7eca13839b06b",
       "triangles" : 5264
     },
     "emu900-epCompressor-reverse-far" : {
-      "hash" : "279de693b92d567d",
+      "hash" : "3c0fe3e9cfb36565",
       "triangles" : 3020
     },
     "emu900-epCompressor-reverse-light" : {
-      "hash" : "4c92f1b5dce09d4f",
+      "hash" : "e03f53d33a89dc7f",
       "triangles" : 1092
     },
     "express-cab" : {
@@ -1314,8 +1314,8 @@
       "triangles" : 552
     },
     "light-set-emu900-head" : {
-      "hash" : "3dd9d9d744756da1",
-      "triangles" : 576
+      "hash" : "4716bed6e7ad3d55",
+      "triangles" : 192
     },
     "light-set-emu900-panto" : {
       "hash" : "7e5d0c0faeb56341",
@@ -1326,8 +1326,8 @@
       "triangles" : 576
     },
     "light-set-emu900-tail" : {
-      "hash" : "ce79e5fea1b70ba1",
-      "triangles" : 576
+      "hash" : "5daf42b965a22255",
+      "triangles" : 192
     },
     "light-set-emu900Far-car" : {
       "hash" : "64c90937963d825d",
@@ -2538,83 +2538,83 @@
       "triangles" : 2418
     },
     "set-emu900-car" : {
-      "hash" : "f51d5c507b071b11",
+      "hash" : "bba3661d8ed3cfe1",
       "triangles" : 5080
     },
     "set-emu900-carBack" : {
-      "hash" : "c3ae53bbd372008d",
+      "hash" : "c335fba5bd0340dd",
       "triangles" : 5080
     },
     "set-emu900-centre" : {
-      "hash" : "7fca745045198c2",
+      "hash" : "1a387842ab573792",
       "triangles" : 5040
     },
     "set-emu900-centreBack" : {
-      "hash" : "156a7258722e2c8d",
+      "hash" : "1036f254c03e6fd",
       "triangles" : 5040
     },
     "set-emu900-fourth" : {
-      "hash" : "380889da40cb9269",
+      "hash" : "869cd54a07d8a7d9",
       "triangles" : 4992
     },
     "set-emu900-fourthBack" : {
-      "hash" : "7db0b08b367d6e46",
+      "hash" : "9cb230186310a4f6",
       "triangles" : 5176
     },
     "set-emu900-head" : {
-      "hash" : "7137578a6fa1905b",
-      "triangles" : 9256
+      "hash" : "37080a18cd01403e",
+      "triangles" : 7045
     },
     "set-emu900-panto" : {
-      "hash" : "3fe812a2c89a95f",
+      "hash" : "16b179ca73c697ef",
       "triangles" : 5264
     },
     "set-emu900-pantoBack" : {
-      "hash" : "29af99bb8c3c105b",
+      "hash" : "78a7eca13839b06b",
       "triangles" : 5264
     },
     "set-emu900-tail" : {
-      "hash" : "48ae66e6988976ed",
-      "triangles" : 9256
+      "hash" : "85fce779e24c26a9",
+      "triangles" : 7045
     },
     "set-emu900Far-car" : {
-      "hash" : "e416bef93d8c3e19",
+      "hash" : "9c0128c1b06a7631",
       "triangles" : 908
     },
     "set-emu900Far-carBack" : {
-      "hash" : "4c7c6518c2a65447",
+      "hash" : "ba237e27e56127cf",
       "triangles" : 908
     },
     "set-emu900Far-centre" : {
-      "hash" : "b1fc92a2310adc57",
+      "hash" : "1866c376f50241f",
       "triangles" : 880
     },
     "set-emu900Far-centreBack" : {
-      "hash" : "be649387f11dc73c",
+      "hash" : "24893816dbe67614",
       "triangles" : 880
     },
     "set-emu900Far-fourth" : {
-      "hash" : "8eab604ee8133260",
+      "hash" : "8b73e75952fa92f8",
       "triangles" : 868
     },
     "set-emu900Far-fourthBack" : {
-      "hash" : "acc1fe23d802fc16",
+      "hash" : "67a1276c442454ae",
       "triangles" : 1052
     },
     "set-emu900Far-head" : {
-      "hash" : "83f90d8cb7593545",
+      "hash" : "7f1a742e87592da5",
       "triangles" : 2188
     },
     "set-emu900Far-panto" : {
-      "hash" : "75b79c27505cd643",
+      "hash" : "c7e4002a5a825f4b",
       "triangles" : 1092
     },
     "set-emu900Far-pantoBack" : {
-      "hash" : "e1a88856bb5e649a",
+      "hash" : "deaee0696331ab42",
       "triangles" : 1092
     },
     "set-emu900Far-tail" : {
-      "hash" : "b7f04b62c82a730e",
+      "hash" : "61876d83e231834",
       "triangles" : 2188
     },
     "set-emu3000-car" : {
